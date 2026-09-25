@@ -1059,6 +1059,94 @@ class ResearchArtifactReader:
         return part_ordinal, row_offset
 
 
+OBSERVATION_SCHEMA_VERSION: Final = "research.artifact-byte-observation.v1"
+MAX_OBSERVED_PARTS: Final = 256
+
+
+def observe_sealed_artifact_bytes(
+    retained_root: Path,
+    *,
+    artifact_id: str,
+    part_paths: Iterable[str],
+    max_manifest_bytes: int = DEFAULT_MAX_MANIFEST_BYTES,
+) -> dict[str, Any]:
+    """A10a: re-read a sealed artifact's bytes and report what is on disk.
+
+    This is an *observation*, not a verdict.  The caller (Control API, the
+    P05 metadata authority) supplies the part paths from its own immutable
+    seal records and compares every observed digest against the digests it
+    stored at seal time; nothing here trusts the on-disk manifest to say
+    which files exist or what they should hash to.  A missing file is
+    reported as ``None`` rather than raising, so one absent part cannot hide
+    the state of the others.  No file is written, moved or repaired.
+    """
+
+    _require_safe_id(artifact_id, "artifact_id")
+    paths = list(part_paths)
+    if len(paths) > MAX_OBSERVED_PARTS:
+        raise ResearchArtifactError("RESEARCH_ARTIFACT_INVALID", "too many parts to observe in one request")
+    artifacts_dir = (retained_root / "artifacts").resolve()
+    artifact_dir = (artifacts_dir / artifact_id).resolve()
+    if not artifact_dir.is_relative_to(artifacts_dir):
+        raise ResearchArtifactError("RESEARCH_ARTIFACT_PATH_INVALID", "artifact path escaped root")
+
+    manifest_path = artifact_dir / "manifest.json"
+    manifest_digest: str | None = None
+    manifest: dict[str, Any] | None = None
+    if manifest_path.is_file() and not manifest_path.is_symlink():
+        try:
+            encoded = _read_bounded(manifest_path, max_manifest_bytes)
+        except ResearchArtifactError:
+            encoded = None
+        if encoded is not None:
+            manifest_digest = _sha256_bytes(encoded)
+            try:
+                decoded = json.loads(encoded)
+                manifest = decoded if isinstance(decoded, dict) else None
+            except json.JSONDecodeError:
+                manifest = None
+
+    def observe(relative_path: str) -> dict[str, Any]:
+        target = _safe_child(artifact_dir, relative_path)
+        if not target.is_file() or target.is_symlink():
+            return {"relative_path": relative_path, "observed_digest": None, "observed_bytes": None}
+        return {
+            "relative_path": relative_path,
+            "observed_digest": _sha256_file(target),
+            "observed_bytes": int(target.stat().st_size),
+        }
+
+    parts = [observe(path) for path in paths]
+    documents: list[dict[str, Any]] = []
+    recorded = manifest.get("documents", []) if manifest is not None else []
+    if isinstance(recorded, list):
+        for document in recorded[:16]:
+            if not isinstance(document, dict):
+                continue
+            relative_path = document.get("relative_path")
+            digest = document.get("sha256")
+            if not isinstance(relative_path, str) or not isinstance(digest, str) or not _SHA256.fullmatch(digest):
+                continue
+            try:
+                observed = observe(relative_path)
+            except ResearchArtifactError:
+                continue
+            documents.append({**observed, "recorded_digest": digest})
+    return {
+        "schema_version": OBSERVATION_SCHEMA_VERSION,
+        "artifact_id": artifact_id,
+        "manifest_state": "PRESENT" if manifest_digest is not None else "MISSING",
+        "manifest_digest": manifest_digest,
+        "manifest_artifact_revision": (
+            manifest.get("artifact_revision")
+            if manifest is not None and isinstance(manifest.get("artifact_revision"), int)
+            else None
+        ),
+        "parts": parts,
+        "documents": documents,
+    }
+
+
 def grid_cell_to_evaluation_map(cells: Iterable[Mapping[str, Any]]) -> dict[str, tuple[str, ...]]:
     """Map display cells to a smaller immutable set of unique config digests."""
 

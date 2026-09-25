@@ -93,6 +93,15 @@ function run(id: string, overrides: Partial<CompareRun> = {}): CompareRun {
       { key: "OOS_SHARPE", definition_id: "oos-sharpe.v1", scope: "original", value: null, availability: np("P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE") },
       { key: "DECAY", definition_id: "decay.v1", scope: "original", value: null, availability: np("P20_SOURCE_DID_NOT_PUBLISH_DECAY") },
     ],
+    lane: "P04_FIXED_PROFILE",
+    schedule: { mode: "fixed", schedule: "none", availability: AVAILABLE },
+    certification: {
+      state: "NOT_PUBLISHED",
+      grade: null,
+      reason_code: "P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE",
+      availability: np("P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE"),
+    },
+    alpha_version_lifecycle: { value: "ACTIVE", availability: AVAILABLE },
     provenance: {
       requested_spec_digest: null,
       effective_spec_digest: null,
@@ -141,7 +150,19 @@ const TRAJECTORY = {
 function attempts(runs: CompareRun[]) {
   return envelope({
     mode: "attempts",
+    order: "CLAIM_RANK_ASC_OOS_SHARPE_DESC_NET_RETURN_DESC",
     attempts: runs,
+    fold_series: runs.map((item) => ({
+      run_id: item.run_id,
+      state: "NOT_PUBLISHED",
+      source_fold_count: null,
+      truncated: false,
+      folds: [],
+      availability: np("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE"),
+    })),
+    config_diff: runs.length < 2
+      ? { paths: [], availability: { state: "NOT_APPLICABLE", reason_code: "P20_CONFIG_DIFF_NEEDS_TWO_ATTEMPTS" } }
+      : { paths: [], availability: AVAILABLE },
     coverage: { state: "COMPLETE", total_attempts: runs.length, reason_code: null },
     trajectory: TRAJECTORY,
   });
@@ -165,7 +186,7 @@ function chart(state: "AVAILABLE" | "NOT_PUBLISHED"): MarketChart {
         state,
         sampling: "NOT_APPLICABLE",
         source_observation_count: null,
-        emitted_point_count: 0,
+        emitted_point_count: null,
         points: [],
         availability: np("P20_P13_EQUITY_SERIES_NOT_AVAILABLE"),
       };
@@ -197,6 +218,7 @@ function pairData(overrides: Partial<PairComparable["pair"]> = {}): PairComparab
       matched_observation_count: 398,
       start_utc_ms: T0,
       end_utc_ms: T0 + 2 * DAY,
+      delta_definition: "RIGHT_MINUS_LEFT",
       metrics: [
         { key: "NET_RETURN_FRACTION", definition_id: "net-return.v1", left_value: "0.4217", right_value: "0.3901", delta: "-0.0316", availability: AVAILABLE },
         { key: "MAX_DRAWDOWN_FRACTION", definition_id: "mdd.v1", left_value: "-0.1375", right_value: "-0.1102", delta: "0.0273", availability: AVAILABLE },
@@ -207,6 +229,22 @@ function pairData(overrides: Partial<PairComparable["pair"]> = {}): PairComparab
           right_value: null,
           delta: null,
           availability: { state: "NOT_APPLICABLE", reason_code: "P20_COMMON_WINDOW_DOES_NOT_DEFINE_TRADE_COUNT" },
+        },
+        {
+          key: "OOS_SHARPE",
+          definition_id: "research.compare.metric.v1.common-window-oos-sharpe",
+          left_value: null,
+          right_value: null,
+          delta: null,
+          availability: { state: "NOT_APPLICABLE", reason_code: "P20_COMMON_WINDOW_SHARPE_NEEDS_SOURCE_ANNUALIZATION" },
+        },
+        {
+          key: "WIN_RATE_FRACTION",
+          definition_id: "research.compare.metric.v1.common-window-win-rate",
+          left_value: null,
+          right_value: null,
+          delta: null,
+          availability: { state: "NOT_APPLICABLE", reason_code: "P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE" },
         },
       ],
       availability: AVAILABLE,
@@ -372,14 +410,14 @@ describe("S13 Compare — reads and order", () => {
     const card = document.querySelector('[data-ladder-run="run_a"]') as HTMLElement;
     expect(card.querySelector("[data-oos-sharpe]")).toBeNull();
     expect(card.querySelector("[data-oos-sharpe-absent]")?.textContent).toContain("P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE");
-    expect(card.querySelector("[data-cert-absent]")?.textContent).toContain("CG-P20-03");
+    expect(card.querySelector("[data-cert-absent]")?.textContent).toContain("P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE");
     expect(card.querySelector("[data-claim-origin]")?.textContent).toContain("PORTAL_DERIVED_FROM_SOURCE_PROTOCOL");
-    expect(panel("fold-chart")?.querySelector("[data-fold-chart-absent]")?.textContent).toContain("CG-P20-04");
+    expect(panel("fold-chart")?.querySelector("[data-fold-chart-absent]")?.textContent).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
     expect(document.querySelector("[data-ladder-header]")?.textContent).toBe(LADDER_HEADER);
     expect(document.querySelector("[data-trajectory-text]")?.textContent).toBe(TRAJECTORY.text);
     expect(panel("rule")?.textContent).toContain(ATTEMPTS_RULE);
     expect(panel("rules")?.textContent).toContain(COMPARE_RULES);
-    expect(panel("diff")?.textContent).toContain("CG-P20-05");
+    expect(panel("diff")?.textContent).toContain("P20_CONFIG_DIFF_NEEDS_TWO_ATTEMPTS");
   });
 
   it("S13-U05 PARTIAL coverage says so, with the total and the reason, and the screen is partial", async () => {
@@ -423,7 +461,8 @@ describe("S13 Compare — pair", () => {
     const rows = Array.from(document.querySelectorAll("[data-delta-row]")).map((el) => el.getAttribute("data-delta-row"));
     expect(rows).toEqual(["OOS_SHARPE", "NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "WIN_RATE", "CLAIM"]);
     const net = document.querySelector('[data-delta-row="NET_RETURN_FRACTION"] td[data-sign]') as HTMLElement;
-    expect(net.textContent).toBe("-0.0316");
+    expect(net.textContent).toBe("−3.16%");
+    expect(net.querySelector("[data-delta-value]")?.getAttribute("data-delta-value")).toBe("-0.0316");
     expect(net.getAttribute("data-sign")).toBe("neg");
     expect(document.querySelector('[data-delta-row="MAX_DRAWDOWN_FRACTION"] td[data-sign]')?.getAttribute("data-sign")).toBe("pos");
     expect(document.querySelector("[data-rho]")?.textContent).toBe("ρ = 0.412345");
@@ -630,9 +669,11 @@ describe("S13 Compare — audit fixes", () => {
     renderAt(`${base}?mode=pair&runs=run_a,run_b`);
     await settled();
     const cell = document.querySelector('[data-delta-row="NET_RETURN_FRACTION"] td.d') as HTMLElement;
-    expect(cell.textContent).toBe("0.0000");
+    expect(cell.querySelector("[data-delta-value]")?.getAttribute("data-delta-value")).toBe("0.0000");
     expect(cell.getAttribute("data-sign")).toBeNull();
-    expect(document.querySelector("[data-delta-direction]")?.textContent).toBe("B − A · as published");
+    /* CG-P20-09: the direction is the contract's field, not a reading of the service code. */
+    expect(document.querySelector("[data-delta-direction]")?.getAttribute("data-delta-direction")).toBe("RIGHT_MINUS_LEFT");
+    expect(document.querySelector("[data-delta-direction]")?.textContent).toBe("B − A · contract invariant");
     expect(document.querySelector('[data-delta-row="OOS_SHARPE"] td')?.textContent).not.toContain("stitched");
   });
 
@@ -641,7 +682,7 @@ describe("S13 Compare — audit fixes", () => {
     data.common_window = {
       ...data.common_window,
       state: "NOT_PUBLISHED",
-      matched_observation_count: 0,
+      matched_observation_count: null,
       left_source_observation_count: null,
       right_source_observation_count: null,
       start_utc_ms: null,
@@ -654,12 +695,12 @@ describe("S13 Compare — audit fixes", () => {
       state: "NOT_PUBLISHED",
       source_label: "NOT_PUBLISHED",
       value: null,
-      n: 0,
+      n: null,
       common_window_start_utc_ms: null,
       common_window_end_utc_ms: null,
       availability: np("P20_NO_COMMON_RAW_RETURN_WINDOW"),
     };
-    data.overlay = { ...data.overlay, state: "NOT_PUBLISHED", sampling: "NOT_APPLICABLE", emitted_point_count: 0, source_observation_count: null, points: [], availability: np("P20_COMMON_WINDOW_NOT_AVAILABLE") };
+    data.overlay = { ...data.overlay, state: "NOT_PUBLISHED", sampling: "NOT_APPLICABLE", emitted_point_count: null, source_observation_count: null, points: [], availability: np("P20_COMMON_WINDOW_NOT_AVAILABLE") };
     server([{ status: 200, body: pair("PARTIAL", data) }]);
     renderAt(`${base}?mode=pair&runs=run_a,run_b`);
     await settled();
@@ -726,5 +767,108 @@ describe("S13 Compare — paths and sources", () => {
     expect(source).toContain(".cp-scroll { overflow-x: auto;");
     expect(source).toMatch(/@media \(max-width: 900px\)/);
     expect(source).not.toMatch(/min-width: (?!0|min\()\d{3,}px/);
+  });
+});
+
+/*
+ * W6a · CG-P20-01…11 on the canonical fixtures the control-api publishes from
+ * the real retained WFO seal (CG-P20-01), not on a body built here.
+ */
+const COMPARE_FIXTURES = join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures");
+const compareFixture = (name: string) => JSON.parse(readFileSync(join(COMPARE_FIXTURES, name), "utf8")) as Compare;
+
+describe("S13 Compare — W6a fields on the canonical fixtures", () => {
+  const WFO_ALPHA = "delta-rsi-polynomial-alpha";
+  const wfoBase = `/research/quantbt/alphas/${WFO_ALPHA}/compare`;
+
+  it("S13-U27 CG-P20-02/03/08 schedule, typed cert and lifecycle ride each ladder card; ACTIVE is drawn heavier", async () => {
+    const body = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(wfoBase);
+    await settled();
+    if (body.result.mode !== "attempts") throw new Error("fixture guard");
+    for (const run of body.result.attempts) {
+      const card = document.querySelector(`[data-ladder-run="${run.run_id}"]`) as HTMLElement;
+      expect(card.getAttribute("data-lifecycle")).toBe(run.alpha_version_lifecycle.value);
+      expect(card.querySelector("[data-schedule]")?.textContent).toBe(`sched ${run.schedule.mode} × ${run.schedule.schedule}`);
+      expect(card.querySelector("[data-cert-absent]")?.textContent).toContain(run.certification.reason_code);
+      expect(card.querySelector(`[data-life="${run.alpha_version_lifecycle.value}"]`)).not.toBeNull();
+    }
+  });
+
+  it("S13-U28 CG-P20-04 the fold chart draws one bar per published fold per attempt, exact value kept", async () => {
+    const body = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(wfoBase);
+    await settled();
+    if (body.result.mode !== "attempts") throw new Error("fixture guard");
+    const published = body.result.fold_series.filter((item) => item.state === "AVAILABLE");
+    const bars = document.querySelectorAll("[data-fold-bar]");
+    expect(bars).toHaveLength(published.reduce((sum, item) => sum + item.folds.filter((fold) => fold.oos_sharpe !== null).length, 0));
+    const first = published[0]!;
+    const bar = document.querySelector(`[data-fold-bar="${first.run_id}:${first.folds[0]!.fold_id}"]`)!;
+    expect(bar.getAttribute("data-exact")).toBe(first.folds[0]!.oos_sharpe);
+    expect(document.querySelector("[data-fold-absent-runs]")?.textContent).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
+  });
+
+  it("S13-U29 CG-P20-05 the config diff lists every changed key with each attempt's value", async () => {
+    const body = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(wfoBase);
+    await settled();
+    if (body.result.mode !== "attempts") throw new Error("fixture guard");
+    const rows = Array.from(document.querySelectorAll("[data-config-diff-path]")).map((row) => row.getAttribute("data-config-diff-path"));
+    expect(rows).toEqual(body.result.config_diff.paths.map((path) => path.path));
+    const seed = body.result.config_diff.paths.find((path) => path.path === "random_seed")!;
+    for (const value of seed.values) {
+      expect(document.querySelector(`[data-config-diff-path="random_seed"] [data-config-value="${value.run_id}"]`)?.textContent).toBe(value.value);
+    }
+  });
+
+  it("S13-U30 CG-P20-11 the ladder names the server's order key and still lays the server array out reversed", async () => {
+    const body = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(wfoBase);
+    await settled();
+    if (body.result.mode !== "attempts") throw new Error("fixture guard");
+    expect(document.querySelector("[data-ladder-order-key]")?.getAttribute("data-ladder-order-key")).toBe(body.result.order);
+    const shown = Array.from(document.querySelectorAll("[data-ladder-run]")).map((card) => card.getAttribute("data-ladder-run"));
+    expect(shown).toEqual([...body.result.attempts].reverse().map((run) => run.run_id));
+  });
+
+  it("S13-U31 CG-P20-06/09 the delta table reads the contract's direction and types Sharpe and win rate as not applicable", async () => {
+    const body = compareFixture("research-compare.pair-ok.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(`${wfoBase}?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b`);
+    await settled();
+    expect(document.querySelector("[data-delta-direction]")?.getAttribute("data-delta-direction")).toBe("RIGHT_MINUS_LEFT");
+    expect(document.querySelector('[data-delta-row="OOS_SHARPE"] td.d')?.textContent).toContain("P20_COMMON_WINDOW_SHARPE_NEEDS_SOURCE_ANNUALIZATION");
+    expect(document.querySelector('[data-delta-row="WIN_RATE"] td.d')?.textContent).toContain("P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE");
+    if (body.result.mode !== "pair" || body.result.pair === null) throw new Error("fixture guard");
+    const net = body.result.pair.common_window.metrics.find((metric) => metric.key === "NET_RETURN_FRACTION")!;
+    expect(document.querySelector('[data-delta-row="NET_RETURN_FRACTION"] [data-delta-value]')?.getAttribute("data-delta-value")).toBe(net.delta);
+  });
+
+  it("S13-U32 CG-P20-10 a zero-variance pair prints the measured n nowhere beside its absence; markets cards keep null counts silent", async () => {
+    const body = compareFixture("research-compare.pair-nocorr.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(`${wfoBase}?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b`);
+    await settled();
+    expect(document.querySelector("[data-rho]")).toBeNull();
+    expect(document.querySelector("[data-correlation-meta]")?.textContent).not.toMatch(/\bn\b/);
+    cleanup();
+    const markets = compareFixture("research-compare.markets.valid.json");
+    server([{ status: 200, body: markets }]);
+    renderAt(`${wfoBase}?mode=markets`);
+    await settled();
+    if (markets.result.mode !== "markets") throw new Error("fixture guard");
+    for (const card of markets.result.cards) {
+      const tile = document.querySelector(`[data-market-run="${card.run.run_id}"]`) as HTMLElement;
+      if (card.chart.state === "AVAILABLE") {
+        expect(tile.querySelector("[data-mini-meta]")?.textContent).toContain(`emitted ${card.chart.emitted_point_count} of ${card.chart.source_observation_count}`);
+      } else {
+        expect(tile.querySelector("[data-mini-meta]")).toBeNull();
+      }
+    }
   });
 });

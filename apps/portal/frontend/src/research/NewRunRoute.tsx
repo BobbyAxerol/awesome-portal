@@ -22,6 +22,9 @@ import { STEPS, type DraftConstraints, type ParameterEntry, type RunDraft, apply
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { useNewRun } from "./useNewRun";
+import { NOT_MODIFIED, freezeApi, isFreezeLaneNotApplicable } from "./freezeClient";
+import { isWhatIf } from "./WhatIfCard";
+import type { ForkSource } from "./NewRun";
 import { researchState, type ResearchState } from "./state";
 
 /** An empty declaration. Every field is the reader's to fill. */
@@ -183,7 +186,43 @@ export function NewRunRoute() {
     () => constraintsFrom(document, registry, draft.alphaVersionId),
     [document, registry, draft.alphaVersionId],
   );
-  const run = useNewRun(draft, limits);
+  /*
+   * W5a · `?from=<run>&fork=<cell>` (spec 07 §2.5 / §15.5): Screen 07's
+   * "create sibling attempt →". The node's two values are read from the
+   * server's own what-if grid for that run, never from the URL, and pinned on
+   * top of the copied declaration; the submission carries SIBLING_OF so the
+   * server links the new attempt to the frozen run's attempt.
+   */
+  const forkCell = new URLSearchParams(location.search).get("fork");
+  const forkRun = new URLSearchParams(location.search).get("from");
+  const [fork, setFork] = useState<ForkSource | null>(null);
+  useEffect(() => {
+    if (!forkRun || !forkCell) return;
+    const controller = new AbortController();
+    setFork({ runId: forkRun, cellId: forkCell, state: "loading", parameters: null, reason: null });
+    freezeApi
+      .currentSource(forkRun, { signal: controller.signal })
+      .then((answer) => {
+        if (answer === NOT_MODIFIED || isFreezeLaneNotApplicable(answer)) {
+          setFork({ runId: forkRun, cellId: forkCell, state: "missing", parameters: null, reason: "That run has no what-if grid — nothing was pinned." });
+          return;
+        }
+        const whatIf = (answer as { what_if?: unknown }).what_if;
+        const cell = isWhatIf(whatIf) ? whatIf.grid?.cells.find((entry) => entry.cell_id === forkCell) ?? null : null;
+        setFork(cell
+          ? { runId: forkRun, cellId: forkCell, state: "ready", parameters: cell.parameters, reason: null }
+          : { runId: forkRun, cellId: forkCell, state: "missing", parameters: null, reason: `Node ${forkCell} is not on that run's what-if grid — nothing was pinned.` });
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setFork({ runId: forkRun, cellId: forkCell, state: "missing", parameters: null, reason: "The what-if grid could not be read — nothing was pinned." });
+      });
+    return () => controller.abort();
+  }, [forkRun, forkCell]);
+  const lineage = fork?.state === "ready"
+    ? { relation: "SIBLING_OF" as const, parent_run_id: fork.runId, what_if_cell_id: fork.cellId }
+    : null;
+  const run = useNewRun(draft, limits, undefined, lineage);
 
   /*
    * `?from=<runId>` (CG-P11-07): copy the run's admitted declaration into a
@@ -235,14 +274,23 @@ export function NewRunRoute() {
    */
   const adoptedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (adoptedFor.current === run.draft.alphaVersionId) return;
+    /* A what-if fork's node arrives after the version binds; its arrival
+       re-adopts once so the pins land (W5a · P16-T08). */
+    const forkKey = fork?.state === "ready" ? `${fork.runId}@${fork.cellId}` : "";
+    const adoptionKey = `${run.draft.alphaVersionId}|${forkKey}`;
+    if (adoptedFor.current === adoptionKey) return;
     const declared = parametersFor(registry, run.draft.alphaVersionId);
     if (declared.length === 0 && run.draft.parameters.length === 0) return;
-    adoptedFor.current = run.draft.alphaVersionId;
-    /* A clone re-applies the copied overrides on the version's own table. */
+    adoptedFor.current = adoptionKey;
+    /* A clone re-applies the copied overrides on the version's own table;
+       a what-if fork then pins its node's two values on top. */
     const copied = clone?.spec?.requested_spec.parameter_space_overrides ?? [];
-    run.patch({ parameters: copied.length > 0 ? applyOverrides(declared, copied) : declared });
-  }, [registry, run, clone]);
+    const pins = fork?.state === "ready" && fork.parameters
+      ? Object.entries(fork.parameters).map(([name, value]) => ({ name, kind: "pin" as const, value: Number(value) }))
+      : [];
+    const merged = [...copied.filter((entry) => !pins.some((pin) => pin.name === entry.name)), ...pins];
+    run.patch({ parameters: merged.length > 0 ? applyOverrides(declared, merged) : declared });
+  }, [registry, run, clone, fork]);
 
   /*
    * The release the form was built from travels with the declaration.
@@ -320,6 +368,7 @@ export function NewRunRoute() {
       catalog={catalog}
       catalogReason={catalogReason}
       cloneSource={clone ? { runId: clone.runId, state: clone.state } : null}
+      forkSource={fork}
       mayCreateRun={run.mayCreateRun}
       canSubmit={run.canSubmit}
       created={run.created}

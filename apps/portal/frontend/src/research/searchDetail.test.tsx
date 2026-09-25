@@ -180,6 +180,7 @@ function detail(overrides: Partial<SearchDetail> = {}): SearchDetail {
           effective_value: "14",
           position_percent: 25.7,
           bound_state: "WITHIN_DECLARED_RANGE",
+          bound_warning: { definition_id: "research.bound-warning.v1", copy_version: "research.bound-warning-copy.v1", reference_space: "DECLARED_RANGE", state: "INTERIOR", side: null, reason_code: null },
         },
         {
           name: "atr_mult",
@@ -190,6 +191,7 @@ function detail(overrides: Partial<SearchDetail> = {}): SearchDetail {
           effective_value: "2.00",
           position_percent: 42.9,
           bound_state: "WITHIN_DECLARED_RANGE",
+          bound_warning: { definition_id: "research.bound-warning.v1", copy_version: "research.bound-warning-copy.v1", reference_space: "DECLARED_RANGE", state: "INTERIOR", side: null, reason_code: null },
         },
       ],
       strict_outer_oos: gap("P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR", "NOT_ASSERTED"),
@@ -925,9 +927,10 @@ describe("RF-06 S06 fidelity — A1 and the ledger", () => {
     expect(container.querySelectorAll("[data-levels-state='NOT_PUBLISHED']")).toHaveLength(2);
     expect(container.querySelectorAll("[data-gap-fact='levels']")).toHaveLength(1);
     // The note is the served bound state and placement, rounded for reading; exact in the title.
-    const note = container.querySelector("[data-bound-state]");
-    expect(note?.textContent).toMatch(/^within range · \d+%$/);
-    expect(note?.getAttribute("title")).toContain("WITHIN_DECLARED_RANGE");
+    // DR-02: the same definition and renderer as Freeze S07.
+    const note = container.querySelector("[data-bound-warning]");
+    expect(note?.textContent).toBe("25.7% · interior");
+    expect(note?.getAttribute("data-bound-definition")).toBe("research.bound-warning.v1");
   });
 
   it("colours trial states as the HiFi does, and a click marks a row without selecting it", () => {

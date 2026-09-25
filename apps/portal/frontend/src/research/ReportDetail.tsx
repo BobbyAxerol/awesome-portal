@@ -30,19 +30,26 @@ import {
   EXPORT_FORMATS,
   EXPORT_FORMAT_LABEL,
   EXPORT_STATE_WORDS,
+  HEADLINE_UNIT,
   REPORT_FACT_WORDS,
+  REPORT_UNIT,
   REPORT_WITHHELD_WORDS,
+  STAGE_CHECK_WORDS,
   STAGE_LABEL,
+  coreV2,
   exportDownloadHref,
   exportPending,
   factReason,
   type ExportFormat,
+  type FoldRowV2,
   type FrozenCore,
+  type FrozenCoreV2,
   type ReportAvailability,
   type ReportDetail,
   type ReportEquity,
   type ReportFolds,
 } from "./reportClient";
+import { formatMetric, shortDigest } from "./researchFormat";
 import { equitySvg } from "./reportEquity";
 import { releaseCandidateHref } from "./releaseCandidateClient";
 import type { ReportController } from "./useReport";
@@ -51,7 +58,11 @@ import { iso } from "./utcMinute";
 
 /* --------------------------------------------------------------- verbatim */
 
-/** Spec 09 §16.1. The hi-fi's run-specific title needs facts the report does not publish. */
+/**
+ * Spec 09 §16.1. A v2 report publishes its own title (strategy on symbol ·
+ * timeframe, CG-P18-03); a v1 report, or a v2 one whose facts are absent,
+ * keeps this generic title.
+ */
 export const REPORT_TITLE = "QuantBT Run Report";
 
 /** Spec 09 §6, verbatim. */
@@ -67,14 +78,29 @@ export const SERIES_UNAVAILABLE = "series unavailable — numbers unaffected";
  */
 export const PASSPORT_TITLE = "claim passport — sealed source facts, quoted verbatim";
 
+/** Hi-fi title, used when the passport is the engine's own claim strip (the retained WFO lane). */
+export const PASSPORT_TITLE_ENGINE = "Claim passport — issued by the engine, quoted verbatim";
+
 export const PASSPORT_NOTE =
   "The report contract publishes these facts in order, without a key or label for each, so they are numbered rather than named.";
 
 export const CERTIFICATION_ABSENT = "The report contract publishes no certification grade for this run.";
 
+/** CG-P18-02 (W6a decision): no source or Portal policy publishes a grade; the box says so. */
+export const CERTIFICATION_NOT_GRADED = "No source publishes a certification grade or stage caps for this run.";
 
 export const FOLD_COLUMNS_ABSENT =
   "params, IS, OOS, Δ decay and contribution are not columns the report publishes, so they are not drawn.";
+
+/** A number for display, with its exact server string kept one hover away (DQ-08). */
+function Num({ value, unit, what }: { value: string; unit: string; what?: string }) {
+  const shown = formatMetric(value, unit) ?? value;
+  return (
+    <span title={value} data-exact={value} data-num={what ?? ""}>
+      {shown}
+    </span>
+  );
+}
 
 export const REPORT_RULES_FOOTER =
   "Every value on this sheet is read from the sealed report; the sheet computes nothing. An absent fact keeps its place with the reason the report gave.";
@@ -202,6 +228,8 @@ const SHEET_CSS = `
 .rr-eq-grid { stroke: var(--line-soft); stroke-dasharray: 3 3; stroke-width: 1; }
 .rr-eq-axis { stroke: var(--line); stroke-width: 1; }
 .rr-eq-line { stroke: var(--role-oos); stroke-width: 1.6; fill: none; }
+/* CG-P18-06: the IS account reads as the same account, dashed and muted, before the stitched OOS. */
+.rr-eq-line.rr-eq-is { stroke: var(--ink-faint); stroke-dasharray: 5 4; stroke-width: 1.2; }
 .rr-eq-fill { fill: var(--role-oos); fill-opacity: .06; stroke: none; }
 .rr-eq-fold { stroke: var(--line); stroke-dasharray: 4 3; stroke-width: 1; }
 .rr-dd-fill { fill: var(--role-oos); fill-opacity: .16; stroke: none; }
@@ -416,14 +444,16 @@ function NoPrintBar({
 }
 
 function Header({ runId, report }: { runId: string; report: ReportDetail | null }) {
+  const v2 = report ? coreV2(report.frozen_core) : null;
+  const title = v2?.title.text ?? REPORT_TITLE;
   return (
     <header className="rr-head rr-keep" data-panel="header">
       <div className="rr-head-text" data-head-text>
         <div className="rr-kicker">Quant Ecosystem Portal · Backtest Evidence Report</div>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           {/* The module header above owns the page's one h1. */}
-          <h2 className="rr-title" data-report-title>
-            {REPORT_TITLE}
+          <h2 className="rr-title" data-report-title data-title-source={v2?.title.text ? "report" : "generic"}>
+            {title}
           </h2>
           <span className="rr-runchip rr-long" data-run-chip>
             {report?.run_id ?? runId}
@@ -436,26 +466,36 @@ function Header({ runId, report }: { runId: string; report: ReportDetail | null 
           </div>
         ) : null}
       </div>
-      <div className="rr-cert" data-cert data-cert-box>
+      <div className="rr-cert" data-cert data-cert-box data-cert-state={v2 ? v2.certification.state : "NOT_A_FIELD"}>
         <div className="k">certification</div>
-        <div className="rr-absent" style={{ fontSize: 12 }} title={CERTIFICATION_ABSENT}>
+        <div className="rr-absent" style={{ fontSize: 12 }} title={v2 ? CERTIFICATION_NOT_GRADED : CERTIFICATION_ABSENT}>
           not published
         </div>
-        <div className="rr-reason">not a field of the report contract</div>
+        <div className="rr-reason" data-reason-code>
+          {v2 ? v2.certification.reason_code : "not a field of the report contract"}
+        </div>
       </div>
     </header>
   );
 }
 
 function Passport({ core }: { core: FrozenCore }) {
+  const v2 = coreV2(core);
+  const engine = v2?.report_source === "RS02_RETAINED_CURRENT_SOURCE";
   return (
     <section className="rr-block rr-passport rr-keep" data-panel="passport" aria-label="claim passport">
-      <h2 className="t">{PASSPORT_TITLE}</h2>
+      <h2 className="t">{engine ? PASSPORT_TITLE_ENGINE : PASSPORT_TITLE}</h2>
       <div className="facts">
         {core.passport.map((fact, index) => (
-          <span key={index} className="fact rr-long" data-passport-fact={index + 1} data-fact-state={fact.state}>
-            {/* The contract publishes no key per fact, so the label is its position. */}
-            <span className="k">fact {index + 1}</span>
+          <span
+            key={index}
+            className="fact rr-long"
+            data-passport-fact={index + 1}
+            data-passport-key={v2 ? v2.passport[index]!.key : undefined}
+            data-fact-state={fact.state}
+          >
+            {/* CG-P18-01: a v2 fact carries its key and label; a v1 fact only its position. */}
+            <span className="k">{v2 ? v2.passport[index]!.label : `fact ${index + 1}`}</span>
             <span className="v">
               {fact.state === "AVAILABLE" && fact.text !== null ? (
                 fact.text
@@ -466,7 +506,7 @@ function Passport({ core }: { core: FrozenCore }) {
           </span>
         ))}
       </div>
-      <p className="rr-caption">{PASSPORT_NOTE}</p>
+      {v2 ? null : <p className="rr-caption">{PASSPORT_NOTE}</p>}
     </section>
   );
 }
@@ -494,14 +534,20 @@ function Identity({ core }: { core: FrozenCore }) {
 }
 
 function HeadlineRow({ core }: { core: FrozenCore }) {
+  const v2 = coreV2(core);
   return (
     <section className="rr-headline" data-panel="headline" aria-label="headline metrics">
-      {core.headline.map((cell) => (
+      {core.headline.map((cell, index) => (
         <div key={cell.key} className="cell" data-headline={cell.key}>
           <div className="k">{cell.label}</div>
           {cell.value !== null ? (
-            <div className="v" data-headline-value>
-              {cell.value}
+            <div className="v" data-headline-value={cell.value}>
+              <Num value={cell.value} unit={HEADLINE_UNIT[cell.key]} what={cell.key} />
+              {v2 && v2.headline[index]!.scope !== "NOT_PUBLISHED" ? (
+                <span className="rr-reason" style={{ display: "block", fontWeight: 400 }} data-headline-scope>
+                  {words(v2.headline[index]!.scope)}
+                </span>
+              ) : null}
             </div>
           ) : (
             <div data-headline-withheld>
@@ -538,8 +584,12 @@ function Metrics({ core }: { core: FrozenCore }) {
                 <th scope="row" className="rr-mono" style={{ fontSize: 10, textTransform: "none", letterSpacing: 0, color: "var(--ink)", borderBottom: "1px solid var(--line-soft)" }}>
                   {metric.label}
                 </th>
-                <td>
-                  {metric.value !== null ? metric.value : <AvailabilityAbsent availability={metric.availability} />}
+                <td data-metric-value={metric.value ?? undefined}>
+                  {metric.value !== null ? (
+                    <Num value={metric.value} unit={REPORT_UNIT[metric.unit] ?? ""} />
+                  ) : (
+                    <AvailabilityAbsent availability={metric.availability} />
+                  )}
                 </td>
                 <td>{words(metric.unit)}</td>
                 <td>{words(metric.scope)}</td>
@@ -554,23 +604,44 @@ function Metrics({ core }: { core: FrozenCore }) {
   );
 }
 
-/** Hi-fi legend names; the IS account is a series the report does not publish. */
+/** Hi-fi legend names. A v1 report publishes no IS account; a v2 one says why when it has none. */
 export const EQUITY_LEGEND_OOS = "Stitched OOS";
 export const EQUITY_LEGEND_IS = "IS account — not published (CG-P18-06)";
+export const EQUITY_LEGEND_IS_PUBLISHED = "IS account";
 
-function equityTitle(folds: ReportFolds): string {
+function equityTitle(folds: ReportFolds, withIs: boolean): string {
   /* The hi-fi names the fold count; only a published fold table can say it. */
+  const lead = withIs ? "Equity — IS account vs stitched OOS" : "Equity — stitched OOS";
   if (folds.state === "AVAILABLE" && folds.rows.length > 0) {
-    return `Equity — stitched OOS (${folds.rows.length} ${folds.rows.length === 1 ? "fold" : "folds"})`;
+    const handoff = "params_handoff" in folds && folds.params_handoff.scope === "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" ? ", frozen params each" : "";
+    return `${lead} (${folds.rows.length} ${folds.rows.length === 1 ? "fold" : "folds"}${handoff})`;
   }
-  return "Equity — stitched OOS";
+  return lead;
 }
 
-function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFolds }) {
+/** Fold boundary marks: a v2 row names its first outer-test bar, a v1 row its start. */
+function foldBoundaries(folds: ReportFolds): { label: string; at_utc_ms: number }[] {
+  if (folds.state !== "AVAILABLE") return [];
+  return folds.rows.flatMap((row) => {
+    const at = "test_start_utc_ms" in row ? row.test_start_utc_ms : row.start_utc_ms;
+    return at === null ? [] : [{ label: row.fold_id, at_utc_ms: at }];
+  });
+}
+
+function countLine(equity: ReportEquity): string {
+  /* CG-P20-10's rule on this sheet too: a block that is not published prints no count. */
+  if (equity.state !== "AVAILABLE" || equity.emitted_point_count === null) return "no points published";
+  return `emitted ${equity.emitted_point_count} of ${
+    equity.source_observation_count !== null ? `${equity.source_observation_count} source observations` : "source observations not published"
+  }`;
+}
+
+function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds: ReportFolds; equityIs: ReportEquity | null }) {
+  const withIs = equityIs !== null && equityIs.state === "AVAILABLE" && equityIs.points.length > 0;
+  const points = withIs ? [...equityIs!.points, ...equity.points] : equity.points;
   const drawable = equity.state === "AVAILABLE" && equity.points.length > 0;
-  const boundaries =
-    folds.state === "AVAILABLE" ? folds.rows.map((row) => ({ label: row.fold_id, at_utc_ms: row.start_utc_ms })) : [];
-  const geometry = drawable ? equitySvg(equity.points, boundaries) : null;
+  const boundaries = foldBoundaries(folds);
+  const geometry = drawable ? equitySvg(points, boundaries, { splitAtUtcMs: withIs ? equity.points[0]!.at_utc_ms : null }) : null;
   const drawn = geometry !== null && geometry.drawn > 0 ? geometry : null;
   /* The y gutter fits the longest server string printed on either axis. */
   const gutterChars = drawn
@@ -581,22 +652,20 @@ function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFo
     <figure className="rr-equity rr-keep" data-panel="equity" data-equity-state={equity.state}>
       <figcaption>
         <span className="rr-eq-title" data-equity-title>
-          {equityTitle(folds)}
+          {equityTitle(folds, withIs)}
         </span>
         <span className="rr-eq-meta" data-equity-counts>
-          emitted {equity.emitted_point_count} of{" "}
-          {equity.source_observation_count ?? "source observations not published"}
-          {equity.source_observation_count !== null ? " source observations" : ""} · sampling{" "}
-          {equity.sampling ? words(equity.sampling) : "not published"} · UTC
+          {withIs ? `IS ${countLine(equityIs!)} · OOS ` : ""}
+          {countLine(equity)} · sampling {equity.sampling ? words(equity.sampling) : "not published"} · UTC
         </span>
       </figcaption>
       {drawn ? (
         <>
           <div className="rr-eq-plot" style={gutter} data-equity-plot>
             <div className="rr-eq-legend" aria-hidden="true" data-equity-legend>
-              <span data-legend="is">
+              <span data-legend="is" data-legend-state={withIs ? "published" : "absent"}>
                 <span className="sw" />
-                {EQUITY_LEGEND_IS}
+                {withIs ? EQUITY_LEGEND_IS_PUBLISHED : equityIs ? `IS account — ${factReason(equityIs)}` : EQUITY_LEGEND_IS}
               </span>
               <span data-legend="oos">
                 <span className="sw" />
@@ -608,7 +677,7 @@ function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFo
                 viewBox={`0 0 ${drawn.width} ${drawn.height}`}
                 preserveAspectRatio="none"
                 role="img"
-                aria-label={`Stitched OOS equity, ${drawn.drawn} sealed points, with drawdown below`}
+                aria-label={`${withIs ? "IS account and stitched OOS" : "Stitched OOS"} equity, ${drawn.drawn} sealed points, with drawdown below`}
                 data-equity-svg
               >
                 {drawn.yLabels.map((label) => (
@@ -619,7 +688,8 @@ function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFo
                 {drawn.boundaries.map((mark) => (
                   <line key={mark.label} className="rr-eq-fold" data-boundary={mark.label} x1={mark.x} x2={mark.x} y1={0} y2={drawn.height} />
                 ))}
-                <path className="rr-eq-line" d={drawn.line} />
+                {drawn.lineBefore ? <path className="rr-eq-line rr-eq-is" d={drawn.lineBefore} data-equity-is-path /> : null}
+                <path className="rr-eq-line" d={drawn.line} data-equity-oos-path />
               </svg>
               <div aria-hidden="true">
                 {drawn.yLabels.map((label) => (
@@ -688,7 +758,9 @@ function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFo
       )}
       <p className="rr-caption mt-1" data-equity-caption>
         {folds.state === "AVAILABLE"
-          ? "fold boundaries marked at each fold's start"
+          ? "params_handoff" in folds && folds.params_handoff.text !== null
+            ? `fold boundaries marked at each fold's first OOS bar · params handoff at each boundary: ${folds.params_handoff.text}`
+            : "fold boundaries marked at each fold's start"
           : `fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]} · ${folds.reason_code ?? factReason(folds)}`}
         {geometry && geometry.dropped > 0 ? ` · ${geometry.dropped} points did not parse and were not drawn` : ""}
       </p>
@@ -697,7 +769,7 @@ function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFo
           <table>
             <caption>Sealed equity points, exact values</caption>
             <tbody>
-              {equity.points.map((point) => (
+              {points.map((point) => (
                 <tr key={point.at_utc_ms}>
                   <th scope="row">{iso(point.at_utc_ms)}</th>
                   <td>{point.equity}</td>
@@ -712,7 +784,84 @@ function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFo
   );
 }
 
+function FoldValue({ fact, unit }: { fact: FoldRowV2["oos_sharpe"]; unit: string }) {
+  return fact.value !== null ? <Num value={fact.value} unit={unit} /> : <AvailabilityAbsent availability={fact.availability} />;
+}
+
+/** CG-P18-04/08: the hi-fi's eight columns, every cell a sealed fold fact. */
+function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
+  const published = folds.state === "AVAILABLE" && folds.rows.length > 0;
+  const worst = published ? folds.rows.filter((row) => row.verdict === "DRAG").map((row) => row.fold_id) : [];
+  return (
+    <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
+      <div className="rr-scroll">
+        <table className="rr-table" data-folds-state={folds.state} data-fold-columns="8">
+          <thead>
+            <tr>
+              <th scope="col">fold</th>
+              <th scope="col">OOS window (UTC)</th>
+              <th scope="col">params</th>
+              <th scope="col">IS</th>
+              <th scope="col">OOS</th>
+              <th scope="col">Δ decay</th>
+              <th scope="col">contribution</th>
+              <th scope="col">verdict</th>
+            </tr>
+          </thead>
+          <tbody>
+            {published ? (
+              folds.rows.map((row) => (
+                <tr key={row.fold_id} data-fold={row.fold_id}>
+                  <td>{row.fold_id}</td>
+                  <td>
+                    {row.test_start_utc_ms !== null ? iso(row.test_start_utc_ms) : "no start published"} →{" "}
+                    {row.test_last_bar_utc_ms !== null ? iso(row.test_last_bar_utc_ms) : "no end published"}
+                  </td>
+                  <td className="rr-long" data-fold-params>
+                    {row.params.text !== null ? (
+                      <span title={row.params.text}>{folds.params_handoff.scope === "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" ? "global selection" : row.params.text}</span>
+                    ) : (
+                      <AvailabilityAbsent availability={row.params.availability} />
+                    )}
+                  </td>
+                  <td data-fold-is={row.is_sharpe.value ?? undefined}><FoldValue fact={row.is_sharpe} unit="ratio" /></td>
+                  <td data-fold-oos={row.oos_sharpe.value ?? undefined}><FoldValue fact={row.oos_sharpe} unit="ratio" /></td>
+                  <td data-fold-decay={row.decay.value ?? undefined}><FoldValue fact={row.decay} unit="ratio" /></td>
+                  <td data-fold-contribution={row.contribution_fraction.value ?? undefined}><FoldValue fact={row.contribution_fraction} unit="fraction" /></td>
+                  <td>
+                    <span className="rr-verdict" data-v={row.verdict} title={row.failed_criteria.length > 0 ? `failed: ${row.failed_criteria.join(", ")}` : undefined}>
+                      {row.verdict}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr data-folds-absent>
+                <td colSpan={8}>
+                  <Absent
+                    what="per-fold rows"
+                    state={folds.state === "AVAILABLE" ? "none in this report" : REPORT_WITHHELD_WORDS[folds.availability.state]}
+                    reason={folds.reason_code ?? factReason(folds)}
+                  />
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <p className="rr-caption" data-verdict-rule>
+        {published
+          ? `${worst.length > 0 ? `${worst.join(", ")} ${worst.length === 1 ? "drags" : "drag"} the run. ` : ""}Verdicts under ${folds.rule?.version ?? "the published rule"}${
+              folds.rule ? ` — pass: OOS Sharpe ≥ ${folds.rule.pass.oos_sharpe_min}, decay ≤ ${folds.rule.pass.decay_max}, drawdown ≥ ${folds.rule.pass.max_drawdown_min}` : ""
+            }. Params: ${folds.params_handoff.text ?? words(folds.params_handoff.scope)}.`
+          : `verdict rule ${folds.rule?.version ?? "not published"}.`}
+      </p>
+    </Block>
+  );
+}
+
 function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule: string }) {
+  if ("params_handoff" in folds) return <FoldVerdictsV2 folds={folds} />;
   const published = folds.state === "AVAILABLE";
   return (
     <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
@@ -769,28 +918,44 @@ function stageWhen(at: number | null): string {
 }
 
 function StageChain({ core }: { core: FrozenCore }) {
+  const v2 = coreV2(core);
   return (
     <Block panel="stages" title={CHAIN_TITLE} className="rr-flush">
       <table className="rr-table rr-chain">
         <tbody>
-          {core.stages.map((stage) => (
-            <tr key={stage.key} data-stage={stage.key} data-stage-state={stage.state}>
-              <td className="key">
-                {stage.key} · {STAGE_LABEL[stage.key]}
-              </td>
-              <td className="desc">
-                {words(stage.state)} · started {stageWhen(stage.started_at_utc_ms)} · completed{" "}
-                {stageWhen(stage.completed_at_utc_ms)}
-              </td>
-              <td className="st" data-s={stage.state}>
-                {stage.state}
-              </td>
-            </tr>
-          ))}
+          {core.stages.map((stage, index) => {
+            const check = v2 ? v2.stages[index]!.check : null;
+            return (
+              <tr key={stage.key} data-stage={stage.key} data-stage-state={stage.state} data-stage-check={check?.result}>
+                <td className="key">
+                  {stage.key} · {STAGE_LABEL[stage.key]}
+                </td>
+                <td className="desc">
+                  {check && check.text !== null ? (
+                    <>
+                      {check.text}
+                      {check.source_key ? <span className="rr-reason"> · {check.source_key}</span> : null}
+                    </>
+                  ) : (
+                    <>
+                      {words(stage.state)} · started {stageWhen(stage.started_at_utc_ms)} · completed{" "}
+                      {stageWhen(stage.completed_at_utc_ms)}
+                      {check ? <span className="rr-reason"> · check {factReason(check)}</span> : null}
+                    </>
+                  )}
+                </td>
+                <td className="st" data-s={check ? check.result : stage.state}>
+                  {check ? STAGE_CHECK_WORDS[check.result] : stage.state}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       <p className="rr-caption">
-        A stage state is progress, not a pass: the report publishes no per-stage check result or certification cap.
+        {v2
+          ? "Each check is one sourced fact with its source key; a stage's progress is not its check. No source publishes a certification cap, so no grade is drawn."
+          : "A stage state is progress, not a pass: the report publishes no per-stage check result or certification cap."}
       </p>
     </Block>
   );
@@ -802,10 +967,18 @@ function Artifacts({ core }: { core: FrozenCore }) {
       <div className="rr-artgrid">
         {core.artifacts.map((artifact) => (
           <div key={artifact.key} className="contents" data-artifact={artifact.key} data-artifact-state={artifact.state}>
-            <span className="k">{ARTIFACT_LABEL[artifact.key]}</span>
+            <span className="k" data-artifact-filename={"filename" in artifact ? artifact.filename ?? undefined : undefined}>
+              {"filename" in artifact && artifact.filename ? artifact.filename : ARTIFACT_LABEL[artifact.key]}
+            </span>
             <span className="rr-long" data-artifact-digest data-tone={artifact.state === "SEALED" ? undefined : artifact.state}>
               {artifact.state === "SEALED" ? (
-                artifact.digest ?? `${ARTIFACT_STATE_WORDS.SEALED} — digest not published`
+                artifact.digest ? (
+                  <span title={artifact.digest} data-exact={artifact.digest}>
+                    sha256:{shortDigest(artifact.digest, 12)}…
+                  </span>
+                ) : (
+                  `${ARTIFACT_STATE_WORDS.SEALED} — ${factReason(artifact)}`
+                )
               ) : (
                 <>
                   {artifact.digest ? `${artifact.digest} · ` : ""}
@@ -817,8 +990,11 @@ function Artifacts({ core }: { core: FrozenCore }) {
         ))}
       </div>
       <p className="rr-caption">
-        Artifact bytes are not published to the report. The source's identifying digests are in the provenance
-        block; none is offered as a download.
+        {coreV2(core)
+          ? `Sealed part digests of the retained artifact; bytes are never reopened by a read (${
+              (core.artifacts[0] as { download?: { reason_code: string } }).download?.reason_code ?? "not published"
+            }), so nothing here downloads.`
+          : "Artifact bytes are not published to the report. The source's identifying digests are in the provenance block; none is offered as a download."}
       </p>
     </Block>
   );
@@ -936,7 +1112,7 @@ function Exports({ report, exporter }: { report: ReportDetail; exporter: ReportE
         const href = exportDownloadHref(slot.job);
         return (
           <div key={format} className="flex flex-col gap-0.5" data-export={format} data-export-state={slot.job?.state ?? "NONE"}>
-            <span className="rr-mono rr-long text-[10.5px]" data-export-line>
+            <span className="rr-mono rr-long text-[10.5px]" data-export-line data-motion={slot.creating || exportPending(slot.job) ? "pulse" : undefined}>
               {EXPORT_FORMAT_LABEL[format]} ·{" "}
               {!offered
                 ? "not offered for this report"
@@ -1080,7 +1256,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
               <HeadlineRow core={core} />
             </div>
             <Metrics core={core} />
-            <EquityFigure equity={core.equity} folds={core.folds} />
+            <EquityFigure equity={core.equity} folds={core.folds} equityIs={coreV2(core)?.equity_is ?? null} />
             <FoldVerdicts folds={core.folds} verdictRule={core.provenance.verdict_rule_revision} />
             <div className="rr-chainrow">
               <StageChain core={core} />

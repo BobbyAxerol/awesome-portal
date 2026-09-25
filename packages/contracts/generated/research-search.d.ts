@@ -42,6 +42,19 @@ export interface components {
             reason_code: components["schemas"]["ReasonCode"];
             availability: components["schemas"]["Availability"];
         };
+        /** @description DR-02 research.bound-warning.v1: one relative definition shared by Search S06 and Freeze S07. Reference space is the declared range; AT_BOUND at <=6% or >=94%, NEAR_BOUND at <=18% or >=82% (inclusive, exact decimal); NOT_APPLICABLE with a typed reason for zero-width, categorical or out-of-declaration values. A display diagnostic, never a gate and never a claim that the value is not an optimum. */
+        BoundWarning: {
+            /** @constant */
+            definition_id: "research.bound-warning.v1";
+            /** @constant */
+            copy_version: "research.bound-warning-copy.v1";
+            /** @constant */
+            reference_space: "DECLARED_RANGE";
+            /** @enum {unknown} */
+            state: "AT_BOUND" | "NEAR_BOUND" | "INTERIOR" | "NOT_APPLICABLE";
+            side: ("LOWER" | "UPPER") | null;
+            reason_code: components["schemas"]["ReasonCode"] | null;
+        };
         Parameter: {
             name: string;
             /** @constant */
@@ -53,6 +66,7 @@ export interface components {
             position_percent: number;
             /** @constant */
             bound_state: "WITHIN_DECLARED_RANGE";
+            bound_warning: components["schemas"]["BoundWarning"];
         };
         FixedProfile: {
             /** @constant */

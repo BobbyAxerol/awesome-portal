@@ -392,82 +392,93 @@
     {
       "id": "CG-P20-01",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-01",
-      "what": "canonical compare fixtures (spec 13 §10: attempts, markets, pair_ok, pair_mismatch, pair_nocorr) + Problem"
+      "what": "canonical compare fixtures (spec 13 §10: attempts, markets, pair_ok, pair_mismatch, pair_nocorr) + Problem",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-02",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-02",
-      "what": "schedule/mode per run"
+      "what": "schedule/mode per run",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-03",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DECIDED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-03",
-      "what": "cert/certification per run (same question as CG-P19-05)"
+      "what": "cert/certification per run (same question as CG-P19-05)",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-04",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-04",
-      "what": "OOS Sharpe per fold"
+      "what": "OOS Sharpe per fold",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-05",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-05",
-      "what": "intentional/config differences in attempts mode"
+      "what": "intentional/config differences in attempts mode",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-06",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DECIDED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-06",
-      "what": "win rate + OOS Sharpe common-window (stitched)"
+      "what": "win rate + OOS Sharpe common-window (stitched)",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-07",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-07",
-      "what": "run-library fixture alpha id 'alpha_momentum_btc' vs compare regex ^[a-z][a-z0-9-]{2,63}$"
+      "what": "run-library fixture alpha id 'alpha_momentum_btc' vs compare regex ^[a-z][a-z0-9-]{2,63}$",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-08",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-08",
-      "what": "alpha-version lifecycle ACTIVE/SUPERSEDED per run (related CG-P19-14)"
+      "what": "alpha-version lifecycle ACTIVE/SUPERSEDED per run (related CG-P19-14)",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-09",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "date": "2026-09-24",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-09",
-      "what": "Δ direction: field delta_definition RIGHT_MINUS_LEFT or written confirmation (compare.service.ts subtractDecimal right − left vs its name/argument order)"
+      "what": "Δ direction: field delta_definition RIGHT_MINUS_LEFT or written confirmation (compare.service.ts subtractDecimal right − left vs its name/argument order)",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-10",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DECIDED",
       "date": "2026-09-24",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-10",
-      "what": "count fields when the block is NOT_PUBLISHED (matched_observation_count 0, emitted_point_count 0, correlation.n): null or a UI rule"
+      "what": "count fields when the block is NOT_PUBLISHED (matched_observation_count 0, emitted_point_count 0, correlation.n): null or a UI rule",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P20-11",
       "owner": "Codex (+ Bobby for spec)",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "date": "2026-09-24",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-11",
-      "what": "attempts secondary sort key: spec OOS desc vs service NET_RETURN desc"
+      "what": "attempts secondary sort key: spec OOS desc vs service NET_RETURN desc",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     }
   ],
   "source_capability_blocked": [],
@@ -476,26 +487,34 @@
     {
       "id": "P20-FE-DG-01",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "what": "integrate baseline bb25bf39 → 72d2638b: 3e7055d5 rewrites RunLibrary.tsx (CompareBar becomes a disabled 'not built yet' button — S13's alpha= entry must be rewired); 8bd81b01 DQ-01 drops the module header (G1), 404 → terminal notFound vs S13/S10 403=404 denied, DQ-08 researchFormat vs S13 raw decimal strings; no compare contract/service/P20 evidence change; P17 FreezeDetail.tsx conflict remains; rerun all unit tests + whole Research probe (162 on tree 58f27644, head eeeae14f)"
+      "state": "CLOSED",
+      "what": "integrate baseline bb25bf39 → 72d2638b: 3e7055d5 rewrites RunLibrary.tsx (CompareBar becomes a disabled 'not built yet' button — S13's alpha= entry must be rewired); 8bd81b01 DQ-01 drops the module header (G1), 404 → terminal notFound vs S13/S10 403=404 denied, DQ-08 researchFormat vs S13 raw decimal strings; no compare contract/service/P20 evidence change; P17 FreezeDetail.tsx conflict remains; rerun all unit tests + whole Research probe (162 on tree 58f27644, head eeeae14f)",
+      "resolution": "baseline long integrated on docs/research-loop-plan (3e7055d5, 8bd81b01 present); S13 now formats via researchFormat (DQ-08); U22 guards the RunLibrary/Lineage entry links",
+      "resolved_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "P20-FE-DG-02",
       "owner": "Thanhvuong",
-      "state": "BLOCKED_ON_FEATURE_FLAG",
-      "what": "REAL_API_E2E_RECEIPT for S13 and V11-P20-DR once CONTROL_API_FEATURE_RESEARCH_COMPARE is on in a preview lane with a real Delta pair"
+      "state": "PARTIAL",
+      "what": "REAL_API_E2E_RECEIPT for S13 and V11-P20-DR once CONTROL_API_FEATURE_RESEARCH_COMPARE is on in a preview lane with a real Delta pair",
+      "resolution": "S13 real-API e2e extended to assert every CG-P20 field equals the API; on the read-only preview (image 4626448) compare still answers 503 because it predates the W5c column fix, so the receipt passed only with the canonical fixture injected by the dev proxy; the real receipt needs a preview rebuild (not in W6a's mandate)",
+      "resolved_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "P20-FE-DG-03",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "what": "B2 copy VD-P20-01/02/10/11/13/14/15/17 (+20, +21…29, audit A6/A7 verbatim copy): proposed new hi-fi version; B3 VD-P20-08; B6 data-compare-state for REFUSED (S13-REFUSED-STATE-ATTR)"
+      "state": "DECIDED",
+      "what": "B2 copy VD-P20-01/02/10/11/13/14/15/17 (+20, +21…29, audit A6/A7 verbatim copy): proposed new hi-fi version; B3 VD-P20-08; B6 data-compare-state for REFUSED (S13-REFUSED-STATE-ATTR)",
+      "resolution": "delegated (Bobby 2026-09-25): VD-P20-21 closed by delta_definition; VD-P20-03/04/05/06 closed by the new fields; B3 keep the one meta line; B6 keep data-compare-state=available for a 200 REFUSED answer with its refusal card (the read succeeded; the refusal is content, not a failure); remaining verbatim-copy VDs keep hi-fi copy",
+      "resolved_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "P20-FE-DG-04",
       "owner": "Codex",
-      "state": "OPEN",
-      "what": "CG-P20-01…11 answered or recorded as genuinely absent (NOT_APPLICABLE_PROVEN)"
+      "state": "CLOSED",
+      "what": "CG-P20-01…11 answered or recorded as genuinely absent (NOT_APPLICABLE_PROVEN)",
+      "resolution": "CG-P20-01…11 answered — DELIVERED or DECIDED",
+      "resolved_by": "c54e6b1f (W6a, 2026-09-25)"
     }
   ],
   "known_flake_note": "none in packages C and C-2; PortalShell full-run flake (P16–P19) not seen on 034aef11 or eeeae14f",

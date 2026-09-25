@@ -24,6 +24,7 @@ import {
   BLOCKED_NOTE,
   PARTIAL_SCOPE_NOTE,
   isFreezeLaneNotApplicable, toFreezeRefusal,
+  type ArtifactBytes,
   type CurrentSourceFreeze,
   type FreezeDetail,
 } from "./freezeClient";
@@ -143,6 +144,7 @@ function detail(overrides: Record<string, unknown> = {}): FreezeDetail {
           frozen_value: "14",
           position_percent: 25.7,
           bound_state: "WITHIN_DECLARED_RANGE",
+          bound_warning: { definition_id: "research.bound-warning.v1", copy_version: "research.bound-warning-copy.v1", reference_space: "DECLARED_RANGE", state: "INTERIOR", side: null, reason_code: null },
         },
       ],
       integrity: {
@@ -203,8 +205,31 @@ function detail(overrides: Record<string, unknown> = {}): FreezeDetail {
     source_absences: {
       artifact_bytes: gap("P10_ARTIFACT_BYTES_NOT_ATTESTED", "NOT_ATTESTED"),
     },
+    artifact_bytes: bytes("NOT_VERIFIED"),
     ...overrides,
   } as unknown as FreezeDetail;
+}
+
+/** A10a receipt fixtures, in the server's own vocabulary. */
+function bytes(state: ArtifactBytes["state"], mismatch = false): ArtifactBytes {
+  const receipt = state === "MATCH" || state === "MISMATCH" || state === "MISSING";
+  return {
+    schema_version: "research.artifact-byte-verification.v1",
+    state,
+    reason_code: state === "MATCH" ? null : `P16_${state}`,
+    verification_scope: "P05_SEALED_MANIFEST_PARTS_AND_DOCUMENTS",
+    receipt_id: receipt ? `rabv_${"1".repeat(32)}` : null,
+    verified_at_utc_ms: receipt ? T0 + 902 * DAY : null,
+    artifact_revision: 1,
+    expected_manifest_digest: "1".repeat(64),
+    observed_manifest_digest: receipt ? "1".repeat(64) : null,
+    parts_checked: receipt ? 5 : 0,
+    parts_mismatched: mismatch ? 1 : 0,
+    documents_checked: receipt ? 2 : 0,
+    mismatches: mismatch
+      ? [{ kind: "PART", table_kind: "trials", ordinal: 1, expected_digest: "a".repeat(64), observed_digest: "e".repeat(64) }]
+      : [],
+  };
 }
 
 function blockedDetail(): FreezeDetail {
@@ -393,6 +418,86 @@ describe("P16-T02 — a blocked freeze shows the mismatch and nothing else", () 
 });
 
 /* -------------------------------------------------------------------------
+ * A10a — the byte receipt (P16-T03/T04/T10, UI half)
+ * ---------------------------------------------------------------------- */
+
+describe("A10a — sealed bytes: a receipt, never a timer", () => {
+  it("a read before any verify says 'not verified yet', never a match", () => {
+    const { container } = view();
+    const receipt = container.querySelector("[data-byte-receipt]");
+    expect(receipt?.getAttribute("data-byte-receipt")).toBe("NOT_VERIFIED");
+    expect(receipt?.textContent).toContain("not verified yet");
+    expect(container.querySelector("[data-blocked-banner]")).toBeNull();
+  });
+
+  it("P16-T03: a MISMATCH receipt shows the red BLOCKED banner and both digests of the bad part", () => {
+    const { container } = view({ detail: detail({ artifact_bytes: bytes("MISMATCH", true) }) });
+    const banner = container.querySelector("[data-blocked-banner]");
+    expect(banner?.getAttribute("role")).toBe("alert");
+    expect(banner?.textContent).toContain("BLOCKED — digest drift");
+    expect(banner?.textContent).toContain("nothing downstream of this screen may be trusted");
+    const mismatch = container.querySelector("[data-byte-mismatch='PART']");
+    expect(mismatch?.textContent).toContain("part trials #1");
+    expect(mismatch?.textContent).toContain("≠ observed");
+  });
+
+  it("P16-T10: a held verify cannot turn into a PASS by the clock, and a failed one never does", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    try {
+      let reject: (reason: unknown) => void = () => undefined;
+      const pending = new Promise<Response>((_resolve, fail) => { reject = fail; });
+      vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+        if ((init?.method ?? "GET").toUpperCase() === "POST") return pending;
+        return { ok: true, status: 200, statusText: "200", headers: new Headers(), json: async () => detail() } as unknown as Response;
+      }));
+      const { result } = renderHook(() => useFreeze("R-WFO-118", null));
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(result.current.detail).not.toBeNull();
+      act(() => result.current.runVerify());
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+      expect(result.current.verify.state).toBe("verifying");
+      const held = view({ detail: result.current.detail, verify: result.current.verify });
+      expect(held.container.querySelector("[data-verify-pending]")).not.toBeNull();
+      expect(held.container.textContent).not.toContain("bytes match the seal");
+      expect(held.container.querySelector("[data-verify-result]")).toBeNull();
+      held.unmount();
+      await act(async () => {
+        reject(new TypeError("network down"));
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      expect(result.current.verify.state).toBe("refused");
+      const failed = view({ detail: result.current.detail, verify: result.current.verify });
+      expect(failed.container.textContent).not.toContain("bytes match the seal");
+      expect(failed.container.querySelector("[data-verify-refusal]")).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the verify answer's own receipt wins over the read's older one", () => {
+    const { container } = view({
+      detail: detail({ artifact_bytes: bytes("MATCH") }),
+      verify: {
+        state: "done",
+        verification: {
+          schema_version: "research.freeze-verification.v1",
+          read_authority: "PORTAL_PERSISTED_RESEARCH",
+          run_id: "R-WFO-118",
+          freeze_revision: "p16r1_31bb90",
+          verified_at_utc_ms: T0 + 903 * DAY,
+          result: "BLOCKED",
+          verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+          integrity: detail().freeze.integrity,
+          artifact_bytes: bytes("MISMATCH", true),
+        },
+      },
+    });
+    expect(container.querySelector("[data-byte-receipt]")?.getAttribute("data-byte-receipt")).toBe("MISMATCH");
+    expect(container.querySelector("[data-blocked-banner]")).not.toBeNull();
+  });
+});
+
+/* -------------------------------------------------------------------------
  * P16-T03 — the one POST
  * ---------------------------------------------------------------------- */
 
@@ -449,6 +554,7 @@ describe("P16-T03 — one write, from one click", () => {
           result: "PARTIAL_MATCH",
           verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
           integrity: detail().freeze.integrity,
+          artifact_bytes: bytes("NOT_ENABLED"),
         },
       },
     });
@@ -481,16 +587,22 @@ describe("P16-T03 — one write, from one click", () => {
  * P16-T04 — what-if, ordering and inspection
  * ---------------------------------------------------------------------- */
 
-describe("P16-T04 — an unavailable question gets no control", () => {
-  it("offers no slider, no grid and no submit — not even disabled ones", () => {
+describe("P16-T04 — an unavailable question keeps its card, with nothing that can act", () => {
+  it("A11: the what-if card keeps its place; every slider and action is disabled with the server's reason", () => {
     const { container } = view();
-    expect(container.querySelector("input[type='range']")).toBeNull();
-    expect(container.querySelector("[data-whatif-grid='NOT_APPLICABLE']")).toBeTruthy();
-    expect(container.querySelector("[data-may-submit='false']")).toBeTruthy();
-    expect(container.querySelector("[data-may-create='false']")).toBeTruthy();
-    // The only button on the screen is the explicit verification.
-    const buttons = [...container.querySelectorAll("button")].map((node) => node.getAttribute("data-action"));
-    expect(buttons.filter((action) => action !== null)).toEqual(["verify"]);
+    const card = container.querySelector("[data-panel='what-if']");
+    expect(card?.getAttribute("data-what-if")).toBe(detail().freeze.what_if.state);
+    const ranges = [...container.querySelectorAll<HTMLInputElement>("input[type='range']")];
+    expect(ranges).toHaveLength(2);
+    expect(ranges.every((range) => range.disabled)).toBe(true);
+    expect(card?.querySelector("[data-what-if-reason]")).not.toBeNull();
+    // The only ENABLED button on the screen is the explicit verification.
+    const enabled = [...container.querySelectorAll<HTMLButtonElement>("button")]
+      .filter((node) => !node.disabled)
+      .map((node) => node.getAttribute("data-action"));
+    expect(enabled.filter((action) => action !== null)).toEqual(["verify"]);
+    // No number stands in for an evaluation that does not exist.
+    expect(card?.textContent).not.toMatch(/ΔJ\s*[−+-]?\d/);
   });
 
   it("renders the data windows without turning them into a verdict", () => {
@@ -760,9 +872,11 @@ describe("Screen 07 composition — the hi-fi panels carry only published facts"
     expect(row?.children).toHaveLength(5);
     expect(row?.querySelector("[data-frozen-value='rsi_len']")?.textContent).toBe("14");
     // The reading and the tick are the server's own placement, printed and positioned — never recomputed.
-    const reading = row?.querySelector("[data-bound-state]");
-    expect(reading?.textContent).toBe("25.7% · in range");
-    expect(reading?.getAttribute("title")).toBe("25.7% of the declared range · within declared range");
+    // DR-02: the reading is the shared server definition through the shared renderer.
+    const reading = row?.querySelector("[data-bound-warning]");
+    expect(reading?.textContent).toBe("25.7% · interior");
+    expect(reading?.getAttribute("data-bound-definition")).toBe("research.bound-warning.v1");
+    expect(reading?.getAttribute("title")).toContain("25.7% of the declared range");
     expect((row?.querySelector("[data-frozen-position='rsi_len']") as HTMLElement).style.left).toBe(
       "calc(25.7% - 1.5px)",
     );
@@ -779,9 +893,10 @@ describe("Screen 07 composition — the hi-fi panels carry only published facts"
     expect(card?.textContent).not.toMatch(/✓|\bBOUND\b/);
   });
 
-  it("adds no control: the verification is still the only action", () => {
+  it("adds no live control: the verification is still the only enabled action", () => {
     const { container } = view();
-    const actions = [...container.querySelectorAll("button")]
+    const actions = [...container.querySelectorAll<HTMLButtonElement>("button")]
+      .filter((node) => !node.disabled)
       .map((node) => node.getAttribute("data-action"))
       .filter((action) => action !== null);
     expect(actions).toEqual(["verify"]);
@@ -893,7 +1008,8 @@ describe("W3b — Freeze on the retained WFO lane", () => {
     expect(whatIf?.getAttribute("data-reason")).toBe("RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET");
     expect(whatIf?.textContent).toContain("RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET");
     expect(container.textContent).not.toMatch(/ΔJ\s*[=:]?\s*[−+-]?\d/);
-    expect(whatIf?.querySelector("input[type='range']")).toBeNull();
+    // An older server's bare absence keeps the card with disabled controls (A11).
+    expect([...(whatIf?.querySelectorAll<HTMLInputElement>("input[type='range']") ?? [])].every((range) => range.disabled)).toBe(true);
   });
 
   it("readiness READY, and no P04-hub reason although the hub answered P16 NOT_APPLICABLE", async () => {
@@ -904,5 +1020,111 @@ describe("W3b — Freeze on the retained WFO lane", () => {
     expect(W3B_F.hub_freeze.availability.reason_code).toBe("P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE");
     expect(container.textContent).not.toMatch(HUB_LANE_REASON);
     expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * W5a · P16-T02 / P16-T11 — per-fold ordering on two axes (guide IDs)
+ * ---------------------------------------------------------------------- */
+
+function foldOrderingFixture(overrides: { second?: Partial<Record<string, unknown>> } = {}) {
+  const fold = (id: string, ordinal: number, isEnd: number, oosStart: number, oosEnd: number) => ({
+    fold_id: id,
+    source_ordinal: ordinal,
+    data_time: {
+      is: { start_utc_ms: 1780272000000, end_utc_ms: isEnd },
+      oos: { start_utc_ms: oosStart, end_utc_ms: oosEnd },
+      boundary: "IS_ENDS_BEFORE_OOS",
+      reason_code: null,
+    },
+    verdict: "NOT_CAUSAL_GLOBAL_SELECTION",
+    reason_code: "SELECTION_SAW_EVERY_OUTER_FOLD",
+    oos_generation_child: { state: "MATCH", reason_code: null, audit_ordinal: 10 + ordinal, candidate_id: "2671e27b827ab2701d52e6ce" },
+  });
+  return {
+    schema_version: "research.freeze-fold-ordering.v1",
+    axes: ["DATA_TIME", "WALL_CLOCK"],
+    selection_scope: "GLOBAL",
+    optimization_schedule: "global",
+    source_claims: {
+      chronological_claim: "not_causal_multi_fold_global_calibration",
+      causality_claim: "retrospective_global_calibration",
+      oos_used_for_selection: true,
+    },
+    wall_clock: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS" },
+    frozen_candidate: { identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1", candidate_id: "2671e27b827ab2701d52e6ce", reason_code: null },
+    counts: { folds: 2, not_causal_global_selection: 2, not_evaluated: 0, not_published: 0, oos_child_match: 2, oos_child_mismatch: 0 },
+    folds: [
+      fold("0", 0, 1782860400000, 1782864000000, 1783465200000),
+      { ...fold("1", 1, 1783465200000, 1783468800000, 1784070000000), ...overrides.second },
+    ],
+  };
+}
+
+function delegatedView(ordering: unknown) {
+  const hub = { ...detail(), availability: { state: "NOT_APPLICABLE", reason_code: "RS02_RETAINED_LANE_OWNS_THIS_RUN" } } as FreezeDetail;
+  const lane = { ...retainedFreeze(), fold_ordering: ordering } as unknown as CurrentSourceFreeze;
+  return view({ detail: hub, retained: { state: "ready", freeze: lane } });
+}
+
+describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
+  it("draws DATA TIME and WALL CLOCK as two separate axes, with one row per retained fold", () => {
+    const { container } = delegatedView(foldOrderingFixture());
+    const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
+    expect(panel.getAttribute("data-ordering-state")).toBe("GLOBAL");
+    expect(panel.querySelector("[data-fold-ordering]")?.getAttribute("data-axes")).toBe("DATA_TIME WALL_CLOCK");
+    expect(panel.querySelectorAll("[data-axis]")).toHaveLength(2);
+    const rows = [...panel.querySelectorAll("[data-axis='DATA_TIME'] [data-fold-row]")];
+    expect(rows.map((row) => row.getAttribute("data-fold-row"))).toEqual(["0", "1"]);
+    for (const row of rows) {
+      expect(row.getAttribute("data-boundary")).toBe("IS_ENDS_BEFORE_OOS");
+      expect(row.querySelector("[data-verdict-words]")?.textContent).toBe("not causal · global selection");
+      expect(row.querySelectorAll("[data-segment]")).toHaveLength(2);
+    }
+    // The wall-clock axis is a typed absence, never a drawn tick.
+    const clock = panel.querySelector("[data-axis='WALL_CLOCK']") as HTMLElement;
+    expect(clock.querySelector("[data-absence-state='NOT_PUBLISHED']")?.getAttribute("data-reason")).toBe(
+      "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS",
+    );
+    expect(clock.querySelector("[data-segment]")).toBeNull();
+  });
+
+  it("names the engine's own claim, never a PASS", () => {
+    const { container } = delegatedView(foldOrderingFixture());
+    const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
+    expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("⚠ NOT CAUSAL · GLOBAL SELECTION");
+    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("not_causal_multi_fold_global_calibration");
+    expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("every outer fold's OOS window had been read");
+    expect(panel.textContent).not.toMatch(/\bPASS\b|causal ✓/);
+  });
+
+  it("marks only the fold whose IS overlaps its OOS", () => {
+    const second = foldOrderingFixture().folds[1]!;
+    const { container } = delegatedView(foldOrderingFixture({ second: { data_time: { ...second.data_time, boundary: "IS_OVERLAPS_OOS" } } }));
+    const words = [...container.querySelectorAll("[data-fold-row] [data-boundary-words]")].map((node) => node.textContent);
+    expect(words).toEqual(["IS ends before OOS", "IS overlaps OOS"]);
+  });
+
+  it("an older server without the block keeps the typed wall-clock absence", () => {
+    const { container } = delegatedView(undefined);
+    const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
+    expect(panel.getAttribute("data-ordering-state")).toBe("NOT_PUBLISHED");
+    expect(panel.querySelector("[data-fold-ordering]")).toBeNull();
+    expect(panel.querySelector("[data-reason='UI_RETAINED_LANE_HAS_NO_FIELD']")).toBeTruthy();
+  });
+});
+
+describe("W5a · P16-T11 — the OOS generation child is the frozen θ*", () => {
+  it("prints the server's per-fold comparison, a mismatch in red on that fold only", () => {
+    const { container } = delegatedView(foldOrderingFixture({
+      second: { oos_generation_child: { state: "MISMATCH", reason_code: null, audit_ordinal: 11, candidate_id: "baf7c707c2436a55bb012a15" } },
+    }));
+    const children = [...container.querySelectorAll("[data-fold-row]")].map((row) => [
+      row.getAttribute("data-oos-child"), row.querySelector("[data-child-words]")?.textContent,
+    ]);
+    expect(children).toEqual([
+      ["MATCH", "OOS child = frozen θ* · 2671e27b"],
+      ["MISMATCH", "OOS child ≠ frozen θ* · baf7c707"],
+    ]);
   });
 });

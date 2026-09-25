@@ -53,5 +53,20 @@
       "reason_code": null
     }
   },
-  "verification_scope": "PORTAL_RETAINED_DIGEST_BINDING_ONLY"
+  "verification_scope": "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+  "artifact_bytes": {
+    "schema_version": "research.artifact-byte-verification.v1",
+    "state": "NOT_ENABLED",
+    "reason_code": "P16_ARTIFACT_BYTE_VERIFY_NOT_ENABLED",
+    "verification_scope": "P05_SEALED_MANIFEST_PARTS_AND_DOCUMENTS",
+    "receipt_id": null,
+    "verified_at_utc_ms": null,
+    "artifact_revision": null,
+    "expected_manifest_digest": null,
+    "observed_manifest_digest": null,
+    "parts_checked": 0,
+    "parts_mismatched": 0,
+    "documents_checked": 0,
+    "mismatches": []
+  }
 }

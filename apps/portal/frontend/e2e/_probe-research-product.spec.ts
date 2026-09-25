@@ -957,7 +957,7 @@ test("S01 groups the loaded page by alpha and says that is what it grouped", asy
   // Three bindings on this page: one alpha, and the legacy row whose binding
   // was never published — which is not the same thing as scratch.
   await expect(page.locator("[data-group]")).toHaveCount(2);
-  await expect(page.locator("[data-group='a:alpha_momentum_btc:av_0_9_3']")).toContainText(
+  await expect(page.locator("[data-group='a:alpha-momentum-btc:av_0_9_3']")).toContainText(
     "runs below share one immutable code artifact",
   );
   await expect(page.locator("[data-group='zz:withheld']")).toContainText("binding not published");

@@ -112,7 +112,7 @@ const SourceRevisionSchema = z.object({
   replay_revision: z.string().regex(/^p17r1_[0-9a-f]{64}$/),
 }).strict();
 
-export const ResearchReportFrozenCoreSchema = z.object({
+export const ResearchReportFrozenCoreV1Schema = z.object({
   schema_version: z.literal("research.report-frozen-core.v1"),
   report_source: z.literal("P13_P17_FIXED_PROFILE"),
   source_revisions: SourceRevisionSchema,
@@ -165,6 +165,187 @@ export const ResearchReportFrozenCoreSchema = z.object({
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ReportFactSchema),
 }).strict();
 
+/*
+ * W6a · frozen core v2 (CG-P18-01…11). A sealed v1 core stays readable and
+ * byte-identical; every report sealed from now on is v2. v2 adds, never
+ * reinterprets: typed passport keys, a server-composed title, a typed
+ * certification absence, the §16.3 identity keys, per-fold rows with their
+ * IS/OOS/decay facts, a stage check next to stage progress, an IS equity
+ * segment, and artifact filenames bound to the sealed P05 parts. The Delta
+ * WFO lane (RS02_RETAINED_CURRENT_SOURCE) is sealed from the retained
+ * current-source reads; a P04 run keeps its P13–P17 hubs.
+ */
+const SourceRevisionV2Schema = z.string().regex(/^(?:p1[3-7]r1_[0-9a-f]{64}|rs02_[a-z][a-z-]{2,40}_[0-9a-f]{64})$/);
+const ReportScopeV2Schema = z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "NOT_PUBLISHED", "OOS_MEAN_OF_FOLDS", "OOS_SUM_OF_FOLDS"]);
+
+const ReportFactV2Schema = ReportFactSchema.extend({
+  key: z.string().regex(/^[a-z][a-z0-9_]{2,63}$/),
+  label: z.string().min(1).max(96),
+}).strict();
+
+/** v2 adds RATIO: a Sharpe or a decay is a ratio, never a fraction to print as a percentage. */
+const ReportMetricV2Schema = ReportMetricSchema.extend({
+  unit: z.enum(["CURRENCY", "FRACTION", "COUNT", "RATIO"]),
+  scope: ReportScopeV2Schema,
+}).strict();
+const HeadlineV2Schema = HeadlineSchema.extend({ scope: ReportScopeV2Schema }).strict();
+
+const EquityV2Schema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  scope: z.enum([
+    "P13_OOS_EQUITY",
+    "RS02_STITCHED_OUTER_TEST_WINDOWS",
+    "RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST",
+    "NOT_PUBLISHED",
+  ]),
+  source_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
+  /** CG-P20-10's rule, applied here too: a block that is not published carries no count. */
+  emitted_point_count: z.number().int().nonnegative().max(600).nullable(),
+  sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1", "OBSERVATION_EXTREMA_BUCKET_V2"]).nullable(),
+  points: z.array(EquityPointSchema).max(600),
+  availability: AvailabilitySchema,
+}).strict();
+
+const FoldFactSchema = z.object({
+  value: ExactDecimalSchema.nullable(),
+  availability: AvailabilitySchema,
+}).strict();
+
+const FoldThresholdSchema = z.object({
+  oos_sharpe_min: ExactDecimalSchema,
+  decay_max: ExactDecimalSchema,
+  max_drawdown_min: ExactDecimalSchema,
+}).strict();
+
+const FoldRowV2Schema = z.object({
+  fold_id: z.string().min(1).max(128),
+  source_ordinal: z.number().int().nonnegative().max(4_096),
+  /** Opening time of the first and of the last outer-test bar (both inclusive). */
+  test_start_utc_ms: UtcMsSchema.nullable(),
+  test_last_bar_utc_ms: UtcMsSchema.nullable(),
+  verdict: z.enum(["PASS", "WARN", "DRAG", "NOT_EVALUATED"]),
+  failed_criteria: z.array(z.enum(["OOS_SHARPE", "DECAY", "MAX_DRAWDOWN"])).max(3),
+  drag_target: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/).nullable(),
+  params: z.object({
+    text: z.string().min(1).max(1_024).nullable(),
+    availability: AvailabilitySchema,
+  }).strict(),
+  is_sharpe: FoldFactSchema,
+  oos_sharpe: FoldFactSchema,
+  decay: FoldFactSchema,
+  /** The fold's own outer-test return; the stitched account compounds these segments. */
+  contribution_fraction: FoldFactSchema,
+  max_drawdown_fraction: FoldFactSchema,
+  oos_trades: FoldFactSchema,
+}).strict();
+
+const FoldsV2Schema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  rule: z.object({
+    version: z.literal("research.fold-verdict.v1"),
+    pass: FoldThresholdSchema,
+    warn: FoldThresholdSchema,
+  }).strict().nullable(),
+  order: z.literal("SOURCE_ORDINAL_ASC"),
+  params_handoff: z.object({
+    scope: z.enum(["GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD", "NOT_PUBLISHED"]),
+    text: z.string().min(1).max(1_024).nullable(),
+    availability: AvailabilitySchema,
+  }).strict(),
+  rows: z.array(FoldRowV2Schema).max(256),
+  availability: AvailabilitySchema,
+}).strict();
+
+const StageV2Schema = StageSchema.extend({
+  /** CG-P18-05: a check result is a sourced fact; `state` stays progress only. */
+  check: z.object({
+    result: z.enum(["PASS", "CAVEAT", "FAIL", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
+    text: z.string().min(1).max(512).nullable(),
+    source_key: z.string().regex(/^[a-z][a-z0-9_.-]{2,95}$/).nullable(),
+    availability: AvailabilitySchema,
+  }).strict(),
+}).strict();
+
+const ArtifactV2Schema = z.object({
+  key: z.enum([
+    "RUN_SPEC", "SELECTION_TRACE", "FOLD_PLAN", "FILL_LEDGER",
+    "METRICS_SUMMARY", "CLAIM", "BUNDLE", "SEARCH_TRACE", "CANDIDATES", "OBSERVATIONS",
+  ]),
+  /** Path of the sealed file inside the P05 artifact; never a host or worker path. */
+  filename: z.string().regex(/^tables\/[a-z_]{2,40}\/part-[0-9]{6}\.parquet$/).nullable(),
+  digest: DigestSchema.nullable(),
+  state: z.enum(["SEALED", "NOT_PUBLISHED", "NOT_APPLICABLE", "ABORTED"]),
+  part_count: z.number().int().positive().max(4_096).nullable(),
+  download: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    reason_code: ReasonCodeSchema,
+  }).strict(),
+  availability: AvailabilitySchema,
+}).strict();
+
+export const ResearchReportFrozenCoreV2Schema = z.object({
+  schema_version: z.literal("research.report-frozen-core.v2"),
+  report_source: z.enum(["P13_P17_FIXED_PROFILE", "RS02_RETAINED_CURRENT_SOURCE"]),
+  source_revisions: z.object({
+    evidence_revision: SourceRevisionV2Schema,
+    split_revision: SourceRevisionV2Schema,
+    search_revision: SourceRevisionV2Schema,
+    freeze_revision: SourceRevisionV2Schema,
+    replay_revision: SourceRevisionV2Schema,
+  }).strict(),
+  source_digests: z.object({
+    source_transform_digest: DigestSchema.nullable(),
+    requested_spec_digest: DigestSchema.nullable(),
+    effective_spec_digest: DigestSchema.nullable(),
+    dataset_binding_digest: DigestSchema.nullable(),
+    manifest_digest: DigestSchema.nullable(),
+  }).strict(),
+  title: z.object({
+    text: z.string().min(1).max(320).nullable(),
+    strategy: z.string().min(1).max(240).nullable(),
+    symbol: z.string().min(1).max(64).nullable(),
+    timeframe: z.string().min(1).max(64).nullable(),
+    availability: AvailabilitySchema,
+  }).strict(),
+  certification: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    grade: z.null(),
+    reason_code: ReasonCodeSchema,
+    availability: AvailabilitySchema,
+  }).strict(),
+  passport: z.array(ReportFactV2Schema).length(6),
+  identity: z.array(IdentityFieldSchema).min(12).max(24),
+  metrics: z.array(ReportMetricV2Schema).min(1).max(16),
+  headline: z.array(HeadlineV2Schema).length(6),
+  headline_footnote: z.string().min(1).max(512),
+  equity: EquityV2Schema,
+  equity_is: EquityV2Schema,
+  folds: FoldsV2Schema,
+  stages: z.array(StageV2Schema).length(5),
+  artifacts: z.array(ArtifactV2Schema).min(7).max(12),
+  warnings: z.array(WarningSchema).max(8),
+  promotion: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    line: z.string().min(1).max(512),
+    availability: AvailabilitySchema,
+  }).strict(),
+  provenance: z.object({
+    line: z.string().min(1).max(1_024),
+    metric_registry_version: z.enum(["research.metric-registry.v1", "research.metric-registry.v2", "research.current-source-metrics.v1"]),
+    data_signature: DigestSchema.nullable(),
+    read_model_revision: z.literal("research.report-read-model.v2"),
+    verdict_rule_revision: z.enum(["research.report-verdict-rule.v1", "research.fold-verdict.v1"]),
+  }).strict(),
+  source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ReportFactSchema),
+}).strict();
+
+/** A stored core is read under the schema it was sealed with. */
+export const ResearchReportFrozenCoreSchema = z.discriminatedUnion("schema_version", [
+  ResearchReportFrozenCoreV1Schema,
+  ResearchReportFrozenCoreV2Schema,
+]);
+
 const ApprovalAnnotationSchema = z.object({
   state: z.enum(["NOT_PUBLISHED", "AVAILABLE"]),
   text: z.string().min(1).max(2_048).nullable(),
@@ -210,5 +391,6 @@ export const ResearchReportExportStatusSchema = z.object({
 }).strict();
 
 export type ResearchReportFrozenCore = z.infer<typeof ResearchReportFrozenCoreSchema>;
+export type ResearchReportFrozenCoreV2 = z.infer<typeof ResearchReportFrozenCoreV2Schema>;
 export type ResearchReportDetailResponse = z.infer<typeof ResearchReportDetailResponseSchema>;
 export type ResearchReportExportStatus = z.infer<typeof ResearchReportExportStatusSchema>;

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { Pool } from "pg";
 
 import { ResearchReportFrozenCoreSchema } from "../src/research/report.contract";
@@ -211,6 +213,58 @@ describe("P18 disposable PostgreSQL migration proof", () => {
       const downloaded = await repository.download(scope, scope.runId, first.jobId);
       expect(downloaded?.bytes).toEqual(bytes);
       await expect(repository.download({ ...scope, actorUserId: "unknown_p18" }, scope.runId, first.jobId))
+        .rejects.toMatchObject({ code: "RESEARCH_REPORT_FORBIDDEN", status: 403 });
+    } finally {
+      await database.end();
+    }
+  });
+
+  it("W6a: seals and re-reads a v2 core next to a v1 core, and reads the sealed P05 parts under the runtime role", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    try {
+      const scope = await seedRun(database, "_w6a");
+      const repository = new ResearchReportRepository(database);
+      const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+      const fixture = JSON.parse(readFileSync(resolve(contracts, "fixtures", "research-report.wfo-retained.valid.json"), "utf8"));
+      const v1 = await repository.seal(scope, scope.runId, sealedCore());
+      const v2 = await repository.seal(scope, scope.runId, fixture.frozen_core);
+      expect(v2.frozenCore.schema_version).toBe("research.report-frozen-core.v2");
+      expect(v2.reportRevision).not.toBe(v1.reportRevision);
+      // The newest sealed core is the one served; the v1 row stays readable and unchanged.
+      expect((await repository.read(scope, scope.runId))!.reportRevision).toBe(v2.reportRevision);
+
+      expect(await repository.sealedArtifactParts(scope, scope.runId, null)).toBeNull();
+      const manifest = "e".repeat(64);
+      const client = await database.connect();
+      try {
+        await client.query("SET session_replication_role = replica");
+        await client.query(`INSERT INTO research.artifacts
+          (workspace_id, artifact_id, run_id, table_kind, schema_version, manifest_digest, state, retention_class,
+           storage_locator, artifact_revision, worker_attempt_id, lease_epoch, manifest_schema_version, total_rows, total_bytes, sealed_at)
+          VALUES ($1, 'rart_w6a', $2, 'research_bundle', 'research.artifact-manifest.v1', $3, 'SEALED',
+                  'RESEARCH_EVIDENCE', 'artifacts/rart_w6a', 1, 'rwa_w6a', 1, 'research.artifact-manifest.v1', 2, 200, now())`,
+        [scope.workspaceId, scope.runId, manifest]);
+        for (const [tableKind, partDigest] of [["folds", "1".repeat(64)], ["selection", "2".repeat(64)]] as const) {
+          await client.query(`INSERT INTO research.artifact_parts
+            (workspace_id, artifact_id, table_kind, part_ordinal, schema_version, relative_path, part_digest, row_count, byte_count)
+            VALUES ($1, 'rart_w6a', $2, 1, 'research.parquet-part.v1', 'tables/' || $2 || '/part-000001.parquet', $3, 1, 100)`,
+          [scope.workspaceId, tableKind, partDigest]);
+        }
+      } finally {
+        await client.query("SET session_replication_role = DEFAULT").catch(() => undefined);
+        client.release();
+      }
+      const parts = await repository.sealedArtifactParts(scope, scope.runId, null);
+      expect(parts).toEqual({
+        artifactRevision: 1,
+        manifestDigest: manifest,
+        parts: [
+          { tableKind: "folds", partOrdinal: 1, relativePath: "tables/folds/part-000001.parquet", partDigest: "1".repeat(64) },
+          { tableKind: "selection", partOrdinal: 1, relativePath: "tables/selection/part-000001.parquet", partDigest: "2".repeat(64) },
+        ],
+      });
+      expect(await repository.sealedArtifactParts(scope, scope.runId, 2)).toBeNull();
+      await expect(repository.sealedArtifactParts({ ...scope, actorUserId: "unknown_w6a" }, scope.runId, null))
         .rejects.toMatchObject({ code: "RESEARCH_REPORT_FORBIDDEN", status: 403 });
     } finally {
       await database.end();

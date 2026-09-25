@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-25",
- "route_count": 186,
+ "route_count": 190,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1606,6 +1606,16 @@
    "test_owner": "claude"
   },
   {
+   "route": "POST /internal/research/progress/artifacts/what-if/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "W5a A10c WHATIF_GRID seal is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing, what-if execution profile only; the results must answer exactly the admitted evaluations from the diagnostic run's own SEALED P05 artifact (PostgreSQL trigger); immutable once written; the frozen parent run is never written.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
    "route": "POST /internal/research/progress/events",
    "controller": "research/progress-ingress.controller.ts",
    "interaction_class": "INTENTIONALLY_UNEXPOSED",
@@ -1688,12 +1698,22 @@
   {
    "route": "POST /api/v1/quantbt/runs/:runId/freeze/verify",
    "controller": "research/freeze.controller.ts",
-   "interaction_class": "INTERACTION_READ",
+   "interaction_class": "PORTAL_MUTATION",
    "consumer": "TYPED_FRONTEND_PORT",
-   "unused_capability": true,
-   "evidence": "P16 explicit same-origin CSRF/origin-protected retained-binding re-read. It persists no verification receipt, writes no business data, opens no artifact/source path, queues no diagnostic and has no command effect; PARTIAL_MATCH is deliberately not an artifact-integrity PASS.",
+   "unused_capability": false,
+   "evidence": "P16 explicit same-origin CSRF/origin-protected verify. It re-reads the retained bindings and (W5a A10a, FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY) re-hashes the run's sealed P05 artifact through the private observer, appending one immutable bounded receipt (research.artifact_byte_receipts_v1). It never rewrites an expected digest, opens no path for the browser, queues no diagnostic and has no command effect; PARTIAL_MATCH is never 'chain intact'.",
    "owner": "codex",
-   "test_owner": "codex"
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/current-source/freeze/what-if/evaluate",
+   "controller": "research/whatif.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "W5a A10c explicit same-origin CSRF/origin-protected 'evaluate grid' action (FEATURE_RESEARCH_WHATIF). Admits at most one bounded DIAGNOSTIC Research job (own attempt, DIAGNOSTIC_OF_RUN run, ≤81 unique evaluations, deduplicated by grid key) through the P10 producer → P06 claim → Portal child path; never on a GET, mount or slider move; never writes the frozen parent run.",
+   "owner": "claude",
+   "test_owner": "claude"
   },
   {
    "route": "GET /api/v1/quantbt/runs/:runId/execute/replay",
@@ -1864,6 +1884,26 @@
    "evidence": "RS-02 named Replay drill-down returns retained research-model observations and opaque relation-bound playheads, private/no-store. It never fabricates broker orders, fills or candles and does not claim execution state.",
    "owner": "codex",
    "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/replay/transitions",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "W5b P17 close-target transition ledger for Screen 08: retained bars whose accepted position changed, keyset over the original bar ordinal (sparse, never renumbered), with the account's own fee and a replay seek cursor; private/no-store. Target transitions settled at the close, never fills or a trade pairing; reads only the sealed local relation and starts no compute.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/replay/child-audit",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "P17-T14 child audit for Screen 08: one fold's QuantBT strategy-isolation records (strategy_lifecycle_table rows, <= 64) read from the sealed local FOLD row by its original fold id, with the original audit ordinal, candidate id and seed; ETag, private. Reads no source bytes and starts no compute.",
+   "owner": "claude",
+   "test_owner": "claude"
   },
   {
    "route": "GET /api/v1/research/release-candidates/:releaseCandidateId/publication",

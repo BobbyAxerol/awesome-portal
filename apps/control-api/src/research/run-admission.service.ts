@@ -26,9 +26,12 @@ import {
   P04_DELTA_ADAPTER_ID,
   P04_DELTA_ALPHA_ID,
   P04_DELTA_ALPHA_VERSION_ID,
+  P04_DELTA_DECLARED_CONTRACT,
   P04_DELTA_FIXED_PARAMETERS,
 } from "./p04-delta.binding";
 import { ResearchMetadataRepository } from "./repository";
+import { parseDecimal } from "./whatif.grid";
+import { WHATIF_PROFILE } from "./whatif.profile";
 import { ResearchRunCreateError } from "./run-create.error";
 
 export interface ResearchRunAdmission {
@@ -227,9 +230,13 @@ export class ResearchRunAdmissionService {
     if (requested.route_params && Object.keys(requested.route_params).length !== 0) {
       return "The Delta walk-forward profile does not accept route-specific parameters.";
     }
-    if (requested.parameter_space_overrides.length !== 0 ||
+    // W5a · A10c sibling: the only admitted overrides are pins of the two
+    // what-if axes, on a declared step inside the declared range; every other
+    // parameter is still searched exactly as the locked profile says.
+    const pinReason = siblingPinReason(requested.parameter_space_overrides);
+    if (pinReason !== null ||
         (requested.optimization_config && Object.keys(requested.optimization_config).length !== 0)) {
-      return "The Delta walk-forward profile searches only the installed Delta parameter space and accepts no overrides.";
+      return pinReason ?? "The Delta walk-forward profile searches only the installed Delta parameter space and accepts no overrides.";
     }
     if (requested.optuna_trials !== profile.optuna_trials) {
       return "The Delta walk-forward profile runs exactly 3 Optuna trials.";
@@ -326,6 +333,35 @@ function utcInstantMs(value: string): number | null {
   const withTime = normalized.length === 10 ? `${normalized}T00:00:00` : normalized;
   const parsed = Date.parse(hasZone ? withTime : `${withTime}Z`);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * W5a: pins a what-if sibling may carry (the two Screen-07 axes), each on its
+ * declared step inside its declared range. Null when admitted.
+ */
+function siblingPinReason(overrides: ResearchRequestedSpec["parameter_space_overrides"]): string | null {
+  if (overrides.length === 0) return null;
+  const refused = "The Delta walk-forward profile searches only the installed Delta parameter space and accepts no overrides except what-if pins on rvol and slpercent.";
+  if (overrides.length > WHATIF_PROFILE.axes.length) return refused;
+  const seen = new Set<string>();
+  for (const override of overrides) {
+    const axis = WHATIF_PROFILE.axes.find((entry) => entry.parameter === override.name);
+    if (override.kind !== "pin" || !axis || seen.has(override.name)) return refused;
+    seen.add(override.name);
+    const range = P04_DELTA_DECLARED_CONTRACT.parameter_space[axis.parameter as "rvol" | "slpercent"];
+    const value = parseDecimal(String(override.value));
+    const low = parseDecimal(String(range.minimum));
+    const high = parseDecimal(String(range.maximum));
+    const step = parseDecimal(String(range.step));
+    if (!value || !low || !high || !step) return "A what-if pin must be an exact decimal.";
+    const scale = Math.max(value.scale, low.scale, high.scale, step.scale);
+    const at = (entry: { units: bigint; scale: number }) => entry.units * 10n ** BigInt(scale - entry.scale);
+    const v = at(value);
+    if (v < at(low) || v > at(high) || (v - at(low)) % at(step) !== 0n) {
+      return `The what-if pin ${override.name} must lie on its declared step inside ${range.minimum}–${range.maximum}.`;
+    }
+  }
+  return null;
 }
 
 /** Fold count of the immutable P08 advanced topology; null for any other shape. */

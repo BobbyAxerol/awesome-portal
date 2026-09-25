@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 
 import { EChart } from "../charts/EChart";
 import { baseOption, roleColorsNow } from "../charts/theme";
+import { CANDLE_SUBTITLE, CandleReplayBody, hasBarLedger, paddedRange } from "./ExecuteCandleReplay";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
@@ -218,7 +219,9 @@ function SampleChart({
       animation: false,
       grid: { left: GRID.left, right: GRID.right, top: 12, bottom: 26 },
       xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { fontSize: 9 } },
-      yAxis: { type: "value", scale: true, axisLabel: { fontSize: 9 } },
+      /* A flat window (equity unchanged) is padded by a hair of its level,
+         never autoscaled to a ±50% band that reads as a swing (W3b/W5b). */
+      yAxis: { type: "value", scale: true, ...(paddedRange(items.map((point) => Number(point.equity))) ?? {}), axisLabel: { fontSize: 9 } },
       tooltip: {
         trigger: "axis",
         formatter: (params: unknown) => {
@@ -1227,11 +1230,22 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
           {EXECUTE_TITLE}
         </h1>
         <p className="text-[13.5px] italic" style={{ color: "var(--ink-mute)" }} data-subtitle>
-          {lane === "retained" ? EXECUTE_SUBTITLE_RETAINED : EXECUTE_SUBTITLE}
+          {lane === "retained" && retainedReplay && hasBarLedger(retainedReplay)
+            ? CANDLE_SUBTITLE
+            : lane === "retained"
+              ? EXECUTE_SUBTITLE_RETAINED
+              : EXECUTE_SUBTITLE}
         </p>
       </div>
 
-      {lane === "retained" && retainedReplay && controller.retained.state === "ready" ? (
+      {lane === "retained" && retainedReplay && controller.retained.state === "ready" && hasBarLedger(retainedReplay) ? (
+        <CandleReplayBody
+          replay={retainedReplay}
+          slot={controller.retained}
+          controller={controller}
+          transport={transport}
+        />
+      ) : lane === "retained" && retainedReplay && controller.retained.state === "ready" ? (
         <RetainedBody
           replay={retainedReplay}
           slot={controller.retained}

@@ -10,6 +10,10 @@
 
 import { z } from "zod";
 
+import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
+import { WhatIfSchema } from "./whatif.contract";
+import { FoldOrderingSchema } from "./fold-ordering";
+
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
@@ -113,6 +117,41 @@ const CommonSchema = z.object({
   provenance: ProvenanceSchema,
 }).strict();
 
+const CountSchema = z.number().int().nonnegative().max(2_000_000);
+const TokenSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/);
+
+/**
+ * W5b (P17) · one retained bar of the final account: the candle QuantBT
+ * consumed (from the run's analysed HMD bars) and the account's own
+ * fee/turnover/funding for that bar, plus a running checkpoint so a far seek
+ * reads the same state a sequential replay reaches. `transition` is a change
+ * of the engine's accepted position — on close_target_v2 the only execution
+ * event there is; it is never a fill.
+ */
+const ReplayBarSchema = z.object({
+  candle: z.object({
+    open: DecimalSchema,
+    high: DecimalSchema,
+    low: DecimalSchema,
+    close: DecimalSchema,
+    volume: DecimalSchema.nullable(),
+  }).strict().nullable(),
+  fee: DecimalSchema.nullable(),
+  turnover: DecimalSchema.nullable(),
+  funding: DecimalSchema.nullable(),
+  rejected_orders: CountSchema.nullable(),
+  position_before: DecimalSchema.nullable(),
+  transition: z.boolean(),
+  fold_id: TokenSchema.nullable(),
+  checkpoint: z.object({
+    cumulative_fee: DecimalSchema.nullable(),
+    cumulative_turnover: DecimalSchema.nullable(),
+    cumulative_funding: DecimalSchema.nullable(),
+    transition_count: CountSchema,
+    rejected_orders: CountSchema.nullable(),
+  }).strict(),
+}).strict();
+
 const ObservationSchema = z.object({
   /** Original table row ordinal; never an inferred execution event sequence. */
   source_ordinal: z.number().int().nonnegative().max(2_000_000),
@@ -123,7 +162,130 @@ const ObservationSchema = z.object({
   accepted_position: DecimalSchema,
   drawdown_fraction: DecimalSchema,
   signal_target: DecimalSchema.nullable(),
+  /** W5b: null on a seal retained before the bar ledger existed. */
+  bar: ReplayBarSchema.nullable(),
   playback_cursor: OpaqueCursorSchema,
+}).strict();
+
+const FoldSegmentSchema = z.object({
+  fold_id: TokenSchema,
+  first_ordinal: CountSchema,
+  last_ordinal: CountSchema,
+  bars: CountSchema,
+  start_basis: z.enum(["PREVIOUS_OBSERVATION", "FIRST_WINDOW_OBSERVATION"]),
+  start_equity: DecimalSchema,
+  end_equity: DecimalSchema,
+  start_position: DecimalSchema.nullable(),
+  end_position: DecimalSchema,
+  transitions: CountSchema,
+  fee: DecimalSchema.nullable(),
+  turnover: DecimalSchema.nullable(),
+  /** Opaque playhead on the fold's first test bar (same relation as `rows`). */
+  start_cursor: OpaqueCursorSchema,
+}).strict();
+
+/**
+ * W5b · what the signal-notional route really produced, as retained at seal
+ * time. Everything here is a QuantBT value or a count of QuantBT records;
+ * the only Portal words are the enums that name a source policy.
+ */
+export const ResearchCurrentSourceReplayExecutionSchema = z.object({
+  schema_version: z.literal("research.current-source-replay-execution.v1"),
+  state: z.enum(["AVAILABLE", "NOT_RETAINED_LEGACY"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  route: z.object({
+    engine_id: TokenSchema.nullable(),
+    signal_phase: TokenSchema.nullable(),
+    fill_phase: TokenSchema.nullable(),
+    accounting_certified: z.boolean().nullable(),
+    fill_price_policy: TokenSchema.nullable(),
+    target_intent_kind: TokenSchema.nullable(),
+    intrabar_exit_model: TokenSchema.nullable(),
+    same_bar_policy: TokenSchema.nullable(),
+    allow_partial_fill: z.boolean().nullable(),
+    oms_mode: TokenSchema.nullable(),
+    margin_mode: TokenSchema.nullable(),
+    report_level: TokenSchema.nullable(),
+    fee_rate_oneway: DecimalSchema.nullable(),
+    slippage_bps: DecimalSchema.nullable(),
+    use_funding: z.boolean().nullable(),
+  }).strict(),
+  counts: z.object({
+    bars: CountSchema.nullable(),
+    orders_published: CountSchema.nullable(),
+    fills_published: CountSchema.nullable(),
+    trades_published: CountSchema.nullable(),
+    transitions: CountSchema.nullable(),
+    bars_with_turnover: CountSchema.nullable(),
+    rejected_orders: CountSchema.nullable(),
+  }).strict(),
+  totals: z.object({
+    fee: DecimalSchema.nullable(),
+    turnover: DecimalSchema.nullable(),
+    funding: DecimalSchema.nullable(),
+  }).strict(),
+  fold_capital: z.object({
+    /** QuantBT's `fold_account_policy`, verbatim. */
+    policy: TokenSchema.nullable(),
+    /** QuantBT's `account_execution_plan.execution_mode`, verbatim. */
+    account_execution: TokenSchema.nullable(),
+    boundary_position_policy: TokenSchema.nullable(),
+    /**
+     * What the policy means for equity across a fold boundary. CONTINUOUS:
+     * one stitched account, fold k starts at fold k-1's end equity.
+     * RESET_PER_FOLD: each fold is its own account and must not be compounded.
+     */
+    equity_continuity: z.enum(["CONTINUOUS_ACROSS_FOLDS", "RESET_PER_FOLD", "NOT_ASSERTED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    segments: z.array(FoldSegmentSchema).max(256),
+    boundary_events: z.array(z.object({
+      previous_fold_id: TokenSchema.nullable(),
+      fold_id: TokenSchema.nullable(),
+      boundary_utc_ms: UtcMsSchema.nullable(),
+      next_test_start_utc_ms: UtcMsSchema.nullable(),
+      gap_bars: CountSchema.nullable(),
+      policy: TokenSchema.nullable(),
+    }).strict()).max(256),
+  }).strict(),
+  candle_overview: z.object({
+    source_bar_count: CountSchema,
+    emitted_bucket_count: z.number().int().nonnegative().max(160),
+    bucket_bars: z.number().int().positive().max(2_000_000),
+    sampling: z.enum(["FULL", "OHLC_BUCKET_V1"]),
+    envelope: z.object({
+      max_high: DecimalSchema,
+      max_high_at_utc_ms: UtcMsSchema,
+      min_low: DecimalSchema,
+      min_low_at_utc_ms: UtcMsSchema,
+    }).strict(),
+    values: z.array(z.object({
+      first_ordinal: CountSchema,
+      last_ordinal: CountSchema,
+      open_utc_ms: UtcMsSchema,
+      close_utc_ms: UtcMsSchema,
+      open: DecimalSchema,
+      high: DecimalSchema,
+      low: DecimalSchema,
+      close: DecimalSchema,
+      volume: DecimalSchema.nullable(),
+      transitions: CountSchema,
+    }).strict()).max(160),
+  }).strict().nullable(),
+  /** P17-T14: run-level child-audit facts; the records are a per-fold sub-read. */
+  child_audit: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    policy: TokenSchema.nullable(),
+    records_dropped_by_source: CountSchema.nullable(),
+    source_record_count: CountSchema.nullable(),
+    source_run_fingerprint: TokenSchema.nullable(),
+  }).strict(),
+  sequence: z.object({
+    order: z.literal("SOURCE_TABLE_ORDINAL_ASC"),
+    density: z.literal("DENSE_SEALED_ORDINALS"),
+    gap_policy: z.literal("REFUSE_RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP"),
+    cross_stream_order: z.literal("NOT_ASSERTED"),
+  }).strict(),
 }).strict();
 
 const PageSchema = z.object({
@@ -548,17 +710,25 @@ export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
   source_artifact_bytes: ResearchCurrentSourceFactSchema,
+  /** A10a: the newest durable byte-verification receipt for this run's sealed P05 artifact. */
+  byte_verification: ArtifactByteVerificationSchema,
   frozen_selection: z.object({
     selected_trial_id: SourceIdentifierSchema.nullable(),
     objective: DecimalSchema.nullable(),
     parameters: ParameterMapSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
-  what_if: z.object({
-    state: z.literal("NOT_PUBLISHED"),
-    reason_code: z.literal("RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET"),
-    availability: ResearchCurrentSourceAvailabilitySchema,
-  }).strict(),
+  /**
+   * W5a A10c: the Screen-07 what-if sandbox. Exact existing evaluations only;
+   * a GET never enqueues or evaluates anything.
+   */
+  what_if: WhatIfSchema,
+  /**
+   * W5a P16-T02/T11: per-fold ordering on two axes (data time, wall clock),
+   * the per-fold causal verdict from QuantBT's own claims, and the
+   * out-of-sample generation child checked against the frozen selection.
+   */
+  fold_ordering: FoldOrderingSchema,
 }).strict();
 
 export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
@@ -573,6 +743,8 @@ export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
       at_utc_ms: UtcMsSchema.nullable(),
       accepted_position: DecimalSchema.nullable(),
       equity: DecimalSchema.nullable(),
+      /** W5b: the selected bar and its checkpoint; null when unselected or pre-W5b. */
+      bar: ReplayBarSchema.nullable(),
       semantics: z.enum(["NO_SELECTED_PLAYHEAD", "RESEARCH_MODEL_SAMPLE_NOT_BROKER_EXECUTION_STATE"]),
       availability: ResearchCurrentSourceAvailabilitySchema,
     }).strict(),
@@ -583,8 +755,138 @@ export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
     orders: ResearchCurrentSourceFactSchema,
     fills: ResearchCurrentSourceFactSchema,
     candles: ResearchCurrentSourceFactSchema,
+    /** W5b: target transitions at the close (with the account's fee). */
+    transitions: ResearchCurrentSourceFactSchema,
+    fees: ResearchCurrentSourceFactSchema,
+    funding: ResearchCurrentSourceFactSchema,
+    fold_capital: ResearchCurrentSourceFactSchema,
+    trades: ResearchCurrentSourceFactSchema,
+    partial_fills: ResearchCurrentSourceFactSchema,
+    oco: ResearchCurrentSourceFactSchema,
+    multi_leg: ResearchCurrentSourceFactSchema,
+    sl_tp: ResearchCurrentSourceFactSchema,
+    mae_mfe: ResearchCurrentSourceFactSchema,
+    execution_events: ResearchCurrentSourceFactSchema,
+    /** P17-T14: QuantBT's strategy-isolation records (child audit), per fold. */
+    child_audit: ResearchCurrentSourceFactSchema,
   }).strict(),
+  /** W5b (P17): the route's retained execution facts and fold capital. */
+  execution: ResearchCurrentSourceReplayExecutionSchema,
 }).strict();
+
+const TransitionRowSchema = z.object({
+  /** Original bar ordinal of the retained table — sparse across transitions, never renumbered. */
+  source_ordinal: z.number().int().nonnegative().max(2_000_000),
+  /** Original bar identity (the bar's UTC timestamp). */
+  source_index_utc: z.string().datetime({ offset: true }),
+  at_utc_ms: UtcMsSchema,
+  /** The source-derived running count at this bar (checkpoint), 1-based. */
+  transition_number: z.number().int().positive().max(2_000_000),
+  fold_id: TokenSchema.nullable(),
+  kind: z.enum(["ENTRY", "EXIT", "FLIP", "RESIZE"]),
+  side_after: z.enum(["LONG", "SHORT", "FLAT"]),
+  position_before: DecimalSchema.nullable(),
+  position_after: DecimalSchema,
+  close: DecimalSchema.nullable(),
+  turnover: DecimalSchema.nullable(),
+  fee: DecimalSchema.nullable(),
+  equity: DecimalSchema,
+  /** Seek token for the replay relation (the same bar in `current-source/replay`). */
+  playback_cursor: OpaqueCursorSchema,
+}).strict();
+
+/**
+ * W5b (P17) · the close-target route's execution ledger: every bar where the
+ * engine's accepted position changed, keyset-paged over the original bar
+ * ordinal. These are target transitions settled at the close, with the
+ * account's own fee — never fills, and never a trade pairing.
+ */
+export const ResearchCurrentSourceReplayTransitionsResponseSchema = CommonSchema.extend({
+  schema_version: z.literal("research.current-source-replay-transitions.v1"),
+  semantics: z.literal("TARGET_TRANSITION_SETTLED_AT_CLOSE_NOT_A_FILL"),
+  availability_reason: ReasonCodeSchema.nullable(),
+  source_transition_count: z.number().int().nonnegative().max(2_000_000).nullable(),
+  rows: z.array(TransitionRowSchema).max(200),
+  page: PageSchema,
+}).strict().superRefine((value, context) => {
+  for (let index = 1; index < value.rows.length; index += 1) {
+    if (value.rows[index]!.source_ordinal <= value.rows[index - 1]!.source_ordinal) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "transition rows must keep strict source order" });
+      break;
+    }
+  }
+  if (value.availability.state !== "AVAILABLE" && value.rows.length !== 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "an unavailable transition ledger must carry no rows" });
+  }
+});
+
+const ChildAuditRecordSchema = z.object({
+  /** The record's row in QuantBT's own `strategy_lifecycle_table` (original child-audit id). */
+  audit_ordinal: CountSchema,
+  candidate_id: TokenSchema.nullable(),
+  fold_id: TokenSchema,
+  seed: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
+  /** QuantBT's own words for why the child ran (e.g. `out-of-sample generation`). */
+  context: z.string().min(1).max(96).regex(/^[A-Za-z0-9 _.:-]+$/).nullable(),
+  lifecycle_kind: TokenSchema.nullable(),
+  policy: TokenSchema.nullable(),
+  certified_isolation: z.boolean().nullable(),
+  spawned: z.boolean().nullable(),
+  reset_called: z.boolean().nullable(),
+  warmup_called: z.boolean().nullable(),
+  warmup_bars: CountSchema.nullable(),
+  closed: z.boolean().nullable(),
+  state_before: TokenSchema.nullable(),
+  cutoff_utc_ms: UtcMsSchema.nullable(),
+  train_start_utc_ms: UtcMsSchema.nullable(),
+  train_end_utc_ms: UtcMsSchema.nullable(),
+  test_start_utc_ms: UtcMsSchema.nullable(),
+  test_end_utc_ms: UtcMsSchema.nullable(),
+  strategy_fingerprint: TokenSchema.nullable(),
+  market_fingerprint: TokenSchema.nullable(),
+}).strict();
+
+export const ResearchCurrentSourceChildAuditQuerySchema = ResearchCurrentSourceReadQuerySchema.extend({
+  fold: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
+}).strict();
+
+/**
+ * P17-T14 · one fold's child audit: QuantBT's strategy-isolation records for
+ * the child strategy instances it created for that fold, in QuantBT's order,
+ * with their original ids. Bounded (≤ 64 records per fold, `truncated`
+ * says when QuantBT published more).
+ */
+export const ResearchCurrentSourceReplayChildAuditResponseSchema = CommonSchema.extend({
+  schema_version: z.literal("research.current-source-replay-child-audit.v1"),
+  fold_id: TokenSchema,
+  reason_code: ReasonCodeSchema.nullable(),
+  policy: TokenSchema.nullable(),
+  records_dropped_by_source: CountSchema.nullable(),
+  source_run_fingerprint: TokenSchema.nullable(),
+  source_record_count: CountSchema.nullable(),
+  truncated: z.boolean(),
+  records: z.array(ChildAuditRecordSchema).max(64),
+}).strict().superRefine((value, context) => {
+  if (value.availability.state !== "AVAILABLE" && value.records.length !== 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "an unavailable child audit must carry no records" });
+  }
+  for (let index = 1; index < value.records.length; index += 1) {
+    if (value.records[index]!.audit_ordinal <= value.records[index - 1]!.audit_ordinal) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "child audit records must keep QuantBT's order" });
+      break;
+    }
+  }
+});
+
+export const ResearchCurrentSourceTransitionsQuerySchema = ResearchCurrentSourceReadQuerySchema.extend({
+  cursor: OpaqueCursorSchema.optional(),
+  before: OpaqueCursorSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+}).strict().superRefine((value, context) => {
+  if (value.cursor !== undefined && value.before !== undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["cursor"], message: "cursor and before are mutually exclusive" });
+  }
+});
 
 /**
  * RF-05 CG-P13-09 · typed answer for a run whose admitted profile can never
@@ -594,7 +896,7 @@ export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
  * `details.lane_state` names the state (see `ResearchCurrentSourceLaneState`).
  */
 export const ResearchCurrentSourceOperationSchema = z.enum([
-  "evidence", "evidence_series", "split", "search", "freeze", "replay",
+  "evidence", "evidence_series", "split", "search", "freeze", "replay", "replay_transitions", "replay_child_audit",
 ]);
 
 export const ResearchCurrentSourceNotApplicableResponseSchema = z.object({
@@ -640,3 +942,8 @@ export type ResearchCurrentSourceSplitResponse = z.infer<typeof ResearchCurrentS
 export type ResearchCurrentSourceSearchResponse = z.infer<typeof ResearchCurrentSourceSearchResponseSchema>;
 export type ResearchCurrentSourceFreezeResponse = z.infer<typeof ResearchCurrentSourceFreezeResponseSchema>;
 export type ResearchCurrentSourceReplayResponse = z.infer<typeof ResearchCurrentSourceReplayResponseSchema>;
+export type ResearchCurrentSourceReplayTransitionsResponse = z.infer<typeof ResearchCurrentSourceReplayTransitionsResponseSchema>;
+export type ResearchCurrentSourceTransitionsQuery = z.infer<typeof ResearchCurrentSourceTransitionsQuerySchema>;
+export type ResearchCurrentSourceReplayExecution = z.infer<typeof ResearchCurrentSourceReplayExecutionSchema>;
+export type ResearchCurrentSourceReplayChildAuditResponse = z.infer<typeof ResearchCurrentSourceReplayChildAuditResponseSchema>;
+export type ResearchCurrentSourceChildAuditQuery = z.infer<typeof ResearchCurrentSourceChildAuditQuerySchema>;
