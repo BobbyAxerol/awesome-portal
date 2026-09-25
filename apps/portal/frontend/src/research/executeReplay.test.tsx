@@ -13,7 +13,7 @@
  *    published. No order, fill, trade or candle row is drawn.
  */
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +33,8 @@ import {
 import { JUMP, ReplayTransport, transportKey, type TransportScheduler } from "./replayTransport";
 import { useReplay, type ReplayController } from "./useReplay";
 import { PortalApiError } from "../lib/api";
+import { ExecuteRoute } from "./ExecuteRoute";
+import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 
 afterEach(() => {
   cleanup();
@@ -567,5 +569,102 @@ describe("S08-U08 — the surface is read-only and names only its two operations
   it("keeps the two replay operations distinct in the client", () => {
     expect(typeof replayApi.detail).toBe("function");
     expect(typeof replayApi.currentSource).toBe("function");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * W3b — Screen 08 on the retained WFO lane (rrun_c860…, real served bodies)
+ * ---------------------------------------------------------------------- */
+
+const W3B_EXEC = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3bRealWfo.fixture.json"), "utf8")) as {
+  replay: { run_id: string; replay: { source_observation_count: number } };
+  progress: unknown;
+  requested_spec: unknown;
+};
+const W3_EXEC = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as {
+  evidence: unknown;
+};
+const W3B_RUN = W3B_EXEC.replay.run_id;
+
+/** What the hub answers a Delta WFO run: its replay route is NOT_PUBLISHED, with its own P04/P13 codes. */
+function hubReplayFor(runId: string): Replay {
+  return { ...replay({ route: "NOT_PUBLISHED" }), run_id: runId } as Replay;
+}
+
+function w3bExecuteFetch() {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const path = new URL(String(input), "http://x").pathname;
+    if (path.endsWith("/current-source/replay")) return jsonResponse(W3B_EXEC.replay);
+    if (path.endsWith("/current-source/evidence")) return jsonResponse(W3_EXEC.evidence);
+    if (path.endsWith("/execute/replay")) return jsonResponse(hubReplayFor(W3B_RUN));
+    if (path.endsWith("/progress")) return jsonResponse(W3B_EXEC.progress);
+    if (path.endsWith("/requested-spec")) return jsonResponse(W3B_EXEC.requested_spec);
+    return jsonResponse({ error: { code: "UNEXPECTED" } }, 404);
+  });
+}
+
+function mountExecute(runId = W3B_RUN) {
+  const path = `/research/quantbt/runs/${runId}/execute`;
+  window.history.replaceState(null, "", path);
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/research/quantbt/runs/:runId/execute" element={<ExecuteRoute />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe("W3b — Execute on the retained WFO lane", () => {
+  async function settled() {
+    forgetRunIdentities();
+    const fetchMock = w3bExecuteFetch();
+    const view = mountExecute();
+    await waitFor(() => expect(view.container.querySelector("[data-counts]")).toBeTruthy());
+    await waitFor(() => expect(view.container.textContent).not.toContain("reading…"));
+    return { ...view, fetchMock };
+  }
+
+  it("reads the run identity: route signal_notional and readiness ready from the P11 progress read", async () => {
+    const { container, fetchMock } = await settled();
+    const route = container.querySelector("[data-route-id='signal_notional']");
+    expect(route?.textContent).toBe("signal_notional");
+    const readiness = container.querySelector("[data-route-state='RETAINED_MODEL_SAMPLE'] [data-readiness]");
+    expect(readiness?.getAttribute("data-readiness")).toBe("READY");
+    expect(readiness?.textContent).toBe("readiness ready");
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls.some((url) => url.includes(`/research/runs/${W3B_RUN}/progress`))).toBe(true);
+    expect(urls.some((url) => url.includes(`/research/runs/${W3B_RUN}/requested-spec`))).toBe(true);
+  });
+
+  it("counts the 1056 retained source observations", async () => {
+    const { container } = await settled();
+    expect(W3B_EXEC.replay.replay.source_observation_count).toBe(1056);
+    expect(container.querySelector("[data-counts]")?.textContent).toMatch(/^source observations 1056 · window 1–24 of 1056$/);
+  });
+
+  it("names orders, fills and candles absent with the retained lane's own QuantBT codes", async () => {
+    const { container } = await settled();
+    const code = (capability: string) =>
+      container.querySelector(`[data-capability='${capability}'][data-capability-lane='retained'] [data-reason-code]`)?.getAttribute("data-reason-code");
+    expect(code("orders")).toBe("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER");
+    expect(code("fills")).toBe("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS");
+    expect(code("candle_windows")).toBe("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_REPLAY_CANDLES");
+  });
+
+  it("formats ledger equity for reading and keeps the exact decimal in title / data-exact", async () => {
+    const { container } = await settled();
+    const row = container.querySelector("[data-sample-row='0']") as HTMLElement;
+    const equity = row.querySelectorAll("td")[3]!.querySelector("[data-exact]");
+    expect(equity?.textContent).toBe("20,000.00");
+    expect(equity?.getAttribute("data-exact")).toBe("20000");
+    expect(equity?.getAttribute("title")).toBe("20000");
+  });
+
+  it("prints no P04-hub reason code anywhere, though the hub answered with them", async () => {
+    const { container } = await settled();
+    expect(JSON.stringify(hubReplayFor(W3B_RUN))).toMatch(HUB_LANE_REASON);
+    expect(container.textContent).not.toMatch(HUB_LANE_REASON);
+    expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
   });
 });

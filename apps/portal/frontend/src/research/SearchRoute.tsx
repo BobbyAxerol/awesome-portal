@@ -18,7 +18,7 @@ import { useParams } from "react-router-dom";
 import { SearchScreen } from "./SearchDetail";
 import { RouteCursorNotice } from "./CursorNotice";
 import { DEFAULT_CURSOR, clampFold, observedFoldsFor, useEvidenceCursor } from "./evidenceCursor";
-import { SEARCH_FOLD_MAX, useSearch } from "./useSearch";
+import { SEARCH_FOLD_MAX, retainedSearchOf, useRetainedRunFacts, useSearch } from "./useSearch";
 
 export function SearchRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
@@ -32,6 +32,8 @@ export function SearchRoute() {
   const clamped = target !== cursor.fold;
   const inRange = target >= 1 && target <= SEARCH_FOLD_MAX;
   const search = useSearch(runId, inRange ? target : DEFAULT_CURSOR.fold);
+  /* W3b: a retained WFO run is read against its own identity and declared space. */
+  const retainedRun = useRetainedRunFacts(runId, undefined, search.ledger);
 
   useEffect(() => {
     if (known && known.length > 0) clampToObserved(known);
@@ -45,13 +47,18 @@ export function SearchRoute() {
   /* The run's mode and schedule were fixed at submit. A link that names
      others is acknowledged, not obeyed and not carried on. */
   const requested = search.detail?.requested_optimizer;
+  /* W3b: on a retained run the mode and schedule are the retained search contract's. */
+  const contract = retainedSearchOf(search.ledger)?.search_contract ?? null;
+  const runMode = contract ? contract.optimization_mode : (requested?.mode ?? null);
+  const runSchedule = contract ? contract.optimization_schedule : (requested?.schedule ?? null);
+  const settled = requested !== undefined && search.state.state !== "loading";
   const linkMode = cursor.carried?.mode ?? null;
   const linkSchedule = cursor.schedule;
   useEffect(() => {
-    if (!requested) return;
-    if (linkMode !== null && linkMode !== requested.mode) decline("mode", requested.mode);
-    if (linkSchedule !== null && linkSchedule !== requested.schedule) decline("schedule", requested.schedule);
-  }, [decline, linkMode, linkSchedule, requested]);
+    if (!settled) return;
+    if (linkMode !== null && linkMode !== runMode) decline("mode", runMode);
+    if (linkSchedule !== null && linkSchedule !== runSchedule) decline("schedule", runSchedule);
+  }, [decline, linkMode, linkSchedule, runMode, runSchedule, settled]);
 
   return (
     <>
@@ -63,6 +70,7 @@ export function SearchRoute() {
         notFound={search.refusal?.notFound === true}
         cursor={cursor}
         ledger={search.ledger}
+        retainedRun={retainedRun}
         ensureLedger={search.ensureLedger}
         onReread={search.reread}
       />

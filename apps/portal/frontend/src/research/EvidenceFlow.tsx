@@ -44,6 +44,7 @@ import {
   type MonthlyReturnPoint,
   type OosPerformance,
   type PerformanceMetric,
+  type RetainedSeriesKind,
   type SeriesKind,
 } from "./evidenceClient";
 import {
@@ -55,6 +56,7 @@ import {
 import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, refusalDetail } from "./researchRefusal";
 import { formatMetric, shortDigest } from "./researchFormat";
 import type { PassportSlot, RetainedSeriesSlot, SeriesSlot } from "./useEvidence";
+import { isRetainedAnswer, retainedReadiness, type RunIdentitySlot } from "./retainedLane";
 import type { ResearchState } from "./state";
 
 /* The chart chunk. Five entry points, one module, fetched once. */
@@ -403,12 +405,15 @@ function ClaimPassport({
   state,
   onJump,
   retained = null,
+  laneReadiness = null,
 }: {
   hub: EvidenceHub | null;
   state: ResearchState;
   onJump: (stage: EvidenceStage) => void;
   /** W3: the sealed retained WFO run's claim strip; null on the P04 lane. */
   retained?: CurrentSourceClaimStrip | null;
+  /** W3b: the retained seal's readiness (progress read), printed instead of the P04 hub's. */
+  laneReadiness?: string | null;
 }) {
   const claim = hub?.claim ?? null;
   const certificate = claim?.methodology_certificate ?? null;
@@ -546,8 +551,12 @@ function ClaimPassport({
         </span>
         {hub ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-            <span data-registry={hub.metric_registry_version}>{hub.metric_registry_version}</span>
-            {hub.oos_performance ? (
+            {laneReadiness !== null ? (
+              <span data-registry="research.current-source-evidence.v1">research.current-source-evidence.v1</span>
+            ) : (
+              <span data-registry={hub.metric_registry_version}>{hub.metric_registry_version}</span>
+            )}
+            {hub.oos_performance && laneReadiness === null ? (
               <>
                 {" · "}
                 <span
@@ -559,9 +568,15 @@ function ClaimPassport({
               </>
             ) : null}
             {" · "}
-            <span data-readiness={hub.readiness}>
-              readiness <b className="font-semibold" style={{ color: "var(--ink-soft)" }}>{hub.readiness}</b>
-            </span>
+            {laneReadiness !== null ? (
+              <span data-readiness={laneReadiness} data-readiness-lane="retained" title="the retained seal, from the run's progress read">
+                retained seal <b className="font-semibold" style={{ color: "var(--ink-soft)" }}>{laneReadiness}</b>
+              </span>
+            ) : (
+              <span data-readiness={hub.readiness}>
+                readiness <b className="font-semibold" style={{ color: "var(--ink-soft)" }}>{hub.readiness}</b>
+              </span>
+            )}
           </span>
         ) : null}
       </div>
@@ -890,8 +905,9 @@ function DatasetPanel({ hub, id, onClose }: { hub: EvidenceHub; id: string; onCl
 
 /* ------------------------------------------------ tabs + cursor, one card */
 
-function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub | null): string {
+function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub | null, summary: string | null = null): string {
   if (hub === null) return "—";
+  if (stage === "summary" && summary !== null) return summary;
   if (stage === "summary") {
     const all = [...hub.metrics, ...(hub.oos_performance?.metrics ?? [])];
     const shown = all.filter((metric) => isAvailable(metric.availability)).length;
@@ -916,11 +932,14 @@ function StageTabs({
   hub,
   onStage,
   rowRef,
+  summary = null,
 }: {
   cursor: EvidenceCursor;
   hub: EvidenceHub | null;
   onStage: (stage: EvidenceStage) => void;
   rowRef?: React.Ref<HTMLDivElement>;
+  /** W3b: the Summary tab's count on a retained run (tiles and series of the lane). */
+  summary?: string | null;
 }) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -979,7 +998,7 @@ function StageTabs({
                 <span className="text-[12px] font-medium uppercase tracking-[.05em]">{name}</span>
               </span>
               <span className="mono whitespace-nowrap text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-tab-sub>
-                {tabSub(stage, cursor, hub)}
+                {tabSub(stage, cursor, hub, summary)}
               </span>
             </button>
           );
@@ -1044,6 +1063,7 @@ function CursorBar({
   folds,
   onFold,
   onReset,
+  laneSelection = null,
 }: {
   runId: string;
   cursor: EvidenceCursor;
@@ -1051,6 +1071,12 @@ function CursorBar({
   folds: FoldNavigation | undefined;
   onFold: (fold: number) => void;
   onReset: () => void;
+  /**
+   * W3b: on a retained run with a GLOBAL schedule every fold froze the same
+   * selection (P11 progress fold selection). An empty cursor shows it, marked
+   * as the global selection rather than a cursor the reader chose.
+   */
+  laneSelection?: { trial: number | null; paramsDigest: string | null } | null;
 }) {
   const [copied, setCopied] = useState(false);
   /*
@@ -1170,6 +1196,10 @@ function CursorBar({
         trial{" "}
         {cursor.trial !== null ? (
           <span style={{ color: "var(--ink)" }}>#{cursor.trial}</span>
+        ) : laneSelection?.trial != null ? (
+          <span style={{ color: "var(--ink)" }} data-cursor-lane="global" title="the global selection every fold froze (progress read, ordinal)">
+            #{laneSelection.trial} · global
+          </span>
         ) : (
           <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_TRIAL_CURSOR" }} />
         )}
@@ -1179,6 +1209,10 @@ function CursorBar({
         params{" "}
         {cursor.params !== null ? (
           <span style={{ color: "var(--ink)" }}>{cursor.params}</span>
+        ) : laneSelection?.paramsDigest != null ? (
+          <span style={{ color: "var(--ink)" }} data-cursor-lane="global" title={laneSelection.paramsDigest}>
+            {shortDigest(laneSelection.paramsDigest)}
+          </span>
         ) : (
           <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_PARAMS_DIGEST" }} />
         )}
@@ -1188,6 +1222,10 @@ function CursorBar({
         seq{" "}
         {cursor.seq !== null ? (
           <span style={{ color: "var(--ink)" }}>{cursor.seq}</span>
+        ) : laneSelection !== null ? (
+          <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-cursor-seq-none title="no event is selected; the retained replay is on S4">
+            none selected
+          </span>
         ) : (
           <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_EVENT_SEQ" }} />
         )}
@@ -1800,10 +1838,13 @@ function RollingFigure({
   hub,
   series,
   ensureSeries,
+  retained = false,
 }: {
   hub: EvidenceHub;
   series: ReadonlyMap<SeriesKind, SeriesSlot>;
   ensureSeries: (kind: SeriesKind) => void;
+  /** W3b: the links are the retained lane's; the footnote says so. */
+  retained?: boolean;
 }) {
   const linkFor = (kind: SeriesKind) => hub.series.find((entry) => entry.kind === kind);
   const sample = hub.oos_performance?.return_sample ?? null;
@@ -1859,8 +1900,9 @@ function RollingFigure({
         </RollingHalf>
       </div>
       <div className="mt-2 text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
-        Read from the Evidence Hub&apos;s rolling series — QuantBT&apos;s rolling Sharpe over 63 daily OOS returns;
-        the UI computes nothing. A Sharpe that only lives in one regime, or a beta drifting toward 1, is a behavior
+        {retained
+          ? "The retained walk-forward lane publishes neither series, so neither is drawn; the UI computes nothing."
+          : "Read from the Evidence Hub's rolling series — QuantBT's rolling Sharpe over 63 daily OOS returns; the UI computes nothing."} A Sharpe that only lives in one regime, or a beta drifting toward 1, is a behavior
         finding the headline tiles cannot show.
       </div>
     </figure>
@@ -2800,6 +2842,207 @@ function VerdictTable({ hub }: { hub: EvidenceHub }) {
   );
 }
 
+/* ------------------------------------------------ W3b · retained headline */
+
+/** A retained absence the UI names itself: the lane has no field for it. */
+const RETAINED_NO_FIELD: Availability = { state: "NOT_PUBLISHED", reason_code: "UI_RETAINED_LANE_HAS_NO_FIELD" };
+const RETAINED_NO_SERIES: Availability = { state: "NOT_PUBLISHED", reason_code: "UI_RETAINED_LANE_HAS_NO_SERIES" };
+
+/** One headline tile on a retained WFO run: a value the lane published, or its typed absence. */
+export interface RetainedTileFact {
+  key: TileKey;
+  label: string;
+  /** The exact server string, or null with `absence`. */
+  value: string | null;
+  unit: "currency" | "fraction" | "count" | "ratio";
+  /** The tile foot: where the value comes from, in the lane's words. */
+  foot: string;
+  absence: Availability | null;
+}
+
+const RETAINED_LABEL: Partial<Record<TileKey, string>> = {
+  FINAL_EQUITY: "Final equity",
+  NET_RETURN_FRACTION: "Net return",
+  MAX_DRAWDOWN_FRACTION: "Max drawdown",
+  TRADE_COUNT: "Trade count",
+  OOS_SORTINO: "OOS Sortino",
+  OOS_CAGR_FRACTION: "OOS CAGR",
+  OOS_PROFIT_FACTOR: "OOS profit factor",
+  OOS_LONG_HIT_RATE_FRACTION: "OOS long-bar hit rate",
+  OOS_SHORT_HIT_RATE_FRACTION: "OOS short-bar hit rate",
+  BARS_PROCESSED: "Bars processed",
+  INITIAL_EQUITY: "Initial equity",
+  BENCHMARK_RETURN_FRACTION: "Benchmark return",
+  FUNDING_TOTAL: "Funding total",
+};
+
+function laneAbsence(entry: { state: string; reason_code?: string | null } | null | undefined, fallback: Availability): Availability {
+  return entry ? { state: entry.state as Availability["state"], reason_code: entry.reason_code ?? null } : fallback;
+}
+
+/**
+ * W3b — the fifteen headline tiles of a sealed retained WFO run, in the HiFi
+ * order. The P04 hub answers this run with its own NOT_PUBLISHED; the retained
+ * lane is the authority, so a tile shows the lane's value (the passport, or the
+ * verdict block's fold means, labelled as such) or the lane's own absence.
+ * Nothing is computed here: a mean over folds is the server's `mean_*`.
+ */
+export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact[] {
+  const passport = evidence.passport;
+  const verdicts = (evidence as Partial<CurrentSourceEvidence>).fold_verdicts ?? null;
+  const absences = (evidence as Partial<CurrentSourceEvidence>).source_absences ?? null;
+  const verdictsOk = verdicts !== null && verdicts.state === "AVAILABLE";
+  const ACCOUNT = "retained stitched account";
+  const fact = (
+    key: TileKey,
+    value: string | number | null | undefined,
+    unit: RetainedTileFact["unit"],
+    foot: string,
+    absence: Availability = RETAINED_NO_FIELD,
+    label?: string,
+  ): RetainedTileFact => ({
+    key,
+    label: label ?? RETAINED_LABEL[key] ?? key,
+    value: value === null || value === undefined ? null : String(value),
+    unit,
+    foot,
+    absence: value === null || value === undefined ? absence : null,
+  });
+  return TILE_ORDER.map((key) => {
+    switch (key) {
+      case "FINAL_EQUITY":
+        return fact(key, passport.final_equity, "currency", `${ACCOUNT} · currency · source-derived`);
+      case "NET_RETURN_FRACTION":
+        return fact(key, passport.net_return_fraction, "fraction", `${ACCOUNT} · percent · source-derived`);
+      case "MAX_DRAWDOWN_FRACTION":
+        return fact(key, passport.max_drawdown_fraction, "fraction", `${ACCOUNT} · percent · source-derived`);
+      case "INITIAL_EQUITY":
+        return fact(key, passport.initial_equity, "currency", `${ACCOUNT} · currency · source-derived`);
+      case "BARS_PROCESSED":
+        return fact(key, passport.artifact_table_rows.observations, "count", "retained observations · count · source-derived");
+      case "OOS_SHARPE":
+        return fact(
+          key,
+          verdictsOk ? verdicts.mean_oos_sharpe : null,
+          "ratio",
+          "mean of fold OOS Sharpe · QuantBT fold score",
+          RETAINED_NO_FIELD,
+          "OOS Sharpe · fold mean",
+        );
+      case "OOS_SHARPE_DECAY":
+        return fact(
+          key,
+          verdictsOk ? verdicts.mean_decay : null,
+          "ratio",
+          "mean of fold decay · QuantBT fold score",
+          RETAINED_NO_FIELD,
+          "Sharpe decay · fold mean",
+        );
+      case "BENCHMARK_RETURN_FRACTION":
+        return fact(key, null, "fraction", "retained lane · benchmark", laneAbsence(absences?.benchmark, RETAINED_NO_FIELD));
+      case "TRADE_COUNT":
+        return fact(key, null, "count", "per-fold OOS trades are in the verdict table");
+      default:
+        return fact(key, null, "fraction", "retained lane · no such field");
+    }
+  });
+}
+
+function RetainedTile({ tile }: { tile: RetainedTileFact }) {
+  const raw = tile.value === null ? null : tile.unit === "ratio" ? formatRatio(tile.value) : formatMetric(tile.value, tile.unit);
+  const shown = raw === null ? null : raw.replace(/^-/, "−");
+  const negative = tile.value !== null && tile.value.trim().startsWith("-");
+  const tone =
+    tile.value === null || tile.unit === "currency" || tile.unit === "count"
+      ? "var(--ink)"
+      : tile.key === "MAX_DRAWDOWN_FRACTION" || negative
+        ? "var(--bad)"
+        : "var(--good)";
+  return (
+    <div
+      className="flex min-h-[90px] min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
+      data-metric={tile.key}
+      data-metric-lane="retained"
+      style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
+    >
+      <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        {tile.label}
+      </span>
+      {tile.value !== null ? (
+        <span
+          className="mono text-[22px] font-semibold leading-[28px]"
+          style={{ color: tone, fontVariantNumeric: "tabular-nums" }}
+          data-metric-value={tile.key}
+          data-exact={tile.value}
+          title={tile.value}
+          onCopy={(event) => {
+            event.clipboardData.setData("text/plain", tile.value as string);
+            event.preventDefault();
+          }}
+        >
+          {shown ?? tile.value}
+        </span>
+      ) : (
+        <span className="leading-[28px]">
+          <Withheld availability={tile.absence ?? RETAINED_NO_FIELD} />
+        </span>
+      )}
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-metric-scope="RETAINED">
+        {tile.foot}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * W3b — the Hub-shaped series links of a retained run: the lane's own derived
+ * series where it publishes one, its typed absence where it does not (a
+ * rolling beta needs the benchmark the lane names as unpublished).
+ */
+export function retainedSeriesLinks(evidence: CurrentSourceEvidence): EvidenceHub["series"] {
+  const absences = (evidence as Partial<CurrentSourceEvidence>).source_absences ?? null;
+  const mapped = (kind: RetainedSeriesKind) => {
+    const entry = evidence.series.find((candidate) => candidate.kind === kind);
+    return {
+      kind,
+      availability: entry ? (entry.availability as Availability) : RETAINED_NO_SERIES,
+      href: entry?.href ?? null,
+    } as unknown as EvidenceHub["series"][number];
+  };
+  return [
+    mapped("MONTHLY_RETURNS"),
+    mapped("RETURN_DISTRIBUTION"),
+    mapped("ROLLING_RETURNS_20"),
+    { kind: "ROLLING_SHARPE_63", availability: RETAINED_NO_SERIES, href: null } as EvidenceHub["series"][number],
+    {
+      kind: "ROLLING_BETA_63",
+      availability: laneAbsence(absences?.benchmark, RETAINED_NO_SERIES),
+      href: null,
+    } as EvidenceHub["series"][number],
+  ];
+}
+
+/** The retained kinds a Summary panel reads through the Hub-shaped panel frame. */
+export const RETAINED_PANEL_KINDS: readonly RetainedSeriesKind[] = ["MONTHLY_RETURNS", "RETURN_DISTRIBUTION", "ROLLING_RETURNS_20"];
+
+/** A retained series in the Hub series' shape: the value rows are the same types. */
+export function asHubSeries(series: CurrentSourceEvidenceSeries): EvidenceSeries {
+  return {
+    schema_version: "research.evidence-series.v1",
+    run_id: series.run_id,
+    revision: series.revision,
+    etag: series.etag,
+    kind: series.kind,
+    availability: series.availability,
+    source_sample: {
+      source_observation_count: series.source_sample.source_observation_count,
+      emitted_point_count: series.source_sample.emitted_point_count,
+      sampling: series.source_sample.sampling,
+    },
+    values: series.values,
+  } as unknown as EvidenceSeries;
+}
+
 /** The HiFi behaviour tiles, each an empty cell with its reason (DQ-14). */
 const BEHAVIOR_TILES = [
   "beta vs benchmark",
@@ -2812,7 +3055,14 @@ const BEHAVIOR_TILES = [
   "turnover",
 ] as const;
 
-function BehaviorCard() {
+function BehaviorCard({ retained = null }: { retained?: CurrentSourceEvidence | null }) {
+  const benchmark = retained ? ((retained as Partial<CurrentSourceEvidence>).source_absences?.benchmark ?? null) : null;
+  const reasonFor = (label: string): Availability =>
+    retained === null
+      ? { state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_BEHAVIOR_ANALYTIC" }
+      : label.includes("benchmark") && benchmark
+        ? { state: benchmark.state as Availability["state"], reason_code: benchmark.reason_code ?? null }
+        : RETAINED_NO_FIELD;
   return (
     <section
       className="flex min-w-0 flex-[1_1_340px] flex-col gap-1.5 rounded-[8px] border p-3.5"
@@ -2822,7 +3072,7 @@ function BehaviorCard() {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <PanelLabel>behavior — engine-published, UI renders</PanelLabel>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          segment not published
+          {retained ? "retained walk-forward lane" : "segment not published"}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -2836,13 +3086,16 @@ function BehaviorCard() {
             <span className="text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
               {label}
             </span>
-            <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_BEHAVIOR_ANALYTIC" }} />
+            <Withheld availability={reasonFor(label)} />
           </span>
         ))}
       </div>
       <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
-        No behaviour analytic is published for this run. These tiles stay empty rather than being computed from the
-        equity series, which would make the chart the source of a number the engine never issued.
+        {retained
+          ? "The retained walk-forward lane publishes no behaviour analytic, and no benchmark for the two benchmark tiles. "
+          : "No behaviour analytic is published for this run. "}
+        These tiles stay empty rather than being computed from the equity series, which would make the chart the source
+        of a number the engine never issued.
       </span>
     </section>
   );
@@ -2859,6 +3112,8 @@ function SummaryTab({
   ensurePassport,
   retainedSeries,
   ensureRetainedSeries,
+  retainedKinds,
+  ensureRetainedKind,
 }: {
   hub: EvidenceHub;
   runId: string;
@@ -2870,6 +3125,8 @@ function SummaryTab({
   ensurePassport: () => void;
   retainedSeries: RetainedSeriesSlot;
   ensureRetainedSeries: () => void;
+  retainedKinds: ReadonlyMap<RetainedSeriesKind, RetainedSeriesSlot>;
+  ensureRetainedKind: (kind: RetainedSeriesKind) => void;
 }) {
   /* W3: a sealed retained WFO run answers the equity, underwater and verdict
      panels from its retained lane; every other run keeps the Hub's. */
@@ -2882,20 +3139,50 @@ function SummaryTab({
         .filter((row) => row.test_start_utc_ms !== null)
         .map((row) => ({ at_utc_ms: row.test_start_utc_ms as number, label: foldId(row.source_ordinal + 1) }))
     : [];
-  const linkFor = (kind: SeriesKind) => hub.series.find((entry) => entry.kind === kind);
+  /* W3b: on a retained run the Hub's series links and slots are the lane's —
+     the Hub answers this run with its own NOT_PUBLISHED, which describes the
+     P04 hub, not the run. The panels keep their frames; only the source moves. */
+  const laneHub: EvidenceHub = retained ? { ...hub, series: retainedSeriesLinks(retained) } : hub;
+  const laneSeries: ReadonlyMap<SeriesKind, SeriesSlot> = retained
+    ? new Map(
+        RETAINED_PANEL_KINDS.flatMap((kind): [SeriesKind, SeriesSlot][] => {
+          const slot = retainedKinds.get(kind);
+          if (slot === undefined) return [];
+          const mapped: SeriesSlot =
+            slot.state === "ready" ? { state: "ready", series: asHubSeries(slot.series) } : (slot as SeriesSlot);
+          return [[kind as SeriesKind, mapped]];
+        }),
+      )
+    : series;
+  const laneEnsure = useCallback(
+    (kind: SeriesKind) => {
+      if (retained === null) {
+        ensureSeries(kind);
+        return;
+      }
+      if ((RETAINED_PANEL_KINDS as readonly string[]).includes(kind)) ensureRetainedKind(kind as RetainedSeriesKind);
+    },
+    [retained, ensureSeries, ensureRetainedKind],
+  );
+  const linkFor = (kind: SeriesKind) => laneHub.series.find((entry) => entry.kind === kind);
   const performance = hub.oos_performance ?? null;
   /* One grid, HiFi row first. A registry-v3 key appears only when the Hub
      sends the block (an older responder does not); a v2 key only when sent. */
-  const tiles = TILE_ORDER.flatMap((key): ReactNode[] => {
-    const v2 = hub.metrics.find((metric) => metric.key === key);
-    if (v2) return [<MetricTile key={key} metric={v2} />];
-    const v3 = performance?.metrics.find((metric) => metric.key === key);
-    return v3 && performance ? [<PerformanceTile key={key} metric={v3} block={performance} />] : [];
-  });
+  const tiles = retained
+    ? retainedTiles(retained).map((tile) => <RetainedTile key={tile.key} tile={tile} />)
+    : TILE_ORDER.flatMap((key): ReactNode[] => {
+        const v2 = hub.metrics.find((metric) => metric.key === key);
+        if (v2) return [<MetricTile key={key} metric={v2} />];
+        const v3 = performance?.metrics.find((metric) => metric.key === key);
+        return v3 && performance ? [<PerformanceTile key={key} metric={v3} block={performance} />] : [];
+      });
   /* A v2 key this screen does not order still gets its tile, after the rest. */
-  const unordered = hub.metrics
-    .filter((metric) => !TILE_ORDER.includes(metric.key))
-    .map((metric) => <MetricTile key={metric.key} metric={metric} />);
+  const unordered = retained
+    ? []
+    : hub.metrics
+        .filter((metric) => !TILE_ORDER.includes(metric.key))
+        .map((metric) => <MetricTile key={metric.key} metric={metric} />);
+  const publisher = retained ? "the retained lane" : "the Hub";
   const passportSkip = passportSkipOf(hub);
 
   return (
@@ -2988,17 +3275,17 @@ function SummaryTab({
       )}
 
       <div className="flex flex-wrap gap-3.5">
-        <RollingFigure hub={hub} series={series} ensureSeries={ensureSeries} />
+        <RollingFigure hub={laneHub} series={laneSeries} ensureSeries={laneEnsure} retained={retained !== null} />
         <SeriesPanel
           kind="RETURN_DISTRIBUTION"
           chartNo={4}
           title="Return distribution — stitched OOS"
           className="flex-[1_1_380px]"
           link={linkFor("RETURN_DISTRIBUTION")}
-          slot={series.get("RETURN_DISTRIBUTION")}
-          onNeeded={ensureSeries}
+          slot={laneSeries.get("RETURN_DISTRIBUTION")}
+          onNeeded={laneEnsure}
           emptyReason="the source published no histogram bucket for this run, so no bar is drawn."
-          footnote="Bucket edges and counts as the Hub published them — the UI bins nothing."
+          footnote={`Bucket edges and counts as ${publisher} published them — the UI bins nothing.`}
         >
           {(loaded) => (
             <ChartFrame height={230}>
@@ -3015,14 +3302,14 @@ function SummaryTab({
           title="monthly returns — stitched OOS"
           className="flex-[1.3_1_460px]"
           link={linkFor("MONTHLY_RETURNS")}
-          slot={series.get("MONTHLY_RETURNS")}
-          onNeeded={ensureSeries}
+          slot={laneSeries.get("MONTHLY_RETURNS")}
+          onNeeded={laneEnsure}
           emptyReason="no calendar month was published for this run — the source emitted 0 monthly values, so no cell is drawn. A month is never reduced from the equity series here."
           footnote="One cell per calendar month, value in %. Depth of tint = magnitude; the reading to look for is clustering — three red cells in a row is a regime, not noise."
         >
           {(loaded) => <MonthlyHeat series={loaded} />}
         </SeriesPanel>
-        <BehaviorCard />
+        <BehaviorCard retained={retained} />
       </div>
 
       {/*
@@ -3036,10 +3323,14 @@ function SummaryTab({
         chartNo={5}
         title="Rolling 20-observation return — stitched OOS"
         link={linkFor("ROLLING_RETURNS_20")}
-        slot={series.get("ROLLING_RETURNS_20")}
-        onNeeded={ensureSeries}
+        slot={laneSeries.get("ROLLING_RETURNS_20")}
+        onNeeded={laneEnsure}
         emptyReason="the source published no rolling window for this run, so no line is drawn."
-        footnote="Read from the Evidence Hub's published rolling series — the UI computes nothing."
+        footnote={
+          retained
+            ? "Read from the retained lane's published rolling series — the UI computes nothing."
+            : "Read from the Evidence Hub's published rolling series — the UI computes nothing."
+        }
       >
         {(loaded) => (
           <ChartFrame height={230}>
@@ -3049,8 +3340,10 @@ function SummaryTab({
       </SeriesPanel>
 
       <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
-        {SAMPLING_NOTE} Every Hub series is capped at {SERIES_POINT_CAP} points by the contract
-        {retained ? "; the retained equity above draws every retained observation up to 2,000 and names its extrema past that." : "."}
+        {SAMPLING_NOTE}{" "}
+        {retained
+          ? "The retained equity above draws every retained observation up to 2,000 and names its extrema past that; each retained series names its own sampling."
+          : `Every Hub series is capped at ${SERIES_POINT_CAP} points by the contract.`}
       </p>
 
       <PassportPanel slot={passport} onNeeded={ensurePassport} skip={passportSkip} />
@@ -3439,6 +3732,36 @@ function NoticeLink({ to, action, children }: { to: string; action: string; chil
 }
 
 /**
+ * W3b — the Hub as the header reads it on a sealed retained WFO run. The P04
+ * hub answers such a run NOT_PUBLISHED / NOT_READY with its own reason
+ * (`P13_SOURCE_EVIDENCE_NOT_PUBLISHED`), which describes the hub lane, not the
+ * run. The run identity it carries is kept; the lane facts (availability,
+ * revision, engine, adapter, readiness) are the retained lane's. Readiness
+ * becomes COMPLETE only when the progress read says the mandatory bundle is
+ * SEALED and materialized READY.
+ */
+export function retainedHubView(
+  hub: EvidenceHub,
+  evidence: CurrentSourceEvidence,
+  readiness: "READY" | "NOT_READY" | null,
+): EvidenceHub {
+  const provenance = evidence.provenance;
+  return {
+    ...hub,
+    availability: evidence.availability as Availability,
+    revision: evidence.revision,
+    readiness: readiness === "READY" ? "COMPLETE" : hub.readiness,
+    core: {
+      ...hub.core,
+      engine_version: provenance.engine_version ?? hub.core.engine_version,
+      /* The P04 contract types its adapter enum narrowly; the retained id is the run's real one. */
+      source_adapter_id: (provenance.source_adapter_id ?? hub.core.source_adapter_id) as EvidenceHub["core"]["source_adapter_id"],
+      source_transform_digest: provenance.source_transform_digest ?? hub.core.source_transform_digest,
+    },
+  };
+}
+
+/**
  * What the reader is told about a run whose evidence is not sealed, and the
  * one way out. RF-05 CG-P13-12 made this typed: `lifecycle.phase` says whether
  * the run is still on its way (the only case that earns "watch progress"),
@@ -3609,6 +3932,8 @@ function useTopbarCrumb(label: string | null) {
 
 const IDLE_RETAINED: RetainedSeriesSlot = { state: "idle" };
 const NOOP = () => {};
+const IDLE_IDENTITY: RunIdentitySlot = { state: "idle" };
+const NO_KINDS: ReadonlyMap<RetainedSeriesKind, RetainedSeriesSlot> = new Map();
 
 export interface EvidenceFlowProps {
   runId: string;
@@ -3627,6 +3952,11 @@ export interface EvidenceFlowProps {
   /** W3: the retained lane's equity relation. Optional for callers without the lane. */
   retainedSeries?: RetainedSeriesSlot;
   ensureRetainedSeries?: () => void;
+  /** W3b: the retained lane's derived series, per kind. */
+  retainedKinds?: ReadonlyMap<RetainedSeriesKind, RetainedSeriesSlot>;
+  ensureRetainedKind?: (kind: RetainedSeriesKind) => void;
+  /** W3b: the run's P11 identity (progress + requested spec), read by the route for a retained run. */
+  runIdentity?: RunIdentitySlot;
   onReread: () => void;
 }
 
@@ -3645,6 +3975,9 @@ export function EvidenceFlow({
   ensurePassport,
   retainedSeries = IDLE_RETAINED,
   ensureRetainedSeries = NOOP,
+  retainedKinds = NO_KINDS,
+  ensureRetainedKind = NOOP,
+  runIdentity = IDLE_IDENTITY,
   onReread,
 }: EvidenceFlowProps) {
   /* W3: the lane is read as soon as the Hub says the run is not in progress,
@@ -3654,6 +3987,23 @@ export function EvidenceFlow({
     if (passportSkip === null) ensurePassport();
   }, [passportSkip === null, ensurePassport]); // eslint-disable-line react-hooks/exhaustive-deps
   const retainedClaim = passport.state === "ready" ? (passport.evidence as Partial<CurrentSourceEvidence>).claim ?? null : null;
+  /* W3b: a retained answer is the authority for the run's lane facts. */
+  const laneEvidence = passport.state === "ready" && isRetainedAnswer(passport.evidence) ? passport.evidence : null;
+  /* The route reads the run identity (P11 progress) once the lane answered; the screen only renders it. */
+  const laneSeal =
+    runIdentity.state === "ready" ? retainedReadiness(runIdentity.identity.progress) : null;
+  const view = hub && laneEvidence ? retainedHubView(hub, laneEvidence, laneSeal) : hub;
+  const laneSelection = (() => {
+    if (!laneEvidence || runIdentity.state !== "ready") return null;
+    const folds = runIdentity.identity.progress?.progress?.folds ?? [];
+    const picks = folds.flatMap((fold) => (fold.selection && fold.selection.state === "AVAILABLE" ? [fold.selection] : []));
+    const head = picks[0];
+    if (head === undefined || !picks.every((pick) => pick.scope === "GLOBAL_STUDY" && pick.params_digest === head.params_digest)) return null;
+    return { trial: head.trial ?? null, paramsDigest: head.params_digest ?? null };
+  })();
+  const laneSummary = laneEvidence
+    ? `${retainedTiles(laneEvidence).filter((tile) => tile.value !== null).length} of ${TILE_ORDER.length} metrics · ${laneEvidence.series.length} series`
+    : null;
   const [datasetOpen, setDatasetOpen] = useState(false);
   const datasetTrigger = useRef<HTMLButtonElement>(null);
   const datasetWasOpen = useRef(false);
@@ -3706,17 +4056,23 @@ export function EvidenceFlow({
     >
       <RunHeader
         runId={runId}
-        hub={hub}
+        hub={view}
         datasetOpen={datasetOpen}
         datasetTrigger={datasetTrigger}
         datasetPanelId={datasetPanelId}
         onToggleDataset={() => setDatasetOpen((open) => !open)}
       />
-      {hub && datasetOpen ? <DatasetPanel hub={hub} id={datasetPanelId} onClose={closeDataset} /> : null}
+      {view && datasetOpen ? <DatasetPanel hub={view} id={datasetPanelId} onClose={closeDataset} /> : null}
 
-      <ClaimPassport hub={hub} state={state} onJump={onStage} retained={retainedClaim} />
+      <ClaimPassport
+        hub={view}
+        state={state}
+        onJump={onStage}
+        retained={retainedClaim}
+        laneReadiness={laneEvidence ? (laneSeal ?? "not read") : null}
+      />
 
-      {hub ? <SealNotice runId={runId} hub={hub} /> : null}
+      {view && !(laneEvidence && laneSeal === "READY") ? <SealNotice runId={runId} hub={view} /> : null}
 
       {/* Tabs and cursor: one card, sticky (HiFi). */}
       <div
@@ -3729,7 +4085,7 @@ export function EvidenceFlow({
           boxShadow: "var(--shadow-e2)",
         }}
       >
-        <StageTabs cursor={cursor} hub={hub} onStage={onStage} rowRef={tabRow} />
+        <StageTabs cursor={cursor} hub={view} onStage={onStage} rowRef={tabRow} summary={laneSummary} />
         <CursorBar
           runId={runId}
           cursor={cursor}
@@ -3737,6 +4093,7 @@ export function EvidenceFlow({
           folds={hub?.core.fold_navigation}
           onFold={onFold}
           onReset={onResetCursor}
+          laneSelection={laneSelection}
         />
       </div>
 
@@ -3794,6 +4151,8 @@ export function EvidenceFlow({
               ensurePassport={ensurePassport}
               retainedSeries={retainedSeries}
               ensureRetainedSeries={ensureRetainedSeries}
+              retainedKinds={retainedKinds}
+              ensureRetainedKind={ensureRetainedKind}
             />
           </div>
         ) : null}

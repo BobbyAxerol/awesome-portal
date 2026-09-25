@@ -19,18 +19,53 @@ import {
   replayApi,
   replayState,
   toReplayRefusal,
+  isRetainedReplay,
+  type CurrentSourceLaneNotApplicable,
   type CurrentSourceReplay,
   type Replay,
   type ReplayNavigation,
   type ReplayRefusal,
 } from "./replayClient";
+import { evidenceApi, type CurrentSourceClaimStrip } from "./evidenceClient";
+import { useRunIdentity, type RunIdentitySlot } from "./retainedLane";
 import { researchState, type ResearchState } from "./state";
 
+/**
+ * The retained lane's answer. `ready` holds the replay (or the lane's typed
+ * not-applicable answer for a P04 run); a later window read keeps the one on
+ * screen and states its own refusal beside it.
+ */
 export type RetainedReplaySlot =
   | { state: "idle" }
   | { state: "loading" }
-  | { state: "ready"; replay: CurrentSourceReplay }
+  | {
+      state: "ready";
+      replay: CurrentSourceReplay | CurrentSourceLaneNotApplicable;
+      inFlight?: boolean;
+      /** A failed window/pin read on this lane; the loaded window stays. */
+      pageRefusal?: ReplayRefusal | null;
+      /** Set when an expired retained token was answered by one re-read of the first window. */
+      recovered?: boolean;
+    }
   | { state: "refused"; refusal: ReplayRefusal };
+
+export type RetainedClaimSlot =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "ready"; claim: CurrentSourceClaimStrip | null };
+
+/**
+ * What a retained run is read against besides its replay: the run identity
+ * (route id, readiness) from P11 progress, and the execution contract from the
+ * retained evidence claim strip. Both are asked only once the retained lane
+ * answered AVAILABLE for this run.
+ */
+export interface RetainedContext {
+  identity: RunIdentitySlot;
+  claim: RetainedClaimSlot;
+}
+
+type RetainedNavigation = Exclude<ReplayNavigation, { kind: "at_ordinal" }>;
 
 /** A request, plus the public ordinal to fall back on if its token expires. */
 interface Intent {
@@ -54,6 +89,11 @@ export interface ReplayController {
   reread: () => void;
   retained: RetainedReplaySlot;
   ensureRetained: () => void;
+  /** Retained-lane window navigation, by the lane's own opaque tokens. */
+  retainedNextWindow?: () => void;
+  retainedPreviousWindow?: () => void;
+  retainedPin?: (playbackCursor: string) => void;
+  retainedContext?: RetainedContext;
 }
 
 export function useReplay(
@@ -136,15 +176,68 @@ export function useReplay(
     setIntent({ navigation: { kind: "at", token: playbackCursor }, recoverTo: ordinal });
   }, []);
 
+  /* ---- the retained lane: first window on request, then its own tokens ---- */
+
+  const [retainedIntent, setRetainedIntent] = useState<{ navigation: RetainedNavigation } | null>(null);
+
   const ensureRetained = useCallback(() => {
     if (retainedAsked.current) return;
     retainedAsked.current = true;
-    setRetained({ state: "loading" });
-    replayApi
-      .currentSource(runId, { workspaceId })
-      .then((answer) => setRetained({ state: "ready", replay: answer }))
-      .catch((error: unknown) => setRetained({ state: "refused", refusal: toReplayRefusal(error, "retained") }));
-  }, [runId, workspaceId]);
+    setRetainedIntent({ navigation: { kind: "first" } });
+  }, []);
+
+  useEffect(() => {
+    if (retainedIntent === null) return;
+    const controller = new AbortController();
+    let recovering = false;
+    const send = (navigation: RetainedNavigation) =>
+      replayApi.currentSource(runId, { workspaceId, navigation, signal: controller.signal });
+    setRetained((prev) => (prev.state === "ready" ? { ...prev, inFlight: true } : { state: "loading" }));
+    send(retainedIntent.navigation)
+      .catch((error: unknown) => {
+        /* One bounded recovery for an expired retained token: the first window. */
+        if (!toReplayRefusal(error, "retained").cursorExpired || controller.signal.aborted) throw error;
+        recovering = true;
+        return send({ kind: "first" });
+      })
+      .then((answer) => {
+        if (controller.signal.aborted) return;
+        setRetained({ state: "ready", replay: answer, inFlight: false, pageRefusal: null, recovered: recovering });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        const refusal = toReplayRefusal(error, "retained");
+        setRetained((prev) =>
+          prev.state === "ready"
+            ? { ...prev, inFlight: false, pageRefusal: refusal }
+            : { state: "refused", refusal },
+        );
+      });
+    return () => controller.abort();
+  }, [retainedIntent, runId, workspaceId]);
+
+  const retainedPage = retained.state === "ready" && isRetainedReplay(retained.replay) ? retained.replay.replay.page : null;
+  const retainedNextWindow = useCallback(() => {
+    if (retainedPage?.next_cursor) setRetainedIntent({ navigation: { kind: "cursor", token: retainedPage.next_cursor } });
+  }, [retainedPage?.next_cursor]);
+  const retainedPreviousWindow = useCallback(() => {
+    if (retainedPage?.prev_cursor) setRetainedIntent({ navigation: { kind: "before", token: retainedPage.prev_cursor } });
+  }, [retainedPage?.prev_cursor]);
+  const retainedPin = useCallback((playbackCursor: string) => {
+    setRetainedIntent({ navigation: { kind: "at", token: playbackCursor } });
+  }, []);
+
+  /* The hub published no replay for this run: ask the retained lane once, so
+     a walk-forward run is read from the lane that holds it. A P04 run whose
+     hub replay is published never sends this read. */
+  const hubUnpublished = replay?.route.state === "NOT_PUBLISHED";
+  useEffect(() => {
+    if (hubUnpublished) ensureRetained();
+  }, [ensureRetained, hubUnpublished]);
+
+  const retainedAnswered = retained.state === "ready" && isRetainedReplay(retained.replay);
+  const identity = useRunIdentity(runId, workspaceId, retainedAnswered);
+  const claim = useRetainedClaim(runId, workspaceId, retainedAnswered);
 
   /* A failed window read keeps the window already on screen, unless the
      answer was about authority or existence — then nothing is kept. */
@@ -168,9 +261,42 @@ export function useReplay(
     previousWindow,
     pin,
     reread: useCallback(() => setGeneration((n) => n + 1), []),
-    retained,
+    /* Between the hub's NOT_PUBLISHED answer and the effect that asks the
+       retained lane, the slot already reads as loading — so no frame draws
+       the hub's reasons for a run the retained lane may hold. */
+    retained: hubUnpublished && retained.state === "idle" ? { state: "loading" } : retained,
     ensureRetained,
+    retainedNextWindow,
+    retainedPreviousWindow,
+    retainedPin,
+    retainedContext: { identity, claim },
   };
+}
+
+/**
+ * The retained evidence claim strip, for the execution contract. Asked once
+ * per run when `enabled`; a refusal or a not-applicable answer is `null`, and
+ * the screen names that absence.
+ */
+function useRetainedClaim(runId: string, workspaceId: string | undefined, enabled: boolean): RetainedClaimSlot {
+  const [slot, setSlot] = useState<RetainedClaimSlot>({ state: "idle" });
+  useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    setSlot({ state: "loading" });
+    evidenceApi
+      .currentSource(runId, { workspaceId, signal: controller.signal })
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        const claim = (body as { claim?: CurrentSourceClaimStrip | null }).claim ?? null;
+        setSlot({ state: "ready", claim });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setSlot({ state: "ready", claim: null });
+      });
+    return () => controller.abort();
+  }, [enabled, runId, workspaceId]);
+  return enabled ? slot : { state: "idle" };
 }
 
 function initialIntent(deepLinkOrdinal: number | null): Intent {

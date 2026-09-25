@@ -13,11 +13,14 @@ import { FreezeScreen } from "./FreezeDetail";
 import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useFreeze } from "./useFreeze";
+import { useRunIdentity } from "./retainedLane";
 
 export function FreezeRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
   const { cursor, problems } = useEvidenceCursor({ stage: "freeze" });
   const freeze = useFreeze(runId, cursor.fold);
+  /* W3b: the run identity (schedule, folds, readiness) a retained answer is read against. */
+  const identity = useRunIdentity(runId, undefined, freeze.laneRetained);
 
   return (
     <>
@@ -32,6 +35,7 @@ export function FreezeRoute() {
         retained={freeze.retained}
         ensureRetained={freeze.ensureRetained}
         onReread={freeze.reread}
+        identity={identity}
       />
     </>
   );

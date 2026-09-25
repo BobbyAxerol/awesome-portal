@@ -46,6 +46,7 @@ export function SplitRoute() {
         cursor={cursor}
         onFold={setFold}
         folds={split.folds}
+        retained={split.retained}
         ensureFolds={split.ensureFolds}
         onReread={split.reread}
       />

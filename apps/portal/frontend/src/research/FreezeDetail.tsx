@@ -44,8 +44,18 @@ import {
 } from "./freezeClient";
 import { HAIRLINE_PERCENT, placeInTimeline } from "./splitClient";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
-import type { RetainedSlot, VerifySlot } from "./useFreeze";
+import { hubDelegates, readsRetainedLane, type RetainedSlot, type VerifySlot } from "./useFreeze";
 import type { ResearchState } from "./state";
+import { reasonCodeSentence } from "./researchRefusal";
+import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import {
+  protocolLabel,
+  retainedReadiness,
+  walkForwardOf,
+  type RunIdentity,
+  type RunIdentitySlot,
+} from "./retainedLane";
+import type { ProgressRead } from "./progressClient";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -682,6 +692,518 @@ function RetainedRows({ freeze }: { freeze: CurrentSourceFreeze }) {
   );
 }
 
+/* ----------------------------------------------- the retained WFO lane (W3b) */
+
+/*
+ * A Delta walk-forward run is never frozen through the P16 hub: the hub
+ * answers NOT_APPLICABLE and names the retained current-source lane. Once
+ * that lane answered AVAILABLE, everything below is read from it — its
+ * integrity receipt, its frozen selection, its typed absences — and nothing
+ * the hub said about itself (its NOT_APPLICABLE codes) reaches the screen.
+ */
+
+/** Sentences for the retained freeze's own reason codes, beside the shared registry. */
+const RETAINED_REASON_SENTENCES: Record<string, string> = {
+  P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES:
+    "The source bytes were verified when the run was imported; a read never reopens the private artifact, so no byte-level check is shown here.",
+  RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET:
+    "A read never enqueues an evaluation, so no neighbourhood around θ* is re-scored and no ΔJ exists to show.",
+  SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS:
+    "The source published no per-fold IS/OOS segments, so no fold boundary is drawn.",
+};
+
+function reasonText(code: string | null | undefined): string | null {
+  return reasonCodeSentence(code) ?? (code ? RETAINED_REASON_SENTENCES[code] ?? null : null);
+}
+
+/** Spec 07 §2.5, verbatim. */
+export const WHAT_IF_RULE =
+  "a what-if never writes onto frozen params — commit creates a SIBLING ATTEMPT with its own config_hash, lineage-linked to this one.";
+
+const OBJECTIVE_WORDS: Record<string, string> = {
+  MODE_1_DECAY_J: "J",
+  IS_MEAN_SHARPE: "IS mean Sharpe",
+};
+
+/** A digest as 8 hex with the full value one hover away. */
+function Digest({ value, ...rest }: { value: string | null | undefined } & Record<string, unknown>) {
+  const short = shortDigest(value);
+  return short === null ? (
+    <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} {...rest}>
+      not published
+    </span>
+  ) : (
+    <span className="mono text-[10px]" style={{ color: "var(--ink)" }} title={value ?? undefined} {...rest}>
+      {short}
+    </span>
+  );
+}
+
+/** A typed absence that shows its code and, when one exists, its sentence. */
+function TypedAbsence({
+  what,
+  state,
+  code,
+  ...rest
+}: {
+  what: string;
+  state: string;
+  code: string | null | undefined;
+} & Record<string, unknown>) {
+  const sentence = reasonText(code);
+  return (
+    <div className="flex flex-col gap-0.5" data-absence={what} data-absence-state={state} data-reason={code ?? ""} {...rest}>
+      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          {what}
+        </span>
+        <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+          {state.toLowerCase().replace(/_/g, " ")}
+        </span>
+        {code ? (
+          <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }}>
+            {code}
+          </span>
+        ) : null}
+      </span>
+      {sentence ? (
+        <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+          {sentence}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+type RetainedFreeze = CurrentSourceFreeze;
+type FoldEntry = NonNullable<ProgressRead["progress"]>["folds"][number];
+
+/** `folds 1–2`, `fold 3`, `folds 1, 3, 4` — from the fold numbers the progress read published. */
+function foldSpan(folds: readonly number[]): string {
+  if (folds.length === 0) return "no fold";
+  if (folds.length === 1) return `fold ${folds[0]}`;
+  const contiguous = folds.every((fold, index) => index === 0 || fold === folds[index - 1] + 1);
+  return contiguous ? `folds ${folds[0]}–${folds[folds.length - 1]}` : `folds ${folds.join(", ")}`;
+}
+
+function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity: RunIdentitySlot }) {
+  const selection = freeze.frozen_selection;
+  const objectiveKind = (selection as { objective_kind?: string }).objective_kind ?? null;
+  const objectiveWord = (objectiveKind && OBJECTIVE_WORDS[objectiveKind]) ?? "objective";
+  const readiness = identity.state === "ready" ? retainedReadiness(identity.identity.progress) : undefined;
+  return (
+    <div
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[6px] border px-3.5 py-2"
+      data-freeze-strip="RETAINED"
+      data-read-authority={freeze.read_authority}
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+    >
+      <Chip tone="var(--accent)" border="var(--accent)" title={freeze.read_authority}>
+        retained current source
+      </Chip>
+      <span className="flex flex-wrap items-baseline gap-1.5" data-selection-state={selection.availability.state}>
+        <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          selection
+        </span>
+        <span className="mono text-[10px]">{selection.availability.state.toLowerCase().replace(/_/g, " ")}</span>
+        {selection.selected_trial_id !== null ? (
+          <span
+            className="mono text-[10px]"
+            data-selected-trial={selection.selected_trial_id}
+            title="the source's trial id; the progress read numbers trials from 1 (P11 ordinal = source trial + 1)"
+          >
+            · trial {selection.selected_trial_id}
+          </span>
+        ) : (
+          <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+            · trial not published
+          </span>
+        )}
+        {selection.objective !== null ? (
+          <span className="mono text-[10px]" data-selected-objective={selection.objective} title={selection.objective}>
+            · {objectiveWord} {formatMetric(selection.objective, "ratio") ?? selection.objective}
+          </span>
+        ) : (
+          <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+            · objective not published
+          </span>
+        )}
+      </span>
+      {/* Readiness is the run's seal on the retained lane, not the hub's NOT_READY for a lane it never holds. */}
+      <Chip
+        data-readiness={readiness ?? (readiness === null ? "NOT_PUBLISHED" : "READING")}
+        tone={readiness === "READY" ? "var(--good)" : "var(--ink-soft)"}
+        border={readiness === "READY" ? "var(--good)" : "var(--line)"}
+        title="the attempt resolved from its source, materialized READY and sealed its mandatory bundle (P11 progress read)"
+      >
+        readiness{" "}
+        {readiness === undefined ? "reading…" : readiness === null ? "not published" : readiness.toLowerCase().replace(/_/g, " ")}
+      </Chip>
+      <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
+        as of {formatUtc(freeze.as_of_utc_ms) ?? "not published"}
+      </span>
+    </div>
+  );
+}
+
+/** Hi-fi F3 on the retained lane: the receipt RS-02 publishes, pair by pair. */
+function RetainedIntegrity({ freeze }: { freeze: RetainedFreeze }) {
+  const { integrity } = freeze;
+  const matched = integrity.state === "MATCH";
+  const tone = matched ? "var(--good)" : "var(--bad)";
+  const pairs = [
+    {
+      key: "manifest",
+      label: "manifest digest",
+      expected: integrity.expected_manifest_digest,
+      observed: integrity.observed_manifest_digest,
+    },
+    {
+      key: "retained-import",
+      label: "retained import digest",
+      expected: integrity.expected_retained_import_digest,
+      observed: integrity.observed_retained_import_digest,
+    },
+  ];
+  return (
+    <section
+      className="flex min-w-0 flex-col gap-2 rounded-[8px] border px-4 py-3"
+      data-panel="retained-integrity"
+      data-integrity-state={integrity.state}
+      data-verification-scope={integrity.verification_scope}
+      style={{
+        borderColor: matched ? "var(--line)" : "var(--bad)",
+        background: matched ? "var(--paper-raised)" : "var(--bad-bg-soft)",
+      }}
+    >
+      <div className="flex flex-wrap items-baseline gap-2">
+        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          digest chain · retained custody
+        </h3>
+        <Chip data-retained-state={integrity.state} tone={tone} border={tone}>
+          {integrity.state.toLowerCase()}
+        </Chip>
+        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-retained-scope-code>
+          {integrity.verification_scope.toLowerCase().replace(/_/g, " ")}
+        </span>
+      </div>
+
+      <ul className="flex flex-col">
+        {pairs.map((pair) => (
+          <li
+            key={pair.key}
+            className="flex flex-col gap-0.5 border-b py-1.5 last:border-b-0"
+            style={{ borderColor: "var(--line-soft)" }}
+            data-integrity-row={pair.key}
+          >
+            <span className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="mono text-[10px]">{pair.label}</span>
+              {/* The server's verdict over the receipt; this screen compares nothing itself. */}
+              <Chip data-integrity-row-state={integrity.state} tone={tone} border={tone}>
+                {integrity.state.toLowerCase()}
+              </Chip>
+            </span>
+            <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+              <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+                expected
+              </span>
+              <Digest value={pair.expected} data-expected={pair.key} />
+              <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+                · observed
+              </span>
+              <Digest value={pair.observed} data-observed={pair.key} />
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="mono text-[10px]" data-retained-rows={integrity.retained_row_count}>
+          {formatMetric(integrity.retained_row_count, "count")} retained rows
+        </span>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+          retained {formatUtc(freeze.provenance.retained_at_utc_ms) ?? "not published"}
+        </span>
+      </div>
+
+      <TypedAbsence
+        what="source artifact bytes"
+        state={freeze.source_artifact_bytes.state}
+        code={freeze.source_artifact_bytes.reason_code ?? freeze.source_artifact_bytes.availability.reason_code}
+        data-source-bytes={freeze.source_artifact_bytes.state}
+      />
+
+      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope>
+        A match here means the retained manifest, its row counts and its batch receipt agree with what
+        Portal imported. It is not a check of artifact bytes, of causal order, of a selection, or of
+        anything a broker saw.
+      </p>
+    </section>
+  );
+}
+
+/** Hi-fi F2 on the retained lane: the one frozen selection, and the folds it serves. */
+function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; identity: RunIdentity | null }) {
+  const parameters = Object.entries(freeze.frozen_selection.parameters);
+  const run = identity?.progress?.run ?? null;
+  const folds: FoldEntry[] = identity?.progress?.progress?.folds ?? [];
+  const selected = folds.filter((fold) => fold.selection?.state === "AVAILABLE");
+  const digests = [...new Set(selected.map((fold) => fold.selection?.params_digest ?? null))].filter(
+    (digest): digest is string => digest !== null,
+  );
+  const global =
+    run?.schedule === "global" &&
+    selected.length > 0 &&
+    selected.length === folds.length &&
+    selected.every((fold) => fold.selection?.scope === "GLOBAL_STUDY") &&
+    digests.length === 1;
+  const foldNumbers = folds.map((fold) => fold.fold).sort((a, b) => a - b);
+  const head = "mono px-3 py-2 text-left text-[10px] font-normal uppercase tracking-[.07em]";
+
+  return (
+    <section
+      className="flex min-w-0 flex-col overflow-hidden rounded-[6px] border"
+      data-panel="frozen-parameters"
+      data-frozen-scope={global ? "GLOBAL" : run?.schedule ?? "UNKNOWN"}
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+    >
+      <div
+        className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2"
+        style={{ borderColor: "var(--line)" }}
+      >
+        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          frozen θ* — {global ? "one shared set" : "retained selection"}
+        </h3>
+        <span className="flex flex-wrap items-center gap-2">
+          {digests.length === 1 ? (
+            <span className="flex items-baseline gap-1.5" data-params-digest={digests[0]}>
+              <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+                params digest
+              </span>
+              <Digest value={digests[0]} />
+            </span>
+          ) : null}
+          {global ? (
+            <Chip data-schedule="global" tone="var(--accent)" border="var(--accent)">
+              shared
+            </Chip>
+          ) : null}
+        </span>
+      </div>
+
+      {global ? (
+        <p
+          className="border-b px-3 py-1.5 text-[11px] leading-[1.5]"
+          style={{ borderColor: "var(--line-soft)", background: "var(--accent-soft)", color: "var(--ink-soft)" }}
+          data-shared-banner
+        >
+          <span className="mono">shared params — global schedule, one θ* for {foldSpan(foldNumbers)}</span>
+          <span style={{ color: "var(--ink-faint)" }}>
+            {" "}
+            · one optimizer study selected it for every fold, so its objective is study-wide, not a per-fold best.
+          </span>
+        </p>
+      ) : identity === null ? (
+        <p className="border-b px-3 py-1.5 mono text-[10px] italic" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}>
+          reading the run's schedule…
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1 border-b px-3 py-1.5" style={{ borderColor: "var(--line-soft)" }} data-fold-selections>
+          <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
+            schedule {run?.schedule ?? "not published"} — the retained lane publishes one frozen selection
+          </span>
+          {folds.map((fold) => (
+            <span key={fold.fold} className="flex flex-wrap items-baseline gap-2" data-fold-selection={fold.fold}>
+              <span className="mono text-[10px]">fold {fold.fold}</span>
+              {fold.selection?.state === "AVAILABLE" ? (
+                <>
+                  <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+                    {(fold.selection.scope ?? "").toLowerCase().replace(/_/g, " ")}
+                  </span>
+                  <Digest value={fold.selection.params_digest} />
+                </>
+              ) : (
+                <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} title={fold.selection?.reason_code ?? undefined}>
+                  selection not published
+                </span>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {parameters.length === 0 ? (
+        <p className="mono px-3 py-2 text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-frozen-empty>
+          the retained selection published no parameter
+        </p>
+      ) : (
+        <table className="w-full table-fixed border-collapse" data-frozen-table data-frozen={parameters.length}>
+          <colgroup>
+            <col />
+            <col style={{ width: "34%" }} />
+          </colgroup>
+          <thead>
+            <tr className="border-b" style={{ borderColor: "var(--line)", color: "var(--ink-faint)" }}>
+              <th scope="col" className={head}>
+                parameter
+              </th>
+              <th scope="col" className={`${head} text-right`}>
+                frozen θ*
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {parameters.map(([name, value]) => (
+              <tr
+                key={name}
+                className="border-b last:border-b-0"
+                style={{ borderColor: "var(--line-soft)" }}
+                data-frozen-param={name}
+              >
+                <th
+                  scope="row"
+                  className="mono truncate px-3 py-[7px] text-left text-[12px] font-normal normal-case tracking-normal"
+                  style={{ color: "var(--ink)" }}
+                >
+                  {name}
+                </th>
+                {/* The exact decimal the server sent; nothing is rounded. */}
+                <td className="mono px-3 py-[7px] text-right text-[12px] font-semibold tabular-nums" data-frozen-value={name}>
+                  {value}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div
+        className="flex flex-col gap-1 border-t px-3 py-2.5"
+        style={{ borderColor: "var(--line)", background: "var(--paper-sunken)" }}
+      >
+        <TypedAbsence what="declared range · range position" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" data-frozen-range />
+        <span className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+          Read-only by decision: writing onto a frozen set breaks the invariant the claim rests on. Manually entered
+          params have no lineage — no path for them exists.
+        </span>
+      </div>
+    </section>
+  );
+}
+
+/** Hi-fi F1 on the retained lane: what the requested window says, and what no source clock says. */
+function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
+  const window = walkForwardOf(identity?.requested ?? null);
+  const label = protocolLabel(window, identity?.progress?.run?.protocol ?? null);
+  const folds: FoldEntry[] = identity?.progress?.progress?.folds ?? [];
+  const segmentGap = folds.find((fold) => fold.fold_timeline?.state === "NOT_PUBLISHED")?.fold_timeline ?? null;
+  const declared = identity?.progress?.run?.declared_folds ?? null;
+  return (
+    <section
+      className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
+      data-panel="ordering"
+      data-ordering-state="NOT_PUBLISHED"
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+    >
+      <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        ordering
+      </h3>
+      <TypedAbsence what="wall clock ordering" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" />
+      <div className="flex flex-col gap-1" data-data-time="REQUESTED_WINDOW">
+        <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          data time · requested walk-forward window
+        </span>
+        {identity === null ? (
+          <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+            reading the admitted spec…
+          </span>
+        ) : window.start !== null && window.endExclusive !== null ? (
+          <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5" data-requested-window>
+            <span className="mono text-[10px]">
+              {window.start} → {window.endExclusive}
+            </span>
+            {label ? <Chip>{label}</Chip> : null}
+            {declared?.state === "DECLARED" && declared.count !== null ? (
+              <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+                {declared.count} declared folds
+              </span>
+            ) : null}
+          </span>
+        ) : (
+          <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+            requested window not published
+          </span>
+        )}
+        {segmentGap ? (
+          <TypedAbsence what="per-fold IS/OOS segments" state={segmentGap.state} code={segmentGap.reason_code} />
+        ) : null}
+      </div>
+      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-two-clocks>
+        {TWO_CLOCKS_NOTE}
+      </p>
+    </section>
+  );
+}
+
+/** Hi-fi F5 on the retained lane: the card keeps its place, typed and inert. */
+function RetainedWhatIf({ freeze }: { freeze: RetainedFreeze }) {
+  const code = freeze.what_if.reason_code;
+  return (
+    <section
+      className="flex flex-col gap-2 rounded-[10px] border border-dashed px-4 py-3.5"
+      data-panel="what-if"
+      data-what-if={freeze.what_if.state}
+      data-reason={code}
+      style={{ borderColor: "var(--warn)", background: "var(--paper-raised)" }}
+    >
+      <div className="flex flex-wrap items-baseline gap-2">
+        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          what-if
+        </h3>
+        <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+          {freeze.what_if.state.toLowerCase().replace(/_/g, " ")}
+        </span>
+        <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }}>
+          {code}
+        </span>
+      </div>
+      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+        {reasonText(code)} The what-if sandbox (A10c) is not built, so no slider and no ΔJ preview is drawn.
+      </p>
+      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule>
+        {WHAT_IF_RULE}
+      </p>
+      <div>
+        <button
+          type="button"
+          className="btn-ghost mono text-[10px]"
+          data-action="create-sibling"
+          disabled
+          aria-disabled="true"
+          style={{ opacity: 0.5, cursor: "not-allowed" }}
+          title={`${code} — the what-if sandbox (A10c) is not built`}
+        >
+          create sibling attempt →
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function RetainedFreezeBody({ freeze, identity }: { freeze: RetainedFreeze; identity: RunIdentitySlot }) {
+  const known = identity.state === "ready" ? identity.identity : null;
+  return (
+    <div className="flex flex-col gap-3" data-lane="retained">
+      <RetainedOrdering identity={known} />
+      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <RetainedFrozenTable freeze={freeze} identity={known} />
+        <RetainedIntegrity freeze={freeze} />
+      </div>
+      <RetainedWhatIf freeze={freeze} />
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- screen */
 
 export interface FreezeScreenProps {
@@ -694,6 +1216,8 @@ export interface FreezeScreenProps {
   retained: RetainedSlot;
   ensureRetained: () => void;
   onReread: () => void;
+  /** W3b: the run identity a retained answer is read against (schedule, folds, readiness). */
+  identity?: RunIdentitySlot;
 }
 
 export function FreezeScreen({
@@ -706,8 +1230,14 @@ export function FreezeScreen({
   retained,
   ensureRetained,
   onReread,
+  identity = { state: "idle" },
 }: FreezeScreenProps) {
-  const freeze = detail?.freeze;
+  /* W3b: the hub delegated this run and the retained lane answered — read it from there. */
+  const lane = readsRetainedLane(detail, retained) ? retained.freeze : null;
+  /* While the delegated lane is still reading (or refused), the hub's own
+     NOT_APPLICABLE body describes the hub, not this run: it is not drawn. */
+  const handedOff = hubDelegates(detail) && retained.state !== "not-applicable";
+  const freeze = lane === null && !handedOff ? detail?.freeze : undefined;
   const blocked = freeze?.integrity.state === "BLOCKED";
 
   return (
@@ -778,13 +1308,35 @@ export function FreezeScreen({
             as of {new Date(detail.as_of_utc_ms).toISOString()}
           </span>
         </div>
+      ) : lane !== null ? (
+        <RetainedStrip freeze={lane} identity={identity} />
       ) : null}
 
-      {detail ? <ProvenanceStrip provenance={detail.provenance} /> : null}
+      {lane !== null ? (
+        <ProvenanceStrip
+          provenance={{
+            source_adapter_id: lane.provenance.source_adapter_id,
+            engine_version: lane.provenance.engine_version,
+            source_transform_digest: lane.provenance.source_transform_digest,
+            requested_spec_digest: lane.provenance.requested_spec_digest,
+            effective_spec_digest: lane.provenance.effective_spec_digest,
+            dataset_binding_digest: lane.provenance.dataset_binding_digest,
+            manifest_digest: lane.provenance.source_manifest_digest,
+          }}
+        />
+      ) : detail && !handedOff ? (
+        <ProvenanceStrip provenance={detail.provenance} />
+      ) : null}
 
       <ResearchPanel
         title="freeze"
-        meta={detail?.revision ? `revision ${detail.revision}` : undefined}
+        meta={
+          lane !== null ? (
+            <span title={lane.revision ?? undefined}>retained lane · profile {lane.provenance.profile_id}</span>
+          ) : detail?.revision && !handedOff ? (
+            `revision ${detail.revision}`
+          ) : undefined
+        }
         state={state}
         minBodyHeight={240}
         recovery={
@@ -961,6 +1513,8 @@ export function FreezeScreen({
               </section>
             ) : null}
           </div>
+        ) : lane !== null ? (
+          <RetainedFreezeBody freeze={lane} identity={identity} />
         ) : null}
       </ResearchPanel>
 

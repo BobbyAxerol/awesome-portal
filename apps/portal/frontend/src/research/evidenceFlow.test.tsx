@@ -1570,3 +1570,98 @@ describe("W3 — the retained equity is drawn at full resolution (CG-P13-05)", (
     expect(container.querySelector("[data-series-panel='EQUITY_OOS']")).toBeNull();
   });
 });
+
+/* -------------------------------------------------------------------------
+ * W3b — Screen 04 reads the retained lane, not the P04 hub, on a WFO run
+ *
+ * The hub body is the one the preview served for the same run
+ * (`w3bRealWfo.fixture.json` hub_evidence): NOT_PUBLISHED with
+ * P13_SOURCE_EVIDENCE_NOT_PUBLISHED everywhere. None of that may reach the
+ * screen once the retained lane answered.
+ * ---------------------------------------------------------------------- */
+
+const W3B = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3bRealWfo.fixture.json"), "utf8")) as {
+  hub_evidence: React.ComponentProps<typeof EvidenceFlow>["hub"] & object;
+  progress: import("./progressClient").ProgressRead;
+  requested_spec: import("./progressClient").RunRequestedSpec;
+  series_monthly: CurrentSourceEvidenceSeries;
+  series_distribution: CurrentSourceEvidenceSeries;
+};
+const W3B_IDENTITY = {
+  state: "ready" as const,
+  identity: { progress: W3B.progress, requested: W3B.requested_spec },
+};
+
+describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => {
+  it("fills the tiles the passport publishes, labels them source-derived, and keeps retained absences", () => {
+    const { container } = view({ hub: W3B.hub_evidence, passport: retainedPassport, runIdentity: W3B_IDENTITY });
+    const exact = (key: string) => container.querySelector(`[data-metric-value='${key}']`)?.getAttribute("data-exact");
+    const shown = (key: string) => container.querySelector(`[data-metric-value='${key}']`)?.textContent;
+    expect(exact("FINAL_EQUITY")).toBe(W3.evidence.passport.final_equity);
+    expect(shown("FINAL_EQUITY")).toBe("19,926.51");
+    expect(shown("INITIAL_EQUITY")).toBe("20,000.00");
+    expect(shown("NET_RETURN_FRACTION")).toBe("−0.37%");
+    expect(shown("MAX_DRAWDOWN_FRACTION")).toBe("−0.67%");
+    expect(shown("BARS_PROCESSED")).toBe("1,056");
+    expect(shown("OOS_SHARPE")).toBe("−5.35");
+    expect(container.querySelector("[data-metric='FINAL_EQUITY'] [data-metric-scope]")?.textContent).toContain("source-derived");
+    // A tile the lane has no field for names the lane; the benchmark tile carries the lane's own reason.
+    expect(container.querySelector("[data-metric='OOS_SORTINO'] [data-withheld]")?.getAttribute("data-reason-code")).toBe(
+      "UI_RETAINED_LANE_HAS_NO_FIELD",
+    );
+    expect(container.querySelector("[data-metric='BENCHMARK_RETURN_FRACTION'] [data-withheld]")?.getAttribute("data-reason-code")).toBe(
+      "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES",
+    );
+  });
+
+  it("shows no P04-hub banner or reason code once the retained seal is READY", () => {
+    const { container } = view({ hub: W3B.hub_evidence, passport: retainedPassport, runIdentity: W3B_IDENTITY });
+    expect(container.querySelector("[data-not-ready]")).toBeNull();
+    expect(container.querySelector("[data-readiness]")?.getAttribute("data-readiness")).toBe("READY");
+    expect(container.innerHTML).not.toMatch(/P13_SOURCE_EVIDENCE_NOT_PUBLISHED|P13_PUBLISHES_NO_BEHAVIOR_ANALYTIC/);
+    expect(container.textContent).not.toContain("This run published no sealed evidence");
+    // The engine is the retained provenance's, not "engine — not published".
+    expect(container.querySelector("[data-engine]")?.getAttribute("data-engine")).toBe("1.1.1");
+    // Global schedule: the cursor shows the one selection every fold froze.
+    expect(container.querySelector("[data-cursor-trial] [data-cursor-lane='global']")?.textContent).toContain("#1");
+  });
+
+  it("never claims READY before the progress read answered", () => {
+    const { container } = view({ hub: W3B.hub_evidence, passport: retainedPassport });
+    expect(container.querySelector("[data-readiness]")?.getAttribute("data-readiness")).toBe("not read");
+  });
+
+  it("reads the retained derived series: monthly strip, distribution; rolling Sharpe/beta keep the lane's absences", async () => {
+    const ensureRetainedKind = vi.fn();
+    const retainedKinds = new Map([
+      ["MONTHLY_RETURNS", { state: "ready" as const, series: W3B.series_monthly }],
+      ["RETURN_DISTRIBUTION", { state: "ready" as const, series: W3B.series_distribution }],
+    ]) as NonNullable<React.ComponentProps<typeof EvidenceFlow>["retainedKinds"]>;
+    const { container } = view({
+      hub: W3B.hub_evidence,
+      passport: retainedPassport,
+      runIdentity: W3B_IDENTITY,
+      retainedKinds,
+      ensureRetainedKind,
+    });
+    expect(ensureRetainedKind).toHaveBeenCalledWith("ROLLING_RETURNS_20");
+    expect(container.querySelector("[data-month='2026-07'] [data-month-value]")?.textContent).toBe("−0.37%");
+    const distribution = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']");
+    expect(distribution?.getAttribute("data-series-state")).toBe("ready");
+    expect(distribution?.querySelector("[data-sampling]")?.getAttribute("data-sampling")).toBe("FULL_RETURN_HISTOGRAM_V2");
+    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-absence-note]")?.getAttribute("data-reason-code")).toBe(
+      "UI_RETAINED_LANE_HAS_NO_SERIES",
+    );
+    expect(container.querySelector("[data-series-panel='ROLLING_BETA_63'] [data-absence-note]")?.getAttribute("data-reason-code")).toBe(
+      "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES",
+    );
+    // The lazy chart chunk settles before the test ends (console guard).
+    await waitFor(() => expect(container.querySelector("[data-chart-table='distribution']")).toBeTruthy(), { timeout: 15_000 });
+  }, 20_000);
+
+  it("leaves a run the lane never answered on the hub: hub tiles and the hub's banner", () => {
+    const { container } = view({ hub: W3B.hub_evidence });
+    expect(container.querySelector("[data-metric-lane='retained']")).toBeNull();
+    expect(container.querySelector("[data-not-ready]")?.getAttribute("data-not-ready")).toBe("COMPLETED");
+  });
+});

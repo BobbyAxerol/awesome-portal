@@ -22,6 +22,7 @@ import type { components as ReplayComponents } from "@portal/contracts-research-
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 
 import { PortalApiError } from "../lib/api";
+import { isRetainedAnswer } from "./retainedLane";
 import type { ResearchState } from "./state";
 
 type ReplaySchemas = ReplayComponents["schemas"];
@@ -36,6 +37,11 @@ export type ReplaySourceGap = ReplaySchemas["SourceGap"];
 export type RouteCapability = ReplaySchemas["RouteCapability"];
 export type RouteCapabilityKey = keyof Replay["route_capabilities"];
 export type CurrentSourceReplay = SourceSchemas["Replay"];
+/** The retained lane's typed "this run is a P04 fixed qualification" answer (200, not a refusal). */
+export type CurrentSourceLaneNotApplicable = SourceSchemas["LaneNotApplicable"];
+export type CurrentSourceObservation = SourceSchemas["Observation"];
+export type CurrentSourceFact = SourceSchemas["Fact"];
+export type RetainedCapabilityKey = keyof CurrentSourceReplay["route_capabilities"];
 
 const RUNS = "/api/v1/quantbt/runs";
 
@@ -111,10 +117,21 @@ export const replayApi = {
       options.signal,
     ),
 
-  /** `researchCurrentSourceReplayGetV1` — first window only; no `at_ordinal` exists here. */
-  currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
-    call<CurrentSourceReplay>(
-      `${RUNS}/${encodeURIComponent(runId)}/current-source/replay${replayQuery({ kind: "first" }, options)}`,
+  /**
+   * `researchCurrentSourceReplayGetV1` — the first window, or one opaque
+   * `cursor` / `before` / `at` token this lane minted. No `at_ordinal` exists
+   * here, so a public deep link cannot be restored on this lane.
+   */
+  currentSource: (
+    runId: string,
+    options: {
+      workspaceId?: string;
+      signal?: AbortSignal;
+      navigation?: Exclude<ReplayNavigation, { kind: "at_ordinal" }>;
+    } = {},
+  ) =>
+    call<CurrentSourceReplay | CurrentSourceLaneNotApplicable>(
+      `${RUNS}/${encodeURIComponent(runId)}/current-source/replay${replayQuery(options.navigation ?? { kind: "first" }, options)}`,
       options.signal,
     ),
 } as const;
@@ -196,6 +213,61 @@ export const SAMPLING_NOTE: Record<"FULL" | "EXTREMA_BUCKET_V1", string> = {
 };
 
 /* -------------------------------------------------------------------------
+ * The retained WFO lane (W3b)
+ * ---------------------------------------------------------------------- */
+
+/**
+ * What the retained lane replays, in one sentence. Said instead of the P04
+ * route note on a run the retained lane answered — the hub's "did not publish"
+ * describes the hub, not this run.
+ */
+export const RETAINED_ROUTE_NOTE =
+  "This lane replays the walk-forward observations the run retained and sealed: model position, equity, return and drawdown per observation. It has no orders, fills or candles, so the playhead is a model observation, not an execution state.";
+
+export const RETAINED_SAMPLING_NOTE =
+  "every retained observation in source-table order, read a window at a time; nothing is bucketed or interpolated.";
+
+/** A UI-authored code (researchRefusal.ts): the retained lane has no field for this fact. */
+export const RETAINED_NO_FIELD = "UI_RETAINED_LANE_HAS_NO_FIELD";
+
+/** The retained lane's five capabilities, in the order the screen reads them. */
+export const RETAINED_CAPABILITY_KEYS: readonly RetainedCapabilityKey[] = [
+  "model_positions",
+  "returns",
+  "orders",
+  "fills",
+  "candles",
+] as const;
+
+export const RETAINED_CAPABILITY_LABEL: Record<RetainedCapabilityKey, string> = {
+  model_positions: "model positions",
+  returns: "returns",
+  orders: "orders",
+  fills: "fills",
+  candles: "candles",
+};
+
+/**
+ * Which retained capability answers a P04 route capability. A key absent here
+ * has no retained field at all, and the screen says so in the retained lane's
+ * name — never with the hub's reason code.
+ */
+export const RETAINED_ANSWER_FOR: Partial<Record<RouteCapabilityKey, RetainedCapabilityKey>> = {
+  orders: "orders",
+  fills: "fills",
+  /* The model's accepted position, labelled as such — not a broker position snapshot. */
+  positions: "model_positions",
+  candle_windows: "candles",
+};
+
+/** Whether a retained-lane body is the replay itself (not the typed not-applicable answer). */
+export function isRetainedReplay(
+  body: CurrentSourceReplay | CurrentSourceLaneNotApplicable | null | undefined,
+): body is CurrentSourceReplay {
+  return isRetainedAnswer(body) && (body as { schema_version?: unknown }).schema_version === "research.current-source-replay.v1";
+}
+
+/* -------------------------------------------------------------------------
  * Refusals
  * ---------------------------------------------------------------------- */
 
@@ -256,7 +328,11 @@ export function toReplayRefusal(error: unknown, lane: "replay" | "retained" = "r
   }
   const { status } = error;
   const denied = status === 401 || status === 403;
-  const notRetained = lane === "retained" && status === 409;
+  /* The retained lane mints its own opaque tokens; an expired one is a stale
+     position, not a missing retention. */
+  const retainedCursorExpired =
+    lane === "retained" && status === 409 && error.code === "RESEARCH_CURRENT_SOURCE_CURSOR_EXPIRED";
+  const notRetained = lane === "retained" && status === 409 && !retainedCursorExpired;
   const copy = notRetained
     ? RETAINED_NOT_RETAINED
     : lane === "retained" && status === 404
@@ -282,7 +358,8 @@ export function toReplayRefusal(error: unknown, lane: "replay" | "retained" = "r
             : "terminal",
     mayRetry: status >= 500,
     terminal: denied || status === 404 || status === 400,
-    cursorExpired: lane === "replay" && status === 409 && error.code === "RESEARCH_REPLAY_CURSOR_EXPIRED",
+    cursorExpired:
+      (lane === "replay" && status === 409 && error.code === "RESEARCH_REPLAY_CURSOR_EXPIRED") || retainedCursorExpired,
   };
 }
 
