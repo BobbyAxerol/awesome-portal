@@ -47,7 +47,8 @@ So on `signal_notional` there is **no order, fill or trade record to retain**: t
 |---|---|---|
 | `088acd27` | feat(research): P17 retained replay ledger for the signal-notional route (W5b) | 24 files, +2394 / −41 |
 | `68d6ce03` | feat(research): Screen 08 replays the run's candles and target transitions (W5b) | 7 files, +1593 / −16 |
-| (this commit) | docs(research): W5b P17 replay evidence, A12 P17 gap closure, CG-P17 answers | this file + request status |
+| `897fb48d` | docs(research): W5b P17 replay evidence, A12 P17 gap closure, CG-P17 answers | 2 files, +161 / −3 |
+| `8775be46` | feat(research): P17-T14 child audit - QuantBT strategy isolation per fold (W5b) | 28 files, +817 / −32 |
 
 All through the pre-commit hook (`verify-workspace.sh`); none bypassed. The first attempt of `088acd27` was refused by the hook: the P01 live route inventory lacked the new route; `node scripts/research-loop-v11/p01-baseline.mjs --write-live-routes` fixed it (233 routes).
 
@@ -78,7 +79,7 @@ All through the pre-commit hook (`verify-workspace.sh`); none bypassed. The firs
 | P17-T11 | GAP (partial) | **COVERED** | CA two bars with one timestamp: table order kept, `cross_stream_order = NOT_ASSERTED`, ledger order kept |
 | P17-T12 | COVERED | COVERED + | FE `#fold=2` arrival → fold-1 window via its start cursor; fold switch |
 | P17-T13 | GAP | **COVERED** | FE reveal test: future transitions (time too), markers, candles after the cursor, full-run fees/transitions and fold outcomes hidden; revision text and request count unchanged |
-| P17-T14 | GAP (partial) | **COVERED** (capital + original ids) / child audit **NOT RETAINED** | CA fold switch keeps `source_index_utc` and fold id; child-audit lifecycle table not retained (§6) |
+| P17-T14 | GAP (partial) | **COVERED** (capital + original ids + child audit) | CA fold switch keeps `source_index_utc` and fold id; child audit §10: Py (golden + opt-in real HMD, both paths) every retained record equals QuantBT's `strategy_lifecycle_table` row, all 12 audit ordinals present once, exactly one `out-of-sample generation` child per fold starting on the fold's first replayed bar; CA sub-read returns them verbatim in QuantBT's order, 404 for an unknown fold, typed absence on an older seal; DB route + ETag; FE card + anatomy link, one read per fold |
 | P13-T12 | GAP | **COVERED** by the same reveal (S08 is where reveal is built; S04's HiFi toggle is the same presentation mode) | FE reveal test |
 | V11-P17-DR | GAP | **PARTIAL→DONE for this route** | Real HMD numbers: 1056 bars, 8 transitions, fees 8.0327295941789174, fold 0 20000→19931.280844135865, fold 1 →19926.50808204798; every bar field equals the engine value exactly (Py assertions) |
 | V11-P17-BR | GAP | **DONE (two labelled lanes)** | §7 |
@@ -110,7 +111,7 @@ The P17 gate command mixes the three P17 files (2 + 2 + 8 = **12** tests) with t
 | T18 hidden tab pause | Tested | `executeReplay.test.tsx` |
 | T19 keys | Tested | `executeReplay.test.tsx` |
 | T20 660px | Browser probe, no overflow | §7 |
-| T21 axe | Not run in this slice | open |
+| T21 axe | Run in the fixture lane at 1440/660 (§10) | 0 blocking; only `color-contrast` on `#939db0` (the approved D-B1 shared-token exception, as in the RF-04 probe) |
 | T22 reduced motion | No pulse animation used | by construction |
 
 ## 6. CG-P17 answers and what stays open
@@ -120,7 +121,7 @@ The P17 gate command mixes the three P17 files (2 + 2 + 8 = **12** tests) with t
 | **CG-P17-01** canonical fixtures | **ANSWERED.** `packages/contracts/fixtures/research-current-source.replay.fold0.valid.json`, `…replay-transitions.valid.json`, `…replay.legacy-seal.valid.json`, generated from the real-HMD seal by `research-w5b-replay.spec.ts` (`W5B_WRITE_FIXTURES=1`), validated against Zod and OpenAPI on every run, tracked by `snapshot.py`, loaded by `executeCandleReplay.test.tsx` and the browser probe. The hub (`research.replay.v1`) fixtures were not added: the hub lane is the P04 sample lane and its contract spec bodies remain the reference. |
 | **CG-P17-02** lane fact + codes in the contract | **ANSWERED.** (a) RF-05 already answers the lane state (200 `LaneNotApplicable` for P04; 409 with `details.lane_state`). (b) OpenAPI 1.4.0 publishes `ProblemCode` (7 codes incl. the new `RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP`). |
 | **CG-P17-03** two counts | **ANSWERED for the retained lane:** `source_observation_count` is the number of sealed bars; there is no bucketing in the replay relation (every bar, a window at a time). The only downsample is `execution.candle_overview` and it carries `source_bar_count`, `emitted_bucket_count`, `bucket_bars`. The hub's `emitted_point_count` semantics are unchanged (hub lane). |
-| Child-audit provenance (P17-T14 half) | **Not retained.** QuantBT publishes `strategy_lifecycle_table` (isolation records per candidate × fold); retaining it is a separate additive document. Recorded as open, not closed by a typed absence. |
+| Child-audit provenance (P17-T14 half) | **Retained and served** (§10). |
 | HiFi LENS / COPY link / Validation tab | Not built (D13). |
 
 ## 7. Real data and browser (lanes kept apart)
@@ -152,6 +153,31 @@ Screenshots (not committed, SHA-256): `ledger-1440` 59f54609…, `ledger-660` 60
 | Python full suite (scratch venv with the pinned QuantBT 1.1.1 wheel) | 649 passed, 7 skipped (opt-in), 1 failed: `test_rf02_nats_consume_loop_survives_an_idle_queue` — `nats` is not installed in the scratch venv (environment, unrelated to W5b) |
 | `test_m0_freeze` | green after re-pinning `advanced_walkforward_runner` |
 | W1 real seal fixture | `research-w1-preview-seal.spec.ts` still passes (optional `replay` summary block) |
+
+## 10. Follow-up · P17-T14 child audit and S08 axe (2026-09-25, coordinator request)
+
+**Source fact.** QuantBT's `strategy_lifecycle_table` on the real run has 12 rows, policy `isolated_v1`, 0 records dropped by the source. Per fold: three in-sample-search children (one per candidate), one in-sample scoring child, one out-of-sample scoring child and one **out-of-sample generation** child, which produced the replayed bars. Each row carries candidate id, fold id, seed, cutoff, train/test window, lifecycle kind, `certified_isolation`, and the strategy and market fingerprints. There is no record id column, so the original child-audit id is the row's position in QuantBT's table (`audit_ordinal`), kept together with candidate id, fold id and seed.
+
+| Decision | Why |
+|---|---|
+| D15 · Retain the table verbatim per fold, inside the FOLD row payload (`child_audit`, schema `research.current-source-fold-child-audit.v1`, at most 64 records, `truncated` when QuantBT published more), with run-level facts in `summary.replay.child_audit` | No new table kind, **no migration**; a FOLD row stays well under 64 KiB (5.9 KB on the real run); older seals and the W1 seal fixture are untouched (optional blocks) |
+| D16 · Serve it as a bounded sub-read `GET …/current-source/replay/child-audit?fold=<fold_id>` (one indexed row via the unique `source_id` key, ETag), not inside every replay window | A replay window must stay small; 256 folds × 64 records would not fit in the response |
+| D17 · Screen 08 shows the fold window's child audit as a card (generating child marked) and as a `child` link in the close-target trade anatomy | The HiFi's audit lens puts ids on each row; the anatomy is where a transition is traced to its source |
+
+**Files.** Runner `wfo/strategy_lifecycle.v1.parquet` + `wfo/strategy_lifecycle_contract.v1.json`; exporter `_attach_child_audit`; Control API payload/contract/service/repository (`rowBySourceId`)/controller; OpenAPI 1.5.0; fixture `research-current-source.replay-child-audit.fold0.valid.json`; R2 inventory route_count 185; P01 live routes 234; M0 freeze re-pinned; S08 `ChildAuditCard`.
+
+**Tests.**
+- Python: W5b + current-source + retention + M0 freeze pass. With `PORTAL_RUN_HMD_REAL_SMOKE=1`, `test_research_wfo_real_hmd.py` (P06 child path; it re-exported the real fixture) and `test_current_source_w5b_replay.py` give 14/14.
+- Control API: W5b in-memory spec 20/20. The related current-source/replay specs give 153 passed and 1 skipped.
+- PostgreSQL cell: `research-w5b-replay-db` (now with the child-audit route), rs02 migration and rs03 acceptance give 17/17.
+- Contracts: 184/184. Generated types verified, snapshot updated.
+- Frontend: `src/research` plus `r2Ledger` give 1163/1163. `tsc` is clean and the build passes.
+
+**Axe (S08 T21), fixture lane.** Real preview API; only the retained replay, transitions and child-audit reads are answered by the CG-P17-01 real-HMD fixtures.
+- 1440: `serious:color-contrast` ×79, every node `#939db0` (the approved D-B1 shared-token exception). No other violation.
+- 660: the same, after two fixes. The child-audit table's scroll container is now focusable, and card headings are `h2` under the page `h1`. Before the fixes, axe reported `scrollable-region-focusable` and a moderate `heading-order`.
+- DOM stayed at 2396 nodes while playing a fold at 64×.
+- Screenshots are not committed. SHA-256: `ledger-1440` 65638f35…, `ledger-660` ad8fda6e…, `ledger-reveal-1440` 8ffddd10…, `ledger-reveal-660` de4ea8eb….
 
 ## 9. Rollback
 
