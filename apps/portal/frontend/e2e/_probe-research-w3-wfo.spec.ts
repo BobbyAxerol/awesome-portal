@@ -17,34 +17,32 @@ import { freezeClock, settle, stubPortalApi } from "./fixtures";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const W3 = JSON.parse(readFileSync(join(here, "..", "src", "research", "w3RealWfo.fixture.json"), "utf8")) as Record<string, unknown>;
+const W3B = JSON.parse(readFileSync(join(here, "..", "src", "research", "w3bRealWfo.fixture.json"), "utf8")) as Record<string, unknown>;
 const OUT = process.env.RESEARCH_SHOT_DIR ?? "/tmp/research-shots";
 const RUN = "/research/quantbt/runs/R-WFO-118";
 
 async function retained(page: import("@playwright/test").Page) {
   const body = (value: unknown) => ({ status: 200, contentType: "application/json", body: JSON.stringify(value) });
-  await page.route("**/current-source/evidence/series*", (route) => route.fulfill(body(W3.series)));
+  /* One body per retained kind, as the preview served them (w3bRealWfo.fixture.json). */
+  const byKind: Record<string, unknown> = {
+    EQUITY: W3.series,
+    MONTHLY_RETURNS: W3B.series_monthly,
+    RETURN_DISTRIBUTION: W3B.series_distribution,
+    ROLLING_RETURNS_20: W3B.series_rolling,
+  };
+  await page.route("**/current-source/evidence/series*", (route) => {
+    const kind = new URL(route.request().url()).searchParams.get("kind") ?? "";
+    return byKind[kind]
+      ? route.fulfill(body(byKind[kind]))
+      : route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: { code: "RESEARCH_CURRENT_SOURCE_INVALID" } }) });
+  });
+  await page.route("**/api/v1/research/runs/*/progress*", (route) => route.fulfill(body(W3B.progress)));
+  await page.route("**/api/v1/research/runs/*/requested-spec*", (route) => route.fulfill(body(W3B.requested_spec)));
   await page.route("**/current-source/evidence?*", (route) => route.fulfill(body(W3.evidence)));
   await page.route("**/current-source/evidence", (route) => route.fulfill(body(W3.evidence)));
-  /* The e2e split-hub fixture predates CG-P14-05 (no dataset block) and throws
-     on S05 regardless of W3; add the block the contract now requires. */
-  await page.route("**/api/v1/quantbt/runs/*/split*", async (route) => {
-    const hub = JSON.parse(readFileSync(join(here, "research-foundation", "split-detail.json"), "utf8")) as Record<string, unknown>;
-    route.fulfill(body({ ...hub, dataset: hub.dataset ?? { state: "NOT_PUBLISHED", reason_code: "E2E_FIXTURE_PREDATES_CG_P14_05" } }));
-  });
-  /* Likewise the e2e search-hub fixture predates CG-P15-05 (no claim_row). */
-  const none = (state: string, reason: string) => ({ state, value: null, provenance: "NONE", reason_code: reason, availability: { state, reason_code: reason } });
-  await page.route("**/api/v1/quantbt/runs/*/search*", (route) => {
-    const hub = JSON.parse(readFileSync(join(here, "research-foundation", "search-detail.json"), "utf8")) as Record<string, unknown>;
-    route.fulfill(body({ ...hub, claim_row: hub.claim_row ?? {
-      basis: "DECLARED_NOT_EXECUTED",
-      validation_claim: none("NOT_APPLICABLE", "E2E_FIXTURE_PREDATES_CG_P15_05"),
-      chronological_claim: none("NOT_APPLICABLE", "E2E_FIXTURE_PREDATES_CG_P15_05"),
-      oos_used_for_selection: none("NOT_ASSERTED", "E2E_FIXTURE_PREDATES_CG_P15_05"),
-      oos_column: { state: "REPORT_ONLY", source_evaluation_state: "E2E", provenance: "NONE", reason_code: null, availability: { state: "AVAILABLE", reason_code: null } },
-      scoring_backend: { state: "NOT_APPLICABLE", declared_value: null, provenance: "NONE", reason_code: "E2E_FIXTURE_PREDATES_CG_P15_05", availability: { state: "NOT_APPLICABLE", reason_code: "E2E_FIXTURE_PREDATES_CG_P15_05" } },
-      mode_reference: null,
-    } }));
-  });
+  /* The research-foundation split/search hub fixtures carry the CG-P14-05
+     dataset block and the CG-P15-05 claim row (W3b refresh), so fixtures.ts
+     serves them as they are. */
   await page.route("**/current-source/split*", (route) => route.fulfill(body(W3.split)));
   await page.route("**/current-source/search*", (route) => route.fulfill(body(W3.search)));
 }
