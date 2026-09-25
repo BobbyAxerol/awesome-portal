@@ -1,295 +1,423 @@
 /**
- * Screen 11's composer controller — one read on arrival, two writes that only
- * a reader's click can send, and one read of the sealed pack.
+ * Screen 11's containers — one composition read, two reader-triggered writes,
+ * and one read of a sealed pack.
  *
- *  - The composition is read once and again only when a write returns, a CAS
- *    fence is lost (409) or the reader asks. It is never polled.
- *  - Declarations are local text until saved. A save sends both boxes (the
- *    server replaces both) fenced by the draft revision and the source
- *    fingerprint the server gave. A 409 re-reads the composition and keeps
- *    every character the reader typed.
- *  - The local seal needs a saved draft and the server's `may_seal`; it sends
- *    only the identities the server returned. No write is ever retried on its
- *    own: 401/403 lock both writes, 503/timeout keeps everything and waits for
- *    the reader.
+ * The composition is persisted research: it is read once per run, never
+ * polled, never refetched on focus or on a re-render. It is read again only
+ * when the reader asks, after a write lands, or after a `409` says the fence
+ * the write carried has moved.
+ *
+ * The two writes follow spec 11 §3:
+ *
+ *  - they fire from a click and nothing else, and cannot overlap each other
+ *    (a synchronous ref guard, so a burst of clicks sends one request);
+ *  - they carry the fences the composition in hand returned — the draft
+ *    revision and the source fingerprint — never a value the browser made;
+ *  - `409` re-reads the composition and reports the conflict; the text the
+ *    reader typed is the screen's and is never touched here;
+ *  - `401`/`403`/`404` lock both writes for the life of this screen: asking
+ *    again cannot change the answer, and nothing retries on its own;
+ *  - `503` or a request that never arrived keeps the composition and the
+ *    draft; the reader may try again;
+ *  - `400`/`422` end that request with a typed reason.
+ *
+ * A seal answer is kept as sent, and the composition is re-read so the
+ * screen renders the server's `local_seal`, not a state the browser assumed.
+ * A second `201` naming the same identity is the idempotent replay the
+ * contract promises, and is reported as such.
+ *
+ * P22 adds two more writes under the same guard and the same lock:
+ *
+ *  - publish sends the pack digest of the local seal in hand as its fence and,
+ *    only when the server lists several mirrored claims, the one the reader
+ *    chose from that list. `201`/`200` (`DELIVERED`) and `202` (`UNKNOWN`) are
+ *    both kept as sent and followed by a re-read: `state`, `publication` and
+ *    `mirror` are the server's, never an optimistic `PUBLISHED`;
+ *  - reconcile replays the stored request; it fires only while the server
+ *    says `publication.reconcile_allowed`.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  DECLARATION_KEYS,
-  declarationIssues,
-  declarationValue,
+  composeState,
+  packState,
   releaseCandidateApi,
-  type DeclarationIssue,
-  type DeclarationKey,
+  toRcPublishRefusal,
+  toRcRefusal,
+  toRcWriteRefusal,
   type RcCompose,
   type RcPack,
+  type RcPublicationResponse,
+  type RcPublishRequest,
+  type RcRefusal,
   type RcSealResponse,
+  type RcWriteRefusal,
 } from "./releaseCandidateClient";
-import { refusalState, toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 import { researchState, type ResearchState } from "./state";
 
-export type RcLane = "draft" | "seal";
+export type RcWriteOp = "patch" | "seal" | "publish" | "reconcile";
+export type RcPublicationOp = "publish" | "reconcile";
 
-export interface RcMutationRefusal {
-  lane: RcLane;
-  refusal: ResearchRefusal;
-}
-
-export interface RcSealOutcome {
-  response: RcSealResponse;
-  /** The rc_ id returned was already the one on screen: the server replayed it. */
-  replayed: boolean;
-}
-
-export type RcPackRead =
+export type RcWriteSlot =
   | { state: "idle" }
-  | { state: "loading"; id: string }
-  | { state: "loaded"; id: string; pack: RcPack }
-  | { state: "refused"; id: string; refusal: ResearchRefusal };
+  | { state: "pending"; op: RcWriteOp }
+  | { state: "saved"; op: "patch" }
+  | { state: "sealed"; op: "seal"; seal: RcSealResponse; replayed: boolean }
+  /** `DELIVERED` (201 new, 200 replay/reconcile), kept as sent. */
+  | { state: "published"; op: RcPublicationOp; answer: RcPublicationResponse }
+  /** `202`: the governance store did not confirm; a success to reconcile. */
+  | { state: "unknown"; op: RcPublicationOp; answer: RcPublicationResponse }
+  | { state: "refused"; op: RcWriteOp; refusal: RcWriteRefusal };
+
+export interface RcDeclarations {
+  known_limitations: string | null;
+  proposed_use_restrictions: string | null;
+}
 
 export interface ReleaseCandidateController {
   compose: RcCompose | null;
-  /** Panel state of the composition read. */
+  refusal: RcRefusal | null;
   state: ResearchState;
-  composeRefusal: ResearchRefusal | null;
   inFlight: boolean;
-  values: Record<DeclarationKey, string>;
-  dirty: Record<DeclarationKey, boolean>;
-  issues: DeclarationIssue[];
-  saving: boolean;
-  sealing: boolean;
-  mutation: RcMutationRefusal | null;
-  /** True after a 409: the composition was read again under the reader's text. */
-  conflict: boolean;
-  /** 401/403 on a write: both writes stay locked until the page is read again. */
+  /** Every composition read this controller has sent. */
+  requestCount: number;
+  write: RcWriteSlot;
+  /** True once a write was refused for access: both writes stay off. */
   writesLocked: boolean;
-  sealOutcome: RcSealOutcome | null;
-  packRead: RcPackRead;
-  setValue: (key: DeclarationKey, value: string) => void;
-  discard: (key: DeclarationKey) => void;
-  save: () => void;
+  /** The last seal the server answered, kept as sent. */
+  lastSeal: RcSealResponse | null;
+  /** Send the two declarations with the fences in hand. Resolves true on 200. */
+  patchDraft: (declarations: RcDeclarations) => Promise<boolean>;
+  /** Ask for the local seal of the persisted draft in hand. */
   seal: () => void;
-  openPack: (releaseCandidateId: string) => void;
+  /** The last publish/reconcile answer, kept as sent. */
+  lastPublication: RcPublicationResponse | null;
+  /**
+   * Publish the local seal in hand. `claimId` is sent only when the server
+   * lists more than one mirrored claim, and only if it is one of them.
+   */
+  publish: (claimId: string | null) => void;
+  /** Replay the stored publication request (server-admitted actor only). */
+  reconcile: () => void;
+  /** Whether a safe, exact publication request is available for replay. */
+  canReconcile: boolean;
+  /** Read the composition again. */
   retry: () => void;
-  dismissConflict: () => void;
 }
 
-const EMPTY: Record<DeclarationKey, string> = { known_limitations: "", proposed_use_restrictions: "" };
-const CLEAN: Record<DeclarationKey, boolean> = { known_limitations: false, proposed_use_restrictions: false };
-
-function fromDraft(compose: RcCompose): Record<DeclarationKey, string> {
-  return {
-    known_limitations: compose.draft.known_limitations ?? "",
-    proposed_use_restrictions: compose.draft.proposed_use_restrictions ?? "",
-  };
-}
-
-function composeState(compose: RcCompose): ResearchState {
-  if (compose.availability.state === "PARTIAL") {
-    return {
-      state: "partial",
-      reason: "The composition is partial: a referenced source did not agree with its other copies. Each affected row names its reason below.",
-      detail: compose.availability.reason_code,
-      mayRetry: false,
-      retainsContent: true,
-    };
-  }
-  return { state: "available", reason: "", mayRetry: false, retainsContent: true };
-}
-
-export function useReleaseCandidate(
-  runId: string,
-  options: { workspaceId?: string; initialPack?: string | null } = {},
-): ReleaseCandidateController {
-  const { workspaceId, initialPack = null } = options;
+export function useReleaseCandidate(runId: string, workspaceId?: string): ReleaseCandidateController {
   const [compose, setCompose] = useState<RcCompose | null>(null);
-  const [composeRefusal, setComposeRefusal] = useState<ResearchRefusal | null>(null);
+  const [refusal, setRefusal] = useState<RcRefusal | null>(null);
   const [inFlight, setInFlight] = useState(true);
+  const [requestCount, setRequestCount] = useState(0);
   const [generation, setGeneration] = useState(0);
-  const [values, setValues] = useState<Record<DeclarationKey, string>>(EMPTY);
-  const [dirty, setDirty] = useState<Record<DeclarationKey, boolean>>(CLEAN);
-  const [saving, setSaving] = useState(false);
-  const [sealing, setSealing] = useState(false);
-  const [mutation, setMutation] = useState<RcMutationRefusal | null>(null);
-  const [conflict, setConflict] = useState(false);
+  const [write, setWrite] = useState<RcWriteSlot>({ state: "idle" });
   const [writesLocked, setWritesLocked] = useState(false);
-  const [sealOutcome, setSealOutcome] = useState<RcSealOutcome | null>(null);
-  const [packRead, setPackRead] = useState<RcPackRead>({ state: "idle" });
-  const [attempted, setAttempted] = useState(false);
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
+  const [lastSeal, setLastSeal] = useState<RcSealResponse | null>(null);
+  const [lastPublication, setLastPublication] = useState<RcPublicationResponse | null>(null);
+
+  const sequence = useRef(0);
+  const writing = useRef(false);
   const composeRef = useRef<RcCompose | null>(null);
   composeRef.current = compose;
+  const lastSealRef = useRef<RcSealResponse | null>(null);
+  const lastPublishRequestRef = useRef<RcPublishRequest | null>(null);
+  const lockedRef = useRef(false);
+  const mounted = useRef(true);
 
-  /** Accept a composition; only the boxes the reader has not touched follow the server. */
-  const accept = useCallback((next: RcCompose) => {
-    setCompose(next);
-    setComposeRefusal(null);
-    const server = fromDraft(next);
-    setValues((current) => {
-      const merged = { ...current };
-      for (const key of DECLARATION_KEYS) if (!dirtyRef.current[key]) merged[key] = server[key];
-      return merged;
-    });
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
   }, []);
 
   useEffect(() => {
+    const id = (sequence.current += 1);
     const controller = new AbortController();
+    const current = () => !controller.signal.aborted && id === sequence.current;
     setInFlight(true);
+    setRequestCount((n) => n + 1);
     releaseCandidateApi
       .compose(runId, { workspaceId, signal: controller.signal })
       .then((answer) => {
-        if (!controller.signal.aborted) accept(answer);
+        if (!current()) return;
+        setRefusal(null);
+        setCompose(answer);
       })
       .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        const refusal = toResearchRefusal(error);
-        setComposeRefusal(refusal);
-        /* Authority or existence changed: nothing is kept on screen. */
-        if (refusal.terminal) setCompose(null);
+        if (!current()) return;
+        const next = toRcRefusal(error);
+        /* Authority or existence changed: nothing already on screen is kept. */
+        if (next.terminal) setCompose(null);
+        setRefusal(next);
       })
       .finally(() => {
-        if (!controller.signal.aborted) setInFlight(false);
+        if (current()) setInFlight(false);
       });
     return () => controller.abort();
-  }, [accept, generation, runId, workspaceId]);
+  }, [runId, workspaceId, generation]);
 
-  const openPack = useCallback(
-    (releaseCandidateId: string) => {
-      setPackRead({ state: "loading", id: releaseCandidateId });
-      releaseCandidateApi
-        .pack(releaseCandidateId, { workspaceId })
-        .then((pack) => setPackRead({ state: "loaded", id: releaseCandidateId, pack }))
-        .catch((error: unknown) => setPackRead({ state: "refused", id: releaseCandidateId, refusal: toResearchRefusal(error) }));
-    },
-    [workspaceId],
-  );
+  const reread = useCallback(() => setGeneration((n) => n + 1), []);
 
-  /* A `#pack=` deep link opens the sealed pack once, beside the composition. */
-  const openedInitial = useRef(false);
-  useEffect(() => {
-    if (initialPack && !openedInitial.current) {
-      openedInitial.current = true;
-      openPack(initialPack);
+  const refuse = useCallback((op: RcWriteOp, error: unknown) => {
+    const next = op === "publish" || op === "reconcile" ? toRcPublishRefusal(error) : toRcWriteRefusal(error);
+    if (next.outcome === "denied") {
+      lockedRef.current = true;
+      setWritesLocked(true);
     }
-  }, [initialPack, openPack]);
-
-  const refuse = useCallback((lane: RcLane, error: unknown) => {
-    const refusal = toResearchRefusal(error);
-    setMutation({ lane, refusal });
-    if (refusal.state === "denied") setWritesLocked(true);
-    if (refusal.state === "stale") {
-      /* Lost CAS fence: read the composition again; the reader's text stays. */
-      setConflict(true);
-      setGeneration((n) => n + 1);
-    }
+    setWrite({ state: "refused", op, refusal: next });
+    /* The fence moved: read the composition the server holds now. */
+    if (next.outcome === "conflict") setGeneration((n) => n + 1);
   }, []);
 
-  const issues = attempted ? declarationIssues(values) : [];
-
-  const save = useCallback(() => {
-    const current = composeRef.current;
-    if (!current || writesLocked || saving || sealing) return;
-    setAttempted(true);
-    if (declarationIssues(values).length > 0) return;
-    setSaving(true);
-    setMutation(null);
-    releaseCandidateApi
-      .patchDraft(
-        runId,
-        {
-          expected_revision: current.draft.revision,
-          expected_source_fingerprint: current.source_fingerprint,
-          known_limitations: declarationValue(values.known_limitations),
-          proposed_use_restrictions: declarationValue(values.proposed_use_restrictions),
-        },
-        { workspaceId },
-      )
-      .then((next) => {
-        setDirty(CLEAN);
-        dirtyRef.current = CLEAN;
-        setAttempted(false);
-        setConflict(false);
-        accept(next);
-      })
-      .catch((error: unknown) => refuse("draft", error))
-      .finally(() => setSaving(false));
-  }, [accept, refuse, runId, saving, sealing, values, workspaceId, writesLocked]);
+  const patchDraft = useCallback(
+    async (declarations: RcDeclarations): Promise<boolean> => {
+      const held = composeRef.current;
+      if (!held || writing.current || lockedRef.current) return false;
+      writing.current = true;
+      setWrite({ state: "pending", op: "patch" });
+      try {
+        const answer = await releaseCandidateApi.patchDraft(
+          runId,
+          {
+            expected_revision: held.draft.revision,
+            expected_source_fingerprint: held.source_fingerprint,
+            known_limitations: declarations.known_limitations,
+            proposed_use_restrictions: declarations.proposed_use_restrictions,
+          },
+          { workspaceId },
+        );
+        if (!mounted.current) return false;
+        /* A newer read in flight would otherwise land over the recomposed view. */
+        sequence.current += 1;
+        setInFlight(false);
+        setRefusal(null);
+        setCompose(answer);
+        setWrite({ state: "saved", op: "patch" });
+        return true;
+      } catch (error: unknown) {
+        if (mounted.current) refuse("patch", error);
+        return false;
+      } finally {
+        writing.current = false;
+      }
+    },
+    [refuse, runId, workspaceId],
+  );
 
   const seal = useCallback(() => {
-    const current = composeRef.current;
-    if (!current || writesLocked || saving || sealing) return;
-    const draftId = current.draft.draft_id;
-    if (draftId === null || !current.actions.may_seal || DECLARATION_KEYS.some((key) => dirtyRef.current[key])) return;
-    const before = current.local_seal.release_candidate_id;
-    setSealing(true);
-    setMutation(null);
+    const held = composeRef.current;
+    if (!held || writing.current || lockedRef.current) return;
+    const draftId = held.draft.draft_id;
+    if (!held.actions.may_seal || draftId === null) return;
+    writing.current = true;
+    setWrite({ state: "pending", op: "seal" });
     releaseCandidateApi
       .seal(
         runId,
         {
           draft_id: draftId,
-          expected_draft_revision: current.draft.revision,
-          expected_source_fingerprint: current.source_fingerprint,
+          expected_draft_revision: held.draft.revision,
+          expected_source_fingerprint: held.source_fingerprint,
         },
         { workspaceId },
       )
-      .then((response) => {
-        setSealOutcome({ response, replayed: before !== null && before === response.release_candidate_id });
-        /* The rail, the seal card and the Run Library chip read the new facts from the server. */
+      .then((answer) => {
+        if (!mounted.current) return;
+        const replayed =
+          lastSealRef.current?.release_candidate_id === answer.release_candidate_id ||
+          held.local_seal.release_candidate_id === answer.release_candidate_id;
+        lastSealRef.current = answer;
+        setLastSeal(answer);
+        setWrite({ state: "sealed", op: "seal", seal: answer, replayed });
+        /* The screen renders `local_seal` from the server, so read it. */
         setGeneration((n) => n + 1);
-        openPack(response.release_candidate_id);
       })
-      .catch((error: unknown) => refuse("seal", error))
-      .finally(() => setSealing(false));
-  }, [openPack, refuse, runId, saving, sealing, workspaceId, writesLocked]);
+      .catch((error: unknown) => {
+        if (mounted.current) refuse("seal", error);
+      })
+      .finally(() => {
+        writing.current = false;
+      });
+  }, [refuse, runId, workspaceId]);
 
-  const setValue = useCallback((key: DeclarationKey, value: string) => {
-    setValues((current) => ({ ...current, [key]: value }));
-    setDirty((current) => ({ ...current, [key]: true }));
+  /** One settled publication answer: kept as sent, then the composition is re-read. */
+  const settle = useCallback((op: "publish" | "reconcile", answer: RcPublicationResponse) => {
+    setLastPublication(answer);
+    setWrite(
+      answer.publication_state === "UNKNOWN"
+        ? { state: "unknown", op, answer }
+        : { state: "published", op, answer },
+    );
+    /* `state`, `publication` and `mirror` are the server's to render. */
+    setGeneration((n) => n + 1);
   }, []);
 
-  const discard = useCallback((key: DeclarationKey) => {
-    const current = composeRef.current;
-    setValues((existing) => ({ ...existing, [key]: current ? fromDraft(current)[key] : "" }));
-    setDirty((existing) => ({ ...existing, [key]: false }));
-  }, []);
+  const publish = useCallback(
+    (claimId: string | null) => {
+      const held = composeRef.current;
+      if (!held || writing.current || lockedRef.current) return;
+      const action = held.actions.publish;
+      const releaseCandidateId = action.release_candidate_id;
+      const packDigest = held.local_seal.pack_digest;
+      if (!action.enabled || releaseCandidateId === null || packDigest === null) return;
+      const claims = held.publication.claim_candidates;
+      const choice = claims.length > 1 ? claimId : claims[0] ?? null;
+      if (choice === null || !claims.includes(choice)) return;
+      const request: RcPublishRequest = {
+        schema_version: "research.release-candidate-publish-request.v1",
+        expected_pack_digest: packDigest,
+        request_key: `portal-research:${releaseCandidateId}:${packDigest}`,
+        methodology_claim_id: choice,
+        summary: `Publish release candidate ${releaseCandidateId}`,
+      };
+      lastPublishRequestRef.current = request;
+      writing.current = true;
+      setWrite({ state: "pending", op: "publish" });
+      releaseCandidateApi
+        .publish(
+          releaseCandidateId,
+          request,
+          { workspaceId },
+        )
+        .then((answer) => {
+          if (mounted.current) settle("publish", answer);
+        })
+        .catch((error: unknown) => {
+          if (mounted.current) refuse("publish", error);
+        })
+        .finally(() => {
+          writing.current = false;
+        });
+    },
+    [refuse, settle, workspaceId],
+  );
 
-  const retained = composeRefusal !== null && compose !== null && !composeRefusal.terminal;
-  const state: ResearchState = composeRefusal
-    ? refusalState(composeRefusal, retained)
+  const reconcile = useCallback(() => {
+    const held = composeRef.current;
+    if (!held || writing.current || lockedRef.current) return;
+    const releaseCandidateId = held.publication.release_candidate_id;
+    if (!held.publication.reconcile_allowed || releaseCandidateId === null) return;
+    const packDigest = held.local_seal.pack_digest;
+    const claims = held.publication.claim_candidates;
+    const request =
+      lastPublishRequestRef.current ??
+      (packDigest !== null && claims.length === 1
+        ? {
+            schema_version: "research.release-candidate-publish-request.v1" as const,
+            expected_pack_digest: packDigest,
+            request_key: `portal-research:${releaseCandidateId}:${packDigest}`,
+            methodology_claim_id: claims[0],
+            summary: `Publish release candidate ${releaseCandidateId}`,
+          }
+        : null);
+    if (request === null) return;
+    lastPublishRequestRef.current = request;
+    writing.current = true;
+    setWrite({ state: "pending", op: "reconcile" });
+    releaseCandidateApi
+      .reconcile(releaseCandidateId, { workspaceId, body: request })
+      .then((answer) => {
+        if (mounted.current) settle("reconcile", answer);
+      })
+      .catch((error: unknown) => {
+        if (mounted.current) refuse("reconcile", error);
+      })
+      .finally(() => {
+        writing.current = false;
+      });
+  }, [refuse, settle, workspaceId]);
+
+  const canReconcile = Boolean(
+    compose?.publication.reconcile_allowed &&
+      compose.publication.release_candidate_id !== null &&
+      (lastPublishRequestRef.current !== null ||
+        (compose.local_seal.pack_digest !== null && compose.publication.claim_candidates.length === 1)),
+  );
+
+  const keeps = refusal !== null && compose !== null && !refusal.terminal;
+  const state: ResearchState = refusal
+    ? { state: refusal.state, reason: refusal.message, mayRetry: refusal.mayRetry, retainsContent: keeps }
     : compose === null
       ? researchState({ kind: "in-flight", hasAcceptedResponse: false })
-      : inFlight
-        ? researchState({ kind: "in-flight", hasAcceptedResponse: true })
-        : composeState(compose);
+      : composeState(compose);
 
   return {
-    compose: composeRefusal && !retained ? null : compose,
+    compose: refusal && !keeps ? null : compose,
+    refusal,
     state,
-    composeRefusal,
     inFlight,
-    values,
-    dirty,
-    issues,
-    saving,
-    sealing,
-    mutation,
-    conflict,
+    requestCount,
+    write,
     writesLocked,
-    sealOutcome,
-    packRead,
-    setValue,
-    discard,
-    save,
+    lastSeal,
+    lastPublication,
+    patchDraft,
     seal,
-    openPack,
-    retry: useCallback(() => {
-      setMutation(null);
-      setGeneration((n) => n + 1);
-    }, []),
-    dismissConflict: useCallback(() => setConflict(false), []),
+    publish,
+    reconcile,
+    canReconcile,
+    retry: reread,
+  };
+}
+
+/* -------------------------------------------------------------------------
+ * The sealed pack
+ * ---------------------------------------------------------------------- */
+
+export interface RcPackController {
+  pack: RcPack | null;
+  refusal: RcRefusal | null;
+  state: ResearchState;
+  inFlight: boolean;
+  retry: () => void;
+}
+
+export function useReleaseCandidatePack(releaseCandidateId: string, workspaceId?: string): RcPackController {
+  const [pack, setPack] = useState<RcPack | null>(null);
+  const [refusal, setRefusal] = useState<RcRefusal | null>(null);
+  const [inFlight, setInFlight] = useState(true);
+  const [generation, setGeneration] = useState(0);
+  const sequence = useRef(0);
+
+  useEffect(() => {
+    const id = (sequence.current += 1);
+    const controller = new AbortController();
+    const current = () => !controller.signal.aborted && id === sequence.current;
+    setInFlight(true);
+    releaseCandidateApi
+      .pack(releaseCandidateId, { workspaceId, signal: controller.signal })
+      .then((answer) => {
+        if (!current()) return;
+        setRefusal(null);
+        setPack(answer);
+      })
+      .catch((error: unknown) => {
+        if (!current()) return;
+        const next = toRcRefusal(error);
+        if (next.terminal) setPack(null);
+        setRefusal(next);
+      })
+      .finally(() => {
+        if (current()) setInFlight(false);
+      });
+    return () => controller.abort();
+  }, [releaseCandidateId, workspaceId, generation]);
+
+  const keeps = refusal !== null && pack !== null && !refusal.terminal;
+  const state: ResearchState = refusal
+    ? { state: refusal.state, reason: refusal.message, mayRetry: refusal.mayRetry, retainsContent: keeps }
+    : pack === null
+      ? researchState({ kind: "in-flight", hasAcceptedResponse: false })
+      : packState(pack);
+
+  return {
+    pack: refusal && !keeps ? null : pack,
+    refusal,
+    state,
+    inFlight,
+    retry: useCallback(() => setGeneration((n) => n + 1), []),
   };
 }

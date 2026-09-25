@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+    "include": ["./*.ts", "../fixtures.ts", "../../playwright.research-qualification.config.ts", "../../src/vite-env.d.ts"]
+}

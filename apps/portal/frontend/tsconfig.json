@@ -85,6 +85,9 @@
       "@portal/contracts-research-release-candidate": [
         "../../../packages/contracts/generated/research-release-candidate.d.ts"
       ],
+      "@portal/contracts-research-release-candidate-publication": [
+        "../../../packages/contracts/generated/research-release-candidate-publication.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

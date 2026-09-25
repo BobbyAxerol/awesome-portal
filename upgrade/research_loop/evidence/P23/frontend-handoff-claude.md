@@ -10,6 +10,16 @@ P23 là qualification phase, nên không có product code, migration hay flag. H
 
 Hồ sơ: [receipt](./thanhvuong-frontend-receipt.md) · [backend requests](./thanhvuong-backend-requests.md) · [test results](./thanhvuong-test-results.json) · [debt](./thanhvuong-debt-register.json) · [rollback](./thanhvuong-rollback.md).
 
+## Codex integration note (2026-09-25)
+
+The P23 qualification runner and typed fixture builders are restored on the
+shared `docs/research-loop-plan` branch. They remain a fixture/client-cost
+qualification lane, not a production or real-source receipt. The builders are
+checked against the current generated contracts (including P20 compare,
+P19 lineage, P18 report v1 and the P21/P22 release-candidate normalised view).
+The browser runner's known VD/host-baseline failures remain explicit in this
+handoff; they are not converted into passes or used as a release claim.
+
 ## 1. Có gì
 
 | Thành phần | Nơi | Lane | Chứng minh gì |

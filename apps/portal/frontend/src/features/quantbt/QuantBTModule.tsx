@@ -74,6 +74,7 @@ const CompareRoute = lazyNamed(() => import("../../research/CompareRoute"), "Com
 const CompareResolverRoute = lazyNamed(() => import("../../research/CompareRoute"), "CompareResolverRoute");
 const LineageRoute = lazyNamed(() => import("../../research/LineageRoute"), "LineageRoute");
 const ReleaseCandidateRoute = lazyNamed(() => import("../../research/ReleaseCandidateRoute"), "ReleaseCandidateRoute");
+const ReleaseCandidatePackRoute = lazyNamed(() => import("../../research/ReleaseCandidateRoute"), "ReleaseCandidatePackRoute");
 
 function RunStatusBadge({ status }: { status: string | null }) {
   if (!status) return null;
@@ -240,7 +241,7 @@ function LegacyTabRedirect() {
 
 /** The Research Loop screens mounted through P20. */
 const RESEARCH_SCREEN =
-  /\/research\/quantbt\/(journey|atlas|alpha-import|alphas\/[^/]+\/(lineage|compare)|compare|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report|release-candidate)|runs)\/?$/;
+  /\/research\/quantbt\/(journey|atlas|alpha-import|alphas\/[^/]+\/(lineage|compare)|compare|release-candidates\/[^/]+|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report|release-candidate)|runs)\/?$/;
 
 /** Research screens that draw their own HiFi frame (padding, max width): 01, 03, 04, 05, 06. */
 const OWN_FRAME_SCREEN = /\/research\/quantbt\/(runs|runs\/(?!new\/?$)[^/]+\/(progress|evidence|split|search))\/?$/;
@@ -417,6 +418,7 @@ export function QuantBTModule() {
         <Route path="runs/:runId/report" element={<ReportRoute />} />
         {/* P21 · Screen 11, the local-seal composer. P22 publication is not here. */}
         <Route path="runs/:runId/release-candidate" element={<ReleaseCandidateRoute />} />
+        <Route path="release-candidates/:releaseCandidateId" element={<ReleaseCandidatePackRoute />} />
         {/* Screen 14's canonical route, resolved as `FD-P09-02`: under QuantBT
           * rather than under the still-COMMISSIONED ALPHA_POOL feature.
           * Legacy `imports` below is untouched. */}

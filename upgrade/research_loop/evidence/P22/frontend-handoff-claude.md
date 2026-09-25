@@ -6,6 +6,21 @@ Theo D3 (`0fa3c385`), P22+ là việc của Codex. Bản P22 này do Thanhvuong 
 
 Hồ sơ: [receipt](./thanhvuong-frontend-receipt.md) · [backend requests](./thanhvuong-backend-requests.md) · [test results](./thanhvuong-test-results.json) · [debt](./thanhvuong-debt-register.json) · [rollback](./thanhvuong-rollback.md).
 
+## Codex integration note (2026-09-25)
+
+The contributor handoff above is retained as historical evidence. On the
+shared `docs/research-loop-plan` integration branch, the Codex P21/P22
+generated contracts are authoritative. The current publication contract
+publishes `GET /api/v1/research/release-candidates/{id}/publication` and
+`POST /api/v1/research/release-candidates/{id}/publish`; it does not publish a
+separate `/publish/reconcile` route or a `/mirror` route. The browser adapter
+therefore normalises the P21 composition with the publication read, sends the
+exact idempotent publish request, and replays that same request on the current
+`/publish` endpoint. It never invents `PUBLISHED`: the state is rendered only
+after the publication response says `DELIVERED`. The focused Screen 11 lane is
+61/61; no backend, migration, feature flag or runtime file was changed by this
+integration.
+
 ## 1. Contract (generated, không viết tay)
 
 - OpenAPI `packages/contracts/openapi/research-release-candidate.openapi.json` (version `1.0.0`, SHA-256 `bfea70462aefcddf…`), d.ts `packages/contracts/generated/research-release-candidate.d.ts` (`4edd818b8a86fb93…`). Regenerate: `npm --prefix packages/contracts run generate:research-release-candidate`.

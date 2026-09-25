@@ -1,25 +1,41 @@
 /**
- * `/research/quantbt/runs/:runId/release-candidate` — Screen 11 Release
- * Candidate composer (P21).
+ * Screen 11 Release Candidate routes (P21).
  *
- * Keyed on the run so a different run is a fresh composition, never the last
- * run's declarations. `#pack=rc_…` (the Run Library rc chip of a sealed pack)
- * opens that sealed pack beside the composition; the screen never writes the hash.
+ *  - `/research/quantbt/runs/:runId/release-candidate` — the composition for
+ *    one run: identity, the 12-row evidence pack, the record preview, the two
+ *    declarations, the local seal and (P22) publish plus the R1 mirror.
+ *  - `/research/quantbt/release-candidates/:releaseCandidateId` — a sealed
+ *    pack, read-only (VD-P21-09).
+ *
+ * Keying each container on its path id makes another run, or another pack, a
+ * fresh read with fresh write state: a refusal or a typed declaration never
+ * carries from one identity to the next.
  */
 
 import { useParams } from "react-router-dom";
 
 import { ReleaseCandidateScreen } from "./ReleaseCandidateDetail";
-import { packFromHash } from "./releaseCandidateClient";
-import { useReleaseCandidate } from "./useReleaseCandidate";
+import { useReleaseCandidate, useReleaseCandidatePack } from "./useReleaseCandidate";
+import { useReleaseCandidateMirror } from "./useReleaseCandidateMirror";
 
-function ReleaseCandidateContainer({ runId }: { runId: string }) {
-  const initialPack = packFromHash(typeof window === "undefined" ? "" : window.location.hash);
-  const controller = useReleaseCandidate(runId, { initialPack });
-  return <ReleaseCandidateScreen runId={runId} controller={controller} />;
+function ComposeContainer({ runId }: { runId: string }) {
+  const controller = useReleaseCandidate(runId);
+  /* P22: the R1 mirror poll runs only while the composition says PUBLISHED. */
+  const mirror = useReleaseCandidateMirror({ compose: controller.compose, writesLocked: controller.writesLocked });
+  return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} mirror={mirror} />;
+}
+
+function PackContainer({ releaseCandidateId }: { releaseCandidateId: string }) {
+  const controller = useReleaseCandidatePack(releaseCandidateId);
+  return <ReleaseCandidateScreen mode="pack" releaseCandidateId={releaseCandidateId} controller={controller} />;
 }
 
 export function ReleaseCandidateRoute() {
   const { runId = "" } = useParams();
-  return <ReleaseCandidateContainer key={runId} runId={runId} />;
+  return <ComposeContainer key={runId} runId={runId} />;
+}
+
+export function ReleaseCandidatePackRoute() {
+  const { releaseCandidateId = "" } = useParams();
+  return <PackContainer key={releaseCandidateId} releaseCandidateId={releaseCandidateId} />;
 }
