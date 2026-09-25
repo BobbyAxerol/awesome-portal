@@ -434,7 +434,8 @@ describe("P04 — Engine Atlas composition", () => {
       }
       // Links only go to reading screens: a run list filtered by mode, or a run's Search & Selection.
       for (const link of screen.queryAllByRole("link")) {
-        expect(link.getAttribute("href")).toMatch(/^\/research\/quantbt\/runs(\?mode=|\/[^/]+\/(search|evidence))/);
+        // W4: "declare →" opens New Run on the route step — a form, not a run.
+        expect(link.getAttribute("href")).toMatch(/^\/research\/quantbt\/runs(\?mode=|\/new\?step=route\&route=|\/[^/]+\/(search|evidence))/);
       }
     }
   });

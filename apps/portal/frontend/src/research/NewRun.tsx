@@ -25,6 +25,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import { scheduleChoices } from "./atlas";
 import type { AtlasDocument } from "./atlas";
+import { type CatalogDataset, type DatasetCatalog, coverageLabel } from "./datasetClient";
+import { OOS_STATE_LABEL, statusTone } from "./EngineAtlas";
+import type { PreflightRefusal } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
 import { PreflightPanel } from "./PreflightPanel";
 import {
@@ -37,9 +40,11 @@ import {
   blockingProblems,
   effectiveStrategyId,
   missingConstraints,
+  stepForFieldPath,
   parameterStatus,
   pinnedCount,
   sweptCount,
+  usesSpecV2,
 } from "./runDraft";
 import type { AtlasRelease } from "./foundationClient";
 import type { RegistryEntry } from "./alphaImportClient";
@@ -425,7 +430,27 @@ function RouteStep({
                   cursor: blocked ? "not-allowed" : "pointer",
                 }}
               >
-                <span className="mono text-[10.5px] font-semibold">{route.route_id}</span>
+                <span className="flex items-baseline justify-between gap-1.5">
+                  <span className="mono text-[10.5px] font-semibold">{route.route_id}</span>
+                  {route.status_word ? (
+                    <span
+                      className="mono rounded-[3px] border px-1 text-[8.5px] font-bold leading-[13px]"
+                      style={{
+                        color: statusTone(route.status_word).color,
+                        borderColor: statusTone(route.status_word).color,
+                        borderStyle: statusTone(route.status_word).dashed ? "dashed" : "solid",
+                      }}
+                      data-route-status={route.status_word}
+                    >
+                      {route.status_word}
+                    </span>
+                  ) : null}
+                </span>
+                {route.engine_facts ? (
+                  <span className="text-[9.5px] leading-[1.4]" style={{ color: "var(--ink-soft)" }} data-route-desc={route.route_id}>
+                    {route.engine_facts.description}
+                  </span>
+                ) : null}
                 <span className="mono text-[8.5px]" style={{ color: "var(--ink-faint)" }}>
                   {route.family} · {route.execution_contract}
                 </span>
@@ -439,8 +464,90 @@ function RouteStep({
           })}
         </div>
       )}
+      {atlas ? <RoutePanel route={atlas.routes.find((route) => route.route_id === draft.executionRoute) ?? null} /> : null}
       {error ? <ErrorBlock message={error} /> : null}
     </Card>
+  );
+}
+
+/** Spec 02 §5.2 method notes, keyed by the engine-derived method (CG-P04-06). */
+const ROUTE_METHOD_NOTE: Record<string, string> = {
+  wfo: "strategy-param route — walk-forward search applies",
+  tape: "tape-driven — single-pass replay; the walk-forward step collapses to the tape span",
+  single_pass: "single pass — the engine lists no walk-forward target for this route",
+};
+
+/**
+ * The selected route's facts (spec 02 §5.2), all from the Atlas.
+ *
+ * Route parameters are shown as the engine's own vocabulary next to the form
+ * values it accepts. The four route forms stay descriptive while the route is
+ * not admitted: a control the server will refuse is not offered as a choice.
+ */
+function RoutePanel({ route }: { route: AtlasDocument["routes"][number] | null }) {
+  if (!route) return null;
+  const facts = route.engine_facts ?? null;
+  const resolved = facts?.resolved_backend ?? null;
+  return (
+    <div
+      className="flex flex-col gap-2 rounded-[6px] border px-3 py-2.5"
+      style={{ borderColor: "var(--line-soft)", background: "var(--paper)" }}
+      data-route-panel={route.route_id}
+    >
+      <div className="flex flex-wrap items-baseline gap-2">
+        <span className="mono text-[11px] font-semibold">{route.route_id}</span>
+        <span className="mono rounded-[3px] border px-1 text-[9px]" style={{ borderColor: "var(--accent)", color: "var(--accent)" }}>
+          {route.execution_contract}
+        </span>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={resolved?.reason ?? undefined}>
+          {resolved?.state === "RESOLVED" ? resolved.value : resolved?.state === "SPEC_DEPENDENT" ? "backend per specification" : route.backend}
+        </span>
+        {facts ? (
+          <span
+            className="ml-auto text-[10px]"
+            style={{ color: facts.method === "wfo" ? "var(--good)" : "var(--accent-2)" }}
+            data-route-method-note={facts.method}
+          >
+            {ROUTE_METHOD_NOTE[facts.method] ?? facts.method}
+          </span>
+        ) : null}
+      </div>
+      {facts?.support_matrix ? (
+        <div className="flex flex-col" data-route-support>
+          {facts.support_matrix.rows.map((row) => (
+            <span key={row.spec_id} className="mono text-[9.5px]" style={{ color: row.status === "supported" ? "var(--ink-soft)" : "var(--ink-faint)" }}>
+              {row.spec_id} · {row.status}
+              {row.status === "supported" ? "" : ` — ${row.route}`}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {facts?.route_params ? (
+        <div className="flex flex-wrap gap-3" data-route-form={facts.route_params.group}>
+          {facts.route_params.fields.map((field) => (
+            <label key={field.name} className="flex min-w-[180px] flex-col gap-0.5">
+              <span className="mono text-[9.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>{field.name}</span>
+              {field.requested_spec_values.length > 0 ? (
+                <select className={INPUT_CLASS} style={inputStyle()} disabled aria-label={field.name} title={field.note}>
+                  {field.requested_spec_values.map((value) => (
+                    <option key={value} value={value} disabled={!field.accepted_by_engine.includes(value)}>
+                      {value}
+                      {field.accepted_by_engine.includes(value) ? "" : " — not an engine value"}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input className={INPUT_CLASS} style={inputStyle()} disabled aria-label={field.name} placeholder={field.engine_field ?? field.name} />
+              )}
+              <span className="text-[9px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>{field.note}</span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+      {route.axes.admission !== "P04_BASELINE_ONLY" ? (
+        <span className="text-[10px]" style={{ color: "var(--ink-soft)" }}>{route.reason}</span>
+      ) : null}
+    </div>
   );
 }
 
@@ -449,12 +556,20 @@ function DataStep({
   patch,
   limits,
   error,
+  catalog = null,
+  catalogReason = null,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   limits: DraftConstraints;
   error: string | null;
+  /** CG-P08-04: the research dataset catalog, or null when it was not read. */
+  catalog?: DatasetCatalog | null;
+  catalogReason?: string | null;
 }) {
+  const dataset: CatalogDataset | null = catalog?.datasets.find((item) => item.dataset_id === draft.datasetId) ?? null;
+  const symbols = dataset?.symbols.state === "PUBLISHED" ? dataset.symbols.items : [];
+  const selectedSymbol = symbols.find((item) => item.symbol === draft.symbol.trim().toUpperCase()) ?? null;
   const publishedTimeframes = limits.declaredTimeframes ?? [];
   const timeframeOptions = publishedTimeframes.length > 0
     ? publishedTimeframes
@@ -467,22 +582,70 @@ function DataStep({
       </p>
       <div className="flex flex-wrap gap-2.5">
         <Field label="Dataset" hint="Historical source — backtest only. Realtime and paper are separate services.">
-          <input
-            className={INPUT_CLASS}
-            style={inputStyle()}
-            value={draft.datasetId}
-            onChange={(e) => patch({ datasetId: e.target.value })}
-            aria-label="Dataset"
-          />
+          {catalog ? (
+            <select
+              className={INPUT_CLASS}
+              style={inputStyle()}
+              value={draft.datasetId}
+              onChange={(e) => patch({ datasetId: e.target.value })}
+              aria-label="Dataset"
+              data-dataset-select
+            >
+              <option value="">choose a dataset</option>
+              {catalog.datasets.map((item) => (
+                <option key={item.dataset_id} value={item.dataset_id} disabled={item.availability !== "available"}>
+                  {item.dataset_id} · {item.availability}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              className={INPUT_CLASS}
+              style={inputStyle()}
+              value={draft.datasetId}
+              onChange={(e) => patch({ datasetId: e.target.value })}
+              aria-label="Dataset"
+            />
+          )}
+          {dataset && dataset.availability !== "available" ? (
+            <span className="text-[10px]" style={{ color: "var(--bad)" }}>{dataset.unavailable_reason ?? "This dataset is unavailable."}</span>
+          ) : null}
+          {!catalog && catalogReason ? (
+            <span className="text-[10px]" style={{ color: "var(--ink-faint)" }} data-catalog-unread>
+              Dataset catalog not read: {catalogReason}
+            </span>
+          ) : null}
         </Field>
         <Field label="Symbol *">
           <input
             className={INPUT_CLASS}
             style={inputStyle(draft.symbol.trim().length === 0)}
             value={draft.symbol}
-            onChange={(e) => patch({ symbol: e.target.value })}
+            onChange={(e) => patch({ symbol: e.target.value.toUpperCase() })}
             aria-label="Symbol"
+            list={symbols.length > 0 ? "research-dataset-symbols" : undefined}
           />
+          {symbols.length > 0 ? (
+            <datalist id="research-dataset-symbols" data-symbol-list>
+              {symbols.map((item) => (
+                <option key={item.symbol} value={item.symbol}>
+                  {item.contract_kind ?? ""} {coverageLabel(item) ?? ""}
+                </option>
+              ))}
+            </datalist>
+          ) : null}
+          {selectedSymbol ? (
+            <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-symbol-coverage>
+              {selectedSymbol.contract_kind ? `${selectedSymbol.contract_kind.toLowerCase()} · ` : ""}
+              {coverageLabel(selectedSymbol) ?? "coverage not published"}
+            </span>
+          ) : dataset && dataset.symbols.state === "PUBLISHED" && draft.symbol.trim() ? (
+            <span className="text-[10px]" style={{ color: "var(--accent-2)" }} data-symbol-unlisted>
+              {draft.symbol.trim().toUpperCase()} is not in this dataset&rsquo;s {dataset.symbols.total} listed symbols — preflight will refuse it.
+            </span>
+          ) : dataset?.symbols.state === "NOT_PUBLISHED" ? (
+            <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>{dataset.symbols.reason}</span>
+          ) : null}
         </Field>
         <Field label="Timeframe *">
           <select
@@ -511,6 +674,14 @@ function DataStep({
           ) : null}
         </Field>
       </div>
+      {dataset ? (
+        <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-dataset-facts>
+          {dataset.venue} · {dataset.source_timezone} · {dataset.calendar_policy} · timeframes {dataset.timeframes.join(" · ")}
+        </p>
+      ) : null}
+      {catalog ? (
+        <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{catalog.coverage_rule}</p>
+      ) : null}
       {error ? <ErrorBlock message={error} /> : null}
     </Card>
   );
@@ -702,10 +873,45 @@ function WindowsStep({
             fallback={options?.window_mode_default ?? ""}
             onChange={(windowMode) => patch({ walkForward: { ...draft.walkForward, windowMode } })}
           />
+          {draft.walkForward.windowMode === "rolling" ? (
+            <Field label="Train width" hint={options?.train_window?.rule ?? "Required for rolling, e.g. 180D or 72h."}>
+              <input
+                className={INPUT_CLASS}
+                style={inputStyle(!/^[1-9][0-9]{0,4}(D|h)$/.test(draft.walkForward.trainWindow ?? ""))}
+                value={draft.walkForward.trainWindow ?? ""}
+                onChange={(e) => patch({ walkForward: { ...draft.walkForward, trainWindow: e.target.value.trim() || undefined } })}
+                aria-label="Train width"
+                placeholder="180D"
+                data-train-window
+              />
+            </Field>
+          ) : null}
           {options ? (
             <p className="w-full text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-split-rule>
               {options.split_mode_rule}
             </p>
+          ) : null}
+          {options?.temporal_guards ? (
+            <div className="flex w-full flex-wrap items-end gap-2.5" data-temporal-guards>
+              {([
+                ["labelHorizonBars", "Label horizon (bars)"],
+                ["purgeBars", "Purge (bars)"],
+                ["embargoBars", "Embargo (bars)"],
+              ] as const).map(([key, label]) => (
+                <Field key={key} label={label}>
+                  <input
+                    className={INPUT_CLASS}
+                    style={inputStyle()}
+                    inputMode="numeric"
+                    value={draft.walkForward[key] ?? ""}
+                    onChange={(e) => patch({ walkForward: { ...draft.walkForward, [key]: e.target.value.trim() || undefined } })}
+                    aria-label={label}
+                    placeholder="0"
+                  />
+                </Field>
+              ))}
+              <p className="w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{options.temporal_guards.rule}</p>
+            </div>
           ) : null}
         </div>
       )}
@@ -756,6 +962,41 @@ function WindowsStep({
           </select>
         </Field>
       </div>
+      {draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" ? (
+        <div className="flex flex-wrap items-end gap-2.5 rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line-soft)" }} data-inner-folds>
+          <span className="w-full mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+            inner folds — decay selection stays inside each outer IS
+          </span>
+          {(() => {
+            const inner = draft.walkForward.inner ?? { splitFrequency: "", windowMode: "expanding", trainWindow: "", minFolds: "" };
+            const set = (change: Partial<typeof inner>) => patch({ walkForward: { ...draft.walkForward, inner: { ...inner, ...change } } });
+            return (
+              <>
+                <Field label="Inner frequency">
+                  <select className={INPUT_CLASS} style={inputStyle()} value={inner.splitFrequency} onChange={(e) => set({ splitFrequency: e.target.value })} aria-label="Inner frequency">
+                    <option value="">choose</option>
+                    {(options?.inner_folds?.split_frequency ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                </Field>
+                <Field label="Inner window mode">
+                  <select className={INPUT_CLASS} style={inputStyle()} value={inner.windowMode} onChange={(e) => set({ windowMode: e.target.value })} aria-label="Inner window mode">
+                    {(options?.inner_folds?.window_mode ?? ["expanding", "rolling"]).map((value) => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                </Field>
+                <Field label="Inner train width">
+                  <input className={INPUT_CLASS} style={inputStyle()} value={inner.trainWindow} onChange={(e) => set({ trainWindow: e.target.value.trim() })} aria-label="Inner train width" placeholder="90D" />
+                </Field>
+                <Field label="Minimum inner folds" hint={options?.inner_folds ? `release default ${options.inner_folds.min_folds_release_default}` : undefined}>
+                  <input className={INPUT_CLASS} style={inputStyle()} inputMode="numeric" value={inner.minFolds} onChange={(e) => set({ minFolds: e.target.value.trim() })} aria-label="Minimum inner folds" placeholder={String(options?.inner_folds?.min_folds_release_default ?? 2)} />
+                </Field>
+                {options?.inner_folds ? (
+                  <p className="w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{options.inner_folds.rule}</p>
+                ) : null}
+              </>
+            );
+          })()}
+        </div>
+      ) : null}
       {scheduleOptions.filter((choice) => !choice.valid).map((choice) => {
         const reason = selectedMode?.invalid_schedules?.find((entry) => entry.schedule === choice.schedule)?.reason;
         return <p key={choice.schedule} data-invalid-schedule={choice.schedule} className="text-[10px]" style={{ color: "var(--ink-soft)" }}>
@@ -773,10 +1014,13 @@ function ParametersStep({
   draft,
   patch,
   error,
+  ceiling = SWEEP_CEILING,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   error: string | null;
+  /** CG-P08-05: the release's published sweep ceiling; null when not published. */
+  ceiling?: number | null;
 }) {
   const swept = sweptCount(draft);
 
@@ -792,9 +1036,9 @@ function ParametersStep({
         <span
           className="mono text-[9.5px]"
           data-sweep-count
-          style={{ color: swept > SWEEP_CEILING ? "var(--bad)" : "var(--ink-faint)" }}
+          style={{ color: ceiling !== null && swept > ceiling ? "var(--bad)" : "var(--ink-faint)" }}
         >
-          {swept} swept · {pinnedCount(draft)} pinned · sweep ceiling {SWEEP_CEILING}
+          {swept} swept · {pinnedCount(draft)} pinned · {ceiling === null ? "sweep ceiling not published" : `sweep ceiling ${ceiling}`}
         </span>
       }
     >
@@ -1105,10 +1349,14 @@ function ReviewRail({
   draft,
   blocking,
   atlas,
+  sweepCeiling,
+  usesV2,
 }: {
   draft: RunDraft;
   blocking: readonly { step: StepId; message: string }[];
   atlas: AtlasDocument | null;
+  sweepCeiling: number | null;
+  usesV2: boolean;
 }) {
   const overrides = Object.keys(draft.optimizationConfigOverrides);
   const mode = atlas?.modes.find((item) => item.mode_id === draft.optimizationMode);
@@ -1150,6 +1398,11 @@ function ReviewRail({
         {scheduleFact && mode?.valid_schedules.includes(draft.optimizationSchedule) ? (
           <>
             <p className="mt-1 text-[10.5px] leading-[1.5]">{scheduleFact.chronological_validation_claim}</p>
+            {scheduleFact.oos_use_state ? (
+              <p className="mono mt-1 text-[9.5px]" data-forecast-oos={scheduleFact.oos_use_state}>
+                {OOS_STATE_LABEL[scheduleFact.oos_use_state] ?? scheduleFact.oos_use_state}
+              </p>
+            ) : null}
             <p className="mono mt-1 text-[9px]" style={{ color: "var(--ink-faint)" }}>
               {mode.mode_id} × {scheduleFact.schedule} · cert ceiling not published
             </p>
@@ -1192,8 +1445,19 @@ function ReviewRail({
         <Row label="protocol">{draft.protocol}</Row>
         <Row label="parameter_space">
           {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
-          (sweep ceiling {SWEEP_CEILING})
+          {sweepCeiling === null ? " (sweep ceiling not published)" : ` (sweep ceiling ${sweepCeiling})`}
         </Row>
+        {draft.protocol === "advanced" && usesV2 ? (
+          <Row label="walk-forward v2">
+            {[
+              draft.walkForward.windowMode === "rolling" && draft.walkForward.trainWindow ? `train ${draft.walkForward.trainWindow}` : null,
+              draft.walkForward.labelHorizonBars ? `label ${draft.walkForward.labelHorizonBars}` : null,
+              draft.walkForward.purgeBars ? `purge ${draft.walkForward.purgeBars}` : null,
+              draft.walkForward.embargoBars ? `embargo ${draft.walkForward.embargoBars}` : null,
+              draft.optimizationSchedule === "per_fold_causal" && draft.walkForward.inner ? `inner ${draft.walkForward.inner.splitFrequency || "?"}/${draft.walkForward.inner.trainWindow || "?"}` : null,
+            ].filter(Boolean).join(" · ") || "requested-spec v2"}
+          </Row>
+        ) : null}
         <Row label="mode × schedule">
           {/* Two empty fields rendered as a bare `×` printed a separator where
               a value belongs; an undeclared field says so. */}
@@ -1256,6 +1520,13 @@ export interface NewRunProps {
   preflightState: ResearchState;
   clearedBecause?: string | null;
   onRunPreflight: () => void;
+  /** CG-P08-03: the typed refusal of the last preflight, with its field path. */
+  preflightRefusal?: PreflightRefusal | null;
+  /** CG-P08-04: research dataset catalog for the data step. */
+  catalog?: DatasetCatalog | null;
+  catalogReason?: string | null;
+  /** CG-P11-07 `?from=`: the run this draft was copied from, and the read's state. */
+  cloneSource?: { runId: string; state: ResearchState; copiedAt?: number | null } | null;
 
   mayCreateRun: boolean;
   canSubmit: boolean;
@@ -1288,7 +1559,14 @@ export function NewRun(props: NewRunProps) {
     onSubmit,
     onRecheck,
     initialStep = "context",
+    preflightRefusal = null,
+    catalog = null,
+    catalogReason = null,
+    cloneSource = null,
   } = props;
+  const sweepCeiling = limits.sweepCeiling === undefined ? SWEEP_CEILING : limits.sweepCeiling;
+  const v2 = usesSpecV2(draft);
+  const refusalStep = preflightRefusal?.fieldPath ? stepForFieldPath(preflightRefusal.fieldPath) : null;
 
   const [step, setStep] = useState<StepId>(initialStep);
   const [visited, setVisited] = useState<ReadonlySet<StepId>>(() => new Set(initialStep === "context" ? [] : [initialStep]));
@@ -1300,7 +1578,12 @@ export function NewRun(props: NewRunProps) {
     () => new Map(blocking.map((problem) => [problem.step, problem.message])),
     [blocking],
   );
-  const errorSteps = useMemo(() => new Set([...errorByStep.keys()].filter((key) => visited.has(key))), [errorByStep, visited]);
+  const errorSteps = useMemo(() => {
+    const steps = new Set([...errorByStep.keys()].filter((key) => visited.has(key)));
+    /* CG-P08-03: a server refusal marks the step that owns its field path. */
+    if (refusalStep && refusalStep !== "review") steps.add(refusalStep);
+    return steps;
+  }, [errorByStep, visited, refusalStep]);
   const missing = useMemo(() => missingConstraints(limits), [limits]);
 
   return (
@@ -1351,6 +1634,33 @@ export function NewRun(props: NewRunProps) {
         </p>
       </header>
 
+      {cloneSource ? (
+        <div
+          role="status"
+          className="flex flex-wrap items-baseline gap-2 rounded-[6px] border px-3 py-2 text-[11px]"
+          style={{
+            borderColor: cloneSource.state.state === "available" ? "var(--accent)" : "var(--bad)",
+            background: "var(--paper-raised)",
+          }}
+          data-clone-source={cloneSource.runId}
+          data-clone-state={cloneSource.state.state}
+        >
+          {cloneSource.state.state === "available" ? (
+            <>
+              <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--accent)" }}>copied from</span>
+              <a className="mono" href={`/research/quantbt/runs/${encodeURIComponent(cloneSource.runId)}/progress`}>{cloneSource.runId}</a>
+              <span style={{ color: "var(--ink-soft)" }}>
+                A new run with a NEW intent: change anything, then run a fresh preflight. The original run is untouched.
+              </span>
+            </>
+          ) : cloneSource.state.state === "loading" ? (
+            <span style={{ color: "var(--ink-soft)" }}>Reading the declaration of {cloneSource.runId}…</span>
+          ) : (
+            <span style={{ color: "var(--bad)" }}>{cloneSource.state.reason}</span>
+          )}
+        </div>
+      ) : null}
+
       <WizardBar current={step} onPick={(next) => {
         setVisited((previous) => new Set([...previous, step, next]));
         setStep(next);
@@ -1397,13 +1707,13 @@ export function NewRun(props: NewRunProps) {
             </ResearchPanel>
           ) : null}
           {step === "data" ? (
-            <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} />
+            <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} />
           ) : null}
           {step === "windows" ? (
             <WindowsStep draft={draft} patch={patch} atlas={atlas} error={errorByStep.get("windows") ?? null} />
           ) : null}
           {step === "parameters" ? (
-            <ParametersStep draft={draft} patch={patch} error={errorByStep.get("parameters") ?? null} />
+            <ParametersStep draft={draft} patch={patch} error={errorByStep.get("parameters") ?? null} ceiling={sweepCeiling} />
           ) : null}
           {step === "optimization" ? (
             <OptimizationStep
@@ -1442,6 +1752,31 @@ export function NewRun(props: NewRunProps) {
                 ) : null}
               </div>
 
+              {preflightRefusal && refusalStep ? (
+                <div
+                  role="alert"
+                  className="flex flex-wrap items-baseline gap-2 rounded-[6px] border px-2.5 py-1.5 text-[11px]"
+                  style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)", color: "var(--bad)" }}
+                  data-refusal-field={preflightRefusal.fieldPath?.join(".") ?? ""}
+                >
+                  <span className="mono text-[9.5px] font-bold">{preflightRefusal.gate ?? preflightRefusal.code}</span>
+                  <span className="flex-1">{preflightRefusal.message}</span>
+                  {refusalStep !== "review" ? (
+                    <button
+                      type="button"
+                      className="btn-ghost mono text-[10px]"
+                      data-action="go-to-refused-step"
+                      onClick={() => {
+                        setVisited((previous) => new Set([...previous, refusalStep]));
+                        setStep(refusalStep);
+                      }}
+                    >
+                      fix in {STEPS.find((candidate) => candidate.id === refusalStep)?.label ?? refusalStep} →
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
               <PreflightPanel preflight={preflight} state={preflightState} />
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1462,8 +1797,18 @@ export function NewRun(props: NewRunProps) {
                   </span>
                 ) : !mayCreateRun ? (
                   <span className="text-[10.5px]" style={{ color: "var(--role-holdout)" }} data-admission-note>
-                    The server has not published creation admission for this preview. Submitting is
-                    still allowed — admission is decided when the request arrives.
+                    {preflight?.run_admission?.message ? (
+                      <>
+                        <span className="mono text-[9.5px] font-bold">{preflight.run_admission.code}</span>{" "}
+                        {preflight.run_admission.message} Submitting is still allowed — admission is decided
+                        again when the request arrives.
+                      </>
+                    ) : (
+                      <>
+                        The server has not published creation admission for this preview. Submitting is
+                        still allowed — admission is decided when the request arrives.
+                      </>
+                    )}
                   </span>
                 ) : null}
               </div>
@@ -1494,7 +1839,7 @@ export function NewRun(props: NewRunProps) {
           ) : null}
         </div>
 
-        <ReviewRail draft={draft} blocking={blocking} atlas={atlas} />
+        <ReviewRail draft={draft} blocking={blocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} />
       </div>
     </div>
   );
