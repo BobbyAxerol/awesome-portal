@@ -68,6 +68,7 @@ TRACKED = (
     "fixtures/research-foundation.atlas-current.valid.json",
     "fixtures/research-preflight.response.valid.json",
     "fixtures/research-progress.attempts.valid.json",
+    "fixtures/research-progress.failed-at.valid.json",
     "fixtures/research-current-source.replay.fold0.valid.json",
     "fixtures/research-current-source.replay.legacy-seal.valid.json",
     "fixtures/research-current-source.replay-transitions.valid.json",

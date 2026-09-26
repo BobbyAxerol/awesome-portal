@@ -7,6 +7,9 @@
  * new-run action, server ETA states, and a stream that carries its own read
  * so the page does not refetch per event.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { act, cleanup, render, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -382,5 +385,41 @@ describe("CG-P10-04 — events patch only what they publish", () => {
       payload: { fold: 1, selection: { scope: "GLOBAL_STUDY", trial: 1, objective: "-9.8", params_digest: DIGEST } },
     } as never);
     expect(fold.folds[0]).toMatchObject({ fold: 1, state: "DONE", selection: { state: "AVAILABLE", trial: 1, params_digest: DIGEST, reason_code: null } });
+  });
+});
+
+describe("E10 (audit 01-5/03-4) — a FAILED run shows where it stopped and why, from the server", () => {
+  // The canonical fixture is a real PostgreSQL read (p11-progress.spec E10-03):
+  // the lease was lost while S4 ran and no dispatcher claimed the retry.
+  const fixture = JSON.parse(
+    readFileSync(join(process.cwd(), "../../../packages/contracts/fixtures/research-progress.failed-at.valid.json"), "utf8"),
+  ) as { current: Pick<ProgressRead["current"], "job_state" | "effective_status" | "may_cancel" | "failed_at" | "terminal_reason"> };
+
+  function failedRead(): ProgressRead {
+    return read({ current: { ...read().current, ...fixture.current, terminal_resolution: "SOURCE" } });
+  }
+
+  it("draws the failing stage red, and only that stage", () => {
+    view(failedRead());
+    const s4 = $('[data-stage="S4"]');
+    expect(s4.getAttribute("data-stage-state")).toBe("FAILED");
+    expect(s4.style.color).toBe("var(--bad)");
+    expect(s4.textContent).toMatch(/^✕ S4 /);
+    expect(s4.getAttribute("title")).toBe("Failed during this stage.");
+    expect(s4.getAttribute("data-motion")).toBeNull();
+    for (const key of ["S1", "S2", "S3", "S5"]) expect($(`[data-stage="${key}"]`).style.color).not.toBe("var(--bad)");
+  });
+
+  it("states the control-side reason when the source reported none", () => {
+    view(failedRead());
+    const failure = $("[data-failure]");
+    expect(failure.getAttribute("data-failure")).toBe("P06_RETRY_NOT_DISPATCHED");
+    expect(failure.textContent).toContain("no dispatcher claimed the scheduled retry");
+  });
+
+  it("marks nothing red while the run is live", () => {
+    view(read());
+    expect(document.querySelector('[data-stage-state="FAILED"]')).toBeNull();
+    expect(document.querySelector("[data-failure]")).toBeNull();
   });
 });

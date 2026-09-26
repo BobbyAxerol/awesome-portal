@@ -343,6 +343,10 @@ export const CURRENT_SOURCE_LANE_COPY: Record<CurrentSourceLaneState, string> = 
  * no sentence here; the caller falls back to its availability word.
  */
 export const REASON_CODE_SENTENCES: Record<string, string> = {
+  /* E10: failures the Portal closed itself — the server's typed control reason. */
+  P06_RETRY_NOT_DISPATCHED: "The run lost its worker and no retry was ever dispatched, so the Portal closed it. Start a new run from the same spec.",
+  P11_TERMINAL_SIDECAR_FAILED: "The engine finished, but the Portal could not record its terminal result, so the run was closed as failed.",
+  P11_TERMINAL_SIDECAR_PAYLOAD_LOST: "The engine finished, but its terminal payload was lost before the Portal could record it, so the run was closed as failed.",
   P13_SOURCE_PREDATES_OOS_ANALYTICS:
     "This run was sealed before OOS analytics were published, so the engine's OOS figures were never recorded for it.",
   P13_SOURCE_EVIDENCE_NOT_PUBLISHED: "This run published no sealed evidence.",

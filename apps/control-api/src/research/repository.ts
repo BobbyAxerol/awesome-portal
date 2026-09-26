@@ -51,6 +51,7 @@ import {
   P04_FIXED_QUALIFICATION_PROFILE_ID,
 } from "./delta-wfo.profile";
 import { WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID } from "./whatif.profile";
+import { RETRY_WAIT_DISPATCH_GRACE_SECONDS, retryNotDispatchedReason } from "./run-state";
 
 type ScopedClient = PoolClient;
 
@@ -2999,6 +3000,203 @@ export class ResearchMetadataRepository {
   }
 
   /**
+   * E10: close a job whose worker journaled its source terminal fact but lost
+   * its lease before `finishDurableJob` committed (the terminal write was
+   * lost). The caller (P11) has already replayed the terminal sidecars from
+   * the journal; this is the lifecycle half, fenced differently from
+   * `finishDurableJob` because the lease is gone by definition:
+   *
+   * - the attempt must have a journaled `run_completed`/`run_failed` event;
+   * - the job is either still pointing at that attempt with an expired lease,
+   *   or waiting (RETRY_WAIT/QUEUED) with that attempt as its latest one — a
+   *   newer claim always wins and this call is rejected.
+   *
+   * Cancellation still wins. An already-terminal job is returned unchanged.
+   */
+  async settleJournaledTerminal(
+    scope: ResearchScope,
+    input: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch"> & {
+      outcome: "SUCCEEDED" | "FAILED" | "CANCELLED";
+      reason?: string;
+      usage: ResearchWorkerUsage;
+    },
+  ): Promise<{ outcome: "SUCCEEDED" | "FAILED" | "CANCELLED"; changed: boolean }> {
+    this.assertScope(scope);
+    this.assertClaim(input);
+    if (input.reason != null) requireText(input.reason, "terminal reason", 256);
+    this.assertWorkerUsage(input.usage);
+    return this.withScopedWrite(scope, async (client) => {
+      const selected = await client.query<DurableJobRow & {
+        attempt_id: string;
+        current_worker_attempt_id: string | null;
+        current_lease_epoch: string | number | null;
+        wa_state: string;
+        wa_expired: boolean;
+        wa_latest: boolean;
+        journaled_terminal: boolean;
+      }>(
+        `SELECT j.job_id, j.run_id, j.command_id, j.logical_work_key, j.work_digest, j.job_kind, j.readiness_class,
+                j.queue_class, j.resource_class, j.cost_estimate, j.attempt_limit,
+                j.cancel_version, j.requested_by_user_id, j.state, r.attempt_id,
+                j.current_worker_attempt_id, j.current_lease_epoch,
+                wa.state AS wa_state, (wa.expires_at <= now()) AS wa_expired,
+                (wa.ordinal = (SELECT max(o.ordinal) FROM research.worker_attempts o
+                                WHERE o.workspace_id = wa.workspace_id AND o.job_id = wa.job_id)) AS wa_latest,
+                EXISTS (
+                  SELECT 1 FROM research.run_progress_events e
+                   WHERE e.workspace_id = j.workspace_id AND e.run_id = j.run_id
+                     AND e.worker_attempt_id = wa.worker_attempt_id
+                     AND e.event_type IN ('run_completed', 'run_failed')
+                ) AS journaled_terminal
+           FROM research.jobs j
+           JOIN research.runs r ON r.workspace_id = j.workspace_id AND r.run_id = j.run_id
+           JOIN research.worker_attempts wa
+             ON wa.workspace_id = j.workspace_id AND wa.job_id = j.job_id
+          WHERE j.workspace_id = $1 AND j.job_id = $2
+            AND wa.worker_attempt_id = $3 AND wa.lease_epoch = $4
+          FOR UPDATE OF j, r, wa`,
+        [scope.workspaceId, input.jobId, input.workerAttemptId, input.leaseEpoch],
+      );
+      const job = selected.rows[0];
+      if (!job) throw new ResearchMetadataError("RESEARCH_JOB_NOT_FOUND", "The Research job was not found.", 404);
+      if (["SUCCEEDED", "FAILED", "CANCELLED"].includes(job.state)) {
+        return { outcome: job.state as "SUCCEEDED" | "FAILED" | "CANCELLED", changed: false };
+      }
+      const stillCurrent = job.current_worker_attempt_id === input.workerAttemptId
+        && job.current_lease_epoch !== null && asNumber(job.current_lease_epoch) === input.leaseEpoch
+        && ["CLAIMED", "RUNNING", "CANCEL_REQUESTED"].includes(job.state)
+        && job.wa_expired;
+      const waitingOnIt = job.current_worker_attempt_id === null
+        && ["RETRY_WAIT", "QUEUED"].includes(job.state)
+        && job.wa_latest;
+      if (!job.journaled_terminal || !(stillCurrent || waitingOnIt)) this.throwLeaseRejected();
+      const outcome = job.state === "CANCEL_REQUESTED" ? "CANCELLED" : input.outcome;
+      const reason = outcome === "SUCCEEDED" ? null : (input.reason ?? outcome);
+      // The attempt's own history stays true: a lease that was already
+      // recorded as lost stays LOST_LEASE; one that lapsed unrecorded closes
+      // with the outcome its journal proves.
+      await client.query(
+        `UPDATE research.worker_attempts
+            SET state = CASE WHEN state IN ('CLAIMED', 'RUNNING') THEN $4 ELSE state END,
+                exit_reason = COALESCE(exit_reason, $5),
+                measured_usage = COALESCE(measured_usage, $6::jsonb),
+                updated_at = now()
+          WHERE workspace_id = $1 AND worker_attempt_id = $2 AND lease_epoch = $3`,
+        [
+          scope.workspaceId, input.workerAttemptId, input.leaseEpoch, outcome, reason,
+          JSON.stringify(this.workerUsageDatabaseShape(input.usage)),
+        ],
+      );
+      if (outcome !== "SUCCEEDED") {
+        await this.abortWritingArtifactsForFence(client, scope, input.workerAttemptId, input.leaseEpoch);
+      }
+      await client.query(
+        `UPDATE research.jobs
+            SET state = $3, terminal_reason = $4, retry_not_before = NULL,
+                current_worker_attempt_id = $5, current_lease_epoch = $6, updated_at = now()
+          WHERE workspace_id = $1 AND job_id = $2`,
+        [scope.workspaceId, job.job_id, outcome, reason, input.workerAttemptId, input.leaseEpoch],
+      );
+      const lifecycleState = outcome === "SUCCEEDED" ? "READY" : outcome;
+      await client.query(
+        `UPDATE research.attempts SET state = $3, updated_at = now()
+          WHERE workspace_id = $1 AND attempt_id = $2`,
+        [scope.workspaceId, job.attempt_id, lifecycleState],
+      );
+      await client.query(
+        `UPDATE research.runs SET state = $3, state_version = state_version + 1, updated_at = now()
+          WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, job.run_id, lifecycleState],
+      );
+      await this.recordJobEvent(client, scope, job.job_id, input.workerAttemptId, `JOB_${outcome}`, {
+        lease_epoch: input.leaseEpoch,
+        cancellation_version: asNumber(job.cancel_version),
+        settled_from: "P11_JOURNALED_TERMINAL",
+        prior_state: job.state,
+      });
+      await this.audit(client, scope, "RESEARCH_DURABLE_JOB_TERMINAL_SETTLED", "job", job.job_id, {
+        outcome,
+        prior_state: job.state,
+        worker_attempt_id: input.workerAttemptId,
+        lease_epoch: input.leaseEpoch,
+      });
+      return { outcome, changed: true };
+    });
+  }
+
+  /**
+   * E10: a RETRY_WAIT job that no dispatcher claimed. P10 is the only
+   * producer and dispatches a job once, at create; nothing claims a scheduled
+   * retry, so without this the run waits forever. P11/CG-P11-07 publishes no
+   * automatic or in-place retry (`may_retry: false`, a new run from the
+   * requested spec), so an overdue retry is closed as FAILED with a typed
+   * reason rather than redispatched. The grace keeps a future P06 worker pool
+   * free to claim within it. An attempt that journaled a source terminal is
+   * left to `settleJournaledTerminal`.
+   */
+  async expireOverdueRetryWait(
+    scope: ResearchScope,
+    graceSeconds: number = RETRY_WAIT_DISPATCH_GRACE_SECONDS,
+  ): Promise<{ expired: string[] }> {
+    this.assertScope(scope);
+    requirePositiveSafeInteger(graceSeconds, "retry grace seconds", 86_400);
+    return this.withScopedWrite(scope, async (client) => {
+      const overdue = await client.query<{ job_id: string; run_id: string; attempt_id: string; cancel_version: string | number }>(
+        `SELECT j.job_id, j.run_id, r.attempt_id, j.cancel_version
+           FROM research.jobs j
+           JOIN research.runs r ON r.workspace_id = j.workspace_id AND r.run_id = j.run_id
+          WHERE j.workspace_id = $1
+            AND j.state = 'RETRY_WAIT'
+            AND j.retry_not_before IS NOT NULL
+            AND j.retry_not_before <= now() - $2 * interval '1 second'
+            AND NOT EXISTS (
+              SELECT 1
+                FROM research.worker_attempts wa
+                JOIN research.run_progress_events e
+                  ON e.workspace_id = wa.workspace_id AND e.worker_attempt_id = wa.worker_attempt_id
+               WHERE wa.workspace_id = j.workspace_id AND wa.job_id = j.job_id
+                 AND e.run_id = j.run_id
+                 AND e.event_type IN ('run_completed', 'run_failed')
+            )
+          ORDER BY j.retry_not_before, j.job_id
+          FOR UPDATE OF j, r SKIP LOCKED
+          LIMIT 32`,
+        [scope.workspaceId, graceSeconds],
+      );
+      const expired: string[] = [];
+      for (const row of overdue.rows) {
+        const reason = retryNotDispatchedReason(graceSeconds);
+        await client.query(
+          `UPDATE research.jobs
+              SET state = 'FAILED', retry_not_before = NULL, terminal_reason = $3, updated_at = now()
+            WHERE workspace_id = $1 AND job_id = $2 AND state = 'RETRY_WAIT'`,
+          [scope.workspaceId, row.job_id, reason],
+        );
+        await client.query(
+          `UPDATE research.attempts SET state = 'FAILED', updated_at = now()
+            WHERE workspace_id = $1 AND attempt_id = $2`,
+          [scope.workspaceId, row.attempt_id],
+        );
+        await client.query(
+          `UPDATE research.runs SET state = 'FAILED', state_version = state_version + 1, updated_at = now()
+            WHERE workspace_id = $1 AND run_id = $2`,
+          [scope.workspaceId, row.run_id],
+        );
+        await this.recordJobEvent(client, scope, row.job_id, null, "JOB_FAILED", {
+          reason,
+          transition: "RETRY_WAIT_EXPIRED",
+          cancellation_version: asNumber(row.cancel_version),
+        });
+        await this.audit(client, scope, "RESEARCH_DURABLE_JOB_RETRY_EXPIRED", "job", row.job_id, {
+          grace_seconds: graceSeconds,
+        });
+        expired.push(row.run_id);
+      }
+      return { expired };
+    });
+  }
+
+  /**
    * Claim ID-only outbox records for a publisher. Publishing and acknowledgement
    * are intentionally two calls: a transport outage never advances the job
    * state and a duplicate delivery remains harmless at the consumer boundary.
@@ -3220,6 +3418,16 @@ export class ResearchMetadataRepository {
           AND j.current_lease_epoch = wa.lease_epoch
           AND wa.state IN ('CLAIMED', 'RUNNING')
           AND wa.expires_at <= now()
+          -- E10: an attempt that already journaled its source terminal fact
+          -- must never be retried: its compute is sealed, and a retry would
+          -- rerun QuantBT (P11 README). P11 settles it from the journal
+          -- (settleJournaledTerminal) instead of P06 scheduling RETRY_WAIT.
+          AND NOT EXISTS (
+            SELECT 1 FROM research.run_progress_events e
+             WHERE e.workspace_id = j.workspace_id AND e.run_id = j.run_id
+               AND e.worker_attempt_id = wa.worker_attempt_id
+               AND e.event_type IN ('run_completed', 'run_failed')
+          )
         FOR UPDATE OF j, wa SKIP LOCKED`,
       [scope.workspaceId],
     );
