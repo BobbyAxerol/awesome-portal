@@ -173,7 +173,7 @@ a.rc-node:hover { border-color: var(--accent); text-decoration: none; }
 .rc-digest[data-absent="declaration"] { color: var(--accent); }
 .rc-src { font-family: var(--font-mono); font-size: 10px; }
 .rc-src[data-unlinked] { color: var(--ink-faint); }
-.rc-note { font-size: 10.5px; color: var(--ink-faint); line-height: 1.5; }
+.rc-note { font-size: 10.5px; color: var(--ink-faint); line-height: 1.5; overflow-wrap: break-word; }
 .rc-edit { border: 0; background: transparent; color: var(--accent); font-family: var(--font-mono); font-size: 9.5px; padding: 0; margin-left: 6px; cursor: pointer; }
 .rc-edit:disabled { color: var(--ink-faint); cursor: not-allowed; }
 .rc-decl td { background: var(--paper); }

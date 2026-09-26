@@ -630,3 +630,53 @@ describe("S11 Release Candidate — pure parts, wiring and boundary", () => {
     expect(client.match(/method: "(POST|PATCH)"/g)).toEqual(['method: "PATCH"', 'method: "POST"']);
   });
 });
+
+/* ------------------------------------------------ W7 · retained (WFO) lane */
+
+/**
+ * W7: the published compositions of the preview's real Delta WFO run as the
+ * retained lane now composes them (packages/contracts fixtures, written by
+ * the control-api service test from the run's real retained rows).
+ */
+const CONTRACT_FIXTURES = join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures");
+const retained = (name: string) => JSON.parse(readFileSync(join(CONTRACT_FIXTURES, name), "utf8")) as RcCompose;
+
+describe("S11 Release Candidate — W7 retained (Delta WFO) lane", () => {
+  it("S11-U25 shows the WFO run bound to its retained facts: no MISSING row, the uncertified claim DEGRADED with its reason", async () => {
+    const body = retained("research-release-candidate.wfo-retained.valid.json");
+    server({ compose: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await ready();
+    const rows = qa("[data-pack-row]");
+    expect(rows.map((row) => [row.getAttribute("data-pack-row"), row.getAttribute("data-status")])).toEqual(body.pack.map((item) => [item.key, item.status]));
+    expect(q("[data-pack-counts]")!.textContent).toBe("8 COMPLETE · 2 DEGRADED · 2 INPUT · 0 MISSING");
+    expect(qa("[data-pack-row][data-status='MISSING']")).toHaveLength(0);
+    const claim = q("[data-pack-row='METHODOLOGY_CLAIM']")!;
+    expect(claim.getAttribute("data-status")).toBe("DEGRADED");
+    expect(claim.querySelector("[data-reason-code='P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED']")).not.toBeNull();
+    expect(claim.textContent).toContain("no issued methodology certificate");
+    expect(claim.textContent).toContain("walk_forward_oos");
+    /* Every YAML line is the server's value; only the rc_ id waits for the local seal. */
+    const lines = qa("[data-yaml-key]").map((line) => [line.getAttribute("data-yaml-key"), line.getAttribute("data-yaml-value")]);
+    expect(lines).toEqual(body.yaml.map((field) => [field.key, field.value ?? ""]));
+    expect(lines.filter(([, value]) => value === "").map(([key]) => key)).toEqual(["release_candidate_id"]);
+    /* Digests print whole: the params lineage row carries the retained θ* digest. */
+    const params = body.pack.find((item) => item.key === "SELECTED_PARAMS_LINEAGE")!;
+    expect(q("[data-pack-row='SELECTED_PARAMS_LINEAGE'] [data-digest]")!.getAttribute("data-digest")).toBe(params.digest);
+    expect(q("[data-seal-blocked]")!.getAttribute("data-seal-blocked")).toBe("P21_RESEARCHER_DECLARATIONS_REQUIRED");
+    expect(q("[data-rc-state]")!.textContent).toBe("DRAFT");
+    expect(screenText()).not.toMatch(/P21_REFERENCED_SOURCE_INTEGRITY_FAILED/);
+  });
+
+  it("S11-U26 the declared WFO composition offers the local seal; publish stays the P22 ghost", async () => {
+    const body = retained("research-release-candidate.wfo-retained-declared.valid.json");
+    server({ compose: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await ready();
+    expect(body.actions.may_seal).toBe(true);
+    expect(q("[data-action='local-seal']")!.getAttribute("data-seal-enabled")).toBe("true");
+    expect(q("[data-seal-blocked]")).toBeNull();
+    expect(q("[data-publish-ghost]")!.getAttribute("data-blocked-reason")).toBe("P22_PUBLICATION_NOT_COMMISSIONED");
+    expect(screenText()).not.toMatch(/\bPUBLISHED\b(?!_)/);
+  });
+});

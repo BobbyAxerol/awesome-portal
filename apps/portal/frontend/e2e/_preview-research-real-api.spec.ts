@@ -12,7 +12,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const HOME = `${process.env.HOME}/.config/portal-research-preview`;
 const OUT = process.env.RESEARCH_PREVIEW_RECEIPTS ?? `${HOME}/receipts`;
@@ -348,6 +348,8 @@ for (const [name, width, height] of VIEWPORTS) {
       /* 12 rows, statuses and counter as served. */
       const rows = await root.locator("[data-pack-row]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-pack-row"), node.getAttribute("data-status")]));
       expect(rows).toEqual(api.pack.map((item: any) => [item.key, item.status]));
+      /* W7 · each row's digest and reason are the server's, row by row. */
+      await expectRowsAsServed(root, api);
       const counts = api.pack_counts;
       await expect(root.locator("[data-pack-counts]")).toHaveText(`${counts.complete} COMPLETE · ${counts.degraded} DEGRADED · ${counts.input} INPUT · ${counts.missing} MISSING`);
       /* Rail tones, the server's seal reason, the typed publish ghost, the state chip. */
@@ -659,6 +661,107 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
       await finish(page, `W6b-S10-${label}-${name}`, observed, { attempt: node.attempt_id, etag, promotion_state: node.promotion_state });
       expect(observed.failures, "S10 failed reads").toEqual([]);
       expect(observed.noise, `S10 console:\n${observed.noise.join("\n")}`).toEqual([]);
+    });
+  }
+}
+
+/**
+ * W7 · the P21 retained (Delta WFO) lane.
+ *
+ * Row by row, a pack row shows the server's status, its digest whole and, for
+ * a MISSING or DEGRADED row, the server's reason code.
+ *
+ * The preview still runs the pre-W7 composer, so its WFO answer is the one W7
+ * replaces (3 · 0 · 2 · 7, P21_REFERENCED_SOURCE_INTEGRITY_FAILED). The
+ * W7 composition of the same run — written by the control-api service test
+ * from this run's real retained rows (packages/contracts fixtures) — is
+ * injected for the one compose GET and labelled INJECTED; every other read is
+ * real. The test first proves the fixture is this run: every identity the old
+ * composer already published equals the fixture's.
+ */
+async function expectRowsAsServed(root: Locator, api: any) {
+  for (const item of api.pack) {
+    const row = root.locator(`[data-pack-row='${item.key}']`);
+    await expect(row).toHaveAttribute("data-status", item.status);
+    if (item.digest) await expect(row.locator("[data-digest]")).toHaveAttribute("data-digest", item.digest);
+    if ((item.status === "MISSING" || item.status === "DEGRADED") && item.availability.reason_code) {
+      await expect(row.locator(`[data-reason-for='${item.key}']`)).toHaveAttribute("data-reason-code", item.availability.reason_code);
+    }
+  }
+}
+
+const W7_FIXTURES = `${process.cwd()}/../../../packages/contracts/fixtures`;
+const W7_VIEWPORTS = [
+  ["wide", 1440, 900],
+  ["mobile", 660, 900],
+] as const;
+const W7_SHARED_FIELDS = [
+  "alpha_id", "alpha_version_id", "alpha_code_digest", "alpha_entrypoint", "requested_spec_digest", "effective_spec_digest",
+  "dataset_binding_digest", "source_transform_digest", "engine_release_id", "adapter_contract_digest", "report_revision",
+];
+
+for (const [name, width, height] of W7_VIEWPORTS) {
+  for (const [label, run] of RC_RUNS) {
+    test(`W7 S11 ${label} rows as served on real reads at ${name}`, async ({ page }) => {
+      const observed = observe(page);
+      await page.setViewportSize({ width, height });
+      await signIn(page);
+      const api = (await (await page.request.get(`/api/v1/quantbt/runs/${run}/release-candidate`)).json()) as any;
+      await page.goto(`/research/quantbt/runs/${run}/release-candidate`);
+      const root = page.locator("[data-screen='release-candidate']");
+      await expect(root.locator("[data-pack-row]")).toHaveCount(12, { timeout: 20_000 });
+      await page.waitForLoadState("networkidle");
+      await expectRowsAsServed(root, api);
+      const counts = api.pack_counts;
+      await expect(root.locator("[data-pack-counts]")).toHaveText(`${counts.complete} COMPLETE · ${counts.degraded} DEGRADED · ${counts.input} INPUT · ${counts.missing} MISSING`);
+      await finish(page, `W7-S11-${label}-real-${name}`, observed, { run, api_availability: api.availability, api_counts: counts, api_blocked: api.actions.seal_blocked_reason });
+      expect(observed.failures, "S11 failed reads").toEqual([]);
+      expect(observed.noise, `S11 console:\n${observed.noise.join("\n")}`).toEqual([]);
+    });
+  }
+
+  for (const [label, file] of [
+    ["virtual", "research-release-candidate.wfo-retained.valid.json"],
+    ["declared", "research-release-candidate.wfo-retained-declared.valid.json"],
+  ] as const) {
+    test(`W7 S11 WFO retained lane (${label} draft, composition INJECTED) at ${name}`, async ({ page }) => {
+      test.skip(!WFO_RUN, "no seeded WFO run on this preview");
+      const body = JSON.parse(readFileSync(`${W7_FIXTURES}/${file}`, "utf8"));
+      test.skip(body.run_id !== WFO_RUN, "the W7 fixture is composed for another seeded WFO run");
+      const observed = observe(page);
+      await page.setViewportSize({ width, height });
+      await signIn(page);
+      const real = (await (await page.request.get(`/api/v1/quantbt/runs/${WFO_RUN}/release-candidate`)).json()) as any;
+      const realFields = Object.fromEntries(real.fields.map((field: any) => [field.key, field.value]));
+      const injectedFields = Object.fromEntries(body.fields.map((field: any) => [field.key, field.value]));
+      for (const key of W7_SHARED_FIELDS) expect(injectedFields[key], `${key} is this run's own fact`).toBe(realFields[key]);
+      await page.route(`**/api/v1/quantbt/runs/${WFO_RUN}/release-candidate`, (route) =>
+        route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }),
+      );
+      await page.goto(`/research/quantbt/runs/${WFO_RUN}/release-candidate`);
+      const root = page.locator("[data-screen='release-candidate']");
+      await expect(root.locator("[data-pack-row]")).toHaveCount(12, { timeout: 20_000 });
+      await page.waitForLoadState("networkidle");
+      await expectRowsAsServed(root, body);
+      await expect(root.locator("[data-pack-counts]")).toHaveText("8 COMPLETE · 2 DEGRADED · 2 INPUT · 0 MISSING");
+      await expect(root.locator("[data-pack-row][data-status='MISSING']")).toHaveCount(0);
+      const lines = await root.locator("[data-yaml-key]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-yaml-key"), node.getAttribute("data-yaml-value")]));
+      expect(lines).toEqual(body.yaml.map((field: any) => [field.key, field.value ?? ""]));
+      if (body.actions.may_seal) {
+        await expect(root.locator("[data-action='local-seal']")).toHaveAttribute("data-seal-enabled", "true");
+      } else {
+        await expect(root.locator("[data-seal-blocked]")).toHaveAttribute("data-seal-blocked", body.actions.seal_blocked_reason);
+      }
+      await expect(root.locator("[data-publish-ghost]")).toHaveAttribute("data-blocked-reason", "P22_PUBLICATION_NOT_COMMISSIONED");
+      await expect(root.locator("[data-rc-state-panel='partial']")).toHaveCount(0);
+      const pack = await root.locator(".rc-pack").evaluate((node) => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+      if (width < 960) expect(pack.scroll).toBeGreaterThan(pack.client);
+      expect(await axeBlocking(page, "[data-screen='release-candidate']")).toEqual([]);
+      await finish(page, `W7-S11-WFO-retained-${label}-${name}`, observed, {
+        run: WFO_RUN, injected: ["GET compose (W7 composition of this run)"], preview_counts: real.pack_counts, preview_blocked: real.actions.seal_blocked_reason,
+      });
+      expect(observed.failures, "S11 failed reads").toEqual([]);
+      expect(observed.noise, `S11 console:\n${observed.noise.join("\n")}`).toEqual([]);
     });
   }
 }
