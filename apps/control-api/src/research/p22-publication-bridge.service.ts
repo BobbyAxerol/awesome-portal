@@ -84,7 +84,7 @@ export class P22PublicationBridgeService {
     return this.transaction(scope, false, async (client) => {
       await this.member(client, scope);
       const facts = await this.finalAudit(client, scope.workspaceId, input.releaseCandidateId);
-      if (!facts) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", "The final-audit child is not published as a READY rrun_ source.", 503);
+      if (!facts) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", "The final-audit source is not published as a READY rrun_ source.", 503);
       const materializationDigest = digest({
         schema_version: "research.p22-run-read-model-bridge.v1",
         workspace_id: scope.workspaceId, release_candidate_id: input.releaseCandidateId,
@@ -138,9 +138,10 @@ export class P22PublicationBridgeService {
         FROM research.release_candidate_packs_v1 pack
         JOIN research.runs root ON root.workspace_id = pack.workspace_id AND root.run_id = pack.run_id
         JOIN research.runs run ON run.workspace_id = root.workspace_id
-         AND ((run.parent_run_id = root.run_id AND run.relationship_kind = 'AUDIT_OF_SELECTION')
-           OR (run.run_id = root.run_id AND run.relationship_kind = 'AUDIT_OF_SELECTION'))
          AND run.run_id ~ '^rrun_' AND run.state = 'READY'
+         AND research.p22_final_audit_source_eligible(
+               pack.workspace_id, pack.release_candidate_id, run.run_id
+             )
         JOIN research.attempts attempt ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
         LEFT JOIN research.alpha_versions version ON version.workspace_id = attempt.workspace_id AND version.alpha_version_id = attempt.alpha_version_id
         LEFT JOIN research.selection_records selection ON selection.workspace_id = run.workspace_id AND selection.selection_id = run.target_selection_id
