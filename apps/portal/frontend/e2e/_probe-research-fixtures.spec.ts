@@ -152,7 +152,9 @@ test("Screen 14 holds its fail-closed composition in the browser", async ({ page
   // A field the parser did not find prints no value at all — not 0, - or N/A.
   const missing = screens.nth(2).locator("[data-mirror-field='warmup_bars']");
   await expect(missing).toHaveAttribute("data-mirror-state", "missing");
-  expect((await missing.locator("dd").innerText()).trim()).toBe("");
+  // E6: the value cell carries the typed absence, and only that.
+  expect((await missing.locator("dd").first().innerText()).trim()).toBe("missing");
+  await expect(missing.locator("dd [data-absent]")).toHaveAttribute("data-absent", "missing");
 
   // The unparsed instance keeps its frame and says what is still owed.
   const idle = screens.nth(3);
@@ -186,6 +188,8 @@ test("Screen 14 does not overflow a 660px viewport", async ({ page }) => {
   // containment itself rather than that overflow happens to occur at this
   // width: the fixture's longest value could shrink and quietly retire the
   // check.
+  // E6: one step view at a time; the clean instance opens on step 3.
+  await screen14.locator("[data-step-marker='1']").click();
   const mirror = screen14.locator("[data-mirror]").first();
   await expect(mirror).toBeVisible();
   const contained = await mirror.evaluate(

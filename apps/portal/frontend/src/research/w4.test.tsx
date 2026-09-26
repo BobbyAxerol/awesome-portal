@@ -265,7 +265,9 @@ describe("CG-P07-03/04 Screen 14 mirror and gates", () => {
     expect(document.querySelector('[data-mirror-field="version"]')?.textContent).toContain("contract-complete");
     const notInContract = document.querySelector('[data-mirror-field="output_contract"]') as HTMLElement;
     expect(notInContract.textContent).toContain("not in v1");
-    expect(notInContract.querySelector("dd")?.textContent).toBe("");
+    // Its typed absence, and nothing that reads as a value.
+    expect(notInContract.querySelector("dd")?.textContent).toBe("not in v1");
+    expect(notInContract.querySelector("dd [data-absent]")?.getAttribute("data-absent")).toBe("not_in_contract");
     expect(document.querySelector('[data-mirror-field="artifact.digest"] dd')?.textContent).toBe("sha256:abc");
   });
 
