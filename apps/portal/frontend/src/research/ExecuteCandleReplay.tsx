@@ -177,6 +177,7 @@ function CandleChart({
   } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const fitted = useRef<readonly CurrentSourceObservation[] | null>(null);
+  const revealed = useRef(false);
   const { index } = useTransport(transport);
   const markers = useMemo(() => windowMarkers(rows), [rows]);
   const cut = reveal ? index + 1 : rows.length;
@@ -253,6 +254,12 @@ function CandleChart({
       fitted.current = rows;
       c.api.timeScale().fitContent();
     }
+    if (reveal !== revealed.current) {
+      /* E2b (audit 8.15): cutting the data must not rescale the axis to the bars that are
+         left — the window keeps its width and the future stays blank. */
+      revealed.current = reveal;
+      c.api.timeScale().setVisibleLogicalRange({ from: -1, to: rows.length });
+    }
     const pal = paletteNow();
     c.markers?.setMarkers(markers.filter((marker) => rows.findIndex((row) => row.source_ordinal === marker.ordinal) < cut).map((marker) => ({
       time: sec(marker.at),
@@ -261,7 +268,7 @@ function CandleChart({
       color: marker.side === "LONG" ? pal.good : marker.side === "SHORT" ? pal.bad : pal.inkFaint,
       text: marker.kind === "EXIT" ? "T·exit" : "T",
     })));
-  }, [rows, cut, markers, status]);
+  }, [rows, cut, markers, status, reveal]);
 
   /* The playhead: crosshair on the bar, and the visible range follows it. */
   useEffect(() => {
@@ -331,11 +338,14 @@ function FoldStrip({
   onFold,
   disabled,
   reveal,
+  cutOrdinal = null,
 }: {
   replay: CurrentSourceReplay;
   activeFold: string | null;
   onFold: (segment: FoldSegment) => void;
   disabled: boolean;
+  /** Under causal reveal, the cursor's source ordinal; nothing after it is drawn. */
+  cutOrdinal?: number | null;
   reveal: boolean;
 }) {
   const activeAt = replay.execution.fold_capital.segments.findIndex((segment) => segment.fold_id === activeFold);
@@ -414,13 +424,13 @@ function FoldStrip({
           {capital.account_execution ? ` · ${words(capital.account_execution)}` : ""}
         </span>
       </div>
-      {overview ? <OverviewStrip replay={replay} activeFold={activeFold} /> : null}
+      {overview ? <OverviewStrip replay={replay} activeFold={activeFold} cutOrdinal={cutOrdinal} /> : null}
     </div>
   );
 }
 
 /** The whole run as extrema-keeping OHLC buckets, with the fold windows shaded. */
-function OverviewStrip({ replay, activeFold }: { replay: CurrentSourceReplay; activeFold: string | null }) {
+function OverviewStrip({ replay, activeFold, cutOrdinal }: { replay: CurrentSourceReplay; activeFold: string | null; cutOrdinal: number | null }) {
   const overview = replay.execution.candle_overview!;
   const segments = replay.execution.fold_capital.segments;
   const hi = Number(overview.envelope.max_high);
@@ -442,7 +452,8 @@ function OverviewStrip({ replay, activeFold }: { replay: CurrentSourceReplay; ac
             opacity={segment.fold_id === activeFold ? 0.22 : 0.5}
           />
         ))}
-        {overview.values.map((bucket) => (
+        {/* E2b (audit 8.15): under causal reveal the whole-run strip shows no candle past the cursor either. */}
+        {overview.values.filter((bucket) => cutOrdinal === null || bucket.first_ordinal <= cutOrdinal).map((bucket) => (
           <line
             key={bucket.first_ordinal}
             x1={x((bucket.first_ordinal + bucket.last_ordinal) / 2)}
@@ -1044,7 +1055,7 @@ export function CandleReplayBody({
         data-replay-window="RETAINED_BARS"
         data-retained-in-flight={String(inFlight)}
       >
-        <FoldStrip replay={replay} activeFold={activeFold} onFold={goFold} disabled={inFlight} reveal={reveal} />
+        <FoldStrip replay={replay} activeFold={activeFold} onFold={goFold} disabled={inFlight} reveal={reveal} cutOrdinal={reveal ? (playRow?.source_ordinal ?? null) : null} />
         {slot.pageRefusal ? (
           <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-page-refusal={slot.pageRefusal.code ?? slot.pageRefusal.status}>
             {slot.pageRefusal.code === "RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP"

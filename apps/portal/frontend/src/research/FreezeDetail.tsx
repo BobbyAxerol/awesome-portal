@@ -59,7 +59,7 @@ import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import { hubDelegates, readsRetainedLane, type RetainedSlot, type VerifySlot } from "./useFreeze";
 import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
-import { claimToken, foldLabel, formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { claimToken, foldLabel, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 import {
   protocolLabel,
@@ -1671,6 +1671,7 @@ export function FreezeScreen({
           {/* The contract's readiness, which this screen never showed. */}
           <Chip data-readiness={detail.readiness}>readiness {detail.readiness.toLowerCase()}</Chip>
           <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
+            {detail.revision && !handedOff ? <span title={detail.revision} data-freeze-revision>revision {shortId(detail.revision)} · </span> : null}
             as of {iso(detail.as_of_utc_ms)}
           </span>
         </div>
@@ -1694,13 +1695,15 @@ export function FreezeScreen({
         <ProvenanceStrip provenance={detail.provenance} />
       ) : null}
 
+      {/* E2b (audit X4): S05 wraps its cards in a plain panel; the HiFi has no outer FREEZE card here either. */}
       <ResearchPanel
         title="freeze"
+        variant="plain"
         meta={
           lane !== null ? (
             <span title={lane.revision ?? undefined}>retained lane · profile {lane.provenance.profile_id}</span>
           ) : detail?.revision && !handedOff ? (
-            `revision ${detail.revision}`
+            `revision ${shortId(detail.revision)}`
           ) : undefined
         }
         state={state}
