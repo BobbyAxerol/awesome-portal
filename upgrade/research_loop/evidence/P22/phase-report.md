@@ -1,6 +1,6 @@
 # P22 phase report — 2026-09-25
 
-Owner: Codex backend. Branch: `docs/research-loop-plan`. Scope: P22 backend,
+Owner: Codex backend. Branch: `codex/research-ol-p22-p24`. Scope: P22 backend,
 generated contracts, capability inventory and evidence only; no frontend,
 Execution, Trading System, deployment or runtime flag change.
 
@@ -11,7 +11,7 @@ Execution, Trading System, deployment or runtime flag change.
 2. Strict Zod/OpenAPI/generated types; P21 local-seal action changes from
    P22-not-commissioned to a typed local-seal affordance. `may_publish` is
    returned by P22 after currentness/source checks.
-3. Migration `1723680000063` stores one actor-bound immutable request per RC,
+3. Migrations `1723680000063` and additive OL migration `1723680000070` stores one actor-bound immutable request per RC,
    a recoverable unknown outcome and verified receipt. Narrow role grants
    permit only lifecycle columns and the corresponding P21 delivery row to
    change. No deletion path or token/credential column.
@@ -24,8 +24,9 @@ Execution, Trading System, deployment or runtime flag change.
 
 | Gate | Result |
 | --- | --- |
-| P21/P22 focused Control API contracts, controller, service | PASS: 5 files, 23 tests |
-| P21/P22 migrations on isolated PostgreSQL 16, exact disposable container removed | PASS: 2 files, 2 tests |
+| P22 focused service/contract/bridge tests | PASS: 3 files, 20 tests |
+| P22 disposable PostgreSQL 16 migration/privilege gate | PASS: 2 tests |
+| P21/P22 migrations on isolated PostgreSQL 16, exact disposable container removed | PASS: legacy + OL migration, 2 tests |
 | Governance R1 and RunSync regression on isolated PostgreSQL 16 | PASS: 2 files, 35 tests |
 | Generated P21/P22 contract tests | PASS: 2 files, 5 tests |
 | Capability inventory `r2Ledger.test.ts` | PASS: 22 tests |

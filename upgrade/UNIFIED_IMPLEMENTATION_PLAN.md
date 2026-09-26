@@ -3636,6 +3636,34 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P23](#rl-p23) | P11–P22 | mọi màn | 12 | **BACKEND_RESOURCE_HARNESS_READY · FULL_QUALIFICATION_PENDING** — Codex / [P23 packet](./research_loop/evidence/P23/README.md): opt-in isolated 5 GB cgroup profile, pagecache-inclusive sampler and 20-distinct-principal GET-only load runner, focused security/compatibility tests. Shared preview idle has no hard cap and is **not** 5 GB/DR proof. P22 real preview, W01/W02/W06/W09/W10, T01–T15 and Claude browser receipt remain open; no deployment or product acceptance claimed. |
 | [P24](#rl-p24) | P23 | mọi màn | 12 | PLANNED / unassigned / — |
 
+### 13.4.1 OL-03 → OL-12 — Codex/Claude split (2026-09-26)
+
+The OL campaign is tracked here, not in a second status board. Codex owns the
+backend P22–P24 slice in the isolated `codex/research-ol-p22-p24` worktree;
+Claude owns the P22/P23 browser and visual receipts; Bobby/ops owns production
+profile provisioning. Codex must not edit the ≤P21 frontend/source lane, use the
+shared preview `:8095`, or push `primus-origin` without a separate owner order.
+Migrations start at `070`. Any dependency on a ≤P21 fact is recorded as a
+typed request, never patched by the OL worktree.
+
+| OL | Owner | Scope / exit evidence | State |
+|---|---|---|---|
+| OL-03 | Codex | P22 intent/replay and bounded publication DTO; focused service/contract tests | DELIVERED_BACKEND · [P22 receipt](./research_loop/evidence/P22/ol03-ol11-codex-receipt.md) |
+| OL-04 | Codex | Sealed-pack claim and final-audit source bridge; no inferred claim | DELIVERED_BACKEND |
+| OL-05 | Codex | Isolated P22 compose project/loopback lifecycle; no shared stack | DELIVERED_TOOLING |
+| OL-06 | Codex | `rrun_` read-model bridge through SECURITY DEFINER only | DELIVERED_BACKEND |
+| OL-07 | Codex | Existing P19 pick schema preserved; immutable P22 receipt sibling | DELIVERED_BACKEND |
+| OL-08 | Codex | Exact R1 approval/status gate and approved-only P19 write | DELIVERED_BACKEND |
+| OL-09 | Codex | OpenAPI/generated contracts plus focused tests | DELIVERED_BACKEND |
+| OL-10 | Codex | migration cleanup/test harness and route/privilege assertions | DELIVERED_BACKEND |
+| OL-11 | Codex | canonical two-route disposition; old contributor routes not adopted | DELIVERED_DOCS |
+| OL-12 | Codex | P23 T01–T15 fail-closed qualification harness and 5GB/20-user constraints | HARNESS_READY · QUALIFICATION_PENDING |
+
+The backend receipt is technically complete only for the isolated code/tooling
+slice. P22 product acceptance remains pending a real isolated Delta→R1 and
+Claude's Screen 11 receipt; P23 remains pending real cgroup/load/failure/restore
+and browser evidence.
+
 **P22/P23 backend gap audit (2026-09-25):** P22 closes a revoke-between-intent-and-R1
 authorization race and retains one retryable intent after reversible R1 errors;
 P23's strict receipt now refuses missing services and measures complete reads/peak
