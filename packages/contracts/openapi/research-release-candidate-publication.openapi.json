@@ -479,7 +479,30 @@
           "href": {
             "type": "string",
             "pattern": "^/governance/approvals/[A-Za-z0-9._-]+/r1$"
-          }
+          },
+          "subject_label": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "effective_status": { "type": "string", "enum": ["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"] },
+          "assignee_pool": {
+            "type": "array", "maxItems": 64,
+            "items": { "type": "object", "additionalProperties": false, "required": ["user_id", "username", "role"], "properties": {
+              "user_id": { "type": "string", "minLength": 1, "maxLength": 191 },
+              "username": { "type": "string", "minLength": 1, "maxLength": 191 },
+              "role": { "type": "string", "minLength": 1, "maxLength": 64 }
+            }}
+          },
+          "quorum": { "type": "object", "additionalProperties": false, "required": ["required", "met"], "properties": {
+            "required": { "type": "integer", "minimum": 1, "maximum": 64 },
+            "met": { "type": "integer", "minimum": 0, "maximum": 64 }
+          }},
+          "approval_version": { "type": "integer", "minimum": 1 },
+          "blocker_count": { "type": "integer", "minimum": 0, "maximum": 256 },
+          "condition_count": { "type": "integer", "minimum": 0, "maximum": 256 },
+          "decision_outcomes": { "type": "array", "maxItems": 64, "items": { "type": "object", "additionalProperties": false, "required": ["actor_user_id", "outcome"], "properties": {
+            "actor_user_id": { "type": "string", "minLength": 1, "maxLength": 191 },
+            "outcome": { "type": "string", "minLength": 1, "maxLength": 64 }
+          }}},
+          "rc_superseded": { "type": "boolean" },
+          "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMs" }
         }
       },
       "PublicationResponse": {
@@ -595,7 +618,31 @@
           },
           "replayed": {
             "type": "boolean"
-          }
+          },
+          "attempt_count": { "type": "integer", "minimum": 0, "maximum": 32 },
+          "conflicting_approval_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] },
+          "conflicting_approval_href": { "anyOf": [{ "type": "string", "pattern": "^/governance/approvals/[A-Za-z0-9._-]+/r1$" }, { "type": "null" }] },
+          "downstream_code": { "anyOf": [{ "$ref": "#/components/schemas/Reason" }, { "type": "null" }] },
+          "publication_created_at": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+          "updated_at_utc_ms": { "$ref": "#/components/schemas/UtcMs" },
+          "intent_actor": { "anyOf": [{ "type": "object", "additionalProperties": false, "required": ["user_id", "username"], "properties": {
+            "user_id": { "type": "string", "minLength": 1, "maxLength": 191 }, "username": { "type": "string", "minLength": 1, "maxLength": 191 }
+          }}, { "type": "null" }] },
+          "reconcile_allowed": { "type": "boolean" },
+          "claim_candidates": { "type": "array", "maxItems": 64, "items": { "type": "string", "minLength": 1, "maxLength": 191 } },
+          "promotion_pick": { "anyOf": [{ "$ref": "#/components/schemas/PromotionPick" }, { "type": "null" }] }
+        }
+      },
+      "PromotionPick": {
+        "type": "object", "additionalProperties": false,
+        "required": ["state", "approval_id", "run_id", "selected_trial_id", "artifact_id", "fact_digest"],
+        "properties": {
+          "state": { "type": "string", "enum": ["NOT_PUBLISHED", "PENDING_APPROVAL", "WRITTEN"] },
+          "approval_id": { "type": "string", "minLength": 1, "maxLength": 191 },
+          "run_id": { "$ref": "#/components/schemas/RunId" },
+          "selected_trial_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] },
+          "artifact_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] },
+          "fact_digest": { "$ref": "#/components/schemas/Digest" }
         }
       },
       "Problem": {

@@ -15,6 +15,9 @@ export const TEST_TABLES = [
   // compatibility row and all source parents.  Keeping the full four-table
   // plane named prevents a reusable test database from inheriting a local
   // seal, delivery state or retention pin across an unrelated test.
+  "research.p22_promotion_pick_receipts_v1",
+  "research.p22_run_read_model_bridges_v1",
+  "research.release_candidate_publications_v1",
   "research.release_candidate_retention_pins_v1",
   "research.release_candidate_delivery_states_v1",
   "research.release_candidate_packs_v1",

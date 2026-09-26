@@ -169,6 +169,7 @@ import { ResearchReleaseCandidateService } from "./research/release-candidate.se
 import { ResearchReleaseCandidatePublicationController } from "./research/release-candidate-publication.controller";
 import { ResearchReleaseCandidatePublicationRepository } from "./research/release-candidate-publication.repository";
 import { ResearchReleaseCandidatePublicationService } from "./research/release-candidate-publication.service";
+import { P22PublicationBridgeService } from "./research/p22-publication-bridge.service";
 
 @Module({})
 export class AppModule {
@@ -326,6 +327,7 @@ export class AppModule {
         ResearchCompareService,
         ResearchReleaseCandidateRepository,
         ResearchReleaseCandidateService,
+        P22PublicationBridgeService,
         ResearchReleaseCandidatePublicationRepository,
         ResearchReleaseCandidatePublicationService,
         ResearchFoundationAtlasClient,
