@@ -44,7 +44,7 @@
  *  - VD-P20-17 the claim chip names its origin.
  */
 
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { releaseCandidateHref } from "./releaseCandidateClient";
@@ -84,10 +84,46 @@ import {
 import { LineageLink, lineageHref } from "./LineageLink";
 import { foldBars } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
-import { formatAxisValue, formatCorrelation, formatMetric } from "./researchFormat";
+import { formatAxisValue, formatCorrelation, formatMetric, shortId } from "./researchFormat";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
 import { iso } from "./utcMinute";
+
+/** An id on screen (E1): prefix + 8 hex; callers keep the full value in a title. */
+function sid(id: string): string {
+  return shortId(id) ?? id;
+}
+
+/**
+ * 13-3 / D10: the claim line is the family and one sentence of the screen's
+ * own (VD-P23-01: the words on screen are the screen's). The server's
+ * `claim.text` (a `key=value` string today) rides in the title, never as copy.
+ */
+export const CLAIM_SENTENCE: Record<CompareClaim["family"], string> = {
+  STRICT_OUTER_OOS: "Outer OOS read once, after the selection was frozen.",
+  SELECTION_ADJUSTED_OOS: "OOS entered the selection, so the number is selection-adjusted.",
+  WALK_FORWARD_OOS_COMPATIBILITY: "Walk-forward OOS calibrated across the folds after the fact — not a causal claim.",
+  NONE_FULL_SAMPLE_CALIBRATION: "Full-sample calibration: no window was held out, so nothing here is OOS.",
+  NOT_PUBLISHED: "No claim is published for this run.",
+};
+
+/** 13-10: a metric's scope in words (as S10's "selected trial, mean of folds", D-W6B-04); an unknown scope prints as sent. */
+export const SCOPE_WORDS: Record<string, string> = {
+  RS02_OOS_MEAN_OF_FOLDS: "mean of folds",
+  RS02_OOS_SUM_OF_FOLDS: "sum of folds",
+  RS02_RETAINED_FINAL_ACCOUNT: "final account",
+  P13_OOS_EQUITY_SERIES: "OOS equity series",
+  P13_FULL_CHILD_TAPE: "full child tape",
+};
+
+export function scopeWords(scope: string): string {
+  return SCOPE_WORDS[scope] ?? scope;
+}
+
+/** D10: an attempt with a published claim family stands on the ladder; one without folds into a compact row. */
+export function hasClaim(run: CompareRun): boolean {
+  return run.claim.family !== "NOT_PUBLISHED";
+}
 
 export { compareHref };
 
@@ -397,6 +433,21 @@ const COMPARE_CSS = `
 .cp-foot p { font-size: 11px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
 .cp-absent { font-family: var(--font-mono); font-style: italic; color: var(--ink-faint); font-size: 9.5px; }
 .cp-reason { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); word-break: break-all; }
+/* D10: attempts without a claim, folded like S10's probes. */
+.cp-unclaimed { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin-top: 10px; min-width: 0; }
+.cp-toggle { border: 1px dashed var(--line-strong); background: var(--paper-raised); color: var(--ink-soft); padding: 1px 9px; font-family: var(--font-mono);
+  font-size: 9.5px; border-radius: 999px; cursor: pointer; }
+.cp-toggle[aria-pressed="true"] { border-style: solid; border-color: var(--accent-2); color: var(--ink); }
+.cp-crows { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cp-crow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; border: 1px solid var(--line-soft); border-radius: 6px; background: var(--paper-raised);
+  padding: 4px 12px; font-size: 10px; min-width: 0; }
+.cp-crowid { font-size: 10.5px; font-weight: 600; min-width: min(200px, 100%); }
+.cp-crowwhy { flex: 1 1 200px; min-width: 0; }
+.cp-absentlist { margin: 4px 0 0; padding-left: 16px; }
+/* E1: an id in a table head keeps its case (the heads are uppercase; RATT_… / RRUN_… misreads the id). */
+.cp-delta th[data-side], .cp-difftable thead th:not(:first-child) { text-transform: none; letter-spacing: 0; }
+/* Links inside running text are underlined (axe link-in-text-block). */
+.cp-page .cp-trajcard p a, .cp-page .cp-crow a { text-decoration: underline; }
 .cp-btn { font-family: var(--font-mono); font-size: 10.5px; line-height: 22px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px;
   background: var(--paper-raised); color: var(--ink); cursor: pointer; }
 @media (max-width: 900px) {
@@ -405,6 +456,8 @@ const COMPARE_CSS = `
      scrolls inside its own .cp-scroll body instead of widening the page. */
   .cp-diffcard, .cp-trajcard, .cp-deltacard, .cp-corr { flex: 1 1 auto; width: 100%; }
   .cp-ladder { flex-direction: column; }
+  /* 13-11: stacked cards take their content's height, not the grid row's. */
+  .cp-lcard { flex: 0 0 auto; }
   .cp-arrow { align-self: flex-start; transform: rotate(90deg); }
 }
 `;
@@ -451,7 +504,7 @@ function MetricValue({ metric, what }: { metric: CompareMetric | undefined; what
   if (metric.value !== null && metric.availability.state === "AVAILABLE") {
     /* DQ-08: displayed by unit; the server's exact string stays in the title and data-exact. */
     return (
-      <span className="cp-mono" data-metric={metric.key} data-definition={metric.definition_id} data-exact={metric.value} title={`${metric.value} · ${metric.scope}`}>
+      <span className="cp-mono" data-metric={metric.key} data-definition={metric.definition_id} data-exact={metric.value} title={`${metric.value} · ${scopeWords(metric.scope)}`}>
         {formatMetric(metric.value, COMPARE_METRIC_UNIT[metric.key]) ?? metric.value}
       </span>
     );
@@ -485,7 +538,7 @@ function ClaimChip({ claim }: { claim: CompareClaim }) {
   return (
     <span className="flex flex-col" data-claim={claim.family}>
       <span className="cp-claimchip" data-rank={entry.rank ?? "none"} data-claim-rank={claim.rank ?? undefined} style={style} title={detail}>
-        {claim.family}
+        {claim.family.split("_").map((part, index) => (index === 0 ? part : <Fragment key={index}>_<wbr />{part}</Fragment>))}
         <span className="sr-only" data-claim-origin={claim.origin}>
           {` (${detail})`}
         </span>
@@ -505,8 +558,8 @@ function RunState({ state }: { state: CompareRun["run_state"] }) {
 function RunLine({ run, withState = false }: { run: CompareRun; withState?: boolean }) {
   return (
     <span className="cp-faint" data-run-line>
-      <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id}>
-        {run.run_id}
+      <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={run.run_id}>
+        {sid(run.run_id)}
       </Link>
       {withState ? (
         <>
@@ -563,8 +616,8 @@ function Lifecycle({ run }: { run: CompareRun }) {
 
 function ClaimNote({ claim }: { claim: CompareClaim }) {
   return (
-    <span className="cp-note" data-claim-text>
-      {claim.text ?? <Absent what="note" state="not published" reason="claim.text is null" />}
+    <span className="cp-note" data-claim-text data-claim-source-text={claim.text ?? undefined} title={claim.text ?? undefined}>
+      {CLAIM_SENTENCE[claim.family]}
     </span>
   );
 }
@@ -873,7 +926,9 @@ function LadderCard({ run }: { run: CompareRun }) {
   return (
     <article className="cp-lcard" data-ladder-run={run.run_id} data-attempt={run.attempt_id} data-lifecycle={run.alpha_version_lifecycle.value ?? undefined} data-lane={run.lane}>
       <div className="top">
-        <span className="cp-att">{run.attempt_id}</span>
+        <span className="cp-att" title={run.attempt_id}>
+          {sid(run.attempt_id)}
+        </span>
         <Lifecycle run={run} />
       </div>
       <RunLine run={run} withState />
@@ -882,7 +937,7 @@ function LadderCard({ run }: { run: CompareRun }) {
         {(() => {
           const sharpe = metricOf(run, "OOS_SHARPE");
           return sharpe && sharpe.value !== null && sharpe.availability.state === "AVAILABLE" ? (
-            <span className="cp-bignum" data-oos-sharpe={sharpe.value} title={`${sharpe.value} · ${sharpe.scope}`}>
+            <span className="cp-bignum" data-oos-sharpe={sharpe.value} title={`${sharpe.value} · ${scopeWords(sharpe.scope)}`}>
               {formatMetric(sharpe.value, "ratio") ?? sharpe.value}
             </span>
           ) : (
@@ -899,26 +954,32 @@ function LadderCard({ run }: { run: CompareRun }) {
 }
 
 function Ladder({ result }: { result: AttemptResult }) {
+  const claimed = ladderOrder(result);
   return (
     <section data-panel="ladder" aria-label="claim ladder">
       <h3 className="cp-ladderhead">
         <span data-ladder-header>{LADDER_HEADER}</span>
         <span className="cp-faint" data-ladder-order-key={result.order} title={`server order: ${result.order}, laid out reversed`}>
-          {result.attempts.length} returned · strongest claim on the right
+          {claimed.length} with a claim · {result.attempts.length} returned · strongest claim on the right
         </span>
       </h3>
       {result.attempts.length === 0 ? (
         <span className="cp-faint" data-no-attempts>
           no comparable attempt was returned for this alpha
         </span>
+      ) : claimed.length === 0 ? (
+        <span className="cp-faint" data-no-claimed>
+          no returned attempt publishes a claim — nothing stands on the ladder
+        </span>
       ) : (
         <div className="cp-ladder" data-ladder-order="server-reversed">
           {/* Reversed for the hi-fi's reading direction (VD-P20-14); the server's order is the inverse. */}
-          {[...result.attempts].reverse().map((run, index) => (
-            <LadderStep key={run.run_id} run={run} last={index === result.attempts.length - 1} />
+          {claimed.map((run, index) => (
+            <LadderStep key={run.run_id} run={run} last={index === claimed.length - 1} />
           ))}
         </div>
       )}
+      <Unclaimed runs={[...result.attempts].reverse().filter((run) => !hasClaim(run))} />
       {result.coverage.state === "PARTIAL" ? (
         <div className="cp-coverage" data-coverage-partial>
           <span className="cp-chip" data-tone="partial">
@@ -930,6 +991,47 @@ function Ladder({ result }: { result: AttemptResult }) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * D10 (13-1): attempts that publish no claim family are not ladder cards
+ * (they carry no "claim ↑ →" step): they fold into one compact row each, the
+ * way S10 folds its probes, hidden until asked for and always counted.
+ */
+function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
+  const [open, setOpen] = useState(false);
+  if (runs.length === 0) return null;
+  const states = [...new Set(runs.map((run) => run.run_state))].map((state) => `${runs.filter((run) => run.run_state === state).length} ${state}`);
+  return (
+    <div className="cp-unclaimed" data-unclaimed={runs.length}>
+      <button type="button" className="cp-toggle" aria-pressed={open} aria-expanded={open} data-action="toggle-unclaimed" onClick={() => setOpen((value) => !value)}>
+        {open ? "hide" : "show"} {runs.length} {runs.length === 1 ? "attempt" : "attempts"} without a claim
+      </button>
+      <span className="cp-faint" data-unclaimed-states>
+        {states.join(" · ")} — no claim family published, so they do not stand on the ladder
+      </span>
+      {open ? (
+        <ul className="cp-crows" aria-label="attempts without a claim">
+          {runs.map((run) => (
+            <li key={run.run_id} className="cp-crow" data-unclaimed-run={run.run_id} data-attempt={run.attempt_id}>
+              <span className="cp-mono cp-crowid" title={`${run.attempt_id} · ${run.run_id}`}>
+                {sid(run.attempt_id)} ·{" "}
+                <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id}>
+                  {sid(run.run_id)}
+                </Link>
+              </span>
+              <span className="cp-runstate" data-state={run.run_state}>
+                {run.run_state}
+              </span>
+              <span className="cp-faint">{run.alpha_version_label}</span>
+              <span className="cp-faint cp-crowwhy">claim not published · {reasonOf(run.claim.availability)}</span>
+              <span className="cp-faint">{iso(run.created_at_utc_ms)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -953,7 +1055,7 @@ function LadderStep({ run, last }: { run: CompareRun; last: boolean }) {
  * right, the same way.
  */
 function ladderOrder(result: AttemptResult): CompareRun[] {
-  return [...result.attempts].reverse();
+  return [...result.attempts].reverse().filter(hasClaim);
 }
 
 /**
@@ -961,11 +1063,17 @@ function ladderOrder(result: AttemptResult): CompareRun[] {
  * pale gold, gold …); the ACTIVE version is always the accent. A colour names
  * a position, never a quality.
  */
-const FOLD_TONES = ["var(--line-strong)", "var(--warn)", "var(--accent-2)", "var(--ink-faint)", "var(--ink-soft)", "var(--good)"] as const;
+const FOLD_TONES = ["var(--role-is)", "var(--accent-2)", "var(--good)", "var(--warn)", "var(--ink-mute)", "var(--bad)", "var(--line-strong)", "var(--accent)"] as const;
 
-function foldTone(run: CompareRun | undefined, index: number): string {
-  if (run?.alpha_version_lifecycle.value === "ACTIVE") return "var(--accent)";
-  return FOLD_TONES[index % FOLD_TONES.length]!;
+/**
+ * 13-4: one tone per ladder position, so eight attempts of one claim class
+ * are eight colours (all eight were the ACTIVE teal); the strongest-claim end
+ * keeps the accent. The ACTIVE version is marked by a heavier line past eight
+ * folds, not by the colour.
+ */
+function foldTone(_run: CompareRun | undefined, index: number, count: number): string {
+  if (index === count - 1) return "var(--accent)";
+  return FOLD_TONES[index % (FOLD_TONES.length - 1)]!;
 }
 
 /** The hi-fi's legend entry: "att_03 · STRICT (B)" — attempt and claim family; no grade exists (CG-P20-03). */
@@ -978,7 +1086,7 @@ const CLAIM_SHORT: Record<CompareClaim["family"], string> = {
 };
 
 function foldLegend(run: CompareRun | undefined, runId: string): string {
-  return run ? `${run.attempt_id} · ${CLAIM_SHORT[run.claim.family]}` : runId;
+  return run ? `${sid(run.attempt_id)} · ${CLAIM_SHORT[run.claim.family]}` : sid(runId);
 }
 
 /**
@@ -992,14 +1100,16 @@ function FoldChart({ result }: { result: AttemptResult }) {
   const byRun = new Map(runs.map((run) => [run.run_id, run] as const));
   const drawable = result.fold_series.filter((item: FoldSeries) => item.state === "AVAILABLE" && item.folds.length > 0);
   /* Ladder order for the series; a series whose run is not among the attempts keeps the server's place after them. */
+  /* Ladder attempts in ladder order; a drawable series of an attempt without a claim keeps the server's place after them. */
   const published = [
     ...runs.flatMap((run) => drawable.filter((item) => item.run_id === run.run_id)),
     ...drawable.filter((item) => !byRun.has(item.run_id)),
   ];
+  const byRunAll = new Map(result.attempts.map((run) => [run.run_id, run] as const));
   const geometry = foldBars(published.map((item) => ({ runId: item.run_id, folds: item.folds })));
   const absent = result.fold_series.filter((item: FoldSeries) => item.state !== "AVAILABLE");
   const truncated = published.filter((item) => item.truncated);
-  const tone = (runId: string) => foldTone(byRun.get(runId), published.findIndex((item) => item.run_id === runId));
+  const tone = (runId: string) => foldTone(byRun.get(runId), published.findIndex((item) => item.run_id === runId), published.length);
   const axis = (text: string) => formatMetric(text, "ratio") ?? text;
   return (
     <figure className="cp-fig" data-panel="fold-chart" aria-label="OOS Sharpe per fold" data-fold-series={published.length} data-fold-mode={geometry?.mode}>
@@ -1016,9 +1126,9 @@ function FoldChart({ result }: { result: AttemptResult }) {
         <>
           <div className="cp-foldlegend" data-fold-legend>
             {published.map((item) => (
-              <span key={item.run_id} data-fold-legend-run={item.run_id}>
+              <span key={item.run_id} data-fold-legend-run={item.run_id} title={item.run_id}>
                 <span className="sw" style={{ background: tone(item.run_id) }} aria-hidden="true" />
-                {foldLegend(byRun.get(item.run_id), item.run_id)}
+                {foldLegend(byRunAll.get(item.run_id), item.run_id)}
               </span>
             ))}
           </div>
@@ -1052,7 +1162,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
                         data-exact={bar.value}
                         style={{ fill: tone(bar.runId) }}
                       >
-                        <title>{`${byRun.get(bar.runId)?.attempt_id ?? bar.runId} · fold ${bar.foldId} · OOS Sharpe ${bar.value}`}</title>
+                        <title>{`${byRun.get(bar.runId)?.attempt_id ?? bar.runId} · fold_id ${bar.foldId} · OOS Sharpe ${bar.value}`}</title>
                       </rect>
                     ))
                   : geometry.lines.map((line) => (
@@ -1080,8 +1190,9 @@ function FoldChart({ result }: { result: AttemptResult }) {
                 )}
                 {geometry.groups.map((group, index) =>
                   geometry.mode === "bars" || index === 0 || index === geometry.groups.length - 1 || index % 4 === 0 ? (
-                    <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label}>
-                      fold {group.label}
+                    /* 13-4: folds read 1-based, as the hi-fi; the server's fold_id stays in the data attribute. */
+                    <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label} data-fold-position={index + 1}>
+                      fold {index + 1}
                     </span>
                   ) : null,
                 )}
@@ -1099,10 +1210,19 @@ function FoldChart({ result }: { result: AttemptResult }) {
         </div>
       )}
       {geometry && absent.length > 0 ? (
-        <p className="cp-faint" data-fold-absent-runs>
-          {absent.map((item) => byRun.get(item.run_id)?.attempt_id ?? item.run_id).join(", ")} {absent.length === 1 ? "has" : "have"} no per-fold rows:{" "}
-          {reasonOf(absent[0]!.availability)}
-        </p>
+        /* 13-5: a count and a disclosure, not a dump of 25 raw ids. */
+        <details className="cp-faint" data-fold-absent-runs={absent.length}>
+          <summary>
+            {absent.length} {absent.length === 1 ? "attempt has" : "attempts have"} no per-fold rows
+          </summary>
+          <ul className="cp-absentlist">
+            {absent.map((item) => (
+              <li key={item.run_id} title={item.run_id}>
+                {sid(byRunAll.get(item.run_id)?.attempt_id ?? item.run_id)} · {reasonOf(item.availability)}
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
     </figure>
   );
@@ -1127,11 +1247,11 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
           {diff.availability.state !== "AVAILABLE"
             ? COMPARE_WITHHELD_WORDS[diff.availability.state]
             : active
-              ? `gold = differs from ACTIVE ${active.attempt_id}`
+              ? `gold = differs from ACTIVE ${sid(active.attempt_id)}`
               : `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"} · no ACTIVE version returned`}
         </span>
       </h3>
-      <div className="body cp-scroll">
+      <div className="body cp-scroll" tabIndex={0} role="region" aria-label="config diff table">
         {diff.availability.state !== "AVAILABLE" ? (
           <AvailabilityAbsent availability={diff.availability} what="config diff" />
         ) : diff.paths.length === 0 ? (
@@ -1144,8 +1264,8 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
               <tr>
                 <th scope="col">key</th>
                 {runs.map((run) => (
-                  <th key={run.run_id} scope="col" data-active={run === active ? "true" : undefined}>
-                    {run.attempt_id}
+                  <th key={run.run_id} scope="col" data-active={run === active ? "true" : undefined} title={run.attempt_id}>
+                    {sid(run.attempt_id)}
                   </th>
                 ))}
               </tr>
@@ -1167,7 +1287,7 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
                           data-active={run === active ? "true" : undefined}
                           data-differs={differs ? "true" : undefined}
                         >
-                          {value ?? <span className="cp-absent">not set</span>}
+                          {value === null ? <span className="cp-absent">not set</span> : <span title={value}>{sid(value)}</span>}
                         </td>
                       );
                     })}
@@ -1179,6 +1299,12 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
         )}
       </div>
       <div className="foot">
+        {result.attempts.length > runs.length ? (
+          /* 13-6: the columns are the ladder's attempts; the rest are counted, their keys are on the tree. */
+          <span data-config-diff-omitted={result.attempts.length - runs.length}>
+            {result.attempts.length - runs.length} attempts without a claim are not columns here.{" "}
+          </span>
+        ) : null}
         {DIFF_FOOTER}{" "}
         {alphaId ? (
           <LineageLink to={lineageHref(alphaId)} action="open-lineage">
@@ -1192,8 +1318,9 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
   );
 }
 
-function TrajectoryCard({ result }: { result: AttemptResult }) {
+function TrajectoryCard({ result, alphaId }: { result: AttemptResult; alphaId: string | null }) {
   const { trajectory } = result;
+  const active = ladderOrder(result).filter((run) => run.alpha_version_lifecycle.value === "ACTIVE").at(-1) ?? null;
   return (
     <section className="cp-card cp-trajcard" data-panel="trajectory" aria-label={TRAJECTORY_TITLE}>
       <h3 className="t">
@@ -1205,6 +1332,25 @@ function TrajectoryCard({ result }: { result: AttemptResult }) {
       ) : (
         <AvailabilityAbsent availability={trajectory.availability} what="trajectory" />
       )}
+      {/* 13-7: the hi-fi's two in-text links, as a line of the screen's own. */}
+      <p data-trajectory-links>
+        {alphaId ? (
+          <LineageLink to={lineageHref(alphaId)} action="trajectory-tree">
+            the tree
+          </LineageLink>
+        ) : (
+          "the tree"
+        )}{" "}
+        records every attempt, and{" "}
+        {active ? (
+          <Link to={releaseCandidateHref(active.run_id)} data-action="trajectory-rc" title={active.run_id}>
+            the release candidate
+          </Link>
+        ) : (
+          "the release candidate"
+        )}{" "}
+        only ever reads the ACTIVE node.
+      </p>
     </section>
   );
 }
@@ -1217,7 +1363,7 @@ function AttemptsBody({ result, alphaId }: { result: AttemptResult; alphaId: str
       <FoldChart result={result} />
       <div className="cp-grid">
         <DiffCard alphaId={alphaId} diff={result.config_diff} result={result} />
-        <TrajectoryCard result={result} />
+        <TrajectoryCard result={result} alphaId={alphaId} />
       </div>
     </>
   );
@@ -1225,17 +1371,40 @@ function AttemptsBody({ result, alphaId }: { result: AttemptResult; alphaId: str
 
 /* ---------------------------------------------------------------- markets */
 
+/** D10: why this run stands for its market, in the screen's words. */
+export const MARKET_SELECTION_WORDS: Record<MarketCard["selection"], string> = {
+  LATEST_ACTIVE_VERSION_RUN: "latest run of the ACTIVE version",
+  LATEST_RUN: "latest run — no ACTIVE version ran this market",
+  MARKET_NOT_PUBLISHED: "this run's key publishes no market — shown on its own",
+};
+
+/** A server older than D10 sends one card per run, with no market grouping: said so, never grouped here. */
+export const MARKETS_UNGROUPED = "this server lists one card per run — market grouping is not published (P20 composer before D10)";
+
 function MarketTile({ card }: { card: MarketCard }) {
   const { run, chart } = card;
   const key = run.comparison_contract_key;
+  const grouped = (card as Partial<MarketCard>).market !== undefined && (card as Partial<MarketCard>).selection !== undefined;
+  const market = grouped ? card.market : { symbol: key.symbol, timeframe: key.timeframe };
   return (
-    <article className="cp-mcard" data-market-run={run.run_id}>
+    <article
+      className="cp-mcard"
+      data-market-run={run.run_id}
+      data-market-selection={grouped ? card.selection : "UNGROUPED"}
+      data-runs-in-market={grouped ? card.runs_in_market : undefined}
+    >
       <div className="top">
         <span className="cp-mkey" data-market-key>
-          {key.symbol ?? "not published"} · {key.timeframe ?? "not published"}
+          {market.symbol ?? "market not published"} · {market.timeframe ?? "timeframe not published"}
         </span>
         <RunState state={run.run_state} />
       </div>
+      {grouped ? (
+        <span className="cp-faint" data-market-selection-words>
+          {MARKET_SELECTION_WORDS[card.selection]}
+          {card.runs_in_market > 1 ? ` · 1 of ${card.runs_in_market} runs on this market` : " · the only run on this market"}
+        </span>
+      ) : null}
       <span className="cp-faint" data-market-route>
         {key.route ?? "route not published"} · {key.protocol ?? "protocol not published"}
         {key.availability.state !== "AVAILABLE" ? (
@@ -1274,8 +1443,14 @@ function MarketTile({ card }: { card: MarketCard }) {
 }
 
 function MarketsBody({ result }: { result: MarketResult }) {
+  const grouped = (result as Partial<MarketResult>).grouping !== undefined;
   return (
     <>
+      {grouped ? null : (
+        <span className="cp-faint" data-markets-ungrouped>
+          {MARKETS_UNGROUPED}
+        </span>
+      )}
       <Rule tone="bad">
         <span data-caption>{result.caption}</span> {MARKETS_RULE_TAIL}
       </Rule>
@@ -1311,9 +1486,9 @@ function RunChips({ runs }: { runs: readonly string[] | null }) {
   return (
     <span className="cp-runchips" data-run-chips aria-label="the two runs this URL names">
       {(runs ?? []).map((runId, index) => (
-        <span key={`${index}:${runId}`} className="cp-runchip" data-run-chip={runId}>
+        <span key={`${index}:${runId}`} className="cp-runchip" data-run-chip={runId} title={runId}>
           {index === 0 ? "A " : "B "}
-          {runId}
+          {sid(runId)}
         </span>
       ))}
     </span>
@@ -1358,7 +1533,7 @@ function RefusalCard({ result, runs }: { result: PairRefused; runs: readonly str
         {refusal.message}
       </span>
       <span className="msg cp-mono" data-refusal-keys>
-        {left ?? "A"} is {keyText(refusal.left_key)}; {right ?? "B"} is {keyText(refusal.right_key)}.
+        {left ? sid(left) : "A"} is {keyText(refusal.left_key)}; {right ? sid(right) : "B"} is {keyText(refusal.right_key)}.
       </span>
       <span className="msg">{REFUSED_NO_CHART}</span>
       <span className="hint">{REFUSED_MARKETS_HINT}</span>
@@ -1393,7 +1568,7 @@ function ComparableGuard({ result, runs }: { result: PairComparable; runs: reado
 }
 
 function legendText(run: CompareRun | undefined): string {
-  return run ? `${run.run_id} · ${run.alpha_version_label} (${run.claim.family})` : "run not returned";
+  return run ? `${sid(run.run_id)} · ${run.alpha_version_label} (${run.claim.family})` : "run not returned";
 }
 
 function OverlayFigure({ result }: { result: PairComparable }) {
@@ -1610,11 +1785,11 @@ function DeltaTable({ result }: { result: PairComparable }) {
           <thead>
             <tr>
               <th scope="col">metric</th>
-              <th scope="col" data-side="left">
-                {left?.run_id ?? "A"}
+              <th scope="col" data-side="left" title={left?.run_id}>
+                A{left ? ` · ${sid(left.run_id)}` : ""}
               </th>
-              <th scope="col" data-side="right">
-                {right?.run_id ?? "B"}
+              <th scope="col" data-side="right" title={right?.run_id}>
+                B{right ? ` · ${sid(right.run_id)}` : ""}
               </th>
               <th scope="col">
                 Δ<span className="scope" data-delta-direction={window.delta_definition}>
@@ -1628,7 +1803,11 @@ function DeltaTable({ result }: { result: PairComparable }) {
               <tr key={row.id} data-delta-row={row.id}>
                 <td title={row.definition ?? undefined} data-definition={row.definition ?? undefined}>
                   {row.label}
-                  {row.scope ? <span className="scope">{row.scope}</span> : null}
+                  {row.scope ? (
+                    <span className="scope" data-scope={row.scope}>
+                      {scopeWords(row.scope)}
+                    </span>
+                  ) : null}
                 </td>
                 <td>{row.left}</td>
                 <td>{row.right}</td>

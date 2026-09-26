@@ -55,7 +55,7 @@ import { isHubLaneReason, retainedReadiness } from "./retainedLane";
 import type { ResearchState } from "./state";
 import type { ReplayController, RetainedContext, RetainedReplaySlot } from "./useReplay";
 import { iso } from "./utcMinute";
-import { formatMetric, shortId } from "./researchFormat";
+import { formatAxisValue, formatFractionAxis, formatMetric, shortId } from "./researchFormat";
 import { ShortId } from "./ShortId";
 import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
 
@@ -223,7 +223,15 @@ function SampleChart({
       xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { fontSize: 9 } },
       /* A flat window (equity unchanged) is padded by a hair of its level,
          never autoscaled to a ±50% band that reads as a swing (W3b/W5b). */
-      yAxis: { type: "value", scale: true, ...(paddedRange(items.map((point) => Number(point.equity))) ?? {}), axisLabel: { fontSize: 9 } },
+      /* E2b (audit 8.7): the padded min/max are not round numbers, so their labels sat on top of the
+         nearest tick ("20,020 / 20,010"); only the round ticks are labelled. */
+      yAxis: {
+        type: "value",
+        scale: true,
+        splitNumber: 4,
+        ...(paddedRange(items.map((point) => Number(point.equity))) ?? {}),
+        axisLabel: { fontSize: 9, showMinLabel: false, showMaxLabel: false, formatter: (value: number) => formatAxisValue(String(value)) },
+      },
       tooltip: {
         trigger: "axis",
         formatter: (params: unknown) => {
@@ -257,7 +265,8 @@ function SampleChart({
       animation: false,
       grid: { left: GRID.left, right: GRID.right, top: 8, bottom: 22 },
       xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { show: false } },
-      yAxis: { type: "value", axisLabel: { fontSize: 9 } },
+      /* E2b (audit 8.7): a 90 px pane holds two labels, not eight; drawdown reads as a percentage. */
+      yAxis: { type: "value", splitNumber: 1, axisLabel: { fontSize: 9, formatter: (value: number) => formatFractionAxis(value, 1) } },
       series: [
         {
           type: "line",
@@ -358,7 +367,7 @@ function TransportBar({
       </button>
       <button type="button" className={button} style={style} aria-label="step back" disabled={disabled}
         title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.step(-1)}>
-        ◀
+        ◀◀
       </button>
       <button
         type="button"
@@ -375,7 +384,7 @@ function TransportBar({
       </button>
       <button type="button" className={button} style={style} aria-label="step forward" disabled={disabled}
         title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.step(1)}>
-        ▶︎|
+        ▶▶
       </button>
       <button
         type="button"

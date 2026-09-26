@@ -555,7 +555,9 @@ describe("S09 Run Report — layout rules", () => {
 
   it("S09-U28 long sealed identifiers wrap in full and no block clips them", async () => {
     const css = await sheetCss();
-    expect(css).toContain(".rr-long { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }");
+    /* E3 (audit 9.2): wrap only when a token overflows — never split a word that fits. */
+    expect(css).toContain(".rr-long { overflow-wrap: anywhere; word-break: normal; min-width: 0; }");
+    expect(css).not.toContain("break-all");
     expect(css).toMatch(/\.rr-block \{[^}]*\}/);
     expect(/\.rr-block \{([^}]*)\}/.exec(css)![1]).not.toMatch(/overflow\s*:\s*(hidden|clip)/);
     /* The one clipped box is the off-screen screen-reader copy (.rr-sr, S09-U32). */
@@ -643,7 +645,7 @@ describe("S09 Run Report — audit fixes (A1/A2)", () => {
     expect(td).toContain("overflow-wrap: break-word");
     expect(td).not.toContain("break-all");
     expect(td).not.toContain("anywhere");
-    expect(css).toContain(".rr-table td.rr-long { word-break: break-all; }");
+    expect(css).toContain(".rr-table td.rr-long { overflow-wrap: anywhere; }");
     /* Header cells too: at 660 "Initial equity" and "SCOPE" split before this rule (hi-fi pass). */
     const th = /\.rr-table th \{([^}]*)\}/.exec(css)![1]!;
     expect(th).toContain("word-break: normal; overflow-wrap: break-word");

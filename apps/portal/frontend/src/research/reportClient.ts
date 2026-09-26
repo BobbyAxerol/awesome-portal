@@ -364,9 +364,13 @@ export function reportAbsences(report: ReportDetail): string[] {
   const v2 = coreV2(core);
   if (v2 && v2.equity_is.state !== "AVAILABLE") absent.push("IS equity segment");
   if (core.folds.state !== "AVAILABLE") absent.push("per-fold rows");
-  if (core.headline.some((cell) => cell.value === null)) absent.push("headline values");
-  if (core.artifacts.some((artifact) => artifact.state !== "SEALED")) absent.push("artifact digests");
-  if (core.passport.some((fact) => fact.state !== "AVAILABLE")) absent.push("passport facts");
+  /* E3 (audit 9.4): name how many are missing, not the whole category. */
+  const count = (missing: number, of: number, what: string) => {
+    if (missing > 0) absent.push(missing === of ? `all ${of} ${what}` : `${missing} of ${of} ${what}`);
+  };
+  count(core.headline.filter((cell) => cell.value === null).length, core.headline.length, "headline values");
+  count(core.artifacts.filter((artifact) => artifact.state !== "SEALED").length, core.artifacts.length, "artifact digests");
+  count(core.passport.filter((fact) => fact.state !== "AVAILABLE").length, core.passport.length, "passport facts");
   return absent;
 }
 
