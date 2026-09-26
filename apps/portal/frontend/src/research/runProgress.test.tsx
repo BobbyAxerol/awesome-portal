@@ -495,8 +495,9 @@ describe("RF01-F6 — retained tables go through ArtifactPanel in the authority'
       expect(tables.querySelector(`[data-artifact-state='${state}']`)).toBeTruthy();
     }
     // Exact integer strings, never rounded through a float.
-    expect(tables.textContent).toContain("9007199254740993");
-    expect(tables.textContent).toContain("2026-09-19T");
+    expect(tables.textContent).toContain("9,007,199,254,740,993");
+    expect(tables.querySelector('[data-exact="9007199254740993"]')).not.toBeNull();
+    expect(tables.textContent).toContain("2026-09-19 16:49 UTC");
     // No reader route is published, so nothing is a link or a download.
     expect(tables.querySelectorAll("a, button")).toHaveLength(0);
     expect(tables.textContent).toMatch(/has not published an export action/);

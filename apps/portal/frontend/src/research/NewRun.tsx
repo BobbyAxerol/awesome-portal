@@ -52,6 +52,8 @@ import type { RegistryEntry } from "./alphaImportClient";
 import type { RunCreateResponse } from "./runCreateClient";
 import type { PreflightResponse } from "./preflightClient";
 import type { ResearchState } from "./state";
+import { ShortId } from "./ShortId";
+import { claimToken, shortId } from "./researchFormat";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1398,7 +1400,7 @@ function ReviewRail({
         <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]">Claim forecast</h4>
         {scheduleFact && mode?.valid_schedules.includes(draft.optimizationSchedule) ? (
           <>
-            <p className="mt-1 text-[10.5px] leading-[1.5]">{scheduleFact.chronological_validation_claim}</p>
+            <p className="mt-1 text-[10.5px] leading-[1.5]">{claimToken(scheduleFact.chronological_validation_claim)}</p>
             {scheduleFact.oos_use_state ? (
               <p className="mono mt-1 text-[9.5px]" data-forecast-oos={scheduleFact.oos_use_state}>
                 {OOS_STATE_LABEL[scheduleFact.oos_use_state] ?? scheduleFact.oos_use_state}
@@ -1661,7 +1663,7 @@ export function NewRun(props: NewRunProps) {
           {cloneSource.state.state === "available" ? (
             <>
               <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--accent)" }}>copied from</span>
-              <a className="mono" href={`/research/quantbt/runs/${encodeURIComponent(cloneSource.runId)}/progress`}>{cloneSource.runId}</a>
+              <a className="mono" href={`/research/quantbt/runs/${encodeURIComponent(cloneSource.runId)}/progress`}>{shortId(cloneSource.runId)}</a>
               <span style={{ color: "var(--ink-soft)" }}>
                 A new run with a NEW intent: change anything, then run a fresh preflight. The original run is untouched.
               </span>
@@ -1691,7 +1693,7 @@ export function NewRun(props: NewRunProps) {
           <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--warn)" }}>
             sibling of
           </span>
-          <a className="mono" href={`/research/quantbt/runs/${encodeURIComponent(forkSource.runId)}/freeze`}>{forkSource.runId}</a>
+          <a className="mono" href={`/research/quantbt/runs/${encodeURIComponent(forkSource.runId)}/freeze`}>{shortId(forkSource.runId)}</a>
           <span className="mono" style={{ color: "var(--ink-faint)" }}>· what-if {forkSource.cellId}</span>
           {forkSource.state === "ready" && forkSource.parameters ? (
             <>
@@ -1870,7 +1872,7 @@ export function NewRun(props: NewRunProps) {
               <ResearchPanel title="run" state={createState} minBodyHeight={72}>
                 {created ? (
                   <div className="flex flex-col" data-created={created.run_id}>
-                    <Row label="run">{created.run_id}</Row>
+                    <Row label="run"><ShortId id={created.run_id} label="run" /></Row>
                     <Row label="status">{created.status}</Row>
                     <Row label="replayed">{String(created.replayed)}</Row>
                     <Row label="effective spec">{created.effective_spec_digest}</Row>

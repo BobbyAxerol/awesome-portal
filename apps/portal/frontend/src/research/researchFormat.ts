@@ -108,3 +108,44 @@ export function formatBytes(bytes: number | null | undefined): string | null {
   }
   return `${value.toFixed(1)} ${units[unit]}`;
 }
+
+/**
+ * A server id shortened for display (E1, HiFi audit 2026-09-26): the type
+ * prefix (`rrun_`, `ratt_`, `rc_`…) plus the first 8 characters after it.
+ * A 37-character id wraps every header it sits in; the full value always
+ * stays in the caller's `title` and copy. Ids without a prefix fall back to
+ * `shortDigest`.
+ */
+export function shortId(id: string | null | undefined, length = 8): string | null {
+  if (!id) return null;
+  const match = /^([a-z][a-z0-9]{0,7}_)(.+)$/.exec(id);
+  /* Only a bare digest is shortened; a label such as `R-WFO-118` is already short. */
+  if (!match) return /^(sha256:)?[0-9a-f]{16,}$/i.test(id) ? shortDigest(id, length) : id;
+  const [, prefix, rest] = match;
+  /* Only an opaque hex tail is cut: `av_delta_rsi_polynomial_alpha_1_0_0` is a name, not an id to shorten. */
+  return rest.length <= length || !/^[0-9a-f]+$/i.test(rest) ? id : `${prefix}${rest.slice(0, length)}`;
+}
+
+/**
+ * A claim value as the HiFi prints it (E1): the server's token in capitals
+ * (`NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION`, as HiFi 04 prints
+ * `CHRONOLOGICAL_CAUSAL`), a boolean as YES / NO. Nothing is reworded, so
+ * the screen never claims more than the token says; callers keep the exact
+ * value in a data attribute.
+ */
+export function claimToken(value: string | number | boolean): string {
+  if (typeof value === "boolean") return value ? "YES" : "NO";
+  return String(value).toUpperCase();
+}
+
+/**
+ * An exact decimal string grouped with commas for display, without ever
+ * turning it into a float (`9007199254740993` stays `…993`, never `…992`).
+ * Anything that is not a plain decimal comes back unchanged.
+ */
+export function groupDecimalString(value: string): string {
+  const match = /^(-?)(\d+)(\.\d+)?$/.exec(value);
+  if (!match) return value;
+  const [, sign, whole, fraction = ""] = match;
+  return `${sign}${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${fraction}`;
+}

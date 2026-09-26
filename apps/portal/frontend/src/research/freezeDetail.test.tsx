@@ -1106,7 +1106,7 @@ describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
     const { container } = delegatedView(foldOrderingFixture());
     const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
     expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("⚠ NOT CAUSAL · GLOBAL SELECTION");
-    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("not_causal_multi_fold_global_calibration");
+    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
     expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("every outer fold's OOS window had been read");
     expect(panel.textContent).not.toMatch(/\bPASS\b|causal ✓/);
   });

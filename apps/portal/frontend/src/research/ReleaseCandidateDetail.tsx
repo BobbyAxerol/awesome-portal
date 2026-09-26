@@ -72,6 +72,7 @@ import type { ResearchState } from "./state";
 import type { RcDeclarations, RcPackController, RcWriteOp, RcWriteSlot, ReleaseCandidateController } from "./useReleaseCandidate";
 import type { RcPublicationController, RcPublicationView, RcReadFailure } from "./useReleaseCandidatePublication";
 import { iso } from "./utcMinute";
+import { shortDigest, shortId } from "./researchFormat";
 
 export { releaseCandidateHref, releaseCandidatePackHref };
 
@@ -136,6 +137,10 @@ export const SEAL_DIRTY = "save your declarations first — the seal fences the 
 export const SEALED_SENTENCE =
   "This evidence pack is Portal-local and immutable. A further change to code, params or methodology composes a new candidate.";
 export const SEALED_REPLAY = "The server returned this same pack for the same draft and evidence — a replay, not a second candidate.";
+/** E1: the read authority in words; the token stays in `data-read-authority`. */
+const READ_AUTHORITY_WORDS: Record<string, string> = {
+  PORTAL_PERSISTED_RESEARCH: "portal-persisted research record",
+};
 export const DRAFT_NOT_PERSISTED = "save the two declarations first — the draft is not persisted yet";
 
 /* ------------------------------------------------------------- P22 publish */
@@ -338,7 +343,7 @@ a.rc-node:hover { border-color: var(--accent); text-decoration: none; }
 .rc-pack tr[data-s="DEGRADED"] > td:first-child { box-shadow: inset 3px 0 0 var(--accent-2); }
 .rc-pack tr[data-s="MISSING"] > * { background: var(--bad-bg); }
 .rc-pack .n { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); }
-.rc-pack .item { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; color: var(--ink); }
+.rc-pack .item { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: normal; overflow-wrap: anywhere; color: var(--ink); }
 .rc-status { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; }
 .rc-status[data-s="COMPLETE"] { color: var(--good); }
 .rc-status[data-s="DEGRADED"] { color: var(--accent-2); }
@@ -552,8 +557,8 @@ function Header({ runId, here, chips }: { runId: string | null; here: ReactNode;
                 Evidence Flow
               </Link>
               <span className="sep">/</span>
-              <span className="rc-mono rc-long" data-crumb-run>
-                {runId}
+              <span className="rc-mono" data-crumb-run title={runId}>
+                {shortId(runId)}
               </span>
               <span className="sep">/</span>
             </>
@@ -693,15 +698,15 @@ function Rail({ compose, sealedId }: { compose: RcCompose; sealedId: string | nu
             <span className="v" data-rail-value>
               {linkedPack ? (
                 <Link to={releaseCandidatePackHref(node.value)} data-action="open-pack">
-                  {node.value}
+                  {shortId(node.value)}
                 </Link>
               ) : (
-                node.value
+                shortId(node.value)
               )}
             </span>
             {node.detail !== null ? (
               <span className="sub" data-rail-detail>
-                {node.detail}
+                {shortId(node.detail)}
               </span>
             ) : null}
           </>
@@ -1883,11 +1888,11 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
       <div className="rc-meta" data-panel="meta">
         {compose ? (
           <>
-            <span>{compose.read_authority}</span>
+            <span data-read-authority={compose.read_authority}>{READ_AUTHORITY_WORDS[compose.read_authority] ?? compose.read_authority}</span>
             <span data-as-of>as of {iso(compose.as_of_utc_ms)}</span>
-            <span data-source-fingerprint>source {compose.source_fingerprint}</span>
-            <span data-draft-meta data-draft-revision={compose.draft.revision}>
-              draft {compose.draft.state} · revision {compose.draft.revision}
+            <span data-source-fingerprint title={compose.source_fingerprint}>source {shortDigest(compose.source_fingerprint)}</span>
+            <span data-draft-meta data-draft-revision={compose.draft.revision} data-draft-state={compose.draft.state}>
+              {compose.draft.state === "VIRTUAL" ? "draft not saved yet" : `draft saved · revision ${compose.draft.revision}`}
               {compose.draft.updated_at_utc_ms !== null ? ` · saved ${iso(compose.draft.updated_at_utc_ms)}` : ""}
             </span>
           </>
@@ -1965,10 +1970,10 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
       <div className="rc-meta" data-panel="meta">
         {pack ? (
           <>
-            <span>{pack.read_authority}</span>
+            <span data-read-authority={pack.read_authority}>{READ_AUTHORITY_WORDS[pack.read_authority] ?? pack.read_authority}</span>
             <span data-sealed-at>sealed {iso(pack.sealed_at_utc_ms)}</span>
-            <span data-pack-digest>pack {pack.pack_digest}</span>
-            <span data-source-fingerprint>source {pack.frozen_core.source_fingerprint}</span>
+            <span data-pack-digest title={pack.pack_digest}>pack {shortDigest(pack.pack_digest)}</span>
+            <span data-source-fingerprint title={pack.frozen_core.source_fingerprint}>source {shortDigest(pack.frozen_core.source_fingerprint)}</span>
           </>
         ) : (
           <span>{state.state}</span>
@@ -2039,7 +2044,7 @@ function PackIdentity({ pack, state }: { pack: RcPack | null; state: ResearchSta
             <li>
               <Link className="rc-node" to={runHref(pack.run_id, "evidence")} data-rail-node="run" data-tone="ink">
                 <span className="k">{RAIL_LABEL.run}</span>
-                <span className="v">{pack.run_id}</span>
+                <span className="v" title={pack.run_id}>{shortId(pack.run_id)}</span>
               </Link>
               <span className="rc-arrow" aria-hidden="true">
                 →

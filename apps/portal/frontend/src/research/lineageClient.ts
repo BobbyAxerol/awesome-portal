@@ -24,6 +24,7 @@ import type { components as LineageComponents } from "@portal/contracts-research
 import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
+import { REFUSAL_COPY } from "./researchRefusal";
 
 type LineageSchemas = LineageComponents["schemas"];
 
@@ -305,8 +306,8 @@ export function absenceReason(fact: { reason_code?: string | null; availability?
  * it withholds content without claiming the alpha has none, which `empty`
  * would.
  */
-export const LINEAGE_NEUTRAL_REFUSAL =
-  "This alpha may not exist or may be outside your access — nothing here confirms either.";
+/* E1 (HiFi audit 2026-09-26): one F-04 sentence on every Research screen. */
+export const LINEAGE_NEUTRAL_REFUSAL = REFUSAL_COPY.denied;
 
 export const LINEAGE_REFUSAL_COPY = {
   network: "The request did not reach the server.",
