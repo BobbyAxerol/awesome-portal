@@ -22,6 +22,7 @@ import {
   type ProgressIngressScope,
   type ProgressRunIdentity,
   type ProgressRunRead,
+  type StrandedTerminal,
 } from "./progress.repository";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchEvidenceService } from "./evidence.service";
@@ -29,12 +30,22 @@ import { ResearchSplitService } from "./split.service";
 import { ResearchReportService } from "./report.service";
 import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { WHATIF_PROFILE, WHATIF_PROFILE_ID } from "./whatif.profile";
+import {
+  STRANDED_TERMINAL_MIN_AGE_SECONDS,
+  terminalSidecarFailedReason,
+  terminalSidecarPayloadLostReason,
+} from "./run-state";
 
 /** The installed P04 fixed-qualification child CPU limit (P10 job cost). */
 const P04_FIXED_CHILD_CPU_SECONDS = 45;
 
-const ACTIVE_JOB_STATES = new Set(["QUEUED", "CLAIMED", "RUNNING"]);
+/** E10: every non-terminal P06 state may be cancelled by its owner. */
+const CANCELLABLE_JOB_STATES = new Set(["QUEUED", "CLAIMED", "RUNNING", "RETRY_WAIT", "CANCEL_REQUESTED"]);
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
+const EFFECTIVE_STATUSES = new Set(["QUEUED", "RUNNING", "FINISHING", "COMPLETED", "FAILED", "CANCELLED"]);
+/** E10: a read reconciles its workspace at most this often per process. */
+const RECONCILE_INTERVAL_MS = 10_000;
+const STRANDED_TERMINAL_BATCH = 16;
 
 /** CG-P11-03: run identity from the P10 producer row and its immutable P08 manifest. */
 export interface ResearchProgressRunIdentity {
@@ -169,6 +180,8 @@ export interface ResearchProgressConsoleResponse {
  */
 @Injectable()
 export class ResearchProgressService {
+  private readonly reconciledAt = new Map<string, number>();
+
   constructor(
     private readonly progress: ResearchProgressRepository,
     private readonly metadata: ResearchMetadataRepository,
@@ -188,6 +201,31 @@ export class ResearchProgressService {
     // P13 is a terminal sidecar only. If its own immutable write temporarily
     // fails, the P11 event remains persisted and the source relay can retry
     // the same digest-bound payload without rerunning QuantBT.
+    await this.materializeSidecars(ingressScope, input);
+    await this.applyLifecycle(ingressScope, input);
+    const isTerminal = input.event.event_type === "run_completed" || input.event.event_type === "run_failed";
+    if (isTerminal) await this.progress.markTerminalMaterialized(ingressScope, input);
+    // Duplicate terminal delivery is the recovery mechanism after a sidecar
+    // or fanout failure.  The immutable journal sequence makes the repeated
+    // notification idempotent for SSE consumers.
+    if (persisted.inserted || isTerminal) {
+      // CG-P11-08 (DQ-13): one read per committed event, shared by every
+      // viewer, so the stream carries `current`/`availability` too. A failed
+      // read never withholds the already-durable event.
+      const run = await this.progress
+        .readRun({ workspaceId: ingressScope.workspaceId, actorUserId: ingressScope.actorUserId }, input.run_id)
+        .catch(() => null);
+      this.fanout.publish(input.run_id, { event: persisted.event, snapshot: persisted.snapshot, run });
+    }
+    return { accepted: true, latest_sequence: input.snapshot.latest_sequence };
+  }
+
+  /**
+   * The terminal sidecars, in the one order both paths use: the source's
+   * callback (`ingest`) and the E10 settlement of a lost terminal write
+   * (`settleStranded`). Each is idempotent over the immutable journal event.
+   */
+  private async materializeSidecars(ingressScope: ProgressIngressScope, input: ResearchProgressIngress): Promise<void> {
     await this.evidence.ingest(ingressScope, input);
     // P14 follows the same terminal-only idempotent sidecar rule as P13.
     // Its reader has a separate feature flag; persisting a verified source
@@ -221,28 +259,104 @@ export class ResearchProgressService {
         process.stderr.write(`${JSON.stringify({ event: "research_report_rs02_materialize_failed", run_id: input.run_id, code })}\n`);
       }
     }
-    await this.applyLifecycle(ingressScope, input);
-    const isTerminal = input.event.event_type === "run_completed" || input.event.event_type === "run_failed";
-    if (isTerminal) await this.progress.markTerminalMaterialized(ingressScope, input);
-    // Duplicate terminal delivery is the recovery mechanism after a sidecar
-    // or fanout failure.  The immutable journal sequence makes the repeated
-    // notification idempotent for SSE consumers.
-    if (persisted.inserted || isTerminal) {
-      // CG-P11-08 (DQ-13): one read per committed event, shared by every
-      // viewer, so the stream carries `current`/`availability` too. A failed
-      // read never withholds the already-durable event.
-      const run = await this.progress
-        .readRun({ workspaceId: ingressScope.workspaceId, actorUserId: ingressScope.actorUserId }, input.run_id)
-        .catch(() => null);
-      this.fanout.publish(input.run_id, { event: persisted.event, snapshot: persisted.snapshot, run });
-    }
-    return { accepted: true, latest_sequence: input.snapshot.latest_sequence };
   }
 
   async read(user: PortalUser, scope: ResearchScope, runId: string): Promise<ResearchProgressReadResponse> {
     this.requireEnabled();
+    await this.reconcileBestEffort(scope);
     const current = await this.progress.readRun(scope, runId);
     return this.readResponse(user, current);
+  }
+
+  /**
+   * E10: converge every run in the workspace that can no longer converge on
+   * its own. Control API has no background worker by design, so reads and
+   * claims drive this; it is idempotent and bounded.
+   *
+   * 1. P06 lease recovery (an attempt that journaled a terminal is skipped).
+   * 2. A lost terminal write is settled from the journal: the sidecars are
+   *    replayed, then the job is finalized — or FAILED with a typed reason
+   *    when a sidecar cannot be recorded — and the RS-01 checkpoint written.
+   * 3. An overdue RETRY_WAIT with no dispatcher is FAILED with a typed reason.
+   */
+  async reconcile(scope: ResearchScope): Promise<{ recovered: number; settled: string[]; expired: string[] }> {
+    this.requireEnabled();
+    const recovered = await this.metadata.recoverExpiredDurableJobs(scope);
+    const stranded = await this.progress.strandedTerminals(scope, STRANDED_TERMINAL_MIN_AGE_SECONDS, STRANDED_TERMINAL_BATCH);
+    const settled: string[] = [];
+    for (const row of stranded) {
+      try {
+        if (await this.settleStranded(row)) settled.push(row.input.run_id);
+      } catch (error) {
+        const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code: unknown }).code) : "UNTYPED";
+        process.stderr.write(`${JSON.stringify({ event: "research_terminal_settle_failed", run_id: row.input.run_id, code })}\n`);
+      }
+    }
+    const { expired } = await this.metadata.expireOverdueRetryWait(scope);
+    return { recovered: recovered.recovered, settled, expired };
+  }
+
+  /** A throttled, never-throwing `reconcile` for read paths (Run Progress, Run Library). */
+  async reconcileBestEffort(scope: ResearchScope): Promise<void> {
+    if (this.config.FEATURE_RESEARCH_PROGRESS !== "true") return;
+    const now = Date.now();
+    const last = this.reconciledAt.get(scope.workspaceId);
+    if (last !== undefined && now - last < RECONCILE_INTERVAL_MS) return;
+    this.reconciledAt.set(scope.workspaceId, now);
+    try {
+      await this.reconcile(scope);
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code: unknown }).code) : "UNTYPED";
+      process.stderr.write(`${JSON.stringify({ event: "research_run_reconcile_failed", workspace_id: scope.workspaceId, code })}\n`);
+    }
+  }
+
+  private async settleStranded(row: StrandedTerminal): Promise<boolean> {
+    const { scope, input } = row;
+    const jobTerminal = TERMINAL_JOB_STATES.has(row.jobState);
+    let outcome: "SUCCEEDED" | "FAILED" | "CANCELLED";
+    let reason: string | undefined;
+    if (row.sidecarPayloadLost) {
+      outcome = "FAILED";
+      reason = terminalSidecarPayloadLostReason();
+    } else {
+      try {
+        await this.materializeSidecars(scope, input);
+        if (input.event.event_type === "run_completed") {
+          const sealed = input.snapshot.status === "COMPLETED" && input.snapshot.readiness.mandatory === "SEALED";
+          outcome = sealed ? "SUCCEEDED" : "FAILED";
+          reason = sealed ? undefined : terminalSidecarFailedReason();
+        } else {
+          outcome = input.event.payload.code === "USER_CANCELLED" ? "CANCELLED" : "FAILED";
+          reason = this.failureReason(input.event);
+        }
+      } catch {
+        // The job already closed but its checkpoint did not: the sidecars
+        // succeeded once before, so a transient failure is retried next time
+        // rather than rewriting a terminal job.
+        if (jobTerminal) return false;
+        outcome = "FAILED";
+        reason = terminalSidecarFailedReason();
+      }
+    }
+    if (!jobTerminal) {
+      let usage: ResearchWorkerUsage;
+      try {
+        usage = this.usage(input.event);
+      } catch {
+        usage = { peakRssBytes: null, cpuSeconds: null, scratchBytes: null, fdPeak: null };
+      }
+      await this.metadata.settleJournaledTerminal(
+        { workspaceId: scope.workspaceId, actorUserId: scope.actorUserId },
+        { jobId: scope.jobId, workerAttemptId: scope.workerAttemptId, leaseEpoch: scope.leaseEpoch, outcome, reason, usage },
+      );
+    }
+    await this.progress.markTerminalMaterialized(scope, input);
+    const run = await this.progress
+      .readRun({ workspaceId: scope.workspaceId, actorUserId: scope.actorUserId }, input.run_id)
+      .catch(() => null);
+    this.fanout.publish(input.run_id, { event: input.event, snapshot: input.snapshot, run });
+    return true;
   }
 
   async events(
@@ -309,10 +423,11 @@ export class ResearchProgressService {
     source_marker: "REQUESTED" | "NOT_REQUIRED" | "PENDING_RECONCILIATION";
   }> {
     this.requireEnabled();
-    if (user.role !== "ADMIN") {
+    const lease = await this.progress.currentLease(scope, input.runId);
+    // E10: the run's owner (its requester) may cancel it, as may an ADMIN.
+    if (!this.mayCancelAs(user, lease.requestedByUserId)) {
       throw new ResearchProgressError("RESEARCH_PROGRESS_FORBIDDEN", "Research cancellation is not allowed.", 403);
     }
-    const lease = await this.progress.currentLease(scope, input.runId);
     let requested;
     try {
       requested = await this.metadata.requestDurableJobCancellation(scope, {
@@ -428,7 +543,7 @@ export class ResearchProgressService {
         source_latest_sequence: current.sourceLatestSequence,
         retention_floor_sequence: current.retentionFloorSequence,
         last_received_at_utc_ms: current.receivedAt?.valueOf() ?? null,
-        may_cancel: user.role === "ADMIN" && ACTIVE_JOB_STATES.has(current.jobState),
+        may_cancel: CANCELLABLE_JOB_STATES.has(current.jobState) && this.mayCancelAs(user, current.requestedByUserId),
         may_retry: false,
         retry_reason: "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC",
         new_run_from: identity?.requestedSpecRetained
@@ -483,13 +598,21 @@ export class ResearchProgressService {
     };
   }
 
+  /**
+   * E10: the status is `research.run_lifecycle_status_v1`, computed in the
+   * same statement as the rest of this read — the function the Run Library
+   * view calls. No second derivation lives here.
+   */
   private effectiveStatus(current: ProgressRunRead): ResearchProgressReadResponse["current"]["effective_status"] {
-    if (current.jobState === "CANCELLED") return "CANCELLED";
-    if (current.terminalMaterialization === "PENDING") return "FINISHING";
-    if (current.jobState === "FAILED") return "FAILED";
-    if (current.jobState === "SUCCEEDED") return "COMPLETED";
-    if (current.progress) return current.progress.status;
-    return current.jobState === "RUNNING" ? "RUNNING" : "QUEUED";
+    if (!EFFECTIVE_STATUSES.has(current.lifecycleStatus)) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research run lifecycle status is incompatible.", 409);
+    }
+    return current.lifecycleStatus as ResearchProgressReadResponse["current"]["effective_status"];
+  }
+
+  private mayCancelAs(user: PortalUser, requestedByUserId: string | null): boolean {
+    return user.role === "ADMIN"
+      || (typeof requestedByUserId === "string" && requestedByUserId.length > 0 && user.userId === requestedByUserId);
   }
 
   private async applyLifecycle(scope: ProgressIngressScope, input: ResearchProgressIngress): Promise<void> {

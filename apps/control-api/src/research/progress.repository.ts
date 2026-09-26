@@ -45,6 +45,9 @@ interface ReadRunRow {
   received_at: Date | null;
   terminal_materialized: boolean;
   source_terminal_event: boolean;
+  lifecycle_status?: string | null;
+  job_terminal_reason?: string | null;
+  requested_by_user_id?: string | null;
   alpha_id?: string | null;
   alpha_name?: string | null;
   alpha_version_id?: string | null;
@@ -209,6 +212,15 @@ export interface ProgressRunRead {
   receivedAt: Date | null;
   hasCurrentAttempt: boolean;
   terminalMaterialization: "NOT_REQUIRED" | "PENDING" | "READY";
+  /**
+   * E10: `research.run_lifecycle_status_v1` over this row — the same function
+   * the Run Library view calls, so the two reads cannot disagree.
+   */
+  lifecycleStatus: string;
+  /** Why the P06 job closed, when it did (`CODE: sentence` for control-side closes). */
+  jobTerminalReason: string | null;
+  /** The run's requester: with ADMIN, the only viewer who may cancel it. */
+  requestedByUserId: string | null;
   retainedArtifacts: ProgressRetainedArtifact[];
   /** Null only if the producer row's identity could not be read. */
   identity: ProgressRunIdentity | null;
@@ -220,6 +232,20 @@ export interface ProgressCurrentLease {
   workerAttemptId: string | null;
   leaseEpoch: number | null;
   jobState: string;
+  requestedByUserId: string | null;
+}
+
+/**
+ * E10: a run whose source journaled its terminal event but whose terminal
+ * write never landed (no RS-01 checkpoint) after its lease was gone. Carries
+ * exactly what the original ingress carried, rebuilt from durable rows only.
+ */
+export interface StrandedTerminal {
+  scope: ProgressIngressScope;
+  jobState: string;
+  input: ResearchProgressIngress;
+  /** True when the terminal event names a sidecar receipt that was never persisted. */
+  sidecarPayloadLost: boolean;
 }
 
 /**
@@ -423,6 +449,12 @@ export class ResearchProgressRepository {
                 snapshot.retention_floor_sequence, snapshot.received_at,
                 (terminal.source_sequence IS NOT NULL) AS terminal_materialized,
                 COALESCE(latest_event.event_type IN ('run_completed', 'run_failed'), false) AS source_terminal_event,
+                research.run_lifecycle_status_v1(
+                  job.state, NULL, true, snapshot.snapshot->>'status',
+                  COALESCE(latest_event.event_type IN ('run_completed', 'run_failed'), false),
+                  terminal.source_sequence IS NOT NULL
+                ) AS lifecycle_status,
+                job.terminal_reason AS job_terminal_reason, job.requested_by_user_id,
                 producer.alpha_id, alpha.name AS alpha_name, producer.alpha_version_id,
                 producer.execution_profile_id, producer.requested_spec_digest,
                 preflight.requested_spec->>'protocol' AS spec_protocol,
@@ -553,6 +585,9 @@ export class ResearchProgressRepository {
           // A durable SUCCEEDED job without its required source terminal event
           // is inconsistent; keep it fail-closed instead of reporting success.
           : row.job_state === "SUCCEEDED" ? "PENDING" : "NOT_REQUIRED",
+        lifecycleStatus: row.lifecycle_status ?? "QUEUED",
+        jobTerminalReason: row.job_terminal_reason ?? null,
+        requestedByUserId: row.requested_by_user_id ?? null,
         retainedArtifacts,
         identity: this.identity(row),
       };
@@ -663,9 +698,10 @@ export class ResearchProgressRepository {
         worker_attempt_id: string | null;
         lease_epoch: string | number | null;
         job_state: string;
+        requested_by_user_id: string | null;
       }>(
         `SELECT producer.job_id, producer.worker_attempt_id, producer.lease_epoch,
-                job.state AS job_state
+                job.state AS job_state, job.requested_by_user_id
            FROM research.run_producers producer
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
@@ -683,7 +719,132 @@ export class ResearchProgressRepository {
         workerAttemptId: row.worker_attempt_id,
         leaseEpoch: row.lease_epoch === null ? null : asSafeNumber(row.lease_epoch, "lease epoch"),
         jobState: row.job_state,
+        requestedByUserId: row.requested_by_user_id,
       };
+    });
+  }
+
+  /**
+   * E10: runs whose terminal write was lost. The head journal event of the
+   * producer's attempt is `run_completed`/`run_failed`, no RS-01 checkpoint
+   * exists, the journal is older than `minAgeSeconds`, and the attempt can no
+   * longer finish on its own: its lease expired, or P06 already moved the job
+   * off it (RETRY_WAIT/QUEUED), or the job closed but the checkpoint did not.
+   * A cancelled job is never listed: cancellation already resolved it.
+   */
+  async strandedTerminals(scope: ResearchScope, minAgeSeconds: number, limit: number): Promise<StrandedTerminal[]> {
+    return this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
+      const result = await client.query<{
+        run_id: string;
+        actor_user_id: string;
+        execution_profile_id: string | null;
+        job_id: string;
+        job_state: string;
+        worker_attempt_id: string;
+        lease_epoch: string | number;
+        snapshot: Record<string, unknown> | string;
+        source_sequence: string | number;
+        event_type: string;
+        occurred_at_utc_ms: string | number;
+        event_payload: Record<string, unknown> | string;
+        evidence_payload: Record<string, unknown> | string | null;
+        split_payload: Record<string, unknown> | string | null;
+      }>(
+        `SELECT producer.run_id, producer.actor_user_id, producer.execution_profile_id,
+                job.job_id, job.state AS job_state,
+                snapshot.worker_attempt_id, snapshot.lease_epoch, snapshot.snapshot,
+                head.source_sequence, head.event_type, head.occurred_at_utc_ms, head.event_payload,
+                evidence.source_payload AS evidence_payload, split.source_payload AS split_payload
+           FROM research.run_producers producer
+           JOIN research.jobs job
+             ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
+           JOIN research.run_progress_snapshots snapshot
+             ON snapshot.workspace_id = producer.workspace_id
+            AND snapshot.run_id = producer.run_id
+            AND snapshot.worker_attempt_id = producer.worker_attempt_id
+           JOIN research.run_progress_events head
+             ON head.workspace_id = snapshot.workspace_id
+            AND head.run_id = snapshot.run_id
+            AND head.worker_attempt_id = snapshot.worker_attempt_id
+            AND head.source_sequence = snapshot.source_latest_sequence
+           JOIN research.worker_attempts wa
+             ON wa.workspace_id = snapshot.workspace_id AND wa.worker_attempt_id = snapshot.worker_attempt_id
+          LEFT JOIN research.run_terminal_materializations_v1 checkpoint
+             ON checkpoint.workspace_id = head.workspace_id
+            AND checkpoint.run_id = head.run_id
+            AND checkpoint.worker_attempt_id = head.worker_attempt_id
+            AND checkpoint.source_sequence = head.source_sequence
+          LEFT JOIN research.run_evidence_sources_v1 evidence
+             ON evidence.workspace_id = head.workspace_id
+            AND evidence.run_id = head.run_id
+            AND evidence.worker_attempt_id = head.worker_attempt_id
+            AND evidence.source_event_sequence = head.source_sequence
+            AND evidence.source_evidence_digest = head.event_payload->>'evidence_digest'
+          LEFT JOIN research.run_split_sources_v1 split
+             ON split.workspace_id = head.workspace_id
+            AND split.run_id = head.run_id
+            AND split.worker_attempt_id = head.worker_attempt_id
+            AND split.source_event_sequence = head.source_sequence
+            AND split.source_split_digest = head.event_payload->>'split_digest'
+          WHERE producer.workspace_id = $1
+            AND head.event_type IN ('run_completed', 'run_failed')
+            AND checkpoint.source_sequence IS NULL
+            AND job.state <> 'CANCELLED'
+            AND snapshot.received_at <= now() - $2 * interval '1 second'
+            AND (job.state IN ('SUCCEEDED', 'FAILED', 'RETRY_WAIT', 'QUEUED') OR wa.expires_at <= now())
+          ORDER BY snapshot.received_at ASC, producer.run_id ASC
+          LIMIT $3`,
+        [scope.workspaceId, minAgeSeconds, limit],
+      );
+      return result.rows.flatMap((row): StrandedTerminal[] => {
+        const leaseEpoch = asSafeNumber(row.lease_epoch, "lease epoch");
+        const payload = parseObject(row.event_payload, "event payload");
+        const event = {
+          schema_version: "research.progress-event.v1" as const,
+          run_id: row.run_id,
+          attempt_id: row.worker_attempt_id,
+          lease_epoch: leaseEpoch,
+          sequence: asSafeNumber(row.source_sequence, "event sequence"),
+          event_type: row.event_type,
+          occurred_at_utc_ms: asSafeNumber(row.occurred_at_utc_ms, "event timestamp"),
+          payload,
+        };
+        const parsedEvent = ResearchProgressEventSchema.safeParse(event);
+        const parsedSnapshot = ResearchProgressSnapshotSchema.safeParse(parseObject(row.snapshot, "snapshot"));
+        // An incompatible historical row is left for an operator; it is never
+        // settled from a guess.
+        if (!parsedEvent.success || !parsedSnapshot.success) return [];
+        const evidence = row.evidence_payload === null ? undefined : parseObject(row.evidence_payload, "evidence source");
+        const split = row.split_payload === null ? undefined : parseObject(row.split_payload, "split source");
+        const sidecarPayloadLost = (typeof payload.evidence_digest === "string" && evidence === undefined)
+          || (typeof payload.split_digest === "string" && split === undefined);
+        return [{
+          scope: {
+            workspaceId: scope.workspaceId,
+            actorUserId: row.actor_user_id,
+            jobId: row.job_id,
+            workerAttemptId: row.worker_attempt_id,
+            leaseEpoch,
+            ...(row.execution_profile_id ? { executionProfileId: row.execution_profile_id } : {}),
+          },
+          jobState: row.job_state,
+          sidecarPayloadLost,
+          input: {
+            schema_version: "research.progress-ingress.v1",
+            workspace_id: scope.workspaceId,
+            run_id: row.run_id,
+            job_id: row.job_id,
+            worker_attempt_id: row.worker_attempt_id,
+            lease_epoch: leaseEpoch,
+            // The immutable journal event exactly as persisted (its digest is
+            // what the RS-01 checkpoint binds), not a re-parsed copy.
+            event: event as ResearchProgressEvent,
+            snapshot: parsedSnapshot.data,
+            ...(evidence ? { evidence } : {}),
+            ...(split ? { split } : {}),
+          } as ResearchProgressIngress,
+        }];
+      });
     });
   }
 

@@ -228,15 +228,32 @@ function identity(overrides: Record<string, unknown> = {}) {
   };
 }
 
+
+/**
+ * E10: the status now comes from `research.run_lifecycle_status_v1` in the
+ * repository's SQL (proved against PostgreSQL in p11-progress.spec.ts). A
+ * repository fake must say what that function returns for its row.
+ */
+function withLifecycle<T extends Record<string, unknown>>(row: T): T & { lifecycleStatus: string } {
+  if (typeof row.lifecycleStatus === "string") return row as T & { lifecycleStatus: string };
+  const job = row.jobState;
+  const lifecycleStatus = job === "CANCELLED" ? "CANCELLED"
+    : row.terminalMaterialization === "PENDING" ? "FINISHING"
+      : job === "FAILED" ? "FAILED"
+        : job === "SUCCEEDED" ? "COMPLETED"
+          : job === "RUNNING" || job === "CLAIMED" || job === "CANCEL_REQUESTED" ? "RUNNING" : "QUEUED";
+  return { ...row, lifecycleStatus };
+}
+
 function runRead(overrides: Record<string, unknown> = {}) {
-  return {
+  return withLifecycle({
     runId: "run_w2", jobState: "RUNNING", progress: null,
     sourceLatestSequence: 4, retentionFloorSequence: 0, receivedAt: null,
     hasCurrentAttempt: true, terminalMaterialization: "NOT_REQUIRED", retainedArtifacts: [],
     queueClass: "HEAVY", queuedAt: new Date("2026-09-24T17:00:00.000Z"),
     retryNotBefore: null, attempts: [], identity: identity(),
     ...overrides,
-  };
+  });
 }
 
 function service(current: Record<string, unknown>, flags: Record<string, string> = {}) {

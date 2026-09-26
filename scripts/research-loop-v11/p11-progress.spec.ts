@@ -1164,4 +1164,205 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     expect(frames[0]!.read?.current.effective_status).toBe("RUNNING");
     expect(frames[1]!.read?.current.effective_status).toBe("COMPLETED");
   });
+
+  /* ------------------------------------------------------------------ E10 */
+
+  /** A P04 report sidecar that can be made to fail, like the W1 preview's WFO refusal. */
+  class ToggleReportService {
+    fail = true;
+    async materializeTerminal(_scope: unknown, input: { event: { event_type: string } }): Promise<void> {
+      if (this.fail && input.event.event_type === "run_completed") throw Object.assign(new Error("report sidecar refused"), { code: "RESEARCH_REPORT_UNAVAILABLE" });
+    }
+  }
+
+  function withReports(reports: ToggleReportService, fanout = new ResearchProgressFanout()) {
+    return new ResearchProgressService(
+      new ResearchProgressRepository(pool), metadata, fanout,
+      new FakeProgressPortalClient() as never, new FakeEvidenceService() as never, new FakeSplitService() as never,
+      reports as never, config,
+    );
+  }
+
+  function sealedCompletion(run: { runId: string; workerAttemptId: string; leaseEpoch: number }, sequence: number) {
+    return snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, sequence, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: sequence, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      stages: ["S1", "S2", "S3", "S4", "S5"].map((key) => ({
+        key: key as "S1" | "S2" | "S3" | "S4" | "S5", state: "DONE" as const,
+        started_at_utc_ms: 1_725_000_000_000, completed_at_utc_ms: 1_725_000_000_001,
+      })),
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+  }
+
+  /** Lose the terminal write the way `rrun_0df059…` did: sidecar refused, lease lapsed. */
+  async function strandCompletion(reports: ToggleReportService) {
+    const run = await createDispatchedRun();
+    const live = withReports(reports);
+    await live.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));
+    await expect(live.ingest(ingress({ ...run, sequence: 2, eventType: "run_completed", progress: sealedCompletion(run, 2) })))
+      .rejects.toMatchObject({ code: "RESEARCH_REPORT_UNAVAILABLE" });
+    // The journal holds the sealed terminal; nothing else landed.
+    const journal = await pool.query<{ event_type: string }>(
+      `SELECT event_type FROM research.run_progress_events WHERE workspace_id = $1 AND run_id = $2 ORDER BY source_sequence`,
+      [scope.workspaceId, run.runId],
+    );
+    expect(journal.rows.map((row) => row.event_type)).toEqual(["run_started", "run_completed"]);
+    await pool.query(
+      `UPDATE research.worker_attempts SET expires_at = now() - interval '3 days'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    await pool.query(
+      `UPDATE research.run_progress_snapshots SET received_at = now() - interval '3 days'
+        WHERE workspace_id = $1 AND run_id = $2`,
+      [scope.workspaceId, run.runId],
+    );
+    return run;
+  }
+
+  async function libraryRow(runId: string) {
+    const row = await pool.query<{ effective_status: string; lifecycle_status: string; job_state: string; job_terminal_reason: string | null }>(
+      `SELECT effective_status, lifecycle_status, job_state, job_terminal_reason
+         FROM research.run_library_rows_v1 WHERE workspace_id = $1 AND run_id = $2`,
+      [scope.workspaceId, runId],
+    );
+    return row.rows[0]!;
+  }
+
+  it("E10-01: a sealed terminal whose write was lost is never retried; both reads say FINISHING; it converges to COMPLETED", async () => {
+    const reports = new ToggleReportService();
+    const run = await strandCompletion(reports);
+    // P06 lease recovery must not schedule a retry of a sealed compute.
+    expect(await metadata.recoverExpiredDurableJobs(scope)).toEqual({ recovered: 0, terminal: 0 });
+    // One function, one state, before anything settles.
+    expect((await progress.readRun(scope, run.runId)).lifecycleStatus).toBe("FINISHING");
+    expect(await libraryRow(run.runId)).toMatchObject({ lifecycle_status: "FINISHING", effective_status: "RUNNING", job_state: "RUNNING" });
+
+    reports.fail = false;
+    const fanout = new ResearchProgressFanout();
+    const settler = withReports(reports, fanout);
+    const frames: Array<{ read: { current: { effective_status: string } } | null }> = [];
+    const stop = settler.subscribe(admin, run.runId, (frame) => frames.push(frame as never));
+    const result = await settler.reconcile(scope);
+    stop();
+    expect(result).toMatchObject({ recovered: 0, settled: [run.runId], expired: [] });
+    const read = await settler.read(admin, scope, run.runId);
+    expect(read.current).toMatchObject({
+      job_state: "SUCCEEDED", effective_status: "COMPLETED", terminal_materialization: "READY", may_cancel: false,
+    });
+    expect(await libraryRow(run.runId)).toMatchObject({ effective_status: "COMPLETED", lifecycle_status: "COMPLETED", job_state: "SUCCEEDED" });
+    expect(frames.at(-1)?.read?.current.effective_status).toBe("COMPLETED");
+    // Never retried: one attempt, closed by the outcome its journal proves.
+    expect(read.attempts).toHaveLength(1);
+    expect(read.attempts[0]).toMatchObject({ state: "SUCCEEDED" });
+    // Idempotent: nothing left to settle.
+    expect((await settler.reconcile(scope)).settled).toEqual([]);
+  });
+
+  it("E10-02: a lost terminal already moved to RETRY_WAIT (the preview's state) fails with a typed reason when its sidecar cannot land", async () => {
+    const reports = new ToggleReportService();
+    const run = await strandCompletion(reports);
+    // Reproduce the pre-E10 P06 decision the preview recorded for rrun_0df059…
+    await pool.query(
+      `UPDATE research.worker_attempts SET state = 'LOST_LEASE', exit_reason = 'LEASE_EXPIRED'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    await pool.query(
+      `UPDATE research.jobs SET state = 'RETRY_WAIT', current_worker_attempt_id = NULL, current_lease_epoch = NULL,
+              retry_not_before = now() - interval '3 days'
+        WHERE workspace_id = $1 AND job_id = $2`,
+      [scope.workspaceId, run.jobId],
+    );
+    await pool.query(`UPDATE research.runs SET state = 'QUEUED' WHERE workspace_id = $1 AND run_id = $2`, [scope.workspaceId, run.runId]);
+    // Before E10 this read QUEUED in the library and FINISHING on Screen 03.
+    expect((await progress.readRun(scope, run.runId)).lifecycleStatus).toBe("FINISHING");
+    expect(await libraryRow(run.runId)).toMatchObject({ lifecycle_status: "FINISHING", effective_status: "RUNNING" });
+
+    const service = withReports(reports);
+    const result = await service.reconcile(scope);
+    expect(result.settled).toEqual([run.runId]);
+    // An overdue RETRY_WAIT whose attempt journaled a terminal is settled, not expired.
+    expect(result.expired).toEqual([]);
+    const read = await service.read(admin, scope, run.runId);
+    expect(read.current).toMatchObject({ job_state: "FAILED", effective_status: "FAILED", terminal_materialization: "READY" });
+    const library = await libraryRow(run.runId);
+    expect(library).toMatchObject({ effective_status: "FAILED", lifecycle_status: "FAILED" });
+    expect(library.job_terminal_reason).toMatch(/^P11_TERMINAL_SIDECAR_FAILED: /);
+    expect(read.attempts[0]).toMatchObject({ state: "LOST_LEASE" });
+  });
+
+  it("E10-03: an overdue RETRY_WAIT with no dispatcher is FAILED with P06_RETRY_NOT_DISPATCHED; one inside the grace waits as QUEUED", async () => {
+    const run = await createDispatchedRun();
+    await service.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));
+    await pool.query(
+      `UPDATE research.worker_attempts SET expires_at = now() - interval '1 minute'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    expect(await metadata.recoverExpiredDurableJobs(scope)).toMatchObject({ recovered: 1, terminal: 0 });
+    // Within the grace: still waiting, and both reads say QUEUED — the lost
+    // attempt's RUNNING snapshot is history, not the current state.
+    expect((await metadata.expireOverdueRetryWait(scope)).expired).toEqual([]);
+    const waiting = await service.read(admin, scope, run.runId);
+    expect(waiting.current).toMatchObject({ job_state: "RETRY_WAIT", effective_status: "QUEUED", may_cancel: true });
+    expect(waiting.progress?.status).toBe("RUNNING");
+    expect(await libraryRow(run.runId)).toMatchObject({ effective_status: "QUEUED", lifecycle_status: "QUEUED" });
+
+    await pool.query(
+      `UPDATE research.jobs SET retry_not_before = now() - interval '3 days' WHERE workspace_id = $1 AND job_id = $2`,
+      [scope.workspaceId, run.jobId],
+    );
+    expect((await service.reconcile(scope)).expired).toEqual([run.runId]);
+    const failed = await service.read(admin, scope, run.runId);
+    expect(failed.current).toMatchObject({
+      job_state: "FAILED", effective_status: "FAILED", may_cancel: false, terminal_materialization: "NOT_REQUIRED",
+    });
+    expect(failed.queue.retry_not_before_utc_ms).toBeNull();
+    const library = await libraryRow(run.runId);
+    expect(library).toMatchObject({ effective_status: "FAILED", lifecycle_status: "FAILED" });
+    expect(library.job_terminal_reason).toMatch(/^P06_RETRY_NOT_DISPATCHED: /);
+    // A late callback from the lost attempt cannot resurrect it.
+    await expectProgressError(service.ingest(ingress({ ...run, sequence: 2, eventType: "heartbeat" })), "RESEARCH_PROGRESS_STALE_LEASE");
+  });
+
+  it("E10-04: the run's owner may cancel any non-terminal run, including RETRY_WAIT; another member may not", async () => {
+    const run = await createDispatchedRun();
+    for (const userId of ["p11-owner", "p11-viewer"]) {
+      await pool.query(
+        `INSERT INTO portal_users (user_id, username, display_name, role, status, must_change_password)
+         VALUES ($1, $1, $1, 'USER', 'ACTIVE', false)`,
+        [userId],
+      );
+      await pool.query(`INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'MEMBER')`, [scope.workspaceId, userId]);
+    }
+    await pool.query(
+      `UPDATE research.jobs SET requested_by_user_id = 'p11-owner' WHERE workspace_id = $1 AND job_id = $2`,
+      [scope.workspaceId, run.jobId],
+    );
+    const owner: PortalUser = { ...admin, userId: "p11-owner", username: "p11-owner", role: "USER" };
+    const viewer: PortalUser = { ...admin, userId: "p11-viewer", username: "p11-viewer", role: "USER" };
+    const ownerScope = { workspaceId: scope.workspaceId, actorUserId: owner.userId };
+    const viewerScope = { workspaceId: scope.workspaceId, actorUserId: viewer.userId };
+    await pool.query(
+      `UPDATE research.worker_attempts SET expires_at = now() - interval '1 minute'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    await metadata.recoverExpiredDurableJobs(scope);
+    expect((await service.read(owner, ownerScope, run.runId)).current).toMatchObject({ job_state: "RETRY_WAIT", may_cancel: true });
+    expect((await service.read(admin, scope, run.runId)).current.may_cancel).toBe(true);
+    expect((await service.read(viewer, viewerScope, run.runId)).current.may_cancel).toBe(false);
+    await expectProgressError(
+      service.cancel(viewer, viewerScope, { runId: run.runId, reason: "not mine", requestId: "p11-e10-viewer" }),
+      "RESEARCH_PROGRESS_FORBIDDEN",
+    );
+    const cancelled = await service.cancel(owner, ownerScope, { runId: run.runId, reason: "owner stop", requestId: "p11-e10-owner" });
+    expect(cancelled).toMatchObject({ status: "CANCELLED", source_marker: "NOT_REQUIRED" });
+    const read = await service.read(owner, ownerScope, run.runId);
+    expect(read.current).toMatchObject({ job_state: "CANCELLED", effective_status: "CANCELLED", may_cancel: false });
+    expect(await libraryRow(run.runId)).toMatchObject({ effective_status: "CANCELLED", lifecycle_status: "CANCELLED" });
+  });
 });
