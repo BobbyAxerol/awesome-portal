@@ -1,4 +1,4 @@
-# A12 — gate-ID mapping, Research Loop P13–P17 (Claude, 2026-09-24)
+# A12 — gate-ID mapping, Research Loop P13–P19 (Claude, 2026-09-24; updated 2026-09-26)
 
 Astra A12 (`upgrade/research_loop/P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md:308–324`) and the
 RS-03 exit (`…:526–546`) require each of the **68 base gate IDs** (`P13-T01…T13`,
@@ -12,6 +12,143 @@ for this mapping; it cites tests as they are written.
 V11 `:2078–2080`, `:2145–2147`, `:2210–2212`, `:2279–2281`, `:2344–2346`). Unified §13.5
 (`upgrade/UNIFIED_IMPLEMENTATION_PLAN.md:4829, 4881, 4950, 5006, 5085`) lists the same sets.
 **Count check: base = 13 + 13 + 14 + 14 + 14 = 68; V11 = 5 × 3 = 15. Both match.**
+
+## Update 2026-09-26 (X3, Claude) — what W3, W5a, W5b, W6a, W6b closed, and P18/P19 added
+
+**Read on:** `docs/research-loop-plan` at `177df754` (W1–W7 + P22/P23 integrated). The rows
+below are taken from each wave's own mapping table and re-checked by `grep` that every cited
+test file exists on this head; this pass did **not** re-run those suites. Where a wave's table
+says "typed absence" for a source that publishes nothing, the rule of this file still applies
+(a capability note is not a DECIDED) and the ID stays GAP. The original tables further down
+are kept unchanged as the 2026-09-24 reading.
+
+| Wave | Record | IDs it moved |
+|---|---|---|
+| W3 (RF-05) | `evidence/RF-05/W3_P13_P15_CLAUDE_2026-09-24.md` §3 | P13-T02, T03, T08, T10 (S06 half); P14-T01, T02; P15-T02, T03, T06, T07, T10, T11, T12; V11-P13/P14/P15-DR |
+| W3b (RF-06) | `evidence/RF-06/W3B_WFO_LANE_SCREENS_CLAUDE_2026-09-24.md:158` | V11-P13…P16-BR (real-API 28/28, 12 WFO tests S03–S08 × 2 viewports, each screen value checked against the API answer) |
+| DR-02 / A10b | commit `b8c5a0d8` | P13-T11 |
+| W5a | `evidence/P16/W5A_A10_CLAUDE_2026-09-25.md` §6 + §8 | P16-T02, T03, T04, T06, T07, T08, T10, T11, T12, T13, T14 |
+| W5b | `evidence/P17/W5B_REPLAY_CLAUDE_2026-09-25.md` §5 | P17-T02, T03, T04, T06, T08, T09, T10, T11, T13, T14; P13-T12 (Reveal); V11-P17-DR/BR/GX |
+| W6a | `evidence/P18/W6A_P18_P20_CLAUDE_2026-09-25.md` | P18 fields (below); no P13–P17 ID |
+| W6b | `evidence/P19/W6B_P19_CLAUDE_2026-09-25.md` | P19 (below); no P13–P17 ID |
+
+### Totals now (P13–P17, same 83 IDs)
+
+| Set | IDs | COVERED | DECIDED | GAP | was (2026-09-24) |
+|---|---:|---:|---:|---:|---|
+| P13-T01…T13 | 13 | 11 | 0 | 2 | 6 / 0 / 7 |
+| P14-T01…T13 | 13 | 7 | 3 | 3 | 6 / 2 / 5 |
+| P15-T01…T14 | 14 | 7 | 1 | 6 | 1 / 0 / 13 |
+| P16-T01…T14 | 14 | 13 | 0 | 1 | 2 / 0 / 12 |
+| P17-T01…T14 | 14 | 14 | 0 | 0 | 4 / 0 / 10 |
+| **Base** | **68** | **52** | **4** | **12** | 19 / 2 / 47 |
+| V11 DR/BR/GX | 15 | 10 | 0 | 5 | 0 / 0 / 15 |
+| **All** | **83** | **62** | **4** | **17** | 19 / 2 / 62 |
+
+### Rows that changed
+
+| ID | Now | Evidence |
+|---|---|---|
+| P13-T02 | COVERED | `PB/test_current_source_w3_facts.py::test_rolling_returns_20_match_an_independent_reference` |
+| P13-T03 | COVERED | `CA/research-rs02-migration.spec.ts` "W3 · A12 P13-T03…" (PG lane) |
+| P13-T08 | COVERED | `CA/research-w3-current-source-facts.spec.ts` "P13-T08…"; `FE/evidenceFlow.test.tsx` "a seal without per-fold facts…" |
+| P13-T10 | GAP (partial) | S06 half: `FE/searchDetail.test.tsx:1177` "A12 P13-T10 / P15-T10…". **Missing:** a test that S07 θ* and the S09 report parameters stay the frozen selection after a pick in S06 |
+| P13-T11 | COVERED | `CA/research-p16-binding-dr02.spec.ts:94` "serves the same definition on Search S06 and Freeze S07 for the same run", `:76` typed NOT_APPLICABLE reason; `FE/boundWarning.test.tsx:54` "the one renderer both screens import" |
+| P13-T12 | COVERED | W5b D10 Reveal (presentation only): FE reveal test in `executeCandleReplay.test.tsx` (future transitions/markers/candles/totals hidden; revision text and request count unchanged) |
+| P14-T01 | COVERED | `PB/…::test_future_data_does_not_move_the_fold_plan_and_the_claim_stays_non_causal` (fold plan); the causal path is not admitted by the W1 profile (QuantBT declares the run non-causal) |
+| P14-T02 | DECIDED | Same test: the global selector reads OOS, `oos_used_for_selection = true` is served and shown; the strict path is not admitted |
+| P15-T02 | COVERED | `CA/research-w3-current-source-facts.spec.ts` "P15-T02/T03…" |
+| P15-T03 | COVERED | same spec; PB `_objective_components` → `QUANTBT_TRIAL_ROW_HAS_NO_OBJECTIVE` |
+| P15-T04, T05, T08 | GAP | Typed absence asserted (`CA/…facts.spec.ts` "P15-T04/T05/T08…", "P15-T05/T12…"); the source publishes no constraints, prune reasons, sampler or warm-start. A capability absence is not a decision under this file's rule |
+| P15-T06 | DECIDED | `CA/…facts.spec.ts` "P15-T06…": one admitted (global) study; a collision is refused by `UNIQUE (…, table_kind, source_id)`. A per-fold schedule needs a study-scoped id first |
+| P15-T07 | COVERED | `CA/…facts.spec.ts` "P15-T07…" (limit 1, with and without fold filter, cross-fold cursor refused) |
+| P15-T10 | COVERED | `FE/searchDetail.test.tsx:1177` (θ*, selected card and next-stage link unchanged by a pick) |
+| P15-T11 | COVERED | `CA/…facts.spec.ts` "P15-T11…" |
+| P15-T12 | COVERED | `CA/…facts.spec.ts` "P15-T05/T12…" |
+| P15-T14 | GAP (partial) | Bound half: `CA/research-p16-binding-dr02.spec.ts:62, :87`; widen outside the declaration refused: `CA/research-w1-wfo-profile.spec.ts` (off-step / out-of-range / sweep pins). **Missing:** mode-5 labels without fake OOS |
+| P16-T02 | COVERED | `CA/research-p16-fold-ordering.spec.ts` "each retained fold gets its own data-time boundary…", "a fold whose IS overlaps its OOS…" |
+| P16-T03 | COVERED | `CA/research-p16-a10a-bytes.spec.ts` "one flipped byte in one part is MISMATCH…"; `CA/research-w5a-migration.spec.ts` "P16-T03/T04 on PostgreSQL"; `PB/test_research_artifact_observe.py` |
+| P16-T04 | COVERED | `CA/research-p16-a10a-bytes.spec.ts` "re-verifying against wrong bytes appends another MISMATCH against the SAME original expectation"; PG trigger refusal |
+| P16-T06, T12 | COVERED | `CA/research-p16-a10c-whatif.spec.ts` "P16-T06/T12…", "81 cells, θ* ± 4 steps, clamped…"; `FE/whatIfCard.test.tsx` "a missing node prints a word, never 0" |
+| P16-T07 | COVERED | `CA/research-p16-a10c-whatif.spec.ts` "P16-T07: one bounded job with ONLY the missing unique evaluations, dispatched once"; `PB/test_research_whatif.py` |
+| P16-T08 | COVERED | `CA/research-w5a-migration.spec.ts` sibling proof (SIBLING_OF, frozen run untouched); `FE/whatIfCard.test.tsx` "create sibling attempt →"; `FE/newRun.test.tsx` "W5a · P16/P19" |
+| P16-T10 | COVERED | `FE/freezeDetail.test.tsx` "P16-T10: a held verify cannot turn into a PASS by the clock…" (fake timers) |
+| P16-T11 | COVERED | `CA/research-p16-fold-ordering.spec.ts` "every fold's out-of-sample generation child in the replay child audit is the frozen selection — no reselect, no fold-last" |
+| P16-T13 | COVERED | `CA/research-p16-a10c-whatif.spec.ts` (a read dispatches nothing); `FE/whatIfCard.test.tsx` "'evaluate grid' hands the grid key to the one explicit action; sliders never do" |
+| P16-T14 | COVERED | `CA/research-p16-a10c-whatif.spec.ts` ΔJ scope; `PB/test_research_whatif.py` "P16-T08/T14"; `CA/research-w1-wfo-profile.spec.ts` |
+| P17-T02 | COVERED | `PB/test_current_source_w5b_replay.py::test_signal_notional_replay_ledger_is_the_engine_account_bar_by_bar` (SOURCE_UNSUPPORTED_CONFIRMED on the real engine) |
+| P17-T03 | COVERED | Py segments (fold k start = fold k−1 end); `CA/research-w5b-replay.spec.ts` "one stitched carry-position account" |
+| P17-T04 | COVERED | `CA/research-w5b-replay.spec.ts` "sequential pages, random seeks and a far seek read the same state", "a window with a hole … is refused"; DB "refuses to seal an ordinal gap {0, 1, 3}" |
+| P17-T06 | COVERED | CA 200-row cap and < 1 MiB; FE step through 168 bars adds < 20 nodes; W5b browser probe DOM 2334 → 2334 at 64× |
+| P17-T08 | COVERED | CA response/schema have no certificate key; FE no `[data-certificate]` |
+| P17-T09 | COVERED (inventory) | W5b §5.2: S08 T01–T22 each mapped to a test, a route decision or not-applicable |
+| P17-T10 | COVERED | CA synthetic `{10, 12, 90}` next/prev; DB real sparse ordinals paged both ways |
+| P17-T11 | COVERED | CA two bars with one timestamp: table order kept, `cross_stream_order = NOT_ASSERTED` |
+| P17-T13 | COVERED | FE reveal test (as P13-T12) |
+| P17-T14 | COVERED | CA fold switch keeps `source_index_utc` and fold id; child audit §10 (Py golden + opt-in real HMD) |
+| V11-P13/P14/P15-DR | COVERED | `PB/test_research_wfo_real_hmd.py` (`_w3_dr_receipt`) + `CA/research-w3-real-dr.spec.ts`, W3 §2 exact-value table |
+| V11-P13…P16-BR | COVERED | RF-06 real-API lane 28/28 (`e2e/_preview-research-real-api.spec.ts`, W3b record `:158`) |
+| V11-P17-DR/BR/GX | COVERED | W5b §5 (real HMD bar-by-bar values; two labelled browser lanes; count reconciliation §5.1) |
+| V11-P16-DR | GAP (partial) | Real HMD what-if (49 unique evaluations) and byte corruption on retained parts exist (W5a); no single recorded `delta-real-data` diff for the freeze read |
+| V11-P13…P16-GX | GAP | No rebuilt dev receipt on this head; the preview is image `c66836bf` |
+
+### Still GAP after this update (12 base + 5 V11)
+
+P13-T07, P14-T08, P15-T09, P16-T09 (no S04/S05/S06/S07 spec-matrix inventory; P17 has one, W5b §5.2, which is the pattern to copy) · P13-T10 (S07/S09 half) · P14-T07 (legacy used-holdout fixture) · P14-T12 (clone exposure inheritance) · P15-T01 (one admitted mode/schedule) · P15-T04/T05/T08 (source publishes no constraints, prune reasons, sampler) · P15-T14 (mode-5 labels) · V11-P16-DR · V11-P13…P16-GX.
+
+## P18 — Run Report (S09), mapped 2026-09-26
+
+Guide `RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md:2437–2448`, V11 `:2408–2410`. Sources: backend
+`evidence/P18/phase-report.md:14–21`, frontend `evidence/P18/thanhvuong-frontend-receipt.md` §0.1
+(`S09-Uxx` = `FE/reportDetail.test.tsx`), W6a record §2/§5.
+
+| ID | Requirement | Status | Evidence / what is missing |
+|---|---|---|---|
+| P18-T01 | Report = hub/raw metrics/digests | COVERED | Service unit seals exact P13–P17 revisions and decimals (`phase-report.md:14`); W6a `CA/research-w6a-report.spec.ts` (10) on the real W5b seal; fixtures `research-report.*.valid.json` validated against Zod + OpenAPI |
+| P18-T02 | Mode-5 / selection-adjusted OOS scope labelled | GAP (partial) | Scope is printed per metric (S09 headline tiles with scope, W6a §4). **Missing:** a mode-5 or selection-adjusted fixture — the only admitted WFO profile is global |
+| P18-T03 | Print downsample affects display only | GAP (partial) | FE S09-U06, U23 (server points drawn as sent, sampling caption, headline unchanged). **Missing:** a print-emulation assertion in a committed test |
+| P18-T04 | Export readable after restart | COVERED | `phase-report.md:16`: disposable PG seal → dedupe → claim → complete → checksum download under the runtime role |
+| P18-T05 | Abort/disk-full/slow client bounded | COVERED | `phase-report.md:17`: 512 KiB `bytea` cap, oversized row rejected on PG |
+| P18-T06 | CSV/filename injection | COVERED | `phase-report.md:18`: formula neutralisation unit + DB filename constraint; FE never builds a filename (S09-U17, U24) |
+| P18-T07 | Old engine artifacts still reported | COVERED | `phase-report.md:19`; W6a D01: a stored v1 frozen core stays byte-identical and readable (`FrozenCore = oneOf[V1, V2]`) |
+| P18-T08 | All S09 spec tests | GAP | No S09 spec-matrix inventory; S09 T03 (32 folds), T05/T06 (scratch/FAILED) open (audit B5/F6) |
+| P18-T09 | Pick/verify/slider before Report changes nothing | GAP (partial) | `phase-report.md:20` export uses the sealed core only; FE browser case `no-mutation-after-inspect` (receipt §5). Same missing S06→S09 journey as P13-T10 |
+| P18-T10 | Reused-original vs linked-child refs | GAP | No contract field (audit `AUDIT_P15_P23…md` B5) |
+| P18-T11 | Re-export after engine-default upgrade keeps evidence | GAP (partial) | `presentation_revision` is separate from `report_revision` (receipt §0.1). No upgrade test |
+| P18-T12 | Warnings keep labels in print and bundle | GAP (partial) | FE S09-U27 (print). Bundle half: no test |
+| V11-P18-DR | GAP | No real-data report diff |
+| V11-P18-BR | GAP (partial) | W6a real-API 6/6 with the canonical v2 fixture injected; the preview predates W6a |
+| V11-P18-GX | GAP | No rebuilt dev receipt |
+
+**P18 totals:** 12 base IDs — COVERED 5 (T01, T04, T05, T06, T07), GAP 7; V11 3 GAP.
+
+## P19 — Attempt Lineage (S10), mapped 2026-09-26
+
+Guide `:2499–2511`, V11 `:2469–2471`. Sources: backend acceptance map `evidence/P19/phase-report.md`
+("Acceptance map"), frontend `evidence/P19/thanhvuong-frontend-receipt.md` §0.1 (`S10-Uxx` =
+`FE/lineageDetail.test.tsx`), W6b record §2/§6 (`CA/research-lineage*.spec.ts`, 30 tests on PG,
+`FE/lineageDetail.w6b.test.tsx` 11).
+
+| ID | Status | Evidence / what is missing |
+|---|---|---|
+| P19-T01 | COVERED | Backend: attempts and worker retries counted separately, a retry never adds a node; FE S10-U15 ("technical retries: N (not attempts)") |
+| P19-T02 | COVERED | Backend persisted intent/version facts + allow-listed semantic diff; FE S10-U04 |
+| P19-T03 | COVERED | Same; FE S10-U09 (GATES RESET on `kind=ALPHA_VERSION`) |
+| P19-T04 | COVERED | Migration rejects invalid pick scope; service rejects cyclic/cross-Alpha graphs; FE S10-U06/U07/U39 (`OUTSIDE_RETURNED_GRAPH`) |
+| P19-T05 | COVERED | FE S10-U12, U13 (ABANDONED/FAILED kept with reason) |
+| P19-T06 | COVERED | Backend repeatable-read scoped transaction, no graph write surface |
+| P19-T07 | COVERED | FE S10-U16, U17, U42 (no sort/compare); W6b D-W6B-01 pick stays typed NOT_PUBLISHED with its authority |
+| P19-T08 | GAP (partial) | S10 spec T01–T12 inventory in the receipt §5.3 with T02/T04/T07/T08 open; axe run in W6b (D-W6B-10) |
+| P19-T09 | COVERED | W6b CG-P19-13 `counts_definitions` reconciled on disposable PG against Run Library counters |
+| P19-T10 | COVERED | FE S10-U14 (`relationship_kind` verbatim, bounded chip) |
+| P19-T11 | COVERED | As T07 |
+| P19-T12 | COVERED | FE S10-U10 (chip is a span, 0 requests on click) |
+| P19-T13 | COVERED | FE S10-U18, U31 (403 = 404 one sentence, no server prose) |
+| V11-P19-DR | GAP (partial) | W6b real-API S10 on P04 + WFO via a read-only shim over the preview PG; no numerical diff |
+| V11-P19-BR | GAP (partial) | Same lane, 6/6, preview on contract 1.0 |
+| V11-P19-GX | GAP | No rebuilt dev receipt |
+
+**P19 totals:** 13 base IDs — COVERED 12, GAP 1; V11 3 GAP.
 
 ## How a status was decided
 

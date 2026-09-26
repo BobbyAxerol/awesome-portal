@@ -10,24 +10,27 @@
       "audit": "A9",
       "what": "data-compare-state stays 'available' for pair REFUSED and pair zero-variance correlation (CompareDetail.tsx:1558 @ eeeae14f); refusal/absence only in data-pair-state / data-correlation-absent",
       "owner": "Thanhvuong after Bobby (B6)",
-      "state": "AWAITING_DECISION",
-      "evidence": "probe-final2.log RECEIPT refused@1280/660 and dark-refused state=available; supersedes S13-COMPARE-STATE-REFUSED"
+      "state": "DECIDED_W6A",
+      "evidence": "probe-final2.log RECEIPT refused@1280/660 and dark-refused state=available; supersedes S13-COMPARE-STATE-REFUSED",
+      "x3_decision": "keep data-compare-state=available for a 200 REFUSED answer; refusal lives in data-pair-state (W6a P20-FE-DG-03 B6)"
     },
     {
       "id": "S13-BACK-REFETCH",
       "audit": "C4 (package B finding 4)",
       "what": "single-slot ETag validator: If-None-Match is sent only when returning to the key just read; back/forward across another key re-reads 200",
       "owner": "Thanhvuong",
-      "state": "OPEN",
-      "evidence": "probe-final2.log mode-switch@1280 and @660 compareGets=5 (attempts re-read without validator); etag-304 sends the validator only on the immediate return; supersedes S13-BACK-ETAG-660"
+      "state": "CLOSED_X3_2026-09-26",
+      "evidence": "probe-final2.log mode-switch@1280 and @660 compareGets=5 (attempts re-read without validator); etag-304 sends the validator only on the immediate return; supersedes S13-BACK-ETAG-660",
+      "x3_decision": "one validator per key (8-slot LRU), retained copy shown stale while revalidating; S13-U33; commit f83849ec"
     },
     {
       "id": "S13-DELTA-DIRECTION-LABEL",
       "audit": "A1",
       "what": "Δ header label 'B − A · as published' is a constant based on reading compare.service.ts subtractDecimal (right − left), not on a contract field",
       "owner": "Thanhvuong after Codex (CG-P20-09)",
-      "state": "BLOCKED_ON_BACKEND",
-      "evidence": "CompareDetail.tsx:1253 @ eeeae14f; U24; probe pair deltaDir; VD-P20-21"
+      "state": "CLOSED_W6A",
+      "evidence": "CompareDetail.tsx:1253 @ eeeae14f; U24; probe pair deltaDir; VD-P20-21",
+      "x3_decision": "header reads common_window.delta_definition (CG-P20-09)"
     }
   ],
   "open_debt": [
@@ -36,177 +39,198 @@
       "what": "hi-fi 'two alphas, one key' (mode label, EChart 2 title, guard, footer) vs contract pair = two runs of one Alpha; copy says 'two runs, one key'",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "MODE_LABELS, OVERLAY_TITLE, GUARD_MATCH (CompareDetail.tsx :90–:137)"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "MODE_LABELS, OVERLAY_TITLE, GUARD_MATCH (CompareDetail.tsx :90–:137)",
+      "x3_decision": "KEEP contract copy 'two runs, one key' (pair = two runs of one Alpha; hi-fi 'two alphas' would be false) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-02 S13-COPY-VS-HIFI",
       "what": "hi-fi/spec 'engine-published' correlation and spec §8 absent copy vs contract PORTAL_DERIVED; card prints formula/version/n/window/missing policy, absent → 'correlation not derived — {reason_code}'",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "correlationAbsent (compareClient.ts :146), CORRELATION_NOTE"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "correlationAbsent (compareClient.ts :146), CORRELATION_NOTE",
+      "x3_decision": "KEEP Portal-derived source chip and 'correlation not derived — {reason}' (spec 'engine' copy contradicts contract) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-08 S13-DISCLOSURE-LINE",
       "what": "one mono disclosure line (read_authority · revision · as_of · coverage · source_absences) not in the hi-fi; same group as S10-COUNTS-PANEL",
       "class": "disclosure not in hi-fi",
       "owner": "Bobby (B3)",
-      "state": "AWAITING_DECISION",
-      "evidence": "Meta (CompareDetail.tsx :671)"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "Meta (CompareDetail.tsx :671)",
+      "x3_decision": "KEEP the mono disclosure line (W6a P20-FE-DG-03 B3) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-10 S13-COPY-VS-HIFI",
       "what": "rules footer verbatim except 'Two runs on one key', 'Portal-derived from sealed raw returns', 'the UI never constructs or compares one; the server refuses'; not covered (audit A7): 'only the ACTIVE node may promote' still printed though the screen has no ACTIVE node — kept verbatim per the Bobby rule 2026-09-24, Bobby decides",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "COMPARE_RULES (CompareDetail.tsx:151 @ eeeae14f)"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "COMPARE_RULES (CompareDetail.tsx:151 @ eeeae14f)",
+      "x3_decision": "KEEP footer; 'only the ACTIVE node may promote' is now true (CG-P20-08 lifecycle on every card) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-11 S13-COPY-VS-HIFI",
       "what": "subtitle 'Two ideas on one key' → 'Two runs on one key'",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "COMPARE_SUBTITLE (:86)"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "COMPARE_SUBTITLE (:86)",
+      "x3_decision": "KEEP 'Two runs on one key' in the subtitle (as VD-P20-01) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-13 S13-COPY-VS-HIFI",
       "what": "delta header 'engine-published' → 'server-published'",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "DELTA_TITLE (:140)"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "DELTA_TITLE (:140)",
+      "x3_decision": "KEEP 'server-published; the UI subtracts nothing' (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-14 S13-COPY-VS-HIFI",
       "what": "ladder laid out as the server's array reversed (weak → strong) so the hi-fi arrow 'claim ↑ →' and rule copy stay verbatim; label 'server order, read right to left · N returned'; spec T01 and contract order strong → weak",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "009cedb8; data-ladder-order=server-reversed; U02"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "009cedb8; data-ladder-order=server-reversed; U02",
+      "x3_decision": "KEEP server array laid out reversed; label shortened to 'N returned · strongest claim on the right', order key in title (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-15 S13-COPY-VS-HIFI",
       "what": "'EChart N' tags and the hi-fi demo narratives are not printed; not covered (audit A6): ATTEMPTS_RULE still prints the demo numbers 'a retrospective 1.31 does not beat a strict 1.19' — kept verbatim per the Bobby rule 2026-09-24, Bobby decides",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "CompareDetail.tsx header comment; ATTEMPTS_RULE (:104 @ eeeae14f)"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "CompareDetail.tsx header comment; ATTEMPTS_RULE (:104 @ eeeae14f)",
+      "x3_decision": "CHANGED: attempts rule keeps every sentence without the demo digits (1.31/1.19) and without promising 'the number falls' (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-17 S13-COPY-VS-HIFI",
       "what": "claim chip carries a faint 'origin {claim.origin}' line the hi-fi does not have",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "CompareDetail.tsx :38"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "CompareDetail.tsx :38",
+      "x3_decision": "CHANGED to hi-fi: no visible origin line; rank/tier/origin in the chip title + sr-only text (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-20 S13-COPY-VS-HIFI",
       "what": "markets banner tail drops the hi-fi's repeated 'Small multiples only:' because the server caption before it already says it",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "034aef11; MARKETS_RULE_TAIL (:110)"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "034aef11; MARKETS_RULE_TAIL (:110)",
+      "x3_decision": "KEEP server caption + hi-fi tail without the repeated clause (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-03/04/05/06 S13-FIELD-DRIVEN-CELLS",
       "what": "hi-fi cells with no compare field keep position/shape with typed absence: cert chip, schedule, ACTIVE/SUPERSEDED pill (run_state shown), per-fold OOS chart + 5/32 toggle, attempts config diff, win rate, OOS Sharpe common-window Δ",
       "class": "field-driven",
       "owner": "Codex (CG-P20-02/03/04/05/06/08), then Bobby",
-      "state": "BLOCKED_ON_BACKEND",
-      "evidence": "CONTRACT_GAPS (CompareDetail.tsx :161); U04, U06, U07; probe attempts/markets/pair"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "CONTRACT_GAPS (CompareDetail.tsx :161); U04, U06, U07; probe attempts/markets/pair",
+      "x3_decision": "CLOSED by W6a fields; lifecycle pill (ACTIVE filled), fold lines past 8 folds, config diff vs ACTIVE column (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "S13-MINI-LABELS-UNIT",
       "what": "034aef11 limits mini-chart x labels to first/last without a unit test; only the (uncommitted) browser probe locks it",
       "class": "test coverage",
       "owner": "Thanhvuong",
-      "state": "OPEN",
-      "evidence": "probe-final.log MINI-XLABEL markets@1280/660 n=2 overlap=false"
+      "state": "DECIDED_X3_2026-09-26",
+      "evidence": "probe-final.log MINI-XLABEL markets@1280/660 n=2 overlap=false",
+      "x3_decision": "CLOSED: S13-U34 (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-21 S13-COPY-VS-HIFI",
       "what": "hi-fi Δ reads A − B; server returns B − A (right − left); UI labels 'B − A · as published' and never recomputes",
       "class": "hi-fi vs contract direction",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "p20-hifi-pair-legal-1280.png d298726fe3d42ab5 vs p20-pair-1280.png e15641b5be08dd36; CG-P20-09",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "KEEP 'B − A · contract invariant' from delta_definition (CG-P20-09) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-22 S13-COPY-VS-HIFI",
       "what": "header: segmented control on the subtitle row, title wraps to two lines at 1280; hi-fi one-line title, control below subtitle (was S13-G1-HEADER-LAYOUT)",
       "class": "layout",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "p20-hifi-attempts-1280.png 1c5738b9461de0d9 vs p20-attempts-1280.png 35ad99e226e1b703",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "CHANGED to hi-fi: title block takes its own width, segmented control wraps below the subtitle (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-23 S13-COPY-VS-HIFI",
       "what": "weaker-claim block and intentional-differences table are not in the hi-fi (handoff rich composition + spec §8)",
       "class": "block not in hi-fi",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "p20-hifi-pair-legal-1280.png d298726fe3d42ab5 vs p20-pair-1280.png e15641b5be08dd36",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "KEEP weaker-claim row and intentional differences (spec §4/§8 T07, handoff rich composition) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-24 S13-COPY-VS-HIFI",
       "what": "extra lines not in the hi-fi: route·protocol, markets sampling line, overlay figcaption, common-window foot",
       "class": "copy/layout",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "p20-hifi-markets-1280.png 1a50dc5bc45e5cb4 vs p20-markets-1280.png b3f302663293a836; pair as above",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "KEEP sampling/common-window disclosure lines (scale invariant: downsampling must be captioned) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-25 S13-COPY-VS-HIFI",
       "what": "markets banner drops the hi-fi sentence 'Three different ComparisonContractKeys — overlay and Δ columns are REFUSED by design.'",
       "class": "copy",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "MARKETS_RULE_TAIL (CompareDetail.tsx:112); p20-hifi-markets-1280.png vs p20-markets-1280.png",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "KEEP without the count sentence (a key count would need a browser key comparison) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-26 S13-COPY-VS-HIFI",
       "what": "correlation sub-caption 'daily OOS returns · overlapping window only' replaced by meta n · window · missing_policy",
       "class": "copy",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "p20-hifi-pair-legal-1280.png vs p20-pair-1280.png",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "CHANGED to hi-fi: rho to two places with a sub-caption beside it ('raw returns · overlapping window only'); n/window/policy below (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-27 S13-COPY-VS-HIFI",
       "what": "overlay y axis shows 2 labels (max/min of server points) vs 5 labelled gridlines in the hi-fi (equitySvg reuse, no rebase)",
       "class": "chart",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "p20-hifi-pair-legal-1280.png vs p20-pair-1280.png",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "CHANGED toward hi-fi: five dashed gridlines, only the two server extremes labelled (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-28 S13-COPY-VS-HIFI",
       "what": "Δ coloured by sign, not by better/worse; a zero Δ is not coloured (eeeae14f, deltaSign :1168)",
       "class": "colour semantics",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "p20-zero-delta-1280.png 06f1c0666143f236; p20-pair-1280.png e15641b5be08dd36",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "KEEP colour by sign (spec §7 CSS ledger; hi-fi good/bad would need the browser to judge) (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     },
     {
       "id": "VD-P20-29 S13-COPY-VS-HIFI",
       "what": "row label 'OOS sharpe' without '(stitched)': the value is original_metrics OOS_SHARPE, not a stitched common-window number (eeeae14f :1185)",
       "class": "copy",
       "owner": "Bobby (B2)",
-      "state": "REQUIRES_BOBBY_DECISION",
+      "state": "DECIDED_X3_2026-09-26",
       "evidence": "p20-hifi-pair-legal-1280.png vs p20-pair-1280.png; CG-P20-06",
-      "source": "independent audit 2026-09-24"
+      "source": "independent audit 2026-09-24",
+      "x3_decision": "KEEP 'OOS sharpe' without '(stitched)'; per-run scope printed under the label (X3_S13_P23_CLAUDE_2026-09-26.md §2)"
     }
   ],
   "recorded_visual_decisions_not_blocking": [
@@ -371,7 +395,8 @@
       "what": "axe scan (spec 13 T10)",
       "reason": "axe-core not in lock file",
       "owner": "Bobby (B4)",
-      "state": "AWAITING_DECISION"
+      "state": "CLOSED_X3_2026-09-26",
+      "x3_decision": "axe 12/12 (3 modes + needs-two + denied + unavailable at 1440/660) after the documented D-B1 --ink-faint discount; two serious gold-contrast nodes fixed (VD-P20-30)"
     },
     {
       "id": "S13-REAL-API",
@@ -528,5 +553,6 @@
     ],
     "p20_debt_for_P21": "see Unified P20 note 'Nợ cho phase sau (P21+)' and frontend-handoff-claude.md Thanhvuong addendum"
   },
-  "audit_note": "independent audit 2026-09-24 on head 7800e8e2: A1–A5, A8, A10 fixed in eeeae14f; A6/A7 recorded on VD-P20-15/-10 (verbatim hi-fi copy, Bobby decides); A9 → S13-REFUSED-STATE-ATTR; audit B → VD-P20-21…27 (+28, 29); audit D → CG-P20-09…11; receipt §12"
+  "audit_note": "independent audit 2026-09-24 on head 7800e8e2: A1–A5, A8, A10 fixed in eeeae14f; A6/A7 recorded on VD-P20-15/-10 (verbatim hi-fi copy, Bobby decides); A9 → S13-REFUSED-STATE-ATTR; audit B → VD-P20-21…27 (+28, 29); audit D → CG-P20-09…11; receipt §12",
+  "x3_note": "2026-09-26 X3 (Claude): every VD-P20 REQUIRES_BOBBY_DECISION item decided per hi-fi/spec under Bobby's delegation; see X3_S13_P23_CLAUDE_2026-09-26.md"
 }
