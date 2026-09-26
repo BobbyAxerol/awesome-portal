@@ -35,6 +35,7 @@ import {
   LINEAGE_REASON,
   LINEAGE_WITHHELD_WORDS,
   absenceReason,
+  lineageGaps,
   lineageHasPresentation,
   type ChildRun,
   type Exposure,
@@ -50,7 +51,8 @@ import {
   type SemanticChange,
   type SemanticDiff,
 } from "./lineageClient";
-import { formatMetric } from "./researchFormat";
+import { formatMetric, shortId } from "./researchFormat";
+import { ShortId } from "./ShortId";
 import type { ResearchState } from "./state";
 import type { LineageController } from "./useLineage";
 import { iso } from "./utcMinute";
@@ -63,12 +65,32 @@ export const LINEAGE_TITLE = "Attempt lineage";
 /** Hi-fi subtitle, verbatim. */
 export const LINEAGE_SUBTITLE = "Immutable nodes · every config change is a sibling attempt with its own hash.";
 
-/** Hi-fi header chip, verbatim. */
-export const LINEAGE_SOURCE_CHIP = "attempts.json · lineage is engine-recorded, not reconstructed";
+/**
+ * Hi-fi header chip. D8 (S10-SOURCE-CHIP-VS-READ-AUTHORITY, decided
+ * 2026-09-26): the hi-fi names `attempts.json`, a file this read never opens;
+ * the chip names the response's own `read_authority` instead, in the hi-fi's
+ * shape. Before a lineage answers, the authority is not known and is not
+ * guessed.
+ */
+export const LINEAGE_SOURCE_TAIL = "lineage is persisted, not reconstructed";
+export function lineageSourceChip(readAuthority: string | null): string {
+  return readAuthority ? `${readAuthority} · ${LINEAGE_SOURCE_TAIL}` : `read authority pending · ${LINEAGE_SOURCE_TAIL}`;
+}
 
-/** Hi-fi rules footer, verbatim. (Spec §2.5 words it differently; the hi-fi wins.) */
+/**
+ * Hi-fi rules footer; "Engine truth (attempts.json)" names the read authority
+ * for the same reason as the chip (D8), as S13's diff footer does (VD-P20-05).
+ */
 export const LINEAGE_RULES =
-  "Attempts are immutable — every change is a new node with parent_attempt. Engine truth (attempts.json), never reconstructed. Abandoning is a state, not an erasure.";
+  "Attempts are immutable — every change is a new node with parent_attempt. Persisted truth (PORTAL_PERSISTED_RESEARCH), never reconstructed. Abandoning is a state, not an erasure.";
+
+/**
+ * The hi-fi's verdict line for the node the tree exists to produce, verbatim.
+ * D8: it is printed on the published promotion pick only; until a pick is
+ * published it stands in the promotion rule as the rule's aim, never on an
+ * attempt the source did not pick.
+ */
+export const TREE_AIM = "Weakest number, strongest claim — the node this tree exists to produce.";
 
 /**
  * Hi-fi promotion rule, verbatim. Display copy only: the pick itself is still
@@ -324,7 +346,8 @@ const LINEAGE_CSS = `
 .ln-chip[data-status="ACTIVE"] { color: var(--good); border-color: var(--good); }
 .ln-chip[data-status="ABANDONED"] { color: var(--bad); }
 .ln-chip[data-status="SUPERSEDED"] { opacity: .75; }
-.ln-chip[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+/* The current chip keeps white ground (green/gold text on --accent-soft is < 4.5:1, axe) and marks itself with a double accent ring. */
+.ln-chip[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .ln-chip.probe { border-style: dashed; border-color: var(--line-strong); color: var(--ink-faint); }
 .ln-chip:disabled { cursor: not-allowed; }
 .ln-pill { font-family: var(--font-mono); font-size: 9.5px; border: 1px dashed var(--line-strong); border-radius: 999px; padding: 0 7px; color: var(--ink-faint); background: var(--paper); }
@@ -361,6 +384,8 @@ const LINEAGE_CSS = `
 .ln-node[data-status="SUPERSEDED"] .ln-card, .ln-node[data-status="ABANDONED"] .ln-card,
 .ln-node[data-status="SUPERSEDED"] .ln-row, .ln-node[data-status="ABANDONED"] .ln-row { opacity: .82; }
 .ln-node[data-selected="true"] .ln-card, .ln-node[data-selected="true"] .ln-row { border-color: var(--accent); background: var(--accent-soft); }
+/* Gold diff text on the selected card's pale teal reads 3.95:1 (axe); it sits on raised paper there. */
+.ln-node[data-selected="true"] .ln-diff:not([data-gates="true"]) { background: var(--paper-raised); border-radius: 3px; padding: 0 4px; }
 .ln-cardhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
 /* The card's button covers the whole card (click anywhere selects); links and chips sit above it. */
 .ln-cardbtn { background: none; border: 0; padding: 0; color: inherit; cursor: pointer; font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; text-align: left; }
@@ -380,7 +405,6 @@ const LINEAGE_CSS = `
 .ln-st[data-status="ABANDONED"] { border-color: var(--bad); color: var(--bad); }
 .ln-st[data-status="DRAFT"] { border-color: var(--accent-2); color: var(--accent-2); }
 .ln-st[data-fill="true"][data-status="ACTIVE"] { background: var(--good); color: var(--accent-contrast); }
-.ln-raw { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .04em; color: var(--ink-soft); border: 1px dashed var(--line-strong); border-radius: 3px; padding: 0 5px; }
 .ln-cert { font-family: var(--font-mono); font-size: 9px; font-weight: 700; border: 1px dashed var(--line); color: var(--ink-faint); border-radius: 3px; padding: 0 6px; background: var(--paper-raised); }
 .ln-av { font-family: var(--font-mono); font-size: 9.5px; border: 1px solid var(--line-strong); border-radius: 999px; padding: 0 7px; color: var(--ink-faint); background: var(--paper-raised); }
 .ln-av[data-s="ACTIVE"] { border-color: var(--good); color: var(--good); }
@@ -394,7 +418,7 @@ const LINEAGE_CSS = `
   background: var(--paper-raised); padding: 0 12px; margin: 2px 0; }
 .ln-rowbtn { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; color: inherit;
   text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
-.ln-rowid { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; width: 170px; flex: none; overflow: hidden; text-overflow: ellipsis; }
+.ln-rowid { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; width: 196px; flex: none; overflow: hidden; text-overflow: ellipsis; }
 .ln-rowspec { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-soft); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ln-rowwhen { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); flex: none; }
 .ln-scroll[data-virtual="true"] .ln-detail { height: ${DETAIL_HEIGHT - 8}px; margin: 0 0 4px; overflow-y: auto; }
@@ -406,6 +430,14 @@ const LINEAGE_CSS = `
 .ln-rows dt { color: var(--ink-faint); padding: 3px 0; border-bottom: 1px solid var(--line-soft); }
 .ln-rows dd { margin: 0; font-family: var(--font-mono); font-size: 10.5px; text-align: right; padding: 3px 0; border-bottom: 1px solid var(--line-soft); overflow-wrap: anywhere; }
 .ln-verdict { font-size: 10.5px; color: var(--ink-soft); line-height: 1.55; }
+/* The selected id keeps its case: the heading's uppercase would print RATT_… (10-2). */
+.ln-selid { text-transform: none; letter-spacing: 0; color: var(--ink); font-size: 10px; }
+.ln-claim { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.ln-claimwhy { font-family: var(--font-body); font-size: 10px; color: var(--ink-soft); line-height: 1.45; text-align: right; }
+/* D8 (10-5): the technical rows under one disclosure, closed on load. */
+.ln-tech > summary { cursor: pointer; font-family: var(--font-mono); font-size: 10px; color: var(--accent); padding: 2px 0; }
+.ln-tech[open] > summary { margin-bottom: 2px; }
+.ln-aim { font-family: var(--font-display); font-style: italic; font-size: 12px; color: var(--ink); margin: 0; }
 .ln-btnlinks { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 2px; }
 .ln-btnlink { border: 1px solid var(--accent); border-radius: 6px; padding: 3px 12px; font-family: var(--font-mono); font-size: 10px; }
 .ln-btnlink.soft { border-color: var(--line); color: var(--ink-soft); }
@@ -457,8 +489,9 @@ const LINEAGE_CSS = `
 
 const RUNS_ROOT = "/research/quantbt/runs";
 
+/** A digest on screen (E1): 8 hex, the full value in the caller's title. */
 function short(digest: string): string {
-  return `${digest.slice(0, 12)}…`;
+  return shortId(digest) ?? digest;
 }
 
 export { LineageLink, lineageHref } from "./LineageLink";
@@ -482,27 +515,52 @@ function AvailabilityAbsent({ availability, what }: { availability: LineageAvail
   return <Absent what={what} state={LINEAGE_WITHHELD_WORDS[availability.state]} reason={absenceReason(availability)} />;
 }
 
-/** The hi-fi status chip; the raw contract state follows when it says something the status does not. */
+/**
+ * The hi-fi's one status pill per attempt. D8 (Unified 13.4.1, decided
+ * 2026-09-26, S10-RAW-STATE-CHIP): the raw contract state is no longer a
+ * second chip beside it; it rides in the pill's title and `data-raw-state`,
+ * and the selected panel prints it as a row when it says more than the status.
+ * An attempt whose version was not returned has no status: its pill says so.
+ */
 function StatusChips({ status, state, fill = false }: { status: LineageStatus | null; state: LineageAttemptState; fill?: boolean }) {
+  const differs = status !== state;
   return (
-    <>
-      {status ? (
-        <span className="ln-st" data-status={status} data-fill={fill ? "true" : undefined}>
-          {status}
-        </span>
-      ) : null}
-      {status !== state ? (
-        <span className="ln-raw" data-raw-state={state} title="attempt state as the lineage recorded it">
-          {state}
-        </span>
-      ) : null}
-    </>
+    <span
+      className="ln-st"
+      data-status={status ?? undefined}
+      data-fill={fill ? "true" : undefined}
+      data-raw-state={differs ? state : undefined}
+      title={differs ? `attempt state ${state} (as the lineage recorded it)` : undefined}
+    >
+      {status ?? "NO VERSION"}
+    </span>
   );
 }
+
+/** The attempt state in words, for the selected panel's `state` row (hi-fi att_04: "abandoned at Stage 2"). */
+export function stateWords(state: LineageAttemptState): string {
+  return state.toLowerCase().replace(/_/g, " ");
+}
+
+/**
+ * The claim cell (10-6): the lineage's claim state in words, never the raw
+ * enum, with the source's sentence as its reason (`NOT_ISSUED` → "not
+ * issued — The fixed P10 qualification … did not issue a release claim.").
+ */
+export const CLAIM_STATE_WORDS: Record<"FORECAST" | "NOT_ISSUED" | "ISSUED", string> = {
+  FORECAST: "forecast",
+  NOT_ISSUED: "not issued",
+  ISSUED: "issued",
+};
 
 function chipLabel(attemptId: string, status: LineageStatus | null, state: LineageAttemptState): string {
   const head = status ?? "NO VERSION";
   return `attempt ${attemptId} — ${status === state ? head : `${head} · ${state}`}`;
+}
+
+/** An id on a card, chip or row (E1): prefix + 8 hex on screen; the caller keeps the full id in a title. */
+function sid(id: string): string {
+  return shortId(id) ?? id;
 }
 
 function evidenceHref(runId: string): string {
@@ -605,9 +663,15 @@ function ChildRuns({ attempt }: { attempt: LineageAttempt }) {
         <span className="ln-faint">child runs</span>
       )}
       {attempt.child_runs.map((child: ChildRun) => (
-        <span key={child.run_id} className="ln-child" data-child-run={child.run_id} data-relationship={child.relationship_kind}>
-          {child.relationship_kind} · {child.run_kind} · {child.run_id} · {child.state}
-          {child.parent_run_id ? ` · of ${child.parent_run_id}` : ""}
+        <span
+          key={child.run_id}
+          className="ln-child"
+          data-child-run={child.run_id}
+          data-relationship={child.relationship_kind}
+          title={`${child.run_id}${child.parent_run_id ? ` · of ${child.parent_run_id}` : ""}`}
+        >
+          {child.relationship_kind} · {child.run_kind} · {sid(child.run_id)} · {child.state}
+          {child.parent_run_id ? ` · of ${sid(child.parent_run_id)}` : ""}
         </span>
       ))}
       {partial ? (
@@ -741,9 +805,10 @@ function Header({ alphaId, lineage }: { alphaId: string; lineage: Lineage | null
       <span
         className="ln-src"
         data-source-chip
+        data-read-authority-chip={lineage?.read_authority ?? undefined}
         title={lineage ? `read authority: ${lineage.read_authority} · ${lineage.schema_version}` : undefined}
       >
-        {LINEAGE_SOURCE_CHIP}
+        {lineageSourceChip(lineage?.read_authority ?? null)}
       </span>
     </header>
   );
@@ -855,8 +920,8 @@ function VersionBand({
         </span>
         <span className="ln-faint ln-long">{version.entrypoint}</span>
         {version.lifecycle_state !== "ACTIVE" && pick.state === "PUBLISHED" && pick.attempt_id !== null ? (
-          <span className="ln-faint" data-band-pick={pick.attempt_id}>
-            promotion pick {pick.attempt_id}
+          <span className="ln-faint" data-band-pick={pick.attempt_id} title={pick.attempt_id}>
+            promotion pick {sid(pick.attempt_id)}
           </span>
         ) : null}
         <VersionOutcome version={version} />
@@ -891,7 +956,7 @@ function VersionBand({
                   aria-current={selectedId === attempt.attempt_id ? "true" : undefined}
                   onClick={() => onChip(attempt.attempt_id)}
                 >
-                  {attempt.attempt_id}
+                  {sid(attempt.attempt_id)}
                   {rc ? " ●" : ""}
                 </button>
               );
@@ -970,17 +1035,19 @@ function PickRow({
         <span className="t">PROMOTION PICK</span>
         <span className="v ln-long">
           {returnedIds.has(attemptId) ? (
-            <button type="button" className="ln-chip" data-action="pick-attempt" onClick={() => onSelect(attemptId)}>
-              {attemptId}
+            <button type="button" className="ln-chip" data-action="pick-attempt" title={attemptId} onClick={() => onSelect(attemptId)}>
+              {sid(attemptId)}
             </button>
           ) : (
-            <span data-pick-outside>{attemptId} (not in the returned graph)</span>
+            <span data-pick-outside title={attemptId}>
+              {sid(attemptId)} (not in the returned graph)
+            </span>
           )}
           {pick.run_id ? (
             <>
               {" · "}
-              <Link to={evidenceHref(pick.run_id)} data-pick-run>
-                {pick.run_id}
+              <Link to={evidenceHref(pick.run_id)} data-pick-run title={pick.run_id}>
+                {sid(pick.run_id)}
               </Link>
             </>
           ) : null}
@@ -1198,15 +1265,15 @@ function NodeDetail({ attempt }: { attempt: LineageAttempt }) {
   const run = attempt.primary_run;
   return (
     <div className="ln-detail" data-detail={attempt.attempt_id}>
-      <span className="ln-spec" data-parent-line data-relation={attempt.relation_to_parent ?? ""}>
+      <span className="ln-spec" data-parent-line data-relation={attempt.relation_to_parent ?? ""} title={attempt.parent_attempt_id ?? undefined}>
         {attempt.parent_state === "ROOT"
           ? "root — no parent"
-          : `${attempt.relation_to_parent === "SIBLING_OF" ? "sibling of" : "parent"} ${attempt.parent_attempt_id ?? ""}${
+          : `${attempt.relation_to_parent === "SIBLING_OF" ? "sibling of" : "parent"} ${attempt.parent_attempt_id ? sid(attempt.parent_attempt_id) : ""}${
             attempt.relation_to_parent === "SIBLING_OF" ? " — a what-if fork with its own config_hash" : ""
           }${attempt.parent_state === "RETURNED" ? "" : " — outside the returned graph"}`}
       </span>
-      <span className="ln-faint" data-run-line>
-        {run.run_id ? `primary run ${run.run_id} · ${run.state ?? "state not published"}` : "no primary run recorded"}
+      <span className="ln-faint" data-run-line title={run.run_id ?? undefined}>
+        {run.run_id ? `primary run ${sid(run.run_id)} · ${run.state ?? "state not published"}` : "no primary run recorded"}
         {" · "}
         <span data-technical-retries>technical retries: {String(run.technical_retry_count)} (not attempts)</span>
       </span>
@@ -1288,15 +1355,16 @@ function AttemptCard({ node, status, versionState, selected, expanded, onToggle 
             data-row={attempt.attempt_id}
             aria-expanded={expanded}
             aria-label={`${chipLabel(attempt.attempt_id, status, attempt.state)} — select and ${expanded ? "hide" : "show"} run detail`}
+            title={attempt.attempt_id}
             onClick={() => onToggle(attempt.attempt_id)}
           >
-            {attempt.attempt_id}
+            {sid(attempt.attempt_id)}
           </button>
           {run.run_id ? (
             <span className="ln-mono" style={{ fontSize: "12.5px", fontWeight: 700 }}>
               {"· "}
-              <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id}>
-                {run.run_id}
+              <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={run.run_id}>
+                {sid(run.run_id)}
               </Link>
             </span>
           ) : (
@@ -1367,10 +1435,11 @@ function AttemptRow({ node, status, selected, expanded, onToggle }: NodeProps) {
             data-row={attempt.attempt_id}
             aria-expanded={expanded}
             aria-label={`${chipLabel(attempt.attempt_id, status, attempt.state)} — select and ${expanded ? "hide" : "show"} run detail`}
+            title={`${attempt.attempt_id} · ${run.run_id ?? "no primary run recorded"}`}
             onClick={() => onToggle(attempt.attempt_id)}
           >
             <span className="ln-rowid">
-              {attempt.attempt_id} · {run.run_id ?? "no run"}
+              {sid(attempt.attempt_id)} · {run.run_id ? sid(run.run_id) : "no run"}
             </span>
             <StatusChips status={status} state={attempt.state} />
             <span className="ln-rowspec">{specLine(attempt)}</span>
@@ -1389,8 +1458,8 @@ function AttemptRow({ node, status, selected, expanded, onToggle }: NodeProps) {
             <OutcomeLine attempt={attempt} />
             <MetricsLine attempt={attempt} />
             {run.run_id ? (
-              <Link className="ln-faint" to={evidenceHref(run.run_id)} data-run-link={run.run_id}>
-                {run.run_id} →
+              <Link className="ln-faint" to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={run.run_id}>
+                {sid(run.run_id)} →
               </Link>
             ) : null}
             <span className="ln-faint" data-run-line>
@@ -1563,26 +1632,44 @@ function Selected({
   return (
     <section className="ln-block" data-panel="selected" aria-label="selected attempt" data-selected-attempt={attempt.attempt_id}>
       <h3 className="t">
-        <span>selected attempt — {attempt.attempt_id}</span>
+        <span>
+          selected attempt — <ShortId id={attempt.attempt_id} className="ln-selid" label="attempt" />
+        </span>
         <span className="inline-flex gap-1">
           <StatusChips status={status} state={attempt.state} />
         </span>
       </h3>
-      <dl className="ln-rows">
+      {/* D8 (10-5): the hi-fi's few rows stay open; the technical rows sit under one disclosure. */}
+      <dl className="ln-rows" data-selected-rows="headline">
         <Row k="parent">
-          {attempt.parent_state === "ROOT"
-            ? "— root"
-            : attempt.parent_state === "RETURNED"
-              ? attempt.parent_attempt_id
-              : `${attempt.parent_attempt_id ?? ""} (outside returned graph)`}
+          {attempt.parent_state === "ROOT" ? (
+            "— root"
+          ) : attempt.parent_attempt_id ? (
+            <span title={attempt.parent_attempt_id}>
+              {sid(attempt.parent_attempt_id)}
+              {attempt.parent_state === "RETURNED" ? "" : " (outside returned graph)"}
+            </span>
+          ) : (
+            <span className="ln-absent">parent not published</span>
+          )}
         </Row>
         <Row k="mode × schedule">
           {attempt.spec_label.text ?? <AvailabilityAbsent availability={attempt.spec_label.availability} />}
         </Row>
+        {status !== attempt.state ? (
+          <Row k="state">
+            <span data-attempt-state={attempt.state}>{stateWords(attempt.state)}</span>
+          </Row>
+        ) : null}
         <Row k="claim">
           {claim.state !== null ? (
-            <span data-claim-state={claim.state} title={claim.text ?? undefined}>
-              {claim.state}
+            <span className="ln-claim" data-claim-state={claim.state}>
+              <span data-claim-words>{CLAIM_STATE_WORDS[claim.state]}</span>
+              {claim.text ? (
+                <span className="ln-claimwhy" data-claim-reason>
+                  {claim.text}
+                </span>
+              ) : null}
             </span>
           ) : (
             <AvailabilityAbsent availability={claim.availability} />
@@ -1597,14 +1684,6 @@ function Selected({
         <Row k="cert">
           {facts.certificate.grade !== null ? `${facts.certificate.grade}` : <AvailabilityAbsent availability={facts.certificate.availability} />}
         </Row>
-        <Row k="promotion">
-          <span data-promotion-state={attempt.promotion_state ?? "NOT_PUBLISHED"} title={attempt.promotion_reason_code ?? undefined}>
-            {attempt.promotion_state ? PROMOTION_WORDS[attempt.promotion_state] : "not published"}
-          </span>
-        </Row>
-        <Row k="release candidate">
-          {attempt.release_candidate ? <RcChip rc={attempt.release_candidate} /> : <AvailabilityAbsent availability={attempt.release_candidate_availability} />}
-        </Row>
         {version?.lifecycle_state === "SUPERSEDED" ? (
           <Row k="why superseded">
             {version.supersession.state === "RECORDED" ? (
@@ -1614,35 +1693,53 @@ function Selected({
             )}
           </Row>
         ) : null}
-        <Row k="presentation">
-          <span data-presentation={attempt.presentation_kind} title={attempt.presentation_reasons.map((reason) => PRESENTATION_WORDS[reason]).join(" · ") || "no storied reason: a probe"}>
-            {attempt.presentation_kind.toLowerCase()}
-            {attempt.presentation_reasons.length ? ` — ${attempt.presentation_reasons.map((reason) => PRESENTATION_WORDS[reason]).join(", ")}` : ""}
-          </span>
-        </Row>
-        <Row k="intent">{attempt.intent_kind}</Row>
-        <Row k="alpha version">{attempt.alpha_version_label}</Row>
-        <Row k="primary run">{run.run_id ?? <span className="ln-absent">no primary run recorded</span>}</Row>
-        <Row k="run state">{run.state ?? <span className="ln-absent">not published</span>}</Row>
-        <Row k="execution profile">{run.execution_profile_id ?? <span className="ln-absent">not published</span>}</Row>
-        <Row k="engine release">{run.engine_release_id ?? <span className="ln-absent">not published</span>}</Row>
-        <Row k="effective spec">
-          {run.effective_spec_digest ? <span title={run.effective_spec_digest}>{short(run.effective_spec_digest)}</span> : <span className="ln-absent">not published</span>}
-        </Row>
-        <Row k="dataset binding">
-          {run.dataset_binding_digest ? <span title={run.dataset_binding_digest}>{short(run.dataset_binding_digest)}</span> : <span className="ln-absent">not published</span>}
-        </Row>
-        <Row k="technical retries">{`${String(run.technical_retry_count)} (not attempts)`}</Row>
-        <Row k="space signature">
-          {attempt.space_signature ? <span title={attempt.space_signature}>{short(attempt.space_signature)}</span> : <span className="ln-absent">not published</span>}
-        </Row>
-        <Row k="created">{iso(attempt.created_at_utc_ms)}</Row>
-        <Row k="updated">{iso(attempt.updated_at_utc_ms)}</Row>
       </dl>
+      <details className="ln-tech" data-selected-rows="technical">
+        <summary>run and record details</summary>
+        <dl className="ln-rows">
+          <Row k="promotion">
+            <span data-promotion-state={attempt.promotion_state ?? "NOT_PUBLISHED"} title={attempt.promotion_reason_code ?? undefined}>
+              {attempt.promotion_state ? PROMOTION_WORDS[attempt.promotion_state] : "not published"}
+            </span>
+          </Row>
+          <Row k="release candidate">
+            {attempt.release_candidate ? <RcChip rc={attempt.release_candidate} /> : <AvailabilityAbsent availability={attempt.release_candidate_availability} />}
+          </Row>
+          <Row k="presentation">
+            <span data-presentation={attempt.presentation_kind} title={attempt.presentation_reasons.map((reason) => PRESENTATION_WORDS[reason]).join(" · ") || "no storied reason: a probe"}>
+              {attempt.presentation_kind.toLowerCase()}
+              {attempt.presentation_reasons.length ? ` — ${attempt.presentation_reasons.map((reason) => PRESENTATION_WORDS[reason]).join(", ")}` : ""}
+            </span>
+          </Row>
+          <Row k="intent">{attempt.intent_kind}</Row>
+          <Row k="alpha version">{attempt.alpha_version_label}</Row>
+          <Row k="primary run">{run.run_id ? <ShortId id={run.run_id} label="run" /> : <span className="ln-absent">no primary run recorded</span>}</Row>
+          <Row k="run state">{run.state ?? <span className="ln-absent">not published</span>}</Row>
+          <Row k="execution profile">{run.execution_profile_id ?? <span className="ln-absent">not published</span>}</Row>
+          <Row k="engine release">{run.engine_release_id ?? <span className="ln-absent">not published</span>}</Row>
+          <Row k="effective spec">
+            {run.effective_spec_digest ? <ShortId id={run.effective_spec_digest} label="effective spec digest" /> : <span className="ln-absent">not published</span>}
+          </Row>
+          <Row k="dataset binding">
+            {run.dataset_binding_digest ? <ShortId id={run.dataset_binding_digest} label="dataset binding digest" /> : <span className="ln-absent">not published</span>}
+          </Row>
+          <Row k="technical retries">{`${String(run.technical_retry_count)} (not attempts)`}</Row>
+          <Row k="space signature">
+            {attempt.space_signature ? <ShortId id={attempt.space_signature} label="space signature" /> : <span className="ln-absent">not published</span>}
+          </Row>
+          <Row k="created">{iso(attempt.created_at_utc_ms)}</Row>
+          <Row k="updated">{iso(attempt.updated_at_utc_ms)}</Row>
+        </dl>
+      </details>
+      {attempt.promotion_state === "PICKED" ? (
+        <span className="ln-verdict" data-tree-aim="picked">
+          {TREE_AIM}
+        </span>
+      ) : null}
       <span className="ln-verdict" data-verdict={attempt.outcome.source ?? "NONE"}>
         {attempt.state === "ABANDONED" || attempt.state === "FAILED" ? (
           <ReasonLine attempt={attempt} className="ln-verdict" />
-        ) : attempt.outcome.text !== null ? (
+        ) : attempt.outcome.text !== null && attempt.outcome.text === claim.text && claim.state !== null ? null : attempt.outcome.text !== null ? (
           attempt.outcome.text
         ) : (
           <AvailabilityAbsent what="verdict" availability={attempt.outcome.availability} />
@@ -1755,6 +1852,12 @@ function PromotionRule({ lineage }: { lineage?: Lineage | null }) {
         <span className="ln-mono">ACTIVE</span>
         {tail}
       </p>
+      {!lineage || !lineage.attempts.some((attempt) => attempt.promotion_state === "PICKED") ? (
+        /* D8: the hi-fi's verdict line for the picked node; with no published pick it names the rule's aim, not an attempt. */
+        <p className="ln-aim" data-tree-aim="rule">
+          {TREE_AIM}
+        </p>
+      ) : null}
       {lineage ? (
         <p className="ln-mono" data-promotion-standing style={{ fontSize: "10px" }}>
           {standing.length
@@ -1937,6 +2040,17 @@ function PendingFrame({ state }: { state: ResearchState["state"] }) {
 }
 
 /* ---------------------------------------------------------------- screen */
+
+/**
+ * D8 (10-8): a PARTIAL whose only declared gap is the promotion pick is said
+ * once, by the pick card in the root; the screen-level notice would repeat it
+ * about 110 px higher. Any other gap (bounded history, bounded child runs,
+ * historical diff) still raises the notice.
+ */
+export function onlyPickGap(lineage: Lineage): boolean {
+  const gaps = lineageGaps(lineage);
+  return gaps.length > 0 && gaps.every((gap) => gap.startsWith("promotion pick"));
+}
 
 /** Nearest ancestor that scrolls vertically, else the document's scroller. */
 function scrollAncestor(element: HTMLElement): HTMLElement | null {
@@ -2176,7 +2290,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       <Header alphaId={alphaId} lineage={lineage} />
       {lineage ? (
         <>
-          {state.state !== "available" ? <Notice controller={controller} /> : null}
+          {state.state !== "available" && !(state.state === "partial" && onlyPickGap(lineage)) ? <Notice controller={controller} /> : null}
           <div className="ln-grid">
             <div className="ln-left">
               <RootCard

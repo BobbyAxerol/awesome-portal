@@ -17,6 +17,7 @@
       "APPROVED",
       "APPROVED_WITH_CONDITION",
       "DENIED",
+      "CHANGES_REQUESTED",
       "EXPIRED"
     ],
     "publication_state": "DELIVERED"
@@ -53,11 +54,19 @@
       "NOT_FOUND",
       "UNAVAILABLE"
     ],
+    "typed_required_fields": [
+      "assignee_pool_availability"
+    ],
     "typed_optional_fields": [
       "assignee_pool",
       "quorum",
       "decision_outcomes",
       "rc_superseded"
+    ],
+    "promotion_pick_states": [
+      "PENDING_APPROVAL",
+      "WRITTEN",
+      "REJECTED"
     ]
   }
 }

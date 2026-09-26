@@ -601,7 +601,8 @@ describe("P16-T04 — an unavailable question keeps its card, with nothing that 
     const enabled = [...container.querySelectorAll<HTMLButtonElement>("button")]
       .filter((node) => !node.disabled)
       .map((node) => node.getAttribute("data-action"));
-    expect(enabled.filter((action) => action !== null)).toEqual(["copy-theta-digest", "verify"]);
+    /* E2: copy-evidence-link writes the clipboard only, like copy-theta-digest. */
+    expect(enabled.filter((action) => action !== null)).toEqual(["copy-evidence-link", "copy-theta-digest", "verify"]);
     // No number stands in for an evaluation that does not exist.
     expect(card?.textContent).not.toMatch(/ΔJ\s*[−+-]?\d/);
   });
@@ -771,7 +772,8 @@ describe("P16-T06 — the surface requests only the three named operations", () 
   it("classifies each refusal the contract declares", () => {
     const of = (status: number) => toFreezeRefusal(new PortalApiError("no", status, null, null));
     expect(of(401).state).toBe("denied");
-    expect(of(404).state).toBe("terminal");
+    /* X3 2026-09-26 one refusal rule (F-04): a 404 reads exactly as a 403. */
+    expect(of(404).state).toBe("denied");
     expect(of(409).state).toBe("stale");
     expect(of(503).state).toBe("unavailable");
   });
@@ -904,7 +906,7 @@ describe("Screen 07 composition — the hi-fi panels carry only published facts"
       .filter((node) => !node.disabled)
       .map((node) => node.getAttribute("data-action"))
       .filter((action) => action !== null);
-    expect(actions).toEqual(["copy-theta-digest", "verify"]);
+    expect(actions).toEqual(["copy-evidence-link", "copy-theta-digest", "verify"]);
     await act(async () => {
       fireEvent.click(container.querySelector("[data-action='copy-theta-digest']") as Element);
     });
@@ -1105,7 +1107,7 @@ describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
     const { container } = delegatedView(foldOrderingFixture());
     const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
     expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("⚠ NOT CAUSAL · GLOBAL SELECTION");
-    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("not_causal_multi_fold_global_calibration");
+    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
     expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("every outer fold's OOS window had been read");
     expect(panel.textContent).not.toMatch(/\bPASS\b|causal ✓/);
   });

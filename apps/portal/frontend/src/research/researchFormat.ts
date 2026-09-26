@@ -48,6 +48,27 @@ export function formatFractionAxis(value: number, digits = 2): string {
   return `${GROUPED(digits).format(value * 100)}%`;
 }
 
+const AXIS_LARGE = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+const AXIS_SMALL = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+
+/**
+ * A server value printed on a chart axis (S13 small multiples and overlay):
+ * grouped, whole above 1,000 and at most two places below, so a ~300px
+ * figure keeps its plot. The exact string stays in the caller's title.
+ * A non-numeric string comes back unchanged.
+ */
+export function formatAxisValue(value: string): string {
+  const parsed = parse(value);
+  if (parsed === null) return value;
+  return (Math.abs(parsed) >= 1000 ? AXIS_LARGE : AXIS_SMALL).format(parsed);
+}
+
+/** A correlation coefficient to two places, as the S13 hi-fi prints ρ (DQ-08); `null` when not numeric. */
+export function formatCorrelation(value: string | null | undefined): string | null {
+  const parsed = parse(value);
+  return parsed === null ? null : GROUPED(2).format(parsed);
+}
+
 /** `8s`, `3m 12s`, `1h 04m`. */
 export function formatDuration(seconds: number | null | undefined): string | null {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return null;
@@ -86,4 +107,57 @@ export function formatBytes(bytes: number | null | undefined): string | null {
     unit += 1;
   }
   return `${value.toFixed(1)} ${units[unit]}`;
+}
+
+/**
+ * A server id shortened for display (E1, HiFi audit 2026-09-26): the type
+ * prefix (`rrun_`, `ratt_`, `rc_`…) plus the first 8 characters after it.
+ * A 37-character id wraps every header it sits in; the full value always
+ * stays in the caller's `title` and copy. Ids without a prefix fall back to
+ * `shortDigest`.
+ */
+export function shortId(id: string | null | undefined, length = 8): string | null {
+  if (!id) return null;
+  const match = /^([a-z][a-z0-9]{0,7}_)(.+)$/.exec(id);
+  /* Only a bare digest is shortened; a label such as `R-WFO-118` is already short. */
+  if (!match) return /^(sha256:)?[0-9a-f]{16,}$/i.test(id) ? shortDigest(id, length) : id;
+  const [, prefix, rest] = match;
+  /* Only an opaque hex tail is cut: `av_delta_rsi_polynomial_alpha_1_0_0` is a name, not an id to shorten. */
+  return rest.length <= length || !/^[0-9a-f]+$/i.test(rest) ? id : `${prefix}${rest.slice(0, length)}`;
+}
+
+/**
+ * A claim value as the HiFi prints it (E1): the server's token in capitals
+ * (`NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION`, as HiFi 04 prints
+ * `CHRONOLOGICAL_CAUSAL`), a boolean as YES / NO. Nothing is reworded, so
+ * the screen never claims more than the token says; callers keep the exact
+ * value in a data attribute.
+ */
+export function claimToken(value: string | number | boolean): string {
+  if (typeof value === "boolean") return value ? "YES" : "NO";
+  return String(value).toUpperCase();
+}
+
+/**
+ * An exact decimal string grouped with commas for display, without ever
+ * turning it into a float (`9007199254740993` stays `…993`, never `…992`).
+ * Anything that is not a plain decimal comes back unchanged.
+ */
+export function groupDecimalString(value: string): string {
+  const match = /^(-?)(\d+)(\.\d+)?$/.exec(value);
+  if (!match) return value;
+  const [, sign, whole, fraction = ""] = match;
+  return `${sign}${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${fraction}`;
+}
+
+/**
+ * QuantBT's `fold_id` as the HiFi numbers folds (E2, audit X3): the engine
+ * publishes a 0-based id ("0", "1"); the hash, the progress read and every
+ * sentence count from 1. `"0"` prints `fold_01`, so row 1 and `#fold=1` are
+ * the same fold. A non-numeric id is printed unchanged; callers keep the
+ * engine's id in a data attribute or title.
+ */
+export function foldLabel(foldId: string | number): string {
+  const text = String(foldId);
+  return /^\d+$/.test(text) ? `fold_${String(Number(text) + 1).padStart(2, "0")}` : text;
 }

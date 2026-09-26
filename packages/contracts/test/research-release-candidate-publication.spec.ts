@@ -11,12 +11,15 @@ describe("P22 generated publication and existing R1 mirror", () => {
     expect(Object.entries(openApi.paths).map(([path, verbs]) => [path, Object.keys(verbs as object)])).toEqual([
       ["/api/v1/research/release-candidates/{releaseCandidateId}/publication", ["get"]],
       ["/api/v1/research/release-candidates/{releaseCandidateId}/publish", ["post"]],
+      ["/api/v1/research/alpha-versions/{alphaVersionId}/publication", ["get"]],
     ]);
     const post = openApi.paths["/api/v1/research/release-candidates/{releaseCandidateId}/publish"].post;
     expect(post.operationId).toBe("researchReleaseCandidatePublishV1");
     expect(post.parameters).toContainEqual({ $ref: "#/components/parameters/Csrf" });
     expect(generated).toContain("researchReleaseCandidatePublicationGetV1");
     expect(generated).toContain("researchReleaseCandidatePublishV1");
+    expect(generated).toContain("researchAlphaVersionPublicationGetV1");
+    expect(generated).toContain("AlphaVersionPublicationResponse:");
     for (const field of ["legacy_artifact_sha256", "evidence_set_hash", "approval_read", "candidate_relation"]) {
       expect(generated).toContain(field);
     }

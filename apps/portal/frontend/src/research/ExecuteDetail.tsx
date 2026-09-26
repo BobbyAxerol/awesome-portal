@@ -55,7 +55,9 @@ import { isHubLaneReason, retainedReadiness } from "./retainedLane";
 import type { ResearchState } from "./state";
 import type { ReplayController, RetainedContext, RetainedReplaySlot } from "./useReplay";
 import { iso } from "./utcMinute";
-import { formatMetric } from "./researchFormat";
+import { formatAxisValue, formatFractionAxis, formatMetric, shortId } from "./researchFormat";
+import { ShortId } from "./ShortId";
+import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -221,14 +223,22 @@ function SampleChart({
       xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { fontSize: 9 } },
       /* A flat window (equity unchanged) is padded by a hair of its level,
          never autoscaled to a ±50% band that reads as a swing (W3b/W5b). */
-      yAxis: { type: "value", scale: true, ...(paddedRange(items.map((point) => Number(point.equity))) ?? {}), axisLabel: { fontSize: 9 } },
+      /* E2b (audit 8.7): the padded min/max are not round numbers, so their labels sat on top of the
+         nearest tick ("20,020 / 20,010"); only the round ticks are labelled. */
+      yAxis: {
+        type: "value",
+        scale: true,
+        splitNumber: 4,
+        ...(paddedRange(items.map((point) => Number(point.equity))) ?? {}),
+        axisLabel: { fontSize: 9, showMinLabel: false, showMaxLabel: false, formatter: (value: number) => formatAxisValue(String(value)) },
+      },
       tooltip: {
         trigger: "axis",
         formatter: (params: unknown) => {
           const rows = params as { dataIndex: number }[];
           const point = items[rows[0]?.dataIndex ?? 0];
           return point
-            ? `${noun} ${point.playback_ordinal + 1}<br/>${new Date(point.at_utc_ms).toISOString()}<br/>equity ${point.equity}`
+            ? `${noun} ${point.playback_ordinal + 1}<br/>${iso(point.at_utc_ms)}<br/>equity ${formatMetric(point.equity, "currency") ?? "not published"}`
             : "";
         },
       },
@@ -255,7 +265,8 @@ function SampleChart({
       animation: false,
       grid: { left: GRID.left, right: GRID.right, top: 8, bottom: 22 },
       xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { show: false } },
-      yAxis: { type: "value", axisLabel: { fontSize: 9 } },
+      /* E2b (audit 8.7): a 90 px pane holds two labels, not eight; drawdown reads as a percentage. */
+      yAxis: { type: "value", splitNumber: 1, axisLabel: { fontSize: 9, formatter: (value: number) => formatFractionAxis(value, 1) } },
       series: [
         {
           type: "line",
@@ -283,18 +294,21 @@ function SampleChart({
         <EChart option={drawdownOption} height={90} />
         <Playhead transport={transport} length={items.length} />
       </div>
-      <table className="sr-only" data-chart-table="replay-equity">
-        <caption>{caption}</caption>
-        <tbody>
-          {items.map((point) => (
-            <tr key={point.playback_ordinal}>
-              <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
-              <td>{point.equity}</td>
-              <td>{point.drawdown_fraction}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* A table ignores width: 1px, so the clip sits on a wrapper (E2, S08 overflowed 91px at 660). */}
+      <div className="sr-only">
+        <table data-chart-table="replay-equity">
+          <caption>{caption}</caption>
+          <tbody>
+            {items.map((point) => (
+              <tr key={point.playback_ordinal}>
+                <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
+                <td>{point.equity}</td>
+                <td>{point.drawdown_fraction}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -349,11 +363,11 @@ function TransportBar({
     >
       <button type="button" className={button} style={style} aria-label="window start" disabled={disabled}
         title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.seek(0)}>
-        ⏮
+        |◀
       </button>
       <button type="button" className={button} style={style} aria-label="step back" disabled={disabled}
         title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.step(-1)}>
-        ◀
+        ◀◀
       </button>
       <button
         type="button"
@@ -370,7 +384,7 @@ function TransportBar({
       </button>
       <button type="button" className={button} style={style} aria-label="step forward" disabled={disabled}
         title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.step(1)}>
-        ▶︎|
+        ▶▶
       </button>
       <button
         type="button"
@@ -381,7 +395,7 @@ function TransportBar({
         title={disabled ? NO_TRANSPORT : undefined}
         onClick={() => transport.seek(items.length - 1)}
       >
-        ⏭
+        ▶|
       </button>
       <span className="flex gap-1" role="group" aria-label="speed">
         {SPEEDS.map((speed) => (
@@ -432,8 +446,8 @@ function PlayheadReadout({ transport, items }: { transport: ReplayTransport; ite
   return (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1" data-playhead-readout={point.playback_ordinal}>
       <span className="mono text-[10px]">t {iso(point.at_utc_ms)}</span>
-      <span className="mono text-[10px]">equity {point.equity}</span>
-      <span className="mono text-[10px]">drawdown {point.drawdown_fraction}</span>
+      <span className="mono text-[10px]" title={String(point.equity)}>equity {formatMetric(point.equity, "currency") ?? "not published"}</span>
+      <span className="mono text-[10px]" title={String(point.drawdown_fraction)}>drawdown {formatMetric(point.drawdown_fraction, "fraction") ?? "not published"}</span>
       <span className="mono text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-playhead-note>
         {PLAYHEAD_NOTE}
       </span>
@@ -476,8 +490,8 @@ function SampleLedger({ transport, items }: { transport: ReplayTransport; items:
                   </button>
                 </td>
                 <td className="py-[3px] pr-3">{iso(point.at_utc_ms)}</td>
-                <td className="py-[3px] pr-3">{point.equity}</td>
-                <td className="py-[3px]">{point.drawdown_fraction}</td>
+                <td className="py-[3px] pr-3" title={String(point.equity)}>{formatMetric(point.equity, "currency") ?? "not published"}</td>
+                <td className="py-[3px]" title={String(point.drawdown_fraction)}>{formatMetric(point.drawdown_fraction, "fraction") ?? "not published"}</td>
               </tr>
             );
           })}
@@ -705,18 +719,21 @@ function PositionChart({ rows, transport }: { rows: readonly CurrentSourceObserv
         <EChart option={option} height={90} />
         <Playhead transport={transport} length={rows.length} />
       </div>
-      <table className="sr-only" data-chart-table="retained-position">
-        <caption>Model position per retained observation in this window, exact values</caption>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.source_ordinal}>
-              <th scope="row">{new Date(row.at_utc_ms).toISOString()}</th>
-              <td>{row.accepted_position}</td>
-              <td>{row.signal_target ?? "not published"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* A table ignores width: 1px, so the clip sits on a wrapper (E2, S08 overflowed 91px at 660). */}
+      <div className="sr-only">
+        <table data-chart-table="retained-position">
+          <caption>Model position per retained observation in this window, exact values</caption>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.source_ordinal}>
+                <th scope="row">{new Date(row.at_utc_ms).toISOString()}</th>
+                <td>{row.accepted_position}</td>
+                <td>{row.signal_target ?? "not published"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -846,7 +863,7 @@ function RetainedContract({ replay, context }: { replay: CurrentSourceReplay; co
       data-route-state="RETAINED_MODEL_SAMPLE"
       aside={
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-          as of {new Date(replay.as_of_utc_ms).toISOString()}
+          as of {iso(replay.as_of_utc_ms)}
         </span>
       }
     >
@@ -988,7 +1005,7 @@ function RetainedBody({
 
       <ResearchPanel
         title="stitched account — retained walk-forward observations"
-        meta={`revision ${replay.revision}`}
+        meta={`revision ${shortId(replay.revision)}`}
         state={state}
         minBodyHeight={280}
       >
@@ -1189,35 +1206,34 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
   const playheadPoint = items[snapshot.index];
 
   return (
-    <div className="flex flex-col gap-3" data-screen="execute-replay" data-run={runId} data-lane={lane}>
-      <nav className="flex flex-wrap items-center gap-1.5 text-[11px]" aria-label="Breadcrumb">
+    <div className={`${SCREEN_FRAME} max-w-[1440px]`} data-screen="execute-replay" data-run={runId} data-lane={lane}>
+      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "execute" })}
-          className="mono"
           style={{ color: "var(--accent)" }}
           data-action="back-to-hub"
         >
           Evidence Flow
         </Link>
-        <span style={{ color: "var(--line-strong)" }}>/</span>
-        <span className="mono">{runId}</span>
-        <span style={{ color: "var(--line-strong)" }}>/</span>
-        <span className="mono" style={{ color: "var(--ink-faint)" }}>
+        <span style={{ color: "var(--ink-faint)" }}>/</span>
+        <ShortId id={runId} label="run" />
+        <span style={{ color: "var(--ink-faint)" }}>/</span>
+        <span style={{ color: "var(--ink)" }}>
           Stage 4 · Execute Replay
         </span>
-        <span style={{ color: "var(--line-strong)" }}>·</span>
+        <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${run}/freeze`, { ...cursor, stage: "freeze" })}
-          className="mono"
+          className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="back-to-freeze"
         >
           ← S3 Freeze
         </Link>
-        <span style={{ color: "var(--line-strong)" }}>·</span>
+        <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
           to={`/research/quantbt/runs/${run}/report`}
-          className="mono"
+          className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-next="run-report"
         >
@@ -1225,17 +1241,20 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
         </Link>
       </nav>
 
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
+      <div className="flex flex-col gap-[3px]">
+        <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
           {EXECUTE_TITLE}
         </h1>
-        <p className="text-[13.5px] italic" style={{ color: "var(--ink-mute)" }} data-subtitle>
+        <p className="text-[13.5px] italic [line-height:normal]" style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }} data-subtitle>
           {lane === "retained" && retainedReplay && hasBarLedger(retainedReplay)
             ? CANDLE_SUBTITLE
             : lane === "retained"
               ? EXECUTE_SUBTITLE_RETAINED
               : EXECUTE_SUBTITLE}
         </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3" data-header-actions>
+        <CopyEvidenceLink />
       </div>
 
       {lane === "retained" && retainedReplay && controller.retained.state === "ready" && hasBarLedger(retainedReplay) ? (
@@ -1270,7 +1289,7 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
           data-route-state={replay.route.state}
           aside={
             <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-              as of {new Date(replay.as_of_utc_ms).toISOString()}
+              as of {iso(replay.as_of_utc_ms)}
             </span>
           }
         >
@@ -1298,7 +1317,7 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
 
       <ResearchPanel
         title="stitched account — retrospective equity"
-        meta={replay?.revision ? `revision ${replay.revision}` : undefined}
+        meta={replay?.revision ? `revision ${shortId(replay.revision)}` : undefined}
         state={state}
         minBodyHeight={280}
         actions={

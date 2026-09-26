@@ -18,7 +18,7 @@ const frozen = {
     { key: "alpha_version_id", value: "av_p22", availability: { state: "AVAILABLE" } },
     { key: "final_audit_run_id", value: "run_p22", availability: { state: "AVAILABLE" } },
   ],
-  pack: [], source_fingerprint: sourceFingerprint,
+  pack: [{ key: "methodology_claim_id", value: claimId }], source_fingerprint: sourceFingerprint,
   draft: { known_limitations: "Known limitation.", proposed_use_restrictions: "Research only." },
 };
 const digest = (value: unknown) => createHash("sha256").update(canonicalResearchJson(value), "utf8").digest("hex");
@@ -42,10 +42,11 @@ const approval = {
   expires_at: "2026-09-28T10:00:00.000Z",
   created_at: "2026-09-25T10:00:00.000Z",
 };
-function subject(intake: "true" | "false" = "true") {
+function subject(intake: "true" | "false" = "true", bridgeEnabled = false) {
   let state: PublicationIntent | null = null;
   const repository = {
     read: vi.fn(async () => state),
+    latestDeliveredByAlphaVersion: vi.fn(async () => state?.state === "DELIVERED" ? rcId : null),
     begin: vi.fn(async (_scope: unknown, value: Record<string, unknown>) => {
       state = {
         releaseCandidateId: rcId, runId: "run_p22", alphaId: "alpha_p22",
@@ -94,7 +95,9 @@ function subject(intake: "true" | "false" = "true") {
     detail: vi.fn().mockResolvedValue({
       schema_version: "governance.r1-review.v1", read_at: "2026-09-25T10:00:01.000Z",
       data: {
-        approval, known_limitations: [],
+        approval: { ...approval, subject_label: "Alpha P22", quorum_required: 2, quorum_met: 1, approval_version: 3, blocker_count: 0 },
+        decisions: [{ actor: { user_id: "usr_reviewer", username: "reviewer" }, outcome: "APPROVED_WITH_CONDITION", conditions: [{ text: "Research only" }] }],
+        known_limitations: [],
         evidence_manifest: { manifest_hash: evidenceHash, entries: [{
           artifact_id: "run_p22", sha256: legacySha,
           schema_version: "quantbt.selected-params.v1", source_reference: "run_p22",
@@ -103,11 +106,24 @@ function subject(intake: "true" | "false" = "true") {
       },
     }),
   };
+  const bridge = {
+    materialize: vi.fn().mockResolvedValue({
+      runId: "run_p22", parentRunId: null, attemptId: "attempt_p22",
+      alphaId: "alpha_p22", alphaVersionId: "av_p22", strategyId: "alpha_p22",
+      datasetId: "dataset_p22", sourceCursor: null, status: "READY",
+      artifactSha256: legacySha, artifactSchemaVersion: "quantbt.selected-params.v1",
+      artifactId: "artifact_p22", artifactManifestDigest: legacySha.slice(7),
+      ownerUserId: user.userId, selectionId: "selection_p22", selectedTrialId: "trial_p22",
+      selectionSequence: ["trial_p22"], materializationDigest: "d".repeat(64),
+      materializedAtUtcMs: 1790330400000, replayed: false,
+    }),
+  };
   const service = new ResearchReleaseCandidatePublicationService(
     repository as never, packs as never, candidate as never, governance as never,
     { FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: intake },
+    bridgeEnabled ? bridge as never : undefined,
   );
-  return { service, repository, packs, candidate, governance, state: () => state };
+  return { service, repository, packs, candidate, governance, bridge, state: () => state };
 }
 
 describe("P22 actor-bound publication over existing R1", () => {
@@ -117,7 +133,13 @@ describe("P22 actor-bound publication over existing R1", () => {
     expect(result).toMatchObject({
       state: "DELIVERED", candidate_relation: "CURRENT", may_publish: false,
       published: { approval_id: "apr_p22" },
-      approval_read: "AVAILABLE", approval: { status: "PENDING", evidence_set_hash: evidenceHash },
+      approval_read: "AVAILABLE", approval: {
+        status: "PENDING", effective_status: "PENDING", evidence_set_hash: evidenceHash,
+        subject_label: "Alpha P22", quorum: { required: 2, met: 1 }, approval_version: 3,
+        blocker_count: 0, condition_count: 1, rc_superseded: false,
+        assignee_pool_availability: { state: "NOT_PUBLISHED", reason_code: "P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED" },
+        decision_outcomes: [{ actor_user_id: "usr_reviewer", outcome: "APPROVED_WITH_CONDITION" }],
+      },
     });
     expect(x.governance.createApproval).toHaveBeenCalledWith(user, {
       workspaceId: "ws_p22", requestKey: input.request_key, alphaId: "alpha_p22",
@@ -290,4 +312,33 @@ describe("P22 actor-bound publication over existing R1", () => {
     expect(x.governance.publicationEvidence).toHaveBeenCalledWith(user, "ws_p22", "run_p22", true);
     expect(x.governance.createApproval).not.toHaveBeenCalled();
   });
+  it("OL-05 materializes a sealed retained source before reading Governance evidence", async () => {
+    const x = subject("true", true);
+    const result = await x.service.publication(scope, user as never, rcId);
+    expect(result).toMatchObject({ state: "NOT_PUBLISHED", may_publish: true, blocked_reason: null });
+    expect(x.bridge.materialize).toHaveBeenCalledWith(scope, {
+      releaseCandidateId: rcId, packDigest, sourceFingerprint, methodologyClaimIds: [claimId],
+    });
+    expect(x.governance.publicationEvidence).toHaveBeenCalledWith(user, "ws_p22", "run_p22", false);
+    expect(x.bridge.materialize.mock.invocationCallOrder[0]).toBeLessThan(
+      x.governance.publicationEvidence.mock.invocationCallOrder[0]!,
+    );
+    expect(x.governance.createApproval).not.toHaveBeenCalled();
+  });
+  it("OL-13 returns typed absence and the exact delivered publication for one Alpha version", async () => {
+    const x = subject();
+    const absent = await x.service.alphaVersionPublication(scope, user as never, "av_p22");
+    expect(absent).toMatchObject({
+      alpha_version_id: "av_p22", availability: "NOT_PUBLISHED",
+      reason_code: "P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED", publication: null,
+    });
+    await x.service.publish(scope, user as never, rcId, input, "req_p22");
+    const available = await x.service.alphaVersionPublication(scope, user as never, "av_p22");
+    expect(available).toMatchObject({
+      alpha_version_id: "av_p22", availability: "AVAILABLE", reason_code: null,
+      publication: { release_candidate_id: rcId, alpha_version_id: "av_p22", state: "DELIVERED" },
+    });
+    expect(x.repository.latestDeliveredByAlphaVersion).toHaveBeenLastCalledWith(scope, "av_p22");
+  });
+
 });

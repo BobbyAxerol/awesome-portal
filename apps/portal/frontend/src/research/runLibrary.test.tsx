@@ -373,6 +373,41 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
     expect(absent.getAttribute("title")).toBe("no stage narrative was published");
   });
 
+  it("E10 (audit 01-5): a FAILED card's failing stage is red and the card says where it failed", () => {
+    // The server's P12 shape for a failed run: the stopping stage is `blocked`
+    // (HiFi R-WFO-116), derived and labelled so; `failed at` names it.
+    const failed = item({
+      status: "FAILED",
+      stages: [
+        { key: "S1", state: "done", tip: "Persisted S1 state: DONE.", tooltip_source: "DERIVED_FROM_PERSISTED_STATE", availability: AVAILABLE },
+        { key: "S2", state: "done", tip: "Persisted S2 state: DONE.", tooltip_source: "DERIVED_FROM_PERSISTED_STATE", availability: AVAILABLE },
+        { key: "S3", state: "done", tip: "Persisted S3 state: DONE.", tooltip_source: "DERIVED_FROM_PERSISTED_STATE", availability: AVAILABLE },
+        { key: "S4", state: "blocked", tip: "The run failed during S4; persisted S4 state: RUNNING.", tooltip_source: "DERIVED_FROM_PERSISTED_STATE", availability: AVAILABLE },
+        { key: "S5", state: "pend", tip: "Persisted S5 state: PENDING.", tooltip_source: "DERIVED_FROM_PERSISTED_STATE", availability: AVAILABLE },
+      ],
+      stats: [
+        { key: "failed_at", label: "failed at", role: "FAILED_AT", value: "S4", tone: "BAD", availability: AVAILABLE, scope: null, definition_id: null },
+        { key: "failure_reason", label: "reason", role: "FAILURE_REASON", value: "P06_RETRY_NOT_DISPATCHED", tone: "BAD", availability: AVAILABLE, scope: null, definition_id: null },
+        { key: "runtime", label: "runtime", role: "RUNTIME", value: "9 s", tone: "BAD", availability: AVAILABLE, scope: null, definition_id: null },
+      ],
+      sparkline: { kind: "failed", availability: AVAILABLE },
+    });
+    view({ response: page([failed]) });
+    const cell = document.querySelector('[data-stage-cell="S4"]') as HTMLElement;
+    expect(cell.getAttribute("data-stage-state")).toBe("blocked");
+    expect(cell.style.color).toBe("var(--bad)");
+    expect(cell.style.borderColor || cell.style.border).toContain("var(--bad)");
+    expect(cell.getAttribute("title")).toBe("derived from persisted state — The run failed during S4; persisted S4 state: RUNNING.");
+    // No other cell is red, and a failed stage never pulses as if running.
+    for (const key of ["S1", "S2", "S3", "S5"]) {
+      expect((document.querySelector(`[data-stage-cell="${key}"]`) as HTMLElement).style.color).not.toBe("var(--bad)");
+    }
+    expect(cell.getAttribute("data-motion")).toBeNull();
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("S4");
+    expect(text).toContain("P06_RETRY_NOT_DISPATCHED");
+  });
+
   it("keeps the lazy placeholder when no series is published", () => {
     view({ response: page([item({ sparkline: { kind: null, availability: NOT_PUBLISHED } })]) });
     expect(
@@ -581,7 +616,8 @@ describe("P12-T06 — typed refusals keep the route and stop the poll", () => {
     [400, "terminal", false],
     [401, "denied", true],
     [403, "denied", true],
-    [404, "terminal", true],
+    /* X3 VD-P23-03 (F-04): 404 reads as 403. */
+    [404, "denied", true],
     [503, "unavailable", false],
   ])("maps %i", (status, expected, stops) => {
     const refusal = toLibraryRefusal(new PortalApiError("said so", status, "CODE", "r"));

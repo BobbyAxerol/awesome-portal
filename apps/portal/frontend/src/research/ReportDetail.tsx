@@ -50,13 +50,14 @@ import {
   type ReportEquity,
   type ReportFolds,
 } from "./reportClient";
-import { formatMetric, shortDigest } from "./researchFormat";
+import { foldLabel, formatMetric, shortDigest } from "./researchFormat";
 import { equitySvg } from "./reportEquity";
 import { releaseCandidateHref } from "./releaseCandidateClient";
 import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
 import { FailedSheet, FinalAuditBlock } from "./ReportFailedSheet";
+import { ShortId } from "./ShortId";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -150,7 +151,7 @@ const SHEET_CSS = `
 /* Sealed identifiers (revisions, digests, ETags, job ids, filenames) are
    unbroken 64–70 character tokens. They wrap, in full, on screen and on
    paper; nothing on the sheet clips or shortens them. */
-.rr-long { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }
+.rr-long { overflow-wrap: anywhere; word-break: normal; min-width: 0; }
 .rr-noprint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 18px;
   background: var(--paper-sunken); border: 1px solid var(--line); border-radius: 6px 6px 0 0; font-size: 12px; color: var(--ink-soft); }
 .rr-noprint a { color: var(--accent); text-decoration: none; }
@@ -171,7 +172,7 @@ const SHEET_CSS = `
 .rr-kicker { font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
 .rr-title { font-family: var(--font-display); font-size: 27px; font-weight: 400; letter-spacing: -.01em; line-height: 1.25; margin: 2px 0 0; }
 .rr-runchip { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
-.rr-meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); margin-top: 3px; word-break: break-all; }
+.rr-meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); margin-top: 3px; overflow-wrap: anywhere; }
 .rr-head-text { flex: 1 1 0; min-width: 0; }
 .rr-cert { flex: none; text-align: center; border: 2px solid var(--accent-2); border-radius: 8px; padding: 8px 18px; max-width: 220px; }
 .rr-cert .k { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
@@ -194,11 +195,13 @@ const SHEET_CSS = `
 .rr-t2 { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; margin: 0 0 4px; }
 .rr-id { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; font-family: var(--font-mono); font-size: 10px; margin: 0; }
 .rr-id .k { color: var(--ink-faint); white-space: nowrap; }
-.rr-id .v { margin: 0; word-break: break-all; }
+.rr-id .v { margin: 0; overflow-wrap: anywhere; }
 .rr-headline { flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
 .rr-headline .cell { flex: 1 1 44%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 0; }
 .rr-headline .k { font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
-.rr-headline .v { font-family: var(--font-mono); font-size: 15px; font-weight: 600; word-break: break-all; }
+.rr-headline .v { font-family: var(--font-mono); font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.rr-headline .v[data-sign="neg"] { color: var(--bad); }
+.rr-headline .v[data-sign="pos"] { color: var(--good); }
 .rr-headline .foot { flex: 1 1 100%; font-size: 9px; color: var(--ink-faint); padding: 0 2px; margin: 0; }
 .rr-scroll { overflow-x: auto; }
 .rr-table { width: 100%; border-collapse: collapse; }
@@ -211,7 +214,7 @@ const SHEET_CSS = `
    cell's min-content width, so an auto-layout table narrows the column and
    splits ordinary words (measured in the browser). Only sealed identifiers
    break anywhere. */
-.rr-table td.rr-long { word-break: break-all; }
+.rr-table td.rr-long { overflow-wrap: anywhere; }
 /* A table ignores a 1px height, so the screen-reader copy of the equity
    points sits in its own clipped box and never prints (the SVG and caption do). */
 .rr-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
@@ -254,11 +257,11 @@ const SHEET_CSS = `
 .rr-eq-legend [data-legend="is"] { color: var(--ink-soft); }
 .rr-eq-legend [data-legend="is"] .sw { background: none; border: 1px dashed var(--ink-faint); }
 .rr-dd-mark { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--bad); transform: translate(-50%, -50%); }
-.rr-dd-marklbl { position: absolute; color: var(--bad); font-size: 8.5px; white-space: nowrap; transform: translate(-50%, calc(-100% - 5px)); }
+.rr-dd-marklbl { position: absolute; color: var(--bad); font-size: 8.5px; white-space: nowrap; transform: translate(-50%, 6px); background: var(--paper-raised); padding: 0 3px; }
 .rr-eq-frame { fill: var(--paper-sunken); stroke: var(--line); }
 .rr-caption { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); margin: 0; }
 .rr-absent { font-family: var(--font-mono); font-style: italic; color: var(--ink-faint); }
-.rr-reason { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); word-break: break-all; }
+.rr-reason { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); overflow-wrap: anywhere; }
 .rr-note { font-size: 10.5px; color: var(--ink-soft); line-height: 1.55; margin: 0; }
 /* Certification chain + key artifacts (hi-fi): two cards in one row, 1.1 : 1. */
 .rr-chainrow { display: flex; gap: 10px; }
@@ -479,7 +482,7 @@ function Header({ runId, report }: { runId: string; report: ReportDetail | null 
             {title}
           </h2>
           <span className="rr-runchip rr-long" data-run-chip>
-            {report?.run_id ?? runId}
+            <ShortId id={report?.run_id ?? runId} label="run" />
           </span>
         </div>
         {report ? (
@@ -556,6 +559,9 @@ function Identity({ core }: { core: FrozenCore }) {
   );
 }
 
+/** Headline cells coloured by sign, as the HiFi does (E3); a count is never coloured. */
+const SIGNED_HEADLINE = new Set<string>(["OOS_SHARPE", "MAX_DRAWDOWN", "FUNDING"]);
+
 function HeadlineRow({ core }: { core: FrozenCore }) {
   const v2 = coreV2(core);
   return (
@@ -564,7 +570,7 @@ function HeadlineRow({ core }: { core: FrozenCore }) {
         <div key={cell.key} className="cell" data-headline={cell.key}>
           <div className="k">{cell.label}</div>
           {cell.value !== null ? (
-            <div className="v" data-headline-value={cell.value}>
+            <div className="v" data-headline-value={cell.value} data-sign={SIGNED_HEADLINE.has(cell.key) ? (cell.value.trim().startsWith("-") ? "neg" : /^[+]?0*(\.0*)?$/.test(cell.value.trim()) ? undefined : "pos") : undefined}>
               <Num value={cell.value} unit={HEADLINE_UNIT[cell.key]} what={cell.key} />
               {v2 && v2.headline[index]!.scope !== "NOT_PUBLISHED" ? (
                 <span className="rr-reason" style={{ display: "block", fontWeight: 400 }} data-headline-scope>
@@ -819,7 +825,7 @@ function FoldValue({ fact, unit }: { fact: FoldRowV2["oos_sharpe"]; unit: string
 /** CG-P18-04/08: the hi-fi's eight columns, every cell a sealed fold fact. */
 function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
   const published = folds.state === "AVAILABLE" && folds.rows.length > 0;
-  const worst = published ? folds.rows.filter((row) => row.verdict === "DRAG").map((row) => row.fold_id) : [];
+  const worst = published ? folds.rows.filter((row) => row.verdict === "DRAG").map((row) => foldLabel(row.fold_id)) : [];
   return (
     <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
       <div className="rr-scroll" tabIndex={0} role="region" aria-label="per-fold verdict table — scrolls sideways">
@@ -840,7 +846,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
             {published ? (
               folds.rows.map((row) => (
                 <tr key={row.fold_id} data-fold={row.fold_id}>
-                  <td>{row.fold_id}</td>
+                  <td title={`QuantBT fold_id ${row.fold_id}`}>{foldLabel(row.fold_id)}</td>
                   <td>
                     {row.test_start_utc_ms !== null ? iso(row.test_start_utc_ms) : "no start published"} →{" "}
                     {row.test_last_bar_utc_ms !== null ? iso(row.test_last_bar_utc_ms) : "no end published"}
@@ -906,7 +912,7 @@ function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule:
             {published && folds.rows.length > 0 ? (
               folds.rows.map((row) => (
                 <tr key={row.fold_id} data-fold={row.fold_id}>
-                  <td>{row.fold_id}</td>
+                  <td title={`QuantBT fold_id ${row.fold_id}`}>{foldLabel(row.fold_id)}</td>
                   <td>
                     {iso(row.start_utc_ms)} → {iso(row.end_exclusive_utc_ms)}
                   </td>
@@ -1114,7 +1120,7 @@ function Footer({ runId, report }: { runId: string; report: ReportDetail | null 
     <footer className="rr-foot" data-panel="footer">
       <span>Quant Ecosystem Portal · Research · confidential</span>
       <span className="rr-long">
-        {report?.run_id ?? runId}
+        <ShortId id={report?.run_id ?? runId} label="run" />
         {report ? ` · report ${iso(report.sealed_at_utc_ms)}` : ""} · page prints on letter or A4
       </span>
     </footer>

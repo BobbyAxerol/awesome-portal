@@ -1,5 +1,7 @@
 # P22 frontend handoff — Screen 11 publication + R1 approval mirror (contributor, outside D3)
 
+> Historical contributor packet. The current generated-contract handoff is [frontend-handoff-codex-closeout.md](./frontend-handoff-codex-closeout.md); route/field status below is preserved as audit history, not live truth.
+
 **Trạng thái:** `IMPLEMENTED-CONTRIBUTOR (outside D3) · FAKE_REPO_AND_BROWSER_STUB_RECEIPT · FLAG_DARK · REQUIRES_BOBBY_DECISION`.
 
 Theo D3 (`0fa3c385`), P22+ là việc của Codex. Bản P22 này do Thanhvuong (Claude) làm theo yêu cầu của Vuong trên nhánh contributor `feat/thanhvuong/research-p17-p21` (code `51a944eb` backend + contract, `d55beca7` frontend). Chưa merge, chưa PR. Bobby quyết giữ hay bỏ (`B-P22-01`); baseline `85c1b113` còn ghi một bản Codex WIP (`codex/p22-wip-2026-09-24`, không có trên `primus-origin`) cùng tên operation `researchReleaseCandidatePublishV1`. Handoff này mô tả **đúng code đang có**, không phải contract đã được owner duyệt.

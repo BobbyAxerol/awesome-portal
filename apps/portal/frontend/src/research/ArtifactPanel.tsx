@@ -25,6 +25,7 @@ import {
 } from "./artifacts";
 import { ResearchPanel, ResearchValue } from "./ResearchPanel";
 import { researchState, type ResearchState } from "./state";
+import { formatBytes, formatUtc, groupDecimalString } from "./researchFormat";
 
 export interface ArtifactMetadata {
   /** Exact decimal strings from the server. Never parsed into numbers. */
@@ -118,21 +119,24 @@ export function ArtifactPanel({
       {withheld ? null : (
         <div className="flex flex-col gap-2">
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">
-            {[
-              ["rows", exactDecimal(metadata.rowCount ?? null)],
-              ["bytes", exactDecimal(metadata.byteSize ?? null)],
-              ["coverage", exactDecimal(metadata.coverage ?? null)],
-              ["sealed at", exactUtcMillis(metadata.sealedAt ?? null)],
-            ].map(([label, value]) => (
-              <div key={label as string} className="contents">
+            {/* E1: shown formatted, the exact server string kept in the title. */}
+            {(
+              [
+              ["rows", exactDecimal(metadata.rowCount ?? null), (v: string) => groupDecimalString(v)],
+              ["bytes", exactDecimal(metadata.byteSize ?? null), (v: string) => formatBytes(Number(v))],
+              ["coverage", exactDecimal(metadata.coverage ?? null), (v: string) => v],
+              ["sealed at", exactUtcMillis(metadata.sealedAt ?? null), (v: string) => formatUtc(v)],
+              ] as [string, string | null, (v: string) => string | null][]
+            ).map(([label, value, show]) => (
+              <div key={label} className="contents">
                 <dt
                   className="mono text-[10px] uppercase tracking-[.06em]"
                   style={{ color: "var(--ink-faint)" }}
                 >
                   {label}
                 </dt>
-                <dd>
-                  <ResearchValue value={value as string | null} />
+                <dd title={value ?? undefined} data-exact={value ?? undefined}>
+                  <ResearchValue value={value === null ? null : (show(value) ?? value)} />
                 </dd>
               </div>
             ))}

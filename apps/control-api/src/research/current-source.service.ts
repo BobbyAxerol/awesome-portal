@@ -70,6 +70,7 @@ import { notYet, type ArtifactByteVerification } from "./artifact-verify.contrac
 import { inertWhatIf, ResearchWhatIfService, type WhatIfBasis } from "./whatif.service";
 import { foldOrdering } from "./fold-ordering";
 import { declaredSpace, searchSurface, type SurfaceTrial } from "./current-source-surface";
+import { candidateDrawdown, searchPool } from "./current-source-pool";
 import { parameterAuthority, retainedStage4Binding } from "./stage4-binding";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
 import type { WhatIf } from "./whatif.contract";
@@ -533,6 +534,25 @@ export class ResearchCurrentSourceService {
     if (candidates.totalRows !== seal.tableRows.CANDIDATE || candidates.hasMore || candidates.hasPrevious) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained candidate ledger exceeds its admitted bound.", 503);
     }
+    // E5: the pool and θ*'s per-fold decay read every retained trial and fold row.
+    const poolFolds = await this.boundedRows(scope, runId, seal, "FOLD", 256, signal);
+    const pool = searchPool({
+      facts,
+      trials: allTrials.map((row) => {
+        const trial = asTrial(row);
+        return { trialId: trial.trial_id, state: typedTrialState(trial.state), objective: trial.objective, facts: trial.trial_facts };
+      }),
+      candidates: candidates.rows.map((row) => {
+        const candidate = asCandidate(row);
+        return { candidateId: candidate.candidate_id, objective: candidate.objective, facts: candidate.trial_facts };
+      }),
+      folds: poolFolds.map((row) => {
+        const fold = asFold(row);
+        return { foldId: fold.fold_id, sourceOrdinal: row.sourceOrdinal, facts: fold.fold_facts };
+      }),
+      selectedTrialId: summary.selection.trial_id,
+    });
+    const contract = searchContract(facts);
     const value = {
       schema_version: "research.current-source-search.v1" as const,
       ...this.common("search", seal),
@@ -545,7 +565,8 @@ export class ResearchCurrentSourceService {
         objective_kind: facts ? "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
         roles,
       },
-      search_contract: searchContract(facts),
+      // E5 · 6.7: K from the retained pool when QuantBT's own rule agrees; otherwise the configured value (null stays null).
+      search_contract: { ...contract, top_is_k: pool.top_is_k.value ?? contract.top_is_k },
       ledger: {
         source_trial_count: seal.tableRows.TRIAL,
         returned_rows: page.rows.length,
@@ -569,7 +590,17 @@ export class ResearchCurrentSourceService {
         source_candidate_count: seal.tableRows.CANDIDATE,
         rows: candidates.rows.map((row) => {
           const { trial_facts: rowFacts, ...candidate } = asCandidate(row);
-          return { source_ordinal: row.sourceOrdinal, ...candidate, facts: trialFacts(rowFacts, ledgerMode) };
+          return {
+            source_ordinal: row.sourceOrdinal,
+            ...candidate,
+            facts: trialFacts(rowFacts, ledgerMode),
+            max_drawdown: candidateDrawdown({
+              candidate: { candidateId: candidate.candidate_id, objective: candidate.objective, facts: rowFacts },
+              selection: summary.selection,
+              schedule: facts?.search.optimization_schedule ?? null,
+              passportMaxDrawdown: summary.metrics.max_drawdown_fraction,
+            }),
+          };
         }),
         availability: available(),
       },
@@ -582,6 +613,7 @@ export class ResearchCurrentSourceService {
         bestIsTrialId: roles.raw_best_is.trial_id,
         objectiveKind: firstFacts?.objective_kind ?? "NOT_PUBLISHED",
       }),
+      pool,
     };
     return this.valid(ResearchCurrentSourceSearchResponseSchema, value);
   }

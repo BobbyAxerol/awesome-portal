@@ -8,8 +8,10 @@ import { ResearchReleaseCandidateError } from "./release-candidate.error";
 
 export type PublicationState = "PENDING" | "UNKNOWN" | "DELIVERED" | "REFUSED";
 export interface PublicationPromotionPick {
-  state: "NOT_PUBLISHED" | "PENDING_APPROVAL" | "WRITTEN";
-  approvalId: string; runId: string; selectedTrialId: string | null; artifactId: string | null; factDigest: string;
+  state: "NOT_PUBLISHED" | "PENDING_APPROVAL" | "WRITTEN" | "REJECTED";
+  approvalId: string; approvalStatus: FinishPublication["approvalStatus"];
+  approvalVersion: number | null; runId: string; selectedTrialId: string | null;
+  artifactId: string | null; factDigest: string;
 }
 export interface PublicationIntent {
   releaseCandidateId: string; runId: string; alphaId: string; alphaVersionId: string;
@@ -96,13 +98,29 @@ export class ResearchReleaseCandidatePublicationRepository {
     });
   }
 
+  /** OL-13: one named lookup; the browser never scans release candidates. */
+  async latestDeliveredByAlphaVersion(scope: ResearchScope, alphaVersionId: string): Promise<string | null> {
+    return this.transaction(scope, true, async (client) => {
+      await this.member(client, scope);
+      const result = await client.query<{ release_candidate_id: string }>(
+        `SELECT release_candidate_id
+           FROM research.release_candidate_publications_v1
+          WHERE workspace_id = $1 AND alpha_version_id = $2 AND state = 'DELIVERED'
+          ORDER BY published_at DESC, release_candidate_id DESC
+          LIMIT 1`,
+        [scope.workspaceId, alphaVersionId],
+      );
+      return result.rows[0]?.release_candidate_id ?? null;
+    });
+  }
+
   async begin(scope: ResearchScope, input: BeginPublication): Promise<{ intent: PublicationIntent; replayed: boolean }> {
     return this.transaction(scope, false, async (client) => {
       await this.member(client, scope);
       // P21 seal takes the same run lock; the current pack cannot change mid-check.
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))", [scope.workspaceId, input.runId]);
       const pack = await client.query<{ run_id: string; pack_digest: string; source_fingerprint: string }>(
-        "SELECT run_id, pack_digest, source_fingerprint FROM research.release_candidate_packs_v1 WHERE workspace_id = $1 AND release_candidate_id = $2 FOR UPDATE",
+        "SELECT run_id, pack_digest, source_fingerprint FROM research.release_candidate_packs_v1 WHERE workspace_id = $1 AND release_candidate_id = $2",
         [scope.workspaceId, input.releaseCandidateId],
       );
       if (pack.rowCount !== 1 || pack.rows[0]!.run_id !== input.runId) this.notFound();
@@ -199,15 +217,31 @@ export class ResearchReleaseCandidatePublicationRepository {
   private async hydratePromotionPick(client: PoolClient, scope: ResearchScope, intent: PublicationIntent): Promise<PublicationIntent> {
     const result = await client.query<{
       approval_id: string; run_id: string; selected_trial_id: string | null; artifact_id: string | null;
-      approval_status: FinishPublication["approvalStatus"]; fact_digest: string;
-    }>(`SELECT approval_id, run_id, selected_trial_id, artifact_id, approval_status, fact_digest
-          FROM research.p22_promotion_pick_receipts_v1
-         WHERE workspace_id = $1 AND release_candidate_id = $2`, [scope.workspaceId, intent.releaseCandidateId]);
+      approval_status: FinishPublication["approvalStatus"]; approval_version: string | number | null; fact_digest: string;
+    }>(`SELECT receipt.approval_id, receipt.run_id, receipt.selected_trial_id,
+               receipt.artifact_id,
+               coalesce(settlement.approval_status, receipt.approval_status) AS approval_status,
+               settlement.approval_version,
+               receipt.fact_digest
+          FROM research.p22_promotion_pick_receipts_v1 receipt
+          LEFT JOIN LATERAL (
+            SELECT approval_status, approval_version
+              FROM research.p22_approval_settlements_v1
+             WHERE workspace_id = receipt.workspace_id
+               AND release_candidate_id = receipt.release_candidate_id
+             ORDER BY approval_version DESC
+             LIMIT 1
+          ) settlement ON true
+         WHERE receipt.workspace_id = $1 AND receipt.release_candidate_id = $2`, [scope.workspaceId, intent.releaseCandidateId]);
     const row = result.rows[0];
     if (!row) return intent;
+    const state: PublicationPromotionPick["state"] = ["APPROVED", "APPROVED_WITH_CONDITION"].includes(row.approval_status)
+      ? "WRITTEN"
+      : row.approval_status === "PENDING" ? "PENDING_APPROVAL" : "REJECTED";
     return { ...intent, promotionPick: {
-      state: ["APPROVED", "APPROVED_WITH_CONDITION"].includes(row.approval_status) ? "WRITTEN" : "PENDING_APPROVAL",
-      approvalId: row.approval_id, runId: row.run_id, selectedTrialId: row.selected_trial_id,
+      state, approvalId: row.approval_id, approvalStatus: row.approval_status,
+      approvalVersion: row.approval_version === null ? null : Number(row.approval_version),
+      runId: row.run_id, selectedTrialId: row.selected_trial_id,
       artifactId: row.artifact_id, factDigest: row.fact_digest,
     } };
   }

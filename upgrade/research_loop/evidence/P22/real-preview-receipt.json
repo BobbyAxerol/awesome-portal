@@ -1,0 +1,90 @@
+{
+  "schema_version": "research.p22-real-preview-receipt.v1",
+  "environment": {
+    "kind": "ISOLATED_PREVIEW",
+    "compose_project": "portal-research-p22-publication",
+    "shared_preview_used": false,
+    "production_used": false,
+    "git_head_at_closeout": "88bdb9f5a01a03c8b4fe542eef6314442e919269",
+    "images": {
+      "control_api": "sha256:b3e3b8f3ca7f2c91386462e9e9b030de81809665ac771a3bbe2a8c43ca8085a7",
+      "portal_api": "sha256:e48d8fbd238ea5575d02df4182d188b170f8ca6ad1bab6414b2259de4dcdaf1b",
+      "quant_worker_py": "sha256:e48d8fbd238ea5575d02df4182d188b170f8ca6ad1bab6414b2259de4dcdaf1b",
+      "postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "nats": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927"
+    },
+    "image_revision_label": "NOT_PUBLISHED"
+  },
+  "source_run": {
+    "run_id": "rrun_540c6543addbbd0625d3bd891770a8d9",
+    "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_0",
+    "status": "COMPLETED",
+    "release_candidate_id": "rc_06GDX4PYVK83R5FDPJQ8EVK7F7",
+    "pack_counts": {
+      "complete": 8,
+      "degraded": 2,
+      "input": 2,
+      "missing": 0
+    },
+    "may_seal": true,
+    "artifact_digest": "sha256:77c963ede20ca2b1c113cecdacb42697c7dc9f850a3f0c28eb33c4456484da50",
+    "methodology_claim_id": "claim:sha256:cab7dce3b320fc8f1cfa25763b027ac99f0d86f3f40f616f24c9770e3d41922a"
+  },
+  "publication": {
+    "state": "DELIVERED",
+    "approval_id": "apr_06GDX9X6AZ9X1BV3MS3FVT5FC3",
+    "attempt_count": 1,
+    "published_at": "2026-09-26T16:58:44.183Z",
+    "blocked_reason_after_delivery": "P22_ALREADY_DELIVERED",
+    "downstream_code": null,
+    "candidate_relation": "CURRENT"
+  },
+  "governance": {
+    "gate": "R1",
+    "initial_status": "PENDING",
+    "initial_version": 1,
+    "final_status": "APPROVED",
+    "final_version": 2,
+    "quorum_met": 1,
+    "quorum_required": 1,
+    "blocker_count": 0,
+    "decision_count": 1,
+    "condition_count": 0,
+    "assignee_pool": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED"
+    }
+  },
+  "promotion_pick": {
+    "state": "WRITTEN",
+    "approval_status": "APPROVED",
+    "approval_version": 2,
+    "artifact_id": "rart_61598d03c9be8ceb83d3d22484d5a391e2a43502",
+    "fact_digest": "522ea9872363d3f5746f629d06c96672b66b169361ec6bf781f3544c160a2f61"
+  },
+  "alpha_version_lookup": {
+    "availability": "AVAILABLE",
+    "release_candidate_id": "rc_06GDX4PYVK83R5FDPJQ8EVK7F7",
+    "approval_status": "APPROVED"
+  },
+  "database_counts_after_replay": {
+    "publication": 1,
+    "run_read_model_bridge": 1,
+    "promotion_pick_receipt": 1,
+    "promotion_fact": 1,
+    "approval_settlement": 2,
+    "governance_decision": 1
+  },
+  "approval_settlements": [
+    { "approval_version": 1, "status": "PENDING" },
+    { "approval_version": 2, "status": "APPROVED" }
+  ],
+  "negative_assertions": {
+    "run_not_mirrored": false,
+    "governance_source_unavailable": false,
+    "duplicate_publication": false,
+    "duplicate_promotion_fact": false,
+    "browser_or_product_acceptance_claimed": false,
+    "production_activation_claimed": false
+  }
+}

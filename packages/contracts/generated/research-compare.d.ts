@@ -162,16 +162,27 @@ export interface components {
                 availability: components["schemas"]["Availability"];
             };
         };
+        /** @description D10 (2026-09-26): one card per market (the symbol · timeframe part of the ComparisonContractKey), represented by the latest run of an ACTIVE alpha version on it, else its latest run. A key without a market part is its own card. */
         MarketResult: {
             /** @constant */
             mode: "markets";
             /** @constant */
             caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie.";
+            /** @constant */
+            grouping: "MARKET_KEY_ACTIVE_OR_LATEST_V1";
             cards: {
+                market: components["schemas"]["Market"];
+                /** @enum {unknown} */
+                selection: "LATEST_ACTIVE_VERSION_RUN" | "LATEST_RUN" | "MARKET_NOT_PUBLISHED";
+                runs_in_market: number;
                 run: components["schemas"]["Run"];
                 chart: components["schemas"]["MarketChart"];
             }[];
             coverage: components["schemas"]["Coverage"];
+        };
+        Market: {
+            symbol: string | null;
+            timeframe: string | null;
         };
         MarketChart: {
             /** @enum {unknown} */

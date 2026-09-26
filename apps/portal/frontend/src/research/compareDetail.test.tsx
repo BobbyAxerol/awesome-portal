@@ -21,6 +21,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ATTEMPTS_RULE,
+  CLAIM_SENTENCE,
+  scopeWords,
   COMPARE_PANELS,
   COMPARE_RULES,
   COMPARE_TITLE,
@@ -196,9 +198,16 @@ function markets() {
   return envelope({
     mode: "markets",
     caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie.",
+    grouping: "MARKET_KEY_ACTIVE_OR_LATEST_V1",
     cards: [
-      { run: run("run_btc"), chart: chart("AVAILABLE") },
-      { run: run("run_eth", { comparison_contract_key: key("ETHUSDT"), run_state: "QUEUED", claim: NOT_PUBLISHED_CLAIM }), chart: chart("NOT_PUBLISHED") },
+      { market: { symbol: "BTCUSDT", timeframe: "4h" }, selection: "LATEST_ACTIVE_VERSION_RUN", runs_in_market: 3, run: run("run_btc"), chart: chart("AVAILABLE") },
+      {
+        market: { symbol: "ETHUSDT", timeframe: "4h" },
+        selection: "LATEST_RUN",
+        runs_in_market: 1,
+        run: run("run_eth", { comparison_contract_key: key("ETHUSDT"), run_state: "QUEUED", claim: NOT_PUBLISHED_CLAIM }),
+        chart: chart("NOT_PUBLISHED"),
+      },
     ],
     coverage: { state: "COMPLETE", total_attempts: 2, reason_code: null },
   });
@@ -383,11 +392,17 @@ describe("S13 Compare — reads and order", () => {
     expect(calls[0]!.method).toBe("GET");
     expect(calls[0]!.url).toBe(`/api/v1/research/alphas/${ALPHA}/compare?mode=attempts`);
     const order = Array.from(document.querySelectorAll("[data-ladder-run]")).map((el) => el.getAttribute("data-ladder-run"));
-    expect(order).toEqual(["run_m", "run_a", "run_z"]);
+    /* D10 (13-1): run_m publishes no claim, so it folds into a compact row instead of a ladder step. */
+    expect(order).toEqual(["run_a", "run_z"]);
     expect(document.querySelector("[data-ladder-order]")?.getAttribute("data-ladder-order")).toBe("server-reversed");
     const arrows = Array.from(document.querySelectorAll("[data-ladder-arrow]"));
-    expect(arrows).toHaveLength(2);
-    expect(arrows.map((el) => el.textContent?.trim())).toEqual(["claim ↑ →", "claim ↑ →"]);
+    expect(arrows).toHaveLength(1);
+    expect(arrows.map((el) => el.textContent?.trim())).toEqual(["claim ↑ →"]);
+    const folded = document.querySelector("[data-unclaimed]") as HTMLElement;
+    expect(folded.getAttribute("data-unclaimed")).toBe("1");
+    expect(folded.querySelector("[data-unclaimed-run]")).toBeNull();
+    fireEvent.click(folded.querySelector('[data-action="toggle-unclaimed"]') as HTMLElement);
+    expect(Array.from(folded.querySelectorAll("[data-unclaimed-run]")).map((el) => el.getAttribute("data-unclaimed-run"))).toEqual(["run_m"]);
     expect(panels()).toEqual([...COMPARE_PANELS.attempts]);
   });
 
@@ -447,6 +462,11 @@ describe("S13 Compare — markets", () => {
     const eth = document.querySelector('[data-market-run="run_eth"]') as HTMLElement;
     expect(eth.querySelector('[data-mini-chart="NOT_PUBLISHED"]')?.textContent).toContain("P20_P13_EQUITY_SERIES_NOT_AVAILABLE");
     expect(eth.querySelector('[data-state="QUEUED"]')).not.toBeNull();
+    /* D10: a card is a market; it says which run stands for it and how many ran there. */
+    const btc = document.querySelector('[data-market-run="run_btc"]') as HTMLElement;
+    expect(btc.querySelector("[data-market-key]")?.textContent).toBe("BTCUSDT · 4h");
+    expect(btc.querySelector("[data-market-selection-words]")?.textContent).toBe("latest run of the ACTIVE version · 1 of 3 runs on this market");
+    expect(eth.querySelector("[data-market-selection-words]")?.textContent).toBe("latest run — no ACTIVE version ran this market · the only run on this market");
     expect(panels()).toEqual([...COMPARE_PANELS.markets]);
   });
 });
@@ -465,7 +485,10 @@ describe("S13 Compare — pair", () => {
     expect(net.querySelector("[data-delta-value]")?.getAttribute("data-delta-value")).toBe("-0.0316");
     expect(net.getAttribute("data-sign")).toBe("neg");
     expect(document.querySelector('[data-delta-row="MAX_DRAWDOWN_FRACTION"] td[data-sign]')?.getAttribute("data-sign")).toBe("pos");
-    expect(document.querySelector("[data-rho]")?.textContent).toBe("ρ = 0.412345");
+    /* DQ-08 + hi-fi "ρ = 0.18": two places on screen, the exact server string kept one hover away. */
+    expect(document.querySelector("[data-rho]")?.textContent).toBe("ρ = 0.41");
+    expect(document.querySelector("[data-rho]")?.getAttribute("data-exact")).toBe("0.412345");
+    expect(document.querySelector("[data-rho-caption]")?.textContent).toBe("raw returns · overlapping window only");
     expect(document.querySelector("[data-correlation-source]")?.textContent).toContain("PORTAL_DERIVED");
     expect(document.querySelector("[data-correlation-meta]")?.textContent).toContain("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
     expect(document.querySelector("[data-promotes-under]")?.textContent).toBe(
@@ -790,7 +813,11 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
     for (const run of body.result.attempts) {
       const card = document.querySelector(`[data-ladder-run="${run.run_id}"]`) as HTMLElement;
       expect(card.getAttribute("data-lifecycle")).toBe(run.alpha_version_lifecycle.value);
-      expect(card.querySelector("[data-schedule]")?.textContent).toBe(`sched ${run.schedule.mode} × ${run.schedule.schedule}`);
+      /* Hi-fi: "{run} · {mode} × {schedule}" — no "sched" word. */
+      expect(card.querySelector("[data-schedule]")?.textContent).toBe(`${run.schedule.mode} × ${run.schedule.schedule}`);
+      /* The pill is the lifecycle (hi-fi); the run state reads in the run line. */
+      expect(card.querySelector("[data-run-state]")?.textContent).toBe(run.run_state);
+      expect(card.querySelectorAll(".cp-st")).toHaveLength(0);
       expect(card.querySelector("[data-cert-absent]")?.textContent).toContain(run.certification.reason_code);
       expect(card.querySelector(`[data-life="${run.alpha_version_lifecycle.value}"]`)).not.toBeNull();
     }
@@ -870,5 +897,210 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
         expect(tile.querySelector("[data-mini-meta]")).toBeNull();
       }
     }
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * X3 2026-09-26 — VD-P20 decisions and S13 debt (evidence
+ * P20/X3_S13_P23_CLAUDE_2026-09-26.md).
+ * ---------------------------------------------------------------------- */
+
+describe("S13 Compare — X3 decisions and debt", () => {
+  it("S13-U33 S13-BACK-REFETCH: returning to any key already read resends that key's own ETag and shows its copy while it revalidates", async () => {
+    const mk = { ...markets(), revision: "rev_mk", etag: '"cmp-mk-1"' };
+    let release: (value: Response) => void = () => {};
+    const calls: Call[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      calls.push({ url: String(input), method: "GET", headers: (init?.headers ?? {}) as Record<string, string> });
+      if (calls.length === 1) return new Response(JSON.stringify(attempts([run("run_a")])), { status: 200 });
+      if (calls.length === 2) return new Response(JSON.stringify(mk), { status: 200 });
+      if (calls.length === 3) return new Promise<Response>((resolve) => (release = resolve));
+      return new Response(null, { status: 304 });
+    });
+    renderAt(base);
+    await settled();
+    fireEvent.click(document.querySelector('[data-mode-option="markets"]') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-market-run="run_btc"]')).not.toBeNull());
+    await settled();
+    fireEvent.click(document.querySelector('[data-mode-option="attempts"]') as HTMLElement);
+    await waitFor(() => expect(calls).toHaveLength(3));
+    /* The single-slot validator sent nothing here (debt C4): the last key read was markets. */
+    expect(calls[2]!.headers["If-None-Match"]).toBe('"cmp-rev-7"');
+    /* Retained copy of the same key, labelled stale — never another key's runs. */
+    expect(document.querySelector('[data-ladder-run="run_a"]')).not.toBeNull();
+    expect(document.querySelector('[data-market-run="run_btc"]')).toBeNull();
+    expect(page().getAttribute("data-compare-state")).toBe("stale");
+    release(new Response(null, { status: 304 }));
+    await settled();
+    expect(page().getAttribute("data-compare-state")).toBe("available");
+    fireEvent.click(document.querySelector('[data-mode-option="markets"]') as HTMLElement);
+    await waitFor(() => expect(calls).toHaveLength(4));
+    expect(calls[3]!.headers["If-None-Match"]).toBe('"cmp-mk-1"');
+    await settled();
+    expect(document.querySelector('[data-market-run="run_btc"]')).not.toBeNull();
+  });
+
+  it("S13-U34 S13-MINI-LABELS-UNIT: a small multiple prints at most two day labels and formatted axis values with the exact string kept", async () => {
+    server([{ status: 200, body: markets() }]);
+    renderAt(`${base}?mode=markets`);
+    await settled();
+    const mini = document.querySelector('[data-mini-chart="AVAILABLE"]') as HTMLElement;
+    const days = Array.from(mini.querySelectorAll("[data-x-label]"));
+    expect(days.length).toBeGreaterThan(0);
+    expect(days.length).toBeLessThanOrEqual(2);
+    const ys = Array.from(mini.querySelectorAll("[data-y-label]")).map((el) => [el.textContent, el.getAttribute("data-exact")]);
+    expect(ys).toContainEqual(["1,041", "1040.5"]);
+    expect(ys).toContainEqual(["1,000", "1000"]);
+  });
+
+  it("S13-U35 past eight folds the per-fold figure draws one line per attempt, the ACTIVE one heavier; legend reads attempt · claim", async () => {
+    const folds = (base0: number) =>
+      Array.from({ length: 10 }, (_, index) => ({
+        fold_id: String(index),
+        source_ordinal: index,
+        oos_sharpe: String(base0 + (index % 3) * 0.1),
+        availability: AVAILABLE,
+      }));
+    const runs = [
+      run("run_active", { attempt_id: "att_03" }),
+      run("run_old", { attempt_id: "att_01", alpha_version_lifecycle: { value: "SUPERSEDED", availability: AVAILABLE } }),
+    ];
+    const body = attempts(runs);
+    if (body.result.mode !== "attempts") throw new Error("guard");
+    body.result.fold_series = runs.map((item, index) => ({
+      run_id: item.run_id,
+      state: "AVAILABLE",
+      source_fold_count: 10,
+      truncated: false,
+      folds: folds(1 + index),
+      availability: AVAILABLE,
+    })) as typeof body.result.fold_series;
+    server([{ status: 200, body }]);
+    renderAt(base);
+    await settled();
+    const figure = panel("fold-chart") as HTMLElement;
+    expect(figure.getAttribute("data-fold-mode")).toBe("lines");
+    expect(figure.querySelectorAll("rect.cp-foldbar")).toHaveLength(0);
+    expect(figure.querySelector('[data-fold-line="run_active"]')?.getAttribute("data-active")).toBe("true");
+    expect(figure.querySelector('[data-fold-line="run_old"]')?.getAttribute("data-active")).toBe("false");
+    /* Legend in ladder order (weak → strong): the server's array reversed. */
+    expect(Array.from(figure.querySelectorAll("[data-fold-legend-run]")).map((el) => el.textContent)).toEqual(["att_01 · WALK-FORWARD", "att_03 · WALK-FORWARD"]);
+  });
+
+  it("S13-U36 the config diff reads in ladder order, marks the ACTIVE column and tints only cells that differ from it", async () => {
+    const body = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(`/research/quantbt/alphas/delta-rsi-polynomial-alpha/compare`);
+    await settled();
+    if (body.result.mode !== "attempts") throw new Error("fixture guard");
+    const heads = Array.from(document.querySelectorAll(".cp-difftable thead th")).map((el) => el.textContent);
+    expect(heads).toEqual(["key", ...[...body.result.attempts].reverse().map((item) => item.attempt_id)]);
+    const active = body.result.attempts.find((item) => item.alpha_version_lifecycle.value === "ACTIVE")!;
+    expect(document.querySelector("[data-config-diff-legend]")?.textContent).toBe(`gold = differs from ACTIVE ${active.attempt_id}`);
+    for (const path of body.result.config_diff.paths) {
+      const reference = path.values.find((entry) => entry.run_id === active.run_id)?.value ?? null;
+      for (const entry of path.values) {
+        const cell = document.querySelector(`[data-config-diff-path="${path.path}"] [data-config-value="${entry.run_id}"]`) as HTMLElement;
+        expect(cell.getAttribute("data-differs"), `${path.path} ${entry.run_id}`).toBe(entry.run_id !== active.run_id && entry.value !== reference ? "true" : null);
+      }
+    }
+  });
+
+  it("S13-U37 VD decisions: rule without demo digits, one lifecycle pill, family-only claim chip, one-line title block, headings in the body face", async () => {
+    server([{ status: 200, body: attempts([run("run_a")]) }]);
+    renderAt(base);
+    await settled();
+    expect(ATTEMPTS_RULE).not.toMatch(/\d/);
+    expect(COMPARE_RULES).toContain("only the ACTIVE node may promote");
+    const card = document.querySelector('[data-ladder-run="run_a"]') as HTMLElement;
+    const chip = card.querySelector(".cp-claimchip") as HTMLElement;
+    expect(chip.getAttribute("title")).toContain("rank 3");
+    expect(chip.getAttribute("title")).toContain("origin PORTAL_DERIVED_FROM_SOURCE_PROTOCOL");
+    expect(card.querySelectorAll("[data-life]")).toHaveLength(1);
+    expect(card.querySelector("[data-run-state]")?.textContent).toBe("READY");
+    const css = document.querySelector('[data-screen="compare"] style')?.textContent ?? "";
+    expect(css).toMatch(/\.cp-head > \.l \{[^}]*flex: 0 1 auto/);
+    expect(css).toMatch(/\.cp-card > \.t, \.cp-tcard > \.t \{[^}]*font-family: var\(--font-body\)/);
+  });
+});
+
+describe("E7 / D10 — Screen 13 on the HiFi (Unified 13.4.1)", () => {
+  const WFO_ALPHA = "delta-rsi-polynomial-alpha";
+  const wfoBase = `/research/quantbt/alphas/${WFO_ALPHA}/compare`;
+
+  it("13-3 the claim line is the family and one sentence of the screen's; the key=value text stays in the title", async () => {
+    const body = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(wfoBase);
+    await settled();
+    const card = document.querySelector('[data-ladder-run="run-w6a-wfo-a"]') as HTMLElement;
+    const note = card.querySelector("[data-claim-text]") as HTMLElement;
+    expect(note.textContent).toBe(CLAIM_SENTENCE.WALK_FORWARD_OOS_COMPATIBILITY);
+    expect(note.getAttribute("title")).toContain("validation_claim=walk_forward_oos");
+    expect(page().textContent).not.toContain("validation_claim=");
+    expect(card.querySelector("[data-claim]")?.getAttribute("data-claim")).toBe("WALK_FORWARD_OOS_COMPATIBILITY");
+  });
+
+  it("13-10 metric scopes read as words, never RS02_… codes", async () => {
+    expect(scopeWords("RS02_OOS_MEAN_OF_FOLDS")).toBe("mean of folds");
+    expect(scopeWords("RS02_OOS_SUM_OF_FOLDS")).toBe("sum of folds");
+    expect(scopeWords("SOMETHING_NEW")).toBe("SOMETHING_NEW");
+    const body = compareFixture("research-compare.pair-ok.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(`${wfoBase}?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b`);
+    await settled();
+    const table = document.querySelector("[data-delta-table]") as HTMLElement;
+    expect(table.textContent).not.toMatch(/RS02_/);
+    expect(table.querySelector('[data-delta-row="OOS_SHARPE"] [data-scope]')?.textContent).toBe("mean of folds");
+    expect(table.querySelector('[data-delta-row="TRADE_COUNT"] [data-scope]')?.textContent).toBe("sum of folds");
+    /* 13-9: heads are A/B + the run, not the raw id twice. */
+    expect(table.querySelector('th[data-side="left"]')?.textContent).toBe("A · run-w6a-wfo-a");
+  });
+
+  it("13-2 / 13-4 E1 short ids on cards and legend; folds read 1-based; each series its own tone", async () => {
+    const LONG = "rrun_8c9c9991bdd0cfe72100da64ebee1150";
+    const LONG_ATT = "ratt_8c9c9991bdd0cfe72100da64ebee1150";
+    server([{ status: 200, body: attempts([run(LONG, { attempt_id: LONG_ATT }), run("run_a")]) }]);
+    renderAt(base);
+    await settled();
+    const card = document.querySelector(`[data-ladder-run="${LONG}"]`) as HTMLElement;
+    expect(card.querySelector(".cp-att")?.textContent).toBe("ratt_8c9c9991");
+    expect(card.querySelector(".cp-att")?.getAttribute("title")).toBe(LONG_ATT);
+    expect(card.querySelector(`[data-run-link="${LONG}"]`)?.textContent).toBe("rrun_8c9c9991");
+    expect(page().textContent).not.toContain("8c9c9991bdd0cfe72100da64ebee1150");
+    cleanup();
+    const fixture = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body: fixture }]);
+    renderAt(`/research/quantbt/alphas/${WFO_ALPHA}/compare`);
+    await settled();
+    const groups = Array.from(document.querySelectorAll("[data-fold-group]")).map((el) => el.textContent);
+    expect(groups[0]).toBe("fold 1");
+    const swatches = Array.from(document.querySelectorAll("[data-fold-legend] .sw")).map((el) => (el as HTMLElement).style.background);
+    expect(new Set(swatches).size).toBe(swatches.length);
+    /* 13-5: the attempts without per-fold rows are a count and a closed disclosure. */
+    const absent = document.querySelector("[data-fold-absent-runs]") as HTMLDetailsElement;
+    expect(absent.tagName).toBe("DETAILS");
+    expect(absent.open).toBe(false);
+    expect(absent.querySelector("summary")?.textContent).toBe("1 attempt has no per-fold rows");
+  });
+});
+
+describe("E7 / D10 — a server before the market grouping", () => {
+  it("lists its per-run cards as they came and says the grouping is not published, grouping nothing itself", async () => {
+    const body = markets();
+    const result = body.result as unknown as Record<string, unknown> & { cards: Array<Record<string, unknown>> };
+    delete result.grouping;
+    for (const card of result.cards) {
+      delete card.market;
+      delete card.selection;
+      delete card.runs_in_market;
+    }
+    server([{ status: 200, body }]);
+    renderAt(`${base}?mode=markets`);
+    await settled();
+    expect(document.querySelector("[data-markets-ungrouped]")).not.toBeNull();
+    expect(document.querySelectorAll("[data-market-run]")).toHaveLength(2);
+    expect(document.querySelector('[data-market-run="run_btc"] [data-market-key]')?.textContent).toBe("BTCUSDT · 4h");
+    expect(document.querySelector("[data-market-selection-words]")).toBeNull();
   });
 });

@@ -30,6 +30,18 @@ import { ProvenanceStrip, type ProvenanceFacts } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import type { DeclaredParameter } from "./alphaImportClient";
 import { reasonCodeSentence } from "./researchRefusal";
+import { claimToken, groupDecimalString } from "./researchFormat";
+import { ShortId } from "./ShortId";
+import {
+  BestVsSelectedCards,
+  FoldDecayBars,
+  PoolFunnel,
+  PoolPlane,
+  SERVER_PREDATES_POOL,
+  TypesetFormula,
+  freezeLineLabel,
+  selectedCandidate,
+} from "./SearchStageB";
 import { isRetainedAnswer, retainedReadiness, walkForwardOf } from "./retainedLane";
 import {
   DIAGNOSTIC_KEYS,
@@ -336,7 +348,9 @@ function ClaimAbsence({ state, reason, what }: { state: string; reason: string |
 function RetainedToken({ value, what }: { value: string; what: string }) {
   return (
     <span className="flex items-baseline gap-1.5" data-claim-fact={what} data-claim-state="RETAINED_SOURCE">
-      <span data-claim-value>{value}</span>
+      <span data-claim-value={value} title={value}>
+        {claimToken(value)}
+      </span>
       <span className="text-[9px]" style={{ color: "var(--good)" }} title="published by QuantBT for this run, read from the retained lane">
         QUANTBT
       </span>
@@ -349,7 +363,9 @@ function ClaimToken({ fact, what }: { fact: ClaimTokenFact | ClaimRow["oos_used_
   if (fact.state === "CONFIRMED") {
     return (
       <span className="flex items-baseline gap-1.5" data-claim-fact={what} data-claim-state="CONFIRMED">
-        <span data-claim-value>{fact.value}</span>
+        <span data-claim-value={String(fact.value)} title={String(fact.value)}>
+          {claimToken(fact.value as string | boolean)}
+        </span>
         <span className="text-[9px]" style={{ color: "var(--good)" }} title={fact.provenance}>
           CONFIRMED
         </span>
@@ -416,7 +432,9 @@ function ScoringBackendFact({ backend }: { backend: ScoringBackend }) {
   if (backend.state === "CONFIRMED" && backend.declared_value !== null) {
     return (
       <span className="flex items-baseline gap-1.5" data-claim-fact="scoring backend" data-claim-state="CONFIRMED">
-        <span data-claim-value>{backend.declared_value}</span>
+        <span data-claim-value={backend.declared_value} title={backend.declared_value}>
+          {claimToken(backend.declared_value)}
+        </span>
         <span className="text-[9px]" style={{ color: "var(--good)" }} title={backend.provenance}>
           CONFIRMED
         </span>
@@ -427,7 +445,9 @@ function ScoringBackendFact({ backend }: { backend: ScoringBackend }) {
     return (
       <span className="flex flex-col gap-[1px]" data-claim-fact="scoring backend" data-claim-state={backend.state}>
         <span className="flex items-baseline gap-1.5">
-          <span data-claim-declared>{backend.declared_value}</span>
+          <span data-claim-declared={backend.declared_value} title={backend.declared_value}>
+            {claimToken(backend.declared_value)}
+          </span>
           <span
             className="text-[9px]"
             style={{ color: "var(--accent-2)" }}
@@ -977,26 +997,31 @@ function CandidateLedger({ search }: { search: CurrentSourceSearch }) {
 /** W3 · B1: the pool the selector saw, from the source's own counts — never a derived k. */
 function RetainedPoolFreeze({ search }: { search: CurrentSourceSearch }) {
   const contract = search.search_contract;
-  const rows: [string, number, string][] = [
+  const rows: [string, number | null, string][] = [
     ["Optuna trials (Stage A)", search.ledger.source_trial_count, `${contract.optuna_trials_scope ?? "scope not published"} study · ${contract.n_studies ?? "?"} study`],
     [
       "candidate pool",
       search.candidates.source_candidate_count,
       contract.top_is_fraction !== null ? `top_is_fraction ${contract.top_is_fraction}` : contract.top_is_k !== null ? `top_is_k ${contract.top_is_k}` : "pool rule not published",
     ],
-    ["selected", search.selection.selected_trial_id === null ? 0 : 1, contract.candidate_selection_metric ?? "selector not published"],
+    ["selected", search.selection.selected_trial_id === null ? null : 1, contract.candidate_selection_metric ?? "selector not published"],
   ];
   /* Bar length is geometry only: each count against the Stage A trial count. */
   const most = search.ledger.source_trial_count;
   return (
-    <div className="flex flex-col gap-[5px]" data-retained-pool>
+    <div className="flex flex-col gap-[5px]" data-retained-pool="pre-e5">
+      <span className="mono text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} title={SERVER_PREDATES_POOL} data-gap-reason="pool">
+        this server does not publish the pool counts, K or feasibility — the counts below are the ledger&apos;s row totals
+      </span>
       {rows.map(([label, n, note]) => (
         <span key={label} className="mono flex items-center gap-2 text-[10.5px]" data-pool-row={label}>
           <span className="w-[158px] flex-none text-[10.5px] [font-family:var(--font-body)]" style={{ color: "var(--ink-soft)" }}>
             {label}
           </span>
-          <span className="h-[8px] rounded-[2px]" style={{ width: `${n === 0 ? 2 : Math.round((n / most) * 120)}px`, background: "var(--accent-2)" }} />
-          <span className="w-[40px] flex-none text-right">{n}</span>
+          {n !== null ? <span className="h-[8px] rounded-[2px]" style={{ width: `${n === 0 ? 2 : Math.round((n / most) * 120)}px`, background: "var(--accent-2)" }} /> : null}
+          <span className="min-w-[40px] flex-none text-right">
+            {n !== null ? n : <span className="italic" style={{ color: "var(--ink-faint)" }}>not published</span>}
+          </span>
           <span className="flex-1 pl-1.5 text-[9px]" style={{ color: "var(--ink-faint)" }}>
             {note}
           </span>
@@ -1031,19 +1056,17 @@ function RetainedFormula({ search }: { search: CurrentSourceSearch }) {
   }
   return (
     <div className="flex flex-col gap-[2px]" data-retained-formula={components.formula}>
-      <span className="mono border-l-2 py-0.5 pl-2.5 text-[11px]" style={{ borderColor: "var(--accent)" }}>
-        J = S̄_OOS − λ·σ(decay) − γ·max(0, D̄) · λ {search.diagnostics.probe.decay_lambda ?? "?"} · γ {search.diagnostics.probe.decay_gamma ?? "?"}
-      </span>
+      <TypesetFormula search={search} selected={selected} />
       {components.terms.map((term) => (
         <span key={term.term} className="flex items-baseline gap-[9px] border-b py-0.5 text-[10.5px]" style={{ borderColor: "var(--paper-sunken)" }} data-formula-term={term.term}>
           <span className="mono w-[150px] flex-none" style={{ color: "var(--ink-soft)" }}>
             {term.term}
           </span>
           <span className="flex-1" style={{ color: "var(--ink-faint)" }}>
-            {TERM_WORDS[term.term] ?? term.term} · value {ratio2(term.value)} × weight {term.weight}
+            {TERM_WORDS[term.term] ?? term.term} · value {ratio2(term.value) ?? "not published"} × weight {term.weight}
           </span>
-          <span className="mono" title={term.contribution}>
-            {ratio2(term.contribution)}
+          <span className="mono text-[11px] font-semibold" title={term.contribution}>
+            {ratio2(term.contribution) ?? "not published"}
           </span>
         </span>
       ))}
@@ -1055,9 +1078,14 @@ function RetainedFormula({ search }: { search: CurrentSourceSearch }) {
           as QuantBT ranked it — {search.diagnostics.probe.objective_rows_recomposed} of {search.diagnostics.probe.objective_rows} retained objectives recompose from their terms
         </span>
         <span className="mono font-semibold" title={search.selection.objective ?? undefined}>
-          {ratio2(search.selection.objective)}
+          {ratio2(search.selection.objective) ?? <NotPublished title="the selection publishes no objective" />}
         </span>
       </span>
+      {/* HiFi Mode 1 sub-panels (6.10): θ*'s per-fold decay and the pool on the S_IS × S̄_OOS plane. */}
+      <div className="flex flex-wrap gap-[14px] pt-1.5" data-formula-panels>
+        <FoldDecayBars pool={search.pool} />
+        <PoolPlane search={search} selected={selectedCandidate(search)} />
+      </div>
     </div>
   );
 }
@@ -1088,12 +1116,18 @@ function RetainedBestVsSelected({ search }: { search: CurrentSourceSearch }) {
     </div>
   );
   const same = roles.raw_best_is_equals_selected;
+  /* E5 · 6.11: each card lists S_IS, S̄_OOS, d̄ decay and max_dd (SearchStageB); an older server keeps one number per card. */
+  const fourRows = search.candidates.rows.some((row) => (row as Partial<RetainedCandidate>).max_drawdown !== undefined);
   return (
     <div className="flex flex-col gap-2" data-retained-roles>
-      <div className="flex gap-2.5">
-        {card(roles.raw_best_is, "best_trial", "var(--bad)", "RANK 1 BY IS", "raw-best")}
-        {card(roles.selected, "selected", "var(--accent-2)", "SELECTED BY POLICY", "selected")}
-      </div>
+      {fourRows ? (
+        <BestVsSelectedCards search={search} />
+      ) : (
+        <div className="flex flex-wrap gap-2.5">
+          {card(roles.raw_best_is, "best_trial", "var(--bad)", "RANK 1 BY IS", "raw-best")}
+          {card(roles.selected, "selected", "var(--accent-2)", "SELECTED BY POLICY", "selected")}
+        </div>
+      )}
       <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-roles-note>
         {same === true
           ? "The IS best and the selected candidate are the same trial here, but the two numbers measure different things: the IS search scores mean IS Sharpe; the selector ranks the candidate by Mode 1 J over every outer fold."
@@ -1123,6 +1157,11 @@ type RetainedFact = CurrentSourceSearch["diagnostics"]["importance"];
 
 /** The UI's own code (researchRefusal.ts) for a figure the retained lane carries no field for. */
 export const RETAINED_NO_FIELD = "UI_RETAINED_LANE_HAS_NO_FIELD";
+
+/** A server state token in words (`FIXED_PROFILE_NO_SEARCH` → `fixed profile no search`); callers keep the token in a title. */
+export function stateWords(token: string): string {
+  return token.toLowerCase().replace(/_/g, " ");
+}
 
 function noField(): SearchSourceGap {
   return { state: "NOT_PUBLISHED", reason_code: RETAINED_NO_FIELD } as SearchSourceGap;
@@ -1262,7 +1301,7 @@ function ServedSearchSpace({ search, space, run }: { search: CurrentSourceSearch
       )}
       <div className="flex flex-wrap gap-x-[22px] gap-y-1 pt-[5px]" data-coverage>
         {space.grid_size !== null && space.grid_size !== undefined ? (
-          <CoverageFact what="grid_size" value={`${Number(space.grid_size).toLocaleString("en-US")} points declared`} />
+          <CoverageFact what="grid_size" value={`${groupDecimalString(String(space.grid_size))} points declared`} />
         ) : null}
         <CoverageFact what="sampler seed" value={window.seed !== null ? `${window.seed} · requested spec` : null} pending={pending} />
         <CoverageFact
@@ -1275,7 +1314,7 @@ function ServedSearchSpace({ search, space, run }: { search: CurrentSourceSearch
       </div>
       {space.state === "AVAILABLE" && space.grid_size ? (
         <span className="text-[10px] leading-[1.5]" style={{ color: "var(--accent-2)" }} data-coverage-note>
-          {search.ledger.source_trial_count} trials sampled a declared grid of {Number(space.grid_size).toLocaleString("en-US")} points — every
+          {search.ledger.source_trial_count} trials sampled a declared grid of {groupDecimalString(String(space.grid_size))} points — every
           conclusion below is about the sampled region, not the whole space.
         </span>
       ) : null}
@@ -1624,6 +1663,8 @@ function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument;
         ? "no-freeze"
         : "unpublished";
   const arrow = freezeArrow(kind);
+  /* E5 · 6.7: the HiFi label carries K when the server published it. */
+  const served = froze ? freezeLineLabel(retained?.pool) : null;
   const line =
     "h-0 flex-1 border-t-2 border-dashed min-[1100px]:h-auto min-[1100px]:w-0 min-[1100px]:border-l-2 min-[1100px]:border-t-0";
   return (
@@ -1636,9 +1677,10 @@ function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument;
         <span
           className="mono whitespace-nowrap text-[9.5px] font-bold tracking-[.14em] min-[1100px]:[transform:rotate(180deg)] min-[1100px]:[writing-mode:vertical-rl]"
           style={{ color: "var(--accent-2)" }}
-          title={title}
+          title={served ? `${title} ${served.title}.` : title}
+          data-freeze-label={served ? "served" : "rule"}
         >
-          {FREEZE_LABEL} · {froze ? "FROZEN" : retained !== null ? "RULE NOT PUBLISHED" : "NONE — NO SEARCH RAN"}
+          {served ? served.text : `${FREEZE_LABEL} · ${froze ? "FROZEN" : retained !== null ? "RULE NOT PUBLISHED" : "NONE — NO SEARCH RAN"}`}
         </span>
         <span
           className="mono whitespace-nowrap rounded-[3px] border px-1.5 py-[3px] text-[10px] font-bold"
@@ -1788,9 +1830,7 @@ export function SearchScreen({
               </Link>
             )}
             <span style={{ color: "var(--ink-faint)" }}>/</span>
-            <span className="mono min-w-0 truncate" title={runId}>
-              {runId}
-            </span>
+            <ShortId id={runId} label="run" className="min-w-0 text-[12px]" />
             <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span style={{ color: "var(--ink)" }}>Stage 2 · Search &amp; Selection</span>
             {notFound ? null : (
@@ -1936,7 +1976,7 @@ export function SearchScreen({
                   </Claim>
                   <Claim k="oos_used_for_selection">
                     {retainedClaims && retainedClaims.oos_used_for_selection !== null ? (
-                      <RetainedToken value={String(retainedClaims.oos_used_for_selection)} what="oos used for selection" />
+                      <RetainedToken value={retainedClaims.oos_used_for_selection ? "YES" : "NO"} what="oos used for selection" />
                     ) : (
                       <ClaimToken fact={detail.claim_row.oos_used_for_selection} what="oos used for selection" />
                     )}
@@ -1960,7 +2000,9 @@ export function SearchScreen({
                       <RetainedToken value={retainedClaims.candidate_selection_metric} what="candidate selection metric" />
                     ) : metric?.state === "CONFIRMED" ? (
                       <span className="flex items-baseline gap-1.5">
-                        <span data-metric-value={metric.value}>{metric.value}</span>
+                        <span data-metric-value={metric.value} title={metric.value}>
+                          {claimToken(metric.value)}
+                        </span>
                         <span className="text-[9px]" style={{ color: "var(--good)" }}>
                           CONFIRMED
                         </span>
@@ -1987,24 +2029,24 @@ export function SearchScreen({
                         </span>
                       </span>
                     ) : (
-                      <span data-source-profile={detail.source_profile.state} title={detail.source_profile.reason_code ?? undefined}>
-                        {detail.source_profile.state}
+                      <span data-source-profile={detail.source_profile.state} title={`${detail.source_profile.state}${detail.source_profile.reason_code ? ` · ${detail.source_profile.reason_code}` : ""}`}>
+                        {stateWords(detail.source_profile.state)}
                       </span>
                     )}
                   </Claim>
                   <Claim k="selection" data-selection-state={lane ? lane.selection.availability.state : detail.selection.state}>
                     {lane ? (
                       <span className="flex flex-col gap-[1px]">
-                        <span>{lane.selection.availability.state}</span>
+                        <span title={lane.selection.availability.state}>{stateWords(lane.selection.availability.state)}</span>
                         {lane.selection.selected_trial_id !== null ? (
                           <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} title={lane.selection.objective ?? undefined} data-selection-summary>
                             trial {lane.selection.selected_trial_id} · J {ratio2(lane.selection.objective) ?? "not published"} ·{" "}
-                            {lane.selection.objective_kind}
+                            {OBJECTIVE_KIND_WORDS[lane.selection.objective_kind] ?? lane.selection.objective_kind}
                           </span>
                         ) : null}
                       </span>
                     ) : (
-                      detail.selection.state
+                      <span title={detail.selection.state}>{stateWords(detail.selection.state)}</span>
                     )}
                   </Claim>
                   <Claim k="strict outer OOS">
@@ -2025,9 +2067,9 @@ export function SearchScreen({
                     ) : (
                       <span
                         data-readiness={detail.readiness}
-                        title="The server's own word: a fixed profile is published; the optimizer facts around it are absent by nature."
+                        title={`${detail.readiness} — the server's own word: a fixed profile is published; the optimizer facts around it are absent by nature.`}
                       >
-                        {detail.readiness}
+                        {stateWords(detail.readiness)}
                       </span>
                     )}
                   </Claim>
@@ -2134,7 +2176,8 @@ export function SearchScreen({
                     ) : null}
                   </div>
                   {parameters.length > 0 ? (
-                    <ParameterTable parameters={parameters} />
+                    /* 6.6: every kind one short word (NUMERIC) → the narrow kind cell, so the range-position note is not clipped at 1440. */
+                    <ParameterTable parameters={parameters} kindWidth={parameters.every((parameter) => parameter.kind.length <= 8) ? 64 : undefined} />
                   ) : (
                     <Withheld availability={profile?.availability ?? detail.availability} what="parameter profile" />
                   )}
@@ -2227,7 +2270,7 @@ export function SearchScreen({
                   <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
                     B1 · pool freeze
                   </h3>
-                  {retained ? <RetainedPoolFreeze search={retained} /> : gapOf("candidate_pool") ? <Gap gap={gapOf("candidate_pool") as SearchSourceGap} what="candidate pool" showReason /> : null}
+                  {retained ? (retained.pool ? <PoolFunnel search={retained} /> : <RetainedPoolFreeze search={retained} />) : gapOf("candidate_pool") ? <Gap gap={gapOf("candidate_pool") as SearchSourceGap} what="candidate pool" showReason /> : null}
                 </section>
 
                 <section className={CARD} style={CARD_STYLE} data-panel="formula">

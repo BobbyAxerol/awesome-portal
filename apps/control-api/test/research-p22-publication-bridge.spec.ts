@@ -16,6 +16,13 @@ describe("P22 sealed-pack authority extraction", () => {
     expect(sealedPackMethodologyClaimIds({ notes: ["methodology claim:oos"], fields: [] })).toEqual([]);
   });
 
+  it("gives the canonical P21 methodology row a content-addressed claim identity", () => {
+    const digest = "a".repeat(64);
+    expect(sealedPackMethodologyClaimIds({
+      pack: [{ key: "METHODOLOGY_CLAIM", status: "DEGRADED", digest, note: "prose is not parsed" }],
+    })).toEqual([`claim:sha256:${digest}`]);
+  });
+
   it("bounds malformed and oversized claim values without inventing a source fact", () => {
     expect(sealedPackMethodologyClaimIds({
       claim_id: " ",

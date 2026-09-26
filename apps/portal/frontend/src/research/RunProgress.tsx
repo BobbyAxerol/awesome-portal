@@ -46,12 +46,14 @@ import {
 import { ArtifactPanel } from "./ArtifactPanel";
 import { decodeInspectionCursor, encodeInspectionCursor, type InspectionCursor } from "./inspectionCursor";
 import { ServedAttempts } from "./QueuePanel";
-import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { NotPublished, RunMetaStrip } from "./RunMetaStrip";
 import { StageLedger, utcClock } from "./StageLedger";
 import type { Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
+import { ShortId } from "./ShortId";
+import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -318,6 +320,16 @@ function evidenceCursor(
   };
 }
 
+/**
+ * E10: a FAILED run the Portal closed itself (lost lease, retry never
+ * dispatched, terminal record unrecordable) has no source failure; its reason
+ * is the server's typed `current.terminal_reason`, shown the same way.
+ */
+function controlFailure(read: ProgressRead | null): ProgressSnapshot["failure"] {
+  const reason = read?.current.terminal_reason;
+  return reason && reason.origin === "CONTROL" ? { code: reason.code, message: reason.message } : null;
+}
+
 /** Where a failed/cancelled run's one action goes: Screen 02 seeded from this run. */
 export function newRunFromHref(runId: string): string {
   return `${QUANTBT_ROOT}/runs/new?from=${encodeURIComponent(runId)}`;
@@ -325,30 +337,40 @@ export function newRunFromHref(runId: string): string {
 
 /* ---------------------------------------------------------------- stages */
 
+/** E10: the server's `current.failed_at` — where a FAILED run stopped. */
+type FailedAt = NonNullable<ProgressRead["current"]["failed_at"]>;
+
 function StagePills({
   stages,
   claimState,
   runId,
   cursor,
+  failedAt = null,
 }: {
   stages: readonly Stage[];
   claimState: ProgressSnapshot["claim"]["state"];
   runId: string;
   cursor: InspectionCursor;
+  failedAt?: FailedAt | null;
 }) {
   return (
     <div data-stage-rail style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
       {stages.map((stage, index) => {
         const issued = stage.key === "S5" && claimState === "ISSUED";
-        const done = stage.state === "DONE";
-        const running = stage.state === "RUNNING";
-        const tone = issued
-          ? { border: "var(--accent-2)", bg: "var(--accent-2-soft)", fg: "var(--accent-2)" }
-          : running
-            ? { border: "var(--accent)", bg: "var(--accent-soft)", fg: "var(--accent)" }
-            : done
-              ? { border: "var(--good)", bg: "var(--good-bg)", fg: "var(--good)" }
-              : { border: "var(--line)", bg: "transparent", fg: "var(--ink-faint)" };
+        /* HiFi S01/S03: the failing stage is red. Where it is comes from the
+           server (`current.failed_at`), never from a local guess. */
+        const failed = failedAt?.stage === stage.key;
+        const done = stage.state === "DONE" && !failed;
+        const running = stage.state === "RUNNING" && !failed;
+        const tone = failed
+          ? { border: "var(--bad)", bg: "var(--bad-bg)", fg: "var(--bad)" }
+          : issued
+            ? { border: "var(--accent-2)", bg: "var(--accent-2-soft)", fg: "var(--accent-2)" }
+            : running
+              ? { border: "var(--accent)", bg: "var(--accent-soft)", fg: "var(--accent)" }
+              : done
+                ? { border: "var(--good)", bg: "var(--good-bg)", fg: "var(--good)" }
+                : { border: "var(--line)", bg: "transparent", fg: "var(--ink-faint)" };
         const motion = running ? pulse("1.6s") : null;
         const style: CSSProperties = {
           ...motion?.style,
@@ -363,7 +385,7 @@ function StagePills({
           whiteSpace: "nowrap",
           textTransform: "uppercase",
         };
-        const label = `${done || issued ? "✓ " : ""}${stage.key} ${STAGE_LABEL[stage.key]}`;
+        const label = `${failed ? "✕ " : done || issued ? "✓ " : ""}${stage.key} ${STAGE_LABEL[stage.key]}`;
         const target = stageTarget(stage.key);
         const linked = done || issued;
         return (
@@ -381,13 +403,21 @@ function StagePills({
             ) : (
               <span
                 data-stage={stage.key}
-                data-stage-state={stage.state}
+                data-stage-state={failed ? "FAILED" : stage.state}
                 data-motion={motion?.["data-motion"]}
                 /* Not a control yet: focusable and announced as disabled rather
                    than silently inert (spec 03 §12). */
                 aria-disabled="true"
                 tabIndex={0}
-                title={running ? "Running — the deep dive opens when the stage completes." : "Pending"}
+                title={
+                  failed
+                    ? failedAt?.basis === "SOURCE_RUNNING_STAGE"
+                      ? `Failed during this stage${failedAt.fold === null ? "" : ` at fold ${failedAt.fold}`}.`
+                      : "Failed before this stage started."
+                    : running
+                      ? "Running — the deep dive opens when the stage completes."
+                      : "Pending"
+                }
                 style={style}
               >
                 {label}
@@ -1461,8 +1491,14 @@ function ClaimPassport({
         {failure !== null ? (
           <Field label="failure" name="failure">
             <span role="alert" style={valueStyle("bad")} data-failure={failure.code}>
-              {/* The engine's code and sentence, verbatim. */}
-              {failure.code} — {failure.message}
+              {/* VD-P23-01 / E1: the screen's own sentence; the engine's code and message stay verbatim behind details. */}
+              {reasonCodeSentence(failure.code) ?? "The run failed before it could seal its evidence."}{" "}
+              <details style={{ display: "inline" }}>
+                <summary style={{ cursor: "pointer", fontSize: 10 }}>details</summary>
+                <span className="mono" style={{ fontSize: 10.5 }}>
+                  {failure.code} — {failure.message}
+                </span>
+              </details>
             </span>
           </Field>
         ) : null}
@@ -1758,7 +1794,7 @@ function Header({
             /
           </span>
           <span style={{ fontFamily: MONO, wordBreak: "break-all" }} data-breadcrumb-run>
-            {runId}
+            <ShortId id={runId} label="run" />
           </span>
           <span aria-hidden="true" style={{ color: "var(--ink-faint)" }}>
             /
@@ -1915,12 +1951,10 @@ export function RunProgress(props: RunProgressProps) {
   if (refusal?.notFound || (read === null && state.state === "empty")) {
     return (
       <div data-screen="run-progress" data-run-not-found style={ROOT}>
-        <Header runId={runId} title={`Run not found — ${runId}`} />
+        <Header runId={runId} title={`Run ${shortId(runId)}`} />
         <section style={{ ...CARD, gap: 8 }}>
-          <h2 style={{ ...CARD_TITLE, margin: 0 }}>run not found</h2>
-          <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>
-            This run does not exist in this workspace, or you cannot read it here. No progress has been inferred.
-          </p>
+          <h2 style={{ ...CARD_TITLE, margin: 0 }}>run not available</h2>
+          <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>{REFUSAL_COPY.denied}</p>
           <a href={`${QUANTBT_ROOT}/runs`} style={{ fontFamily: MONO, fontSize: 10.5 }}>
             Open Run Library →
           </a>
@@ -1936,7 +1970,7 @@ export function RunProgress(props: RunProgressProps) {
       <div data-screen="run-progress" data-no-source={read.availability} style={ROOT}>
         <Header
           runId={runId}
-          title={`${queued ? "Run queued" : "Run cancelled"} — ${runId}`}
+          title={`${queued ? "Run queued" : "Run cancelled"} — ${shortId(runId)}`}
           right={<TransportDot transport={transport} live={live} />}
         />
         <RunMetaStrip runId={runId} identity={identity} status={statusSlot} />
@@ -1971,7 +2005,7 @@ export function RunProgress(props: RunProgressProps) {
   const handoffLabel = cursor.fold && cursor.trial ? `fold ${cursor.fold} · trial ${cursor.trial}` : null;
   const cursorFold = folds.find((f) => f.fold === foldCursor) ?? null;
   const terminalStatus = status === "FAILED" || status === "CANCELLED";
-  const title = `${status === "COMPLETED" ? "Run completed" : "Run progress"} — ${runId}`;
+  const title = `${status === "COMPLETED" ? "Run completed" : "Run progress"} — ${shortId(runId)}`;
 
   const tabButton = (key: "live" | "stage", label: string) => (
     <button
@@ -2059,7 +2093,7 @@ export function RunProgress(props: RunProgressProps) {
           claim={snapshot.claim}
           status={status}
           sealed={sealed}
-          failure={snapshot.failure}
+          failure={snapshot.failure ?? controlFailure(read)}
           readiness={snapshot.readiness}
           handoffHref={handoffHref}
           handoffLabel={handoffLabel}
@@ -2076,7 +2110,13 @@ export function RunProgress(props: RunProgressProps) {
       <section data-research-panel="progress" aria-label="progress" style={{ ...CARD, gap: 8 }}>
         {content && snapshot ? (
           <>
-            <StagePills stages={snapshot.stages} claimState={snapshot.claim.state} runId={runId} cursor={cursor} />
+            <StagePills
+              stages={snapshot.stages}
+              claimState={snapshot.claim.state}
+              runId={runId}
+              cursor={cursor}
+              failedAt={read?.current.failed_at ?? null}
+            />
             <ProgressCard snapshot={snapshot} live={live} foldCount={foldCount} />
           </>
         ) : (

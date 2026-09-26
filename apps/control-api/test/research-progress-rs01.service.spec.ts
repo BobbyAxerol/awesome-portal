@@ -26,6 +26,22 @@ const terminalIngress = {
   },
 };
 
+/**
+ * E10: the status now comes from `research.run_lifecycle_status_v1` in the
+ * repository's SQL (proved against PostgreSQL in p11-progress.spec.ts). A
+ * repository fake must say what that function returns for its row.
+ */
+function withLifecycle<T extends Record<string, unknown>>(row: T): T & { lifecycleStatus: string } {
+  if (typeof row.lifecycleStatus === "string") return row as T & { lifecycleStatus: string };
+  const job = row.jobState;
+  const lifecycleStatus = job === "CANCELLED" ? "CANCELLED"
+    : row.terminalMaterialization === "PENDING" ? "FINISHING"
+      : job === "FAILED" ? "FAILED"
+        : job === "SUCCEEDED" ? "COMPLETED"
+          : job === "RUNNING" || job === "CLAIMED" || job === "CANCEL_REQUESTED" ? "RUNNING" : "QUEUED";
+  return { ...row, lifecycleStatus };
+}
+
 function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<string, unknown>; scope?: Record<string, unknown>; reportRefuses?: boolean }) {
   const progress = {
     resolveIngress: vi.fn().mockResolvedValue({ ...ingressScope, ...options?.scope }),
@@ -35,14 +51,14 @@ function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<strin
       snapshot: terminalIngress.snapshot,
     }),
     markTerminalMaterialized: vi.fn().mockResolvedValue(undefined),
-    readRun: vi.fn().mockResolvedValue({
+    readRun: vi.fn().mockResolvedValue(withLifecycle({
       runId: "run_rs01", jobState: "SUCCEEDED", progress: null,
       sourceLatestSequence: 9, retentionFloorSequence: 0, receivedAt: null,
       hasCurrentAttempt: true, terminalMaterialization: "PENDING", retainedArtifacts: [],
       queueClass: "BACKGROUND", queuedAt: new Date("2026-09-23T00:00:00.000Z"),
       retryNotBefore: null, attempts: [],
       ...options?.current,
-    }),
+    })),
     currentLease: vi.fn(),
   };
   const metadata = { finishDurableJob: vi.fn().mockResolvedValue(undefined) };

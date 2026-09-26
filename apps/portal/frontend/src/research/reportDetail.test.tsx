@@ -555,7 +555,9 @@ describe("S09 Run Report — layout rules", () => {
 
   it("S09-U28 long sealed identifiers wrap in full and no block clips them", async () => {
     const css = await sheetCss();
-    expect(css).toContain(".rr-long { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }");
+    /* E3 (audit 9.2): wrap only when a token overflows — never split a word that fits. */
+    expect(css).toContain(".rr-long { overflow-wrap: anywhere; word-break: normal; min-width: 0; }");
+    expect(css).not.toContain("break-all");
     expect(css).toMatch(/\.rr-block \{[^}]*\}/);
     expect(/\.rr-block \{([^}]*)\}/.exec(css)![1]).not.toMatch(/overflow\s*:\s*(hidden|clip)/);
     /* The one clipped box is the off-screen screen-reader copy (.rr-sr, S09-U32). */
@@ -643,7 +645,7 @@ describe("S09 Run Report — audit fixes (A1/A2)", () => {
     expect(td).toContain("overflow-wrap: break-word");
     expect(td).not.toContain("break-all");
     expect(td).not.toContain("anywhere");
-    expect(css).toContain(".rr-table td.rr-long { word-break: break-all; }");
+    expect(css).toContain(".rr-table td.rr-long { overflow-wrap: anywhere; }");
     /* Header cells too: at 660 "Initial equity" and "SCOPE" split before this rule (hi-fi pass). */
     const th = /\.rr-table th \{([^}]*)\}/.exec(css)![1]!;
     expect(th).toContain("word-break: normal; overflow-wrap: break-word");
@@ -847,7 +849,7 @@ describe("S09 Run Report — reading", () => {
     [400, "RESEARCH_REPORT_INVALID", "terminal"],
     [401, "RESEARCH_REPORT_FORBIDDEN", "denied"],
     [403, "RESEARCH_REPORT_FORBIDDEN", "denied"],
-    [404, "RESEARCH_REPORT_NOT_FOUND", "empty"],
+    [404, "RESEARCH_REPORT_NOT_FOUND", "denied"], // F-04 (X3): a 404 reads as a 403
     [503, "RESEARCH_REPORT_UNAVAILABLE", "unavailable"],
   ] as const)("S09-U14 a %i refusal shows fixed copy and confirms nothing about the run", async (status, code, state) => {
     server({ detail: [problem(status, code)] });
@@ -865,6 +867,7 @@ describe("S09 Run Report — reading", () => {
   });
 
   it("S09-U15 403 uses the audited F-04 sentence, 409 maps to stale and keeps the job", () => {
+    expect(REPORT_REFUSAL_COPY.report[404]).toBe(REPORT_REFUSAL_COPY.report[403]);
     expect(REPORT_REFUSAL_COPY.report[403]).toBe(REPLAY_REFUSAL_COPY[403]);
     expect(REPORT_REFUSAL_COPY.export[403]).toBe(REPLAY_REFUSAL_COPY[403]);
     const conflict = toReportRefusal(new PortalApiError("409", 409, "RESEARCH_REPORT_NOT_READY", "req"), "export");
@@ -1048,7 +1051,7 @@ describe("S09 Run Report — pure parts and source rules", () => {
     const module = readFileSync(join(process.cwd(), "src", "features", "quantbt", "QuantBTModule.tsx"), "utf8");
     expect(module).toContain('<Route path="runs/:runId/report" element={<ReportRoute />} />');
     const execute = readFileSync(join(process.cwd(), "src", "research", "ExecuteDetail.tsx"), "utf8");
-    expect(execute).toMatch(/to=\{`\/research\/quantbt\/runs\/\$\{run\}\/report`\}\s+className="mono"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
+    expect(execute).toMatch(/to=\{`\/research\/quantbt\/runs\/\$\{run\}\/report`\}\s+className="mono text-\[10px\]"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
     const hub = readFileSync(join(process.cwd(), "src", "research", "EvidenceFlow.tsx"), "utf8");
     expect(hub).toContain('data-action="generate-report"');
     expect(hub).toContain('data-action="release-candidate"');
@@ -1205,7 +1208,7 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     const audit = panel("final-audit");
     expect(audit.getAttribute("data-final-audit")).toBe("REUSED_ORIGINAL");
     expect(audit.querySelector("[data-optimizer-reinvoked]")?.getAttribute("data-optimizer-reinvoked")).toBe("false");
-    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toBe("fold 0: child #10 2671e27b = θ* · fold 1: child #11 2671e27b = θ*");
+    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toBe("fold_01: child #10 2671e27b = θ* · fold_02: child #11 2671e27b = θ*");
     expect(audit.querySelector("[data-final-audit-refs]")?.textContent).toContain("frozen_candidate");
   });
 

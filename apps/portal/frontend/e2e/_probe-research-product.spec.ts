@@ -11,10 +11,8 @@
  * overflow, a clean console, keyboard reach, and reduced motion honoured.
  */
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { freezeClock, settle, stubPortalApi } from "./fixtures";

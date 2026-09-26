@@ -23,6 +23,7 @@
 import type { components as ReportComponents } from "@portal/contracts-research-report";
 
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
+import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import { NOT_MODIFIED, type Fresh } from "./evidenceClient";
 import { REPLAY_REFUSAL_COPY } from "./replayClient";
@@ -288,8 +289,9 @@ export const REPORT_REFUSAL_COPY = {
     400: "This report request is not valid. Reopen the report from the run.",
     401: "Your session has ended. Sign in again to read this report.",
     403: REPLAY_REFUSAL_COPY[403],
-    /* CG-P18-10: the read never answers 409 — an unsealed run is a 404. */
-    404: "No report was found for this run in your current workspace.",
+    /* CG-P18-10: the read never answers 409 — an unsealed run is a 404.
+       X3 2026-09-26 (VD-P23-03, F-04): a 404 says exactly what a 403 says. */
+    404: REPLAY_REFUSAL_COPY[404],
     503: "The report is unavailable right now. Nothing on this screen was changed.",
     other: "The report could not be read.",
   },
@@ -298,7 +300,7 @@ export const REPORT_REFUSAL_COPY = {
     400: "This export request is not valid. Nothing was queued.",
     401: "Your session has ended. Sign in again to export this report.",
     403: REPLAY_REFUSAL_COPY[403],
-    404: "No export was found for this report in your current workspace.",
+    404: REPLAY_REFUSAL_COPY[404],
     409: "This export is not ready. The current job was kept and no replacement job was requested.",
     503: "Export is unavailable right now. Nothing was queued.",
     other: "The export could not be requested.",
@@ -330,7 +332,10 @@ export function toReportRefusal(error: unknown, lane: ReportLane = "report"): Re
     };
   }
   const { status } = error;
-  const denied = status === 401 || status === 403;
+  /* RF01-F3 / VD-P23-02: an expired session goes to the shell's Frame 01D. */
+  if (status === 401) reportSessionExpired();
+  /* F-04 (X3 2026-09-26): 403 and 404 are one state on every Research screen. */
+  const denied = status === 401 || status === 403 || status === 404;
   /* A 409 is declared only on the export lane (CG-P18-10); on the read it is an undeclared answer. */
   const conflict = status === 409 && lane === "export";
   const known = status === 400 || status === 401 || status === 403 || status === 404 || conflict || status === 503;
@@ -339,17 +344,9 @@ export function toReportRefusal(error: unknown, lane: ReportLane = "report"): Re
     message: known ? (copy as Record<number, string>)[status]! : copy.other,
     status,
     requestId: error.requestId,
-    state: denied
-      ? "denied"
-      : status === 404
-        ? "empty"
-        : conflict
-          ? "stale"
-          : status >= 500
-            ? "unavailable"
-            : "terminal",
+    state: denied ? "denied" : conflict ? "stale" : status >= 500 ? "unavailable" : "terminal",
     mayRetry: status >= 500,
-    terminal: denied || status === 404 || status === 400,
+    terminal: denied || status === 400,
   };
 }
 
@@ -367,9 +364,13 @@ export function reportAbsences(report: ReportDetail): string[] {
   const v2 = coreV2(core);
   if (v2 && v2.equity_is.state !== "AVAILABLE") absent.push("IS equity segment");
   if (core.folds.state !== "AVAILABLE") absent.push("per-fold rows");
-  if (core.headline.some((cell) => cell.value === null)) absent.push("headline values");
-  if (core.artifacts.some((artifact) => artifact.state !== "SEALED")) absent.push("artifact digests");
-  if (core.passport.some((fact) => fact.state !== "AVAILABLE")) absent.push("passport facts");
+  /* E3 (audit 9.4): name how many are missing, not the whole category. */
+  const count = (missing: number, of: number, what: string) => {
+    if (missing > 0) absent.push(missing === of ? `all ${of} ${what}` : `${missing} of ${of} ${what}`);
+  };
+  count(core.headline.filter((cell) => cell.value === null).length, core.headline.length, "headline values");
+  count(core.artifacts.filter((artifact) => artifact.state !== "SEALED").length, core.artifacts.length, "artifact digests");
+  count(core.passport.filter((fact) => fact.state !== "AVAILABLE").length, core.passport.length, "passport facts");
   return absent;
 }
 

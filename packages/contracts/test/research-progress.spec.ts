@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..");
@@ -48,6 +49,9 @@ describe("P11 published Research Progress contract", () => {
       "ProgressDeniedArtifact", "denied_artifacts", "ProgressFoldSelection", "ProgressHandoffCursor",
       "handoff_cursor", "lease_expired_at_utc_ms", "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC", "new_run_from",
       "P11_STREAM_READ_OVER_FRAME_BUDGET", "evidence_digest", "split_digest", "best_objective",
+      // E10: where a FAILED run stopped and why.
+      "ProgressFailedAt", "ProgressTerminalReason", "failed_at", "terminal_reason",
+      "SOURCE_RUNNING_STAGE", "FIRST_UNFINISHED_STAGE",
     ]) expect(generated).toContain(needle);
     // CG-P11-09: an unmeasured usage field is nullable, never a required zero.
     expect(generated).toMatch(/fd_peak: number \| null;/);
@@ -63,6 +67,32 @@ describe("P11 published Research Progress contract", () => {
     expect(generated).toContain('event_type: "fold_segment_observed";');
     expect(generated).toContain('event_type: "artifact_sealed";');
     expect(generated).not.toContain("ProgressEventPayload");
+  });
+
+  it("E10: the canonical failed-at fixture validates against the published read contract", () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as { components: { schemas: Record<string, unknown> } };
+    const rewrite = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(rewrite);
+      if (value && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+          key,
+          key === "$ref" && typeof item === "string" ? item.replace("#/components/schemas/", "#/$defs/") : rewrite(item),
+        ]));
+      }
+      return value;
+    };
+    const ajv = new Ajv2020({ allErrors: true, strict: false });
+    ajv.addSchema({ $id: "research-progress", $defs: rewrite(openApi.components.schemas) });
+    const failedAt = ajv.getSchema("research-progress#/$defs/ProgressFailedAt")!;
+    const terminalReason = ajv.getSchema("research-progress#/$defs/ProgressTerminalReason")!;
+    const fixture = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-progress.failed-at.valid.json"), "utf8")) as {
+      current: { failed_at: unknown; terminal_reason: unknown };
+    };
+    expect(failedAt(fixture.current.failed_at), JSON.stringify(failedAt.errors)).toBe(true);
+    expect(terminalReason(fixture.current.terminal_reason), JSON.stringify(terminalReason.errors)).toBe(true);
+    // A stage outside the five contract stages, or an unknown origin, is refused.
+    expect(failedAt({ stage: "S6", fold: null, basis: "SOURCE_RUNNING_STAGE" })).toBe(false);
+    expect(terminalReason({ code: "X", message: "y", origin: "BROWSER" })).toBe(false);
   });
 
   it("does not publish private worker, source, broker or terminal-control inputs", () => {

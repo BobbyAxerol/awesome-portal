@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ResearchReleaseCandidatePublishRequestSchema,
+  ResearchAlphaVersionPublicationResponseSchema,
   ResearchReleaseCandidatePublicationResponseSchema,
 } from "../src/research/release-candidate-publication.contract";
 
@@ -43,6 +44,8 @@ describe("P22 strict publication contract", () => {
       expect.objectContaining({ code: "APPROVAL_CREATE_SERIALIZATION_CONFLICT", retryable: true }),
     ]));
     expect(fixture.mirror.typed_optional_fields).toContain("assignee_pool");
+    expect(fixture.mirror.typed_required_fields).toContain("assignee_pool_availability");
+    expect(fixture.mirror.promotion_pick_states).toEqual(["PENDING_APPROVAL", "WRITTEN", "REJECTED"]);
   });
 
   it("P22-T02 rejects downstream authority and unknown fields from the browser", () => {
@@ -68,11 +71,30 @@ describe("P22 strict publication contract", () => {
         created_at: "2026-09-25T10:00:00.000Z",
         read_at: "2026-09-25T10:00:01.000Z", conditions: [],
         href: "/governance/approvals/apr_p22/r1",
+        assignee_pool_availability: {
+          state: "NOT_PUBLISHED", reason_code: "P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED",
+        },
       },
     };
     expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse(delivered).success).toBe(true);
     expect(delivered.pack_digest).not.toBe(delivered.source.legacy_artifact_sha256.slice(7));
     expect(delivered.pack_digest).not.toBe(delivered.approval.evidence_set_hash.slice(7));
+    expect(ResearchAlphaVersionPublicationResponseSchema.safeParse({
+      schema_version: "research.alpha-version-publication.v1",
+      alpha_version_id: "av_p22", availability: "AVAILABLE", reason_code: null,
+      publication: delivered, as_of_utc_ms: 1790330400000,
+    }).success).toBe(true);
+    expect(ResearchAlphaVersionPublicationResponseSchema.safeParse({
+      schema_version: "research.alpha-version-publication.v1",
+      alpha_version_id: "av_p22", availability: "NOT_PUBLISHED",
+      reason_code: "P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED",
+      publication: null, as_of_utc_ms: 1790330400000,
+    }).success).toBe(true);
+    expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse({
+      ...delivered, approval: {
+        ...delivered.approval, assignee_pool_availability: { state: "AVAILABLE", reason_code: null },
+      },
+    }).success).toBe(false);
   });
   it("P22-T03/T08 refuses actionable partial source, superseded RC, or invented mirror", () => {
     expect(ResearchReleaseCandidatePublicationResponseSchema.safeParse(base).success).toBe(true);

@@ -30,7 +30,10 @@ import {
   GATES_RESET,
   LINEAGE_PANELS,
   LINEAGE_RULES,
-  LINEAGE_SOURCE_CHIP,
+  LINEAGE_SOURCE_TAIL,
+  TREE_AIM,
+  lineageSourceChip,
+  onlyPickGap,
   LINEAGE_STATUSES,
   LINEAGE_SUBTITLE,
   LINEAGE_TITLE,
@@ -633,7 +636,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(pick.querySelector("[data-pick-source]")?.textContent).toContain("governance.promotion.v1");
     expect(pick.querySelector("[data-pick-source]")?.textContent).toContain("as of 2026-07-25");
     /* Hi-fi line "att · run · … → rc_": W5c — the pick's run opens Screen 11 (P21). */
-    expect(pick.querySelector(".v")?.textContent).toBe(`att_03 · run_att_03 · ${hex("9").slice(0, 12)}… → rc_`);
+    expect(pick.querySelector(".v")?.textContent).toBe(`att_03 · run_att_03 · ${hex("9").slice(0, 8)} → rc_`);
     const rc = pick.querySelector("[data-pick-rc]") as HTMLElement;
     expect(rc.tagName).toBe("A");
     expect(rc.getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/release-candidate");
@@ -659,6 +662,11 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(panel("root").lastElementChild).toBe(gaps[0]);
     expect(document.querySelector("[data-pick-attempt]")).toBeNull();
     expect(screenState()).toBe("partial");
+    /* D8 (10-8): the pick card says it; no screen-level PARTIAL notice repeats it above the tree. */
+    expect(document.querySelector('[data-panel="notice"]')).toBeNull();
+    /* D8 (10-5): with no published pick the hi-fi's verdict line stands in the rule, on no attempt. */
+    expect(panel("promotion-rule").querySelector('[data-tree-aim="rule"]')?.textContent).toBe(TREE_AIM);
+    expect(document.querySelector('[data-tree-aim="picked"]')).toBeNull();
   });
 
   it("S10-U18 shows recorded exposure with its roles, and an unpublished one as a typed absence", async () => {
@@ -683,6 +691,8 @@ describe("S10 Attempt Lineage — the screen", () => {
     renderRoute();
     await ready();
     expect(screenState()).toBe("partial");
+    /* A gap other than the pick still raises the screen notice (D8 drops only the duplicate). */
+    expect(document.querySelector('[data-panel="notice"]')?.getAttribute("data-lineage-notice")).toBe("partial");
     const bound = document.querySelector("[data-bounded]") as HTMLElement;
     expect(bound.textContent).toContain("3 of 200 attempts were returned");
     expect(bound.textContent).toContain("P19_BOUNDED_GRAPH_LIMIT_REACHED");
@@ -729,7 +739,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     /* Operational states are not hidden: FAILED stays in ACTIVE with its raw state beside it. */
     for (const status of ["DRAFT", "SUPERSEDED", "ABANDONED"]) fireEvent.click(chip(status));
     expect(counter()).toBe("showing 2 of 6 attempts");
-    expect(node("att_05").querySelector("[data-raw-state]")?.textContent).toBe("FAILED");
+    expect(node("att_05").querySelector("[data-raw-state]")?.getAttribute("data-raw-state")).toBe("FAILED");
   });
 
   it("S10-U21 a band chip selects its attempt, widens a filter that hid it, and opens it in the tree", async () => {
@@ -1057,6 +1067,11 @@ describe("S10 Attempt Lineage — scale and pure parts", () => {
     expect(lineageState(diff).state).toBe("partial");
     expect(lineageState(diff).reason).toContain("P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE_FOR_PARENT_DIFF");
     expect(lineageState(lineage({ attempts: [] })).state).toBe("empty");
+    /* D8 (10-8): only a pick-only gap is left to the pick card. */
+    expect(onlyPickGap(lineage())).toBe(false);
+    expect(onlyPickGap(child)).toBe(false);
+    const pickOnly = lineage({ source_absences: { promotion_pick: np("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"), historical_semantic_diff: AVAILABLE } });
+    expect(onlyPickGap(pickOnly)).toBe(true);
   });
 
   it("S10-U41 the lineage link is a router link inside a router and a plain same-origin anchor outside one", () => {
@@ -1137,7 +1152,8 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     await ready();
     expect(counter()).toBe("showing 7 of 7 attempts");
     expect(node("att_07").getAttribute("data-status")).toBeNull();
-    expect(node("att_07").querySelector("[data-raw-state]")?.textContent).toBe("READY");
+    expect(node("att_07").querySelector("[data-raw-state]")?.getAttribute("data-raw-state")).toBe("READY");
+    expect(node("att_07").querySelector(".ln-st")?.textContent).toBe("NO VERSION");
     for (const status of LINEAGE_STATUSES) {
       fireEvent.click(document.querySelector(`[data-filter="${status}"]`) as HTMLElement);
     }
@@ -1210,7 +1226,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
       "Immutable nodes · every config change is a sibling attempt with its own hash.",
     );
     expect(panel("header").querySelector("[data-source-chip]")?.textContent).toBe(
-      "attempts.json · lineage is engine-recorded, not reconstructed",
+      "PORTAL_PERSISTED_RESEARCH · lineage is persisted, not reconstructed",
     );
     expect(panel("header").querySelector("nav")?.textContent).toBe("Runs/Attempt Lineage — alpha_momentum_btc");
     expect(panel("promotion-rule").querySelector("p")?.textContent).toBe(
@@ -1218,13 +1234,20 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     );
     expect(panel("promotion-rule").querySelector("p .ln-mono")?.textContent).toBe("ACTIVE");
     expect(panel("rules").textContent).toBe(
-      "rules of this screenAttempts are immutable — every change is a new node with parent_attempt. Engine truth (attempts.json), never reconstructed. Abandoning is a state, not an erasure.",
+      "rules of this screenAttempts are immutable — every change is a new node with parent_attempt. Persisted truth (PORTAL_PERSISTED_RESEARCH), never reconstructed. Abandoning is a state, not an erasure.",
     );
-    expect([LINEAGE_TITLE, LINEAGE_SUBTITLE, LINEAGE_SOURCE_CHIP]).toEqual([
+    expect([LINEAGE_TITLE, LINEAGE_SUBTITLE]).toEqual([
       "Attempt lineage",
       "Immutable nodes · every config change is a sibling attempt with its own hash.",
-      "attempts.json · lineage is engine-recorded, not reconstructed",
     ]);
+    /* D8 (S10-SOURCE-CHIP-VS-READ-AUTHORITY): the chip names the read this screen made, never attempts.json. */
+    const chip = panel("header").querySelector("[data-source-chip]") as HTMLElement;
+    expect(chip.textContent).toBe(`PORTAL_PERSISTED_RESEARCH · ${LINEAGE_SOURCE_TAIL}`);
+    expect(chip.getAttribute("data-read-authority-chip")).toBe("PORTAL_PERSISTED_RESEARCH");
+    expect(document.body.textContent).not.toContain("attempts.json");
+    expect(lineageSourceChip(null)).toBe(`read authority pending · ${LINEAGE_SOURCE_TAIL}`);
+    /* D8 (10-1): the crumb names the alpha only — no market or timeframe the lineage does not carry. */
+    expect(panel("header").querySelector("nav")?.textContent).not.toMatch(/USDT|· \d+[mhd]\b/);
     const root = panel("root");
     expect(root.querySelector(".ln-k")?.textContent).toBe("root · alpha");
     expect([...root.querySelectorAll(".ln-links > *")].map((l) => l.textContent)).toEqual(["runs →", "new run →", "rc & publish →"]);
@@ -1258,11 +1281,14 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     server();
     renderRoute();
     await ready();
-    const raw = (id: string) => node(id).querySelector("[data-raw-state]")?.textContent ?? null;
+    /* D8 (S10-RAW-STATE-CHIP, decided 2026-09-26): one pill per attempt as the hi-fi; the raw state rides in its title. */
+    const raw = (id: string) => node(id).querySelector(".ln-st")?.getAttribute("data-raw-state") ?? null;
     expect([raw("att_01"), raw("att_03"), raw("att_05"), raw("att_04"), raw("att_06")]).toEqual(["READY", "READY", "FAILED", null, null]);
+    expect(node("att_05").querySelector(".ln-st")?.getAttribute("title")).toBe("attempt state FAILED (as the lineage recorded it)");
+    for (const id of ["att_01", "att_03", "att_05", "att_04", "att_06"]) expect(node(id).querySelectorAll(".ln-st")).toHaveLength(1);
+    expect(document.querySelector(".ln-raw")).toBeNull();
     expect(node("att_03").querySelector(".ln-st")?.getAttribute("data-fill")).toBe("true");
     const css = document.querySelector("style")?.textContent ?? "";
-    expect(css).toMatch(/^\.ln-raw \{ font-family: var\(--font-mono\)/m);
     expect(css).toMatch(/^\.ln-st \{ font-family: var\(--font-mono\)/m);
   });
 
@@ -1281,5 +1307,32 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(within(panel("root")).getByText("P19_ALPHA_HAS_NO_ACTIVE_VERSION")).toBeTruthy();
     /* Both superseded versions still show their own published picks in their rows. */
     expect(document.querySelectorAll("[data-band-pick]")).toHaveLength(2);
+  });
+
+  it("S10-U60 E1 short ids: a real 37-character attempt/run id prints as prefix + 8 hex, the full id in the title (10-2)", async () => {
+    const LONG_ATT = "ratt_8c9c9991bdd0cfe72100da64ebee1150";
+    const LONG_RUN = "rrun_8c9c9991bdd0cfe72100da64ebee1150";
+    const attempts = sixAttempts();
+    attempts[0] = { ...attempts[0], attempt_id: LONG_ATT, primary_run: { ...attempts[0].primary_run, run_id: LONG_RUN } };
+    server([{ status: 200, body: lineage({ attempts }) }]);
+    renderRoute(`?attempt=${LONG_ATT}`);
+    await ready();
+    const card = node(LONG_ATT);
+    const button = card.querySelector("[data-row]") as HTMLElement;
+    expect(button.textContent).toBe("ratt_8c9c9991");
+    expect(button.getAttribute("title")).toBe(LONG_ATT);
+    const run = card.querySelector(`[data-run-link="${LONG_RUN}"]`) as HTMLElement;
+    expect(run.textContent).toBe("rrun_8c9c9991");
+    expect(run.getAttribute("title")).toBe(LONG_RUN);
+    const chip = document.querySelector(`[data-chip="${LONG_ATT}"]`) as HTMLElement;
+    expect(chip.textContent).toBe("ratt_8c9c9991");
+    expect(chip.getAttribute("title")).toContain(LONG_ATT);
+    /* The selected heading keeps the id's case (the heading is uppercase) and copies the full value. */
+    const selectedId = panel("selected").querySelector("h3 [data-full-id]") as HTMLElement;
+    expect(selectedId.textContent).toBe("ratt_8c9c9991");
+    expect(selectedId.getAttribute("data-full-id")).toBe(LONG_ATT);
+    expect(selectedId.className).toContain("ln-selid");
+    /* No full 32-hex tail is printed as visible text anywhere on the screen. */
+    expect(document.querySelector('[data-screen="attempt-lineage"]')?.textContent).not.toContain("8c9c9991bdd0cfe72100da64ebee1150");
   });
 });

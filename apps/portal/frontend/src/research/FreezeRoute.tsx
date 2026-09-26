@@ -14,6 +14,7 @@ import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useFreeze } from "./useFreeze";
 import { useRunIdentity } from "./retainedLane";
+import { StageDenied } from "./StageDenied";
 
 export function FreezeRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
@@ -22,6 +23,10 @@ export function FreezeRoute() {
   /* W3b: the run identity (schedule, folds, readiness) a retained answer is read against. */
   const identity = useRunIdentity(runId, undefined, freeze.laneRetained);
 
+  /* E2 (X8): a refused run gets the shared "run not available" page, not the stage chrome. */
+  if (freeze.state.state === "denied" && freeze.detail === null) {
+    return <StageDenied runId={runId} stage="Stage 3 · Freeze" screen="freeze-detail" />;
+  }
   return (
     <>
       <RouteCursorNotice problems={problems} />

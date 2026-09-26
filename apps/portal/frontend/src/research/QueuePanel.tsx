@@ -110,7 +110,7 @@ export function QueuePanel({
   return (
     <ResearchPanel
       title={title}
-      meta={<span data-run-id={display.runId}>{display.runId}</span>}
+      meta={<span data-run-id={display.runId} title={display.runId}>{shortId(display.runId)}</span>}
       state={state}
     >
       <div className="flex flex-col gap-2">
@@ -182,7 +182,7 @@ export function QueuePanel({
  * ---------------------------------------------------------------------- */
 
 import type { ProgressRead } from "./progressClient";
-import { formatUtc } from "./researchFormat";
+import { formatUtc, shortId } from "./researchFormat";
 
 type ServedQueue = NonNullable<ProgressRead["queue"]>;
 type ServedAttempt = NonNullable<ProgressRead["attempts"]>[number];

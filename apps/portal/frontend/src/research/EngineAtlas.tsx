@@ -108,13 +108,21 @@ function AxisChips({ route }: { route: RouteDisplay }) {
  * Tab: routes
  * ---------------------------------------------------------------------- */
 
+/**
+ * D9 (Unified 13.4.1 E-D, 12-5): the HiFi's compact card — one line per
+ * route (route · status · family · contract · backend · report levels ·
+ * portal). A blocked route's refusal reason is its portal cell and wraps
+ * inside it, never truncated. The four axis chips (D-1), the input class and
+ * the engine facts open under the row when it is selected (hash `route=`),
+ * so every fact keeps its place without fourteen multi-line blocks.
+ */
 const ROUTE_COLUMNS = [
-  { key: "route", width: 172 },
-  { key: "status", width: 86 },
-  { key: "family", width: 76 },
-  { key: "contract", width: 170 },
-  { key: "backend", width: 140 },
-  { key: "report levels", width: 120 },
+  { key: "route", width: 164 },
+  { key: "status", width: 84 },
+  { key: "family", width: 72 },
+  { key: "contract", width: 156 },
+  { key: "backend", width: 136 },
+  { key: "report levels", width: 176 },
 ] as const;
 
 /** Tone of the server's status word (spec 12 §3; derived server-side, CG-P04-06). */
@@ -138,7 +146,7 @@ function RouteEngineDetail({ routeId, facts }: { routeId: string; facts: EngineF
   const matrix = facts.support_matrix ?? null;
   const params = facts.route_params ?? null;
   return (
-    <div className="flex w-full flex-col gap-1.5 sm:pl-[172px]" data-route-engine={routeId}>
+    <div className="flex w-full flex-col gap-1.5" data-route-engine={routeId}>
       <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink)" }} data-route-description={routeId}>
         {facts.description}
       </span>
@@ -147,7 +155,7 @@ function RouteEngineDetail({ routeId, facts }: { routeId: string; facts: EngineF
       </span>
       {matrix ? (
         <div className="flex flex-col" data-support-matrix={matrix.function}>
-          <span className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+          <span className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>
             {matrix.function}() · {matrix.executable}/{matrix.total} executable
           </span>
           {matrix.rows.map((row) => (
@@ -156,7 +164,7 @@ function RouteEngineDetail({ routeId, facts }: { routeId: string; facts: EngineF
               className="mono flex flex-wrap gap-x-2 text-[9.5px]"
               data-support-row={row.spec_id}
               data-support-status={row.status}
-              style={{ color: row.status === "supported" ? "var(--ink-soft)" : "var(--ink-faint)" }}
+              style={{ color: "var(--ink-soft)" }}
             >
               <span style={{ width: 170 }}>{row.spec_id}</span>
               <span style={{ width: 110, color: row.status === "supported" ? "var(--good)" : "var(--accent-2)" }}>{row.status}</span>
@@ -181,11 +189,11 @@ function RouteEngineDetail({ routeId, facts }: { routeId: string; facts: EngineF
                   <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>engine: {field.engine_values.join(" · ")}</span>
                 ) : null}
                 {field.requested_spec_values.length > 0 ? (
-                  <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+                  <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
                     form: {field.requested_spec_values.map((value) => (field.accepted_by_engine.includes(value) ? value : `${value}✕`)).join(" · ")}
                   </span>
                 ) : null}
-                <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>{field.note}</span>
+                <span className="text-[9.5px]" style={{ color: "var(--ink-soft)" }}>{field.note}</span>
               </div>
             ))}
           </div>
@@ -193,6 +201,36 @@ function RouteEngineDetail({ routeId, facts }: { routeId: string; facts: EngineF
       ) : null}
       <Locators sources={facts.source} />
     </div>
+  );
+}
+
+/** The support-matrix functions the manifest names, for the card's source line (HiFi: `arbitrage_support_matrix() · …`). */
+function supportFunctions(doc: AtlasDocument): string[] {
+  const names: string[] = [];
+  for (const route of doc.routes) {
+    const name = route.engine_facts?.support_matrix?.function;
+    if (name) names.push(name);
+  }
+  return [...new Set(names)];
+}
+
+/** The HiFi's card frame for the routes and claims tabs: a title row, a mono source line, the body and a foot. */
+function TabCard({ title, source, foot, children, name }: { title: string; source: ReactNode; foot: ReactNode; children: ReactNode; name: string }) {
+  return (
+    <section className="rounded-[6px] border" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-tab-card={name} aria-label={title}>
+      <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
+        <h2 className="m-0 text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
+          {title}
+        </h2>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-tab-card-source>
+          {source}
+        </span>
+      </div>
+      {children}
+      <p className="m-0 border-t px-3 py-[7px] text-[10px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}>
+        {foot}
+      </p>
+    </section>
   );
 }
 
@@ -207,6 +245,7 @@ function RoutesTab({
 }) {
   const rows = useMemo(() => allRouteDisplays(doc), [doc]);
   const tableRef = useRef<HTMLDivElement>(null);
+  const functions = supportFunctions(doc);
   useEffect(() => {
     if (!selectedRoute) return;
     const selected = [...(tableRef.current?.querySelectorAll<HTMLElement>("[data-route]") ?? [])]
@@ -214,71 +253,62 @@ function RoutesTab({
     if (typeof selected?.scrollIntoView === "function") selected.scrollIntoView({ block: "center", behavior: "auto" });
   }, [selectedRoute, rows]);
   return (
-    /*
-      No fixed-width track at all.
-
-      It was 1020px — wider than the panel once the Portal sidebar takes 248px —
-      so on the product route the input class and every refusal reason sat
-      behind a horizontal scrollbar. Narrowing it to the column sum only moved
-      the problem to 660px, where the reason then wrapped inside a track wider
-      than the viewport.
-
-      So the columns wrap instead. Alignment across fourteen rows is worth a
-      lot at 1280, where all five still fit on one line; it is worth less than
-      a readable refusal at 660. The fixture lane has no sidebar, which is
-      exactly why it never showed this: a fixture lane is not a product route.
-    */
-    <div ref={tableRef}>
-      <div>
+    <TabCard
+      name="routes"
+      title="execution routes — support matrix, not aspiration"
+      source={functions.length ? functions.map((name) => `${name}()`).join(" · ") : "no support matrix published by this manifest"}
+      foot={<>Disabled routes render with the engine&rsquo;s refusal reason — a route absent from the support matrix is not a defect.</>}
+    >
+      <div ref={tableRef}>
         <div
-          className="mono flex flex-wrap border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
-          style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
+          className="mono hidden flex-wrap border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em] min-[900px]:flex"
+          style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
+          aria-hidden="true"
         >
           {ROUTE_COLUMNS.map((column) => (
             <span key={column.key} style={{ width: column.width, flex: "none" }}>
               {column.key}
             </span>
           ))}
+          <span style={{ flex: 1 }}>portal</span>
         </div>
 
-        {rows.map((row) => (
-          <div
-            key={row.routeId}
-            data-route={row.routeId}
-            data-admitted={row.admitted}
-            data-selected={row.routeId === selectedRoute || undefined}
-            aria-current={row.routeId === selectedRoute ? "true" : undefined}
-            className="flex flex-col gap-1 border-b px-3 py-[7px]"
-            style={{
-              borderColor: row.routeId === selectedRoute ? "var(--accent)" : "var(--line-soft)",
-              background: row.routeId === selectedRoute ? "var(--accent-soft)" : undefined,
-            }}
-          >
-            <div className="flex flex-wrap items-baseline gap-y-0.5">
-            <span
-              className="mono text-[11px] font-semibold"
+        {rows.map((row) => {
+          const route = doc.routes.find((r) => r.route_id === row.routeId);
+          const word = route?.status_word ?? null;
+          const tone = statusTone(word);
+          const resolved = route?.engine_facts?.resolved_backend ?? null;
+          const facts = route?.engine_facts ?? null;
+          const open = row.routeId === selectedRoute;
+          return (
+            <div
+              key={row.routeId}
+              data-route={row.routeId}
+              data-admitted={row.admitted}
+              data-selected={open || undefined}
+              aria-current={open ? "true" : undefined}
+              className="flex flex-col border-b px-3 py-[6px]"
               style={{
-                width: 172,
-                flex: "none",
-                color: row.admitted ? "var(--ink)" : "var(--ink-soft)",
+                borderColor: open ? "var(--accent)" : "var(--line-soft)",
+                /* The selected row keeps white ground: gold/green chips on --accent-soft read < 4.5:1 (axe). */
+                boxShadow: open ? "inset 3px 0 0 var(--accent)" : undefined,
               }}
             >
-              <button
-                type="button"
-                className="mono text-left font-semibold"
-                onClick={() => onRoute?.(row.routeId)}
-                data-route-link={row.routeId}
-                style={{ color: "inherit" }}
-              >
-                {row.routeId}
-              </button>
-            </span>
-            {(() => {
-              const route = doc.routes.find((r) => r.route_id === row.routeId);
-              const word = route?.status_word ?? null;
-              const tone = statusTone(word);
-              return (
-                <span style={{ width: 86, flex: "none" }}>
+              <div className="flex flex-wrap items-baseline gap-y-0.5">
+                <span className="mono text-[11px] font-semibold" style={{ width: ROUTE_COLUMNS[0].width, flex: "none" }}>
+                  <button
+                    type="button"
+                    className="mono text-left font-semibold"
+                    onClick={() => onRoute?.(row.routeId)}
+                    data-route-link={row.routeId}
+                    aria-expanded={open}
+                    title={open ? "selected — its axes and engine facts are open below" : "select this route: open its four axes and engine facts"}
+                    style={{ color: row.admitted ? "var(--ink)" : "var(--ink-soft)" }}
+                  >
+                    {row.routeId}
+                  </button>
+                </span>
+                <span style={{ width: ROUTE_COLUMNS[1].width, flex: "none" }}>
                   {word ? (
                     <span
                       className="mono rounded-[3px] border px-[5px] text-[9px] font-bold leading-[15px]"
@@ -289,94 +319,60 @@ function RoutesTab({
                     </span>
                   ) : (
                     /* An older manifest has no engine facts: say so, never a dash. */
-                    <span className="mono text-[8.5px] italic" style={{ color: "var(--ink-faint)" }} data-status-word="none" title="This manifest publishes no engine facts for this route.">
+                    <span className="mono text-[8.5px] italic" style={{ color: "var(--ink-soft)" }} data-status-word="none" title="This manifest publishes no engine facts for this route.">
                       not published
                     </span>
                   )}
                 </span>
-              );
-            })()}
-            <span
-              className="mono text-[10px]"
-              style={{ width: 76, flex: "none", color: "var(--ink-faint)" }}
-            >
-              {row.family}
-            </span>
-            <span
-              className="mono text-[10px]"
-              style={{ width: 170, flex: "none", color: "var(--ink-soft)" }}
-            >
-              {doc.routes.find((r) => r.route_id === row.routeId)?.execution_contract}
-            </span>
-            {(() => {
-              const resolved = doc.routes.find((r) => r.route_id === row.routeId)?.engine_facts?.resolved_backend ?? null;
-              return (
+                <span className="mono text-[10px]" style={{ width: ROUTE_COLUMNS[2].width, flex: "none", color: "var(--ink-soft)" }}>
+                  {row.family}
+                </span>
+                <span className="mono text-[10px]" style={{ width: ROUTE_COLUMNS[3].width, flex: "none", color: "var(--ink-soft)" }}>
+                  {route?.execution_contract}
+                </span>
                 <span
                   className="mono text-[10px]"
-                  style={{ width: 140, flex: "none", color: "var(--ink-soft)" }}
+                  style={{ width: ROUTE_COLUMNS[4].width, flex: "none", color: "var(--ink-soft)" }}
                   data-resolved-backend={resolved?.state ?? "catalog"}
                   title={resolved?.reason ?? (resolved?.engine_mode ? `engine mode ${resolved.engine_mode}` : undefined)}
                 >
                   {resolved?.state === "RESOLVED" ? resolved.value : resolved?.state === "SPEC_DEPENDENT" ? "spec-dependent" : row.backendLabel}
                 </span>
-              );
-            })()}
-            <span
-              className="mono text-[10px]"
-              style={{ width: 120, flex: "none", color: "var(--ink-faint)" }}
-            >
-              {doc.routes.find((r) => r.route_id === row.routeId)?.report_levels.join(" ")}
-            </span>
+                <span className="mono pr-2 text-[10px]" style={{ width: ROUTE_COLUMNS[5].width, flex: "none", color: "var(--ink-soft)" }}>
+                  {route?.report_levels.join(" · ")}
+                </span>
+                {/* The portal cell: the declare link for an admitted route, else the engine's refusal reason in full (spec 12 §3). */}
+                <span className="min-w-[min(240px,100%)] flex-1 text-[10px] leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
+                  {row.admitted ? (
+                    <Link
+                      to={`/research/quantbt/runs/new?step=route&route=${encodeURIComponent(row.routeId)}`}
+                      className="mono text-[10px] font-semibold"
+                      style={{ color: "var(--accent)" }}
+                      data-declare-route={row.routeId}
+                    >
+                      declare →
+                    </Link>
+                  ) : null}
+                  <span data-route-reason={row.routeId} className={row.admitted ? "sr-only" : undefined}>
+                    {row.admitted ? ` — ${row.reason}` : row.reason}
+                  </span>
+                </span>
+              </div>
+              {/* The four axes (D-1), the input class and the engine facts: in the row, open when it is selected. */}
+              <div className={`${open ? "flex" : "hidden"} flex-col gap-1.5 pt-1.5 min-[900px]:pl-[164px]`} hidden={!open} data-route-detail={row.routeId}>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <AxisChips route={row} />
+                  <span className="mono text-[10px]" data-input-class={row.routeId} style={{ color: "var(--ink-soft)" }}>
+                    {route?.required_input_class}
+                  </span>
+                </div>
+                {facts ? <RouteEngineDetail routeId={row.routeId} facts={facts} /> : null}
+              </div>
             </div>
-
-            {/* Axes and the engine's own refusal wording get the full row width:
-                squeezed into a residual column the reason truncates, and a
-                truncated refusal is the one thing a disabled route must not do. */}
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:pl-[172px]">
-              <AxisChips route={row} />
-              {/* The input class moved here from a residual column on line one:
-                  as `flex:1` after five fixed columns it had ~150px on the
-                  product route and was cut mid-identifier. */}
-              <span
-                className="mono text-[10px]"
-                data-input-class={row.routeId}
-                style={{ color: "var(--ink-faint)" }}
-              >
-                {doc.routes.find((r) => r.route_id === row.routeId)?.required_input_class}
-              </span>
-              <span
-                className="w-full text-[10px] leading-[1.5]"
-                data-route-reason={row.routeId}
-                style={{ color: "var(--ink-soft)" }}
-              >
-                {row.reason}
-              </span>
-              {/* Declaring is offered only for a route New Run can submit; a
-                  blocked route keeps its reason and no action (spec 12 §3). */}
-              {row.admitted ? (
-                <Link
-                  to={`/research/quantbt/runs/new?step=route&route=${encodeURIComponent(row.routeId)}`}
-                  className="mono text-[9.5px] font-semibold"
-                  style={{ color: "var(--accent)" }}
-                  data-declare-route={row.routeId}
-                >
-                  declare →
-                </Link>
-              ) : null}
-            </div>
-            {(() => {
-              const facts = doc.routes.find((r) => r.route_id === row.routeId)?.engine_facts ?? null;
-              return facts ? <RouteEngineDetail routeId={row.routeId} facts={facts} /> : null;
-            })()}
-          </div>
-        ))}
-
-        <p className="px-3 py-[7px] text-[10px]" style={{ color: "var(--ink-faint)" }}>
-          Disabled routes render with the engine&rsquo;s refusal reason — a route absent from the
-          support matrix is not a defect.
-        </p>
+          );
+        })}
       </div>
-    </div>
+    </TabCard>
   );
 }
 
@@ -384,82 +380,64 @@ function RoutesTab({
  * Tab: claims
  * ---------------------------------------------------------------------- */
 
+/** The certification level with its word (12-6): `L2 · ENGINE_CAUSAL`, both from the manifest. */
+function certText(claim: AtlasDocument["claims"][number]): string {
+  return claim.qualifier ? `${claim.engine_certification} · ${claim.qualifier.level_name}` : claim.engine_certification;
+}
+
 function ClaimsTab({ doc }: { doc: AtlasDocument }) {
   return (
-    <div>
-      <div>
-        <div
-          className="mono flex flex-wrap border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
-          style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
-        >
-          <span style={{ width: 216, flex: "none" }}>execution contract</span>
-          <span style={{ width: 88, flex: "none" }}>engine cert</span>
-          <span style={{ flex: 1 }}>numeric guarantee</span>
-        </div>
-
-        {doc.claims.map((claim) => (
-          <div
-            key={claim.contract_id}
-            data-contract={claim.contract_id}
-            className="flex flex-col gap-0.5 border-b px-3 py-[6px]"
-            style={{ borderColor: "var(--line-soft)" }}
-          >
-            <div className="flex flex-wrap items-baseline gap-y-0.5">
-              <span
-                className="mono text-[11px] font-semibold"
-                style={{ width: 216, flex: "none" }}
-              >
-                {claim.contract_id}
-              </span>
-              <span
-                className="mono text-[10px]"
-                style={{ width: 88, flex: "none", color: "var(--ink-soft)" }}
-              >
-                {claim.engine_certification}
-              </span>
-              <span
-                className="flex-1 text-[10.5px] leading-[1.5]"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                {claim.numeric_guarantee}
-              </span>
-            </div>
-            {/*
-              The most important column on this tab, and the reason it is a
-              line rather than a column: as a fourth fixed column it needed a
-              980px table, so at 1280 with the sidebar it sat behind a
-              horizontal scrollbar. A contract's honest limit that the reader
-              has to scroll sideways to find is a limit nobody reads — the same
-              defect the route refusal reason had in P04.
-            */}
-            <span
-              className="text-[10.5px] leading-[1.5]"
-              style={{ color: "var(--accent-strong)" }}
-              data-never-claims={claim.contract_id}
-            >
+    <TabCard
+      name="claims"
+      title="claims by contract — two axes, never mixed"
+      source="engine cert ⊥ methodology claim (mode × schedule)"
+      foot={
+        <>
+          <span className="mono">certificate = min(engine cert, methodology cap, artifact completeness)</span>. The two chips on the
+          Release Candidate screen carry the axes separately.
+        </>
+      }
+    >
+      <div
+        className="mono hidden flex-wrap border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em] min-[900px]:flex"
+        style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
+        aria-hidden="true"
+      >
+        <span style={{ width: 216, flex: "none" }}>execution contract</span>
+        <span style={{ width: 150, flex: "none" }}>engine cert</span>
+        <span style={{ width: 300, flex: "none" }}>numeric guarantee</span>
+        <span style={{ flex: 1 }}>never claims</span>
+      </div>
+      {doc.claims.map((claim) => (
+        <div key={claim.contract_id} data-contract={claim.contract_id} className="flex flex-col gap-0.5 border-b px-3 py-[6px]" style={{ borderColor: "var(--line-soft)" }}>
+          <div className="flex flex-wrap items-baseline gap-y-0.5">
+            <span className="mono text-[11px] font-semibold" style={{ width: 216, flex: "none" }}>
+              {claim.contract_id}
+            </span>
+            <span className="mono text-[10px] font-bold" style={{ width: 150, flex: "none", color: "var(--accent)" }} title="engine certification ceiling for this contract">
+              {certText(claim)}
+            </span>
+            <span className="min-w-[min(240px,100%)] text-[10.5px] leading-[1.5] min-[900px]:w-[300px] min-[900px]:flex-none min-[900px]:pr-3.5" style={{ color: "var(--ink-soft)" }}>
+              {claim.numeric_guarantee}
+            </span>
+            {/* HiFi: the never-claims column in gold (on white it reads ≥ 4.5:1, VD-P20-30's rule). */}
+            <span className="min-w-[min(240px,100%)] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--accent-2)" }} data-never-claims={claim.contract_id}>
               {claim.never_claims}
             </span>
-            {claim.qualifier ? (
-              <span className="mono text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-claim-qualifier={claim.qualifier.result_metadata_derivation}>
-                {claim.qualifier.level_name} · {claim.qualifier.level_description} ·{" "}
-                {claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_SAME_LEVEL"
-                  ? `certify_result_metadata derives the same level (${claim.qualifier.result_metadata_status})`
-                  : claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_OTHER_LEVEL"
-                    ? `certify_result_metadata derives L${claim.qualifier.result_metadata_level} (${claim.qualifier.result_metadata_status}) — the catalog level is the Portal record`
-                    : "certify_result_metadata has no branch for this contract — the catalog level is the Portal record"}
-              </span>
-            ) : null}
           </div>
-        ))}
-
-        <p
-          className="mono border-t px-3 py-[7px] text-[10px]"
-          style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
-        >
-          certificate = min(engine cert, methodology cap, artifact completeness)
-        </p>
-      </div>
-    </div>
+          {claim.qualifier ? (
+            <span className="mono text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-claim-qualifier={claim.qualifier.result_metadata_derivation}>
+              {claim.qualifier.level_description} ·{" "}
+              {claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_SAME_LEVEL"
+                ? `certify_result_metadata derives the same level (${claim.qualifier.result_metadata_status})`
+                : claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_OTHER_LEVEL"
+                  ? `certify_result_metadata derives L${claim.qualifier.result_metadata_level} (${claim.qualifier.result_metadata_status}) — the catalog level is the Portal record`
+                  : "certify_result_metadata has no branch for this contract — the catalog level is the Portal record"}
+            </span>
+          ) : null}
+        </div>
+      ))}
+    </TabCard>
   );
 }
 
@@ -471,13 +449,12 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
 function claimTone(claim: string): { color: string; border: string } {
   if (claim.startsWith("strict")) return { color: "var(--good)", border: "var(--good)" };
   if (claim.startsWith("selection_adjusted")) return { color: "var(--accent-2)", border: "var(--accent-2)" };
-  if (claim.startsWith("not_causal") || claim.includes("retrospective")) return { color: "var(--bad)", border: "var(--bad)" };
   return { color: "var(--bad)", border: "var(--bad)" };
 }
 
 function Locators({ sources }: { sources: readonly AtlasSourceLocator[] }) {
   return (
-    <span className="mono text-[9px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-fact-source>
+    <span className="mono text-[9px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-fact-source>
       source{" "}
       {sources.map((source, index) => (
         <span key={`${source.path}:${source.lines}`} title={`sha256 ${source.sha256} · “${source.anchor}”`}>
@@ -492,7 +469,7 @@ function Locators({ sources }: { sources: readonly AtlasSourceLocator[] }) {
 function NotPublished({ fact, label }: { fact: AtlasNotPublishedFact; label: string }) {
   return (
     <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-not-published={label}>
-      <span className="mono text-[9px] font-bold uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+      <span className="mono text-[9px] font-bold uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>
         not published
       </span>{" "}
       {fact.reason}
@@ -512,60 +489,70 @@ export const OOS_STATE_LABEL: Record<string, string> = {
 function oosStateColor(state: string): string {
   if (state === "SELECTION_INPUT" || state === "RETROSPECTIVE") return "var(--accent-2)";
   if (state === "REPORT_ONLY") return "var(--ink-mute)";
-  if (state === "WITHHELD_UNTIL_S4") return "var(--ink-faint)";
+  if (state === "WITHHELD_UNTIL_S4") return "var(--ink-soft)";
   return "var(--bad)";
 }
 
+/** HiFi column 3 · SCHEDULE → CLAIM: the claim pair, the OOS state, then the rest of the facts under one disclosure. */
 function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
   const tone = claimTone(fact.chronological_validation_claim);
   return (
-    <div className="flex flex-col gap-1" data-schedule-claim={fact.schedule}>
-      <div className="flex flex-wrap items-baseline gap-1.5">
-        <span
-          className="mono rounded-[3px] border px-[5px] text-[9px] leading-[15px]"
-          style={{ color: tone.color, borderColor: tone.border }}
-          data-claim={fact.chronological_validation_claim}
-        >
+    <div className="flex flex-col gap-1.5" data-schedule-claim={fact.schedule}>
+      <span className="mono flex flex-col gap-0.5 text-[10.5px]">
+        <span className="border-l-2 pl-1.5" style={{ borderColor: tone.border, color: tone.color }} data-claim={fact.chronological_validation_claim}>
           {fact.chronological_validation_claim}
         </span>
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
-          validation {fact.validation_claim}
+        <span style={{ color: "var(--ink-soft)" }}>validation {fact.validation_claim}</span>
+      </span>
+      {fact.oos_use_state ? (
+        <span
+          className="mono self-start rounded-[3px] border px-[6px] text-[10px] font-semibold leading-[16px]"
+          style={{ color: oosStateColor(fact.oos_use_state), borderColor: oosStateColor(fact.oos_use_state) }}
+          data-oos-state={fact.oos_use_state}
+        >
+          {OOS_STATE_LABEL[fact.oos_use_state] ?? fact.oos_use_state}
         </span>
-        {fact.oos_use_state ? (
-          <span
-            className="mono rounded-[3px] border px-[6px] text-[10px] font-semibold leading-[16px]"
-            style={{ color: oosStateColor(fact.oos_use_state), borderColor: oosStateColor(fact.oos_use_state) }}
-            data-oos-state={fact.oos_use_state}
-          >
-            {OOS_STATE_LABEL[fact.oos_use_state] ?? fact.oos_use_state}
-          </span>
-        ) : null}
-      </div>
+      ) : null}
       {fact.required_request_fields && fact.required_request_fields.length > 0 ? (
         <span className="text-[10px]" style={{ color: "var(--ink-soft)" }} data-required-fields={fact.schedule}>
           needs <span className="mono">{fact.required_request_fields.join(", ")}</span> (requested-spec v2) — preflight refuses it without them.
         </span>
       ) : null}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5 text-[10.5px]">
-        <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>causality</dt>
-        <dd className="mono text-[10px]">{fact.causality_claim} · {fact.causality_schedule_v2}</dd>
-        <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>outer OOS</dt>
-        <dd className="text-[10.5px]" data-oos-use={fact.oos_use}>
-          {fact.oos_use === "USED" ? "feeds selection" : "does not feed selection"}
-          {fact.oos_use_condition ? (
-            <span style={{ color: "var(--ink-faint)" }}> — {fact.oos_use_condition}</span>
-          ) : null}
-        </dd>
-        <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>params</dt>
-        <dd className="mono text-[10px]">{fact.params_semantics}</dd>
-        <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>cert cap</dt>
-        <dd>
-          <NotPublished fact={fact.cert_cap} label="cert_cap" />
-        </dd>
-      </dl>
-      <Locators sources={fact.source} />
+      <details className="text-[10.5px]" data-claim-facts={fact.schedule}>
+        <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }}>
+          causality, OOS use, params, cert cap
+        </summary>
+        <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
+          <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>causality</dt>
+          <dd className="mono text-[10px]">{fact.causality_claim} · {fact.causality_schedule_v2}</dd>
+          <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>outer OOS</dt>
+          <dd className="text-[10.5px]" data-oos-use={fact.oos_use}>
+            {fact.oos_use === "USED" ? "feeds selection" : "does not feed selection"}
+            {fact.oos_use_condition ? <span style={{ color: "var(--ink-soft)" }}> — {fact.oos_use_condition}</span> : null}
+          </dd>
+          <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>params</dt>
+          <dd className="mono text-[10px]">{fact.params_semantics}</dd>
+          <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>cert cap</dt>
+          <dd>
+            <NotPublished fact={fact.cert_cap} label="cert_cap" />
+          </dd>
+        </dl>
+        <Locators sources={fact.source} />
+      </details>
     </div>
   );
+}
+
+/**
+ * 12-2: the stage that governs selection opens the column — the OOS candidate
+ * selection when the mode has one, else the IS search (IS-only modes). The
+ * other stages, the coefficients' notes, the weights and every source locator
+ * sit under one disclosure. The formula text is the engine's (RF-02 #5).
+ */
+const TERMS_SHOWN = 4;
+
+export function governingStage<T extends { stage: string }>(stages: readonly T[]): T | null {
+  return stages.find((stage) => stage.stage === "oos_candidate_selection") ?? stages.find((stage) => stage.stage === "is_search") ?? stages[0] ?? null;
 }
 
 function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
@@ -573,85 +560,135 @@ function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
     return <NotPublished fact={facts.objective} label="objective" />;
   }
   const objective = facts.objective;
+  const lead = governingStage(objective.stages);
+  const rest = objective.stages.filter((stage) => stage !== lead);
+  const terms = objective.terms ?? [];
+  /* D9: the HiFi shows up to four terms beside the formula; the rest are counted and open with the other stages. */
+  const shownTerms = terms.slice(0, TERMS_SHOWN);
+  const moreTerms = terms.slice(TERMS_SHOWN);
   return (
-    <div className="flex flex-col gap-1.5 border-l-2 pl-2.5" style={{ borderColor: "var(--accent)" }} data-objective>
-      {objective.stages.map((stage) => (
-        <div key={stage.stage} className="flex flex-col gap-0.5">
-          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
-            {stage.stage} · {stage.formula_id} · {objective.direction}
+    <div className="flex flex-col gap-1" data-objective>
+      {lead ? (
+        <div className="flex flex-col gap-0.5 overflow-x-auto border-l-2 py-0.5 pl-2.5" style={{ borderColor: "var(--accent)" }} data-objective-lead={lead.stage}>
+          <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }}>
+            {lead.stage} · {objective.direction}
           </span>
-          <Formula formula={stage.formula} />
+          <Formula formula={lead.formula} />
         </div>
-      ))}
+      ) : null}
+      {shownTerms.length > 0 ? (
+        <div className="flex flex-col" data-objective-term-table>
+          {shownTerms.map((term) => (
+            <span
+              key={term.symbol}
+              className="flex items-baseline gap-2 border-b py-[2px] text-[10.5px]"
+              style={{ borderColor: "var(--line-soft)" }}
+              data-objective-term={term.symbol}
+              title={term.source.map((item) => `${item.path}:${item.lines} sha256 ${item.sha256}`).join("\n")}
+            >
+              <span className="mono w-[140px] flex-none text-[10px]" style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>
+                {term.symbol}
+              </span>
+              <span className="min-w-0 flex-1 leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
+                {term.meaning}
+              </span>
+            </span>
+          ))}
+        </div>
+      ) : null}
       {objective.coefficients.length > 0 ? (
-        <table className="text-[10px]" data-objective-terms>
-          <tbody>
-            {objective.coefficients.map((coefficient) => (
-              <tr key={coefficient.name}>
-                <td className="mono pr-3" style={{ color: "var(--ink)" }}>{coefficient.name}</td>
-                <td className="mono pr-3">
-                  {coefficient.release_default ?? (
-                    <span style={{ color: "var(--ink-faint)" }}>unset</span>
-                  )}
-                </td>
-                <td style={{ color: "var(--ink-faint)" }}>{coefficient.note ?? "release default"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-objective-terms>
+          {objective.coefficients.map((coefficient, index) => (
+            <span key={coefficient.name} title={coefficient.note ?? "release default"}>
+              {index > 0 ? " · " : ""}
+              {coefficient.name}
+              {" "}
+              {coefficient.release_default ?? "unset"}
+            </span>
+          ))}
+        </span>
       ) : null}
-      {objective.terms && objective.terms.length > 0 ? (
-        <table className="text-[10px]" data-objective-term-table>
-          <thead>
-            <tr className="mono text-[8.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
-              <th className="pr-3 text-left font-normal">term</th>
-              <th className="pr-3 text-left font-normal">meaning</th>
-              <th className="text-left font-normal">source</th>
-            </tr>
-          </thead>
-          <tbody>
-            {objective.terms.map((term) => (
-              <tr key={term.symbol} className="align-top" data-objective-term={term.symbol}>
-                <td className="mono py-[2px] pr-3" style={{ color: "var(--ink)" }}>{term.symbol}</td>
-                <td className="py-[2px] pr-3 leading-[1.45]" style={{ color: "var(--ink-soft)" }}>{term.meaning}</td>
-                <td className="mono py-[2px] text-[9px]" style={{ color: "var(--ink-faint)" }} title={term.source.map((item) => `${item.path}:${item.lines} sha256 ${item.sha256}`).join("\n")}>
-                  {term.source.map((item) => `${item.path.replace(/^quantbt\//, "")}:${item.lines}`).join(" · ")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : null}
-      {objective.weights && objective.weights.length > 0 ? (
-        <table className="text-[10px]" data-objective-weights>
-          <thead>
-            <tr className="mono text-[8.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
-              <th className="pr-3 text-left font-normal">weight</th>
-              <th className="pr-3 text-left font-normal">release default</th>
-              <th className="text-left font-normal">role</th>
-            </tr>
-          </thead>
-          <tbody>
-            {objective.weights.map((weight) => (
-              <tr key={weight.name} className="align-top" data-objective-weight={weight.name}>
-                <td className="mono py-[2px] pr-3">{weight.name}</td>
-                <td className="mono py-[2px] pr-3" title={weight.source.map((item) => `${item.path}:${item.lines}`).join(" · ")}>{weight.release_default}</td>
-                <td className="py-[2px] leading-[1.45]" style={{ color: "var(--ink-soft)" }}>{weight.role}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : null}
-      <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
-        selection metric {objective.selection_metrics.join(" · ")}
-      </span>
-      {objective.note ? (
-        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>{objective.note}</span>
-      ) : null}
-      <Locators sources={objective.source} />
+      <details className="text-[10px]" data-objective-more>
+        <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }}>
+          {moreTerms.length > 0 ? `${moreTerms.length} more ${moreTerms.length === 1 ? "term" : "terms"}, ` : ""}
+          {rest.length > 0 ? `${rest.length} more ${rest.length === 1 ? "stage" : "stages"}, ` : ""}
+          {objective.weights && objective.weights.length > 0 ? "weights, " : ""}selection metric and sources
+        </summary>
+        <div className="mt-1 flex flex-col gap-1.5">
+          {moreTerms.length > 0 ? (
+            <div className="flex flex-col" data-objective-term-table-more>
+              {moreTerms.map((term) => (
+                <span key={term.symbol} className="flex items-baseline gap-2 border-b py-[2px] text-[10.5px]" style={{ borderColor: "var(--line-soft)" }} data-objective-term={term.symbol}>
+                  <span className="mono w-[140px] flex-none text-[10px]" style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>
+                    {term.symbol}
+                  </span>
+                  <span className="min-w-0 flex-1 leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
+                    {term.meaning}
+                  </span>
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {rest.map((stage) => (
+            <div key={stage.stage} className="flex flex-col gap-0.5 overflow-x-auto" data-objective-stage={stage.stage}>
+              <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }}>
+                {stage.stage} · {stage.formula_id} · {objective.direction}
+              </span>
+              <Formula formula={stage.formula} />
+            </div>
+          ))}
+          {lead ? (
+            <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }}>
+              {lead.stage} formula id {lead.formula_id}
+            </span>
+          ) : null}
+          {objective.weights && objective.weights.length > 0 ? (
+            <table className="text-[10px]" data-objective-weights>
+              <thead>
+                <tr className="mono text-[8.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>
+                  <th className="pr-3 text-left font-normal">weight</th>
+                  <th className="pr-3 text-left font-normal">release default</th>
+                  <th className="text-left font-normal">role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {objective.weights.map((weight) => (
+                  <tr key={weight.name} className="align-top" data-objective-weight={weight.name}>
+                    <td className="mono py-[2px] pr-3">{weight.name}</td>
+                    <td className="mono py-[2px] pr-3" title={weight.source.map((item) => `${item.path}:${item.lines}`).join(" · ")}>{weight.release_default}</td>
+                    <td className="py-[2px] leading-[1.45]" style={{ color: "var(--ink-soft)" }}>{weight.role}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : null}
+          {objective.coefficients.some((coefficient) => coefficient.note) ? (
+            <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+              {objective.coefficients.filter((coefficient) => coefficient.note).map((coefficient) => `${coefficient.name}: ${coefficient.note}`).join(" · ")}
+            </span>
+          ) : null}
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
+            selection metric {objective.selection_metrics.join(" · ")}
+          </span>
+          {objective.note ? <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>{objective.note}</span> : null}
+          {objective.terms && objective.terms.length > 0 ? (
+            <span className="mono text-[9px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-fact-source>
+              source{" "}
+              {objective.terms.flatMap((term) => term.source).map((item, index) => `${index > 0 ? " · " : ""}${item.path}:${item.lines}`).join("")}
+            </span>
+          ) : null}
+          <Locators sources={objective.source} />
+        </div>
+      </details>
     </div>
   );
 }
+
+/** What the Atlas knows about the run it was opened from (12-3), read by the route from the run's progress identity. */
+export type AtlasRunCell =
+  | { state: "known"; mode: string | null; schedule: string | null }
+  | { state: "loading" }
+  | { state: "absent"; reason: string };
 
 export interface ModeCardProps {
   mode: AtlasMode;
@@ -660,123 +697,52 @@ export interface ModeCardProps {
   onSchedule: (schedule: string) => void;
   /** A run to open Search & Selection for, when the Atlas was reached from one. */
   runId: string | null;
+  /** 12-3: the run's own mode × schedule when it is known; `undefined` when the caller did not read it. */
+  runCell?: AtlasRunCell;
 }
 
-export function ModeCard({ mode, schedule, onSchedule, runId }: ModeCardProps) {
+export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCardProps) {
   const facts = mode.facts ?? null;
   const fact = facts?.schedules.find((item) => item.schedule === schedule) ?? null;
+  const known = runCell?.state === "known" ? runCell : null;
+  const thisRun = runId !== null && known !== null && known.mode === mode.mode_id;
+  /* 12-8: with the run's mode known, only its card opens that run's Search; the others find runs in their mode. */
+  const opensSearch = runId !== null && (known === null || thisRun);
   return (
     <article
       data-mode={mode.mode_id}
-      className="flex flex-col rounded-[10px] border px-4 py-3.5"
-      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+      data-this-run={thisRun || undefined}
+      className="flex flex-col rounded-[8px] border px-4 py-3.5"
+      style={{
+        borderColor: thisRun ? "var(--accent)" : "var(--line)",
+        background: "var(--paper-raised)",
+        boxShadow: "var(--shadow-e1)",
+      }}
     >
-      <header
-        className="flex flex-wrap items-baseline gap-2.5 border-b pb-2"
-        style={{ borderColor: "var(--line-soft)" }}
-      >
-        <span className="mono text-[12px] font-bold">{mode.mode_id}</span>
+      <header className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b pb-2" style={{ borderColor: "var(--line-soft)" }}>
+        <span className="mono text-[13px] font-bold">{mode.mode_id}</span>
         <span className="text-[12px]" style={{ color: "var(--ink-soft)" }}>
           {mode.display_name}
         </span>
-        <span className="ml-auto flex flex-wrap gap-1" role="group" aria-label={`${mode.mode_id} schedules`}>
-          {ENGINE_SCHEDULES.map((candidate) => {
-            const valid = mode.valid_schedules.includes(candidate);
-            const selected = valid && candidate === schedule;
-            return valid ? (
-              <button
-                key={candidate}
-                type="button"
-                aria-pressed={selected}
-                data-schedule={candidate}
-                onClick={() => onSchedule(candidate)}
-                className="mono rounded-[3px] border px-[6px] text-[9.5px] leading-[17px]"
-                style={{
-                  borderColor: selected ? "var(--accent)" : "var(--line)",
-                  background: selected ? "var(--accent-soft)" : "var(--paper-raised)",
-                  color: selected ? "var(--accent)" : "var(--ink-soft)",
-                }}
-              >
-                {candidate}
-                {candidate === mode.default_schedule ? " · default" : ""}
-              </button>
-            ) : (
-              /* Invalid schedules are struck through with the reason, never hidden. */
-              <span
-                key={candidate}
-                data-schedule-invalid={candidate}
-                tabIndex={0}
-                role="note"
-                aria-label={`${candidate}: not admitted by this mode in the installed release manifest`}
-                title="Not in this mode's valid schedules in the installed release manifest."
-                className="mono rounded-[3px] border border-dashed px-[6px] text-[9.5px] leading-[17px] line-through"
-                style={{ borderColor: "var(--line)", color: "var(--ink-faint)" }}
-              >
-                {candidate}
-              </span>
-            );
-          })}
+        {/* CG-P04-05: no per-mode cap is published; the chip keeps the HiFi's place and says so. */}
+        <span
+          className="mono rounded-[3px] border border-dashed px-1.5 text-[9.5px] font-bold"
+          style={{ borderColor: "var(--line-strong)", color: "var(--ink-soft)" }}
+          title={fact && fact.cert_cap.state === "NOT_PUBLISHED" ? fact.cert_cap.reason : "no certification cap is published for this mode"}
+          data-cert-cap="not-published"
+        >
+          cert cap not published
         </span>
-      </header>
-
-      <div className="flex flex-wrap gap-4 pt-2.5">
-        <div className="flex min-w-[280px] flex-[1.1] flex-col gap-2.5">
-          <span className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-            claim · {mode.mode_id} × {schedule}
+        {thisRun ? (
+          <span className="mono text-[9px]" style={{ color: "var(--accent)" }} data-this-run-marker title={`${runId} ran ${known?.mode ?? ""} × ${known?.schedule ?? "schedule not published"}`}>
+            ← this run
           </span>
-          {fact ? (
-            <ScheduleClaim fact={fact} />
-          ) : (
-            <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-facts-unpublished>
-              This manifest publishes no engine facts for this mode × schedule.
-            </span>
-          )}
-          <span className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-            objective
-          </span>
-          <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-            {mode.objective_summary}
-          </span>
-          {facts ? <ObjectiveBlock facts={facts} /> : null}
-          {facts && isPublished<AtlasReadsFact>(facts.reads) ? (
-            <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-reads>
-              reads {facts.reads.selection_inputs.join(" · ")} · retains {facts.reads.retention}
-            </span>
-          ) : null}
-        </div>
-
-        <div className="flex min-w-[260px] flex-1 flex-col gap-2">
-          {/* The failure signature, from the manifest, never paraphrased. */}
-          <div className="border-l-2 pl-2" style={{ borderColor: "var(--bad)" }}>
-            <span
-              className="mono block text-[8.5px] font-bold uppercase tracking-[.08em]"
-              style={{ color: "var(--bad)" }}
-            >
-              suspect
-            </span>
-            <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-suspect>
-              {mode.suspect}
-            </span>
-          </div>
-          {mode.artifact_fields.length > 0 ? (
-            <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-              artifacts: {mode.artifact_fields.join(" · ")}
-            </span>
-          ) : null}
-          {mode.when_to_use ? (
-            <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-              {mode.when_to_use}
-            </span>
-          ) : null}
-          {mode.rules.map((rule, index) => (
-            <span key={index} className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-              {rule}
-            </span>
-          ))}
-          {runId ? (
+        ) : null}
+        <span className="ml-auto">
+          {opensSearch && runId ? (
             <Link
               to={`/research/quantbt/runs/${encodeURIComponent(runId)}/search#${encodeInspectionCursor({ stage: "search", mode: mode.mode_id, schedule })}`}
-              className="mono self-start text-[10px] font-semibold uppercase tracking-[.06em]"
+              className="mono text-[10px] font-semibold uppercase tracking-[.05em]"
               style={{ color: "var(--accent)" }}
               data-open-search={mode.mode_id}
             >
@@ -785,12 +751,119 @@ export function ModeCard({ mode, schedule, onSchedule, runId }: ModeCardProps) {
           ) : (
             <Link
               to={`/research/quantbt/runs?mode=${encodeURIComponent(mode.mode_id)}`}
-              className="mono self-start text-[10px] font-semibold uppercase tracking-[.06em]"
+              className="mono text-[10px] font-semibold uppercase tracking-[.05em]"
               style={{ color: "var(--accent)" }}
               data-find-runs={mode.mode_id}
+              title={known ? "not this run's mode — find runs that ran it" : undefined}
             >
               find runs in this mode →
             </Link>
+          )}
+        </span>
+      </header>
+
+      {/* D9 (12-1): the HiFi's three columns — WHAT IT READS · OBJECTIVE · SCHEDULE → CLAIM. */}
+      <div className="flex flex-wrap gap-x-[18px] gap-y-3 pt-2.5">
+        <div className="flex min-w-[min(280px,100%)] flex-[1.1] flex-col gap-1.5" data-mode-column="reads">
+          <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
+            what it reads
+          </span>
+          {facts && isPublished<AtlasReadsFact>(facts.reads) ? (
+            <span className="flex flex-wrap gap-1" data-reads>
+              {facts.reads.selection_inputs.map((input) => (
+                <span key={input} className="mono rounded-[3px] border px-[5px] text-[9.5px] leading-[16px]" style={{ borderColor: "var(--line)", color: "var(--ink)" }}>
+                  {input}
+                </span>
+              ))}
+              <span className="mono text-[9.5px] leading-[18px]" style={{ color: "var(--ink-soft)" }}>
+                retains {facts.reads.retention}
+              </span>
+            </span>
+          ) : facts ? (
+            <NotPublished fact={facts.reads as AtlasNotPublishedFact} label="reads" />
+          ) : (
+            <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }}>This manifest publishes no reads for this mode.</span>
+          )}
+          <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+            {mode.objective_summary}
+          </span>
+          {mode.when_to_use ? (
+            <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+              {mode.when_to_use}
+            </span>
+          ) : null}
+          {mode.rules.map((rule, index) => (
+            <span key={index} className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+              {rule}
+            </span>
+          ))}
+        </div>
+
+        <div className="flex min-w-[min(320px,100%)] flex-[1.3] flex-col gap-1 min-[900px]:border-l min-[900px]:pl-[18px]" style={{ borderColor: "var(--line-soft)" }} data-mode-column="objective">
+          <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
+            objective — Stage 2 opens every term
+          </span>
+          {facts ? <ObjectiveBlock facts={facts} /> : null}
+          {/* The failure signature, from the manifest, never paraphrased. */}
+          <span className="text-[10px] leading-[1.5]" style={{ color: "var(--bad)" }}>
+            <span className="text-[8.5px] font-bold uppercase tracking-[.05em]">suspect</span> · <span data-suspect>{mode.suspect}</span>
+          </span>
+          {mode.artifact_fields.length > 0 ? (
+            <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }}>
+              {mode.artifact_fields.join(" · ")}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex min-w-[min(260px,100%)] flex-1 flex-col gap-1.5 min-[900px]:border-l min-[900px]:pl-[18px]" style={{ borderColor: "var(--line-soft)" }} data-mode-column="claim">
+          <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
+            schedule → claim
+          </span>
+          <span className="flex flex-wrap gap-1" role="group" aria-label={`${mode.mode_id} schedules`}>
+            {ENGINE_SCHEDULES.map((candidate) => {
+              const valid = mode.valid_schedules.includes(candidate);
+              const selected = valid && candidate === schedule;
+              return valid ? (
+                <button
+                  key={candidate}
+                  type="button"
+                  aria-pressed={selected}
+                  data-schedule={candidate}
+                  onClick={() => onSchedule(candidate)}
+                  className="mono rounded-[3px] border px-[8px] text-[9.5px] leading-[18px]"
+                  style={{
+                    borderColor: selected ? "var(--accent)" : "var(--line)",
+                    background: selected ? "var(--accent-soft)" : "var(--paper-raised)",
+                    color: selected ? "var(--accent)" : "var(--ink-soft)",
+                  }}
+                >
+                  {candidate}
+                  {candidate === mode.default_schedule ? " · default" : ""}
+                  {thisRun && known?.schedule === candidate ? " · this run" : ""}
+                </button>
+              ) : (
+                /* Invalid schedules are struck through with the reason, never hidden. */
+                <span
+                  key={candidate}
+                  data-schedule-invalid={candidate}
+                  tabIndex={0}
+                  role="note"
+                  aria-label={`${candidate}: not admitted by this mode in the installed release manifest`}
+                  title="Not in this mode's valid schedules in the installed release manifest."
+                  className="mono rounded-[3px] border border-dashed px-[8px] text-[9.5px] leading-[18px] line-through"
+                  style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}
+                >
+                  {candidate}
+                </span>
+              );
+            })}
+          </span>
+          {fact ? (
+            <ScheduleClaim fact={fact} />
+          ) : (
+            <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-facts-unpublished>
+              This manifest publishes no engine facts for this mode × schedule.
+            </span>
           )}
         </div>
       </div>
@@ -802,13 +875,13 @@ function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
   return (
     <div className="overflow-x-auto rounded-[6px] border" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-mode-table>
       <div className="border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
-        <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
           when to reach for which mode
         </span>
       </div>
       <table className="w-full border-collapse text-[12px]">
         <thead>
-          <tr className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+          <tr className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>
             <th className="px-3 py-1.5 text-left font-normal">mode</th>
             <th className="px-3 py-1.5 text-left font-normal">use when</th>
             <th className="px-3 py-1.5 text-left font-normal">avoid when</th>
@@ -823,7 +896,7 @@ function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
                 {mode.facts ? (
                   <NotPublished fact={mode.facts.avoid_when} label={`avoid_when:${mode.mode_id}`} />
                 ) : (
-                  <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>not published</span>
+                  <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>not published</span>
                 )}
               </td>
             </tr>
@@ -834,17 +907,36 @@ function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
   );
 }
 
+/** 12-7: the HiFi's footer on every tab, verbatim. */
+function ScreenRules() {
+  return (
+    <div className="flex flex-col gap-[3px] border-t pt-2" style={{ borderColor: "var(--line)" }} data-screen-rules>
+      <span className="text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-soft)" }}>
+        rules of this screen
+      </span>
+      <p className="m-0 text-[11px] leading-[1.6]" style={{ color: "var(--ink-soft)" }}>
+        Claim strings are the engine&rsquo;s, rendered verbatim from the mode × schedule matrix — the UI never composes its own.
+        Invalid schedules render struck-through with the reason, never hidden. A real run locks mode and schedule at submit; this
+        atlas exists so nobody learns that the hard way.
+      </p>
+    </div>
+  );
+}
+
 function ModesTab({
   doc,
   schedules,
   onSchedule,
   runId,
+  runCell,
 }: {
   doc: AtlasDocument;
   schedules: Readonly<Record<string, string>>;
   onSchedule: (modeId: string, schedule: string) => void;
   runId: string | null;
+  runCell?: AtlasRunCell;
 }) {
+  const known = runCell?.state === "known" ? runCell : null;
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap gap-3.5">
@@ -856,30 +948,21 @@ function ModesTab({
         >
           {/* D-B2 (2026-09-23): gold on gold-soft is 4.0:1, below AA for this
               size. The gold frame carries the warning; the words are ink. */}
-          <span
-            className="mono flex-none text-[10px] font-bold uppercase tracking-[.1em]"
-            style={{ color: "var(--ink)" }}
-          >
+          <span className="mono flex-none text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--ink)" }}>
             rule one
           </span>
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink)" }}>
-            {/* HiFi copy, restored in W4: requested-spec v2 carries the inner
-                folds, so `mode_1_decay + per_fold_causal` is a valid pair in
-                the manifest again (CG-P02-02; it was struck under DQ-10). */}
-            {/* An older manifest still strikes the pair; the sentence then names
-                only pairs it admits (DQ-10), so it never contradicts a chip. */}
-            The claim comes from <span className="mono">mode × schedule</span>, never from the mode
-            alone.{" "}
+            {/* HiFi copy, restored in W4 (CG-P02-02); an older manifest names only pairs it admits (DQ-10). */}
+            The claim comes from <span className="mono">mode × schedule</span>, never from the mode alone.{" "}
             {doc.modes.find((mode) => mode.mode_id === "mode_1_decay")?.valid_schedules.includes("per_fold_causal") ? (
               <>
-                <span className="mono">mode_1_decay + per_fold_causal</span> is strict outer OOS; the
-                same mode with <span className="mono">per_fold_decay</span> is selection-adjusted.
+                <span className="mono">mode_1_decay + per_fold_causal</span> is strict outer OOS; the same mode with{" "}
+                <span className="mono">per_fold_decay</span> is selection-adjusted.
               </>
             ) : (
               <>
-                <span className="mono">mode_1_decay + per_fold_decay</span> is selection-adjusted outer
-                OOS; the same mode with <span className="mono">global</span> is a global calibration, not
-                causal.
+                <span className="mono">mode_1_decay + per_fold_decay</span> is selection-adjusted outer OOS; the same mode with{" "}
+                <span className="mono">global</span> is a global calibration, not causal.
               </>
             )}{" "}
             Click the schedule chips below and watch the claim change.
@@ -889,46 +972,44 @@ function ModesTab({
           className="flex min-w-[min(360px,100%)] flex-1 items-start gap-3 rounded-[6px] border px-3.5 py-2.5"
           style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
         >
-          <span
-            className="mono flex-none text-[10px] font-bold uppercase tracking-[.1em]"
-            style={{ color: "var(--ink-soft)" }}
-          >
+          <span className="mono flex-none text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--ink-soft)" }}>
             rule two
           </span>
+          {/* 12-4: the HiFi's CandidateSelector list is not published by QuantBT 1.1.1's manifest; the sentence names no layer it cannot cite. */}
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-            Two selector layers, never mixed: <span className="mono">optimization_mode</span> belongs
-            to this page; the execution route does not.
+            Two selector layers, never mixed: <span className="mono">optimization_mode</span> belongs to this page; the execution
+            route does not.
           </span>
         </div>
       </div>
 
-      {doc.modes.map((mode) => (
-        <ModeCard
-          key={mode.mode_id}
-          mode={mode}
-          schedule={
-            schedules[mode.mode_id] && mode.valid_schedules.includes(schedules[mode.mode_id]!)
-              ? schedules[mode.mode_id]!
-              : mode.default_schedule
-          }
-          onSchedule={(schedule) => onSchedule(mode.mode_id, schedule)}
-          runId={runId}
-        />
-      ))}
+      {runId && runCell && runCell.state !== "known" ? (
+        <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-this-run-absent={runCell.state}>
+          {runCell.state === "loading" ? "reading this run's mode × schedule…" : `this run's mode × schedule is not published here — ${runCell.reason}`}
+        </span>
+      ) : null}
+      {known && !doc.modes.some((mode) => mode.mode_id === known.mode) ? (
+        <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-this-run-outside>
+          this run declared {known.mode ?? "no mode"} × {known.schedule ?? "no schedule"} — not a walk-forward mode on this page
+        </span>
+      ) : null}
+
+      {doc.modes.map((mode) => {
+        const chosen = schedules[mode.mode_id];
+        const runSchedule = known && known.mode === mode.mode_id && known.schedule && mode.valid_schedules.includes(known.schedule) ? known.schedule : null;
+        return (
+          <ModeCard
+            key={mode.mode_id}
+            mode={mode}
+            schedule={chosen && mode.valid_schedules.includes(chosen) ? chosen : (runSchedule ?? mode.default_schedule)}
+            onSchedule={(schedule) => onSchedule(mode.mode_id, schedule)}
+            runId={runId}
+            runCell={runCell}
+          />
+        );
+      })}
 
       <ModeTable modes={doc.modes} />
-
-      <div className="flex flex-col gap-1" data-screen-rules>
-        <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-          rules of this screen
-        </span>
-        <p className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-          Claim strings are the engine&rsquo;s, rendered verbatim from the mode × schedule matrix —
-          the UI never composes its own. Invalid schedules render struck-through with the reason,
-          never hidden. A real run locks mode and schedule at submit; this atlas exists so nobody
-          learns that the hard way.
-        </p>
-      </div>
     </div>
   );
 }
@@ -978,7 +1059,13 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
               <span style={{ color: "var(--ink-faint)" }}>{group.group_id}</span>{" "}
               {group.fields.map((field) => (
                 <span key={field.field_id} title={field.detail}>
-                  {field.field_id}={Array.isArray(field.default_value) ? field.default_value.join(",") : String(field.default_value)}
+                  {/* The engine's `None` default is a fact ("unset"), never the bare token "null" (P23 matrix). */}
+                  {field.field_id}=
+                  {Array.isArray(field.default_value)
+                    ? field.default_value.join(",")
+                    : field.default_value === null
+                      ? "unset"
+                      : String(field.default_value)}
                   <span style={{ color: "var(--ink-faint)" }}> {field.override_state.toLowerCase()} </span>
                 </span>
               ))}
@@ -1079,6 +1166,8 @@ export interface EngineAtlasProps {
   /** RF02-F1: the rest of the hash — mode, schedule, route and the run it came from. */
   location?: Omit<AtlasLocation, "tab">;
   onLocationChange?: (change: Partial<Omit<AtlasLocation, "tab">>) => void;
+  /** 12-3: the mode × schedule of `location.run`, as its progress identity publishes it. */
+  runCell?: AtlasRunCell;
 }
 
 export function EngineAtlas({
@@ -1090,6 +1179,7 @@ export function EngineAtlas({
   selectedReleaseKind = null,
   location = { mode: null, schedule: null, route: null, run: null },
   onLocationChange,
+  runCell,
 }: EngineAtlasProps) {
   const release = doc ? currentReleaseLabel(doc.current_release) : null;
   const history = doc ? historicalReleaseLabels(doc) : [];
@@ -1107,7 +1197,7 @@ export function EngineAtlas({
   return (
     <div
       data-screen="engine-atlas"
-      className="flex flex-col gap-3.5 px-4 py-4"
+      className="flex min-w-0 flex-col gap-3.5"
       style={{ background: "var(--paper)", color: "var(--ink)" }}
     >
       <header
@@ -1146,7 +1236,8 @@ export function EngineAtlas({
         </div>
 
         {release || selectedReleaseId ? (
-          <div className="flex flex-col items-end gap-[3px]">
+          /* 12-9: right-aligned beside the title at desktop width, stacked left under it at 660. */
+          <div className="flex flex-col items-start gap-[3px] min-[900px]:items-end">
             {selectedReleaseId ? (
               <span
                 className="mono rounded-[3px] border px-[5px] text-[9px] font-bold leading-[15px]"
@@ -1264,11 +1355,12 @@ export function EngineAtlas({
             ) : null}
             {tab === "claims" ? <ClaimsTab doc={doc} /> : null}
             {tab === "modes" ? (
-              <ModesTab doc={doc} schedules={schedules} onSchedule={onSchedule} runId={location.run} />
+              <ModesTab doc={doc} schedules={schedules} onSchedule={onSchedule} runId={location.run} runCell={runCell} />
             ) : null}
           </div>
         ) : null}
       </ResearchPanel>
+      <ScreenRules />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 # Rà soát P15–P23 — frontend thiếu gì, backend còn nợ gì (Claude, 2026-09-26)
 
+> **Superseded 2026-09-26 (later):** written on `501c31fb`, before W7, X1 and X2 landed. The current open-items list is [Unified §13.4.1](../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-open-ledger); this file is kept as the audit that produced it.
+
 Bobby hỏi: "rà soát lại tất cả các P15 đến P23 … list lại frontend đang thiếu gì và backend đang nợ
 những gì … phải luôn test bằng browser". File này là kết quả; chat chỉ trỏ tới đây.
 

@@ -59,7 +59,7 @@ import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import { hubDelegates, readsRetainedLane, type RetainedSlot, type VerifySlot } from "./useFreeze";
 import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
-import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { claimToken, foldLabel, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 import {
   protocolLabel,
@@ -69,6 +69,8 @@ import {
   type RunIdentitySlot,
 } from "./retainedLane";
 import type { ProgressRead } from "./progressClient";
+import { ShortId } from "./ShortId";
+import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1211,7 +1213,7 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
           </span>
           {folds.map((fold) => (
             <span key={fold.fold} className="flex flex-wrap items-baseline gap-2" data-fold-selection={fold.fold}>
-              <span className="mono text-[10px]">fold {fold.fold}</span>
+              <span className="mono text-[10px]">{foldLabel(fold.fold - 1)}</span>
               {fold.selection?.state === "AVAILABLE" ? (
                 <>
                   <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
@@ -1355,12 +1357,12 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
         </span>
         {ordering.source_claims.chronological_claim ? (
           <span className="mono text-[10px]" data-source-claim title="QuantBT walk_forward.chronological_validation_claim">
-            {ordering.source_claims.chronological_claim}
+            {claimToken(ordering.source_claims.chronological_claim)}
           </span>
         ) : null}
         {ordering.source_claims.causality_claim ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title="QuantBT walk_forward.causality_claim">
-            {ordering.source_claims.causality_claim}
+            {claimToken(ordering.source_claims.causality_claim)}
           </span>
         ) : null}
         {ordering.source_claims.oos_used_for_selection === true ? (
@@ -1384,7 +1386,7 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
               data-fold-verdict={fold.verdict}
               data-oos-child={fold.oos_generation_child.state}
             >
-              <span className="mono w-[52px] flex-none text-[10px]" style={{ color: "var(--ink-soft)" }}>fold {fold.fold_id}</span>
+              <span className="mono w-[52px] flex-none text-[10px]" style={{ color: "var(--ink-soft)" }}title={`QuantBT fold_id ${fold.fold_id}`}>{foldLabel(fold.fold_id)}</span>
               <DataTimeBar fold={fold} span={span} />
               <span
                 className="mono text-[9.5px]"
@@ -1577,36 +1579,35 @@ export function FreezeScreen({
           : null) ?? null;
 
   return (
-    <div className="flex flex-col gap-3" data-screen="freeze-detail" data-run={runId}>
-      <nav className="flex flex-wrap items-center gap-1.5 text-[11px]" aria-label="Breadcrumb">
+    <div className={`${SCREEN_FRAME} max-w-[1440px]`} data-screen="freeze-detail" data-run={runId}>
+      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/evidence`, cursor)}
-          className="mono"
           style={{ color: "var(--accent)" }}
           data-action="back-to-hub"
         >
           Evidence Flow
         </Link>
-        <span style={{ color: "var(--line-strong)" }}>/</span>
-        <span className="mono">{runId}</span>
-        <span style={{ color: "var(--line-strong)" }}>/</span>
-        <span className="mono" style={{ color: "var(--ink-faint)" }}>
+        <span style={{ color: "var(--ink-faint)" }}>/</span>
+        <ShortId id={runId} label="run" />
+        <span style={{ color: "var(--ink-faint)" }}>/</span>
+        <span style={{ color: "var(--ink)" }}>
           Stage 3 · Freeze
         </span>
-        <span style={{ color: "var(--line-strong)" }}>·</span>
+        <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/search`, cursor)}
-          className="mono"
+          className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="back-to-search"
         >
           ← S2 Search
         </Link>
-        <span style={{ color: "var(--line-strong)" }}>·</span>
+        <span style={{ color: "var(--ink-faint)" }}>·</span>
         {/* P17 · spec 08 §1 inbound "07 next-stage". */}
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })}
-          className="mono"
+          className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="next-execute"
         >
@@ -1614,13 +1615,13 @@ export function FreezeScreen({
         </Link>
         {identity.state === "ready" && identity.identity.progress?.run?.alpha?.alpha_id ? (
           <>
-            <span style={{ color: "var(--line-strong)" }}>·</span>
+            <span style={{ color: "var(--ink-faint)" }}>·</span>
             {/* Spec 07 outbound "attempt → 10": this run inside its alpha's attempt lineage. */}
             <LineageLink
               to={lineageHref(identity.identity.progress.run.alpha.alpha_id, {
                 av: identity.identity.progress.run.alpha.alpha_version_id,
               })}
-              className="mono"
+              className="mono text-[10px]"
               action="open-lineage"
             >
               attempt lineage →
@@ -1631,13 +1632,25 @@ export function FreezeScreen({
 
       {bytes && bytesBlock(bytes) ? <BlockedBanner bytes={bytes} /> : null}
 
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
+      <div className="flex flex-col gap-[3px]">
+        <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
           S3 · Freeze — ordering &amp; integrity
         </h1>
-        <p className="text-[13.5px] italic" style={{ color: "var(--ink-mute)" }} data-subtitle>
+        <p className="text-[13.5px] italic [line-height:normal]" style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }} data-subtitle>
           {FREEZE_SUBTITLE}
         </p>
+      </div>
+      {/* E2: the HiFi header actions — copy the evidence link, and propose a new attempt from this run (spec 07 F2), independent of the what-if flag. */}
+      <div className="flex flex-wrap items-center gap-3" data-header-actions>
+        <CopyEvidenceLink />
+        <Link
+          to={`/research/quantbt/runs/new?from=${encodeURIComponent(runId)}`}
+          className="mono text-[10px] uppercase tracking-[.06em]"
+          style={{ color: "var(--accent)" }}
+          data-action="propose-new-attempt"
+        >
+          propose new attempt →
+        </Link>
       </div>
 
       {detail && freeze ? (
@@ -1658,7 +1671,8 @@ export function FreezeScreen({
           {/* The contract's readiness, which this screen never showed. */}
           <Chip data-readiness={detail.readiness}>readiness {detail.readiness.toLowerCase()}</Chip>
           <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-            as of {new Date(detail.as_of_utc_ms).toISOString()}
+            {detail.revision && !handedOff ? <span title={detail.revision} data-freeze-revision>revision {shortId(detail.revision)} · </span> : null}
+            as of {iso(detail.as_of_utc_ms)}
           </span>
         </div>
       ) : lane !== null ? (
@@ -1681,13 +1695,15 @@ export function FreezeScreen({
         <ProvenanceStrip provenance={detail.provenance} />
       ) : null}
 
+      {/* E2b (audit X4): S05 wraps its cards in a plain panel; the HiFi has no outer FREEZE card here either. */}
       <ResearchPanel
         title="freeze"
+        variant="plain"
         meta={
           lane !== null ? (
             <span title={lane.revision ?? undefined}>retained lane · profile {lane.provenance.profile_id}</span>
           ) : detail?.revision && !handedOff ? (
-            `revision ${detail.revision}`
+            `revision ${shortId(detail.revision)}`
           ) : undefined
         }
         state={state}

@@ -14,6 +14,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import type { ProgressRunIdentity } from "./progressClient";
 import { shortDigest } from "./researchFormat";
+import { ShortId } from "./ShortId";
 
 const MONO = "var(--font-mono)";
 
@@ -81,7 +82,7 @@ export function RunMetaStrip({ runId, identity, status, panel = false }: RunMeta
       }}
     >
       <span>
-        run <span style={{ color: "var(--ink)", wordBreak: "break-all" }}>{runId}</span>
+        run <span style={{ color: "var(--ink)" }}><ShortId id={runId} label="run" /></span>
       </span>
       {status}
       {identity === undefined ? (

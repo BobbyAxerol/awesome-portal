@@ -280,6 +280,25 @@ async function insertDurable(pool: Pool, input: {
       [scope.workspaceId, input.runId, latestWorkerId, retryOrdinal,
         JSON.stringify(progressSnapshot(input.runId, latestWorkerId, 1, status, input.claim)), DIGEST_C, input.createdAt],
     );
+    if (input.state === "READY") {
+      // E10: a completed P10 run has its source terminal event and RS-01
+      // checkpoint. Without them the one lifecycle function reads FINISHING
+      // (a SUCCEEDED job with no source terminal fact is fail-closed) — the
+      // same answer Run Progress always gave for such a row.
+      await pool.query(
+        `INSERT INTO research.run_progress_events (
+           workspace_id, run_id, worker_attempt_id, source_sequence, lease_epoch,
+           event_type, occurred_at_utc_ms, event_payload, event_digest
+         ) VALUES ($1, $2, $3, 1, $4, 'run_completed', 1790000000000, '{}'::jsonb, $5)`,
+        [scope.workspaceId, input.runId, latestWorkerId, retryOrdinal, DIGEST_C],
+      );
+      await pool.query(
+        `INSERT INTO research.run_terminal_materializations_v1 (
+           workspace_id, run_id, worker_attempt_id, source_sequence, event_digest, materialization_revision
+         ) VALUES ($1, $2, $3, 1, $4, 'research.terminal-materialization.v1')`,
+        [scope.workspaceId, input.runId, latestWorkerId, DIGEST_C],
+      );
+    }
   }
 }
 

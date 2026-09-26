@@ -49,7 +49,7 @@ import {
 import { compareEntryHref } from "./compareClient";
 import { lineageHref } from "./lineageClient";
 import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
-import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
@@ -265,7 +265,8 @@ function GroupLabel({ children }: { children: ReactNode }) {
  * withholds two facts otherwise reads as the same phrase twice.
  */
 const WITHHELD_WORDS: Record<Availability["state"], string> = {
-  AVAILABLE: "available",
+  /* AVAILABLE with a null value breaks the contract (HiFi audit 01-2, E-BE); the screen shows what it has: nothing. */
+  AVAILABLE: "not published",
   NOT_PUBLISHED: "not published",
   LEGACY_METADATA_ONLY: "legacy metadata",
   PENDING_SOURCE_CALLBACK: "pending source",
@@ -663,7 +664,8 @@ export function statDisplay(metric: Pick<MetricCell, "role" | "value">): string 
     case "TRADE_COUNT":
       return formatMetric(metric.value, "count") ?? metric.value;
     default:
-      return metric.value;
+      /* E1: a timestamp cell (e.g. FAILED AT) never prints ISO with milliseconds. */
+      return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(metric.value) ? (formatUtc(metric.value) ?? metric.value) : metric.value;
   }
 }
 
@@ -1007,7 +1009,7 @@ function RunId({ runId }: { runId: string }) {
         cursor: "copy",
       }}
     >
-      {runId}
+      {shortId(runId)}
     </button>
   );
 }
@@ -1336,7 +1338,7 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
           <span className="flex flex-wrap" style={{ gap: "0 10px", fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
             {selection.map((run) => (
               <span key={run.runId} data-compare-selected={run.runId} data-hidden={run.hidden}>
-                {run.runId}
+                {shortId(run.runId)}
                 {run.hidden ? " (hidden by filter)" : ""}
               </span>
             ))}

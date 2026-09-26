@@ -42,9 +42,10 @@ export interface ResearchRefusal {
   /** True for `401`: the session, not this object, is the problem. */
   sessionExpired: boolean;
   /**
-   * True when the server said the addressed object does not exist (404).
-   * A screen addressed by a run id renders its not-found page — a way back to
-   * the Run Library — rather than an empty frame.
+   * True when the addressed object cannot be shown here: a 403 or a 404,
+   * deliberately not told apart (F-04). A screen addressed by a run id renders
+   * its neutral not-available page — a way back to the Run Library — rather
+   * than an empty frame.
    */
   notFound: boolean;
   /**
@@ -121,10 +122,13 @@ export const RESEARCH_SURFACE_CODES = Object.keys(SURFACE_CODES);
 
 const KIND_STATE: Record<Kind, ResearchState["state"]> = {
   FORBIDDEN: "denied",
-  /* RF-06 FE-X-11: `empty` is a successful answer with zero rows (state
-     semantics v1). A 404 is not that — nothing with this id exists — so it is
-     terminal, with its own sentence. */
-  NOT_FOUND: "terminal",
+  /* X3 2026-09-26 (VD-P23-03 / B3, one rule for every Research screen): a
+     404 is never `empty` (RF-06 FE-X-11 stands), and it is not told apart
+     from a 403 either. The server answers a foreign workspace and a missing
+     id alike (P18/P19/P20 handoffs: "foreign/not-found objects must remain
+     indistinguishable"), so both resolve to `denied` with the one F-04
+     sentence and the same way back. */
+  NOT_FOUND: "denied",
   CONFLICT: "stale",
   UNAVAILABLE: "unavailable",
   INVALID: "terminal",
@@ -157,9 +161,19 @@ export const REFUSAL_COPY: Record<string, string> = {
   transport: "The request did not reach the server.",
 };
 
-function stateOfStatus(status: number): ResearchState["state"] {
-  if (status === 401 || status === 403) return "denied";
-  if (status === 404) return "terminal";
+/**
+ * The screen's fixed sentence for a refusal that resolved to `state` (VD-P23-01).
+ * For the clients that keep their own code tables (foundation, alpha import):
+ * the server's text rides as `detail`, never as this sentence.
+ */
+export function refusalCopy(state: ResearchState["state"], status: number): string {
+  if (status === 401) return REFUSAL_COPY.session;
+  return REFUSAL_COPY[state] ?? REFUSAL_COPY.terminal;
+}
+
+/** The state a bare HTTP status resolves to when no code says more (403 = 404, F-04). */
+export function stateOfStatus(status: number): ResearchState["state"] {
+  if (status === 401 || status === 403 || status === 404) return "denied";
   if (status === 409) return "stale";
   if (status >= 500) return "unavailable";
   return "terminal";
@@ -204,12 +218,11 @@ export function toResearchRefusal(error: unknown): ResearchRefusal {
     mayRetry = state === "unavailable" || state === "stale" || state === "failed-retryable";
     message = sessionExpired
       ? REFUSAL_COPY.session
-      : (kind ? KIND_COPY[kind] : undefined) ??
-        (status === 404 ? REFUSAL_COPY["not-found"] : undefined) ??
-        REFUSAL_COPY[state] ??
-        REFUSAL_COPY.terminal;
+      : (kind ? KIND_COPY[kind] : undefined) ?? REFUSAL_COPY[state] ?? REFUSAL_COPY.terminal;
   }
-  const notFound = status === 404 && state === "terminal";
+  /* The addressed object cannot be shown here — 403 and 404 alike (F-04), so
+     a run-addressed screen renders the same neutral page for both. */
+  const notFound = (status === 403 || status === 404) && state === "denied";
   const closed = state === "denied" || state === "empty" || notFound;
 
   return {
@@ -330,6 +343,10 @@ export const CURRENT_SOURCE_LANE_COPY: Record<CurrentSourceLaneState, string> = 
  * no sentence here; the caller falls back to its availability word.
  */
 export const REASON_CODE_SENTENCES: Record<string, string> = {
+  /* E10: failures the Portal closed itself — the server's typed control reason. */
+  P06_RETRY_NOT_DISPATCHED: "The run lost its worker and no retry was ever dispatched, so the Portal closed it. Start a new run from the same spec.",
+  P11_TERMINAL_SIDECAR_FAILED: "The engine finished, but the Portal could not record its terminal result, so the run was closed as failed.",
+  P11_TERMINAL_SIDECAR_PAYLOAD_LOST: "The engine finished, but its terminal payload was lost before the Portal could record it, so the run was closed as failed.",
   P13_SOURCE_PREDATES_OOS_ANALYTICS:
     "This run was sealed before OOS analytics were published, so the engine's OOS figures were never recorded for it.",
   P13_SOURCE_EVIDENCE_NOT_PUBLISHED: "This run published no sealed evidence.",

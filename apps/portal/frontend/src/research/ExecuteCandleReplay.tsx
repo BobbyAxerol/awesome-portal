@@ -24,7 +24,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { paletteNow } from "../charts/theme";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
-import { formatMetric } from "./researchFormat";
+import { foldLabel, formatMetric } from "./researchFormat";
 import {
   REPLAY_GAP_WORDS,
   type CurrentSourceObservation,
@@ -177,6 +177,7 @@ function CandleChart({
   } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const fitted = useRef<readonly CurrentSourceObservation[] | null>(null);
+  const revealed = useRef(false);
   const { index } = useTransport(transport);
   const markers = useMemo(() => windowMarkers(rows), [rows]);
   const cut = reveal ? index + 1 : rows.length;
@@ -253,6 +254,12 @@ function CandleChart({
       fitted.current = rows;
       c.api.timeScale().fitContent();
     }
+    if (reveal !== revealed.current) {
+      /* E2b (audit 8.15): cutting the data must not rescale the axis to the bars that are
+         left — the window keeps its width and the future stays blank. */
+      revealed.current = reveal;
+      c.api.timeScale().setVisibleLogicalRange({ from: -1, to: rows.length });
+    }
     const pal = paletteNow();
     c.markers?.setMarkers(markers.filter((marker) => rows.findIndex((row) => row.source_ordinal === marker.ordinal) < cut).map((marker) => ({
       time: sec(marker.at),
@@ -261,7 +268,7 @@ function CandleChart({
       color: marker.side === "LONG" ? pal.good : marker.side === "SHORT" ? pal.bad : pal.inkFaint,
       text: marker.kind === "EXIT" ? "T·exit" : "T",
     })));
-  }, [rows, cut, markers, status]);
+  }, [rows, cut, markers, status, reveal]);
 
   /* The playhead: crosshair on the bar, and the visible range follows it. */
   useEffect(() => {
@@ -331,11 +338,14 @@ function FoldStrip({
   onFold,
   disabled,
   reveal,
+  cutOrdinal = null,
 }: {
   replay: CurrentSourceReplay;
   activeFold: string | null;
   onFold: (segment: FoldSegment) => void;
   disabled: boolean;
+  /** Under causal reveal, the cursor's source ordinal; nothing after it is drawn. */
+  cutOrdinal?: number | null;
   reveal: boolean;
 }) {
   const activeAt = replay.execution.fold_capital.segments.findIndex((segment) => segment.fold_id === activeFold);
@@ -396,7 +406,7 @@ function FoldStrip({
                 onClick={() => onFold(segment)}
                 title={reveal && position >= activeAt ? `fold ${segment.fold_id}: ${segment.bars} bars` : `fold ${segment.fold_id}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity}`}
               >
-                fold {segment.fold_id} · {segment.bars} bars ·{" "}
+                {foldLabel(segment.fold_id)} · {segment.bars} bars ·{" "}
                 {reveal && position >= activeAt ? (
                   <em data-reveal-hidden>{REVEAL_HIDDEN}</em>
                 ) : (
@@ -414,13 +424,13 @@ function FoldStrip({
           {capital.account_execution ? ` · ${words(capital.account_execution)}` : ""}
         </span>
       </div>
-      {overview ? <OverviewStrip replay={replay} activeFold={activeFold} /> : null}
+      {overview ? <OverviewStrip replay={replay} activeFold={activeFold} cutOrdinal={cutOrdinal} /> : null}
     </div>
   );
 }
 
 /** The whole run as extrema-keeping OHLC buckets, with the fold windows shaded. */
-function OverviewStrip({ replay, activeFold }: { replay: CurrentSourceReplay; activeFold: string | null }) {
+function OverviewStrip({ replay, activeFold, cutOrdinal }: { replay: CurrentSourceReplay; activeFold: string | null; cutOrdinal: number | null }) {
   const overview = replay.execution.candle_overview!;
   const segments = replay.execution.fold_capital.segments;
   const hi = Number(overview.envelope.max_high);
@@ -442,7 +452,8 @@ function OverviewStrip({ replay, activeFold }: { replay: CurrentSourceReplay; ac
             opacity={segment.fold_id === activeFold ? 0.22 : 0.5}
           />
         ))}
-        {overview.values.map((bucket) => (
+        {/* E2b (audit 8.15): under causal reveal the whole-run strip shows no candle past the cursor either. */}
+        {overview.values.filter((bucket) => cutOrdinal === null || bucket.first_ordinal <= cutOrdinal).map((bucket) => (
           <line
             key={bucket.first_ordinal}
             x1={x((bucket.first_ordinal + bucket.last_ordinal) / 2)}
@@ -642,10 +653,12 @@ function TransitionLedger({
                   data-transition-kind={row.kind}
                   data-play={String(current)}
                   data-revealed={future ? "hidden" : "shown"}
-                  style={{ background: current ? "var(--paper-sunken)" : undefined, borderBottom: "1px solid var(--line-soft)" }}
+                  /* E2 (audit 8.14): the whole row selects; the number stays the keyboard target. */
+                  onClick={() => onSeek(row)}
+                  style={{ background: current ? "var(--paper-sunken)" : undefined, borderBottom: "1px solid var(--line-soft)", cursor: "pointer" }}
                 >
                   <td className="py-[3px] pr-3">
-                    <button type="button" className="mono underline-offset-2 hover:underline" onClick={() => onSeek(row)} title="move the cursor to this bar">
+                    <button type="button" className="mono underline-offset-2 hover:underline" onClick={(event) => { event.stopPropagation(); onSeek(row); }} title="move the cursor to this bar">
                       {row.transition_number}
                     </button>
                   </td>
@@ -957,6 +970,14 @@ export function CandleReplayBody({
     const target = direction > 0 ? ledger.find((row) => row.source_ordinal > here) : [...ledger].reverse().find((row) => row.source_ordinal < here);
     if (target) controller.retainedSeek?.(target.playback_cursor);
   };
+  /* E2 (audit 8.14): the anatomy opens on a transition, as the HiFi does — the
+     first one at or after the playhead — instead of an empty "pick one". */
+  const ledgerRows = controller.transitions?.state === "ready" ? controller.transitions.ledger.rows : null;
+  useEffect(() => {
+    if (selected !== null || !ledgerRows || ledgerRows.length === 0) return;
+    const here = rows[0]?.source_ordinal ?? 0;
+    setSelected(ledgerRows.find((row) => row.source_ordinal >= here) ?? ledgerRows[0]!);
+  }, [ledgerRows, rows, selected]);
   const seekTransition = (row: TransitionRow) => {
     setSelected(row);
     const at = rows.findIndex((candidate) => candidate.source_ordinal === row.source_ordinal);
@@ -994,7 +1015,7 @@ export function CandleReplayBody({
         data-route-state="RETAINED_BAR_LEDGER"
         aside={
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-            revision {replay.revision.slice(0, 26)}… · as of {new Date(replay.as_of_utc_ms).toISOString()}
+            revision {replay.revision.slice(0, 26)}… · as of {iso(replay.as_of_utc_ms)}
           </span>
         }
       >
@@ -1034,7 +1055,7 @@ export function CandleReplayBody({
         data-replay-window="RETAINED_BARS"
         data-retained-in-flight={String(inFlight)}
       >
-        <FoldStrip replay={replay} activeFold={activeFold} onFold={goFold} disabled={inFlight} reveal={reveal} />
+        <FoldStrip replay={replay} activeFold={activeFold} onFold={goFold} disabled={inFlight} reveal={reveal} cutOrdinal={reveal ? (playRow?.source_ordinal ?? null) : null} />
         {slot.pageRefusal ? (
           <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-page-refusal={slot.pageRefusal.code ?? slot.pageRefusal.status}>
             {slot.pageRefusal.code === "RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP"

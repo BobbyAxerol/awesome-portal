@@ -64,15 +64,16 @@ import {
   type SplitDetail as SplitDetailDocument,
 } from "./splitClient";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
-import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { foldLabel, formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
-import { reasonCodeSentence } from "./researchRefusal";
+import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
 import { LineageLink, lineageHref } from "./LineageLink";
 import type { ProgressRead } from "./progressClient";
 import type { CurrentSourceSearch } from "./searchClient";
 import type { CurrentSourceClaimFact } from "./evidenceClient";
+import { ShortId } from "./ShortId";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -400,14 +401,14 @@ export function RunNotFound({ runId }: { runId: string }) {
     <section
       className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
       style={CARD_STYLE}
-      data-run-not-found
+      data-run-not-found={runId}
     >
       <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-        run not found
+        run not available
       </span>
+      {/* F-04: one sentence for a 403 and a 404 — it neither confirms the run exists nor says whose it is. */}
       <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-        No run <span className="mono">{runId}</span> exists in your current workspace. It may belong to another
-        workspace, or the link may be mistyped.
+        {REFUSAL_COPY.denied}
       </p>
       <Link
         to="/research/quantbt/runs"
@@ -813,7 +814,7 @@ function FoldRows({
               }}
             >
               <span className="mono w-[64px] flex-none text-left text-[11px]" style={{ color: "var(--ink-soft)" }}>
-                {fold.fold_id}
+                {foldLabel(fold.fold_id)}
               </span>
               <span className="relative h-[16px] flex-1 rounded-[3px]" style={{ background: "var(--paper-sunken)" }}>
                 {bounds && train ? (
@@ -1344,7 +1345,7 @@ export function SplitScreen({
             )}
             <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span className="mono min-w-0 truncate" title={runId}>
-              {runId}
+              <ShortId id={runId} label="run" />
             </span>
             <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span style={{ color: "var(--ink)" }}>Stage 1 · Split</span>
@@ -2427,7 +2428,7 @@ function FoldTable({
                     className={TD}
                     style={{ boxShadow: `inset 2px 0 0 ${current ? "var(--accent)" : "transparent"}` }}
                   >
-                    {fold.fold_id}
+                    {foldLabel(fold.fold_id)}
                   </td>
                   <SpanCell range={train} closed />
                   <CountCell value={anatomy?.train_bars ?? null} reason={anatomy?.reason_code ?? null} />

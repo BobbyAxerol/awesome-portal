@@ -9,6 +9,7 @@ const LegacySha = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 const UtcMs = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const Reason = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
 const Timestamp = z.string().datetime({ offset: true });
+const AlphaVersionId = z.string().regex(/^av_[A-Za-z0-9._-]{1,187}$/);
 
 export const ResearchReleaseCandidatePublishRequestSchema = z.object({
   schema_version: z.literal("research.release-candidate-publish-request.v1"),
@@ -44,6 +45,10 @@ export const ResearchReleaseCandidateApprovalMirrorSchema = z.object({
   // OL-07: mirror only facts Governance actually publishes; absence is typed.
   subject_label: z.string().min(1).max(256).optional(),
   effective_status: z.enum(["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"]).optional(),
+  assignee_pool_availability: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: Reason.nullable(),
+  }).strict(),
   assignee_pool: z.array(z.object({
     user_id: z.string().min(1).max(191), username: z.string().min(1).max(191),
     role: z.string().min(1).max(64),
@@ -55,7 +60,15 @@ export const ResearchReleaseCandidateApprovalMirrorSchema = z.object({
   decision_outcomes: z.array(z.object({ actor_user_id: z.string().min(1).max(191), outcome: z.string().min(1).max(64) }).strict()).max(64).optional(),
   rc_superseded: z.boolean().optional(),
   as_of_utc_ms: UtcMs.optional(),
-}).strict();
+}).strict().superRefine((value, context) => {
+  const published = value.assignee_pool !== undefined;
+  if ((value.assignee_pool_availability.state === "AVAILABLE") !== published) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "assignee pool availability and payload must agree" });
+  }
+  if ((value.assignee_pool_availability.state === "NOT_PUBLISHED") !== (value.assignee_pool_availability.reason_code !== null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "assignee pool typed absence requires exactly one reason code" });
+  }
+});
 
 export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
   schema_version: z.literal("research.release-candidate-publication.v1"),
@@ -99,8 +112,11 @@ export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
   reconcile_allowed: z.boolean().optional(),
   claim_candidates: z.array(z.string().min(1).max(191)).max(64).optional(),
   promotion_pick: z.object({
-    state: z.enum(["NOT_PUBLISHED", "PENDING_APPROVAL", "WRITTEN"]),
-    approval_id: z.string().min(1).max(191), run_id: ResearchReleaseCandidateRunIdSchema,
+    state: z.enum(["NOT_PUBLISHED", "PENDING_APPROVAL", "WRITTEN", "REJECTED"]),
+    approval_id: z.string().min(1).max(191),
+    approval_status: z.enum(["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"]),
+    approval_version: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable(),
+    run_id: ResearchReleaseCandidateRunIdSchema,
     selected_trial_id: z.string().min(1).max(191).nullable(), artifact_id: z.string().min(1).max(191).nullable(),
     fact_digest: Digest,
   }).strict().nullable().optional(),
@@ -120,5 +136,22 @@ export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
   }
 });
 
+export const ResearchAlphaVersionPublicationResponseSchema = z.object({
+  schema_version: z.literal("research.alpha-version-publication.v1"),
+  alpha_version_id: AlphaVersionId,
+  availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: Reason.nullable(),
+  publication: ResearchReleaseCandidatePublicationResponseSchema.nullable(),
+  as_of_utc_ms: UtcMs,
+}).strict().superRefine((value, context) => {
+  if ((value.availability === "AVAILABLE") !== (value.publication !== null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "available alpha-version publication requires a publication" });
+  }
+  if ((value.availability === "NOT_PUBLISHED") !== (value.reason_code !== null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "typed absence requires exactly one reason code" });
+  }
+});
+
+export type ResearchAlphaVersionPublicationResponse = z.infer<typeof ResearchAlphaVersionPublicationResponseSchema>;
 export type ResearchReleaseCandidatePublishRequest = z.infer<typeof ResearchReleaseCandidatePublishRequestSchema>;
 export type ResearchReleaseCandidatePublicationResponse = z.infer<typeof ResearchReleaseCandidatePublicationResponseSchema>;

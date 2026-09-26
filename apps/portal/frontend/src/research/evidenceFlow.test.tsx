@@ -665,7 +665,9 @@ describe("P13-T07 — a refusal keeps the screen", () => {
     const of = (status: number) => toEvidenceRefusal(new PortalApiError("no", status, null, null));
     expect(of(401).state).toBe("denied");
     expect(of(403).state).toBe("denied");
-    expect(of(404).state).toBe("terminal");
+    /* X3 2026-09-26 (VD-P23-03, F-04): 404 reads exactly as 403. */
+    expect(of(404).state).toBe("denied");
+    expect(of(404).message).toBe(of(403).message);
     expect(of(409).state).toBe("stale");
     expect(of(503).state).toBe("unavailable");
     expect(of(400).state).toBe("terminal");
@@ -1048,7 +1050,7 @@ describe("RF-06 FE-S04-05 — state vocabulary", () => {
     const { result } = renderHook(() => useEvidence("rrun_nope"));
     await waitFor(() => expect(result.current.refusal).not.toBeNull());
     expect(result.current.refusal?.notFound).toBe(true);
-    expect(result.current.state.state).toBe("terminal");
+    expect(result.current.state.state).toBe("denied");
   });
 });
 

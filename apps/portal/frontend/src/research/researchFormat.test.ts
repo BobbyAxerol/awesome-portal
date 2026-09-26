@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatBytes, formatDuration, formatFractionAxis, formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { claimToken, formatBytes, formatDuration, formatFractionAxis, formatMetric, formatUtc, groupDecimalString, shortDigest, shortId } from "./researchFormat";
 
 describe("RF-06 FE-X-13 — display formatting never invents a number", () => {
   it("formats by unit and keeps absence as null", () => {
@@ -23,5 +23,27 @@ describe("RF-06 FE-X-13 — display formatting never invents a number", () => {
     expect(shortDigest("sha256:3cbc794c16012ee0aa")).toBe("3cbc794c");
     expect(formatBytes(6279)).toBe("6.1 KB");
     expect(formatBytes(402)).toBe("402 B");
+  });
+});
+
+describe("E1 display rules (HiFi audit 2026-09-26)", () => {
+  it("shortens a prefixed server id to prefix + 8, leaves labels alone, shortens bare digests", () => {
+    expect(shortId("rrun_91f4b6acfda7c4eda62c34b407a52e13")).toBe("rrun_91f4b6ac");
+    expect(shortId("ratt_0123")).toBe("ratt_0123");
+    expect(shortId("R-WFO-118")).toBe("R-WFO-118");
+    expect(shortId("sha256:3cbc794c16012ee0aa")).toBe("3cbc794c");
+    expect(shortId(null)).toBeNull();
+  });
+
+  it("groups an exact decimal string digit for digit, never through a float", () => {
+    expect(groupDecimalString("9007199254740993")).toBe("9,007,199,254,740,993");
+    expect(groupDecimalString("-1234567.000100")).toBe("-1,234,567.000100");
+    expect(groupDecimalString("n/a")).toBe("n/a");
+  });
+
+  it("prints a claim as the server token in capitals and a boolean as YES / NO", () => {
+    expect(claimToken("not_causal_multi_fold_global_calibration")).toBe("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
+    expect(claimToken(true)).toBe("YES");
+    expect(claimToken(false)).toBe("NO");
   });
 });

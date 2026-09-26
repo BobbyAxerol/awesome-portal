@@ -1,76 +1,69 @@
 # P22 backend packet — Publication and existing R1 mirror
 
-Status: **BACKEND_AND_TYPED_CONTRACT_COMPLETE · PRODUCT_BROWSER_AND_REAL_PREVIEW_PENDING**.
+Status: **BACKEND_REAL_PREVIEW_COMPLETE · PRODUCT_BROWSER_PENDING**.
 
 P22 adds a server-side, actor-bound Research publication saga. It does not add
 an approval decision, alternate R1/R2 workflow, Execution command, or a
 Trading/QuantBT write path. The immutable P21 pack remains `SEALED_LOCAL`;
-publication and approval are distinct source-backed facts.
+publication delivery, Governance decision and promotion selection remain
+separate source-backed facts.
 
 ## Operations and authority
 
 | Generated operation | Route | Behavior |
 | --- | --- | --- |
-| `researchReleaseCandidatePublicationGetV1` | `GET /api/v1/research/release-candidates/{releaseCandidateId}/publication` | Private/no-store state and authorized read-only R1 mirror. |
-| `researchReleaseCandidatePublishV1` | `POST /api/v1/research/release-candidates/{releaseCandidateId}/publish` | Same-origin CSRF-checked, strict request. Persist actor-bound intent before calling the unchanged R1 create service. |
+| `researchReleaseCandidatePublicationGetV1` | `GET /api/v1/research/release-candidates/{releaseCandidateId}/publication` | Private/no-store publication, current RC relation, settled promotion fact and authorized read-only R1 mirror. |
+| `researchReleaseCandidatePublishV1` | `POST /api/v1/research/release-candidates/{releaseCandidateId}/publish` | Same-origin CSRF-checked strict request. Persists actor-bound intent before the unchanged R1 create service. Replays the same intent after ambiguous outcomes; there is no separate reconcile route. |
+| `researchAlphaVersionPublicationGetV1` | `GET /api/v1/research/alpha-versions/{alphaVersionId}/publication` | Named bounded lookup for S01/S02; returns the current RC/publication relation or typed absence without browser scans. |
 
-Both operations are generated from
+All operations are generated from
 `packages/contracts/openapi/research-release-candidate-publication.openapi.json`
-into `ResearchReleaseCandidatePublicationResponse` and
-`ResearchReleaseCandidatePublishRequest` in
-`packages/contracts/generated/research-release-candidate-publication.d.ts`.
-The P21 compose action now offers a navigation/action affordance only for a
-current local seal; **`may_publish` from the P22 GET is the final server-side
-eligibility hint**. Neither value grants authority. The R1 service still
-enforces create permission and exact source eligibility on POST.
+into `packages/contracts/generated/research-release-candidate-publication.d.ts`.
+The P21 compose action is only an affordance; the P22 POST and unchanged R1
+service remain the authorization boundaries.
 
-## Exact source mapping
+## Exact source and settlement mapping
 
-- The final-audit `run_id` and active `alpha_id`/`alpha_version_id` must agree
-  across the frozen P21 pack, current P21 composition, and RunSync-backed
-  Governance evidence. Local-only or unseeded runs return a typed blocked state.
-- The P21 `pack_digest`, RunSync `legacy_artifact_sha256`, and R1
-  `evidence_set_hash` are **three distinct hashes**. The R1 payload is parsed
-  against unchanged `governance.approval-create-request.v1`; no `rc_id` or
-  Research-only field is injected downstream.
-- The internal `expectedArtifactSha256` guard protects the R1 create against
-  a RunSync artifact changing between readiness and creation. A replay is
-  attached only after checking requester, R1 subject/run, artifact hash,
-  schema, server pin, and evidence-set hash.
+- The final-audit `run_id`, active `alpha_id`/`alpha_version_id`, source
+  fingerprint and pack digest must agree with the immutable P21 pack. The
+  narrow migrations 070/072/073 materialise only that exact sealed run into
+  the existing Governance read model and append one immutable bridge receipt.
+- `pack_digest`, RunSync `legacy_artifact_sha256` and R1
+  `evidence_set_hash` are distinct hashes. The unchanged
+  `governance.approval-create-request.v1` receives no RC-only field.
 - `PENDING`/`UNKNOWN` retain one immutable actor, request key, downstream
-  payload and source pin. An ambiguous timeout never becomes `DELIVERED` until
-  the R1 create replay and pin verification succeed. Another actor or payload
-  cannot adopt the same RC intent.
-- The mirror reads existing R1 detail only with that caller's read authority.
-  It preserves raw status, SLA, expiry, limitations, and read time. A denied,
-  missing or unavailable read remains typed; the immutable delivery receipt
-  is not mistaken for an approval decision.
+  payload and source pin. A timeout never becomes `DELIVERED` until replay and
+  exact pin verification succeed. Another actor cannot adopt the intent.
+- The original promotion receipt is immutable even when R1 changes later. A
+  server-owned trigger/function appends `p22_approval_settlements_v1` keyed by
+  exact approval version; only `APPROVED` or `APPROVED_WITH_CONDITION` writes
+  the existing P19 promotion-fact relation. Replays are idempotent.
+- The mirror maps Governance `data.decisions` canonically and keeps raw status,
+  effective status, quorum, version, blockers, conditions, timestamps and RC
+  relation. Governance does not publish an assignee pool, so the contract says
+  `P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED`; it never invents a team name.
 
-## Evidence and remaining gate
+## Evidence and exit state
 
-See [phase-report](./phase-report.md) for test commands and results. The
-disposable PostgreSQL migration, targeted service/controller/contract,
-Governance/RunSync regressions and ledger pass. These are backend proofs, not
-the guide's `V11-P22-DR/BR` real preview/browser receipts. A real final Delta
-run through the isolated preview and Claude's S11 product browser acceptance
-remain separate gates; this packet does **not** claim phase/product activation
-or a production write.
+The focused contract/service/migration/privilege gates pass, and the isolated
+P22 stack produced a real historical-data WFO → sealed P21 pack → publication
+→ existing R1 → independent owner approval → promotion-fact receipt. See:
 
-Rollback: keep the P21 feature dark to stop new intake; retain immutable
-packs, publication intents, verified receipts and R1 approvals. Never delete
-or revoke an approval as a rollback shortcut. See [rollback](./rollback.md).
+- [real-preview structured receipt](./real-preview-receipt.json)
+- [OL-03→OL-13 closeout](./ol03-ol13-codex-receipt.md)
+- [phase report](./phase-report.md)
 
-## Backend gap audit — 2026-09-25
+The database contains one publication, one bridge, one immutable promotion
+receipt, one P19 promotion fact, two settlement versions (`PENDING@1`,
+`APPROVED@2`) and one Governance decision. Re-reading produces no duplicate.
+Neither `RUN_NOT_MIRRORED` nor `P22_GOVERNANCE_SOURCE_UNAVAILABLE` occurs on
+the accepted path.
 
-- The unchanged R1 service now checks workspace membership before a replay or
-  evidence read. Its SERIALIZABLE create transaction locks the membership row
-  before inserting the approval. The Research controller check alone could not
-  close the revoke-between-intent-and-R1 race.
-- A reversible 403, serialization conflict, timeout or rate limit leaves the
-  original actor-bound intent UNKNOWN for an authorized retry; it never marks
-  DELIVERED or substitutes a service account.
-- Read-only preview census: 43 run-producer rows and 35 terminal
-  materializations, but **zero** sealed RC packs; migration 0063/publication
-  table is not deployed in that preview image. It cannot yield an actual P22
-  publish receipt until a real final-audit pack and this candidate build are
-  installed in an isolated cell. No shared preview runtime was changed.
+This closes P22's backend and real-preview scope. Claude still owns the S11
+browser/HiFi receipt and the S01/S02/S10/S11 consumer rendering; P23 resource/
+DR qualification and P24 remain separate. No dev, Production, Execution or
+Trading System runtime was changed.
+
+Rollback is feature/intake-only: retain immutable packs, intents, receipts,
+settlements, promotion facts and R1 decisions. Never delete or revoke an
+approval as a rollback shortcut. See [rollback](./rollback.md).

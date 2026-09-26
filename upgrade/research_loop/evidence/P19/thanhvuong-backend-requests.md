@@ -28,7 +28,7 @@ Kết quả kiểm:
 
 **R3 (`9c4afb18`, 2026-09-24):** commit chỉ đổi `LineageDetail.tsx` và `lineageDetail.test.tsx` (thứ tự band, bước rail); không chạm contract, OpenAPI, d.ts hay backend. Trạng thái request giữ nguyên như R2.
 
-**Sau R2: 13 OPEN (`01…10`, `12`, `13`, `14`), 1 WITHDRAWN (`11`).** `14` mới; `03`, `04`, `05` mở rộng theo ô hi-fi mà R1 đặt đúng chỗ (số probe mỗi version, rc và cert theo attempt/pick).
+**Hiện tại (2026-09-25, W6b): 11 DELIVERED, 2 DECIDED (`10` DR-03, `12`), 1 WITHDRAWN (`11`) — xem bảng trạng thái cuối file và [Unified §13.4.1](../../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-open-ledger).** Lịch sử: **Sau R2: 13 OPEN (`01…10`, `12`, `13`, `14`), 1 WITHDRAWN (`11`).** `14` mới; `03`, `04`, `05` mở rộng theo ô hi-fi mà R1 đặt đúng chỗ (số probe mỗi version, rc và cert theo attempt/pick).
 
 **Sau audit (2026-09-24, lịch sử): 12 OPEN (`01…10`, `12`, `13`), 1 WITHDRAWN (`11`).** Chúng được liệt kê ở §1.
 - `CG-P19-11` WITHDRAWN: handoff dòng 29 đã trả lời chính sách F-04; frontend tự sửa ở `1fb29010` (404 → `denied`, cùng badge với 403). Giữ số thứ tự.
