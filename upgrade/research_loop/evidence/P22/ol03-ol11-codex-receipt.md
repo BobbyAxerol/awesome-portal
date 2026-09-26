@@ -1,4 +1,6 @@
-# OL-03 → OL-11 — P22 backend delivery receipt
+# OL-03 → OL-11 — P22 backend delivery receipt (historical pre-runtime)
+
+> Superseded by [OL-03→OL-13 closeout](./ol03-ol13-codex-receipt.md) and the [real-preview receipt](./real-preview-receipt.json). This file preserves the pre-runtime checkpoint only.
 
 **Branch:** `codex/research-ol-p22-p24` (isolated worktree)
 **Scope:** P22 only; no P01–P21 source or frontend files were modified.
