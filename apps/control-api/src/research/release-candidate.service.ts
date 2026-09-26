@@ -27,6 +27,7 @@ import {
   type ReleaseCandidateSource,
   type ReleaseCandidateStoredPack,
 } from "./release-candidate.repository";
+import { retainedLaneFacts } from "./release-candidate.retained-lane";
 
 type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL" | "NOT_APPLICABLE";
@@ -118,6 +119,16 @@ function input(
     availability: value === null ? absent("P21_RESEARCHER_DECLARATION_REQUIRED") : AVAILABLE,
   };
 }
+
+/** W7: a DEGRADED retained-lane row names its own reason (e.g. a claim with no issued certificate). */
+function degradedBecause(
+  key: PackItem["key"], n: number, item: string, source: PackItem["source"], digestValue: string | null, reason: string, note: string,
+): PackItem {
+  return { key, n, item, status: "DEGRADED", digest: digestValue, source, note, availability: partial(reason) };
+}
+
+/** W7: a Delta WFO run whose retained current source is not sealed yet. */
+const RETAINED_NOT_SEALED = "P21_RETAINED_CURRENT_SOURCE_NOT_SEALED";
 
 function missing(
   key: PackItem["key"], n: number, item: string, source: PackItem["source"], reason: string, note: string,
@@ -214,9 +225,7 @@ export class ResearchReleaseCandidateService {
     latestPack: ReleaseCandidateStoredPack | null,
   ): ResearchReleaseCandidateComposeResponse {
     const sourceFingerprint = releaseCandidateSourceFingerprint(source);
-    const values = this.values(source, draft, null);
-    const pack = this.packItems(source, draft, values);
-    const sourceIntegrity = this.sourceIntegrity(source, values);
+    const { values, pack, sourceIntegrity, selectedDetail } = this.lane(source, draft, null);
     const missingCount = pack.filter((item) => item.status === "MISSING").length;
     const hasInput = draft.knownLimitations === null || draft.proposedUseRestrictions === null;
     const isScratch = source.alpha.alphaVersionId === null;
@@ -252,7 +261,7 @@ export class ResearchReleaseCandidateService {
         { key: "alpha", value: source.alpha.alphaId ?? "— unbound / scratch run", detail: source.alpha.name, tone: source.alpha.alphaId ? "ink" : "dim" },
         { key: "alpha_version", value: source.alpha.alphaVersionId ?? "— unbound / scratch run", detail: source.alpha.codeDigest ? `sha256:${source.alpha.codeDigest.slice(0, 12)}` : null, tone: source.alpha.alphaVersionId ? "ink" : "dim" },
         { key: "run", value: source.runId, detail: source.attemptId, tone: "ink" },
-        { key: "selected_params", value: values.parameterBundle ?? "— selection not published", detail: source.selection.targetKind, tone: values.parameterBundle ? "ink" : "dim" },
+        { key: "selected_params", value: values.parameterBundle ?? "— selection not published", detail: selectedDetail, tone: values.parameterBundle ? "ink" : "dim" },
         { key: "release_candidate", value: localSeal.release_candidate_id ?? "rc_(draft)", detail: localSeal.state === "SEALED_LOCAL" ? "sealed locally — not delivered" : "assigned on local seal", tone: localSeal.state === "SEALED_LOCAL" ? "green" : "gold" },
       ],
       taxonomy: [
@@ -471,8 +480,7 @@ export class ResearchReleaseCandidateService {
     if (draft.knownLimitations === null || draft.proposedUseRestrictions === null) {
       throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE", "Release Candidate declarations are required before sealing.", 422);
     }
-    const values = this.values(source, draft, releaseCandidateId);
-    const pack = this.packItems(source, draft, values);
+    const { values, pack } = this.lane(source, draft, releaseCandidateId);
     const frozenCore = {
       fields: values.fields,
       pack,
@@ -480,17 +488,203 @@ export class ResearchReleaseCandidateService {
       draft: { known_limitations: draft.knownLimitations, proposed_use_restrictions: draft.proposedUseRestrictions },
     };
     const packDigest = digestOf(frozenCore);
-    const pins: ReleaseCandidatePin[] = [
+    const p04Pins: ReleaseCandidatePin[] = [
       { pinKind: "RUN", sourceRef: source.runId, sourceDigest: source.effectiveSpecDigest },
       { pinKind: "ALPHA_VERSION", sourceRef: source.alpha.alphaVersionId!, sourceDigest: source.alpha.codeDigest },
       { pinKind: "REPORT", sourceRef: source.report.reportRevision!, sourceDigest: source.report.frozenCoreDigest },
       { pinKind: "EVIDENCE", sourceRef: source.evidence.revision!, sourceDigest: source.evidence.projectionDigest },
       { pinKind: "SPLIT", sourceRef: source.split.revision!, sourceDigest: source.split.projectionDigest },
       { pinKind: "SELECTION", sourceRef: source.selection.selectionId!, sourceDigest: source.selection.sourceDigest },
+    ];
+    const pins: ReleaseCandidatePin[] = [
+      ...(source.wfo ? this.retainedPins(source) : p04Pins),
       ...source.currentSource.retainedImportDigest ? [{ pinKind: "CURRENT_SOURCE" as const, sourceRef: `artifact-revision-${source.currentSource.artifactRevision}`, sourceDigest: source.currentSource.retainedImportDigest }] : [],
       ...source.artifacts.filter((artifact) => artifact.state === "SEALED").map((artifact) => ({ pinKind: "ARTIFACT" as const, sourceRef: artifact.artifactId, sourceDigest: artifact.manifestDigest })),
     ];
     return { frozenCore, packDigest, pins };
+  }
+
+  /**
+   * W7 · the lane is the run's execution profile. A P04 run (`wfo === null`)
+   * runs exactly the composition it always ran; a Delta WFO run binds every
+   * row and field the P04 hubs used to answer to its retained fact.
+   */
+  private lane(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null) {
+    if (!source.wfo) {
+      const values = this.values(source, draft, releaseCandidateId);
+      return {
+        values,
+        pack: this.packItems(source, draft, values),
+        sourceIntegrity: this.sourceIntegrity(source, values),
+        selectedDetail: source.selection.targetKind,
+      };
+    }
+    const values = this.retainedValues(source, draft, releaseCandidateId);
+    return {
+      values,
+      pack: this.retainedPackItems(source, draft, values),
+      sourceIntegrity: this.retainedIntegrity(source, values),
+      selectedDetail: values.facts.selection ? `retained trial ${values.facts.selection.trialId} · global` : null,
+    };
+  }
+
+  // ---- W7 · retained (Delta WFO) lane --------------------------------------
+
+  /**
+   * The WFO lane starts from the P04 composition for the rows that are
+   * lane-independent (alpha passport, engine, execution assumptions, the two
+   * declarations) and replaces every row and field the P04 hubs used to
+   * answer with its retained fact. Nothing of the P04 path is changed.
+   */
+  private retainedValues(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null) {
+    const base = this.values(source, draft, releaseCandidateId);
+    const lane = source.wfo!;
+    const facts = retainedLaneFacts(lane);
+    const reportCore = base.reportCore;
+    const retainedReport = reportCore !== null && reportCore.report_source === "RS02_RETAINED_CURRENT_SOURCE";
+    const reportDigestAt = (key: string) => (retainedReport ? stringAt(reportCore, ["source_digests", key]) : null);
+    const seal = lane.seal;
+    // Dataset: the run's P10 producer binding and the retained seal's binding
+    // (and the retained report's copy) are one identity.
+    const strictDatasetDigest = this.sameDigest(
+      source.datasetBindingDigest, lane.producerDatasetBindingDigest, seal?.datasetBindingDigest ?? null, reportDigestAt("dataset_binding_digest"),
+    );
+    // Manifest: the retained seal's manifest, bound to the SEALED P05 artifact
+    // at the same revision, and its retained report copy. The preflight
+    // manifest (run_producers) is a different identity and is not compared.
+    const retainedManifest = seal ? this.sameDigest(seal.manifestDigest, reportDigestAt("manifest_digest")) : null;
+    const manifest = retainedManifest !== null && lane.sealedArtifactId !== null ? retainedManifest : null;
+    const sourceTransform = seal ? this.sameDigest(seal.sourceTransformDigest, reportDigestAt("source_transform_digest")) : null;
+    const childAudit = facts.ordering;
+    const childAuditMatches = childAudit !== null && childAudit.counts.folds > 0
+      && childAudit.counts.oos_child_match === childAudit.counts.folds;
+    const finalAudit = source.runState === "READY" && facts.replayRetained && childAuditMatches && facts.parameterDigest !== null;
+    const reportFromLane = retainedReport && source.report.reportRevision !== null
+      && stringAt(reportCore, ["source_revisions", "evidence_revision"]) === facts.evidenceRevision;
+    const fields = base.fields.map((item): Field => {
+      switch (item.key) {
+        case "final_audit_run_id":
+          return field(item.key, item.label, finalAudit ? source.runId : null, finalAudit ? AVAILABLE : absent("P21_FINAL_AUDIT_RUN_NOT_PUBLISHED"));
+        case "final_audit_attempt_id":
+          return field(item.key, item.label, finalAudit ? source.attemptId : null, finalAudit ? AVAILABLE : absent("P21_FINAL_AUDIT_RUN_NOT_PUBLISHED"));
+        case "dataset_binding_digest":
+          return field(item.key, item.label, strictDatasetDigest, strictDatasetDigest ? AVAILABLE : absent("P21_DATASET_BINDING_IDENTITY_MISMATCH"));
+        case "manifest_digest":
+          return field(item.key, item.label, manifest, manifest ? AVAILABLE : absent(seal ? "P21_MANIFEST_IDENTITY_MISMATCH" : RETAINED_NOT_SEALED));
+        case "source_transform_digest":
+          return field(item.key, item.label, sourceTransform, sourceTransform ? AVAILABLE : absent(seal ? "P21_SOURCE_TRANSFORM_IDENTITY_MISMATCH" : RETAINED_NOT_SEALED));
+        case "parameter_bundle_digest":
+          return field(item.key, item.label, facts.parameterDigest, facts.parameterDigest ? AVAILABLE : absent("P21_SELECTION_PARAMETER_BUNDLE_NOT_PUBLISHED"));
+        case "evidence_revision":
+          return field(item.key, item.label, facts.evidenceRevision, facts.evidenceRevision ? AVAILABLE : absent("P21_EVIDENCE_REVISION_NOT_PUBLISHED"));
+        default:
+          return item;
+      }
+    });
+    return {
+      ...base, fields, facts, manifest, sourceTransform, strictDatasetDigest,
+      parameterBundle: facts.parameterDigest, finalAudit, reportFromLane, childAudit,
+    };
+  }
+
+  private retainedPackItems(
+    source: ReleaseCandidateSource,
+    draft: ReleaseCandidateDraft,
+    values: ReturnType<ResearchReleaseCandidateService["retainedValues"]>,
+  ): PackItem[] {
+    const base = this.packItems(source, draft, values);
+    const lane = source.wfo!;
+    const { facts } = values;
+    const sealed = lane.seal !== null;
+    const at = (index: number) => base[index]!;
+    const unsealed = (index: number) => missing(at(index).key, at(index).n, at(index).item, at(index).source, RETAINED_NOT_SEALED, "The run's retained current source is not sealed yet; nothing is composed from the P04 hubs it never had.");
+
+    const data = !sealed ? unsealed(2) : values.strictDatasetDigest && values.manifest
+      ? complete(at(2).key, 3, at(2).item, at(2).source, values.strictDatasetDigest, "P10 producer and retained seal dataset bindings agree; the retained manifest names its sealed P05 artifact.")
+      : missing(at(2).key, 3, at(2).item, at(2).source, "P21_DATASET_BINDING_IDENTITY_MISMATCH", "The P10 producer / retained seal dataset binding or the retained artifact manifest is absent or inconsistent.");
+
+    const claims = facts.claims;
+    const issued = source.methodology.certificateState === "ISSUED" && source.methodology.certificateGrade !== null
+      && source.methodology.certificateIssuedAtUtcMs !== null;
+    const claimDigest = claims ? digestOf({
+      validation_claim: claims.validation_claim ?? null,
+      chronological_validation_claim: claims.chronological_validation_claim ?? null,
+      causality_claim: claims.causality_claim ?? null,
+      oos_used_for_selection: claims.oos_used_for_selection ?? null,
+      claim_state: lane.claimState,
+      certificate_state: source.methodology.certificateState,
+      grade: source.methodology.certificateGrade,
+    }) : null;
+    const claimLine = claims
+      ? `QuantBT claim ${claims.validation_claim ?? "not published"} (${claims.chronological_validation_claim ?? "chronology not published"}; OOS used for selection: ${claims.oos_used_for_selection === null || claims.oos_used_for_selection === undefined ? "not published" : String(claims.oos_used_for_selection)}) is retained`
+      : "";
+    const methodology = !sealed ? unsealed(3) : claims === null
+      ? missing(at(3).key, 4, at(3).item, at(3).source, "P21_RETAINED_CLAIM_FACTS_NOT_PUBLISHED", "The retained seal predates QuantBT's claim facts; no claim is composed.")
+      : issued
+        ? complete(at(3).key, 4, at(3).item, at(3).source, claimDigest, `${claimLine}; the source-issued methodology certificate travels with it.`)
+        : degradedBecause(at(3).key, 4, at(3).item, at(3).source, claimDigest, "P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED",
+          `${claimLine}; the release claim is ${lane.claimState ?? "not published"} and no methodology certificate is issued, so the claim ceiling travels unchanged.`);
+
+    const selection = !sealed ? unsealed(4) : facts.selection && facts.parameterDigest
+      ? complete(at(4).key, 5, at(4).item, at(4).source, facts.parameterDigest, `Retained global selection (trial ${facts.selection.trialId}) is the frozen θ*; its parameter digest ${lane.handoffParamsDigest ? "matches the run's hand-off cursor" : "is pinned by the P14 rule"}.`)
+      : missing(at(4).key, 5, at(4).item, at(4).source, facts.parameterDigestConflict ? "P21_RETAINED_PARAMETER_DIGEST_MISMATCH" : "P21_SELECTION_PARAMETER_BUNDLE_NOT_PUBLISHED",
+        facts.parameterDigestConflict ? "The retained selection and the run's hand-off cursor name different parameter digests." : "The retained seal names no selected trial with parameters.");
+
+    const ordering = values.childAudit;
+    const audit = !sealed ? unsealed(5) : values.finalAudit && ordering
+      ? complete(at(5).key, 6, at(5).item, at(5).source, digestOf({
+        replay_revision: facts.replayRevision,
+        frozen_candidate_id: ordering.frozen_candidate.candidate_id,
+        oos_generation_children: ordering.folds.map((fold) => ({ fold_id: fold.fold_id, audit_ordinal: fold.oos_generation_child.audit_ordinal, candidate_id: fold.oos_generation_child.candidate_id })),
+      }), `Retained final-account replay (${lane.seal!.tableRows.OBSERVATION} bars) and, for ${ordering.counts.folds}/${ordering.counts.folds} folds, QuantBT's out-of-sample generation child of the frozen θ* (MATCH).`)
+      : missing(at(5).key, 6, at(5).item, at(5).source,
+        ordering && ordering.counts.oos_child_mismatch > 0 ? "P21_RETAINED_CHILD_AUDIT_MISMATCH" : "P21_FINAL_AUDIT_RUN_NOT_PUBLISHED",
+        ordering && ordering.counts.oos_child_mismatch > 0
+          ? "A fold's out-of-sample generation child is not the frozen θ*; the run is not an audit of its selection."
+          : "The retained replay or a fold's out-of-sample generation child record is absent.");
+
+    const metrics = !sealed ? unsealed(6) : values.reportFromLane && source.report.frozenCoreDigest
+      ? complete(at(6).key, 7, at(6).item, at(6).source, source.report.frozenCoreDigest, `Report v2 is sealed from this retained lane (${stringAt(values.reportCore, ["provenance", "metric_registry_version"]) ?? "metric registry not named"}).`)
+      : missing(at(6).key, 7, at(6).item, at(6).source, "P21_RETAINED_REPORT_NOT_SEALED", "No report v2 sealed from the current retained evidence revision exists.");
+
+    const robustness = !sealed ? unsealed(8) : facts.evidenceRevision
+      ? degraded(at(8).key, 9, at(8).item, at(8).source, facts.sealDigest, "Retained evidence, split and search publish fold verdicts and one global selection, not a stability/regime certificate; the degraded state travels unchanged.")
+      : missing(at(8).key, 9, at(8).item, at(8).source, "P21_EVIDENCE_REVISION_NOT_PUBLISHED", "No retained evidence revision exists to support even a degraded declaration.");
+
+    const reproducible = values.manifest && values.sourceTransform && facts.importMatch && lane.partDigests.length > 0 && facts.partsValid;
+    const reproducibility = !sealed ? unsealed(10) : reproducible
+      ? complete(at(10).key, 11, at(10).item, at(10).source, lane.seal!.retainedImportDigest, `Retained manifest, recomputed import receipt (MATCH), source transform and ${lane.partDigests.length} sealed P05 part digests are pinned.`)
+      : missing(at(10).key, 11, at(10).item, at(10).source, "P21_REPRODUCIBILITY_CHECKSUMS_INCOMPLETE", "A retained manifest, import receipt, transform or P05 part checksum is absent or mismatched.");
+
+    return [at(0), at(1), data, methodology, selection, audit, metrics, at(7), robustness, at(9), reproducibility, at(11)];
+  }
+
+  /** Every present retained identity must be well-formed and agree with its own authority. */
+  private retainedIntegrity(source: ReleaseCandidateSource, values: ReturnType<ResearchReleaseCandidateService["retainedValues"]>): boolean {
+    const lane = source.wfo!;
+    const { facts } = values;
+    if (!values.exactSource || !facts.laneConsistent) return false;
+    if (values.strictDatasetDigest === null) return false;
+    if (source.artifacts.some((artifact) => artifact.state === "CORRUPT" || artifact.state === "MISSING")) return false;
+    const seal = lane.seal;
+    if (seal === null) return true;
+    return values.manifest !== null && values.sourceTransform !== null
+      && seal.requestedSpecDigest === source.requestSpecDigest && seal.effectiveSpecDigest === source.effectiveSpecDigest
+      && facts.importMatch && facts.foldsValid && facts.partsValid && !facts.parameterDigestConflict
+      && digest(seal.retainedImportDigest) !== null;
+  }
+
+  /** Retention pins of a retained-lane seal: each names the retained revision it was composed from. */
+  private retainedPins(source: ReleaseCandidateSource): ReleaseCandidatePin[] {
+    const facts = retainedLaneFacts(source.wfo as NonNullable<ReleaseCandidateSource["wfo"]>);
+    return [
+      { pinKind: "RUN", sourceRef: source.runId, sourceDigest: source.effectiveSpecDigest },
+      { pinKind: "ALPHA_VERSION", sourceRef: source.alpha.alphaVersionId as string, sourceDigest: source.alpha.codeDigest },
+      { pinKind: "REPORT", sourceRef: source.report.reportRevision as string, sourceDigest: source.report.frozenCoreDigest },
+      { pinKind: "EVIDENCE", sourceRef: facts.evidenceRevision as string, sourceDigest: facts.sealDigest },
+      { pinKind: "SPLIT", sourceRef: facts.splitRevision as string, sourceDigest: facts.sealDigest },
+      { pinKind: "SELECTION", sourceRef: facts.searchRevision as string, sourceDigest: facts.parameterDigest },
+    ];
   }
 
   private requireEnabled(): void {

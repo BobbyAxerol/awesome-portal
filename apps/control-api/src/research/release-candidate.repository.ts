@@ -16,7 +16,16 @@ import { newUlid } from "../id";
 import { CONTROL_API_POOL } from "../tokens";
 import { canonicalResearchJson } from "./preflight.service";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
+import {
+  currentSourceImportDigest,
+  type CurrentSourceBatchDigestRow,
+  type CurrentSourceTableKind,
+} from "./current-source.repository";
+import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
+import type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
+
+export type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
 
 type JsonColumn = Record<string, unknown> | string | null;
 
@@ -94,6 +103,12 @@ export interface ReleaseCandidateSource {
   };
   artifacts: ReleaseCandidateArtifact[];
   asOfUtcMs: number;
+  /**
+   * W7: the run's retained (Delta WFO) lane, or null for the P04 fixed
+   * profile. A null lane leaves the composition and its fingerprint exactly
+   * as they were before the lane existed.
+   */
+  wfo: ReleaseCandidateRetainedLane | null;
 }
 
 export interface ReleaseCandidateDraft {
@@ -168,6 +183,18 @@ interface SourceRow {
   current_manifest_digest: string | null;
   current_source_transform_digest: string | null;
   retained_import_digest: string | null;
+  execution_profile_id: string | null;
+  execution_profile_digest: string | null;
+  producer_dataset_binding_digest: string | null;
+  current_source_adapter_id: string | null;
+  current_profile_id: string | null;
+  current_requested_spec_digest: string | null;
+  current_effective_spec_digest: string | null;
+  current_dataset_binding_digest: string | null;
+  current_table_rows: JsonColumn;
+  current_total_rows: string | number | null;
+  current_summary: JsonColumn;
+  current_sealed_artifact_id: string | null;
   as_of_utc_ms: string | number;
 }
 
@@ -198,6 +225,10 @@ interface PackRow {
   delivery_state: ReleaseCandidateStoredPack["deliveryState"];
   approval_state: ReleaseCandidateStoredPack["approvalState"];
 }
+
+const MAXIMUM_RETAINED_FOLDS = 256;
+const MAXIMUM_RETAINED_PARTS = 512;
+const RETAINED_TABLE_KINDS: readonly CurrentSourceTableKind[] = ["OBSERVATION", "FOLD", "TRIAL", "CANDIDATE", "SELECTION"];
 
 function safeInteger(value: string | number | null | undefined, label: string): number {
   const numeric = typeof value === "number" ? value : Number(value);
@@ -253,6 +284,8 @@ export function releaseCandidateSourceFingerprint(source: ReleaseCandidateSource
       artifact_id: artifact.artifactId, manifest_digest: artifact.manifestDigest,
       state: artifact.state, artifact_revision: artifact.artifactRevision,
     })),
+    // W7: present only on the retained lane, so a P04 fingerprint is unchanged.
+    ...(!source.wfo ? {} : { retained_lane: source.wfo }),
   }), "utf8").digest("hex");
 }
 
@@ -464,6 +497,17 @@ export class ResearchReleaseCandidateRepository {
              current_source.manifest_digest AS current_manifest_digest,
              current_source.source_transform_digest AS current_source_transform_digest,
              current_source.retained_import_digest,
+             producer.execution_profile_id, producer.execution_profile_digest,
+             producer.dataset_binding_digest AS producer_dataset_binding_digest,
+             current_source.source_adapter_id AS current_source_adapter_id,
+             current_source.profile_id AS current_profile_id,
+             current_source.requested_spec_digest AS current_requested_spec_digest,
+             current_source.effective_spec_digest AS current_effective_spec_digest,
+             current_source.dataset_binding_digest AS current_dataset_binding_digest,
+             current_source.table_rows AS current_table_rows,
+             current_source.total_rows AS current_total_rows,
+             current_source.summary AS current_summary,
+             current_source.sealed_artifact_id AS current_sealed_artifact_id,
              floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms
         FROM research.runs run
         JOIN research.attempts attempt
@@ -501,7 +545,19 @@ export class ResearchReleaseCandidateRepository {
            ORDER BY split.received_at DESC, split.projection_revision DESC LIMIT 1
         ) split ON TRUE
         LEFT JOIN LATERAL (
-          SELECT artifact_revision, manifest_digest, source_transform_digest, retained_import_digest
+          SELECT current_source.artifact_revision, current_source.manifest_digest, current_source.source_transform_digest,
+                 current_source.retained_import_digest, current_source.source_adapter_id, current_source.profile_id,
+                 current_source.requested_spec_digest, current_source.effective_spec_digest,
+                 current_source.dataset_binding_digest, current_source.table_rows, current_source.total_rows,
+                 current_source.summary,
+                 -- W7: the SEALED P05 artifact this seal's manifest names (same
+                 -- revision, same manifest); never the preflight manifest.
+                 (SELECT sealed.artifact_id
+                    FROM research.artifacts sealed
+                   WHERE sealed.workspace_id = current_source.workspace_id AND sealed.run_id = current_source.run_id
+                     AND sealed.artifact_revision = current_source.artifact_revision
+                     AND sealed.manifest_digest = current_source.manifest_digest AND sealed.state = 'SEALED'
+                   ORDER BY sealed.artifact_id ASC LIMIT 1) AS sealed_artifact_id
             FROM research.current_source_seals_v1 current_source
            WHERE current_source.workspace_id = run.workspace_id AND current_source.run_id = run.run_id
            ORDER BY current_source.artifact_revision DESC LIMIT 1
@@ -567,6 +623,92 @@ export class ResearchReleaseCandidateRepository {
         state: artifact.state, artifactRevision: safeInteger(artifact.artifact_revision, "artifact revision"),
       })),
       asOfUtcMs: safeInteger(row.as_of_utc_ms, "snapshot timestamp"),
+      wfo: await this.retainedLane(client, workspaceId, runId, row),
+    };
+  }
+
+  /**
+   * W7 · the retained-lane facts of a Delta WFO run, read in the same
+   * REPEATABLE READ snapshot as the rest of the composition. A P04 run (any
+   * other execution profile) answers null and its composition is unchanged.
+   */
+  private async retainedLane(client: PoolClient, workspaceId: string, runId: string, row: SourceRow): Promise<ReleaseCandidateRetainedLane | null> {
+    if (row.execution_profile_id !== DELTA_WFO_PROFILE_ID) return null;
+    const claim = this.claimFacts(row.progress_snapshot);
+    const base = {
+      executionProfileId: row.execution_profile_id,
+      executionProfileDigest: row.execution_profile_digest,
+      producerDatasetBindingDigest: row.producer_dataset_binding_digest,
+      claimState: claim.state,
+      handoffParamsDigest: claim.handoffParamsDigest,
+    };
+    if (row.current_artifact_revision === null) {
+      return { ...base, seal: null, sealedArtifactId: null, partDigests: [], observedImportDigest: null, folds: [] };
+    }
+    const revision = safeInteger(row.current_artifact_revision, "current-source artifact revision");
+    const folds = await client.query<{ source_ordinal: string | number; source_id: string; payload: JsonColumn }>(
+      `SELECT source_ordinal, source_id, payload
+         FROM research.current_source_rows_v1
+        WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'FOLD'
+        ORDER BY source_ordinal ASC
+        LIMIT ${MAXIMUM_RETAINED_FOLDS + 1}`, [workspaceId, runId, revision],
+    );
+    const batches = await client.query<CurrentSourceBatchDigestRow>(
+      `SELECT table_kind, batch_ordinal, batch_digest, row_count
+         FROM research.current_source_import_batches_v1
+        WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3
+        ORDER BY table_kind ASC, batch_ordinal ASC`, [workspaceId, runId, revision],
+    );
+    const parts = row.current_sealed_artifact_id === null ? { rows: [] as Array<{ part_digest: string }> } : await client.query<{ part_digest: string }>(
+      `SELECT part_digest
+         FROM research.artifact_parts
+        WHERE workspace_id = $1 AND artifact_id = $2
+        ORDER BY table_kind ASC, part_ordinal ASC
+        LIMIT ${MAXIMUM_RETAINED_PARTS}`, [workspaceId, row.current_sealed_artifact_id],
+    );
+    return {
+      ...base,
+      seal: {
+        artifactRevision: revision,
+        sourceAdapterId: row.current_source_adapter_id ?? "",
+        profileId: row.current_profile_id ?? "",
+        manifestDigest: row.current_manifest_digest ?? "",
+        sourceTransformDigest: row.current_source_transform_digest ?? "",
+        retainedImportDigest: row.retained_import_digest ?? "",
+        requestedSpecDigest: row.current_requested_spec_digest ?? "",
+        effectiveSpecDigest: row.current_effective_spec_digest ?? "",
+        datasetBindingDigest: row.current_dataset_binding_digest ?? "",
+        tableRows: this.tableRows(row.current_table_rows),
+        totalRows: safeInteger(row.current_total_rows, "current-source row count"),
+        summary: jsonRecord(row.current_summary, "current-source summary"),
+      },
+      sealedArtifactId: row.current_sealed_artifact_id,
+      partDigests: parts.rows.map((part) => part.part_digest),
+      observedImportDigest: (batches.rowCount ?? 0) > 0 ? currentSourceImportDigest(batches.rows) : null,
+      folds: folds.rows.map((fold) => ({
+        sourceOrdinal: safeInteger(fold.source_ordinal, "retained fold ordinal"),
+        sourceId: fold.source_id,
+        payload: jsonRecord(fold.payload, "retained fold row"),
+      })),
+    };
+  }
+
+  private tableRows(value: JsonColumn): Record<CurrentSourceTableKind, number> {
+    const rows = jsonRecord(value, "current-source table rows") ?? {};
+    return Object.fromEntries(RETAINED_TABLE_KINDS.map((kind) => [
+      kind, safeInteger(rows[kind] as string | number | null, `current-source ${kind} count`),
+    ])) as Record<CurrentSourceTableKind, number>;
+  }
+
+  /** The progress claim's state and hand-off parameter digest (typed absence when not published). */
+  private claimFacts(snapshot: JsonColumn): { state: string | null; handoffParamsDigest: string | null } {
+    const value = snapshot === null ? null : jsonRecord(snapshot, "progress claim snapshot");
+    const claim = value?.claim && typeof value.claim === "object" && !Array.isArray(value.claim) ? value.claim as Record<string, unknown> : null;
+    const cursor = claim?.handoff_cursor && typeof claim.handoff_cursor === "object" ? claim.handoff_cursor as Record<string, unknown> : null;
+    const paramsDigest = cursor?.params_digest;
+    return {
+      state: typeof claim?.state === "string" && /^[A-Z][A-Z0-9_]{1,63}$/.test(claim.state) ? claim.state : null,
+      handoffParamsDigest: typeof paramsDigest === "string" && /^[0-9a-f]{64}$/.test(paramsDigest) ? paramsDigest : null,
     };
   }
 

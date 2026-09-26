@@ -103,15 +103,24 @@ function fact(state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE", reasonCod
 
 function sourceGap(reasonCode: string) { return fact("NOT_PUBLISHED", reasonCode); }
 
-function revision(kind: string, seal: CurrentSourceSealRow): string {
-  return `rs02_${kind}_${sha256ResearchJson({
+/**
+ * The digest every retained read revision (`rs02_<kind>_<digest>`) carries.
+ * Exported so P21 names exactly the revisions Screens 04–08 serve (W7).
+ */
+export function currentSourceSealDigest(seal: Pick<CurrentSourceSealRow,
+  "artifactRevision" | "manifestDigest" | "sourceTransformDigest" | "retainedImportDigest" | "tableRows" | "summary">): string {
+  return sha256ResearchJson({
     artifact_revision: seal.artifactRevision,
     manifest_digest: seal.manifestDigest,
     source_transform_digest: seal.sourceTransformDigest,
     retained_import_digest: seal.retainedImportDigest,
     table_rows: seal.tableRows,
     summary: seal.summary,
-  })}`;
+  });
+}
+
+function revision(kind: string, seal: CurrentSourceSealRow): string {
+  return `rs02_${kind}_${currentSourceSealDigest(seal)}`;
 }
 
 function parseSummary(seal: CurrentSourceSealRow) {

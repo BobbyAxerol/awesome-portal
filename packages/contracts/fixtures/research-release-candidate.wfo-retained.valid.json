@@ -1,0 +1,699 @@
+{
+  "schema_version": "research.release-candidate-compose.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "rrun_e1fa9e5cae3bcef8f8e38311905a17d5",
+  "state": "DRAFT",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "as_of_utc_ms": 1790371782762,
+  "source_fingerprint": "8b29eca9f4472459372ca4420388d1f2f3cadc0f335cdcc8766f88aec29d2919",
+  "run": {
+    "id": "rrun_e1fa9e5cae3bcef8f8e38311905a17d5",
+    "attempt": "ratt_e1fa9e5cae3bcef8f8e38311905a17d5",
+    "binding": {
+      "alpha_id": "delta-rsi-polynomial-alpha",
+      "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_0",
+      "lifecycle_state": "ACTIVE"
+    }
+  },
+  "rail": [
+    {
+      "key": "alpha",
+      "value": "delta-rsi-polynomial-alpha",
+      "detail": "Delta-RSI Polynomial Alpha",
+      "tone": "ink"
+    },
+    {
+      "key": "alpha_version",
+      "value": "av_delta_rsi_polynomial_alpha_1_0_0",
+      "detail": "sha256:34dc1847d051",
+      "tone": "ink"
+    },
+    {
+      "key": "run",
+      "value": "rrun_e1fa9e5cae3bcef8f8e38311905a17d5",
+      "detail": "ratt_e1fa9e5cae3bcef8f8e38311905a17d5",
+      "tone": "ink"
+    },
+    {
+      "key": "selected_params",
+      "value": "6c8364189d72bfc2d13602152569674f81e92ebb70180fc29d1a8047f69bc9bb",
+      "detail": "retained trial 0 · global",
+      "tone": "ink"
+    },
+    {
+      "key": "release_candidate",
+      "value": "rc_(draft)",
+      "detail": "assigned on local seal",
+      "tone": "gold"
+    }
+  ],
+  "taxonomy": [
+    {
+      "what": "code / entrypoint (av_)",
+      "state": "UNSET",
+      "consequence": "No P22-published predecessor is available, so no code-change or gate conclusion is inferred."
+    },
+    {
+      "what": "selected strategy params",
+      "state": "UNSET",
+      "consequence": "Current exact parameter bundle is pinned, but no predecessor comparison is published."
+    },
+    {
+      "what": "data contract / dataset snapshot",
+      "state": "UNSET",
+      "consequence": "Current dataset binding is pinned, but no predecessor comparison is published."
+    },
+    {
+      "what": "target venue / account / capital",
+      "state": "UNSET",
+      "consequence": "Deployment facts belong to an Execution-side candidate and are never composed here."
+    }
+  ],
+  "published_comparison": {
+    "last_release_candidate_id": null,
+    "availability": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P22_PUBLISHED_COMPARISON_NOT_COMMISSIONED"
+    }
+  },
+  "certification_axes": {
+    "methodology_claim": {
+      "value": null,
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED"
+      }
+    },
+    "engine_execution_contract": {
+      "value": null,
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED"
+      }
+    }
+  },
+  "gate_verdict": {
+    "title": "local seal blocked — review evidence",
+    "body": "P21 creates only a Portal-local immutable evidence pack. It neither computes, approves, delivers, nor starts Paper."
+  },
+  "draft": {
+    "draft_id": null,
+    "revision": 0,
+    "source_fingerprint": "8b29eca9f4472459372ca4420388d1f2f3cadc0f335cdcc8766f88aec29d2919",
+    "known_limitations": null,
+    "proposed_use_restrictions": null,
+    "state": "VIRTUAL",
+    "updated_at_utc_ms": null
+  },
+  "fields": [
+    {
+      "key": "release_candidate_id",
+      "label": "Release candidate ID",
+      "value": null,
+      "tone": "gold",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P21_ASSIGNED_ON_LOCAL_SEAL"
+      }
+    },
+    {
+      "key": "alpha_id",
+      "label": "Alpha ID",
+      "value": "delta-rsi-polynomial-alpha",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "alpha_version_id",
+      "label": "Alpha version ID",
+      "value": "av_delta_rsi_polynomial_alpha_1_0_0",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "alpha_code_digest",
+      "label": "Alpha code digest",
+      "value": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "alpha_entrypoint",
+      "label": "Alpha entrypoint",
+      "value": "strategy.delta_rsi:generate_signals",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "final_audit_run_id",
+      "label": "Final audit run ID",
+      "value": "rrun_e1fa9e5cae3bcef8f8e38311905a17d5",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "final_audit_attempt_id",
+      "label": "Final audit attempt ID",
+      "value": "ratt_e1fa9e5cae3bcef8f8e38311905a17d5",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "requested_spec_digest",
+      "label": "Requested spec digest",
+      "value": "a45ac459ce9cf51fc8668857a58afa3f5e81b8860ea990b77bde235586c999bc",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "effective_spec_digest",
+      "label": "Effective spec digest",
+      "value": "54c9fa7ffdf2ee65cedf95f8ab4de22e94821deccb604b0b6baeaa0a05f7ffbf",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "dataset_binding_digest",
+      "label": "Dataset binding digest",
+      "value": "e6394a52e21a36f96aa11ae5b3724cc4dfa436c7acba2ade1fb5243483443ddd",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "manifest_digest",
+      "label": "Manifest digest",
+      "value": "b71259790d937832a606ee7d552fb1bde8baa58f5511a896c6037ba8f15ea197",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "source_transform_digest",
+      "label": "Source transform digest",
+      "value": "5c226a9460c6843fac2c3dce62f6dda16ea82752ea7ccbbe1f4808e46530b497",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "engine_release_id",
+      "label": "Engine release",
+      "value": "er_quantbt_111",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "adapter_contract_digest",
+      "label": "Adapter contract digest",
+      "value": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "parameter_bundle_digest",
+      "label": "Parameter bundle digest",
+      "value": "6c8364189d72bfc2d13602152569674f81e92ebb70180fc29d1a8047f69bc9bb",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "evidence_revision",
+      "label": "Evidence revision",
+      "value": "rs02_evidence_3d5622f85f5a289ee5ad5850a42e8165fc6ffe10fc75220e82cb809f970ec71b",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "report_revision",
+      "label": "Report revision",
+      "value": "p18r1_5ec011074f0d6461889c9f6fc3eb384dcbb670f24d60b76dc542fe2924149d96",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    }
+  ],
+  "yaml": [
+    {
+      "key": "release_candidate_id",
+      "label": "Release candidate ID",
+      "value": null,
+      "tone": "gold",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P21_ASSIGNED_ON_LOCAL_SEAL"
+      }
+    },
+    {
+      "key": "alpha_id",
+      "label": "Alpha ID",
+      "value": "delta-rsi-polynomial-alpha",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "alpha_version_id",
+      "label": "Alpha version ID",
+      "value": "av_delta_rsi_polynomial_alpha_1_0_0",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "alpha_code_digest",
+      "label": "Alpha code digest",
+      "value": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "alpha_entrypoint",
+      "label": "Alpha entrypoint",
+      "value": "strategy.delta_rsi:generate_signals",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "final_audit_run_id",
+      "label": "Final audit run ID",
+      "value": "rrun_e1fa9e5cae3bcef8f8e38311905a17d5",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "final_audit_attempt_id",
+      "label": "Final audit attempt ID",
+      "value": "ratt_e1fa9e5cae3bcef8f8e38311905a17d5",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "requested_spec_digest",
+      "label": "Requested spec digest",
+      "value": "a45ac459ce9cf51fc8668857a58afa3f5e81b8860ea990b77bde235586c999bc",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "effective_spec_digest",
+      "label": "Effective spec digest",
+      "value": "54c9fa7ffdf2ee65cedf95f8ab4de22e94821deccb604b0b6baeaa0a05f7ffbf",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "dataset_binding_digest",
+      "label": "Dataset binding digest",
+      "value": "e6394a52e21a36f96aa11ae5b3724cc4dfa436c7acba2ade1fb5243483443ddd",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "manifest_digest",
+      "label": "Manifest digest",
+      "value": "b71259790d937832a606ee7d552fb1bde8baa58f5511a896c6037ba8f15ea197",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "source_transform_digest",
+      "label": "Source transform digest",
+      "value": "5c226a9460c6843fac2c3dce62f6dda16ea82752ea7ccbbe1f4808e46530b497",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "engine_release_id",
+      "label": "Engine release",
+      "value": "er_quantbt_111",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "adapter_contract_digest",
+      "label": "Adapter contract digest",
+      "value": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "parameter_bundle_digest",
+      "label": "Parameter bundle digest",
+      "value": "6c8364189d72bfc2d13602152569674f81e92ebb70180fc29d1a8047f69bc9bb",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "evidence_revision",
+      "label": "Evidence revision",
+      "value": "rs02_evidence_3d5622f85f5a289ee5ad5850a42e8165fc6ffe10fc75220e82cb809f970ec71b",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "report_revision",
+      "label": "Report revision",
+      "value": "p18r1_5ec011074f0d6461889c9f6fc3eb384dcbb670f24d60b76dc542fe2924149d96",
+      "tone": "ink",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    }
+  ],
+  "pack": [
+    {
+      "key": "ALPHA_VERSION_PASSPORT",
+      "n": 1,
+      "item": "Alpha Version passport",
+      "status": "COMPLETE",
+      "digest": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "source": {
+        "label": "Alpha 360°",
+        "href": null
+      },
+      "note": "Exact Alpha version identity is retained.",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "ENGINE_CAPABILITY_BACKEND",
+      "n": 2,
+      "item": "Engine/capability/backend",
+      "status": "COMPLETE",
+      "digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+      "source": {
+        "label": "Engine Atlas",
+        "href": "/research/quantbt/atlas"
+      },
+      "note": "Pinned adapter contract and engine release are retained.",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "DATASET_UNIVERSE_SNAPSHOTS",
+      "n": 3,
+      "item": "Dataset & universe snapshots",
+      "status": "COMPLETE",
+      "digest": "e6394a52e21a36f96aa11ae5b3724cc4dfa436c7acba2ade1fb5243483443ddd",
+      "source": {
+        "label": "Data snapshots",
+        "href": "/research/quantbt/runs/rrun_e1fa9e5cae3bcef8f8e38311905a17d5/split"
+      },
+      "note": "P10 producer and retained seal dataset bindings agree; the retained manifest names its sealed P05 artifact.",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "METHODOLOGY_CLAIM",
+      "n": 4,
+      "item": "Methodology claim",
+      "status": "DEGRADED",
+      "digest": "cab7dce3b320fc8f1cfa25763b027ac99f0d86f3f40f616f24c9770e3d41922a",
+      "source": {
+        "label": "Evidence Flow",
+        "href": "/research/quantbt/runs/rrun_e1fa9e5cae3bcef8f8e38311905a17d5/evidence"
+      },
+      "note": "QuantBT claim walk_forward_oos (not_causal_multi_fold_global_calibration; OOS used for selection: true) is retained; the release claim is NOT_ISSUED and no methodology certificate is issued, so the claim ceiling travels unchanged.",
+      "availability": {
+        "state": "PARTIAL",
+        "reason_code": "P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED"
+      }
+    },
+    {
+      "key": "SELECTED_PARAMS_LINEAGE",
+      "n": 5,
+      "item": "Selected params lineage",
+      "status": "COMPLETE",
+      "digest": "6c8364189d72bfc2d13602152569674f81e92ebb70180fc29d1a8047f69bc9bb",
+      "source": {
+        "label": "Search & diagnostics",
+        "href": "/research/quantbt/runs/rrun_e1fa9e5cae3bcef8f8e38311905a17d5/search"
+      },
+      "note": "Retained global selection (trial 0) is the frozen θ*; its parameter digest matches the run's hand-off cursor.",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "FINAL_AUDIT_REPLAY",
+      "n": 6,
+      "item": "Final audit replay",
+      "status": "COMPLETE",
+      "digest": "38f2bed50f0c3c4341cc1a56d77022d52eaa8eb3dba294aa1f511a6a91ba9e42",
+      "source": {
+        "label": "Replay",
+        "href": "/research/quantbt/runs/rrun_e1fa9e5cae3bcef8f8e38311905a17d5/execute"
+      },
+      "note": "Retained final-account replay (1056 bars) and, for 2/2 folds, QuantBT's out-of-sample generation child of the frozen θ* (MATCH).",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "METRICS_SEMANTICS",
+      "n": 7,
+      "item": "Metrics semantics",
+      "status": "COMPLETE",
+      "digest": "5ec011074f0d6461889c9f6fc3eb384dcbb670f24d60b76dc542fe2924149d96",
+      "source": {
+        "label": "Run report",
+        "href": "/research/quantbt/runs/rrun_e1fa9e5cae3bcef8f8e38311905a17d5/report"
+      },
+      "note": "Report v2 is sealed from this retained lane (research.current-source-metrics.v1).",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "EXECUTION_ASSUMPTIONS",
+      "n": 8,
+      "item": "Execution assumptions",
+      "status": "COMPLETE",
+      "digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+      "source": {
+        "label": "Split & chronology",
+        "href": "/research/quantbt/runs/rrun_e1fa9e5cae3bcef8f8e38311905a17d5/split"
+      },
+      "note": "Declared adapter route is an assumption only; this pack makes no deployment decision.",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "ROBUSTNESS_PARAM_STABILITY_REGIME",
+      "n": 9,
+      "item": "Robustness/param stability/regime",
+      "status": "DEGRADED",
+      "digest": "3d5622f85f5a289ee5ad5850a42e8165fc6ffe10fc75220e82cb809f970ec71b",
+      "source": {
+        "label": "Compare",
+        "href": "/research/quantbt/alphas/delta-rsi-polynomial-alpha/compare"
+      },
+      "note": "Retained evidence, split and search publish fold verdicts and one global selection, not a stability/regime certificate; the degraded state travels unchanged.",
+      "availability": {
+        "state": "PARTIAL",
+        "reason_code": "P21_SOURCE_DEGRADED_EVIDENCE"
+      }
+    },
+    {
+      "key": "KNOWN_LIMITATIONS_WAIVERS",
+      "n": 10,
+      "item": "Known limitations & waivers",
+      "status": "INPUT",
+      "digest": null,
+      "source": {
+        "label": "Researcher declaration",
+        "href": null
+      },
+      "note": "Researcher-signed declaration; it cannot hide a missing mandatory item.",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_RESEARCHER_DECLARATION_REQUIRED"
+      }
+    },
+    {
+      "key": "REPRODUCIBILITY_PARITY_CHECKSUMS",
+      "n": 11,
+      "item": "Reproducibility/parity checksums",
+      "status": "COMPLETE",
+      "digest": "f40807a80d411c4940997912448a3c566ad157814bcbe28db7e5efd9bd79d327",
+      "source": {
+        "label": "Freeze & integrity",
+        "href": "/research/quantbt/runs/rrun_e1fa9e5cae3bcef8f8e38311905a17d5/freeze"
+      },
+      "note": "Retained manifest, recomputed import receipt (MATCH), source transform and 4 sealed P05 part digests are pinned.",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "PROPOSED_USE_RESTRICTIONS",
+      "n": 12,
+      "item": "Proposed use restrictions",
+      "status": "INPUT",
+      "digest": null,
+      "source": {
+        "label": "Researcher declaration",
+        "href": null
+      },
+      "note": "Researcher-signed declaration; downstream approval policy belongs to P22.",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_RESEARCHER_DECLARATION_REQUIRED"
+      }
+    }
+  ],
+  "pack_counts": {
+    "complete": 8,
+    "degraded": 2,
+    "input": 2,
+    "missing": 0
+  },
+  "local_seal": {
+    "state": "UNSEALED",
+    "release_candidate_id": null,
+    "pack_digest": null,
+    "sealed_at_utc_ms": null,
+    "delivery_state": null,
+    "approval_state": null,
+    "availability": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P21_LOCAL_SEAL_NOT_CREATED"
+    }
+  },
+  "actions": {
+    "may_edit_draft": true,
+    "may_seal": false,
+    "seal_blocked_reason": "P21_RESEARCHER_DECLARATIONS_REQUIRED",
+    "publish": {
+      "enabled": false,
+      "blocked_reason": "P22_PUBLICATION_NOT_COMMISSIONED"
+    }
+  },
+  "mirror": null,
+  "source_absences": {
+    "alpha_binding": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "methodology_claim": {
+      "state": "PARTIAL",
+      "reason_code": "P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED"
+    },
+    "final_audit": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "approval_mirror": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P22_PUBLICATION_NOT_COMMISSIONED"
+    },
+    "execution_deployment": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P21_EXECUTION_DEPLOYMENT_OUT_OF_SCOPE"
+    }
+  }
+}
