@@ -196,7 +196,10 @@ for (const [name, width, height] of VIEWPORTS) {
       if (screenId === "S06") {
         const search = await read("search");
         await expect(page.locator("[data-trial] [data-trial-is]")).toHaveCount(search.ledger.trials.length);
-        await expect(page.locator("[data-role-card='selected']")).toContainText(minus(search.selection.objective));
+        /* E5: the selected card is the HiFi selCard — S_IS, S̄_OOS, d̄ decay, max_dd — not J. */
+        const selectedCard = page.locator("[data-role-card='selected']");
+        await expect(selectedCard.locator("[data-role-row]")).toHaveCount(4);
+        await expect(selectedCard).toContainText(String(search.selection.selected_trial_id ?? ""));
       }
       /* W3b: a WFO run reads the retained lane; no P04-hub reason reaches the DOM (text, titles or data attributes). */
       const html = await page.locator(selector).innerHTML();
@@ -229,7 +232,8 @@ for (const [name, width, height] of VIEWPORTS) {
       }
       if (screenId === "S07") {
         const freeze = await read("freeze");
-        await expect(page.locator("[data-frozen-param]")).toHaveCount(Object.keys(freeze.frozen_selection.parameters).length);
+        /* The retained WFO lane draws its own θ* table (`data-frozen-parameter`); the P16 lane draws `data-frozen-param`. */
+        await expect(page.locator("[data-frozen-param], [data-frozen-parameter]")).toHaveCount(Object.keys(freeze.frozen_selection.parameters).length);
         await expect(page.locator("[data-integrity-state]").first()).toHaveAttribute("data-integrity-state", freeze.integrity.state);
       }
       if (screenId === "S08") {
@@ -648,11 +652,14 @@ for (const [name, width, height] of VIEWPORTS) {
         await expect(root.locator(`[data-rc-link='${run}']`).first()).toHaveAttribute("href", `/research/quantbt/runs/${run}/release-candidate`);
       }
       /* W6a: every CG-P20 field the ladder, fold chart and diff show equals the API. */
-      for (const run of result.attempts ?? []) {
+      /* E7 (D10): an attempt without a claim family folds into a compact row, not a ladder card. */
+      const unclaimed = (result.attempts ?? []).filter((run: any) => run.claim?.family === "NOT_PUBLISHED");
+      if (unclaimed.length > 0) await expect(root.locator("[data-unclaimed]")).toHaveAttribute("data-unclaimed", String(unclaimed.length));
+      for (const run of (result.attempts ?? []).filter((item: any) => item.claim?.family !== "NOT_PUBLISHED")) {
         const card = root.locator(`[data-ladder-run='${run.run_id}']`);
         const sharpe = run.original_metrics.find((metric: any) => metric.key === "OOS_SHARPE");
         if (sharpe?.availability.state === "AVAILABLE") await expect(card.locator("[data-oos-sharpe]")).toHaveAttribute("data-oos-sharpe", sharpe.value);
-        if (run.schedule.availability.state === "AVAILABLE") await expect(card.locator("[data-schedule]")).toHaveText(`sched ${run.schedule.mode} × ${run.schedule.schedule}`);
+        if (run.schedule.availability.state === "AVAILABLE") await expect(card.locator("[data-schedule]")).toHaveText(`${run.schedule.mode} × ${run.schedule.schedule}`); /* E7: no "sched" prefix, as the HiFi card head */
         if (run.alpha_version_lifecycle.value) await expect(card).toHaveAttribute("data-lifecycle", run.alpha_version_lifecycle.value);
         await expect(card.locator("[data-cert-absent]")).toContainText(run.certification.reason_code);
       }
@@ -726,7 +733,8 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
       await expect(row("execution profile")).toHaveText(node.primary_run.execution_profile_id);
       await expect(row("promotion")).toHaveText(PROMOTION_WORDS[node.promotion_state]!);
       await expect(row("presentation")).toContainText(node.presentation_kind.toLowerCase());
-      if (node.run_facts.claim.state) await expect(row("claim")).toHaveText(node.run_facts.claim.state);
+      /* E7 (D8): the claim reads in words ("not issued") followed by the source sentence. */
+      if (node.run_facts.claim.state) await expect(row("claim")).toContainText(node.run_facts.claim.state.toLowerCase().replace(/_/g, " "));
       if (node.run_facts.certificate.grade) await expect(row("cert")).toHaveText(node.run_facts.certificate.grade);
       else await expect(row("cert")).toContainText(node.run_facts.certificate.availability.reason_code);
       for (const [key, fact] of [["OOS sharpe", node.run_facts.oos_sharpe], ["decay", node.run_facts.decay]] as const) {

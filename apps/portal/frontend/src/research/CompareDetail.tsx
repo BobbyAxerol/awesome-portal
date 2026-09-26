@@ -858,7 +858,7 @@ function Meta({ alphaId, compare, state }: { alphaId: string | null; compare: Co
     <div className="cp-meta" data-panel="meta">
       <span data-alpha-id>{compare.alpha.alpha_id}</span>
       <span data-read-authority>{compare.read_authority}</span>
-      <span data-revision>revision {compare.revision}</span>
+      <span data-revision={compare.revision} title={compare.revision}>revision {shortId(compare.revision)}</span>
       <span data-as-of>as of {iso(compare.as_of_utc_ms)}</span>
       <span data-coverage>{coverageOf(compare)}</span>
       <span data-source-absence="structured_claim_family">
