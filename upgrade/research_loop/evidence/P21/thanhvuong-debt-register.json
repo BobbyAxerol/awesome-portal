@@ -1,0 +1,346 @@
+{
+  "phase": "P21",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-09-24",
+  "tree": "57a290a22c8266cbf8f36d1b99e7e7e25cbd7103",
+  "head": "c16ece6149d7f99328a872d291290b4082ed0bba",
+  "open_implementation_debt": [
+    {
+      "id": "S11-RAIL-DIGEST-WRAP",
+      "audit": "C1 follow-up",
+      "what": "at 3af31923 the rail stays on one row at 1280, but the parameter-bundle digest wraps over several lines inside the 'selected params' node, which is taller than the others; hi-fi shows short ids",
+      "owner": "Bobby (B2, with VD-P21-21)",
+      "state": "OPEN",
+      "evidence": "p21-bound-virtual-1280.png edb55a501b85aba4; railTops [337,337,337,337,337]"
+    },
+    {
+      "id": "S11-LOCAL-DUPLICATION",
+      "what": "releaseCandidateClient.ts keeps its own call<T> and refusal mappers; baseline 0fa3c385 has a shared researchRefusal.ts (404 → notFound)",
+      "owner": "Codex merge (B1) then Thanhvuong",
+      "state": "DEFERRED_TO_INTEGRATION"
+    }
+  ],
+  "open_debt": [
+    {
+      "id": "VD-P21-01",
+      "what": "state chip DRAFT + separate SEALED_LOCAL chip; hi-fi DRAFT/PUBLISHED/NOT_PUBLISHABLE",
+      "class": "layout",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hifi p21-hifi-draft-1280.png 981f4e83a02939b0 vs product p21-bound-virtual-1280.png edb55a501b85aba4"
+    },
+    {
+      "id": "VD-P21-02",
+      "what": "publish card → local seal card 'Local seal evidence pack'; publish + mirror ghosts P22",
+      "class": "copy/layout",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hifi p21-hifi-draft-1280.png 981f4e83a02939b0 vs product p21-bound-virtual-1280.png edb55a501b85aba4"
+    },
+    {
+      "id": "VD-P21-03",
+      "what": "YAML renders the server's 17 keys, not the hi-fi's 17 keys",
+      "class": "hi-fi contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p21-copy-yaml-1280.png 588667f77202c02f"
+    },
+    {
+      "id": "VD-P21-04",
+      "what": "taxonomy all UNSET; last-published caption is a typed absence",
+      "class": "copy",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hifi p21-hifi-draft-1280.png 981f4e83a02939b0 vs product p21-bound-virtual-1280.png edb55a501b85aba4"
+    },
+    {
+      "id": "VD-P21-08",
+      "what": "explicit 'save declaration' + CAS + 409 banner",
+      "class": "layout",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hifi p21-hifi-draft-1280.png 981f4e83a02939b0 vs product p21-bound-virtual-1280.png edb55a501b85aba4"
+    },
+    {
+      "id": "VD-P21-10",
+      "what": "YAML null reads 'null  # <reason_code>'",
+      "class": "copy",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p21-copy-yaml-1280.png 588667f77202c02f"
+    },
+    {
+      "id": "VD-P21-11",
+      "what": "404 treated as denied with the 403 sentence (F-04) while the codex handoff says 404 terminal",
+      "class": "discrepancy D7",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "browser F04@1280/660; U20/U26/U31"
+    },
+    {
+      "id": "VD-P21-13",
+      "what": "mono meta line authority/as-of/fingerprint/draft revision (not in hi-fi)",
+      "class": "layout; same group as S10-COUNTS-PANEL / VD-P20-08",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hifi p21-hifi-draft-1280.png 981f4e83a02939b0 vs product p21-bound-virtual-1280.png edb55a501b85aba4"
+    },
+    {
+      "id": "VD-P21-14",
+      "what": "declaration trim → null, single save; two null declarations are refused before sending per contract (c16ece61, closes S11-A1-BOTH-NULL)",
+      "class": "behaviour/copy",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "U15/U17"
+    },
+    {
+      "id": "VD-P21-15",
+      "what": "seal button aria-disabled + reason label · code; VIRTUAL draft sentence FE-derived from draft_id null",
+      "class": "copy",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hifi p21-hifi-draft-1280.png 981f4e83a02939b0 vs product p21-bound-virtual-1280.png edb55a501b85aba4"
+    },
+    {
+      "id": "VD-P21-16",
+      "what": "INPUT stays editable after SEALED_LOCAL (may_edit_draft true) vs spec T07 read-only after publish",
+      "class": "spec contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p21-sealed-1280.png 24b0a8dda83cb091"
+    },
+    {
+      "id": "VD-P21-20",
+      "what": "mirror ghost status 'status not published' instead of hi-fi '—'",
+      "class": "copy (hard rule 3)",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hifi p21-hifi-draft-1280.png 981f4e83a02939b0 vs product p21-bound-virtual-1280.png edb55a501b85aba4"
+    },
+    {
+      "id": "VD-P21-21",
+      "what": "pack digest one line with ellipsis + full title; rail nodes share width, digest wraps inside its node",
+      "class": "layout",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hifi p21-hifi-draft-1280.png 981f4e83a02939b0 vs product p21-bound-virtual-1280.png edb55a501b85aba4"
+    }
+  ],
+  "recorded_visual_decisions_not_blocking": [
+    {
+      "id": "VD-P21-05",
+      "state": "field-driven",
+      "note": "cert axes ghost unless server publishes methodology value"
+    },
+    {
+      "id": "VD-P21-06",
+      "state": "field-driven",
+      "note": "rail value/detail from server; 'run / attempt' label"
+    },
+    {
+      "id": "VD-P21-07",
+      "state": "field-driven",
+      "cg": [
+        "CG-P21-02"
+      ]
+    },
+    {
+      "id": "VD-P21-09",
+      "state": "route",
+      "note": "read-only pack route"
+    },
+    {
+      "id": "VD-P21-12",
+      "state": "rule over hi-fi",
+      "note": "unlinked source span + title"
+    },
+    {
+      "id": "VD-P21-17",
+      "state": "rule over hi-fi",
+      "note": "'✓ copied' only on resolve; 'copy unavailable' otherwise"
+    },
+    {
+      "id": "VD-P21-18",
+      "state": "field-driven",
+      "cg": [
+        "CG-P21-05"
+      ]
+    },
+    {
+      "id": "VD-P21-19",
+      "state": "route",
+      "note": "run report link kept; S10 alpha-level card unrouted"
+    }
+  ],
+  "resolved_in_phase": [
+    {
+      "id": "S11-TOKEN-GATE",
+      "what": "hex in a CSS comment tripped tokens.test.ts",
+      "found_by": "package A full vitest",
+      "status": "RESOLVED",
+      "evidence": "commit 2 amended before commit 3"
+    },
+    {
+      "id": "S11-EMPTY-DECLARATION-RULE (A1)",
+      "what": "FE blocked PATCH when both declarations were null",
+      "found_by": "Fable audit A",
+      "status": "RESOLVED as audited in cad8bed9 — re-opened as S11-A1-BOTH-NULL because the contract does forbid both-null — closed again at c16ece61 (revert cad8bed9)",
+      "evidence": "cad8bed9 → c16ece61"
+    },
+    {
+      "id": "S11-MIRROR-BARE-DASH (B1)",
+      "what": "mirror ghost printed a bare '—' status",
+      "found_by": "package B F-B1",
+      "status": "RESOLVED",
+      "evidence": "e4c47d6a; knownBare=0 in 78 receipts"
+    },
+    {
+      "id": "S11-RAIL-TWO-ROWS (B2 → C1)",
+      "what": "rail wrapped to two rows at 1280",
+      "found_by": "package B H1; re-found by package C round 1 after e4c47d6a",
+      "status": "RESOLVED",
+      "evidence": "3af31923; railTops [337,337,337,337,337]"
+    },
+    {
+      "id": "S11-DEGRADED-GROUND (B3 → C2)",
+      "what": "DEGRADED row ground ≈ page (--paper), then blue-grey --accent-soft",
+      "found_by": "package B H8; package C round 1",
+      "status": "RESOLVED",
+      "evidence": "3af31923 --state-degraded-bg rgb(244, 236, 219) ≠ page rgb(255,255,255)"
+    },
+    {
+      "id": "S11-DIGEST-TWO-LINES (B4)",
+      "what": "64-hex pack digests wrapped to two lines",
+      "found_by": "package B H2",
+      "status": "RESOLVED",
+      "evidence": "e4c47d6a; digestOneLine 10/10 at 1280 and 660"
+    },
+    {
+      "id": "S11-REASON-BREAK-ALL (B5)",
+      "what": "reason code broke mid-word at 660",
+      "found_by": "package B H9",
+      "status": "RESOLVED",
+      "evidence": "e4c47d6a overflow-wrap:anywhere; p21-unbound-660.png 647bca47d895d649"
+    },
+    {
+      "id": "S11-A1-BOTH-NULL",
+      "audit": "A1 (re-checked in package C, discrepancy D15)",
+      "what": "since cad8bed9 the declaration editor sends PATCH with both declarations null; the contract forbids it (OpenAPI DraftPatch 'not' clause; release-candidate.contract.ts:31–35 superRefine → 400), so the user gets a terminal refusal instead of a pre-send reason",
+      "owner": "Thanhvuong (Fable, after package C)",
+      "state": "RESOLVED",
+      "fix_options": [
+        "restore the pre-send guard citing the contract (revert cad8bed9)",
+        "keep server-decides and map this 400 to a declaration-specific message"
+      ],
+      "evidence": "c16ece6149d7f99328a872d291290b4082ed0bba; release-candidate.contract.ts:31–35; ~/tv-shots/p21/final3/",
+      "resolution": "c16ece61 reverts cad8bed9: the pre-send guard returns with the contract's own sentence; S11-U17 again proves no PATCH is sent; tvp21 82/82, S11 34/34"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "S11-AXE",
+      "what": "axe scan (spec 11 T14)",
+      "reason": "axe-core not in lock file",
+      "owner": "Bobby (B3)",
+      "state": "AWAITING_DECISION"
+    },
+    {
+      "id": "S11-REAL-API",
+      "what": "REAL_API_E2E_RECEIPT and V11-P21-DR",
+      "reason": "CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATES=false; no real bound run in this lane",
+      "owner": "Thanhvuong after Bobby (B4)",
+      "state": "BLOCKED_ON_FEATURE_FLAG"
+    },
+    {
+      "id": "S11-P22-TESTS",
+      "what": "spec 11 T02 publish, T11 mirror poll, T18 mirror stale; T07 read-only after publish; T10 CHANGED taxonomy in browser",
+      "reason": "P22 scope (D3: P22+ is Codex)",
+      "owner": "Codex (P22), Bobby (B5)",
+      "state": "PENDING_OWNER_PHASE"
+    },
+    {
+      "id": "S11-CODE-ANATOMY",
+      "what": "handoff asks for a 'Code anatomy' presentation substage; hi-fi 11 and spec 11 have no such block",
+      "reason": "no design source",
+      "owner": "Bobby/Codex (B2)",
+      "state": "AWAITING_DECISION"
+    }
+  ],
+  "backend_requests": [
+    {
+      "id": "CG-P21-01",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P21-01",
+      "what": "canonical compose/seal/pack fixtures + Problem"
+    },
+    {
+      "id": "CG-P21-02",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P21-02",
+      "what": "pack source hrefs do not match FE routes (atlas, execute, compare, Alpha 360°)"
+    },
+    {
+      "id": "CG-P21-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P21-03",
+      "what": "etag header sent at runtime but not declared in OpenAPI"
+    },
+    {
+      "id": "CG-P21-04",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P21-04",
+      "what": "Problem.error.message: UI copy or debug only"
+    },
+    {
+      "id": "CG-P21-05",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P21-05",
+      "what": "PackResponse has no pack_counts / certification_axes"
+    }
+  ],
+  "not_opened": [
+    {
+      "what": "declaration maxLength (PLAN §4 CG-P21-05)",
+      "reason": "OpenAPI DraftPatch already declares minLength 1 / maxLength 4096 and not-both-null"
+    }
+  ],
+  "source_capability_blocked": [],
+  "source_capability_note": "P21 has no source-capability matrix; source absences are P21_*/P22_* reason codes rendered verbatim",
+  "explicit_downstream_gates": [
+    {
+      "id": "P21-FE-DG-01",
+      "owner": "Codex (merge per D1) + Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "integrate baseline 4d296c06 → 0fa3c385: keep S11 routes in QuantBTModule.tsx and the S11 link in EvidenceFlow.tsx (6a3f15cc rewrites it); choose 404 denied (F-04) vs notFound terminal (researchRefusal.ts); fold S11 mappers into researchRefusal.ts; then rerun full unit + whole Research probe (244 on tree 78bb9370)"
+    },
+    {
+      "id": "P21-FE-DG-02",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_FEATURE_FLAG",
+      "what": "REAL_API_E2E_RECEIPT for S11 and V11-P21-DR once the flag is on in a preview lane"
+    },
+    {
+      "id": "P21-FE-DG-03",
+      "owner": "Codex (P22)",
+      "state": "PENDING_OWNER_PHASE",
+      "what": "publish, Approval mirror, spec T02/T11/T18, PUBLISHED chip, INPUT read-only after publish, taxonomy vs predecessor"
+    }
+  ],
+  "known_flake_note": "foundation.test.tsx P09-T04 timing flake once in package A; not seen on 3af31923",
+  "rule_for_later_phases": {
+    "source": "Bobby 2026-09-24, Unified P19 note; applied in P20 and P21",
+    "rules": [
+      "each screen matches both the hi-fi and the spec; when they differ the hi-fi wins unless Bobby approves a VD exception",
+      "the frontend never picks a deviation on its own: record VD-PXX-NN in the phase note ledger and the handoff; open a new version when scope needs trimming",
+      "hard rule 3 (truthful display) outranks hi-fi copy: render the contract and record REQUIRES_BOBBY_DECISION",
+      "D3 (0fa3c385): Claude works up to P21; P22+ is Codex"
+    ],
+    "p21_debt_for_P22": "see Unified P21 note 'Nợ cho phase sau (P22+)' and frontend-handoff-claude.md Thanhvuong addendum"
+  },
+  "audit_note": "Fable audit after each package: A1–A6 (after A, head cad8bed9), B1–B7 (after B, head e4c47d6a), C1–C2 (after C round 1, head 3af31923). Package C re-checked A1 against OpenAPI and found the contract forbids both-null (S11-A1-BOTH-NULL). Receipts: cad8bed9 82/82 + 244/244 → e4c47d6a 81/82 STOP → 3af31923 82/82 + 244/244."
+}
