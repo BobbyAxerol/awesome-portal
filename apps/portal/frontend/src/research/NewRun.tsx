@@ -21,6 +21,7 @@
  * summary written beside the payload — it *is* the payload, rendered.
  */
 
+import { LineageLink, lineageHref } from "./LineageLink";
 import { useEffect, useMemo, useState } from "react";
 
 import { scheduleChoices } from "./atlas";
@@ -1664,6 +1665,11 @@ export function NewRun(props: NewRunProps) {
               <span style={{ color: "var(--ink-soft)" }}>
                 A new run with a NEW intent: change anything, then run a fresh preflight. The original run is untouched.
               </span>
+              {draft.alphaId ? (
+                <LineageLink to={lineageHref(draft.alphaId, { av: draft.alphaVersionId || null })} className="mono" action="open-lineage">
+                  attempt lineage →
+                </LineageLink>
+              ) : null}
             </>
           ) : cloneSource.state.state === "loading" ? (
             <span style={{ color: "var(--ink-soft)" }}>Reading the declaration of {cloneSource.runId}…</span>
@@ -1695,6 +1701,11 @@ export function NewRun(props: NewRunProps) {
               <span style={{ color: "var(--ink-soft)" }}>
                 forked from {forkSource.runId} · what-if — a new intent with its own preflight and config_hash, lineage-linked to that run. The frozen run is untouched.
               </span>
+              {draft.alphaId ? (
+                <LineageLink to={lineageHref(draft.alphaId, { av: draft.alphaVersionId || null })} className="mono" action="open-lineage">
+                  attempt lineage →
+                </LineageLink>
+              ) : null}
             </>
           ) : forkSource.state === "loading" ? (
             <span style={{ color: "var(--ink-soft)" }}>Reading that run's what-if grid…</span>

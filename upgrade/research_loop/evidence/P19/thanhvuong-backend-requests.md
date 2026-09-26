@@ -319,22 +319,22 @@ P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pi
 | B6 | Flake `PortalShell.test.tsx` và `tradeReplayEvents.test.tsx` | Ngoài diff; vòng này full chạy 1 lần là pass | `fix/*` riêng nếu cần |
 
 ## 4. Trạng thái
-
+| ID | Chủ | Trạng thái — cập nhật W6b 2026-09-25 (xem [W6B_P19_CLAUDE_2026-09-25.md](./W6B_P19_CLAUDE_2026-09-25.md)); trước đó R2 (head `c9dd195e`, baseline `bb25bf39`) |
 | ID | Chủ | Trạng thái 2026-09-24, kiểm lại R2 (head `c9dd195e`, baseline `bb25bf39`) |
 |---|---|---|
-| CG-P19-01 | Codex | OPEN |
-| CG-P19-02 | Codex | OPEN |
-| CG-P19-03 | Codex | OPEN (mở rộng R2: số probe mỗi version) |
-| CG-P19-04 | Codex | OPEN (mở rộng R2: rc theo attempt/pick) |
-| CG-P19-05 | Codex | OPEN (mở rộng R2: cert/OOS/decay theo attempt/pick) |
-| CG-P19-06 | Codex | OPEN |
-| CG-P19-07 | Codex | OPEN |
-| CG-P19-08 | Codex | OPEN |
-| CG-P19-09 | Codex | OPEN |
-| CG-P19-10 | Codex | OPEN (chặn exit gate DR-03) |
+| CG-P19-01 | Claude (W6b) | DELIVERED `6e7f4693` — fixtures healthy/partial/empty/bounded/problems, service-written, Zod+OpenAPI validated |
+| CG-P19-02 | Claude (W6b) | DELIVERED `6e7f4693` — ETag `"p19r2_…"` + 304; FE held copy |
+| CG-P19-03 | Claude (W6b) | DELIVERED `6e7f4693` — `presentation_kind` (rule `research.lineage-presentation.v1`), probe counts per version and overall |
+| CG-P19-04 | Claude (W6b) | DELIVERED `6e7f4693` — rc ref per attempt and per pick |
+| CG-P19-05 | Claude (W6b) | DELIVERED `6e7f4693` — `run_facts` cert/claim/OOS/decay (Run Library mapping; RS-02 selected-trial fallback labelled) |
+| CG-P19-06 | Claude (W6b) | DELIVERED `6e7f4693` — `exercised` (all attempts of the version) + `untried` (Engine Atlas) |
+| CG-P19-07 | Claude (W6b) | DELIVERED `6e7f4693` — version outcome rule, RF-03 supersession, attempt outcome sentence |
+| CG-P19-08 | Claude (W6b) | DELIVERED `6e7f4693` — `spec_label` text + declared space |
+| CG-P19-09 | Claude (W6b) | DELIVERED `6e7f4693` — newest window + signed `older_cursor`; FE "load older attempts" |
+| CG-P19-10 | Claude (W6b) | DECIDED (D-W6B-01, DR-03): pick writer = P22 governed approval of a sealed RC; until then typed `NOT_PUBLISHED` + `source_authority NOT_CONNECTED`; rc chip is the research-only representation |
 | CG-P19-11 | — | WITHDRAWN (frontend sửa ở `1fb29010`, audit A3) |
-| CG-P19-12 | Codex | OPEN |
-| CG-P19-13 | Codex | OPEN (thêm sau audit A6) |
-| CG-P19-14 | Codex | OPEN (thêm ở R2: status promotion cấp attempt) |
+| CG-P19-12 | Claude (W6b) | DECIDED — NOT_APPLICABLE (D-W6B-07): no Research telemetry sink exists; S10 emits no events |
+| CG-P19-13 | Claude (W6b) | DELIVERED `6e7f4693` — `counts_definitions` + PG reconciliation test with the Run Library |
+| CG-P19-14 | Claude (W6b) | DELIVERED `6e7f4693` — `promotion_state` PICKED/NOT_PICKED/AWAITING_PICK/CLOSED |
 | B1, B3–B6 | Bobby | Chờ quyết |
 | B2 | Bobby | Đã quyết 2026-09-24 (khớp hi-fi); `VD-P19-02`, `VD-P19-04` đã về hi-fi ở `9c4afb18` — đóng |

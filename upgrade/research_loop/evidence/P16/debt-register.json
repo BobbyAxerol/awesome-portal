@@ -2,31 +2,39 @@
   "schema_version": "research.phase-debt-register.v1",
   "phase": "P16",
   "audit_status": "ORIGINAL_PHASE_ACCEPTANCE_PENDING_RS02_RS03",
-  "in_scope_backend_debt": [
-    {
-      "id": "A10a",
-      "what": "expected artifact-byte verifier + durable receipt (freeze.service.ts NOT_ATTESTED)",
-      "owner": "Claude",
-      "wave": "W5"
-    },
-    {
-      "id": "A10b",
-      "what": "historical parameter binding by run adapter digest",
-      "owner": "Claude",
-      "wave": "W5"
-    },
-    {
-      "id": "A10c",
-      "what": "what-if 9x9 grid from existing evaluations + explicit bounded diagnostic job + sibling attempt (Bobby D2: must be built)",
-      "owner": "Claude",
-      "wave": "W5"
-    }
-  ],
+  "in_scope_backend_debt": [],
   "typed_source_boundaries": [
     "P16-A verifies exactly three Portal-retained bindings; PARTIAL_MATCH never attests source artifact bytes, source wall-clock ordering, selection or what-if evaluation.",
     "Current P04 is fixed-parameter and publishes no candidate/study/trial/selection artifact, causal method timestamps, diagnostic grid/job or sibling-draft relation.",
     "Screen-07 frontend browser/product receipt remains Claude-owned while FEATURE_RESEARCH_FREEZE=false."
   ],
   "rollback": "Disable FEATURE_RESEARCH_FREEZE through signed deployment; retain immutable P10/P14 facts and add no cleanup action.",
-  "reviewed": "2026-09-25 · Claude (A12/GX correction: registers previously claimed zero debt while Astra A09–A12 were open)"
+  "reviewed": "2026-09-25 · Claude — W5a/W5b closed the in-scope P16/P17 debt",
+  "closed_debt": [
+    {
+      "id": "A10a",
+      "what": "expected artifact-byte verification with durable MATCH/MISMATCH receipts; corrupt bytes block, never rebaseline",
+      "commit": "91ba9639 (merge f0a3bcd6)"
+    },
+    {
+      "id": "A10b",
+      "what": "historical parameter binding by the run's exact adapter/profile digest; unregistered digest fails closed",
+      "commit": "b8c5a0d8"
+    },
+    {
+      "id": "A10c",
+      "what": "9x9 what-if grid from exact evaluations + one bounded diagnostic job; sibling attempt to Screen 02 with SIBLING_OF lineage",
+      "commit": "f4cd0f64, f21eb980"
+    },
+    {
+      "id": "DR-02",
+      "what": "one server-owned bound-warning definition for Search/Freeze",
+      "commit": "b8c5a0d8"
+    },
+    {
+      "id": "P16-T02/T11",
+      "what": "per-fold causal verdict (NOT_CAUSAL_GLOBAL_SELECTION, never PASS); audit target equals the frozen selection's generation child",
+      "commit": "06995a6f"
+    }
+  ]
 }

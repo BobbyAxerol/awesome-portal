@@ -17,6 +17,7 @@
  */
 
 import { Component, lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { LineageLink, lineageHref } from "./LineageLink";
 import { Link } from "react-router-dom";
 
 import { releaseCandidateHref } from "./releaseCandidateClient";
@@ -671,6 +672,15 @@ function RunHeader({
           ) : (
             <Withheld availability={identity.binding.availability} what="binding" />
           )}
+          {isAvailable(identity.binding.availability) && identity.binding.alpha_id ? (
+            <LineageLink
+              to={lineageHref(identity.binding.alpha_id, { av: identity.binding.alpha_version_id })}
+              className="mono text-[10.5px]"
+              action="open-lineage"
+            >
+              attempt lineage →
+            </LineageLink>
+          ) : null}
         </>
       ) : null}
 

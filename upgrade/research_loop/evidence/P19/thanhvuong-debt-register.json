@@ -11,8 +11,9 @@
       "what": "promotion rule reads 'Only the ACTIVE attempt promotes' verbatim, but lineageStatus maps every attempt of the ACTIVE version to ACTIVE (3 in the probe fixture)",
       "class": "field-driven",
       "owner": "Codex (CG-P19-14), then Bobby",
-      "state": "BLOCKED_ON_BACKEND",
-      "evidence": "PROMOTION_RULE (:70), lineageStatus (:147), U44/U49; probe r2 filter groups ACTIVE 3"
+      "state": "RESOLVED",
+      "evidence": "PROMOTION_RULE (:70), lineageStatus (:147), U44/U49; probe r2 filter groups ACTIVE 3",
+      "resolution": "W6b: contract 1.1.0 fields rendered (probe split, rc, cert/OOS/decay, exercised/untried, outcome, spec line, promotion_state)"
     },
     {
       "id": "S10-CERT-NOT-PUBLISHED",
@@ -59,8 +60,9 @@
       "what": "hi-fi cells with no contract field kept in place as typed absence: probe counts and storied/probe rows, rc chip and pick 'gate' line, cert/OOS/claim/decay/verdict, exercised/untried, outcome, card spec line and narrative, run label R-WFO-118, symbol/timeframe breadcrumb, short ids",
       "class": "field-driven",
       "owner": "Codex (CG-P19-03…08, 14)",
-      "state": "BLOCKED_ON_BACKEND",
-      "evidence": "receipt §13.4; backend requests"
+      "state": "RESOLVED",
+      "evidence": "receipt §13.4; backend requests",
+      "resolution": "W6b: contract 1.1.0 fields rendered (probe split, rc, cert/OOS/decay, exercised/untried, outcome, spec line, promotion_state)"
     }
   ],
   "resolved_in_phase": [
@@ -163,73 +165,93 @@
   "backend_requests": [
     {
       "id": "CG-P19-01",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-01",
-      "what": "canonical P19 fixture (healthy/partial/empty/bounded + Problem)"
+      "what": "canonical P19 fixture (healthy/partial/empty/bounded + Problem)",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-02",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-02",
-      "what": "ETag/304 on GET lineage or confirmation it is intentionally absent"
+      "what": "ETag/304 on GET lineage or confirmation it is intentionally absent",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-03",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-03",
-      "what": "storied/probe classification by the server, or confirmation there is none — R2: plus probe count per version"
+      "what": "storied/probe classification by the server, or confirmation there is none — R2: plus probe count per version",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-04",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-04",
-      "what": "release-candidate ref on attempt/pick (rc chip, 'gate R1 next') — R2: per attempt and per pick"
+      "what": "release-candidate ref on attempt/pick (rc chip, 'gate R1 next') — R2: per attempt and per pick",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-05",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-05",
-      "what": "cert/OOS/decay mini-metrics or a typed link to the report contract — R2: per attempt and per pick"
+      "what": "cert/OOS/decay mini-metrics or a typed link to the report contract — R2: per attempt and per pick",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-06",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-06",
-      "what": "exercised/untried (routes, modes, param ranges) on the version"
+      "what": "exercised/untried (routes, modes, param ranges) on the version",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-07",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-07",
-      "what": "outcome / why-superseded text"
+      "what": "outcome / why-superseded text",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-08",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-08",
-      "what": "spec line / config label built server-side"
+      "what": "spec line / config label built server-side",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-09",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-09",
-      "what": "paging/cursor beyond 128 and ordering: today the oldest 128 are returned and the newest are cut"
+      "what": "paging/cursor beyond 128 and ordering: today the oldest 128 are returned and the newest are cut",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-10",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DECIDED (D-W6B-01, DR-03)",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-10",
-      "what": "DR-03 source-attested promotion pick: owner and roadmap (today NOT_PUBLISHED everywhere)"
+      "what": "DR-03 source-attested promotion pick: owner and roadmap (today NOT_PUBLISHED everywhere)",
+      "closed_by": "W6b decision record",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-11",
@@ -240,24 +262,30 @@
     },
     {
       "id": "CG-P19-12",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DECIDED_NOT_APPLICABLE (D-W6B-07)",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-12",
-      "what": "telemetry sink for spec 10 §12 events"
+      "what": "telemetry sink for spec 10 §12 events",
+      "closed_by": "W6b decision record",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-13",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-13",
-      "what": "definition table reconciling lineage.counts with the Run Library's alpha grouping (which runs/attempts each count includes), so the Unified test 'counts reconcile Library definitions' can run; or confirmation counts are self-contained"
+      "what": "definition table reconciling lineage.counts with the Run Library's alpha grouping (which runs/attempts each count includes), so the Unified test 'counts reconcile Library definitions' can run; or confirmation counts are self-contained",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     },
     {
       "id": "CG-P19-14",
-      "owner": "Codex",
-      "state": "OPEN",
+      "owner": "Claude (W6b)",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-14",
-      "what": "attempt-level promotion status (or version-level promoted_attempt_id) so 'Only the ACTIVE attempt promotes' names one attempt; or confirmation the concept is version-level"
+      "what": "attempt-level promotion status (or version-level promoted_attempt_id) so 'Only the ACTIVE attempt promotes' names one attempt; or confirmation the concept is version-level",
+      "closed_by": "6e7f4693 (backend) + cbca8dde (Screen 10)",
+      "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md"
     }
   ],
   "source_capability_blocked": [],
@@ -272,14 +300,16 @@
     {
       "id": "P19-FE-DG-02",
       "owner": "Thanhvuong",
-      "state": "BLOCKED_ON_FEATURE_FLAG",
-      "what": "REAL_API_E2E_RECEIPT for S10 once FEATURE_RESEARCH_LINEAGE (+ RUN_LIBRARY) is on in a preview lane; PUBLISHED pick branch needs CG-P19-10"
+      "state": "PARTLY_DONE",
+      "what": "REAL_API_E2E_RECEIPT for S10 once FEATURE_RESEARCH_LINEAGE (+ RUN_LIBRARY) is on in a preview lane; PUBLISHED pick branch needs CG-P19-10",
+      "resolution": "W6b: real-API W6b S10 block passes through a read-only shim of this tree against the preview DB; the preview binary itself still serves contract 1.0"
     },
     {
       "id": "P19-FE-DG-03",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "what": "axe (not in lock file); spec 10 T12"
+      "state": "RUN",
+      "what": "axe (not in lock file); spec 10 T12",
+      "resolution": "W6b: axe 0 blocking on real data at 1440/660 (D-B1 exception only)"
     },
     {
       "id": "P19-FE-DG-04",
@@ -296,8 +326,9 @@
     {
       "id": "P19-FE-DG-06",
       "owner": "Thanhvuong",
-      "state": "BLOCKED_ON_BACKEND",
-      "what": "load canonical fixtures in S10-U* and the probe once CG-P19-01 lands; run spec T01/T10 against the 52-attempt fixture"
+      "state": "RESOLVED",
+      "what": "load canonical fixtures in S10-U* and the probe once CG-P19-01 lands; run spec T01/T10 against the 52-attempt fixture",
+      "resolution": "W6b: lineageDetail.w6b.test.tsx loads the canonical fixtures"
     }
   ],
   "known_flake_note": "probe-only flake: 'fix-hypothesis stacked grid @660' timed out once in the audit's full pass and passed alone; passed in both A-fix passes (test-results known_flake)",
@@ -309,5 +340,10 @@
       "a hi-fi cell with no field keeps the hi-fi position and shape, renders a typed absence, and gets a CG-PXX-NN request",
       "new debt created while doing P20 and later goes into both the phase handoff and Unified"
     ]
+  },
+  "w6b": {
+    "date": "2026-09-25",
+    "record": "upgrade/research_loop/evidence/P19/W6B_P19_CLAUDE_2026-09-25.md",
+    "backend_commit": "6e7f4693"
   }
 }

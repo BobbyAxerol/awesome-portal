@@ -105,7 +105,7 @@ function pickPublished(attempt: string, run: string) {
   } as const;
 }
 
-function version(id: string, label: string, state: LineageVersion["lifecycle_state"], pick: LineageVersion["promotion_pick"] = PICK_ABSENT_FACT): LineageVersion {
+function version(id: string, label: string, state: LineageVersion["lifecycle_state"], pick: unknown = PICK_ABSENT_FACT): LineageVersion {
   return {
     alpha_version_id: id,
     label,
@@ -114,7 +114,7 @@ function version(id: string, label: string, state: LineageVersion["lifecycle_sta
     lifecycle_state: state,
     registered_at_utc_ms: T0,
     promotion_pick: pick,
-  };
+  } as unknown as LineageVersion;
 }
 
 const V1 = "alphaver_092";
@@ -122,7 +122,7 @@ const V2 = "alphaver_093";
 
 function attempt(
   id: string,
-  over: Partial<LineageAttempt> & { minute?: number } = {},
+  over: Partial<Record<keyof LineageAttempt, unknown>> & { minute?: number } = {},
 ): LineageAttempt {
   const { minute = 0, ...rest } = over;
   return {
@@ -157,7 +157,7 @@ function attempt(
       availability: np("P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"),
     },
     ...rest,
-  };
+  } as unknown as LineageAttempt;
 }
 
 const diffOf = (changes: LineageAttempt["semantic_diff"]["changes"], gates = false): LineageAttempt["semantic_diff"] => ({
@@ -253,7 +253,7 @@ function sixAttempts(): LineageAttempt[] {
   ];
 }
 
-function lineage(over: Partial<Lineage> & { attempts?: LineageAttempt[] } = {}): Lineage {
+function lineage(over: Partial<Record<keyof Lineage, unknown>> & { attempts?: LineageAttempt[] } = {}): Lineage {
   const attempts = over.attempts ?? sixAttempts();
   return {
     schema_version: "research.attempt-lineage.v1",
@@ -288,7 +288,7 @@ function lineage(over: Partial<Lineage> & { attempts?: LineageAttempt[] } = {}):
     source_absences: { promotion_pick: AVAILABLE, historical_semantic_diff: AVAILABLE },
     as_of_utc_ms: T0 + 100 * MIN,
     ...over,
-  };
+  } as unknown as Lineage;
 }
 
 /** 120 attempts over two bands, for the window. */
@@ -645,7 +645,7 @@ describe("S10 Attempt Lineage — the screen", () => {
 
   it("S10-U17 keeps a missing promotion pick as a typed source gap and picks nothing", async () => {
     const body = lineage();
-    body.alpha.versions = body.alpha.versions.map((v) => ({ ...v, promotion_pick: PICK_ABSENT_FACT }));
+    body.alpha.versions = body.alpha.versions.map((v) => ({ ...v, promotion_pick: PICK_ABSENT_FACT })) as unknown as LineageVersion[];
     body.source_absences = { ...body.source_absences, promotion_pick: np("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK") };
     server([{ status: 200, body }]);
     renderRoute();
@@ -678,7 +678,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     const attempts = sixAttempts().slice(0, 3);
     const body = lineage({ attempts });
     body.counts = { ...body.counts, total_attempts: 200, returned_attempts: 3 };
-    body.coverage = { state: "PARTIAL", reason_code: "P19_BOUNDED_GRAPH_LIMIT_REACHED", oldest_returned_created_at_utc_ms: T0 };
+    body.coverage = { state: "PARTIAL", reason_code: "P19_BOUNDED_GRAPH_LIMIT_REACHED", oldest_returned_created_at_utc_ms: T0 } as unknown as Lineage["coverage"];
     server([{ status: 200, body }]);
     renderRoute();
     await ready();
@@ -810,8 +810,9 @@ describe("S10 Attempt Lineage — the screen", () => {
     renderRoute();
     await ready();
     expect(panel("rules").textContent).toContain(LINEAGE_RULES);
-    expect(panel("promotion-rule").textContent).toBe(`promotion rule${PROMOTION_RULE}`);
-    const counts = [...panel("counts").querySelectorAll("[data-count]")].map((c) => [c.getAttribute("data-count"), c.querySelector(".n")?.textContent]);
+    expect(panel("promotion-rule").querySelector("p")?.textContent).toBe(PROMOTION_RULE);
+    const counts = [...panel("counts").querySelectorAll("[data-count]")].map((c) => [c.getAttribute("data-count"), c.querySelector(".n")?.textContent ?? null]);
+    /* A pre-1.1 server has no storied/probe split: those two say so, never 0. */
     expect(counts).toEqual([
       ["total_attempts", "6"],
       ["returned_attempts", "6"],
@@ -821,20 +822,26 @@ describe("S10 Attempt Lineage — the screen", () => {
       ["abandoned_attempts", "1"],
       ["child_runs", "1"],
       ["technical_retries", "3"],
+      ["storied_returned", null],
+      ["probe_returned", null],
     ]);
+    expect(panel("counts").querySelector('[data-count="probe_returned"]')?.textContent).toContain("not published");
     expect(panel("header").querySelector("[data-subtitle]")?.textContent).toBe(LINEAGE_SUBTITLE);
     expect(panel("counts").querySelector("[data-read-authority]")?.textContent).toContain("PORTAL_PERSISTED_RESEARCH");
     expect(panel("header").querySelector("[data-source-chip]")?.getAttribute("title")).toContain("PORTAL_PERSISTED_RESEARCH");
   });
 
-  it("S10-U27 names every hi-fi cell the contract does not carry instead of inventing it", async () => {
+  it("S10-U27 a server older than contract 1.1.0 leaves every W6b cell a typed absence, never an invented value", async () => {
     server();
     renderRoute();
     await ready();
     const root = panel("root");
-    /* outcome ×2 bands, exercised ×2 bands, untried ×1 */
-    expect(within(root).getAllByText(NOT_IN_CONTRACT).length).toBe(5);
+    /* outcome ×2 bands, exercised ×2 bands, untried ×1 — each names the missing contract, not a guess. */
+    expect(within(root).getAllByText("P19_SERVER_PREDATES_LINEAGE_CONTRACT_1_1").length).toBeGreaterThanOrEqual(5);
     expect(root.querySelectorAll("[data-outcome] [data-absent=outcome]")).toHaveLength(2);
+    expect(root.querySelectorAll('[data-exercised="NOT_PUBLISHED"]')).toHaveLength(2);
+    expect(root.querySelector('[data-untried="NOT_PUBLISHED"]')).toBeTruthy();
+    expect(NOT_IN_CONTRACT).toBe("not a field of the lineage contract");
     /* W5c: the active version's published pick names a run, so "rc & publish →" opens Screen 11 for it. */
     const rc = root.querySelector('[data-action="release-candidate"]') as HTMLElement;
     expect(rc.tagName).toBe("A");
@@ -842,7 +849,10 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(root.querySelector('[data-action-unrouted="release-candidate"]')).toBeNull();
     expect(root.querySelector('[data-action="runs"]')?.getAttribute("href")).toBe(`/research/quantbt/runs?group=1&alpha=${ALPHA}`);
     expect(root.querySelector('[data-action="declare-at-new-run"]')?.getAttribute("href")).toBe("/research/quantbt/runs/new");
-    expect(panel("selected").querySelector('[data-row-key="certification · OOS · decay"]')?.textContent).toBe(NOT_IN_CONTRACT);
+    for (const key of ["OOS sharpe", "decay", "cert"]) {
+      expect(panel("selected").querySelector(`[data-row-key="${key}"]`)?.textContent, key).toMatch(/not published/);
+      expect(panel("selected").querySelector(`[data-row-key="${key}"]`)?.textContent, key).not.toMatch(/\b0\b/);
+    }
     expect(panel("selected").querySelector("[data-verdict] [data-absent=verdict]")).toBeTruthy();
     expect(node("att_01").querySelector("[data-cert-absent]")?.textContent).toBe("cert not published");
   });
@@ -1223,7 +1233,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(panel("diff").querySelector("h3")?.textContent).toBe("diff vs parent — config keys only");
   });
 
-  it("S10-U50 the probe toggle keeps the hi-fi's place and shape but is disabled with its reason and no invented count", async () => {
+  it("S10-U50 against a pre-1.1 server the probe toggle keeps the hi-fi's place and shape but is disabled with its reason and no invented count", async () => {
     const { calls } = server();
     renderRoute();
     await ready();
@@ -1234,9 +1244,9 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(toggle.disabled).toBe(true);
     expect(toggle.textContent).toBe("show probe attempts");
     expect(toggle.textContent).not.toMatch(/\d/);
-    expect(toggle.getAttribute("title")).toBe("probe classification not published by the lineage contract (CG-P19-03)");
+    expect(toggle.getAttribute("title")).toBe("probe classification not published by this server (P19_SERVER_PREDATES_LINEAGE_CONTRACT_1_1)");
     expect(toggle.getAttribute("aria-label")).toContain(PROBES_REASON);
-    expect(toggle.getAttribute("data-reason-code")).toBe("CG-P19-03");
+    expect(toggle.getAttribute("data-reason-code")).toBe("P19_SERVER_PREDATES_LINEAGE_CONTRACT_1_1");
     const before = counter();
     fireEvent.click(toggle);
     expect(counter()).toBe(before);

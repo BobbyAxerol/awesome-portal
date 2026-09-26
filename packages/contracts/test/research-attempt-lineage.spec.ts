@@ -28,6 +28,32 @@ describe("P19 published Research Attempt Lineage contract", () => {
     expect(document).toContain("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK");
   });
 
+  it("W6b 1.1.0: revalidation, an opaque older-page cursor and the additive P19 facts are published", () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      info: { version: string };
+      paths: Record<string, { get: { responses: Record<string, unknown>; parameters: Array<{ $ref: string }> } }>;
+    };
+    expect(openApi.info.version).toBe("1.1.0");
+    const get = openApi.paths["/api/v1/research/alphas/{alphaId}/lineage"]!.get;
+    expect(Object.keys(get.responses)).toContain("304");
+    expect(get.parameters.map((parameter) => parameter.$ref)).toContain("#/components/parameters/LineageCursor");
+    const generated = readFileSync(generatedPath, "utf8");
+    for (const needle of [
+      "lineage_revision", "older_cursor", "presentation_kind", "promotion_state", "spec_label", "ReleaseCandidateRef",
+      "RunFacts", "RS02_RETAINED_SELECTED_TRIAL", "exercised", "untried", "supersession", "counts_definitions",
+      "P22_RELEASE_CANDIDATE_APPROVAL", "execution_profile_id",
+    ]) expect(generated).toContain(needle);
+  });
+
+  it("CG-P19-01 publishes healthy/partial/empty/bounded fixtures and typed problems", () => {
+    const fixture = (name: string) => JSON.parse(readFileSync(join(ROOT, "fixtures", `research-attempt-lineage.${name}.valid.json`), "utf8"));
+    expect(fixture("healthy").coverage.state).toBe("COMPLETE");
+    expect(fixture("partial").coverage).toMatchObject({ state: "PARTIAL", window: "OLDER_PAGE" });
+    expect(fixture("empty").attempts).toEqual([]);
+    expect(fixture("bounded").counts).toMatchObject({ returned_attempts: 128, total_attempts: 140 });
+    expect(Object.keys(fixture("problems"))).toEqual(["400", "401", "403", "404", "503"]);
+  });
+
   it("does not expose a write, source/worker transport or promotion heuristic", () => {
     const document = readFileSync(openApiPath, "utf8");
     for (const forbidden of [

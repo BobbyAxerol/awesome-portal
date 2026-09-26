@@ -583,7 +583,12 @@ export class ResearchRunLibraryService {
     });
   }
 
-  private mapRow(row: RunLibraryRow): ResearchRunLibraryItem {
+  /**
+   * One Library row as Screen 01 shows it.  Public for the P19 lineage reader
+   * (W6b CG-P19-05/13): Screen 10's per-attempt certificate, claim, OOS
+   * Sharpe, decay and rc are this exact mapping, so 01 and 10 cannot disagree.
+   */
+  mapRow(row: RunLibraryRow): ResearchRunLibraryItem {
     const requested = this.requestedSpec(row.requested_spec);
     const progress = this.progress(row.progress_snapshot);
     const source = sourceAvailability(row, progress);

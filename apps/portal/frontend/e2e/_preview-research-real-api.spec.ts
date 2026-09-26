@@ -235,10 +235,17 @@ for (const [name, width, height] of VIEWPORTS) {
       if (screenId === "S08") {
         const replay = await read("replay");
         await expect(page.locator("[data-route-id]").first()).toContainText("signal_notional");
-        await expect(page.locator("[data-sample-ledger='retained']")).toBeVisible();
+        // A seal retained after W5b carries the replay ledger (candles + per-bar
+        // account facts): the screen replays candles. An older seal keeps the
+        // retained sample ledger.
+        if (replay.execution) {
+          expect(await page.locator("[data-candle-row]").count(), "S08 replays the retained candles").toBeGreaterThan(0);
+        } else {
+          await expect(page.locator("[data-sample-ledger='retained']")).toBeVisible();
+        }
         for (const key of ["orders", "fills", "candles"] as const) {
-          const reason = replay.route_capabilities[key].reason_code as string;
-          expect(html, `S08 ${key} carries the retained reason`).toContain(reason);
+          const capability = replay.route_capabilities[key] as { state?: string; reason_code?: string | null };
+          if (capability.reason_code) expect(html, `S08 ${key} carries the retained reason`).toContain(capability.reason_code);
         }
       }
 
@@ -564,4 +571,96 @@ for (const [name, width, height] of VIEWPORTS) {
     const noise = explainedNoise(observed, { RESEARCH_COMPARE_UNAVAILABLE: /unavailable|did not answer/i }, await root.innerText());
     expect(noise, `S13 console:\n${observed.noise.join("\n")}`).toEqual([]);
   });
+}
+
+/**
+ * W6b · Screen 10 on lineage contract 1.1.0 (CG-P19-01…14), per seeded run.
+ *
+ * For the P04 run and the Delta WFO run, the page opened on that run's
+ * attempt must print exactly what the lineage API served in the same
+ * session: the spec line, claim, OOS Sharpe and decay (exact value in
+ * `data-metric-value`, never a digit from null), cert, execution profile,
+ * promotion standing, storied/probe, the version outcome, exercised and
+ * untried, the counter — and the ETag must revalidate as `304`. When the
+ * answering server predates 1.1.0 these checks are skipped by name rather
+ * than weakened.
+ */
+const W6B_VIEWPORTS = [
+  ["1440", 1440, 900],
+  ["660", 660, 900],
+] as const;
+const PROMOTION_WORDS: Record<string, string> = {
+  PICKED: "promotion pick",
+  NOT_PICKED: "not the pick",
+  AWAITING_PICK: "awaiting a published pick",
+  CLOSED: "promotion closed",
+};
+
+for (const [name, width, height] of W6B_VIEWPORTS) {
+  for (const [label, run] of RC_RUNS) {
+    test(`W6b S10 ${label} attempt on real lineage at ${name}`, async ({ page }) => {
+      const observed = observe(page);
+      await page.setViewportSize({ width, height });
+      await signIn(page);
+      const response = await page.request.get(`/api/v1/research/alphas/${ALPHA}/lineage`);
+      expect(response.status()).toBe(200);
+      const api = (await response.json()) as any;
+      test.skip(!api.presentation_rule, "the answering server predates lineage contract 1.1.0");
+      const etag = response.headers()["etag"];
+      // Behind the portal-web nginx (gzip) the validator arrives weak (W/"…");
+      // the server accepts a weak If-None-Match, so compare the opaque value.
+      expect(etag?.replace(/^W\//, "")).toBe(api.etag);
+      const revalidated = await page.request.get(`/api/v1/research/alphas/${ALPHA}/lineage`, { headers: { "if-none-match": etag! } });
+      expect(revalidated.status(), "CG-P19-02 revalidation").toBe(304);
+
+      const node = api.attempts.find((attempt: any) => attempt.primary_run.run_id === run);
+      expect(node, `${label} run ${run} is an attempt of ${ALPHA}`).toBeTruthy();
+      await page.goto(`/research/quantbt/alphas/${ALPHA}/lineage?attempt=${node.attempt_id}`);
+      const root = page.locator("[data-screen='attempt-lineage']");
+      await expect(root).toHaveAttribute("data-lineage-state", /available|partial/, { timeout: 20_000 });
+      await page.waitForLoadState("networkidle");
+      const selected = root.locator("[data-panel='selected']");
+      await expect(selected).toHaveAttribute("data-selected-attempt", node.attempt_id);
+      const row = (key: string) => selected.locator(`[data-row-key='${key}']`);
+      await expect(row("mode × schedule")).toHaveText(node.spec_label.text);
+      await expect(row("execution profile")).toHaveText(node.primary_run.execution_profile_id);
+      await expect(row("promotion")).toHaveText(PROMOTION_WORDS[node.promotion_state]!);
+      await expect(row("presentation")).toContainText(node.presentation_kind.toLowerCase());
+      if (node.run_facts.claim.state) await expect(row("claim")).toHaveText(node.run_facts.claim.state);
+      if (node.run_facts.certificate.grade) await expect(row("cert")).toHaveText(node.run_facts.certificate.grade);
+      else await expect(row("cert")).toContainText(node.run_facts.certificate.availability.reason_code);
+      for (const [key, fact] of [["OOS sharpe", node.run_facts.oos_sharpe], ["decay", node.run_facts.decay]] as const) {
+        const metric = row(key).locator("[data-metric]");
+        if (fact.value !== null) {
+          await expect(metric).toHaveAttribute("data-metric-value", fact.value);
+          await expect(metric).toContainText(Number(fact.value).toFixed(3));
+        } else {
+          await expect(metric).toHaveAttribute("data-metric-state", fact.availability.state);
+          expect(await metric.innerText(), `${key} prints no digit for a null`).not.toMatch(/\d/);
+        }
+      }
+      /* The card of this attempt; a probe opens the probes (spec T04). */
+      const card = root.locator(`[data-attempt='${node.attempt_id}']`);
+      await expect(card).toBeVisible();
+      if (node.presentation_kind === "PROBE") {
+        await expect(root.locator("[data-action='toggle-probes']")).toHaveAttribute("aria-pressed", "true");
+      }
+      const version = api.alpha.versions.find((item: any) => item.alpha_version_id === node.alpha_version_id);
+      const band = root.locator(`[data-band='${version.alpha_version_id}']`);
+      if (version.outcome.text) await expect(band.locator(".ln-out")).toHaveText(version.outcome.text);
+      await expect(band.locator("[data-exercised-routes]")).toHaveText(version.exercised.routes.join(" · "));
+      await expect(band.locator("[data-exercised-modes]")).toHaveText(version.exercised.modes.join(" · "));
+      const active = api.alpha.versions.find((item: any) => item.lifecycle_state === "ACTIVE");
+      if (active?.untried.routes.length) {
+        await expect(root.locator("[data-untried-routes]")).toHaveText(active.untried.routes.map((route: any) => route.route_id).join(" · "));
+      }
+      await expect(root.locator("[data-counter]")).toContainText(`of ${api.counts.returned_attempts} attempts`);
+      await expect(root.locator("[data-count='probe_returned'] .n")).toHaveText(String(api.counts.probe_returned));
+      await expect(root.locator("[data-promotion-standing]")).toBeVisible();
+      expect(await axeBlocking(page, "[data-screen='attempt-lineage']")).toEqual([]);
+      await finish(page, `W6b-S10-${label}-${name}`, observed, { attempt: node.attempt_id, etag, promotion_state: node.promotion_state });
+      expect(observed.failures, "S10 failed reads").toEqual([]);
+      expect(observed.noise, `S10 console:\n${observed.noise.join("\n")}`).toEqual([]);
+    });
+  }
 }

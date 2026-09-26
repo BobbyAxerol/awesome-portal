@@ -1,0 +1,1202 @@
+{
+  "schema_version": "research.attempt-lineage.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "alpha": {
+    "alpha_id": "alpha-p19",
+    "name": "Momentum BTC",
+    "active_version_id": "av-p19-momentum-0-9-3",
+    "active_version_state": "ACTIVE",
+    "active_version_availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "versions": [
+      {
+        "alpha_version_id": "av-p19-momentum-0-9-2",
+        "label": "av_0_9_2",
+        "code_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "entrypoint": "strategy:main",
+        "lifecycle_state": "SUPERSEDED",
+        "registered_at_utc_ms": 1789948800000,
+        "promotion_pick": {
+          "state": "NOT_PUBLISHED",
+          "attempt_id": null,
+          "run_id": null,
+          "source_contract_rev": null,
+          "source_digest": null,
+          "source_as_of_utc_ms": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
+          "source_authority": {
+            "owner": "P22_RELEASE_CANDIDATE_APPROVAL",
+            "state": "NOT_CONNECTED"
+          },
+          "release_candidate": null,
+          "release_candidate_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          }
+        },
+        "outcome": {
+          "text": "best cert C · promote closed",
+          "rule": "research.lineage-version-outcome.v1",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "supersession": {
+          "state": "RECORDED",
+          "superseded_by_version_id": "av-p19-momentum-0-9-3",
+          "superseded_by_label": "av_0_9_3",
+          "reason_code": null
+        },
+        "exercised": {
+          "routes": [
+            "signal_notional"
+          ],
+          "modes": [
+            "mode_1_decay × global",
+            "mode_1_decay × per_fold_decay"
+          ],
+          "param_ranges": [
+            {
+              "name": "entry_z",
+              "kind": "SWEEP",
+              "low": "0.6",
+              "high": "2.6",
+              "values": []
+            },
+            {
+              "name": "fee_bps",
+              "kind": "PIN",
+              "low": "4",
+              "high": "4",
+              "values": []
+            },
+            {
+              "name": "window",
+              "kind": "SWEEP",
+              "low": "12",
+              "high": "72",
+              "values": []
+            }
+          ],
+          "attempts_considered": 2,
+          "attempts_without_manifest": 0,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "untried": {
+          "routes": [
+            {
+              "route_id": "intrabar_bracket",
+              "status_word": "SUPPORTED"
+            },
+            {
+              "route_id": "dca_ladder",
+              "status_word": "LEGACY"
+            }
+          ],
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "presentation": {
+          "storied": 1,
+          "probe": 1,
+          "basis": "RETURNED_ATTEMPTS"
+        }
+      },
+      {
+        "alpha_version_id": "av-p19-momentum-0-9-3",
+        "label": "av_0_9_3",
+        "code_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "entrypoint": "strategy:main",
+        "lifecycle_state": "ACTIVE",
+        "registered_at_utc_ms": 1789948800000,
+        "promotion_pick": {
+          "state": "PUBLISHED",
+          "attempt_id": "att_04",
+          "run_id": "run-att_04",
+          "source_contract_rev": "p22.release-approval.v1",
+          "source_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+          "source_as_of_utc_ms": 1790046000000,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          },
+          "source_authority": {
+            "owner": "P22_RELEASE_CANDIDATE_APPROVAL",
+            "state": "CONNECTED"
+          },
+          "release_candidate": {
+            "kind": "ACTOR_DRAFT",
+            "release_candidate_id": null,
+            "draft_id": "rcd_01JB2C3D4E5F6G7H8J9KMNPQRS",
+            "run_id": "run-att_04",
+            "delivery_state": null,
+            "approval_state": null,
+            "sealed_at_utc_ms": null
+          },
+          "release_candidate_availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "outcome": {
+          "text": "best cert B · rc_ draft · pick att_04",
+          "rule": "research.lineage-version-outcome.v1",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "supersession": {
+          "state": "NOT_APPLICABLE",
+          "superseded_by_version_id": null,
+          "superseded_by_label": null,
+          "reason_code": "P19_VERSION_NOT_SUPERSEDED"
+        },
+        "exercised": {
+          "routes": [
+            "signal_notional"
+          ],
+          "modes": [
+            "mode_1_decay × global",
+            "mode_1_decay × per_fold_causal"
+          ],
+          "param_ranges": [
+            {
+              "name": "entry_z",
+              "kind": "SWEEP",
+              "low": "0.6",
+              "high": "2.6",
+              "values": []
+            },
+            {
+              "name": "fee_bps",
+              "kind": "PIN",
+              "low": "4",
+              "high": "4",
+              "values": []
+            },
+            {
+              "name": "window",
+              "kind": "SWEEP",
+              "low": "12",
+              "high": "96",
+              "values": []
+            }
+          ],
+          "attempts_considered": 4,
+          "attempts_without_manifest": 1,
+          "availability": {
+            "state": "PARTIAL",
+            "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE"
+          }
+        },
+        "untried": {
+          "routes": [
+            {
+              "route_id": "intrabar_bracket",
+              "status_word": "SUPPORTED"
+            },
+            {
+              "route_id": "dca_ladder",
+              "status_word": "LEGACY"
+            }
+          ],
+          "availability": {
+            "state": "PARTIAL",
+            "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE"
+          }
+        },
+        "presentation": {
+          "storied": 2,
+          "probe": 3,
+          "basis": "RETURNED_ATTEMPTS"
+        }
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "attempt_id": "att_01",
+      "parent_attempt_id": null,
+      "parent_state": "ROOT",
+      "alpha_version_id": "av-p19-momentum-0-9-2",
+      "alpha_version_label": "av_0_9_2",
+      "state": "READY",
+      "intent_kind": "NEW",
+      "relation_to_parent": null,
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035260000,
+      "updated_at_utc_ms": 1790038860000,
+      "primary_run": {
+        "run_id": "run-att_01",
+        "state": "READY",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 0,
+        "execution_profile_id": "p04.fixed-qualification.v1"
+      },
+      "child_runs": [],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "ROOT",
+        "changes": [],
+        "gates_reset": false,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "STORIED",
+      "presentation_reasons": [
+        "VERSION_FIRST_ATTEMPT"
+      ],
+      "promotion_state": "CLOSED",
+      "promotion_reason_code": "P19_VERSION_NOT_ACTIVE_PROMOTION_CLOSED",
+      "spec_label": {
+        "text": "signal_notional · mode_1_decay × global",
+        "space": {
+          "parameters": 3,
+          "swept": 2,
+          "pinned": 1
+        },
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": "C",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "claim": {
+          "state": "ISSUED",
+          "text": "Retrospective claim only — the schedule capped it at C.",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "oos_sharpe": {
+          "value": "0.7440081232022494",
+          "source": "P13_EVIDENCE_PROJECTION",
+          "scope": "OOS",
+          "definition_id": "research.metric.v3.oos_sharpe",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT"
+          }
+        }
+      },
+      "outcome": {
+        "text": "Retrospective claim only — the schedule capped it at C.",
+        "source": "SOURCE_CLAIM_SENTENCE",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      }
+    },
+    {
+      "attempt_id": "att_02",
+      "parent_attempt_id": "att_01",
+      "parent_state": "RETURNED",
+      "alpha_version_id": "av-p19-momentum-0-9-2",
+      "alpha_version_label": "av_0_9_2",
+      "state": "READY",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "relation_to_parent": null,
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035320000,
+      "updated_at_utc_ms": 1790038920000,
+      "primary_run": {
+        "run_id": "run-att_02",
+        "state": "READY",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 0,
+        "execution_profile_id": "p04.fixed-qualification.v1"
+      },
+      "child_runs": [],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "AVAILABLE",
+        "changes": [
+          {
+            "path": "optimization.effective_schedule",
+            "kind": "CONFIG",
+            "before": "global",
+            "after": "per_fold_decay"
+          },
+          {
+            "path": "optimization_schedule",
+            "kind": "CONFIG",
+            "before": "global",
+            "after": "per_fold_decay"
+          }
+        ],
+        "gates_reset": false,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "PROBE",
+      "presentation_reasons": [],
+      "promotion_state": "CLOSED",
+      "promotion_reason_code": "P19_VERSION_NOT_ACTIVE_PROMOTION_CLOSED",
+      "spec_label": {
+        "text": "signal_notional · mode_1_decay × per_fold_decay",
+        "space": {
+          "parameters": 3,
+          "swept": 2,
+          "pinned": 1
+        },
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": "C",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "claim": {
+          "state": "ISSUED",
+          "text": "Selection-adjusted: OOS entered selection, so the claim got weaker.",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "oos_sharpe": {
+          "value": "0.7440081232022494",
+          "source": "P13_EVIDENCE_PROJECTION",
+          "scope": "OOS",
+          "definition_id": "research.metric.v3.oos_sharpe",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT"
+          }
+        }
+      },
+      "outcome": {
+        "text": "Selection-adjusted: OOS entered selection, so the claim got weaker.",
+        "source": "SOURCE_CLAIM_SENTENCE",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      }
+    },
+    {
+      "attempt_id": "att_03",
+      "parent_attempt_id": "att_02",
+      "parent_state": "RETURNED",
+      "alpha_version_id": "av-p19-momentum-0-9-3",
+      "alpha_version_label": "av_0_9_3",
+      "state": "READY",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "relation_to_parent": null,
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035380000,
+      "updated_at_utc_ms": 1790038980000,
+      "primary_run": {
+        "run_id": "run-att_03",
+        "state": "READY",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 0,
+        "execution_profile_id": "p10.delta-signal-notional-wfo.v1"
+      },
+      "child_runs": [],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "AVAILABLE",
+        "changes": [
+          {
+            "path": "alpha_version",
+            "kind": "ALPHA_VERSION",
+            "before": "av_0_9_2",
+            "after": "av_0_9_3"
+          },
+          {
+            "path": "optimization.effective_schedule",
+            "kind": "CONFIG",
+            "before": "per_fold_decay",
+            "after": "per_fold_causal"
+          },
+          {
+            "path": "optimization_schedule",
+            "kind": "CONFIG",
+            "before": "per_fold_decay",
+            "after": "per_fold_causal"
+          }
+        ],
+        "gates_reset": true,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "STORIED",
+      "presentation_reasons": [
+        "VERSION_FIRST_ATTEMPT",
+        "GATES_RESET"
+      ],
+      "promotion_state": "NOT_PICKED",
+      "promotion_reason_code": "P19_VERSION_PICK_NAMES_ANOTHER_ATTEMPT",
+      "spec_label": {
+        "text": "signal_notional · mode_1_decay × per_fold_causal",
+        "space": {
+          "parameters": 3,
+          "swept": 2,
+          "pinned": 1
+        },
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE"
+          }
+        },
+        "claim": {
+          "state": "NOT_ISSUED",
+          "text": "The Delta walk-forward study sealed its artifacts but did not issue a release claim.",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "oos_sharpe": {
+          "value": "1.19",
+          "source": "RS02_RETAINED_SELECTED_TRIAL",
+          "scope": "SELECTED_TRIAL_MEAN_ACROSS_FOLDS",
+          "definition_id": "research.current-source.v1.selected-trial-mean-oos-sharpe",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "decay": {
+          "value": "0.21",
+          "source": "RS02_RETAINED_SELECTED_TRIAL",
+          "scope": "SELECTED_TRIAL_MEAN_ACROSS_FOLDS",
+          "definition_id": "research.current-source.v1.selected-trial-mean-decay",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      },
+      "outcome": {
+        "text": "The Delta walk-forward study sealed its artifacts but did not issue a release claim.",
+        "source": "SOURCE_CLAIM_SENTENCE",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      }
+    },
+    {
+      "attempt_id": "att_04",
+      "parent_attempt_id": "att_03",
+      "parent_state": "RETURNED",
+      "alpha_version_id": "av-p19-momentum-0-9-3",
+      "alpha_version_label": "av_0_9_3",
+      "state": "READY",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "relation_to_parent": null,
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035440000,
+      "updated_at_utc_ms": 1790039040000,
+      "primary_run": {
+        "run_id": "run-att_04",
+        "state": "READY",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 1,
+        "execution_profile_id": "p04.fixed-qualification.v1"
+      },
+      "child_runs": [
+        {
+          "run_id": "run-att_04-audit",
+          "run_kind": "AUDIT",
+          "relationship_kind": "AUDIT_OF_SELECTION",
+          "parent_run_id": "run-att_04",
+          "state": "READY",
+          "created_at_utc_ms": 1790044200000
+        }
+      ],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "AVAILABLE",
+        "changes": [
+          {
+            "path": "optimization.effective_random_seed",
+            "kind": "CONFIG",
+            "before": "7",
+            "after": "11"
+          },
+          {
+            "path": "parameter_space_overrides",
+            "kind": "CONFIG",
+            "before": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "after": "sha256:cfab600f78d1542fa069533a3ae8f94743ba68162a04c742d87c7fab60a4a4c8"
+          },
+          {
+            "path": "random_seed",
+            "kind": "CONFIG",
+            "before": "7",
+            "after": "11"
+          }
+        ],
+        "gates_reset": false,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "exposure": {
+        "state": "RECORDED",
+        "count": 2,
+        "roles": [
+          "OUTER_OOS",
+          "SELECTION_INPUT"
+        ],
+        "latest_source_as_of_utc_ms": 1790042400000,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "presentation_kind": "STORIED",
+      "presentation_reasons": [
+        "PROMOTION_PICK",
+        "RELEASE_CANDIDATE",
+        "MATERIAL_CHANGES"
+      ],
+      "promotion_state": "PICKED",
+      "promotion_reason_code": null,
+      "spec_label": {
+        "text": "signal_notional · mode_1_decay × per_fold_causal",
+        "space": {
+          "parameters": 3,
+          "swept": 1,
+          "pinned": 2
+        },
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "release_candidate": {
+        "kind": "ACTOR_DRAFT",
+        "release_candidate_id": null,
+        "draft_id": "rcd_01JB2C3D4E5F6G7H8J9KMNPQRS",
+        "run_id": "run-att_04",
+        "delivery_state": null,
+        "approval_state": null,
+        "sealed_at_utc_ms": null
+      },
+      "release_candidate_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": "B",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "claim": {
+          "state": "ISSUED",
+          "text": "Strict outer OOS — the strongest claim this mode can issue while the holdout stays sealed.",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "oos_sharpe": {
+          "value": "0.7440081232022494",
+          "source": "P13_EVIDENCE_PROJECTION",
+          "scope": "OOS",
+          "definition_id": "research.metric.v3.oos_sharpe",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT"
+          }
+        }
+      },
+      "outcome": {
+        "text": "Strict outer OOS — the strongest claim this mode can issue while the holdout stays sealed.",
+        "source": "SOURCE_CLAIM_SENTENCE",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      }
+    },
+    {
+      "attempt_id": "att_05",
+      "parent_attempt_id": "att_03",
+      "parent_state": "RETURNED",
+      "alpha_version_id": "av-p19-momentum-0-9-3",
+      "alpha_version_label": "av_0_9_3",
+      "state": "ABANDONED",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "relation_to_parent": null,
+      "reason": "decay unstable across seeds; kept for the record.",
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035500000,
+      "updated_at_utc_ms": 1790039100000,
+      "primary_run": {
+        "run_id": "run-att_05",
+        "state": "CANCELLED",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 0,
+        "execution_profile_id": "p04.fixed-qualification.v1"
+      },
+      "child_runs": [],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "AVAILABLE",
+        "changes": [
+          {
+            "path": "parameter_space_overrides",
+            "kind": "CONFIG",
+            "before": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "after": "sha256:327fafe6333623810892157103155885cc31ed1b899359e5f9d722930baf80df"
+          }
+        ],
+        "gates_reset": false,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "PROBE",
+      "presentation_reasons": [],
+      "promotion_state": "NOT_PICKED",
+      "promotion_reason_code": "P19_VERSION_PICK_NAMES_ANOTHER_ATTEMPT",
+      "spec_label": {
+        "text": "signal_notional · mode_1_decay × per_fold_causal",
+        "space": {
+          "parameters": 3,
+          "swept": 2,
+          "pinned": 1
+        },
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE"
+          }
+        },
+        "claim": {
+          "state": null,
+          "text": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_CANCELLED_BEFORE_CLAIM"
+          }
+        },
+        "oos_sharpe": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_PUBLISHES_NO_PERFORMANCE_CELL_FOR_STATUS"
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_PUBLISHES_NO_PERFORMANCE_CELL_FOR_STATUS"
+          }
+        }
+      },
+      "outcome": {
+        "text": "decay unstable across seeds; kept for the record.",
+        "source": "ATTEMPT_REASON",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      }
+    },
+    {
+      "attempt_id": "att_06",
+      "parent_attempt_id": "att_03",
+      "parent_state": "RETURNED",
+      "alpha_version_id": "av-p19-momentum-0-9-3",
+      "alpha_version_label": "av_0_9_3",
+      "state": "DRAFT",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "relation_to_parent": null,
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035560000,
+      "updated_at_utc_ms": 1790039160000,
+      "primary_run": {
+        "run_id": null,
+        "state": null,
+        "effective_spec_digest": null,
+        "engine_release_id": null,
+        "dataset_binding_digest": null,
+        "technical_retry_count": 0,
+        "execution_profile_id": null
+      },
+      "child_runs": [],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "NOT_PUBLISHED",
+        "changes": [],
+        "gates_reset": false,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE_FOR_PARENT_DIFF"
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "PROBE",
+      "presentation_reasons": [],
+      "promotion_state": "NOT_PICKED",
+      "promotion_reason_code": "P19_VERSION_PICK_NAMES_ANOTHER_ATTEMPT",
+      "spec_label": {
+        "text": null,
+        "space": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE"
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P19_ATTEMPT_HAS_NO_PRIMARY_RUN"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": null,
+          "availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_ATTEMPT_HAS_NO_PRIMARY_RUN"
+          }
+        },
+        "claim": {
+          "state": null,
+          "text": null,
+          "availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_ATTEMPT_HAS_NO_PRIMARY_RUN"
+          }
+        },
+        "oos_sharpe": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_ATTEMPT_HAS_NO_PRIMARY_RUN"
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_ATTEMPT_HAS_NO_PRIMARY_RUN"
+          }
+        }
+      },
+      "outcome": {
+        "text": null,
+        "source": null,
+        "availability": {
+          "state": "NOT_APPLICABLE",
+          "reason_code": "P19_ATTEMPT_HAS_NO_PRIMARY_RUN"
+        }
+      }
+    },
+    {
+      "attempt_id": "att_07",
+      "parent_attempt_id": null,
+      "parent_state": "ROOT",
+      "alpha_version_id": "av-p19-momentum-0-9-3",
+      "alpha_version_label": "av_0_9_3",
+      "state": "FAILED",
+      "intent_kind": "NEW",
+      "relation_to_parent": null,
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035620000,
+      "updated_at_utc_ms": 1790039220000,
+      "primary_run": {
+        "run_id": "run-att_07",
+        "state": "FAILED",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 0,
+        "execution_profile_id": "p04.fixed-qualification.v1"
+      },
+      "child_runs": [],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "ROOT",
+        "changes": [],
+        "gates_reset": false,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "PROBE",
+      "presentation_reasons": [],
+      "promotion_state": "NOT_PICKED",
+      "promotion_reason_code": "P19_VERSION_PICK_NAMES_ANOTHER_ATTEMPT",
+      "spec_label": {
+        "text": "signal_notional · mode_1_decay × global",
+        "space": {
+          "parameters": 3,
+          "swept": 2,
+          "pinned": 1
+        },
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE"
+          }
+        },
+        "claim": {
+          "state": null,
+          "text": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_CLAIM_NOT_PUBLISHED"
+          }
+        },
+        "oos_sharpe": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_PUBLISHES_NO_PERFORMANCE_CELL_FOR_STATUS"
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_PUBLISHES_NO_PERFORMANCE_CELL_FOR_STATUS"
+          }
+        }
+      },
+      "outcome": {
+        "text": null,
+        "source": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "SOURCE_CLAIM_NOT_PUBLISHED"
+        }
+      }
+    }
+  ],
+  "counts": {
+    "total_attempts": 7,
+    "returned_attempts": 7,
+    "draft_attempts": 1,
+    "submitted_attempts": 6,
+    "failed_attempts": 1,
+    "abandoned_attempts": 1,
+    "child_runs": 1,
+    "technical_retries": 1,
+    "storied_returned": 3,
+    "probe_returned": 4
+  },
+  "counts_definitions": {
+    "version": "research.lineage-counts.v1",
+    "rows": [
+      {
+        "key": "total_attempts",
+        "includes": "Every logical research attempt of every version of this Alpha in the workspace: draft, submitted, failed and abandoned alike. Worker retries and child runs are not attempts.",
+        "run_library_equivalent": "counters.logical_runs for ?alpha=<id> plus draft_attempts, when every submitted attempt has its PRIMARY run"
+      },
+      {
+        "key": "returned_attempts",
+        "includes": "Attempts in this bounded page (at most `limit`); equal to total_attempts only when coverage is COMPLETE.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "draft_attempts",
+        "includes": "Attempts in state DRAFT (autosaved intent, never submitted).",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "submitted_attempts",
+        "includes": "Attempts in any state other than DRAFT.",
+        "run_library_equivalent": "counters.logical_runs for ?alpha=<id> (its PRIMARY rows), when every submitted attempt has its PRIMARY run"
+      },
+      {
+        "key": "failed_attempts",
+        "includes": "Attempts whose lifecycle state is FAILED.",
+        "run_library_equivalent": "claim_ledger.failed for ?alpha=<id> (FAILED runs), when each FAILED attempt's PRIMARY run is FAILED"
+      },
+      {
+        "key": "abandoned_attempts",
+        "includes": "Attempts whose lifecycle state is ABANDONED; kept on record, never deleted.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "child_runs",
+        "includes": "Non-PRIMARY runs of these attempts (audit, diagnostic, reproduction, export, verify, projection).",
+        "run_library_equivalent": "counters.worker_children for ?alpha=<id>"
+      },
+      {
+        "key": "technical_retries",
+        "includes": "Worker re-leases of the same durable job beyond the first; never an attempt or a node.",
+        "run_library_equivalent": "counters.technical_retries for ?alpha=<id>"
+      },
+      {
+        "key": "storied_returned",
+        "includes": "Returned attempts classified STORIED by research.lineage-presentation.v1.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "probe_returned",
+        "includes": "Returned attempts classified PROBE by research.lineage-presentation.v1.",
+        "run_library_equivalent": null
+      }
+    ]
+  },
+  "presentation_rule": {
+    "version": "research.lineage-presentation.v1",
+    "storied_when": [
+      "PROMOTION_PICK",
+      "RELEASE_CANDIDATE",
+      "VERSION_FIRST_ATTEMPT",
+      "GATES_RESET",
+      "MATERIAL_CHANGES"
+    ],
+    "material_change_threshold": 2
+  },
+  "coverage": {
+    "state": "COMPLETE",
+    "reason_code": null,
+    "oldest_returned_created_at_utc_ms": 1790035260000,
+    "window": "NEWEST",
+    "older_cursor": null
+  },
+  "source_absences": {
+    "promotion_pick": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+    },
+    "historical_semantic_diff": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE_FOR_PARENT_DIFF"
+    }
+  },
+  "as_of_utc_ms": 1790035200000,
+  "lineage_revision": "p19r2_2907a7355e18897100f9637298557d45021205174b5ef64a9cb98f5ddbcd72d7",
+  "etag": "\"p19r2_2907a7355e18897100f9637298557d45021205174b5ef64a9cb98f5ddbcd72d7\""
+}

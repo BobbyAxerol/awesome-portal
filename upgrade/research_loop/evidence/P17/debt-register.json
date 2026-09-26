@@ -2,20 +2,7 @@
   "schema_version": "research.phase-debt-register.v1",
   "phase": "P17",
   "audit_status": "RS01_REPLAY_CORRECTNESS_REMEDIATED; ORIGINAL_PHASE_ACCEPTANCE_PENDING_RS02_RS03",
-  "in_scope_backend_debt": [
-    {
-      "id": "A09/P17-B",
-      "what": "route-discriminated orders/fills/positions/candles/checkpoints where the source publishes them",
-      "owner": "Claude",
-      "wave": "W5"
-    },
-    {
-      "id": "A12-P17",
-      "what": "T01-T14 mapping gaps (capital convention, sparse sequence, same-timestamp rows, gap refusal); 24 vs 25 test count",
-      "owner": "Claude",
-      "wave": "W5"
-    }
-  ],
+  "in_scope_backend_debt": [],
   "rs01_repairs": [
     "A05/A06/A08: one revision-pinned bundle, no-store replay HTTP, typed cursor-expiry recovery and scoped cancellable admission are implemented."
   ],
@@ -25,5 +12,27 @@
     "Screen-08 browser/product receipt remains Claude-owned while FEATURE_RESEARCH_REPLAY=false."
   ],
   "rollback": "Disable FEATURE_RESEARCH_REPLAY through signed deployment; retain immutable P13 evidence and add no cleanup action.",
-  "reviewed": "2026-09-25 · Claude (A12/GX correction: registers previously claimed zero debt while Astra A09–A12 were open)"
+  "reviewed": "2026-09-25 · Claude — W5a/W5b closed the in-scope P16/P17 debt",
+  "closed_debt": [
+    {
+      "id": "A09/P17-B",
+      "what": "signal-notional replay ledger: candles, per-bar account facts, target transitions, carry_position fold capital; orders/fills typed absent (QuantBT emits 0)",
+      "commit": "088acd27, 68d6ce03 (merge 8d7d9967)"
+    },
+    {
+      "id": "P17-T14",
+      "what": "child audit from QuantBT strategy_lifecycle_table, original audit ordinals",
+      "commit": "8775be46"
+    },
+    {
+      "id": "A12-P17",
+      "what": "T02-T14 real assertions incl. T17 at 32 folds; test count reconciled",
+      "commit": "897fb48d, 556db7a5"
+    },
+    {
+      "id": "Reveal",
+      "what": "causal reveal is presentation-only (cuts at cursor, no request, no revision change)",
+      "commit": "68d6ce03"
+    }
+  ]
 }

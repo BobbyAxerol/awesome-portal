@@ -26,6 +26,8 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
+import { LineageLink, lineageHref } from "./LineageLink";
+
 import { BoundWarningNote } from "./BoundWarning";
 import { isWhatIf, WhatIfCard } from "./WhatIfCard";
 import { ProvenanceStrip } from "./ProvenanceStrip";
@@ -1570,6 +1572,21 @@ export function FreezeScreen({
         >
           next: S4 Execute →
         </Link>
+        {identity.state === "ready" && identity.identity.progress?.run?.alpha?.alpha_id ? (
+          <>
+            <span style={{ color: "var(--line-strong)" }}>·</span>
+            {/* Spec 07 outbound "attempt → 10": this run inside its alpha's attempt lineage. */}
+            <LineageLink
+              to={lineageHref(identity.identity.progress.run.alpha.alpha_id, {
+                av: identity.identity.progress.run.alpha.alpha_version_id,
+              })}
+              className="mono"
+              action="open-lineage"
+            >
+              attempt lineage →
+            </LineageLink>
+          </>
+        ) : null}
       </nav>
 
       {bytes && bytesBlock(bytes) ? <BlockedBanner bytes={bytes} /> : null}

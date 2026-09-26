@@ -742,18 +742,21 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     expect(order.indexOf("metrics")).toBe(order.indexOf("headline") + 1);
   });
 
-  it("S09-U38 the equity figure prints only server strings on its axes, over a 92px underwater strip", async () => {
+  it("S09-U38 the equity figure formats its axis labels and keeps the server strings in their titles, over a 92px underwater strip", async () => {
     const css = await loaded();
     const figure = panel("equity");
     expect(figure.querySelector("[data-equity-title]")?.textContent).toBe("Equity — stitched OOS");
     expect(figure.querySelector("[data-equity-counts]")?.textContent).toBe("emitted 3 of 3 source observations · sampling full · UTC");
-    expect([...figure.querySelectorAll("[data-y-label]")].map((el) => el.textContent)).toEqual(["110", "100"]);
+    expect([...figure.querySelectorAll("[data-y-label]")].map((el) => el.textContent)).toEqual(["110.00", "100.00"]);
+    expect([...figure.querySelectorAll("[data-y-label]")].map((el) => el.getAttribute("title"))).toEqual(["110", "100"]);
     expect([...figure.querySelectorAll("[data-x-label]")].map((el) => el.textContent)).toEqual(["2024-09-22"]);
     expect(figure.querySelectorAll("line.rr-eq-grid").length).toBeGreaterThan(0);
     expect(figure.querySelector('[data-legend="oos"]')?.textContent).toBe(EQUITY_LEGEND_OOS);
     expect(figure.querySelector('[data-legend="is"]')?.textContent).toBe(EQUITY_LEGEND_IS);
-    expect(figure.querySelector("[data-dd-top]")?.textContent).toBe("0");
-    expect(figure.querySelector("[data-dd-deepest]")?.textContent).toBe("-0.02 fraction");
+    expect(figure.querySelector("[data-dd-top]")?.textContent).toBe("0.00%");
+    expect(figure.querySelector("[data-dd-top]")?.getAttribute("title")).toBe("0");
+    expect(figure.querySelector("[data-dd-deepest]")?.textContent).toBe("deepest \u22122.00%");
+    expect(figure.querySelector("[data-dd-deepest]")?.getAttribute("title")).toBe("-0.02 (fraction)");
     expect(figure.querySelector("[data-boundary]")).toBeNull();
     expect(rule(css, ".rr-eq-plot")).toContain("height: 215px");
     expect(rule(css, ".rr-dd-plot")).toContain("height: 92px");
