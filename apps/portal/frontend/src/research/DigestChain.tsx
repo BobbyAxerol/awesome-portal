@@ -95,6 +95,24 @@ function sealedParams(binding: Stage4BindingValue | undefined | null) {
 }
 
 /**
+ * The rule the printed params digest was produced under.
+ *
+ * `sealed_params_sha256` and the F4 sealed-params row are the same value on
+ * the P04 lane and two different values on the retained one, where F4 compares
+ * QuantBT's candidate id and the digest is the sha256 beside it. So the served
+ * rule is used only where it names the value on screen; otherwise the link
+ * carries the contract's own description of the field it printed. Labelling a
+ * sha256 "QuantBT candidate id" would be a small lie, and it is the kind this
+ * card exists to prevent.
+ */
+function paramsDigestRule(binding: Stage4BindingValue | undefined | null, printed: string | null): string | null {
+  const row = sealedParams(binding);
+  if (row === null) return null;
+  if (printed !== null && row.value === printed) return RULE_WORDS[row.identity_rule];
+  return "sha256 of the sealed canonical parameter map";
+}
+
+/**
  * Links 1 and 3 are the same question on both lanes — which parameter set is
  * hashed, and which strategy source the hash of the code covers — and both
  * are answered by the X2 parameter authority (CG-P16-03).
@@ -108,7 +126,7 @@ function authorityLinks(authority: ParameterAuthorityValue | null | undefined): 
       label: "ParameterSetV1 canonical form",
       value: declared && declared.names.length > 0 ? declared.names.join(" · ") : null,
       kind: "text",
-      rule: declared ? declared.hash_scope.toLowerCase().replace(/_/g, " ") : null,
+      rule: declared ? `hashed into the ${declared.hash_scope.toLowerCase().replace(/_/g, " ")}` : null,
       sourceKey: "parameter_authority.declared.names",
       reasonCode: authority?.state === "AVAILABLE" ? null : authority?.reason_code ?? null,
       absenceNote:
@@ -136,6 +154,7 @@ export function hubDigestChain(detail: FreezeDetailDocument): DigestChainFacts {
   const [canonical, source] = authorityLinks(authority);
   const params = sealedParams(binding);
   const bundle = sealedBundle(binding);
+  const paramsDigest = binding?.sealed_params_sha256 ?? detail.freeze.selection.parameter_bundle_digest ?? null;
   return {
     lane: binding?.lane ?? "P04_FIXED_QUALIFICATION",
     links: [
@@ -143,11 +162,11 @@ export function hubDigestChain(detail: FreezeDetailDocument): DigestChainFacts {
       {
         key: "PARAMS_DIGEST",
         label: "params digest",
-        value: binding?.sealed_params_sha256 ?? detail.freeze.selection.parameter_bundle_digest ?? null,
+        value: paramsDigest,
         kind: "digest",
-        rule: params ? RULE_WORDS[params.identity_rule] : null,
+        rule: paramsDigestRule(binding, paramsDigest) ?? "sha256 of the canonical parameter map",
         sourceKey: params?.source_key ?? "freeze.selection.parameter_bundle_digest",
-        reasonCode: binding?.sealed_params_sha256 ? null : params?.reason_code ?? null,
+        reasonCode: paramsDigest ? null : params?.reason_code ?? null,
         absenceNote: null,
       },
       source,
@@ -165,8 +184,7 @@ export function hubDigestChain(detail: FreezeDetailDocument): DigestChainFacts {
          * the version itself — so this link says that, rather than printing a
          * version this response never carried.
          */
-        absenceNote:
-          "The P04 freeze read publishes no engine version. The engine release this run was admitted under is covered by the adapter contract digest below, and is not restated here.",
+        absenceNote: "the P04 freeze read publishes no engine version; it is not restated from a build constant",
       },
       {
         key: "DATASET_HASH",
@@ -218,7 +236,7 @@ export function retainedDigestChain(freeze: CurrentSourceFreezeDocument): Digest
         label: "params digest",
         value: binding?.sealed_params_sha256 ?? null,
         kind: "digest",
-        rule: params ? RULE_WORDS[params.identity_rule] : null,
+        rule: paramsDigestRule(binding, binding?.sealed_params_sha256 ?? null),
         sourceKey: "stage4_binding.sealed_params_sha256",
         reasonCode: binding?.sealed_params_sha256 ? null : params?.reason_code ?? null,
         absenceNote: null,

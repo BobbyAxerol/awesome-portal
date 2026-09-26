@@ -57,8 +57,13 @@ function ExecuteContainer({ runId }: { runId: string }) {
 
   /* E2c (8.5): one bounded read of the split the answering lane owns, for the
      IS / OOS / HOLDOUT band. It belongs to the container, not the screen —
-     the screen stays a function of what it is handed. */
-  const band = useSplitBand(runId, executeLane(controller));
+     the screen stays a function of what it is handed.
+
+     It waits until a lane has answered. Asked on arrival, the lane still reads
+     "hub" for every run, so a walk-forward run would read the P04 hub split
+     first and its own fold plan a moment later — two reads to draw one band. */
+  const answered = controller.replay !== null || controller.retained.state !== "idle";
+  const band = useSplitBand(runId, answered ? executeLane(controller) : "pending");
 
   /* E2 (X8): a refused run gets the shared "run not available" page, not the stage chrome. */
   if (controller.state.state === "denied" && controller.replay === null) {

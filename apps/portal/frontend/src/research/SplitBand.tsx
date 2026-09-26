@@ -69,17 +69,36 @@ const LABEL: Record<BandKey, string> = {
   holdout: "HOLDOUT",
 };
 
-/** The role tones the split and freeze screens already use for these three windows. */
+/**
+ * The tones Screens 05 and 07 already give these three windows: the in-sample
+ * span in the train tone, the plotted OOS solid, and the holdout hatched and
+ * dashed so it is never mistaken for a window something read.
+ */
 const TONE: Record<BandKey, string> = {
-  is: "repeating-linear-gradient(135deg, var(--role-is) 0 2px, transparent 2px 5px)",
+  is: "repeating-linear-gradient(135deg, var(--viz-train) 0 2px, transparent 2px 5px)",
   outer_oos: "var(--role-oos)",
   holdout: "repeating-linear-gradient(135deg, var(--role-holdout) 0 3px, transparent 3px 6px)",
 };
 
 const BORDER: Record<BandKey, string> = {
-  is: "1px solid var(--role-is)",
+  is: "1px solid var(--viz-train)",
   outer_oos: "1px solid var(--role-oos)",
   holdout: "1px dashed var(--role-holdout)",
+};
+
+/**
+ * Label inks.
+ *
+ * The OOS and holdout roles are dark enough to read on paper, and colouring
+ * them ties the word to its band. `--role-is` is not: it measures 3.68:1 on
+ * white, below AA, and axe says so. So the in-sample label takes the ordinary
+ * soft ink and lets its swatch carry the role — which also reads correctly,
+ * since IS is the window this chart does not plot.
+ */
+const LABEL_INK: Record<BandKey, string> = {
+  is: "var(--ink-soft)",
+  outer_oos: "var(--role-oos)",
+  holdout: "var(--role-holdout)",
 };
 
 /* -------------------------------------------------------------- builders */
@@ -190,9 +209,16 @@ export type SplitBandSlot =
 export function useSplitBand(runId: string, lane: "hub" | "retained" | "pending", workspaceId?: string): SplitBandSlot {
   const [slot, setSlot] = useState<SplitBandSlot>({ state: "idle" });
   /*
-   * Which read has been sent, in a ref rather than state. In state it would
-   * re-render, the effect would run again, and its cleanup would abort the
-   * very request it had just sent — a read that always cancelled itself.
+   * Which read has been sent, in a ref rather than state.
+   *
+   * Two traps, both caught in the browser rather than by a test:
+   *  - in state, setting it would re-render, the effect would run again, and
+   *    its cleanup would abort the very request it had just sent;
+   *  - in a ref that survives cleanup, React's development double-mount aborts
+   *    the first read and then skips the second, so the band would say
+   *    "reading this run's split…" for ever.
+   * So the key is cleared whenever the effect is torn down before its read
+   * settled: one read per mount in production, and a re-mount reads again.
    */
   const asked = useRef<string | null>(null);
 
@@ -202,12 +228,14 @@ export function useSplitBand(runId: string, lane: "hub" | "retained" | "pending"
     if (asked.current === key) return;
     asked.current = key;
     setSlot({ state: "loading" });
+    let settled = false;
     const abort = new AbortController();
     const read = lane === "retained"
       ? splitApi.currentSource(runId, { workspaceId, signal: abort.signal })
       : splitApi.detail(runId, { workspaceId, signal: abort.signal });
     read.then(
       (answer) => {
+        settled = true;
         if (abort.signal.aborted) return;
         if (typeof answer === "symbol") {
           setSlot({ state: "absent", reason: "The split read answered not-modified before this screen held one." });
@@ -225,11 +253,16 @@ export function useSplitBand(runId: string, lane: "hub" | "retained" | "pending"
         setSlot({ state: "ready", hub: answer as SplitDetail, folds: null });
       },
       () => {
+        settled = true;
         if (abort.signal.aborted) return;
         setSlot({ state: "absent", reason: "This run's split could not be read, so the windows are not drawn." });
       },
     );
-    return () => abort.abort();
+    return () => {
+      abort.abort();
+      /* Torn down before an answer: forget the key so a re-mount asks again. */
+      if (!settled) asked.current = null;
+    };
   }, [lane, runId, workspaceId]);
 
   return slot;
@@ -306,7 +339,7 @@ export function SplitBand({ band }: { band: SplitBandFacts }) {
               <span key={piece.segment.key} className="flex min-w-0 items-center gap-[3px]" style={{ flex: `${piece.grow} 1 0` }}>
                 <span
                   className="mono flex-none whitespace-nowrap text-[9px]"
-                  style={{ color: `var(--role-${piece.segment.key === "outer_oos" ? "oos" : piece.segment.key})` }}
+                  style={{ color: LABEL_INK[piece.segment.key] }}
                   data-band-label={piece.segment.key}
                 >
                   {piece.segment.label}
@@ -328,7 +361,7 @@ export function SplitBand({ band }: { band: SplitBandFacts }) {
         <span key={segment.key} className="flex flex-none items-baseline gap-1" data-band={segment.key} data-band-state={segment.state}>
           <span
             className="mono text-[9px]"
-            style={{ color: `var(--role-${segment.key === "outer_oos" ? "oos" : segment.key})` }}
+            style={{ color: LABEL_INK[segment.key] }}
             data-band-label={segment.key}
           >
             {segment.label}

@@ -191,6 +191,18 @@ describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () 
     expect(link("BUNDLE_DIGEST").textContent).toContain("QuantBT strategy fingerprint");
   });
 
+  it("does not label the sealed sha256 with the candidate-id rule it is not", async () => {
+    const { container } = await settled();
+    const params = container.querySelector("[data-chain-link='PARAMS_DIGEST']") as HTMLElement;
+    /* F4 compares QuantBT's candidate id on this lane; the digest printed here
+       is the sha256 beside it, so it may not borrow that row's rule. */
+    expect(params.querySelector("[data-chain-rule='PARAMS_DIGEST']")!.textContent).toBe("sha256 of the sealed canonical parameter map");
+    expect(params.textContent).not.toContain("QuantBT candidate id");
+    const candidateId = FREEZE.stage4_binding!.rows.find((row) => row.key === "SEALED_PARAMS")!.value;
+    expect(candidateId).not.toBe(FREEZE.stage4_binding!.sealed_params_sha256);
+    expect(params.textContent).not.toContain(candidateId!.slice(0, 12));
+  });
+
   it("names the parameter set that is hashed, and the scope it is hashed into", async () => {
     const { container } = await settled();
     const canonical = container.querySelector("[data-chain-link='CANONICAL_FORM']") as HTMLElement;

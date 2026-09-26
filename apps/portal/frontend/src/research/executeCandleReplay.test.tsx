@@ -413,6 +413,9 @@ describe("E2c · 8.5 — the band above the chart is the fold's published window
     const { container, fetchMock } = await settled();
     const splitReads = () => urls(fetchMock).filter((url) => url.includes("/current-source/split"));
     expect(splitReads()).toHaveLength(1);
+    /* The band waits for a lane to answer, so this run never reads the P04 hub split. */
+    const hubSplitReads = urls(fetchMock).filter((url) => new URL(url, "http://x").pathname.endsWith("/runs/" + RUN + "/split"));
+    expect(hubSplitReads).toEqual([]);
     expect(container.querySelector("[data-band-fold]")!.textContent).toBe("fold_01");
     fireEvent.click(container.querySelector("[aria-label='next fold']")!);
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(4));
