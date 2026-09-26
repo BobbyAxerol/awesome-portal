@@ -42,7 +42,7 @@ const approval = {
   expires_at: "2026-09-28T10:00:00.000Z",
   created_at: "2026-09-25T10:00:00.000Z",
 };
-function subject() {
+function subject(intake: "true" | "false" = "true") {
   let state: PublicationIntent | null = null;
   const repository = {
     read: vi.fn(async () => state),
@@ -50,7 +50,7 @@ function subject() {
       state = {
         releaseCandidateId: rcId, runId: "run_p22", alphaId: "alpha_p22",
         alphaVersionId: "av_p22", actorUserId: user.userId, actorUsername: user.username,
-        requestKey: input.request_key, payloadDigest: String(value.payloadDigest),
+        requestKey: String(value.requestKey), payloadDigest: String(value.payloadDigest),
         requestPayload: value.requestPayload as Record<string, unknown>,
         packDigest, sourceFingerprint, legacyArtifactSha256: legacySha,
         artifactSchemaVersion: "quantbt.selected-params.v1", methodologyClaimId: claimId,
@@ -105,6 +105,7 @@ function subject() {
   };
   const service = new ResearchReleaseCandidatePublicationService(
     repository as never, packs as never, candidate as never, governance as never,
+    { FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: intake },
   );
   return { service, repository, packs, candidate, governance, state: () => state };
 }
@@ -232,6 +233,55 @@ describe("P22 actor-bound publication over existing R1", () => {
     expect(result.approval_read).toBe("NOT_PUBLISHED");
     expect(x.repository.finish).not.toHaveBeenCalled();
   });
+  it("X1 derives the request key and R1 summary from the sealed pack when the browser names neither", async () => {
+    const x = subject();
+    const bare = { schema_version: input.schema_version, expected_pack_digest: packDigest, methodology_claim_id: claimId };
+    x.governance.createApproval.mockRejectedValueOnce(new Error("response lost after commit"));
+    const first = await x.service.publish(scope, user as never, rcId, bare, "req_first");
+    expect(first.state).toBe("UNKNOWN");
+    const expected = { requestKey: `rcpub:${rcId}`, summary: `Release candidate ${rcId} · pack sha256:${packDigest} · evidence run run_p22` };
+    expect(x.governance.createApproval).toHaveBeenCalledWith(user, expect.objectContaining(expected), "req_first");
+    expect(x.state()!.requestKey).toBe(expected.requestKey);
+    // The replay derives the same bytes: no conflict, no second intent.
+    const second = await x.service.publish(scope, user as never, rcId, bare, "req_retry");
+    expect(second.state).toBe("DELIVERED");
+    expect(x.repository.begin).toHaveBeenCalledTimes(1);
+    expect(x.governance.createApproval).toHaveBeenLastCalledWith(user, expect.objectContaining(expected), "req_retry");
+  });
+
+  it("X1 intake dark: no new intent, no RunSync refresh, no Governance call; the read says why", async () => {
+    const x = subject("false");
+    const read = await x.service.publication(scope, user as never, rcId);
+    expect(read).toMatchObject({ state: "NOT_PUBLISHED", may_publish: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" });
+    expect(read.source.availability).toBe("NOT_CHECKED");
+    const post = await x.service.publish(scope, user as never, rcId, input, "req_p22");
+    expect(post).toMatchObject({ state: "NOT_PUBLISHED", may_publish: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" });
+    expect(x.governance.publicationEvidence).not.toHaveBeenCalled();
+    expect(x.repository.begin).not.toHaveBeenCalled();
+    expect(x.governance.createApproval).not.toHaveBeenCalled();
+  });
+
+  it("X1 intake dark still reconciles an intent recorded while it was open", async () => {
+    const open = subject("true");
+    open.governance.createApproval.mockRejectedValueOnce(new Error("response lost after commit"));
+    expect((await open.service.publish(scope, user as never, rcId, input, "req_first")).state).toBe("UNKNOWN");
+    const recorded = open.state()!;
+    const dark = subject("false");
+    dark.repository.read.mockResolvedValue(recorded);
+    dark.repository.pending.mockResolvedValue({ ...recorded, state: "PENDING" });
+    const pending = await dark.service.publication(scope, user as never, rcId);
+    expect(pending).toMatchObject({ state: "UNKNOWN", may_publish: true, blocked_reason: null });
+    dark.repository.finish.mockImplementation(async () => {
+      const done = { ...recorded, state: "DELIVERED" as const, approvalId: "apr_p22", evidenceSetHash: evidenceHash, receiptDigest: "d".repeat(64), publishedAtUtcMs: 1790330400000 };
+      dark.repository.read.mockResolvedValue(done);
+      return done;
+    });
+    const retried = await dark.service.publish(scope, user as never, rcId, input, "req_retry");
+    expect(retried.state).toBe("DELIVERED");
+    expect(dark.governance.createApproval).toHaveBeenCalledTimes(1);
+    expect(dark.repository.begin).not.toHaveBeenCalled();
+  });
+
   it("P22-T11 refreshes the final-audit RunSync read model before showing publish eligibility", async () => {
     const x = subject();
     const result = await x.service.publication(scope, user as never, rcId);

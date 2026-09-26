@@ -112,6 +112,7 @@ function service(value: ReleaseCandidateSource, draft: ReleaseCandidateDraft | n
     snapshot: vi.fn().mockResolvedValue(value),
     draft: vi.fn().mockResolvedValue(draft),
     latestPack: vi.fn().mockResolvedValue(null),
+    publicationContext: vi.fn().mockResolvedValue({ current: null, predecessor: null }),
     readPack: vi.fn(),
     patchDraft: vi.fn(),
     seal: vi.fn(),

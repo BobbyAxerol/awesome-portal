@@ -1,7 +1,7 @@
 /**
- * Research Loop — Release Candidate client (P21, Screen 11).
+ * Research Loop — Release Candidate client (P21 + P22, Screen 11).
  *
- * Two reads and two writes, each named after its generated operation:
+ * Six operations, each named after its generated operation and nothing else:
  *
  *  - `researchReleaseCandidateComposeGetV1` — one bounded composition for one
  *    run: rail, taxonomy, 17 server-built fields (the YAML preview is the same
@@ -13,25 +13,23 @@
  *    returned (compare-and-swap). A `409` means the fence moved.
  *  - `researchReleaseCandidateLocalSealCreateV1` — one Portal-local immutable
  *    evidence pack. Idempotent: asking again for the same draft answers `201`
- *    with the same identity. A local seal is not a publication, a delivery or
- *    an approval (P22 owns those).
+ *    with the same identity. A local seal is not a publication.
  *  - `researchReleaseCandidatePackGetV1` — the frozen pack by its identity.
- *
- * P22 adds three operations on the sealed candidate:
- *
- *  - `researchReleaseCandidatePublishV1` — one explicit click publishes the
- *    current local seal to the existing R1 Approval Inbox, fenced by the pack
- *    digest the composition returned. `201` delivered, `200` the idempotent
- *    replay, `202` an outcome the governance store did not confirm
- *    (`publication_state: "UNKNOWN"`), which is a success to be reconciled.
- *  - `researchReleaseCandidatePublishReconcileV1` — replays the stored request
- *    unchanged; only the actor who recorded the intent is admitted.
- *  - `researchReleaseCandidateApprovalMirrorGetV1` — the read-only R1 mirror.
+ *  - `researchReleaseCandidatePublicationGetV1` (P22) — the durable publication
+ *    state of one sealed candidate, its `may_publish` / `blocked_reason` gate
+ *    and, once delivered, the R1 approval read under the caller's own
+ *    authority. It is the only mirror: there is no `/mirror` route.
+ *  - `researchReleaseCandidatePublishV1` (P22) — one explicit, confirmed publish
+ *    of the current local seal, fenced by its pack digest. The browser sends
+ *    the digest and the methodology claim the server listed; the idempotency
+ *    key and the R1 summary are the server's (it derives both from the sealed
+ *    pack). The answer is the same publication read.
  *
  * The contract declares no ETag and no `304`, so no validator is sent. Every
  * write carries the same-origin CSRF proof; the reads carry nothing extra.
- * The server's `error.message` is never rendered: the screen speaks from
- * `RC_REFUSAL_COPY`, keyed by status, and shows the code and request id only.
+ * The server's `error.message` is never rendered: the screen speaks from the
+ * copy below, keyed by status and typed code, and shows the code and request
+ * id only.
  */
 
 import type { components as ReleaseCandidateComponents } from "@portal/contracts-research-release-candidate";
@@ -44,58 +42,8 @@ import type { ResearchState } from "./state";
 
 type RcSchemas = ReleaseCandidateComponents["schemas"];
 type PublicationSchemas = PublicationComponents["schemas"];
-type P21Compose = RcSchemas["ComposeResponseP21"];
-type PublicationWire = PublicationSchemas["PublicationResponse"];
 
-export interface RcPublication {
-  state: PublicationWire["state"] | "CONFLICT" | null;
-  release_candidate_id: string | null;
-  approval_id: string | null;
-  conflicting_approval_id: string | null;
-  downstream_code: string | null;
-  downstream_receipt_digest: string | null;
-  attempt_count: number | null;
-  intent_actor: { user_id: string; username: string } | null;
-  updated_at_utc_ms: number | null;
-  reconcile_allowed: boolean;
-  claim_candidates: string[];
-  availability: RcSchemas["Availability"];
-}
-
-export interface RcMirror {
-  schema_version: "research.release-candidate-approval-mirror.v1";
-  release_candidate_id: string;
-  approval_id: string;
-  href: string;
-  availability: RcSchemas["Availability"];
-  gate: "R1" | null;
-  subject_id: string | null;
-  subject_label: string | null;
-  status: PublicationSchemas["ApprovalMirror"]["status"] | null;
-  effective_status: string | null;
-  sla_due_at: string | null;
-  expires_at: string | null;
-  created_at: string | null;
-  quorum_met: number | null;
-  quorum_required: number | null;
-  approval_version: number | null;
-  evidence_set_hash: string | null;
-  blocker_count: number | null;
-  condition_count: number | null;
-  conditions: string[];
-  decision_outcomes: string[];
-  rc_superseded: boolean | null;
-  as_of_utc_ms: number;
-}
-
-export type RcCompose = Omit<P21Compose, "state" | "actions" | "mirror"> & {
-  state: P21Compose["state"] | "PUBLISHED";
-  actions: Omit<P21Compose["actions"], "publish"> & {
-    publish: P21Compose["actions"]["publish"] & { release_candidate_id: string | null };
-  };
-  publication: RcPublication;
-  mirror: RcMirror | null;
-};
+export type RcCompose = RcSchemas["ComposeResponseP21"];
 export type RcAvailability = RcSchemas["Availability"];
 export type RcRailNode = RcSchemas["ComposeRailNode"];
 export type RcTaxonomyRow = RcSchemas["ComposeTaxonomyRow"];
@@ -111,43 +59,17 @@ export type RcPack = RcSchemas["PackResponse"];
 export type RcCertificationAxis = RcSchemas["CertificationAxis"];
 export type RcPublishedComparison = RcSchemas["PublishedComparison"];
 export type RcPackKey = RcPackItem["key"];
-export interface RcPublishRequest {
-  schema_version: "research.release-candidate-publish-request.v1";
-  expected_pack_digest: string;
-  request_key?: string;
-  methodology_claim_id?: string;
-  summary?: string;
-  workspace_id?: string;
-}
-export interface RcReconcileRequest {
-  schema_version: "research.release-candidate-publish-reconcile-request.v1";
-}
-export interface RcPublicationResponse {
-  schema_version: "research.release-candidate-publication.v1";
-  release_candidate_id: string | null;
-  publication_state: PublicationWire["state"] | "CONFLICT";
-  delivery_state: string;
-  approval_state: string;
-  replayed: boolean;
-  run_id?: string;
-  pack_digest?: string;
-  href?: string | null;
-  approval_id?: string | null;
-  downstream_receipt_digest?: string | null;
-  attempt_count?: number | null;
-  updated_at_utc_ms?: number | null;
-  conflicting_approval_id?: string | null;
-  downstream_code?: string | null;
-  intent_actor?: { user_id: string; username: string } | null;
-  reconcile_allowed?: boolean;
-  claim_candidates?: string[];
-  availability?: RcSchemas["Availability"];
-}
+
+/** P22 — the one publication read (and the publish answer). */
+export type RcPublication = PublicationSchemas["PublicationResponse"];
+export type RcApproval = PublicationSchemas["ApprovalMirror"];
+export type RcApprovalCondition = PublicationSchemas["Condition"];
+export type RcPublishRequest = PublicationSchemas["PublishRequest"];
 
 const RUNS = "/api/v1/quantbt/runs";
 const PACKS = "/api/v1/research/release-candidates";
 
-/** Reason codes the P21 service publishes (`release-candidate.service.ts`), named once. */
+/** Reason codes the P21/P22 services publish, named once. */
 export const RC_REASON = {
   scratchUnbound: "P21_SCRATCH_RUN_UNBOUND",
   versionNotActive: "P21_ALPHA_VERSION_NOT_ACTIVE",
@@ -158,29 +80,10 @@ export const RC_REASON = {
   assignedOnSeal: "P21_ASSIGNED_ON_LOCAL_SEAL",
   priorFingerprint: "P21_LOCAL_SEAL_REFERENCES_PRIOR_SOURCE_FINGERPRINT",
   sealNotCreated: "P21_LOCAL_SEAL_NOT_CREATED",
-  /* P22 publish blockers (`release-candidate.service.ts` publishAction). */
-  publicationDisabled: "P22_PUBLICATION_DISABLED",
-  alreadyPublished: "P22_ALREADY_PUBLISHED",
-  pendingReconcile: "P22_PUBLICATION_PENDING_RECONCILE",
-  packNotCurrent: "P22_PACK_NOT_CURRENT",
-  runNotMirrored: "P22_RUN_NOT_MIRRORED",
-  alphaMismatch: "P22_ALPHA_MISMATCH",
-  claimNotMirrored: "P22_CLAIM_NOT_MIRRORED",
-  notPublished: "P22_NOT_PUBLISHED",
-  /* P22 mirror availability (`release-candidate-publication.service.ts`). */
-  mirrorReadDenied: "GOVERNANCE_R1_READ_DENIED",
+  localSealRequired: "P22_LOCAL_SEAL_REQUIRED",
+  alreadyDelivered: "P22_ALREADY_DELIVERED",
+  intakeDisabled: "P22_PUBLICATION_INTAKE_DISABLED",
 } as const;
-
-/** P22 `PublicationRefusalCode` values the screen words differently, named once. */
-export const RC_PUBLICATION_CODE = {
-  conflict: "RESEARCH_PUBLICATION_CONFLICT",
-  packNotCurrent: "RESEARCH_PUBLICATION_PACK_NOT_CURRENT",
-  openApprovalExists: "RESEARCH_PUBLICATION_OPEN_APPROVAL_EXISTS",
-  retryable: "RESEARCH_PUBLICATION_RETRYABLE",
-  refusedDownstream: "RESEARCH_PUBLICATION_REFUSED_DOWNSTREAM",
-  recoveryActorMismatch: "RESEARCH_PUBLICATION_RECOVERY_ACTOR_MISMATCH",
-  notReconcilable: "RESEARCH_PUBLICATION_NOT_RECONCILABLE",
-} as const satisfies Record<string, string>;
 
 /* -------------------------------------------------------------------------
  * Paths
@@ -209,37 +112,39 @@ export function packPath(releaseCandidateId: string, workspaceId?: string): stri
   return `${PACKS}/${encodeURIComponent(releaseCandidateId)}${query(workspaceId)}`;
 }
 
-export function publishPath(releaseCandidateId: string, workspaceId?: string): string {
-  return `${PACKS}/${encodeURIComponent(releaseCandidateId)}/publish${query(workspaceId)}`;
-}
-
-export function reconcilePath(releaseCandidateId: string, workspaceId?: string): string {
-  return `${PACKS}/${encodeURIComponent(releaseCandidateId)}/publish/reconcile${query(workspaceId)}`;
-}
-
-export function mirrorPath(releaseCandidateId: string, workspaceId?: string): string {
-  return `${PACKS}/${encodeURIComponent(releaseCandidateId)}/mirror${query(workspaceId)}`;
-}
-
 export function publicationPath(releaseCandidateId: string, workspaceId?: string): string {
   return `${PACKS}/${encodeURIComponent(releaseCandidateId)}/publication${query(workspaceId)}`;
 }
 
-/** Screen 11's product routes (PLAN P21 §2.1). */
-export function releaseCandidateHref(runId: string, options: { pack?: string | null } = {}): string {
-  const base = `/research/quantbt/runs/${encodeURIComponent(runId)}/release-candidate`;
-  return options.pack ? `${base}#pack=${encodeURIComponent(options.pack)}` : base;
+export function publishPath(releaseCandidateId: string, workspaceId?: string): string {
+  return `${PACKS}/${encodeURIComponent(releaseCandidateId)}/publish${query(workspaceId)}`;
 }
 
+/** Screen 11's composition route (PLAN P21 §2.1). */
+export function releaseCandidateHref(runId: string): string {
+  return `/research/quantbt/runs/${encodeURIComponent(runId)}/release-candidate`;
+}
+
+/** A sealed pack's own read-only route (VD-P21-09); the 01 rc chip of a LOCAL_SEAL opens it. */
+export function releaseCandidatePackHref(releaseCandidateId: string): string {
+  return `/research/quantbt/release-candidates/${encodeURIComponent(releaseCandidateId)}`;
+}
+
+/**
+ * W5c deep links (`…/release-candidate#pack=rc_…`) are still honoured: the
+ * composition route forwards them to the pack route. Only a well-formed rc id
+ * is accepted — the hash is never a URL.
+ */
 export function packFromHash(hash: string): string | null {
   const match = /(?:^#|&)pack=([^&]+)/.exec(hash);
   if (!match) return null;
-  const value = decodeURIComponent(match[1]!);
+  let value: string;
+  try {
+    value = decodeURIComponent(match[1]!);
+  } catch {
+    return null;
+  }
   return /^rc_[0-9A-HJKMNP-TV-Z]{26}$/.test(value) ? value : null;
-}
-
-export function releaseCandidatePackHref(releaseCandidateId: string): string {
-  return `/research/quantbt/release-candidates/${encodeURIComponent(releaseCandidateId)}`;
 }
 
 /* -------------------------------------------------------------------------
@@ -277,163 +182,31 @@ async function call<T>(path: string, init: { method?: "GET" | "PATCH" | "POST"; 
   return (await response.json()) as T;
 }
 
-
-const unavailablePublication = (releaseCandidateId: string, reason = "P22_PUBLICATION_NOT_PUBLISHED"): RcPublication => ({
-  state: null,
-  release_candidate_id: releaseCandidateId || null,
-  approval_id: null,
-  conflicting_approval_id: null,
-  downstream_code: null,
-  downstream_receipt_digest: null,
-  attempt_count: null,
-  intent_actor: null,
-  updated_at_utc_ms: null,
-  reconcile_allowed: false,
-  claim_candidates: [],
-  availability: { state: "NOT_PUBLISHED", reason_code: reason },
-});
-
-function sourceAvailability(source: PublicationWire["source"]): RcAvailability {
-  if (source.availability === "AVAILABLE") return { state: "AVAILABLE", reason_code: null };
-  return { state: source.availability === "PARTIAL" ? "PARTIAL" : "NOT_PUBLISHED", reason_code: source.reason_code ?? "P22_PUBLICATION_SOURCE_NOT_AVAILABLE" };
-}
-
-function mirrorFromWire(wire: PublicationWire): RcMirror | null {
-  if (wire.approval_read !== "AVAILABLE" || wire.approval === null) return null;
-  const approval = wire.approval;
-  const asOf = Date.parse(approval.read_at);
-  return {
-    schema_version: "research.release-candidate-approval-mirror.v1",
-    release_candidate_id: wire.release_candidate_id,
-    approval_id: approval.approval_id,
-    href: approval.href,
-    availability: { state: "AVAILABLE", reason_code: null },
-    gate: "R1",
-    subject_id: approval.subject_id,
-    subject_label: approval.subject_id,
-    status: approval.status,
-    effective_status: null,
-    sla_due_at: approval.sla_due_at,
-    expires_at: approval.expires_at,
-    created_at: approval.created_at,
-    quorum_met: null,
-    quorum_required: null,
-    approval_version: null,
-    evidence_set_hash: approval.evidence_set_hash,
-    blocker_count: null,
-    condition_count: approval.conditions.length,
-    conditions: approval.conditions.map((condition: PublicationSchemas["Condition"]) => `${condition.kind}: ${condition.statement}`),
-    decision_outcomes: [],
-    rc_superseded: wire.candidate_relation === "SUPERSEDED",
-    as_of_utc_ms: Number.isFinite(asOf) ? asOf : wire.as_of_utc_ms,
-  };
-}
-
-function publicationFromWire(wire: PublicationWire): RcPublication {
-  return {
-    state: wire.state === "NOT_PUBLISHED" ? null : wire.state,
-    release_candidate_id: wire.release_candidate_id,
-    approval_id: wire.published?.approval_id ?? wire.approval?.approval_id ?? null,
-    conflicting_approval_id: null,
-    downstream_code: wire.blocked_reason,
-    downstream_receipt_digest: wire.published?.receipt_digest ?? null,
-    attempt_count: null,
-    intent_actor: wire.published ? { user_id: wire.published.by_user_id, username: wire.published.by_username } : null,
-    updated_at_utc_ms: wire.published?.at_utc_ms ?? wire.as_of_utc_ms,
-    reconcile_allowed: wire.state === "UNKNOWN" && wire.may_publish,
-    claim_candidates: wire.source.eligible_methodology_claim_ids,
-    availability: sourceAvailability(wire.source),
-  };
-}
-
-function publicationAnswerFromWire(wire: PublicationWire, replayed = wire.replayed): RcPublicationResponse {
-  const publication = publicationFromWire(wire);
-  return {
-    ...publication,
-    schema_version: "research.release-candidate-publication.v1",
-    publication_state: wire.state,
-    delivery_state: wire.state === "DELIVERED" ? "DELIVERED" : wire.state,
-    approval_state: wire.approval_read,
-    replayed,
-  };
-}
-
-function combinedCompose(value: unknown): value is RcCompose {
-  return typeof value === "object" && value !== null && "publication" in value && "mirror" in value;
-}
-
-async function normaliseCompose(raw: P21Compose | RcCompose, options: { workspaceId?: string; signal?: AbortSignal } = {}): Promise<RcCompose> {
-  if (combinedCompose(raw)) return raw;
-  const releaseCandidateId = raw.local_seal.release_candidate_id;
-  let wire: PublicationWire | null = null;
-  if (releaseCandidateId !== null) {
-    try {
-      wire = await call<PublicationWire>(publicationPath(releaseCandidateId, options.workspaceId), { signal: options.signal });
-    } catch {
-      /* Publication is an optional P22 read; keep the P21 composition and a typed absence. */
-    }
-  }
-  const publication = wire ? publicationFromWire(wire) : unavailablePublication(releaseCandidateId ?? "");
-  return {
-    ...raw,
-    state: wire?.state === "DELIVERED" ? "PUBLISHED" : raw.state,
-    actions: { ...raw.actions, publish: { ...raw.actions.publish, release_candidate_id: publication.release_candidate_id } },
-    publication,
-    mirror: wire ? mirrorFromWire(wire) : null,
-  };
-}
-
-function normalisePublication(value: PublicationWire | RcPublicationResponse): RcPublicationResponse {
-  if ("publication_state" in value) return value;
-  return publicationAnswerFromWire(value);
-}
+type Options = { workspaceId?: string; signal?: AbortSignal };
 
 export const releaseCandidateApi = {
-  /** `researchReleaseCandidateComposeGetV1` plus the current P22 publication read when a seal exists. */
-  compose: async (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) => {
-    const raw = await call<P21Compose | RcCompose>(composePath(runId, options.workspaceId), { signal: options.signal });
-    return normaliseCompose(raw, options);
-  },
+  /** `researchReleaseCandidateComposeGetV1` */
+  compose: (runId: string, options: Options = {}) => call<RcCompose>(composePath(runId, options.workspaceId), { signal: options.signal }),
 
   /** `researchReleaseCandidateDraftPatchV1` — only ever from an explicit save. */
-  patchDraft: async (runId: string, body: RcDraftPatch, options: { workspaceId?: string; signal?: AbortSignal } = {}) => {
-    const raw = await call<P21Compose | RcCompose>(draftPath(runId, options.workspaceId), { method: "PATCH", body, signal: options.signal });
-    return normaliseCompose(raw, options);
-  },
+  patchDraft: (runId: string, body: RcDraftPatch, options: Options = {}) =>
+    call<RcCompose>(draftPath(runId, options.workspaceId), { method: "PATCH", body, signal: options.signal }),
 
-  /** `researchReleaseCandidateLocalSealCreateV1` — only ever from an explicit click. */
-  seal: (runId: string, body: RcSealRequest, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
+  /** `researchReleaseCandidateLocalSealCreateV1` — only ever from a confirmed click. */
+  seal: (runId: string, body: RcSealRequest, options: Options = {}) =>
     call<RcSealResponse>(sealPath(runId, options.workspaceId), { method: "POST", body, signal: options.signal }),
 
   /** `researchReleaseCandidatePackGetV1` */
-  pack: (releaseCandidateId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
+  pack: (releaseCandidateId: string, options: Options = {}) =>
     call<RcPack>(packPath(releaseCandidateId, options.workspaceId), { signal: options.signal }),
 
-  /** `researchReleaseCandidatePublishV1` — current backend accepts the full idempotent request body. */
-  publish: async (releaseCandidateId: string, body: RcPublishRequest, options: { workspaceId?: string; signal?: AbortSignal } = {}) => {
-    const raw = await call<PublicationWire>(publishPath(releaseCandidateId, options.workspaceId), { method: "POST", body, signal: options.signal });
-    return normalisePublication(raw);
-  },
+  /** `researchReleaseCandidatePublicationGetV1` (P22): state, gate and the R1 mirror. */
+  publication: (releaseCandidateId: string, options: Options = {}) =>
+    call<RcPublication>(publicationPath(releaseCandidateId, options.workspaceId), { signal: options.signal }),
 
-  /** Replays the exact stored request on the current `/publish` endpoint. */
-  reconcile: async (releaseCandidateId: string, options: { workspaceId?: string; signal?: AbortSignal; body?: RcPublishRequest } = {}) => {
-    if (!options.body) throw new PortalApiError("Publication request is not available for replay.", 409, RC_REASON.pendingReconcile, null);
-    const raw = await call<PublicationWire>(publishPath(releaseCandidateId, options.workspaceId), { method: "POST", body: options.body, signal: options.signal });
-    return normalisePublication(raw);
-  },
-
-  /** Current backend publishes the authorized R1 mirror under the publication read. */
-  mirror: async (releaseCandidateId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) => {
-    try {
-      return await call<RcMirror>(mirrorPath(releaseCandidateId, options.workspaceId), { signal: options.signal });
-    } catch (error) {
-      if (!(error instanceof PortalApiError) || error.status !== 404) throw error;
-      const raw = await call<PublicationWire>(publicationPath(releaseCandidateId, options.workspaceId), { signal: options.signal });
-      const mirror = mirrorFromWire(raw);
-      if (mirror === null) throw error;
-      return mirror;
-    }
-  },
+  /** `researchReleaseCandidatePublishV1` (P22) — only ever from a confirmed click. */
+  publish: (releaseCandidateId: string, body: RcPublishRequest, options: Options = {}) =>
+    call<RcPublication>(publishPath(releaseCandidateId, options.workspaceId), { method: "POST", body, signal: options.signal }),
 } as const;
 
 /* -------------------------------------------------------------------------
@@ -449,6 +222,65 @@ export const RC_WITHHELD_WORDS: Record<RcAvailability["state"], string> = {
 
 export function reasonOf(availability: RcAvailability): string {
   return availability.reason_code ?? availability.state;
+}
+
+/**
+ * One sentence per reason code the P21/P22 services publish, shown beside the
+ * code (the code is always printed; an unknown code prints alone). Spec 11 §7
+ * copy is verbatim where it exists ("resolve MISSING rows first").
+ */
+export const RC_REASON_SENTENCES: Readonly<Record<string, string>> = {
+  /* P21 seal gate */
+  P21_SCRATCH_RUN_UNBOUND: "bind alpha_version first — a scratch run cannot be sealed",
+  P21_ALPHA_VERSION_NOT_ACTIVE: "the bound alpha_version is not ACTIVE",
+  P21_REFERENCED_SOURCE_INTEGRITY_FAILED: "a referenced source is absent, malformed or disagrees with another copy — nothing can be sealed from it",
+  P21_REQUIRED_EVIDENCE_MISSING: "resolve MISSING rows first",
+  P21_RESEARCHER_DECLARATIONS_REQUIRED: "complete and save the two declarations first",
+  P21_RESEARCHER_DECLARATION_REQUIRED: "not declared yet",
+  P21_LOCAL_SEAL_NOT_CREATED: "no local pack has been sealed from this run",
+  P21_LOCAL_SEAL_REFERENCES_PRIOR_SOURCE_FINGERPRINT: "the sealed pack was frozen against earlier evidence — the source has changed since",
+  P21_ASSIGNED_ON_LOCAL_SEAL: "assigned on local seal",
+  P21_SOURCE_DEGRADED_EVIDENCE: "partial evidence — travels as DEGRADED",
+  P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED: "no issued methodology certificate",
+  P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED: "no engine execution-contract certificate",
+  /* W7 retained (Delta WFO) lane */
+  P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED: "claim retained, no issued methodology certificate — travels as DEGRADED",
+  P21_RETAINED_CURRENT_SOURCE_NOT_SEALED: "the run's retained current source is not sealed yet",
+  P21_RETAINED_CLAIM_FACTS_NOT_PUBLISHED: "the retained source publishes no methodology claim facts for this run",
+  P21_RETAINED_CHILD_AUDIT_MISMATCH: "the per-fold OOS child audit does not match the frozen candidate",
+  P21_RETAINED_PARAMETER_DIGEST_MISMATCH: "the retained selection's parameter digest differs from the hand-off cursor",
+  P21_RETAINED_REPORT_NOT_SEALED: "no report was sealed from the retained revision",
+  /* P22 publication (compose affordance and publication read) */
+  P22_LOCAL_SEAL_REQUIRED: "seal the evidence pack first",
+  P22_NOT_PUBLISHED: "not published yet",
+  P22_NO_PUBLISHED_PREDECESSOR: "no earlier candidate of this Alpha was published",
+  P22_PUBLICATION_INTAKE_DISABLED: "publication intake is switched off on this deployment — the sealed pack is kept",
+  P22_PUBLICATION_PENDING: "a publication was recorded and has not settled",
+  P22_PUBLICATION_OUTCOME_UNKNOWN: "the governance store did not confirm the last attempt",
+  P22_PUBLICATION_REFUSED: "the governance store refused this publication — nothing was attached",
+  P22_GOVERNANCE_REFUSED: "the governance store refused this publication — nothing was attached",
+  P22_ALREADY_DELIVERED: "published — immutable",
+  P22_MIRROR_READ_ON_PUBLICATION_ROUTE: "the approval mirror is read live from the publication",
+  P22_SOURCE_NOT_CHECKED: "the governance source was not checked",
+  P22_PACK_INTEGRITY_FAILED: "the sealed pack no longer matches its digest",
+  P22_FINAL_AUDIT_NOT_LINKED: "the sealed pack names no final audit run bound to an Alpha version",
+  P22_RELEASE_CANDIDATE_SUPERSEDED: "a newer candidate was sealed for this run",
+  P22_RELEASE_CANDIDATE_CURRENTNESS_UNKNOWN: "whether this is the run's newest candidate could not be read",
+  P22_CURRENT_SOURCE_CHANGED: "the evidence changed since this pack was sealed — seal again",
+  P22_GOVERNANCE_SOURCE_UNAVAILABLE: "the governance run mirror did not answer",
+  P22_ALPHA_MAPPING_MISMATCH: "the governance run mirror names another Alpha or run",
+  P22_RUN_NOT_TERMINAL: "the governance run mirror does not show this run as completed",
+  P22_SOURCE_FACTS_PARTIAL: "the governance run mirror is missing an artifact hash, schema or methodology claim",
+  P22_METHODOLOGY_CLAIM_NOT_PUBLISHED: "the chosen methodology claim is not one the governance store lists",
+  P22_PUBLICATION_OWNED_BY_ANOTHER_ACTOR: "another researcher recorded this publication; only they may retry it",
+  P22_SOURCE_PIN_CHANGED: "the pinned artifact changed since the publication was recorded",
+  P22_SAVED_REQUEST_INVALID: "the recorded publication request is no longer valid",
+  P22_DOWNSTREAM_OUTCOME_UNKNOWN: "the governance store did not confirm the last attempt",
+  P22_APPROVAL_PIN_UNVERIFIED: "the approval was created but its evidence pin could not be verified yet",
+};
+
+export function rcReasonSentence(code: string | null | undefined): string | null {
+  return code && Object.prototype.hasOwnProperty.call(RC_REASON_SENTENCES, code) ? RC_REASON_SENTENCES[code]! : null;
 }
 
 /** One YAML line exactly as the preview prints it and `copy yaml` copies it. */
@@ -468,85 +300,67 @@ export const DECLARATION_OF_ROW: Partial<Record<RcPackKey, DeclarationKey>> = {
   KNOWN_LIMITATIONS_WAIVERS: "known_limitations",
   PROPOSED_USE_RESTRICTIONS: "proposed_use_restrictions",
 };
-export interface DeclarationIssue { path: string; message: string; }
+export interface DeclarationIssue {
+  path: string;
+  message: string;
+}
+/**
+ * The draft body the contract accepts (`DraftPatch`), checked before sending
+ * so the reader sees the field path; the server stays authoritative.
+ */
 export function declarationIssues(values: Record<DeclarationKey, string>): DeclarationIssue[] {
   const issues: DeclarationIssue[] = [];
   for (const key of DECLARATION_KEYS) {
     const value = values[key];
-    if (value.length > DECLARATION_MAX) issues.push({ path: key, message: `at most ${DECLARATION_MAX} characters (now ${value.length})` });
-    else if (value.length > 0 && value.trim().length === 0) issues.push({ path: key, message: "only whitespace — write the declaration or leave it empty" });
+    if (value.length > DECLARATION_MAX) {
+      issues.push({ path: key, message: `at most ${DECLARATION_MAX} characters (now ${value.length})` });
+    } else if (value.length > 0 && value.trim().length === 0) {
+      issues.push({ path: key, message: "only whitespace — write the declaration or leave it empty" });
+    }
   }
-  if (DECLARATION_KEYS.every((key) => values[key].trim().length === 0)) issues.push({ path: "(body)", message: "at least one declaration is required to save the draft" });
+  if (DECLARATION_KEYS.every((key) => values[key].trim().length === 0)) {
+    issues.push({ path: "(body)", message: "at least one declaration is required to save the draft" });
+  }
   return issues;
 }
 
+/**
+ * Where a pack row's evidence lives in this build, by contract key (W5c D-04).
+ * A row links only when the server published a source for it; the server's
+ * href string itself is never navigated to.
+ */
 export function packSourceRoute(item: RcPackItem, runId: string, alphaId: string | null): string | null {
   if (item.source.href === null) return null;
   const run = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
   switch (item.key) {
-    case "ENGINE_CAPABILITY_BACKEND": return "/research/quantbt/atlas";
+    case "ENGINE_CAPABILITY_BACKEND":
+      return "/research/quantbt/atlas";
     case "DATASET_UNIVERSE_SNAPSHOTS":
-    case "EXECUTION_ASSUMPTIONS": return `${run}/split`;
-    case "METHODOLOGY_CLAIM": return `${run}/evidence#stage=claim`;
-    case "SELECTED_PARAMS_LINEAGE": return `${run}/search`;
-    case "FINAL_AUDIT_REPLAY": return `${run}/execute`;
-    case "METRICS_SEMANTICS": return `${run}/report`;
-    case "REPRODUCIBILITY_PARITY_CHECKSUMS": return `${run}/freeze`;
-    case "ROBUSTNESS_PARAM_STABILITY_REGIME": return alphaId ? `/research/quantbt/alphas/${encodeURIComponent(alphaId)}/compare` : null;
-    default: return null;
+    case "EXECUTION_ASSUMPTIONS":
+      return `${run}/split`;
+    case "METHODOLOGY_CLAIM":
+      return `${run}/evidence#stage=claim`;
+    case "SELECTED_PARAMS_LINEAGE":
+      return `${run}/search`;
+    case "FINAL_AUDIT_REPLAY":
+      return `${run}/execute`;
+    case "METRICS_SEMANTICS":
+      return `${run}/report`;
+    case "REPRODUCIBILITY_PARITY_CHECKSUMS":
+      return `${run}/freeze`;
+    case "ROBUSTNESS_PARAM_STABILITY_REGIME":
+      return alphaId ? `/research/quantbt/alphas/${encodeURIComponent(alphaId)}/compare` : null;
+    default:
+      return null;
   }
 }
 
-export function railRoute(node: RcRailNode, compose: RcCompose): string | null {
+/** Rail links (W5c D-10): `alpha` → Screen 10 lineage, `run` → Screen 04 hub; a dim node never links. */
+export function railRoute(node: RcRailNode, compose: Pick<RcCompose, "run" | "run_id">): string | null {
   if (node.tone === "dim") return null;
   if (node.key === "alpha" && compose.run.binding) return lineageHref(compose.run.binding.alpha_id);
   if (node.key === "run") return `/research/quantbt/runs/${encodeURIComponent(compose.run_id)}/evidence`;
   return null;
-}
-
-/* Compatibility names retained for the P21 consumer tests; the P22 copy stays authoritative. */
-export const CONFLICT_COPY = "evidence changed since composing — review the pack";
-export const DENIED_COPY = "Access changed — reauthenticate or ask a workspace administrator.";
-export const UNAVAILABLE_COPY = "Release candidate service is temporarily unavailable — your draft is kept locally.";
-export const MIRROR_GHOST_NOTE = "Preview of the inbox row this publish will create on the Execution side. It stays a ghost until the record exists — this screen never fakes a governance state.";
-export const SEAL_BUTTON = "Local seal evidence pack";
-
-/**
- * The seal button's reason, in words, for the codes the service publishes.
- * Spec 11 §7 copy where one exists ("resolve MISSING rows first"); "publish"
- * reads "seal" because P21 does not publish (VD-P21-02). Any other code is
- * printed as the code itself.
- */
-export const SEAL_BLOCKED_LABEL: Readonly<Record<string, string>> = {
-  [RC_REASON.scratchUnbound]: "seal blocked — bind alpha_version first",
-  [RC_REASON.versionNotActive]: "seal blocked — the bound alpha_version is not ACTIVE",
-  [RC_REASON.integrityFailed]: "seal blocked — a referenced source failed its integrity check",
-  [RC_REASON.evidenceMissing]: "resolve MISSING rows first",
-  [RC_REASON.declarationsRequired]: "complete the two declarations first",
-  [RC_REASON.alreadyPublished]: "published — immutable",
-};
-
-export function sealBlockedLabel(reasonCode: string): string {
-  return SEAL_BLOCKED_LABEL[reasonCode] ?? reasonCode;
-}
-
-/**
- * The publish button's reason, in words, for the P22 blockers the service
- * publishes. The scratch-run wording is the hi-fi's own disabled label. Any
- * other code (P22_PACK_NOT_CURRENT, P22_ALPHA_MISMATCH, …) is printed as the
- * code itself.
- */
-export const PUBLISH_BLOCKED_LABEL: Readonly<Record<string, string>> = {
-  [RC_REASON.publicationDisabled]: "publish — not enabled in this build",
-  [RC_REASON.sealNotCreated]: "seal the evidence pack first",
-  [RC_REASON.alreadyPublished]: "published — immutable",
-  [RC_REASON.runNotMirrored]: "publish blocked — this run is not mirrored to the governance store",
-  [RC_REASON.pendingReconcile]: "publication outcome unknown — reconcile first",
-  [RC_REASON.scratchUnbound]: "publish blocked — bind alpha_version first",
-};
-
-export function publishBlockedLabel(reasonCode: string): string {
-  return PUBLISH_BLOCKED_LABEL[reasonCode] ?? reasonCode;
 }
 
 /* -------------------------------------------------------------------------
@@ -558,8 +372,7 @@ export function publishBlockedLabel(reasonCode: string): string {
  * server answers a non-member and an unknown run identically, so the screen
  * must not turn either into an existence hint (audit F-04).
  */
-export const RC_NEUTRAL_REFUSAL =
-  "This run may not exist or may be outside your access — nothing here confirms either.";
+export const RC_NEUTRAL_REFUSAL = "This run may not exist or may be outside your access — nothing here confirms either.";
 
 export const RC_REFUSAL_COPY = {
   network: "The request did not reach the server.",
@@ -582,22 +395,12 @@ export const RC_NOT_PUBLISHABLE_COPY =
   "The service refused to seal this composition. Review the blocked rows and the two declarations; nothing was sealed.";
 /** A 400 on a write. */
 export const RC_INVALID_COPY = "The service rejected this request as invalid; nothing was changed.";
-
-/* P22 publish/reconcile refusals — no hi-fi cell carries them (VD-P22-05). */
-/** An open R1 approval for the same alpha and run already exists; nothing was attached. */
-export const RC_OPEN_APPROVAL_COPY =
-  "an open R1 approval already exists for this alpha and run — this candidate was not attached to it";
-/** `RESEARCH_PUBLICATION_RETRYABLE`: the governance write did not settle; not a moved fence. */
-export const RC_RETRYABLE_COPY = "publication did not settle — retry";
-/** A 422 on publish: a server pre-check or a typed downstream refusal. */
-export const RC_PUBLISH_REFUSED_COPY =
-  "The service refused to publish this candidate. Nothing was published and no approval was attached.";
-/** A downstream refusal answered as 409. */
-export const RC_REFUSED_DOWNSTREAM_COPY =
-  "The governance store refused this publication. Nothing was published and no approval was attached.";
-export const RC_ACTOR_MISMATCH_COPY =
-  "Only the researcher who recorded this publication may reconcile it. Nothing was re-submitted.";
-export const RC_NOT_RECONCILABLE_COPY = "This publication is settled and cannot be reconciled. Nothing was re-submitted.";
+/** A 409 on publish: the pack moved, or the recorded intent is someone else's or differs. */
+export const RC_PUBLISH_CONFLICT_COPY =
+  "evidence changed since composing — review the pack. Nothing was published; the publication was read again.";
+/** A 503 or a request that never arrived on publish. */
+export const RC_PUBLISH_UNAVAILABLE_COPY =
+  "The publication service did not answer. Nothing on this screen was changed; publish again when it is back.";
 
 export type RcRefusal = LineageRefusal;
 
@@ -641,13 +444,7 @@ export function toRcWriteRefusal(error: unknown): RcWriteRefusal {
   }
   const { status } = error;
   const outcome: RcWriteOutcome =
-    status === 401 || status === 403 || status === 404
-      ? "denied"
-      : status === 409
-        ? "conflict"
-        : status >= 500
-          ? "unavailable"
-          : "terminal";
+    status === 401 || status === 403 || status === 404 ? "denied" : status === 409 ? "conflict" : status >= 500 ? "unavailable" : "terminal";
   const message =
     outcome === "denied"
       ? status === 401
@@ -663,30 +460,14 @@ export function toRcWriteRefusal(error: unknown): RcWriteRefusal {
   return { outcome, code: error.code, status, requestId: error.requestId, message };
 }
 
-/**
- * Publish and reconcile refusals: the same outcome by status as every other
- * write (`toRcWriteRefusal`), with the sentence chosen by the typed code where
- * a `409` or `422` means something narrower than "the fence moved". The code
- * decides the words only, never the outcome.
- */
+/** Publish refusals: the same outcome by status; the sentence says publish, not seal. */
 export function toRcPublishRefusal(error: unknown): RcWriteRefusal {
   const base = toRcWriteRefusal(error);
-  if (base.outcome === "conflict") {
-    const message =
-      base.code === RC_PUBLICATION_CODE.openApprovalExists
-        ? RC_OPEN_APPROVAL_COPY
-        : base.code === RC_PUBLICATION_CODE.retryable
-          ? RC_RETRYABLE_COPY
-          : base.code === RC_PUBLICATION_CODE.refusedDownstream
-            ? RC_REFUSED_DOWNSTREAM_COPY
-            : base.code === RC_PUBLICATION_CODE.recoveryActorMismatch
-              ? RC_ACTOR_MISMATCH_COPY
-              : base.code === RC_PUBLICATION_CODE.notReconcilable
-                ? RC_NOT_RECONCILABLE_COPY
-                : RC_CONFLICT_COPY;
-    return { ...base, message };
+  if (base.outcome === "conflict") return { ...base, message: RC_PUBLISH_CONFLICT_COPY };
+  if (base.outcome === "unavailable") return { ...base, message: RC_PUBLISH_UNAVAILABLE_COPY };
+  if (base.outcome === "terminal") {
+    return { ...base, message: "The service refused this publish request. Nothing was published and no approval was attached." };
   }
-  if (base.outcome === "terminal" && base.status === 422) return { ...base, message: RC_PUBLISH_REFUSED_COPY };
   return base;
 }
 
@@ -697,9 +478,12 @@ export function toRcPublishRefusal(error: unknown): RcWriteRefusal {
 /** `availability: PARTIAL` is the only degraded outer state a composition declares. */
 export function composeState(compose: RcCompose): ResearchState {
   if (compose.availability.state !== "AVAILABLE") {
+    const code = reasonOf(compose.availability);
+    const sentence = rcReasonSentence(compose.availability.reason_code);
     return {
       state: "partial",
-      reason: `Composed with a declared source gap (${reasonOf(compose.availability)}). The seal stays blocked until it is resolved.`,
+      reason: `Composed with a declared source gap${sentence ? ` — ${sentence}` : ""}. The seal stays blocked until it is resolved.`,
+      detail: code,
       mayRetry: false,
       retainsContent: true,
     };
@@ -711,10 +495,20 @@ export function packState(pack: RcPack): ResearchState {
   if (pack.delivery.availability.state === "PARTIAL") {
     return {
       state: "partial",
-      reason: `Sealed pack with a declared note (${reasonOf(pack.delivery.availability)}).`,
+      reason: "Sealed pack with a declared note.",
+      detail: reasonOf(pack.delivery.availability),
       mayRetry: false,
       retainsContent: true,
     };
   }
   return { state: "available", reason: "", mayRetry: false, retainsContent: true };
+}
+
+/**
+ * Whether the server says this candidate was delivered to R1: the P21 local
+ * seal's own delivery fact, or the P22 publication read. Either is the
+ * server's; the browser never infers it from a click.
+ */
+export function isDelivered(compose: Pick<RcCompose, "local_seal"> | null, publication: RcPublication | null): boolean {
+  return compose?.local_seal.delivery_state === "DELIVERED" || publication?.state === "DELIVERED";
 }

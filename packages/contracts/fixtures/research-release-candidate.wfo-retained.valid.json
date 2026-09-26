@@ -76,7 +76,7 @@
     "last_release_candidate_id": null,
     "availability": {
       "state": "NOT_PUBLISHED",
-      "reason_code": "P22_PUBLISHED_COMPARISON_NOT_COMMISSIONED"
+      "reason_code": "P22_NO_PUBLISHED_PREDECESSOR"
     }
   },
   "certification_axes": {
@@ -689,7 +689,7 @@
     },
     "approval_mirror": {
       "state": "NOT_PUBLISHED",
-      "reason_code": "P22_PUBLICATION_NOT_COMMISSIONED"
+      "reason_code": "P22_LOCAL_SEAL_REQUIRED"
     },
     "execution_deployment": {
       "state": "NOT_APPLICABLE",

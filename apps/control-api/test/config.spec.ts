@@ -226,6 +226,23 @@ describe("P21 Release Candidate local-seal activation guard", () => {
       FEATURE_RESEARCH_RELEASE_CANDIDATES: "true",
     }).FEATURE_RESEARCH_RELEASE_CANDIDATES).toBe("true");
   });
+
+  it("keeps P22 publication intake dark by default and only behind the P21 composer", () => {
+    const p21 = {
+      ...p11Env(),
+      FEATURE_RESEARCH_EVIDENCE: "true", FEATURE_RESEARCH_SPLIT: "true",
+      FEATURE_RESEARCH_SEARCH: "true", FEATURE_RESEARCH_FREEZE: "true",
+      FEATURE_RESEARCH_REPLAY: "true", FEATURE_RESEARCH_REPORTS: "true",
+      FEATURE_RESEARCH_RUN_LIBRARY: "true", FEATURE_RESEARCH_LINEAGE: "true",
+      FEATURE_RESEARCH_RELEASE_CANDIDATES: "true",
+    };
+    expect(loadConfig(p21).FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true",
+    })).toThrow(/FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION=true requires FEATURE_RESEARCH_RELEASE_CANDIDATES=true/);
+    expect(loadConfig({ ...p21, FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true" })
+      .FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION).toBe("true");
+  });
 });
 
 describe("Execution realtime feature dependencies", () => {

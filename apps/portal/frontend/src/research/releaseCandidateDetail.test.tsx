@@ -1,22 +1,31 @@
 /**
- * P21 consumer tests — Screen 11 Release Candidate (S11-U01…).
+ * Screen 11 Release Candidate — consumer tests (P21 compose/seal + P22 publish).
  *
- * The claims that carry this phase:
+ * The compositions are the ones the Research preview served (`w5cRealRc.fixture.json`:
+ * P04 and the pre-W7 WFO run) and the two canonical W7 retained-lane bodies
+ * (`packages/contracts/fixtures/research-release-candidate.wfo-retained*.valid.json`);
+ * each variant is that answer with the fields a case needs changed, never a
+ * hand-built body. The publication read is the Codex P22 wire
+ * (`research.release-candidate-publication.v1`), the only P22 read there is.
  *
- *  - **The server composes; the screen prints.** Rail, taxonomy, verdict, the
- *    12 pack rows, their counts, the 17 fields and the seal gate are printed
- *    as sent — the counter is the server's even when it disagrees with rows.
- *  - **Writes are fenced and explicit.** A save sends the revision and source
- *    fingerprint in hand; a seal sends the persisted draft; neither fires on
- *    its own, and a refusal never loses the text the reader typed.
- *  - **Local seal ≠ publish.** Before a delivered publication the mirror is a
- *    ghost with nothing interactive inside it; publish is one fenced click
- *    whose gate, state and mirror are the server's (P22, S11-U34…).
- *  - **Refusals are neutral.** 403 and 404 say the same sentence and take the
- *    same state; the server's prose is never rendered.
+ * The claims this file carries:
+ *
+ *  - **the server composes; the screen prints** — 17 lines and 12 rows in
+ *    order, the counter as sent, reasons with their sentence and their code;
+ *  - **writes are fenced, confirmed and never retried on their own** — a save
+ *    carries the fences in hand, a seal and a publish each need a confirmation,
+ *    a refusal keeps every typed character;
+ *  - **publish is the server's gate** — P21 `actions.publish` and P22
+ *    `may_publish` / `blocked_reason` both hold, the body carries only the
+ *    pack digest and a listed claim, and `PUBLISHED` is printed only from a
+ *    server fact;
+ *  - **the publication read has typed states** — a transient failure keeps
+ *    polling on a backoff and never becomes "denied"; 401/403/404 are each
+ *    their own state; a delivered candidate never shows the ghost;
+ *  - **nothing is invented** — no assignee pool, no decisions, no summary.
  */
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -24,10 +33,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ALPHA360_TITLE,
   CEILING_TITLE,
-  CLAIM_LEGEND,
   CLAIM_REQUIRED,
   ENGCERT_TITLE,
-  MIRROR_CONDITIONS_NONE,
   MIRROR_INBOX_LINK,
   MIRROR_NOT_READABLE,
   MIRROR_NOTE,
@@ -35,44 +42,50 @@ import {
   MIRROR_POOL_ABSENT,
   MIRROR_PUBLISHED_NOTE,
   MIRROR_SUPERSEDED,
+  NOT_PUBLISHABLE_BADGE,
+  PUBLISH_CONFIRM,
+  PUBLISH_UNBOUND_LABEL,
   PUBLISHED_SENTENCE,
   PUBLISHING_LABEL,
-  RECONCILE_NOT_ADMITTED,
-  UNKNOWN_COPY,
-  NOT_PUBLISHABLE_BADGE,
   RC_PANELS,
   RC_RULES,
   RC_SUBTITLE,
   RC_TITLE,
+  SEAL_CONFIRM,
+  SEAL_DIRTY,
   SEAL_LABEL,
   SEAL_SENTENCE,
   SEALED_REPLAY,
   SOD_NOTE,
   STATUS_TITLE,
+  UNKNOWN_COPY,
+  publishBlock,
 } from "./ReleaseCandidateDetail";
 import { ReleaseCandidatePackRoute, ReleaseCandidateRoute } from "./ReleaseCandidateRoute";
 import {
-  RC_ACTOR_MISMATCH_COPY,
   RC_CONFLICT_COPY,
   RC_DENIED_COPY,
   RC_NEUTRAL_REFUSAL,
-  RC_NOT_PUBLISHABLE_COPY,
-  RC_OPEN_APPROVAL_COPY,
-  RC_PUBLISH_REFUSED_COPY,
-  RC_RETRYABLE_COPY,
+  RC_PUBLISH_CONFLICT_COPY,
+  RC_PUBLISH_UNAVAILABLE_COPY,
+  RC_REASON_SENTENCES,
   RC_UNAVAILABLE_COPY,
+  declarationIssues,
+  packFromHash,
+  packSourceRoute,
+  rcReasonSentence,
+  releaseCandidateHref,
+  releaseCandidatePackHref,
   yamlText,
   type RcCompose,
-  type RcField,
-  type RcMirror,
   type RcPack,
-  type RcPackItem,
   type RcPublication,
-  type RcPublicationResponse,
   type RcSealResponse,
 } from "./releaseCandidateClient";
-import { MIRROR_POLL_MS, nextMirrorView } from "./useReleaseCandidateMirror";
+import { PUBLICATION_BACKOFF_MS, PUBLICATION_POLL_MS, nextPublicationView } from "./useReleaseCandidatePublication";
 import { PortalApiError } from "../lib/api";
+import { iso } from "./utcMinute";
+import real from "./w5cRealRc.fixture.json";
 
 vi.mock("../auth/authApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../auth/authApi")>()),
@@ -83,416 +96,245 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.useRealTimers();
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
 });
 
 /* ---------------------------------------------------------------- fixtures */
 
-/*
- * Shapes, enums and reason codes from `apps/control-api/src/research/
- * release-candidate.contract.ts` and `release-candidate.service.ts` (no
- * canonical frontend fixture is published for P21).
- */
-const RUN = "run_01";
-const ALPHA = "alpha-momentum";
-const RC = "rc_01";
-const T0 = Date.UTC(2026, 8, 20, 10, 30);
-const FP = "sha256:source-fp-1";
-const AVAILABLE = { state: "AVAILABLE", reason_code: null } as const;
-const np = (reason: string) => ({ state: "NOT_PUBLISHED", reason_code: reason }) as const;
-const VERDICT_TITLE = "local seal ready — seal before publishing";
-const COMPOSE_PATH = `/api/v1/quantbt/runs/${RUN}/release-candidate`;
+const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const P04 = real.p04 as unknown as RcCompose;
+const WFO_PRE_W7 = real.wfo as unknown as RcCompose;
+const contractFixture = (name: string) =>
+  JSON.parse(readFileSync(join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures", name), "utf8")) as RcCompose;
+const W7_VIRTUAL = contractFixture("research-release-candidate.wfo-retained.valid.json");
+const W7_DECLARED = contractFixture("research-release-candidate.wfo-retained-declared.valid.json");
 
-const FIELD_KEYS: RcField["key"][] = [
-  "release_candidate_id",
-  "alpha_id",
-  "alpha_version_id",
-  "alpha_code_digest",
-  "alpha_entrypoint",
-  "final_audit_run_id",
-  "final_audit_attempt_id",
-  "requested_spec_digest",
-  "effective_spec_digest",
-  "dataset_binding_digest",
-  "manifest_digest",
-  "source_transform_digest",
-  "engine_release_id",
-  "adapter_contract_digest",
-  "parameter_bundle_digest",
-  "evidence_revision",
-  "report_revision",
-];
+const RUN = P04.run_id;
+const ALPHA = P04.run.binding!.alpha_id;
+const AV = P04.run.binding!.alpha_version_id;
+const RC_ID = "rc_01K5W5CSEA1ED0000000000000";
+const OTHER_RC = "rc_01K5W5CSEA1ED0000000000001";
+const DRAFT_ID = "rcd_01K5W5CDRAFT00000000000AB";
+const SEALED_AT = 1_790_320_100_000;
+const PUBLISHED_AT = SEALED_AT + 3_600_000;
+const PACK_DIGEST = "5".repeat(64);
+const CLAIM = "mclaim_delta_oos";
+const APPROVAL = "apr_01K5W5C";
+const SERVER_PROSE = "SECRET-SERVER-PROSE run owned by alice@example";
 
-function fields(): RcField[] {
-  return FIELD_KEYS.map((key) =>
-    key === "release_candidate_id"
-      ? { key, label: "release candidate id", value: null, tone: "gold", availability: { state: "NOT_APPLICABLE", reason_code: "P21_ASSIGNED_ON_LOCAL_SEAL" } }
-      : key === "source_transform_digest"
-        ? { key, label: "source transform digest", value: null, tone: "dim", availability: np("P21_SOURCE_TRANSFORM_NOT_PUBLISHED") }
-        : { key, label: key.replace(/_/g, " "), value: `${key}:v1`, tone: "ink", availability: AVAILABLE },
-  );
-}
-
-const RUN_ROOT = `/research/quantbt/runs/${RUN}`;
-
-function item(
-  n: number,
-  key: RcPackItem["key"],
-  label: string,
-  status: RcPackItem["status"],
-  href: string | null,
-  extra: Partial<RcPackItem> = {},
-): RcPackItem {
-  return {
-    key,
-    n,
-    item: label,
-    status,
-    digest: status === "COMPLETE" || status === "DEGRADED" ? `sha256:${key.toLowerCase()}` : null,
-    source: { label: href === null ? "Researcher declaration" : `source ${n}`, href },
-    note: `note ${n}`,
-    availability:
-      status === "COMPLETE"
-        ? AVAILABLE
-        : status === "DEGRADED"
-          ? { state: "PARTIAL", reason_code: "P21_SOURCE_DEGRADED_EVIDENCE" }
-          : status === "INPUT"
-            ? np("P21_RESEARCHER_DECLARATION_REQUIRED")
-            : np("P21_REQUIRED_EVIDENCE_MISSING"),
-    ...extra,
-  } as RcPackItem;
-}
-
-function pack(): RcPackItem[] {
-  return [
-    item(1, "ALPHA_VERSION_PASSPORT", "alpha_version passport", "COMPLETE", `/research/alphas/${ALPHA}`),
-    item(2, "ENGINE_CAPABILITY_BACKEND", "engine capability & backend", "COMPLETE", "/research/quantbt"),
-    item(3, "DATASET_UNIVERSE_SNAPSHOTS", "dataset & universe snapshots", "COMPLETE", RUN_ROOT),
-    item(4, "METHODOLOGY_CLAIM", "methodology claim", "DEGRADED", `${RUN_ROOT}/evidence`),
-    item(5, "SELECTED_PARAMS_LINEAGE", "selected params lineage", "COMPLETE", `${RUN_ROOT}/search`),
-    item(6, "FINAL_AUDIT_REPLAY", "final audit replay", "MISSING", `${RUN_ROOT}/replay`),
-    item(7, "METRICS_SEMANTICS", "metrics semantics", "COMPLETE", `${RUN_ROOT}/report`),
-    item(8, "EXECUTION_ASSUMPTIONS", "execution assumptions", "COMPLETE", `${RUN_ROOT}/split`),
-    item(9, "ROBUSTNESS_PARAM_STABILITY_REGIME", "robustness · param stability · regime", "COMPLETE", `/research/alphas/${ALPHA}/compare`),
-    item(10, "KNOWN_LIMITATIONS_WAIVERS", "known limitations & waivers", "INPUT", null),
-    item(11, "REPRODUCIBILITY_PARITY_CHECKSUMS", "reproducibility · parity · checksums", "COMPLETE", `${RUN_ROOT}/freeze`),
-    item(12, "PROPOSED_USE_RESTRICTIONS", "proposed use & restrictions", "INPUT", null),
-  ];
-}
-
-type DraftOverrides = Partial<RcCompose["draft"]>;
-
-/** `Publication` with nothing recorded yet (shape of `publicationBlock`). */
-function publication(overrides: Partial<RcPublication> = {}): RcPublication {
-  return {
-    availability: np("P22_NOT_PUBLISHED"),
-    state: null,
-    release_candidate_id: RC,
-    approval_id: null,
-    conflicting_approval_id: null,
-    downstream_code: null,
-    downstream_receipt_digest: null,
-    attempt_count: null,
-    intent_actor: null,
-    updated_at_utc_ms: null,
-    reconcile_allowed: false,
-    claim_candidates: ["claim_m1"],
-    ...overrides,
+/** The P04 answer with its three MISSING rows resolved: what a sealable composition looks like. */
+function sealable(overrides: { saved?: boolean; revision?: number } = {}): RcCompose {
+  const body = clone(P04);
+  const saved = overrides.saved ?? true;
+  for (const item of body.pack) {
+    if (item.status === "MISSING") Object.assign(item, { status: "COMPLETE", digest: "6".repeat(64), availability: { state: "AVAILABLE", reason_code: null } });
+    if (item.status === "INPUT" && saved) Object.assign(item, { digest: "7".repeat(64), availability: { state: "AVAILABLE", reason_code: null } });
+  }
+  body.pack_counts = { complete: 9, degraded: 1, input: 2, missing: 0 };
+  body.draft = saved
+    ? {
+        draft_id: DRAFT_ID,
+        revision: overrides.revision ?? 1,
+        source_fingerprint: body.source_fingerprint,
+        known_limitations: "Single venue depth; funding modelled at a constant rate.",
+        proposed_use_restrictions: "Paper first; BTCUSDT-PERP only.",
+        state: "PERSISTED",
+        updated_at_utc_ms: 1_790_320_050_000,
+      }
+    : body.draft;
+  body.actions = {
+    ...body.actions,
+    may_seal: saved,
+    seal_blocked_reason: saved ? null : "P21_RESEARCHER_DECLARATIONS_REQUIRED",
+    publish: { enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED" },
   };
+  body.gate_verdict = { ...body.gate_verdict, title: saved ? "local seal ready — downstream publish remains P22" : body.gate_verdict.title };
+  body.source_absences = { ...body.source_absences, approval_mirror: { state: "NOT_PUBLISHED", reason_code: "P22_LOCAL_SEAL_REQUIRED" } };
+  return body;
 }
 
-function compose(overrides: Partial<RcCompose> = {}, draft: DraftOverrides = {}): RcCompose {
-  const f = fields();
-  return {
-    schema_version: "research.release-candidate-compose.v1",
-    read_authority: "PORTAL_PERSISTED_RESEARCH",
-    run_id: RUN,
-    state: "DRAFT",
-    availability: AVAILABLE,
-    as_of_utc_ms: T0,
-    source_fingerprint: FP,
-    run: { id: RUN, attempt: "att_01", binding: { alpha_id: ALPHA, alpha_version_id: "alphaver_1", lifecycle_state: "ACTIVE" } },
-    rail: [
-      { key: "alpha", value: ALPHA, detail: "momentum family", tone: "ink" },
-      { key: "alpha_version", value: "alphaver_1", detail: "ACTIVE", tone: "ink" },
-      { key: "run", value: `${RUN} / att_01`, detail: null, tone: "ink" },
-      { key: "selected_params", value: "params:9f2", detail: "bundle pinned", tone: "green" },
-      { key: "release_candidate", value: "rc_ — assigned on seal", detail: "DRAFT", tone: "gold" },
-    ],
-    taxonomy: [
-      { what: "alpha code", state: "UNSET", consequence: "no published predecessor to compare" },
-      { what: "params", state: "UNSET", consequence: "no published predecessor to compare" },
-      { what: "data / universe", state: "UNSET", consequence: "no published predecessor to compare" },
-      { what: "methodology", state: "UNSET", consequence: "no published predecessor to compare" },
-    ],
-    published_comparison: { last_release_candidate_id: null, availability: np("P22_NO_PUBLISHED_PREDECESSOR") },
-    certification_axes: {
-      methodology_claim: { value: "B", availability: AVAILABLE },
-      engine_execution_contract: { value: null, availability: np("P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED") },
-    },
-    gate_verdict: { title: VERDICT_TITLE, body: "Every required row is present; the declarations are signed." },
-    draft: {
-      draft_id: "rcd_1",
-      revision: 2,
-      source_fingerprint: FP,
-      known_limitations: "fees modelled at taker",
-      proposed_use_restrictions: null,
-      state: "PERSISTED",
-      updated_at_utc_ms: T0,
-      ...draft,
-    },
-    fields: f,
-    yaml: f,
-    pack: pack(),
-    /* Deliberately not the rows' own tally: the counter is the server's. */
-    pack_counts: { complete: 9, degraded: 0, input: 2, missing: 1 },
-    local_seal: {
-      state: "UNSEALED",
-      release_candidate_id: null,
-      pack_digest: null,
-      sealed_at_utc_ms: null,
-      delivery_state: null,
-      approval_state: null,
-      availability: np("P21_LOCAL_SEAL_NOT_CREATED"),
-    },
-    actions: {
-      may_edit_draft: true,
-      may_seal: true,
-      seal_blocked_reason: null,
-      publish: { enabled: false, blocked_reason: "P21_LOCAL_SEAL_NOT_CREATED", release_candidate_id: null },
-    },
-    publication: publication({ availability: np("P21_LOCAL_SEAL_NOT_CREATED"), release_candidate_id: null }),
-    mirror: null,
-    source_absences: {
-      alpha_binding: AVAILABLE,
-      approval_mirror: np("P22_NOT_PUBLISHED"),
-      execution_deployment: { state: "NOT_APPLICABLE", reason_code: "P21_EXECUTION_DEPLOYMENT_NOT_APPLICABLE" },
-    },
-    ...overrides,
-  } as RcCompose;
-}
-
-function unbound(): RcCompose {
-  const base = compose({}, { draft_id: null, revision: 0, state: "VIRTUAL", known_limitations: null, updated_at_utc_ms: null });
-  return {
-    ...base,
-    run: { ...base.run, binding: null },
-    rail: base.rail.map((node) =>
-      node.key === "alpha" || node.key === "alpha_version" ? { ...node, value: "not bound", detail: null, tone: "dim" } : node,
-    ),
-    gate_verdict: { title: "local seal blocked — review evidence", body: "This run has no alpha_version binding." },
-    actions: { ...base.actions, may_seal: false, seal_blocked_reason: "P21_SCRATCH_RUN_UNBOUND" },
-    source_absences: { ...base.source_absences, alpha_binding: np("P21_SCRATCH_RUN_UNBOUND") },
-  };
-}
-
-const SEALED_AT = T0 + 3_600_000;
-
-function sealedLocal(): RcCompose["local_seal"] {
-  return {
+/** A sealed candidate; `publish` is the P21 affordance the server returns (intake open by default). */
+function sealed(publish: RcCompose["actions"]["publish"] = { enabled: true, blocked_reason: null }): RcCompose {
+  const body = sealable();
+  body.local_seal = {
     state: "SEALED_LOCAL",
-    release_candidate_id: RC,
-    pack_digest: "sha256:pack-1",
+    release_candidate_id: RC_ID,
+    pack_digest: PACK_DIGEST,
     sealed_at_utc_ms: SEALED_AT,
     delivery_state: "NOT_DELIVERED",
     approval_state: "NOT_APPROVED",
-    availability: AVAILABLE,
+    availability: { state: "AVAILABLE", reason_code: null },
+  };
+  body.rail = body.rail.map((node) => (node.key === "release_candidate" ? { ...node, value: RC_ID, detail: "sealed locally — not delivered", tone: "green" } : node));
+  body.actions = { ...body.actions, publish };
+  body.source_absences = { ...body.source_absences, approval_mirror: { state: "NOT_PUBLISHED", reason_code: "P22_NOT_PUBLISHED" } };
+  return body;
+}
+
+/** The composition after P22 delivered it: the seal's own delivery fact says so. */
+function deliveredCompose(): RcCompose {
+  const body = sealed({ enabled: false, blocked_reason: "P22_ALREADY_DELIVERED" });
+  body.local_seal = { ...body.local_seal, delivery_state: "DELIVERED", approval_state: "PENDING" };
+  body.source_absences = { ...body.source_absences, approval_mirror: { state: "NOT_APPLICABLE", reason_code: "P22_MIRROR_READ_ON_PUBLICATION_ROUTE" } };
+  return body;
+}
+
+function unbound(): RcCompose {
+  const body = clone(P04);
+  body.run.binding = null;
+  body.rail = body.rail.map((node) => (node.key === "alpha" || node.key === "alpha_version" ? { ...node, value: "— unbound / scratch run", detail: null, tone: "dim" } : node));
+  body.actions = { ...body.actions, may_seal: false, seal_blocked_reason: "P21_SCRATCH_RUN_UNBOUND", publish: { enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED" } };
+  body.source_absences = { ...body.source_absences, alpha_binding: { state: "NOT_PUBLISHED", reason_code: "P21_SCRATCH_RUN_UNBOUND" } };
+  body.yaml = body.yaml.map((field) =>
+    field.key === "alpha_version_id" ? { ...field, value: null, tone: "red", availability: { state: "NOT_PUBLISHED", reason_code: "P21_ALPHA_BINDING_NOT_PUBLISHED" } } : field,
+  );
+  body.fields = body.yaml;
+  return body;
+}
+
+const sealResponse = (id = RC_ID): RcSealResponse => ({
+  schema_version: "research.release-candidate-local-seal.v1",
+  release_candidate_id: id,
+  run_id: RUN,
+  pack_digest: PACK_DIGEST,
+  sealed_at_utc_ms: SEALED_AT,
+  delivery_state: "NOT_DELIVERED",
+  approval_state: "NOT_APPROVED",
+});
+
+function pack(delivery: RcPack["delivery"] = sealed().local_seal): RcPack {
+  const body = sealed();
+  return {
+    schema_version: "research.release-candidate-pack.v1",
+    read_authority: "PORTAL_PERSISTED_RESEARCH",
+    release_candidate_id: RC_ID,
+    run_id: RUN,
+    pack_digest: PACK_DIGEST,
+    sealed_at_utc_ms: SEALED_AT,
+    frozen_core: {
+      fields: body.fields.map((field) => (field.key === "release_candidate_id" ? { ...field, value: RC_ID, tone: "ink", availability: { state: "AVAILABLE", reason_code: null } } : field)),
+      pack: body.pack,
+      source_fingerprint: body.source_fingerprint,
+      draft: { known_limitations: body.draft.known_limitations!, proposed_use_restrictions: body.draft.proposed_use_restrictions! },
+    },
+    delivery,
   };
 }
 
-function sealed(pub: Partial<RcPublication> = {}, action: Partial<RcCompose["actions"]["publish"]> = {}): RcCompose {
-  const base = compose();
+/** The Codex P22 publication read (`research.release-candidate-publication.v1`), nothing published yet. */
+function publication(overrides: Partial<RcPublication> = {}): RcPublication {
   return {
-    ...base,
-    rail: base.rail.map((node) => (node.key === "release_candidate" ? { ...node, value: RC, detail: "SEALED_LOCAL", tone: "green" } : node)),
-    local_seal: sealedLocal(),
-    actions: { ...base.actions, publish: { enabled: true, blocked_reason: null, release_candidate_id: RC, ...action } },
-    publication: publication(pub),
-  };
-}
-
-const PUBLISHED_AT = SEALED_AT + 3_600_000;
-const APPROVAL = "apr_01";
-const ACTOR = { user_id: "u_1", username: "researcher@bobby" };
-
-/** `Mirror` as `release-candidate-publication.service.ts` answers a readable R1 approval. */
-function mirror(overrides: Partial<RcMirror> = {}): RcMirror {
-  return {
-    schema_version: "research.release-candidate-approval-mirror.v1",
-    release_candidate_id: RC,
-    approval_id: APPROVAL,
-    href: `/governance/approvals/${APPROVAL}/r1`,
-    availability: AVAILABLE,
-    gate: "R1",
-    subject_id: ALPHA,
-    subject_label: `${RC} — ${ALPHA} alphaver_1`,
-    status: "PENDING",
-    effective_status: "PENDING",
-    sla_due_at: "2026-09-21T12:30:00.000Z",
-    expires_at: "2026-09-23T12:30:00.000Z",
-    created_at: "2026-09-20T12:30:00.000Z",
-    quorum_met: 0,
-    quorum_required: 1,
-    approval_version: 1,
-    evidence_set_hash: "sha256:evidence-set-1",
-    blocker_count: 0,
-    condition_count: 0,
-    conditions: [],
-    decision_outcomes: [],
-    rc_superseded: false,
-    as_of_utc_ms: PUBLISHED_AT,
+    schema_version: "research.release-candidate-publication.v1",
+    release_candidate_id: RC_ID,
+    run_id: RUN,
+    alpha_id: ALPHA,
+    alpha_version_id: AV,
+    pack_digest: PACK_DIGEST,
+    source: {
+      availability: "AVAILABLE",
+      reason_code: null,
+      run_status: "COMPLETED",
+      legacy_artifact_sha256: `sha256:${"b".repeat(64)}`,
+      artifact_schema_version: "quantbt.selected-params.v1",
+      eligible_methodology_claim_ids: [CLAIM],
+      captured_at: "2026-09-25T10:00:00.000Z",
+    },
+    state: "NOT_PUBLISHED",
+    candidate_relation: "CURRENT",
+    may_publish: true,
+    blocked_reason: null,
+    published: null,
+    approval_read: "NOT_PUBLISHED",
+    approval: null,
+    as_of_utc_ms: SEALED_AT + 60_000,
+    replayed: false,
     ...overrides,
   };
 }
 
-/** Without the R1 read authority: the id, the link and a typed absence, nothing else. */
-function deniedMirror(): RcMirror {
-  return mirror({
-    availability: { state: "NOT_APPLICABLE", reason_code: "GOVERNANCE_R1_READ_DENIED" },
-    gate: null,
-    subject_id: null,
-    subject_label: null,
-    status: null,
-    effective_status: null,
-    sla_due_at: null,
-    expires_at: null,
-    created_at: null,
-    quorum_met: null,
-    quorum_required: null,
-    approval_version: null,
-    evidence_set_hash: null,
-    blocker_count: null,
-    condition_count: null,
-  });
-}
-
-function published(m: RcMirror = mirror()): RcCompose {
-  const base = sealed();
-  return {
-    ...base,
-    state: "PUBLISHED",
-    rail: base.rail.map((node) => (node.key === "release_candidate" ? { ...node, value: RC, detail: "published · immutable", tone: "green" } : node)),
-    gate_verdict: { title: "published — immutable · R1 review in Approval Inbox", body: PUBLISHED_SENTENCE },
-    local_seal: { ...sealedLocal(), delivery_state: "DELIVERED", approval_state: "PENDING" },
-    actions: {
-      may_edit_draft: false,
-      may_seal: false,
-      seal_blocked_reason: "P22_ALREADY_PUBLISHED",
-      publish: { enabled: false, blocked_reason: "P22_ALREADY_PUBLISHED", release_candidate_id: RC },
-    },
-    publication: publication({
-      availability: AVAILABLE,
-      state: "DELIVERED",
-      approval_id: APPROVAL,
-      downstream_receipt_digest: "sha256:receipt-1",
-      attempt_count: 1,
-      intent_actor: ACTOR,
-      updated_at_utc_ms: PUBLISHED_AT,
-    }),
-    mirror: m,
-    source_absences: { alpha_binding: AVAILABLE, execution_deployment: { state: "NOT_APPLICABLE", reason_code: "P21_EXECUTION_DEPLOYMENT_OUT_OF_SCOPE" } },
-  };
-}
-
-/** An attempt the governance store did not confirm; only the intent actor may reconcile. */
-function unknownOutcome(): RcCompose {
-  return sealed(
-    { availability: AVAILABLE, state: "UNKNOWN", attempt_count: 1, intent_actor: ACTOR, updated_at_utc_ms: PUBLISHED_AT, reconcile_allowed: true },
-    { enabled: false, blocked_reason: "P22_PUBLICATION_PENDING_RECONCILE" },
-  );
-}
-
-function publicationAnswer(state: "DELIVERED" | "UNKNOWN", replayed = false): RcPublicationResponse {
-  const delivered = state === "DELIVERED";
-  return {
-    schema_version: "research.release-candidate-publication.v1",
-    release_candidate_id: RC,
-    run_id: RUN,
-    pack_digest: "sha256:pack-1",
-    publication_state: state,
-    replayed,
-    approval_id: delivered ? APPROVAL : null,
-    href: delivered ? `/governance/approvals/${APPROVAL}/r1` : null,
-    downstream_receipt_digest: delivered ? "sha256:receipt-1" : null,
-    attempt_count: 1,
-    delivery_state: delivered ? "DELIVERED" : "UNKNOWN",
-    approval_state: delivered ? "PENDING" : "UNKNOWN",
-    updated_at_utc_ms: PUBLISHED_AT,
-  };
-}
-
-const SEAL_RESPONSE: RcSealResponse = {
-  schema_version: "research.release-candidate-local-seal.v1",
-  release_candidate_id: RC,
-  run_id: RUN,
-  pack_digest: "sha256:pack-1",
-  sealed_at_utc_ms: SEALED_AT,
-  delivery_state: "NOT_DELIVERED",
-  approval_state: "NOT_APPROVED",
+const APPROVAL_BODY: NonNullable<RcPublication["approval"]> = {
+  approval_id: APPROVAL,
+  gate: "R1",
+  status: "PENDING",
+  subject_id: ALPHA,
+  requester_user_id: "usr_researcher",
+  evidence_set_hash: `sha256:${"c".repeat(64)}`,
+  sla_due_at: "2026-09-27T09:12:00.000Z",
+  expires_at: "2026-12-25T09:12:00.000Z",
+  created_at: "2026-09-26T09:12:00.000Z",
+  read_at: "2026-09-26T09:13:00.000Z",
+  conditions: [],
+  href: `/governance/approvals/${APPROVAL}/r1`,
 };
 
-function packResponse(): RcPack {
-  const base = compose();
-  return {
-    schema_version: "research.release-candidate-pack.v1",
-    read_authority: "PORTAL_PERSISTED_RESEARCH",
-    release_candidate_id: RC,
-    run_id: RUN,
-    pack_digest: "sha256:pack-1",
-    sealed_at_utc_ms: SEALED_AT,
-    frozen_core: {
-      fields: base.fields,
-      pack: base.pack,
-      source_fingerprint: FP,
-      draft: { known_limitations: "fees modelled at taker", proposed_use_restrictions: "research only" },
-    },
-    delivery: sealedLocal(),
-  };
+function deliveredRead(overrides: Partial<RcPublication> = {}, approval: Partial<NonNullable<RcPublication["approval"]>> = {}): RcPublication {
+  return publication({
+    state: "DELIVERED",
+    may_publish: false,
+    blocked_reason: "P22_ALREADY_DELIVERED",
+    published: { by_user_id: "usr_researcher", by_username: "researcher@bobby", approval_id: APPROVAL, at_utc_ms: PUBLISHED_AT, receipt_digest: "d".repeat(64) },
+    approval_read: "AVAILABLE",
+    approval: { ...APPROVAL_BODY, ...approval },
+    as_of_utc_ms: PUBLISHED_AT + 60_000,
+    ...overrides,
+  });
 }
 
 /* ------------------------------------------------------------------ server */
 
+type Lane = "COMPOSE" | "PATCH" | "SEAL" | "PACK" | "PUBLICATION" | "PUBLISH" | "OTHER";
 interface Answer {
   status: number;
   body?: unknown;
-  /** Hold the answer until the test releases it. */
   hold?: Promise<void>;
 }
 interface Call {
   url: string;
+  lane: Lane;
   method: string;
   headers: Record<string, string>;
   body: unknown;
 }
 
 const ok = (body: unknown, status = 200): Answer => ({ status, body });
-const SERVER_PROSE = "SECRET-SERVER-PROSE run owned by alice@example";
-const problem = (status: number, code: string): Answer => ({
-  status,
-  body: { error: { code, message: SERVER_PROSE }, request_id: `req_${status}` },
-});
+const problem = (status: number, code: string): Answer => ({ status, body: { error: { code, message: SERVER_PROSE }, request_id: `req_${status}` } });
 
-/** `MIRROR` answers GET …/mirror; every other GET is the composition. */
-function server(answers: Partial<Record<"GET" | "PATCH" | "POST" | "MIRROR", Answer[]>>) {
+function laneOf(url: string, method: string): Lane {
+  const path = url.split("?")[0]!;
+  if (/\/api\/v1\/quantbt\/runs\/[^/]+\/release-candidate$/.test(path) && method === "GET") return "COMPOSE";
+  if (/\/release-candidate\/draft$/.test(path) && method === "PATCH") return "PATCH";
+  if (/\/release-candidate\/seal$/.test(path) && method === "POST") return "SEAL";
+  if (/\/api\/v1\/research\/release-candidates\/[^/]+\/publication$/.test(path) && method === "GET") return "PUBLICATION";
+  if (/\/api\/v1\/research\/release-candidates\/[^/]+\/publish$/.test(path) && method === "POST") return "PUBLISH";
+  if (/\/api\/v1\/research\/release-candidates\/[^/]+$/.test(path) && method === "GET") return "PACK";
+  return "OTHER";
+}
+
+function server(answers: Partial<Record<Lane, Answer[]>>) {
   const calls: Call[] = [];
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    const verb = (init?.method ?? "GET").toUpperCase() as "GET" | "PATCH" | "POST";
-    const method = verb === "GET" && String(input).includes("/mirror") ? "MIRROR" : verb;
+    const url = String(input);
+    const method = (init?.method ?? "GET").toUpperCase();
+    const lane = laneOf(url, method);
     calls.push({
-      url: String(input),
+      url,
+      lane,
       method,
       headers: (init?.headers ?? {}) as Record<string, string>,
       body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
     });
-    const queue = answers[method] ?? [];
+    const queue = answers[lane] ?? [];
     const answer = queue.length > 1 ? queue.shift()! : queue[0];
-    if (!answer) throw new Error(`no answer for ${method}`);
+    if (!answer) return new Response(JSON.stringify({ error: { code: "NOT_STUBBED" } }), { status: 404, headers: { "content-type": "application/json" } });
     if (answer.hold) await answer.hold;
     return new Response(JSON.stringify(answer.body), { status: answer.status, headers: { "content-type": "application/json" } });
   });
-  return {
-    calls,
-    of: (method: string) => calls.filter((call) => call.method === method),
-  };
+  return { calls, of: (lane: Lane) => calls.filter((call) => call.lane === lane) };
+}
+
+function Where() {
+  const location = useLocation();
+  return <span data-testid="where">{`${location.pathname}${location.hash}`}</span>;
 }
 
 function renderAt(url: string) {
@@ -502,28 +344,45 @@ function renderAt(url: string) {
         <Route path="/research/quantbt/runs/:runId/release-candidate" element={<ReleaseCandidateRoute />} />
         <Route path="/research/quantbt/release-candidates/:releaseCandidateId" element={<ReleaseCandidatePackRoute />} />
       </Routes>
+      <Where />
     </MemoryRouter>,
   );
 }
 
-const renderCompose = () => renderAt(`/research/quantbt/runs/${RUN}/release-candidate`);
-const page = () => document.querySelector('[data-screen="release-candidate"]') as HTMLElement;
-const panel = (name: string) => document.querySelector(`[data-panel="${name}"]`) as HTMLElement;
-const panelOrder = () => [...page().querySelectorAll(":scope [data-panel]")].map((el) => el.getAttribute("data-panel"));
-const row = (key: string) => document.querySelector(`[data-pack-row="${key}"]`) as HTMLElement;
-const sealButton = () => document.querySelector('[data-action="local-seal"]') as HTMLElement;
-const publishButton = () => document.querySelector('[data-action="publish"]') as HTMLElement;
-const reconcileButton = () => document.querySelector('[data-action="reconcile"]') as HTMLElement;
+const renderCompose = (runId = RUN) => renderAt(`/research/quantbt/runs/${runId}/release-candidate`);
+const q = <T extends Element = HTMLElement>(selector: string) => document.querySelector(selector) as T | null;
+const qa = (selector: string) => Array.from(document.querySelectorAll(selector));
+const page = () => q("[data-screen='release-candidate']")!;
+const panel = (name: string) => q(`[data-panel="${name}"]`);
+const panelOrder = () => qa("[data-screen='release-candidate'] [data-panel]").map((el) => el.getAttribute("data-panel"));
+const sealButton = () => q("[data-action='local-seal']")!;
+const publishButton = () => q("[data-action='publish']");
+const describedBy = (el: Element) => document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent ?? null;
 
-async function ready(title = VERDICT_TITLE) {
-  await screen.findByText(title);
+/** What a reader sees on the screen: its text without the injected stylesheet. */
+function screenText(): string {
+  const copy = page().cloneNode(true) as HTMLElement;
+  copy.querySelectorAll("style").forEach((style) => style.remove());
+  return copy.textContent ?? "";
+}
+
+async function ready() {
+  await waitFor(() => expect(qa("[data-pack-row]")).toHaveLength(12));
+}
+
+async function flush() {
+  for (let i = 0; i < 8; i += 1) {
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
 }
 
 async function until(selector: string): Promise<HTMLElement> {
   return waitFor(() => {
-    const found = document.querySelector(selector);
+    const found = q(selector);
     if (!found) throw new Error(`not yet: ${selector}`);
-    return found as HTMLElement;
+    return found;
   });
 }
 
@@ -535,16 +394,23 @@ function deferred() {
   return { promise, release };
 }
 
-async function openEditor(key: "KNOWN_LIMITATIONS_WAIVERS" | "PROPOSED_USE_RESTRICTIONS", text: string) {
-  fireEvent.click(document.querySelector(`[data-edit="${key}"]`)!);
-  const input = document.querySelector(`[data-declaration-input="${key}"]`) as HTMLTextAreaElement;
+function edit(key: "KNOWN_LIMITATIONS_WAIVERS" | "PROPOSED_USE_RESTRICTIONS", text: string) {
+  fireEvent.click(q(`[data-edit="${key}"]`)!);
+  const input = q<HTMLTextAreaElement>(`[data-declaration-input="${key}"]`)!;
   fireEvent.change(input, { target: { value: text } });
   return input;
 }
 
-/* ------------------------------------------------------------------- tests */
+function setVisibility(state: "visible" | "hidden") {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+  act(() => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+}
 
-describe("Screen 11 Release Candidate", () => {
+/* ------------------------------------------------------------ composition */
+
+describe("S11 composition as served (P21)", () => {
   it("S11-U01 shows the loading frame, the header, every block and the rules before the server answers", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
     renderCompose();
@@ -552,437 +418,241 @@ describe("Screen 11 Release Candidate", () => {
     expect(page().getAttribute("data-rc-state")).toBe("loading");
     expect(screen.getAllByRole("status", { name: "Loading" }).length).toBeGreaterThan(0);
     expect(panelOrder()).toEqual(["header", "meta", "notice", "identity", "pack", "record", "seal", "publish", "mirror-ghost", "rules"]);
-    expect((sealButton() as HTMLElement).getAttribute("aria-disabled")).toBe("true");
+    expect(sealButton().getAttribute("aria-disabled")).toBe("true");
     expect(screen.getByText(RC_RULES)).toBeTruthy();
   });
 
   it("S11-U02 renders the blocks in the hi-fi order RC_PANELS names", async () => {
-    server({ GET: [ok(unbound())] });
-    renderCompose();
-    await ready("local seal blocked — review evidence");
-    const notNow = (...names: string[]) => [...RC_PANELS.compose].filter((name) => !names.includes(name));
-    expect(panelOrder()).toEqual(notNow("sealed", "publish-unknown", "published", "mirror"));
-    cleanup();
-    server({ GET: [ok(sealed())] });
+    server({ COMPOSE: [ok(unbound())] });
     renderCompose();
     await ready();
-    expect(panelOrder()).toEqual(notNow("banner", "publish-unknown", "published", "mirror"));
+    const without = (...names: string[]) => [...RC_PANELS.compose].filter((name) => !names.includes(name));
+    expect(panelOrder()).toEqual(without("sealed", "publish-unknown", "published", "mirror"));
+    cleanup();
+    server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    expect(panelOrder()).toEqual(without("banner", "publish-unknown", "published", "mirror"));
   });
 
-  it("S11-U03 prints the hi-fi title, subtitle, breadcrumb and verbatim copy", async () => {
-    server({ GET: [ok(compose())] });
+  it("S11-U03 prints the hi-fi title, subtitle, breadcrumb and verbatim copy; DRAFT is the server's state", async () => {
+    server({ COMPOSE: [ok(P04)] });
     renderCompose();
     await ready();
     expect(screen.getByText(RC_SUBTITLE)).toBeTruthy();
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(crumb.textContent).toBe(`Evidence Flow/${RUN}/Release Candidate & Publish`);
-    expect(within(crumb).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toMatch(
-      new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`),
-    );
+    expect(within(crumb).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`));
     expect(screen.getByText(SEAL_SENTENCE)).toBeTruthy();
-    expect(within(panel("publish")).getByText(SOD_NOTE)).toBeTruthy();
-    expect(panel("seal").textContent).not.toContain(SOD_NOTE);
+    expect(within(panel("publish")!).getByText(SOD_NOTE)).toBeTruthy();
+    expect(panel("seal")!.textContent).not.toContain(SOD_NOTE);
     expect(screen.getByText(MIRROR_NOTE)).toBeTruthy();
-    expect(panel("pack").textContent).toContain(
+    expect(panel("pack")!.textContent).toContain(
       "DEGRADED travels as DEGRADED — the reviewer sees it. MISSING blocks publish. The two INPUT rows are the researcher's own signed declarations.",
     );
     expect(sealButton().textContent).toBe(SEAL_LABEL);
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
+    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    expect(q("[data-action='run-report']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
   });
 
   it("S11-U04 prints the meta line from the composition: authority, as-of, fingerprint and draft", async () => {
-    server({ GET: [ok(compose())] });
+    server({ COMPOSE: [ok(sealable())] });
     renderCompose();
     await ready();
-    const meta = panel("meta").textContent ?? "";
+    const meta = panel("meta")!.textContent ?? "";
     expect(meta).toContain("PORTAL_PERSISTED_RESEARCH");
-    expect(meta).toContain("as of 2026-09-20 10:30Z");
-    expect(meta).toContain(`source ${FP}`);
-    expect(meta).toContain("draft PERSISTED · revision 2 · saved 2026-09-20 10:30Z");
+    expect(meta).toContain(`source ${P04.source_fingerprint}`);
+    expect(meta).toContain("draft PERSISTED · revision 1 · saved 2026-");
   });
 
-  it("S11-U05 keeps the rail in server order with the server's tones, values and details", async () => {
-    server({ GET: [ok(unbound())] });
+  it("S11-U05 keeps the rail in server order and tones; alpha links to Screen 10, run to Screen 04; a dim node never links", async () => {
+    server({ COMPOSE: [ok(P04)] });
     renderCompose();
-    await ready("local seal blocked — review evidence");
-    const nodes = [...document.querySelectorAll("[data-rail-node]")];
-    expect(nodes.map((node) => node.getAttribute("data-rail-node"))).toEqual(["alpha", "alpha_version", "run", "selected_params", "release_candidate"]);
-    expect(nodes.map((node) => node.getAttribute("data-tone"))).toEqual(["dim", "dim", "ink", "green", "gold"]);
-    expect(nodes[2].querySelector(".k")?.textContent).toBe("run / attempt");
-    expect(nodes[2].querySelector("[data-rail-value]")?.textContent).toBe(`${RUN} / att_01`);
-    expect(nodes[2].querySelector("[data-rail-detail]")).toBeNull();
-    expect(nodes[4].querySelector("[data-rail-value]")?.textContent).toBe("rc_ — assigned on seal");
-    expect(nodes[4].querySelector("[data-rail-value] a")).toBeNull();
+    await ready();
+    const nodes = qa("[data-rail-node]");
+    expect(nodes.map((node) => node.getAttribute("data-rail-node"))).toEqual(P04.rail.map((node) => node.key));
+    expect(nodes.map((node) => node.getAttribute("data-tone"))).toEqual(P04.rail.map((node) => node.tone));
+    expect(q("[data-rail-node='alpha']")!.getAttribute("href")).toBe(`/research/quantbt/alphas/${ALPHA}/lineage`);
+    expect(q("[data-rail-node='run']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence`);
+    expect(q("[data-rail-node='release_candidate']")!.tagName).toBe("DIV");
+    cleanup();
+    server({ COMPOSE: [ok(unbound())] });
+    renderCompose();
+    await ready();
+    expect(q("[data-rail-node='alpha']")!.tagName).toBe("DIV");
+    expect(q("[data-rail-node='alpha']")!.getAttribute("data-tone")).toBe("dim");
   });
 
-  it("S11-U06 a scratch run shows the NOT_PUBLISHABLE banner and a refused seal that names its reason", async () => {
-    const api = server({ GET: [ok(unbound())] });
+  it("S11-U06 a scratch run keeps the whole screen: NOT_PUBLISHABLE chip and banner, seal and publish blocked by name", async () => {
+    const api = server({ COMPOSE: [ok(unbound())] });
     renderCompose();
-    await ready("local seal blocked — review evidence");
-    const banner = panel("banner");
-    expect(within(banner).getByText(NOT_PUBLISHABLE_BADGE)).toBeTruthy();
+    await ready();
+    const chip = q("[data-state-chip]")!;
+    expect(chip.textContent).toBe(NOT_PUBLISHABLE_BADGE);
+    expect(chip.getAttribute("data-s")).toBe("NOT_PUBLISHABLE");
+    const banner = panel("banner")!;
     expect(banner.textContent).toContain(
       "This run was submitted without an alpha_version binding — a scratch research run. It stays fully usable as evidence for you, but no release candidate can be composed from it. Bind a version at New Run and re-run to publish.",
     );
     expect(within(banner).getByRole("link", { name: "New Run" }).getAttribute("href")).toBe("/research/quantbt/runs/new");
-    expect(banner.querySelector("[data-reason-code]")?.textContent).toBe("P21_SCRATCH_RUN_UNBOUND");
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
-    const seal = sealButton();
-    expect(seal.getAttribute("aria-disabled")).toBe("true");
-    const reason = document.getElementById(seal.getAttribute("aria-describedby")!)!;
-    expect(reason.textContent).toBe("seal blocked — bind alpha_version first · P21_SCRATCH_RUN_UNBOUND");
-    fireEvent.click(seal);
-    expect(api.of("POST")).toHaveLength(0);
+    expect(describedBy(sealButton())).toBe("bind alpha_version first — a scratch run cannot be sealed · P21_SCRATCH_RUN_UNBOUND");
+    expect(publishButton()!.textContent).toBe(PUBLISH_UNBOUND_LABEL);
+    expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
+    expect(q("[data-yaml-key='alpha_version_id'] .v")!.getAttribute("data-tone")).toBe("red");
+    fireEvent.click(sealButton());
+    fireEvent.click(publishButton()!);
+    expect(q("[data-confirm]")).toBeNull();
+    expect(api.of("SEAL")).toHaveLength(0);
+    expect(api.of("PUBLICATION")).toHaveLength(0);
   });
 
-  it("S11-U07 prints the taxonomy as sent and the last-rc caption as a typed absence", async () => {
-    server({ GET: [ok(compose())] });
-    renderCompose();
+  it("S11-U07 taxonomy, last-rc and verdict are the server's; a predecessor links to its pack and CHANGED is red", async () => {
+    server({ COMPOSE: [ok(W7_VIRTUAL)] });
+    renderCompose(W7_VIRTUAL.run_id);
     await ready();
-    const rows = [...document.querySelectorAll("[data-taxonomy-row]")];
-    expect(rows.map((r) => r.getAttribute("data-taxonomy-row"))).toEqual(["alpha code", "params", "data / universe", "methodology"]);
-    expect(rows.every((r) => r.querySelector("td.state")?.textContent === "UNSET")).toBe(true);
-    const caption = document.querySelector("[data-taxonomy-caption]")!;
-    expect(caption.textContent).toContain("change taxonomy vs last published rc — ");
-    expect(caption.querySelector("[data-last-rc]")).toBeNull();
-    expect(caption.querySelector("[data-reason-code]")?.textContent).toBe("P22_NO_PUBLISHED_PREDECESSOR");
-    expect(document.querySelector("[data-verdict-body]")?.textContent).toBe("Every required row is present; the declarations are signed.");
+    expect(qa("[data-taxonomy-row]").map((row) => row.getAttribute("data-taxonomy-state"))).toEqual(["UNSET", "UNSET", "UNSET", "UNSET"]);
+    const caption = q("[data-taxonomy-caption]")!;
+    expect(caption.textContent).toContain("last published rc — not published");
+    expect(caption.querySelector("[data-reason-code='P22_NO_PUBLISHED_PREDECESSOR']")!.textContent).toBe(
+      "no earlier candidate of this Alpha was published · P22_NO_PUBLISHED_PREDECESSOR",
+    );
+    cleanup();
+    const compared = clone(W7_DECLARED);
+    compared.published_comparison = { last_release_candidate_id: OTHER_RC, availability: { state: "AVAILABLE", reason_code: null } };
+    compared.taxonomy = [
+      { what: "code / entrypoint (av_)", state: "UNCHANGED", consequence: `No gate re-run from this row — equal by digest to ${OTHER_RC}.` },
+      { what: "selected strategy params", state: "CHANGED", consequence: "R1 + R2 re-run — numerical artifact changed" },
+      { what: "data contract / dataset snapshot", state: "UNCHANGED", consequence: `No gate re-run from this row — equal by digest to ${OTHER_RC}.` },
+      { what: "target venue / account / capital", state: "UNSET", consequence: "belongs to deployment candidate → Gate R2, Execution side" },
+    ];
+    compared.gate_verdict = { title: "R1 + R2 must run — selected params changed", body: `Compared by digest with the last published candidate ${OTHER_RC}.` };
+    server({ COMPOSE: [ok(compared)] });
+    renderCompose(compared.run_id);
+    await ready();
+    expect(within(q("[data-taxonomy-caption]")!).getByRole("link", { name: OTHER_RC }).getAttribute("href")).toBe(releaseCandidatePackHref(OTHER_RC));
+    expect(q("[data-taxonomy-state='CHANGED'] td.state")!.getAttribute("data-s")).toBe("CHANGED");
+    expect(q("[data-verdict-title]")!.textContent).toBe("R1 + R2 must run — selected params changed");
   });
 
-  it("S11-U08 draws both certification axes with the spec titles; an absent axis is a ghost chip with its reason", async () => {
-    server({ GET: [ok(compose())] });
+  it("S11-U08 draws both certification axes as separate chips with the spec titles; an absent axis is a ghost with its reason", async () => {
+    server({ COMPOSE: [ok(P04)] });
     renderCompose();
     await ready();
-    const ceiling = document.querySelector('[data-cert="methodology_claim"]')!;
-    expect(ceiling.getAttribute("title")).toBe(CEILING_TITLE);
-    expect(ceiling.getAttribute("data-ghost")).toBe("false");
-    expect(ceiling.textContent).toBe("claim ceiling B");
-    const engine = document.querySelector('[data-cert="engine_execution_contract"]')!;
-    expect(engine.getAttribute("title")).toBe(ENGCERT_TITLE);
+    const claim = q("[data-cert='methodology_claim']")!;
+    const engine = q("[data-cert='engine_execution_contract']")!;
+    expect(claim).not.toBe(engine);
+    expect(claim.getAttribute("title")).toContain(CEILING_TITLE);
+    expect(engine.getAttribute("title")).toContain(ENGCERT_TITLE);
     expect(engine.getAttribute("data-ghost")).toBe("true");
-    expect(engine.querySelector("[data-reason-code]")?.textContent).toBe("P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED");
-    expect(engine.textContent).not.toMatch(/\b0\b/);
+    expect(engine.getAttribute("data-reason-code")).toBe("P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED");
+    expect(engine.getAttribute("title")).toContain("no engine execution-contract certificate");
   });
 
   it("S11-U09 lists the 12 pack rows in server order and prints the server's counter even where it disagrees", async () => {
-    server({ GET: [ok(compose())] });
+    const body = clone(P04);
+    body.pack_counts = { complete: 5, degraded: 2, input: 2, missing: 3 };
+    server({ COMPOSE: [ok(body)] });
     renderCompose();
     await ready();
-    const rows = [...document.querySelectorAll("[data-pack-row]")];
-    expect(rows).toHaveLength(12);
-    expect(rows.map((r) => r.getAttribute("data-n"))).toEqual(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]);
-    expect(document.querySelector("[data-pack-counts]")?.textContent).toBe("9 COMPLETE · 0 DEGRADED · 2 INPUT · 1 MISSING");
-    expect(document.querySelector("[data-pack-scroll] table")).toBeTruthy();
+    expect(qa("[data-pack-row]").map((row) => row.getAttribute("data-pack-row"))).toEqual(P04.pack.map((item) => item.key));
+    expect(qa("[data-pack-row]").map((row) => row.getAttribute("data-status"))).toEqual(P04.pack.map((item) => item.status));
+    expect(q("[data-pack-counts]")!.textContent).toBe("5 COMPLETE · 2 DEGRADED · 2 INPUT · 3 MISSING");
   });
 
-  it("S11-U10 titles each status as the hi-fi does; MISSING carries its reason and no digest stands in for a number", async () => {
-    server({ GET: [ok(compose())] });
+  it("S11-U10 keeps DEGRADED, MISSING and INPUT distinct: titles, sentence + code, never a digit in a withheld cell", async () => {
+    server({ COMPOSE: [ok(P04)] });
     renderCompose();
     await ready();
-    expect(row("ALPHA_VERSION_PASSPORT").querySelector("[data-status]")?.getAttribute("title")).toBe(STATUS_TITLE.COMPLETE);
-    expect(row("METHODOLOGY_CLAIM").querySelector("[data-status]")?.getAttribute("title")).toBe(STATUS_TITLE.DEGRADED);
-    expect(row("METHODOLOGY_CLAIM").querySelector("[data-digest]")?.textContent).toBe("sha256:methodology_claim");
-    expect(row("KNOWN_LIMITATIONS_WAIVERS").querySelector("[data-status]")?.getAttribute("title")).toBe(STATUS_TITLE.INPUT);
-    const missing = row("FINAL_AUDIT_REPLAY");
-    expect(missing.getAttribute("data-s")).toBe("MISSING");
-    expect(missing.querySelector("[data-status]")?.getAttribute("title")).toBe("P21_REQUIRED_EVIDENCE_MISSING");
-    expect(missing.querySelector("[data-digest] [data-reason-code]")?.textContent).toBe("P21_REQUIRED_EVIDENCE_MISSING");
-    for (const cell of document.querySelectorAll("[data-digest]")) {
-      expect(["0", "-", "N/A", ""]).not.toContain((cell.textContent ?? "").trim());
-    }
+    const degraded = q("[data-pack-row='ROBUSTNESS_PARAM_STABILITY_REGIME']")!;
+    expect(degraded.querySelector(".rc-status")!.getAttribute("title")).toBe(STATUS_TITLE.DEGRADED);
+    expect(degraded.querySelector("[data-reason-code='P21_SOURCE_DEGRADED_EVIDENCE']")!.textContent).toBe(
+      "partial evidence — travels as DEGRADED · P21_SOURCE_DEGRADED_EVIDENCE",
+    );
+    const missing = q("[data-pack-row='METHODOLOGY_CLAIM']")!;
+    expect(missing.querySelector(".rc-status")!.getAttribute("title")).toBe("P21_METHODOLOGY_CLAIM_NOT_PUBLISHED");
+    /* An unknown code prints alone, never a guessed sentence. */
+    expect(missing.querySelector(".note [data-reason-code='P21_METHODOLOGY_CLAIM_NOT_PUBLISHED']")!.textContent).toBe("P21_METHODOLOGY_CLAIM_NOT_PUBLISHED");
+    expect(missing.querySelector("[data-digest]")!.getAttribute("data-digest")).toBe("");
+    expect(missing.querySelector("[data-digest]")!.textContent).toBe("not publishedP21_METHODOLOGY_CLAIM_NOT_PUBLISHED");
+    const input = q("[data-pack-row='KNOWN_LIMITATIONS_WAIVERS']")!;
+    expect(input.querySelector(".rc-status")!.getAttribute("title")).toBe(STATUS_TITLE.INPUT);
+    expect(input.querySelector("[data-digest]")!.textContent).toBe("— not declared");
+    expect(q("[data-seal-blocked]")!.getAttribute("data-seal-blocked")).toBe("P21_REQUIRED_EVIDENCE_MISSING");
+    expect(q("[data-seal-blocked]")!.textContent).toBe("resolve MISSING rows first · P21_REQUIRED_EVIDENCE_MISSING");
   });
 
-  it("S11-U11 links each source exactly as the server sent it, /replay included; a null or foreign href is not a link", async () => {
-    const body = compose();
-    body.pack[0] = { ...body.pack[0], source: { label: "Alpha 360°", href: null } };
-    body.pack[1] = { ...body.pack[1], source: { label: "Engine Atlas", href: "//elsewhere.example/atlas" } };
-    server({ GET: [ok(body)] });
+  it("S11-U11 links each row to the screen this build serves by contract key, only when the server named a source", async () => {
+    server({ COMPOSE: [ok(P04)] });
     renderCompose();
     await ready();
-    const expected: Record<string, string> = {
-      DATASET_UNIVERSE_SNAPSHOTS: RUN_ROOT,
-      METHODOLOGY_CLAIM: `${RUN_ROOT}/evidence`,
-      SELECTED_PARAMS_LINEAGE: `${RUN_ROOT}/search`,
-      FINAL_AUDIT_REPLAY: `${RUN_ROOT}/replay`,
-      METRICS_SEMANTICS: `${RUN_ROOT}/report`,
-      EXECUTION_ASSUMPTIONS: `${RUN_ROOT}/split`,
-      ROBUSTNESS_PARAM_STABILITY_REGIME: `/research/alphas/${ALPHA}/compare`,
-      REPRODUCIBILITY_PARITY_CHECKSUMS: `${RUN_ROOT}/freeze`,
-    };
-    for (const [key, href] of Object.entries(expected)) {
-      expect(row(key).querySelector(".source a")?.getAttribute("href"), key).toBe(href);
-    }
-    const passport = row("ALPHA_VERSION_PASSPORT").querySelector("[data-source-unlinked]")!;
-    expect(passport.tagName).toBe("SPAN");
+    const run = `/research/quantbt/runs/${RUN}`;
+    const links = Object.fromEntries(qa("[data-source-link]").map((a) => [a.getAttribute("data-source-link"), a.getAttribute("href")]));
+    expect(links).toEqual({
+      ENGINE_CAPABILITY_BACKEND: "/research/quantbt/atlas",
+      DATASET_UNIVERSE_SNAPSHOTS: `${run}/split`,
+      METHODOLOGY_CLAIM: `${run}/evidence#stage=claim`,
+      SELECTED_PARAMS_LINEAGE: `${run}/search`,
+      FINAL_AUDIT_REPLAY: `${run}/execute`,
+      METRICS_SEMANTICS: `${run}/report`,
+      EXECUTION_ASSUMPTIONS: `${run}/split`,
+      ROBUSTNESS_PARAM_STABILITY_REGIME: `/research/quantbt/alphas/${ALPHA}/compare`,
+      REPRODUCIBILITY_PARITY_CHECKSUMS: `${run}/freeze`,
+    });
+    /* The preview's old `/replay` and `/research/alphas/…` hrefs are never navigated to. */
+    expect(qa("a").map((a) => a.getAttribute("href"))).not.toContain(`${run}/replay`);
+    const passport = q("[data-pack-row='ALPHA_VERSION_PASSPORT'] [data-source-unlinked]")!;
     expect(passport.getAttribute("title")).toBe(ALPHA360_TITLE);
-    expect(row("ENGINE_CAPABILITY_BACKEND").querySelector(".source a")).toBeNull();
-    expect(row("KNOWN_LIMITATIONS_WAIVERS").querySelector("[data-source-unlinked]")?.textContent).toBe("Researcher declaration");
+    expect(q("[data-pack-row='KNOWN_LIMITATIONS_WAIVERS'] [data-source-unlinked]")!.getAttribute("title")).toBe("your own declaration — edited on this row");
   });
 
   it("S11-U12 prints the record preview as the server's 17 fields; a null value reads its reason", async () => {
-    server({ GET: [ok(compose())] });
+    server({ COMPOSE: [ok(P04)] });
     renderCompose();
     await ready();
-    const lines = [...document.querySelectorAll("[data-yaml-key]")];
-    expect(lines.map((line) => line.getAttribute("data-yaml-key"))).toEqual(FIELD_KEYS);
-    expect(lines[0].querySelector("[data-yaml-value]")?.textContent).toBe("null  # P21_ASSIGNED_ON_LOCAL_SEAL");
-    expect(lines[0].querySelector("[data-yaml-value]")?.getAttribute("data-tone")).toBe("gold");
-    expect(lines[1].querySelector("[data-yaml-value]")?.textContent).toBe("alpha_id:v1");
+    const lines = qa("[data-yaml-key]");
+    expect(lines.map((line) => line.getAttribute("data-yaml-key"))).toEqual(P04.yaml.map((field) => field.key));
+    expect(lines).toHaveLength(17);
+    expect(q("[data-yaml-key='final_audit_run_id']")!.textContent).toContain("null  # P21_FINAL_AUDIT_RUN_NOT_PUBLISHED");
+    expect(q("[data-yaml-key='manifest_digest']")!.getAttribute("data-yaml-value")).toBe(P04.fields.find((field) => field.key === "manifest_digest")!.value);
   });
 
-  it("S11-U13 copy yaml writes the server's join and says copied only once the clipboard accepts it", async () => {
+  it("S11-U13 copy yaml writes the server's join and says copied only once the clipboard accepts it; a refusal never claims a copy", async () => {
+    server({ COMPOSE: [ok(P04)] });
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-    server({ GET: [ok(compose())] });
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     renderCompose();
     await ready();
-    const button = document.querySelector('[data-action="copy-yaml"]') as HTMLElement;
-    expect(button.textContent).toBe("copy yaml");
-    fireEvent.click(button);
-    expect(writeText).toHaveBeenCalledWith(yamlText(compose().yaml));
-    expect(writeText.mock.calls[0][0].split("\n")).toHaveLength(17);
-    await waitFor(() => expect(button.textContent).toBe("✓ copied"));
-  });
-
-  it("S11-U14 a refused clipboard never claims a copy", async () => {
-    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
-    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-    server({ GET: [ok(compose())] });
-    renderCompose();
-    await ready();
-    const button = document.querySelector('[data-action="copy-yaml"]') as HTMLElement;
-    fireEvent.click(button);
-    await waitFor(() => expect(button.textContent).toBe("copy unavailable"));
-    expect(button.textContent).not.toContain("copied");
-  });
-
-  it("S11-U15 shows the declared text under each INPUT row, and a missing declaration as not declared", async () => {
-    server({ GET: [ok(compose())] });
-    renderCompose();
-    await ready();
-    expect(document.querySelector('[data-declared="KNOWN_LIMITATIONS_WAIVERS"]')?.textContent).toBe("fees modelled at taker");
-    expect(document.querySelector('[data-declared="PROPOSED_USE_RESTRICTIONS"]')?.textContent).toBe("not declared");
-    expect(document.querySelectorAll('[data-action="edit-declaration"]')).toHaveLength(2);
-  });
-
-  it("S11-U16 saving a declaration sends the fences in hand with the CSRF proof and prints the server's answer", async () => {
-    const saved = compose({}, { revision: 3, proposed_use_restrictions: "research only" });
-    const api = server({ GET: [ok(compose())], PATCH: [ok(saved)] });
-    renderCompose();
-    await ready();
-    await openEditor("PROPOSED_USE_RESTRICTIONS", "research only");
-    fireEvent.click(document.querySelector('[data-action="save-declaration"]')!);
-    await waitFor(() => expect(document.querySelector('[data-declared="PROPOSED_USE_RESTRICTIONS"]')?.textContent).toBe("research only"));
-    const [patch] = api.of("PATCH");
-    expect(patch.url).toBe(`${COMPOSE_PATH}/draft`);
-    expect(patch.headers["x-portal-csrf"]).toBe("tok_123");
-    expect(patch.body).toEqual({
-      expected_revision: 2,
-      expected_source_fingerprint: FP,
-      known_limitations: "fees modelled at taker",
-      proposed_use_restrictions: "research only",
-    });
-    expect(document.querySelector("[data-declaration-input]")).toBeNull();
-    expect(document.querySelector('[data-write-notice="patch"]')?.getAttribute("data-outcome")).toBe("saved");
-    expect(panel("meta").textContent).toContain("revision 3");
-    expect(api.of("GET")).toHaveLength(1);
-    expect(api.of("GET")[0].headers["x-portal-csrf"]).toBeUndefined();
-  });
-
-  it("S11-U17 save is refused before sending when both declarations would be empty", async () => {
-    const api = server({ GET: [ok(compose({}, { proposed_use_restrictions: null }))] });
-    renderCompose();
-    await ready();
-    await openEditor("KNOWN_LIMITATIONS_WAIVERS", "   ");
-    const save = document.querySelector('[data-action="save-declaration"]') as HTMLElement;
-    expect(save.getAttribute("aria-disabled")).toBe("true");
-    expect(document.getElementById(save.getAttribute("aria-describedby")!)?.textContent).toBe("at least one declaration is required");
-    fireEvent.click(save);
-    expect(api.of("PATCH")).toHaveLength(0);
-  });
-
-  it("S11-U18 a 409 keeps the typed text, says the evidence changed, and reads the composition again", async () => {
-    const moved = compose({ source_fingerprint: "sha256:source-fp-2" });
-    const api = server({ GET: [ok(compose()), ok(moved)], PATCH: [problem(409, "RESEARCH_RELEASE_CANDIDATE_CONFLICT")] });
-    renderCompose();
-    await ready();
-    await openEditor("PROPOSED_USE_RESTRICTIONS", "research only, no capital");
-    fireEvent.click(document.querySelector('[data-action="save-declaration"]')!);
-    const notice = await until('[data-write-notice="patch"][data-outcome="conflict"]');
-    expect(notice.textContent).toContain(RC_CONFLICT_COPY);
-    expect(notice.textContent).toContain("RESEARCH_RELEASE_CANDIDATE_CONFLICT");
-    expect(notice.textContent).not.toContain("alice@example");
-    await waitFor(() => expect(api.of("GET")).toHaveLength(2));
-    await waitFor(() => expect(panel("meta").textContent).toContain("sha256:source-fp-2"));
-    expect((document.querySelector('[data-declaration-input="PROPOSED_USE_RESTRICTIONS"]') as HTMLTextAreaElement).value).toBe(
-      "research only, no capital",
-    );
-  });
-
-  it.each([
-    [401, "RESEARCH_RELEASE_CANDIDATE_UNAUTHENTICATED"],
-    [403, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN"],
-  ])("S11-U19 a %i on save keeps the text, locks both writes and never retries", async (status, code) => {
-    const api = server({ GET: [ok(compose())], PATCH: [problem(status, code)] });
-    renderCompose();
-    await ready();
-    await openEditor("PROPOSED_USE_RESTRICTIONS", "research only");
-    const save = document.querySelector('[data-action="save-declaration"]') as HTMLElement;
-    fireEvent.click(save);
-    const notice = await until('[data-write-notice="patch"][data-outcome="denied"]');
-    expect(notice.textContent).toContain(RC_DENIED_COPY);
-    expect(notice.querySelector("[data-request-id]")?.textContent).toBe(`request req_${status}`);
-    expect(notice.querySelector("button")).toBeNull();
-    expect((document.querySelector('[data-declaration-input="PROPOSED_USE_RESTRICTIONS"]') as HTMLTextAreaElement).value).toBe("research only");
-    expect(save.getAttribute("aria-disabled")).toBe("true");
-    fireEvent.click(save);
-    expect(sealButton().getAttribute("aria-disabled")).toBe("true");
-    fireEvent.click(sealButton());
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(api.of("PATCH")).toHaveLength(1);
-    expect(api.of("POST")).toHaveLength(0);
-    expect(api.of("GET")).toHaveLength(1);
-  });
-
-  it("S11-U20 a write refused with 403 and with 404 says the same neutral sentence", async () => {
-    const messages: string[] = [];
-    for (const status of [403, 404]) {
-      server({ GET: [ok(compose())], PATCH: [problem(status, "RESEARCH_RELEASE_CANDIDATE_X")] });
-      renderCompose();
-      await ready();
-      await openEditor("PROPOSED_USE_RESTRICTIONS", "x");
-      fireEvent.click(document.querySelector('[data-action="save-declaration"]')!);
-      const notice = await until('[data-write-notice="patch"][data-outcome="denied"]');
-      messages.push(notice.firstElementChild!.textContent!);
-      cleanup();
-      vi.restoreAllMocks();
-    }
-    expect(messages[0]).toBe(`${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`);
-    expect(messages[1]).toBe(messages[0]);
-  });
-
-  it("S11-U21 a 503 on save keeps the draft and lets the reader send it again", async () => {
-    const saved = compose({}, { revision: 3, proposed_use_restrictions: "research only" });
-    const api = server({ GET: [ok(compose())], PATCH: [problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"), ok(saved)] });
-    renderCompose();
-    await ready();
-    await openEditor("PROPOSED_USE_RESTRICTIONS", "research only");
-    const save = document.querySelector('[data-action="save-declaration"]') as HTMLElement;
-    fireEvent.click(save);
-    const notice = await until('[data-write-notice="patch"][data-outcome="unavailable"]');
-    expect(notice.textContent).toContain(RC_UNAVAILABLE_COPY);
-    expect((document.querySelector('[data-declaration-input="PROPOSED_USE_RESTRICTIONS"]') as HTMLTextAreaElement).value).toBe("research only");
-    expect(api.of("GET")).toHaveLength(1);
-    expect(save.getAttribute("aria-disabled")).toBeNull();
-    fireEvent.click(save);
-    await waitFor(() => expect(document.querySelector('[data-declared="PROPOSED_USE_RESTRICTIONS"]')?.textContent).toBe("research only"));
-    expect(api.of("PATCH")).toHaveLength(2);
-  });
-
-  it("S11-U22 sealing sends the persisted draft and its fences, then prints the server's re-read seal", async () => {
-    const api = server({ GET: [ok(compose()), ok(sealed())], POST: [ok(SEAL_RESPONSE, 201)] });
-    renderCompose();
-    await ready();
-    expect(sealButton().getAttribute("aria-disabled")).toBeNull();
-    fireEvent.click(sealButton());
-    fireEvent.click(sealButton());
-    await waitFor(() => expect(panel("sealed")).toBeTruthy());
-    const [post] = api.of("POST");
-    expect(api.of("POST")).toHaveLength(1);
-    expect(post.url).toBe(`${COMPOSE_PATH}/seal`);
-    expect(post.headers["x-portal-csrf"]).toBe("tok_123");
-    expect(post.body).toEqual({ draft_id: "rcd_1", expected_draft_revision: 2, expected_source_fingerprint: FP });
-    expect(api.of("GET")).toHaveLength(2);
-    const sealedCard = panel("sealed");
-    expect(within(sealedCard).getByRole("link", { name: RC }).getAttribute("href")).toBe(`/research/quantbt/release-candidates/${RC}`);
-    expect(sealedCard.querySelector("[data-sealed-facts]")?.textContent).toBe("sealed_at 2026-09-20 11:30Z · pack digest sha256:pack-1");
-    expect(sealedCard.querySelector("[data-sealed-lifecycle]")?.textContent).toBe("NOT_DELIVERED · NOT_APPROVED");
-    expect(document.querySelector("[data-seal-chip]")?.textContent).toBe("SEALED_LOCAL");
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
-    expect(document.querySelector('[data-write-notice="seal"]')?.textContent).toContain("sealed locally");
-    expect(screen.queryByText(SEALED_REPLAY)).toBeNull();
-  });
-
-  it("S11-U23 a second seal answering the same identity is reported as the idempotent replay", async () => {
-    server({ GET: [ok(sealed())], POST: [ok(SEAL_RESPONSE, 201)] });
-    renderCompose();
-    await ready();
-    fireEvent.click(sealButton());
-    await waitFor(() => expect(screen.getAllByText(SEALED_REPLAY).length).toBeGreaterThan(0));
-    expect(document.querySelector("[data-seal-response-id]")?.textContent).toBe(RC);
-  });
-
-  it("S11-U24 a 422 on seal ends that request with its code; a draft that is not persisted cannot seal", async () => {
-    server({ GET: [ok(compose())], POST: [problem(422, "RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE")] });
-    renderCompose();
-    await ready();
-    fireEvent.click(sealButton());
-    const notice = await until('[data-write-notice="seal"][data-outcome="terminal"]');
-    expect(notice.textContent).toContain(RC_NOT_PUBLISHABLE_COPY);
-    expect(notice.querySelector("[data-error-code]")?.textContent).toBe("RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE");
+    fireEvent.click(screen.getByRole("button", { name: "copy yaml" }));
+    await flush();
+    expect(writeText).toHaveBeenCalledWith(yamlText(P04.yaml));
+    expect(writeText.mock.calls[0]![0].split("\n")).toHaveLength(17);
+    expect(screen.getByRole("button", { name: "✓ copied" })).toBeTruthy();
     cleanup();
-    vi.restoreAllMocks();
-    const api = server({ GET: [ok(compose({}, { draft_id: null, revision: 0, state: "VIRTUAL" }))] });
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) } });
+    server({ COMPOSE: [ok(P04)] });
     renderCompose();
     await ready();
-    expect(document.getElementById(sealButton().getAttribute("aria-describedby")!)?.textContent).toContain("draft is not persisted");
-    fireEvent.click(sealButton());
-    expect(api.of("POST")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "copy yaml" }));
+    await flush();
+    expect(screen.getByRole("button", { name: "copy unavailable" })).toBeTruthy();
   });
 
-  it("S11-U25 before a delivered publication the mirror is a ghost with nothing to operate, and publish names its blocker", async () => {
-    const api = server({ GET: [ok(compose())] });
-    renderCompose();
+  it("S11-U14 a PARTIAL composition (the pre-W7 WFO run) says so above the blocks, with sentence and code, and keeps them", async () => {
+    server({ COMPOSE: [ok(WFO_PRE_W7)] });
+    renderCompose(WFO_PRE_W7.run_id);
     await ready();
-    const ghost = panel("mirror-ghost");
-    expect(ghost.querySelectorAll("button, a, input, textarea, select, [tabindex]")).toHaveLength(0);
-    expect(ghost.textContent).toContain("R1 · RESEARCH EVIDENCE");
-    expect(ghost.textContent).toContain("SLA starts at publish");
-    expect(ghost.querySelector("[data-mirror-foot]")?.textContent).toBe("mirror not published · P22_NOT_PUBLISHED");
-    /* VD-P21-20: the hi-fi's bare "—" status is a typed absence here (hard rule 3). */
-    expect(ghost.querySelector("[data-mirror-status]")?.textContent).toBe("status not published");
-    for (const leaf of Array.from(ghost.querySelectorAll("span"))) expect(leaf.textContent?.trim()).not.toBe("—");
-    const publish = publishButton();
-    expect(publish.textContent).toBe("seal the evidence pack first");
-    expect(publish.getAttribute("aria-disabled")).toBe("true");
-    expect(document.getElementById(publish.getAttribute("aria-describedby")!)?.textContent).toBe("P21_LOCAL_SEAL_NOT_CREATED");
-    fireEvent.click(publish);
-    expect(api.of("POST")).toHaveLength(0);
-  });
-
-  it("S11-U26 a read refused with 403 and with 404 is the same neutral denied state with no retry and no server prose", async () => {
-    const seen: string[] = [];
-    for (const status of [403, 404]) {
-      const api = server({ GET: [problem(status, "RESEARCH_RELEASE_CANDIDATE_X")] });
-      renderCompose();
-      await waitFor(() => expect(page().getAttribute("data-rc-state")).toBe("denied"));
-      expect(screen.getByText(RC_NEUTRAL_REFUSAL)).toBeTruthy();
-      expect(document.body.textContent).not.toContain("alice@example");
-      expect(document.querySelector("[data-request-id]")?.textContent).toBe(`request req_${status}`);
-      expect(document.querySelector('[data-action="retry"]')).toBeNull();
-      expect(document.querySelectorAll("[data-pack-row]")).toHaveLength(0);
-      expect(api.calls).toHaveLength(1);
-      seen.push(panel("notice").textContent!.replace(/req_\d+/, ""));
-      cleanup();
-      vi.restoreAllMocks();
-    }
-    expect(seen[1]).toBe(seen[0]);
-  });
-
-  it("S11-U27 a 503 read offers read again; a PARTIAL composition shows its reason and keeps the blocks", async () => {
-    const api = server({ GET: [problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"), ok(compose({ availability: { state: "PARTIAL", reason_code: "P21_REFERENCED_SOURCE_INTEGRITY_FAILED" } }))] });
-    renderCompose();
-    await waitFor(() => expect(page().getAttribute("data-rc-state")).toBe("unavailable"));
-    fireEvent.click(screen.getByRole("button", { name: "read again" }));
-    await ready();
-    expect(api.of("GET")).toHaveLength(2);
+    const notice = q("[data-rc-notice]")!;
+    expect(notice.getAttribute("data-rc-notice")).toBe("partial");
     expect(page().getAttribute("data-rc-state")).toBe("partial");
-    expect(panel("notice").textContent).toContain("P21_REFERENCED_SOURCE_INTEGRITY_FAILED");
-    expect(document.querySelectorAll("[data-pack-row]")).toHaveLength(12);
+    expect(notice.textContent).toContain("a referenced source is absent, malformed or disagrees with another copy");
+    expect(notice.textContent).toContain("P21_REFERENCED_SOURCE_INTEGRITY_FAILED");
+    expect(q("[data-pack-counts]")!.textContent).toBe("3 COMPLETE · 0 DEGRADED · 2 INPUT · 7 MISSING");
+    expect(q("[data-seal-blocked]")!.getAttribute("data-seal-blocked")).toBe("P21_REFERENCED_SOURCE_INTEGRITY_FAILED");
   });
 
-  it("S11-U28 reads once per run: no poll, no refetch on a re-render", async () => {
-    const api = server({ GET: [ok(compose())] });
+  it("S11-U15 reads once per run: no poll, no refetch on a re-render, no publication read before a seal, never /mirror", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = server({ COMPOSE: [ok(P04)] });
     const view = renderCompose();
     await ready();
     view.rerender(
@@ -992,546 +662,770 @@ describe("Screen 11 Release Candidate", () => {
         </Routes>
       </MemoryRouter>,
     );
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    expect(api.of("GET")).toHaveLength(1);
-    expect(api.of("GET")[0].url).toBe(COMPOSE_PATH);
-    expect(page().getAttribute("data-request-count")).toBe("1");
-  });
-
-  it("S11-U29 an overlapping save is sent once", async () => {
-    const gate = deferred();
-    const api = server({ GET: [ok(compose())], PATCH: [{ ...ok(compose({}, { revision: 3 })), hold: gate.promise }] });
-    renderCompose();
-    await ready();
-    await openEditor("PROPOSED_USE_RESTRICTIONS", "x");
-    const save = document.querySelector('[data-action="save-declaration"]') as HTMLElement;
-    fireEvent.click(save);
-    fireEvent.click(save);
-    expect(save.getAttribute("aria-busy")).toBe("true");
-    gate.release();
-    await waitFor(() => expect(document.querySelector("[data-declaration-input]")).toBeNull());
-    expect(api.of("PATCH")).toHaveLength(1);
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_POLL_MS * 3));
+    expect(api.of("COMPOSE")).toHaveLength(1);
+    expect(api.of("PUBLICATION")).toHaveLength(0);
+    expect(api.calls.filter((call) => call.url.includes("/mirror"))).toHaveLength(0);
   });
 });
 
-describe("Screen 11 publish and approval mirror (P22)", () => {
-  const PUBLISH_PATH = `/api/v1/research/release-candidates/${RC}/publish`;
-  const PUBLISHED_TITLE = "published — immutable · R1 review in Approval Inbox";
-  const describedBy = (el: HTMLElement) => document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent;
-  const setVisibility = (state: "visible" | "hidden") => {
-    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-    act(() => {
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-  };
-  afterEach(() => {
-    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+/* ------------------------------------------------------------ W7 lane */
+
+describe("S11 W7 retained lane (Delta WFO)", () => {
+  it("S11-U16 the W7 composition renders 8 COMPLETE · 2 DEGRADED · 2 INPUT · 0 MISSING with each reason's sentence", async () => {
+    server({ COMPOSE: [ok(W7_VIRTUAL)] });
+    renderCompose(W7_VIRTUAL.run_id);
+    await ready();
+    expect(q("[data-pack-counts]")!.textContent).toBe("8 COMPLETE · 2 DEGRADED · 2 INPUT · 0 MISSING");
+    expect(qa("[data-pack-row]").map((row) => row.getAttribute("data-status"))).toEqual(W7_VIRTUAL.pack.map((item) => item.status));
+    expect(page().getAttribute("data-rc-state")).toBe("available");
+    expect(q("[data-rc-notice]")).toBeNull();
+    const claim = q("[data-pack-row='METHODOLOGY_CLAIM']")!;
+    expect(claim.getAttribute("data-status")).toBe("DEGRADED");
+    expect(claim.querySelector("[data-reason-code='P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED']")!.textContent).toBe(
+      "claim retained, no issued methodology certificate — travels as DEGRADED · P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED",
+    );
+    /* The claim-ceiling token wraps in its note cell instead of being clipped. */
+    expect(claim.querySelector(".note")!.textContent).toContain("not_causal_multi_fold_global_calibration");
+    expect(q("[data-pack-row='ROBUSTNESS_PARAM_STABILITY_REGIME']")!.getAttribute("data-status")).toBe("DEGRADED");
+    const rail = q("[data-rail-node='selected_params']")!;
+    expect(rail.querySelector("[data-rail-detail]")!.textContent).toBe("retained trial 0 · global");
+    expect(rail.getAttribute("data-tone")).toBe("ink");
+    expect(q("[data-yaml-key='release_candidate_id']")!.textContent).toContain("null  # P21_ASSIGNED_ON_LOCAL_SEAL");
+    expect(q("[data-yaml-key='release_candidate_id'] .v")!.getAttribute("data-tone")).toBe("gold");
+    expect(q("[data-yaml-key='manifest_digest']")!.getAttribute("data-yaml-value")).toMatch(/^b71259790d93/);
+    expect(q("[data-seal-blocked]")!.textContent).toBe("complete and save the two declarations first · P21_RESEARCHER_DECLARATIONS_REQUIRED");
+    expect(q("[data-cert='methodology_claim']")!.getAttribute("data-reason-code")).toBe("P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED");
   });
 
-  it("S11-U34 a sealed candidate offers the hi-fi publish button with the rc id and keeps the SoD note", async () => {
-    const api = server({ GET: [ok(sealed())] });
+  it("S11-U17 the declared W7 composition may be sealed; publish waits for the seal and says so", async () => {
+    const api = server({ COMPOSE: [ok(W7_DECLARED)] });
+    renderCompose(W7_DECLARED.run_id);
+    await ready();
+    expect(sealButton().getAttribute("aria-disabled")).toBeNull();
+    expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
+    expect(describedBy(publishButton()!)).toBe("seal the evidence pack first · P22_LOCAL_SEAL_REQUIRED");
+    expect(q("[data-mirror-foot] [data-reason-code='P22_LOCAL_SEAL_REQUIRED']")).not.toBeNull();
+    expect(api.of("PUBLICATION")).toHaveLength(0);
+  });
+
+  it("S11-U18 every reason code a composition, a publication or W7 can carry has its sentence", () => {
+    for (const code of [
+      "P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED",
+      "P21_RETAINED_CURRENT_SOURCE_NOT_SEALED",
+      "P21_RETAINED_CLAIM_FACTS_NOT_PUBLISHED",
+      "P21_RETAINED_CHILD_AUDIT_MISMATCH",
+      "P21_RETAINED_PARAMETER_DIGEST_MISMATCH",
+      "P21_RETAINED_REPORT_NOT_SEALED",
+      "P22_PUBLICATION_INTAKE_DISABLED",
+      "P22_GOVERNANCE_SOURCE_UNAVAILABLE",
+      "P22_ALREADY_DELIVERED",
+    ]) {
+      expect(rcReasonSentence(code), code).toBeTruthy();
+    }
+    for (const body of [W7_VIRTUAL, W7_DECLARED]) {
+      for (const item of body.pack) {
+        if (item.availability.reason_code) expect(RC_REASON_SENTENCES[item.availability.reason_code], item.availability.reason_code).toBeTruthy();
+      }
+    }
+    expect(rcReasonSentence("SOMETHING_NEW")).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------ declarations */
+
+describe("S11 declarations (draft CAS)", () => {
+  it("S11-U19 shows the declared text under each INPUT row, and a missing declaration as not declared", async () => {
+    server({ COMPOSE: [ok(sealable())] });
     renderCompose();
     await ready();
-    const button = publishButton();
-    expect(button.textContent).toBe(`Publish release candidate ${RC}`);
-    expect(button.getAttribute("aria-disabled")).toBeNull();
-    expect(button.getAttribute("aria-describedby")).toBeNull();
-    const card = panel("publish");
-    expect(card.querySelector("[data-publish-sentence]")?.textContent).toBe(
-      `Publishing freezes this exact combination as ${RC} in the portal governance store. It creates no account, no allocation, and does not start Paper — it only makes the candidate reviewable.`,
+    expect(q("[data-declared='KNOWN_LIMITATIONS_WAIVERS']")!.textContent).toBe("Single venue depth; funding modelled at a constant rate.");
+    cleanup();
+    server({ COMPOSE: [ok(P04)] });
+    renderCompose();
+    await ready();
+    expect(q("[data-declared='PROPOSED_USE_RESTRICTIONS']")!.textContent).toBe("not declared");
+  });
+
+  it("S11-U20 names a bad body by field path before any request", async () => {
+    const api = server({ COMPOSE: [ok(P04)] });
+    renderCompose();
+    await ready();
+    const box = edit("KNOWN_LIMITATIONS_WAIVERS", "   ");
+    expect(document.activeElement).toBe(box);
+    fireEvent.click(q("[data-action='save-declaration']")!);
+    await flush();
+    expect(api.of("PATCH")).toHaveLength(0);
+    expect(q("[data-issue-path='known_limitations']")!.textContent).toContain("only whitespace");
+    expect(q("[data-issue-path='(body)']")!.textContent).toContain("at least one declaration is required");
+    expect(box.getAttribute("aria-invalid")).toBe("true");
+    expect(declarationIssues({ known_limitations: "x".repeat(4097), proposed_use_restrictions: "ok" })).toEqual([
+      { path: "known_limitations", message: "at most 4096 characters (now 4097)" },
+    ]);
+  });
+
+  it("S11-U21 saving sends the fences in hand with the CSRF proof and prints the server's answer", async () => {
+    const api = server({ COMPOSE: [ok(P04)], PATCH: [ok(sealable())] });
+    renderCompose();
+    await ready();
+    edit("KNOWN_LIMITATIONS_WAIVERS", "Single venue depth.");
+    fireEvent.click(q("[data-action='save-declaration']")!);
+    await until("[data-write-notice='patch'][data-outcome='saved']");
+    const [call] = api.of("PATCH");
+    expect(call!.url).toBe(`/api/v1/quantbt/runs/${RUN}/release-candidate/draft`);
+    expect(call!.headers["x-portal-csrf"]).toBe("tok_123");
+    expect(call!.body).toEqual({
+      expected_revision: 0,
+      expected_source_fingerprint: P04.source_fingerprint,
+      known_limitations: "Single venue depth.",
+      proposed_use_restrictions: null,
+    });
+    expect(q("[data-draft-revision]")!.getAttribute("data-draft-revision")).toBe("1");
+    expect(q("[data-declaration-input]")).toBeNull();
+  });
+
+  it("S11-U22 a 409 reads the composition again, says so verbatim and keeps every typed character", async () => {
+    const api = server({ COMPOSE: [ok(P04)], PATCH: [problem(409, "RESEARCH_RELEASE_CANDIDATE_CONFLICT")] });
+    renderCompose();
+    await ready();
+    edit("PROPOSED_USE_RESTRICTIONS", "Paper first.");
+    fireEvent.click(q("[data-action='save-declaration']")!);
+    const notice = await until("[data-write-notice='patch'][data-outcome='conflict']");
+    expect(notice.textContent).toContain(RC_CONFLICT_COPY);
+    await waitFor(() => expect(api.of("COMPOSE")).toHaveLength(2));
+    expect(q<HTMLTextAreaElement>("[data-declaration-input='PROPOSED_USE_RESTRICTIONS']")!.value).toBe("Paper first.");
+    expect(api.of("PATCH")).toHaveLength(1);
+  });
+
+  it("S11-U23 a write refused with 403 and with 404 says the same neutral sentence, locks every write and never retries", async () => {
+    const seen: string[] = [];
+    for (const status of [403, 404]) {
+      const api = server({ COMPOSE: [ok(sealable())], PATCH: [problem(status, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN")] });
+      renderCompose();
+      await ready();
+      edit("KNOWN_LIMITATIONS_WAIVERS", "x");
+      fireEvent.click(q("[data-action='save-declaration']")!);
+      const notice = await until("[data-write-notice='patch'][data-outcome='denied']");
+      seen.push(notice.firstElementChild!.textContent!);
+      expect(sealButton().getAttribute("aria-disabled")).toBe("true");
+      expect(describedBy(sealButton())).toContain("writes are off — access changed");
+      await flush();
+      expect(api.of("PATCH")).toHaveLength(1);
+      expect(qa("[data-pack-row]")).toHaveLength(12);
+      expect(screenText()).not.toContain("SECRET-SERVER-PROSE");
+      cleanup();
+      vi.restoreAllMocks();
+    }
+    expect(seen[0]).toBe(`${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`);
+    expect(seen[1]).toBe(seen[0]);
+  });
+
+  it("S11-U24 a 503 keeps the draft and the text; only the reader sends it again", async () => {
+    const api = server({ COMPOSE: [ok(P04)], PATCH: [problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"), ok(sealable())] });
+    renderCompose();
+    await ready();
+    edit("KNOWN_LIMITATIONS_WAIVERS", "kept");
+    fireEvent.click(q("[data-action='save-declaration']")!);
+    const notice = await until("[data-write-notice='patch'][data-outcome='unavailable']");
+    expect(notice.textContent).toContain(RC_UNAVAILABLE_COPY);
+    expect(q<HTMLTextAreaElement>("[data-declaration-input='KNOWN_LIMITATIONS_WAIVERS']")!.value).toBe("kept");
+    await flush();
+    expect(api.of("PATCH")).toHaveLength(1);
+    fireEvent.click(q("[data-action='save-declaration']")!);
+    await until("[data-write-notice='patch'][data-outcome='saved']");
+    expect(api.of("PATCH")).toHaveLength(2);
+  });
+
+  it("S11-U25 a 400 is terminal for the request and keeps the text; an overlapping save is sent once", async () => {
+    const gate = deferred();
+    const api = server({ COMPOSE: [ok(P04)], PATCH: [{ ...problem(400, "RESEARCH_RELEASE_CANDIDATE_INVALID"), hold: gate.promise }] });
+    renderCompose();
+    await ready();
+    edit("KNOWN_LIMITATIONS_WAIVERS", "kept");
+    fireEvent.click(q("[data-action='save-declaration']")!);
+    fireEvent.click(q("[data-action='save-declaration']")!);
+    gate.release();
+    const notice = await until("[data-write-notice='patch'][data-outcome='terminal']");
+    expect(notice.textContent).toContain("RESEARCH_RELEASE_CANDIDATE_INVALID");
+    expect(api.of("PATCH")).toHaveLength(1);
+    expect(q<HTMLTextAreaElement>("[data-declaration-input='KNOWN_LIMITATIONS_WAIVERS']")!.value).toBe("kept");
+  });
+});
+
+/* ------------------------------------------------------------ local seal */
+
+describe("S11 local seal", () => {
+  it("S11-U26 needs a saved draft: unsaved text blocks the seal with its own reason", async () => {
+    server({ COMPOSE: [ok(sealable())] });
+    renderCompose();
+    await ready();
+    expect(sealButton().getAttribute("aria-disabled")).toBeNull();
+    edit("KNOWN_LIMITATIONS_WAIVERS", "edited");
+    expect(sealButton().getAttribute("aria-disabled")).toBe("true");
+    expect(describedBy(sealButton())).toBe(SEAL_DIRTY);
+  });
+
+  it("S11-U27 asks for confirmation, sends only the server's identities, then prints the server's re-read seal", async () => {
+    const api = server({ COMPOSE: [ok(sealable()), ok(sealed())], SEAL: [ok(sealResponse(), 201)], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    fireEvent.click(sealButton());
+    expect(api.of("SEAL")).toHaveLength(0);
+    const dialog = screen.getByRole("alertdialog", { name: "confirm local seal" });
+    expect(dialog.textContent).toContain(SEAL_CONFIRM);
+    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Confirm local seal" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(api.of("SEAL")).toHaveLength(0);
+    fireEvent.click(sealButton());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
+    await until("[data-panel='sealed']");
+    expect(api.of("SEAL")).toHaveLength(1);
+    expect(api.of("SEAL")[0]!.body).toEqual({ draft_id: DRAFT_ID, expected_draft_revision: 1, expected_source_fingerprint: P04.source_fingerprint });
+    expect(api.of("SEAL")[0]!.headers["x-portal-csrf"]).toBe("tok_123");
+    expect(api.of("COMPOSE")).toHaveLength(2);
+    expect(q("[data-sealed]")!.getAttribute("data-sealed")).toBe(RC_ID);
+    expect(q("[data-delivery-state]")!.textContent).toBe("NOT_DELIVERED");
+    expect(q("[data-approval-state]")!.textContent).toBe("NOT_APPROVED");
+    /* SEALED_LOCAL sits beside DRAFT; nothing says PUBLISHED. */
+    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    expect(q("[data-seal-chip]")!.textContent).toBe("SEALED_LOCAL");
+    expect(within(q("[data-panel='sealed']")!).getByRole("link", { name: RC_ID }).getAttribute("href")).toBe(releaseCandidatePackHref(RC_ID));
+    expect(q("[data-seal-replayed]")).toBeNull();
+    /* The seal opens the P22 read of the new candidate — and only that read. */
+    await waitFor(() => expect(api.of("PUBLICATION")).toHaveLength(1));
+    expect(api.of("PUBLICATION")[0]!.url).toBe(`/api/v1/research/release-candidates/${RC_ID}/publication`);
+    expect(screenText()).not.toMatch(/\bPUBLISHED\b(?!_)/);
+  });
+
+  it("S11-U28 a replayed seal says the server returned the same pack, not a second candidate", async () => {
+    const api = server({ COMPOSE: [ok(sealed({ enabled: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" }))], SEAL: [ok(sealResponse(), 201)], PUBLICATION: [ok(publication({ may_publish: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" }))] });
+    renderCompose();
+    await ready();
+    fireEvent.click(sealButton());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
+    await until("[data-seal-replayed]");
+    expect(q("[data-seal-replayed]")!.textContent).toBe(SEALED_REPLAY);
+    expect(api.of("SEAL")).toHaveLength(1);
+  });
+
+  it("S11-U29 a 422 is terminal for the seal; a 409 re-reads; neither is retried", async () => {
+    const api = server({
+      COMPOSE: [ok(sealable())],
+      SEAL: [problem(422, "RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE"), problem(409, "RESEARCH_RELEASE_CANDIDATE_CONFLICT")],
+    });
+    renderCompose();
+    await ready();
+    fireEvent.click(sealButton());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
+    const terminal = await until("[data-write-notice='seal'][data-outcome='terminal']");
+    expect(terminal.textContent).toContain("RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE");
+    fireEvent.click(sealButton());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
+    const conflict = await until("[data-write-notice='seal'][data-outcome='conflict']");
+    expect(conflict.textContent).toContain(RC_CONFLICT_COPY);
+    await waitFor(() => expect(api.of("COMPOSE")).toHaveLength(2));
+    expect(api.of("SEAL")).toHaveLength(2);
+  });
+});
+
+/* ------------------------------------------------------------ read refused */
+
+describe("S11 composition read refused", () => {
+  it.each([
+    [404, "RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "denied"],
+    [403, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN", "denied"],
+    [401, "UNAUTHENTICATED", "denied"],
+    [503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", "unavailable"],
+    [400, "RESEARCH_RELEASE_CANDIDATE_INVALID", "terminal"],
+  ])("S11-U30 %s %s renders its own state inside the screen frame, with no server prose", async (status, code, state) => {
+    const api = server({ COMPOSE: [problem(status, code)] });
+    renderCompose();
+    const notice = await until("[data-rc-notice]");
+    expect(notice.getAttribute("data-rc-notice")).toBe(state);
+    expect(qa("[data-pack-row]")).toHaveLength(0);
+    expect(q("[data-error-code]")!.textContent).toBe(code);
+    expect(screenText()).not.toContain("SECRET-SERVER-PROSE");
+    if (status === 403 || status === 404) expect(notice.textContent).toContain(RC_NEUTRAL_REFUSAL);
+    if (status !== 503) expect(q("[data-action='run-library']")!.getAttribute("href")).toBe("/research/quantbt/runs");
+    await flush();
+    expect(api.of("COMPOSE")).toHaveLength(1);
+    if (status === 503) {
+      fireEvent.click(screen.getByRole("button", { name: "read again" }));
+      await waitFor(() => expect(api.of("COMPOSE")).toHaveLength(2));
+    }
+  });
+});
+
+/* ------------------------------------------------------------ P22 publish */
+
+describe("S11 publish (P22, two routes)", () => {
+  it("S11-U31 a sealed candidate reads its publication and offers the hi-fi publish button only when both gates hold", async () => {
+    const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+    expect(publishButton()!.textContent).toBe(`Publish release candidate ${RC_ID}`);
+    expect(publishButton()!.getAttribute("aria-describedby")).toBeNull();
+    expect(q("[data-publish-sentence]")!.textContent).toBe(
+      `Publishing freezes this exact combination as ${RC_ID} in the portal governance store. It creates no account, no allocation, and does not start Paper — it only makes the candidate reviewable.`,
     );
-    expect(card.querySelector("[data-publish-rc]")?.className).toContain("rc-mono");
-    expect(within(card).getByText(SOD_NOTE)).toBeTruthy();
-    expect(card.querySelector("[data-claim-choice]")).toBeNull();
-    expect(api.of("POST")).toHaveLength(0);
-    expect(api.of("MIRROR")).toHaveLength(0);
+    expect(api.of("PUBLICATION")[0]!.headers["x-portal-csrf"]).toBeUndefined();
+    expect(api.of("PUBLISH")).toHaveLength(0);
+    expect(api.calls.filter((call) => call.url.includes("/mirror") || call.url.includes("reconcile"))).toHaveLength(0);
   });
 
   it.each([
-    ["P22_PUBLICATION_DISABLED", "publish — not enabled in this build"],
-    ["P21_LOCAL_SEAL_NOT_CREATED", "seal the evidence pack first"],
-    ["P22_RUN_NOT_MIRRORED", "publish blocked — this run is not mirrored to the governance store"],
-    ["P22_PUBLICATION_PENDING_RECONCILE", "publication outcome unknown — reconcile first"],
-    ["P21_SCRATCH_RUN_UNBOUND", "publish blocked — bind alpha_version first"],
-    ["P22_PACK_NOT_CURRENT", "P22_PACK_NOT_CURRENT"],
-  ])("S11-U35 a publish blocked by %s is labelled, described by its code and sends nothing", async (code, label) => {
-    const api = server({ GET: [ok(sealed({}, { enabled: false, blocked_reason: code }))] });
+    ["P21 intake dark", sealed({ enabled: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" }), publication({ may_publish: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" }), "P22_PUBLICATION_INTAKE_DISABLED"],
+    ["P22 governance source down", sealed(), publication({ may_publish: false, blocked_reason: "P22_GOVERNANCE_SOURCE_UNAVAILABLE", source: { ...publication().source, availability: "UNAVAILABLE", reason_code: "P22_GOVERNANCE_SOURCE_UNAVAILABLE", eligible_methodology_claim_ids: [] } }), "P22_GOVERNANCE_SOURCE_UNAVAILABLE"],
+    ["P22 superseded", sealed(), publication({ may_publish: false, blocked_reason: "P22_RELEASE_CANDIDATE_SUPERSEDED", candidate_relation: "SUPERSEDED" }), "P22_RELEASE_CANDIDATE_SUPERSEDED"],
+    ["P22 unknown code", sealed(), publication({ may_publish: false, blocked_reason: "P22_SOMETHING_NEW" }), "P22_SOMETHING_NEW"],
+  ])("S11-U32 %s: publish is disabled, described by its sentence and code, and a click sends nothing", async (_label, body, read, code) => {
+    const api = server({ COMPOSE: [ok(body)], PUBLICATION: [ok(read)] });
     renderCompose();
     await ready();
-    const button = publishButton();
-    expect(button.textContent).toBe(label);
+    await waitFor(() => expect(q("[data-publish-blocked]")!.getAttribute("data-publish-blocked")).toBe(code));
+    const button = publishButton()!;
     expect(button.getAttribute("aria-disabled")).toBe("true");
-    expect(button.getAttribute("data-publish-enabled")).toBe("false");
-    expect(describedBy(button)).toBe(code);
+    const sentence = rcReasonSentence(code);
+    expect(describedBy(button)).toBe(sentence ? `${sentence} · ${code}` : `the server does not offer publish for this candidate · ${code}`);
     fireEvent.click(button);
-    expect(api.of("POST")).toHaveLength(0);
+    expect(q("[data-confirm]")).toBeNull();
+    await flush();
+    expect(api.of("PUBLISH")).toHaveLength(0);
   });
 
-  it("S11-U36 one click publishes with the pack fence, shows publishing…, then prints the server's PUBLISHED state, card and mirror", async () => {
+  it("S11-U33 publish asks for confirmation, sends only the pack digest and the listed claim, then prints PUBLISHED from the server", async () => {
     const gate = deferred();
-    const api = server({ GET: [ok(sealed()), ok(published())], POST: [{ ...ok(publicationAnswer("DELIVERED"), 201), hold: gate.promise }] });
+    const api = server({
+      COMPOSE: [ok(sealed()), ok(deliveredCompose())],
+      PUBLICATION: [ok(publication()), ok(deliveredRead())],
+      PUBLISH: [{ ...ok(deliveredRead()), hold: gate.promise }],
+    });
     renderCompose();
     await ready();
-    fireEvent.click(publishButton());
-    fireEvent.click(publishButton());
-    expect(publishButton().textContent).toBe(PUBLISHING_LABEL);
-    expect(publishButton().getAttribute("aria-busy")).toBe("true");
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
+    await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+    fireEvent.click(publishButton()!);
+    const dialog = screen.getByRole("alertdialog", { name: "confirm publish" });
+    expect(dialog.textContent).toContain(PUBLISH_CONFIRM);
+    expect(dialog.textContent).toContain(`${RC_ID} · pack ${PACK_DIGEST} · claim ${CLAIM}`);
+    expect(api.of("PUBLISH")).toHaveLength(0);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirm publish" }));
+    expect(publishButton()!.textContent).toBe(PUBLISHING_LABEL);
+    expect(publishButton()!.getAttribute("aria-busy")).toBe("true");
+    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    fireEvent.click(publishButton()!);
     gate.release();
-    await screen.findByText(PUBLISHED_TITLE);
-    expect(api.of("POST")).toHaveLength(1);
-    const [post] = api.of("POST");
-    expect(post.url).toBe(PUBLISH_PATH);
-    expect(post.headers["x-portal-csrf"]).toBe("tok_123");
-    expect(post.body).toEqual({
-      schema_version: "research.release-candidate-publish-request.v1",
-      expected_pack_digest: "sha256:pack-1",
-      methodology_claim_id: "claim_m1",
-      request_key: `portal-research:${RC}:sha256:pack-1`,
-      summary: `Publish release candidate ${RC}`,
-    });
-    expect(api.of("GET")).toHaveLength(2);
-    const chip = document.querySelector("[data-state-chip]")!;
-    expect(chip.textContent).toBe("PUBLISHED");
-    expect(chip.getAttribute("data-s")).toBe("PUBLISHED");
-    const rc = document.querySelector('[data-rail-node="release_candidate"]')!;
-    expect(rc.getAttribute("data-tone")).toBe("green");
-    expect(rc.querySelector("[data-rail-detail]")?.textContent).toBe("published · immutable");
-    const card = panel("published");
-    expect(card.querySelector("h3")?.textContent).toBe("published — immutable");
-    expect(within(card).getByRole("link", { name: RC }).getAttribute("href")).toBe(`/research/quantbt/release-candidates/${RC}`);
-    expect(card.querySelector("[data-published-facts]")?.textContent).toBe(
-      `published_at 2026-09-20 12:30Z · by researcher@bobby · evidence digest sha256:evidence-set-1. ${PUBLISHED_SENTENCE}`,
+    await until("[data-panel='published']");
+    expect(api.of("PUBLISH")).toHaveLength(1);
+    const [post] = api.of("PUBLISH");
+    expect(post!.url).toBe(`/api/v1/research/release-candidates/${RC_ID}/publish`);
+    expect(post!.headers["x-portal-csrf"]).toBe("tok_123");
+    /* No summary, no request key: the server writes both from the sealed pack. */
+    expect(post!.body).toEqual({ schema_version: "research.release-candidate-publish-request.v1", expected_pack_digest: PACK_DIGEST, methodology_claim_id: CLAIM });
+    await waitFor(() => expect(api.of("COMPOSE")).toHaveLength(2));
+    expect(q("[data-state-chip]")!.textContent).toBe("PUBLISHED");
+    expect(q("[data-state-chip]")!.getAttribute("data-s")).toBe("PUBLISHED");
+    expect(q("[data-seal-chip]")).toBeNull();
+    const card = panel("published")!;
+    expect(card.querySelector("[data-published-facts]")!.textContent).toBe(
+      `published_at ${iso(PUBLISHED_AT)} · by researcher@bobby · evidence digest sha256:${"c".repeat(64)}. ${PUBLISHED_SENTENCE}`,
     );
-    expect(card.querySelector("[data-published-receipt]")?.textContent).toBe(`receipt sha256:receipt-1 · approval ${APPROVAL}`);
-    const mirrorCard = panel("mirror");
+    expect(card.querySelector("[data-published-receipt]")!.textContent).toBe(`receipt ${"d".repeat(64)} · approval ${APPROVAL}`);
+    /* No ghost after publish: the solid mirror, with the server's facts only. */
     expect(panel("mirror-ghost")).toBeNull();
-    expect(mirrorCard.querySelector(".gate")?.textContent).toBe("R1 · RESEARCH EVIDENCE");
-    expect(mirrorCard.querySelector("[data-mirror-subject]")?.textContent).toBe(`${RC} — ${ALPHA} alphaver_1`);
-    expect(mirrorCard.querySelector("[data-mirror-status]")?.textContent).toBe("PENDING");
-    expect(mirrorCard.querySelector("[data-mirror-sla]")?.textContent).toBe(
-      "SLA due 2026-09-21T12:30:00.000Z · expires 2026-09-23T12:30:00.000Z · time left — not published",
-    );
-    expect(mirrorCard.querySelector("[data-mirror-meta]")?.textContent).toBe(`${MIRROR_POOL_ABSENT}·${MIRROR_CONDITIONS_NONE}·${MIRROR_OUTCOMES}`);
-    expect(within(mirrorCard).getByText(MIRROR_PUBLISHED_NOTE)).toBeTruthy();
-    expect(within(mirrorCard).getByRole("link", { name: MIRROR_INBOX_LINK }).getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
-    expect(mirrorCard.querySelectorAll("button, input, textarea, select")).toHaveLength(0);
-    expect(mirrorCard.querySelector("[data-mirror-superseded]")).toBeNull();
-    /* T07: a published candidate is read-only. */
-    expect(document.querySelectorAll('[data-action="edit-declaration"]')).toHaveLength(0);
-    expect(describedBy(sealButton())).toContain("published — immutable");
+    const mirror = panel("mirror")!;
+    expect(mirror.querySelector("[data-mirror-subject]")!.textContent).toBe(`${RC_ID} — ${ALPHA} ${AV}`);
+    expect(mirror.querySelector("[data-mirror-status]")!.textContent).toBe("PENDING");
+    expect(mirror.querySelector("[data-mirror-sla]")!.textContent).toBe("SLA due 2026-09-27T09:12:00.000Z · expires 2026-12-25T09:12:00.000Z");
+    expect(mirror.querySelector("[data-mirror-meta]")!.textContent).toBe(`${MIRROR_POOL_ABSENT}·conditions: none·${MIRROR_OUTCOMES}`);
+    expect(within(mirror).getByText(MIRROR_PUBLISHED_NOTE)).toBeTruthy();
+    expect(within(mirror).getByRole("link", { name: MIRROR_INBOX_LINK }).getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
+    expect(mirror.querySelectorAll("button, input, textarea, select")).toHaveLength(0);
+    /* T07: the published candidate's declarations are read-only; the seal and publish cards are gone. */
+    expect(qa("[data-action='edit-declaration']")).toHaveLength(0);
+    expect(panel("seal")).toBeNull();
     expect(publishButton()).toBeNull();
-    const absent = ["banner", "publish", "publish-unknown", "mirror-ghost"];
+    const absent = ["banner", "seal", "publish", "publish-unknown", "mirror-ghost"];
     expect(panelOrder()).toEqual(RC_PANELS.compose.filter((name) => !absent.includes(name)));
   });
 
-  it("S11-U37 a 202 shows the unknown-outcome card, never PUBLISHED, and reconcile recovers the receipt", async () => {
+  it("S11-U34 several listed claims need a choice from the server's list before publish is offered", async () => {
     const api = server({
-      GET: [ok(sealed()), ok(unknownOutcome()), ok(published())],
-      POST: [ok(publicationAnswer("UNKNOWN"), 202), ok(publicationAnswer("DELIVERED"), 200)],
+      COMPOSE: [ok(sealed())],
+      PUBLICATION: [ok(publication({ source: { ...publication().source, eligible_methodology_claim_ids: ["claim_a", "claim_b"] } }))],
+      PUBLISH: [ok(deliveredRead())],
     });
     renderCompose();
     await ready();
-    fireEvent.click(publishButton());
-    const unknown = await until('[data-panel="publish-unknown"]');
-    expect(unknown.textContent).toContain(UNKNOWN_COPY);
-    await waitFor(() => expect(api.of("GET")).toHaveLength(2));
-    await waitFor(() => expect(document.querySelector("[data-publication-facts]")).toBeTruthy());
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
-    expect(panel("published")).toBeNull();
-    expect(panel("mirror")).toBeNull();
-    expect(document.querySelector("[data-publication-facts]")?.textContent).toBe(
-      "publication UNKNOWN · attempt 1 · recorded 2026-09-20 12:30Z · by researcher@bobby",
-    );
-    await waitFor(() => expect(reconcileButton().getAttribute("aria-disabled")).toBeNull());
-    fireEvent.click(reconcileButton());
-    await screen.findByText(PUBLISHED_TITLE);
-    const posts = api.of("POST");
-    expect(posts).toHaveLength(2);
-    expect(posts[1].url).toBe(PUBLISH_PATH);
-    expect(posts[1].headers["x-portal-csrf"]).toBe("tok_123");
-    expect(posts[1].body).toEqual(posts[0].body);
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("PUBLISHED");
+    await until("[data-claim-choice]");
+    expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
+    expect(describedBy(publishButton()!)).toBe(CLAIM_REQUIRED);
+    fireEvent.click(q("[data-claim='claim_b']")!);
+    expect(publishButton()!.getAttribute("aria-disabled")).toBeNull();
+    fireEvent.click(publishButton()!);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
+    await waitFor(() => expect(api.of("PUBLISH")).toHaveLength(1));
+    expect((api.of("PUBLISH")[0]!.body as { methodology_claim_id: string }).methodology_claim_id).toBe("claim_b");
   });
 
-  it("S11-U38 a 409 on publish says the evidence changed and reads the composition again", async () => {
-    const moved = sealed();
-    moved.source_fingerprint = "sha256:source-fp-2";
-    const api = server({ GET: [ok(sealed()), ok(moved)], POST: [problem(409, "RESEARCH_PUBLICATION_CONFLICT")] });
+  it("S11-U35 an UNKNOWN outcome is neither published nor refused; only the server may admit the same request again", async () => {
+    const unknown = publication({ state: "UNKNOWN", may_publish: true, blocked_reason: null });
+    const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(unknown)], PUBLISH: [ok(deliveredRead())] });
     renderCompose();
     await ready();
-    fireEvent.click(publishButton());
-    const notice = await until('[data-write-notice="publish"][data-outcome="conflict"]');
-    expect(notice.firstElementChild?.textContent).toBe(RC_CONFLICT_COPY);
-    expect(notice.querySelector("[data-error-code]")?.textContent).toBe("RESEARCH_PUBLICATION_CONFLICT");
-    await waitFor(() => expect(panel("meta").textContent).toContain("sha256:source-fp-2"));
-    expect(api.of("GET")).toHaveLength(2);
-    expect(panel("published")).toBeNull();
-  });
-
-  it("S11-U39 an open R1 approval is reported, nothing is attached, and the server's conflicting id is printed without a link", async () => {
-    const conflict = sealed({ availability: AVAILABLE, state: "CONFLICT", conflicting_approval_id: "apr_00", attempt_count: 1, intent_actor: ACTOR, updated_at_utc_ms: PUBLISHED_AT });
-    const api = server({ GET: [ok(sealed()), ok(conflict)], POST: [problem(409, "RESEARCH_PUBLICATION_OPEN_APPROVAL_EXISTS")] });
-    renderCompose();
-    await ready();
-    fireEvent.click(publishButton());
-    const notice = await until('[data-write-notice="publish"][data-outcome="conflict"]');
-    expect(notice.firstElementChild?.textContent).toBe(RC_OPEN_APPROVAL_COPY);
-    await waitFor(() => expect(document.querySelector("[data-conflicting-approval]")?.textContent).toBe("apr_00"));
-    expect(panel("publish").querySelectorAll("a")).toHaveLength(0);
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
-    expect(panel("mirror")).toBeNull();
-    expect(panel("mirror-ghost")).toBeTruthy();
-    expect(api.of("MIRROR")).toHaveLength(0);
-  });
-
-  it("S11-U40 a retryable 409 says the publication did not settle, not that the evidence changed", async () => {
-    const pending = sealed(
-      { availability: AVAILABLE, state: "PENDING", attempt_count: 1, intent_actor: ACTOR, updated_at_utc_ms: PUBLISHED_AT, downstream_code: "APPROVAL_CREATE_SERIALIZATION_CONFLICT", reconcile_allowed: true },
-      { enabled: false, blocked_reason: "P22_PUBLICATION_PENDING_RECONCILE" },
-    );
-    server({ GET: [ok(sealed()), ok(pending)], POST: [problem(409, "RESEARCH_PUBLICATION_RETRYABLE")] });
-    renderCompose();
-    await ready();
-    fireEvent.click(publishButton());
-    const unknown = await until('[data-panel="publish-unknown"]');
-    const notice = await until('[data-write-notice="publish"][data-outcome="conflict"]');
-    expect(unknown.contains(notice)).toBe(true);
-    expect(notice.firstElementChild?.textContent).toBe(RC_RETRYABLE_COPY);
-    expect(notice.textContent).not.toContain(RC_CONFLICT_COPY);
-    await waitFor(() => expect(document.querySelector("[data-downstream-code]")?.textContent).toBe("APPROVAL_CREATE_SERIALIZATION_CONFLICT"));
-    expect(reconcileButton().getAttribute("aria-disabled")).toBeNull();
-  });
-
-  it("S11-U41 a 422 ends that publish with its code, keeps the INPUT rows and reads nothing again", async () => {
-    const api = server({ GET: [ok(sealed())], POST: [problem(422, "RESEARCH_PUBLICATION_RUN_NOT_MIRRORED")] });
-    renderCompose();
-    await ready();
-    fireEvent.click(publishButton());
-    const notice = await until('[data-write-notice="publish"][data-outcome="terminal"]');
-    expect(notice.firstElementChild?.textContent).toBe(RC_PUBLISH_REFUSED_COPY);
-    expect(notice.querySelector("[data-error-code]")?.textContent).toBe("RESEARCH_PUBLICATION_RUN_NOT_MIRRORED");
-    expect(document.querySelectorAll('[data-action="edit-declaration"]')).toHaveLength(2);
-    expect(document.querySelector('[data-declared="KNOWN_LIMITATIONS_WAIVERS"]')?.textContent).toBe("fees modelled at taker");
-    expect(api.of("GET")).toHaveLength(1);
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
-  });
-
-  it("S11-U42 a 401 on publish locks every write, never retries and never polls", async () => {
-    const api = server({ GET: [ok(sealed())], POST: [problem(401, "UNAUTHENTICATED")] });
-    renderCompose();
-    await ready();
-    fireEvent.click(publishButton());
-    const notice = await until('[data-write-notice="publish"][data-outcome="denied"]');
-    expect(notice.firstElementChild?.textContent).toBe(RC_DENIED_COPY);
-    expect(publishButton().getAttribute("aria-disabled")).toBe("true");
-    expect(describedBy(publishButton())).toBe("writes are off — access changed");
-    fireEvent.click(publishButton());
-    fireEvent.click(sealButton());
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(api.of("POST")).toHaveLength(1);
-    expect(api.of("MIRROR")).toHaveLength(0);
-    expect(page().getAttribute("data-mirror-polling")).toBe("false");
-  });
-
-  it("S11-U43 a publish refused with 403 and with 404 says the same neutral sentence", async () => {
-    const seen: string[] = [];
-    for (const status of [403, 404]) {
-      server({ GET: [ok(sealed())], POST: [problem(status, "RESEARCH_RELEASE_CANDIDATE_NOT_FOUND")] });
-      renderCompose();
-      await ready();
-      fireEvent.click(publishButton());
-      const notice = await until('[data-write-notice="publish"][data-outcome="denied"]');
-      seen.push(notice.firstElementChild!.textContent!);
-      cleanup();
-      vi.restoreAllMocks();
-    }
-    expect(seen[0]).toBe(`${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`);
-    expect(seen[1]).toBe(seen[0]);
-  });
-
-  it("S11-U44 a 503 on publish is unavailable, keeps DRAFT and lets the reader send it again", async () => {
-    const api = server({
-      GET: [ok(sealed()), ok(published())],
-      POST: [problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"), ok(publicationAnswer("DELIVERED"), 201)],
-    });
-    renderCompose();
-    await ready();
-    fireEvent.click(publishButton());
-    const notice = await until('[data-write-notice="publish"][data-outcome="unavailable"]');
-    expect(notice.firstElementChild?.textContent).toBe(RC_UNAVAILABLE_COPY);
-    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
-    expect(api.of("GET")).toHaveLength(1);
-    expect(publishButton().getAttribute("aria-disabled")).toBeNull();
-    fireEvent.click(publishButton());
-    await screen.findByText(PUBLISHED_TITLE);
-    expect(api.of("POST")).toHaveLength(2);
-  });
-
-  it("S11-U45 while PUBLISHED the mirror is read every 60 s; a later 5xx keeps the last read as stale with its as-of", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const approved = mirror({ status: "APPROVED", effective_status: "APPROVED", decision_outcomes: ["APPROVED"], as_of_utc_ms: PUBLISHED_AT + 60_000 });
-    const api = server({ GET: [ok(published())], MIRROR: [ok(approved), problem(503, "RESEARCH_PUBLICATION_MIRROR_UNAVAILABLE")] });
-    renderCompose();
-    await ready(PUBLISHED_TITLE);
-    expect(api.of("MIRROR")).toHaveLength(0);
-    await waitFor(() => expect(page().getAttribute("data-mirror-polling")).toBe("true"));
-    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
-    await waitFor(() => expect(panel("mirror").querySelector("[data-mirror-status]")?.textContent).toBe("APPROVED"));
-    expect(api.of("MIRROR")[0].url).toBe(`/api/v1/research/release-candidates/${RC}/mirror`);
-    expect(api.of("MIRROR")[0].headers["x-portal-csrf"]).toBeUndefined();
-    expect(panel("mirror").querySelector("[data-mirror-facts]")?.textContent).toContain("decisions APPROVED");
-    expect(page().getAttribute("data-mirror-requests")).toBe("1");
-    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
-    const stale = await until("[data-mirror-stale]");
-    expect(stale.textContent).toBe("mirror as of 2026-09-20 12:31Z — the governance store did not answer");
-    expect(panel("mirror").getAttribute("data-mirror-view")).toBe("stale");
-    expect(panel("mirror").querySelector("[data-mirror-status]")?.textContent).toBe("APPROVED");
-    expect(api.of("GET")).toHaveLength(1);
-    expect(document.body.textContent).not.toContain("SECRET-SERVER-PROSE");
-  });
-
-  it("S11-U46 a 401 on the mirror is denied: the facts go, the poll stops", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const api = server({ GET: [ok(published())], MIRROR: [problem(401, "UNAUTHENTICATED")] });
-    renderCompose();
-    await ready(PUBLISHED_TITLE);
-    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
-    const denied = await until("[data-mirror-denied]");
-    expect(denied.firstElementChild?.textContent).toBe(RC_DENIED_COPY);
-    expect(panel("mirror").querySelector("[data-mirror-status]")).toBeNull();
-    expect(panel("mirror").querySelector("[data-mirror-facts]")).toBeNull();
-    expect(panel("published").querySelector("[data-evidence-digest]")).toBeNull();
-    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS * 3));
-    expect(api.of("MIRROR")).toHaveLength(1);
-    expect(page().getAttribute("data-mirror-polling")).toBe("false");
-  });
-
-  it("S11-U47 a mirror read refused with 403 and with 404 reads the same", async () => {
-    const seen: string[] = [];
-    for (const status of [403, 404]) {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
-      server({ GET: [ok(published())], MIRROR: [problem(status, "RESEARCH_RELEASE_CANDIDATE_NOT_FOUND")] });
-      renderCompose();
-      await ready(PUBLISHED_TITLE);
-      await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
-      const denied = await until("[data-mirror-denied]");
-      seen.push(denied.firstElementChild!.textContent!);
-      cleanup();
-      vi.restoreAllMocks();
-      vi.useRealTimers();
-    }
-    expect(seen[0]).toBe(`${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`);
-    expect(seen[1]).toBe(seen[0]);
-  });
-
-  it("S11-U48 a refused mirror read with no prior read is unavailable; with one it is stale; denial drops it", () => {
-    const prior = mirror();
-    const down = new PortalApiError("503", 503, "RESEARCH_PUBLICATION_MIRROR_UNAVAILABLE", "req_503");
-    expect(nextMirrorView(null, down)).toEqual({
-      mirror: null,
-      view: { state: "unavailable", status: 503, code: "RESEARCH_PUBLICATION_MIRROR_UNAVAILABLE", requestId: "req_503" },
-    });
-    expect(nextMirrorView(null, new TypeError("network"))).toEqual({ mirror: null, view: { state: "unavailable", status: 0, code: null, requestId: null } });
-    expect(nextMirrorView(prior, down)).toEqual({
-      mirror: prior,
-      view: { state: "stale", asOfUtcMs: PUBLISHED_AT, status: 503, code: "RESEARCH_PUBLICATION_MIRROR_UNAVAILABLE", requestId: "req_503" },
-    });
-    for (const status of [401, 403, 404]) {
-      const next = nextMirrorView(prior, new PortalApiError(String(status), status, "X", null));
-      expect(next.mirror).toBeNull();
-      expect(next.view.state).toBe("denied");
-    }
-  });
-
-  it("S11-U49 a hidden tab clears the timer, a visible one re-arms it, and unmounting stops it", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const api = server({ GET: [ok(published())], MIRROR: [ok(mirror())] });
-    const view = renderCompose();
-    await ready(PUBLISHED_TITLE);
-    await waitFor(() => expect(page().getAttribute("data-mirror-polling")).toBe("true"));
-    setVisibility("hidden");
-    await waitFor(() => expect(page().getAttribute("data-mirror-polling")).toBe("false"));
-    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS * 2));
-    expect(api.of("MIRROR")).toHaveLength(0);
-    setVisibility("visible");
-    await waitFor(() => expect(page().getAttribute("data-mirror-polling")).toBe("true"));
-    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
-    await waitFor(() => expect(api.of("MIRROR")).toHaveLength(1));
-    act(() => view.unmount());
-    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS * 3));
-    expect(api.of("MIRROR")).toHaveLength(1);
-  });
-
-  it("S11-U50 without the R1 read authority the mirror prints the id and link, 'not readable', and no status", async () => {
-    server({ GET: [ok(published(deniedMirror()))] });
-    renderCompose();
-    await ready(PUBLISHED_TITLE);
-    const card = panel("mirror");
-    expect(card.querySelector("[data-mirror-status]")?.textContent).toBe(`approval status: ${MIRROR_NOT_READABLE}`);
-    expect(card.querySelector(".rc-mstatus")).toBeNull();
-    expect(card.querySelector("[data-mirror-subject] [data-reason-code]")?.textContent).toBe("GOVERNANCE_R1_READ_DENIED");
-    expect(card.querySelector("[data-mirror-facts]")?.textContent).toContain(`approval ${APPROVAL} · version not published`);
-    expect(within(card).getByRole("link", { name: MIRROR_INBOX_LINK }).getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
-    expect(panel("published").querySelector("[data-evidence-digest]")).toBeNull();
-    expect(panel("published").querySelector("[data-published-facts] [data-reason-code]")?.textContent).toBe("GOVERNANCE_R1_READ_DENIED");
-    for (const leaf of Array.from(card.querySelectorAll("*"))) {
-      if (leaf.children.length === 0) expect(["0", "-", "N/A", "—"]).not.toContain((leaf.textContent ?? "").trim());
-    }
-  });
-
-  it("S11-U51 rc_superseded is its own line; the raw status stays as the server sent it", async () => {
-    server({
-      GET: [ok(published(mirror({ status: "APPROVED", effective_status: "APPROVED", rc_superseded: true, conditions: ["paper only"], condition_count: 1 })))],
-    });
-    renderCompose();
-    await ready(PUBLISHED_TITLE);
-    const card = panel("mirror");
-    expect(card.querySelector("[data-mirror-status]")?.textContent).toBe("APPROVED");
-    expect(card.querySelector("[data-mirror-superseded]")?.textContent).toBe(MIRROR_SUPERSEDED);
-    expect(card.querySelector("[data-mirror-conditions]")?.textContent).toBe("conditions: paper only");
-  });
-
-  it("S11-U52 several mirrored claims need a choice from the server's list before publish sends it", async () => {
-    const api = server({
-      GET: [ok(sealed({ claim_candidates: ["claim_a", "claim_b"] })), ok(published())],
-      POST: [ok(publicationAnswer("DELIVERED"), 201)],
-    });
-    renderCompose();
-    await ready();
-    const choice = panel("publish").querySelector("[data-claim-choice]")!;
-    expect(choice.querySelector("legend")?.textContent).toBe(CLAIM_LEGEND);
-    expect([...choice.querySelectorAll("[data-claim]")].map((radio) => radio.getAttribute("data-claim"))).toEqual(["claim_a", "claim_b"]);
-    expect(publishButton().textContent).toBe(CLAIM_REQUIRED);
-    fireEvent.click(publishButton());
-    expect(api.of("POST")).toHaveLength(0);
-    fireEvent.click(choice.querySelector('[data-claim="claim_b"]')!);
-    expect(publishButton().textContent).toBe(`Publish release candidate ${RC}`);
-    fireEvent.click(publishButton());
-    await screen.findByText(PUBLISHED_TITLE);
-    expect(api.of("POST")[0].body).toEqual({
-      schema_version: "research.release-candidate-publish-request.v1",
-      expected_pack_digest: "sha256:pack-1",
-      methodology_claim_id: "claim_b",
-      request_key: `portal-research:${RC}:sha256:pack-1`,
-      summary: `Publish release candidate ${RC}`,
-    });
-  });
-
-  it("S11-U53 no refusal on publish, reconcile or the mirror ever renders the server's prose", async () => {
-    for (const [status, code] of [
-      [409, "RESEARCH_PUBLICATION_CONFLICT"],
-      [422, "RESEARCH_PUBLICATION_REFUSED_DOWNSTREAM"],
-      [503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"],
-    ] as const) {
-      server({ GET: [ok(sealed())], POST: [problem(status, code)] });
-      renderCompose();
-      await ready();
-      fireEvent.click(publishButton());
-      await until('[data-write-notice="publish"]');
-      expect(document.body.textContent, String(status)).not.toContain("SECRET-SERVER-PROSE");
-      cleanup();
-      vi.restoreAllMocks();
-    }
-    server({ GET: [ok(unknownOutcome())], POST: [problem(409, "RESEARCH_PUBLICATION_RECOVERY_ACTOR_MISMATCH")] });
-    renderCompose();
-    await ready();
-    fireEvent.click(reconcileButton());
-    const notice = await until('[data-write-notice="reconcile"]');
-    expect(notice.firstElementChild?.textContent).toBe(RC_ACTOR_MISMATCH_COPY);
-    expect(document.body.textContent).not.toContain("SECRET-SERVER-PROSE");
-  });
-
-  it("S11-U54 reconcile is off unless the server admits it for this reader", async () => {
-    const base = unknownOutcome();
-    const api = server({ GET: [ok({ ...base, publication: { ...base.publication, reconcile_allowed: false } })] });
-    renderCompose();
-    await ready();
-    const button = reconcileButton();
-    expect(button.getAttribute("aria-disabled")).toBe("true");
-    expect(describedBy(button)).toBe(RECONCILE_NOT_ADMITTED);
-    fireEvent.click(button);
-    expect(api.of("POST")).toHaveLength(0);
+    const card = await until("[data-panel='publish-unknown']");
+    expect(card.textContent).toContain(UNKNOWN_COPY);
+    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
     expect(panel("publish")).toBeNull();
-  });
-});
-
-describe("Screen 11 sealed pack route", () => {
-  const renderPack = () => renderAt(`/research/quantbt/release-candidates/${RC}`);
-
-  it("S11-U30 reads the frozen pack by its id and prints it read-only", async () => {
-    const api = server({ GET: [ok(packResponse())] });
-    renderPack();
-    await waitFor(() => expect(page().getAttribute("data-rc-state")).toBe("available"));
-    expect(api.calls[0].url).toBe(`/api/v1/research/release-candidates/${RC}`);
-    expect(page().getAttribute("data-rc-mode")).toBe("pack");
-    expect(panelOrder()).toEqual([...RC_PANELS.pack]);
-    expect(document.querySelectorAll("[data-pack-row]")).toHaveLength(12);
-    expect(document.querySelector('[data-declared="PROPOSED_USE_RESTRICTIONS"]')?.textContent).toBe("research only");
-    expect(document.querySelectorAll('[data-action="edit-declaration"], [data-action="local-seal"], textarea')).toHaveLength(0);
-    expect(document.querySelector("[data-pack-counts]")).toBeNull();
-    expect(document.querySelector("[data-pack-counts-absent]")).toBeTruthy();
-    expect(document.querySelectorAll("[data-yaml-key]")).toHaveLength(17);
-    expect(panel("meta").textContent).toContain("pack sha256:pack-1");
-    expect(within(panel("identity")).getByRole("link", { name: /open the run's composition/ }).getAttribute("href")).toBe(
-      `/research/quantbt/runs/${RUN}/release-candidate`,
-    );
-    expect(document.querySelector("[data-seal-chip]")?.textContent).toBe("SEALED_LOCAL");
+    expect(panel("mirror-ghost")).not.toBeNull();
+    fireEvent.click(q("[data-action='publish-retry']")!);
+    await waitFor(() => expect(api.of("PUBLISH")).toHaveLength(1));
+    expect(api.of("PUBLISH")[0]!.body).toEqual({ schema_version: "research.release-candidate-publish-request.v1", expected_pack_digest: PACK_DIGEST, methodology_claim_id: CLAIM });
+    cleanup();
+    vi.restoreAllMocks();
+    const other = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication({ state: "UNKNOWN", may_publish: false, blocked_reason: "P22_PUBLICATION_OWNED_BY_ANOTHER_ACTOR" }))] });
+    renderCompose();
+    await ready();
+    const retry = await until("[data-action='publish-retry']");
+    await waitFor(() => expect(retry.getAttribute("aria-disabled")).toBe("true"));
+    expect(describedBy(retry)).toBe("another researcher recorded this publication; only they may retry it · P22_PUBLICATION_OWNED_BY_ANOTHER_ACTOR");
+    fireEvent.click(retry);
+    await flush();
+    expect(other.of("PUBLISH")).toHaveLength(0);
   });
 
-  it("S11-U31 a pack read refused with 403 and with 404 says the same thing", async () => {
+  it("S11-U36 a 409 on publish says so, reads the composition and the publication again, and sends nothing more", async () => {
+    const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())], PUBLISH: [problem(409, "RESEARCH_RELEASE_CANDIDATE_CONFLICT")] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+    fireEvent.click(publishButton()!);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
+    const notice = await until("[data-write-notice='publish'][data-outcome='conflict']");
+    expect(notice.textContent).toContain(RC_PUBLISH_CONFLICT_COPY);
+    await waitFor(() => expect(api.of("COMPOSE")).toHaveLength(2));
+    await waitFor(() => expect(api.of("PUBLICATION")).toHaveLength(2));
+    expect(api.of("PUBLISH")).toHaveLength(1);
+  });
+
+  it("S11-U37 a publish refused with 401 locks every write and polls nothing; 403 and 404 say the same neutral sentence", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const seen: string[] = [];
-    for (const status of [403, 404]) {
-      server({ GET: [problem(status, "RESEARCH_RELEASE_CANDIDATE_X")] });
-      renderPack();
-      await waitFor(() => expect(page().getAttribute("data-rc-state")).toBe("denied"));
-      seen.push(panel("notice").textContent!.replace(/req_\d+/, ""));
+    for (const status of [401, 403, 404]) {
+      const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())], PUBLISH: [problem(status, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN")] });
+      renderCompose();
+      await ready();
+      await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+      fireEvent.click(publishButton()!);
+      fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
+      const notice = await until("[data-write-notice='publish'][data-outcome='denied']");
+      seen.push(notice.firstElementChild!.textContent!);
+      expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
+      expect(sealButton().getAttribute("aria-disabled")).toBe("true");
+      if (status === 401) expect(within(notice).getByRole("link", { name: "sign in again" }).getAttribute("href")).toBe("/login");
+      await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_POLL_MS * 3));
+      expect(api.of("PUBLISH")).toHaveLength(1);
+      expect(api.of("PUBLICATION")).toHaveLength(1);
+      expect(screenText()).not.toContain("SECRET-SERVER-PROSE");
       cleanup();
       vi.restoreAllMocks();
     }
-    expect(seen[0]).toContain(RC_NEUTRAL_REFUSAL);
-    expect(seen[1]).toBe(seen[0]);
+    expect(seen[0]).toBe(RC_DENIED_COPY);
+    expect(seen[1]).toBe(`${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`);
+    expect(seen[2]).toBe(seen[1]);
+  });
+
+  it("S11-U38 a 503 on publish is unavailable: DRAFT and the pack stay, the reader may send it again", async () => {
+    const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())], PUBLISH: [problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"), ok(deliveredRead())] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+    fireEvent.click(publishButton()!);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
+    const notice = await until("[data-write-notice='publish'][data-outcome='unavailable']");
+    expect(notice.textContent).toContain(RC_PUBLISH_UNAVAILABLE_COPY);
+    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    await flush();
+    expect(api.of("PUBLISH")).toHaveLength(1);
+    fireEvent.click(publishButton()!);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
+    await waitFor(() => expect(api.of("PUBLISH")).toHaveLength(2));
   });
 });
 
-describe("Screen 11 source guards", () => {
-  const S11 = [
-    "ReleaseCandidateDetail.tsx",
-    "ReleaseCandidateRoute.tsx",
-    "releaseCandidateClient.ts",
-    "useReleaseCandidate.ts",
-    "useReleaseCandidateMirror.ts",
-  ];
-  const source = (name: string) => readFileSync(join(process.cwd(), "src", "research", name), "utf8");
+/* ------------------------------------------------------------ publication read */
 
-  it("S11-U32 no S11 file formats, sorts or scrolls on the client", () => {
-    for (const name of S11) {
-      expect(source(name), name).not.toMatch(/toFixed|Intl|toLocaleString|sort\(|scrollIntoView/);
-    }
+describe("S11 publication read and R1 mirror (P22)", () => {
+  it("S11-U39 a transient governance outage is 'unavailable', never 'denied', and is read again on a backoff until it answers", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = server({
+      COMPOSE: [ok(sealed())],
+      PUBLICATION: [problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"), problem(502, "BAD_GATEWAY"), ok(publication())],
+    });
+    renderCompose();
+    await ready();
+    const read = await until("[data-publication-read='unavailable']");
+    expect(read.textContent).toContain("the publication read did not answer — it is tried again on its own");
+    expect(read.textContent).toContain("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE");
+    expect(screenText()).not.toContain(RC_DENIED_COPY);
+    expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
+    expect(page().getAttribute("data-publication-polling")).toBe("true");
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_BACKOFF_MS[0]));
+    await waitFor(() => expect(api.of("PUBLICATION")).toHaveLength(2));
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_BACKOFF_MS[1]));
+    await waitFor(() => expect(api.of("PUBLICATION")).toHaveLength(3));
+    await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+    expect(q("[data-publication-read]")).toBeNull();
+    /* NOT_PUBLISHED needs no poll: nothing more is read. */
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_POLL_MS * 2));
+    expect(api.of("PUBLICATION")).toHaveLength(3);
   });
 
-  it("S11-U55 no S11 file writes a raw hex colour; the PUBLISHED chip and the mirror/ghost borders are palette tokens", () => {
+  it.each([
+    [401, "session", "Your session has ended."],
+    [403, "denied", RC_NEUTRAL_REFUSAL],
+    [404, "not-found", "This build serves no publication for this candidate."],
+    [400, "terminal", "The publication read was refused as invalid."],
+  ])("S11-U40 a publication read refused with %s is its own state (%s) and is not read again", async (status, state, words) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [problem(status, `CODE_${status}`)] });
+    renderCompose();
+    await ready();
+    const read = await until(`[data-publication-read='${state}']`);
+    expect(read.textContent).toContain(words);
+    expect(read.textContent).toContain(`CODE_${status}`);
+    expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_BACKOFF_MS[4] * 2));
+    expect(api.of("PUBLICATION")).toHaveLength(1);
+    expect(screenText()).not.toContain("SECRET-SERVER-PROSE");
+  });
+
+  it("S11-U41 while DELIVERED the publication is read every 60 s while visible; a later 5xx keeps the last read as stale with its as-of", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const approved = deliveredRead({ as_of_utc_ms: PUBLISHED_AT + 120_000 }, { status: "APPROVED" });
+    const api = server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(deliveredRead()), ok(approved), problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE")] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(panel("mirror")!.querySelector("[data-mirror-status]")!.textContent).toBe("PENDING"));
+    await waitFor(() => expect(page().getAttribute("data-publication-polling")).toBe("true"));
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_POLL_MS));
+    await waitFor(() => expect(panel("mirror")!.querySelector("[data-mirror-status]")!.textContent).toBe("APPROVED"));
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_POLL_MS));
+    const stale = await until("[data-panel='mirror'] [data-publication-read='stale']");
+    expect(stale.textContent).toContain(`publication as of ${iso(PUBLISHED_AT + 120_000)} — the last read did not answer; it is read again in 15 s`);
+    expect(panel("mirror")!.querySelector("[data-mirror-status]")!.textContent).toBe("APPROVED");
+    expect(api.of("PUBLICATION")).toHaveLength(3);
+    setVisibility("hidden");
+    await waitFor(() => expect(page().getAttribute("data-publication-polling")).toBe("false"));
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_POLL_MS * 3));
+    expect(api.of("PUBLICATION")).toHaveLength(3);
+    setVisibility("visible");
+    await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_BACKOFF_MS[0]));
+    await waitFor(() => expect(api.of("PUBLICATION")).toHaveLength(4));
+  });
+
+  it("S11-U42 a delivered candidate never shows the ghost: denied, not-found and unavailable R1 reads each say so", async () => {
+    const cases: Array<[RcPublication["approval_read"], string]> = [
+      ["DENIED", MIRROR_NOT_READABLE],
+      ["NOT_FOUND", "the governance store has no approval by this id"],
+      ["UNAVAILABLE", "the governance store did not answer this read"],
+    ];
+    for (const [read, words] of cases) {
+      server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(deliveredRead({ approval_read: read, approval: null }))] });
+      renderCompose();
+      await ready();
+      const mirror = await until("[data-panel='mirror']");
+      await waitFor(() => expect(mirror.getAttribute("data-mirror-read")).toBe(read));
+      expect(panel("mirror-ghost")).toBeNull();
+      expect(mirror.textContent).toContain(`approval status: ${words}`);
+      expect(mirror.querySelector("[data-mirror-facts]")!.textContent).toContain(`approval ${APPROVAL}`);
+      expect(mirror.querySelector("a")).toBeNull();
+      expect(panel("published")!.querySelector("[data-evidence-digest-absent]")!.textContent).toBe(`not read (${read})`);
+      cleanup();
+      vi.restoreAllMocks();
+    }
+    /* The composition says delivered but the publication read itself failed: still no ghost. */
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE")] });
+    renderCompose();
+    await ready();
+    await until("[data-panel='mirror'] [data-publication-read='unavailable']");
+    expect(panel("mirror-ghost")).toBeNull();
+    expect(q("[data-state-chip]")!.textContent).toBe("PUBLISHED");
+  });
+
+  it("S11-U43 a superseded candidate is its own line; the raw status and conditions are the server's", async () => {
+    const read = deliveredRead({ candidate_relation: "SUPERSEDED" }, {
+      status: "APPROVED_WITH_CONDITION",
+      conditions: [{ limitation_id: "lim_1", kind: "restriction", label: "Paper only", statement: "Paper only until R2.", expires_at: null }],
+    });
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(read)] });
+    renderCompose();
+    await ready();
+    const mirror = await until("[data-panel='mirror'] [data-mirror-superseded]");
+    expect(mirror.textContent).toBe(MIRROR_SUPERSEDED);
+    expect(q("[data-mirror-status]")!.textContent).toBe("APPROVED_WITH_CONDITION");
+    expect(q("[data-mirror-conditions]")!.textContent).toBe("conditions: restriction — Paper only");
+  });
+
+  it("S11-U44 nothing is invented: no assignee pool, no decisions, no quorum, no summary; the server's prose never renders", async () => {
+    const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())], PUBLISH: [ok(deliveredRead())] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+    expect(screenText()).not.toMatch(/Quant Reviewers|none recorded|quorum|decisions none|time left/);
+    expect(q("[data-panel='mirror-ghost'] [data-mirror-meta]")!.textContent).toBe(`${MIRROR_POOL_ABSENT}·conditions: not published·${MIRROR_OUTCOMES}`);
+    expect(panel("mirror-ghost")!.querySelectorAll("a, button, input, textarea, select, [tabindex]")).toHaveLength(0);
+    fireEvent.click(publishButton()!);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
+    await waitFor(() => expect(api.of("PUBLISH")).toHaveLength(1));
+    const body = api.of("PUBLISH")[0]!.body as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual(["expected_pack_digest", "methodology_claim_id", "schema_version"]);
+    expect(screenText()).not.toMatch(/Quant Reviewers|none recorded|quorum/);
+  });
+
+  it("S11-U45 a failed publication read is typed without a timer: transient keeps the last read, anything else drops it", () => {
+    const prior = publication();
+    const down = new PortalApiError("503", 503, "UNAVAILABLE", "req_503");
+    expect(nextPublicationView(null, down, 0)).toEqual({ state: "unavailable", failure: { status: 503, code: "UNAVAILABLE", requestId: "req_503" }, retryInMs: PUBLICATION_BACKOFF_MS[0] });
+    expect(nextPublicationView(prior, new TypeError("network"), 1)).toEqual({ state: "stale", publication: prior, failure: { status: 0, code: null, requestId: null }, retryInMs: PUBLICATION_BACKOFF_MS[1] });
+    expect(nextPublicationView(prior, new PortalApiError("429", 429, null, null), 99)).toMatchObject({ state: "stale", retryInMs: PUBLICATION_BACKOFF_MS[4] });
+    expect(nextPublicationView(prior, new PortalApiError("401", 401, null, null), 0).state).toBe("session");
+    expect(nextPublicationView(prior, new PortalApiError("403", 403, null, null), 0).state).toBe("denied");
+    expect(nextPublicationView(prior, new PortalApiError("404", 404, null, null), 0).state).toBe("not-found");
+    expect(nextPublicationView(prior, new PortalApiError("422", 422, null, null), 0).state).toBe("terminal");
+    expect("publication" in nextPublicationView(prior, new PortalApiError("403", 403, null, null), 0)).toBe(false);
+  });
+
+  it("S11-U46 the publish gate is the server's, first reason first (pure)", () => {
+    const fresh = { state: "fresh" as const, publication: publication() };
+    const base = { writesLocked: false, busy: false, publishing: false, claim: null };
+    expect(publishBlock({ ...base, compose: sealed(), view: fresh })).toBeNull();
+    expect(publishBlock({ ...base, compose: unbound(), view: fresh })).toEqual({ label: PUBLISH_UNBOUND_LABEL, code: "P21_SCRATCH_RUN_UNBOUND" });
+    expect(publishBlock({ ...base, compose: sealed({ enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED" }), view: fresh })!.code).toBe("P22_LOCAL_SEAL_REQUIRED");
+    expect(publishBlock({ ...base, compose: sealed(), view: { state: "loading" } })!.label).toBe("reading the publication…");
+    expect(publishBlock({ ...base, compose: sealed(), view: { state: "stale", publication: publication(), failure: { status: 503, code: null, requestId: null }, retryInMs: 15_000 } })!.label).toContain("stale");
+    expect(publishBlock({ ...base, compose: sealed(), view: { state: "fresh", publication: publication({ may_publish: false, blocked_reason: null }) } })!.label).toBe(
+      "the server does not offer publish for this candidate",
+    );
+    expect(publishBlock({ ...base, writesLocked: true, compose: sealed(), view: fresh })!.label).toBe("writes are off — access changed");
+    expect(publishBlock({ ...base, busy: true, compose: sealed(), view: fresh })!.label).toBe("another write is in flight");
+  });
+});
+
+/* ------------------------------------------------------------ pack route */
+
+describe("S11 sealed pack route", () => {
+  it("S11-U47 reads the frozen pack by its id and prints it read-only, with its publication read", async () => {
+    const api = server({ PACK: [ok(pack())], PUBLICATION: [ok(publication())] });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    expect(page().getAttribute("data-rc-mode")).toBe("pack");
+    expect(api.of("PACK")[0]!.url).toBe(`/api/v1/research/release-candidates/${RC_ID}`);
+    await waitFor(() => expect(api.of("PUBLICATION")).toHaveLength(1));
+    expect(qa("[data-yaml-key]")).toHaveLength(17);
+    expect(q("[data-yaml-key='release_candidate_id']")!.getAttribute("data-yaml-value")).toBe(RC_ID);
+    expect(qa("[data-action='edit-declaration'], [data-action='local-seal'], [data-action='publish']")).toHaveLength(0);
+    const ghost = panel("publish-ghost")!;
+    expect(within(ghost).getByRole("link", { name: "open the run's composition →" }).getAttribute("href")).toBe(releaseCandidateHref(RUN));
+    await waitFor(() => expect(ghost.querySelector("[data-reason-code='P22_NOT_PUBLISHED']")).not.toBeNull());
+    expect(q("[data-pack-counts-absent]")!.textContent).toBe("counts are not part of the frozen pack");
+  });
+
+  it("S11-U48 a delivered pack shows PUBLISHED, the receipt and the mirror, never the ghost", async () => {
+    server({ PACK: [ok(pack({ ...sealed().local_seal, delivery_state: "DELIVERED", approval_state: "PENDING" }))], PUBLICATION: [ok(deliveredRead())] });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    await until("[data-panel='published'] [data-published-receipt]");
+    expect(q("[data-state-chip]")!.textContent).toBe("PUBLISHED");
+    expect(panel("mirror-ghost")).toBeNull();
+    expect(panel("publish-ghost")).toBeNull();
+    expect(panel("mirror")!.querySelector("[data-mirror-status]")!.textContent).toBe("PENDING");
+  });
+
+  it("S11-U49 a pack read refused with 403 and with 404 says the same neutral sentence", async () => {
+    const seen: string[] = [];
+    for (const status of [403, 404]) {
+      const api = server({ PACK: [problem(status, "RESEARCH_RELEASE_CANDIDATE_NOT_FOUND")] });
+      renderAt(releaseCandidatePackHref(RC_ID));
+      const notice = await until("[data-rc-notice]");
+      seen.push(notice.getAttribute("data-rc-notice")!);
+      expect(notice.textContent).toContain(RC_NEUTRAL_REFUSAL);
+      await flush();
+      expect(api.of("PUBLICATION")).toHaveLength(0);
+      cleanup();
+      vi.restoreAllMocks();
+    }
+    expect(seen).toEqual(["denied", "denied"]);
+  });
+
+  it("S11-U50 a W5c #pack= deep link on the composition route forwards to the pack route; a malformed one is ignored", async () => {
+    server({ PACK: [ok(pack())], PUBLICATION: [ok(publication())], COMPOSE: [ok(P04)] });
+    renderAt(`/research/quantbt/runs/${RUN}/release-candidate#pack=${RC_ID}`);
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe(releaseCandidatePackHref(RC_ID)));
+    await ready();
+    cleanup();
+    vi.restoreAllMocks();
+    server({ COMPOSE: [ok(P04)] });
+    renderAt(`/research/quantbt/runs/${RUN}/release-candidate#pack=https://evil`);
+    await ready();
+    expect(page().getAttribute("data-rc-mode")).toBe("compose");
+    expect(packFromHash(`#pack=${RC_ID}`)).toBe(RC_ID);
+    expect(packFromHash("#pack=%E0%A4%A")).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------ source guards */
+
+describe("S11 source guards", () => {
+  const S11 = ["ReleaseCandidateDetail.tsx", "ReleaseCandidateRoute.tsx", "releaseCandidateClient.ts", "useReleaseCandidate.ts", "useReleaseCandidatePublication.ts"];
+  const source = (...parts: string[]) => readFileSync(join(process.cwd(), "src", ...parts), "utf8");
+
+  it("S11-U51 no S11 file formats, sorts or scrolls on the client, or writes a raw hex colour", () => {
     for (const name of S11) {
-      const code = source(name)
+      const code = source("research", name)
         .split("\n")
         .filter((line) => !line.trimStart().startsWith("*") && !line.trimStart().startsWith("//"))
         .join("\n");
+      expect(code, name).not.toMatch(/toFixed|Intl\.|toLocaleString|\.sort\(|scrollIntoView/);
       expect(code, name).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     }
-    const detail = source("ReleaseCandidateDetail.tsx");
-    expect(detail).toContain('.rc-state[data-s="SEALED_LOCAL"], .rc-state[data-s="PUBLISHED"] { border-color: var(--good); color: var(--good); background: var(--good-bg); }');
-    expect(detail).toContain(".rc-mirror { border: 1px solid var(--line);");
-    expect(detail).toContain(".rc-ghost { border: 1px dashed var(--line-strong);");
+    /* W5c D-07/D-08: gold/green text keeps the white ground; the ghost is not faded. */
+    const detail = source("research", "ReleaseCandidateDetail.tsx");
+    expect(detail).not.toMatch(/opacity:\s*\.75/);
+    expect(detail).toContain('.rc-state[data-s="SEALED_LOCAL"], .rc-state[data-s="PUBLISHED"] { border-color: var(--good); color: var(--good); background: var(--paper-raised); }');
   });
 
-  it("S11-U33 the routes are registered under QuantBT and the Hub and Report link to Screen 11", () => {
-    const module = readFileSync(join(process.cwd(), "src", "features", "quantbt", "QuantBTModule.tsx"), "utf8");
+  it("S11-U52 the client reads two P22 routes only: /publication and /publish; no /mirror, no reconcile, no summary", () => {
+    const code = (name: string) =>
+      source("research", name)
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith("*") && !line.trimStart().startsWith("//") && !line.trimStart().startsWith("/*"))
+        .join("\n");
+    const client = code("releaseCandidateClient.ts");
+    const hooks = code("useReleaseCandidatePublication.ts") + code("useReleaseCandidate.ts");
+    expect(client).toContain("/publication");
+    expect(client).toContain("/publish");
+    for (const text of [client, hooks]) {
+      expect(text).not.toMatch(/\/mirror|reconcile|summary:|request_key:|setInterval/);
+    }
+    expect(client.match(/method: "(POST|PATCH)"/g)).toEqual(['method: "PATCH"', 'method: "POST"', 'method: "POST"']);
+  });
+
+  it("S11-U53 the routes are registered and 01/04/09/10/13 link into Screen 11; the 01 rc chip opens a sealed pack's route", () => {
+    const module = source("features", "quantbt", "QuantBTModule.tsx");
     expect(module).toContain('<Route path="runs/:runId/release-candidate" element={<ReleaseCandidateRoute />} />');
     expect(module).toContain('<Route path="release-candidates/:releaseCandidateId" element={<ReleaseCandidatePackRoute />} />');
     expect(module.indexOf("runs/:runId/release-candidate")).toBeLessThan(module.indexOf('path="runs/:runId/*"'));
-    expect(module).toContain("execute|report|release-candidate)");
-    expect(source("EvidenceFlow.tsx")).toContain('data-action="release-candidate"');
-    expect(source("ReportDetail.tsx")).toContain('data-action="release-candidate"');
-    expect(source("ReportDetail.tsx")).toContain("releaseCandidateHref");
+    expect(source("research", "RunLibrary.tsx")).toContain(
+      'rc.kind === "LOCAL_SEAL" && rc.release_candidate_id ? releaseCandidatePackHref(rc.release_candidate_id) : releaseCandidateHref(runId)',
+    );
+    expect(source("research", "EvidenceFlow.tsx")).toContain("to={releaseCandidateHref(hub.run_id)}");
+    expect(source("research", "ReportDetail.tsx")).toContain('data-action="release-candidate"');
+    expect(source("research", "LineageDetail.tsx")).toContain("releaseCandidateHref(pick.run_id)");
+    expect(source("research", "CompareDetail.tsx")).toContain("releaseCandidateHref(run.run_id)");
+    expect(releaseCandidateHref("rrun_1")).toBe("/research/quantbt/runs/rrun_1/release-candidate");
+    const item = { ...P04.pack[5]!, source: { label: "Replay", href: "/research/quantbt/runs/x/replay" } };
+    expect(packSourceRoute(item, "rrun_1", null)).toBe("/research/quantbt/runs/rrun_1/execute");
+    expect(packSourceRoute({ ...item, source: { ...item.source, href: null } }, "rrun_1", null)).toBeNull();
   });
 });

@@ -48,7 +48,7 @@ import {
 } from "./runLibraryClient";
 import { compareEntryHref } from "./compareClient";
 import { lineageHref } from "./lineageClient";
-import { releaseCandidateHref } from "./releaseCandidateClient";
+import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
 import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
@@ -910,11 +910,11 @@ export function rcChipFace(rc: ReleaseCandidateRef): { text: string; state: stri
 function RcChip({ rc, runId }: { rc: ReleaseCandidateRef; runId: string }) {
   const face = rcChipFace(rc);
   const tone = RC_TONE[face.state] ?? "var(--ink-faint)";
-  /* Hi-fi: an <a> to Screen 11 (P21). A sealed pack opens beside the
-     composition through `#pack=`; the viewer's draft opens the composer. */
+  /* Hi-fi: an <a> to Screen 11 (P21). A sealed pack opens its own read-only
+     route (the one Screen 11 links to); the viewer's draft opens the composer. */
   return (
     <Link
-      to={releaseCandidateHref(runId, { pack: rc.kind === "LOCAL_SEAL" ? rc.release_candidate_id : null })}
+      to={rc.kind === "LOCAL_SEAL" && rc.release_candidate_id ? releaseCandidatePackHref(rc.release_candidate_id) : releaseCandidateHref(runId)}
       data-rc={face.fullId ?? rc.kind}
       data-rc-kind={rc.kind}
       data-rc-state={face.state}

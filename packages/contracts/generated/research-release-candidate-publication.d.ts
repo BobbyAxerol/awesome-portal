@@ -54,9 +54,11 @@ export interface components {
             schema_version: "research.release-candidate-publish-request.v1";
             workspace_id?: components["schemas"]["WorkspaceId"];
             expected_pack_digest: components["schemas"]["Digest"];
-            request_key: string;
+            /** @description Optional. When absent the server uses rcpub:<release candidate id>. */
+            request_key?: string;
             methodology_claim_id: string;
-            summary: string;
+            /** @description Optional. When absent the server writes the R1 summary from the sealed pack's own identity (release candidate, pack digest, evidence run). */
+            summary?: string;
         };
         Source: {
             /** @enum {string} */
