@@ -1,6 +1,6 @@
 # W7 · P21 composes a Delta WFO run from its retained lane — Claude, 2026-09-25/26
 
-Status: **P21_RETAINED_LANE_DELIVERED · WFO_RUN_LOCALLY_SEALABLE (service + disposable PG) · PREVIEW_NOT_REBUILT (read-only).**
+Status: **P21_RETAINED_LANE_DELIVERED · WFO_RUN_LOCALLY_SEALABLE (service + disposable PG) · PREVIEW_NOT_REBUILT (read-only) · S11_HANDOFF_ONLY (integrated P22/P23 screen owns rendering).**
 
 Worktree `.claude/worktrees/agent-a05ec4910d0b4d949`, branch `worktree-agent-a05ec4910d0b4d949`, base
 `origin/docs/research-loop-plan` @ `c66836bf`. Commits in §8; nothing pushed.
@@ -97,24 +97,58 @@ The preview is read-only, so no seal was written to it. Two proofs instead:
 | Control API compile | `tsc --noEmit -p tsconfig.build.json` | exit 0 |
 | Hook on commit 19de188b | `.githooks/pre-commit` (verify-workspace) | exit 0; control-api 148 files / 1138 tests passed, 1 skipped; contracts 15 files / 188 tests |
 | Contracts | `python3 tooling/snapshot.py --check` | 213 tracked files match (no contract change) |
-| Frontend unit | `npx vitest run` | **191 files, 3638 passed, 3 skipped** (S11: 29, incl. new U25/U26) |
+| Frontend unit (before the revert) | `npx vitest run` | **191 files, 3638 passed, 3 skipped** (S11: 29 incl. U25/U26, since reverted) |
 | Frontend build | `npm run build` | exit 0 |
-| Real-API e2e through the Vite proxy to the preview :8095 | W7 and W5c S11 tests | **14 passed** |
+| Real-API e2e through the Vite proxy to the preview :8095 (before the revert) | W7 and W5c S11 tests | **14 passed** |
 | Real-API e2e, whole file | `playwright test -c playwright.research-preview.config.ts` | 50 passed, 4 failed: all four are `W6b S10 … lineage` ETag assertions (lineage, not touched here) |
 | test_m0_freeze + test_compat_parity | pytest, host python | 18 passed, 1 failed (`test_environment_report_stable_subset_is_deterministic`: host package set; no Python changed) |
 | Route / R2 ledgers | none | no route changed |
 
-## 7. Screen 11 on the real preview API (1440 and 660)
+## 7. Screen 11 — what it must show for a WFO run (handoff onto the integrated P22/P23 S11)
 
-Real reads (P04 `rrun_8c9c9991…`, WFO `rrun_e1fa9e5c…`) and the INJECTED W7 composition of the same WFO run (compose GET
-only; the test first checks that the fixture's 11 already-published identities equal the preview's). Receipts:
-`~/.config/portal-research-preview/receipts/W7-S11-*` (8 PNG + JSON); overflow 0 at both widths; axe serious/critical 0.
+Lead decision (2026-09-26): W7 stays on the P21 backend compose/seal path. The shared local branch integrates the
+P22/P23 Screen 11 (new ReleaseCandidateDetail, client, mirror hook, tests), so the W7 frontend commit `8472a9b3` was
+**reverted** on this branch (commit in §8) and nothing here edits Screen 11. What the integrated screen must render for
+the WFO run is fixed by the server and published as two canonical bodies:
 
-**Looked at:** the image viewer was unavailable in this session (its tool hook timed out, and the last attempt was declined), so the PNGs
-were not opened by eye. Instead the rendered DOM of the INJECTED WFO page was read at 1440 and 660 (row text, cell
-boxes, clipping, seal-card text). That read found one real defect: at 660 the methodology note's unbroken engine token
-(`not_causal_multi_fold_global_calibration`) was clipped in its 192px cell. Fixed with `overflow-wrap: break-word` on
-`.rc-note` (re-read: not clipped; P04 min-content sizing unchanged). **Owner action:** open the 8 W7 PNGs once.
+- `packages/contracts/fixtures/research-release-candidate.wfo-retained.valid.json` (virtual draft)
+- `packages/contracts/fixtures/research-release-candidate.wfo-retained-declared.valid.json` (both declarations saved)
+
+**Pack (12 rows, server order):** 1 COMPLETE · 2 COMPLETE · 3 COMPLETE · 4 **DEGRADED** reason
+`P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED` · 5 COMPLETE · 6 COMPLETE · 7 COMPLETE · 8 COMPLETE · 9 DEGRADED reason
+`P21_SOURCE_DEGRADED_EVIDENCE` · 10 INPUT · 11 COMPLETE · 12 INPUT. Counter "8 COMPLETE · 2 DEGRADED · 2 INPUT · 0 MISSING".
+Row digests (whole, sha256): 3 e6394a52…, 4 cab7dce3…, 5 6c836418…, 6 38f2bed5…, 7 5ec01107…, 9 3d5622f8…, 11 f40807a8….
+Row 4's note quotes the claim and its ceiling (walk_forward_oos; not_causal_multi_fold_global_calibration; OOS used for
+selection: true; release claim NOT_ISSUED; no certificate).
+
+**YAML (17 lines):** release_candidate_id `null # P21_ASSIGNED_ON_LOCAL_SEAL` (gold); every other line AVAILABLE/ink:
+final_audit_run_id = the run, final_audit_attempt_id = its attempt, manifest_digest b71259790d93… (retained, NOT the
+preflight 3966d997…), parameter_bundle_digest 6c8364189d72…, evidence_revision rs02_evidence_3d5622f8…,
+report_revision p18r1_5ec01107…, dataset e6394a52…, transform 5c226a94…, plus the unchanged alpha/spec/engine/adapter lines.
+
+**Elsewhere:** availability AVAILABLE (no partial panel); rail selected_params = 6c8364189d72… detail
+"retained trial 0 · global" (ink); certification axis methodology_claim stays NOT_PUBLISHED
+`P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED`; source_absences.methodology_claim = PARTIAL
+`P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED`; seal blocked `P21_RESEARCHER_DECLARATIONS_REQUIRED` (virtual) and
+`may_seal: true` (declared); publish `P22_PUBLICATION_NOT_COMMISSIONED` from P21 (P22 owns its own gate).
+
+**New reason codes the screen may meet** (sentence suggestions, code shown beside):
+`P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED` "claim retained, no issued methodology certificate — travels as DEGRADED";
+`P21_RETAINED_CURRENT_SOURCE_NOT_SEALED` "the run's retained current source is not sealed yet";
+`P21_RETAINED_CLAIM_FACTS_NOT_PUBLISHED`; `P21_RETAINED_CHILD_AUDIT_MISMATCH`; `P21_RETAINED_PARAMETER_DIGEST_MISMATCH`;
+`P21_RETAINED_REPORT_NOT_SEALED`.
+
+**Layout finding for the integrated screen:** in the W5c S11 at 660px, the row-4 note's unbroken token
+`not_causal_multi_fold_global_calibration` was clipped in its ~192px note cell (DOM read). The integrated S11 should let
+note text wrap (`overflow-wrap: break-word`) or verify it does.
+
+**Real-API check done before the revert** (Vite dev proxy to the read-only preview :8095, Origin
+research-portal.primusspark.com, W5c screen): W7 and W5c S11 e2e 14 passed at 1440/660 for the P04 and WFO runs,
+row status, whole digest and reason code equal to the API; the W7 composition INJECTED for the WFO run rendered
+8·2·2·0, overflow 0, axe serious/critical 0 (receipts `~/.config/portal-research-preview/receipts/W7-S11-*`).
+**Screenshots were not looked at by eye**: the image viewer hook timed out and the final attempt was declined; the page
+was checked by reading its rendered DOM instead. These e2e additions were reverted with `8472a9b3` and should be
+re-applied onto the integrated S11's selectors.
 
 ## 8. Commits
 
@@ -122,17 +156,22 @@ boxes, clipping, seal-card text). That read found one real defect: at 660 the me
 |---|---|---|
 | `0cf1b8a2` | test(research): W7 freeze the P21 P04 lane as a byte-for-byte golden | 2 files, +159 |
 | `19de188b` | feat(research): P21 composes a Delta WFO run from its retained current-source lane | 10 files, +2465 −11 |
-| `8472a9b3` | feat(research): Screen 11 reads the retained-lane composition row by row | 4 files, +162 −2 |
-| (this) | docs(research): W7 P21 retained-lane record | this file |
+| `8472a9b3` | feat(research): Screen 11 reads the retained-lane composition row by row | 4 files, +162 −2 (reverted) |
+| `eef9ef05` | docs(research): W7 P21 retained-lane record | 1 file, +140 |
+| (this) | Revert 8472a9b3; this record states the S11 handoff | see git |
+
+Net W7 change: backend compose/seal path + its tests + two contract fixtures + this record. No frontend file differs
+from `c66836bf`.
 
 ## 9. Unfinished and why
 
-- **Preview not rebuilt** (read-only for this lane): the live preview still answers 3·0·2·7 for the WFO run. After a
-  rebuild of this branch it composes 8·2·2·0 (the INJECTED receipt shows that page). No real seal was written.
-- **Methodology certificate** stays NOT_ISSUED: QuantBT issues none for this run; the row is DEGRADED, not COMPLETE,
-  and the certification axis stays NOT_PUBLISHED.
-- **Screenshots not opened by eye** (tool outage, §7).
-- The W6b S10 ETag e2e failures are outside this change (lineage).
+- **Screen 11 for WFO runs**: not implemented here by decision (§7); to be applied onto the integrated P22/P23 S11,
+  which should load the two canonical fixtures in its unit tests and re-add the row-by-row real-API assertion.
+- **Preview not rebuilt** (read-only for this lane): the live preview still answers 3·0·2·7 for the WFO run; after a
+  rebuild of this branch it composes 8·2·2·0. No real seal was written.
+- **Methodology certificate** stays NOT_ISSUED: QuantBT issues none for this run; the row is DEGRADED, not COMPLETE.
+- **Screenshots not opened by eye** (§7).
+- The W6b S10 ETag real-API failures (4) are lineage, outside this change.
 
 ## 10. Rollback
 

@@ -339,13 +339,6 @@ export const RC_REASON_SENTENCES: Record<string, string> = {
   P21_SOURCE_DEGRADED_EVIDENCE: "partial evidence — travels as DEGRADED",
   P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED: "no issued methodology certificate",
   P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED: "no engine execution-contract certificate",
-  /* W7 · the retained (Delta WFO) lane names its own reasons. */
-  P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED: "claim retained, no issued methodology certificate — travels as DEGRADED",
-  P21_RETAINED_CURRENT_SOURCE_NOT_SEALED: "the run's retained current source is not sealed yet",
-  P21_RETAINED_CLAIM_FACTS_NOT_PUBLISHED: "the retained seal predates the engine's claim facts",
-  P21_RETAINED_CHILD_AUDIT_MISMATCH: "a fold's out-of-sample child is not the frozen selection",
-  P21_RETAINED_PARAMETER_DIGEST_MISMATCH: "the retained selection and the hand-off cursor name different parameters",
-  P21_RETAINED_REPORT_NOT_SEALED: "no report is sealed from the current retained evidence",
   P22_PUBLISHED_COMPARISON_NOT_COMMISSIONED: "no published predecessor — publication is not commissioned yet",
   P22_PUBLICATION_NOT_COMMISSIONED: "publication to the Approval Inbox is not commissioned in this build",
 };
