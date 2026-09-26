@@ -1,23 +1,25 @@
 /**
  * P23 qualification lane — typed stub builders for the fifteen Research screens.
  *
- * Fixture lane only. Nothing here is a backend: every body is either one of the
+ * Fixture lane only. Nothing here is a backend: every body is one of the
  * repository's own fixtures (`e2e/research-foundation/*.json`, served by
- * `stubPortalApi` in `../fixtures`) or a builder typed against the generated
- * contract (`packages/contracts/generated/*.d.ts`) the screen reads, ported
- * from the per-phase receipt probes:
+ * `stubPortalApi` in `../fixtures`), a canonical contract fixture
+ * (`packages/contracts/fixtures/*.valid.json`, re-keyed by `contractFixture`),
+ * or a builder typed against the generated contract
+ * (`packages/contracts/generated/*.d.ts`) the screen reads:
  *
  *  - S08 Execute replay  ← `src/research/executeReplay.test.tsx` fixture (P17)
- *  - S09 Run report      ← `src/research/reportDetail.test.tsx` fixture (P18)
- *  - S10 Lineage         ← P20 receipt probe `LINEAGE()` (P19 shape)
+ *  - S09 Run report      ← contract fixture `research-report.wfo-retained` (W6a, frozen core v2)
+ *  - S10 Lineage         ← contract fixture `research-attempt-lineage.healthy` (W6b, lineage 1.1.0)
  *  - S11 Release cand.   ← P22 receipt probe `COMPOSE()` incl. `publication`/`mirror`
- *  - S13 Compare         ← P20 receipt probe (attempts / markets / pair)
+ *  - S13 Compare         ← contract fixtures `research-compare.{attempts,markets,pair-ok}` (W6a)
  *  - S03 terminal run    ← `research-foundation/progress-read.json` with a
  *                          contract-typed `run_completed` frame
  *
  * The compile-time `satisfies`/return types are the point: a contract change
  * that makes one of these bodies stale fails `tsc` before it fails a browser.
  */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +28,7 @@ import type { BrowserContext, Page, Request, Route } from "@playwright/test";
 
 import type { components as CompareC } from "../../../../../packages/contracts/generated/research-compare";
 import type { components as LineageC } from "../../../../../packages/contracts/generated/research-attempt-lineage";
+import type { components as PreflightC } from "../../../../../packages/contracts/generated/research-preflight";
 import type { components as ProgressC } from "../../../../../packages/contracts/generated/research-progress";
 import type { components as ReplayC } from "../../../../../packages/contracts/generated/research-replay";
 import type { components as ReportC } from "../../../../../packages/contracts/generated/research-report";
@@ -37,13 +40,11 @@ type Replay = ReplayC["schemas"]["Replay"];
 type ReportDetail = ReportC["schemas"]["ReportDetail"];
 type Lineage = LineageC["schemas"]["AttemptLineageResponse"];
 type Compare = CompareC["schemas"]["CompareResponse"];
-type CmpRun = CompareC["schemas"]["Run"];
-type CmpChart = CompareC["schemas"]["MarketChart"];
 type RcCompose = PortalRcCompose;
 type RcMirror = PortalRcMirror;
 type ProgressRead = ProgressC["schemas"]["ProgressRead"];
+type DatasetCatalog = PreflightC["schemas"]["DatasetCatalog"];
 type ProgressStreamEvent = ProgressC["schemas"]["ProgressStreamEvent"];
-type ReportArtifactKey = ReportC["schemas"]["Artifact"]["key"];
 type RcFieldKey = RcCompose["fields"][number]["key"];
 type RcPackKey = RcCompose["pack"][number]["key"];
 
@@ -58,6 +59,20 @@ export function foundationRaw(name: string): string {
 /** One of the repository's own fixture bodies, parsed fresh (callers may mutate). */
 export function foundation<T = Record<string, unknown>>(name: string): T {
   return JSON.parse(readFileSync(join(FOUNDATION, name), "utf8")) as T;
+}
+
+const CONTRACT_FIXTURES = join(HERE, "..", "..", "..", "..", "..", "packages", "contracts", "fixtures");
+
+/**
+ * A canonical contract fixture (`packages/contracts/fixtures/<name>.valid.json`),
+ * with each `[from, to]` literal replaced throughout its bytes before parsing.
+ * The contracts suite validates these files against Zod and OpenAPI, so the
+ * cast below is backed by a schema check, not by trust.
+ */
+export function contractFixture<T>(name: string, replace: readonly (readonly [string, string])[] = []): T {
+  let raw = readFileSync(join(CONTRACT_FIXTURES, `${name}.valid.json`), "utf8");
+  for (const [from, to] of replace) raw = raw.replaceAll(from, to);
+  return JSON.parse(raw) as T;
 }
 
 /* ------------------------------------------------------------------ ids */
@@ -255,7 +270,13 @@ function replayFor(url: URL, runId: string): Replay {
 }
 
 /* ======================================================================
- * S09 — Run report (P18). Shape from `reportDetail.test.tsx`.
+ * S09 — Run report (P18) and S10 — Attempt lineage (P19).
+ *
+ * Both bodies are the contract's own canonical fixtures
+ * (`packages/contracts/fixtures/*.valid.json`, validated against Zod and the
+ * OpenAPI schema on every contracts run), re-keyed to the run / Alpha the
+ * page addresses. Nothing is hand-typed, so a contract change reaches this
+ * lane through the fixture, not through a stale copy of it.
  * ==================================================================== */
 
 /** The seeded report revision tag for the fixture run; a distinct one for any other run. */
@@ -263,248 +284,19 @@ export function reportTagFor(runId: string): string {
   return runId === EVIDENCE_RUN ? "7" : "8";
 }
 
+/** S09: the W6a retained-WFO report (frozen core v2), re-keyed to `runId` and revision tag `tag`. */
 export function reportDetail(runId: string, tag = "7"): ReportDetail {
-  const REV = `p18r1_${hex(tag)}`;
-  const T0 = 1_727_000_000_000;
-  const REVS = {
-    evidence_revision: `p13r1_${hex("a")}`,
-    split_revision: `p14r1_${hex("1")}`,
-    search_revision: `p15r1_${hex("2")}`,
-    freeze_revision: `p16r1_${hex("3")}`,
-    replay_revision: `p17r1_${hex("4")}`,
-  };
-  const absent = (reason: string) => ({ state: "NOT_PUBLISHED" as const, text: null, reason_code: reason, availability: np(reason) });
-  const fact = (text: string) => ({ state: "AVAILABLE" as const, text, reason_code: null, availability: AV });
-  const metric = (key: string, label: string, unit: "CURRENCY" | "FRACTION" | "COUNT", value: string | null) => ({
-    key,
-    label,
-    unit,
-    scope: value === null ? ("NOT_PUBLISHED" as const) : ("OOS" as const),
-    origin: value === null ? ("NOT_PUBLISHED" as const) : ("ENGINE_DIRECT" as const),
-    definition_id: `research.metric.v1.${key.toLowerCase()}`,
-    value,
-    availability: value === null ? np("P18_METRIC_NOT_PUBLISHED") : AV,
-  });
-  const identity: [string, string, string][] = [
-    ["run_id", "Run ID", runId],
-    ["source_adapter", "Source adapter", "p04.delta-rsi.v1"],
-    ["engine_version", "Engine version", "1.1.1"],
-    ["input_scope", "Input scope", "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"],
-    ["dataset_id", "Dataset", "delta-rsi"],
-    ["symbol", "Symbol", "BTCUSDT"],
-    ["timeframe", "Timeframe", "1h"],
-    ["evidence_revision", "Evidence revision", REVS.evidence_revision],
-    ["split_revision", "Split revision", REVS.split_revision],
-    ["search_revision", "Search revision", REVS.search_revision],
-    ["freeze_revision", "Freeze revision", REVS.freeze_revision],
-    ["replay_revision", "Replay revision", REVS.replay_revision],
-  ];
-  const artifacts: [ReportArtifactKey, string][] = [
-    ["RUN_SPEC", "P18_REQUESTED_SPEC_BYTES_NOT_PUBLISHED"],
-    ["SELECTION_TRACE", "P04_FIXED_PROFILE_HAS_NO_SELECTION_TRACE"],
-    ["FOLD_PLAN", "P04_SOURCE_DID_NOT_PUBLISH_FOLD_PLAN"],
-    ["FILL_LEDGER", "P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS"],
-    ["METRICS_SUMMARY", "P13_EVIDENCE_PROJECTION_IS_NOT_ARTIFACT_FILE"],
-    ["CLAIM", "P13_CLAIM_IS_NOT_AN_ARTIFACT_DIGEST"],
-    ["BUNDLE", "P18_MANIFEST_BYTES_NOT_PUBLISHED"],
-  ];
-  const body = {
-    schema_version: "research.report-detail.v1",
-    read_authority: "PORTAL_PERSISTED_RESEARCH",
-    run_id: runId,
-    report_revision: REV,
-    etag: `"${REV}"`,
-    sealed_at_utc_ms: 1_727_000_002_000,
-    presentation_revision: "research.report-presentation.v1",
-    frozen_core: {
-      schema_version: "research.report-frozen-core.v1",
-      report_source: "P13_P17_FIXED_PROFILE",
-      source_revisions: REVS,
-      source_digests: {
-        source_transform_digest: hex("b"),
-        requested_spec_digest: hex("c"),
-        effective_spec_digest: hex("d"),
-        dataset_binding_digest: hex("e"),
-        manifest_digest: hex("f"),
-      },
-      passport: [
-        fact("p04.delta-rsi.v1"),
-        fact("1.1.1"),
-        fact("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
-        absent("P18_SPLIT_PROTOCOL_NOT_PUBLISHED"),
-        fact("FIXED_PROFILE_NO_SEARCH"),
-        absent("P18_INTEGRITY_NOT_PUBLISHED"),
-      ],
-      identity: identity.map(([key, label, value]) => ({ key, label, value, availability: AV })),
-      metrics: [
-        metric("INITIAL_EQUITY", "Initial equity", "CURRENCY", "100"),
-        metric("FINAL_EQUITY", "Final equity", "CURRENCY", "110"),
-        metric("NET_RETURN_FRACTION", "Net return", "FRACTION", "0.1"),
-        metric("MAX_DRAWDOWN_FRACTION", "Max drawdown", "FRACTION", "-0.02"),
-        metric("TRADE_COUNT", "Trades", "COUNT", "3"),
-        metric("BARS_PROCESSED", "Bars processed", "COUNT", "1000"),
-        metric("BENCHMARK_RETURN_FRACTION", "Benchmark return", "FRACTION", null),
-        metric("FUNDING_TOTAL", "Funding", "CURRENCY", null),
-      ],
-      headline: [
-        { key: "OOS_SHARPE", label: "OOS Sharpe", value: null, availability: np("P04_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE") },
-        { key: "DECAY_MEAN", label: "Decay mean", value: null, availability: np("P04_SOURCE_DID_NOT_PUBLISH_DECAY_MEAN") },
-        { key: "MAX_DRAWDOWN", label: "Max drawdown", value: "-0.02", availability: AV },
-        { key: "TRADES", label: "Trades", value: "3", availability: AV },
-        { key: "WIN_RATE", label: "Win rate", value: null, availability: np("P04_SOURCE_DID_NOT_PUBLISH_WIN_RATE") },
-        { key: "FUNDING", label: "Funding", value: null, availability: np("P18_METRIC_NOT_PUBLISHED") },
-      ],
-      headline_footnote:
-        "All values retain the scope and availability stated by the sealed Evidence Hub; missing optimizer and execution facts are not inferred.",
-      equity: {
-        state: "AVAILABLE",
-        source_observation_count: 3,
-        emitted_point_count: 3,
-        sampling: "FULL",
-        points: [
-          { at_utc_ms: T0, equity: "100", drawdown_fraction: "0" },
-          { at_utc_ms: T0 + 60_000, equity: "105", drawdown_fraction: "-0.01" },
-          { at_utc_ms: T0 + 120_000, equity: "110", drawdown_fraction: "-0.02" },
-        ],
-        availability: AV,
-      },
-      folds: {
-        state: "NOT_PUBLISHED",
-        reason_code: "P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS",
-        rows: [],
-        availability: np("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS"),
-      },
-      stages: (["S1", "S2", "S3", "S4", "S5"] as const).map((key) => ({
-        key,
-        state: "DONE" as const,
-        started_at_utc_ms: T0,
-        completed_at_utc_ms: T0 + 1_000,
-      })),
-      artifacts: artifacts.map(([key, reason]) => ({ key, digest: null, state: "NOT_PUBLISHED" as const, availability: np(reason) })),
-      warnings: [
-        { definition_id: "research.warning.v1.fixed-profile", state: "ACTIVE", reason_code: "P04_FIXED_PROFILE", copy: "Fixed profile." },
-      ],
-      promotion: {
-        state: "NOT_PUBLISHED",
-        line: "Promotion/governance approval is not published by the current P04 source.",
-        availability: np("P04_SOURCE_DID_NOT_PUBLISH_PROMOTION_APPROVAL"),
-      },
-      provenance: {
-        line: `P18 report sealed from ${REVS.evidence_revision}, ${REVS.split_revision}, ${REVS.search_revision}, ${REVS.freeze_revision} and ${REVS.replay_revision}; replay remains retrospective equity only (AVAILABLE).`,
-        metric_registry_version: "research.metric-registry.v2",
-        data_signature: hex("e"),
-        read_model_revision: "research.report-read-model.v1",
-        verdict_rule_revision: "research.report-verdict-rule.v1",
-      },
-      source_absences: {
-        audited_fills: absent("P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS"),
-        per_fold_rows: absent("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS"),
-        approval_annotation: absent("P18_APPROVAL_ANNOTATION_NOT_PUBLISHED"),
-        replay_execution_state: absent("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS"),
-      },
-    },
-    approval_annotation: {
-      state: "NOT_PUBLISHED",
-      text: null,
-      source_updated_at_utc_ms: null,
-      availability: np("P18_APPROVAL_ANNOTATION_NOT_PUBLISHED"),
-    },
-    exports: {
-      formats: ["REPORT_JSON", "REPORT_CSV"],
-      maximum_bytes: 524288,
-      unavailable_formats: [
-        { format: "PARQUET", reason_code: "P18_SOURCE_DID_NOT_PUBLISH_REPORT_ROWSET_FOR_PARQUET" },
-        { format: "ARCHIVE", reason_code: "P18_SOURCE_ARTIFACT_ARCHIVE_NOT_EXPOSED_TO_REPORT" },
-      ],
-    },
-  } satisfies ReportDetail;
-  return body;
+  const base = contractFixture<ReportDetail>("research-report.wfo-retained");
+  return contractFixture<ReportDetail>("research-report.wfo-retained", [
+    [base.run_id, runId],
+    [base.report_revision, `p18r1_${hex(tag)}`],
+  ]);
 }
 
-/* ======================================================================
- * S10 — Attempt lineage (P19). Minimal body of the P20 receipt probe.
- * ==================================================================== */
-
+/** S10: the P19 healthy lineage (W6b lineage 1.1.0 fields included), re-keyed to `alphaId`. */
 export function lineage(alphaId: string = ALPHA): Lineage {
-  const T0 = 1_785_000_000_000;
-  const id = "att_01J8ZKQ4M2001XV7B1N6C";
-  return {
-    schema_version: "research.attempt-lineage.v1",
-    read_authority: "PORTAL_PERSISTED_RESEARCH",
-    alpha: {
-      alpha_id: alphaId,
-      name: "mom_breakout_v3",
-      active_version_id: "alphaver_093",
-      active_version_state: "ACTIVE",
-      active_version_availability: AV,
-      versions: [
-        {
-          alpha_version_id: "alphaver_093",
-          label: "av_0_9_3",
-          code_digest: hex("a"),
-          entrypoint: "alphas.momentum_btc:Alpha",
-          lifecycle_state: "ACTIVE",
-          registered_at_utc_ms: T0,
-          promotion_pick: {
-            state: "NOT_PUBLISHED",
-            attempt_id: null,
-            run_id: null,
-            source_contract_rev: null,
-            source_digest: null,
-            source_as_of_utc_ms: null,
-            availability: np("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"),
-          },
-        },
-      ],
-    },
-    attempts: [
-      {
-        attempt_id: id,
-        parent_attempt_id: null,
-        parent_state: "ROOT",
-        relation_to_parent: null,
-        alpha_version_id: "alphaver_093",
-        alpha_version_label: "av_0_9_3",
-        state: "READY",
-        intent_kind: "NEW",
-        reason: null,
-        space_signature: hex("c"),
-        created_at_utc_ms: T0,
-        updated_at_utc_ms: T0 + 60_000,
-        primary_run: {
-          run_id: `run_${id}`,
-          state: "READY",
-          effective_spec_digest: hex("d"),
-          engine_release_id: "quantbt-1.1.1",
-          dataset_binding_digest: hex("e"),
-          technical_retry_count: 0,
-        },
-        child_runs: [],
-        child_runs_coverage: { state: "COMPLETE", reason_code: null },
-        semantic_diff: { state: "ROOT", changes: [], gates_reset: false, availability: AV },
-        exposure: {
-          state: "NOT_PUBLISHED",
-          count: 0,
-          roles: [],
-          latest_source_as_of_utc_ms: null,
-          availability: np("P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"),
-        },
-      },
-    ],
-    counts: {
-      total_attempts: 1,
-      returned_attempts: 1,
-      draft_attempts: 0,
-      submitted_attempts: 1,
-      failed_attempts: 0,
-      abandoned_attempts: 0,
-      child_runs: 0,
-      technical_retries: 0,
-    },
-    coverage: { state: "COMPLETE", reason_code: null, oldest_returned_created_at_utc_ms: T0 },
-    source_absences: { promotion_pick: np("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"), historical_semantic_diff: AV },
-    as_of_utc_ms: T0 + 1000 * 60_000,
-  };
+  const base = contractFixture<Lineage>("research-attempt-lineage.healthy");
+  return contractFixture<Lineage>("research-attempt-lineage.healthy", [[base.alpha.alpha_id, alphaId]]);
 }
 
 /* ======================================================================
@@ -669,144 +461,32 @@ export function rcCompose(runId: string = RC_RUN, rcId: string = RC_ID, publishe
 }
 
 /* ======================================================================
- * S13 — Compare (P20). Attempts / markets / pair from the receipt probe.
+ * S13 — Compare (P20). The W6a canonical fixtures (attempts / markets /
+ * pair-ok), re-keyed to the Alpha and — for a pair — the two runs the URL
+ * names. Each distinct key answers its own revision, so a validator for one
+ * key never matches another.
  * ==================================================================== */
 
-const CMP_T0 = 1_785_000_000_000;
-const DAY = 86_400_000;
-const cmpKey = (symbol: string, timeframe = "4h") => ({ symbol, timeframe, route: "close_target_v2", protocol: "walk_forward", availability: AV });
-const WF_CLAIM = { family: "WALK_FORWARD_OOS_COMPATIBILITY", rank: 3, origin: "PORTAL_DERIVED_FROM_SOURCE_PROTOCOL", text: "fixed-profile outer-OOS observation; compatibility tier only", availability: AV } as const;
-const NP_CLAIM = { family: "NOT_PUBLISHED", rank: null, origin: "NOT_PUBLISHED", text: null, availability: np("P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED") } as const;
-
-function cmpMetrics(ret: string | null, dd: string | null, trades: string | null): CmpRun["original_metrics"] {
-  const src = ret === null ? np("P20_P13_EVIDENCE_PROJECTION_NOT_AVAILABLE") : AV;
-  return [
-    { key: "NET_RETURN_FRACTION", definition_id: "research.compare.metric.v1.original-net-return", scope: "P13_OOS_EQUITY_SERIES", value: ret, availability: src },
-    { key: "MAX_DRAWDOWN_FRACTION", definition_id: "research.compare.metric.v1.original-max-drawdown", scope: "P13_OOS_EQUITY_SERIES", value: dd, availability: src },
-    { key: "TRADE_COUNT", definition_id: "research.compare.metric.v1.original-trade-count", scope: "P13_FULL_CHILD_TAPE", value: trades, availability: src },
-    { key: "OOS_SHARPE", definition_id: "research.compare.metric.v1.oos-sharpe", scope: "NOT_PUBLISHED", value: null, availability: np("P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE") },
-    { key: "DECAY", definition_id: "research.compare.metric.v1.decay", scope: "NOT_PUBLISHED", value: null, availability: np("P20_SOURCE_DID_NOT_PUBLISH_DECAY") },
-  ];
+function compareRekeyed(name: string, alphaId: string, pairs: readonly (readonly [string, string])[] = [], key: string = name): Compare {
+  const base = contractFixture<Compare>(name);
+  const revision = `p20r1_${createHash("sha256").update(`${key}|${alphaId}`).digest("hex")}`;
+  const body = contractFixture<Compare>(name, [[base.revision, revision], ...pairs]);
+  return { ...body, alpha: { ...body.alpha, alpha_id: alphaId } };
 }
-
-function cmpRun(id: string, o: Partial<CmpRun> = {}): CmpRun {
-  return {
-    run_id: id,
-    attempt_id: `att_${id.replace(/^run_/, "")}`,
-    alpha_version_id: "alphaver_093",
-    alpha_version_label: "av_0_9_3",
-    run_state: "READY",
-    lane: "P04_FIXED_PROFILE",
-    created_at_utc_ms: CMP_T0,
-    comparison_contract_key: cmpKey("BTCUSDT"),
-    claim: WF_CLAIM,
-    original_metrics: cmpMetrics("0.4217", "-0.1375", "118"),
-    schedule: { mode: null, schedule: null, availability: AV },
-    certification: { state: "NOT_PUBLISHED", grade: null, reason_code: "P20_SOURCE_DID_NOT_PUBLISH_CERTIFICATION", availability: np("P20_SOURCE_DID_NOT_PUBLISH_CERTIFICATION") },
-    alpha_version_lifecycle: { value: "ACTIVE", availability: AV },
-    provenance: {
-      requested_spec_digest: hex("1"), effective_spec_digest: hex("2"), dataset_binding_digest: hex("3"), manifest_digest: hex("4"),
-      evidence_revision: "evrev_7", split_revision: "sprev_3", current_source_revision: "12",
-    },
-    ...o,
-  };
-}
-
-function cmpEnvelope(alphaId: string, result: Compare["result"], c: string, absences: Compare["source_absences"]): Compare {
-  const revision = `p20r1_${hex(c)}`;
-  return {
-    schema_version: "research.compare.v1",
-    read_authority: "PORTAL_PERSISTED_RESEARCH",
-    alpha: { alpha_id: alphaId, name: "mom_breakout_v3" },
-    revision,
-    etag: `"${revision}"`,
-    availability: AV,
-    as_of_utc_ms: CMP_T0 + 30 * DAY,
-    result,
-    source_absences: absences,
-  };
-}
-
-const NON_PAIR_ABSENCES: Compare["source_absences"] = {
-  structured_claim_family: np("P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED"),
-  full_resolution_outer_oos_returns: na("P20_FULL_RESOLUTION_RETURNS_APPLY_TO_PAIR_MODE_ONLY"),
-};
 
 export function compareAttempts(alphaId: string = ALPHA): Compare {
-  return cmpEnvelope(alphaId, {
-    mode: "attempts",
-    order: "CLAIM_RANK_ASC_OOS_SHARPE_DESC_NET_RETURN_DESC",
-    attempts: [
-      cmpRun("run_att_b", { attempt_id: "att_02", created_at_utc_ms: CMP_T0 + DAY }),
-      cmpRun("run_att_a", { attempt_id: "att_01", alpha_version_label: "av_0_9_2", original_metrics: cmpMetrics("0.3120", "-0.1811", "97") }),
-      cmpRun("run_att_c", { attempt_id: "att_03", created_at_utc_ms: CMP_T0 + 2 * DAY, claim: NP_CLAIM, run_state: "FAILED", original_metrics: cmpMetrics(null, null, null) }),
-    ],
-    fold_series: [],
-    config_diff: { paths: [], availability: AV },
-    coverage: { state: "COMPLETE", total_attempts: 3, reason_code: null },
-    trajectory: {
-      template_id: "P20_ATTEMPT_TRAJECTORY_V1",
-      text: "claims rank before numbers — inspection never selects, promotes, approves, or publishes a run.",
-      availability: AV,
-    },
-  }, "a", NON_PAIR_ABSENCES);
+  return compareRekeyed("research-compare.attempts", alphaId);
 }
 
 export function compareMarkets(alphaId: string = ALPHA): Compare {
-  const points = Array.from({ length: 40 }, (_, i) => ({ at_utc_ms: CMP_T0 + i * DAY, equity: (10000 + 38.5 * i + (i % 5) * 7.25).toFixed(2) }));
-  const chartNp: CmpChart = { state: "NOT_PUBLISHED", sampling: "NOT_APPLICABLE", source_observation_count: null, emitted_point_count: 0, points: [], availability: np("P20_P13_EQUITY_SERIES_NOT_AVAILABLE") };
-  return cmpEnvelope(alphaId, {
-    mode: "markets",
-    caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie.",
-    cards: [
-      { run: cmpRun("run_mk_btc"), chart: { state: "AVAILABLE", sampling: "FULL", source_observation_count: 40, emitted_point_count: 40, points, availability: AV } },
-      { run: cmpRun("run_mk_eth", { comparison_contract_key: cmpKey("ETHUSDT", "1h"), original_metrics: cmpMetrics("0.1120", "-0.2204", "301") }), chart: chartNp },
-      { run: cmpRun("run_mk_sol", { comparison_contract_key: cmpKey("SOLUSDT"), run_state: "QUEUED", claim: NP_CLAIM, original_metrics: cmpMetrics(null, null, null) }), chart: chartNp },
-    ],
-    coverage: { state: "COMPLETE", total_attempts: 3, reason_code: null },
-  }, "c", NON_PAIR_ABSENCES);
+  return compareRekeyed("research-compare.markets", alphaId);
 }
 
-export function comparePair(alphaId: string, left: string, right: string, c = "d"): Compare {
-  const overlay = Array.from({ length: 48 }, (_, i) => ({
-    at_utc_ms: CMP_T0 + i * 4 * HOUR,
-    left_equity: (100 + i * 0.41 + (i % 7) * 0.3).toFixed(4),
-    right_equity: (100 + i * 0.29 + (i % 5) * 0.45).toFixed(4),
-  }));
-  return cmpEnvelope(alphaId, {
-    mode: "pair",
-    state: "AVAILABLE",
-    refusal: null,
-    pair: {
-      key: cmpKey("BTCUSDT"),
-      runs: [
-        cmpRun(left, { attempt_id: `att_${left}` }),
-        cmpRun(right, { attempt_id: `att_${right}`, alpha_version_id: "alphaver_094", alpha_version_label: "av_0_9_4", original_metrics: cmpMetrics("0.3871", "-0.1102", "131") }),
-      ],
-      intentional_differences: [
-        { path: "alpha_version", before: "alphaver_093", after: "alphaver_094" },
-        { path: "random_seed", before: "7", after: "11" },
-      ],
-      weaker_claim: { family: "WALK_FORWARD_OOS_COMPATIBILITY", rank: 3, availability: AV },
-      common_window: {
-        state: "AVAILABLE", definition_id: "research.compare-common-window.v1", left_source_observation_count: 400, right_source_observation_count: 410,
-        matched_observation_count: 398, start_utc_ms: CMP_T0, end_utc_ms: CMP_T0 + 66 * DAY,
-        delta_definition: "RIGHT_MINUS_LEFT",
-        metrics: [
-          { key: "NET_RETURN_FRACTION", definition_id: "research.compare.metric.v1.common-window-net-return", left_value: "0.4217", right_value: "0.3871", delta: "-0.0346", availability: AV },
-          { key: "MAX_DRAWDOWN_FRACTION", definition_id: "research.compare.metric.v1.common-window-max-drawdown", left_value: "-0.1375", right_value: "-0.1102", delta: "0.0273", availability: AV },
-          { key: "TRADE_COUNT", definition_id: "research.compare.metric.v1.common-window-trade-count", left_value: null, right_value: null, delta: null, availability: na("P20_COMMON_WINDOW_DOES_NOT_DEFINE_TRADE_COUNT") },
-        ],
-        availability: AV,
-      },
-      correlation: {
-        state: "AVAILABLE", source_label: "PORTAL_DERIVED", formula_id: "pearson-product-moment-correlation", formula_version: "p20.raw-return-v1",
-        value: "0.1834", n: 397, common_window_start_utc_ms: CMP_T0, common_window_end_utc_ms: CMP_T0 + 66 * DAY,
-        missing_policy: "INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL", availability: AV,
-      },
-      overlay: { state: "AVAILABLE", sampling: "RETENTION_STRIDE_V1", source_observation_count: 398, emitted_point_count: overlay.length, points: overlay, availability: AV },
-    },
-  }, c, { structured_claim_family: AV, full_resolution_outer_oos_returns: AV });
+export function comparePair(alphaId: string, left: string, right: string): Compare {
+  const base = contractFixture<Compare>("research-compare.pair-ok");
+  if (base.result.mode !== "pair" || base.result.pair === null) throw new Error("research-compare.pair-ok is not a comparable pair");
+  const [a, b] = base.result.pair.runs;
+  return compareRekeyed("research-compare.pair-ok", alphaId, [[a!.run_id, left], [b!.run_id, right]], `pair|${left}|${right}`);
 }
 
 function compareFor(url: URL, alphaId: string): Compare | null {
@@ -818,6 +498,42 @@ function compareFor(url: URL, alphaId: string): Compare | null {
     return left && right ? comparePair(alphaId, left, right) : null;
   }
   return compareAttempts(alphaId);
+}
+
+/* ======================================================================
+ * S02 — the W4 dataset catalog (CG-P08-04). No canonical contract fixture is
+ * published for it, so the body is typed against `research-preflight.d.ts`
+ * and names the dataset `split-detail.json` already uses.
+ * ==================================================================== */
+
+export function datasetCatalog(): DatasetCatalog {
+  return {
+    schema_version: "research.dataset-catalog.v1",
+    coverage_rule: "Coverage is the month partitions present in the approved reader's storage layout.",
+    datasets: [
+      {
+        dataset_id: "crypto-binance-1m",
+        venue: "BINANCE",
+        availability: "available",
+        unavailable_reason: null,
+        source_class: "historical_market_data",
+        usage_scopes: ["backtest", "research"],
+        excluded_scopes: [],
+        source_timezone: "UTC",
+        calendar_policy: "CRYPTO_24_7",
+        timeframes: ["1min", "1h", "4h", "1D"],
+        symbols: {
+          state: "PUBLISHED",
+          reason: null,
+          total: 1,
+          truncated: false,
+          items: [
+            { symbol: "BTCUSDT", contract_kind: "PERPETUAL", coverage: { first_month: "2020-01", last_month: "2026-09", months: 81, granularity: "MONTH_PARTITION" } },
+          ],
+        },
+      },
+    ],
+  };
 }
 
 /* ======================================================================
@@ -873,6 +589,7 @@ const RE = {
   mirror: /\/api\/v1\/research\/release-candidates\/([^/?]+)\/mirror(\?|$)/,
   lineage: /\/api\/v1\/research\/alphas\/([^/?]+)\/lineage(\?|$)/,
   compare: /\/api\/v1\/research\/alphas\/([^/?]+)\/compare(\?|$)/,
+  datasets: /\/api\/v1\/research\/datasets(\?|$)/,
   progress: /\/api\/v1\/research\/runs\/([^/?]+)\/progress(\?|$)/,
   events: /\/api\/v1\/research\/runs\/([^/?]+)\/events(\?|$)/,
 } as const;
@@ -909,6 +626,7 @@ export async function installLane(page: Page, options: LaneOptions = {}): Promis
     );
   }
 
+  await page.route(RE.datasets, (route) => json(route, datasetCatalog()));
   await page.route(RE.replay, async (route) => {
     const url = new URL(route.request().url());
     await wait(route);

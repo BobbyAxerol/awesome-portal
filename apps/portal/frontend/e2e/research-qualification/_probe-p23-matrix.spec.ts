@@ -34,6 +34,7 @@ import {
   rootText,
   shellCount,
   shotDir,
+  SIGN_IN_FRAME,
 } from "./harness";
 import {
   SCREENS,
@@ -100,18 +101,18 @@ async function historyCheck(cell: Cell, s: ScreenDef, tag: string): Promise<void
   await page.goto(start);
   await quiet(page, net);
   await page.goto(s.path);
-  await page.locator(s.root).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => undefined);
+  await page.locator(`${s.root}, ${SIGN_IN_FRAME}`).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => undefined);
   await quiet(page, net);
   const deep = await location(page);
   await page.goBack();
   await quiet(page, net);
   expect.soft(new URL(page.url()).pathname, `${tag} back returns to the previous route`).toBe(start);
   await page.goForward();
-  await page.locator(s.root).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => undefined);
+  await page.locator(`${s.root}, ${SIGN_IN_FRAME}`).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => undefined);
   await quiet(page, net);
   expect.soft(await location(page), `${tag} forward keeps pathname+hash`).toBe(deep);
   await page.reload();
-  await page.locator(s.root).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => undefined);
+  await page.locator(`${s.root}, ${SIGN_IN_FRAME}`).first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => undefined);
   await quiet(page, net);
   expect.soft(await location(page), `${tag} reload keeps pathname+hash`).toBe(deep);
 }
@@ -234,10 +235,23 @@ for (const s of SCREENS) {
           const { page } = cell;
           await refusePrimary(page, s.primary, 401);
           const rendered = await open(page, cell.net, s.path, s.root);
-          expect.soft(rendered, `${tag} screen root renders under 401`).toBe(true);
-          await staticChecks(cell, s, tag);
+          /*
+           * X3 2026-09-26 (VD-P23-02): the decided sign-in state is the shell's
+           * Frame 01D — every Research client reports a 401 and AuthGate
+           * replaces the shell without navigating. A screen that still keeps
+           * its own root must carry the session copy there instead. Either is
+           * a sign-in state; which one each screen used is annotated.
+           */
+          const frame = await page.locator(SIGN_IN_FRAME).first().isVisible();
+          test.info().annotations.push({ type: "sign-in", description: `${tag} ${frame ? "Frame 01D" : rendered ? "screen root" : "neither"}` });
+          expect.soft(frame || rendered, `${tag} a sign-in state renders under 401 (Frame 01D or the screen root)`).toBe(true);
+          if (frame) {
+            expect.soft(new URL(page.url()).pathname, `${tag} Frame 01D keeps the reader's URL`).toBe(new URL(s.path, "http://x").pathname);
+          } else {
+            await staticChecks(cell, s, tag);
+          }
           await historyCheck(cell, s, tag);
-          const text = await rootText(page, s.root);
+          const text = frame ? await rootText(page, SIGN_IN_FRAME) : await rootText(page, s.root);
           const sessionState = /session/i.test(text) && /(sign in|sign-in|signed out|ended|expired)/i.test(text);
           expect.soft(sessionState, `${tag} session-expired copy on screen; saw: ${text.slice(0, 160)}`).toBe(true);
           expect.soft(text.includes(SERVER_PROSE_SENTINEL), `${tag} server prose rendered on screen`).toBe(false);

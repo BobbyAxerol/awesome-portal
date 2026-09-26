@@ -70,6 +70,16 @@ test("evidence hub 04: rapid tabs, cursor hash changes and history stay within t
   await open(page, net, s.path, s.root);
   const initial = await location(page);
   const initialTab = (await page.locator(`${s.root} [role='tab'][aria-selected='true']`).first().getAttribute("data-tab")) ?? "search";
+  /* Spec 04 §11: once opened, Summary stays mounted (hidden) so its charts are
+     not rebuilt. That kept panel is the screen's steady state, so the DOM
+     baseline is taken with it mounted — otherwise the first visit to Summary
+     reads as growth (X3 2026-09-26; baseline run: 481 → 1522). */
+  await page.locator(`${s.root} [role='tab'][data-tab='summary']`).click();
+  await quiet(page, net);
+  await page.locator(`${s.root} [role='tab'][data-tab='${initialTab}']`).click();
+  await quiet(page, net);
+  await pushHash(page, initial.slice(initial.indexOf("#") + 1));
+  await quiet(page, net);
   const before = await domNodes(page);
   const HUB = /\/api\/v1\/quantbt\/runs\/[^/]+\/evidence(\?|$)/;
   const SERIES = /\/api\/v1\/quantbt\/runs\/[^/]+\/evidence\/series\?/;
