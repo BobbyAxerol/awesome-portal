@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ResearchReleaseCandidatePublishRequestSchema,
@@ -29,6 +31,20 @@ const base = {
 };
 
 describe("P22 strict publication contract", () => {
+  it("P22-T01/T06 fixture bundle keeps success, typed negative and mirror states explicit", () => {
+    const fixturePath = process.env.PORTAL_CONTRACTS_DIR
+      ? join(process.env.PORTAL_CONTRACTS_DIR, "fixtures/research-release-candidate-publication.p22-governance.fixtures.json")
+      : new URL("../../../packages/contracts/fixtures/research-release-candidate-publication.p22-governance.fixtures.json", import.meta.url);
+    const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+    expect(fixture.schema_version).toBe("research.release-candidate-publication.fixtures.v1");
+    expect(fixture.success.approval_create.schema_version).toBe("governance.approval-create.v1");
+    expect(fixture.negative).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "DUPLICATE_OPEN_APPROVAL", http_status: 409 }),
+      expect.objectContaining({ code: "APPROVAL_CREATE_SERIALIZATION_CONFLICT", retryable: true }),
+    ]));
+    expect(fixture.mirror.typed_optional_fields).toContain("assignee_pool");
+  });
+
   it("P22-T02 rejects downstream authority and unknown fields from the browser", () => {
     expect(ResearchReleaseCandidatePublishRequestSchema.safeParse(request).success).toBe(true);
     expect(ResearchReleaseCandidatePublishRequestSchema.safeParse({ ...request, gate: "R2" }).success).toBe(false);

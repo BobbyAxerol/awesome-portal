@@ -7,6 +7,10 @@ import { canonicalResearchJson } from "./preflight.service";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
 
 export type PublicationState = "PENDING" | "UNKNOWN" | "DELIVERED" | "REFUSED";
+export interface PublicationPromotionPick {
+  state: "NOT_PUBLISHED" | "PENDING_APPROVAL" | "WRITTEN";
+  approvalId: string; runId: string; selectedTrialId: string | null; artifactId: string | null; factDigest: string;
+}
 export interface PublicationIntent {
   releaseCandidateId: string; runId: string; alphaId: string; alphaVersionId: string;
   actorUserId: string; actorUsername: string; requestKey: string; payloadDigest: string;
@@ -15,6 +19,8 @@ export interface PublicationIntent {
   state: PublicationState; approvalId: string | null; evidenceSetHash: string | null;
   receiptDigest: string | null; receipt: Record<string, unknown> | null;
   publishedAtUtcMs: number | null; lastErrorCode: string | null;
+  attemptCount?: number; conflictingApprovalId?: string | null; downstreamCode?: string | null;
+  createdAtUtcMs?: number; updatedAtUtcMs?: number; promotionPick?: PublicationPromotionPick | null;
 }
 export interface BeginPublication {
   releaseCandidateId: string; runId: string; alphaId: string; alphaVersionId: string;
@@ -26,6 +32,11 @@ export interface FinishPublication {
   approvalId: string; evidenceSetHash: string; receiptDigest: string;
   receipt: Record<string, unknown>; publishedAtUtcMs: number;
   approvalStatus: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+  promotionPick?: {
+    attemptId: string; runId: string; alphaVersionId: string; selectionId: string | null; selectedTrialId: string | null;
+    selectionSequence: readonly string[]; artifactId: string | null; artifactManifestDigest: string | null;
+    packDigest: string; evidenceSetHash: string; factDigest: string;
+  };
 }
 interface IntentRow {
   release_candidate_id: string; run_id: string; alpha_id: string; alpha_version_id: string;
@@ -35,13 +46,18 @@ interface IntentRow {
   state: PublicationState; approval_id: string | null; evidence_set_hash: string | null;
   receipt_digest: string | null; receipt_json: Record<string, unknown> | string | null;
   published_at_utc_ms: string | number | null; last_error_code: string | null;
+  attempt_count: string | number; conflicting_approval_id: string | null; downstream_code: string | null;
+  created_at_utc_ms: string | number; updated_at_utc_ms: string | number;
 }
 const SELECT = [
   "SELECT release_candidate_id, run_id, alpha_id, alpha_version_id, actor_user_id, actor_username,",
   "request_key, payload_digest, request_payload, pack_digest, source_fingerprint,",
   "legacy_artifact_sha256, artifact_schema_version, methodology_claim_id, state, approval_id,",
   "evidence_set_hash, receipt_digest, receipt_json,",
-  "(extract(epoch FROM published_at) * 1000)::bigint AS published_at_utc_ms, last_error_code",
+  "(extract(epoch FROM published_at) * 1000)::bigint AS published_at_utc_ms, last_error_code,",
+  "attempt_count, conflicting_approval_id, downstream_code,",
+  "(extract(epoch FROM created_at) * 1000)::bigint AS created_at_utc_ms,",
+  "(extract(epoch FROM updated_at) * 1000)::bigint AS updated_at_utc_ms",
   "FROM research.release_candidate_publications_v1 WHERE workspace_id = $1 AND release_candidate_id = $2",
 ].join(" ");
 function object(value: Record<string, unknown> | string | null): Record<string, unknown> | null {
@@ -61,7 +77,9 @@ function mapped(row: IntentRow): PublicationIntent {
     methodologyClaimId: row.methodology_claim_id, state: row.state, approvalId: row.approval_id,
     evidenceSetHash: row.evidence_set_hash, receiptDigest: row.receipt_digest,
     receipt: object(row.receipt_json), publishedAtUtcMs: row.published_at_utc_ms === null ? null : Number(row.published_at_utc_ms),
-    lastErrorCode: row.last_error_code,
+    lastErrorCode: row.last_error_code, attemptCount: Number(row.attempt_count),
+    conflictingApprovalId: row.conflicting_approval_id, downstreamCode: row.downstream_code,
+    createdAtUtcMs: Number(row.created_at_utc_ms), updatedAtUtcMs: Number(row.updated_at_utc_ms),
   };
 }
 
@@ -73,7 +91,8 @@ export class ResearchReleaseCandidatePublicationRepository {
     return this.transaction(scope, true, async (client) => {
       await this.member(client, scope);
       const result = await client.query<IntentRow>(SELECT, [scope.workspaceId, releaseCandidateId]);
-      return result.rowCount === 1 ? mapped(result.rows[0]!) : null;
+      if (result.rowCount !== 1) return null;
+      return this.hydratePromotionPick(client, scope, mapped(result.rows[0]!));
     });
   }
 
@@ -94,7 +113,7 @@ export class ResearchReleaseCandidatePublicationRepository {
       );
       if (latest.rows[0]?.release_candidate_id !== input.releaseCandidateId) this.conflict();
       const previous = await client.query<IntentRow>(SELECT, [scope.workspaceId, input.releaseCandidateId]);
-      if (previous.rowCount === 1) return { intent: mapped(previous.rows[0]!), replayed: true };
+      if (previous.rowCount === 1) return { intent: await this.hydratePromotionPick(client, scope, mapped(previous.rows[0]!)), replayed: true };
       await client.query(
         "INSERT INTO research.release_candidate_publications_v1 (workspace_id, release_candidate_id, run_id, alpha_id, alpha_version_id, actor_user_id, actor_username, request_key, payload_digest, request_payload, pack_digest, source_fingerprint, legacy_artifact_sha256, artifact_schema_version, methodology_claim_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15)",
         [scope.workspaceId, input.releaseCandidateId, input.runId, input.alphaId, input.alphaVersionId,
@@ -104,24 +123,33 @@ export class ResearchReleaseCandidatePublicationRepository {
       );
       const created = await client.query<IntentRow>(SELECT, [scope.workspaceId, input.releaseCandidateId]);
       if (created.rowCount !== 1) this.unavailable();
-      return { intent: mapped(created.rows[0]!), replayed: false };
+      return { intent: await this.hydratePromotionPick(client, scope, mapped(created.rows[0]!)), replayed: false };
     });
   }
 
   async pending(scope: ResearchScope, id: string): Promise<PublicationIntent> { return this.transition(scope, id, "PENDING", null); }
-  async unknown(scope: ResearchScope, id: string, code: string): Promise<PublicationIntent> { return this.transition(scope, id, "UNKNOWN", code); }
-  async refused(scope: ResearchScope, id: string, code: string): Promise<PublicationIntent> { return this.transition(scope, id, "REFUSED", code); }
+  async unknown(scope: ResearchScope, id: string, code: string, details?: { conflictingApprovalId?: string | null }): Promise<PublicationIntent> { return this.transition(scope, id, "UNKNOWN", code, details); }
+  async refused(scope: ResearchScope, id: string, code: string, details?: { conflictingApprovalId?: string | null }): Promise<PublicationIntent> { return this.transition(scope, id, "REFUSED", code, details); }
+  async attempt(scope: ResearchScope, id: string): Promise<void> {
+    await this.transaction(scope, false, async (client) => {
+      await this.member(client, scope);
+      await client.query(`UPDATE research.release_candidate_publications_v1
+        SET attempt_count = LEAST(attempt_count + 1, 32), updated_at = now()
+        WHERE workspace_id = $1 AND release_candidate_id = $2 AND actor_user_id = $3
+          AND state IN ('PENDING','UNKNOWN')`, [scope.workspaceId, id, scope.actorUserId]);
+    });
+  }
 
-  private async transition(scope: ResearchScope, id: string, state: PublicationState, code: string | null): Promise<PublicationIntent> {
+  private async transition(scope: ResearchScope, id: string, state: PublicationState, code: string | null, details?: { conflictingApprovalId?: string | null }): Promise<PublicationIntent> {
     return this.transaction(scope, false, async (client) => {
       await this.member(client, scope);
       await client.query(
-        "UPDATE research.release_candidate_publications_v1 SET state = $4, last_error_code = $5, updated_at = now() WHERE workspace_id = $1 AND release_candidate_id = $2 AND actor_user_id = $3 AND state IN ('PENDING','UNKNOWN')",
-        [scope.workspaceId, id, scope.actorUserId, state, code],
+        "UPDATE research.release_candidate_publications_v1 SET state = $4, last_error_code = $5, downstream_code = $5, conflicting_approval_id = $6, updated_at = now() WHERE workspace_id = $1 AND release_candidate_id = $2 AND actor_user_id = $3 AND state IN ('PENDING','UNKNOWN')",
+        [scope.workspaceId, id, scope.actorUserId, state, code, details?.conflictingApprovalId ?? null],
       );
       const current = await client.query<IntentRow>(SELECT, [scope.workspaceId, id]);
       if (current.rowCount !== 1) this.notFound();
-      return mapped(current.rows[0]!);
+      return this.hydratePromotionPick(client, scope, mapped(current.rows[0]!));
     });
   }
 
@@ -134,7 +162,7 @@ export class ResearchReleaseCandidatePublicationRepository {
       if (current.actorUserId !== scope.actorUserId) this.notFound();
       if (current.state === "DELIVERED") {
         if (current.approvalId !== receipt.approvalId || current.evidenceSetHash !== receipt.evidenceSetHash) this.conflict();
-        return current;
+        return this.hydratePromotionPick(client, scope, current);
       }
       if (current.state === "REFUSED") this.conflict();
       const updated = await client.query(
@@ -150,9 +178,38 @@ export class ResearchReleaseCandidatePublicationRepository {
         [scope.workspaceId, id, approvalState, receipt.receiptDigest, receipt.approvalId],
       );
       if (delivery.rowCount !== 1) this.conflict();
+      if (receipt.promotionPick) {
+        const pick = receipt.promotionPick;
+        await client.query(
+          `SELECT research.p22_record_promotion_pick(
+             $1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,$14,$15,$16
+           )`,
+          [scope.workspaceId, id, receipt.approvalId, pick.alphaVersionId, pick.attemptId,
+            pick.runId, pick.selectionId, pick.selectedTrialId,
+            canonicalResearchJson(pick.selectionSequence), pick.artifactId,
+            pick.artifactManifestDigest, pick.packDigest, pick.evidenceSetHash,
+            receipt.approvalStatus, pick.factDigest, scope.actorUserId],
+        );
+      }
       const saved = await client.query<IntentRow>(SELECT, [scope.workspaceId, id]);
-      return mapped(saved.rows[0]!);
+      return this.hydratePromotionPick(client, scope, mapped(saved.rows[0]!));
     });
+  }
+
+  private async hydratePromotionPick(client: PoolClient, scope: ResearchScope, intent: PublicationIntent): Promise<PublicationIntent> {
+    const result = await client.query<{
+      approval_id: string; run_id: string; selected_trial_id: string | null; artifact_id: string | null;
+      approval_status: FinishPublication["approvalStatus"]; fact_digest: string;
+    }>(`SELECT approval_id, run_id, selected_trial_id, artifact_id, approval_status, fact_digest
+          FROM research.p22_promotion_pick_receipts_v1
+         WHERE workspace_id = $1 AND release_candidate_id = $2`, [scope.workspaceId, intent.releaseCandidateId]);
+    const row = result.rows[0];
+    if (!row) return intent;
+    return { ...intent, promotionPick: {
+      state: ["APPROVED", "APPROVED_WITH_CONDITION"].includes(row.approval_status) ? "WRITTEN" : "PENDING_APPROVAL",
+      approvalId: row.approval_id, runId: row.run_id, selectedTrialId: row.selected_trial_id,
+      artifactId: row.artifact_id, factDigest: row.fact_digest,
+    } };
   }
 
   private async member(client: PoolClient, scope: ResearchScope): Promise<void> {

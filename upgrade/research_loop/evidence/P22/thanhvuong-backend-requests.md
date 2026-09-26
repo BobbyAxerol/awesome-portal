@@ -166,3 +166,12 @@ Backend/ledger request (@codex + Bobby) — 2026-09-25
 | `CG-P22-C` | Codex + Bobby | OPEN | ledger r2 thêm 3 route |
 | R1–R9 | Bobby | AWAITING_REVIEW | §3 |
 | B-P22-01…07 | Bobby | AWAITING_DECISION | [receipt §11](./thanhvuong-frontend-receipt.md#11-việc-bobby-quyết) |
+
+
+## OL-11 route disposition (Codex, 2026-09-26)
+
+`CG-P22-C` is resolved on the canonical integration branch: the R2 ledger and
+OpenAPI publish only `GET /api/v1/research/release-candidates/{id}/publication`
+and `POST /api/v1/research/release-candidates/{id}/publish`. The contributor
+`/mirror` and `/publish/reconcile` proposals are historical and are not to be
+implemented or added to the ledger.

@@ -22,6 +22,24 @@ describe("P22 disposable PostgreSQL publication migration", () => {
     try { await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`); } finally { await admin.end(); }
   });
 
+  it("OL-03/P22-T09 keeps P19 source facts read-only and exposes only the P22 writer", async () => {
+    const database = new Pool({ connectionString: urlFor(databaseName) });
+    try {
+      const result = await database.query(`SELECT
+        to_regclass('research.p22_promotion_pick_receipts_v1') IS NOT NULL AS pick_receipt,
+        to_regclass('research.p22_run_read_model_bridges_v1') IS NOT NULL AS bridge,
+        has_table_privilege('portal_research_runtime', 'research.p22_promotion_pick_receipts_v1', 'SELECT') AS pick_read,
+        has_table_privilege('portal_research_runtime', 'research.p22_promotion_pick_receipts_v1', 'INSERT') AS pick_insert,
+        has_table_privilege('portal_research_runtime', 'research.attempt_promotion_pick_facts_v1', 'INSERT') AS p19_insert,
+        has_function_privilege('portal_research_runtime', 'research.p22_record_promotion_pick(text,text,text,text,text,text,text,text,jsonb,text,text,text,text,text,text,text)', 'EXECUTE') AS writer_execute,
+        EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'p22_record_promotion_pick') AS writer_exists`);
+      expect(result.rows[0]).toEqual({
+        pick_receipt: true, bridge: true, pick_read: true, pick_insert: false,
+        p19_insert: false, writer_execute: true, writer_exists: true,
+      });
+    } finally { await database.end(); }
+  });
+
   it("P22-T04/T05/T14 installs actor-bound, retained intent and narrow runtime grants", async () => {
     const database = new Pool({ connectionString: urlFor(databaseName) });
     try {

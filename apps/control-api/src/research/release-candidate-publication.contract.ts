@@ -41,6 +41,20 @@ export const ResearchReleaseCandidateApprovalMirrorSchema = z.object({
     expires_at: Timestamp.nullable(),
   }).strict()).max(128),
   href: z.string().regex(/^\/governance\/approvals\/[A-Za-z0-9._-]+\/r1$/),
+  // OL-07: mirror only facts Governance actually publishes; absence is typed.
+  subject_label: z.string().min(1).max(256).optional(),
+  effective_status: z.enum(["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"]).optional(),
+  assignee_pool: z.array(z.object({
+    user_id: z.string().min(1).max(191), username: z.string().min(1).max(191),
+    role: z.string().min(1).max(64),
+  }).strict()).max(64).optional(),
+  quorum: z.object({ required: z.number().int().positive().max(64), met: z.number().int().nonnegative().max(64) }).strict().optional(),
+  approval_version: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  blocker_count: z.number().int().nonnegative().max(256).optional(),
+  condition_count: z.number().int().nonnegative().max(256).optional(),
+  decision_outcomes: z.array(z.object({ actor_user_id: z.string().min(1).max(191), outcome: z.string().min(1).max(64) }).strict()).max(64).optional(),
+  rc_superseded: z.boolean().optional(),
+  as_of_utc_ms: UtcMs.optional(),
 }).strict();
 
 export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
@@ -74,6 +88,22 @@ export const ResearchReleaseCandidatePublicationResponseSchema = z.object({
   approval: ResearchReleaseCandidateApprovalMirrorSchema.nullable(),
   as_of_utc_ms: UtcMs,
   replayed: z.boolean(),
+  // OL-03/07/09: additive P22 facts; nullable means source absence.
+  attempt_count: z.number().int().nonnegative().max(32).optional(),
+  conflicting_approval_id: z.string().min(1).max(191).nullable().optional(),
+  conflicting_approval_href: z.string().regex(/^\/governance\/approvals\/[A-Za-z0-9._-]+\/r1$/).nullable().optional(),
+  downstream_code: Reason.nullable().optional(),
+  publication_created_at: Timestamp.nullable().optional(),
+  updated_at_utc_ms: UtcMs.optional(),
+  intent_actor: z.object({ user_id: z.string().min(1).max(191), username: z.string().min(1).max(191) }).strict().nullable().optional(),
+  reconcile_allowed: z.boolean().optional(),
+  claim_candidates: z.array(z.string().min(1).max(191)).max(64).optional(),
+  promotion_pick: z.object({
+    state: z.enum(["NOT_PUBLISHED", "PENDING_APPROVAL", "WRITTEN"]),
+    approval_id: z.string().min(1).max(191), run_id: ResearchReleaseCandidateRunIdSchema,
+    selected_trial_id: z.string().min(1).max(191).nullable(), artifact_id: z.string().min(1).max(191).nullable(),
+    fact_digest: Digest,
+  }).strict().nullable().optional(),
 }).strict().superRefine((value, context) => {
   if ((value.state === "DELIVERED") !== (value.published !== null)) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "delivered state and immutable receipt must agree" });

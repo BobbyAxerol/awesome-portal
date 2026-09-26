@@ -104,6 +104,27 @@ export interface components {
             read_at: string;
             conditions: components["schemas"]["Condition"][];
             href: string;
+            subject_label?: string;
+            /** @enum {string} */
+            effective_status?: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+            assignee_pool?: {
+                user_id: string;
+                username: string;
+                role: string;
+            }[];
+            quorum?: {
+                required: number;
+                met: number;
+            };
+            approval_version?: number;
+            blocker_count?: number;
+            condition_count?: number;
+            decision_outcomes?: {
+                actor_user_id: string;
+                outcome: string;
+            }[];
+            rc_superseded?: boolean;
+            as_of_utc_ms?: components["schemas"]["UtcMs"];
         };
         PublicationResponse: {
             /** @constant */
@@ -126,6 +147,28 @@ export interface components {
             approval: components["schemas"]["ApprovalMirror"] | null;
             as_of_utc_ms: components["schemas"]["UtcMs"];
             replayed: boolean;
+            attempt_count?: number;
+            conflicting_approval_id?: string | null;
+            conflicting_approval_href?: string | null;
+            downstream_code?: components["schemas"]["Reason"] | null;
+            publication_created_at?: string | null;
+            updated_at_utc_ms?: components["schemas"]["UtcMs"];
+            intent_actor?: {
+                user_id: string;
+                username: string;
+            } | null;
+            reconcile_allowed?: boolean;
+            claim_candidates?: string[];
+            promotion_pick?: components["schemas"]["PromotionPick"] | null;
+        };
+        PromotionPick: {
+            /** @enum {string} */
+            state: "NOT_PUBLISHED" | "PENDING_APPROVAL" | "WRITTEN";
+            approval_id: string;
+            run_id: components["schemas"]["RunId"];
+            selected_trial_id: string | null;
+            artifact_id: string | null;
+            fact_digest: components["schemas"]["Digest"];
         };
         Problem: {
             error: {

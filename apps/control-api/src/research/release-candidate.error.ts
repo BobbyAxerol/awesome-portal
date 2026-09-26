@@ -10,6 +10,7 @@ export class ResearchReleaseCandidateError extends Error {
       | "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE",
     message: string,
     readonly status: 400 | 403 | 404 | 409 | 422 | 503,
+    readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "ResearchReleaseCandidateError";

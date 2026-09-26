@@ -1,0 +1,63 @@
+{
+  "schema_version": "research.release-candidate-publication.fixtures.v1",
+  "success": {
+    "approval_create": {
+      "schema_version": "governance.approval-create.v1",
+      "replayed": false,
+      "approval": {
+        "approval_id": "apr_p22_fixture",
+        "gate": "R1",
+        "subject_id": "alpha_p22",
+        "status": "PENDING",
+        "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "r1_statuses": [
+      "PENDING",
+      "APPROVED",
+      "APPROVED_WITH_CONDITION",
+      "DENIED",
+      "EXPIRED"
+    ],
+    "publication_state": "DELIVERED"
+  },
+  "negative": [
+    {
+      "code": "DUPLICATE_OPEN_APPROVAL",
+      "http_status": 409,
+      "retryable": false
+    },
+    {
+      "code": "EVIDENCE_RUN_NOT_ELIGIBLE",
+      "http_status": 422,
+      "retryable": false
+    },
+    {
+      "code": "APPROVAL_CREATE_SERIALIZATION_CONFLICT",
+      "http_status": 409,
+      "retryable": true
+    },
+    {
+      "code": "RESEARCH_PUBLICATION_DOWNSTREAM_OUTCOME_UNKNOWN",
+      "http_status": 202,
+      "retryable": true
+    }
+  ],
+  "mirror": {
+    "schema_version": "governance.r1-review.v1",
+    "approval_id": "apr_p22_fixture",
+    "gate": "R1",
+    "availability_states": [
+      "AVAILABLE",
+      "DENIED",
+      "NOT_FOUND",
+      "UNAVAILABLE"
+    ],
+    "typed_optional_fields": [
+      "assignee_pool",
+      "quorum",
+      "decision_outcomes",
+      "rc_superseded"
+    ]
+  }
+}

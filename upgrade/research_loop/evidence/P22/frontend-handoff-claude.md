@@ -27,9 +27,8 @@ integration.
 - Flag `CONTROL_API_FEATURE_RESEARCH_PUBLICATION` (default `false`, đòi `FEATURE_RESEARCH_RELEASE_CANDIDATES=true`). Flag tắt → cả 3 route dưới trả 503 `RESEARCH_PUBLICATION_DISABLED`, compose chặn publish bằng `P22_PUBLICATION_DISABLED` (xem debt `S11-P22-FLAG-OFF-HIDES-PUBLICATION`).
 
 ```text
-POST /api/v1/research/release-candidates/{releaseCandidateId}/publish            researchReleaseCandidatePublishV1          201 new · 200 replay · 202 unknown outcome
-POST /api/v1/research/release-candidates/{releaseCandidateId}/publish/reconcile  researchReleaseCandidatePublishReconcileV1 intent actor only
-GET  /api/v1/research/release-candidates/{releaseCandidateId}/mirror             researchReleaseCandidateApprovalMirrorGetV1 cache-control: private, no-store; no etag
+GET  /api/v1/research/release-candidates/{releaseCandidateId}/publication  researchReleaseCandidatePublicationGetV1 private, no-store
+POST /api/v1/research/release-candidates/{releaseCandidateId}/publish       researchReleaseCandidatePublishV1 201 new · 200 replay · 202 unknown outcome
 ```
 
 - Request publish `research.release-candidate-publish-request.v1` (strict): `{schema_version, workspace_id?, expected_pack_digest, methodology_claim_id?}`. Browser chỉ gửi digest pack đang thấy và claim người dùng chọn khi server mirror > 1 claim; alpha, run, summary, gate đều do server suy ra. POST đi qua CSRF same-origin như P21.
@@ -72,10 +71,19 @@ Không bao giờ in `0`/`-`/`N/A` thay cho `null`; không localStorage; không m
 2. **Đóng `CG-P22-02`** trước khi coi publish là thật; sau đó chạy P22-T01 real path, T11 seed/refresh/publish và một REAL_API receipt (`CG-P22-05`).
 3. Thêm 3 route vào ledger r2 (`CG-P22-C`) để `r2Ledger.test.ts` xanh lại.
 4. Quyết `S11-P22-FLAG-OFF-HIDES-PUBLICATION` trước khi bật flag ở đâu; thứ tự bật theo `B-P22-07` (DG-01…04 trước).
-5. P23 đọc mirror qua `GET …/mirror` và `publication` trong compose; **không** gọi governance từ browser, **không** revoke approval để rollback (đường ghi governance duy nhất là `createApproval` trong `deliver()`).
+5. P23 đọc `publication` (approval mirror nằm trong cùng DTO) trong compose; **không** gọi governance từ browser, **không** revoke approval để rollback (đường ghi governance duy nhất là `createApproval` trong `deliver()`).
 6. Probe tạm `tvp21` đã retired; nếu cần hồi quy S11 trên Playwright thì dựng spec committed mới từ fixture canonical (`CG-P22-01`/`CG-P22-04`), không hồi sinh stub P21.
 7. Reuse cho P23: `releaseCandidateClient.ts` (call/refusal mapper — gộp với `researchRefusal.ts` của baseline, `S11-LOCAL-DUPLICATION`), hook poll mirror có dừng khi tab ẩn, card/rail/chip token Fund Paper hiện có.
 
 ## 5. Chưa chạy
 
 Migration 056 trên Postgres; REAL_API; delta-real-data; direct-vs-portal; dev-host-review; axe; CHANGED/SUPERSEDED trong browser; mirror `unavailable` qua route product; CSRF header trong probe (có ở vitest). Chi tiết `not_run` trong [test results](./thanhvuong-test-results.json).
+
+## OL-11 canonical-route resolution (Codex, 2026-09-26)
+
+The historical contributor three-route sketch above is not the active contract.
+The canonical inventory has exactly two operations: `GET …/publication` and
+`POST …/publish`. Reconcile is a replay of the actor-bound `/publish` intent,
+and the approval mirror is returned in the same publication DTO; no `/mirror` or
+`/publish/reconcile` route may be added. The P22 isolated stack and generated
+client must be checked against these two paths only.

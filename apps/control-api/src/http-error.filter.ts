@@ -117,6 +117,10 @@ export class HttpErrorFilter implements ExceptionFilter {
         ...(exception instanceof ResearchPreflightError && exception.details
           ? { details: exception.details }
           : {}),
+        // OL-09 / P22-B: downstream refusal codes are public typed facts, not raw error text.
+        ...(exception instanceof ResearchReleaseCandidateError && exception.details
+          ? { details: exception.details }
+          : {}),
       });
       return;
     }
