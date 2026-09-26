@@ -21,6 +21,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ATTEMPTS_RULE,
+  CLAIM_SENTENCE,
+  scopeWords,
   COMPARE_PANELS,
   COMPARE_RULES,
   COMPARE_TITLE,
@@ -196,9 +198,16 @@ function markets() {
   return envelope({
     mode: "markets",
     caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie.",
+    grouping: "MARKET_KEY_ACTIVE_OR_LATEST_V1",
     cards: [
-      { run: run("run_btc"), chart: chart("AVAILABLE") },
-      { run: run("run_eth", { comparison_contract_key: key("ETHUSDT"), run_state: "QUEUED", claim: NOT_PUBLISHED_CLAIM }), chart: chart("NOT_PUBLISHED") },
+      { market: { symbol: "BTCUSDT", timeframe: "4h" }, selection: "LATEST_ACTIVE_VERSION_RUN", runs_in_market: 3, run: run("run_btc"), chart: chart("AVAILABLE") },
+      {
+        market: { symbol: "ETHUSDT", timeframe: "4h" },
+        selection: "LATEST_RUN",
+        runs_in_market: 1,
+        run: run("run_eth", { comparison_contract_key: key("ETHUSDT"), run_state: "QUEUED", claim: NOT_PUBLISHED_CLAIM }),
+        chart: chart("NOT_PUBLISHED"),
+      },
     ],
     coverage: { state: "COMPLETE", total_attempts: 2, reason_code: null },
   });
@@ -383,11 +392,17 @@ describe("S13 Compare — reads and order", () => {
     expect(calls[0]!.method).toBe("GET");
     expect(calls[0]!.url).toBe(`/api/v1/research/alphas/${ALPHA}/compare?mode=attempts`);
     const order = Array.from(document.querySelectorAll("[data-ladder-run]")).map((el) => el.getAttribute("data-ladder-run"));
-    expect(order).toEqual(["run_m", "run_a", "run_z"]);
+    /* D10 (13-1): run_m publishes no claim, so it folds into a compact row instead of a ladder step. */
+    expect(order).toEqual(["run_a", "run_z"]);
     expect(document.querySelector("[data-ladder-order]")?.getAttribute("data-ladder-order")).toBe("server-reversed");
     const arrows = Array.from(document.querySelectorAll("[data-ladder-arrow]"));
-    expect(arrows).toHaveLength(2);
-    expect(arrows.map((el) => el.textContent?.trim())).toEqual(["claim ↑ →", "claim ↑ →"]);
+    expect(arrows).toHaveLength(1);
+    expect(arrows.map((el) => el.textContent?.trim())).toEqual(["claim ↑ →"]);
+    const folded = document.querySelector("[data-unclaimed]") as HTMLElement;
+    expect(folded.getAttribute("data-unclaimed")).toBe("1");
+    expect(folded.querySelector("[data-unclaimed-run]")).toBeNull();
+    fireEvent.click(folded.querySelector('[data-action="toggle-unclaimed"]') as HTMLElement);
+    expect(Array.from(folded.querySelectorAll("[data-unclaimed-run]")).map((el) => el.getAttribute("data-unclaimed-run"))).toEqual(["run_m"]);
     expect(panels()).toEqual([...COMPARE_PANELS.attempts]);
   });
 
@@ -447,6 +462,11 @@ describe("S13 Compare — markets", () => {
     const eth = document.querySelector('[data-market-run="run_eth"]') as HTMLElement;
     expect(eth.querySelector('[data-mini-chart="NOT_PUBLISHED"]')?.textContent).toContain("P20_P13_EQUITY_SERIES_NOT_AVAILABLE");
     expect(eth.querySelector('[data-state="QUEUED"]')).not.toBeNull();
+    /* D10: a card is a market; it says which run stands for it and how many ran there. */
+    const btc = document.querySelector('[data-market-run="run_btc"]') as HTMLElement;
+    expect(btc.querySelector("[data-market-key]")?.textContent).toBe("BTCUSDT · 4h");
+    expect(btc.querySelector("[data-market-selection-words]")?.textContent).toBe("latest run of the ACTIVE version · 1 of 3 runs on this market");
+    expect(eth.querySelector("[data-market-selection-words]")?.textContent).toBe("latest run — no ACTIVE version ran this market · the only run on this market");
     expect(panels()).toEqual([...COMPARE_PANELS.markets]);
   });
 });
@@ -1001,5 +1021,86 @@ describe("S13 Compare — X3 decisions and debt", () => {
     const css = document.querySelector('[data-screen="compare"] style')?.textContent ?? "";
     expect(css).toMatch(/\.cp-head > \.l \{[^}]*flex: 0 1 auto/);
     expect(css).toMatch(/\.cp-card > \.t, \.cp-tcard > \.t \{[^}]*font-family: var\(--font-body\)/);
+  });
+});
+
+describe("E7 / D10 — Screen 13 on the HiFi (Unified 13.4.1)", () => {
+  const WFO_ALPHA = "delta-rsi-polynomial-alpha";
+  const wfoBase = `/research/quantbt/alphas/${WFO_ALPHA}/compare`;
+
+  it("13-3 the claim line is the family and one sentence of the screen's; the key=value text stays in the title", async () => {
+    const body = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(wfoBase);
+    await settled();
+    const card = document.querySelector('[data-ladder-run="run-w6a-wfo-a"]') as HTMLElement;
+    const note = card.querySelector("[data-claim-text]") as HTMLElement;
+    expect(note.textContent).toBe(CLAIM_SENTENCE.WALK_FORWARD_OOS_COMPATIBILITY);
+    expect(note.getAttribute("title")).toContain("validation_claim=walk_forward_oos");
+    expect(page().textContent).not.toContain("validation_claim=");
+    expect(card.querySelector("[data-claim]")?.getAttribute("data-claim")).toBe("WALK_FORWARD_OOS_COMPATIBILITY");
+  });
+
+  it("13-10 metric scopes read as words, never RS02_… codes", async () => {
+    expect(scopeWords("RS02_OOS_MEAN_OF_FOLDS")).toBe("mean of folds");
+    expect(scopeWords("RS02_OOS_SUM_OF_FOLDS")).toBe("sum of folds");
+    expect(scopeWords("SOMETHING_NEW")).toBe("SOMETHING_NEW");
+    const body = compareFixture("research-compare.pair-ok.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(`${wfoBase}?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b`);
+    await settled();
+    const table = document.querySelector("[data-delta-table]") as HTMLElement;
+    expect(table.textContent).not.toMatch(/RS02_/);
+    expect(table.querySelector('[data-delta-row="OOS_SHARPE"] [data-scope]')?.textContent).toBe("mean of folds");
+    expect(table.querySelector('[data-delta-row="TRADE_COUNT"] [data-scope]')?.textContent).toBe("sum of folds");
+    /* 13-9: heads are A/B + the run, not the raw id twice. */
+    expect(table.querySelector('th[data-side="left"]')?.textContent).toBe("A · run-w6a-wfo-a");
+  });
+
+  it("13-2 / 13-4 E1 short ids on cards and legend; folds read 1-based; each series its own tone", async () => {
+    const LONG = "rrun_8c9c9991bdd0cfe72100da64ebee1150";
+    const LONG_ATT = "ratt_8c9c9991bdd0cfe72100da64ebee1150";
+    server([{ status: 200, body: attempts([run(LONG, { attempt_id: LONG_ATT }), run("run_a")]) }]);
+    renderAt(base);
+    await settled();
+    const card = document.querySelector(`[data-ladder-run="${LONG}"]`) as HTMLElement;
+    expect(card.querySelector(".cp-att")?.textContent).toBe("ratt_8c9c9991");
+    expect(card.querySelector(".cp-att")?.getAttribute("title")).toBe(LONG_ATT);
+    expect(card.querySelector(`[data-run-link="${LONG}"]`)?.textContent).toBe("rrun_8c9c9991");
+    expect(page().textContent).not.toContain("8c9c9991bdd0cfe72100da64ebee1150");
+    cleanup();
+    const fixture = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body: fixture }]);
+    renderAt(`/research/quantbt/alphas/${WFO_ALPHA}/compare`);
+    await settled();
+    const groups = Array.from(document.querySelectorAll("[data-fold-group]")).map((el) => el.textContent);
+    expect(groups[0]).toBe("fold 1");
+    const swatches = Array.from(document.querySelectorAll("[data-fold-legend] .sw")).map((el) => (el as HTMLElement).style.background);
+    expect(new Set(swatches).size).toBe(swatches.length);
+    /* 13-5: the attempts without per-fold rows are a count and a closed disclosure. */
+    const absent = document.querySelector("[data-fold-absent-runs]") as HTMLDetailsElement;
+    expect(absent.tagName).toBe("DETAILS");
+    expect(absent.open).toBe(false);
+    expect(absent.querySelector("summary")?.textContent).toBe("1 attempt has no per-fold rows");
+  });
+});
+
+describe("E7 / D10 — a server before the market grouping", () => {
+  it("lists its per-run cards as they came and says the grouping is not published, grouping nothing itself", async () => {
+    const body = markets();
+    const result = body.result as unknown as Record<string, unknown> & { cards: Array<Record<string, unknown>> };
+    delete result.grouping;
+    for (const card of result.cards) {
+      delete card.market;
+      delete card.selection;
+      delete card.runs_in_market;
+    }
+    server([{ status: 200, body }]);
+    renderAt(`${base}?mode=markets`);
+    await settled();
+    expect(document.querySelector("[data-markets-ungrouped]")).not.toBeNull();
+    expect(document.querySelectorAll("[data-market-run]")).toHaveLength(2);
+    expect(document.querySelector('[data-market-run="run_btc"] [data-market-key]')?.textContent).toBe("BTCUSDT · 4h");
+    expect(document.querySelector("[data-market-selection-words]")).toBeNull();
   });
 });
