@@ -69,6 +69,9 @@ import { sha256ResearchJson } from "./preflight.service";
 import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
 import { inertWhatIf, ResearchWhatIfService, type WhatIfBasis } from "./whatif.service";
 import { foldOrdering } from "./fold-ordering";
+import { declaredSpace, searchSurface, type SurfaceTrial } from "./current-source-surface";
+import { parameterAuthority, retainedStage4Binding } from "./stage4-binding";
+import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
 import type { WhatIf } from "./whatif.contract";
 import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
 import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
@@ -510,6 +513,23 @@ export class ResearchCurrentSourceService {
       page = this.pageInMemory(scope.workspaceId, runId, currentRevision, operation, matched, query);
     }
     const candidates = await this.repository.rows(scope, runId, seal.artifactRevision, "CANDIDATE", { limit: 64 }, signal);
+    // X2 · B3: the surface is every retained trial (≤ 64), whatever page the ledger shows.
+    const allTrials = fold === null && !page.hasMore && !page.hasPrevious && page.rows.length === seal.tableRows.TRIAL
+      ? page.rows
+      : await this.boundedRows(scope, runId, seal, "TRIAL", MAXIMUM_TRIAL_ROWS, signal);
+    const space = declaredSpace(seal.profileId, summary.selection.parameters);
+    const roles = selectionRoles(facts, summary.selection);
+    const surfaceTrials: SurfaceTrial[] = allTrials.map((row) => {
+      const trial = asTrial(row);
+      return {
+        sourceOrdinal: row.sourceOrdinal,
+        trialId: trial.trial_id,
+        state: typedTrialState(trial.state),
+        objective: trial.objective,
+        parameters: trial.parameters,
+      };
+    });
+    const firstFacts = allTrials.length > 0 ? asTrial(allTrials[0]!).trial_facts : undefined;
     if (candidates.totalRows !== seal.tableRows.CANDIDATE || candidates.hasMore || candidates.hasPrevious) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained candidate ledger exceeds its admitted bound.", 503);
     }
@@ -523,7 +543,7 @@ export class ResearchCurrentSourceService {
         parameters: summary.selection.parameters,
         availability: available(),
         objective_kind: facts ? "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
-        roles: selectionRoles(facts, summary.selection),
+        roles,
       },
       search_contract: searchContract(facts),
       ledger: {
@@ -554,6 +574,14 @@ export class ResearchCurrentSourceService {
         availability: available(),
       },
       diagnostics: searchDiagnostics(facts),
+      declared_space: space,
+      surface: searchSurface({
+        trials: surfaceTrials,
+        space,
+        selectedTrialId: summary.selection.trial_id,
+        bestIsTrialId: roles.raw_best_is.trial_id,
+        objectiveKind: firstFacts?.objective_kind ?? "NOT_PUBLISHED",
+      }),
     };
     return this.valid(ResearchCurrentSourceSearchResponseSchema, value);
   }
@@ -569,10 +597,13 @@ export class ResearchCurrentSourceService {
     // A10c: exact existing evaluations around θ*; nothing is evaluated here.
     const whatIf = await this.whatIfFor(scope, await this.basisFrom(scope, runId, seal, summary, byteVerification, signal));
     const common = this.common("freeze", seal);
+    const space = declaredSpace(seal.profileId, summary.selection.parameters);
+    const binding = DEFAULT_PARAMETER_BINDING_REGISTRY.byRetainedLaneProfile(seal.profileId);
     // P16-T02/T11: per-fold ordering from the sealed FOLD rows (immutable
     // under the seal revision, so it cannot move the ETag on its own).
+    const foldRows = (await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map((row) => ({ row, fold: asFold(row) }));
     const ordering = foldOrdering(
-      (await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map((row) => {
+      foldRows.map(({ row }) => {
         const fold = asFold(row);
         return {
           sourceOrdinal: row.sourceOrdinal,
@@ -625,6 +656,19 @@ export class ResearchCurrentSourceService {
       },
       what_if: whatIf,
       fold_ordering: ordering,
+      declared_space: space,
+      stage4_binding: retainedStage4Binding(
+        summary.selection.parameters,
+        Object.keys(summary.selection.parameters).length > 0 ? sha256ResearchJson(summary.selection.parameters) : null,
+        [...foldRows]
+          .sort((left, right) => left.row.sourceOrdinal - right.row.sourceOrdinal)
+          .map(({ fold }) => ({ foldId: fold.fold_id, records: fold.child_audit?.records })),
+      ),
+      parameter_authority: parameterAuthority({
+        names: space.parameters.map((parameter) => parameter.name),
+        codeFixed: binding?.codeFixed,
+        adapterContractDigest: binding?.adapterContractDigest ?? null,
+      }),
     };
     return this.valid(ResearchCurrentSourceFreezeResponseSchema, value);
   }

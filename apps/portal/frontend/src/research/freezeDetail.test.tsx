@@ -596,11 +596,12 @@ describe("P16-T04 — an unavailable question keeps its card, with nothing that 
     expect(ranges).toHaveLength(2);
     expect(ranges.every((range) => range.disabled)).toBe(true);
     expect(card?.querySelector("[data-what-if-reason]")).not.toBeNull();
-    // The only ENABLED button on the screen is the explicit verification.
+    // The only ENABLED server action on the screen is the explicit verification;
+    // X2 (spec 07 T10) adds "copy θ* digest", which writes the clipboard only.
     const enabled = [...container.querySelectorAll<HTMLButtonElement>("button")]
       .filter((node) => !node.disabled)
       .map((node) => node.getAttribute("data-action"));
-    expect(enabled.filter((action) => action !== null)).toEqual(["verify"]);
+    expect(enabled.filter((action) => action !== null)).toEqual(["copy-theta-digest", "verify"]);
     // No number stands in for an evaluation that does not exist.
     expect(card?.textContent).not.toMatch(/ΔJ\s*[−+-]?\d/);
   });
@@ -893,13 +894,24 @@ describe("Screen 07 composition — the hi-fi panels carry only published facts"
     expect(card?.textContent).not.toMatch(/✓|\bBOUND\b/);
   });
 
-  it("adds no live control: the verification is still the only enabled action", () => {
+  it("adds no live control: the verification is still the only enabled server action (T10 copy writes the clipboard only)", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
     const { container } = view();
     const actions = [...container.querySelectorAll<HTMLButtonElement>("button")]
       .filter((node) => !node.disabled)
       .map((node) => node.getAttribute("data-action"))
       .filter((action) => action !== null);
-    expect(actions).toEqual(["verify"]);
+    expect(actions).toEqual(["copy-theta-digest", "verify"]);
+    await act(async () => {
+      fireEvent.click(container.querySelector("[data-action='copy-theta-digest']") as Element);
+    });
+    expect(writeText).toHaveBeenCalledWith(detail().freeze.selection.parameter_bundle_digest);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(container.querySelector("[data-action='copy-theta-digest']")?.textContent).toBe("✓ θ* digest copied");
+    vi.unstubAllGlobals();
   });
 });
 

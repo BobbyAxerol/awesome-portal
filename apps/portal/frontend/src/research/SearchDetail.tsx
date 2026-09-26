@@ -47,11 +47,20 @@ import {
   type SearchDetail as SearchDetailDocument,
   type SearchSourceGap,
 } from "./searchClient";
-import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
+import { deepDiveHref, serializeCursor, type EvidenceCursor } from "./evidenceCursor";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME } from "./SplitDetail";
 import { LANE_STATE_COPY, laneNotApplicableSentence } from "./splitClient";
 import type { LedgerSlot, RetainedRunFacts } from "./useSearch";
 import { BoundWarningNote } from "./BoundWarning";
+import type { BoundWarningValue } from "./BoundWarning";
+import {
+  SurfaceAbsence,
+  SurfaceDistributions,
+  SurfaceProgression,
+  SurfaceScatter,
+  ThetaJourney,
+  type DeclaredSpace,
+} from "./SearchSurface";
 import type { ResearchState } from "./state";
 
 /* --------------------------------------------------------------- verbatim */
@@ -489,7 +498,34 @@ const LEVELS_REASON = "levels — the search read publishes no level count per p
  * bound" either: the note is the served `bound_state` and that placement.
  * `levels` is not served, so its cell says so.
  */
-function ParameterTable({ parameters }: { parameters: readonly Parameter[] }) {
+/** HiFi A1 tick tone (spec 06 §3): at bound red, near bound gold, else green — the server's DR-02 state, not a browser judgement. */
+function tickTone(warning: BoundWarningValue | null | undefined): string {
+  if (warning?.state === "AT_BOUND") return "var(--bad)";
+  if (warning?.state === "NEAR_BOUND") return "var(--accent-2)";
+  return "var(--good)";
+}
+
+function ParameterTable({
+  parameters,
+  levels,
+  pinned,
+  kindWidth,
+}: {
+  parameters: readonly Parameter[];
+  /** X2: exact grid levels per parameter, when the read publishes them. */
+  levels?: Readonly<Record<string, number | null>>;
+  /** X2: parameters the requested spec pinned (a what-if sibling) — the kind cell says so. */
+  pinned?: ReadonlySet<string>;
+  /** X2: a narrower kind cell when every kind is one short word, so θ*'s track keeps its room in a laptop column. */
+  kindWidth?: number;
+}) {
+  /* Compact (laptop Stage A column): kind and levels narrow, so θ*'s track keeps real width beside the note. */
+  const compact = kindWidth !== undefined && kindWidth < 112;
+  const levelsWidth = compact ? 44 : 56;
+  const noteWidth = compact ? 104 : 118;
+  const columns = A1_COLUMNS.map((column) =>
+    column.head === "kind" && kindWidth ? { ...column, width: kindWidth } : column.head === "levels" ? { ...column, width: levelsWidth } : column,
+  );
   return (
     <div className="flex min-w-0 flex-col" data-parameters={parameters.length}>
       <div
@@ -497,7 +533,7 @@ function ParameterTable({ parameters }: { parameters: readonly Parameter[] }) {
         style={{ color: "var(--ink-faint)", borderColor: "var(--line-soft)" }}
         data-a1-head
       >
-        {A1_COLUMNS.map((column) => (
+        {columns.map((column) => (
           <span
             key={column.head}
             className={`flex-none ${column.right ? "text-right" : ""}`}
@@ -518,8 +554,8 @@ function ParameterTable({ parameters }: { parameters: readonly Parameter[] }) {
           data-parameter={parameter.name}
         >
           <span className="w-[86px] flex-none">{parameter.name}</span>
-          <span className="w-[112px] flex-none" style={{ color: "var(--ink-soft)" }} data-kind={parameter.name}>
-            {parameter.kind}
+          <span className="flex-none" style={{ color: "var(--ink-soft)", width: kindWidth ?? 112 }} data-kind={parameter.name}>
+            {pinned?.has(parameter.name) ? "pinned (sibling)" : parameter.kind}
           </span>
           <span className="w-[96px] flex-none" style={{ color: "var(--ink-soft)" }} data-range={parameter.name}>
             {parameter.minimum} … {parameter.maximum}
@@ -527,16 +563,23 @@ function ParameterTable({ parameters }: { parameters: readonly Parameter[] }) {
           <span className="w-[44px] flex-none text-right" style={{ color: "var(--ink-soft)" }} data-step={parameter.name}>
             {parameter.step}
           </span>
-          {/* Levels are not served: the cell keeps its place and its reason, and
-              the absence is printed once, under the table — not eight times. */}
-          <span
-            className="w-[56px] flex-none text-right"
-            title={LEVELS_REASON}
-            data-levels={parameter.name}
-            data-levels-state="NOT_PUBLISHED"
-          >
-            <span className="sr-only">levels not published</span>
-          </span>
+          {/* Levels: the exact count when the read publishes it; otherwise the cell
+              keeps its place and the absence is printed once, under the table. */}
+          {levels && levels[parameter.name] != null ? (
+            <span className="flex-none text-right" style={{ width: levelsWidth }} data-levels={parameter.name} data-levels-state="AVAILABLE" title="(maximum − minimum) / step + 1, from the declaration">
+              {levels[parameter.name]}
+            </span>
+          ) : (
+            <span
+              className="flex-none text-right"
+              style={{ width: levelsWidth }}
+              title={LEVELS_REASON}
+              data-levels={parameter.name}
+              data-levels-state="NOT_PUBLISHED"
+            >
+              <span className="sr-only">levels not published</span>
+            </span>
+          )}
           <span className="flex flex-1 items-center gap-2 pl-[14px]">
             <span className="w-[44px] flex-none text-right" style={{ color: "var(--good)" }} data-effective={parameter.name}>
               {parameter.effective_value}
@@ -551,12 +594,13 @@ function ParameterTable({ parameters }: { parameters: readonly Parameter[] }) {
               <span
                 data-position={parameter.name}
                 data-position-percent={parameter.position_percent}
+                data-tick-tone={parameter.bound_warning?.state ?? "NOT_PUBLISHED"}
                 className="absolute bottom-[-1px] h-[11px] w-[2px]"
-                style={{ left: `${parameter.position_percent}%`, background: "var(--good)" }}
+                style={{ left: `${parameter.position_percent}%`, background: tickTone(parameter.bound_warning) }}
               />
             </span>
             {/* DR-02: the shared server definition, the shared renderer (S06 = S07). */}
-            <span className="w-[118px] flex-none text-[9px]" data-bound-state={parameter.bound_state}>
+            <span className="flex-none text-[9px] leading-[1.25]" style={{ width: noteWidth }} data-bound-state={parameter.bound_state}>
               <BoundWarningNote warning={parameter.bound_warning} positionPercent={parameter.position_percent} />
             </span>
           </span>
@@ -572,10 +616,14 @@ function LedgerPanel({
   slot,
   detail,
   onNeeded,
+  pick,
+  onPick,
 }: {
   slot: LedgerSlot;
   detail: SearchDetailDocument;
   onNeeded: () => void;
+  pick: string | null;
+  onPick: (trialId: string) => void;
 }) {
   useEffect(() => {
     onNeeded();
@@ -597,7 +645,7 @@ function LedgerPanel({
       </div>
 
       {slot.state === "ready" ? (
-        <LedgerRows search={slot.search} />
+        <LedgerRows search={slot.search} pick={pick} onPick={onPick} />
       ) : (
         <>
           <LedgerHead />
@@ -727,10 +775,16 @@ function NotPublished({ title }: { title: string }) {
  * source's selection is the gold row, the row the reader clicked is the accent
  * row, and clicking never selects anything.
  */
-function LedgerRows({ search }: { search: CurrentSourceSearch }) {
+function LedgerRows({ search, pick, onPick }: { search: CurrentSourceSearch; pick: string | null; onPick: (trialId: string) => void }) {
   const trials = search.ledger.trials;
   const selectedId = search.selection.selected_trial_id;
-  const [picked, setPicked] = useState<string | null>(null);
+  const picked = pick;
+  /* T07: a pick from the surface (or a restored `pick=`) brings its row into view. */
+  useEffect(() => {
+    if (picked === null || typeof document === "undefined") return;
+    const row = [...document.querySelectorAll("[data-trial]")].find((element) => element.getAttribute("data-trial") === picked);
+    if (row && typeof (row as HTMLElement).scrollIntoView === "function") (row as HTMLElement).scrollIntoView({ block: "nearest" });
+  }, [picked]);
 
   return (
     <div>
@@ -775,7 +829,7 @@ function LedgerRows({ search }: { search: CurrentSourceSearch }) {
               background: selected ? "var(--accent-2-soft)" : picked === trial.trial_id ? "var(--accent-soft)" : "transparent",
             }}
             aria-pressed={picked === trial.trial_id}
-            onClick={() => setPicked(trial.trial_id)}
+            onClick={() => onPick(trial.trial_id)}
             data-trial={trial.trial_id}
             data-trial-selected={selected}
           >
@@ -1133,7 +1187,105 @@ function declaredCells(declared: DeclaredParameter | undefined): { kind: string;
  * No range position is drawn: the lane publishes none and the browser does
  * not work one out.
  */
+/** X2: θ*'s declared rows as the hub A1 shape — the server's own values, placement and DR-02 warning. */
+function declaredParameters(space: DeclaredSpace): Parameter[] {
+  return space.parameters.map((parameter) => ({
+    name: parameter.name,
+    kind: parameter.kind,
+    minimum: parameter.minimum,
+    maximum: parameter.maximum,
+    step: parameter.step,
+    effective_value: parameter.value,
+    position_percent: parameter.position_percent,
+    bound_state: "WITHIN_DECLARED_RANGE" as const,
+    bound_warning: parameter.bound_warning,
+  }));
+}
+
+/** Parameters the admitted requested spec pinned (a what-if sibling's `parameter_space_overrides`). */
+function pinnedNames(run: RetainedRunFacts | undefined): Set<string> {
+  const identity = run?.identity.state === "ready" ? run.identity.identity : null;
+  const overrides = (identity?.requested?.requested_spec as Record<string, unknown> | null | undefined)?.parameter_space_overrides;
+  return new Set(
+    Array.isArray(overrides)
+      ? overrides.filter((item): item is { kind: string; name: string } => typeof item === "object" && item !== null && (item as { kind?: unknown }).kind === "pin")
+        .map((item) => item.name)
+      : [],
+  );
+}
+
+/**
+ * X2 · B3: A1 on a retained run when the server publishes the declared space
+ * it searched — the A10b binding of the retained lane profile, θ* placed in
+ * each range with the shared DR-02 warning (S06 = S07), exact levels and the
+ * grid size. A typed absence prints the server's reason.
+ */
+function ServedSearchSpace({ search, space, run }: { search: CurrentSourceSearch; space: DeclaredSpace; run: RetainedRunFacts | undefined }) {
+  const identity = run?.identity.state === "ready" ? run.identity.identity : null;
+  const window = walkForwardOf(identity?.requested ?? null);
+  const probe = search.diagnostics.probe;
+  const contract = search.search_contract;
+  const pending = run?.identity.state === "loading";
+  const levels = Object.fromEntries(space.parameters.map((parameter) => [parameter.name, parameter.levels]));
+  return (
+    <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} data-panel="search-space" data-panel-lane="retained" data-space-state={space.state}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
+          A1 · search space as declared
+        </h3>
+        <span
+          className="mono text-[9.5px]"
+          style={{ color: "var(--ink-faint)" }}
+          data-space-source="server"
+          title={space.binding ? `profile digest ${space.binding.profile_digest} · adapter ${space.binding.adapter_contract_digest}` : space.reason_code ?? undefined}
+        >
+          {space.binding ? `${space.binding.profile_id} · binding ${space.binding.installed_in_release}` : "config.parameter_space"}
+        </span>
+      </div>
+      {space.state === "AVAILABLE" ? (
+        <ParameterTable parameters={declaredParameters(space)} levels={levels} pinned={pinnedNames(run)} kindWidth={pinnedNames(run).size > 0 ? 112 : 56} />
+      ) : (
+        <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-gap-fact="ranges" data-gap-state={space.state}>
+          <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+            kind · range · step
+          </span>
+          <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={space.reason_code ?? undefined}>
+            not published
+          </span>
+          <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+            {reasonCodeSentence(space.reason_code ?? "")}
+          </span>
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+            {space.reason_code}
+          </span>
+        </span>
+      )}
+      <div className="flex flex-wrap gap-x-[22px] gap-y-1 pt-[5px]" data-coverage>
+        {space.grid_size !== null && space.grid_size !== undefined ? (
+          <CoverageFact what="grid_size" value={`${Number(space.grid_size).toLocaleString("en-US")} points declared`} />
+        ) : null}
+        <CoverageFact what="sampler seed" value={window.seed !== null ? `${window.seed} · requested spec` : null} pending={pending} />
+        <CoverageFact
+          what="trials"
+          value={`${window.trials !== null ? `${window.trials} requested · ` : ""}${search.ledger.source_trial_count} retained${contract.n_studies !== null ? ` · ${contract.n_studies} ${contract.n_studies === 1 ? "study" : "studies"}` : ""}`}
+        />
+        <Gap gap={factGap(probe.sampler)} what="sampler trace" />
+        <Gap gap={factGap(probe.warm_start)} what="warm start" />
+        <Gap gap={factGap(probe.dedupe)} what="dedupe" />
+      </div>
+      {space.state === "AVAILABLE" && space.grid_size ? (
+        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--accent-2)" }} data-coverage-note>
+          {search.ledger.source_trial_count} trials sampled a declared grid of {Number(space.grid_size).toLocaleString("en-US")} points — every
+          conclusion below is about the sampled region, not the whole space.
+        </span>
+      ) : null}
+    </section>
+  );
+}
+
 function RetainedSearchSpace({ search, run }: { search: CurrentSourceSearch; run: RetainedRunFacts | undefined }) {
+  /* X2: a server that publishes the declared space is the authority for A1. */
+  if (search.declared_space) return <ServedSearchSpace search={search} space={search.declared_space} run={run} />;
   const names = retainedParameterNames(search);
   const identity = run?.identity.state === "ready" ? run.identity.identity : null;
   const requestedSpec = (identity?.requested?.requested_spec ?? null) as Record<string, unknown> | null;
@@ -1522,6 +1674,48 @@ export interface SearchScreenProps {
   onReread: () => void;
   /** W3b: a retained run's identity and declared space (asked only once the retained lane answered). */
   retainedRun?: RetainedRunFacts;
+  /** X2 · F4 (T07/T08): the trial the reader is inspecting — the hash's `pick=`, never θ*. */
+  pick?: string | null;
+  onPick?: (trialId: string) => void;
+}
+
+/**
+ * X2 · F4 (T16): the evidence link a reader copies. The hi-fi writes
+ * `portal://…/stage/search?mode&schedule&trial&params`; a portal:// address
+ * opens nothing, so the link is this screen's own URL with the same facts in
+ * its cursor hash: stage, fold, the run's mode and schedule, θ*'s trial and
+ * params digest, and the inspected `pick` when there is one. Every value is
+ * the server's; a value the run did not publish is left out, never guessed.
+ */
+export function searchEvidenceLink(
+  runId: string,
+  cursor: EvidenceCursor,
+  lane: CurrentSourceSearch | null,
+  run: RetainedRunFacts | undefined,
+  pick: string | null,
+): string | undefined {
+  if (typeof window === "undefined" || !window.location) return undefined;
+  const base = `${window.location.origin}/research/quantbt/runs/${encodeURIComponent(runId)}/search`;
+  if (lane === null) return `${base}${serializeCursor({ ...cursor, stage: "search" })}`;
+  const identity = run?.identity.state === "ready" ? run.identity.identity : null;
+  const digests = new Set(
+    (identity?.progress?.progress?.folds ?? [])
+      .map((fold) => (fold.selection?.state === "AVAILABLE" ? fold.selection.params_digest : null))
+      .filter((digest): digest is string => typeof digest === "string"),
+  );
+  const carried = { ...(cursor.carried ?? {}) };
+  if (lane.search_contract.optimization_mode) carried.mode = lane.search_contract.optimization_mode;
+  if (lane.selection.selected_trial_id !== null) carried.trial = lane.selection.selected_trial_id;
+  if (pick !== null) carried.pick = pick;
+  else delete carried.pick;
+  return `${base}${serializeCursor({
+    ...cursor,
+    stage: "search",
+    trial: null,
+    schedule: lane.search_contract.optimization_schedule ?? cursor.schedule,
+    params: digests.size === 1 ? [...digests][0]! : cursor.params,
+    carried,
+  })}`;
 }
 
 /** Names the frames on this screen already state; `source_absences` repeats them. */
@@ -1549,7 +1743,13 @@ export function SearchScreen({
   ensureLedger,
   onReread,
   retainedRun,
+  pick: controlledPick,
+  onPick: controlledOnPick,
 }: SearchScreenProps) {
+  /* Controlled by the route (the hash's `pick=`); a bare screen keeps its own. */
+  const [localPick, setLocalPick] = useState<string | null>(null);
+  const pick = controlledPick !== undefined ? controlledPick : localPick;
+  const onPick = controlledOnPick ?? setLocalPick;
   const profile = detail?.fixed_profile;
   const parameters = profile?.parameters ?? [];
   const fixed = detail?.source_profile.state === "FIXED_PROFILE_NO_SEARCH";
@@ -1630,7 +1830,7 @@ export function SearchScreen({
         {detail ? (
           <div className="flex flex-none flex-col items-end gap-[5px]">
             <AsOf at={detail.as_of_utc_ms} source="search read" basis={detail.as_of_basis} />
-            <CopyEvidenceLink />
+            <CopyEvidenceLink href={searchEvidenceLink(runId, cursor, lane, retainedRun, pick)} />
           </div>
         ) : null}
       </header>
@@ -1959,6 +2159,35 @@ export function SearchScreen({
 
                 {STAGE_A_DIAGNOSTICS.map((key) => {
                   if (lane) {
+                    /* X2 · B3: the server's trial surface draws A2–A5; an older server keeps the W3b frames. */
+                    const surface = lane.surface;
+                    const space = lane.declared_space;
+                    if (surface && space) {
+                      const served = surface.state === "AVAILABLE" && space.state === "AVAILABLE";
+                      if (key === "scatter") {
+                        return served ? (
+                          <SurfaceScatter
+                            key={key}
+                            surface={surface}
+                            parametersOf={(id) => lane.ledger.trials.find((trial) => trial.trial_id === id)?.parameters}
+                            schedule={lane.search_contract.optimization_schedule}
+                            pick={pick}
+                            onPick={onPick}
+                          />
+                        ) : (
+                          <SurfaceAbsence key={key} id={key} title={DIAGNOSTIC_LABEL.scatter} reason={surface.reason_code ?? space.reason_code} />
+                        );
+                      }
+                      if (key === "progression" && served) {
+                        return <SurfaceProgression key={key} surface={surface} declared={space} prunedCount={lane.diagnostics.probe.pruned_trial_count} />;
+                      }
+                      if (key === "distributions" && served) return <SurfaceDistributions key={key} surface={surface} />;
+                      /* A5 sits inside A4's card, as in the hi-fi. */
+                      if (key === "importance" && served) return null;
+                      if (key === "interactions") {
+                        return <EmptyPanel key={key} id={key} title={DIAGNOSTIC_LABEL[key]} gap={{ state: "NOT_PUBLISHED", reason_code: surface.interactions.reason_code } as SearchSourceGap} sentence />;
+                      }
+                    }
                     /* W3b: each Stage A frame from the retained lane, or its own typed absence. */
                     if (key === "scatter") return <RetainedSurface key={key} search={lane} />;
                     if (key === "progression") return <RetainedProgression key={key} search={lane} />;
@@ -2034,7 +2263,9 @@ export function SearchScreen({
                   )}
                 </section>
 
-                {lane ? (
+                {lane && lane.surface?.state === "AVAILABLE" && lane.declared_space?.state === "AVAILABLE" ? (
+                  <ThetaJourney surface={lane.surface} declared={lane.declared_space} schedule={lane.search_contract.optimization_schedule} />
+                ) : lane ? (
                   <RetainedThetaJourney search={lane} />
                 ) : (
                   <EmptyPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} gap={detail.diagnostics.parameter_frequency} />
@@ -2084,7 +2315,7 @@ export function SearchScreen({
             </div>
 
             {/* ------------------------------------------ ledger, full width */}
-            <LedgerPanel slot={ledger} detail={detail} onNeeded={ensureLedger} />
+            <LedgerPanel slot={ledger} detail={detail} onNeeded={ensureLedger} pick={pick} onPick={onPick} />
 
             {absences.length > 0 ? (
               <section className="flex flex-wrap gap-x-5 gap-y-1.5 px-1" data-source-absences>

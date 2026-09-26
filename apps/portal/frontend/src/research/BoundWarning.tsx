@@ -88,7 +88,7 @@ export function BoundWarningNote({
   return (
     <span
       className={`mono ${className}`}
-      style={{ color: flagged ? "var(--warn)" : "var(--ink-faint)" }}
+      style={{ color: warning.state === "AT_BOUND" ? "var(--bad)" : flagged ? "var(--warn)" : "var(--ink-faint)" }}
       title={boundWarningTitle(warning, positionPercent)}
       data-bound-warning={warning.state}
       data-bound-side={warning.side ?? ""}

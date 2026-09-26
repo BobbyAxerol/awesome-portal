@@ -11,6 +11,7 @@ import { z } from "zod";
 
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { BoundWarningSchema } from "./bound-warning";
+import { ParameterAuthoritySchema, Stage4BindingSchema } from "./stage4-binding";
 
 export const ResearchFreezeRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -192,6 +193,10 @@ export const ResearchFreezeResponseSchema = z.object({
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ResearchFreezeSourceGapSchema),
   /** A10a: the newest durable byte-verification receipt, or a typed "not yet". */
   artifact_bytes: ArtifactByteVerificationSchema,
+  /** X2 · B4 · CG-P16-02: the registered binding vs what the P04 child executed, decided here. */
+  stage4_binding: Stage4BindingSchema,
+  /** X2 · B4 · CG-P16-03: declared values in the params digest, code-fixed values in the code digest. */
+  parameter_authority: ParameterAuthoritySchema,
 }).strict();
 
 export const ResearchFreezeVerificationResponseSchema = z.object({
