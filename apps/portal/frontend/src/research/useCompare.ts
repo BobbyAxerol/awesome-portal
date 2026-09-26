@@ -66,7 +66,14 @@ export function useCompare(
   const [notModifiedCount, setNotModifiedCount] = useState(0);
   const [generation, setGeneration] = useState(0);
   const sequence = useRef(0);
-  const validator = useRef<{ key: string; etag: string } | null>(null);
+  /*
+   * S13-BACK-REFETCH (P20 audit C4): one validator per comparison key, not one
+   * slot. Back/forward between modes returns to a key already read; its last
+   * accepted copy is shown at once as retained (`stale`) and revalidated with
+   * its own ETag, so an unchanged comparison answers 304 instead of a second
+   * full body. Bounded, least recently used first out.
+   */
+  const accepted = useRef(new Map<string, Compare>());
 
   useEffect(() => {
     if (key === null) {
@@ -78,7 +85,8 @@ export function useCompare(
     const id = (sequence.current += 1);
     const controller = new AbortController();
     const current = () => !controller.signal.aborted && id === sequence.current;
-    const etag = validator.current?.key === key ? validator.current.etag : null;
+    const retained = accepted.current.get(key) ?? null;
+    if (retained) setHeld((now) => (now !== null && now.key === key ? now : { key, body: retained }));
     setInFlight(true);
     setRequestCount((n) => n + 1);
     compareApi
@@ -86,7 +94,7 @@ export function useCompare(
         mode: readMode,
         runs: readRuns,
         workspaceId: readWorkspace ?? undefined,
-        etag,
+        etag: retained?.etag ?? null,
         signal: controller.signal,
       })
       .then((answer) => {
@@ -96,7 +104,7 @@ export function useCompare(
           setNotModifiedCount((n) => n + 1);
           return;
         }
-        validator.current = { key, etag: answer.etag };
+        remember(accepted.current, key, answer);
         setHeld({ key, body: answer });
       })
       .catch((error: unknown) => {
@@ -104,7 +112,7 @@ export function useCompare(
         const next = toCompareRefusal(error);
         /* Authority or existence changed: nothing is kept, not even the validator. */
         if (next.terminal) {
-          validator.current = null;
+          accepted.current.delete(key);
           setHeld(null);
         }
         setRefusal({ key, value: next });
@@ -138,4 +146,17 @@ export function useCompare(
     notModifiedCount,
     retry: useCallback(() => setGeneration((n) => n + 1), []),
   };
+}
+
+/** How many comparison keys keep their last accepted copy and validator. */
+export const COMPARE_VALIDATOR_SLOTS = 8;
+
+function remember(cache: Map<string, Compare>, key: string, body: Compare): void {
+  cache.delete(key);
+  cache.set(key, body);
+  while (cache.size > COMPARE_VALIDATOR_SLOTS) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
 }

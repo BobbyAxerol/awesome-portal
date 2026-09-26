@@ -23,6 +23,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { formatUtc, shortDigest } from "./researchFormat";
 import type { WhatIf, WhatIfCell, WhatIfEvaluateSlot } from "./freezeClient";
 import { RefusalNote } from "./ResearchPanel";
+import { ShortId } from "./ShortId";
 
 /** Spec 07 §2.5, verbatim. */
 export const WHAT_IF_RULE =
@@ -413,7 +414,7 @@ function LiveWhatIf({
           <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
             diagnostic job
           </span>
-          <span className="mono text-[10px]">{job.run_id}</span>
+          <ShortId id={job.run_id} label="run" className="text-[10px]" />
           <span className="mono text-[10px]">{job.state.toLowerCase()}</span>
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
             {job.evaluations} evaluations · requested {formatUtc(job.requested_at_utc_ms) ?? ""}

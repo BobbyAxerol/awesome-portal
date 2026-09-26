@@ -619,7 +619,7 @@ describe("RF-04 FE-S02-06 — timeframe choices come only from the bound declara
     const selected = manifest.atlas.modes[0]!.facts!.schedules[0]!;
     view({ atlas: manifest.atlas, draft: draft({ optimizationMode: manifest.atlas.modes[0]!.mode_id, optimizationSchedule: selected.schedule }) });
     expect(document.querySelector("[data-window-timeline]")?.textContent).toContain("2022-01-01T00:00");
-    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain(selected.chronological_validation_claim);
+    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain(selected.chronological_validation_claim.toUpperCase());
     expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("cert ceiling not published");
   });
 });

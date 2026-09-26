@@ -57,6 +57,7 @@ import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
 import { FailedSheet, FinalAuditBlock } from "./ReportFailedSheet";
+import { ShortId } from "./ShortId";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -479,7 +480,7 @@ function Header({ runId, report }: { runId: string; report: ReportDetail | null 
             {title}
           </h2>
           <span className="rr-runchip rr-long" data-run-chip>
-            {report?.run_id ?? runId}
+            <ShortId id={report?.run_id ?? runId} label="run" />
           </span>
         </div>
         {report ? (
@@ -1114,7 +1115,7 @@ function Footer({ runId, report }: { runId: string; report: ReportDetail | null 
     <footer className="rr-foot" data-panel="footer">
       <span>Quant Ecosystem Portal · Research · confidential</span>
       <span className="rr-long">
-        {report?.run_id ?? runId}
+        <ShortId id={report?.run_id ?? runId} label="run" />
         {report ? ` · report ${iso(report.sealed_at_utc_ms)}` : ""} · page prints on letter or A4
       </span>
     </footer>

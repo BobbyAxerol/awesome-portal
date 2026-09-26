@@ -847,7 +847,7 @@ describe("S09 Run Report — reading", () => {
     [400, "RESEARCH_REPORT_INVALID", "terminal"],
     [401, "RESEARCH_REPORT_FORBIDDEN", "denied"],
     [403, "RESEARCH_REPORT_FORBIDDEN", "denied"],
-    [404, "RESEARCH_REPORT_NOT_FOUND", "empty"],
+    [404, "RESEARCH_REPORT_NOT_FOUND", "denied"], // F-04 (X3): a 404 reads as a 403
     [503, "RESEARCH_REPORT_UNAVAILABLE", "unavailable"],
   ] as const)("S09-U14 a %i refusal shows fixed copy and confirms nothing about the run", async (status, code, state) => {
     server({ detail: [problem(status, code)] });
@@ -865,6 +865,7 @@ describe("S09 Run Report — reading", () => {
   });
 
   it("S09-U15 403 uses the audited F-04 sentence, 409 maps to stale and keeps the job", () => {
+    expect(REPORT_REFUSAL_COPY.report[404]).toBe(REPORT_REFUSAL_COPY.report[403]);
     expect(REPORT_REFUSAL_COPY.report[403]).toBe(REPLAY_REFUSAL_COPY[403]);
     expect(REPORT_REFUSAL_COPY.export[403]).toBe(REPLAY_REFUSAL_COPY[403]);
     const conflict = toReportRefusal(new PortalApiError("409", 409, "RESEARCH_REPORT_NOT_READY", "req"), "export");

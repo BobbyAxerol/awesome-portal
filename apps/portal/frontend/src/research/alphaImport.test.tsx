@@ -653,7 +653,9 @@ describe("T10 — accessible names and roles", () => {
     const alert = document.querySelector("[data-refusal]") as HTMLElement;
     expect(alert.getAttribute("role")).toBe("alert");
     expect(alert.getAttribute("data-refusal")).toBe("RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED");
-    expect(alert.textContent).toContain("The run queue is full.");
+    /* VD-P23-01 (X3 2026-09-26): the screen's own sentence for the code, never the server's prose. */
+    expect(alert.textContent).toContain("The import queue is full.");
+    expect(refusal.detail).toBe("The run queue is full.");
     expect(alert.textContent).toContain("req_9");
   });
 });
@@ -677,8 +679,9 @@ describe("T11 — contractual copy is byte-exact", () => {
     for (const code of PROBLEM_CODES) {
       const refusal = toRefusal(new PortalApiError("server sentence", 400, code, "req_1"));
       expect(refusal.code).toBe(code);
-      // The server's words survive; nothing is rewritten locally.
-      expect(refusal.message).toBe("server sentence");
+      // VD-P23-01 (X3 2026-09-26): the screen speaks its own sentence; the server's rides as detail.
+      expect(refusal.message).not.toBe("server sentence");
+      expect(refusal.detail).toBe("server sentence");
       expect(refusal.state).not.toBe("available");
     }
   });

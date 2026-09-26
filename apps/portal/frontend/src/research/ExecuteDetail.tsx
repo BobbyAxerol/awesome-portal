@@ -55,7 +55,8 @@ import { isHubLaneReason, retainedReadiness } from "./retainedLane";
 import type { ResearchState } from "./state";
 import type { ReplayController, RetainedContext, RetainedReplaySlot } from "./useReplay";
 import { iso } from "./utcMinute";
-import { formatMetric } from "./researchFormat";
+import { formatMetric, shortId } from "./researchFormat";
+import { ShortId } from "./ShortId";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -228,7 +229,7 @@ function SampleChart({
           const rows = params as { dataIndex: number }[];
           const point = items[rows[0]?.dataIndex ?? 0];
           return point
-            ? `${noun} ${point.playback_ordinal + 1}<br/>${new Date(point.at_utc_ms).toISOString()}<br/>equity ${point.equity}`
+            ? `${noun} ${point.playback_ordinal + 1}<br/>${iso(point.at_utc_ms)}<br/>equity ${formatMetric(point.equity, "currency") ?? "not published"}`
             : "";
         },
       },
@@ -432,8 +433,8 @@ function PlayheadReadout({ transport, items }: { transport: ReplayTransport; ite
   return (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1" data-playhead-readout={point.playback_ordinal}>
       <span className="mono text-[10px]">t {iso(point.at_utc_ms)}</span>
-      <span className="mono text-[10px]">equity {point.equity}</span>
-      <span className="mono text-[10px]">drawdown {point.drawdown_fraction}</span>
+      <span className="mono text-[10px]" title={String(point.equity)}>equity {formatMetric(point.equity, "currency") ?? "not published"}</span>
+      <span className="mono text-[10px]" title={String(point.drawdown_fraction)}>drawdown {formatMetric(point.drawdown_fraction, "fraction") ?? "not published"}</span>
       <span className="mono text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-playhead-note>
         {PLAYHEAD_NOTE}
       </span>
@@ -476,8 +477,8 @@ function SampleLedger({ transport, items }: { transport: ReplayTransport; items:
                   </button>
                 </td>
                 <td className="py-[3px] pr-3">{iso(point.at_utc_ms)}</td>
-                <td className="py-[3px] pr-3">{point.equity}</td>
-                <td className="py-[3px]">{point.drawdown_fraction}</td>
+                <td className="py-[3px] pr-3" title={String(point.equity)}>{formatMetric(point.equity, "currency") ?? "not published"}</td>
+                <td className="py-[3px]" title={String(point.drawdown_fraction)}>{formatMetric(point.drawdown_fraction, "fraction") ?? "not published"}</td>
               </tr>
             );
           })}
@@ -846,7 +847,7 @@ function RetainedContract({ replay, context }: { replay: CurrentSourceReplay; co
       data-route-state="RETAINED_MODEL_SAMPLE"
       aside={
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-          as of {new Date(replay.as_of_utc_ms).toISOString()}
+          as of {iso(replay.as_of_utc_ms)}
         </span>
       }
     >
@@ -988,7 +989,7 @@ function RetainedBody({
 
       <ResearchPanel
         title="stitched account — retained walk-forward observations"
-        meta={`revision ${replay.revision}`}
+        meta={`revision ${shortId(replay.revision)}`}
         state={state}
         minBodyHeight={280}
       >
@@ -1200,7 +1201,7 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
           Evidence Flow
         </Link>
         <span style={{ color: "var(--line-strong)" }}>/</span>
-        <span className="mono">{runId}</span>
+        <ShortId id={runId} label="run" />
         <span style={{ color: "var(--line-strong)" }}>/</span>
         <span className="mono" style={{ color: "var(--ink-faint)" }}>
           Stage 4 · Execute Replay
@@ -1270,7 +1271,7 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
           data-route-state={replay.route.state}
           aside={
             <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-              as of {new Date(replay.as_of_utc_ms).toISOString()}
+              as of {iso(replay.as_of_utc_ms)}
             </span>
           }
         >
@@ -1298,7 +1299,7 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
 
       <ResearchPanel
         title="stitched account — retrospective equity"
-        meta={replay?.revision ? `revision ${replay.revision}` : undefined}
+        meta={replay?.revision ? `revision ${shortId(replay.revision)}` : undefined}
         state={state}
         minBodyHeight={280}
         actions={

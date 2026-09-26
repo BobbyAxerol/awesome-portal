@@ -441,7 +441,8 @@ describe("S11 composition as served (P21)", () => {
     await ready();
     expect(screen.getByText(RC_SUBTITLE)).toBeTruthy();
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
-    expect(crumb.textContent).toBe(`Evidence Flow/${RUN}/Release Candidate & Publish`);
+    expect(crumb.textContent).toBe(`Evidence Flow/${RUN.slice(0, 13)}/Release Candidate & Publish`);
+    expect(q("[data-crumb-run]")!.getAttribute("title")).toBe(RUN);
     expect(within(crumb).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`));
     expect(screen.getByText(SEAL_SENTENCE)).toBeTruthy();
     expect(within(panel("publish")!).getByText(SOD_NOTE)).toBeTruthy();
@@ -460,9 +461,11 @@ describe("S11 composition as served (P21)", () => {
     renderCompose();
     await ready();
     const meta = panel("meta")!.textContent ?? "";
-    expect(meta).toContain("PORTAL_PERSISTED_RESEARCH");
-    expect(meta).toContain(`source ${P04.source_fingerprint}`);
-    expect(meta).toContain("draft PERSISTED · revision 1 · saved 2026-");
+    expect(meta).toContain("portal-persisted research record");
+    expect(q("[data-read-authority]")!.getAttribute("data-read-authority")).toBe("PORTAL_PERSISTED_RESEARCH");
+    expect(meta).toContain(`source ${P04.source_fingerprint.replace(/^sha256:/, "").slice(0, 8)}`);
+    expect(q("[data-source-fingerprint]")!.getAttribute("title")).toBe(P04.source_fingerprint);
+    expect(meta).toContain("draft saved · revision 1 · saved 2026-");
   });
 
   it("S11-U05 keeps the rail in server order and tones; alpha links to Screen 10, run to Screen 04; a dim node never links", async () => {

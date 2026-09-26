@@ -557,7 +557,9 @@ describe("P09-T07 — typed refusals keep their generated meaning", () => {
     for (const code of FOUNDATION_PROBLEM_CODES) {
       const refusal = toFoundationRefusal(new PortalApiError("server sentence", 400, code, "req_1"));
       expect(refusal.code).toBe(code);
-      expect(refusal.message).toBe("server sentence");
+      /* VD-P23-01 (X3 2026-09-26): fixed screen sentence; the server's text is detail only. */
+      expect(refusal.message).not.toBe("server sentence");
+      expect(refusal.detail).toBe("server sentence");
       expect(refusal.state).not.toBe("available");
     }
   });
@@ -577,7 +579,8 @@ describe("P09-T07 — typed refusals keep their generated meaning", () => {
     // The screen keeps its composition: heading, tabs and the panel frame.
     expect(screen.getByRole("heading", { name: "Engine Atlas" })).toBeTruthy();
     expect(screen.getAllByRole("tab")).toHaveLength(3);
-    expect(screen.getAllByText("The server said so.").length).toBeGreaterThan(0);
+    /* VD-P23-01: the server's sentence never reaches the screen. */
+    expect(screen.queryAllByText("The server said so.")).toHaveLength(0);
   });
 
   it("does not fall back to a local manifest when the Atlas is unavailable", async () => {

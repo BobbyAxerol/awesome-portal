@@ -68,11 +68,12 @@ import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
-import { reasonCodeSentence } from "./researchRefusal";
+import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
 import { LineageLink, lineageHref } from "./LineageLink";
 import type { ProgressRead } from "./progressClient";
 import type { CurrentSourceSearch } from "./searchClient";
 import type { CurrentSourceClaimFact } from "./evidenceClient";
+import { ShortId } from "./ShortId";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -400,14 +401,14 @@ export function RunNotFound({ runId }: { runId: string }) {
     <section
       className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
       style={CARD_STYLE}
-      data-run-not-found
+      data-run-not-found={runId}
     >
       <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-        run not found
+        run not available
       </span>
+      {/* F-04: one sentence for a 403 and a 404 — it neither confirms the run exists nor says whose it is. */}
       <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-        No run <span className="mono">{runId}</span> exists in your current workspace. It may belong to another
-        workspace, or the link may be mistyped.
+        {REFUSAL_COPY.denied}
       </p>
       <Link
         to="/research/quantbt/runs"
@@ -1344,7 +1345,7 @@ export function SplitScreen({
             )}
             <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span className="mono min-w-0 truncate" title={runId}>
-              {runId}
+              <ShortId id={runId} label="run" />
             </span>
             <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span style={{ color: "var(--ink)" }}>Stage 1 · Split</span>

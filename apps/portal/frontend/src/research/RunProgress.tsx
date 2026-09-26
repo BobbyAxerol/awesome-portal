@@ -46,12 +46,14 @@ import {
 import { ArtifactPanel } from "./ArtifactPanel";
 import { decodeInspectionCursor, encodeInspectionCursor, type InspectionCursor } from "./inspectionCursor";
 import { ServedAttempts } from "./QueuePanel";
-import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { NotPublished, RunMetaStrip } from "./RunMetaStrip";
 import { StageLedger, utcClock } from "./StageLedger";
 import type { Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
+import { ShortId } from "./ShortId";
+import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1461,8 +1463,14 @@ function ClaimPassport({
         {failure !== null ? (
           <Field label="failure" name="failure">
             <span role="alert" style={valueStyle("bad")} data-failure={failure.code}>
-              {/* The engine's code and sentence, verbatim. */}
-              {failure.code} — {failure.message}
+              {/* VD-P23-01 / E1: the screen's own sentence; the engine's code and message stay verbatim behind details. */}
+              {reasonCodeSentence(failure.code) ?? "The run failed before it could seal its evidence."}{" "}
+              <details style={{ display: "inline" }}>
+                <summary style={{ cursor: "pointer", fontSize: 10 }}>details</summary>
+                <span className="mono" style={{ fontSize: 10.5 }}>
+                  {failure.code} — {failure.message}
+                </span>
+              </details>
             </span>
           </Field>
         ) : null}
@@ -1758,7 +1766,7 @@ function Header({
             /
           </span>
           <span style={{ fontFamily: MONO, wordBreak: "break-all" }} data-breadcrumb-run>
-            {runId}
+            <ShortId id={runId} label="run" />
           </span>
           <span aria-hidden="true" style={{ color: "var(--ink-faint)" }}>
             /
@@ -1915,12 +1923,10 @@ export function RunProgress(props: RunProgressProps) {
   if (refusal?.notFound || (read === null && state.state === "empty")) {
     return (
       <div data-screen="run-progress" data-run-not-found style={ROOT}>
-        <Header runId={runId} title={`Run not found — ${runId}`} />
+        <Header runId={runId} title={`Run ${shortId(runId)}`} />
         <section style={{ ...CARD, gap: 8 }}>
-          <h2 style={{ ...CARD_TITLE, margin: 0 }}>run not found</h2>
-          <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>
-            This run does not exist in this workspace, or you cannot read it here. No progress has been inferred.
-          </p>
+          <h2 style={{ ...CARD_TITLE, margin: 0 }}>run not available</h2>
+          <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>{REFUSAL_COPY.denied}</p>
           <a href={`${QUANTBT_ROOT}/runs`} style={{ fontFamily: MONO, fontSize: 10.5 }}>
             Open Run Library →
           </a>
@@ -1936,7 +1942,7 @@ export function RunProgress(props: RunProgressProps) {
       <div data-screen="run-progress" data-no-source={read.availability} style={ROOT}>
         <Header
           runId={runId}
-          title={`${queued ? "Run queued" : "Run cancelled"} — ${runId}`}
+          title={`${queued ? "Run queued" : "Run cancelled"} — ${shortId(runId)}`}
           right={<TransportDot transport={transport} live={live} />}
         />
         <RunMetaStrip runId={runId} identity={identity} status={statusSlot} />
@@ -1971,7 +1977,7 @@ export function RunProgress(props: RunProgressProps) {
   const handoffLabel = cursor.fold && cursor.trial ? `fold ${cursor.fold} · trial ${cursor.trial}` : null;
   const cursorFold = folds.find((f) => f.fold === foldCursor) ?? null;
   const terminalStatus = status === "FAILED" || status === "CANCELLED";
-  const title = `${status === "COMPLETED" ? "Run completed" : "Run progress"} — ${runId}`;
+  const title = `${status === "COMPLETED" ? "Run completed" : "Run progress"} — ${shortId(runId)}`;
 
   const tabButton = (key: "live" | "stage", label: string) => (
     <button

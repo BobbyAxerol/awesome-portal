@@ -244,7 +244,8 @@ describe("S01 fidelity — run id", () => {
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
     view({ response: page([item({ run_id: id })]) });
     const button = document.querySelector(`[data-run-id="${id}"]`) as HTMLElement;
-    expect(button.textContent).toBe(id);
+    /* E1: short on screen, the full id in the title and on the clipboard. */
+    expect(button.textContent).toBe("rrun_91f4b6ac");
     expect(button.className).toContain("truncate");
     expect(button.getAttribute("title")).toBe(`${id} — click to copy`);
     await act(async () => {

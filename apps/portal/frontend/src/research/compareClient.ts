@@ -25,6 +25,7 @@ import { PortalApiError } from "../lib/api";
 import { NOT_MODIFIED, type Fresh } from "./evidenceClient";
 import { toLineageRefusal, type LineageRefusal } from "./lineageClient";
 import type { ResearchState } from "./state";
+import { REFUSAL_COPY } from "./researchRefusal";
 
 type CompareSchemas = CompareComponents["schemas"];
 
@@ -284,8 +285,8 @@ export function reasonOf(availability: CompareAvailability): string {
  * Alpha identically, so the screen must not turn any of them into an
  * existence hint (audit F-04).
  */
-export const COMPARE_NEUTRAL_REFUSAL =
-  "This alpha or these runs may not exist or may be outside your access — nothing here confirms either.";
+/* E1 (HiFi audit 2026-09-26): one F-04 sentence on every Research screen. */
+export const COMPARE_NEUTRAL_REFUSAL = REFUSAL_COPY.denied;
 
 export const COMPARE_REFUSAL_COPY = {
   network: "The request did not reach the server.",

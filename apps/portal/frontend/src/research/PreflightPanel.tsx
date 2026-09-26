@@ -33,6 +33,7 @@ import type {
 import { ResearchPanel } from "./ResearchPanel";
 import { formatUtc } from "./researchFormat";
 import type { ResearchState } from "./state";
+import { iso } from "./utcMinute";
 
 /* ------------------------------------------------------------------ parts */
 
@@ -586,7 +587,7 @@ export function PreflightPanel({ preflight, state, clearedBecause }: PreflightPa
               {preflight.preflight_token}
             </Row>
             <Row label="expires" wide>
-              {new Date(preflight.expires_at_utc_ms).toISOString()}
+              {iso(preflight.expires_at_utc_ms)}
             </Row>
             <Row label="requested spec" wide>
               {preflight.requested_spec_digest}

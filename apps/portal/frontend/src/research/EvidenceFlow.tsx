@@ -55,11 +55,12 @@ import {
   type EvidenceCursor,
   type EvidenceStage,
 } from "./evidenceCursor";
-import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, refusalDetail } from "./researchRefusal";
-import { formatMetric, shortDigest } from "./researchFormat";
+import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, REFUSAL_COPY, refusalDetail } from "./researchRefusal";
+import { claimToken, formatMetric, shortDigest } from "./researchFormat";
 import type { PassportSlot, RetainedSeriesSlot, SeriesSlot } from "./useEvidence";
 import { isRetainedAnswer, retainedReadiness, type RunIdentitySlot } from "./retainedLane";
 import type { ResearchState } from "./state";
+import { ShortId } from "./ShortId";
 
 /* The chart chunk. Five entry points, one module, fetched once. */
 const EquityChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.EquityChart })));
@@ -623,7 +624,7 @@ function RunHeader({
       <span>
         run{" "}
         <span style={{ color: "var(--ink)" }} data-run-id>
-          {hub?.run_id ?? runId}
+          <ShortId id={hub?.run_id ?? runId} label="run" />
         </span>
       </span>
 
@@ -917,7 +918,8 @@ function DatasetPanel({ hub, id, onClose }: { hub: EvidenceHub; id: string; onCl
 /* ------------------------------------------------ tabs + cursor, one card */
 
 function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub | null, summary: string | null = null): string {
-  if (hub === null) return "—";
+  /* No hub in hand (loading or refused): a word, never a bare dash (P23 matrix). */
+  if (hub === null) return "not read";
   if (stage === "summary" && summary !== null) return summary;
   if (stage === "summary") {
     const all = [...hub.metrics, ...(hub.oos_performance?.metrics ?? [])];
@@ -1056,15 +1058,6 @@ function CursorPill({ children, ...rest }: { children: ReactNode } & Record<stri
 /** The HiFi's fold id: `fold_03` for fold 3 (spec 04 §3 folds are 1-based). */
 export function foldId(fold: number): string {
   return `fold_${String(fold).padStart(2, "0")}`;
-}
-
-/** A deep-dive link whose screen has no route yet: shown, refused, with the phase. */
-function UnbuiltLink({ label, why }: { label: string; why: string }) {
-  return (
-    <span title={why} aria-disabled="true" style={{ opacity: 0.6 }} data-unbuilt-link={label}>
-      {label}
-    </span>
-  );
 }
 
 function CursorBar({
@@ -1266,9 +1259,13 @@ function CursorBar({
           S3 freeze
         </Link>{" "}
         ·{" "}
-        <UnbuiltLink label="S4 replay" why="Screen 08 is not built yet (P17), so this link would go nowhere." />{" "}
+        <Link to={deepDiveHref(`${base}/execute`, { ...cursor, stage: "execute" })} style={{ color: "var(--accent)" }}>
+          S4 replay
+        </Link>{" "}
         ·{" "}
-        <UnbuiltLink label="promotion" why="Screen 11 is not built yet (P21), so this link would go nowhere." />{" "}
+        <Link to={`${base}/release-candidate`} style={{ color: "var(--accent)" }}>
+          promotion
+        </Link>{" "}
         ·{" "}
         <Link to="/research/quantbt/journey" style={{ color: "var(--accent)" }}>
           journey map ↗
@@ -2209,6 +2206,7 @@ function RetainedClaimFields({
       );
     }
     const text = String(fact.value);
+    const shown = claimToken(fact.value);
     return (
       <PassportField key={name} name={name} bar={bar} data-claim-value={text} data-claim-source={fact.source_key}>
         <button
@@ -2219,7 +2217,7 @@ function RetainedClaimFields({
           title={`QuantBT ${fact.source_key}${detail ? ` · ${detail}` : ""}`}
           onClick={() => onJump(stage)}
         >
-          {text}
+          {shown}
           {detail ? (
             <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
               {" "}
@@ -3681,13 +3679,13 @@ function RunNotFound({ runId }: { runId: string }) {
         <span aria-hidden="true" style={{ color: "var(--line-strong)" }}>
           /
         </span>{" "}
-        <span className="mono">{runId}</span>
+        <ShortId id={runId} label="run" />
       </nav>
       <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
-        Run not found in this workspace
+        Run not available
       </h1>
       <p className="text-[12px]" style={{ color: "var(--ink-soft)" }}>
-        No run with this id exists in your current workspace, so there is no evidence to show. Nothing was inferred.
+        {REFUSAL_COPY.denied}
       </p>
       <Link
         to="/research/quantbt/runs"

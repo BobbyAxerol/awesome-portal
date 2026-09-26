@@ -22,6 +22,7 @@ import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
 import { reportSessionExpired } from "../auth/sessionExpiry";
+import { refusalCopy, stateOfStatus } from "./researchRefusal";
 
 type Schemas = components["schemas"];
 
@@ -230,11 +231,34 @@ const REFUSAL: Record<ProblemCode, RefusalPresentation> = {
 
 export interface ImportRefusal extends RefusalPresentation {
   code: ProblemCode | null;
-  /** The server's own sentence. Never rewritten locally. */
+  /** The screen's fixed sentence for the resolved state (VD-P23-01); never the server's prose. */
   message: string;
+  /** The server's own sentence, for a details disclosure only. */
+  detail?: string | null;
   status: number;
   requestId: string | null;
 }
+
+/**
+ * The screen's sentence per contract code (VD-P23-01): specific enough to act
+ * on, fixed so no server prose reaches the screen. A code not listed falls
+ * back to the state's sentence.
+ */
+export const IMPORT_REFUSAL_SENTENCE: Partial<Record<ProblemCode, string>> = {
+  RESEARCH_ALPHA_IMPORT_INVALID: "The import request is not valid. Check the source and try again.",
+  RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE: "The analyser is not responding. Try again.",
+  RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED: "The analyser rejected this module. Nothing was registered.",
+  RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH: "The module changed since it was parsed — its digest no longer matches. Parse it again.",
+  RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND: "You don't have access to this source in your current workspace, or it doesn't exist.",
+  RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED: "That parse receipt expired. Parse the module again.",
+  RESEARCH_ALPHA_IMPORT_GATES_REQUIRED: "The gates have not run for this source yet. Run them before registering.",
+  RESEARCH_ALPHA_IMPORT_GATES_FAILED: "At least one gate failed for this source. Nothing was registered.",
+  RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED: "This exact source is already registered as an alpha version.",
+  RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT: "This alpha changed since it was read. Read it again.",
+  RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED: "The import queue is full. This request was not accepted and can be tried again.",
+  RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN: "You don't have access to this in your current workspace, or it doesn't exist.",
+  RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT: "This version's lifecycle changed since it was read. Read it again.",
+};
 
 /**
  * Turns a failed call into a refusal the UI can render.
@@ -259,13 +283,16 @@ export function toRefusal(error: unknown): ImportRefusal {
   /* RF01-F3: an expired session goes to the shell's sign-in path. */
   if (error.status === 401) reportSessionExpired();
   const known = error.code && error.code in REFUSAL ? REFUSAL[error.code as ProblemCode] : null;
+  const state = known?.state ?? stateOfStatus(error.status);
   return {
     code: (error.code as ProblemCode | null) ?? null,
-    message: error.message,
+    /* VD-P23-01: the words on screen are the screen's; the server's sentence is detail. */
+    message: (known && error.code ? IMPORT_REFUSAL_SENTENCE[error.code as ProblemCode] : undefined) ?? refusalCopy(state, error.status),
+    detail: error.message || null,
     status: error.status,
     requestId: error.requestId,
-    state: known?.state ?? (error.status >= 500 ? "unavailable" : "terminal"),
-    mayRetry: known?.mayRetry ?? false,
+    state,
+    mayRetry: known?.mayRetry ?? state === "unavailable",
     requiresRefresh: known?.requiresRefresh ?? false,
     invalidatesSource: known?.invalidatesSource ?? false,
   };

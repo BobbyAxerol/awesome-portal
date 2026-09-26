@@ -78,18 +78,22 @@ export async function quiet(page: Page, net: NetLog, timeout = 8_000): Promise<v
 }
 
 /** Opens a path and waits for the screen root; returns whether the root rendered. */
+/**
+ * The shell's Frame 01D session-expired presentation (RF01-F3). A Research
+ * client that receives a 401 reports it and `AuthGate` replaces the shell with
+ * this frame without navigating, so "Sign in again" returns to the same URL.
+ */
+export const SIGN_IN_FRAME = "[data-testid='access-problem-screen'][data-problem='SESSION_EXPIRED']";
+
 export async function open(page: Page, net: NetLog, path: string, root: string): Promise<boolean> {
   await page.goto(path);
-  const rendered = await page
-    .locator(root)
+  await page
+    .locator(`${root}, ${SIGN_IN_FRAME}`)
     .first()
     .waitFor({ state: "visible", timeout: 15_000 })
-    .then(
-      () => true,
-      () => false,
-    );
+    .catch(() => undefined);
   await quiet(page, net);
-  return rendered;
+  return page.locator(root).first().isVisible();
 }
 
 /** Client-side navigation through the router, as an in-app link would do. */

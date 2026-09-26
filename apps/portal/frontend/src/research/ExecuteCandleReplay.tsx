@@ -994,7 +994,7 @@ export function CandleReplayBody({
         data-route-state="RETAINED_BAR_LEDGER"
         aside={
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-            revision {replay.revision.slice(0, 26)}… · as of {new Date(replay.as_of_utc_ms).toISOString()}
+            revision {replay.revision.slice(0, 26)}… · as of {iso(replay.as_of_utc_ms)}
           </span>
         }
       >

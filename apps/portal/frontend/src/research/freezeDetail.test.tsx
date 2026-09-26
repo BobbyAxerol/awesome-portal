@@ -771,7 +771,8 @@ describe("P16-T06 — the surface requests only the three named operations", () 
   it("classifies each refusal the contract declares", () => {
     const of = (status: number) => toFreezeRefusal(new PortalApiError("no", status, null, null));
     expect(of(401).state).toBe("denied");
-    expect(of(404).state).toBe("terminal");
+    /* X3 2026-09-26 one refusal rule (F-04): a 404 reads exactly as a 403. */
+    expect(of(404).state).toBe("denied");
     expect(of(409).state).toBe("stale");
     expect(of(503).state).toBe("unavailable");
   });
@@ -1105,7 +1106,7 @@ describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
     const { container } = delegatedView(foldOrderingFixture());
     const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
     expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("⚠ NOT CAUSAL · GLOBAL SELECTION");
-    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("not_causal_multi_fold_global_calibration");
+    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
     expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("every outer fold's OOS window had been read");
     expect(panel.textContent).not.toMatch(/\bPASS\b|causal ✓/);
   });

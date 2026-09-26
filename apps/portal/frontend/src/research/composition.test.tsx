@@ -501,7 +501,9 @@ describe("P05 — artifact readiness panel", () => {
         metadata={{ rowCount: "1234567890.123456789", byteSize: null }}
       />,
     );
-    expect(screen.getByText("1234567890.123456789")).toBeTruthy();
+    /* E1: grouped for display, digit for digit; the exact string stays in the title. */
+    expect(screen.getByText("1,234,567,890.123456789")).toBeTruthy();
+    expect(document.querySelector('[data-exact="1234567890.123456789"]')).not.toBeNull();
     // The absent byte size is words, not zero.
     expect(screen.getAllByText("not reported").length).toBeGreaterThan(0);
   });

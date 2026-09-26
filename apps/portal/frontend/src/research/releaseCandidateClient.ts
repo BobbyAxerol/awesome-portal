@@ -39,6 +39,7 @@ import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import { lineageHref, toLineageRefusal, type LineageRefusal } from "./lineageClient";
 import type { ResearchState } from "./state";
+import { REFUSAL_COPY } from "./researchRefusal";
 
 type RcSchemas = ReleaseCandidateComponents["schemas"];
 type PublicationSchemas = PublicationComponents["schemas"];
@@ -372,7 +373,8 @@ export function railRoute(node: RcRailNode, compose: Pick<RcCompose, "run" | "ru
  * server answers a non-member and an unknown run identically, so the screen
  * must not turn either into an existence hint (audit F-04).
  */
-export const RC_NEUTRAL_REFUSAL = "This run may not exist or may be outside your access — nothing here confirms either.";
+/* E1 (HiFi audit 2026-09-26): one F-04 sentence on every Research screen. */
+export const RC_NEUTRAL_REFUSAL = REFUSAL_COPY.denied;
 
 export const RC_REFUSAL_COPY = {
   network: "The request did not reach the server.",

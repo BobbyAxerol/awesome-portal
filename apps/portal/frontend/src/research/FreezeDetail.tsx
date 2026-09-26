@@ -59,7 +59,7 @@ import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import { hubDelegates, readsRetainedLane, type RetainedSlot, type VerifySlot } from "./useFreeze";
 import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
-import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { claimToken, formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 import {
   protocolLabel,
@@ -69,6 +69,7 @@ import {
   type RunIdentitySlot,
 } from "./retainedLane";
 import type { ProgressRead } from "./progressClient";
+import { ShortId } from "./ShortId";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1355,12 +1356,12 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
         </span>
         {ordering.source_claims.chronological_claim ? (
           <span className="mono text-[10px]" data-source-claim title="QuantBT walk_forward.chronological_validation_claim">
-            {ordering.source_claims.chronological_claim}
+            {claimToken(ordering.source_claims.chronological_claim)}
           </span>
         ) : null}
         {ordering.source_claims.causality_claim ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title="QuantBT walk_forward.causality_claim">
-            {ordering.source_claims.causality_claim}
+            {claimToken(ordering.source_claims.causality_claim)}
           </span>
         ) : null}
         {ordering.source_claims.oos_used_for_selection === true ? (
@@ -1588,7 +1589,7 @@ export function FreezeScreen({
           Evidence Flow
         </Link>
         <span style={{ color: "var(--line-strong)" }}>/</span>
-        <span className="mono">{runId}</span>
+        <ShortId id={runId} label="run" />
         <span style={{ color: "var(--line-strong)" }}>/</span>
         <span className="mono" style={{ color: "var(--ink-faint)" }}>
           Stage 3 · Freeze
@@ -1658,7 +1659,7 @@ export function FreezeScreen({
           {/* The contract's readiness, which this screen never showed. */}
           <Chip data-readiness={detail.readiness}>readiness {detail.readiness.toLowerCase()}</Chip>
           <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-            as of {new Date(detail.as_of_utc_ms).toISOString()}
+            as of {iso(detail.as_of_utc_ms)}
           </span>
         </div>
       ) : lane !== null ? (

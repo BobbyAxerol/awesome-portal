@@ -21,6 +21,7 @@
 import type { components as ReplayComponents } from "@portal/contracts-research-replay";
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 
+import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import { isRetainedAnswer } from "./retainedLane";
 import type { ResearchState } from "./state";
@@ -332,7 +333,8 @@ export const REPLAY_REFUSAL_COPY = {
   401: "Your session has ended. Sign in again to read this replay.",
   /* Neutral on purpose: a denial must not confirm the run exists or say whose it is (audit F-04). */
   403: "You don't have access to this in your current workspace, or it doesn't exist.",
-  404: "No replay exists for this run in this workspace.",
+  /* X3 2026-09-26 (VD-P23-03, F-04): a 404 says exactly what a 403 says. */
+  404: "You don't have access to this in your current workspace, or it doesn't exist.",
   409: "The replay position expired. It was discarded and the replay was read again once.",
   503: "Replay is unavailable right now. Nothing on this screen was changed.",
   other: "The replay could not be read.",
@@ -347,8 +349,6 @@ export const REPLAY_REFUSAL_COPY = {
 export const RETAINED_NOT_RETAINED =
   "No sealed retained source exists for this run yet — it is pending retention, or the run predates it. Nothing here is taken from the live output instead.";
 
-/** A retained-lane 404: a scope fact, not "deleted". */
-export const RETAINED_NOT_FOUND = "No retained model replay was found for this run in your current workspace.";
 
 export interface ReplayRefusal {
   code: string | null;
@@ -376,7 +376,10 @@ export function toReplayRefusal(error: unknown, lane: "replay" | "retained" = "r
     };
   }
   const { status } = error;
-  const denied = status === 401 || status === 403;
+  /* RF01-F3 / VD-P23-02: an expired session goes to the shell's Frame 01D. */
+  if (status === 401) reportSessionExpired();
+  /* F-04 (X3 2026-09-26): 403 and 404 are one state on every Research screen. */
+  const denied = status === 401 || status === 403 || status === 404;
   /* The retained lane mints its own opaque tokens; an expired one is a stale
      position, not a missing retention. */
   const retainedCursorExpired =
@@ -384,9 +387,7 @@ export function toReplayRefusal(error: unknown, lane: "replay" | "retained" = "r
   const notRetained = lane === "retained" && status === 409 && !retainedCursorExpired;
   const copy = notRetained
     ? RETAINED_NOT_RETAINED
-    : lane === "retained" && status === 404
-      ? RETAINED_NOT_FOUND
-      : status === 400 || status === 401 || status === 403 || status === 404 || status === 409 || status === 503
+    : status === 400 || status === 401 || status === 403 || status === 404 || status === 409 || status === 503
       ? REPLAY_REFUSAL_COPY[status]
       : REPLAY_REFUSAL_COPY.other;
   return {
@@ -398,9 +399,7 @@ export function toReplayRefusal(error: unknown, lane: "replay" | "retained" = "r
       ? "denied"
       : notRetained
         ? "unavailable"
-      : status === 404
-        ? "empty"
-        : status === 409
+      : status === 409
           ? "stale"
           : status >= 500
             ? "unavailable"
