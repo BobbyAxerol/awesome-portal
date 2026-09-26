@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { TREE_AIM } from "./LineageDetail";
 import { LineageRoute } from "./LineageRoute";
 import { resetLineageCache, type Lineage } from "./lineageClient";
 
@@ -185,13 +186,30 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     expect(selected.getAttribute("data-selected-attempt")).toBe("att_04");
     const row = (key: string) => selected.querySelector(`[data-row-key="${key}"]`)?.textContent;
     expect(row("mode × schedule")).toBe("signal_notional · mode_1_decay × per_fold_causal");
-    expect(row("claim")).toBe("ISSUED");
+    /* 10-6: the claim state in words with the source's sentence as its reason, never the raw enum. */
+    expect(selected.querySelector('[data-row-key="claim"] [data-claim-words]')?.textContent).toBe("issued");
+    expect(selected.querySelector('[data-row-key="claim"] [data-claim-reason]')?.textContent).toBe(attempt("att_04").run_facts.claim.text);
+    expect(row("claim")).not.toContain("ISSUED");
     expect(row("OOS sharpe")).toBe(" 0.744");
     expect(row("cert")).toBe("B");
     expect(row("promotion")).toBe("promotion pick");
     expect(row("release candidate")).toBe("rc_ (draft)");
     expect(row("presentation")).toBe("storied — promotion pick, has a release candidate, changes two or more declared keys");
-    expect(selected.querySelector("[data-verdict]")?.textContent).toBe(attempt("att_04").outcome.text);
+    /* D8 (10-5): the hi-fi's rows stay open, the technical rows sit under one closed disclosure. */
+    const technical = selected.querySelector('details[data-selected-rows="technical"]') as HTMLDetailsElement;
+    expect(technical.open).toBe(false);
+    expect([...technical.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual([
+      "promotion", "release candidate", "presentation", "intent", "alpha version", "primary run", "run state",
+      "execution profile", "engine release", "effective spec", "dataset binding", "technical retries", "space signature", "created", "updated",
+    ]);
+    expect([...selected.querySelectorAll('[data-selected-rows="headline"] > dt')].map((dt) => dt.textContent)).toEqual([
+      "parent", "mode × schedule", "state", "claim", "OOS sharpe", "decay", "cert",
+    ]);
+    /* The hi-fi's verdict line sits on the published promotion pick. */
+    expect(selected.querySelector('[data-tree-aim="picked"]')?.textContent).toBe(TREE_AIM);
+    /* The source sentence is the claim's reason; the verdict line does not print it a second time. */
+    expect(selected.querySelector("[data-verdict]")?.textContent).toBe("");
+    expect(selected.textContent?.split(attempt("att_04").outcome.text ?? "").length).toBe(2);
     const href = (action: string) => selected.querySelector(`[data-action="${action}"]`)?.getAttribute("href");
     expect(href("open-evidence")).toBe("/research/quantbt/runs/run-att_04/evidence");
     expect(href("run-report")).toBe("/research/quantbt/runs/run-att_04/report");
