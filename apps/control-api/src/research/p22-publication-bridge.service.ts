@@ -55,6 +55,14 @@ export function sealedPackMethodologyClaimIds(frozenCore: Record<string, unknown
     const recordValue = value as Record<string, unknown>;
     const declaredKey = recordValue.key;
     const declaredValue = recordValue.value;
+    // P21's canonical evidence-pack row is itself an explicit claim fact. Its
+    // sha256 is content authority, so give that immutable fact a stable local
+    // identifier instead of parsing prose or inventing a certificate ID.
+    if (declaredKey === "METHODOLOGY_CLAIM"
+      && (recordValue.status === "COMPLETE" || recordValue.status === "DEGRADED")
+      && typeof recordValue.digest === "string" && /^[0-9a-f]{64}$/.test(recordValue.digest)) {
+      found.add(`claim:sha256:${recordValue.digest}`);
+    }
     if ((declaredKey === "methodology_claim_id" || declaredKey === "methodology_claim_ids" || declaredKey === "claim_id")
       && (typeof declaredValue === "string" || Array.isArray(declaredValue))) {
       const values = typeof declaredValue === "string" ? [declaredValue] : declaredValue;
@@ -104,20 +112,14 @@ export class P22PublicationBridgeService {
         }
         return { ...facts, materializationDigest, materializedAtUtcMs: Number(existing.rows[0]!.materialized_at_utc_ms), replayed: true };
       }
-      await client.query(
-        `SELECT research.p22_materialize_run_read_model($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::text[])`,
-        [scope.workspaceId, facts.runId, "COMPLETED", "RESEARCH_P22_FINAL_AUDIT", facts.strategyId,
-          facts.datasetId, facts.sourceCursor, facts.artifactSha256, facts.artifactSchemaVersion,
-          facts.ownerUserId, claims],
-      );
       const inserted = await client.query<{ materialized_at_utc_ms: string | number }>(
-        `INSERT INTO research.p22_run_read_model_bridges_v1
-           (workspace_id, final_audit_run_id, release_candidate_id, source_pack_digest, source_fingerprint,
-            artifact_sha256, methodology_claim_ids, materialization_digest, materialized_by_user_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-         RETURNING (extract(epoch FROM materialized_at) * 1000)::bigint AS materialized_at_utc_ms`,
-        [scope.workspaceId, facts.runId, input.releaseCandidateId, input.packDigest, input.sourceFingerprint,
-          facts.artifactSha256, claims, materializationDigest, scope.actorUserId],
+        `SELECT research.p22_record_run_read_model_bridge(
+           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::text[],$13,$14,$15,$16
+         ) AS materialized_at_utc_ms`,
+        [scope.workspaceId, input.releaseCandidateId, facts.runId, "COMPLETED",
+          "RESEARCH_P22_FINAL_AUDIT", facts.strategyId, facts.datasetId, facts.sourceCursor,
+          facts.artifactSha256, facts.artifactSchemaVersion, facts.ownerUserId, claims,
+          input.packDigest, input.sourceFingerprint, materializationDigest, scope.actorUserId],
       );
       if (inserted.rowCount !== 1) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", "The final-audit bridge receipt could not be stored.", 503);
       return { ...facts, materializationDigest, materializedAtUtcMs: Number(inserted.rows[0]!.materialized_at_utc_ms), replayed: false };

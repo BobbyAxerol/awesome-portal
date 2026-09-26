@@ -120,7 +120,7 @@ export class ResearchReleaseCandidatePublicationRepository {
       // P21 seal takes the same run lock; the current pack cannot change mid-check.
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))", [scope.workspaceId, input.runId]);
       const pack = await client.query<{ run_id: string; pack_digest: string; source_fingerprint: string }>(
-        "SELECT run_id, pack_digest, source_fingerprint FROM research.release_candidate_packs_v1 WHERE workspace_id = $1 AND release_candidate_id = $2 FOR UPDATE",
+        "SELECT run_id, pack_digest, source_fingerprint FROM research.release_candidate_packs_v1 WHERE workspace_id = $1 AND release_candidate_id = $2",
         [scope.workspaceId, input.releaseCandidateId],
       );
       if (pack.rowCount !== 1 || pack.rows[0]!.run_id !== input.runId) this.notFound();

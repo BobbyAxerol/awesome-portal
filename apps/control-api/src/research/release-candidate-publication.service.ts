@@ -318,8 +318,32 @@ export class ResearchReleaseCandidatePublicationService {
     // Intake off: no RunSync refresh and no Governance read for a candidate
     // that has no recorded intent; nothing downstream is contacted.
     if (!intake) return { ...base, blocked: P22_PUBLICATION_INTAKE_DISABLED };
+    // The P22 bridge is the producer of the legacy RunSync-shaped row for a
+    // retained rrun_. Materialize that exact, sealed source before asking
+    // Governance to read it. The previous order attempted a RunSync refresh
+    // first, so a valid retained WFO run was reported as source-unavailable
+    // and the browser could never reach the POST that materialized the row.
+    let bridgeReceipt: P22BridgeReceipt | null = null;
+    if (this.bridge) {
+      const claims = sealedPackMethodologyClaimIds(frozen);
+      if (claims.length > 0) {
+        try {
+          bridgeReceipt = await this.bridge.materialize(scope, {
+            releaseCandidateId: id, packDigest: pack.packDigest,
+            sourceFingerprint: pack.sourceFingerprint, methodologyClaimIds: claims,
+          });
+        } catch {
+          bridgeReceipt = null;
+        }
+      }
+    }
     let fact: Awaited<ReturnType<GovernanceService["publicationEvidence"]>>;
-    try { fact = await this.governance.publicationEvidence(user, scope.workspaceId, pack.runId, refresh); }
+    try {
+      // A successful bridge already produced the exact row. Re-running the
+      // legacy source refresh can only mask that row when rrun_ has no legacy
+      // source adapter, so refresh stays enabled solely for the legacy path.
+      fact = await this.governance.publicationEvidence(user, scope.workspaceId, pack.runId, refresh && bridgeReceipt === null);
+    }
     catch { fact = null; }
     if (!fact) return { ...base, source: { ...notChecked, availability: "UNAVAILABLE", reason_code: "P22_GOVERNANCE_SOURCE_UNAVAILABLE" }, blocked: "P22_GOVERNANCE_SOURCE_UNAVAILABLE" };
     const governanceClaims = [...new Set(fact.methodology_claim_ids.filter((item) => typeof item === "string" && item.length > 0 && item.length <= 191))].slice(0, 64);

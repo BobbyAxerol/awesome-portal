@@ -18,7 +18,7 @@ const frozen = {
     { key: "alpha_version_id", value: "av_p22", availability: { state: "AVAILABLE" } },
     { key: "final_audit_run_id", value: "run_p22", availability: { state: "AVAILABLE" } },
   ],
-  pack: [], source_fingerprint: sourceFingerprint,
+  pack: [{ key: "methodology_claim_id", value: claimId }], source_fingerprint: sourceFingerprint,
   draft: { known_limitations: "Known limitation.", proposed_use_restrictions: "Research only." },
 };
 const digest = (value: unknown) => createHash("sha256").update(canonicalResearchJson(value), "utf8").digest("hex");
@@ -42,7 +42,7 @@ const approval = {
   expires_at: "2026-09-28T10:00:00.000Z",
   created_at: "2026-09-25T10:00:00.000Z",
 };
-function subject(intake: "true" | "false" = "true") {
+function subject(intake: "true" | "false" = "true", bridgeEnabled = false) {
   let state: PublicationIntent | null = null;
   const repository = {
     read: vi.fn(async () => state),
@@ -106,11 +106,24 @@ function subject(intake: "true" | "false" = "true") {
       },
     }),
   };
+  const bridge = {
+    materialize: vi.fn().mockResolvedValue({
+      runId: "run_p22", parentRunId: null, attemptId: "attempt_p22",
+      alphaId: "alpha_p22", alphaVersionId: "av_p22", strategyId: "alpha_p22",
+      datasetId: "dataset_p22", sourceCursor: null, status: "READY",
+      artifactSha256: legacySha, artifactSchemaVersion: "quantbt.selected-params.v1",
+      artifactId: "artifact_p22", artifactManifestDigest: legacySha.slice(7),
+      ownerUserId: user.userId, selectionId: "selection_p22", selectedTrialId: "trial_p22",
+      selectionSequence: ["trial_p22"], materializationDigest: "d".repeat(64),
+      materializedAtUtcMs: 1790330400000, replayed: false,
+    }),
+  };
   const service = new ResearchReleaseCandidatePublicationService(
     repository as never, packs as never, candidate as never, governance as never,
     { FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: intake },
+    bridgeEnabled ? bridge as never : undefined,
   );
-  return { service, repository, packs, candidate, governance, state: () => state };
+  return { service, repository, packs, candidate, governance, bridge, state: () => state };
 }
 
 describe("P22 actor-bound publication over existing R1", () => {
@@ -297,6 +310,19 @@ describe("P22 actor-bound publication over existing R1", () => {
     expect(result.state).toBe("NOT_PUBLISHED");
     expect(result.may_publish).toBe(true);
     expect(x.governance.publicationEvidence).toHaveBeenCalledWith(user, "ws_p22", "run_p22", true);
+    expect(x.governance.createApproval).not.toHaveBeenCalled();
+  });
+  it("OL-05 materializes a sealed retained source before reading Governance evidence", async () => {
+    const x = subject("true", true);
+    const result = await x.service.publication(scope, user as never, rcId);
+    expect(result).toMatchObject({ state: "NOT_PUBLISHED", may_publish: true, blocked_reason: null });
+    expect(x.bridge.materialize).toHaveBeenCalledWith(scope, {
+      releaseCandidateId: rcId, packDigest, sourceFingerprint, methodologyClaimIds: [claimId],
+    });
+    expect(x.governance.publicationEvidence).toHaveBeenCalledWith(user, "ws_p22", "run_p22", false);
+    expect(x.bridge.materialize.mock.invocationCallOrder[0]).toBeLessThan(
+      x.governance.publicationEvidence.mock.invocationCallOrder[0]!,
+    );
     expect(x.governance.createApproval).not.toHaveBeenCalled();
   });
   it("OL-13 returns typed absence and the exact delivered publication for one Alpha version", async () => {
