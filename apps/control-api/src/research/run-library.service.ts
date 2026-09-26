@@ -21,6 +21,7 @@ import {
   type ResearchRunLibraryResponse,
 } from "./run-library.contract";
 import { ResearchRunLibraryError } from "./run-library.error";
+import { failedAt, failedAtLabel, parseTerminalReason } from "./run-state";
 import {
   type RunLibraryBoundary,
   type RunLibraryRow,
@@ -620,7 +621,7 @@ export class ResearchRunLibraryService {
       created_at_utc_ms: utcMs(row.created_at, "created timestamp"),
       certificate: this.certificate(progress, source),
       claim: this.claim(progress, source),
-      stages: this.stages(progress, source),
+      stages: this.stages(progress, source, status),
       stats: this.stats(row, progress, source),
       superseded_note: currentOrdinal > 1 && row.source_kind === "RESEARCH_DURABLE"
         ? `Technical worker retry ${currentOrdinal} of the same durable job; it is not another logical research run.`
@@ -860,16 +861,33 @@ export class ResearchRunLibraryService {
     };
   }
 
-  private stages(progress: ResearchProgressSnapshot | null, source: Availability): ResearchRunLibraryItem["stages"] {
+  private stages(
+    progress: ResearchProgressSnapshot | null,
+    source: Availability,
+    status: ResearchRunLibraryItem["status"],
+  ): ResearchRunLibraryItem["stages"] {
     const sourceStages = new Map(progress?.stages.map((stage) => [stage.key, stage]) ?? []);
+    // E10: P11 publishes only PENDING/RUNNING/DONE per stage. A FAILED run's
+    // stopping point is derived — by the one rule Run Progress also publishes
+    // as `current.failed_at` — from its lifecycle status and last persisted
+    // snapshot, and labelled derived, never as a source narrative.
+    const failed = status === "FAILED" && source.state === "AVAILABLE" ? failedAt(progress) : null;
     return ["S1", "S2", "S3", "S4", "S5"].map((key) => {
       const stage = sourceStages.get(key as "S1" | "S2" | "S3" | "S4" | "S5");
       if (stage && source.state === "AVAILABLE") {
+        if (failed?.stage === key) {
+          return {
+            key,
+            state: "blocked" as const,
+            tip: failed.basis === "SOURCE_RUNNING_STAGE"
+              ? `The run failed during ${key}${failed.fold === null ? "" : ` at fold ${failed.fold}`}; persisted ${key} state: ${stage.state}.`
+              : `The run failed before ${key} started; persisted ${key} state: ${stage.state}.`,
+            tooltip_source: "DERIVED_FROM_PERSISTED_STATE" as const,
+            availability: available(),
+          };
+        }
         return {
           key,
-          // P11 only publishes PENDING/RUNNING/DONE at the stage level.  A
-          // run-level failure must not be projected onto an individual stage
-          // as a fabricated `blocked` fact.
           state: stage.state === "DONE" ? "done" : stage.state === "RUNNING" ? "run" : "pend",
           tip: `Persisted ${key} state: ${stage.state}.`,
           tooltip_source: "DERIVED_FROM_PERSISTED_STATE" as const,
@@ -945,12 +963,22 @@ export class ResearchRunLibraryService {
         metric("elapsed", "elapsed", "ELAPSED", `${progress.overall.elapsed_s} s`, available()),
       ] as ResearchRunLibraryItem["stats"];
     }
-    if (status === "FAILED" && progress && source.state === "AVAILABLE") {
+    if (status === "FAILED") {
+      // E10 / HiFi S01: "failed at" names where the run stopped (`fold 2 · S2`),
+      // and the reason is the source's failure code, else the typed code the
+      // scheduler recorded when it closed the job (P06_RETRY_NOT_DISPATCHED…).
+      const readable = progress !== null && source.state === "AVAILABLE";
+      const where = readable ? failedAt(progress) : null;
+      const reasonCode = (readable ? progress.failure?.code : undefined)
+        ?? parseTerminalReason(row.job_terminal_reason)?.code
+        ?? null;
       return [
-        metric("failed_at", "failed at", "FAILED_AT", new Date(progress.updated_at_utc_ms).toISOString(), available(), "BAD"),
-        metric("failure_reason", "reason", "FAILURE_REASON", progress.failure?.code ?? null,
-          progress.failure?.code ? available() : unavailable("NOT_PUBLISHED", "SOURCE_FAILURE_REASON_NOT_PUBLISHED"), "BAD"),
-        metric("runtime", "runtime", "RUNTIME", `${progress.overall.elapsed_s} s`, available(), "BAD"),
+        metric("failed_at", "failed at", "FAILED_AT", where ? failedAtLabel(where) : null,
+          where ? available() : unavailable("NOT_PUBLISHED", "P11_FAILED_STAGE_NOT_PUBLISHED"), "BAD"),
+        metric("failure_reason", "reason", "FAILURE_REASON", reasonCode,
+          reasonCode ? available() : unavailable("NOT_PUBLISHED", "SOURCE_FAILURE_REASON_NOT_PUBLISHED"), "BAD"),
+        metric("runtime", "runtime", "RUNTIME", readable ? `${progress.overall.elapsed_s} s` : null,
+          readable ? available() : source, "BAD"),
       ] as ResearchRunLibraryItem["stats"];
     }
     if (status === "COMPLETED") {

@@ -59,6 +59,8 @@ export interface RunLibraryRow {
   job_state: string | null;
   current_worker_ordinal: string | number | null;
   alpha_filter_key: string;
+  /** E10: why the P06 job closed (`CODE: sentence` for a control-side close). */
+  job_terminal_reason?: string | null;
   mode_key: string | null;
   /** Exact microsecond keyset text; see RunLibraryBoundary. */
   created_at_cursor: string;
@@ -486,7 +488,7 @@ export class ResearchRunLibraryRepository {
               library.alpha_code_digest, library.legacy_request, library.requested_spec, library.portal_receipt,
               library.progress_snapshot, library.progress_received_at, library.source_latest_sequence,
               library.retention_floor_sequence, library.job_state, library.current_worker_ordinal,
-              library.alpha_filter_key, library.mode_key,
+              library.alpha_filter_key, library.mode_key, library.job_terminal_reason,
               ${CREATED_AT_CURSOR_SQL} AS created_at_cursor,
               evidence.projection_revision AS evidence_revision,
               evidence.projection AS evidence_projection,

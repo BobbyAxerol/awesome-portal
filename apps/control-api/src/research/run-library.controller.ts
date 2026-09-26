@@ -1,6 +1,6 @@
 /** P12 same-origin, session-scoped Run Library read routes. */
 
-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Inject, Optional, Param, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 
 import { PortalUser } from "../domain";
@@ -13,6 +13,7 @@ import {
 } from "./run-library.contract";
 import { ResearchRunLibraryError } from "./run-library.error";
 import { ResearchRunLibraryService } from "./run-library.service";
+import { ResearchProgressService } from "./progress.service";
 
 interface RunLibraryRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -30,6 +31,8 @@ export class ResearchRunLibraryController {
   constructor(
     private readonly service: ResearchRunLibraryService,
     private readonly workspaces: WorkspacesRepository,
+    /** E10: the library converges stuck runs before it lists them, like Run Progress. */
+    @Optional() @Inject(ResearchProgressService) private readonly progress?: ResearchProgressService,
   ) {}
 
   @Get()
@@ -37,6 +40,7 @@ export class ResearchRunLibraryController {
     const query = ResearchRunLibraryQuerySchema.safeParse(rawQuery);
     if (!query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
+    await this.progress?.reconcileBestEffort({ workspaceId, actorUserId: request.portalUser.userId });
     return this.service.list(
       { workspaceId, actorUserId: request.portalUser.userId },
       { ...query.data, workspace_id: workspaceId },

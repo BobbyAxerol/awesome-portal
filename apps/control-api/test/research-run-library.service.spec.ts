@@ -273,4 +273,72 @@ describe("RF-05 P12 Run Library service mapping", () => {
       createdAt: "2026-09-24T07:43:14.885092Z", runId: "rrun_unit", direction: "after",
     });
   });
+
+  it("E10 (audit 01-5): a FAILED card marks the failing stage `blocked` and says where and why", async () => {
+    const failedSnapshot = {
+      ...snapshot("rrun_unit"),
+      status: "FAILED",
+      readiness: { mandatory: "FAILED", optional: "NOT_APPLICABLE" },
+      failure: { code: "inner_min_folds", message: "outer IS too short for inner_min_folds = 3" },
+      overall: { pct: 40, elapsed_s: 660, eta_s: null, trials_done: 2, trials_declared: 4, tqdm_line: "failed" },
+      stages: ["S1", "S2", "S3", "S4", "S5"].map((key, index) => ({
+        key,
+        state: index === 0 ? "DONE" : index === 1 ? "RUNNING" : "PENDING",
+        started_at_utc_ms: index <= 1 ? 1_790_235_794_892 : null,
+        completed_at_utc_ms: index === 0 ? 1_790_235_794_900 : null,
+      })),
+      folds: [
+        { fold: 1, state: "DONE", started_at_utc_ms: 1_790_235_794_892, completed_at_utc_ms: 1_790_235_794_900 },
+        { fold: 2, state: "FAILED", started_at_utc_ms: 1_790_235_794_900, completed_at_utc_ms: 1_790_235_794_950 },
+      ],
+      mandatory_bundle: undefined,
+    };
+    const repository = {
+      list: vi.fn().mockResolvedValue(page([
+        row({ run_id: "rrun_source_failed", effective_status: "FAILED", job_state: "FAILED", progress_snapshot: failedSnapshot }),
+        // A control-side close: the lease was lost while S4 ran and no
+        // dispatcher claimed the retry. The source never reported a failure.
+        row({
+          run_id: "rrun_retry_expired", effective_status: "FAILED", job_state: "FAILED",
+          progress_snapshot: {
+            ...failedSnapshot, status: "RUNNING", failure: null, folds: [],
+            readiness: { mandatory: "PENDING", optional: "NOT_APPLICABLE" },
+            stages: failedSnapshot.stages.map((stage, index) => ({
+              ...stage,
+              state: index < 3 ? "DONE" : index === 3 ? "RUNNING" : "PENDING",
+              started_at_utc_ms: index <= 3 ? 1_790_235_794_892 : null,
+              completed_at_utc_ms: index < 3 ? 1_790_235_794_900 : null,
+            })),
+          },
+          job_terminal_reason: "P06_RETRY_NOT_DISPATCHED: the worker lease expired and no dispatcher claimed the scheduled retry within 300 s.",
+        }),
+        // Failed before any source progress: nothing to point at, reason still typed.
+        row({
+          run_id: "rrun_no_source", effective_status: "FAILED", job_state: "FAILED", progress_snapshot: null,
+          job_terminal_reason: "LEASE_EXPIRED",
+        }),
+      ])),
+      findSparklineSource: vi.fn(),
+    };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    const [source, control, none] = (await service.list(scope, QUERY)).items;
+    for (const item of [source!, control!, none!]) expect(ResearchRunLibraryItemSchema.safeParse(item).success).toBe(true);
+
+    // HiFi R-WFO-116: S1 done, S2 red, S3–S5 never reached; "failed at fold 2 · S2".
+    expect(source!.stages.map((cell) => cell.state)).toEqual(["done", "blocked", "pend", "pend", "pend"]);
+    expect(source!.stages[1]).toMatchObject({ tooltip_source: "DERIVED_FROM_PERSISTED_STATE" });
+    expect(source!.stages[1]!.tip).toBe("The run failed during S2 at fold 2; persisted S2 state: RUNNING.");
+    expect(source!.stats.map((cell) => [cell.role, cell.value, cell.tone])).toEqual([
+      ["FAILED_AT", "fold 2 · S2", "BAD"], ["FAILURE_REASON", "inner_min_folds", "BAD"], ["RUNTIME", "660 s", "BAD"],
+    ]);
+
+    expect(control!.stages.map((cell) => cell.state)).toEqual(["done", "done", "done", "blocked", "pend"]);
+    expect(control!.stats.map((cell) => [cell.role, cell.value])).toEqual([
+      ["FAILED_AT", "S4"], ["FAILURE_REASON", "P06_RETRY_NOT_DISPATCHED"], ["RUNTIME", "660 s"],
+    ]);
+
+    expect(none!.stages.every((cell) => cell.state === "pend")).toBe(true);
+    expect(none!.stats[0]).toMatchObject({ role: "FAILED_AT", value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P11_FAILED_STAGE_NOT_PUBLISHED" } });
+    expect(none!.stats[1]).toMatchObject({ role: "FAILURE_REASON", value: "LEASE_EXPIRED" });
+  });
 });

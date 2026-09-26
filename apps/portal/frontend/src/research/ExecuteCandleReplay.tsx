@@ -24,7 +24,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { paletteNow } from "../charts/theme";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
-import { formatMetric } from "./researchFormat";
+import { foldLabel, formatMetric } from "./researchFormat";
 import {
   REPLAY_GAP_WORDS,
   type CurrentSourceObservation,
@@ -396,7 +396,7 @@ function FoldStrip({
                 onClick={() => onFold(segment)}
                 title={reveal && position >= activeAt ? `fold ${segment.fold_id}: ${segment.bars} bars` : `fold ${segment.fold_id}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity}`}
               >
-                fold {segment.fold_id} · {segment.bars} bars ·{" "}
+                {foldLabel(segment.fold_id)} · {segment.bars} bars ·{" "}
                 {reveal && position >= activeAt ? (
                   <em data-reveal-hidden>{REVEAL_HIDDEN}</em>
                 ) : (
@@ -642,10 +642,12 @@ function TransitionLedger({
                   data-transition-kind={row.kind}
                   data-play={String(current)}
                   data-revealed={future ? "hidden" : "shown"}
-                  style={{ background: current ? "var(--paper-sunken)" : undefined, borderBottom: "1px solid var(--line-soft)" }}
+                  /* E2 (audit 8.14): the whole row selects; the number stays the keyboard target. */
+                  onClick={() => onSeek(row)}
+                  style={{ background: current ? "var(--paper-sunken)" : undefined, borderBottom: "1px solid var(--line-soft)", cursor: "pointer" }}
                 >
                   <td className="py-[3px] pr-3">
-                    <button type="button" className="mono underline-offset-2 hover:underline" onClick={() => onSeek(row)} title="move the cursor to this bar">
+                    <button type="button" className="mono underline-offset-2 hover:underline" onClick={(event) => { event.stopPropagation(); onSeek(row); }} title="move the cursor to this bar">
                       {row.transition_number}
                     </button>
                   </td>
@@ -957,6 +959,14 @@ export function CandleReplayBody({
     const target = direction > 0 ? ledger.find((row) => row.source_ordinal > here) : [...ledger].reverse().find((row) => row.source_ordinal < here);
     if (target) controller.retainedSeek?.(target.playback_cursor);
   };
+  /* E2 (audit 8.14): the anatomy opens on a transition, as the HiFi does — the
+     first one at or after the playhead — instead of an empty "pick one". */
+  const ledgerRows = controller.transitions?.state === "ready" ? controller.transitions.ledger.rows : null;
+  useEffect(() => {
+    if (selected !== null || !ledgerRows || ledgerRows.length === 0) return;
+    const here = rows[0]?.source_ordinal ?? 0;
+    setSelected(ledgerRows.find((row) => row.source_ordinal >= here) ?? ledgerRows[0]!);
+  }, [ledgerRows, rows, selected]);
   const seekTransition = (row: TransitionRow) => {
     setSelected(row);
     const at = rows.findIndex((candidate) => candidate.source_ordinal === row.source_ordinal);

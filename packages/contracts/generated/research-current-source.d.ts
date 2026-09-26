@@ -292,6 +292,7 @@ export interface components {
                 [key: string]: components["schemas"]["Decimal"];
             };
             facts: components["schemas"]["TrialFacts"];
+            max_drawdown?: components["schemas"]["CandidateDrawdown"];
         };
         Selection: {
             /** @constant */
@@ -436,6 +437,7 @@ export interface components {
             };
             declared_space?: components["schemas"]["DeclaredSpace"];
             surface?: components["schemas"]["SearchSurface"];
+            pool?: components["schemas"]["SearchPool"];
         };
         ArtifactByteMismatch: {
             /** @enum {unknown} */
@@ -721,6 +723,60 @@ export interface components {
             theta_position_percent: number;
             regions_sampled: number;
             bins: components["schemas"]["SurfaceBin"][];
+        };
+        PoolCount: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            value: number | null;
+            reason_code: string | null;
+            source: ("RETAINED_TRIAL_LEDGER" | "RETAINED_CANDIDATE_LEDGER" | "RETAINED_SELECTION") | null;
+        };
+        /** @description QuantBT _candidate_count: K = top_is_k when configured, else ceil(n x top_is_fraction) in float64, capped to [1, n]; n = completed unpruned IS trials. AVAILABLE only when k equals the retained pool. */
+        PoolRule: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: string | null;
+            expression: ("CEIL_N_TIMES_TOP_IS_FRACTION" | "CONFIGURED_TOP_IS_K") | null;
+            n: number | null;
+            top_is_fraction: components["schemas"]["Decimal"] | null;
+            configured_top_is_k: number | null;
+            k: number | null;
+        };
+        FoldDecay: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            basis: "QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1" | null;
+            rows: {
+                fold_id: string;
+                source_ordinal: number;
+                is_sharpe: components["schemas"]["Decimal"] | null;
+                oos_sharpe: components["schemas"]["Decimal"] | null;
+                decay: components["schemas"]["Decimal"] | null;
+            }[];
+        };
+        /** @description E5: the pool a retained WFO run froze and theta*'s per-fold decay, from the sealed ledger only. */
+        SearchPool: {
+            /** @constant */
+            schema_version: "research.current-source-search-pool.v1";
+            trials_evaluated: components["schemas"]["PoolCount"];
+            scored_unpruned: components["schemas"]["PoolCount"];
+            feasible: components["schemas"]["PoolCount"];
+            top_is_k: components["schemas"]["PoolCount"];
+            rule: components["schemas"]["PoolRule"];
+            reevaluated: components["schemas"]["PoolCount"];
+            /** @enum {unknown} */
+            reevaluation_scope: "ALL_OUTER_FOLDS" | "FOLD" | "NOT_PUBLISHED";
+            selected: components["schemas"]["PoolCount"];
+            per_fold_decay: components["schemas"]["FoldDecay"];
+        };
+        /** @description E5: a candidate's OOS max drawdown fraction, or a typed absence (QuantBT's candidate ledger publishes none). */
+        CandidateDrawdown: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            value: components["schemas"]["Decimal"] | null;
+            reason_code: string | null;
+            source: "RETAINED_STITCHED_OOS_PATH" | null;
         };
         /** @description X2 · B3 (spec 06 A2–A5, B4): the trial surface of a retained WFO run, derived on the server from every retained trial (<= 64 under RS-02, <= 600 points by rule; `sampling` names whether anything was left out). The browser draws coordinates only: placements, quintile ramp steps, 12-bin counts and means, the top-decile share at θ* and the Spearman |ρ| proxy (not fANOVA; NOT_APPLICABLE under 8 complete trials) are all published here. */
         SearchSurface: {

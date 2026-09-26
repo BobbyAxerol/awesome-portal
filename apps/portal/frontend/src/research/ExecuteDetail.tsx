@@ -57,6 +57,7 @@ import type { ReplayController, RetainedContext, RetainedReplaySlot } from "./us
 import { iso } from "./utcMinute";
 import { formatMetric, shortId } from "./researchFormat";
 import { ShortId } from "./ShortId";
+import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -284,18 +285,21 @@ function SampleChart({
         <EChart option={drawdownOption} height={90} />
         <Playhead transport={transport} length={items.length} />
       </div>
-      <table className="sr-only" data-chart-table="replay-equity">
-        <caption>{caption}</caption>
-        <tbody>
-          {items.map((point) => (
-            <tr key={point.playback_ordinal}>
-              <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
-              <td>{point.equity}</td>
-              <td>{point.drawdown_fraction}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* A table ignores width: 1px, so the clip sits on a wrapper (E2, S08 overflowed 91px at 660). */}
+      <div className="sr-only">
+        <table data-chart-table="replay-equity">
+          <caption>{caption}</caption>
+          <tbody>
+            {items.map((point) => (
+              <tr key={point.playback_ordinal}>
+                <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
+                <td>{point.equity}</td>
+                <td>{point.drawdown_fraction}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -350,7 +354,7 @@ function TransportBar({
     >
       <button type="button" className={button} style={style} aria-label="window start" disabled={disabled}
         title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.seek(0)}>
-        ⏮
+        |◀
       </button>
       <button type="button" className={button} style={style} aria-label="step back" disabled={disabled}
         title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.step(-1)}>
@@ -382,7 +386,7 @@ function TransportBar({
         title={disabled ? NO_TRANSPORT : undefined}
         onClick={() => transport.seek(items.length - 1)}
       >
-        ⏭
+        ▶|
       </button>
       <span className="flex gap-1" role="group" aria-label="speed">
         {SPEEDS.map((speed) => (
@@ -706,18 +710,21 @@ function PositionChart({ rows, transport }: { rows: readonly CurrentSourceObserv
         <EChart option={option} height={90} />
         <Playhead transport={transport} length={rows.length} />
       </div>
-      <table className="sr-only" data-chart-table="retained-position">
-        <caption>Model position per retained observation in this window, exact values</caption>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.source_ordinal}>
-              <th scope="row">{new Date(row.at_utc_ms).toISOString()}</th>
-              <td>{row.accepted_position}</td>
-              <td>{row.signal_target ?? "not published"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* A table ignores width: 1px, so the clip sits on a wrapper (E2, S08 overflowed 91px at 660). */}
+      <div className="sr-only">
+        <table data-chart-table="retained-position">
+          <caption>Model position per retained observation in this window, exact values</caption>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.source_ordinal}>
+                <th scope="row">{new Date(row.at_utc_ms).toISOString()}</th>
+                <td>{row.accepted_position}</td>
+                <td>{row.signal_target ?? "not published"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1190,35 +1197,34 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
   const playheadPoint = items[snapshot.index];
 
   return (
-    <div className="flex flex-col gap-3" data-screen="execute-replay" data-run={runId} data-lane={lane}>
-      <nav className="flex flex-wrap items-center gap-1.5 text-[11px]" aria-label="Breadcrumb">
+    <div className={`${SCREEN_FRAME} max-w-[1440px]`} data-screen="execute-replay" data-run={runId} data-lane={lane}>
+      <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "execute" })}
-          className="mono"
           style={{ color: "var(--accent)" }}
           data-action="back-to-hub"
         >
           Evidence Flow
         </Link>
-        <span style={{ color: "var(--line-strong)" }}>/</span>
+        <span style={{ color: "var(--ink-faint)" }}>/</span>
         <ShortId id={runId} label="run" />
-        <span style={{ color: "var(--line-strong)" }}>/</span>
-        <span className="mono" style={{ color: "var(--ink-faint)" }}>
+        <span style={{ color: "var(--ink-faint)" }}>/</span>
+        <span style={{ color: "var(--ink)" }}>
           Stage 4 · Execute Replay
         </span>
-        <span style={{ color: "var(--line-strong)" }}>·</span>
+        <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${run}/freeze`, { ...cursor, stage: "freeze" })}
-          className="mono"
+          className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="back-to-freeze"
         >
           ← S3 Freeze
         </Link>
-        <span style={{ color: "var(--line-strong)" }}>·</span>
+        <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
           to={`/research/quantbt/runs/${run}/report`}
-          className="mono"
+          className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-next="run-report"
         >
@@ -1226,17 +1232,20 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
         </Link>
       </nav>
 
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
+      <div className="flex flex-col gap-[3px]">
+        <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
           {EXECUTE_TITLE}
         </h1>
-        <p className="text-[13.5px] italic" style={{ color: "var(--ink-mute)" }} data-subtitle>
+        <p className="text-[13.5px] italic [line-height:normal]" style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }} data-subtitle>
           {lane === "retained" && retainedReplay && hasBarLedger(retainedReplay)
             ? CANDLE_SUBTITLE
             : lane === "retained"
               ? EXECUTE_SUBTITLE_RETAINED
               : EXECUTE_SUBTITLE}
         </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3" data-header-actions>
+        <CopyEvidenceLink />
       </div>
 
       {lane === "retained" && retainedReplay && controller.retained.state === "ready" && hasBarLedger(retainedReplay) ? (

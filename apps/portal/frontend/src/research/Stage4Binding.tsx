@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 import { reasonCodeSentence } from "./researchRefusal";
-import { shortDigest } from "./researchFormat";
+import { foldLabel, shortDigest } from "./researchFormat";
 
 export type Stage4BindingValue = CurrentSourceComponents["schemas"]["Stage4Binding"];
 export type ParameterAuthorityValue = CurrentSourceComponents["schemas"]["ParameterAuthority"];
@@ -110,7 +110,7 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
                         data-binding-fold={fold.fold_id}
                         data-binding-fold-state={fold.state}
                       >
-                        fold {fold.fold_id} {fold.value ? fold.value.slice(0, 8) : "—"} {foldMark.glyph}
+                        {foldLabel(fold.fold_id)} {fold.value ? fold.value.slice(0, 8) : "—"} {foldMark.glyph}
                       </span>
                     );
                   })}
