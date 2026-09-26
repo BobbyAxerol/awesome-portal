@@ -32,8 +32,11 @@ import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { WHATIF_PROFILE, WHATIF_PROFILE_ID } from "./whatif.profile";
 import {
   STRANDED_TERMINAL_MIN_AGE_SECONDS,
+  failedAt,
+  parseTerminalReason,
   terminalSidecarFailedReason,
   terminalSidecarPayloadLostReason,
+  type FailedAt,
 } from "./run-state";
 
 /** The installed P04 fixed-qualification child CPU limit (P10 job cost). */
@@ -116,6 +119,10 @@ export interface ResearchProgressReadResponse {
     new_run_from:
       | { state: "AVAILABLE"; reason_code: null }
       | { state: "NOT_AVAILABLE"; reason_code: "RUN_REQUESTED_SPEC_NOT_RETAINED" };
+    /** E10: where a FAILED run stopped (the Run Library trail's derivation); null otherwise. */
+    failed_at: FailedAt | null;
+    /** E10: why a FAILED run failed — the source's failure, else the typed control reason; null otherwise. */
+    terminal_reason: { code: string; message: string; origin: "SOURCE" | "CONTROL" } | null;
   };
   progress: ResearchProgressPublicSnapshot | null;
   /**
@@ -549,6 +556,8 @@ export class ResearchProgressService {
         new_run_from: identity?.requestedSpecRetained
           ? { state: "AVAILABLE", reason_code: null }
           : { state: "NOT_AVAILABLE", reason_code: "RUN_REQUESTED_SPEC_NOT_RETAINED" },
+        failed_at: effectiveStatus === "FAILED" ? failedAt(current.progress) : null,
+        terminal_reason: effectiveStatus === "FAILED" ? this.terminalReason(current) : null,
       },
       progress: current.progress ? toPublicResearchProgressSnapshot(current.progress) : null,
       retained_artifacts: current.retainedArtifacts.map((artifact) => ({
@@ -608,6 +617,16 @@ export class ResearchProgressService {
       throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research run lifecycle status is incompatible.", 409);
     }
     return current.lifecycleStatus as ResearchProgressReadResponse["current"]["effective_status"];
+  }
+
+  /** E10: the source's own failure first; else the reason the scheduler recorded when it closed the job. */
+  private terminalReason(current: ProgressRunRead): ResearchProgressReadResponse["current"]["terminal_reason"] {
+    const failure = current.progress?.failure;
+    if (failure) {
+      return { code: failure.code, message: failure.message.length > 0 ? failure.message : failure.code, origin: "SOURCE" };
+    }
+    const control = parseTerminalReason(current.jobTerminalReason);
+    return control ? { ...control, origin: "CONTROL" } : null;
   }
 
   private mayCancelAs(user: PortalUser, requestedByUserId: string | null): boolean {

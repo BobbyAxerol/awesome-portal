@@ -1292,11 +1292,26 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     expect(library).toMatchObject({ effective_status: "FAILED", lifecycle_status: "FAILED" });
     expect(library.job_terminal_reason).toMatch(/^P11_TERMINAL_SIDECAR_FAILED: /);
     expect(read.attempts[0]).toMatchObject({ state: "LOST_LEASE" });
+    // Every stage completed; the run failed in the Portal, after S5. No stage
+    // is blamed, and the reason is the control-side one.
+    expect(read.current.failed_at).toBeNull();
+    expect(read.current.terminal_reason).toMatchObject({ code: "P11_TERMINAL_SIDECAR_FAILED", origin: "CONTROL" });
   });
 
   it("E10-03: an overdue RETRY_WAIT with no dispatcher is FAILED with P06_RETRY_NOT_DISPATCHED; one inside the grace waits as QUEUED", async () => {
     const run = await createDispatchedRun();
-    await service.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));
+    // The lease is lost while S4 runs (the preview's rrun_6f9ffea1… shape).
+    await service.ingest(ingress({
+      ...run, sequence: 1, eventType: "run_started",
+      progress: snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
+        stages: ["S1", "S2", "S3", "S4", "S5"].map((key, index) => ({
+          key: key as "S1" | "S2" | "S3" | "S4" | "S5",
+          state: index < 3 ? "DONE" as const : index === 3 ? "RUNNING" as const : "PENDING" as const,
+          started_at_utc_ms: index <= 3 ? 1_725_000_000_000 : null,
+          completed_at_utc_ms: index < 3 ? 1_725_000_000_001 : null,
+        })),
+      }),
+    }));
     await pool.query(
       `UPDATE research.worker_attempts SET expires_at = now() - interval '1 minute'
         WHERE workspace_id = $1 AND worker_attempt_id = $2`,
@@ -1321,6 +1336,18 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       job_state: "FAILED", effective_status: "FAILED", may_cancel: false, terminal_materialization: "NOT_REQUIRED",
     });
     expect(failed.queue.retry_not_before_utc_ms).toBeNull();
+    // Where it stopped and why, published by the server: the canonical
+    // fixture is this real read, byte for byte.
+    const fixture = JSON.parse(readFileSync(join(__dirname, "../../packages/contracts/fixtures/research-progress.failed-at.valid.json"), "utf8"));
+    expect({
+      current: {
+        job_state: failed.current.job_state,
+        effective_status: failed.current.effective_status,
+        may_cancel: failed.current.may_cancel,
+        failed_at: failed.current.failed_at,
+        terminal_reason: failed.current.terminal_reason,
+      },
+    }).toEqual(fixture);
     const library = await libraryRow(run.runId);
     expect(library).toMatchObject({ effective_status: "FAILED", lifecycle_status: "FAILED" });
     expect(library.job_terminal_reason).toMatch(/^P06_RETRY_NOT_DISPATCHED: /);

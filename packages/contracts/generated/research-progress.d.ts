@@ -592,6 +592,26 @@ export interface components {
                 requires_fresh_preflight: true;
             };
         };
+        /** @description E10. The stage (and fold, when the source marked one FAILED) at which a failed run stopped. */
+        ProgressFailedAt: {
+            /** @enum {unknown} */
+            stage: "S1" | "S2" | "S3" | "S4" | "S5";
+            fold: number | null;
+            /**
+             * @description SOURCE_RUNNING_STAGE: the last snapshot had this stage RUNNING. FIRST_UNFINISHED_STAGE: no stage was running; this is the first stage that never completed, so the run stopped before it started.
+             * @enum {unknown}
+             */
+            basis: "SOURCE_RUNNING_STAGE" | "FIRST_UNFINISHED_STAGE";
+        };
+        ProgressTerminalReason: {
+            code: string;
+            message: string;
+            /**
+             * @description SOURCE: the worker reported the failure. CONTROL: the Portal scheduler closed the run (lost lease, undispatched retry, unrecordable terminal sidecar).
+             * @enum {unknown}
+             */
+            origin: "SOURCE" | "CONTROL";
+        };
         ProgressRead: {
             /** @constant */
             schema_version: "research.progress-read.v1";
@@ -632,6 +652,10 @@ export interface components {
                     state: "AVAILABLE" | "NOT_AVAILABLE";
                     reason_code: "RUN_REQUESTED_SPEC_NOT_RETAINED" | null;
                 };
+                /** @description E10. Where a FAILED run stopped, derived by the server from its last persisted snapshot (the same derivation the Run Library trail uses). Null unless effective_status is FAILED and a snapshot exists. Optional during additive client rollout; the server emits it on every read. */
+                failed_at?: components["schemas"]["ProgressFailedAt"] | null;
+                /** @description E10. Why a FAILED run failed: the source failure when the source reported one, otherwise the typed control-side reason the scheduler recorded (for example P06_RETRY_NOT_DISPATCHED or P11_TERMINAL_SIDECAR_FAILED). Null unless effective_status is FAILED. Optional during additive client rollout; the server emits it on every read. */
+                terminal_reason?: components["schemas"]["ProgressTerminalReason"] | null;
             };
             progress: components["schemas"]["ProgressSnapshot"] | null;
             /** @description RF01-B3. The run's retained P05 tables from the artifact authority, ordered by table_kind then artifact identity, bounded at 128. A different set from progress.artifacts (bundle readiness journaled by the source); only here can CORRUPT or MISSING appear. Optional during additive client rollout; the server emits it for every current read, as [] when no table is retained yet. */
