@@ -1,6 +1,6 @@
 # P15 backend and contract packet — current-source Search, ledger and diagnostics
 
-> **Current status 2026-09-26 (Claude, owner ≤P21):** the retained WFO lane is delivered — CG-P15-03/04 by W3 ([record](../RF-05/W3_P13_P15_CLAUDE_2026-09-24.md)), screens by W3b; DR-02 decided by W5a. Remaining: WFO declared ranges + trial surface, `pick=`/copy link ([audit](../AUDIT_P15_P23_CLAUDE_2026-09-26.md) B3/F4). The text below is the original packet.
+> **Current status 2026-09-26 (Claude, owner ≤P21):** the retained WFO lane is delivered — CG-P15-03/04 by W3 ([record](../RF-05/W3_P13_P15_CLAUDE_2026-09-24.md)), screens by W3b; DR-02 decided by W5a. WFO declared ranges, trial surface, `pick=` and copy link closed by X2 ([record](../P16/X2_P15_P18_GAPS_CLAUDE_2026-09-26.md)). Open items live in [Unified §13.4.1](../../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-open-ledger). The text below is the original packet.
 
 Status: **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE; feature-dark.** This packet
 closes the current-P04 compatibility surface. It does **not** claim a generic

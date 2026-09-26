@@ -1,6 +1,6 @@
 # P16 backend and contract packet — current-source Freeze / retained integrity
 
-> **Current status 2026-09-26 (Claude, owner ≤P21):** P16-B is no longer source-blocked — A10a/b/c delivered by W5a ([record](./W5A_A10_CLAUDE_2026-09-25.md)): byte-verify receipts, historical binding, 9×9 what-if with a bounded job and sibling attempt; T02/T11 closed. Remaining: CG-P16-02/03, θ* digest copy ([audit](../AUDIT_P15_P23_CLAUDE_2026-09-26.md) B4/F5). The text below is the original packet.
+> **Current status 2026-09-26 (Claude, owner ≤P21):** P16-B is no longer source-blocked — A10a/b/c delivered by W5a ([record](./W5A_A10_CLAUDE_2026-09-25.md)): byte-verify receipts, historical binding, 9×9 what-if with a bounded job and sibling attempt; T02/T11 closed. CG-P16-02/03 (Stage-4 binding BOUND, parameter authority, P16-T14) and θ* digest copy closed by X2 ([record](./X2_P15_P18_GAPS_CLAUDE_2026-09-26.md)). Open items live in [Unified §13.4.1](../../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-open-ledger) (OL-02). The text below is the original packet.
 
 Status: **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE; feature-dark.** This packet
 closes P16-A for the installed fixed P04 source. It does **not** claim full
