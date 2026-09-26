@@ -22,7 +22,6 @@ import { EXECUTE_RULES_FOOTER, EXECUTE_SUBTITLE, EXECUTE_TITLE, ExecuteScreen, P
 import { DEFAULT_CURSOR } from "./evidenceCursor";
 import {
   REPLAY_REFUSAL_COPY,
-  RETAINED_NOT_FOUND,
   RETAINED_NOT_RETAINED,
   ROUTE_CAPABILITY_KEYS,
   replayApi,
@@ -403,7 +402,8 @@ describe("S08-U06 — refusals speak fixed copy and keep the shell", () => {
     [400, "RESEARCH_REPLAY_CURSOR_INVALID", "terminal"],
     [401, "AUTH_REQUIRED", "denied"],
     [403, "RESEARCH_REPLAY_FORBIDDEN", "denied"],
-    [404, "RESEARCH_REPLAY_NOT_FOUND", "empty"],
+    /* X3 2026-09-26 (VD-P23-03, F-04): a 404 reads as a 403. */
+    [404, "RESEARCH_REPLAY_NOT_FOUND", "denied"],
     [409, "RESEARCH_REPLAY_CURSOR_EXPIRED", "stale"],
     [503, "RESEARCH_REPLAY_UNAVAILABLE", "unavailable"],
   ] as const)("%i %s → %s", (status, code, state) => {
@@ -420,11 +420,12 @@ describe("S08-U06 — refusals speak fixed copy and keep the shell", () => {
     expect(refusal.message).toContain("or it doesn't exist");
   });
 
-  it("on the retained lane, 409 is pending retention and 404 is a scope fact", () => {
+  it("on the retained lane, 409 is pending retention and 404 reads as 403 (F-04)", () => {
     const pending = toReplayRefusal(new PortalApiError("x", 409, "RESEARCH_CURRENT_SOURCE_CONFLICT", null), "retained");
     expect([pending.state, pending.message, pending.cursorExpired]).toEqual(["unavailable", RETAINED_NOT_RETAINED, false]);
     const missing = toReplayRefusal(new PortalApiError("x", 404, "RESEARCH_CURRENT_SOURCE_NOT_FOUND", null), "retained");
-    expect([missing.state, missing.message]).toEqual(["empty", RETAINED_NOT_FOUND]);
+    const forbidden = toReplayRefusal(new PortalApiError("x", 403, "RESEARCH_CURRENT_SOURCE_FORBIDDEN", null), "retained");
+    expect([missing.state, missing.message]).toEqual(["denied", forbidden.message]);
   });
 
   it("while loading, keeps the shell busy and draws no sample, panel or zero", () => {
