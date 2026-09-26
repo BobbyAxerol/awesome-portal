@@ -66,6 +66,7 @@ function source(overrides: Partial<ReleaseCandidateSource> = {}): ReleaseCandida
     currentSource: { artifactRevision: 7, manifestDigest: digest("c"), sourceTransformDigest: digest("a"), retainedImportDigest: digest("s") },
     artifacts: [{ artifactId: "art-p21", manifestDigest: digest("t"), state: "SEALED", artifactRevision: 7 }],
     asOfUtcMs: 1_790_000_002_000,
+    wfo: null,
   };
   const output = { ...value, ...overrides };
   // The report digest is itself a source fact and must match the exact core.
