@@ -32,6 +32,9 @@ import {
   stubRunApi,
   usePreferences,
 } from "./fixtures";
+import { assertPinnedVisualHost } from "./visualHost";
+
+assertPinnedVisualHost();
 
 interface Screen {
   name: string;

@@ -87,7 +87,7 @@
       "audit": "package B gates 1b/2b; fable-notes B section",
       "what": "EXECUTION_REGRESSION on the contributor preview: chromium (flag off) 28/248 and chromium-preview (flag on) 5/100 FAIL, all toHaveScreenshot mismatches vs Bobby's immutable baselines (last changed 7441c572, 2026-09-17), ratio 0.01–0.05, largest phase-2-gate-r1 @ laptop 973x4205 -> 973x4159; every non-screenshot test passed; deterministic (1-worker reruns identical). First time this lane ran on the contributor host. Diffs also hit suites this branch never touched (execution fixtures, planning-reports): host font/rasteriser drift is a hypothesis, not evidence",
       "owner": "Bobby",
-      "state": "OPEN — REQUIRES_BOBBY_DECISION (B-P23-06)",
+      "state": "CLOSED 2026-09-26 — runner mistake, not drift: bare host 28 failed vs pinned image 332 passed/16 skipped/0 failed on 1dec9d33; guard e2e/visualHost.ts added; see evidence/OL22_VISUAL_BASELINE_CLAUDE_2026-09-26.md",
       "not_fixed_because": "contributors never regenerate or edit visual baselines (updateSnapshots none); diagnosis needs the baseline host",
       "evidence": "pw-exec-off.log d4fd43c2fd68a40e; pw-exec-off-rerun-failed.log 1c583f7fc5142dfb; pw-exec-on.log c397389c0bc7d8eb; pw-exec-on-rerun-failed.log 58877e030117715e",
       "bobby_decision": "B-P23-06"

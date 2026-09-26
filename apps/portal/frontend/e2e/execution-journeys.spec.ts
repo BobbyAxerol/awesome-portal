@@ -12,6 +12,9 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { stubExecutionBff } from "./bffDouble";
 import { FROZEN_NOW, freezeClock, settle, stubPortalApi, usePreferences } from "./fixtures";
+import { assertPinnedVisualHost } from "./visualHost";
+
+assertPinnedVisualHost();
 
 async function open(page: Page, route: string) {
   await freezeClock(page);
