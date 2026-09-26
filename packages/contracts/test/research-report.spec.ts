@@ -43,6 +43,8 @@ describe("P18 published Research Report contract", () => {
     expect(openApi.components.schemas.FrozenCore!.oneOf).toEqual([
       { $ref: "#/components/schemas/FrozenCoreV1" },
       { $ref: "#/components/schemas/FrozenCoreV2" },
+      // X2 · spec 09 T06: a failed/cancelled run's sheet, sealed from the P11 terminal snapshot.
+      { $ref: "#/components/schemas/FrozenCoreFailedV1" },
     ]);
     const get = openApi.paths["/api/v1/quantbt/runs/{runId}/report"]!.get!;
     expect(Object.keys(get.responses)).not.toContain("409");
@@ -51,6 +53,7 @@ describe("P18 published Research Report contract", () => {
     for (const needle of [
       "FrozenCoreV2", "ReportFactV2", "FoldRowV2", "StageCheck", "ArtifactV2", "ReportTitle", "Certification",
       "RS02_RETAINED_CURRENT_SOURCE", "RS02_STITCHED_OUTER_TEST_WINDOWS", "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD",
+      "FrozenCoreFailedV1", "P11_TERMINAL_FAILURE", "FinalAudit", "REUSED_ORIGINAL", "LINKED_CHILD",
     ]) expect(generated).toContain(needle);
   });
 

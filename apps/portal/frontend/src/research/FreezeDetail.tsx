@@ -30,6 +30,7 @@ import { LineageLink, lineageHref } from "./LineageLink";
 
 import { BoundWarningNote } from "./BoundWarning";
 import { isWhatIf, WhatIfCard } from "./WhatIfCard";
+import { CopyThetaDigest, ServedStage4Binding } from "./Stage4Binding";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
@@ -637,10 +638,16 @@ function FrozenParameters({ parameters, blocked }: { parameters: readonly Frozen
                   {/* The server's placement, again: the browser never recomputes it. */}
                   <span
                     data-frozen-position={parameter.name}
+                    data-tick-tone={parameter.bound_warning?.state ?? "NOT_PUBLISHED"}
                     className="absolute top-[-3px] h-[12px] w-[3px] rounded-[1px]"
                     style={{
                       left: `calc(${parameter.position_percent}% - 1.5px)`,
-                      background: "var(--role-oos)",
+                      background:
+                        parameter.bound_warning?.state === "AT_BOUND"
+                          ? "var(--bad)"
+                          : parameter.bound_warning?.state === "NEAR_BOUND"
+                            ? "var(--accent-2)"
+                            : "var(--role-oos)",
                     }}
                   />
                 </span>
@@ -1130,6 +1137,24 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
     digests.length === 1;
   const foldNumbers = folds.map((fold) => fold.fold).sort((a, b) => a - b);
   const head = "mono px-3 py-2 text-left text-[10px] font-normal uppercase tracking-[.07em]";
+  /* X2 · B3: the declared rows of θ* (range, placement, DR-02) when the server publishes them. */
+  const declared = freeze.declared_space;
+  const served: FrozenParameter[] | null =
+    declared?.state === "AVAILABLE"
+      ? declared.parameters.map((parameter) => ({
+          name: parameter.name,
+          kind: parameter.kind,
+          minimum: parameter.minimum,
+          maximum: parameter.maximum,
+          step: parameter.step,
+          frozen_value: parameter.value,
+          position_percent: parameter.position_percent,
+          bound_state: "WITHIN_DECLARED_RANGE" as const,
+          bound_warning: parameter.bound_warning,
+        }))
+      : null;
+  /* T10: the θ* digest — P11's fold params digest, the same sha256 the server binds in F4. */
+  const thetaDigest = digests.length === 1 ? digests[0]! : freeze.stage4_binding?.sealed_params_sha256 ?? null;
 
   return (
     <section
@@ -1146,12 +1171,13 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
           frozen θ* — {global ? "one shared set" : "retained selection"}
         </h3>
         <span className="flex flex-wrap items-center gap-2">
-          {digests.length === 1 ? (
-            <span className="flex items-baseline gap-1.5" data-params-digest={digests[0]}>
+          {thetaDigest !== null ? (
+            <span className="flex items-baseline gap-1.5" data-params-digest={thetaDigest}>
               <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
                 params digest
               </span>
-              <Digest value={digests[0]} />
+              <Digest value={thetaDigest} />
+              <CopyThetaDigest digest={thetaDigest} />
             </span>
           ) : null}
           {global ? (
@@ -1203,7 +1229,11 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
         </div>
       )}
 
-      {parameters.length === 0 ? (
+      {served !== null ? (
+        <div className="px-3 py-1.5" data-frozen-source="declared-space">
+          <FrozenParameters parameters={served} blocked={false} />
+        </div>
+      ) : parameters.length === 0 ? (
         <p className="mono px-3 py-2 text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-frozen-empty>
           the retained selection published no parameter
         </p>
@@ -1252,7 +1282,12 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
         className="flex flex-col gap-1 border-t px-3 py-2.5"
         style={{ borderColor: "var(--line)", background: "var(--paper-sunken)" }}
       >
-        <TypedAbsence what="declared range · range position" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" data-frozen-range />
+        {served !== null ? null : declared ? (
+          /* The server answered: its own reason, never a UI code. */
+          <TypedAbsence what="declared range · range position" state={declared.state} code={declared.reason_code} data-frozen-range />
+        ) : (
+          <TypedAbsence what="declared range · range position" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" data-frozen-range />
+        )}
         <span className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
           Read-only by decision: writing onto a frozen set breaks the invariant the claim rests on. Manually entered
           params have no lineage — no path for them exists.
@@ -1474,7 +1509,12 @@ function RetainedFreezeBody({
       <RetainedOrdering identity={known} ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <RetainedFrozenTable freeze={freeze} identity={known} />
-        <RetainedIntegrity freeze={freeze} verify={verify} onVerify={onVerify} />
+        <div className="flex min-w-0 flex-col gap-3">
+          <RetainedIntegrity freeze={freeze} verify={verify} onVerify={onVerify} />
+          {freeze.stage4_binding ? (
+            <ServedStage4Binding binding={freeze.stage4_binding} authority={freeze.parameter_authority ?? null} />
+          ) : null}
+        </div>
       </div>
       <WhatIfCard
         whatIf={isWhatIf(freeze.what_if) ? freeze.what_if : null}
@@ -1721,9 +1761,12 @@ export function FreezeScreen({
                     frozen parameters
                   </h3>
                   {freeze.selection.parameter_bundle_digest !== null ? (
-                    <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-bundle-digest>
-                      bundle {freeze.selection.parameter_bundle_digest}
-                    </span>
+                    <>
+                      <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-bundle-digest>
+                        bundle {freeze.selection.parameter_bundle_digest}
+                      </span>
+                      <CopyThetaDigest digest={freeze.selection.parameter_bundle_digest} />
+                    </>
                   ) : null}
                 </div>
                 <FrozenParameters parameters={freeze.frozen_parameters} blocked={blocked} />
@@ -1742,7 +1785,11 @@ export function FreezeScreen({
 
               <div className="flex min-w-0 flex-col gap-3">
                 <IntegrityPanel integrity={freeze.integrity} bytes={detail.artifact_bytes} verify={verify} onVerify={onVerify} />
-                <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
+                {detail.stage4_binding ? (
+                  <ServedStage4Binding binding={detail.stage4_binding} authority={detail.parameter_authority ?? null} />
+                ) : (
+                  <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
+                )}
               </div>
             </div>
 

@@ -212,6 +212,74 @@ export interface components {
                 [key: string]: components["schemas"]["SourceGap"];
             };
             artifact_bytes: components["schemas"]["ArtifactByteVerification"];
+            stage4_binding?: components["schemas"]["Stage4Binding"];
+            parameter_authority?: components["schemas"]["ParameterAuthority"];
+        };
+        Stage4BindingRow: {
+            /** @enum {unknown} */
+            key: "SEALED_PARAMS" | "REPLAY_PARAMS" | "SEALED_BUNDLE" | "RUNTIME_BUNDLE";
+            /** @enum {unknown} */
+            label: "sealed params digest" | "params digest used by replay" | "sealed bundle digest" | "runtime bundle digest";
+            value: string | null;
+            /** @enum {unknown} */
+            identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1" | "QUANTBT_STRATEGY_FINGERPRINT_V1" | "SHA256_CANONICAL_PARAMETER_MAP_V1" | "P04_ADAPTER_CONTRACT_DIGEST_V1";
+            source_key: string;
+            folds: {
+                fold_id: string;
+                value: string | null;
+                audit_ordinal: number | null;
+                /** @enum {unknown} */
+                state: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
+                reason_code: string | null;
+            }[];
+            /** @enum {unknown} */
+            state: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
+            reason_code: string | null;
+        };
+        /** @description X2 · B4 · CG-P16-02 (HiFi 07 F4): sealed vs replayed params and sealed vs runtime bundle, compared on the server under a named identity rule per lane. RS-02: QuantBT candidate identity of the sealed θ* vs each fold's out-of-sample generation child, and the strategy fingerprint of the frozen candidate's selection-stage children vs the generation child's. P04: the registered fixed bundle and adapter digests vs what the P04 child executed (its P14 receipt and producer row). Any MISMATCH is DRIFT; a missing side is NOT_COMPARED with its reason, never a tick. */
+        Stage4Binding: {
+            /** @constant */
+            schema_version: "research.stage4-binding.v1";
+            /** @enum {unknown} */
+            lane: "RS02_RETAINED_CHILD_AUDIT" | "P04_FIXED_QUALIFICATION";
+            /** @enum {unknown} */
+            state: "BOUND" | "DRIFT" | "NOT_COMPARED";
+            reason_code: string | null;
+            sealed_params_sha256: string | null;
+            rows: components["schemas"]["Stage4BindingRow"][];
+            pairs: {
+                /** @enum {unknown} */
+                params: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
+                /** @enum {unknown} */
+                bundle: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
+            };
+        };
+        /** @description X2 · B4 · CG-P16-03 (guide §6.6): declared/swept/pinned values live in the params (θ) digest; values the code fixes are outside it and are covered by the protected code digest bound into the adapter contract digest. The Delta kernel publishes no machine-readable list of its fixed values, so `code_fixed.values` is a typed absence (P04_DELTA_KERNEL_PUBLISHES_NO_CODE_FIXED_VALUE_LIST) with the exact hash scope. */
+        ParameterAuthority: {
+            /** @constant */
+            schema_version: "research.parameter-authority.v1";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            declared: {
+                /** @constant */
+                hash_scope: "PARAMS_DIGEST";
+                names: string[];
+            };
+            code_fixed: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                values: {
+                    name: string;
+                    value: string;
+                }[];
+                /** @constant */
+                hash_scope: "ADAPTER_CONTRACT_DIGEST";
+                code_digest: string | null;
+                specification_digest: string | null;
+                adapter_contract_digest: string | null;
+            };
         };
         ArtifactByteMismatch: {
             /** @enum {unknown} */

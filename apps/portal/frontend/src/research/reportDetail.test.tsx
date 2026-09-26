@@ -736,7 +736,12 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     expect(rule(css, ".rr-headline .v")).toContain("font-size: 15px; font-weight: 600");
     expect(rule(css, ".rr-headline .foot")).toContain("flex: 1 1 100%; font-size: 9px");
     expect(narrow(css)).toContain(".rr-idrow, .rr-chainrow, .rr-pp { flex-direction: column; }");
-    expect(css.slice(css.indexOf("@media print {"))).toContain(".rr-idrow, .rr-chainrow, .rr-pp { flex-direction: row; }");
+    const print = css.slice(css.indexOf("@media print {"));
+    expect(print).toContain(".rr-idrow, .rr-pp { flex-direction: row; }");
+    /* X2 · F6: on paper the stage chain and the artifacts stack, and the sheet's tables flow (Letter/A4 re-run). */
+    expect(print).toContain(".rr-chainrow { flex-direction: column; }");
+    expect(print).toContain(".rr-page table.rr-table { break-inside: auto; }");
+    expect(print).toContain(".rr-scroll { overflow: visible; }");
     /* Metrics (not in the hi-fi) stays right after the row. */
     const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
     expect(order.indexOf("metrics")).toBe(order.indexOf("headline") + 1);
@@ -1149,5 +1154,67 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(panel("passport").querySelector('[data-passport-key="split_protocol"] .k')?.textContent).toBe("Split protocol");
     expect(panel("folds").querySelector("[data-folds-absent]")?.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
     expect(panel("equity").querySelector('[data-legend="is"]')?.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_IS_EQUITY_SERIES");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * X2 · B5/F6 — spec 09 T06 (failed run), T03 (32 folds), P18-T10 (final audit)
+ * and the real export reasons, on the canonical fixtures.
+ * ---------------------------------------------------------------------- */
+describe("S09 X2 — failed run, 32 folds, final audit", () => {
+  it("S09-T06 a failed run's sheet: 'no claim — run failed at S2 Search', stages to the failure, ABORTED artifacts, series unavailable", async () => {
+    const body = fixture("research-report.wfo-failed.valid.json");
+    server({ detail: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await screen.findByText("no claim — run failed at S2 Search");
+    await act(async () => {});
+    const outcome = panel("failed-outcome");
+    expect(outcome.getAttribute("data-outcome")).toBe("FAILED");
+    expect(outcome.getAttribute("role")).toBe("status");
+    expect(outcome.querySelector("[data-failure-code]")?.textContent).toBe("QUANTBT_CHILD_EXITED");
+    expect([...panel("stages").querySelectorAll("[data-stage]")].map((row) => row.getAttribute("data-stage-check"))).toEqual([
+      "NOT_PUBLISHED", "FAIL", "NOT_APPLICABLE", "NOT_APPLICABLE", "NOT_APPLICABLE",
+    ]);
+    expect(panel("artifacts").querySelector('[data-artifact="search/trials.parquet"]')?.getAttribute("data-artifact-state")).toBe("ABORTED");
+    expect(panel("artifacts").textContent).toContain("ABORTED");
+    expect(panel("equity").querySelector("[data-series-unavailable]")?.textContent).toBe("series unavailable — numbers unaffected");
+    // No claim block is drawn for a run without a claim.
+    expect(panel("headline")).toBeNull();
+    expect(panel("passport")).toBeNull();
+    expect(panel("folds")).toBeNull();
+    expect(document.querySelector("[data-report-title]")?.textContent).toBe("Delta-RSI Polynomial Alpha on BTCUSDT · 1h");
+  });
+
+  it("S09-T03 the 32-fold sheet draws one verdict row per fold, in source order", async () => {
+    const body = fixture("research-report.wfo-32-folds.valid.json");
+    server({ detail: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await screen.findAllByText(/per-fold verdict/i);
+    await act(async () => {});
+    const rows = [...panel("folds").querySelectorAll("[data-fold]")];
+    expect(rows).toHaveLength(32);
+    expect(rows.map((row) => row.getAttribute("data-fold"))).toEqual(Array.from({ length: 32 }, (_, index) => String(index)));
+  });
+
+  it("P18-T10 the final audit names reused original, the optimizer not re-invoked, and each fold's generation child", async () => {
+    const body = fixture("research-report.wfo-retained.valid.json");
+    server({ detail: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await screen.findAllByText(/per-fold verdict/i);
+    await act(async () => {});
+    const audit = panel("final-audit");
+    expect(audit.getAttribute("data-final-audit")).toBe("REUSED_ORIGINAL");
+    expect(audit.querySelector("[data-optimizer-reinvoked]")?.getAttribute("data-optimizer-reinvoked")).toBe("false");
+    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toBe("fold 0: child #10 2671e27b = θ* · fold 1: child #11 2671e27b = θ*");
+    expect(audit.querySelector("[data-final-audit-refs]")?.textContent).toContain("frozen_candidate");
+  });
+
+  it("X2-D09 PARQUET and ARCHIVE stay disabled with the server's real reasons", async () => {
+    const body = fixture("research-report.wfo-retained.valid.json");
+    server({ detail: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await screen.findAllByText(/per-fold verdict/i);
+    expect(document.querySelector('[data-export-unavailable="PARQUET"]')?.getAttribute("title")).toBe("P18_CONTROL_API_HAS_NO_PINNED_PARQUET_WRITER");
+    expect(document.querySelector('[data-export-unavailable="ARCHIVE"]')?.getAttribute("title")).toBe("P18_ARCHIVE_WOULD_EXPOSE_PRIVATE_P05_BYTES_AND_RAW_MARKET_ROWS");
   });
 });

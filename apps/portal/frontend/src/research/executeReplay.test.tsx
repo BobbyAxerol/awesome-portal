@@ -668,3 +668,29 @@ describe("W3b — Execute on the retained WFO lane", () => {
     expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
   });
 });
+
+/* X2 · B6: the P04 hub lane on the published canonical fixtures (the real P04 receipt through the Control API). */
+describe("S08 · P04 hub replay on the canonical fixtures (X2 · B6)", () => {
+  const FIXTURES = join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures");
+  const load = (name: string) => JSON.parse(readFileSync(join(FIXTURES, name), "utf8")) as Replay;
+
+  it("draws the real retrospective-equity window row by row and names the absent order ledger", () => {
+    const body = load("research-replay.p04-real.first-window.valid.json");
+    renderScreen(controllerOf(body));
+    expect(document.querySelector("[data-route-state]")?.getAttribute("data-route-state")).toBe(body.route.state);
+    /* The ledger shows a bounded window of the served page; every row is a served ordinal. */
+    const rows = [...document.querySelectorAll("[data-sample-row]")].map((row) => Number(row.getAttribute("data-sample-row")));
+    const served = new Set(body.equity_replay.items.map((item) => item.playback_ordinal));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((ordinal) => served.has(ordinal))).toBe(true);
+  });
+
+  it("a far seek keeps its own ordinal; an unpublished answer draws no row", () => {
+    const seek = load("research-replay.p04-real.far-seek.valid.json");
+    renderScreen(controllerOf(seek));
+    expect(document.querySelector("[data-sample-row]")?.getAttribute("data-sample-row")).toBe(String(seek.equity_replay.items[0]!.playback_ordinal));
+    cleanup();
+    renderScreen(controllerOf(load("research-replay.p04-not-published.valid.json")));
+    expect(document.querySelectorAll("[data-sample-row]")).toHaveLength(0);
+  });
+});

@@ -31,7 +31,14 @@ import type { ResearchState } from "./state";
 type ReportSchemas = ReportComponents["schemas"];
 
 export type ReportDetail = ReportSchemas["ReportDetail"];
-export type FrozenCore = ReportSchemas["FrozenCore"];
+/** Every sealed core shape, including a failed run's sheet (X2 · spec 09 T06). */
+export type AnyFrozenCore = ReportSchemas["FrozenCore"];
+/** X2: the sheet of a run that FAILED or was cancelled — no claim, no metric. */
+export type FrozenCoreFailed = ReportSchemas["FrozenCoreFailedV1"];
+/** A core with a claim to report (v1 or v2); the sheet's claim blocks read only these. */
+export type FrozenCore = Exclude<AnyFrozenCore, FrozenCoreFailed>;
+/** X2 · P18-T10: reused original vs linked child. */
+export type FinalAudit = ReportSchemas["FinalAudit"];
 export type FrozenCoreV1 = ReportSchemas["FrozenCoreV1"];
 /** W6a: every report sealed after CG-P18-01…11 is v2 (both lanes); a v1 core stays readable. */
 export type FrozenCoreV2 = ReportSchemas["FrozenCoreV2"];
@@ -56,9 +63,14 @@ export type ExportFormat = ReportSchemas["ExportCreate"]["format"];
 export type UnavailableExportFormat = ReportSchemas["UnavailableExportFormat"];
 export type ExportJob = ReportSchemas["ExportJob"];
 
-/** The v2 core, or null for a report sealed before W6a (it keeps its v1 shape). */
-export function coreV2(core: FrozenCore): FrozenCoreV2 | null {
+/** The v2 core, or null for a report sealed before W6a (it keeps its v1 shape) or a failed-run sheet. */
+export function coreV2(core: AnyFrozenCore): FrozenCoreV2 | null {
   return core.schema_version === "research.report-frozen-core.v2" ? core : null;
+}
+
+/** X2: the failed-run sheet, or null for a report with a claim. */
+export function coreFailed(core: AnyFrozenCore): FrozenCoreFailed | null {
+  return core.schema_version === "research.report-failed-core.v1" ? core : null;
 }
 
 /** Display unit of a report metric, for `researchFormat.formatMetric`. */
@@ -347,7 +359,9 @@ export function toReportRefusal(error: unknown, lane: ReportLane = "report"): Re
 
 /** The facts the report names as absent, for the screen's own partial notice. */
 export function reportAbsences(report: ReportDetail): string[] {
-  const core = report.frozen_core;
+  /* A failed run's sheet states its failure in the headline; nothing is "missing" from it. */
+  if (coreFailed(report.frozen_core)) return [];
+  const core = report.frozen_core as FrozenCore;
   const absent: string[] = [];
   if (core.equity.state !== "AVAILABLE") absent.push("equity series");
   const v2 = coreV2(core);

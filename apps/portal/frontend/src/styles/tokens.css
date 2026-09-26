@@ -152,6 +152,14 @@
   --viz-marker-short-border: #7c2626;
   --viz-cell-border: #ffffff;
   --viz-legend-inactive: #c9c5ba;
+  /* Search S06 objective ramp (spec 06 §15.3, five steps light → dark) and the
+     pick ring (a cursor, not a selection). Additive: no existing value moves. */
+  --viz-ramp-1: #dbe5e7;
+  --viz-ramp-2: #a8c6ce;
+  --viz-ramp-3: #6b9ea8;
+  --viz-ramp-4: #3d7a86;
+  --viz-ramp-5: #0f4c5c;
+  --viz-pick-ring: rgba(154, 106, 31, 0.35);
 
   /* Run console is a terminal surface: it stays dark in BOTH themes so log
    * output keeps one legibility contract. */

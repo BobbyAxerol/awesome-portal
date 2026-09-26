@@ -12,7 +12,7 @@
  * rather than forwarded into every link (FE-S06-05).
  */
 
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 import { SearchScreen } from "./SearchDetail";
@@ -22,7 +22,15 @@ import { SEARCH_FOLD_MAX, retainedSearchOf, useRetainedRunFacts, useSearch } fro
 
 export function SearchRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
-  const { cursor, problems, notes, replaceFold, decline, clampToObserved } = useEvidenceCursor({ stage: "search" });
+  const { cursor, problems, notes, replaceFold, decline, clampToObserved, update } = useEvidenceCursor({ stage: "search" });
+  /* X2 · F4 (T07/T08): the inspected trial lives in the hash as `pick=`, so a
+     link restores it; picking never moves θ* or any other cursor key. */
+  const pick = cursor.carried?.pick ?? null;
+  const carried = cursor.carried;
+  const onPick = useCallback(
+    (trialId: string) => update({ carried: { ...(carried ?? {}), pick: trialId } }),
+    [carried, update],
+  );
   /* RF-06: the search read publishes no fold set. Where this run already
      published one (the hub's `fold_navigation`, S05's fold plan), a fold it
      never observed is clamped here exactly as there — before it is sent. */
@@ -71,6 +79,8 @@ export function SearchRoute() {
         cursor={cursor}
         ledger={search.ledger}
         retainedRun={retainedRun}
+        pick={pick}
+        onPick={onPick}
         ensureLedger={search.ensureLedger}
         onReread={search.reread}
       />

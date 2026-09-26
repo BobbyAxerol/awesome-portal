@@ -246,7 +246,7 @@ function declarationKey(key: RcPackItem["key"]): DeclarationRowKey | null {
 /*
  * Scoped to `.rc-page`. Hi-fi colours map to palette tokens only (U02 gate).
  * W5c D-06/D-07/D-08 (axe, spec T14): the hi-fi's tinted grounds put the gold
- * (#9a6a1f) and green (#1e7b4f) text below 4.5:1, so a chip or card carrying
+ * (the warn token) and green (the good token) text below 4.5:1, so a chip or card carrying
  * that text keeps the white `--paper-raised` ground with a 3 px inset bar in
  * its tone; the ghost is carried by its dashed frame and faint ink, never by
  * `opacity`. DEGRADED rows keep the gold bar, not a gold fill.
