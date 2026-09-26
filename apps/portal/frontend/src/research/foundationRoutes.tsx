@@ -19,7 +19,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { EngineAtlas, atlasHash, atlasLocationFromHash, type AtlasLocation, type AtlasTab } from "./EngineAtlas";
+import { EngineAtlas, atlasHash, atlasLocationFromHash, type AtlasLocation, type AtlasRunCell, type AtlasTab } from "./EngineAtlas";
+import { progressApi } from "./progressClient";
+import { toResearchRefusal } from "./researchRefusal";
 import { preloadKatex } from "./Formula";
 import { JourneyMap } from "./JourneyMap";
 import type { AtlasDocument } from "./atlas";
@@ -190,6 +192,36 @@ export function EngineAtlasRoute() {
     [JSON.stringify(query)],
   );
 
+  /* 12-3: the run the Atlas was opened from marks its own mode card. Its
+     mode × schedule is the run's published identity (the progress read's
+     `run`), never the hash's `mode=`, which the reader's clicks rewrite. */
+  const runId = place.run;
+  const [runCell, setRunCell] = useState<AtlasRunCell | undefined>(undefined);
+  useEffect(() => {
+    if (!runId) {
+      setRunCell(undefined);
+      return;
+    }
+    const controller = new AbortController();
+    setRunCell({ state: "loading" });
+    progressApi
+      .read(runId, undefined, controller.signal)
+      .then((read) => {
+        if (controller.signal.aborted) return;
+        const identity = read.run ?? null;
+        setRunCell(
+          identity
+            ? { state: "known", mode: identity.mode, schedule: identity.schedule }
+            : { state: "absent", reason: "the progress read publishes no run identity" },
+        );
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setRunCell({ state: "absent", reason: toResearchRefusal(error).message });
+      });
+    return () => controller.abort();
+  }, [runId]);
+
   /* No narrowing layer any more: `atlas.ts` is typed from this same contract,
      so the response *is* the document S12 renders (`CG-P09-01`). */
   const document: AtlasDocument | null = read.data?.atlas ?? null;
@@ -202,6 +234,7 @@ export function EngineAtlasRoute() {
       onTabChange={onTabChange}
       location={{ mode: place.mode, schedule: place.schedule, route: place.route, run: place.run }}
       onLocationChange={move}
+      runCell={runCell}
       selectedReleaseId={read.data?.selected_release_id ?? null}
       selectedReleaseKind={read.data?.selected_release_kind ?? null}
       state={state}
