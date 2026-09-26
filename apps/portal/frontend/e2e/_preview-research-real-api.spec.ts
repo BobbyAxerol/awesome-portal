@@ -22,7 +22,7 @@ const RUN = (JSON.parse(readFileSync(`${HOME}/seeded-run.json`, "utf8")) as { ru
 const ORIGIN = process.env.RESEARCH_PREVIEW_ORIGIN ?? "http://localhost:8095";
 
 const VIEWPORTS = [
-  ["laptop", 1280, 900],
+  ["laptop", Number(process.env.RESEARCH_PREVIEW_LAPTOP_WIDTH ?? 1280), 900],
   ["mobile", 660, 900],
 ] as const;
 
@@ -324,14 +324,33 @@ async function finish(page: Page, name: string, observed: Observed, extra: Recor
 async function visibleText(page: Page, selector: string): Promise<string> {
   return page.locator(selector).evaluate((node) => {
     const copy = node.cloneNode(true) as HTMLElement;
-    copy.querySelectorAll("style, [data-mirror-ghost] .meta").forEach((element) => element.remove());
+    /* The mirror ghost's outcome vocabulary is copy, not a governance state. */
+    copy.querySelectorAll("style, [data-mirror-meta]").forEach((element) => element.remove());
     return copy.textContent ?? "";
   });
 }
 
+/** Where a pack row's evidence lives in this build, by contract key (X1-D04, W5c D-04). */
+function sourceRouteOf(item: any, runId: string, alphaId: string | null): string | null {
+  if (item.source.href === null) return null;
+  const run = `/research/quantbt/runs/${runId}`;
+  const byKey: Record<string, string | null> = {
+    ENGINE_CAPABILITY_BACKEND: "/research/quantbt/atlas",
+    DATASET_UNIVERSE_SNAPSHOTS: `${run}/split`,
+    EXECUTION_ASSUMPTIONS: `${run}/split`,
+    METHODOLOGY_CLAIM: `${run}/evidence#stage=claim`,
+    SELECTED_PARAMS_LINEAGE: `${run}/search`,
+    FINAL_AUDIT_REPLAY: `${run}/execute`,
+    METRICS_SEMANTICS: `${run}/report`,
+    REPRODUCIBILITY_PARITY_CHECKSUMS: `${run}/freeze`,
+    ROBUSTNESS_PARAM_STABILITY_REGIME: alphaId ? `/research/quantbt/alphas/${alphaId}/compare` : null,
+  };
+  return byKey[item.key] ?? null;
+}
+
 for (const [name, width, height] of VIEWPORTS) {
   for (const [label, run] of RC_RUNS) {
-    test(`W5c S11 ${label} composition on real reads at ${name}`, async ({ page }) => {
+    test(`X1 S11 ${label} composition on real reads at ${name}`, async ({ page }) => {
       const observed = observe(page);
       await page.setViewportSize({ width, height });
       await signIn(page);
@@ -345,36 +364,61 @@ for (const [name, width, height] of VIEWPORTS) {
       await expect(root.locator("[data-yaml-key]")).toHaveCount(17);
       const lines = await root.locator("[data-yaml-key]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-yaml-key"), node.getAttribute("data-yaml-value")]));
       expect(lines).toEqual(api.yaml.map((field: any) => [field.key, field.value ?? ""]));
-      /* 12 rows, statuses and counter as served. */
+      /* 12 rows, statuses, reasons and counter as served. */
       const rows = await root.locator("[data-pack-row]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-pack-row"), node.getAttribute("data-status")]));
       expect(rows).toEqual(api.pack.map((item: any) => [item.key, item.status]));
+      for (const item of api.pack) {
+        if ((item.status === "MISSING" || item.status === "DEGRADED") && item.availability.reason_code) {
+          await expect(root.locator(`[data-pack-row='${item.key}'] .note [data-reason-code='${item.availability.reason_code}']`)).toBeVisible();
+        }
+        const route = sourceRouteOf(item, run, api.run.binding?.alpha_id ?? null);
+        if (route) await expect(root.locator(`[data-source-link='${item.key}']`)).toHaveAttribute("href", route);
+        else await expect(root.locator(`[data-pack-row='${item.key}'] [data-source-link]`)).toHaveCount(0);
+      }
       const counts = api.pack_counts;
       await expect(root.locator("[data-pack-counts]")).toHaveText(`${counts.complete} COMPLETE · ${counts.degraded} DEGRADED · ${counts.input} INPUT · ${counts.missing} MISSING`);
-      /* Rail tones, the server's seal reason, the typed publish ghost, the state chip. */
-      const tones = await root.locator("[data-rail-key]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-rail-key"), node.getAttribute("data-tone")]));
+      /* Rail tones and links, the server's seal and publish gates, the state chip. */
+      const tones = await root.locator("[data-rail-node]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-rail-node"), node.getAttribute("data-tone")]));
       expect(tones).toEqual(api.rail.map((node: any) => [node.key, node.tone]));
+      if (api.run.binding) await expect(root.locator("[data-rail-node='alpha']")).toHaveAttribute("href", `/research/quantbt/alphas/${api.run.binding.alpha_id}/lineage`);
+      await expect(root.locator("[data-rail-node='run']")).toHaveAttribute("href", `/research/quantbt/runs/${run}/evidence`);
       await expect(root.locator("[data-seal-blocked]")).toHaveAttribute("data-seal-blocked", api.actions.seal_blocked_reason ?? "LOCAL");
       await expect(root.locator("[data-action='local-seal']")).toHaveAttribute("aria-disabled", "true");
-      await expect(root.locator("[data-publish-ghost]")).toHaveAttribute("data-blocked-reason", api.actions.publish.blocked_reason);
-      await expect(root.locator("[data-mirror-ghost] a, [data-mirror-ghost] button")).toHaveCount(0);
-      await expect(root.locator("[data-rc-state]")).toHaveText(api.run.binding === null ? "NOT_PUBLISHABLE" : api.state);
-      const visible = await visibleText(page, "[data-screen='release-candidate']");
-      expect(visible, "no fabricated governance state").not.toMatch(/\bPUBLISHED\b(?!_)|\bPENDING\b|\bAPPROVED\b(?!_)/);
-      if (api.availability.state === "PARTIAL") {
-        await expect(root.locator("[data-rc-state-panel]")).toHaveAttribute("data-rc-state-panel", "partial");
+      if (!api.actions.publish.enabled) {
+        await expect(root.locator("[data-action='publish']")).toHaveAttribute("aria-disabled", "true");
+        await expect(root.locator("[data-publish-blocked]")).toHaveAttribute("data-publish-blocked", api.run.binding === null ? "P21_SCRATCH_RUN_UNBOUND" : api.actions.publish.blocked_reason);
       }
+      await expect(root.locator("[data-mirror-ghost] a, [data-mirror-ghost] button, [data-mirror-ghost] [tabindex]")).toHaveCount(0);
+      if (api.source_absences.approval_mirror?.reason_code) {
+        await expect(root.locator(`[data-mirror-foot] [data-reason-code='${api.source_absences.approval_mirror.reason_code}']`)).toBeVisible();
+      }
+      await expect(root.locator("[data-state-chip]")).toHaveText(api.run.binding === null ? "NOT_PUBLISHABLE" : api.local_seal.delivery_state === "DELIVERED" ? "PUBLISHED" : api.state);
+      const visible = await visibleText(page, "[data-screen='release-candidate']");
+      expect(visible, "no fabricated governance state").not.toMatch(/\bPUBLISHED\b(?!_)|\bPENDING\b|\bAPPROVED\b(?!_)|Quant Reviewers|none recorded/);
+      if (api.availability.state === "PARTIAL") {
+        await expect(root.locator("[data-rc-notice]")).toHaveAttribute("data-rc-notice", "partial");
+        await expect(root.locator("[data-rc-notice]")).toContainText(api.availability.reason_code);
+      } else {
+        await expect(root.locator("[data-rc-notice]")).toHaveCount(0);
+      }
+      /* An unsealed candidate reads no publication, and nothing ever asks for /mirror. */
+      if (api.local_seal.state !== "SEALED_LOCAL") expect(observed.requests.filter((line) => line.includes("/publication"))).toEqual([]);
+      expect(observed.requests.filter((line) => line.includes("/mirror"))).toEqual([]);
       /* 660px: the evidence table scrolls inside its own frame, never the page. */
       const pack = await root.locator(".rc-pack").evaluate((node) => ({ scroll: node.scrollWidth, client: node.clientWidth }));
       if (width < 960) expect(pack.scroll).toBeGreaterThan(pack.client);
+      /* W7 (after a preview rebuild): the retained lane's DEGRADED rows carry their sentence. */
+      const certificate = api.pack.find((item: any) => item.availability.reason_code === "P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED");
+      if (certificate) await expect(root.locator(`[data-pack-row='${certificate.key}'] .note`)).toContainText("claim retained, no issued methodology certificate");
       expect(await axeBlocking(page, "[data-screen='release-candidate']")).toEqual([]);
 
-      await finish(page, `W5c-S11-${label}-${name}`, observed, { run, api_availability: api.availability, api_counts: counts });
+      await finish(page, `X1-S11-${label}-${name}`, observed, { run, api_availability: api.availability, api_counts: counts, api_publish: api.actions.publish });
       expect(observed.failures, "S11 failed reads").toEqual([]);
       expect(observed.noise, `S11 console:\n${observed.noise.join("\n")}`).toEqual([]);
     });
   }
 
-  test(`W5c S11 DOUBLE declarations, 409 and local seal in a real browser at ${name}`, async ({ page }) => {
+  test(`X1 S11 DOUBLE declarations, 409, confirmed local seal, then the real publication read at ${name}`, async ({ page }) => {
     const observed = observe(page);
     await page.setViewportSize({ width, height });
     await signIn(page);
@@ -392,6 +436,7 @@ for (const [name, width, height] of VIEWPORTS) {
     const sealedBody = JSON.parse(JSON.stringify(saved));
     sealedBody.local_seal = { state: "SEALED_LOCAL", release_candidate_id: rcId, pack_digest: "5".repeat(64), sealed_at_utc_ms: real.as_of_utc_ms, delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED", availability: { state: "AVAILABLE", reason_code: null } };
     sealedBody.rail = sealedBody.rail.map((node: any) => (node.key === "release_candidate" ? { ...node, value: rcId, detail: "sealed locally — not delivered", tone: "green" } : node));
+    sealedBody.actions = { ...sealedBody.actions, may_seal: false, seal_blocked_reason: "P21_RESEARCHER_DECLARATIONS_REQUIRED", publish: { enabled: true, blocked_reason: null } };
     let patches = 0;
     let sealedYet = false;
     const writes: string[] = [];
@@ -409,57 +454,112 @@ for (const [name, width, height] of VIEWPORTS) {
       return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ schema_version: "research.release-candidate-local-seal.v1", release_candidate_id: rcId, run_id: RUN, pack_digest: "5".repeat(64), sealed_at_utc_ms: real.as_of_utc_ms, delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED" }) });
     });
     await page.route(`**/api/v1/quantbt/runs/${RUN}/release-candidate`, async (route) => (sealedYet ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sealedBody) }) : route.continue()));
-    await page.route(`**/api/v1/research/release-candidates/${rcId}`, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          schema_version: "research.release-candidate-pack.v1",
-          read_authority: "PORTAL_PERSISTED_RESEARCH",
-          release_candidate_id: rcId,
-          run_id: RUN,
-          pack_digest: "5".repeat(64),
-          sealed_at_utc_ms: real.as_of_utc_ms,
-          frozen_core: {
-            fields: saved.fields.map((field: any) => (field.key === "release_candidate_id" ? { ...field, value: rcId, tone: "ink" } : field)),
-            pack: saved.pack,
-            source_fingerprint: saved.source_fingerprint,
-            draft: { known_limitations: "Single venue depth.", proposed_use_restrictions: "Paper first." },
-          },
-          delivery: sealedBody.local_seal,
-        }),
-      }),
-    );
 
     await page.goto(`/research/quantbt/runs/${RUN}/release-candidate`);
     const root = page.locator("[data-screen='release-candidate']");
     await expect(root.locator("[data-pack-row]")).toHaveCount(12, { timeout: 20_000 });
     /* Edit a declaration from its row; the first save meets a 409 and keeps the text. */
     await root.locator("[data-pack-row='KNOWN_LIMITATIONS_WAIVERS'] [data-action='edit-declaration']").click();
-    const box = root.locator("[data-declaration-input='known_limitations']");
+    const box = root.locator("[data-declaration-input='KNOWN_LIMITATIONS_WAIVERS']");
     await expect(box).toBeFocused();
     await box.fill("Single venue depth.");
-    await root.locator("[data-action='save-declarations']").click();
-    await expect(root.locator("[data-mutation-state='conflict']")).toContainText("evidence changed since composing — review the pack");
+    await root.locator("[data-action='save-declaration']").click();
+    await expect(root.locator("[data-write-notice='patch'][data-outcome='conflict']")).toContainText("evidence changed since composing — review the pack");
     await expect(box).toHaveValue("Single venue depth.");
-    await page.screenshot({ path: `${OUT}/W5c-S11-DOUBLE-409-${name}.png`, fullPage: true });
-    /* The second save succeeds; the seal asks for confirmation, then shows the immutable pack. */
-    await root.locator("[data-action='save-declarations']").click();
+    await page.screenshot({ path: `${OUT}/X1-S11-DOUBLE-409-${name}.png`, fullPage: true });
+    /* The second save succeeds; the seal asks for confirmation, then shows the server's seal. */
+    await root.locator("[data-action='save-declaration']").click();
     await expect(root.locator("[data-draft-revision]")).toHaveAttribute("data-draft-revision", "1");
     await root.locator("[data-action='local-seal']").click();
-    await expect(root.locator("[data-seal-confirm]")).toBeVisible();
+    await expect(root.locator("[data-confirm='local-seal']")).toBeVisible();
+    await expect(root.locator("[data-action='confirm-local-seal']")).toBeFocused();
+    await page.screenshot({ path: `${OUT}/X1-S11-DOUBLE-confirm-${name}.png`, fullPage: true });
     await root.locator("[data-action='confirm-local-seal']").click();
     await expect(root.locator("[data-sealed]")).toHaveAttribute("data-sealed", rcId);
-    await expect(root.locator("[data-sealed-pack] [data-frozen-field]")).toHaveCount(17);
-    await expect(root.locator("[data-rc-seal-state]")).toHaveText("SEALED_LOCAL");
-    await expect(root.locator("[data-rc-state]")).toHaveText("DRAFT");
+    await expect(root.locator("[data-seal-chip]")).toHaveText("SEALED_LOCAL");
+    await expect(root.locator("[data-state-chip]")).toHaveText("DRAFT");
+    /* The publication read goes to the real preview. An older preview serves no P22 route: the screen says so, typed, and publishes nothing. */
+    const publicationRead = await pageGet(page, `/api/v1/research/release-candidates/${rcId}/publication`);
+    if (publicationRead.status === 404) {
+      await expect(root.locator("[data-publication-read='not-found']")).toContainText("This build serves no publication for this candidate.");
+    } else {
+      await expect(root.locator("[data-panel='publish']")).toHaveAttribute("data-publish-state", /.+/);
+    }
+    await expect(root.locator("[data-action='publish']")).toHaveAttribute("aria-disabled", "true");
+    await expect(root.locator("[data-panel='mirror-ghost']")).toBeVisible();
     expect(writes.map((line) => line.split(" ")[0])).toEqual(["PATCH", "PATCH", "POST"]);
-    expect(JSON.parse(writes[0]!.slice(6))).toEqual({ expected_revision: real.draft.revision, expected_source_fingerprint: real.source_fingerprint, known_limitations: "Single venue depth.", proposed_use_restrictions: null });
+    expect(JSON.parse(writes[0]!.slice(6))).toEqual({ expected_revision: real.draft.revision, expected_source_fingerprint: real.source_fingerprint, known_limitations: "Single venue depth.", proposed_use_restrictions: real.draft.proposed_use_restrictions });
     expect(JSON.parse(writes[2]!.slice(5))).toEqual({ draft_id: saved.draft.draft_id, expected_draft_revision: 1, expected_source_fingerprint: real.source_fingerprint });
     expect(await axeBlocking(page, "[data-screen='release-candidate']")).toEqual([]);
-    await finish(page, `W5c-S11-DOUBLE-sealed-${name}`, observed, { doubled: ["PATCH draft", "POST seal", "GET pack", "GET compose after the doubled seal"], writes });
-    const noise = observed.noise.filter((line) => line !== "error: Failed to load resource: the server responded with a status of 409 (Conflict)");
+    await finish(page, `X1-S11-DOUBLE-sealed-${name}`, observed, { doubled: ["PATCH draft", "POST seal", "GET compose after the doubled seal"], writes, publication_status: publicationRead.status });
+    const noise = observed.noise.filter((line) => !/Failed to load resource: the server responded with a status of (409|404)/.test(line));
     expect(noise, `S11 DOUBLE console:\n${observed.noise.join("\n")}`).toEqual([]);
+  });
+
+  test(`X1 S11 DOUBLE P22 publish, PUBLISHED from the server, mirror and no ghost at ${name}`, async ({ page }) => {
+    const observed = observe(page);
+    await page.setViewportSize({ width, height });
+    await signIn(page);
+    const real = (await (await page.request.get(`/api/v1/quantbt/runs/${RUN}/release-candidate`)).json()) as any;
+    const rcId = "rc_01K5W5CSEA1ED0000000000000";
+    const sealedBody = JSON.parse(JSON.stringify(real));
+    for (const item of sealedBody.pack) {
+      if (item.status === "MISSING") Object.assign(item, { status: "COMPLETE", digest: "6".repeat(64), availability: { state: "AVAILABLE", reason_code: null } });
+      if (item.status === "INPUT") Object.assign(item, { digest: "7".repeat(64), availability: { state: "AVAILABLE", reason_code: null } });
+    }
+    Object.assign(sealedBody, {
+      pack_counts: { complete: 9, degraded: 1, input: 2, missing: 0 },
+      draft: { draft_id: "rcd_01K5W5CDRAFT0000000000000", revision: 1, source_fingerprint: real.source_fingerprint, known_limitations: "Single venue depth.", proposed_use_restrictions: "Paper first.", state: "PERSISTED", updated_at_utc_ms: real.as_of_utc_ms },
+      local_seal: { state: "SEALED_LOCAL", release_candidate_id: rcId, pack_digest: "5".repeat(64), sealed_at_utc_ms: real.as_of_utc_ms, delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED", availability: { state: "AVAILABLE", reason_code: null } },
+      actions: { may_edit_draft: true, may_seal: true, seal_blocked_reason: null, publish: { enabled: true, blocked_reason: null } },
+    });
+    sealedBody.rail = sealedBody.rail.map((node: any) => (node.key === "release_candidate" ? { ...node, value: rcId, detail: "sealed locally — not delivered", tone: "green" } : node));
+    sealedBody.source_absences = { ...sealedBody.source_absences, approval_mirror: { state: "NOT_PUBLISHED", reason_code: "P22_NOT_PUBLISHED" } };
+    const deliveredBody = JSON.parse(JSON.stringify(sealedBody));
+    deliveredBody.local_seal = { ...deliveredBody.local_seal, delivery_state: "DELIVERED", approval_state: "PENDING" };
+    deliveredBody.actions = { ...deliveredBody.actions, publish: { enabled: false, blocked_reason: "P22_ALREADY_DELIVERED" } };
+    deliveredBody.source_absences = { ...deliveredBody.source_absences, approval_mirror: { state: "NOT_APPLICABLE", reason_code: "P22_MIRROR_READ_ON_PUBLICATION_ROUTE" } };
+    const binding = real.run.binding;
+    const readBody = (published: boolean) => ({
+      schema_version: "research.release-candidate-publication.v1", release_candidate_id: rcId, run_id: RUN,
+      alpha_id: binding.alpha_id, alpha_version_id: binding.alpha_version_id, pack_digest: "5".repeat(64),
+      source: { availability: "AVAILABLE", reason_code: null, run_status: "COMPLETED", legacy_artifact_sha256: `sha256:${"b".repeat(64)}`, artifact_schema_version: "quantbt.selected-params.v1", eligible_methodology_claim_ids: ["mclaim_x1"], captured_at: "2026-09-26T09:00:00.000Z" },
+      state: published ? "DELIVERED" : "NOT_PUBLISHED", candidate_relation: "CURRENT", may_publish: !published, blocked_reason: published ? "P22_ALREADY_DELIVERED" : null,
+      published: published ? { by_user_id: "usr_claude_preview", by_username: "claude-preview", approval_id: "apr_x1_double", at_utc_ms: real.as_of_utc_ms, receipt_digest: "d".repeat(64) } : null,
+      approval_read: published ? "AVAILABLE" : "NOT_PUBLISHED",
+      approval: published ? { approval_id: "apr_x1_double", gate: "R1", status: "PENDING", subject_id: binding.alpha_id, requester_user_id: "usr_claude_preview", evidence_set_hash: `sha256:${"c".repeat(64)}`, sla_due_at: "2026-09-27T09:12:00.000Z", expires_at: "2026-12-25T09:12:00.000Z", created_at: "2026-09-26T09:12:00.000Z", read_at: "2026-09-26T09:13:00.000Z", conditions: [], href: "/governance/approvals/apr_x1_double/r1" } : null,
+      as_of_utc_ms: real.as_of_utc_ms, replayed: false,
+    });
+    let publishedYet = false;
+    const writes: string[] = [];
+    await page.route(`**/api/v1/quantbt/runs/${RUN}/release-candidate`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(publishedYet ? deliveredBody : sealedBody) }));
+    await page.route(`**/api/v1/research/release-candidates/${rcId}/publication`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(readBody(publishedYet)) }));
+    await page.route(`**/api/v1/research/release-candidates/${rcId}/publish`, (route) => {
+      writes.push(route.request().postData() ?? "");
+      publishedYet = true;
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(readBody(true)) });
+    });
+
+    await page.goto(`/research/quantbt/runs/${RUN}/release-candidate`);
+    const root = page.locator("[data-screen='release-candidate']");
+    await expect(root.locator("[data-action='publish']")).toHaveAttribute("data-publish-enabled", "true", { timeout: 20_000 });
+    await expect(root.locator("[data-action='publish']")).toHaveText(`Publish release candidate ${rcId}`);
+    await page.screenshot({ path: `${OUT}/X1-S11-DOUBLE-P22-sealed-${name}.png`, fullPage: true });
+    await root.locator("[data-action='publish']").click();
+    await expect(root.locator("[data-confirm='publish']")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/X1-S11-DOUBLE-P22-confirm-${name}.png`, fullPage: true });
+    await root.locator("[data-action='confirm-publish']").click();
+    await expect(root.locator("[data-panel='published'] [data-published-receipt]")).toContainText("approval apr_x1_double");
+    await expect(root.locator("[data-state-chip]")).toHaveText("PUBLISHED");
+    await expect(root.locator("[data-panel='mirror'] [data-mirror-status]")).toHaveText("PENDING");
+    await expect(root.locator("[data-panel='mirror-ghost']")).toHaveCount(0);
+    await expect(root.locator("[data-action='edit-declaration']")).toHaveCount(0);
+    expect(writes.map((line) => JSON.parse(line))).toEqual([{ schema_version: "research.release-candidate-publish-request.v1", expected_pack_digest: "5".repeat(64), methodology_claim_id: "mclaim_x1" }]);
+    const visible = await visibleText(page, "[data-screen='release-candidate']");
+    expect(visible).not.toMatch(/Quant Reviewers|none recorded|quorum/);
+    expect(await axeBlocking(page, "[data-screen='release-candidate']")).toEqual([]);
+    await finish(page, `X1-S11-DOUBLE-P22-published-${name}`, observed, { doubled: ["GET compose", "GET publication", "POST publish"], writes });
+    expect(observed.noise, `S11 DOUBLE P22 console:\n${observed.noise.join("\n")}`).toEqual([]);
   });
 
   for (const [label, run] of RC_RUNS) {

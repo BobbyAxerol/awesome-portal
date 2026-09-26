@@ -10,7 +10,9 @@
  *  - S08 Execute replay  ← `src/research/executeReplay.test.tsx` fixture (P17)
  *  - S09 Run report      ← `src/research/reportDetail.test.tsx` fixture (P18)
  *  - S10 Lineage         ← P20 receipt probe `LINEAGE()` (P19 shape)
- *  - S11 Release cand.   ← P22 receipt probe `COMPOSE()` incl. `publication`/`mirror`
+ *  - S11 Release cand.   ← P21 compose (ComposeResponseP21) + the P22 publication
+ *                          read (`research.release-candidate-publication.v1`, the
+ *                          only mirror; X1 2026-09-26 — no `/mirror` route)
  *  - S13 Compare         ← P20 receipt probe (attempts / markets / pair)
  *  - S03 terminal run    ← `research-foundation/progress-read.json` with a
  *                          contract-typed `run_completed` frame
@@ -29,7 +31,7 @@ import type { components as LineageC } from "../../../../../packages/contracts/g
 import type { components as ProgressC } from "../../../../../packages/contracts/generated/research-progress";
 import type { components as ReplayC } from "../../../../../packages/contracts/generated/research-replay";
 import type { components as ReportC } from "../../../../../packages/contracts/generated/research-report";
-import type { RcCompose as PortalRcCompose, RcMirror as PortalRcMirror } from "../../src/research/releaseCandidateClient";
+import type { RcCompose as PortalRcCompose, RcPublication as PortalRcPublication } from "../../src/research/releaseCandidateClient";
 
 import { stubPortalApi } from "../fixtures";
 
@@ -40,7 +42,7 @@ type Compare = CompareC["schemas"]["CompareResponse"];
 type CmpRun = CompareC["schemas"]["Run"];
 type CmpChart = CompareC["schemas"]["MarketChart"];
 type RcCompose = PortalRcCompose;
-type RcMirror = PortalRcMirror;
+type RcPublication = PortalRcPublication;
 type ProgressRead = ProgressC["schemas"]["ProgressRead"];
 type ProgressStreamEvent = ProgressC["schemas"]["ProgressStreamEvent"];
 type ReportArtifactKey = ReportC["schemas"]["Artifact"]["key"];
@@ -517,31 +519,50 @@ const RC_PUBLISHED_AT = RC_SEALED_AT + 3_600_000;
 const DECL = { known: "fees modelled at taker; funding not modelled", restr: "research only — no capital until P22 review" };
 const declDigest = (t: string) => `sha256:decl_${t.length.toString(16).padStart(4, "a")}${hex("d").slice(8)}`;
 
-export function rcMirror(rcId: string = RC_ID): RcMirror {
+/** The P22 publication read (Codex wire); `published` carries the R1 approval read. */
+export function rcPublication(rcId: string = RC_ID, published = false, runId: string = RC_RUN): RcPublication {
   return {
-    schema_version: "research.release-candidate-approval-mirror.v1",
+    schema_version: "research.release-candidate-publication.v1",
     release_candidate_id: rcId,
-    approval_id: APPROVAL,
-    href: `/governance/approvals/${APPROVAL}/r1`,
-    availability: AV,
-    gate: "R1",
-    subject_id: ALPHA,
-    subject_label: `${rcId} — ${ALPHA} ${AV_ID}`,
-    status: "PENDING",
-    effective_status: "PENDING",
-    sla_due_at: "2026-07-26T10:40:00.000Z",
-    expires_at: "2026-07-28T10:40:00.000Z",
-    created_at: "2026-07-25T10:40:00.000Z",
-    quorum_met: 0,
-    quorum_required: 1,
-    approval_version: 1,
-    evidence_set_hash: dg("9"),
-    blocker_count: 0,
-    condition_count: 0,
-    conditions: [],
-    decision_outcomes: [],
-    rc_superseded: false,
+    run_id: runId,
+    alpha_id: ALPHA,
+    alpha_version_id: AV_ID,
+    pack_digest: hex("c"),
+    source: {
+      availability: "AVAILABLE",
+      reason_code: null,
+      run_status: "COMPLETED",
+      legacy_artifact_sha256: dg("9"),
+      artifact_schema_version: "quantbt.selected-params.v1",
+      eligible_methodology_claim_ids: ["mclaim_01J9"],
+      captured_at: "2026-07-25T10:30:00.000Z",
+    },
+    state: published ? "DELIVERED" : "NOT_PUBLISHED",
+    candidate_relation: "CURRENT",
+    may_publish: !published,
+    blocked_reason: published ? "P22_ALREADY_DELIVERED" : null,
+    published: published
+      ? { by_user_id: "usr_researcher", by_username: "researcher@bobby", approval_id: APPROVAL, at_utc_ms: RC_PUBLISHED_AT, receipt_digest: hex("0") }
+      : null,
+    approval_read: published ? "AVAILABLE" : "NOT_PUBLISHED",
+    approval: published
+      ? {
+          approval_id: APPROVAL,
+          gate: "R1",
+          status: "PENDING",
+          subject_id: ALPHA,
+          requester_user_id: "usr_researcher",
+          evidence_set_hash: dg("9"),
+          sla_due_at: "2026-07-26T10:40:00.000Z",
+          expires_at: "2026-07-28T10:40:00.000Z",
+          created_at: "2026-07-25T10:40:00.000Z",
+          read_at: "2026-07-25T10:41:00.000Z",
+          conditions: [],
+          href: `/governance/approvals/${APPROVAL}/r1`,
+        }
+      : null,
     as_of_utc_ms: RC_PUBLISHED_AT,
+    replayed: false,
   };
 }
 
@@ -600,15 +621,14 @@ export function rcCompose(runId: string = RC_RUN, rcId: string = RC_ID, publishe
     I("PROPOSED_USE_RESTRICTIONS", 12, "Proposed use restrictions", DECL.restr, "Researcher-signed declaration; downstream approval policy belongs to P22."),
   ];
   const count = (s: string) => pack.filter((p) => p.status === s).length;
-  const actor = { user_id: "usr_researcher", username: "researcher@bobby" };
   const absences: RcCompose["source_absences"] = published
-    ? { alpha_binding: AV, execution_deployment: na("P21_EXECUTION_DEPLOYMENT_OUT_OF_SCOPE") }
+    ? { alpha_binding: AV, approval_mirror: na("P22_MIRROR_READ_ON_PUBLICATION_ROUTE"), execution_deployment: na("P21_EXECUTION_DEPLOYMENT_OUT_OF_SCOPE") }
     : { alpha_binding: AV, approval_mirror: np("P22_NOT_PUBLISHED"), execution_deployment: na("P21_EXECUTION_DEPLOYMENT_OUT_OF_SCOPE") };
   const body = {
     schema_version: "research.release-candidate-compose.v1",
     read_authority: "PORTAL_PERSISTED_RESEARCH",
     run_id: runId,
-    state: published ? "PUBLISHED" : "DRAFT",
+    state: "DRAFT",
     availability: AV,
     as_of_utc_ms: RC_T0,
     source_fingerprint: FP,
@@ -624,15 +644,14 @@ export function rcCompose(runId: string = RC_RUN, rcId: string = RC_ID, publishe
       { what: "code / entrypoint (av_)", state: "UNSET", consequence: "No published predecessor is available, so no code-change or gate conclusion is inferred." },
       { what: "selected strategy params", state: "UNSET", consequence: "Current exact parameter bundle is pinned, but no predecessor comparison is published." },
       { what: "data contract / dataset snapshot", state: "UNSET", consequence: "Current dataset binding is pinned, but no predecessor comparison is published." },
+      { what: "target venue / account / capital", state: "UNSET", consequence: "Deployment facts belong to an Execution-side candidate and are never composed here." },
     ],
     published_comparison: { last_release_candidate_id: null, availability: np("P22_NO_PUBLISHED_PREDECESSOR") },
     certification_axes: {
       methodology_claim: { value: "B", availability: AV },
       engine_execution_contract: { value: null, availability: np("P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED") },
     },
-    gate_verdict: published
-      ? { title: "published — immutable · R1 review in Approval Inbox", body: "Any further change creates a new candidate." }
-      : { title: "local seal ready — publish to Approval Inbox", body: "The pack is sealed; publishing creates the R1 approval in the governance store." },
+    gate_verdict: { title: "local seal ready — downstream publish remains P22", body: "P21 creates only a Portal-local immutable evidence pack. It neither computes, approves, delivers, nor starts Paper." },
     draft: {
       draft_id: "rcd_01J9P21DRAFT00001", revision: 1, source_fingerprint: FP, known_limitations: DECL.known,
       proposed_use_restrictions: DECL.restr, state: "PERSISTED", updated_at_utc_ms: RC_T0 + 60_000,
@@ -646,23 +665,12 @@ export function rcCompose(runId: string = RC_RUN, rcId: string = RC_ID, publishe
       delivery_state: published ? "DELIVERED" : "NOT_DELIVERED", approval_state: published ? "PENDING" : "NOT_APPROVED", availability: AV,
     },
     actions: {
-      may_edit_draft: !published,
+      may_edit_draft: true,
       may_seal: false,
-      seal_blocked_reason: published ? "P22_ALREADY_PUBLISHED" : "P21_ALREADY_SEALED",
-      publish: { enabled: !published, blocked_reason: published ? "P22_ALREADY_PUBLISHED" : null, release_candidate_id: rcId },
+      seal_blocked_reason: "P21_RESEARCHER_DECLARATIONS_REQUIRED",
+      publish: { enabled: !published, blocked_reason: published ? "P22_ALREADY_DELIVERED" : null },
     },
-    publication: published
-      ? {
-          availability: AV, state: "DELIVERED", release_candidate_id: rcId, approval_id: APPROVAL, conflicting_approval_id: null,
-          downstream_code: null, downstream_receipt_digest: dg("0"), attempt_count: 1, intent_actor: actor,
-          updated_at_utc_ms: RC_PUBLISHED_AT, reconcile_allowed: false, claim_candidates: ["mclaim_01J9"],
-        }
-      : {
-          availability: np("P22_NOT_PUBLISHED"), state: null, release_candidate_id: rcId, approval_id: null, conflicting_approval_id: null,
-          downstream_code: null, downstream_receipt_digest: null, attempt_count: null, intent_actor: null, updated_at_utc_ms: null,
-          reconcile_allowed: false, claim_candidates: ["mclaim_01J9"],
-        },
-    mirror: published ? rcMirror(rcId) : null,
+    mirror: null,
     source_absences: absences,
   } satisfies RcCompose;
   return body;
@@ -870,7 +878,7 @@ const RE = {
   replay: /\/api\/v1\/quantbt\/runs\/([^/?]+)\/execute\/replay(\?|$)/,
   report: /\/api\/v1\/quantbt\/runs\/([^/?]+)\/report(\?|$)/,
   compose: /\/api\/v1\/quantbt\/runs\/([^/?]+)\/release-candidate(\?|$)/,
-  mirror: /\/api\/v1\/research\/release-candidates\/([^/?]+)\/mirror(\?|$)/,
+  publication: /\/api\/v1\/research\/release-candidates\/([^/?]+)\/publication(\?|$)/,
   lineage: /\/api\/v1\/research\/alphas\/([^/?]+)\/lineage(\?|$)/,
   compare: /\/api\/v1\/research\/alphas\/([^/?]+)\/compare(\?|$)/,
   progress: /\/api\/v1\/research\/runs\/([^/?]+)\/progress(\?|$)/,
@@ -927,9 +935,10 @@ export async function installLane(page: Page, options: LaneOptions = {}): Promis
     const runId = decodeURIComponent(url.pathname.match(RE.compose)![1]!);
     await json(route, rcCompose(runId, rcIdFor(runId)));
   });
-  await page.route(RE.mirror, async (route) => {
+  await page.route(RE.publication, async (route) => {
     const url = new URL(route.request().url());
-    await json(route, rcMirror(decodeURIComponent(url.pathname.match(RE.mirror)![1]!)));
+    await wait(route);
+    await json(route, rcPublication(decodeURIComponent(url.pathname.match(RE.publication)![1]!)));
   });
   await page.route(RE.lineage, async (route) => {
     const url = new URL(route.request().url());
