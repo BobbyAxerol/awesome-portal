@@ -9,7 +9,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AtlasDocument } from "./atlas";
-import { EngineAtlas, atlasHash, atlasLocationFromHash, type AtlasLocation, type AtlasTab } from "./EngineAtlas";
+import { EngineAtlas, atlasHash, atlasLocationFromHash, governingStage, type AtlasLocation, type AtlasRunCell, type AtlasTab } from "./EngineAtlas";
 import { formulaToTex } from "./Formula";
 import { researchState } from "./state";
 
@@ -116,8 +116,9 @@ describe("spec 12 T02 — the objective, typeset with a mono fallback", () => {
     expect(formulas.length).toBe(3);
     expect(card.textContent).toContain("mean_oos_sharpe - candidate_decay_lambda * std_decay");
     const terms = card.querySelector("[data-objective-terms]") as HTMLElement;
-    expect(terms.textContent).toContain("decay_lambda0.5");
-    expect(terms.textContent).toContain("candidate_decay_lambdaunset");
+    /* D9: the release coefficients as one mono line (name value · …), the notes under the disclosure. */
+    expect(terms.textContent).toMatch(/(^|· )decay_lambda\u00a00\.5( ·|$)/);
+    expect(terms.textContent).toMatch(/candidate_decay_lambda\u00a0unset/);
   });
 });
 
@@ -195,9 +196,103 @@ describe("Q4 / D-4 and the release facts panel", () => {
 
   it("selects a route into the hash from its row", () => {
     const onLocationChange = view("routes", { route: "signal_notional" });
-    expect((document.querySelector('[data-route="signal_notional"]') as HTMLElement).style.background).toBe("var(--accent-soft)");
+    expect((document.querySelector('[data-route="signal_notional"]') as HTMLElement).style.boxShadow).toBe("inset 3px 0 0 var(--accent)");
     expect(document.querySelector('[data-route="signal_notional"]')?.getAttribute("aria-current")).toBe("true");
     fireEvent.click(document.querySelector('[data-route-link="intrabar_bracket"]') as HTMLElement);
     expect(onLocationChange).toHaveBeenCalledWith({ route: "intrabar_bracket" });
+  });
+});
+
+describe("E7 / D9 — the HiFi's density (Unified 13.4.1)", () => {
+  function viewWithRun(tab: AtlasTab, runCell: AtlasRunCell, location: Partial<Omit<AtlasLocation, "tab">> = {}) {
+    render(
+      <MemoryRouter>
+        <EngineAtlas
+          doc={DOC}
+          state={researchState({ kind: "ok", rowCount: 1 })}
+          tab={tab}
+          onTabChange={vi.fn()}
+          location={{ mode: null, schedule: null, route: null, run: "rrun_e1fa9e5cae3bcef8f8e38311905a17d5", ...location }}
+          onLocationChange={vi.fn()}
+          runCell={runCell}
+        />
+      </MemoryRouter>,
+    );
+  }
+
+  it("12-1 each mode card has the HiFi's three columns: what it reads · objective · schedule → claim", () => {
+    view("modes");
+    for (const mode of DOC.modes) {
+      const card = document.querySelector(`[data-mode="${mode.mode_id}"]`) as HTMLElement;
+      expect([...card.querySelectorAll("[data-mode-column]")].map((column) => column.getAttribute("data-mode-column"))).toEqual(["reads", "objective", "claim"]);
+      /* The schedule chips sit in the claim column, not the header (HiFi). */
+      expect(card.querySelector("header [data-schedule], header [data-schedule-invalid]")).toBeNull();
+      expect(card.querySelector('[data-mode-column="claim"] [data-schedule], [data-mode-column="claim"] [data-schedule-invalid]')).toBeTruthy();
+    }
+  });
+
+  it("12-2 the stage that governs selection leads; the other stages, weights and sources sit under one closed disclosure", () => {
+    view("modes");
+    const card = document.querySelector('[data-mode="mode_1_decay"]') as HTMLElement;
+    expect(card.querySelector("[data-objective-lead]")?.getAttribute("data-objective-lead")).toBe("oos_candidate_selection");
+    const more = card.querySelector("[data-objective-more]") as HTMLDetailsElement;
+    expect(more.open).toBe(false);
+    expect(more.querySelectorAll("[data-objective-stage]")).toHaveLength(2);
+    expect(governingStage([{ stage: "is_search" }])?.stage).toBe("is_search");
+    expect(governingStage([{ stage: "is_search" }, { stage: "oos_candidate_selection" }])?.stage).toBe("oos_candidate_selection");
+  });
+
+  it("12-3 / 12-8 the run's own mode card carries '← this run'; only it opens that run's Search", () => {
+    viewWithRun("modes", { state: "known", mode: "mode_1_decay", schedule: "per_fold_decay" });
+    const card = document.querySelector('[data-mode="mode_1_decay"]') as HTMLElement;
+    expect(card.getAttribute("data-this-run")).toBe("true");
+    expect(card.querySelector("[data-this-run-marker]")?.textContent).toBe("← this run");
+    expect(card.getAttribute("style")).toContain("var(--accent)");
+    /* It opens on the run's own schedule. */
+    expect(card.querySelector('[data-schedule="per_fold_decay"]')?.getAttribute("aria-pressed")).toBe("true");
+    expect(card.querySelector('[data-open-search="mode_1_decay"]')?.getAttribute("href")).toContain("schedule=per_fold_decay");
+    expect(document.querySelectorAll("[data-this-run-marker]")).toHaveLength(1);
+    expect(document.querySelectorAll("[data-open-search]")).toHaveLength(1);
+    expect(document.querySelector('[data-find-runs="mode_2_sbb"]')?.getAttribute("href")).toBe("/research/quantbt/runs?mode=mode_2_sbb");
+  });
+
+  it("12-3 a run whose mode is not published, or not a WFO mode, marks no card and says why", () => {
+    viewWithRun("modes", { state: "absent", reason: "You don't have access to this in your current workspace, or it doesn't exist." });
+    expect(document.querySelector("[data-this-run-marker]")).toBeNull();
+    expect(document.querySelector('[data-this-run-absent="absent"]')?.textContent).toContain("not published here");
+    cleanup();
+    viewWithRun("modes", { state: "known", mode: "fixed", schedule: "none" });
+    expect(document.querySelector("[data-this-run-marker]")).toBeNull();
+    expect(document.querySelector("[data-this-run-outside]")?.textContent).toContain("fixed × none");
+  });
+
+  it("12-5 routes: one card titled as the HiFi, one line per route; axes and engine facts open only on the selected row", () => {
+    view("routes", { route: "arbitrage" });
+    const card = document.querySelector('[data-tab-card="routes"]') as HTMLElement;
+    expect(card.querySelector("h2")?.textContent).toBe("execution routes — support matrix, not aspiration");
+    expect(card.querySelector("[data-tab-card-source]")?.textContent).toContain("arbitrage_support_matrix()");
+    for (const route of DOC.routes) {
+      const detail = document.querySelector(`[data-route-detail="${route.route_id}"]`) as HTMLElement;
+      expect(detail.hidden, route.route_id).toBe(route.route_id !== "arbitrage");
+    }
+    expect(document.querySelector('[data-route-link="arbitrage"]')?.getAttribute("aria-expanded")).toBe("true");
+    /* A blocked route's refusal reason is visible in its row, not behind the disclosure. */
+    const blocked = DOC.routes.find((route) => route.axes.integration !== "ADAPTER_AVAILABLE")!;
+    const reason = document.querySelector(`[data-route-reason="${blocked.route_id}"]`) as HTMLElement;
+    expect(reason.closest("[hidden]")).toBeNull();
+    expect(reason.textContent).toBe(blocked.reason);
+  });
+
+  it("12-6 / 12-7 claims: the HiFi's card and cert word; the screen's rules on every tab", () => {
+    for (const tab of ["modes", "routes", "claims"] as const) {
+      view(tab);
+      expect(document.querySelectorAll("[data-screen-rules]"), tab).toHaveLength(1);
+      cleanup();
+    }
+    view("claims");
+    expect(document.querySelector('[data-tab-card="claims"] h2')?.textContent).toBe("claims by contract — two axes, never mixed");
+    const claim = DOC.claims.find((item) => item.qualifier)!;
+    expect(document.querySelector(`[data-contract="${claim.contract_id}"]`)?.textContent).toContain(`${claim.engine_certification} · ${claim.qualifier!.level_name}`);
+    expect(document.querySelector('[data-tab-card="claims"]')?.textContent).toContain("The two chips on the Release Candidate screen carry the axes separately.");
   });
 });

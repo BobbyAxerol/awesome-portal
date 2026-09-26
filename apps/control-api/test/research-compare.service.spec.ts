@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { ResearchCompareResponseSchema } from "../src/research/compare.contract";
 import { ResearchCompareService } from "../src/research/compare.service";
 import type { CompareRunRow } from "../src/research/compare.repository";
 import { p14SplitSourceFixture } from "./research-split.fixture";
@@ -269,16 +270,62 @@ describe("P20 bounded Compare persisted truth", () => {
     const rows = Array.from({ length: 25 }, (_, index) => row(`run-p20-market-${index}`, {
       requested_spec: requested(`run-p20-market-${index}`, { data: { dataset_id: "hmd", symbol: `SYM${index}`, timeframe: "1h" } }),
     }));
-    const bounded = snapshot(rows.slice(0, 24));
-    bounded.totalAttempts = 25;
-    bounded.hasMore = true;
-    const { service, repository } = subject(bounded);
+    const { service, repository } = subject(snapshot(rows));
     const response = await service.detail(scope, "alpha-p20", { mode: "markets", run_ids: [] });
-    expect(response.result).toMatchObject({ mode: "markets", caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie." });
+    expect(response.result).toMatchObject({
+      mode: "markets",
+      caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie.",
+      grouping: "MARKET_KEY_ACTIVE_OR_LATEST_V1",
+    });
     if (response.result.mode !== "markets") throw new Error("test guard");
+    /* 25 markets, 24 cards: the bound is stated, never a silent cut. */
     expect(response.result.cards).toHaveLength(24);
+    expect(new Set(response.result.cards.map((card) => card.market.symbol)).size).toBe(24);
+    expect(response.result.coverage).toMatchObject({ state: "PARTIAL", reason_code: "P20_MARKET_SMALL_MULTIPLES_BOUNDED" });
     expect(repository.pairRaw).not.toHaveBeenCalled();
-    expect(repository.snapshot).toHaveBeenCalledWith(scope, "alpha-p20", [], 24);
+    /* D10: markets reads the full attempts budget so it can group. */
+    expect(repository.snapshot).toHaveBeenCalledWith(scope, "alpha-p20", [], 128);
+  });
+
+  it("D10 groups runs by the market part of the key and shows the latest ACTIVE-version run per market", async () => {
+    const market = (symbol: string, timeframe: string) => ({ data: { dataset_id: "hmd", symbol, timeframe } });
+    const at = (minute: number) => new Date(`2026-09-22T00:${String(minute).padStart(2, "0")}:00.000Z`);
+    const rows = [
+      row("run-btc-old-active", { requested_spec: requested("run-btc-old-active", market("BTCUSDT", "1h")), run_created_at: at(1), alpha_version_lifecycle: "ACTIVE" }),
+      row("run-btc-new-active", { requested_spec: requested("run-btc-new-active", market("BTCUSDT", "1h")), run_created_at: at(5), alpha_version_lifecycle: "ACTIVE" }),
+      /* Newer, but its version is superseded: the ACTIVE version's run stands for the market. */
+      row("run-btc-newest-superseded", { requested_spec: requested("run-btc-newest-superseded", market("BTCUSDT", "1h")), run_created_at: at(9), alpha_version_lifecycle: "SUPERSEDED" }),
+      /* A different route on the same market is the same market card. */
+      row("run-btc-other-route", { requested_spec: requested("run-btc-other-route", { ...market("BTCUSDT", "1h"), execution_route: "pct_equity" }), run_created_at: at(2), alpha_version_lifecycle: "ACTIVE" }),
+      /* The same symbol at another timeframe is another market. */
+      row("run-btc-4h", { requested_spec: requested("run-btc-4h", market("BTCUSDT", "4h")), run_created_at: at(3), alpha_version_lifecycle: "SUPERSEDED" }),
+      row("run-eth-a", { requested_spec: requested("run-eth-a", market("ETHUSDT", "1h")), run_created_at: at(4), alpha_version_lifecycle: "SUPERSEDED" }),
+      row("run-eth-b", { requested_spec: requested("run-eth-b", market("ETHUSDT", "1h")), run_created_at: at(6), alpha_version_lifecycle: "SUPERSEDED" }),
+    ];
+    const { service } = subject(snapshot(rows));
+    const response = await service.detail(scope, "alpha-p20", { mode: "markets", run_ids: [] });
+    expect(ResearchCompareResponseSchema.safeParse(response).success).toBe(true);
+    if (response.result.mode !== "markets") throw new Error("test guard");
+    const cards = Object.fromEntries(response.result.cards.map((card) => [`${card.market.symbol} · ${card.market.timeframe}`, card]));
+    expect(Object.keys(cards).sort()).toEqual(["BTCUSDT · 1h", "BTCUSDT · 4h", "ETHUSDT · 1h"]);
+    expect(cards["BTCUSDT · 1h"]).toMatchObject({ selection: "LATEST_ACTIVE_VERSION_RUN", runs_in_market: 4, run: { run_id: "run-btc-new-active" } });
+    expect(cards["ETHUSDT · 1h"]).toMatchObject({ selection: "LATEST_RUN", runs_in_market: 2, run: { run_id: "run-eth-b" } });
+    expect(cards["BTCUSDT · 4h"]).toMatchObject({ selection: "LATEST_RUN", runs_in_market: 1, run: { run_id: "run-btc-4h" } });
+    expect(response.result.coverage).toMatchObject({ state: "COMPLETE", total_attempts: 7, reason_code: null });
+  });
+
+  it("D10 never merges two runs whose key publishes no market part", async () => {
+    const rows = [
+      row("run-nomarket-a", { requested_spec: null }),
+      row("run-nomarket-b", { requested_spec: null }),
+    ];
+    const { service } = subject(snapshot(rows));
+    const response = await service.detail(scope, "alpha-p20", { mode: "markets", run_ids: [] });
+    if (response.result.mode !== "markets") throw new Error("test guard");
+    const unknown = response.result.cards.filter((card) => card.selection === "MARKET_NOT_PUBLISHED");
+    expect(unknown).toHaveLength(2);
+    expect(unknown.length).toBe(response.result.cards.filter((card) => card.market.symbol === null || card.market.timeframe === null).length);
+    for (const card of unknown) expect(card.runs_in_market).toBe(1);
   });
 
   it("fails closed while its retained-reader prerequisites are dark", async () => {

@@ -239,10 +239,28 @@ const AttemptsModeSchema = z.object({
   }).strict(),
 }).strict();
 
+/**
+ * D10 (Unified 13.4.1 E-D, 2026-09-26) · a markets card is one market — the
+ * `symbol · timeframe` part of the ComparisonContractKey — represented by one
+ * run: the latest run of an ACTIVE alpha version on that market, else the
+ * latest run on it. A run whose key publishes no market part is its own card
+ * (`MARKET_NOT_PUBLISHED`), never merged with another unknown market.
+ */
+const MarketSchema = z.object({
+  symbol: z.string().min(1).max(64).nullable(),
+  timeframe: z.string().min(1).max(160).nullable(),
+}).strict();
+
 const MarketsModeSchema = z.object({
   mode: z.literal("markets"),
   caption: z.literal("different contract keys — small multiples only; an overlay across keys would be a comparison lie."),
+  grouping: z.literal("MARKET_KEY_ACTIVE_OR_LATEST_V1"),
   cards: z.array(z.object({
+    market: MarketSchema,
+    /** Why this run stands for its market. */
+    selection: z.enum(["LATEST_ACTIVE_VERSION_RUN", "LATEST_RUN", "MARKET_NOT_PUBLISHED"]),
+    /** Returned runs on this market (the represented one included). */
+    runs_in_market: z.number().int().min(1).max(128),
     run: RunSchema,
     chart: z.object({
       state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
@@ -252,7 +270,7 @@ const MarketsModeSchema = z.object({
       points: z.array(z.object({ at_utc_ms: UtcMsSchema, equity: ExactDecimalSchema }).strict()).max(192),
       availability: ResearchCompareAvailabilitySchema,
     }).strict(),
-  }).strict()).max(128),
+  }).strict()).max(24),
   coverage: z.object({ state: z.enum(["COMPLETE", "PARTIAL"]), total_attempts: z.number().int().nonnegative(), reason_code: ReasonCodeSchema.nullable() }).strict(),
 }).strict();
 

@@ -20,32 +20,44 @@
       "what": "hi-fi 'cert —' is rendered 'cert not published' because CLAUDE.md forbids '-' in place of a value",
       "class": "other (rule over hi-fi)",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "evidence": "LineageDetail.tsx:1025, :1085; probe r2 fonts/cert"
+      "state": "DECIDED",
+      "evidence": "LineageDetail.tsx:1025, :1085; probe r2 fonts/cert",
+      "decision": "Keep 'cert not published' (the hi-fi's 'cert —' would print a dash for a value; no source publishes a grade). The chip keeps its reason in the title.",
+      "decided_by": "Unified 13.4.1 E-D D8 (Claude, delegated 2026-09-25/26; Bobby may veto); record upgrade/research_loop/evidence/P20/E7_S10_S12_S13_HIFI_CLAUDE_2026-09-26.md",
+      "decided_on": "2026-09-26"
     },
     {
       "id": "S10-COUNTS-PANEL",
       "what": "a counts panel that is not in the hi-fi (disclosure the handoff requires)",
       "class": "other (handoff over hi-fi)",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "evidence": "LINEAGE_PANELS order … promotion-rule, counts, rules; U49"
+      "state": "DECIDED",
+      "evidence": "LINEAGE_PANELS order … promotion-rule, counts, rules; U49",
+      "decision": "Keep the counts panel (the multiple-testing disclosure the handoff requires), as the S13 twin VD-P20-08 was kept.",
+      "decided_by": "Unified 13.4.1 E-D D8 (Claude, delegated 2026-09-25/26; Bobby may veto); record upgrade/research_loop/evidence/P20/E7_S10_S12_S13_HIFI_CLAUDE_2026-09-26.md",
+      "decided_on": "2026-09-26"
     },
     {
       "id": "S10-SOURCE-CHIP-VS-READ-AUTHORITY",
       "what": "source chip copies the hi-fi 'attempts.json' while the response's read_authority is PORTAL_PERSISTED_RESEARCH (shown in title and counts heading)",
       "class": "other (hi-fi copy vs contract fact)",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "evidence": "LINEAGE_SOURCE_CHIP (:60); probe r2 copy"
+      "state": "DECIDED",
+      "evidence": "LINEAGE_SOURCE_CHIP (:60); probe r2 copy",
+      "decision": "The chip names the response's read_authority ('PORTAL_PERSISTED_RESEARCH · lineage is persisted, not reconstructed'); 'attempts.json' is gone from the chip and the rules footer, because this read never opens that file.",
+      "decided_by": "Unified 13.4.1 E-D D8 (Claude, delegated 2026-09-25/26; Bobby may veto); record upgrade/research_loop/evidence/P20/E7_S10_S12_S13_HIFI_CLAUDE_2026-09-26.md",
+      "decided_on": "2026-09-26"
     },
     {
       "id": "S10-RAW-STATE-CHIP",
       "what": "a raw state chip (READY, FAILED…) beside the derived status when they differ; not in the hi-fi",
       "class": "other",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "evidence": "U51"
+      "state": "DECIDED",
+      "evidence": "U51",
+      "decision": "One status pill per attempt, as the hi-fi. The raw attempt state leaves the rows and cards and rides in the pill's title and data-raw-state; the selected panel prints it as a 'state' row when it says more than the status.",
+      "decided_by": "Unified 13.4.1 E-D D8 (Claude, delegated 2026-09-25/26; Bobby may veto); record upgrade/research_loop/evidence/P20/E7_S10_S12_S13_HIFI_CLAUDE_2026-09-26.md",
+      "decided_on": "2026-09-26"
     },
     {
       "id": "S10-DIFF-KEY-WRAP",

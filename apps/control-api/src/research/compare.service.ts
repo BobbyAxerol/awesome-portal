@@ -737,6 +737,54 @@ function retainedChart(points: CompareRetainedEquityPoint[] | undefined) {
   };
 }
 
+/** D10 · at most this many market small multiples (the retained-equity read budget). */
+const MARKET_CARD_LIMIT = 24;
+
+interface MarketGroup {
+  market: { symbol: string | null; timeframe: string | null };
+  selection: "LATEST_ACTIVE_VERSION_RUN" | "LATEST_RUN" | "MARKET_NOT_PUBLISHED";
+  members: number;
+  representative: Candidate;
+}
+
+function later(left: Candidate, right: Candidate): Candidate {
+  const difference = left.run.created_at_utc_ms - right.run.created_at_utc_ms;
+  if (difference !== 0) return difference > 0 ? left : right;
+  return left.run.run_id.localeCompare(right.run.run_id) >= 0 ? left : right;
+}
+
+/**
+ * D10 (Unified 13.4.1 E-D) · one card per market — the symbol · timeframe
+ * part of the ComparisonContractKey. The market's run is the latest run of an
+ * ACTIVE alpha version on it, else its latest run. Cards keep the claim-first
+ * order of their representative runs; a key without a market part is never
+ * merged with another. Nothing here ranks a metric.
+ */
+function marketGroups(sorted: Candidate[]): MarketGroup[] {
+  const byMarket = new Map<string, Candidate[]>();
+  for (const item of sorted) {
+    const key = item.run.comparison_contract_key;
+    const id = key.symbol !== null && key.timeframe !== null
+      ? JSON.stringify([key.symbol, key.timeframe])
+      : `run:${item.run.run_id}`;
+    byMarket.set(id, [...(byMarket.get(id) ?? []), item]);
+  }
+  const groups = [...byMarket.values()].map((members): MarketGroup => {
+    const key = members[0]!.run.comparison_contract_key;
+    const known = key.symbol !== null && key.timeframe !== null;
+    const active = members.filter((item) => item.run.alpha_version_lifecycle.value === "ACTIVE");
+    const representative = (active.length > 0 ? active : members).reduce(later);
+    return {
+      market: { symbol: key.symbol, timeframe: key.timeframe },
+      selection: !known ? "MARKET_NOT_PUBLISHED" : active.length > 0 ? "LATEST_ACTIVE_VERSION_RUN" : "LATEST_RUN",
+      members: members.length,
+      representative,
+    };
+  });
+  const position = new Map(sorted.map((item, index) => [item.run.run_id, index]));
+  return groups.sort((left, right) => position.get(left.representative.run.run_id)! - position.get(right.representative.run.run_id)!);
+}
+
 @Injectable()
 export class ResearchCompareService {
   constructor(
@@ -746,7 +794,9 @@ export class ResearchCompareService {
 
   async detail(scope: ResearchScope, alphaId: string, query: ResearchCompareQuery): Promise<ResearchCompareResponse> {
     this.requireEnabled();
-    const maximumRows = query.mode === "markets" ? 24 : query.mode === "pair" ? 2 : 128;
+    // D10: markets groups every returned run by market, so it reads the full
+    // attempts budget; at most 24 market cards leave the service.
+    const maximumRows = query.mode === "pair" ? 2 : 128;
     const snapshot = await this.repository.snapshot(
       scope,
       alphaId,
@@ -822,7 +872,9 @@ export class ResearchCompareService {
   }
 
   private async markets(scope: ResearchScope, snapshot: CompareSnapshot, candidates: Candidate[]) {
-    const sorted = sortCandidates(candidates);
+    const groups = marketGroups(sortCandidates(candidates));
+    const shown = groups.slice(0, MARKET_CARD_LIMIT);
+    const sorted = shown.map((group) => group.representative);
     const retainedRuns = sorted
       .filter((item) => item.retained !== null && item.sourceBindingReady && Number.isSafeInteger(Number(item.row.current_artifact_revision)))
       .map((item) => ({ runId: item.run.run_id, artifactRevision: Number(item.row.current_artifact_revision) }));
@@ -830,15 +882,24 @@ export class ResearchCompareService {
     for (const point of await this.repository.retainedEquity(scope, retainedRuns)) {
       retainedPoints.set(point.runId, [...(retainedPoints.get(point.runId) ?? []), point]);
     }
-    const incomplete = snapshot.hasMore || candidates.length !== snapshot.totalAttempts;
+    const bounded = snapshot.hasMore || groups.length > shown.length;
+    const incomplete = bounded || candidates.length !== snapshot.totalAttempts;
     return {
       mode: "markets" as const,
       caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie." as const,
-      cards: sorted.map((item) => ({ run: item.run, chart: item.retained ? retainedChart(retainedPoints.get(item.run.run_id)) : chart(item) })),
+      grouping: "MARKET_KEY_ACTIVE_OR_LATEST_V1" as const,
+      cards: shown.map((group) => ({
+        market: group.market,
+        selection: group.selection,
+        runs_in_market: group.members,
+        run: group.representative.run,
+        chart: group.representative.retained ? retainedChart(retainedPoints.get(group.representative.run.run_id)) : chart(group.representative),
+      })),
       coverage: {
         state: incomplete ? "PARTIAL" as const : "COMPLETE" as const,
         total_attempts: snapshot.totalAttempts,
-        reason_code: snapshot.hasMore ? "P20_MARKET_SMALL_MULTIPLES_BOUNDED"
+        // A bounded read cannot promise the latest run per market, so it says so.
+        reason_code: bounded ? "P20_MARKET_SMALL_MULTIPLES_BOUNDED"
           : candidates.length !== snapshot.totalAttempts ? "P20_ATTEMPTS_WITHOUT_PRIMARY_RUN_NOT_COMPAREABLE" : null,
       },
     };
