@@ -15,10 +15,22 @@ import { ResearchEvidenceService } from "./evidence.service";
 import { ResearchFreezeService } from "./freeze.service";
 import { canonicalResearchJson } from "./preflight.service";
 import { ResearchReplayService } from "./replay.service";
-import { AVAILABLE, NOT_PUBLISHED, fixedProfileCore, retainedCore, type Availability } from "./report-core-v2";
+import {
+  AVAILABLE,
+  NOT_PUBLISHED,
+  failedCore,
+  fixedFinalAudit,
+  fixedProfileCore,
+  retainedCore,
+  retainedFinalAudit,
+  type Availability,
+  type ReportAuditRelation,
+} from "./report-core-v2";
+import type { ResearchProgressSnapshot } from "./progress.contract";
 import {
   ResearchReportDetailResponseSchema,
   ResearchReportExportStatusSchema,
+  ResearchReportFrozenCoreFailedSchema,
   ResearchReportFrozenCoreV2Schema,
   type ResearchReportDetailResponse,
   type ResearchReportExportFormat,
@@ -71,13 +83,79 @@ export class ResearchReportService {
    */
   async materializeTerminal(
     scope: ResearchScope,
-    input: { run_id: string; event: { event_type: string } },
+    input: {
+      run_id: string;
+      event: { event_type: string; sequence?: number; occurred_at_utc_ms?: number; payload?: Record<string, unknown> };
+      snapshot?: ResearchProgressSnapshot;
+    },
     lane: ResearchReportLane = "P04_FIXED_PROFILE",
   ): Promise<boolean> {
-    if (this.config.FEATURE_RESEARCH_REPORTS !== "true" || input.event.event_type !== "run_completed") return false;
+    if (this.config.FEATURE_RESEARCH_REPORTS !== "true") return false;
+    if (input.event.event_type === "run_failed") return this.materializeFailureBestEffort(scope, input);
+    if (input.event.event_type !== "run_completed") return false;
     if (lane === "RS02_RETAINED_CURRENT_SOURCE" && this.config.FEATURE_RESEARCH_CURRENT_SOURCE !== "true") return false;
     await this.materialize(scope, input.run_id, lane);
     return true;
+  }
+
+  /**
+   * X2 · B5 (spec 09 T06): a run that FAILED or was cancelled gets a sheet
+   * that says so — sealed from the terminal snapshot P11 just persisted, the
+   * same facts Screen 03 shows. Best-effort like the WFO sidecar (W6A-D02):
+   * a report must never refuse a run's own terminal lifecycle.
+   */
+  private async materializeFailureBestEffort(
+    scope: ResearchScope,
+    input: {
+      run_id: string;
+      event: { sequence?: number; occurred_at_utc_ms?: number; payload?: Record<string, unknown> };
+      snapshot?: ResearchProgressSnapshot;
+    },
+  ): Promise<boolean> {
+    try {
+      if (!input.snapshot) return false;
+      const payload = input.event.payload ?? {};
+      await this.materializeFailure(scope, input.run_id, {
+        snapshot: input.snapshot,
+        failure: {
+          code: typeof payload.code === "string" && payload.code.length > 0 ? payload.code : input.snapshot.failure?.code ?? "UNTYPED_FAILURE",
+          message: typeof payload.message === "string" ? payload.message : input.snapshot.failure?.message ?? null,
+        },
+        terminalSequence: input.event.sequence ?? input.snapshot.latest_sequence,
+        failedAtUtcMs: input.event.occurred_at_utc_ms ?? input.snapshot.updated_at_utc_ms,
+      });
+      return true;
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code: unknown }).code) : "UNTYPED";
+      process.stderr.write(`${JSON.stringify({ event: "research_report_failed_run_materialize_failed", run_id: input.run_id, code })}\n`);
+      return false;
+    }
+  }
+
+  async materializeFailure(
+    scope: ResearchScope,
+    runId: string,
+    facts: { snapshot: ResearchProgressSnapshot; failure: { code: string; message: string | null }; terminalSequence: number; failedAtUtcMs: number },
+  ): Promise<ResearchReportDetailResponse> {
+    this.requireEnabled();
+    // Identity comes from the P13 hub (the P10 producer + P08 manifest); a
+    // hub that cannot answer leaves typed identity absences, never a guess.
+    const hub = await this.evidence.bundle(scope, runId, []).then((bundle) => bundle.hub).catch(() => null);
+    const core = failedCore({ hub, ...facts });
+    const parsed = ResearchReportFrozenCoreFailedSchema.safeParse(core);
+    if (!parsed.success) {
+      const error = new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Failed-run report is incompatible with the terminal facts.", 503);
+      (error as Error & { cause?: unknown }).cause = parsed.error;
+      throw error;
+    }
+    const stored = await this.repository.seal(scope, runId, parsed.data);
+    return this.detail(stored);
+  }
+
+  /** P19 lineage facts for P18-T10; a repository that cannot answer leaves the final audit typed absent. */
+  private async auditRelation(scope: ResearchScope, runId: string): Promise<ReportAuditRelation | null> {
+    if (typeof this.repository.auditRelation !== "function") return null;
+    return this.repository.auditRelation(scope, runId).catch(() => null);
   }
 
   async materialize(scope: ResearchScope, runId: string, lane: ResearchReportLane = "P04_FIXED_PROFILE"): Promise<ResearchReportDetailResponse> {
@@ -128,7 +206,7 @@ export class ResearchReportService {
     const hubBundle = await this.evidence.bundle(scope, runId, []);
     const evidenceRead = sealed(evidence);
     const parts = await this.repository.sealedArtifactParts(scope, runId, null);
-    return retainedCore({
+    const reads = {
       hub: hubBundle.hub,
       evidence: evidenceRead,
       split: sealed(split),
@@ -137,7 +215,12 @@ export class ResearchReportService {
       replay: sealed(replay),
       equity: sealed(equity),
       parts,
-    });
+    };
+    return {
+      ...retainedCore(reads),
+      // X2 · P18-T10: reused original vs linked child, from P19 lineage + QuantBT's child audit.
+      final_audit: retainedFinalAudit(runId, await this.auditRelation(scope, runId), reads.freeze, reads.search, reads.replay),
+    };
   }
 
   private async fixedProfileCore(scope: ResearchScope, runId: string): Promise<unknown> {
@@ -168,7 +251,7 @@ export class ResearchReportService {
         }
         return { at_utc_ms: point.at_utc_ms, equity: point.equity, drawdown_fraction: point.drawdown_fraction };
       }) : [];
-    return fixedProfileCore({
+    const core = fixedProfileCore({
       hub: evidenceBundle.hub,
       equity: {
         availability: equity.availability as Availability,
@@ -188,6 +271,12 @@ export class ResearchReportService {
       },
       replay: { revision: replay.revision!, routeState: replay.route.state },
     });
+    return {
+      ...core,
+      final_audit: fixedFinalAudit(runId, await this.auditRelation(scope, runId), {
+        split: split.revision!, freeze: freeze.revision!, replay: replay.revision!,
+      }),
+    };
   }
 
   async read(scope: ResearchScope, runId: string): Promise<ResearchReportDetailResponse> {
@@ -258,9 +347,16 @@ export class ResearchReportService {
       exports: {
         formats: ["REPORT_JSON", "REPORT_CSV"] as const,
         maximum_bytes: this.config.RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES,
+        // X2 · B5 decision (X2-D09): no bounded, safe path exists for either.
+        //  - ARCHIVE of the sealed P05 parts would hand out private retained
+        //    bytes, including the OHLCV bars the observation parts carry (P05:
+        //    a GET never reopens private artifact bytes; this contract carries
+        //    no raw market rows).
+        //  - PARQUET of the report rowset needs a pinned Parquet writer; the
+        //    Control API ships none and the report is already JSON/CSV exact.
         unavailable_formats: [
-          { format: "PARQUET" as const, reason_code: "P18_SOURCE_DID_NOT_PUBLISH_REPORT_ROWSET_FOR_PARQUET" },
-          { format: "ARCHIVE" as const, reason_code: "P18_SOURCE_ARTIFACT_ARCHIVE_NOT_EXPOSED_TO_REPORT" },
+          { format: "PARQUET" as const, reason_code: "P18_CONTROL_API_HAS_NO_PINNED_PARQUET_WRITER" },
+          { format: "ARCHIVE" as const, reason_code: "P18_ARCHIVE_WOULD_EXPOSE_PRIVATE_P05_BYTES_AND_RAW_MARKET_ROWS" },
         ],
       },
     };
@@ -320,6 +416,24 @@ export class ResearchReportService {
 
   private csv(payload: { frozen_core: ResearchReportFrozenCore; approval_annotation: ClaimedResearchReportExport["annotation"] }): string {
     const lines = ["section,key,label,value,state,reason_code"];
+    if (payload.frozen_core.schema_version === "research.report-failed-core.v1") {
+      // X2: a failed-run sheet exports its outcome, identity, stages and artifacts — no metric exists.
+      const failed = payload.frozen_core;
+      lines.push(["outcome", "state", "Outcome", failed.outcome.state, "AVAILABLE", null].map(csvCell).join(","));
+      lines.push(["outcome", "headline", "Headline", failed.outcome.headline, "AVAILABLE", null].map(csvCell).join(","));
+      lines.push(["outcome", "failure_code", "Failure code", failed.outcome.failure_code, "AVAILABLE", null].map(csvCell).join(","));
+      for (const field of failed.identity) {
+        lines.push(["identity", field.key, field.label, field.value, field.availability.state, field.availability.reason_code].map(csvCell).join(","));
+      }
+      for (const stage of failed.stages) {
+        lines.push(["stage", stage.key, stage.state, stage.check.text, stage.check.result, stage.check.availability.reason_code].map(csvCell).join(","));
+      }
+      for (const artifact of failed.artifacts) {
+        lines.push(["artifact", artifact.name, artifact.state, artifact.digest, artifact.state, null].map(csvCell).join(","));
+      }
+      lines.push(["annotation", "approval_annotation", "Approval annotation", payload.approval_annotation.text, payload.approval_annotation.state, payload.approval_annotation.state === "AVAILABLE" ? null : "P18_APPROVAL_ANNOTATION_NOT_PUBLISHED"].map(csvCell).join(","));
+      return `${lines.join("\r\n")}\r\n`;
+    }
     for (const field of payload.frozen_core.identity) {
       lines.push(["identity", field.key, field.label, field.value, field.availability.state, field.availability.reason_code].map(csvCell).join(","));
     }

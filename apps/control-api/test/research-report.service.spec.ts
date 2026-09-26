@@ -105,6 +105,8 @@ function subject() {
     read: vi.fn().mockImplementation(async () => stored ?? null),
     requestExport: vi.fn(), readExport: vi.fn(), download: vi.fn(), claimOne: vi.fn(), completeClaim: vi.fn(), failClaim: vi.fn(),
     sealedArtifactParts: vi.fn().mockResolvedValue(null),
+    // X2 · P18-T10: a PRIMARY run with no AUDIT_OF_SELECTION child.
+    auditRelation: vi.fn().mockResolvedValue({ relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [] }),
   };
   const service = new ResearchReportService(repository as never, readers.evidence as never, readers.split as never, readers.search as never, readers.freeze as never, readers.replay as never, {} as never, enabledConfig() as never);
   return { service, repository, readers, get stored() { return stored; } };
@@ -200,6 +202,11 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     expect(ResearchReportDetailResponseSchema.safeParse(body).success).toBe(true);
     openApiValidator("research-report.openapi.json", "ReportDetail").assert(body);
     expect(body.frozen_core).toMatchObject({ schema_version: "research.report-frozen-core.v2", report_source: "P13_P17_FIXED_PROFILE" });
+    // X2 · P18-T10: the fixed qualification child is its own final audit and runs no optimizer.
+    expect(body.frozen_core.final_audit).toMatchObject({
+      kind: "REUSED_ORIGINAL", audit_target_kind: "FIXED_PARAMETER_PROFILE", final_audit_run_id: "run_p18",
+      optimizer_reinvoked: false, optimizer_basis: "P04_FIXED_PROFILE_RUNS_NO_OPTIMIZER",
+    });
   });
 
   it("fails closed while the independently admitted P18 reader is dark", async () => {

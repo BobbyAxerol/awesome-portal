@@ -128,7 +128,13 @@ function parts(manifestDigest = real.manifest_digest) {
   };
 }
 
-function subject(options: { binding?: "PUBLISHABLE" | "SCRATCH"; manifestDigest?: string; importDigest?: string } = {}) {
+function subject(options: {
+  binding?: "PUBLISHABLE" | "SCRATCH";
+  manifestDigest?: string;
+  importDigest?: string;
+  /** X2 · P18-T10: the run's P19 lineage relation (undefined = the repository cannot answer). */
+  relation?: { relationshipKind: string; parentRunId: string | null; auditChildren: Array<{ runId: string; state: string }> } | null | undefined;
+} = {}) {
   let stored: StoredResearchReport | undefined;
   const repository = {
     seal: vi.fn(async (_scope: unknown, runId: string, frozenCore: StoredResearchReport["frozenCore"]) => {
@@ -141,6 +147,9 @@ function subject(options: { binding?: "PUBLISHABLE" | "SCRATCH"; manifestDigest?
     }),
     read: vi.fn(async () => stored ?? null),
     sealedArtifactParts: vi.fn().mockResolvedValue(parts(options.manifestDigest)),
+    auditRelation: vi.fn().mockResolvedValue(
+      "relation" in options ? options.relation : { relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [] },
+    ),
   };
   const evidence = { bundle: vi.fn().mockResolvedValue({ hub: wfoHub(options.binding), series: new Map() }) };
   const unused = { detail: vi.fn().mockRejectedValue(new Error("a WFO report never reads a P04 hub")) };
@@ -286,6 +295,8 @@ describe("CG-P18-09 · published report fixtures", () => {
   const files = {
     wfo: "research-report.wfo-retained.valid.json",
     scratch: "research-report.wfo-scratch.valid.json",
+    failed: "research-report.wfo-failed.valid.json",
+    folds32: "research-report.wfo-32-folds.valid.json",
     exportJobs: "research-report.export-jobs.valid.json",
     problems: "research-report.problems.valid.json",
   } as const;
@@ -307,6 +318,8 @@ describe("CG-P18-09 · published report fixtures", () => {
       });
       const problem = (status: number, code: string, message: string) => ({ status, body: { error: { code, message }, request_id: "req_fixture" } });
       writeFileSync(join(root, files.wfo), `${JSON.stringify(wfo)}\n`);
+      writeFileSync(join(root, files.failed), `${JSON.stringify(await subject().service.materializeFailure(scope, real.run_id, failedFacts()))}\n`);
+      writeFileSync(join(root, files.folds32), `${JSON.stringify(thirtyTwoFolds(wfo))}\n`);
       writeFileSync(join(root, files.scratch), `${JSON.stringify(scratch)}\n`);
       writeFileSync(join(root, files.exportJobs), `${JSON.stringify((["QUEUED", "RUNNING", "READY", "FAILED"] as const).map(job))}\n`);
       writeFileSync(join(root, files.problems), `${JSON.stringify([
@@ -319,7 +332,7 @@ describe("CG-P18-09 · published report fixtures", () => {
       ])}\n`);
     }
     const read = (name: string) => JSON.parse(readFileSync(join(root, name), "utf8"));
-    for (const name of [files.wfo, files.scratch]) {
+    for (const name of [files.wfo, files.scratch, files.failed, files.folds32]) {
       expect(ResearchReportDetailResponseSchema.safeParse(read(name)).success, name).toBe(true);
       reportValidator.assert(read(name));
     }
@@ -331,5 +344,185 @@ describe("CG-P18-09 · published report fixtures", () => {
     const problemValidator = openApiValidator("research-report.openapi.json", "Problem");
     for (const problem of read(files.problems)) problemValidator.assert(problem.body);
     expect(read(files.wfo).frozen_core.report_source).toBe("RS02_RETAINED_CURRENT_SOURCE");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * X2 · B5 — spec 09 T06 (failed run), P18-T10 (final audit), export formats,
+ * and the 32-fold S09 fixture.
+ * ---------------------------------------------------------------------- */
+
+/** A terminal snapshot of a WFO run that failed in S2 (the shape P11 persists with `run_failed`). */
+function failedSnapshot(failedAt: "S2" | "SEAL" = "S2") {
+  const stage = (key: string, index: number) => {
+    const done = failedAt === "SEAL" || index < 1;
+    const running = failedAt === "S2" && index === 1;
+    return {
+      key, state: done ? "DONE" : running ? "RUNNING" : "PENDING",
+      started_at_utc_ms: done || running ? 1_790_269_200_000 + index * 2_000 : null,
+      completed_at_utc_ms: done ? 1_790_269_201_000 + index * 2_000 : null,
+    };
+  };
+  return {
+    schema_version: "research.progress-snapshot.v1",
+    run_id: real.run_id,
+    attempt_id: "att_x2_failed",
+    lease_epoch: 1,
+    status: "FAILED",
+    created_at_utc_ms: 1_790_269_199_000,
+    updated_at_utc_ms: 1_790_269_203_500,
+    latest_sequence: 17,
+    retention_floor_sequence: 0,
+    stages: ["S1", "S2", "S3", "S4", "S5"].map(stage),
+    overall: { pct: 22, elapsed_s: 4, eta_s: null, trials_done: 1, trials_declared: 3, tqdm_line: "trial 1/3" },
+    budget: { used: "0.07", cap: "2", unit: "core-min", pct: 3 },
+    folds: [],
+    artifacts: [
+      { name: "search/trials.parquet", state: "ABORTED", size: null, digest: null, reader_href: null },
+      { name: "manifest.json", state: "PENDING", size: null, digest: null, reader_href: null },
+    ],
+    claim: { state: "NOT_ISSUED", text: "no claim", cursor: null, methodology_certificate: { state: "NOT_PUBLISHED", reason_code: "P11_SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE" }, handoff_cursor: null },
+    readiness: { mandatory: "FAILED", optional: "NOT_APPLICABLE" },
+    failure: { code: "QUANTBT_CHILD_EXITED", message: "optuna study aborted: child exited 137 (memory cap)" },
+    source: { kind: "DURABLE_P10", coverage: "ACTUAL_HOOKS", partial: false },
+  } as never;
+}
+
+function failedFacts(code = "QUANTBT_CHILD_EXITED", failedAt: "S2" | "SEAL" = "S2") {
+  return {
+    snapshot: failedSnapshot(failedAt),
+    failure: { code, message: "optuna study aborted: child exited 137 (memory cap)" },
+    terminalSequence: 17,
+    failedAtUtcMs: 1_790_269_203_500,
+  };
+}
+
+/** S09 T03: the real v2 WFO report with its fold table widened to 32 weekly folds (layout fixture). */
+function thirtyTwoFolds(report: ResearchReportDetailResponse): ResearchReportDetailResponse {
+  const core = v2(report);
+  const [first, second] = core.folds.rows;
+  const week = 7 * 24 * 3_600_000;
+  const rows = Array.from({ length: 32 }, (_, index) => {
+    const base = index % 2 === 0 ? first! : second!;
+    return {
+      ...base,
+      fold_id: String(index),
+      source_ordinal: index,
+      test_start_utc_ms: first!.test_start_utc_ms! + index * week,
+      test_last_bar_utc_ms: first!.test_start_utc_ms! + index * week + week - 3_600_000,
+    };
+  });
+  return { ...report, frozen_core: { ...core, folds: { ...core.folds, rows } } };
+}
+
+describe("X2 · spec 09 T06 — a failed run gets a sheet that says so", () => {
+  it("seals 'no claim — run failed at S2 Search' from the terminal snapshot: stages to the failure, ABORTED artifacts, no metric", async () => {
+    const { service, repository } = subject();
+    const report = await service.materializeFailure(scope, real.run_id, failedFacts());
+    expect(ResearchReportDetailResponseSchema.safeParse(report).success).toBe(true);
+    reportValidator.assert(report);
+    const core = report.frozen_core;
+    if (core.schema_version !== "research.report-failed-core.v1") throw new Error("expected a failed core");
+    expect(core.outcome).toMatchObject({
+      state: "FAILED", failed_stage: "S2", failed_stage_label: "S2 Search",
+      headline: "no claim — run failed at S2 Search", failure_code: "QUANTBT_CHILD_EXITED",
+      failure_message: "optuna study aborted: child exited 137 (memory cap)", terminal_sequence: 17,
+    });
+    expect(core.stages.map((stage) => [stage.key, stage.state, stage.check.result])).toEqual([
+      ["S1", "DONE", "NOT_PUBLISHED"], ["S2", "RUNNING", "FAIL"], ["S3", "PENDING", "NOT_APPLICABLE"],
+      ["S4", "PENDING", "NOT_APPLICABLE"], ["S5", "PENDING", "NOT_APPLICABLE"],
+    ]);
+    expect(core.stages[1]!.check.text).toBe("run failed here — QUANTBT_CHILD_EXITED: optuna study aborted: child exited 137 (memory cap)");
+    expect(core.artifacts).toEqual([
+      { name: "search/trials.parquet", state: "ABORTED", size: null, digest: null },
+      { name: "manifest.json", state: "PENDING", size: null, digest: null },
+    ]);
+    expect(core.mandatory_bundle).toBe("FAILED");
+    expect(core.equity.availability.reason_code).toBe("P18_FAILED_RUN_HAS_NO_EQUITY_TO_REPORT");
+    expect(core.title.text).toBe("Delta-RSI Polynomial Alpha on BTCUSDT · 1h");
+    expect(JSON.stringify(core)).not.toMatch(/"metrics"|"headline":\[|"folds"/);
+    expect(repository.seal).toHaveBeenCalledTimes(1);
+  });
+
+  it("a cancelled run says cancelled; a run that ended after S5 failed at the seal", async () => {
+    const cancelled = (await subject().service.materializeFailure(scope, real.run_id, failedFacts("USER_CANCELLED"))).frozen_core;
+    expect(cancelled.schema_version === "research.report-failed-core.v1" && cancelled.outcome.headline).toBe("no claim — run cancelled at S2 Search");
+    const seal = (await subject().service.materializeFailure(scope, real.run_id, failedFacts("SEAL_FAILED", "SEAL"))).frozen_core;
+    if (seal.schema_version !== "research.report-failed-core.v1") throw new Error("expected a failed core");
+    expect(seal.outcome).toMatchObject({ failed_stage: "SEAL", headline: "no claim — run failed at the seal" });
+    expect(seal.stages.every((stage) => stage.check.result === "NOT_PUBLISHED")).toBe(true);
+  });
+
+  it("the terminal hook seals it best-effort: a storage failure never refuses the run's own failure", async () => {
+    const { service, repository } = subject();
+    const input = {
+      run_id: real.run_id,
+      event: { event_type: "run_failed", sequence: 17, occurred_at_utc_ms: 1_790_269_203_500, payload: { code: "QUANTBT_CHILD_EXITED", message: "x", usage: {} } },
+      snapshot: failedSnapshot(),
+    };
+    await expect(service.materializeTerminal(scope, input, "RS02_RETAINED_CURRENT_SOURCE")).resolves.toBe(true);
+    expect(repository.seal).toHaveBeenCalledTimes(1);
+    repository.seal.mockRejectedValueOnce(Object.assign(new Error("db down"), { code: "RESEARCH_REPORT_UNAVAILABLE" }));
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await expect(service.materializeTerminal(scope, input)).resolves.toBe(false);
+    expect(String(stderr.mock.calls[0]?.[0])).toContain("research_report_failed_run_materialize_failed");
+    stderr.mockRestore();
+  });
+
+  it("exports a failed sheet to CSV with its outcome, stages and artifacts", async () => {
+    const { service } = subject();
+    const report = await service.materializeFailure(scope, real.run_id, failedFacts());
+    const csv = (service as unknown as { csv: (payload: unknown) => string }).csv({
+      frozen_core: report.frozen_core, approval_annotation: { state: "NOT_PUBLISHED", text: null, sourceUpdatedAtUtcMs: null },
+    });
+    expect(csv).toContain('"outcome","headline","Headline","no claim — run failed at S2 Search"');
+    expect(csv).toContain('"artifact","search/trials.parquet","ABORTED"');
+    expect(csv).toContain('"stage","S2","RUNNING"');
+  });
+});
+
+describe("X2 · P18-T10 — reused original vs linked child, with source refs, never a second optimisation", () => {
+  it("a PRIMARY run with no audit child is its own final audit: every fold's generation child ran the frozen candidate", async () => {
+    const core = v2(await subject().service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    expect(core.final_audit).toMatchObject({
+      kind: "REUSED_ORIGINAL", audit_target_kind: "SINGLE_PARAMETER_SET", final_audit_run_id: real.run_id, audited_run_id: real.run_id,
+      relationship: "PRIMARY", optimizer_reinvoked: false, optimizer_basis: "EVERY_OOS_GENERATION_CHILD_RAN_THE_FROZEN_CANDIDATE",
+    });
+    expect(core.final_audit!.folds).toEqual([
+      { fold_id: "0", audit_ordinal: 10, candidate_id: "2671e27b827ab2701d52e6ce", state: "MATCH" },
+      { fold_id: "1", audit_ordinal: 11, candidate_id: "2671e27b827ab2701d52e6ce", state: "MATCH" },
+    ]);
+    expect(core.final_audit!.source_refs.map((ref) => ref.key)).toEqual(["selection", "frozen_candidate", "freeze", "replay"]);
+    expect(core.final_audit!.source_refs[1]!.ref).toContain("2671e27b827ab2701d52e6ce");
+  });
+
+  it("a READY AUDIT_OF_SELECTION child in the lineage is the linked final audit", async () => {
+    const core = v2(await subject({
+      relation: { relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [{ runId: "rrun_audit_1", state: "QUEUED" }, { runId: "rrun_audit_2", state: "READY" }] },
+    }).service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    expect(core.final_audit).toMatchObject({ kind: "LINKED_CHILD", final_audit_run_id: "rrun_audit_2", audited_run_id: real.run_id, relationship: "AUDIT_OF_SELECTION", optimizer_reinvoked: false });
+  });
+
+  it("a lineage that cannot be read leaves the final audit a typed absence", async () => {
+    const core = v2(await subject({ relation: null }).service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    expect(core.final_audit).toMatchObject({ kind: "NOT_PUBLISHED", reason_code: "P18_RUN_LINEAGE_RELATION_NOT_READ", optimizer_reinvoked: null });
+  });
+});
+
+describe("X2 · B5 — PARQUET and ARCHIVE stay unavailable, with the real reasons (X2-D09)", () => {
+  it("names the missing Parquet writer and the private-bytes/raw-rows boundary", async () => {
+    const report = await subject().service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE");
+    expect(report.exports.unavailable_formats).toEqual([
+      { format: "PARQUET", reason_code: "P18_CONTROL_API_HAS_NO_PINNED_PARQUET_WRITER" },
+      { format: "ARCHIVE", reason_code: "P18_ARCHIVE_WOULD_EXPOSE_PRIVATE_P05_BYTES_AND_RAW_MARKET_ROWS" },
+    ]);
+  });
+
+  it("S09 T03 fixture: the 32-fold sheet keeps one row per fold in source order", () => {
+    const root = resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures");
+    const report = JSON.parse(readFileSync(join(root, "research-report.wfo-32-folds.valid.json"), "utf8")) as ResearchReportDetailResponse;
+    const core = v2(report);
+    expect(core.folds.rows).toHaveLength(32);
+    expect(core.folds.rows.map((row) => row.source_ordinal)).toEqual(Array.from({ length: 32 }, (_, index) => index));
   });
 });

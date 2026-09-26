@@ -430,9 +430,79 @@ export interface components {
             source_absences: {
                 [key: string]: components["schemas"]["ReportFact"];
             };
+            final_audit?: components["schemas"]["FinalAudit"];
         };
-        /** @description A sealed core is served under the schema it was sealed with. v1 cores stay byte-identical; every report sealed after W6a is v2 (P04 fixed profile or the retained Delta WFO lane). */
-        FrozenCore: components["schemas"]["FrozenCoreV1"] | components["schemas"]["FrozenCoreV2"];
+        /** @description X2 · P18-T10 (guide §5.6): the report's final audit. REUSED_ORIGINAL — the run is its own audit; on the retained WFO lane each fold's out-of-sample generation child is checked to be the frozen candidate (QuantBT child audit), so `optimizer_reinvoked` is false only when every fold matched. LINKED_CHILD — a READY AUDIT_OF_SELECTION run in the P19 lineage. NOT_PUBLISHED when the lineage relation was not read. */
+        FinalAudit: {
+            /** @constant */
+            schema_version: "research.report-final-audit.v1";
+            /** @enum {unknown} */
+            kind: "REUSED_ORIGINAL" | "LINKED_CHILD" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            audit_target_kind: ("SINGLE_PARAMETER_SET" | "FIXED_PARAMETER_PROFILE") | null;
+            final_audit_run_id: components["schemas"]["RunId"] | null;
+            audited_run_id: components["schemas"]["RunId"] | null;
+            relationship: ("PRIMARY" | "AUDIT_OF_SELECTION") | null;
+            optimizer_reinvoked: boolean | null;
+            optimizer_basis: components["schemas"]["ReasonCode"] | null;
+            source_refs: {
+                key: string;
+                ref: string;
+            }[];
+            folds: {
+                fold_id: string;
+                audit_ordinal: number | null;
+                candidate_id: string | null;
+                /** @enum {unknown} */
+                state: "MATCH" | "MISMATCH" | "NOT_RETAINED" | "NOT_PUBLISHED" | "NOT_COMPUTABLE";
+            }[];
+        };
+        /** @description X2 · spec 09 T06: the sheet of a run that FAILED or was cancelled. No claim: sealed from the P11 terminal snapshot (stages, artifacts — ABORTED stays ABORTED — and the bounded failure), with no metric, equity or fold row. The headline reads `no claim — run failed at {stage}`; the failing stage's check is FAIL with the failure code, earlier stages carry no sealed check, later ones are NOT_APPLICABLE. */
+        FrozenCoreFailedV1: {
+            /** @constant */
+            schema_version: "research.report-failed-core.v1";
+            /** @constant */
+            report_source: "P11_TERMINAL_FAILURE";
+            outcome: {
+                /** @enum {unknown} */
+                state: "FAILED" | "CANCELLED";
+                /** @enum {unknown} */
+                failed_stage: "S1" | "S2" | "S3" | "S4" | "S5" | "SEAL";
+                failed_stage_label: string;
+                headline: string;
+                failure_code: string;
+                failure_message: string | null;
+                failed_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+                terminal_sequence: number;
+            };
+            title: components["schemas"]["ReportTitle"];
+            identity: components["schemas"]["IdentityField"][];
+            stages: components["schemas"]["StageV2"][];
+            artifacts: {
+                name: string;
+                /** @enum {unknown} */
+                state: "PENDING" | "WRITING" | "SEALED" | "ABORTED";
+                size: string | null;
+                digest: components["schemas"]["Digest"] | null;
+            }[];
+            /** @enum {unknown} */
+            mandatory_bundle: "PENDING" | "SEALING" | "SEALED" | "FAILED";
+            equity: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                availability: components["schemas"]["Availability"];
+            };
+            promotion: components["schemas"]["Promotion"];
+            provenance: {
+                line: string;
+                /** @constant */
+                read_model_revision: "research.report-read-model.v2";
+                /** @constant */
+                source: "P11_TERMINAL_PROGRESS_SNAPSHOT";
+            };
+        };
+        /** @description A sealed core is served under the schema it was sealed with. v1 cores stay byte-identical; every report sealed after W6a is v2 (P04 fixed profile or the retained Delta WFO lane). X2: a run that FAILED or was cancelled is sealed as FrozenCoreFailedV1 (spec 09 T06). */
+        FrozenCore: components["schemas"]["FrozenCoreV1"] | components["schemas"]["FrozenCoreV2"] | components["schemas"]["FrozenCoreFailedV1"];
         Annotation: {
             /** @enum {unknown} */
             state: "NOT_PUBLISHED" | "AVAILABLE";

@@ -284,6 +284,35 @@ const ArtifactV2Schema = z.object({
   availability: AvailabilitySchema,
 }).strict();
 
+/*
+ * X2 · B5 · P18-T10 (guide §5.6): which execution is this report's final
+ * audit, and whether it could have re-optimised. REUSED_ORIGINAL — the run
+ * itself is its audit (its out-of-sample generation children ran the frozen
+ * selection); LINKED_CHILD — a separate AUDIT_OF_SELECTION run in the
+ * lineage. Each source ref names the sealed fact it came from.
+ */
+export const ReportFinalAuditSchema = z.object({
+  schema_version: z.literal("research.report-final-audit.v1"),
+  kind: z.enum(["REUSED_ORIGINAL", "LINKED_CHILD", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  audit_target_kind: z.enum(["SINGLE_PARAMETER_SET", "FIXED_PARAMETER_PROFILE"]).nullable(),
+  final_audit_run_id: ResearchReportRunIdSchema.nullable(),
+  audited_run_id: ResearchReportRunIdSchema.nullable(),
+  relationship: z.enum(["PRIMARY", "AUDIT_OF_SELECTION"]).nullable(),
+  optimizer_reinvoked: z.boolean().nullable(),
+  optimizer_basis: ReasonCodeSchema.nullable(),
+  source_refs: z.array(z.object({
+    key: z.string().regex(/^[a-z][a-z0-9_.:-]{2,95}$/),
+    ref: z.string().min(1).max(256),
+  }).strict()).max(16),
+  folds: z.array(z.object({
+    fold_id: z.string().min(1).max(160),
+    audit_ordinal: z.number().int().nonnegative().nullable(),
+    candidate_id: z.string().regex(/^[0-9a-f]{24}$/).nullable(),
+    state: z.enum(["MATCH", "MISMATCH", "NOT_RETAINED", "NOT_PUBLISHED", "NOT_COMPUTABLE"]),
+  }).strict()).max(256),
+}).strict();
+
 export const ResearchReportFrozenCoreV2Schema = z.object({
   schema_version: z.literal("research.report-frozen-core.v2"),
   report_source: z.enum(["P13_P17_FIXED_PROFILE", "RS02_RETAINED_CURRENT_SOURCE"]),
@@ -338,12 +367,69 @@ export const ResearchReportFrozenCoreV2Schema = z.object({
     verdict_rule_revision: z.enum(["research.report-verdict-rule.v1", "research.fold-verdict.v1"]),
   }).strict(),
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ReportFactSchema),
+  /** X2 · P18-T10: additive — a core sealed before X2 has none and stays readable. */
+  final_audit: ReportFinalAuditSchema.optional(),
+}).strict();
+
+/*
+ * X2 · B5 · spec 09 T06 — the sheet of a run that FAILED (or was cancelled):
+ * no claim, sealed from the terminal failure facts P11 persisted (the
+ * terminal snapshot's stages, artifacts and failure). It never carries a
+ * metric, an equity path or a fold row: a failed run has none to report.
+ */
+export const ResearchReportFrozenCoreFailedSchema = z.object({
+  schema_version: z.literal("research.report-failed-core.v1"),
+  report_source: z.literal("P11_TERMINAL_FAILURE"),
+  outcome: z.object({
+    state: z.enum(["FAILED", "CANCELLED"]),
+    /** The stage the run was in when it ended; SEAL when every stage had finished. */
+    failed_stage: z.enum(["S1", "S2", "S3", "S4", "S5", "SEAL"]),
+    failed_stage_label: z.string().min(1).max(64),
+    headline: z.string().min(1).max(160),
+    failure_code: z.string().min(1).max(160),
+    /** The worker's bounded message (≤ 256 chars), exactly as P11 persisted it; null when longer or empty. */
+    failure_message: z.string().min(1).max(256).nullable(),
+    failed_at_utc_ms: UtcMsSchema,
+    terminal_sequence: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  }).strict(),
+  title: z.object({
+    text: z.string().min(1).max(320).nullable(),
+    strategy: z.string().min(1).max(240).nullable(),
+    symbol: z.string().min(1).max(64).nullable(),
+    timeframe: z.string().min(1).max(64).nullable(),
+    availability: AvailabilitySchema,
+  }).strict(),
+  identity: z.array(IdentityFieldSchema).min(4).max(24),
+  stages: z.array(StageV2Schema).length(5),
+  /** The terminal snapshot's artifacts verbatim (ABORTED stays ABORTED). */
+  artifacts: z.array(z.object({
+    name: z.string().min(1).max(256),
+    state: z.enum(["PENDING", "WRITING", "SEALED", "ABORTED"]),
+    size: z.string().regex(/^[0-9]+$/).nullable(),
+    digest: DigestSchema.nullable(),
+  }).strict()).max(128),
+  mandatory_bundle: z.enum(["PENDING", "SEALING", "SEALED", "FAILED"]),
+  equity: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    availability: AvailabilitySchema,
+  }).strict(),
+  promotion: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    line: z.string().min(1).max(512),
+    availability: AvailabilitySchema,
+  }).strict(),
+  provenance: z.object({
+    line: z.string().min(1).max(1_024),
+    read_model_revision: z.literal("research.report-read-model.v2"),
+    source: z.literal("P11_TERMINAL_PROGRESS_SNAPSHOT"),
+  }).strict(),
 }).strict();
 
 /** A stored core is read under the schema it was sealed with. */
 export const ResearchReportFrozenCoreSchema = z.discriminatedUnion("schema_version", [
   ResearchReportFrozenCoreV1Schema,
   ResearchReportFrozenCoreV2Schema,
+  ResearchReportFrozenCoreFailedSchema,
 ]);
 
 const ApprovalAnnotationSchema = z.object({
@@ -392,5 +478,7 @@ export const ResearchReportExportStatusSchema = z.object({
 
 export type ResearchReportFrozenCore = z.infer<typeof ResearchReportFrozenCoreSchema>;
 export type ResearchReportFrozenCoreV2 = z.infer<typeof ResearchReportFrozenCoreV2Schema>;
+export type ResearchReportFrozenCoreFailed = z.infer<typeof ResearchReportFrozenCoreFailedSchema>;
+export type ResearchReportFinalAudit = z.infer<typeof ReportFinalAuditSchema>;
 export type ResearchReportDetailResponse = z.infer<typeof ResearchReportDetailResponseSchema>;
 export type ResearchReportExportStatus = z.infer<typeof ResearchReportExportStatusSchema>;

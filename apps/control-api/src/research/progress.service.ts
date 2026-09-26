@@ -206,12 +206,14 @@ export class ResearchProgressService {
     // relation for its parent and nothing P04-shaped.
     if (ingressScope.executionProfileId !== DELTA_WFO_PROFILE_ID && ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       await this.reports.materializeTerminal(ingressScope, input);
-    } else {
+    } else if (ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       // W6a (P18 over current-source): the WFO report is sealed from the
       // retained lane, which the worker seals before `run_completed`. It is a
       // best-effort sidecar (decision W6A-D02): a report failure is logged
       // and never refuses the run's own terminal lifecycle; a duplicate
-      // terminal callback retries it idempotently.
+      // terminal callback retries it idempotently. X2: a `run_failed` seals
+      // the failed-run sheet (spec 09 T06) from the terminal snapshot, on
+      // both lanes; a what-if diagnostic run seals no report of its own.
       try {
         await this.reports.materializeTerminal(ingressScope, input, "RS02_RETAINED_CURRENT_SOURCE");
       } catch (error) {
