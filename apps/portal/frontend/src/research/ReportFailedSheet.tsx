@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import type { FinalAudit, FrozenCoreFailed } from "./reportClient";
 import { STAGE_CHECK_WORDS, STAGE_LABEL } from "./reportClient";
 import { releaseCandidateHref } from "./releaseCandidateClient";
-import { shortDigest } from "./researchFormat";
+import { foldLabel, shortDigest } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
 import { iso } from "./utcMinute";
 
@@ -188,7 +188,7 @@ export function FinalAuditBlock({ audit }: { audit: FinalAudit }) {
       {audit.folds.length > 0 ? (
         <p className="rr-caption" data-final-audit-folds>
           {audit.folds
-            .map((fold) => `fold ${fold.fold_id}: child #${fold.audit_ordinal ?? "—"} ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? "= θ*" : fold.state.toLowerCase().replace(/_/g, " ")}`)
+            .map((fold) => `${foldLabel(fold.fold_id)}: child #${fold.audit_ordinal ?? "—"} ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? "= θ*" : fold.state.toLowerCase().replace(/_/g, " ")}`)
             .join(" · ")}
         </p>
       ) : null}

@@ -13,7 +13,7 @@
  */
 
 /* Only screens that draw their own HiFi frame opt in (`data-own-frame`):
-   01, 03, 04, 05, 06. The others keep the shell's gutter until they do. */
+   01, 03, 04, 05, 06, 07, 08 (07/08 since E2). The others keep the shell's gutter until they do. */
 .portal-content:has(.research-screen[data-own-frame]) {
   padding: 0;
   max-width: none;

@@ -64,7 +64,7 @@ import {
   type SplitDetail as SplitDetailDocument,
 } from "./splitClient";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
-import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { foldLabel, formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
@@ -814,7 +814,7 @@ function FoldRows({
               }}
             >
               <span className="mono w-[64px] flex-none text-left text-[11px]" style={{ color: "var(--ink-soft)" }}>
-                {fold.fold_id}
+                {foldLabel(fold.fold_id)}
               </span>
               <span className="relative h-[16px] flex-1 rounded-[3px]" style={{ background: "var(--paper-sunken)" }}>
                 {bounds && train ? (
@@ -2428,7 +2428,7 @@ function FoldTable({
                     className={TD}
                     style={{ boxShadow: `inset 2px 0 0 ${current ? "var(--accent)" : "transparent"}` }}
                   >
-                    {fold.fold_id}
+                    {foldLabel(fold.fold_id)}
                   </td>
                   <SpanCell range={train} closed />
                   <CountCell value={anatomy?.train_bars ?? null} reason={anatomy?.reason_code ?? null} />

@@ -50,7 +50,7 @@ import {
   type ReportEquity,
   type ReportFolds,
 } from "./reportClient";
-import { formatMetric, shortDigest } from "./researchFormat";
+import { foldLabel, formatMetric, shortDigest } from "./researchFormat";
 import { equitySvg } from "./reportEquity";
 import { releaseCandidateHref } from "./releaseCandidateClient";
 import type { ReportController } from "./useReport";
@@ -841,7 +841,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
             {published ? (
               folds.rows.map((row) => (
                 <tr key={row.fold_id} data-fold={row.fold_id}>
-                  <td>{row.fold_id}</td>
+                  <td title={`QuantBT fold_id ${row.fold_id}`}>{foldLabel(row.fold_id)}</td>
                   <td>
                     {row.test_start_utc_ms !== null ? iso(row.test_start_utc_ms) : "no start published"} →{" "}
                     {row.test_last_bar_utc_ms !== null ? iso(row.test_last_bar_utc_ms) : "no end published"}
@@ -907,7 +907,7 @@ function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule:
             {published && folds.rows.length > 0 ? (
               folds.rows.map((row) => (
                 <tr key={row.fold_id} data-fold={row.fold_id}>
-                  <td>{row.fold_id}</td>
+                  <td title={`QuantBT fold_id ${row.fold_id}`}>{foldLabel(row.fold_id)}</td>
                   <td>
                     {iso(row.start_utc_ms)} → {iso(row.end_exclusive_utc_ms)}
                   </td>

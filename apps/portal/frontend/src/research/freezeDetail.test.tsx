@@ -601,7 +601,8 @@ describe("P16-T04 — an unavailable question keeps its card, with nothing that 
     const enabled = [...container.querySelectorAll<HTMLButtonElement>("button")]
       .filter((node) => !node.disabled)
       .map((node) => node.getAttribute("data-action"));
-    expect(enabled.filter((action) => action !== null)).toEqual(["copy-theta-digest", "verify"]);
+    /* E2: copy-evidence-link writes the clipboard only, like copy-theta-digest. */
+    expect(enabled.filter((action) => action !== null)).toEqual(["copy-evidence-link", "copy-theta-digest", "verify"]);
     // No number stands in for an evaluation that does not exist.
     expect(card?.textContent).not.toMatch(/ΔJ\s*[−+-]?\d/);
   });
@@ -905,7 +906,7 @@ describe("Screen 07 composition — the hi-fi panels carry only published facts"
       .filter((node) => !node.disabled)
       .map((node) => node.getAttribute("data-action"))
       .filter((action) => action !== null);
-    expect(actions).toEqual(["copy-theta-digest", "verify"]);
+    expect(actions).toEqual(["copy-evidence-link", "copy-theta-digest", "verify"]);
     await act(async () => {
       fireEvent.click(container.querySelector("[data-action='copy-theta-digest']") as Element);
     });

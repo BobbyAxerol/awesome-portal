@@ -149,3 +149,15 @@ export function groupDecimalString(value: string): string {
   const [, sign, whole, fraction = ""] = match;
   return `${sign}${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${fraction}`;
 }
+
+/**
+ * QuantBT's `fold_id` as the HiFi numbers folds (E2, audit X3): the engine
+ * publishes a 0-based id ("0", "1"); the hash, the progress read and every
+ * sentence count from 1. `"0"` prints `fold_01`, so row 1 and `#fold=1` are
+ * the same fold. A non-numeric id is printed unchanged; callers keep the
+ * engine's id in a data attribute or title.
+ */
+export function foldLabel(foldId: string | number): string {
+  const text = String(foldId);
+  return /^\d+$/.test(text) ? `fold_${String(Number(text) + 1).padStart(2, "0")}` : text;
+}

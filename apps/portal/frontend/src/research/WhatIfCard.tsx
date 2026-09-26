@@ -102,6 +102,13 @@ export function WhatIfCard(props: {
   );
 }
 
+/**
+ * The two Delta axes the what-if grid moves (W5a A10c: `rvol` and
+ * `slpercent`). The HiFi's `entry_z` / `atr_mult` are demo names from another
+ * alpha and never label this one's controls.
+ */
+const WHAT_IF_AXES = ["rvol", "slpercent"] as const;
+
 function InertWhatIf({ state, reason }: { state: string; reason: string | null }) {
   return (
     <section
@@ -118,15 +125,12 @@ function InertWhatIf({ state, reason }: { state: string; reason: string | null }
         <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
           {state.toLowerCase().replace(/_/g, " ")}
         </span>
-        {reason ? (
-          <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-what-if-code>
-            {reason}
-          </span>
-        ) : null}
+        {/* E2: the code rides in the title; the sentence below says it once. */}
+        {reason ? <span className="sr-only" data-what-if-code title={reason}>{reason}</span> : null}
       </div>
       <div className="flex flex-col gap-2" data-what-if-inert>
         {/* A11: the card keeps its place; controls exist but cannot move, with the server's reason. */}
-        {["entry_z", "atr_mult"].map((name) => (
+        {WHAT_IF_AXES.map((name) => (
           <label key={name} className="flex flex-col gap-1">
             <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
               {name}
@@ -340,7 +344,7 @@ function LiveWhatIf({
       ) : (
         <div className="flex flex-col gap-2" data-what-if-inert>
           {/* A11: the card keeps its place; controls exist but cannot move, with the server's reason. */}
-          {["entry_z", "atr_mult"].map((name) => (
+          {WHAT_IF_AXES.map((name) => (
             <label key={name} className="flex flex-col gap-1">
               <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
                 {name}

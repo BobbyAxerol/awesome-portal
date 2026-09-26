@@ -1049,7 +1049,7 @@ describe("S09 Run Report — pure parts and source rules", () => {
     const module = readFileSync(join(process.cwd(), "src", "features", "quantbt", "QuantBTModule.tsx"), "utf8");
     expect(module).toContain('<Route path="runs/:runId/report" element={<ReportRoute />} />');
     const execute = readFileSync(join(process.cwd(), "src", "research", "ExecuteDetail.tsx"), "utf8");
-    expect(execute).toMatch(/to=\{`\/research\/quantbt\/runs\/\$\{run\}\/report`\}\s+className="mono"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
+    expect(execute).toMatch(/to=\{`\/research\/quantbt\/runs\/\$\{run\}\/report`\}\s+className="mono text-\[10px\]"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
     const hub = readFileSync(join(process.cwd(), "src", "research", "EvidenceFlow.tsx"), "utf8");
     expect(hub).toContain('data-action="generate-report"');
     expect(hub).toContain('data-action="release-candidate"');
@@ -1206,7 +1206,7 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     const audit = panel("final-audit");
     expect(audit.getAttribute("data-final-audit")).toBe("REUSED_ORIGINAL");
     expect(audit.querySelector("[data-optimizer-reinvoked]")?.getAttribute("data-optimizer-reinvoked")).toBe("false");
-    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toBe("fold 0: child #10 2671e27b = θ* · fold 1: child #11 2671e27b = θ*");
+    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toBe("fold_01: child #10 2671e27b = θ* · fold_02: child #11 2671e27b = θ*");
     expect(audit.querySelector("[data-final-audit-refs]")?.textContent).toContain("frozen_candidate");
   });
 

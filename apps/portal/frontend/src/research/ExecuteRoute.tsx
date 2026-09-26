@@ -15,6 +15,7 @@ import { useEvidenceCursor } from "./evidenceCursor";
 import { ReplayTransport, useTransport } from "./replayTransport";
 import { isRetainedReplay } from "./replayClient";
 import { useReplay } from "./useReplay";
+import { StageDenied } from "./StageDenied";
 
 export function ExecuteRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
@@ -53,5 +54,9 @@ function ExecuteContainer({ runId }: { runId: string }) {
     if (restingSeq !== null && restingSeq !== cursor.seq) update({ seq: restingSeq });
   }, [cursor.seq, restingSeq, update]);
 
+  /* E2 (X8): a refused run gets the shared "run not available" page, not the stage chrome. */
+  if (controller.state.state === "denied" && controller.replay === null) {
+    return <StageDenied runId={runId} stage="Stage 4 · Execute Replay" screen="execute-replay" />;
+  }
   return <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} />;
 }
