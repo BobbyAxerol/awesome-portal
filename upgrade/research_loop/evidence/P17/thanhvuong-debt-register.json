@@ -33,21 +33,24 @@
   "backend_requests": [
     {
       "id": "CG-P17-01",
-      "owner": "Codex",
-      "state": "OPEN",
-      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-01"
+      "owner": "Claude (≤P21 since 2026-09-24)",
+      "state": "ANSWERED",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-01",
+      "answered_in": "W5b — see P17/W5B_REPLAY_CLAUDE_2026-09-25.md and thanhvuong-backend-requests.md"
     },
     {
       "id": "CG-P17-02",
-      "owner": "Codex",
-      "state": "OPEN",
-      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-02"
+      "owner": "Claude (≤P21 since 2026-09-24)",
+      "state": "ANSWERED",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-02",
+      "answered_in": "W5b — see P17/W5B_REPLAY_CLAUDE_2026-09-25.md and thanhvuong-backend-requests.md"
     },
     {
       "id": "CG-P17-03",
-      "owner": "Codex",
-      "state": "OPEN",
-      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-03"
+      "owner": "Claude (≤P21 since 2026-09-24)",
+      "state": "ANSWERED",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-03",
+      "answered_in": "W5b — see P17/W5B_REPLAY_CLAUDE_2026-09-25.md and thanhvuong-backend-requests.md"
     }
   ],
   "source_capability_blocked": [
@@ -64,26 +67,30 @@
     {
       "id": "P17-FE-DG-01",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "what": "integrate moved baseline (FreezeDetail.tsx conflict; S08 to toResearchRefusal + recovery)"
+      "state": "CLOSED",
+      "what": "integrate moved baseline (FreezeDetail.tsx conflict; S08 to toResearchRefusal + recovery)",
+      "closed_by": "integration merges 4ab990aa and 177df754"
     },
     {
       "id": "P17-FE-DG-02",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "what": "S08 title VISUAL_DECISION_REQUIRED; LENS / artifact line / COPY EVIDENCE LINK / Reveal"
+      "state": "DECIDED",
+      "what": "S08 title VISUAL_DECISION_REQUIRED; LENS / artifact line / COPY EVIDENCE LINK / Reveal",
+      "decided_by": "Claude under Bobby delegation 2026-09-25 (W5b D10 Reveal built presentation-only; D12 title; D13 LENS/COPY EVIDENCE LINK not built)"
     },
     {
       "id": "P17-FE-DG-03",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "what": "workspace hooks; axe"
+      "state": "CLOSED",
+      "what": "workspace hooks; axe",
+      "closed_by": "W5b axe run (T21): only the approved D-B1 contrast token exception remains"
     },
     {
       "id": "P17-FE-DG-04",
       "owner": "Thanhvuong",
-      "state": "BLOCKED_ON_FEATURE_FLAG",
-      "what": "REAL_API_E2E_RECEIPT on the RF-02 preview lane once replay is on there"
+      "state": "OPEN",
+      "what": "REAL_API_E2E_RECEIPT on the RF-02 preview lane once replay is on there",
+      "note": "replay on in the preview; needs the rebuilt preview (W5b ledger) — Claude"
     }
   ]
 }
