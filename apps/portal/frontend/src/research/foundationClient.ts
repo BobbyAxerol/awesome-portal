@@ -27,6 +27,7 @@ import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
 import { reportSessionExpired } from "../auth/sessionExpiry";
 import { decodeInspectionCursor, INSPECTION_CURSOR_KEYS, type CursorProblem } from "./inspectionCursor";
+import { refusalCopy, stateOfStatus } from "./researchRefusal";
 
 type Schemas = components["schemas"];
 
@@ -243,10 +244,27 @@ const REFUSAL: Record<FoundationProblemCode, FoundationRefusalPresentation> = {
   },
 };
 
+/** The screen's sentence per contract code (VD-P23-01); an unlisted code uses its state's sentence. */
+export const FOUNDATION_REFUSAL_SENTENCE: Partial<Record<FoundationProblemCode, string>> = {
+  RESEARCH_FOUNDATION_INVALID: "This link is not valid for the current manifest.",
+  RESEARCH_FOUNDATION_NOT_FOUND: "The selection names something the current manifest does not carry.",
+  RESEARCH_FOUNDATION_RELEASE_NOT_FOUND: "The selected engine release is not in the current manifest.",
+  RESEARCH_FOUNDATION_ROUTE_NOT_FOUND: "The selected route is not in the current manifest.",
+  RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND: "The selected capability is not in the current manifest.",
+  RESEARCH_FOUNDATION_CURSOR_STUDY_REQUIRED: "This inspection link needs a study to be selected first.",
+  RESEARCH_FOUNDATION_DESCRIPTOR_MISMATCH: "The screen and the server read different descriptor revisions. Reload to read the current one.",
+};
+
 export interface FoundationRefusal extends FoundationRefusalPresentation {
   code: FoundationProblemCode | null;
-  /** The server's own sentence. Never rewritten locally. */
+  /**
+   * The screen's fixed sentence for the resolved state (VD-P23-01, X3
+   * 2026-09-26). It used to be the server's own sentence, which put server
+   * prose — and whatever it named — on screen.
+   */
   message: string;
+  /** The server's own sentence, for a details disclosure only. */
+  detail?: string | null;
   status: number;
   requestId: string | null;
 }
@@ -278,14 +296,18 @@ export function toFoundationRefusal(error: unknown): FoundationRefusal {
   if (error.status === 401) reportSessionExpired();
   const known =
     error.code && error.code in REFUSAL ? REFUSAL[error.code as FoundationProblemCode] : null;
+  const fallbackState = stateOfStatus(error.status);
+  const presentation: FoundationRefusalPresentation = known ?? {
+    state: fallbackState,
+    mayRetry: fallbackState === "unavailable",
+    highlightsSelection: false,
+  };
   return {
-    ...(known ?? {
-      state: error.status >= 500 ? "unavailable" : "terminal",
-      mayRetry: error.status >= 500,
-      highlightsSelection: false,
-    }),
+    ...presentation,
     code: (error.code as FoundationProblemCode | null) ?? null,
-    message: error.message,
+    /* VD-P23-01: the words on screen are the screen's; the server's sentence is detail. */
+    message: (known && error.code ? FOUNDATION_REFUSAL_SENTENCE[error.code as FoundationProblemCode] : undefined) ?? refusalCopy(presentation.state, error.status),
+    detail: error.message || null,
     status: error.status,
     requestId: error.requestId,
   };

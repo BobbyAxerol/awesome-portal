@@ -401,11 +401,12 @@ export function RunNotFound({ runId }: { runId: string }) {
       data-run-not-found
     >
       <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-        run not found
+        run not available
       </span>
+      {/* F-04: one sentence for a 403 and a 404 — it neither confirms the run exists nor says whose it is. */}
       <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-        No run <span className="mono">{runId}</span> exists in your current workspace. It may belong to another
-        workspace, or the link may be mistyped.
+        You don&apos;t have access to run <span className="mono">{runId}</span> in your current workspace, or it
+        doesn&apos;t exist. The link may also be mistyped.
       </p>
       <Link
         to="/research/quantbt/runs"

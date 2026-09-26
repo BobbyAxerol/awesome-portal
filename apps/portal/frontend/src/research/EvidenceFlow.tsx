@@ -917,7 +917,8 @@ function DatasetPanel({ hub, id, onClose }: { hub: EvidenceHub; id: string; onCl
 /* ------------------------------------------------ tabs + cursor, one card */
 
 function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub | null, summary: string | null = null): string {
-  if (hub === null) return "—";
+  /* No hub in hand (loading or refused): a word, never a bare dash (P23 matrix). */
+  if (hub === null) return "not read";
   if (stage === "summary" && summary !== null) return summary;
   if (stage === "summary") {
     const all = [...hub.metrics, ...(hub.oos_performance?.metrics ?? [])];

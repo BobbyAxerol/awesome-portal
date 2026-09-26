@@ -21,6 +21,7 @@
 
 import type { components as LineageComponents } from "@portal/contracts-research-attempt-lineage";
 
+import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
 
@@ -341,6 +342,9 @@ export function toLineageRefusal(error: unknown): LineageRefusal {
     };
   }
   const { status } = error;
+  /* RF01-F3 / VD-P23-02 (X3 2026-09-26): an expired session goes to the shell's
+     Frame 01D sign-in path, like every other Research client (S10 and S13). */
+  if (status === 401) reportSessionExpired();
   const known = status === 400 || status === 401 || status === 403 || status === 404 || status === 503;
   return {
     code: error.code,
