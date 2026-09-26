@@ -108,7 +108,7 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     });
     expect(response).toMatchObject({
       schema_version: "research.journey-response.v1",
-      descriptor: { revision: 2, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      descriptor: { revision: 3, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
       inspection: {
         canonical_query: "?run_id=run-p09&study=study-p09&trial=trial-p09&pick=pick-p09&seq=42",
         pick_effect: "INSPECTION_ONLY", ambiguity_state: "NOT_APPLICABLE",
@@ -120,9 +120,12 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === "claim")).toMatchObject({
       availability: "AVAILABLE", requires_run: true, target_fragment: "stage=claim",
     });
-    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === "execute-replay")).toMatchObject({ availability: "PLANNED" });
+    /* E12: the five mounted screens are AVAILABLE from revision 3 on, and no card is PLANNED. */
+    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === "execute-replay")).toMatchObject({ availability: "AVAILABLE" });
+    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).filter((card: any) => card.availability === "PLANNED")).toHaveLength(0);
     expect((await pool.query("SELECT revision, content_sha256 FROM research.journey_descriptor_registry ORDER BY revision")).rows).toEqual([
-      { revision: "1", content_sha256: expect.any(String) }, { revision: "2", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      { revision: "1", content_sha256: expect.any(String) }, { revision: "2", content_sha256: expect.any(String) },
+      { revision: "3", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
     ]);
     expect(response.inspection.cursor).not.toHaveProperty("event_seq");
     expect(response.inspection.codec).toBe("p02-cursor.v2");

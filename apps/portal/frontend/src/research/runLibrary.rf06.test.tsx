@@ -540,6 +540,68 @@ describe("FE-S01-14 — a legacy row", () => {
   });
 });
 
+describe("E12 / D2 — the Run Library is the journey map's run picker", () => {
+  beforeEach(() => vi.useFakeTimers());
+
+  it("says which screen it is picking for, and keeps it across a filter change", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute("?to=execute_replay");
+    await flush(50);
+
+    const notice = document.querySelector("[data-pick-run-notice]") as HTMLElement;
+    expect(notice.getAttribute("data-pick-run-notice")).toBe("execute_replay");
+    expect(notice.textContent).toContain("Pick a run to open");
+    expect(notice.textContent).toContain("S4 · Execute Replay");
+
+    /* `to` is view state: it survives narrowing the list and never reaches
+       the server, exactly like `group` and `sel`. */
+    fireEvent.click(document.querySelector('[data-filter-status="FAILED"]')!);
+    await flush(50);
+    expect(lastSearch).toContain("to=execute_replay");
+    expect(lists().some((url) => url.includes("to="))).toBe(false);
+  });
+
+  it("points each card's one link at the picked screen for that run", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute("?to=run_report");
+    await flush(50);
+
+    const open = document.querySelector('[data-open="A"]') as HTMLAnchorElement;
+    expect(open.getAttribute("href")).toBe("/research/quantbt/runs/A/report");
+    expect(open.textContent).toContain("open Run Report");
+  });
+
+  it("resolves an alpha-scoped screen through the row's own binding", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute("?to=attempt_lineage");
+    await flush(50);
+
+    const open = document.querySelector('[data-open="A"]') as HTMLAnchorElement;
+    expect(open.getAttribute("href")).toBe("/research/quantbt/alphas/delta-rsi/lineage");
+  });
+
+  it("keeps the default link, with a reason, when the row names no Alpha", async () => {
+    stub(() => [200, page([item({ binding: null })])]);
+    mountRoute("?to=attempt_lineage");
+    await flush(50);
+
+    const open = document.querySelector('[data-open="A"]') as HTMLAnchorElement;
+    expect(open.getAttribute("href")).toBe("/research/quantbt/runs/A/evidence");
+    expect(open.getAttribute("title")).toContain("names no alpha version");
+  });
+
+  it("drops a `to` this build cannot open rather than printing a key as a screen name", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute("?to=not_a_screen");
+    await flush(50);
+
+    expect(document.querySelector("[data-pick-run-notice]")).toBeNull();
+    expect((document.querySelector('[data-open="A"]') as HTMLAnchorElement).getAttribute("href")).toBe(
+      "/research/quantbt/runs/A/evidence",
+    );
+  });
+});
+
 describe("RF-06 extra — a denial withholds what was on screen", () => {
   beforeEach(() => vi.useFakeTimers());
 

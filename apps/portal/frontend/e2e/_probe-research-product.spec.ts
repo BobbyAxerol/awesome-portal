@@ -162,13 +162,21 @@ test("an unrouted card is drawn and says so", async ({ page }) => {
   await expect(card).toBeVisible();
   await expect(card).toHaveAttribute("href", ALPHA_IMPORT);
 
-  // `preflight` is still AVAILABLE server-side with no screen of its own — a
-  // preflight is declared inside Screen 02. The card stays drawn and honest.
-  const unrouted = page.locator("[data-card='preflight']");
+  // `alpha_version_legacy` is AVAILABLE server-side and has no path of its own
+  // in this build: the shipped screen it names lives under an Alpha and a
+  // version, which the map does not hold. The card stays drawn and honest
+  // (audit 00-5).
+  const unrouted = page.locator("[data-card='alpha-version']");
   await expect(unrouted).toBeVisible();
   await expect(unrouted).toHaveAttribute("data-card-availability", "AVAILABLE");
   await expect(unrouted).toHaveAttribute("data-card-unreachable", "NOT ROUTED");
   expect(await unrouted.evaluate((n) => n.tagName)).not.toBe("A");
+
+  // E12 / D2: a card that needs a run is a link to the Run Library carrying
+  // its own target, not a dead "SELECT RUN" badge.
+  const picks = page.locator("[data-card='execute-replay']");
+  await expect(picks).toHaveAttribute("data-card-availability", "AVAILABLE");
+  await expect(picks).toHaveAttribute("href", "/research/quantbt/runs?to=execute_replay");
 
   // A reachable card is a real link resolved through the owned map.
   const atlasCard = page.locator("[data-card='engine-atlas']");

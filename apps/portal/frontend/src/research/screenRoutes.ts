@@ -39,6 +39,10 @@ const SCREEN_ROUTES: Readonly<Record<string, string>> = {
   run_library_legacy: `${QUANTBT_ROOT}/runs/legacy`,
   alpha_imports_legacy: `${QUANTBT_ROOT}/imports`,
   new_run_legacy: `${QUANTBT_ROOT}/new`,
+  /* E12: Screen 13 opens without a run — `CompareResolverRoute` asks for the
+     Alpha when the URL names none. With a run in hand the per-alpha form below
+     wins, because that is the route spec 13 calls canonical. */
+  compare_runs: `${QUANTBT_ROOT}/compare`,
   portal_map: "/portal-map",
   portal_access: "/administration/profile-access",
 };
@@ -52,6 +56,24 @@ const RUN_SCREEN_SUFFIX: Readonly<Record<string, string>> = {
   split: "split",
   search_selection: "search",
   freeze: "freeze",
+  /* E12 (audit 00-3): mounted since the descriptor last said PLANNED. */
+  execute_replay: "execute",
+  release_candidate: "release-candidate",
+  run_report: "report",
+};
+
+/**
+ * Destinations that are scoped to an Alpha, not to a run (E12).
+ *
+ * Screen 10 and Screen 13 live under `alphas/:alphaId/…`. A run reaches them
+ * through the Alpha it is bound to, which only a surface that already holds the
+ * run's binding knows — the Run Library row, not the Journey Map card. So these
+ * keys resolve here with an `alphaId`, and resolve to `null` without one rather
+ * than guessing a path.
+ */
+const ALPHA_SCREEN_SUFFIX: Readonly<Record<string, string>> = {
+  attempt_lineage: "lineage",
+  compare_runs: "compare",
 };
 /**
  * Resolves a descriptor key to a path this build serves.
@@ -61,11 +83,19 @@ const RUN_SCREEN_SUFFIX: Readonly<Record<string, string>> = {
  * refused outright rather than looked up, because the failure mode being
  * prevented is exactly a descriptor value that *is* a URL.
  */
-export function resolveJourneyCardRoute(targetKey: string, runId: string | null): string | null {
+export function resolveJourneyCardRoute(
+  targetKey: string,
+  runId: string | null,
+  alphaId: string | null = null,
+): string | null {
   if (/[/\\:]/.test(targetKey)) return null;
+  const alphaSuffix = ALPHA_SCREEN_SUFFIX[targetKey];
+  if (alphaSuffix !== undefined && alphaId && IDENTIFIER.test(alphaId)) {
+    return `${QUANTBT_ROOT}/alphas/${encodeURIComponent(alphaId)}/${alphaSuffix}`;
+  }
   const suffix = RUN_SCREEN_SUFFIX[targetKey];
   if (suffix === undefined) return resolveScreenRoute(targetKey);
-  if (!runId || !/^[A-Za-z0-9_-]{1,128}$/.test(runId)) return null;
+  if (!runId || !IDENTIFIER.test(runId)) return null;
   return `${QUANTBT_ROOT}/runs/${encodeURIComponent(runId)}/${suffix}`;
 }
 export function resolveScreenRoute(targetKey: string): string | null {
@@ -73,5 +103,36 @@ export function resolveScreenRoute(targetKey: string): string | null {
   return SCREEN_ROUTES[targetKey] ?? null;
 }
 
+const IDENTIFIER = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Whether a key opens once the reader picks a run (E12, decision D2).
+ *
+ * A card the descriptor calls AVAILABLE but which needs a run in hand is not a
+ * dead end: Screen 00 sends the reader to the Run Library carrying this key,
+ * and the Library resolves it against the row they choose. `compare_runs`
+ * counts even though it also opens without a run, because opening it from a
+ * run means opening it inside that run's Alpha.
+ */
+export function needsRunToOpen(targetKey: string): boolean {
+  return targetKey in RUN_SCREEN_SUFFIX || targetKey in ALPHA_SCREEN_SUFFIX;
+}
+
+/** Whether resolving this key needs the run's Alpha rather than the run id. */
+export function needsAlphaToOpen(targetKey: string): boolean {
+  return targetKey in ALPHA_SCREEN_SUFFIX && !(targetKey in RUN_SCREEN_SUFFIX);
+}
+
+/** `/research/quantbt/runs?to=<key>` — the Run Library as a run picker (D2). */
+export function pickRunHref(targetKey: string): string {
+  return `${QUANTBT_ROOT}/runs?to=${encodeURIComponent(targetKey)}`;
+}
+
 /** Every key this build can reach, for tests and for the journey composition. */
 export const KNOWN_SCREEN_KEYS: readonly string[] = Object.keys(SCREEN_ROUTES);
+
+/** Every per-run or per-Alpha key this build can reach, for the same tests. */
+export const KNOWN_RUN_SCREEN_KEYS: readonly string[] = [
+  ...Object.keys(RUN_SCREEN_SUFFIX),
+  ...Object.keys(ALPHA_SCREEN_SUFFIX).filter((key) => !(key in RUN_SCREEN_SUFFIX)),
+];

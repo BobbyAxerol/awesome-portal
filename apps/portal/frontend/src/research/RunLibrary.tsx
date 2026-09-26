@@ -51,6 +51,7 @@ import { lineageHref } from "./lineageClient";
 import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
 import { formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
+import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
 
@@ -940,9 +941,54 @@ function RcChip({ rc, runId }: { rc: ReleaseCandidateRef; runId: string }) {
   );
 }
 
+/**
+ * The name of a `?to=` screen, for the banner and the card link (D2).
+ *
+ * Screen words, not the descriptor's key: the reader picked a card called
+ * "S4 · Execute Replay", not `execute_replay`.
+ */
+export const PICK_TARGET_LABEL: Record<string, string> = {
+  run_progress: "Run Progress",
+  run_progress_legacy: "the legacy run workspace",
+  evidence_hub: "Evidence Flow",
+  split: "S1 · Split",
+  search_selection: "S2 · Search & Selection",
+  freeze: "S3 · Freeze",
+  execute_replay: "S4 · Execute Replay",
+  release_candidate: "Release Candidate & Publish",
+  run_report: "Run Report",
+  attempt_lineage: "Attempt Lineage",
+  compare_runs: "Compare",
+};
+
 /** Where a card's one link goes, by what the row is (spec 01 §15.4). */
-function openTarget(item: RunLibraryItem): { to: string; label: string; title?: string } {
+function openTarget(item: RunLibraryItem, pickTarget?: string): { to: string; label: string; title?: string } {
   const id = encodeURIComponent(item.run_id);
+  /*
+   * D2: the reader came from a Journey Map card, so the card's one link opens
+   * that screen for this run instead of the default. An alpha-scoped screen
+   * resolves through the row's own binding; a scratch row names no Alpha, so
+   * the link stays the default and says why rather than pointing at a path
+   * that cannot exist.
+   */
+  if (pickTarget) {
+    const picked = resolveJourneyCardRoute(pickTarget, item.run_id, item.binding?.alpha_id ?? null);
+    const name = PICK_TARGET_LABEL[pickTarget] ?? pickTarget;
+    if (picked) {
+      return {
+        to: picked,
+        label: `open ${name} →`,
+        title: `Opens this run in ${name}, the screen picked on the journey map.`,
+      };
+    }
+    if (needsAlphaToOpen(pickTarget)) {
+      return {
+        to: `/research/quantbt/runs/${id}/evidence`,
+        label: "open evidence →",
+        title: `${name} opens per Alpha, and this row names no alpha version.`,
+      };
+    }
+  }
   if (item.source_kind === "LEGACY_1_0_8_METADATA") {
     return {
       to: `/research/quantbt/runs/${id}/overview`,
@@ -1054,15 +1100,17 @@ function RunCard({
   onToggle,
   sparkline,
   onVisible,
+  pickTarget,
 }: {
   item: RunLibraryItem;
   selected: boolean;
   onToggle: (runId: string) => void;
   sparkline: SparklineRead | undefined;
   onVisible: (runId: string, visible: boolean) => void;
+  pickTarget?: string;
 }) {
   const legacy = item.source_kind === "LEGACY_1_0_8_METADATA";
-  const open = openTarget(item);
+  const open = openTarget(item, pickTarget);
   const cert = isAvailable(item.certificate.availability) ? item.certificate.grade : null;
 
   return (
@@ -1755,6 +1803,38 @@ export function RunLibrary(props: RunLibraryProps) {
         </span>
       </header>
 
+      {/* D2 (audit 00-4): the journey map sent the reader here to choose a run
+          for one screen. Say so, and offer the way back out of the choice. */}
+      {filters.to ? (
+        <p
+          data-pick-run-notice={filters.to}
+          className="flex flex-wrap items-center"
+          style={{
+            gap: 10,
+            margin: 0,
+            border: "1px solid var(--accent-2)",
+            borderRadius: 6,
+            background: "var(--paper-raised)",
+            padding: "8px 12px",
+            fontSize: 12.5,
+            color: "var(--ink-soft)",
+          }}
+        >
+          <span>
+            Pick a run to open <strong style={{ color: "var(--ink)" }}>{PICK_TARGET_LABEL[filters.to] ?? filters.to}</strong>. Each
+            card&rsquo;s link opens it for that run.
+          </span>
+          <Link
+            to={JOURNEY_MAP}
+            data-action="back-to-journey"
+            className="text-[color:var(--accent)]"
+            style={{ fontFamily: MONO, fontSize: 10 }}
+          >
+            back to the journey map ↗
+          </Link>
+        </p>
+      ) : null}
+
       <div
         className="flex flex-wrap items-center"
         style={{
@@ -1940,6 +2020,7 @@ export function RunLibrary(props: RunLibraryProps) {
                     onToggle={onToggleSel}
                     sparkline={sparklines.get(item.run_id)}
                     onVisible={onVisible}
+                    pickTarget={filters.to}
                   />
                 ))}
               </div>

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 export const RESEARCH_JOURNEY_DESCRIPTOR_ID = "quantbt_journey";
 export const RESEARCH_JOURNEY_SCHEMA_VERSION = "research.journey.v1";
-export const RESEARCH_JOURNEY_DESCRIPTOR_REVISION = 2;
+export const RESEARCH_JOURNEY_DESCRIPTOR_REVISION = 3;
 
 export type JourneyTargetKind = "SHIPPED" | "RESEARCH_SCREEN" | "EXECUTION_HANDOFF";
 export type JourneyAvailability = "AVAILABLE" | "PLANNED" | "DEPENDENCY_REQUIRED";
@@ -50,12 +50,21 @@ const S = "SHIPPED" as const;
 const R = "RESEARCH_SCREEN" as const;
 const E = "EXECUTION_HANDOFF" as const;
 const A = "AVAILABLE" as const;
-const P = "PLANNED" as const;
 const D = "DEPENDENCY_REQUIRED" as const;
+/* Revision 3 (E12) has no PLANNED card: every redesign screen the descriptor
+   names is mounted in this build. `PLANNED` stays in the vocabulary because a
+   later card may be declared before its screen exists. */
 
 // Card copy and ordering follow QuantBT 00 Journey Map.dc.html, release v1.1.
 // HiFi contains 28 cards (3+3+2+2+2+9+3+4), despite the older audit saying 27.
 // Availability is the actual mounted-product state, not the historical HiFi href.
+//
+// Revision 3 (E12, HiFi audit 00-3): S4 Execute Replay, Attempt Lineage,
+// Compare, Release Candidate and Run Report are mounted (QuantBTModule routes
+// `runs/:runId/execute`, `alphas/:alphaId/lineage`, `compare`,
+// `runs/:runId/release-candidate`, `runs/:runId/report`), so the map must stop
+// calling them SOON. The registry row is immutable, so a new revision is
+// published by migration 067 rather than by editing revision 2.
 const phases: readonly PhaseInput[] = [
   ["access_command", "Access & command", "shipped shell — unchanged", [
     ["login", "01 · Login", "Cloudflare Zero Trust → portal credential → session", S, "portal_access", A, false],
@@ -84,15 +93,15 @@ const phases: readonly PhaseInput[] = [
     ["split", "S1 · Split", "fold anatomy, purge/embargo, holdout seal", R, "split", A, true],
     ["search", "S2 · Search & Selection", "search cinema, freeze line, J₁…J₅ in real math, best ≠ selected", R, "search_selection", A, true],
     ["freeze", "S3 · Freeze", "two-axis timeline, digest chain, what-if → new attempt", R, "freeze", A, true],
-    ["execute-replay", "S4 · Execute Replay", "candle replay, trade tape, event ledger, MAE×MFE", R, "execute_replay", P, true],
+    ["execute-replay", "S4 · Execute Replay", "candle replay, trade tape, event ledger, MAE×MFE", R, "execute_replay", A, true],
     ["claim", "S5 · Claim (in hub)", "cert = min of caps, manifest states, window disclosure — lives inside the hub", R, "evidence_hub", A, true, "stage=claim"],
-    ["attempt-lineage", "Attempt Lineage", "version ledger per av_, 52-attempt scale (probes collapsed), promotion pick", R, "attempt_lineage", P, true],
+    ["attempt-lineage", "Attempt Lineage", "version ledger per av_, 52-attempt scale (probes collapsed), promotion pick", R, "attempt_lineage", A, true],
     ["engine-atlas", "Engine Atlas", "modes × routes × claims — the support matrix as a reference", R, "engine_atlas", A, false],
-    ["compare", "Compare", "within one alpha: methodology trajectory, guarded by ComparisonContractKey", R, "compare_runs", P, true],
+    ["compare", "Compare", "within one alpha: methodology trajectory, guarded by ComparisonContractKey", R, "compare_runs", A, true],
   ]],
   ["promote", "Promote", "compose rc_ → publish → Execution side approves", [
-    ["release-candidate", "Release Candidate & Publish", "lineage rail alpha→av_→run→params→rc_, the 12-item R1 evidence pack, publish → approval-inbox mirror", R, "release_candidate", P, true],
-    ["run-report", "Run Report — one sheet", "printable evidence artifact: claim passport, cert chain, per-fold verdict, digests — attach it to the approval", R, "run_report", P, true],
+    ["release-candidate", "Release Candidate & Publish", "lineage rail alpha→av_→run→params→rc_, the 12-item R1 evidence pack, publish → approval-inbox mirror", R, "release_candidate", A, true],
+    ["run-report", "Run Report — one sheet", "printable evidence artifact: claim passport, cert chain, per-fold verdict, digests — attach it to the approval", R, "run_report", A, true],
     ["paper-soon", "Paper Trading — SOON", "deployment params must equal the frozen digest, or declare a refit", S, "paper_trading", D, false],
   ]],
   ["execution", "Execution side", "reads the published record — nothing here is a research screen", [
