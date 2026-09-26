@@ -629,7 +629,8 @@ describe("P15-T06 — one search read, one optional ledger read", () => {
   it("classifies each refusal and keeps the screen", () => {
     const of = (status: number) => toSearchRefusal(new PortalApiError("no", status, null, null));
     expect(of(403).state).toBe("denied");
-    expect(of(404).state).toBe("terminal");
+    /* X3 2026-09-26 one refusal rule (F-04): a 404 reads exactly as a 403. */
+    expect(of(404).state).toBe("denied");
     expect(of(503).state).toBe("unavailable");
 
     const { container } = view({

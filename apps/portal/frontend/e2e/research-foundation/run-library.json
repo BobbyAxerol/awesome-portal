@@ -14,13 +14,22 @@
         "technical_retry_count": 0
       },
       "status": "COMPLETED",
+      "status_basis": {
+        "kind": "DURABLE_LIFECYCLE",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
       "mode": {
         "display": "mode_1_decay \u00b7 per_fold_causal",
         "key": "mode_1_decay",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
-        }
+        },
+        "schedule": "per_fold_causal",
+        "protocol": "walk_forward"
       },
       "strategy_id": {
         "value": "delta_rsi",
@@ -41,6 +50,10 @@
         "reason_code": null
       },
       "rc": null,
+      "rc_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
       "instrument": {
         "display": "BTCUSDT \u00b7 4h",
         "availability": {
@@ -165,7 +178,8 @@
           "reason_code": null
         }
       },
-      "source_updated_at_utc_ms": 1789836582000
+      "source_updated_at_utc_ms": 1789836582000,
+      "evidence_revision": "p13r1_7d21ab"
     },
     {
       "run_id": "R-WFO-119",
@@ -179,13 +193,22 @@
         "technical_retry_count": 0
       },
       "status": "RUNNING",
+      "status_basis": {
+        "kind": "DURABLE_LIFECYCLE",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
       "mode": {
         "display": "mode_1_decay \u00b7 per_fold_causal",
         "key": "mode_1_decay",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
-        }
+        },
+        "schedule": "per_fold_causal",
+        "protocol": "walk_forward"
       },
       "strategy_id": {
         "value": "delta_rsi",
@@ -206,6 +229,10 @@
         "reason_code": null
       },
       "rc": null,
+      "rc_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
       "instrument": {
         "display": "BTCUSDT \u00b7 4h",
         "availability": {
@@ -330,7 +357,8 @@
           "reason_code": null
         }
       },
-      "source_updated_at_utc_ms": 1789836582000
+      "source_updated_at_utc_ms": 1789836582000,
+      "evidence_revision": null
     },
     {
       "run_id": "R-WFO-120",
@@ -344,13 +372,22 @@
         "technical_retry_count": 0
       },
       "status": "FAILED",
+      "status_basis": {
+        "kind": "DURABLE_LIFECYCLE",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
       "mode": {
         "display": "mode_1_decay \u00b7 per_fold_causal",
         "key": "mode_1_decay",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
-        }
+        },
+        "schedule": "per_fold_causal",
+        "protocol": "walk_forward"
       },
       "strategy_id": {
         "value": "delta_rsi",
@@ -371,6 +408,10 @@
         "reason_code": null
       },
       "rc": null,
+      "rc_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
       "instrument": {
         "display": "BTCUSDT \u00b7 4h",
         "availability": {
@@ -495,7 +536,8 @@
           "reason_code": null
         }
       },
-      "source_updated_at_utc_ms": 1789836582000
+      "source_updated_at_utc_ms": 1789836582000,
+      "evidence_revision": null
     },
     {
       "run_id": "R-LEGACY-07",
@@ -509,13 +551,22 @@
         "technical_retry_count": 0
       },
       "status": "COMPLETED",
+      "status_basis": {
+        "kind": "LEGACY_RECORDED_STATUS",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
       "mode": {
         "display": null,
         "key": null,
         "availability": {
           "state": "LEGACY_METADATA_ONLY",
           "reason_code": "LEGACY_1_0_8_HAS_NO_MODE"
-        }
+        },
+        "schedule": null,
+        "protocol": null
       },
       "strategy_id": {
         "value": null,
@@ -530,6 +581,10 @@
         "reason_code": "LEGACY_1_0_8_HAS_NO_BINDING"
       },
       "rc": null,
+      "rc_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P21_NO_PERSISTED_RELEASE_CANDIDATE"
+      },
       "instrument": {
         "display": "BTCUSDT \u00b7 4h",
         "availability": {
@@ -654,7 +709,8 @@
           "reason_code": "SOURCE_DID_NOT_PUBLISH_SERIES"
         }
       },
-      "source_updated_at_utc_ms": 1789836582000
+      "source_updated_at_utc_ms": 1789836582000,
+      "evidence_revision": null
     }
   ],
   "page": {
@@ -675,9 +731,11 @@
   },
   "claim_ledger": {
     "issued": 1,
-    "not_issued": 1,
+    "not_issued": 0,
     "pending_source": 1,
-    "failed": 1
+    "failed": 1,
+    "cancelled_before_source": 0,
+    "legacy_metadata_only": 1
   },
   "filter_catalog": {
     "alphas": [

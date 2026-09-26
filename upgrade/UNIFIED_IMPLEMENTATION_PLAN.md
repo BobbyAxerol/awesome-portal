@@ -3674,7 +3674,7 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 
 | Id | Việc | Chủ | Điều kiện đóng |
 |---|---|---|---|
-| OL-20 | Gộp X3 (S13 VD-P20, một quy tắc refusal cho S02–S08, runner P23 chạy trên contract hiện tại, A12 cập nhật) — đang làm | Claude | Merge xanh |
+| OL-20 | Gộp X3 (S13 VD-P20, một quy tắc refusal cho S02–S08, runner P23 chạy trên contract hiện tại, A12 cập nhật) — **ĐÃ GỘP** (merge `0b6b7fb8`; kèm sửa F-04 cho S09 `reportClient` 404→denied + 401→Frame 01D, và S11 đưa mã lỗi vào disclosure `details`). Record: [`P20/X3_S13_P23_CLAUDE_2026-09-26.md`](research_loop/evidence/P20/X3_S13_P23_CLAUDE_2026-09-26.md). Runner P23 lane fixture 76/78 trước khi sửa S09/S11 — chạy lại ở OL-23 | Claude | Merge xanh |
 | OL-21 | `S01-RUNLIBRARY-PAGE-GUARD`, refusal mapping S02–S05 còn lại sau X3 | Claude | Test + ảnh chụp |
 | OL-22 | 33 ô visual baseline lệch (runner P23) | Claude | Baseline cập nhật có duyệt từng ô, không `--update` mù |
 | OL-23 | Receipt real-API trên preview build lại từ HEAD cho màn 01–13, run P04 + WFO (gồm S11 hợp nhất, W7, X2) | Claude | Lane real-API xanh + ảnh chụp đã xem |

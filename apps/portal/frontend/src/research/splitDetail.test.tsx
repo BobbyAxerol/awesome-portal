@@ -704,7 +704,8 @@ describe("P14-T06 — one split read, one optional fold read", () => {
   it("classifies each refusal the contract declares", () => {
     const of = (status: number) => toSplitRefusal(new PortalApiError("no", status, null, null));
     expect(of(401).state).toBe("denied");
-    expect(of(404).state).toBe("terminal");
+    expect(of(404).state).toBe("denied");
+    expect(of(404).message).toBe(of(403).message);
     expect(of(409).state).toBe("stale");
     expect(of(503).state).toBe("unavailable");
     expect(of(400).state).toBe("terminal");
@@ -877,11 +878,11 @@ describe("RF-06 FE-S05-04 — pending ≠ empty, 404 ≠ empty, first-read 409 �
     expect(splitState(null, refusal).mayRetry).toBe(true);
   });
 
-  it("a 404 is terminal and leads back to the Run Library, with no live stage links", async () => {
+  it("a 404 is denied (F-04, as a 403) and leads back to the Run Library, with no live stage links", async () => {
     stub(() => [404, { error: { code: "RESEARCH_SPLIT_NOT_FOUND", message: "Research run was not found." } }]);
     const { container } = mountRoute("");
     await waitFor(() => expect(container.querySelector("[data-run-not-found]")).toBeTruthy());
-    expect(container.querySelector("[data-state]")?.getAttribute("data-state")).toBe("terminal");
+    expect(container.querySelector("[data-state]")?.getAttribute("data-state")).toBe("denied");
     expect(container.querySelector("[data-action='run-library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
     expect(container.querySelector("[data-action='next-stage']")).toBeNull();
     expect(container.querySelector("[data-action='back-to-hub']")).toBeNull();

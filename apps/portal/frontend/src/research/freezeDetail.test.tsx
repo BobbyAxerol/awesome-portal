@@ -771,7 +771,8 @@ describe("P16-T06 — the surface requests only the three named operations", () 
   it("classifies each refusal the contract declares", () => {
     const of = (status: number) => toFreezeRefusal(new PortalApiError("no", status, null, null));
     expect(of(401).state).toBe("denied");
-    expect(of(404).state).toBe("terminal");
+    /* X3 2026-09-26 one refusal rule (F-04): a 404 reads exactly as a 403. */
+    expect(of(404).state).toBe("denied");
     expect(of(409).state).toBe("stale");
     expect(of(503).state).toBe("unavailable");
   });

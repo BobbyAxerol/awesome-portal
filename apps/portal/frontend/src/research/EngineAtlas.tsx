@@ -978,7 +978,13 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
               <span style={{ color: "var(--ink-faint)" }}>{group.group_id}</span>{" "}
               {group.fields.map((field) => (
                 <span key={field.field_id} title={field.detail}>
-                  {field.field_id}={Array.isArray(field.default_value) ? field.default_value.join(",") : String(field.default_value)}
+                  {/* The engine's `None` default is a fact ("unset"), never the bare token "null" (P23 matrix). */}
+                  {field.field_id}=
+                  {Array.isArray(field.default_value)
+                    ? field.default_value.join(",")
+                    : field.default_value === null
+                      ? "unset"
+                      : String(field.default_value)}
                   <span style={{ color: "var(--ink-faint)" }}> {field.override_state.toLowerCase()} </span>
                 </span>
               ))}

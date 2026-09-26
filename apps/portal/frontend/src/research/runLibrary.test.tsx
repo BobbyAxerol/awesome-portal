@@ -581,7 +581,8 @@ describe("P12-T06 — typed refusals keep the route and stop the poll", () => {
     [400, "terminal", false],
     [401, "denied", true],
     [403, "denied", true],
-    [404, "terminal", true],
+    /* X3 VD-P23-03 (F-04): 404 reads as 403. */
+    [404, "denied", true],
     [503, "unavailable", false],
   ])("maps %i", (status, expected, stops) => {
     const refusal = toLibraryRefusal(new PortalApiError("said so", status, "CODE", "r"));

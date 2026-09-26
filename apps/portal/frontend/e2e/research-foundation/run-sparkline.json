@@ -15,5 +15,17 @@
     "state": "AVAILABLE",
     "reason_code": null
   },
-  "source_revision": "rev_1"
+  "source_revision": "rev_1",
+  "source": {
+    "series_kind": "EQUITY_OOS",
+    "value_field": "equity",
+    "projection_revision": "p13r1_7d21ab",
+    "series_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_observation_count": 8,
+    "source_sampling": "FULL",
+    "persisted_point_count": 8,
+    "display_sampling": "FULL",
+    "first_at_utc_ms": 1719792000000,
+    "last_at_utc_ms": 1720396800000
+  }
 }

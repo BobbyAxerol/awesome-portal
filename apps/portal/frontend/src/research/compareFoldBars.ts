@@ -27,10 +27,26 @@ export interface FoldBar {
   sign: "pos" | "neg" | "zero";
 }
 
+/** One attempt as a polyline through its folds (fold centres, in ordinal order). */
+export interface FoldLine {
+  runId: string;
+  path: string;
+}
+
+/**
+ * Hi-fi / IA doc (`01_IA_AND_WIRING.md`, "13 Compare"): past 8 folds the
+ * grouped bars stop being readable, so the figure draws one line per attempt
+ * instead (the ACTIVE one heavier). Same scale, same values.
+ */
+export const LINES_PAST_FOLDS = 8;
+
 export interface FoldBarGeometry {
   width: number;
   height: number;
   bars: FoldBar[];
+  lines: FoldLine[];
+  /** `bars` up to {@link LINES_PAST_FOLDS} folds, `lines` beyond. */
+  mode: "bars" | "lines";
   /** One label per fold ordinal, centred on its group (percent of the box). */
   groups: { ordinal: number; label: string; pct: number }[];
   /** Height of the zero line (percent from the top). */
@@ -87,10 +103,20 @@ export function foldBars(series: readonly FoldBarInput[]): FoldBarGeometry | nul
   const labelOf = (ordinal: number) => parsed.find((item) => item.fold.source_ordinal === ordinal)!.fold.fold_id;
   const yLabels = [{ text: high.fold.oos_sharpe!, pct: round2((y(high.v) / BOX) * 100) }];
   if (low !== high && low.fold.oos_sharpe !== high.fold.oos_sharpe) yLabels.push({ text: low.fold.oos_sharpe!, pct: round2((y(low.v) / BOX) * 100) });
+  const lines: FoldLine[] = series.map((item) => {
+    const vertices = item.folds
+      .filter((fold) => fold.oos_sharpe !== null && Number.isFinite(Number(fold.oos_sharpe)))
+      .map((fold) => ({ fold, v: Number(fold.oos_sharpe) }))
+      .sort((left, right) => left.fold.source_ordinal - right.fold.source_ordinal)
+      .map(({ fold, v }) => `${round2((ordinals.indexOf(fold.source_ordinal) + 0.5) * groupWidth)} ${round2(y(v))}`);
+    return { runId: item.runId, path: vertices.length > 0 ? `M${vertices.join(" L")}` : "" };
+  });
   return {
     width: BOX,
     height: BOX,
     bars,
+    lines,
+    mode: ordinals.length > LINES_PAST_FOLDS ? "lines" : "bars",
     groups: ordinals.map((ordinal, index) => ({ ordinal, label: labelOf(ordinal), pct: round2(((index + 0.5) * groupWidth / BOX) * 100) })),
     zeroPct: round2((zero / BOX) * 100),
     yLabels,

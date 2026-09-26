@@ -987,7 +987,8 @@ describe("P11-T09 — typed availability and refusals keep the composition", () 
   it.each([
     [401, "denied", true],
     [403, "denied", true],
-    [404, "terminal", false],
+    /* X3 VD-P23-03 (F-04): 404 reads as 403, and a denied read closes the stream. */
+    [404, "denied", true],
     [409, "terminal", true],
     [503, "unavailable", false],
   ])("maps %i to %s", (status, expected, closes) => {

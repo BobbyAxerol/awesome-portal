@@ -17,16 +17,22 @@
  *  - **nothing here writes.** Compare inspects; it never selects, promotes,
  *    approves or publishes a run.
  *
- * Ledger (plan P20 §0.2, continued in the phase report):
+ * Ledger (plan P20 §0.2, continued in the phase report; every open item
+ * decided 2026-09-26 in evidence/P20/X3_S13_P23_CLAUDE_2026-09-26.md):
  *  - VD-P20-01/11 pair is two runs of one Alpha: the segment, the title's
  *    subtitle and the overlay caption say "runs", not "alphas".
  *  - VD-P20-02 the correlation is Portal-derived: the card prints the formula,
  *    version, n, window and missing policy; an absent one names its reason.
- *  - VD-P20-03 cert, schedule and ACTIVE/SUPERSEDED are not contract fields:
- *    typed absences; the pill is `run_state`, the note is `claim.text`.
- *  - VD-P20-04 per-fold OOS Sharpe is not published: the figure keeps its frame.
- *  - VD-P20-05 attempts publish no config diff: the card keeps its frame.
- *  - VD-P20-06/13 the delta table keeps six rows; only the common window has a Δ.
+ *  - VD-P20-03/04/05/06 closed by W6a fields: schedule, typed cert, lifecycle
+ *    pill (ACTIVE filled), per-fold figure (lines past eight folds), config
+ *    diff against the ACTIVE column, Sharpe/win-rate NOT_APPLICABLE reasons.
+ *  - VD-P20-13 the delta table keeps six rows; only the common window has a Δ.
+ *  - VD-P20-15 the attempts rule keeps its sentences without the demo digits.
+ *  - VD-P20-17 claim origin/rank ride the chip's title, not a second line.
+ *  - VD-P20-22 the segmented control wraps below the subtitle (hi-fi).
+ *  - VD-P20-26/27 ρ to two places with the hi-fi sub-caption; five gridlines,
+ *    only the two server extremes labelled.
+ *  - VD-P20-30 gold banners on raised paper (axe contrast), arrow in --warn.
  *  - VD-P20-07 the pair's demo toggle is the URL's two run ids, read-only.
  *  - VD-P20-08 one mono disclosure line under the header.
  *  - VD-P20-10 the rules footer changes two phrases the contract contradicts.
@@ -78,7 +84,7 @@ import {
 import { LineageLink, lineageHref } from "./LineageLink";
 import { foldBars } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
-import { formatMetric } from "./researchFormat";
+import { formatAxisValue, formatCorrelation, formatMetric } from "./researchFormat";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
 import { iso } from "./utcMinute";
@@ -102,14 +108,19 @@ export const MODE_LABELS: Record<CompareMode, string> = {
 };
 
 /**
- * Hi-fi attempts rule, verbatim. The hi-fi reads the ladder weak→strong,
- * left to right; the contract returns it strong→weak. The screen lays the
- * server's array out reversed — a fixed presentation, never a sort by a
- * number — so this sentence and the "claim ↑ →" arrow stay true
- * (VD-P20-14, REQUIRES_BOBBY_DECISION).
+ * Hi-fi attempts rule. The hi-fi reads the ladder weak→strong, left to right;
+ * the contract returns it strong→weak, and the screen lays the server's array
+ * out reversed — a fixed presentation, never a sort by a number — so "left to
+ * right" and the "claim ↑ →" arrow hold (VD-P20-14, decided 2026-09-26).
+ *
+ * VD-P20-15 (decided 2026-09-26): the hi-fi's demo digits ("a retrospective
+ * 1.31 does not beat a strict 1.19") and its promise that "the number falls"
+ * are the demo's data, not a rule: on a real alpha they would read as this
+ * alpha's numbers. The sentence keeps the hi-fi's order and every rule it
+ * states, without a number the server did not send.
  */
 export const ATTEMPTS_RULE =
-  "Same alpha, same key — every chart may overlay. But numbers across claim classes never rank each other: a retrospective 1.31 does not beat a strict 1.19. Read the ladder left to right: the number falls as the claim strengthens, and that gap is the selection luck the weaker claims were counting.";
+  "Same alpha, same key — every chart may overlay. But numbers across claim classes never rank each other: a retrospective number does not beat a strict one, however much higher it reads. Read the ladder left to right: the claim strengthens at every step, and where the number falls, that gap is the selection luck the weaker claims were counting.";
 
 /**
  * Hi-fi markets rule after the server's caption. The hi-fi's own first clause
@@ -202,7 +213,9 @@ const COMPARE_CSS = `
 .cp-mono { font-family: var(--font-mono); }
 .cp-faint { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-faint); overflow-wrap: anywhere; }
 .cp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px 16px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
-.cp-head > .l { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 320px; }
+/* VD-P20-22 (decided 2026-09-26, hi-fi): the title block takes its own width, so the
+   segmented control wraps below the subtitle and the title stays on one line. */
+.cp-head > .l { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 0 1 auto; max-width: 100%; }
 .cp-crumb { font-size: 12px; color: var(--ink-soft); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .cp-crumb .sep { color: var(--ink-faint); }
 .cp-crumb .here { color: var(--ink); }
@@ -216,29 +229,46 @@ const COMPARE_CSS = `
 .cp-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-faint); min-width: 0; }
 .cp-meta > span { overflow-wrap: anywhere; min-width: 0; }
 .cp-rule { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; padding: 9px 14px; border: 1px solid var(--accent-2); border-radius: 6px;
-  background: var(--accent-2-soft); color: var(--accent-2); }
+  /* VD-P20-30 (a11y over hi-fi, 2026-09-26): gold on the hi-fi's pale gold (--accent-2-soft) reads 4.0:1 (axe serious);
+     on raised paper it reads 4.7:1, so the banner keeps its gold border, tag and text on white. */
+  background: var(--paper-raised); color: var(--accent-2); }
 .cp-rule[data-tone="bad"] { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
 .cp-rule .tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; flex: none; }
 .cp-rule .txt { font-size: 11.5px; line-height: 1.55; flex: 1 1 240px; min-width: 0; }
-.cp-ladderhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: .07em;
-  font-weight: 500; color: var(--ink-faint); margin: 0 0 6px; }
+.cp-ladderhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-family: var(--font-body); font-size: 10px; text-transform: uppercase;
+  letter-spacing: .07em; font-weight: 500; color: var(--ink-faint); margin: 0 0 6px; }
+.cp-ladderhead .cp-faint { text-transform: none; letter-spacing: 0; }
 .cp-ladder { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; min-width: 0; }
 .cp-lcard { flex: 1 1 200px; min-width: min(200px, 100%); display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: 8px;
   background: var(--paper-raised); padding: 11px 14px; box-shadow: var(--shadow-e1); }
 .cp-lcard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
-/* CG-P20-08: the ACTIVE version's card is drawn heavier, as the hi-fi does; the pill names the lifecycle. */
-.cp-lcard[data-lifecycle="ACTIVE"] { border: 2px solid var(--ink); }
-.cp-life { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; padding: 0 5px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink-soft); }
-.cp-life[data-life="ACTIVE"] { border-color: var(--good); color: var(--good); }
-.cp-life[data-life="SUPERSEDED"] { color: var(--ink-faint); }
+/* CG-P20-08: the ACTIVE version's card carries the hi-fi's accent border; the pill names the lifecycle
+   (ACTIVE filled, every other state outlined), exactly where the hi-fi puts its status pill. */
+.cp-lcard[data-lifecycle="ACTIVE"] { border: 1.5px solid var(--accent); }
+.cp-life { font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; border-radius: 999px; padding: 1px 7px; border: 1px solid var(--ink-faint);
+  color: var(--ink-faint); background: transparent; flex: none; }
+.cp-life[data-life="ACTIVE"] { border-color: var(--good); color: var(--paper-raised); background: var(--good); }
+.cp-runstate { font-family: var(--font-mono); }
+.cp-runstate[data-state="FAILED"], .cp-runstate[data-state="RECOVERY_REQUIRED"] { color: var(--bad); }
 .cp-plot[data-size="fold"] { height: 220px; }
-.cp-foldbar { fill-opacity: .85; }
-.cp-foldbar[data-sign="neg"] { fill-opacity: .55; }
+.cp-foldbar { fill-opacity: 1; }
 .cp-foldzero { stroke: var(--ink); stroke-width: 1; }
-.cp-foldlegend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); }
-.cp-difftable td, .cp-difftable th { font-family: var(--font-mono); font-size: 10.5px; padding: 3px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
+.cp-foldlegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); margin-bottom: 6px; }
+.cp-foldlegend .sw { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
+.cp-foldline { fill: none; stroke-width: 1.25; }
+.cp-foldline[data-active="true"] { stroke-width: 2.25; }
+.cp-difftable { width: 100%; border-collapse: collapse; font-size: 11px; }
+.cp-difftable thead th { font-family: var(--font-body); font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint);
+  text-align: right; border-bottom: 1px solid var(--line); padding: 6px 12px; }
+.cp-difftable thead th:first-child { text-align: left; }
+.cp-difftable thead th[data-active="true"] { font-weight: 700; color: var(--accent); }
+.cp-difftable tbody th { font-family: var(--font-mono); font-weight: 400; color: var(--ink-soft); text-align: left; padding: 5px 12px; border-top: 1px solid var(--line-soft);
+  text-transform: none; letter-spacing: 0; }
+.cp-difftable td { font-family: var(--font-mono); text-align: right; padding: 5px 12px; border-top: 1px solid var(--line-soft); vertical-align: top; }
+.cp-difftable td[data-differs="true"] { color: var(--accent-2); font-weight: 600; }
+.cp-difftable td[data-active="true"] { background: var(--paper-sunken); }
 .cp-att { font-family: var(--font-mono); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
-.cp-arrow { align-self: center; font-family: var(--font-mono); font-size: 11px; color: var(--accent-2); flex: none; }
+.cp-arrow { align-self: center; font-family: var(--font-mono); font-size: 11px; color: var(--warn); flex: none; }
 .cp-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
 .cp-bignum { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
 .cp-note { font-size: 10px; color: var(--ink-soft); line-height: 1.45; overflow-wrap: anywhere; min-width: 0; }
@@ -247,10 +277,12 @@ const COMPARE_CSS = `
 .cp-st[data-state="READY"] { border-color: var(--good); color: var(--good); }
 .cp-st[data-state="FAILED"], .cp-st[data-state="RECOVERY_REQUIRED"] { border-color: var(--bad); color: var(--bad); }
 .cp-claimchip { font-family: var(--font-mono); font-size: 10px; font-weight: 600; color: var(--cp-claim); border-left: 2px solid var(--cp-claim);
-  padding-left: 6px; margin-top: 2px; overflow-wrap: anywhere; }
+  padding-left: 6px; margin-top: 2px; overflow-wrap: anywhere; align-self: flex-start; }
 .cp-claimchip[data-rank="none"] { font-weight: 400; font-style: italic; }
-.cp-origin { font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-faint); padding-left: 8px; overflow-wrap: anywhere; }
-.cp-cert { font-family: var(--font-mono); font-size: 9px; font-weight: 700; border: 1px dashed var(--line-strong); color: var(--ink-faint); border-radius: 3px; padding: 0 6px; }
+/* The hi-fi's "cert B" chip: dashed while no source publishes a grade, with the reason under it. */
+.cp-cert { display: inline-flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cp-cert .chip { font-family: var(--font-mono); font-size: 10px; font-weight: 700; border: 1.5px dashed var(--line-strong); color: var(--ink-faint); border-radius: 3px;
+  padding: 0 6px; align-self: flex-start; white-space: nowrap; }
 .cp-coverage { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; margin-top: 6px; }
 .cp-chip { font-family: var(--font-mono); font-size: 9.5px; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; background: var(--paper-raised); color: var(--ink-soft); }
 .cp-chip[data-tone="partial"] { border-color: var(--accent-2); color: var(--accent-2); }
@@ -266,8 +298,9 @@ const COMPARE_CSS = `
 .cp-grid { display: flex; gap: 14px; flex-wrap: wrap; align-items: stretch; min-width: 0; }
 .cp-grid > * { min-width: 0; }
 .cp-card { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.cp-card > .t, .cp-tcard > .t { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin: 0; font-size: 10px; text-transform: uppercase;
-  letter-spacing: .07em; font-weight: 500; color: var(--ink-faint); }
+.cp-card > .t, .cp-tcard > .t { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin: 0; font-family: var(--font-body); font-size: 10px;
+  text-transform: uppercase; letter-spacing: .07em; font-weight: 500; color: var(--ink-faint); }
+.cp-card > .t .cp-faint, .cp-tcard > .t .cp-faint { text-transform: none; letter-spacing: 0; }
 .cp-tcard { border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); min-width: 0; max-width: 100%; display: flex; flex-direction: column; }
 .cp-tcard > .body { min-width: 0; max-width: 100%; }
 .cp-tcard > .t { padding: 8px 12px; border-bottom: 1px solid var(--line); }
@@ -339,26 +372,28 @@ const COMPARE_CSS = `
 .cp-delta th[data-side="left"] { color: var(--accent); }
 .cp-delta th[data-side="right"] { color: var(--accent-2); }
 .cp-delta td { padding: 6px 12px; border-top: 1px solid var(--line-soft); font-family: var(--font-mono); text-align: right; vertical-align: top; overflow-wrap: anywhere; }
-.cp-delta td:first-child { font-family: var(--font-body); color: var(--ink-soft); text-align: left; }
+.cp-delta td:first-child { font-family: var(--font-body); color: var(--ink-soft); text-align: left; white-space: nowrap; overflow-wrap: normal; }
 .cp-delta td.d { font-weight: 600; }
 .cp-delta td[data-sign="pos"] { color: var(--good); }
 .cp-delta td[data-sign="neg"] { color: var(--bad); }
-.cp-delta .scope { display: block; font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-faint); }
+.cp-delta .scope { display: block; font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-faint); white-space: normal; word-break: break-all; max-width: 16ch; }
 .cp-corr { flex: 1 1 320px; border: 1.5px solid var(--accent); border-radius: 8px; background: var(--accent-soft);
   padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.cp-corr .t { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px; margin: 0; }
+.cp-corr .t { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px; margin: 0; font-family: var(--font-body); }
 .cp-corr .t .k { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--accent); }
+.cp-rhorow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; }
 .cp-rho { font-family: var(--font-mono); font-size: 30px; font-weight: 700; color: var(--accent); overflow-wrap: anywhere; }
+.cp-rhosub { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); }
 .cp-corr p { font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
 .cp-weaker { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 9px 14px; border: 1px solid var(--accent-2); border-radius: 6px;
-  background: var(--accent-2-soft); font-size: 11.5px; color: var(--ink); }
+  background: var(--paper-raised); font-size: 11.5px; color: var(--ink); }
 .cp-weaker .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--accent-2); flex: none; }
 .cp-dtable { width: 100%; border-collapse: collapse; font-size: 11px; }
 .cp-dtable th { font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); text-align: left; border-bottom: 1px solid var(--line); padding: 6px 12px; }
 .cp-dtable td { padding: 5px 12px; font-family: var(--font-mono); border-top: 1px solid var(--line-soft); overflow-wrap: anywhere; }
 .cp-scroll { overflow-x: auto; min-width: 0; }
 .cp-foot { display: flex; flex-direction: column; gap: 3px; border-top: 1px solid var(--line); padding-top: 8px; }
-.cp-foot .t { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0; font-weight: 400; }
+.cp-foot .t { font-family: var(--font-body); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0; font-weight: 400; }
 .cp-foot p { font-size: 11px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
 .cp-absent { font-family: var(--font-mono); font-style: italic; color: var(--ink-faint); font-size: 9.5px; }
 .cp-reason { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); word-break: break-all; }
@@ -428,26 +463,33 @@ function metricOf(run: CompareRun, key: CompareMetric["key"]): CompareMetric | u
   return run.original_metrics.find((metric) => metric.key === key);
 }
 
+/**
+ * The hi-fi's claim chip: the family, coloured by its spec rank. The rank, the
+ * tier and the server's `claim.origin` (VD-P20-17, decided 2026-09-26) ride in
+ * the chip's title and a screen-reader line, not as a second visible line the
+ * hi-fi does not have.
+ */
 function ClaimChip({ claim }: { claim: CompareClaim }) {
   const entry = CLAIM_RANK_MAP[claim.family];
   const style = { "--cp-claim": entry.token } as CSSProperties;
+  if (claim.family === "NOT_PUBLISHED") {
+    return (
+      <span className="flex flex-col" data-claim={claim.family}>
+        <span className="cp-claimchip" data-rank="none" style={style} title={entry.tier}>
+          <AvailabilityAbsent availability={claim.availability} what="claim" />
+        </span>
+      </span>
+    );
+  }
+  const detail = `${entry.tier}${claim.rank !== null ? ` · rank ${claim.rank}` : ""} · origin ${claim.origin}`;
   return (
     <span className="flex flex-col" data-claim={claim.family}>
-      <span className="cp-claimchip" data-rank={entry.rank ?? "none"} style={style} title={entry.tier}>
-        {claim.family === "NOT_PUBLISHED" ? (
-          <AvailabilityAbsent availability={claim.availability} what="claim" />
-        ) : (
-          <>
-            {claim.family}
-            {claim.rank !== null ? ` · rank ${claim.rank}` : ""}
-          </>
-        )}
-      </span>
-      {claim.family !== "NOT_PUBLISHED" ? (
-        <span className="cp-origin" data-claim-origin={claim.origin}>
-          origin {claim.origin}
+      <span className="cp-claimchip" data-rank={entry.rank ?? "none"} data-claim-rank={claim.rank ?? undefined} style={style} title={detail}>
+        {claim.family}
+        <span className="sr-only" data-claim-origin={claim.origin}>
+          {` (${detail})`}
         </span>
-      ) : null}
+      </span>
     </span>
   );
 }
@@ -460,12 +502,21 @@ function RunState({ state }: { state: CompareRun["run_state"] }) {
   );
 }
 
-function RunLine({ run }: { run: CompareRun }) {
+function RunLine({ run, withState = false }: { run: CompareRun; withState?: boolean }) {
   return (
     <span className="cp-faint" data-run-line>
       <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id}>
         {run.run_id}
       </Link>
+      {withState ? (
+        <>
+          {" · "}
+          {/* On a ladder card the hi-fi's pill is the lifecycle; the run's own state reads here. */}
+          <span className="cp-runstate" data-run-state={run.run_state} data-state={run.run_state}>
+            {run.run_state}
+          </span>
+        </>
+      ) : null}
       {" · "}
       {/* Spec 13 §1 outbound 11: this run's release candidate (P21). */}
       <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)">
@@ -477,7 +528,7 @@ function RunLine({ run }: { run: CompareRun }) {
       {/* CG-P20-02: the requested P08 mode × schedule. */}
       {run.schedule.availability.state === "AVAILABLE" && run.schedule.mode !== null && run.schedule.schedule !== null ? (
         <span data-schedule>
-          sched {run.schedule.mode} × {run.schedule.schedule}
+          {run.schedule.mode} × {run.schedule.schedule}
         </span>
       ) : (
         <AvailabilityAbsent availability={run.schedule.availability} what="sched" />
@@ -489,8 +540,11 @@ function RunLine({ run }: { run: CompareRun }) {
 /** CG-P20-03 (W6a decision): a typed absence the contract carries, never a grade the screen invents. */
 function CertAbsent({ run }: { run: CompareRun }) {
   return (
-    <span className="cp-cert" data-cert-absent data-cert-state={run.certification.state}>
-      <Absent what="cert" state="not published" reason={run.certification.reason_code} />
+    <span className="cp-cert" data-cert-absent data-cert-state={run.certification.state} data-absent="cert" data-absent-state="not published">
+      <span className="chip">cert not published</span>
+      <span className="cp-reason" data-reason-code>
+        {run.certification.reason_code}
+      </span>
     </span>
   );
 }
@@ -607,17 +661,37 @@ export function overlayPlot(points: Overlay["points"]): (Plot & { left: string; 
   };
 }
 
+/**
+ * VD-P20-27 (decided 2026-09-26): the hi-fi's five dashed gridlines. Only the
+ * two server extremes carry a label; the three between are unlabelled
+ * geometry at equal steps, so no number is printed that the server did not send.
+ */
+function gridPcts(plot: Plot): number[] {
+  const pcts = plot.yLabels.map((label) => label.pct);
+  if (pcts.length < 2) return pcts;
+  const top = Math.min(...pcts);
+  const bottom = Math.max(...pcts);
+  return [0, 1, 2, 3, 4].map((step) => Math.round((top + ((bottom - top) * step) / 4) * 100) / 100);
+}
+
 function gutterOf(plot: Plot): CSSProperties {
-  const chars = Math.max(4, ...plot.yLabels.map((label) => label.text.length));
+  const chars = Math.max(4, ...plot.yLabels.map((label) => equityAxis(label.text).length));
   return { "--cp-gutter": `calc(${chars}ch + 10px)` } as CSSProperties;
 }
+
+/**
+ * An equity axis label for display (DQ-08): the server's string, grouped and
+ * rounded to what fits a ~300px small multiple; the exact string stays in the
+ * title and `data-exact`.
+ */
+const equityAxis = formatAxisValue;
 
 function AxisLabels({ plot }: { plot: Plot }) {
   return (
     <div aria-hidden="true">
       {plot.yLabels.map((label) => (
-        <span key={`y${label.text}`} className="cp-lbl y" style={{ top: `${label.pct}%` }} data-y-label>
-          {label.text}
+        <span key={`y${label.text}`} className="cp-lbl y" style={{ top: `${label.pct}%` }} data-y-label data-exact={label.text} title={label.text}>
+          {equityAxis(label.text)}
         </span>
       ))}
       {plot.xLabels.map((label, index) => (
@@ -800,12 +874,9 @@ function LadderCard({ run }: { run: CompareRun }) {
     <article className="cp-lcard" data-ladder-run={run.run_id} data-attempt={run.attempt_id} data-lifecycle={run.alpha_version_lifecycle.value ?? undefined} data-lane={run.lane}>
       <div className="top">
         <span className="cp-att">{run.attempt_id}</span>
-        <span className="flex items-baseline gap-1.5">
-          <Lifecycle run={run} />
-          <RunState state={run.run_state} />
-        </span>
+        <Lifecycle run={run} />
       </div>
-      <RunLine run={run} />
+      <RunLine run={run} withState />
       <ClaimChip claim={run.claim} />
       <div className="cp-big">
         {(() => {
@@ -832,8 +903,8 @@ function Ladder({ result }: { result: AttemptResult }) {
     <section data-panel="ladder" aria-label="claim ladder">
       <h3 className="cp-ladderhead">
         <span data-ladder-header>{LADDER_HEADER}</span>
-        <span className="cp-faint" data-ladder-order-key={result.order}>
-          server order ({result.order.toLowerCase().replace(/_/g, " ")}), read right to left · {result.attempts.length} returned
+        <span className="cp-faint" data-ladder-order-key={result.order} title={`server order: ${result.order}, laid out reversed`}>
+          {result.attempts.length} returned · strongest claim on the right
         </span>
       </h3>
       {result.attempts.length === 0 ? (
@@ -876,15 +947,62 @@ function LadderStep({ run, last }: { run: CompareRun; last: boolean }) {
   );
 }
 
-/** CG-P20-04: grouped bars, one group per fold, one bar per attempt in the server's order. */
+/**
+ * Ladder order: the server's array reversed (VD-P20-14), so every attempts
+ * block — ladder, fold legend, diff columns — reads weak → strong, left to
+ * right, the same way.
+ */
+function ladderOrder(result: AttemptResult): CompareRun[] {
+  return [...result.attempts].reverse();
+}
+
+/**
+ * Series colours by ladder position, from palette tokens (the hi-fi's grey,
+ * pale gold, gold …); the ACTIVE version is always the accent. A colour names
+ * a position, never a quality.
+ */
+const FOLD_TONES = ["var(--line-strong)", "var(--warn)", "var(--accent-2)", "var(--ink-faint)", "var(--ink-soft)", "var(--good)"] as const;
+
+function foldTone(run: CompareRun | undefined, index: number): string {
+  if (run?.alpha_version_lifecycle.value === "ACTIVE") return "var(--accent)";
+  return FOLD_TONES[index % FOLD_TONES.length]!;
+}
+
+/** The hi-fi's legend entry: "att_03 · STRICT (B)" — attempt and claim family; no grade exists (CG-P20-03). */
+const CLAIM_SHORT: Record<CompareClaim["family"], string> = {
+  STRICT_OUTER_OOS: "STRICT",
+  SELECTION_ADJUSTED_OOS: "SELECTION",
+  WALK_FORWARD_OOS_COMPATIBILITY: "WALK-FORWARD",
+  NONE_FULL_SAMPLE_CALIBRATION: "CALIBRATION",
+  NOT_PUBLISHED: "claim not published",
+};
+
+function foldLegend(run: CompareRun | undefined, runId: string): string {
+  return run ? `${run.attempt_id} · ${CLAIM_SHORT[run.claim.family]}` : runId;
+}
+
+/**
+ * CG-P20-04: one group per fold, one bar per attempt in ladder order; past
+ * eight folds one line per attempt, the ACTIVE one heavier (IA doc, "13
+ * Compare"). The printed axis values are the server's highest and lowest
+ * strings, shown by unit with the exact string in the title (DQ-08).
+ */
 function FoldChart({ result }: { result: AttemptResult }) {
-  const published = result.fold_series.filter((item: FoldSeries) => item.state === "AVAILABLE" && item.folds.length > 0);
+  const runs = ladderOrder(result);
+  const byRun = new Map(runs.map((run) => [run.run_id, run] as const));
+  const drawable = result.fold_series.filter((item: FoldSeries) => item.state === "AVAILABLE" && item.folds.length > 0);
+  /* Ladder order for the series; a series whose run is not among the attempts keeps the server's place after them. */
+  const published = [
+    ...runs.flatMap((run) => drawable.filter((item) => item.run_id === run.run_id)),
+    ...drawable.filter((item) => !byRun.has(item.run_id)),
+  ];
   const geometry = foldBars(published.map((item) => ({ runId: item.run_id, folds: item.folds })));
   const absent = result.fold_series.filter((item: FoldSeries) => item.state !== "AVAILABLE");
   const truncated = published.filter((item) => item.truncated);
-  const tone = (index: number) => (index % 2 === 0 ? "var(--accent)" : "var(--accent-2)");
+  const tone = (runId: string) => foldTone(byRun.get(runId), published.findIndex((item) => item.run_id === runId));
+  const axis = (text: string) => formatMetric(text, "ratio") ?? text;
   return (
-    <figure className="cp-fig" data-panel="fold-chart" aria-label="OOS Sharpe per fold" data-fold-series={published.length}>
+    <figure className="cp-fig" data-panel="fold-chart" aria-label="OOS Sharpe per fold" data-fold-series={published.length} data-fold-mode={geometry?.mode}>
       <figcaption>
         <span className="cp-figtitle">{FOLD_CHART_TITLE}</span>
         {geometry ? (
@@ -896,56 +1014,79 @@ function FoldChart({ result }: { result: AttemptResult }) {
       </figcaption>
       {geometry ? (
         <>
+          <div className="cp-foldlegend" data-fold-legend>
+            {published.map((item) => (
+              <span key={item.run_id} data-fold-legend-run={item.run_id}>
+                <span className="sw" style={{ background: tone(item.run_id) }} aria-hidden="true" />
+                {foldLegend(byRun.get(item.run_id), item.run_id)}
+              </span>
+            ))}
+          </div>
           <div
             className="cp-plot"
             data-size="fold"
             data-fold-bars
-            style={{ "--cp-gutter": `calc(${Math.max(4, ...geometry.yLabels.map((label) => label.text.length))}ch + 10px)` } as CSSProperties}
+            style={{ "--cp-gutter": `calc(${Math.max(4, ...geometry.yLabels.map((label) => axis(label.text).length))}ch + 10px)` } as CSSProperties}
           >
             <div className="cp-plot-area">
-              <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" role="img" aria-label={`OOS Sharpe per fold for ${published.length} attempts`}>
-                {geometry.bars.map((bar) => (
-                  <rect
-                    key={`${bar.runId}:${bar.foldId}`}
-                    className="cp-foldbar"
-                    x={bar.x}
-                    y={bar.y}
-                    width={bar.width}
-                    height={bar.height}
-                    data-sign={bar.sign}
-                    data-fold-bar={`${bar.runId}:${bar.foldId}`}
-                    data-exact={bar.value}
-                    style={{ fill: tone(published.findIndex((item) => item.run_id === bar.runId)) }}
-                  >
-                    <title>{`${bar.runId} · fold ${bar.foldId} · OOS Sharpe ${bar.value}`}</title>
-                  </rect>
+              <svg
+                viewBox={`0 0 ${geometry.width} ${geometry.height}`}
+                preserveAspectRatio="none"
+                role="img"
+                aria-label={`OOS Sharpe per fold for ${published.length} attempts, ${geometry.mode === "lines" ? "one line" : "one bar"} per attempt`}
+              >
+                {geometry.yLabels.map((label) => (
+                  <line key={`g${label.text}`} className="cp-grid-line" x1={0} x2={geometry.width} y1={label.pct * 10} y2={label.pct * 10} />
                 ))}
+                {geometry.mode === "bars"
+                  ? geometry.bars.map((bar) => (
+                      <rect
+                        key={`${bar.runId}:${bar.foldId}`}
+                        className="cp-foldbar"
+                        x={bar.x}
+                        y={bar.y}
+                        width={bar.width}
+                        height={bar.height}
+                        data-sign={bar.sign}
+                        data-fold-bar={`${bar.runId}:${bar.foldId}`}
+                        data-exact={bar.value}
+                        style={{ fill: tone(bar.runId) }}
+                      >
+                        <title>{`${byRun.get(bar.runId)?.attempt_id ?? bar.runId} · fold ${bar.foldId} · OOS Sharpe ${bar.value}`}</title>
+                      </rect>
+                    ))
+                  : geometry.lines.map((line) => (
+                      <path
+                        key={line.runId}
+                        className="cp-foldline"
+                        d={line.path}
+                        data-fold-line={line.runId}
+                        data-active={byRun.get(line.runId)?.alpha_version_lifecycle.value === "ACTIVE" ? "true" : "false"}
+                        style={{ stroke: tone(line.runId) }}
+                      />
+                    ))}
                 <line className="cp-foldzero" x1={0} x2={geometry.width} y1={geometry.zeroPct * 10} y2={geometry.zeroPct * 10} />
               </svg>
               <div aria-hidden="true">
                 {geometry.yLabels.map((label) => (
-                  <span key={label.text} className="cp-lbl y" style={{ top: `${label.pct}%` }} data-y-label>
-                    {label.text}
+                  <span key={label.text} className="cp-lbl y" style={{ top: `${label.pct}%` }} data-y-label data-exact={label.text} title={label.text}>
+                    {axis(label.text)}
                   </span>
                 ))}
-                <span className="cp-lbl y" style={{ top: `${geometry.zeroPct}%` }}>
-                  0
-                </span>
-                {geometry.groups.map((group) => (
-                  <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label}>
-                    fold {group.label}
+                {geometry.yLabels.some((label) => Math.abs(label.pct - geometry.zeroPct) < 6) ? null : (
+                  <span className="cp-lbl y" style={{ top: `${geometry.zeroPct}%` }}>
+                    0
                   </span>
-                ))}
+                )}
+                {geometry.groups.map((group, index) =>
+                  geometry.mode === "bars" || index === 0 || index === geometry.groups.length - 1 || index % 4 === 0 ? (
+                    <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label}>
+                      fold {group.label}
+                    </span>
+                  ) : null,
+                )}
               </div>
             </div>
-          </div>
-          <div className="cp-foldlegend" data-fold-legend>
-            {published.map((item, index) => (
-              <span key={item.run_id}>
-                <span style={{ display: "inline-block", width: 9, height: 9, marginRight: 4, background: tone(index) }} aria-hidden="true" />
-                {item.run_id}
-              </span>
-            ))}
           </div>
         </>
       ) : (
@@ -959,20 +1100,36 @@ function FoldChart({ result }: { result: AttemptResult }) {
       )}
       {geometry && absent.length > 0 ? (
         <p className="cp-faint" data-fold-absent-runs>
-          {absent.length} {absent.length === 1 ? "attempt has" : "attempts have"} no per-fold rows: {reasonOf(absent[0]!.availability)}
+          {absent.map((item) => byRun.get(item.run_id)?.attempt_id ?? item.run_id).join(", ")} {absent.length === 1 ? "has" : "have"} no per-fold rows:{" "}
+          {reasonOf(absent[0]!.availability)}
         </p>
       ) : null}
     </figure>
   );
 }
 
-/** CG-P20-05: the allow-listed keys that differ anywhere, one column per attempt in the server's order. */
-function DiffCard({ alphaId, diff, runs }: { alphaId: string | null; diff: ConfigDiff; runs: readonly CompareRun[] }) {
+/**
+ * CG-P20-05: the allow-listed keys that differ anywhere, one column per
+ * attempt in ladder order (weak → strong, as the hi-fi). When the server
+ * names an ACTIVE version, its column is marked and a cell that differs from
+ * it is gold — a display-only equality of two strings the server sent, like
+ * the key-part tint (VD-P20-16); nothing is inferred from results.
+ */
+function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: ConfigDiff; result: AttemptResult }) {
+  const runs = ladderOrder(result);
+  const active = runs.find((run) => run.alpha_version_lifecycle.value === "ACTIVE") ?? null;
+  const valueOf = (path: ConfigDiff["paths"][number], runId: string) => path.values.find((entry) => entry.run_id === runId)?.value ?? null;
   return (
     <section className="cp-tcard cp-diffcard" data-panel="diff" aria-label="config diff" data-config-diff={diff.availability.state}>
       <h3 className="t">
         <span>{DIFF_TITLE}</span>
-        <span className="cp-faint">{diff.availability.state === "AVAILABLE" ? `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"}` : COMPARE_WITHHELD_WORDS[diff.availability.state]}</span>
+        <span className="cp-faint" data-config-diff-legend>
+          {diff.availability.state !== "AVAILABLE"
+            ? COMPARE_WITHHELD_WORDS[diff.availability.state]
+            : active
+              ? `gold = differs from ACTIVE ${active.attempt_id}`
+              : `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"} · no ACTIVE version returned`}
+        </span>
       </h3>
       <div className="body cp-scroll">
         {diff.availability.state !== "AVAILABLE" ? (
@@ -987,26 +1144,36 @@ function DiffCard({ alphaId, diff, runs }: { alphaId: string | null; diff: Confi
               <tr>
                 <th scope="col">key</th>
                 {runs.map((run) => (
-                  <th key={run.run_id} scope="col">
+                  <th key={run.run_id} scope="col" data-active={run === active ? "true" : undefined}>
                     {run.attempt_id}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {diff.paths.map((path) => (
-                <tr key={path.path} data-config-diff-path={path.path}>
-                  <th scope="row">{path.path}</th>
-                  {runs.map((run) => {
-                    const value = path.values.find((entry) => entry.run_id === run.run_id)?.value ?? null;
-                    return (
-                      <td key={run.run_id} className="cp-long" data-config-value={run.run_id}>
-                        {value ?? <span className="cp-absent">not set</span>}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {diff.paths.map((path) => {
+                const reference = active ? valueOf(path, active.run_id) : null;
+                return (
+                  <tr key={path.path} data-config-diff-path={path.path}>
+                    <th scope="row">{path.path}</th>
+                    {runs.map((run) => {
+                      const value = valueOf(path, run.run_id);
+                      const differs = active !== null && run !== active && value !== reference;
+                      return (
+                        <td
+                          key={run.run_id}
+                          className="cp-long"
+                          data-config-value={run.run_id}
+                          data-active={run === active ? "true" : undefined}
+                          data-differs={differs ? "true" : undefined}
+                        >
+                          {value ?? <span className="cp-absent">not set</span>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -1049,7 +1216,7 @@ function AttemptsBody({ result, alphaId }: { result: AttemptResult; alphaId: str
       <Ladder result={result} />
       <FoldChart result={result} />
       <div className="cp-grid">
-        <DiffCard alphaId={alphaId} diff={result.config_diff} runs={result.attempts} />
+        <DiffCard alphaId={alphaId} diff={result.config_diff} result={result} />
         <TrajectoryCard result={result} />
       </div>
     </>
@@ -1261,8 +1428,8 @@ function OverlayFigure({ result }: { result: PairComparable }) {
               role="img"
               aria-label={`two equity lines on one scale: ${legendText(runs[0])}, solid; ${legendText(runs[1])}, dashed`}
             >
-              {plot.yLabels.map((label) => (
-                <line key={label.text} className="cp-grid-line" x1={0} x2={plot.width} y1={label.pct * 10} y2={label.pct * 10} />
+              {gridPcts(plot).map((pct) => (
+                <line key={pct} className="cp-grid-line" x1={0} x2={plot.width} y1={pct * 10} y2={pct * 10} data-grid-line />
               ))}
               <line className="cp-axis" x1={0} x2={plot.width} y1={plot.height} y2={plot.height} />
               <path className="lineA" d={plot.left} data-line="left" />
@@ -1297,7 +1464,10 @@ function SideValue({ value, availability, what, unit }: { value: string | null; 
 interface DeltaRowView {
   id: string;
   label: string;
+  /** Printed under the label only when the value is not the common window's (an original per-run scope). */
   scope: string;
+  /** The server definition id, in the label's title. */
+  definition?: string;
   left: ReactNode;
   right: ReactNode;
   delta: ReactNode;
@@ -1322,7 +1492,8 @@ function commonRow(result: PairComparable, id: CommonMetric["key"], label: strin
   return {
     id,
     label,
-    scope: metric.definition_id,
+    scope: "",
+    definition: metric.definition_id,
     left: <SideValue value={metric.left_value} availability={metric.availability} what="A" unit={unit} />,
     right: <SideValue value={metric.right_value} availability={metric.availability} what="B" unit={unit} />,
     delta,
@@ -1385,7 +1556,8 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
       ? {
           id: "WIN_RATE",
           label: "win rate",
-          scope: winCommon.definition_id,
+          scope: "",
+          definition: winCommon.definition_id,
           left: <AvailabilityAbsent availability={winCommon.availability} what="A" />,
           right: <AvailabilityAbsent availability={winCommon.availability} what="B" />,
           delta: <AvailabilityAbsent availability={winCommon.availability} what="Δ" />,
@@ -1403,12 +1575,20 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
     {
       id: "CLAIM",
       label: "claim class",
-      scope: "claim family · rank",
+      scope: "",
       left: left ? <ClaimChip claim={left.claim} /> : <Absent what="A" state="not returned" reason="pair.runs[0]" />,
       right: right ? <ClaimChip claim={right.claim} /> : <Absent what="B" state="not returned" reason="pair.runs[1]" />,
       delta:
         weaker.availability.state === "AVAILABLE" && weaker.family !== "NOT_PUBLISHED" ? (
-          <span>weaker {weaker.family}</span>
+          /* The hi-fi prints "equal" when both sides carry one class (a display-only
+             equality of the two family strings); otherwise the server's weaker claim. */
+          left && right && left.claim.family === right.claim.family ? (
+            <span data-claim-delta="equal" title={`both ${weaker.family}`}>
+              equal
+            </span>
+          ) : (
+            <span data-claim-delta="weaker">weaker {weaker.family}</span>
+          )
         ) : (
           <AvailabilityAbsent availability={weaker.availability} what="weaker" />
         ),
@@ -1446,9 +1626,9 @@ function DeltaTable({ result }: { result: PairComparable }) {
           <tbody>
             {deltaRows(result).map((row) => (
               <tr key={row.id} data-delta-row={row.id}>
-                <td>
+                <td title={row.definition ?? undefined} data-definition={row.definition ?? undefined}>
                   {row.label}
-                  <span className="scope">{row.scope}</span>
+                  {row.scope ? <span className="scope">{row.scope}</span> : null}
                 </td>
                 <td>{row.left}</td>
                 <td>{row.right}</td>
@@ -1482,6 +1662,17 @@ function DeltaTable({ result }: { result: PairComparable }) {
   );
 }
 
+
+/** The contract's missing-value policies, as the hi-fi's sub-caption words them. */
+const MISSING_POLICY_WORDS: Record<string, string> = {
+  INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL: "overlapping window only",
+};
+
+function rhoCaption(correlation: Correlation): string {
+  const basis = correlation.formula_version.includes("raw-return") ? "raw returns" : correlation.formula_version;
+  return `${basis} · ${MISSING_POLICY_WORDS[correlation.missing_policy] ?? correlation.missing_policy}`;
+}
+
 function CorrelationCard({ correlation }: { correlation: Correlation }) {
   const derived = correlation.state === "AVAILABLE" && correlation.value !== null;
   const window =
@@ -1497,8 +1688,15 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
         </span>
       </h3>
       {derived ? (
-        <span className="cp-rho" data-rho>
-          ρ = {correlation.value}
+        <span className="cp-rhorow">
+          {/* DQ-08: ρ to two places, as the hi-fi prints it; the server's exact string in title/data-exact. */}
+          <span className="cp-rho" data-rho data-exact={correlation.value} title={correlation.value ?? undefined}>
+            ρ = {formatCorrelation(correlation.value) ?? correlation.value}
+          </span>
+          {/* VD-P20-26 (decided 2026-09-26): the hi-fi's sub-caption beside ρ, in the contract's words. */}
+          <span className="cp-rhosub" data-rho-caption>
+            {rhoCaption(correlation)}
+          </span>
         </span>
       ) : (
         <span className="cp-absent" data-correlation-absent>

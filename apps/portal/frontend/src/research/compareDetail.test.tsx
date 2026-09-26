@@ -465,7 +465,10 @@ describe("S13 Compare — pair", () => {
     expect(net.querySelector("[data-delta-value]")?.getAttribute("data-delta-value")).toBe("-0.0316");
     expect(net.getAttribute("data-sign")).toBe("neg");
     expect(document.querySelector('[data-delta-row="MAX_DRAWDOWN_FRACTION"] td[data-sign]')?.getAttribute("data-sign")).toBe("pos");
-    expect(document.querySelector("[data-rho]")?.textContent).toBe("ρ = 0.412345");
+    /* DQ-08 + hi-fi "ρ = 0.18": two places on screen, the exact server string kept one hover away. */
+    expect(document.querySelector("[data-rho]")?.textContent).toBe("ρ = 0.41");
+    expect(document.querySelector("[data-rho]")?.getAttribute("data-exact")).toBe("0.412345");
+    expect(document.querySelector("[data-rho-caption]")?.textContent).toBe("raw returns · overlapping window only");
     expect(document.querySelector("[data-correlation-source]")?.textContent).toContain("PORTAL_DERIVED");
     expect(document.querySelector("[data-correlation-meta]")?.textContent).toContain("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
     expect(document.querySelector("[data-promotes-under]")?.textContent).toBe(
@@ -790,7 +793,11 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
     for (const run of body.result.attempts) {
       const card = document.querySelector(`[data-ladder-run="${run.run_id}"]`) as HTMLElement;
       expect(card.getAttribute("data-lifecycle")).toBe(run.alpha_version_lifecycle.value);
-      expect(card.querySelector("[data-schedule]")?.textContent).toBe(`sched ${run.schedule.mode} × ${run.schedule.schedule}`);
+      /* Hi-fi: "{run} · {mode} × {schedule}" — no "sched" word. */
+      expect(card.querySelector("[data-schedule]")?.textContent).toBe(`${run.schedule.mode} × ${run.schedule.schedule}`);
+      /* The pill is the lifecycle (hi-fi); the run state reads in the run line. */
+      expect(card.querySelector("[data-run-state]")?.textContent).toBe(run.run_state);
+      expect(card.querySelectorAll(".cp-st")).toHaveLength(0);
       expect(card.querySelector("[data-cert-absent]")?.textContent).toContain(run.certification.reason_code);
       expect(card.querySelector(`[data-life="${run.alpha_version_lifecycle.value}"]`)).not.toBeNull();
     }
@@ -870,5 +877,129 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
         expect(tile.querySelector("[data-mini-meta]")).toBeNull();
       }
     }
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * X3 2026-09-26 — VD-P20 decisions and S13 debt (evidence
+ * P20/X3_S13_P23_CLAUDE_2026-09-26.md).
+ * ---------------------------------------------------------------------- */
+
+describe("S13 Compare — X3 decisions and debt", () => {
+  it("S13-U33 S13-BACK-REFETCH: returning to any key already read resends that key's own ETag and shows its copy while it revalidates", async () => {
+    const mk = { ...markets(), revision: "rev_mk", etag: '"cmp-mk-1"' };
+    let release: (value: Response) => void = () => {};
+    const calls: Call[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      calls.push({ url: String(input), method: "GET", headers: (init?.headers ?? {}) as Record<string, string> });
+      if (calls.length === 1) return new Response(JSON.stringify(attempts([run("run_a")])), { status: 200 });
+      if (calls.length === 2) return new Response(JSON.stringify(mk), { status: 200 });
+      if (calls.length === 3) return new Promise<Response>((resolve) => (release = resolve));
+      return new Response(null, { status: 304 });
+    });
+    renderAt(base);
+    await settled();
+    fireEvent.click(document.querySelector('[data-mode-option="markets"]') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-market-run="run_btc"]')).not.toBeNull());
+    await settled();
+    fireEvent.click(document.querySelector('[data-mode-option="attempts"]') as HTMLElement);
+    await waitFor(() => expect(calls).toHaveLength(3));
+    /* The single-slot validator sent nothing here (debt C4): the last key read was markets. */
+    expect(calls[2]!.headers["If-None-Match"]).toBe('"cmp-rev-7"');
+    /* Retained copy of the same key, labelled stale — never another key's runs. */
+    expect(document.querySelector('[data-ladder-run="run_a"]')).not.toBeNull();
+    expect(document.querySelector('[data-market-run="run_btc"]')).toBeNull();
+    expect(page().getAttribute("data-compare-state")).toBe("stale");
+    release(new Response(null, { status: 304 }));
+    await settled();
+    expect(page().getAttribute("data-compare-state")).toBe("available");
+    fireEvent.click(document.querySelector('[data-mode-option="markets"]') as HTMLElement);
+    await waitFor(() => expect(calls).toHaveLength(4));
+    expect(calls[3]!.headers["If-None-Match"]).toBe('"cmp-mk-1"');
+    await settled();
+    expect(document.querySelector('[data-market-run="run_btc"]')).not.toBeNull();
+  });
+
+  it("S13-U34 S13-MINI-LABELS-UNIT: a small multiple prints at most two day labels and formatted axis values with the exact string kept", async () => {
+    server([{ status: 200, body: markets() }]);
+    renderAt(`${base}?mode=markets`);
+    await settled();
+    const mini = document.querySelector('[data-mini-chart="AVAILABLE"]') as HTMLElement;
+    const days = Array.from(mini.querySelectorAll("[data-x-label]"));
+    expect(days.length).toBeGreaterThan(0);
+    expect(days.length).toBeLessThanOrEqual(2);
+    const ys = Array.from(mini.querySelectorAll("[data-y-label]")).map((el) => [el.textContent, el.getAttribute("data-exact")]);
+    expect(ys).toContainEqual(["1,041", "1040.5"]);
+    expect(ys).toContainEqual(["1,000", "1000"]);
+  });
+
+  it("S13-U35 past eight folds the per-fold figure draws one line per attempt, the ACTIVE one heavier; legend reads attempt · claim", async () => {
+    const folds = (base0: number) =>
+      Array.from({ length: 10 }, (_, index) => ({
+        fold_id: String(index),
+        source_ordinal: index,
+        oos_sharpe: String(base0 + (index % 3) * 0.1),
+        availability: AVAILABLE,
+      }));
+    const runs = [
+      run("run_active", { attempt_id: "att_03" }),
+      run("run_old", { attempt_id: "att_01", alpha_version_lifecycle: { value: "SUPERSEDED", availability: AVAILABLE } }),
+    ];
+    const body = attempts(runs);
+    if (body.result.mode !== "attempts") throw new Error("guard");
+    body.result.fold_series = runs.map((item, index) => ({
+      run_id: item.run_id,
+      state: "AVAILABLE",
+      source_fold_count: 10,
+      truncated: false,
+      folds: folds(1 + index),
+      availability: AVAILABLE,
+    })) as typeof body.result.fold_series;
+    server([{ status: 200, body }]);
+    renderAt(base);
+    await settled();
+    const figure = panel("fold-chart") as HTMLElement;
+    expect(figure.getAttribute("data-fold-mode")).toBe("lines");
+    expect(figure.querySelectorAll("rect.cp-foldbar")).toHaveLength(0);
+    expect(figure.querySelector('[data-fold-line="run_active"]')?.getAttribute("data-active")).toBe("true");
+    expect(figure.querySelector('[data-fold-line="run_old"]')?.getAttribute("data-active")).toBe("false");
+    /* Legend in ladder order (weak → strong): the server's array reversed. */
+    expect(Array.from(figure.querySelectorAll("[data-fold-legend-run]")).map((el) => el.textContent)).toEqual(["att_01 · WALK-FORWARD", "att_03 · WALK-FORWARD"]);
+  });
+
+  it("S13-U36 the config diff reads in ladder order, marks the ACTIVE column and tints only cells that differ from it", async () => {
+    const body = compareFixture("research-compare.attempts.valid.json");
+    server([{ status: 200, body }]);
+    renderAt(`/research/quantbt/alphas/delta-rsi-polynomial-alpha/compare`);
+    await settled();
+    if (body.result.mode !== "attempts") throw new Error("fixture guard");
+    const heads = Array.from(document.querySelectorAll(".cp-difftable thead th")).map((el) => el.textContent);
+    expect(heads).toEqual(["key", ...[...body.result.attempts].reverse().map((item) => item.attempt_id)]);
+    const active = body.result.attempts.find((item) => item.alpha_version_lifecycle.value === "ACTIVE")!;
+    expect(document.querySelector("[data-config-diff-legend]")?.textContent).toBe(`gold = differs from ACTIVE ${active.attempt_id}`);
+    for (const path of body.result.config_diff.paths) {
+      const reference = path.values.find((entry) => entry.run_id === active.run_id)?.value ?? null;
+      for (const entry of path.values) {
+        const cell = document.querySelector(`[data-config-diff-path="${path.path}"] [data-config-value="${entry.run_id}"]`) as HTMLElement;
+        expect(cell.getAttribute("data-differs"), `${path.path} ${entry.run_id}`).toBe(entry.run_id !== active.run_id && entry.value !== reference ? "true" : null);
+      }
+    }
+  });
+
+  it("S13-U37 VD decisions: rule without demo digits, one lifecycle pill, family-only claim chip, one-line title block, headings in the body face", async () => {
+    server([{ status: 200, body: attempts([run("run_a")]) }]);
+    renderAt(base);
+    await settled();
+    expect(ATTEMPTS_RULE).not.toMatch(/\d/);
+    expect(COMPARE_RULES).toContain("only the ACTIVE node may promote");
+    const card = document.querySelector('[data-ladder-run="run_a"]') as HTMLElement;
+    const chip = card.querySelector(".cp-claimchip") as HTMLElement;
+    expect(chip.getAttribute("title")).toContain("rank 3");
+    expect(chip.getAttribute("title")).toContain("origin PORTAL_DERIVED_FROM_SOURCE_PROTOCOL");
+    expect(card.querySelectorAll("[data-life]")).toHaveLength(1);
+    expect(card.querySelector("[data-run-state]")?.textContent).toBe("READY");
+    const css = document.querySelector('[data-screen="compare"] style')?.textContent ?? "";
+    expect(css).toMatch(/\.cp-head > \.l \{[^}]*flex: 0 1 auto/);
+    expect(css).toMatch(/\.cp-card > \.t, \.cp-tcard > \.t \{[^}]*font-family: var\(--font-body\)/);
   });
 });

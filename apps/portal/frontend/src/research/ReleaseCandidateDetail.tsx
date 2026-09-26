@@ -608,6 +608,19 @@ function SealChips({ seal, delivered }: { seal: RcLocalSeal; delivered: boolean 
   );
 }
 
+/**
+ * The server's code lives behind a disclosure, never in the sentence: on
+ * screen a 403 and a 404 must read the same (audit F-04, X3 2026-09-26).
+ */
+function CodeDetail({ code, className }: { code: string; className: string }) {
+  return (
+    <details className={className}>
+      <summary>details</summary>
+      <span data-error-code>{code}</span>
+    </details>
+  );
+}
+
 function Notice({ state, requestId, code, onRetry, inFlight }: {
   state: ResearchState;
   requestId: string | null;
@@ -618,11 +631,7 @@ function Notice({ state, requestId, code, onRetry, inFlight }: {
   return (
     <div className="flex flex-col gap-1.5" data-panel="notice" data-rc-notice={state.state}>
       <ResearchPanel title="release candidate" state={state} minBodyHeight={0} />
-      {code ? (
-        <span className="rc-reason" data-error-code>
-          {code}
-        </span>
-      ) : null}
+      {code ? <CodeDetail code={code} className="rc-reason" /> : null}
       {requestId ? (
         <span className="rc-reason" data-request-id>
           request {requestId}
@@ -1153,11 +1162,7 @@ function RefusalNotice({ refusal, op }: { refusal: RcWriteRefusal; op: string })
   return (
     <div className="rc-notice" data-write-notice={op} data-outcome={refusal.outcome} role="alert">
       <span>{refusal.message}</span>
-      {refusal.code ? (
-        <span className="code" data-error-code>
-          {refusal.code}
-        </span>
-      ) : null}
+      {refusal.code ? <CodeDetail code={refusal.code} className="code" /> : null}
       {refusal.requestId ? (
         <span className="code" data-request-id>
           request {refusal.requestId}
@@ -1321,9 +1326,7 @@ function ReadFailure({ view, retry }: { view: RcPublicationView; retry?: () => v
     >
       <span>{words}</span>
       {failure.code || failure.status ? (
-        <span className="code" data-error-code>
-          {failure.code ?? `HTTP ${failure.status}`}
-        </span>
+        <CodeDetail code={failure.code ?? `HTTP ${failure.status}`} className="code" />
       ) : null}
       {failure.requestId ? (
         <span className="code" data-request-id>

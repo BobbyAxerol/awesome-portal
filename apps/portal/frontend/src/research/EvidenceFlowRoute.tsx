@@ -17,8 +17,17 @@ import { useEvidenceCursor } from "./evidenceCursor";
 import { useEvidence } from "./useEvidence";
 import { isRetainedAnswer, useRunIdentity } from "./retainedLane";
 
+/**
+ * VD-P23-04/05 (X3 2026-09-26): the hub is keyed by its run. Moving from run
+ * A to run B mounts a fresh reader, so nothing of A — hub, series, passport,
+ * or A's ETag on B's first read — stays on screen or on the wire while B loads.
+ */
 export function EvidenceFlowRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
+  return <EvidenceFlowRun key={runId} runId={runId} />;
+}
+
+function EvidenceFlowRun({ runId }: { runId: string }) {
   const { cursor, setStage, setFold, reset, problems, notes, clampToObserved } = useEvidenceCursor();
   const evidence = useEvidence(runId);
   /* W3b: a retained answer brings the run's P11 identity with it (readiness, global selection). */
