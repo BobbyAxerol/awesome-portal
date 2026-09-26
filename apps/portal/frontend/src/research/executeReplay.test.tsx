@@ -34,6 +34,7 @@ import { useReplay, type ReplayController } from "./useReplay";
 import { PortalApiError } from "../lib/api";
 import { ExecuteRoute } from "./ExecuteRoute";
 import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
+import type { SplitBandSlot } from "./SplitBand";
 
 afterEach(() => {
   cleanup();
@@ -200,10 +201,14 @@ function controllerOf(value: Replay | null, patch: Partial<ReplayController> = {
   };
 }
 
-function renderScreen(controller: ReplayController, transport = new ReplayTransport(manualScheduler().scheduler)) {
+function renderScreen(
+  controller: ReplayController,
+  transport = new ReplayTransport(manualScheduler().scheduler),
+  band: SplitBandSlot = { state: "idle" },
+) {
   render(
     <MemoryRouter>
-      <ExecuteScreen runId="run_p17" cursor={{ ...DEFAULT_CURSOR, stage: "execute" }} controller={controller} transport={transport} />
+      <ExecuteScreen runId="run_p17" cursor={{ ...DEFAULT_CURSOR, stage: "execute" }} controller={controller} transport={transport} band={band} />
     </MemoryRouter>,
   );
   return transport;
@@ -693,5 +698,96 @@ describe("S08 · P04 hub replay on the canonical fixtures (X2 · B6)", () => {
     cleanup();
     renderScreen(controllerOf(load("research-replay.p04-not-published.valid.json")));
     expect(document.querySelectorAll("[data-sample-row]")).toHaveLength(0);
+  });
+});
+
+/* ------------------------------------------------------------------------
+ * E2c · row 8.5 — the IS / OOS / HOLDOUT band on the P04 hub lane
+ *
+ * The three windows come from P14's split read for this run. The sealed
+ * holdout is shaded in its own hatched tone, exactly as on Screens 05 and 07;
+ * a window P14 did not publish is never given a width. The read itself
+ * belongs to the route, so the screen is handed the answer.
+ * --------------------------------------------------------------------- */
+describe("E2c · 8.5 — the P04 band is P14's three-window truth", () => {
+  const DAY = 86_400_000;
+  const T0 = Date.UTC(2026, 0, 1);
+  /* Window shapes and roles from the P14 split contract. */
+  const WINDOWS = {
+    warmup: { state: "AVAILABLE", start_utc_ms: T0, end_exclusive_utc_ms: T0 + DAY, bars: 6, data_role: "WARMUP_NOT_SCORED", child_input_state: "EXPOSED_TO_CHILD_TAPE", availability: AVAILABLE },
+    is: { start_utc_ms: T0 + DAY, end_exclusive_utc_ms: T0 + 500 * DAY, bars: 2994, data_role: "IS_CALIBRATION_HISTORY", child_input_state: "EXPOSED_TO_CHILD_TAPE", availability: AVAILABLE },
+    outer_oos: { start_utc_ms: T0 + 500 * DAY, end_exclusive_utc_ms: T0 + 700 * DAY, bars: 1200, data_role: "OUTER_OOS_OBSERVATION", child_input_state: "EXPOSED_TO_CHILD_TAPE", evaluation_state: "P04_OBSERVED_AFTER_FIXED_PROFILE", availability: AVAILABLE },
+    holdout: { start_utc_ms: T0 + 700 * DAY, end_exclusive_utc_ms: T0 + 800 * DAY, bars: null, data_role: "HOLDOUT", child_input_state: "NOT_EXPOSED_TO_CHILD_TAPE", availability: AVAILABLE },
+  };
+  const ready = (windows: unknown = WINDOWS): SplitBandSlot =>
+    ({ state: "ready", hub: { schema_version: "research.split-detail.v1", run_id: "run_p17", windows } as never, folds: null });
+
+  it("shades IS, the plotted OOS and the sealed holdout in proportion to their published spans", () => {
+    renderScreen(controllerOf(replay()), undefined, ready());
+    const band = document.querySelector("[data-split-band='hub']") as HTMLElement;
+    expect(band).toBeTruthy();
+    expect(band.getAttribute("data-split-band-drawn")).toBe("3");
+    const width = (key: string) => (band.querySelector(`[data-band='${key}']`) as HTMLElement).parentElement!.style.flexGrow;
+    expect(width("is")).toBe(String(499 * DAY));
+    expect(width("outer_oos")).toBe(String(200 * DAY));
+    expect(width("holdout")).toBe(String(100 * DAY));
+    /* These three windows are contiguous, so nothing is drawn between them. */
+    expect(band.querySelector("[data-band-gap]")).toBeNull();
+    /* The whole band is one sentence for a reader who cannot see it. */
+    expect(band.getAttribute("aria-label")).toContain("OOS (plotted)");
+  });
+
+  it("the sealed holdout keeps its own hatched tone — never the colour of a window something read", () => {
+    renderScreen(controllerOf(replay()), undefined, ready());
+    const holdout = document.querySelector("[data-band='holdout']") as HTMLElement;
+    const oos = document.querySelector("[data-band='outer_oos']") as HTMLElement;
+    expect(holdout.style.background).toContain("repeating-linear-gradient");
+    expect(holdout.style.border).toContain("dashed");
+    expect(oos.style.background).toBe("var(--role-oos)");
+    expect(holdout.style.background).not.toBe(oos.style.background);
+  });
+
+  it("a window P14 did not publish keeps its label and its reason, and gets no width", () => {
+    const absent = { state: "NOT_PUBLISHED", reason_code: "P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED", availability: { state: "NOT_PUBLISHED", reason_code: "P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED" } };
+    renderScreen(controllerOf(replay()), undefined, ready({ ...WINDOWS, holdout: absent }));
+    const holdout = document.querySelector("[data-band='holdout']") as HTMLElement;
+    expect(holdout.getAttribute("data-band-state")).toBe("NOT_PUBLISHED");
+    expect(holdout.textContent).toContain("HOLDOUT");
+    expect(holdout.textContent).toContain("not published");
+    expect(holdout.textContent).not.toContain("0");
+    expect(holdout.querySelector("[data-band-reason]")!.getAttribute("data-band-reason")).toBe("P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED");
+    expect(document.querySelector("[data-split-band='hub']")!.getAttribute("data-split-band-drawn")).toBe("2");
+  });
+
+  it("a split read that failed says so on one line; the replay keeps its own answer", () => {
+    renderScreen(controllerOf(replay()), undefined, { state: "absent", reason: "This run's split could not be read, so the windows are not drawn." });
+    expect(document.querySelector("[data-split-band]")).toBeNull();
+    expect(document.querySelector("[data-split-band-absent]")!.textContent).toContain("could not be read");
+    /* A band that cannot be drawn never takes the chart down with it. */
+    expect(document.querySelectorAll("[data-sample-row]").length).toBeGreaterThan(0);
+  });
+
+  it("the route reads the split once on arrival and the band is drawn from it", async () => {
+    const detail = { schema_version: "research.split-detail.v1", run_id: "run_p17", windows: WINDOWS };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const path = new URL(String(input), "http://x").pathname;
+      const body = path.endsWith("/split") ? detail : replay();
+      return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    });
+    forgetRunIdentities();
+    window.history.replaceState(null, "", "/research/quantbt/runs/run_p17/execute");
+    render(
+      <MemoryRouter initialEntries={["/research/quantbt/runs/run_p17/execute"]}>
+        <Routes>
+          <Route path="/research/quantbt/runs/:runId/execute" element={<ExecuteRoute />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(document.querySelector("[data-split-band='hub']")).toBeTruthy());
+    const splitReads = fetchMock.mock.calls
+      .map(([url]) => new URL(String(url), "http://x").pathname)
+      .filter((path) => path.endsWith("/split"));
+    expect(splitReads).toEqual(["/api/v1/quantbt/runs/run_p17/split"]);
+    expect(document.querySelector("[data-split-band='hub']")!.getAttribute("data-split-band-drawn")).toBe("3");
   });
 });

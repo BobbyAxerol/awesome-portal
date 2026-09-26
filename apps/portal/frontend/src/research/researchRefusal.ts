@@ -379,6 +379,31 @@ export const REASON_CODE_SENTENCES: Record<string, string> = {
     "The first month is not contiguous with the published months, so the monthly series is withheld.",
   P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK:
     "This run's adapter published no benchmark series, so no beta against a benchmark can be stated.",
+  /*
+   * E16 (P17): the P04 hub lane's replay absences, as sentences.
+   *
+   * These are the source's own answer, not a gap in the Portal. The P04
+   * qualification publishes a bounded evidence receipt — equity, returns and
+   * their distributions — and no execution tape, so a replay of it can show
+   * the account over time and nothing that happened bar by bar. The candle
+   * sentence is deliberately about what the read holds, not about why:
+   * whether the source could retain bars is the engine's question, recorded
+   * in the P17 evidence, and the screen does not answer it.
+   */
+  P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS:
+    "This run's adapter published no price bars with its evidence, so the replay draws the equity samples it did publish and no candles.",
+  P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER:
+    "This run's adapter published no order ledger, so no order can be replayed.",
+  P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS:
+    "This run's adapter published no audited fills, so no fill can be replayed.",
+  P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER:
+    "This run's adapter published no trade ledger, so no trade can be replayed.",
+  P04_SOURCE_DID_NOT_PUBLISH_POSITION_STATE_SNAPSHOTS:
+    "This run's adapter published no position snapshots, so no position is shown at the playhead.",
+  P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM:
+    "This run's adapter published no execution event stream, so the ledger holds samples rather than events.",
+  P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS:
+    "This run's adapter published no execution state, so the playhead reads a retrospective equity sample and says so.",
   RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION:
     "This run is bound to the P04 fixed qualification, which the retained lane never holds. Nothing is pending.",
   /* W3b: the retained WFO lane's own absences (research.current-source-*.v1). */

@@ -1142,3 +1142,73 @@ describe("W5a · P16-T11 — the OOS generation child is the frozen θ*", () => 
     ]);
   });
 });
+
+/* ------------------------------------------------------------------------
+ * E2c · row 7.9 — the F3 digest chain on the P04 hub lane
+ *
+ * The hub read publishes the dataset and config digests, the adapter contract
+ * digest and the fixed bundle digest — but no engine version. The chain draws
+ * what it holds and says, in the link's own words, what the read does not
+ * carry. It never borrows the retained lane's engine or a build constant.
+ * --------------------------------------------------------------------- */
+describe("E2c · 7.9 — the P04 digest chain draws the hub's own provenance", () => {
+  const LINKS = ["CANONICAL_FORM", "PARAMS_DIGEST", "STRATEGY_SOURCE", "ENGINE_PIN", "DATASET_HASH", "CONFIG_HASH", "BUNDLE_DIGEST"];
+
+  it("draws the seven links, with the dataset, config and bundle from this read's provenance", () => {
+    const { container } = view();
+    const chain = container.querySelector("[data-panel='digest-chain']") as HTMLElement;
+    expect(chain.getAttribute("data-chain-lane")).toBe("P04_FIXED_QUALIFICATION");
+    expect([...chain.querySelectorAll("[data-chain-link]")].map((li) => li.getAttribute("data-chain-link"))).toEqual(LINKS);
+    const link = (key: string) => container.querySelector(`[data-chain-link='${key}']`) as HTMLElement;
+    const fixture = detail();
+    expect(link("PARAMS_DIGEST").querySelector("span[title]")!.getAttribute("title")).toBe(fixture.freeze.selection.parameter_bundle_digest);
+    expect(link("DATASET_HASH").querySelector("span[title]")!.getAttribute("title")).toBe(fixture.provenance.dataset_binding_digest);
+    expect(link("CONFIG_HASH").querySelector("span[title]")!.getAttribute("title")).toBe(fixture.provenance.effective_spec_digest);
+    expect(link("BUNDLE_DIGEST").querySelector("span[title]")!.getAttribute("title")).toBe(fixture.provenance.adapter_contract_digest);
+  });
+
+  it("the engine pin the hub read does not carry is stated, not guessed and not left blank", () => {
+    const { container } = view();
+    const engine = container.querySelector("[data-chain-link='ENGINE_PIN']") as HTMLElement;
+    expect(engine.getAttribute("data-chain-link-state")).toBe("NOT_PUBLISHED");
+    expect(engine.textContent).toContain("not published");
+    expect(engine.textContent).toContain("publishes no engine version");
+    /* The hub freeze read has no engine field at all, so no version may appear here. */
+    expect(engine.textContent).not.toContain("1.1.1");
+    expect(engine.textContent).not.toContain("—");
+  });
+
+  it("a hub read with no parameter authority leaves the set and the source unnamed, with a reason", () => {
+    const { container } = view();
+    const canonical = container.querySelector("[data-chain-link='CANONICAL_FORM']") as HTMLElement;
+    expect(canonical.getAttribute("data-chain-link-state")).toBe("NOT_PUBLISHED");
+    expect(canonical.textContent).toContain("does not publish a parameter authority");
+    expect(container.querySelector("[data-chain-link='STRATEGY_SOURCE']")!.getAttribute("data-chain-link-state")).toBe("NOT_PUBLISHED");
+    expect(container.querySelector("[data-panel='digest-chain']")!.getAttribute("data-chain-published")).toBe("4");
+  });
+
+  it("the verify label follows this screen's one verify, and never becomes a second button", () => {
+    expect((view().container.querySelector("[data-chain-verify]") as HTMLElement).textContent).toBe("verify digest — below");
+    cleanup();
+    expect((view({ verify: { state: "verifying" } }).container.querySelector("[data-chain-verify]") as HTMLElement).textContent).toBe("recomputing…");
+    cleanup();
+    const done = view({
+      verify: {
+        state: "done",
+        verification: {
+          schema_version: "research.freeze-verification.v1",
+          read_authority: "PORTAL_PERSISTED_RESEARCH",
+          run_id: "R-WFO-118",
+          freeze_revision: null,
+          verified_at_utc_ms: 1_760_000_000_000,
+          result: "PARTIAL_MATCH",
+          verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+          integrity: detail().freeze.integrity,
+          artifact_bytes: detail().artifact_bytes,
+        } as never,
+      },
+    });
+    expect((done.container.querySelector("[data-chain-verify]") as HTMLElement).textContent).toBe("verified — integrity only");
+    expect(done.container.querySelector("[data-panel='digest-chain'] button")).toBeNull();
+  });
+});

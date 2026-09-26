@@ -23,6 +23,7 @@ import { ExecuteRoute } from "./ExecuteRoute";
 import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
 import { SYNTHETIC_FOLDS, scaleToFolds, syntheticChildAudit, syntheticFoldOf, syntheticFoldWindow } from "./w5bFoldScale.fixture";
+import { bandPieces, retainedSplitBand } from "./SplitBand";
 
 vi.mock("lightweight-charts", () => {
   /* jsdom has no canvas: a recording double, so the tests read the data the chart was given. */
@@ -57,7 +58,11 @@ const LEDGER = load<ReplayTransitions>("research-current-source.replay-transitio
 const LEGACY = load<CurrentSourceReplay>("research-current-source.replay.legacy-seal.valid.json");
 const AUDIT0 = load<ReplayChildAudit>("research-current-source.replay-child-audit.fold0.valid.json");
 const W3B = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3bRealWfo.fixture.json"), "utf8")) as { progress: unknown; requested_spec: unknown };
-const W3 = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as { evidence: unknown };
+const W3 = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as {
+  evidence: unknown;
+  /** E2c (8.5): the real retained fold plan — the only published source of fold windows. */
+  split: { fold_plan: { folds: { fold_id: string; train_start_utc_ms: number; train_end_utc_ms: number; test_start_utc_ms: number; test_end_utc_ms: number }[] } };
+};
 const RUN = FOLD0.run_id;
 
 function jsonResponse(body: unknown, status = 200) {
@@ -72,9 +77,10 @@ const HUB = {
   equity_replay: { items: [], page: {}, state_at_cursor: { playback_ordinal: null } },
 };
 
-function fetchFor(replayBody: CurrentSourceReplay = FOLD0) {
+function fetchFor(replayBody: CurrentSourceReplay = FOLD0, splitBody: unknown = W3.split) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const path = new URL(String(input), "http://x").pathname;
+    if (path.endsWith("/current-source/split")) return jsonResponse(splitBody);
     if (path.endsWith("/current-source/replay/transitions")) return jsonResponse(LEDGER);
     if (path.endsWith("/current-source/replay/child-audit")) return jsonResponse(AUDIT0);
     if (path.endsWith("/current-source/replay")) return jsonResponse(replayBody);
@@ -98,9 +104,9 @@ function mount(hash = "") {
   );
 }
 
-async function settled(hash = "", body: CurrentSourceReplay = FOLD0) {
+async function settled(hash = "", body: CurrentSourceReplay = FOLD0, splitBody: unknown = W3.split) {
   forgetRunIdentities();
-  const fetchMock = fetchFor(body);
+  const fetchMock = fetchFor(body, splitBody);
   const view = mount(hash);
   await waitFor(() => expect(view.container.querySelector("[data-transitions='ready']")).toBeTruthy(), { timeout: 10_000 });
   await waitFor(() => expect(view.container.querySelector("[data-retained-in-flight='false'] [data-chart='replay-candles']")).toBeTruthy(), { timeout: 10_000 });
@@ -340,4 +346,105 @@ describe("S08 T17 · a 32-fold run (synthetic, derived from the real-HMD fixture
     expect(Math.abs(container.querySelectorAll("*").length - nodes)).toBeLessThan(20);
     expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("6,096 bars");
   }, 60_000);
+});
+
+/* ------------------------------------------------------------------------
+ * E2c · row 8.5 — the IS / OOS / HOLDOUT band above the chart
+ *
+ * The hi-fi shades three bands; before E2c the screen had one line of text.
+ * The windows come from this run's own retained fold plan, so every assertion
+ * below is against the real W3 WFO split, and a window that plan does not
+ * publish is never given a width.
+ * --------------------------------------------------------------------- */
+describe("E2c · 8.5 — the band above the chart is the fold's published windows", () => {
+  const FOLD_0 = W3.split.fold_plan.folds[0]!;
+
+  it("shades IS and the plotted OOS from the fold's own train and test spans, in proportion", async () => {
+    const { container } = await settled();
+    const band = container.querySelector("[data-split-band='retained']") as HTMLElement;
+    expect(band).toBeTruthy();
+    /* Two spans are published for this fold, so two bands are drawn. */
+    expect(band.getAttribute("data-split-band-drawn")).toBe("2");
+    const is = band.querySelector("[data-band='is']") as HTMLElement;
+    const oos = band.querySelector("[data-band='outer_oos']") as HTMLElement;
+    expect(is.getAttribute("data-band-state")).toBe("AVAILABLE");
+    expect(oos.getAttribute("data-band-state")).toBe("AVAILABLE");
+    /* Width is the published duration and nothing else. */
+    const trainMs = FOLD_0.train_end_utc_ms - FOLD_0.train_start_utc_ms;
+    const testMs = FOLD_0.test_end_utc_ms - FOLD_0.test_start_utc_ms;
+    expect(is.parentElement!.style.flexGrow).toBe(String(trainMs));
+    expect(oos.parentElement!.style.flexGrow).toBe(String(testMs));
+    expect(trainMs).toBeGreaterThan(testMs);
+    /* Each band names its own span in words for a reader who cannot see it. */
+    expect(is.getAttribute("title")).toContain("IS · 2026-06-01");
+    expect(oos.getAttribute("title")).toContain("OOS (plotted) · 2026-07-01");
+    expect(band.querySelector("[data-band-label='outer_oos']")!.textContent).toBe("OOS (plotted)");
+  });
+
+  it("draws the gap between the train and test windows as a gap, never closed up", async () => {
+    const { container } = await settled();
+    const gap = container.querySelector("[data-split-band='retained'] [data-band-gap]") as HTMLElement;
+    expect(gap).toBeTruthy();
+    expect(gap.style.flexGrow).toBe(String(FOLD_0.test_start_utc_ms - FOLD_0.train_end_utc_ms));
+    expect(gap.getAttribute("title")).toContain("Not covered by a published window");
+  });
+
+  it("a profile with no holdout segment says not applicable, not 'not published', and gets no box", async () => {
+    const { container } = await settled();
+    const holdout = container.querySelector("[data-split-band='retained'] [data-band='holdout']") as HTMLElement;
+    /* The retained claim says this profile declares no holdout at all — a
+       different fact from "the source has not published it yet", kept different. */
+    expect(holdout.getAttribute("data-band-state")).toBe("NOT_APPLICABLE");
+    expect(holdout.textContent).toContain("not applicable");
+    expect(holdout.textContent).not.toContain("not published");
+    expect(holdout.querySelector("[data-band-reason]")!.getAttribute("data-band-reason")).toBe(
+      "P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT",
+    );
+    expect(holdout.querySelector("[data-band-reason]")!.getAttribute("title")).toBe(
+      "This walk-forward profile declares no holdout segment.",
+    );
+    /* A band without a published span never gets a width. */
+    expect(holdout.querySelector("[style*='flex']")).toBeNull();
+    expect(holdout.textContent).not.toContain("0");
+    expect(holdout.textContent).not.toContain("—");
+  });
+
+  it("every fold's windows come from the one fold-plan read; changing fold reads no split", async () => {
+    const { container, fetchMock } = await settled();
+    const splitReads = () => urls(fetchMock).filter((url) => url.includes("/current-source/split"));
+    expect(splitReads()).toHaveLength(1);
+    expect(container.querySelector("[data-band-fold]")!.textContent).toBe("fold_01");
+    fireEvent.click(container.querySelector("[aria-label='next fold']")!);
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(4));
+    /* The fold plan already holds every fold: changing fold reads no split. */
+    expect(splitReads()).toHaveLength(1);
+    /* Fold 1's band is that fold's own train span, taken from the same read. */
+    const fold1 = W3.split.fold_plan.folds[1]!;
+    const band = retainedSplitBand(W3.split as never, "1", null);
+    expect(band.foldId).toBe("1");
+    expect(band.segments[0]!.span).toEqual({
+      start_utc_ms: fold1.train_start_utc_ms,
+      end_exclusive_utc_ms: fold1.train_end_utc_ms,
+    });
+    expect(band.segments[1]!.span).toEqual({
+      start_utc_ms: fold1.test_start_utc_ms,
+      end_exclusive_utc_ms: fold1.test_end_utc_ms,
+    });
+  });
+
+  it("a fold the plan does not carry is drawn as no band at all, with its own reason", () => {
+    const band = retainedSplitBand(W3.split as never, "no-such-fold", null);
+    expect(band.segments.every((segment) => segment.span === null)).toBe(true);
+    expect(band.segments[0]!.reasonCode).toBe("RS02_SEAL_HAS_NO_RETAINED_FOLD");
+    expect(bandPieces(band.segments)).toEqual([]);
+  });
+
+  it("a lane that never holds this run's fold plan says so instead of drawing a band", async () => {
+    const { container } = await settled("", FOLD0, {
+      schema_version: "research.current-source-not-applicable.v1",
+      lane: { run_profile: "P04_FIXED_QUALIFICATION", retainable_profile_id: "rs02.delta-signal-notional-wfo.v1", reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION" },
+    });
+    expect(container.querySelector("[data-split-band]")).toBeNull();
+    expect(container.querySelector("[data-split-band-absent]")!.textContent).toContain("never holds this run's fold plan");
+  });
 });
