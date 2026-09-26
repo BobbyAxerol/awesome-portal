@@ -312,12 +312,12 @@ describe("W3 · S06 search: ledger, roles, diagnostics (CG-P15-03/04)", () => {
       validation_claim: "walk_forward_oos", oos_used_for_selection: true, scoring_backend: "endpoint" });
   });
 
-  it("P15-T04/T05/T08: constraints, dedupe and sampler/warm-start stay typed absences; the probe recomposes every objective", async () => {
+  it("P15-T04/T05/T08: constraints do not arise (no constraints function), dedupe and sampler/warm-start stay typed absences; the probe recomposes every objective", async () => {
     const { service } = memory(realSeal, realTables);
     const search = sealed<ResearchCurrentSourceSearchResponse>(await service.search(scope, real.run_id, { limit: 100 }));
     for (const row of [...search.ledger.trials, ...search.candidates.rows]) {
-      expect(row.facts.constraints).toMatchObject({ state: "NOT_PUBLISHED", reason_code: "QUANTBT_COMPACT_TRIAL_LEDGER_DROPS_PER_FOLD_CONSTRAINT_ROWS" });
-      expect(row.facts.feasible.state).toBe("NOT_PUBLISHED");
+      expect(row.facts.constraints).toMatchObject({ state: "NOT_APPLICABLE", reason_code: "QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS" });
+      expect(row.facts.feasible).toMatchObject({ state: "NOT_APPLICABLE", reason_code: "QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS" });
       expect(row.facts.objective_components.state).toBe("AVAILABLE");
     }
     expect(search.diagnostics.objective_components.state).toBe("AVAILABLE");

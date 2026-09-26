@@ -243,8 +243,9 @@ function LegacyTabRedirect() {
 const RESEARCH_SCREEN =
   /\/research\/quantbt\/(journey|atlas|alpha-import|alphas\/[^/]+\/(lineage|compare)|compare|release-candidates\/[^/]+|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report|release-candidate)|runs)\/?$/;
 
-/** Research screens that draw their own HiFi frame (padding, max width): 01, 03, 04, 05, 06, 07, 08. */
-const OWN_FRAME_SCREEN = /\/research\/quantbt\/(runs|runs\/(?!new\/?$)[^/]+\/(progress|evidence|split|search|freeze|execute))\/?$/;
+/** Research screens that draw their own HiFi frame (padding, max width): 01, 03, 04, 05, 06, 07, 08 (E2), 14 (E6). */
+const OWN_FRAME_SCREEN =
+  /\/research\/quantbt\/(alpha-import|runs|runs\/(?!new\/?$)[^/]+\/(progress|evidence|split|search|freeze|execute))\/?$/;
 
 /** Path segments under `runs/` that name a screen rather than a run. */
 const RESERVED_RUN_SEGMENTS = new Set(["new", "legacy"]);

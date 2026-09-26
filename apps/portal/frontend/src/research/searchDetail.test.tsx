@@ -1008,7 +1008,9 @@ describe("RF-06 wave C — S06 consumes claim_row and as_of_basis", () => {
     });
     const fact = field(container, "validation claim");
     expect(fact?.getAttribute("data-claim-state")).toBe("CONFIRMED");
-    expect(fact?.querySelector("[data-claim-value]")?.textContent).toBe("strict_nested_fold_local_retraining");
+    /* E1 claimToken: the HiFi prints the token in capitals; the exact value rides in the attribute. */
+    expect(fact?.querySelector("[data-claim-value]")?.textContent).toBe("STRICT_NESTED_FOLD_LOCAL_RETRAINING");
+    expect(fact?.querySelector("[data-claim-value]")?.getAttribute("data-claim-value")).toBe("strict_nested_fold_local_retraining");
   });
 
   it("oos_used_for_selection: NOT_ASSERTED keeps its own word, never a boolean", () => {
@@ -1075,7 +1077,8 @@ describe("RF-06 wave C — S06 consumes claim_row and as_of_basis", () => {
       }),
     });
     const fact = field(container, "scoring backend");
-    expect(fact?.querySelector("[data-claim-declared]")?.textContent).toBe("proxy");
+    expect(fact?.querySelector("[data-claim-declared]")?.textContent).toBe("PROXY");
+    expect(fact?.querySelector("[data-claim-declared]")?.getAttribute("data-claim-declared")).toBe("proxy");
     expect(fact?.textContent).toContain("DECLARED");
     expect(fact?.textContent).toContain("not applicable as run evidence");
     expect(fact?.textContent).not.toContain("CONFIRMED");
@@ -1172,7 +1175,8 @@ describe("W3 — the retained ledger labels what each number measures", () => {
     expect(container.querySelector("[data-panel='prune_reasons']")?.getAttribute("data-panel-state")).toBe("NOT_APPLICABLE");
     const validation = container.querySelector("[data-claim-fact='validation claim']");
     expect(validation?.getAttribute("data-claim-state")).toBe("RETAINED_SOURCE");
-    expect(validation?.textContent).toContain("walk_forward_oos");
+    expect(validation?.textContent).toContain("WALK_FORWARD_OOS");
+    expect(validation?.querySelector("[data-claim-value]")?.getAttribute("data-claim-value")).toBe("walk_forward_oos");
   });
 
   it("A12 P13-T10 / P15-T10: picking a non-selected trial changes the inspected row only — θ*, the selected card and the next-stage link stay", () => {

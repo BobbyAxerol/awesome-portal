@@ -22,6 +22,8 @@ type State = "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
 /** A seal retained before W3 has no fact blocks; every derived fact names that. */
 export const RS02_SEAL_PREDATES_SOURCE_FACTS = "RS02_SEAL_PREDATES_W3_SOURCE_FACTS_V1";
 export const RS02_ROW_PREDATES_FACTS = "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1";
+/** QuantBT's walk-forward Optuna study declares no constraints (E5). */
+export const WALK_FORWARD_HAS_NO_CONSTRAINTS = "QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS";
 
 function outer(state: State, reasonCode: string | null) {
   return state === "AVAILABLE" ? { state, reason_code: null } : { state, reason_code: reasonCode };
@@ -294,12 +296,13 @@ function metric(value: string | null | undefined, reason: string | null) {
 }
 
 /** CG-P15-03/04: one ledger row's facts, typed absence for a pre-W3 row. */
-export function trialFacts(facts: CurrentSourceTrialFacts | undefined, ledgerMode: string | null) {
-  // The compact QuantBT ledger drops per-fold constraint rows after
-  // selection; a trial therefore has no published constraint/feasible fact.
-  const constraintReason = ledgerMode === "compact"
-    ? "QUANTBT_COMPACT_TRIAL_LEDGER_DROPS_PER_FOLD_CONSTRAINT_ROWS"
-    : "QUANTBT_TRIAL_LEDGER_DID_NOT_PUBLISH_CONSTRAINTS";
+export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMode: string | null) {
+  // E5 correction (was: "the compact ledger drops per-fold constraint rows"):
+  // QuantBT's walk-forward creates its Optuna study with no constraints
+  // function (quantbt-engine 1.0.8/1.1.1 `walkforward.py`), so no trial on
+  // this lane has a constraint or a feasibility to publish — the question
+  // does not arise, whatever the ledger mode.
+  const constraintReason = WALK_FORWARD_HAS_NO_CONSTRAINTS;
   if (!facts) {
     const absent = { value: null, reason_code: RS02_ROW_PREDATES_FACTS };
     return {
@@ -334,8 +337,8 @@ export function trialFacts(facts: CurrentSourceTrialFacts | undefined, ledgerMod
       std_decay: metric(metrics.std_decay, metrics.oos_reason_code),
       temporal_score: metric(metrics.temporal_score, metrics.temporal_reason_code),
     },
-    constraints: namedFact("NOT_PUBLISHED", constraintReason),
-    feasible: namedFact("NOT_PUBLISHED", constraintReason),
+    constraints: namedFact("NOT_APPLICABLE", constraintReason),
+    feasible: namedFact("NOT_APPLICABLE", constraintReason),
     objective_components: facts.objective_components,
   };
 }

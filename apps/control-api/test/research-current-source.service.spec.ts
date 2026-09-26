@@ -264,6 +264,8 @@ describe("RS-02 retained current-source named read models", () => {
       rows: vi.fn().mockImplementation((_scope, _runId, _revision, kind: string) => {
         if (kind === "TRIAL") return page(maximumTrials, 64);
         if (kind === "CANDIDATE") return page(maximumCandidates, 64);
+        // E5: the search read's pool block reads the fold plan for θ*'s per-fold decay.
+        if (kind === "FOLD") return page(folds, 2);
         throw new Error(`unexpected ${kind}`);
       }),
     };

@@ -222,7 +222,7 @@ describe("T01 — a clean module mirrors every field and opens step 2", () => {
     expect(screen.getByText("alpha.delta_rsi:run")).toBeTruthy();
     expect(screen.getByText("120")).toBeTruthy();
     // A non-scalar is shown exactly, not summarised into "5 keys".
-    expect(screen.getByText("rsi_len: 5 · 30")).toBeTruthy();
+    expect(screen.getByText("rsi_len: 5, 30")).toBeTruthy();
   });
 
   it("offers no editable contract field anywhere in the mirror", () => {
@@ -274,9 +274,11 @@ describe("T02 — a missing field is red, and the failure cascades to SKIPPED", 
 
     const row = document.querySelector('[data-mirror-field="warmup_bars"]') as HTMLElement;
     expect(row.getAttribute("data-mirror-state")).toBe("missing");
-    // §3.3: an absent value is never 0, "-" or "N/A".
-    expect(row.querySelector("dd")?.textContent).toBe("");
-    expect(within(row).getByText("missing")).toBeTruthy();
+    // §3.3: an absent value is never 0, "-" or "N/A" — only its typed absence.
+    const value = row.querySelector("dd") as HTMLElement;
+    expect(value.textContent).toBe("missing");
+    expect(value.querySelector("[data-absent]")?.getAttribute("data-absent")).toBe("missing");
+    expect(value.textContent).not.toMatch(/\d|^-$|N\/A/);
   });
 
   it("renders SKIPPED for every gate after the first FAIL", () => {
@@ -423,7 +425,7 @@ describe("T05 — registration lands as DRAFT with its supersedes note", () => {
 
     const card = document.querySelector("[data-registration]") as HTMLElement;
     expect(card.getAttribute("data-registration")).toBe("av_0_3_0");
-    expect(within(card).getByText("av_0_3_0")).toBeTruthy();
+    expect(within(card).getAllByText("av_0_3_0").length).toBeGreaterThan(0);
     expect(card.querySelector("[data-lifecycle]")?.getAttribute("data-lifecycle")).toBe("DRAFT");
     expect(card.textContent).toContain("supersedes av_0_2_0");
     expect(screen.getByText(DRAFT_NOTE).textContent).toBe(
@@ -484,7 +486,7 @@ describe("T06 — activation is a separate, server-admitted act", () => {
     expect(document.querySelector("[data-lifecycle]")?.getAttribute("data-lifecycle")).toBe("ACTIVE");
     // The control is gone too: there is nothing left to activate.
     expect(document.querySelector('[data-action="activate"]')).toBeNull();
-    expect(screen.getByText(/superseded av_0_2_0/)).toBeTruthy();
+    expect(document.querySelector("[data-registration]")?.textContent).toContain("superseded av_0_2_0");
   });
 
   it("never infers ACTIVE from a successful registration", () => {
@@ -501,7 +503,7 @@ describe("S14-VIS-01 — Code anatomy is a presentation substage, not a stage", 
   it("lives under step 1 and adds no step marker", () => {
     render(<AlphaImport {...props()} />);
     const step1 = screen.getByLabelText("Step 1 — source");
-    expect(within(step1).getByText(/Code anatomy/)).toBeTruthy();
+    expect(within(step1).getByText("Code anatomy — current single-file contract")).toBeTruthy();
     // Still three steps: parse, gates, register/activate.
     expect(document.querySelectorAll("[data-step-marker]")).toHaveLength(3);
     expect(document.querySelectorAll("[data-step]")).toHaveLength(3);
@@ -714,8 +716,8 @@ describe("T12 — the screen survives a narrow viewport", () => {
     render(<AlphaImport {...props({ parse: sourceResponse(), parseState: OK, gates: gatesResponse(3), gatesState: OK })} />);
     flushStagger();
     const row = document.querySelector('[data-gate="digest-unique"]') as HTMLElement;
-    const message = row.querySelector("span.w-full") as HTMLElement;
-    expect(message.className).toContain("break-words");
+    const message = row.querySelector("[data-gate-message]") as HTMLElement;
+    expect(message.textContent).toContain("This exact source digest is already registered as av_0_2_0.");
     expect(message.className).not.toContain("truncate");
   });
 });

@@ -22,7 +22,7 @@ import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
 import { reportSessionExpired } from "../auth/sessionExpiry";
-import { refusalCopy, stateOfStatus } from "./researchRefusal";
+import { REFUSAL_COPY, refusalCopy, stateOfStatus } from "./researchRefusal";
 
 type Schemas = components["schemas"];
 
@@ -249,14 +249,15 @@ export const IMPORT_REFUSAL_SENTENCE: Partial<Record<ProblemCode, string>> = {
   RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE: "The analyser is not responding. Try again.",
   RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED: "The analyser rejected this module. Nothing was registered.",
   RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH: "The module changed since it was parsed — its digest no longer matches. Parse it again.",
-  RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND: "You don't have access to this source in your current workspace, or it doesn't exist.",
+  /* 403 = 404 (F-04): one sentence, E1 `REFUSAL_COPY.denied`. */
+  RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND: REFUSAL_COPY.denied,
   RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED: "That parse receipt expired. Parse the module again.",
   RESEARCH_ALPHA_IMPORT_GATES_REQUIRED: "The gates have not run for this source yet. Run them before registering.",
   RESEARCH_ALPHA_IMPORT_GATES_FAILED: "At least one gate failed for this source. Nothing was registered.",
   RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED: "This exact source is already registered as an alpha version.",
   RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT: "This alpha changed since it was read. Read it again.",
   RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED: "The import queue is full. This request was not accepted and can be tried again.",
-  RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN: "You don't have access to this in your current workspace, or it doesn't exist.",
+  RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN: REFUSAL_COPY.denied,
   RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT: "This version's lifecycle changed since it was read. Read it again.",
 };
 
