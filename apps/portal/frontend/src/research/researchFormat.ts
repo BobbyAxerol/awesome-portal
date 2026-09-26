@@ -48,6 +48,27 @@ export function formatFractionAxis(value: number, digits = 2): string {
   return `${GROUPED(digits).format(value * 100)}%`;
 }
 
+const AXIS_LARGE = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+const AXIS_SMALL = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+
+/**
+ * A server value printed on a chart axis (S13 small multiples and overlay):
+ * grouped, whole above 1,000 and at most two places below, so a ~300px
+ * figure keeps its plot. The exact string stays in the caller's title.
+ * A non-numeric string comes back unchanged.
+ */
+export function formatAxisValue(value: string): string {
+  const parsed = parse(value);
+  if (parsed === null) return value;
+  return (Math.abs(parsed) >= 1000 ? AXIS_LARGE : AXIS_SMALL).format(parsed);
+}
+
+/** A correlation coefficient to two places, as the S13 hi-fi prints ρ (DQ-08); `null` when not numeric. */
+export function formatCorrelation(value: string | null | undefined): string | null {
+  const parsed = parse(value);
+  return parsed === null ? null : GROUPED(2).format(parsed);
+}
+
 /** `8s`, `3m 12s`, `1h 04m`. */
 export function formatDuration(seconds: number | null | undefined): string | null {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return null;
