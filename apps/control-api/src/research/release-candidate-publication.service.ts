@@ -1,7 +1,9 @@
 /** P22 publication through the existing R1 create service and read-only mirror. */
 import { createHash } from "node:crypto";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import type { ControlApiConfig } from "../config";
 import type { PortalUser } from "../domain";
+import { CONTROL_API_CONFIG } from "../tokens";
 import { ApprovalCreateRequestSchema } from "../governance/contracts";
 import { GovernanceError, GovernanceService } from "../governance/governance.service";
 import type { ResearchScope } from "./contracts";
@@ -29,6 +31,13 @@ interface Ready {
 const digest = (value: unknown) => createHash("sha256").update(canonicalResearchJson(value), "utf8").digest("hex");
 const record = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+/** A new publication intent is refused while intake is off; recorded intents keep reconciling. */
+export const P22_PUBLICATION_INTAKE_DISABLED = "P22_PUBLICATION_INTAKE_DISABLED";
+/** The idempotency key the server uses when the browser names none. */
+export const publicationRequestKey = (releaseCandidateId: string) => `rcpub:${releaseCandidateId}`;
+/** The R1 summary the server writes when the browser names none: the sealed pack's own identity only. */
+export const publicationSummary = (releaseCandidateId: string, packDigest: string, runId: string) =>
+  `Release candidate ${releaseCandidateId} · pack sha256:${packDigest} · evidence run ${runId}`;
 
 @Injectable()
 export class ResearchReleaseCandidatePublicationService {
@@ -37,7 +46,13 @@ export class ResearchReleaseCandidatePublicationService {
     private readonly packs: ResearchReleaseCandidateRepository,
     private readonly candidate: ResearchReleaseCandidateService,
     private readonly governance: GovernanceService,
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: Pick<ControlApiConfig, "FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION">,
   ) {}
+
+  /** FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: new intake only; dark unless named "true". */
+  private get intakeOpen(): boolean {
+    return this.config?.FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION === "true";
+  }
 
   async publication(scope: ResearchScope, user: PortalUser, id: string): Promise<ResearchReleaseCandidatePublicationResponse> {
     this.actor(scope, user);
@@ -45,7 +60,7 @@ export class ResearchReleaseCandidatePublicationService {
     await this.candidate.pack(scope, id);
     const intent = await this.repository.read(scope, id);
     if (!intent) {
-      const ready = await this.readiness(scope, user, id, true);
+      const ready = await this.readiness(scope, user, id, true, this.intakeOpen);
       return this.response({
         id, ready, state: "NOT_PUBLISHED", mayPublish: ready.blocked === null,
         blocked: ready.blocked, published: null, approvalRead: "NOT_PUBLISHED", approval: null,
@@ -87,12 +102,20 @@ export class ResearchReleaseCandidatePublicationService {
   ): Promise<ResearchReleaseCandidatePublicationResponse> {
     this.actor(scope, user);
     if (input.workspace_id !== undefined && input.workspace_id !== scope.workspaceId) this.notFound();
+    const existing = await this.repository.read(scope, id);
+    // The key and summary the server writes when the browser names none are
+    // derived from the stored intent or pack, so a replay derives the same bytes.
+    const saved = existing ? record(existing.requestPayload.downstream_request) : null;
+    const stored = existing ? null : await this.packs.readPack(scope, id);
+    const requestKey = input.request_key ?? (existing ? existing.requestKey : publicationRequestKey(id));
+    const summary = input.summary ?? (saved && typeof saved.summary === "string"
+      ? saved.summary
+      : publicationSummary(id, stored?.packDigest ?? input.expected_pack_digest, stored?.runId ?? existing?.runId ?? ""));
     const payloadDigest = digest({
       workspace_id: scope.workspaceId, actor_user_id: user.userId, release_candidate_id: id,
-      expected_pack_digest: input.expected_pack_digest, request_key: input.request_key,
-      methodology_claim_id: input.methodology_claim_id, summary: input.summary,
+      expected_pack_digest: input.expected_pack_digest, request_key: requestKey,
+      methodology_claim_id: input.methodology_claim_id, summary,
     });
-    const existing = await this.repository.read(scope, id);
     if (existing) {
       if (existing.actorUserId !== user.userId || existing.payloadDigest !== payloadDigest) this.conflict();
       if (existing.state === "DELIVERED" || existing.state === "REFUSED") return this.publication(scope, user, id);
@@ -101,7 +124,7 @@ export class ResearchReleaseCandidatePublicationService {
       await this.repository.pending(scope, id);
       return this.execute(scope, user, id, existing, requestId, true);
     }
-    const ready = await this.readiness(scope, user, id, true);
+    const ready = await this.readiness(scope, user, id, true, this.intakeOpen);
     if (ready.packDigest !== input.expected_pack_digest) this.conflict();
     if (ready.blocked !== null) {
       return this.response({
@@ -117,15 +140,15 @@ export class ResearchReleaseCandidatePublicationService {
     }
     const downstream = ApprovalCreateRequestSchema.safeParse({
       schema_version: "governance.approval-create-request.v1", workspace_id: scope.workspaceId,
-      request_key: input.request_key, gate: "R1", alpha_id: ready.alphaId,
-      evidence_run_id: ready.runId, methodology_claim_id: input.methodology_claim_id, summary: input.summary,
+      request_key: requestKey, gate: "R1", alpha_id: ready.alphaId,
+      evidence_run_id: ready.runId, methodology_claim_id: input.methodology_claim_id, summary,
     });
     if (!downstream.success || !ready.source.legacy_artifact_sha256 || !ready.source.artifact_schema_version) this.unavailable();
     const payload = { downstream_request: downstream.data, source: ready.source };
     const begun = await this.repository.begin(scope, {
       releaseCandidateId: id, runId: ready.runId, alphaId: ready.alphaId,
       alphaVersionId: ready.alphaVersionId, actorUsername: user.username,
-      requestKey: input.request_key, payloadDigest, requestPayload: payload,
+      requestKey, payloadDigest, requestPayload: payload,
       packDigest: ready.packDigest, sourceFingerprint: ready.sourceFingerprint,
       legacyArtifactSha256: ready.source.legacy_artifact_sha256,
       artifactSchemaVersion: ready.source.artifact_schema_version,
@@ -204,7 +227,7 @@ export class ResearchReleaseCandidatePublicationService {
     }
   }
 
-  private async readiness(scope: ResearchScope, user: PortalUser, id: string, refresh: boolean): Promise<Ready> {
+  private async readiness(scope: ResearchScope, user: PortalUser, id: string, refresh: boolean, intake = true): Promise<Ready> {
     const pack = await this.packs.readPack(scope, id);
     if (!pack) this.notFound();
     const frozen = pack.frozenCore;
@@ -236,6 +259,9 @@ export class ResearchReleaseCandidatePublicationService {
       || composed.local_seal.state !== "SEALED_LOCAL" || composed.local_seal.availability.state !== "AVAILABLE"
       || composed.run.binding?.alpha_id !== alphaId || composed.run.binding.alpha_version_id !== alphaVersionId
       || composed.run.binding.lifecycle_state !== "ACTIVE") return { ...base, blocked: "P22_CURRENT_SOURCE_CHANGED" };
+    // Intake off: no RunSync refresh and no Governance read for a candidate
+    // that has no recorded intent; nothing downstream is contacted.
+    if (!intake) return { ...base, blocked: P22_PUBLICATION_INTAKE_DISABLED };
     let fact: Awaited<ReturnType<GovernanceService["publicationEvidence"]>>;
     try { fact = await this.governance.publicationEvidence(user, scope.workspaceId, pack.runId, refresh); }
     catch { fact = null; }

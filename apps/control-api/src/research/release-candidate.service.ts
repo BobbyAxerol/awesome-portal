@@ -24,6 +24,7 @@ import {
   type ReleaseCandidateArtifact,
   type ReleaseCandidateDraft,
   type ReleaseCandidatePin,
+  type ReleaseCandidatePublicationContext,
   type ReleaseCandidateSource,
   type ReleaseCandidateStoredPack,
 } from "./release-candidate.repository";
@@ -155,7 +156,17 @@ export class ResearchReleaseCandidateService {
       this.repository.snapshot(scope, runId), this.repository.draft(scope, runId), this.repository.latestPack(scope, runId),
     ]);
     if (!source) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Research run was not found.", 404);
-    return this.compose(source, persistedDraft ?? this.virtualDraft(source), latestPack);
+    const context = await this.publicationContext(scope, source, latestPack);
+    return this.compose(source, persistedDraft ?? this.virtualDraft(source), latestPack, context);
+  }
+
+  /** B2: the P22 facts the composer prints — this candidate's intent and the last published candidate of the Alpha. */
+  private publicationContext(
+    scope: ResearchScope, source: ReleaseCandidateSource, latestPack: ReleaseCandidateStoredPack | null,
+  ): Promise<ReleaseCandidatePublicationContext> {
+    return this.repository.publicationContext(scope, {
+      alphaId: source.alpha.alphaId, releaseCandidateId: latestPack?.releaseCandidateId ?? null,
+    });
   }
 
   async patchDraft(
@@ -171,7 +182,8 @@ export class ResearchReleaseCandidateService {
       proposedUseRestrictions: input.proposed_use_restrictions,
     });
     const latestPack = await this.repository.latestPack(scope, runId);
-    return this.compose(result.source, result.draft, latestPack);
+    const context = await this.publicationContext(scope, result.source, latestPack);
+    return this.compose(result.source, result.draft, latestPack, context);
   }
 
   async seal(
@@ -223,6 +235,7 @@ export class ResearchReleaseCandidateService {
     source: ReleaseCandidateSource,
     draft: ReleaseCandidateDraft,
     latestPack: ReleaseCandidateStoredPack | null,
+    context: ReleaseCandidatePublicationContext,
   ): ResearchReleaseCandidateComposeResponse {
     const sourceFingerprint = releaseCandidateSourceFingerprint(source);
     const { values, pack, sourceIntegrity, selectedDetail } = this.lane(source, draft, null);
@@ -242,6 +255,7 @@ export class ResearchReleaseCandidateService {
       return result;
     }, { complete: 0, degraded: 0, input: 0, missing: 0 });
     const fields = values.fields;
+    const publication = this.publicationFacts(fields, localSeal, context);
     const response = {
       schema_version: "research.release-candidate-compose.v1" as const,
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
@@ -264,16 +278,13 @@ export class ResearchReleaseCandidateService {
         { key: "selected_params", value: values.parameterBundle ?? "— selection not published", detail: selectedDetail, tone: values.parameterBundle ? "ink" : "dim" },
         { key: "release_candidate", value: localSeal.release_candidate_id ?? "rc_(draft)", detail: localSeal.state === "SEALED_LOCAL" ? "sealed locally — not delivered" : "assigned on local seal", tone: localSeal.state === "SEALED_LOCAL" ? "green" : "gold" },
       ],
-      taxonomy: [
+      taxonomy: publication.taxonomy ?? [
         { what: "code / entrypoint (av_)", state: "UNSET", consequence: "No P22-published predecessor is available, so no code-change or gate conclusion is inferred." },
         { what: "selected strategy params", state: "UNSET", consequence: values.parameterBundle ? "Current exact parameter bundle is pinned, but no predecessor comparison is published." : "Selection provenance is not published." },
         { what: "data contract / dataset snapshot", state: "UNSET", consequence: values.strictDatasetDigest ? "Current dataset binding is pinned, but no predecessor comparison is published." : "Dataset binding identity is unavailable." },
         { what: "target venue / account / capital", state: "UNSET", consequence: "Deployment facts belong to an Execution-side candidate and are never composed here." },
       ],
-      published_comparison: {
-        last_release_candidate_id: null,
-        availability: absent("P22_PUBLISHED_COMPARISON_NOT_COMMISSIONED"),
-      },
+      published_comparison: publication.comparison,
       certification_axes: {
         methodology_claim: issuedMethodologyAxis(source),
         engine_execution_contract: {
@@ -281,7 +292,7 @@ export class ResearchReleaseCandidateService {
           availability: absent("P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED"),
         },
       },
-      gate_verdict: {
+      gate_verdict: publication.verdict ?? {
         title: sealBlockedReason ? "local seal blocked — review evidence" : "local seal ready — downstream publish remains P22",
         body: "P21 creates only a Portal-local immutable evidence pack. It neither computes, approves, delivers, nor starts Paper.",
       },
@@ -303,24 +314,90 @@ export class ResearchReleaseCandidateService {
         may_edit_draft: true,
         may_seal: sealBlockedReason === null,
         seal_blocked_reason: sealBlockedReason,
-        publish: {
-          enabled: localSeal.state === "SEALED_LOCAL" && localSeal.availability.state === "AVAILABLE",
-          blocked_reason: localSeal.state === "SEALED_LOCAL" && localSeal.availability.state === "AVAILABLE"
-            ? null : "P22_LOCAL_SEAL_REQUIRED",
-        },
+        publish: { enabled: publication.publishBlocked === null, blocked_reason: publication.publishBlocked },
       },
       mirror: null,
       source_absences: {
         alpha_binding: isScratch ? absent("P21_SCRATCH_RUN_UNBOUND") : AVAILABLE,
         methodology_claim: pack[3]!.availability,
         final_audit: pack[5]!.availability,
-        approval_mirror: absent("P22_PUBLICATION_NOT_COMMISSIONED"),
+        approval_mirror: publication.approvalMirror,
         execution_deployment: notApplicable("P21_EXECUTION_DEPLOYMENT_OUT_OF_SCOPE"),
       },
     };
     const parsed = ResearchReleaseCandidateComposeResponseSchema.safeParse(response);
     if (!parsed.success) throw this.unavailable("Release Candidate composer response is incompatible.");
     return parsed.data;
+  }
+
+  /**
+   * B2 — what P22 has recorded, in P21's words. The publish affordance and the
+   * approval-mirror absence follow this candidate's own intent; the taxonomy
+   * compares digests with the newest DELIVERED candidate of the same Alpha.
+   * Absent a predecessor the P04/WFO wording is unchanged (typed absence).
+   */
+  private publicationFacts(
+    fields: readonly Field[],
+    localSeal: ReturnType<ResearchReleaseCandidateService["localSeal"]>,
+    context: ReleaseCandidatePublicationContext,
+  ) {
+    const current = localSeal.state === "SEALED_LOCAL" && context.current?.releaseCandidateId === localSeal.release_candidate_id
+      ? context.current : null;
+    const delivered = current?.state === "DELIVERED" || localSeal.delivery_state === "DELIVERED";
+    const sealed = localSeal.state === "SEALED_LOCAL" && localSeal.availability.state === "AVAILABLE";
+    const intakeOpen = this.config.FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION === "true";
+    const publishBlocked: string | null = delivered ? "P22_ALREADY_DELIVERED"
+      : !sealed ? "P22_LOCAL_SEAL_REQUIRED"
+        : current?.state === "REFUSED" ? "P22_PUBLICATION_REFUSED"
+          : current === null && !intakeOpen ? "P22_PUBLICATION_INTAKE_DISABLED"
+            : null;
+    const approvalMirror: Availability = localSeal.state !== "SEALED_LOCAL" ? absent("P22_LOCAL_SEAL_REQUIRED")
+      : delivered ? notApplicable("P22_MIRROR_READ_ON_PUBLICATION_ROUTE")
+        : current?.state === "PENDING" ? absent("P22_PUBLICATION_PENDING")
+          : current?.state === "UNKNOWN" ? absent("P22_PUBLICATION_OUTCOME_UNKNOWN")
+            : current?.state === "REFUSED" ? absent("P22_PUBLICATION_REFUSED")
+              : absent("P22_NOT_PUBLISHED");
+    const predecessor = context.predecessor;
+    if (!predecessor) {
+      return {
+        publishBlocked, approvalMirror, taxonomy: null, verdict: null,
+        comparison: { last_release_candidate_id: null, availability: absent("P22_NO_PUBLISHED_PREDECESSOR") },
+      };
+    }
+    const now = (key: Field["key"]) => fields.find((item) => item.key === key)?.value ?? null;
+    const compare = (keys: readonly Field["key"][]): "UNCHANGED" | "CHANGED" | "UNSET" => {
+      const pairs = keys.map((key) => [now(key), predecessor.fields[key] ?? null] as const);
+      if (pairs.some(([mine, theirs]) => mine === null || theirs === null)) return "UNSET";
+      return pairs.every(([mine, theirs]) => mine === theirs) ? "UNCHANGED" : "CHANGED";
+    };
+    const rc = predecessor.releaseCandidateId;
+    const row = (what: string, short: string, keys: readonly Field["key"][], changed: string) => {
+      const state = compare(keys);
+      return {
+        what, short, state,
+        consequence: state === "UNCHANGED" ? `No gate re-run from this row — equal by digest to ${rc}.`
+          : state === "CHANGED" ? changed
+            : `Not pinned on both this candidate and ${rc}, so no conclusion is drawn.`,
+      };
+    };
+    const rows = [
+      row("code / entrypoint (av_)", "code", ["alpha_code_digest", "alpha_entrypoint"], `R1 + R2 re-run — code or entrypoint differs from ${rc}.`),
+      row("selected strategy params", "selected params", ["parameter_bundle_digest"], "R1 + R2 re-run — numerical artifact changed"),
+      row("data contract / dataset snapshot", "dataset", ["dataset_binding_digest"], `R1 + R2 re-run — dataset binding differs from ${rc}.`),
+    ];
+    const changed = rows.filter((item) => item.state === "CHANGED").map((item) => item.short);
+    return {
+      publishBlocked, approvalMirror,
+      taxonomy: [
+        ...rows.map(({ what, state, consequence }) => ({ what, state, consequence })),
+        { what: "target venue / account / capital", state: "UNSET" as const, consequence: "belongs to deployment candidate → Gate R2, Execution side" },
+      ],
+      verdict: changed.length === 0 ? null : {
+        title: `R1 + R2 must run — ${changed.join(" and ")} changed`,
+        body: `Compared by digest with the last published candidate ${rc} (${predecessor.alphaVersionId}). Target venue, account and capital belong to the deployment candidate — Gate R2, Execution side.`,
+      },
+      comparison: { last_release_candidate_id: rc, availability: AVAILABLE },
+    };
   }
 
   private values(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null) {
@@ -477,7 +554,7 @@ export class ResearchReleaseCandidateService {
   }
 
   private sealBuild(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string) {
-    const preview = this.compose(source, draft, null);
+    const preview = this.compose(source, draft, null, { current: null, predecessor: null });
     if (!preview.actions.may_seal) {
       throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE", "Release Candidate cannot be locally sealed until all required evidence is available.", 422);
     }

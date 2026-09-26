@@ -14,9 +14,12 @@ export const ResearchReleaseCandidatePublishRequestSchema = z.object({
   schema_version: z.literal("research.release-candidate-publish-request.v1"),
   workspace_id: z.string().min(3).max(96).optional(),
   expected_pack_digest: Digest,
-  request_key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/),
+  // Optional: when absent the server derives both from its own facts
+  // (`rcpub:<rc_id>` and the pack/run identity), so a browser never has to
+  // author a governance summary or an idempotency key.
+  request_key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/).optional(),
   methodology_claim_id: z.string().trim().min(1).max(191),
-  summary: z.string().trim().min(8).max(2_000),
+  summary: z.string().trim().min(8).max(2_000).optional(),
 }).strict();
 
 export const ResearchReleaseCandidateApprovalMirrorSchema = z.object({

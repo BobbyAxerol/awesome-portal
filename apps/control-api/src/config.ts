@@ -167,6 +167,12 @@ const EnvSchema = z.object({
   // worker, artifact-byte, or source-data transport authority. P22 alone
   // may later deliver an already sealed pack to Governance.
   FEATURE_RESEARCH_RELEASE_CANDIDATES: z.enum(["true", "false"]).default("false"),
+  // P22 publication intake: a NEW publish intent (the first POST for a sealed
+  // candidate) goes to the existing R1 create service only when this is true.
+  // Compose, local seal, the publication read/mirror and the replay of an
+  // intent already recorded (PENDING/UNKNOWN reconciliation) keep running
+  // with it off, so intake can be stopped without stranding an outcome.
+  FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -549,6 +555,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     if (missing.length > 0) {
       throw new Error(`FEATURE_RESEARCH_RELEASE_CANDIDATES=true requires: ${missing.join(", ")}`);
     }
+  }
+  if (config.FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION === "true"
+    && config.FEATURE_RESEARCH_RELEASE_CANDIDATES !== "true") {
+    throw new Error("FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION=true requires FEATURE_RESEARCH_RELEASE_CANDIDATES=true");
   }
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
     throw new Error(

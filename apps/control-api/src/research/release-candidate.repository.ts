@@ -131,6 +131,22 @@ export interface ReleaseCandidateStoredPack {
   approvalState: "NOT_APPROVED" | "PENDING" | "APPROVED" | "REJECTED" | "UNKNOWN";
 }
 
+/**
+ * P22 facts the P21 composer prints (audit B2): whether this run's newest
+ * candidate has a recorded publication intent, and the newest candidate of the
+ * same Alpha that P22 DELIVERED (the "last published rc"), with its frozen
+ * field values so the change taxonomy compares digests, never names.
+ */
+export interface ReleaseCandidatePublicationContext {
+  current: { releaseCandidateId: string; state: "PENDING" | "UNKNOWN" | "DELIVERED" | "REFUSED" } | null;
+  predecessor: {
+    releaseCandidateId: string;
+    alphaVersionId: string;
+    publishedAtUtcMs: number;
+    fields: Record<string, string | null>;
+  } | null;
+}
+
 export interface ReleaseCandidatePin {
   pinKind: "ALPHA_VERSION" | "RUN" | "REPORT" | "EVIDENCE" | "SPLIT" | "SELECTION" | "CURRENT_SOURCE" | "ARTIFACT";
   sourceRef: string;
@@ -314,6 +330,59 @@ export class ResearchReleaseCandidateRepository {
         WHERE pack.workspace_id = $1 AND pack.run_id = $2
         ORDER BY pack.sealed_at DESC, pack.release_candidate_id DESC LIMIT 1`, [scope.workspaceId, runId]);
       return result.rowCount === 1 ? this.pack(result.rows[0]!) : null;
+    });
+  }
+
+  /** P22 publication facts for the composer; one read-only snapshot, bounded to two rows. */
+  async publicationContext(
+    scope: ResearchScope,
+    input: { alphaId: string | null; releaseCandidateId: string | null },
+  ): Promise<ReleaseCandidatePublicationContext> {
+    return this.transaction(scope, true, async (client) => {
+      await this.requireMembership(client, scope);
+      let current: ReleaseCandidatePublicationContext["current"] = null;
+      if (input.releaseCandidateId !== null) {
+        const found = await client.query<{ release_candidate_id: string; state: string }>(
+          `SELECT release_candidate_id, state FROM research.release_candidate_publications_v1
+            WHERE workspace_id = $1 AND release_candidate_id = $2`,
+          [scope.workspaceId, input.releaseCandidateId],
+        );
+        const row = found.rows[0];
+        if (row && ["PENDING", "UNKNOWN", "DELIVERED", "REFUSED"].includes(row.state)) {
+          current = { releaseCandidateId: row.release_candidate_id, state: row.state as "PENDING" | "UNKNOWN" | "DELIVERED" | "REFUSED" };
+        }
+      }
+      let predecessor: ReleaseCandidatePublicationContext["predecessor"] = null;
+      if (input.alphaId !== null) {
+        const found = await client.query<{ release_candidate_id: string; alpha_version_id: string; published_at_utc_ms: string | number; frozen_core: JsonColumn }>(
+          `SELECT pub.release_candidate_id, pub.alpha_version_id,
+                  (extract(epoch FROM pub.published_at) * 1000)::bigint AS published_at_utc_ms, pack.frozen_core
+             FROM research.release_candidate_publications_v1 pub
+             JOIN research.release_candidate_packs_v1 pack
+               ON pack.workspace_id = pub.workspace_id AND pack.release_candidate_id = pub.release_candidate_id
+            WHERE pub.workspace_id = $1 AND pub.alpha_id = $2 AND pub.state = 'DELIVERED'
+              AND ($3::text IS NULL OR pub.release_candidate_id <> $3)
+            ORDER BY pub.published_at DESC, pub.release_candidate_id DESC
+            LIMIT 1`,
+          [scope.workspaceId, input.alphaId, input.releaseCandidateId],
+        );
+        const row = found.rows[0];
+        if (row) {
+          const core = jsonRecord(row.frozen_core, "published predecessor");
+          const fields: Record<string, string | null> = {};
+          for (const item of Array.isArray(core?.fields) ? core.fields : []) {
+            const fieldRow = item && typeof item === "object" ? item as Record<string, unknown> : null;
+            if (fieldRow && typeof fieldRow.key === "string") {
+              fields[fieldRow.key] = typeof fieldRow.value === "string" ? fieldRow.value : null;
+            }
+          }
+          predecessor = {
+            releaseCandidateId: row.release_candidate_id, alphaVersionId: row.alpha_version_id,
+            publishedAtUtcMs: safeInteger(row.published_at_utc_ms, "publication timestamp"), fields,
+          };
+        }
+      }
+      return { current, predecessor };
     });
   }
 

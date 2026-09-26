@@ -189,7 +189,25 @@ describe("W7 · P21 retained lane on disposable PostgreSQL", () => {
       expect(sealed).toMatchObject({ delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED" });
       const after = await service.detail(scope, RUN);
       expect(after.local_seal).toMatchObject({ state: "SEALED_LOCAL", release_candidate_id: sealed.release_candidate_id, delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED" });
-      expect(after.actions.publish).toEqual({ enabled: true, blocked_reason: null });
+      // X1: publication intake is its own flag; dark by default, the seal alone does not open it.
+      expect(after.actions.publish).toEqual({ enabled: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" });
+      expect(after.source_absences.approval_mirror).toEqual({ state: "NOT_PUBLISHED", reason_code: "P22_NOT_PUBLISHED" });
+      expect(after.published_comparison).toEqual({ last_release_candidate_id: null, availability: { state: "NOT_PUBLISHED", reason_code: "P22_NO_PUBLISHED_PREDECESSOR" } });
+      const intakeOpen = new ResearchReleaseCandidateService(repository, {
+        FEATURE_RESEARCH_RELEASE_CANDIDATES: "true", FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true",
+      } as never);
+      expect((await intakeOpen.detail(scope, RUN)).actions.publish).toEqual({ enabled: true, blocked_reason: null });
+      // B2 read under the runtime role: a recorded intent for this candidate is printed as such (reconcilable with intake dark).
+      await database.query(`INSERT INTO research.release_candidate_publications_v1
+        (workspace_id, release_candidate_id, run_id, alpha_id, alpha_version_id, actor_user_id, actor_username,
+         request_key, payload_digest, request_payload, pack_digest, source_fingerprint, legacy_artifact_sha256,
+         artifact_schema_version, methodology_claim_id)
+        VALUES ($1, $2, $3, $4, $5, $6, 'researcher', $7, $8, '{}'::jsonb, $9, $10, $11, 'quantbt.selected-params.v1', 'claim:w7')`,
+      [W, sealed.release_candidate_id, RUN, ALPHA, VERSION, U, "rcpub:" + sealed.release_candidate_id, hex("payload"),
+        sealed.pack_digest, after.source_fingerprint, "sha256:" + hex("legacy")]);
+      const pending = await service.detail(scope, RUN);
+      expect(pending.source_absences.approval_mirror).toEqual({ state: "NOT_PUBLISHED", reason_code: "P22_PUBLICATION_PENDING" });
+      expect(pending.actions.publish).toEqual({ enabled: true, blocked_reason: null });
       const pack = await service.pack(scope, sealed.release_candidate_id);
       expect(pack.frozen_core.pack.filter((item) => item.status === "MISSING")).toEqual([]);
 
