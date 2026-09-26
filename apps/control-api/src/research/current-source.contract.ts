@@ -14,6 +14,7 @@ import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { WhatIfSchema } from "./whatif.contract";
 import { FoldOrderingSchema } from "./fold-ordering";
 import { DeclaredSpaceSchema, SearchSurfaceSchema } from "./current-source-surface";
+import { CandidateDrawdownSchema, SearchPoolSchema } from "./current-source-pool";
 import { ParameterAuthoritySchema, Stage4BindingSchema } from "./stage4-binding";
 
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
@@ -615,6 +616,8 @@ const CandidateSchema = z.object({
   objective: DecimalSchema.nullable(),
   parameters: ParameterMapSchema,
   facts: TrialFactsSchema,
+  /** E5 · 6.11: the candidate's OOS max drawdown, or its typed absence. */
+  max_drawdown: CandidateDrawdownSchema,
 }).strict();
 
 const SelectionRoleSchema = z.object({
@@ -704,6 +707,11 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
    */
   declared_space: DeclaredSpaceSchema,
   surface: SearchSurfaceSchema,
+  /**
+   * E5 · 6.7/6.8/6.10: the frozen pool (trials, feasible, top-IS K and the
+   * rule that sized it, re-evaluated, selected) and θ*'s per-fold decay.
+   */
+  pool: SearchPoolSchema,
 }).strict();
 
 export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
