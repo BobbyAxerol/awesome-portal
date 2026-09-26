@@ -3668,17 +3668,74 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 | OL-09 | `CG-P22-A/B` — `conflicting_approval_href`, `details.downstream_code` trong lỗi publish | **Đúng** | Codex; Claude nối S11 | Field có + S11 hiện |
 | OL-10 | `CG-P22-C` — capability ledger | **Đã đóng một phần**: R2 inventory có đủ 2 route P22, `r2Ledger.test.ts` xanh; nếu Codex thấy lệch contract ở field nào thì ghi cụ thể | Codex | Không còn lệch khi `r2Ledger.test.ts` + route inventory xanh |
 | OL-11 | **Mô hình route P22 chính thức** | **Đã chốt (X1, Bobby duyệt S11 bản Thanhvuong 2026-09-26):** hai route `GET …/publication` (mirror nhúng trong đó) và `POST …/publish`. **Không** có `GET /mirror`, `POST /publish/reconcile`; reconcile là việc server. Handoff Thanhvuong cần sửa theo | Codex (sửa handoff/OpenAPI nếu còn nhắc route cũ) | Không còn tài liệu/stub nào nhắc 2 route cũ |
+| OL-13 | Read publication/approval theo `alpha_version_id` cho rc chip S01 và "last published RC" S02 (rà HiFi E-BE P22+) | **Mới** | Codex | Field/route có + S01/S02 hiện |
 | OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **Đúng.** Harness đo đúng, chưa có workload thật đạt giới hạn | Codex | Receipt từng T-id trên stack cô lập |
 
 #### B. Frontend / test còn mở (không phải backend)
 
 | Id | Việc | Chủ | Điều kiện đóng |
 |---|---|---|---|
-| OL-20 | Gộp X3 (S13 VD-P20, một quy tắc refusal cho S02–S08, runner P23 chạy trên contract hiện tại, A12 cập nhật) — **ĐÃ GỘP** (merge `0b6b7fb8`; kèm sửa F-04 cho S09 `reportClient` 404→denied + 401→Frame 01D, và S11 đưa mã lỗi vào disclosure `details`). Record: [`P20/X3_S13_P23_CLAUDE_2026-09-26.md`](research_loop/evidence/P20/X3_S13_P23_CLAUDE_2026-09-26.md). Runner P23 lane fixture 76/78 trước khi sửa S09/S11 — chạy lại ở OL-23 | Claude | Merge xanh |
-| OL-21 | `S01-RUNLIBRARY-PAGE-GUARD`, refusal mapping S02–S05 còn lại sau X3 | Claude | Test + ảnh chụp |
+| OL-20 | Gộp X3 (S13 VD-P20, một quy tắc refusal cho S02–S08, runner P23 chạy trên contract hiện tại, A12 cập nhật) — **ĐÃ GỘP** (merge `0b6b7fb8`; kèm sửa F-04 cho S09 `reportClient` 404→denied + 401→Frame 01D, và S11 đưa mã lỗi vào disclosure `details`). Record: [`P20/X3_S13_P23_CLAUDE_2026-09-26.md`](research_loop/evidence/P20/X3_S13_P23_CLAUDE_2026-09-26.md). Runner P23 lane fixture 76/78 trước khi sửa S09/S11 — đã chạy lại: **78/78** trên `396b6450` | Claude | Merge xanh |
+| OL-21 | `S01-RUNLIBRARY-PAGE-GUARD`, refusal mapping S02–S05 còn lại sau X3 — **ĐÓNG**: X3 sửa fixture làm S01 crash và đưa S01/S03/S04/S05 về một mapper; runner P23 lane fixture **78/78** trên `396b6450` (vitest research 1289/1289). Câu "Run not found" còn ở S03/S04 chuyển sang E1 | Claude | Test + ảnh chụp |
 | OL-22 | 33 ô visual baseline lệch (runner P23) | Claude | Baseline cập nhật có duyệt từng ô, không `--update` mù |
 | OL-23 | Receipt real-API trên preview build lại từ HEAD cho màn 01–13, run P04 + WFO (gồm S11 hợp nhất, W7, X2) | Claude | Lane real-API xanh + ảnh chụp đã xem |
 | OL-24 | P23 browser-real / dev-host review | Codex (P23) + Claude (màn) | Receipt trên research-dev |
+
+#### E. Gap HiFi ↔ frontend màn 00–14 (rà 2026-09-26)
+
+Bằng chứng từng khối: [`HIFI_AUDIT_S00_S14_CLAUDE_2026-09-26.md`](research_loop/evidence/HIFI_AUDIT_S00_S14_CLAUDE_2026-09-26.md)
+(chụp HiFi ↔ thật 1440/660 trên preview `:8095`, run P04 + WFO). Đếm: **100 FE · 28 BE≤P21 ·
+7 BE P22+ · 22 quyết định thiết kế**; 134 lệch đã chốt chỉ trích nguồn. Số id trong ngoặc là id
+dòng trong file bằng chứng.
+
+**E-FE — Claude làm, không chờ ai**
+
+| Id | Gói | Gồm | Cỡ | Điều kiện đóng |
+|---|---|---|---|---|
+| E1 | Luật hiển thị chung (mọi màn) | id ngắn 8 hex + `title` đầy đủ cho `rrun_`/`ratt_`/digest (10-2, 11-3, 13-2/6/9); timestamp không ISO mili-giây; số đếm/bytes/float có định dạng, không số thô (01, 03, 08 ledger `equity 19996.892873321103`, drawdown 60 chữ số); enum/chuỗi server thành câu (`NOT_ISSUED`, `validation_claim=…`, `RS02_OOS_MEAN_OF_FOLDS`, `draft VIRTUAL`, `true` trần); một câu 403/404 (S03/S04 "Run not found"); link cũ "not built yet" ở S04 (08, 11 đã có route); S11 `.rc-pack .item` bị viết hoa bởi `table th`; bảng dữ liệu a11y của chart làm tròn | M | vitest + axe + ảnh 1440/660 từng màn chạm |
+| E2 | S07/S08 | S08 P04: tràn 67 px ở 660, nút ⏮/⏭ ra ô rỗng, reveal thu chart về một nến và dải toàn run lộ nến tương lai, trade anatomy rỗng tới khi bấm `#`; S07 slider what-if dùng tên demo HiFi `entry_z/atr_mult` thay vì `rvol/slpercent` của profile, thiếu lối "propose new attempt" khi what-if tắt; đánh số fold lẫn 0/1 với 1/2; bố cục S07/S08 lệch S05/S06 (offset, màu subtitle, card lồng, breadcrumb mono); S07 thiếu copy-evidence link | M | như E1 + lane real-API S07/S08 |
+| E3 | S09 sheet | notice PARTIAL nói thiếu cả nhóm khi chỉ thiếu vài mục; `break-all` cắt chữ; trục equity chỉ min/max và nhãn đáy đè đường; màu theo dấu | S | ảnh + in Letter/A4 |
+| E4 | S01–S04 | S01 in chữ "available" thay giá trị null-AVAILABLE; S02 màn đầu (badge PUBLISHABLE khi chưa chọn gì, lỗi validate trước khi nhập, sáu panel rỗng đè nút chính, chưa hiện warmup/required columns/step đã có trong registry); S03 claim passport thiếu 4 claim phương pháp, ô forecast rỗng khi QUEUED; S04 WFO equity vẽ đoạn phẳng trước OOS gây hiểu nhầm | M | vitest + ảnh |
+| E5 | S06 Stage B | cột decay theo fold, plot S_IS×S_OOS của pool, thẻ B3 best≠selected đủ S_IS/S_OOS/decay (phần FE; max_dd ở E-BE) | M | ảnh trên preview mới (OL-23) |
+| E6 | S14 theo HiFi | stepper, hai cột, tiêu đề + chip QUARANTINE + meta, bảng mirror 3 cột + rules footer, footer | L | ảnh + fixture lane |
+| E7 | S12/S13 mật độ | S12 bố cục 3 cột + card Routes gọn (trang 5.446 px ↔ HiFi 2.273), marker "← this run"; S13 gộp attempt không có claim thành dòng gọn (33 thẻ, 21 FAILED/QUEUED); S10 theo D8 | L | ảnh 1440/660 |
+
+**E-BE≤P21 — Claude làm (backend ≤P21)**
+
+| Id | Phase | Việc | Cỡ | Điều kiện đóng |
+|---|---|---|---|---|
+| E10 | P06/P11/P12 | **Trạng thái run sai/kẹt** (ưu tiên cao nhất — là lỗi đúng/sai, không phải thẩm mỹ): một run QUEUED ở Library nhưng FINISHING ở S03 từ 2026-09-24; run RETRY_WAIT quá hạn 3 ngày không bao giờ redispatch, `may_cancel=false` nên chủ không dừng được; run FAILED không có `failed_at_stage` → trail S01 không chỉ được chỗ chết | M | Test service + receipt preview: không còn run kẹt, cancel được, stage fail tô đỏ |
+| E11 | P13 | Library card WFO in "not published" ×3 (`P13_SOURCE_EVIDENCE_NOT_PUBLISHED`) trong khi S04 cùng run có Sharpe/decay/trades; S04 thiếu IS equity, rolling Sharpe, behaviour tiles, trade count gộp | M | Card WFO có số; S04 có series hoặc typed absence đúng lý do |
+| E12 | P03/RF | Descriptor Journey Map vẫn ghi 5 màn đã dựng là PLANNED → hiện "SOON" (08, 10, 13, 11, 09); revision descriptor + migration | S | S00 mở đủ màn |
+| E13 | P19 | 33/33 attempt là ROOT: kiểm writer clone có ghi `parent_attempt_id` → cây S10 và diff-vs-parent | S–M | Clone thật tạo cây lồng trên preview |
+| E14 | P14/RS-02, P15, P18 | Lane retained: `stitch_digest` + `gap_scan` trên split; `top_is_k` + số feasible (S06 K callout); `candidates[].max_drawdown`; qualifier "declared, not executed" cho identity P04; ô OOS return headline P18 | M | Field trong contract + fixture + màn hiện |
+| E15 | P11 | Manifest artifacts 7 dòng và journal (fold freeze, artifact build) mỏng | M | S03 artifacts/console đủ khối HiFi hoặc typed absence |
+| E16 | P17 | Nến replay cho lane hub P04 (hiện `P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS`) | L | S08 P04 có nến + marker |
+| E17 | P10 | Chạy alpha import thật (S14 end-to-end) — gắn với OL-01 | — | theo OL-01 |
+
+**E-BE P22+ — Codex**: rc chip ở S01 và "last published RC" ở S02 cần read publication/approval
+theo `alpha_version_id` (**OL-13 mới**); S10 promotion pick = OL-03; S11 taxonomy/mirror/publish =
+OL-06/07/09. Màn đã hiện chúng là typed absence, không bịa.
+
+**E-D — Quyết định thiết kế: Claude chốt theo HiFi (uỷ quyền 2026-09-25), Bobby phủ quyết nếu khác ý**
+
+| Id | Câu hỏi | Chốt | Vì sao |
+|---|---|---|---|
+| D1 | Nhãn run ngắn `R-WFO-###` + breadcrumb topbar tới run/stage (X1, X2, 10-3, 11-4, 13-2, X-1) | **Có**: server cấp `display_label` = kind + số thứ tự trong workspace (BE≤P21, P10/P13), shell breadcrumb đọc nó | HiFi dùng ở mọi màn; id 37 ký tự làm vỡ mọi header. Browser không tự đánh số (sẽ khác giữa hai người xem) |
+| D2 | S00 thẻ theo run bị xám, không có lối chọn run (00-4) | Link "pick a run" sang Run Library, mang theo màn đích | Hết ngõ cụt, không đoán "run mới nhất" |
+| D3 | Thanh tóm tắt S01 là claim ledger thay vì đếm trạng thái (01-11) | Dòng 1 đếm trạng thái như HiFi (server đã có count), claim ledger xuống dòng 2 | Giữ cả hai, HiFi đi trước |
+| D4 | S02 prefill (02-13) | Prefill từ coverage của dataset đã chọn, sửa được; không có dataset thì để trống | Không bịa mặc định |
+| D5 | S03 ARCHIVE RUN (03-9) | **Hoãn** — không có endpoint, không nằm trong hợp đồng P01–P21 | Ghi lại, mở khi có nhu cầu |
+| D6 | S06 search cinema trên WFO (6.5) | **Không dựng** tới khi engine publish sampler trace | Dựng lại từ thứ tự ledger là bịa một trace |
+| D7 | S08 play across folds (8.10) | Công tắc, mặc định tắt; bật thì đọc cửa sổ kế ở biên fold | Giữ luật "chỉ đọc khi bạn yêu cầu" |
+| D8 | S10 (10-1, 10-5, 10-7…10-11) | Theo HiFi: bỏ market/timeframe khỏi crumb; hàng kỹ thuật vào disclosure; bỏ chip run thô (vào title); bỏ notice PARTIAL trùng pick card; giữ panel counts (như VD-P20-08); chip nguồn ghi đúng read authority; giữ "cert not published" | Khớp HiFi mà không nói sai nguồn |
+| D9 | S12 mật độ 3 cột + Routes gọn (12-1, 12-5; RF-04) | Làm theo HiFi (E7) | Chờ lâu nhất trong RF-04, không có lý do giữ 2 cột |
+| D10 | S13 attempt không claim, markets theo market (13-1, 13-8) | Gộp attempt không claim thành dòng gọn; markets nhóm theo phần market của ComparisonContractKey, lấy run ACTIVE/mới nhất mỗi key (composer P20, BE≤P21) | Giữ nghĩa mode "markets" |
+
+**Thứ tự đề xuất:** E10 (lỗi đúng/sai) → E1 (một lần sửa phủ mọi màn) → build lại preview + OL-23
+(để thấy X2/W7/P22 trên dữ liệu thật) → E2/E3/E4 → E11/E12/E13 + D1 → E14/E15 → E5/E6/E7 →
+E16 → lane real-API đủ + receipt. Mỗi gói: test đúng file chạm + ảnh màn đó; lane đầy đủ chỉ ở
+mốc (rebuild preview, trước báo cáo "đóng").
 
 #### C. Nợ tài liệu
 
@@ -3688,7 +3745,7 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 
 #### D. Thứ tự
 
-1. Claude: OL-20 → OL-21/22 → build lại preview → OL-23; OL-02 receipt verify.
+1. Claude: ~~OL-20~~ ~~OL-21~~ → E10 → E1 → build lại preview → OL-23 → OL-22 → phần còn lại của mục E theo thứ tự ở E; OL-02 receipt verify.
 2. Codex (song song, stack riêng): OL-11 → OL-04 → OL-05 (receipt Delta→R1) → OL-06/07/08/09 → OL-03 → OL-12.
 3. Bobby/ops: OL-01 phần host production.
 4. P24 chỉ mở khi A và B rỗng (trừ những mục Bobby chấp nhận có chủ ý).
