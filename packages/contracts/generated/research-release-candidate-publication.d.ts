@@ -38,12 +38,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/alpha-versions/{alphaVersionId}/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the latest delivered publication for one Alpha version */
+        get: operations["researchAlphaVersionPublicationGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         WorkspaceId: string;
         ReleaseCandidateId: string;
+        AlphaVersionId: string;
         RunId: string;
         Digest: string;
         LegacySha: string;
@@ -107,6 +125,11 @@ export interface components {
             subject_label?: string;
             /** @enum {string} */
             effective_status?: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+            assignee_pool_availability: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: components["schemas"]["Reason"] | null;
+            };
             assignee_pool?: {
                 user_id: string;
                 username: string;
@@ -163,12 +186,25 @@ export interface components {
         };
         PromotionPick: {
             /** @enum {string} */
-            state: "NOT_PUBLISHED" | "PENDING_APPROVAL" | "WRITTEN";
+            state: "NOT_PUBLISHED" | "PENDING_APPROVAL" | "WRITTEN" | "REJECTED";
             approval_id: string;
+            /** @enum {string} */
+            approval_status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+            approval_version: number | null;
             run_id: components["schemas"]["RunId"];
             selected_trial_id: string | null;
             artifact_id: string | null;
             fact_digest: components["schemas"]["Digest"];
+        };
+        AlphaVersionPublicationResponse: {
+            /** @constant */
+            schema_version: "research.alpha-version-publication.v1";
+            alpha_version_id: components["schemas"]["AlphaVersionId"];
+            /** @enum {string} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["Reason"] | null;
+            publication: components["schemas"]["PublicationResponse"] | null;
+            as_of_utc_ms: components["schemas"]["UtcMs"];
         };
         Problem: {
             error: {
@@ -191,6 +227,7 @@ export interface components {
     };
     parameters: {
         ReleaseCandidateId: components["schemas"]["ReleaseCandidateId"];
+        AlphaVersionId: components["schemas"]["AlphaVersionId"];
         WorkspaceId: components["schemas"]["WorkspaceId"];
         Csrf: string;
     };
@@ -263,6 +300,35 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchAlphaVersionPublicationGetV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path: {
+                alphaVersionId: components["parameters"]["AlphaVersionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private no-store publication lookup with typed absence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlphaVersionPublicationResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };

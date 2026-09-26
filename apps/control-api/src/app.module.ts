@@ -166,6 +166,7 @@ import { ResearchCompareService } from "./research/compare.service";
 import { ResearchReleaseCandidateController } from "./research/release-candidate.controller";
 import { ResearchReleaseCandidateRepository } from "./research/release-candidate.repository";
 import { ResearchReleaseCandidateService } from "./research/release-candidate.service";
+import { ResearchAlphaVersionPublicationController } from "./research/alpha-version-publication.controller";
 import { ResearchReleaseCandidatePublicationController } from "./research/release-candidate-publication.controller";
 import { ResearchReleaseCandidatePublicationRepository } from "./research/release-candidate-publication.repository";
 import { ResearchReleaseCandidatePublicationService } from "./research/release-candidate-publication.service";
@@ -237,6 +238,7 @@ export class AppModule {
         ResearchCompareController,
         ResearchReleaseCandidateController,
         ResearchReleaseCandidatePublicationController,
+        ResearchAlphaVersionPublicationController,
       ],
       providers: [
         ExecutionLocalReadAuthority,

@@ -116,6 +116,27 @@
           }
         }
       }
+    },
+    "/api/v1/research/alpha-versions/{alphaVersionId}/publication": {
+      "get": {
+        "operationId": "researchAlphaVersionPublicationGetV1",
+        "summary": "Read the latest delivered publication for one Alpha version",
+        "parameters": [
+          { "$ref": "#/components/parameters/AlphaVersionId" },
+          { "$ref": "#/components/parameters/WorkspaceId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private no-store publication lookup with typed absence.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AlphaVersionPublicationResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
     }
   },
   "components": {
@@ -133,6 +154,14 @@
         "required": true,
         "schema": {
           "$ref": "#/components/schemas/ReleaseCandidateId"
+        }
+      },
+      "AlphaVersionId": {
+        "name": "alphaVersionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/AlphaVersionId"
         }
       },
       "WorkspaceId": {
@@ -175,6 +204,10 @@
       "ReleaseCandidateId": {
         "type": "string",
         "pattern": "^rc_[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "AlphaVersionId": {
+        "type": "string",
+        "pattern": "^av_[A-Za-z0-9._-]{1,187}$"
       },
       "RunId": {
         "type": "string",
@@ -418,7 +451,8 @@
           "created_at",
           "read_at",
           "conditions",
-          "href"
+          "href",
+          "assignee_pool_availability"
         ],
         "properties": {
           "approval_id": {
@@ -482,6 +516,13 @@
           },
           "subject_label": { "type": "string", "minLength": 1, "maxLength": 256 },
           "effective_status": { "type": "string", "enum": ["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"] },
+          "assignee_pool_availability": {
+            "type": "object", "additionalProperties": false, "required": ["state", "reason_code"],
+            "properties": {
+              "state": { "type": "string", "enum": ["AVAILABLE", "NOT_PUBLISHED"] },
+              "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/Reason" }, { "type": "null" }] }
+            }
+          },
           "assignee_pool": {
             "type": "array", "maxItems": 64,
             "items": { "type": "object", "additionalProperties": false, "required": ["user_id", "username", "role"], "properties": {
@@ -635,14 +676,29 @@
       },
       "PromotionPick": {
         "type": "object", "additionalProperties": false,
-        "required": ["state", "approval_id", "run_id", "selected_trial_id", "artifact_id", "fact_digest"],
+        "required": ["state", "approval_id", "approval_status", "approval_version", "run_id", "selected_trial_id", "artifact_id", "fact_digest"],
         "properties": {
-          "state": { "type": "string", "enum": ["NOT_PUBLISHED", "PENDING_APPROVAL", "WRITTEN"] },
+          "state": { "type": "string", "enum": ["NOT_PUBLISHED", "PENDING_APPROVAL", "WRITTEN", "REJECTED"] },
           "approval_id": { "type": "string", "minLength": 1, "maxLength": 191 },
+          "approval_status": { "type": "string", "enum": ["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"] },
+          "approval_version": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
           "run_id": { "$ref": "#/components/schemas/RunId" },
           "selected_trial_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] },
           "artifact_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] },
           "fact_digest": { "$ref": "#/components/schemas/Digest" }
+        }
+      },
+      "AlphaVersionPublicationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema_version", "alpha_version_id", "availability", "reason_code", "publication", "as_of_utc_ms"],
+        "properties": {
+          "schema_version": { "const": "research.alpha-version-publication.v1" },
+          "alpha_version_id": { "$ref": "#/components/schemas/AlphaVersionId" },
+          "availability": { "type": "string", "enum": ["AVAILABLE", "NOT_PUBLISHED"] },
+          "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/Reason" }, { "type": "null" }] },
+          "publication": { "anyOf": [{ "$ref": "#/components/schemas/PublicationResponse" }, { "type": "null" }] },
+          "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMs" }
         }
       },
       "Problem": {

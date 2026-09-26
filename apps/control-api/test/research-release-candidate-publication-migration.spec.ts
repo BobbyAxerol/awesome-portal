@@ -28,14 +28,17 @@ describe("P22 disposable PostgreSQL publication migration", () => {
       const result = await database.query(`SELECT
         to_regclass('research.p22_promotion_pick_receipts_v1') IS NOT NULL AS pick_receipt,
         to_regclass('research.p22_run_read_model_bridges_v1') IS NOT NULL AS bridge,
+        to_regclass('research.p22_approval_settlements_v1') IS NOT NULL AS settlement,
         has_table_privilege('portal_research_runtime', 'research.p22_promotion_pick_receipts_v1', 'SELECT') AS pick_read,
         has_table_privilege('portal_research_runtime', 'research.p22_promotion_pick_receipts_v1', 'INSERT') AS pick_insert,
         has_table_privilege('portal_research_runtime', 'research.attempt_promotion_pick_facts_v1', 'INSERT') AS p19_insert,
+        has_table_privilege('portal_research_runtime', 'research.p22_approval_settlements_v1', 'SELECT') AS settlement_read,
+        has_table_privilege('portal_research_runtime', 'research.p22_approval_settlements_v1', 'INSERT') AS settlement_insert,
         has_function_privilege('portal_research_runtime', 'research.p22_record_promotion_pick(text,text,text,text,text,text,text,text,jsonb,text,text,text,text,text,text,text)', 'EXECUTE') AS writer_execute,
         EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'p22_record_promotion_pick') AS writer_exists`);
       expect(result.rows[0]).toEqual({
-        pick_receipt: true, bridge: true, pick_read: true, pick_insert: false,
-        p19_insert: false, writer_execute: true, writer_exists: true,
+        pick_receipt: true, bridge: true, settlement: true, pick_read: true, pick_insert: false,
+        p19_insert: false, settlement_read: true, settlement_insert: false, writer_execute: true, writer_exists: true,
       });
     } finally { await database.end(); }
   });

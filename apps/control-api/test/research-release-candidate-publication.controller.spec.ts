@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { ResearchAlphaVersionPublicationController } from "../src/research/alpha-version-publication.controller";
 import { ResearchReleaseCandidatePublicationController } from "../src/research/release-candidate-publication.controller";
 
 const rcId = `rc_${"0".repeat(26)}`;
@@ -39,5 +40,20 @@ describe("P22 same-origin publication controller", () => {
     await expect(controller.publication(request as never, reply() as never, "wrong/id", {})).rejects.toMatchObject({ status: 400 });
     await expect(controller.publication(request as never, reply() as never, rcId, { workspace_id: "foreign" })).rejects.toMatchObject({ status: 404 });
     expect(service.publication).not.toHaveBeenCalled();
+  });
+
+  it("OL-13 publishes one member-scoped alpha-version lookup and typed absence", async () => {
+    const service = { alphaVersionPublication: vi.fn().mockResolvedValue({ availability: "NOT_PUBLISHED" }) };
+    const workspaces = { isMember: vi.fn().mockResolvedValue(true) };
+    const controller = new ResearchAlphaVersionPublicationController(service as never, workspaces as never);
+    const response = reply();
+    await expect(controller.publication(request as never, response as never, "av_p22", {}))
+      .resolves.toEqual({ availability: "NOT_PUBLISHED" });
+    expect(response.header).toHaveBeenCalledWith("cache-control", "private, no-store");
+    expect(service.alphaVersionPublication).toHaveBeenCalledWith(
+      { workspaceId: "ws_p22", actorUserId: user.userId }, user, "av_p22",
+    );
+    await expect(controller.publication(request as never, reply() as never, "bad/id", {}))
+      .rejects.toMatchObject({ status: 400 });
   });
 });

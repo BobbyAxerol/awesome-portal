@@ -9,8 +9,10 @@ import { GovernanceError, GovernanceService } from "../governance/governance.ser
 import type { ResearchScope } from "./contracts";
 import { canonicalResearchJson } from "./preflight.service";
 import {
+  ResearchAlphaVersionPublicationResponseSchema,
   ResearchReleaseCandidateApprovalMirrorSchema,
   ResearchReleaseCandidatePublicationResponseSchema,
+  type ResearchAlphaVersionPublicationResponse,
   type ResearchReleaseCandidatePublicationResponse,
   type ResearchReleaseCandidatePublishRequest,
 } from "./release-candidate-publication.contract";
@@ -79,7 +81,7 @@ export class ResearchReleaseCandidatePublicationService {
     const canRetry = (intent.state === "PENDING" || intent.state === "UNKNOWN")
       && intent.actorUserId === user.userId && relation === "CURRENT" && sourceMatches && ready.blocked === null;
     const mirror = intent.state === "DELIVERED"
-      ? await this.readMirror(scope, user, intent)
+      ? await this.readMirror(scope, user, intent, relation)
       : { state: "NOT_PUBLISHED" as const, approval: null };
     const published = intent.state === "DELIVERED" && intent.approvalId && intent.receiptDigest && intent.publishedAtUtcMs !== null
       ? { by_user_id: intent.actorUserId, by_username: intent.actorUsername, approval_id: intent.approvalId,
@@ -96,6 +98,30 @@ export class ResearchReleaseCandidatePublicationService {
       id, ready: { ...ready, relation }, state: intent.state, mayPublish: canRetry, blocked,
       published, approvalRead: mirror.state, approval: mirror.approval, replayed: false, intent,
     });
+  }
+
+  /** OL-13 named read for S01/S02; absence is typed and no candidate scan reaches the browser. */
+  async alphaVersionPublication(
+    scope: ResearchScope, user: PortalUser, alphaVersionId: string,
+  ): Promise<ResearchAlphaVersionPublicationResponse> {
+    this.actor(scope, user);
+    const releaseCandidateId = await this.repository.latestDeliveredByAlphaVersion(scope, alphaVersionId);
+    const response = releaseCandidateId === null
+      ? {
+          schema_version: "research.alpha-version-publication.v1" as const,
+          alpha_version_id: alphaVersionId, availability: "NOT_PUBLISHED" as const,
+          reason_code: "P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED",
+          publication: null, as_of_utc_ms: Date.now(),
+        }
+      : {
+          schema_version: "research.alpha-version-publication.v1" as const,
+          alpha_version_id: alphaVersionId, availability: "AVAILABLE" as const,
+          reason_code: null, publication: await this.publication(scope, user, releaseCandidateId),
+          as_of_utc_ms: Date.now(),
+        };
+    const parsed = ResearchAlphaVersionPublicationResponseSchema.safeParse(response);
+    if (!parsed.success) this.unavailable();
+    return parsed.data;
   }
 
   async publish(
@@ -328,7 +354,7 @@ export class ResearchReleaseCandidatePublicationService {
     };
   }
 
-  private async readMirror(scope: ResearchScope, user: PortalUser, intent: PublicationIntent) {
+  private async readMirror(scope: ResearchScope, user: PortalUser, intent: PublicationIntent, relation: Relation) {
     if (!intent.approvalId || !intent.evidenceSetHash) return { state: "UNAVAILABLE" as const, approval: null };
     try {
       const result = await this.governance.detail(user, scope.workspaceId, intent.approvalId);
@@ -351,6 +377,23 @@ export class ResearchReleaseCandidatePublicationService {
           limitation_id: item.limitation_id, kind: item.kind, label: item.label,
           statement: item.statement, expires_at: item.expires_at,
         })) : [];
+      const decisions = Array.isArray(data?.decisions)
+        ? data.decisions.map(record).filter((item): item is Record<string, unknown> => item !== null)
+        : [];
+      const decisionOutcomes = decisions
+        .map((item) => ({ actor: record(item.actor), outcome: item.outcome }))
+        .filter((item) => item.actor && typeof item.actor.user_id === "string" && typeof item.outcome === "string")
+        .map((item) => ({ actor_user_id: item.actor!.user_id as string, outcome: item.outcome as string }));
+      const conditionCount = decisions.reduce((count, item) =>
+        count + (Array.isArray(item.conditions) ? item.conditions.length : 0), 0);
+      const rawPool = Array.isArray(data?.assignee_pool) ? data.assignee_pool : approval.assignee_pool;
+      const assigneePoolPublished = Array.isArray(rawPool);
+      const assigneePool = assigneePoolPublished
+        ? rawPool.map(record).filter((item): item is Record<string, unknown> => item !== null)
+            .filter((item) => typeof item.user_id === "string" && typeof item.username === "string" && typeof item.role === "string")
+            .map((item) => ({ user_id: item.user_id as string, username: item.username as string, role: item.role as string }))
+        : [];
+      const readAtUtcMs = Date.parse(String(result.read_at));
       const mirror = {
         approval_id: approval.approval_id, gate: "R1", status: approval.status,
         subject_id: approval.subject_id, requester_user_id: requester.user_id,
@@ -358,37 +401,20 @@ export class ResearchReleaseCandidatePublicationService {
         sla_due_at: approval.sla_due_at, expires_at: approval.expires_at,
         created_at: approval.created_at, read_at: result.read_at, conditions,
         href: "/governance/approvals/" + intent.approvalId + "/r1",
+        assignee_pool_availability: assigneePoolPublished
+          ? { state: "AVAILABLE", reason_code: null }
+          : { state: "NOT_PUBLISHED", reason_code: "P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED" },
+        ...(assigneePoolPublished ? { assignee_pool: assigneePool } : {}),
         ...(typeof approval.subject_label === "string" ? { subject_label: approval.subject_label } : {}),
         ...(typeof approval.status === "string" ? { effective_status: approval.status } : {}),
         ...(Number.isSafeInteger(approval.quorum_required) && Number.isSafeInteger(approval.quorum_met)
           ? { quorum: { required: approval.quorum_required, met: approval.quorum_met } } : {}),
         ...(Number.isSafeInteger(approval.approval_version) ? { approval_version: approval.approval_version } : {}),
         ...(Number.isSafeInteger(approval.blocker_count) ? { blocker_count: approval.blocker_count } : {}),
-        ...(Number.isSafeInteger(approval.condition_count) ? { condition_count: approval.condition_count } : {}),
-        ...(() => {
-          const pool = Array.isArray(data?.assignee_pool) ? data.assignee_pool : approval.assignee_pool;
-          const assignee_pool = Array.isArray(pool)
-            ? pool.map(record).filter((item): item is Record<string, unknown> => item !== null)
-                .filter((item) => typeof item.user_id === "string" && typeof item.username === "string" && typeof item.role === "string")
-                .map((item) => ({ user_id: item.user_id as string, username: item.username as string, role: item.role as string }))
-            : [];
-          return assignee_pool.length > 0 ? { assignee_pool } : {};
-        })(),
-        ...(() => {
-          const outcomes = Array.isArray(data?.decision_outcomes) ? data.decision_outcomes : [];
-          const decision_outcomes = outcomes.map(record)
-            .filter((item): item is Record<string, unknown> => item !== null)
-            .filter((item) => typeof item.actor_user_id === "string" && typeof item.outcome === "string")
-            .map((item) => ({ actor_user_id: item.actor_user_id as string, outcome: item.outcome as string }));
-          return decision_outcomes.length > 0 ? { decision_outcomes } : {};
-        })(),
-        ...(() => {
-          const quorum = record(data?.quorum) ?? record(approval.quorum);
-          return quorum && Number.isSafeInteger(quorum.required) && Number.isSafeInteger(quorum.met)
-            ? { quorum: { required: Number(quorum.required), met: Number(quorum.met) } } : {};
-        })(),
-        ...(typeof data?.rc_superseded === "boolean" ? { rc_superseded: data.rc_superseded } : {}),
-        as_of_utc_ms: Date.now(),
+        condition_count: Math.min(conditionCount, 256),
+        ...(decisionOutcomes.length > 0 ? { decision_outcomes: decisionOutcomes } : {}),
+        rc_superseded: relation === "SUPERSEDED",
+        as_of_utc_ms: Number.isFinite(readAtUtcMs) ? readAtUtcMs : Date.now(),
       };
       const parsed = ResearchReleaseCandidateApprovalMirrorSchema.safeParse(mirror);
       return parsed.success
@@ -426,7 +452,8 @@ export class ResearchReleaseCandidatePublicationService {
       claim_candidates: input.ready.source.eligible_methodology_claim_ids,
       promotion_pick: input.intent?.promotionPick ? {
         state: input.intent.promotionPick.state, approval_id: input.intent.promotionPick.approvalId,
-        run_id: input.intent.promotionPick.runId, selected_trial_id: input.intent.promotionPick.selectedTrialId,
+        approval_status: input.intent.promotionPick.approvalStatus,
+        approval_version: input.intent.promotionPick.approvalVersion, run_id: input.intent.promotionPick.runId, selected_trial_id: input.intent.promotionPick.selectedTrialId,
         artifact_id: input.intent.promotionPick.artifactId, fact_digest: input.intent.promotionPick.factDigest,
       } : null,
     };

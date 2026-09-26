@@ -1916,6 +1916,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/research/alpha-versions/:alphaVersionId/publication",
+   "controller": "research/alpha-version-publication.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "OL-13 named member-scoped lookup for the latest delivered Release Candidate publication of one Alpha version. Typed NOT_PUBLISHED absence; private/no-store; the browser never scans candidates.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "POST /api/v1/research/release-candidates/:releaseCandidateId/publish",
    "controller": "research/release-candidate-publication.controller.ts",
    "interaction_class": "PORTAL_MUTATION",
