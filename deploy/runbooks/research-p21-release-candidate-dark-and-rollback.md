@@ -60,9 +60,46 @@ change-control rules still apply.
    command/result class and regression test reference. No credential, source
    relation, raw artifact path, cursor or business payload belongs in a ticket.
 
-## P22 exclusion
+## P22 publication intake (separate flag)
 
-P21 local seal does not authorize P22. A future P22 change requires its own
-compatible Governance contract, idempotency/reconciliation evidence and
-separate owner approval. Never flip a UI label from `SEALED_LOCAL` to
-`PUBLISHED` by configuration or manual SQL.
+P22 publication has its own flag, dark by default:
+
+```dotenv
+CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION=false
+```
+
+- It requires `CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATES=true`; the
+  Control API refuses to start otherwise.
+- **On:** a sealed, current candidate may record one actor-bound publish intent
+  and call the unchanged R1 create service (`POST
+  /api/v1/research/release-candidates/{rc}/publish`).
+- **Off:** no NEW intent is recorded and nothing downstream is contacted (no
+  RunSync refresh, no Governance read or create). The publication read answers
+  `may_publish=false`, `blocked_reason=P22_PUBLICATION_INTAKE_DISABLED`; the
+  P21 compose action says the same. Compose, draft, local seal, the pack read,
+  the publication read / R1 mirror, and the replay of an intent already
+  recorded as `PENDING`/`UNKNOWN` (reconciliation by its original actor) keep
+  running, so turning intake off never strands an outcome.
+
+### Admission
+
+1. Only after the P21 admission above and a real final-audit run whose RunSync
+   read model exists (P22 README, audit B8), in a non-production cell.
+2. Set the flag through the normal profile/release workflow; confirm the
+   publication read of one sealed test candidate returns `may_publish=true`
+   only when the source is `AVAILABLE`.
+3. One controlled publish: record the RC id, approval id, receipt digest and
+   R1 evidence-set hash only. `DELIVERED` is a receipt, not an approval.
+
+### Rollback
+
+1. Set `CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION=false`.
+   Leave the P21 flag as it is unless P21 itself must stop.
+2. Do not delete publication intents, receipts, P21 packs or R1 approvals, and
+   never revoke an approval as a rollback shortcut.
+3. For an intent left `UNKNOWN`, its original actor may retry from Screen 11
+   (same request, same key); the flag does not block that replay.
+
+Never flip a UI label from `SEALED_LOCAL` to `PUBLISHED` by configuration or
+manual SQL: Screen 11 prints `PUBLISHED` only from the server's delivered
+publication facts.

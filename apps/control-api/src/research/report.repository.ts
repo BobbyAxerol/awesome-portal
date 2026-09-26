@@ -10,6 +10,7 @@ import { CONTROL_API_POOL } from "../tokens";
 import { canonicalResearchJson } from "./preflight.service";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchReportError } from "./report.error";
+import type { ReportAuditRelation } from "./report-core-v2";
 import {
   ResearchReportFrozenCoreSchema,
   type ResearchReportExportFormat,
@@ -226,6 +227,34 @@ export class ResearchReportRepository {
         [scope.workspaceId, runId],
       );
       return result.rowCount === 1 ? this.toStored(result.rows[0]!) : null;
+    });
+  }
+
+  /**
+   * X2 · P18-T10 · the run's own P19 lineage row and its READY-or-not
+   * AUDIT_OF_SELECTION children (bounded). Metadata only; null for an
+   * unknown run, so the report says the relation was not read.
+   */
+  async auditRelation(scope: ResearchScope, runId: string): Promise<ReportAuditRelation | null> {
+    return this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
+      await this.requireMembership(client, scope);
+      const run = await client.query<{ relationship_kind: string; parent_run_id: string | null }>(
+        `SELECT relationship_kind, parent_run_id FROM research.runs WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, runId],
+      );
+      if (run.rowCount !== 1) return null;
+      const children = await client.query<{ run_id: string; state: string }>(
+        `SELECT run_id, state FROM research.runs
+          WHERE workspace_id = $1 AND parent_run_id = $2 AND relationship_kind = 'AUDIT_OF_SELECTION'
+          ORDER BY created_at ASC, run_id ASC
+          LIMIT 16`,
+        [scope.workspaceId, runId],
+      );
+      return {
+        relationshipKind: run.rows[0]!.relationship_kind,
+        parentRunId: run.rows[0]!.parent_run_id,
+        auditChildren: children.rows.map((row) => ({ runId: row.run_id, state: row.state })),
+      };
     });
   }
 

@@ -1,5 +1,7 @@
 # P17 backend and contract packet — route-aware current-source replay
 
+> **Current status 2026-09-26 (Claude, owner ≤P21):** A09/P17-B delivered by W5b ([record](./W5B_REPLAY_CLAUDE_2026-09-25.md)): signal-notional replay ledger, child audit, Reveal, T17 at 32 folds; CG-P17-01…03 answered. Remaining: P04 hub replay fixtures ([audit](../AUDIT_P15_P23_CLAUDE_2026-09-26.md) B6). The text below is the original packet.
+
 Status: **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE; feature-dark.** This packet
 closes the safe, installed-source compatibility slice of P17. It does **not**
 claim a complete execution replay, order/fill/trade/position/event ledger,

@@ -361,7 +361,7 @@ export function AsOf({ at, source, basis }: { at: number; source: string; basis?
  * run, screen and the whole cursor. Nothing is minted; the HiFi's
  * `✓ evidence link copied` for 1.6 s.
  */
-export function CopyEvidenceLink() {
+export function CopyEvidenceLink({ href }: { href?: string } = {}) {
   const [copied, setCopied] = useState<"idle" | "done" | "failed">("idle");
   useEffect(() => {
     if (copied === "idle") return;
@@ -374,14 +374,16 @@ export function CopyEvidenceLink() {
       className="mono rounded-[6px] border bg-transparent px-3 py-[3px] text-[10px] uppercase tracking-[.06em] [line-height:normal]"
       style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
       data-action="copy-evidence-link"
+      data-copy-href={href}
       onClick={() => {
-        const href = window.location.href;
+        /* X2 (T16): a screen may hand the exact link it means; else this address. */
+        const link = href ?? window.location.href;
         const clipboard = typeof navigator !== "undefined" ? navigator.clipboard : undefined;
         if (!clipboard) {
           setCopied("failed");
           return;
         }
-        clipboard.writeText(href).then(
+        clipboard.writeText(link).then(
           () => setCopied("done"),
           () => setCopied("failed"),
         );

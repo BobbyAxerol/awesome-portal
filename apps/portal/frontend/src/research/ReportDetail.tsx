@@ -36,6 +36,7 @@ import {
   REPORT_WITHHELD_WORDS,
   STAGE_CHECK_WORDS,
   STAGE_LABEL,
+  coreFailed,
   coreV2,
   exportDownloadHref,
   exportPending,
@@ -55,6 +56,7 @@ import { releaseCandidateHref } from "./releaseCandidateClient";
 import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
+import { FailedSheet, FinalAuditBlock } from "./ReportFailedSheet";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -249,7 +251,7 @@ const SHEET_CSS = `
 .rr-lbl.fold { top: 2px; margin-left: 3px; font-size: 8px; }
 .rr-eq-legend { position: absolute; top: 0; right: 8px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; font-size: 9.5px; }
 .rr-eq-legend .sw { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; background: var(--role-oos); }
-.rr-eq-legend [data-legend="is"] { opacity: .6; }
+.rr-eq-legend [data-legend="is"] { color: var(--ink-soft); }
 .rr-eq-legend [data-legend="is"] .sw { background: none; border: 1px dashed var(--ink-faint); }
 .rr-dd-mark { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--bad); transform: translate(-50%, -50%); }
 .rr-dd-marklbl { position: absolute; color: var(--bad); font-size: 8.5px; white-space: nowrap; transform: translate(-50%, calc(-100% - 5px)); }
@@ -307,11 +309,24 @@ const SHEET_CSS = `
   .rr-id { grid-template-columns: auto minmax(0, 1fr); }
   .rr-head { flex-wrap: nowrap; }
   .rr-head-text { flex: 1 1 0; }
-  .rr-idrow, .rr-chainrow, .rr-pp { flex-direction: row; }
+  .rr-idrow, .rr-pp { flex-direction: row; }
   .rr-idcard { flex: 1.15 1 0; }
   .rr-headline, .rr-pp > section { flex: 1 1 0; }
-  .rr-chainrow > [data-panel="stages"] { flex: 1.1 1 0; }
-  .rr-chainrow > [data-panel="artifacts"] { flex: 1 1 0; }
+  /* X2 · F6 (Letter/A4 re-run): a scroll box cannot fragment across pages, so
+     a long fold table jumped whole to the next page and left its header alone
+     over a blank page. On paper the table flows, and its thead repeats. */
+  .rr-scroll { overflow: visible; }
+  /* The shared print sheet keeps every table whole (styles/print.css); this
+     sheet's tables are rows of facts that must flow (spec 09 §3: break-inside
+     avoid-ROW, thead repeat) — so only a row is kept whole here. */
+  .rr-page table.rr-table { break-inside: auto; }
+  .rr-block > .b { display: block; }
+  .rr-block > .b > * + * { margin-top: 6px; }
+  /* Stage checks and artifacts print as two full-width blocks (spec 09 §2.8/§2.9
+     order): side by side on paper, the artifact column broke every digest and
+     the shorter column left an empty frame across the page break. */
+  .rr-chainrow { flex-direction: column; }
+  .rr-chainrow > * { flex: 1 1 auto; }
   .rr-pp > [data-panel="provenance"] { border-left: 1px solid var(--line-soft); padding-left: 16px; border-top: 0; padding-top: 0; }
 }
 `;
@@ -452,14 +467,15 @@ function NoPrintBar({
 
 function Header({ runId, report }: { runId: string; report: ReportDetail | null }) {
   const v2 = report ? coreV2(report.frozen_core) : null;
-  const title = v2?.title.text ?? REPORT_TITLE;
+  const failed = report ? coreFailed(report.frozen_core) : null;
+  const title = v2?.title.text ?? failed?.title.text ?? REPORT_TITLE;
   return (
     <header className="rr-head rr-keep" data-panel="header">
       <div className="rr-head-text" data-head-text>
         <div className="rr-kicker">Quant Ecosystem Portal · Backtest Evidence Report</div>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           {/* The module header above owns the page's one h1. */}
-          <h2 className="rr-title" data-report-title data-title-source={v2?.title.text ? "report" : "generic"}>
+          <h2 className="rr-title" data-report-title data-title-source={v2?.title.text || failed?.title.text ? "report" : "generic"}>
             {title}
           </h2>
           <span className="rr-runchip rr-long" data-run-chip>
@@ -479,7 +495,7 @@ function Header({ runId, report }: { runId: string; report: ReportDetail | null 
           not published
         </div>
         <div className="rr-reason" data-reason-code>
-          {v2 ? v2.certification.reason_code : "not a field of the report contract"}
+          {v2 ? v2.certification.reason_code : failed ? "no claim — the run did not complete" : "not a field of the report contract"}
         </div>
       </div>
     </header>
@@ -573,7 +589,7 @@ function HeadlineRow({ core }: { core: FrozenCore }) {
 function Metrics({ core }: { core: FrozenCore }) {
   return (
     <Block panel="metrics" title="metrics — as the sealed Evidence Hub published them">
-      <div className="rr-scroll">
+      <div className="rr-scroll" tabIndex={0} role="region" aria-label="metrics table — scrolls sideways">
         <table className="rr-table">
           <thead>
             <tr>
@@ -806,7 +822,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
   const worst = published ? folds.rows.filter((row) => row.verdict === "DRAG").map((row) => row.fold_id) : [];
   return (
     <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
-      <div className="rr-scroll">
+      <div className="rr-scroll" tabIndex={0} role="region" aria-label="per-fold verdict table — scrolls sideways">
         <table className="rr-table" data-folds-state={folds.state} data-fold-columns="8">
           <thead>
             <tr>
@@ -829,7 +845,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
                     {row.test_start_utc_ms !== null ? iso(row.test_start_utc_ms) : "no start published"} →{" "}
                     {row.test_last_bar_utc_ms !== null ? iso(row.test_last_bar_utc_ms) : "no end published"}
                   </td>
-                  <td className="rr-long" data-fold-params>
+                  <td className={folds.params_handoff.scope === "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" ? undefined : "rr-long"} data-fold-params>
                     {row.params.text !== null ? (
                       <span title={row.params.text}>{folds.params_handoff.scope === "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" ? "global selection" : row.params.text}</span>
                     ) : (
@@ -877,7 +893,7 @@ function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule:
   const published = folds.state === "AVAILABLE";
   return (
     <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
-      <div className="rr-scroll">
+      <div className="rr-scroll" tabIndex={0} role="region" aria-label="per-fold verdict table — scrolls sideways">
         <table className="rr-table" data-folds-state={folds.state}>
           <thead>
             <tr>
@@ -1251,7 +1267,9 @@ export interface ReportScreenProps {
 
 export function ReportScreen({ runId, cursor, controller, exporter }: ReportScreenProps) {
   const { report, state } = controller;
-  const core = report?.frozen_core ?? null;
+  /* X2 · spec 09 T06: a failed run's sheet has no claim blocks; it is drawn by its own component. */
+  const failed = report ? coreFailed(report.frozen_core) : null;
+  const core = report && !failed ? (report.frozen_core as FrozenCore) : null;
 
   return (
     <div className="rr-page" data-screen="run-report" data-run={runId} data-report-state={state.state} data-report-revision={report?.report_revision ?? ""}>
@@ -1259,7 +1277,9 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
       <NoPrintBar runId={runId} cursor={cursor} report={report} exporter={exporter} />
       <article className="rr-sheet" aria-label="Run report sheet">
         <Header runId={runId} report={report} />
-        {report && core ? (
+        {report && failed ? (
+          <FailedSheet core={failed} runId={runId} seriesUnavailable={SERIES_UNAVAILABLE} />
+        ) : report && core ? (
           <>
             {state.state !== "available" ? <ReportNotice controller={controller} minBodyHeight={0} /> : null}
             <Passport core={core} />
@@ -1274,6 +1294,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
               <StageChain core={core} />
               <Artifacts core={core} />
             </div>
+            {coreV2(core)?.final_audit ? <FinalAuditBlock audit={coreV2(core)!.final_audit!} /> : null}
             <Warnings core={core} />
             <div className="rr-pp rr-keep" data-promotion-provenance>
               <Promotion core={core} runId={runId} />
@@ -1285,7 +1306,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
         )}
         <Footer runId={runId} report={report} />
       </article>
-      {report && core ? (
+      {report && (core || failed) ? (
         <div className="rr-screen no-print">
           <Exports report={report} exporter={exporter} />
           <AnnotationBlock report={report} />

@@ -131,6 +131,7 @@ function subject(value: ReleaseCandidateSource, draftValue: ReleaseCandidateDraf
     snapshot: vi.fn().mockResolvedValue(value),
     draft: vi.fn().mockResolvedValue(draftValue),
     latestPack: vi.fn().mockResolvedValue(null),
+    publicationContext: vi.fn().mockResolvedValue({ current: null, predecessor: null }),
     readPack: vi.fn(), patchDraft: vi.fn(), seal: vi.fn(),
   };
   return { repository, service: new ResearchReleaseCandidateService(repository as never, { FEATURE_RESEARCH_RELEASE_CANDIDATES: "true" } as never) };

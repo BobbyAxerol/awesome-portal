@@ -13,6 +13,8 @@ import { z } from "zod";
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { WhatIfSchema } from "./whatif.contract";
 import { FoldOrderingSchema } from "./fold-ordering";
+import { DeclaredSpaceSchema, SearchSurfaceSchema } from "./current-source-surface";
+import { ParameterAuthoritySchema, Stage4BindingSchema } from "./stage4-binding";
 
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -695,6 +697,13 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
       dedupe: ResearchCurrentSourceFactSchema,
     }).strict(),
   }).strict(),
+  /**
+   * X2 · B3: the declared space this run searched (the historical binding of
+   * its retained lane profile) with θ*'s DR-02 placement, and the Screen-06
+   * trial surface derived on the server from every retained trial.
+   */
+  declared_space: DeclaredSpaceSchema,
+  surface: SearchSurfaceSchema,
 }).strict();
 
 export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
@@ -729,6 +738,12 @@ export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
    * out-of-sample generation child checked against the frozen selection.
    */
   fold_ordering: FoldOrderingSchema,
+  /** X2 · B3: the declared range and DR-02 warning of each frozen θ* value. */
+  declared_space: DeclaredSpaceSchema,
+  /** X2 · B4 · CG-P16-02: sealed vs replayed params and bundle, decided on the server. */
+  stage4_binding: Stage4BindingSchema,
+  /** X2 · B4 · CG-P16-03: which digest holds declared vs code-fixed values. */
+  parameter_authority: ParameterAuthoritySchema,
 }).strict();
 
 export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({

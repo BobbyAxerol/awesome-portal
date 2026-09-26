@@ -27,6 +27,7 @@ import {
 import { ResearchFreezeError } from "./freeze.error";
 import { ResearchSplitError } from "./split.error";
 import { ResearchSplitRepository, type SplitHubRow } from "./split.repository";
+import { fixedStage4Binding, parameterAuthority } from "./stage4-binding";
 
 type AvailabilityState =
   | "AVAILABLE"
@@ -390,7 +391,27 @@ export class ResearchFreezeService {
         sibling_draft: noSibling,
       },
       artifact_bytes: bytes,
+      stage4_binding: this.stage4(checks, HISTORICAL_BINDING_NOT_REGISTERED),
+      parameter_authority: parameterAuthority({
+        names: Object.keys(binding?.parameterSpace ?? {}),
+        codeFixed: binding?.codeFixed,
+        adapterContractDigest: binding?.adapterContractDigest ?? null,
+      }),
     };
+  }
+
+  /** CG-P16-02 on the P04 lane: the two pairs its checks already compare, as the F4 rows. */
+  private stage4(checks: ReturnType<ResearchFreezeService["checks"]>, missingReason: string) {
+    const find = (key: string) => checks.find((check) => check.key === key);
+    const bundle = find("P04_FIXED_PARAMETER_BUNDLE");
+    const adapter = find("P04_ADAPTER_CONTRACT");
+    return fixedStage4Binding({
+      expectedBundleDigest: bundle?.expected_digest ?? null,
+      observedBundleDigest: bundle?.observed_digest ?? null,
+      expectedAdapterDigest: adapter?.expected_digest ?? null,
+      observedAdapterDigest: adapter?.observed_digest ?? null,
+      missingReason,
+    });
   }
 
   private checks(
@@ -503,6 +524,12 @@ export class ResearchFreezeService {
         sibling_draft: unavailable,
       },
       artifact_bytes: bytes,
+      stage4_binding: this.stage4([], unavailable.reason_code),
+      parameter_authority: parameterAuthority({
+        names: [],
+        codeFixed: this.bindings.byAdapterDigest(row.adapterContractDigest)?.codeFixed,
+        adapterContractDigest: row.adapterContractDigest,
+      }),
     };
   }
 

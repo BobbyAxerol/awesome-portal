@@ -491,9 +491,9 @@ describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P
     ]);
     const chip = document.querySelector("[data-rc]") as HTMLElement;
     expect(chip.textContent).toBe("rc_2026_08_c · APPROVED");
-    /* W5c: Screen 11 exists (P21), so the chip is the hi-fi's <a> into it. */
+    /* W5c/X1: Screen 11 exists (P21); a sealed pack's chip opens that pack's own read-only route. */
     expect(chip.tagName).toBe("A");
-    expect(chip.getAttribute("href")).toMatch(/^\/research\/quantbt\/runs\/[^/]+\/release-candidate#pack=rc_2026_08_c$/);
+    expect(chip.getAttribute("href")).toBe("/research/quantbt/release-candidates/rc_2026_08_c");
     expect(chip.getAttribute("data-phase")).toBe("P21");
     expect(chip.getAttribute("title")).toContain("sealed rc from this run's params · approved");
     expect(chip.getAttribute("title")).toContain("open its sealed pack on Screen 11");

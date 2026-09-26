@@ -99,6 +99,7 @@ function subject(sourceValue = source(), draftValue: ReleaseCandidateDraft | nul
     snapshot: vi.fn().mockResolvedValue(sourceValue),
     draft: vi.fn().mockResolvedValue(draftValue),
     latestPack: vi.fn().mockResolvedValue(null),
+    publicationContext: vi.fn().mockResolvedValue({ current: null, predecessor: null }),
     readPack: vi.fn(),
     patchDraft: vi.fn(),
     seal: vi.fn(async (_scope, _runId, _input, build) => {
@@ -127,8 +128,9 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     expect(result.actions).toMatchObject({ may_seal: true, publish: { enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED" } });
     expect(result.published_comparison).toEqual({
       last_release_candidate_id: null,
-      availability: { state: "NOT_PUBLISHED", reason_code: "P22_PUBLISHED_COMPARISON_NOT_COMMISSIONED" },
+      availability: { state: "NOT_PUBLISHED", reason_code: "P22_NO_PUBLISHED_PREDECESSOR" },
     });
+    expect(result.source_absences.approval_mirror).toEqual({ state: "NOT_PUBLISHED", reason_code: "P22_LOCAL_SEAL_REQUIRED" });
     expect(result.certification_axes).toEqual({
       methodology_claim: { value: "A", availability: { state: "AVAILABLE", reason_code: null } },
       engine_execution_contract: {
@@ -252,6 +254,78 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
       REPRODUCIBILITY_PARITY_CHECKSUMS: `${run}/freeze`,
       PROPOSED_USE_RESTRICTIONS: null,
     });
+  });
+
+  it("B2 prints what P22 recorded: publish affordance, approval-mirror absence and intake flag", async () => {
+    const sourceValue = source();
+    const fingerprint = releaseCandidateSourceFingerprint(sourceValue);
+    const draft = persistedDraft({ sourceFingerprint: fingerprint });
+    const sealedPack = storedPack({ sourceFingerprint: fingerprint });
+    const cases: Array<[string, Record<string, unknown>, ReturnType<typeof storedPack> | null, { current: unknown; predecessor: null }, unknown, unknown]> = [
+      ["unsealed", {}, null, { current: null, predecessor: null },
+        { enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED" }, { state: "NOT_PUBLISHED", reason_code: "P22_LOCAL_SEAL_REQUIRED" }],
+      ["sealed, intake dark", {}, sealedPack, { current: null, predecessor: null },
+        { enabled: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" }, { state: "NOT_PUBLISHED", reason_code: "P22_NOT_PUBLISHED" }],
+      ["sealed, intake open", { FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true" }, sealedPack, { current: null, predecessor: null },
+        { enabled: true, blocked_reason: null }, { state: "NOT_PUBLISHED", reason_code: "P22_NOT_PUBLISHED" }],
+      ["unknown outcome reconciles with intake dark", {}, sealedPack, { current: { releaseCandidateId, state: "UNKNOWN" }, predecessor: null },
+        { enabled: true, blocked_reason: null }, { state: "NOT_PUBLISHED", reason_code: "P22_PUBLICATION_OUTCOME_UNKNOWN" }],
+      ["pending", {}, sealedPack, { current: { releaseCandidateId, state: "PENDING" }, predecessor: null },
+        { enabled: true, blocked_reason: null }, { state: "NOT_PUBLISHED", reason_code: "P22_PUBLICATION_PENDING" }],
+      ["refused", { FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true" }, sealedPack, { current: { releaseCandidateId, state: "REFUSED" }, predecessor: null },
+        { enabled: false, blocked_reason: "P22_PUBLICATION_REFUSED" }, { state: "NOT_PUBLISHED", reason_code: "P22_PUBLICATION_REFUSED" }],
+      ["delivered", { FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true" }, storedPack({ sourceFingerprint: fingerprint, deliveryState: "DELIVERED", approvalState: "PENDING" }),
+        { current: { releaseCandidateId, state: "DELIVERED" }, predecessor: null },
+        { enabled: false, blocked_reason: "P22_ALREADY_DELIVERED" }, { state: "NOT_APPLICABLE", reason_code: "P22_MIRROR_READ_ON_PUBLICATION_ROUTE" }],
+      ["another rc's intent is not this candidate's", {}, sealedPack, { current: { releaseCandidateId: `rc_${"9".repeat(26)}`, state: "DELIVERED" }, predecessor: null },
+        { enabled: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" }, { state: "NOT_PUBLISHED", reason_code: "P22_NOT_PUBLISHED" }],
+    ];
+    for (const [label, flags, pack, context, publish, mirror] of cases) {
+      const { repository } = subject(sourceValue, draft);
+      repository.latestPack.mockResolvedValue(pack);
+      repository.publicationContext.mockResolvedValue(context);
+      const service = new ResearchReleaseCandidateService(repository as never, { FEATURE_RESEARCH_RELEASE_CANDIDATES: "true", ...flags } as never);
+      const result = await service.detail(scope, sourceValue.runId);
+      expect(result.actions.publish, label).toEqual(publish);
+      expect(result.source_absences.approval_mirror, label).toEqual(mirror);
+      expect(repository.publicationContext, label).toHaveBeenCalledWith(scope, {
+        alphaId: "alpha-p21", releaseCandidateId: pack?.releaseCandidateId ?? null,
+      });
+    }
+  });
+
+  it("B2 compares by digest with the last published candidate of the same Alpha", async () => {
+    const sourceValue = source();
+    const draft = persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(sourceValue) });
+    const baseline = await subject(sourceValue, draft).service.detail(scope, sourceValue.runId);
+    const value = (key: string) => baseline.fields.find((field) => field.key === key)!.value;
+    const previous = `rc_${"2".repeat(26)}`;
+    const same = {
+      alpha_code_digest: value("alpha_code_digest"), alpha_entrypoint: value("alpha_entrypoint"),
+      parameter_bundle_digest: value("parameter_bundle_digest"), dataset_binding_digest: value("dataset_binding_digest"),
+    };
+    const run = async (fields: Record<string, string | null>) => {
+      const { service, repository } = subject(sourceValue, draft);
+      repository.publicationContext.mockResolvedValue({
+        current: null, predecessor: { releaseCandidateId: previous, alphaVersionId: "av-p20", publishedAtUtcMs: 1_789_000_000_000, fields },
+      });
+      return service.detail(scope, sourceValue.runId);
+    };
+
+    const unchanged = await run(same);
+    expect(unchanged.published_comparison).toEqual({ last_release_candidate_id: previous, availability: { state: "AVAILABLE", reason_code: null } });
+    expect(unchanged.taxonomy.map((row) => row.state)).toEqual(["UNCHANGED", "UNCHANGED", "UNCHANGED", "UNSET"]);
+    expect(unchanged.gate_verdict).toEqual(baseline.gate_verdict);
+
+    const changed = await run({ ...same, parameter_bundle_digest: "f".repeat(64) });
+    expect(changed.taxonomy.map((row) => row.state)).toEqual(["UNCHANGED", "CHANGED", "UNCHANGED", "UNSET"]);
+    expect(changed.taxonomy[1]!.consequence).toBe("R1 + R2 re-run — numerical artifact changed");
+    expect(changed.gate_verdict.title).toBe("R1 + R2 must run — selected params changed");
+    expect(changed.gate_verdict.body).toContain(previous);
+
+    const unpinned = await run({ ...same, dataset_binding_digest: null });
+    expect(unpinned.taxonomy[2]).toMatchObject({ state: "UNSET" });
+    expect(unpinned.gate_verdict).toEqual(baseline.gate_verdict);
   });
 
   it("fails closed while the separately admitted P21 feature is dark", async () => {

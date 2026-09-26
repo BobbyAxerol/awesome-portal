@@ -21,8 +21,10 @@ import {
   P04_DELTA_ADAPTER_CONTRACT_DIGEST,
   P04_DELTA_DECLARED_CONTRACT,
   P04_DELTA_FIXED_PARAMETERS,
+  P04_DELTA_PROTECTED_KERNEL_SHA256,
+  P04_DELTA_SPECIFICATION_SHA256,
 } from "./p04-delta.binding";
-import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_DIGEST } from "./delta-wfo.profile";
+import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_DIGEST, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
 import { boundWarning, positionPercent, type BoundWarning } from "./bound-warning";
 
 export interface DeclaredRange {
@@ -42,7 +44,37 @@ export interface HistoricalParameterBinding {
   fixedBundleDigest: string;
   /** Release that first installed this binding (provenance only). */
   installedInRelease: string;
+  /** CG-P16-03: where values the code fixes (not declared, not swept) are hashed. */
+  codeFixed?: CodeFixedBinding;
 }
+
+/**
+ * CG-P16-03 · code-fixed parameters and their hash scope (guide §6.6).
+ *
+ * A value the strategy code fixes is not a declared parameter: it is not in
+ * the θ (params) digest, it is covered by the code digest that the adapter
+ * contract digest binds. `values` lists such values only when a
+ * machine-readable source publishes them; the Delta kernel publishes none
+ * (its fixed choices live in the protected source), so the list is a typed
+ * absence and the hash scope is still exact.
+ */
+export interface CodeFixedBinding {
+  state: "AVAILABLE" | "NOT_PUBLISHED";
+  reasonCode: string | null;
+  values: ReadonlyArray<{ name: string; value: string }>;
+  /** sha256 of the protected strategy source (inside the adapter contract digest). */
+  codeDigest: string;
+  /** sha256 of the strategy specification (inside the adapter contract digest). */
+  specificationDigest: string;
+}
+
+const DELTA_CODE_FIXED: CodeFixedBinding = Object.freeze({
+  state: "NOT_PUBLISHED" as const,
+  reasonCode: "P04_DELTA_KERNEL_PUBLISHES_NO_CODE_FIXED_VALUE_LIST",
+  values: Object.freeze([]),
+  codeDigest: P04_DELTA_PROTECTED_KERNEL_SHA256,
+  specificationDigest: P04_DELTA_SPECIFICATION_SHA256,
+});
 
 export interface HistoricalProfileBinding {
   profileId: string;
@@ -51,6 +83,13 @@ export interface HistoricalProfileBinding {
   /** Declared space the WFO study searched, from the bound adapter contract. */
   parameterSpace: Readonly<Record<string, DeclaredRange>>;
   installedInRelease: string;
+  /**
+   * RS-02 lane profiles a seal of this P10 profile is retained under. The
+   * ingest refuses a seal unless the producer carries exactly this profile
+   * digest, so a retained lane profile names its binding exactly.
+   */
+  retainedLaneProfileIds?: readonly string[];
+  codeFixed?: CodeFixedBinding;
 }
 
 function canonicalJson(value: unknown): string {
@@ -79,6 +118,7 @@ const P04_V1: HistoricalParameterBinding = Object.freeze({
   fixedParameters: P04_DELTA_FIXED_PARAMETERS,
   fixedBundleDigest: bundleDigest(P04_DELTA_FIXED_PARAMETERS),
   installedInRelease: "research-loop-v1.1/P10",
+  codeFixed: DELTA_CODE_FIXED,
 });
 
 const WFO_V1: HistoricalProfileBinding = Object.freeze({
@@ -87,6 +127,8 @@ const WFO_V1: HistoricalProfileBinding = Object.freeze({
   adapterContractDigest: DELTA_WFO_PROFILE.adapter_contract_digest,
   parameterSpace: P04_DELTA_DECLARED_CONTRACT.parameter_space,
   installedInRelease: "research-loop-v1.1/W1",
+  retainedLaneProfileIds: Object.freeze([RS02_SIGNAL_NOTIONAL_PROFILE_ID]),
+  codeFixed: DELTA_CODE_FIXED,
 });
 
 /**
@@ -125,6 +167,15 @@ export class ResearchParameterBindingRegistry {
   /** The WFO profile binding for a run's exact profile digest, or null. */
   byProfileDigest(digest: string | null | undefined): HistoricalProfileBinding | null {
     return digest ? this.profiles.get(digest) ?? null : null;
+  }
+
+  /** X2 · B3: the binding a retained RS-02 lane profile was sealed under, or null. */
+  byRetainedLaneProfile(profileId: string | null | undefined): HistoricalProfileBinding | null {
+    if (!profileId) return null;
+    for (const binding of this.profiles.values()) {
+      if ((binding.retainedLaneProfileIds ?? []).includes(profileId)) return binding;
+    }
+    return null;
   }
 }
 

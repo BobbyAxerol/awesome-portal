@@ -434,6 +434,8 @@ export interface components {
                 scoring_backend: string | null;
                 availability: components["schemas"]["Availability"];
             };
+            declared_space?: components["schemas"]["DeclaredSpace"];
+            surface?: components["schemas"]["SearchSurface"];
         };
         ArtifactByteMismatch: {
             /** @enum {unknown} */
@@ -644,6 +646,219 @@ export interface components {
             };
             folds: components["schemas"]["FoldOrderingRow"][];
         };
+        /** @description DR-02 research.bound-warning.v1: one relative definition shared by Search S06 and Freeze S07. Reference space is the declared range; AT_BOUND at <=6% or >=94%, NEAR_BOUND at <=18% or >=82% (inclusive, exact decimal); NOT_APPLICABLE with a typed reason for zero-width, categorical or out-of-declaration values. A display diagnostic, never a gate and never a claim that the value is not an optimum. */
+        BoundWarning: {
+            /** @constant */
+            definition_id: "research.bound-warning.v1";
+            /** @constant */
+            copy_version: "research.bound-warning-copy.v1";
+            /** @constant */
+            reference_space: "DECLARED_RANGE";
+            /** @enum {unknown} */
+            state: "AT_BOUND" | "NEAR_BOUND" | "INTERIOR" | "NOT_APPLICABLE";
+            side: ("LOWER" | "UPPER") | null;
+            reason_code: string | null;
+        };
+        /** @description One declared numeric parameter of the historical binding with the sealed θ* value, its exact levels, its server placement and the DR-02 warning. Declared values are inside the params digest (CG-P16-03). */
+        DeclaredSpaceParameter: {
+            name: string;
+            /** @constant */
+            kind: "NUMERIC";
+            minimum: string;
+            maximum: string;
+            step: string;
+            levels: number | null;
+            value: string;
+            position_percent: number;
+            bound_warning: components["schemas"]["BoundWarning"];
+            /** @constant */
+            hash_scope: "PARAMS_DIGEST";
+        };
+        /** @description X2 · B3: the declared space a retained run searched — the A10b historical binding its retained lane profile was sealed under (never this build's constants). An unregistered lane is NOT_PUBLISHED P16_HISTORICAL_PARAMETER_BINDING_NOT_REGISTERED. */
+        DeclaredSpace: {
+            /** @constant */
+            schema_version: "research.current-source-declared-space.v1";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            binding: {
+                profile_id: string;
+                profile_digest: string;
+                adapter_contract_digest: string;
+                installed_in_release: string;
+            } | null;
+            parameters: components["schemas"]["DeclaredSpaceParameter"][];
+            grid_size: string | null;
+        };
+        /** @description One trial on the surface: every coordinate is the server's placement inside the declared range; objective_bucket is its quintile among complete trials; best_so_far is the running best in source order. */
+        SurfacePoint: {
+            trial_id: string;
+            source_ordinal: number;
+            /** @enum {unknown} */
+            state: "COMPLETE" | "PRUNED" | "FAIL" | "RUNNING" | "WAITING";
+            objective: string | null;
+            objective_bucket: number | null;
+            best_so_far: string | null;
+            selected: boolean;
+            best_is: boolean;
+            positions: {
+                [key: string]: number | null;
+            };
+        };
+        SurfaceBin: {
+            index: number;
+            lower: string;
+            upper: string;
+            count: number;
+            mean_objective: string | null;
+            shade_bucket: number | null;
+        };
+        SurfaceDistribution: {
+            name: string;
+            minimum: string;
+            maximum: string;
+            theta_value: string;
+            theta_position_percent: number;
+            regions_sampled: number;
+            bins: components["schemas"]["SurfaceBin"][];
+        };
+        /** @description X2 · B3 (spec 06 A2–A5, B4): the trial surface of a retained WFO run, derived on the server from every retained trial (<= 64 under RS-02, <= 600 points by rule; `sampling` names whether anything was left out). The browser draws coordinates only: placements, quintile ramp steps, 12-bin counts and means, the top-decile share at θ* and the Spearman |ρ| proxy (not fANOVA; NOT_APPLICABLE under 8 complete trials) are all published here. */
+        SearchSurface: {
+            /** @constant */
+            schema_version: "research.current-source-search-surface.v1";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            /** @enum {unknown} */
+            objective_kind: "IS_MEAN_SHARPE" | "NOT_PUBLISHED";
+            source_trial_count: number;
+            complete_trial_count: number;
+            emitted_point_count: number;
+            /** @constant */
+            point_limit: 600;
+            /** @enum {unknown} */
+            sampling: "ALL_RETAINED_TRIALS" | "STRIDE_KEEPING_SELECTED_AND_BEST_V1";
+            objective_ramp: {
+                /** @constant */
+                rule: "QUINTILE_THRESHOLDS_OF_COMPLETE_TRIAL_OBJECTIVES_V1";
+                /** @constant */
+                steps: 5;
+                minimum: string | null;
+                maximum: string | null;
+            };
+            selected_trial_id: string | null;
+            best_is_trial_id: string | null;
+            axes: string[];
+            points: components["schemas"]["SurfacePoint"][];
+            distributions: {
+                /** @constant */
+                rule: "COMPLETE_TRIALS_BINNED_OVER_DECLARED_RANGE_V1";
+                /** @constant */
+                bins: 12;
+                parameters: components["schemas"]["SurfaceDistribution"][];
+            };
+            parameter_frequency: {
+                /** @constant */
+                rule: "TOP_DECILE_IS_TRIALS_AT_THETA_VALUE_V1";
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                pool_count: number;
+                parameters: {
+                    name: string;
+                    theta_value: string;
+                    matching: number;
+                    share_percent: number;
+                }[];
+            };
+            importance: {
+                /** @constant */
+                rule: "SPEARMAN_RANK_CORRELATION_PROXY_NOT_FANOVA_V1";
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_APPLICABLE";
+                reason_code: string | null;
+                /** @constant */
+                minimum_trials: 8;
+                parameters: {
+                    name: string;
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_APPLICABLE";
+                    reason_code: string | null;
+                    rho: string | null;
+                }[];
+            };
+            interactions: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                reason_code: string;
+            };
+        };
+        Stage4BindingRow: {
+            /** @enum {unknown} */
+            key: "SEALED_PARAMS" | "REPLAY_PARAMS" | "SEALED_BUNDLE" | "RUNTIME_BUNDLE";
+            /** @enum {unknown} */
+            label: "sealed params digest" | "params digest used by replay" | "sealed bundle digest" | "runtime bundle digest";
+            value: string | null;
+            /** @enum {unknown} */
+            identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1" | "QUANTBT_STRATEGY_FINGERPRINT_V1" | "SHA256_CANONICAL_PARAMETER_MAP_V1" | "P04_ADAPTER_CONTRACT_DIGEST_V1";
+            source_key: string;
+            folds: {
+                fold_id: string;
+                value: string | null;
+                audit_ordinal: number | null;
+                /** @enum {unknown} */
+                state: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
+                reason_code: string | null;
+            }[];
+            /** @enum {unknown} */
+            state: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
+            reason_code: string | null;
+        };
+        /** @description X2 · B4 · CG-P16-02 (HiFi 07 F4): sealed vs replayed params and sealed vs runtime bundle, compared on the server under a named identity rule per lane. RS-02: QuantBT candidate identity of the sealed θ* vs each fold's out-of-sample generation child, and the strategy fingerprint of the frozen candidate's selection-stage children vs the generation child's. P04: the registered fixed bundle and adapter digests vs what the P04 child executed (its P14 receipt and producer row). Any MISMATCH is DRIFT; a missing side is NOT_COMPARED with its reason, never a tick. */
+        Stage4Binding: {
+            /** @constant */
+            schema_version: "research.stage4-binding.v1";
+            /** @enum {unknown} */
+            lane: "RS02_RETAINED_CHILD_AUDIT" | "P04_FIXED_QUALIFICATION";
+            /** @enum {unknown} */
+            state: "BOUND" | "DRIFT" | "NOT_COMPARED";
+            reason_code: string | null;
+            sealed_params_sha256: string | null;
+            rows: components["schemas"]["Stage4BindingRow"][];
+            pairs: {
+                /** @enum {unknown} */
+                params: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
+                /** @enum {unknown} */
+                bundle: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
+            };
+        };
+        /** @description X2 · B4 · CG-P16-03 (guide §6.6): declared/swept/pinned values live in the params (θ) digest; values the code fixes are outside it and are covered by the protected code digest bound into the adapter contract digest. The Delta kernel publishes no machine-readable list of its fixed values, so `code_fixed.values` is a typed absence (P04_DELTA_KERNEL_PUBLISHES_NO_CODE_FIXED_VALUE_LIST) with the exact hash scope. */
+        ParameterAuthority: {
+            /** @constant */
+            schema_version: "research.parameter-authority.v1";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            declared: {
+                /** @constant */
+                hash_scope: "PARAMS_DIGEST";
+                names: string[];
+            };
+            code_fixed: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                values: {
+                    name: string;
+                    value: string;
+                }[];
+                /** @constant */
+                hash_scope: "ADAPTER_CONTRACT_DIGEST";
+                code_digest: string | null;
+                specification_digest: string | null;
+                adapter_contract_digest: string | null;
+            };
+        };
         /** @description The sealed θ* as Screen 07 reads it (not the Screen 06 selection roles). */
         FrozenSelection: {
             selected_trial_id: string | null;
@@ -673,6 +888,9 @@ export interface components {
             frozen_selection: components["schemas"]["FrozenSelection"];
             what_if: components["schemas"]["WhatIf"];
             fold_ordering: components["schemas"]["FoldOrdering"];
+            declared_space?: components["schemas"]["DeclaredSpace"];
+            stage4_binding?: components["schemas"]["Stage4Binding"];
+            parameter_authority?: components["schemas"]["ParameterAuthority"];
         };
         Observation: {
             source_ordinal: number;

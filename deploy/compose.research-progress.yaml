@@ -50,6 +50,11 @@ services:
       # Execution. Keep dark until its generated Screen-11 consumer and
       # focused backend acceptance are jointly accepted.
       FEATURE_RESEARCH_RELEASE_CANDIDATES: ${CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATES:-false}
+      # P22 publication intake: only a NEW publish intent to the existing R1
+      # create service is gated here. Compose, local seal, the publication
+      # read/R1 mirror and replay of an already recorded PENDING/UNKNOWN
+      # intent keep running when it is off. Requires the P21 flag above.
+      FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: ${CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION:-false}
       RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: ${CONTROL_API_RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS:-1500}
 
   # The worker owns source journalling and the private, at-least-once callback.

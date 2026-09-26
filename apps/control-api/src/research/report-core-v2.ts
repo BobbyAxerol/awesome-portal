@@ -19,7 +19,8 @@ import type {
   ResearchCurrentSourceSearchResponse,
   ResearchCurrentSourceSplitResponse,
 } from "./current-source.contract";
-import type { ResearchReportFrozenCoreV2 } from "./report.contract";
+import type { ResearchReportFinalAudit, ResearchReportFrozenCoreFailed, ResearchReportFrozenCoreV2 } from "./report.contract";
+import type { ResearchProgressSnapshot } from "./progress.contract";
 import type { SealedArtifactParts } from "./report.repository";
 import { extremaPreservingSample } from "./run-library.service";
 
@@ -199,6 +200,207 @@ export function tableArtifacts(parts: SealedArtifactParts | null, expectedManife
       availability: single ? AVAILABLE : NOT_PUBLISHED("P18_MULTI_PART_TABLE_HAS_NO_SINGLE_PART_DIGEST"),
     };
   });
+}
+
+/* ------------------------------------------------ X2 · P18-T10 final audit */
+
+/** The run's own lineage row (P19): its relationship and any AUDIT_OF_SELECTION child. */
+export interface ReportAuditRelation {
+  relationshipKind: string;
+  parentRunId: string | null;
+  auditChildren: ReadonlyArray<{ runId: string; state: string }>;
+}
+
+const FINAL_AUDIT_NOT_READ = "P18_RUN_LINEAGE_RELATION_NOT_READ";
+
+function linkedChild(relation: ReportAuditRelation, runId: string, target: ResearchReportFinalAudit["audit_target_kind"]): ResearchReportFinalAudit | null {
+  if (relation.relationshipKind === "AUDIT_OF_SELECTION") {
+    return {
+      schema_version: "research.report-final-audit.v1", kind: "LINKED_CHILD", reason_code: null, audit_target_kind: target,
+      final_audit_run_id: runId, audited_run_id: relation.parentRunId, relationship: "AUDIT_OF_SELECTION",
+      optimizer_reinvoked: false, optimizer_basis: "AUDIT_OF_SELECTION_RUNS_THE_PINNED_SELECTION",
+      source_refs: [{ key: "lineage.relationship", ref: `AUDIT_OF_SELECTION of ${relation.parentRunId ?? "unknown"}` }], folds: [],
+    };
+  }
+  const ready = relation.auditChildren.filter((child) => child.state === "READY");
+  if (ready.length === 0) return null;
+  const child = ready[ready.length - 1]!;
+  return {
+    schema_version: "research.report-final-audit.v1", kind: "LINKED_CHILD", reason_code: null, audit_target_kind: target,
+    final_audit_run_id: child.runId, audited_run_id: runId, relationship: "AUDIT_OF_SELECTION",
+    optimizer_reinvoked: false, optimizer_basis: "AUDIT_OF_SELECTION_RUNS_THE_PINNED_SELECTION",
+    source_refs: [{ key: "lineage.audit_child", ref: `${child.runId} · READY · AUDIT_OF_SELECTION` }], folds: [],
+  };
+}
+
+/**
+ * WFO lane: the run is its own final audit unless the lineage names a READY
+ * AUDIT_OF_SELECTION child. Reuse is proven per fold by QuantBT's child
+ * audit: the out-of-sample generation child ran the frozen candidate
+ * (P16-T11), so no second optimisation produced the reported path.
+ */
+export function retainedFinalAudit(
+  runId: string,
+  relation: ReportAuditRelation | null,
+  freeze: ResearchCurrentSourceFreezeResponse,
+  search: ResearchCurrentSourceSearchResponse,
+  replay: ResearchCurrentSourceReplayResponse,
+): ResearchReportFinalAudit {
+  if (relation === null) {
+    return {
+      schema_version: "research.report-final-audit.v1", kind: "NOT_PUBLISHED", reason_code: FINAL_AUDIT_NOT_READ, audit_target_kind: "SINGLE_PARAMETER_SET",
+      final_audit_run_id: null, audited_run_id: null, relationship: null, optimizer_reinvoked: null, optimizer_basis: null, source_refs: [], folds: [],
+    };
+  }
+  const linked = linkedChild(relation, runId, "SINGLE_PARAMETER_SET");
+  if (linked) return linked;
+  const ordering = (freeze as { fold_ordering?: { frozen_candidate: { candidate_id: string | null }; folds: Array<{ fold_id: string; oos_generation_child: { state: ResearchReportFinalAudit["folds"][number]["state"]; audit_ordinal: number | null; candidate_id: string | null } }> } }).fold_ordering;
+  const folds = (ordering?.folds ?? []).map((fold) => ({
+    fold_id: fold.fold_id,
+    audit_ordinal: fold.oos_generation_child.audit_ordinal,
+    candidate_id: fold.oos_generation_child.candidate_id,
+    state: fold.oos_generation_child.state,
+  }));
+  const allMatch = folds.length > 0 && folds.every((fold) => fold.state === "MATCH");
+  const anyMismatch = folds.some((fold) => fold.state === "MISMATCH");
+  return {
+    schema_version: "research.report-final-audit.v1",
+    kind: "REUSED_ORIGINAL",
+    reason_code: null,
+    audit_target_kind: "SINGLE_PARAMETER_SET",
+    final_audit_run_id: runId,
+    audited_run_id: runId,
+    relationship: "PRIMARY",
+    optimizer_reinvoked: allMatch ? false : anyMismatch ? true : null,
+    optimizer_basis: allMatch
+      ? "EVERY_OOS_GENERATION_CHILD_RAN_THE_FROZEN_CANDIDATE"
+      : anyMismatch ? "AN_OOS_GENERATION_CHILD_RAN_ANOTHER_CANDIDATE" : "QUANTBT_CHILD_AUDIT_NOT_RETAINED_FOR_EVERY_FOLD",
+    source_refs: [
+      { key: "selection", ref: `${search.revision} · trial ${search.selection.selected_trial_id ?? "none"}` },
+      { key: "frozen_candidate", ref: `QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1 ${ordering?.frozen_candidate.candidate_id ?? "not computable"}` },
+      { key: "freeze", ref: freeze.revision },
+      { key: "replay", ref: replay.revision },
+    ],
+    folds,
+  };
+}
+
+/** P04 lane: the fixed qualification child is its own audit; it runs no optimizer by construction. */
+export function fixedFinalAudit(runId: string, relation: ReportAuditRelation | null, revisions: { split: string; replay: string; freeze: string }): ResearchReportFinalAudit {
+  if (relation === null) {
+    return {
+      schema_version: "research.report-final-audit.v1", kind: "NOT_PUBLISHED", reason_code: FINAL_AUDIT_NOT_READ, audit_target_kind: "FIXED_PARAMETER_PROFILE",
+      final_audit_run_id: null, audited_run_id: null, relationship: null, optimizer_reinvoked: null, optimizer_basis: null, source_refs: [], folds: [],
+    };
+  }
+  const linked = linkedChild(relation, runId, "FIXED_PARAMETER_PROFILE");
+  if (linked) return linked;
+  return {
+    schema_version: "research.report-final-audit.v1",
+    kind: "REUSED_ORIGINAL",
+    reason_code: null,
+    audit_target_kind: "FIXED_PARAMETER_PROFILE",
+    final_audit_run_id: runId,
+    audited_run_id: runId,
+    relationship: "PRIMARY",
+    optimizer_reinvoked: false,
+    optimizer_basis: "P04_FIXED_PROFILE_RUNS_NO_OPTIMIZER",
+    source_refs: [
+      { key: "p14.split_receipt", ref: revisions.split },
+      { key: "p16.freeze", ref: revisions.freeze },
+      { key: "p17.replay", ref: revisions.replay },
+    ],
+    folds: [],
+  };
+}
+
+/* ------------------------------------------ X2 · spec 09 T06 failed-run core */
+
+const STAGE_LABELS: Record<string, string> = {
+  S1: "S1 Split", S2: "S2 Search", S3: "S3 Freeze", S4: "S4 Execute", S5: "S5 Claim", SEAL: "the seal",
+};
+
+export interface FailedReads {
+  hub: Hub | null;
+  snapshot: ResearchProgressSnapshot;
+  failure: { code: string; message: string | null };
+  terminalSequence: number;
+  failedAtUtcMs: number;
+}
+
+/**
+ * The failed-run sheet: no claim, sealed from the terminal snapshot P11
+ * persisted with `run_failed`. The failing stage is the one the snapshot
+ * shows RUNNING (else the first not DONE; SEAL when all five finished).
+ */
+export function failedCore(reads: FailedReads): ResearchReportFrozenCoreFailed {
+  const { hub, snapshot, failure } = reads;
+  const cancelled = failure.code === "USER_CANCELLED";
+  const running = snapshot.stages.find((stage) => stage.state === "RUNNING");
+  const pending = snapshot.stages.find((stage) => stage.state !== "DONE");
+  const failed = (running ?? pending)?.key ?? "SEAL";
+  const failedIndex = failed === "SEAL" ? 5 : snapshot.stages.findIndex((stage) => stage.key === failed);
+  const label = STAGE_LABELS[failed] ?? failed;
+  const verb = cancelled ? "cancelled" : "failed";
+  const ids = hub ? hubIdentity(hub) : null;
+  const data = hub?.core.data;
+  const missing = NOT_PUBLISHED("P18_RUN_IDENTITY_NOT_PUBLISHED");
+  const optimizationFact = ids ? optimization(ids.mode, ids.schedule) : { value: null, availability: missing };
+  const message = failure.message && failure.message.length > 0 && failure.message.length <= 256 ? failure.message : null;
+  return {
+    schema_version: "research.report-failed-core.v1",
+    report_source: "P11_TERMINAL_FAILURE",
+    outcome: {
+      state: cancelled ? "CANCELLED" : "FAILED",
+      failed_stage: failed as ResearchReportFrozenCoreFailed["outcome"]["failed_stage"],
+      failed_stage_label: label,
+      headline: `no claim — run ${verb} at ${label}`,
+      failure_code: failure.code.slice(0, 160),
+      failure_message: message,
+      failed_at_utc_ms: reads.failedAtUtcMs,
+      terminal_sequence: reads.terminalSequence,
+    },
+    title: title(ids?.strategyName ?? null, data?.symbol ?? null, data?.timeframe ?? null),
+    identity: [
+      identity("run_id", "Run ID", snapshot.run_id, AVAILABLE, "P18_RUN_ID_NOT_PUBLISHED"),
+      ids?.alpha ?? identity("alpha", "Alpha", null, missing, "P18_ALPHA_BINDING_NOT_PUBLISHED"),
+      ids?.alphaVersion ?? identity("alpha_version", "Alpha version", null, missing, "P18_ALPHA_BINDING_NOT_PUBLISHED"),
+      ids?.binding ?? identity("binding", "Binding", null, missing, "P18_ALPHA_BINDING_NOT_PUBLISHED"),
+      ids?.strategy ?? identity("strategy", "Strategy", null, missing, "P18_ALPHA_BINDING_NOT_PUBLISHED"),
+      identity("dataset_id", "Dataset", data?.dataset_id ?? null, hub ? AVAILABLE : missing, "P18_DATASET_NOT_PUBLISHED"),
+      identity("symbol", "Symbol", data?.symbol ?? null, hub ? AVAILABLE : missing, "P18_SYMBOL_NOT_PUBLISHED"),
+      identity("timeframe", "Timeframe", data?.timeframe ?? null, hub ? AVAILABLE : missing, "P18_TIMEFRAME_NOT_PUBLISHED"),
+      identity("route", "Route", ids?.route.value ?? null, ids?.route.availability ?? missing, "P18_ROUTE_NOT_PUBLISHED"),
+      identity("optimization", "Optimization", optimizationFact.value, optimizationFact.availability, "P18_OPTIMIZATION_NOT_PUBLISHED"),
+      identity("random_seed", "Seed", ids?.seed.value ?? null, ids?.seed.availability ?? missing, "P18_SEED_NOT_PUBLISHED"),
+      identity("config_digest", "Config digest", ids?.configDigest.value ?? null, ids?.configDigest.availability ?? missing, "P18_CONFIG_DIGEST_NOT_PUBLISHED"),
+      identity("attempt_id", "Attempt", snapshot.attempt_id, AVAILABLE, "P18_ATTEMPT_NOT_PUBLISHED"),
+    ],
+    stages: snapshot.stages.map((stage, index) => ({
+      key: stage.key,
+      state: stage.state,
+      started_at_utc_ms: stage.started_at_utc_ms,
+      completed_at_utc_ms: stage.completed_at_utc_ms,
+      check: index < failedIndex
+        ? check("NOT_PUBLISHED", "stage finished; no check was sealed because the run ended before its evidence was sealed", "p11.progress.stages", NOT_PUBLISHED("P18_FAILED_RUN_SEALS_NO_STAGE_CHECK"))
+        : index === failedIndex
+          ? check("FAIL", `run ${verb} here — ${failure.code.slice(0, 160)}${message ? `: ${message}` : ""}`.slice(0, 512), "p11.progress.run_failed", AVAILABLE)
+          : check("NOT_APPLICABLE", null, null, NOT_APPLICABLE("P18_RUN_ENDED_BEFORE_THIS_STAGE")),
+    })),
+    artifacts: snapshot.artifacts.map((artifact) => ({ name: artifact.name, state: artifact.state, size: artifact.size, digest: artifact.digest })),
+    mandatory_bundle: snapshot.readiness.mandatory,
+    equity: { state: "NOT_PUBLISHED", availability: NOT_PUBLISHED(cancelled ? "P18_CANCELLED_RUN_HAS_NO_EQUITY_TO_REPORT" : "P18_FAILED_RUN_HAS_NO_EQUITY_TO_REPORT") },
+    promotion: {
+      state: "NOT_PUBLISHED",
+      line: `No rc_ can be composed from a ${verb} run — fix the cause and submit a new attempt.`,
+      availability: NOT_PUBLISHED("P18_FAILED_RUN_IS_NOT_PROMOTABLE"),
+    },
+    provenance: {
+      line: `P18 failed-run sheet sealed from the P11 terminal snapshot (sequence ${reads.terminalSequence}); it states the failure and reports no metric.`,
+      read_model_revision: "research.report-read-model.v2",
+      source: "P11_TERMINAL_PROGRESS_SNAPSHOT",
+    },
+  };
 }
 
 export interface RetainedReads {

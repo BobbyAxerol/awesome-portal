@@ -1,37 +1,53 @@
 /**
- * Screen 11 Release Candidate routes (P21).
+ * Screen 11 Release Candidate routes (P21 + P22).
  *
  *  - `/research/quantbt/runs/:runId/release-candidate` — the composition for
  *    one run: identity, the 12-row evidence pack, the record preview, the two
- *    declarations, the local seal and (P22) publish plus the R1 mirror.
+ *    declarations, the local seal, and (P22) publish plus the R1 mirror, both
+ *    from the publication read of the run's sealed candidate. A W5c deep link
+ *    `#pack=rc_…` forwards to the pack route.
  *  - `/research/quantbt/release-candidates/:releaseCandidateId` — a sealed
- *    pack, read-only (VD-P21-09).
+ *    pack, read-only (VD-P21-09), with its publication and mirror read-only.
  *
  * Keying each container on its path id makes another run, or another pack, a
  * fresh read with fresh write state: a refusal or a typed declaration never
  * carries from one identity to the next.
  */
 
-import { useParams } from "react-router-dom";
+import { useRef } from "react";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 
 import { ReleaseCandidateScreen } from "./ReleaseCandidateDetail";
+import { packFromHash, releaseCandidatePackHref } from "./releaseCandidateClient";
 import { useReleaseCandidate, useReleaseCandidatePack } from "./useReleaseCandidate";
-import { useReleaseCandidateMirror } from "./useReleaseCandidateMirror";
+import { useReleaseCandidatePublication } from "./useReleaseCandidatePublication";
 
 function ComposeContainer({ runId }: { runId: string }) {
-  const controller = useReleaseCandidate(runId);
-  /* P22: the R1 mirror poll runs only while the composition says PUBLISHED. */
-  const mirror = useReleaseCandidateMirror({ compose: controller.compose, writesLocked: controller.writesLocked });
-  return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} mirror={mirror} />;
+  /* One writer for the screen: a save, a seal and a publish never overlap. */
+  const writer = useRef(false);
+  const controller = useReleaseCandidate(runId, { writer });
+  const sealed = controller.compose?.local_seal.state === "SEALED_LOCAL" ? controller.compose.local_seal.release_candidate_id : null;
+  const publication = useReleaseCandidatePublication(sealed, {
+    writer,
+    writesLocked: controller.writesLocked,
+    onDenied: controller.lock,
+    onSettled: controller.retry,
+  });
+  return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} publication={publication} />;
 }
 
 function PackContainer({ releaseCandidateId }: { releaseCandidateId: string }) {
   const controller = useReleaseCandidatePack(releaseCandidateId);
-  return <ReleaseCandidateScreen mode="pack" releaseCandidateId={releaseCandidateId} controller={controller} />;
+  /* Read-only here: the publication and its mirror are printed, never operated. */
+  const publication = useReleaseCandidatePublication(controller.pack ? releaseCandidateId : null);
+  return <ReleaseCandidateScreen mode="pack" releaseCandidateId={releaseCandidateId} controller={controller} publication={publication} />;
 }
 
 export function ReleaseCandidateRoute() {
   const { runId = "" } = useParams();
+  const { hash } = useLocation();
+  const pack = packFromHash(hash);
+  if (pack) return <Navigate to={releaseCandidatePackHref(pack)} replace />;
   return <ComposeContainer key={runId} runId={runId} />;
 }
 

@@ -1,6 +1,8 @@
 /**
  * Screen 11's containers — one composition read, two reader-triggered writes,
- * and one read of a sealed pack.
+ * and one read of a sealed pack. P22 publication lives in
+ * `useReleaseCandidatePublication`; the two hooks share one writer guard so
+ * no two writes of this screen ever overlap.
  *
  * The composition is persisted research: it is read once per run, never
  * polled, never refetched on focus or on a re-render. It is read again only
@@ -9,13 +11,13 @@
  *
  * The two writes follow spec 11 §3:
  *
- *  - they fire from a click and nothing else, and cannot overlap each other
+ *  - they fire from a (confirmed) click and nothing else, and cannot overlap
  *    (a synchronous ref guard, so a burst of clicks sends one request);
  *  - they carry the fences the composition in hand returned — the draft
  *    revision and the source fingerprint — never a value the browser made;
  *  - `409` re-reads the composition and reports the conflict; the text the
  *    reader typed is the screen's and is never touched here;
- *  - `401`/`403`/`404` lock both writes for the life of this screen: asking
+ *  - `401`/`403`/`404` lock every write for the life of this screen: asking
  *    again cannot change the answer, and nothing retries on its own;
  *  - `503` or a request that never arrived keeps the composition and the
  *    draft; the reader may try again;
@@ -25,49 +27,31 @@
  * screen renders the server's `local_seal`, not a state the browser assumed.
  * A second `201` naming the same identity is the idempotent replay the
  * contract promises, and is reported as such.
- *
- * P22 adds two more writes under the same guard and the same lock:
- *
- *  - publish sends the pack digest of the local seal in hand as its fence and,
- *    only when the server lists several mirrored claims, the one the reader
- *    chose from that list. `201`/`200` (`DELIVERED`) and `202` (`UNKNOWN`) are
- *    both kept as sent and followed by a re-read: `state`, `publication` and
- *    `mirror` are the server's, never an optimistic `PUBLISHED`;
- *  - reconcile replays the stored request; it fires only while the server
- *    says `publication.reconcile_allowed`.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 
 import {
   composeState,
   packState,
   releaseCandidateApi,
-  toRcPublishRefusal,
   toRcRefusal,
   toRcWriteRefusal,
   type RcCompose,
   type RcPack,
-  type RcPublicationResponse,
-  type RcPublishRequest,
   type RcRefusal,
   type RcSealResponse,
   type RcWriteRefusal,
 } from "./releaseCandidateClient";
 import { researchState, type ResearchState } from "./state";
 
-export type RcWriteOp = "patch" | "seal" | "publish" | "reconcile";
-export type RcPublicationOp = "publish" | "reconcile";
+export type RcWriteOp = "patch" | "seal";
 
 export type RcWriteSlot =
   | { state: "idle" }
   | { state: "pending"; op: RcWriteOp }
   | { state: "saved"; op: "patch" }
   | { state: "sealed"; op: "seal"; seal: RcSealResponse; replayed: boolean }
-  /** `DELIVERED` (201 new, 200 replay/reconcile), kept as sent. */
-  | { state: "published"; op: RcPublicationOp; answer: RcPublicationResponse }
-  /** `202`: the governance store did not confirm; a success to reconcile. */
-  | { state: "unknown"; op: RcPublicationOp; answer: RcPublicationResponse }
   | { state: "refused"; op: RcWriteOp; refusal: RcWriteRefusal };
 
 export interface RcDeclarations {
@@ -83,7 +67,7 @@ export interface ReleaseCandidateController {
   /** Every composition read this controller has sent. */
   requestCount: number;
   write: RcWriteSlot;
-  /** True once a write was refused for access: both writes stay off. */
+  /** True once a write was refused for access: every write stays off. */
   writesLocked: boolean;
   /** The last seal the server answered, kept as sent. */
   lastSeal: RcSealResponse | null;
@@ -91,22 +75,17 @@ export interface ReleaseCandidateController {
   patchDraft: (declarations: RcDeclarations) => Promise<boolean>;
   /** Ask for the local seal of the persisted draft in hand. */
   seal: () => void;
-  /** The last publish/reconcile answer, kept as sent. */
-  lastPublication: RcPublicationResponse | null;
-  /**
-   * Publish the local seal in hand. `claimId` is sent only when the server
-   * lists more than one mirrored claim, and only if it is one of them.
-   */
-  publish: (claimId: string | null) => void;
-  /** Replay the stored publication request (server-admitted actor only). */
-  reconcile: () => void;
-  /** Whether a safe, exact publication request is available for replay. */
-  canReconcile: boolean;
   /** Read the composition again. */
   retry: () => void;
+  /** A write elsewhere on this screen was refused for access: lock every write. */
+  lock: () => void;
 }
 
-export function useReleaseCandidate(runId: string, workspaceId?: string): ReleaseCandidateController {
+/** One writer per screen: the compose writes and the publish write share it. */
+export type RcWriter = MutableRefObject<boolean>;
+
+export function useReleaseCandidate(runId: string, options: { workspaceId?: string; writer?: RcWriter } = {}): ReleaseCandidateController {
+  const { workspaceId } = options;
   const [compose, setCompose] = useState<RcCompose | null>(null);
   const [refusal, setRefusal] = useState<RcRefusal | null>(null);
   const [inFlight, setInFlight] = useState(true);
@@ -115,14 +94,13 @@ export function useReleaseCandidate(runId: string, workspaceId?: string): Releas
   const [write, setWrite] = useState<RcWriteSlot>({ state: "idle" });
   const [writesLocked, setWritesLocked] = useState(false);
   const [lastSeal, setLastSeal] = useState<RcSealResponse | null>(null);
-  const [lastPublication, setLastPublication] = useState<RcPublicationResponse | null>(null);
 
   const sequence = useRef(0);
-  const writing = useRef(false);
+  const ownWriter = useRef(false);
+  const writing = options.writer ?? ownWriter;
   const composeRef = useRef<RcCompose | null>(null);
   composeRef.current = compose;
   const lastSealRef = useRef<RcSealResponse | null>(null);
-  const lastPublishRequestRef = useRef<RcPublishRequest | null>(null);
   const lockedRef = useRef(false);
   const mounted = useRef(true);
 
@@ -161,16 +139,21 @@ export function useReleaseCandidate(runId: string, workspaceId?: string): Releas
 
   const reread = useCallback(() => setGeneration((n) => n + 1), []);
 
-  const refuse = useCallback((op: RcWriteOp, error: unknown) => {
-    const next = op === "publish" || op === "reconcile" ? toRcPublishRefusal(error) : toRcWriteRefusal(error);
-    if (next.outcome === "denied") {
-      lockedRef.current = true;
-      setWritesLocked(true);
-    }
-    setWrite({ state: "refused", op, refusal: next });
-    /* The fence moved: read the composition the server holds now. */
-    if (next.outcome === "conflict") setGeneration((n) => n + 1);
+  const lock = useCallback(() => {
+    lockedRef.current = true;
+    setWritesLocked(true);
   }, []);
+
+  const refuse = useCallback(
+    (op: RcWriteOp, error: unknown) => {
+      const next = toRcWriteRefusal(error);
+      if (next.outcome === "denied") lock();
+      setWrite({ state: "refused", op, refusal: next });
+      /* The fence moved: read the composition the server holds now. */
+      if (next.outcome === "conflict") setGeneration((n) => n + 1);
+    },
+    [lock],
+  );
 
   const patchDraft = useCallback(
     async (declarations: RcDeclarations): Promise<boolean> => {
@@ -204,7 +187,7 @@ export function useReleaseCandidate(runId: string, workspaceId?: string): Releas
         writing.current = false;
       }
     },
-    [refuse, runId, workspaceId],
+    [refuse, runId, workspaceId, writing],
   );
 
   const seal = useCallback(() => {
@@ -241,101 +224,7 @@ export function useReleaseCandidate(runId: string, workspaceId?: string): Releas
       .finally(() => {
         writing.current = false;
       });
-  }, [refuse, runId, workspaceId]);
-
-  /** One settled publication answer: kept as sent, then the composition is re-read. */
-  const settle = useCallback((op: "publish" | "reconcile", answer: RcPublicationResponse) => {
-    setLastPublication(answer);
-    setWrite(
-      answer.publication_state === "UNKNOWN"
-        ? { state: "unknown", op, answer }
-        : { state: "published", op, answer },
-    );
-    /* `state`, `publication` and `mirror` are the server's to render. */
-    setGeneration((n) => n + 1);
-  }, []);
-
-  const publish = useCallback(
-    (claimId: string | null) => {
-      const held = composeRef.current;
-      if (!held || writing.current || lockedRef.current) return;
-      const action = held.actions.publish;
-      const releaseCandidateId = action.release_candidate_id;
-      const packDigest = held.local_seal.pack_digest;
-      if (!action.enabled || releaseCandidateId === null || packDigest === null) return;
-      const claims = held.publication.claim_candidates;
-      const choice = claims.length > 1 ? claimId : claims[0] ?? null;
-      if (choice === null || !claims.includes(choice)) return;
-      const request: RcPublishRequest = {
-        schema_version: "research.release-candidate-publish-request.v1",
-        expected_pack_digest: packDigest,
-        request_key: `portal-research:${releaseCandidateId}:${packDigest}`,
-        methodology_claim_id: choice,
-        summary: `Publish release candidate ${releaseCandidateId}`,
-      };
-      lastPublishRequestRef.current = request;
-      writing.current = true;
-      setWrite({ state: "pending", op: "publish" });
-      releaseCandidateApi
-        .publish(
-          releaseCandidateId,
-          request,
-          { workspaceId },
-        )
-        .then((answer) => {
-          if (mounted.current) settle("publish", answer);
-        })
-        .catch((error: unknown) => {
-          if (mounted.current) refuse("publish", error);
-        })
-        .finally(() => {
-          writing.current = false;
-        });
-    },
-    [refuse, settle, workspaceId],
-  );
-
-  const reconcile = useCallback(() => {
-    const held = composeRef.current;
-    if (!held || writing.current || lockedRef.current) return;
-    const releaseCandidateId = held.publication.release_candidate_id;
-    if (!held.publication.reconcile_allowed || releaseCandidateId === null) return;
-    const packDigest = held.local_seal.pack_digest;
-    const claims = held.publication.claim_candidates;
-    const request =
-      lastPublishRequestRef.current ??
-      (packDigest !== null && claims.length === 1
-        ? {
-            schema_version: "research.release-candidate-publish-request.v1" as const,
-            expected_pack_digest: packDigest,
-            request_key: `portal-research:${releaseCandidateId}:${packDigest}`,
-            methodology_claim_id: claims[0],
-            summary: `Publish release candidate ${releaseCandidateId}`,
-          }
-        : null);
-    if (request === null) return;
-    lastPublishRequestRef.current = request;
-    writing.current = true;
-    setWrite({ state: "pending", op: "reconcile" });
-    releaseCandidateApi
-      .reconcile(releaseCandidateId, { workspaceId, body: request })
-      .then((answer) => {
-        if (mounted.current) settle("reconcile", answer);
-      })
-      .catch((error: unknown) => {
-        if (mounted.current) refuse("reconcile", error);
-      })
-      .finally(() => {
-        writing.current = false;
-      });
-  }, [refuse, settle, workspaceId]);
-
-  const canReconcile = Boolean(
-    compose?.publication.reconcile_allowed &&
-      compose.publication.release_candidate_id !== null &&
-      (lastPublishRequestRef.current !== null ||
-        (compose.local_seal.pack_digest !== null && compose.publication.claim_candidates.length === 1)),
-  );
+  }, [refuse, runId, workspaceId, writing]);
 
   const keeps = refusal !== null && compose !== null && !refusal.terminal;
   const state: ResearchState = refusal
@@ -353,13 +242,10 @@ export function useReleaseCandidate(runId: string, workspaceId?: string): Releas
     write,
     writesLocked,
     lastSeal,
-    lastPublication,
     patchDraft,
     seal,
-    publish,
-    reconcile,
-    canReconcile,
     retry: reread,
+    lock,
   };
 }
 

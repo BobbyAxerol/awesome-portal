@@ -52,8 +52,9 @@
       "what": "long semantic-diff keys wrap mid-word ('optimization.effective_sc hedule')",
       "class": "other (display)",
       "owner": "Thanhvuong",
-      "state": "OPEN",
-      "evidence": "r2 shots full-660 / partial-660"
+      "state": "CLOSED",
+      "evidence": "r2 shots full-660 / partial-660",
+      "closed_by": "1906dd85 (breakablePath: wraps only after . and _)"
     },
     {
       "id": "S10-FIELD-DRIVEN-CELLS",
