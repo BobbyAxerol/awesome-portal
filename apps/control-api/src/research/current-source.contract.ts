@@ -532,6 +532,74 @@ const GuardFactSchema = z.object({
   reason_code: ReasonCodeSchema.nullable(),
 }).strict();
 
+/** E14 · 5.11: one crossing from a fold's test window into the next one's. */
+const BoundaryGapSchema = z.object({
+  previous_fold_id: FactTokenValueSchema.nullable(),
+  fold_id: FactTokenValueSchema.nullable(),
+  boundary_utc_ms: UtcMsSchema.nullable(),
+  next_test_start_utc_ms: UtcMsSchema.nullable(),
+  gap_bars: CountSchema.nullable(),
+  policy: FactTokenValueSchema.nullable(),
+}).strict();
+
+/**
+ * E14 · 5.11 — the boundary-integrity gap scan of the retained lane.
+ *
+ * QuantBT's own `account_execution_plan.boundary_events` measure the bars
+ * between one outer test window and the next; the seal keeps them verbatim
+ * (`summary.replay.fold_capital.boundary_events`). Nothing is recomputed from
+ * the fold plan: `expected_boundary_count` only states how many crossings the
+ * retained fold plan has, so a reader can see whether the scan covered them
+ * all. A seal that predates the W5b replay ledger publishes a typed absence.
+ *
+ * This is a boundary scan, not a per-window coverage scan: the retained lane
+ * has no missing-bar census (see the record's engine request).
+ */
+const SplitGapScanSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  basis: z.enum(["QUANTBT_ACCOUNT_EXECUTION_PLAN_BOUNDARY_EVENTS_V1", "NOT_PUBLISHED"]),
+  scope: z.enum(["OUTER_FOLD_TEST_WINDOW_BOUNDARIES", "NOT_PUBLISHED"]),
+  /** Crossings QuantBT published. */
+  boundary_count: CountSchema.nullable(),
+  /** Crossings the retained fold plan has (`folds − 1`), so a partial scan is visible. */
+  expected_boundary_count: CountSchema.nullable(),
+  /** Crossings whose `gap_bars` QuantBT measured. */
+  measured_count: CountSchema.nullable(),
+  /** Measured crossings with `gap_bars = 0`. */
+  contiguous_count: CountSchema.nullable(),
+  /** The widest measured gap, or null when nothing was measured. */
+  max_gap_bars: CountSchema.nullable(),
+  boundaries: z.array(BoundaryGapSchema).max(256),
+  availability: ResearchCurrentSourceAvailabilitySchema,
+}).strict();
+
+/**
+ * E14 · 5.12 — stitched OOS provenance.
+ *
+ * QuantBT publishes no digest of the stitched OOS series, so `digest` is the
+ * portal's own sha256 over the retained stitch plan and `basis` says exactly
+ * that. It identifies the plan a reader can re-derive from the same seal; it
+ * is never offered as an engine artifact digest.
+ *
+ * `boundary_check` is the HiFi's "verified against fold boundaries", run over
+ * retained values only: every segment names a fold of the retained plan, each
+ * fold has exactly one segment, the segments ascend in fold-plan order with
+ * disjoint observation ranges, and each segment's bar count equals its range.
+ */
+const SplitStitchSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  basis: z.enum(["PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1", "NOT_PUBLISHED"]),
+  digest: DigestSchema.nullable(),
+  segment_count: CountSchema.nullable(),
+  /** Retained observations the stitched segments cover. */
+  observation_count: CountSchema.nullable(),
+  boundary_check: z.enum(["MATCH", "MISMATCH", "NOT_CHECKABLE"]),
+  boundary_check_reason_code: ReasonCodeSchema.nullable(),
+  availability: ResearchCurrentSourceAvailabilitySchema,
+}).strict();
+
 export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
   schema_version: z.literal("research.current-source-split.v1"),
   fold_plan: z.object({
@@ -556,6 +624,10 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     inner_folds: GuardFactSchema,
     oos_used_for_selection: GuardFactSchema,
   }).strict(),
+  /** E14 · 5.11 — boundary integrity, read from the retained lane. */
+  gap_scan: SplitGapScanSchema,
+  /** E14 · 5.12 — stitched OOS provenance. */
+  stitch: SplitStitchSchema,
 }).strict();
 
 const TrialMetricSchema = z.object({

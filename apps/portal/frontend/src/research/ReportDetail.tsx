@@ -50,7 +50,8 @@ import {
   type ReportEquity,
   type ReportFolds,
 } from "./reportClient";
-import { foldLabel, formatMetric, shortDigest } from "./researchFormat";
+import { foldLabel, formatMetric, shortDigest, shortId } from "./researchFormat";
+import { reasonCodeSentence } from "./researchRefusal";
 import { equitySvg } from "./reportEquity";
 import { releaseCandidateHref } from "./releaseCandidateClient";
 import type { ReportController } from "./useReport";
@@ -551,6 +552,18 @@ function Identity({ core }: { core: FrozenCore }) {
               ) : (
                 <AvailabilityAbsent availability={field.availability} />
               )}
+              {/* E14 · 9.7: what the value does not say on its own — the sheet
+                  never lets a declared optimizer read as an executed search. */}
+              {field.qualifier ? (
+                <span
+                  className="rr-reason"
+                  style={{ display: "block", textTransform: "none", letterSpacing: 0 }}
+                  data-identity-qualifier={field.qualifier.state}
+                  title={reasonCodeSentence(field.qualifier.reason_code) ?? field.qualifier.reason_code}
+                >
+                  {field.qualifier.text} · {field.qualifier.reason_code}
+                </span>
+              ) : null}
             </dd>
           </div>
         ))}
@@ -560,7 +573,7 @@ function Identity({ core }: { core: FrozenCore }) {
 }
 
 /** Headline cells coloured by sign, as the HiFi does (E3); a count is never coloured. */
-const SIGNED_HEADLINE = new Set<string>(["OOS_SHARPE", "MAX_DRAWDOWN", "FUNDING"]);
+const SIGNED_HEADLINE = new Set<string>(["NET_RETURN", "OOS_SHARPE", "MAX_DRAWDOWN", "FUNDING"]);
 
 function HeadlineRow({ core }: { core: FrozenCore }) {
   const v2 = coreV2(core);
@@ -714,8 +727,10 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
                 aria-label={`${withIs ? "IS account and stitched OOS" : "Stitched OOS"} equity, ${drawn.drawn} sealed points, with drawdown below`}
                 data-equity-svg
               >
-                {drawn.yLabels.map((label) => (
-                  <line key={label.text} className="rr-eq-grid" x1={0} x2={drawn.width} y1={label.pct * 10} y2={label.pct * 10} />
+                {/* E14 · 9.10: the hi-fi's six-rule grid (VD-P20-27: only the
+                    two extremes are labelled; the rules between are geometry). */}
+                {drawn.yRulePcts.map((rulePct) => (
+                  <line key={rulePct} className="rr-eq-grid" x1={0} x2={drawn.width} y1={rulePct * 10} y2={rulePct * 10} data-y-rule />
                 ))}
                 <line className="rr-eq-axis" x1={0} x2={drawn.width} y1={drawn.height} y2={drawn.height} />
                 <path className="rr-eq-fill" d={drawn.fill} />
@@ -727,7 +742,7 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
               </svg>
               <div aria-hidden="true">
                 {drawn.yLabels.map((label) => (
-                  <span key={label.text} className="rr-lbl y" style={{ top: `${label.pct}%` }} data-y-label title={label.text}>
+                  <span key={label.text} className="rr-lbl y" style={{ top: `${label.pct}%` }} data-y-label data-exact={label.text} title={label.text}>
                     {formatMetric(label.text, "currency") ?? label.text}
                   </span>
                 ))}
@@ -1068,9 +1083,34 @@ const REVISION_ROWS: [keyof FrozenCore["source_revisions"], string][] = [
   ["replay_revision", "replay"],
 ];
 
-function Provenance({ core }: { core: FrozenCore }) {
+/**
+ * E14 · 9.15 — the provenance evidence link.
+ *
+ * The hi-fi writes `portal://runs/…?bundle=…`; a `portal://` address opens
+ * nothing, so this is the X2-D06 pattern the other screens use: the product
+ * URL of this sheet, carrying the sealed report revision this reader is
+ * looking at. Every part is the server's — the run id and the revision — and
+ * a report with no revision yet gets no link rather than a guessed one.
+ */
+export function reportEvidenceLink(runId: string, report: ReportDetail | null): string | null {
+  if (typeof window === "undefined" || !window.location || report === null) return null;
+  const base = `${window.location.origin}/research/quantbt/runs/${encodeURIComponent(runId)}/report`;
+  return `${base}?report_revision=${encodeURIComponent(report.report_revision)}`;
+}
+
+/**
+ * E14 · 9.15 (E1) — the same link, short enough to read on the sheet: the run
+ * id and the revision keep their prefix and their first 8 hex, exactly as
+ * `ShortId` does. The whole address stays in the anchor's `href` and `title`.
+ */
+export function reportEvidenceLinkLabel(runId: string, report: ReportDetail): string {
+  return `/research/quantbt/runs/${shortId(runId) ?? runId}/report?report_revision=${shortId(report.report_revision) ?? report.report_revision}`;
+}
+
+function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; report: ReportDetail | null }) {
   const { provenance } = core;
   const absences = Object.entries(core.source_absences);
+  const evidenceLink = reportEvidenceLink(runId, report);
   return (
     <section data-panel="provenance" aria-label="provenance of this report">
       <h2 className="rr-t2">Provenance of this report</h2>
@@ -1078,6 +1118,19 @@ function Provenance({ core }: { core: FrozenCore }) {
         {provenance.line}
       </p>
       <dl className="rr-id">
+        {/* E14 · 9.15: the evidence link the hi-fi puts first in this block. */}
+        <dt className="k">evidence link</dt>
+        <dd className="v rr-long" data-evidence-link>
+          {evidenceLink !== null && report !== null ? (
+            <a href={evidenceLink} title={evidenceLink} style={{ color: "var(--accent)" }} data-evidence-href={evidenceLink}>
+              {reportEvidenceLinkLabel(runId, report)}
+            </a>
+          ) : (
+            <span className="rr-absent" data-evidence-link-absent>
+              no sealed revision to link to yet
+            </span>
+          )}
+        </dd>
         <dt className="k">metric registry</dt>
         <dd className="v rr-long">{provenance.metric_registry_version}</dd>
         <dt className="k">read model</dt>
@@ -1304,7 +1357,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
             <Warnings core={core} />
             <div className="rr-pp rr-keep" data-promotion-provenance>
               <Promotion core={core} runId={runId} />
-              <Provenance core={core} />
+              <Provenance core={core} runId={runId} report={report} />
             </div>
           </>
         ) : (

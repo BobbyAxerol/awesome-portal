@@ -378,6 +378,8 @@ export interface components {
                 inner_folds: components["schemas"]["GuardFact"];
                 oos_used_for_selection: components["schemas"]["GuardFact"];
             };
+            gap_scan: components["schemas"]["SplitGapScan"];
+            stitch: components["schemas"]["SplitStitch"];
         };
         Search: components["schemas"]["Common"] & {
             /** @constant */
@@ -777,6 +779,47 @@ export interface components {
             value: components["schemas"]["Decimal"] | null;
             reason_code: string | null;
             source: "RETAINED_STITCHED_OOS_PATH" | null;
+        };
+        /** @description E14 (5.11): one crossing from a fold's outer test window into the next one's, as QuantBT's account execution plan published it. */
+        BoundaryGap: {
+            previous_fold_id: string | null;
+            fold_id: string | null;
+            boundary_utc_ms: components["schemas"]["UtcMs"] | null;
+            next_test_start_utc_ms: components["schemas"]["UtcMs"] | null;
+            gap_bars: number | null;
+            policy: string | null;
+        };
+        /** @description E14 (5.11): the boundary-integrity gap scan of the retained lane - QuantBT account_execution_plan.boundary_events, verbatim. expected_boundary_count is the retained fold plan's own crossing count (folds - 1), so a scan that covered fewer says so. A boundary scan, not a per-window coverage census. */
+        SplitGapScan: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            /** @enum {unknown} */
+            basis: "QUANTBT_ACCOUNT_EXECUTION_PLAN_BOUNDARY_EVENTS_V1" | "NOT_PUBLISHED";
+            /** @enum {unknown} */
+            scope: "OUTER_FOLD_TEST_WINDOW_BOUNDARIES" | "NOT_PUBLISHED";
+            boundary_count: number | null;
+            expected_boundary_count: number | null;
+            measured_count: number | null;
+            contiguous_count: number | null;
+            max_gap_bars: number | null;
+            boundaries: components["schemas"]["BoundaryGap"][];
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description E14 (5.12): stitched OOS provenance. QuantBT publishes no digest of the stitched series, so digest is the portal's own sha256 over the retained stitch plan and basis says exactly that; it is never an engine artifact digest. boundary_check is the HiFi's "verified against fold boundaries", run over retained values only. */
+        SplitStitch: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            /** @enum {unknown} */
+            basis: "PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1" | "NOT_PUBLISHED";
+            digest: components["schemas"]["Digest"] | null;
+            segment_count: number | null;
+            observation_count: number | null;
+            /** @enum {unknown} */
+            boundary_check: "MATCH" | "MISMATCH" | "NOT_CHECKABLE";
+            boundary_check_reason_code: string | null;
+            availability: components["schemas"]["Availability"];
         };
         /** @description X2 · B3 (spec 06 A2–A5, B4): the trial surface of a retained WFO run, derived on the server from every retained trial (<= 64 under RS-02, <= 600 points by rule; `sampling` names whether anything was left out). The browser draws coordinates only: placements, quintile ramp steps, 12-bin counts and means, the top-decile share at θ* and the Spearman |ρ| proxy (not fANOVA; NOT_APPLICABLE under 8 complete trials) are all published here. */
         SearchSurface: {

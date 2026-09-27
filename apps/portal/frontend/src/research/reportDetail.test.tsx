@@ -25,6 +25,8 @@ import {
   EQUITY_LEGEND_IS,
   EQUITY_LEGEND_OOS,
   NOPRINT_NOTE,
+  reportEvidenceLink,
+  reportEvidenceLinkLabel,
   REPORT_PANELS,
   SERIES_UNAVAILABLE,
 } from "./ReportDetail";
@@ -1219,5 +1221,120 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     await screen.findAllByText(/per-fold verdict/i);
     expect(document.querySelector('[data-export-unavailable="PARQUET"]')?.getAttribute("title")).toBe("P18_CONTROL_API_HAS_NO_PINNED_PARQUET_WRITER");
     expect(document.querySelector('[data-export-unavailable="ARCHIVE"]')?.getAttribute("title")).toBe("P18_ARCHIVE_WOULD_EXPOSE_PRIVATE_P05_BYTES_AND_RAW_MARKET_ROWS");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * E14 — Screen 09: the OOS return tile (9.8), the identity qualifier (9.7),
+ * the equity grid (9.10) and the provenance evidence link (9.15).
+ *
+ * Every body is a canonical fixture the control API publishes.
+ * ---------------------------------------------------------------------- */
+describe("E14 — S09 headline return, identity qualifier, equity grid and evidence link", () => {
+  async function open(name: string) {
+    const body = fixture(name);
+    server({ detail: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await screen.findAllByText(/per-fold verdict/i);
+    await act(async () => {});
+    return body as unknown as { run_id: string; report_revision: string; frozen_core: Record<string, any> };
+  }
+
+  it("9.8 the retained sheet leads with a net return tile, its exact value, its scope and its sign colour", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    const tiles = [...panel("headline").querySelectorAll("[data-headline]")];
+    expect(tiles.map((tile) => tile.getAttribute("data-headline"))).toEqual([
+      "NET_RETURN", "OOS_SHARPE", "DECAY_MEAN", "MAX_DRAWDOWN", "TRADES", "WIN_RATE", "FUNDING",
+    ]);
+    const tile = tiles[0]!;
+    const value = tile.querySelector("[data-headline-value]")!;
+    expect(value.getAttribute("data-headline-value")).toBe(body.frozen_core.headline[0].value);
+    expect(value.getAttribute("data-sign")).toBe("neg");
+    expect(value.textContent).toContain("−0.37%");
+    /* The value is the whole account path, so the tile says so rather than
+       letting the reader take it for an OOS-only return. */
+    expect(tile.querySelector("[data-headline-scope]")?.textContent).toBe("is plus oos");
+    expect(panel("headline").querySelector("[data-headline-footnote]")?.textContent).toContain("they are not OOS-only");
+  });
+
+  it("9.8 a P04 sheet shows the same tile under the scope its hub published", async () => {
+    const body = await open("research-report.p04-fixed-profile.valid.json");
+    const tile = panel("headline").querySelector('[data-headline="NET_RETURN"]')!;
+    expect(tile.querySelector("[data-headline-value]")?.getAttribute("data-headline-value")).toBe(body.frozen_core.headline[0].value);
+    expect(tile.querySelector("[data-headline-scope]")?.textContent).toBe("oos");
+    expect(tile.querySelector("[data-headline-value]")?.getAttribute("data-sign")).toBe("pos");
+  });
+
+  it("9.7 a fixed-profile run's optimizer identity says it was declared, not executed", async () => {
+    const body = await open("research-report.p04-fixed-profile.valid.json");
+    const row = panel("identity").querySelector('[data-identity="optimization"]')!;
+    expect(row.querySelector("dd")?.textContent).toContain(body.frozen_core.identity.find((f: { key: string }) => f.key === "optimization").value);
+    const qualifier = row.querySelector("[data-identity-qualifier]")!;
+    expect(qualifier.getAttribute("data-identity-qualifier")).toBe("DECLARED_NOT_EXECUTED");
+    expect(qualifier.textContent).toContain("declared, not executed");
+    expect(qualifier.textContent).toContain("P04_FIXED_PROFILE_RUN_DID_NOT_EXECUTE_THE_DECLARED_OPTIMIZER");
+    expect(qualifier.getAttribute("title")).toContain("no search was executed");
+  });
+
+  it("9.7 a run whose search really ran carries no qualifier on any identity row", async () => {
+    await open("research-report.wfo-retained.valid.json");
+    expect(panel("identity").querySelectorAll("[data-identity-qualifier]")).toHaveLength(0);
+    expect(panel("identity").querySelector('[data-identity="optimization"] dd')?.textContent).toBe("mode_1_decay × global");
+  });
+
+  it("9.10 the equity axis draws the hi-fi's six grid rules at equal steps, and still labels only server values", async () => {
+    await open("research-report.wfo-retained.valid.json");
+    const rules = [...panel("equity").querySelectorAll("[data-y-rule]")].map((line) => Number(line.getAttribute("y1")));
+    expect(rules).toHaveLength(6);
+    const steps = rules.slice(1).map((y, index) => Math.round((y - rules[index]!) * 100) / 100);
+    expect(new Set(steps).size).toBe(1);
+    /* VD-P20-27: only the two extremes carry a label, and each is verbatim. */
+    const labels = [...panel("equity").querySelectorAll("[data-y-label]")] as HTMLElement[];
+    expect(labels).toHaveLength(2);
+    for (const label of labels) expect(label.getAttribute("data-exact")).toBe(label.getAttribute("title"));
+    /* The first and last rule sit on those two labels, so the grid spans the
+       sealed extremes and no rule stands for a level of its own. */
+    const labelY = labels.map((label) => Math.round(Number.parseFloat(label.style.top) * 10 * 100) / 100);
+    expect(rules[0]).toBeCloseTo(labelY[0]!, 1);
+    expect(rules[5]).toBeCloseTo(labelY[1]!, 1);
+  });
+
+  it("9.10 the grid spans exactly the two labelled extremes", () => {
+    const geometry = equitySvg([
+      { at_utc_ms: T0, equity: "100", drawdown_fraction: "0" },
+      { at_utc_ms: T0 + 1_000, equity: "120", drawdown_fraction: "-0.1" },
+      { at_utc_ms: T0 + 2_000, equity: "90", drawdown_fraction: "-0.25" },
+    ]);
+    expect(geometry.yRulePcts).toHaveLength(6);
+    const [top] = geometry.yLabels.map((label) => label.pct);
+    const bottom = geometry.yLabels[1]!.pct;
+    expect(geometry.yRulePcts[0]).toBeCloseTo(top!, 2);
+    expect(geometry.yRulePcts[5]).toBeCloseTo(bottom, 2);
+    /* A flat series spans nothing and keeps its one rule rather than six. */
+    const flat = equitySvg([
+      { at_utc_ms: T0, equity: "100", drawdown_fraction: "0" },
+      { at_utc_ms: T0 + 1_000, equity: "100", drawdown_fraction: "0" },
+    ]);
+    expect(flat.yRulePcts).toHaveLength(1);
+  });
+
+  it("9.15 provenance carries an evidence link to this sheet at the revision the reader is on", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    const link = panel("provenance").querySelector("[data-evidence-link] a") as HTMLAnchorElement;
+    expect(link.getAttribute("data-evidence-href")).toBe(
+      `${window.location.origin}/research/quantbt/runs/${encodeURIComponent(body.run_id)}/report?report_revision=${encodeURIComponent(body.report_revision)}`,
+    );
+    /* E1: the printed address is short, the whole one stays in href and title. */
+    expect(link.getAttribute("title")).toBe(link.getAttribute("data-evidence-href"));
+    expect(link.textContent).toBe(reportEvidenceLinkLabel(body.run_id, body as unknown as ReportDetail));
+    /* The 64-hex revision is cut to its prefix + 8, as every other id is. */
+    expect(link.textContent).toContain(`report_revision=${body.report_revision.slice(0, "p18r1_".length + 8)}`);
+    expect(link.textContent).not.toContain(body.report_revision);
+    expect(link.textContent).not.toContain("portal://");
+    expect(link.textContent!.length).toBeLessThan(80);
+  });
+
+  it("9.15 with no report in hand there is no link, and no address is invented", () => {
+    expect(reportEvidenceLink("rrun_x", null)).toBeNull();
   });
 });

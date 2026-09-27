@@ -102,11 +102,19 @@ export interface components {
             reason_code: components["schemas"]["ReasonCode"] | null;
             availability: components["schemas"]["Availability"];
         };
+        /** @description E14 (9.7): what an identity value does not say on its own. A fixed-profile run still carries the optimizer its request declared, so the value reads as if a search had run; this is the same fact Screen 06 publishes as requested_optimizer = DECLARED_NOT_EXECUTED. */
+        IdentityQualifier: {
+            /** @enum {unknown} */
+            state: "DECLARED_NOT_EXECUTED";
+            text: string;
+            reason_code: components["schemas"]["ReasonCode"];
+        };
         IdentityField: {
             key: string;
             label: string;
             value: string | null;
             availability: components["schemas"]["Availability"];
+            qualifier?: components["schemas"]["IdentityQualifier"] | null;
         };
         Metric: {
             key: string;
@@ -123,7 +131,7 @@ export interface components {
         };
         Headline: {
             /** @enum {unknown} */
-            key: "OOS_SHARPE" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
+            key: "NET_RETURN" | "OOS_SHARPE" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
             label: string;
             value: components["schemas"]["ExactDecimal"] | null;
             availability: components["schemas"]["Availability"];
@@ -268,7 +276,7 @@ export interface components {
         };
         HeadlineV2: {
             /** @enum {unknown} */
-            key: "OOS_SHARPE" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
+            key: "NET_RETURN" | "OOS_SHARPE" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
             label: string;
             value: components["schemas"]["ExactDecimal"] | null;
             availability: components["schemas"]["Availability"];

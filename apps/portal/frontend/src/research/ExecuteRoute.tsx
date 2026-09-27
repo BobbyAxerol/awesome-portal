@@ -10,7 +10,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { ExecuteScreen, useTransportInput } from "./ExecuteDetail";
+import { ExecuteScreen, executeLane, useTransportInput } from "./ExecuteDetail";
+import { useSplitBand } from "./SplitBand";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { ReplayTransport, useTransport } from "./replayTransport";
 import { isRetainedReplay } from "./replayClient";
@@ -54,9 +55,19 @@ function ExecuteContainer({ runId }: { runId: string }) {
     if (restingSeq !== null && restingSeq !== cursor.seq) update({ seq: restingSeq });
   }, [cursor.seq, restingSeq, update]);
 
+  /* E2c (8.5): one bounded read of the split the answering lane owns, for the
+     IS / OOS / HOLDOUT band. It belongs to the container, not the screen —
+     the screen stays a function of what it is handed.
+
+     It waits until a lane has answered. Asked on arrival, the lane still reads
+     "hub" for every run, so a walk-forward run would read the P04 hub split
+     first and its own fold plan a moment later — two reads to draw one band. */
+  const answered = controller.replay !== null || controller.retained.state !== "idle";
+  const band = useSplitBand(runId, answered ? executeLane(controller) : "pending");
+
   /* E2 (X8): a refused run gets the shared "run not available" page, not the stage chrome. */
   if (controller.state.state === "denied" && controller.replay === null) {
     return <StageDenied runId={runId} stage="Stage 4 · Execute Replay" screen="execute-replay" />;
   }
-  return <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} />;
+  return <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} band={band} />;
 }

@@ -71,7 +71,7 @@ function sourceReaders() {
       ],
     }]]) }) },
     split: { detail: vi.fn().mockResolvedValue({ revision: `p14r1_${digest("1")}`, availability: availability(), protocol: { kind: "THREE_WINDOW_CURRENT" } }) },
-    search: { detail: vi.fn().mockResolvedValue({ revision: `p15r1_${digest("2")}`, source_profile: { state: "FIXED_PROFILE_NO_SEARCH", availability: availability() } }) },
+    search: { detail: vi.fn().mockResolvedValue({ revision: `p15r1_${digest("2")}`, source_profile: { state: "FIXED_PROFILE_NO_SEARCH", availability: availability() }, requested_optimizer: { mode: "mode_1_decay", schedule: "global", state: "DECLARED_NOT_EXECUTED", candidate_selection_metric: null, availability: availability() } }) },
     freeze: {
       detail: vi.fn().mockResolvedValue({
         revision: `p16r1_${digest("3")}`,
@@ -191,6 +191,49 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     expect(output.bytes.toString("utf8")).toContain("'=HYPERLINK");
     expect(output.filename).toMatch(/^quantbt-run_p18-p18r1_[0-9a-f]{64}\.csv$/);
     expect(output.filename).not.toMatch(/[\\/]/);
+  });
+
+  it("E14 · 9.7 the P04 identity says the declared optimizer never ran, in the same words Screen 06 uses", async () => {
+    const subjectValue = subject();
+    const core = (await subjectValue.service.materialize(scope, "run_p18")).frozen_core;
+    if (core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected a v2 core");
+    const optimization = core.identity.find((field) => field.key === "optimization");
+    expect(optimization).toMatchObject({
+      value: "fixed_profile × none",
+      qualifier: {
+        state: "DECLARED_NOT_EXECUTED",
+        text: "declared, not executed",
+        reason_code: "P04_FIXED_PROFILE_RUN_DID_NOT_EXECUTE_THE_DECLARED_OPTIMIZER",
+      },
+    });
+    /* Only the search read may say it: no other identity row carries one. */
+    expect(core.identity.filter((field) => field.qualifier != null).map((field) => field.key)).toEqual(["optimization"]);
+  });
+
+  it("E14 · 9.7 a search read that declares no optimizer leaves the identity unqualified", async () => {
+    const readers = sourceReaders();
+    readers.search.detail.mockResolvedValue({
+      revision: `p15r1_${digest("2")}`,
+      source_profile: { state: "FIXED_PROFILE_NO_SEARCH", availability: { state: "AVAILABLE", reason_code: null } },
+      requested_optimizer: { mode: null, schedule: null, state: "NOT_PUBLISHED", candidate_selection_metric: null, availability: { state: "NOT_PUBLISHED", reason_code: "P15_REQUESTED_OPTIMIZER_NOT_PUBLISHED" } },
+    });
+    const service = new ResearchReportService(
+      subject().repository as never, readers.evidence as never, readers.split as never, readers.search as never,
+      readers.freeze as never, readers.replay as never, {} as never, enabledConfig() as never,
+    );
+    const core = (await service.materialize(scope, "run_p18")).frozen_core;
+    if (core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected a v2 core");
+    expect(core.identity.every((field) => (field.qualifier ?? null) === null)).toBe(true);
+  });
+
+  it("E14 · 9.8 the P04 headline leads with the hub's net return, carrying the hub's own scope", async () => {
+    const core = (await subject().service.materialize(scope, "run_p18")).frozen_core;
+    if (core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected a v2 core");
+    const metric = core.metrics.find((item) => item.key === "NET_RETURN_FRACTION")!;
+    expect(core.headline).toHaveLength(7);
+    expect(core.headline[0]).toEqual({
+      key: "NET_RETURN", label: "Net return", scope: metric.scope, value: metric.value, availability: metric.availability,
+    });
   });
 
   it("CG-P18-09 writes (opt-in) and validates the P04 fixed-profile fixture", async () => {

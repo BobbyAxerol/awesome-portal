@@ -46,6 +46,7 @@ import {
   trialCoversFold,
   trialFacts,
 } from "./current-source-facts";
+import { splitGapScan, splitStitch } from "./current-source-split-integrity";
 import {
   ResearchCurrentSourceRepository,
   type CurrentSourcePage,
@@ -456,18 +457,26 @@ export class ResearchCurrentSourceService {
     if (page.totalRows !== seal.tableRows.FOLD || page.hasMore || page.hasPrevious) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained fold plan exceeds its admitted bound.", 503);
     }
+    const folds = page.rows.map((row) => {
+      // W6a: the W5b child-audit block is served by its own bounded read
+      // (replay/child-audit); a W5b-retained fold row must not leak it
+      // into the strict split DTO (which then answered 503).
+      const { fold_facts: foldFacts, child_audit: _childAudit, ...fold } = asFold(row);
+      return { source_ordinal: row.sourceOrdinal, ...fold, anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
+    });
+    // E14 · 5.11/5.12: boundary integrity and stitched OOS provenance, both
+    // read from the W5b replay ledger this same seal holds.
+    const windows = folds.map((fold) => ({
+      fold_id: fold.fold_id,
+      test_start_utc_ms: fold.test_start_utc_ms,
+      test_end_utc_ms: fold.test_end_utc_ms,
+    }));
     const value = {
       schema_version: "research.current-source-split.v1" as const,
       ...this.common("split", seal),
       fold_plan: {
         state: "AVAILABLE" as const,
-        folds: page.rows.map((row) => {
-          // W6a: the W5b child-audit block is served by its own bounded read
-          // (replay/child-audit); a W5b-retained fold row must not leak it
-          // into the strict split DTO (which then answered 503).
-          const { fold_facts: foldFacts, child_audit: _childAudit, ...fold } = asFold(row);
-          return { source_ordinal: row.sourceOrdinal, ...fold, anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
-        }),
+        folds,
         chronology: "SOURCE_OBSERVED_ADVANCED_WFO" as const,
         availability: available(),
       },
@@ -478,6 +487,8 @@ export class ResearchCurrentSourceService {
         strict_outer_oos_selection: this.summaryFact(summary.data_use.strict_outer_oos_selection),
       },
       guards: splitGuards(summary.source_facts),
+      gap_scan: splitGapScan(summary.replay, windows),
+      stitch: splitStitch(summary.replay, windows),
     };
     return this.valid(ResearchCurrentSourceSplitResponseSchema, value);
   }

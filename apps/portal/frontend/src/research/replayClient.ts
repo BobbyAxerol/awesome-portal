@@ -23,6 +23,7 @@ import type { components as CurrentSourceComponents } from "@portal/contracts-re
 
 import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
+import { reasonCodeSentence } from "./researchRefusal";
 import { isRetainedAnswer } from "./retainedLane";
 import type { ResearchState } from "./state";
 
@@ -193,7 +194,10 @@ export const REPLAY_GAP_WORDS: Record<ReplaySourceGap["state"] | RouteCapability
 };
 
 export function gapReason(gap: { reason_code?: string | null; availability?: ReplayAvailability }): string {
-  return gap.reason_code ?? gap.availability?.reason_code ?? gap.availability?.state ?? "unknown";
+  const code = gap.reason_code ?? gap.availability?.reason_code ?? null;
+  const sentence = code === null ? null : reasonCodeSentence(code);
+  if (sentence !== null && code !== null) return `${sentence} (${code})`;
+  return code ?? gap.availability?.state ?? "unknown";
 }
 
 /** The thirteen capabilities, in the order the hi-fi's panels read them. */

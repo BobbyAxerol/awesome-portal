@@ -1148,6 +1148,111 @@ function LaneAbsent({ reason, what, word = "not published" }: { reason: string; 
   );
 }
 
+/**
+ * E14 · 5.11/5.12 — the two blocks the retained split read now publishes.
+ *
+ * A server that predates E14 sends neither field. That is a third state, and
+ * it is not the same as a server that sent a typed absence: the first says
+ * "this deployment cannot answer yet", the second says why the run cannot.
+ */
+type LaneGapScan = NonNullable<CurrentSourceSplit["gap_scan"]> | undefined;
+type LaneStitch = NonNullable<CurrentSourceSplit["stitch"]> | undefined;
+
+/** The code this screen prints when the server itself has no such field yet. */
+const NO_RETAINED_FIELD_ON_SERVER = "UI_RETAINED_LANE_HAS_NO_FIELD";
+
+/**
+ * 5.11 — the boundary-integrity gap scan, in the retained lane's own words.
+ * Counts are never rounded into a claim: a crossing QuantBT did not measure
+ * is said apart from one it measured at zero bars.
+ */
+function GapScanValue({ scan }: { scan: LaneGapScan }) {
+  if (!scan) return <LaneAbsent reason={NO_RETAINED_FIELD_ON_SERVER} what="gap scan" word="no field in the retained lane" />;
+  if (scan.state !== "AVAILABLE") {
+    return <LaneAbsent reason={scan.reason_code ?? scan.availability.state} what="gap scan" />;
+  }
+  const measured = scan.measured_count ?? 0;
+  const expected = scan.expected_boundary_count;
+  const boundaries = scan.boundary_count ?? 0;
+  const covered = expected === null || boundaries === expected;
+  const widest = scan.max_gap_bars;
+  return (
+    <span
+      className="inline-flex flex-wrap items-baseline gap-x-1.5"
+      data-gap-scan="AVAILABLE"
+      data-gap-scan-basis={scan.basis}
+      data-gap-scan-max={widest === null ? undefined : String(widest)}
+      title={`QuantBT's account execution plan, verbatim (${scan.basis}).`}
+    >
+      <span className="mono">
+        {covered
+          ? `${boundaries} of ${boundaries} fold ${boundaries === 1 ? "boundary" : "boundaries"}`
+          : `${boundaries} of ${expected} fold boundaries`}
+      </span>
+      <span>·</span>
+      <span className="mono">
+        {measured === 0
+          ? "none measured"
+          : widest === 0
+            ? `no gap at any of ${measured}`
+            : `widest ${widest} ${widest === 1 ? "bar" : "bars"} of ${measured}`}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * 5.12 — stitched OOS provenance. The digest is the portal's own over the
+ * retained stitch plan, so the line says so rather than letting it read as an
+ * engine artifact digest.
+ */
+function StitchDigest({ stitch }: { stitch: LaneStitch }) {
+  if (!stitch) {
+    return (
+      <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-stitch-digest="NO_FIELD">
+        stitch digest — not in the split read
+      </span>
+    );
+  }
+  if (stitch.state !== "AVAILABLE" || stitch.digest === null) {
+    return (
+      <span className="flex flex-wrap items-baseline gap-x-1.5" data-stitch-digest="NOT_PUBLISHED">
+        <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
+          stitch digest
+        </span>
+        <LaneAbsent reason={stitch.reason_code ?? stitch.availability.state} what="stitch digest" />
+      </span>
+    );
+  }
+  const verified = stitch.boundary_check === "MATCH";
+  return (
+    <span className="flex flex-col gap-[2px]" data-stitch-digest="AVAILABLE" data-stitch-check={stitch.boundary_check}>
+      <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} title={stitch.digest} data-stitch-digest-value={stitch.digest}>
+        stitch digest {shortDigest(stitch.digest, 12)}…
+      </span>
+      <span
+        className="mono text-[9px]"
+        style={{ color: verified ? "var(--ink-faint)" : "var(--bad)" }}
+        title={
+          verified
+            ? "Every retained segment names a fold of this plan, each fold has one segment, and the segments run in plan order over disjoint observations."
+            : reasonCodeSentence(stitch.boundary_check_reason_code) ?? undefined
+        }
+        data-stitch-verdict={stitch.boundary_check}
+      >
+        {verified
+          ? `verified against fold boundaries · ${stitch.segment_count} segments, ${stitch.observation_count} retained observations`
+          : `does not line up with the fold boundaries · ${stitch.boundary_check_reason_code ?? stitch.boundary_check}`}
+      </span>
+      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-stitch-basis={stitch.basis}>
+        {stitch.basis === "PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1"
+          ? "the Portal's digest of the retained stitch plan — QuantBT publishes none"
+          : stitch.basis}
+      </span>
+    </span>
+  );
+}
+
 /** `GLOBAL` — QuantBT's schedule token, upper-cased as the HiFi's selection pill. */
 function scheduleWord(schedule: string): string {
   return schedule.toUpperCase().replace(/[\s-]+/g, "_");
@@ -1722,10 +1827,9 @@ export function SplitScreen({
                         />
                       )}
                     </IntegrityRow>
-                    <IntegrityRow mark="none" label="gap scan">
-                      <span className="italic" title={reasonCodeSentence(NO_RETAINED_FIELD) ?? NO_RETAINED_FIELD} data-lane-absent="gap scan" data-lane-reason={NO_RETAINED_FIELD}>
-                        no field in the retained lane
-                      </span>
+                    {/* E14 · 5.11: QuantBT's own boundary events, or the lane's reason. */}
+                    <IntegrityRow mark={lane.split.gap_scan?.state === "AVAILABLE" && lane.split.gap_scan.max_gap_bars === 0 ? "pass" : "none"} label="gap scan">
+                      <GapScanValue scan={lane.split.gap_scan} />
                     </IntegrityRow>
                   </>
                 ) : (
@@ -1793,9 +1897,14 @@ export function SplitScreen({
                     <span className="flex-1 rounded-[2px]" style={{ background: "var(--role-oos)" }} />
                   </span>
                 ) : null}
-                <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-                  stitch digest — not in the split read
-                </span>
+                {/* E14 · 5.12: the HiFi's "verified against fold boundaries". */}
+                {lane ? (
+                  <StitchDigest stitch={lane.split.stitch} />
+                ) : (
+                  <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-stitch-digest="NO_FIELD">
+                    stitch digest — not in the split read
+                  </span>
+                )}
               </section>
 
               <section className={`${CARD} gap-[6px] p-[14px]`} style={CARD_STYLE} data-card="feeds-forward">

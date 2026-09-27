@@ -287,6 +287,33 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
     expect(byKey.TRADES!.value).toBe(String(evidence.fold_verdicts.rows.reduce((sum, row) => sum + Number(row.oos_trades), 0)));
     expect(byKey.WIN_RATE).toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS" } });
   });
+
+  /* E14 · 9.7/9.8 on the retained lane. */
+
+  it("E14 · 9.8: the headline leads with the retained net return, under the scope that return actually has", async () => {
+    const core = v2(await subject().service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    const evidence = await currentSource().evidence(scope, real.run_id) as { passport: { net_return_fraction: string | null } };
+    expect(core.headline).toHaveLength(7);
+    expect(core.headline[0]).toEqual({
+      key: "NET_RETURN",
+      label: "Net return",
+      scope: "IS_PLUS_OOS",
+      value: evidence.passport.net_return_fraction,
+      availability: { state: "AVAILABLE", reason_code: null },
+    });
+    /* The tile is the account path, which begins before the first outer test
+       window — the footnote must not let it read as an OOS-only return. */
+    expect(core.equity_is.scope).toBe("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST");
+    expect(core.equity_is.state).toBe("AVAILABLE");
+    expect(core.headline_footnote).toContain("they are not OOS-only");
+  });
+
+  it("E14 · 9.7: a lane whose search really ran carries no 'declared, not executed' qualifier", async () => {
+    const core = v2(await subject().service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    const optimization = core.identity.find((field) => field.key === "optimization");
+    expect(optimization).toMatchObject({ value: "mode_1_decay × global" });
+    expect(optimization!.qualifier ?? null).toBeNull();
+  });
 });
 
 /** CG-P18-09 · canonical report fixtures for Screen 09. */
