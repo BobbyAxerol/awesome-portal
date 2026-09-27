@@ -43,13 +43,16 @@ from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
 from portal_api.services.research_supervisor import (
     DELTA_WFO_CHILD_LIMITS,
+    IMPORTED_ALPHA_CHILD_LIMITS,
     DeltaWfoChildReceipt,
+    ImportedAlphaChildReceipt,
     IsolatedResearchSupervisor,
     ResearchChildLimits,
     ResearchChildReceipt,
     ResearchSupervisorError,
 )
 from portal_api.services.research_progress import ResearchProgressJournal
+from portal_api.services.research_imported_source import ResearchImportedSourceClient, ResearchImportedSourceError
 
 
 # The WFO child's validated QuantBT output is copied here, beside (not
@@ -288,6 +291,8 @@ class ResearchRunProducerExecutor:
     market_root: Path
     child_limits: ResearchChildLimits = field(default_factory=ResearchChildLimits)
     wfo_child_limits: ResearchChildLimits = DELTA_WFO_CHILD_LIMITS
+    imported_child_limits: ResearchChildLimits = IMPORTED_ALPHA_CHILD_LIMITS
+    imported_source_client: ResearchImportedSourceClient | None = None
 
     async def __call__(
         self,
@@ -344,6 +349,7 @@ class ResearchRunProducerExecutor:
             return self._execute_delta_wfo_sync(request, artifact_root, progress)
 
         research = request.research
+        imported = research.is_imported_alpha
         progress("stage_started", {"stage": "S1"})
         try:
             identity, _ = self.snapshots.describe(research.snapshot_id)
@@ -375,6 +381,7 @@ class ResearchRunProducerExecutor:
 
         job_directory = self.market_root / request.job_id / request.worker_attempt_id
         tape_path = job_directory / "is_oos_only.parquet"
+        source_path = job_directory / "imported_alpha.py"
         if job_directory.exists():
             # A redelivery may see a stale partial temporary directory after a
             # killed worker.  It contains no accepted artifact; clear exactly
@@ -398,20 +405,52 @@ class ResearchRunProducerExecutor:
             if tape_counts.total_bars < 2 or tape_counts.is_bars < 1 or tape_counts.outer_oos_bars < 1:
                 raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded IS/OOS tape")
             os.chmod(tape_path, 0o600)
+            if imported:
+                if self.imported_source_client is None:
+                    raise ResearchRunProducerError(
+                        "E17 imported source authority is not configured",
+                        code="CAPABILITY_MISMATCH",
+                    )
+                try:
+                    source = self.imported_source_client.fetch(request)
+                except ResearchImportedSourceError as exc:
+                    raise ResearchRunProducerError(str(exc), code=exc.code) from exc
+                source_path.write_bytes(source.source_bytes)
+                os.chmod(source_path, 0o600)
             # The tape is now verified, bounded and holdout-free.  This is the
             # real S1 hook, not a timer/progress estimate in a browser.
             progress("stage_completed", {"stage": "S1"})
             progress("stage_started", {"stage": "S2"})
-            receipt = ResearchChildReceipt(
-                job_id=request.job_id,
-                run_id=request.run_id,
-                worker_attempt_id=request.worker_attempt_id,
-                lease_epoch=request.lease_epoch,
-                market_path=tape_path,
-                artifact_root=artifact_root,
-                p04_parameters=dict(research.p04_parameters),
-                oos_start_utc_ms=int(oos_start.value // 1_000_000),
-            )
+            if imported:
+                assert research.imported_source_digest is not None
+                assert research.imported_entrypoint is not None
+                assert research.imported_parameters is not None
+                receipt = ImportedAlphaChildReceipt(
+                    job_id=request.job_id,
+                    run_id=request.run_id,
+                    worker_attempt_id=request.worker_attempt_id,
+                    lease_epoch=request.lease_epoch,
+                    market_path=tape_path,
+                    source_path=source_path,
+                    source_digest=research.imported_source_digest,
+                    entrypoint=research.imported_entrypoint,
+                    parameters=dict(research.imported_parameters),
+                    random_seed=research.requested_spec.get("random_seed"),
+                    artifact_root=artifact_root,
+                    oos_start_utc_ms=int(oos_start.value // 1_000_000),
+                )
+            else:
+                assert research.p04_parameters is not None
+                receipt = ResearchChildReceipt(
+                    job_id=request.job_id,
+                    run_id=request.run_id,
+                    worker_attempt_id=request.worker_attempt_id,
+                    lease_epoch=request.lease_epoch,
+                    market_path=tape_path,
+                    artifact_root=artifact_root,
+                    p04_parameters=dict(research.p04_parameters),
+                    oos_start_utc_ms=int(oos_start.value // 1_000_000),
+                )
             # P10 has one server-installed fixed qualification, not a generic
             # optimizer.  S2 therefore records preparation of that exact one
             # study and never invents a sweep/trial count.
@@ -424,12 +463,22 @@ class ResearchRunProducerExecutor:
             # Publish the exact CPU ceiling before entering P06. CPU usage is
             # not observable from this parent callback while the child runs;
             # the measured value is published immediately after its receipt.
-            progress("budget_tick", _cpu_budget_tick_payload(0, self.child_limits.cpu_seconds))
-            child = self.supervisor.run_p04_delta_qualification(
-                receipt,
-                limits=self.child_limits,
-                on_child_alive=(lambda: progress("heartbeat", {})) if progress_journal is not None else None,
-            )
+            limits = self.imported_child_limits if imported else self.child_limits
+            progress("budget_tick", _cpu_budget_tick_payload(0, limits.cpu_seconds))
+            if imported:
+                assert isinstance(receipt, ImportedAlphaChildReceipt)
+                child = self.supervisor.run_imported_alpha_qualification(
+                    receipt,
+                    limits=limits,
+                    on_child_alive=(lambda: progress("heartbeat", {})) if progress_journal is not None else None,
+                )
+            else:
+                assert isinstance(receipt, ResearchChildReceipt)
+                child = self.supervisor.run_p04_delta_qualification(
+                    receipt,
+                    limits=limits,
+                    on_child_alive=(lambda: progress("heartbeat", {})) if progress_journal is not None else None,
+                )
             progress("budget_tick", _cpu_budget_tick_payload(
                 child.cpu_seconds,
                 child.enforced_limits.get("cpu_seconds", 0),
@@ -445,7 +494,7 @@ class ResearchRunProducerExecutor:
                 "tqdm_line": "fixed profile · fold 1/1 · trial 1/1 · no search",
                 "console": {
                     "tone": "COMPLETE",
-                    "text": "fixed P04 qualification completed",
+                    "text": "restricted imported Alpha qualification completed" if imported else "fixed P04 qualification completed",
                     "fold": 1,
                     "trial": 1,
                 },
@@ -453,16 +502,22 @@ class ResearchRunProducerExecutor:
             progress("fold_completed", {
                 "fold": 1,
                 "selection": {
-                    "scope": "FIXED_PROFILE",
+                    "scope": "IMPORTED_FIXED_PROFILE" if imported else "FIXED_PROFILE",
                     "trial": 1,
                     "objective": None,
-                    "params_digest": parameter_bundle_digest(dict(research.p04_parameters)),
+                    "params_digest": parameter_bundle_digest(dict(
+                        research.imported_parameters if imported else research.p04_parameters or {}
+                    )),
                 },
             })
             progress("stage_completed", {"stage": "S4"})
         except ResearchSupervisorError as exc:
             raise ResearchRunProducerError(
-                "P10 isolated Delta qualification exceeded its resource budget"
+                "E17 isolated imported Alpha qualification exceeded its resource budget"
+                if imported and exc.code == "RESOURCE_EXCEEDED"
+                else "E17 isolated imported Alpha qualification failed"
+                if imported
+                else "P10 isolated Delta qualification exceeded its resource budget"
                 if exc.code == "RESOURCE_EXCEEDED"
                 else "P10 isolated Delta qualification failed",
                 code=exc.code,
@@ -484,7 +539,7 @@ class ResearchRunProducerExecutor:
         # preflight capability, worker/job/lease fence, snapshot locator/hash
         # or work digest where a future artifact reader could expose them.
         public_config = {
-            "schema_version": "research.p10.run-config.v1",
+            "schema_version": "research.p17.imported-run-config.v1" if imported else "research.p10.run-config.v1",
             "run_id": request.run_id,
             "alpha_id": research.alpha_id,
             "alpha_version_id": research.alpha_version_id,
@@ -494,7 +549,13 @@ class ResearchRunProducerExecutor:
             "effective_spec_digest": research.effective_spec_digest,
             "dataset_binding_digest": research.dataset_binding_digest,
             "manifest_digest": research.manifest_digest,
-            "p04_parameters": research.p04_parameters,
+            **({
+                "execution_profile_id": research.execution_profile_id,
+                "execution_profile_digest": research.execution_profile_digest,
+                "source_digest": research.imported_source_digest,
+                "entrypoint": research.imported_entrypoint,
+                "parameters": research.imported_parameters,
+            } if imported else {"p04_parameters": research.p04_parameters}),
             "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
         }
         request_path = engine_directory / "config" / "request.json"
@@ -504,14 +565,20 @@ class ResearchRunProducerExecutor:
         )
         os.chmod(request_path, 0o600)
         receipt_document = {
-            "schema_version": "research.p10.delta-qualification-receipt.v1",
+            "schema_version": "research.p17.imported-qualification-receipt.v1" if imported else "research.p10.delta-qualification-receipt.v1",
             "run_id": request.run_id,
             "execution_adapter_id": research.execution_adapter_id,
             "requested_spec_digest": research.requested_spec_digest,
             "effective_spec_digest": research.effective_spec_digest,
             "dataset_binding_digest": research.dataset_binding_digest,
             "manifest_digest": research.manifest_digest,
-            "p04_parameters": research.p04_parameters,
+            **({
+                "execution_profile_id": research.execution_profile_id,
+                "execution_profile_digest": research.execution_profile_digest,
+                "source_digest": research.imported_source_digest,
+                "entrypoint": research.imported_entrypoint,
+                "parameters": research.imported_parameters,
+            } if imported else {"p04_parameters": research.p04_parameters}),
             "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
             "holdout_rows_exposed_to_child": 0,
             "engine": {
@@ -529,6 +596,7 @@ class ResearchRunProducerExecutor:
         }
         split_source = self._p14_split_source(
             request=request,
+            imported_source_digest=child.imported_source_digest,
             tape_counts=tape_counts,
             is_start=is_start,
             oos_start=oos_start,
@@ -785,6 +853,7 @@ class ResearchRunProducerExecutor:
         oos_end: pd.Timestamp,
         holdout_end: pd.Timestamp,
         source_transform_digest: object,
+        imported_source_digest: str | None = None,
     ) -> dict[str, Any]:
         """Build P14's exact current-adapter chronology receipt.
 
@@ -819,11 +888,19 @@ class ResearchRunProducerExecutor:
         else:
             warmup = {"state": "NOT_APPLICABLE", "bars": 0, "reason_code": "P08_WARMUP_NOT_REQUESTED"}
 
-        parameter_bundle_digest = _sha256_canonical_json(dict(research.p04_parameters))
+        imported = research.is_imported_alpha
+        if imported and imported_source_digest != research.imported_source_digest:
+            raise ResearchRunProducerError("E17 child source identity differs from its immutable admission")
+        parameters = research.imported_parameters if imported else research.p04_parameters
+        if parameters is None:
+            raise ResearchRunProducerError("P14 fixed adapter did not publish its exact parameter bundle")
+        parameter_bundle_digest = _sha256_canonical_json(dict(parameters))
+        absence_prefix = "E17_IMPORTED_FIXED_PROFILE" if imported else "P04_FIXED_PROFILE"
         return {
             "schema_version": "research.p14.split-source.v1",
             "source": {
-                "execution_adapter_id": "p04.delta-rsi.v1",
+                "execution_adapter_id": research.execution_adapter_id,
+                **({"imported_source_digest": imported_source_digest} if imported else {}),
                 "engine_version": "1.1.1",
                 "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
                 "source_transform_digest": source_transform_digest,
@@ -835,13 +912,13 @@ class ResearchRunProducerExecutor:
             },
             "protocol": {
                 "kind": "THREE_WINDOW_CURRENT",
-                "fold_plan": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_FOLD_PLAN"),
+                "fold_plan": absence(f"{absence_prefix}_DOES_NOT_PUBLISH_FOLD_PLAN"),
                 "selection": {
                     "state": "FIXED_PROFILE_NO_SEARCH",
                     "parameter_bundle_digest": parameter_bundle_digest,
                     "strict_outer_oos": {
                         "state": "NOT_ASSERTED",
-                        "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
+                        "reason_code": f"{absence_prefix}_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
                     },
                 },
             },
@@ -866,7 +943,10 @@ class ResearchRunProducerExecutor:
                     "bars": tape_counts.outer_oos_bars,
                     "data_role": "OUTER_OOS_OBSERVATION",
                     "child_input_state": "EXPOSED_TO_CHILD_TAPE",
-                    "evaluation_state": "P04_OBSERVED_AFTER_FIXED_PROFILE",
+                    "evaluation_state": (
+                        "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE"
+                        if imported else "P04_OBSERVED_AFTER_FIXED_PROFILE"
+                    ),
                 },
                 "holdout": {
                     **range_document(oos_end, holdout_end),
@@ -879,11 +959,11 @@ class ResearchRunProducerExecutor:
                 },
             },
             "absences": {
-                "purge": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_PURGE"),
-                "embargo": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EMBARGO"),
-                "inner_folds": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_INNER_FOLDS"),
-                "theta_per_fold": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_THETA_PER_FOLD"),
-                "gap_scan": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_GAP_SCAN"),
+                "purge": absence(f"{absence_prefix}_DOES_NOT_PUBLISH_PURGE"),
+                "embargo": absence(f"{absence_prefix}_DOES_NOT_PUBLISH_EMBARGO"),
+                "inner_folds": absence(f"{absence_prefix}_DOES_NOT_PUBLISH_INNER_FOLDS"),
+                "theta_per_fold": absence(f"{absence_prefix}_DOES_NOT_PUBLISH_THETA_PER_FOLD"),
+                "gap_scan": absence(f"{absence_prefix}_DOES_NOT_PUBLISH_GAP_SCAN"),
                 "holdout_unlock": absence("DR01_HOLDOUT_UNLOCK_AUTHORITY_NOT_PUBLISHED"),
             },
         }

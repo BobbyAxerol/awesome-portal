@@ -1626,6 +1626,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "POST /internal/research/progress/sources/imported",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "E17 exact imported-source custody: signed research_progress_writer principal, enabled imported profile, current job/worker/lease and immutable run/version/source digest binding before bounded source bytes are returned. Browser, facade and general CLI cannot reach this route. Covered by research-e17-imported-execution.spec.ts and the real producer-child receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "GET /api/v1/quantbt/runs",
    "controller": "research/run-library.controller.ts",
    "interaction_class": "AUTO_READ",

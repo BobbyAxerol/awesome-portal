@@ -14,6 +14,12 @@ import pytest
 
 from portal_api.main import create_app
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
+from portal_api.domain.research_imported_alpha_profile import (
+    IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
+    IMPORTED_ALPHA_ADAPTER_ID,
+    IMPORTED_ALPHA_PROFILE_DIGEST,
+    IMPORTED_ALPHA_PROFILE_ID,
+)
 from portal_api.services.artifact_store import ContentAddressedArtifactStore
 from portal_api.services.data_catalog import (
     DataFamily,
@@ -29,6 +35,7 @@ from portal_api.services.research_run_producer import (
     ResearchRunProducerExecutor,
     _cpu_budget_tick_payload,
 )
+from portal_api.services.research_imported_source import ImportedSource
 from portal_api.services.research_supervisor import IsolatedResearchSupervisor
 import portal_api.workers.durable_worker as durable_worker_module
 from portal_api.workers.durable_worker import DurableQuantWorker
@@ -875,3 +882,93 @@ def test_rf02_nats_consume_loop_survives_an_idle_queue() -> None:
     received = asyncio.run(scenario())
     assert [job.payload for job in received] == [{"run_id": "r1"}]
     assert message.acked
+
+
+def test_e17_imported_source_runs_through_real_producer_child_and_is_erased(
+    tmp_path: Path,
+) -> None:
+    """OL-01: exact bytes cross only the lease client and short-lived child file."""
+
+    source_bytes = b'''ALPHA_CONTRACT = {
+    "schema_version": "research.alpha-source.v1",
+    "version": "0.3.0",
+    "entrypoint": "generate_signals",
+    "timeframes": ["1h"],
+    "required_columns": ["open", "high", "low", "close", "volume"],
+    "warmup_bars": 2,
+    "determinism": {"seed_required": True},
+    "parameter_space": {"scale": {"kind": "fixed", "value": 1000}},
+}
+def generate_signals(context):
+    history = context["history"]["close"]
+    direction = 1 if history[-1] >= history[-2] else -1
+    return {
+        "schema_version": "research.imported-signal-notional-output.v1",
+        "signal_notional": direction * context["parameters"]["scale"],
+    }
+'''
+    source_digest = hashlib.sha256(source_bytes).hexdigest()
+
+    class ExactSourceClient:
+        def fetch(self, request: ResearchRunProducerRequest) -> ImportedSource:
+            assert request.research.imported_source_digest == source_digest
+            return ImportedSource(
+                source_bytes=source_bytes,
+                source_digest=source_digest,
+                entrypoint="generate_signals",
+            )
+
+    snapshots, identity = _snapshot(tmp_path)
+    payload = _request(
+        snapshot_id=identity.snapshot_id,
+        snapshot_content_hash=identity.content_hash,
+        run_id="rrun_e17_real",
+        job_id="rjob_e17_real",
+        worker_attempt_id="rwa_e17_real",
+    )
+    requested = payload["research"]["requested_spec"]
+    requested["alpha_binding"] = {
+        "alpha_id": "imported-alpha",
+        "alpha_version_id": "av_imported_0_3_0",
+    }
+    requested["strategy_id"] = "imported-alpha"
+    requested["random_seed"] = 7
+    payload["strategy_id"] = "imported-alpha"
+    research = payload["research"]
+    research.update({
+        "alpha_id": "imported-alpha",
+        "alpha_version_id": "av_imported_0_3_0",
+        "execution_adapter_id": IMPORTED_ALPHA_ADAPTER_ID,
+        "adapter_contract_digest": IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
+        "execution_profile_id": IMPORTED_ALPHA_PROFILE_ID,
+        "execution_profile_digest": IMPORTED_ALPHA_PROFILE_DIGEST,
+        "imported_source_digest": source_digest,
+        "imported_entrypoint": "generate_signals",
+        "imported_parameters": {"scale": 1000},
+    })
+    research.pop("p04_parameters")
+    request = ResearchRunProducerRequest.model_validate(payload)
+
+    market_root = tmp_path / "market-scratch"
+    market_root.mkdir(mode=0o700)
+    artifact_root = tmp_path / "artifacts"
+    executor = ResearchRunProducerExecutor(
+        snapshots=snapshots,
+        supervisor=IsolatedResearchSupervisor(
+            tmp_path / "child-scratch",
+            allowed_market_root=market_root,
+        ),
+        market_root=market_root,
+        imported_source_client=ExactSourceClient(),  # type: ignore[arg-type]
+    )
+    result = executor._execute_sync(request, artifact_root)
+
+    assert result["status"] == "COMPLETED"
+    assert result["research_receipt"]["schema_version"] == "research.p17.imported-qualification-receipt.v1"
+    assert result["research_receipt"]["source_digest"] == source_digest
+    assert result["research_evidence"]["source"]["execution_adapter_id"] == IMPORTED_ALPHA_ADAPTER_ID
+    assert not (market_root / request.job_id / request.worker_attempt_id).exists()
+    persisted = (artifact_root / request.run_id / "config" / "request.json").read_text(encoding="utf-8")
+    assert source_digest in persisted
+    assert "ALPHA_CONTRACT" not in persisted
+    assert "source_base64" not in persisted

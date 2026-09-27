@@ -51,3 +51,21 @@ changed. Backend E13 is closed. Claude/OL-23 owns only the browser receipt that
 shows the already-persisted sibling as a nested S10 node with diff-vs-parent;
 absence of that visual receipt must not reopen the writer or duplicate its
 authority.
+
+## Real product-path addendum — 2026-09-27
+
+The earlier PostgreSQL service test above did **not** by itself prove the complete
+E13 goal. The isolated E17 cell now supplies a real public-API three-node graph:
+
+- root: `rrun_1084d207e57bba4127c8e8b0cf77dc8e`;
+- CLONE_OF child: `rrun_80df739a29f127db1e5d6514a4a548d4`;
+- second CLONE_OF child: `rrun_dcb29c9c1614d5b960a5eeda8aaf9b01`.
+
+All three are COMPLETED/READY. Both children persist parent
+`ratt_1084d207e57bba4127c8e8b0cf77dc8e`; the second changes seed 7→8, and
+GET lineage returns the exact server semantic diff. No timestamp/version inference.
+These are two structural siblings sharing an explicit parent, not diagnostic
+SIBLING_OF cells or a manufactured worker retry. Full E13 is still open because
+REPRODUCE_EXISTING remains typed refused. See the [E17 machine receipt](../P10/e17-backend-acceptance.v1.json)
+for private-byte hashes and exact read statuses. Earlier closeout wording is
+superseded by this requirement-level state, not erased.

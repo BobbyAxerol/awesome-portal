@@ -51,7 +51,7 @@ _SEGMENT_EVENTS = 128
 _MAX_SEGMENTS = 80  # 10,240 structured events; browser only ever receives 500.
 _SIGNED_DECIMAL_RE = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 _DIGEST_RE = re.compile(r"[0-9a-f]{64}")
-_FOLD_SELECTION_SCOPES = {"GLOBAL_STUDY", "FIXED_PROFILE"}
+_FOLD_SELECTION_SCOPES = {"GLOBAL_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"}
 _USAGE_MAXIMA = {
     "peak_rss_bytes": 4 * 1024 * 1024 * 1024,
     # Largest admitted child CPU cap (W1 Delta WFO profile). Each journal
@@ -79,6 +79,11 @@ _PROFILE_COPY = {
         "forecast": "The what-if diagnostic does not issue a claim; it seals one evaluation grid for its parent run.",
         "not_issued": "The what-if diagnostic sealed its evaluation grid; a diagnostic never issues a release claim.",
         "claimed": "worker claimed durable P16 what-if diagnostic",
+    },
+    "IMPORTED_ALPHA": {
+        "forecast": "The restricted imported Alpha qualification has not sealed a publishable claim.",
+        "not_issued": "The restricted imported Alpha qualification sealed its artifacts but did not issue a release claim.",
+        "claimed": "worker claimed durable E17 imported Alpha qualification",
     },
 }
 

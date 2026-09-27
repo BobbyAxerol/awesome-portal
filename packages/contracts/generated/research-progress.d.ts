@@ -329,7 +329,7 @@ export interface components {
         /** @description CG-P11-03. The parameter bundle a fold was evaluated with. GLOBAL_STUDY: one optimizer study selected it for every fold, so objective is study-wide, not a per-fold best. FIXED_PROFILE: no search ran; objective is null. */
         ProgressFoldSelectionFact: {
             /** @enum {unknown} */
-            scope: "GLOBAL_STUDY" | "FIXED_PROFILE";
+            scope: "GLOBAL_STUDY" | "FIXED_PROFILE" | "IMPORTED_FIXED_PROFILE";
             trial: number;
             objective: components["schemas"]["SignedDecimal"] | null;
             params_digest: components["schemas"]["Digest"];
@@ -338,7 +338,7 @@ export interface components {
         ProgressFoldSelection: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED";
-            scope: ("GLOBAL_STUDY" | "FIXED_PROFILE") | null;
+            scope: ("GLOBAL_STUDY" | "FIXED_PROFILE" | "IMPORTED_FIXED_PROFILE") | null;
             trial: number | null;
             objective: components["schemas"]["SignedDecimal"] | null;
             params_digest: components["schemas"]["Digest"] | null;

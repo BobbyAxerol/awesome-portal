@@ -33,6 +33,13 @@ import { ResearchMetadataRepository } from "./repository";
 import { parseDecimal } from "./whatif.grid";
 import { WHATIF_PROFILE } from "./whatif.profile";
 import { ResearchRunCreateError } from "./run-create.error";
+import {
+  IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
+  IMPORTED_ALPHA_ADAPTER_ID,
+  IMPORTED_ALPHA_PROFILE,
+  IMPORTED_ALPHA_PROFILE_DIGEST,
+  IMPORTED_ALPHA_PROFILE_ID,
+} from "./imported-alpha.profile";
 
 export interface ResearchRunAdmission {
   allowed: boolean;
@@ -43,10 +50,14 @@ export interface ResearchRunAdmission {
   alpha: {
     alphaId: string;
     alphaVersionId: string;
-    adapterId: "p04.delta-rsi.v1";
+    adapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
     adapterContractDigest: string;
     /** P04 fixed map; null for the WFO profile, which searches its parameters. */
     fixedParameters: Readonly<Record<string, number>> | null;
+    /** Exact declaration-bound pins for E17; never browser-selected source bytes. */
+    importedParameters: Readonly<Record<string, string | number | boolean>> | null;
+    sourceDigest: string | null;
+    entrypoint: string;
   } | null;
   /** W1 execution profile selected by the server predicate; null when denied. */
   profile: {
@@ -150,6 +161,48 @@ export class ResearchRunAdmissionService {
     if (!eligibility) {
       return denied("RESEARCH_RUN_PREFLIGHT_NOT_READY", "The preflight AlphaVersion is no longer available in this workspace.");
     }
+    // An immutable imported declaration identifies the missing executor, not
+    // permission to execute. Preserve the legacy lifecycle denial when the
+    // imported lane is off; when it is on, report the actual absent binding.
+    if (this.config.FEATURE_RESEARCH_IMPORTED_EXECUTION === "true" &&
+        eligibility.binding === null && eligibility.sourceDigest !== null &&
+        eligibility.declaredContract.schema_version === IMPORTED_ALPHA_PROFILE.source_contract &&
+        (eligibility.lifecycleState === "DRAFT" || eligibility.lifecycleState === "ACTIVE")) {
+      return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "The imported AlphaVersion has no installed execution adapter binding.");
+    }
+    if (eligibility.binding?.adapterId === IMPORTED_ALPHA_ADAPTER_ID) {
+      if (eligibility.lifecycleState !== "DRAFT" && eligibility.lifecycleState !== "ACTIVE") {
+        return denied("RESEARCH_RUN_ALPHA_NOT_ACTIVE", "The bound imported AlphaVersion is neither DRAFT nor active.");
+      }
+      if (this.config.FEATURE_RESEARCH_IMPORTED_EXECUTION !== "true") {
+        return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "Imported Alpha execution is not enabled in this environment.");
+      }
+      if (eligibility.binding.contractDigest !== IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST || eligibility.sourceDigest === null) {
+        return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "The imported AlphaVersion is not bound to the installed restricted adapter contract.");
+      }
+      const imported = this.importedUnsupportedReason(requestedSpec, eligibility.declaredContract, eligibility.entrypoint);
+      if (imported.reason !== null) {
+        return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", imported.reason);
+      }
+      return {
+        allowed: true,
+        code: null,
+        message: null,
+        manifest,
+        requestedSpec,
+        alpha: {
+          alphaId: eligibility.alphaId,
+          alphaVersionId: eligibility.alphaVersionId,
+          adapterId: eligibility.binding.adapterId,
+          adapterContractDigest: eligibility.binding.contractDigest,
+          fixedParameters: null,
+          importedParameters: imported.parameters,
+          sourceDigest: eligibility.sourceDigest,
+          entrypoint: eligibility.entrypoint,
+        },
+        profile: { id: IMPORTED_ALPHA_PROFILE_ID, digest: IMPORTED_ALPHA_PROFILE_DIGEST },
+      };
+    }
     if (eligibility.lifecycleState !== "ACTIVE") {
       return denied("RESEARCH_RUN_ALPHA_NOT_ACTIVE", "The bound AlphaVersion is not active.");
     }
@@ -191,11 +244,109 @@ export class ResearchRunAdmissionService {
         adapterId: eligibility.binding.adapterId,
         adapterContractDigest: eligibility.binding.contractDigest,
         fixedParameters: wfo ? null : P04_DELTA_FIXED_PARAMETERS,
+        importedParameters: null,
+        sourceDigest: null,
+        entrypoint: eligibility.entrypoint,
       },
       profile: wfo
         ? { id: DELTA_WFO_PROFILE_ID, digest: DELTA_WFO_PROFILE_DIGEST }
         : { id: P04_FIXED_QUALIFICATION_PROFILE_ID, digest: null },
     };
+  }
+
+  /**
+   * E17 admits one deliberately small source-as-data contract. All variable
+   * parameters must be pinned inside the P07 declaration; a range is never
+   * silently optimized and a fixed value is never overridden.
+   */
+  private importedUnsupportedReason(
+    requested: ResearchRequestedSpec,
+    declaration: Record<string, unknown>,
+    entrypoint: string,
+  ): { reason: string | null; parameters: Readonly<Record<string, string | number | boolean>> | null } {
+    if (requested.schema_version !== "research.requested-spec.v1") {
+      return { reason: "The installed imported Alpha adapter accepts requested-spec v1 only.", parameters: null };
+    }
+    if (declaration.schema_version !== IMPORTED_ALPHA_PROFILE.source_contract || declaration.entrypoint !== entrypoint) {
+      return { reason: "The imported Alpha source declaration no longer matches its immutable entrypoint.", parameters: null };
+    }
+    if (requested.client.engine_release_id !== IMPORTED_ALPHA_PROFILE.engine_release_id ||
+        requested.execution_route !== IMPORTED_ALPHA_PROFILE.execution_route ||
+        requested.protocol !== IMPORTED_ALPHA_PROFILE.protocol || !requested.windows || requested.walk_forward) {
+      return { reason: "The imported Alpha adapter accepts only the QuantBT 1.1.1 three-window signal-notional profile.", parameters: null };
+    }
+    if (Object.keys(requested.route_params).length !== 0 || requested.optuna_trials !== 1 ||
+        requested.early_stopping !== null || Object.keys(requested.optimization_config).length !== 0) {
+      return { reason: "The imported Alpha fixed profile accepts no route configuration, optimizer study or early stopping.", parameters: null };
+    }
+    const timeframes = declaration.timeframes;
+    if (!Array.isArray(timeframes) || !timeframes.includes(requested.data.timeframe)) {
+      return { reason: "The requested timeframe is outside the imported Alpha declaration.", parameters: null };
+    }
+    if (!Number.isInteger(declaration.warmup_bars) || (declaration.warmup_bars as number) < 0 ||
+        (declaration.warmup_bars as number) > 4_096) {
+      return { reason: "The imported Alpha warmup exceeds the restricted execution profile ceiling of 4096 bars.", parameters: null };
+    }
+    const determinism = declaration.determinism;
+    if (!determinism || typeof determinism !== "object" || Array.isArray(determinism) ||
+        (determinism as Record<string, unknown>).seed_required === true && requested.random_seed === null) {
+      return { reason: "The imported Alpha determinism declaration requires an explicit random seed.", parameters: null };
+    }
+    const space = declaration.parameter_space;
+    if (!space || typeof space !== "object" || Array.isArray(space)) {
+      return { reason: "The imported Alpha parameter declaration is unavailable.", parameters: null };
+    }
+    const overrides = new Map(requested.parameter_space_overrides.map((row) => [row.name, row]));
+    if (requested.parameter_space_overrides.some((row) => row.kind !== "pin")) {
+      return { reason: "The imported Alpha fixed profile accepts parameter pins only; sweeps require a separately versioned adapter.", parameters: null };
+    }
+    const parameters: Record<string, string | number | boolean> = {};
+    for (const [name, raw] of Object.entries(space as Record<string, unknown>)) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        return { reason: `The imported Alpha parameter ${name} has an invalid declaration.`, parameters: null };
+      }
+      const spec = raw as Record<string, unknown>;
+      const override = overrides.get(name);
+      if (spec.kind === "fixed") {
+        const value = spec.value;
+        if (!["string", "number", "boolean"].includes(typeof value) ||
+            (typeof value === "number" && !Number.isFinite(value))) {
+          return { reason: `The imported Alpha fixed parameter ${name} is invalid.`, parameters: null };
+        }
+        if (override && (override.kind !== "pin" || override.value !== value)) {
+          return { reason: `The imported Alpha fixed parameter ${name} cannot be overridden.`, parameters: null };
+        }
+        parameters[name] = value as string | number | boolean;
+      } else {
+        if (!override || override.kind !== "pin") {
+          return { reason: `The imported Alpha parameter ${name} must be pinned for this execution profile.`, parameters: null };
+        }
+        if (spec.kind === "categorical") {
+          if (!Array.isArray(spec.values) || !spec.values.some((value) => value === override.value)) {
+            return { reason: `The imported Alpha parameter ${name} is outside its categorical declaration.`, parameters: null };
+          }
+        } else if (spec.kind === "int_range" || spec.kind === "float_range") {
+          const value = override.value;
+          const low = spec.low;
+          const high = spec.high;
+          const step = spec.step;
+          if (typeof value !== "number" || !Number.isFinite(value) || typeof low !== "number" ||
+              typeof high !== "number" || typeof step !== "number" || step <= 0 || value < low || value > high ||
+              Math.abs((value - low) / step - Math.round((value - low) / step)) > 1e-9 ||
+              (spec.kind === "int_range" && !Number.isInteger(value))) {
+            return { reason: `The imported Alpha parameter ${name} is outside its declared range/step.`, parameters: null };
+          }
+        } else {
+          return { reason: `The imported Alpha parameter ${name} has an unsupported declaration kind.`, parameters: null };
+        }
+        parameters[name] = override.value;
+      }
+      overrides.delete(name);
+    }
+    if (overrides.size > 0) {
+      return { reason: `The imported Alpha request pins undeclared parameters: ${[...overrides.keys()].sort().join(", ")}.`, parameters: null };
+    }
+    return { reason: null, parameters };
   }
 
   /**

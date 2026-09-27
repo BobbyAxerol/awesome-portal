@@ -25,6 +25,7 @@ from portal_api.services.durable_runs import (
 from portal_api.services.job_broker import NatsJetStreamBroker
 from portal_api.services.data_catalog import SnapshotStore
 from portal_api.services.research_run_producer import ResearchRunProducerExecutor
+from portal_api.services.research_imported_source import ResearchImportedSourceClient
 from portal_api.services.research_progress_recovery import ResearchProgressRecovery
 from portal_api.services.research_supervisor import IsolatedResearchSupervisor
 from portal_api.workers.durable_worker import (
@@ -76,6 +77,7 @@ async def run() -> None:
                 allowed_market_root=market_root,
             ),
             market_root=market_root,
+            imported_source_client=ResearchImportedSourceClient.from_environment(),
         )
     worker = DurableQuantWorker(
         broker=broker,

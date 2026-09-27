@@ -27,6 +27,7 @@ describe("P13 published Research Evidence Flow contract", () => {
       "RETURN_DISTRIBUTION", "PENDING_SOURCE_CALLBACK", "LEGACY_METADATA_ONLY",
       "source_transform_digest", "metric_registry_version", "RunIdentity", "FoldNavigation",
       "run_identity", "fold_navigation", "published_fold_count", "observed_folds",
+      "p17.imported-signal-notional.v1",
     ]) expect(generated).toContain(needle);
     const openApi = readFileSync(openApiPath, "utf8");
     expect(openApi).toContain('"maxItems": 192');

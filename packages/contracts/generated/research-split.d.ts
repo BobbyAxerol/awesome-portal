@@ -79,8 +79,8 @@ export interface components {
             data_role: "OUTER_OOS_OBSERVATION";
             /** @constant */
             child_input_state: "EXPOSED_TO_CHILD_TAPE";
-            /** @constant */
-            evaluation_state: "P04_OBSERVED_AFTER_FIXED_PROFILE";
+            /** @enum {unknown} */
+            evaluation_state: "P04_OBSERVED_AFTER_FIXED_PROFILE" | "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE";
             availability: components["schemas"]["Availability"];
         }) | components["schemas"]["AbsentFact"];
         HoldoutWindow: (components["schemas"]["Range"] & {
@@ -162,7 +162,7 @@ export interface components {
             as_of_basis: "P14_PROJECTION_RECEIVED_AT" | "RUN_STATE_UPDATED_AT" | "LEGACY_READ_MODEL_UPDATED_AT";
             dataset: components["schemas"]["DatasetFact"];
             provenance: {
-                source_adapter_id: "p04.delta-rsi.v1" | null;
+                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
                 engine_version: "1.1.1" | null;
                 input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" | null;
                 source_transform_digest: components["schemas"]["Digest"] | null;

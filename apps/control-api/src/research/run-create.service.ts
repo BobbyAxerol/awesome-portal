@@ -24,6 +24,12 @@ import {
   DELTA_WFO_RESOURCE_PROFILE,
   DELTA_WFO_WORK_SCHEMA_VERSION,
 } from "./delta-wfo.profile";
+import {
+  IMPORTED_ALPHA_PROFILE_ID,
+  IMPORTED_ALPHA_RESOURCE_CLASS,
+  IMPORTED_ALPHA_RESOURCE_PROFILE,
+  IMPORTED_ALPHA_WORK_SCHEMA_VERSION,
+} from "./imported-alpha.profile";
 
 const P10_RESOURCE_PROFILE = Object.freeze({
   memoryBytes: 4 * 1024 * 1024 * 1024,
@@ -64,13 +70,14 @@ export class ResearchRunCreateService {
         503,
       );
     }
-    if (input.intent_kind !== "NEW") {
+    const parentBoundClone = input.intent_kind === "CLONE_FOR_EXPERIMENT" && input.lineage?.relation === "CLONE_OF";
+    if (input.intent_kind !== "NEW" && !parentBoundClone) {
       // P12/P19 own clone/reproduce/upgrade lineage semantics.  Accepting
       // their labels before their parent/effective-version contracts exist
       // would create a misleading graph, so P10 makes the current gap typed.
       throw new ResearchRunCreateError(
         "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
-        "This installed Research adapter currently accepts only a new Delta qualification run.",
+        "This installed Research adapter accepts a new run or an explicitly parent-bound clone.",
         409,
       );
     }
@@ -107,10 +114,40 @@ export class ResearchRunCreateService {
     const commandId = stableId("rcmd", commandDigest);
     const profile = accepted.profile!;
     const wfo = profile.id === DELTA_WFO_PROFILE_ID;
+    const imported = profile.id === IMPORTED_ALPHA_PROFILE_ID;
+    // Lineage is Portal-owned and already persisted above the compute port.
+    // A clone is a fresh execution for the worker, not a new private engine
+    // operation. Keep the immutable public intent/parent in PostgreSQL and
+    // the command digest, while preserving the existing NEW compute contract.
+    const workerIntentKind = parentBoundClone ? "NEW" : input.intent_kind;
     // The P04 branch below is byte-for-byte the pre-W1 construction (golden
     // tests pin both digests). The WFO branch is a separate versioned shape:
     // it carries the pinned profile identity and never a P04 parameter map.
-    const workDigest = wfo
+    const workDigest = imported
+      ? digest({
+        schema_version: IMPORTED_ALPHA_WORK_SCHEMA_VERSION,
+        requested_spec_digest: manifest.requestedSpecDigest,
+        effective_spec_digest: manifest.effectiveSpecDigest,
+        dataset_binding_digest: manifest.datasetBindingDigest,
+        manifest_digest: manifest.manifestDigest,
+        snapshot: {
+          snapshot_id: this.stringFact(manifest.snapshot, "snapshot_id"),
+          snapshot_content_hash: this.stringFact(manifest.snapshot, "snapshot_content_hash"),
+        },
+        alpha: {
+          alpha_id: alpha.alphaId,
+          alpha_version_id: alpha.alphaVersionId,
+          source_digest: alpha.sourceDigest,
+          entrypoint: alpha.entrypoint,
+          adapter_id: alpha.adapterId,
+          adapter_contract_digest: alpha.adapterContractDigest,
+          parameters: alpha.importedParameters,
+        },
+        execution_profile: { profile_id: profile.id, profile_digest: profile.digest },
+        engine_release_id: requested.client.engine_release_id,
+        requested_spec: requested,
+      })
+      : wfo
       ? digest({
         schema_version: DELTA_WFO_WORK_SCHEMA_VERSION,
         requested_spec_digest: manifest.requestedSpecDigest,
@@ -156,7 +193,7 @@ export class ResearchRunCreateService {
         // a value before the only installed worker profile evaluated it.
         requested_spec: requested,
       });
-    const legacyRequest = wfo ? {
+    const legacyRequest = (wfo || imported) ? {
       strategy_id: requested.strategy_id,
       dataset_id: requested.data.dataset_id,
       protocol: requested.protocol,
@@ -166,7 +203,7 @@ export class ResearchRunCreateService {
       research: {
         schema_version: "research.run-producer.v1",
         client_intent_id: input.client_intent_id,
-        intent_kind: input.intent_kind,
+        intent_kind: workerIntentKind,
         preflight_token: input.preflight_token,
         requested_spec: requested,
         requested_spec_digest: manifest.requestedSpecDigest,
@@ -183,6 +220,11 @@ export class ResearchRunCreateService {
         // walk-forward search; there is deliberately no p04_parameters map.
         execution_profile_id: profile.id,
         execution_profile_digest: profile.digest,
+        ...(imported ? {
+          imported_source_digest: alpha.sourceDigest,
+          imported_entrypoint: alpha.entrypoint,
+          imported_parameters: alpha.importedParameters,
+        } : {}),
         work_digest: workDigest,
       },
     } : {
@@ -196,7 +238,7 @@ export class ResearchRunCreateService {
       research: {
         schema_version: "research.run-producer.v1",
         client_intent_id: input.client_intent_id,
-        intent_kind: input.intent_kind,
+        intent_kind: workerIntentKind,
         preflight_token: input.preflight_token,
         requested_spec: requested,
         requested_spec_digest: manifest.requestedSpecDigest,
@@ -242,9 +284,9 @@ export class ResearchRunCreateService {
         workDigest,
         engineReleaseId: requested.client.engine_release_id,
         legacyRequest,
-        cost: wfo ? DELTA_WFO_RESOURCE_PROFILE : P10_RESOURCE_PROFILE,
+        cost: imported ? IMPORTED_ALPHA_RESOURCE_PROFILE : wfo ? DELTA_WFO_RESOURCE_PROFILE : P10_RESOURCE_PROFILE,
         queueClass: "INTERACTIVE",
-        resourceClass: wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
+        resourceClass: imported ? IMPORTED_ALPHA_RESOURCE_CLASS : wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
         attemptLimit: 2,
         // The edge the browser declared, if any. Both relations reach the
         // same column; only SIBLING_OF carries a cell and the same-version

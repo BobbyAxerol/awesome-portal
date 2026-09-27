@@ -85,11 +85,14 @@ describe("CG-P08-03 admission reason → field path", () => {
     const sentences = [
       ...source.matchAll(/return "([^"]+\.)";/g),
       ...source.matchAll(/denied\(\s*"[A-Z_]+",\s*"([^"]+\.)"/g),
+      ...source.matchAll(/return \{ reason: "([^"]+\.)", parameters: null \}/g),
     ].map((match) => match[1]);
     expect(sentences.length).toBeGreaterThan(20);
     for (const sentence of sentences) expect(ADMISSION_REASON_FIELD_PATHS, sentence).toHaveProperty([sentence]);
     expect(admissionFieldPath("The Delta walk-forward profile runs exactly 3 Optuna trials.")).toEqual(["optuna_trials"]);
     expect(admissionFieldPath(null)).toEqual([]);
+    expect(admissionFieldPath("The imported Alpha parameter scale must be pinned for this execution profile."))
+      .toEqual(["parameter_space_overrides"]);
   });
 
   it("refuses a v2 request at P10 even with the WFO profile on, keeping the typed sentence", async () => {

@@ -5,6 +5,8 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
+import { importedAlphaReadBinding } from "./imported-alpha.read-binding";
+import { IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
 import {
   DEFAULT_PARAMETER_BINDING_REGISTRY,
   declaredParameterRows,
@@ -227,7 +229,7 @@ export class ResearchFreezeService {
   }
 
   private mapDetail(row: SplitHubRow, requestedFold: number | null, bytes: ArtifactByteVerification): unknown {
-    if (row.kind === "DURABLE" && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID) {
+    if (row.kind === "DURABLE" && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID && row.executionProfileId !== IMPORTED_ALPHA_PROFILE_ID) {
       // W1: a Delta WFO run shares the P04 executor digest but has no P04
       // fixed-parameter bundle to verify; its freeze truth is the retained
       // RS-02 current-source lane. Answer the existing typed absence.
@@ -242,8 +244,21 @@ export class ResearchFreezeService {
 
     const source = projection.source;
     // A10b: the run's own historical binding, by its exact adapter digest.
-    const binding = this.bindings.byAdapterDigest(row.adapterContractDigest);
+    const imported = importedAlphaReadBinding(row);
+    if (row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID && source.source.execution_adapter_id !== "p17.imported-signal-notional.v1") {
+      throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Stored Freeze adapter does not match the imported run.", 503);
+    }
+    const binding = row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID
+      ? imported?.numeric ?? null : this.bindings.byAdapterDigest(row.adapterContractDigest);
     const checks = this.checks(row, source, binding);
+    if (row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID) {
+      const expected = imported?.public.source_digest ?? null;
+      const observed = source.source.imported_source_digest ?? null;
+      checks.push({ key: "IMPORTED_SOURCE_CODE", expected_digest: expected, observed_digest: observed,
+        state: expected === null || observed === null ? "NOT_PUBLISHED" : expected === observed ? "MATCH" : "MISMATCH",
+        availability: expected === null || observed === null
+          ? availability("NOT_PUBLISHED", "E17_IMPORTED_SOURCE_BYTE_IDENTITY_NOT_PUBLISHED") : availability("AVAILABLE", null) });
+    }
     const bindingIntegrity = this.integrity(checks, source);
     // A10a: a durable receipt that found corrupt or missing sealed bytes
     // BLOCKS the chain — it never warns, and never rebaselines the binding.
@@ -260,11 +275,12 @@ export class ResearchFreezeService {
       : sourceAvailable;
     const bindingMatches = integrity.state === "PARTIAL";
     const strictOuterOos = gap("NOT_ASSERTED", source.protocol.selection.strict_outer_oos.reason_code);
-    const noSelection = gap("NOT_APPLICABLE", NO_SELECTION_ARTIFACT);
-    const noOrdering = gap("NOT_ASSERTED", NO_STRICT_ORDERING);
-    const noGrid = gap("NOT_APPLICABLE", NO_DIAGNOSTIC_GRID);
-    const noDiagnosticAdmission = gap("NOT_APPLICABLE", NO_DIAGNOSTIC_ADMISSION);
-    const noSibling = gap("NOT_APPLICABLE", NO_SIBLING_DRAFT);
+    const profileReason = (reason: string) => imported ? reason.replace(/^P04_/, "E17_IMPORTED_") : reason;
+    const noSelection = gap("NOT_APPLICABLE", profileReason(NO_SELECTION_ARTIFACT));
+    const noOrdering = gap("NOT_ASSERTED", profileReason(NO_STRICT_ORDERING));
+    const noGrid = gap("NOT_APPLICABLE", profileReason(NO_DIAGNOSTIC_GRID));
+    const noDiagnosticAdmission = gap("NOT_APPLICABLE", profileReason(NO_DIAGNOSTIC_ADMISSION));
+    const noSibling = gap("NOT_APPLICABLE", profileReason(NO_SIBLING_DRAFT));
     const revision = `p16r1_${sha256ResearchJson({
       p14_revision: row.revision,
       p14_source_split_digest: row.sourceSplitDigest,
@@ -303,13 +319,13 @@ export class ResearchFreezeService {
       freeze: {
         source_profile: {
           state: "FIXED_PROFILE_NO_SELECTION_ARTIFACT",
-          reason_code: NO_SELECTION_ARTIFACT,
+          reason_code: profileReason(NO_SELECTION_ARTIFACT),
           availability: sourceAvailable,
         },
         inspection: {
           requested_fold: requestedFold,
           state: "NOT_APPLICABLE",
-          availability: availability("NOT_APPLICABLE", "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_FOLD_SELECTIONS"),
+          availability: availability("NOT_APPLICABLE", profileReason("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_FOLD_SELECTIONS")),
         },
         selection: {
           state: "FIXED_PARAMETER_PROFILE",
@@ -398,8 +414,22 @@ export class ResearchFreezeService {
         sibling_draft: noSibling,
       },
       artifact_bytes: bytes,
-      stage4_binding: this.stage4(checks, HISTORICAL_BINDING_NOT_REGISTERED),
-      parameter_authority: parameterAuthority({
+      ...(imported ? { imported_alpha: imported.public } : {}),
+      stage4_binding: imported ? fixedStage4Binding({
+        lane: "IMPORTED_FIXED_QUALIFICATION", expectedBundleDigest: imported.public.parameter_bundle_digest,
+        observedBundleDigest: source.protocol.selection.parameter_bundle_digest,
+        expectedAdapterDigest: sha256ResearchJson({ source_digest: imported.public.source_digest, adapter_contract_digest: row.adapterContractDigest }),
+        observedAdapterDigest: source.source.imported_source_digest
+          ? sha256ResearchJson({ source_digest: source.source.imported_source_digest, adapter_contract_digest: row.adapterContractDigest }) : null,
+        missingReason: "E17_IMPORTED_SOURCE_BYTE_IDENTITY_NOT_PUBLISHED",
+      }) : this.stage4(checks, HISTORICAL_BINDING_NOT_REGISTERED),
+      parameter_authority: imported ? {
+        schema_version: "research.parameter-authority.v1", state: "NOT_PUBLISHED",
+        reason_code: "E17_CODE_FIXED_VALUES_NOT_DECLARED", declared: { hash_scope: "PARAMS_DIGEST", names: imported.public.parameters.map((parameter) => parameter.name) },
+        code_fixed: { state: "NOT_PUBLISHED", reason_code: "E17_CODE_FIXED_VALUES_NOT_DECLARED", values: [],
+          hash_scope: "SOURCE_CODE_SHA256", code_digest: imported.public.source_digest,
+          specification_digest: null, adapter_contract_digest: row.adapterContractDigest },
+      } : parameterAuthority({
         names: Object.keys(binding?.parameterSpace ?? {}),
         codeFixed: binding?.codeFixed,
         adapterContractDigest: binding?.adapterContractDigest ?? null,
@@ -427,7 +457,7 @@ export class ResearchFreezeService {
     binding: HistoricalParameterBinding | null,
   ) {
     const check = (
-      key: "P04_ADAPTER_CONTRACT" | "P10_MANIFEST_BINDING" | "P04_FIXED_PARAMETER_BUNDLE",
+      key: "P04_ADAPTER_CONTRACT" | "P10_MANIFEST_BINDING" | "P04_FIXED_PARAMETER_BUNDLE" | "IMPORTED_SOURCE_CODE" | "EXECUTION_ADAPTER_CONTRACT" | "DECLARED_PARAMETER_BUNDLE",
       expected: string | null,
       observed: string | null,
     ) => {
@@ -447,9 +477,9 @@ export class ResearchFreezeService {
     return [
       // Expected = the registered historical binding for this exact digest.
       // A release that installs a newer binding does not change this answer.
-      check("P04_ADAPTER_CONTRACT", binding?.adapterContractDigest ?? this.bindings.newestAdapterDigest(), row.adapterContractDigest),
+      check(row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID ? "EXECUTION_ADAPTER_CONTRACT" : "P04_ADAPTER_CONTRACT", binding?.adapterContractDigest ?? this.bindings.newestAdapterDigest(), row.adapterContractDigest),
       check("P10_MANIFEST_BINDING", row.manifestDigest, source.source.manifest_digest),
-      check("P04_FIXED_PARAMETER_BUNDLE", binding?.fixedBundleDigest ?? null, source.protocol.selection.parameter_bundle_digest),
+      check(row.executionProfileId === IMPORTED_ALPHA_PROFILE_ID ? "DECLARED_PARAMETER_BUNDLE" : "P04_FIXED_PARAMETER_BUNDLE", binding?.fixedBundleDigest ?? null, source.protocol.selection.parameter_bundle_digest),
     ];
   }
 

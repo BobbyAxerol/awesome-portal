@@ -160,7 +160,7 @@ export const ResearchReplayResponseSchema = z.object({
   readiness: z.enum(["PARTIAL", "NOT_READY"]),
   as_of_utc_ms: UtcMsSchema,
   provenance: z.object({
-    source_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
+    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
     evidence_revision: z.string().regex(/^p13r1_[0-9a-f]{64}$/).nullable(),
     source_transform_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY").nullable(),
@@ -173,7 +173,7 @@ export const ResearchReplayResponseSchema = z.object({
       "LEGACY_METADATA_ONLY",
       "NOT_PUBLISHED",
     ]),
-    replay_contract: z.literal("P17_CURRENT_P04_EQUITY_SAMPLE_V1").nullable(),
+    replay_contract: z.enum(["P17_CURRENT_P04_EQUITY_SAMPLE_V1", "P17_IMPORTED_FIXED_EQUITY_SAMPLE_V1"]).nullable(),
     availability: ResearchReplayAvailabilitySchema,
   }).strict(),
   /** Bounded direct-seek window over immutable P13 OOS equity samples. */
@@ -188,7 +188,7 @@ export const ResearchReplayResponseSchema = z.object({
     semantics: z.literal("BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY"),
     data: ResearchEvidenceCandleOverviewSchema.nullable(),
     availability: ResearchReplayAvailabilitySchema,
-  }).strict(),
+  }).strict().optional(),
   /**
    * Route-specific execution panels. P04 does not publish their source
    * records, so these are structured absences rather than decorative rows.

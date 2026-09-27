@@ -10,6 +10,7 @@
  */
 
 import { z } from "zod";
+import { ImportedAlphaReadBindingSchema } from "./imported-alpha.read-binding";
 
 import { BoundWarningSchema } from "./bound-warning";
 
@@ -75,7 +76,9 @@ const FixedProfileSchema = z.object({
   state: z.literal("FIXED_PROFILE_NO_SEARCH"),
   adapter_contract_digest: DigestSchema,
   parameter_bundle_digest: DigestSchema,
-  parameters: z.array(ParameterSchema).min(1).max(32),
+  // Numeric range placements only; imported fixed/categorical pins are
+  // carried losslessly by imported_alpha, never fabricated as zero-width ranges.
+  parameters: z.array(ParameterSchema).max(32),
   // P14 is the source's exact current fact: the child did not publish strict
   // outer-OOS selection evidence. It is intentionally not upgraded here.
   strict_outer_oos: ResearchSearchSourceGapSchema,
@@ -162,7 +165,7 @@ const OosColumnSchema = z.object({
   // window was observed after the parameters were fixed and fed no selection
   // inside this run; strict outer-OOS selection stays NOT_ASSERTED above.
   state: z.enum(["SELECTION_INPUT", "RETROSPECTIVE", "REPORT_ONLY", "WITHHELD", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
-  source_evaluation_state: z.literal("P04_OBSERVED_AFTER_FIXED_PROFILE").nullable(),
+  source_evaluation_state: z.enum(["P04_OBSERVED_AFTER_FIXED_PROFILE", "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE"]).nullable(),
   provenance: z.enum(["P14_SOURCE_RECEIPT", "NONE"]),
   reason_code: ReasonCodeSchema.nullable(),
   availability: ResearchSearchAvailabilitySchema,
@@ -205,7 +208,7 @@ export const ResearchSearchResponseSchema = z.object({
   as_of_utc_ms: UtcMsSchema,
   as_of_basis: z.enum(["P14_PROJECTION_RECEIVED_AT", "RUN_STATE_UPDATED_AT", "LEGACY_READ_MODEL_UPDATED_AT"]),
   provenance: z.object({
-    source_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
+    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
     adapter_contract_digest: DigestSchema.nullable(),
     engine_version: z.literal("1.1.1").nullable(),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY").nullable(),
@@ -237,6 +240,8 @@ export const ResearchSearchResponseSchema = z.object({
   }).strict(),
   claim_row: ClaimRowSchema,
   fixed_profile: z.union([FixedProfileSchema, AbsentFixedProfileSchema]),
+  /** Includes categorical/fixed pins without coercing them into numeric range rows. */
+  imported_alpha: ImportedAlphaReadBindingSchema.optional(),
   selection: z.object({
     state: z.enum(["FIXED_PARAMETER_PROFILE", "NOT_PUBLISHED"]),
     selected_trial_ref: z.null(),
@@ -262,6 +267,12 @@ export const ResearchSearchResponseSchema = z.object({
     interactions: ResearchSearchSourceGapSchema,
   }).strict(),
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ResearchSearchSourceGapSchema),
-}).strict();
+}).strict().superRefine((value, context) => {
+  if (value.fixed_profile.state === "FIXED_PROFILE_NO_SEARCH" &&
+      value.fixed_profile.parameters.length === 0 && !value.imported_alpha) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["fixed_profile", "parameters"],
+      message: "An available empty range map must identify the imported immutable pins" });
+  }
+});
 
 export type ResearchSearchResponse = z.infer<typeof ResearchSearchResponseSchema>;

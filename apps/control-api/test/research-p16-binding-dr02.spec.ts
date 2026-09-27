@@ -12,6 +12,7 @@ import {
 import {
   bundleDigest,
   declaredParameterRows,
+  exactDecimalText,
   ResearchParameterBindingRegistry,
   type HistoricalParameterBinding,
 } from "../src/research/parameter-binding.registry";
@@ -107,6 +108,16 @@ describe("DR-02 · research.bound-warning.v1", () => {
 });
 
 describe("A10b · historical parameter binding by the run's exact adapter digest", () => {
+  it("expands scientific notation without rounding the declared binary64 value", () => {
+    for (const value of [1e-8, -1.2345e-8, 5e-324, 1e21, Number.MAX_VALUE]) {
+      const text = exactDecimalText(value)!;
+      expect(text).toMatch(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/);
+      expect(Number(text)).toBe(value);
+    }
+    expect(exactDecimalText(Number.NaN)).toBeNull();
+    expect(exactDecimalText(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+
   const oldBundle = { ...P04_DELTA_FIXED_PARAMETERS, rvol: 1.2, slpercent: 0.9 };
   const oldDigest = "a".repeat(64);
   const oldBinding: HistoricalParameterBinding = {

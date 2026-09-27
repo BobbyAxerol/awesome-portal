@@ -5,6 +5,7 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
+import { importedAlphaReadBinding } from "./imported-alpha.read-binding";
 import {
   DEFAULT_PARAMETER_BINDING_REGISTRY,
   declaredParameterRows,
@@ -307,11 +308,13 @@ export class ResearchSearchService {
 
     const source = projection.source;
     // A10b: the run's own historical binding, by its exact adapter digest.
-    const binding = this.bindings.byAdapterDigest(row.adapterContractDigest);
+    const imported = importedAlphaReadBinding(row);
+    const binding = imported?.numeric ?? this.bindings.byAdapterDigest(row.adapterContractDigest);
     // W1: gate on the immutable execution profile too; the Delta WFO profile
     // shares the P04 executor digest but is not the fixed qualification.
-    const compatible = (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID
+    const compatible = (imported !== null || (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID)
       && binding !== null
+      && (imported === null || source.source.execution_adapter_id === "p17.imported-signal-notional.v1")
       && source.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH"
       && source.protocol.selection.parameter_bundle_digest === binding.fixedBundleDigest;
     if (!compatible) {
@@ -331,9 +334,11 @@ export class ResearchSearchService {
     const declaredOptimizer = Boolean(declared);
     const metric = candidateSelectionMetric(available, declaredOptimizer);
     const strictOos = gap("NOT_ASSERTED", source.protocol.selection.strict_outer_oos.reason_code || STRICT_OOS_REASON);
-    const fixedGap = gap("NOT_APPLICABLE", FIXED_PROFILE_REASON);
-    const diagnosticGap = gap("NOT_APPLICABLE", FIXED_DIAGNOSTIC_REASON);
-    const selectionTrace = gap("NOT_APPLICABLE", "P04_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE");
+    const fixedReason = imported ? "E17_IMPORTED_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY" : FIXED_PROFILE_REASON;
+    const diagnosticReason = imported ? "E17_IMPORTED_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS" : FIXED_DIAGNOSTIC_REASON;
+    const fixedGap = gap("NOT_APPLICABLE", fixedReason);
+    const diagnosticGap = gap("NOT_APPLICABLE", diagnosticReason);
+    const selectionTrace = gap("NOT_APPLICABLE", imported ? "E17_IMPORTED_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE" : "P04_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE");
     const sourceAbsences = {
       study: fixedGap,
       trial_ledger: fixedGap,
@@ -406,6 +411,7 @@ export class ResearchSearchService {
         strict_outer_oos: strictOos,
         availability: available,
       },
+      ...(imported ? { imported_alpha: imported.public } : {}),
       selection: {
         state: "FIXED_PARAMETER_PROFILE",
         selected_trial_ref: null,
@@ -416,19 +422,19 @@ export class ResearchSearchService {
       inspection: {
         requested_fold: requestedFold,
         state: "NOT_APPLICABLE",
-        availability: availability("NOT_APPLICABLE", FIXED_PROFILE_REASON),
+        availability: availability("NOT_APPLICABLE", fixedReason),
       },
       ledger: {
         state: "NOT_APPLICABLE",
-        reason_code: FIXED_PROFILE_REASON,
+        reason_code: fixedReason,
         total_rows: null,
         sampled_rows: null,
         page: null,
-        availability: availability("NOT_APPLICABLE", FIXED_PROFILE_REASON),
+        availability: availability("NOT_APPLICABLE", fixedReason),
       },
       diagnostics: {
         state: "NOT_APPLICABLE",
-        availability: availability("NOT_APPLICABLE", FIXED_DIAGNOSTIC_REASON),
+        availability: availability("NOT_APPLICABLE", diagnosticReason),
         scatter: diagnosticGap,
         distributions: diagnosticGap,
         parameter_frequency: diagnosticGap,

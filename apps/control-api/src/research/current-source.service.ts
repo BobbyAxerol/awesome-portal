@@ -66,6 +66,7 @@ import {
 } from "./current-source.payload";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } from "./delta-wfo.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
+import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
 import { sha256ResearchJson } from "./preflight.service";
 import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
 import { inertWhatIf, ResearchWhatIfService, type WhatIfBasis } from "./whatif.service";
@@ -1101,14 +1102,20 @@ export class ResearchCurrentSourceService {
     adapterContractDigest: string | null,
     executionProfileId: string | null,
   ): ResearchCurrentSourceNotApplicableResponse | null {
-    if (executionProfileId !== P04_FIXED_QUALIFICATION_PROFILE_ID) return null;
-    if (adapterContractDigest !== P04_DELTA_ADAPTER_CONTRACT_DIGEST) return null;
+    const imported = executionProfileId === IMPORTED_ALPHA_PROFILE_ID &&
+      adapterContractDigest === IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST;
+    const p04 = executionProfileId === P04_FIXED_QUALIFICATION_PROFILE_ID &&
+      adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST;
+    if (!p04 && !imported) return null;
+    const reason = imported
+      ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_IMPORTED_FIXED_QUALIFICATION"
+      : P04_FIXED_PROFILE_NOT_RETAINABLE_REASON;
     const revisionValue = `rs02_not-applicable_${sha256ResearchJson({
       schema_version: "research.current-source-not-applicable.v1",
       run_id: runId,
       operation,
       run_adapter_contract_digest: adapterContractDigest,
-      reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON,
+      reason_code: reason,
     })}`;
     return this.valid(ResearchCurrentSourceNotApplicableResponseSchema, {
       schema_version: "research.current-source-not-applicable.v1",
@@ -1116,15 +1123,15 @@ export class ResearchCurrentSourceService {
       run_id: runId,
       revision: revisionValue,
       etag: `"${revisionValue}"`,
-      availability: { state: "NOT_APPLICABLE", reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON },
+      availability: { state: "NOT_APPLICABLE", reason_code: reason },
       lane: {
         state: "NOT_APPLICABLE",
         operation,
-        run_profile: "P04_FIXED_QUALIFICATION",
+        run_profile: imported ? "IMPORTED_FIXED_QUALIFICATION" : "P04_FIXED_QUALIFICATION",
         run_adapter_contract_digest: adapterContractDigest,
         // Byte-stable: P04 N/A keeps naming the original Advanced-WFO lane.
         retainable_profile_id: RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
-        reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON,
+        reason_code: reason,
       },
     });
   }

@@ -163,6 +163,19 @@ export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly stri
   "The preflight AlphaVersion is no longer available in this workspace.": ["alpha_binding"],
   "The bound AlphaVersion is not active.": ["alpha_binding"],
   "No installed durable executor is bound to this active AlphaVersion.": ["alpha_binding"],
+  "The imported AlphaVersion has no installed execution adapter binding.": ["alpha_binding"],
+  "The bound imported AlphaVersion is neither DRAFT nor active.": ["alpha_binding"],
+  "Imported Alpha execution is not enabled in this environment.": ["alpha_binding"],
+  "The imported AlphaVersion is not bound to the installed restricted adapter contract.": ["alpha_binding"],
+  "The installed imported Alpha adapter accepts requested-spec v1 only.": ["schema_version"],
+  "The imported Alpha source declaration no longer matches its immutable entrypoint.": ["alpha_binding"],
+  "The imported Alpha adapter accepts only the QuantBT 1.1.1 three-window signal-notional profile.": ["protocol"],
+  "The imported Alpha fixed profile accepts no route configuration, optimizer study or early stopping.": ["route_params"],
+  "The requested timeframe is outside the imported Alpha declaration.": ["data", "timeframe"],
+  "The imported Alpha warmup exceeds the restricted execution profile ceiling of 4096 bars.": ["alpha_binding"],
+  "The imported Alpha determinism declaration requires an explicit random seed.": ["random_seed"],
+  "The imported Alpha parameter declaration is unavailable.": ["alpha_binding"],
+  "The imported Alpha fixed profile accepts parameter pins only; sweeps require a separately versioned adapter.": ["parameter_space_overrides"],
   "No installed executor runs requested-spec v2 temporal guards, rolling width or inner folds yet; preflight validates them only.": ["schema_version"],
   "The effective preflight engine binding no longer matches the submitted request.": ["client", "engine_release_id"],
   "The Delta walk-forward profile is bound to engine release er_quantbt_111.": ["client", "engine_release_id"],
@@ -191,5 +204,14 @@ export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly stri
 };
 
 export function admissionFieldPath(message: string | null): readonly string[] {
-  return message === null ? [] : ADMISSION_REASON_FIELD_PATHS[message] ?? [];
+  if (message === null) return [];
+  const exact = ADMISSION_REASON_FIELD_PATHS[message];
+  if (exact) return exact;
+  // Declaration/pin refusals have a validated public parameter name in the
+  // sentence, not a fixed literal. Publish the form field, never that value.
+  if (/^The imported Alpha (?:fixed )?parameter [A-Za-z][A-Za-z0-9_]{0,63} /.test(message)
+    || message.startsWith("The imported Alpha request pins undeclared parameters: ")) {
+    return ["parameter_space_overrides"];
+  }
+  return [];
 }

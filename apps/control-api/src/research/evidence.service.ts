@@ -168,7 +168,7 @@ const StoredIdentitySchema = (sampling: z.ZodTypeAny) => z.object({
 const StoredProjectionSchema = z.object({
   schema_version: z.literal("research.evidence-projection.v1"),
   source: z.object({
-    execution_adapter_id: z.literal("p04.delta-rsi.v1"),
+    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
     engine_version: z.string().regex(/^1\.1\.1$/),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     oos_observation_count: z.number().int().positive().max(2_000_000),

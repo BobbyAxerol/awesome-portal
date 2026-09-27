@@ -26,6 +26,7 @@ from pydantic import ValidationError
 
 from portal_api.domain.research_delta_wfo_profile import DELTA_WFO_CPU_SECONDS, DELTA_WFO_OPTUNA_TRIALS
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
+from portal_api.domain.research_imported_alpha_profile import IMPORTED_ALPHA_CPU_SECONDS
 from portal_api.domain.research_whatif_profile import WHATIF_CPU_SECONDS
 from portal_api.services.artifact_store import ContentAddressedArtifactStore
 from portal_api.services.durable_runs import (
@@ -243,8 +244,18 @@ class DurableQuantWorker:
         # same confined child and seals one WHATIF_GRID relation instead of
         # an RS-02 current-source lane.
         is_whatif = is_research_producer and research_request.research.is_whatif
+        is_imported_alpha = is_research_producer and research_request.research.is_imported_alpha
         whatif_job = research_request.research.whatif if is_whatif else None
         try:
+            if is_imported_alpha and not (
+                _flag("PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION")
+                and _flag("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS")
+                and _flag("PORTAL_FEATURE_RESEARCH_PROGRESS")
+            ):
+                raise _DeltaWfoProfileUnavailable(
+                    "E17 imported Alpha execution requires PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION, "
+                    "PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS and PORTAL_FEATURE_RESEARCH_PROGRESS"
+                )
             if is_whatif and not (
                 _flag("PORTAL_FEATURE_RESEARCH_WHATIF")
                 and _flag("PORTAL_FEATURE_RESEARCH_WFO_PROFILE")
@@ -285,8 +296,14 @@ class DurableQuantWorker:
                         len(whatif_job.evaluations) if whatif_job is not None
                         else DELTA_WFO_OPTUNA_TRIALS if is_delta_wfo else 1
                     ),
-                    cpu_cap_seconds=WHATIF_CPU_SECONDS if is_whatif else DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
-                    profile="DELTA_WHATIF" if is_whatif else "DELTA_WFO" if is_delta_wfo else "P04_FIXED",
+                    cpu_cap_seconds=(
+                        WHATIF_CPU_SECONDS if is_whatif else IMPORTED_ALPHA_CPU_SECONDS
+                        if is_imported_alpha else DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45
+                    ),
+                    profile=(
+                        "DELTA_WHATIF" if is_whatif else "IMPORTED_ALPHA"
+                        if is_imported_alpha else "DELTA_WFO" if is_delta_wfo else "P04_FIXED"
+                    ),
                 )
                 try:
                     progress_relay = ResearchProgressRelay.from_environment(

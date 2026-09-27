@@ -49,6 +49,18 @@ export const ResearchArtifactSealIngressSchema = Identity.extend({
   documents: z.array(Document).max(16).optional(),
 }).strict();
 
+/**
+ * E17 source custody. The durable worker presents its current lease and the
+ * digest already pinned in the private producer envelope. Control API returns
+ * the exact immutable P07 bytes only when the run's adapter/profile binding
+ * matches; no opaque upload ref or database locator crosses this boundary.
+ */
+export const ResearchImportedSourceResolveIngressSchema = Identity.omit({ artifact_id: true }).extend({
+  schema_version: z.literal("research.imported-source-resolve.v1"),
+  source_digest: Digest,
+  entrypoint: z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,127}$/),
+}).strict();
+
 const TableKind = z.enum(["OBSERVATION", "FOLD", "TRIAL", "CANDIDATE", "SELECTION"]);
 const SourceId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/);
 
@@ -109,3 +121,4 @@ export type ResearchCurrentSourceBatchIngress = z.infer<typeof ResearchCurrentSo
 export type ResearchCurrentSourceSealIngress = z.infer<typeof ResearchCurrentSourceSealIngressSchema>;
 export type ResearchArtifactReserveIngress = z.infer<typeof ResearchArtifactReserveIngressSchema>;
 export type ResearchArtifactSealIngress = z.infer<typeof ResearchArtifactSealIngressSchema>;
+export type ResearchImportedSourceResolveIngress = z.infer<typeof ResearchImportedSourceResolveIngressSchema>;

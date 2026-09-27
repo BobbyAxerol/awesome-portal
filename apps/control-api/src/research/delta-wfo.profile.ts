@@ -12,9 +12,15 @@
 
 import { createHash } from "node:crypto";
 
+import { IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
+
 export const P04_FIXED_QUALIFICATION_PROFILE_ID = "p04.fixed-qualification.v1" as const;
 export const DELTA_WFO_PROFILE_ID = "p10.delta-signal-notional-wfo.v1" as const;
-export const RESEARCH_EXECUTION_PROFILE_IDS = [P04_FIXED_QUALIFICATION_PROFILE_ID, DELTA_WFO_PROFILE_ID] as const;
+export const RESEARCH_EXECUTION_PROFILE_IDS = [
+  P04_FIXED_QUALIFICATION_PROFILE_ID,
+  DELTA_WFO_PROFILE_ID,
+  IMPORTED_ALPHA_PROFILE_ID,
+] as const;
 export type ResearchExecutionProfileId = typeof RESEARCH_EXECUTION_PROFILE_IDS[number];
 
 export const DELTA_WFO_PROFILE_DIGEST = "b86c66fa68c41e76c6106bd06a48b5ba1281bc4b168a915ec2fa7e34ec2a6cca" as const;

@@ -12,6 +12,7 @@ import {
   ResearchArtifactSealIngressSchema,
   ResearchCurrentSourceBatchIngressSchema,
   ResearchCurrentSourceSealIngressSchema,
+  ResearchImportedSourceResolveIngressSchema,
 } from "./artifact-ingress.contract";
 import { ResearchCurrentSourceIngestService } from "./current-source-ingest.service";
 import { ResearchMetadataRepository } from "./repository";
@@ -117,6 +118,39 @@ export class ResearchProgressIngressController {
       },
     );
     return { schema_version: "research.artifact-seal.v1", sealed: true, replayed: result.replayed };
+  }
+
+  /** E17: exact immutable source bytes for one current imported-run lease. */
+  @Post("sources/imported")
+  @HttpCode(200)
+  async resolveImportedSource(@Req() request: FastifyRequest, @Body() body: unknown) {
+    this.assertWorkerPrincipal(request);
+    if (this.config.FEATURE_RESEARCH_IMPORTED_EXECUTION !== "true") {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE", "Imported Alpha execution is not enabled.", 503);
+    }
+    const parsed = ResearchImportedSourceResolveIngressSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Imported Alpha source request is invalid.", 400);
+    }
+    const lease = await this.progress.resolveIngress(parsed.data);
+    if (lease.executionProfileId !== "p17.imported-signal-notional.v1") {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Only an imported Alpha run may resolve imported source bytes.", 409);
+    }
+    const source = await this.metadata.loadImportedExecutionSource(
+      { workspaceId: lease.workspaceId, actorUserId: lease.actorUserId },
+      {
+        runId: parsed.data.run_id,
+        sourceDigest: parsed.data.source_digest,
+        entrypoint: parsed.data.entrypoint,
+      },
+    );
+    return {
+      schema_version: "research.imported-source.v1",
+      source_digest: source.sourceDigest,
+      entrypoint: source.entrypoint,
+      source_base64: source.sourceBytes.toString("base64"),
+      byte_count: source.sourceBytes.byteLength,
+    };
   }
 
   /** W1 §1.2: one bounded retained-row batch for a sealed P05 WFO artifact. */

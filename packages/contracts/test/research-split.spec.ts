@@ -21,6 +21,7 @@ describe("P14 published Research Split contract", () => {
       "WARMUP_NOT_SCORED", "NOT_EXPOSED_TO_CHILD_TAPE", "NOT_EVALUATED",
       "FIXED_PROFILE_NO_SEARCH", "NOT_ATTESTED", "P08_METADATA_BOUND",
       "PENDING_SOURCE_CALLBACK", "LEGACY_METADATA_ONLY", "source_transform_digest",
+      "p17.imported-signal-notional.v1", "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE",
     ]) expect(generated).toContain(needle);
   });
 

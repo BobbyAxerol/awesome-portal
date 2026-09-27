@@ -361,13 +361,13 @@ export interface ResearchRunProducerInput {
   intentKind: ResearchIntentKind;
   alphaId: string;
   alphaVersionId: string;
-  executionAdapterId: "p04.delta-rsi.v1";
+  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
   adapterContractDigest: string;
   /**
    * W1 run execution profile. Omitted means the P04 fixed qualification
    * (with a NULL digest), so existing callers keep their exact identity.
    */
-  executionProfileId?: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+  executionProfileId?: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p17.imported-signal-notional.v1";
   executionProfileDigest?: string | null;
   preflightToken: string;
   requestedSpecDigest: string;
@@ -417,7 +417,7 @@ export interface ResearchWhatIfIntentInput {
   preflightToken: string;
   alphaId: string;
   alphaVersionId: string;
-  executionAdapterId: "p04.delta-rsi.v1";
+  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
   adapterContractDigest: string;
   requestedSpecDigest: string;
   effectiveSpecDigest: string;
@@ -437,9 +437,9 @@ export interface ResearchRunProducerRecord {
   clientIntentId: string;
   alphaId: string;
   alphaVersionId: string;
-  executionAdapterId: "p04.delta-rsi.v1";
+  executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
   adapterContractDigest: string;
-  executionProfileId: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1";
+  executionProfileId: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1";
   executionProfileDigest: string | null;
   requestedSpecDigest: string;
   effectiveSpecDigest: string;
@@ -455,12 +455,18 @@ export interface ResearchRunProducerRecord {
   portalReceipt: Record<string, unknown> | null;
 }
 
-/** P10 can only claim a server-installed P04 adapter, never arbitrary source. */
+/** P10 can only claim a server-installed adapter, never a browser-selected source. */
 export interface ResearchExecutionAdapterBinding {
   alphaId: string;
   alphaVersionId: string;
-  adapterId: "p04.delta-rsi.v1";
+  adapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
   contractDigest: string;
+}
+
+/** E17 server-owned binding installed atomically with DRAFT -> ACTIVE CAS. */
+export interface ResearchImportedExecutionBindingInput {
+  adapterId: "p17.imported-signal-notional.v1";
+  adapterContractDigest: string;
 }
 
 /**

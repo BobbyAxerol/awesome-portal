@@ -198,7 +198,18 @@ export interface DeclaredParameterRow {
 export function exactDecimalText(value: number): string | null {
   if (!Number.isFinite(value)) return null;
   const text = String(value);
-  return /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(text) ? text : null;
+  if (/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(text)) return text;
+  // Expand JS's shortest round-trip binary64 representation; no rounding,
+  // toFixed or arithmetic over source decimal strings. Imported declarations
+  // can legitimately contain 1e-8; the public decimal grammar has no exponent.
+  const match = /^(-?)([0-9]+)(?:\.([0-9]+))?e([+-]?[0-9]+)$/.exec(text);
+  if (!match) return null;
+  const digits = match[2] + (match[3] ?? "");
+  const point = match[2].length + Number(match[4]);
+  const expanded = point <= 0 ? "0." + "0".repeat(-point) + digits
+    : point >= digits.length ? digits + "0".repeat(point - digits.length)
+    : digits.slice(0, point) + "." + digits.slice(point);
+  return match[1] + expanded;
 }
 
 /**

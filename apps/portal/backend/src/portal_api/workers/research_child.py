@@ -11,6 +11,7 @@ allowlisted receipt.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import math
@@ -55,7 +56,19 @@ _MAX_DISTRIBUTION_BUCKETS = 12
 # buckets leave the existing 24-KiB source-receipt budget intact.
 _MAX_P04_CANDLE_OVERVIEW_BUCKETS = 12
 _MAX_EVIDENCE_RECEIPT_BYTES = 24 * 1024
-_ALLOWED_TASKS = frozenset({"P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"})
+_ALLOWED_TASKS = frozenset({
+    "P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID", "P17_IMPORTED_SIGNAL_NOTIONAL"
+})
+
+_IMPORTED_FORBIDDEN_NODES = (
+    ast.Import, ast.ImportFrom, ast.ClassDef, ast.AsyncFunctionDef, ast.Lambda,
+    ast.With, ast.AsyncWith, ast.Try, ast.Raise, ast.Global, ast.Nonlocal,
+    ast.Yield, ast.YieldFrom, ast.Await, ast.While, ast.Delete, ast.Attribute,
+)
+_IMPORTED_SAFE_CALLS = frozenset({"abs", "bool", "enumerate", "float", "int", "len", "max", "min", "range", "round", "sum", "zip"})
+_IMPORTED_MAX_AST_NODES = 20_000
+_IMPORTED_MAX_AST_DEPTH = 96
+_IMPORTED_MAX_WARMUP_BARS = 4_096
 
 
 def _finite_decimal(value: object, *, label: str) -> Decimal:
@@ -362,7 +375,14 @@ def _p04_candle_overview(*, market, positions, oos_start_utc_ms: int) -> dict[st
     }
 
 
-def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_utc_ms: int) -> dict[str, Any]:
+def _p13_evidence_source(
+    *,
+    market,
+    result,
+    report: dict[str, Any],
+    oos_start_utc_ms: int,
+    execution_adapter_id: str = "p04.delta-rsi.v1",
+) -> dict[str, Any]:
     """Build the bounded evidence passport from the actual QuantBT result.
 
     It excludes raw OHLCV/source rows, fills, benchmark and funding. E16 adds
@@ -427,7 +447,7 @@ def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_ut
     receipt = {
         "schema_version": "research.p13.evidence-source.v1",
         "source": {
-            "execution_adapter_id": "p04.delta-rsi.v1",
+            "execution_adapter_id": execution_adapter_id,
             "engine_version": QuantBTGateway().version(),
             "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
             "oos_observation_count": len(equity),
@@ -511,6 +531,16 @@ def _safe_path(value: str, *, label: str) -> Path:
     return path
 
 
+def _safe_imported_source_path(value: str) -> Path:
+    unresolved = Path(value)
+    if unresolved.is_symlink():
+        raise ValueError("source_path must not be a symlink")
+    path = unresolved.resolve(strict=True)
+    if not path.is_file() or path.suffix != ".py":
+        raise ValueError("source_path must name an existing Python source file")
+    return path
+
+
 def _assert_clean_environment() -> None:
     leaked = sorted(
         name for name in os.environ
@@ -586,6 +616,175 @@ def _run_p04_delta_smoke(receipt: dict[str, Any]) -> dict[str, Any]:
             result=result,
             report=report,
             oos_start_utc_ms=oos_start_utc_ms,
+        )
+    return output
+
+
+def _load_imported_entrypoint(source_text: str, *, expected_entrypoint: str) -> tuple[Any, dict[str, Any]]:
+    """Compile one structurally restricted function with no ambient authority."""
+
+    try:
+        tree = ast.parse(source_text, filename="<imported-alpha>", mode="exec")
+    except SyntaxError as exc:
+        raise ValueError("E17 imported Alpha source is not valid Python") from exc
+    stack: list[tuple[ast.AST, int]] = [(tree, 1)]
+    count = 0
+    while stack:
+        node, depth = stack.pop()
+        count += 1
+        if count > _IMPORTED_MAX_AST_NODES or depth > _IMPORTED_MAX_AST_DEPTH:
+            raise ValueError("E17 imported Alpha AST exceeds its bound")
+        if isinstance(node, _IMPORTED_FORBIDDEN_NODES):
+            raise ValueError(f"E17 imported Alpha uses forbidden syntax: {type(node).__name__}")
+        if isinstance(node, ast.Name) and (node.id.startswith("__") or node.id in {"open", "eval", "exec", "compile", "globals", "locals", "getattr", "setattr", "delattr", "vars", "dir", "input", "breakpoint", "memoryview"}):
+            raise ValueError("E17 imported Alpha references a forbidden name")
+        if isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name) or node.func.id not in _IMPORTED_SAFE_CALLS:
+                raise ValueError("E17 imported Alpha may call only the bounded safe builtin set")
+        stack.extend((child, depth + 1) for child in ast.iter_child_nodes(node))
+    body = [node for node in tree.body if not (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str))]
+    if len(body) != 2:
+        raise ValueError("E17 imported Alpha must contain one literal contract and one function")
+    assignment = next((node for node in body if isinstance(node, ast.Assign)), None)
+    function = next((node for node in body if isinstance(node, ast.FunctionDef)), None)
+    if (
+        assignment is None or len(assignment.targets) != 1 or not isinstance(assignment.targets[0], ast.Name)
+        or assignment.targets[0].id != "ALPHA_CONTRACT" or function is None or function.name != expected_entrypoint
+        or len(function.args.args) != 1 or function.args.defaults or function.args.vararg or function.args.kwarg
+    ):
+        raise ValueError("E17 imported Alpha definition does not match its immutable entrypoint")
+    try:
+        contract = ast.literal_eval(assignment.value)
+    except (ValueError, TypeError, MemoryError, RecursionError) as exc:
+        raise ValueError("E17 imported Alpha contract is not literal") from exc
+    if not isinstance(contract, dict) or contract.get("schema_version") != "research.alpha-source.v1" or contract.get("entrypoint") != expected_entrypoint:
+        raise ValueError("E17 imported Alpha contract does not match the admitted source identity")
+    warmup = contract.get("warmup_bars")
+    required = contract.get("required_columns")
+    if (
+        isinstance(warmup, bool) or not isinstance(warmup, int) or not 0 <= warmup <= _IMPORTED_MAX_WARMUP_BARS
+        or not isinstance(required, list) or not required
+        or any(column not in {"open", "high", "low", "close", "volume"} for column in required)
+    ):
+        raise ValueError("E17 imported Alpha data contract exceeds the execution profile")
+    safe_builtins = {name: getattr(__builtins__, name) for name in _IMPORTED_SAFE_CALLS} if not isinstance(__builtins__, dict) else {
+        name: __builtins__[name] for name in _IMPORTED_SAFE_CALLS
+    }
+    namespace: dict[str, Any] = {"__builtins__": safe_builtins}
+    module = ast.fix_missing_locations(ast.Module(body=[assignment, function], type_ignores=[]))
+    exec(compile(module, "<imported-alpha>", "exec"), namespace, namespace)  # noqa: S102
+    entrypoint = namespace.get(expected_entrypoint)
+    if not callable(entrypoint):
+        raise ValueError("E17 imported Alpha entrypoint did not load")
+    return entrypoint, contract
+
+
+def _run_p17_imported_signal_notional(receipt: dict[str, Any]) -> dict[str, Any]:
+    """Execute one exact P07 source against past-only bounded bar contexts."""
+
+    import pandas as pd
+
+    from portal_api.adapters.quantbt import QuantBTGateway
+    from portal_api.domain.research_imported_alpha_profile import (
+        IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
+        IMPORTED_ALPHA_ADAPTER_ID,
+        IMPORTED_ALPHA_MAX_SIGNAL_POINTS,
+        IMPORTED_ALPHA_MAX_SOURCE_BYTES,
+        IMPORTED_ALPHA_PROFILE_DIGEST,
+        IMPORTED_ALPHA_PROFILE_ID,
+    )
+
+    if (
+        receipt.get("execution_adapter_id") != IMPORTED_ALPHA_ADAPTER_ID
+        or receipt.get("adapter_contract_digest") != IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST
+        or receipt.get("execution_profile_id") != IMPORTED_ALPHA_PROFILE_ID
+        or receipt.get("execution_profile_digest") != IMPORTED_ALPHA_PROFILE_DIGEST
+    ):
+        raise ValueError("E17 child receipt does not name the installed profile")
+    market_path = _safe_path(str(receipt["market_path"]), label="market_path")
+    source_path = _safe_imported_source_path(str(receipt["source_path"]))
+    source_bytes = source_path.read_bytes()
+    source_digest = receipt.get("source_digest")
+    if (
+        not isinstance(source_digest, str) or len(source_digest) != 64
+        or not 1 <= len(source_bytes) <= IMPORTED_ALPHA_MAX_SOURCE_BYTES
+        or hashlib.sha256(source_bytes).hexdigest() != source_digest
+    ):
+        raise ValueError("E17 imported source bytes do not match the immutable digest")
+    try:
+        source_text = source_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("E17 imported source is not UTF-8") from exc
+    entrypoint_name = receipt.get("entrypoint")
+    if not isinstance(entrypoint_name, str):
+        raise ValueError("E17 imported source has no entrypoint")
+    entrypoint, contract = _load_imported_entrypoint(source_text, expected_entrypoint=entrypoint_name)
+    parameters = receipt.get("parameters")
+    if not isinstance(parameters, dict) or len(parameters) > 12:
+        raise ValueError("E17 imported parameters are invalid")
+    market = pd.read_parquet(market_path)
+    if not 2 <= len(market) <= IMPORTED_ALPHA_MAX_SIGNAL_POINTS:
+        raise ValueError("E17 market input exceeds the signal profile bound")
+    required = list(contract["required_columns"])
+    if any(column not in market.columns for column in required):
+        raise ValueError("E17 market input omits a declared required column")
+    warmup = int(contract["warmup_bars"])
+    seed = receipt.get("random_seed")
+    signals: list[float] = []
+    for index, (timestamp, row) in enumerate(market.iterrows()):
+        if index < warmup:
+            signals.append(0.0)
+            continue
+        start = max(0, index - warmup)
+        context = {
+            "schema_version": "research.imported-alpha-context.v1",
+            "timestamp_utc_ms": _utc_ms(timestamp, label="imported bar"),
+            "bar_index": index,
+            "history": {
+                column: tuple(float(value) for value in market[column].iloc[start:index + 1].tolist())
+                for column in required
+            },
+            "parameters": dict(parameters),
+            "random_seed": seed,
+        }
+        output = entrypoint(context)
+        if (
+            not isinstance(output, dict)
+            or output.get("schema_version") != "research.imported-signal-notional-output.v1"
+            or set(output) != {"schema_version", "signal_notional"}
+        ):
+            raise ValueError("E17 imported Alpha returned an invalid output contract")
+        value = output.get("signal_notional")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or abs(float(value)) > 1e12:
+            raise ValueError("E17 imported Alpha returned an invalid signal notional")
+        signals.append(float(value))
+    signal = pd.Series(signals, index=market.index, dtype="float64")
+    endpoint = QuantBTGateway().signal_notional_endpoint(
+        initial_capital=20_000,
+        leverage=3,
+        alloc_per_trade=2_000,
+        fee_rate=0.0005,
+        use_funding=False,
+    )
+    result = endpoint.backtest(data=market, signal=signal)
+    report = result.full_report()
+    output: dict[str, Any] = {
+        "task": "P17_IMPORTED_SIGNAL_NOTIONAL",
+        "engine_version": QuantBTGateway().version(),
+        "bars": int(len(market)),
+        "final_equity": float(report["final_equity"]),
+        "num_trades": int(report["num_trades"]),
+        "source_digest": source_digest,
+        "execution_profile_digest": IMPORTED_ALPHA_PROFILE_DIGEST,
+    }
+    oos_start_utc_ms = receipt.get("oos_start_utc_ms")
+    if isinstance(oos_start_utc_ms, int) and not isinstance(oos_start_utc_ms, bool) and oos_start_utc_ms >= 0:
+        output["evidence_source"] = _p13_evidence_source(
+            market=market,
+            result=result,
+            report=report,
+            oos_start_utc_ms=oos_start_utc_ms,
+            execution_adapter_id=IMPORTED_ALPHA_ADAPTER_ID,
         )
     return output
 
@@ -1024,6 +1223,8 @@ def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None)
         result = _run_p10_delta_wfo(receipt, _wfo_output_root(receipt, receipt_dir))
     elif task == "P16_DELTA_WHATIF_GRID":
         result = _run_p16_delta_whatif(receipt, _wfo_output_root(receipt, receipt_dir))
+    elif task == "P17_IMPORTED_SIGNAL_NOTIONAL":
+        result = _run_p17_imported_signal_notional(receipt)
     else:
         result = _run_p04_delta_smoke(receipt)
     result.update(

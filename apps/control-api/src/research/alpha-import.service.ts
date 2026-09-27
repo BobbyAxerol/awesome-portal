@@ -22,6 +22,10 @@ import { ResearchAlphaAnalysisClient } from "./alpha-analysis.client";
 import { ResearchAlphaImportError } from "./alpha-import.error";
 import { type ResearchScope, ResearchMetadataError } from "./contracts";
 import { ResearchMetadataRepository } from "./repository";
+import {
+  IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
+  IMPORTED_ALPHA_ADAPTER_ID,
+} from "./imported-alpha.profile";
 
 const STATIC_SCAN_DISCLOSURE = "Static scan — runtime causality is proven per run at Stage 3/4." as const;
 const SKIPPED_MESSAGE = "SKIPPED because a prior gate failed; no provisional registration is available.";
@@ -178,10 +182,13 @@ export class ResearchAlphaImportService {
       analysisDigest: source.analysisDigest,
       gateReceiptId: input.gateReceiptId,
       entrypoint,
-      // P07 has no installer or arbitrary dependency execution. P10 may add a
-      // typed worker adapter that consumes this exact source/version evidence.
+      // Server-owned E17 binding permits evidence execution while DRAFT;
+      // publication still requires the independent ACTIVE lifecycle.
       dependencyRef: "research.alpha-source.v1:restricted-definition",
       declaredContract: analysis.declared_contract,
+    }, {
+      adapterId: IMPORTED_ALPHA_ADAPTER_ID,
+      adapterContractDigest: IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
     });
     return {
       schema_version: "research.alpha-registration.v1",
@@ -209,7 +216,10 @@ export class ResearchAlphaImportService {
         403,
       );
     }
-    const activation = await this.repository.activateImportedAlphaVersion(scope, input);
+    const activation = await this.repository.activateImportedAlphaVersion(scope, input, {
+      adapterId: IMPORTED_ALPHA_ADAPTER_ID,
+      adapterContractDigest: IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
+    });
     return {
       schema_version: "research.alpha-activation.v1",
       alpha_id: activation.alphaId,

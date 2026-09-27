@@ -1,0 +1,40 @@
+# E17 disposable backend receipt cell. Apply after compose.yaml and
+# deploy/compose.research-progress.yaml, never to an existing project.
+# No web build, production credentials, Execution flags or shared preview DB.
+services:
+  control-api:
+    ports: ["127.0.0.1:8098:4000"]
+    mem_limit: 650000000
+    pids_limit: 128
+    environment:
+      PREVIEW_AUTO_LOGIN_USERNAME: e17-owner
+      FEATURE_RESEARCH_RUN_LIBRARY: "true"
+  portal-api:
+    mem_limit: 1000000000
+    pids_limit: 128
+    environment:
+      PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: "true"
+      PORTAL_FEATURE_RESEARCH_PROGRESS: "true"
+      PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS: "true"
+      NATS_URL: nats://portal-nats:4222
+    depends_on:
+      portal-nats: { condition: service_healthy }
+  quant-worker-py:
+    # The exact imported child profile limits address space to 4 GiB;
+    # leave bounded room for the lightweight parent and Arrow buffers.
+    mem_limit: 5368709120
+    memswap_limit: 5368709120
+    cpus: 2
+    pids_limit: 128
+  portal-postgres:
+    mem_limit: 512000000
+    pids_limit: 128
+  portal-nats:
+    mem_limit: 128000000
+    pids_limit: 64
+  control-api-migrate:
+    mem_limit: 350000000
+    pids_limit: 64
+  control-api-bootstrap:
+    mem_limit: 350000000
+    pids_limit: 64

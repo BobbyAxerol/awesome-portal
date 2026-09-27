@@ -60,6 +60,7 @@ const Stage4RowSchema = z.object({
     "QUANTBT_STRATEGY_FINGERPRINT_V1",
     "SHA256_CANONICAL_PARAMETER_MAP_V1",
     "P04_ADAPTER_CONTRACT_DIGEST_V1",
+    "IMPORTED_SOURCE_AND_ADAPTER_SHA256_V1",
   ]),
   source_key: z.string().regex(/^[a-z][a-z0-9_.-]{2,95}$/),
   /** Per fold, where the replay side is read fold by fold (≤ 256). */
@@ -76,7 +77,7 @@ const Stage4RowSchema = z.object({
 
 export const Stage4BindingSchema = z.object({
   schema_version: z.literal(STAGE4_BINDING_RULE),
-  lane: z.enum(["RS02_RETAINED_CHILD_AUDIT", "P04_FIXED_QUALIFICATION"]),
+  lane: z.enum(["RS02_RETAINED_CHILD_AUDIT", "P04_FIXED_QUALIFICATION", "IMPORTED_FIXED_QUALIFICATION"]),
   state: z.enum(["BOUND", "DRIFT", "NOT_COMPARED"]),
   reason_code: Reason.nullable(),
   /** sha256 of the sealed θ* canonical map — the P11 fold `params_digest` (the θ* digest S07 T10 copies). */
@@ -106,7 +107,7 @@ export const ParameterAuthoritySchema = z.object({
     state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
     reason_code: Reason.nullable(),
     values: z.array(z.object({ name: z.string().min(1).max(64), value: z.string().min(1).max(64) }).strict()).max(32),
-    hash_scope: z.literal("ADAPTER_CONTRACT_DIGEST"),
+    hash_scope: z.enum(["ADAPTER_CONTRACT_DIGEST", "SOURCE_CODE_SHA256"]),
     code_digest: Digest.nullable(),
     specification_digest: Digest.nullable(),
     adapter_contract_digest: Digest.nullable(),
@@ -287,6 +288,7 @@ export function fixedStage4Binding(input: {
   expectedAdapterDigest: string | null;
   observedAdapterDigest: string | null;
   missingReason: string;
+  lane?: "P04_FIXED_QUALIFICATION" | "IMPORTED_FIXED_QUALIFICATION";
 }): Stage4Binding {
   const side = (key: Row["key"], value: string | null, rule: Row["identity_rule"], sourceKey: string) =>
     row(key, {
@@ -304,13 +306,15 @@ export function fixedStage4Binding(input: {
       : { ...runtime, state: sealed.value === runtime.value ? "MATCH" : "MISMATCH", reason_code: null });
   const sealedParams = side("SEALED_PARAMS", input.expectedBundleDigest, "SHA256_CANONICAL_PARAMETER_MAP_V1", "p16.registry.fixed_bundle_digest");
   const replayParams = compare(sealedParams, side("REPLAY_PARAMS", input.observedBundleDigest, "SHA256_CANONICAL_PARAMETER_MAP_V1", "p14.receipt.parameter_bundle_digest"));
-  const sealedBundle = side("SEALED_BUNDLE", input.expectedAdapterDigest, "P04_ADAPTER_CONTRACT_DIGEST_V1", "p16.registry.adapter_contract_digest");
-  const runtimeBundle = compare(sealedBundle, side("RUNTIME_BUNDLE", input.observedAdapterDigest, "P04_ADAPTER_CONTRACT_DIGEST_V1", "p10.run_producer.adapter_contract_digest"));
+  const imported = input.lane === "IMPORTED_FIXED_QUALIFICATION";
+  const rule = imported ? "IMPORTED_SOURCE_AND_ADAPTER_SHA256_V1" : "P04_ADAPTER_CONTRACT_DIGEST_V1";
+  const sealedBundle = side("SEALED_BUNDLE", input.expectedAdapterDigest, rule, imported ? "p07.version.source_and_adapter_digest" : "p16.registry.adapter_contract_digest");
+  const runtimeBundle = compare(sealedBundle, side("RUNTIME_BUNDLE", input.observedAdapterDigest, rule, imported ? "p14.receipt.source_and_adapter_digest" : "p10.run_producer.adapter_contract_digest"));
   const params = pairState(sealedParams.state, replayParams.state);
   const bundle = pairState(sealedBundle.state, runtimeBundle.state);
   return {
     schema_version: STAGE4_BINDING_RULE,
-    lane: "P04_FIXED_QUALIFICATION",
+    lane: input.lane ?? "P04_FIXED_QUALIFICATION",
     ...verdict(params, bundle, [sealedParams.reason_code, replayParams.reason_code, sealedBundle.reason_code, runtimeBundle.reason_code]),
     sealed_params_sha256: input.expectedBundleDigest,
     rows: [settle(sealedParams, params), replayParams, settle(sealedBundle, bundle), runtimeBundle],

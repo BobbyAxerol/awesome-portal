@@ -42,6 +42,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ImportedAlphaReadBinding: {
+            /** @constant */
+            schema_version: "research.imported-alpha-read-binding.v1";
+            source_digest: string;
+            entrypoint: string;
+            parameter_bundle_digest: string;
+            parameters: {
+                name: string;
+                /** @enum {unknown} */
+                kind: "fixed" | "int_range" | "float_range" | "categorical";
+                value: string | number | boolean;
+            }[];
+        };
         WorkspaceId: string;
         RunId: string;
         Digest: string;
@@ -105,7 +118,7 @@ export interface components {
         };
         IntegrityCheck: {
             /** @enum {unknown} */
-            key: "P04_ADAPTER_CONTRACT" | "P10_MANIFEST_BINDING" | "P04_FIXED_PARAMETER_BUNDLE";
+            key: "P04_ADAPTER_CONTRACT" | "P10_MANIFEST_BINDING" | "P04_FIXED_PARAMETER_BUNDLE" | "IMPORTED_SOURCE_CODE" | "EXECUTION_ADAPTER_CONTRACT" | "DECLARED_PARAMETER_BUNDLE";
             /** @enum {unknown} */
             state: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
             expected_digest: components["schemas"]["Digest"] | null;
@@ -126,7 +139,7 @@ export interface components {
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED";
             engine_version: "1.1.1" | null;
-            execution_adapter_id: "p04.delta-rsi.v1" | null;
+            execution_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
             adapter_contract_digest: components["schemas"]["Digest"] | null;
             availability: components["schemas"]["Availability"];
         };
@@ -143,7 +156,7 @@ export interface components {
             readiness: "PARTIAL" | "NOT_READY";
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
             provenance: {
-                source_adapter_id: "p04.delta-rsi.v1" | null;
+                source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
                 adapter_contract_digest: components["schemas"]["Digest"] | null;
                 p14_split_revision: string | null;
                 source_split_digest: components["schemas"]["Digest"] | null;
@@ -153,6 +166,7 @@ export interface components {
                 manifest_digest: components["schemas"]["Digest"] | null;
             };
             engine_pin: components["schemas"]["EnginePin"];
+            imported_alpha?: components["schemas"]["ImportedAlphaReadBinding"];
             freeze: {
                 source_profile: {
                     /** @enum {unknown} */
@@ -232,7 +246,7 @@ export interface components {
             label: "sealed params digest" | "params digest used by replay" | "sealed bundle digest" | "runtime bundle digest";
             value: string | null;
             /** @enum {unknown} */
-            identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1" | "QUANTBT_STRATEGY_FINGERPRINT_V1" | "SHA256_CANONICAL_PARAMETER_MAP_V1" | "P04_ADAPTER_CONTRACT_DIGEST_V1";
+            identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1" | "QUANTBT_STRATEGY_FINGERPRINT_V1" | "SHA256_CANONICAL_PARAMETER_MAP_V1" | "P04_ADAPTER_CONTRACT_DIGEST_V1" | "IMPORTED_SOURCE_AND_ADAPTER_SHA256_V1";
             source_key: string;
             folds: {
                 fold_id: string;
@@ -251,7 +265,7 @@ export interface components {
             /** @constant */
             schema_version: "research.stage4-binding.v1";
             /** @enum {unknown} */
-            lane: "RS02_RETAINED_CHILD_AUDIT" | "P04_FIXED_QUALIFICATION";
+            lane: "RS02_RETAINED_CHILD_AUDIT" | "P04_FIXED_QUALIFICATION" | "IMPORTED_FIXED_QUALIFICATION";
             /** @enum {unknown} */
             state: "BOUND" | "DRIFT" | "NOT_COMPARED";
             reason_code: string | null;
@@ -284,8 +298,8 @@ export interface components {
                     name: string;
                     value: string;
                 }[];
-                /** @constant */
-                hash_scope: "ADAPTER_CONTRACT_DIGEST";
+                /** @enum {unknown} */
+                hash_scope: "ADAPTER_CONTRACT_DIGEST" | "SOURCE_CODE_SHA256";
                 code_digest: string | null;
                 specification_digest: string | null;
                 adapter_contract_digest: string | null;

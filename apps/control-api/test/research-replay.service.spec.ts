@@ -101,6 +101,18 @@ function enabledConfig() {
 }
 
 describe("P17 route-aware, current-source replay authority", () => {
+  it("reads imported retained equity with its own route identity, never as P04", async () => {
+    const fixture = evidenceFixture(3);
+    fixture.hub.core.source_adapter_id = "p17.imported-signal-notional.v1";
+    const service = new ResearchReplayService(evidenceReader(fixture) as never, enabledConfig() as never);
+    const result = await service.detail(scope, "run_p17", { limit: 2 });
+    expect(result).toMatchObject({ availability: { state: "AVAILABLE" },
+      provenance: { source_adapter_id: "p17.imported-signal-notional.v1" },
+      route: { id: "signal_notional", replay_contract: "P17_IMPORTED_FIXED_EQUITY_SAMPLE_V1" },
+      equity_replay: { state: "AVAILABLE" } });
+    expect(result.equity_replay.items).toHaveLength(2);
+    expect(result.equity_replay.page.next_cursor).toEqual(expect.any(String));
+  });
   it("preserves exact source sample order and supports a direct late seek without compute, ledger synthesis or source-path access", async () => {
     const fixture = evidenceFixture(120, { marketOverview: true });
     const evidence = evidenceReader(fixture);

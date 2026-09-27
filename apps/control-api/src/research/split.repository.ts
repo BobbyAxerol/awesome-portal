@@ -45,6 +45,8 @@ export interface SplitHubRow {
   manifestDigest: string | null;
   /** Internal bounded P10 request; readers extract only validated public facts. */
   legacyRequest: JsonValue;
+  /** E17 exact historical P07 version, never the mutable active pointer. */
+  importedAlphaVersion?: { alphaVersionId: string; sourceDigest: string; entrypoint: string; declaredContract: Record<string, unknown> } | null;
   progressSnapshot: JsonValue;
   jobState: string | null;
   revision: string | null;
@@ -84,6 +86,10 @@ interface HubQueryRow {
   dataset_binding_digest: string | null;
   manifest_digest: string | null;
   legacy_request: JsonValue;
+  alpha_version_id: string;
+  alpha_code_digest: string | null;
+  alpha_entrypoint: string | null;
+  alpha_declared_contract: Record<string, unknown> | null;
   progress_snapshot: JsonValue;
   job_state: string | null;
   projection_revision: string | null;
@@ -207,6 +213,10 @@ export class ResearchSplitRepository {
                 producer.dataset_binding_digest,
                 producer.manifest_digest,
                 producer.legacy_request,
+                producer.alpha_version_id,
+                version.code_digest AS alpha_code_digest,
+                version.entrypoint AS alpha_entrypoint,
+                version.declared_contract AS alpha_declared_contract,
                 snapshot.snapshot AS progress_snapshot,
                 job.state AS job_state,
                 projection.projection_revision,
@@ -222,6 +232,8 @@ export class ResearchSplitRepository {
            FROM research.run_producers producer
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
+           LEFT JOIN research.alpha_versions version
+             ON version.workspace_id = producer.workspace_id AND version.alpha_version_id = producer.alpha_version_id
            LEFT JOIN research.run_progress_snapshots snapshot
              ON snapshot.workspace_id = producer.workspace_id
             AND snapshot.run_id = producer.run_id
@@ -254,6 +266,9 @@ export class ResearchSplitRepository {
           datasetBindingDigest: row.dataset_binding_digest,
           manifestDigest: row.manifest_digest,
           legacyRequest: row.legacy_request,
+          importedAlphaVersion: row.alpha_code_digest && row.alpha_entrypoint && row.alpha_declared_contract
+            ? { alphaVersionId: row.alpha_version_id, sourceDigest: row.alpha_code_digest,
+                entrypoint: row.alpha_entrypoint, declaredContract: row.alpha_declared_contract } : null,
           progressSnapshot: row.progress_snapshot,
           jobState: row.job_state,
           revision: row.projection_revision,

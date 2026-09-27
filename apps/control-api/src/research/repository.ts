@@ -31,6 +31,7 @@ import {
   type ResearchDurableJobClaim,
   type ResearchDurableJobInput,
   type ResearchExecutionAdapterBinding,
+  type ResearchImportedExecutionBindingInput,
   type ResearchP04DeltaBindingInput,
   type ResearchJobOutboxClaim,
   type ResearchJobOutboxMessage,
@@ -51,6 +52,12 @@ import {
   P04_FIXED_QUALIFICATION_PROFILE_ID,
 } from "./delta-wfo.profile";
 import { WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID } from "./whatif.profile";
+import {
+  IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
+  IMPORTED_ALPHA_ADAPTER_ID,
+  IMPORTED_ALPHA_PROFILE_DIGEST,
+  IMPORTED_ALPHA_PROFILE_ID,
+} from "./imported-alpha.profile";
 import { RETRY_WAIT_DISPATCH_GRACE_SECONDS, retryNotDispatchedReason } from "./run-state";
 
 type ScopedClient = PoolClient;
@@ -178,7 +185,10 @@ interface ExecutionAdapterBindingRow {
   alpha_version_id: string;
   lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   declared_contract: Record<string, unknown> | string;
-  adapter_id: "p04.delta-rsi.v1" | null;
+  entrypoint: string;
+  code_digest: string;
+  source_file_ref: string | null;
+  adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | null;
   contract_digest: string | null;
 }
 
@@ -189,7 +199,7 @@ interface RunProducerRow {
   client_intent_id: string;
   alpha_id: string;
   alpha_version_id: string;
-  execution_adapter_id: "p04.delta-rsi.v1";
+  execution_adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
   adapter_contract_digest: string;
   requested_spec_digest: string;
   effective_spec_digest: string;
@@ -203,7 +213,7 @@ interface RunProducerRow {
   worker_attempt_id: string | null;
   lease_epoch: string | number | null;
   portal_receipt: Record<string, unknown> | string | null;
-  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1";
+  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1";
   execution_profile_digest: string | null;
 }
 
@@ -977,6 +987,7 @@ export class ResearchMetadataRepository {
   async registerImportedAlphaVersion(
     scope: ResearchScope,
     input: ResearchAlphaImportRegistrationInput,
+    binding?: ResearchImportedExecutionBindingInput,
   ): Promise<ResearchAlphaImportRegistration> {
     this.assertScope(scope);
     requireAlphaId(input.alphaId);
@@ -1134,6 +1145,9 @@ export class ResearchMetadataRepository {
           );
         }
       }
+      if (binding) {
+        await this.bindImportedExecutor(client, scope, input.alphaVersionId, binding);
+      }
       if (!replayed) {
         await this.audit(client, scope, "ALPHA_VERSION_REGISTERED", "alpha_version", input.alphaVersionId, {
           alpha_id: input.alphaId,
@@ -1153,14 +1167,58 @@ export class ResearchMetadataRepository {
     });
   }
 
+  /** A server-installed adapter is independent of publication lifecycle. */
+  private async bindImportedExecutor(
+    client: ScopedClient,
+    scope: ResearchScope,
+    alphaVersionId: string,
+    binding: ResearchImportedExecutionBindingInput,
+  ): Promise<void> {
+    if (binding.adapterId !== IMPORTED_ALPHA_ADAPTER_ID ||
+        binding.adapterContractDigest !== IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Only the exact installed E17 adapter contract may be bound.", 400);
+    }
+    const inserted = await client.query(
+      `INSERT INTO research.execution_adapter_bindings
+         (workspace_id, alpha_version_id, adapter_id, contract_digest, installed_by_user_id)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (workspace_id, alpha_version_id) DO NOTHING
+       RETURNING alpha_version_id`,
+      [scope.workspaceId, alphaVersionId, binding.adapterId, binding.adapterContractDigest, scope.actorUserId],
+    );
+    if (inserted.rowCount === 0) {
+      const existing = await client.query<{ adapter_id: string; contract_digest: string }>(
+        `SELECT adapter_id, contract_digest FROM research.execution_adapter_bindings
+          WHERE workspace_id = $1 AND alpha_version_id = $2`,
+        [scope.workspaceId, alphaVersionId],
+      );
+      const row = existing.rows[0];
+      if (!row || row.adapter_id !== binding.adapterId || row.contract_digest !== binding.adapterContractDigest) {
+        throw new ResearchMetadataError("RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT",
+          "The imported AlphaVersion is already bound to a different execution adapter contract.", 409);
+      }
+    } else {
+      await this.audit(client, scope, "ALPHA_EXECUTION_ADAPTER_BOUND", "alpha_version", alphaVersionId, {
+        execution_adapter_id: binding.adapterId,
+        adapter_contract_digest: binding.adapterContractDigest,
+      });
+    }
+  }
+
   /** DRAFT → ACTIVE metadata CAS; no run/attempt binding is ever rewritten. */
   async activateImportedAlphaVersion(
     scope: ResearchScope,
     input: { alphaVersionId: string; expectedAlphaRevision: number },
+    binding: ResearchImportedExecutionBindingInput,
   ): Promise<ResearchAlphaActivation> {
     this.assertScope(scope);
     requireOpaqueId(input.alphaVersionId, "alphaVersionId");
     requirePositiveSafeInteger(input.expectedAlphaRevision, "expectedAlphaRevision");
+    if (binding.adapterId !== IMPORTED_ALPHA_ADAPTER_ID ||
+        binding.adapterContractDigest !== IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Only the installed E17 imported adapter may be bound.", 400);
+    }
+    requireDigest(binding.adapterContractDigest, "imported adapterContractDigest");
     return this.withScopedWrite(scope, async (client) => {
       const target = await client.query<AlphaImportVersionRow>(
         `SELECT alpha_id, alpha_version_id, source_file_ref, code_digest,
@@ -1185,6 +1243,7 @@ export class ResearchMetadataRepository {
         throw new ResearchMetadataError("RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND", "Imported Alpha version was not found.", 404);
       }
       if (alphaRow.active_version_id === input.alphaVersionId) {
+        await this.bindImportedExecutor(client, scope, input.alphaVersionId, binding);
         return {
           alphaId: targetRow.alpha_id,
           alphaVersionId: input.alphaVersionId,
@@ -1228,9 +1287,12 @@ export class ResearchMetadataRepository {
           WHERE workspace_id = $1 AND alpha_version_id = $2 AND lifecycle_state = 'DRAFT'`,
         [scope.workspaceId, input.alphaVersionId],
       );
+      await this.bindImportedExecutor(client, scope, input.alphaVersionId, binding);
       await this.audit(client, scope, "ALPHA_VERSION_ACTIVATED", "alpha_version", input.alphaVersionId, {
         alpha_id: targetRow.alpha_id,
         superseded_alpha_version_id: alphaRow.active_version_id,
+        execution_adapter_id: binding.adapterId,
+        adapter_contract_digest: binding.adapterContractDigest,
       });
       return {
         alphaId: targetRow.alpha_id,
@@ -1365,6 +1427,9 @@ export class ResearchMetadataRepository {
     alphaVersionId: string;
     lifecycleState: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
     declaredContract: Record<string, unknown>;
+    entrypoint: string;
+    /** Present only for a P07 imported source; never returned by a browser DTO. */
+    sourceDigest: string | null;
     binding: ResearchExecutionAdapterBinding | null;
   } | null> {
     this.assertScope(scope);
@@ -1373,7 +1438,8 @@ export class ResearchMetadataRepository {
     return this.withScopedRead(scope, async (client) => {
       const result = await client.query<ExecutionAdapterBindingRow>(
         `SELECT version.alpha_id, version.alpha_version_id, version.lifecycle_state,
-                version.declared_contract, binding.adapter_id, binding.contract_digest
+                version.declared_contract, version.entrypoint, version.code_digest,
+                version.source_file_ref, binding.adapter_id, binding.contract_digest
            FROM research.alpha_versions version
            LEFT JOIN research.execution_adapter_bindings binding
              ON binding.workspace_id = version.workspace_id
@@ -1386,7 +1452,8 @@ export class ResearchMetadataRepository {
       const row = result.rows[0];
       if (!row) return null;
       const declaredContract = decodeObject(row.declared_contract, "Research AlphaVersion execution contract");
-      const binding = row.adapter_id === "p04.delta-rsi.v1" && typeof row.contract_digest === "string"
+      const binding = (row.adapter_id === "p04.delta-rsi.v1" || row.adapter_id === "p17.imported-signal-notional.v1") &&
+        typeof row.contract_digest === "string"
         ? {
             alphaId: row.alpha_id,
             alphaVersionId: row.alpha_version_id,
@@ -1399,8 +1466,70 @@ export class ResearchMetadataRepository {
         alphaVersionId: row.alpha_version_id,
         lifecycleState: row.lifecycle_state,
         declaredContract,
+        entrypoint: row.entrypoint,
+        sourceDigest: row.source_file_ref === null ? null : row.code_digest,
         binding,
       };
+    });
+  }
+
+  /**
+   * E17 current-lease source custody. The caller has already resolved the
+   * exact producer lease through ResearchProgressRepository. This query then
+   * proves the run/profile/adapter/version/source relation before any byte is
+   * returned. Upload expiry is intentionally irrelevant after immutable
+   * registration: a durable admitted run must remain reproducible.
+   */
+  async loadImportedExecutionSource(
+    scope: ResearchScope,
+    input: { runId: string; sourceDigest: string; entrypoint: string },
+  ): Promise<{ sourceBytes: Buffer; sourceDigest: string; entrypoint: string }> {
+    this.assertScope(scope);
+    requireOpaqueId(input.runId, "runId");
+    requireDigest(input.sourceDigest, "sourceDigest");
+    requireText(input.entrypoint, "entrypoint", 128);
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<{
+        source_bytes: Buffer;
+        source_digest: string;
+        entrypoint: string;
+      }>(
+        `SELECT source.source_bytes, source.source_digest, version.entrypoint
+           FROM research.run_producers producer
+           JOIN research.alpha_versions version
+             ON version.workspace_id = producer.workspace_id
+            AND version.alpha_version_id = producer.alpha_version_id
+           JOIN research.import_sources source
+             ON source.workspace_id = version.workspace_id
+            AND source.source_file_ref = version.source_file_ref
+           JOIN research.execution_adapter_bindings binding
+             ON binding.workspace_id = version.workspace_id
+            AND binding.alpha_version_id = version.alpha_version_id
+          WHERE producer.workspace_id = $1
+            AND producer.actor_user_id = $2
+            AND producer.run_id = $3
+            AND producer.execution_adapter_id = 'p17.imported-signal-notional.v1'
+            AND producer.execution_profile_id = 'p17.imported-signal-notional.v1'
+            AND binding.adapter_id = producer.execution_adapter_id
+            AND binding.contract_digest = producer.adapter_contract_digest
+            AND version.code_digest = $4
+            AND source.source_digest = $4
+            AND version.entrypoint = $5`,
+        [scope.workspaceId, scope.actorUserId, input.runId, input.sourceDigest, input.entrypoint],
+      );
+      const row = result.rows[0];
+      if (!row || row.source_digest !== input.sourceDigest || row.entrypoint !== input.entrypoint) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND",
+          "The imported Alpha source is unavailable for this exact run binding.",
+          404,
+        );
+      }
+      const sourceBytes = Buffer.from(row.source_bytes);
+      if (sourceBytes.byteLength < 1 || sourceBytes.byteLength > 256 * 1024) {
+        throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Imported Alpha source bytes exceed the execution bound.", 409);
+      }
+      return { sourceBytes, sourceDigest: row.source_digest, entrypoint: row.entrypoint };
     });
   }
 
@@ -4618,13 +4747,16 @@ export class ResearchMetadataRepository {
     if (!/^dss_[0-9a-f]{32}$/.test(input.snapshotId)) {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "snapshotId has an invalid P08 identity.", 400);
     }
-    if (input.executionAdapterId !== "p04.delta-rsi.v1") {
-      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research execution adapter is unsupported.", 400);
-    }
     const profileId = input.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID;
     const profileDigest = input.executionProfileDigest ?? null;
-    if (!(profileId === P04_FIXED_QUALIFICATION_PROFILE_ID && profileDigest === null)
-      && !(profileId === DELTA_WFO_PROFILE_ID && profileDigest === DELTA_WFO_PROFILE_DIGEST)) {
+    const p04 = input.executionAdapterId === "p04.delta-rsi.v1" && (
+      (profileId === P04_FIXED_QUALIFICATION_PROFILE_ID && profileDigest === null) ||
+      (profileId === DELTA_WFO_PROFILE_ID && profileDigest === DELTA_WFO_PROFILE_DIGEST)
+    );
+    const imported = input.executionAdapterId === IMPORTED_ALPHA_ADAPTER_ID &&
+      input.adapterContractDigest === IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST &&
+      profileId === IMPORTED_ALPHA_PROFILE_ID && profileDigest === IMPORTED_ALPHA_PROFILE_DIGEST;
+    if (!p04 && !imported) {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research execution profile is unsupported.", 400);
     }
     for (const [label, value] of Object.entries({

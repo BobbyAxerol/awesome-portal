@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { ImportedAlphaReadBindingSchema } from "./imported-alpha.read-binding";
 
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { BoundWarningSchema } from "./bound-warning";
@@ -73,6 +74,9 @@ const IntegrityCheckSchema = z.object({
     "P04_ADAPTER_CONTRACT",
     "P10_MANIFEST_BINDING",
     "P04_FIXED_PARAMETER_BUNDLE",
+    "IMPORTED_SOURCE_CODE",
+    "EXECUTION_ADAPTER_CONTRACT",
+    "DECLARED_PARAMETER_BUNDLE",
   ]),
   state: z.enum(["MATCH", "MISMATCH", "NOT_PUBLISHED"]),
   expected_digest: DigestSchema.nullable(),
@@ -95,7 +99,7 @@ const VerifyResponseScopeSchema = z.enum([
 const IntegritySchema = z.object({
   state: z.enum(["PARTIAL", "BLOCKED", "NOT_PUBLISHED"]),
   verification_scope: VerificationScopeSchema,
-  checks: z.array(IntegrityCheckSchema).max(3),
+  checks: z.array(IntegrityCheckSchema).max(4),
   source_artifact_bytes: ResearchFreezeSourceGapSchema,
   availability: ResearchFreezeAvailabilitySchema,
 }).strict();
@@ -180,7 +184,7 @@ export const ResearchFreezeResponseSchema = z.object({
   readiness: z.enum(["PARTIAL", "NOT_READY"]),
   as_of_utc_ms: UtcMsSchema,
   provenance: z.object({
-    source_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
+    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
     adapter_contract_digest: DigestSchema.nullable(),
     p14_split_revision: z.string().regex(/^p14r1_[0-9a-f]{64}$/).nullable(),
     source_split_digest: DigestSchema.nullable(),
@@ -193,11 +197,12 @@ export const ResearchFreezeResponseSchema = z.object({
   engine_pin: z.object({
     state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
     engine_version: z.literal("1.1.1").nullable(),
-    execution_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
+    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
     adapter_contract_digest: DigestSchema.nullable(),
     availability: ResearchFreezeAvailabilitySchema,
   }).strict(),
   freeze: FreezeDetailShape,
+  imported_alpha: ImportedAlphaReadBindingSchema.optional(),
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ResearchFreezeSourceGapSchema),
   /** A10a: the newest durable byte-verification receipt, or a typed "not yet". */
   artifact_bytes: ArtifactByteVerificationSchema,

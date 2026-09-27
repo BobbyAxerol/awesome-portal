@@ -1,0 +1,117 @@
+{
+  "schema_version": "research.e17.backend-acceptance.v1",
+  "recorded_at_utc": "2026-09-27T09:49:26.184Z",
+  "verdict": "REAL_BACKEND_ACCEPTED_FRONTEND_PENDING",
+  "scope": "disposable portal-research-e17 backend cell, loopback 8098; not production activation",
+  "engine": "quantbt 1.1.1",
+  "profile_id": "p17.imported-signal-notional.v1",
+  "profile_digest": "f1ed5dbccdd90ca7dd35be2755f3b3b5f7e9a29b1641beb08bd0136783c0f298",
+  "adapter_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6",
+  "source_digest": "7cd5a483ed0a363e6d0776fa6eed5663370613e90456de076595c9b9cf378a67",
+  "alpha_version_id": "av_e17_qualification_db810a7c_0_3_0",
+  "registry_lifecycle_after_execution": "DRAFT",
+  "dataset": {
+    "id": "crypto-binance-1m",
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "is_start": "2026-06-01T00:00:00Z",
+    "oos_start": "2026-06-08T00:00:00Z",
+    "oos_end_exclusive": "2026-06-15T00:00:00Z",
+    "holdout_end_exclusive": "2026-06-17T00:00:00Z",
+    "read_only": true
+  },
+  "image_ids": {
+    "control_api": "sha256:436c05b4a228d454e04a61e6f95dff62dff00270913a436a34e6bff65b736f0d",
+    "quant_worker": "sha256:e2cd603ee2367d86fa32ef09f29592f657f4ca573da9bdcb730b1cf273026040"
+  },
+  "root_execution_image_note": "Root executed before the final Control API clone-wire fix; named APIs were reread successfully on the recorded final image without rerunning QuantBT.",
+  "apparmor": {
+    "host": "SGP host of the isolated cell",
+    "profile": "portal-research-child",
+    "mode": "enforce",
+    "worker_inspect_profile": "portal-research-child",
+    "loaded_before_imported_admission": true,
+    "production_stack_modified": false
+  },
+  "runs": [
+    {
+      "run_id": "rrun_1084d207e57bba4127c8e8b0cf77dc8e",
+      "attempt_id": "ratt_1084d207e57bba4127c8e8b0cf77dc8e",
+      "parent_attempt_id": null,
+      "intent_kind": "NEW",
+      "seed": "7",
+      "status": "COMPLETED",
+      "terminal_materialization": "READY",
+      "source_latest_sequence": 33,
+      "read_status": {
+        "evidence": 200,
+        "split": 200,
+        "search": 200,
+        "freeze": 200,
+        "replay": 200,
+        "report": 200
+      },
+      "private_receipt_filename": "e17-api-80874d11-6b6b-4abc-87c2-5fd5fd676bec.json",
+      "private_receipt_sha256": "676602d3d438cf4d51e926afe4508662220b0ad9c7f2d8bd2177b55ca63f415f"
+    },
+    {
+      "run_id": "rrun_80df739a29f127db1e5d6514a4a548d4",
+      "attempt_id": "ratt_80df739a29f127db1e5d6514a4a548d4",
+      "parent_attempt_id": "ratt_1084d207e57bba4127c8e8b0cf77dc8e",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "seed": "7",
+      "status": "COMPLETED",
+      "terminal_materialization": "READY",
+      "source_latest_sequence": 33,
+      "read_status": {
+        "evidence": 200,
+        "split": 200,
+        "search": 200,
+        "freeze": 200,
+        "replay": 200,
+        "report": 200,
+        "lineage": 200
+      },
+      "private_receipt_filename": "e17-api-ed41104e-5782-45ab-8cc7-bc6443474641.json",
+      "private_receipt_sha256": "5745171df2bcf73938e76c02d78af101093d3dcd3f97322f5836d8e915a6d962"
+    },
+    {
+      "run_id": "rrun_dcb29c9c1614d5b960a5eeda8aaf9b01",
+      "attempt_id": "ratt_dcb29c9c1614d5b960a5eeda8aaf9b01",
+      "parent_attempt_id": "ratt_1084d207e57bba4127c8e8b0cf77dc8e",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "seed": "8",
+      "status": "COMPLETED",
+      "terminal_materialization": "READY",
+      "source_latest_sequence": 33,
+      "read_status": {
+        "evidence": 200,
+        "split": 200,
+        "search": 200,
+        "freeze": 200,
+        "replay": 200,
+        "report": 200,
+        "lineage": 200
+      },
+      "private_receipt_filename": "e17-api-cf80b34f-19cb-498b-be3e-fd1c9808ccea.json",
+      "private_receipt_sha256": "e90b70820bbc495dabdaa9b38f0b5f7c72edfdbf25765c2874872d8541455c3a"
+    }
+  ],
+  "rereads": [
+    {
+      "run_id": "rrun_1084d207e57bba4127c8e8b0cf77dc8e",
+      "private_receipt_filename": "e17-api-c1137093-5c2e-4e87-a306-991bccf31098.json",
+      "sha256": "d64953c6dc26e81ac3ed12d342734423b854717466b0ce67a745a0d13128a628"
+    }
+  ],
+  "limitations": [
+    "No imported optimization or WFO: one pinned fixed signal_notional execution profile.",
+    "No activation/publication: AlphaVersion remains DRAFT.",
+    "Three-node proof is root plus two explicit CLONE_OF children, not a synthesized technical retry or diagnostic grid sibling.",
+    "REPRODUCE_EXISTING still typed refused; E13 full reproduction requirement remains open.",
+    "Frontend identity-rule mappings require Claude; browser acceptance is not claimed."
+  ],
+  "cleanup": {
+    "policy": "Stop and remove only portal-research-e17 containers/network and owned custody test container after receipt capture; retain named disposable volumes until E11/E14 reuse or documented closeout. No shared preview/dev/stable/source cleanup."
+  }
+}

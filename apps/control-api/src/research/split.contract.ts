@@ -77,7 +77,10 @@ const OuterOosWindowSchema = RangeShape.extend({
   bars: z.number().int().positive().max(2_000_000),
   data_role: z.literal("OUTER_OOS_OBSERVATION"),
   child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
-  evaluation_state: z.literal("P04_OBSERVED_AFTER_FIXED_PROFILE"),
+  evaluation_state: z.enum([
+    "P04_OBSERVED_AFTER_FIXED_PROFILE",
+    "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE",
+  ]),
   availability: ResearchSplitAvailabilitySchema,
 }).strict();
 
@@ -152,7 +155,7 @@ export const ResearchSplitResponseSchema = z.object({
   as_of_basis: z.enum(["P14_PROJECTION_RECEIVED_AT", "RUN_STATE_UPDATED_AT", "LEGACY_READ_MODEL_UPDATED_AT"]),
   dataset: DatasetFactSchema,
   provenance: z.object({
-    source_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
+    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
     engine_version: z.literal("1.1.1").nullable(),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY").nullable(),
     source_transform_digest: DigestSchema.nullable(),

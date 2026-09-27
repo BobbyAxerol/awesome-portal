@@ -10,6 +10,7 @@ raw candle row, credential or generic Python entrypoint.
 from __future__ import annotations
 
 import json
+import math
 import re
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -23,6 +24,13 @@ from .research_delta_wfo_profile import (
     DELTA_WFO_PROFILE_DIGEST,
     DELTA_WFO_PROFILE_ID,
     P04_FIXED_QUALIFICATION_PROFILE_ID,
+)
+from .research_imported_alpha_profile import (
+    IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
+    IMPORTED_ALPHA_ADAPTER_ID,
+    IMPORTED_ALPHA_PROFILE,
+    IMPORTED_ALPHA_PROFILE_DIGEST,
+    IMPORTED_ALPHA_PROFILE_ID,
 )
 from .research_whatif_profile import WHATIF_MAX_EVALUATIONS, WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 
@@ -95,16 +103,22 @@ class ResearchRunProducerEnvelope(PortalModel):
     snapshot_content_hash: str = Field(pattern=_DIGEST)
     alpha_id: str = Field(pattern=_IDENTIFIER, max_length=191)
     alpha_version_id: str = Field(pattern=_IDENTIFIER, max_length=191)
-    execution_adapter_id: Literal["p04.delta-rsi.v1"]
+    execution_adapter_id: Literal["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]
     adapter_contract_digest: str = Field(pattern=_DIGEST)
     # W1 §1.1: absent ⇒ the unchanged P04 fixed qualification.  The P04 wire
     # never carries these two fields (see the serializer below), so the P04
     # durable request, its spec digest and the child receipt stay byte-equal.
     execution_profile_id: Literal[
-        "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1", "p16.delta-whatif-grid.v1"
+        "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1", "p16.delta-whatif-grid.v1",
+        "p17.imported-signal-notional.v1"
     ] = P04_FIXED_QUALIFICATION_PROFILE_ID
     execution_profile_digest: str | None = Field(default=None, pattern=_DIGEST)
     p04_parameters: Annotated[dict[str, int | float], Field(min_length=8, max_length=8)] | None = None
+    imported_source_digest: str | None = Field(default=None, pattern=_DIGEST)
+    imported_entrypoint: str | None = Field(default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]{0,127}$")
+    imported_parameters: Annotated[
+        dict[str, str | int | float | bool], Field(max_length=12)
+    ] | None = None
     work_digest: str = Field(pattern=_DIGEST)
     whatif: WhatIfJob | None = None
 
@@ -116,6 +130,10 @@ class ResearchRunProducerEnvelope(PortalModel):
     def is_whatif(self) -> bool:
         return self.execution_profile_id == WHATIF_PROFILE_ID
 
+    @property
+    def is_imported_alpha(self) -> bool:
+        return self.execution_profile_id == IMPORTED_ALPHA_PROFILE_ID
+
     @model_serializer(mode="wrap")
     def _serialize_without_p04_profile_fields(self, handler: Any) -> dict[str, Any]:
         data = handler(self)
@@ -126,6 +144,12 @@ class ResearchRunProducerEnvelope(PortalModel):
             data.pop("p04_parameters", None)
         if self.whatif is None:
             data.pop("whatif", None)
+        if self.imported_source_digest is None:
+            data.pop("imported_source_digest", None)
+        if self.imported_entrypoint is None:
+            data.pop("imported_entrypoint", None)
+        if self.imported_parameters is None:
+            data.pop("imported_parameters", None)
         return data
 
     @model_validator(mode="after")
@@ -159,6 +183,9 @@ class ResearchRunProducerEnvelope(PortalModel):
         if self.execution_profile_id == DELTA_WFO_PROFILE_ID:
             self._validate_delta_wfo_profile()
             return self
+        if self.execution_profile_id == IMPORTED_ALPHA_PROFILE_ID:
+            self._validate_imported_alpha_profile()
+            return self
         if self.execution_profile_digest is not None:
             raise ValueError("the P04 fixed qualification profile carries no execution profile digest")
         if self.p04_parameters is None:
@@ -177,6 +204,38 @@ class ResearchRunProducerEnvelope(PortalModel):
         if not isinstance(windows, dict) or not all(isinstance(windows.get(name), dict) for name in ("is", "oos", "holdout")):
             raise ValueError("requested_spec must retain three-window boundaries")
         return self
+
+    def _validate_imported_alpha_profile(self) -> None:
+        profile = IMPORTED_ALPHA_PROFILE
+        if self.execution_profile_digest != IMPORTED_ALPHA_PROFILE_DIGEST:
+            raise ValueError("the imported Alpha execution profile digest does not match the installed profile")
+        if (
+            self.execution_adapter_id != IMPORTED_ALPHA_ADAPTER_ID
+            or self.adapter_contract_digest != IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST
+        ):
+            raise ValueError("the imported Alpha execution profile is not bound to its installed adapter")
+        if not self.imported_source_digest or not self.imported_entrypoint or self.imported_parameters is None:
+            raise ValueError("the imported Alpha execution profile requires exact source identity and declared pins")
+        if self.p04_parameters is not None or self.whatif is not None:
+            raise ValueError("the imported Alpha execution profile cannot carry P04 or what-if inputs")
+        for name, value in self.imported_parameters.items():
+            if not _PARAMETER_NAME.fullmatch(name) or isinstance(value, (dict, list)):
+                raise ValueError("the imported Alpha parameter map contains an invalid scalar")
+            if isinstance(value, float) and not math.isfinite(value):
+                raise ValueError("the imported Alpha parameter map contains a non-finite number")
+        spec = self.requested_spec
+        if (
+            spec.get("schema_version") != "research.requested-spec.v1"
+            or spec.get("execution_route") != profile["execution_route"]
+            or spec.get("protocol") != profile["protocol"]
+            or not isinstance(spec.get("windows"), dict)
+            or spec.get("walk_forward") is not None
+            or spec.get("optuna_trials") != 1
+        ):
+            raise ValueError("the imported Alpha profile accepts only one fixed three-window signal-notional run")
+        client = spec.get("client")
+        if not isinstance(client, dict) or client.get("engine_release_id") != profile["engine_release_id"]:
+            raise ValueError("the imported Alpha profile is bound to QuantBT 1.1.1")
 
     def _validate_delta_wfo_profile(self) -> None:
         """Accept only the exact W1 §1.1 Delta signal-notional WFO profile."""

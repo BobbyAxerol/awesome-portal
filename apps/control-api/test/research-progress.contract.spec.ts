@@ -61,6 +61,24 @@ const snapshot = {
 };
 
 describe("P11 progress contracts", () => {
+  it("accepts imported fixed selection on the durable event and snapshot without inventing an objective", () => {
+    const selection = { scope: "IMPORTED_FIXED_PROFILE", trial: 1, objective: null, params_digest: "a".repeat(64) };
+    const completed = { ...event, event_type: "fold_completed", payload: { fold: 1, selection } };
+    expect(ResearchProgressEventSchema.safeParse(completed).success).toBe(true);
+    expect(ResearchProgressEventSchema.safeParse({
+      ...completed, payload: { ...completed.payload, selection: { ...selection, objective: "0.2" } },
+    }).success).toBe(false);
+    const sourceSnapshot = { ...snapshot, folds: [{
+      fold: 1, state: "DONE", started_at_utc_ms: snapshot.created_at_utc_ms,
+      completed_at_utc_ms: snapshot.created_at_utc_ms + 1,
+      selection: { state: "AVAILABLE", ...selection, reason_code: null },
+    }] };
+    expect(ResearchProgressSnapshotSchema.safeParse(sourceSnapshot).success).toBe(true);
+    expect(ResearchProgressSnapshotSchema.safeParse({ ...sourceSnapshot, folds: [{
+      ...sourceSnapshot.folds[0], selection: { ...sourceSnapshot.folds[0].selection, objective: "0.2" },
+    }] }).success).toBe(false);
+  });
+
   it("accepts only a bounded contiguous E16 market overview", () => {
     const overview = {
       source_bar_count: 3,

@@ -8,6 +8,16 @@ const openApiPath = join(ROOT, "openapi", "research-freeze.openapi.json");
 const generatedPath = join(ROOT, "generated", "research-freeze.d.ts");
 
 describe("P16 published Research Freeze contract", () => {
+  it("E17 publishes imported identity at the response root and keeps shared Stage 4 schemas aligned", () => {
+    const freeze = JSON.parse(readFileSync(openApiPath, "utf8"));
+    const retained = JSON.parse(readFileSync(join(ROOT, "openapi", "research-current-source.openapi.json"), "utf8"));
+    expect(freeze.components.schemas.FreezeDetail.properties.imported_alpha.$ref)
+      .toBe("#/components/schemas/ImportedAlphaReadBinding");
+    expect(freeze.components.schemas.FreezeDetail.properties.freeze.properties.imported_alpha).toBeUndefined();
+    for (const key of ["Stage4BindingRow", "Stage4Binding", "ParameterAuthority"]) {
+      expect(freeze.components.schemas[key], key).toEqual(retained.components.schemas[key]);
+    }
+  });
   it("publishes one bounded read plus an explicit, CSRF-protected re-read", () => {
     const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as { paths: Record<string, Record<string, unknown>> };
     expect(Object.keys(openApi.paths)).toEqual([

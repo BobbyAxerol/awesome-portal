@@ -145,12 +145,15 @@ export class ResearchReplayService {
     const sourceAvailability = responseAvailability(series.availability);
     const sourceAdapterId = hub.core.source_adapter_id;
     const sourceIsCurrentP04 = sourceAdapterId === "p04.delta-rsi.v1";
-    const sourceIsAvailable = sourceIsCurrentP04 && series.availability.state === "AVAILABLE";
+    const sourceReason = (reason: string) => sourceAdapterId === "p17.imported-signal-notional.v1"
+      ? reason.replace(/^P04_SOURCE_/, "E17_IMPORTED_SOURCE_") : reason;
+    const sourceIsSupported = sourceIsCurrentP04 || sourceAdapterId === "p17.imported-signal-notional.v1";
+    const sourceIsAvailable = sourceIsSupported && series.availability.state === "AVAILABLE";
     // A persisted series may be individually available while its adapter is
     // outside this deliberately narrow P17 reader. Do not surface that as an
     // available P17 replay window (or turn it into a 503); return a stable
     // typed compatibility absence instead.
-    const compatibilityAvailability = !sourceIsCurrentP04 && sourceAvailability.state === "AVAILABLE"
+    const compatibilityAvailability = !sourceIsSupported && sourceAvailability.state === "AVAILABLE"
       ? notPublished("P17_SOURCE_ADAPTER_NOT_SUPPORTED")
       : sourceAvailability;
     const samples = sourceIsAvailable ? this.samples(series) : [];
@@ -182,7 +185,7 @@ export class ResearchReplayService {
     const replayAvailability = sourceIsAvailable ? availability("AVAILABLE", null) : compatibilityAvailability;
     const executionStateGap = gap(
       "NOT_PUBLISHED",
-      "P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS",
+      sourceReason("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS"),
       sourceIsAvailable ? undefined : compatibilityAvailability,
     );
     const sampling = series.source_sample.sampling;
@@ -209,7 +212,7 @@ export class ResearchReplayService {
       && hubOverview.data !== null;
     const overviewReason = sourceIsCurrentP04
       ? hubOverview?.reason_code ?? "P04_SOURCE_PREDATES_E16_CANDLE_OVERVIEW"
-      : "P17_SOURCE_ADAPTER_NOT_SUPPORTED";
+      : sourceIsSupported ? "E17_IMPORTED_SOURCE_DID_NOT_PUBLISH_CANDLE_OVERVIEW" : "P17_SOURCE_ADAPTER_NOT_SUPPORTED";
     const marketOverview = overviewAvailable
       ? {
         state: "AVAILABLE" as const,
@@ -227,36 +230,36 @@ export class ResearchReplayService {
       };
     const absenceAvailability = sourceIsAvailable ? undefined : compatibilityAvailability;
     const routeCapabilities = {
-      orders: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER", absenceAvailability),
-      fills: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS", absenceAvailability),
-      trades: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER", absenceAvailability),
-      positions: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_POSITION_STATE_SNAPSHOTS", absenceAvailability),
-      execution_events: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM", absenceAvailability),
-      candle_windows: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS", absenceAvailability),
-      sl_tp_ambiguity: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_INTRABAR_SL_TP_AMBIGUITY", absenceAvailability),
-      oco_tree: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_OCO_PARENT_CHILD_RELATIONSHIPS", absenceAvailability),
-      multi_leg: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_MULTI_LEG_EXECUTION_FACTS", absenceAvailability),
-      funding: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_FUNDING", absenceAvailability),
-      mae_mfe: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_MAE_MFE_INPUTS", absenceAvailability),
-      fold_capital: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_FOLD_CAPITAL_CONVENTION", absenceAvailability),
-      child_audit_provenance: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_CHILD_AUDIT_REPLAY_PROVENANCE", absenceAvailability),
+      orders: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER"), absenceAvailability),
+      fills: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS"), absenceAvailability),
+      trades: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER"), absenceAvailability),
+      positions: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_POSITION_STATE_SNAPSHOTS"), absenceAvailability),
+      execution_events: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM"), absenceAvailability),
+      candle_windows: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS"), absenceAvailability),
+      sl_tp_ambiguity: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_INTRABAR_SL_TP_AMBIGUITY"), absenceAvailability),
+      oco_tree: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_OCO_PARENT_CHILD_RELATIONSHIPS"), absenceAvailability),
+      multi_leg: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_MULTI_LEG_EXECUTION_FACTS"), absenceAvailability),
+      funding: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_FUNDING"), absenceAvailability),
+      mae_mfe: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_MAE_MFE_INPUTS"), absenceAvailability),
+      fold_capital: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_FOLD_CAPITAL_CONVENTION"), absenceAvailability),
+      child_audit_provenance: this.routeGap(sourceReason("P04_SOURCE_DID_NOT_PUBLISH_CHILD_AUDIT_REPLAY_PROVENANCE"), absenceAvailability),
     };
     const sourceAbsences = {
       execution_state: executionStateGap,
-      order_ledger: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER", absenceAvailability),
-      fill_ledger: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS", absenceAvailability),
-      trade_ledger: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER", absenceAvailability),
-      position_snapshots: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_POSITION_STATE_SNAPSHOTS", absenceAvailability),
-      event_stream: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM", absenceAvailability),
-      candles: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS", absenceAvailability),
-      sl_tp_ambiguity: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_INTRABAR_SL_TP_AMBIGUITY", absenceAvailability),
-      oco_tree: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_OCO_PARENT_CHILD_RELATIONSHIPS", absenceAvailability),
-      multi_leg: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_MULTI_LEG_EXECUTION_FACTS", absenceAvailability),
-      funding: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_FUNDING", absenceAvailability),
-      mae_mfe: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_MAE_MFE_INPUTS", absenceAvailability),
-      fold_capital: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_FOLD_CAPITAL_CONVENTION", absenceAvailability),
-      child_audit_provenance: gap("NOT_PUBLISHED", "P04_SOURCE_DID_NOT_PUBLISH_CHILD_AUDIT_REPLAY_PROVENANCE", absenceAvailability),
-      cross_stream_order: gap("NOT_ASSERTED", "P04_SOURCE_DID_NOT_PUBLISH_CROSS_STREAM_EXECUTION_ORDER", absenceAvailability),
+      order_ledger: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER"), absenceAvailability),
+      fill_ledger: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS"), absenceAvailability),
+      trade_ledger: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER"), absenceAvailability),
+      position_snapshots: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_POSITION_STATE_SNAPSHOTS"), absenceAvailability),
+      event_stream: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM"), absenceAvailability),
+      candles: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS"), absenceAvailability),
+      sl_tp_ambiguity: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_INTRABAR_SL_TP_AMBIGUITY"), absenceAvailability),
+      oco_tree: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_OCO_PARENT_CHILD_RELATIONSHIPS"), absenceAvailability),
+      multi_leg: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_MULTI_LEG_EXECUTION_FACTS"), absenceAvailability),
+      funding: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_FUNDING"), absenceAvailability),
+      mae_mfe: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_MAE_MFE_INPUTS"), absenceAvailability),
+      fold_capital: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_FOLD_CAPITAL_CONVENTION"), absenceAvailability),
+      child_audit_provenance: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_CHILD_AUDIT_REPLAY_PROVENANCE"), absenceAvailability),
+      cross_stream_order: gap("NOT_ASSERTED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_CROSS_STREAM_EXECUTION_ORDER"), absenceAvailability),
     };
     return {
       schema_version: "research.replay.v1",
@@ -274,9 +277,9 @@ export class ResearchReplayService {
         input_scope: hub.core.input_scope,
       },
       route: {
-        id: sourceIsCurrentP04 ? "signal_notional" : null,
+        id: sourceIsSupported ? "signal_notional" : null,
         state: routeState,
-        replay_contract: sourceIsAvailable ? "P17_CURRENT_P04_EQUITY_SAMPLE_V1" : null,
+        replay_contract: sourceIsAvailable ? (sourceIsCurrentP04 ? "P17_CURRENT_P04_EQUITY_SAMPLE_V1" : "P17_IMPORTED_FIXED_EQUITY_SAMPLE_V1") : null,
         availability: routeAvailability,
       },
       equity_replay: window,

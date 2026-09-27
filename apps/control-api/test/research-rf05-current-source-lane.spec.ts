@@ -15,6 +15,7 @@ import { ResearchCurrentSourceError } from "../src/research/current-source.error
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
 import { ifNoneMatchWeakly } from "../src/research/etag";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "../src/research/p04-delta.binding";
+import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "../src/research/imported-alpha.profile";
 
 const scope = { workspaceId: "rf05-workspace", actorUserId: "rf05-user" };
 const config = {
@@ -61,6 +62,23 @@ const operations = [
 ] as const;
 
 describe("RF-05 CG-P13-09 · P04 fixed profile is NOT_APPLICABLE, answered as a typed 200", () => {
+  it("E17 fixed runs never claim pending WFO retention, including after completion", async () => {
+    for (const status of ["COMPLETED", "RUNNING"]) {
+      const { service, repository } = build({ status, executionProfileId: IMPORTED_ALPHA_PROFILE_ID,
+        adapterContractDigest: IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST });
+      for (const [, read] of operations) {
+        expect(await read(service)).toMatchObject({
+          availability: { state: "NOT_APPLICABLE" },
+          lane: { run_profile: "IMPORTED_FIXED_QUALIFICATION",
+            reason_code: "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_IMPORTED_FIXED_QUALIFICATION" },
+        });
+      }
+      expect(repository.rows).not.toHaveBeenCalled();
+    }
+    const { service } = build({ status: "COMPLETED", executionProfileId: IMPORTED_ALPHA_PROFILE_ID,
+      adapterContractDigest: "0".repeat(64) });
+    await expect(service.split(scope, "drift")).rejects.toMatchObject({ status: 409 });
+  });
   it("answers every named read with the not-applicable lane and never reads retained rows", async () => {
     for (const status of ["COMPLETED", "CANCELLED", "RUNNING"]) {
       const { service, repository } = build({ status, adapterContractDigest: P04_DELTA_ADAPTER_CONTRACT_DIGEST });

@@ -64,12 +64,12 @@ const UsageSchema = z.object({
  * there is no objective at all.
  */
 const FoldSelectionFactSchema = z.object({
-  scope: z.enum(["GLOBAL_STUDY", "FIXED_PROFILE"]),
+  scope: z.enum(["GLOBAL_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"]),
   trial: PositiveIntegerSchema,
   objective: SignedDecimalSchema.nullable(),
   params_digest: DigestSchema,
 }).strict().superRefine((value, context) => {
-  if (value.scope === "FIXED_PROFILE" && value.objective !== null) {
+  if (value.scope !== "GLOBAL_STUDY" && value.objective !== null) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "a fixed profile publishes no search objective" });
   }
 });
@@ -89,7 +89,7 @@ const notPublishedFoldSelection = () => ({
 });
 const SnapshotFoldSelectionSchema = z.object({
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
-  scope: z.enum(["GLOBAL_STUDY", "FIXED_PROFILE"]).nullable(),
+  scope: z.enum(["GLOBAL_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"]).nullable(),
   trial: PositiveIntegerSchema.nullable(),
   objective: SignedDecimalSchema.nullable(),
   params_digest: DigestSchema.nullable(),
@@ -97,7 +97,7 @@ const SnapshotFoldSelectionSchema = z.object({
 }).strict().superRefine((value, context) => {
   if (value.state === "AVAILABLE") {
     if (value.scope === null || value.trial === null || value.params_digest === null || value.reason_code !== null
-      || (value.scope === "FIXED_PROFILE" && value.objective !== null)) {
+      || (value.scope !== "GLOBAL_STUDY" && value.objective !== null)) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "available fold selection is inconsistent" });
     }
   } else if (value.scope !== null || value.trial !== null || value.objective !== null
@@ -268,7 +268,7 @@ const ResearchEvidenceAvailabilitySchema = z.object({
 export const ResearchEvidenceSourceSchema = z.object({
   schema_version: z.literal("research.p13.evidence-source.v1"),
   source: z.object({
-    execution_adapter_id: z.literal("p04.delta-rsi.v1"),
+    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
     engine_version: z.string().regex(/^1\.1\.1$/),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     oos_observation_count: z.number().int().positive().max(2_000_000),
@@ -449,7 +449,10 @@ const ResearchOuterOosRangeSchema = refineSplitRange(ResearchSplitRangeShape.ext
   bars: z.number().int().positive().max(2_000_000),
   data_role: z.literal("OUTER_OOS_OBSERVATION"),
   child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
-  evaluation_state: z.literal("P04_OBSERVED_AFTER_FIXED_PROFILE"),
+  evaluation_state: z.enum([
+    "P04_OBSERVED_AFTER_FIXED_PROFILE",
+    "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE",
+  ]),
 }).strict());
 const ResearchHoldoutRangeSchema = refineSplitRange(ResearchSplitRangeShape.extend({
   bars: z.null(),
@@ -475,7 +478,9 @@ const ResearchSplitAbsenceSchema = z.object({
 export const ResearchSplitSourceSchema = z.object({
   schema_version: z.literal("research.p14.split-source.v1"),
   source: z.object({
-    execution_adapter_id: z.literal("p04.delta-rsi.v1"),
+    /** E17 child-verified raw-source SHA; absent on P04/historical receipts. */
+    imported_source_digest: DigestSchema.optional(),
+    execution_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]),
     engine_version: z.string().regex(/^1\.1\.1$/),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
     source_transform_digest: DigestSchema,
@@ -493,7 +498,10 @@ export const ResearchSplitSourceSchema = z.object({
       parameter_bundle_digest: DigestSchema,
       strict_outer_oos: z.object({
         state: z.literal("NOT_ASSERTED"),
-        reason_code: z.literal("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS"),
+        reason_code: z.enum([
+          "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
+          "E17_IMPORTED_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
+        ]),
       }).strict(),
     }).strict(),
   }).strict(),

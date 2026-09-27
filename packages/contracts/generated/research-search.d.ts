@@ -25,6 +25,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ImportedAlphaReadBinding: {
+            /** @constant */
+            schema_version: "research.imported-alpha-read-binding.v1";
+            source_digest: string;
+            entrypoint: string;
+            parameter_bundle_digest: string;
+            parameters: {
+                name: string;
+                /** @enum {unknown} */
+                kind: "fixed" | "int_range" | "float_range" | "categorical";
+                value: string | number | boolean;
+            }[];
+        };
         WorkspaceId: string;
         RunId: string;
         Digest: string;
@@ -154,7 +167,7 @@ export interface components {
             interactions: components["schemas"]["SourceGap"];
         };
         Provenance: {
-            source_adapter_id: "p04.delta-rsi.v1" | null;
+            source_adapter_id: ("p04.delta-rsi.v1" | "p17.imported-signal-notional.v1") | null;
             adapter_contract_digest: components["schemas"]["Digest"] | null;
             engine_version: "1.1.1" | null;
             input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" | null;
@@ -204,7 +217,7 @@ export interface components {
         OosColumn: {
             /** @enum {unknown} */
             state: "SELECTION_INPUT" | "RETROSPECTIVE" | "REPORT_ONLY" | "WITHHELD" | "NOT_APPLICABLE" | "NOT_PUBLISHED";
-            source_evaluation_state: "P04_OBSERVED_AFTER_FIXED_PROFILE" | null;
+            source_evaluation_state: ("P04_OBSERVED_AFTER_FIXED_PROFILE" | "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE") | null;
             /** @enum {unknown} */
             provenance: "P14_SOURCE_RECEIPT" | "NONE";
             reason_code: components["schemas"]["ReasonCode"] | null;
@@ -265,6 +278,7 @@ export interface components {
             requested_optimizer: components["schemas"]["RequestedOptimizer"];
             claim_row: components["schemas"]["ClaimRow"];
             fixed_profile: components["schemas"]["FixedProfile"] | components["schemas"]["UnavailableFixedProfile"];
+            imported_alpha?: components["schemas"]["ImportedAlphaReadBinding"];
             selection: components["schemas"]["Selection"];
             inspection: components["schemas"]["Inspection"];
             ledger: components["schemas"]["Ledger"];

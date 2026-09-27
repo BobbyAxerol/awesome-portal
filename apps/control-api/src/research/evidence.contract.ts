@@ -378,7 +378,7 @@ export const ResearchEvidenceHubResponseSchema = z.object({
   as_of_utc_ms: UtcMsSchema,
   metric_registry_version: z.enum(["research.metric-registry.v1", "research.metric-registry.v2"]),
   core: z.object({
-    source_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
+    source_adapter_id: z.enum(["p04.delta-rsi.v1", "p17.imported-signal-notional.v1"]).nullable(),
     engine_version: z.string().regex(/^1\.1\.1$/).nullable(),
     input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY").nullable(),
     source_transform_digest: DigestSchema.nullable(),
