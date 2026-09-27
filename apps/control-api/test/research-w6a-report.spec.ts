@@ -63,10 +63,12 @@ const seal: CurrentSourceSealRow = {
   retainedAtUtcMs: 1_790_269_236_911,
 };
 
-function currentSource(importDigest = seal.retainedImportDigest) {
+function currentSource(importDigest = seal.retainedImportDigest, summaryAnalytics?: Record<string, unknown>) {
   const sorted = (kind: Kind) => [...(real.rows[kind] ?? [])].sort((left, right) => left.sourceOrdinal - right.sourceOrdinal);
   const repository = {
-    sealForRead: vi.fn().mockResolvedValue(seal),
+    sealForRead: vi.fn().mockResolvedValue(summaryAnalytics
+      ? { ...seal, summary: { ...seal.summary, summary_analytics: summaryAnalytics } }
+      : seal),
     runState: vi.fn(),
     rows: vi.fn(async (_scope: unknown, _runId: string, _revision: number, kind: Kind, selection: { afterOrdinal?: number; atOrdinal?: number; limit: number }) => {
       const all = sorted(kind);
@@ -129,6 +131,7 @@ function parts(manifestDigest = real.manifest_digest) {
 }
 
 function subject(options: {
+  summaryAnalytics?: Record<string, unknown>;
   binding?: "PUBLISHABLE" | "SCRATCH";
   manifestDigest?: string;
   importDigest?: string;
@@ -155,7 +158,7 @@ function subject(options: {
   const unused = { detail: vi.fn().mockRejectedValue(new Error("a WFO report never reads a P04 hub")) };
   const service = new ResearchReportService(
     repository as never, evidence as never, unused as never, unused as never, unused as never, unused as never,
-    currentSource(options.importDigest),
+    currentSource(options.importDigest, options.summaryAnalytics),
     {
       FEATURE_RESEARCH_REPORTS: "true", FEATURE_RESEARCH_CURRENT_SOURCE: "true",
       RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES: 512 * 1024, RESEARCH_REPORT_EXPORT_LEASE_SECONDS: 90,
@@ -290,22 +293,37 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
 
   /* E14 · 9.7/9.8 on the retained lane. */
 
-  it("E14 · 9.8: the headline leads with the retained net return, under the scope that return actually has", async () => {
+  it("E14 · 9.8: older seals without engine OOS return stay absent, not whole-account relabelled", async () => {
     const core = v2(await subject().service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
     const evidence = await currentSource().evidence(scope, real.run_id) as { passport: { net_return_fraction: string | null } };
     expect(core.headline).toHaveLength(7);
     expect(core.headline[0]).toEqual({
       key: "NET_RETURN",
-      label: "Net return",
-      scope: "IS_PLUS_OOS",
-      value: evidence.passport.net_return_fraction,
-      availability: { state: "AVAILABLE", reason_code: null },
+      label: "Net OOS return",
+      scope: "OOS",
+      value: null,
+      availability: { state: "NOT_PUBLISHED", reason_code: "RS02_SOURCE_PREDATES_RETAINED_OOS_RETURN" },
     });
     /* The tile is the account path, which begins before the first outer test
        window — the footnote must not let it read as an OOS-only return. */
     expect(core.equity_is.scope).toBe("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST");
     expect(core.equity_is.state).toBe("AVAILABLE");
-    expect(core.headline_footnote).toContain("they are not OOS-only");
+    expect(core.metrics.find(value => value.key === "NET_RETURN_FRACTION")?.value).toBe(evidence.passport.net_return_fraction);
+    expect(core.headline_footnote).toContain("Older seals");
+  });
+
+  it("E11/E14 new sealed engine OOS fact reaches the named Evidence and frozen Report unchanged", async () => {
+    const analytics = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics.fixed.valid.json"), "utf8"));
+    analytics.in_sample_equity = { state: "NOT_PUBLISHED", reason_code: "QUANTBT_WFO_HAS_NO_SELECTED_CANDIDATE_IS_ACCOUNT",
+      scope: "SELECTED_CANDIDATE_IS", source_locator: "QuantBT.walk_forward.output.final_account_not_candidate_IS",
+      start_utc_ms: null, end_exclusive_utc_ms: null, source_observation_count: 0, emitted_point_count: 0, sampling: null, points: [] };
+    const evidence = await currentSource(undefined, analytics).evidence(scope, real.run_id);
+    expect(evidence).toHaveProperty("summary_analytics", analytics);
+    openApiValidator("research-current-source.openapi.json", "Evidence").assert(evidence);
+    const core = v2(await subject({ summaryAnalytics: analytics }).service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    expect(core.headline[0]).toMatchObject({ key: "NET_RETURN", label: "Net OOS return", scope: "OOS", value: "0.012", availability: available });
+    expect(core.metrics.find(value => value.key === "NET_OOS_RETURN_FRACTION")).toMatchObject({ value: "0.012", scope: "OOS", origin: "ENGINE_DIRECT" });
+    expect(core.metrics.find(value => value.key === "NET_RETURN_FRACTION")?.value).not.toBe("0.012");
   });
 
   it("E14 · 9.7: a lane whose search really ran carries no 'declared, not executed' qualifier", async () => {

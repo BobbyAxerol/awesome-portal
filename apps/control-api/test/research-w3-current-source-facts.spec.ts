@@ -186,7 +186,7 @@ describe("W3 · S04 evidence: claim strip and fold verdicts (CG-P13-07/08)", () 
       state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT",
     });
     expect(evidence.source_absences.rolling_sharpe).toMatchObject({
-      state: "NOT_PUBLISHED", reason_code: "RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES",
+      state: "NOT_PUBLISHED", reason_code: "RS02_SOURCE_PREDATES_RETAINED_ANALYTICS",
     });
   });
 

@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 
 import type { CurrentSourceTableKind } from "./current-source.repository";
 
@@ -387,6 +388,7 @@ export const CurrentSourceSummarySchema = z.object({
   source_facts: CurrentSourceFactsSchema.optional(),
   // W5b (P17): the signal-notional replay ledger summary; absent before W5b.
   replay: CurrentSourceReplaySummarySchema.optional(),
+  summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   derived: z.object({
     monthly_returns: z.object({
       source_observation_count: z.number().int().nonnegative().max(2_000_000),
@@ -418,7 +420,11 @@ export const CurrentSourceSummarySchema = z.object({
       }).strict()).max(192),
     }).strict(),
   }).strict(),
-}).strict();
+}).strict().superRefine((value, context) => {
+  if (value.summary_analytics && value.summary_analytics.in_sample_equity.scope !== "SELECTED_CANDIDATE_IS") {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "WFO seal cannot substitute fixed-child IS equity" });
+  }
+});
 
 export const CurrentSourceObservationPayloadSchema = z.object({
   source_index_utc: z.string().datetime({ offset: true }),

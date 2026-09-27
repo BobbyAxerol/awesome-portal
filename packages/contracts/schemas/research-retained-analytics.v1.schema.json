@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ResearchRetainedAnalytics",
+  "description": "E11/E14 source-time analytics sealed with one immutable artifact/projection. UTC milliseconds, exact decimals, no compute on GET. Child-tape trade count is not an audited ledger.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "input_digest", "scope_locator", "oos_observation_count", "trade_ledger_record_count", "net_oos_return", "total_trade_count", "rolling_sharpe_63", "in_sample_equity", "behaviour"],
+  "properties": {
+    "schema_version": {"const": "research.retained-analytics.v1"},
+    "input_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "scope_locator": {"$ref": "#/$defs/Locator"},
+    "oos_observation_count": {"type": "integer", "minimum": 1, "maximum": 2000000},
+    "trade_ledger_record_count": {"$ref": "#/$defs/Count"},
+    "net_oos_return": {"allOf": [{"$ref": "#/$defs/Fact"}, {"properties": {"scope": {"const": "OOS"}, "origin": {"const": "ENGINE_DIRECT"}}}]},
+    "total_trade_count": {"allOf": [{"$ref": "#/$defs/Fact"}, {"properties": {"scope": {"const": "CHILD_TAPE"}, "origin": {"const": "ENGINE_DIRECT"}, "value": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)$", "maxLength": 96}]}}}]},
+    "rolling_sharpe_63": {"$ref": "#/$defs/Rolling"},
+    "in_sample_equity": {"$ref": "#/$defs/Curve"},
+    "behaviour": {
+      "type": "object", "additionalProperties": false,
+      "required": ["win_rate", "payoff_ratio", "average_hold_seconds", "max_consecutive_losses", "turnover_notional", "exposure_fraction"],
+      "properties": {
+        "win_rate": {"$ref": "#/$defs/OosFact"},
+        "payoff_ratio": {"$ref": "#/$defs/OosFact"},
+        "average_hold_seconds": {"$ref": "#/$defs/OosFact"},
+        "max_consecutive_losses": {"$ref": "#/$defs/OosFact"},
+        "turnover_notional": {"$ref": "#/$defs/OosFact"},
+        "exposure_fraction": {"$ref": "#/$defs/OosFact"}
+      }
+    }
+  },
+  "$defs": {
+    "Decimal": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$", "maxLength": 96},
+    "UtcMs": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "Count": {"type": "integer", "minimum": 0, "maximum": 2000000},
+    "Locator": {"type": "string", "minLength": 1, "maxLength": 256},
+    "Reason": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,159}$"},
+    "State": {"enum": ["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]},
+    "Fact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "value", "source_locator", "scope", "origin"],
+      "properties": {
+        "state": {"$ref": "#/$defs/State"},
+        "reason_code": {"anyOf": [{"$ref": "#/$defs/Reason"}, {"type": "null"}]},
+        "value": {"anyOf": [{"$ref": "#/$defs/Decimal"}, {"type": "null"}]},
+        "source_locator": {"$ref": "#/$defs/Locator"},
+        "scope": {"enum": ["OOS", "CHILD_TAPE"]},
+        "origin": {"enum": ["ENGINE_DIRECT", "SOURCE_DERIVED"]}
+      },
+      "allOf": [{"if": {"properties": {"state": {"const": "AVAILABLE"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/Decimal"}, "reason_code": {"type": "null"}}}, "else": {"properties": {"value": {"type": "null"}, "reason_code": {"$ref": "#/$defs/Reason"}}}}]
+    },
+    "OosFact": {"allOf": [{"$ref": "#/$defs/Fact"}, {"properties": {"scope": {"const": "OOS"}}}]},
+    "Curve": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "scope", "source_locator", "start_utc_ms", "end_exclusive_utc_ms", "source_observation_count", "emitted_point_count", "sampling", "points"],
+      "properties": {
+        "state": {"$ref": "#/$defs/State"},
+        "reason_code": {"anyOf": [{"$ref": "#/$defs/Reason"}, {"type": "null"}]},
+        "scope": {"enum": ["DECLARED_IS", "SELECTED_CANDIDATE_IS"]},
+        "source_locator": {"$ref": "#/$defs/Locator"},
+        "start_utc_ms": {"anyOf": [{"$ref": "#/$defs/UtcMs"}, {"type": "null"}]},
+        "end_exclusive_utc_ms": {"anyOf": [{"$ref": "#/$defs/UtcMs"}, {"type": "null"}]},
+        "source_observation_count": {"$ref": "#/$defs/Count"},
+        "emitted_point_count": {"type": "integer", "minimum": 0, "maximum": 24},
+        "sampling": {"enum": ["FULL", "EXTREMA_BUCKET_V1", null]},
+        "points": {"type": "array", "maxItems": 24, "items": {"type": "object", "additionalProperties": false, "required": ["at_utc_ms", "equity"], "properties": {"at_utc_ms": {"$ref": "#/$defs/UtcMs"}, "equity": {"$ref": "#/$defs/Decimal"}}}}
+      },
+      "allOf": [{"if": {"properties": {"state": {"const": "AVAILABLE"}}}, "then": {"properties": {"reason_code": {"type": "null"}, "start_utc_ms": {"$ref": "#/$defs/UtcMs"}, "end_exclusive_utc_ms": {"$ref": "#/$defs/UtcMs"}, "source_observation_count": {"minimum": 1}, "emitted_point_count": {"minimum": 1}, "sampling": {"enum": ["FULL", "EXTREMA_BUCKET_V1"]}, "points": {"minItems": 1}}}, "else": {"properties": {"reason_code": {"$ref": "#/$defs/Reason"}, "emitted_point_count": {"const": 0}, "sampling": {"type": "null"}, "points": {"maxItems": 0}}}}]
+    },
+    "Rolling": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "window_days", "daily_return_count", "locator", "source_observation_count", "omitted_non_finite_count", "emitted_point_count", "sampling", "points"],
+      "properties": {
+        "state": {"$ref": "#/$defs/State"},
+        "reason_code": {"anyOf": [{"$ref": "#/$defs/Reason"}, {"type": "null"}]},
+        "window_days": {"const": 63},
+        "daily_return_count": {"anyOf": [{"$ref": "#/$defs/Count"}, {"type": "null"}]},
+        "locator": {"anyOf": [{"$ref": "#/$defs/Locator"}, {"type": "null"}]},
+        "source_observation_count": {"$ref": "#/$defs/Count"},
+        "omitted_non_finite_count": {"$ref": "#/$defs/Count"},
+        "emitted_point_count": {"type": "integer", "minimum": 0, "maximum": 12},
+        "sampling": {"enum": ["FULL", "EXTREMA_BUCKET_V1", null]},
+        "points": {"type": "array", "maxItems": 12, "items": {"type": "object", "additionalProperties": false, "required": ["at_utc_ms", "sharpe"], "properties": {"at_utc_ms": {"$ref": "#/$defs/UtcMs"}, "sharpe": {"$ref": "#/$defs/Decimal"}}}}
+      },
+      "allOf": [{"if": {"properties": {"state": {"const": "AVAILABLE"}}}, "then": {"properties": {"reason_code": {"type": "null"}, "emitted_point_count": {"minimum": 1}, "sampling": {"enum": ["FULL", "EXTREMA_BUCKET_V1"]}, "points": {"minItems": 1}}}, "else": {"properties": {"reason_code": {"$ref": "#/$defs/Reason"}, "emitted_point_count": {"const": 0}, "sampling": {"type": "null"}, "points": {"maxItems": 0}}}}]
+    }
+  }
+}

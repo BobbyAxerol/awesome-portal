@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { WhatIfSchema } from "./whatif.contract";
@@ -406,6 +407,7 @@ const FoldVerdictsSchema = z.object({
 }).strict();
 
 export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
+  summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   schema_version: z.literal("research.current-source-evidence.v1"),
   passport: z.object({
     artifact_table_rows: z.object({
@@ -441,9 +443,9 @@ export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
     in_sample_account: ResearchCurrentSourceFactSchema.optional(),
     /**
      * E11 (audit 04-10): rolling Sharpe(63 daily returns) is QuantBT's own
-     * measure over a scoped result. The retained tape is hourly and carries
-     * no daily-return series, so this lane can never answer it and the
-     * screen must not compute one. Optional for pre-E11 captures.
+     * measure over its UTC daily scoped result. New seals publish its bounded
+     * source-time points in summary_analytics; older/short runs remain typed.
+     * An hourly tape does not prohibit engine daily aggregation.
      */
     rolling_sharpe: ResearchCurrentSourceFactSchema.optional(),
   }).strict(),

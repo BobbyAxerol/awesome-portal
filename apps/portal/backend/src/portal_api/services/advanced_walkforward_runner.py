@@ -225,6 +225,13 @@ class AdvancedWalkForwardRunner:
             endpoint, trading_days=int(config.optimization.scoring_trading_days)
         )
         result = endpoint.result
+        from portal_api.services.research_retained_analytics import retained_analytics
+
+        # Source-time calculation inside the confined writer, never on GET.
+        self._artifacts.write_json(
+            run_id, "wfo/retained_analytics.v1.json",
+            with_portal_provenance("retained_analytics.v1.json", retained_analytics(result=result, mode="WFO")),
+        )
         series = _stitched_series(active_market.frame, result)
         self._artifacts.write_frame(run_id, "series/stitched.parquet", series)
         self._write_account_ledger(run_id, active_market.frame, result, wf)

@@ -80,6 +80,8 @@ class ResearchChildReceipt:
     # passport.  It is optional only for pre-P13/P06 compatibility callers;
     # the installed P10 producer always supplies it.
     oos_start_utc_ms: int | None = None
+    # Immutable P08 bound: optional warmup must not appear as IS equity.
+    is_start_utc_ms: int | None = None
 
     def as_payload(self) -> dict[str, Any]:
         payload = {
@@ -98,6 +100,8 @@ class ResearchChildReceipt:
             payload["p04_parameters"] = self.p04_parameters
         if self.oos_start_utc_ms is not None:
             payload["oos_start_utc_ms"] = self.oos_start_utc_ms
+        if self.is_start_utc_ms is not None:
+            payload["is_start_utc_ms"] = self.is_start_utc_ms
         return payload
 
 
@@ -155,6 +159,7 @@ class ImportedAlphaChildReceipt:
     random_seed: int | None
     artifact_root: Path
     oos_start_utc_ms: int
+    is_start_utc_ms: int | None = None
 
     def as_payload(self) -> dict[str, Any]:
         return {
@@ -172,6 +177,7 @@ class ImportedAlphaChildReceipt:
             "random_seed": self.random_seed,
             "artifact_root": str(self.artifact_root),
             "oos_start_utc_ms": self.oos_start_utc_ms,
+            **({"is_start_utc_ms": self.is_start_utc_ms} if self.is_start_utc_ms is not None else {}),
             "execution_adapter_id": IMPORTED_ALPHA_ADAPTER_ID,
             "adapter_contract_digest": IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
             "execution_profile_id": IMPORTED_ALPHA_PROFILE_ID,

@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 
 import { ResearchEvidenceOosAnalyticsSourceSchema } from "./evidence.contract";
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
@@ -317,9 +318,20 @@ export const ResearchEvidenceSourceSchema = z.object({
   }).strict(),
   /** RF-05 (P13 evidence owner): additive engine OOS analytics; see evidence.contract.ts. */
   oos_analytics: ResearchEvidenceOosAnalyticsSourceSchema.optional(),
+  summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
 }).strict().superRefine((value, context) => {
   if (value.source.emitted_equity_points !== value.equity_points.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count is inconsistent" });
+  }
+  if (value.summary_analytics) {
+    const facts = value.summary_analytics;
+    if (facts.in_sample_equity.scope !== "DECLARED_IS"
+      || facts.oos_observation_count !== value.source.oos_observation_count
+      || (facts.total_trade_count.state === "AVAILABLE" && facts.total_trade_count.value !== value.direct.num_trades)
+      || (facts.in_sample_equity.state === "AVAILABLE"
+        && facts.in_sample_equity.end_exclusive_utc_ms! > value.equity_points[0]!.at_utc_ms)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "fixed-child retained analytics authority disagrees with its source receipt" });
+    }
   }
   const isCorrectedR2 = value.source.evidence_transform_revision === "P13_SOURCE_R2";
   if (isCorrectedR2 && (!value.source.direct_metric_scopes || !value.source.series_metadata)) {

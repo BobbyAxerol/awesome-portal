@@ -2,6 +2,7 @@
 
 import { Inject, Injectable } from "@nestjs/common";
 import { z } from "zod";
+import { ResearchRetainedAnalyticsSchema, type ResearchRetainedAnalytics } from "./retained-analytics.contract";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -61,6 +62,7 @@ type AnalyticsSeriesKind = "ROLLING_SHARPE_63" | "ROLLING_BETA_63";
 type StoredOosAnalytics = Omit<ResearchEvidenceOosAnalyticsSource, "rolling_sharpe_63" | "rolling_beta_63" | "monthly_leading">;
 
 interface StoredProjection {
+  summary_analytics?: ResearchRetainedAnalytics;
   schema_version: "research.evidence-projection.v1";
   source: ResearchEvidenceSource["source"];
   /** Bound into the immutable projection digest; never reconstructed on read. */
@@ -245,6 +247,7 @@ const StoredProjectionSchema = z.object({
     reason_code: z.literal("P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS"),
   }).strict().optional(),
   candle_overview: ResearchEvidenceCandleOverviewSchema.optional(),
+  summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
 }).strict().superRefine((value, context) => {
   if (value.transform_revision === "P13_SOURCE_R2" && !value.source.direct_metric_scopes) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "P13 R2 projection omits direct metric scope" });
@@ -492,6 +495,7 @@ export class ResearchEvidenceService {
       } : {}),
       ...(monthlyLeadingNote ? { monthly_leading: monthlyLeadingNote } : {}),
       ...(source.candle_overview ? { candle_overview: source.candle_overview } : {}),
+      ...(source.summary_analytics ? { summary_analytics: source.summary_analytics } : {}),
       series: Object.fromEntries(series.map((item) => [item.kind, {
         state: item.availabilityState,
         reason_code: item.reasonCode,
@@ -624,6 +628,7 @@ export class ResearchEvidenceService {
     const warnings = projection ? this.warnings(projection, sourceAbsences) : [];
     const response = {
       schema_version: "research.evidence-hub.v1",
+      ...(projection?.summary_analytics ? { summary_analytics: projection.summary_analytics } : {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: row.runId,
       revision,

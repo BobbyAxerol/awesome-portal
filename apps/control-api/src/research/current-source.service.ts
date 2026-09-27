@@ -382,6 +382,7 @@ export class ResearchCurrentSourceService {
       && candidate.objective === summary.selection.objective) ?? null;
     const value = {
       schema_version: "research.current-source-evidence.v1" as const,
+      ...(summary.summary_analytics ? { summary_analytics: summary.summary_analytics } : {}),
       ...this.common("evidence", seal),
       passport: {
         artifact_table_rows: {
@@ -410,7 +411,10 @@ export class ResearchCurrentSourceService {
            one legend entry short and EChart 3 half empty with a UI-authored
            code. Both are structural facts of this lane, not this run. */
         in_sample_account: sourceGap("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT"),
-        rolling_sharpe: sourceGap("RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES"),
+        ...(summary.summary_analytics?.rolling_sharpe_63.state === "AVAILABLE" ? {} : {
+          rolling_sharpe: sourceGap(summary.summary_analytics?.rolling_sharpe_63.reason_code
+            ?? "RS02_SOURCE_PREDATES_RETAINED_ANALYTICS"),
+        }),
       },
       claim: claimStrip(facts),
       fold_verdicts: foldVerdicts(

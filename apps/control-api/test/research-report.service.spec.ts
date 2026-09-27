@@ -113,6 +113,22 @@ function subject() {
 }
 
 describe("P18 immutable Report and bounded reproducible export", () => {
+  it("E14 seals the new FIXED engine OOS fact without replacing the broader Hub metric or resealing old reports", async () => {
+    const value = subject();
+    const existing = await value.readers.evidence.bundle();
+    const analytics = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics.fixed.valid.json"), "utf8"));
+    value.readers.evidence.bundle.mockResolvedValue({ ...existing, hub: { ...existing.hub, summary_analytics: analytics } });
+    const report = await value.service.materialize(scope, "run_p18");
+    const core = report.frozen_core;
+    if (core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected v2");
+    expect(core.headline[0]).toMatchObject({ label: "Net OOS return", value: "0.012", scope: "OOS", availability: availability() });
+    expect(core.metrics.find(item => item.key === "NET_RETURN_FRACTION")?.value).toBe("0.1");
+    expect(core.metrics.find(item => item.key === "NET_OOS_RETURN_FRACTION")).toMatchObject({ value: "0.012", scope: "OOS", origin: "ENGINE_DIRECT" });
+    openApiValidator("research-report.openapi.json", "ReportDetail").assert(report);
+    value.readers.evidence.bundle.mockRejectedValue(new Error("An immutable report must not reopen its readers"));
+    expect((await value.service.read(scope, "run_p18")).frozen_core).toEqual(core);
+  });
+
   it("P18-T01/T02/T07/T09 seals exact P13--P17 identity once without engine rerun or unsupported metric claims", async () => {
     const subjectValue = subject();
     const report = await subjectValue.service.materialize(scope, "run_p18");

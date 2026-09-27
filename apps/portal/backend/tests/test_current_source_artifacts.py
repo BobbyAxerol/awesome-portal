@@ -154,6 +154,15 @@ def test_current_source_adapter_retains_real_wfo_rows_once(exported) -> None:
     assert receipt.summary["schema_version"] == "research.current-source-summary.v1"
     assert receipt.summary["metrics"]["initial_equity"]
     assert receipt.summary["selection"]["parameters"]
+    # E11/E14 source-time block survives the actual P05 seal, not a GET rerun.
+    analytics = receipt.summary["summary_analytics"]
+    original = source.read_json("run-rs02-advanced", "wfo/retained_analytics.v1.json")
+    assert original["artifact_schema_version"] == "1"
+    assert original["producer"]["artifact"] == "retained_analytics.v1.json"
+    assert analytics == {key: value for key, value in original.items() if key not in {"producer", "artifact_schema_version"}}
+    assert analytics["net_oos_return"]["scope"] == "OOS"
+    assert analytics["total_trade_count"]["scope"] == "CHILD_TAPE"
+    assert analytics["in_sample_equity"]["reason_code"] == "QUANTBT_WFO_HAS_NO_SELECTED_CANDIDATE_IS_ACCOUNT"
     assert receipt.summary["derived"]["monthly_returns"]["source_observation_count"] == receipt.table_rows["observations"]
     assert receipt.summary["derived"]["return_distribution"]["state"] in {"AVAILABLE", "NOT_APPLICABLE"}
     distribution = receipt.summary["derived"]["return_distribution"]

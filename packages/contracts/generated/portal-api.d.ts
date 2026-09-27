@@ -2104,9 +2104,9 @@ export interface components {
             effective_spec_digest: string;
             /**
              * Execution Adapter Id
-             * @constant
+             * @enum {string}
              */
-            execution_adapter_id: "p04.delta-rsi.v1";
+            execution_adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
             /** Execution Profile Digest */
             execution_profile_digest?: string | null;
             /**
@@ -2114,7 +2114,15 @@ export interface components {
              * @default p04.fixed-qualification.v1
              * @enum {string}
              */
-            execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1";
+            execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1";
+            /** Imported Entrypoint */
+            imported_entrypoint?: string | null;
+            /** Imported Parameters */
+            imported_parameters?: {
+                [key: string]: string | number | boolean;
+            } | null;
+            /** Imported Source Digest */
+            imported_source_digest?: string | null;
             /**
              * Intent Kind
              * @enum {string}

@@ -481,6 +481,9 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
   const oosTrades = sumIntegerStrings(folds.map((row) => row.oos_trades));
   const decimalFact = (value: string | null, reason: string) => ({ value, availability: value === null ? NOT_PUBLISHED(reason) : AVAILABLE });
   const passport = evidence.passport;
+  const netOos = evidence.summary_analytics?.net_oos_return;
+  const netOosValue = netOos?.state === "AVAILABLE" ? netOos.value : null;
+  const netOosReason = netOos?.reason_code ?? "RS02_SOURCE_PREDATES_RETAINED_OOS_RETURN";
   const scoped = (key: string, label: string, unit: "CURRENCY" | "FRACTION" | "COUNT" | "RATIO", scope: CoreV2["metrics"][number]["scope"], origin: "ENGINE_DIRECT" | "SOURCE_DERIVED", value: string | null, reason: string) =>
     ({ key, label, unit, scope, origin, definition_id: `research.metric.v1.rs02_${key.toLowerCase()}`, value, availability: value === null ? NOT_PUBLISHED(reason) : AVAILABLE });
   const oosUsed = claim.oos_used_for_selection.value;
@@ -546,17 +549,15 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       scoped("INITIAL_EQUITY", "Initial equity", "CURRENCY", "IS_PLUS_OOS", "ENGINE_DIRECT", passport.initial_equity, "RS02_INITIAL_EQUITY_NOT_PUBLISHED"),
       scoped("FINAL_EQUITY", "Final equity", "CURRENCY", "IS_PLUS_OOS", "ENGINE_DIRECT", passport.final_equity, "RS02_FINAL_EQUITY_NOT_PUBLISHED"),
       scoped("NET_RETURN_FRACTION", "Net return", "FRACTION", "IS_PLUS_OOS", "SOURCE_DERIVED", passport.net_return_fraction, "RS02_NET_RETURN_NOT_PUBLISHED"),
+      scoped("NET_OOS_RETURN_FRACTION", "Net OOS return", "FRACTION", "OOS", "ENGINE_DIRECT", netOosValue, netOosReason),
       scoped("MAX_DRAWDOWN_FRACTION", "Max drawdown", "FRACTION", "IS_PLUS_OOS", "SOURCE_DERIVED", passport.max_drawdown_fraction, "RS02_MAX_DRAWDOWN_NOT_PUBLISHED"),
       scoped("MEAN_OOS_SHARPE", "Mean OOS Sharpe", "RATIO", "OOS_MEAN_OF_FOLDS", "ENGINE_DIRECT", verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED"),
       scoped("MEAN_DECAY", "Mean decay", "RATIO", "OOS_MEAN_OF_FOLDS", "ENGINE_DIRECT", verdicts.mean_decay, "QUANTBT_SELECTED_CANDIDATE_DECAY_NOT_PUBLISHED"),
       scoped("OOS_TRADE_COUNT", "OOS trades", "COUNT", "OOS_SUM_OF_FOLDS", "SOURCE_DERIVED", oosTrades, "QUANTBT_FOLD_OOS_TRADES_NOT_PUBLISHED"),
     ],
     headline: [
-      // E14 · 9.8: the return tile the hi-fi leads with. The retained lane's
-      // one net return is the whole final-account path, which begins before
-      // the first outer test window, so it is served with that scope and is
-      // never relabelled as OOS-only (the record's engine request).
-      { key: "NET_RETURN", label: "Net return", scope: "IS_PLUS_OOS", ...decimalFact(passport.net_return_fraction, "RS02_NET_RETURN_NOT_PUBLISHED") },
+      // Real engine OOS fact; old seals stay absent, never relabelled on GET.
+      { key: "NET_RETURN", label: "Net OOS return", scope: "OOS", ...decimalFact(netOosValue, netOosReason) },
       { key: "OOS_SHARPE", label: "OOS Sharpe", scope: "OOS_MEAN_OF_FOLDS", ...decimalFact(verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED") },
       { key: "DECAY_MEAN", label: "Decay mean", scope: "OOS_MEAN_OF_FOLDS", ...decimalFact(verdicts.mean_decay, "QUANTBT_SELECTED_CANDIDATE_DECAY_NOT_PUBLISHED") },
       { key: "MAX_DRAWDOWN", label: "Max drawdown", scope: "IS_PLUS_OOS", ...decimalFact(passport.max_drawdown_fraction, "RS02_MAX_DRAWDOWN_NOT_PUBLISHED") },
@@ -564,7 +565,7 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       { key: "WIN_RATE", label: "Win rate", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS") },
       { key: "FUNDING", label: "Funding", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("RS02_SUMMARY_PUBLISHES_NO_FUNDING_TOTAL") },
     ],
-    headline_footnote: "Net return and drawdown are the retained final-account path, which runs from before the first outer test window — they are not OOS-only. OOS Sharpe and decay are QuantBT's means over the outer folds for the selected candidate; OOS trades is the exact sum of the fold rows. Win rate needs audited fills, which QuantBT did not publish.",
+    headline_footnote: "Net OOS return is QuantBT full_report(total_return_pct)/100 on its union of outer-test windows; gaps and leading IS are excluded. Older seals without that engine fact remain not published. Drawdown is the whole retained final-account path, not OOS-only. OOS Sharpe and decay are means over outer folds; OOS trades is the exact sum of fold rows, not an audited trade ledger.",
     equity: equityBlock("RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
     equity_is: equityBlock("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST", isPoints, seriesSampling, 300, "RS02_NO_RETAINED_OBSERVATION_BEFORE_FIRST_OUTER_TEST"),
     folds: {
@@ -700,6 +701,11 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
     availability: (metric(key)?.availability ?? NOT_PUBLISHED("P18_METRIC_NOT_PUBLISHED")) as Availability,
   });
   const metricScope = (key: string) => (metric(key)?.scope ?? "NOT_PUBLISHED") as CoreV2["headline"][number]["scope"];
+  const netOos = hub.summary_analytics?.net_oos_return;
+  const netOosFact = netOos ? {
+    value: netOos.value,
+    availability: netOos.state === "AVAILABLE" ? AVAILABLE : NOT_PUBLISHED(netOos.reason_code!),
+  } : null;
   const optimizationFact = optimization(ids.mode, ids.schedule);
   /* E14 · 9.7: only the search read may say the declared optimizer never ran. */
   const optimizerQualifier = search.requestedOptimizerState === "DECLARED_NOT_EXECUTED"
@@ -762,14 +768,20 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       identity("freeze_revision", "Freeze revision", freeze.revision, AVAILABLE, "P18_REVISION_NOT_PUBLISHED"),
       identity("replay_revision", "Replay revision", replay.revision, AVAILABLE, "P18_REVISION_NOT_PUBLISHED"),
     ],
-    metrics: hub.metrics.map((item) => ({
+    metrics: [...hub.metrics.map((item) => ({
       key: item.key, label: item.label, unit: item.unit, scope: item.scope,
       origin: item.origin, definition_id: item.definition_id, value: item.value,
       availability: item.availability as Availability,
-    })),
+    })), ...(netOosFact ? [{
+      key: "NET_OOS_RETURN_FRACTION", label: "Net OOS return", unit: "FRACTION" as const, scope: "OOS" as const,
+      origin: "ENGINE_DIRECT" as const, definition_id: "research.metric.v1.p04_net_oos_return_fraction",
+      ...netOosFact,
+    }] : [])],
     headline: [
-      // E14 · 9.8: the hub's own net return, with the hub's own scope.
-      { key: "NET_RETURN", label: "Net return", scope: metricScope("NET_RETURN_FRACTION"), ...metricFact("NET_RETURN_FRACTION") },
+      // New source-time seals supply the actual engine OOS report, not a renamed full-account ratio.
+      netOosFact
+        ? { key: "NET_RETURN", label: "Net OOS return", scope: "OOS", ...netOosFact }
+        : { key: "NET_RETURN", label: "Net return", scope: metricScope("NET_RETURN_FRACTION"), ...metricFact("NET_RETURN_FRACTION") },
       { key: "OOS_SHARPE", label: "OOS Sharpe", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE") },
       { key: "DECAY_MEAN", label: "Decay mean", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_DECAY_MEAN") },
       { key: "MAX_DRAWDOWN", label: "Max drawdown", scope: metricScope("MAX_DRAWDOWN_FRACTION"), ...metricFact("MAX_DRAWDOWN_FRACTION") },
@@ -777,7 +789,9 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       { key: "WIN_RATE", label: "Win rate", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_WIN_RATE") },
       { key: "FUNDING", label: "Funding", scope: metricScope("FUNDING_TOTAL"), ...metricFact("FUNDING_TOTAL") },
     ],
-    headline_footnote: "All values retain the scope and availability stated by the sealed Evidence Hub; missing optimizer and execution facts are not inferred.",
+    headline_footnote: netOosFact
+      ? "Net OOS return is QuantBT full_report(total_return_pct)/100 on the immutable P08 OOS slice. Other values retain their sealed Evidence Hub scopes; child-tape trade count is not an audited OOS trade ledger."
+      : "All values retain the scope and availability stated by the sealed Evidence Hub; missing optimizer and execution facts are not inferred.",
     equity: equity.availability.state === "AVAILABLE" && equity.points.length > 0
       ? {
         state: "AVAILABLE",

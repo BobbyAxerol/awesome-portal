@@ -3527,7 +3527,10 @@
             "type": "string"
           },
           "execution_adapter_id": {
-            "const": "p04.delta-rsi.v1",
+            "enum": [
+              "p04.delta-rsi.v1",
+              "p17.imported-signal-notional.v1"
+            ],
             "title": "Execution Adapter Id",
             "type": "string"
           },
@@ -3548,10 +3551,63 @@
             "enum": [
               "p04.fixed-qualification.v1",
               "p10.delta-signal-notional-wfo.v1",
-              "p16.delta-whatif-grid.v1"
+              "p16.delta-whatif-grid.v1",
+              "p17.imported-signal-notional.v1"
             ],
             "title": "Execution Profile Id",
             "type": "string"
+          },
+          "imported_entrypoint": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,127}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Entrypoint"
+          },
+          "imported_parameters": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "maxProperties": 12,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Parameters"
+          },
+          "imported_source_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Source Digest"
           },
           "intent_kind": {
             "enum": [

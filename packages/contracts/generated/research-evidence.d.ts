@@ -45,6 +45,96 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ResearchRetainedAnalytics
+         * @description E11/E14 source-time analytics sealed with one immutable artifact/projection. UTC milliseconds, exact decimals, no compute on GET. Child-tape trade count is not an audited ledger.
+         */
+        RetainedAnalytics: {
+            /** @constant */
+            schema_version: "research.retained-analytics.v1";
+            input_digest: string;
+            scope_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            oos_observation_count: number;
+            trade_ledger_record_count: components["schemas"]["RetainedAnalyticsCount"];
+            net_oos_return: components["schemas"]["RetainedAnalyticsFact"] & {
+                /** @constant */
+                scope?: "OOS";
+                /** @constant */
+                origin?: "ENGINE_DIRECT";
+            };
+            total_trade_count: components["schemas"]["RetainedAnalyticsFact"] & {
+                /** @constant */
+                scope?: "CHILD_TAPE";
+                /** @constant */
+                origin?: "ENGINE_DIRECT";
+                value?: null | string;
+            };
+            rolling_sharpe_63: components["schemas"]["RetainedAnalyticsRolling"];
+            in_sample_equity: components["schemas"]["RetainedAnalyticsCurve"];
+            behaviour: {
+                win_rate: components["schemas"]["RetainedAnalyticsOosFact"];
+                payoff_ratio: components["schemas"]["RetainedAnalyticsOosFact"];
+                average_hold_seconds: components["schemas"]["RetainedAnalyticsOosFact"];
+                max_consecutive_losses: components["schemas"]["RetainedAnalyticsOosFact"];
+                turnover_notional: components["schemas"]["RetainedAnalyticsOosFact"];
+                exposure_fraction: components["schemas"]["RetainedAnalyticsOosFact"];
+            };
+        };
+        RetainedAnalyticsDecimal: string;
+        RetainedAnalyticsUtcMs: number;
+        RetainedAnalyticsCount: number;
+        RetainedAnalyticsLocator: string;
+        RetainedAnalyticsReason: string;
+        /** @enum {unknown} */
+        RetainedAnalyticsState: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+        RetainedAnalyticsFact: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+            value: components["schemas"]["RetainedAnalyticsDecimal"] | null;
+            source_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            /** @enum {unknown} */
+            scope: "OOS" | "CHILD_TAPE";
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "SOURCE_DERIVED";
+        } & unknown;
+        RetainedAnalyticsOosFact: components["schemas"]["RetainedAnalyticsFact"] & {
+            /** @constant */
+            scope?: "OOS";
+        };
+        RetainedAnalyticsCurve: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+            /** @enum {unknown} */
+            scope: "DECLARED_IS" | "SELECTED_CANDIDATE_IS";
+            source_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            start_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"] | null;
+            end_exclusive_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"] | null;
+            source_observation_count: components["schemas"]["RetainedAnalyticsCount"];
+            emitted_point_count: number;
+            /** @enum {unknown} */
+            sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
+            points: {
+                at_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"];
+                equity: components["schemas"]["RetainedAnalyticsDecimal"];
+            }[];
+        } & unknown;
+        RetainedAnalyticsRolling: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+            /** @constant */
+            window_days: 63;
+            daily_return_count: components["schemas"]["RetainedAnalyticsCount"] | null;
+            locator: components["schemas"]["RetainedAnalyticsLocator"] | null;
+            source_observation_count: components["schemas"]["RetainedAnalyticsCount"];
+            omitted_non_finite_count: components["schemas"]["RetainedAnalyticsCount"];
+            emitted_point_count: number;
+            /** @enum {unknown} */
+            sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
+            points: {
+                at_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"];
+                sharpe: components["schemas"]["RetainedAnalyticsDecimal"];
+            }[];
+        } & unknown;
         WorkspaceId: string;
         RunId: string;
         Digest: string;
@@ -202,6 +292,7 @@ export interface components {
         EvidenceHub: {
             /** @constant */
             schema_version: "research.evidence-hub.v1";
+            summary_analytics?: components["schemas"]["RetainedAnalytics"];
             /** @constant */
             read_authority: "PORTAL_PERSISTED_RESEARCH";
             run_id: components["schemas"]["RunId"];

@@ -9,6 +9,9 @@ services:
     environment:
       PREVIEW_AUTO_LOGIN_USERNAME: e17-owner
       FEATURE_RESEARCH_RUN_LIBRARY: "true"
+      # E11/E14 qualification uses the same bounded, digest-pinned WFO child.
+      FEATURE_RESEARCH_WFO_PROFILE: "true"
+      FEATURE_RESEARCH_CURRENT_SOURCE: "true"
   portal-api:
     mem_limit: 1000000000
     pids_limit: 128
@@ -20,6 +23,8 @@ services:
     depends_on:
       portal-nats: { condition: service_healthy }
   quant-worker-py:
+    environment:
+      PORTAL_FEATURE_RESEARCH_WFO_PROFILE: "true"
     # The exact imported child profile limits address space to 4 GiB;
     # leave bounded room for the lightweight parent and Arrow buffers.
     mem_limit: 5368709120

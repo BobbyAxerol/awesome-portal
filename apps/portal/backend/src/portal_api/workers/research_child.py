@@ -382,6 +382,7 @@ def _p13_evidence_source(
     report: dict[str, Any],
     oos_start_utc_ms: int,
     execution_adapter_id: str = "p04.delta-rsi.v1",
+    is_start_utc_ms: int | None = None,
 ) -> dict[str, Any]:
     """Build the bounded evidence passport from the actual QuantBT result.
 
@@ -507,6 +508,11 @@ def _p13_evidence_source(
             "per_fold_metrics": {"state": "NOT_PUBLISHED", "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_METRICS"},
         },
     }
+    from portal_api.services.research_retained_analytics import retained_analytics
+    receipt["summary_analytics"] = retained_analytics(
+        result=result, mode="FIXED", is_start_utc_ms=is_start_utc_ms,
+        oos_start_utc_ms=oos_start_utc_ms,
+    )
     # RF-05 CG-P13-03/04/06: additive engine OOS analytics (services/research_evidence_metrics.py).
     # An analytics failure is a typed absence, never a failed child run.
     from portal_api.services import research_evidence_metrics as analytics
@@ -616,6 +622,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any]) -> dict[str, Any]:
             result=result,
             report=report,
             oos_start_utc_ms=oos_start_utc_ms,
+            is_start_utc_ms=receipt.get("is_start_utc_ms"),
         )
     return output
 
@@ -785,6 +792,7 @@ def _run_p17_imported_signal_notional(receipt: dict[str, Any]) -> dict[str, Any]
             report=report,
             oos_start_utc_ms=oos_start_utc_ms,
             execution_adapter_id=IMPORTED_ALPHA_ADAPTER_ID,
+            is_start_utc_ms=receipt.get("is_start_utc_ms"),
         )
     return output
 

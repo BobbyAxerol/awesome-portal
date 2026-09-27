@@ -438,6 +438,7 @@ class ResearchRunProducerExecutor:
                     random_seed=research.requested_spec.get("random_seed"),
                     artifact_root=artifact_root,
                     oos_start_utc_ms=int(oos_start.value // 1_000_000),
+                    is_start_utc_ms=int(is_start.value // 1_000_000),
                 )
             else:
                 assert research.p04_parameters is not None
@@ -450,6 +451,7 @@ class ResearchRunProducerExecutor:
                     artifact_root=artifact_root,
                     p04_parameters=dict(research.p04_parameters),
                     oos_start_utc_ms=int(oos_start.value // 1_000_000),
+                    is_start_utc_ms=int(is_start.value // 1_000_000),
                 )
             # P10 has one server-installed fixed qualification, not a generic
             # optimizer.  S2 therefore records preparation of that exact one
