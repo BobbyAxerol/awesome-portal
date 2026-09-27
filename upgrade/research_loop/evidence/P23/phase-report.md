@@ -15,17 +15,19 @@ OL-02 observer proofs are closed; P22 backend real publication is closed.
 | T10 | PARTIAL: `b2e8b868` full commit hook PASS (1331 backend, one external skip; 196 contracts). Focused Library 30/P12 actual PG 11/build PASS. Full required browser/engine qualification remains separate. |
 | T11 | PARTIAL: clean mixed twenty-reader sample has zero implicit jobs (20→20), finite admission and all six SLOs PASS. Far-seek/slider coverage is still required, not replaced by ordinary GETs. |
 | T12 | PARTIAL: actual flag-parity retake completes primary and diagnostic, seals 81 cells/63 unique evaluations, eight exports READY/six verifies MATCH, preserves parent and adds exactly two explicit jobs under 656769024-byte peak. Separate audit and negative quotas remain OPEN. [Exact utility proof and preserved failures](./UTILITY_CHECKPOINT_2026-09-27.md). |
-| T03/05/07/08/09/13/14/15 | Preserve exact remaining workload/security/scale/restore/cold/upgrade/browser gates, not closed by this subset. |
+| T14 | PARTIAL: real R1 APPROVED@2, promotion pick one, temporary grant revoked, actual null-trial RC pin and coherent restore (139 tables/16 artifacts/127 parts/753 files), worker-off five reads and post-restore GC pin readback PASS. Exposure and AUDIT_OF_SELECTION child source cases are absent; no fake rows or deletion. [Actual graph and private receipt hashes](./APPROVAL_GRAPH_RESTORE_CHECKPOINT_2026-09-27.md). |
+| T03/05/07/08/09/13/15 | Preserve exact remaining workload/security/scale/cold/upgrade/browser gates, not closed by this subset. |
 
 E6-BR-01 typed source-only signature/SBOM absence has a real DRAFT import/replay/
 list/injection-refusal receipt. No alpha signature or full browser claim.
 The new packet contains raw private evidence hashes, preserved failed probes,
 runtime pin boundary, resource snapshot and deferred owned-cell cleanup.
 
-Cold process/pool read proof exists, not a host/HMD cache flush. T14 remains
-OPEN because the earlier restored publication/selection graph was empty.
-The subsequent public WFO→RC seal→R1 journey creates one real publication,
-but its nonempty graph has not yet been restore/GC-qualified. Terminal POST
+Cold process/pool read proof exists, not a host/HMD cache flush. **Historical
+sequence, superseded by the T14 row above:** the first restored graph was empty;
+the subsequent public WFO→RC seal→R1 journey created one real publication.
+That nonempty graph was later restored and read back as recorded in the current
+T14 checkpoint, although exposure/audit-child cases remain absent. Terminal POST
 replay metadata repair has 17 focused tests/build PASS and actual clean
 `19a8e813` runtime retake PASS: three repeated POSTs return true, same R1,
 one row with unchanged bytes, GET false. Nineteen actual export checks and

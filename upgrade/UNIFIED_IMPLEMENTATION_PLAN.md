@@ -3669,7 +3669,7 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 | OL-10 | Capability/route ledger | **CLOSED — Codex P22.** R2 inventory, generated route inventory and contract snapshot include the canonical P22 surface. | — | Gates green. |
 | OL-11 | Canonical RC publication route model | **CLOSED — Codex P22.** Exactly `GET …/publication` + `POST …/publish`; mirror is embedded and reconcile is server-owned. Historical contributor notes are explicitly superseded, not erased. | Claude consumer | No product client calls old routes. |
 | OL-13 | Named publication/approval read by `alpha_version_id` | **BACKEND CLOSED — Codex P22.** `researchAlphaVersionPublicationGetV1` returns current RC relation or typed absence; real lookup is `AVAILABLE`. | Claude consumer | S01/S02 render it without scanning RCs. |
-| OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **IN_PROGRESS, 2026-09-27.** Clean application `b2e8b868`: actual 20-reader/one-heavy/four-queued completion, all six SLOs PASS (Library **490 ms**), 618209280-byte peak, zero implicit jobs; cold process reads PASS. Coherent restore **139 tables/9 artifacts/54 parts/337 files**, worker-off readback PASS. Image-index failure/recovery retained; nonempty selection/publication graph and other required gates remain OPEN. | Codex | [Current proof/remaining exact gates](./research_loop/evidence/P23/MIXED_RESTORE_CHECKPOINT_2026-09-27.md); no full P23/P24 claim from this subset |
+| OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **IN_PROGRESS, 2026-09-27.** Clean application `b2e8b868`: 20 readers/one HEAVY/four queued, six SLOs PASS (Library **490 ms**), 618209280-byte peak, zero implicit jobs. F4/E10 and OL-02 actual recovery/integrity PASS. T12 utility scoped PASS (81 cells/63 evaluations, eight exports/six verifies) but quota/audit remain. T14 real APPROVED R1→one promotion pick, revoked temporary grant, nonempty null-trial RC pin and fresh-volume restore **139 tables/16 artifacts/127 parts/753 files**, worker-off reads PASS; exposure and audit-child cases absent, so T14 PARTIAL. T02 scratch growth and other T gates remain OPEN. | Codex | [T14 graph/restore](./research_loop/evidence/P23/APPROVAL_GRAPH_RESTORE_CHECKPOINT_2026-09-27.md) · [P23 matrix](./research_loop/evidence/P23/phase-report.md); no full P23/P24 claim from this subset |
 | CG-P23-T02-01 | Shared <=P21 supervisor scratch lifecycle, discovered by W08 | **OPEN, 2026-09-27.** Six real terminal complete/fail/cancel jobs leave **+42 files/+1006525 bytes**; not a proven RAM leak. Exact Node probe/natural token-expiry pacing repaired in qualification tool. | Claude source repair; Codex runtime retake | Lease/fencing/once-only and output/audit retention preserved; three corrected real rounds meet fixed gates. [Reproduction, source locators, requirements and hashes](./research_loop/evidence/P23/PLATEAU_CHECKPOINT_2026-09-27.md). Other P23 gates proceed. |
 
 #### B. Frontend / test còn mở (không phải backend)
@@ -3926,6 +3926,20 @@ T12 stays PARTIAL pending audit/quota negatives; T02 source repair, other
 P23 gates, full cross-stack and P24 stay OPEN. No application rebuild,
 frontend, shared 8095, Production, dev/main or push. [Hashes, actual failures,
 runtime identity and cleanup](./research_loop/evidence/P23/UTILITY_CHECKPOINT_2026-09-27.md).
+
+**T14 actual graph/restore continuation — 2026-09-27:** the owned cell's
+source-backed RC and R1 passed a supported-API independent decision:
+PENDING@1→APPROVED@2, one immutable promotion pick and two versioned
+settlements. An owner step-up granted one exact-workspace R1 capability to an
+existing USER/member and revoked it after the decision; post-revoke R1 read
+403 and active grants zero. No membership SQL edit. A fresh-volume coherent
+restore then matched 139 table hashes, 16 SEALED artifacts/127 parts/753
+files, and five worker-off reads; post-restore publication/pack/reference
+hashes, null-trial RC pin and GC-reference refusal remained exact. **T14 is
+PARTIAL**, because real exposure and AUDIT_OF_SELECTION child facts are absent
+from this cell. No fabricated rows, sweeper deletion, shared preview or
+Production mutation. P23/P24/full goal remain OPEN. [Exact receipt hashes,
+test and scoped cleanup](./research_loop/evidence/P23/APPROVAL_GRAPH_RESTORE_CHECKPOINT_2026-09-27.md).
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5

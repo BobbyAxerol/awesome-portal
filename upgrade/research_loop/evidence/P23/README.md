@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest T14 graph/restore checkpoint, 2026-09-27:** [Real R1 and nonempty
+publication graph](./APPROVAL_GRAPH_RESTORE_CHECKPOINT_2026-09-27.md) proves
+approved R1@2, exactly one promotion fact, revoked temporary capability,
+null-trial RC pin, 139-table/16-artifact coherent restore and worker-off
+readback. T14 stays **PARTIAL**: this cell has no real exposure fact or
+AUDIT_OF_SELECTION child. No SQL membership mutation, fake source fact or GC
+deletion was performed.
+
 **Latest T12 utility checkpoint, 2026-09-27:** [Worker flag repair and actual retake](./UTILITY_CHECKPOINT_2026-09-27.md)
 records the real missing worker what-if flag, unchanged image/caps/mounts/auth,
 and successful primary + diagnostic, sealed **81 cells/63 unique evaluations**,
