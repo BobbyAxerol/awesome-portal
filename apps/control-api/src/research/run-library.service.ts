@@ -415,7 +415,12 @@ export class ResearchRunLibraryService {
      * One bounded read covers the whole page; a hub-published run is not
      * asked about, so nothing changes for the runs that already worked.
      */
-    const retained = await this.retainedFor(scope, page.rows);
+    const retained = page.retainedFacts === undefined
+      ? await this.retainedFor(scope, page.rows)
+      : new Map(page.retainedFacts.flatMap((fact) => {
+        const mapped = retainedCardFacts(fact);
+        return mapped ? [[fact.run_id, mapped] as const] : [];
+      }));
     const items = page.rows.map((row) => this.mapRow(row, retained.get(row.run_id)));
     const first = page.rows[0];
     const last = page.rows[page.rows.length - 1];

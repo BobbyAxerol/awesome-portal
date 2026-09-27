@@ -134,7 +134,8 @@ interface SeriesQueryRow {
 }
 
 const MAXIMUM_CONCURRENT_EVIDENCE_READS = 2;
-const MAXIMUM_QUEUED_EVIDENCE_READS = 8;
+// The active DB lane stays at two; one finite twenty-reader burst may wait.
+const MAXIMUM_QUEUED_EVIDENCE_READS = 18;
 
 function asSafeNonNegative(value: string | number | null, label: string): number {
   const numeric = typeof value === "number" ? value : Number(value);

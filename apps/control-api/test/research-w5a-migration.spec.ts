@@ -143,6 +143,24 @@ describe("W5a migration 064 · A10a byte receipts on PostgreSQL", () => {
         preflight_token: "rpft_w5a_parent", requested_spec: spec, intent_kind: "NEW",
       }, "w5a-parent");
     const parentRunId = created.run_id;
+    // This is a PostgreSQL lineage fixture, not a worker/engine receipt.
+    // The proxy only acknowledges dispatch; finish its actual fenced job
+    // before treating it as a frozen parent. Otherwise every later WFO
+    // correctly waits behind the still-live HEAVY lease.
+    const finishFixtureRun = async (runId: string) => {
+      const job = (await database.query(
+        `SELECT job_id, current_worker_attempt_id, current_lease_epoch, queue_class
+           FROM research.jobs WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, runId],
+      )).rows[0];
+      expect(job.queue_class).toBe("HEAVY");
+      await repository.finishDurableJob(scope, {
+        jobId: job.job_id, workerAttemptId: job.current_worker_attempt_id,
+        leaseEpoch: Number(job.current_lease_epoch), outcome: "SUCCEEDED",
+        usage: { peakRssBytes: 1_024, cpuSeconds: 1, scratchBytes: null, fdPeak: null },
+      });
+    };
+    await finishFixtureRun(parentRunId);
     const snapshotParent = async () => (await database.query(
       `SELECT run.state AS run_state, run.state_version, attempt.state AS attempt_state, producer.work_digest,
               producer.dispatch_state, producer.legacy_request::text AS legacy
@@ -278,12 +296,33 @@ describe("W5a migration 064 · A10a byte receipts on PostgreSQL", () => {
     ] });
     const cloneManifest = manifestFor(cloneSpec, { token: "rpft_e13_clone" });
     await repository.storePreflightManifest(scope, { ...cloneManifest, expiresAt: new Date(Date.now() + 60_000) }, 5);
-    const clone = await new ResearchRunCreateService(repository, new ResearchRunAdmissionService(repository, config), proxy as never, config)
-      .create(owner, scope, {
+    const cloneService = new ResearchRunCreateService(repository, new ResearchRunAdmissionService(repository, config), proxy as never, config);
+    const cloneInput = {
         schema_version: "research.run-create.v1", client_intent_id: "e13-clone-intent",
         preflight_token: "rpft_e13_clone", requested_spec: cloneSpec, intent_kind: "NEW",
         lineage: { relation: "CLONE_OF", parent_run_id: parentRunId },
-      }, "e13-clone");
+      } as const;
+    // A live sibling owns the only HEAVY slot. Two retries must preserve one
+    // durable queued intent and must not dispatch it or mutate the parent.
+    for (let retry = 0; retry < 2; retry += 1) {
+      await expect(cloneService.create(owner, scope, cloneInput, `e13-clone-wait-${retry}`))
+        .rejects.toMatchObject({ code: "RESEARCH_RUN_TRANSPORT_UNKNOWN", status: 503 });
+    }
+    const waitingClone = (await database.query(
+      `SELECT producer.run_id, job.state, job.queue_class
+         FROM research.run_producers producer JOIN research.jobs job
+           ON job.workspace_id = producer.workspace_id AND job.run_id = producer.run_id
+        WHERE producer.workspace_id = $1 AND producer.client_intent_id = $2`,
+      [scope.workspaceId, cloneInput.client_intent_id],
+    )).rows;
+    expect(waitingClone).toHaveLength(1);
+    expect(waitingClone[0]).toMatchObject({ state: "QUEUED", queue_class: "HEAVY" });
+    expect(calls.filter((call) => call.idempotencyKey === "research-run:e13-clone-intent")).toHaveLength(0);
+    expect(await snapshotParent()).toEqual(before);
+    await finishFixtureRun(sibling.run_id);
+    const clone = await cloneService.create(owner, scope, cloneInput, "e13-clone");
+    expect(clone.run_id).toBe(waitingClone[0].run_id);
+    expect(calls.filter((call) => call.idempotencyKey === "research-run:e13-clone-intent")).toHaveLength(1);
     expect(clone.run_id).not.toBe(parentRunId);
     const cloneAttempt = (await database.query(
       `SELECT attempt.intent_kind, attempt.relation_kind, attempt.parent_attempt_id, attempt.reason, parent.attempt_id AS parent_attempt
@@ -309,6 +348,7 @@ describe("W5a migration 064 · A10a byte receipts on PostgreSQL", () => {
     // E13: a reproduction is a separate explicit intent, but only the exact
     // immutable parent input may be submitted. The private compute operation
     // stays NEW; an idempotent retry cannot create another lineage node.
+    await finishFixtureRun(clone.run_id);
     const reproductionManifest = manifestFor(spec, { token: "rpft_e13_reproduction" });
     await repository.storePreflightManifest(scope, { ...reproductionManifest, expiresAt: new Date(Date.now() + 60_000) }, 16);
     const createService = new ResearchRunCreateService(repository, new ResearchRunAdmissionService(repository, config), proxy as never, config);

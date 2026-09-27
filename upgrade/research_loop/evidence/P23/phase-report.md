@@ -1,5 +1,25 @@
 # P23 backend report — 2026-09-25
 
+## Current addendum — 2026-09-27
+
+The initial matrix below remains historical. [Current checkpoint](./READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md)
+supersedes absence of an owned cell/P22 backend: F6 + upgrade, real F4/E10 and
+OL-02 observer proofs are closed; P22 backend real publication is closed.
+
+| Test | Current status, scoped honestly |
+|---|---|
+| T01 | PARTIAL: actual dirty-image 20-reader + one-heavy + four-queued workload/cgroup proof; initial Library SLO FAIL. Separate optimized warm read PASS (466 ms); clean-candidate simultaneous rerun required. |
+| T04 | PARTIAL: actual PG/NATS/worker outage found/repaired API pool crash; corrected bounded refusal/recovery/source preservation/one durable intent PASS on diagnostic image. Clean candidate proof still required. |
+| T06 | PARTIAL: real observer MATCH/MISMATCH/copy restore PASS without modifying original seal; coherent DB+artifact restore still pending. |
+| T10 | PARTIAL: focused 68 backend/14 verifier/23 Node tests and build PASS. First full hook: 1329 PASS, one HEAVY lineage fixture failure, one external skip; fenced-lifecycle correction adds queued-intent identity assertions, fresh PG/Node-22 focused 40/40 PASS. Full hook retake/candidate regression still pending. |
+| T11 | PARTIAL: 20 actual authorized warm readers, finite admission/SLO checks; all six APIs PASS, no fake 20 copies of Bobby. Full far-seek/slider/mixed-heavy candidate receipt pending. |
+| T02/03/05/07/08/09/12/13/14/15 | Preserve exact remaining workload/security/scale/restore/cold/upgrade/browser gates, not closed by this subset. |
+
+E6-BR-01 typed source-only signature/SBOM absence has a real DRAFT import/replay/
+list/injection-refusal receipt. No alpha signature or full browser claim.
+The new packet contains raw private evidence hashes, preserved failed probes,
+runtime pin boundary, resource snapshot and deferred owned-cell cleanup.
+
 Branch `docs/research-loop-plan`; owner Codex. Scope: resource profile,
 read-only cgroup/load instruments, focused backend regressions and truthful
 qualification ledger. No frontend code, runtime restart, production deploy,

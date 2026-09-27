@@ -3,13 +3,26 @@ import { chmodSync, mkdtempSync, rmdirSync, unlinkSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { readPrivateManifest, runReadLoad, validateManifest } from './read-load.mjs';
+import { readPrivateManifest, runReadLoad, validateManifest, evaluateReadSlo } from './read-load.mjs';
 
 const input = {
   base_url: 'http://127.0.0.1:8096',
   users: Array.from({ length: 20 }, (_, n) => ({ id: `user_${n}`, cookie: `portal_session=private-${n}` })),
   paths: ['/api/v1/research/runs?limit=1'],
 };
+
+test('Guide latency budgets distinguish warm/cold and never accept HTTP success as SLO success', () => {
+  const receipt={temperature:'warm',by_path:{
+    '/api/v1/quantbt/runs?limit=20':{p95_ms:501},
+    '/api/v1/quantbt/runs/rrun_test/search':{p95_ms:750},
+    '/api/v1/quantbt/runs/rrun_test/execute/replay':{p95_ms:1000},
+  }};
+  assert.equal(evaluateReadSlo(receipt).passed,false);
+  assert.equal(evaluateReadSlo({...receipt,temperature:'cold'}).passed,true);
+  assert.equal(evaluateReadSlo({...receipt,temperature:'hot'}).passed,false);
+  assert.equal(evaluateReadSlo({by_path:{'/api/v1/quantbt/runs':{}}}).passed,false);
+  assert.equal(evaluateReadSlo({by_path:{'/api/v1/quantbt/runs':{p95_ms:500}}}).passed,true);
+});
 
 test('20 distinct sessions, loopback and GET-only named Research paths are mandatory', () => {
   assert.doesNotThrow(() => validateManifest(input));

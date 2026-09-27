@@ -29,10 +29,13 @@ function fixture() {
     passed:true,sample_count:2,peak_current_bytes:2_300_000_000,samples};
   const read_load={schema_version:'research.p23-read-load.v1',base_url:config.base_url,passed:true,distinct_users:20,
     started_at_utc:'2026-09-27T00:00:02.000Z',completed_at_utc:'2026-09-27T00:00:08.000Z',
-    by_path:{'/api/v1/research/quantbt/atlas':{requests:20,statuses:{'200':20}}}};
+    by_path:Object.fromEntries(['/api/v1/quantbt/runs','/api/v1/research/runs/rrun_test/progress',
+      '/api/v1/quantbt/runs/rrun_test/report','/api/v1/quantbt/runs/rrun_test/search',
+      '/api/v1/quantbt/runs/rrun_test/execute/replay'].map(path=>[path,{requests:20,statuses:{'200':20},p95_ms:1}]))};
   const workload={schema_version:'research.p23-mixed-workload.v1',project:config.project,candidate_source_sha:config.candidate_source_sha,
     started_at_utc:'2026-09-27T00:00:01.000Z',completed_at_utc:'2026-09-27T00:00:09.000Z',
-    heavy_active_peak:1,distinct_heavy_intents_queued:4,completed_heavy_runs:1};
+    heavy_active_peak:1,distinct_heavy_intents_queued:4,completed_heavy_runs:1,
+    no_implicit_viewer_jobs:true,viewer_job_count_before:5,viewer_job_count_after:5};
   const runtime={resource,read_load,workload};
   const refs=Object.entries(runtime).map(([role,body]) => {
     const ref=write(`${role}.json`,body); runtime[`${role}_locator`]=ref.locator; return ref;
@@ -135,6 +138,24 @@ describe('OL-12 P23 qualification verifier', () => {
     const receipt=buildQualificationReceipt(config,f.evidence(),f.runtime);
     expect(receipt.passed).toBe(false);
     expect(receipt.tests.find(test => test.test_id==='P23-T11').status).toBe('PASS');
+  });
+
+  it('rejects a validly hashed warm-latency failure or dirty workload even with passed labels', () => {
+    const f=fixture(); const original=f.runtime.read_load;
+    f.replaceRuntime('read_load',{...original,by_path:{'/api/v1/quantbt/runs':{requests:20,statuses:{'200':20},p95_ms:501}}});
+    expect(buildQualificationReceipt(config,f.evidence(),f.runtime).passed).toBe(false);
+    f.replaceRuntime('read_load',original);
+    f.replaceRuntime('workload',{...f.runtime.workload,diagnostic_only:true});
+    expect(buildQualificationReceipt(config,f.evidence(),f.runtime).passed).toBe(false);
+  });
+
+  it('requires the actual five W06 read categories and unchanged viewer job count',()=>{
+    const f=fixture();const original=f.runtime.read_load;
+    f.replaceRuntime('read_load',{...original,by_path:{'/api/v1/research/quantbt/atlas':{requests:20,statuses:{'200':20},p95_ms:1}}});
+    expect(buildQualificationReceipt(config,f.evidence(),f.runtime).passed).toBe(false);
+    f.replaceRuntime('read_load',original);
+    f.replaceRuntime('workload',{...f.runtime.workload,viewer_job_count_after:6});
+    expect(buildQualificationReceipt(config,f.evidence(),f.runtime).passed).toBe(false);
   });
 
   it('rejects a validly hashed read receipt from a different measurement window', () => {

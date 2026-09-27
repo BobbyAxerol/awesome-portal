@@ -123,8 +123,33 @@ export async function operatorClient(home = DEFAULT_HOME, username = 'p23-owner'
   assert(identity.state === 'AUTHENTICATED' && identity.principal.principalId === user.id, 'OWNER_SESSION_EXPIRED');
   return client;
 }
+/** Renew ONLY owned test sessions using their existing private password.
+ * No activation reset, password change, DB expiry edit or production identity.
+ */
+export async function refreshTestSessions(home = DEFAULT_HOME) {
+  home=validateHome(home);
+  const sessions=loadSessions(home);
+  assert(sessions.preparation_complete && sessions.identities.length===22,'OWNED_SESSIONS_REQUIRED');
+  for(const user of sessions.identities) {
+    assert(TEST_USERS.some(entry=>entry.username===user.username),'FOREIGN_TEST_IDENTITY');
+    const client=makeClient(user);
+    const context=(await client.call('GET','/api/auth/context')).body;
+    if(context.state==='AUTHENTICATED') {
+      assert.equal(context.principal.principalId,user.id); continue;
+    }
+    assert.equal(context.state,'APP_LOGIN_REQUIRED','DO_NOT_BYPASS_OTHER_AUTH_REFUSAL');
+    const login=await client.call('POST','/api/auth/login',{username:user.username,credential:user.password},[201]);
+    const actual=(await client.call('GET','/api/auth/context')).body;
+    assert(actual.state==='AUTHENTICATED' && actual.principal.principalId===user.id,'SAME_REAL_TEST_PRINCIPAL_REQUIRED');
+    user.absolute_expires_at=login.body.absolute_expires_at;
+    user.refreshed_at_utc=new Date().toISOString();
+    savePrivate(join(home,'sessions.json'),sessions);
+  }
+  console.log('P23 owned sessions checked/refreshed through real password login; no credential reset.');
+  return sessions;
+}
 export const ownerClient = home => operatorClient(home);
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  prepareSessions(process.argv.find(arg => arg.startsWith('--home='))?.slice(7) ?? DEFAULT_HOME)
+  (process.argv.includes('--refresh') ? refreshTestSessions : prepareSessions)(process.argv.find(arg => arg.startsWith('--home='))?.slice(7) ?? DEFAULT_HOME)
     .catch(error => { console.error('P23 session setup refused:', error.message); process.exitCode = 1; });
 }

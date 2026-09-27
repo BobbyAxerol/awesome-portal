@@ -240,7 +240,7 @@ describe("W1 run-create producer shapes", () => {
       executionProfileDigest: DELTA_WFO_PROFILE_DIGEST,
       resourceClass: "p10-delta-wfo-v1",
       cost: { memoryBytes: 4 * 1024 ** 3, cpuSeconds: 120, scratchBytes: 128 * 1024 ** 2, ioBytes: 512 * 1024 ** 2 },
-      queueClass: "INTERACTIVE",
+      queueClass: "HEAVY",
     });
     const expectedWork = sha256ResearchJson({
       schema_version: "research.p10.delta-wfo-work.v1",

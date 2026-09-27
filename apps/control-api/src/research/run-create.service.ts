@@ -289,7 +289,11 @@ export class ResearchRunCreateService {
         engineReleaseId: requested.client.engine_release_id,
         legacyRequest,
         cost: imported ? IMPORTED_ALPHA_RESOURCE_PROFILE : wfo ? DELTA_WFO_RESOURCE_PROFILE : P10_RESOURCE_PROFILE,
-        queueClass: "INTERACTIVE",
+        // The wide confined profiles are compute, not viewer interactions.
+        // P06's existing one-heavy-per-workspace admission must see them;
+        // otherwise several creates reserve leases before a single worker
+        // can consume them. Keep the historical fixed P04 policy unchanged.
+        queueClass: wfo || imported ? "HEAVY" : "INTERACTIVE",
         resourceClass: imported ? IMPORTED_ALPHA_RESOURCE_CLASS : wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
         attemptLimit: 2,
         // The edge the browser declared, if any. Both relations reach the
@@ -324,7 +328,7 @@ export class ResearchRunCreateService {
       if (!claim || claim.jobId !== producer.jobId || claim.runId !== producer.runId) {
         throw new ResearchRunCreateError(
           "RESEARCH_RUN_TRANSPORT_UNKNOWN",
-          "The Research intent is durable but its previous dispatch lease is still being recovered; retry with the same intent.",
+          "The Research intent is durable but dispatch is waiting for queue capacity or lease recovery; retry with the same intent.",
           503,
         );
       }

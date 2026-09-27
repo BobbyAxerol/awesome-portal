@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto';
 import { chmodSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { evaluateContainers } from './resource-snapshot.mjs';
+import { evaluateReadSlo } from './read-load.mjs';
 
 export const P23_TESTS = Object.freeze([
   ['P23-T01', 'Mixed load20users trong aggregate5GB.'],
@@ -121,16 +122,31 @@ export function buildQualificationReceipt(config, evidence = new Map(), runtime 
       });
   } catch { /* malformed, incomplete or uncapped measurement is not proof */ }
   const readLoad = runtime?.read_load;
+  const readPaths=Object.keys(readLoad?.by_path ?? {});
+  const coverage=['LIBRARY','PROGRESS','REPORT','SEARCH','REPLAY'].every(kind=>readPaths.some(path=>{
+    if(typeof path!=='string' || !/^\/api\/v1\/[a-z0-9/?=&_%.-]+$/i.test(path)) return false;
+    const pathname=new URL(path,config.base_url).pathname;
+    return kind==='LIBRARY' ? pathname==='/api/v1/quantbt/runs'
+      : kind==='PROGRESS' ? /^\/api\/v1\/research\/runs\/rrun_[a-z0-9]+\/progress$/.test(pathname)
+      : pathname.endsWith(kind==='REPLAY' ? '/execute/replay' : `/${kind.toLowerCase()}`);
+  }));
   const readValid = readLoad?.schema_version === 'research.p23-read-load.v1'
     && readLoad.base_url === config.base_url && readLoad.passed === true && readLoad.distinct_users === 20
     && Object.keys(readLoad.by_path ?? {}).length > 0
-    && Object.values(readLoad.by_path ?? {}).every(row => row.requests === 20 && row.statuses?.['200'] === 20);
+    && Object.values(readLoad.by_path ?? {}).every(row => row.requests === 20 && row.statuses?.['200'] === 20)
+    && coverage && evaluateReadSlo(readLoad).passed;
   const workload = runtime?.workload;
   const workloadValid = workload?.schema_version === 'research.p23-mixed-workload.v1'
     && workload.project === config.project && workload.candidate_source_sha === config.candidate_source_sha
+    && workload.diagnostic_only !== true
     && workload.heavy_active_peak === 1 && Number.isSafeInteger(workload.distinct_heavy_intents_queued)
     && workload.distinct_heavy_intents_queued >= 4 && Number.isSafeInteger(workload.completed_heavy_runs)
     && workload.completed_heavy_runs >= 1;
+  const viewerJobsValid=workload?.schema_version==='research.p23-mixed-workload.v1'
+    && workload.project===config.project && workload.candidate_source_sha===config.candidate_source_sha
+    && workload.diagnostic_only!==true && workload.no_implicit_viewer_jobs===true
+    && Number.isSafeInteger(workload.viewer_job_count_before) && workload.viewer_job_count_before>=0
+    && workload.viewer_job_count_before===workload.viewer_job_count_after;
   const linked = (test,role) => {
     try {
       const path = runtime?.[`${role}_locator`];
@@ -146,7 +162,8 @@ export function buildQualificationReceipt(config, evidence = new Map(), runtime 
   for (const id of ['P23-T01','P23-T11']) {
     const current = tests.find(test => test.test_id === id);
     const valid = resourceValid && readValid && overlaps(measuredWindow,readWindow)
-      && linked(current,'resource') && linked(current,'read_load');
+      && linked(current,'resource') && linked(current,'read_load')
+      && viewerJobsValid && linked(current,'workload');
     if (!valid || (id === 'P23-T01' && (!workloadValid || !linked(current,'workload') || !overlaps(measuredWindow,readWindow,workloadWindow)))) {
       current.status = 'BLOCKED';
       current.reason = 'P23_MEASURED_5GB_20_PRINCIPAL_MIXED_WORKLOAD_REQUIRED';

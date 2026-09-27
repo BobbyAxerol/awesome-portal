@@ -96,6 +96,7 @@ export interface components {
         OpaqueId: string;
         AlphaId: string;
         ResearchAlphaAnalysisV1: components["schemas"]["ResearchAlphaAnalysis"];
+        ResearchAlphaImportAttestationV1: components["schemas"]["ImportAttestation"];
         ResearchAlphaSourceV1: components["schemas"]["SourceResponse"];
         ResearchAlphaImportGatesV1: components["schemas"]["GatesResponse"];
         ResearchAlphaRegistryV1: components["schemas"]["RegistryListResponse"];
@@ -170,6 +171,30 @@ export interface components {
             };
         };
         UtcMilliseconds: number;
+        /** @description Evidence for the registered Alpha source only. This pipeline produces neither an Alpha signature nor an Alpha SBOM. Container image signatures/SBOM/provenance are a different subject and cannot fill this object. */
+        ImportAttestation: {
+            /** @constant */
+            schema_version: "research.alpha-import-attestation.v1";
+            /** @constant */
+            scope: "REGISTERED_ALPHA_SOURCE_ONLY";
+            source_digest: components["schemas"]["Digest"];
+            signature: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "RESEARCH_ALPHA_IMPORT_SIGNATURE_NOT_PRODUCED";
+                /** @constant */
+                source_locator: "apps/control-api/src/research/alpha-import.service.ts#register";
+            };
+            sbom: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "RESEARCH_ALPHA_IMPORT_SBOM_NOT_PRODUCED";
+                /** @constant */
+                source_locator: "apps/control-api/src/research/alpha-import.service.ts#register";
+            };
+        };
         RegistryEntry: {
             alpha_id: components["schemas"]["AlphaId"];
             alpha_version_id: components["schemas"]["AlphaVersionId"];
@@ -191,6 +216,7 @@ export interface components {
             source_digest_prefix: string;
             alpha_revision: number;
             registered_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            import_attestation?: components["schemas"]["ImportAttestation"];
             /** @description Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role. */
             may_activate: boolean;
         };
@@ -257,6 +283,7 @@ export interface components {
         RegistrationResponse: {
             /** @constant */
             schema_version: "research.alpha-registration.v1";
+            import_attestation?: components["schemas"]["ImportAttestation"];
             alpha_id: components["schemas"]["AlphaId"];
             alpha_version_id: components["schemas"]["AlphaVersionId"];
             version_label: string;

@@ -77,6 +77,7 @@ export class ResearchAlphaImportController {
   }
 
   @Post("/import/gates")
+  @HttpCode(200)
   async gates(@Req() request: AlphaImportRequest, @Body() body: unknown) {
     this.assertMutationSecurity(request);
     const parsed = ResearchAlphaImportGatesRequestSchema.safeParse(body);
@@ -118,6 +119,7 @@ export class ResearchAlphaImportController {
   }
 
   @Post(":alpha_version_id/activate")
+  @HttpCode(200)
   async activate(
     @Req() request: AlphaImportRequest,
     @Param("alpha_version_id") alphaVersionId: string,

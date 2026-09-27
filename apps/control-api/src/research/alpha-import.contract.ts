@@ -81,6 +81,35 @@ export const ResearchAlphaAnalysisResponseSchema = z.object({
 
 export type ResearchAlphaAnalysis = z.infer<typeof ResearchAlphaAnalysisResponseSchema>;
 
+/** E6-BR-01: source registration is not container-release attestation. */
+export const ResearchAlphaImportAttestationSchema = z.object({
+  schema_version: z.literal("research.alpha-import-attestation.v1"),
+  scope: z.literal("REGISTERED_ALPHA_SOURCE_ONLY"),
+  source_digest: DigestSchema,
+  signature: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    reason_code: z.literal("RESEARCH_ALPHA_IMPORT_SIGNATURE_NOT_PRODUCED"),
+    source_locator: z.literal("apps/control-api/src/research/alpha-import.service.ts#register"),
+  }).strict(),
+  sbom: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    reason_code: z.literal("RESEARCH_ALPHA_IMPORT_SBOM_NOT_PRODUCED"),
+    source_locator: z.literal("apps/control-api/src/research/alpha-import.service.ts#register"),
+  }).strict(),
+}).strict();
+export type ResearchAlphaImportAttestation = z.infer<typeof ResearchAlphaImportAttestationSchema>;
+
+export function researchAlphaImportAttestation(sourceDigest: string): ResearchAlphaImportAttestation {
+  return ResearchAlphaImportAttestationSchema.parse({
+    schema_version: "research.alpha-import-attestation.v1", scope: "REGISTERED_ALPHA_SOURCE_ONLY",
+    source_digest: sourceDigest,
+    signature: { state: "NOT_PUBLISHED", reason_code: "RESEARCH_ALPHA_IMPORT_SIGNATURE_NOT_PRODUCED",
+      source_locator: "apps/control-api/src/research/alpha-import.service.ts#register" },
+    sbom: { state: "NOT_PUBLISHED", reason_code: "RESEARCH_ALPHA_IMPORT_SBOM_NOT_PRODUCED",
+      source_locator: "apps/control-api/src/research/alpha-import.service.ts#register" },
+  });
+}
+
 export type ResearchAlphaImportGateState = "PASS" | "FAIL" | "SKIPPED";
 
 export interface ResearchAlphaImportGateRow {
@@ -147,6 +176,8 @@ export interface ResearchAlphaRegistryEntry {
   registered_at_utc_ms: number;
   /** Caller-specific server admission, evaluated by the same policy as activate. */
   may_activate: boolean;
+  /** Additive for old clients; new server responses always publish it. */
+  import_attestation?: ResearchAlphaImportAttestation;
 }
 
 export interface ResearchAlphaImportRegisterResponse {
@@ -161,6 +192,8 @@ export interface ResearchAlphaImportRegisterResponse {
   replayed: boolean;
   /** Caller-specific server admission, evaluated by the same policy as activate. */
   may_activate: boolean;
+  /** No signing authority is inferred from DRAFT/ACTIVE or image provenance. */
+  import_attestation?: ResearchAlphaImportAttestation;
 }
 
 export interface ResearchAlphaActivateResponse {

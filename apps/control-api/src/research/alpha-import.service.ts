@@ -6,6 +6,7 @@ import { PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
+  researchAlphaImportAttestation,
   type ResearchAlphaActivateResponse,
   type ResearchAlphaAnalysis,
   type ResearchAlphaImportGateRow,
@@ -201,6 +202,7 @@ export class ResearchAlphaImportService {
       alpha_revision: registration.alphaRevision,
       replayed: registration.replayed,
       may_activate: mayActivateResearchAlpha(user),
+      import_attestation: researchAlphaImportAttestation(registration.sourceDigest),
     };
   }
 
@@ -254,6 +256,7 @@ export class ResearchAlphaImportService {
         alpha_revision: row.alphaRevision,
         registered_at_utc_ms: row.registeredAt.getTime(),
         may_activate: mayActivateResearchAlpha(user),
+        import_attestation: researchAlphaImportAttestation(row.sourceDigest),
       }));
     } catch (error) {
       if (error instanceof ResearchAlphaVersionDeclarationError) {

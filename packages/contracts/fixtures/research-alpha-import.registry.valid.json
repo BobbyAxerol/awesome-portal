@@ -26,7 +26,22 @@
       "source_digest_prefix": "aaaaaaaaaaaa",
       "alpha_revision": 1,
       "registered_at_utc_ms": 1780000000000,
-      "may_activate": true
+      "may_activate": true,
+      "import_attestation": {
+        "schema_version": "research.alpha-import-attestation.v1",
+        "scope": "REGISTERED_ALPHA_SOURCE_ONLY",
+        "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "signature": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "RESEARCH_ALPHA_IMPORT_SIGNATURE_NOT_PRODUCED",
+          "source_locator": "apps/control-api/src/research/alpha-import.service.ts#register"
+        },
+        "sbom": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "RESEARCH_ALPHA_IMPORT_SBOM_NOT_PRODUCED",
+          "source_locator": "apps/control-api/src/research/alpha-import.service.ts#register"
+        }
+      }
     }
   ]
 }

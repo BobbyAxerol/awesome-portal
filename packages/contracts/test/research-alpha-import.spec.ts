@@ -14,6 +14,27 @@ function json(path: string): Record<string, unknown> {
 }
 
 describe("P07 published Research Alpha Import contract", () => {
+  it("E6-BR-01 binds truthful import absence to Alpha source, not signed release images", () => {
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    const schema = json(schemaPath);
+    ajv.addSchema(schema);
+    const validate = ajv.getSchema(schema.$id as string)!;
+    const registration = json(join(ROOT, "fixtures", "research-alpha-import.registration.valid.json"));
+    const fact = registration.import_attestation as Record<string, unknown>;
+    expect(fact.source_digest).toBe(registration.source_digest);
+    expect(validate(registration)).toBe(true);
+    expect(validate({ ...registration, import_attestation: { ...fact, scope: "SIGNED_RELEASE_IMAGE" } })).toBe(false);
+    expect(validate({ ...registration, import_attestation: { ...fact, signature: {
+      state: "AVAILABLE", signature: "image-signature-is-not-alpha-signature",
+    } } })).toBe(false);
+    expect(validate({ ...registration, import_attestation: { ...fact, sbom: {
+      state: "AVAILABLE", locator: "release-image-sbom.json",
+    } } })).toBe(false);
+    const old = { ...registration }; delete old.import_attestation;
+    expect(validate(old)).toBe(true); // Additive compatibility, not a false signed status.
+    expect(readFileSync(generatedPath, "utf8")).toContain("ResearchAlphaImportAttestationV1");
+  });
+
   it("validates one canonical fixture for every public success response", () => {
     const ajv = new Ajv2020({ allErrors: true, strict: true });
     const schema = json(schemaPath);

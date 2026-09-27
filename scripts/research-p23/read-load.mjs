@@ -18,6 +18,7 @@ export function validateManifest(input) {
     throw new Error('OWNED_TEST_ACCESS_IDENTITY_REQUIRED');
   }
   const url = new URL(input.base_url);
+  if (input.temperature !== undefined && !['warm','cold'].includes(input.temperature)) throw new Error('NAMED_READ_TEMPERATURE_REQUIRED');
   if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.port !== '8096'
     || url.pathname !== '/' || url.username || url.password || url.search || url.hash) {
     throw new Error('ISOLATED_P23_URL_REQUIRED');
@@ -37,6 +38,22 @@ export function validateManifest(input) {
 export function percentile(sorted, fraction) {
   if (!sorted.length) return null;
   return sorted[Math.ceil(sorted.length * fraction) - 1];
+}
+
+/** Guide §16.3, verified again at aggregation; HTTP 200 is not an SLO PASS. */
+export function evaluateReadSlo(receipt) {
+  const temperature = receipt.temperature ?? 'warm';
+  if (!['warm','cold'].includes(temperature)) return { passed:false,reason:'INVALID_TEMPERATURE' };
+  const byPath = Object.fromEntries(Object.entries(receipt.by_path ?? {}).map(([path,row]) => {
+    const pathname = new URL(path,'http://127.0.0.1:8096').pathname;
+    const kind = pathname.endsWith('/execute/replay') ? 'REPLAY' : pathname.endsWith('/search') ? 'TRIAL' : 'SUMMARY';
+    const target = temperature === 'cold' ? (kind === 'SUMMARY' ? 1500 : 2000)
+      : kind === 'REPLAY' ? 1000 : kind === 'TRIAL' ? 750 : 500;
+    return [path,{kind,target_p95_ms:target,observed_p95_ms:row.p95_ms,
+      passed:Number.isSafeInteger(row.p95_ms) && row.p95_ms >= 0 && row.p95_ms <= target}];
+  }));
+  return { schema_version:'research.p23-read-slo.v1',temperature,by_path:byPath,
+    passed:Object.keys(byPath).length>0 && Object.values(byPath).every(row=>row.passed) };
 }
 
 export function readPrivateManifest(path) {
@@ -98,9 +115,12 @@ export async function runReadLoad(input, fetchFn = fetch) {
       statuses: Object.fromEntries([...new Set(data.map(sample => sample.status))].map(status =>
         [status, data.filter(sample => sample.status === status).length])) }];
   }));
-  return { schema_version: 'research.p23-read-load.v1', sampled_at_utc: new Date().toISOString(),
+  const receipt = { schema_version: 'research.p23-read-load.v1', sampled_at_utc: new Date().toISOString(),
     base_url:manifest.base_url, started_at_utc:startedAt, completed_at_utc:new Date().toISOString(),
-    distinct_users: 20, by_path: byPath, passed: samples.every(sample => sample.status === 200) };
+    temperature:manifest.temperature ?? 'warm',distinct_users:20,by_path:byPath,
+    http_passed:samples.every(sample => sample.status === 200) };
+  const slo=evaluateReadSlo(receipt);
+  return {...receipt,slo,passed:receipt.http_passed && slo.passed};
 }
 
 if (process.argv[1] && new URL(`file://${process.argv[1]}`).href === import.meta.url) {

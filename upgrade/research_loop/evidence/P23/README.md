@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest read/outage/import checkpoint, 2026-09-27:** [Current packet](./READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md)
+records actual mixed-load diagnostic (one heavy/four queued/20 identities,
+684380160-byte peak, initial Library SLO FAIL), optimized warm read p95 466 ms,
+real PG/NATS/worker recovery after pool-error repair, bounded read admission,
+and E6-BR-01 source-only signing/SBOM semantics. These dirty-image diagnostics
+do not close T01/T11 or full P23. Full qualification remains IN_PROGRESS;
+the initial NOT_RUN table below is historical, not absence of these probes.
+
 **Current owned runtime checkpoint, 2026-09-27:** cell 8096 is built/running,
 22 distinct test principals authenticated without auto-login, F4/E10 real
 stranded-terminal/retry-expiry/live-lease preservation and OL-02 real observer

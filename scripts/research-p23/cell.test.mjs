@@ -32,3 +32,9 @@ test('isolated activation uses private credentials, disables auto-login and adds
   assert(!source.includes('ports:'));
   assert(!source.includes('external:'));
 });
+test('API replacement refreshes only the owned static-DNS gateway', () => {
+  const source = readFileSync(new URL('./cell.mjs', import.meta.url), 'utf8');
+  assert(source.includes('previousControl && previousControl !== currentControl'));
+  assert(source.includes("'--no-deps', '--force-recreate', '--wait', '--wait-timeout', '90', 'portal-web'"));
+  assert(!source.includes("'--force-recreate', 'portal-postgres'"));
+});

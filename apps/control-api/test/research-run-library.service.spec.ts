@@ -473,6 +473,26 @@ describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub 
     expect(repository.retainedFacts).not.toHaveBeenCalled();
   });
 
+  it("uses retained aggregates from the Library snapshot without a second transaction", async () => {
+    const repository = {
+      list: vi.fn().mockResolvedValue({ ...page([hubless()]), retainedFacts: [retainedRow()] }),
+      retainedFacts: vi.fn().mockRejectedValue(new Error("SECOND_SNAPSHOT_FORBIDDEN")),
+    };
+    const response = await new ResearchRunLibraryService(repository as never, config).list(scope, QUERY);
+    expect(response.items[0]!.stats.map(cell => cell.value)).toEqual(["-5.354970424211971", "3.911439612138451", "10"]);
+    expect(repository.retainedFacts).not.toHaveBeenCalled();
+  });
+
+  it("an empty same-snapshot retained set never falls back to a newer seal", async () => {
+    const repository = {
+      list: vi.fn().mockResolvedValue({ ...page([hubless()]), retainedFacts: [] }),
+      retainedFacts: vi.fn().mockResolvedValue([retainedRow()]),
+    };
+    const response = await new ResearchRunLibraryService(repository as never, config).list(scope, QUERY);
+    expect(response.items[0]!.stats[0]!.value).toBeNull();
+    expect(repository.retainedFacts).not.toHaveBeenCalled();
+  });
+
   it("D3: publishes the status counts the HiFi's first summary line reads", async () => {
     const { response } = await card([retainedRow()]);
     expect(response.status_counts).toEqual({

@@ -118,7 +118,17 @@ async function main() {
     compose(['build', '--build-arg', 'PORTAL_HMD_READER_REQUIRED=true',
       'portal-api', 'control-api', 'portal-web', 'roadmap-task-board-api']);
   } else if (command === 'up') {
+    const previousControl = docker(['ps', '-a', '-q', '--filter', `label=com.docker.compose.project=${PROJECT}`,
+      '--filter', 'label=com.docker.compose.service=control-api']).trim();
     compose(['up', '-d', '--no-build', '--wait', '--wait-timeout', '150', 'portal-web', 'quant-worker-py']);
+    const currentControl = docker(['ps', '-q', '--filter', `label=com.docker.compose.project=${PROJECT}`,
+      '--filter', 'label=com.docker.compose.service=control-api']).trim();
+    // nginx resolves the existing static upstream at startup. If Compose
+    // replaced the API container/IP, refresh only this cell's gateway; no
+    // shared nginx edit/reload and no unrelated service restart.
+    if (previousControl && previousControl !== currentControl) {
+      compose(['up', '-d', '--no-build', '--no-deps', '--force-recreate', '--wait', '--wait-timeout', '90', 'portal-web']);
+    }
     const ids = docker(['ps', '-q', '--filter', `label=com.docker.compose.project=${PROJECT}`]).trim().split('\n').filter(Boolean);
     const images = Object.fromEntries(ids.map(id => {
       const container = JSON.parse(docker(['inspect', '--format', '{{json .}}', id]));

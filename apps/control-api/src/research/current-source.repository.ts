@@ -199,7 +199,8 @@ export interface CurrentSourceIngestAuthority {
 }
 
 const MAXIMUM_CONCURRENT_CURRENT_SOURCE_READS = 2;
-const MAXIMUM_QUEUED_CURRENT_SOURCE_READS = 8;
+// Retained inspection is bounded to two active DB reads plus eighteen waiters.
+const MAXIMUM_QUEUED_CURRENT_SOURCE_READS = 18;
 const MAXIMUM_BATCH_ROWS = 200;
 const MAXIMUM_BATCH_BYTES = 1_048_576;
 const TABLE_KINDS: readonly CurrentSourceTableKind[] = ["OBSERVATION", "FOLD", "TRIAL", "CANDIDATE", "SELECTION"];

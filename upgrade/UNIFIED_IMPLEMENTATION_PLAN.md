@@ -3669,7 +3669,7 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 | OL-10 | Capability/route ledger | **CLOSED — Codex P22.** R2 inventory, generated route inventory and contract snapshot include the canonical P22 surface. | — | Gates green. |
 | OL-11 | Canonical RC publication route model | **CLOSED — Codex P22.** Exactly `GET …/publication` + `POST …/publish`; mirror is embedded and reconcile is server-owned. Historical contributor notes are explicitly superseded, not erased. | Claude consumer | No product client calls old routes. |
 | OL-13 | Named publication/approval read by `alpha_version_id` | **BACKEND CLOSED — Codex P22.** `researchAlphaVersionPublicationGetV1` returns current RC relation or typed absence; real lookup is `AVAILABLE`. | Claude consumer | S01/S02 render it without scanning RCs. |
-| OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **Đúng.** Harness đo đúng, chưa có workload thật đạt giới hạn | Codex | Receipt từng T-id trên stack cô lập |
+| OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **IN_PROGRESS, 2026-09-27.** Actual 20-reader/one-heavy/four-queued diagnostic measured 684380160-byte peak, but Library p95 failed. Bounded queries now pass separate warm read at 466 ms; real PG/NATS/worker outage passes after repairing unhandled pool disconnect. `dirty:true` evidence is not final T01/T11/P23 acceptance. | Codex | [Current proof/remaining exact gates](./research_loop/evidence/P23/READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md); every final T-id still needs clean-candidate evidence |
 
 #### B. Frontend / test còn mở (không phải backend)
 
@@ -3829,6 +3829,22 @@ lease. All 22 namespaced principals used real auth lifecycle, no auto-login.
 Temporary terminal fault removed, observer root restored, worker resumed.
 Four of the full goal's eight scoped groups have backend proof; OL-12/P23,
 F3/F5/OL-24, E6-BR-01 and P24 remain open. [Current packet](./research_loop/evidence/P23/RECOVERY_INTEGRITY_RUNTIME_CHECKPOINT_2026-09-27.md).
+
+**Read/outage/import checkpoint — 2026-09-27 (supersedes only these statuses):**
+E6-BR-01 now publishes generated source-only attestation with actual signature/
+SBOM `NOT_PUBLISHED` and exact source locator; real DRAFT register/replay/list
+and injection 400 pass. This closes semantics, not a signature infrastructure
+or full S14 browser claim. Library admission, bounded same-snapshot card SQL,
+HEAVY WFO/import queue, pool-disconnect survival and owned-gateway DNS refresh
+are implemented. Actual corrected PG/NATS/worker outage and twenty-reader
+warm read pass; dirty diagnostics do not close full P23. Focused 68 backend,
+14 verifier and 23 Node tests pass. First full hook: 1329 pass, one fail, one
+external skip; the HEAVY lineage fixture now uses fenced terminal transitions
+and verifies queued same-intent retry, focused real-PG/Node-22 40/40 PASS.
+Full hook retake is pending, not a future PASS. After commit, five of eight goal groups have scoped backend
+proof; OL-12/P23, full F3/F5/OL-24 and P24 remain active. Exact failed probes,
+new receipts/hashes, dependency pins and cleanup boundary are in the
+[new packet](./research_loop/evidence/P23/READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md).
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5
