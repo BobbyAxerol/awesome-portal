@@ -43,6 +43,7 @@ import {
   routeDisplay,
 } from "./atlas";
 import { ResearchPanel } from "./ResearchPanel";
+import { claimToken, groupDecimalString, shortId } from "./researchFormat";
 import type { ResearchState } from "./state";
 
 export const ATLAS_TABS = ["modes", "routes", "claims"] as const;
@@ -428,10 +429,11 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
           {claim.qualifier ? (
             <span className="mono text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-claim-qualifier={claim.qualifier.result_metadata_derivation}>
               {claim.qualifier.level_description} ·{" "}
+              {/* E1: the engine's certification token is printed as a token (`CLOSE_TARGET_CERTIFIED`), never as prose. */}
               {claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_SAME_LEVEL"
-                ? `certify_result_metadata derives the same level (${claim.qualifier.result_metadata_status})`
+                ? `certify_result_metadata derives the same level (${claimToken(claim.qualifier.result_metadata_status ?? "not published")})`
                 : claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_OTHER_LEVEL"
-                  ? `certify_result_metadata derives L${claim.qualifier.result_metadata_level} (${claim.qualifier.result_metadata_status}) — the catalog level is the Portal record`
+                  ? `certify_result_metadata derives L${claim.qualifier.result_metadata_level} (${claimToken(claim.qualifier.result_metadata_status ?? "not published")}) — the catalog level is the Portal record`
                   : "certify_result_metadata has no branch for this contract — the catalog level is the Portal record"}
             </span>
           ) : null}
@@ -555,6 +557,82 @@ export function governingStage<T extends { stage: string }>(stages: readonly T[]
   return stages.find((stage) => stage.stage === "oos_candidate_selection") ?? stages.find((stage) => stage.stage === "is_search") ?? stages[0] ?? null;
 }
 
+/**
+ * RF-04: the symbol gutter is measured against the symbols the manifest
+ * actually publishes, not against the HiFi's sample.
+ *
+ * The HiFi's four terms are names — `S̄_OOS`, `λ·σ_d` — so a fixed 140 px
+ * gutter fits them. QuantBT 1.1.1 publishes whole expressions: 108 characters
+ * of `plateau_score = q + plateau_median_weight * median - …`. In 140 px that
+ * broke over seven lines beside a three-line meaning, so the row cost 97 px to
+ * carry 46 px of reading. The gutter is sized in `ch` of the mono face from
+ * the longest symbol on the card, floored at the HiFi's own width and capped
+ * so the meaning always keeps the larger half of the column.
+ */
+const GUTTER_MIN_CH = 23;
+const GUTTER_MAX_CH = 42;
+
+/**
+ * The gutter for a set of terms, in `ch` of the mono face, or `null` when the
+ * gutter has stopped paying for itself.
+ *
+ * Past `GUTTER_MAX_CH` the gutter is no longer a label column: it takes half
+ * the width and the symbol still wraps, so both halves wrap and the row costs
+ * the sum of two wrapped blocks instead of the taller of them. There the
+ * symbol takes a full-width line of its own with the meaning under it.
+ */
+export function symbolGutterCh(terms: readonly { symbol: string }[]): number | null {
+  const longest = terms.reduce((width, term) => Math.max(width, term.symbol.length), 0);
+  if (longest > GUTTER_MAX_CH) return null;
+  return Math.max(longest, GUTTER_MIN_CH);
+}
+
+type AtlasObjectiveTerm = NonNullable<AtlasObjectiveFact["terms"]>[number];
+
+/** One term row: the engine's symbol in the measured gutter, or stacked above its meaning. */
+function TermRow({ term, gutter }: { term: AtlasObjectiveTerm; gutter: number | null }) {
+  const title = term.source.map((item) => `${item.path}:${item.lines} sha256 ${item.sha256}`).join("\n");
+  if (gutter === null) {
+    return (
+      <span
+        className="flex flex-col border-b py-[2px] text-[10.5px]"
+        style={{ borderColor: "var(--line-soft)" }}
+        data-objective-term={term.symbol}
+        data-term-layout="stacked"
+        title={title}
+      >
+        <span className="mono text-[10px]" style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>
+          {term.symbol}
+        </span>
+        {/* Indented so the expression still reads as the row's key and the
+            meaning as its value, the way the gutter says it in the other cards. */}
+        <span className="pl-2.5 leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
+          {term.meaning}
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span
+      className="flex items-baseline gap-2 border-b py-[2px] text-[10.5px]"
+      style={{ borderColor: "var(--line-soft)" }}
+      data-objective-term={term.symbol}
+      data-term-layout="gutter"
+      title={title}
+    >
+      <span
+        className="mono flex-none text-[10px]"
+        style={{ width: `${gutter}ch`, maxWidth: "48%", color: "var(--ink)", overflowWrap: "anywhere" }}
+      >
+        {term.symbol}
+      </span>
+      <span className="min-w-0 flex-1 leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
+        {term.meaning}
+      </span>
+    </span>
+  );
+}
+
 function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
   if (!isPublished<AtlasObjectiveFact>(facts.objective)) {
     return <NotPublished fact={facts.objective} label="objective" />;
@@ -566,33 +644,31 @@ function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
   /* D9: the HiFi shows up to four terms beside the formula; the rest are counted and open with the other stages. */
   const shownTerms = terms.slice(0, TERMS_SHOWN);
   const moreTerms = terms.slice(TERMS_SHOWN);
+  const gutter = symbolGutterCh(shownTerms);
+  /* RF-04: the disclosure summary names the cap it applies — "4 of 7 terms",
+     never a silent slice — and every other thing it holds, on one line. */
+  const opens = [
+    terms.length === 0
+      ? null
+      : moreTerms.length > 0
+        ? `${shownTerms.length} of ${terms.length} terms`
+        : `all ${terms.length} ${terms.length === 1 ? "term" : "terms"} shown`,
+    rest.length > 0 ? `${rest.length} more ${rest.length === 1 ? "stage" : "stages"}` : null,
+    objective.weights && objective.weights.length > 0 ? "weights" : null,
+    "selection metric",
+    "sources",
+  ].filter((part): part is string => part !== null);
   return (
     <div className="flex flex-col gap-1" data-objective>
       {lead ? (
-        <div className="flex flex-col gap-0.5 overflow-x-auto border-l-2 py-0.5 pl-2.5" style={{ borderColor: "var(--accent)" }} data-objective-lead={lead.stage}>
-          <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }}>
-            {lead.stage} · {objective.direction}
-          </span>
+        <div className="flex flex-col overflow-x-auto border-l-2 py-0.5 pl-2.5" style={{ borderColor: "var(--accent)" }} data-objective-lead={lead.stage}>
           <Formula formula={lead.formula} />
         </div>
       ) : null}
       {shownTerms.length > 0 ? (
         <div className="flex flex-col" data-objective-term-table>
           {shownTerms.map((term) => (
-            <span
-              key={term.symbol}
-              className="flex items-baseline gap-2 border-b py-[2px] text-[10.5px]"
-              style={{ borderColor: "var(--line-soft)" }}
-              data-objective-term={term.symbol}
-              title={term.source.map((item) => `${item.path}:${item.lines} sha256 ${item.sha256}`).join("\n")}
-            >
-              <span className="mono w-[140px] flex-none text-[10px]" style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>
-                {term.symbol}
-              </span>
-              <span className="min-w-0 flex-1 leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
-                {term.meaning}
-              </span>
-            </span>
+            <TermRow key={term.symbol} term={term} gutter={gutter} />
           ))}
         </div>
       ) : null}
@@ -609,23 +685,14 @@ function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
         </span>
       ) : null}
       <details className="text-[10px]" data-objective-more>
-        <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }}>
-          {moreTerms.length > 0 ? `${moreTerms.length} more ${moreTerms.length === 1 ? "term" : "terms"}, ` : ""}
-          {rest.length > 0 ? `${rest.length} more ${rest.length === 1 ? "stage" : "stages"}, ` : ""}
-          {objective.weights && objective.weights.length > 0 ? "weights, " : ""}selection metric and sources
+        <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }} data-objective-cap={moreTerms.length > 0 ? `${shownTerms.length}/${terms.length}` : undefined}>
+          {opens.join(" · ")}
         </summary>
         <div className="mt-1 flex flex-col gap-1.5">
           {moreTerms.length > 0 ? (
             <div className="flex flex-col" data-objective-term-table-more>
               {moreTerms.map((term) => (
-                <span key={term.symbol} className="flex items-baseline gap-2 border-b py-[2px] text-[10.5px]" style={{ borderColor: "var(--line-soft)" }} data-objective-term={term.symbol}>
-                  <span className="mono w-[140px] flex-none text-[10px]" style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>
-                    {term.symbol}
-                  </span>
-                  <span className="min-w-0 flex-1 leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
-                    {term.meaning}
-                  </span>
-                </span>
+                <TermRow key={term.symbol} term={term} gutter={symbolGutterCh(moreTerms)} />
               ))}
             </div>
           ) : null}
@@ -708,6 +775,9 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
   const thisRun = runId !== null && known !== null && known.mode === mode.mode_id;
   /* 12-8: with the run's mode known, only its card opens that run's Search; the others find runs in their mode. */
   const opensSearch = runId !== null && (known === null || thisRun);
+  const objective = facts && isPublished<AtlasObjectiveFact>(facts.objective) ? facts.objective : null;
+  const governing = objective ? governingStage(objective.stages) : null;
+  const governingDirection = objective?.direction ?? "";
   return (
     <article
       data-mode={mode.mode_id}
@@ -763,8 +833,11 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
       </header>
 
       {/* D9 (12-1): the HiFi's three columns — WHAT IT READS · OBJECTIVE · SCHEDULE → CLAIM. */}
+      {/* RF-04: the objective column carries every pixel the card is taller
+          than the HiFi, while "what it reads" and "schedule → claim" sit on
+          ~200 px of slack each. The engine's terms get that width back. */}
       <div className="flex flex-wrap gap-x-[18px] gap-y-3 pt-2.5">
-        <div className="flex min-w-[min(280px,100%)] flex-[1.1] flex-col gap-1.5" data-mode-column="reads">
+        <div className="flex min-w-[min(236px,100%)] flex-1 flex-col gap-1.5" data-mode-column="reads">
           <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
             what it reads
           </span>
@@ -775,7 +848,9 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
                   {input}
                 </span>
               ))}
-              <span className="mono text-[9.5px] leading-[18px]" style={{ color: "var(--ink-soft)" }}>
+              {/* The engine's retention names run to 51 characters and have no
+                  break opportunity; without this they crossed the column rule. */}
+              <span className="mono text-[9.5px] leading-[18px]" style={{ color: "var(--ink-soft)", overflowWrap: "anywhere" }}>
                 retains {facts.reads.retention}
               </span>
             </span>
@@ -787,11 +862,9 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
           <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
             {mode.objective_summary}
           </span>
-          {mode.when_to_use ? (
-            <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-              {mode.when_to_use}
-            </span>
-          ) : null}
+          {/* RF-04: `when_to_use` is the "when to reach for which mode" table's
+              column, as it is in the HiFi. Printing it here too said the same
+              sentence twice on one screen. */}
           {mode.rules.map((rule, index) => (
             <span key={index} className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
               {rule}
@@ -799,9 +872,16 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
           ))}
         </div>
 
-        <div className="flex min-w-[min(320px,100%)] flex-[1.3] flex-col gap-1 min-[900px]:border-l min-[900px]:pl-[18px]" style={{ borderColor: "var(--line-soft)" }} data-mode-column="objective">
-          <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
+        <div className="flex min-w-[min(384px,100%)] flex-[2] flex-col gap-1 min-[900px]:border-l min-[900px]:pl-[18px]" style={{ borderColor: "var(--line-soft)" }} data-mode-column="objective">
+          {/* RF-04: the governing stage rides the label row rather than taking
+              a line of its own above the formula (12-2 keeps the fact). */}
+          <span className="flex flex-wrap items-baseline gap-x-2 text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
             objective — Stage 2 opens every term
+            {governing ? (
+              <span className="mono ml-auto text-[9px] normal-case tracking-normal" data-governing-stage={governing.stage}>
+                {governing.stage} · {governingDirection}
+              </span>
+            ) : null}
           </span>
           {facts ? <ObjectiveBlock facts={facts} /> : null}
           {/* The failure signature, from the manifest, never paraphrased. */}
@@ -815,7 +895,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
           ) : null}
         </div>
 
-        <div className="flex min-w-[min(260px,100%)] flex-1 flex-col gap-1.5 min-[900px]:border-l min-[900px]:pl-[18px]" style={{ borderColor: "var(--line-soft)" }} data-mode-column="claim">
+        <div className="flex min-w-[min(236px,100%)] flex-1 flex-col gap-1.5 min-[900px]:border-l min-[900px]:pl-[18px]" style={{ borderColor: "var(--line-soft)" }} data-mode-column="claim">
           <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
             schedule → claim
           </span>
@@ -871,7 +951,28 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
   );
 }
 
+/**
+ * RF-04: the one avoid-when sentence every mode shares is said once.
+ *
+ * QuantBT 1.1.1 publishes the identical `NOT_PUBLISHED` reason on all five
+ * modes. As a per-row column it printed the same sentence five times and took
+ * 547 px of the table's width from the column that does carry five different
+ * sentences. Returns the shared fact when there is exactly one, else `null`
+ * and the rows keep their own column — a manifest that publishes real,
+ * different guidance is not folded into one line.
+ */
+export function sharedAvoidWhen(modes: readonly AtlasMode[]): AtlasNotPublishedFact | null {
+  const facts = modes.map((mode) => mode.facts?.avoid_when ?? null);
+  if (facts.length === 0 || facts.some((fact) => fact === null)) return null;
+  const first = facts[0] as AtlasNotPublishedFact;
+  if (first.state !== "NOT_PUBLISHED") return null;
+  return facts.every((fact) => (fact as AtlasNotPublishedFact).state === "NOT_PUBLISHED" && (fact as AtlasNotPublishedFact).reason === first.reason)
+    ? first
+    : null;
+}
+
 function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
+  const shared = sharedAvoidWhen(modes);
   return (
     <div className="overflow-x-auto rounded-[6px] border" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-mode-table>
       <div className="border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
@@ -880,11 +981,12 @@ function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
         </span>
       </div>
       <table className="w-full border-collapse text-[12px]">
-        <thead>
-          <tr className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>
-            <th className="px-3 py-1.5 text-left font-normal">mode</th>
-            <th className="px-3 py-1.5 text-left font-normal">use when</th>
-            <th className="px-3 py-1.5 text-left font-normal">avoid when</th>
+        {/* The HiFi's table carries no visible head; the columns stay named for a reader who cannot see the shape. */}
+        <thead className="sr-only">
+          <tr>
+            <th scope="col">mode</th>
+            <th scope="col">use when</th>
+            {shared ? null : <th scope="col">avoid when</th>}
           </tr>
         </thead>
         <tbody>
@@ -892,17 +994,25 @@ function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
             <tr key={mode.mode_id} className="border-t" style={{ borderColor: "var(--line-soft)" }} data-mode-row={mode.mode_id}>
               <td className="mono px-3 py-[7px] align-top" style={{ width: 190 }}>{mode.mode_id}</td>
               <td className="px-3 py-[7px] align-top" style={{ color: "var(--ink-soft)" }}>{mode.when_to_use}</td>
-              <td className="px-3 py-[7px] align-top">
-                {mode.facts ? (
-                  <NotPublished fact={mode.facts.avoid_when} label={`avoid_when:${mode.mode_id}`} />
-                ) : (
-                  <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>not published</span>
-                )}
-              </td>
+              {shared ? null : (
+                <td className="px-3 py-[7px] align-top">
+                  {mode.facts ? (
+                    <NotPublished fact={mode.facts.avoid_when} label={`avoid_when:${mode.mode_id}`} />
+                  ) : (
+                    <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>not published</span>
+                  )}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
       </table>
+      {shared ? (
+        <p className="m-0 border-t px-3 py-[7px] text-[10px] leading-[1.5]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-avoid-when-shared>
+          <span className="mono text-[9px] font-bold uppercase tracking-[.06em]">avoid when · not published</span>{" "}
+          {shared.reason}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1034,8 +1144,10 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
  */
 function ReleaseFacts({ release }: { release: CurrentRelease }) {
   const options = release.walk_forward_options ?? null;
+  /* Closed it is a chip at the end of the tab row; open it takes the row's
+     full width and the tabs move above it. */
   return (
-    <details className="rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-release-facts>
+    <details className="max-w-full flex-none self-start rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-release-facts>
       <summary className="mono cursor-pointer text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         release facts · {release.release_id}
       </summary>
@@ -1045,13 +1157,21 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
           <Fact label="native">
             {release.native_package ? `${release.native_package} · expected ${release.native_expected_version ?? "not declared"}` : "none declared"}
           </Fact>
-          <Fact label="trial ceiling">{release.trial_ceiling}</Fact>
+          {/* E1: an exact integer is grouped as a string, never turned into a float. */}
+          <Fact label="trial ceiling">{groupDecimalString(String(release.trial_ceiling))}</Fact>
           <Fact label="profile">{release.submission_constraints.profile_id}</Fact>
           <Fact label="overrides">{release.submission_constraints.optimization_overrides}</Fact>
-          <Fact label="trials accepted">{release.submission_constraints.accepted_trial_count}</Fact>
+          <Fact label="trials accepted">{groupDecimalString(String(release.submission_constraints.accepted_trial_count))}</Fact>
           <Fact label="early stopping">{release.submission_constraints.early_stopping}</Fact>
           <Fact label="random seed">{release.submission_constraints.random_seed}</Fact>
-          {release.config_digest ? <Fact label="config digest">{release.config_digest}</Fact> : null}
+          {/* E1: a 64-character digest wraps every row it sits in; the full value stays in the title. */}
+          {release.config_digest ? (
+            <Fact label="config digest">
+              <span title={release.config_digest} data-config-digest={release.config_digest}>
+                {shortId(release.config_digest)}
+              </span>
+            </Fact>
+          ) : null}
         </dl>
         <div className="flex min-w-[260px] flex-1 flex-col gap-1">
           {release.optimizer_defaults.groups.map((group) => (
@@ -1084,13 +1204,14 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
             <span className="mono text-[10px] leading-[1.6]" data-preflight-limits>
               <span style={{ color: "var(--ink-faint)" }}>preflight limits</span>{" "}
               <span title={release.preflight_limits.sweep_dimension_ceiling.basis}>
-                sweep dims {release.preflight_limits.sweep_dimension_ceiling.value} ({release.preflight_limits.sweep_dimension_ceiling.value_source.toLowerCase()})
+                sweep dims {groupDecimalString(String(release.preflight_limits.sweep_dimension_ceiling.value))} ({release.preflight_limits.sweep_dimension_ceiling.value_source.toLowerCase()})
               </span>
               {" · "}
-              <span title={release.preflight_limits.outer_fold_ceiling.basis}>folds {release.preflight_limits.outer_fold_ceiling.value}</span>
+              <span title={release.preflight_limits.outer_fold_ceiling.basis}>folds {groupDecimalString(String(release.preflight_limits.outer_fold_ceiling.value))}</span>
               {" · "}
+              {/* E1: grouped from the exact decimal string, not through `toLocaleString` on a float. */}
               <span title={release.preflight_limits.estimated_cpu_seconds_ceiling.basis}>
-                cpu {release.preflight_limits.estimated_cpu_seconds_ceiling.value.toLocaleString("en-US")} s
+                cpu {groupDecimalString(String(release.preflight_limits.estimated_cpu_seconds_ceiling.value))} s
               </span>
             </span>
           ) : null}
@@ -1236,8 +1357,10 @@ export function EngineAtlas({
         </div>
 
         {release || selectedReleaseId ? (
-          /* 12-9: right-aligned beside the title at desktop width, stacked left under it at 660. */
+          /* 12-9: right-aligned beside the title at desktop width, stacked left under it at 660.
+             RF-04: the release identity is one wrapped row, not four stacked lines. */
           <div className="flex flex-col items-start gap-[3px] min-[900px]:items-end">
+            <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-[3px] min-[900px]:justify-end">
             {selectedReleaseId ? (
               <span
                 className="mono rounded-[3px] border px-[5px] text-[9px] font-bold leading-[15px]"
@@ -1257,17 +1380,6 @@ export function EngineAtlas({
                 {selectedReleaseKind ?? "SELECTED"} · {selectedReleaseId}
               </span>
             ) : null}
-            {/* A retained historical identity is not a promise that it runs,
-                so the kind is stated rather than left to the version string. */}
-            {selectedReleaseKind === "HISTORICAL" ? (
-              <span
-                className="text-[10px]"
-                style={{ color: "var(--role-holdout)" }}
-                data-historical-note
-              >
-                Historical identity retained — this release is not installed and cannot run.
-              </span>
-            ) : null}
             {release ? (
               <span
                 className="mono text-[10px]"
@@ -1282,6 +1394,19 @@ export function EngineAtlas({
                 {label}
               </span>
             ))}
+            </span>
+            {/* A retained historical identity is not a promise that it runs,
+                so the kind is stated rather than left to the version string.
+                It keeps its own line: a warning is not a chip. */}
+            {selectedReleaseKind === "HISTORICAL" ? (
+              <span
+                className="text-[10px]"
+                style={{ color: "var(--role-holdout)" }}
+                data-historical-note
+              >
+                Historical identity retained — this release is not installed and cannot run.
+              </span>
+            ) : null}
             {location.run ? (
               <Link
                 data-header-search
@@ -1294,11 +1419,9 @@ export function EngineAtlas({
         ) : null}
       </header>
 
-      {/* A pre-P10 document carries no release facts; nothing is drawn for it. */}
-      {doc?.current_release.submission_constraints && doc.current_release.optimizer_defaults ? (
-        <ReleaseFacts release={doc.current_release} />
-      ) : null}
-
+      {/* RF-04: the tab bar is 369 px of a 1128 px row; the release facts sit
+          in the space beside it instead of costing a band of their own. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
       <div
         className="flex gap-1 self-start rounded-[6px] border p-[5px]"
         style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
@@ -1335,6 +1458,12 @@ export function EngineAtlas({
             </button>
           );
         })}
+      </div>
+
+      {/* A pre-P10 document carries no release facts; nothing is drawn for it. */}
+      {doc?.current_release.submission_constraints && doc.current_release.optimizer_defaults ? (
+        <ReleaseFacts release={doc.current_release} />
+      ) : null}
       </div>
 
       <ResearchPanel
