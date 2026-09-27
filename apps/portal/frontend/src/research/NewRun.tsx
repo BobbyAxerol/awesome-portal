@@ -63,6 +63,48 @@ export const SUBTITLE =
 export const SCRATCH_BANNER =
   "Scratch runs iterate freely and stay full evidence for you — but no release candidate can ever be composed from one. Strategy pick below becomes free.";
 
+/**
+ * The binding badge (E4, audit 02-3).
+ *
+ * It used to read "PUBLISHABLE · no version bound" on an empty form, which
+ * contradicts itself: nothing is bound, so nothing is publishable yet. And
+ * once a version was chosen it printed the long `alpha_version_id`, where the
+ * HiFi prints the registry's short `version_label`.
+ *
+ * Three honest states, one place, so the header and the review rail can never
+ * disagree (they held two copies of the same ternary).
+ */
+export function bindingChip(
+  draft: Pick<RunDraft, "bound" | "alphaId" | "alphaVersionId">,
+  registry: readonly RegistryEntry[],
+): { state: "PUBLISHABLE" | "PENDING_VERSION" | "NOT_PUBLISHABLE"; text: string; title: string } {
+  if (!draft.bound) {
+    return {
+      state: "NOT_PUBLISHABLE",
+      text: "NOT_PUBLISHABLE · scratch",
+      title: "A scratch run keeps full evidence, but no release candidate can be composed from one.",
+    };
+  }
+  if (!draft.alphaVersionId) {
+    return {
+      state: "PENDING_VERSION",
+      text: "NO VERSION CHOSEN",
+      title: "A run bound to an alpha version can compose a release candidate. Choose the version to bind it.",
+    };
+  }
+  const label = registry.find(
+    (entry) => entry.alpha_version_id === draft.alphaVersionId
+      && (draft.alphaId === "" || entry.alpha_id === draft.alphaId),
+  )?.version_label;
+  return {
+    state: "PUBLISHABLE",
+    /* The registry's short label, as the HiFi prints it; the full id is in
+       the title and in `data-alpha-version-id`. */
+    text: `PUBLISHABLE · ${label ?? draft.alphaVersionId}`,
+    title: label ? `${label} — ${draft.alphaVersionId}` : draft.alphaVersionId,
+  };
+}
+
 export const DATA_REQUIREMENTS_NOTE =
   "Timeframe and seed are checked in this form. Required columns and warmup are checked by the server at preflight — the Review step names whichever gate failed.";
 
@@ -677,6 +719,34 @@ function DataStep({
           ) : null}
         </Field>
       </div>
+      {/* E4 (audit 02-12): the HiFi's declaration box. The registry already
+          publishes all four facts and the form ignored them, so the reader
+          could not see what the run needs until preflight refused. Shown, not
+          checked: the server is still the authority at preflight. */}
+      <div
+        className="flex flex-wrap gap-x-5 gap-y-1 rounded-[6px] border px-3 py-2"
+        style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
+        data-declaration-box
+      >
+        <Label>version declaration</Label>
+        {([
+          ["required columns", limits.requiredColumns?.join(" · ") ?? null],
+          ["warmup bars", limits.warmupBars === null ? null : String(limits.warmupBars)],
+          ["declared timeframes", limits.declaredTimeframes?.join(" · ") || null],
+          ["seed", limits.seedRequired === null ? null : limits.seedRequired ? "required" : "not required"],
+        ] as const).map(([label, value]) => (
+          <span key={label} className="flex items-baseline gap-1.5" data-declaration-fact={label}>
+            <Label>{label}</Label>
+            {value === null ? (
+              <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+                {draft.alphaVersionId ? "not declared" : "no version chosen"}
+              </span>
+            ) : (
+              <span className="mono text-[10.5px]">{value}</span>
+            )}
+          </span>
+        ))}
+      </div>
       {dataset ? (
         <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-dataset-facts>
           {dataset.venue} · {dataset.source_timezone} · {dataset.calendar_policy} · timeframes {dataset.timeframes.join(" · ")}
@@ -1051,6 +1121,23 @@ function ParametersStep({
         </p>
       ) : (
         <div className="flex flex-col" data-parameter-table>
+          {/* E4 (audit 02-14): the HiFi's header row. Without it the two
+              free-text boxes on each row are unlabelled, and the declared
+              step — which the registry publishes and the form dropped — had
+              nowhere to go. */}
+          <div
+            className="mono flex flex-wrap items-center gap-2 border-b pb-1 text-[9px] uppercase"
+            style={{ borderColor: "var(--line)", color: "var(--ink-faint)", letterSpacing: ".06em" }}
+            data-parameter-header
+          >
+            <span className="w-[104px] flex-none">param</span>
+            <span className="w-[120px] flex-none">declared</span>
+            <span className="w-[84px] flex-none">dim</span>
+            <span className="w-[88px] flex-none">low</span>
+            <span className="w-[88px] flex-none">high</span>
+            <span className="w-[72px] flex-none">step</span>
+            <span className="flex-1">status</span>
+          </div>
           {draft.parameters.map((entry, index) => {
             const status = parameterStatus(entry);
             const refused = status.tone === "refused";
@@ -1116,6 +1203,19 @@ function ParametersStep({
                     —
                   </span>
                 )}
+                {/* The declaration's grid, read from the registry. A fixed or
+                    categorical parameter declares none, and says so. */}
+                <span
+                  className="mono w-[72px] flex-none text-[10px]"
+                  style={{ color: "var(--ink-faint)" }}
+                  data-parameter-step={entry.name}
+                >
+                  {entry.declaredStep === null || entry.declaredStep === undefined ? (
+                    <span className="italic">not declared</span>
+                  ) : (
+                    String(entry.declaredStep)
+                  )}
+                </span>
                 <span
                   className="flex-1 text-[10px]"
                   data-parameter-status={entry.name}
@@ -1354,12 +1454,15 @@ function ReviewRail({
   atlas,
   sweepCeiling,
   usesV2,
+  registry,
 }: {
   draft: RunDraft;
   blocking: readonly { step: StepId; message: string }[];
   atlas: AtlasDocument | null;
   sweepCeiling: number | null;
   usesV2: boolean;
+  /** E4: the rail prints the registry's short `version_label`, as the header does. */
+  registry: readonly RegistryEntry[];
 }) {
   const overrides = Object.keys(draft.optimizationConfigOverrides);
   const mode = atlas?.modes.find((item) => item.mode_id === draft.optimizationMode);
@@ -1420,11 +1523,7 @@ function ReviewRail({
       </section>
       <div className="flex flex-col">
         <Row label="alpha binding">
-          {draft.bound
-            ? draft.alphaVersionId
-              ? `PUBLISHABLE · ${draft.alphaVersionId}`
-              : "PUBLISHABLE · no version bound"
-            : "NOT_PUBLISHABLE · scratch"}
+          <span title={bindingChip(draft, registry).title}>{bindingChip(draft, registry).text}</span>
         </Row>
         <Row label="execution route">{draft.executionRoute}</Row>
         <Row label="strategy_id">
@@ -1588,6 +1687,13 @@ export function NewRun(props: NewRunProps) {
   useEffect(() => {
     setStep(initialStep);
   }, [initialStep]);
+  /* E4 (audit 02-8): reaching a step counts as visiting it, however the
+     reader got there — a pill, a refusal jump, or `?step=`. Before this, only
+     a pill click counted, so the wizard's own error marks lagged behind the
+     step on screen. */
+  useEffect(() => {
+    setVisited((previous) => (previous.has(step) ? previous : new Set([...previous, step])));
+  }, [step]);
   const blocking = useMemo(() => blockingProblems(draft, limits), [draft, limits]);
   const errorByStep = useMemo(
     () => new Map(blocking.map((problem) => [problem.step, problem.message])),
@@ -1600,6 +1706,19 @@ export function NewRun(props: NewRunProps) {
     return steps;
   }, [errorByStep, visited, refusalStep]);
   const missing = useMemo(() => missingConstraints(limits), [limits]);
+  /*
+   * E4 (audit 02-8): a form that opens on a red box has told the reader they
+   * are wrong before they have typed anything. The HiFi shows no error until
+   * the reader reaches a step. The rail therefore lists the problems of steps
+   * they have been to; Review lists all of them, because Review is where the
+   * decision to run is made and every problem blocks it. `blocking` itself is
+   * unchanged, so the preflight button's own guard still sees everything.
+   */
+  const visibleBlocking = useMemo(
+    () => (step === "review" ? blocking : blocking.filter((problem) => visited.has(problem.step))),
+    [blocking, visited, step],
+  );
+  const chip = bindingChip(draft, registry);
 
   return (
     <div
@@ -1622,19 +1741,17 @@ export function NewRun(props: NewRunProps) {
           </h1>
           <span
             className="mono rounded-[3px] border px-[5px] text-[10px] font-bold leading-[16px]"
-            data-binding-chip={draft.bound ? "PUBLISHABLE" : "NOT_PUBLISHABLE"}
+            data-binding-chip={chip.state}
+            data-alpha-version-id={draft.alphaVersionId || undefined}
+            title={chip.title}
             style={{
-              color: draft.bound ? "var(--good)" : "var(--role-holdout)",
-              borderColor: draft.bound ? "var(--good)" : "var(--role-holdout)",
-              borderStyle: draft.bound ? "solid" : "dashed",
-              background: draft.bound ? "var(--good-bg, var(--paper))" : "var(--paper)",
+              color: chip.state === "PUBLISHABLE" ? "var(--good)" : chip.state === "PENDING_VERSION" ? "var(--ink-faint)" : "var(--role-holdout)",
+              borderColor: chip.state === "PUBLISHABLE" ? "var(--good)" : chip.state === "PENDING_VERSION" ? "var(--line)" : "var(--role-holdout)",
+              borderStyle: chip.state === "PUBLISHABLE" ? "solid" : "dashed",
+              background: chip.state === "PUBLISHABLE" ? "var(--good-bg, var(--paper))" : "var(--paper)",
             }}
           >
-            {draft.bound
-              ? draft.alphaVersionId
-                ? `PUBLISHABLE · ${draft.alphaVersionId}`
-                : "PUBLISHABLE · no version bound"
-              : "NOT_PUBLISHABLE · scratch"}
+            {chip.text}
           </span>
           <span className="mono ml-auto text-[10px]" style={{ color: "var(--ink-faint)" }} data-release-note>
             routes, protocols and ceilings read from the INSTALLED engine release —{" "}
@@ -1789,6 +1906,10 @@ export function NewRun(props: NewRunProps) {
                 </p>
               ) : null}
 
+              {/* E4 (audit 02-16): the HiFi puts the primary action in the
+                  main panel, above everything. It used to sit above seven
+                  empty framed panels and a ghost button, so the reader
+                  scrolled past an empty preflight to find "Create run". */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -1796,7 +1917,17 @@ export function NewRun(props: NewRunProps) {
                   data-action="preflight"
                   onClick={onRunPreflight}
                   disabled={blocking.length > 0}
-                  style={blocking.length > 0 ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
+                  style={blocking.length > 0
+                    ? { opacity: 0.4, cursor: "not-allowed" }
+                    : {
+                      border: "1px solid var(--accent)",
+                      background: "var(--accent)",
+                      color: "var(--accent-contrast)",
+                      fontWeight: 600,
+                      letterSpacing: ".05em",
+                      textTransform: "uppercase",
+                      padding: "6px 16px",
+                    }}
                   title={blocking.length > 0 ? blocking[0].message : undefined}
                 >
                   Run preflight
@@ -1833,7 +1964,27 @@ export function NewRun(props: NewRunProps) {
                 </div>
               ) : null}
 
-              <PreflightPanel preflight={preflight} state={preflightState} />
+              {/* E4 (audit 02-16): before a preflight has run, its six panels
+                  are six empty frames saying the same sentence. They stay in
+                  the DOM — the reader can see what preflight will check, and
+                  P08-T10 still finds every named panel — but they are folded,
+                  so the primary action is not buried under them. */}
+              {preflight === null ? (
+                <details data-preflight-preview>
+                  <summary
+                    className="mono cursor-pointer text-[10.5px]"
+                    style={{ color: "var(--ink-soft)" }}
+                    data-preflight-preview-summary
+                  >
+                    what preflight will check — 6 panels, none read yet
+                  </summary>
+                  <div className="flex flex-col gap-2.5 pt-2">
+                    <PreflightPanel preflight={preflight} state={preflightState} />
+                  </div>
+                </details>
+              ) : (
+                <PreflightPanel preflight={preflight} state={preflightState} />
+              )}
 
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -1869,6 +2020,10 @@ export function NewRun(props: NewRunProps) {
                 ) : null}
               </div>
 
+              {/* E4 (audit 02-16): the seventh empty frame. A run that has not
+                  been created has no record to show and no state to report, so
+                  the panel appears with the request rather than before it. */}
+              {created || createState.state !== "empty" ? (
               <ResearchPanel title="run" state={createState} minBodyHeight={72}>
                 {created ? (
                   <div className="flex flex-col" data-created={created.run_id}>
@@ -1880,6 +2035,7 @@ export function NewRun(props: NewRunProps) {
                   </div>
                 ) : null}
               </ResearchPanel>
+              ) : null}
 
               {outcomeUnknown ? (
                 <div className="flex flex-wrap items-center gap-2" data-unknown-outcome>
@@ -1895,7 +2051,7 @@ export function NewRun(props: NewRunProps) {
           ) : null}
         </div>
 
-        <ReviewRail draft={draft} blocking={blocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} />
+        <ReviewRail draft={draft} blocking={visibleBlocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} />
       </div>
     </div>
   );

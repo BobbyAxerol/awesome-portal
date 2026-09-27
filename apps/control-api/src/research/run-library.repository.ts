@@ -15,6 +15,7 @@ import { CONTROL_API_POOL } from "../tokens";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import type { ResearchRunLibraryQuery } from "./run-library.contract";
 import { ResearchRunLibraryError } from "./run-library.error";
+import { runDisplayOrdinalSql } from "./run-display-label";
 
 type JsonRecord = Record<string, unknown>;
 type JsonColumn = JsonRecord | string | null;
@@ -81,6 +82,10 @@ export interface RunLibraryRow {
   rc_sealed_at_utc_ms: string | number | null;
   /** The viewer's own persisted P21 draft for the run. */
   rc_draft_id: string | null;
+  /** D1: the stored execution profile the run's kind token comes from. */
+  display_profile_id: string | null;
+  /** D1: this run's position among the logical runs of its own kind. */
+  display_ordinal: string | number | null;
 }
 
 export interface RunLibrarySparklineSource {
@@ -103,6 +108,33 @@ export interface RunLibrarySparklineSource {
   retained_series_payload?: JsonRecord[] | string | null;
 }
 
+/**
+ * E11 (HiFi audit 01-7) — the retained RS-02 facts a COMPLETED card needs.
+ *
+ * A Delta walk-forward run is never published through the P13 hub, so the
+ * `evidence` lateral above finds nothing and the card printed
+ * `P13_SOURCE_EVIDENCE_NOT_PUBLISHED` three times while Screen 04 showed the
+ * numbers. Screen 10 already reads this lane (W6b CG-P19-05); Screen 01 did
+ * not, which is the whole of the disagreement.
+ *
+ * Read from the newest seal per run: the selected trial's candidate row
+ * (QuantBT's own means across folds) and the per-fold OOS trade counts.
+ */
+export interface RunLibraryRetainedFacts {
+  run_id: string;
+  artifact_revision: string | number;
+  /** `trial_facts.metrics` of the selected trial's candidate row, or null. */
+  metrics: JsonColumn;
+  /** Folds retained for this seal. */
+  fold_count: string | number;
+  /** Folds whose `oos_score.oos_trade_count` is published. */
+  trade_fold_count: string | number;
+  /** Sum of those counts. Meaningless unless it covers every fold. */
+  trade_sum: string | number | null;
+  /** OBSERVATION rows the seal declares, for the sparkline's bounds. */
+  observation_count: string | number;
+}
+
 export interface RunLibraryCounters {
   logicalRuns: number;
   workerChildren: number;
@@ -117,6 +149,23 @@ export interface RunLibraryClaimLedger {
   failed: number;
   cancelledBeforeSource: number;
   legacyMetadataOnly: number;
+}
+
+/**
+ * D3: status counts over the filtered rows, the HiFi's first summary line
+ * ("7 runs · 5 completed · 1 running · 1 failed"). They partition
+ * `filteredRows` exactly as the claim ledger does, and they come from the
+ * same `effective_status` the cards print, so the line and the cards can
+ * never disagree.
+ */
+export interface RunLibraryStatusCounts {
+  completed: number;
+  running: number;
+  failed: number;
+  queued: number;
+  draft: number;
+  cancelled: number;
+  recoveryRequired: number;
 }
 
 export interface RunLibraryFilterCatalog {
@@ -135,6 +184,7 @@ export interface RunLibraryPage {
   hasPrevious: boolean;
   counters: RunLibraryCounters;
   claimLedger: RunLibraryClaimLedger;
+  statusCounts: RunLibraryStatusCounts;
   filterCatalog: RunLibraryFilterCatalog;
 }
 
@@ -154,6 +204,16 @@ interface ClaimLedgerRow {
   cancelled_before_source: string | number;
   legacy_metadata_only: string | number;
 }
+/** D3: the HiFi's first summary line — status counts over the filtered rows. */
+interface StatusCountRow {
+  completed: string | number;
+  running: string | number;
+  failed: string | number;
+  queued: string | number;
+  draft: string | number;
+  cancelled: string | number;
+  recovery_required: string | number;
+}
 interface AlphaFacetRow { alpha_id: string; alpha_name: string; }
 interface ModeFacetRow { mode_key: string; }
 interface ScratchFacetRow { scratch_available: boolean; }
@@ -166,6 +226,8 @@ interface BuiltFilter {
 
 const MAXIMUM_CONCURRENT_LIBRARY_READS = 2;
 const MAXIMUM_QUEUED_LIBRARY_READS = 8;
+/** E11: a page is at most 50 rows plus the keyset probe row. */
+const MAXIMUM_RETAINED_FACT_RUNS = 51;
 
 function asNonNegativeInteger(value: string | number | null | undefined, label: string): number {
   const numeric = typeof value === "number" ? value : Number(value);
@@ -189,6 +251,10 @@ function emptyCounters(): RunLibraryCounters {
 
 function emptyLedger(): RunLibraryClaimLedger {
   return { issued: 0, notIssued: 0, pendingSource: 0, failed: 0, cancelledBeforeSource: 0, legacyMetadataOnly: 0 };
+}
+
+function emptyStatusCounts(): RunLibraryStatusCounts {
+  return { completed: 0, running: 0, failed: 0, queued: 0, draft: 0, cancelled: 0, recoveryRequired: 0 };
 }
 
 /**
@@ -321,6 +387,21 @@ export class ResearchRunLibraryRepository {
             WHERE ${filter.whereSql}`,
         filter.params,
       );
+      // D3: the HiFi's first summary line. Same filtered set, same
+      // `effective_status` the cards print, so the line cannot contradict them.
+      const statuses = await client.query<StatusCountRow>(
+        `SELECT
+             count(*) FILTER (WHERE library.effective_status = 'COMPLETED') AS completed,
+             count(*) FILTER (WHERE library.effective_status = 'RUNNING') AS running,
+             count(*) FILTER (WHERE library.effective_status = 'FAILED') AS failed,
+             count(*) FILTER (WHERE library.effective_status = 'QUEUED') AS queued,
+             count(*) FILTER (WHERE library.effective_status = 'DRAFT') AS draft,
+             count(*) FILTER (WHERE library.effective_status = 'CANCELLED') AS cancelled,
+             count(*) FILTER (WHERE library.effective_status = 'RECOVERY_REQUIRED') AS recovery_required
+             FROM ${filter.fromSql}
+            WHERE ${filter.whereSql}`,
+        filter.params,
+      );
       const alphas = await client.query<AlphaFacetRow>(
         `SELECT alpha_id, max(alpha_name) AS alpha_name
              FROM research.run_library_rows_v1
@@ -376,12 +457,138 @@ export class ResearchRunLibraryRepository {
           cancelledBeforeSource: asNonNegativeInteger(claim.cancelled_before_source, "cancelled claim count"),
           legacyMetadataOnly: asNonNegativeInteger(claim.legacy_metadata_only, "legacy claim count"),
         } : emptyLedger(),
+        statusCounts: statuses.rows[0] ? {
+          completed: asNonNegativeInteger(statuses.rows[0].completed, "completed count"),
+          running: asNonNegativeInteger(statuses.rows[0].running, "running count"),
+          failed: asNonNegativeInteger(statuses.rows[0].failed, "failed count"),
+          queued: asNonNegativeInteger(statuses.rows[0].queued, "queued count"),
+          draft: asNonNegativeInteger(statuses.rows[0].draft, "draft count"),
+          cancelled: asNonNegativeInteger(statuses.rows[0].cancelled, "cancelled count"),
+          recoveryRequired: asNonNegativeInteger(statuses.rows[0].recovery_required, "recovery count"),
+        } : emptyStatusCounts(),
         filterCatalog: {
           alphas: alphas.rows.map((row) => ({ alphaId: row.alpha_id, alphaName: row.alpha_name })),
           modes: modes.rows.map((row) => ({ key: row.mode_key, display: row.mode_key })),
           scratchAvailable: scratch.rows[0]?.scratch_available === true,
         },
       };
+    });
+  }
+
+  /**
+   * E11 (audit 01-7): the retained RS-02 facts of the given runs, in one
+   * bounded read of the newest seal per run.
+   *
+   * The SQL is the one Screen 10 already runs (W6b CG-P19-05,
+   * `lineage.repository.ts`), plus the per-fold OOS trade counts and the
+   * seal's observation count. Nothing is opened: `current_source_seals_v1`
+   * and `current_source_rows_v1` are Portal relations, like every other join
+   * on this page.
+   *
+   * `runIds` is the page (<= 51 rows), so the `= ANY` stays bounded.
+   */
+  async retainedFacts(scope: ResearchScope, runIds: readonly string[]): Promise<RunLibraryRetainedFacts[]> {
+    this.assertScope(scope);
+    if (runIds.length === 0) return [];
+    if (runIds.length > MAXIMUM_RETAINED_FACT_RUNS) {
+      throw new ResearchRunLibraryError(
+        "RESEARCH_RUN_LIBRARY_UNAVAILABLE",
+        "Run Library retained-fact read exceeds its admitted bound.",
+        503,
+      );
+    }
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<RunLibraryRetainedFacts>(
+        `SELECT seal.run_id,
+                seal.artifact_revision,
+                candidate.payload->'trial_facts'->'metrics' AS metrics,
+                folds.fold_count,
+                folds.trade_fold_count,
+                folds.trade_sum,
+                COALESCE((seal.table_rows->>'OBSERVATION')::bigint, 0) AS observation_count
+           FROM unnest($2::text[]) AS wanted(run_id)
+           JOIN LATERAL (
+             SELECT source.workspace_id, source.run_id, source.artifact_revision, source.summary, source.table_rows
+               FROM research.current_source_seals_v1 source
+              WHERE source.workspace_id = $1 AND source.run_id = wanted.run_id
+              ORDER BY source.artifact_revision DESC
+              LIMIT 1
+           ) seal ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT row.payload
+               FROM research.current_source_rows_v1 row
+              WHERE row.workspace_id = seal.workspace_id
+                AND row.run_id = seal.run_id
+                AND row.artifact_revision = seal.artifact_revision
+                AND row.table_kind = 'CANDIDATE'
+                AND row.payload->'trial_facts'->>'source_trial_id' = seal.summary->'selection'->>'trial_id'
+                AND row.payload->>'objective' IS NOT DISTINCT FROM seal.summary->'selection'->>'objective'
+              ORDER BY row.source_ordinal ASC
+              LIMIT 1
+           ) candidate ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT count(*) AS fold_count,
+                    count(row.payload->'fold_facts'->'oos_score'->>'oos_trade_count') AS trade_fold_count,
+                    sum((row.payload->'fold_facts'->'oos_score'->>'oos_trade_count')::numeric) AS trade_sum
+               FROM research.current_source_rows_v1 row
+              WHERE row.workspace_id = seal.workspace_id
+                AND row.run_id = seal.run_id
+                AND row.artifact_revision = seal.artifact_revision
+                AND row.table_kind = 'FOLD'
+           ) folds ON TRUE`,
+        [scope.workspaceId, [...runIds]],
+      );
+      return result.rows;
+    });
+  }
+
+  /**
+   * E11: the retained OBSERVATION equity of one run, bucketed in the database
+   * to at most `maximum` rows so the sparkline never reads a whole tape.
+   *
+   * The bucket rule is the retained lane's own (`OBSERVATION_EXTREMA_BUCKET_V2`
+   * in `current-source.repository.ts`) reduced to first/last/min/max per
+   * bucket: a sparkline that dropped an extremum would flatten the very shape
+   * it exists to show.
+   */
+  async findRetainedSparklineValues(
+    scope: ResearchScope,
+    runId: string,
+    artifactRevision: number,
+    totalRows: number,
+    maximum: number,
+  ): Promise<Array<{ at_utc_ms: string | number | null; equity: string }>> {
+    this.assertScope(scope);
+    const buckets = Math.max(1, Math.floor(maximum / 4));
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<{ at_utc_ms: string | number | null; equity: string }>(
+        totalRows <= maximum
+          ? `SELECT occurred_at_utc_ms AS at_utc_ms, payload->>'equity' AS equity
+               FROM research.current_source_rows_v1
+              WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'OBSERVATION'
+              ORDER BY source_ordinal ASC
+              LIMIT $4`
+          : `WITH obs AS (
+               SELECT source_ordinal, occurred_at_utc_ms, payload->>'equity' AS equity,
+                      (payload->>'equity')::numeric AS equity_numeric,
+                      (source_ordinal * $5::bigint) / $6::bigint AS bucket
+                 FROM research.current_source_rows_v1
+                WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'OBSERVATION'
+             ), picks AS (
+               (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, source_ordinal ASC)
+               UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, source_ordinal DESC)
+               UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, equity_numeric ASC, source_ordinal ASC)
+               UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, equity_numeric DESC, source_ordinal ASC)
+             )
+             SELECT obs.occurred_at_utc_ms AS at_utc_ms, obs.equity
+               FROM obs JOIN picks ON picks.source_ordinal = obs.source_ordinal
+              ORDER BY obs.source_ordinal ASC
+              LIMIT $4`,
+        totalRows <= maximum
+          ? [scope.workspaceId, runId, artifactRevision, maximum]
+          : [scope.workspaceId, runId, artifactRevision, maximum, buckets, totalRows],
+      );
+      return result.rows;
     });
   }
 
@@ -520,7 +727,10 @@ export class ResearchRunLibraryRepository {
                 AND draft.run_id = library.run_id
                 AND draft.actor_user_id = current_setting('research.actor_user_id', true)
               LIMIT 1
-           ) rc_draft ON true`;
+           ) rc_draft ON true
+           LEFT JOIN research.run_producers label_producer
+             ON label_producer.workspace_id = library.workspace_id
+            AND label_producer.run_id = library.run_id`;
   }
 
   static selectColumns(): string {
@@ -545,7 +755,9 @@ export class ResearchRunLibraryRepository {
               rc_pack.delivery_state AS rc_delivery_state,
               rc_pack.approval_state AS rc_approval_state,
               rc_pack.sealed_at_utc_ms AS rc_sealed_at_utc_ms,
-              rc_draft.draft_id AS rc_draft_id`;
+              rc_draft.draft_id AS rc_draft_id,
+              label_producer.execution_profile_id AS display_profile_id,
+              ${runDisplayOrdinalSql("library", "label_producer")} AS display_ordinal`;
   }
 
   private buildFilter(workspaceId: string, query: ResearchRunLibraryQuery): BuiltFilter {

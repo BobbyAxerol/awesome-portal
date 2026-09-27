@@ -141,6 +141,12 @@ describe("P13 Evidence Flow projection authority", () => {
     repository.hub.mockResolvedValue(row);
 
     const first = await service.hub(scope, "run_p13");
+    /* D1: the Hub carries the short run label; this row has none derived, and
+       `null` is the honest answer that makes the screen print the short id. */
+    expect(first.core.run_identity?.display_label).toBeNull();
+    repository.hub.mockResolvedValue({ ...row, displayLabel: "R-WFO-118" });
+    expect((await service.hub(scope, "run_p13")).core.run_identity?.display_label).toBe("R-WFO-118");
+    repository.hub.mockResolvedValue(row);
     expect(first.core.run_identity).toMatchObject({
       status: { value: "READY", availability: { state: "AVAILABLE" } },
       binding: { alpha_id: "alpha-p13", alpha_name: "P13 Alpha", alpha_version_id: "av_p13", availability: { state: "AVAILABLE" } },

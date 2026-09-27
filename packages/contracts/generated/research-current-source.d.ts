@@ -179,53 +179,6 @@ export interface components {
             reason_code: string | null;
             availability: components["schemas"]["Availability"];
         };
-        RetainedAnalyticValue: components["schemas"]["Decimal"] | {
-            long_fraction: components["schemas"]["Decimal"];
-            short_fraction: components["schemas"]["Decimal"];
-            flat_fraction: components["schemas"]["Decimal"];
-        };
-        /** @description E11 exact retained analytic. AVAILABLE always has a value; every absence has value null and a typed reason. Internal source locators are never browser-visible. */
-        RetainedAnalyticMetric: {
-            value: components["schemas"]["RetainedAnalyticValue"] | null;
-            /** @enum {unknown} */
-            unit: "ratio" | "fraction" | "count" | "bars" | "exposure_triplet";
-            definition_id: string;
-            availability: components["schemas"]["Availability"];
-        };
-        /** @description E11 named typed absence. A future source-backed series requires an additive contract revision and a real endpoint; this version never emits a fake href. */
-        RetainedAnalyticSeries: {
-            /** @enum {unknown} */
-            kind: "IS_EQUITY" | "ROLLING_SHARPE_63";
-            href: null;
-            availability: {
-                /** @enum {unknown} */
-                state: "NOT_PUBLISHED" | "NOT_APPLICABLE";
-                reason_code: string;
-            };
-        };
-        RetainedAnalytics: {
-            /** @constant */
-            schema_version: "research.current-source-analytics.v1";
-            metrics: {
-                oos_sharpe: components["schemas"]["RetainedAnalyticMetric"];
-                sharpe_decay: components["schemas"]["RetainedAnalyticMetric"];
-                total_trade_count: components["schemas"]["RetainedAnalyticMetric"];
-            };
-            series: {
-                is_equity: components["schemas"]["RetainedAnalyticSeries"];
-                rolling_sharpe_63: components["schemas"]["RetainedAnalyticSeries"];
-            };
-            behavior: {
-                benchmark_beta: components["schemas"]["RetainedAnalyticMetric"];
-                benchmark_correlation: components["schemas"]["RetainedAnalyticMetric"];
-                skew: components["schemas"]["RetainedAnalyticMetric"];
-                excess_kurtosis: components["schemas"]["RetainedAnalyticMetric"];
-                win_rate: components["schemas"]["RetainedAnalyticMetric"];
-                average_holding_bars: components["schemas"]["RetainedAnalyticMetric"];
-                exposure_long_short_flat: components["schemas"]["RetainedAnalyticMetric"];
-                turnover: components["schemas"]["RetainedAnalyticMetric"];
-            };
-        };
         /** @description W1: exactly one admitted RS-02 lane pair; the source adapter and profile are never mixed. */
         Provenance: {
             /** @enum {unknown} */
@@ -383,14 +336,16 @@ export interface components {
                 availability: components["schemas"]["Availability"];
                 href: string;
             }[];
+            /** @description What this lane structurally does not hold. E11 adds in_sample_account (the HiFi's EChart 1 is IS vs stitched OOS; the retained tape is one stitched account, so the legend states the absence) and rolling_sharpe (QuantBT's rolling Sharpe needs daily returns, which the hourly tape has none of). Both are optional so a capture taken before E11 still validates; the server always emits them. */
             source_absences: {
                 route_ledger: components["schemas"]["Fact"];
                 audited_fills: components["schemas"]["Fact"];
                 benchmark: components["schemas"]["Fact"];
+                in_sample_account?: components["schemas"]["Fact"];
+                rolling_sharpe?: components["schemas"]["Fact"];
             };
             claim: components["schemas"]["ClaimStrip"];
             fold_verdicts: components["schemas"]["FoldVerdicts"];
-            analytics?: components["schemas"]["RetainedAnalytics"];
         };
         EvidenceSeries: components["schemas"]["Common"] & {
             /** @constant */
@@ -426,27 +381,8 @@ export interface components {
                 inner_folds: components["schemas"]["GuardFact"];
                 oos_used_for_selection: components["schemas"]["GuardFact"];
             };
-        };
-        SplitE14: components["schemas"]["Split"] & {
-            integrity: {
-                stitch_digest: {
-                    value: components["schemas"]["Digest"] | null;
-                    availability: components["schemas"]["Availability"];
-                };
-                gap_scan: {
-                    /** @enum {unknown} */
-                    state: "AVAILABLE" | "NOT_RETAINED_LEGACY";
-                    cadence_ms: number | null;
-                    folds: {
-                        fold_id: string;
-                        observed_bars: number;
-                        missing_bars: number;
-                        gap_runs: number;
-                        max_gap_bars: number;
-                    }[];
-                    availability: components["schemas"]["Availability"];
-                };
-            };
+            gap_scan: components["schemas"]["SplitGapScan"];
+            stitch: components["schemas"]["SplitStitch"];
         };
         Search: components["schemas"]["Common"] & {
             /** @constant */
@@ -847,6 +783,47 @@ export interface components {
             reason_code: string | null;
             source: "RETAINED_STITCHED_OOS_PATH" | null;
         };
+        /** @description E14 (5.11): one crossing from a fold's outer test window into the next one's, as QuantBT's account execution plan published it. */
+        BoundaryGap: {
+            previous_fold_id: string | null;
+            fold_id: string | null;
+            boundary_utc_ms: components["schemas"]["UtcMs"] | null;
+            next_test_start_utc_ms: components["schemas"]["UtcMs"] | null;
+            gap_bars: number | null;
+            policy: string | null;
+        };
+        /** @description E14 (5.11): the boundary-integrity gap scan of the retained lane - QuantBT account_execution_plan.boundary_events, verbatim. expected_boundary_count is the retained fold plan's own crossing count (folds - 1), so a scan that covered fewer says so. A boundary scan, not a per-window coverage census. */
+        SplitGapScan: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            /** @enum {unknown} */
+            basis: "QUANTBT_ACCOUNT_EXECUTION_PLAN_BOUNDARY_EVENTS_V1" | "NOT_PUBLISHED";
+            /** @enum {unknown} */
+            scope: "OUTER_FOLD_TEST_WINDOW_BOUNDARIES" | "NOT_PUBLISHED";
+            boundary_count: number | null;
+            expected_boundary_count: number | null;
+            measured_count: number | null;
+            contiguous_count: number | null;
+            max_gap_bars: number | null;
+            boundaries: components["schemas"]["BoundaryGap"][];
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description E14 (5.12): stitched OOS provenance. QuantBT publishes no digest of the stitched series, so digest is the portal's own sha256 over the retained stitch plan and basis says exactly that; it is never an engine artifact digest. boundary_check is the HiFi's "verified against fold boundaries", run over retained values only. */
+        SplitStitch: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            /** @enum {unknown} */
+            basis: "PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1" | "NOT_PUBLISHED";
+            digest: components["schemas"]["Digest"] | null;
+            segment_count: number | null;
+            observation_count: number | null;
+            /** @enum {unknown} */
+            boundary_check: "MATCH" | "MISMATCH" | "NOT_CHECKABLE";
+            boundary_check_reason_code: string | null;
+            availability: components["schemas"]["Availability"];
+        };
         /** @description X2 · B3 (spec 06 A2–A5, B4): the trial surface of a retained WFO run, derived on the server from every retained trial (<= 64 under RS-02, <= 600 points by rule; `sampling` names whether anything was left out). The browser draws coordinates only: placements, quintile ramp steps, 12-bin counts and means, the top-decile share at θ* and the Spearman |ρ| proxy (not fANOVA; NOT_APPLICABLE under 8 complete trials) are all published here. */
         SearchSurface: {
             /** @constant */
@@ -1216,6 +1193,18 @@ export interface components {
             };
             mean_oos_sharpe: components["schemas"]["Decimal"] | null;
             mean_decay: components["schemas"]["Decimal"] | null;
+            /** @description E11: the run's OOS trade count, summed over the published per-fold counts under the same score_basis as mean_*. Withheld whenever a fold did not publish one — a partial sum is a smaller number wearing the run's name. Optional so a pre-E11 capture still validates; the server always emits it. */
+            total_oos_trades?: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                availability: components["schemas"]["Availability"];
+                value: number | null;
+                /** @constant */
+                basis: "SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1";
+                folds_counted: number;
+                folds: number;
+            };
             rows: components["schemas"]["FoldVerdictRow"][];
         };
         SeriesEnvelope: {
@@ -1562,7 +1551,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["SplitE14"] | components["schemas"]["LaneNotApplicable"];
+                "application/json": components["schemas"]["Split"] | components["schemas"]["LaneNotApplicable"];
             };
         };
         /** @description Bounded retained trial/candidate ledger */

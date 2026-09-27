@@ -1514,21 +1514,49 @@ export class ResearchMetadataRepository {
         throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "sibling.whatIfCellId is invalid.", 400);
       }
     }
+    if (input.clonedFrom) requireOpaqueId(input.clonedFrom.parentRunId, "clonedFrom.parentRunId");
+    if (input.sibling && input.clonedFrom) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "An attempt declares one parent relation, not two.", 400);
+    }
     return this.withScopedWrite(scope, async (client) => {
-      // W5a · P19: a what-if sibling links to the frozen run's own attempt.
+      /*
+       * The parent edge. A what-if sibling (W5a) and a `?from=` clone (E13)
+       * resolve the same way — the parent run's own PRIMARY attempt — and
+       * differ only in what they are allowed to claim afterwards.
+       *
+       * E13: before this, the clone path declared nothing, so every cloned
+       * attempt was inserted with a NULL parent and Screen 10 rendered 33
+       * roots and an empty "diff vs parent". Attempts written before the fix
+       * still have no parent and must keep reading ROOT: this writes the edge
+       * for new work only and backfills nothing, because a guessed parent is
+       * a lineage claim nobody made.
+       */
+      const declared = input.sibling ?? input.clonedFrom ?? null;
       let parentAttemptId: string | null = null;
-      if (input.sibling) {
+      if (declared) {
         const parent = await client.query<{ attempt_id: string; alpha_version_id: string | null }>(
           `SELECT run.attempt_id, attempt.alpha_version_id
              FROM research.runs run
              JOIN research.attempts attempt
                ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
             WHERE run.workspace_id = $1 AND run.run_id = $2 AND run.relationship_kind = 'PRIMARY'`,
-          [scope.workspaceId, input.sibling.parentRunId],
+          [scope.workspaceId, declared.parentRunId],
         );
         const row = parent.rows[0];
-        if (!row) throw new ResearchMetadataError("RESEARCH_RUN_NOT_FOUND", "The frozen run a sibling forks from was not found.", 404);
-        if (row.alpha_version_id !== input.alphaVersionId) {
+        if (!row) {
+          throw new ResearchMetadataError(
+            "RESEARCH_RUN_NOT_FOUND",
+            input.sibling
+              ? "The frozen run a sibling forks from was not found."
+              : "The run this attempt was cloned from was not found.",
+            404,
+          );
+        }
+        // Only a sibling must match: it claims to be the same experiment at a
+        // different what-if node. A clone onto another AlphaVersion is a real
+        // clone, and refusing it would break the one path Screens 03, 07 and
+        // 10 offer for starting from an existing run.
+        if (input.sibling && row.alpha_version_id !== input.alphaVersionId) {
           throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "A sibling attempt must bind the same AlphaVersion as its parent.", 400);
         }
         parentAttemptId = row.attempt_id;
@@ -1545,9 +1573,13 @@ export class ResearchMetadataRepository {
         [
           scope.workspaceId, input.attemptId, input.alphaVersionId,
           input.clientIntentId, input.requestPayloadDigest,
-          input.sibling ? "CLONE_FOR_EXPERIMENT" : input.intentKind,
+          declared ? "CLONE_FOR_EXPERIMENT" : input.intentKind,
           scope.actorUserId, parentAttemptId,
-          input.sibling ? `what-if fork of ${input.sibling.parentRunId} at ${input.sibling.whatIfCellId}` : null,
+          input.sibling
+            ? `what-if fork of ${input.sibling.parentRunId} at ${input.sibling.whatIfCellId}`
+            : input.clonedFrom ? `clone of ${input.clonedFrom.parentRunId}` : null,
+          // `relation_kind` stays NULL for a clone: the DB CHECK reserves
+          // SIBLING_OF for a what-if fork, and a clone makes no such claim.
           input.sibling ? "SIBLING_OF" : null,
         ],
       );

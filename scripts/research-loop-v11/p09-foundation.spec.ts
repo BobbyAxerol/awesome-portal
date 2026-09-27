@@ -123,6 +123,7 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     for (const cardId of ["execute-replay", "attempt-lineage", "compare", "release-candidate", "run-report"]) {
       expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === cardId)).toMatchObject({ availability: "AVAILABLE" });
     }
+    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).filter((card: any) => card.availability === "PLANNED")).toHaveLength(0);
     expect((await pool.query("SELECT revision, content_sha256 FROM research.journey_descriptor_registry ORDER BY revision")).rows).toEqual([
       { revision: "1", content_sha256: expect.any(String) },
       { revision: "2", content_sha256: expect.any(String) },

@@ -31,6 +31,7 @@ import { LineageLink, lineageHref } from "./LineageLink";
 import { BoundWarningNote } from "./BoundWarning";
 import { isWhatIf, WhatIfCard } from "./WhatIfCard";
 import { CopyThetaDigest, ServedStage4Binding } from "./Stage4Binding";
+import { DigestChain, hubDigestChain, retainedDigestChain, verifyChainLabel } from "./DigestChain";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
@@ -1512,6 +1513,8 @@ function RetainedFreezeBody({
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <RetainedFrozenTable freeze={freeze} identity={known} />
         <div className="flex min-w-0 flex-col gap-3">
+          {/* E2c (7.9): the chain the hi-fi draws, above the custody receipt it is verified by. */}
+          <DigestChain chain={retainedDigestChain(freeze)} verifyLabel={verifyChainLabel(verify)} />
           <RetainedIntegrity freeze={freeze} verify={verify} onVerify={onVerify} />
           {freeze.stage4_binding ? (
             <ServedStage4Binding binding={freeze.stage4_binding} authority={freeze.parameter_authority ?? null} />
@@ -1800,6 +1803,8 @@ export function FreezeScreen({
               </section>
 
               <div className="flex min-w-0 flex-col gap-3">
+                {/* E2c (7.9): the chain the hi-fi draws, above the integrity card it is verified by. */}
+                <DigestChain chain={hubDigestChain(detail)} verifyLabel={verifyChainLabel(verify)} />
                 <IntegrityPanel integrity={freeze.integrity} bytes={detail.artifact_bytes} verify={verify} onVerify={onVerify} />
                 {detail.stage4_binding ? (
                   <ServedStage4Binding binding={detail.stage4_binding} authority={detail.parameter_authority ?? null} />

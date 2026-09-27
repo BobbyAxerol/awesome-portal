@@ -7,6 +7,7 @@ import type { Pool, PoolClient } from "pg";
 import { CONTROL_API_POOL } from "../tokens";
 import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bounded-read";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
+import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import { ResearchEvidenceError } from "./evidence.error";
 import type { ProgressIngressScope } from "./progress.repository";
 
@@ -65,6 +66,8 @@ export interface EvidenceHubRow {
   datasetBindingDigest: string | null;
   manifestDigest: string | null;
   progressSnapshot: JsonValue;
+  /** D1: the short run label (`R-WFO-118`); null when none can be derived. */
+  displayLabel: string | null;
   jobState: string | null;
   revision: string | null;
   projection: JsonValue;
@@ -112,6 +115,8 @@ interface HubQueryRow {
   readiness: "COMPLETE" | "PARTIAL" | null;
   source_evidence_digest: string | null;
   received_at: Date | null;
+  display_profile_id: string | null;
+  display_ordinal: string | number | null;
 }
 
 interface LegacyRunRow { run_id: string; }
@@ -363,7 +368,9 @@ export class ResearchEvidenceRepository {
                 projection.projection,
                 projection.readiness,
                 projection.source_evidence_digest,
-                projection.received_at
+                projection.received_at,
+                producer.execution_profile_id AS display_profile_id,
+                ${runDisplayOrdinalSql("durable_run", "producer")} AS display_ordinal
            FROM research.run_producers producer
            JOIN research.runs durable_run
              ON durable_run.workspace_id = producer.workspace_id AND durable_run.run_id = producer.run_id
@@ -408,6 +415,8 @@ export class ResearchEvidenceRepository {
           datasetBindingDigest: row.dataset_binding_digest,
           manifestDigest: row.manifest_digest,
           progressSnapshot: row.progress_snapshot,
+          // D1: the short label Screen 04 and its stage screens print.
+          displayLabel: runDisplayLabel(row.display_profile_id, runDisplayOrdinal(row.display_ordinal)),
           jobState: row.job_state,
           revision: row.projection_revision,
           projection: row.projection,
@@ -427,7 +436,7 @@ export class ResearchEvidenceRepository {
         runState: null, runCreatedAtUtcMs: null, alphaId: null, alphaName: null, alphaVersionId: null,
         requestedSpec: null,
         requestedSpecDigest: null, effectiveSpecDigest: null, datasetBindingDigest: null, manifestDigest: null,
-        progressSnapshot: null, jobState: null, revision: null, projection: null, readiness: null,
+        progressSnapshot: null, displayLabel: null, jobState: null, revision: null, projection: null, readiness: null,
         sourceEvidenceDigest: null, receivedAt: null, asOfUtcMs,
       };
   }

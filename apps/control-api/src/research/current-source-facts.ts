@@ -188,7 +188,39 @@ export function foldVerdicts(
     },
     mean_oos_sharpe: selectedMeans.meanOosSharpe,
     mean_decay: selectedMeans.meanDecay,
+    total_oos_trades: totalOosTrades(rows),
     rows,
+  };
+}
+
+/**
+ * E11 (audit 04-6): the run's OOS trade count.
+ *
+ * QuantBT retains `oos_trade_count` per fold and nothing for the run. The
+ * folds' test windows are disjoint, so their sum is the run's OOS trade
+ * count — but only when every fold published one. One missing fold makes the
+ * sum a smaller number wearing the run's name, so it is withheld with the
+ * reason instead. Nothing here estimates: an absent count stays absent.
+ */
+function totalOosTrades(rows: readonly { oos_trades: string | null }[]) {
+  const counted = rows.filter((row) => row.oos_trades !== null);
+  const parsed = counted.map((row) => Number(row.oos_trades));
+  const usable = parsed.every((value) => Number.isSafeInteger(value) && value >= 0);
+  const complete = rows.length > 0 && counted.length === rows.length && usable;
+  const reason = rows.length === 0
+    ? "RS02_SEAL_RETAINED_NO_FOLD_ROWS"
+    : !usable
+      ? "QUANTBT_RETAINED_A_FOLD_OOS_TRADE_COUNT_THAT_IS_NOT_A_COUNT"
+      : "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT";
+  const state = complete ? "AVAILABLE" as const : "NOT_PUBLISHED" as const;
+  return {
+    state,
+    reason_code: complete ? null : reason,
+    availability: outer(state, complete ? null : reason),
+    value: complete ? parsed.reduce((sum, value) => sum + value, 0) : null,
+    basis: "SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1" as const,
+    folds_counted: counted.length,
+    folds: rows.length,
   };
 }
 

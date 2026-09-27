@@ -6,10 +6,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ControlApiConfig } from "../src/config";
 import { ResearchRunLibraryItemSchema } from "../src/research/run-library.contract";
-import type { RunLibraryRow, RunLibrarySparklineSource } from "../src/research/run-library.repository";
+import type {
+  RunLibraryRetainedFacts,
+  RunLibraryRow,
+  RunLibrarySparklineSource,
+} from "../src/research/run-library.repository";
 import {
   extremaPreservingSample,
   projectionMetricValues,
+  retainedCardFacts,
   ResearchRunLibraryService,
 } from "../src/research/run-library.service";
 import { testConfig } from "./harness";
@@ -111,6 +116,8 @@ function row(overrides: Partial<RunLibraryRow> = {}): RunLibraryRow {
     rc_approval_state: null,
     rc_sealed_at_utc_ms: null,
     rc_draft_id: null,
+    display_profile_id: "p10.delta-signal-notional-wfo.v1",
+    display_ordinal: "118",
     ...overrides,
   };
 }
@@ -125,6 +132,12 @@ function page(rows: RunLibraryRow[]) {
     hasPrevious: false,
     counters: { logicalRuns: rows.length, workerChildren: 0, technicalRetries: 0, legacyMetadataRows: 0 },
     claimLedger: { issued: 0, notIssued: rows.length, pendingSource: 0, failed: 0, cancelledBeforeSource: 0, legacyMetadataOnly: 0 },
+    statusCounts: {
+      completed: rows.filter((candidate) => candidate.effective_status === "COMPLETED").length,
+      running: rows.filter((candidate) => candidate.effective_status === "RUNNING").length,
+      failed: rows.filter((candidate) => candidate.effective_status === "FAILED").length,
+      queued: 0, draft: 0, cancelled: 0, recoveryRequired: 0,
+    },
     filterCatalog: { alphas: [], modes: [], scratchAvailable: true },
   };
 }
@@ -340,5 +353,143 @@ describe("RF-05 P12 Run Library service mapping", () => {
     expect(none!.stages.every((cell) => cell.state === "pend")).toBe(true);
     expect(none!.stats[0]).toMatchObject({ role: "FAILED_AT", value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P11_FAILED_STAGE_NOT_PUBLISHED" } });
     expect(none!.stats[1]).toMatchObject({ role: "FAILURE_REASON", value: "LEASE_EXPIRED" });
+  });
+
+  it("D1: prints the label the hi-fi names a run by", async () => {
+    const repository = { list: vi.fn().mockResolvedValue(page([row()])), findSparklineSource: vi.fn() };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    /* The Library is the read that teaches every other screen this run's
+       label, so `R-WFO-118` has to survive the mapper intact. */
+    expect((await service.list(scope, QUERY)).items[0]!.display_label).toBe("R-WFO-118");
+    expect(
+      service.mapRow(row({ display_profile_id: "p04.fixed-qualification.v1", display_ordinal: 7 }))
+        .display_label,
+    ).toBe("R-P04-007");
+  });
+
+  it("D1: a row with no ordinal of its own is unlabelled, never numbered", () => {
+    const repository = { list: vi.fn(), findSparklineSource: vi.fn() };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    /* A worker child and a retired 1.0.8 row are not logical runs. The SQL
+       gives them no ordinal; the mapper must publish `null` rather than fall
+       back to a number, so the reader prints the short id instead. */
+    const child = service.mapRow(row({
+      run_kind: "AUDIT", relationship_kind: "AUDIT_OF_SELECTION", display_ordinal: null,
+    }));
+    expect(child.display_label).toBeNull();
+    const legacy = service.mapRow(row({
+      source_kind: "LEGACY_1_0_8_METADATA", relationship_kind: "LEGACY_UNKNOWN",
+      display_profile_id: null, display_ordinal: null,
+    }));
+    expect(legacy.display_label).toBeNull();
+    /* Still valid items: the contract makes the field nullable, not absent. */
+    for (const item of [child, legacy]) {
+      expect(ResearchRunLibraryItemSchema.safeParse(item).success).toBe(true);
+    }
+  });
+});
+
+/* ------------------------------------------------------------------ E11 */
+
+describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub never published", () => {
+  /** The real Delta walk-forward seal's shape, values from `w3RealWfo.fixture.json`. */
+  const retainedRow = (overrides: Partial<RunLibraryRetainedFacts> = {}): RunLibraryRetainedFacts => ({
+    run_id: "rrun_unit",
+    artifact_revision: "1",
+    metrics: { mean_oos_sharpe: "-5.354970424211971", mean_decay: "3.911439612138451" },
+    fold_count: "2",
+    trade_fold_count: "2",
+    trade_sum: "10",
+    observation_count: "1056",
+    ...overrides,
+  });
+  /** A hub-less row: exactly what a Delta WFO run looks like to the Library. */
+  const hubless = () => row({ evidence_revision: null, evidence_projection: null, evidence_equity_state: null });
+
+  async function card(retained: RunLibraryRetainedFacts[], rows = [hubless()]) {
+    const repository = {
+      list: vi.fn().mockResolvedValue(page(rows)),
+      retainedFacts: vi.fn().mockResolvedValue(retained),
+      findSparklineSource: vi.fn(),
+    };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    const response = await service.list(scope, QUERY);
+    return { item: response.items[0]!, response, repository };
+  }
+
+  it("prints QuantBT's own fold means and the summed OOS trades instead of P13_SOURCE_EVIDENCE_NOT_PUBLISHED", async () => {
+    const { item } = await card([retainedRow()]);
+    expect(ResearchRunLibraryItemSchema.safeParse(item).success).toBe(true);
+    expect(item.stats.map((cell) => [cell.role, cell.value, cell.scope])).toEqual([
+      ["OOS_SHARPE", "-5.354970424211971", "OOS"],
+      ["DECAY", "3.911439612138451", "OOS"],
+      ["TRADE_COUNT", "10", "OOS"],
+    ]);
+    /* The same definition ids Screen 10 publishes, so 01 and 10 cannot disagree. */
+    expect(item.stats[0]!.definition_id).toBe("research.current-source.v1.selected-trial-mean-oos-sharpe");
+    expect(item.stats[1]!.definition_id).toBe("research.current-source.v1.selected-trial-mean-decay");
+    /* And the card may now ask for its curve. */
+    expect(item.sparkline).toMatchObject({ kind: "oos_equity", availability: { state: "AVAILABLE" } });
+  });
+
+  it("withholds the trade count rather than publishing a partial sum", async () => {
+    const { item } = await card([retainedRow({ fold_count: "5", trade_fold_count: "2", trade_sum: "10" })]);
+    expect(item.stats[2]).toMatchObject({
+      role: "TRADE_COUNT",
+      value: null,
+      availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT" },
+    });
+    /* The two means the lane did retain are still published. */
+    expect(item.stats[0]!.value).toBe("-5.354970424211971");
+  });
+
+  it("names the lane's own absence when the selected trial retained no metrics", async () => {
+    const { item } = await card([retainedRow({ metrics: null })]);
+    expect(item.stats.map((cell) => [cell.role, cell.value, cell.availability.reason_code])).toEqual([
+      ["OOS_SHARPE", null, "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS"],
+      ["DECAY", null, "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS"],
+      ["TRADE_COUNT", "10", null],
+    ]);
+  });
+
+  it("keeps the hub's absence for a run that has no retained seal either", async () => {
+    const { item, repository } = await card([]);
+    expect(repository.retainedFacts).toHaveBeenCalledWith(scope, ["rrun_unit"]);
+    for (const cell of item.stats) {
+      expect(cell.value).toBeNull();
+      expect(cell.availability.reason_code).toBe("P13_SOURCE_EVIDENCE_NOT_PUBLISHED");
+    }
+    expect(item.sparkline.availability.reason_code).toBe("P13_SOURCE_EVIDENCE_NOT_PUBLISHED");
+  });
+
+  it("never asks the retained lane about a run the hub already published", async () => {
+    const repository = {
+      list: vi.fn().mockResolvedValue(page([row()])),
+      retainedFacts: vi.fn().mockResolvedValue([]),
+      findSparklineSource: vi.fn(),
+    };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    await service.list(scope, QUERY);
+    expect(repository.retainedFacts).not.toHaveBeenCalled();
+  });
+
+  it("D3: publishes the status counts the HiFi's first summary line reads", async () => {
+    const { response } = await card([retainedRow()]);
+    expect(response.status_counts).toEqual({
+      COMPLETED: 1, RUNNING: 0, FAILED: 0, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0,
+    });
+  });
+
+  it("reads a retained row into the card's shape, and refuses one that is not a seal", () => {
+    expect(retainedCardFacts(retainedRow())).toMatchObject({
+      artifactRevision: 1, meanOosSharpe: "-5.354970424211971", meanDecay: "3.911439612138451",
+      oosTrades: 10, oosTradesReason: null, observationCount: 1056,
+    });
+    expect(retainedCardFacts(retainedRow({ artifact_revision: "not-a-revision" }))).toBeNull();
+    /* A value that is not an exact decimal is dropped, never coerced. */
+    expect(retainedCardFacts(retainedRow({ metrics: { mean_oos_sharpe: "NaN", mean_decay: 3.9 } })))
+      .toMatchObject({ meanOosSharpe: null, meanDecay: null });
+    expect(retainedCardFacts(retainedRow({ fold_count: "0", trade_fold_count: "0", trade_sum: null })))
+      .toMatchObject({ oosTrades: null, oosTradesReason: "RS02_SEAL_RETAINED_NO_FOLD_ROWS" });
   });
 });

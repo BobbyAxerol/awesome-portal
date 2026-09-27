@@ -30,7 +30,7 @@ import type {
   JourneyPhase,
 } from "./foundationClient";
 import { ResearchPanel } from "./ResearchPanel";
-import { resolveJourneyCardRoute } from "./screenRoutes";
+import { needsRunToOpen, pickRunHref, resolveJourneyCardRoute } from "./screenRoutes";
 import type { ResearchState } from "./state";
 import { CursorNotice } from "./CursorNotice";
 import { decodeInspectionCursor, encodeInspectionCursor, type CursorProblem } from "./inspectionCursor";
@@ -107,6 +107,12 @@ function TagLegend() {
   );
 }
 
+const CARD_CLASS =
+  "jm-card flex min-w-[180px] max-w-[300px] flex-1 flex-col gap-1 rounded-[8px] px-3 py-2.5 shadow-[0_1px_2px_rgba(28,37,50,.05)] transition-[filter,border-color] duration-[120ms] hover:brightness-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
+
+/** D2: the badge on a card that opens the Run Library to choose its run. */
+export const PICK_RUN_BADGE = "PICK A RUN";
+
 function CardBody({ card, blocked }: { card: JourneyCard; blocked: string | null }) {
   const tone = TAG_STYLE[card.target_kind];
   return (
@@ -134,15 +140,46 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
   const decoded = card.target_fragment ? decodeInspectionCursor(card.target_fragment) : null;
   const fragment = decoded && decoded.problems.length === 0 ? encodeInspectionCursor(decoded.cursor) : "";
   const href = route && fragment ? `${route}#${fragment}` : route;
-  const blocked = card.requires_run && !runId && card.availability === "AVAILABLE"
-    ? "SELECT RUN" : unreachableReason(card, route);
+  /*
+   * D2 (audit 00-4): a card that needs a run is not a dead end. Before, 14
+   * cards greyed to "SELECT RUN" with nowhere to select one, so the map
+   * pointed at nothing past the hub. Now the card opens the Run Library
+   * carrying its own target, and the Library opens this screen for the run
+   * the reader picks. We do not guess "the latest run" — the reader chooses.
+   */
+  const picksRun = card.availability === "AVAILABLE" && !route && needsRunToOpen(card.target_key);
+  const blocked = picksRun ? null : unreachableReason(card, route);
   const tone = TAG_STYLE[card.target_kind];
+
+  if (picksRun) {
+    return (
+      <Link
+        data-card={card.card_id}
+        data-card-kind={card.target_kind}
+        data-card-availability={card.availability}
+        data-card-picks-run={card.target_key}
+        className={CARD_CLASS}
+        style={{
+          border: `${card.target_kind === "RESEARCH_SCREEN" ? 1.5 : 1}px solid ${tone.border}`,
+          background: tone.background,
+          cursor: "pointer",
+        }}
+        to={pickRunHref(card.target_key)}
+        data-card-route={pickRunHref(card.target_key)}
+      >
+        <CardBody card={card} blocked={PICK_RUN_BADGE} />
+        <span className="mono text-[8.5px] font-bold" style={{ color: "var(--accent)" }}>
+          pick a run →
+        </span>
+      </Link>
+    );
+  }
 
   const shared = {
     "data-card": card.card_id,
     "data-card-kind": card.target_kind,
     "data-card-availability": card.availability,
-    className: "jm-card flex min-w-[180px] max-w-[300px] flex-1 flex-col gap-1 rounded-[8px] px-3 py-2.5 shadow-[0_1px_2px_rgba(28,37,50,.05)] transition-[filter,border-color] duration-[120ms] hover:brightness-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]",
+    className: CARD_CLASS,
     style: {
       border: `${card.target_kind === "RESEARCH_SCREEN" ? 1.5 : 1}px solid ${tone.border}`,
       background: tone.background,

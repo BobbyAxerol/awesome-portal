@@ -723,6 +723,9 @@ export class ResearchEvidenceService {
     const requested = requestedParsed?.success ? requestedParsed.data : null;
     return {
       status: { value: runState, availability: statusAvailability },
+      // D1: the short label Screen 04 and its stage screens print instead of
+      // the 37-character id. Presentation only; `run_id` is the identity.
+      display_label: row.displayLabel ?? null,
       binding: {
         alpha_id: bindingAvailability.state === "AVAILABLE" ? row.alphaId : null,
         alpha_name: bindingAvailability.state === "AVAILABLE" ? row.alphaName : null,

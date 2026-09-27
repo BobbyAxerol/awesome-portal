@@ -228,7 +228,11 @@ test("RF01-F5 S00 hands its cursor to S04 through the same codec", async ({ page
   await freezeClock(page);
   await stubPortalApi(page, "healthy");
   await page.route("**/api/v1/research/journey*", async (route) => {
-    const body = JSON.parse(readFileSync(join(HERE, "research-foundation", "journey.json"), "utf8")) as {
+    /* E12 / CG-P09-02: the canonical contract fixture, not a local copy that
+       had drifted to descriptor revision 1. */
+    const body = JSON.parse(
+      readFileSync(join(HERE, "..", "..", "..", "..", "packages", "contracts", "fixtures", "research-foundation.journey-v2.valid.json"), "utf8"),
+    ) as {
       inspection: Record<string, unknown>;
     };
     const url = new URL(route.request().url());

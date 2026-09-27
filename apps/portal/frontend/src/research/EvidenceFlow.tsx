@@ -2542,10 +2542,13 @@ function RetainedEquityPanels({
   slot,
   onNeeded,
   boundaries,
+  inSampleAbsence,
 }: {
   slot: RetainedSeriesSlot;
   onNeeded: () => void;
   boundaries: FoldBoundary[];
+  /** E11 / audit 04-7: why this chart has no IS series. */
+  inSampleAbsence: Availability;
 }) {
   useEffect(() => {
     onNeeded();
@@ -2585,6 +2588,19 @@ function RetainedEquityPanels({
             <EquityChart points={drawn} boundaries={boundaries} />
           </ChartFrame>
         ))}
+        {/* HiFi EChart 1 is "IS vs stitched OOS", two series and a legend.
+            This lane retains one stitched account, so the second series is
+            stated as absent rather than silently missing (audit 04-7). */}
+        <p
+          className="mt-2 text-[11px] leading-[1.45]"
+          style={{ color: "var(--ink-soft)" }}
+          data-series-absent="EQUITY_IS"
+          data-absence-reason={inSampleAbsence.reason_code ?? undefined}
+        >
+          No IS equity series is drawn:{" "}
+          {reasonCodeSentence(inSampleAbsence.reason_code)
+            ?? "the retained walk-forward lane publishes no in-sample account, and this screen does not compute one."}
+        </p>
         {ready ? (
           <div className="mono mt-2 flex flex-wrap gap-x-4 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-retained-provenance>
             <span>source retained current-source · {ready.provenance.profile_id}</span>
@@ -2853,6 +2869,16 @@ function VerdictTable({ hub }: { hub: EvidenceHub }) {
 
 /* ------------------------------------------------ W3b · retained headline */
 
+/** E11: the lane's own run-level OOS trade count block (`fold_verdicts`). */
+type RetainedTotalTrades = {
+  state: "AVAILABLE" | "NOT_PUBLISHED";
+  reason_code: string | null;
+  value: number | null;
+  basis: string;
+  folds_counted: number;
+  folds: number;
+};
+
 /** A retained absence the UI names itself: the lane has no field for it. */
 const RETAINED_NO_FIELD: Availability = { state: "NOT_PUBLISHED", reason_code: "UI_RETAINED_LANE_HAS_NO_FIELD" };
 const RETAINED_NO_SERIES: Availability = { state: "NOT_PUBLISHED", reason_code: "UI_RETAINED_LANE_HAS_NO_SERIES" };
@@ -2949,8 +2975,22 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
         );
       case "BENCHMARK_RETURN_FRACTION":
         return fact(key, null, "fraction", "retained lane · benchmark", laneAbsence(absences?.benchmark, RETAINED_NO_FIELD));
-      case "TRADE_COUNT":
-        return fact(key, null, "count", "per-fold OOS trades are in the verdict table");
+      case "TRADE_COUNT": {
+        /* E11 (audit 04-6): the lane now publishes the run's OOS trade count
+           as the sum of its published per-fold counts, under the same basis
+           as `mean_*`. The UI does not add anything up — an incomplete sum
+           arrives as a typed absence with the fold it is missing. */
+        const total = (verdicts as { total_oos_trades?: RetainedTotalTrades } | null)?.total_oos_trades ?? null;
+        return fact(
+          key,
+          verdictsOk && total && total.state === "AVAILABLE" ? total.value : null,
+          "count",
+          "sum of published per-fold OOS trades · QuantBT fold score",
+          total
+            ? { state: "NOT_PUBLISHED", reason_code: total.reason_code ?? "UI_RETAINED_LANE_HAS_NO_FIELD" }
+            : RETAINED_NO_FIELD,
+        );
+      }
       default:
         return fact(key, null, "fraction", "retained lane · no such field");
     }
@@ -3022,7 +3062,15 @@ export function retainedSeriesLinks(evidence: CurrentSourceEvidence): EvidenceHu
     mapped("MONTHLY_RETURNS"),
     mapped("RETURN_DISTRIBUTION"),
     mapped("ROLLING_RETURNS_20"),
-    { kind: "ROLLING_SHARPE_63", availability: RETAINED_NO_SERIES, href: null } as EvidenceHub["series"][number],
+    {
+      kind: "ROLLING_SHARPE_63",
+      /* E11: the lane now names the cause itself — an hourly tape carries no
+         daily-return series, so QuantBT's rolling Sharpe(63 daily returns)
+         has no input here. The UI's older "no such series" stands in only
+         for a capture taken before the lane published the reason. */
+      availability: laneAbsence(absences?.rolling_sharpe, RETAINED_NO_SERIES),
+      href: null,
+    } as EvidenceHub["series"][number],
     {
       kind: "ROLLING_BETA_63",
       availability: laneAbsence(absences?.benchmark, RETAINED_NO_SERIES),
@@ -3209,7 +3257,15 @@ function SummaryTab({
       </div>
 
       {retained ? (
-        <RetainedEquityPanels slot={retainedSeries} onNeeded={ensureRetainedSeries} boundaries={boundaries} />
+        <RetainedEquityPanels
+          slot={retainedSeries}
+          onNeeded={ensureRetainedSeries}
+          boundaries={boundaries}
+          inSampleAbsence={laneAbsence(
+            (retained as Partial<CurrentSourceEvidence> | null)?.source_absences?.in_sample_account,
+            RETAINED_NO_SERIES,
+          )}
+        />
       ) : null}
 
       {retained ? null : (
@@ -3997,10 +4053,11 @@ export function EvidenceFlow({
   if (cursor.stage === "summary") summaryVisited.current = true;
   const summaryKept = summaryVisited.current;
 
-  /* A run id is 37 characters; the full one is on the identity line, and at
-     full length the crumb wrapped the 56px topbar. */
-  const crumbRun = runId.length > 16 ? `${runId.slice(0, 13)}…` : runId;
-  useTopbarCrumb(notFound ? null : `${crumbRun} / ${STAGE_CRUMB[cursor.stage]}`);
+  /* D1: the run is the shell's crumb now (`researchRunCrumb`), written once as
+     `R-WFO-118` for every run-scoped address instead of as a 13-character
+     slice of the id here. This screen names only the stage, because only this
+     screen knows it — the cursor is in the hash. */
+  useTopbarCrumb(notFound ? null : STAGE_CRUMB[cursor.stage]);
 
   /* FE-S04-07: closing the panel, by the chip or by Escape, hands focus back to the chip. */
   useEffect(() => {

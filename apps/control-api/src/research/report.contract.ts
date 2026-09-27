@@ -49,11 +49,27 @@ const ReportFactSchema = z.object({
   availability: AvailabilitySchema,
 }).strict();
 
+/**
+ * E14 · 9.7 — what an identity value does not say on its own.
+ *
+ * A fixed-profile run still carries the optimizer its request declared, so
+ * `mode_1_decay × global` reads as if a search had run. The qualifier is the
+ * same fact Screen 06 already publishes (`requested_optimizer` =
+ * `DECLARED_NOT_EXECUTED`), carried onto the identity row so the sheet reads
+ * the same way. Additive and optional: a core sealed before E14 has none.
+ */
+const IdentityQualifierSchema = z.object({
+  state: z.enum(["DECLARED_NOT_EXECUTED"]),
+  text: z.string().min(1).max(96),
+  reason_code: ReasonCodeSchema,
+}).strict();
+
 const IdentityFieldSchema = z.object({
   key: z.string().regex(/^[a-z][a-z0-9_]{2,63}$/),
   label: z.string().min(1).max(96),
   value: z.string().min(1).max(1_024).nullable(),
   availability: AvailabilitySchema,
+  qualifier: IdentityQualifierSchema.nullable().optional(),
 }).strict();
 
 const ReportMetricSchema = z.object({
@@ -68,7 +84,8 @@ const ReportMetricSchema = z.object({
 }).strict();
 
 const HeadlineSchema = z.object({
-  key: z.enum(["OOS_SHARPE", "OOS_RETURN", "DECAY_MEAN", "MAX_DRAWDOWN", "TRADES", "WIN_RATE", "FUNDING"]),
+  /** E14 · 9.8: `NET_RETURN` is additive — a core sealed before E14 has six tiles. */
+  key: z.enum(["NET_RETURN", "OOS_SHARPE", "DECAY_MEAN", "MAX_DRAWDOWN", "TRADES", "WIN_RATE", "FUNDING"]),
   label: z.string().min(1).max(96),
   value: ExactDecimalSchema.nullable(),
   availability: AvailabilitySchema,
@@ -126,7 +143,7 @@ export const ResearchReportFrozenCoreV1Schema = z.object({
   passport: z.array(ReportFactSchema).length(6),
   identity: z.array(IdentityFieldSchema).length(12),
   metrics: z.array(ReportMetricSchema).length(8),
-  headline: z.array(HeadlineSchema).length(6),
+  headline: z.array(HeadlineSchema).min(6).max(7),
   headline_footnote: z.string().min(1).max(512),
   equity: z.object({
     state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
@@ -346,7 +363,7 @@ export const ResearchReportFrozenCoreV2Schema = z.object({
   passport: z.array(ReportFactV2Schema).length(6),
   identity: z.array(IdentityFieldSchema).min(12).max(24),
   metrics: z.array(ReportMetricV2Schema).min(1).max(16),
-  headline: z.array(HeadlineV2Schema).length(6),
+  headline: z.array(HeadlineV2Schema).min(6).max(7),
   headline_footnote: z.string().min(1).max(512),
   equity: EquityV2Schema,
   equity_is: EquityV2Schema,

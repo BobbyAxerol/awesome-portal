@@ -63,12 +63,16 @@ export interface components {
              * @enum {unknown}
              */
             intent_kind: "NEW" | "CLONE_FOR_EXPERIMENT" | "REPRODUCE_EXISTING" | "UPGRADE_ENGINE_EXPERIMENT";
-            /** @description W5a · P19: a sibling attempt forked from a Screen-07 what-if node. The run is a NEW intent with its own preflight and config_hash; the server links its attempt to the frozen run's attempt as SIBLING_OF. */
+            /** @description The run this attempt came out of, when the browser opened the draft from one. The run is still a NEW intent with its own preflight and config_hash either way; the server records the edge, never a dependency. SIBLING_OF (W5a · P19) is a Screen-07 what-if node made real: it names the cell and must bind the same AlphaVersion as its parent. CLONE_OF (E13) is the ?from=<run> copy Screens 03, 07 and 10 offer: it names no cell and does not require the same AlphaVersion. Before E13 the clone declared nothing, so every cloned attempt was stored with a null parent_attempt_id and Screen 10 read every attempt as ROOT with an empty diff. */
             lineage?: {
                 /** @constant */
                 relation: "SIBLING_OF";
                 parent_run_id: string;
                 what_if_cell_id: string;
+            } | {
+                /** @constant */
+                relation: "CLONE_OF";
+                parent_run_id: string;
             };
         };
         RunCreateResponse: {

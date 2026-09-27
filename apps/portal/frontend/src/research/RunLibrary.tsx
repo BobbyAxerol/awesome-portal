@@ -51,8 +51,10 @@ import { lineageHref } from "./lineageClient";
 import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
 import { formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
+import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
+import { useRunLabel } from "./runLabels";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -152,6 +154,17 @@ export const REASON_SENTENCES: Record<string, string> = {
   LEGACY_1_0_8_HAS_NO_RELEASE_CANDIDATE_RELATION: "A legacy 1.0.8 run has no release-candidate relation.",
   LEGACY_1_0_8_STRATEGY_METADATA_ONLY: "Recorded by the legacy 1.0.8 engine as strategy metadata only.",
   LEGACY_1_0_8_DOES_NOT_PUBLISH_EXACT_OOS_METRICS: "The legacy 1.0.8 engine did not publish exact OOS figures.",
+  /* E11 (audit 01-7): a card that reads the retained walk-forward lane names
+     that lane's absences, never the hub's. */
+  QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS:
+    "QuantBT retained no fold metrics for this run's selected trial, so this figure has no source.",
+  QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT:
+    "At least one fold retained no OOS trade count, and a sum over the rest would be a smaller number wearing the run's name.",
+  QUANTBT_RETAINED_A_FOLD_OOS_TRADE_COUNT_THAT_IS_NOT_A_COUNT:
+    "A retained fold's OOS trade count is not a whole count, so no total is stated.",
+  RS02_SEAL_RETAINED_NO_FOLD_ROWS: "This run's retained seal holds no fold rows, so there is nothing to total.",
+  RS02_RETAINED_OBSERVATIONS_DO_NOT_FORM_A_SERIES:
+    "The retained tape holds fewer than two usable observations, so no curve is drawn.",
 };
 
 /** The sentence for a withheld fact: its code's own, else its state's. */
@@ -940,9 +953,54 @@ function RcChip({ rc, runId }: { rc: ReleaseCandidateRef; runId: string }) {
   );
 }
 
+/**
+ * The name of a `?to=` screen, for the banner and the card link (D2).
+ *
+ * Screen words, not the descriptor's key: the reader picked a card called
+ * "S4 · Execute Replay", not `execute_replay`.
+ */
+export const PICK_TARGET_LABEL: Record<string, string> = {
+  run_progress: "Run Progress",
+  run_progress_legacy: "the legacy run workspace",
+  evidence_hub: "Evidence Flow",
+  split: "S1 · Split",
+  search_selection: "S2 · Search & Selection",
+  freeze: "S3 · Freeze",
+  execute_replay: "S4 · Execute Replay",
+  release_candidate: "Release Candidate & Publish",
+  run_report: "Run Report",
+  attempt_lineage: "Attempt Lineage",
+  compare_runs: "Compare",
+};
+
 /** Where a card's one link goes, by what the row is (spec 01 §15.4). */
-function openTarget(item: RunLibraryItem): { to: string; label: string; title?: string } {
+function openTarget(item: RunLibraryItem, pickTarget?: string): { to: string; label: string; title?: string } {
   const id = encodeURIComponent(item.run_id);
+  /*
+   * D2: the reader came from a Journey Map card, so the card's one link opens
+   * that screen for this run instead of the default. An alpha-scoped screen
+   * resolves through the row's own binding; a scratch row names no Alpha, so
+   * the link stays the default and says why rather than pointing at a path
+   * that cannot exist.
+   */
+  if (pickTarget) {
+    const picked = resolveJourneyCardRoute(pickTarget, item.run_id, item.binding?.alpha_id ?? null);
+    const name = PICK_TARGET_LABEL[pickTarget] ?? pickTarget;
+    if (picked) {
+      return {
+        to: picked,
+        label: `open ${name} →`,
+        title: `Opens this run in ${name}, the screen picked on the journey map.`,
+      };
+    }
+    if (needsAlphaToOpen(pickTarget)) {
+      return {
+        to: `/research/quantbt/runs/${id}/evidence`,
+        label: "open evidence →",
+        title: `${name} opens per Alpha, and this row names no alpha version.`,
+      };
+    }
+  }
   if (item.source_kind === "LEGACY_1_0_8_METADATA") {
     return {
       to: `/research/quantbt/runs/${id}/overview`,
@@ -972,6 +1030,8 @@ function openTarget(item: RunLibraryItem): { to: string; label: string; title?: 
  * and a click copies it, so nothing is lost to the cut.
  */
 function RunId({ runId }: { runId: string }) {
+  /* D1: the server's label when this read carried one; the id is still what is copied. */
+  const label = useRunLabel(runId);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -1009,7 +1069,7 @@ function RunId({ runId }: { runId: string }) {
         cursor: "copy",
       }}
     >
-      {shortId(runId)}
+      {label ?? shortId(runId)}
     </button>
   );
 }
@@ -1054,15 +1114,17 @@ function RunCard({
   onToggle,
   sparkline,
   onVisible,
+  pickTarget,
 }: {
   item: RunLibraryItem;
   selected: boolean;
   onToggle: (runId: string) => void;
   sparkline: SparklineRead | undefined;
   onVisible: (runId: string, visible: boolean) => void;
+  pickTarget?: string;
 }) {
   const legacy = item.source_kind === "LEGACY_1_0_8_METADATA";
-  const open = openTarget(item);
+  const open = openTarget(item, pickTarget);
   const cert = isAvailable(item.certificate.availability) ? item.certificate.grade : null;
 
   return (
@@ -1447,6 +1509,35 @@ export function ledgerCaption(ledger: ClaimLedgerCounts, rows: number): string {
   return [`${rows} ${rows === 1 ? "run" : "runs"}`, ...parts].join(" · ");
 }
 
+type StatusCounts = RunLibraryResponse["status_counts"];
+
+/** The statuses the HiFi's first line names, in its order. */
+const STATUS_WORDS: readonly { key: keyof StatusCounts; word: string }[] = [
+  { key: "COMPLETED", word: "completed" },
+  { key: "RUNNING", word: "running" },
+  { key: "FAILED", word: "failed" },
+  { key: "QUEUED", word: "queued" },
+  { key: "DRAFT", word: "draft" },
+  { key: "CANCELLED", word: "cancelled" },
+  { key: "RECOVERY_REQUIRED", word: "recovery required" },
+];
+
+/**
+ * D3 (audit 01-11): the HiFi's first summary line — "7 runs · 5 completed ·
+ * 1 running · 1 failed".
+ *
+ * Only statuses with rows are named: a bar that lists five zeroes says less
+ * than one that lists the two states the reader is looking at. The claim
+ * ledger is not replaced — it moves to the second line, so the screen keeps
+ * both facts and the HiFi's goes first.
+ */
+export function statusCaption(counts: StatusCounts, rows: number): string {
+  const parts = STATUS_WORDS.filter((entry) => counts[entry.key] > 0).map(
+    (entry) => `${counts[entry.key]} ${entry.word}`,
+  );
+  return [`${rows} ${rows === 1 ? "run" : "runs"}`, ...parts].join(" · ");
+}
+
 function ClaimLedger({ ledger, rows }: { ledger: ClaimLedgerCounts; rows: number }) {
   const total = LEDGER_BUCKETS.reduce((sum, bucket) => sum + ledger[bucket.key], 0);
   const width = Math.min(total * LEDGER_PX_PER_RUN, LEDGER_MAX_PX);
@@ -1665,6 +1756,9 @@ export function RunLibrary(props: RunLibraryProps) {
   const clearAll = () => onFilters(clearedFilters(filters));
 
   const ledger = response?.claim_ledger;
+  /* D3: optional at the wire, because a deployment can be older than the
+     contract. `statusCaption` is never fed a guess. */
+  const statusCounts = (response as { status_counts?: StatusCounts } | null)?.status_counts ?? null;
 
   const loading = state.state === "loading";
   const listVisible =
@@ -1754,6 +1848,38 @@ export function RunLibrary(props: RunLibraryProps) {
           </Link>
         </span>
       </header>
+
+      {/* D2 (audit 00-4): the journey map sent the reader here to choose a run
+          for one screen. Say so, and offer the way back out of the choice. */}
+      {filters.to ? (
+        <p
+          data-pick-run-notice={filters.to}
+          className="flex flex-wrap items-center"
+          style={{
+            gap: 10,
+            margin: 0,
+            border: "1px solid var(--accent-2)",
+            borderRadius: 6,
+            background: "var(--paper-raised)",
+            padding: "8px 12px",
+            fontSize: 12.5,
+            color: "var(--ink-soft)",
+          }}
+        >
+          <span>
+            Pick a run to open <strong style={{ color: "var(--ink)" }}>{PICK_TARGET_LABEL[filters.to] ?? filters.to}</strong>. Each
+            card&rsquo;s link opens it for that run.
+          </span>
+          <Link
+            to={JOURNEY_MAP}
+            data-action="back-to-journey"
+            className="text-[color:var(--accent)]"
+            style={{ fontFamily: MONO, fontSize: 10 }}
+          >
+            back to the journey map ↗
+          </Link>
+        </p>
+      ) : null}
 
       <div
         className="flex flex-wrap items-center"
@@ -1882,8 +2008,43 @@ export function RunLibrary(props: RunLibraryProps) {
           </span>
         ) : null}
 
-        {ledger && response ? <ClaimLedger ledger={ledger} rows={response.page.filtered_rows} /> : null}
+        {/* D3: the HiFi's line 1 — status counts — with the claim ledger kept
+            on line 2 below. Both facts stay; the HiFi's goes first.
+
+            A deployment that predates the field sends no `status_counts`. The
+            line is then left out rather than counted from the page: the page
+            is 50 rows of a larger match, so counting it would print a number
+            that is wrong for every paged list. */}
+        {statusCounts ? (
+          <span
+            className="ml-auto"
+            style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink)" }}
+            data-status-counts
+            title="Counts of the whole match, by the status each card prints."
+          >
+            {statusCaption(statusCounts, response!.page.filtered_rows)}
+          </span>
+        ) : null}
       </div>
+
+      {ledger && response ? (
+        <div
+          className="flex flex-wrap items-center"
+          style={{
+            border: "1px solid var(--line)",
+            borderRadius: 6,
+            background: "var(--paper-raised)",
+            padding: "5px 10px",
+            gap: 10,
+          }}
+          data-claim-ledger-row
+        >
+          <span className="mono" style={{ fontSize: 9.5, color: "var(--ink-faint)", textTransform: "uppercase", letterSpacing: ".05em" }}>
+            claim ledger
+          </span>
+          <ClaimLedger ledger={ledger} rows={response.page.filtered_rows} />
+        </div>
+      ) : null}
 
       {loading ? (
         <SkeletonCards />
@@ -1940,6 +2101,7 @@ export function RunLibrary(props: RunLibraryProps) {
                     onToggle={onToggleSel}
                     sparkline={sparklines.get(item.run_id)}
                     onVisible={onVisible}
+                    pickTarget={filters.to}
                   />
                 ))}
               </div>

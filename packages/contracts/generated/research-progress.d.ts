@@ -528,13 +528,15 @@ export interface components {
             /** @description CG-P11-06. When a LOST_LEASE attempt's lease actually lapsed (the attempt's last expires_at); null for every other state. Optional during additive client rollout. */
             lease_expired_at_utc_ms?: components["schemas"]["UtcMilliseconds"] | null;
         };
-        /** @description CG-P11-03. Stored facts from the P10 producer row and its immutable P08 manifest; nothing is derived from progress. No display id is minted: run_id is the identity. */
+        /** @description CG-P11-03. Stored facts from the P10 producer row and its immutable P08 manifest; nothing is derived from progress. No display id is minted as an identity: run_id is the identity. display_label (D1) is a derived presentation label, never an identity and never accepted as input. */
         ProgressRunIdentity: {
             alpha: {
                 alpha_id: string;
                 alpha_name: string | null;
                 alpha_version_id: string;
             };
+            /** @description D1: the short label the hi-fi prints (`R-WFO-118`) - the run's execution profile kind plus its position among the logical runs of that kind in this workspace, ordered by creation (run_id breaks a tie). Server-derived so two readers cannot disagree; presentation only - run_id remains the identity and is the only value a request may carry. null when no label can be derived, and the reader prints the short id rather than a guess. */
+            display_label: string | null;
             execution_profile_id: string;
             protocol: string | null;
             mode: string | null;

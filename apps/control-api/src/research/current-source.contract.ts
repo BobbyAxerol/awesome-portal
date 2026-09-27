@@ -382,63 +382,27 @@ const FoldVerdictsSchema = z.object({
   }).strict(),
   mean_oos_sharpe: DecimalSchema.nullable(),
   mean_decay: DecimalSchema.nullable(),
+  /**
+   * E11 (audit 04-6): the run's OOS trade count.
+   *
+   * QuantBT retains a trade count per fold and none for the run, so the only
+   * honest total is the sum of the published per-fold counts, under the same
+   * `score_basis` as `mean_*`. It is withheld whenever a fold did not publish
+   * one: a partial sum is a smaller number wearing the run's name.
+   *
+   * Optional so a capture taken before E11 still parses; the server always
+   * emits it.
+   */
+  total_oos_trades: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    availability: ResearchCurrentSourceAvailabilitySchema,
+    value: z.number().int().nonnegative().max(100_000_000).nullable(),
+    basis: z.literal("SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1"),
+    folds_counted: z.number().int().nonnegative().max(256),
+    folds: z.number().int().nonnegative().max(256),
+  }).strict().optional(),
   rows: z.array(FoldVerdictRowSchema).max(256),
-}).strict();
-
-const RetainedAnalyticValueSchema = z.union([
-  DecimalSchema,
-  z.object({
-    long_fraction: DecimalSchema,
-    short_fraction: DecimalSchema,
-    flat_fraction: DecimalSchema,
-  }).strict(),
-]);
-
-const RetainedAnalyticMetricSchema = z.object({
-  value: RetainedAnalyticValueSchema.nullable(),
-  unit: z.enum(["ratio", "fraction", "count", "bars", "exposure_triplet"]),
-  definition_id: z.string().regex(/^research\.metric\.[a-z0-9_.-]{3,128}$/),
-  availability: ResearchCurrentSourceAvailabilitySchema,
-}).strict().superRefine((value, context) => {
-  if ((value.value === null) === (value.availability.state === "AVAILABLE")) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["value"],
-      message: "retained analytic value and availability disagree",
-    });
-  }
-});
-
-const RetainedAnalyticSeriesSchema = z.object({
-  kind: z.enum(["IS_EQUITY", "ROLLING_SHARPE_63"]),
-  href: z.null(),
-  availability: z.object({
-    state: z.enum(["NOT_PUBLISHED", "NOT_APPLICABLE"]),
-    reason_code: ReasonCodeSchema,
-  }).strict(),
-}).strict();
-
-const RetainedAnalyticsSchema = z.object({
-  schema_version: z.literal("research.current-source-analytics.v1"),
-  metrics: z.object({
-    oos_sharpe: RetainedAnalyticMetricSchema,
-    sharpe_decay: RetainedAnalyticMetricSchema,
-    total_trade_count: RetainedAnalyticMetricSchema,
-  }).strict(),
-  series: z.object({
-    is_equity: RetainedAnalyticSeriesSchema,
-    rolling_sharpe_63: RetainedAnalyticSeriesSchema,
-  }).strict(),
-  behavior: z.object({
-    benchmark_beta: RetainedAnalyticMetricSchema,
-    benchmark_correlation: RetainedAnalyticMetricSchema,
-    skew: RetainedAnalyticMetricSchema,
-    excess_kurtosis: RetainedAnalyticMetricSchema,
-    win_rate: RetainedAnalyticMetricSchema,
-    average_holding_bars: RetainedAnalyticMetricSchema,
-    exposure_long_short_flat: RetainedAnalyticMetricSchema,
-    turnover: RetainedAnalyticMetricSchema,
-  }).strict(),
 }).strict();
 
 export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
@@ -466,16 +430,27 @@ export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
     route_ledger: ResearchCurrentSourceFactSchema,
     audited_fills: ResearchCurrentSourceFactSchema,
     benchmark: ResearchCurrentSourceFactSchema,
+    /**
+     * E11 (audit 04-7): the HiFi's EChart 1 is "IS vs stitched OOS", two
+     * series and a legend. The retained tape is one stitched account: it has
+     * per-fold `is_sharpe` scalars and no in-sample equity of any kind, and
+     * its pre-OOS rows are the idle prologue of the same OOS account, not an
+     * IS curve. The screen states the absence instead of leaving the legend
+     * silently one series short. Optional for pre-E11 captures.
+     */
+    in_sample_account: ResearchCurrentSourceFactSchema.optional(),
+    /**
+     * E11 (audit 04-10): rolling Sharpe(63 daily returns) is QuantBT's own
+     * measure over a scoped result. The retained tape is hourly and carries
+     * no daily-return series, so this lane can never answer it and the
+     * screen must not compute one. Optional for pre-E11 captures.
+     */
+    rolling_sharpe: ResearchCurrentSourceFactSchema.optional(),
   }).strict(),
   /** W3 · CG-P13-07 (A11): the claim strip, verbatim QuantBT facts. */
   claim: ClaimStripSchema,
   /** W3 · CG-P13-08 (A09): per-fold verdict rows under a versioned server rule. */
   fold_verdicts: FoldVerdictsSchema,
-  /**
-   * E11: server-owned retained analytics. Values are exact source decimals;
-   * unsupported IS/rolling/behaviour facts remain named typed absences.
-   */
-  analytics: RetainedAnalyticsSchema.optional(),
 }).strict();
 
 export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.extend({
@@ -593,6 +568,74 @@ const GuardFactSchema = z.object({
   reason_code: ReasonCodeSchema.nullable(),
 }).strict();
 
+/** E14 · 5.11: one crossing from a fold's test window into the next one's. */
+const BoundaryGapSchema = z.object({
+  previous_fold_id: FactTokenValueSchema.nullable(),
+  fold_id: FactTokenValueSchema.nullable(),
+  boundary_utc_ms: UtcMsSchema.nullable(),
+  next_test_start_utc_ms: UtcMsSchema.nullable(),
+  gap_bars: CountSchema.nullable(),
+  policy: FactTokenValueSchema.nullable(),
+}).strict();
+
+/**
+ * E14 · 5.11 — the boundary-integrity gap scan of the retained lane.
+ *
+ * QuantBT's own `account_execution_plan.boundary_events` measure the bars
+ * between one outer test window and the next; the seal keeps them verbatim
+ * (`summary.replay.fold_capital.boundary_events`). Nothing is recomputed from
+ * the fold plan: `expected_boundary_count` only states how many crossings the
+ * retained fold plan has, so a reader can see whether the scan covered them
+ * all. A seal that predates the W5b replay ledger publishes a typed absence.
+ *
+ * This is a boundary scan, not a per-window coverage scan: the retained lane
+ * has no missing-bar census (see the record's engine request).
+ */
+const SplitGapScanSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  basis: z.enum(["QUANTBT_ACCOUNT_EXECUTION_PLAN_BOUNDARY_EVENTS_V1", "NOT_PUBLISHED"]),
+  scope: z.enum(["OUTER_FOLD_TEST_WINDOW_BOUNDARIES", "NOT_PUBLISHED"]),
+  /** Crossings QuantBT published. */
+  boundary_count: CountSchema.nullable(),
+  /** Crossings the retained fold plan has (`folds − 1`), so a partial scan is visible. */
+  expected_boundary_count: CountSchema.nullable(),
+  /** Crossings whose `gap_bars` QuantBT measured. */
+  measured_count: CountSchema.nullable(),
+  /** Measured crossings with `gap_bars = 0`. */
+  contiguous_count: CountSchema.nullable(),
+  /** The widest measured gap, or null when nothing was measured. */
+  max_gap_bars: CountSchema.nullable(),
+  boundaries: z.array(BoundaryGapSchema).max(256),
+  availability: ResearchCurrentSourceAvailabilitySchema,
+}).strict();
+
+/**
+ * E14 · 5.12 — stitched OOS provenance.
+ *
+ * QuantBT publishes no digest of the stitched OOS series, so `digest` is the
+ * portal's own sha256 over the retained stitch plan and `basis` says exactly
+ * that. It identifies the plan a reader can re-derive from the same seal; it
+ * is never offered as an engine artifact digest.
+ *
+ * `boundary_check` is the HiFi's "verified against fold boundaries", run over
+ * retained values only: every segment names a fold of the retained plan, each
+ * fold has exactly one segment, the segments ascend in fold-plan order with
+ * disjoint observation ranges, and each segment's bar count equals its range.
+ */
+const SplitStitchSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  basis: z.enum(["PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1", "NOT_PUBLISHED"]),
+  digest: DigestSchema.nullable(),
+  segment_count: CountSchema.nullable(),
+  /** Retained observations the stitched segments cover. */
+  observation_count: CountSchema.nullable(),
+  boundary_check: z.enum(["MATCH", "MISMATCH", "NOT_CHECKABLE"]),
+  boundary_check_reason_code: ReasonCodeSchema.nullable(),
+  availability: ResearchCurrentSourceAvailabilitySchema,
+}).strict();
+
 export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
   schema_version: z.literal("research.current-source-split.v1"),
   fold_plan: z.object({
@@ -617,25 +660,10 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     inner_folds: GuardFactSchema,
     oos_used_for_selection: GuardFactSchema,
   }).strict(),
-  /** E14: source-sealed stitch identity and per-fold cadence scan. */
-  integrity: z.object({
-    stitch_digest: z.object({
-      value: DigestSchema.nullable(),
-      availability: ResearchCurrentSourceAvailabilitySchema,
-    }).strict(),
-    gap_scan: z.object({
-      state: z.enum(["AVAILABLE", "NOT_RETAINED_LEGACY"]),
-      cadence_ms: z.number().int().positive().max(31 * 86_400_000).nullable(),
-      folds: z.array(z.object({
-        fold_id: SourceIdentifierSchema,
-        observed_bars: z.number().int().nonnegative().max(2_000_000),
-        missing_bars: z.number().int().nonnegative().max(2_000_000),
-        gap_runs: z.number().int().nonnegative().max(2_000_000),
-        max_gap_bars: z.number().int().nonnegative().max(2_000_000),
-      }).strict()).max(256),
-      availability: ResearchCurrentSourceAvailabilitySchema,
-    }).strict(),
-  }).strict(),
+  /** E14 · 5.11 — boundary integrity, read from the retained lane. */
+  gap_scan: SplitGapScanSchema,
+  /** E14 · 5.12 — stitched OOS provenance. */
+  stitch: SplitStitchSchema,
 }).strict();
 
 const TrialMetricSchema = z.object({

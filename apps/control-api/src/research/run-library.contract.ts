@@ -129,7 +129,12 @@ const MetricCellSchema = z.object({
    * OOS only).  Null for lifecycle cells and for absent values.
    */
   scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE"]).nullable(),
-  definition_id: z.string().regex(/^research\.metric\.[a-z0-9_.]{1,120}$/).nullable(),
+  /**
+   * E11: also the retained lane's definition ids
+   * (`research.current-source.v1.…`), which is what Screen 10 already
+   * publishes for the same two values — so 01 and 10 name one definition.
+   */
+  definition_id: z.string().regex(/^research\.(?:metric|current-source)\.[a-z0-9_.-]{1,120}$/).nullable(),
 }).strict();
 
 const AlphaBindingSchema = z.object({
@@ -174,6 +179,14 @@ const ComparisonSchema = z.object({
 
 export const ResearchRunLibraryItemSchema = z.object({
   run_id: ResearchRunIdSchema,
+  /**
+   * D1: the short label the hi-fi prints (`R-WFO-118`) — the run's execution
+   * profile kind plus its position among the logical runs of that kind in this
+   * workspace, ordered by creation. Presentation only: `run_id` is the
+   * identity and the only value a request may carry. `null` when the row is
+   * not a logical run of a known profile, and the reader prints the short id.
+   */
+  display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
   attempt_id: z.string().min(1).max(160).nullable(),
   source_kind: z.enum(["RESEARCH_DURABLE", "LEGACY_1_0_8_METADATA"]),
   row_kind: z.enum(["LOGICAL_RUN", "WORKER_CHILD", "AUDIT_CHILD", "REPRODUCTION_CHILD", "LEGACY_RUN"]),
@@ -242,6 +255,22 @@ const ClaimLedgerSchema = z.object({
   legacy_metadata_only: z.number().int().nonnegative(),
 }).strict();
 
+/**
+ * D3: the HiFi's first summary line — "7 runs · 5 completed · 1 running ·
+ * 1 failed". The seven statuses partition the filtered rows exactly as the
+ * claim ledger does, and come from the same `effective_status` the cards
+ * print, so a count can never contradict a card.
+ */
+const StatusCountsSchema = z.object({
+  COMPLETED: z.number().int().nonnegative(),
+  RUNNING: z.number().int().nonnegative(),
+  FAILED: z.number().int().nonnegative(),
+  QUEUED: z.number().int().nonnegative(),
+  DRAFT: z.number().int().nonnegative(),
+  CANCELLED: z.number().int().nonnegative(),
+  RECOVERY_REQUIRED: z.number().int().nonnegative(),
+}).strict();
+
 export const ResearchRunLibraryResponseSchema = z.object({
   schema_version: z.literal("research.run-library.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
@@ -262,6 +291,7 @@ export const ResearchRunLibraryResponseSchema = z.object({
     technical_retries: z.number().int().nonnegative(),
     legacy_metadata_rows: z.number().int().nonnegative(),
   }).strict(),
+  status_counts: StatusCountsSchema,
   claim_ledger: ClaimLedgerSchema,
   filter_catalog: z.object({
     alphas: z.array(z.object({ alpha_id: AlphaIdSchema, alpha_name: z.string().min(1).max(240) }).strict()).max(200),
@@ -284,10 +314,17 @@ export const ResearchRunLibrarySparklineResponseSchema = z.object({
    * preserving bucket that always keeps the first, last, minimum and maximum.
    */
   source: z.object({
-    series_kind: z.literal("EQUITY_OOS"),
+    /**
+     * E11: which lane answered. The P13 hub publishes no series for a
+     * retained walk-forward run, whose curve is its sealed RS-02 observation
+     * tape; the card must say which one it drew.
+     */
+    lane: z.enum(["PORTAL_PERSISTED_RESEARCH", "PORTAL_RETAINED_CURRENT_SOURCE"]).default("PORTAL_PERSISTED_RESEARCH"),
+    series_kind: z.enum(["EQUITY_OOS", "EQUITY"]),
     value_field: z.literal("equity"),
-    projection_revision: z.string().regex(/^p13r[0-9]+_[0-9a-f]{64}$/),
-    series_digest: z.string().regex(/^[0-9a-f]{64}$/),
+    projection_revision: z.string().regex(/^(?:p13r[0-9]+_[0-9a-f]{64}|rs02r[0-9]+)$/),
+    /** Null on the retained lane: its integrity is the seal's, not a per-series digest. */
+    series_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
     source_observation_count: z.number().int().nonnegative().nullable(),
     source_sampling: z.string().min(1).max(64).nullable(),
     persisted_point_count: z.number().int().nonnegative(),

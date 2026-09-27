@@ -95,3 +95,34 @@ X1-S11-DOUBLE-P22-published-laptop 1898e0172d6faafc
   stubbed in E6's fixture lane; S00 is E12).
 - S08 on the P04 run is not in the lane (WFO S08 is).
 - The 33-cell visual baseline (OL-22) was not run.
+
+---
+
+## Second round, 2026-09-27 — preview `c81e8dc2`, migration head 067
+
+The first round above ran on `9f0a9066`. E11 (Run Library projection), E12 (journey descriptor
+v3, migration 067), D1 (`display_label`) and E13 (lineage parent writer) landed after it, so the
+preview was rebuilt and the lane re-run.
+
+| Fact | Value |
+|---|---|
+| Git commit built | `c81e8dc2` |
+| Migrations | head `1723680000067_research-journey-descriptor-v3` |
+| Real-API lane | **48 / 48** at 1280 and 660, 0 overflow |
+
+Confirmed on real reads, not on fixtures:
+
+- **E11** — the WFO card `rrun_e1fa9e5c…` now serves `oos_sharpe -5.354970424211971`,
+  `decay 3.911439612138451` and a sparkline, all `AVAILABLE`. Before the fix all three read
+  "not published" while Screen 04 showed the same numbers.
+- **E12** — Screen 00 opens S4 Execute Replay, Attempt Lineage, Compare, Release Candidate and
+  Run Report ("pick a run"), and no built screen prints SOON. The Execution-side cards stay
+  BLOCKED, which is correct.
+- **D1** — `GET /api/v1/quantbt/runs` carries `display_label`: `R-WFO-016`, `R-P04-017`; the
+  lineage read carries `R-P04-001…`. S01's card head printed the short id until this round —
+  the read carried the label and the card had not been wired to it. Fixed; the head now reads
+  `R-P04-017` and the full id is still what a click copies.
+- **E13** — all 33 attempts still read ROOT, which is the truth: they predate the writer and
+  nothing is backfilled. The writer itself is proved by `research-w5a-migration.spec.ts` in the
+  pre-commit hook (it needs PostgreSQL, so it cannot run in a bare worktree — the run that wrote
+  that spec pinned `slpercent` at 3.1, outside its declared 0.7–2.5, and never saw it fail).

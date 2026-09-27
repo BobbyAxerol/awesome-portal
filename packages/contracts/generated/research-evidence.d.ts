@@ -85,6 +85,8 @@ export interface components {
             availability: components["schemas"]["Availability"];
         };
         RunIdentity: {
+            /** @description D1 (audit X2): the short label the hi-fi names a run by (R-WFO-118) - the run's execution profile kind plus its position among the logical runs of that kind in this workspace, ordered by creation. Server-derived by the one rule every read shares, so two readers cannot disagree. Presentation only - run_id remains the identity. null when no label can be derived, and the screen prints the short id rather than a guess. */
+            display_label: string | null;
             status: {
                 value: ("DRAFT" | "QUEUED" | "RUNNING" | "SEALING" | "READY" | "FAILED" | "CANCELLED" | "RECOVERY_REQUIRED") | null;
                 availability: components["schemas"]["Availability"];

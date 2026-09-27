@@ -69,10 +69,30 @@ export function fact(
   return { key, label, state, text: null, reason_code: settled.reason_code ?? unavailableReason, availability: settled };
 }
 
-export function identity(key: string, label: string, value: string | null, availability: Availability, missingReason: string): Identity {
-  if (availability.state === "AVAILABLE" && value !== null) return { key, label, value: value.slice(0, 1_024), availability };
-  return { key, label, value: null, availability: availability.state === "AVAILABLE" ? NOT_PUBLISHED(missingReason) : availability };
+export function identity(
+  key: string,
+  label: string,
+  value: string | null,
+  availability: Availability,
+  missingReason: string,
+  /** E14 · 9.7: what the value does not say on its own; null on every other row. */
+  qualifier: Identity["qualifier"] = null,
+): Identity {
+  if (availability.state === "AVAILABLE" && value !== null) return { key, label, value: value.slice(0, 1_024), availability, qualifier };
+  return { key, label, value: null, availability: availability.state === "AVAILABLE" ? NOT_PUBLISHED(missingReason) : availability, qualifier };
 }
+
+/**
+ * E14 · 9.7 — the fact Screen 06 already states for a fixed-profile run: the
+ * request declared an optimizer and the run never executed it. Published only
+ * when the search read says so, so a lane that did search carries no
+ * qualifier and nothing is asserted about it.
+ */
+export const OPTIMIZER_DECLARED_NOT_EXECUTED = {
+  state: "DECLARED_NOT_EXECUTED",
+  text: "declared, not executed",
+  reason_code: "P04_FIXED_PROFILE_RUN_DID_NOT_EXECUTE_THE_DECLARED_OPTIMIZER",
+} as const;
 
 /** A decimal string of integers only (per-fold OOS trade counts), summed exactly. */
 function sumIntegerStrings(values: Array<string | null>): string | null {
@@ -523,23 +543,28 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       identity("replay_revision", "Replay revision", replay.revision, AVAILABLE, "P18_REVISION_NOT_PUBLISHED"),
     ],
     metrics: [
-      scoped("INITIAL_EQUITY", "Initial equity", "CURRENCY", "OOS", "ENGINE_DIRECT", passport.initial_equity, "RS02_INITIAL_EQUITY_NOT_PUBLISHED"),
-      scoped("FINAL_EQUITY", "Final equity", "CURRENCY", "OOS", "ENGINE_DIRECT", passport.final_equity, "RS02_FINAL_EQUITY_NOT_PUBLISHED"),
-      scoped("NET_RETURN_FRACTION", "OOS return", "FRACTION", "OOS", "SOURCE_DERIVED", passport.net_return_fraction, "RS02_NET_RETURN_NOT_PUBLISHED"),
-      scoped("MAX_DRAWDOWN_FRACTION", "Max drawdown", "FRACTION", "OOS", "SOURCE_DERIVED", passport.max_drawdown_fraction, "RS02_MAX_DRAWDOWN_NOT_PUBLISHED"),
+      scoped("INITIAL_EQUITY", "Initial equity", "CURRENCY", "IS_PLUS_OOS", "ENGINE_DIRECT", passport.initial_equity, "RS02_INITIAL_EQUITY_NOT_PUBLISHED"),
+      scoped("FINAL_EQUITY", "Final equity", "CURRENCY", "IS_PLUS_OOS", "ENGINE_DIRECT", passport.final_equity, "RS02_FINAL_EQUITY_NOT_PUBLISHED"),
+      scoped("NET_RETURN_FRACTION", "Net return", "FRACTION", "IS_PLUS_OOS", "SOURCE_DERIVED", passport.net_return_fraction, "RS02_NET_RETURN_NOT_PUBLISHED"),
+      scoped("MAX_DRAWDOWN_FRACTION", "Max drawdown", "FRACTION", "IS_PLUS_OOS", "SOURCE_DERIVED", passport.max_drawdown_fraction, "RS02_MAX_DRAWDOWN_NOT_PUBLISHED"),
       scoped("MEAN_OOS_SHARPE", "Mean OOS Sharpe", "RATIO", "OOS_MEAN_OF_FOLDS", "ENGINE_DIRECT", verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED"),
       scoped("MEAN_DECAY", "Mean decay", "RATIO", "OOS_MEAN_OF_FOLDS", "ENGINE_DIRECT", verdicts.mean_decay, "QUANTBT_SELECTED_CANDIDATE_DECAY_NOT_PUBLISHED"),
       scoped("OOS_TRADE_COUNT", "OOS trades", "COUNT", "OOS_SUM_OF_FOLDS", "SOURCE_DERIVED", oosTrades, "QUANTBT_FOLD_OOS_TRADES_NOT_PUBLISHED"),
     ],
     headline: [
+      // E14 · 9.8: the return tile the hi-fi leads with. The retained lane's
+      // one net return is the whole final-account path, which begins before
+      // the first outer test window, so it is served with that scope and is
+      // never relabelled as OOS-only (the record's engine request).
+      { key: "NET_RETURN", label: "Net return", scope: "IS_PLUS_OOS", ...decimalFact(passport.net_return_fraction, "RS02_NET_RETURN_NOT_PUBLISHED") },
       { key: "OOS_SHARPE", label: "OOS Sharpe", scope: "OOS_MEAN_OF_FOLDS", ...decimalFact(verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED") },
-      { key: "OOS_RETURN", label: "OOS return", scope: "OOS", ...decimalFact(passport.net_return_fraction, "RS02_NET_RETURN_NOT_PUBLISHED") },
       { key: "DECAY_MEAN", label: "Decay mean", scope: "OOS_MEAN_OF_FOLDS", ...decimalFact(verdicts.mean_decay, "QUANTBT_SELECTED_CANDIDATE_DECAY_NOT_PUBLISHED") },
-      { key: "MAX_DRAWDOWN", label: "Max drawdown", scope: "OOS", ...decimalFact(passport.max_drawdown_fraction, "RS02_MAX_DRAWDOWN_NOT_PUBLISHED") },
+      { key: "MAX_DRAWDOWN", label: "Max drawdown", scope: "IS_PLUS_OOS", ...decimalFact(passport.max_drawdown_fraction, "RS02_MAX_DRAWDOWN_NOT_PUBLISHED") },
       { key: "TRADES", label: "OOS trades", scope: "OOS_SUM_OF_FOLDS", ...decimalFact(oosTrades, "QUANTBT_FOLD_OOS_TRADES_NOT_PUBLISHED") },
       { key: "WIN_RATE", label: "Win rate", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS") },
+      { key: "FUNDING", label: "Funding", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("RS02_SUMMARY_PUBLISHES_NO_FUNDING_TOTAL") },
     ],
-    headline_footnote: "OOS return and drawdown come from the retained stitched outer-test account path; OOS Sharpe and decay are QuantBT's means over outer folds; OOS trades is the exact sum of fold rows. Win rate needs audited fills, which QuantBT did not publish.",
+    headline_footnote: "Net return and drawdown are the retained final-account path, which runs from before the first outer test window — they are not OOS-only. OOS Sharpe and decay are QuantBT's means over the outer folds for the selected candidate; OOS trades is the exact sum of the fold rows. Win rate needs audited fills, which QuantBT did not publish.",
     equity: equityBlock("RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
     equity_is: equityBlock("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST", isPoints, seriesSampling, 300, "RS02_NO_RETAINED_OBSERVATION_BEFORE_FIRST_OUTER_TEST"),
     folds: {
@@ -652,7 +677,13 @@ export interface FixedProfileReads {
   hub: Hub;
   equity: { availability: Availability; source_sample: { source_observation_count: number | null; emitted_point_count: number; sampling: string | null }; points: EquityPoint[] };
   split: { revision: string; availability: Availability; protocolKind: string | null };
-  search: { revision: string; sourceProfileState: string | null; sourceProfileAvailability: Availability };
+  search: {
+    revision: string;
+    sourceProfileState: string | null;
+    sourceProfileAvailability: Availability;
+    /** E14 · 9.7: Screen 06's `requested_optimizer.state` for this run. */
+    requestedOptimizerState?: string | null;
+  };
   freeze: { revision: string; integrityState: string; integrityAvailability: Availability };
   replay: { revision: string; routeState: string };
 }
@@ -670,6 +701,10 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
   });
   const metricScope = (key: string) => (metric(key)?.scope ?? "NOT_PUBLISHED") as CoreV2["headline"][number]["scope"];
   const optimizationFact = optimization(ids.mode, ids.schedule);
+  /* E14 · 9.7: only the search read may say the declared optimizer never ran. */
+  const optimizerQualifier = search.requestedOptimizerState === "DECLARED_NOT_EXECUTED"
+    ? OPTIMIZER_DECLARED_NOT_EXECUTED
+    : null;
   const noFold = NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
   const absent = (reasonCode: string) => ({ state: "NOT_PUBLISHED" as const, text: null, reason_code: reasonCode, availability: NOT_PUBLISHED(reasonCode) });
   const sampling = equity.source_sample.sampling === "FULL" || equity.source_sample.sampling === "EXTREMA_BUCKET_V1" ? equity.source_sample.sampling : null;
@@ -717,7 +752,7 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       identity("protocol", "Protocol", split.protocolKind, split.availability, "P18_SPLIT_PROTOCOL_NOT_PUBLISHED"),
       identity("route", "Route", ids.route.value, ids.route.availability, "P18_ROUTE_NOT_PUBLISHED"),
       identity("runtime_authority", "Runtime", null, NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_RUNTIME_AUTHORITY"), "P04_SOURCE_DID_NOT_PUBLISH_RUNTIME_AUTHORITY"),
-      identity("optimization", "Optimization", optimizationFact.value, optimizationFact.availability, "P18_OPTIMIZATION_NOT_PUBLISHED"),
+      identity("optimization", "Optimization", optimizationFact.value, optimizationFact.availability, "P18_OPTIMIZATION_NOT_PUBLISHED", optimizerQualifier),
       identity("selected_params", "Selected parameters", null, NOT_APPLICABLE("P04_FIXED_PROFILE_HAS_NO_SELECTION_TRACE"), "P04_FIXED_PROFILE_HAS_NO_SELECTION_TRACE"),
       identity("random_seed", "Seed", ids.seed.value, ids.seed.availability, "P18_SEED_NOT_PUBLISHED"),
       identity("config_digest", "Config digest", ids.configDigest.value, ids.configDigest.availability, "P18_CONFIG_DIGEST_NOT_PUBLISHED"),
@@ -733,6 +768,8 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       availability: item.availability as Availability,
     })),
     headline: [
+      // E14 · 9.8: the hub's own net return, with the hub's own scope.
+      { key: "NET_RETURN", label: "Net return", scope: metricScope("NET_RETURN_FRACTION"), ...metricFact("NET_RETURN_FRACTION") },
       { key: "OOS_SHARPE", label: "OOS Sharpe", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE") },
       { key: "DECAY_MEAN", label: "Decay mean", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_DECAY_MEAN") },
       { key: "MAX_DRAWDOWN", label: "Max drawdown", scope: metricScope("MAX_DRAWDOWN_FRACTION"), ...metricFact("MAX_DRAWDOWN_FRACTION") },

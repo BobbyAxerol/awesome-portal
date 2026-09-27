@@ -1,0 +1,262 @@
+{
+  "read_authority": "PORTAL_RETAINED_CURRENT_SOURCE",
+  "run_id": "rrun_w1_real_hmd",
+  "revision": "rs02_split_67d35752ea0d0390eeb28bd243c8db15aae524724498617f65e6c6f8e4669e39",
+  "etag": "\"rs02_split_67d35752ea0d0390eeb28bd243c8db15aae524724498617f65e6c6f8e4669e39\"",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "as_of_utc_ms": 1790269236911,
+  "provenance": {
+    "source_adapter_id": "rs02.quantbt-signal-notional-wfo.v1",
+    "profile_id": "rs02.delta-signal-notional-wfo.v1",
+    "engine_version": "1.1.1",
+    "source_manifest_digest": "dea0c9f1090450be98edf6d97a866aec7e7c3ee28725756a3bbde90f494de75c",
+    "source_transform_digest": "3f970868028ac2d58692f420ed2e6c63d7d07cffe7a7a4b0460fa1e76a8dcbcd",
+    "retained_import_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "requested_spec_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "effective_spec_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "dataset_binding_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+    "retained_at_utc_ms": 1790269236911
+  },
+  "schema_version": "research.current-source-split.v1",
+  "fold_plan": {
+    "state": "AVAILABLE",
+    "folds": [
+      {
+        "source_ordinal": 0,
+        "fold_id": "0",
+        "train_start_utc_ms": 1780272000000,
+        "train_end_utc_ms": 1782860400000,
+        "test_start_utc_ms": 1782864000000,
+        "test_end_utc_ms": 1783465200000,
+        "anatomy": {
+          "state": "AVAILABLE",
+          "reason_code": null,
+          "train_bars": 720,
+          "test_bars": 168,
+          "warmup": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "label_horizon": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "purge": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "embargo": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "validation": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "cutoff_utc_ms": 1783465200000,
+          "account_policy": "carry_position"
+        },
+        "score": {
+          "state": "AVAILABLE",
+          "reason_code": null,
+          "is_sharpe": "-0.3591250351173603",
+          "oos_sharpe": "-7.799572637865059",
+          "decay": "7.440447602747699",
+          "oos_trades": "5"
+        }
+      },
+      {
+        "source_ordinal": 1,
+        "fold_id": "1",
+        "train_start_utc_ms": 1780272000000,
+        "train_end_utc_ms": 1783465200000,
+        "test_start_utc_ms": 1783468800000,
+        "test_end_utc_ms": 1784070000000,
+        "anatomy": {
+          "state": "AVAILABLE",
+          "reason_code": null,
+          "train_bars": 888,
+          "test_bars": 168,
+          "warmup": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "label_horizon": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "purge": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "embargo": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "validation": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "bars": 0,
+            "start_utc_ms": null,
+            "end_utc_ms": null
+          },
+          "cutoff_utc_ms": 1784070000000,
+          "account_policy": "carry_position"
+        },
+        "score": {
+          "state": "AVAILABLE",
+          "reason_code": null,
+          "is_sharpe": "-2.52793658902968",
+          "oos_sharpe": "-2.9103682105588837",
+          "decay": "0.3824316215292036",
+          "oos_trades": "5"
+        }
+      }
+    ],
+    "chronology": "SOURCE_OBSERVED_ADVANCED_WFO",
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "data_use": {
+    "warmup": {
+      "state": "AVAILABLE",
+      "reason_code": null,
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "purge": {
+      "state": "AVAILABLE",
+      "reason_code": null,
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "embargo": {
+      "state": "AVAILABLE",
+      "reason_code": null,
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "strict_outer_oos_selection": {
+      "state": "AVAILABLE",
+      "reason_code": null,
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    }
+  },
+  "guards": {
+    "label_horizon_bars": {
+      "value": 0,
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "purge_bars": {
+      "value": 0,
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "embargo_bars": {
+      "value": 0,
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "warmup_policy": {
+      "value": "none",
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "warmup_bars": {
+      "value": null,
+      "state": "NOT_APPLICABLE",
+      "reason_code": "QUANTBT_WARMUP_POLICY_IS_NONE"
+    },
+    "inner_folds": {
+      "value": null,
+      "state": "NOT_APPLICABLE",
+      "reason_code": "QUANTBT_SCHEDULE_HAS_NO_NESTED_INNER_VALIDATION"
+    },
+    "oos_used_for_selection": {
+      "value": true,
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "gap_scan": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "basis": "QUANTBT_ACCOUNT_EXECUTION_PLAN_BOUNDARY_EVENTS_V1",
+    "scope": "OUTER_FOLD_TEST_WINDOW_BOUNDARIES",
+    "boundary_count": 1,
+    "expected_boundary_count": 1,
+    "measured_count": 1,
+    "contiguous_count": 1,
+    "max_gap_bars": 0,
+    "boundaries": [
+      {
+        "previous_fold_id": "0",
+        "fold_id": "1",
+        "boundary_utc_ms": 1783465200000,
+        "next_test_start_utc_ms": 1783468800000,
+        "gap_bars": 0,
+        "policy": "carry_position"
+      }
+    ],
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "stitch": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "basis": "PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1",
+    "digest": "812b913261e74c5069af581ae6cbafdc8537edfd77b5e3d231f9c695fb8f5449",
+    "segment_count": 2,
+    "observation_count": 336,
+    "boundary_check": "MATCH",
+    "boundary_check_reason_code": null,
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  }
+}

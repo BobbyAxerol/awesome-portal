@@ -52,6 +52,7 @@ import {
 import { ReplayTransport, SPEEDS, transportKey, useTransport } from "./replayTransport";
 import { reasonCodeSentence } from "./researchRefusal";
 import { isHubLaneReason, retainedReadiness } from "./retainedLane";
+import { SplitBand, SplitBandNote, hubSplitBand, type SplitBandSlot } from "./SplitBand";
 import type { ResearchState } from "./state";
 import type { ReplayController, RetainedContext, RetainedReplaySlot } from "./useReplay";
 import { iso } from "./utcMinute";
@@ -1166,14 +1167,30 @@ function RetainedBody({
 
 /* ---------------------------------------------------------------- screen */
 
+/**
+ * Which lane answers this run — the one fact the route and the screen must
+ * agree on, because the route reads the split of whichever lane this is.
+ */
+export function executeLane(controller: ReplayController): "hub" | "retained" | "pending" {
+  if (controller.retained.state === "ready" && isRetainedReplay(controller.retained.replay)) return "retained";
+  if (controller.replay?.route.state === "NOT_PUBLISHED" && controller.retained.state === "loading") return "pending";
+  return "hub";
+}
+
 export interface ExecuteScreenProps {
   runId: string;
   cursor: EvidenceCursor;
   controller: ReplayController;
   transport: ReplayTransport;
+  /**
+   * E2c (8.5): the split behind the IS / OOS / HOLDOUT band, read once by the
+   * route. The screen never reads it, so rendering the screen is still a pure
+   * function of what its container already holds.
+   */
+  band?: SplitBandSlot;
 }
 
-export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteScreenProps) {
+export function ExecuteScreen({ runId, cursor, controller, transport, band = { state: "idle" } }: ExecuteScreenProps) {
   const { replay, state } = controller;
   const replayWindow = replay?.equity_replay;
   const items = useMemo(() => replayWindow?.items ?? [], [replayWindow]);
@@ -1187,11 +1204,7 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
     controller.retained.state === "ready" && isRetainedReplay(controller.retained.replay)
       ? controller.retained.replay
       : null;
-  const lane: "hub" | "retained" | "pending" = retainedReplay
-    ? "retained"
-    : replay?.route.state === "NOT_PUBLISHED" && controller.retained.state === "loading"
-      ? "pending"
-      : "hub";
+  const lane = executeLane(controller);
 
   /* A new window places the playhead on the sample the server selected, or at
      its start. Nothing else moves the playhead but the reader. */
@@ -1263,6 +1276,7 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
           slot={controller.retained}
           controller={controller}
           transport={transport}
+          band={band}
         />
       ) : lane === "retained" && retainedReplay && controller.retained.state === "ready" ? (
         <RetainedBody
@@ -1360,6 +1374,23 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
                 {SAMPLING_NOTE[replayWindow.sampling]}
               </p>
             ) : null}
+
+            {/*
+              * E2c (8.5): the hi-fi's IS / OOS / HOLDOUT band, from P14's
+              * three-window truth for this run. The sealed holdout keeps its
+              * own hatched tone here exactly as on Screens 05 and 07 — it is
+              * never drawn in the colour of a window something read.
+              */}
+            <div className="flex flex-wrap items-center gap-3 border-y py-1.5" style={{ borderColor: "var(--line-soft)" }}>
+              <span className="mono flex-none text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }} data-band-fold>
+                run windows
+              </span>
+              {band.state === "ready" && band.hub ? (
+                <SplitBand band={hubSplitBand(band.hub)} />
+              ) : (
+                <SplitBandNote slot={band} />
+              )}
+            </div>
 
             {items.length > 0 ? (
               <>

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchLineageService } from "../src/research/lineage.service";
+import { libraryItem } from "./research-lineage.builders";
 
 const scope = { workspaceId: "ws-p19", actorUserId: "usr-p19" };
 const digest = (character: string) => character.repeat(64);
@@ -222,5 +223,25 @@ describe("P19 Attempt Lineage persisted truth", () => {
       .rejects.toMatchObject({ code: "RESEARCH_LINEAGE_UNAVAILABLE", status: 503 });
     await expect(subject(snapshot(), { FEATURE_RESEARCH_LINEAGE: "true", FEATURE_RESEARCH_RUN_LIBRARY: "false" }).service.read(scope, "alpha-p19", { limit: 128 }))
       .rejects.toMatchObject({ code: "RESEARCH_LINEAGE_UNAVAILABLE", status: 503 });
+  });
+
+  it("D1 (10-3): the attempt's primary run carries the Library's own label, or null", async () => {
+    /* The hi-fi writes `R-WFO-114` beside the attempt. The label comes from
+       the Run Library row this service already joins for `rc`, so Screen 10
+       and Screen 01 cannot name the same run two different ways. */
+    const primaryRunId = snapshot().attempts[0]!.primary_run_id;
+    const repository = { read: vi.fn().mockResolvedValue(snapshot({ libraryRows: [{ run_id: primaryRunId }] })) };
+    const config = { FEATURE_RESEARCH_LINEAGE: "true", FEATURE_RESEARCH_RUN_LIBRARY: "true" };
+    const runLibrary = {
+      mapRow: vi.fn((row: { run_id: string }) => ({ ...libraryItem(row.run_id), display_label: "R-WFO-114" })),
+    };
+    const withLibrary = new ResearchLineageService(repository as never, config as never, runLibrary as never);
+    const labelled = await withLibrary.read(scope, "alpha-p19", { limit: 128 });
+    expect(labelled.attempts[0]?.primary_run.display_label).toBe("R-WFO-114");
+
+    /* With no Library reader wired the label is null, exactly as `rc` is —
+       the screen then prints the short id rather than a guessed number. */
+    const bare = await subject().service.read(scope, "alpha-p19", { limit: 128 });
+    expect(bare.attempts[0]?.primary_run.display_label).toBeNull();
   });
 });

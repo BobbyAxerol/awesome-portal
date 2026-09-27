@@ -35,6 +35,11 @@ export interface ParameterEntry {
    */
   declaredLow: number | string | boolean | null;
   declaredHigh: number | string | boolean | null;
+  /**
+   * E4 (audit 02-14): the grid the declaration names, for the HiFi's STEP
+   * column. Absent on a fixed or categorical parameter, which has no step.
+   */
+  declaredStep?: number | null;
   /** Present when the parameter is categorical rather than numeric. */
   levels?: readonly (string | number | boolean | null)[];
   dimension: ParameterDimension;
@@ -117,6 +122,14 @@ export interface DraftConstraints {
   trialCeiling: number | null;
   /** The entrypoint the bound version pins, or null. */
   entrypoint: string | null;
+  /**
+   * E4 (audit 02-12): the columns the declaration requires and the warmup it
+   * declares. The server still checks both at preflight — these are shown so
+   * the reader can see what the run will need before spending a preflight,
+   * not so the browser can check them.
+   */
+  requiredColumns: readonly string[] | null;
+  warmupBars: number | null;
   /** Routes the installed release will not run, with the engine's reason. */
   blockedRoutes: Readonly<Record<string, string>>;
   /**
@@ -645,6 +658,7 @@ export function parameterEntriesFrom(
         name,
         declaredLow: declared.low,
         declaredHigh: declared.high,
+        declaredStep: declared.step ?? null,
         dimension: "sweep" as const,
         low: String(declared.low),
         high: String(declared.high),

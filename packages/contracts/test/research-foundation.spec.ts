@@ -100,6 +100,8 @@ describe("P09 published Research foundation contract", () => {
     const fixture = (name: string) => JSON.parse(readFileSync(join(ROOT, "fixtures", name), "utf8")) as Record<string, any>;
     const journey = fixture("research-foundation.journey-v3.valid.json");
     expect(journey.descriptor).toMatchObject({ revision: 3, content_sha256: expect.stringMatching(/^[0-9a-f]{64}$/) });
+    /* E12: revision 3 declares no PLANNED card — every redesign screen the map names is mounted. */
+    expect(journey.descriptor.phases.flatMap((phase: any) => phase.cards).filter((card: any) => card.availability === "PLANNED")).toHaveLength(0);
     expect(journey.descriptor.phases.flatMap((phase: any) => phase.cards)).toHaveLength(28);
     expect(journey.descriptor.mapping).toHaveLength(6);
     const byId = Object.fromEntries(journey.descriptor.phases.flatMap((phase: any) => phase.cards).map((card: any) => [card.card_id, card]));

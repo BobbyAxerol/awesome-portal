@@ -12,6 +12,11 @@
  * sealed point's own timestamp. Coordinates are rounded to two decimals with
  * arithmetic, so no number formatter is used.
  *
+ * E14 · 9.10 adds the hi-fi's six-rule equity grid as `yRulePcts`: positions
+ * only, at equal steps between the two labelled extremes. Under VD-P20-27 the
+ * rules between them stay unlabelled, so a denser axis still prints no level
+ * the server did not send.
+ *
  * Both plots use a 1000 × 1000 box drawn with `preserveAspectRatio="none"`;
  * the screen lays the labels out in HTML at the returned percentages, so text
  * is never stretched with the plot.
@@ -32,6 +37,9 @@ export interface AxisLabel {
   pct: number;
 }
 
+/** Rules on the equity grid, counting both ends (the hi-fi's six). */
+const Y_RULES = 6;
+
 export interface EquityGeometry {
   /** The plot box of both paths (viewBox `0 0 width height`). */
   width: number;
@@ -47,6 +55,14 @@ export interface EquityGeometry {
   boundaries: { x: number; pct: number; label: string }[];
   /** Equity of the highest and lowest point, verbatim, at their height (top = 0). */
   yLabels: AxisLabel[];
+  /**
+   * E14 · 9.10 — the equity grid, top to bottom: `Y_RULES` rules at equal
+   * steps between the highest and the lowest sealed point. Positions only:
+   * the two ends are the `yLabels`, and the rules between them stay
+   * unlabelled (VD-P20-27), so the axis prints no number the server did not
+   * send. Empty when there are fewer than two distinct levels to span.
+   */
+  yRulePcts: number[];
   /** At most six UTC days of sealed points, left to right. */
   xLabels: AxisLabel[];
   /** Drawdown fraction of the shallowest point, verbatim, at the strip's top. */
@@ -90,6 +106,7 @@ export function equitySvg(
     underwaterLine: "",
     boundaries: [],
     yLabels: [],
+    yRulePcts: [],
     xLabels: [],
     drawdownTop: null,
     deepest: null,
@@ -152,6 +169,16 @@ export function equitySvg(
   const yLabels: AxisLabel[] = [{ text: high.source.equity, pct: pct(y(high.e)) }];
   if (low !== high && low.source.equity !== high.source.equity) yLabels.push({ text: low.source.equity, pct: pct(y(low.e)) });
 
+  /* E14 · 9.10: the hi-fi's six-rule grid, under VD-P20-27's rule. The ends
+     are the two labelled extremes; the four rules between them are geometry
+     at equal steps and carry no text, so the axis prints no level the server
+     did not send. A flat series spans nothing, so it keeps its one rule. */
+  const top = pct(y(high.e));
+  const bottom = pct(y(low.e));
+  const yRulePcts = bottom === top
+    ? [top]
+    : Array.from({ length: Y_RULES }, (_, index) => round2(top + ((bottom - top) * index) / (Y_RULES - 1)));
+
   const xLabels: AxisLabel[] = [];
   const steps = Math.min(X_LABELS, parsed.length);
   for (let k = 0; k < steps; k += 1) {
@@ -176,6 +203,7 @@ export function equitySvg(
     underwaterLine,
     boundaries: marks,
     yLabels,
+    yRulePcts,
     xLabels,
     drawdownTop: shallow.source.drawdown_fraction,
     deepest: deep.d > 0 ? { text: deep.source.drawdown_fraction, xPct: pct(xs(deep)), yPct: pct(uy(deep.d)) } : null,

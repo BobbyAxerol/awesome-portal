@@ -148,3 +148,99 @@ describe("X2 · F5 — T10 copy θ* digest", () => {
     expect(container.innerHTML).not.toContain("UI_RETAINED_LANE_HAS_NO_FIELD");
   });
 });
+
+/* ------------------------------------------------------------------------
+ * E2c · row 7.9 — the F3 digest chain on the retained WFO lane
+ *
+ * Every link is read from the published canonical fixture: the declared
+ * parameter set and the strategy source from the X2 parameter authority, the
+ * params and bundle digests from the server's own F4 rows, and the engine,
+ * dataset and config from the seal's provenance. Nothing is recomputed.
+ * --------------------------------------------------------------------- */
+describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () => {
+  const LINKS = ["CANONICAL_FORM", "PARAMS_DIGEST", "STRATEGY_SOURCE", "ENGINE_PIN", "DATASET_HASH", "CONFIG_HASH", "BUNDLE_DIGEST"];
+
+  it("draws all seven links in the hi-fi's order, each from its own served field", async () => {
+    const { container } = await settled();
+    const chain = container.querySelector("[data-panel='digest-chain']") as HTMLElement;
+    expect(chain).toBeTruthy();
+    expect(chain.getAttribute("data-chain-lane")).toBe("RS02_RETAINED_CHILD_AUDIT");
+    expect([...chain.querySelectorAll("[data-chain-link]")].map((li) => li.getAttribute("data-chain-link"))).toEqual(LINKS);
+    /* This seal publishes every link. */
+    expect(chain.getAttribute("data-chain-published")).toBe("7");
+    expect([...chain.querySelectorAll("[data-chain-link]")].every((li) => li.getAttribute("data-chain-link-state") === "PUBLISHED")).toBe(true);
+  });
+
+  it("prints the seal's own values: the theta digest, the protected source, the engine, the dataset and the config", async () => {
+    const { container } = await settled();
+    const link = (key: string) => container.querySelector(`[data-chain-link='${key}']`) as HTMLElement;
+    const sealed = FREEZE.stage4_binding!.sealed_params_sha256!;
+    /* The params digest is the sealed theta sha256 the server binds in F4, elided with the full value in the title. */
+    expect(link("PARAMS_DIGEST").textContent).toContain(`sha256:${sealed.slice(0, 12)}`);
+    expect(link("PARAMS_DIGEST").querySelector("span[title]")!.getAttribute("title")).toBe(sealed);
+    /* The strategy source is the protected kernel digest, named by its hash rule. */
+    expect(link("STRATEGY_SOURCE").textContent).toContain("PROTECTED_SHA256");
+    expect(link("STRATEGY_SOURCE").querySelector("span[title]")!.getAttribute("title")).toBe(FREEZE.parameter_authority!.code_fixed.code_digest);
+    /* The engine pin is the seal's own recorded version, not a build constant. */
+    expect(link("ENGINE_PIN").textContent).toContain(FREEZE.provenance.engine_version);
+    expect(link("DATASET_HASH").querySelector("span[title]")!.getAttribute("title")).toBe(FREEZE.provenance.dataset_binding_digest);
+    expect(link("CONFIG_HASH").querySelector("span[title]")!.getAttribute("title")).toBe(FREEZE.provenance.effective_spec_digest);
+    /* The bundle digest is QuantBT's own strategy fingerprint on this lane, and the card says so. */
+    const bundle = FREEZE.stage4_binding!.rows.find((row) => row.key === "SEALED_BUNDLE")!;
+    expect(link("BUNDLE_DIGEST").querySelector("span[title]")!.getAttribute("title")).toBe(bundle.value);
+    expect(link("BUNDLE_DIGEST").textContent).toContain("QuantBT strategy fingerprint");
+  });
+
+  it("does not label the sealed sha256 with the candidate-id rule it is not", async () => {
+    const { container } = await settled();
+    const params = container.querySelector("[data-chain-link='PARAMS_DIGEST']") as HTMLElement;
+    /* F4 compares QuantBT's candidate id on this lane; the digest printed here
+       is the sha256 beside it, so it may not borrow that row's rule. */
+    expect(params.querySelector("[data-chain-rule='PARAMS_DIGEST']")!.textContent).toBe("sha256 of the sealed canonical parameter map");
+    expect(params.textContent).not.toContain("QuantBT candidate id");
+    const candidateId = FREEZE.stage4_binding!.rows.find((row) => row.key === "SEALED_PARAMS")!.value;
+    expect(candidateId).not.toBe(FREEZE.stage4_binding!.sealed_params_sha256);
+    expect(params.textContent).not.toContain(candidateId!.slice(0, 12));
+  });
+
+  it("names the parameter set that is hashed, and the scope it is hashed into", async () => {
+    const { container } = await settled();
+    const canonical = container.querySelector("[data-chain-link='CANONICAL_FORM']") as HTMLElement;
+    for (const name of FREEZE.parameter_authority!.declared.names) expect(canonical.textContent).toContain(name);
+    expect(canonical.textContent).toContain("params digest");
+  });
+
+  it("a link the seal did not publish says so with the server's reason, never a dash or a zero", async () => {
+    stub({
+      ...FREEZE,
+      parameter_authority: {
+        ...FREEZE.parameter_authority!,
+        state: "NOT_PUBLISHED",
+        reason_code: "P16_HISTORICAL_PARAMETER_BINDING_NOT_REGISTERED",
+        declared: { hash_scope: "PARAMS_DIGEST", names: [] },
+        code_fixed: { ...FREEZE.parameter_authority!.code_fixed, code_digest: null },
+      },
+    });
+    const { container } = await settled();
+    const chain = container.querySelector("[data-panel='digest-chain']") as HTMLElement;
+    expect(chain.getAttribute("data-chain-published")).toBe("5");
+    for (const key of ["CANONICAL_FORM", "STRATEGY_SOURCE"]) {
+      const link = container.querySelector(`[data-chain-link='${key}']`) as HTMLElement;
+      expect(link.getAttribute("data-chain-link-state")).toBe("NOT_PUBLISHED");
+      expect(link.textContent).toContain("not published");
+      expect(link.textContent).not.toContain("—");
+      expect(link.querySelector("[data-chain-reason]")!.getAttribute("data-chain-reason")).toBeTruthy();
+    }
+  });
+
+  it("verify stays one control: the chain states its scope and points at the card that owns the button", async () => {
+    const { container } = await settled();
+    const chain = container.querySelector("[data-panel='digest-chain']") as HTMLElement;
+    expect(chain.querySelector("[data-chain-verify]")!.textContent).toBe("verify digest — below");
+    expect(chain.querySelector("[data-chain-verify]")!.tagName).not.toBe("BUTTON");
+    expect(chain.querySelector("button")).toBeNull();
+    expect(container.querySelectorAll("[data-action='verify']")).toHaveLength(1);
+    expect(chain.querySelector("[data-chain-note]")!.textContent).toContain("artifact integrity, not selection correctness");
+    expect(chain.querySelector("[data-chain-note]")!.textContent).toContain("never issues a digest of its own");
+  });
+});

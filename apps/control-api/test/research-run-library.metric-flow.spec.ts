@@ -62,8 +62,10 @@ async function stats(projection: Record<string, unknown>) {
       rows: [libraryRow(projection)], asOfUtcMs: 1, totalRows: 1, filteredRows: 1, hasMore: false, hasPrevious: false,
       counters: { logicalRuns: 1, workerChildren: 0, technicalRetries: 0, legacyMetadataRows: 0 },
       claimLedger: { issued: 0, notIssued: 0, pendingSource: 1, failed: 0, cancelledBeforeSource: 0, legacyMetadataOnly: 0 },
+      statusCounts: { completed: 1, running: 0, failed: 0, queued: 0, draft: 0, cancelled: 0, recoveryRequired: 0 },
       filterCatalog: { alphas: [], modes: [], scratchAvailable: true },
     }),
+    retainedFacts: vi.fn().mockResolvedValue([]),
     findSparklineSource: vi.fn(),
   };
   const response = await new ResearchRunLibraryService(repository as never, config).list(
@@ -120,6 +122,10 @@ describe("E11 retained WFO cards", () => {
   };
 
   async function retainedCells(candidate = retained.rows.CANDIDATE[0]!.payload) {
+    const foldTradeCounts = retained.rows.FOLD
+      .map((entry) => (entry.payload.fold_facts as { oos_score?: { oos_trade_count?: unknown } } | undefined)?.oos_score?.oos_trade_count)
+      .filter((value): value is string => typeof value === "string");
+    const trialFacts = candidate.trial_facts as { metrics?: Record<string, unknown> } | undefined;
     const row = {
       ...libraryRow({}),
       evidence_revision: null,
@@ -136,8 +142,18 @@ describe("E11 retained WFO cards", () => {
         rows: [row], asOfUtcMs: 1, totalRows: 1, filteredRows: 1, hasMore: false, hasPrevious: false,
         counters: { logicalRuns: 1, workerChildren: 0, technicalRetries: 0, legacyMetadataRows: 0 },
         claimLedger: { issued: 0, notIssued: 0, pendingSource: 1, failed: 0, cancelledBeforeSource: 0, legacyMetadataOnly: 0 },
+        statusCounts: { completed: 1, running: 0, failed: 0, queued: 0, draft: 0, cancelled: 0, recoveryRequired: 0 },
         filterCatalog: { alphas: [], modes: [], scratchAvailable: true },
       }),
+      retainedFacts: vi.fn().mockResolvedValue([{
+        run_id: row.run_id,
+        artifact_revision: "1",
+        metrics: trialFacts?.metrics ?? null,
+        fold_count: String(retained.rows.FOLD.length),
+        trade_fold_count: String(foldTradeCounts.length),
+        trade_sum: foldTradeCounts.reduce((total, value) => total + Number(value), 0).toString(),
+        observation_count: "1056",
+      }]),
       findSparklineSource: vi.fn(),
     };
     const response = await new ResearchRunLibraryService(repository as never, config).list(
@@ -149,7 +165,8 @@ describe("E11 retained WFO cards", () => {
 
   it("maps selected retained facts to the card with exact totals and immutable revision", async () => {
     const item = await retainedCells();
-    expect(item.evidence_revision).toBe(`p13r2_${"f".repeat(64)}`);
+    /* Retained facts do not impersonate a P13 Hub revision. */
+    expect(item.evidence_revision).toBeNull();
     expect(item.stats.map((cell) => [cell.role, cell.value, cell.availability.state])).toEqual([
       ["OOS_SHARPE", "-5.354970424211971", "AVAILABLE"],
       ["DECAY", "3.911439612138451", "AVAILABLE"],
@@ -168,8 +185,8 @@ describe("E11 retained WFO cards", () => {
       ["TRADE_COUNT", "10", "AVAILABLE"],
     ]);
     expect(item.stats.slice(0, 2).map((cell) => cell.availability.reason_code)).toEqual([
-      "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1",
-      "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1",
+      "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS",
+      "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS",
     ]);
     expect(item.stats.every((cell) => cell.value !== null || cell.availability.state !== "AVAILABLE")).toBe(true);
   });

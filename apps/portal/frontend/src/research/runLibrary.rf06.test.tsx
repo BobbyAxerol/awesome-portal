@@ -18,6 +18,7 @@ import {
   TITLE,
   filteredEmpty,
   groupRuns,
+  statusCaption,
 } from "./RunLibrary";
 import { RunLibraryRoute } from "./RunLibraryRoute";
 import { COMPARE_REFUSAL, type Availability, type RunLibraryItem, type RunLibraryResponse } from "./runLibraryClient";
@@ -37,6 +38,7 @@ const NO_CERT: Availability = { state: "NOT_PUBLISHED", reason_code: "SOURCE_DID
 function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
   return {
     run_id: "A",
+    display_label: null,
     attempt_id: null,
     source_kind: "RESEARCH_DURABLE",
     row_kind: "LOGICAL_RUN",
@@ -97,6 +99,7 @@ function page(items: RunLibraryItem[], pageOverrides: Partial<RunLibraryResponse
       ...pageOverrides,
     },
     counters: { logical_runs: 12, worker_children: 0, technical_retries: 0, legacy_metadata_rows: 1 },
+    status_counts: { COMPLETED: 5, RUNNING: 1, FAILED: 1, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0 },
     claim_ledger: { issued: 0, not_issued: 7, pending_source: 5, failed: 0, cancelled_before_source: 0, legacy_metadata_only: 0 },
     filter_catalog: {
       alphas: [{ alpha_id: "delta-rsi", alpha_name: "Delta-RSI Polynomial Alpha" }],
@@ -537,6 +540,116 @@ describe("FE-S01-14 — a legacy row", () => {
       "zz:scratch",
       "zzz:legacy",
     ]);
+  });
+});
+
+describe("D3 / audit 01-11 — the summary bar leads with the HiFi's status counts", () => {
+  beforeEach(() => vi.useFakeTimers());
+
+  it("prints the server's status counts on line 1 and keeps the claim ledger on line 2", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute();
+    await flush(50);
+
+    /* The HiFi reads "7 runs · 5 completed · 1 running · 1 failed"; a bucket
+       with no rows is not named, because five zeroes say less than two facts. */
+    expect(document.querySelector("[data-status-counts]")?.textContent).toBe("1 run · 5 completed · 1 running · 1 failed");
+    /* The claim ledger is not replaced — it moves down and is labelled. */
+    const ledgerRow = document.querySelector("[data-claim-ledger-row]");
+    expect(ledgerRow?.textContent).toContain("claim ledger");
+    expect(ledgerRow?.querySelector("[data-claim-ledger]")?.textContent).toContain("0 issued");
+  });
+
+  it("leaves the line out on a deployment older than the field, rather than counting the page", async () => {
+    /* The page is 50 rows of a larger match; counting it would print a number
+       that is wrong for every paged list. */
+    stub(() => {
+      const body = page([item()]) as Record<string, unknown>;
+      delete body.status_counts;
+      return [200, body];
+    });
+    mountRoute();
+    await flush(50);
+    expect(document.querySelector("[data-status-counts]")).toBeNull();
+    expect(document.querySelector("[data-claim-ledger-row]")).toBeTruthy();
+    expect(document.querySelector('[data-run="A"]')).toBeTruthy();
+  });
+
+  it("counts by the same status the cards print", () => {
+    expect(statusCaption(
+      { COMPLETED: 5, RUNNING: 1, FAILED: 1, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0 },
+      7,
+    )).toBe("7 runs · 5 completed · 1 running · 1 failed");
+    expect(statusCaption(
+      { COMPLETED: 0, RUNNING: 0, FAILED: 0, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0 },
+      0,
+    )).toBe("0 runs");
+    expect(statusCaption(
+      { COMPLETED: 0, RUNNING: 0, FAILED: 0, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 1 },
+      1,
+    )).toBe("1 run · 1 recovery required");
+  });
+});
+
+describe("E12 / D2 — the Run Library is the journey map's run picker", () => {
+  beforeEach(() => vi.useFakeTimers());
+
+  it("says which screen it is picking for, and keeps it across a filter change", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute("?to=execute_replay");
+    await flush(50);
+
+    const notice = document.querySelector("[data-pick-run-notice]") as HTMLElement;
+    expect(notice.getAttribute("data-pick-run-notice")).toBe("execute_replay");
+    expect(notice.textContent).toContain("Pick a run to open");
+    expect(notice.textContent).toContain("S4 · Execute Replay");
+
+    /* `to` is view state: it survives narrowing the list and never reaches
+       the server, exactly like `group` and `sel`. */
+    fireEvent.click(document.querySelector('[data-filter-status="FAILED"]')!);
+    await flush(50);
+    expect(lastSearch).toContain("to=execute_replay");
+    expect(lists().some((url) => url.includes("to="))).toBe(false);
+  });
+
+  it("points each card's one link at the picked screen for that run", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute("?to=run_report");
+    await flush(50);
+
+    const open = document.querySelector('[data-open="A"]') as HTMLAnchorElement;
+    expect(open.getAttribute("href")).toBe("/research/quantbt/runs/A/report");
+    expect(open.textContent).toContain("open Run Report");
+  });
+
+  it("resolves an alpha-scoped screen through the row's own binding", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute("?to=attempt_lineage");
+    await flush(50);
+
+    const open = document.querySelector('[data-open="A"]') as HTMLAnchorElement;
+    expect(open.getAttribute("href")).toBe("/research/quantbt/alphas/delta-rsi/lineage");
+  });
+
+  it("keeps the default link, with a reason, when the row names no Alpha", async () => {
+    stub(() => [200, page([item({ binding: null })])]);
+    mountRoute("?to=attempt_lineage");
+    await flush(50);
+
+    const open = document.querySelector('[data-open="A"]') as HTMLAnchorElement;
+    expect(open.getAttribute("href")).toBe("/research/quantbt/runs/A/evidence");
+    expect(open.getAttribute("title")).toContain("names no alpha version");
+  });
+
+  it("drops a `to` this build cannot open rather than printing a key as a screen name", async () => {
+    stub(() => [200, page([item()])]);
+    mountRoute("?to=not_a_screen");
+    await flush(50);
+
+    expect(document.querySelector("[data-pick-run-notice]")).toBeNull();
+    expect((document.querySelector('[data-open="A"]') as HTMLAnchorElement).getAttribute("href")).toBe(
+      "/research/quantbt/runs/A/evidence",
+    );
   });
 });
 

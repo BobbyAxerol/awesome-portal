@@ -245,6 +245,14 @@ export const ResearchAttemptLineageNodeSchema = z.object({
   updated_at_utc_ms: UtcMsSchema,
   primary_run: z.object({
     run_id: OpaqueIdSchema.nullable(),
+    /**
+     * D1 (audit 10-3): the short label the hi-fi writes beside the attempt
+     * (`R-WFO-114`). Derived by the same one rule as every other read, from
+     * the Run Library row this service already holds. Presentation only —
+     * `run_id` is the identity. `null` when no label can be derived, and the
+     * card prints the short id rather than a guess.
+     */
+    display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
     state: RunStateSchema.nullable(),
     effective_spec_digest: DigestSchema.nullable(),
     engine_release_id: z.string().min(1).max(256).nullable(),

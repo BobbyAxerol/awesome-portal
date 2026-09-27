@@ -64,6 +64,7 @@ const NOT_PUBLISHED: Availability = {
 function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
   return {
     run_id: "R-WFO-118",
+    display_label: null,
     attempt_id: null,
     source_kind: "RESEARCH_DURABLE",
     row_kind: "LOGICAL_RUN",
@@ -128,6 +129,7 @@ function page(items: RunLibraryItem[], overrides: Partial<RunLibraryResponse> = 
       order: "CREATED_AT_DESC_RUN_ID_DESC",
     },
     counters: { logical_runs: items.length, worker_children: 0, technical_retries: 0, legacy_metadata_rows: 0 },
+    status_counts: { COMPLETED: items.length, RUNNING: 0, FAILED: 0, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0 },
     claim_ledger: { issued: 1, not_issued: 0, pending_source: 0, failed: 0, cancelled_before_source: 0, legacy_metadata_only: 0 },
     filter_catalog: {
       alphas: [{ alpha_id: "alpha_momentum_btc", alpha_name: "alpha_momentum_btc" }],

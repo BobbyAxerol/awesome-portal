@@ -263,6 +263,8 @@ export class ResearchReportService {
         revision: search.revision!,
         sourceProfileState: search.source_profile.state,
         sourceProfileAvailability: search.source_profile.availability as Availability,
+        // E14 · 9.7: the same fact Screen 06 prints beside the declared optimizer.
+        requestedOptimizerState: search.requested_optimizer.state,
       },
       freeze: {
         revision: freeze.revision!,

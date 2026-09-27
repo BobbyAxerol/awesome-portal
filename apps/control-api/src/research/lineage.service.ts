@@ -576,6 +576,10 @@ export class ResearchLineageService {
         updated_at_utc_ms: requiredUtcMs(row.updated_at, "attempt update timestamp"),
         primary_run: {
           run_id: row.primary_run_id,
+          // D1 (10-3): the Library row is already joined here for `rc`, so
+          // the label costs nothing extra and cannot drift from Screen 01's.
+          // Without the Library reader wired it stays null, like `rc` does.
+          display_label: item?.display_label ?? null,
           state: row.primary_run_state as Node["primary_run"]["state"],
           effective_spec_digest: row.effective_spec_digest,
           engine_release_id: row.engine_release_id,

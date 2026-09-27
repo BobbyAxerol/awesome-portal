@@ -81,6 +81,8 @@ const LIMITS: DraftConstraints = {
   trialCeiling: 2000,
   entrypoint: "delta_rsi_polynomial",
   blockedRoutes: { options: "options route is deferred this round — no portal parameters are declared for it yet." },
+  requiredColumns: ["open", "high", "low", "close", "volume"],
+  warmupBars: 120,
 };
 
 const ATLAS: AtlasDocument = {
@@ -678,11 +680,15 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
     view({ draft: { ...emptyDraft(), bound: true } });
     const rail = document.querySelector("[data-review-rail]") as HTMLElement;
     expect(rail.textContent).not.toMatch(/PUBLISHABLE ·\s*$/m);
-    expect(rail.textContent).toContain("PUBLISHABLE · no version bound");
+    /* E4 (audit 02-x): before a version is chosen the chip states that, instead of
+       claiming PUBLISHABLE for a binding the reader has not made. */
+    expect(rail.textContent).toContain("NO VERSION CHOSEN");
+    expect(rail.textContent).not.toContain("PUBLISHABLE · no version bound");
     expect(within(rail).getAllByText("not declared").length).toBeGreaterThan(0);
 
     const chip = document.querySelector("[data-binding-chip]") as HTMLElement;
-    expect(chip.textContent).toBe("PUBLISHABLE · no version bound");
+    expect(chip.textContent).toBe("NO VERSION CHOSEN");
+    expect(chip.getAttribute("data-binding-chip")).toBe("PENDING_VERSION");
     // No pin is claimed while no version is bound: the message used to read
     // "pinned by  (entrypoint …)", naming a version the reader had not chosen.
     expect(rail.textContent).not.toMatch(/pinned by\s{2}/);

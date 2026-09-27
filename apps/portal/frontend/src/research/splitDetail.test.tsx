@@ -1399,3 +1399,153 @@ describe("W3b — Split on the retained WFO lane", () => {
     expect(requested.some((url) => /\/research\/runs\/[^/]+\/(progress|requested-spec)/.test(url))).toBe(false);
   });
 });
+
+/* -------------------------------------------------------------------------
+ * E14 — Screen 05 boundary integrity (5.11) and stitched OOS provenance (5.12)
+ *
+ * The two blocks come from the canonical retained split fixture the control
+ * API publishes (`research-current-source.split.valid.json`, written from the
+ * real W5b signal-notional WFO seal), never from a body written here.
+ * ---------------------------------------------------------------------- */
+
+const E14_SPLIT = JSON.parse(
+  readFileSync(join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures", "research-current-source.split.valid.json"), "utf8"),
+) as CurrentSourceSplit & {
+  gap_scan: NonNullable<CurrentSourceSplit["gap_scan"]>;
+  stitch: NonNullable<CurrentSourceSplit["stitch"]>;
+};
+
+/** The W3b retained lane, with E14's two blocks exactly as the server publishes them. */
+function e14Lane(patch: Record<string, unknown> = {}): unknown {
+  return { ...W3_ALL.split, gap_scan: E14_SPLIT.gap_scan, stitch: E14_SPLIT.stitch, ...patch };
+}
+
+describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
+  beforeEach(() => {
+    forgetRunIdentities();
+    forgetObservedFolds();
+  });
+
+  async function laneRoute(splitLane: unknown) {
+    stub(w3bResponder(splitLane));
+    const view = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(view.container.querySelector("[data-holdout-lane]")).toBeTruthy());
+    return view;
+  }
+
+  it("5.11 the gap scan is QuantBT's own boundary events, counted against the retained fold plan", async () => {
+    const { container } = await laneRoute(e14Lane());
+    const scan = container.querySelector("[data-gap-scan]") as HTMLElement;
+    expect(scan.getAttribute("data-gap-scan")).toBe("AVAILABLE");
+    expect(scan.getAttribute("data-gap-scan-basis")).toBe("QUANTBT_ACCOUNT_EXECUTION_PLAN_BOUNDARY_EVENTS_V1");
+    expect(scan.textContent).toContain("1 of 1 fold boundary");
+    expect(scan.textContent).toContain("no gap at any of 1");
+    /* The row is a pass only because the widest measured gap is 0 bars. */
+    expect(scan.closest("[data-integrity]")!.getAttribute("data-integrity-mark")).toBe("pass");
+    expect(container.querySelector("[data-lane-absent='gap scan']")).toBeNull();
+  });
+
+  it("5.11 a crossing QuantBT never measured is said apart from a measured zero, and never drawn as a pass", async () => {
+    const lane = e14Lane({
+      gap_scan: {
+        ...E14_SPLIT.gap_scan,
+        measured_count: 0,
+        contiguous_count: 0,
+        max_gap_bars: null,
+        boundaries: [{ ...E14_SPLIT.gap_scan.boundaries[0]!, gap_bars: null }],
+      },
+    });
+    const { container } = await laneRoute(lane);
+    const scan = container.querySelector("[data-gap-scan]") as HTMLElement;
+    expect(scan.textContent).toContain("none measured");
+    expect(scan.textContent).not.toContain("no gap");
+    expect(scan.closest("[data-integrity]")!.getAttribute("data-integrity-mark")).toBe("none");
+  });
+
+  it("5.11 a scan that covered fewer crossings than the fold plan has says both numbers", async () => {
+    const { container } = await laneRoute(e14Lane({ gap_scan: { ...E14_SPLIT.gap_scan, expected_boundary_count: 4 } }));
+    expect(container.querySelector("[data-gap-scan]")?.textContent).toContain("1 of 4 fold boundaries");
+  });
+
+  it("5.11 a typed absence keeps the row and prints the lane's own reason, never a zero", async () => {
+    const lane = e14Lane({
+      gap_scan: {
+        ...E14_SPLIT.gap_scan,
+        state: "NOT_PUBLISHED",
+        reason_code: "RS02_SEAL_PREDATES_W5B_REPLAY_LEDGER_V1",
+        basis: "NOT_PUBLISHED",
+        scope: "NOT_PUBLISHED",
+        boundary_count: null,
+        measured_count: null,
+        contiguous_count: null,
+        max_gap_bars: null,
+        boundaries: [],
+        availability: { state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_W5B_REPLAY_LEDGER_V1" },
+      },
+    });
+    const { container } = await laneRoute(lane);
+    const absent = container.querySelector("[data-lane-absent='gap scan']") as HTMLElement;
+    expect(absent.getAttribute("data-lane-reason")).toBe("RS02_SEAL_PREDATES_W5B_REPLAY_LEDGER_V1");
+    expect(absent.textContent).toContain("not published");
+    expect(absent.textContent).toContain("RS02_SEAL_PREDATES_W5B_REPLAY_LEDGER_V1");
+    expect(absent.textContent).not.toMatch(/\b0\b/);
+  });
+
+  it("5.11 an older server that publishes no such field keeps the sentence it always printed", async () => {
+    const { gap_scan: _gapScan, ...withoutGapScan } = e14Lane() as Record<string, unknown>;
+    const { container } = await laneRoute(withoutGapScan);
+    const absent = container.querySelector("[data-lane-absent='gap scan']") as HTMLElement;
+    expect(absent.textContent).toContain("no field in the retained lane");
+    expect(absent.getAttribute("data-lane-reason")).toBe("UI_RETAINED_LANE_HAS_NO_FIELD");
+  });
+
+  it("5.12 the stitch digest is shown, verified against the fold boundaries, and says whose digest it is", async () => {
+    const { container } = await laneRoute(e14Lane());
+    const stitch = container.querySelector("[data-stitch-digest]") as HTMLElement;
+    expect(stitch.getAttribute("data-stitch-digest")).toBe("AVAILABLE");
+    expect(stitch.getAttribute("data-stitch-check")).toBe("MATCH");
+    expect(container.querySelector("[data-stitch-digest-value]")?.getAttribute("data-stitch-digest-value")).toBe(E14_SPLIT.stitch.digest);
+    expect(stitch.textContent).toContain(`stitch digest ${E14_SPLIT.stitch.digest!.slice(0, 12)}…`);
+    expect(stitch.textContent).toContain("verified against fold boundaries · 2 segments, 336 retained observations");
+    expect(stitch.textContent).toContain("the Portal's digest of the retained stitch plan — QuantBT publishes none");
+    expect(container.textContent).not.toContain("stitch digest — not in the split read");
+  });
+
+  it("5.12 a stitch that does not line up says so with its own code, and is not called verified", async () => {
+    const lane = e14Lane({
+      stitch: { ...E14_SPLIT.stitch, boundary_check: "MISMATCH", boundary_check_reason_code: "RETAINED_STITCH_SEGMENT_OBSERVATION_RANGES_OVERLAP" },
+    });
+    const { container } = await laneRoute(lane);
+    const verdict = container.querySelector("[data-stitch-verdict]") as HTMLElement;
+    expect(verdict.getAttribute("data-stitch-verdict")).toBe("MISMATCH");
+    expect(verdict.textContent).toContain("does not line up with the fold boundaries");
+    expect(verdict.textContent).toContain("RETAINED_STITCH_SEGMENT_OBSERVATION_RANGES_OVERLAP");
+    expect(container.textContent).not.toContain("verified against fold boundaries");
+  });
+
+  it("5.12 a withheld stitch keeps the block and prints the reason; an older server keeps the old sentence", async () => {
+    const withheld = e14Lane({
+      stitch: {
+        ...E14_SPLIT.stitch,
+        state: "NOT_PUBLISHED",
+        reason_code: "RS02_REPLAY_LEDGER_RETAINED_NO_FOLD_SEGMENT",
+        basis: "NOT_PUBLISHED",
+        digest: null,
+        segment_count: null,
+        observation_count: null,
+        boundary_check: "NOT_CHECKABLE",
+        boundary_check_reason_code: "RS02_REPLAY_LEDGER_RETAINED_NO_FOLD_SEGMENT",
+        availability: { state: "NOT_PUBLISHED", reason_code: "RS02_REPLAY_LEDGER_RETAINED_NO_FOLD_SEGMENT" },
+      },
+    });
+    const first = await laneRoute(withheld);
+    expect(first.container.querySelector("[data-stitch-digest]")?.getAttribute("data-stitch-digest")).toBe("NOT_PUBLISHED");
+    expect(first.container.querySelector("[data-lane-absent='stitch digest']")?.textContent).toContain("RS02_REPLAY_LEDGER_RETAINED_NO_FOLD_SEGMENT");
+    cleanup();
+
+    const { stitch: _stitch, ...withoutStitch } = e14Lane() as Record<string, unknown>;
+    const second = await laneRoute(withoutStitch);
+    expect(second.container.querySelector("[data-stitch-digest]")?.getAttribute("data-stitch-digest")).toBe("NO_FIELD");
+    expect(second.container.textContent).toContain("stitch digest — not in the split read");
+  });
+});

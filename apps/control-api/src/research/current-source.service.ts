@@ -46,6 +46,7 @@ import {
   trialCoversFold,
   trialFacts,
 } from "./current-source-facts";
+import { splitGapScan, splitStitch } from "./current-source-split-integrity";
 import {
   ResearchCurrentSourceRepository,
   type CurrentSourcePage,
@@ -76,7 +77,6 @@ import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry
 import type { WhatIf } from "./whatif.contract";
 import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
 import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
-import { sumExactDecimals } from "./exact-decimal";
 
 /** RF-05 CG-P13-09: the P04 fixed qualification can never be sealed into the RS-02 lane. */
 const P04_FIXED_PROFILE_NOT_RETAINABLE_REASON = "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION";
@@ -107,30 +107,6 @@ function fact(state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE", reasonCod
 }
 
 function sourceGap(reasonCode: string) { return fact("NOT_PUBLISHED", reasonCode); }
-
-function retainedMetric(
-  value: string | null,
-  unit: "ratio" | "fraction" | "count" | "bars" | "exposure_triplet",
-  definitionId: string,
-  reasonCode: string,
-) {
-  return {
-    value,
-    unit,
-    definition_id: definitionId,
-    availability: value === null
-      ? { state: "NOT_PUBLISHED" as const, reason_code: reasonCode }
-      : available(),
-  };
-}
-
-function retainedSeries(kind: "IS_EQUITY" | "ROLLING_SHARPE_63", reasonCode: string) {
-  return {
-    kind,
-    href: null,
-    availability: { state: "NOT_PUBLISHED" as const, reason_code: reasonCode },
-  };
-}
 
 /**
  * The digest every retained read revision (`rs02_<kind>_<digest>`) carries.
@@ -403,17 +379,6 @@ export class ResearchCurrentSourceService {
     const selectedCandidate = candidateRows.map(asCandidate).find((candidate) =>
       candidate.trial_facts?.source_trial_id === summary.selection.trial_id
       && candidate.objective === summary.selection.objective) ?? null;
-    const selectedFacts = selectedCandidate?.trial_facts ?? null;
-    const tradeCounts = foldRows.flatMap((row) => {
-      const value = asFold(row).fold_facts?.oos_score?.oos_trade_count;
-      return value === null || value === undefined ? [] : [value];
-    });
-    const totalTradeCount = tradeCounts.length === foldRows.length
-      ? sumExactDecimals(tradeCounts)
-      : null;
-    const factsMissing = "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1";
-    const selectedMissing = selectedFacts ? "QUANTBT_SELECTED_CANDIDATE_DID_NOT_PUBLISH_METRIC" : factsMissing;
-    const behaviorMissing = "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BEHAVIOR_ANALYTIC";
     const value = {
       schema_version: "research.current-source-evidence.v1" as const,
       ...this.common("evidence", seal),
@@ -440,6 +405,11 @@ export class ResearchCurrentSourceService {
         route_ledger: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_ROUTE_LEDGER"),
         audited_fills: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS"),
         benchmark: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES"),
+        /* E11: named so Screen 04 can state them instead of leaving EChart 1
+           one legend entry short and EChart 3 half empty with a UI-authored
+           code. Both are structural facts of this lane, not this run. */
+        in_sample_account: sourceGap("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT"),
+        rolling_sharpe: sourceGap("RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES"),
       },
       claim: claimStrip(facts),
       fold_verdicts: foldVerdicts(
@@ -459,43 +429,6 @@ export class ResearchCurrentSourceService {
           meanDecay: selectedCandidate?.trial_facts?.metrics.mean_decay ?? null,
         },
       ),
-      analytics: {
-        schema_version: "research.current-source-analytics.v1" as const,
-        metrics: {
-          oos_sharpe: retainedMetric(
-            selectedFacts?.metrics.mean_oos_sharpe ?? null,
-            "ratio",
-            "research.metric.retained_wfo.v1.oos_sharpe",
-            selectedMissing,
-          ),
-          sharpe_decay: retainedMetric(
-            selectedFacts?.metrics.mean_decay ?? null,
-            "ratio",
-            "research.metric.retained_wfo.v1.sharpe_decay",
-            selectedMissing,
-          ),
-          total_trade_count: retainedMetric(
-            totalTradeCount,
-            "count",
-            "research.metric.retained_wfo.v1.total_trade_count",
-            tradeCounts.length === 0 ? factsMissing : "QUANTBT_FOLD_LEDGER_DID_NOT_PUBLISH_EVERY_OOS_TRADE_COUNT",
-          ),
-        },
-        series: {
-          is_equity: retainedSeries("IS_EQUITY", "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_IS_EQUITY_SERIES"),
-          rolling_sharpe_63: retainedSeries("ROLLING_SHARPE_63", "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_ROLLING_SHARPE_63"),
-        },
-        behavior: {
-          benchmark_beta: retainedMetric(null, "ratio", "research.metric.retained_wfo.v1.benchmark_beta", "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES"),
-          benchmark_correlation: retainedMetric(null, "ratio", "research.metric.retained_wfo.v1.benchmark_correlation", "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES"),
-          skew: retainedMetric(null, "ratio", "research.metric.retained_wfo.v1.skew", behaviorMissing),
-          excess_kurtosis: retainedMetric(null, "ratio", "research.metric.retained_wfo.v1.excess_kurtosis", behaviorMissing),
-          win_rate: retainedMetric(null, "fraction", "research.metric.retained_wfo.v1.win_rate", behaviorMissing),
-          average_holding_bars: retainedMetric(null, "bars", "research.metric.retained_wfo.v1.average_holding_bars", behaviorMissing),
-          exposure_long_short_flat: retainedMetric(null, "exposure_triplet", "research.metric.retained_wfo.v1.exposure_long_short_flat", behaviorMissing),
-          turnover: retainedMetric(null, "fraction", "research.metric.retained_wfo.v1.turnover", behaviorMissing),
-        },
-      },
     };
     return this.valid(ResearchCurrentSourceEvidenceResponseSchema, value);
   }
@@ -529,18 +462,26 @@ export class ResearchCurrentSourceService {
     if (page.totalRows !== seal.tableRows.FOLD || page.hasMore || page.hasPrevious) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained fold plan exceeds its admitted bound.", 503);
     }
+    const folds = page.rows.map((row) => {
+      // W6a: the W5b child-audit block is served by its own bounded read
+      // (replay/child-audit); a W5b-retained fold row must not leak it
+      // into the strict split DTO (which then answered 503).
+      const { fold_facts: foldFacts, child_audit: _childAudit, ...fold } = asFold(row);
+      return { source_ordinal: row.sourceOrdinal, ...fold, anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
+    });
+    // E14 · 5.11/5.12: boundary integrity and stitched OOS provenance, both
+    // read from the W5b replay ledger this same seal holds.
+    const windows = folds.map((fold) => ({
+      fold_id: fold.fold_id,
+      test_start_utc_ms: fold.test_start_utc_ms,
+      test_end_utc_ms: fold.test_end_utc_ms,
+    }));
     const value = {
       schema_version: "research.current-source-split.v1" as const,
       ...this.common("split", seal),
       fold_plan: {
         state: "AVAILABLE" as const,
-        folds: page.rows.map((row) => {
-          // W6a: the W5b child-audit block is served by its own bounded read
-          // (replay/child-audit); a W5b-retained fold row must not leak it
-          // into the strict split DTO (which then answered 503).
-          const { fold_facts: foldFacts, child_audit: _childAudit, ...fold } = asFold(row);
-          return { source_ordinal: row.sourceOrdinal, ...fold, anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
-        }),
+        folds,
         chronology: "SOURCE_OBSERVED_ADVANCED_WFO" as const,
         availability: available(),
       },
@@ -551,23 +492,8 @@ export class ResearchCurrentSourceService {
         strict_outer_oos_selection: this.summaryFact(summary.data_use.strict_outer_oos_selection),
       },
       guards: splitGuards(summary.source_facts),
-      integrity: summary.integrity
-        ? {
-          stitch_digest: { value: summary.integrity.stitch_digest, availability: available() },
-          gap_scan: { ...summary.integrity.gap_scan, availability: available() },
-        }
-        : {
-          stitch_digest: {
-            value: null,
-            availability: { state: "NOT_PUBLISHED" as const, reason_code: "RS02_SEAL_PREDATES_E14_STITCH_INTEGRITY" },
-          },
-          gap_scan: {
-            state: "NOT_RETAINED_LEGACY" as const,
-            cadence_ms: null,
-            folds: [],
-            availability: { state: "NOT_PUBLISHED" as const, reason_code: "RS02_SEAL_PREDATES_E14_GAP_SCAN" },
-          },
-        },
+      gap_scan: splitGapScan(summary.replay, windows),
+      stitch: splitStitch(summary.replay, windows),
     };
     return this.valid(ResearchCurrentSourceSplitResponseSchema, value);
   }

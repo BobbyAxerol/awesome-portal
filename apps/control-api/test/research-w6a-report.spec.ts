@@ -187,17 +187,6 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
     expect(Object.values(core.source_revisions).every((value) => /^rs02_[a-z-]+_[0-9a-f]{64}$/.test(value))).toBe(true);
     expect(unused.detail).not.toHaveBeenCalled();
     expect(repository.seal).toHaveBeenCalledTimes(1);
-    expect(core.headline.map((item) => item.key)).toEqual([
-      "OOS_SHARPE", "OOS_RETURN", "DECAY_MEAN", "MAX_DRAWDOWN", "TRADES", "WIN_RATE",
-    ]);
-    expect(core.headline.find((item) => item.key === "OOS_RETURN")).toMatchObject({
-      label: "OOS return",
-      scope: "OOS",
-      value: real.summary.metrics.net_return_fraction,
-      availability: { state: "AVAILABLE", reason_code: null },
-    });
-    expect(core.metrics.filter((item) => ["INITIAL_EQUITY", "FINAL_EQUITY", "NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION"].includes(item.key))
-      .every((item) => item.scope === "OOS")).toBe(true);
   });
 
   it("CG-P18-01 passport carries the claim strip under stable keys; CG-P18-02 certification is a typed absence", async () => {
@@ -297,6 +286,33 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
     expect(byKey.OOS_SHARPE).toMatchObject({ value: evidence.fold_verdicts.mean_oos_sharpe, scope: "OOS_MEAN_OF_FOLDS" });
     expect(byKey.TRADES!.value).toBe(String(evidence.fold_verdicts.rows.reduce((sum, row) => sum + Number(row.oos_trades), 0)));
     expect(byKey.WIN_RATE).toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS" } });
+  });
+
+  /* E14 · 9.7/9.8 on the retained lane. */
+
+  it("E14 · 9.8: the headline leads with the retained net return, under the scope that return actually has", async () => {
+    const core = v2(await subject().service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    const evidence = await currentSource().evidence(scope, real.run_id) as { passport: { net_return_fraction: string | null } };
+    expect(core.headline).toHaveLength(7);
+    expect(core.headline[0]).toEqual({
+      key: "NET_RETURN",
+      label: "Net return",
+      scope: "IS_PLUS_OOS",
+      value: evidence.passport.net_return_fraction,
+      availability: { state: "AVAILABLE", reason_code: null },
+    });
+    /* The tile is the account path, which begins before the first outer test
+       window — the footnote must not let it read as an OOS-only return. */
+    expect(core.equity_is.scope).toBe("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST");
+    expect(core.equity_is.state).toBe("AVAILABLE");
+    expect(core.headline_footnote).toContain("they are not OOS-only");
+  });
+
+  it("E14 · 9.7: a lane whose search really ran carries no 'declared, not executed' qualifier", async () => {
+    const core = v2(await subject().service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    const optimization = core.identity.find((field) => field.key === "optimization");
+    expect(optimization).toMatchObject({ value: "mode_1_decay × global" });
+    expect(optimization!.qualifier ?? null).toBeNull();
   });
 });
 

@@ -34,6 +34,7 @@ import type { components as CurrentSourceComponents } from "@portal/contracts-re
 
 import { PortalApiError } from "../lib/api";
 import { ResearchLaneConflictError, readLaneState, toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
+import { rememberRunLabel } from "./runLabels";
 
 type HubSchemas = EvidenceComponents["schemas"];
 type SourceSchemas = CurrentSourceComponents["schemas"];
@@ -171,7 +172,19 @@ export const evidenceApi = {
       `${RUNS}/${encodeURIComponent(runId)}/evidence${query(options.workspaceId)}`,
       options.etag,
       options.signal,
-    ),
+    ).then((answer) => {
+      /*
+       * D1: the Hub is the read Screen 04 and its stage screens go through,
+       * so it is where the shared label registry learns this run's name. A
+       * 304 carries no body and teaches nothing — the label already known
+       * stands. A pre-D1 server publishes none, which is remembered as "no
+       * label", never as a number this browser worked out.
+       */
+      if (answer !== NOT_MODIFIED) {
+        rememberRunLabel(runId, (answer as EvidenceHub).core?.run_identity?.display_label);
+      }
+      return answer;
+    }),
 
   /** `researchEvidenceSeriesGetV1` */
   series: (

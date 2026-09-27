@@ -35,6 +35,7 @@ import {
 } from "./replayClient";
 import { ReplayTransport, SPEEDS, useTransport } from "./replayTransport";
 import { retainedReadiness } from "./retainedLane";
+import { SplitBand, SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
 import type { ChildAuditSlot, ReplayController, RetainedReplaySlot, TransitionsSlot } from "./useReplay";
 import { iso } from "./utcMinute";
 
@@ -921,11 +922,14 @@ export function CandleReplayBody({
   slot,
   controller,
   transport,
+  band,
 }: {
   replay: CurrentSourceReplay;
   slot: Extract<RetainedReplaySlot, { state: "ready" }>;
   controller: ReplayController;
   transport: ReplayTransport;
+  /** E2c (8.5): the run's own fold plan, for the IS / OOS / HOLDOUT band. */
+  band: SplitBandSlot;
 }) {
   const rows = replay.replay.rows;
   const execution = replay.execution;
@@ -1068,10 +1072,20 @@ export function CandleReplayBody({
             The replay position expired. It was discarded and the first window was read again once.
           </p>
         ) : null}
+        {/*
+          * E2c (8.5): the hi-fi's IS / OOS / HOLDOUT band. The windows come
+          * from this run's own retained fold plan, so the shading is the
+          * fold's published train and test spans and nothing else.
+          */}
         <div className="flex flex-wrap items-center gap-3 border-y py-1.5" style={{ borderColor: "var(--line-soft)" }}>
-          <span className="mono text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
-            {segment ? `fold ${segment.fold_id} · OOS test window` : "in-sample bars (no fold)"}
+          <span className="mono flex-none text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }} data-band-fold>
+            {segment ? foldLabel(segment.fold_id) : "in-sample bars (no fold)"}
           </span>
+          {band.state === "ready" && band.folds ? (
+            <SplitBand band={retainedSplitBand(band.folds, activeFold, claimStrip?.holdout ?? null)} />
+          ) : (
+            <SplitBandNote slot={band} />
+          )}
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-counts>
             source bars {replay.replay.source_observation_count} · window {window} of {replay.replay.source_observation_count}
             {segment ? ` · fold bars ${segment.first_ordinal + 1}–${segment.last_ordinal + 1}` : ""}

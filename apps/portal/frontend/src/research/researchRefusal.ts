@@ -379,6 +379,31 @@ export const REASON_CODE_SENTENCES: Record<string, string> = {
     "The first month is not contiguous with the published months, so the monthly series is withheld.",
   P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK:
     "This run's adapter published no benchmark series, so no beta against a benchmark can be stated.",
+  /*
+   * E16 (P17): the P04 hub lane's replay absences, as sentences.
+   *
+   * These are the source's own answer, not a gap in the Portal. The P04
+   * qualification publishes a bounded evidence receipt — equity, returns and
+   * their distributions — and no execution tape, so a replay of it can show
+   * the account over time and nothing that happened bar by bar. The candle
+   * sentence is deliberately about what the read holds, not about why:
+   * whether the source could retain bars is the engine's question, recorded
+   * in the P17 evidence, and the screen does not answer it.
+   */
+  P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS:
+    "This run's adapter published no price bars with its evidence, so the replay draws the equity samples it did publish and no candles.",
+  P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER:
+    "This run's adapter published no order ledger, so no order can be replayed.",
+  P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS:
+    "This run's adapter published no audited fills, so no fill can be replayed.",
+  P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER:
+    "This run's adapter published no trade ledger, so no trade can be replayed.",
+  P04_SOURCE_DID_NOT_PUBLISH_POSITION_STATE_SNAPSHOTS:
+    "This run's adapter published no position snapshots, so no position is shown at the playhead.",
+  P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM:
+    "This run's adapter published no execution event stream, so the ledger holds samples rather than events.",
+  P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS:
+    "This run's adapter published no execution state, so the playhead reads a retrospective equity sample and says so.",
   RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION:
     "This run is bound to the P04 fixed qualification, which the retained lane never holds. Nothing is pending.",
   /* W3b: the retained WFO lane's own absences (research.current-source-*.v1). */
@@ -393,6 +418,43 @@ export const REASON_CODE_SENTENCES: Record<string, string> = {
   UI_RETAINED_LANE_HAS_NO_SERIES:
     "The retained walk-forward lane publishes no such series (its series are equity, returns, positions, monthly returns, the 20-observation rolling return and the return distribution).",
   P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT: "This walk-forward profile declares no holdout segment.",
+  /* E14 · 5.11/5.12: the split read's boundary scan and stitch provenance. */
+  RS02_SEAL_PREDATES_W5B_REPLAY_LEDGER_V1:
+    "This run was sealed before the replay ledger was retained, so the seal holds no fold boundaries and no stitch plan.",
+  QUANTBT_ACCOUNT_EXECUTION_PLAN_PUBLISHED_NO_BOUNDARY_EVENT:
+    "QuantBT's account execution plan published no fold-boundary event for this run, so no crossing was scanned.",
+  RETAINED_FOLD_PLAN_HAS_NO_OUTER_FOLD_CROSSING:
+    "The retained fold plan has one outer fold, so there is no crossing between fold windows to scan.",
+  RS02_REPLAY_LEDGER_RETAINED_NO_FOLD_SEGMENT:
+    "The retained replay ledger holds no fold segment, so there is no stitch plan to identify.",
+  RETAINED_STITCH_SEGMENT_NAMES_A_FOLD_THE_PLAN_DOES_NOT_HAVE:
+    "A stitched segment names a fold the retained plan does not have, so the stitch and the fold plan disagree.",
+  RETAINED_STITCH_SEGMENTS_DO_NOT_COVER_EVERY_RETAINED_FOLD_ONCE:
+    "The stitched segments do not cover every retained fold exactly once, so the stitch and the fold plan disagree.",
+  RETAINED_STITCH_SEGMENTS_ARE_NOT_IN_RETAINED_FOLD_PLAN_ORDER:
+    "The stitched segments are not in the retained fold plan's order, so the stitch and the fold plan disagree.",
+  RETAINED_STITCH_SEGMENT_OBSERVATION_RANGES_OVERLAP:
+    "Two stitched segments claim the same retained observations, so the stitch and the fold plan disagree.",
+  RETAINED_STITCH_SEGMENT_BAR_COUNT_DISAGREES_WITH_ITS_OBSERVATION_RANGE:
+    "A stitched segment's bar count does not match its own observation range, so the stitch and the fold plan disagree.",
+  /* E14 · 9.7: the identity qualifier on a fixed-profile run. */
+  P04_FIXED_PROFILE_RUN_DID_NOT_EXECUTE_THE_DECLARED_OPTIMIZER:
+    "The request declared this optimizer, and the run qualified a fixed parameter profile instead — no search was executed.",
+  /* E11: what the retained walk-forward lane structurally does not hold, in
+     the lane's own words rather than the screen's placeholder. */
+  QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT:
+    "The retained walk-forward lane holds one stitched account and no in-sample equity, so there is no IS curve to draw beside it.",
+  RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES:
+    "Rolling Sharpe is measured over 63 daily returns, and the retained tape is per bar with no daily-return series, so this screen has nothing to read and computes nothing.",
+  QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS:
+    "QuantBT retained no fold metrics for the selected trial, so this figure has no source.",
+  QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT:
+    "At least one fold retained no OOS trade count, and a sum over the rest would be a smaller number wearing the run's name.",
+  QUANTBT_RETAINED_A_FOLD_OOS_TRADE_COUNT_THAT_IS_NOT_A_COUNT:
+    "A retained fold's OOS trade count is not a whole count, so no total is stated.",
+  RS02_SEAL_RETAINED_NO_FOLD_ROWS: "This run's retained seal holds no fold rows, so there is nothing to total.",
+  RS02_RETAINED_OBSERVATIONS_DO_NOT_FORM_A_SERIES:
+    "The retained tape holds fewer than two usable observations, so no curve is drawn.",
 };
 
 /** The sentence for a reason code, or null when this module has none. */

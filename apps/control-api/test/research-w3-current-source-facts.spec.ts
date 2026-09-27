@@ -167,23 +167,45 @@ describe("W3 · S04 evidence: claim strip and fold verdicts (CG-P13-07/08)", () 
     }
     expect(verdicts.mean_oos_sharpe).toBe("-5.354970424211971");
     expect(verdicts.mean_decay).toBe("3.911439612138451");
-    expect(evidence.analytics.metrics).toMatchObject({
-      oos_sharpe: { value: "-5.354970424211971", availability: { state: "AVAILABLE", reason_code: null } },
-      sharpe_decay: { value: "3.911439612138451", availability: { state: "AVAILABLE", reason_code: null } },
-      total_trade_count: { value: "10", availability: { state: "AVAILABLE", reason_code: null } },
+
+    /* E11 (audit 04-6): the run's OOS trade count is the sum of the published
+       per-fold counts, under the same score basis as the means. */
+    expect(verdicts.total_oos_trades).toEqual({
+      state: "AVAILABLE",
+      reason_code: null,
+      availability: { state: "AVAILABLE", reason_code: null },
+      value: real.expected.folds.reduce((sum, fold) => sum + Number(fold.oos_trade_count), 0),
+      basis: "SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1",
+      folds_counted: 2,
+      folds: 2,
     });
-    expect(evidence.analytics.series).toEqual({
-      is_equity: {
-        kind: "IS_EQUITY", href: null,
-        availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_IS_EQUITY_SERIES" },
-      },
-      rolling_sharpe_63: {
-        kind: "ROLLING_SHARPE_63", href: null,
-        availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_ROLLING_SHARPE_63" },
-      },
+
+    /* E11 (audit 04-7, 04-10): the lane names what it structurally lacks, so
+       Screen 04 states it instead of leaving a legend one series short. */
+    expect(evidence.source_absences.in_sample_account).toMatchObject({
+      state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT",
     });
-    expect(Object.values(evidence.analytics.behavior).every((entry) =>
-      entry.value === null && entry.availability.state === "NOT_PUBLISHED")).toBe(true);
+    expect(evidence.source_absences.rolling_sharpe).toMatchObject({
+      state: "NOT_PUBLISHED", reason_code: "RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES",
+    });
+  });
+
+  it("E11: withholds the OOS trade total rather than publishing a partial sum", async () => {
+    /* One fold predates the W3 fact block, so it retained no trade count; the
+       sum would be the other fold's alone, wearing the run's name. */
+    const folds = real.rows.FOLD.map((row, index) => index !== 0 ? row : {
+      ...row,
+      payload: Object.fromEntries(Object.entries(row.payload).filter(([key]) => key !== "fold_facts")),
+    });
+    const { service } = memory(realSeal, { ...realTables, FOLD: folds } as never);
+    const evidence = sealed<ResearchCurrentSourceEvidenceResponse>(await service.evidence(scope, real.run_id));
+    expect(evidence.fold_verdicts.total_oos_trades).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT",
+      value: null,
+      folds_counted: 1,
+      folds: 2,
+    });
   });
 
   it("P13-T08: every required S04 field carries a value or a typed absence, never a silent null", async () => {
@@ -210,17 +232,6 @@ describe("W3 · S04 evidence: claim strip and fold verdicts (CG-P13-07/08)", () 
         expect(evidence.fold_verdicts).toMatchObject({ state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_W3_SOURCE_FACTS_V1" });
         expect(evidence.fold_verdicts.rows.every((row) => row.oos_sharpe === null && row.verdict === "NOT_EVALUATED")).toBe(true);
         expect(evidence.claim.validation_claim.reason_code).toBe("RS02_SEAL_PREDATES_W3_SOURCE_FACTS_V1");
-        expect(Object.values(evidence.analytics.metrics).every((metric) =>
-          metric.value === null && metric.availability.state === "NOT_PUBLISHED")).toBe(true);
-      }
-      for (const metric of [
-        ...Object.values(evidence.analytics.metrics),
-        ...Object.values(evidence.analytics.behavior),
-      ]) {
-        expect(metric.value === null).toBe(metric.availability.state !== "AVAILABLE");
-      }
-      for (const series of Object.values(evidence.analytics.series)) {
-        expect(series.href === null).toBe(series.availability.state !== "AVAILABLE");
       }
     }
   });
@@ -299,40 +310,6 @@ describe("W3 · S05 split: fold anatomy and guards (CG-P14-02)", () => {
       state: "AVAILABLE", oos_sharpe: fold.oos_sharpe, decay: fold.decay,
     })));
     expect(Object.values(split.data_use).map((fact) => fact.state)).toEqual(["AVAILABLE", "AVAILABLE", "AVAILABLE", "AVAILABLE"]);
-    expect(split.integrity).toEqual({
-      stitch_digest: {
-        value: null,
-        availability: { state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_E14_STITCH_INTEGRITY" },
-      },
-      gap_scan: {
-        state: "NOT_RETAINED_LEGACY",
-        cadence_ms: null,
-        folds: [],
-        availability: { state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_E14_GAP_SCAN" },
-      },
-    });
-  });
-
-  it("E14 publishes the source-sealed stitch digest and per-fold cadence scan", async () => {
-    const summary = structuredClone(real.summary);
-    summary.integrity = {
-      schema_version: "research.current-source-integrity.v1",
-      stitch_digest: "9".repeat(64),
-      gap_scan: {
-        state: "AVAILABLE",
-        cadence_ms: 3_600_000,
-        folds: [
-          { fold_id: "0", observed_bars: 168, missing_bars: 0, gap_runs: 0, max_gap_bars: 0 },
-          { fold_id: "1", observed_bars: 168, missing_bars: 1, gap_runs: 1, max_gap_bars: 1 },
-        ],
-      },
-    };
-    const { service } = memory(sealRow(summary, real.table_rows), realTables);
-    const split = sealed<ResearchCurrentSourceSplitResponse>(await service.split(scope, real.run_id));
-    expect(ResearchCurrentSourceSplitResponseSchema.safeParse(split).success).toBe(true);
-    openApiValidator("research-current-source.openapi.json", "Split").assert(split);
-    expect(split.integrity.stitch_digest).toEqual({ value: "9".repeat(64), availability: { state: "AVAILABLE", reason_code: null } });
-    expect(split.integrity.gap_scan).toMatchObject({ state: "AVAILABLE", cadence_ms: 3_600_000, folds: [{ missing_bars: 0 }, { missing_bars: 1 }] });
   });
 
   it("a pre-W3 fold row reads as a typed absence, never as zero bars", async () => {

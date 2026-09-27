@@ -84,6 +84,8 @@ export const REPORT_UNIT: Record<string, "currency" | "fraction" | "count" | "ra
 
 /** Headline tiles carry no unit of their own; the key decides it. */
 export const HEADLINE_UNIT: Record<Headline["key"], "currency" | "fraction" | "count" | "ratio"> = {
+  /** E14 · 9.8: the net return tile; the server states the scope it belongs to. */
+  NET_RETURN: "fraction",
   OOS_SHARPE: "ratio",
   DECAY_MEAN: "ratio",
   MAX_DRAWDOWN: "fraction",

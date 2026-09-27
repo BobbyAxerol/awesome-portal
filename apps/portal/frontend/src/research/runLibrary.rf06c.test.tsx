@@ -81,6 +81,7 @@ const LIVE_STATS: MetricCell[] = [
 function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
   return {
     run_id: "rrun_3935d7d16bbccabcc43382108ffca89d",
+    display_label: "R-WFO-118",
     attempt_id: null,
     source_kind: "RESEARCH_DURABLE",
     row_kind: "LOGICAL_RUN",
@@ -216,6 +217,7 @@ function page(items: RunLibraryItem[], ledger = LIVE_LEDGER): RunLibraryResponse
       order: "CREATED_AT_DESC_RUN_ID_DESC",
     },
     counters: { logical_runs: 15, worker_children: 0, technical_retries: 0, legacy_metadata_rows: 1 },
+    status_counts: { COMPLETED: 2, RUNNING: 0, FAILED: 0, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0 },
     claim_ledger: ledger,
     filter_catalog: {
       alphas: [{ alpha_id: "delta-rsi-polynomial-alpha", alpha_name: "Delta-RSI Polynomial Alpha" }],
@@ -236,6 +238,7 @@ const LIVE_VALUES = [
 ];
 
 const LIVE_SOURCE: RunSparklineSource = {
+  lane: "PORTAL_PERSISTED_RESEARCH",
   series_kind: "EQUITY_OOS",
   value_field: "equity",
   projection_revision: REVISION,

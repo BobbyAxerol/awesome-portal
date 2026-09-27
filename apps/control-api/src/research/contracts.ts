@@ -389,6 +389,13 @@ export interface ResearchRunProducerInput {
    * SIBLING_OF; the producer intent itself stays a NEW run.
    */
   sibling?: { parentRunId: string; whatIfCellId: string };
+  /**
+   * E13 · P19: a `?from=<run>` clone. The new attempt is a
+   * CLONE_FOR_EXPERIMENT child of that run's attempt with no `relation_kind`
+   * — it is a parent edge, not a what-if sibling — and the producer intent
+   * itself stays a NEW run with its own preflight and digests.
+   */
+  clonedFrom?: { parentRunId: string };
 }
 
 /** W5a A10c: one explicit what-if diagnostic intent (see createOrReplayWhatIfIntent). */
