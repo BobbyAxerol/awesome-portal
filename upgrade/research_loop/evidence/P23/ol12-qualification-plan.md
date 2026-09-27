@@ -2,6 +2,26 @@
 
 Status: `HARNESS_READY · QUALIFICATION_NOT_RUN`.
 
+2026-09-27 verifier amendment: the matrix matches Guide P23 byte-for-byte;
+each private T receipt must bind `project`, `base_url`, `candidate_source_sha`
+and referenced private regular-file byte hashes. A SHA-shaped string is not
+evidence. Changed/missing/symlink/public/oversized proofs stay BLOCKED.
+T01/T11 additionally require a linked cgroup time series and 20-principal
+read receipt in the same measurement window; T01 also requires one active
+heavy slot, >=4 distinct queued heavy intents and an actual completion.
+All checks are repeated on final aggregation. The runtime JSON must equal
+the hashed file, not a substituted object with a `passed` label.
+
+Config requires the exact `candidate_source_sha` (40 hex). Per-T envelope:
+`{test_id,status,project,base_url,candidate_source_sha,evidence:[{kind,locator,command,exit_code,sha256}]}`.
+Evidence JSON/files stay 0600 outside Git. `--resource-receipt`, `--read-receipt`
+and `--workload-receipt` consume the corresponding sanitized, referenced
+JSON files; resource/read timing must overlap the workload. A live one-off
+`--resource-project` idle sample is diagnostic only, never qualification.
+Canonical `/api/v1/quantbt/runs` and its named sparkline GET are included in
+the bounded read sampler, without admitting the legacy producer namespace.
+Positive unit verifier fixtures do not become real P23 receipts.
+
 The backend lane owns the isolated project `portal-research-p23-ol12` and the
 loopback base URL `http://127.0.0.1:8096/`. It never reuses the shared preview
 (:8095), dev, stable, or a production volume. `scripts/research-p23/qualify.mjs`

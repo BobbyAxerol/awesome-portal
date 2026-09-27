@@ -23,6 +23,15 @@ test('20 distinct sessions, loopback and GET-only named Research paths are manda
   assert.throws(() => validateManifest({ ...input, paths: ['/api/v1/execution/commands'] }), /NAMED_READ/);
 });
 
+test('the canonical Library and sparkline are allowed without admitting the legacy producer or other namespaces', () => {
+  for (const path of ['/api/v1/quantbt/runs?limit=20','/api/v1/quantbt/runs/rrun_abcdef/sparkline']) {
+    assert.equal(validateManifest({...input,paths:[path]}).paths[0],path);
+  }
+  for (const path of ['/api/v1/quantbt/runs/rrun_abcdef/cancel','/api/v1/quantbt/releases/current','/api/v1/quantbt/runs/../../execution/commands']) {
+    assert.throws(() => validateManifest({...input,paths:[path]}),/NAMED_READ/);
+  }
+});
+
 test('private session manifest must be a regular 0600 file', () => {
   const dir = mkdtempSync(join(tmpdir(), 'portal-p23-manifest-'));
   const path = join(dir, 'sessions.json');

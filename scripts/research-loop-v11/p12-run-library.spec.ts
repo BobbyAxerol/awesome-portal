@@ -863,6 +863,7 @@ describe("Research Loop P12 · Run Library persisted reader", () => {
     expect(sparkline.values.every((value) => equities.includes(value))).toBe(true);
     expect(sparkline.source_revision).toBe(LIVE.projection_revision);
     expect(sparkline.source).toEqual({
+      lane: "PORTAL_PERSISTED_RESEARCH",
       series_kind: "EQUITY_OOS", value_field: "equity", projection_revision: LIVE.projection_revision,
       series_digest: LIVE.equity_oos.series_digest, source_observation_count: 744,
       source_sampling: "EXTREMA_BUCKET_V1", persisted_point_count: 25, display_sampling: "EXTREMA_BUCKET_24_V1",
@@ -884,7 +885,9 @@ describe("Research Loop P12 · Run Library persisted reader", () => {
     const runId = await seedRetainedEvidence(pool, currentSourceRepository);
     const response = await service.list(scope, { ...ALL, ids: [runId] });
     const item = response.items[0]!;
-    expect(item.evidence_revision).toMatch(/^p13r2_[0-9a-f]{64}$/);
+    // E11's accepted RS-02 lane reads the seal; it must not fabricate a P13
+    // projection/revision merely to populate a Library card.
+    expect(item.evidence_revision).toBeNull();
     expect(item.stats.map((metric) => [metric.role, metric.value, metric.availability.state])).toEqual([
       ["OOS_SHARPE", "-5.354970424211971", "AVAILABLE"],
       ["DECAY", "3.911439612138451", "AVAILABLE"],
@@ -897,12 +900,32 @@ describe("Research Loop P12 · Run Library persisted reader", () => {
     expect(sparkline.values).toHaveLength(24);
     expect(sparkline.values[0]).toBe(LIVE.equity_oos.payload[0]!.equity);
     expect(sparkline.values.at(-1)).toBe(LIVE.equity_oos.payload.at(-1)!.equity);
-    expect(sparkline.source_revision).toBe(item.evidence_revision);
+    expect(sparkline.source_revision).toBe("rs02r1");
     expect(sparkline.source).toMatchObject({
-      series_kind: "EQUITY_OOS",
+      lane: "PORTAL_RETAINED_CURRENT_SOURCE",
+      series_kind: "EQUITY",
+      projection_revision: "rs02r1",
+      series_digest: null,
       source_observation_count: LIVE.equity_oos.payload.length,
       display_sampling: "EXTREMA_BUCKET_24_V1",
     });
+    expect(item.stats.every((metric) => metric.scope === "OOS")).toBe(true);
+    expect(item.stats[2]!.definition_id).toBe("research.current-source.v1.sum-of-published-fold-oos-trade-counts");
+    const equities = LIVE.equity_oos.payload.map((point) => point.equity);
+    expect(sparkline.values.every((value) => equities.includes(value))).toBe(true);
+    const ordered = [...equities].sort((a, b) => Number(a) - Number(b));
+    expect(sparkline.values).toContain(ordered[0]);
+    expect(sparkline.values).toContain(ordered.at(-1));
+    const custody = await pool.query(
+      `SELECT artifact_revision, manifest_digest FROM research.current_source_seals_v1
+        WHERE workspace_id = $1 AND run_id = $2`, [scope.workspaceId, runId],
+    );
+    expect(custody.rows).toEqual([{ artifact_revision: 1, manifest_digest: RETAINED.manifest_digest }]);
+    const projections = await pool.query(
+      `SELECT count(*)::integer AS count FROM research.run_evidence_projections_v1
+        WHERE workspace_id = $1 AND run_id = $2`, [scope.workspaceId, runId],
+    );
+    expect(projections.rows[0].count).toBe(0);
 
     await pool.query("SET enable_seqscan = off");
     try {

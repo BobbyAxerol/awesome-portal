@@ -1,5 +1,12 @@
 # P12 backend and contract packet — Run Library, search and historical browsing
 
+Current addendum (2026-09-27): historical typed-absence/sparkline statements below
+describe the original P12 checkpoint. Later accepted E11 adds sealed RS-02 facts
+and a separately named retained sparkline lane. F6's current isolated PostgreSQL
+suite is **11/11 PASS**, retaining exact scope/values/seal/extrema and proving GET
+does not create a P13 projection. See the [qualification checkpoint](../P23/F6_MIGRATION_VERIFIER_CHECKPOINT_2026-09-27.md).
+This does not replace the final candidate/browser or P23/P24 gates.
+
 Status: **BACKEND_AND_TYPED_CONTRACT_COMPLETE; feature-dark; Screen-01 consumer, browser/HiFi and product-route acceptance remain Claude-owned.**
 This packet does not claim a live QuantBT run, a deployment, an artifact read, a Parquet scan, a source-DB connection, or `PRODUCT_ACTIVE`.
 

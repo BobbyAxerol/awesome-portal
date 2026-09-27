@@ -19,9 +19,10 @@ export function validateManifest(input) {
     throw new Error('ISOLATED_P23_URL_REQUIRED');
   }
   if (!Array.isArray(input.paths) || input.paths.length < 1 || input.paths.length > 12 || input.paths.some(path => {
-    if (typeof path !== 'string' || !/^\/api\/v1\/research\/[a-z0-9/?=&_%.-]+$/i.test(path)) return true;
+    if (typeof path !== 'string' || !/^\/api\/v1\/[a-z0-9/?=&_%.-]+$/i.test(path)) return true;
     const resolved = new URL(path, url);
-    return !resolved.pathname.startsWith('/api/v1/research/') || resolved.hash !== ''
+    const namedLibrary = /^\/api\/v1\/quantbt\/runs(?:\/[A-Za-z0-9_.-]{1,128}\/sparkline)?$/.test(resolved.pathname);
+    return !(resolved.pathname.startsWith('/api/v1/research/') || namedLibrary) || resolved.hash !== ''
       || /(?:publish|create|verify|evaluate|export|cancel|activate)/i.test(resolved.pathname);
   })) {
     throw new Error('NAMED_READ_PATHS_ONLY');
@@ -58,6 +59,7 @@ async function consumeBounded(response) {
 
 export async function runReadLoad(input, fetchFn = fetch) {
   const manifest = validateManifest(input);
+  const startedAt = new Date().toISOString();
   const origin = new URL(manifest.base_url).origin;
   const samples = [];
   await Promise.all(manifest.users.map(async user => {
@@ -91,6 +93,7 @@ export async function runReadLoad(input, fetchFn = fetch) {
         [status, data.filter(sample => sample.status === status).length])) }];
   }));
   return { schema_version: 'research.p23-read-load.v1', sampled_at_utc: new Date().toISOString(),
+    base_url:manifest.base_url, started_at_utc:startedAt, completed_at_utc:new Date().toISOString(),
     distinct_users: 20, by_path: byPath, passed: samples.every(sample => sample.status === 200) };
 }
 

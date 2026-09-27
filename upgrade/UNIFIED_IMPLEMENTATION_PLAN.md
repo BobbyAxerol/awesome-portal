@@ -3767,12 +3767,12 @@ chưa commit** — phải lấy lại, đừng làm lại từ đầu:
 | F3 | Build lại preview **một lần** (migration 068 + 069 cùng lượt — F1 và F2 **đã vào nhánh**), rồi chạy lane lấy **receipt xanh 54/54**. Đây là việc kiểm, không phải code | Claude hoặc **Codex** (chỉ build + chạy lane) | Lane là receipt real-API: sửa frontend thì phải build lại preview mới xanh. **Chú ý thứ tự migration:** 069 vào nhánh trước 068, DB nào đã chạy 069 rồi sẽ kẹt — xem [`preview-migration-order`] trong ghi chú vận hành |
 | F4 | **E10-O1** — receipt thật cho E10 **và** E10-O3: preview đã build sạch nên bốn run kẹt cũ không còn; phải tạo một strand mới rồi chứng minh nó hội tụ | **Codex làm được** (backend), **cần Bobby cho phép ghi vào preview** | Preview đang read-only |
 | F5 | **Frontend chưa xong — E4-O1 / E6:** đường create + preflight của S02 và write của S14 chưa từng chạy với server thật; hiện chỉ stub trong browser | Claude (frontend), cần một stack ghi được | Preview read-only |
-| F6 | **P12 spec PostgreSQL 9/10 đỏ sẵn từ `05f0d6a0`** (`CG-P12-02/03/04/09`, `lane: "PORTAL_PERSISTED_RESEARCH"` ngoài dự kiến). Đã kiểm bằng cách stash: **không phải do đợt này** | **Codex làm được** (backend thuần) | Mới phát hiện, chưa điều tra |
+| F6 | **CLOSED backend regression, 2026-09-27.** Historical 9/10 failure superseded: actual current suite first reproduced 9/11, then **11/11 PASS**. Assertions now follow published persisted/RS-02 lane identity; exact values, extrema, sealed manifest and no reader-created P13 projection remain checked. | Codex | [Checkpoint + original failure retained](./research_loop/evidence/P23/F6_MIGRATION_VERIFIER_CHECKPOINT_2026-09-27.md) |
 | F7 | **E10-O3a** — nhịp 2 workspace/phút/process: 10 workspace hội tụ trong ~5 phút, 100 workspace mất ~50 phút. Quá ~30 workspace phải đo lại | Bobby quyết, rồi Claude | Đo rồi mới biết có cần đổi nhịp |
 | F8 | Request cho engine/source: **E5-O1** (max_dd từng candidate), **E5-O2** (K thật + id pool cho mode 3/4/5) | Claude gửi, engine trả lời | E16 producer và engine pin không còn chờ source: Codex đã đóng bằng [real proof](./research_loop/evidence/P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md). Hai request E5 giữ đúng owner/scope cũ. |
 | F9 | **D-B1** tương phản `--ink-faint` `#939db0` — ngoại lệ axe duy nhất còn lại, dùng chung cả lane | Bobby (token) | Đổi token là đụng baseline |
 | F10 | **OL-01** Production activation | Bobby/ops | Host SGP đã có profile enforce và owned child đã dùng thật; không còn thiếu host profile trên máy này. Production Research flags/rollout vẫn tách riêng, không được suy từ receipt 8098. |
-| F11 | **OL-03 → OL-13** | Codex | P22+ |
+| F11 | **Current: OL-12 / P23 qualification.** OL-03…OL-11 and OL-13 backend are closed by the P22 real receipt; their consumer acceptance remains in F3/F5/OL-24. Historical broad OL-03→OL-13 wording is superseded, not a request to rebuild P22. | Codex | Real P23 T01–T15/DR/BR/GX evidence still required |
 | F12 | **Frontend chưa xong — nhỏ, đã biết:** ladder S13 còn mũi tên `claim ↑ →` treo ở cuối hàng (12 thẻ, hàng 4); hai lane S08 có độ phân giải dải khác nhau (WFO bucket 160, P04 bucket 48 — trung thực vì caption ghi cỡ bucket, nhưng không đồng đều); S09 chưa chạy lại in Letter/A4 sau E3/E14 | Claude (frontend) | Chưa làm |
 | F13 | **Visual baseline** chưa chạy lại sau S08 (E16-R1 thêm một hàng) và S12 (RF-04 đổi bố cục). Chạy **chỉ** qua `./scripts/portal-web-visual.sh` (image ghim) — chạy trần sẽ ra 28 ô đỏ giả | Claude | Chưa làm |
 | F14 | **E16-R2** — publish engine pin trên freeze read P04 | **Codex — CLOSED isolated backend + consumer** | `engine_pin` generated fact/reason consumed by DigestChain; P04 + imported Freeze real browser PASS at both widths. [Receipt](./research_loop/evidence/P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md). Old records remain typed absent. |
@@ -3789,6 +3789,27 @@ within their tested scope; unrelated F3/F4/F5/visual/print/P24 gates stay open.
 [Full integration packet](./research_loop/evidence/P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md).
 
 #### C. Nợ tài liệu
+
+**Full qualification goal continuation — 2026-09-27 (Codex):** Bobby approved
+all eight groups in the private goal objective: F6; migration compatibility;
+F4/E10 recovery; OL-02 integrity; OL-12/P23; F3/F5/OL-24; E6-BR-01; P24.
+The goal remains ACTIVE until the complete candidate is ready for Bobby review;
+no push, main/dev merge or Production rollout is authorized by this checkpoint.
+F6 first actual run on `decb5f6c`: 9/11 PASS, two stale assertions fail
+(published `lane` omitted; RS-02 seal confused with a P13 projection).
+Fixes retain strict provenance, exact source values and no-GET-recompute checks.
+Migration 068/069→075/076 compatibility is IN_PROGRESS, without ledger rewrite
+or deleting DB data. P23 verifier review also found mismatched T-id semantics,
+unverified referenced byte hashes and optional runtime measurement; these must
+be repaired in P23 before qualification, not hidden by receipt-only PASS.
+Current checkpoint: F6 is CLOSED (11/11). Exact preview-ledger readback ends at
+067, not the historical contributor source labels 068/069. Isolated forward
+upgrade 067→076 and no-op migrator restart both PASS (2/2), preserving original
+ledger/data/auth sentinels; shared preview rebuild remains F3, not claimed here.
+P23 verifier repair passes 12 unit tests and its samplers pass 7 Node tests,
+including canonical Library GET coverage. These are not real qualification
+receipts. F4/E10, OL-02, OL-12/P23 workload, F3/F5/OL-24, E6-BR-01 and P24
+remain open. [Exact evidence and next steps](./research_loop/evidence/P23/F6_MIGRATION_VERIFIER_CHECKPOINT_2026-09-27.md).
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5

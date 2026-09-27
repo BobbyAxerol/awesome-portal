@@ -4,6 +4,13 @@ Status: **BACKEND_RESOURCE_HARNESS_READY · NOT_QUALIFIED**. This is P23 (the
 request's heading), not another P22 publication implementation. P22's real
 Delta→R1 and S11 browser receipts remain prerequisites; see the P22 packet.
 
+Current-status correction, 2026-09-27: P22's **backend real-preview** prerequisite
+is satisfied by its immutable real-preview receipt. The S01/S02/S10/S11 final
+candidate browser lane remains separate. Preserve the paragraph above as the
+historical checkpoint, not a claim that the P22 backend must be implemented again.
+Full OL-12 remains NOT_QUALIFIED. The T-id mapping/byte-hash/runtime requirements
+of `qualify.mjs` are corrected and tested in the [current checkpoint](./F6_MIGRATION_VERIFIER_CHECKPOINT_2026-09-27.md).
+
 ## Delivered without changing a runtime
 
 - `compose.research-p23-5gb.yaml` is an *opt-in, isolated-cell-only* profile.
