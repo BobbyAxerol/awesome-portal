@@ -1,6 +1,14 @@
 # P23 backend qualification packet
 
-**Latest read/outage/import checkpoint, 2026-09-27:** [Current packet](./READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md)
+**Latest mixed/restore checkpoint, 2026-09-27:** [Actual candidate proof](./MIXED_RESTORE_CHECKPOINT_2026-09-27.md)
+records clean `b2e8b868` twenty-reader/one-heavy/four-queued completion,
+Library p95 **490 ms PASS**, 618209280-byte peak, cold process reads PASS,
+and actual coherent restore of 139 tables/9 sealed artifacts/54 parts/337 files
+with worker-off readback. Image-index recovery and failed attempts are retained.
+Nonempty publication/selection graph, remaining T gates and browser/P24 stay
+OPEN; older absence/789-ms paragraphs below are historical, not current status.
+
+**Earlier read/outage/import checkpoint, 2026-09-27:** [Previous packet](./READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md)
 records actual mixed-load diagnostic (one heavy/four queued/20 identities,
 684380160-byte peak, initial Library SLO FAIL), optimized warm read p95 466 ms,
 real PG/NATS/worker recovery after pool-error repair, bounded read admission,

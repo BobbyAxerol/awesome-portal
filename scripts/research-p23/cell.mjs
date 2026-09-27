@@ -16,6 +16,17 @@ export const TEST_USERS = Object.freeze([
     username: `p23-reader-${String(index + 1).padStart(2, '0')}`, role: 'USER',
   })),
 ]);
+const RUNTIME_SERVICES = ['portal-web','control-api','portal-api','quant-worker-py',
+  'portal-postgres','portal-nats','roadmap-task-board-api'];
+export function retainedImageTag(service, image) {
+  assert(RUNTIME_SERVICES.includes(service) && /^sha256:[a-f0-9]{64}$/.test(image), 'OWNED_IMMUTABLE_IMAGE_REQUIRED');
+  return `local/portal-research-p23-retained-${service}:${image.slice(7)}`;
+}
+export function imageReplacements(rows) {
+  assert(rows.every(row=>RUNTIME_SERVICES.includes(row.service)
+    && /^sha256:[a-f0-9]{64}$/.test(row.actual) && /^sha256:[a-f0-9]{64}$/.test(row.desired)), 'VALID_OWNED_IMAGE_INVENTORY_REQUIRED');
+  return rows.filter(row=>row.actual!==row.desired).map(row=>row.service);
+}
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const STATE_ROOT = '/home/bobby/.local/state/portal-research-p23';
 
@@ -115,12 +126,34 @@ async function main() {
     return result.stdout ?? '';
   };
   if (command === 'build') {
+    // Containerd image-store index IDs can disappear when a build replaces a
+    // tag, even if a container still uses the unchanged underlying config.
+    // Preserve the exact active index before export, so rollback/DR can run it.
+    const ids=docker(['ps','-q','--filter',`label=com.docker.compose.project=${PROJECT}`]).trim().split('\n').filter(Boolean);
+    for(const id of ids) {
+      const current=JSON.parse(docker(['inspect','--format','{{json .}}',id]));
+      const service=current.Config.Labels['com.docker.compose.service'];
+      const tag=retainedImageTag(service,current.Image);
+      docker(['image','inspect',current.Image]);
+      docker(['image','tag',current.Image,tag]);
+    }
     compose(['build', '--build-arg', 'PORTAL_HMD_READER_REQUIRED=true',
       'portal-api', 'control-api', 'portal-web', 'roadmap-task-board-api']);
   } else if (command === 'up') {
     const previousControl = docker(['ps', '-a', '-q', '--filter', `label=com.docker.compose.project=${PROJECT}`,
       '--filter', 'label=com.docker.compose.service=control-api']).trim();
     compose(['up', '-d', '--no-build', '--wait', '--wait-timeout', '150', 'portal-web', 'quant-worker-py']);
+    const inventory=docker(['ps','-q','--filter',`label=com.docker.compose.project=${PROJECT}`]).trim().split('\n').filter(Boolean)
+      .map(id=>{
+        const current=JSON.parse(docker(['inspect','--format','{{json .}}',id]));
+        return {service:current.Config.Labels['com.docker.compose.service'],actual:current.Image,
+          desired:docker(['image','inspect','--format','{{.Id}}',current.Config.Image]).trim()};
+      });
+    // Compose may keep a container with an unchanged image config while its
+    // exported index ID changed. Record only a fully runnable exact image set.
+    for(const service of imageReplacements(inventory)) {
+      compose(['up','-d','--no-build','--no-deps','--force-recreate','--wait','--wait-timeout','90',service]);
+    }
     const currentControl = docker(['ps', '-q', '--filter', `label=com.docker.compose.project=${PROJECT}`,
       '--filter', 'label=com.docker.compose.service=control-api']).trim();
     // nginx resolves the existing static upstream at startup. If Compose
@@ -136,6 +169,7 @@ async function main() {
         container_id: container.Id, image_id: container.Image,
         memory_limit_bytes: container.HostConfig.Memory, swap_limit_bytes: container.HostConfig.MemorySwap,
         apparmor: container.AppArmorProfile,
+        image_runnable: docker(['image','inspect','--format','{{.Id}}',container.Image]).trim() === container.Image,
       }];
     }));
     writePrivate(join(home, 'identity.json'), JSON.stringify({ schema_version: 'research.p23-cell-identity.v1',

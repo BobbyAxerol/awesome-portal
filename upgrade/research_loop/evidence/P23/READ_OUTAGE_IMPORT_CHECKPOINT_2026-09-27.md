@@ -229,3 +229,14 @@ and Control API build PASS. Private diagnosis files:
 No runtime application files or shared preview were edited for profiling.
 Next exact candidate needs full commit gate/build/mixed receipt; full P23/P24
 is still incomplete. No frontend, Production, AWS-HK/TS, push or merge changes.
+
+## Subsequent actual receipt — supersedes the previous next action only
+
+`b2e8b868` committed with the mandatory full hook PASS (1331 backend / one
+external skip, 196 contracts), then clean build/up and actual mixed-load PASS:
+Library p95 490 ms, 618209280-byte peak, twenty distinct readers, one HEAVY
+completed/four queued and zero implicit jobs. Coherent 139-table/9-artifact/
+54-part/337-file restore with worker-off readback also PASS. Full P23/P24,
+nonempty publication graph and other gates remain OPEN. The source/index
+identity issue and exact failure history are recorded, not hidden; see the
+[mixed/restore checkpoint](./MIXED_RESTORE_CHECKPOINT_2026-09-27.md).

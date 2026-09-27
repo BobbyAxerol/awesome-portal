@@ -3669,7 +3669,7 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 | OL-10 | Capability/route ledger | **CLOSED — Codex P22.** R2 inventory, generated route inventory and contract snapshot include the canonical P22 surface. | — | Gates green. |
 | OL-11 | Canonical RC publication route model | **CLOSED — Codex P22.** Exactly `GET …/publication` + `POST …/publish`; mirror is embedded and reconcile is server-owned. Historical contributor notes are explicitly superseded, not erased. | Claude consumer | No product client calls old routes. |
 | OL-13 | Named publication/approval read by `alpha_version_id` | **BACKEND CLOSED — Codex P22.** `researchAlphaVersionPublicationGetV1` returns current RC relation or typed absence; real lookup is `AVAILABLE`. | Claude consumer | S01/S02 render it without scanning RCs. |
-| OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **IN_PROGRESS, 2026-09-27.** Clean `4e343fe9` actual 20-reader/one-heavy/four-queued run completed: cap PASS, 611323904-byte sampled peak, no implicit jobs; Library p95 **789 ms FAIL** (500-ms target), other five reads PASS. Cold API-process/pool read PASS. Actual query/mapping diagnosis led to exact-response narrow-payload/single-validation repair; diagnostic parity PASS, not final mixed-load acceptance. | Codex | [Current proof/remaining exact gates](./research_loop/evidence/P23/READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md); every final T-id still needs clean-candidate evidence |
+| OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **IN_PROGRESS, 2026-09-27.** Clean application `b2e8b868`: actual 20-reader/one-heavy/four-queued completion, all six SLOs PASS (Library **490 ms**), 618209280-byte peak, zero implicit jobs; cold process reads PASS. Coherent restore **139 tables/9 artifacts/54 parts/337 files**, worker-off readback PASS. Image-index failure/recovery retained; nonempty selection/publication graph and other required gates remain OPEN. | Codex | [Current proof/remaining exact gates](./research_loop/evidence/P23/MIXED_RESTORE_CHECKPOINT_2026-09-27.md); no full P23/P24 claim from this subset |
 
 #### B. Frontend / test còn mở (không phải backend)
 
@@ -3857,6 +3857,20 @@ already validated by the shared P12/P19 mapper. Exact public-response parity
 Diagnostic p95 341→248 ms is not a new runtime PASS. Next: commit/build exact
 candidate and mixed-load; remaining P23 faults/coherent restore/isolation/
 plateau/utility/upgrade/browser and P24 remain in the original full goal.
+
+**Mixed-load/coherent-restore continuation — 2026-09-27:** application
+`b2e8b868` clean build/up and actual twenty-reader mixed HEAVY workload PASS;
+Library p95 **490 ms**, cap peak **618209280 bytes**, jobs **20→20**.
+Cold process/pool reads PASS, not a host/HMD cache flush. Coherent DB+artifact
+restore now PASS: 139 table hashes, 9 SEALED artifacts, 54 parts, 337 files;
+five API reads succeed with worker off, original volumes resumed. A real
+containerd index-retention issue and PostgreSQL CHECK reparse difference were
+fixed in the owned tool path; failed attempts are preserved. No frontend/app/
+migration changes in that harness slice. T14 stays OPEN because this cell's
+selection/promotion/publication relations are empty, not a valid nonempty
+reference-graph proof. Remaining plateau/disk/security/utility/scale/upgrade/
+browser and P24 are unchanged; full eight-group goal stays ACTIVE.
+[Exact hashes, identity boundary and cleanup](./research_loop/evidence/P23/MIXED_RESTORE_CHECKPOINT_2026-09-27.md).
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5

@@ -2,23 +2,27 @@
 
 ## Current addendum — 2026-09-27
 
-The initial matrix below remains historical. [Current checkpoint](./READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md)
+The initial matrix below remains historical. [Current checkpoint](./MIXED_RESTORE_CHECKPOINT_2026-09-27.md)
 supersedes absence of an owned cell/P22 backend: F6 + upgrade, real F4/E10 and
 OL-02 observer proofs are closed; P22 backend real publication is closed.
 
 | Test | Current status, scoped honestly |
 |---|---|
-| T01 | PARTIAL: clean `4e343fe9` real twenty-reader/one-heavy/four-queued HEAVY completion + cgroup cap PASS; Library p95 789 ms FAIL, other five APIs PASS. Measured narrow-payload/single-validation repair has exact DTO parity and focused/P12 PG proof; repaired candidate simultaneous receipt required. |
+| T01 | Scoped real mixed-load PASS on clean application `b2e8b868`: twenty readers, one HEAVY/four queued, actual completion, 120 GET 200, Library p95 490 ms, 618209280-byte peak, zero implicit jobs. Final qualification aggregation/image-index binding remains separate. Prior 789 ms FAIL retained. |
 | T04 | PARTIAL: actual PG/NATS/worker outage found/repaired API pool crash; corrected bounded refusal/recovery/source preservation/one durable intent PASS on diagnostic image. Clean candidate proof still required. |
-| T06 | PARTIAL: real observer MATCH/MISMATCH/copy restore PASS without modifying original seal; coherent DB+artifact restore still pending. |
-| T10 | PARTIAL: `4e343fe9` full commit gate PASS (1330 backend, one external skip; 196 contracts; 219 snapshot MATCH; 241 routes/no collision). New Library repair 30 focused/11 actual PG tests + build PASS. Full required browser/engine qualification is separate. |
-| T11 | PARTIAL: clean mixed twenty-reader sample has zero implicit jobs (15→15), finite admission, five APIs meet SLO; Library 789 ms FAIL. Full repaired-candidate far-seek/slider/mixed-heavy receipt pending. |
+| T06 | Actual scoped PASS: observer MATCH/MISMATCH/copy restore plus coherent 139-table/9-artifact/54-part/337-file restore and five worker-off GETs. Original seals unchanged. Nonempty graph/GC is T14, not inferred here. |
+| T10 | PARTIAL: `b2e8b868` full commit hook PASS (1331 backend, one external skip; 196 contracts). Focused Library 30/P12 actual PG 11/build PASS. Full required browser/engine qualification remains separate. |
+| T11 | PARTIAL: clean mixed twenty-reader sample has zero implicit jobs (20→20), finite admission and all six SLOs PASS. Far-seek/slider coverage is still required, not replaced by ordinary GETs. |
 | T02/03/05/07/08/09/12/13/14/15 | Preserve exact remaining workload/security/scale/restore/cold/upgrade/browser gates, not closed by this subset. |
 
 E6-BR-01 typed source-only signature/SBOM absence has a real DRAFT import/replay/
 list/injection-refusal receipt. No alpha signature or full browser claim.
 The new packet contains raw private evidence hashes, preserved failed probes,
 runtime pin boundary, resource snapshot and deferred owned-cell cleanup.
+
+Cold process/pool read proof exists, not a host/HMD cache flush. T14 remains
+OPEN because the restored publication/selection graph is currently empty.
+Do not erase the historical failure tables below or call full P23 qualified.
 
 Branch `docs/research-loop-plan`; owner Codex. Scope: resource profile,
 read-only cgroup/load instruments, focused backend regressions and truthful

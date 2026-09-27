@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { BASE_URL, PROJECT, TEST_USERS, composeArguments, validateHome } from './cell.mjs';
+import { BASE_URL, PROJECT, TEST_USERS, composeArguments, validateHome, retainedImageTag, imageReplacements } from './cell.mjs';
 
 test('qualification cell has its own fixed project, loopback and 20 distinct readers', () => {
   assert.equal(PROJECT, 'portal-research-p23-ol12');
@@ -37,4 +37,16 @@ test('API replacement refreshes only the owned static-DNS gateway', () => {
   assert(source.includes('previousControl && previousControl !== currentControl'));
   assert(source.includes("'--no-deps', '--force-recreate', '--wait', '--wait-timeout', '90', 'portal-web'"));
   assert(!source.includes("'--force-recreate', 'portal-postgres'"));
+});
+test('active immutable image indexes are retained before export and exact drift is targeted',()=>{
+  const a='sha256:'+'a'.repeat(64),b='sha256:'+'b'.repeat(64);
+  assert.equal(retainedImageTag('portal-api',a),'local/portal-research-p23-retained-portal-api:'+'a'.repeat(64));
+  assert.throws(()=>retainedImageTag('stable',a));
+  assert.throws(()=>retainedImageTag('portal-api','latest'));
+  assert.deepEqual(imageReplacements([{service:'portal-api',actual:a,desired:b},
+    {service:'portal-postgres',actual:a,desired:a}]),['portal-api']);
+  assert.throws(()=>imageReplacements([{service:'stable',actual:a,desired:b}]));
+  const source=readFileSync(new URL('./cell.mjs',import.meta.url),'utf8');
+  assert(source.indexOf("docker(['image','tag'")<source.indexOf("compose(['build'"));
+  assert(!source.includes("['image','rm'"));
 });
