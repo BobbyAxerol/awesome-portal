@@ -3914,6 +3914,19 @@ T02/P23/P24 remain unqualified; T03/T12/T14 continue on the owned cell. Current
 capacity: active compute/exports zero, nine original seal pins unchanged.
 [Actual receipt and preserved failures](./research_loop/evidence/P23/PLATEAU_CHECKPOINT_2026-09-27.md).
 
+**T12 utility continuation — 2026-09-27:** actual scoped diagnostic exposed a
+P23-only mismatch: Control API admitted what-if but worker lacked its flag,
+then lease expired with source sequence zero. Fixed only the owned worker
+overlay, recreated exactly one container; same images/caps/AppArmor/mounts,
+six other containers and 78 original auth/membership/seal rows unchanged.
+Real retake: primary and diagnostic COMPLETED/READY, 81/81 grid cells and
+63/63 unique evaluations sealed, eight exports READY/six verifies MATCH,
+exact parent/selection preserved; two explicit jobs, peak 656769024 bytes.
+T12 stays PARTIAL pending audit/quota negatives; T02 source repair, other
+P23 gates, full cross-stack and P24 stay OPEN. No application rebuild,
+frontend, shared 8095, Production, dev/main or push. [Hashes, actual failures,
+runtime identity and cleanup](./research_loop/evidence/P23/UTILITY_CHECKPOINT_2026-09-27.md).
+
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5
 (P10, P13–P20) — **không xoá** (luật A13.1), sổ này thắng chúng.

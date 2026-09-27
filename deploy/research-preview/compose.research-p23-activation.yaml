@@ -42,6 +42,9 @@ services:
     cpus: 2
     environment:
       PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION: "true"
+      # Match Control API's explicit what-if lane. Without this worker fence
+      # the durable diagnostic is admitted but cannot emit a source event.
+      PORTAL_FEATURE_RESEARCH_WHATIF: "true"
   portal-minio:
     environment:
       MINIO_ROOT_PASSWORD: ${P23_OBJECT_PASSWORD:?P23 requires its own object credential}

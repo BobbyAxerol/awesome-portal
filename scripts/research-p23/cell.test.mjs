@@ -28,6 +28,8 @@ test('isolated activation uses private credentials, disables auto-login and adds
   assert.match(source, /P23_DATABASE_PASSWORD:\?P23/);
   assert.match(source, /PREVIEW_AUTO_LOGIN_USERNAME: ""/);
   assert.match(source, /FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY: "true"/);
+  assert.match(source, /FEATURE_RESEARCH_WHATIF: "true"/);
+  assert.match(source, /quant-worker-py:[\s\S]*PORTAL_FEATURE_RESEARCH_WHATIF: "true"/);
   assert(!source.includes('FEATURE_EXECUTION_'));
   assert(!source.includes('ports:'));
   assert(!source.includes('external:'));

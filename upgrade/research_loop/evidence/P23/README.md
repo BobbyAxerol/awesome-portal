@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest T12 utility checkpoint, 2026-09-27:** [Worker flag repair and actual retake](./UTILITY_CHECKPOINT_2026-09-27.md)
+records the real missing worker what-if flag, unchanged image/caps/mounts/auth,
+and successful primary + diagnostic, sealed **81 cells/63 unique evaluations**,
+eight READY exports, six MATCH verifies and exact parent preservation. Peak
+**656769024 bytes**. Failed instruments/runtime evidence remain retained.
+This is scoped utility PASS, **not full T12**: separate audit/quota negatives,
+other P23 gates and P24 remain OPEN. No frontend or Production change.
+
 **Latest W08/T02 checkpoint, 2026-09-27:** [Actual cycle failure and handoff](./PLATEAU_CHECKPOINT_2026-09-27.md)
 records six real complete/fail/cancel terminals, stable scoped worker FD/RSS,
 and **42 files/1006525 bytes supervisor scratch growth**. Third-round admission

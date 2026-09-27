@@ -14,7 +14,8 @@ OL-02 observer proofs are closed; P22 backend real publication is closed.
 | T06 | Actual scoped PASS: observer MATCH/MISMATCH/copy restore plus coherent 139-table/9-artifact/54-part/337-file restore and five worker-off GETs. Original seals unchanged. Nonempty graph/GC is T14, not inferred here. |
 | T10 | PARTIAL: `b2e8b868` full commit hook PASS (1331 backend, one external skip; 196 contracts). Focused Library 30/P12 actual PG 11/build PASS. Full required browser/engine qualification remains separate. |
 | T11 | PARTIAL: clean mixed twenty-reader sample has zero implicit jobs (20→20), finite admission and all six SLOs PASS. Far-seek/slider coverage is still required, not replaced by ordinary GETs. |
-| T03/05/07/08/09/12/13/14/15 | Preserve exact remaining workload/security/scale/restore/cold/upgrade/browser gates, not closed by this subset. |
+| T12 | PARTIAL: actual flag-parity retake completes primary and diagnostic, seals 81 cells/63 unique evaluations, eight exports READY/six verifies MATCH, preserves parent and adds exactly two explicit jobs under 656769024-byte peak. Separate audit and negative quotas remain OPEN. [Exact utility proof and preserved failures](./UTILITY_CHECKPOINT_2026-09-27.md). |
+| T03/05/07/08/09/13/14/15 | Preserve exact remaining workload/security/scale/restore/cold/upgrade/browser gates, not closed by this subset. |
 
 E6-BR-01 typed source-only signature/SBOM absence has a real DRAFT import/replay/
 list/injection-refusal receipt. No alpha signature or full browser claim.
