@@ -102,6 +102,10 @@ substage under parse. It creates no fourth lifecycle state, API field,
 migration or backend transition. P10 owns the only remaining route/action
 dependency: a preflight cannot be routed until its durable producer exists.
 
+## E12 Journey descriptor revision 3
+
+Five already-mounted product screens are now advertised as `AVAILABLE` by immutable descriptor revision 3. See [the E12 closeout receipt](./E12_JOURNEY_DESCRIPTOR_V3_CLOSEOUT_2026-09-27.md) for migration, compatibility, generated-contract and rollback evidence.
+
 ## Rollback
 
 Disable only the two lazy Research routes/consumer imports if a later P09

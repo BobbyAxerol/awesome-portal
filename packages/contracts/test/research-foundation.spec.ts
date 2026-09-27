@@ -96,12 +96,16 @@ describe("P09 published Research foundation contract", () => {
     expect(readFileSync(generatedPath, "utf8")).toContain("invalid_schedules?:");
   });
 
-  it("RF-03: publishes canonical v2 Journey and historical identity response fixtures", () => {
+  it("E12: publishes canonical v3 Journey availability and historical identity response fixtures", () => {
     const fixture = (name: string) => JSON.parse(readFileSync(join(ROOT, "fixtures", name), "utf8")) as Record<string, any>;
-    const journey = fixture("research-foundation.journey-v2.valid.json");
-    expect(journey.descriptor).toMatchObject({ revision: 2, content_sha256: expect.stringMatching(/^[0-9a-f]{64}$/) });
+    const journey = fixture("research-foundation.journey-v3.valid.json");
+    expect(journey.descriptor).toMatchObject({ revision: 3, content_sha256: expect.stringMatching(/^[0-9a-f]{64}$/) });
     expect(journey.descriptor.phases.flatMap((phase: any) => phase.cards)).toHaveLength(28);
     expect(journey.descriptor.mapping).toHaveLength(6);
+    const byId = Object.fromEntries(journey.descriptor.phases.flatMap((phase: any) => phase.cards).map((card: any) => [card.card_id, card]));
+    for (const cardId of ["execute-replay", "attempt-lineage", "compare", "release-candidate", "run-report"]) {
+      expect(byId[cardId].availability).toBe("AVAILABLE");
+    }
     expect(journey.inspection.codec).toBe("p02-cursor.v2");
     const historical = fixture("research-foundation.historical-identity.valid.json");
     expect(historical).toMatchObject({ selected_release_kind: "HISTORICAL", atlas: null,

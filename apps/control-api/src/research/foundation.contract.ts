@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ResearchJourneyDescriptor } from "./journey.descriptor.v2";
+import type { ResearchJourneyDescriptor } from "./journey.descriptor.v3";
 
 const Identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/);
 const WorkspaceId = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional();

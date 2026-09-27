@@ -15,7 +15,7 @@ import { ResearchFoundationError } from "../../apps/control-api/src/research/fou
 import { ResearchFoundationService } from "../../apps/control-api/src/research/foundation.service";
 import {
   RESEARCH_JOURNEY_DESCRIPTOR_SHA256,
-} from "../../apps/control-api/src/research/journey.descriptor.v2";
+} from "../../apps/control-api/src/research/journey.descriptor.v3";
 import { ResearchMetadataRepository } from "../../apps/control-api/src/research/repository";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
 import { Pool } from "../../apps/control-api/node_modules/pg";
@@ -108,7 +108,7 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     });
     expect(response).toMatchObject({
       schema_version: "research.journey-response.v1",
-      descriptor: { revision: 2, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      descriptor: { revision: 3, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
       inspection: {
         canonical_query: "?run_id=run-p09&study=study-p09&trial=trial-p09&pick=pick-p09&seq=42",
         pick_effect: "INSPECTION_ONLY", ambiguity_state: "NOT_APPLICABLE",
@@ -120,9 +120,13 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === "claim")).toMatchObject({
       availability: "AVAILABLE", requires_run: true, target_fragment: "stage=claim",
     });
-    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === "execute-replay")).toMatchObject({ availability: "PLANNED" });
+    for (const cardId of ["execute-replay", "attempt-lineage", "compare", "release-candidate", "run-report"]) {
+      expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === cardId)).toMatchObject({ availability: "AVAILABLE" });
+    }
     expect((await pool.query("SELECT revision, content_sha256 FROM research.journey_descriptor_registry ORDER BY revision")).rows).toEqual([
-      { revision: "1", content_sha256: expect.any(String) }, { revision: "2", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      { revision: "1", content_sha256: expect.any(String) },
+      { revision: "2", content_sha256: expect.any(String) },
+      { revision: "3", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
     ]);
     expect(response.inspection.cursor).not.toHaveProperty("event_seq");
     expect(response.inspection.codec).toBe("p02-cursor.v2");
@@ -219,8 +223,12 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     expect(mode4.facts?.avoid_when.state).toBe("NOT_PUBLISHED");
     // RF02-B2: the walk-forward values S02 may offer come through the same read.
     const options = response.atlas.current_release.walk_forward_options!;
-    expect(options.window_mode.filter((item) => item.admission === "ADMITTED").map((item) => item.value)).toEqual(["expanding"]);
-    expect(options.window_mode.find((item) => item.value === "rolling")?.admission).toBe("NOT_ADMITTED");
+    expect(options.window_mode.filter((item) => item.admission === "ADMITTED").map((item) => item.value)).toEqual(["expanding", "rolling"]);
+    expect(options.window_mode.find((item) => item.value === "rolling")?.admission).toBe("ADMITTED");
+    expect(options.train_window).toMatchObject({
+      requested_spec_field: "walk_forward.train_window",
+      required_when: "window_mode=rolling",
+    });
     expect(options.frequency_default).toBe("quarterly");
     const dumped = JSON.parse(JSON.stringify(atlasFixture())) as { modes: Array<{ facts: Record<string, any> }> };
     for (const mode of dumped.modes) {

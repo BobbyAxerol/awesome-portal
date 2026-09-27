@@ -3,7 +3,7 @@
   "descriptor": {
     "schema_version": "research.journey.v1",
     "descriptor_id": "quantbt_journey",
-    "revision": 2,
+    "revision": 3,
     "phases": [
       {
         "phase_id": "access_command",
@@ -217,7 +217,7 @@
             "description": "candle replay, trade tape, event ledger, MAE×MFE",
             "target_kind": "RESEARCH_SCREEN",
             "target_key": "execute_replay",
-            "availability": "PLANNED",
+            "availability": "AVAILABLE",
             "requires_run": true,
             "target_fragment": null
           },
@@ -237,7 +237,7 @@
             "description": "version ledger per av_, 52-attempt scale (probes collapsed), promotion pick",
             "target_kind": "RESEARCH_SCREEN",
             "target_key": "attempt_lineage",
-            "availability": "PLANNED",
+            "availability": "AVAILABLE",
             "requires_run": true,
             "target_fragment": null
           },
@@ -257,7 +257,7 @@
             "description": "within one alpha: methodology trajectory, guarded by ComparisonContractKey",
             "target_kind": "RESEARCH_SCREEN",
             "target_key": "compare_runs",
-            "availability": "PLANNED",
+            "availability": "AVAILABLE",
             "requires_run": true,
             "target_fragment": null
           }
@@ -275,7 +275,7 @@
             "description": "lineage rail alpha→av_→run→params→rc_, the 12-item R1 evidence pack, publish → approval-inbox mirror",
             "target_kind": "RESEARCH_SCREEN",
             "target_key": "release_candidate",
-            "availability": "PLANNED",
+            "availability": "AVAILABLE",
             "requires_run": true,
             "target_fragment": null
           },
@@ -285,7 +285,7 @@
             "description": "printable evidence artifact: claim passport, cert chain, per-fold verdict, digests — attach it to the approval",
             "target_kind": "RESEARCH_SCREEN",
             "target_key": "run_report",
-            "availability": "PLANNED",
+            "availability": "AVAILABLE",
             "requires_run": true,
             "target_fragment": null
           },
@@ -394,7 +394,7 @@
         "adds": "fold anatomy, nested inner folds, holdout seal — and the modes × routes reference"
       }
     ],
-    "content_sha256": "07d0ed3e7b4cf6fd7ad614a39d646656a931a84ef3aa8ee800cdeddf093071b1"
+    "content_sha256": "7f42203c4f6b4f326e28e020398a530c2fe6268c05352eb9aab5b918e5cd548d"
   },
   "inspection": {
     "cursor": {},
