@@ -9,6 +9,12 @@ import type { ControlApiConfig } from "../../apps/control-api/src/config";
 import type { ResearchScope } from "../../apps/control-api/src/research/contracts";
 import { ResearchEvidenceRepository } from "../../apps/control-api/src/research/evidence.repository";
 import { ResearchEvidenceService } from "../../apps/control-api/src/research/evidence.service";
+import {
+  currentSourceBatchDigest,
+  ResearchCurrentSourceRepository,
+  type CurrentSourceRowInput,
+  type CurrentSourceTableKind,
+} from "../../apps/control-api/src/research/current-source.repository";
 import { ResearchRunLibraryError } from "../../apps/control-api/src/research/run-library.error";
 import { ResearchRunLibraryRepository } from "../../apps/control-api/src/research/run-library.repository";
 import { ResearchRunLibraryService } from "../../apps/control-api/src/research/run-library.service";
@@ -53,6 +59,12 @@ const LIVE = JSON.parse(readFileSync(join(__dirname, "../../apps/control-api/tes
   };
   progress_claim: { state: "NOT_ISSUED"; text: string; cursor: null; methodology_certificate: Record<string, unknown> };
   hub_trade_count: { value: string; definition_id: string };
+};
+const RETAINED = JSON.parse(readFileSync(join(__dirname, "../../apps/control-api/test/research-w3-real-hmd-seal.fixture.json"), "utf8")) as {
+  manifest_digest: string;
+  source_transform_digest: string;
+  summary: Record<string, unknown>;
+  rows: Record<Exclude<CurrentSourceTableKind, "OBSERVATION">, CurrentSourceRowInput[]>;
 };
 
 function requestedSpec() {
@@ -396,6 +408,68 @@ async function seedLiveEvidence(pool: Pool): Promise<void> {
   );
 }
 
+/**
+ * E11 database receipt: retain the real W3 candidate/fold facts and real
+ * preview equity points through the same append+seal custody path used by the
+ * worker. The product read remains Portal-local; no test contacts QuantBT.
+ */
+async function seedRetainedEvidence(pool: Pool, repository: ResearchCurrentSourceRepository): Promise<string> {
+  const runId = "run_p12_retained";
+  await insertDurable(pool, {
+    runId, attemptId: "attempt_p12_retained", jobId: "job_p12_retained",
+    createdAt: "2026-09-21T12:00:00.000Z", state: "READY", withProgress: true,
+  });
+  const observations: CurrentSourceRowInput[] = LIVE.equity_oos.payload.map((point, sourceOrdinal) => ({
+    sourceOrdinal,
+    sourceId: new Date(point.at_utc_ms).toISOString(),
+    occurredAtUtcMs: point.at_utc_ms,
+    payload: {
+      source_index_utc: new Date(point.at_utc_ms).toISOString(),
+      at_utc_ms: point.at_utc_ms,
+      equity: point.equity,
+      return_fraction: "0",
+      accepted_position: "0",
+      drawdown_fraction: point.drawdown_fraction,
+      signal_target: null,
+    },
+  }));
+  const tables: Record<CurrentSourceTableKind, CurrentSourceRowInput[]> = {
+    OBSERVATION: observations,
+    FOLD: RETAINED.rows.FOLD,
+    TRIAL: RETAINED.rows.TRIAL,
+    CANDIDATE: RETAINED.rows.CANDIDATE,
+    SELECTION: RETAINED.rows.SELECTION,
+  };
+  for (const tableKind of ["OBSERVATION", "FOLD", "TRIAL", "CANDIDATE", "SELECTION"] as const) {
+    await repository.append(scope, {
+      runId,
+      artifactRevision: 1,
+      manifestDigest: RETAINED.manifest_digest,
+      sourceTransformDigest: RETAINED.source_transform_digest,
+      tableKind,
+      batchOrdinal: 0,
+      batchDigest: currentSourceBatchDigest(tables[tableKind]),
+      rows: tables[tableKind],
+    });
+  }
+  const tableRows = Object.fromEntries(Object.entries(tables).map(([kind, rows]) => [kind, rows.length])) as Record<CurrentSourceTableKind, number>;
+  await repository.seal(scope, {
+    runId,
+    artifactRevision: 1,
+    sourceAdapterId: "rs02.quantbt-advanced-wfo.v1",
+    profileId: "rs02.delta-wfo-global.v1",
+    manifestDigest: RETAINED.manifest_digest,
+    sourceTransformDigest: RETAINED.source_transform_digest,
+    requestedSpecDigest: DIGEST_A,
+    effectiveSpecDigest: DIGEST_B,
+    datasetBindingDigest: DIGEST_C,
+    tableRows,
+    totalRows: Object.values(tableRows).reduce((total, count) => total + count, 0),
+    summary: RETAINED.summary,
+  });
+  return runId;
+}
+
 async function seedReleaseCandidate(pool: Pool, runId: string, sealed: boolean): Promise<{ draftId: string; rcId: string }> {
   const draftId = `rcd_${ulidSuffix(`draft-${runId}`)}`;
   const rcId = `rc_${ulidSuffix(`rc-${runId}`)}`;
@@ -434,13 +508,15 @@ const ALL = { workspace_id: scope.workspaceId, q: undefined, status: [], mode: [
 describe("Research Loop P12 · Run Library persisted reader", () => {
   let pool: Pool;
   let repository: ResearchRunLibraryRepository;
+  let currentSourceRepository: ResearchCurrentSourceRepository;
   let service: ResearchRunLibraryService;
 
   beforeAll(async () => {
     await migrateTestDatabase(DATABASE_URL);
     pool = new Pool({ connectionString: DATABASE_URL });
     repository = new ResearchRunLibraryRepository(pool);
-    service = new ResearchRunLibraryService(repository, config);
+    currentSourceRepository = new ResearchCurrentSourceRepository(pool);
+    service = new ResearchRunLibraryService(repository, config, currentSourceRepository);
   }, 60_000);
 
   afterEach(async () => { await truncateAll(pool); });
@@ -801,6 +877,46 @@ describe("Research Loop P12 · Run Library persisted reader", () => {
     expect(darkItem.evidence_revision).toBeNull();
     expect(darkItem.stats.every((cell) => cell.availability.reason_code === "P13_EVIDENCE_READER_DISABLED")).toBe(true);
     expect((await dark.sparkline(scope, LIVE_RUN)).availability.reason_code).toBe("P13_EVIDENCE_READER_DISABLED");
+  });
+
+  it("E11: retained WFO facts supply exact card metrics and a bounded local sparkline", async () => {
+    await seedIdentity(pool);
+    const runId = await seedRetainedEvidence(pool, currentSourceRepository);
+    const response = await service.list(scope, { ...ALL, ids: [runId] });
+    const item = response.items[0]!;
+    expect(item.evidence_revision).toMatch(/^p13r2_[0-9a-f]{64}$/);
+    expect(item.stats.map((metric) => [metric.role, metric.value, metric.availability.state])).toEqual([
+      ["OOS_SHARPE", "-5.354970424211971", "AVAILABLE"],
+      ["DECAY", "3.911439612138451", "AVAILABLE"],
+      ["TRADE_COUNT", "10", "AVAILABLE"],
+    ]);
+    expect(item.sparkline.availability).toEqual({ state: "AVAILABLE", reason_code: null });
+
+    const sparkline = await service.sparkline(scope, runId);
+    expect(sparkline.availability).toEqual({ state: "AVAILABLE", reason_code: null });
+    expect(sparkline.values).toHaveLength(24);
+    expect(sparkline.values[0]).toBe(LIVE.equity_oos.payload[0]!.equity);
+    expect(sparkline.values.at(-1)).toBe(LIVE.equity_oos.payload.at(-1)!.equity);
+    expect(sparkline.source_revision).toBe(item.evidence_revision);
+    expect(sparkline.source).toMatchObject({
+      series_kind: "EQUITY_OOS",
+      source_observation_count: LIVE.equity_oos.payload.length,
+      display_sampling: "EXTREMA_BUCKET_24_V1",
+    });
+
+    await pool.query("SET enable_seqscan = off");
+    try {
+      const plan = await pool.query<{ "QUERY PLAN": string }>(
+        `EXPLAIN (COSTS OFF)
+         SELECT payload FROM research.current_source_rows_v1
+          WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = 1 AND table_kind = 'FOLD'
+          ORDER BY source_ordinal LIMIT 256`,
+        [scope.workspaceId, runId],
+      );
+      expect(plan.rows.map((row) => row["QUERY PLAN"]).join("\n")).toMatch(/current_source_rows_v1_page_idx/);
+    } finally {
+      await pool.query("RESET enable_seqscan");
+    }
   });
 
   it("CG-P12-04/05/07: ledger partitions rows; cancelled and legacy rows are not pending; legacy is not scratch", async () => {

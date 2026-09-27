@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ControlApiConfig } from "../src/config";
@@ -107,5 +109,68 @@ describe("RF-05 P12 · CG-P13-03 performance facts flow into the COMPLETED card"
     const legacyProjection = await stats({ metric_registry_version: "research.metric-registry.v2", direct: { num_trades: "45" } });
     expect(legacyProjection[0]!.availability.reason_code).toBe("P13_SOURCE_PREDATES_OOS_ANALYTICS");
     expect(legacyProjection[2]!.value).toBe("45");
+  });
+});
+
+
+describe("E11 retained WFO cards", () => {
+  const retained = JSON.parse(readFileSync(join(__dirname, "research-w3-real-hmd-seal.fixture.json"), "utf8")) as {
+    summary: Record<string, unknown>;
+    rows: { CANDIDATE: Array<{ payload: Record<string, unknown> }>; FOLD: Array<{ payload: Record<string, unknown> }> };
+  };
+
+  async function retainedCells(candidate = retained.rows.CANDIDATE[0]!.payload) {
+    const row = {
+      ...libraryRow({}),
+      evidence_revision: null,
+      evidence_projection: null,
+      evidence_equity_state: null,
+      evidence_equity_reason: null,
+      retained_revision: `p13r2_${"f".repeat(64)}`,
+      retained_summary: retained.summary,
+      retained_candidate: candidate,
+      retained_folds: retained.rows.FOLD.map((entry) => entry.payload),
+    };
+    const repository = {
+      list: vi.fn().mockResolvedValue({
+        rows: [row], asOfUtcMs: 1, totalRows: 1, filteredRows: 1, hasMore: false, hasPrevious: false,
+        counters: { logicalRuns: 1, workerChildren: 0, technicalRetries: 0, legacyMetadataRows: 0 },
+        claimLedger: { issued: 0, notIssued: 0, pendingSource: 1, failed: 0, cancelledBeforeSource: 0, legacyMetadataOnly: 0 },
+        filterCatalog: { alphas: [], modes: [], scratchAvailable: true },
+      }),
+      findSparklineSource: vi.fn(),
+    };
+    const response = await new ResearchRunLibraryService(repository as never, config).list(
+      { workspaceId: "p12-flow", actorUserId: "p12-flow-user" },
+      { workspace_id: "p12-flow", q: undefined, status: [], mode: [], alpha: [], ids: [], cursor: null, before: null, limit: 50 },
+    );
+    return response.items[0]!;
+  }
+
+  it("maps selected retained facts to the card with exact totals and immutable revision", async () => {
+    const item = await retainedCells();
+    expect(item.evidence_revision).toBe(`p13r2_${"f".repeat(64)}`);
+    expect(item.stats.map((cell) => [cell.role, cell.value, cell.availability.state])).toEqual([
+      ["OOS_SHARPE", "-5.354970424211971", "AVAILABLE"],
+      ["DECAY", "3.911439612138451", "AVAILABLE"],
+      ["TRADE_COUNT", "10", "AVAILABLE"],
+    ]);
+    expect(item.stats.every((cell) => cell.value !== null || cell.availability.state !== "AVAILABLE")).toBe(true);
+  });
+
+  it("returns exact typed absences when an older retained candidate lacks its W3 fact block", async () => {
+    const candidate = structuredClone(retained.rows.CANDIDATE[0]!.payload);
+    delete candidate.trial_facts;
+    const item = await retainedCells(candidate);
+    expect(item.stats.map((cell) => [cell.role, cell.value, cell.availability.state])).toEqual([
+      ["OOS_SHARPE", null, "NOT_PUBLISHED"],
+      ["DECAY", null, "NOT_PUBLISHED"],
+      ["TRADE_COUNT", "10", "AVAILABLE"],
+    ]);
+    expect(item.stats.slice(0, 2).map((cell) => cell.availability.reason_code)).toEqual([
+      "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1",
+      "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1",
+    ]);
+    expect(item.stats.every((cell) => cell.value !== null || cell.availability.state !== "AVAILABLE")).toBe(true);
   });
 });

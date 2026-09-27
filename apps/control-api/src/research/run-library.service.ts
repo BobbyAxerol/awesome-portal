@@ -1,7 +1,7 @@
 /** P12 server-side mapping from persisted Research rows to Screen-01 DTOs. */
 
 import { createHash } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
@@ -9,6 +9,9 @@ import type { AppliedSort, NormalizedFilter } from "../query/contracts";
 import { CONTROL_API_CONFIG } from "../tokens";
 import * as metricRegistry from "./evidence-metric-registry";
 import type { ResearchMetricDefinition, ResearchMetricRegistryVersion } from "./evidence-metric-registry";
+import { CurrentSourceCandidatePayloadSchema, CurrentSourceFoldPayloadSchema, CurrentSourceSummarySchema } from "./current-source.payload";
+import { ResearchCurrentSourceRepository } from "./current-source.repository";
+import { isExactDecimal, sumExactDecimals } from "./exact-decimal";
 import { ResearchProgressSnapshotSchema, type ResearchProgressSnapshot } from "./progress.contract";
 import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
 import {
@@ -148,7 +151,6 @@ function canonicalComparisonKey(row: RunLibraryRow, spec: ResearchRequestedSpec 
   return `rck1_${createHash("sha256").update(canonical, "utf8").digest("base64url")}`;
 }
 
-const EXACT_DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
 const EVIDENCE_REVISION = /^p13r[0-9]+_[0-9a-f]{64}$/;
 const DIGEST = /^[0-9a-f]{64}$/;
 const RELEASE_CANDIDATE_ID = /^rc_[0-9A-HJKMNP-TV-Z]{26}$/;
@@ -217,7 +219,7 @@ export function projectionMetricValues(projection: Record<string, unknown> | nul
     if (typeof key !== "string" || !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(key)) return;
     const normalizedKey = key.toUpperCase();
     const value = typeof raw === "number" && Number.isFinite(raw) ? String(raw) : raw;
-    if (typeof value !== "string" || value.length > 192 || !EXACT_DECIMAL.test(value)) return;
+    if (typeof value !== "string" || value.length > 192 || !isExactDecimal(value)) return;
     if (!values.has(normalizedKey)) values.set(normalizedKey, value);
   };
   const record = (value: unknown): Record<string, unknown> | null =>
@@ -325,6 +327,7 @@ export class ResearchRunLibraryService {
   constructor(
     private readonly repository: ResearchRunLibraryRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() private readonly currentSourceRepository?: ResearchCurrentSourceRepository,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -433,9 +436,37 @@ export class ResearchRunLibraryService {
         : sourceAvailability(row, progress));
     } else {
       const equity = this.equityAvailability(row.evidence_revision, row.equity_availability_state, row.equity_reason_code);
-      response = equity.state === "AVAILABLE"
-        ? this.equitySparkline(row)
-        : absent(equity, this.evidenceRevision(row.evidence_revision) ?? progressRevision);
+      if (equity.state === "AVAILABLE") {
+        response = this.equitySparkline(row);
+      } else if (this.currentSourceRepository) {
+        const seal = await this.currentSourceRepository.sealForRead(scope, runId);
+        if (seal) {
+          const retained = await this.currentSourceRepository.observationSeries(
+            scope, runId, seal.artifactRevision, seal.tableRows.OBSERVATION, 192,
+          );
+          const payload = retained.rows.map((entry) => ({
+            at_utc_ms: entry.occurredAtUtcMs,
+            equity: entry.payload.equity,
+          }));
+          if (payload.some((entry) => !Number.isSafeInteger(entry.at_utc_ms)
+            || typeof entry.equity !== "string" || !isExactDecimal(entry.equity))) {
+            throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Retained WFO sparkline is incompatible.", 503);
+          }
+          const revision = "p13r2_" + seal.retainedImportDigest;
+          response = this.equitySparkline({
+            ...row, evidence_revision: revision,
+            equity_source_observation_count: seal.tableRows.OBSERVATION,
+            equity_emitted_point_count: payload.length,
+            equity_sampling: retained.sampling,
+            equity_series_payload: payload as Array<Record<string, unknown>>,
+            equity_series_digest: createHash("sha256").update(canonicalJson(payload), "utf8").digest("hex"),
+          });
+        } else {
+          response = absent(equity, this.evidenceRevision(row.evidence_revision) ?? progressRevision);
+        }
+      } else {
+        response = absent(equity, this.evidenceRevision(row.evidence_revision) ?? progressRevision);
+      }
     }
     const parsed = ResearchRunLibrarySparklineResponseSchema.safeParse(response);
     if (!parsed.success) {
@@ -477,7 +508,7 @@ export class ResearchRunLibraryService {
       const at = point?.at_utc_ms;
       const equity = point?.equity;
       if (typeof at !== "number" || !Number.isSafeInteger(at) || at < 0
-          || typeof equity !== "string" || !EXACT_DECIMAL.test(equity)) {
+          || typeof equity !== "string" || !isExactDecimal(equity)) {
         throw incompatible();
       }
       return { at, equity, numeric: Number(equity) };
@@ -647,7 +678,9 @@ export class ResearchRunLibraryService {
         availability: row.source_kind === "LEGACY_1_0_8_METADATA"
           ? unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES")
           : status === "COMPLETED"
-            ? this.equityAvailability(row.evidence_revision, row.evidence_equity_state, row.evidence_equity_reason)
+            ? (this.evidenceRevision(row.retained_revision ?? null)
+              ? available()
+              : this.equityAvailability(row.evidence_revision, row.evidence_equity_state, row.evidence_equity_reason))
             /* Same rule as the lazy /sparkline read: a run that never received a
                source (e.g. cancelled before it) says so, rather than blaming
                the reader for a series that could not exist. */
@@ -655,7 +688,9 @@ export class ResearchRunLibraryService {
               ? unavailable("NOT_PUBLISHED", "P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES")
               : source,
       },
-      evidence_revision: this.evidenceEnabled() ? this.evidenceRevision(row.evidence_revision) : null,
+      evidence_revision: this.evidenceEnabled()
+        ? (this.evidenceRevision(row.evidence_revision) ?? this.evidenceRevision(row.retained_revision ?? null))
+        : this.evidenceRevision(row.retained_revision ?? null),
       source_updated_at_utc_ms: utcMs(sourceUpdated, "source update timestamp"),
     };
     const parsed = ResearchRunLibraryItemSchema.safeParse(item);
@@ -936,7 +971,7 @@ export class ResearchRunLibraryService {
     if (definition.origin !== "ENGINE_DIRECT" || raw.locator !== definition.sourceLocator) {
       return { value: null, availability: unavailable("NOT_PUBLISHED", "P13_ENGINE_LOCATOR_MISMATCH") };
     }
-    if (typeof raw.value !== "string" || raw.value.length > 192 || !EXACT_DECIMAL.test(raw.value)) return incompatible;
+    if (typeof raw.value !== "string" || raw.value.length > 192 || !isExactDecimal(raw.value)) return incompatible;
     return { value: raw.value, availability: available() };
   }
 
@@ -992,6 +1027,43 @@ export class ResearchRunLibraryService {
         return cells.map(([key, label, role]) => metric(key, label, role, null, missing)) as ResearchRunLibraryItem["stats"];
       }
       const revision = this.evidenceRevision(row.evidence_revision);
+      const retainedRevision = this.evidenceRevision(row.retained_revision ?? null);
+      // A retained WFO seal is the card authority even when an older P13
+      // projection also exists. Mixing a P13 cell with retained fold facts
+      // would make one card describe two immutable revisions.
+      if (retainedRevision) {
+        const summaryRaw = asObject(row.retained_summary ?? null);
+        const candidateRaw = asObject(row.retained_candidate ?? null);
+        const foldsRaw = typeof row.retained_folds === "string" ? (() => { try { return JSON.parse(row.retained_folds); } catch { return null; } })() : row.retained_folds;
+        const summary = summaryRaw ? CurrentSourceSummarySchema.safeParse(summaryRaw) : null;
+        const candidate = candidateRaw ? CurrentSourceCandidatePayloadSchema.safeParse(candidateRaw) : null;
+        const folds = Array.isArray(foldsRaw) ? foldsRaw.map((fold) => CurrentSourceFoldPayloadSchema.safeParse(fold)) : [];
+        if (!summary?.success || !candidate?.success || folds.some((fold) => !fold.success)) {
+          throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Retained WFO card projection is incompatible.", 503);
+        }
+        const facts = candidate.data.trial_facts;
+        const tradeValues = folds.flatMap((fold) => {
+          const value = fold.success ? fold.data.fold_facts?.oos_score?.oos_trade_count : null;
+          return value === null || value === undefined ? [] : [value];
+        });
+        const values: Record<StatRole, string | null> = {
+          OOS_SHARPE: facts?.metrics.mean_oos_sharpe ?? null,
+          DECAY: facts?.metrics.mean_decay ?? null,
+          TRADE_COUNT: tradeValues.length === folds.length ? sumExactDecimals(tradeValues) : null,
+        };
+        return cells.map(([key, label, role]) => {
+          const value = values[role];
+          const reason = facts
+            ? "RS02_RETAINED_WFO_DID_NOT_PUBLISH_" + role
+            : "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1";
+          return metric(
+            key, label, role, value,
+            value === null ? unavailable("NOT_PUBLISHED", reason) : available(),
+            "DEFAULT", role === "TRADE_COUNT" ? "CHILD_TAPE" : "OOS",
+            "research.metric.retained_wfo.v1." + key,
+          );
+        }) as ResearchRunLibraryItem["stats"];
+      }
       if (!this.evidenceEnabled() || !revision) {
         const missing = unavailable(
           "NOT_PUBLISHED",

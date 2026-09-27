@@ -179,6 +179,53 @@ export interface components {
             reason_code: string | null;
             availability: components["schemas"]["Availability"];
         };
+        RetainedAnalyticValue: components["schemas"]["Decimal"] | {
+            long_fraction: components["schemas"]["Decimal"];
+            short_fraction: components["schemas"]["Decimal"];
+            flat_fraction: components["schemas"]["Decimal"];
+        };
+        /** @description E11 exact retained analytic. AVAILABLE always has a value; every absence has value null and a typed reason. Internal source locators are never browser-visible. */
+        RetainedAnalyticMetric: {
+            value: components["schemas"]["RetainedAnalyticValue"] | null;
+            /** @enum {unknown} */
+            unit: "ratio" | "fraction" | "count" | "bars" | "exposure_triplet";
+            definition_id: string;
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description E11 named typed absence. A future source-backed series requires an additive contract revision and a real endpoint; this version never emits a fake href. */
+        RetainedAnalyticSeries: {
+            /** @enum {unknown} */
+            kind: "IS_EQUITY" | "ROLLING_SHARPE_63";
+            href: null;
+            availability: {
+                /** @enum {unknown} */
+                state: "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: string;
+            };
+        };
+        RetainedAnalytics: {
+            /** @constant */
+            schema_version: "research.current-source-analytics.v1";
+            metrics: {
+                oos_sharpe: components["schemas"]["RetainedAnalyticMetric"];
+                sharpe_decay: components["schemas"]["RetainedAnalyticMetric"];
+                total_trade_count: components["schemas"]["RetainedAnalyticMetric"];
+            };
+            series: {
+                is_equity: components["schemas"]["RetainedAnalyticSeries"];
+                rolling_sharpe_63: components["schemas"]["RetainedAnalyticSeries"];
+            };
+            behavior: {
+                benchmark_beta: components["schemas"]["RetainedAnalyticMetric"];
+                benchmark_correlation: components["schemas"]["RetainedAnalyticMetric"];
+                skew: components["schemas"]["RetainedAnalyticMetric"];
+                excess_kurtosis: components["schemas"]["RetainedAnalyticMetric"];
+                win_rate: components["schemas"]["RetainedAnalyticMetric"];
+                average_holding_bars: components["schemas"]["RetainedAnalyticMetric"];
+                exposure_long_short_flat: components["schemas"]["RetainedAnalyticMetric"];
+                turnover: components["schemas"]["RetainedAnalyticMetric"];
+            };
+        };
         /** @description W1: exactly one admitted RS-02 lane pair; the source adapter and profile are never mixed. */
         Provenance: {
             /** @enum {unknown} */
@@ -343,6 +390,7 @@ export interface components {
             };
             claim: components["schemas"]["ClaimStrip"];
             fold_verdicts: components["schemas"]["FoldVerdicts"];
+            analytics?: components["schemas"]["RetainedAnalytics"];
         };
         EvidenceSeries: components["schemas"]["Common"] & {
             /** @constant */

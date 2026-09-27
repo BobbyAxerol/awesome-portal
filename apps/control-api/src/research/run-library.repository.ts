@@ -69,6 +69,11 @@ export interface RunLibraryRow {
   evidence_projection: JsonColumn;
   evidence_equity_state: string | null;
   evidence_equity_reason: string | null;
+  /** E11: immutable RS-02 seal used only when a P13 projection is absent. */
+  retained_revision?: string | null;
+  retained_summary?: JsonColumn;
+  retained_candidate?: JsonColumn;
+  retained_folds?: JsonColumn;
   /** Latest persisted P21 Portal-local sealed pack for the run. */
   rc_release_candidate_id: string | null;
   rc_delivery_state: string | null;
@@ -92,6 +97,10 @@ export interface RunLibrarySparklineSource {
   equity_sampling: string | null;
   equity_series_payload: JsonRecord[] | string | null;
   equity_series_digest: string | null;
+  retained_revision?: string | null;
+  retained_source_observation_count?: string | number | null;
+  retained_sampling?: string | null;
+  retained_series_payload?: JsonRecord[] | string | null;
 }
 
 export interface RunLibraryCounters {
@@ -457,6 +466,40 @@ export class ResearchRunLibraryRepository {
               LIMIT 1
            ) evidence ON true
            LEFT JOIN LATERAL (
+             SELECT seal.artifact_revision, seal.retained_import_digest, seal.summary
+               FROM research.current_source_seals_v1 seal
+              WHERE library.source_kind = 'RESEARCH_DURABLE'
+                AND seal.workspace_id = library.workspace_id
+                AND seal.run_id = library.run_id
+              ORDER BY seal.artifact_revision DESC
+              LIMIT 1
+           ) retained ON true
+           LEFT JOIN LATERAL (
+             SELECT row.payload AS candidate
+               FROM research.current_source_rows_v1 row
+              WHERE row.workspace_id = library.workspace_id
+                AND row.run_id = library.run_id
+                AND row.artifact_revision = retained.artifact_revision
+                AND row.table_kind = 'CANDIDATE'
+                AND row.payload->'trial_facts'->>'source_trial_id' = retained.summary->'selection'->>'trial_id'
+                AND row.payload->>'objective' = retained.summary->'selection'->>'objective'
+              ORDER BY row.source_ordinal ASC
+              LIMIT 1
+           ) retained_selected ON true
+           LEFT JOIN LATERAL (
+             SELECT jsonb_agg(bounded.payload ORDER BY bounded.source_ordinal) AS folds
+               FROM (
+                 SELECT row.payload, row.source_ordinal
+                   FROM research.current_source_rows_v1 row
+                  WHERE row.workspace_id = library.workspace_id
+                    AND row.run_id = library.run_id
+                    AND row.artifact_revision = retained.artifact_revision
+                    AND row.table_kind = 'FOLD'
+                  ORDER BY row.source_ordinal
+                  LIMIT 256
+               ) bounded
+           ) retained_fold_rows ON true
+           LEFT JOIN LATERAL (
              SELECT pack.release_candidate_id, delivery.delivery_state, delivery.approval_state,
                     floor(extract(epoch FROM pack.sealed_at) * 1000)::bigint AS sealed_at_utc_ms
                FROM research.release_candidate_packs_v1 pack
@@ -494,6 +537,10 @@ export class ResearchRunLibraryRepository {
               evidence.projection AS evidence_projection,
               evidence.equity_state AS evidence_equity_state,
               evidence.equity_reason AS evidence_equity_reason,
+              CASE WHEN retained.retained_import_digest IS NULL THEN NULL ELSE 'p13r2_' || retained.retained_import_digest END AS retained_revision,
+              retained.summary AS retained_summary,
+              retained_selected.candidate AS retained_candidate,
+              retained_fold_rows.folds AS retained_folds,
               rc_pack.release_candidate_id AS rc_release_candidate_id,
               rc_pack.delivery_state AS rc_delivery_state,
               rc_pack.approval_state AS rc_approval_state,

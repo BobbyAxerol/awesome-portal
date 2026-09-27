@@ -385,6 +385,62 @@ const FoldVerdictsSchema = z.object({
   rows: z.array(FoldVerdictRowSchema).max(256),
 }).strict();
 
+const RetainedAnalyticValueSchema = z.union([
+  DecimalSchema,
+  z.object({
+    long_fraction: DecimalSchema,
+    short_fraction: DecimalSchema,
+    flat_fraction: DecimalSchema,
+  }).strict(),
+]);
+
+const RetainedAnalyticMetricSchema = z.object({
+  value: RetainedAnalyticValueSchema.nullable(),
+  unit: z.enum(["ratio", "fraction", "count", "bars", "exposure_triplet"]),
+  definition_id: z.string().regex(/^research\.metric\.[a-z0-9_.-]{3,128}$/),
+  availability: ResearchCurrentSourceAvailabilitySchema,
+}).strict().superRefine((value, context) => {
+  if ((value.value === null) === (value.availability.state === "AVAILABLE")) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["value"],
+      message: "retained analytic value and availability disagree",
+    });
+  }
+});
+
+const RetainedAnalyticSeriesSchema = z.object({
+  kind: z.enum(["IS_EQUITY", "ROLLING_SHARPE_63"]),
+  href: z.null(),
+  availability: z.object({
+    state: z.enum(["NOT_PUBLISHED", "NOT_APPLICABLE"]),
+    reason_code: ReasonCodeSchema,
+  }).strict(),
+}).strict();
+
+const RetainedAnalyticsSchema = z.object({
+  schema_version: z.literal("research.current-source-analytics.v1"),
+  metrics: z.object({
+    oos_sharpe: RetainedAnalyticMetricSchema,
+    sharpe_decay: RetainedAnalyticMetricSchema,
+    total_trade_count: RetainedAnalyticMetricSchema,
+  }).strict(),
+  series: z.object({
+    is_equity: RetainedAnalyticSeriesSchema,
+    rolling_sharpe_63: RetainedAnalyticSeriesSchema,
+  }).strict(),
+  behavior: z.object({
+    benchmark_beta: RetainedAnalyticMetricSchema,
+    benchmark_correlation: RetainedAnalyticMetricSchema,
+    skew: RetainedAnalyticMetricSchema,
+    excess_kurtosis: RetainedAnalyticMetricSchema,
+    win_rate: RetainedAnalyticMetricSchema,
+    average_holding_bars: RetainedAnalyticMetricSchema,
+    exposure_long_short_flat: RetainedAnalyticMetricSchema,
+    turnover: RetainedAnalyticMetricSchema,
+  }).strict(),
+}).strict();
+
 export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
   schema_version: z.literal("research.current-source-evidence.v1"),
   passport: z.object({
@@ -415,6 +471,11 @@ export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
   claim: ClaimStripSchema,
   /** W3 · CG-P13-08 (A09): per-fold verdict rows under a versioned server rule. */
   fold_verdicts: FoldVerdictsSchema,
+  /**
+   * E11: server-owned retained analytics. Values are exact source decimals;
+   * unsupported IS/rolling/behaviour facts remain named typed absences.
+   */
+  analytics: RetainedAnalyticsSchema.optional(),
 }).strict();
 
 export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.extend({

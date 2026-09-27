@@ -167,6 +167,23 @@ describe("W3 · S04 evidence: claim strip and fold verdicts (CG-P13-07/08)", () 
     }
     expect(verdicts.mean_oos_sharpe).toBe("-5.354970424211971");
     expect(verdicts.mean_decay).toBe("3.911439612138451");
+    expect(evidence.analytics.metrics).toMatchObject({
+      oos_sharpe: { value: "-5.354970424211971", availability: { state: "AVAILABLE", reason_code: null } },
+      sharpe_decay: { value: "3.911439612138451", availability: { state: "AVAILABLE", reason_code: null } },
+      total_trade_count: { value: "10", availability: { state: "AVAILABLE", reason_code: null } },
+    });
+    expect(evidence.analytics.series).toEqual({
+      is_equity: {
+        kind: "IS_EQUITY", href: null,
+        availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_IS_EQUITY_SERIES" },
+      },
+      rolling_sharpe_63: {
+        kind: "ROLLING_SHARPE_63", href: null,
+        availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_ROLLING_SHARPE_63" },
+      },
+    });
+    expect(Object.values(evidence.analytics.behavior).every((entry) =>
+      entry.value === null && entry.availability.state === "NOT_PUBLISHED")).toBe(true);
   });
 
   it("P13-T08: every required S04 field carries a value or a typed absence, never a silent null", async () => {
@@ -193,6 +210,17 @@ describe("W3 · S04 evidence: claim strip and fold verdicts (CG-P13-07/08)", () 
         expect(evidence.fold_verdicts).toMatchObject({ state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_W3_SOURCE_FACTS_V1" });
         expect(evidence.fold_verdicts.rows.every((row) => row.oos_sharpe === null && row.verdict === "NOT_EVALUATED")).toBe(true);
         expect(evidence.claim.validation_claim.reason_code).toBe("RS02_SEAL_PREDATES_W3_SOURCE_FACTS_V1");
+        expect(Object.values(evidence.analytics.metrics).every((metric) =>
+          metric.value === null && metric.availability.state === "NOT_PUBLISHED")).toBe(true);
+      }
+      for (const metric of [
+        ...Object.values(evidence.analytics.metrics),
+        ...Object.values(evidence.analytics.behavior),
+      ]) {
+        expect(metric.value === null).toBe(metric.availability.state !== "AVAILABLE");
+      }
+      for (const series of Object.values(evidence.analytics.series)) {
+        expect(series.href === null).toBe(series.availability.state !== "AVAILABLE");
       }
     }
   });
