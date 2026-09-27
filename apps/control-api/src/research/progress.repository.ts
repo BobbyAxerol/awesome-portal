@@ -18,6 +18,12 @@ import { ResearchProgressError } from "./progress.error";
 
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
 
+/**
+ * E10-O3: the session marker a global convergence sweep sets instead of a
+ * workspace id. No workspace id can collide with it (they are `ws_` ULIDs).
+ */
+const SWEEP_SESSION_WORKSPACE = "*";
+
 interface IngressRow {
   workspace_id: string;
   actor_user_id: string;
@@ -251,6 +257,16 @@ export interface StrandedTerminal {
   input: ResearchProgressIngress;
   /** True when the terminal event names a sidecar receipt that was never persisted. */
   sidecarPayloadLost: boolean;
+}
+
+/**
+ * E10-O3: a workspace with stuck Research work, and the identity that already
+ * owns it (the job's requester). Nothing else about that workspace is
+ * returned, and none of it reaches a read response.
+ */
+export interface ConvergenceCandidate {
+  workspaceId: string;
+  actorUserId: string;
 }
 
 /**
@@ -862,6 +878,49 @@ export class ResearchProgressRepository {
     });
   }
 
+  /**
+   * E10-O3: the workspaces that hold a Research job which can no longer
+   * converge on its own, oldest first, globally and bounded.
+   *
+   * A read reconciles its own workspace (E10). Nothing reconciles a workspace
+   * nobody opens, and Control API has no Research worker by design — so a
+   * read also repairs a couple of *other* workspaces. This is the only query
+   * that crosses a workspace boundary, and it is a repair list, never a read
+   * answer: it returns a workspace id and the identity that already owns the
+   * work (`jobs.requested_by_user_id`, a member by construction), and the
+   * caller never learns a run, an Alpha, a digest or a count from it.
+   *
+   * Bounded three ways: the partial index of migration 069 holds only the
+   * five non-terminal states (the live queue, not the archive), `updated_at`
+   * leads it so the scan is oldest-first and stops at `limit`, and a job
+   * whose lease is still alive is excluded — a heartbeating run is not stuck.
+   * Measured at 200 000 runs / 100 workspaces: 7 buffers, 0.095 ms.
+   */
+  async workspacesPendingConvergence(
+    actorUserId: string,
+    idleSeconds: number,
+    limit: number,
+  ): Promise<ConvergenceCandidate[]> {
+    return this.withSweepTransaction(actorUserId, async (client) => {
+      const result = await client.query<{ workspace_id: string; requested_by_user_id: string }>(
+        `SELECT j.workspace_id, j.requested_by_user_id
+           FROM research.jobs j
+           LEFT JOIN research.worker_attempts wa
+             ON wa.workspace_id = j.workspace_id
+            AND wa.worker_attempt_id = j.current_worker_attempt_id
+          WHERE j.state IN ('QUEUED', 'CLAIMED', 'RUNNING', 'RETRY_WAIT', 'CANCEL_REQUESTED')
+            AND j.updated_at <= now() - $1 * interval '1 second'
+            -- A live lease is a live run: P06 heartbeats extend it, and only
+            -- the attempt row records that, never jobs.updated_at.
+            AND (wa.worker_attempt_id IS NULL OR wa.expires_at <= now())
+          ORDER BY j.updated_at ASC, j.workspace_id ASC, j.job_id ASC
+          LIMIT $2`,
+        [idleSeconds, limit],
+      );
+      return result.rows.map((row) => ({ workspaceId: row.workspace_id, actorUserId: row.requested_by_user_id }));
+    });
+  }
+
   async events(
     scope: ResearchScope,
     runId: string,
@@ -955,6 +1014,19 @@ export class ResearchProgressRepository {
       "Research progress cannot append a new event after the durable job reached a terminal state.",
       409,
     );
+  }
+
+  /**
+   * E10-O3: the one read-only transaction that is deliberately not scoped to
+   * a workspace. It runs under the same runtime role and the same statement,
+   * lock and idle budgets as every other Research read; its session says
+   * `research.workspace_id = '*'` rather than naming a workspace it is not
+   * answering about, so a `pg_stat_activity` reader can tell a global sweep
+   * from a workspace read. Only `workspacesPendingConvergence` uses it, and
+   * its result is a repair list, never a response.
+   */
+  private async withSweepTransaction<T>(actorUserId: string, work: (client: PoolClient) => Promise<T>): Promise<T> {
+    return this.withTransaction(SWEEP_SESSION_WORKSPACE, actorUserId, true, work);
   }
 
   private async withTransaction<T>(

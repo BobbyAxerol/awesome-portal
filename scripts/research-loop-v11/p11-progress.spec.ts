@@ -1392,4 +1392,147 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     expect(read.current).toMatchObject({ job_state: "CANCELLED", effective_status: "CANCELLED", may_cancel: false });
     expect(await libraryRow(run.runId)).toMatchObject({ effective_status: "CANCELLED", lifecycle_status: "CANCELLED" });
   });
+
+  /* --------------------------------------------------------------- E10-O3 */
+
+  /** A second workspace whose only member is not a member of `p11-workspace`. */
+  const OTHER = { workspaceId: "p11-other-workspace", actorUserId: "p11-outsider" };
+
+  async function seedOtherWorkspace(): Promise<void> {
+    await pool.query(
+      `INSERT INTO portal_users (user_id, username, display_name, role, status, must_change_password)
+       VALUES ($1, 'p11-outsider', 'P11 Outsider', 'USER', 'ACTIVE', false)`,
+      [OTHER.actorUserId],
+    );
+    await pool.query(
+      `INSERT INTO workspaces (workspace_id, name, owner_user_id) VALUES ($1, 'P11 Other Workspace', $2)`,
+      [OTHER.workspaceId, OTHER.actorUserId],
+    );
+    await pool.query(
+      `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'OWNER')`,
+      [OTHER.workspaceId, OTHER.actorUserId],
+    );
+  }
+
+  /** A real stranded job has not been written to for a long time; only the lost attempt was. */
+  async function ageJob(jobId: string): Promise<void> {
+    await pool.query(
+      `UPDATE research.jobs SET updated_at = now() - interval '3 days' WHERE workspace_id = $1 AND job_id = $2`,
+      [scope.workspaceId, jobId],
+    );
+  }
+
+  /** A progress repository that counts how often the global sweep asked its question. */
+  function countingProgress(): { repository: ResearchProgressRepository; sweeps: number[] } {
+    const repository = new ResearchProgressRepository(pool);
+    const sweeps: number[] = [];
+    const inner = repository.workspacesPendingConvergence.bind(repository);
+    repository.workspacesPendingConvergence = async (actorUserId, idleSeconds, limit) => {
+      const found = await inner(actorUserId, idleSeconds, limit);
+      sweeps.push(found.length);
+      return found;
+    };
+    return { repository, sweeps };
+  }
+
+  function withProgress(repository: ResearchProgressRepository, reports: ToggleReportService) {
+    return new ResearchProgressService(
+      repository, metadata, new ResearchProgressFanout(),
+      new FakeProgressPortalClient() as never, new FakeEvidenceService() as never, new FakeSplitService() as never,
+      reports as never, config,
+    );
+  }
+
+  it("E10-O3-01: a read of one workspace converges a run stranded in another, and still reports nothing about it", async () => {
+    const reports = new ToggleReportService();
+    const run = await strandCompletion(reports);
+    await seedOtherWorkspace();
+
+    // The bounded global lookup is selective: a live lease is a live run.
+    await pool.query(
+      `UPDATE research.worker_attempts SET expires_at = now() + interval '60 seconds'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    await ageJob(run.jobId);
+    expect(await progress.workspacesPendingConvergence(OTHER.actorUserId, 300, 64)).toEqual([]);
+    await pool.query(
+      `UPDATE research.worker_attempts SET expires_at = now() - interval '3 days'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    expect(await progress.workspacesPendingConvergence(OTHER.actorUserId, 300, 64))
+      .toEqual([{ workspaceId: scope.workspaceId, actorUserId: scope.actorUserId }]);
+
+    // Stuck, and invisible from the other workspace, before anything converges.
+    expect((await progress.readRun(scope, run.runId)).lifecycleStatus).toBe("FINISHING");
+    await expectProgressError(progress.readRun(OTHER, run.runId), "RESEARCH_PROGRESS_NOT_FOUND");
+
+    reports.fail = false;
+    const { repository, sweeps } = countingProgress();
+    const reader = withProgress(repository, reports);
+    // The exact entry point Run Progress and the Run Library call. Nobody
+    // reads `p11-workspace`; this read is of the other workspace only.
+    await reader.reconcileBestEffort(OTHER);
+    expect(sweeps).toEqual([1]);
+
+    const read = await reader.read(admin, scope, run.runId);
+    expect(read.current).toMatchObject({
+      job_state: "SUCCEEDED", effective_status: "COMPLETED", terminal_materialization: "READY", may_cancel: false,
+    });
+    expect(await libraryRow(run.runId)).toMatchObject({ effective_status: "COMPLETED", lifecycle_status: "COMPLETED" });
+    // The repair crossed the boundary; the report never does.
+    await expectProgressError(progress.readRun(OTHER, run.runId), "RESEARCH_PROGRESS_NOT_FOUND");
+    // Nothing left for the next sweep to find.
+    expect(await progress.workspacesPendingConvergence(OTHER.actorUserId, 300, 64)).toEqual([]);
+  });
+
+  it("E10-O3-02: the sweep asks its question at most once per interval per process, and a restart asks again", async () => {
+    const reports = new ToggleReportService();
+    const run = await strandCompletion(reports);
+    await seedOtherWorkspace();
+    await ageJob(run.jobId);
+    reports.fail = false;
+
+    const first = countingProgress();
+    const reader = withProgress(first.repository, reports);
+    await reader.reconcileBestEffort(OTHER);
+    await reader.reconcileBestEffort(OTHER);
+    await reader.reconcileBestEffort(OTHER);
+    // Three reads, one global question: the per-process interval holds even
+    // though E10's own per-workspace clock (10 s) would allow more.
+    expect(first.sweeps).toEqual([1]);
+    expect((await progress.readRun(scope, run.runId)).lifecycleStatus).toBe("COMPLETED");
+
+    // A restarted process has its own clock and asks again on its first read.
+    const second = countingProgress();
+    await withProgress(second.repository, reports).reconcileBestEffort(OTHER);
+    expect(second.sweeps).toEqual([0]);
+  });
+
+  it("E10-O3-03: a workspace whose stuck work is owned by a non-member is skipped, and the read still answers", async () => {
+    const reports = new ToggleReportService();
+    const run = await strandCompletion(reports);
+    await seedOtherWorkspace();
+    await ageJob(run.jobId);
+    // The requester left the workspace: the identity that owns the stuck work
+    // may no longer write into it.
+    await pool.query(
+      `UPDATE research.jobs SET requested_by_user_id = $3 WHERE workspace_id = $1 AND job_id = $2`,
+      [scope.workspaceId, run.jobId, OTHER.actorUserId],
+    );
+    reports.fail = false;
+
+    const { repository, sweeps } = countingProgress();
+    const reader = withProgress(repository, reports);
+    // Fail closed: the repository's membership check refuses the write, the
+    // sweep swallows it, and the read that triggered it is unaffected.
+    await expect(reader.reconcileBestEffort(OTHER)).resolves.toBeUndefined();
+    expect(sweeps).toEqual([1]);
+    expect((await progress.readRun(scope, run.runId)).lifecycleStatus).toBe("FINISHING");
+
+    // A member of that workspace still converges it, from its own read.
+    await withProgress(new ResearchProgressRepository(pool), reports).reconcileBestEffort(scope);
+    expect((await progress.readRun(scope, run.runId)).lifecycleStatus).toBe("COMPLETED");
+  });
 });
