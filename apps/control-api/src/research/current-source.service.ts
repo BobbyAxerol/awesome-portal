@@ -405,6 +405,11 @@ export class ResearchCurrentSourceService {
         route_ledger: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_ROUTE_LEDGER"),
         audited_fills: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS"),
         benchmark: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES"),
+        /* E11: named so Screen 04 can state them instead of leaving EChart 1
+           one legend entry short and EChart 3 half empty with a UI-authored
+           code. Both are structural facts of this lane, not this run. */
+        in_sample_account: sourceGap("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT"),
+        rolling_sharpe: sourceGap("RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES"),
       },
       claim: claimStrip(facts),
       fold_verdicts: foldVerdicts(

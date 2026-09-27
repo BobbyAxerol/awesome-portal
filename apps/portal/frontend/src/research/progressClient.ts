@@ -24,6 +24,7 @@ import type { components } from "@portal/contracts-research-progress";
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import { REFUSAL_COPY, toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
+import { rememberRunLabel } from "./runLabels";
 
 type Schemas = components["schemas"];
 
@@ -140,7 +141,18 @@ export const progressApi = {
     call<ProgressRead>(
       runPath(runId, `/progress${workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : ""}`),
       { signal },
-    ),
+    ).then((answer) => {
+      /*
+       * D1: this read carries the run identity for Screens 03-08, so it is
+       * where the shared label registry learns what the server called this
+       * run. Remembering it here rather than in each screen is what lets
+       * every `ShortId` pick the label up with no edit. A pre-D1 server
+       * publishes no `display_label`; `undefined` is remembered as "no
+       * label", never as a number this browser worked out.
+       */
+      rememberRunLabel(runId, answer.run?.display_label);
+      return answer;
+    }),
 
   /** One bounded console page. Never a full-history read. */
   console: (runId: string, afterSeq: number, signal?: AbortSignal) =>

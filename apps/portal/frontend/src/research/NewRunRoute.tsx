@@ -21,7 +21,7 @@ import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./founda
 import { STEPS, type DraftConstraints, type ParameterEntry, type RunDraft, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
-import { useNewRun } from "./useNewRun";
+import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
 import { NOT_MODIFIED, freezeApi, isFreezeLaneNotApplicable } from "./freezeClient";
 import { isWhatIf } from "./WhatIfCard";
 import type { ForkSource } from "./NewRun";
@@ -89,6 +89,9 @@ export function constraintsFrom(
     seedRequired: declaration ? declaration.determinism.seed_required : null,
     trialCeiling: atlas ? atlas.current_release.trial_ceiling : null,
     entrypoint: declaration ? declaration.entrypoint : null,
+    /* E4 (audit 02-12): already in the registry response, never read until now. */
+    requiredColumns: declaration?.required_columns ?? null,
+    warmupBars: declaration?.warmup_bars ?? null,
     blockedRoutes: blocked,
     /* CG-P08-05: the release's own sweep ceiling; null when unpublished. */
     sweepCeiling: atlas ? (atlas.current_release.preflight_limits?.sweep_dimension_ceiling.value ?? null) : null,
@@ -219,15 +222,18 @@ export function NewRunRoute() {
       });
     return () => controller.abort();
   }, [forkRun, forkCell]);
-  const lineage = fork?.state === "ready"
-    ? { relation: "SIBLING_OF" as const, parent_run_id: fork.runId, what_if_cell_id: fork.cellId }
-    : null;
-  const run = useNewRun(draft, limits, undefined, lineage);
-
   /*
    * `?from=<runId>` (CG-P11-07): copy the run's admitted declaration into a
    * NEW draft. The copy is only the declaration — a fresh preflight is owed,
-   * and the original run is never referenced by the new submission.
+   * and none of the original run's admission (its token, manifest, lease or
+   * digests) is reused by the new submission.
+   *
+   * E13: the submission does now *name* the run it was copied from, as
+   * `CLONE_OF`. That is a provenance edge, not a dependency — it is the only
+   * thing that gives the new attempt a `parent_attempt_id`. Without it every
+   * clone landed as a root: all 33 attempts on the preview read
+   * `parent_state: ROOT`, Screen 10's tree never nested, and "diff vs parent"
+   * was always empty.
    */
   const fromRun = new URLSearchParams(location.search).get("from");
   const [clone, setClone] = useState<{ runId: string; state: ResearchState; spec: RunRequestedSpec | null } | null>(null);
@@ -245,6 +251,22 @@ export function NewRunRoute() {
       });
     return () => controller.abort();
   }, [fromRun]);
+  /* Which parent, if any, this draft may name. The rule lives beside the
+     lineage types so it can be read and tested without the route. */
+  const forkReady = fork?.state === "ready";
+  const forkRunId = fork?.runId ?? null;
+  const forkCellId = fork?.cellId ?? null;
+  const cloneCopied = clone?.spec != null;
+  const cloneRunId = clone?.runId ?? null;
+  const lineage = useMemo<RunLineage | null>(
+    () => runLineageFor(
+      forkRunId && forkCellId ? { runId: forkRunId, cellId: forkCellId, ready: forkReady } : null,
+      cloneRunId ? { runId: cloneRunId, copied: cloneCopied } : null,
+    ),
+    [forkReady, forkRunId, forkCellId, cloneCopied, cloneRunId],
+  );
+  const run = useNewRun(draft, limits, undefined, lineage);
+
   const clonedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!clone?.spec || clonedFor.current === clone.runId) return;

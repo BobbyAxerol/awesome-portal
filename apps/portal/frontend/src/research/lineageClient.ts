@@ -25,6 +25,7 @@ import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
 import { REFUSAL_COPY } from "./researchRefusal";
+import { rememberRunLabels } from "./runLabels";
 
 type LineageSchemas = LineageComponents["schemas"];
 
@@ -130,7 +131,13 @@ export function normalizeLineage(raw: Lineage): Lineage {
   }));
   const attempts = raw.attempts.map((attempt) => ({
     ...attempt,
-    primary_run: { ...attempt.primary_run, execution_profile_id: attempt.primary_run.execution_profile_id ?? null },
+    primary_run: {
+      ...attempt.primary_run,
+      execution_profile_id: attempt.primary_run.execution_profile_id ?? null,
+      /* D1: a pre-D1 server publishes no label. `null` means "no label", not
+         "the server has not said yet", so the card prints the short id. */
+      display_label: attempt.primary_run.display_label ?? null,
+    },
     presentation_kind: attempt.presentation_kind ?? ("STORIED" as const),
     presentation_reasons: attempt.presentation_reasons ?? [],
     promotion_state: attempt.promotion_state ?? null,
@@ -146,6 +153,12 @@ export function normalizeLineage(raw: Lineage): Lineage {
     },
     outcome: attempt.outcome ?? { text: null, source: null, availability: PRE_W6B },
   }));
+  /* D1 (10-3): teach the shared registry every run this page names, so the
+     `ShortId` on each card prints `R-WFO-114` with no edit to the screen. */
+  rememberRunLabels(attempts.map((attempt) => ({
+    run_id: attempt.primary_run.run_id,
+    display_label: attempt.primary_run.display_label,
+  })));
   return {
     ...raw,
     alpha: { ...raw.alpha, versions: versions as unknown as LineageVersion[] },

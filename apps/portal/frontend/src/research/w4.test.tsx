@@ -31,6 +31,7 @@ import {
 } from "./runDraft";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
+import { runLineageFor } from "./useNewRun";
 
 afterEach(cleanup);
 
@@ -228,6 +229,34 @@ describe("CG-P11-07 ?from= clone", () => {
       .toContain("not retained");
     expect(cloneFailureState("rrun_1", new PortalApiError("x", 404, null, null)).reason).toContain("not found");
     expect(cloneFailureState("rrun_1", new PortalApiError("x", 403, null, null)).state).toBe("denied");
+  });
+
+  it("E13: the submission names the run it was copied from, once the copy landed", () => {
+    /* This is the whole of E13 on the browser side. Without the declaration
+       the server stores no `parent_attempt_id`, and Screen 10 reads every
+       attempt as ROOT with an empty "diff vs parent" — which is exactly what
+       all 33 attempts on the preview do today. */
+    expect(runLineageFor(null, { runId: "rrun_1", copied: true }))
+      .toEqual({ relation: "CLONE_OF", parent_run_id: "rrun_1" });
+  });
+
+  it("E13: names no parent before the copy lands, or when the read failed", () => {
+    /* `?from=` in the address is an intention, not a copy. Claiming the
+       parent on intention alone would write an edge for a draft the reader
+       then filled in by hand. */
+    expect(runLineageFor(null, { runId: "rrun_1", copied: false })).toBeNull();
+    expect(runLineageFor(null, null)).toBeNull();
+  });
+
+  it("E13: a what-if fork still wins, cell and all", () => {
+    /* `runs/new?from=<run>&fork=<cell>` sets both. SIBLING_OF is the more
+       specific claim and must not be downgraded to a plain clone. */
+    expect(runLineageFor({ runId: "rrun_1", cellId: "x6y4", ready: true }, { runId: "rrun_1", copied: true }))
+      .toEqual({ relation: "SIBLING_OF", parent_run_id: "rrun_1", what_if_cell_id: "x6y4" });
+    /* A fork whose grid could not be read falls back to the plain copy, not
+       to a sibling with no node behind it. */
+    expect(runLineageFor({ runId: "rrun_1", cellId: "x6y4", ready: false }, { runId: "rrun_1", copied: true }))
+      .toEqual({ relation: "CLONE_OF", parent_run_id: "rrun_1" });
   });
 });
 

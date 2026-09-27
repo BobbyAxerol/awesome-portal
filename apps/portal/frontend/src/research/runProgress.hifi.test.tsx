@@ -94,6 +94,7 @@ function read(overrides: Partial<ProgressRead> = {}, snap: Partial<ProgressSnaps
 /** CG-P11-03: the progress read's own run identity. */
 function identity(): NonNullable<ProgressRead["run"]> {
   return {
+    display_label: "R-WFO-118",
     alpha: {
       alpha_id: "delta-rsi-polynomial-alpha",
       alpha_name: "Delta-RSI Polynomial Alpha",

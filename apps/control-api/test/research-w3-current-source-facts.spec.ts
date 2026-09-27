@@ -167,6 +167,45 @@ describe("W3 · S04 evidence: claim strip and fold verdicts (CG-P13-07/08)", () 
     }
     expect(verdicts.mean_oos_sharpe).toBe("-5.354970424211971");
     expect(verdicts.mean_decay).toBe("3.911439612138451");
+
+    /* E11 (audit 04-6): the run's OOS trade count is the sum of the published
+       per-fold counts, under the same score basis as the means. */
+    expect(verdicts.total_oos_trades).toEqual({
+      state: "AVAILABLE",
+      reason_code: null,
+      availability: { state: "AVAILABLE", reason_code: null },
+      value: real.expected.folds.reduce((sum, fold) => sum + Number(fold.oos_trade_count), 0),
+      basis: "SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1",
+      folds_counted: 2,
+      folds: 2,
+    });
+
+    /* E11 (audit 04-7, 04-10): the lane names what it structurally lacks, so
+       Screen 04 states it instead of leaving a legend one series short. */
+    expect(evidence.source_absences.in_sample_account).toMatchObject({
+      state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT",
+    });
+    expect(evidence.source_absences.rolling_sharpe).toMatchObject({
+      state: "NOT_PUBLISHED", reason_code: "RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES",
+    });
+  });
+
+  it("E11: withholds the OOS trade total rather than publishing a partial sum", async () => {
+    /* One fold predates the W3 fact block, so it retained no trade count; the
+       sum would be the other fold's alone, wearing the run's name. */
+    const folds = real.rows.FOLD.map((row, index) => index !== 0 ? row : {
+      ...row,
+      payload: Object.fromEntries(Object.entries(row.payload).filter(([key]) => key !== "fold_facts")),
+    });
+    const { service } = memory(realSeal, { ...realTables, FOLD: folds } as never);
+    const evidence = sealed<ResearchCurrentSourceEvidenceResponse>(await service.evidence(scope, real.run_id));
+    expect(evidence.fold_verdicts.total_oos_trades).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT",
+      value: null,
+      folds_counted: 1,
+      folds: 2,
+    });
   });
 
   it("P13-T08: every required S04 field carries a value or a typed absence, never a silent null", async () => {

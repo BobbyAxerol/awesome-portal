@@ -89,6 +89,7 @@ export interface components {
             availability: components["schemas"]["Availability"];
             /** @description P13 metric-registry scope of a COMPLETED-card value (TRADE_COUNT covers the full child tape, not OOS only). Null for lifecycle cells and absent values. */
             scope: ("OOS" | "IS_PLUS_OOS" | "CHILD_TAPE") | null;
+            /** @description E11: also the retained lane's definition ids (research.current-source.v1.…), which Screen 10 already publishes for the same two values, so 01 and 10 name one definition. */
             definition_id: string | null;
         };
         /** @description A persisted P21 relation only: the newest Portal-local sealed pack for the run, otherwise the viewer's own draft. Never inferred from a run name, claim or certificate. */
@@ -117,6 +118,8 @@ export interface components {
         };
         RunLibraryItem: {
             run_id: components["schemas"]["RunId"];
+            /** @description D1: the short label the hi-fi prints (`R-WFO-118`) - the run's execution profile kind plus its position among the logical runs of that kind in this workspace, ordered by creation (run_id breaks a tie). Server-derived so two readers cannot disagree; presentation only - run_id remains the identity and is the only value a request may carry. null when the row is not a logical run of a known profile, and the reader prints the short id. */
+            display_label: string | null;
             attempt_id: string | null;
             /** @enum {unknown} */
             source_kind: "RESEARCH_DURABLE" | "LEGACY_1_0_8_METADATA";
@@ -199,6 +202,16 @@ export interface components {
                 technical_retries: number;
                 legacy_metadata_rows: number;
             };
+            /** @description D3: status counts over the filtered rows — the HiFi's first summary line ("7 runs · 5 completed · 1 running · 1 failed"). The seven statuses partition page.filtered_rows and come from the same effective_status the cards print, so a count can never contradict a card. */
+            status_counts: {
+                COMPLETED: number;
+                RUNNING: number;
+                FAILED: number;
+                QUEUED: number;
+                DRAFT: number;
+                CANCELLED: number;
+                RECOVERY_REQUIRED: number;
+            };
             /** @description Six buckets that partition the filtered rows (their sum is page.filtered_rows). pending_source is only a durable, non-cancelled run still waiting for its source claim; a run cancelled before its source published is cancelled_before_source; a legacy 1.0.8 row is legacy_metadata_only. */
             claim_ledger: {
                 issued: number;
@@ -230,14 +243,17 @@ export interface components {
             source_revision: string | null;
             source: components["schemas"]["RunSparklineSource"] | null;
         };
-        /** @description Provenance of the display values: the persisted P13 series, its source sampling and the Library's own <=24-point reduction. Null whenever values is empty. */
+        /** @description Provenance of the display values: the lane that answered, its series, its source sampling and the Library's own <=24-point reduction. Null whenever values is empty. A retained walk-forward run has no P13 series, so its curve is the sealed RS-02 observation tape. */
         RunSparklineSource: {
-            /** @constant */
-            series_kind: "EQUITY_OOS";
+            /** @enum {unknown} */
+            lane: "PORTAL_PERSISTED_RESEARCH" | "PORTAL_RETAINED_CURRENT_SOURCE";
+            /** @enum {unknown} */
+            series_kind: "EQUITY_OOS" | "EQUITY";
             /** @constant */
             value_field: "equity";
             projection_revision: string;
-            series_digest: components["schemas"]["Digest"];
+            /** @description Null on the retained lane: its integrity is the seal's, not a per-series digest. */
+            series_digest: components["schemas"]["Digest"] | null;
             source_observation_count: number | null;
             source_sampling: string | null;
             persisted_point_count: number;

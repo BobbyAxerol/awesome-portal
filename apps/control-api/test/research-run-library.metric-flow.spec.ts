@@ -60,8 +60,10 @@ async function stats(projection: Record<string, unknown>) {
       rows: [libraryRow(projection)], asOfUtcMs: 1, totalRows: 1, filteredRows: 1, hasMore: false, hasPrevious: false,
       counters: { logicalRuns: 1, workerChildren: 0, technicalRetries: 0, legacyMetadataRows: 0 },
       claimLedger: { issued: 0, notIssued: 0, pendingSource: 1, failed: 0, cancelledBeforeSource: 0, legacyMetadataOnly: 0 },
+      statusCounts: { completed: 1, running: 0, failed: 0, queued: 0, draft: 0, cancelled: 0, recoveryRequired: 0 },
       filterCatalog: { alphas: [], modes: [], scratchAvailable: true },
     }),
+    retainedFacts: vi.fn().mockResolvedValue([]),
     findSparklineSource: vi.fn(),
   };
   const response = await new ResearchRunLibraryService(repository as never, config).list(

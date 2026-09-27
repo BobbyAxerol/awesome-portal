@@ -69,11 +69,47 @@ export interface SiblingLineage {
   what_if_cell_id: string;
 }
 
+/**
+ * E13 · P19: the run a `?from=` draft was copied from.
+ *
+ * Declaring it is what gives the new attempt a `parent_attempt_id`, so
+ * Screen 10 can nest it under its parent and show a diff. It changes nothing
+ * about the submission itself — still a NEW intent, still a fresh preflight,
+ * still its own digests.
+ */
+export interface CloneLineage {
+  relation: "CLONE_OF";
+  parent_run_id: string;
+}
+
+export type RunLineage = SiblingLineage | CloneLineage;
+
+/**
+ * What this draft may claim about where it came from.
+ *
+ * A what-if fork names its cell and wins — it is the more specific claim. A
+ * plain `?from=` copy names only its parent, and only once the copy actually
+ * landed: a read that failed copied nothing, and a draft the reader filled in
+ * by hand has no parent to point at. Saying otherwise would write a lineage
+ * edge the data cannot back, which is the same class of lie as a substituted
+ * zero.
+ */
+export function runLineageFor(
+  fork: { runId: string; cellId: string; ready: boolean } | null,
+  clone: { runId: string; copied: boolean } | null,
+): RunLineage | null {
+  if (fork?.ready) {
+    return { relation: "SIBLING_OF", parent_run_id: fork.runId, what_if_cell_id: fork.cellId };
+  }
+  if (clone?.copied) return { relation: "CLONE_OF", parent_run_id: clone.runId };
+  return null;
+}
+
 export function useNewRun(
   initial: RunDraft,
   limits: DraftConstraints,
   workspaceId?: string,
-  lineage?: SiblingLineage | null,
+  lineage?: RunLineage | null,
 ): NewRunController {
   const [draft, setDraft] = useState<RunDraft>(initial);
   const [created, setCreated] = useState<RunCreateResponse | null>(null);

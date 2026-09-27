@@ -38,6 +38,9 @@ describe("P12 Run Library wire contract", () => {
         has_more: false, has_previous: false, order: "CREATED_AT_DESC_RUN_ID_DESC",
       },
       counters: { logical_runs: 0, worker_children: 0, technical_retries: 0, legacy_metadata_rows: 0 },
+      status_counts: {
+        COMPLETED: 0, RUNNING: 0, FAILED: 0, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0,
+      },
       claim_ledger: {
         issued: 0, not_issued: 0, pending_source: 0, failed: 0, cancelled_before_source: 0, legacy_metadata_only: 0,
       },
@@ -54,7 +57,8 @@ describe("P12 Run Library wire contract", () => {
       scope: null, definition_id: null,
     });
     const item = {
-      run_id: "rrun_a", attempt_id: null, source_kind: "RESEARCH_DURABLE", row_kind: "LOGICAL_RUN",
+      run_id: "rrun_a", display_label: "R-WFO-118", attempt_id: null,
+      source_kind: "RESEARCH_DURABLE", row_kind: "LOGICAL_RUN",
       relationship: { kind: "PRIMARY", logical_run_key: null, parent_run_id: null, technical_retry_count: 0 },
       status: "COMPLETED",
       status_basis: { kind: "DURABLE_LIFECYCLE", availability: { state: "AVAILABLE", reason_code: null } },

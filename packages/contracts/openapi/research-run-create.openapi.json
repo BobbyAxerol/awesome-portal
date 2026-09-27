@@ -222,15 +222,28 @@
             "default": "NEW"
           },
           "lineage": {
-            "type": "object",
-            "additionalProperties": false,
-            "description": "W5a · P19: a sibling attempt forked from a Screen-07 what-if node. The run is a NEW intent with its own preflight and config_hash; the server links its attempt to the frozen run's attempt as SIBLING_OF.",
-            "required": ["relation", "parent_run_id", "what_if_cell_id"],
-            "properties": {
-              "relation": { "const": "SIBLING_OF" },
-              "parent_run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
-              "what_if_cell_id": { "type": "string", "pattern": "^x[0-8]y[0-8]$" }
-            }
+            "description": "The run this attempt came out of, when the browser opened the draft from one. The run is still a NEW intent with its own preflight and config_hash either way; the server records the edge, never a dependency. SIBLING_OF (W5a · P19) is a Screen-07 what-if node made real: it names the cell and must bind the same AlphaVersion as its parent. CLONE_OF (E13) is the ?from=<run> copy Screens 03, 07 and 10 offer: it names no cell and does not require the same AlphaVersion. Before E13 the clone declared nothing, so every cloned attempt was stored with a null parent_attempt_id and Screen 10 read every attempt as ROOT with an empty diff.",
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["relation", "parent_run_id", "what_if_cell_id"],
+                "properties": {
+                  "relation": { "const": "SIBLING_OF" },
+                  "parent_run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+                  "what_if_cell_id": { "type": "string", "pattern": "^x[0-8]y[0-8]$" }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["relation", "parent_run_id"],
+                "properties": {
+                  "relation": { "const": "CLONE_OF" },
+                  "parent_run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" }
+                }
+              }
+            ]
           }
         }
       },

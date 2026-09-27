@@ -28,7 +28,8 @@ import {
   journeyQueryFromSearch,
   toFoundationRefusal,
 } from "./foundationClient";
-import { KNOWN_SCREEN_KEYS, resolveScreenRoute } from "./screenRoutes";
+import journeySnapshot from "../../../../../packages/contracts/fixtures/research-foundation.journey-v2.valid.json";
+import { KNOWN_SCREEN_KEYS, needsRunToOpen, resolveJourneyCardRoute, resolveScreenRoute } from "./screenRoutes";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
 
@@ -363,6 +364,97 @@ describe("P09-T02b — an unrouted screen says so rather than blaming the roadma
     expect(card.getAttribute("data-card-availability")).toBe("AVAILABLE");
     expect(card.getAttribute("data-card-unreachable")).toBe("NOT ROUTED");
     expect(card.tagName).not.toBe("A");
+  });
+});
+
+describe("E12 — the map opens every screen this build serves (audit 00-3, D2)", () => {
+  /** A one-card descriptor for the key under test. */
+  const oneCard = (targetKey: string, requiresRun: boolean) =>
+    journey({
+      descriptor: {
+        ...DESCRIPTOR,
+        phases: [
+          {
+            phase_id: "p_e12",
+            ordinal: 1,
+            title: "Evidence",
+            description: "",
+            cards: [
+              {
+                card_id: "c_e12",
+                title: "The screen",
+                description: "",
+                target_kind: "RESEARCH_SCREEN",
+                target_key: targetKey,
+                availability: "AVAILABLE",
+                requires_run: requiresRun,
+                target_fragment: null,
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+  it("resolves the five screens the descriptor used to call PLANNED", () => {
+    /* Three are per-run; the run id is the only thing the map holds. */
+    expect(resolveJourneyCardRoute("execute_replay", "rrun_1")).toBe("/research/quantbt/runs/rrun_1/execute");
+    expect(resolveJourneyCardRoute("release_candidate", "rrun_1")).toBe("/research/quantbt/runs/rrun_1/release-candidate");
+    expect(resolveJourneyCardRoute("run_report", "rrun_1")).toBe("/research/quantbt/runs/rrun_1/report");
+    /* Two are per-Alpha: a run id alone cannot open them, an Alpha can. */
+    expect(resolveJourneyCardRoute("attempt_lineage", "rrun_1")).toBeNull();
+    expect(resolveJourneyCardRoute("attempt_lineage", "rrun_1", "alpha_delta")).toBe(
+      "/research/quantbt/alphas/alpha_delta/lineage",
+    );
+    expect(resolveJourneyCardRoute("compare_runs", null)).toBe("/research/quantbt/compare");
+    expect(resolveJourneyCardRoute("compare_runs", "rrun_1", "alpha_delta")).toBe(
+      "/research/quantbt/alphas/alpha_delta/compare",
+    );
+  });
+
+  it("still refuses a hostile key on the run-scoped and alpha-scoped paths", () => {
+    expect(resolveJourneyCardRoute("execute_replay", "../../admin")).toBeNull();
+    expect(resolveJourneyCardRoute("attempt_lineage", "rrun_1", "../../admin")).toBeNull();
+    expect(resolveJourneyCardRoute("//evil.example.com", "rrun_1")).toBeNull();
+  });
+
+  it("D2: a card that needs a run links to the Run Library carrying its target", async () => {
+    stub(() => [200, oneCard("execute_replay", true), 'W/"journey-e12"']);
+    renderAt("/research/quantbt/journey", <JourneyMapRoute />);
+    await waitFor(() => expect(document.querySelector('[data-card="c_e12"]')).toBeTruthy());
+
+    const card = document.querySelector('[data-card="c_e12"]') as HTMLElement;
+    expect(card.tagName).toBe("A");
+    expect(card.getAttribute("href")).toBe("/research/quantbt/runs?to=execute_replay");
+    expect(card.getAttribute("data-card-picks-run")).toBe("execute_replay");
+    /* The dead end is gone: no card says SELECT RUN with nowhere to select. */
+    expect(card.getAttribute("data-card-unreachable")).toBeNull();
+    expect(card.textContent).toContain("pick a run");
+  });
+
+  it("an unserved key still greys out rather than becoming a run picker", async () => {
+    stub(() => [200, oneCard("alpha_version_legacy", false), 'W/"journey-e12b"']);
+    renderAt("/research/quantbt/journey", <JourneyMapRoute />);
+    await waitFor(() => expect(document.querySelector('[data-card="c_e12"]')).toBeTruthy());
+
+    const card = document.querySelector('[data-card="c_e12"]') as HTMLElement;
+    expect(card.getAttribute("data-card-unreachable")).toBe("NOT ROUTED");
+    expect(card.tagName).not.toBe("A");
+  });
+
+  it("the published descriptor declares no PLANNED card", () => {
+    const cards = (journeySnapshot as JourneyResponse).descriptor.phases.flatMap((phase) => phase.cards);
+    expect(cards.filter((card) => card.availability === "PLANNED")).toHaveLength(0);
+    expect((journeySnapshot as JourneyResponse).descriptor.revision).toBe(3);
+    /* Every AVAILABLE card either resolves, or is a run picker, or is the one
+       shipped screen that needs an Alpha and a version this build cannot name. */
+    const unreachable = cards.filter(
+      (card) =>
+        card.availability === "AVAILABLE" &&
+        resolveJourneyCardRoute(card.target_key, "rrun_1") === null &&
+        !needsRunToOpen(card.target_key),
+    );
+    expect(unreachable.map((card) => card.target_key)).toEqual(["alpha_version_legacy"]);
   });
 });
 

@@ -246,8 +246,14 @@ export class ResearchRunCreateService {
         queueClass: "INTERACTIVE",
         resourceClass: wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
         attemptLimit: 2,
-        ...(input.lineage
+        // The edge the browser declared, if any. Both relations reach the
+        // same column; only SIBLING_OF carries a cell and the same-version
+        // rule (E13).
+        ...(input.lineage?.relation === "SIBLING_OF"
           ? { sibling: { parentRunId: input.lineage.parent_run_id, whatIfCellId: input.lineage.what_if_cell_id } }
+          : {}),
+        ...(input.lineage?.relation === "CLONE_OF"
+          ? { clonedFrom: { parentRunId: input.lineage.parent_run_id } }
           : {}),
       });
     } catch (error) {

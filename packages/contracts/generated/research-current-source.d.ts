@@ -336,10 +336,13 @@ export interface components {
                 availability: components["schemas"]["Availability"];
                 href: string;
             }[];
+            /** @description What this lane structurally does not hold. E11 adds in_sample_account (the HiFi's EChart 1 is IS vs stitched OOS; the retained tape is one stitched account, so the legend states the absence) and rolling_sharpe (QuantBT's rolling Sharpe needs daily returns, which the hourly tape has none of). Both are optional so a capture taken before E11 still validates; the server always emits them. */
             source_absences: {
                 route_ledger: components["schemas"]["Fact"];
                 audited_fills: components["schemas"]["Fact"];
                 benchmark: components["schemas"]["Fact"];
+                in_sample_account?: components["schemas"]["Fact"];
+                rolling_sharpe?: components["schemas"]["Fact"];
             };
             claim: components["schemas"]["ClaimStrip"];
             fold_verdicts: components["schemas"]["FoldVerdicts"];
@@ -1190,6 +1193,18 @@ export interface components {
             };
             mean_oos_sharpe: components["schemas"]["Decimal"] | null;
             mean_decay: components["schemas"]["Decimal"] | null;
+            /** @description E11: the run's OOS trade count, summed over the published per-fold counts under the same score_basis as mean_*. Withheld whenever a fold did not publish one — a partial sum is a smaller number wearing the run's name. Optional so a pre-E11 capture still validates; the server always emits it. */
+            total_oos_trades?: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                availability: components["schemas"]["Availability"];
+                value: number | null;
+                /** @constant */
+                basis: "SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1";
+                folds_counted: number;
+                folds: number;
+            };
             rows: components["schemas"]["FoldVerdictRow"][];
         };
         SeriesEnvelope: {

@@ -53,6 +53,13 @@ const STRANDED_TERMINAL_BATCH = 16;
 /** CG-P11-03: run identity from the P10 producer row and its immutable P08 manifest. */
 export interface ResearchProgressRunIdentity {
   alpha: { alpha_id: string; alpha_name: string | null; alpha_version_id: string };
+  /**
+   * D1: the short label the hi-fi prints (`R-WFO-118`). Presentation only —
+   * no display id is minted as an identity, `run_id` remains the identity and
+   * the only value a request may carry. `null` when none can be derived, and
+   * the reader prints the short id rather than a guess.
+   */
+  display_label: string | null;
   execution_profile_id: string;
   protocol: string | null;
   mode: string | null;
@@ -591,6 +598,7 @@ export class ResearchProgressService {
         alpha_name: identity.alphaName,
         alpha_version_id: identity.alphaVersionId,
       },
+      display_label: identity.displayLabel,
       execution_profile_id: identity.executionProfileId,
       protocol: identity.protocol,
       mode: identity.mode,

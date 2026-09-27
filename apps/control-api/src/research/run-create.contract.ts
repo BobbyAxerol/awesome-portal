@@ -34,15 +34,34 @@ export const ResearchRunCreateRequestSchema = z.object({
   requested_spec: ResearchRequestedSpecSchema,
   intent_kind: ResearchRunIntentKindSchema.default("NEW"),
   /**
-   * W5a · P19: a sibling attempt forked from a Screen-07 what-if node. The run
-   * is still a NEW intent with its own preflight and config_hash; the server
-   * links its attempt to the frozen run's attempt as SIBLING_OF.
+   * The run this attempt came out of, when the browser opened the draft from
+   * one. The run is still a NEW intent with its own preflight and config_hash
+   * either way — the server records the edge, never a dependency.
+   *
+   * Two relations, because they are two different claims:
+   *
+   *  - `SIBLING_OF` (W5a · P19) is a Screen-07 what-if node made real. It
+   *    names the exact cell and must bind the same AlphaVersion as its parent.
+   *  - `CLONE_OF` (E13) is the `?from=<run>` copy Screens 03, 07 and 10 offer.
+   *    Before E13 that copy declared nothing, so every cloned attempt landed
+   *    with `parent_attempt_id` NULL: all 33 attempts on the preview read
+   *    `parent_state: ROOT`, Screen 10's tree never nested and "diff vs
+   *    parent" was always empty. It names no cell, because there is none, and
+   *    it does not require the same AlphaVersion — a clone onto a different
+   *    version is still a clone, and the lineage read already has an honest
+   *    state for a parent outside the graph it returned.
    */
-  lineage: z.object({
-    relation: z.literal("SIBLING_OF"),
-    parent_run_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
-    what_if_cell_id: z.string().regex(/^x[0-8]y[0-8]$/),
-  }).strict().optional(),
+  lineage: z.discriminatedUnion("relation", [
+    z.object({
+      relation: z.literal("SIBLING_OF"),
+      parent_run_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
+      what_if_cell_id: z.string().regex(/^x[0-8]y[0-8]$/),
+    }).strict(),
+    z.object({
+      relation: z.literal("CLONE_OF"),
+      parent_run_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
+    }).strict(),
+  ]).optional(),
 }).strict();
 
 export type ResearchRunCreateRequest = z.infer<typeof ResearchRunCreateRequestSchema>;

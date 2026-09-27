@@ -15,6 +15,12 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 
 const REGISTRY = join(dirname(fileURLToPath(import.meta.url)), "../../registry");
+const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "packages", "contracts", "fixtures");
+
+/** A canonical contract fixture, read from the package that publishes it. */
+function contractFixture(name: string): unknown {
+  return JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"));
+}
 
 function fixture(relative: string): unknown {
   return JSON.parse(readFileSync(join(REGISTRY, relative), "utf8"));
@@ -23,11 +29,11 @@ function fixture(relative: string): unknown {
 /**
  * A response fixture owned by this suite rather than by the registry.
  *
- * P09 published no canonical fixture for either foundation read, so these two
- * are generated from the repository's own sources — the journey descriptor
- * module and the engine catalog — and regenerated when those change. Recorded
- * as `CG-P09-02`: the durable fix is for the contract package to publish them
- * beside the other `*.valid.json` files.
+ * The Atlas and the alpha registry are generated from the repository's own
+ * sources — the engine catalog and the registry shape — and regenerated when
+ * those change. `CG-P09-02` is closed for the journey read: it now comes from
+ * `packages/contracts/fixtures`, so this suite can never drift from the
+ * descriptor the server publishes. It had drifted to revision 1.
  */
 function local(name: string): unknown {
   return JSON.parse(
@@ -242,8 +248,8 @@ export async function stubPortalApi(
     }),
   );
 
-  // P09 · the two Research foundation BFF reads. The journey descriptor is
-  // generated from `journey.descriptor.ts` and the Atlas from
+  // P09 · the two Research foundation BFF reads. The journey descriptor is the
+  // canonical contract fixture and the Atlas is generated from
   // `research-engine-catalog.v1.json`, so the probe renders the facts the
   // server actually serves rather than a hand-written approximation.
   // P07 registry, now carrying the safe version declaration Screen 02's
@@ -253,7 +259,7 @@ export async function stubPortalApi(
   );
 
   await page.route("**/api/v1/research/journey*", (route) =>
-    void json(route, local("journey.json")),
+    void json(route, contractFixture("research-foundation.journey-v2.valid.json")),
   );
   await page.route("**/api/v1/research/quantbt/atlas*", (route) => {
     const url = new URL(route.request().url());

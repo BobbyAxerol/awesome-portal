@@ -59,6 +59,7 @@ function read(overrides: Partial<ProgressRead> = {}, snap: Partial<ProgressSnaps
     run_id: "run_w2",
     availability: "AVAILABLE",
     run: {
+      display_label: "R-WFO-118",
       alpha: { alpha_id: "delta-rsi-polynomial-alpha", alpha_name: null, alpha_version_id: "av_delta_1" },
       execution_profile_id: "p10.delta-signal-notional-wfo.v1",
       protocol: "advanced",

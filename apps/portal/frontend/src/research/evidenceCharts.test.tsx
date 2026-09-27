@@ -13,6 +13,7 @@ import {
   drawdownOption,
   equityOption,
   percent,
+  preOosSplit,
   rollingOption,
   tickInterval,
   utcZ,
@@ -213,5 +214,47 @@ describe("RF-06 fidelity — HiFi chart geometry and marks", () => {
   it("draws no 0% line when zero lies outside every bucket", () => {
     const positive = [{ lower_inclusive: "0.001", upper: "0.002", upper_inclusive: "false" as const, count: "1" }];
     expect(series0(distributionOption(positive) as Opt).markLine).toBeUndefined();
+  });
+});
+
+describe("E11 / audit 04-8 — the stretch before the first OOS window is not OOS performance", () => {
+  /* The real walk-forward run's shape: idle at the opening equity, then the
+     first fold's test window starts and the account begins to move. */
+  const BOUNDARIES = [{ at_utc_ms: T1, label: "fold_01" }];
+
+  it("splits the account at the first published fold start, naming the idle stretch", () => {
+    expect(preOosSplit(EQUITY, BOUNDARIES)).toBe(1);
+    const option = equityOption(EQUITY, BOUNDARIES) as Opt;
+    const [before, oos] = option.series as Opt[];
+    expect(before.name).toBe(SERIES_NAME.beforeOos);
+    expect(oos.name).toBe(SERIES_NAME.equity);
+    /* Nothing is dropped, and the two share the boundary point so the line
+       stays continuous: 2 + 2 points for a 3-point account. */
+    expect(before.data.map((pair: [number, number]) => pair[0])).toEqual([T0, T1]);
+    expect(oos.data.map((pair: [number, number]) => pair[0])).toEqual([T1, T2]);
+    /* Read as one flat OOS line before; now it is dashed, muted and shaded. */
+    expect(before.lineStyle.type).toBe("dashed");
+    expect(before.markArea.data).toEqual([[{ xAxis: T0 }, { xAxis: T1 }]]);
+    /* The legend is the HiFi's, and only appears when there are two stretches. */
+    expect(option.legend.show).toBe(true);
+    expect(option.legend.data).toEqual([SERIES_NAME.beforeOos, SERIES_NAME.equity]);
+    /* The fold boundary marks stay on the OOS series, where the folds are. */
+    expect(oos.markLine.data).toEqual([{ xAxis: T1, name: "fold_01" }]);
+  });
+
+  it("keeps one series when no fold start is published, or when every point is already OOS", () => {
+    for (const boundaries of [[], [{ at_utc_ms: T0, label: "fold_01" }]]) {
+      const option = equityOption(EQUITY, boundaries) as Opt;
+      expect(preOosSplit(EQUITY, boundaries)).toBe(0);
+      expect((option.series as Opt[]).length).toBe(1);
+      expect(series0(option).data.length).toBe(3);
+      expect(option.legend.show).toBe(false);
+    }
+  });
+
+  it("names the stretch a hovered point belongs to", () => {
+    const option = equityOption(EQUITY, BOUNDARIES) as Opt;
+    expect(tooltip(option, 0, SERIES_NAME.beforeOos)).toContain("19,996.89");
+    expect(tooltip(option, 1, SERIES_NAME.equity)).toContain("19,966.00");
   });
 });

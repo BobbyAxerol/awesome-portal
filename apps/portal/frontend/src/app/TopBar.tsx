@@ -7,12 +7,14 @@
  * frontend does not infer which environment it is talking to (v0.5 §12.1).
  */
 import { Menu, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { isOwnerAccess, useSession } from "../auth/session";
 import { EnvironmentBadge } from "../components/semantic";
 import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
+import { useRunLabel } from "../research/runLabels";
+import { researchRunCrumb } from "./researchRunCrumb";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePreferences } from "./preferences";
 import { usePresentation } from "./presentation";
@@ -31,6 +33,17 @@ export function TopBar({
   const preferences = usePreferences();
   const { mode: presentationMode, entityLabel, chrome } = usePresentation();
   const { access } = useSession();
+  const location = useLocation();
+  /*
+   * D1 / audit X1 and X-1: a run-scoped Research address extends the trail to
+   * `… / R-WFO-118 / Stage 1 · Split`. Subscribing to the run's label here is
+   * what repaints the crumb when the read lands after the first frame, and
+   * deriving the crumb in one place is what keeps the shell and the screens
+   * from writing the same run two different ways.
+   */
+  const runCrumb = researchRunCrumb(location.pathname);
+  useRunLabel(runCrumb?.runId);
+  const crumbTail = entityLabel ?? runCrumb?.screen ?? null;
 
   return (
     <header className="portal-topbar">
@@ -74,10 +87,16 @@ export function TopBar({
             entity name comes from the screen that resolved it (via the
             presentation context) — the shell cannot know fixture display
             names, and would otherwise print ids or nothing. */}
-        {entityLabel ? (
+        {runCrumb ? (
           <span className="portal-crumb">
             <span aria-hidden="true" className="portal-crumb-sep">/</span>
-            <span>{entityLabel}</span>
+            <Link to={runCrumb.route} title={runCrumb.runId} className="mono">{runCrumb.label}</Link>
+          </span>
+        ) : null}
+        {crumbTail ? (
+          <span className="portal-crumb">
+            <span aria-hidden="true" className="portal-crumb-sep">/</span>
+            <span>{crumbTail}</span>
           </span>
         ) : null}
       </nav>

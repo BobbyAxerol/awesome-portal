@@ -214,6 +214,8 @@ export interface components {
             created_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             updated_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             primary_run: {
+                /** @description D1 (audit 10-3): the short label the hi-fi writes beside the attempt (R-WFO-114) - the run's execution profile kind plus its position among the logical runs of that kind in this workspace, ordered by creation. Derived by the same rule as every other read, from the Run Library row this service already joins, so two screens cannot disagree. Presentation only - run_id remains the identity. null when no label can be derived, and the card prints the short id. */
+                display_label: string | null;
                 /** @description W6b: the run's immutable execution profile (p04.fixed-qualification.v1 / p10.delta-signal-notional-wfo.v1). */
                 execution_profile_id: string | null;
                 run_id: components["schemas"]["OpaqueId"] | null;

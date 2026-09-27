@@ -103,6 +103,7 @@ function hub(overrides: Partial<EvidenceHub> = {}): EvidenceHub {
         oos_observation_count: 2190,
       },
       run_identity: {
+        display_label: "R-WFO-118",
         status: { value: "READY", availability: AVAILABLE },
         binding: {
           alpha_id: "alpha_momentum_btc",
@@ -1668,5 +1669,74 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     const { container } = view({ hub: W3B.hub_evidence });
     expect(container.querySelector("[data-metric-lane='retained']")).toBeNull();
     expect(container.querySelector("[data-not-ready]")?.getAttribute("data-not-ready")).toBe("COMPLETED");
+  });
+});
+
+describe("E11 — what the retained lane now publishes, and what it names as absent", () => {
+  /** The same real capture, with the blocks the lane publishes from E11 on. */
+  const e11Evidence = {
+    ...W3.evidence,
+    fold_verdicts: {
+      ...W3.evidence.fold_verdicts,
+      total_oos_trades: {
+        state: "AVAILABLE", reason_code: null, availability: { state: "AVAILABLE", reason_code: null },
+        value: 10, basis: "SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1", folds_counted: 2, folds: 2,
+      },
+    },
+    source_absences: {
+      ...W3.evidence.source_absences,
+      in_sample_account: {
+        state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT",
+        availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT" },
+      },
+      rolling_sharpe: {
+        state: "NOT_PUBLISHED", reason_code: "RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES",
+        availability: { state: "NOT_PUBLISHED", reason_code: "RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES" },
+      },
+    },
+  };
+  const e11Passport = { state: "ready" as const, evidence: e11Evidence } as typeof retainedPassport;
+
+  it("audit 04-6: the trade tile shows the lane's summed per-fold OOS trades, not an empty cell", () => {
+    const { container } = view({ hub: W3B.hub_evidence, passport: e11Passport, runIdentity: W3B_IDENTITY });
+    expect(container.querySelector("[data-metric-value='TRADE_COUNT']")?.textContent).toBe("10");
+    expect(container.querySelector("[data-metric='TRADE_COUNT'] [data-withheld]")).toBeNull();
+    expect(container.querySelector("[data-metric='TRADE_COUNT'] [data-metric-scope]")?.textContent)
+      .toContain("sum of published per-fold OOS trades");
+  });
+
+  it("audit 04-6: an incomplete sum stays absent, with the lane's reason", () => {
+    const partial = {
+      ...e11Evidence,
+      fold_verdicts: {
+        ...e11Evidence.fold_verdicts,
+        total_oos_trades: {
+          state: "NOT_PUBLISHED", reason_code: "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT",
+          availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT" },
+          value: null, basis: "SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1", folds_counted: 1, folds: 2,
+        },
+      },
+    };
+    const { container } = view({
+      hub: W3B.hub_evidence,
+      passport: { state: "ready" as const, evidence: partial } as typeof retainedPassport,
+      runIdentity: W3B_IDENTITY,
+    });
+    expect(container.querySelector("[data-metric-value='TRADE_COUNT']")).toBeNull();
+    expect(container.querySelector("[data-metric='TRADE_COUNT'] [data-withheld]")?.getAttribute("data-reason-code"))
+      .toBe("QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT");
+  });
+
+  it("audit 04-7: EChart 1 states why it has no IS series instead of being silently one short", () => {
+    const { container } = view({ hub: W3B.hub_evidence, passport: e11Passport, runIdentity: W3B_IDENTITY });
+    const note = container.querySelector("[data-series-absent='EQUITY_IS']");
+    expect(note?.getAttribute("data-absence-reason")).toBe("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT");
+    expect(note?.textContent).toContain("No IS equity series is drawn");
+  });
+
+  it("audit 04-10: rolling Sharpe carries the lane's own cause, not the UI's placeholder", () => {
+    const { container } = view({ hub: W3B.hub_evidence, passport: e11Passport, runIdentity: W3B_IDENTITY });
+    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-absence-note]")?.getAttribute("data-reason-code"))
+      .toBe("RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES");
   });
 });

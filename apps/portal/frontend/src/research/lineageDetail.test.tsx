@@ -64,11 +64,15 @@ import {
   type LineageAttempt,
   type LineageVersion,
 } from "./lineageClient";
+import { forgetRunLabels, rememberRunLabel } from "./runLabels";
 import { PortalApiError } from "../lib/api";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  /* D1: the run-label registry outlives a render, so one case seeding it
+     must not decide what the next case sees. */
+  forgetRunLabels();
 });
 
 /* ---------------------------------------------------------------- fixtures */
@@ -1334,5 +1338,45 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(selectedId.className).toContain("ln-selid");
     /* No full 32-hex tail is printed as visible text anywhere on the screen. */
     expect(document.querySelector('[data-screen="attempt-lineage"]')?.textContent).not.toContain("8c9c9991bdd0cfe72100da64ebee1150");
+  });
+
+  it("S10 D1 (10-3): once a read has published the run's label, the card names it R-WFO-118", async () => {
+    /* Audit 10-3: the hi-fi writes the run beside the attempt as
+       `R-WFO-114`; the screen printed a full `rrun_`. Screen 10 reaches this
+       through the shared registry the Library read fills — no edit to this
+       screen was needed, which is the point of the change. */
+    const LONG_RUN = "rrun_8c9c9991bdd0cfe72100da64ebee1150";
+    const attempts = sixAttempts();
+    /* The label rides in on this screen's own read — `primary_run.display_label`
+       — not on a seeded registry. The client remembers it, and `ShortId` picks
+       it up with no edit to this screen. */
+    attempts[0] = {
+      ...attempts[0],
+      primary_run: { ...attempts[0].primary_run, run_id: LONG_RUN, display_label: "R-WFO-114" },
+    };
+    server([{ status: 200, body: lineage({ attempts }) }]);
+    renderRoute(`?attempt=${attempts[0].attempt_id}`);
+    await ready();
+    const run = panel("selected").querySelector('[data-row-key="primary run"] [data-full-id]') as HTMLElement;
+    expect(run.textContent).toBe("R-WFO-114");
+    /* The id is still the identity: the hover and the copy target keep it. */
+    expect(run.getAttribute("data-full-id")).toBe(LONG_RUN);
+    expect(run.getAttribute("title")).toBe(`${LONG_RUN} — click to copy`);
+  });
+
+  it("S10 D1: a run the read did not label keeps the short id, never a guessed number", async () => {
+    const LONG_RUN = "rrun_8c9c9991bdd0cfe72100da64ebee1150";
+    const attempts = sixAttempts();
+    /* A pre-D1 server, or a run with no ordinal of its own. The read's silence
+       must beat anything the registry happens to be holding, so the label a
+       previous screen remembered cannot survive a server that says there is
+       none — that is what this seed proves. */
+    rememberRunLabel(LONG_RUN, "R-WFO-114");
+    attempts[0] = { ...attempts[0], primary_run: { ...attempts[0].primary_run, run_id: LONG_RUN } };
+    server([{ status: 200, body: lineage({ attempts }) }]);
+    renderRoute(`?attempt=${attempts[0].attempt_id}`);
+    await ready();
+    const run = panel("selected").querySelector('[data-row-key="primary run"] [data-full-id]') as HTMLElement;
+    expect(run.textContent).toBe("rrun_8c9c9991");
   });
 });

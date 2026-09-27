@@ -261,6 +261,49 @@ describe("W5a migration 064 · A10a byte receipts on PostgreSQL", () => {
     // The DB refuses SIBLING_OF without a parent.
     await expect(database.query(`UPDATE research.attempts SET parent_attempt_id = NULL WHERE workspace_id = 'ws_w5a' AND relation_kind = 'SIBLING_OF'`))
       .rejects.toBeTruthy();
+
+    /*
+     * E13 · P19: the plain `?from=<run>` clone records its parent too.
+     *
+     * Before this, `?from=` declared nothing: the new attempt landed with a
+     * NULL `parent_attempt_id`, so all 33 attempts on the preview read
+     * `parent_state: ROOT`, Screen 10's tree never nested and "diff vs
+     * parent" was always "Root attempt". A clone is not a what-if node, so
+     * it stores no `relation_kind` — the DB CHECK reserves SIBLING_OF for a
+     * fork, and the lineage read prints "parent <id>" for a plain edge.
+     */
+    const cloneSpec = wfoRequested({ parameter_space_overrides: [
+      { name: "rvol", kind: "pin", value: 1.9 }, { name: "slpercent", kind: "pin", value: 2.1 },
+    ] });
+    const cloneManifest = manifestFor(cloneSpec, { token: "rpft_e13_clone" });
+    await repository.storePreflightManifest(scope, { ...cloneManifest, expiresAt: new Date(Date.now() + 60_000) }, 5);
+    const clone = await new ResearchRunCreateService(repository, new ResearchRunAdmissionService(repository, config), proxy as never, config)
+      .create(owner, scope, {
+        schema_version: "research.run-create.v1", client_intent_id: "e13-clone-intent",
+        preflight_token: "rpft_e13_clone", requested_spec: cloneSpec, intent_kind: "NEW",
+        lineage: { relation: "CLONE_OF", parent_run_id: parentRunId },
+      }, "e13-clone");
+    expect(clone.run_id).not.toBe(parentRunId);
+    const cloneAttempt = (await database.query(
+      `SELECT attempt.intent_kind, attempt.relation_kind, attempt.parent_attempt_id, attempt.reason, parent.attempt_id AS parent_attempt
+         FROM research.runs run
+         JOIN research.attempts attempt ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
+         JOIN research.runs parent ON parent.workspace_id = run.workspace_id AND parent.run_id = $2
+        WHERE run.workspace_id = 'ws_w5a' AND run.run_id = $1`, [clone.run_id, parentRunId])).rows[0];
+    expect(cloneAttempt).toMatchObject({ intent_kind: "CLONE_FOR_EXPERIMENT", relation_kind: null });
+    expect(cloneAttempt.parent_attempt_id).toBe(cloneAttempt.parent_attempt);
+    expect(cloneAttempt.reason).toBe(`clone of ${parentRunId}`);
+    // Recording the edge changes nothing about the parent run itself.
+    expect(await snapshotParent()).toEqual(before);
+
+    // A clone of a run this workspace does not have is a typed 404, not a
+    // silent root — the browser only ever sends an id a read just returned.
+    await expect(new ResearchRunCreateService(repository, new ResearchRunAdmissionService(repository, config), proxy as never, config)
+      .create(owner, scope, {
+        schema_version: "research.run-create.v1", client_intent_id: "e13-clone-missing",
+        preflight_token: "rpft_e13_clone", requested_spec: cloneSpec, intent_kind: "NEW",
+        lineage: { relation: "CLONE_OF", parent_run_id: "rrun_not_in_this_workspace" },
+      }, "e13-clone-missing")).rejects.toMatchObject({ status: 404 });
   });
 
   it("refuses a receipt that names a different expectation, a MATCH without matching digests, and any mutation", async () => {

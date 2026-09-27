@@ -53,6 +53,15 @@ export function ratio(value: string | number): string {
 
 export const SERIES_NAME = {
   equity: "OOS equity",
+  /**
+   * E11 / audit 04-8. The stitched OOS account exists before its first OOS
+   * window and does not trade there: on the real walk-forward run 720 of
+   * 1,056 observations sit at the opening equity with a zero return. Drawn
+   * as one line it read as a month of flat OOS performance. It is the same
+   * account, so it is not hidden — it is named and drawn as the idle stretch
+   * it is.
+   */
+  beforeOos: "before the first OOS window",
   drawdown: "OOS drawdown",
   rolling: "rolling 20-observation return",
   rollingSharpe: "rolling 63-day Sharpe",
@@ -194,11 +203,44 @@ function boundaryMarks(boundaries: readonly FoldBoundary[]) {
   };
 }
 
+/**
+ * Where the stitched OOS account starts being OOS (E11, audit 04-8).
+ *
+ * The first published fold start. Points at or after it are OOS; points
+ * before it are the same account standing still. Exported so the test can
+ * assert the split index rather than re-deriving it.
+ */
+export function preOosSplit(points: EquityPoint[], boundaries: readonly FoldBoundary[]): number {
+  if (boundaries.length === 0 || points.length === 0) return 0;
+  const first = Math.min(...boundaries.map((boundary) => boundary.at_utc_ms));
+  const index = points.findIndex((point) => point.at_utc_ms >= first);
+  /* No split when every point is already OOS, or when none is. */
+  return index <= 0 || index >= points.length ? 0 : index;
+}
+
 /** Exported for unit tests: jsdom never initialises a canvas, so the option is the testable surface. */
 export function equityOption(points: EquityPoint[], boundaries: readonly FoldBoundary[] = []) {
   const role = roleColorsNow();
+  const { inkFaint } = paletteNow();
+  const split = preOosSplit(points, boundaries);
+  /* The two series share the boundary point, so the line stays continuous. */
+  const before = split > 0 ? points.slice(0, split + 1) : [];
+  const oos = split > 0 ? points.slice(split) : points;
   return baseOption({
     ...noChartApparatus(),
+    ...(split > 0
+      ? {
+        legend: {
+          show: true,
+          top: 0,
+          right: 8,
+          itemWidth: 10,
+          itemHeight: 8,
+          textStyle: { fontSize: 10, fontFamily: "JetBrains Mono, monospace" },
+          data: [SERIES_NAME.beforeOos, SERIES_NAME.equity],
+        },
+      }
+      : {}),
     useUTC: true,
     /* HiFi EChart 1 grid; containLabel keeps long equity ticks inside it. */
     grid: { left: 56, right: 20, top: 34, bottom: 44, containLabel: true },
@@ -213,18 +255,39 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
       ...hifiTooltip(),
       formatter: (params: unknown) => {
         const param = first(params);
-        const point = points[param?.dataIndex ?? -1];
+        /* With the pre-OOS stretch split off, `dataIndex` is per-series; the
+           series' own name says which stretch the reader is hovering. */
+        const series = param?.seriesName === SERIES_NAME.beforeOos ? before : oos;
+        const point = series[param?.dataIndex ?? -1];
         return point
-          ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.equity, currency(point.equity))}`
+          ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, param?.seriesName ?? SERIES_NAME.equity, currency(point.equity))}`
           : "";
       },
     },
     series: [
+      /* Drawn first so the OOS line sits on top where they meet. */
+      ...(split > 0
+        ? [{
+          type: "line" as const,
+          name: SERIES_NAME.beforeOos,
+          showSymbol: false,
+          data: before.map((point) => [point.at_utc_ms, Number(point.equity)]),
+          lineStyle: { width: 1.25, color: inkFaint, type: "dashed" as const },
+          itemStyle: { color: inkFaint },
+          markArea: {
+            silent: true,
+            itemStyle: { color: withAlpha(inkFaint, 0.07) },
+            data: [
+              [{ xAxis: before[0]!.at_utc_ms }, { xAxis: before[before.length - 1]!.at_utc_ms }],
+            ] as [{ xAxis: number }, { xAxis: number }][],
+          },
+        }]
+        : []),
       {
         type: "line",
         name: SERIES_NAME.equity,
         showSymbol: false,
-        data: points.map((point) => [point.at_utc_ms, Number(point.equity)]),
+        data: oos.map((point) => [point.at_utc_ms, Number(point.equity)]),
         lineStyle: { width: 1.75, color: role.oos },
         itemStyle: { color: role.oos },
         ...boundaryMarks(boundaries),

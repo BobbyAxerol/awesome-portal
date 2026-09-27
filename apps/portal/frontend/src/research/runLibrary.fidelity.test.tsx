@@ -30,6 +30,7 @@ const NO_CERT: Availability = { state: "NOT_PUBLISHED", reason_code: "SOURCE_DID
 function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
   return {
     run_id: "A",
+    display_label: null,
     attempt_id: null,
     source_kind: "RESEARCH_DURABLE",
     row_kind: "LOGICAL_RUN",
@@ -90,6 +91,7 @@ function page(items: RunLibraryItem[], pageOverrides: Partial<RunLibraryResponse
       ...pageOverrides,
     },
     counters: { logical_runs: 12, worker_children: 0, technical_retries: 0, legacy_metadata_rows: 1 },
+    status_counts: { COMPLETED: 5, RUNNING: 1, FAILED: 1, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0 },
     claim_ledger: { issued: 0, not_issued: 7, pending_source: 5, failed: 0, cancelled_before_source: 0, legacy_metadata_only: 0 },
     filter_catalog: {
       alphas: [{ alpha_id: "delta-rsi", alpha_name: "Delta-RSI Polynomial Alpha" }],

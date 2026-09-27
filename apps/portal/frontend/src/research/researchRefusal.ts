@@ -440,6 +440,21 @@ export const REASON_CODE_SENTENCES: Record<string, string> = {
   /* E14 · 9.7: the identity qualifier on a fixed-profile run. */
   P04_FIXED_PROFILE_RUN_DID_NOT_EXECUTE_THE_DECLARED_OPTIMIZER:
     "The request declared this optimizer, and the run qualified a fixed parameter profile instead — no search was executed.",
+  /* E11: what the retained walk-forward lane structurally does not hold, in
+     the lane's own words rather than the screen's placeholder. */
+  QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT:
+    "The retained walk-forward lane holds one stitched account and no in-sample equity, so there is no IS curve to draw beside it.",
+  RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES:
+    "Rolling Sharpe is measured over 63 daily returns, and the retained tape is per bar with no daily-return series, so this screen has nothing to read and computes nothing.",
+  QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS:
+    "QuantBT retained no fold metrics for the selected trial, so this figure has no source.",
+  QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT:
+    "At least one fold retained no OOS trade count, and a sum over the rest would be a smaller number wearing the run's name.",
+  QUANTBT_RETAINED_A_FOLD_OOS_TRADE_COUNT_THAT_IS_NOT_A_COUNT:
+    "A retained fold's OOS trade count is not a whole count, so no total is stated.",
+  RS02_SEAL_RETAINED_NO_FOLD_ROWS: "This run's retained seal holds no fold rows, so there is nothing to total.",
+  RS02_RETAINED_OBSERVATIONS_DO_NOT_FORM_A_SERIES:
+    "The retained tape holds fewer than two usable observations, so no curve is drawn.",
 };
 
 /** The sentence for a reason code, or null when this module has none. */

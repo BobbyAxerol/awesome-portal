@@ -29,6 +29,7 @@ import {
   runLibraryApi,
   toLibraryRefusal,
 } from "./runLibraryClient";
+import { needsRunToOpen } from "./screenRoutes";
 import { researchState, type ResearchState } from "./state";
 import { refusalState } from "./researchRefusal";
 
@@ -48,6 +49,14 @@ export interface LibraryFilters {
    */
   cursor?: string;
   before?: string;
+  /**
+   * D2: the Journey Map card this list is picking a run for (`?to=<key>`).
+   *
+   * View state, like `group` and `sel` — it never reaches the server and never
+   * enters the query key. It survives filter changes so the reader can narrow
+   * the list without losing the screen they came to open.
+   */
+  to?: string;
 }
 
 const STATUS_VALUES: readonly RunStatus[] = [
@@ -62,6 +71,12 @@ const STATUS_VALUES: readonly RunStatus[] = [
 
 function isStatus(value: string): value is RunStatus {
   return (STATUS_VALUES as readonly string[]).includes(value);
+}
+
+/* A `to=` this build cannot open is dropped, exactly as an unknown status is:
+   a hand-edited URL must not put a screen name on the card's one link. */
+function isPickTarget(value: string | null): boolean {
+  return value !== null && needsRunToOpen(value);
 }
 
 /** Reads the filters out of a search string. Unknown values are dropped. */
@@ -83,6 +98,7 @@ export function filtersFromSearch(search: string): LibraryFilters {
     sel: [...new Set(list("sel"))].slice(0, 2),
     ...(params.get("cursor") ? { cursor: params.get("cursor") as string } : {}),
     ...(params.get("before") && !params.get("cursor") ? { before: params.get("before") as string } : {}),
+    ...(isPickTarget(params.get("to")) ? { to: params.get("to") as string } : {}),
   };
 }
 
@@ -95,6 +111,7 @@ export function searchFromFilters(filters: LibraryFilters): string {
   if (filters.alpha.length) params.set("alpha", filters.alpha.join(","));
   if (filters.group) params.set("group", "1");
   if (filters.sel.length) params.set("sel", filters.sel.join(","));
+  if (filters.to) params.set("to", filters.to);
   if (filters.cursor) params.set("cursor", filters.cursor);
   else if (filters.before) params.set("before", filters.before);
   const text = params.toString();
@@ -125,7 +142,7 @@ export function queryKeyOf(filters: LibraryFilters): string {
 
 /** Clears every server filter; keeps grouping and the compare selection. */
 export function clearedFilters(filters: LibraryFilters): LibraryFilters {
-  return { q: "", status: [], mode: [], alpha: [], group: filters.group, sel: filters.sel };
+  return { q: "", status: [], mode: [], alpha: [], group: filters.group, sel: filters.sel, ...(filters.to ? { to: filters.to } : {}) };
 }
 
 /** FIFO selection, capped at two (spec 01 §3.3). */

@@ -308,6 +308,15 @@ const HeaderSeedFactSchema = z.object({
 }).strict();
 
 const RunIdentitySchema = z.object({
+  /**
+   * D1 (audit X2): the short label the hi-fi names a run by (`R-WFO-118`) —
+   * the run's execution profile kind plus its position among the logical runs
+   * of that kind in this workspace, ordered by creation. Server-derived by
+   * the one rule every read shares, so two readers cannot disagree.
+   * Presentation only: `run_id` is the identity. `null` when no label can be
+   * derived, and the screen prints the short id rather than a guess.
+   */
+  display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
   /** Durable Research-run lifecycle, never an inferred worker/job status. */
   status: z.object({
     value: z.enum(["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"]).nullable(),

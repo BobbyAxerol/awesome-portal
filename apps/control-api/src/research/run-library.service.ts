@@ -21,14 +21,79 @@ import {
   type ResearchRunLibraryResponse,
 } from "./run-library.contract";
 import { ResearchRunLibraryError } from "./run-library.error";
+import { runDisplayLabel, runDisplayOrdinal } from "./run-display-label";
 import { failedAt, failedAtLabel, parseTerminalReason } from "./run-state";
 import {
   type RunLibraryBoundary,
+  type RunLibraryRetainedFacts,
   type RunLibraryRow,
   type RunLibrarySparklineSource,
   ResearchRunLibraryRepository,
 } from "./run-library.repository";
 import type { ResearchScope } from "./contracts";
+
+/**
+ * E11 (HiFi audit 01-7) — what a COMPLETED card reads from the retained
+ * RS-02 lane when the P13 hub published nothing for the run.
+ *
+ * Every field is a value QuantBT itself retained; the only arithmetic is the
+ * sum of the published per-fold OOS trade counts, and that sum is withheld
+ * unless every fold published one (a partial sum would be a smaller number
+ * wearing the run's name).
+ */
+export interface RetainedCardFacts {
+  /** `rs02` artifact revision of the newest seal. */
+  artifactRevision: number;
+  /** QuantBT's mean OOS Sharpe across folds for the selected trial. */
+  meanOosSharpe: string | null;
+  /** QuantBT's mean decay across folds for the selected trial. */
+  meanDecay: string | null;
+  /** Σ per-fold `oos_trade_count`, only when every fold published one. */
+  oosTrades: number | null;
+  /** Why the trade sum is absent, when it is. */
+  oosTradesReason: string | null;
+  /** OBSERVATION rows the seal declares. */
+  observationCount: number;
+}
+
+/** The three definition ids Screen 10 already publishes for these values. */
+const RETAINED_DEFINITION = {
+  oosSharpe: "research.current-source.v1.selected-trial-mean-oos-sharpe",
+  decay: "research.current-source.v1.selected-trial-mean-decay",
+  trades: "research.current-source.v1.sum-of-published-fold-oos-trade-counts",
+} as const;
+
+const EXACT_DECIMAL_TEXT = /^-?(0|[1-9][0-9]{0,29})(\.[0-9]{1,30})?$/;
+
+/** E11: the retained tape is bucketed to this many rows before display reduction. */
+const RETAINED_SPARKLINE_READ_LIMIT = 192;
+
+/** A retained row from the repository, read into the card's own shape. */
+export function retainedCardFacts(row: RunLibraryRetainedFacts): RetainedCardFacts | null {
+  const revision = Number(row.artifact_revision);
+  if (!Number.isSafeInteger(revision) || revision < 0) return null;
+  const metrics = asObject(row.metrics);
+  const decimal = (value: unknown): string | null =>
+    typeof value === "string" && value.length <= 192 && EXACT_DECIMAL_TEXT.test(value) ? value : null;
+  const folds = Number(row.fold_count);
+  const counted = Number(row.trade_fold_count);
+  const sum = row.trade_sum === null ? null : Number(row.trade_sum);
+  const complete =
+    Number.isSafeInteger(folds) && folds > 0 && counted === folds && sum !== null && Number.isSafeInteger(sum) && sum >= 0;
+  const observations = Number(row.observation_count);
+  return {
+    artifactRevision: revision,
+    meanOosSharpe: decimal(metrics?.mean_oos_sharpe),
+    meanDecay: decimal(metrics?.mean_decay),
+    oosTrades: complete ? sum : null,
+    oosTradesReason: complete
+      ? null
+      : folds === 0
+        ? "RS02_SEAL_RETAINED_NO_FOLD_ROWS"
+        : "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT",
+    observationCount: Number.isSafeInteger(observations) && observations >= 0 ? observations : 0,
+  };
+}
 
 const RESOURCE_ID = "research.run-library.v1";
 const ORDER: readonly AppliedSort[] = [
@@ -343,7 +408,15 @@ export class ResearchRunLibraryService {
     });
     const boundary = this.decodeBoundary(query, scope.workspaceId, fingerprint);
     const page = await this.repository.list(scope, query, boundary);
-    const items = page.rows.map((row) => this.mapRow(row));
+    /*
+     * E11 (audit 01-7): a run whose evidence the P13 hub never published is
+     * not a run without evidence — a Delta walk-forward seals its evidence in
+     * the retained RS-02 lane, which Screen 04 and Screen 10 already read.
+     * One bounded read covers the whole page; a hub-published run is not
+     * asked about, so nothing changes for the runs that already worked.
+     */
+    const retained = await this.retainedFor(scope, page.rows);
+    const items = page.rows.map((row) => this.mapRow(row, retained.get(row.run_id)));
     const first = page.rows[0];
     const last = page.rows[page.rows.length - 1];
     const response = {
@@ -369,6 +442,15 @@ export class ResearchRunLibraryService {
         worker_children: page.counters.workerChildren,
         technical_retries: page.counters.technicalRetries,
         legacy_metadata_rows: page.counters.legacyMetadataRows,
+      },
+      status_counts: {
+        COMPLETED: page.statusCounts.completed,
+        RUNNING: page.statusCounts.running,
+        FAILED: page.statusCounts.failed,
+        QUEUED: page.statusCounts.queued,
+        DRAFT: page.statusCounts.draft,
+        CANCELLED: page.statusCounts.cancelled,
+        RECOVERY_REQUIRED: page.statusCounts.recoveryRequired,
       },
       claim_ledger: {
         issued: page.claimLedger.issued,
@@ -433,9 +515,19 @@ export class ResearchRunLibraryService {
         : sourceAvailability(row, progress));
     } else {
       const equity = this.equityAvailability(row.evidence_revision, row.equity_availability_state, row.equity_reason_code);
-      response = equity.state === "AVAILABLE"
-        ? this.equitySparkline(row)
-        : absent(equity, this.evidenceRevision(row.evidence_revision) ?? progressRevision);
+      if (equity.state === "AVAILABLE") {
+        response = this.equitySparkline(row);
+      } else {
+        /* E11: the hub published no series for a retained walk-forward run.
+           Its sealed OBSERVATION tape is the card's curve — the same tape
+           Screen 04 draws — reduced in the database to <=24 display points. */
+        const lane = this.evidenceEnabled()
+          ? (await this.repository.retainedFacts(scope, [runId])).map(retainedCardFacts).find((fact) => fact !== null) ?? null
+          : null;
+        response = lane && lane.observationCount >= 2
+          ? await this.retainedSparkline(scope, runId, lane)
+          : absent(equity, this.evidenceRevision(row.evidence_revision) ?? progressRevision);
+      }
     }
     const parsed = ResearchRunLibrarySparklineResponseSchema.safeParse(response);
     if (!parsed.success) {
@@ -497,6 +589,64 @@ export class ResearchRunLibraryService {
         series_digest: row.equity_series_digest,
         source_observation_count: observed !== null && Number.isSafeInteger(observed) && observed >= 0 ? observed : null,
         source_sampling: row.equity_sampling,
+        persisted_point_count: points.length,
+        display_sampling: sample.sampled ? "EXTREMA_BUCKET_24_V1" as const : "FULL" as const,
+        first_at_utc_ms: points[0]!.at,
+        last_at_utc_ms: points[points.length - 1]!.at,
+      },
+    };
+  }
+
+  /**
+   * E11: the card's curve for a retained walk-forward run.
+   *
+   * The reduction happens in the database (first, last, min and max of each
+   * bucket) and again here, so a 1,056-row tape becomes <=24 display values
+   * without losing an extremum. The lane's `rs02_` revision is reported as
+   * the source revision, so the card names the lane it read, not the hub.
+   */
+  private async retainedSparkline(scope: ResearchScope, runId: string, lane: RetainedCardFacts) {
+    const rows = await this.repository.findRetainedSparklineValues(
+      scope,
+      runId,
+      lane.artifactRevision,
+      lane.observationCount,
+      RETAINED_SPARKLINE_READ_LIMIT,
+    );
+    const points = rows.flatMap((row) => {
+      const at = Number(row.at_utc_ms);
+      return typeof row.equity === "string" && EXACT_DECIMAL.test(row.equity)
+        && Number.isSafeInteger(at) && at >= 0
+        ? [{ at, equity: row.equity, numeric: Number(row.equity) }]
+        : [];
+    });
+    if (points.length < 2) {
+      return {
+        schema_version: "research.run-sparkline.v1" as const,
+        run_id: runId,
+        values: [] as string[],
+        availability: unavailable("NOT_PUBLISHED", "RS02_RETAINED_OBSERVATIONS_DO_NOT_FORM_A_SERIES"),
+        source_revision: `rs02r${lane.artifactRevision}`,
+        source: null,
+      };
+    }
+    const sample = extremaPreservingSample(points, (point) => point.numeric);
+    return {
+      schema_version: "research.run-sparkline.v1" as const,
+      run_id: runId,
+      values: sample.points.map((point) => point.equity),
+      availability: available(),
+      source_revision: `rs02r${lane.artifactRevision}`,
+      source: {
+        lane: "PORTAL_RETAINED_CURRENT_SOURCE" as const,
+        series_kind: "EQUITY" as const,
+        value_field: "equity" as const,
+        projection_revision: `rs02r${lane.artifactRevision}`,
+        series_digest: null,
+        source_observation_count: lane.observationCount,
+        source_sampling: lane.observationCount > RETAINED_SPARKLINE_READ_LIMIT
+          ? "OBSERVATION_EXTREMA_BUCKET_V2"
+          : "FULL",
         persisted_point_count: points.length,
         display_sampling: sample.sampled ? "EXTREMA_BUCKET_24_V1" as const : "FULL" as const,
         first_at_utc_ms: points[0]!.at,
@@ -589,7 +739,33 @@ export class ResearchRunLibraryService {
    * (W6b CG-P19-05/13): Screen 10's per-attempt certificate, claim, OOS
    * Sharpe, decay and rc are this exact mapping, so 01 and 10 cannot disagree.
    */
-  mapRow(row: RunLibraryRow): ResearchRunLibraryItem {
+  /**
+   * E11: the retained facts of every page row that the P13 hub did not
+   * publish. Only COMPLETED durable rows are asked about — a running or
+   * failed card shows lifecycle cells, not evidence — and a row that already
+   * has a hub projection keeps it, so the hub stays the first authority.
+   */
+  private async retainedFor(
+    scope: ResearchScope,
+    rows: readonly RunLibraryRow[],
+  ): Promise<ReadonlyMap<string, RetainedCardFacts>> {
+    if (!this.evidenceEnabled()) return new Map();
+    const wanted = rows
+      .filter((row) =>
+        row.source_kind === "RESEARCH_DURABLE"
+        && safeStatus(row.effective_status) === "COMPLETED"
+        && !this.evidenceRevision(row.evidence_revision))
+      .map((row) => row.run_id);
+    if (wanted.length === 0) return new Map();
+    const facts = new Map<string, RetainedCardFacts>();
+    for (const found of await this.repository.retainedFacts(scope, wanted)) {
+      const mapped = retainedCardFacts(found);
+      if (mapped) facts.set(found.run_id, mapped);
+    }
+    return facts;
+  }
+
+  mapRow(row: RunLibraryRow, retained?: RetainedCardFacts): ResearchRunLibraryItem {
     const requested = this.requestedSpec(row.requested_spec);
     const progress = this.progress(row.progress_snapshot);
     const source = sourceAvailability(row, progress);
@@ -601,6 +777,9 @@ export class ResearchRunLibraryService {
     const status = safeStatus(row.effective_status);
     const item = {
       run_id: row.run_id,
+      // D1: server-derived, never minted here as an identity — see
+      // run-display-label.ts. `null` stays distinct from a label.
+      display_label: runDisplayLabel(row.display_profile_id, runDisplayOrdinal(row.display_ordinal)),
       attempt_id: row.attempt_id,
       source_kind: row.source_kind,
       row_kind: rowKind(row),
@@ -622,7 +801,7 @@ export class ResearchRunLibraryService {
       certificate: this.certificate(progress, source),
       claim: this.claim(progress, source),
       stages: this.stages(progress, source, status),
-      stats: this.stats(row, progress, source),
+      stats: this.stats(row, progress, source, retained),
       superseded_note: currentOrdinal > 1 && row.source_kind === "RESEARCH_DURABLE"
         ? `Technical worker retry ${currentOrdinal} of the same durable job; it is not another logical research run.`
         : null,
@@ -647,7 +826,11 @@ export class ResearchRunLibraryService {
         availability: row.source_kind === "LEGACY_1_0_8_METADATA"
           ? unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES")
           : status === "COMPLETED"
-            ? this.equityAvailability(row.evidence_revision, row.evidence_equity_state, row.evidence_equity_reason)
+            /* E11: a retained run has a sealed equity tape even though the hub
+               published none, so the card may ask for it. */
+            ? retained && retained.observationCount >= 2
+              ? available()
+              : this.equityAvailability(row.evidence_revision, row.evidence_equity_state, row.evidence_equity_reason)
             /* Same rule as the lazy /sparkline read: a run that never received a
                source (e.g. cancelled before it) says so, rather than blaming
                the reader for a series that could not exist. */
@@ -944,6 +1127,7 @@ export class ResearchRunLibraryService {
     row: RunLibraryRow,
     progress: ResearchProgressSnapshot | null,
     source: Availability,
+    retained?: RetainedCardFacts,
   ): ResearchRunLibraryItem["stats"] {
     const metric = (
       key: string,
@@ -993,6 +1177,32 @@ export class ResearchRunLibraryService {
       }
       const revision = this.evidenceRevision(row.evidence_revision);
       if (!this.evidenceEnabled() || !revision) {
+        /*
+         * E11 (audit 01-7): before printing the hub's absence, read the
+         * retained lane. `P13_SOURCE_EVIDENCE_NOT_PUBLISHED` describes the
+         * hub, not the run — Screen 04 shows OOS Sharpe −5.35 and decay 3.91
+         * for the very run whose card said "not published" three times.
+         *
+         * The two means are QuantBT's own, from the selected trial's
+         * candidate row — the same values, with the same definition ids,
+         * that Screen 10 publishes (W6b CG-P19-05), so 01 and 10 cannot
+         * disagree. Trades are the sum of the published per-fold OOS counts
+         * and are withheld unless every fold published one.
+         */
+        if (retained) {
+          return [
+            retained.meanOosSharpe !== null
+              ? metric("oos_sharpe", "OOS sharpe", "OOS_SHARPE", retained.meanOosSharpe, available(), "DEFAULT", "OOS", RETAINED_DEFINITION.oosSharpe)
+              : metric("oos_sharpe", "OOS sharpe", "OOS_SHARPE", null, unavailable("NOT_PUBLISHED", "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS")),
+            retained.meanDecay !== null
+              ? metric("decay", "Δ decay", "DECAY", retained.meanDecay, available(), "DEFAULT", "OOS", RETAINED_DEFINITION.decay)
+              : metric("decay", "Δ decay", "DECAY", null, unavailable("NOT_PUBLISHED", "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS")),
+            retained.oosTrades !== null
+              ? metric("trade_count", "trades", "TRADE_COUNT", String(retained.oosTrades), available(), "DEFAULT", "OOS", RETAINED_DEFINITION.trades)
+              : metric("trade_count", "trades", "TRADE_COUNT", null,
+                unavailable("NOT_PUBLISHED", retained.oosTradesReason ?? "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT")),
+          ] as ResearchRunLibraryItem["stats"];
+        }
         const missing = unavailable(
           "NOT_PUBLISHED",
           this.evidenceEnabled() ? "P13_SOURCE_EVIDENCE_NOT_PUBLISHED" : "P13_EVIDENCE_READER_DISABLED",

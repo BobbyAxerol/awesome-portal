@@ -144,6 +144,9 @@ export function snapshot(overrides: Record<string, unknown> = {}) {
 export function libraryItem(runId: string, overrides: Record<string, unknown> = {}) {
   return {
     run_id: runId,
+    /* D1: these builders wire no Run Library rows, so no ordinal exists to
+       derive a label from — the same reason `rc` is null here. */
+    display_label: null,
     rc: null,
     rc_availability: { state: "NOT_PUBLISHED", reason_code: "P21_NO_PERSISTED_RELEASE_CANDIDATE" },
     certificate: { grade: null, availability: { state: "NOT_PUBLISHED", reason_code: "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE" } },

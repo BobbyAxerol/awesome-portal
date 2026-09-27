@@ -382,6 +382,26 @@ const FoldVerdictsSchema = z.object({
   }).strict(),
   mean_oos_sharpe: DecimalSchema.nullable(),
   mean_decay: DecimalSchema.nullable(),
+  /**
+   * E11 (audit 04-6): the run's OOS trade count.
+   *
+   * QuantBT retains a trade count per fold and none for the run, so the only
+   * honest total is the sum of the published per-fold counts, under the same
+   * `score_basis` as `mean_*`. It is withheld whenever a fold did not publish
+   * one: a partial sum is a smaller number wearing the run's name.
+   *
+   * Optional so a capture taken before E11 still parses; the server always
+   * emits it.
+   */
+  total_oos_trades: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    availability: ResearchCurrentSourceAvailabilitySchema,
+    value: z.number().int().nonnegative().max(100_000_000).nullable(),
+    basis: z.literal("SUM_OF_PUBLISHED_FOLD_OOS_TRADE_COUNTS_V1"),
+    folds_counted: z.number().int().nonnegative().max(256),
+    folds: z.number().int().nonnegative().max(256),
+  }).strict().optional(),
   rows: z.array(FoldVerdictRowSchema).max(256),
 }).strict();
 
@@ -410,6 +430,22 @@ export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
     route_ledger: ResearchCurrentSourceFactSchema,
     audited_fills: ResearchCurrentSourceFactSchema,
     benchmark: ResearchCurrentSourceFactSchema,
+    /**
+     * E11 (audit 04-7): the HiFi's EChart 1 is "IS vs stitched OOS", two
+     * series and a legend. The retained tape is one stitched account: it has
+     * per-fold `is_sharpe` scalars and no in-sample equity of any kind, and
+     * its pre-OOS rows are the idle prologue of the same OOS account, not an
+     * IS curve. The screen states the absence instead of leaving the legend
+     * silently one series short. Optional for pre-E11 captures.
+     */
+    in_sample_account: ResearchCurrentSourceFactSchema.optional(),
+    /**
+     * E11 (audit 04-10): rolling Sharpe(63 daily returns) is QuantBT's own
+     * measure over a scoped result. The retained tape is hourly and carries
+     * no daily-return series, so this lane can never answer it and the
+     * screen must not compute one. Optional for pre-E11 captures.
+     */
+    rolling_sharpe: ResearchCurrentSourceFactSchema.optional(),
   }).strict(),
   /** W3 · CG-P13-07 (A11): the claim strip, verbatim QuantBT facts. */
   claim: ClaimStripSchema,

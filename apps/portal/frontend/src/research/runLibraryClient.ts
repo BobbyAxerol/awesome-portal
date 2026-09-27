@@ -22,6 +22,7 @@ import type { components } from "@portal/contracts-research-run-library";
 
 import { PortalApiError } from "../lib/api";
 import { toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
+import { rememberRunLabels } from "./runLabels";
 
 type Schemas = components["schemas"];
 
@@ -122,7 +123,17 @@ async function call<T>(path: string, signal?: AbortSignal): Promise<T> {
 
 export const runLibraryApi = {
   list: (query: ListQuery | IdsQuery, signal?: AbortSignal) =>
-    call<RunLibraryResponse>(`${BASE}${listQueryString(query)}`, signal),
+    call<RunLibraryResponse>(`${BASE}${listQueryString(query)}`, signal).then((answer) => {
+      /*
+       * D1: the Library is the one read that returns many runs at once, so a
+       * single page teaches the shared registry every label on it — Screen 10
+       * then prints `R-WFO-118` for the run behind an attempt without asking
+       * for it again. Rows the server did not label are remembered as
+       * unlabelled, not skipped, so a later read cannot be mistaken for one.
+       */
+      rememberRunLabels(answer.items);
+      return answer;
+    }),
 
   sparkline: (runId: string, workspaceId?: string, signal?: AbortSignal) =>
     call<RunSparklineResponse>(

@@ -6,6 +6,7 @@ import type { Pool, PoolClient } from "pg";
 
 import { CONTROL_API_POOL } from "../tokens";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
+import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import {
   ResearchProgressEventSchema,
   ResearchProgressSnapshotSchema,
@@ -64,6 +65,8 @@ interface ReadRunRow {
   declared_fold_count?: string | number | null;
   sealed_holdout?: Record<string, unknown> | string | null;
   requested_spec_retained?: boolean | null;
+  /** D1: count(*) of same-kind logical runs created no later than this one. */
+  display_ordinal?: string | number | null;
 }
 
 interface RequestedSpecRow {
@@ -181,6 +184,8 @@ export interface ProgressRunIdentity {
   configDigest: string | null;
   requestedSpecDigest: string;
   createdAt: Date;
+  /** D1: the short run label (`R-WFO-118`); null when none can be derived. */
+  displayLabel: string | null;
   /** Length of the P08 topology's fold list; null when the topology declares none. */
   declaredFoldCount: number | null;
   /** The P08-declared sealed holdout window, never its values. */
@@ -469,8 +474,11 @@ export class ResearchProgressRepository {
                      THEN jsonb_array_length(preflight.topology->'folds') END AS declared_fold_count,
                 CASE WHEN jsonb_typeof(preflight.topology->'sealed_holdout') = 'object'
                      THEN preflight.topology->'sealed_holdout' END AS sealed_holdout,
-                (preflight.requested_spec IS NOT NULL) AS requested_spec_retained
+                (preflight.requested_spec IS NOT NULL) AS requested_spec_retained,
+                ${runDisplayOrdinalSql("durable", "producer")} AS display_ordinal
            FROM research.run_producers producer
+          LEFT JOIN research.runs durable
+             ON durable.workspace_id = producer.workspace_id AND durable.run_id = producer.run_id
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
           LEFT JOIN research.alphas alpha
@@ -680,6 +688,12 @@ export class ResearchProgressRepository {
         ? row.spec_config_digest : null,
       requestedSpecDigest: row.requested_spec_digest,
       createdAt: row.created_at,
+      // D1: derived by the one rule every read shares, from the same stored
+      // profile the line above resolves.
+      displayLabel: runDisplayLabel(
+        text(row.execution_profile_id) ?? "p04.fixed-qualification.v1",
+        runDisplayOrdinal(row.display_ordinal),
+      ),
       declaredFoldCount: declared !== null && declared > 0 ? declared : null,
       sealedHoldout,
       requestedSpecRetained: row.requested_spec_retained === true,

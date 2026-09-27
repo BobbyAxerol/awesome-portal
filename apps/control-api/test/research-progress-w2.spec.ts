@@ -218,6 +218,7 @@ const scope = { workspaceId: "research-workspace", actorUserId: "research-owner"
 function identity(overrides: Record<string, unknown> = {}) {
   return {
     alphaId: "alpha_delta", alphaName: "Delta RSI", alphaVersionId: "av_delta_1",
+    displayLabel: "R-WFO-118",
     executionProfileId: "p10.delta-signal-notional-wfo.v1",
     protocol: "advanced", mode: "mode_1_decay", schedule: "global",
     symbol: "BTCUSDT", timeframe: "1h", executionRoute: "signal_notional",
@@ -281,6 +282,9 @@ describe("W2 P11 read", () => {
     const read = await subject.read({ role: "USER" } as never, scope, "run_w2");
     expect(read.run).toEqual({
       alpha: { alpha_id: "alpha_delta", alpha_name: "Delta RSI", alpha_version_id: "av_delta_1" },
+      /* D1: the short label Screens 03-08 print instead of the 37-char id.
+         Derived by the server; `run_id` is still the identity. */
+      display_label: "R-WFO-118",
       execution_profile_id: "p10.delta-signal-notional-wfo.v1",
       protocol: "advanced",
       mode: "mode_1_decay",
@@ -294,6 +298,17 @@ describe("W2 P11 read", () => {
       declared_folds: { state: "DECLARED", count: 2, reason_code: null },
     });
     expect(read.denied_artifacts).toEqual([]);
+  });
+
+  it("D1: a run whose label cannot be derived publishes null, not a number", async () => {
+    /* `null` is a real answer here: the reader falls back to the short id.
+       What must never happen is a substituted ordinal — two readers would
+       then see different numbers for the same run, which is the whole reason
+       the label is server-derived. */
+    const { subject } = service(runRead({ identity: identity({ displayLabel: null }) }));
+    const read = await subject.read({ role: "USER" } as never, scope, "run_w2");
+    expect(read.run?.display_label).toBeNull();
+    expect(read.run_id).toBe("run_w2");
   });
 
   it("CG-P11-03: a sealed P08 holdout is a DENIED card with its row count, never a reader link", async () => {
