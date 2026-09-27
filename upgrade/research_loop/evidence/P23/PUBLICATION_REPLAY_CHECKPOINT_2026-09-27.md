@@ -5,6 +5,41 @@ This continues the original eight-group goal; full P23/P24 stays ACTIVE.
 No push, shared preview 8095, dev/main merge, Production or AWS-HK/TS change.
 No frontend, visual baseline, migration or generated contract change.
 
+## Actual post-deploy continuation — supersedes pending runtime retake only
+
+Clean Control API candidate `19a8e81362e0e6aa3e09ad1a1c224db226c37455`
+was built and installed only in the owned cell. Six unchanged application
+images were reused with explicit per-image source pins; the owned gateway
+was recreated to refresh its Control API DNS. No migration/bootstrap or
+shared/Production service change. Auth/user and workspace-membership row
+hashes before/after match.
+
+Three public retry POSTs against the **same existing sealed RC** return 200,
+`DELIVERED`, `replayed:true` and the same R1. GET remains `replayed:false`.
+Publication cardinality stays one and the entire immutable publication-row
+SHA-256 is unchanged. Mandatory commit hook: **1333 Control API tests PASS,
+one external skip; 196 contracts PASS**. No skipped check is called qualified.
+
+Additional actual security receipts: **19 export checks PASS**, including
+JSON and CSV reaching READY via the finite existing export worker, exact
+download bytes/hash, refusal before READY and isolation from nonmember/other
+actor; **five publication negatives PASS** for altered pins/actor and foreign
+workspace. Earlier ten named-read/ETag probes remain valid scoped evidence.
+These proofs do not close every object-store/file/cache surface in T05 or
+nonempty approved-graph restore/GC in T14. Original failed replay and earlier
+empty-graph restore remain historical evidence, never rewritten.
+
+| New private receipt | SHA-256 |
+|---|---|
+| `publication-replay-19a8e813.json` | `a0aeaf8f88fdd2e5038583a190e2824c897f22ccd7049ad51acdc95208ba39ed` |
+| `tenant-export-b2e8b868.json` | `403c301d4a37154ec89f00629652dc457858072c3ccd445155c7b08caafca6b4` |
+| `publication-negative-b2e8b868.json` | `577f0c9fda40bfc00d6c6bcb64a2069086f134ed5e7ea5ba2daa2d001e6dd932` |
+
+Capacity after this slice: seven bounded runtime services,
+`memory.current` aggregate **339095552 bytes**, active compute/pending exports
+zero. This idle sample is hygiene, **not** a replacement mixed-load result.
+No prune; original volumes, rollback images and private receipts retained.
+
 ## Read/ownership boundary
 
 Read the private goal, root AGENTS, Research A13.1–4, Unified live ledger and

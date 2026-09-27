@@ -72,7 +72,7 @@ export function evaluateContainers(containers, { requireLimits = false, requireC
   };
 }
 
-function takeSnapshot(project, requireLimits) {
+export function takeSnapshot(project, requireLimits) {
   if (!/^portal-research-(?:preview|p23(?:-[a-z0-9-]+)?)$/.test(project)) throw new Error('PROJECT_NOT_RESEARCH_SCOPED');
   const ids = docker(['ps', '-q', '--filter', `label=com.docker.compose.project=${project}`]).split('\n').filter(Boolean);
   if (ids.length === 0) throw new Error('NO_RUNNING_CONTAINERS');

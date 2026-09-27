@@ -1,10 +1,20 @@
 # P23 backend qualification packet
 
+**Latest W08/T02 checkpoint, 2026-09-27:** [Actual cycle failure and handoff](./PLATEAU_CHECKPOINT_2026-09-27.md)
+records six real complete/fail/cancel terminals, stable scoped worker FD/RSS,
+and **42 files/1006525 bytes supervisor scratch growth**. Third-round admission
+hit the actor's eight-live-preflight budget. Exact Node PID and natural-expiry
+pacing are repaired in the tool, not asserted as a new runtime PASS.
+`CG-P23-T02-01` is OPEN for Claude's <=P21 scratch lifecycle; other P23 gates
+continue. T02/P23/P24 remain unqualified; no blind rerun or scratch deletion.
+
 **Latest publication/tenant checkpoint, 2026-09-27:** [Real source journey and repair](./PUBLICATION_REPLAY_CHECKPOINT_2026-09-27.md)
 records actual current WFO→RC seal→one R1/publication, a preserved failed
 terminal replay flag assertion and its small P22 backend repair (17 focused
-tests/build PASS; runtime retake pending). Ten named-read/ETag isolation checks
-PASS, not full T05. The new nonempty publication does not supersede T14's
+tests/build PASS; subsequent clean `19a8e813` runtime replay PASS). Three exact
+retry POSTs preserve one R1/publication and immutable row bytes; GET is unchanged.
+Nineteen actual export checks and five publication negatives PASS, alongside
+ten named-read/ETag isolation checks, not full T05. The new nonempty publication does not supersede T14's
 missing nonempty-graph restore/GC proof. Full goal stays ACTIVE.
 
 **Latest mixed/restore checkpoint, 2026-09-27:** [Actual candidate proof](./MIXED_RESTORE_CHECKPOINT_2026-09-27.md)

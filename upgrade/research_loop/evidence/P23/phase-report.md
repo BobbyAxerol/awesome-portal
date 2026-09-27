@@ -8,12 +8,13 @@ OL-02 observer proofs are closed; P22 backend real publication is closed.
 
 | Test | Current status, scoped honestly |
 |---|---|
+| T02 | NOT_QUALIFIED: two actual complete/fail/cancel rounds (six terminals); supervisor scratch +42 files/+1006525 bytes. Third round refused by eight-live-preflight actor budget. Earlier API PID1 measures Docker init and cannot qualify Node plateau; corrected probe/pacing needs a new receipt after owner scratch repair. [Exact failure and CG-P23-T02-01](./PLATEAU_CHECKPOINT_2026-09-27.md). |
 | T01 | Scoped real mixed-load PASS on clean application `b2e8b868`: twenty readers, one HEAVY/four queued, actual completion, 120 GET 200, Library p95 490 ms, 618209280-byte peak, zero implicit jobs. Final qualification aggregation/image-index binding remains separate. Prior 789 ms FAIL retained. |
 | T04 | PARTIAL: actual PG/NATS/worker outage found/repaired API pool crash; corrected bounded refusal/recovery/source preservation/one durable intent PASS on diagnostic image. Clean candidate proof still required. |
 | T06 | Actual scoped PASS: observer MATCH/MISMATCH/copy restore plus coherent 139-table/9-artifact/54-part/337-file restore and five worker-off GETs. Original seals unchanged. Nonempty graph/GC is T14, not inferred here. |
 | T10 | PARTIAL: `b2e8b868` full commit hook PASS (1331 backend, one external skip; 196 contracts). Focused Library 30/P12 actual PG 11/build PASS. Full required browser/engine qualification remains separate. |
 | T11 | PARTIAL: clean mixed twenty-reader sample has zero implicit jobs (20→20), finite admission and all six SLOs PASS. Far-seek/slider coverage is still required, not replaced by ordinary GETs. |
-| T02/03/05/07/08/09/12/13/14/15 | Preserve exact remaining workload/security/scale/restore/cold/upgrade/browser gates, not closed by this subset. |
+| T03/05/07/08/09/12/13/14/15 | Preserve exact remaining workload/security/scale/restore/cold/upgrade/browser gates, not closed by this subset. |
 
 E6-BR-01 typed source-only signature/SBOM absence has a real DRAFT import/replay/
 list/injection-refusal receipt. No alpha signature or full browser claim.
@@ -24,8 +25,10 @@ Cold process/pool read proof exists, not a host/HMD cache flush. T14 remains
 OPEN because the earlier restored publication/selection graph was empty.
 The subsequent public WFO→RC seal→R1 journey creates one real publication,
 but its nonempty graph has not yet been restore/GC-qualified. Terminal POST
-replay metadata repair has 17 focused tests/build PASS; clean runtime retake
-is pending. Ten named-read/ETag checks PASS, not complete T05. See
+replay metadata repair has 17 focused tests/build PASS and actual clean
+`19a8e813` runtime retake PASS: three repeated POSTs return true, same R1,
+one row with unchanged bytes, GET false. Nineteen actual export checks and
+five publication negatives PASS, plus ten named-read/ETag checks, not complete T05. See
 [publication continuation](./PUBLICATION_REPLAY_CHECKPOINT_2026-09-27.md).
 Do not erase the historical failure tables below or call full P23 qualified.
 

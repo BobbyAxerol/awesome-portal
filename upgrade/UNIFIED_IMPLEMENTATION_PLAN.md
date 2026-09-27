@@ -3670,6 +3670,7 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 | OL-11 | Canonical RC publication route model | **CLOSED — Codex P22.** Exactly `GET …/publication` + `POST …/publish`; mirror is embedded and reconcile is server-owned. Historical contributor notes are explicitly superseded, not erased. | Claude consumer | No product client calls old routes. |
 | OL-13 | Named publication/approval read by `alpha_version_id` | **BACKEND CLOSED — Codex P22.** `researchAlphaVersionPublicationGetV1` returns current RC relation or typed absence; real lookup is `AVAILABLE`. | Claude consumer | S01/S02 render it without scanning RCs. |
 | OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **IN_PROGRESS, 2026-09-27.** Clean application `b2e8b868`: actual 20-reader/one-heavy/four-queued completion, all six SLOs PASS (Library **490 ms**), 618209280-byte peak, zero implicit jobs; cold process reads PASS. Coherent restore **139 tables/9 artifacts/54 parts/337 files**, worker-off readback PASS. Image-index failure/recovery retained; nonempty selection/publication graph and other required gates remain OPEN. | Codex | [Current proof/remaining exact gates](./research_loop/evidence/P23/MIXED_RESTORE_CHECKPOINT_2026-09-27.md); no full P23/P24 claim from this subset |
+| CG-P23-T02-01 | Shared <=P21 supervisor scratch lifecycle, discovered by W08 | **OPEN, 2026-09-27.** Six real terminal complete/fail/cancel jobs leave **+42 files/+1006525 bytes**; not a proven RAM leak. Exact Node probe/natural token-expiry pacing repaired in qualification tool. | Claude source repair; Codex runtime retake | Lease/fencing/once-only and output/audit retention preserved; three corrected real rounds meet fixed gates. [Reproduction, source locators, requirements and hashes](./research_loop/evidence/P23/PLATEAU_CHECKPOINT_2026-09-27.md). Other P23 gates proceed. |
 
 #### B. Frontend / test còn mở (không phải backend)
 
@@ -3882,6 +3883,36 @@ at this code checkpoint. Ten scoped nonmember/named-read/ETag checks PASS,
 not full file/export isolation. Earlier restore's empty graph is historical:
 the newly populated publication has not yet been restored/GC-qualified.
 Full goal/P23/P24 remain ACTIVE. [Failed proof, repair and next action](./research_loop/evidence/P23/PUBLICATION_REPLAY_CHECKPOINT_2026-09-27.md).
+
+**Actual publication/security retake — 2026-09-27:** clean owned Control API
+`19a8e813`, six unchanged per-image-pinned services reused, gateway DNS refreshed.
+Three retries of the existing sealed RC return `replayed:true` with one unchanged
+publication/R1; GET false. Auth/membership hashes unchanged. Actual export
+isolation **19 checks PASS** and publication negatives **five PASS**, additional
+to the ten named-read/ETag checks. These are scoped T05 proofs, not full T05/T14.
+Full hook **1333 Control API + one external skip / 196 contracts PASS**.
+This supersedes pending retake above, not the historical failed assertion.
+
+**W08/T02 started — 2026-09-27:** actual current-image WFO warmup
+`rrun_0d7891d8904d2a753d87771a59ffcdde` COMPLETED/READY. The next owned
+measurement fixes three complete/fail/cancel rounds, unchanged parent PID/start
+identity, exact 5-GB aggregate snapshots, RSS/PSS/FD and market/supervisor
+scratch inventory before execution. Fault kills only the newly admitted,
+receipt/lease-bound unshare group; cancel is public API. Thresholds are fixed
+before measurement: parent RSS/PSS growth ≤64 MiB and FD growth ≤4, **zero
+new transient scratch bytes/files at quiescence**. No parent restart, source
+rewrite, old artifact deletion or UI change. No T02 PASS before actual cycles.
+
+**W08 actual continuation — 2026-09-27:** six actual terminal jobs complete two
+rounds; scoped worker FD/RSS/PSS remains bounded, but supervisor scratch grows
+42 files/1006525 bytes. Third-round admission reaches the actor's eight-live-
+preflight budget, not an engine failure. Tools now wait for natural expiry and
+select the actual Node process (old API PID1 was Docker init, not valid app RSS).
+`CG-P23-T02-01` above is the precise Claude-owned source repair, not a new phase.
+No repeated predictable failure, threshold relaxation or scratch deletion.
+T02/P23/P24 remain unqualified; T03/T12/T14 continue on the owned cell. Current
+capacity: active compute/exports zero, nine original seal pins unchanged.
+[Actual receipt and preserved failures](./research_loop/evidence/P23/PLATEAU_CHECKPOINT_2026-09-27.md).
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5
