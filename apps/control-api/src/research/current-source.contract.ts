@@ -617,6 +617,25 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     inner_folds: GuardFactSchema,
     oos_used_for_selection: GuardFactSchema,
   }).strict(),
+  /** E14: source-sealed stitch identity and per-fold cadence scan. */
+  integrity: z.object({
+    stitch_digest: z.object({
+      value: DigestSchema.nullable(),
+      availability: ResearchCurrentSourceAvailabilitySchema,
+    }).strict(),
+    gap_scan: z.object({
+      state: z.enum(["AVAILABLE", "NOT_RETAINED_LEGACY"]),
+      cadence_ms: z.number().int().positive().max(31 * 86_400_000).nullable(),
+      folds: z.array(z.object({
+        fold_id: SourceIdentifierSchema,
+        observed_bars: z.number().int().nonnegative().max(2_000_000),
+        missing_bars: z.number().int().nonnegative().max(2_000_000),
+        gap_runs: z.number().int().nonnegative().max(2_000_000),
+        max_gap_bars: z.number().int().nonnegative().max(2_000_000),
+      }).strict()).max(256),
+      availability: ResearchCurrentSourceAvailabilitySchema,
+    }).strict(),
+  }).strict(),
 }).strict();
 
 const TrialMetricSchema = z.object({

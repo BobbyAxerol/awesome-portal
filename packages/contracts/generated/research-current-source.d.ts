@@ -427,6 +427,27 @@ export interface components {
                 oos_used_for_selection: components["schemas"]["GuardFact"];
             };
         };
+        SplitE14: components["schemas"]["Split"] & {
+            integrity: {
+                stitch_digest: {
+                    value: components["schemas"]["Digest"] | null;
+                    availability: components["schemas"]["Availability"];
+                };
+                gap_scan: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_RETAINED_LEGACY";
+                    cadence_ms: number | null;
+                    folds: {
+                        fold_id: string;
+                        observed_bars: number;
+                        missing_bars: number;
+                        gap_runs: number;
+                        max_gap_bars: number;
+                    }[];
+                    availability: components["schemas"]["Availability"];
+                };
+            };
+        };
         Search: components["schemas"]["Common"] & {
             /** @constant */
             schema_version: "research.current-source-search.v1";
@@ -1541,7 +1562,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Split"] | components["schemas"]["LaneNotApplicable"];
+                "application/json": components["schemas"]["SplitE14"] | components["schemas"]["LaneNotApplicable"];
             };
         };
         /** @description Bounded retained trial/candidate ledger */

@@ -383,6 +383,22 @@ export const CurrentSourceSummarySchema = z.object({
     trials: z.number().int().positive().max(1_000_000),
     candidates: z.number().int().nonnegative().max(1_000_000),
   }).strict().optional(),
+  // E14: written once by the retention exporter over the exact stitched rows.
+  integrity: z.object({
+    schema_version: z.literal("research.current-source-integrity.v1"),
+    stitch_digest: z.string().regex(/^[0-9a-f]{64}$/),
+    gap_scan: z.object({
+      state: z.literal("AVAILABLE"),
+      cadence_ms: z.number().int().positive().max(31 * 86_400_000),
+      folds: z.array(z.object({
+        fold_id: FactTokenSchema,
+        observed_bars: FactCountSchema,
+        missing_bars: FactCountSchema,
+        gap_runs: FactCountSchema,
+        max_gap_bars: FactCountSchema,
+      }).strict()).min(2).max(256),
+    }).strict(),
+  }).strict().optional(),
   // W3: run-level QuantBT facts (claims, guards, search, execution contract).
   source_facts: CurrentSourceFactsSchema.optional(),
   // W5b (P17): the signal-notional replay ledger summary; absent before W5b.

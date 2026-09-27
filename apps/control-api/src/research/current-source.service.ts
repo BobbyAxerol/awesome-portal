@@ -551,6 +551,23 @@ export class ResearchCurrentSourceService {
         strict_outer_oos_selection: this.summaryFact(summary.data_use.strict_outer_oos_selection),
       },
       guards: splitGuards(summary.source_facts),
+      integrity: summary.integrity
+        ? {
+          stitch_digest: { value: summary.integrity.stitch_digest, availability: available() },
+          gap_scan: { ...summary.integrity.gap_scan, availability: available() },
+        }
+        : {
+          stitch_digest: {
+            value: null,
+            availability: { state: "NOT_PUBLISHED" as const, reason_code: "RS02_SEAL_PREDATES_E14_STITCH_INTEGRITY" },
+          },
+          gap_scan: {
+            state: "NOT_RETAINED_LEGACY" as const,
+            cadence_ms: null,
+            folds: [],
+            availability: { state: "NOT_PUBLISHED" as const, reason_code: "RS02_SEAL_PREDATES_E14_GAP_SCAN" },
+          },
+        },
     };
     return this.valid(ResearchCurrentSourceSplitResponseSchema, value);
   }

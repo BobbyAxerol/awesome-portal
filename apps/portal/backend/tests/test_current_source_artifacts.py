@@ -154,6 +154,11 @@ def test_current_source_adapter_retains_real_wfo_rows_once(exported) -> None:
     assert receipt.summary["schema_version"] == "research.current-source-summary.v1"
     assert receipt.summary["metrics"]["initial_equity"]
     assert receipt.summary["selection"]["parameters"]
+    assert receipt.summary["integrity"]["schema_version"] == "research.current-source-integrity.v1"
+    assert len(receipt.summary["integrity"]["stitch_digest"]) == 64
+    assert receipt.summary["integrity"]["gap_scan"]["cadence_ms"] == 3_600_000
+    assert len(receipt.summary["integrity"]["gap_scan"]["folds"]) == receipt.table_rows["folds"]
+    assert all(row["missing_bars"] == 0 for row in receipt.summary["integrity"]["gap_scan"]["folds"])
     assert receipt.summary["derived"]["monthly_returns"]["source_observation_count"] == receipt.table_rows["observations"]
     assert receipt.summary["derived"]["return_distribution"]["state"] in {"AVAILABLE", "NOT_APPLICABLE"}
     distribution = receipt.summary["derived"]["return_distribution"]
@@ -182,6 +187,30 @@ def test_current_source_adapter_retains_real_wfo_rows_once(exported) -> None:
     # additive and source output can still be reopened without QuantBT rerun.
     stitched = pd.read_parquet(source.run_directory("run-rs02-advanced") / "series" / "stitched.parquet")
     assert receipt.table_rows["observations"] == len(stitched)
+
+
+def test_retained_integrity_counts_only_holes_inside_each_oos_fold() -> None:
+    integrity = CurrentSourceArtifactAdapter._retained_integrity(
+        observations=[
+            {"at_utc_ms": 0},
+            {"at_utc_ms": 3_600_000},
+            {"at_utc_ms": 10_800_000},
+            # The large boundary between folds is intentional and must not be
+            # reported as a source gap.
+            {"at_utc_ms": 86_400_000},
+            {"at_utc_ms": 90_000_000},
+        ],
+        folds=[
+            {"fold_id": "fold-0", "test_start_utc_ms": 0, "test_end_utc_ms": 10_800_000},
+            {"fold_id": "fold-1", "test_start_utc_ms": 86_400_000, "test_end_utc_ms": 90_000_000},
+        ],
+        timeframe="1h",
+    )
+
+    assert integrity["gap_scan"]["folds"] == [
+        {"fold_id": "fold-0", "observed_bars": 3, "missing_bars": 1, "gap_runs": 1, "max_gap_bars": 1},
+        {"fold_id": "fold-1", "observed_bars": 2, "missing_bars": 0, "gap_runs": 0, "max_gap_bars": 0},
+    ]
 
 
 def test_current_source_retention_bridge_pages_only_sealed_rows(exported) -> None:

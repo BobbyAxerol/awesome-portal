@@ -68,7 +68,7 @@ const ReportMetricSchema = z.object({
 }).strict();
 
 const HeadlineSchema = z.object({
-  key: z.enum(["OOS_SHARPE", "DECAY_MEAN", "MAX_DRAWDOWN", "TRADES", "WIN_RATE", "FUNDING"]),
+  key: z.enum(["OOS_SHARPE", "OOS_RETURN", "DECAY_MEAN", "MAX_DRAWDOWN", "TRADES", "WIN_RATE", "FUNDING"]),
   label: z.string().min(1).max(96),
   value: ExactDecimalSchema.nullable(),
   availability: AvailabilitySchema,

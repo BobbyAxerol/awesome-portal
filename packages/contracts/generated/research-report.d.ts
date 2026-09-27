@@ -123,7 +123,7 @@ export interface components {
         };
         Headline: {
             /** @enum {unknown} */
-            key: "OOS_SHARPE" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
+            key: "OOS_SHARPE" | "OOS_RETURN" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
             label: string;
             value: components["schemas"]["ExactDecimal"] | null;
             availability: components["schemas"]["Availability"];
@@ -268,7 +268,7 @@ export interface components {
         };
         HeadlineV2: {
             /** @enum {unknown} */
-            key: "OOS_SHARPE" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
+            key: "OOS_SHARPE" | "OOS_RETURN" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
             label: string;
             value: components["schemas"]["ExactDecimal"] | null;
             availability: components["schemas"]["Availability"];

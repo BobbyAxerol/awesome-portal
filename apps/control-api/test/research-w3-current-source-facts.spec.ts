@@ -299,6 +299,40 @@ describe("W3 · S05 split: fold anatomy and guards (CG-P14-02)", () => {
       state: "AVAILABLE", oos_sharpe: fold.oos_sharpe, decay: fold.decay,
     })));
     expect(Object.values(split.data_use).map((fact) => fact.state)).toEqual(["AVAILABLE", "AVAILABLE", "AVAILABLE", "AVAILABLE"]);
+    expect(split.integrity).toEqual({
+      stitch_digest: {
+        value: null,
+        availability: { state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_E14_STITCH_INTEGRITY" },
+      },
+      gap_scan: {
+        state: "NOT_RETAINED_LEGACY",
+        cadence_ms: null,
+        folds: [],
+        availability: { state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_E14_GAP_SCAN" },
+      },
+    });
+  });
+
+  it("E14 publishes the source-sealed stitch digest and per-fold cadence scan", async () => {
+    const summary = structuredClone(real.summary);
+    summary.integrity = {
+      schema_version: "research.current-source-integrity.v1",
+      stitch_digest: "9".repeat(64),
+      gap_scan: {
+        state: "AVAILABLE",
+        cadence_ms: 3_600_000,
+        folds: [
+          { fold_id: "0", observed_bars: 168, missing_bars: 0, gap_runs: 0, max_gap_bars: 0 },
+          { fold_id: "1", observed_bars: 168, missing_bars: 1, gap_runs: 1, max_gap_bars: 1 },
+        ],
+      },
+    };
+    const { service } = memory(sealRow(summary, real.table_rows), realTables);
+    const split = sealed<ResearchCurrentSourceSplitResponse>(await service.split(scope, real.run_id));
+    expect(ResearchCurrentSourceSplitResponseSchema.safeParse(split).success).toBe(true);
+    openApiValidator("research-current-source.openapi.json", "Split").assert(split);
+    expect(split.integrity.stitch_digest).toEqual({ value: "9".repeat(64), availability: { state: "AVAILABLE", reason_code: null } });
+    expect(split.integrity.gap_scan).toMatchObject({ state: "AVAILABLE", cadence_ms: 3_600_000, folds: [{ missing_bars: 0 }, { missing_bars: 1 }] });
   });
 
   it("a pre-W3 fold row reads as a typed absence, never as zero bars", async () => {

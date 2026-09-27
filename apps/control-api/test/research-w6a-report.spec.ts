@@ -187,6 +187,17 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
     expect(Object.values(core.source_revisions).every((value) => /^rs02_[a-z-]+_[0-9a-f]{64}$/.test(value))).toBe(true);
     expect(unused.detail).not.toHaveBeenCalled();
     expect(repository.seal).toHaveBeenCalledTimes(1);
+    expect(core.headline.map((item) => item.key)).toEqual([
+      "OOS_SHARPE", "OOS_RETURN", "DECAY_MEAN", "MAX_DRAWDOWN", "TRADES", "WIN_RATE",
+    ]);
+    expect(core.headline.find((item) => item.key === "OOS_RETURN")).toMatchObject({
+      label: "OOS return",
+      scope: "OOS",
+      value: real.summary.metrics.net_return_fraction,
+      availability: { state: "AVAILABLE", reason_code: null },
+    });
+    expect(core.metrics.filter((item) => ["INITIAL_EQUITY", "FINAL_EQUITY", "NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION"].includes(item.key))
+      .every((item) => item.scope === "OOS")).toBe(true);
   });
 
   it("CG-P18-01 passport carries the claim strip under stable keys; CG-P18-02 certification is a typed absence", async () => {

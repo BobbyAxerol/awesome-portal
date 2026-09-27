@@ -669,6 +669,11 @@ class CurrentSourceArtifactAdapter:
             trials=trials,
             candidates=candidates,
             selection=selection_rows[0],
+            integrity=self._retained_integrity(
+                observations=observations,
+                folds=folds,
+                timeframe=config.get("timeframe"),
+            ),
             source_facts=self._source_facts(
                 source_contract=source_contract,
                 fold_metrics=fold_metrics,
@@ -1684,6 +1689,7 @@ class CurrentSourceArtifactAdapter:
         trials: list[dict[str, Any]],
         candidates: list[dict[str, Any]],
         selection: Mapping[str, Any],
+        integrity: Mapping[str, Any],
         source_facts: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Build a compact, source-derived seal document for TS BFF mapping.
@@ -1763,10 +1769,85 @@ class CurrentSourceArtifactAdapter:
                 "trials": len(trials),
                 "candidates": len(candidates),
             },
+            # E14: source-owned integrity over the exact retained stitched
+            # rows. Readers never recreate either digest or cadence gaps.
+            "integrity": dict(integrity),
         }
         if source_facts is not None:
             body["source_facts"] = dict(source_facts)
         return body
+
+    @staticmethod
+    def _retained_integrity(
+        *,
+        observations: list[dict[str, Any]],
+        folds: list[dict[str, Any]],
+        timeframe: object,
+    ) -> dict[str, Any]:
+        """Digest the retained stitch and scan cadence holes inside each OOS fold.
+
+        Fold boundaries can be separated by an intentional train/search gap,
+        so only consecutive observations that both belong to the same source
+        OOS window participate in the gap scan.
+        """
+
+        match = re.fullmatch(r"([1-9][0-9]*)([mhd])", timeframe) if isinstance(timeframe, str) else None
+        if match is None:
+            raise CurrentSourceArtifactError(
+                "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID",
+                "The retained current-source timeframe cannot be cadence-scanned.",
+            )
+        multiplier = {"m": 60_000, "h": 3_600_000, "d": 86_400_000}[match.group(2)]
+        cadence_ms = int(match.group(1)) * multiplier
+        stitched = json.dumps(
+            canonicalize(observations), ensure_ascii=True, sort_keys=True,
+            separators=(",", ":"), allow_nan=False,
+        ).encode("utf-8")
+        rows: list[dict[str, Any]] = []
+        for fold in folds:
+            fold_id = fold.get("fold_id")
+            start = fold.get("test_start_utc_ms")
+            end = fold.get("test_end_utc_ms")
+            if not isinstance(fold_id, str) or not isinstance(start, int) or not isinstance(end, int):
+                raise CurrentSourceArtifactError(
+                    "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID",
+                    "A retained fold has no cadence-scannable OOS window.",
+                )
+            instants = [
+                int(row["at_utc_ms"]) for row in observations
+                if start <= int(row["at_utc_ms"]) <= end
+            ]
+            missing = 0
+            gap_runs = 0
+            max_gap = 0
+            for previous, current in zip(instants, instants[1:], strict=False):
+                delta = current - previous
+                if delta <= 0 or delta % cadence_ms != 0:
+                    raise CurrentSourceArtifactError(
+                        "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID",
+                        "Retained OOS observations do not align to the declared cadence.",
+                    )
+                gap = (delta // cadence_ms) - 1
+                if gap > 0:
+                    missing += gap
+                    gap_runs += 1
+                    max_gap = max(max_gap, gap)
+            rows.append({
+                "fold_id": fold_id,
+                "observed_bars": len(instants),
+                "missing_bars": missing,
+                "gap_runs": gap_runs,
+                "max_gap_bars": max_gap,
+            })
+        return {
+            "schema_version": "research.current-source-integrity.v1",
+            "stitch_digest": hashlib.sha256(stitched).hexdigest(),
+            "gap_scan": {
+                "state": "AVAILABLE",
+                "cadence_ms": cadence_ms,
+                "folds": rows,
+            },
+        }
 
     @staticmethod
     def _derived_series(observations: list[dict[str, Any]]) -> dict[str, Any]:
