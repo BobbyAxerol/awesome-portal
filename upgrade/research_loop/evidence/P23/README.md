@@ -1,5 +1,12 @@
 # P23 backend qualification packet
 
+**Latest T05 tenant/cache checkpoint, 2026-09-27:** [Ten real named reads and
+source repair request](./T05_TENANT_CACHE_CHECKPOINT_2026-09-27.md) show owner
+200/nonmember 404/anonymous 401 on all ten, including conditional requests.
+T05 is **NOT_QUALIFIED**: three reads omit `Cache-Control`; browser-visible
+weak ETags do not revalidate Freeze/Report. `CG-P23-T05-01` belongs to the
+shared ≤P21 source owner; the failed 0600 receipt is retained for retake.
+
 **Latest T14 graph/restore checkpoint, 2026-09-27:** [Real R1 and nonempty
 publication graph](./APPROVAL_GRAPH_RESTORE_CHECKPOINT_2026-09-27.md) proves
 approved R1@2, exactly one promotion fact, revoked temporary capability,
