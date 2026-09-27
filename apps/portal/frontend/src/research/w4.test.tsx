@@ -51,6 +51,8 @@ const LIMITS: DraftConstraints = {
   entrypoint: "generate_signals",
   blockedRoutes: {},
   sweepCeiling: 8,
+  requiredColumns: ["open", "high", "low", "close"],
+  warmupBars: 64,
 };
 
 function advanced(walkForward: Partial<RunDraft["walkForward"]> = {}, extra: Partial<RunDraft> = {}): RunDraft {

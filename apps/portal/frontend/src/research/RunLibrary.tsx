@@ -54,6 +54,7 @@ import { ResearchPanel } from "./ResearchPanel";
 import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
+import { useRunLabel } from "./runLabels";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1029,6 +1030,8 @@ function openTarget(item: RunLibraryItem, pickTarget?: string): { to: string; la
  * and a click copies it, so nothing is lost to the cut.
  */
 function RunId({ runId }: { runId: string }) {
+  /* D1: the server's label when this read carried one; the id is still what is copied. */
+  const label = useRunLabel(runId);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -1066,7 +1069,7 @@ function RunId({ runId }: { runId: string }) {
         cursor: "copy",
       }}
     >
-      {shortId(runId)}
+      {label ?? shortId(runId)}
     </button>
   );
 }
