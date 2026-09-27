@@ -10,7 +10,10 @@
 
 import { z } from "zod";
 
-import { ResearchEvidenceOosAnalyticsSourceSchema } from "./evidence.contract";
+import {
+  ResearchEvidenceCandleOverviewSourceSchema,
+  ResearchEvidenceOosAnalyticsSourceSchema,
+} from "./evidence.contract";
 
 const OpaqueIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/);
 export const ResearchProgressRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
@@ -313,6 +316,8 @@ export const ResearchEvidenceSourceSchema = z.object({
   }).strict(),
   /** RF-05 (P13 evidence owner): additive engine OOS analytics; see evidence.contract.ts. */
   oos_analytics: ResearchEvidenceOosAnalyticsSourceSchema.optional(),
+  /** E16-R1: additive bounded OHLC overview of the OOS window; see evidence.contract.ts. */
+  candle_overview: ResearchEvidenceCandleOverviewSourceSchema.optional(),
 }).strict().superRefine((value, context) => {
   if (value.source.emitted_equity_points !== value.equity_points.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count is inconsistent" });
@@ -364,6 +369,23 @@ export const ResearchEvidenceSourceSchema = z.object({
     || value.direct.final_equity !== value.equity_points[value.equity_points.length - 1]?.equity
   ) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "direct evidence endpoints do not reconcile to the OOS series" });
+  }
+  // E16-R1: the overview summarises the OOS window, so it must count exactly
+  // the bars the receipt already declares -- never a wider, unnamed tape.
+  const overview = value.candle_overview;
+  if (overview && overview.state === "AVAILABLE") {
+    if (overview.source_bar_count !== value.source.oos_observation_count) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "candle overview does not cover the declared OOS window" });
+    }
+    if (overview.emitted_bucket_count > 48) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "P04 candle overview exceeds its source byte-budget cap" });
+    }
+    const first = value.equity_points[0]?.at_utc_ms;
+    const last = value.equity_points[value.equity_points.length - 1]?.at_utc_ms;
+    if (first !== undefined && last !== undefined
+      && (overview.values[0]!.open_utc_ms !== first || overview.values.at(-1)!.close_utc_ms !== last)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "candle overview does not span the OOS equity endpoints" });
+    }
   }
   for (let index = 1; index < value.equity_points.length; index += 1) {
     if (value.equity_points[index]!.at_utc_ms <= value.equity_points[index - 1]!.at_utc_ms) {

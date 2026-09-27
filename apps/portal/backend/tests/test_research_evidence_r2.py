@@ -14,7 +14,9 @@ import pandas as pd
 import pytest
 
 from portal_api.workers.research_child import (
+    _MAX_CANDLE_OVERVIEW_BUCKETS,
     _MAX_EVIDENCE_RECEIPT_BYTES,
+    _candle_overview,
     _monthly_returns,
     _p13_evidence_source,
     _return_distribution,
@@ -165,4 +167,195 @@ def test_oos_metrics_exclude_warmup_and_is_but_counters_state_child_tape_scope(m
         "final_equity": "OOS_EQUITY_SERIES",
         "num_trades": "FULL_CHILD_TAPE",
         "bars": "FULL_CHILD_TAPE",
+    }
+
+
+# --------------------------------------------------------------- E16-R1
+
+def _ohlc_frame(bars: int, *, volume: bool = True):
+    """A deterministic tape whose extremes are known independently here.
+
+    The high spikes on every 7th bar and the low dips on every 11th, so a
+    bucketing that quietly averaged -- or that read the bucket's first/last
+    bar instead of its extremes -- would land on a different number.
+    """
+
+    index = pd.date_range("2026-04-01", periods=bars, freq="h", tz="UTC")
+    close = [1_000.0 + (position % 37) for position in range(bars)]
+    frame = pd.DataFrame(
+        {
+            "open": [value - 1.0 for value in close],
+            "high": [value + (50.0 if position % 7 == 0 else 2.0) for position, value in enumerate(close)],
+            "low": [value - (40.0 if position % 11 == 0 else 2.0) for position, value in enumerate(close)],
+            "close": close,
+            "volume": [10.0 + position for position in range(bars)],
+        },
+        index=index,
+    )
+    return frame if volume else frame.drop(columns=["volume"])
+
+
+def test_candle_overview_keeps_the_true_extreme_of_every_bucket() -> None:
+    frame = _ohlc_frame(600)
+
+    block = _candle_overview(frame, frame.index, receipt_bytes=0, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES)
+
+    assert block["state"] == "AVAILABLE"
+    assert block["scope"] == "OOS_EQUITY_WINDOW"
+    assert block["sampling"] == "OHLC_BUCKET_V1"
+    assert block["emitted_bucket_count"] == len(block["values"])
+    assert block["emitted_bucket_count"] <= _MAX_CANDLE_OVERVIEW_BUCKETS
+    # Independent oracle: recompute each bucket straight from the frame.
+    for bucket in block["values"]:
+        window = frame.iloc[bucket["first_ordinal"]: bucket["last_ordinal"] + 1]
+        assert float(bucket["high"]) == float(window["high"].max())
+        assert float(bucket["low"]) == float(window["low"].min())
+        assert float(bucket["open"]) == float(window["open"].iloc[0])
+        assert float(bucket["close"]) == float(window["close"].iloc[-1])
+        assert float(bucket["volume"]) == pytest.approx(float(window["volume"].sum()))
+        # P04 publishes no execution ledger, so this is null, never zero.
+        assert bucket["transitions"] is None
+    # The envelope is the whole window's extreme, not the widest bucket's guess.
+    assert float(block["envelope"]["max_high"]) == float(frame["high"].max())
+    assert float(block["envelope"]["min_low"]) == float(frame["low"].min())
+    assert block["envelope"]["max_high_at_utc_ms"] == int(frame["high"].idxmax().value // 1_000_000)
+    assert block["envelope"]["min_low_at_utc_ms"] == int(frame["low"].idxmin().value // 1_000_000)
+
+
+def test_candle_overview_covers_the_whole_window_without_a_gap() -> None:
+    frame = _ohlc_frame(601)
+
+    block = _candle_overview(frame, frame.index, receipt_bytes=0, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES)
+
+    values = block["values"]
+    assert block["source_bar_count"] == 601
+    assert values[0]["first_ordinal"] == 0
+    assert values[-1]["last_ordinal"] == 600
+    for previous, current in zip(values, values[1:]):
+        assert current["first_ordinal"] == previous["last_ordinal"] + 1
+        assert current["open_utc_ms"] > previous["close_utc_ms"]
+    # A ragged final bucket is allowed; an over-wide one is not.
+    assert all(
+        bucket["last_ordinal"] - bucket["first_ordinal"] + 1 <= block["bucket_bars"]
+        for bucket in values
+    )
+    assert sum(bucket["last_ordinal"] - bucket["first_ordinal"] + 1 for bucket in values) == 601
+
+
+def test_candle_overview_is_full_when_every_bar_fits() -> None:
+    frame = _ohlc_frame(_MAX_CANDLE_OVERVIEW_BUCKETS)
+
+    block = _candle_overview(frame, frame.index, receipt_bytes=0, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES)
+
+    assert block["sampling"] == "FULL"
+    assert block["bucket_bars"] == 1
+    assert block["emitted_bucket_count"] == _MAX_CANDLE_OVERVIEW_BUCKETS
+
+
+def test_candle_overview_shrinks_to_fit_and_then_refuses_rather_than_overrun() -> None:
+    frame = _ohlc_frame(4_000)
+
+    full = _candle_overview(frame, frame.index, receipt_bytes=0, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES)
+    assert full["emitted_bucket_count"] == _MAX_CANDLE_OVERVIEW_BUCKETS
+
+    size = len(json.dumps(full, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
+    # Leave room for roughly a quarter of the full block: the ladder must give
+    # up buckets to fit rather than publish a receipt over its budget.
+    squeezed = _candle_overview(
+        frame, frame.index,
+        receipt_bytes=_MAX_EVIDENCE_RECEIPT_BYTES - (size // 4),
+        byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES,
+    )
+    assert squeezed["state"] == "AVAILABLE"
+    assert squeezed["emitted_bucket_count"] < full["emitted_bucket_count"]
+    # Coarser, still honest: the envelope is unchanged by the bucket count.
+    assert squeezed["envelope"] == full["envelope"]
+
+    starved = _candle_overview(
+        frame, frame.index,
+        receipt_bytes=_MAX_EVIDENCE_RECEIPT_BYTES - 100,
+        byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES,
+    )
+    assert starved["state"] == "NOT_PUBLISHED"
+    assert starved["reason_code"] == "P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET"
+    assert starved["values"] == []
+    assert starved["envelope"] is None
+
+
+def test_candle_overview_without_volume_keeps_the_key_and_publishes_null() -> None:
+    frame = _ohlc_frame(120, volume=False)
+
+    block = _candle_overview(frame, frame.index, receipt_bytes=0, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES)
+
+    assert block["state"] == "AVAILABLE"
+    assert all(bucket["volume"] is None for bucket in block["values"])
+
+
+def test_p13_receipt_carries_the_overview_of_exactly_the_oos_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    import portal_api.adapters.quantbt as quantbt
+
+    monkeypatch.setattr(quantbt, "QuantBTGateway", lambda: SimpleNamespace(version=lambda: "1.1.1"))
+    market = _ohlc_frame(500)
+    index = market.index
+    equity = pd.Series([100.0 + position * 0.1 for position in range(len(index))], index=index)
+    result = SimpleNamespace(equity=equity, returns=equity.pct_change().fillna(0.0))
+    oos_start = int(index[100].value // 1_000_000)
+
+    receipt = _p13_evidence_source(
+        market=market, result=result,
+        report={"final_equity": float(equity.iloc[-1]), "num_trades": 3},
+        oos_start_utc_ms=oos_start,
+    )
+
+    block = receipt["candle_overview"]
+    assert block["state"] == "AVAILABLE"
+    # The overview counts the OOS bars the receipt already declares, not the
+    # full 500-bar child tape it was sliced from.
+    assert block["source_bar_count"] == receipt["source"]["oos_observation_count"] == 400
+    assert block["values"][0]["open_utc_ms"] == receipt["equity_points"][0]["at_utc_ms"]
+    assert block["values"][-1]["close_utc_ms"] == receipt["equity_points"][-1]["at_utc_ms"]
+    assert float(block["envelope"]["max_high"]) == float(market["high"].iloc[100:].max())
+    # Whatever it costs, the finished receipt is still inside the child budget.
+    encoded = len(json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
+    assert encoded <= _MAX_EVIDENCE_RECEIPT_BYTES
+
+
+def test_candle_overview_refuses_a_tape_whose_own_bar_breaks_ohlc() -> None:
+    # A bucket whose high does not bracket its own open would be refused by
+    # the ingress contract, and that refusal would reject the whole evidence
+    # receipt -- equity series included. The producer must fail here instead.
+    frame = _ohlc_frame(40)
+    frame.iloc[0, frame.columns.get_loc("high")] = frame["open"].iloc[0] - 10.0
+
+    with pytest.raises(ValueError, match="bucket range is invalid"):
+        _candle_overview(frame, frame.index, receipt_bytes=0, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES)
+
+
+def test_p13_receipt_names_a_tape_without_ohlc_instead_of_failing(monkeypatch: pytest.MonkeyPatch) -> None:
+    import portal_api.adapters.quantbt as quantbt
+
+    monkeypatch.setattr(quantbt, "QuantBTGateway", lambda: SimpleNamespace(version=lambda: "1.1.1"))
+    index = pd.date_range("2026-04-01", periods=5, freq="D", tz="UTC")
+    market = pd.DataFrame({"close": [1.0] * 5}, index=index)
+    result = SimpleNamespace(
+        equity=pd.Series([80.0, 90.0, 100.0, 110.0, 121.0], index=index),
+        returns=pd.Series([0.0, 0.0, 0.0, 0.1, 0.1], index=index),
+    )
+
+    receipt = _p13_evidence_source(
+        market=market, result=result,
+        report={"final_equity": 121.0, "num_trades": 7},
+        oos_start_utc_ms=int(index[2].value // 1_000_000),
+    )
+
+    assert receipt["candle_overview"] == {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_TAPE_DID_NOT_PUBLISH_OHLC_COLUMNS",
+        "scope": "OOS_EQUITY_WINDOW",
+        "source_bar_count": None,
+        "emitted_bucket_count": 0,
+        "bucket_bars": None,
+        "sampling": None,
+        "envelope": None,
+        "values": [],
     }

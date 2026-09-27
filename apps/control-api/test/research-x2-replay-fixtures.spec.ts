@@ -35,14 +35,20 @@ const files = {
   first: "research-replay.p04-real.first-window.valid.json",
   seek: "research-replay.p04-real.far-seek.valid.json",
   absent: "research-replay.p04-not-published.valid.json",
+  /** E16-R1: the same real run as `first`, sealed before the producer retained an overview. */
+  predates: "research-replay.p04-real.predates-candle-overview.valid.json",
 } as const;
 
 /** The real receipt ingested exactly as the terminal callback would, then read back as the hub bundle. */
-async function replayService(options: { published?: boolean } = {}) {
+async function replayService(options: { published?: boolean; candleOverview?: boolean } = {}) {
   const persist = vi.fn().mockResolvedValue(undefined);
   const repository = { persist, inputBinding: vi.fn().mockResolvedValue(binding), hub: vi.fn(), series: vi.fn(), bundle: vi.fn() };
   const evidence = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
   const receipt = p13RealReceiptFixture("four_month_oos");
+  // E16-R1: exactly what every run sealed before the producer retained an
+  // overview carries -- no block at all. Its tape is gone, so there is
+  // nothing to backfill and the read must say so with its own reason code.
+  if (options.candleOverview === false) delete receipt.candle_overview;
   await evidence.ingest({ ...scope, jobId: "job_x2", workerAttemptId: "attempt_x2", leaseEpoch: 1 }, {
     run_id: RUN, event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: sha256ResearchJson(receipt) } }, evidence: receipt,
   } as unknown as ResearchProgressIngress);
@@ -99,6 +105,8 @@ describe("X2 · B6 · published P04 hub-lane replay fixtures (research.replay.v1
       writeFileSync(join(root, files.first), `${JSON.stringify(first)}\n`);
       writeFileSync(join(root, files.seek), `${JSON.stringify(await service.detail(scope, RUN, { limit: 10, at_ordinal: Math.max(0, total - 3) }))}\n`);
       writeFileSync(join(root, files.absent), `${JSON.stringify(await (await replayService({ published: false })).detail(scope, RUN, { limit: 50 }))}\n`);
+      const predates = await (await replayService({ candleOverview: false })).detail(scope, RUN, { limit: 50 });
+      writeFileSync(join(root, files.predates), `${JSON.stringify(predates)}\n`);
     }
     for (const name of Object.values(files)) {
       const body = JSON.parse(readFileSync(join(root, name), "utf8"));
@@ -107,5 +115,47 @@ describe("X2 · B6 · published P04 hub-lane replay fixtures (research.replay.v1
     }
     const absent = JSON.parse(readFileSync(join(root, files.absent), "utf8"));
     expect(absent).toMatchObject({ revision: null, readiness: "NOT_READY", equity_replay: { state: "NOT_PUBLISHED", items: [] } });
+  });
+
+  it("E16-R1: draws the real run's retained OHLC overview, and a pre-change run keeps its typed absence", async () => {
+    const first = JSON.parse(readFileSync(join(root, files.first), "utf8"));
+    const overview = first.candle_overview;
+    expect(overview.state).toBe("AVAILABLE");
+    expect(overview.scope).toBe("OOS_EQUITY_WINDOW");
+    expect(overview.sampling).toBe("OHLC_BUCKET_V1");
+    // The overview covers exactly the OOS window the equity samples come from.
+    expect(overview.source_bar_count).toBe(first.equity_replay.source_observation_count);
+    expect(overview.values.length).toBe(overview.emitted_bucket_count);
+    expect(overview.values[0].first_ordinal).toBe(0);
+    expect(overview.values.at(-1).last_ordinal).toBe(overview.source_bar_count - 1);
+    // The downsample keeps the true extremes: the envelope is a real bucket's.
+    const highs = overview.values.map((bucket: { high: string }) => Number(bucket.high));
+    const lows = overview.values.map((bucket: { low: string }) => Number(bucket.low));
+    expect(Number(overview.envelope.max_high)).toBe(Math.max(...highs));
+    expect(Number(overview.envelope.min_low)).toBe(Math.min(...lows));
+    for (const bucket of overview.values) {
+      const [high, low, open, close] = [bucket.high, bucket.low, bucket.open, bucket.close].map(Number);
+      expect(high).toBeGreaterThanOrEqual(Math.max(open, close));
+      expect(low).toBeLessThanOrEqual(Math.min(open, close));
+      expect(bucket.transitions).toBeNull();
+    }
+    // A summary is not a bar ledger: the per-bar absence is unchanged.
+    expect(first.route_capabilities.candle_windows.state).toBe("NOT_PUBLISHED");
+
+    const predates = JSON.parse(readFileSync(join(root, files.predates), "utf8"));
+    expect(predates.candle_overview).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW",
+      scope: null,
+      source_bar_count: null,
+      emitted_bucket_count: null,
+      bucket_bars: null,
+      sampling: null,
+      envelope: null,
+      values: [],
+    });
+    // Everything else about that run still reads: only the overview is absent.
+    expect(predates.equity_replay.state).toBe("AVAILABLE");
+    expect(predates.equity_replay.items.length).toBeGreaterThan(0);
   });
 });

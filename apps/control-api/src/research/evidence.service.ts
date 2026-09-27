@@ -7,8 +7,10 @@ import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import {
+  ResearchEvidenceCandleOverviewSourceSchema,
   ResearchEvidenceHubResponseSchema,
   ResearchEvidenceSeriesResponseSchema,
+  type ResearchEvidenceCandleOverviewSource,
   type ResearchEvidenceHubResponse,
   type ResearchEvidenceOosAnalyticsSource,
   type ResearchEvidenceSeriesKind,
@@ -80,6 +82,13 @@ interface StoredProjection {
   oos_analytics?: StoredOosAnalytics;
   /** RF-05 CG-P13-06: present only when the leading-month fact was not prepended. */
   monthly_leading?: { state: "NOT_APPLIED"; reason_code: "P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS" };
+  /**
+   * E16-R1: the child's bounded OHLC overview, verbatim.  It rides in this
+   * jsonb rather than the lazy series table because it is one bounded block
+   * with its own envelope, not a sixth chart kind, and the P13 series
+   * vocabulary stays exactly the four charts plus RF-05's two.
+   */
+  candle_overview?: ResearchEvidenceCandleOverviewSource;
 }
 
 const SERIES_KINDS: readonly ResearchEvidenceSeriesKind[] = [
@@ -92,6 +101,20 @@ const EVIDENCE_SERIES_REPRESENTATION_VERSION = "research.evidence-series.v1+rf05
 
 /** RF-05: a projection sealed before the child published `oos_analytics`. */
 const PREDATES_OOS_ANALYTICS = "P13_SOURCE_PREDATES_OOS_ANALYTICS";
+
+/**
+ * E16-R1 · the two ways a run has no retained OHLC overview.  They stay
+ * distinct: the first is every run sealed before the producer retained one
+ * (its tape is gone and no backfill can invent it), the second is a stored
+ * block this reader can no longer validate.
+ */
+export const PREDATES_CANDLE_OVERVIEW = "P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW";
+export const CANDLE_OVERVIEW_INCOMPATIBLE = "P13_RETAINED_CANDLE_OVERVIEW_IS_INCOMPATIBLE";
+
+/** What `bundle()` publishes about the run's retained OHLC overview. */
+export type EvidenceCandleOverview =
+  | { state: "AVAILABLE"; reason_code: null; value: ResearchEvidenceCandleOverviewSource }
+  | { state: "NOT_PUBLISHED"; reason_code: string; value: null };
 
 /** RF-05 CG-P13-06: an AVAILABLE series never carries zero points. */
 const EMPTY_SERIES_REASON: Record<ResearchEvidenceSeriesKind, string> = {
@@ -241,6 +264,13 @@ const StoredProjectionSchema = z.object({
     state: z.literal("NOT_APPLIED"),
     reason_code: z.literal("P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS"),
   }).strict().optional(),
+  /**
+   * E16-R1.  Read back loosely on purpose: the block is re-validated against
+   * its own schema in `bundle()`, so a stored overview that a later contract
+   * would reject degrades to one typed absence instead of failing the whole
+   * Hub read that Screens 04 and 08 depend on.
+   */
+  candle_overview: z.unknown().optional(),
 }).strict().superRefine((value, context) => {
   if (value.transform_revision === "P13_SOURCE_R2" && !value.source.direct_metric_scopes) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "P13 R2 projection omits direct metric scope" });
@@ -253,6 +283,19 @@ const StoredProjectionSchema = z.object({
 function parseProjection(value: unknown): StoredProjection | null {
   const parsed = StoredProjectionSchema.safeParse(value);
   return parsed.success ? parsed.data as StoredProjection : null;
+}
+
+function candleOverviewOf(projection: StoredProjection | null): EvidenceCandleOverview {
+  const stored = projection?.candle_overview;
+  if (stored === undefined) return { state: "NOT_PUBLISHED", reason_code: PREDATES_CANDLE_OVERVIEW, value: null };
+  const parsed = ResearchEvidenceCandleOverviewSourceSchema.safeParse(stored);
+  if (!parsed.success) return { state: "NOT_PUBLISHED", reason_code: CANDLE_OVERVIEW_INCOMPATIBLE, value: null };
+  if (parsed.data.state !== "AVAILABLE") {
+    // The child's own reason survives the round trip: "this tape had no
+    // priced bar" must not read as "this run predates the overview".
+    return { state: "NOT_PUBLISHED", reason_code: parsed.data.reason_code ?? PREDATES_CANDLE_OVERVIEW, value: null };
+  }
+  return { state: "AVAILABLE", reason_code: null, value: parsed.data };
 }
 
 function sourceAbsenceAvailability(value: { state: "NOT_PUBLISHED" | "NOT_APPLICABLE"; reason_code: string }): Availability {
@@ -333,7 +376,12 @@ export class ResearchEvidenceService {
     runId: string,
     kinds: readonly ResearchEvidenceSeriesKind[],
     signal?: AbortSignal,
-  ): Promise<{ hub: ResearchEvidenceHubResponse; series: Map<ResearchEvidenceSeriesKind, ResearchEvidenceSeriesResponse> }> {
+  ): Promise<{
+    hub: ResearchEvidenceHubResponse;
+    series: Map<ResearchEvidenceSeriesKind, ResearchEvidenceSeriesResponse>;
+    /** E16-R1: the run's retained OHLC overview, behind the same revision fence. */
+    candleOverview: EvidenceCandleOverview;
+  }> {
     this.requireEnabled();
     const stored = await this.repository.bundle(scope, runId, kinds, signal);
     if (!stored.hub) {
@@ -370,7 +418,7 @@ export class ResearchEvidenceService {
       }
       values.set(kind, parsed.data);
     }
-    return { hub: parsedHub.data, series: values };
+    return { hub: parsedHub.data, series: values, candleOverview: candleOverviewOf(projection) };
   }
 
   private buildWrite(
@@ -487,6 +535,9 @@ export class ResearchEvidenceService {
         },
       } : {}),
       ...(monthlyLeadingNote ? { monthly_leading: monthlyLeadingNote } : {}),
+      // E16-R1: verbatim.  The projection never recomputes a bucket; the
+      // confined child is the only place the run's bars ever existed.
+      ...(source.candle_overview ? { candle_overview: source.candle_overview } : {}),
       series: Object.fromEntries(series.map((item) => [item.kind, {
         state: item.availabilityState,
         reason_code: item.reasonCode,

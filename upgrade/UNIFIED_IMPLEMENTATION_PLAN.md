@@ -3757,22 +3757,25 @@ chưa commit** — phải lấy lại, đừng làm lại từ đầu:
 
 | Id | Việc | Ở đâu | Đã có gì | Còn gì |
 |---|---|---|---|---|
-| F1 | **RF-04 — mật độ S12** | worktree `agent-a3aebbf8a0fed5e6b` | `EngineAtlas.tsx`, `engineAtlas.rf02.test.tsx`, record `P20/RF04_S12_DENSITY_CLAUDE_2026-09-27.md` — **chưa commit** | Bóc tách xong 743 px, chạy test + ảnh, commit qua hook, gộp |
-| F2 | **E16-R1 — overview OHLC cho P04** | worktree `agent-a3923235c11975020` | migration **068**, `evidence.contract.ts`, `evidence.service.ts`, `progress.contract.ts` — **chưa commit** | Hoàn thiện phần serve + vẽ trên S08, spec PostgreSQL, commit qua hook, gộp |
+| F1 | **RF-04 — mật độ S12** | — | **ĐÃ XONG, đã gộp (merge `56439458`):** S12 Modes ở 1440 từ 3.016 xuống **2.478 px** (HiFi 2.273), ở 660 từ 4.468 xuống **3.977** (HiFi 4.110 — thấp hơn HiFi). 205 px còn lại ở 1440 đã đo từng khối: chữ engine dài gấp **2,5 lần** mẫu HiFi (2.706 so với 1.082 ở phần text), không phải khoảng trắng — ghi là lệch có chủ ý | Record [`P20/RF04_S12_DENSITY_CLAUDE_2026-09-27.md`](research_loop/evidence/P20/RF04_S12_DENSITY_CLAUDE_2026-09-27.md) |
+| F2 | **E16-R1 — overview OHLC cho P04** | — | **ĐÃ XONG, đã gộp** (agent bị cắt quota lúc hook đang chạy; code và test đã xanh trong worktree, tôi gộp lại): child P10 tóm tắt bar **trong lúc còn giữ tape**, migration **068**, serve đúng shape `candle_overview` của lane WFO, S08 P04 vẽ dải toàn run. Run cũ đọc `P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW` mãi mãi — **không backfill**. Test: producer Python 16/16, replay 3+11+3, **PostgreSQL 4/4**, frontend S08 73/73, contracts 191/191. Bản patch dự phòng: `/home/bobby/portal-wip/e16r1-p04-candle-overview-2026-09-27.patch` | Record [`P17/E16R1_P04_CANDLE_OVERVIEW_CLAUDE_2026-09-27.md`](research_loop/evidence/P17/E16R1_P04_CANDLE_OVERVIEW_CLAUDE_2026-09-27.md) |
 
-**Việc lớn còn lại, theo thứ tự:**
+**Việc lớn còn lại, theo thứ tự.** Cột *Chủ* ghi rõ việc nào **Codex làm được** (backend, không đụng màn ≤P21) và việc nào là **frontend chưa xong**. Mọi việc dưới đây đều **chưa bắt đầu** — không có code dở nào ngoài những gì đã ghi.
 
 | # | Việc | Chủ | Vì sao chưa xong |
 |---|---|---|---|
-| F3 | Build lại preview **một lần** sau khi F1 + F2 vào (migration 068 + 069 cùng lượt), rồi chạy lane lấy **receipt xanh 54/54** | Claude | Lane là receipt real-API: sửa frontend thì phải build lại preview mới xanh. **Chú ý thứ tự migration:** 069 vào nhánh trước 068, DB nào đã chạy 069 rồi sẽ kẹt — xem [`preview-migration-order`] trong ghi chú vận hành |
-| F4 | **E10-O1** — receipt thật cho E10: preview đã build sạch nên bốn run kẹt cũ không còn; phải tạo một strand mới rồi chứng minh nó hội tụ | Claude, **cần Bobby cho phép ghi vào preview** | Preview đang read-only |
-| F5 | **E4-O1 / E6** — đường create + preflight của S02 và write của S14 chưa từng chạy thật; hiện chỉ stub | Claude, cần một stack ghi được | Preview read-only |
-| F6 | **P12 spec PostgreSQL 9/10 đỏ sẵn từ `05f0d6a0`** (`CG-P12-02/03/04/09`, `lane: "PORTAL_PERSISTED_RESEARCH"` ngoài dự kiến). Đã kiểm bằng cách stash: **không phải do đợt này** | Claude | Mới phát hiện, chưa điều tra |
+| F3 | Build lại preview **một lần** (migration 068 + 069 cùng lượt — F1 và F2 **đã vào nhánh**), rồi chạy lane lấy **receipt xanh 54/54**. Đây là việc kiểm, không phải code | Claude hoặc **Codex** (chỉ build + chạy lane) | Lane là receipt real-API: sửa frontend thì phải build lại preview mới xanh. **Chú ý thứ tự migration:** 069 vào nhánh trước 068, DB nào đã chạy 069 rồi sẽ kẹt — xem [`preview-migration-order`] trong ghi chú vận hành |
+| F4 | **E10-O1** — receipt thật cho E10 **và** E10-O3: preview đã build sạch nên bốn run kẹt cũ không còn; phải tạo một strand mới rồi chứng minh nó hội tụ | **Codex làm được** (backend), **cần Bobby cho phép ghi vào preview** | Preview đang read-only |
+| F5 | **Frontend chưa xong — E4-O1 / E6:** đường create + preflight của S02 và write của S14 chưa từng chạy với server thật; hiện chỉ stub trong browser | Claude (frontend), cần một stack ghi được | Preview read-only |
+| F6 | **P12 spec PostgreSQL 9/10 đỏ sẵn từ `05f0d6a0`** (`CG-P12-02/03/04/09`, `lane: "PORTAL_PERSISTED_RESEARCH"` ngoài dự kiến). Đã kiểm bằng cách stash: **không phải do đợt này** | **Codex làm được** (backend thuần) | Mới phát hiện, chưa điều tra |
 | F7 | **E10-O3a** — nhịp 2 workspace/phút/process: 10 workspace hội tụ trong ~5 phút, 100 workspace mất ~50 phút. Quá ~30 workspace phải đo lại | Bobby quyết, rồi Claude | Đo rồi mới biết có cần đổi nhịp |
 | F8 | Request cho engine/source: **E5-O1** (max_dd từng candidate), **E5-O2** (K thật + id pool cho mode 3/4/5), **E16-R1** phần producer nếu không giữ được, **E16-R2** (engine pin trên freeze read P04) | Claude gửi, engine trả lời | Ngoài tầm ≤P21 |
 | F9 | **D-B1** tương phản `--ink-faint` `#939db0` — ngoại lệ axe duy nhất còn lại, dùng chung cả lane | Bobby (token) | Đổi token là đụng baseline |
 | F10 | **OL-01** profile host production | Bobby/ops | Chờ nạp profile |
 | F11 | **OL-03 → OL-13** | Codex | P22+ |
+| F12 | **Frontend chưa xong — nhỏ, đã biết:** ladder S13 còn mũi tên `claim ↑ →` treo ở cuối hàng (12 thẻ, hàng 4); hai lane S08 có độ phân giải dải khác nhau (WFO bucket 160, P04 bucket 48 — trung thực vì caption ghi cỡ bucket, nhưng không đồng đều); S09 chưa chạy lại in Letter/A4 sau E3/E14 | Claude (frontend) | Chưa làm |
+| F13 | **Visual baseline** chưa chạy lại sau S08 (E16-R1 thêm một hàng) và S12 (RF-04 đổi bố cục). Chạy **chỉ** qua `./scripts/portal-web-visual.sh` (image ghim) — chạy trần sẽ ra 28 ô đỏ giả | Claude | Chưa làm |
+| F14 | **E16-R2** — publish engine pin trên freeze read P04 (S07 đang để typed absence cho mắt đó của chuỗi digest) | **Codex làm được** (backend ≤P21, nhỏ) | Chưa làm |
 
 #### C. Nợ tài liệu
 

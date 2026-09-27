@@ -84,6 +84,59 @@ function notPublished(reason: string, parent?: { state: string; reason_code: str
   return { state: "NOT_PUBLISHED", reason_code: reason, availability: parent ?? { state: "NOT_PUBLISHED", reason_code: reason } };
 }
 
+/**
+ * E16-R1 · the retained OHLC overview of the same OOS window, as the server
+ * serves it. Four true-extrema buckets over 240 bars; the envelope is a real
+ * bucket's high/low, never a wider invented range.
+ */
+function candleOverview(bars: number, parent?: { state: string; reason_code: string | null }) {
+  const bucketBars = bars / 4;
+  const values = Array.from({ length: 4 }, (_, index) => ({
+    first_ordinal: index * bucketBars,
+    last_ordinal: (index + 1) * bucketBars - 1,
+    open_utc_ms: T0 + index * bucketBars * HOUR,
+    close_utc_ms: T0 + ((index + 1) * bucketBars - 1) * HOUR,
+    open: (60000 + index * 500).toFixed(2),
+    high: (61200 + index * 500).toFixed(2),
+    low: (59400 + index * 500).toFixed(2),
+    close: (60400 + index * 500).toFixed(2),
+    volume: "1234.5",
+    transitions: null,
+  }));
+  return {
+    state: "AVAILABLE",
+    reason_code: null,
+    scope: "OOS_EQUITY_WINDOW",
+    source_bar_count: bars,
+    emitted_bucket_count: values.length,
+    bucket_bars: bucketBars,
+    sampling: "OHLC_BUCKET_V1",
+    envelope: {
+      max_high: values[3]!.high,
+      max_high_at_utc_ms: values[3]!.close_utc_ms,
+      min_low: values[0]!.low,
+      min_low_at_utc_ms: values[0]!.open_utc_ms,
+    },
+    values,
+    availability: parent ?? AVAILABLE,
+  };
+}
+
+function absentOverview(reason: string, parent?: { state: string; reason_code: string | null }) {
+  return {
+    state: "NOT_PUBLISHED",
+    reason_code: reason,
+    scope: null,
+    source_bar_count: null,
+    emitted_bucket_count: null,
+    bucket_bars: null,
+    sampling: null,
+    envelope: null,
+    values: [],
+    availability: parent ?? { state: "NOT_PUBLISHED", reason_code: reason },
+  };
+}
+
 function replay(
   options: {
     count?: number;
@@ -91,6 +144,8 @@ function replay(
     sampling?: "FULL" | "EXTREMA_BUCKET_V1";
     selected?: number | null;
     route?: Replay["route"]["state"];
+    /** E16-R1: `null` drops the field entirely, as an un-rolled-forward reader does. */
+    overviewReason?: string | null;
   } = {},
 ): Replay {
   const { count = 24, start = 0, sampling = "FULL", selected = null, route = "RETROSPECTIVE_EQUITY_ONLY" } = options;
@@ -169,6 +224,16 @@ function replay(
           },
       availability: (parent ?? AVAILABLE) as Replay["availability"],
     },
+    ...(options.overviewReason === null
+      ? {}
+      : {
+        candle_overview: (options.overviewReason !== undefined
+          ? absentOverview(options.overviewReason, parent)
+          : available
+            ? candleOverview(total)
+            : absentOverview("P13_EVIDENCE_NOT_READABLE_FOR_RETAINED_CANDLE_OVERVIEW", parent)
+        ) as Replay["candle_overview"],
+      }),
     route_capabilities: Object.fromEntries(
       ROUTE_CAPABILITY_KEYS.map((key) => [key, notPublished(REASON[key]!, parent)]),
     ) as Replay["route_capabilities"],
@@ -341,6 +406,75 @@ describe("S08-U03 — sampling is shown as a limit", () => {
     expect(document.querySelector("[data-sampling]")!.getAttribute("data-sampling")).toBe("EXTREMA_BUCKET_V1");
     expect(document.querySelector("[data-sampling-note]")!.textContent).toMatch(/not every observation.*Nothing is interpolated/);
     expect(document.querySelector("[data-counts]")!.textContent).toContain("source observations 5000 · emitted samples 240");
+  });
+});
+
+describe("S08-E16R1 — the retained OHLC overview on the P04 hub lane", () => {
+  it("draws the whole out-of-sample window as true-extrema buckets, and says it is a downsample with its bucket size", () => {
+    renderScreen(controllerOf(replay()));
+    const block = document.querySelector('[data-candle-overview]')!;
+    expect(block.getAttribute("data-candle-overview")).toBe("AVAILABLE");
+    const strip = block.querySelector("[data-overview]")!;
+    expect(strip.getAttribute("data-overview")).toBe("OHLC_BUCKET_V1");
+    // One line per bucket, none invented and none dropped.
+    expect(strip.querySelectorAll("svg line").length).toBe(4);
+    const caption = block.querySelector("[data-overview-caption]")!.textContent!;
+    expect(caption).toContain("out-of-sample window · 240 bars");
+    expect(caption).toContain("in 4 candles of 60 bars");
+    expect(caption).toContain("each high/low is the true extreme of its bars");
+    // The caption prints the envelope, so a reader can check the range drawn.
+    expect(caption).toContain("59400.00 – 62700.00");
+  });
+
+  it("keeps the per-bar candle ledger absent: a summary is not a bar ledger", () => {
+    renderScreen(controllerOf(replay()));
+    expect(document.querySelector('[data-candle-overview]')!.getAttribute("data-candle-overview")).toBe("AVAILABLE");
+    const capability = document.querySelector('[data-capability="candle_windows"]')!;
+    expect(capability.getAttribute("data-capability-state")).toBe("NOT_PUBLISHED");
+    expect(capability.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS");
+  });
+
+  it("a run sealed before the producer retained an overview says so, with its own reason code and no zero", () => {
+    renderScreen(controllerOf(replay({ overviewReason: "P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW" })));
+    const block = document.querySelector('[data-candle-overview]')!;
+    expect(block.getAttribute("data-candle-overview")).toBe("NOT_PUBLISHED");
+    expect(block.querySelector("[data-reason-code]")!.textContent).toBe("P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW");
+    expect(block.querySelector("[data-overview-note]")!.textContent)
+      .toMatch(/sealed before the producer retained a price overview.*deleted when the run finished/);
+    expect(block.querySelector("[data-overview-caption]")).toBeNull();
+    expect(block.querySelectorAll("svg line").length).toBe(0);
+    expect(block.textContent).not.toMatch(/\b0 bars\b|—\s*bars/);
+  });
+
+  it("distinguishes a pre-change run from an unreadable source and from an un-rolled-forward reader", () => {
+    const seen = new Set<string>();
+    for (const reason of [
+      "P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW",
+      "P13_RETAINED_CANDLE_OVERVIEW_IS_INCOMPATIBLE",
+      "P13_EVIDENCE_NOT_READABLE_FOR_RETAINED_CANDLE_OVERVIEW",
+      "P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET",
+      "P04_OOS_WINDOW_HAS_NO_PRICED_BAR",
+    ]) {
+      cleanup();
+      renderScreen(controllerOf(replay({ overviewReason: reason })));
+      const block = document.querySelector("[data-candle-overview]")!;
+      const note = block.querySelector("[data-overview-note]")!.textContent!;
+      expect(block.querySelector("[data-reason-code]")!.textContent, reason).toBe(reason);
+      expect(note.length, reason).toBeGreaterThan(20);
+      seen.add(note);
+    }
+    // Five different reasons must read as five different sentences.
+    expect(seen.size).toBe(5);
+  });
+
+  it("a replay read that predates the field at all is named, not treated as a run without bars", () => {
+    renderScreen(controllerOf(replay({ overviewReason: null })));
+    const block = document.querySelector('[data-candle-overview]')!;
+    expect(block.getAttribute("data-candle-overview")).toBe("NOT_PUBLISHED");
+    expect(block.querySelector("[data-reason-code]")!.textContent)
+      .toBe("P17_REPLAY_READ_PREDATES_RETAINED_CANDLE_OVERVIEW");
+    expect(block.querySelector("[data-overview-note]")!.textContent)
+      .toMatch(/deployment's replay read does not publish a price overview yet/);
   });
 });
 

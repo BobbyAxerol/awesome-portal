@@ -82,6 +82,38 @@ export interface components {
             state_at_cursor: components["schemas"]["StateAtCursor"];
             availability: components["schemas"]["Availability"];
         };
+        /** @description E16-R1 one bucket of the retained OHLC overview. high/low are the TRUE extremes of the bars the bucket covers, never an interpolation. transitions is always null: P04 publishes no execution ledger through this adapter. The field names are the retained WFO lane's execution.candle_overview.values[] so one component draws both lanes. */
+        CandleBucket: {
+            first_ordinal: number;
+            last_ordinal: number;
+            open_utc_ms: components["schemas"]["UtcMilliseconds"];
+            close_utc_ms: components["schemas"]["UtcMilliseconds"];
+            open: components["schemas"]["ExactDecimal"];
+            high: components["schemas"]["ExactDecimal"];
+            low: components["schemas"]["ExactDecimal"];
+            close: components["schemas"]["ExactDecimal"];
+            volume: components["schemas"]["ExactDecimal"] | null;
+            transitions: null;
+        };
+        /** @description E16-R1 the bounded whole-window OHLC overview the confined P06 child retained while it still held the tape the P10 producer deletes. A summary, never a bar ledger: route_capabilities.candle_windows still reports the per-bar absence. A run sealed before the producer retained one keeps a typed absence with its own reason code; nothing is backfilled. */
+        CandleOverview: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            scope: "OOS_EQUITY_WINDOW" | null;
+            source_bar_count: number | null;
+            emitted_bucket_count: number | null;
+            bucket_bars: number | null;
+            sampling: ("FULL" | "OHLC_BUCKET_V1") | null;
+            envelope: {
+                max_high: components["schemas"]["ExactDecimal"];
+                max_high_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+                min_low: components["schemas"]["ExactDecimal"];
+                min_low_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            } | null;
+            values: components["schemas"]["CandleBucket"][];
+            availability: components["schemas"]["Availability"];
+        };
         RouteCapability: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
@@ -114,6 +146,7 @@ export interface components {
                 availability: components["schemas"]["Availability"];
             };
             equity_replay: components["schemas"]["ReplayWindow"];
+            candle_overview: components["schemas"]["CandleOverview"];
             route_capabilities: {
                 orders: components["schemas"]["RouteCapability"];
                 fills: components["schemas"]["RouteCapability"];

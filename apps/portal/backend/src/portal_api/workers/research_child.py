@@ -52,6 +52,14 @@ _MAX_ROLLING_EVIDENCE_POINTS = 16
 _MAX_MONTHLY_EVIDENCE_POINTS = 32
 _MAX_DISTRIBUTION_BUCKETS = 12
 _MAX_EVIDENCE_RECEIPT_BYTES = 24 * 1024
+# E16-R1: the bounded OHLC overview of the OOS window.  The retained WFO lane
+# keeps at most 160 buckets in a 64 KiB seal row; this receipt is a 24 KiB
+# channel that already carries four series, so the P04 bound is 48 and the
+# producer still shrinks it to whatever the remaining bytes allow.  Below the
+# floor the overview is a typed absence rather than a chart too coarse to
+# mean anything.
+_MAX_CANDLE_OVERVIEW_BUCKETS = 48
+_MIN_CANDLE_OVERVIEW_BUCKETS = 8
 _ALLOWED_TASKS = frozenset({"P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"})
 
 
@@ -274,6 +282,148 @@ def _rolling_returns(oos, equity: list[float]) -> tuple[list[dict[str, Any]], di
     }
 
 
+def _candle_overview_absence(reason_code: str) -> dict[str, Any]:
+    """The one absent shape; every field an available overview fills is null."""
+
+    return {
+        "state": "NOT_PUBLISHED",
+        "reason_code": reason_code,
+        "scope": "OOS_EQUITY_WINDOW",
+        "source_bar_count": None,
+        "emitted_bucket_count": 0,
+        "bucket_bars": None,
+        "sampling": None,
+        "envelope": None,
+        "values": [],
+    }
+
+
+def _candle_overview_buckets(frame, *, bucket_bars: int, has_volume: bool) -> dict[str, Any]:
+    """Bucket the OOS bars, keeping each bucket's true high and low.
+
+    A bucket's high is the maximum ``high`` and its low the minimum ``low`` of
+    the bars it covers; its open is the first bar's open and its close the
+    last bar's close.  Nothing is interpolated and nothing is averaged, so a
+    downsample can never hide the window's price range -- the run envelope
+    below is exactly the maximum/minimum of these true bucket extremes.
+    """
+
+    import pandas as pd
+
+    # Bulk UTC conversion: `_utc_ms` builds one Timestamp per call, which a
+    # per-bar loop over a multi-thousand-bar window would pay for twice over.
+    utc_index = pd.DatetimeIndex(frame.index)
+    utc_index = utc_index.tz_localize("UTC") if utc_index.tz is None else utc_index.tz_convert("UTC")
+    timestamps = [int(value) // 1_000_000 for value in utc_index.asi8]
+    if any(value < 0 for value in timestamps):
+        raise ValueError("P13 candle overview timestamp precedes UTC epoch")
+    opens = [float(value) for value in frame["open"].to_list()]
+    highs = [float(value) for value in frame["high"].to_list()]
+    lows = [float(value) for value in frame["low"].to_list()]
+    closes = [float(value) for value in frame["close"].to_list()]
+    volumes = [float(value) for value in frame["volume"].to_list()] if has_volume else None
+    count = len(timestamps)
+    values: list[dict[str, Any]] = []
+    envelope_high: tuple[float, int] | None = None
+    envelope_low: tuple[float, int] | None = None
+    for start in range(0, count, bucket_bars):
+        end = min(count, start + bucket_bars)
+        span = range(start, end)
+        high_index = max(span, key=lambda index: highs[index])
+        low_index = min(span, key=lambda index: lows[index])
+        high, low = highs[high_index], lows[low_index]
+        # A tape whose own bar breaks OHLC would make a bucket the contract
+        # must refuse, and that refusal would reject the whole evidence
+        # receipt -- equity series included.  Fail here instead, so the
+        # caller turns one bad tape into one typed absence.
+        if (
+            not math.isfinite(high) or not math.isfinite(low) or high < low
+            or high < max(opens[start], closes[end - 1]) or low > min(opens[start], closes[end - 1])
+        ):
+            raise ValueError("P13 candle overview bucket range is invalid")
+        if envelope_high is None or high > envelope_high[0]:
+            envelope_high = (high, timestamps[high_index])
+        if envelope_low is None or low < envelope_low[0]:
+            envelope_low = (low, timestamps[low_index])
+        bucket_volume: str | None = None
+        if volumes is not None:
+            window = volumes[start:end]
+            if all(math.isfinite(value) for value in window):
+                bucket_volume = _decimal_text(sum(window), label="bucket volume")
+        values.append({
+            "first_ordinal": start,
+            "last_ordinal": end - 1,
+            "open_utc_ms": timestamps[start],
+            "close_utc_ms": timestamps[end - 1],
+            "open": _decimal_text(opens[start], label="bucket open"),
+            "high": _decimal_text(high, label="bucket high"),
+            "low": _decimal_text(low, label="bucket low"),
+            "close": _decimal_text(closes[end - 1], label="bucket close"),
+            "volume": bucket_volume,
+            # P04 publishes no execution ledger through this adapter, so a
+            # per-bucket transition count would be invented.  The key stays
+            # in the retained lane's shape and carries an explicit null.
+            "transitions": None,
+        })
+    assert envelope_high is not None and envelope_low is not None  # count >= 1
+    return {
+        "state": "AVAILABLE",
+        "reason_code": None,
+        "scope": "OOS_EQUITY_WINDOW",
+        "source_bar_count": count,
+        "emitted_bucket_count": len(values),
+        "bucket_bars": bucket_bars,
+        "sampling": "FULL" if bucket_bars == 1 else "OHLC_BUCKET_V1",
+        "envelope": {
+            "max_high": _decimal_text(envelope_high[0], label="max high"),
+            "max_high_at_utc_ms": envelope_high[1],
+            "min_low": _decimal_text(envelope_low[0], label="min low"),
+            "min_low_at_utc_ms": envelope_low[1],
+        },
+        "values": values,
+    }
+
+
+def _candle_overview(market, index, *, receipt_bytes: int, byte_budget: int) -> dict[str, Any]:
+    """E16-R1 · retain a bounded OHLC overview while the child still holds the tape.
+
+    The P10 producer deletes the derived tape before the artifact bundle is
+    written (``research_run_producer._execute`` / ``finally: shutil.rmtree``),
+    and the bundle keeps only two JSON documents.  This child is therefore the
+    last place the run's OHLC exists; an overview not summarised here can
+    never be recovered from the run's own artifacts, and nothing about the
+    tape itself is retained -- this is a summary, not a second price store.
+
+    The window is exactly the OOS equity window the replay replays, so a
+    bucket ordinal and an OOS observation ordinal count the same bars.
+    """
+
+    required = ("open", "high", "low", "close")
+    if any(column not in market.columns for column in required):
+        return _candle_overview_absence("P04_TAPE_DID_NOT_PUBLISH_OHLC_COLUMNS")
+    frame = market.loc[index, [*required, "volume"] if "volume" in market.columns else list(required)]
+    count = len(frame.index)
+    if count < 1:
+        return _candle_overview_absence("P04_OOS_WINDOW_HAS_NO_PRICED_BAR")
+    has_volume = "volume" in frame.columns
+    # `"candle_overview":` plus the separating comma, so the fit is measured
+    # against the receipt this block will actually be embedded in.
+    overhead = len('"candle_overview":,')
+    ladder: list[int] = []
+    maximum = _MAX_CANDLE_OVERVIEW_BUCKETS
+    while maximum > _MIN_CANDLE_OVERVIEW_BUCKETS:
+        ladder.append(maximum)
+        maximum //= 2
+    ladder.append(_MIN_CANDLE_OVERVIEW_BUCKETS)
+    for maximum in ladder:
+        bucket_bars = max(1, math.ceil(count / maximum))
+        block = _candle_overview_buckets(frame, bucket_bars=bucket_bars, has_volume=has_volume)
+        encoded = len(json.dumps(block, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
+        if receipt_bytes + overhead + encoded <= byte_budget:
+            return block
+    return _candle_overview_absence("P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET")
+
+
 def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_utc_ms: int) -> dict[str, Any]:
     """Build the bounded evidence passport from the actual QuantBT result.
 
@@ -399,6 +549,18 @@ def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_ut
         receipt["oos_analytics"] = analytics.oos_analytics(result=result, market=market, oos_start_utc_ms=oos_start_utc_ms, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES, receipt_bytes=len(json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8")))
     except (ValueError, QuantBTEngineError):
         receipt["oos_analytics"] = analytics.not_published_block()
+    # E16-R1: last, so it measures itself against the finished receipt and
+    # never pushes an existing series out of the budget.  An overview failure
+    # is a typed absence, never a failed child run.
+    try:
+        receipt["candle_overview"] = _candle_overview(
+            market,
+            oos.index,
+            receipt_bytes=len(json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8")),
+            byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES,
+        )
+    except (KeyError, ValueError):
+        receipt["candle_overview"] = _candle_overview_absence("P13_CANDLE_OVERVIEW_SOURCE_BARS_ARE_UNREADABLE")
     encoded = json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
     if len(encoded) > _MAX_EVIDENCE_RECEIPT_BYTES:
         # This runs inside the bounded child before its terminal event is
