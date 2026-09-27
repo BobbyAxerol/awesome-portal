@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 
 export const ResearchReplayRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -177,6 +178,17 @@ export const ResearchReplayResponseSchema = z.object({
   }).strict(),
   /** Bounded direct-seek window over immutable P13 OOS equity samples. */
   equity_replay: ReplayWindowSchema,
+  /**
+   * E16-R1 source-time market context. This is an extrema-preserving overview,
+   * not the per-bar tape required for execution replay or marker ordering.
+   */
+  market_overview: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    semantics: z.literal("BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY"),
+    data: ResearchEvidenceCandleOverviewSchema.nullable(),
+    availability: ResearchReplayAvailabilitySchema,
+  }).strict(),
   /**
    * Route-specific execution panels. P04 does not publish their source
    * records, so these are structured absences rather than decorative rows.

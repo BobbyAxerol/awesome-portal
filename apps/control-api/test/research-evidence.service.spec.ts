@@ -8,6 +8,31 @@ import { p13EvidenceSourceFixture } from "./research-evidence.fixture";
 const scope = { workspaceId: "p13-workspace", actorUserId: "p13-user" };
 const ingressScope = { ...scope, jobId: "job_p13", workerAttemptId: "attempt_p13", leaseEpoch: 1 };
 
+function candleOverview() {
+  return {
+    source_bar_count: 3,
+    emitted_bucket_count: 2,
+    bucket_bars: 2,
+    sampling: "OHLC_BUCKET_V1" as const,
+    envelope: {
+      max_high: "103", max_high_at_utc_ms: 1_725_000_060_000,
+      min_low: "98", min_low_at_utc_ms: 1_725_000_000_000,
+    },
+    values: [
+      {
+        first_ordinal: 0, last_ordinal: 1,
+        open_utc_ms: 1_725_000_000_000, close_utc_ms: 1_725_000_060_000,
+        open: "100", high: "103", low: "98", close: "102", volume: "25", transitions: 1,
+      },
+      {
+        first_ordinal: 2, last_ordinal: 2,
+        open_utc_ms: 1_725_000_120_000, close_utc_ms: 1_725_000_120_000,
+        open: "102", high: "102", low: "101", close: "101", volume: null, transitions: 0,
+      },
+    ],
+  };
+}
+
 function requestedSpec(seed: number | null = 42) {
   return {
     schema_version: "research.requested-spec.v1" as const,
@@ -89,6 +114,38 @@ describe("P13 Evidence Flow projection authority", () => {
     } as unknown as ResearchProgressIngress)).rejects.toMatchObject({ code: "RESEARCH_EVIDENCE_CONFLICT", status: 409 });
   });
 
+  it("persists and publishes the bounded E16 market overview without upgrading it to a replay tape", async () => {
+    const evidence = { ...p13EvidenceSourceFixture(), candle_overview: candleOverview() };
+    const digest = sha256ResearchJson(evidence);
+    const persist = vi.fn().mockResolvedValue(undefined);
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn() };
+    const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
+    await service.ingest(ingressScope, {
+      run_id: "run_p13", event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: digest } }, evidence,
+    } as unknown as ResearchProgressIngress);
+    const write = persist.mock.calls[0]?.[1];
+    expect(write.projection.candle_overview).toEqual(candleOverview());
+    repository.hub.mockResolvedValue({
+      kind: "DURABLE", runId: "run_p13",
+      requestedSpec: { data: { dataset_id: "ds_p13", symbol: "BTCUSDT", timeframe: "1h" } },
+      requestedSpecDigest: "a".repeat(64), effectiveSpecDigest: "b".repeat(64),
+      datasetBindingDigest: "c".repeat(64), manifestDigest: "d".repeat(64),
+      progressSnapshot: null, jobState: "SUCCEEDED", revision: write.projectionRevision,
+      projection: write.projection, readiness: write.readiness,
+      sourceEvidenceDigest: digest, receivedAt: new Date(), asOfUtcMs: 1_725_000_000_000,
+    });
+    await expect(service.hub(scope, "run_p13")).resolves.toMatchObject({
+      core: {
+        market_overview: {
+          state: "AVAILABLE",
+          semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY",
+          data: candleOverview(),
+          availability: { state: "AVAILABLE", reason_code: null },
+        },
+      },
+    });
+  });
+
   it("maps an immutable projection into direct/derived metrics and typed source gaps", async () => {
     const evidence = p13EvidenceSourceFixture();
     const digest = sha256ResearchJson(evidence);
@@ -115,6 +172,11 @@ describe("P13 Evidence Flow projection authority", () => {
     });
     expect(hub.series.find((item) => item.kind === "ROLLING_RETURNS_20")).toMatchObject({
       availability: { state: "NOT_APPLICABLE", reason_code: "P04_OOS_OBSERVATIONS_BELOW_ROLLING_WINDOW" },
+    });
+    expect(hub.core.market_overview).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "P04_SOURCE_PREDATES_E16_CANDLE_OVERVIEW",
+      data: null,
     });
   });
 

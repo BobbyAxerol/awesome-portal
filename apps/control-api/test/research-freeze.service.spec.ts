@@ -53,6 +53,13 @@ describe("P16 current-source Freeze / retained integrity authority", () => {
       schema_version: "research.freeze-detail.v1",
       availability: { state: "AVAILABLE", reason_code: null },
       readiness: "PARTIAL",
+      engine_pin: {
+        state: "AVAILABLE",
+        engine_version: "1.1.1",
+        execution_adapter_id: "p04.delta-rsi.v1",
+        adapter_contract_digest: P04_DELTA_ADAPTER_CONTRACT_DIGEST,
+        availability: { state: "AVAILABLE", reason_code: null },
+      },
       freeze: {
         source_profile: { state: "FIXED_PROFILE_NO_SELECTION_ARTIFACT" },
         inspection: { requested_fold: 2, state: "NOT_APPLICABLE" },
@@ -157,6 +164,11 @@ describe("P16 current-source Freeze / retained integrity authority", () => {
     const legacyDetail = await service.detail(scope, "legacy_p16", {});
     expect(legacyDetail).toMatchObject({
       availability: { state: "LEGACY_METADATA_ONLY" },
+      engine_pin: {
+        state: "NOT_PUBLISHED",
+        engine_version: null,
+        execution_adapter_id: null,
+      },
       freeze: { source_profile: { state: "LEGACY_METADATA_ONLY" }, integrity: { state: "NOT_PUBLISHED" } },
       source_absences: { source_artifact_bytes: { availability: { state: "LEGACY_METADATA_ONLY" } } },
     });

@@ -11,6 +11,8 @@
 import { z } from "zod";
 
 import { ResearchEvidenceOosAnalyticsSourceSchema } from "./evidence.contract";
+import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
+export { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 
 const OpaqueIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/);
 export const ResearchProgressRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
@@ -305,6 +307,8 @@ export const ResearchEvidenceSourceSchema = z.object({
     }).strict(),
   }).strict(),
   equity_points: z.array(ResearchEvidencePointSchema).min(1).max(192),
+  /** E16-R1: bounded source-time OHLC overview; absent on immutable older receipts. */
+  candle_overview: ResearchEvidenceCandleOverviewSchema.optional(),
   unavailable: z.object({
     benchmark: ResearchEvidenceAvailabilitySchema,
     funding: ResearchEvidenceAvailabilitySchema,

@@ -265,6 +265,10 @@ const APPROVAL_BODY: NonNullable<RcPublication["approval"]> = {
   read_at: "2026-09-26T09:13:00.000Z",
   conditions: [],
   href: `/governance/approvals/${APPROVAL}/r1`,
+  assignee_pool_availability: {
+    state: "NOT_PUBLISHED",
+    reason_code: "P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED",
+  },
 };
 
 function deliveredRead(overrides: Partial<RcPublication> = {}, approval: Partial<NonNullable<RcPublication["approval"]>> = {}): RcPublication {

@@ -56,6 +56,42 @@ export interface components {
             state: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_APPLICABLE";
             reason_code: string | null;
         };
+        CandleOverviewBucket: {
+            first_ordinal: number;
+            last_ordinal: number;
+            open_utc_ms: components["schemas"]["UtcMilliseconds"];
+            close_utc_ms: components["schemas"]["UtcMilliseconds"];
+            open: components["schemas"]["ExactDecimal"];
+            high: components["schemas"]["ExactDecimal"];
+            low: components["schemas"]["ExactDecimal"];
+            close: components["schemas"]["ExactDecimal"];
+            volume: components["schemas"]["ExactDecimal"] | null;
+            transitions: number;
+        };
+        /** @description E16-R1 bounded true-extrema source overview. It is not a per-bar replay tape and cannot establish execution marker ordering. */
+        CandleOverview: {
+            source_bar_count: number;
+            emitted_bucket_count: number;
+            bucket_bars: number;
+            /** @enum {unknown} */
+            sampling: "FULL" | "OHLC_BUCKET_V1";
+            envelope: {
+                max_high: components["schemas"]["ExactDecimal"];
+                max_high_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+                min_low: components["schemas"]["ExactDecimal"];
+                min_low_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            };
+            values: components["schemas"]["CandleOverviewBucket"][];
+        };
+        MarketOverview: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            /** @constant */
+            semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY";
+            data: components["schemas"]["CandleOverview"] | null;
+            availability: components["schemas"]["Availability"];
+        };
         /**
          * @description ROLLING_SHARPE_63 is QuantBT rolling_sharpe over 63 UTC daily OOS returns (365-day annualisation). ROLLING_BETA_63 stays a typed NOT_PUBLISHED absence until a benchmark series is published; it never carries values.
          * @enum {unknown}
@@ -196,6 +232,8 @@ export interface components {
                 run_identity?: components["schemas"]["RunIdentity"];
                 /** @description Optional during a bounded rolling deployment; it bounds only the published observed P11 fold set. */
                 fold_navigation?: components["schemas"]["FoldNavigation"];
+                /** @description Optional during a bounded rolling deployment; legacy P04 runs return the documented typed absence. */
+                market_overview?: components["schemas"]["MarketOverview"];
             };
             metrics: components["schemas"]["Metric"][];
             oos_performance?: components["schemas"]["OosPerformance"];

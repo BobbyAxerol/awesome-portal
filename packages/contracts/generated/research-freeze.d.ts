@@ -121,6 +121,15 @@ export interface components {
             source_artifact_bytes: components["schemas"]["SourceGap"];
             availability: components["schemas"]["Availability"];
         };
+        /** @description E16-R2 exact engine and adapter identity retained with the immutable P04 source binding. */
+        EnginePin: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            engine_version: "1.1.1" | null;
+            execution_adapter_id: "p04.delta-rsi.v1" | null;
+            adapter_contract_digest: components["schemas"]["Digest"] | null;
+            availability: components["schemas"]["Availability"];
+        };
         FreezeDetail: {
             /** @constant */
             schema_version: "research.freeze-detail.v1";
@@ -143,6 +152,7 @@ export interface components {
                 dataset_binding_digest: components["schemas"]["Digest"] | null;
                 manifest_digest: components["schemas"]["Digest"] | null;
             };
+            engine_pin: components["schemas"]["EnginePin"];
             freeze: {
                 source_profile: {
                     /** @enum {unknown} */

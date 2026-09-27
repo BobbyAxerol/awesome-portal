@@ -36,6 +36,42 @@ export interface components {
             state: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_APPLICABLE";
             reason_code: components["schemas"]["ReasonCode"] | null;
         };
+        CandleOverviewBucket: {
+            first_ordinal: number;
+            last_ordinal: number;
+            open_utc_ms: components["schemas"]["UtcMilliseconds"];
+            close_utc_ms: components["schemas"]["UtcMilliseconds"];
+            open: components["schemas"]["ExactDecimal"];
+            high: components["schemas"]["ExactDecimal"];
+            low: components["schemas"]["ExactDecimal"];
+            close: components["schemas"]["ExactDecimal"];
+            volume: components["schemas"]["ExactDecimal"] | null;
+            transitions: number;
+        };
+        /** @description E16-R1 bounded true-extrema source overview. It is not a per-bar replay tape and cannot establish execution marker ordering. */
+        CandleOverview: {
+            source_bar_count: number;
+            emitted_bucket_count: number;
+            bucket_bars: number;
+            /** @enum {unknown} */
+            sampling: "FULL" | "OHLC_BUCKET_V1";
+            envelope: {
+                max_high: components["schemas"]["ExactDecimal"];
+                max_high_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+                min_low: components["schemas"]["ExactDecimal"];
+                min_low_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            };
+            values: components["schemas"]["CandleOverviewBucket"][];
+        };
+        MarketOverview: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            /** @constant */
+            semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY";
+            data: components["schemas"]["CandleOverview"] | null;
+            availability: components["schemas"]["Availability"];
+        };
         SourceGap: {
             /** @enum {unknown} */
             state: "NOT_PUBLISHED" | "NOT_APPLICABLE" | "NOT_ASSERTED";
@@ -114,6 +150,7 @@ export interface components {
                 availability: components["schemas"]["Availability"];
             };
             equity_replay: components["schemas"]["ReplayWindow"];
+            market_overview: components["schemas"]["MarketOverview"];
             route_capabilities: {
                 orders: components["schemas"]["RouteCapability"];
                 fills: components["schemas"]["RouteCapability"];

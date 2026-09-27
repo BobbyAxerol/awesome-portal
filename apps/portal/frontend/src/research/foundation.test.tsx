@@ -28,7 +28,7 @@ import {
   journeyQueryFromSearch,
   toFoundationRefusal,
 } from "./foundationClient";
-import journeySnapshot from "../../../../../packages/contracts/fixtures/research-foundation.journey-v2.valid.json";
+import journeySnapshot from "../../../../../packages/contracts/fixtures/research-foundation.journey-v3.valid.json";
 import { KNOWN_SCREEN_KEYS, needsRunToOpen, resolveJourneyCardRoute, resolveScreenRoute } from "./screenRoutes";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";

@@ -189,6 +189,14 @@ export const ResearchFreezeResponseSchema = z.object({
     dataset_binding_digest: DigestSchema.nullable(),
     manifest_digest: DigestSchema.nullable(),
   }).strict(),
+  /** E16-R2: the exact engine/adapter identity frozen with this P04 run. */
+  engine_pin: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    engine_version: z.literal("1.1.1").nullable(),
+    execution_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
+    adapter_contract_digest: DigestSchema.nullable(),
+    availability: ResearchFreezeAvailabilitySchema,
+  }).strict(),
   freeze: FreezeDetailShape,
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ResearchFreezeSourceGapSchema),
   /** A10a: the newest durable byte-verification receipt, or a typed "not yet". */

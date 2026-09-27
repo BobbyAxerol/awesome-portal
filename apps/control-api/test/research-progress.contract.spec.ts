@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ResearchEvidenceCandleOverviewSchema,
   ResearchProgressEventSchema,
   ResearchProgressIngressSchema,
   ResearchProgressSnapshotSchema,
@@ -60,6 +61,62 @@ const snapshot = {
 };
 
 describe("P11 progress contracts", () => {
+  it("accepts only a bounded contiguous E16 market overview", () => {
+    const overview = {
+      source_bar_count: 3,
+      emitted_bucket_count: 2,
+      bucket_bars: 2,
+      sampling: "OHLC_BUCKET_V1" as const,
+      envelope: {
+        max_high: "103",
+        max_high_at_utc_ms: 1_725_000_060_000,
+        min_low: "98",
+        min_low_at_utc_ms: 1_725_000_000_000,
+      },
+      values: [
+        {
+          first_ordinal: 0, last_ordinal: 1,
+          open_utc_ms: 1_725_000_000_000, close_utc_ms: 1_725_000_060_000,
+          open: "100", high: "103", low: "98", close: "102", volume: "25", transitions: 1,
+        },
+        {
+          first_ordinal: 2, last_ordinal: 2,
+          open_utc_ms: 1_725_000_120_000, close_utc_ms: 1_725_000_120_000,
+          open: "102", high: "102", low: "101", close: "101", volume: null, transitions: 0,
+        },
+      ],
+    };
+    expect(ResearchEvidenceCandleOverviewSchema.safeParse(overview).success).toBe(true);
+    expect(ResearchEvidenceCandleOverviewSchema.safeParse({
+      ...overview,
+      emitted_bucket_count: 3,
+    }).success).toBe(false);
+    expect(ResearchEvidenceCandleOverviewSchema.safeParse({
+      ...overview,
+      values: [overview.values[0], { ...overview.values[1], first_ordinal: 3 }],
+    }).success).toBe(false);
+    expect(ResearchEvidenceCandleOverviewSchema.safeParse({
+      ...overview,
+      source_bar_count: 4,
+    }).success).toBe(false);
+    expect(ResearchEvidenceCandleOverviewSchema.safeParse({
+      ...overview,
+      values: [
+        overview.values[0],
+        { ...overview.values[1], open_utc_ms: overview.values[0].close_utc_ms },
+      ],
+    }).success).toBe(false);
+    expect(ResearchEvidenceCandleOverviewSchema.safeParse({
+      ...overview,
+      values: Array.from({ length: 13 }, (_, index) => ({
+        ...overview.values[0],
+        first_ordinal: index,
+        last_ordinal: index,
+      })),
+      emitted_bucket_count: 13,
+    }).success).toBe(false);
+  });
+
   it("keeps fence fields server-only in every public projection", () => {
     const parsedEvent = ResearchProgressEventSchema.parse(event);
     const parsedSnapshot = ResearchProgressSnapshotSchema.parse(snapshot);

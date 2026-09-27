@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 
 export const ResearchEvidenceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -398,6 +399,14 @@ export const ResearchEvidenceHubResponseSchema = z.object({
      */
     run_identity: RunIdentitySchema.optional(),
     fold_navigation: FoldNavigationSchema.optional(),
+    /** E16-R1: bounded source overview, never a per-bar replay tape. */
+    market_overview: z.object({
+      state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+      reason_code: ReasonCodeSchema.nullable(),
+      semantics: z.literal("BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY"),
+      data: ResearchEvidenceCandleOverviewSchema.nullable(),
+      availability: ResearchEvidenceAvailabilitySchema,
+    }).strict().optional(),
   }).strict(),
   metrics: z.array(MetricSchema).length(8),
   /** Optional only for rolling-deploy compatibility, like `run_identity`. */

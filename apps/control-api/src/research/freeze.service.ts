@@ -293,6 +293,13 @@ export class ResearchFreezeService {
         dataset_binding_digest: row.datasetBindingDigest,
         manifest_digest: row.manifestDigest,
       },
+      engine_pin: {
+        state: "AVAILABLE",
+        engine_version: source.source.engine_version,
+        execution_adapter_id: source.source.execution_adapter_id,
+        adapter_contract_digest: row.adapterContractDigest,
+        availability: sourceAvailable,
+      },
       freeze: {
         source_profile: {
           state: "FIXED_PROFILE_NO_SELECTION_ARTIFACT",
@@ -485,6 +492,13 @@ export class ResearchFreezeService {
         source_split_digest: null, requested_spec_digest: row.requestedSpecDigest,
         effective_spec_digest: row.effectiveSpecDigest, dataset_binding_digest: row.datasetBindingDigest,
         manifest_digest: row.manifestDigest,
+      },
+      engine_pin: {
+        state: "NOT_PUBLISHED",
+        engine_version: null,
+        execution_adapter_id: null,
+        adapter_contract_digest: row.adapterContractDigest,
+        availability: fallback,
       },
       freeze: {
         source_profile: {

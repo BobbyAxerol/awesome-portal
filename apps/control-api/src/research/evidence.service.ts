@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
+import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 import {
   ResearchEvidenceHubResponseSchema,
   ResearchEvidenceSeriesResponseSchema,
@@ -80,6 +81,8 @@ interface StoredProjection {
   oos_analytics?: StoredOosAnalytics;
   /** RF-05 CG-P13-06: present only when the leading-month fact was not prepended. */
   monthly_leading?: { state: "NOT_APPLIED"; reason_code: "P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS" };
+  /** E16-R1: bounded child-time overview; older immutable projections omit it. */
+  candle_overview?: ResearchEvidenceSource["candle_overview"];
 }
 
 const SERIES_KINDS: readonly ResearchEvidenceSeriesKind[] = [
@@ -241,6 +244,7 @@ const StoredProjectionSchema = z.object({
     state: z.literal("NOT_APPLIED"),
     reason_code: z.literal("P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS"),
   }).strict().optional(),
+  candle_overview: ResearchEvidenceCandleOverviewSchema.optional(),
 }).strict().superRefine((value, context) => {
   if (value.transform_revision === "P13_SOURCE_R2" && !value.source.direct_metric_scopes) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "P13 R2 projection omits direct metric scope" });
@@ -487,6 +491,7 @@ export class ResearchEvidenceService {
         },
       } : {}),
       ...(monthlyLeadingNote ? { monthly_leading: monthlyLeadingNote } : {}),
+      ...(source.candle_overview ? { candle_overview: source.candle_overview } : {}),
       series: Object.fromEntries(series.map((item) => [item.kind, {
         state: item.availabilityState,
         reason_code: item.reasonCode,
@@ -648,6 +653,21 @@ export class ResearchEvidenceService {
         },
         run_identity: runIdentity,
         fold_navigation: foldNavigation,
+        market_overview: projection?.candle_overview
+          ? {
+            state: "AVAILABLE" as const,
+            reason_code: null,
+            semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY" as const,
+            data: projection.candle_overview,
+            availability: availability("AVAILABLE", null),
+          }
+          : {
+            state: "NOT_PUBLISHED" as const,
+            reason_code: "P04_SOURCE_PREDATES_E16_CANDLE_OVERVIEW",
+            semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY" as const,
+            data: null,
+            availability: notPublished("P04_SOURCE_PREDATES_E16_CANDLE_OVERVIEW"),
+          },
       },
       metrics,
       oos_performance: this.oosPerformance(projection, fallback),

@@ -4,7 +4,11 @@ import { ResearchReplayService } from "../src/research/replay.service";
 
 const scope = { workspaceId: "p17-workspace", actorUserId: "p17-user" };
 
-function evidenceFixture(pointCount = 120, options: { availability?: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK"; sampling?: "FULL" | "EXTREMA_BUCKET_V1" } = {}) {
+function evidenceFixture(pointCount = 120, options: {
+  availability?: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK";
+  sampling?: "FULL" | "EXTREMA_BUCKET_V1";
+  marketOverview?: boolean;
+} = {}) {
   const availability = options.availability ?? "AVAILABLE";
   const sampling = options.sampling ?? "FULL";
   const values = availability === "AVAILABLE"
@@ -27,6 +31,36 @@ function evidenceFixture(pointCount = 120, options: { availability?: "AVAILABLE"
       source_adapter_id: "p04.delta-rsi.v1",
       source_transform_digest: "b".repeat(64),
       input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
+      ...(options.marketOverview ? {
+        market_overview: {
+          state: "AVAILABLE",
+          reason_code: null,
+          semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY",
+          data: {
+            source_bar_count: 2,
+            emitted_bucket_count: 2,
+            bucket_bars: 1,
+            sampling: "FULL",
+            envelope: {
+              max_high: "103", max_high_at_utc_ms: 1_725_000_060_000,
+              min_low: "98", min_low_at_utc_ms: 1_725_000_000_000,
+            },
+            values: [
+              {
+                first_ordinal: 0, last_ordinal: 0,
+                open_utc_ms: 1_725_000_000_000, close_utc_ms: 1_725_000_000_000,
+                open: "100", high: "101", low: "98", close: "100", volume: "10", transitions: 0,
+              },
+              {
+                first_ordinal: 1, last_ordinal: 1,
+                open_utc_ms: 1_725_000_060_000, close_utc_ms: 1_725_000_060_000,
+                open: "100", high: "103", low: "99", close: "102", volume: "12", transitions: 1,
+              },
+            ],
+          },
+          availability: { state: "AVAILABLE", reason_code: null },
+        },
+      } : {}),
     },
   };
   const series = {
@@ -68,7 +102,7 @@ function enabledConfig() {
 
 describe("P17 route-aware, current-source replay authority", () => {
   it("preserves exact source sample order and supports a direct late seek without compute, ledger synthesis or source-path access", async () => {
-    const fixture = evidenceFixture();
+    const fixture = evidenceFixture(120, { marketOverview: true });
     const evidence = evidenceReader(fixture);
     const service = new ResearchReplayService(evidence as never, enabledConfig() as never);
 
@@ -78,6 +112,15 @@ describe("P17 route-aware, current-source replay authority", () => {
       route: { id: "signal_notional", state: "RETROSPECTIVE_EQUITY_ONLY" },
       equity_replay: { state: "AVAILABLE", source_observation_count: 120, emitted_point_count: 120 },
       route_capabilities: { orders: { state: "NOT_PUBLISHED" }, fills: { state: "NOT_PUBLISHED" }, trades: { state: "NOT_PUBLISHED" }, positions: { state: "NOT_PUBLISHED" } },
+      market_overview: {
+        state: "AVAILABLE",
+        semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY",
+        data: { emitted_bucket_count: 2, sampling: "FULL" },
+      },
+    });
+    expect(first.route_capabilities.candle_windows).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS",
     });
     expect(first.equity_replay.items.map((item) => item.playback_ordinal)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(JSON.stringify(first)).not.toMatch(/worker_attempt_id|lease_epoch|artifact_path|raw_ohlcv|compute|order_id|fill_id/);
@@ -130,6 +173,11 @@ describe("P17 route-aware, current-source replay authority", () => {
       source_absences: {
         order_ledger: { state: "NOT_PUBLISHED" },
         cross_stream_order: { state: "NOT_ASSERTED" },
+      },
+      market_overview: {
+        state: "NOT_PUBLISHED",
+        reason_code: "P04_SOURCE_PREDATES_E16_CANDLE_OVERVIEW",
+        data: null,
       },
     });
   });

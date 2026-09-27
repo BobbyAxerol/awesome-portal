@@ -51,6 +51,9 @@ _MAX_EQUITY_EVIDENCE_POINTS = 32
 _MAX_ROLLING_EVIDENCE_POINTS = 16
 _MAX_MONTHLY_EVIDENCE_POINTS = 32
 _MAX_DISTRIBUTION_BUCKETS = 12
+# E16-R1: an overview, not a replay tape. Twelve extrema-preserving OHLC
+# buckets leave the existing 24-KiB source-receipt budget intact.
+_MAX_P04_CANDLE_OVERVIEW_BUCKETS = 12
 _MAX_EVIDENCE_RECEIPT_BYTES = 24 * 1024
 _ALLOWED_TASKS = frozenset({"P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"})
 
@@ -274,12 +277,97 @@ def _rolling_returns(oos, equity: list[float]) -> tuple[list[dict[str, Any]], di
     }
 
 
+def _p04_candle_overview(*, market, positions, oos_start_utc_ms: int) -> dict[str, Any]:
+    """Retain a bounded OHLC overview from the exact child tape.
+
+    This is deliberately not a per-bar replay series. Each bucket preserves
+    its first open, last close, true maximum high and true minimum low.
+    """
+
+    import pandas as pd
+
+    start = pd.Timestamp(oos_start_utc_ms, unit="ms", tz="UTC")
+    oos = market.loc[market.index >= start]
+    if oos.empty:
+        raise ValueError("P17 P04 market overview has no OOS bars")
+    required = ("open", "high", "low", "close")
+    if any(name not in oos.columns for name in required):
+        raise ValueError("P17 P04 market overview requires OHLC columns")
+    if hasattr(positions, "columns"):
+        position_column = next(
+            (column for column in positions.columns if column.endswith("DEFAULT")),
+            positions.columns[0],
+        )
+        position_series = positions[position_column]
+    else:
+        position_series = positions
+    aligned_positions = position_series.reindex(market.index).loc[oos.index]
+    if aligned_positions.isna().any():
+        raise ValueError("P17 P04 market overview position chronology is incomplete")
+
+    bucket_bars = max(1, math.ceil(len(oos) / _MAX_P04_CANDLE_OVERVIEW_BUCKETS))
+    values: list[dict[str, Any]] = []
+    maximum: tuple[Decimal, int] | None = None
+    minimum: tuple[Decimal, int] | None = None
+    previous_position: Decimal | None = None
+    for first in range(0, len(oos), bucket_bars):
+        frame = oos.iloc[first : first + bucket_bars]
+        bucket_positions = aligned_positions.iloc[first : first + bucket_bars]
+        highs = [_finite_decimal(value, label="candle high") for value in frame["high"].to_list()]
+        lows = [_finite_decimal(value, label="candle low") for value in frame["low"].to_list()]
+        high = max(highs)
+        low = min(lows)
+        high_at = _utc_ms(frame.index[highs.index(high)], label="candle high")
+        low_at = _utc_ms(frame.index[lows.index(low)], label="candle low")
+        if maximum is None or high > maximum[0]:
+            maximum = (high, high_at)
+        if minimum is None or low < minimum[0]:
+            minimum = (low, low_at)
+        transitions = 0
+        for raw_position in bucket_positions.to_list():
+            position = _finite_decimal(raw_position, label="position")
+            if previous_position is not None and position != previous_position:
+                transitions += 1
+            previous_position = position
+        volumes = frame["volume"].to_list() if "volume" in frame.columns else None
+        volume = None if volumes is None else _decimal_text(
+            sum((_finite_decimal(item, label="candle volume") for item in volumes), Decimal("0")),
+            label="candle volume",
+        )
+        values.append({
+            "first_ordinal": first,
+            "last_ordinal": first + len(frame) - 1,
+            "open_utc_ms": _utc_ms(frame.index[0], label="candle open"),
+            "close_utc_ms": _utc_ms(frame.index[-1], label="candle close"),
+            "open": _decimal_text(frame.iloc[0]["open"], label="candle open"),
+            "high": _decimal_text(high, label="candle high"),
+            "low": _decimal_text(low, label="candle low"),
+            "close": _decimal_text(frame.iloc[-1]["close"], label="candle close"),
+            "volume": volume,
+            "transitions": transitions,
+        })
+    assert maximum is not None and minimum is not None
+    return {
+        "source_bar_count": len(oos),
+        "emitted_bucket_count": len(values),
+        "bucket_bars": bucket_bars,
+        "sampling": "FULL" if bucket_bars == 1 else "OHLC_BUCKET_V1",
+        "envelope": {
+            "max_high": _decimal_text(maximum[0], label="max high"),
+            "max_high_at_utc_ms": maximum[1],
+            "min_low": _decimal_text(minimum[0], label="min low"),
+            "min_low_at_utc_ms": minimum[1],
+        },
+        "values": values,
+    }
+
+
 def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_utc_ms: int) -> dict[str, Any]:
     """Build the bounded evidence passport from the actual QuantBT result.
 
-    It intentionally excludes OHLCV/source rows, fills, benchmark and funding
-    because P04 does not publish those facts through this adapter.  Those
-    absences are explicit typed states rather than a dashboard default.
+    It excludes raw OHLCV/source rows, fills, benchmark and funding. E16 adds
+    only a bounded, extrema-preserving market overview; it is not a per-bar
+    replay source and cannot be used to infer execution ordering.
     """
 
     import pandas as pd
@@ -329,6 +417,13 @@ def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_ut
         raise ValueError("P13 P04 engine final equity is invalid")
     if not math.isclose(final, equity[-1], rel_tol=1e-9, abs_tol=1e-7):
         raise ValueError("P13 P04 engine final equity does not reconcile to the OOS series")
+    overview = None
+    if all(name in market.columns for name in ("open", "high", "low", "close")) and hasattr(result, "positions"):
+        overview = _p04_candle_overview(
+            market=market,
+            positions=result.positions,
+            oos_start_utc_ms=oos_start_utc_ms,
+        )
     receipt = {
         "schema_version": "research.p13.evidence-source.v1",
         "source": {
@@ -384,6 +479,7 @@ def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_ut
             "return_distribution": distribution,
         },
         "equity_points": points,
+        **({"candle_overview": overview} if overview is not None else {}),
         "unavailable": {
             "benchmark": {"state": "NOT_PUBLISHED", "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK"},
             "funding": {"state": "NOT_PUBLISHED", "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_FUNDING"},

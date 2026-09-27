@@ -83,3 +83,66 @@ def test_p06_t06_t08_rejects_unapproved_inputs_and_never_reuses_a_receipt(tmp_pa
     )
     with pytest.raises(ResearchSupervisorError, match="approved Parquet"):
         supervisor.run_p04_delta_qualification(bad)
+
+
+def test_e16_supervisor_rejects_an_overview_that_does_not_cover_its_source_range() -> None:
+    overview = {
+        "source_bar_count": 3,
+        "emitted_bucket_count": 2,
+        "bucket_bars": 2,
+        "sampling": "OHLC_BUCKET_V1",
+        "envelope": {
+            "max_high": "103",
+            "max_high_at_utc_ms": 1_725_000_060_000,
+            "min_low": "98",
+            "min_low_at_utc_ms": 1_725_000_000_000,
+        },
+        "values": [
+            {
+                "first_ordinal": 0,
+                "last_ordinal": 1,
+                "open_utc_ms": 1_725_000_000_000,
+                "close_utc_ms": 1_725_000_060_000,
+                "open": "100",
+                "high": "103",
+                "low": "98",
+                "close": "102",
+                "volume": "25",
+                "transitions": 1,
+            },
+            {
+                "first_ordinal": 2,
+                "last_ordinal": 2,
+                "open_utc_ms": 1_725_000_120_000,
+                "close_utc_ms": 1_725_000_120_000,
+                "open": "102",
+                "high": "102",
+                "low": "101",
+                "close": "101",
+                "volume": None,
+                "transitions": 0,
+            },
+        ],
+    }
+    evidence = {
+        "schema_version": "research.p13.evidence-source.v1",
+        "source": {
+            "execution_adapter_id": "p04.delta-rsi.v1",
+            "engine_version": "1.1.1",
+            "emitted_equity_points": 1,
+            "source_transform_digest": "a" * 64,
+        },
+        "direct": {},
+        "derived": {},
+        "equity_points": [{}],
+        "unavailable": {},
+        "candle_overview": overview,
+    }
+    IsolatedResearchSupervisor._validate_evidence_source(evidence)
+
+    invalid = {
+        **evidence,
+        "candle_overview": {**overview, "source_bar_count": 4},
+    }
+    with pytest.raises(ResearchSupervisorError, match="source coverage"):
+        IsolatedResearchSupervisor._validate_evidence_source(invalid)

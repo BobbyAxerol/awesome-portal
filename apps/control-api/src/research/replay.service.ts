@@ -203,6 +203,28 @@ export class ResearchReplayService {
         scope.workspaceId, runId, revision, query, samples, sourceObservationCount, replaySampling, executionStateGap,
       )
       : this.absentWindow(query.limit, replayAvailability, executionStateGap);
+    const hubOverview = hub.core.market_overview;
+    const overviewAvailable = sourceIsCurrentP04
+      && hubOverview?.state === "AVAILABLE"
+      && hubOverview.data !== null;
+    const overviewReason = sourceIsCurrentP04
+      ? hubOverview?.reason_code ?? "P04_SOURCE_PREDATES_E16_CANDLE_OVERVIEW"
+      : "P17_SOURCE_ADAPTER_NOT_SUPPORTED";
+    const marketOverview = overviewAvailable
+      ? {
+        state: "AVAILABLE" as const,
+        reason_code: null,
+        semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY" as const,
+        data: hubOverview.data,
+        availability: availability("AVAILABLE", null),
+      }
+      : {
+        state: "NOT_PUBLISHED" as const,
+        reason_code: overviewReason,
+        semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY" as const,
+        data: null,
+        availability: sourceIsCurrentP04 ? notPublished(overviewReason) : compatibilityAvailability,
+      };
     const absenceAvailability = sourceIsAvailable ? undefined : compatibilityAvailability;
     const routeCapabilities = {
       orders: this.routeGap("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER", absenceAvailability),
@@ -258,6 +280,7 @@ export class ResearchReplayService {
         availability: routeAvailability,
       },
       equity_replay: window,
+      market_overview: marketOverview,
       route_capabilities: routeCapabilities,
       source_absences: sourceAbsences,
     };

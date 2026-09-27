@@ -718,6 +718,70 @@ class IsolatedResearchSupervisor:
             raise ResearchSupervisorError("P06 child evidence receipt point count is invalid")
         if not isinstance(source.get("source_transform_digest"), str) or not re.fullmatch(r"[0-9a-f]{64}", source["source_transform_digest"]):
             raise ResearchSupervisorError("P06 child evidence receipt digest is invalid")
+        overview = value.get("candle_overview")
+        if overview is not None:
+            if not isinstance(overview, dict):
+                raise ResearchSupervisorError("P06 child candle overview is invalid")
+            rows = overview.get("values")
+            bucket_count = overview.get("emitted_bucket_count")
+            bucket_bars = overview.get("bucket_bars")
+            source_bars = overview.get("source_bar_count")
+            sampling = overview.get("sampling")
+            if (
+                not isinstance(rows, list)
+                or not 1 <= len(rows) <= 12
+                or bucket_count != len(rows)
+                or not isinstance(bucket_bars, int)
+                or bucket_bars < 1
+                or not isinstance(source_bars, int)
+                or source_bars < len(rows)
+                or (source_bars + bucket_bars - 1) // bucket_bars != bucket_count
+                or sampling not in {"FULL", "OHLC_BUCKET_V1"}
+                or (sampling == "FULL") != (bucket_bars == 1)
+            ):
+                raise ResearchSupervisorError("P06 child candle overview bounds are invalid")
+            previous_last = -1
+            previous_close_at = -1
+            decimal_pattern = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$")
+            for row in rows:
+                if not isinstance(row, dict):
+                    raise ResearchSupervisorError("P06 child candle overview row is invalid")
+                first = row.get("first_ordinal")
+                last = row.get("last_ordinal")
+                open_at = row.get("open_utc_ms")
+                close_at = row.get("close_utc_ms")
+                if (
+                    not isinstance(first, int)
+                    or not isinstance(last, int)
+                    or first != previous_last + 1
+                    or last < first
+                    or last - first + 1 > bucket_bars
+                    or not isinstance(open_at, int)
+                    or not isinstance(close_at, int)
+                    or open_at <= previous_close_at
+                    or close_at < open_at
+                    or not isinstance(row.get("transitions"), int)
+                ):
+                    raise ResearchSupervisorError("P06 child candle overview chronology is invalid")
+                for key in ("open", "high", "low", "close"):
+                    if not isinstance(row.get(key), str) or not decimal_pattern.fullmatch(row[key]):
+                        raise ResearchSupervisorError("P06 child candle overview decimal is invalid")
+                volume = row.get("volume")
+                if volume is not None and (not isinstance(volume, str) or not decimal_pattern.fullmatch(volume)):
+                    raise ResearchSupervisorError("P06 child candle overview volume is invalid")
+                previous_last = last
+                previous_close_at = close_at
+            if previous_last != source_bars - 1:
+                raise ResearchSupervisorError("P06 child candle overview source coverage is invalid")
+            envelope = overview.get("envelope")
+            if not isinstance(envelope, dict):
+                raise ResearchSupervisorError("P06 child candle overview envelope is invalid")
+            for key in ("max_high", "min_low"):
+                if not isinstance(envelope.get(key), str) or not decimal_pattern.fullmatch(envelope[key]):
+                    raise ResearchSupervisorError("P06 child candle overview envelope decimal is invalid")
+            for key in ("max_high_at_utc_ms", "min_low_at_utc_ms"):
+                if not isinstance(envelope.get(key), int):
+                    raise ResearchSupervisorError("P06 child candle overview envelope timestamp is invalid")
         # The hash is not persisted as a source of truth here; calculating it
         # confirms the JSON is canonicalizable before the worker receives it.
         hashlib.sha256(encoded).hexdigest()

@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import time
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
@@ -319,8 +320,20 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
         assert opaque_private_value not in serialized_public_artifacts
 
     public_keys = _object_keys(evidence).union(_object_keys(split))
-    for forbidden in ("market_path", "snapshot_id", "worker_attempt_id", "lease_epoch", "open", "high", "low", "close"):
+    for forbidden in ("market_path", "snapshot_id", "worker_attempt_id", "lease_epoch"):
         assert forbidden not in public_keys
+    overview = evidence["candle_overview"]
+    assert 1 <= overview["emitted_bucket_count"] == len(overview["values"]) <= 12
+    assert overview["source_bar_count"] >= overview["emitted_bucket_count"]
+    assert overview["sampling"] in {"FULL", "OHLC_BUCKET_V1"}
+    assert overview["values"][0]["first_ordinal"] == 0
+    assert overview["values"][-1]["last_ordinal"] == overview["source_bar_count"] - 1
+    assert Decimal(overview["envelope"]["max_high"]) == max(
+        Decimal(row["high"]) for row in overview["values"]
+    )
+    assert Decimal(overview["envelope"]["min_low"]) == min(
+        Decimal(row["low"]) for row in overview["values"]
+    )
 
     assert not list(market_root.rglob("*.parquet"))
     assert not list((tmp_path / "engine-output").rglob("*.parquet"))
