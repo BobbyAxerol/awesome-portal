@@ -3749,6 +3749,31 @@ Hai việc lane hỏi, Claude đã chốt và làm luôn: S00 in `descriptor rev
 E16 → lane real-API đủ + receipt. Mỗi gói: test đúng file chạm + ảnh màn đó; lane đầy đủ chỉ ở
 mốc (rebuild preview, trước báo cáo "đóng").
 
+#### F. Còn phải làm, chốt lúc 2026-09-27 (ghi ngay để không rơi mất)
+
+Trạng thái lúc ghi: lane real-API 54 ô (52 xanh so với preview `c81e8dc2` vì preview còn phục vụ
+bundle trước khi sửa S00), E10-O3 đã xong. **Hai việc đang làm dở, có code trong worktree nhưng
+chưa commit** — phải lấy lại, đừng làm lại từ đầu:
+
+| Id | Việc | Ở đâu | Đã có gì | Còn gì |
+|---|---|---|---|---|
+| F1 | **RF-04 — mật độ S12** | worktree `agent-a3aebbf8a0fed5e6b` | `EngineAtlas.tsx`, `engineAtlas.rf02.test.tsx`, record `P20/RF04_S12_DENSITY_CLAUDE_2026-09-27.md` — **chưa commit** | Bóc tách xong 743 px, chạy test + ảnh, commit qua hook, gộp |
+| F2 | **E16-R1 — overview OHLC cho P04** | worktree `agent-a3923235c11975020` | migration **068**, `evidence.contract.ts`, `evidence.service.ts`, `progress.contract.ts` — **chưa commit** | Hoàn thiện phần serve + vẽ trên S08, spec PostgreSQL, commit qua hook, gộp |
+
+**Việc lớn còn lại, theo thứ tự:**
+
+| # | Việc | Chủ | Vì sao chưa xong |
+|---|---|---|---|
+| F3 | Build lại preview **một lần** sau khi F1 + F2 vào (migration 068 + 069 cùng lượt), rồi chạy lane lấy **receipt xanh 54/54** | Claude | Lane là receipt real-API: sửa frontend thì phải build lại preview mới xanh. **Chú ý thứ tự migration:** 069 vào nhánh trước 068, DB nào đã chạy 069 rồi sẽ kẹt — xem [`preview-migration-order`] trong ghi chú vận hành |
+| F4 | **E10-O1** — receipt thật cho E10: preview đã build sạch nên bốn run kẹt cũ không còn; phải tạo một strand mới rồi chứng minh nó hội tụ | Claude, **cần Bobby cho phép ghi vào preview** | Preview đang read-only |
+| F5 | **E4-O1 / E6** — đường create + preflight của S02 và write của S14 chưa từng chạy thật; hiện chỉ stub | Claude, cần một stack ghi được | Preview read-only |
+| F6 | **P12 spec PostgreSQL 9/10 đỏ sẵn từ `05f0d6a0`** (`CG-P12-02/03/04/09`, `lane: "PORTAL_PERSISTED_RESEARCH"` ngoài dự kiến). Đã kiểm bằng cách stash: **không phải do đợt này** | Claude | Mới phát hiện, chưa điều tra |
+| F7 | **E10-O3a** — nhịp 2 workspace/phút/process: 10 workspace hội tụ trong ~5 phút, 100 workspace mất ~50 phút. Quá ~30 workspace phải đo lại | Bobby quyết, rồi Claude | Đo rồi mới biết có cần đổi nhịp |
+| F8 | Request cho engine/source: **E5-O1** (max_dd từng candidate), **E5-O2** (K thật + id pool cho mode 3/4/5), **E16-R1** phần producer nếu không giữ được, **E16-R2** (engine pin trên freeze read P04) | Claude gửi, engine trả lời | Ngoài tầm ≤P21 |
+| F9 | **D-B1** tương phản `--ink-faint` `#939db0` — ngoại lệ axe duy nhất còn lại, dùng chung cả lane | Bobby (token) | Đổi token là đụng baseline |
+| F10 | **OL-01** profile host production | Bobby/ops | Chờ nạp profile |
+| F11 | **OL-03 → OL-13** | Codex | P22+ |
+
 #### C. Nợ tài liệu
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
