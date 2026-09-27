@@ -3669,7 +3669,7 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 | OL-10 | Capability/route ledger | **CLOSED — Codex P22.** R2 inventory, generated route inventory and contract snapshot include the canonical P22 surface. | — | Gates green. |
 | OL-11 | Canonical RC publication route model | **CLOSED — Codex P22.** Exactly `GET …/publication` + `POST …/publish`; mirror is embedded and reconcile is server-owned. Historical contributor notes are explicitly superseded, not erased. | Claude consumer | No product client calls old routes. |
 | OL-13 | Named publication/approval read by `alpha_version_id` | **BACKEND CLOSED — Codex P22.** `researchAlphaVersionPublicationGetV1` returns current RC relation or typed absence; real lookup is `AVAILABLE`. | Claude consumer | S01/S02 render it without scanning RCs. |
-| OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **IN_PROGRESS, 2026-09-27.** Actual 20-reader/one-heavy/four-queued diagnostic measured 684380160-byte peak, but Library p95 failed. Bounded queries now pass separate warm read at 466 ms; real PG/NATS/worker outage passes after repairing unhandled pool disconnect. `dirty:true` evidence is not final T01/T11/P23 acceptance. | Codex | [Current proof/remaining exact gates](./research_loop/evidence/P23/READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md); every final T-id still needs clean-candidate evidence |
+| OL-12 | P23 qualification: `CG-P23-01` (stack cô lập + cgroup 5 GB), `-02` (cô lập MinIO/file/export/cache), `-03` (corrupt-part, restore, kiểm hash/pin), `-04` (Research không ảnh hưởng Execution), `-05` (lane regression Python/QuantBT 1.1.1); T01–T15, fault/restore/upgrade/cold-cache | **IN_PROGRESS, 2026-09-27.** Clean `4e343fe9` actual 20-reader/one-heavy/four-queued run completed: cap PASS, 611323904-byte sampled peak, no implicit jobs; Library p95 **789 ms FAIL** (500-ms target), other five reads PASS. Cold API-process/pool read PASS. Actual query/mapping diagnosis led to exact-response narrow-payload/single-validation repair; diagnostic parity PASS, not final mixed-load acceptance. | Codex | [Current proof/remaining exact gates](./research_loop/evidence/P23/READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md); every final T-id still needs clean-candidate evidence |
 
 #### B. Frontend / test còn mở (không phải backend)
 
@@ -3841,10 +3841,22 @@ warm read pass; dirty diagnostics do not close full P23. Focused 68 backend,
 14 verifier and 23 Node tests pass. First full hook: 1329 pass, one fail, one
 external skip; the HEAVY lineage fixture now uses fenced terminal transitions
 and verifies queued same-intent retry, focused real-PG/Node-22 40/40 PASS.
-Full hook retake is pending, not a future PASS. After commit, five of eight goal groups have scoped backend
+Full hook retake for `4e343fe9` **PASS**: Control API 1330/one external skip,
+contracts 196, 219 snapshot files MATCH, 241 routes/zero collisions. Five of eight goal groups have scoped backend
 proof; OL-12/P23, full F3/F5/OL-24 and P24 remain active. Exact failed probes,
 new receipts/hashes, dependency pins and cleanup boundary are in the
 [new packet](./research_loop/evidence/P23/READ_OUTAGE_IMPORT_CHECKPOINT_2026-09-27.md).
+
+**Clean mixed-load/Library repair continuation — 2026-09-27:** clean candidate
+`4e343fe9` cold API-process read PASS; actual HEAVY completed with four queued
+intents and twenty readers, cap/no-implicit-job PASS but Library p95 789 ms FAIL.
+The target remains 500 ms. New narrow SQL removes unused 60-KiB WFO summary/
+candidate transport; separate envelope validation avoids revalidating cards
+already validated by the shared P12/P19 mapper. Exact public-response parity
+(only transaction timestamp differs) and focused 30/P12 PG 11 tests PASS.
+Diagnostic p95 341→248 ms is not a new runtime PASS. Next: commit/build exact
+candidate and mixed-load; remaining P23 faults/coherent restore/isolation/
+plateau/utility/upgrade/browser and P24 remain in the original full goal.
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5

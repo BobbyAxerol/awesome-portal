@@ -96,6 +96,11 @@ export function retainedCardFacts(row: RunLibraryRetainedFacts): RetainedCardFac
 }
 
 const RESOURCE_ID = "research.run-library.v1";
+// mapRow validates each card once, also for the P19 consumer. Validate the
+// envelope separately instead of cloning/validating the same cards again.
+// This is not a data/auth cache or a weaker public contract: both schemas
+// still come from the canonical response and all item/array bounds apply.
+const RunLibraryEnvelopeSchema = ResearchRunLibraryResponseSchema.omit({ items: true });
 const ORDER: readonly AppliedSort[] = [
   { field: "created_at", direction: "desc" },
   { field: "run_id", direction: "desc" },
@@ -478,15 +483,16 @@ export class ResearchRunLibraryService {
       // host clock: callers use this as provenance, not a render timestamp.
       as_of_utc_ms: page.asOfUtcMs,
     };
-    const parsed = ResearchRunLibraryResponseSchema.safeParse(response);
-    if (!parsed.success) {
+    const { items: validatedItems, ...envelope } = response;
+    const parsed = RunLibraryEnvelopeSchema.safeParse(envelope);
+    if (!parsed.success || validatedItems.length > 50) {
       throw new ResearchRunLibraryError(
         "RESEARCH_RUN_LIBRARY_UNAVAILABLE",
         "Run Library could not form a compatible persisted response.",
         503,
       );
     }
-    return parsed.data;
+    return { ...parsed.data, items: validatedItems };
   }
 
   async sparkline(scope: ResearchScope, runId: string) {

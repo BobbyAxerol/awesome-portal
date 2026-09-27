@@ -42,6 +42,17 @@ describe("P23 bounded Run Library admission", () => {
     }
     expect(joins).toContain("AS trade_sum");
     expect(joins).not.toContain("projection.projection->'candle_overview'");
+    // Sealed WFO summaries include full fold/chart history (60 KiB in the
+    // measured cell), but neither Library nor P19's card mapper uses it.
+    // Select only the exact selection keys and metrics; no query/data cache.
+    expect(joins).toContain("seal.summary->'selection' AS selection");
+    expect(joins).toContain("row.payload->'trial_facts'->'metrics' AS metrics");
+    expect(joins).toContain("retained.selection->>'trial_id'");
+    const columns = ResearchRunLibraryRepository.selectColumns();
+    expect(columns).toContain("'metrics', retained_selected.metrics");
+    for (const payload of ["retained.summary AS retained_summary", "retained_selected.candidate", "AS retained_revision"]) {
+      expect(columns).not.toContain(payload);
+    }
   });
   it("bounds filtered keyset metadata before hydrating rich cards, in both directions", async () => {
     const queries: Array<{ sql: string; values?: unknown[]; name?: string }> = [];

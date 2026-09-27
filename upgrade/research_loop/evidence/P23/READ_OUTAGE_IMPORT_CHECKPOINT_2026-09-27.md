@@ -189,3 +189,43 @@ browser reads/writes/publication and P24 `READY_FOR_BOBBY_REVIEW`. Disk-full,
 plateau/scale, tenant file/cache/export, coherent restore workers-off, cold,
 upgrade/rollback/pins, utility quotas/GC, full browser/print/visual and cleanup
 are not closed by the warm read or outage subset. No push/release authority.
+
+## Clean candidate and measured Library repair continuation
+
+The unbypassed `4e343fe9` commit gate completed: Control API **1330 PASS / one
+external test skip**, contracts **196 PASS**, snapshot **219 MATCH**, route
+inventory **241 / zero collisions**, disposable database restore drill PASS.
+Private raw log: `checkpoint/read-outage-import-commit-gate-retake.log`.
+
+Clean candidate build/up completed; identity binds `4e343fe9…`, `dirty:false`
+and actual image IDs. Cold twenty-principal read PASS means new API process,
+pool and prepared plans, not host/HMD cache clearing. Actual WFO HEAVY completed
+with four distinct queued HEAVY intents. All 120 reads returned 200, measured
+cgroup peak 611323904 bytes, viewer jobs 15→15. **Library p95 789 ms FAIL**;
+Progress/Evidence/Search/Report/Replay 406/422/376/228/355 ms meet their targets.
+The four queued-only intents were cancelled through the normal API afterward;
+their producer/history rows remain. Receipts: `candidate-4e343fe9-{workload,
+read,cold-read,resource-series}.json` under the private runtime directory.
+
+Measured diagnosis on the same real, read-only scoped relations:
+
+- EXPLAIN page execution 8.315–9.399 ms, census 4.376–4.986 ms; first page
+  planning 26.738 ms. Twenty direct repository calls finished in 371 ms.
+- Two sealed WFO summaries were 60080 bytes each; Library/P19's shared card
+  mapping consumes neither the full summary nor full candidate payload.
+- Select only immutable selection keys and exact selected-trial metrics;
+  retain same-snapshot fold aggregates, nulls, cursor, RLS and membership.
+- Validate each card once in `mapRow`, then the canonical envelope separately,
+  preserving the 50-item ceiling and all public schema validation/defaults.
+  No new cache, auth reuse, pool expansion or SLO change.
+- Ephemeral read-only comparison of compiled old/new modules produces identical
+  public DTOs (excluding only the database transaction timestamp). Warm
+  diagnostic p95 340.677→247.907 ms. This is not an HTTP/heavy qualification.
+
+New focused Library tests **30/30**, actual disposable P12 PostgreSQL **11/11**
+and Control API build PASS. Private diagnosis files:
+`library-query-diagnostic-4e343fe9.json`, `library-plan-diagnostic-4e343fe9.json`,
+`library-decode-profile-4e343fe9.json`, `library-parity-narrow-diagnostic.json`.
+No runtime application files or shared preview were edited for profiling.
+Next exact candidate needs full commit gate/build/mixed receipt; full P23/P24
+is still incomplete. No frontend, Production, AWS-HK/TS, push or merge changes.

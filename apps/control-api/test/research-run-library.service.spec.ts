@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ControlApiConfig } from "../src/config";
-import { ResearchRunLibraryItemSchema } from "../src/research/run-library.contract";
+import { ResearchRunLibraryItemSchema, ResearchRunLibraryResponseSchema } from "../src/research/run-library.contract";
 import type {
   RunLibraryRetainedFacts,
   RunLibraryRow,
@@ -167,6 +167,19 @@ const QUERY = {
 };
 
 describe("RF-05 P12 Run Library service mapping", () => {
+  it("validates every card and envelope once without relaxing canonical response or array bounds", async () => {
+    const repository = { list: vi.fn().mockResolvedValue(page([row()])) };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    const mapped = await service.list(scope, QUERY);
+    expect(ResearchRunLibraryResponseSchema.parse(mapped)).toEqual(mapped);
+    repository.list.mockResolvedValueOnce(page([row({ created_at: new Date(NaN) })]));
+    await expect(service.list(scope, QUERY)).rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_UNAVAILABLE" });
+    repository.list.mockResolvedValueOnce({ ...page([row()]), totalRows: -1 });
+    await expect(service.list(scope, QUERY)).rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_UNAVAILABLE" });
+    repository.list.mockResolvedValueOnce(page(Array.from({ length: 51 }, (_, index) => row({ run_id: `rrun_${index}` }))));
+    await expect(service.list(scope, QUERY)).rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_UNAVAILABLE" });
+  });
+
   it("CG-P12-03: extrema-preserving sample keeps first, last, min and max within 24 ordered points", () => {
     const values = Array.from({ length: 192 }, (_, index) => Math.sin(index / 7) * 100 + (index === 97 ? 500 : 0) - (index === 150 ? 400 : 0));
     const { points, sampled } = extremaPreservingSample(values.map((value, index) => ({ index, value })), (point) => point.value);

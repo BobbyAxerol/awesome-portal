@@ -665,7 +665,7 @@ export class ResearchRunLibraryRepository {
               LIMIT 1
            ) evidence ON true
            LEFT JOIN LATERAL (
-             SELECT seal.artifact_revision, seal.retained_import_digest, seal.summary, seal.table_rows
+             SELECT seal.artifact_revision, seal.summary->'selection' AS selection, seal.table_rows
                FROM research.current_source_seals_v1 seal
               WHERE library.source_kind = 'RESEARCH_DURABLE'
                 AND seal.workspace_id = library.workspace_id
@@ -674,14 +674,14 @@ export class ResearchRunLibraryRepository {
               LIMIT 1
            ) retained ON true
            LEFT JOIN LATERAL (
-             SELECT row.payload AS candidate
+             SELECT row.payload->'trial_facts'->'metrics' AS metrics
                FROM research.current_source_rows_v1 row
               WHERE row.workspace_id = library.workspace_id
                 AND row.run_id = library.run_id
                 AND row.artifact_revision = retained.artifact_revision
                 AND row.table_kind = 'CANDIDATE'
-                AND row.payload->'trial_facts'->>'source_trial_id' = retained.summary->'selection'->>'trial_id'
-                AND row.payload->>'objective' IS NOT DISTINCT FROM retained.summary->'selection'->>'objective'
+                AND row.payload->'trial_facts'->>'source_trial_id' = retained.selection->>'trial_id'
+                AND row.payload->>'objective' IS NOT DISTINCT FROM retained.selection->>'objective'
               ORDER BY row.source_ordinal ASC
               LIMIT 1
            ) retained_selected ON true
@@ -737,13 +737,10 @@ export class ResearchRunLibraryRepository {
               evidence.projection AS evidence_projection,
               evidence.equity_state AS evidence_equity_state,
               evidence.equity_reason AS evidence_equity_reason,
-              CASE WHEN retained.retained_import_digest IS NULL THEN NULL ELSE 'p13r2_' || retained.retained_import_digest END AS retained_revision,
-              retained.summary AS retained_summary,
-              retained_selected.candidate AS retained_candidate,
               CASE WHEN retained.artifact_revision IS NOT NULL AND evidence.projection_revision IS NULL
                         AND library.source_kind = 'RESEARCH_DURABLE' AND library.effective_status = 'COMPLETED'
                    THEN jsonb_build_object('run_id', library.run_id, 'artifact_revision', retained.artifact_revision::text,
-                     'metrics', retained_selected.candidate->'trial_facts'->'metrics',
+                     'metrics', retained_selected.metrics,
                      'fold_count', retained_card_counts.fold_count::text,
                      'trade_fold_count', retained_card_counts.trade_fold_count::text,
                      'trade_sum', retained_card_counts.trade_sum::text,

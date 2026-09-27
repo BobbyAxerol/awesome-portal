@@ -8,11 +8,11 @@ OL-02 observer proofs are closed; P22 backend real publication is closed.
 
 | Test | Current status, scoped honestly |
 |---|---|
-| T01 | PARTIAL: actual dirty-image 20-reader + one-heavy + four-queued workload/cgroup proof; initial Library SLO FAIL. Separate optimized warm read PASS (466 ms); clean-candidate simultaneous rerun required. |
+| T01 | PARTIAL: clean `4e343fe9` real twenty-reader/one-heavy/four-queued HEAVY completion + cgroup cap PASS; Library p95 789 ms FAIL, other five APIs PASS. Measured narrow-payload/single-validation repair has exact DTO parity and focused/P12 PG proof; repaired candidate simultaneous receipt required. |
 | T04 | PARTIAL: actual PG/NATS/worker outage found/repaired API pool crash; corrected bounded refusal/recovery/source preservation/one durable intent PASS on diagnostic image. Clean candidate proof still required. |
 | T06 | PARTIAL: real observer MATCH/MISMATCH/copy restore PASS without modifying original seal; coherent DB+artifact restore still pending. |
-| T10 | PARTIAL: focused 68 backend/14 verifier/23 Node tests and build PASS. First full hook: 1329 PASS, one HEAVY lineage fixture failure, one external skip; fenced-lifecycle correction adds queued-intent identity assertions, fresh PG/Node-22 focused 40/40 PASS. Full hook retake/candidate regression still pending. |
-| T11 | PARTIAL: 20 actual authorized warm readers, finite admission/SLO checks; all six APIs PASS, no fake 20 copies of Bobby. Full far-seek/slider/mixed-heavy candidate receipt pending. |
+| T10 | PARTIAL: `4e343fe9` full commit gate PASS (1330 backend, one external skip; 196 contracts; 219 snapshot MATCH; 241 routes/no collision). New Library repair 30 focused/11 actual PG tests + build PASS. Full required browser/engine qualification is separate. |
+| T11 | PARTIAL: clean mixed twenty-reader sample has zero implicit jobs (15→15), finite admission, five APIs meet SLO; Library 789 ms FAIL. Full repaired-candidate far-seek/slider/mixed-heavy receipt pending. |
 | T02/03/05/07/08/09/12/13/14/15 | Preserve exact remaining workload/security/scale/restore/cold/upgrade/browser gates, not closed by this subset. |
 
 E6-BR-01 typed source-only signature/SBOM absence has a real DRAFT import/replay/
