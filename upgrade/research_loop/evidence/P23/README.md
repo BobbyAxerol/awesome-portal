@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest T04 clean-candidate fault checkpoint, 2026-09-27:** [Actual PG,
+NATS and worker drill](./T04_CLEAN_FAULT_CHECKPOINT_2026-09-27.md) passes a
+5,014-ms structured database refusal/recovery without Control API restart;
+one real same-intent durable run resumes after NATS/worker restoration and
+ends `COMPLETED/READY`, original archived source/auth unchanged. All seven
+candidate image pins and post-fault hard cgroup limits match. This closes
+**T04 on the isolated clean candidate only**, not other P23/P24 gates.
+
 **Latest T11 deep-read checkpoint, 2026-09-27:** [Real 20-reader far-seek
 receipt](./T11_FAR_SEEK_CHECKPOINT_2026-09-27.md) passes seven named API reads
 per principal, 140/140 status 200, actual signed Library/replay keysets,
