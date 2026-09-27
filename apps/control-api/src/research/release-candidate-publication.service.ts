@@ -146,7 +146,10 @@ export class ResearchReleaseCandidatePublicationService {
     });
     if (existing) {
       if (existing.actorUserId !== user.userId || existing.payloadDigest !== payloadDigest) this.conflict();
-      if (existing.state === "DELIVERED" || existing.state === "REFUSED") return this.publication(scope, user, id);
+      if (existing.state === "DELIVERED" || existing.state === "REFUSED") {
+        const result = await this.publication(scope, user, id);
+        return { ...result, replayed: true };
+      }
       const current = await this.publication(scope, user, id);
       if (!current.may_publish) return current;
       await this.repository.pending(scope, id);

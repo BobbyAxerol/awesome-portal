@@ -3872,6 +3872,17 @@ reference-graph proof. Remaining plateau/disk/security/utility/scale/upgrade/
 browser and P24 are unchanged; full eight-group goal stays ACTIVE.
 [Exact hashes, identity boundary and cleanup](./research_loop/evidence/P23/MIXED_RESTORE_CHECKPOINT_2026-09-27.md).
 
+**Publication/tenant continuation — 2026-09-27:** the owned current WFO public
+draft→seal→publish journey created one actual RC/R1/publication. Exact retry
+preserves the R1 and cardinality, but exposed terminal `replayed:false`. The
+P22 service now returns true only for terminal POST replay after unchanged
+actor/payload checks; GET stays false, no duplicate delivery/write. Focused
+17 tests and TypeScript build PASS; clean-image runtime retake still pending
+at this code checkpoint. Ten scoped nonmember/named-read/ETag checks PASS,
+not full file/export isolation. Earlier restore's empty graph is historical:
+the newly populated publication has not yet been restored/GC-qualified.
+Full goal/P23/P24 remain ACTIVE. [Failed proof, repair and next action](./research_loop/evidence/P23/PUBLICATION_REPLAY_CHECKPOINT_2026-09-27.md).
+
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5
 (P10, P13–P20) — **không xoá** (luật A13.1), sổ này thắng chúng.

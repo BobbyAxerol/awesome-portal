@@ -178,6 +178,30 @@ describe("P22 actor-bound publication over existing R1", () => {
     expect(x.governance.createApproval).toHaveBeenCalledTimes(2);
   });
 
+  it.each(["DELIVERED", "REFUSED"] as const)("P22-T05/T14 marks %s POST replays without rewriting the intent or calling R1 again", async (terminalState) => {
+    const x = subject();
+    if (terminalState === "REFUSED") {
+      x.governance.createApproval.mockRejectedValueOnce(new GovernanceError("APPROVAL_CREATE_INVALID", "Refused.", 400));
+    }
+    const first = await x.service.publish(scope, user as never, rcId, input, "req_first");
+    expect(first).toMatchObject({ state: terminalState, replayed: false });
+    const recorded = x.state();
+    const retry = await x.service.publish(scope, user as never, rcId, input, "req_terminal_retry");
+    expect(retry).toMatchObject({ state: terminalState, replayed: true, published: first.published });
+    expect(x.state()).toBe(recorded);
+    // A GET reads existing state, not an idempotent POST replay.
+    expect((await x.service.publication(scope, user as never, rcId)).replayed).toBe(false);
+    await expect(x.service.publish(scope, user as never, rcId, { ...input, summary: "Changed terminal payload." }, "req_changed"))
+      .rejects.toMatchObject({ code: "RESEARCH_RELEASE_CANDIDATE_CONFLICT", status: 409 });
+    await expect(x.service.publish({ ...scope, actorUserId: "usr_other" }, { ...user, userId: "usr_other" } as never, rcId, input, "req_other"))
+      .rejects.toMatchObject({ code: "RESEARCH_RELEASE_CANDIDATE_CONFLICT", status: 409 });
+    expect(x.repository.begin).toHaveBeenCalledTimes(1);
+    expect(x.repository.pending).not.toHaveBeenCalled();
+    expect(x.repository.finish).toHaveBeenCalledTimes(terminalState === "DELIVERED" ? 1 : 0);
+    expect(x.repository.refused).toHaveBeenCalledTimes(terminalState === "REFUSED" ? 1 : 0);
+    expect(x.governance.createApproval).toHaveBeenCalledTimes(1);
+  });
+
   it("P22-T06/T12 leaves an unverified replay UNKNOWN and never attaches a different source pin", async () => {
     const x = subject();
     x.governance.verifyPublicationPin.mockResolvedValue(false);
@@ -269,6 +293,10 @@ describe("P22 actor-bound publication over existing R1", () => {
     expect(second.state).toBe("DELIVERED");
     expect(x.repository.begin).toHaveBeenCalledTimes(1);
     expect(x.governance.createApproval).toHaveBeenLastCalledWith(user, expect.objectContaining(expected), "req_retry");
+    const terminalReplay = await x.service.publish(scope, user as never, rcId, bare, "req_terminal_retry");
+    expect(terminalReplay).toMatchObject({ state: "DELIVERED", replayed: true, published: second.published });
+    expect(x.repository.begin).toHaveBeenCalledTimes(1);
+    expect(x.governance.createApproval).toHaveBeenCalledTimes(2);
   });
 
   it("X1 intake dark: no new intent, no RunSync refresh, no Governance call; the read says why", async () => {

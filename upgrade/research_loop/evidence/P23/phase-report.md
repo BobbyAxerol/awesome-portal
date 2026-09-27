@@ -21,7 +21,12 @@ The new packet contains raw private evidence hashes, preserved failed probes,
 runtime pin boundary, resource snapshot and deferred owned-cell cleanup.
 
 Cold process/pool read proof exists, not a host/HMD cache flush. T14 remains
-OPEN because the restored publication/selection graph is currently empty.
+OPEN because the earlier restored publication/selection graph was empty.
+The subsequent public WFO→RC seal→R1 journey creates one real publication,
+but its nonempty graph has not yet been restore/GC-qualified. Terminal POST
+replay metadata repair has 17 focused tests/build PASS; clean runtime retake
+is pending. Ten named-read/ETag checks PASS, not complete T05. See
+[publication continuation](./PUBLICATION_REPLAY_CHECKPOINT_2026-09-27.md).
 Do not erase the historical failure tables below or call full P23 qualified.
 
 Branch `docs/research-loop-plan`; owner Codex. Scope: resource profile,

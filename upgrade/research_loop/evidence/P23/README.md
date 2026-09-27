@@ -1,5 +1,12 @@
 # P23 backend qualification packet
 
+**Latest publication/tenant checkpoint, 2026-09-27:** [Real source journey and repair](./PUBLICATION_REPLAY_CHECKPOINT_2026-09-27.md)
+records actual current WFO→RC seal→one R1/publication, a preserved failed
+terminal replay flag assertion and its small P22 backend repair (17 focused
+tests/build PASS; runtime retake pending). Ten named-read/ETag isolation checks
+PASS, not full T05. The new nonempty publication does not supersede T14's
+missing nonempty-graph restore/GC proof. Full goal stays ACTIVE.
+
 **Latest mixed/restore checkpoint, 2026-09-27:** [Actual candidate proof](./MIXED_RESTORE_CHECKPOINT_2026-09-27.md)
 records clean `b2e8b868` twenty-reader/one-heavy/four-queued completion,
 Library p95 **490 ms PASS**, 618209280-byte peak, cold process reads PASS,

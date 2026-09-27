@@ -1,5 +1,15 @@
 # P22 phase report — 2026-09-26
 
+## Addendum — terminal POST replay metadata, 2026-09-27
+
+The P23 cell's real WFO→RC seal→R1 journey found repeat DELIVERED POST returning
+`replayed:false`, although the approval ID and one-row cardinality were correct.
+Terminal DELIVERED/REFUSED POST now sets true after unchanged actor/payload
+checks. GET semantics and all immutable intent/receipt/R1 data stay unchanged.
+Focused service tests **17/17 PASS**, build PASS; clean-image runtime retake
+and final candidate browser proof remain separate. No schema or UI change.
+See [original failure and exact handoff](../P23/PUBLICATION_REPLAY_CHECKPOINT_2026-09-27.md).
+
 Owner: Codex backend. Branch: `codex/research-ol-p22-p24`. Scope: P22 backend,
 generated contracts, isolated runtime evidence and documentation only; no
 Research screen, Execution, Trading System, shared preview, dev or Production
