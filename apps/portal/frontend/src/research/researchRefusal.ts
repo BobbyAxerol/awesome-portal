@@ -391,7 +391,29 @@ export const REASON_CODE_SENTENCES: Record<string, string> = {
    * in the P17 evidence, and the screen does not answer it.
    */
   P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS:
-    "This run's adapter published no price bars with its evidence, so the replay draws the equity samples it did publish and no candles.",
+    "This run's adapter published no per-bar candle ledger, so nothing here is drawn bar by bar. A whole-window price overview is shown above when the run retained one.",
+  /*
+   * E16-R1: the retained whole-window OHLC overview. Each reason is a
+   * different fact and they must not collapse into one another -- "this run
+   * predates the overview" is a permanent property of a sealed run, while
+   * "the evidence is not readable right now" is a passing state of this read.
+   */
+  P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW:
+    "This run was sealed before the producer retained a price overview. Its tape was deleted when the run finished, so no overview can be recovered for it.",
+  P13_RETAINED_CANDLE_OVERVIEW_IS_INCOMPATIBLE:
+    "The price overview stored with this run no longer matches the published shape, so it is withheld rather than drawn partially.",
+  P13_EVIDENCE_NOT_READABLE_FOR_RETAINED_CANDLE_OVERVIEW:
+    "This run's evidence is not readable yet, so its price overview cannot be read either.",
+  P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET:
+    "The run's receipt reached its size budget before a price overview coarse enough to fit could still be worth drawing.",
+  P13_CANDLE_OVERVIEW_SOURCE_BARS_ARE_UNREADABLE:
+    "The producer could not read this run's bars when it summarised them, so no price overview was retained.",
+  P04_TAPE_DID_NOT_PUBLISH_OHLC_COLUMNS:
+    "This run's tape carried no open/high/low/close columns, so no price overview could be summarised from it.",
+  P04_OOS_WINDOW_HAS_NO_PRICED_BAR:
+    "This run's out-of-sample window holds no priced bar, so there is nothing to summarise into a price overview.",
+  P17_REPLAY_READ_PREDATES_RETAINED_CANDLE_OVERVIEW:
+    "This deployment's replay read does not publish a price overview yet, so none is drawn for any run here.",
   P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER:
     "This run's adapter published no order ledger, so no order can be replayed.",
   P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS:

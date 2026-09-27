@@ -162,14 +162,14 @@ test("an unrouted card is drawn and says so", async ({ page }) => {
   await expect(card).toBeVisible();
   await expect(card).toHaveAttribute("href", ALPHA_IMPORT);
 
-  // `alpha_version_legacy` is AVAILABLE server-side and has no path of its own
-  // in this build: the shipped screen it names lives under an Alpha and a
-  // version, which the map does not hold. The card stays drawn and honest
-  // (audit 00-5).
-  const unrouted = page.locator("[data-card='alpha-version']");
-  await expect(unrouted).toBeVisible();
-  await expect(unrouted).toHaveAttribute("data-card-availability", "AVAILABLE");
-  await expect(unrouted).toHaveAttribute("data-card-unreachable", "NOT ROUTED");
+  // `alpha_version_legacy` names a shipped screen under an Alpha and a version.
+  // The map holds neither, so it goes through the Run Library picker like the
+  // other context-scoped cards instead of drawing a dead NOT ROUTED tile.
+  const picker = page.locator("[data-card='alpha-version']");
+  await expect(picker).toBeVisible();
+  await expect(picker).toHaveAttribute("data-card-availability", "AVAILABLE");
+  await expect(picker).not.toHaveAttribute("data-card-unreachable", /./);
+  await expect(picker).toHaveAttribute("href", /\/runs\?to=alpha_version_legacy$/);
   expect(await unrouted.evaluate((n) => n.tagName)).not.toBe("A");
 
   // E12 / D2: a card that needs a run is a link to the Run Library carrying

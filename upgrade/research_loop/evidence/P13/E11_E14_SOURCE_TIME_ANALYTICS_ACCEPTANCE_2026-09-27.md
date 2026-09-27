@@ -3,6 +3,12 @@
 Date: 2026-09-27. Branch: `docs/research-loop-plan`. Base: `5a5c79b7`.
 Status: **BACKEND_REAL_API_ACCEPTED · E11_CONSUMER_PENDING**.
 
+> **Later integration checkpoint:** the pending consumer above is now accepted
+> on the owned real-API cell: S04/Library and Split/Search/Report at 1280/660,
+> exact generated source values/scopes/reasons, no design or baseline changes.
+> See [E11–E17 final receipt](../P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md).
+> The original backend receipt and this historical status are preserved.
+
 ## Scope and correction of the earlier closeout
 
 Read the Unified E11–E17 ledger, P13/E11 historical closeout, P14/E14

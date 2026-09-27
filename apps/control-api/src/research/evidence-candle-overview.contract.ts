@@ -1,4 +1,7 @@
-/** E16-R1 bounded market overview shared by P11, P13 and P17. */
+/** E16-R1 legacy payload reader/market_overview compatibility alias.
+ * Canonical source now includes its availability envelope. Legacy numeric
+ * transitions are position changes, never trade/fill markers.
+ */
 
 import { z } from "zod";
 
@@ -7,7 +10,7 @@ const UtcMsSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 
 export const ResearchEvidenceCandleOverviewSchema = z.object({
   source_bar_count: z.number().int().positive().max(2_000_000),
-  emitted_bucket_count: z.number().int().positive().max(12),
+  emitted_bucket_count: z.number().int().positive().max(48),
   bucket_bars: z.number().int().positive().max(2_000_000),
   sampling: z.enum(["FULL", "OHLC_BUCKET_V1"]),
   envelope: z.object({
@@ -26,8 +29,8 @@ export const ResearchEvidenceCandleOverviewSchema = z.object({
     low: DecimalSchema,
     close: DecimalSchema,
     volume: DecimalSchema.nullable(),
-    transitions: z.number().int().nonnegative().max(2_000_000),
-  }).strict()).min(1).max(12),
+    transitions: z.number().int().nonnegative().max(2_000_000).nullable(),
+  }).strict()).min(1).max(48),
 }).strict().superRefine((value, context) => {
   if (value.emitted_bucket_count !== value.values.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "candle overview bucket count is inconsistent" });

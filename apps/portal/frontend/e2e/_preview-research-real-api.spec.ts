@@ -772,3 +772,473 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
     });
   }
 }
+
+/**
+ * E20 · the three screens this lane still missed: Screen 00, Screen 14 and
+ * Screen 08 on the P04 run.
+ *
+ * Same rules as the cells above. Every assertion compares the screen with what
+ * the preview served in the same session, read through the page so the Secure
+ * session cookie rides along. Screen 14 is the one exception and says why in
+ * its own comment: the preview is read-only, so its four writes never leave
+ * the browser — they are answered with the canonical contract fixtures, and
+ * the cell proves afterwards, from the real registry, that nothing landed.
+ */
+
+/** The repository root, from `apps/portal/frontend` (Playwright's cwd). */
+const REPO = `${process.cwd()}/../../..`;
+const alphaFixture = (name: string) =>
+  readFileSync(`${REPO}/packages/contracts/fixtures/research-alpha-import.${name}.valid.json`, "utf8");
+
+/** The shell's words for a path no feature claims (`PortalRoutes.tsx` `NotFound`). */
+const NOT_FOUND_COPY = "No feature in the current registry claims this route.";
+
+/**
+ * Cards the descriptor calls AVAILABLE that this build cannot address at all.
+ *
+ * `alpha_version_legacy` used to sit here: its screen is mounted under an
+ * Alpha and a version, which a context-free map cannot name. It now goes
+ * through the Run Library picker like the other context-scoped cards, so the
+ * list is empty and any card that draws NOT ROUTED fails this cell.
+ */
+const JOURNEY_UNROUTED_KEYS: readonly string[] = [];
+
+/** The badge Screen 00 must print for a card, derived from the served card. */
+function expectedJourneyBadge(card: { availability: string; target_key: string }): string | null {
+  if (card.availability === "PLANNED") return "SOON";
+  if (card.availability === "DEPENDENCY_REQUIRED") return "BLOCKED";
+  if (JOURNEY_UNROUTED_KEYS.includes(card.target_key)) return "NOT ROUTED";
+  return null;
+}
+
+/** A v1 single-file alpha module: a literal contract and one plain function. */
+const ALPHA_MODULE = 'ALPHA_CONTRACT = {"schema_version": "research.alpha-source.v1"}\n\ndef generate_signals(context):\n    return context\n';
+
+for (const [name, width, height] of VIEWPORTS) {
+  /* ------------------------------------------------------------ Screen 00 */
+  test(`E20 S00 journey map on real reads at ${name}`, async ({ page }) => {
+    const observed = observe(page);
+    await page.setViewportSize({ width, height });
+    await signIn(page);
+    await page.goto("/research/quantbt/journey");
+    const root = page.locator("[data-screen='journey-map']");
+    await expect(root).toBeVisible({ timeout: 20_000 });
+    await expect(root.locator("[data-card]").first()).toBeVisible({ timeout: 20_000 });
+    await page.waitForLoadState("networkidle");
+
+    const read = await pageGet(page, "/api/v1/research/journey");
+    expect(read.status, "S00 journey read").toBe(200);
+    const descriptor = read.body.descriptor as {
+      descriptor_id: string;
+      revision: number;
+      content_sha256: string;
+      phases: { phase_id: string; cards: any[] }[];
+    };
+    const cards = descriptor.phases.flatMap((phase) => phase.cards);
+    expect(cards.length, "the descriptor published cards").toBeGreaterThan(20);
+
+    /* The map on screen is this descriptor's, and says which one: the digest
+       line pins the exact revision's content. (The revision *number* is passed
+       as a panel `meta`, which `variant="plain"` does not render — recorded in
+       the P23 record rather than asserted against something not on screen.) */
+    await expect(root.locator("[data-descriptor-digest]")).toHaveText(`${descriptor.descriptor_id} · ${descriptor.content_sha256}`);
+    await expect(root.locator("[data-phase]")).toHaveCount(descriptor.phases.length);
+
+    /* Settle before snapshotting: the panel draws a skeleton until the read
+       lands, so the card list is read once it is the server's list. */
+    await expect
+      .poll(() => root.locator("[data-card]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-card"))), { timeout: 20_000 })
+      .toEqual(cards.map((card) => card.card_id));
+    const drawn = await root.locator("[data-card]").evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        card: node.getAttribute("data-card"),
+        kind: node.getAttribute("data-card-kind"),
+        availability: node.getAttribute("data-card-availability"),
+        badge: node.getAttribute("data-card-unreachable"),
+        picks: node.getAttribute("data-card-picks-run"),
+        href: node.getAttribute("href"),
+        tag: node.tagName,
+        disabled: node.getAttribute("aria-disabled"),
+      })),
+    );
+    /* Every card the server published, in its order, with its own kind and availability. */
+    expect(drawn.map((card) => [card.card, card.kind, card.availability])).toEqual(
+      cards.map((card) => [card.card_id, card.target_kind, card.availability]),
+    );
+    /* 00-3: the badge column, derived from the server. A screen the descriptor
+       calls built is a link — never "SOON", which only a PLANNED card earns. */
+    expect(drawn.map((card) => [card.card, card.badge])).toEqual(cards.map((card) => [card.card_id, expectedJourneyBadge(card)]));
+    expect(cards.filter((card) => card.availability === "PLANNED").map((card) => card.card_id), "revision 3 publishes no PLANNED card").toEqual([]);
+    expect(drawn.filter((card) => card.badge === null && !card.href).map((card) => card.card), "a built card with nowhere to go").toEqual([]);
+
+    /* The Execution side stays blocked — the server's word, and the screen's. */
+    const execution = cards.filter((card) => card.target_kind === "EXECUTION_HANDOFF");
+    expect(execution.length, "the descriptor publishes execution-side cards").toBeGreaterThan(0);
+    for (const card of execution) {
+      expect(card.availability, `${card.card_id} is blocked by the server`).toBe("DEPENDENCY_REQUIRED");
+      const node = root.locator(`[data-card='${card.card_id}']`);
+      await expect(node).toHaveAttribute("data-card-unreachable", "BLOCKED");
+      await expect(node).toHaveAttribute("aria-disabled", "true");
+      await expect(node.locator("a")).toHaveCount(0);
+      expect(drawn.find((item) => item.card === card.card_id)?.href, `${card.card_id} carries an href`).toBeNull();
+    }
+
+    /* D2: a card that needs a run opens the Run Library carrying its target. */
+    const picks = drawn.filter((card) => card.picks !== null);
+    expect(picks.length, "the map offers no run picker").toBeGreaterThan(0);
+    for (const card of picks) {
+      const served = cards.find((item) => item.card_id === card.card);
+      expect(card.picks, `${card.card} picks a target of its own`).toBe(served.target_key);
+      expect(card.href, `${card.card} does not carry its target to the Run Library`).toBe(
+        `/research/quantbt/runs?to=${encodeURIComponent(served.target_key)}`,
+      );
+      expect(served.requires_run, `${card.card} picks a run for a target that needs none`).toBe(true);
+    }
+
+    /* "Built" means mounted: each destination is opened, and none of them is
+       the shell's "no feature claims this route". A second page keeps the
+       journey screen's own request log clean. */
+    const destinations = [...new Set(drawn.map((card) => card.href).filter((href): href is string => Boolean(href)))];
+    const sweep = await page.context().newPage();
+    const sweepObserved = observe(sweep);
+    const unmounted: string[] = [];
+    for (const href of destinations) {
+      await sweep.goto(href, { waitUntil: "domcontentloaded" });
+      await sweep.waitForSelector("main, [data-screen]", { timeout: 15_000 }).catch(() => undefined);
+      if ((await sweep.locator("body").innerText()).includes(NOT_FOUND_COPY)) unmounted.push(href);
+    }
+    await sweep.close();
+    expect(unmounted, "a card points at a route no feature claims").toEqual([]);
+    for (const request of sweepObserved.requests) expect(request, "the route sweep reached a private route").not.toMatch(/\/internal\//);
+
+    expect(await axeBlocking(page, "[data-screen='journey-map']")).toEqual([]);
+    await finish(page, `E20-S00-${name}`, observed, {
+      revision: descriptor.revision,
+      content_sha256: descriptor.content_sha256,
+      cards: cards.length,
+      badges: drawn.filter((card) => card.badge).map((card) => `${card.card}=${card.badge}`),
+      picks_run: picks.map((card) => card.picks),
+      destinations,
+      route_sweep: { mounted: destinations.length - unmounted.length, unmounted, requests: [...new Set(sweepObserved.requests)], failures: sweepObserved.failures, noise: sweepObserved.noise },
+    });
+    expect(observed.failures, "S00 failed reads").toEqual([]);
+    expect(observed.noise, `S00 console:\n${observed.noise.join("\n")}`).toEqual([]);
+  });
+
+  /* ------------------------------------------------------------ Screen 14 */
+  test(`E20 S14 alpha import on the canonical fixtures at ${name}`, async ({ page }) => {
+    const observed = observe(page);
+    await page.setViewportSize({ width, height });
+    await signIn(page);
+
+    /*
+     * The preview is read-only. Screen 14's four writes are therefore answered
+     * in the browser with the fixtures the contract itself ships
+     * (`packages/contracts/fixtures`), exactly as E6's fixture lane does — and
+     * every other non-GET is aborted and recorded, so a write this cell did
+     * not expect fails the test instead of reaching the stack.
+     */
+    const source = JSON.parse(alphaFixture("source"));
+    const gates = JSON.parse(alphaFixture("gates"));
+    const registration = JSON.parse(alphaFixture("registration"));
+    const activation = JSON.parse(alphaFixture("activation"));
+    const writes: string[] = [];
+    const escaped: string[] = [];
+    await page.route("**/api/**", async (route) => {
+      const request = route.request();
+      if (request.method() === "GET" || request.method() === "HEAD") return route.continue();
+      const path = new URL(request.url()).pathname;
+      const fixture =
+        path === "/api/v1/research/alphas/import/parse" ? "source"
+        : path === "/api/v1/research/alphas/import/gates" ? "gates"
+        : path === "/api/v1/research/alphas/import/register" ? "registration"
+        : /^\/api\/v1\/research\/alphas\/[^/]+\/activate$/.test(path) ? "activation"
+        : null;
+      if (fixture === null) {
+        escaped.push(`${request.method()} ${path}`);
+        return route.abort();
+      }
+      writes.push(`${request.method()} ${path}`);
+      return route.fulfill({ status: 200, contentType: "application/json", body: alphaFixture(fixture) });
+    });
+
+    await page.goto("/research/quantbt/alpha-import");
+    const root = page.locator("[data-screen='alpha-import']");
+    await expect(root).toBeVisible({ timeout: 20_000 });
+    await page.waitForLoadState("networkidle");
+
+    /* Header: the HiFi title over the shared crumb, with the real endpoint family. */
+    await expect(root.locator("h1")).toHaveText("Alpha Import — standardize the code artifact");
+    await expect(root.locator(".ai-crumb [aria-current='page']")).toHaveText("Alpha Import");
+    await expect(root.locator("[data-meta]")).toContainText("POST /api/v1/research/alphas/import/*");
+    await expect(root.locator("[data-chip]")).toHaveCount(0);
+
+    /* Registry strip: a real read of this workspace's versions, entry by entry. */
+    const registryBefore = (await pageGet(page, "/api/v1/research/alphas")).body as { entries: any[] };
+    expect(registryBefore.entries.length, "the preview registry has a version to draw").toBeGreaterThan(0);
+    await expect(root.locator("[data-registry-entry]")).toHaveCount(registryBefore.entries.length);
+    for (const entry of registryBefore.entries) {
+      const chip = root.locator(`[data-registry-entry='${entry.alpha_version_id}']`);
+      await expect(chip).toHaveAttribute("data-lifecycle", entry.lifecycle_state);
+      await expect(chip).toContainText(entry.display_name);
+      await expect(chip).toContainText(entry.version_label);
+    }
+
+    /*
+     * Stepper: three authority states (DQ-06), each one's progress from its
+     * receipt. Read with `expect.poll`, not once: a receipt arriving re-renders
+     * the step it belongs to, so a single read can land mid-flight and see the
+     * state before it. Polling asserts the settled value without weakening it.
+     */
+    const stepper = () =>
+      root.locator("[data-step-marker]").evaluateAll((nodes) => nodes.map((node) => `${node.getAttribute("data-step-marker")}:${node.getAttribute("data-progress")}`));
+    await expect(root.locator("[data-step-marker]")).toHaveCount(3);
+    await expect.poll(stepper, { timeout: 15_000 }).toEqual(["1:open", "2:open", "3:open"]);
+
+    /* Step 1 — the mirror is the served mirror, row for row. */
+    await root.getByLabel("Alpha source text").fill(ALPHA_MODULE);
+    await root.locator("[data-action='parse']").click();
+    await expect(root.locator("[data-mirror-field]")).toHaveCount(source.mirror.length);
+    const mirror = () =>
+      root.locator("[data-mirror-field]").evaluateAll((nodes) =>
+        nodes.map((node) => [node.getAttribute("data-mirror-field"), node.getAttribute("data-mirror-state"), node.getAttribute("data-mirror-check")]),
+      );
+    await expect.poll(mirror, { timeout: 15_000 }).toEqual(source.mirror.map((field: any) => [field.field, field.state, field.check]));
+    for (const field of source.mirror) {
+      const row = root.locator(`[data-mirror-field='${field.field}']`);
+      await expect(row.locator("[data-mirror-verdict]")).toHaveAttribute("data-mirror-verdict", field.check);
+      if (field.state === "parsed") await expect(row.locator("dd.v")).toContainText(String(field.value));
+      else if (field.state === "server_computed") await expect(row.locator("dd.v")).toContainText(String(field.value).slice(0, 15));
+      /* A field with no value prints its typed absence, never a blank or a dash. */
+      else await expect(row.locator("[data-absent]")).toHaveAttribute("data-absent", field.state);
+    }
+    await expect(root.locator("[data-chip]")).toHaveAttribute("data-chip", "QUARANTINE");
+    await expect.poll(stepper, { timeout: 15_000 }).toEqual(["1:done", "2:open", "3:open"]);
+
+    /*
+     * Step 2 — seven gates, each one's state, message and timing source as
+     * served. While the one server request is in flight the screen honestly
+     * draws seven RUNNING rows (CG-P07-04), and the answer then replaces them
+     * with a 120ms stagger from zero. A single read is therefore racy — it can
+     * catch the RUNNING set or the empty moment between the two lists — so the
+     * exact triple is polled for instead.
+     */
+    await root.locator("[data-nav='2']").click();
+    await root.locator("[data-action='run-gates']").click();
+    const gateRows = () =>
+      root.locator("[data-gate]").evaluateAll((nodes) =>
+        nodes.map((node) => [node.getAttribute("data-gate"), node.getAttribute("data-gate-state"), node.querySelector("[data-gate-timing]")?.getAttribute("data-gate-timing") ?? null]),
+      );
+    await expect.poll(gateRows, { timeout: 20_000 }).toEqual(gates.gates.map((gate: any) => [gate.name, gate.state, gate.timing_source]));
+    for (const gate of gates.gates) {
+      await expect(root.locator(`[data-gate='${gate.name}'] [data-gate-message]`)).toContainText(gate.message);
+    }
+    await expect.poll(stepper, { timeout: 15_000 }).toEqual(["1:done", "2:done", "3:open"]);
+
+    /* Step 3 — the registry rows are the served registration; three rows no v1
+       response carries stay typed absences. */
+    await root.locator("[data-nav='3']").click();
+    await root.getByLabel("Alpha id").fill(registration.alpha_id);
+    await root.locator("[data-action='register']").click();
+    await expect(root.locator("[data-registration]")).toHaveAttribute("data-registration", registration.alpha_version_id);
+    await expect(root.locator("[data-reg-row='alpha_id']")).toContainText(registration.alpha_id);
+    await expect(root.locator("[data-reg-row='alpha_version_id']")).toContainText(registration.version_label);
+    await expect(root.locator("[data-reg-row='alpha_version_id']")).toContainText(registration.alpha_version_id);
+    await expect(root.locator("[data-reg-row='artifact digest']")).toContainText(registration.source_digest.slice(0, 8));
+    await expect(root.locator("[data-reg-row='import state']")).toContainText(`${registration.lifecycle_state} · rev ${registration.alpha_revision}`);
+    await expect(root.locator("[data-chip]")).toHaveAttribute("data-chip", registration.lifecycle_state);
+    for (const [key, code] of [["entrypoint", "REGISTRY_NOT_READ"], ["capability registration", "NOT_IN_V1_CONTRACT"], ["signed publication", "NOT_PUBLISHED"]] as const) {
+      await expect(root.locator(`[data-reg-row='${key}'] dd`)).toHaveAttribute("data-absent", code);
+    }
+    await expect.poll(stepper, { timeout: 15_000 }).toEqual(["1:done", "2:done", "3:done"]);
+
+    /* OL-01: running an imported version is a typed absence, never a live link. */
+    const notAdmitted = root.locator("[data-absent-action='new-run']");
+    await expect(notAdmitted).toHaveAttribute("data-absent-code", "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE");
+    expect(await notAdmitted.evaluate((node) => node.tagName), "the OL-01 absence is an element that can be followed").toBe("SPAN");
+    expect(await notAdmitted.getAttribute("href")).toBeNull();
+    expect(await notAdmitted.getAttribute("tabindex")).toBeNull();
+    await expect(root.locator("[data-where-next] a[href*='/runs/new']")).toHaveCount(0);
+    await expect(root.locator("[data-run-not-admitted]")).toContainText("Not admitted yet (OL-01)");
+
+    /* Activation is a registry action: the chip and the state row take the served lifecycle. */
+    await root.locator("[data-action='activate']").click();
+    await expect(root.locator("[data-chip]")).toHaveAttribute("data-chip", activation.lifecycle_state);
+    await expect(root.locator("[data-reg-row='import state']")).toContainText(`${activation.lifecycle_state} · rev ${activation.alpha_revision}`);
+
+    /* Nothing was written: four stubs, nothing aborted, and the real registry
+       is the one it was before — the fixture alpha never reached the preview. */
+    expect(writes, "S14 wrote somewhere this cell did not stub").toEqual([
+      "POST /api/v1/research/alphas/import/parse",
+      "POST /api/v1/research/alphas/import/gates",
+      "POST /api/v1/research/alphas/import/register",
+      `POST /api/v1/research/alphas/${registration.alpha_version_id}/activate`,
+    ]);
+    expect(escaped, "a write left the browser for the read-only preview").toEqual([]);
+    const registryAfter = (await pageGet(page, "/api/v1/research/alphas")).body as { entries: any[] };
+    expect(registryAfter.entries.map((entry) => entry.alpha_version_id), "the preview registry changed").toEqual(
+      registryBefore.entries.map((entry) => entry.alpha_version_id),
+    );
+    expect(registryAfter.entries.some((entry) => entry.alpha_id === registration.alpha_id), "the fixture alpha reached the preview").toBe(false);
+
+    expect(await axeBlocking(page, "[data-screen='alpha-import']")).toEqual([]);
+    await finish(page, `E20-S14-${name}`, observed, {
+      stubbed: writes,
+      escaped,
+      stub_note: "the POSTs listed in `requests` are this test's own route fulfillments; the preview answered none of them — registry_before/after is the proof",
+      registry_before: registryBefore.entries.map((entry) => entry.alpha_version_id),
+      registry_after: registryAfter.entries.map((entry) => entry.alpha_version_id),
+      mirror_rows: source.mirror.length,
+      gates: gates.gates.length,
+    });
+    expect(observed.failures, "S14 failed reads").toEqual([]);
+    expect(observed.noise, `S14 console:\n${observed.noise.join("\n")}`).toEqual([]);
+  });
+
+  /* ------------------------------- Screen 08 on the P04 run (equity sample) */
+  test(`E20 S08 P04 equity sample on real reads at ${name}`, async ({ page }) => {
+    const observed = observe(page);
+    await page.setViewportSize({ width, height });
+    await signIn(page);
+    await page.goto(`/research/quantbt/runs/${RUN}/execute`);
+    const root = page.locator("[data-screen='execute-replay']");
+    await expect(root).toBeVisible({ timeout: 20_000 });
+    await page.waitForLoadState("networkidle");
+
+    const read = await pageGet(page, `/api/v1/quantbt/runs/${RUN}/execute/replay`);
+    expect(read.status, "S08 P04 replay read").toBe(200);
+    const replay = read.body as any;
+    const items = replay.equity_replay.items as any[];
+    expect(items.length, "the P04 source published equity samples").toBeGreaterThan(1);
+
+    /* The P04 run reads the hub lane, and the header is the served contract. */
+    await expect(root).toHaveAttribute("data-lane", "hub");
+    await expect(root.locator("[data-route-id]").first()).toHaveText(replay.route.id);
+    await expect(root.locator("[data-route-state]").first()).toHaveAttribute("data-route-state", replay.route.state);
+    await expect(root.locator("[data-replay-contract]").first()).toContainText(replay.route.replay_contract);
+    await expect(root.locator("[data-readiness]").first()).toHaveAttribute("data-readiness", replay.readiness);
+    const sampling = root.locator("[data-sampling]").first();
+    await expect(sampling).toHaveAttribute("data-sampling", replay.equity_replay.sampling);
+    await expect(sampling).toContainText(`source observations ${replay.equity_replay.source_observation_count}`);
+    await expect(sampling).toContainText(`emitted samples ${replay.equity_replay.emitted_point_count}`);
+
+    /* The chart's accessible table is the whole loaded window, sample for sample. */
+    await expect(root.locator("[data-chart-table='replay-equity'] tbody tr")).toHaveCount(items.length);
+
+    /* Spec 08 §2.5's window of 14 rows around the playhead: the exact server
+       string rides the cell's title, and the reader sees it formatted. */
+    const window = Math.min(14, items.length);
+    await expect(root.locator("[data-sample-row]")).toHaveCount(window);
+    /* Settle before snapshotting, as on Screen 00. */
+    await expect
+      .poll(() => root.locator("[data-sample-row]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-sample-row"))), { timeout: 20_000 })
+      .toEqual(items.slice(0, window).map((item) => String(item.playback_ordinal)));
+    const ledger = await root.locator("[data-sample-row]").evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const cells = [...node.querySelectorAll("td")];
+        return {
+          ordinal: node.getAttribute("data-sample-row"),
+          equity: cells[2]?.textContent?.trim() ?? "",
+          equityExact: cells[2]?.getAttribute("title"),
+          drawdown: cells[3]?.textContent?.trim() ?? "",
+          drawdownExact: cells[3]?.getAttribute("title"),
+        };
+      }),
+    );
+    expect(ledger.map((row) => [row.ordinal, row.equityExact, row.drawdownExact])).toEqual(
+      items.slice(0, window).map((item) => [String(item.playback_ordinal), item.equity, item.drawdown_fraction]),
+    );
+    for (const row of ledger) {
+      expect(row.equity, `S08 ledger equity "${row.equity}" is not a displayed currency`).toMatch(/^\d{1,3}(,\d{3})*\.\d{2}$/);
+      expect(row.drawdown, `S08 ledger drawdown "${row.drawdown}" is not a displayed percentage`).toMatch(/^[+−]\d{1,3}(,\d{3})*\.\d{2}%$/);
+    }
+
+    /* E2b/DQ-08: no raw float from this response reaches the reader. The
+       chart's sr-only data table is the exact series by design, so it is
+       removed before looking — everything a reader sees must be formatted. */
+    const shown = await root.evaluate((node) => {
+      const copy = node.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll("style, .sr-only, [data-chart-table]").forEach((element) => element.remove());
+      return copy.textContent ?? "";
+    });
+    /* …and that copy really is what the reader sees, so the next loop is not
+       looking at an empty string. */
+    expect(shown, "the reader's copy of the ledger was not captured").toContain(ledger[0]!.equity);
+    for (const item of items) {
+      for (const raw of [item.equity, item.drawdown_fraction]) {
+        if (/\.\d{3,}/.test(String(raw))) expect(shown, `S08 prints the raw float ${raw}`).not.toContain(String(raw));
+      }
+    }
+
+    /* The playhead's own values are the first sample's, exact in their titles. */
+    const readout = root.locator("[data-playhead-readout]");
+    await expect(readout).toHaveAttribute("data-playhead-readout", String(items[0].playback_ordinal));
+    expect(await readout.locator("[title]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("title")))).toEqual([
+      String(items[0].equity),
+      String(items[0].drawdown_fraction),
+    ]);
+
+    /* The transport is drawn with its five glyphs, each one laid out and able
+       to move the playhead — the clock the rest of the screen listens to. */
+    const transport = await root.locator("[data-transport] button[aria-label]").evaluateAll((nodes) =>
+      nodes.map((node) => [node.getAttribute("aria-label"), node.textContent?.trim(), node.getBoundingClientRect().width > 0]),
+    );
+    expect(transport).toEqual([
+      ["window start", "|◀", true],
+      ["step back", "◀◀", true],
+      ["play", "▶", true],
+      ["step forward", "▶▶", true],
+      ["window end", "▶|", true],
+    ]);
+    expect(await root.locator("[data-transport] [data-speed]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-speed")))).toEqual(["1", "4", "16", "64"]);
+    await root.locator("[data-transport] button[aria-label='step forward']").click();
+    await expect(readout).toHaveAttribute("data-playhead-readout", String(items[1].playback_ordinal));
+    await expect(root.locator("[data-sample-row][data-play='true']")).toHaveAttribute("data-sample-row", String(items[1].playback_ordinal));
+
+    /* Every capability the route did not publish carries the server's own code —
+       candles above all: this run replays samples, and never draws a bar. */
+    for (const [key, fact] of Object.entries(replay.route_capabilities) as [string, any][]) {
+      const code = fact.reason_code ?? fact.availability?.reason_code;
+      if (!code) continue;
+      const chips = await root.locator(`[data-capability='${key}']`).evaluateAll((nodes) =>
+        nodes.map((node) => [node.getAttribute("data-capability-state"), node.querySelector("[data-reason-code]")?.textContent?.trim()]),
+      );
+      expect(chips.length, `S08 draws no capability row for ${key}`).toBeGreaterThan(0);
+      for (const chip of chips) expect(chip, `S08 ${key} does not carry the served reason`).toEqual([fact.state, code]);
+    }
+    expect(replay.route_capabilities.candle_windows.reason_code, "the P04 candle absence is typed").toBe("P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS");
+    await expect(root.locator("[data-candle-row]")).toHaveCount(0);
+
+    /* E2b left this screen at 0 px of horizontal overflow at 660; keep it there. */
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `S08 P04 horizontal overflow at ${width} (E2b closed a 91px one)`).toBe(0);
+
+    /* The absences are behind one disclosure; a reader can open it, and the
+       candle line is there in words, for every absence the server declared. */
+    const absences = Object.keys(replay.source_absences);
+    await expect(root.locator("[data-source-absences]")).toHaveAttribute("data-source-absences", String(absences.length));
+    await root.locator("[data-source-absences] > summary").click();
+    await expect(root.locator("[data-source-absence]")).toHaveCount(absences.length);
+    await expect(root.locator("[data-source-absence='candles']")).toBeVisible();
+    await expect(root.locator("[data-source-absence='candles']")).toContainText("candles — not published");
+    const openOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(openOverflow, `S08 P04 overflow at ${width} with the absences open`).toBe(0);
+
+    expect(await axeBlocking(page, "[data-screen='execute-replay']")).toEqual([]);
+    await finish(page, `E20-S08-P04-${name}`, observed, {
+      run: RUN,
+      route: replay.route,
+      readiness: replay.readiness,
+      sampling: replay.equity_replay.sampling,
+      source_observation_count: replay.equity_replay.source_observation_count,
+      emitted_point_count: replay.equity_replay.emitted_point_count,
+      ledger_rows: window,
+      candle_reason: replay.route_capabilities.candle_windows.reason_code,
+      source_absences: absences.length,
+      overflow,
+      overflow_absences_open: openOverflow,
+    });
+    expect(observed.failures, "S08 P04 failed reads").toEqual([]);
+    expect(observed.noise, `S08 P04 console:\n${observed.noise.join("\n")}`).toEqual([]);
+  });
+}

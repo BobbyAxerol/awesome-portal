@@ -30,6 +30,7 @@ import {
   type EvidenceHub,
   type EvidenceSeries,
   type Metric,
+  type RetainedAnalytics,
 } from "./evidenceClient";
 import {
   DEFAULT_CURSOR,
@@ -207,6 +208,9 @@ function equitySeries(overrides: Partial<EvidenceSeries> = {}): EvidenceSeries {
 }
 
 const OK = researchState({ kind: "ok", rowCount: 5 });
+
+const E11_ANALYTICS = JSON.parse(readFileSync(join(process.cwd(), "..", "..", "..", "packages", "contracts",
+  "fixtures", "research-retained-analytics.fixed.valid.json"), "utf8")) as RetainedAnalytics;
 
 function view(overrides: Partial<React.ComponentProps<typeof EvidenceFlow>> = {}) {
   return render(
@@ -1738,5 +1742,51 @@ describe("E11 — what the retained lane now publishes, and what it names as abs
     const { container } = view({ hub: W3B.hub_evidence, passport: e11Passport, runIdentity: W3B_IDENTITY });
     expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-absence-note]")?.getAttribute("data-reason-code"))
       .toBe("RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES");
+  });
+});
+
+// After the lazy-loading receipt above: these cases intentionally load ECharts.
+describe("E11 · sealed summary analytics are bound without recomputation or authority mixing", () => {
+  it("draws the source IS points and retains exact strings and their scope", async () => {
+    const { container } = view({ hub: hub({ summary_analytics: E11_ANALYTICS }),
+      series: new Map([["EQUITY_OOS", { state: "ready", series: equitySeries() }]]) });
+    await waitFor(() => expect(container.querySelector('[data-chart-table="equity-is"]')).toBeTruthy());
+    expect(container.querySelector('[data-chart-table="equity-is"]')?.textContent).toContain("102");
+    expect(container.querySelector('[data-series-authority="EQUITY_IS"]')?.textContent).toContain("DECLARED_IS");
+    expect(container.querySelector('[data-summary-trade-count]')?.getAttribute("data-trade-scope")).toBe("CHILD_TAPE");
+    expect(container.querySelector('[data-summary-trade-count] [data-exact]')?.getAttribute("data-exact")).toBe("4");
+    expect(container.querySelector('[data-summary-trade-count]')?.textContent).toContain("not an audited fill count");
+  });
+
+  it("renders source behaviour values in the existing eight cells and missing facts with their own reasons", () => {
+    const { container } = view({ hub: hub({ summary_analytics: E11_ANALYTICS }) });
+    expect(container.querySelectorAll("[data-behavior-tile]")).toHaveLength(8);
+    expect(container.querySelector('[data-behavior-tile="turnover"] [data-exact]')?.getAttribute("data-exact")).toBe("450");
+    expect(container.querySelector('[data-behavior-tile="exposure"] [data-exact]')?.getAttribute("data-exact")).toBe("0.5");
+    expect(container.querySelector('[data-behavior-tile="win rate"] [data-exact]')).toBeNull();
+    expect(container.querySelector('[data-behavior-tile="win rate"]')?.innerHTML).toContain("QUANTBT_ROUTE_PUBLISHES_NO_AUDITED_TRADE_LEDGER");
+  });
+
+  it("consumes inline rolling Sharpe without requesting another series or inventing a short-window value", () => {
+    const ensureSeries = vi.fn();
+    const { container } = view({ hub: hub({ summary_analytics: E11_ANALYTICS }), ensureSeries });
+    const panel = container.querySelector('[data-series-panel="ROLLING_SHARPE_63"]');
+    expect(panel?.getAttribute("data-series-state")).toBe("absent");
+    expect(panel?.innerHTML).toContain("P13_OOS_DAILY_RETURNS_BELOW_ROLLING_WINDOW");
+    expect(ensureSeries.mock.calls.some(([kind]) => kind === "ROLLING_SHARPE_63")).toBe(false);
+  });
+
+  it("draws available inline rolling Sharpe, preserving the server's exact value", async () => {
+    const summary: RetainedAnalytics = { ...E11_ANALYTICS, rolling_sharpe_63: {
+      ...E11_ANALYTICS.rolling_sharpe_63, state: "AVAILABLE", reason_code: null,
+      daily_return_count: 70, source_observation_count: 7, emitted_point_count: 1, sampling: "EXTREMA_BUCKET_V1",
+      points: [{ at_utc_ms: 1725000000000, sharpe: "1.23456789" }],
+    } };
+    const ensureSeries = vi.fn();
+    const { container } = view({ hub: hub({ summary_analytics: summary }), ensureSeries });
+    await waitFor(() => expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"] [data-chart-table]')).toBeTruthy());
+    expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"]')?.textContent).toContain("1.23456789");
+    expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"]')?.getAttribute("data-series-state")).toBe("ready");
+    expect(ensureSeries.mock.calls.some(([kind]) => kind === "ROLLING_SHARPE_63")).toBe(false);
   });
 });

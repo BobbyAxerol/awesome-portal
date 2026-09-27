@@ -9,7 +9,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AtlasDocument } from "./atlas";
-import { EngineAtlas, atlasHash, atlasLocationFromHash, governingStage, type AtlasLocation, type AtlasRunCell, type AtlasTab } from "./EngineAtlas";
+import { EngineAtlas, atlasHash, atlasLocationFromHash, governingStage, sharedAvoidWhen, symbolGutterCh, type AtlasLocation, type AtlasRunCell, type AtlasTab } from "./EngineAtlas";
 import { formulaToTex } from "./Formula";
 import { researchState } from "./state";
 
@@ -87,10 +87,24 @@ describe("spec 12 §2 — the claim comes from mode × schedule", () => {
     fireEvent.click(within(card).getByRole("button", { name: /per_fold_causal/ }));
     expect(card.querySelector("[data-claim]")?.textContent).toBe("strict_outer_oos_after_frozen_selection");
     expect(card.querySelector('[data-not-published="cert_cap"]')?.textContent).toMatch(/certifies an execution route/);
+    /* RF-04: the five modes share one avoid-when sentence, so it is said once
+       under the table and the per-row column is gone. It is still said. */
     const table = document.querySelector("[data-mode-table]") as HTMLElement;
-    expect(within(table).getAllByText(/publishes no avoid-when guidance/)).toHaveLength(5);
+    expect(within(table).getAllByText(/publishes no avoid-when guidance/)).toHaveLength(1);
+    expect(table.querySelector("[data-avoid-when-shared]")?.textContent).toMatch(/avoid when · not published/);
+    expect(table.querySelectorAll('[data-mode-row="mode_1_decay"] td')).toHaveLength(2);
     // No cap is invented from the HiFi's sample letters.
     expect(card.textContent).not.toMatch(/≤ C|\bcap B\b/);
+  });
+
+  it("keeps a per-mode avoid-when column when the modes do not share one sentence", () => {
+    const modes = DOC.modes.map((mode, index) =>
+      index === 0 && mode.facts
+        ? { ...mode, facts: { ...mode.facts, avoid_when: { ...mode.facts.avoid_when, reason: "Its own reason." } } }
+        : mode,
+    );
+    expect(sharedAvoidWhen(modes)).toBeNull();
+    expect(sharedAvoidWhen(DOC.modes)?.reason).toMatch(/publishes no avoid-when guidance/);
   });
 
   it("cites the pinned source of every fact it shows", () => {
@@ -186,9 +200,15 @@ describe("Q4 / D-4 and the release facts panel", () => {
   it("publishes the release facts a researcher needs before declaring a run", () => {
     view("routes");
     const facts = document.querySelector("[data-release-facts]") as HTMLElement;
-    expect(facts.textContent).toContain(`trial ceiling${DOC.current_release.trial_ceiling}`);
+    /* E1: an exact integer is grouped, and the 64-character digest is short on
+       screen with the whole value still carried for a reader who needs it. */
+    expect(facts.textContent).toContain("trial ceiling4,000");
     expect(facts.textContent).toContain("p10.fixed-qualification.v1");
-    expect(facts.textContent).toContain(DOC.current_release.config_digest!);
+    const digest = facts.querySelector("[data-config-digest]") as HTMLElement;
+    expect(digest.getAttribute("data-config-digest")).toBe(DOC.current_release.config_digest);
+    expect(digest.getAttribute("title")).toBe(DOC.current_release.config_digest);
+    expect(digest.textContent).toBe(DOC.current_release.config_digest!.slice(0, 8));
+    expect(facts.querySelector("[data-preflight-limits]")?.textContent).toContain("cpu 86,400 s");
     expect(facts.querySelectorAll("[data-default-group]")).toHaveLength(4);
     expect(facts.querySelector("[data-walk-forward-options]")?.textContent).toContain("expanding/rolling");
     expect(facts.querySelector("[data-preflight-limits]")?.textContent).toContain("sweep dims 8");
@@ -294,5 +314,70 @@ describe("E7 / D9 — the HiFi's density (Unified 13.4.1)", () => {
     const claim = DOC.claims.find((item) => item.qualifier)!;
     expect(document.querySelector(`[data-contract="${claim.contract_id}"]`)?.textContent).toContain(`${claim.engine_certification} · ${claim.qualifier!.level_name}`);
     expect(document.querySelector('[data-tab-card="claims"]')?.textContent).toContain("The two chips on the Release Candidate screen carry the axes separately.");
+  });
+});
+
+describe("RF-04 — S12 density against the HiFi, and what is honestly bigger", () => {
+  it("sizes the symbol gutter from the symbols the manifest publishes, and drops it when they stop fitting", () => {
+    /* The HiFi's sample symbols are names; a 140 px gutter fits them. */
+    expect(symbolGutterCh([{ symbol: "S_OOS" }, { symbol: "std_decay" }])).toBe(23);
+    expect(symbolGutterCh([{ symbol: "d_k = is_sharpe_k - oos_sharpe_k" }])).toBe(32);
+    /* QuantBT 1.1.1 publishes whole expressions; past the cap the gutter stops
+       paying for itself and the term stacks instead. */
+    expect(symbolGutterCh([{ symbol: "plateau_score = q + plateau_median_weight * median - plateau_std_penalty * std + plateau_size_bonus * log1p(n)" }])).toBeNull();
+  });
+
+  it("uses the gutter for name-shaped symbols and stacks expression-shaped ones", () => {
+    view("modes");
+    const short = document.querySelector('[data-mode="mode_1_decay"] [data-objective-term-table]') as HTMLElement;
+    expect([...short.children].every((row) => row.getAttribute("data-term-layout") === "gutter")).toBe(true);
+    const long = document.querySelector('[data-mode="mode_4_is_only_robust"] [data-objective-term-table]') as HTMLElement;
+    expect([...long.children].every((row) => row.getAttribute("data-term-layout") === "stacked")).toBe(true);
+  });
+
+  it("names the cap it applies and serves every term the manifest published", () => {
+    view("modes");
+    for (const mode of DOC.modes) {
+      const objective = mode.facts?.objective;
+      const published = objective && "terms" in objective ? (objective.terms ?? []) : [];
+      if (published.length === 0) continue;
+      const card = document.querySelector(`[data-mode="${mode.mode_id}"]`) as HTMLElement;
+      const shown = card.querySelectorAll("[data-objective-term-table] [data-objective-term]");
+      const hidden = card.querySelectorAll("[data-objective-term-table-more] [data-objective-term]");
+      /* Never a silent slice: shown + hidden is everything the engine served. */
+      expect(shown.length + hidden.length, mode.mode_id).toBe(published.length);
+      /* And the summary says what it caps, in the open — or that nothing is capped. */
+      expect(card.querySelector("[data-objective-more] summary")?.textContent, mode.mode_id).toContain(
+        hidden.length > 0 ? `${shown.length} of ${published.length} terms` : `all ${published.length} terms shown`,
+      );
+    }
+  });
+
+  it("says when_to_use once — in the table the HiFi keeps it in, not also in the card", () => {
+    view("modes");
+    for (const mode of DOC.modes) {
+      if (!mode.when_to_use) continue;
+      expect(screen.getAllByText(mode.when_to_use), mode.mode_id).toHaveLength(1);
+      expect((document.querySelector(`[data-mode-row="${mode.mode_id}"]`) as HTMLElement).textContent).toContain(mode.when_to_use);
+    }
+  });
+
+  it("keeps the governing stage on the column's label row, not on a line of its own", () => {
+    view("modes");
+    const card = document.querySelector('[data-mode="mode_1_decay"]') as HTMLElement;
+    const label = card.querySelector('[data-mode-column="objective"] > span:first-child') as HTMLElement;
+    expect(label.textContent).toContain("objective — Stage 2 opens every term");
+    expect(label.querySelector("[data-governing-stage]")?.getAttribute("data-governing-stage")).toBe("oos_candidate_selection");
+    expect(label.textContent).toContain("maximize");
+    /* The lead block is the formula alone. */
+    expect((card.querySelector("[data-objective-lead]") as HTMLElement).children).toHaveLength(1);
+  });
+
+  it("puts the release facts on the tab row rather than in a band of its own", () => {
+    view("modes");
+    const tablist = document.querySelector('[role="tablist"]') as HTMLElement;
+    const facts = document.querySelector("[data-release-facts]") as HTMLElement;
+    expect(facts.parentElement).toBe(tablist.parentElement);
+    expect((facts as HTMLDetailsElement).open).toBe(false);
   });
 });

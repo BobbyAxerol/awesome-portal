@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CLOSE_TARGET_NOTICE, REVEAL_HIDDEN, paddedRange, windowMarkers } from "./ExecuteCandleReplay";
+import { CandleOverviewStrip, CLOSE_TARGET_NOTICE, REVEAL_HIDDEN, paddedRange, windowMarkers } from "./ExecuteCandleReplay";
 import { ExecuteRoute } from "./ExecuteRoute";
 import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
@@ -64,6 +64,39 @@ const W3 = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3Rea
   split: { fold_plan: { folds: { fold_id: string; train_start_utc_ms: number; train_end_utc_ms: number; test_start_utc_ms: number; test_end_utc_ms: number }[] } };
 };
 const RUN = FOLD0.run_id;
+
+describe("E16 · overview reveal cannot leak a future bucket or its price scale", () => {
+  const overview = {
+    source_bar_count: 8, emitted_bucket_count: 2, bucket_bars: 4, sampling: "OHLC_BUCKET_V1" as const,
+    envelope: { max_high: "9999", min_low: "1" },
+    values: [
+      { first_ordinal: 0, last_ordinal: 3, open_utc_ms: 0, close_utc_ms: 3,
+        open: "10", high: "12", low: "8", close: "11", volume: null, transitions: null },
+      { first_ordinal: 4, last_ordinal: 7, open_utc_ms: 4, close_utc_ms: 7,
+        open: "11", high: "9999", low: "1", close: "9000", volume: null, transitions: null },
+    ],
+  };
+  it("withholds a bucket whose first bar is past but whose last bar is still future", () => {
+    const { container } = render(<CandleOverviewStrip overview={overview} scope="OOS" label="overview" cutOrdinal={1} />);
+    expect(container.querySelectorAll("svg line")).toHaveLength(0);
+    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("range withheld");
+    expect(container.textContent).not.toContain("9999");
+  });
+  it("draws and scales only completed buckets, not the envelope's future extrema", () => {
+    const { container } = render(<CandleOverviewStrip overview={overview} scope="OOS" label="overview" cutOrdinal={5} />);
+    const lines = container.querySelectorAll("svg line");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.getAttribute("y1")).toBe("2");
+    expect(lines[0]?.getAttribute("y2")).toBe("22");
+    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("revealed range 8 – 12");
+    expect(container.textContent).not.toContain("9999");
+  });
+  it("keeps the complete sealed overview unchanged when reveal is off", () => {
+    const { container } = render(<CandleOverviewStrip overview={overview} scope="OOS" label="overview" />);
+    expect(container.querySelectorAll("svg line")).toHaveLength(2);
+    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("range 1 – 9999");
+  });
+});
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });

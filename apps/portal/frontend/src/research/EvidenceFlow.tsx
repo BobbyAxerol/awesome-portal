@@ -47,6 +47,7 @@ import {
   type OosPerformance,
   type PerformanceMetric,
   type RetainedSeriesKind,
+  type RetainedAnalytics,
   type SeriesKind,
 } from "./evidenceClient";
 import {
@@ -1793,6 +1794,7 @@ function RollingHalf({
   onNeeded,
   absentExtra,
   children,
+  inline,
 }: {
   kind: SeriesKind;
   label: string;
@@ -1801,17 +1803,25 @@ function RollingHalf({
   onNeeded: (kind: SeriesKind) => void;
   absentExtra?: ReactNode;
   children: (series: EvidenceSeries) => ReactNode;
+  inline?: RetainedAnalytics["rolling_sharpe_63"];
 }) {
-  const { body, state, ready } = useSeriesBody({
+  const served = useSeriesBody({
     kind,
-    link,
+    link: inline === undefined ? link : undefined,
     slot,
     onNeeded,
     emptyReason: "the source published this window with no points, so no line is drawn.",
     absentExtra,
     children,
   });
-  const drawn = ready !== null && ready.values.length > 0;
+  const ready = served.ready;
+  const drawn = inline === undefined ? ready !== null && ready.values.length > 0 : inline.state === "AVAILABLE" && inline.points.length > 0;
+  const state = inline === undefined ? served.state : drawn ? "ready" : "absent";
+  const body = inline === undefined ? served.body : drawn ? (
+    <ChartFrame height={230}><RollingSharpeChart points={inline.points} /></ChartFrame>
+  ) : <AbsenceNote availability={{ state: inline.state, reason_code: inline.reason_code }} extra={
+    inline.daily_return_count === null ? undefined : <span className="mono">({inline.daily_return_count} daily UTC returns published; the window needs 63.)</span>
+  } />;
   return (
     <div className="flex min-w-0 flex-col gap-1.5" data-series-panel={kind} data-series-state={state}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -1819,6 +1829,9 @@ function RollingHalf({
           {label}
         </span>
         {ready ? <SamplingLine series={ready} /> : null}
+        {inline?.state === "AVAILABLE" ? <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-sampling={inline.sampling ?? undefined}>
+          {inline.emitted_point_count} points from {inline.source_observation_count} source observations · {inline.sampling}
+        </span> : null}
       </div>
       {drawn ? (
         body
@@ -1847,12 +1860,14 @@ function RollingFigure({
   series,
   ensureSeries,
   retained = false,
+  summary = null,
 }: {
   hub: EvidenceHub;
   series: ReadonlyMap<SeriesKind, SeriesSlot>;
   ensureSeries: (kind: SeriesKind) => void;
   /** W3b: the links are the retained lane's; the footnote says so. */
   retained?: boolean;
+  summary?: RetainedAnalytics | null;
 }) {
   const linkFor = (kind: SeriesKind) => hub.series.find((entry) => entry.kind === kind);
   const sample = hub.oos_performance?.return_sample ?? null;
@@ -1884,6 +1899,7 @@ function RollingFigure({
           slot={series.get("ROLLING_SHARPE_63")}
           onNeeded={ensureSeries}
           absentExtra={belowWindow}
+          inline={summary?.rolling_sharpe_63}
         >
           {(loaded) => (
             <ChartFrame height={230}>
@@ -1908,7 +1924,9 @@ function RollingFigure({
         </RollingHalf>
       </div>
       <div className="mt-2 text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
-        {retained
+        {summary?.rolling_sharpe_63.state === "AVAILABLE"
+          ? "Read from the run's sealed source-time analytics — QuantBT rolling Sharpe over 63 daily OOS returns; the UI computes nothing."
+          : retained
           ? "The retained walk-forward lane publishes neither series, so neither is drawn; the UI computes nothing."
           : "Read from the Evidence Hub's rolling series — QuantBT's rolling Sharpe over 63 daily OOS returns; the UI computes nothing."} A Sharpe that only lives in one regime, or a beta drifting toward 1, is a behavior
         finding the headline tiles cannot show.
@@ -2543,12 +2561,14 @@ function RetainedEquityPanels({
   onNeeded,
   boundaries,
   inSampleAbsence,
+  inSample,
 }: {
   slot: RetainedSeriesSlot;
   onNeeded: () => void;
   boundaries: FoldBoundary[];
   /** E11 / audit 04-7: why this chart has no IS series. */
   inSampleAbsence: Availability;
+  inSample?: RetainedAnalytics["in_sample_equity"];
 }) {
   useEffect(() => {
     onNeeded();
@@ -2585,13 +2605,12 @@ function RetainedEquityPanels({
         </figcaption>
         {state((drawn) => (
           <ChartFrame height={380}>
-            <EquityChart points={drawn} boundaries={boundaries} />
+            <EquityChart points={drawn} boundaries={boundaries} inSample={inSample?.state === "AVAILABLE" ? inSample.points : undefined} />
           </ChartFrame>
         ))}
-        {/* HiFi EChart 1 is "IS vs stitched OOS", two series and a legend.
-            This lane retains one stitched account, so the second series is
-            stated as absent rather than silently missing (audit 04-7). */}
-        <p
+        {/* Bind the separately published IS curve, or keep the lane's own
+            typed absence. The idle prefix of a WFO account is not IS. */}
+        {inSample?.state === "AVAILABLE" ? <InSampleNote curve={inSample} /> : <p
           className="mt-2 text-[11px] leading-[1.45]"
           style={{ color: "var(--ink-soft)" }}
           data-series-absent="EQUITY_IS"
@@ -2600,7 +2619,7 @@ function RetainedEquityPanels({
           No IS equity series is drawn:{" "}
           {reasonCodeSentence(inSampleAbsence.reason_code)
             ?? "the retained walk-forward lane publishes no in-sample account, and this screen does not compute one."}
-        </p>
+        </p>}
         {ready ? (
           <div className="mono mt-2 flex flex-wrap gap-x-4 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-retained-provenance>
             <span>source retained current-source · {ready.provenance.profile_id}</span>
@@ -3112,7 +3131,22 @@ const BEHAVIOR_TILES = [
   "turnover",
 ] as const;
 
-function BehaviorCard({ retained = null }: { retained?: CurrentSourceEvidence | null }) {
+const SUMMARY_BEHAVIOR = [
+  ["win rate", "win_rate", "fraction"], ["payoff", "payoff_ratio", "ratio"],
+  ["avg holding", "average_hold_seconds", "seconds"], ["turnover", "turnover_notional", "currency"],
+  ["max consec loss", "max_consecutive_losses", "count"], ["exposure", "exposure_fraction", "fraction"],
+] as const;
+
+function InSampleNote({ curve }: { curve: RetainedAnalytics["in_sample_equity"] }) {
+  return <p className="mt-2 text-[11px] leading-[1.45]" style={{ color: "var(--ink-soft)" }}
+    data-series-authority="EQUITY_IS" data-absence-reason={curve.reason_code ?? undefined} title={curve.source_locator}>
+    {curve.state === "AVAILABLE"
+      ? `${curve.emitted_point_count} of ${curve.source_observation_count} IS observations · ${curve.scope} · ${curve.sampling}`
+      : <>No IS equity series is drawn: <Withheld availability={{ state: curve.state, reason_code: curve.reason_code }} /></>}
+  </p>;
+}
+
+function BehaviorCard({ retained = null, summary = null }: { retained?: CurrentSourceEvidence | null; summary?: RetainedAnalytics | null }) {
   const benchmark = retained ? ((retained as Partial<CurrentSourceEvidence>).source_absences?.benchmark ?? null) : null;
   const reasonFor = (label: string): Availability =>
     retained === null
@@ -3120,6 +3154,9 @@ function BehaviorCard({ retained = null }: { retained?: CurrentSourceEvidence | 
       : label.includes("benchmark") && benchmark
         ? { state: benchmark.state as Availability["state"], reason_code: benchmark.reason_code ?? null }
         : RETAINED_NO_FIELD;
+  // Keep the existing eight-cell frame: the six named source facts and two
+  // benchmark cells. Old responders keep their original typed placeholders.
+  const labels: readonly string[] = summary ? [...SUMMARY_BEHAVIOR.map(([label]) => label), "beta vs benchmark", "corr vs benchmark"] : BEHAVIOR_TILES;
   return (
     <section
       className="flex min-w-0 flex-[1_1_340px] flex-col gap-1.5 rounded-[8px] border p-3.5"
@@ -3129,11 +3166,14 @@ function BehaviorCard({ retained = null }: { retained?: CurrentSourceEvidence | 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <PanelLabel>behavior — engine-published, UI renders</PanelLabel>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          {retained ? "retained walk-forward lane" : "segment not published"}
+          {summary ? "segment OOS" : retained ? "retained walk-forward lane" : "segment not published"}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        {BEHAVIOR_TILES.map((label) => (
+        {labels.map((label) => {
+          const definition = SUMMARY_BEHAVIOR.find(([name]) => name === label);
+          const metric = summary && definition ? summary.behaviour[definition[1]] : null;
+          return (
           <span
             key={label}
             className="flex min-w-0 flex-col gap-px rounded-[6px] border px-2.5 py-1.5"
@@ -3143,16 +3183,21 @@ function BehaviorCard({ retained = null }: { retained?: CurrentSourceEvidence | 
             <span className="text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
               {label}
             </span>
-            <Withheld availability={reasonFor(label)} />
+            {metric?.state === "AVAILABLE" && metric.value !== null ? <span className="mono text-[14px] font-semibold"
+              data-exact={metric.value} data-behavior-origin={metric.origin} data-behavior-scope={metric.scope}
+              title={`${metric.value} · ${metric.source_locator} · ${metric.origin} · ${metric.scope}`}>
+              {formatMetric(metric.value, definition?.[2])?.replace(/^\+/, "") ?? metric.value}
+            </span> : <Withheld availability={metric ? { state: metric.state, reason_code: metric.reason_code } : reasonFor(label)} />}
           </span>
-        ))}
+        ); })}
       </div>
       <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
-        {retained
+        {summary
+          ? "Values are the run's sealed OOS facts with ENGINE_DIRECT or SOURCE_DERIVED authority; missing facts retain their own reason. "
+          : retained
           ? "The retained walk-forward lane publishes no behaviour analytic, and no benchmark for the two benchmark tiles. "
           : "No behaviour analytic is published for this run. "}
-        These tiles stay empty rather than being computed from the equity series, which would make the chart the source
-        of a number the engine never issued.
+        The UI computes no analytic from the equity series.
       </span>
     </section>
   );
@@ -3188,6 +3233,7 @@ function SummaryTab({
   /* W3: a sealed retained WFO run answers the equity, underwater and verdict
      panels from its retained lane; every other run keeps the Hub's. */
   const retained = passport.state === "ready" ? passport.evidence : null;
+  const summary = retained ? retained.summary_analytics ?? null : hub.summary_analytics ?? null;
   /* Optional: a pre-W3 responder sends the passport without these blocks. */
   const verdicts = (retained as Partial<CurrentSourceEvidence> | null)?.fold_verdicts ?? null;
   const boundaries: FoldBoundary[] = verdicts
@@ -3262,9 +3308,10 @@ function SummaryTab({
           onNeeded={ensureRetainedSeries}
           boundaries={boundaries}
           inSampleAbsence={laneAbsence(
-            (retained as Partial<CurrentSourceEvidence> | null)?.source_absences?.in_sample_account,
+            summary?.in_sample_equity ?? (retained as Partial<CurrentSourceEvidence> | null)?.source_absences?.in_sample_account,
             RETAINED_NO_SERIES,
           )}
+          inSample={summary?.in_sample_equity}
         />
       ) : null}
 
@@ -3281,6 +3328,7 @@ function SummaryTab({
         footer={(loaded) => (
           <>
             <ProvenanceRow hub={hub} series={loaded} kind="EQUITY_OOS" />
+            {summary ? <InSampleNote curve={summary.in_sample_equity} /> : null}
             {hub.warnings.length > 0 ? (
               <ul className="mt-2 flex flex-col gap-0.5" data-warnings>
                 {hub.warnings.map((warning) => (
@@ -3302,7 +3350,7 @@ function SummaryTab({
       >
         {(loaded) => (
           <ChartFrame height={380}>
-            <EquityChart series={loaded} />
+            <EquityChart series={loaded} inSample={summary?.in_sample_equity.state === "AVAILABLE" ? summary.in_sample_equity.points : undefined} />
           </ChartFrame>
         )}
       </SeriesPanel>
@@ -3340,7 +3388,7 @@ function SummaryTab({
       )}
 
       <div className="flex flex-wrap gap-3.5">
-        <RollingFigure hub={laneHub} series={laneSeries} ensureSeries={laneEnsure} retained={retained !== null} />
+        <RollingFigure hub={laneHub} series={laneSeries} ensureSeries={laneEnsure} retained={retained !== null} summary={summary} />
         <SeriesPanel
           kind="RETURN_DISTRIBUTION"
           chartNo={4}
@@ -3374,7 +3422,7 @@ function SummaryTab({
         >
           {(loaded) => <MonthlyHeat series={loaded} />}
         </SeriesPanel>
-        <BehaviorCard retained={retained} />
+        <BehaviorCard retained={retained} summary={summary} />
       </div>
 
       {/*
@@ -3409,6 +3457,14 @@ function SummaryTab({
         {retained
           ? "The retained equity above draws every retained observation up to 2,000 and names its extrema past that; each retained series names its own sampling."
           : `Every Hub series is capped at ${SERIES_POINT_CAP} points by the contract.`}
+        {summary ? <span data-summary-trade-count data-trade-scope={summary.total_trade_count.scope}
+          title={summary.total_trade_count.source_locator}>
+          {" "}Engine total trades ({summary.total_trade_count.scope}):{" "}
+          {summary.total_trade_count.state === "AVAILABLE" && summary.total_trade_count.value !== null
+            ? <span data-exact={summary.total_trade_count.value}>{formatMetric(summary.total_trade_count.value, "count")}</span>
+            : <Withheld availability={{ state: summary.total_trade_count.state, reason_code: summary.total_trade_count.reason_code }} />}.
+          {" "}This is not an audited fill count or the per-fold OOS trade total.
+        </span> : null}
       </p>
 
       <PassportPanel slot={passport} onNeeded={ensurePassport} skip={passportSkip} />

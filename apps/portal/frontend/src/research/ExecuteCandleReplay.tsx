@@ -432,29 +432,98 @@ function FoldStrip({
 
 /** The whole run as extrema-keeping OHLC buckets, with the fold windows shaded. */
 function OverviewStrip({ replay, activeFold, cutOrdinal }: { replay: CurrentSourceReplay; activeFold: string | null; cutOrdinal: number | null }) {
-  const overview = replay.execution.candle_overview!;
-  const segments = replay.execution.fold_capital.segments;
-  const hi = Number(overview.envelope.max_high);
-  const lo = Number(overview.envelope.min_low);
+  return (
+    <CandleOverviewStrip
+      overview={replay.execution.candle_overview!}
+      segments={replay.execution.fold_capital.segments.map((segment) => ({
+        key: segment.fold_id,
+        first_ordinal: segment.first_ordinal,
+        last_ordinal: segment.last_ordinal,
+        active: segment.fold_id === activeFold,
+      }))}
+      cutOrdinal={cutOrdinal}
+      scope="whole run"
+      shading="shaded = OOS fold windows"
+      label="whole-run price range with the fold windows"
+    />
+  );
+}
+
+/**
+ * E16-R1 · the one OHLC overview drawing both lanes use.
+ *
+ * The retained WFO lane shades its fold windows over it; the P04 hub lane has
+ * no folds on this read and draws the same buckets without shading. Keeping
+ * one component keeps one caption vocabulary, so a reader who learns to read
+ * the strip on one lane can read it on the other.
+ *
+ * The caption always says it is a downsample and always names the bucket size:
+ * a strip that looked like every bar when it is one line per 61 bars would be
+ * the dishonest part, not the downsample itself.
+ */
+export type CandleOverviewBucket = {
+  first_ordinal: number;
+  last_ordinal: number;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+};
+
+export type CandleOverviewFacts = {
+  source_bar_count: number;
+  emitted_bucket_count: number;
+  bucket_bars: number;
+  sampling: "FULL" | "OHLC_BUCKET_V1";
+  envelope: { max_high: string; min_low: string };
+  values: readonly CandleOverviewBucket[];
+};
+
+export function CandleOverviewStrip({
+  overview,
+  segments = [],
+  cutOrdinal = null,
+  scope,
+  shading,
+  label,
+}: {
+  overview: CandleOverviewFacts;
+  segments?: readonly { key: string; first_ordinal: number; last_ordinal: number; active: boolean }[];
+  cutOrdinal?: number | null;
+  scope: string;
+  shading?: string;
+  label: string;
+}) {
+  // A multi-bar bucket is known only after its last bar. Neither a wick,
+  // colour, autoscale bound nor caption may reveal its future suffix.
+  const visible = overview.values.filter((bucket) => cutOrdinal === null || bucket.last_ordinal <= cutOrdinal);
+  const highBucket = visible.reduce<CandleOverviewBucket | null>((best, bucket) =>
+    best === null || Number(bucket.high) > Number(best.high) ? bucket : best, null);
+  const lowBucket = visible.reduce<CandleOverviewBucket | null>((best, bucket) =>
+    best === null || Number(bucket.low) < Number(best.low) ? bucket : best, null);
+  const high = cutOrdinal === null ? overview.envelope.max_high : highBucket?.high ?? null;
+  const low = cutOrdinal === null ? overview.envelope.min_low : lowBucket?.low ?? null;
+  const hi = high === null ? 0 : Number(high);
+  const lo = low === null ? 0 : Number(low);
   const n = overview.source_bar_count;
   const y = (value: number) => (hi === lo ? 12 : 22 - ((value - lo) / (hi - lo)) * 20);
   const x = (ordinal: number) => (ordinal / Math.max(1, n - 1)) * 100;
   return (
     <div className="flex flex-col gap-0.5" data-overview={overview.sampling}>
-      <svg viewBox="0 0 100 24" preserveAspectRatio="none" className="h-[34px] w-full" role="img" aria-label="whole-run price range with the fold windows">
+      <svg viewBox="0 0 100 24" preserveAspectRatio="none" className="h-[34px] w-full" role="img" aria-label={label}>
         {segments.map((segment) => (
           <rect
-            key={segment.fold_id}
+            key={segment.key}
             x={x(segment.first_ordinal)}
             y={0}
             width={Math.max(0.3, x(segment.last_ordinal) - x(segment.first_ordinal))}
             height={24}
-            fill={segment.fold_id === activeFold ? "var(--role-oos)" : "var(--line-soft)"}
-            opacity={segment.fold_id === activeFold ? 0.22 : 0.5}
+            fill={segment.active ? "var(--role-oos)" : "var(--line-soft)"}
+            opacity={segment.active ? 0.22 : 0.5}
           />
         ))}
         {/* E2b (audit 8.15): under causal reveal the whole-run strip shows no candle past the cursor either. */}
-        {overview.values.filter((bucket) => cutOrdinal === null || bucket.first_ordinal <= cutOrdinal).map((bucket) => (
+        {visible.map((bucket) => (
           <line
             key={bucket.first_ordinal}
             x1={x((bucket.first_ordinal + bucket.last_ordinal) / 2)}
@@ -468,12 +537,14 @@ function OverviewStrip({ replay, activeFold, cutOrdinal }: { replay: CurrentSour
         ))}
       </svg>
       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-overview-caption>
-        whole run · {n.toLocaleString("en-US")} bars
+        {scope} · {n.toLocaleString("en-US")} bars
         {overview.sampling === "FULL"
           ? " · every bar"
           : ` in ${overview.emitted_bucket_count} candles of ${overview.bucket_bars} bars — each high/low is the true extreme of its bars`}
-        {" · range "}
-        {overview.envelope.min_low} – {overview.envelope.max_high} · shaded = OOS fold windows
+        {high !== null && low !== null
+          ? ` · ${cutOrdinal === null ? "range" : "revealed range"} ${low} – ${high}`
+          : " · range withheld — no complete bucket at cursor"}
+        {shading ? ` · ${shading}` : ""}
       </span>
     </div>
   );

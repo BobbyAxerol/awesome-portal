@@ -155,6 +155,7 @@ const REFUSAL: Record<RunCreateProblemCode, RunCreateRefusalPresentation> = {
   RESEARCH_RUN_TRANSPORT_UNKNOWN: { ...NO, state: "unavailable" },
 
   RESEARCH_RUN_NOT_FOUND: { ...NO, state: "terminal" },
+  RESEARCH_RUN_REPRODUCTION_CONFLICT: { ...NO, state: "terminal", highlightsInput: true },
 };
 
 export interface RunCreateRefusal extends RunCreateRefusalPresentation {

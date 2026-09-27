@@ -75,6 +75,18 @@ const ALPHA_SCREEN_SUFFIX: Readonly<Record<string, string>> = {
   attempt_lineage: "lineage",
   compare_runs: "compare",
 };
+
+/**
+ * Keys whose screen lives under an Alpha **and** a version
+ * (`alphas/:alphaId/:version`).
+ *
+ * The journey map holds neither, so the card used to draw NOT ROUTED even
+ * though the screen is mounted and shipped. It is the same shape as D2's
+ * per-run cards: not unbuilt, just not addressable from a context-free map.
+ * A run's own binding carries both halves, so the card goes through the same
+ * Run Library picker and resolves against the row the reader chooses.
+ */
+const ALPHA_VERSION_SCREEN_KEYS: readonly string[] = ["alpha_version_legacy"];
 /**
  * Resolves a descriptor key to a path this build serves.
  *
@@ -87,8 +99,14 @@ export function resolveJourneyCardRoute(
   targetKey: string,
   runId: string | null,
   alphaId: string | null = null,
+  alphaVersionId: string | null = null,
 ): string | null {
   if (/[/\\:]/.test(targetKey)) return null;
+  if (ALPHA_VERSION_SCREEN_KEYS.includes(targetKey)) {
+    return alphaId && alphaVersionId && IDENTIFIER.test(alphaId) && IDENTIFIER.test(alphaVersionId)
+      ? `${QUANTBT_ROOT}/alphas/${encodeURIComponent(alphaId)}/${encodeURIComponent(alphaVersionId)}`
+      : null;
+  }
   const alphaSuffix = ALPHA_SCREEN_SUFFIX[targetKey];
   if (alphaSuffix !== undefined && alphaId && IDENTIFIER.test(alphaId)) {
     return `${QUANTBT_ROOT}/alphas/${encodeURIComponent(alphaId)}/${alphaSuffix}`;
@@ -115,12 +133,19 @@ const IDENTIFIER = /^[A-Za-z0-9_-]{1,128}$/;
  * run means opening it inside that run's Alpha.
  */
 export function needsRunToOpen(targetKey: string): boolean {
-  return targetKey in RUN_SCREEN_SUFFIX || targetKey in ALPHA_SCREEN_SUFFIX;
+  return (
+    targetKey in RUN_SCREEN_SUFFIX ||
+    targetKey in ALPHA_SCREEN_SUFFIX ||
+    ALPHA_VERSION_SCREEN_KEYS.includes(targetKey)
+  );
 }
 
 /** Whether resolving this key needs the run's Alpha rather than the run id. */
 export function needsAlphaToOpen(targetKey: string): boolean {
-  return targetKey in ALPHA_SCREEN_SUFFIX && !(targetKey in RUN_SCREEN_SUFFIX);
+  return (
+    (targetKey in ALPHA_SCREEN_SUFFIX || ALPHA_VERSION_SCREEN_KEYS.includes(targetKey)) &&
+    !(targetKey in RUN_SCREEN_SUFFIX)
+  );
 }
 
 /** `/research/quantbt/runs?to=<key>` — the Run Library as a run picker (D2). */
@@ -135,4 +160,5 @@ export const KNOWN_SCREEN_KEYS: readonly string[] = Object.keys(SCREEN_ROUTES);
 export const KNOWN_RUN_SCREEN_KEYS: readonly string[] = [
   ...Object.keys(RUN_SCREEN_SUFFIX),
   ...Object.keys(ALPHA_SCREEN_SUFFIX).filter((key) => !(key in RUN_SCREEN_SUFFIX)),
+  ...ALPHA_VERSION_SCREEN_KEYS,
 ];

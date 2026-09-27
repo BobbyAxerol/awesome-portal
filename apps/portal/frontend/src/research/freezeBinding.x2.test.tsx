@@ -15,6 +15,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FreezeRoute } from "./FreezeRoute";
+import { hubDigestChain, retainedDigestChain } from "./DigestChain";
+import type { FreezeDetail } from "./freezeClient";
 import type { CurrentSourceFreeze } from "./freezeClient";
 import { forgetRunIdentities } from "./retainedLane";
 
@@ -159,6 +161,23 @@ describe("X2 · F5 — T10 copy θ* digest", () => {
  * --------------------------------------------------------------------- */
 describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () => {
   const LINKS = ["CANONICAL_FORM", "PARAMS_DIGEST", "STRATEGY_SOURCE", "ENGINE_PIN", "DATASET_HASH", "CONFIG_HASH", "BUNDLE_DIGEST"];
+
+  it("does not label imported-source authority as the protected fixed kernel", () => {
+    const fixture: CurrentSourceFreeze = { ...FREEZE, parameter_authority: { ...FREEZE.parameter_authority!,
+      code_fixed: { ...FREEZE.parameter_authority!.code_fixed, hash_scope: "SOURCE_CODE_SHA256" } } };
+    const source = retainedDigestChain(fixture).links.find(link => link.key === "STRATEGY_SOURCE")!;
+    expect(source.rule).toBe("SOURCE_CODE_SHA256");
+    expect(source.value).toBe(fixture.parameter_authority!.code_fixed.code_digest);
+  });
+
+  it("binds a newly published hub engine pin but preserves historical absence", () => {
+    const old = W3B.hub_freeze as FreezeDetail;
+    const fixture: FreezeDetail = { ...old, engine_pin: { state: "AVAILABLE", availability: { state: "AVAILABLE", reason_code: null },
+      engine_version: "1.1.1", execution_adapter_id: "p04.delta-rsi.v1", adapter_contract_digest: "a".repeat(64),
+    } };
+    expect(hubDigestChain(fixture).links.find(link => link.key === "ENGINE_PIN")!.value).toBe("1.1.1");
+    expect(hubDigestChain(old).links.find(link => link.key === "ENGINE_PIN")!.value).toBeNull();
+  });
 
   it("draws all seven links in the hi-fi's order, each from its own served field", async () => {
     const { container } = await settled();

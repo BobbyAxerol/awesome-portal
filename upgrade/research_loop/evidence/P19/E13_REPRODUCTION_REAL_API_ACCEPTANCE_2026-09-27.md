@@ -4,6 +4,12 @@ Date: 2026-09-27 · branch `docs/research-loop-plan` · Codex backend.
 Verdict: **BACKEND_REAL_API_ACCEPTED · S10_CONSUMER_BROWSER_PENDING**.
 This extends, rather than deletes, the earlier sibling/clone records.
 
+> **Later consumer acceptance:** S10 browser reads the persisted root/clone/
+> reproduction depths 0/1/2 at 1280 and 660 through the existing attempt
+> deep-link. Reproduction conflicts are terminal, not an automatic new-intent
+> retry. [Final integration proof](../P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md)
+> supersedes the pending consumer statement, not these immutable API receipts.
+
 ## Scope and authority
 
 Read: Unified E13/P19, P19 README and phase-report, the complete E13 sibling

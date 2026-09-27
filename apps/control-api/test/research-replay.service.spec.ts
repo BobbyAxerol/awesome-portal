@@ -79,14 +79,68 @@ function evidenceFixture(pointCount = 120, options: {
     },
     values,
   };
-  return { hub, series };
+  return { hub, series, candleOverview: candleOverview(pointCount) };
 }
 
-function evidenceReader(fixture: ReturnType<typeof evidenceFixture>) {
+/**
+ * E16-R1 · the shape `ResearchEvidenceService.bundle` publishes for the
+ * retained OHLC overview. Four true-extrema buckets over the same window the
+ * equity samples cover, so a bucket ordinal and an OOS bar ordinal count the
+ * same bars.
+ */
+function candleOverview(barCount: number) {
+  if (barCount < 1) {
+    return { state: "NOT_PUBLISHED" as const, reason_code: "P04_OOS_WINDOW_HAS_NO_PRICED_BAR", value: null };
+  }
+  const bucketBars = Math.ceil(barCount / 4);
+  const values = Array.from({ length: Math.ceil(barCount / bucketBars) }, (_, index) => {
+    const first = index * bucketBars;
+    const last = Math.min(barCount, first + bucketBars) - 1;
+    return {
+      first_ordinal: first,
+      last_ordinal: last,
+      open_utc_ms: 1_725_000_000_000 + first * 60_000,
+      close_utc_ms: 1_725_000_000_000 + last * 60_000,
+      open: String(1_000 + first),
+      high: String(1_100 + last),
+      low: String(900 + first),
+      close: String(1_000 + last),
+      volume: "12.5",
+      transitions: null,
+    };
+  });
+  const lastBucket = values[values.length - 1]!;
+  return {
+    state: "AVAILABLE" as const,
+    reason_code: null,
+    value: {
+      state: "AVAILABLE" as const,
+      reason_code: null,
+      scope: "OOS_EQUITY_WINDOW" as const,
+      source_bar_count: barCount,
+      emitted_bucket_count: values.length,
+      bucket_bars: bucketBars,
+      sampling: bucketBars === 1 ? "FULL" as const : "OHLC_BUCKET_V1" as const,
+      envelope: {
+        max_high: lastBucket.high,
+        max_high_at_utc_ms: lastBucket.close_utc_ms,
+        min_low: values[0]!.low,
+        min_low_at_utc_ms: values[0]!.open_utc_ms,
+      },
+      values,
+    },
+  };
+}
+
+function evidenceReader(
+  fixture: ReturnType<typeof evidenceFixture>,
+  overview: unknown = fixture.candleOverview,
+) {
   return {
     bundle: vi.fn().mockResolvedValue({
       hub: fixture.hub,
       series: new Map([["EQUITY_OOS", fixture.series]]),
+      candleOverview: overview,
     }),
   };
 }
@@ -240,6 +294,67 @@ describe("P17 route-aware, current-source replay authority", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("E16-R1: serves the retained OHLC overview verbatim, with the true whole-window envelope", async () => {
+    const fixture = evidenceFixture(20);
+    const service = new ResearchReplayService(evidenceReader(fixture) as never, enabledConfig() as never);
+    const result = await service.detail(scope, "run_p17", { limit: 5 });
+    const overview = result.candle_overview;
+    expect(overview.state).toBe("AVAILABLE");
+    expect(overview.scope).toBe("OOS_EQUITY_WINDOW");
+    expect(overview.sampling).toBe("OHLC_BUCKET_V1");
+    expect(overview.reason_code).toBeNull();
+    expect(overview.emitted_bucket_count).toBe(overview.values.length);
+    // Not one bucket is rebuilt by this reader: the bytes are the sealed ones.
+    expect(overview.values).toEqual(fixture.candleOverview.value.values);
+    expect(Number(overview.envelope!.max_high)).toBe(Math.max(...overview.values.map((bucket) => Number(bucket.high))));
+    expect(Number(overview.envelope!.min_low)).toBe(Math.min(...overview.values.map((bucket) => Number(bucket.low))));
+    // The overview is a summary, so the per-bar ledger absence is unchanged.
+    expect(result.route_capabilities.candle_windows).toMatchObject({
+      state: "NOT_PUBLISHED", reason_code: "P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS",
+    });
+    expect(result.source_absences.candles.state).toBe("NOT_PUBLISHED");
+    // Every bucket carries a null transition count rather than a fabricated 0.
+    expect(overview.values.every((bucket) => bucket.transitions === null)).toBe(true);
+  });
+
+  it("E16-R1: a run sealed before the producer retained an overview keeps its own reason, never a backfill", async () => {
+    const fixture = evidenceFixture(20);
+    const service = new ResearchReplayService(
+      evidenceReader(fixture, {
+        state: "NOT_PUBLISHED",
+        reason_code: "P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW",
+        value: null,
+      }) as never,
+      enabledConfig() as never,
+    );
+    const result = await service.detail(scope, "run_p17", { limit: 5 });
+    expect(result.candle_overview).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW",
+      scope: null,
+      source_bar_count: null,
+      emitted_bucket_count: null,
+      bucket_bars: null,
+      sampling: null,
+      envelope: null,
+      values: [],
+    });
+    // The equity replay is untouched by a missing overview.
+    expect(result.equity_replay.state).toBe("AVAILABLE");
+  });
+
+  it("E16-R1: an unreadable evidence source gives the overview its own typed absence", async () => {
+    const fixture = evidenceFixture(20, { availability: "PENDING_SOURCE_CALLBACK" });
+    const service = new ResearchReplayService(evidenceReader(fixture) as never, enabledConfig() as never);
+    const result = await service.detail(scope, "run_p17", { limit: 5 });
+    expect(result.candle_overview).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "P13_EVIDENCE_NOT_READABLE_FOR_RETAINED_CANDLE_OVERVIEW",
+      values: [],
+    });
+    expect(result.candle_overview.availability.state).toBe("PENDING_SOURCE_CALLBACK");
   });
 
   it("fails closed if a bundle tries to mix Hub and series revisions", async () => {

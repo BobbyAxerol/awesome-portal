@@ -25,6 +25,7 @@ const RULE_WORDS: Record<Row["identity_rule"], string> = {
   QUANTBT_STRATEGY_FINGERPRINT_V1: "QuantBT strategy fingerprint",
   SHA256_CANONICAL_PARAMETER_MAP_V1: "sha256 of the canonical parameter map",
   P04_ADAPTER_CONTRACT_DIGEST_V1: "P04 adapter contract digest",
+  IMPORTED_SOURCE_AND_ADAPTER_SHA256_V1: "sha256 of the imported source and adapter contract",
 };
 
 const BADGE: Record<Stage4BindingValue["state"], { words: string; tone: string }> = {
@@ -123,6 +124,8 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
       <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-binding-note>
         {binding.lane === "RS02_RETAINED_CHILD_AUDIT"
           ? "Compared by QuantBT's own identities: the sealed θ*'s candidate id against the candidate each fold's out-of-sample generation child ran, and the strategy fingerprint of the frozen candidate's selection-stage children against the generation child's."
+          : binding.lane === "IMPORTED_FIXED_QUALIFICATION"
+          ? "Compared by exact imported-source and adapter-contract digests against the confined child's persisted execution receipt. This is source identity, not an audited broker fill claim."
           : "Compared by digest: the registered fixed bundle and adapter contract against what the P04 child executed (its P14 receipt and the run's producer row) — the P04 replay is that child's own tape."}{" "}
         {binding.state === "NOT_COMPARED" && binding.reason_code ? (
           <span data-binding-reason={binding.reason_code}>{reasonCodeSentence(binding.reason_code)} ({binding.reason_code})</span>

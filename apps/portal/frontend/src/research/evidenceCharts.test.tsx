@@ -44,6 +44,19 @@ const series0 = (option: Opt) => (option.series as Opt[])[0];
 const tooltip = (option: Opt, dataIndex: number, seriesName: string) =>
   (option.tooltip as Opt).formatter([{ dataIndex, seriesName, marker: "" }]) as string;
 
+describe("E11 · IS is a separate published source curve, not an OOS reconstruction", () => {
+  it("plots IS at its exact source times with a named legend and source tooltip", () => {
+    const input = [{ at_utc_ms: T0 - 3600000, equity: "9876.1234" }];
+    const option = equityOption(EQUITY, [], input) as Opt;
+    const is = option.series.find((entry: Opt) => entry.name === SERIES_NAME.inSample);
+    expect(is.data).toEqual([[T0 - 3600000, 9876.1234]]);
+    expect(is.lineStyle.type).toBe("dashed");
+    expect(option.legend.data).toEqual([SERIES_NAME.inSample, SERIES_NAME.equity]);
+    expect(tooltip(option, 0, SERIES_NAME.inSample)).toContain("9,876.12");
+    expect(series0(equityOption(EQUITY) as Opt).name).toBe(SERIES_NAME.equity);
+  });
+});
+
 describe("RF-06 FE-S04-03 — time is a time axis", () => {
   it("places each sample at its own timestamp, so uneven samples are spaced by time", () => {
     for (const option of [equityOption(EQUITY), drawdownOption(EQUITY)] as Opt[]) {

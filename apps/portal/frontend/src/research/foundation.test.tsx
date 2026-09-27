@@ -433,7 +433,10 @@ describe("E12 — the map opens every screen this build serves (audit 00-3, D2)"
   });
 
   it("an unserved key still greys out rather than becoming a run picker", async () => {
-    stub(() => [200, oneCard("alpha_version_legacy", false), 'W/"journey-e12b"']);
+    /* `alpha_version_legacy` became a run picker (its screen is mounted under an
+       Alpha and a version, both of which a run's binding names), so the dead-end
+       case now needs a key this build genuinely does not serve. */
+    stub(() => [200, oneCard("no_such_screen", false), 'W/"journey-e12b"']);
     renderAt("/research/quantbt/journey", <JourneyMapRoute />);
     await waitFor(() => expect(document.querySelector('[data-card="c_e12"]')).toBeTruthy());
 
@@ -442,19 +445,35 @@ describe("E12 — the map opens every screen this build serves (audit 00-3, D2)"
     expect(card.tagName).not.toBe("A");
   });
 
+  it("the shipped alpha-version card is a run picker, not a dead end", async () => {
+    stub(() => [200, oneCard("alpha_version_legacy", false), 'W/"journey-e12c"']);
+    renderAt("/research/quantbt/journey", <JourneyMapRoute />);
+    await waitFor(() => expect(document.querySelector('[data-card="c_e12"]')).toBeTruthy());
+
+    const card = document.querySelector('[data-card="c_e12"]') as HTMLElement;
+    expect(card.getAttribute("data-card-unreachable")).toBeNull();
+    expect(card.textContent).toContain("pick a run");
+    /* Resolved against a row: the Alpha and the version both come from its binding. */
+    expect(resolveJourneyCardRoute("alpha_version_legacy", "rrun_1", "alpha_a", "av_a_1_0_0")).toBe(
+      "/research/quantbt/alphas/alpha_a/av_a_1_0_0",
+    );
+    /* A row that names no version still cannot address it, and says so. */
+    expect(resolveJourneyCardRoute("alpha_version_legacy", "rrun_1", "alpha_a", null)).toBeNull();
+  });
+
   it("the published descriptor declares no PLANNED card", () => {
     const cards = (journeySnapshot as JourneyResponse).descriptor.phases.flatMap((phase) => phase.cards);
     expect(cards.filter((card) => card.availability === "PLANNED")).toHaveLength(0);
     expect((journeySnapshot as JourneyResponse).descriptor.revision).toBe(3);
-    /* Every AVAILABLE card either resolves, or is a run picker, or is the one
-       shipped screen that needs an Alpha and a version this build cannot name. */
     const unreachable = cards.filter(
       (card) =>
         card.availability === "AVAILABLE" &&
         resolveJourneyCardRoute(card.target_key, "rrun_1") === null &&
         !needsRunToOpen(card.target_key),
     );
-    expect(unreachable.map((card) => card.target_key)).toEqual(["alpha_version_legacy"]);
+    /* Every AVAILABLE card now either resolves or is a run picker: the shipped
+       alpha-version screen joined the pickers, so nothing is left stranded. */
+    expect(unreachable.map((card) => card.target_key)).toEqual([]);
   });
 });
 

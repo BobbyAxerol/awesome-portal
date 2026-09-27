@@ -826,13 +826,20 @@ describe("P10-T07 — the create request carries only what the contract declares
 
 describe("P10-T08 — typed refusals keep the declaration on screen", () => {
   it("maps every code the contract declares", () => {
-    expect(RUN_CREATE_PROBLEM_CODES).toHaveLength(12);
+    expect(RUN_CREATE_PROBLEM_CODES).toHaveLength(13);
     for (const code of RUN_CREATE_PROBLEM_CODES) {
       const refusal = toRunCreateRefusal(new PortalApiError("server sentence", 400, code, "r"));
       expect(refusal.code).toBe(code);
       expect(refusal.message).toBe("server sentence");
       expect(refusal.state).not.toBe("available");
     }
+  });
+
+  it("keeps a reproduction-pin conflict terminal and never silently retries a new intent", () => {
+    const refusal = toRunCreateRefusal(new PortalApiError("Pins differ", 409, "RESEARCH_RUN_REPRODUCTION_CONFLICT", "r"));
+    expect(refusal.state).toBe("terminal");
+    expect(refusal.mayRetry).toBe(false);
+    expect(refusal.highlightsInput).toBe(true);
   });
 
   it("does not downgrade rich parameters when the adapter refuses them", async () => {

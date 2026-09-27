@@ -150,6 +150,94 @@ const RouteCapabilitySchema = z.object({
   availability: ResearchReplayAvailabilitySchema,
 }).strict();
 
+const OrdinalSchema = z.number().int().nonnegative().max(2_000_000);
+
+/**
+ * E16-R1 · one bucket of the retained OHLC overview.  The field names are the
+ * retained WFO lane's `execution.candle_overview.values[]`
+ * (`current-source.contract.ts`) so Screen 08 draws both lanes with one
+ * component and one caption vocabulary.  `high`/`low` are the **true
+ * extremes** of the bucket's bars, never an interpolation; `transitions` is
+ * always null because P04 publishes no execution ledger through this adapter.
+ */
+const ReplayCandleBucketSchema = z.object({
+  first_ordinal: OrdinalSchema,
+  last_ordinal: OrdinalSchema,
+  open_utc_ms: UtcMsSchema,
+  close_utc_ms: UtcMsSchema,
+  open: ExactDecimalSchema,
+  high: ExactDecimalSchema,
+  low: ExactDecimalSchema,
+  close: ExactDecimalSchema,
+  volume: ExactDecimalSchema.nullable(),
+  transitions: z.null(),
+}).strict();
+
+/**
+ * E16-R1 · the whole-window price overview the P06 child retained while it
+ * still held the tape.  It is never a per-bar candle ledger: the source
+ * publishes none, `route_capabilities.candle_windows` still says so, and a
+ * run sealed before the producer retained an overview keeps a typed absence
+ * with its own reason rather than a backfilled guess.
+ */
+const ReplayCandleOverviewSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  /** The bars summarised: exactly the OOS window `equity_replay` samples. */
+  scope: z.literal("OOS_EQUITY_WINDOW").nullable(),
+  source_bar_count: z.number().int().positive().max(2_000_000).nullable(),
+  emitted_bucket_count: z.number().int().nonnegative().max(160).nullable(),
+  bucket_bars: z.number().int().positive().max(2_000_000).nullable(),
+  sampling: z.enum(["FULL", "OHLC_BUCKET_V1"]).nullable(),
+  envelope: z.object({
+    max_high: ExactDecimalSchema,
+    max_high_at_utc_ms: UtcMsSchema,
+    min_low: ExactDecimalSchema,
+    min_low_at_utc_ms: UtcMsSchema,
+  }).strict().nullable(),
+  values: z.array(ReplayCandleBucketSchema).max(160),
+  availability: ResearchReplayAvailabilitySchema,
+}).strict().superRefine((value, context) => {
+  const issue = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  const available = value.state === "AVAILABLE";
+  if (available === (value.reason_code !== null)) issue("candle overview state and reason are inconsistent");
+  if (
+    available !== (value.values.length > 0)
+    || available !== (value.envelope !== null)
+    || available !== (value.bucket_bars !== null)
+    || available !== (value.sampling !== null)
+    || available !== (value.scope !== null)
+    || available !== (value.source_bar_count !== null)
+    || available !== (value.emitted_bucket_count !== null)
+  ) issue("candle overview availability and payload are inconsistent");
+  if (!available) return;
+  if (value.emitted_bucket_count !== value.values.length) issue("candle overview bucket count is inconsistent");
+  if ((value.sampling === "FULL") !== (value.bucket_bars === 1)) issue("candle overview sampling declaration is inconsistent");
+  if (value.values.length > value.source_bar_count!) issue("candle overview emits more buckets than it has bars");
+  if (value.values[0]!.first_ordinal !== 0 || value.values.at(-1)!.last_ordinal !== value.source_bar_count! - 1) {
+    issue("candle overview must cover its whole declared window");
+  }
+  for (let index = 0; index < value.values.length; index += 1) {
+    const bucket = value.values[index]!;
+    const [high, low, open, close] = [bucket.high, bucket.low, bucket.open, bucket.close].map(Number);
+    // The one thing a downsample must never do is lose an extreme.
+    if (!(high >= low) || !(high >= open) || !(high >= close) || !(low <= open) || !(low <= close)) {
+      issue("a candle bucket high/low must bracket its own open and close");
+      break;
+    }
+    const previous = value.values[index - 1];
+    if (previous && (bucket.first_ordinal !== previous.last_ordinal + 1 || bucket.open_utc_ms <= previous.close_utc_ms)) {
+      issue("candle overview buckets must be contiguous and strictly chronological");
+      break;
+    }
+  }
+  const highs = value.values.map((bucket) => Number(bucket.high));
+  const lows = value.values.map((bucket) => Number(bucket.low));
+  if (Number(value.envelope!.max_high) !== Math.max(...highs) || Number(value.envelope!.min_low) !== Math.min(...lows)) {
+    issue("candle overview envelope must be the true extreme of its buckets");
+  }
+});
+
 export const ResearchReplayResponseSchema = z.object({
   schema_version: z.literal("research.replay.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
@@ -189,6 +277,12 @@ export const ResearchReplayResponseSchema = z.object({
     data: ResearchEvidenceCandleOverviewSchema.nullable(),
     availability: ResearchReplayAvailabilitySchema,
   }).strict().optional(),
+  /**
+   * E16-R1 · the run's retained, bounded OHLC overview of the same OOS
+   * window.  A summary, not a bar ledger: the per-bar candle chart stays a
+   * typed absence under `route_capabilities.candle_windows`.
+   */
+  candle_overview: ReplayCandleOverviewSchema,
   /**
    * Route-specific execution panels. P04 does not publish their source
    * records, so these are structured absences rather than decorative rows.

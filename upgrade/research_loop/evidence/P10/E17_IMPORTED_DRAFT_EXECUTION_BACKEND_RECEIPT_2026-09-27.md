@@ -3,6 +3,12 @@
 Verdict: **REAL_BACKEND_ACCEPTED · FRONTEND_PENDING**, not Production activation.
 Machine receipt: [e17-backend-acceptance.v1.json](./e17-backend-acceptance.v1.json).
 
+> **Later approved consumer integration:** imported identity labels, source-code
+> versus protected adapter hash authority and exact engine pin are now bound;
+> real imported Evidence/Freeze browsers pass at 1280/660. The original machine
+> receipt stays unchanged. Separate E13 later proves reproduction; this packet's
+> three-run claim still only proves clone. See [E11–E17 final receipt](../P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md).
+
 ## Implementation and authority
 
 - Exact P07 source custody creates an immutable imported adapter binding at DRAFT.

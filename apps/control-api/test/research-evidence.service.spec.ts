@@ -86,6 +86,53 @@ function progressSnapshot(folds: number[]) {
 }
 
 describe("P13 Evidence Flow projection authority", () => {
+  it.each(["CANONICAL", "LEGACY", "CORRUPT"] as const)(
+    "keeps %s overview compatibility and isolates the canonical block behind the revision fence",
+    async (shape) => {
+      const raw = candleOverview();
+      const canonical = {
+        ...raw, state: "AVAILABLE", reason_code: null, scope: "OOS_EQUITY_WINDOW",
+        values: raw.values.map((bucket) => ({ ...bucket, transitions: null })),
+      };
+      const evidence = { ...p13EvidenceSourceFixture(), candle_overview: shape === "LEGACY" ? raw : canonical };
+      const persist = vi.fn().mockResolvedValue(undefined);
+      const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), bundle: vi.fn() };
+      const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
+      await service.ingest(ingressScope, {
+        run_id: "run_p13",
+        event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: sha256ResearchJson(evidence) } },
+        evidence,
+      } as unknown as ResearchProgressIngress);
+      const write = persist.mock.calls[0]![1];
+      const projection = shape === "CORRUPT"
+        ? { ...write.projection, candle_overview: { ...canonical, emitted_bucket_count: 49 } }
+        : write.projection;
+      repository.bundle.mockResolvedValue({
+        hub: {
+          kind: "DURABLE", runId: "run_p13", requestedSpec: requestedSpec(),
+          requestedSpecDigest: "a".repeat(64), effectiveSpecDigest: "b".repeat(64),
+          datasetBindingDigest: "c".repeat(64), manifestDigest: "d".repeat(64),
+          progressSnapshot: null, jobState: "SUCCEEDED", revision: write.projectionRevision,
+          projection, readiness: write.readiness, sourceEvidenceDigest: write.sourceEvidenceDigest,
+          receivedAt: new Date(), asOfUtcMs: 1_725_000_000_000,
+        }, series: new Map(),
+      });
+      const bundle = await service.bundle(scope, "run_p13", []);
+      expect(bundle.hub.availability.state).toBe("AVAILABLE");
+      if (shape === "CORRUPT") {
+        expect(bundle.candleOverview).toEqual({
+          state: "NOT_PUBLISHED", reason_code: "P13_RETAINED_CANDLE_OVERVIEW_IS_INCOMPATIBLE", value: null,
+        });
+        expect(bundle.hub.core.market_overview?.data).toBeNull();
+      } else {
+        expect(bundle.candleOverview.value).toEqual(canonical);
+        expect(bundle.candleOverview.value?.values.every((bucket) => bucket.transitions === null)).toBe(true);
+        expect(write.projection.candle_overview).toEqual(evidence.candle_overview);
+        expect(bundle.hub.core.market_overview?.data?.values[0]?.transitions).toBe(shape === "LEGACY" ? 1 : null);
+      }
+    },
+  );
+
   it("binds a terminal source receipt to its digest and persists bounded lazy vectors", async () => {
     const persist = vi.fn().mockResolvedValue(undefined);
     const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn() };

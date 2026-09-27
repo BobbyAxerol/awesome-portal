@@ -349,6 +349,14 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
           A reading map of the domain: where each screen sits, and what it adds.
         </p>
         <TagLegend />
+        {/* `ResearchPanel` prints `meta` only in its framed variant, and this screen is
+            plain, so the descriptor revision never reached the reader: the map said which
+            screens exist without saying which published answer it was reading. */}
+        {descriptor ? (
+          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-descriptor-revision={descriptor.revision}>
+            descriptor revision {descriptor.revision}
+          </span>
+        ) : null}
       </header>
 
       <ResearchPanel

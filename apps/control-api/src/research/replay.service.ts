@@ -14,7 +14,11 @@ import {
   type ResearchEvidenceSeriesResponse,
 } from "./evidence.contract";
 import { ResearchEvidenceError } from "./evidence.error";
-import { ResearchEvidenceService } from "./evidence.service";
+import {
+  CANDLE_OVERVIEW_INCOMPATIBLE,
+  ResearchEvidenceService,
+  type EvidenceCandleOverview,
+} from "./evidence.service";
 import {
   ResearchReplayResponseSchema,
   type ResearchReplayReadQuery,
@@ -26,6 +30,12 @@ import { sha256ResearchJson } from "./preflight.service";
 const PAGE_RESOURCE = "research.replay.equity-window.v1";
 const PLAYHEAD_RESOURCE = "research.replay.state-at-cursor.v1";
 const RESPONSE_MAX_BYTES = 1_048_576;
+/**
+ * E16-R1 · the overview rides on the same sealed evidence as the equity
+ * samples, so when that evidence is not readable the overview is not either.
+ * It keeps its own reason so the screen never implies the run lacked bars.
+ */
+const RETAINED_CANDLE_OVERVIEW_UNREADABLE = "P13_EVIDENCE_NOT_READABLE_FOR_RETAINED_CANDLE_OVERVIEW";
 
 type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_APPLICABLE";
@@ -88,8 +98,8 @@ export class ResearchReplayService {
     signal?: AbortSignal,
   ): Promise<ResearchReplayResponse> {
     this.requireEnabled();
-    const { hub, series } = await this.readEvidence(scope, runId, signal);
-    const response = this.mapResponse(scope, runId, query, hub, series);
+    const { hub, series, candleOverview } = await this.readEvidence(scope, runId, signal);
+    const response = this.mapResponse(scope, runId, query, hub, series, candleOverview);
     const parsed = ResearchReplayResponseSchema.safeParse(response);
     if (!parsed.success || Buffer.byteLength(JSON.stringify(response), "utf8") > RESPONSE_MAX_BYTES) {
       throw new ResearchReplayError("RESEARCH_REPLAY_UNAVAILABLE", "Replay response is incompatible or exceeds its bounded budget.", 503);
@@ -107,7 +117,11 @@ export class ResearchReplayService {
     scope: ResearchScope,
     runId: string,
     signal?: AbortSignal,
-  ): Promise<{ hub: ResearchEvidenceHubResponse; series: ResearchEvidenceSeriesResponse }> {
+  ): Promise<{
+    hub: ResearchEvidenceHubResponse;
+    series: ResearchEvidenceSeriesResponse;
+    candleOverview: EvidenceCandleOverview;
+  }> {
     try {
       const bundle = signal
         ? await this.evidence.bundle(scope, runId, [ResearchEvidenceSeriesKindSchema.enum.EQUITY_OOS], signal)
@@ -117,7 +131,7 @@ export class ResearchReplayService {
       if (!series || series.revision !== hub.revision) {
         throw new ResearchReplayError("RESEARCH_REPLAY_UNAVAILABLE", "Replay evidence revision is incompatible.", 503);
       }
-      return { hub, series };
+      return { hub, series, candleOverview: bundle.candleOverview };
     } catch (error) {
       if (error instanceof ResearchReplayError) throw error;
       if (error instanceof ResearchEvidenceError) {
@@ -141,6 +155,7 @@ export class ResearchReplayService {
     query: ResearchReplayReadQuery,
     hub: ResearchEvidenceHubResponse,
     series: ResearchEvidenceSeriesResponse,
+    candleOverview: EvidenceCandleOverview,
   ): unknown {
     const sourceAvailability = responseAvailability(series.availability);
     const sourceAdapterId = hub.core.source_adapter_id;
@@ -284,8 +299,53 @@ export class ResearchReplayService {
       },
       equity_replay: window,
       market_overview: marketOverview,
+      candle_overview: this.candleOverview(candleOverview, sourceIsAvailable, compatibilityAvailability),
       route_capabilities: routeCapabilities,
       source_absences: sourceAbsences,
+    };
+  }
+
+  /**
+   * E16-R1.  The overview is served verbatim from the sealed P13 projection:
+   * this reader never re-buckets, never interpolates and never fills a gap.
+   * A run whose child did not retain one keeps its own reason code — there is
+   * nothing to backfill, because the producer deleted its tape.
+   */
+  private candleOverview(
+    overview: EvidenceCandleOverview,
+    sourceIsAvailable: boolean,
+    compatibilityAvailability: Availability,
+  ) {
+    const absent = (reasonCode: string) => ({
+      state: "NOT_PUBLISHED" as const,
+      reason_code: reasonCode,
+      scope: null,
+      source_bar_count: null,
+      emitted_bucket_count: null,
+      bucket_bars: null,
+      sampling: null,
+      envelope: null,
+      values: [],
+      availability: sourceIsAvailable ? notPublished(reasonCode) : compatibilityAvailability,
+    });
+    if (!sourceIsAvailable) return absent(RETAINED_CANDLE_OVERVIEW_UNREADABLE);
+    // Fail closed as a typed absence, never as an untyped 500: an evidence
+    // reader that published no overview field at all is the same kind of
+    // unreadable as a stored block this contract can no longer validate.
+    if (!overview) return absent(CANDLE_OVERVIEW_INCOMPATIBLE);
+    if (overview.state !== "AVAILABLE") return absent(overview.reason_code);
+    const value = overview.value;
+    return {
+      state: "AVAILABLE" as const,
+      reason_code: null,
+      scope: value.scope,
+      source_bar_count: value.source_bar_count,
+      emitted_bucket_count: value.emitted_bucket_count,
+      bucket_bars: value.bucket_bars,
+      sampling: value.sampling,
+      envelope: value.envelope,
+      values: value.values,
+      availability: availability("AVAILABLE", null),
     };
   }
 

@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 
 import { EChart } from "../charts/EChart";
 import { baseOption, roleColorsNow } from "../charts/theme";
-import { CANDLE_SUBTITLE, CandleReplayBody, hasBarLedger, paddedRange } from "./ExecuteCandleReplay";
+import { CANDLE_SUBTITLE, CandleOverviewStrip, CandleReplayBody, hasBarLedger, paddedRange } from "./ExecuteCandleReplay";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
@@ -160,6 +160,78 @@ function CapabilityGap({ replay, capability }: { replay: Replay; capability: Rou
         {fact.reason_code ?? fact.availability.reason_code ?? words(fact.availability.state)}
       </span>
     </span>
+  );
+}
+
+/**
+ * E16-R1 · the P04 hub lane's whole-window price overview, or the reason it
+ * has none.
+ *
+ * The overview is a summary the P06 child retained while it still held the
+ * tape, not a bar ledger read back from an artifact — a run sealed before the
+ * producer retained one has no bars left anywhere and says so here. The
+ * absence keeps its own reason code beside the sentence, exactly as every
+ * other absence on this screen does.
+ */
+function HubCandleOverview({ replay }: { replay: Replay }) {
+  /*
+   * Optional at the type level only for a bounded rolling deploy, the same
+   * rule the P13 Hub's `run_identity`/`fold_navigation` follow: a replay
+   * responder that has not rolled forward publishes no field at all, and the
+   * screen must name that rather than imply the run had no bars.
+   */
+  const overview = replay.candle_overview as Replay["candle_overview"] | undefined;
+  if (
+    !overview
+    || overview.state !== "AVAILABLE"
+    || overview.envelope === null
+    || overview.sampling === null
+    || overview.bucket_bars === null
+    || overview.source_bar_count === null
+    || overview.emitted_bucket_count === null
+  ) {
+    const code = overview
+      ? overview.reason_code ?? overview.availability.reason_code
+      : "P17_REPLAY_READ_PREDATES_RETAINED_CANDLE_OVERVIEW";
+    return (
+      <div
+        className="flex flex-wrap items-baseline gap-1.5 border-b pb-1.5"
+        style={{ borderColor: "var(--line-soft)" }}
+        data-candle-overview="NOT_PUBLISHED"
+      >
+        <span className="mono flex-none text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
+          price overview
+        </span>
+        <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+          {REPLAY_GAP_WORDS[overview?.state ?? "NOT_PUBLISHED"]}
+        </span>
+        <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-overview-note>
+          {reasonCodeSentence(code) ?? "This run published no price overview."}
+        </span>
+        <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code>
+          {code ?? words(overview!.availability.state)}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1 border-b pb-1.5" style={{ borderColor: "var(--line-soft)" }} data-candle-overview="AVAILABLE">
+      <span className="mono text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
+        price overview
+      </span>
+      <CandleOverviewStrip
+        overview={{
+          source_bar_count: overview.source_bar_count,
+          emitted_bucket_count: overview.emitted_bucket_count,
+          bucket_bars: overview.bucket_bars,
+          sampling: overview.sampling,
+          envelope: overview.envelope,
+          values: overview.values,
+        }}
+        scope="out-of-sample window"
+        label="out-of-sample window price range, as retained OHLC buckets"
+      />
+    </div>
   );
 }
 
@@ -1391,6 +1463,18 @@ export function ExecuteScreen({ runId, cursor, controller, transport, band = { s
                 <SplitBandNote slot={band} />
               )}
             </div>
+
+            {/*
+              * E16-R1 (8.6): the price context the hi-fi draws as candles.
+              * The producer now retains a bounded OHLC overview of the same
+              * OOS window while the child still holds the tape, so this lane
+              * can show the run's price range without inventing a bar. It is
+              * the retained lane's strip, drawn by the same component: a
+              * downsample that keeps every true extreme, captioned with its
+              * bucket size. The per-bar candle chart is still absent, and the
+              * chip above keeps saying so.
+              */}
+            <HubCandleOverview replay={replay} />
 
             {items.length > 0 ? (
               <>

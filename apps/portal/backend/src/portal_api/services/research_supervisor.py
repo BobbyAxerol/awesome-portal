@@ -20,6 +20,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Callable
 
@@ -865,71 +866,103 @@ class IsolatedResearchSupervisor:
             raise ResearchSupervisorError("P06 child evidence receipt digest is invalid")
         overview = value.get("candle_overview")
         if overview is not None:
-            if not isinstance(overview, dict):
-                raise ResearchSupervisorError("P06 child candle overview is invalid")
-            rows = overview.get("values")
-            bucket_count = overview.get("emitted_bucket_count")
-            bucket_bars = overview.get("bucket_bars")
-            source_bars = overview.get("source_bar_count")
-            sampling = overview.get("sampling")
-            if (
-                not isinstance(rows, list)
-                or not 1 <= len(rows) <= 12
-                or bucket_count != len(rows)
-                or not isinstance(bucket_bars, int)
-                or bucket_bars < 1
-                or not isinstance(source_bars, int)
-                or source_bars < len(rows)
-                or (source_bars + bucket_bars - 1) // bucket_bars != bucket_count
-                or sampling not in {"FULL", "OHLC_BUCKET_V1"}
-                or (sampling == "FULL") != (bucket_bars == 1)
-            ):
-                raise ResearchSupervisorError("P06 child candle overview bounds are invalid")
-            previous_last = -1
-            previous_close_at = -1
-            decimal_pattern = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$")
-            for row in rows:
-                if not isinstance(row, dict):
-                    raise ResearchSupervisorError("P06 child candle overview row is invalid")
-                first = row.get("first_ordinal")
-                last = row.get("last_ordinal")
-                open_at = row.get("open_utc_ms")
-                close_at = row.get("close_utc_ms")
-                if (
-                    not isinstance(first, int)
-                    or not isinstance(last, int)
-                    or first != previous_last + 1
-                    or last < first
-                    or last - first + 1 > bucket_bars
-                    or not isinstance(open_at, int)
-                    or not isinstance(close_at, int)
-                    or open_at <= previous_close_at
-                    or close_at < open_at
-                    or not isinstance(row.get("transitions"), int)
-                ):
-                    raise ResearchSupervisorError("P06 child candle overview chronology is invalid")
-                for key in ("open", "high", "low", "close"):
-                    if not isinstance(row.get(key), str) or not decimal_pattern.fullmatch(row[key]):
-                        raise ResearchSupervisorError("P06 child candle overview decimal is invalid")
-                volume = row.get("volume")
-                if volume is not None and (not isinstance(volume, str) or not decimal_pattern.fullmatch(volume)):
-                    raise ResearchSupervisorError("P06 child candle overview volume is invalid")
-                previous_last = last
-                previous_close_at = close_at
-            if previous_last != source_bars - 1:
-                raise ResearchSupervisorError("P06 child candle overview source coverage is invalid")
-            envelope = overview.get("envelope")
-            if not isinstance(envelope, dict):
-                raise ResearchSupervisorError("P06 child candle overview envelope is invalid")
-            for key in ("max_high", "min_low"):
-                if not isinstance(envelope.get(key), str) or not decimal_pattern.fullmatch(envelope[key]):
-                    raise ResearchSupervisorError("P06 child candle overview envelope decimal is invalid")
-            for key in ("max_high_at_utc_ms", "min_low_at_utc_ms"):
-                if not isinstance(envelope.get(key), int):
-                    raise ResearchSupervisorError("P06 child candle overview envelope timestamp is invalid")
+            IsolatedResearchSupervisor._validate_candle_overview(overview)
         # The hash is not persisted as a source of truth here; calculating it
         # confirms the JSON is canonicalizable before the worker receives it.
         hashlib.sha256(encoded).hexdigest()
+
+    @staticmethod
+    def _validate_candle_overview(overview: Any) -> None:
+        """Accept the E16-R1 producer contract without relaxing old receipts.
+
+        New children publish an availability envelope with at most 48 true
+        OOS buckets and null execution markers. Legacy children published at
+        most 12 raw buckets; their numeric position changes are not fills.
+        The full evidence byte budget is checked by the caller above.
+        """
+        if not isinstance(overview, dict):
+            raise ResearchSupervisorError("P06 child candle overview is invalid")
+        canonical = "state" in overview
+        keys = {"source_bar_count", "emitted_bucket_count", "bucket_bars", "sampling", "envelope", "values"}
+        if canonical:
+            keys |= {"state", "reason_code", "scope"}
+        if set(overview) != keys:
+            raise ResearchSupervisorError("P06 child candle overview shape is invalid")
+        if canonical:
+            if overview["scope"] != "OOS_EQUITY_WINDOW":
+                raise ResearchSupervisorError("P06 child candle overview scope is invalid")
+            if overview["state"] == "NOT_PUBLISHED":
+                reason = overview["reason_code"]
+                if (
+                    not isinstance(reason, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{2,159}", reason)
+                    or any(overview[key] is not None for key in ("source_bar_count", "bucket_bars", "sampling", "envelope"))
+                    or type(overview["emitted_bucket_count"]) is not int or overview["emitted_bucket_count"] != 0
+                    or overview["values"] != []
+                ):
+                    raise ResearchSupervisorError("P06 child candle overview absence is invalid")
+                return
+            if overview["state"] != "AVAILABLE" or overview["reason_code"] is not None:
+                raise ResearchSupervisorError("P06 child candle overview availability is invalid")
+        rows = overview["values"]
+        bucket_count, bucket_bars, source_bars = (overview[key] for key in ("emitted_bucket_count", "bucket_bars", "source_bar_count"))
+        sampling = overview["sampling"]
+        if (
+            not isinstance(rows, list) or not 1 <= len(rows) <= (48 if canonical else 12)
+            or type(bucket_count) is not int or bucket_count != len(rows)
+            or type(bucket_bars) is not int or not 1 <= bucket_bars <= 2_000_000
+            or type(source_bars) is not int or not len(rows) <= source_bars <= 2_000_000
+            or (source_bars + bucket_bars - 1) // bucket_bars != bucket_count
+            or sampling not in ("FULL", "OHLC_BUCKET_V1")
+            or (sampling == "FULL") != (bucket_bars == 1)
+        ):
+            raise ResearchSupervisorError("P06 child candle overview bounds are invalid")
+        decimal_pattern = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$")
+        def exact_decimal(value: Any) -> Decimal:
+            if not isinstance(value, str) or len(value) > 96 or not decimal_pattern.fullmatch(value):
+                raise ResearchSupervisorError("P06 child candle overview decimal is invalid")
+            return Decimal(value)
+        def utc_ms(value: Any) -> bool:
+            return type(value) is int and 0 <= value <= 9_007_199_254_740_991
+        previous_last, previous_close_at = -1, -1
+        extremes: list[tuple[Decimal, Decimal, int, int]] = []
+        for row in rows:
+            if not isinstance(row, dict) or set(row) != {
+                "first_ordinal", "last_ordinal", "open_utc_ms", "close_utc_ms", "open", "high", "low", "close", "volume", "transitions",
+            }:
+                raise ResearchSupervisorError("P06 child candle overview row is invalid")
+            first, last, open_at, close_at = (row[key] for key in ("first_ordinal", "last_ordinal", "open_utc_ms", "close_utc_ms"))
+            if (
+                type(first) is not int or type(last) is not int or first != previous_last + 1
+                or not first <= last < source_bars or last - first + 1 > bucket_bars
+                or not utc_ms(open_at) or not utc_ms(close_at) or open_at <= previous_close_at or close_at < open_at
+            ):
+                raise ResearchSupervisorError("P06 child candle overview chronology is invalid")
+            transitions = row["transitions"]
+            if (canonical and transitions is not None) or (
+                not canonical and (type(transitions) is not int or not 0 <= transitions <= 2_000_000)
+            ):
+                raise ResearchSupervisorError("P06 child candle overview markers are invalid")
+            open_price, high, low, close = (exact_decimal(row[key]) for key in ("open", "high", "low", "close"))
+            if not low <= min(open_price, close) <= max(open_price, close) <= high:
+                raise ResearchSupervisorError("P06 child candle overview OHLC range is invalid")
+            if row["volume"] is not None:
+                exact_decimal(row["volume"])
+            extremes.append((high, low, open_at, close_at))
+            previous_last, previous_close_at = last, close_at
+        if previous_last != source_bars - 1:
+            raise ResearchSupervisorError("P06 child candle overview source coverage is invalid")
+        envelope = overview["envelope"]
+        if not isinstance(envelope, dict) or set(envelope) != {"max_high", "min_low", "max_high_at_utc_ms", "min_low_at_utc_ms"}:
+            raise ResearchSupervisorError("P06 child candle overview envelope is invalid")
+        high, low = exact_decimal(envelope["max_high"]), exact_decimal(envelope["min_low"])
+        high_at, low_at = envelope["max_high_at_utc_ms"], envelope["min_low_at_utc_ms"]
+        if (
+            high != max(item[0] for item in extremes) or low != min(item[1] for item in extremes)
+            or not utc_ms(high_at) or not utc_ms(low_at)
+            or not any(item[0] == high and item[2] <= high_at <= item[3] for item in extremes)
+            or not any(item[1] == low and item[2] <= low_at <= item[3] for item in extremes)
+        ):
+            raise ResearchSupervisorError("P06 child candle overview envelope extrema are invalid")
 
     @staticmethod
     def _limit_preexec(limits: ResearchChildLimits):

@@ -35,6 +35,7 @@ import type {
   EquityPoint,
   EvidenceSeries,
   FoldBoundary,
+  InSampleEquityPoint,
   RollingReturnPoint,
   RollingSharpePoint,
 } from "./evidenceClient";
@@ -53,6 +54,7 @@ export function ratio(value: string | number): string {
 
 export const SERIES_NAME = {
   equity: "OOS equity",
+  inSample: "IS equity",
   /**
    * E11 / audit 04-8. The stitched OOS account exists before its first OOS
    * window and does not trade there: on the real walk-forward run 720 of
@@ -219,7 +221,7 @@ export function preOosSplit(points: EquityPoint[], boundaries: readonly FoldBoun
 }
 
 /** Exported for unit tests: jsdom never initialises a canvas, so the option is the testable surface. */
-export function equityOption(points: EquityPoint[], boundaries: readonly FoldBoundary[] = []) {
+export function equityOption(points: EquityPoint[], boundaries: readonly FoldBoundary[] = [], inSample: readonly InSampleEquityPoint[] = []) {
   const role = roleColorsNow();
   const { inkFaint } = paletteNow();
   const split = preOosSplit(points, boundaries);
@@ -228,7 +230,7 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
   const oos = split > 0 ? points.slice(split) : points;
   return baseOption({
     ...noChartApparatus(),
-    ...(split > 0
+    ...(split > 0 || inSample.length > 0
       ? {
         legend: {
           show: true,
@@ -237,7 +239,7 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
           itemWidth: 10,
           itemHeight: 8,
           textStyle: { fontSize: 10, fontFamily: "JetBrains Mono, monospace" },
-          data: [SERIES_NAME.beforeOos, SERIES_NAME.equity],
+          data: [...(inSample.length > 0 ? [SERIES_NAME.inSample] : []), ...(split > 0 ? [SERIES_NAME.beforeOos] : []), SERIES_NAME.equity],
         },
       }
       : {}),
@@ -257,7 +259,7 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
         const param = first(params);
         /* With the pre-OOS stretch split off, `dataIndex` is per-series; the
            series' own name says which stretch the reader is hovering. */
-        const series = param?.seriesName === SERIES_NAME.beforeOos ? before : oos;
+        const series = param?.seriesName === SERIES_NAME.inSample ? inSample : param?.seriesName === SERIES_NAME.beforeOos ? before : oos;
         const point = series[param?.dataIndex ?? -1];
         return point
           ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, param?.seriesName ?? SERIES_NAME.equity, currency(point.equity))}`
@@ -265,6 +267,12 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
       },
     },
     series: [
+      ...(inSample.length > 0 ? [{
+        type: "line" as const, name: SERIES_NAME.inSample, showSymbol: false,
+        data: inSample.map((point) => [point.at_utc_ms, Number(point.equity)]),
+        lineStyle: { width: 1.25, color: role.is, type: "dashed" as const },
+        itemStyle: { color: role.is },
+      }] : []),
       /* Drawn first so the OOS line sits on top where they meet. */
       ...(split > 0
         ? [{
@@ -533,6 +541,7 @@ export function rollingSharpeOption(points: RollingSharpePoint[]) {
 /* ---------------------------------------------------------- components */
 
 const NO_BOUNDARIES: readonly FoldBoundary[] = [];
+const NO_IN_SAMPLE: readonly InSampleEquityPoint[] = [];
 
 /**
  * EChart 1 — the stitched OOS equity. Its exact values (and the drawdown the
@@ -542,14 +551,16 @@ export function EquityChart({
   series,
   points: given,
   boundaries = NO_BOUNDARIES,
+  inSample = NO_IN_SAMPLE,
 }: {
   series?: EvidenceSeries;
   /** W3: the retained lane's observations, drawn as they were served. */
   points?: EquityPoint[];
   boundaries?: readonly FoldBoundary[];
+  inSample?: readonly InSampleEquityPoint[];
 }) {
   const points = given ?? ((series?.values ?? []) as EquityPoint[]);
-  const equity = useMemo(() => equityOption(points, boundaries), [points, boundaries]);
+  const equity = useMemo(() => equityOption(points, boundaries, inSample), [points, boundaries, inSample]);
   return (
     <div data-chart="equity">
       <EChart option={equity} height={CHART_HEIGHT.equity} />
@@ -562,6 +573,11 @@ export function EquityChart({
           cells: [new Date(point.at_utc_ms).toISOString(), point.equity, point.drawdown_fraction],
         }))}
       />
+      {inSample.length > 0 ? <ExactTable
+        id="equity-is" caption="Declared IS equity, exact source values"
+        head={["time (UTC)", "equity"]}
+        rows={inSample.map((point) => ({ key: String(point.at_utc_ms), cells: [new Date(point.at_utc_ms).toISOString(), point.equity] }))}
+      /> : null}
     </div>
   );
 }
@@ -608,8 +624,8 @@ export function RollingChart({ series }: { series: EvidenceSeries }) {
   );
 }
 
-export function RollingSharpeChart({ series }: { series: EvidenceSeries }) {
-  const points = series.values as RollingSharpePoint[];
+export function RollingSharpeChart({ series, points: supplied }: { series?: EvidenceSeries; points?: RollingSharpePoint[] }) {
+  const points = supplied ?? (series?.values ?? []) as RollingSharpePoint[];
   const option = useMemo(() => rollingSharpeOption(points), [points]);
   return (
     <div data-chart="rolling-sharpe">

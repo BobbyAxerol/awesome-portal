@@ -19,6 +19,7 @@ import { ResearchProgressFanout, type ResearchProgressEnvelope } from "./progres
 import { ResearchProgressPortalClient } from "./progress.portal-client";
 import {
   ResearchProgressRepository,
+  type ConvergenceCandidate,
   type ProgressIngressScope,
   type ProgressRunIdentity,
   type ProgressRunRead,
@@ -31,6 +32,7 @@ import { ResearchReportService } from "./report.service";
 import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { WHATIF_PROFILE, WHATIF_PROFILE_ID } from "./whatif.profile";
 import {
+  RETRY_WAIT_DISPATCH_GRACE_SECONDS,
   STRANDED_TERMINAL_MIN_AGE_SECONDS,
   failedAt,
   parseTerminalReason,
@@ -49,6 +51,21 @@ const EFFECTIVE_STATUSES = new Set(["QUEUED", "RUNNING", "FINISHING", "COMPLETED
 /** E10: a read reconciles its workspace at most this often per process. */
 const RECONCILE_INTERVAL_MS = 10_000;
 const STRANDED_TERMINAL_BATCH = 16;
+/** E10-O3: a read looks for stuck work in other workspaces at most this often per process. */
+const SWEEP_INTERVAL_MS = 60_000;
+/** E10-O3: and reconciles at most this many of them, so one read never pays for many. */
+const SWEEP_WORKSPACE_BATCH = 2;
+/** E10-O3: the oldest candidates the bounded global lookup returns, deduplicated by workspace here. */
+const SWEEP_CANDIDATE_LIMIT = 64;
+/**
+ * E10-O3: a workspace nobody is reading is reconciled by the sweep at most
+ * this often. It is read from the same per-workspace clock E10 established,
+ * so a workspace someone *is* reading (≤ 10 s) is never swept: it already
+ * converges on its own reads, and the sweep rotates on to another one.
+ */
+const SWEEP_WORKSPACE_COOLDOWN_MS = 300_000;
+/** E10-O3: the per-workspace clock is a cache, not a ledger; drop it whole rather than grow it. */
+const RECONCILE_CLOCK_LIMIT = 512;
 
 /** CG-P11-03: run identity from the P10 producer row and its immutable P08 manifest. */
 export interface ResearchProgressRunIdentity {
@@ -195,6 +212,8 @@ export interface ResearchProgressConsoleResponse {
 @Injectable()
 export class ResearchProgressService {
   private readonly reconciledAt = new Map<string, number>();
+  /** E10-O3: when this process last looked for stuck work outside the workspace being read. */
+  private sweptAt = 0;
 
   constructor(
     private readonly progress: ResearchProgressRepository,
@@ -310,18 +329,81 @@ export class ResearchProgressService {
     return { recovered: recovered.recovered, settled, expired };
   }
 
-  /** A throttled, never-throwing `reconcile` for read paths (Run Progress, Run Library). */
+  /**
+   * A throttled, never-throwing `reconcile` for read paths (Run Progress,
+   * Run Library). It converges the workspace being read, and then — E10-O3 —
+   * a bounded number of workspaces nobody is reading.
+   *
+   * The two are deliberately separate budgets. A hot workspace read every
+   * second must not starve the sweep, and the sweep must not make a read of
+   * one workspace pay for many.
+   */
   async reconcileBestEffort(scope: ResearchScope): Promise<void> {
     if (this.config.FEATURE_RESEARCH_PROGRESS !== "true") return;
+    await this.reconcileWorkspaceBestEffort(scope, RECONCILE_INTERVAL_MS);
+    await this.sweepPendingWorkspacesBestEffort(scope);
+  }
+
+  /** One workspace, at most once per `minIntervalMs` per process, never throwing. */
+  private async reconcileWorkspaceBestEffort(scope: ResearchScope, minIntervalMs: number): Promise<void> {
     const now = Date.now();
     const last = this.reconciledAt.get(scope.workspaceId);
-    if (last !== undefined && now - last < RECONCILE_INTERVAL_MS) return;
+    if (last !== undefined && now - last < minIntervalMs) return;
+    if (this.reconciledAt.size >= RECONCILE_CLOCK_LIMIT) this.reconciledAt.clear();
     this.reconciledAt.set(scope.workspaceId, now);
     try {
       await this.reconcile(scope);
     } catch (error) {
       const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code: unknown }).code) : "UNTYPED";
       process.stderr.write(`${JSON.stringify({ event: "research_run_reconcile_failed", workspace_id: scope.workspaceId, code })}\n`);
+    }
+  }
+
+  /**
+   * E10-O3: a run stuck in a workspace nobody opens stays stuck, because E10
+   * made convergence read-driven and Control API has no Research worker by
+   * design. So a read repairs further than it reports: after converging its
+   * own workspace it reconciles up to `SWEEP_WORKSPACE_BATCH` others that
+   * hold work which can no longer converge on its own.
+   *
+   * Nothing here reaches the caller. The sweep returns no value, changes no
+   * response field, and never throws — a failure is logged and the read that
+   * triggered it answers exactly as before. Each swept workspace is
+   * reconciled under the identity that already owns the stuck work (the
+   * job's requester); if that account is no longer a member the repository's
+   * own membership check refuses it and this skips that workspace.
+   *
+   * Bounded: one indexed lookup per minute per process (migration 069),
+   * at most `SWEEP_CANDIDATE_LIMIT` rows from it, at most
+   * `SWEEP_WORKSPACE_BATCH` workspaces reconciled per tick, and each of
+   * those runs the same already-bounded per-workspace `reconcile`.
+   */
+  private async sweepPendingWorkspacesBestEffort(scope: ResearchScope): Promise<void> {
+    const now = Date.now();
+    if (now - this.sweptAt < SWEEP_INTERVAL_MS) return;
+    this.sweptAt = now;
+    let candidates: ConvergenceCandidate[];
+    try {
+      candidates = await this.progress.workspacesPendingConvergence(
+        scope.actorUserId,
+        RETRY_WAIT_DISPATCH_GRACE_SECONDS,
+        SWEEP_CANDIDATE_LIMIT,
+      );
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code: unknown }).code) : "UNTYPED";
+      process.stderr.write(`${JSON.stringify({ event: "research_run_convergence_sweep_failed", code })}\n`);
+      return;
+    }
+    const seen = new Set<string>([scope.workspaceId]);
+    let budget = SWEEP_WORKSPACE_BATCH;
+    for (const candidate of candidates) {
+      if (budget === 0) break;
+      if (seen.has(candidate.workspaceId)) continue;
+      seen.add(candidate.workspaceId);
+      const last = this.reconciledAt.get(candidate.workspaceId);
+      if (last !== undefined && now - last < SWEEP_WORKSPACE_COOLDOWN_MS) continue;
+      budget -= 1;
+      await this.reconcileWorkspaceBestEffort(candidate, SWEEP_WORKSPACE_COOLDOWN_MS);
     }
   }
 

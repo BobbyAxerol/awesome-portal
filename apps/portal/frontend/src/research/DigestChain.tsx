@@ -83,6 +83,7 @@ const RULE_WORDS: Record<Stage4BindingValue["rows"][number]["identity_rule"], st
   QUANTBT_STRATEGY_FINGERPRINT_V1: "QuantBT strategy fingerprint",
   SHA256_CANONICAL_PARAMETER_MAP_V1: "sha256 of the canonical parameter map",
   P04_ADAPTER_CONTRACT_DIGEST_V1: "P04 adapter contract digest",
+  IMPORTED_SOURCE_AND_ADAPTER_SHA256_V1: "sha256 of the imported source and adapter contract",
 };
 
 /** The sealed-bundle row is the chain's last link on both lanes. */
@@ -139,7 +140,8 @@ function authorityLinks(authority: ParameterAuthorityValue | null | undefined): 
       label: "strategy source",
       value: fixed?.code_digest ?? null,
       kind: "digest",
-      rule: "PROTECTED_SHA256",
+      rule: !fixed ? null : fixed.hash_scope === "SOURCE_CODE_SHA256"
+        ? "SOURCE_CODE_SHA256" : "PROTECTED_SHA256 · ADAPTER_CONTRACT_DIGEST",
       sourceKey: "parameter_authority.code_fixed.code_digest",
       reasonCode: fixed?.code_digest ? null : fixed?.reason_code ?? authority?.reason_code ?? null,
       absenceNote: null,
@@ -155,6 +157,8 @@ export function hubDigestChain(detail: FreezeDetailDocument): DigestChainFacts {
   const params = sealedParams(binding);
   const bundle = sealedBundle(binding);
   const paramsDigest = binding?.sealed_params_sha256 ?? detail.freeze.selection.parameter_bundle_digest ?? null;
+  const engine = detail.engine_pin;
+  const engineAvailable = engine?.state === "AVAILABLE";
   return {
     lane: binding?.lane ?? "P04_FIXED_QUALIFICATION",
     links: [
@@ -173,18 +177,17 @@ export function hubDigestChain(detail: FreezeDetailDocument): DigestChainFacts {
       {
         key: "ENGINE_PIN",
         label: "engine pin",
-        value: null,
+        value: engineAvailable ? engine.engine_version : null,
         kind: "text",
-        rule: null,
-        sourceKey: "provenance",
-        reasonCode: null,
+        rule: engineAvailable ? "QuantBT engine, as the execution receipt recorded it" : null,
+        sourceKey: engine ? "engine_pin.engine_version" : "provenance",
+        reasonCode: engineAvailable ? null : engine?.availability.reason_code ?? null,
         /*
-         * The engine release this qualification pinned is inside the adapter
-         * contract the last link names, but the freeze read does not publish
-         * the version itself — so this link says that, rather than printing a
-         * version this response never carried.
+         * A new response publishes the execution's engine pin. Historical
+         * responses remain absent; never substitute a build constant.
          */
-        absenceNote: "the P04 freeze read publishes no engine version; it is not restated from a build constant",
+        absenceNote: engineAvailable ? null : engine?.availability.reason_code
+          ?? "the P04 freeze read publishes no engine version; it is not restated from a build constant",
       },
       {
         key: "DATASET_HASH",

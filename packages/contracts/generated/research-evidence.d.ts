@@ -156,7 +156,7 @@ export interface components {
             low: components["schemas"]["ExactDecimal"];
             close: components["schemas"]["ExactDecimal"];
             volume: components["schemas"]["ExactDecimal"] | null;
-            transitions: number;
+            transitions: number | null;
         };
         /** @description E16-R1 bounded true-extrema source overview. It is not a per-bar replay tape and cannot establish execution marker ordering. */
         CandleOverview: {

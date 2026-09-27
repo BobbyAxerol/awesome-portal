@@ -11,9 +11,12 @@
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 
-import { ResearchEvidenceOosAnalyticsSourceSchema } from "./evidence.contract";
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 export { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
+import {
+  ResearchEvidenceCandleOverviewSourceSchema,
+  ResearchEvidenceOosAnalyticsSourceSchema,
+} from "./evidence.contract";
 
 const OpaqueIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/);
 export const ResearchProgressRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
@@ -309,7 +312,10 @@ export const ResearchEvidenceSourceSchema = z.object({
   }).strict(),
   equity_points: z.array(ResearchEvidencePointSchema).min(1).max(192),
   /** E16-R1: bounded source-time OHLC overview; absent on immutable older receipts. */
-  candle_overview: ResearchEvidenceCandleOverviewSchema.optional(),
+  candle_overview: z.union([
+    ResearchEvidenceCandleOverviewSourceSchema,
+    ResearchEvidenceCandleOverviewSchema,
+  ]).optional(),
   unavailable: z.object({
     benchmark: ResearchEvidenceAvailabilitySchema,
     funding: ResearchEvidenceAvailabilitySchema,
@@ -380,6 +386,23 @@ export const ResearchEvidenceSourceSchema = z.object({
     || value.direct.final_equity !== value.equity_points[value.equity_points.length - 1]?.equity
   ) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "direct evidence endpoints do not reconcile to the OOS series" });
+  }
+  // E16-R1: the overview summarises the OOS window, so it must count exactly
+  // the bars the receipt already declares -- never a wider, unnamed tape.
+  const overview = value.candle_overview;
+  if (overview && (!("state" in overview) || overview.state === "AVAILABLE")) {
+    if (overview.source_bar_count !== value.source.oos_observation_count) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "candle overview does not cover the declared OOS window" });
+    }
+    if (overview.emitted_bucket_count > 48) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "P04 candle overview exceeds its source byte-budget cap" });
+    }
+    const first = value.equity_points[0]?.at_utc_ms;
+    const last = value.equity_points[value.equity_points.length - 1]?.at_utc_ms;
+    if (first !== undefined && last !== undefined
+      && (overview.values[0]!.open_utc_ms !== first || overview.values.at(-1)!.close_utc_ms !== last)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "candle overview does not span the OOS equity endpoints" });
+    }
   }
   for (let index = 1; index < value.equity_points.length; index += 1) {
     if (value.equity_points[index]!.at_utc_ms <= value.equity_points[index - 1]!.at_utc_ms) {

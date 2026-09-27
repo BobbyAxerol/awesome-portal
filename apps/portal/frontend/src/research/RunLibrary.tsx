@@ -984,7 +984,12 @@ function openTarget(item: RunLibraryItem, pickTarget?: string): { to: string; la
    * that cannot exist.
    */
   if (pickTarget) {
-    const picked = resolveJourneyCardRoute(pickTarget, item.run_id, item.binding?.alpha_id ?? null);
+    const picked = resolveJourneyCardRoute(
+      pickTarget,
+      item.run_id,
+      item.binding?.alpha_id ?? null,
+      item.binding?.alpha_version_id ?? null,
+    );
     const name = PICK_TARGET_LABEL[pickTarget] ?? pickTarget;
     if (picked) {
       return {

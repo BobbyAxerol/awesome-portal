@@ -40,6 +40,8 @@ type HubSchemas = EvidenceComponents["schemas"];
 type SourceSchemas = CurrentSourceComponents["schemas"];
 
 export type EvidenceHub = HubSchemas["EvidenceHub"];
+export type RetainedAnalytics = HubSchemas["RetainedAnalytics"];
+export type InSampleEquityPoint = RetainedAnalytics["in_sample_equity"]["points"][number];
 export type EvidenceSeries = HubSchemas["EvidenceSeries"];
 export type SeriesKind = HubSchemas["SeriesKind"];
 export type Metric = HubSchemas["Metric"];

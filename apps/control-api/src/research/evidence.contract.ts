@@ -146,6 +146,109 @@ export const ResearchEvidenceOosAnalyticsSourceSchema = z.object({
 
 export type ResearchEvidenceOosAnalyticsSource = z.infer<typeof ResearchEvidenceOosAnalyticsSourceSchema>;
 
+/**
+ * E16-R1 · additive `candle_overview` block of the private P13 source receipt,
+ * produced in the confined child by `workers/research_child._candle_overview`
+ * while it still holds the tape the P10 producer deletes before the artifact
+ * bundle is written.  Receipts without it stay valid and read as "predates the
+ * retained candle overview": there is no backfill, because a run whose tape is
+ * gone has no bars to summarise.
+ *
+ * It is a summary, never a second price store: at most 160 buckets (the P04
+ * child emits at most 48, shrunk further to fit its 24 KiB receipt), each
+ * bucket's `high`/`low` the **true extreme** of the bars it covers.  The
+ * field names are the retained WFO lane's `execution.candle_overview`
+ * (`current-source.contract.ts`) so Screen 08 draws both lanes with one
+ * vocabulary; `transitions` is always null here because P04 publishes no
+ * execution ledger through this adapter.
+ */
+const CandleOverviewBucketSchema = z.object({
+  first_ordinal: z.number().int().nonnegative().max(2_000_000),
+  last_ordinal: z.number().int().nonnegative().max(2_000_000),
+  open_utc_ms: UtcMsSchema,
+  close_utc_ms: UtcMsSchema,
+  open: DecimalSchema,
+  high: DecimalSchema,
+  low: DecimalSchema,
+  close: DecimalSchema,
+  volume: DecimalSchema.nullable(),
+  transitions: z.null(),
+}).strict().superRefine((value, context) => {
+  const issue = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  if (value.last_ordinal < value.first_ordinal) issue("a candle bucket must cover at least one bar");
+  if (value.close_utc_ms < value.open_utc_ms) issue("a candle bucket must not close before it opens");
+  const [high, low, open, close] = [value.high, value.low, value.open, value.close].map(Number);
+  // A downsample that loses an extreme is the one thing this block must never
+  // do, so the boundary refuses a bucket whose own open/close escape it.
+  if (!(high >= low) || !(high >= open) || !(high >= close) || !(low <= open) || !(low <= close)) {
+    issue("a candle bucket high/low must bracket its own open and close");
+  }
+});
+
+export const ResearchEvidenceCandleOverviewSourceSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  /** The bars summarised: exactly the OOS window the P17 replay replays. */
+  scope: z.literal("OOS_EQUITY_WINDOW"),
+  source_bar_count: z.number().int().positive().max(2_000_000).nullable(),
+  emitted_bucket_count: z.number().int().nonnegative().max(160),
+  bucket_bars: z.number().int().positive().max(2_000_000).nullable(),
+  sampling: z.enum(["FULL", "OHLC_BUCKET_V1"]).nullable(),
+  envelope: z.object({
+    max_high: DecimalSchema,
+    max_high_at_utc_ms: UtcMsSchema,
+    min_low: DecimalSchema,
+    min_low_at_utc_ms: UtcMsSchema,
+  }).strict().nullable(),
+  values: z.array(CandleOverviewBucketSchema).max(160),
+}).strict().superRefine((value, context) => {
+  const issue = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  const available = value.state === "AVAILABLE";
+  if (available === (value.reason_code !== null)) issue("candle overview state and reason are inconsistent");
+  if (
+    available !== (value.values.length > 0)
+    || available !== (value.envelope !== null)
+    || available !== (value.bucket_bars !== null)
+    || available !== (value.sampling !== null)
+    || available !== (value.source_bar_count !== null)
+  ) issue("candle overview availability and payload are inconsistent");
+  if (value.emitted_bucket_count !== value.values.length) issue("candle overview bucket count is inconsistent");
+  if (!available) return;
+  const bucketBars = value.bucket_bars!;
+  const barCount = value.source_bar_count!;
+  if ((value.sampling === "FULL") !== (bucketBars === 1)) issue("candle overview sampling declaration is inconsistent");
+  if (value.sampling === "FULL" && value.values.length !== barCount) issue("a FULL candle overview must emit every bar");
+  if (value.values.length > barCount) issue("candle overview emits more buckets than it has bars");
+  // Dense, contiguous, chronological coverage of the whole declared window:
+  // a gap would let a hidden stretch of the run masquerade as summarised.
+  if (value.values[0]!.first_ordinal !== 0 || value.values.at(-1)!.last_ordinal !== barCount - 1) {
+    issue("candle overview must cover its whole declared window");
+  }
+  for (let index = 1; index < value.values.length; index += 1) {
+    const previous = value.values[index - 1]!;
+    const current = value.values[index]!;
+    if (current.first_ordinal !== previous.last_ordinal + 1 || current.open_utc_ms <= previous.close_utc_ms) {
+      issue("candle overview buckets must be contiguous and strictly chronological");
+      break;
+    }
+  }
+  for (const bucket of value.values) {
+    if (bucket.last_ordinal - bucket.first_ordinal + 1 > bucketBars) {
+      issue("a candle bucket covers more bars than the declared bucket size");
+      break;
+    }
+  }
+  // The envelope is the run-level extreme, so it must be one of the true
+  // bucket extremes and never a wider or narrower invented range.
+  const highs = value.values.map((bucket) => Number(bucket.high));
+  const lows = value.values.map((bucket) => Number(bucket.low));
+  if (Number(value.envelope!.max_high) !== Math.max(...highs) || Number(value.envelope!.min_low) !== Math.min(...lows)) {
+    issue("candle overview envelope must be the true extreme of its buckets");
+  }
+});
+
+export type ResearchEvidenceCandleOverviewSource = z.infer<typeof ResearchEvidenceCandleOverviewSourceSchema>;
+
 export const ResearchEvidenceAvailabilitySchema = z.object({
   state: z.enum([
     "AVAILABLE",
