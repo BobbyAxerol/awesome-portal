@@ -23,12 +23,39 @@ test('20 distinct sessions, loopback and GET-only named Research paths are manda
   assert.throws(() => validateManifest({ ...input, paths: ['/api/v1/execution/commands'] }), /NAMED_READ/);
 });
 
+test('dev access identity is optional but restricted to the 20 owned readers and sent with their session', async () => {
+  const manifest = { ...input, users: input.users.map((user, index) => ({ ...user,
+    access_email: `p23-reader-${String(index + 1).padStart(2, '0')}@azdag.com` })) };
+  assert.throws(() => validateManifest({ ...manifest, users: manifest.users.map(user => ({ ...user,
+    access_email: 'bobby@azdag.com' })) }), /OWNED_TEST_ACCESS_IDENTITY_REQUIRED/);
+  const result = await runReadLoad(manifest, async (url, init) => {
+    const index = Number(init.headers.cookie.split('-').at(-1));
+    assert.equal(init.headers['x-dev-access-email'], manifest.users[index].access_email);
+    return new Response(String(url).endsWith('/api/auth/context')
+      ? JSON.stringify({ state: 'AUTHENTICATED', principal: { principalId: `user_${index}` } }) : '{}',
+    { headers: { 'content-type': 'application/json' } });
+  });
+  assert.equal(result.passed, true);
+});
+
 test('the canonical Library and sparkline are allowed without admitting the legacy producer or other namespaces', () => {
   for (const path of ['/api/v1/quantbt/runs?limit=20','/api/v1/quantbt/runs/rrun_abcdef/sparkline']) {
     assert.equal(validateManifest({...input,paths:[path]}).paths[0],path);
   }
   for (const path of ['/api/v1/quantbt/runs/rrun_abcdef/cancel','/api/v1/quantbt/releases/current','/api/v1/quantbt/runs/../../execution/commands']) {
     assert.throws(() => validateManifest({...input,paths:[path]}),/NAMED_READ/);
+  }
+});
+
+test('W06 uses actual named report/search/replay reads, never download or diagnostic mutations', () => {
+  for (const path of ['/api/v1/quantbt/runs/rrun_abcdef/report', '/api/v1/quantbt/runs/rrun_abcdef/execute/replay',
+    '/api/v1/quantbt/runs/rrun_abcdef/current-source/search', '/api/v1/quantbt/runs/rrun_abcdef/evidence/series']) {
+    assert.doesNotThrow(() => validateManifest({ ...input, paths: [path] }));
+  }
+  for (const path of ['/api/v1/quantbt/runs/rrun_abcdef/report/exports',
+    '/api/v1/quantbt/runs/rrun_abcdef/freeze/verify', '/api/v1/quantbt/runs/rrun_abcdef/whatif/evaluate',
+    '/api/v1/quantbt/runs/rrun_abcdef/raw']) {
+    assert.throws(() => validateManifest({ ...input, paths: [path] }), /NAMED_READ/);
   }
 });
 

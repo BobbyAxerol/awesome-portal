@@ -1,5 +1,12 @@
 # P16 backend and contract packet — current-source Freeze / retained integrity
 
+> **OL-02 current closeout, 2026-09-27 (Codex):** owned real P04 + public
+> byte-observer verify has six durable MATCH/MISMATCH/repeat/restore receipts;
+> original artifact tree and sealed expectation stay unchanged. Corruption
+> touched only a test copy; private observer root restored. This closes OL-02
+> runtime evidence, not full P16 visual/P23/P24 or production activation.
+> [Runtime checkpoint](../P23/RECOVERY_INTEGRITY_RUNTIME_CHECKPOINT_2026-09-27.md).
+
 > **Current status 2026-09-26 (Claude, owner ≤P21):** P16-B is no longer source-blocked — A10a/b/c delivered by W5a ([record](./W5A_A10_CLAUDE_2026-09-25.md)): byte-verify receipts, historical binding, 9×9 what-if with a bounded job and sibling attempt; T02/T11 closed. CG-P16-02/03 (Stage-4 binding BOUND, parameter authority, P16-T14) and θ* digest copy closed by X2 ([record](./X2_P15_P18_GAPS_CLAUDE_2026-09-26.md)). Open items live in [Unified §13.4.1](../../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-open-ledger) (OL-02). The text below is the original packet.
 
 Status: **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE; feature-dark.** This packet

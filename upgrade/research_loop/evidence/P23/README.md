@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Current owned runtime checkpoint, 2026-09-27:** cell 8096 is built/running,
+22 distinct test principals authenticated without auto-login, F4/E10 real
+stranded-terminal/retry-expiry/live-lease preservation and OL-02 real observer
+MATCH/MISMATCH on a test copy PASS. [Exact proof and safety limits](./RECOVERY_INTEGRITY_RUNTIME_CHECKPOINT_2026-09-27.md).
+Full OL-12/P23 remains **NOT_QUALIFIED**: this is not 20-viewer mixed-load,
+restore/cold/upgrade/browser or P24 acceptance. Historical paragraphs below
+are preserved, not current absence of a cell or P22 backend.
+
 Status: **BACKEND_RESOURCE_HARNESS_READY · NOT_QUALIFIED**. This is P23 (the
 request's heading), not another P22 publication implementation. P22's real
 Delta→R1 and S11 browser receipts remain prerequisites; see the P22 packet.

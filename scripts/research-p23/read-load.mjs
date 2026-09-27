@@ -13,6 +13,10 @@ export function validateManifest(input) {
     throw new Error('DISTINCT_USER_IDENTITIES_AND_SESSIONS_REQUIRED');
   }
   if (new Set(input.users.map(user => user.cookie)).size !== 20) throw new Error('SESSION_REUSE_IS_NOT_20_USERS');
+  if (input.users.some(user => user.access_email !== undefined
+    && !/^p23-reader-(?:0[1-9]|1[0-9]|20)@azdag\.com$/.test(user.access_email))) {
+    throw new Error('OWNED_TEST_ACCESS_IDENTITY_REQUIRED');
+  }
   const url = new URL(input.base_url);
   if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.port !== '8096'
     || url.pathname !== '/' || url.username || url.password || url.search || url.hash) {
@@ -21,8 +25,8 @@ export function validateManifest(input) {
   if (!Array.isArray(input.paths) || input.paths.length < 1 || input.paths.length > 12 || input.paths.some(path => {
     if (typeof path !== 'string' || !/^\/api\/v1\/[a-z0-9/?=&_%.-]+$/i.test(path)) return true;
     const resolved = new URL(path, url);
-    const namedLibrary = /^\/api\/v1\/quantbt\/runs(?:\/[A-Za-z0-9_.-]{1,128}\/sparkline)?$/.test(resolved.pathname);
-    return !(resolved.pathname.startsWith('/api/v1/research/') || namedLibrary) || resolved.hash !== ''
+    const namedQuantbtRead = /^\/api\/v1\/quantbt\/runs(?:\/[A-Za-z0-9_.-]{1,128}\/(?:sparkline|report|execute\/replay|evidence(?:\/series)?|split|search|freeze|current-source\/(?:evidence(?:\/series)?|split|search|freeze|replay)))?$/.test(resolved.pathname);
+    return !(resolved.pathname.startsWith('/api/v1/research/') || namedQuantbtRead) || resolved.hash !== ''
       || /(?:publish|create|verify|evaluate|export|cancel|activate)/i.test(resolved.pathname);
   })) {
     throw new Error('NAMED_READ_PATHS_ONLY');
@@ -63,8 +67,10 @@ export async function runReadLoad(input, fetchFn = fetch) {
   const origin = new URL(manifest.base_url).origin;
   const samples = [];
   await Promise.all(manifest.users.map(async user => {
+    const headers = { cookie: user.cookie, accept: 'application/json',
+      ...(user.access_email ? { 'x-dev-access-email': user.access_email } : {}) };
     const identity = await fetchFn(new URL('/api/auth/context', origin), {
-      method: 'GET', redirect: 'manual', headers: { cookie: user.cookie, accept: 'application/json' },
+      method: 'GET', redirect: 'manual', headers,
       signal: AbortSignal.timeout(10_000),
     });
     if (identity.status !== 200) throw new Error('IDENTITY_CHECK_REFUSED');
@@ -76,7 +82,7 @@ export async function runReadLoad(input, fetchFn = fetch) {
       const url = new URL(path, origin);
       const start = performance.now();
       const response = await fetchFn(url, {
-        method: 'GET', redirect: 'manual', headers: { cookie: user.cookie, accept: 'application/json' },
+        method: 'GET', redirect: 'manual', headers,
         signal: AbortSignal.timeout(10_000),
       });
       // Measure the complete bounded JSON response, but never retain or print business rows.

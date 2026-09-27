@@ -3658,7 +3658,7 @@ Migration: Claude 064–069, Codex 063 (P22, đã dùng) và ≥070. Merge vào
 | Id | Việc | Đối chiếu nhận xét Codex | Chủ | Điều kiện đóng |
 |---|---|---|---|---|
 | OL-01 | Imported/DRAFT exact-profile execution | **ISOLATED BACKEND + CONSUMER ACCEPTED, 2026-09-27.** Host has `portal-research-child (enforce)`; owned worker uses it, three DRAFT runs complete with fenced source/retention. Exact identity/hash/engine-pin consumers pass at 1280/660. Production stack was not activated and defaults remain false. | Codex approved integration · Bobby/ops Production rollout | [E17 backend receipt](./research_loop/evidence/P10/E17_IMPORTED_DRAFT_EXECUTION_BACKEND_RECEIPT_2026-09-27.md) + [final 30-cell proof](./research_loop/evidence/P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md). No Production activation claim. |
-| OL-02 | P16 `source_artifact_bytes` trên lane GET | **Cũ một nửa.** Verify byte đã có: `POST …/freeze/verify` đọc byte qua observer riêng, receipt MATCH/MISMATCH bền, hỏng thì BLOCKED (W5a `91ba9639`, `artifact-verify.*`). Field trên GET current-source cố ý giữ NOT_PUBLISHED vì GET không mở lại byte — **thiết kế, không phải nợ**. Còn mở: observer phải được bật và có receipt trên preview/dev | Claude | Receipt verify MATCH + một MISMATCH có chủ ý trên preview |
+| OL-02 | P16 `source_artifact_bytes` trên lane GET | **CLOSED owned runtime, 2026-09-27.** Explicit public verify + real private observer produces six durable MATCH/MISMATCH/repeat/restore receipts; original artifact tree and seal unchanged, only test copy corrupted. GET still does not reopen bytes; no production claim. | Codex approved qualification | [Exact actual evidence](./research_loop/evidence/P23/RECOVERY_INTEGRITY_RUNTIME_CHECKPOINT_2026-09-27.md) |
 | OL-03 | P19 writer cho promotion pick (`CG-P19-10`, DR-03) | **CLOSED — Codex P22.** Approval thật `PENDING@1 → APPROVED@2` append settlement và ghi đúng một `attempt_promotion_pick_facts_v1`; reread không nhân đôi. | Claude consumer | S10 render fact thật theo [`P22 real receipt`](./research_loop/evidence/P22/real-preview-receipt.json). |
 | OL-04 | `CG-P22-02` — exact sealed final-audit `rrun_` vào existing `public.run_read_models` | **CLOSED — Codex P22.** Narrow security-definer bridge + immutable receipt; runtime không có direct DML. | — | Publish thật không còn `P22_GOVERNANCE_SOURCE_UNAVAILABLE`/`RUN_NOT_MIRRORED`. |
 | OL-05 | Isolated P22 preview and real WFO → P21 seal → existing R1 | **CLOSED — Codex P22.** Namespaced stack, no shared `:8095`, dev or Production mutation. | — | Structured receipt retained in P22 packet. |
@@ -3765,7 +3765,7 @@ chưa commit** — phải lấy lại, đừng làm lại từ đầu:
 | # | Việc | Chủ | Vì sao chưa xong |
 |---|---|---|---|
 | F3 | Build lại preview **một lần** (migration 068 + 069 cùng lượt — F1 và F2 **đã vào nhánh**), rồi chạy lane lấy **receipt xanh 54/54**. Đây là việc kiểm, không phải code | Claude hoặc **Codex** (chỉ build + chạy lane) | Lane là receipt real-API: sửa frontend thì phải build lại preview mới xanh. **Chú ý thứ tự migration:** 069 vào nhánh trước 068, DB nào đã chạy 069 rồi sẽ kẹt — xem [`preview-migration-order`] trong ghi chú vận hành |
-| F4 | **E10-O1** — receipt thật cho E10 **và** E10-O3: preview đã build sạch nên bốn run kẹt cũ không còn; phải tạo một strand mới rồi chứng minh nó hội tụ | **Codex làm được** (backend), **cần Bobby cho phép ghi vào preview** | Preview đang read-only |
+| F4 | **CLOSED owned runtime F4/E10, 2026-09-27.** New real terminal is deliberately stranded then read-recovered once; overdue retry becomes typed FAILED, another actual live lease remains byte-identical and completes after worker restoration. Public production paths, no fake source terminal/immutable rewrite. | Codex approved qualification | [Fault + actual API/DB evidence](./research_loop/evidence/P23/RECOVERY_INTEGRITY_RUNTIME_CHECKPOINT_2026-09-27.md); shared preview 8095 untouched |
 | F5 | **Frontend chưa xong — E4-O1 / E6:** đường create + preflight của S02 và write của S14 chưa từng chạy với server thật; hiện chỉ stub trong browser | Claude (frontend), cần một stack ghi được | Preview read-only |
 | F6 | **CLOSED backend regression, 2026-09-27.** Historical 9/10 failure superseded: actual current suite first reproduced 9/11, then **11/11 PASS**. Assertions now follow published persisted/RS-02 lane identity; exact values, extrema, sealed manifest and no reader-created P13 projection remain checked. | Codex | [Checkpoint + original failure retained](./research_loop/evidence/P23/F6_MIGRATION_VERIFIER_CHECKPOINT_2026-09-27.md) |
 | F7 | **E10-O3a** — nhịp 2 workspace/phút/process: 10 workspace hội tụ trong ~5 phút, 100 workspace mất ~50 phút. Quá ~30 workspace phải đo lại | Bobby quyết, rồi Claude | Đo rồi mới biết có cần đổi nhịp |
@@ -3810,6 +3810,25 @@ P23 verifier repair passes 12 unit tests and its samplers pass 7 Node tests,
 including canonical Library GET coverage. These are not real qualification
 receipts. F4/E10, OL-02, OL-12/P23 workload, F3/F5/OL-24, E6-BR-01 and P24
 remain open. [Exact evidence and next steps](./research_loop/evidence/P23/F6_MIGRATION_VERIFIER_CHECKPOINT_2026-09-27.md).
+
+**Next runtime slice started — 2026-09-27:** checkpoint committed as `12e00e7f`
+after the unbypassed whole-workspace gate (Control API 1315 PASS / one external
+real-data test skipped separately, contracts 195 PASS). One owned P23 cell is
+being provisioned on loopback 8096 with private random credentials, no
+auto-login, 20 actual reader identities plus two test operators and the exact
+5,000,000,000-byte aggregate profile. The P23-only activation overlay admits
+explicit byte verification/what-if/publication; every Execution flag stays
+dark. Next actual evidence is F4/E10 lost-terminal/retry-expiry/live-lease
+preservation and OL-02 observer MATCH/MISMATCH on a test copy. Provisioning or
+green instrumentation does not close runtime qualification or P24.
+
+**Owned runtime checkpoint complete — 2026-09-27:** F4/E10 and OL-02 now have
+actual fault/observer proofs, including intact original bytes/seals, exactly
+one recovered real terminal, typed retry expiry and a byte-identical live
+lease. All 22 namespaced principals used real auth lifecycle, no auto-login.
+Temporary terminal fault removed, observer root restored, worker resumed.
+Four of the full goal's eight scoped groups have backend proof; OL-12/P23,
+F3/F5/OL-24, E6-BR-01 and P24 remain open. [Current packet](./research_loop/evidence/P23/RECOVERY_INTEGRITY_RUNTIME_CHECKPOINT_2026-09-27.md).
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5

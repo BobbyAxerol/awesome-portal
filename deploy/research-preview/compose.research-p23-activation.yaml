@@ -1,0 +1,47 @@
+# Bobby's P23/P24 isolated qualification cell only. Apply after the Research
+# progress overlay and before its exact decimal-byte 5 GB cap overlay.
+# No production secret, shared volume, auto-login or Execution authority.
+services:
+  portal-api:
+    environment:
+      PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: "true"
+      PORTAL_FEATURE_RESEARCH_PROGRESS: "true"
+      PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS: "true"
+      PORTAL_FEATURE_RESEARCH_WFO_PROFILE: "true"
+      NATS_URL: nats://portal-nats:4222
+    depends_on:
+      portal-nats: { condition: service_healthy }
+  portal-postgres:
+    environment:
+      POSTGRES_PASSWORD: ${P23_DATABASE_PASSWORD:?P23 requires its own database credential}
+  control-api:
+    environment:
+      DATABASE_URL: ${P23_DATABASE_URL:?P23 requires its own database credential}
+      PREVIEW_AUTO_LOGIN_USERNAME: ""
+      SESSION_IDLE_SECONDS: "3600"
+      SESSION_ABSOLUTE_SECONDS: "7200"
+      FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY: "true"
+      FEATURE_RESEARCH_WHATIF: "true"
+      FEATURE_RESEARCH_RUN_LIBRARY: "true"
+      FEATURE_RESEARCH_IMPORTED_EXECUTION: "true"
+      FEATURE_RESEARCH_REPLAY: "true"
+      FEATURE_RESEARCH_REPORTS: "true"
+      FEATURE_RESEARCH_LINEAGE: "true"
+      FEATURE_RESEARCH_COMPARE: "true"
+      FEATURE_RESEARCH_RELEASE_CANDIDATES: "true"
+      FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true"
+  control-api-migrate:
+    environment:
+      DATABASE_URL: ${P23_DATABASE_URL:?P23 requires its own database credential}
+  control-api-bootstrap:
+    environment:
+      DATABASE_URL: ${P23_DATABASE_URL:?P23 requires its own database credential}
+    volumes:
+      - ${P23_BOOTSTRAP_FILE:?P23 requires its own test identities}:/opt/control-api/bootstrap-users.yaml:ro
+  quant-worker-py:
+    cpus: 2
+    environment:
+      PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION: "true"
+  portal-minio:
+    environment:
+      MINIO_ROOT_PASSWORD: ${P23_OBJECT_PASSWORD:?P23 requires its own object credential}

@@ -1,0 +1,6 @@
+# Owned P23 test only: observer reads a copy, never the original retained bytes.
+# Worker store, public data/commands and sealed PostgreSQL expectations unchanged.
+services:
+  portal-api:
+    environment:
+      PORTAL_RESEARCH_RETAINED_ROOT: /var/lib/portal/artifacts/p23-integrity-copy
