@@ -15,6 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.services.research_progress import ResearchProgressError, ResearchProgressJournal
 from portal_api.services.research_run_producer import LiveStudyProgress, parameter_bundle_digest
 from portal_api.services.research_supervisor import (
@@ -24,6 +25,7 @@ from portal_api.services.research_supervisor import (
 )
 from portal_api.workers import research_child
 from portal_api.workers.durable_worker import DurableQuantWorker
+from wfo_test_support import wfo_request
 
 _DIGEST = "d" * 64
 
@@ -368,6 +370,40 @@ def test_parameter_bundle_digest_matches_the_p14_rule() -> None:
         json.dumps(canonicalize(parameters), sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
     assert parameter_bundle_digest(parameters) == expected
+
+
+def test_e15_identity_artifacts_are_exact_bounded_non_secret_receipts(tmp_path: Path) -> None:
+    request = ResearchRunProducerRequest.model_validate(wfo_request())
+    research_dir = tmp_path / "research"
+    research_dir.mkdir(mode=0o700)
+
+    DurableQuantWorker._write_research_identity_artifacts(research_dir, request)
+
+    requested = json.loads((research_dir / "requested-spec.json").read_text(encoding="utf-8"))
+    effective = json.loads((research_dir / "effective-spec-receipt.json").read_text(encoding="utf-8"))
+    binding = json.loads((research_dir / "dataset-binding-receipt.json").read_text(encoding="utf-8"))
+    assert requested == {
+        "schema_version": "research.p11.requested-spec-receipt.v1",
+        "run_id": request.run_id,
+        "attempt_id": request.worker_attempt_id,
+        "requested_spec": request.research.requested_spec,
+        "requested_spec_digest": request.research.requested_spec_digest,
+    }
+    assert effective["effective_spec_digest"] == request.research.effective_spec_digest
+    assert effective["execution_profile_id"] == request.research.execution_profile_id
+    assert binding == {
+        "schema_version": "research.p11.dataset-binding-receipt.v1",
+        "run_id": request.run_id,
+        "attempt_id": request.worker_attempt_id,
+        "snapshot_id": request.research.snapshot_id,
+        "snapshot_content_hash": request.research.snapshot_content_hash,
+        "dataset_binding_digest": request.research.dataset_binding_digest,
+    }
+    forbidden = {"credential", "token", "source_path", "lease_token", "market_rows"}
+    encoded = json.dumps([requested, effective, binding]).lower()
+    assert all(name not in encoded for name in forbidden)
+    for path in research_dir.iterdir():
+        assert oct(os.stat(path).st_mode & 0o777) == "0o600"
 
 
 def _retention(trial_states: tuple, *, selection: dict | None, folds: int = 2) -> SimpleNamespace:

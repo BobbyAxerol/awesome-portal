@@ -71,6 +71,12 @@ RunExecutor = Callable[[dict[str, Any], str, Path], Awaitable[dict[str, Any]]]
 START_ACK_WINDOW_SECONDS = 15.0
 START_ACK_RETRY_SECONDS = 0.25
 
+RESEARCH_IDENTITY_ARTIFACTS = (
+    "research/requested-spec.json",
+    "research/effective-spec-receipt.json",
+    "research/dataset-binding-receipt.json",
+)
+
 
 async def _await_start_acknowledged(
     relay: Any,
@@ -477,6 +483,7 @@ class DurableQuantWorker:
                         fence_validator=current_fence,
                     )
             split_digest: str | None = None
+            sealed_names: list[str] = []
             if is_research_producer:
                 shutil.rmtree(engine_root)
                 if progress_journal is not None:
@@ -488,13 +495,10 @@ class DurableQuantWorker:
                     # progress view never promotes a path or a partial file
                     # to a readable artifact merely because a console says
                     # that sealing began.
-                    progress_journal.emit("artifact_writing", {"name": "research/progress-journal.ndjson"})
-                    progress_journal.export_to(research_dir / "progress-journal.ndjson")
-                    progress_journal.emit("artifact_writing", {"name": "research/progress-receipt.json"})
-                    self._write_progress_receipt(
-                        research_dir / "progress-receipt.json",
-                        progress_journal.snapshot(),
-                    )
+                    for name in RESEARCH_IDENTITY_ARTIFACTS:
+                        progress_journal.emit("artifact_writing", {"name": name})
+                    self._write_research_identity_artifacts(research_dir, research_request)
+                    sealed_names.extend(RESEARCH_IDENTITY_ARTIFACTS)
                     source_evidence = result.get("research_evidence")
                     if source_evidence is not None:
                         if not isinstance(source_evidence, dict):
@@ -508,6 +512,7 @@ class DurableQuantWorker:
                             research_dir / "evidence-source.json",
                             evidence_digest,
                         )
+                        sealed_names.append("research/evidence-source.json")
                     source_split = result.get("research_split")
                     if source_split is not None:
                         if not isinstance(source_split, dict):
@@ -521,17 +526,25 @@ class DurableQuantWorker:
                             research_dir / "split-source.json",
                             split_digest,
                         )
+                        sealed_names.append("research/split-source.json")
+                    # Export the journal only after every artifact entered
+                    # WRITING. This makes the persisted console/progress
+                    # receipt truthful without attempting the impossible
+                    # self-reference of writing its own SEALED digest.
+                    progress_journal.emit("artifact_writing", {"name": "research/progress-journal.ndjson"})
+                    progress_journal.emit("artifact_writing", {"name": "research/progress-receipt.json"})
+                    sealed_names.extend(("research/progress-journal.ndjson", "research/progress-receipt.json"))
+                    progress_journal.export_to(research_dir / "progress-journal.ndjson")
+                    self._write_progress_receipt(
+                        research_dir / "progress-receipt.json",
+                        progress_journal.snapshot(),
+                    )
             bundle = self._artifact_store.commit_bundle(
                 run_id=run_id,
                 attempt_id=attempt.run_attempt_id,
                 temp_dir=temp_dir,
                 required_files=(
-                    (
-                        "research/progress-journal.ndjson",
-                        "research/progress-receipt.json",
-                        *(("research/evidence-source.json",) if evidence_digest is not None else ()),
-                        *(("research/split-source.json",) if split_digest is not None else ()),
-                    )
+                    tuple(sealed_names)
                     if progress_journal is not None else ()
                 ),
                 manifest_extra={"engine": {"status": "COMPLETED"}},
@@ -541,11 +554,6 @@ class DurableQuantWorker:
                     bundle_digest=bundle.bundle_sha256,
                     bundle_bytes=sum((temp_dir / name).stat().st_size for name in bundle.files),
                 )
-                sealed_names = ["research/progress-journal.ndjson", "research/progress-receipt.json"]
-                if evidence_digest is not None:
-                    sealed_names.append("research/evidence-source.json")
-                if split_digest is not None:
-                    sealed_names.append("research/split-source.json")
                 for name in sealed_names:
                     digest = bundle.files.get(name)
                     if digest is None:
@@ -887,6 +895,52 @@ class DurableQuantWorker:
         }
         path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         path.chmod(0o600)
+
+    @staticmethod
+    def _write_research_identity_artifacts(
+        research_dir: Path,
+        request: ResearchRunProducerRequest,
+    ) -> None:
+        """Seal the three immutable producer inputs P11 names as artifacts.
+
+        These receipts deliberately omit credentials, source paths, lease
+        tokens and raw market rows. They are reconstructed only from the
+        already validated P10 envelope and remain bounded by its 64-KiB cap.
+        """
+
+        research = request.research
+        documents = {
+            "requested-spec.json": {
+                "schema_version": "research.p11.requested-spec-receipt.v1",
+                "run_id": request.run_id,
+                "attempt_id": request.worker_attempt_id,
+                "requested_spec": research.requested_spec,
+                "requested_spec_digest": research.requested_spec_digest,
+            },
+            "effective-spec-receipt.json": {
+                "schema_version": "research.p11.effective-spec-receipt.v1",
+                "run_id": request.run_id,
+                "attempt_id": request.worker_attempt_id,
+                "effective_spec_digest": research.effective_spec_digest,
+                "manifest_digest": research.manifest_digest,
+                "execution_adapter_id": research.execution_adapter_id,
+                "adapter_contract_digest": research.adapter_contract_digest,
+                "execution_profile_id": research.execution_profile_id,
+                "execution_profile_digest": research.execution_profile_digest,
+            },
+            "dataset-binding-receipt.json": {
+                "schema_version": "research.p11.dataset-binding-receipt.v1",
+                "run_id": request.run_id,
+                "attempt_id": request.worker_attempt_id,
+                "snapshot_id": research.snapshot_id,
+                "snapshot_content_hash": research.snapshot_content_hash,
+                "dataset_binding_digest": research.dataset_binding_digest,
+            },
+        }
+        for name, payload in documents.items():
+            path = research_dir / name
+            path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+            path.chmod(0o600)
 
     @staticmethod
     def _emit_whatif_trials(journal: ResearchProgressJournal, results: list[dict[str, Any]]) -> None:

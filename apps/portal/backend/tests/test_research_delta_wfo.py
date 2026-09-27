@@ -530,6 +530,20 @@ async def test_w1_worker_retains_before_run_completed_and_claims_three_trials(
     manifest = store.open_bundle(run_id, attempt_id, attempt.artifacts_sha256)
     assert not any(WFO_SOURCE_DIRNAME in name for name in manifest["files"])
     assert "research/p10-receipt.json" in manifest["files"]
+    # E15: the WFO lane has five mandatory P11 artifacts. The fixed P04 lane
+    # adds evidence-source + split-source and therefore seals the seven rows
+    # in the Screen-03 manifest without inventing either source receipt here.
+    mandatory = {
+        "research/requested-spec.json",
+        "research/effective-spec-receipt.json",
+        "research/dataset-binding-receipt.json",
+        "research/progress-journal.ndjson",
+        "research/progress-receipt.json",
+    }
+    assert mandatory.issubset(manifest["files"])
+    artifacts = {row["name"]: row for row in snapshot["artifacts"]}
+    assert set(artifacts) == mandatory
+    assert all(row["state"] == "SEALED" and len(row["digest"]) == 64 for row in artifacts.values())
     assert not list(store.temp_dir(run_id, attempt_id).iterdir())
 
 
