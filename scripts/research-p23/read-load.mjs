@@ -46,7 +46,8 @@ export function evaluateReadSlo(receipt) {
   if (!['warm','cold'].includes(temperature)) return { passed:false,reason:'INVALID_TEMPERATURE' };
   const byPath = Object.fromEntries(Object.entries(receipt.by_path ?? {}).map(([path,row]) => {
     const pathname = new URL(path,'http://127.0.0.1:8096').pathname;
-    const kind = pathname.endsWith('/execute/replay') ? 'REPLAY' : pathname.endsWith('/search') ? 'TRIAL' : 'SUMMARY';
+    const kind = pathname.endsWith('/execute/replay') || pathname.endsWith('/current-source/replay')
+      ? 'REPLAY' : pathname.endsWith('/search') ? 'TRIAL' : 'SUMMARY';
     const target = temperature === 'cold' ? (kind === 'SUMMARY' ? 1500 : 2000)
       : kind === 'REPLAY' ? 1000 : kind === 'TRIAL' ? 750 : 500;
     return [path,{kind,target_p95_ms:target,observed_p95_ms:row.p95_ms,

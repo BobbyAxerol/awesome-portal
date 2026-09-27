@@ -1,5 +1,14 @@
 # P23 backend qualification packet
 
+**Latest T11 deep-read checkpoint, 2026-09-27:** [Real 20-reader far-seek
+receipt](./T11_FAR_SEEK_CHECKPOINT_2026-09-27.md) passes seven named API reads
+per principal, 140/140 status 200, actual signed Library/replay keysets,
+`at`/`before` playhead truth, job count 37→37 and 24 overlapping capped
+cgroup samples (429371392-byte peak). This is **T11 backend/API PASS only**;
+T15 browser-real and full P23/P24 remain open. The failed stale-cookie first
+attempt is retained and normal test-account login corrected the private
+manifest without password reset or business mutation.
+
 **Latest T05 tenant/cache checkpoint, 2026-09-27:** [Ten real named reads and
 source repair request](./T05_TENANT_CACHE_CHECKPOINT_2026-09-27.md) show owner
 200/nonmember 404/anonymous 401 on all ten, including conditional requests.

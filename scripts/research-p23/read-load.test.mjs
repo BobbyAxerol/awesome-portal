@@ -22,6 +22,8 @@ test('Guide latency budgets distinguish warm/cold and never accept HTTP success 
   assert.equal(evaluateReadSlo({...receipt,temperature:'hot'}).passed,false);
   assert.equal(evaluateReadSlo({by_path:{'/api/v1/quantbt/runs':{}}}).passed,false);
   assert.equal(evaluateReadSlo({by_path:{'/api/v1/quantbt/runs':{p95_ms:500}}}).passed,true);
+  assert.equal(evaluateReadSlo({by_path:{'/api/v1/quantbt/runs/rrun_test/current-source/replay?at=opaque':{p95_ms:1000}}}).passed,true);
+  assert.equal(evaluateReadSlo({by_path:{'/api/v1/quantbt/runs/rrun_test/current-source/replay?at=opaque':{p95_ms:1001}}}).passed,false);
 });
 
 test('20 distinct sessions, loopback and GET-only named Research paths are mandatory', () => {
