@@ -3732,6 +3732,14 @@ OL-06/07/09. Màn đã hiện chúng là typed absence, không bịa.
 | D9 | S12 mật độ 3 cột + Routes gọn (12-1, 12-5; RF-04) | Làm theo HiFi (E7) | Chờ lâu nhất trong RF-04, không có lý do giữ 2 cột |
 | D10 | S13 attempt không claim, markets theo market (13-1, 13-8) | Gộp attempt không claim thành dòng gọn; markets nhóm theo phần market của ComparisonContractKey, lấy run ACTIVE/mới nhất mỗi key (composer P20, BE≤P21) | Giữ nghĩa mode "markets" |
 
+**Ba quyết định Bobby uỷ quyền 2026-09-27 ("Bạn làm luôn nhé, đầy đủ và hết nhé") — Claude đã chốt:**
+
+| # | Câu hỏi | Chốt | Vì sao |
+|---|---|---|---|
+| RF-04 | Mật độ S12 (sau E7 còn cao hơn HiFi 743 px) | **Bóc tách từng khối:** phần do khoảng cách/lặp/bố cục là lỗi, phải đóng; phần vì engine trả nhiều term hơn mẫu HiFi thì dùng luật mật độ của HiFi, disclosure, hoặc cap **có ghi rõ** ("top 10 / 214") — không cắt ngầm, không bỏ term server đã trả, không thu chữ dưới cỡ nhỏ nhất của design system. Còn cao hơn HiFi sau đó thì ghi là lệch có chủ ý kèm số đo | "Bảng dài hơn" mới là giả thuyết cho tới khi đo từng khối; im lặng cắt dữ liệu là nói dối |
+| E16-R1 | Có giữ overview OHLC ở producer P10/child P06 để S08 P04 có nến? | **Có.** Giữ overview **có giới hạn**: bucket lấy high/low là cực trị thật của các bar, không nội suy, ghi kèm cỡ bucket và số bucket; dùng đúng shape `candle_overview` của lane WFO. **Không backfill** — run cũ mất tape thì vẫn typed absence. Chart nến từng bar ở P04 vẫn không có, không dựng từ overview | Không giữ gì thì S08 P04 vĩnh viễn thiếu một khối HiFi; giữ cả tape thì quá đắt. Overview là mức nhỏ nhất đủ trung thực |
+| E10-O3 | Có dựng sweep định kỳ (cần worker) không? | **Không thêm worker.** Mở rộng đường hội tụ đã có (read-driven + lease sweep của P06) sao cho một lượt đọc có thể dọn cả run kẹt ngoài workspace đó, **có chặn trên** và giữ nguyên rate limit; nếu đo xong thấy không mở rộng an toàn được thì ghi rõ "không" kèm bằng chứng và làm trạng thái kẹt hiện rõ | Control API cố ý không có worker; thêm scheduler là thay đổi lớn hơn chính vấn đề |
+
 **Thứ tự (Bobby chốt 2026-09-26: FE trước, thiếu backend thì làm luôn, không hợp thì ghi receipt/request):** E1 → các màn lớn E6/E7/E5 song song (mỗi gói một worktree) kèm backend của chính nó (D1 `display_label`, D10 nhóm markets) → E2 + E16 → E3/E4 → E11–E15. E10 chạy nền song song (agent riêng, chỉ backend). Thứ tự cũ: E10 → E1 → build lại preview + OL-23
 (để thấy X2/W7/P22 trên dữ liệu thật) → E2/E3/E4 → E11/E12/E13 + D1 → E14/E15 → E5/E6/E7 →
 E16 → lane real-API đủ + receipt. Mỗi gói: test đúng file chạm + ảnh màn đó; lane đầy đủ chỉ ở
