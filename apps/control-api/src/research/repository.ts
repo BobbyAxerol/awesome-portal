@@ -1644,8 +1644,12 @@ export class ResearchMetadataRepository {
       }
     }
     if (input.clonedFrom) requireOpaqueId(input.clonedFrom.parentRunId, "clonedFrom.parentRunId");
-    if (input.sibling && input.clonedFrom) {
+    if (input.reproducedFrom) requireOpaqueId(input.reproducedFrom.parentRunId, "reproducedFrom.parentRunId");
+    if ([input.sibling, input.clonedFrom, input.reproducedFrom].filter(Boolean).length > 1) {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "An attempt declares one parent relation, not two.", 400);
+    }
+    if ((input.intentKind === "REPRODUCE_EXISTING") !== Boolean(input.reproducedFrom)) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Reproduction requires its explicit parent and intent.", 400);
     }
     return this.withScopedWrite(scope, async (client) => {
       /*
@@ -1660,14 +1664,21 @@ export class ResearchMetadataRepository {
        * for new work only and backfills nothing, because a guessed parent is
        * a lineage claim nobody made.
        */
-      const declared = input.sibling ?? input.clonedFrom ?? null;
+      const declared = input.sibling ?? input.clonedFrom ?? input.reproducedFrom ?? null;
       let parentAttemptId: string | null = null;
       if (declared) {
-        const parent = await client.query<{ attempt_id: string; alpha_version_id: string | null }>(
-          `SELECT run.attempt_id, attempt.alpha_version_id
+        const parent = await client.query<Record<string, unknown> & { attempt_id: string; alpha_version_id: string | null }>(
+          `SELECT run.attempt_id, attempt.alpha_version_id, run.engine_release_id,
+                  producer.requested_spec_digest, producer.effective_spec_digest,
+                  producer.dataset_binding_digest, producer.manifest_digest,
+                  producer.snapshot_id, producer.snapshot_content_hash, producer.work_digest,
+                  producer.execution_adapter_id, producer.adapter_contract_digest,
+                  producer.execution_profile_id, producer.execution_profile_digest
              FROM research.runs run
              JOIN research.attempts attempt
                ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
+             LEFT JOIN research.run_producers producer
+               ON producer.workspace_id = run.workspace_id AND producer.run_id = run.run_id
             WHERE run.workspace_id = $1 AND run.run_id = $2 AND run.relationship_kind = 'PRIMARY'`,
           [scope.workspaceId, declared.parentRunId],
         );
@@ -1688,6 +1699,29 @@ export class ResearchMetadataRepository {
         if (input.sibling && row.alpha_version_id !== input.alphaVersionId) {
           throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "A sibling attempt must bind the same AlphaVersion as its parent.", 400);
         }
+        if (input.reproducedFrom) {
+          // Compare immutable source pins in the same transaction that writes
+          // the parent edge. A fresh preflight token is operational identity,
+          // not a changed input. No engine/default/snapshot drift is adopted.
+          const pins: Array<[unknown, unknown]> = [
+            [row.alpha_version_id, input.alphaVersionId],
+            [row.engine_release_id, input.engineReleaseId],
+            [row.requested_spec_digest, input.requestedSpecDigest],
+            [row.effective_spec_digest, input.effectiveSpecDigest],
+            [row.dataset_binding_digest, input.datasetBindingDigest],
+            [row.manifest_digest, input.manifestDigest],
+            [row.snapshot_id, input.snapshotId],
+            [row.snapshot_content_hash, input.snapshotContentHash],
+            [row.work_digest, input.workDigest],
+            [row.execution_adapter_id, input.executionAdapterId],
+            [row.adapter_contract_digest, input.adapterContractDigest],
+            [row.execution_profile_id, input.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID],
+            [row.execution_profile_digest, input.executionProfileDigest ?? null],
+          ];
+          if (pins.some(([previous, next]) => previous !== next)) {
+            throw new ResearchMetadataError("RESEARCH_REPRODUCTION_BINDING_CONFLICT", "Reproduction cannot change the immutable parent inputs.", 409);
+          }
+        }
         parentAttemptId = row.attempt_id;
       }
       const attempt = await client.query<ExistingAttemptRow>(
@@ -1702,11 +1736,12 @@ export class ResearchMetadataRepository {
         [
           scope.workspaceId, input.attemptId, input.alphaVersionId,
           input.clientIntentId, input.requestPayloadDigest,
-          declared ? "CLONE_FOR_EXPERIMENT" : input.intentKind,
+          input.reproducedFrom ? "REPRODUCE_EXISTING" : declared ? "CLONE_FOR_EXPERIMENT" : input.intentKind,
           scope.actorUserId, parentAttemptId,
           input.sibling
             ? `what-if fork of ${input.sibling.parentRunId} at ${input.sibling.whatIfCellId}`
-            : input.clonedFrom ? `clone of ${input.clonedFrom.parentRunId}` : null,
+            : input.clonedFrom ? `clone of ${input.clonedFrom.parentRunId}`
+            : input.reproducedFrom ? `reproduction of ${input.reproducedFrom.parentRunId}` : null,
           // `relation_kind` stays NULL for a clone: the DB CHECK reserves
           // SIBLING_OF for a what-if fork, and a clone makes no such claim.
           input.sibling ? "SIBLING_OF" : null,

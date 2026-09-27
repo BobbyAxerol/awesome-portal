@@ -11,7 +11,8 @@ export class ResearchRunCreateError extends Error {
       | "RESEARCH_RUN_PRODUCER_UNAVAILABLE"
       | "RESEARCH_RUN_TRANSPORT_UNKNOWN"
       | "RESEARCH_RUN_UPSTREAM_REJECTED"
-      | "RESEARCH_RUN_NOT_FOUND",
+      | "RESEARCH_RUN_NOT_FOUND"
+      | "RESEARCH_RUN_REPRODUCTION_CONFLICT",
     message: string,
     readonly status: 400 | 403 | 404 | 409 | 502 | 503,
   ) {

@@ -49,6 +49,15 @@ describe("E13 run-create lineage", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("accepts reproduction only with its explicit parent and intent", () => {
+    const value = { ...(request({ relation: "REPRODUCTION_OF", parent_run_id: PARENT }) as object), intent_kind: "REPRODUCE_EXISTING" };
+    expect(ResearchRunCreateRequestSchema.safeParse(value).success).toBe(true);
+    expect(ResearchRunCreateRequestSchema.safeParse({ ...value, lineage: undefined }).success).toBe(false);
+    expect(ResearchRunCreateRequestSchema.safeParse({ ...value, lineage: { relation: "CLONE_OF", parent_run_id: PARENT } }).success).toBe(false);
+    expect(ResearchRunCreateRequestSchema.safeParse({ ...value, intent_kind: "NEW" }).success).toBe(false);
+    expect(ResearchRunCreateRequestSchema.safeParse({ ...value, lineage: { relation: "REPRODUCTION_OF", parent_run_id: PARENT, work_digest: "a".repeat(64) } }).success).toBe(false);
+  });
+
   it("refuses a clone that smuggles a what-if cell", () => {
     /* A clone is not a node on a grid. Letting the cell through would store a
        fork's reason for a copy nobody forked. */

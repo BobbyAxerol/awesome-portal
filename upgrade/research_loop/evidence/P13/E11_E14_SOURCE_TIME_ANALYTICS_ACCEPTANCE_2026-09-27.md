@@ -116,6 +116,10 @@ without the analytics block state that they predate it; they are not backfilled.
   inside the disposable Docker cell. The three readers now honor that existing
   mount contract; no expected value, assertion or test admission was weakened.
   The first attempt is not a PASS and is not replaced by the local counts.
+- Final mandatory retry completed successfully at commit `0ab62994`:
+  **166 Control API files PASS, 1 skipped; 1,300 tests PASS, 1 skipped**.
+  Contract/generated parity and the repository gate also passed. This result
+  covers the E11/E14 commit, not the later E13 reproduction edits.
 
 ## Claude consumer handoff — do not replace the rich composition
 

@@ -35,10 +35,10 @@ export const ResearchRunCreateRequestSchema = z.object({
   intent_kind: ResearchRunIntentKindSchema.default("NEW"),
   /**
    * The run this attempt came out of, when the browser opened the draft from
-   * one. The run is still a NEW intent with its own preflight and config_hash
-   * either way — the server records the edge, never a dependency.
+   * one. Every intent has its own fresh preflight and command identity;
+   * the worker executes NEW while Portal preserves the public intent/edge.
    *
-   * Two relations, because they are two different claims:
+   * Relations make different claims:
    *
    *  - `SIBLING_OF` (W5a · P19) is a Screen-07 what-if node made real. It
    *    names the exact cell and must bind the same AlphaVersion as its parent.
@@ -50,6 +50,9 @@ export const ResearchRunCreateRequestSchema = z.object({
    *    it does not require the same AlphaVersion — a clone onto a different
    *    version is still a clone, and the lineage read already has an honest
    *    state for a parent outside the graph it returned.
+   *  - `REPRODUCTION_OF` requires REPRODUCE_EXISTING and the parent's
+   *    immutable engine/spec/AlphaVersion/snapshot/adapter/profile pins.
+   *    A changed request is a clone, never an exact input reproduction.
    */
   lineage: z.discriminatedUnion("relation", [
     z.object({
@@ -61,8 +64,16 @@ export const ResearchRunCreateRequestSchema = z.object({
       relation: z.literal("CLONE_OF"),
       parent_run_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
     }).strict(),
+    z.object({
+      relation: z.literal("REPRODUCTION_OF"),
+      parent_run_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
+    }).strict(),
   ]).optional(),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+  if ((value.intent_kind === "REPRODUCE_EXISTING") !== (value.lineage?.relation === "REPRODUCTION_OF")) {
+    ctx.addIssue({ code: "custom", path: ["lineage"], message: "Reproduction requires an explicit REPRODUCTION_OF parent and intent." });
+  }
+});
 
 export type ResearchRunCreateRequest = z.infer<typeof ResearchRunCreateRequestSchema>;
 
@@ -77,6 +88,15 @@ export const ResearchRunCreateResponseSchema = z.object({
   effective_spec_digest: z.string().regex(/^[a-f0-9]{64}$/),
   dataset_binding_digest: z.string().regex(/^[a-f0-9]{64}$/),
   manifest_digest: z.string().regex(/^[a-f0-9]{64}$/),
+  reproduction: z.object({
+    parent_run_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
+    pin_scope: z.literal("IMMUTABLE_INPUT_PINS"),
+    environment_equivalence: z.object({
+      state: z.literal("NOT_PUBLISHED"),
+      reason_code: z.literal("P10_RUNTIME_IMAGE_DEPENDENCY_EQUIVALENCE_NOT_RECORDED"),
+      source_locator: z.literal("research.run_producers.v1:engine_release+adapter+execution_profile"),
+    }).strict(),
+  }).strict().optional(),
   legacy: z.object({
     strategy_id: z.string().min(1).max(191),
     dataset_id: z.string().min(1).max(191),

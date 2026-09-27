@@ -222,7 +222,7 @@
             "default": "NEW"
           },
           "lineage": {
-            "description": "The run this attempt came out of, when the browser opened the draft from one. The run is still a NEW intent with its own preflight and config_hash either way; the server records the edge, never a dependency. SIBLING_OF (W5a · P19) is a Screen-07 what-if node made real: it names the cell and must bind the same AlphaVersion as its parent. CLONE_OF (E13) is the ?from=<run> copy Screens 03, 07 and 10 offer: it names no cell and does not require the same AlphaVersion. Before E13 the clone declared nothing, so every cloned attempt was stored with a null parent_attempt_id and Screen 10 read every attempt as ROOT with an empty diff.",
+            "description": "An explicit, workspace-scoped parent edge, never inferred from timestamps or names. SIBLING_OF is a what-if fork with a cell and the same AlphaVersion. CLONE_OF is a new experiment copied from a parent and may change its input. REPRODUCTION_OF requires intent_kind REPRODUCE_EXISTING and the exact immutable parent engine, AlphaVersion, requested/effective specs, snapshot and execution profile. A fresh preflight is required; a changed or unavailable historical pin is refused. The worker still executes its established NEW compute operation, while Portal persists the reproduction intent and parent atomically. This is input reproduction, not a promise of bitwise output equality for unseeded optimizers. Old missing edges are not backfilled.",
             "oneOf": [
               {
                 "type": "object",
@@ -242,10 +242,29 @@
                   "relation": { "const": "CLONE_OF" },
                   "parent_run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" }
                 }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["relation", "parent_run_id"],
+                "properties": {
+                  "relation": { "const": "REPRODUCTION_OF" },
+                  "parent_run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" }
+                }
               }
             ]
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": { "required": ["intent_kind"], "properties": { "intent_kind": { "const": "REPRODUCE_EXISTING" } } },
+            "then": { "required": ["lineage"], "properties": { "lineage": { "properties": { "relation": { "const": "REPRODUCTION_OF" } } } } }
+          },
+          {
+            "if": { "required": ["lineage"], "properties": { "lineage": { "required": ["relation"], "properties": { "relation": { "const": "REPRODUCTION_OF" } } } } },
+            "then": { "required": ["intent_kind"], "properties": { "intent_kind": { "const": "REPRODUCE_EXISTING" } } }
+          }
+        ]
       },
       "RunCreateResponse": {
         "type": "object",
@@ -287,6 +306,26 @@
           },
           "manifest_digest": {
             "$ref": "#/components/schemas/Digest"
+          },
+          "reproduction": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["parent_run_id", "pin_scope", "environment_equivalence"],
+            "properties": {
+              "parent_run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+              "pin_scope": { "const": "IMMUTABLE_INPUT_PINS" },
+              "environment_equivalence": {
+                "description": "The source preserves input pins, not archived runtime image/dependency equivalence. Do not promise bitwise output equality or silently call a changed environment exact reproduction.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["state", "reason_code", "source_locator"],
+                "properties": {
+                  "state": { "const": "NOT_PUBLISHED" },
+                  "reason_code": { "const": "P10_RUNTIME_IMAGE_DEPENDENCY_EQUIVALENCE_NOT_RECORDED" },
+                  "source_locator": { "const": "research.run_producers.v1:engine_release+adapter+execution_profile" }
+                }
+              }
+            }
           },
           "legacy": {
             "type": "object",
@@ -391,7 +430,8 @@
                   "RESEARCH_RUN_PRODUCER_UNAVAILABLE",
                   "RESEARCH_RUN_TRANSPORT_UNKNOWN",
                   "RESEARCH_RUN_UPSTREAM_REJECTED",
-                  "RESEARCH_RUN_NOT_FOUND"
+                  "RESEARCH_RUN_NOT_FOUND",
+                  "RESEARCH_RUN_REPRODUCTION_CONFLICT"
                 ]
               },
               "message": {

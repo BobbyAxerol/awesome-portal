@@ -69,3 +69,14 @@ SIBLING_OF cells or a manufactured worker retry. Full E13 is still open because
 REPRODUCE_EXISTING remains typed refused. See the [E17 machine receipt](../P10/e17-backend-acceptance.v1.json)
 for private-byte hashes and exact read statuses. Earlier closeout wording is
 superseded by this requirement-level state, not erased.
+
+## Reproduction addendum — 2026-09-27
+
+The remaining reproduction writer/receipt is now delivered by
+[E13_REPRODUCTION_REAL_API_ACCEPTANCE_2026-09-27.md](./E13_REPRODUCTION_REAL_API_ACCEPTANCE_2026-09-27.md).
+It proves a real root → clone → reproduction chain, atomic immutable-input
+comparison, same-intent replay, typed negative matrix and restart parity.
+The older statements that reproduction is refused are historical. Runtime
+image/dependency equivalence remains a public typed limitation; no bitwise
+output claim or historical edge backfill is made. S10 browser remains
+consumer-owned, not silently marked accepted by a backend receipt.

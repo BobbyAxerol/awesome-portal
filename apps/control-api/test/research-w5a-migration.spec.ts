@@ -5,7 +5,7 @@
  * other Research migration proofs.
  */
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 
@@ -16,6 +16,7 @@ import { ResearchP04DeltaBindingService } from "../src/research/p04-delta-bindin
 import { ResearchMetadataRepository } from "../src/research/repository";
 import { ResearchRunAdmissionService } from "../src/research/run-admission.service";
 import { ResearchRunCreateService } from "../src/research/run-create.service";
+import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "../src/research/delta-wfo.profile";
 import { buildWhatIfGrid } from "../src/research/whatif.grid";
 import { ResearchWhatIfRepository } from "../src/research/whatif.repository";
 import { ResearchWhatIfService } from "../src/research/whatif.service";
@@ -304,6 +305,70 @@ describe("W5a migration 064 · A10a byte receipts on PostgreSQL", () => {
         preflight_token: "rpft_e13_clone", requested_spec: cloneSpec, intent_kind: "NEW",
         lineage: { relation: "CLONE_OF", parent_run_id: "rrun_not_in_this_workspace" },
       }, "e13-clone-missing")).rejects.toMatchObject({ status: 404 });
+
+    // E13: a reproduction is a separate explicit intent, but only the exact
+    // immutable parent input may be submitted. The private compute operation
+    // stays NEW; an idempotent retry cannot create another lineage node.
+    const reproductionManifest = manifestFor(spec, { token: "rpft_e13_reproduction" });
+    await repository.storePreflightManifest(scope, { ...reproductionManifest, expiresAt: new Date(Date.now() + 60_000) }, 16);
+    const createService = new ResearchRunCreateService(repository, new ResearchRunAdmissionService(repository, config), proxy as never, config);
+    const reproductionRequest = {
+      schema_version: "research.run-create.v1" as const, client_intent_id: "e13-reproduction-intent",
+      preflight_token: "rpft_e13_reproduction", requested_spec: spec, intent_kind: "REPRODUCE_EXISTING" as const,
+      lineage: { relation: "REPRODUCTION_OF" as const, parent_run_id: parentRunId },
+    };
+    const capture = vi.spyOn(repository, "createOrReplayRunProducerIntent");
+    const reproduction = await createService.create(owner, scope, reproductionRequest, "e13-reproduction");
+    const admittedInput = capture.mock.calls[0]![1];
+    capture.mockRestore();
+    expect(reproduction.run_id).not.toBe(parentRunId);
+    expect(await createService.create(owner, scope, reproductionRequest, "e13-reproduction-retry"))
+      .toMatchObject({ run_id: reproduction.run_id, replayed: true });
+    const reproduced = (await database.query(`SELECT attempt.intent_kind, attempt.parent_attempt_id,
+        producer.intent_kind AS public_intent, producer.legacy_request->'research'->>'intent_kind' AS compute_intent,
+        producer.work_digest, parent.work_digest AS parent_work_digest, parent.attempt_id AS expected_parent_attempt_id
+      FROM research.run_producers producer
+      JOIN research.attempts attempt USING (workspace_id, attempt_id)
+      JOIN research.run_producers parent ON parent.workspace_id = producer.workspace_id AND parent.run_id = $2
+      WHERE producer.workspace_id = 'ws_w5a' AND producer.run_id = $1`, [reproduction.run_id, parentRunId])).rows[0];
+    expect(reproduced).toMatchObject({ intent_kind: "REPRODUCE_EXISTING", public_intent: "REPRODUCE_EXISTING", compute_intent: "NEW" });
+    expect(reproduced.parent_attempt_id).toBe(reproduced.expected_parent_attempt_id);
+    expect(reproduced.work_digest).toBe(reproduced.parent_work_digest);
+    expect((await database.query(`SELECT count(*)::int AS n FROM research.attempts WHERE workspace_id = 'ws_w5a' AND client_intent_id = 'e13-reproduction-intent'`)).rows[0].n).toBe(1);
+    expect(await snapshotParent()).toEqual(before);
+
+    const pinChanges = {
+      alphaVersionId: cloneSpec.alpha_binding!.alpha_version_id + "_other",
+      engineReleaseId: "er_different", requestedSpecDigest: WRONG, effectiveSpecDigest: WRONG,
+      datasetBindingDigest: WRONG, manifestDigest: WRONG, snapshotId: "dss_" + "e".repeat(32),
+      snapshotContentHash: WRONG, workDigest: WRONG, adapterContractDigest: WRONG,
+    };
+    for (const [pin, value] of Object.entries(pinChanges)) {
+      const id = `e13-repro-mismatch-${pin}`;
+      await expect(repository.createOrReplayRunProducerIntent(scope, {
+        ...admittedInput, attemptId: `ratt_${id}`, runId: `rrun_${id}`, jobId: `rjob_${id}`,
+        commandId: `rcmd_${id}`, clientIntentId: id, requestPayloadDigest: WRONG, [pin]: value,
+      })).rejects.toMatchObject({ code: "RESEARCH_REPRODUCTION_BINDING_CONFLICT", status: 409 });
+      expect((await database.query(`SELECT count(*)::int AS n FROM research.attempts WHERE workspace_id = 'ws_w5a' AND client_intent_id = $1`, [id])).rows[0].n).toBe(0);
+    }
+    // An invalid profile digest is refused even earlier by profile admission.
+    // A different, valid profile must pass that shape check but still fail
+    // the immutable-parent comparison. Neither case may append an attempt.
+    for (const [suffix, changedProfile, expected] of [
+      ["invalid-profile", { executionProfileDigest: WRONG }, { code: "RESEARCH_INVALID_INPUT", status: 400 }],
+      ["different-profile", { executionProfileId: P04_FIXED_QUALIFICATION_PROFILE_ID, executionProfileDigest: null },
+        { code: "RESEARCH_REPRODUCTION_BINDING_CONFLICT", status: 409 }],
+    ] as const) {
+      const id = `e13-repro-${suffix}`;
+      await expect(repository.createOrReplayRunProducerIntent(scope, {
+        ...admittedInput, attemptId: `ratt_${id}`, runId: `rrun_${id}`, jobId: `rjob_${id}`,
+        commandId: `rcmd_${id}`, clientIntentId: id, requestPayloadDigest: WRONG, ...changedProfile,
+      })).rejects.toMatchObject(expected);
+      expect((await database.query(`SELECT count(*)::int AS n FROM research.attempts WHERE workspace_id = 'ws_w5a' AND client_intent_id = $1`, [id])).rows[0].n).toBe(0);
+    }
+    await expect(createService.create(owner, scope, { ...reproductionRequest, client_intent_id: "e13-repro-missing",
+      lineage: { relation: "REPRODUCTION_OF", parent_run_id: "rrun_outside_this_workspace" } }, "e13-repro-missing"))
+      .rejects.toMatchObject({ code: "RESEARCH_RUN_NOT_FOUND", status: 404 });
   });
 
   it("refuses a receipt that names a different expectation, a MATCH without matching digests, and any mutation", async () => {

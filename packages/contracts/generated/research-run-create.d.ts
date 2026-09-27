@@ -63,7 +63,7 @@ export interface components {
              * @enum {unknown}
              */
             intent_kind: "NEW" | "CLONE_FOR_EXPERIMENT" | "REPRODUCE_EXISTING" | "UPGRADE_ENGINE_EXPERIMENT";
-            /** @description The run this attempt came out of, when the browser opened the draft from one. The run is still a NEW intent with its own preflight and config_hash either way; the server records the edge, never a dependency. SIBLING_OF (W5a · P19) is a Screen-07 what-if node made real: it names the cell and must bind the same AlphaVersion as its parent. CLONE_OF (E13) is the ?from=<run> copy Screens 03, 07 and 10 offer: it names no cell and does not require the same AlphaVersion. Before E13 the clone declared nothing, so every cloned attempt was stored with a null parent_attempt_id and Screen 10 read every attempt as ROOT with an empty diff. */
+            /** @description An explicit, workspace-scoped parent edge, never inferred from timestamps or names. SIBLING_OF is a what-if fork with a cell and the same AlphaVersion. CLONE_OF is a new experiment copied from a parent and may change its input. REPRODUCTION_OF requires intent_kind REPRODUCE_EXISTING and the exact immutable parent engine, AlphaVersion, requested/effective specs, snapshot and execution profile. A fresh preflight is required; a changed or unavailable historical pin is refused. The worker still executes its established NEW compute operation, while Portal persists the reproduction intent and parent atomically. This is input reproduction, not a promise of bitwise output equality for unseeded optimizers. Old missing edges are not backfilled. */
             lineage?: {
                 /** @constant */
                 relation: "SIBLING_OF";
@@ -73,8 +73,12 @@ export interface components {
                 /** @constant */
                 relation: "CLONE_OF";
                 parent_run_id: string;
+            } | {
+                /** @constant */
+                relation: "REPRODUCTION_OF";
+                parent_run_id: string;
             };
-        };
+        } & (unknown & unknown);
         RunCreateResponse: {
             /** @constant */
             schema_version: "research.run-create.v1";
@@ -86,6 +90,20 @@ export interface components {
             effective_spec_digest: components["schemas"]["Digest"];
             dataset_binding_digest: components["schemas"]["Digest"];
             manifest_digest: components["schemas"]["Digest"];
+            reproduction?: {
+                parent_run_id: string;
+                /** @constant */
+                pin_scope: "IMMUTABLE_INPUT_PINS";
+                /** @description The source preserves input pins, not archived runtime image/dependency equivalence. Do not promise bitwise output equality or silently call a changed environment exact reproduction. */
+                environment_equivalence: {
+                    /** @constant */
+                    state: "NOT_PUBLISHED";
+                    /** @constant */
+                    reason_code: "P10_RUNTIME_IMAGE_DEPENDENCY_EQUIVALENCE_NOT_RECORDED";
+                    /** @constant */
+                    source_locator: "research.run_producers.v1:engine_release+adapter+execution_profile";
+                };
+            };
             legacy: {
                 strategy_id: string;
                 dataset_id: string;
@@ -111,7 +129,7 @@ export interface components {
         Problem: {
             error: {
                 /** @enum {unknown} */
-                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_RUN_CREATE_INVALID" | "RESEARCH_RUN_CREATE_FORBIDDEN" | "RESEARCH_RUN_PREFLIGHT_NOT_READY" | "RESEARCH_RUN_PREFLIGHT_STALE" | "RESEARCH_RUN_ALPHA_NOT_ACTIVE" | "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE" | "RESEARCH_RUN_PRODUCER_UNAVAILABLE" | "RESEARCH_RUN_TRANSPORT_UNKNOWN" | "RESEARCH_RUN_UPSTREAM_REJECTED" | "RESEARCH_RUN_NOT_FOUND";
+                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_RUN_CREATE_INVALID" | "RESEARCH_RUN_CREATE_FORBIDDEN" | "RESEARCH_RUN_PREFLIGHT_NOT_READY" | "RESEARCH_RUN_PREFLIGHT_STALE" | "RESEARCH_RUN_ALPHA_NOT_ACTIVE" | "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE" | "RESEARCH_RUN_PRODUCER_UNAVAILABLE" | "RESEARCH_RUN_TRANSPORT_UNKNOWN" | "RESEARCH_RUN_UPSTREAM_REJECTED" | "RESEARCH_RUN_NOT_FOUND" | "RESEARCH_RUN_REPRODUCTION_CONFLICT";
                 message: string;
             };
             request_id: string;

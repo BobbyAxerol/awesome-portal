@@ -71,13 +71,17 @@ export class ResearchRunCreateService {
       );
     }
     const parentBoundClone = input.intent_kind === "CLONE_FOR_EXPERIMENT" && input.lineage?.relation === "CLONE_OF";
-    if (input.intent_kind !== "NEW" && !parentBoundClone) {
+    const parentBoundReproduction = input.intent_kind === "REPRODUCE_EXISTING" && input.lineage?.relation === "REPRODUCTION_OF";
+    if ((input.intent_kind === "REPRODUCE_EXISTING") !== (input.lineage?.relation === "REPRODUCTION_OF")) {
+      throw new ResearchRunCreateError("RESEARCH_RUN_CREATE_INVALID", "Reproduction requires its explicit parent and intent.", 400);
+    }
+    if (input.intent_kind !== "NEW" && !parentBoundClone && !parentBoundReproduction) {
       // P12/P19 own clone/reproduce/upgrade lineage semantics.  Accepting
       // their labels before their parent/effective-version contracts exist
       // would create a misleading graph, so P10 makes the current gap typed.
       throw new ResearchRunCreateError(
         "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
-        "This installed Research adapter accepts a new run or an explicitly parent-bound clone.",
+        "This installed Research adapter accepts a new run, a parent-bound clone, or an exact input reproduction.",
         409,
       );
     }
@@ -119,7 +123,7 @@ export class ResearchRunCreateService {
     // A clone is a fresh execution for the worker, not a new private engine
     // operation. Keep the immutable public intent/parent in PostgreSQL and
     // the command digest, while preserving the existing NEW compute contract.
-    const workerIntentKind = parentBoundClone ? "NEW" : input.intent_kind;
+    const workerIntentKind = parentBoundClone || parentBoundReproduction ? "NEW" : input.intent_kind;
     // The P04 branch below is byte-for-byte the pre-W1 construction (golden
     // tests pin both digests). The WFO branch is a separate versioned shape:
     // it carries the pinned profile identity and never a P04 parameter map.
@@ -297,6 +301,9 @@ export class ResearchRunCreateService {
         ...(input.lineage?.relation === "CLONE_OF"
           ? { clonedFrom: { parentRunId: input.lineage.parent_run_id } }
           : {}),
+        ...(parentBoundReproduction && input.lineage
+          ? { reproducedFrom: { parentRunId: input.lineage.parent_run_id } }
+          : {}),
       });
     } catch (error) {
       throw this.mapMetadataError(error);
@@ -304,7 +311,7 @@ export class ResearchRunCreateService {
 
     const producer = produced.producer;
     if (producer.dispatchState === "DISPATCHED") {
-      return this.response(producer, true);
+      return this.response(producer, true, input.lineage?.relation === "REPRODUCTION_OF" ? input.lineage.parent_run_id : undefined);
     }
 
     let claim;
@@ -395,7 +402,8 @@ export class ResearchRunCreateService {
           facade_replayed: write.replayed,
         },
       });
-      return this.response(recorded, produced.replayed || write.replayed);
+      return this.response(recorded, produced.replayed || write.replayed,
+        input.lineage?.relation === "REPRODUCTION_OF" ? input.lineage.parent_run_id : undefined);
     } catch (error) {
       // Portal may already own the NATS message. Never create another intent
       // or claim success: the next same-key retry reconciles the exact lease.
@@ -417,6 +425,7 @@ export class ResearchRunCreateService {
       legacyRequest: Record<string, unknown>;
     },
     replayed: boolean,
+    reproductionParentRunId?: string,
   ): ResearchRunCreateResponse {
     const legacy = producer.legacyRequest;
     const response = {
@@ -428,6 +437,15 @@ export class ResearchRunCreateService {
       effective_spec_digest: producer.effectiveSpecDigest,
       dataset_binding_digest: producer.datasetBindingDigest,
       manifest_digest: producer.manifestDigest,
+      ...(reproductionParentRunId ? { reproduction: {
+        parent_run_id: reproductionParentRunId,
+        pin_scope: "IMMUTABLE_INPUT_PINS" as const,
+        environment_equivalence: {
+          state: "NOT_PUBLISHED" as const,
+          reason_code: "P10_RUNTIME_IMAGE_DEPENDENCY_EQUIVALENCE_NOT_RECORDED" as const,
+          source_locator: "research.run_producers.v1:engine_release+adapter+execution_profile" as const,
+        },
+      } } : {}),
       legacy: {
         strategy_id: this.stringFact(legacy, "strategy_id"),
         dataset_id: this.stringFact(legacy, "dataset_id"),
@@ -458,6 +476,10 @@ export class ResearchRunCreateService {
     if (error instanceof ResearchRunCreateError) return error;
     if (error instanceof ResearchMetadataError) {
       switch (error.code) {
+        case "RESEARCH_REPRODUCTION_BINDING_CONFLICT":
+          return new ResearchRunCreateError("RESEARCH_RUN_REPRODUCTION_CONFLICT", "Reproduction must preserve the parent engine, AlphaVersion, effective specification and data snapshot; use a clone for changed inputs.", 409);
+        case "RESEARCH_RUN_NOT_FOUND":
+          return new ResearchRunCreateError("RESEARCH_RUN_NOT_FOUND", "Research parent run was not found.", 404);
         case "RESEARCH_PREFLIGHT_NOT_FOUND":
           return new ResearchRunCreateError("RESEARCH_RUN_NOT_FOUND", "Research preflight was not found.", 404);
         case "RESEARCH_PREFLIGHT_EXPIRED":

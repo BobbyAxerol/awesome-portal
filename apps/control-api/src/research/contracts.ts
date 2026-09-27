@@ -156,6 +156,7 @@ export class ResearchMetadataError extends Error {
       | "RESEARCH_ATTEMPT_NOT_FOUND"
       | "RESEARCH_RUN_NOT_FOUND"
       | "RESEARCH_CHILD_RELATION_INVALID"
+      | "RESEARCH_REPRODUCTION_BINDING_CONFLICT"
       | "RESEARCH_SELECTION_SCOPE_INVALID"
       | "RESEARCH_EVALUATION_SCOPE_INVALID"
       | "RESEARCH_INSPECTION_SCOPE_INVALID"
@@ -396,6 +397,8 @@ export interface ResearchRunProducerInput {
    * itself stays a NEW run with its own preflight and digests.
    */
   clonedFrom?: { parentRunId: string };
+  /** E13: exact admitted input reproduction; never a changed-config clone. */
+  reproducedFrom?: { parentRunId: string };
 }
 
 /** W5a A10c: one explicit what-if diagnostic intent (see createOrReplayWhatIfIntent). */

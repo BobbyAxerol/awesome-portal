@@ -1,0 +1,30 @@
+{
+  "schema_version": "research.run-create.v1",
+  "client_intent_id": "rci_e13_fixture_reproduction",
+  "preflight_token": "rpft_e13_fixture",
+  "intent_kind": "REPRODUCE_EXISTING",
+  "lineage": { "relation": "REPRODUCTION_OF", "parent_run_id": "rrun_e13_fixture_parent" },
+  "requested_spec": {
+    "schema_version": "research.requested-spec.v1",
+    "alpha_binding": { "alpha_id": "a_delta_fixture", "alpha_version_id": "av_delta_fixture" },
+    "not_publishable": false,
+    "strategy_id": "a_delta_fixture",
+    "execution_route": "signal_notional",
+    "route_params": {},
+    "data": { "dataset_id": "crypto-binance-1m", "symbol": "BTCUSDT", "timeframe": "1h" },
+    "protocol": "three_window_decay",
+    "windows": {
+      "is": { "start": "2026-06-01T00:00:00Z", "end_exclusive": "2026-06-08T00:00:00Z" },
+      "oos": { "start": "2026-06-08T00:00:00Z", "end_exclusive": "2026-06-15T00:00:00Z" },
+      "holdout": { "start": "2026-06-15T00:00:00Z", "end_exclusive": "2026-06-17T00:00:00Z" }
+    },
+    "optimization_mode": "mode_1_decay",
+    "optimization_schedule": "global",
+    "parameter_space_overrides": [],
+    "optuna_trials": 1,
+    "early_stopping": null,
+    "random_seed": null,
+    "optimization_config": {},
+    "client": { "engine_release_id": "er_fixture_quantbt111", "config_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
+  }
+}
