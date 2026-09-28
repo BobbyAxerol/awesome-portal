@@ -27,8 +27,9 @@
  *  - VD-P22-01 the mirror SLA prints the server's timestamps; no countdown.
  *  - VD-P22-02 "assignee pool" prints only a pool the mirror publishes; today
  *    the mirror says `NOT_PUBLISHED` with its reason code, which is printed.
- *  - VD-P22-08 the outcome vocabulary is the governance contract's; the
- *    decisions actually recorded (`decision_outcomes`) print beside it.
+ *  - VD-P22-08 the outcome vocabulary is the governance contract's. VD-FG-05-02:
+ *    it prints only as a legend (`possible outcomes:`) while no decision is
+ *    recorded; once `decision_outcomes` has entries only those print.
  *  - FG-05 (Codex P22 closeout): the raw `approval.status` and the separate
  *    `effective_status`, `rc_superseded`, the conflicting approval and the
  *    downstream code, the recorded intent's actor and attempts. A `401` goes to
@@ -205,8 +206,11 @@ export const MIRROR_NOTE =
   "Preview of the inbox row this publish will create on the Execution side. It stays a ghost until the record exists — this screen never fakes a governance state.";
 /** VD-P22-02: no contract field names an assignee pool. */
 export const MIRROR_POOL_ABSENT = "assignee pool: not published";
-/** VD-P22-08: the governance contract's decision vocabulary (`ApprovalMirror.status` minus PENDING). */
-export const MIRROR_OUTCOMES = "decision outcomes: APPROVED · APPROVED_WITH_CONDITION · CHANGES_REQUESTED · DENIED · EXPIRED";
+/**
+ * VD-P22-08: the governance contract's decision vocabulary (`ApprovalMirror.status`
+ * minus PENDING). VD-FG-05-02: a legend, shown only while no decision is recorded.
+ */
+export const MIRROR_OUTCOMES = "possible outcomes: APPROVED · APPROVED_WITH_CONDITION · CHANGES_REQUESTED · DENIED · EXPIRED";
 export const MIRROR_PUBLISHED_NOTE =
   "The reviewer opens this row, walks the same evidence links you pinned above, and records one of the outcomes above. Conditions and waivers they attach flow back into this mirror. You cannot edit anything past this point — only supersede with a new candidate.";
 /** VD-P22-07: a Research fact beside the raw status, never in place of it. */
@@ -421,6 +425,8 @@ a.rc-node:hover { border-color: var(--accent); text-decoration: none; }
 .rc-mirrorrow .subj { font-family: var(--font-mono); font-size: 10.5px; flex: 1 1 170px; min-width: 0; overflow-wrap: anywhere; }
 .rc-mirrorrow .st, .rc-mirrorrow .sla { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .rc-mirrormeta { display: flex; gap: 4px 10px; flex-wrap: wrap; font-size: 10px; color: var(--ink-soft); }
+/* VD-FG-05-11: a separator travels with the item before it, so a wrapped line never starts with "·". */
+.rc-mirrormeta .rc-mseg { display: inline-flex; gap: 10px; }
 .rc-claims { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .rc-claims legend { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 500; color: var(--accent-2); padding: 0; margin-bottom: 2px; }
 .rc-claims label { display: flex; gap: 6px; align-items: baseline; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
@@ -1700,11 +1706,15 @@ function MirrorGhost({ foot }: { foot: ReactNode }) {
         <span className="sla">{MIRROR_SLA}</span>
       </div>
       <div className="rc-mirrormeta" data-mirror-meta>
-        <span>{MIRROR_POOL_ABSENT}</span>
-        <span>·</span>
-        <span>conditions: not published</span>
-        <span>·</span>
-        <span>{MIRROR_OUTCOMES}</span>
+        <span className="rc-mseg">
+          <span>{MIRROR_POOL_ABSENT}</span>
+          <span>·</span>
+        </span>
+        <span className="rc-mseg">
+          <span>conditions: not published</span>
+          <span>·</span>
+        </span>
+        <span data-mirror-outcomes="legend">{MIRROR_OUTCOMES}</span>
       </div>
       <p>{MIRROR_NOTE}</p>
       <span className="rc-reason" data-mirror-foot>
@@ -1740,7 +1750,9 @@ function decisionLine(approval: RcApproval): string {
   const recorded =
     outcomes === undefined
       ? "decisions recorded: not published"
-      : `decisions recorded: ${outcomes.map((decision) => `${decision.actor_user_id} ${decision.outcome}`).join(" · ")}`;
+      : outcomes.length === 0
+        ? "decisions recorded: none"
+        : `decisions recorded: ${outcomes.map((decision) => `${decision.actor_user_id} ${decision.outcome}`).join(" · ")}`;
   return approval.condition_count !== undefined ? `${recorded} · condition_count ${approval.condition_count}` : recorded;
 }
 
@@ -1811,11 +1823,22 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
             )}
           </div>
           <div className="rc-mirrormeta" data-mirror-meta>
-            {approval !== null ? <PoolLine approval={approval} /> : <span>{MIRROR_POOL_ABSENT}</span>}
-            <span>·</span>
-            <span data-mirror-conditions>{approval !== null ? conditionLine(approval) : "conditions: not read"}</span>
-            <span>·</span>
-            <span>{MIRROR_OUTCOMES}</span>
+            <span className="rc-mseg">
+              {approval !== null ? <PoolLine approval={approval} /> : <span>{MIRROR_POOL_ABSENT}</span>}
+              <span>·</span>
+            </span>
+            {/* VD-FG-05-02: recorded decisions replace the static vocabulary; without any it stays, as a legend. */}
+            {approval !== null && (approval.decision_outcomes?.length ?? 0) > 0 ? (
+              <span data-mirror-conditions>{conditionLine(approval)}</span>
+            ) : (
+              <>
+                <span className="rc-mseg">
+                  <span data-mirror-conditions>{approval !== null ? conditionLine(approval) : "conditions: not read"}</span>
+                  <span>·</span>
+                </span>
+                <span data-mirror-outcomes="legend">{MIRROR_OUTCOMES}</span>
+              </>
+            )}
           </div>
           {approval !== null ? (
             <span className="facts" data-mirror-decisions>

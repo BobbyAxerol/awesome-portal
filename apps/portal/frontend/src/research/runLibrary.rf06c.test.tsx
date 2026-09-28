@@ -498,7 +498,10 @@ describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P
       }),
     ]);
     const chip = document.querySelector("[data-rc]") as HTMLElement;
-    expect(chip.textContent).toBe("rc_2026_08_c · APPROVED");
+    /* VD-FG-05-07: the in-flight lookup is on the face, not only in the title. */
+    expect(chip.textContent).toBe("rc_2026_08_c · APPROVED · reading…");
+    expect(chip.getAttribute("data-rc-publication")).toBe("loading");
+    expect(chip.getAttribute("data-rc-tone-source")).toBe("raw");
     /* W5c/X1: Screen 11 exists (P21); a sealed pack's chip opens that pack's own read-only route. */
     expect(chip.tagName).toBe("A");
     expect(chip.getAttribute("href")).toBe("/research/quantbt/release-candidates/rc_2026_08_c");
@@ -773,11 +776,14 @@ async function settledChip(state: string): Promise<HTMLElement> {
 }
 
 describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
-  it("prints this candidate's raw Governance status when the lookup names it CURRENT, the effective status apart", async () => {
+  it("prints this candidate's raw Governance status and, when it differs, the effective status after it, in the effective status's ink", async () => {
     lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED_WITH_CONDITION", effective_status: "EXPIRED" }))]);
     view([sealedRow()]);
     const found = await settledChip("CURRENT");
-    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED_WITH_CONDITION`);
+    /* VD-FG-05-06 (option B): an expired approval is never painted --good. */
+    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED_WITH_CONDITION · effective EXPIRED`);
+    expect(found.style.color).toBe("var(--ink-faint)");
+    expect(found.getAttribute("data-rc-tone-source")).toBe("effective");
     expect(found.getAttribute("data-rc-state")).toBe("APPROVED_WITH_CONDITION");
     expect(found.getAttribute("data-rc-approval-status")).toBe("APPROVED_WITH_CONDITION");
     expect(found.getAttribute("data-rc-effective-status")).toBe("EXPIRED");
@@ -786,6 +792,49 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     );
     expect(found.getAttribute("href")).toBe(`/research/quantbt/release-candidates/${SEALED_RC}`);
     expect(lookupUrls).toEqual([`/api/v1/research/alpha-versions/${AV_ID}/publication`]);
+  });
+
+  it("prints an APPROVED candidate whose effective status is EXPIRED as effective EXPIRED in faint ink, not the approved green", async () => {
+    lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED", effective_status: "EXPIRED" }))]);
+    view([sealedRow()]);
+    const found = await settledChip("CURRENT");
+    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED · effective EXPIRED`);
+    expect(found.style.color).toBe("var(--ink-faint)");
+    expect(found.style.color).not.toBe("var(--good)");
+    expect(found.getAttribute("data-rc-tone-source")).toBe("effective");
+    expect(found.getAttribute("data-rc-approval-status")).toBe("APPROVED");
+    expect(found.getAttribute("data-rc-effective-status")).toBe("EXPIRED");
+  });
+
+  it("leaves the chip exactly as before when the effective status equals the raw status", async () => {
+    lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED", effective_status: "APPROVED" }))]);
+    view([sealedRow()]);
+    const found = await settledChip("CURRENT");
+    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED`);
+    expect(found.style.color).toBe("var(--good)");
+    expect(found.getAttribute("data-rc-tone-source")).toBe("raw");
+    expect(found.getAttribute("data-rc-effective-status")).toBe("APPROVED");
+  });
+
+  it("leaves the chip exactly as before when the lookup publishes no effective status", async () => {
+    lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED" }))]);
+    view([sealedRow()]);
+    const found = await settledChip("CURRENT");
+    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED`);
+    expect(found.style.color).toBe("var(--good)");
+    expect(found.getAttribute("data-rc-tone-source")).toBe("raw");
+    expect(found.getAttribute("data-rc-effective-status")).toBeNull();
+  });
+
+  it("keeps a long chip face inside the card: no wrap, clipped with an ellipsis, every fact in the title", async () => {
+    lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED_WITH_CONDITION", effective_status: "EXPIRED" }))]);
+    view([sealedRow()]);
+    const found = await settledChip("CURRENT");
+    expect(found.style.whiteSpace).toBe("nowrap");
+    expect(found.style.maxWidth).toBe("100%");
+    expect(found.style.overflow).toBe("hidden");
+    expect(found.style.textOverflow).toBe("ellipsis");
+    expect(found.getAttribute("title")).toContain("effective status expired");
   });
 
   it("marks a superseded candidate from the server's candidate_relation, in faint ink", async () => {
@@ -829,6 +878,31 @@ describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
     }
     expect(titles[0]).toContain("publication lookup: You don't have access to this in your current workspace, or it doesn't exist.");
     expect(titles[1]).toBe(titles[0]);
+  });
+
+  it("tells a pending lookup, a 403 or 404 refusal and a 503 apart on the chip face; 403 and 404 read the same", async () => {
+    const faces: Record<string, string> = {};
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    view([sealedRow()]);
+    faces.pending = (await settledChip("loading")).textContent!;
+    cleanup();
+    vi.unstubAllGlobals();
+    for (const [status, state] of [[403, "denied"], [404, "denied"], [503, "unavailable"]] as const) {
+      lookup(() => [status, lookupProblem(status, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN")]);
+      view([sealedRow()]);
+      const face = await settledChip(state);
+      faces[status] = face.textContent!;
+      expect(face.getAttribute("data-rc-tone-source")).toBe("raw");
+      expect(document.body.innerHTML).not.toContain(LOOKUP_SERVER_PROSE);
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+    expect(faces.pending).toBe(`${SEALED_RC} · APPROVED · reading…`);
+    expect(faces[403]).toBe(`${SEALED_RC} · APPROVED · publication not readable`);
+    expect(faces[404]).toBe(faces[403]);
+    expect(faces[503]).toBe(`${SEALED_RC} · APPROVED · publication unavailable`);
+    expect(faces.pending).not.toBe(faces[403]);
+    expect(faces[503]).not.toBe(faces[403]);
   });
 
   it("raises the shell's session signal once on a 401 lookup", async () => {

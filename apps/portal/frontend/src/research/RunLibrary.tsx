@@ -946,6 +946,13 @@ const RC_ID_CHARS = 14;
 export interface RcChipFace {
   text: string;
   state: string;
+  /**
+   * VD-FG-05-06: the `RC_TONE` key the chip's ink follows. It is `state`
+   * unless the lookup's effective status differs from the raw one; then it is
+   * the effective status (a superseded candidate keeps SUPERSEDED).
+   */
+  toneState: string;
+  toneSource: "effective" | "raw";
   title: string;
   fullId: string | null;
   /** The P22 lookup outcome for this chip: loading, NOT_PUBLISHED, CURRENT/SUPERSEDED/UNKNOWN (this rc), OTHER_CANDIDATE, or a refusal state. */
@@ -962,14 +969,30 @@ function enumWords(value: string): string {
   return value.toLowerCase().split("_").join(" ");
 }
 
+/**
+ * VD-FG-05-07: what the chip face itself says while the lookup is in flight
+ * and after it was refused, so loading and denied differ in visible text, not
+ * only in the title. 403 and 404 are both `denied` and read the same.
+ */
+const LOOKUP_FACE: Partial<Record<AlphaVersionPublicationView["state"], string>> = {
+  loading: " · reading…",
+  denied: " · publication not readable",
+  unavailable: " · publication unavailable",
+};
+
 function lookupNote(
   lookup: AlphaVersionPublicationView | undefined,
   releaseCandidateId: string | null,
-): { note: string | null; publication: string | null; reasonCode: string | null } {
-  if (lookup === undefined) return { note: null, publication: null, reasonCode: null };
-  if (lookup.state === "loading") return { note: "publication lookup pending", publication: "loading", reasonCode: null };
+): { note: string | null; publication: string | null; reasonCode: string | null; face: string } {
+  if (lookup === undefined) return { note: null, publication: null, reasonCode: null, face: "" };
+  if (lookup.state === "loading") return { note: "publication lookup pending", publication: "loading", reasonCode: null, face: LOOKUP_FACE.loading ?? "" };
   if (lookup.state !== "available") {
-    return { note: `publication lookup: ${ALPHA_VERSION_PUBLICATION_WORDS[lookup.state]}`, publication: lookup.state, reasonCode: lookup.code };
+    return {
+      note: `publication lookup: ${ALPHA_VERSION_PUBLICATION_WORDS[lookup.state]}`,
+      publication: lookup.state,
+      reasonCode: lookup.code,
+      face: LOOKUP_FACE[lookup.state] ?? "",
+    };
   }
   const { read } = lookup;
   if (read.publication === null) {
@@ -977,12 +1000,13 @@ function lookupNote(
       note: `no delivered publication for this version — ${reasonSentence({ state: "NOT_PUBLISHED", reason_code: read.reason_code })}`,
       publication: read.availability,
       reasonCode: read.reason_code,
+      face: "",
     };
   }
   if (read.publication.release_candidate_id !== releaseCandidateId) {
-    return { note: `this version's latest delivered publication is ${read.publication.release_candidate_id}`, publication: "OTHER_CANDIDATE", reasonCode: null };
+    return { note: `this version's latest delivered publication is ${read.publication.release_candidate_id}`, publication: "OTHER_CANDIDATE", reasonCode: null, face: "" };
   }
-  return { note: null, publication: read.publication.candidate_relation, reasonCode: null };
+  return { note: null, publication: read.publication.candidate_relation, reasonCode: null, face: "" };
 }
 
 export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublicationView): RcChipFace {
@@ -990,6 +1014,8 @@ export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublica
     return {
       text: "rc_ (draft) · DRAFT",
       state: "DRAFT",
+      toneState: "DRAFT",
+      toneSource: "raw",
       title: "release candidate being composed from this run — open Screen 11 to continue the draft",
       fullId: rc.draft_id,
       publication: null,
@@ -1006,9 +1032,15 @@ export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublica
     const status = approvalStatusWords(found);
     const superseded = found.candidate_relation === "SUPERSEDED";
     const effective = found.approval_read === "AVAILABLE" ? (found.approval?.effective_status ?? null) : null;
+    /* VD-FG-05-06: an effective status that differs from the raw one is on the
+       face and sets the ink, so an expired approval never reads in --good. */
+    const shownEffective = effective !== null && effective !== status.raw ? effective : null;
+    const state = superseded ? "SUPERSEDED" : (status.raw ?? "UNKNOWN");
     return {
-      text: `${shortId} · ${status.words}${superseded ? " · SUPERSEDED" : ""}`,
-      state: superseded ? "SUPERSEDED" : (status.raw ?? "UNKNOWN"),
+      text: `${shortId} · ${status.words}${shownEffective !== null ? ` · effective ${shownEffective}` : ""}${superseded ? " · SUPERSEDED" : ""}`,
+      state,
+      toneState: shownEffective !== null && !superseded ? shownEffective : state,
+      toneSource: shownEffective !== null && !superseded ? "effective" : "raw",
       title:
         `${id} — publication ${enumWords(found.state)} · candidate ${enumWords(found.candidate_relation)} · approval status ${status.raw !== null ? enumWords(status.raw) : status.words}` +
         ` · effective status ${effective !== null ? enumWords(effective) : "not published"} · as of ${new Date(found.as_of_utc_ms).toISOString()} — open its sealed pack on Screen 11`,
@@ -1020,10 +1052,12 @@ export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublica
     };
   }
   const state = rc.approval_state ?? "UNKNOWN";
-  const { note, publication, reasonCode } = lookupNote(lookup, id);
+  const { note, publication, reasonCode, face } = lookupNote(lookup, id);
   return {
-    text: `${shortId} · ${rc.approval_state ?? "approval not published"}`,
+    text: `${shortId} · ${rc.approval_state ?? "approval not published"}${face}`,
     state,
+    toneState: state,
+    toneSource: "raw",
     title: `${id ?? "sealed release candidate"} — sealed rc from this run's params · ${state.toLowerCase().replace("_", " ")}${note ? ` · ${note}` : ""} — open its sealed pack on Screen 11`,
     approvalStatus: null,
     effectiveStatus: null,
@@ -1035,9 +1069,13 @@ export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublica
 
 function RcChip({ rc, runId, alphaVersionId }: { rc: ReleaseCandidateRef; runId: string; alphaVersionId: string | null }) {
   const lookups = useContext(RcPublicationContext);
-  const lookup = rc.kind === "LOCAL_SEAL" && alphaVersionId !== null ? lookups.get(alphaVersionId) : undefined;
+  /* A looked-up version with no entry yet is loading (`useAlphaVersionPublications`). */
+  const lookup =
+    rc.kind === "LOCAL_SEAL" && alphaVersionId !== null
+      ? (lookups.get(alphaVersionId) ?? (rc.release_candidate_id !== null ? { state: "loading" as const } : undefined))
+      : undefined;
   const face = rcChipFace(rc, lookup);
-  const tone = RC_TONE[face.state] ?? "var(--ink-faint)";
+  const tone = RC_TONE[face.toneState] ?? "var(--ink-faint)";
   /* Hi-fi: an <a> to Screen 11 (P21). A sealed pack opens its own read-only
      route (the one Screen 11 links to); the viewer's draft opens the composer. */
   return (
@@ -1050,6 +1088,7 @@ function RcChip({ rc, runId, alphaVersionId }: { rc: ReleaseCandidateRef; runId:
       data-rc-approval-status={face.approvalStatus ?? undefined}
       data-rc-effective-status={face.effectiveStatus ?? undefined}
       data-rc-publication-reason={face.reasonCode ?? undefined}
+      data-rc-tone-source={face.toneSource}
       data-phase={RC_PHASE}
       title={face.title}
       style={{
@@ -1062,6 +1101,10 @@ function RcChip({ rc, runId, alphaVersionId }: { rc: ReleaseCandidateRef; runId:
         padding: "1px 8px",
         background: "var(--paper-raised)",
         whiteSpace: "nowrap",
+        /* A long face stays inside the card; the title keeps every fact. */
+        maxWidth: "100%",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
         textDecoration: "none",
       }}
     >

@@ -1524,6 +1524,56 @@ describe("S11 P22 closeout bindings (FG-05)", () => {
     expect(screenText()).not.toContain("Quant Reviewers");
   });
 
+  it("S11-U61 once Governance has recorded a decision the static outcome vocabulary is gone and only the real decisions print", async () => {
+    const read = deliveredRead({}, {
+      status: "APPROVED_WITH_CONDITION",
+      decision_outcomes: [{ actor_user_id: "usr_reviewer_1", outcome: "APPROVE_WITH_CONDITION" }],
+    });
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(read)] });
+    renderCompose();
+    await ready();
+    const decisions = await until("[data-panel='mirror'] [data-mirror-decisions]");
+    expect(decisions.textContent).toBe("decisions recorded: usr_reviewer_1 APPROVE_WITH_CONDITION");
+    const meta = q("[data-panel='mirror'] [data-mirror-meta]")!;
+    expect(meta.querySelector("[data-mirror-outcomes]")).toBeNull();
+    expect(meta.textContent).toBe(`${MIRROR_POOL_ABSENT} · P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED·conditions: none`);
+    expect(screenText()).not.toContain(MIRROR_OUTCOMES);
+    expect(screenText()).not.toMatch(/(decision|possible) outcomes:/);
+  });
+
+  it("S11-U62 with no decision recorded the contract's outcome vocabulary stays, as a legend headed possible outcomes", async () => {
+    expect(MIRROR_OUTCOMES).toBe("possible outcomes: APPROVED · APPROVED_WITH_CONDITION · CHANGES_REQUESTED · DENIED · EXPIRED");
+    for (const decisions of [[], undefined]) {
+      const read = deliveredRead({}, { status: "PENDING", decision_outcomes: decisions });
+      server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(read)] });
+      renderCompose();
+      await ready();
+      const legend = await until("[data-panel='mirror'] [data-mirror-outcomes='legend']");
+      expect(legend.textContent).toBe(MIRROR_OUTCOMES);
+      expect(screenText()).not.toContain("decision outcomes:");
+      /* An empty list is said; the line never ends in a bare separator. */
+      const recorded = document.querySelector("[data-panel=\"mirror\"] [data-mirror-decisions]")!.textContent ?? "";
+      expect(recorded.startsWith(decisions === undefined ? "decisions recorded: not published" : "decisions recorded: none")).toBe(true);
+      expect(recorded).not.toContain("recorded:  ·");
+      expect(recorded).not.toMatch(/recorded: ·/);
+      cleanup();
+    }
+  });
+
+  it("S11-U63 every mirror meta separator closes the item before it, so a wrapped line cannot start with a separator", async () => {
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(deliveredRead({}, { status: "PENDING" }))] });
+    renderCompose();
+    await ready();
+    const meta = await until("[data-panel='mirror'] [data-mirror-meta]");
+    const segments = Array.from(meta.querySelectorAll(":scope > .rc-mseg"));
+    expect(segments).toHaveLength(2);
+    for (const segment of segments) expect(segment.lastElementChild!.textContent).toBe("·");
+    for (const child of Array.from(meta.children)) {
+      expect(child.textContent).not.toBe("·");
+      expect(child.firstElementChild?.textContent ?? child.textContent).not.toBe("·");
+    }
+  });
+
   it("S11-U55 a conflict keeps the conflicting approval and the downstream code; the recorded intent's actor and attempts print; reconcile_allowed false blocks the same-request retry", async () => {
     const unknown = publication({
       state: "UNKNOWN",
