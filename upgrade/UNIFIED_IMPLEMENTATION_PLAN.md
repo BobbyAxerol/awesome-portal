@@ -3703,6 +3703,13 @@ warm p95 at 773 ms versus 500 ms. Unloaded 1/4/8/20-reader Library p95 was
 72/109/181/375 ms; this narrows the contention hypothesis but does not prove
 the stage. W06/P23 remain FAIL/OPEN; no quota, pool or SLO was changed.
 [Exact private hashes, failed probe and retake](./research_loop/evidence/P23/T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md).
+**T13 current-route checkpoint (2026-09-28):** the pinned isolated Atlas has
+verified QuantBT 1.1.1 and lists `options` as nondefault/DEFERRED. An actual
+authenticated preflight refused it with typed 409 and unchanged job/preflight
+counts. This proves only current-catalogue fail-closed behavior; no newer
+Research-only build, in-flight pin, default rollback or archived reproduction
+was exercised. T07/T13 remain OPEN. [Bounded private receipt and exact
+scope](./research_loop/evidence/P23/T13_CURRENT_ROUTE_NEGATIVE_CHECKPOINT_2026-09-28.md).
 
 #### B. Frontend / test còn mở (không phải backend)
 

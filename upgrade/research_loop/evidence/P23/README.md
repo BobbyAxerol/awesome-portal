@@ -1,5 +1,11 @@
 # P23 backend qualification packet
 
+**Latest T13 current-route negative checkpoint, 2026-09-28:**
+[Exact named preflight refusal](./T13_CURRENT_ROUTE_NEGATIVE_CHECKPOINT_2026-09-28.md)
+shows the existing `options` catalogue entry is not auto-admitted: 409 typed
+refusal, no new job/preflight. This is **not** a new-build/in-flight/rollback
+PASS; T07/T13 remain open.
+
 **Latest T09 dynamic-isolation checkpoint, 2026-09-28:**
 [Real HEAVY+four-queued overlap and unchanged Execution sentinels](./T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md).
 Owner/member capability+manifest signatures, anonymous 401, and both
