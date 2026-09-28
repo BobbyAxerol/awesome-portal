@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest T12 negative admission checkpoint, 2026-09-28:** [Finite real quota
+receipt and precise source-owner handoffs](./T12_ADMISSION_QUOTA_CHECKPOINT_2026-09-28.md)
+prove eight accepted preflights/actor, a ninth typed 503, another workspace
+member unaffected, unchanged 40 durable jobs and 11 capped cgroup samples.
+This is **preflight admission only**. T12 remains PARTIAL: no published
+`AUDIT_OF_SELECTION` child admission or fully measured utility-kind quota;
+`CG-P23-T12-01/02` are assigned to shared ≤P21 source owner Claude.
+
 **Latest T04 clean-candidate fault checkpoint, 2026-09-27:** [Actual PG,
 NATS and worker drill](./T04_CLEAN_FAULT_CHECKPOINT_2026-09-27.md) passes a
 5,014-ms structured database refusal/recovery without Control API restart;
