@@ -104,8 +104,9 @@ export async function spaNavigate(page: Page, path: string): Promise<void> {
   }, path);
 }
 
+/** pathname + search + hash: a claim query (`?run_id=…`) is part of the address the history checks compare (T6). */
 export const location = (page: Page): Promise<string> =>
-  page.evaluate(() => `${window.location.pathname}${window.location.hash}`);
+  page.evaluate(() => `${window.location.pathname}${window.location.search}${window.location.hash}`);
 
 export async function horizontalOverflow(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

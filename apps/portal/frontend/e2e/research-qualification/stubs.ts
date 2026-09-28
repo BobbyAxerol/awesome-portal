@@ -29,12 +29,16 @@ import { fileURLToPath } from "node:url";
 import type { BrowserContext, Page, Request, Route } from "@playwright/test";
 
 import type { components as CompareC } from "../../../../../packages/contracts/generated/research-compare";
+import type { components as CurrentSourceC } from "../../../../../packages/contracts/generated/research-current-source";
+import type { components as FoundationC } from "../../../../../packages/contracts/generated/research-foundation";
 import type { components as LineageC } from "../../../../../packages/contracts/generated/research-attempt-lineage";
 import type { components as PreflightC } from "../../../../../packages/contracts/generated/research-preflight";
 import type { components as ProgressC } from "../../../../../packages/contracts/generated/research-progress";
+import type { components as RcC } from "../../../../../packages/contracts/generated/research-release-candidate";
+import type { components as RcPubC } from "../../../../../packages/contracts/generated/research-release-candidate-publication";
 import type { components as ReplayC } from "../../../../../packages/contracts/generated/research-replay";
 import type { components as ReportC } from "../../../../../packages/contracts/generated/research-report";
-import type { RcCompose as PortalRcCompose, RcPublication as PortalRcPublication } from "../../src/research/releaseCandidateClient";
+import type { components as RunLibraryC } from "../../../../../packages/contracts/generated/research-run-library";
 
 import { stubPortalApi } from "../fixtures";
 
@@ -42,9 +46,14 @@ type Replay = ReplayC["schemas"]["Replay"];
 type ReportDetail = ReportC["schemas"]["ReportDetail"];
 type Lineage = LineageC["schemas"]["AttemptLineageResponse"];
 type Compare = CompareC["schemas"]["CompareResponse"];
-type RcCompose = PortalRcCompose;
-type RcPublication = PortalRcPublication;
+type RcCompose = RcC["schemas"]["ComposeResponseP21"];
+type RcPublication = RcPubC["schemas"]["PublicationResponse"];
+type AlphaVersionPublication = RcPubC["schemas"]["AlphaVersionPublicationResponse"];
+export type JourneyResponse = FoundationC["schemas"]["JourneyResponse"];
+type LaneNotApplicable = CurrentSourceC["schemas"]["LaneNotApplicable"];
+type LaneOperation = LaneNotApplicable["lane"]["operation"];
 type ProgressRead = ProgressC["schemas"]["ProgressRead"];
+export type RunLibrary = RunLibraryC["schemas"]["RunLibraryResponse"];
 type DatasetCatalog = PreflightC["schemas"]["DatasetCatalog"];
 type ProgressStreamEvent = ProgressC["schemas"]["ProgressStreamEvent"];
 type RcFieldKey = RcCompose["fields"][number]["key"];
@@ -105,8 +114,6 @@ const na = (reason: string) => ({ state: "NOT_APPLICABLE" as const, reason_code:
 const pa = (reason: string) => ({ state: "PARTIAL" as const, reason_code: reason });
 const hex = (c: string) => c.repeat(64);
 const dg = (c: string) => `sha256:${hex(c)}`;
-
-type Json = Record<string, unknown>;
 
 async function json(route: Route, body: unknown, headers: Record<string, string> = {}): Promise<void> {
   try {
@@ -242,6 +249,21 @@ export function replayWindow(runId: string, start: number, selected: number | nu
           },
       availability: AV,
     },
+    /* E16-R1: this seeded run predates the retained OHLC overview, so it keeps
+       the typed absence (as `research-replay.p04-real.predates-candle-overview`
+       does); nothing is backfilled. */
+    candle_overview: {
+      state: "NOT_PUBLISHED",
+      reason_code: "P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW",
+      scope: null,
+      source_bar_count: null,
+      emitted_bucket_count: null,
+      bucket_bars: null,
+      sampling: null,
+      envelope: null,
+      values: [],
+      availability: np("P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW"),
+    },
     route_capabilities: capabilities,
     source_absences: {
       execution_state: gap(EXEC_STATE),
@@ -351,6 +373,9 @@ export function rcPublication(rcId: string = RC_ID, published = false, runId: st
           read_at: "2026-07-25T10:41:00.000Z",
           conditions: [],
           href: `/governance/approvals/${APPROVAL}/r1`,
+          /* Required by the contract (`typed_required_fields` of the P22
+             governance fixture); the pool itself is not published here. */
+          assignee_pool_availability: { state: "NOT_PUBLISHED", reason_code: "P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED" },
         }
       : null,
     as_of_utc_ms: RC_PUBLISHED_AT,
@@ -545,6 +570,102 @@ export function datasetCatalog(): DatasetCatalog {
 }
 
 /* ======================================================================
+ * S00 — the journey descriptor. The canonical v3 contract fixture, read from
+ * the contracts package on every call. The shared `stubPortalApi` still reads
+ * the removed v2 file (`e2e/fixtures.ts:262`, not this package's to change),
+ * so `installLane` registers this route after it and wins.
+ * ==================================================================== */
+
+export const JOURNEY_FIXTURE = "research-foundation.journey-v3";
+
+export function journey(): JourneyResponse {
+  return contractFixture<JourneyResponse>(JOURNEY_FIXTURE);
+}
+
+/* ======================================================================
+ * S04–S08 — the RS-02 retained current-source lane. Every seeded run here is
+ * the fixed P04 profile, and for that profile the contract answers 200 with
+ * the typed `LaneNotApplicable` body (RF-05), not a 404 refusal. No canonical
+ * contract fixture is published for it; the body mirrors the one in
+ * `src/research/evidenceFlow.test.tsx` and is typed against the d.ts.
+ * ==================================================================== */
+
+const LANE_REASON = "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION";
+
+export function laneNotApplicable(runId: string, operation: LaneOperation): LaneNotApplicable {
+  const revision = `rs02_not-applicable_${createHash("sha256").update(`${runId}|${operation}`).digest("hex")}`;
+  return {
+    schema_version: "research.current-source-not-applicable.v1",
+    read_authority: "PORTAL_RETAINED_CURRENT_SOURCE",
+    run_id: runId,
+    revision,
+    etag: `"${revision}"`,
+    availability: { state: "NOT_APPLICABLE", reason_code: LANE_REASON },
+    lane: {
+      state: "NOT_APPLICABLE",
+      operation,
+      run_profile: "P04_FIXED_QUALIFICATION",
+      run_adapter_contract_digest: hex("9"),
+      retainable_profile_id: operation.startsWith("replay") ? "rs02.delta-signal-notional-wfo.v1" : "rs02.delta-wfo-global.v1",
+      reason_code: LANE_REASON,
+    },
+  };
+}
+
+/** `/current-source/<path>` → the lane operation the contract names for it. */
+function laneOperationOf(path: string): LaneOperation | null {
+  const table: Record<string, LaneOperation> = {
+    evidence: "evidence",
+    "evidence/series": "evidence_series",
+    split: "split",
+    search: "search",
+    freeze: "freeze",
+    replay: "replay",
+    "replay/transitions": "replay_transitions",
+    "replay/child-audit": "replay_child_audit",
+  };
+  return table[path] ?? null;
+}
+
+/* ======================================================================
+ * S01/S11 — FG-05 alpha-version publication lookup. The control-api's typed
+ * absence (`alphaVersionPublication.fixture.ts` `lookupAbsent`): no seeded
+ * Alpha version here has a delivered publication.
+ * ==================================================================== */
+
+export function alphaVersionPublication(alphaVersionId: string): AlphaVersionPublication {
+  return {
+    schema_version: "research.alpha-version-publication.v1",
+    alpha_version_id: alphaVersionId,
+    availability: "NOT_PUBLISHED",
+    reason_code: "P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED",
+    publication: null,
+    as_of_utc_ms: RC_PUBLISHED_AT,
+  };
+}
+
+/* ======================================================================
+ * S01 — the run library list. The repository fixture `run-library.json`
+ * predates two required contract fields (T4): `status_counts`
+ * (research-run-library.d.ts:206) and each item's `display_label` (:122).
+ * Both are added here rather than in the shared fixture: the counts are the
+ * fixture's own item statuses (the partition the contract describes), and
+ * `display_label` is the contract's typed absence (null → the reader prints
+ * the short id). This is harness data, not product arithmetic.
+ * ==================================================================== */
+
+export function runLibrary(): RunLibrary {
+  const base = foundation<Omit<RunLibrary, "status_counts" | "items"> & { items: Array<Omit<RunLibrary["items"][number], "display_label">> }>("run-library.json");
+  const status_counts: RunLibrary["status_counts"] = { COMPLETED: 0, RUNNING: 0, FAILED: 0, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 0 };
+  for (const item of base.items) {
+    const status = item.status as keyof RunLibrary["status_counts"];
+    if (!(status in status_counts)) throw new Error(`run-library.json: status ${String(item.status)} is outside status_counts`);
+    status_counts[status] += 1;
+  }
+  return { ...base, status_counts, items: base.items.map((item) => ({ ...item, display_label: null })) };
+}
+
+/* ======================================================================
  * S03 — progress, running and terminal.
  * ==================================================================== */
 
@@ -598,8 +719,12 @@ const RE = {
   lineage: /\/api\/v1\/research\/alphas\/([^/?]+)\/lineage(\?|$)/,
   compare: /\/api\/v1\/research\/alphas\/([^/?]+)\/compare(\?|$)/,
   datasets: /\/api\/v1\/research\/datasets(\?|$)/,
+  runLibrary: /\/api\/v1\/quantbt\/runs(\?|$)/,
   progress: /\/api\/v1\/research\/runs\/([^/?]+)\/progress(\?|$)/,
   events: /\/api\/v1\/research\/runs\/([^/?]+)\/events(\?|$)/,
+  journey: /\/api\/v1\/research\/journey(\?|$)/,
+  currentSource: /\/api\/v1\/quantbt\/runs\/([^/?]+)\/current-source\/([a-z/-]+?)(\?|$)/,
+  alphaVersionPublication: /\/api\/v1\/research\/alpha-versions\/([^/?]+)\/publication(\?|$)/,
 } as const;
 
 const delay = (ms: number) => (ms > 0 ? new Promise<void>((resolve) => setTimeout(resolve, ms)) : Promise.resolve());
@@ -634,7 +759,23 @@ export async function installLane(page: Page, options: LaneOptions = {}): Promis
     );
   }
 
+  /* Registered after `stubPortalApi`, so these win over its handlers. */
+  await page.route(RE.journey, (route) => json(route, journey()));
+  await page.route(RE.currentSource, async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const url = new URL(route.request().url());
+    const [, run, path] = url.pathname.match(RE.currentSource)!;
+    const operation = laneOperationOf(path!);
+    if (operation === null) return route.fallback();
+    await wait(route);
+    await json(route, laneNotApplicable(decodeURIComponent(run!), operation));
+  });
+  await page.route(RE.alphaVersionPublication, async (route) => {
+    const url = new URL(route.request().url());
+    await json(route, alphaVersionPublication(decodeURIComponent(url.pathname.match(RE.alphaVersionPublication)![1]!)));
+  });
   await page.route(RE.datasets, (route) => json(route, datasetCatalog()));
+  await page.route(RE.runLibrary, (route) => json(route, runLibrary()));
   await page.route(RE.replay, async (route) => {
     const url = new URL(route.request().url());
     await wait(route);
@@ -714,14 +855,46 @@ export async function refuse(route: Route, status: number, code: string): Promis
 }
 
 /** Overrides one screen's primary read(s) with a refusal; returns the route handle to remove it. */
-export async function refusePrimary(page: Page, primary: RegExp, status: number): Promise<() => Promise<void>> {
-  const code = { 401: "UNAUTHENTICATED", 403: "RESEARCH_FORBIDDEN", 404: "RESEARCH_NOT_FOUND", 503: "RESEARCH_UNAVAILABLE" }[status] ?? "RESEARCH_REFUSED";
+export async function refusePrimary(page: Page, primary: RegExp, status: number, typedCode?: string): Promise<() => Promise<void>> {
+  const code = typedCode ?? { 401: "UNAUTHENTICATED", 403: "RESEARCH_FORBIDDEN", 404: "RESEARCH_NOT_FOUND", 503: "RESEARCH_UNAVAILABLE" }[status] ?? "RESEARCH_REFUSED";
   const handler = async (route: Route) => {
     if (route.request().method() !== "GET") return route.fallback();
     await refuse(route, status, code);
   };
   await page.route(primary, handler);
   return () => page.unroute(primary, handler);
+}
+
+/** Answers every GET matching `re` with `body` (registered last, so it wins). */
+export async function serve(page: Page, re: RegExp, body: () => unknown): Promise<void> {
+  await page.route(re, async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await json(route, body());
+  });
+}
+
+/**
+ * Parks every GET matching `re` (and `when`, if given) until the returned
+ * release is called; the parked request then falls through to the lane's own
+ * handler. A request still parked when the context closes is simply dropped.
+ */
+export async function hold(page: Page, re: RegExp, when: (url: URL) => boolean = () => true): Promise<{ release: () => void; parked: () => number }> {
+  let open!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  let parked = 0;
+  await page.route(re, async (route) => {
+    if (route.request().method() !== "GET" || !when(new URL(route.request().url()))) return route.fallback();
+    parked += 1;
+    await gate;
+    try {
+      await route.fallback();
+    } catch {
+      /* context closed while parked */
+    }
+  });
+  return { release: () => open(), parked: () => parked };
 }
 
 /* ======================================================================
@@ -885,7 +1058,7 @@ export function watchConsole(page: Page, net: NetLog): { noise: string[]; expect
       return;
     }
     /* The refusal's response may be recorded a tick after Chrome logs it. */
-    if (text.startsWith("Failed to load resource") && at && /status of (40[0134]|409|503)/.test(text)) {
+    if (text.startsWith("Failed to load resource") && at && /status of (40[0134]|409|422|503)/.test(text)) {
       expected.push(`${message.type()}: ${text} @ ${new URL(at).pathname} (late)`);
       return;
     }
