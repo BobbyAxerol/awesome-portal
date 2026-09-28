@@ -10,7 +10,7 @@
  *
  * Fixture values are the live preview's (2026-09-24, :8095 contracts), trimmed.
  */
-import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +21,7 @@ import {
   groupRuns,
   ledgerCaption,
   rcChipFace,
+  rcLookupVersions,
   reasonSentence,
   sparkCaption,
   sparkHeights,
@@ -38,6 +39,8 @@ import {
 } from "./runLibraryClient";
 import { useRunLibrary, type LibraryFilters, type SparklineRead } from "./useRunLibrary";
 import { researchState } from "./state";
+import { onSessionExpired } from "../auth/sessionExpiry";
+import { lookupAbsent, lookupFound, lookupProblem, lookupRecord, LOOKUP_AS_OF, LOOKUP_SERVER_PROSE } from "./alphaVersionPublication.fixture";
 
 /* ---------------------------------------------------------------- fixtures */
 
@@ -479,6 +482,8 @@ describe("claims ledger — six buckets, cancelled and legacy included (CG-P12-0
 
 describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P12-06)", () => {
   it("shows a local seal as id · approval state, as a disabled link naming P21", () => {
+    /* FG-05: the row's P22 lookup is in flight for this whole test; the P21 face stands. */
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     view([
       item({
         rc: {
@@ -723,5 +728,135 @@ describe("useRunLibrary — the lazy read and the legacy poll", () => {
     expect(result.current.polling).toBe(false);
     await settle(RUNNING_POLL_MS * 2);
     expect(requested.filter((url) => url.includes("ids="))).toHaveLength(0);
+  });
+});
+
+/* ------------------------------------------------ FG-05: P22 lookup on the chip */
+
+const SEALED_RC = "rc_2026_08_c";
+const AV_ID = item().binding!.alpha_version_id;
+
+function sealedRow(overrides: Partial<RunLibraryItem> = {}, releaseCandidateId = SEALED_RC): RunLibraryItem {
+  return item({
+    rc: {
+      kind: "LOCAL_SEAL",
+      release_candidate_id: releaseCandidateId,
+      draft_id: null,
+      delivery_state: "DELIVERED",
+      approval_state: "APPROVED",
+      sealed_at_utc_ms: 1790245500000,
+    },
+    rc_availability: AVAILABLE,
+    ...overrides,
+  });
+}
+
+let lookupUrls: string[] = [];
+
+function lookup(answer: (url: string) => [number, unknown]) {
+  lookupUrls = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      lookupUrls.push(url);
+      const [status, body] = answer(url);
+      return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+    }),
+  );
+}
+
+const chip = () => document.querySelector("[data-rc]") as HTMLElement;
+
+async function settledChip(state: string): Promise<HTMLElement> {
+  await waitFor(() => expect(chip().getAttribute("data-rc-publication")).toBe(state));
+  return chip();
+}
+
+describe("rc chip — the P22 alpha-version publication lookup (FG-05)", () => {
+  it("prints this candidate's raw Governance status when the lookup names it CURRENT, the effective status apart", async () => {
+    lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, {}, { status: "APPROVED_WITH_CONDITION", effective_status: "EXPIRED" }))]);
+    view([sealedRow()]);
+    const found = await settledChip("CURRENT");
+    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED_WITH_CONDITION`);
+    expect(found.getAttribute("data-rc-state")).toBe("APPROVED_WITH_CONDITION");
+    expect(found.getAttribute("data-rc-approval-status")).toBe("APPROVED_WITH_CONDITION");
+    expect(found.getAttribute("data-rc-effective-status")).toBe("EXPIRED");
+    expect(found.getAttribute("title")).toBe(
+      `${SEALED_RC} — publication delivered · candidate current · approval status approved with condition · effective status expired · as of ${new Date(LOOKUP_AS_OF).toISOString()} — open its sealed pack on Screen 11`,
+    );
+    expect(found.getAttribute("href")).toBe(`/research/quantbt/release-candidates/${SEALED_RC}`);
+    expect(lookupUrls).toEqual([`/api/v1/research/alpha-versions/${AV_ID}/publication`]);
+  });
+
+  it("marks a superseded candidate from the server's candidate_relation, in faint ink", async () => {
+    lookup(() => [200, lookupFound(lookupRecord(SEALED_RC, AV_ID, { candidate_relation: "SUPERSEDED" }, { status: "APPROVED" }))]);
+    view([sealedRow()]);
+    const found = await settledChip("SUPERSEDED");
+    expect(found.textContent).toBe(`${SEALED_RC} · APPROVED · SUPERSEDED`);
+    expect(found.getAttribute("data-rc-state")).toBe("SUPERSEDED");
+    expect(found.style.color).toBe("var(--ink-faint)");
+  });
+
+  it("keeps the P21 face on a typed absence and carries the server's reason code, never a guessed status", async () => {
+    lookup(() => [200, lookupAbsent(AV_ID)]);
+    view([sealedRow()]);
+    const absent = await settledChip("NOT_PUBLISHED");
+    expect(absent.textContent).toBe(`${SEALED_RC} · APPROVED`);
+    expect(absent.getAttribute("data-rc-publication-reason")).toBe("P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED");
+    expect(absent.getAttribute("data-rc-approval-status")).toBeNull();
+    expect(absent.getAttribute("title")).toContain("no delivered publication for this version");
+    expect(absent.getAttribute("title")).not.toMatch(RAW_CODE);
+  });
+
+  it("says when the version's delivered publication is another candidate, and picks nothing", async () => {
+    lookup(() => [200, lookupFound(lookupRecord("rc_2026_09_a", AV_ID))]);
+    view([sealedRow()]);
+    const other = await settledChip("OTHER_CANDIDATE");
+    expect(other.textContent).toBe(`${SEALED_RC} · APPROVED`);
+    expect(other.getAttribute("data-rc")).toBe(SEALED_RC);
+    expect(other.getAttribute("title")).toContain("this version's latest delivered publication is rc_2026_09_a");
+  });
+
+  it("gives a 403 and a 404 lookup the identical title, and never renders the server's message", async () => {
+    const titles: string[] = [];
+    for (const status of [403, 404]) {
+      lookup(() => [status, lookupProblem(status, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN")]);
+      view([sealedRow()]);
+      titles.push((await settledChip("denied")).getAttribute("title")!);
+      expect(document.body.innerHTML).not.toContain(LOOKUP_SERVER_PROSE);
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+    expect(titles[0]).toContain("publication lookup: You don't have access to this in your current workspace, or it doesn't exist.");
+    expect(titles[1]).toBe(titles[0]);
+  });
+
+  it("raises the shell's session signal once on a 401 lookup", async () => {
+    let reports = 0;
+    const stop = onSessionExpired(() => {
+      reports += 1;
+    });
+    lookup(() => [401, lookupProblem(401, "UNAUTHENTICATED")]);
+    view([sealedRow()]);
+    await settledChip("session");
+    stop();
+    expect(reports).toBe(1);
+    expect(document.body.innerHTML).not.toContain(LOOKUP_SERVER_PROSE);
+  });
+
+  it("asks once per distinct version with a sealed rc; a draft, an unsealed row or a scratch row asks nothing, and no route but /publication is used", async () => {
+    lookup(() => [200, lookupAbsent(AV_ID)]);
+    const draftRow = item({
+      run_id: "rrun_draft",
+      rc: { kind: "ACTOR_DRAFT", release_candidate_id: null, draft_id: "rcd_1", delivery_state: null, approval_state: null, sealed_at_utc_ms: null },
+      rc_availability: AVAILABLE,
+    });
+    const rows = [sealedRow({ run_id: "rrun_a" }), sealedRow({ run_id: "rrun_b" }, "rc_2026_08_d"), draftRow, item({ run_id: "rrun_none" }), sealedRow({ run_id: "rrun_scratch", binding: null })];
+    expect(rcLookupVersions(rows)).toEqual([AV_ID]);
+    view(rows);
+    await waitFor(() => expect(document.querySelectorAll("[data-rc-publication='NOT_PUBLISHED']")).toHaveLength(2));
+    expect(lookupUrls).toEqual([`/api/v1/research/alpha-versions/${AV_ID}/publication`]);
+    expect(lookupUrls.filter((url) => /mirror|reconcile|release-candidates\?/.test(url))).toEqual([]);
+    expect(document.querySelector("[data-run='rrun_draft'] [data-rc]")!.getAttribute("data-rc-publication")).toBeNull();
   });
 });

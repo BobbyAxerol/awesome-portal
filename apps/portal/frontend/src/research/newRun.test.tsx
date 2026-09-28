@@ -46,6 +46,8 @@ import { useNewRun } from "./useNewRun";
 import type { AtlasDocument } from "./atlas";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
+import { onSessionExpired } from "../auth/sessionExpiry";
+import { lookupAbsent, lookupFound, lookupProblem, lookupRecord, LOOKUP_PUBLISHED_AT, LOOKUP_SERVER_PROSE } from "./alphaVersionPublication.fixture";
 
 afterEach(cleanup);
 
@@ -1085,5 +1087,92 @@ describe("W5a · P16/P19 — a what-if fork opens as a sibling, never an edit", 
   it("renders no banner for an ordinary new run", () => {
     view();
     expect(document.querySelector("[data-fork-source]")).toBeNull();
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * FG-05 — "last published rc" from the P22 alpha-version publication lookup
+ * ---------------------------------------------------------------------- */
+
+describe("FG-05 — last published rc reads the Alpha version's publication", () => {
+  const registry = [entryWithDeclaration()];
+  const LOOKUP_URL = "/api/v1/research/alpha-versions/av_0_3_0/publication";
+
+  async function lastRc(state: string): Promise<HTMLElement> {
+    return waitFor(() => {
+      const row = document.querySelector(`[data-last-published-rc="${state}"]`) as HTMLElement | null;
+      if (!row) throw new Error(`not yet: ${state}`);
+      return row;
+    });
+  }
+
+  it("prints the current rc, its raw status with the effective status beside it, the relation and the exact publish time", async () => {
+    stub(() => [200, lookupFound(lookupRecord("rc_01K5LAST", "av_0_3_0", {}, { status: "APPROVED_WITH_CONDITION", effective_status: "EXPIRED" }))]);
+    view({ registry });
+    goToStep("context");
+    const row = await lastRc("CURRENT");
+    expect(row.querySelector("[data-last-rc]")!.textContent).toBe(
+      `rc_01K5LAST · APPROVED_WITH_CONDITION (effective EXPIRED) · CURRENT · published ${new Date(LOOKUP_PUBLISHED_AT).toISOString()}`,
+    );
+    expect(row.querySelector("[data-last-rc]")!.getAttribute("data-last-rc-status")).toBe("APPROVED_WITH_CONDITION");
+    expect(sent.map((call) => call.url)).toEqual([LOOKUP_URL]);
+  });
+
+  it("marks a superseded rc with the server's candidate_relation", async () => {
+    stub(() => [200, lookupFound(lookupRecord("rc_01K5OLD", "av_0_3_0", { candidate_relation: "SUPERSEDED" }, { status: "APPROVED" }))]);
+    view({ registry });
+    goToStep("context");
+    const row = await lastRc("SUPERSEDED");
+    expect(row.querySelector("[data-last-rc]")!.textContent).toBe(`rc_01K5OLD · APPROVED · SUPERSEDED · published ${new Date(LOOKUP_PUBLISHED_AT).toISOString()}`);
+  });
+
+  it("shows a typed absence with the server's reason code, never a dash or a zero", async () => {
+    stub(() => [200, lookupAbsent("av_0_3_0")]);
+    view({ registry });
+    goToStep("context");
+    const row = await lastRc("NOT_PUBLISHED");
+    expect(row.querySelector("[data-last-rc-absent]")!.textContent).toBe("not published · P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED");
+    expect(row.textContent).not.toMatch(/—|N\/A|\b0\b/);
+  });
+
+  it("gives a 403 and a 404 the same words and never renders the server's message", async () => {
+    const words: string[] = [];
+    for (const status of [403, 404]) {
+      stub(() => [status, lookupProblem(status, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN")]);
+      view({ registry });
+      goToStep("context");
+      const row = await lastRc("denied");
+      words.push(row.querySelector("[data-last-rc-refusal]")!.textContent!);
+      expect(document.body.innerHTML).not.toContain(LOOKUP_SERVER_PROSE);
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+    expect(words[0]).toBe("You don't have access to this in your current workspace, or it doesn't exist.");
+    expect(words[1]).toBe(words[0]);
+  });
+
+  it("raises the shell's session signal once on a 401", async () => {
+    let reports = 0;
+    const stop = onSessionExpired(() => {
+      reports += 1;
+    });
+    stub(() => [401, lookupProblem(401, "UNAUTHENTICATED")]);
+    view({ registry });
+    goToStep("context");
+    await lastRc("session");
+    stop();
+    expect(reports).toBe(1);
+  });
+
+  it("asks nothing for a scratch draft or a version the registry does not list", () => {
+    stub(() => [200, lookupAbsent("av_0_3_0")]);
+    view({ registry, draft: draft({ bound: false }) });
+    goToStep("context");
+    expect(document.querySelector("[data-last-published-rc]")).toBeNull();
+    cleanup();
+    view({ registry, draft: draft({ alphaVersionId: "av_0_4_0" }) });
+    goToStep("context");
+    expect(document.querySelector("[data-last-published-rc]")).toBeNull();
+    expect(sent).toEqual([]);
   });
 });

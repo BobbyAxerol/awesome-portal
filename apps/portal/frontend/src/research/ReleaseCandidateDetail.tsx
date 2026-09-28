@@ -25,8 +25,14 @@
  *  - VD-P21-09 a sealed pack has a read-only route of its own; the 01 rc chip
  *    opens it, and `#pack=rc_…` forwards to it.
  *  - VD-P22-01 the mirror SLA prints the server's timestamps; no countdown.
- *  - VD-P22-02 "assignee pool" has no contract field: "not published".
- *  - VD-P22-08 the outcome vocabulary is the governance contract's.
+ *  - VD-P22-02 "assignee pool" prints only a pool the mirror publishes; today
+ *    the mirror says `NOT_PUBLISHED` with its reason code, which is printed.
+ *  - VD-P22-08 the outcome vocabulary is the governance contract's; the
+ *    decisions actually recorded (`decision_outcomes`) print beside it.
+ *  - FG-05 (Codex P22 closeout): the raw `approval.status` and the separate
+ *    `effective_status`, `rc_superseded`, the conflicting approval and the
+ *    downstream code, the recorded intent's actor and attempts. A `401` goes to
+ *    the shell's Frame 01D path, and a `403` and a `404` read the same.
  *
  * Nothing here counts, sorts, formats a number, diffs or decides: counts,
  * tones, titles, reason codes and the seal and publish gates are the server's.
@@ -223,8 +229,8 @@ export const PUBLICATION_READ_WORDS: Record<Exclude<RcPublicationView["state"], 
   loading: "reading the publication…",
   unavailable: "the publication read did not answer — it is tried again on its own",
   session: RC_REFUSAL_COPY[401],
+  /* F-04 / FG-05: a 403 and a 404 are one state and this one sentence, the same the writes say. */
   denied: `${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`,
-  "not-found": "This build serves no publication for this candidate.",
   terminal: "The publication read was refused as invalid.",
 };
 
@@ -1173,11 +1179,7 @@ function RefusalNotice({ refusal, op }: { refusal: RcWriteRefusal; op: string })
           request {refusal.requestId}
         </span>
       ) : null}
-      {refusal.status === 401 ? (
-        <Link to="/login" data-action="reauthenticate" aria-label="sign in again">
-          sign in again
-        </Link>
-      ) : null}
+      {/* FG-05: a 401 already raised the shell's Frame 01D sign-in; no second sign-in link here. */}
     </div>
   );
 }
@@ -1345,12 +1347,43 @@ function ReadFailure({ view, retry }: { view: RcPublicationView; retry?: () => v
           </button>
         </span>
       ) : null}
-      {view.state === "session" ? (
-        <Link to="/login" data-action="reauthenticate" aria-label="sign in again">
-          sign in again
-        </Link>
-      ) : null}
+      {/* FG-05: a 401 already raised the shell's Frame 01D sign-in; no second sign-in link here. */}
     </div>
+  );
+}
+
+/**
+ * FG-05: the conflicting approval and the downstream code the server recorded
+ * for this publication, as sent. The approval becomes a link only when the
+ * server's href is a same-origin path. Nothing is decided from them.
+ */
+function PublicationConflict({ publication }: { publication: RcPublication | null }) {
+  if (publication === null) return null;
+  const approvalId = publication.conflicting_approval_id ?? null;
+  const code = publication.downstream_code ?? null;
+  if (approvalId === null && code === null) return null;
+  const href = publication.conflicting_approval_href ?? null;
+  return (
+    <p className="rc-pubfacts" data-publication-conflict={approvalId ?? ""} data-downstream-code={code ?? ""}>
+      {approvalId !== null ? (
+        <>
+          conflicting approval{" "}
+          {isLocalPath(href) ? (
+            <Link to={href} data-action="open-conflicting-approval">
+              {approvalId}
+            </Link>
+          ) : (
+            <span data-conflicting-approval-unrouted>{approvalId}</span>
+          )}
+        </>
+      ) : null}
+      {approvalId !== null && code !== null ? " · " : null}
+      {code !== null ? (
+        <>
+          downstream code <Reason code={code} what="downstream" />
+        </>
+      ) : null}
+    </p>
   );
 }
 
@@ -1512,6 +1545,7 @@ function PublishCard({ compose, controller, publication }: {
           {blocked.code ? ` · ${blocked.code}` : ""}
         </span>
       ) : null}
+      <PublicationConflict publication={publication.publication} />
       <ReadFailure view={view} retry={publication.retry} />
       <PublishWriteNotice publication={publication} />
       <p className="sod">{SOD_NOTE}</p>
@@ -1532,6 +1566,9 @@ function UnknownOutcomeCard({ publication, controller }: { publication: RcPublic
     ? { label: "writes are off — access changed", code: null }
     : !current.may_publish || current.blocked_reason !== null
       ? { label: rcReasonSentence(current.blocked_reason) ?? "the server does not admit a retry for you", code: current.blocked_reason }
+      : current.reconcile_allowed === false
+        ? /* FG-05: the server says the recorded request is not retryable; nothing else is offered. */
+          { label: "the server does not admit a retry of the recorded request", code: null }
       : publication.view.state !== "fresh"
         ? { label: "the last publication read is stale — retry waits for a fresh read", code: null }
         : claims.length > 1 && (choice === null || !claims.includes(choice))
@@ -1546,6 +1583,17 @@ function UnknownOutcomeCard({ publication, controller }: { publication: RcPublic
       <p className="rc-pubfacts" data-publication-facts={current.state}>
         publication {current.state} · {current.release_candidate_id} · as of {iso(current.as_of_utc_ms)}
       </p>
+      {/* FG-05: who recorded the intent and how often it was sent, as the server keeps them. */}
+      <p className="rc-pubfacts" data-publication-intent={current.intent_actor?.user_id ?? ""}>
+        recorded by {current.intent_actor ? current.intent_actor.username : "actor not published"}
+        {" · attempt_count "}
+        {current.attempt_count !== undefined ? String(current.attempt_count) : "not published"}
+        {" · recorded "}
+        {current.publication_created_at ?? "not published"}
+        {" · updated "}
+        {current.updated_at_utc_ms !== undefined ? new Date(current.updated_at_utc_ms).toISOString() : "not published"}
+      </p>
+      <PublicationConflict publication={current} />
       {claims.length > 1 && current.may_publish ? (
         <fieldset className="rc-claims" data-claim-choice>
           <legend>{CLAIM_LEGEND}</legend>
@@ -1629,6 +1677,7 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
           <span className="rc-absent">publication facts — not read in this session</span> {PUBLISHED_SENTENCE}
         </p>
       )}
+      <PublicationConflict publication={current} />
       <ReadFailure view={publication.view} retry={publication.retry} />
     </section>
   );
@@ -1663,6 +1712,50 @@ function MirrorGhost({ foot }: { foot: ReactNode }) {
       </span>
     </section>
   );
+}
+
+/** FG-05: the assignee pool exactly as the mirror publishes it; absent → the contract's reason, never a team name. */
+function PoolLine({ approval }: { approval: RcApproval }) {
+  const availability = approval.assignee_pool_availability;
+  if (availability.state === "AVAILABLE" && approval.assignee_pool !== undefined) {
+    return (
+      <span data-mirror-pool="AVAILABLE">
+        assignee pool:{" "}
+        {approval.assignee_pool.length === 0
+          ? "empty list published"
+          : approval.assignee_pool.map((member) => `${member.username} (${member.role})`).join(" · ")}
+      </span>
+    );
+  }
+  return (
+    <span data-mirror-pool={availability.state}>
+      {MIRROR_POOL_ABSENT} · <Reason code={availability.reason_code ?? availability.state} what="assignee_pool" />
+    </span>
+  );
+}
+
+/** FG-05: the decisions Governance recorded (`decision_outcomes`) and its own `condition_count`, as sent. */
+function decisionLine(approval: RcApproval): string {
+  const outcomes = approval.decision_outcomes;
+  const recorded =
+    outcomes === undefined
+      ? "decisions recorded: not published"
+      : `decisions recorded: ${outcomes.map((decision) => `${decision.actor_user_id} ${decision.outcome}`).join(" · ")}`;
+  return approval.condition_count !== undefined ? `${recorded} · condition_count ${approval.condition_count}` : recorded;
+}
+
+/** FG-05: the mirror's optional facts, only those the server sent. */
+function mirrorExtras(approval: RcApproval): string {
+  return [
+    approval.subject_label !== undefined ? `subject ${approval.subject_label}` : null,
+    approval.approval_version !== undefined ? `approval_version ${approval.approval_version}` : null,
+    approval.blocker_count !== undefined ? `blocker_count ${approval.blocker_count}` : null,
+    approval.quorum !== undefined ? `quorum met ${approval.quorum.met} of required ${approval.quorum.required}` : null,
+    approval.as_of_utc_ms !== undefined ? `mirror as of ${new Date(approval.as_of_utc_ms).toISOString()}` : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .map((part) => ` · ${part}`)
+    .join("");
 }
 
 function conditionLine(approval: RcApproval): string {
@@ -1700,8 +1793,12 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
             </span>
             {approval !== null ? (
               <>
-                <span className="rc-mstatus" data-s={approval.status} data-mirror-status={approval.status}>
+                <span className="rc-mstatus" data-s={approval.status} data-mirror-status={approval.status} title="raw Governance approval status">
                   {approval.status}
+                </span>
+                {/* FG-05: the effective status is its own fact beside the raw one, never in place of it. */}
+                <span className="st" data-mirror-effective-status={approval.effective_status ?? "not-published"}>
+                  {approval.effective_status !== undefined ? `effective ${approval.effective_status}` : "effective status not published"}
                 </span>
                 <span className="sla" data-mirror-sla>
                   SLA due {approval.sla_due_at} · expires {approval.expires_at}
@@ -1714,19 +1811,30 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
             )}
           </div>
           <div className="rc-mirrormeta" data-mirror-meta>
-            <span>{MIRROR_POOL_ABSENT}</span>
+            {approval !== null ? <PoolLine approval={approval} /> : <span>{MIRROR_POOL_ABSENT}</span>}
             <span>·</span>
             <span data-mirror-conditions>{approval !== null ? conditionLine(approval) : "conditions: not read"}</span>
             <span>·</span>
             <span>{MIRROR_OUTCOMES}</span>
           </div>
+          {approval !== null ? (
+            <span className="facts" data-mirror-decisions>
+              {decisionLine(approval)}
+            </span>
+          ) : null}
           <span className="facts" data-mirror-facts>
             approval {approval?.approval_id ?? current.published?.approval_id ?? "not published"}
             {approval !== null ? ` · created ${approval.created_at} · read ${approval.read_at}` : ` · approval read ${read ?? "not made"}`}
+            {approval !== null ? mirrorExtras(approval) : ""}
             {` · publication as of ${iso(current.as_of_utc_ms)}`}
           </span>
-          {current.candidate_relation === "SUPERSEDED" ? (
-            <span className="superseded" data-mirror-superseded>
+          {current.candidate_relation === "SUPERSEDED" || approval?.rc_superseded === true ? (
+            <span
+              className="superseded"
+              data-mirror-superseded
+              data-candidate-relation={current.candidate_relation}
+              data-rc-superseded={approval?.rc_superseded === undefined ? "not-published" : String(approval.rc_superseded)}
+            >
               {MIRROR_SUPERSEDED}
             </span>
           ) : null}
@@ -2013,6 +2121,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
                 <h3 className="k">{PUBLISH_GHOST_LABEL}</h3>
                 <p>{PUBLISH_GHOST_COPY}</p>
                 {current ? <Reason code={current.blocked_reason ?? `P22_${current.state}`} what="publication" /> : <ReadFailure view={publication.view} />}
+                <PublicationConflict publication={current} />
                 {pack ? (
                   <span>
                     <Link to={releaseCandidateHref(pack.run_id)} data-action="open-composition">

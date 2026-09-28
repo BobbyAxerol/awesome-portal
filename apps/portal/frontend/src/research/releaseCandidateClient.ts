@@ -36,6 +36,7 @@ import type { components as ReleaseCandidateComponents } from "@portal/contracts
 import type { components as PublicationComponents } from "@portal/contracts-research-release-candidate-publication";
 
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
+import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import { lineageHref, toLineageRefusal, type LineageRefusal } from "./lineageClient";
 import type { ResearchState } from "./state";
@@ -66,9 +67,12 @@ export type RcPublication = PublicationSchemas["PublicationResponse"];
 export type RcApproval = PublicationSchemas["ApprovalMirror"];
 export type RcApprovalCondition = PublicationSchemas["Condition"];
 export type RcPublishRequest = PublicationSchemas["PublishRequest"];
+/** FG-05: `researchAlphaVersionPublicationGetV1` — one Alpha version's latest delivered publication, or its typed absence. */
+export type RcAlphaVersionPublication = PublicationSchemas["AlphaVersionPublicationResponse"];
 
 const RUNS = "/api/v1/quantbt/runs";
 const PACKS = "/api/v1/research/release-candidates";
+const ALPHA_VERSIONS = "/api/v1/research/alpha-versions";
 
 /** Reason codes the P21/P22 services publish, named once. */
 export const RC_REASON = {
@@ -115,6 +119,11 @@ export function packPath(releaseCandidateId: string, workspaceId?: string): stri
 
 export function publicationPath(releaseCandidateId: string, workspaceId?: string): string {
   return `${PACKS}/${encodeURIComponent(releaseCandidateId)}/publication${query(workspaceId)}`;
+}
+
+/** FG-05 (Codex P22 closeout, S01/S02): the Alpha-version lookup; the browser never scans candidates. */
+export function alphaVersionPublicationPath(alphaVersionId: string, workspaceId?: string): string {
+  return `${ALPHA_VERSIONS}/${encodeURIComponent(alphaVersionId)}/publication${query(workspaceId)}`;
 }
 
 export function publishPath(releaseCandidateId: string, workspaceId?: string): string {
@@ -204,6 +213,10 @@ export const releaseCandidateApi = {
   /** `researchReleaseCandidatePublicationGetV1` (P22): state, gate and the R1 mirror. */
   publication: (releaseCandidateId: string, options: Options = {}) =>
     call<RcPublication>(publicationPath(releaseCandidateId, options.workspaceId), { signal: options.signal }),
+
+  /** `researchAlphaVersionPublicationGetV1` (P22) — Screens 01 and 02, one read per Alpha version, never polled. */
+  alphaVersionPublication: (alphaVersionId: string, options: Options = {}) =>
+    call<RcAlphaVersionPublication>(alphaVersionPublicationPath(alphaVersionId, options.workspaceId), { signal: options.signal }),
 
   /** `researchReleaseCandidatePublishV1` (P22) — only ever from a confirmed click. */
   publish: (releaseCandidateId: string, body: RcPublishRequest, options: Options = {}) =>
@@ -439,12 +452,17 @@ export interface RcWriteRefusal {
  * the unsent text; 503, other 5xx and a request that never arrived are
  * `unavailable`, retried only by the reader; 400 and 422 are `terminal` for
  * that request.
+ *
+ * FG-05: a `401` on a seal, a draft save or a publish also goes to the shell's
+ * Frame 01D sign-in path (`reportSessionExpired`), like every other Research
+ * client; the card builds no sign-in of its own. Call once per refused write.
  */
 export function toRcWriteRefusal(error: unknown): RcWriteRefusal {
   if (!(error instanceof PortalApiError)) {
     return { outcome: "unavailable", code: null, status: 0, requestId: null, message: RC_UNAVAILABLE_COPY };
   }
   const { status } = error;
+  if (status === 401) reportSessionExpired();
   const outcome: RcWriteOutcome =
     status === 401 || status === 403 || status === 404 ? "denied" : status === 409 ? "conflict" : status >= 500 ? "unavailable" : "terminal";
   const message =

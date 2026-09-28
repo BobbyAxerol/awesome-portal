@@ -24,6 +24,12 @@
 import { LineageLink, lineageHref } from "./LineageLink";
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  ALPHA_VERSION_PUBLICATION_WORDS,
+  approvalStatusWords,
+  useAlphaVersionPublications,
+  type AlphaVersionPublicationView,
+} from "./alphaVersionPublication";
 import { scheduleChoices } from "./atlas";
 import type { AtlasDocument } from "./atlas";
 import { type CatalogDataset, type DatasetCatalog, coverageLabel } from "./datasetClient";
@@ -273,6 +279,9 @@ function ContextStep({
 }) {
   const bound = registry.find((entry) => entry.alpha_id === draft.alphaId && entry.alpha_version_id === draft.alphaVersionId);
   const alphaIds = [...new Set(registry.map((entry) => entry.alpha_id))];
+  /* FG-05: the P22 lookup runs only for a bound version the registry listed. */
+  const lookedUp = draft.bound && bound ? bound.alpha_version_id : null;
+  const publications = useAlphaVersionPublications(lookedUp !== null ? [lookedUp] : []);
   return (
     <Card title="Context — alpha &amp; version binding">
       <div className="flex flex-wrap items-end gap-2.5">
@@ -339,6 +348,7 @@ function ContextStep({
               )}
             </span>
           ))}
+          {lookedUp !== null ? <LastPublishedRc view={publications.get(lookedUp) ?? { state: "loading" }} /> : null}
         </div>
       ) : (
         <div
@@ -358,6 +368,60 @@ function ContextStep({
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * FG-05 (Codex P22 closeout, S02; hi-fi 02 "last published rc"): the Alpha
+ * version's latest delivered release candidate from
+ * `researchAlphaVersionPublicationGetV1`. It shows the rc id, the raw
+ * Governance status (the effective status beside it when the server sent
+ * one), the server's `candidate_relation` and the publish time as an exact ISO
+ * string. Absence is typed with the server's reason code. A refusal shows the
+ * screen's own words, never the server's.
+ */
+function LastPublishedRc({ view }: { view: AlphaVersionPublicationView }) {
+  let body: React.ReactNode;
+  let state: string;
+  if (view.state === "loading") {
+    state = "loading";
+    body = (
+      <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+        reading the publication…
+      </span>
+    );
+  } else if (view.state !== "available") {
+    state = view.state;
+    body = (
+      <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-last-rc-refusal={view.state}>
+        {ALPHA_VERSION_PUBLICATION_WORDS[view.state]}
+      </span>
+    );
+  } else if (view.read.publication === null) {
+    state = view.read.availability;
+    body = (
+      <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-last-rc-absent={view.read.reason_code ?? view.read.availability}>
+        not published · {view.read.reason_code ?? view.read.availability}
+      </span>
+    );
+  } else {
+    const found = view.read.publication;
+    const status = approvalStatusWords(found);
+    const effective = found.approval_read === "AVAILABLE" ? (found.approval?.effective_status ?? null) : null;
+    state = found.candidate_relation;
+    body = (
+      <span className="mono text-[10.5px]" data-last-rc={found.release_candidate_id} data-last-rc-status={status.raw ?? found.approval_read}>
+        {found.release_candidate_id} · {status.words}
+        {effective !== null ? ` (effective ${effective})` : ""} · {found.candidate_relation} ·{" "}
+        {found.published !== null ? `published ${new Date(found.published.at_utc_ms).toISOString()}` : "publish time not published"}
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-baseline gap-1.5" data-last-published-rc={state}>
+      <Label>last published rc</Label>
+      {body}
+    </span>
   );
 }
 

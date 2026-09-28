@@ -16,9 +16,11 @@
  *    last good read stays on screen as `stale` with its own `as_of_utc_ms`
  *    (or `unavailable` when there is none) and the read is tried again on a
  *    bounded backoff (`PUBLICATION_BACKOFF_MS`), still only while visible;
- *  - `401` (session), `403` (denied), `404` (not found) and `400`/other `4xx`
- *    (terminal) are each their own state and stop the reads: asking again
- *    cannot change the answer. Nothing already read is kept past a denial.
+ *  - `401` (session), `403`/`404` (denied — one state and one sentence, so a
+ *    non-member and an unknown candidate read the same, audit F-04) and
+ *    `400`/other `4xx` (terminal) stop the reads: asking again cannot change
+ *    the answer. Nothing already read is kept past a denial. A `401` also goes
+ *    to the shell's Frame 01D sign-in path (`reportSessionExpired`, FG-05).
  *
  * Publishing: one confirmed click sends the pack digest the server returned
  * and the methodology claim the server listed (the reader's choice when it
@@ -26,11 +28,15 @@
  * The answer is itself a publication read and is shown as sent; the
  * composition and the publication are then read again. A refusal follows spec
  * 11 §3 (`toRcPublishRefusal`): denied locks every write, a conflict re-reads,
- * unavailable waits for the reader, terminal ends the request.
+ * unavailable waits for the reader, terminal ends the request. Every typed
+ * refusal other than a denial is followed by one publication read, so the
+ * screen shows what the server recorded (Codex P22 closeout: "reread the GET
+ * after the typed response"); a request that never arrived is not.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import { releaseCandidateApi, toRcPublishRefusal, type RcPublication, type RcWriteRefusal } from "./releaseCandidateClient";
 import type { RcWriter } from "./useReleaseCandidate";
@@ -56,8 +62,8 @@ export type RcPublicationView =
   /** A transient failure with nothing read yet. */
   | { state: "unavailable"; failure: RcReadFailure; retryInMs: number }
   | { state: "session"; failure: RcReadFailure }
+  /** 403 and 404 alike (F-04): the screen cannot tell a non-member from an unknown candidate. */
   | { state: "denied"; failure: RcReadFailure }
-  | { state: "not-found"; failure: RcReadFailure }
   | { state: "terminal"; failure: RcReadFailure };
 
 export type RcPublishSlot =
@@ -104,8 +110,7 @@ export function nextPublicationView(prior: RcPublication | null, error: unknown,
     return prior ? { state: "stale", publication: prior, failure, retryInMs } : { state: "unavailable", failure, retryInMs };
   }
   if (failure.status === 401) return { state: "session", failure };
-  if (failure.status === 403) return { state: "denied", failure };
-  if (failure.status === 404) return { state: "not-found", failure };
+  if (failure.status === 403 || failure.status === 404) return { state: "denied", failure };
   return { state: "terminal", failure };
 }
 
@@ -211,6 +216,7 @@ export function useReleaseCandidatePublication(
         .catch((error: unknown) => {
           if (stopped || controller.signal.aborted) return;
           const next = nextPublicationView(held(viewRef.current), error, failures);
+          if (next.state === "session") reportSessionExpired();
           setView(next);
           if (next.state === "stale" || next.state === "unavailable") {
             failures += 1;
@@ -280,6 +286,9 @@ export function useReleaseCandidatePublication(
           if (refusal.outcome === "conflict") {
             setGeneration((n) => n + 1);
             callbacks.current.onSettled?.();
+          } else if (refusal.outcome !== "denied" && refusal.status !== 0) {
+            /* A typed 400/422/5xx: read what the server recorded; nothing is sent again. */
+            setGeneration((n) => n + 1);
           }
         })
         .finally(() => {

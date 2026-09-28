@@ -20,9 +20,13 @@
  *    pack digest and a listed claim, and `PUBLISHED` is printed only from a
  *    server fact;
  *  - **the publication read has typed states** — a transient failure keeps
- *    polling on a backoff and never becomes "denied"; 401/403/404 are each
- *    their own state; a delivered candidate never shows the ghost;
- *  - **nothing is invented** — no assignee pool, no decisions, no summary.
+ *    polling on a backoff and never becomes "denied"; 401 is its own state and
+ *    raises the shell's session signal; 403 and 404 are one state with one
+ *    sentence; a delivered candidate never shows the ghost;
+ *  - **nothing is invented** — the assignee pool, decisions, quorum and the
+ *    effective status print only as the server sent them (FG-05);
+ *  - **two P22 routes only** — no request in this file ever reaches `/mirror`
+ *    or `/publish/reconcile`.
  */
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -84,6 +88,7 @@ import {
 } from "./releaseCandidateClient";
 import { PUBLICATION_BACKOFF_MS, PUBLICATION_POLL_MS, nextPublicationView } from "./useReleaseCandidatePublication";
 import { PortalApiError } from "../lib/api";
+import { onSessionExpired } from "../auth/sessionExpiry";
 import { iso } from "./utcMinute";
 import real from "./w5cRealRc.fixture.json";
 
@@ -314,12 +319,25 @@ function laneOf(url: string, method: string): Lane {
   return "OTHER";
 }
 
+/** Every request any test in this file sent, for the file-wide route guard (S11-U60). */
+const ALL_CALLS: Array<{ url: string; method: string }> = [];
+
+/** Counts the shell's session-expired reports until the returned stop is called. */
+function sessionReports() {
+  let count = 0;
+  const stop = onSessionExpired(() => {
+    count += 1;
+  });
+  return { count: () => count, stop };
+}
+
 function server(answers: Partial<Record<Lane, Answer[]>>) {
   const calls: Call[] = [];
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
     const method = (init?.method ?? "GET").toUpperCase();
     const lane = laneOf(url, method);
+    ALL_CALLS.push({ url, method });
     calls.push({
       url,
       lane,
@@ -1043,8 +1061,13 @@ describe("S11 publish (P22, two routes)", () => {
     const mirror = panel("mirror")!;
     expect(mirror.querySelector("[data-mirror-subject]")!.textContent).toBe(`${RC_ID} — ${ALPHA} ${AV}`);
     expect(mirror.querySelector("[data-mirror-status]")!.textContent).toBe("PENDING");
+    expect(mirror.querySelector("[data-mirror-effective-status]")!.textContent).toBe("effective status not published");
     expect(mirror.querySelector("[data-mirror-sla]")!.textContent).toBe("SLA due 2026-09-27T09:12:00.000Z · expires 2026-12-25T09:12:00.000Z");
-    expect(mirror.querySelector("[data-mirror-meta]")!.textContent).toBe(`${MIRROR_POOL_ABSENT}·conditions: none·${MIRROR_OUTCOMES}`);
+    expect(mirror.querySelector("[data-mirror-meta]")!.textContent).toBe(
+      `${MIRROR_POOL_ABSENT} · P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED·conditions: none·${MIRROR_OUTCOMES}`,
+    );
+    expect(mirror.querySelector("[data-mirror-pool]")!.getAttribute("data-mirror-pool")).toBe("NOT_PUBLISHED");
+    expect(mirror.querySelector("[data-mirror-decisions]")!.textContent).toBe("decisions recorded: not published");
     expect(within(mirror).getByText(MIRROR_PUBLISHED_NOTE)).toBeTruthy();
     expect(within(mirror).getByRole("link", { name: MIRROR_INBOX_LINK }).getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
     expect(mirror.querySelectorAll("button, input, textarea, select")).toHaveLength(0);
@@ -1115,10 +1138,11 @@ describe("S11 publish (P22, two routes)", () => {
     expect(api.of("PUBLISH")).toHaveLength(1);
   });
 
-  it("S11-U37 a publish refused with 401 locks every write and polls nothing; 403 and 404 say the same neutral sentence", async () => {
+  it("S11-U37 a publish refused with 401 locks every write, polls nothing and raises the shell's session signal once; 403 and 404 say the same neutral sentence", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const seen: string[] = [];
     for (const status of [401, 403, 404]) {
+      const reports = sessionReports();
       const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())], PUBLISH: [problem(status, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN")] });
       renderCompose();
       await ready();
@@ -1129,8 +1153,11 @@ describe("S11 publish (P22, two routes)", () => {
       seen.push(notice.firstElementChild!.textContent!);
       expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
       expect(sealButton().getAttribute("aria-disabled")).toBe("true");
-      if (status === 401) expect(within(notice).getByRole("link", { name: "sign in again" }).getAttribute("href")).toBe("/login");
+      /* FG-05: the shell's Frame 01D answers a 401; the card builds no sign-in link of its own. */
+      expect(within(notice).queryByRole("link", { name: "sign in again" })).toBeNull();
       await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_POLL_MS * 3));
+      expect(reports.count()).toBe(status === 401 ? 1 : 0);
+      reports.stop();
       expect(api.of("PUBLISH")).toHaveLength(1);
       expect(api.of("PUBLICATION")).toHaveLength(1);
       expect(screenText()).not.toContain("SECRET-SERVER-PROSE");
@@ -1191,10 +1218,11 @@ describe("S11 publication read and R1 mirror (P22)", () => {
   it.each([
     [401, "session", "Your session has ended."],
     [403, "denied", RC_NEUTRAL_REFUSAL],
-    [404, "not-found", "This build serves no publication for this candidate."],
+    [404, "denied", RC_NEUTRAL_REFUSAL],
     [400, "terminal", "The publication read was refused as invalid."],
-  ])("S11-U40 a publication read refused with %s is its own state (%s) and is not read again", async (status, state, words) => {
+  ])("S11-U40 a publication read refused with %s is its own state (%s), is not read again, and only a 401 raises the session signal", async (status, state, words) => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    const reports = sessionReports();
     const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [problem(status, `CODE_${status}`)] });
     renderCompose();
     await ready();
@@ -1202,9 +1230,28 @@ describe("S11 publication read and R1 mirror (P22)", () => {
     expect(read.textContent).toContain(words);
     expect(read.textContent).toContain(`CODE_${status}`);
     expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
+    expect(within(read).queryByRole("link", { name: "sign in again" })).toBeNull();
     await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_BACKOFF_MS[4] * 2));
     expect(api.of("PUBLICATION")).toHaveLength(1);
+    expect(reports.count()).toBe(status === 401 ? 1 : 0);
+    reports.stop();
     expect(screenText()).not.toContain("SECRET-SERVER-PROSE");
+  });
+
+  it("S11-U40b a publication read refused with 403 and with 404 renders the identical words and state", async () => {
+    const seen: string[] = [];
+    for (const status of [403, 404]) {
+      server({ COMPOSE: [ok(sealed())], PUBLICATION: [problem(status, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN")] });
+      renderCompose();
+      await ready();
+      const read = await until("[data-publication-read='denied']");
+      seen.push(read.firstElementChild!.textContent!);
+      expect(screenText()).not.toContain(SERVER_PROSE);
+      cleanup();
+      vi.restoreAllMocks();
+    }
+    expect(seen[0]).toBe(`${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`);
+    expect(seen[1]).toBe(seen[0]);
   });
 
   it("S11-U41 while DELIVERED the publication is read every 60 s while visible; a later 5xx keeps the last read as stale with its as-of", async () => {
@@ -1298,7 +1345,7 @@ describe("S11 publication read and R1 mirror (P22)", () => {
     expect(nextPublicationView(prior, new PortalApiError("429", 429, null, null), 99)).toMatchObject({ state: "stale", retryInMs: PUBLICATION_BACKOFF_MS[4] });
     expect(nextPublicationView(prior, new PortalApiError("401", 401, null, null), 0).state).toBe("session");
     expect(nextPublicationView(prior, new PortalApiError("403", 403, null, null), 0).state).toBe("denied");
-    expect(nextPublicationView(prior, new PortalApiError("404", 404, null, null), 0).state).toBe("not-found");
+    expect(nextPublicationView(prior, new PortalApiError("404", 404, null, null), 0)).toEqual({ state: "denied", failure: { status: 404, code: null, requestId: null } });
     expect(nextPublicationView(prior, new PortalApiError("422", 422, null, null), 0).state).toBe("terminal");
     expect("publication" in nextPublicationView(prior, new PortalApiError("403", 403, null, null), 0)).toBe(false);
   });
@@ -1434,5 +1481,173 @@ describe("S11 source guards", () => {
     const item = { ...P04.pack[5]!, source: { label: "Replay", href: "/research/quantbt/runs/x/replay" } };
     expect(packSourceRoute(item, "rrun_1", null)).toBe("/research/quantbt/runs/rrun_1/execute");
     expect(packSourceRoute({ ...item, source: { ...item.source, href: null } }, "rrun_1", null)).toBeNull();
+  });
+});
+
+/* ------------------------------------------------ FG-05: P22 closeout bindings */
+
+describe("S11 P22 closeout bindings (FG-05)", () => {
+  it("S11-U54 the raw approval status and the effective status are two separate, labelled facts; the mirror prints the server's optional facts as sent", async () => {
+    const read = deliveredRead({}, {
+      status: "APPROVED_WITH_CONDITION",
+      effective_status: "EXPIRED",
+      rc_superseded: true,
+      decision_outcomes: [{ actor_user_id: "usr_reviewer_1", outcome: "APPROVE_WITH_CONDITION" }],
+      condition_count: 2,
+      quorum: { required: 2, met: 1 },
+      approval_version: 3,
+      blocker_count: 0,
+      subject_label: "Delta RSI polynomial v3",
+      as_of_utc_ms: PUBLISHED_AT + 30_000,
+      assignee_pool_availability: { state: "AVAILABLE", reason_code: null },
+      assignee_pool: [{ user_id: "usr_reviewer_1", username: "reviewer@bobby", role: "QUANT_REVIEWER" }],
+    });
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(read)] });
+    renderCompose();
+    await ready();
+    const effective = await until("[data-panel='mirror'] [data-mirror-effective-status='EXPIRED']");
+    const raw = q("[data-panel='mirror'] [data-mirror-status]")!;
+    expect(raw.textContent).toBe("APPROVED_WITH_CONDITION");
+    expect(raw.getAttribute("title")).toBe("raw Governance approval status");
+    expect(effective.textContent).toBe("effective EXPIRED");
+    expect(raw.contains(effective)).toBe(false);
+    expect(effective.contains(raw)).toBe(false);
+    const superseded = q("[data-mirror-superseded]")!;
+    expect(superseded.textContent).toBe(MIRROR_SUPERSEDED);
+    expect(superseded.getAttribute("data-candidate-relation")).toBe("CURRENT");
+    expect(superseded.getAttribute("data-rc-superseded")).toBe("true");
+    expect(q("[data-mirror-pool]")!.textContent).toBe("assignee pool: reviewer@bobby (QUANT_REVIEWER)");
+    expect(q("[data-mirror-decisions]")!.textContent).toBe("decisions recorded: usr_reviewer_1 APPROVE_WITH_CONDITION · condition_count 2");
+    expect(q("[data-mirror-facts]")!.textContent).toBe(
+      `approval ${APPROVAL} · created 2026-09-26T09:12:00.000Z · read 2026-09-26T09:13:00.000Z · subject Delta RSI polynomial v3 · approval_version 3 · blocker_count 0 · quorum met 1 of required 2 · mirror as of ${new Date(PUBLISHED_AT + 30_000).toISOString()} · publication as of ${iso(PUBLISHED_AT + 60_000)}`,
+    );
+    expect(screenText()).not.toContain("Quant Reviewers");
+  });
+
+  it("S11-U55 a conflict keeps the conflicting approval and the downstream code; the recorded intent's actor and attempts print; reconcile_allowed false blocks the same-request retry", async () => {
+    const unknown = publication({
+      state: "UNKNOWN",
+      may_publish: true,
+      blocked_reason: null,
+      conflicting_approval_id: "apr_01K5CONFLICT",
+      conflicting_approval_href: "/governance/approvals/apr_01K5CONFLICT/r1",
+      downstream_code: "P22_DOWNSTREAM_OUTCOME_UNKNOWN",
+      intent_actor: { user_id: "usr_researcher", username: "researcher@bobby" },
+      attempt_count: 2,
+      publication_created_at: "2026-09-26T09:10:00.000Z",
+      updated_at_utc_ms: PUBLISHED_AT,
+      reconcile_allowed: false,
+    });
+    const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(unknown)], PUBLISH: [ok(deliveredRead())] });
+    renderCompose();
+    await ready();
+    const card = await until("[data-panel='publish-unknown']");
+    const conflict = card.querySelector<HTMLElement>("[data-publication-conflict]")!;
+    expect(conflict.getAttribute("data-publication-conflict")).toBe("apr_01K5CONFLICT");
+    expect(conflict.getAttribute("data-downstream-code")).toBe("P22_DOWNSTREAM_OUTCOME_UNKNOWN");
+    expect(within(conflict).getByRole("link", { name: "apr_01K5CONFLICT" }).getAttribute("href")).toBe("/governance/approvals/apr_01K5CONFLICT/r1");
+    expect(conflict.textContent).toBe(
+      `conflicting approval apr_01K5CONFLICT · downstream code ${rcReasonSentence("P22_DOWNSTREAM_OUTCOME_UNKNOWN")} · P22_DOWNSTREAM_OUTCOME_UNKNOWN`,
+    );
+    expect(card.querySelector("[data-publication-intent]")!.textContent).toBe(
+      `recorded by researcher@bobby · attempt_count 2 · recorded 2026-09-26T09:10:00.000Z · updated ${new Date(PUBLISHED_AT).toISOString()}`,
+    );
+    const retry = await until("[data-action='publish-retry']");
+    await waitFor(() => expect(retry.getAttribute("aria-disabled")).toBe("true"));
+    expect(describedBy(retry)).toBe("the server does not admit a retry of the recorded request");
+    fireEvent.click(retry);
+    await flush();
+    expect(api.of("PUBLISH")).toHaveLength(0);
+    expect(screenText()).not.toContain(SERVER_PROSE);
+    cleanup();
+    vi.restoreAllMocks();
+    /* A server href that is not a same-origin path is printed, never linked. */
+    server({
+      COMPOSE: [ok(deliveredCompose())],
+      PUBLICATION: [ok(deliveredRead({ conflicting_approval_id: "apr_01K5CONFLICT", conflicting_approval_href: "https://governance.example/apr_01K5CONFLICT", downstream_code: null }))],
+    });
+    renderCompose();
+    await ready();
+    const published = await until("[data-panel='published'] [data-publication-conflict]");
+    expect(published.querySelector("a")).toBeNull();
+    expect(published.querySelector("[data-conflicting-approval-unrouted]")!.textContent).toBe("apr_01K5CONFLICT");
+    expect(published.textContent).toBe("conflicting approval apr_01K5CONFLICT");
+  });
+
+  it("S11-U56 a draft save refused with 401 raises the shell's session signal once and builds no sign-in link", async () => {
+    const reports = sessionReports();
+    const api = server({ COMPOSE: [ok(sealable())], PATCH: [problem(401, "UNAUTHENTICATED")] });
+    renderCompose();
+    await ready();
+    edit("KNOWN_LIMITATIONS_WAIVERS", "x");
+    fireEvent.click(q("[data-action='save-declaration']")!);
+    const notice = await until("[data-write-notice='patch'][data-outcome='denied']");
+    await flush();
+    expect(reports.count()).toBe(1);
+    reports.stop();
+    expect(within(notice).queryByRole("link")).toBeNull();
+    expect(api.of("PATCH")).toHaveLength(1);
+    expect(screenText()).not.toContain(SERVER_PROSE);
+  });
+
+  it("S11-U57 repeated clicks while a publish is in flight send one POST: the confirmed publish and the same-request retry", async () => {
+    const gate = deferred();
+    const api = server({
+      COMPOSE: [ok(sealed())],
+      PUBLICATION: [ok(publication())],
+      PUBLISH: [{ ...ok(deliveredRead()), hold: gate.promise }],
+    });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+    fireEvent.click(publishButton()!);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
+    fireEvent.click(publishButton()!);
+    fireEvent.click(publishButton()!);
+    gate.release();
+    await waitFor(() => expect(api.of("PUBLISH")).toHaveLength(1));
+    await flush();
+    expect(api.of("PUBLISH")).toHaveLength(1);
+    cleanup();
+    vi.restoreAllMocks();
+    const hold = deferred();
+    const retryApi = server({
+      COMPOSE: [ok(sealed())],
+      PUBLICATION: [ok(publication({ state: "UNKNOWN", may_publish: true, blocked_reason: null, reconcile_allowed: true }))],
+      PUBLISH: [{ ...ok(deliveredRead()), hold: hold.promise }],
+    });
+    renderCompose();
+    await ready();
+    const retry = await until("[data-action='publish-retry']");
+    await waitFor(() => expect(retry.getAttribute("aria-disabled")).toBeNull());
+    fireEvent.click(retry);
+    fireEvent.click(retry);
+    fireEvent.doubleClick(retry);
+    hold.release();
+    await waitFor(() => expect(retryApi.of("PUBLISH")).toHaveLength(1));
+    await flush();
+    expect(retryApi.of("PUBLISH")).toHaveLength(1);
+  });
+
+  it("S11-U58 a typed 422 on publish is terminal and is followed by one publication read, never a second POST", async () => {
+    const api = server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())], PUBLISH: [problem(422, "RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE")] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
+    fireEvent.click(publishButton()!);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
+    await until("[data-write-notice='publish']");
+    await waitFor(() => expect(api.of("PUBLICATION")).toHaveLength(2));
+    await flush();
+    expect(api.of("PUBLISH")).toHaveLength(1);
+    expect(screenText()).not.toContain(SERVER_PROSE);
+  });
+});
+
+/* -------------------------------------------- file-wide route guard (last) */
+
+describe("S11 P22 route guard across this file", () => {
+  it("S11-U60 no request sent by any test in this file reached /mirror or /publish/reconcile", () => {
+    expect(ALL_CALLS.filter((call) => /\/mirror(\/|\?|$)|\/publish\/reconcile|reconcile/.test(call.url))).toEqual([]);
   });
 });

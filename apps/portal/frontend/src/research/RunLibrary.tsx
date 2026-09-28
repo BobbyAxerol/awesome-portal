@@ -27,7 +27,7 @@
  * block by block; behaviour and data follow spec 01 (DQ-02).
  */
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -46,6 +46,12 @@ import {
   mayCompare,
   unavailableReason as stateSentence,
 } from "./runLibraryClient";
+import {
+  ALPHA_VERSION_PUBLICATION_WORDS,
+  approvalStatusWords,
+  useAlphaVersionPublications,
+  type AlphaVersionPublicationView,
+} from "./alphaVersionPublication";
 import { compareEntryHref } from "./compareClient";
 import { lineageHref } from "./lineageClient";
 import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
@@ -883,15 +889,40 @@ export function modeTitle(mode: RunLibraryItem["mode"]): string | undefined {
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-/** Hi-fi rc chip ink by approval state (`rcColors`), in tokens. */
+/**
+ * Hi-fi rc chip ink by approval state (`rcColors`), in tokens. The P22 raw
+ * Governance statuses take the Screen 11 mirror's tones; SUPERSEDED is the
+ * hi-fi's faint ink.
+ */
 const RC_TONE: Record<string, string> = {
   DRAFT: "var(--accent-2)",
   APPROVED: "var(--good)",
+  APPROVED_WITH_CONDITION: "var(--good)",
   PENDING: "var(--accent-2)",
   REJECTED: "var(--bad)",
+  DENIED: "var(--bad)",
+  CHANGES_REQUESTED: "var(--ink-faint)",
+  EXPIRED: "var(--ink-faint)",
+  SUPERSEDED: "var(--ink-faint)",
   NOT_APPROVED: "var(--ink-faint)",
   UNKNOWN: "var(--ink-faint)",
 };
+
+/**
+ * FG-05: the P22 alpha-version publication lookups of the rows on this page,
+ * keyed by `alpha_version_id` (one read per version, `useAlphaVersionPublications`).
+ */
+const RcPublicationContext = createContext<ReadonlyMap<string, AlphaVersionPublicationView>>(new Map());
+
+/** Which versions the page looks up: a bound row that carries a sealed P21 rc. Rows in page order, no ranking. */
+export function rcLookupVersions(items: readonly RunLibraryItem[]): string[] {
+  const ids: string[] = [];
+  for (const item of items) {
+    const id = item.binding?.alpha_version_id;
+    if (id && item.rc?.kind === "LOCAL_SEAL" && item.rc.release_candidate_id !== null && !ids.includes(id)) ids.push(id);
+  }
+  return ids;
+}
 
 /** Hi-fi `rc_` ids are short; a longer sealed id keeps 14 characters and its title. */
 const RC_ID_CHARS = 14;
@@ -899,31 +930,113 @@ const RC_ID_CHARS = 14;
 /**
  * The rc chip's face, tone and title (spec 01 §2.5 #7, §17; RF-05 CG-P12-06).
  *
- * The relation is the persisted P21 one and nothing else: a local seal reads
+ * The relation is the persisted P21 one: a local seal reads
  * `rc_… · {approval state}`, the viewer's own draft `rc_ (draft) · DRAFT`.
+ *
+ * FG-05 (Codex P22 closeout, S01): when the Alpha version's publication lookup
+ * names **this** sealed candidate, the chip prints the P22 facts instead:
+ * the raw Governance `approval.status` (or why it was not read), `SUPERSEDED`
+ * when the server's `candidate_relation` says so, and a title with the
+ * publication state, the relation, the raw and the effective status and the
+ * read's own as-of. Any other answer keeps the P21 face and says in the title
+ * what the lookup answered: no delivered publication (with its reason code),
+ * another candidate's publication, a refusal, or no answer. The browser never
+ * picks, ranks or infers a candidate.
  */
-export function rcChipFace(rc: ReleaseCandidateRef): { text: string; state: string; title: string; fullId: string | null } {
+export interface RcChipFace {
+  text: string;
+  state: string;
+  title: string;
+  fullId: string | null;
+  /** The P22 lookup outcome for this chip: loading, NOT_PUBLISHED, CURRENT/SUPERSEDED/UNKNOWN (this rc), OTHER_CANDIDATE, or a refusal state. */
+  publication: string | null;
+  /** The raw Governance `approval.status` and, separately, `effective_status`, exactly as the lookup sent them. */
+  approvalStatus: string | null;
+  effectiveStatus: string | null;
+  /** The lookup's typed-absence reason code, kept as sent (titles carry words, never codes). */
+  reasonCode: string | null;
+}
+
+/** A server enum in a title reads as words, like the P21 title does (`APPROVED_WITH_CONDITION` → `approved with condition`). */
+function enumWords(value: string): string {
+  return value.toLowerCase().split("_").join(" ");
+}
+
+function lookupNote(
+  lookup: AlphaVersionPublicationView | undefined,
+  releaseCandidateId: string | null,
+): { note: string | null; publication: string | null; reasonCode: string | null } {
+  if (lookup === undefined) return { note: null, publication: null, reasonCode: null };
+  if (lookup.state === "loading") return { note: "publication lookup pending", publication: "loading", reasonCode: null };
+  if (lookup.state !== "available") {
+    return { note: `publication lookup: ${ALPHA_VERSION_PUBLICATION_WORDS[lookup.state]}`, publication: lookup.state, reasonCode: lookup.code };
+  }
+  const { read } = lookup;
+  if (read.publication === null) {
+    return {
+      note: `no delivered publication for this version — ${reasonSentence({ state: "NOT_PUBLISHED", reason_code: read.reason_code })}`,
+      publication: read.availability,
+      reasonCode: read.reason_code,
+    };
+  }
+  if (read.publication.release_candidate_id !== releaseCandidateId) {
+    return { note: `this version's latest delivered publication is ${read.publication.release_candidate_id}`, publication: "OTHER_CANDIDATE", reasonCode: null };
+  }
+  return { note: null, publication: read.publication.candidate_relation, reasonCode: null };
+}
+
+export function rcChipFace(rc: ReleaseCandidateRef, lookup?: AlphaVersionPublicationView): RcChipFace {
   if (rc.kind === "ACTOR_DRAFT") {
     return {
       text: "rc_ (draft) · DRAFT",
       state: "DRAFT",
       title: "release candidate being composed from this run — open Screen 11 to continue the draft",
       fullId: rc.draft_id,
+      publication: null,
+      approvalStatus: null,
+      effectiveStatus: null,
+      reasonCode: null,
     };
   }
   const id = rc.release_candidate_id;
   const shortId = id === null ? "rc_" : id.length > RC_ID_CHARS ? `${id.slice(0, RC_ID_CHARS)}…` : id;
+  const found = lookup?.state === "available" ? lookup.read.publication : null;
+  if (found !== null && id !== null && found.release_candidate_id === id) {
+    /* P22: this sealed candidate is the version's delivered publication. */
+    const status = approvalStatusWords(found);
+    const superseded = found.candidate_relation === "SUPERSEDED";
+    const effective = found.approval_read === "AVAILABLE" ? (found.approval?.effective_status ?? null) : null;
+    return {
+      text: `${shortId} · ${status.words}${superseded ? " · SUPERSEDED" : ""}`,
+      state: superseded ? "SUPERSEDED" : (status.raw ?? "UNKNOWN"),
+      title:
+        `${id} — publication ${enumWords(found.state)} · candidate ${enumWords(found.candidate_relation)} · approval status ${status.raw !== null ? enumWords(status.raw) : status.words}` +
+        ` · effective status ${effective !== null ? enumWords(effective) : "not published"} · as of ${new Date(found.as_of_utc_ms).toISOString()} — open its sealed pack on Screen 11`,
+      fullId: id,
+      publication: found.candidate_relation,
+      approvalStatus: status.raw,
+      effectiveStatus: effective,
+      reasonCode: null,
+    };
+  }
   const state = rc.approval_state ?? "UNKNOWN";
+  const { note, publication, reasonCode } = lookupNote(lookup, id);
   return {
     text: `${shortId} · ${rc.approval_state ?? "approval not published"}`,
     state,
-    title: `${id ?? "sealed release candidate"} — sealed rc from this run's params · ${state.toLowerCase().replace("_", " ")} — open its sealed pack on Screen 11`,
+    title: `${id ?? "sealed release candidate"} — sealed rc from this run's params · ${state.toLowerCase().replace("_", " ")}${note ? ` · ${note}` : ""} — open its sealed pack on Screen 11`,
+    approvalStatus: null,
+    effectiveStatus: null,
+    reasonCode,
     fullId: id,
+    publication,
   };
 }
 
-function RcChip({ rc, runId }: { rc: ReleaseCandidateRef; runId: string }) {
-  const face = rcChipFace(rc);
+function RcChip({ rc, runId, alphaVersionId }: { rc: ReleaseCandidateRef; runId: string; alphaVersionId: string | null }) {
+  const lookups = useContext(RcPublicationContext);
+  const lookup = rc.kind === "LOCAL_SEAL" && alphaVersionId !== null ? lookups.get(alphaVersionId) : undefined;
+  const face = rcChipFace(rc, lookup);
   const tone = RC_TONE[face.state] ?? "var(--ink-faint)";
   /* Hi-fi: an <a> to Screen 11 (P21). A sealed pack opens its own read-only
      route (the one Screen 11 links to); the viewer's draft opens the composer. */
@@ -933,6 +1046,10 @@ function RcChip({ rc, runId }: { rc: ReleaseCandidateRef; runId: string }) {
       data-rc={face.fullId ?? rc.kind}
       data-rc-kind={rc.kind}
       data-rc-state={face.state}
+      data-rc-publication={face.publication ?? undefined}
+      data-rc-approval-status={face.approvalStatus ?? undefined}
+      data-rc-effective-status={face.effectiveStatus ?? undefined}
+      data-rc-publication-reason={face.reasonCode ?? undefined}
       data-phase={RC_PHASE}
       title={face.title}
       style={{
@@ -1218,7 +1335,7 @@ function RunCard({
         )}
 
         {/* Spec 01 §4.4: a null rc reserves no chip and no space. */}
-        {item.rc !== null ? <RcChip rc={item.rc} runId={item.run_id} /> : null}
+        {item.rc !== null ? <RcChip rc={item.rc} runId={item.run_id} alphaVersionId={item.binding?.alpha_version_id ?? null} /> : null}
 
         <span
           data-certificate={cert ?? "none"}
@@ -1790,7 +1907,11 @@ export function RunLibrary(props: RunLibraryProps) {
 
   const cursorExpired = (filters.cursor || filters.before) && state.state === "terminal";
 
+  /* FG-05: one P22 publication lookup per Alpha version with a sealed rc on this page. */
+  const rcPublications = useAlphaVersionPublications(rcLookupVersions(items));
+
   return (
+    <RcPublicationContext.Provider value={rcPublications}>
     <div
       data-screen="run-library"
       className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col"
@@ -2167,5 +2288,6 @@ export function RunLibrary(props: RunLibraryProps) {
         </p>
       </footer>
     </div>
+    </RcPublicationContext.Provider>
   );
 }
