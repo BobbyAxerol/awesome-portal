@@ -3817,6 +3817,24 @@ chưa commit** — phải lấy lại, đừng làm lại từ đầu:
 | F13 | **Visual baseline** chưa chạy lại sau S08 (E16-R1 thêm một hàng) và S12 (RF-04 đổi bố cục). Chạy **chỉ** qua `./scripts/portal-web-visual.sh` (image ghim) — chạy trần sẽ ra 28 ô đỏ giả | Claude | Chưa làm |
 | F14 | **E16-R2** — publish engine pin trên freeze read P04 | **Codex — CLOSED isolated backend + consumer** | `engine_pin` generated fact/reason consumed by DigestChain; P04 + imported Freeze real browser PASS at both widths. [Receipt](./research_loop/evidence/P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md). Old records remain typed absent. |
 
+**Checkpoint 2026-09-28 — Bobby tạm dừng goal backend, giao frontend gap closeout cho Thanhvuong.**
+[P23 goal checkpoint](./research_loop/evidence/P23/BACKEND_GOAL_PAUSE_AND_RESUME_2026-09-28.md)
+ghi rõ F6/migration, F4/E10, OL-02, P22 replay và các scoped P23 receipts đã sửa/chứng minh,
+cùng lỗi mới `CG-P23-T02-01`, `-T03-01`, `-T05-01`, `-T12-01/02` và warm Library W06/T08
+chưa đạt 500 ms. Đây là lộ trình sửa khi goal được tiếp tục, **không** phải P23 PASS hay
+quyền bật runtime. [Handoff frontend `FG-01…FG-07`](./research_loop/evidence/FRONTEND_GAP_HANDOFF_THANHVUONG_2026-09-28.md)
+là phạm vi hiện hành cho Thanhvuong trên `feat/gap_frontend_thanhvuong`, link tới
+[rules contributor A0.1](./research_loop/CLAUDE-FOR-thanhvuong.md#rl-thanhvuong-gap-2026-09-28).
+F3/F5/F12/F13 và S01/S02/S10/S11 P22 consumer được Thanhvuong audit/đóng bằng
+candidate hiện tại; status trong các dòng lịch sử trên **không tự nâng thành DONE**.
+`D1-O1` mới: S09/S11/S13 deep-link còn thiếu `display_label` trong chính named read;
+Codex phải publish additive contract trước, Thanhvuong không suy label từ cache/id.
+`E14` reference không tồn tại đã được sửa trong
+[retrospective](./research_loop/evidence/P14/E14_RETAINED_INTEGRITY_AND_REPORT_CLOSEOUT_2026-09-27.md),
+không tạo receipt hồi tố. `F9` contrast, S12 lệch 205 px có đo và S14 mirror deviation
+chờ đúng owner visual decision; E5 source gaps giữ typed absence. Các backend/source
+row P23 trong §13.4.1 vẫn thuộc owner được ghi ở đó; Thanhvuong không nhận P23 backend/P24.
+
 **E11–E17 integration checkpoint (2026-09-27, Codex approved binding scope):**
 incoming Claude `a00df203` and local `1ac1c628` are reconciled without losing
 history/docs. Incoming 068/069 are appended as **075/076**, applied forward on

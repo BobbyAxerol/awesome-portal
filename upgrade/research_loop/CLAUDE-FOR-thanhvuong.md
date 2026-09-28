@@ -10,12 +10,32 @@
 
 # A. RULES ĐANG ÁP DỤNG CHO THANHVUONG
 
-## A0. Active campaign assignment — frontend P17–P21
+<a id="rl-thanhvuong-gap-2026-09-28"></a>
+## A0.1. Active assignment — frontend gap closeout (Bobby, 2026-09-28)
 
-**Chỉ đạo cụ thể mới nhất của Bobby, có hiệu lực ưu tiên trong campaign này:**
-mọi câu ở phần A về baseline/PR `dev`, cadence hai phase hoặc tự tạo branch
-được **thay thế cho duy nhất scope frontend P17–P21** bằng các điều kiện dưới
-đây. Các rules an toàn khác vẫn giữ nguyên.
+**A0.1 là assignment hiện hành, thay A0 cũ và mọi ví dụ `dev`-base/PR cadence
+khác bên dưới chỉ trong chiến dịch này.** Các giới hạn Linux, workspace, remote,
+hooks, protected surfaces, quality và reporting ở phần A vẫn nguyên vẹn.
+
+| Item | Quy tắc hiện hành |
+|---|---|
+| Baseline duy nhất | `primus-origin/feat/gap_frontend_thanhvuong`, do Bobby publish từ toàn bộ `docs/research-loop-plan` sau checkpoint 2026-09-28; xác minh exact base/head SHA lúc clone |
+| Working branch | `feat/gap_frontend_thanhvuong` trong workspace cô lập của user `thanhvuong`; không dùng worktree hay Git metadata của Bobby |
+| Scope | [Frontend gap handoff](./evidence/FRONTEND_GAP_HANDOFF_THANHVUONG_2026-09-28.md) FG-01…FG-07: Research S00–S14 current-build audit, UI/data-binding, browser/visual/print/write receipts và docs/CG requests. Không tiếp quản P23 backend goal hoặc P24 release |
+| Baseline bảo vệ | FE/BE của Codex và Claude trên `docs/research-loop-plan` là điểm xuất phát; giữ commit/thiết kế/contract đã duyệt, không reset hoặc port nguyên branch contributor P17–P21 cũ |
+| Push/handoff | Chỉ push branch này lên `primus-origin`; một PR `feat/gap_frontend_thanhvuong` → `docs/research-loop-plan` cho Bobby review; commit + receipt sau từng slice, không tự merge/rebase/force-push |
+| Backend gap | Ghi typed `CG-FG-*` packet, Unified §13 owner/exit gate và báo Bobby/Codex; không tự sửa backend service/OpenAPI/migration/runtime, không gọi nguồn trực tiếp |
+
+Trước mỗi slice, đọc lại Unified §13 và handoff mới nhất, nhất là trạng thái
+đã supersede receipt cũ. Nếu baseline di chuyển, báo Bobby cả hai SHA; không tự
+đuổi theo `dev`, `main` hay nhánh cũ. Việc viết docs/evidence **không** cho
+quyền nâng P23/P24 thành PASS. A4/A5/A7–A10 vẫn là quality bar cho từng slice.
+
+## A0. Historical assignment — frontend P17–P21 (superseded by A0.1)
+
+**Chỉ đạo lịch sử cho campaign P17–P21, nay được A0.1 thay thế:** những
+điều kiện dưới đây giải thích branch/baseline cũ và không còn là quyền làm
+việc hiện hành. Các rules an toàn khác vẫn giữ nguyên.
 
 | Item | Quy tắc bắt buộc |
 |---|---|
@@ -31,7 +51,7 @@ quyết định integration, không tự merge/rebase để đuổi theo. Khi v�
 Bobby xác nhận toàn bộ Research campaign đủ điều kiện, Bobby tự quyết đường
 integration `docs/research-loop-plan` → `dev` → `main`.
 
-**General policy outside A0:** `dev` is normally the integration branch and contributor baseline, never a direct-commit branch. The active P17–P21 assignment in A0 overrides this paragraph and all conflicting `dev`-base/PR wording in part A; do not combine the two workflows.
+**General policy outside the active assignment:** `dev` is normally the integration branch and contributor baseline, never a direct-commit branch. A0.1 overrides conflicting `dev`-base/PR wording in part A for this frontend-gap campaign; do not combine the workflows. The P17–P21 A0 above is historical, not a second active assignment.
 
 ## A1. Nhận diện người dùng và workspace trước mọi thay đổi
 
@@ -70,7 +90,7 @@ Chạy `./scripts/verify-contributor-workspace.sh` nguyên bản. Nếu không c
 
 Báo đầu phiên (thay placeholder bằng giá trị thật, không điền theo trí nhớ):
 
-> Tôi xác nhận đang chạy dưới Linux user `<actual-user>`, trong workspace `<actual-workspace>`, trên nhánh công việc `<feature-or-phase-branch>`, được tạo từ `primus-origin/dev` tại commit `<base-dev-sha>` cho phạm vi phase đã giao. Tôi chỉ commit/push nhánh công việc này lên `primus-origin` và mở PR vào `dev` theo lịch hai phase. Tôi không commit/push/merge trực tiếp vào dev/main, không mở PR nhắm main, không tự merge PR, không dùng origin/tag hoặc credential Bobby, không sửa Execution Loop hay hạ tầng ngoài phạm vi được cấp.
+> Tôi xác nhận đang chạy dưới Linux user `<actual-user>`, trong workspace `<actual-workspace>`, trên nhánh `<assigned-branch>`, được tạo từ `<Bobby-published-base-SHA>` đúng A0.1. Tôi chỉ commit/push nhánh này lên `primus-origin` và mở PR vào `docs/research-loop-plan` cho Bobby review. Tôi không commit/push/merge trực tiếp vào baseline/dev/main, không tự merge/rebase/force-push, không dùng origin/tag hoặc credential Bobby, không sửa Execution Loop hay hạ tầng ngoài phạm vi được cấp.
 
 Bobby đã cho phép thanhvuong tạo **nhánh công việc mới theo phase hoặc cặp phase** từ `primus-origin/dev`, trong phạm vi Research đã giao; không cần xin lại quyền đặt từng tên nhánh nếu quy ước/provisioning hiện hành cho phép. Prefix đúng không tự chứng minh đúng base, scope hoặc quyền: phải ghi base-dev SHA và kiểm tra workspace/remote/hooks. Workspace phải tách khỏi canonical `.git`/home của Bobby; không nested git repo/submodule hoặc tạo git worktree chia sẻ metadata canonical khi chưa được cấp. Nếu verifier/hook vẫn chỉ nhận một assigned branch cũ, báo Bobby cập nhật provisioning; không sửa hoặc bỏ qua kiểm soát.
 
