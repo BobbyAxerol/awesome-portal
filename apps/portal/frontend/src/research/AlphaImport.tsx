@@ -148,11 +148,12 @@ export function awaitingStep(reason: string): ResearchState {
 /* ----------------------------------------------------------------- styles */
 
 /*
- * Measured from the HiFi markup, block by block; token for every hex
- * (#faf9f5 paper, #fff paper-raised, #f4f2ec paper-sunken, #e3e0d7 line,
- * #efede4 line-soft, #c9c5ba ≈ line-strong, #939db0 ink-faint, #4e5a6e
- * ink-soft, #0f4c5c accent, #e2edf0 accent-soft, #1e7b4f good, #9a6a1f
- * accent-2, #fdfbf5 ≈ paper).
+ * Measured from the HiFi markup, block by block; every HiFi colour is written
+ * as its token (paper, paper-raised, paper-sunken, line, line-soft,
+ * line-strong, ink-faint, ink-soft, accent, accent-soft, good, accent-2, and
+ * the card shadow as shadow-e1). Two HiFi values are near matches rather than
+ * exact: the stronger hairline maps to line-strong and the near-paper tint to
+ * paper. Literals stay in tokens.css only (U02 token gate).
  */
 const AI_CSS = `
 .ai-page { max-width: 1240px; margin: 0 auto; padding: 16px 24px 56px; display: flex; flex-direction: column; gap: 12px; color: var(--ink); font-family: var(--font-body); font-size: 13px; min-width: 0; }
@@ -175,7 +176,7 @@ const AI_CSS = `
 .ai-chip[data-chip="ACTIVE"] { border-color: var(--good); color: var(--good); }
 .ai-sub { font-family: var(--font-display); font-style: italic; font-size: 13.5px; color: var(--ink-faint); margin: 0; }
 .ai-meta { flex: 0 1 auto; font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); overflow-wrap: anywhere; }
-.ai-stepper { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); box-shadow: 0 1px 2px rgba(28,37,50,.05); padding: 5px; overflow-x: auto; }
+.ai-stepper { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); box-shadow: var(--shadow-e1); padding: 5px; overflow-x: auto; }
 .ai-step { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 5px; padding: 5px 12px; background: transparent; color: var(--ink); flex: none; cursor: pointer; text-align: left; }
 .ai-step[aria-selected="true"] { background: var(--accent-soft); }
 .ai-step .num { width: 20px; height: 20px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; border: 1.5px solid var(--ink-faint); color: var(--ink-mute); }
@@ -188,7 +189,7 @@ const AI_CSS = `
 .ai-cols { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
 .ai-cols[data-stretch] { align-items: stretch; }
 .ai-card { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised); min-width: 0; }
-.ai-card[data-shadow] { box-shadow: 0 1px 2px rgba(28,37,50,.05); }
+.ai-card[data-shadow] { box-shadow: var(--shadow-e1); }
 .ai-card[data-pad] { padding: 12px 14px; display: flex; flex-direction: column; gap: 5px; }
 .ai-label { font-family: var(--font-body); font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 500; color: var(--ink-faint); margin: 0; }
 .ai-mirror-card { flex: 1.4; min-width: 460px; overflow-x: auto; }
