@@ -48,6 +48,9 @@ import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
 import { onSessionExpired } from "../auth/sessionExpiry";
 import { lookupAbsent, lookupFound, lookupProblem, lookupRecord, LOOKUP_PUBLISHED_AT, LOOKUP_SERVER_PROSE } from "./alphaVersionPublication.fixture";
+import { CATALOG_FAILURE_COPY, catalogFailureState, readDatasetCatalog } from "./datasetClient";
+import { PREFLIGHT_REFUSAL_GENERIC_COPY } from "./preflightClient";
+import { usePreflight } from "./usePreflight";
 
 afterEach(cleanup);
 
@@ -1174,5 +1177,224 @@ describe("FG-05 — last published rc reads the Alpha version's publication", ()
     goToStep("context");
     expect(document.querySelector("[data-last-published-rc]")).toBeNull();
     expect(sent).toEqual([]);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * FG-08 (FE-A1-01, FE-A1-03, FE-A1-04): server prose never reaches Screen 02
+ * ---------------------------------------------------------------------- */
+
+describe("FG-08 — Screen 02 never renders the server's refusal prose", () => {
+  const SENTINEL = "zq_SERVER_PROSE_SENTINEL alice@example.invalid";
+  const problem = (code: string, details?: Record<string, unknown>) => ({
+    error: { code, message: SENTINEL },
+    request_id: "req_fg08",
+    ...(details ? { details } : {}),
+  });
+
+  /** Reads the catalog through the real client and renders the data step with its note. */
+  async function catalogNote(status: number, code: string) {
+    stub(() => [status, problem(code)]);
+    const error = await readDatasetCatalog().catch((caught: unknown) => caught);
+    view({ initialStep: "data", catalog: null, catalogReason: catalogFailureState(error).reason });
+    const note = document.querySelector("[data-catalog-unread]") as HTMLElement | null;
+    expect(note, `catalog ${status}`).not.toBeNull();
+    expect(document.body.textContent, `catalog ${status}`).not.toContain(SENTINEL);
+    const facts = note!.querySelector("[data-catalog-facts]");
+    const result = {
+      text: note!.textContent!,
+      facts: facts?.textContent ?? null,
+      factsAreMono: facts?.classList.contains("mono") ?? false,
+      sentence: note!.textContent!.replace(facts?.textContent ?? "", "").trim(),
+    };
+    cleanup();
+    vi.unstubAllGlobals();
+    return result;
+  }
+
+  it("prints fixed copy and typed facts for a dataset catalog 403, 404 and 503, the denials without their code", async () => {
+    const denied403 = await catalogNote(403, "RESEARCH_WORKSPACE_FORBIDDEN");
+    const denied404 = await catalogNote(404, "RESEARCH_PREFLIGHT_NOT_FOUND");
+    const down503 = await catalogNote(503, "RESEARCH_PREFLIGHT_UNAVAILABLE");
+
+    expect(denied403.sentence).toBe(`Dataset catalog not read: ${CATALOG_FAILURE_COPY.denied}`);
+    expect(denied404.sentence).toBe(denied403.sentence);
+    /* A denial prints the request id only, so a 403 and a 404 are the same text. */
+    expect(denied403.facts).toBe("request req_fg08");
+    expect(denied404.text).toBe(denied403.text);
+    expect(down503.text).toBe(
+      `Dataset catalog not read: ${CATALOG_FAILURE_COPY.unavailable} RESEARCH_PREFLIGHT_UNAVAILABLE · request req_fg08`,
+    );
+    expect([denied403, denied404, down503].every((note) => note.factsAreMono)).toBe(true);
+  });
+
+  it("gives a catalog 403 and a coded 404 byte-identical text when the server sends the same code", async () => {
+    const denied403 = await catalogNote(403, "RESEARCH_WORKSPACE_FORBIDDEN");
+    const denied404 = await catalogNote(404, "RESEARCH_WORKSPACE_FORBIDDEN");
+    expect(denied404.text).toBe(denied403.text);
+  });
+
+  /** Runs a refused preflight through the real client and hook, then renders the review step. */
+  async function refusedReview(status: number, body: unknown) {
+    stub(() => [status, body]);
+    const hook = renderHook(() => usePreflight(serializeRequestedSpec(draft())));
+    await act(async () => hook.result.current.runPreflight());
+    await waitFor(() => expect(hook.result.current.refusal).not.toBeNull());
+    const { refusal, preflightState } = hook.result.current;
+    hook.unmount();
+    view({ initialStep: "review", preflightRefusal: refusal, preflightState });
+    const alert = document.querySelector("[role=alert][data-refusal-field]") as HTMLElement | null;
+    return { refusal: refusal!, alert };
+  }
+
+  it("shows the gate, fixed copy, field path and request id for a 422 with a field path", async () => {
+    const { alert } = await refusedReview(
+      422,
+      problem("RESEARCH_PREFLIGHT_DATA_UNAVAILABLE", { gate: "DATA", field_path: ["data", "symbol"] }),
+    );
+    expect(document.body.textContent).not.toContain(SENTINEL);
+    expect(alert).not.toBeNull();
+    expect(alert!.getAttribute("data-refusal-field")).toBe("data.symbol");
+    expect(alert!.querySelector("[data-refusal-copy]")!.textContent).toBe("The historical source has no data for this request.");
+    expect(alert!.querySelector("[data-refusal-path]")!.textContent).toBe("data.symbol");
+    expect(alert!.querySelector("[data-request-id]")!.textContent).toBe("request req_fg08");
+    expect(alert!.textContent).toContain("DATA");
+    expect(alert!.querySelector('[data-action="go-to-refused-step"]')).not.toBeNull();
+  });
+
+  it("still shows a refusal alert on the review step for a 422 without a field path", async () => {
+    const { alert } = await refusedReview(422, problem("RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED"));
+    expect(document.body.textContent).not.toContain(SENTINEL);
+    const alerts = screen.getAllByRole("alert");
+    expect(alerts).toContain(alert);
+    expect(alert!.getAttribute("data-refusal-field")).toBe("");
+    expect(alert!.querySelector("[data-refusal-copy]")!.textContent).toBe("Portal has not admitted this route for runs.");
+    expect(alert!.querySelector("[data-refusal-path]")).toBeNull();
+    expect(alert!.querySelector('[data-action="go-to-refused-step"]')).toBeNull();
+    const preview = document.querySelector("[data-preflight-preview]") as HTMLDetailsElement;
+    expect(preview.open).toBe(true);
+    expect(document.querySelector("[data-preflight-preview-summary]")!.textContent).not.toContain("none read yet");
+  });
+
+  it("keeps the server prose out of the page for a 400 that lists field paths", async () => {
+    const { alert } = await refusedReview(
+      400,
+      problem("RESEARCH_PREFLIGHT_INVALID", { field_paths: [["walk_forward", "purge_bars"]] }),
+    );
+    expect(document.body.textContent).not.toContain(SENTINEL);
+    expect(alert!.getAttribute("data-refusal-field")).toBe("walk_forward.purge_bars");
+    expect(alert!.querySelector("[data-refusal-copy]")!.textContent).toBe(
+      "Preflight cannot accept a field of this declaration. Fix it and run preflight again.",
+    );
+  });
+
+  it("uses the generic sentence for a refusal code this client does not know", async () => {
+    const { alert } = await refusedReview(422, problem("RESEARCH_PREFLIGHT_SOMETHING_NEW"));
+    expect(document.body.textContent).not.toContain(SENTINEL);
+    expect(alert!.querySelector("[data-refusal-copy]")!.textContent).toBe(PREFLIGHT_REFUSAL_GENERIC_COPY);
+  });
+
+  it("keeps the folded preview saying none read yet before any preflight", () => {
+    view({ initialStep: "review" });
+    expect(document.querySelector("[role=alert][data-refusal-field]")).toBeNull();
+    const preview = document.querySelector("[data-preflight-preview]") as HTMLDetailsElement;
+    expect(preview.open).toBe(false);
+    expect(document.querySelector("[data-preflight-preview-summary]")!.textContent).toBe(
+      "what preflight will check — 6 panels, none read yet",
+    );
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * FG-08 (A2b): a failed run create and a refused preflight never carry the
+ * server's prose into the hook state or the rendered page
+ * ---------------------------------------------------------------------- */
+
+describe("FG-08 (A2b) — Screen 02 run create and preflight hook never carry server prose", () => {
+  const SENTINEL = "zq_SERVER_PROSE_SENTINEL alice@example.invalid";
+  const problem = (code: string | null) => ({
+    error: { ...(code ? { code } : {}), message: SENTINEL },
+    request_id: "req_a2b",
+  });
+
+  /** Runs a valid preflight, then a refused create, through the real client and hook; renders the review step. */
+  async function failedCreate(status: number, code: string | null) {
+    stub((url) => (url.endsWith("/preflights") ? [201, preflightResponse(true)] : [status, problem(code)]));
+    const hook = renderHook(() => useNewRun(draft(), LIMITS));
+    await act(async () => hook.result.current.preflight.runPreflight());
+    await waitFor(() => expect(hook.result.current.preflight.preflight).not.toBeNull());
+    await act(async () => hook.result.current.submit());
+    await waitFor(() => expect(hook.result.current.createRefusal).not.toBeNull());
+    const { createState, createRefusal, outcomeUnknown } = hook.result.current;
+    hook.unmount();
+    view({
+      initialStep: "review",
+      createState,
+      outcomeUnknown,
+      canSubmit: true,
+      preflight: preflightResponse(true),
+      preflightState: OK,
+    });
+    const panel = document.querySelector('[data-research-panel="run"]') as HTMLElement | null;
+    expect(panel, `run panel for ${status}`).not.toBeNull();
+    const pageText = document.body.textContent ?? "";
+    const detailNode = panel!.querySelector("[data-research-detail]");
+    const panelWithoutDetail = panel!.textContent!.replace(detailNode?.textContent ?? "", "");
+    cleanup();
+    vi.unstubAllGlobals();
+    return { createState, refusal: createRefusal!, pageText, panelWithoutDetail };
+  }
+
+  it("keeps the sentinel out of the hook state and the page for run create 403, 404, 409, 422 and 503", async () => {
+    for (const [status, code] of [
+      [403, "RESEARCH_RUN_CREATE_FORBIDDEN"],
+      [404, "RESEARCH_RUN_NOT_FOUND"],
+      [409, "RESEARCH_RUN_PREFLIGHT_STALE"],
+      [422, "RESEARCH_RUN_CREATE_INVALID"],
+      [503, "RESEARCH_RUN_PRODUCER_UNAVAILABLE"],
+    ] as const) {
+      const { createState, refusal, pageText, panelWithoutDetail } = await failedCreate(status, code);
+      expect(createState.reason, `${status}`).not.toContain(SENTINEL);
+      expect(createState.detail ?? "", `${status}`).not.toContain(SENTINEL);
+      expect(pageText, `${status}`).not.toContain(SENTINEL);
+      expect(createState.reason, `${status}`).toBe(refusal.copy);
+      expect(createState.detail, `${status}`).toBe(`${code} · request req_a2b`);
+      expect(panelWithoutDetail, `${status}`).toContain(refusal.copy);
+      // The server's sentence is still on the refusal, for diagnostics only.
+      expect(refusal.message, `${status}`).toBe(SENTINEL);
+    }
+  });
+
+  it("gives a run create 403 and 404 the same copy and the same panel text", async () => {
+    const forbidden = await failedCreate(403, "RESEARCH_RUN_CREATE_FORBIDDEN");
+    const notFound = await failedCreate(404, "RESEARCH_RUN_NOT_FOUND");
+    expect(notFound.createState.reason).toBe(forbidden.createState.reason);
+    expect(notFound.createState.state).toBe("denied");
+    expect(forbidden.createState.state).toBe("denied");
+    expect(notFound.panelWithoutDetail).toBe(forbidden.panelWithoutDetail);
+  });
+
+  it("uses the generic sentence for an unknown code and the uncoded sentence when no code came back", async () => {
+    const unknown = await failedCreate(422, "RESEARCH_RUN_SOMETHING_NEW");
+    expect(unknown.createState.reason).toBe("The run was not created.");
+    expect(unknown.pageText).not.toContain(SENTINEL);
+
+    const uncoded = await failedCreate(502, null);
+    expect(uncoded.createState.reason).toBe("The server did not say whether the run was created.");
+    expect(uncoded.createState.detail).toBe("request req_a2b");
+    expect(uncoded.pageText).not.toContain(SENTINEL);
+  });
+
+  it("gives the preflight hook's panel state the client sentence, not the server message", async () => {
+    stub(() => [422, { ...problem("RESEARCH_PREFLIGHT_DATA_UNAVAILABLE"), details: { gate: "DATA" } }]);
+    const hook = renderHook(() => usePreflight(serializeRequestedSpec(draft())));
+    await act(async () => hook.result.current.runPreflight());
+    await waitFor(() => expect(hook.result.current.refusal).not.toBeNull());
+    const { preflightState, refusal } = hook.result.current;
+    hook.unmount();
+    expect(preflightState.reason).toBe(refusal!.copy);
+    expect(preflightState.reason).not.toContain(SENTINEL);
+    expect(preflightState.detail ?? "").not.toContain(SENTINEL);
+    expect(refusal!.message).toBe(SENTINEL);
   });
 });

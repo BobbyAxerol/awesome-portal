@@ -128,7 +128,9 @@ export function usePreflight(
     if (refusal) {
       return {
         state: refusal.state,
-        reason: refusal.message,
+        /* FG-08 (A2b): the client sentence for the typed code. The server's
+           message stays on `refusal` for diagnostics and is never a reason. */
+        reason: refusal.copy,
         mayRetry: refusal.mayRetry,
         /* An input-fault refusal keeps nothing on screen: the metadata it
            would retain describes a spec the server just rejected. */

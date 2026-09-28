@@ -39,16 +39,61 @@ export async function readDatasetCatalog(workspaceId?: string, signal?: AbortSig
   return (await response.json()) as DatasetCatalog;
 }
 
+/**
+ * FG-08 (FE-A1-01): the catalog note is client copy chosen by status class.
+ * The server's `error.message` stays on the error and is never rendered; only
+ * typed facts (problem code, request id) follow the sentence. A 403 and a 404
+ * that carries a `RESEARCH_` code are the same denial and read the same.
+ */
+export const CATALOG_FAILURE_COPY = {
+  denied: "The dataset catalog is not readable for this session. Type the dataset id; preflight checks it.",
+  unavailable: "The dataset catalog is unavailable right now. Type the dataset id; preflight checks it.",
+  terminal: "The dataset catalog request was refused.",
+} as const;
+
+/** `RESEARCH_X · request req_1` — the typed facts of a refusal, or null when it carried none. */
+export function catalogFailureFacts(error: PortalApiError, withCode = true): string | null {
+  const parts = [withCode ? error.code : null, error.requestId ? `request ${error.requestId}` : null].filter(
+    (part): part is string => Boolean(part),
+  );
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/**
+ * Splits a catalog note into the client sentence and its trailing facts, so
+ * the data step can print the facts in mono. A note that does not start with
+ * one of the fixed sentences is returned whole as the sentence.
+ */
+export function splitCatalogReason(reason: string): { sentence: string; facts: string | null } {
+  for (const sentence of Object.values(CATALOG_FAILURE_COPY)) {
+    if (reason.startsWith(`${sentence} `)) return { sentence, facts: reason.slice(sentence.length + 1) };
+  }
+  return { sentence: reason, facts: null };
+}
+
+function withFacts(sentence: string, error: PortalApiError, withCode = true): string {
+  const facts = catalogFailureFacts(error, withCode);
+  return facts ? `${sentence} ${facts}` : sentence;
+}
+
 /** The panel state of a failed catalog read; the form keeps working without it. */
 export function catalogFailureState(error: unknown): ResearchState {
   if (!(error instanceof PortalApiError)) {
     return { state: "failed-retryable", reason: "The dataset catalog request did not reach the server.", mayRetry: true, retainsContent: false };
   }
   if (error.status === 401) reportSessionExpired();
-  if (error.status === 401 || error.status === 403) {
-    return { state: "denied", reason: error.message, mayRetry: false, retainsContent: false };
+  const researchCoded = error.code?.startsWith("RESEARCH_") === true;
+  if (error.status === 401 || error.status === 403 || (error.status === 404 && researchCoded)) {
+    return {
+      state: "denied",
+      /* A denial prints the request id only: the code would tell a 403 from a 404. */
+      reason: withFacts(CATALOG_FAILURE_COPY.denied, error, false),
+      detail: catalogFailureFacts(error, false),
+      mayRetry: false,
+      retainsContent: false,
+    };
   }
-  if (error.status === 404 && !error.code?.startsWith("RESEARCH_")) {
+  if (error.status === 404) {
     // An older server without the CG-P08-04 read: say so, and keep the free field.
     return {
       state: "unavailable",
@@ -57,10 +102,12 @@ export function catalogFailureState(error: unknown): ResearchState {
       retainsContent: false,
     };
   }
+  const unavailable = error.status >= 500;
   return {
-    state: error.status >= 500 ? "unavailable" : "terminal",
-    reason: error.message,
-    mayRetry: error.status >= 500,
+    state: unavailable ? "unavailable" : "terminal",
+    reason: withFacts(unavailable ? CATALOG_FAILURE_COPY.unavailable : CATALOG_FAILURE_COPY.terminal, error),
+    detail: catalogFailureFacts(error),
+    mayRetry: unavailable,
     retainsContent: false,
   };
 }

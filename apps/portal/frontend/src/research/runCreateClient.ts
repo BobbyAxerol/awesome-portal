@@ -101,32 +101,85 @@ interface RunCreateRefusalPresentation {
   invalidatesPreflight: boolean;
   /** True when the reader's declaration is what the server rejected. */
   highlightsInput: boolean;
+  /**
+   * FG-08 (A2b): the fixed client sentence the "run" panel prints. The
+   * server's `error.message` is never rendered.
+   */
+  copy: string;
 }
 
-const NO: Omit<RunCreateRefusalPresentation, "state"> = {
+/** FG-08: the sentence for a refusal whose code this client does not know. */
+export const RUN_CREATE_REFUSAL_GENERIC_COPY = "The run was not created.";
+
+/**
+ * FG-08: a refusal that carried no code at all. `outcomeIsUnknown` treats it
+ * as an unknown outcome, so the sentence must not claim the run was not created.
+ */
+export const RUN_CREATE_UNCODED_COPY = "The server did not say whether the run was created.";
+
+/**
+ * FG-08: the request never reached the server. The run may or may not exist
+ * (same rule as `TRANSPORT_UNKNOWN`), so the sentence claims neither.
+ */
+export const RUN_CREATE_TRANSPORT_COPY =
+  "The request did not reach the server, so it is not known whether the run was created.";
+
+/**
+ * FG-08: 403 and 404 read the same (audit F-04). Neither confirms that the
+ * workspace, preflight or parent run exists; the typed code rides in the facts.
+ */
+export const RUN_CREATE_NOT_AVAILABLE_COPY =
+  "The run was not created. You don't have access to this in your current workspace, or it doesn't exist.";
+
+const NO: Omit<RunCreateRefusalPresentation, "state" | "copy"> = {
   mayRetry: false,
   invalidatesPreflight: false,
   highlightsInput: false,
 };
 
 const REFUSAL: Record<RunCreateProblemCode, RunCreateRefusalPresentation> = {
-  SESSION_REQUIRED: { ...NO, state: "denied", invalidatesPreflight: true },
-  REQUEST_REJECTED: { ...NO, state: "terminal" },
+  SESSION_REQUIRED: {
+    ...NO,
+    state: "denied",
+    invalidatesPreflight: true,
+    copy: "The session has ended. Sign in again, then run preflight and create the run.",
+  },
+  REQUEST_REJECTED: { ...NO, state: "terminal", copy: "The request was rejected before a run was created." },
 
   /* The declaration is at fault; every field stays on screen. */
-  RESEARCH_RUN_CREATE_INVALID: { ...NO, state: "terminal", highlightsInput: true },
+  RESEARCH_RUN_CREATE_INVALID: {
+    ...NO,
+    state: "terminal",
+    highlightsInput: true,
+    copy: "The run was not created: the server did not accept this declaration. Fix it and run preflight again.",
+  },
 
   /* Admission, re-evaluated atomically at submit. `may_create_run` being true
      a moment ago is display state, not a promise, so this is a normal outcome
      rather than a contradiction to explain away. */
-  RESEARCH_RUN_CREATE_FORBIDDEN: { ...NO, state: "denied" },
+  RESEARCH_RUN_CREATE_FORBIDDEN: { ...NO, state: "denied", copy: RUN_CREATE_NOT_AVAILABLE_COPY },
 
   /* The preview a run would be built from is gone or was never usable. */
-  RESEARCH_RUN_PREFLIGHT_NOT_READY: { ...NO, state: "terminal", invalidatesPreflight: true },
-  RESEARCH_RUN_PREFLIGHT_STALE: { ...NO, state: "terminal", invalidatesPreflight: true },
+  RESEARCH_RUN_PREFLIGHT_NOT_READY: {
+    ...NO,
+    state: "terminal",
+    invalidatesPreflight: true,
+    copy: "The run was not created: this preflight cannot back a run. Run preflight again.",
+  },
+  RESEARCH_RUN_PREFLIGHT_STALE: {
+    ...NO,
+    state: "terminal",
+    invalidatesPreflight: true,
+    copy: "The run was not created: that preflight no longer matches this declaration. Run preflight again.",
+  },
 
   /* The bound alpha version is no longer the one that may run. */
-  RESEARCH_RUN_ALPHA_NOT_ACTIVE: { ...NO, state: "terminal", highlightsInput: true },
+  RESEARCH_RUN_ALPHA_NOT_ACTIVE: {
+    ...NO,
+    state: "terminal",
+    highlightsInput: true,
+    copy: "The run was not created: the bound alpha version is no longer active. Choose an active version.",
+  },
 
   /*
    * The fixed P04 adapter cannot serve these parameters or this intent.
@@ -138,11 +191,22 @@ const REFUSAL: Record<RunCreateProblemCode, RunCreateRefusalPresentation> = {
     ...NO,
     state: "unavailable",
     highlightsInput: true,
+    copy: "The run was not created: no installed executor runs these parameters yet. The declaration is kept as written.",
   },
 
   /* Dependencies. Retryable where retrying could plausibly differ. */
-  RESEARCH_RUN_PRODUCER_UNAVAILABLE: { ...NO, state: "unavailable", mayRetry: true },
-  RESEARCH_RUN_UPSTREAM_REJECTED: { ...NO, state: "failed-retryable", mayRetry: true },
+  RESEARCH_RUN_PRODUCER_UNAVAILABLE: {
+    ...NO,
+    state: "unavailable",
+    mayRetry: true,
+    copy: "Run creation is unavailable right now. Try again.",
+  },
+  RESEARCH_RUN_UPSTREAM_REJECTED: {
+    ...NO,
+    state: "failed-retryable",
+    mayRetry: true,
+    copy: "The run service did not accept this request right now. Try again.",
+  },
 
   /*
    * The transport did not say whether the run was created.
@@ -152,15 +216,27 @@ const REFUSAL: Record<RunCreateProblemCode, RunCreateRefusalPresentation> = {
    * answer `replayed` instead of creating a second one — so the control is
    * offered as an explicit "check again", never as an automatic retry.
    */
-  RESEARCH_RUN_TRANSPORT_UNKNOWN: { ...NO, state: "unavailable" },
+  RESEARCH_RUN_TRANSPORT_UNKNOWN: {
+    ...NO,
+    state: "unavailable",
+    copy: "The server did not confirm whether the run was created. Check again with the same request.",
+  },
 
-  RESEARCH_RUN_NOT_FOUND: { ...NO, state: "terminal" },
-  RESEARCH_RUN_REPRODUCTION_CONFLICT: { ...NO, state: "terminal", highlightsInput: true },
+  RESEARCH_RUN_NOT_FOUND: { ...NO, state: "terminal", copy: RUN_CREATE_NOT_AVAILABLE_COPY },
+  RESEARCH_RUN_REPRODUCTION_CONFLICT: {
+    ...NO,
+    state: "terminal",
+    highlightsInput: true,
+    copy: "The run was not created: a reproduction must keep the parent's engine, alpha version, effective spec and data snapshot. Use a clone for changed inputs.",
+  },
 };
 
 export interface RunCreateRefusal extends RunCreateRefusalPresentation {
   code: RunCreateProblemCode | null;
-  /** The server's own sentence. Never rewritten locally. */
+  /**
+   * The server's own sentence, kept for tests and diagnostics only. FG-08:
+   * nothing renders it — the "run" panel prints `copy`.
+   */
   message: string;
   status: number;
   requestId: string | null;
@@ -172,6 +248,7 @@ export function toRunCreateRefusal(error: unknown): RunCreateRefusal {
       ...NO,
       code: null,
       message: "The request did not reach the server.",
+      copy: RUN_CREATE_TRANSPORT_COPY,
       status: 0,
       requestId: null,
       /* Indistinguishable from `TRANSPORT_UNKNOWN` from here: the run may or
@@ -183,8 +260,18 @@ export function toRunCreateRefusal(error: unknown): RunCreateRefusal {
   if (error.status === 401) reportSessionExpired();
   const known =
     error.code && error.code in REFUSAL ? REFUSAL[error.code as RunCreateProblemCode] : null;
+  /* FG-08: a coded 403 and 404 are one neutral denial whatever the code says
+     (F-04); the code itself is still carried as a typed fact. An uncoded one
+     keeps the uncoded sentence (403 and 404 alike), because `outcomeIsUnknown`
+     reads a missing code as an unknown outcome. */
+  const hidden = (error.status === 403 || error.status === 404) && Boolean(error.code);
   return {
-    ...(known ?? { ...NO, state: error.status >= 500 ? "unavailable" : "terminal" }),
+    ...(known ?? {
+      ...NO,
+      state: error.status >= 500 ? "unavailable" : "terminal",
+      copy: error.code ? RUN_CREATE_REFUSAL_GENERIC_COPY : RUN_CREATE_UNCODED_COPY,
+    }),
+    ...(hidden ? { state: "denied" as const, mayRetry: false, copy: RUN_CREATE_NOT_AVAILABLE_COPY } : {}),
     code: (error.code as RunCreateProblemCode | null) ?? null,
     message: error.message,
     status: error.status,
@@ -194,6 +281,17 @@ export function toRunCreateRefusal(error: unknown): RunCreateRefusal {
 
 /** Every code the contract declares, for exhaustiveness tests. */
 export const RUN_CREATE_PROBLEM_CODES = Object.keys(REFUSAL) as RunCreateProblemCode[];
+
+/**
+ * FG-08: `CODE · request <id>` — the typed facts of a refusal, or null when it
+ * carried none. Same form as the dataset catalog note (`catalogFailureFacts`).
+ */
+export function runCreateRefusalFacts(refusal: Pick<RunCreateRefusal, "code" | "requestId">): string | null {
+  const parts = [refusal.code, refusal.requestId ? `request ${refusal.requestId}` : null].filter(
+    (part): part is string => Boolean(part),
+  );
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
 
 /**
  * Whether a refusal leaves the run's existence unknown.

@@ -141,9 +141,20 @@ interface PreflightRefusalPresentation {
   highlightsInput: boolean;
   /** True when the caller must re-read something before trying again. */
   requiresRefresh: boolean;
+  /**
+   * FG-08 (FE-A1-03): the fixed client sentence the refusal alert and the
+   * preview panels print. The server's `error.message` is never rendered.
+   */
+  copy: string;
 }
 
-const NO: Omit<PreflightRefusalPresentation, "state"> = {
+/** FG-08: the sentence for a refusal whose code this client does not know. */
+export const PREFLIGHT_REFUSAL_GENERIC_COPY = "Preflight refused this request.";
+
+/** FG-08: the sentence for a request that never reached the server. */
+export const PREFLIGHT_TRANSPORT_COPY = "The request did not reach the server.";
+
+const NO: Omit<PreflightRefusalPresentation, "state" | "copy"> = {
   mayRetry: false,
   invalidatesToken: false,
   highlightsInput: false,
@@ -151,30 +162,31 @@ const NO: Omit<PreflightRefusalPresentation, "state"> = {
 };
 
 const REFUSAL: Record<PreflightProblemCode, PreflightRefusalPresentation> = {
-  SESSION_REQUIRED: { ...NO, state: "denied", invalidatesToken: true, requiresRefresh: true },
-  REQUEST_REJECTED: { ...NO, state: "terminal" },
+  SESSION_REQUIRED: { ...NO, state: "denied", invalidatesToken: true, requiresRefresh: true, copy: "The session has ended. Sign in again, then run preflight." },
+  REQUEST_REJECTED: { ...NO, state: "terminal", copy: "Preflight rejected the request before checking it." },
 
   /* The spec is at fault. Keep every edit and point at the field, because the
      alternative — clearing the form on a validation error — destroys exactly
      the work the reader now has to correct. */
-  RESEARCH_PREFLIGHT_INVALID: { ...NO, state: "terminal", highlightsInput: true },
-  RESEARCH_PREFLIGHT_TOPOLOGY_INVALID: { ...NO, state: "terminal", highlightsInput: true },
+  RESEARCH_PREFLIGHT_INVALID: { ...NO, state: "terminal", highlightsInput: true, copy: "Preflight cannot accept a field of this declaration. Fix it and run preflight again." },
+  RESEARCH_PREFLIGHT_TOPOLOGY_INVALID: { ...NO, state: "terminal", highlightsInput: true, copy: "Preflight cannot accept this window layout. Fix it and run preflight again." },
 
-  /* A declared dependency has nothing to give for this request. The reason is
-     the server's; there is no fallback read and no empty preview. */
-  RESEARCH_PREFLIGHT_DATA_UNAVAILABLE: { ...NO, state: "unavailable" },
-  RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE: { ...NO, state: "unavailable" },
-  RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE: { ...NO, state: "unavailable" },
-  RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE: { ...NO, state: "unavailable" },
+  /* A declared dependency has nothing to give for this request. There is no
+     fallback read and no empty preview; the server's own sentence stays off
+     screen (FG-08) and the code says which dependency it was. */
+  RESEARCH_PREFLIGHT_DATA_UNAVAILABLE: { ...NO, state: "unavailable", copy: "The historical source has no data for this request." },
+  RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE: { ...NO, state: "unavailable", copy: "The dataset does not carry every column this route needs." },
+  RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE: { ...NO, state: "unavailable", copy: "Funding data is not available for this request." },
+  RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE: { ...NO, state: "unavailable", copy: "There is not enough history before the start for the warm-up." },
 
   /* The engine refused this configuration. Retrying it unchanged cannot help. */
-  RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED: { ...NO, state: "terminal" },
-  RESEARCH_PREFLIGHT_ROUTE_UNKNOWN: { ...NO, state: "terminal" },
+  RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED: { ...NO, state: "terminal", copy: "Portal has not admitted this route for runs." },
+  RESEARCH_PREFLIGHT_ROUTE_UNKNOWN: { ...NO, state: "terminal", copy: "The installed engine release does not know this route." },
   /* W4 CG-P08-03: an invalid mode × schedule used to surface as a 502. */
-  RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED: { ...NO, state: "terminal", highlightsInput: true },
-  RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED: { ...NO, state: "terminal", highlightsInput: true },
-  RESEARCH_PREFLIGHT_RESOURCE_REFUSED: { ...NO, state: "terminal", highlightsInput: true },
-  RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE: { ...NO, state: "terminal", highlightsInput: true },
+  RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED: { ...NO, state: "terminal", highlightsInput: true, copy: "This mode and schedule are not admitted together. Change one and run preflight again." },
+  RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED: { ...NO, state: "terminal", highlightsInput: true, copy: "The installed engine release does not support this walk-forward plan." },
+  RESEARCH_PREFLIGHT_RESOURCE_REFUSED: { ...NO, state: "terminal", highlightsInput: true, copy: "This request exceeds a resource limit of the installed release." },
+  RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE: { ...NO, state: "terminal", highlightsInput: true, copy: "The data snapshot for this request is too large. Narrow the range or the symbols." },
 
   /* The installed release moved under the form; the manifest must be re-read
      before the same declaration means the same thing. */
@@ -183,22 +195,26 @@ const REFUSAL: Record<PreflightProblemCode, PreflightRefusalPresentation> = {
     state: "terminal",
     invalidatesToken: true,
     requiresRefresh: true,
+    copy: "The installed release changed. Reload the page, then run preflight again.",
   },
 
   /* Transient, and typed as such: the dependency answered, it said "not now". */
-  RESEARCH_PREFLIGHT_UNAVAILABLE: { ...NO, state: "failed-retryable", mayRetry: true },
-  RESEARCH_PREFLIGHT_REJECTED: { ...NO, state: "failed-retryable", mayRetry: true },
+  RESEARCH_PREFLIGHT_UNAVAILABLE: { ...NO, state: "failed-retryable", mayRetry: true, copy: "Preflight is unavailable right now. Try again." },
+  RESEARCH_PREFLIGHT_REJECTED: { ...NO, state: "failed-retryable", mayRetry: true, copy: "Preflight could not take this request right now. Try again." },
 
   /* The token is gone. It is never retried: a run must not be built on a
      preview the server no longer stands behind. */
-  RESEARCH_PREFLIGHT_NOT_FOUND: { ...NO, state: "terminal", invalidatesToken: true },
-  RESEARCH_PREFLIGHT_EXPIRED: { ...NO, state: "terminal", invalidatesToken: true },
-  RESEARCH_PREFLIGHT_STALE: { ...NO, state: "terminal", invalidatesToken: true },
+  RESEARCH_PREFLIGHT_NOT_FOUND: { ...NO, state: "terminal", invalidatesToken: true, copy: "That preflight is not on record. Run preflight again." },
+  RESEARCH_PREFLIGHT_EXPIRED: { ...NO, state: "terminal", invalidatesToken: true, copy: "That preflight expired. Run preflight again." },
+  RESEARCH_PREFLIGHT_STALE: { ...NO, state: "terminal", invalidatesToken: true, copy: "That preflight no longer matches this declaration. Run preflight again." },
 };
 
 export interface PreflightRefusal extends PreflightRefusalPresentation {
   code: PreflightProblemCode | null;
-  /** The server's own sentence. Never rewritten locally. */
+  /**
+   * The server's own sentence, kept for tests and diagnostics only. FG-08:
+   * nothing renders it — the alert and the panels print `copy`.
+   */
   message: string;
   status: number;
   requestId: string | null;
@@ -220,7 +236,8 @@ export function toPreflightRefusal(error: unknown): PreflightRefusal {
     return {
       ...NO,
       code: null,
-      message: "The request did not reach the server.",
+      message: PREFLIGHT_TRANSPORT_COPY,
+      copy: PREFLIGHT_TRANSPORT_COPY,
       status: 0,
       requestId: null,
       state: "failed-retryable",
@@ -235,6 +252,7 @@ export function toPreflightRefusal(error: unknown): PreflightRefusal {
     ...(known ?? {
       ...NO,
       state: error.status >= 500 ? "unavailable" : "terminal",
+      copy: PREFLIGHT_REFUSAL_GENERIC_COPY,
     }),
     code: (error.code as PreflightProblemCode | null) ?? null,
     message: error.message,

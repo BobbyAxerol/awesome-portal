@@ -30,6 +30,7 @@ import {
   newClientIntentId,
   outcomeIsUnknown,
   runCreateApi,
+  runCreateRefusalFacts,
   toRunCreateRefusal,
 } from "./runCreateClient";
 import { type DraftConstraints, type RunDraft, blockingProblems, serializeRequestedSpec } from "./runDraft";
@@ -174,7 +175,10 @@ export function useNewRun(
     : createRefusal
       ? {
           state: createRefusal.state,
-          reason: createRefusal.message,
+          /* FG-08 (A2b): client copy keyed by the typed code; the server's
+             message is never rendered. Only typed facts go to `detail`. */
+          reason: createRefusal.copy,
+          detail: runCreateRefusalFacts(createRefusal),
           mayRetry: createRefusal.mayRetry,
           /* Nothing of the attempt is retained: the declaration is still on
              screen in the form, which is where the reader will fix it. */

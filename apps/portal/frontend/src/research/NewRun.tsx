@@ -32,7 +32,7 @@ import {
 } from "./alphaVersionPublication";
 import { scheduleChoices } from "./atlas";
 import type { AtlasDocument } from "./atlas";
-import { type CatalogDataset, type DatasetCatalog, coverageLabel } from "./datasetClient";
+import { type CatalogDataset, type DatasetCatalog, coverageLabel, splitCatalogReason } from "./datasetClient";
 import { OOS_STATE_LABEL, statusTone } from "./EngineAtlas";
 import type { PreflightRefusal } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
@@ -677,6 +677,8 @@ function DataStep({
   catalogReason?: string | null;
 }) {
   const dataset: CatalogDataset | null = catalog?.datasets.find((item) => item.dataset_id === draft.datasetId) ?? null;
+  /* FG-08 (FE-A1-01): client sentence, then the typed facts in mono. */
+  const catalogNote = catalogReason ? splitCatalogReason(catalogReason) : null;
   const symbols = dataset?.symbols.state === "PUBLISHED" ? dataset.symbols.items : [];
   const selectedSymbol = symbols.find((item) => item.symbol === draft.symbol.trim().toUpperCase()) ?? null;
   const publishedTimeframes = limits.declaredTimeframes ?? [];
@@ -719,9 +721,15 @@ function DataStep({
           {dataset && dataset.availability !== "available" ? (
             <span className="text-[10px]" style={{ color: "var(--bad)" }}>{dataset.unavailable_reason ?? "This dataset is unavailable."}</span>
           ) : null}
-          {!catalog && catalogReason ? (
+          {!catalog && catalogNote ? (
             <span className="text-[10px]" style={{ color: "var(--ink-faint)" }} data-catalog-unread>
-              Dataset catalog not read: {catalogReason}
+              Dataset catalog not read: {catalogNote.sentence}
+              {catalogNote.facts ? (
+                <>
+                  {" "}
+                  <span className="mono text-[9.5px]" data-catalog-facts>{catalogNote.facts}</span>
+                </>
+              ) : null}
             </span>
           ) : null}
         </Field>
@@ -1745,6 +1753,11 @@ export function NewRun(props: NewRunProps) {
   const sweepCeiling = limits.sweepCeiling === undefined ? SWEEP_CEILING : limits.sweepCeiling;
   const v2 = usesSpecV2(draft);
   const refusalStep = preflightRefusal?.fieldPath ? stepForFieldPath(preflightRefusal.fieldPath) : null;
+  /* FG-08 (FE-A1-03): a refused preflight's panels state the client sentence,
+     not the server's message that the hook carries as the panel reason. */
+  const previewState: ResearchState = preflightRefusal
+    ? { ...preflightState, reason: preflightRefusal.copy, detail: null }
+    : preflightState;
 
   const [step, setStep] = useState<StepId>(initialStep);
   const [visited, setVisited] = useState<ReadonlySet<StepId>>(() => new Set(initialStep === "context" ? [] : [initialStep]));
@@ -2003,16 +2016,27 @@ export function NewRun(props: NewRunProps) {
                 ) : null}
               </div>
 
-              {preflightRefusal && refusalStep ? (
+              {/* FG-08 (FE-A1-03/-04): every refusal shows here, with or
+                  without a field path. The sentence is client copy keyed by
+                  the typed code; the server's own message is never printed. */}
+              {preflightRefusal ? (
                 <div
                   role="alert"
                   className="flex flex-wrap items-baseline gap-2 rounded-[6px] border px-2.5 py-1.5 text-[11px]"
                   style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)", color: "var(--bad)" }}
                   data-refusal-field={preflightRefusal.fieldPath?.join(".") ?? ""}
                 >
-                  <span className="mono text-[9.5px] font-bold">{preflightRefusal.gate ?? preflightRefusal.code}</span>
-                  <span className="flex-1">{preflightRefusal.message}</span>
-                  {refusalStep !== "review" ? (
+                  {preflightRefusal.gate ?? preflightRefusal.code ? (
+                    <span className="mono text-[9.5px] font-bold">{preflightRefusal.gate ?? preflightRefusal.code}</span>
+                  ) : null}
+                  <span className="flex-1" data-refusal-copy>{preflightRefusal.copy}</span>
+                  {preflightRefusal.fieldPath && preflightRefusal.fieldPath.length > 0 ? (
+                    <span className="mono text-[9.5px]" data-refusal-path>{preflightRefusal.fieldPath.join(".")}</span>
+                  ) : null}
+                  {preflightRefusal.requestId ? (
+                    <span className="mono text-[9.5px]" data-request-id>request {preflightRefusal.requestId}</span>
+                  ) : null}
+                  {refusalStep && refusalStep !== "review" ? (
                     <button
                       type="button"
                       className="btn-ghost mono text-[10px]"
@@ -2034,20 +2058,22 @@ export function NewRun(props: NewRunProps) {
                   P08-T10 still finds every named panel — but they are folded,
                   so the primary action is not buried under them. */}
               {preflight === null ? (
-                <details data-preflight-preview>
+                <details data-preflight-preview open={preflightRefusal ? true : undefined}>
                   <summary
                     className="mono cursor-pointer text-[10.5px]"
                     style={{ color: "var(--ink-soft)" }}
                     data-preflight-preview-summary
                   >
-                    what preflight will check — 6 panels, none read yet
+                    {preflightRefusal
+                      ? "what preflight checks — 6 panels, preflight refused this request"
+                      : "what preflight will check — 6 panels, none read yet"}
                   </summary>
                   <div className="flex flex-col gap-2.5 pt-2">
-                    <PreflightPanel preflight={preflight} state={preflightState} />
+                    <PreflightPanel preflight={preflight} state={previewState} />
                   </div>
                 </details>
               ) : (
-                <PreflightPanel preflight={preflight} state={preflightState} />
+                <PreflightPanel preflight={preflight} state={previewState} />
               )}
 
               <div className="flex flex-wrap items-center gap-2">
