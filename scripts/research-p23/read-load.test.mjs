@@ -88,7 +88,7 @@ test('private session manifest must be a regular 0600 file', () => {
   }
 });
 
-test('read load records only status and latency, refusing auth failures', async () => {
+test('read load records status/latency and bounded typed errors, refusing auth failures', async () => {
   const calls = [];
   const result = await runReadLoad(input, async (url, init) => {
     calls.push({ url: String(url), method: init.method });
@@ -116,4 +116,20 @@ test('read load records only status and latency, refusing auth failures', async 
       : 'x'.repeat(2 * 1024 * 1024 + 1),
     { headers: { 'content-type': 'application/json' } },
   )), /NAMED_READ_EXCEEDED_2MIB/);
+});
+
+test('a failed GET records only a bounded typed error code, never server copy or rows', async () => {
+  const receipt = await runReadLoad(input, async (url, init) => new Response(
+    String(url).endsWith('/api/auth/context')
+      ? JSON.stringify({ state: 'AUTHENTICATED', principal: {
+        principalId: `user_${init.headers.cookie.split('-').at(-1)}` } })
+      : JSON.stringify({ error: { code: 'RESEARCH_RUN_LIBRARY_UNAVAILABLE',
+        message: 'do not persist this server copy or a secret' }, rows: ['private row'] }),
+    { status: String(url).endsWith('/api/auth/context') ? 200 : 503,
+      headers: { 'content-type': 'application/json' } },
+  ));
+  assert.deepEqual(receipt.by_path[input.paths[0]].error_codes,
+    { RESEARCH_RUN_LIBRARY_UNAVAILABLE: 20 });
+  assert.equal(JSON.stringify(receipt).includes('do not persist'), false);
+  assert.equal(JSON.stringify(receipt).includes('private row'), false);
 });

@@ -3692,6 +3692,14 @@ private byte-hashed; a separate aggregate-only DB sampler found no sampled
 lock wait but is diagnostic, not an acceptance result or root-cause proof.
 The exact <=P21 owner handoff and source locators are appended to the T08
 checkpoint; no admission limit, snapshot/RLS semantics or SLO was changed.
+**T09 dynamic checkpoint (2026-09-28):** one actual HEAVY and four queued
+Research intents overlapped owner/member/anonymous Execution GET authority
+sentinels and same-host Portal health/identity. Those signatures stayed
+unchanged; this is a scoped isolation PASS, not AWS-HK/business-read coverage.
+The same W06 showed Library 3×503/p95 1263 ms and Progress/Evidence >500 ms,
+so W06/P23 remain FAIL/OPEN. A typed-error retake hit the real eight-live-
+preflight actor quota; expiry was not bypassed. [Exact private hashes, failed
+probe and cleanup](./research_loop/evidence/P23/T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md).
 
 #### B. Frontend / test còn mở (không phải backend)
 

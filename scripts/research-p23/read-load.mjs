@@ -69,14 +69,27 @@ async function consumeBounded(response) {
     throw new Error('NAMED_READ_JSON_RESPONSE_REQUIRED');
   }
   let bytes = 0;
+  const errorChunks = [];
+  let errorTooLarge = false;
   for await (const chunk of response.body) {
     bytes += chunk.byteLength;
     if (bytes > MAX_RESPONSE_BYTES) {
       await response.body.cancel().catch(() => undefined);
       throw new Error('NAMED_READ_EXCEEDED_2MIB');
     }
+    if (response.status !== 200 && !errorTooLarge) {
+      if (bytes <= 16 * 1024) errorChunks.push(Buffer.from(chunk));
+      else { errorChunks.length = 0; errorTooLarge = true; }
+    }
   }
-  return bytes;
+  let errorCode = null;
+  if (errorChunks.length > 0) {
+    try {
+      const value = JSON.parse(Buffer.concat(errorChunks, bytes).toString('utf8'))?.error?.code;
+      if (typeof value === 'string' && /^[A-Z][A-Z0-9_]{0,95}$/.test(value)) errorCode = value;
+    } catch { /* Preserve the status; never retain malformed server text. */ }
+  }
+  return { bytes, errorCode };
 }
 
 export async function runReadLoad(input, fetchFn = fetch) {
@@ -104,8 +117,9 @@ export async function runReadLoad(input, fetchFn = fetch) {
         signal: AbortSignal.timeout(10_000),
       });
       // Measure the complete bounded JSON response, but never retain or print business rows.
-      const bytes = await consumeBounded(response);
-      samples.push({ path, status: response.status, bytes, duration_ms: Math.round(performance.now() - start) });
+      const { bytes, errorCode } = await consumeBounded(response);
+      samples.push({ path, status: response.status, bytes, error_code: errorCode,
+        duration_ms: Math.round(performance.now() - start) });
     }
   }));
   const byPath = Object.fromEntries(manifest.paths.map(path => {
@@ -113,6 +127,8 @@ export async function runReadLoad(input, fetchFn = fetch) {
     const durations = data.map(sample => sample.duration_ms).sort((a, b) => a - b);
     return [path, { requests: data.length, p50_ms: percentile(durations, .5), p95_ms: percentile(durations, .95),
       max_response_bytes: Math.max(...data.map(sample => sample.bytes)),
+      error_codes: Object.fromEntries([...new Set(data.map(sample => sample.error_code).filter(Boolean))].map(code =>
+        [code, data.filter(sample => sample.error_code === code).length])),
       statuses: Object.fromEntries([...new Set(data.map(sample => sample.status))].map(status =>
         [status, data.filter(sample => sample.status === status).length])) }];
   }));

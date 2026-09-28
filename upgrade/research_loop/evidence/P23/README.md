@@ -1,5 +1,14 @@
 # P23 backend qualification packet
 
+**Latest T09 dynamic-isolation checkpoint, 2026-09-28:**
+[Real HEAVY+four-queued overlap and unchanged Execution sentinels](./T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md).
+Owner/member capability+manifest signatures, anonymous 401, and both
+same-host outside-P23 Portal health/container identities stayed identical
+before/during/after. This is a scoped T09 pass, not an AWS-HK or full P23
+claim. W06 failed concurrently: Library 3×503/p95 1263 ms and
+Progress/Evidence over 500 ms. The typed-code retake then hit the genuine
+eight-live-preflight actor quota; no expiry or quota was changed.
+
 **Latest T08 cold-cache checkpoint, 2026-09-28:** [Exact isolated first-read
 and warm Library regression](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md).
 Two P23-only volumes were evicted without host-wide cache drop or any shared
