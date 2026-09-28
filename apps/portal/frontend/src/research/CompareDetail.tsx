@@ -274,8 +274,15 @@ const COMPARE_CSS = `
 .cp-ladderhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-family: var(--font-body); font-size: 10px; text-transform: uppercase;
   letter-spacing: .07em; font-weight: 500; color: var(--ink-faint); margin: 0 0 6px; }
 .cp-ladderhead .cp-faint { text-transform: none; letter-spacing: 0; }
-.cp-ladder { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; min-width: 0; }
-.cp-lcard { flex: 1 1 200px; min-width: min(200px, 100%); display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: 8px;
+/* FG-04a: the hi-fi puts "claim ↑ →" in the 10px + arrow + 10px space between two cards and never after the last one
+   (13 Compare.dc.html :76-93, :329). Each step (card + its leading connector) is one wrapping unit, the connector is drawn
+   in the column gap to the left of its own card, and the ladder clips its own horizontal overflow: a connector can then
+   stand only between two cards on one line. It never ends a line, and one whose card opens a wrapped line falls outside
+   the ladder's left edge and is not drawn. Pure CSS, no measuring; the cards keep the hi-fi's equal widths. */
+.cp-ladder { --cp-link: 80px; display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px var(--cp-link); min-width: 0;
+  overflow-x: clip; overflow-clip-margin: 2px; }
+.cp-lstep { flex: 1 1 200px; min-width: min(200px, 100%); display: flex; position: relative; }
+.cp-lcard { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: 8px;
   background: var(--paper-raised); padding: 11px 14px; box-shadow: var(--shadow-e1); }
 .cp-lcard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
 /* CG-P20-08: the ACTIVE version's card carries the hi-fi's accent border; the pill names the lifecycle
@@ -304,7 +311,8 @@ const COMPARE_CSS = `
 .cp-difftable td[data-differs="true"] { color: var(--accent-2); font-weight: 600; }
 .cp-difftable td[data-active="true"] { background: var(--paper-sunken); }
 .cp-att { font-family: var(--font-mono); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
-.cp-arrow { align-self: center; font-family: var(--font-mono); font-size: 11px; color: var(--warn); flex: none; }
+.cp-arrow { position: absolute; top: 0; bottom: 0; right: 100%; width: var(--cp-link); display: flex; align-items: center; justify-content: center;
+  white-space: nowrap; font-family: var(--font-mono); font-size: 11px; color: var(--warn); }
 .cp-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
 .cp-bignum { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
 .cp-note { font-size: 10px; color: var(--ink-soft); line-height: 1.45; overflow-wrap: anywhere; min-width: 0; }
@@ -455,10 +463,11 @@ const COMPARE_CSS = `
   /* Stacked: each card takes the column width and a wide table (≈30 attempts)
      scrolls inside its own .cp-scroll body instead of widening the page. */
   .cp-diffcard, .cp-trajcard, .cp-deltacard, .cp-corr { flex: 1 1 auto; width: 100%; }
-  .cp-ladder { flex-direction: column; }
+  .cp-ladder { flex-direction: column; gap: var(--cp-link) 0; }
   /* 13-11: stacked cards take their content's height, not the grid row's. */
-  .cp-lcard { flex: 0 0 auto; }
-  .cp-arrow { align-self: flex-start; transform: rotate(90deg); }
+  .cp-lstep { flex: 0 0 auto; }
+  /* Stacked, the connector stands in the gap above its own card, turned a quarter as before (sideways, so both arrows turn). */
+  .cp-arrow { top: auto; right: auto; bottom: 100%; left: 14px; width: auto; height: var(--cp-link); writing-mode: vertical-rl; text-orientation: sideways; }
 }
 `;
 
@@ -878,11 +887,25 @@ function Meta({ alphaId, compare, state }: { alphaId: string | null; compare: Co
   );
 }
 
-function Notice({ controller, idleLink }: { controller: CompareController; idleLink?: ReactNode }) {
+function Notice({
+  controller,
+  idleLink,
+  idleReason,
+}: {
+  controller: CompareController;
+  idleLink?: ReactNode;
+  /** Why nothing was read (no Alpha in the URL). Pair mode prints it in its guard card instead. */
+  idleReason?: string | null;
+}) {
   const { state } = controller;
   return (
     <div className="flex flex-col gap-1.5" data-panel="notice" data-compare-notice={state.state}>
       <ResearchPanel title="compare" state={state} minBodyHeight={controller.compare ? 0 : 96} />
+      {idleReason ? (
+        <span className="cp-note" data-idle-reason>
+          {idleReason}
+        </span>
+      ) : null}
       {idleLink ? <span data-idle-link>{idleLink}</span> : null}
       {controller.refusal?.requestId ? (
         <span className="cp-reason" data-request-id>
@@ -975,7 +998,7 @@ function Ladder({ result }: { result: AttemptResult }) {
         <div className="cp-ladder" data-ladder-order="server-reversed">
           {/* Reversed for the hi-fi's reading direction (VD-P20-14); the server's order is the inverse. */}
           {claimed.map((run, index) => (
-            <LadderStep key={run.run_id} run={run} last={index === claimed.length - 1} />
+            <LadderStep key={run.run_id} run={run} first={index === 0} />
           ))}
         </div>
       )}
@@ -1035,17 +1058,23 @@ function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
   );
 }
 
-/** A card and, before the next one, the hi-fi's arrow "claim ↑ →" (the ladder is laid out weak→strong, VD-P20-14). */
-function LadderStep({ run, last }: { run: CompareRun; last: boolean }) {
+/**
+ * One ladder step: the hi-fi's arrow "claim ↑ →" from the previous card, then
+ * the card (the ladder is laid out weak→strong, VD-P20-14). The first card has
+ * no arrow, so none ever follows the last one. The arrow leads its own card
+ * inside one wrapping box (FG-04a): a line that wraps never ends on an arrow
+ * pointing at nothing. DOM and reading order stay card, arrow, card, …
+ */
+function LadderStep({ run, first }: { run: CompareRun; first: boolean }) {
   return (
-    <>
-      <LadderCard run={run} />
-      {last ? null : (
+    <div className="cp-lstep" data-ladder-step={run.run_id}>
+      {first ? null : (
         <span className="cp-arrow" aria-label="claim strengthens along the ladder" data-ladder-arrow>
           claim ↑ →
         </span>
       )}
-    </>
+      <LadderCard run={run} />
+    </div>
   );
 }
 
@@ -2136,7 +2165,9 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
       <style>{COMPARE_CSS}</style>
       <Header alphaId={alphaId} compare={compare} active={mode} onMode={onMode} />
       <Meta alphaId={alphaId} compare={compare} state={state.state} />
-      {state.state !== "available" ? <Notice controller={controller} idleLink={idleLink} /> : null}
+      {state.state !== "available" ? (
+        <Notice controller={controller} idleLink={idleLink} idleReason={mode === "pair" ? null : idleReason} />
+      ) : null}
       {result ? (
         result.mode === "attempts" ? (
           <AttemptsBody result={result} alphaId={alphaId} />

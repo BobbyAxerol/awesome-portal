@@ -683,6 +683,28 @@ describe("S13 Compare — URL and switching", () => {
   });
 });
 
+describe("S13 Compare — the resolver says why it read nothing, in every mode", () => {
+  /* FG-01 row 13-15. */
+  for (const mode of ["attempts", "markets"] as const) {
+    it(`without an Alpha the ${mode} view names the missing Alpha once and reads nothing`, () => {
+      const spy = vi.spyOn(globalThis, "fetch");
+      renderAt(`/research/quantbt/compare?mode=${mode}`);
+      expect(spy).not.toHaveBeenCalled();
+      const reasons = document.querySelectorAll("[data-idle-reason]");
+      expect(reasons.length).toBe(1);
+      expect(reasons[0]?.textContent).toBe(RESOLVER_NEEDS_ALPHA);
+      expect(document.querySelector('[data-action="runs"]')?.getAttribute("href")).toBe("/research/quantbt/runs");
+    });
+  }
+
+  it("without an Alpha the pair view still names the missing Alpha exactly once", () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    renderAt("/research/quantbt/compare?runs=run_a,run_b");
+    expect(spy).not.toHaveBeenCalled();
+    expect(document.querySelectorAll("[data-idle-reason]").length).toBe(1);
+  });
+});
+
 describe("S13 Compare — audit fixes", () => {
   it("S13-U24 a zero Δ carries no sign colour; the Δ header names the server's direction", async () => {
     const data = pairData();
@@ -1102,5 +1124,116 @@ describe("E7 / D10 — a server before the market grouping", () => {
     expect(document.querySelectorAll("[data-market-run]")).toHaveLength(2);
     expect(document.querySelector('[data-market-run="run_btc"] [data-market-key]')?.textContent).toBe("BTCUSDT · 4h");
     expect(document.querySelector("[data-market-selection-words]")).toBeNull();
+  });
+});
+
+/*
+ * FG-04a (board F12, Unified :3816): on the hi-fi (`QuantBT 13 Compare.dc.html`
+ * :76–93, :329) "claim ↑ →" stands only between two cards. The arrow leads its
+ * own card inside one wrapping step, so a wrapped row can never end on an arrow
+ * that points at nothing. The layout itself is CSS (checked in the browser);
+ * these tests hold the structure it relies on and the server's order.
+ */
+describe("S13 Compare — ladder arrows between cards, never after one", () => {
+  const CLAIMS: ReadonlyArray<Pick<CompareRun["claim"], "family" | "rank">> = [
+    { family: "WALK_FORWARD_OOS_COMPATIBILITY", rank: 3 },
+    { family: "STRICT_OUTER_OOS", rank: 1 },
+    { family: "NONE_FULL_SAMPLE_CALIBRATION", rank: 4 },
+    { family: "SELECTION_ADJUSTED_OOS", rank: 2 },
+  ];
+
+  /** `count` claimed attempts in the server's order, claim families deliberately unsorted. */
+  function claimedRuns(count: number): CompareRun[] {
+    return Array.from({ length: count }, (_, index) => {
+      const claim = CLAIMS[index % CLAIMS.length]!;
+      return run(`run_${String(index + 1).padStart(2, "0")}`, {
+        claim: { ...run("x").claim, family: claim.family, rank: claim.rank },
+      });
+    });
+  }
+
+  async function renderLadder(runs: CompareRun[]) {
+    server([{ status: 200, body: attempts(runs) }]);
+    renderAt(base);
+    await settled();
+    const ladder = document.querySelector("[data-ladder-order]") as HTMLElement;
+    expect(ladder).not.toBeNull();
+    return { ladder, steps: Array.from(ladder.children) as HTMLElement[], arrows: Array.from(ladder.querySelectorAll<HTMLElement>("[data-ladder-arrow]")) };
+  }
+
+  /** Every arrow opens a step that is not the first, and no card is ever followed by an arrow. */
+  function expectArrowsLeadTheirCards(ladder: HTMLElement, steps: HTMLElement[], arrows: HTMLElement[]) {
+    for (const step of steps) {
+      expect(step.hasAttribute("data-ladder-step")).toBe(true);
+      expect(step.lastElementChild?.hasAttribute("data-ladder-run")).toBe(true);
+    }
+    for (const arrow of arrows) {
+      const step = arrow.parentElement as HTMLElement;
+      expect(step.parentElement).toBe(ladder);
+      expect(step.firstElementChild).toBe(arrow);
+      expect(steps.indexOf(step)).toBeGreaterThan(0);
+    }
+    expect(steps[0]?.querySelector("[data-ladder-arrow]")).toBeNull();
+    expect(ladder.lastElementChild?.hasAttribute("data-ladder-arrow")).toBe(false);
+    expect(ladder.lastElementChild?.lastElementChild?.hasAttribute("data-ladder-arrow")).toBe(false);
+  }
+
+  it("a single claimed attempt stands alone on the ladder, with no claim arrow", async () => {
+    const { ladder, steps, arrows } = await renderLadder(claimedRuns(1));
+    expect(steps).toHaveLength(1);
+    expect(arrows).toHaveLength(0);
+    expectArrowsLeadTheirCards(ladder, steps, arrows);
+  });
+
+  it("two claimed attempts are joined by one claim arrow that leads the second card, outside either card's text", async () => {
+    const { ladder, steps, arrows } = await renderLadder(claimedRuns(2));
+    expect(steps).toHaveLength(2);
+    expect(arrows).toHaveLength(1);
+    expectArrowsLeadTheirCards(ladder, steps, arrows);
+    const arrow = arrows[0]!;
+    expect(arrow.textContent?.trim()).toBe("claim ↑ →");
+    /* Accessibility unchanged: the same label as before, not hidden, and never part of a card's content. */
+    expect(arrow.getAttribute("aria-label")).toBe("claim strengthens along the ladder");
+    expect(arrow.hasAttribute("aria-hidden")).toBe(false);
+    expect(arrow.closest("[data-ladder-run]")).toBeNull();
+    for (const card of Array.from(ladder.querySelectorAll("[data-ladder-run]"))) expect(card.textContent).not.toContain("claim ↑ →");
+    /* Reading order is still card, arrow, card. */
+    const sequence = Array.from(ladder.querySelectorAll("[data-ladder-run], [data-ladder-arrow]")).map((el) =>
+      el.hasAttribute("data-ladder-arrow") ? "arrow" : el.getAttribute("data-ladder-run"),
+    );
+    expect(sequence).toEqual(["run_02", "arrow", "run_01"]);
+  });
+
+  it("four claimed attempts read as the hi-fi row: three arrows between the cards and none after the last", async () => {
+    const { ladder, steps, arrows } = await renderLadder(claimedRuns(4));
+    expect(steps).toHaveLength(4);
+    expect(arrows).toHaveLength(3);
+    expectArrowsLeadTheirCards(ladder, steps, arrows);
+    expect(steps.map((step) => step.querySelector("[data-ladder-arrow]") !== null)).toEqual([false, true, true, true]);
+    expect(steps.at(-1)?.lastElementChild?.getAttribute("data-ladder-run")).toBe("run_01");
+  });
+
+  it("twelve claimed attempts get eleven arrows and no arrow is the ladder's last child, whichever row the cards wrap into", async () => {
+    const { ladder, steps, arrows } = await renderLadder(claimedRuns(12));
+    expect(steps).toHaveLength(12);
+    expect(arrows).toHaveLength(11);
+    expectArrowsLeadTheirCards(ladder, steps, arrows);
+    /* No arrow is a flex item of its own, so none can be left alone at the end of a wrapped row. */
+    expect(Array.from(ladder.children).some((child) => child.hasAttribute("data-ladder-arrow"))).toBe(false);
+    expect(ladder.lastElementChild?.hasAttribute("data-ladder-step")).toBe(true);
+  });
+
+  it("the ladder keeps the server's attempt order, laid out reversed as VD-P20-14 decides, and never regroups by claim", async () => {
+    const runs = claimedRuns(12);
+    const { steps } = await renderLadder(runs);
+    const serverReversed = [...runs].reverse();
+    const shownRuns = steps.map((step) => step.querySelector("[data-ladder-run]")?.getAttribute("data-ladder-run"));
+    expect(shownRuns).toEqual(serverReversed.map((item) => item.run_id));
+    expect(steps.map((step) => step.getAttribute("data-ladder-step"))).toEqual(shownRuns);
+    const shownClaims = steps.map((step) => step.querySelector("[data-claim]")?.getAttribute("data-claim"));
+    expect(shownClaims).toEqual(serverReversed.map((item) => item.claim.family));
+    /* The fixture's families are unsorted, so a ladder that sorted or grouped by claim would fail above. */
+    const byRank = [...serverReversed].sort((a, b) => (a.claim.rank ?? 0) - (b.claim.rank ?? 0)).map((item) => item.claim.family);
+    expect(shownClaims).not.toEqual(byRank);
   });
 });
