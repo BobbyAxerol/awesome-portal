@@ -1,5 +1,14 @@
 # P23 backend qualification packet
 
+**Latest T03 disk-pressure checkpoint, 2026-09-28:** [Real 64-MiB ext4
+ENOSPC receipt and source handoff](./T03_DISK_PRESSURE_CHECKPOINT_2026-09-28.md)
+proves typed refusal on Parquet append, unchanged sealed reads, clean abort
+and recovery. A >one-block manifest at zero free space instead produces
+raw OSError errno 28; this is **CG-P23-T03-01** for shared <=P21 source.
+T03 is PARTIAL, not product-qualified. The test used only a no-network,
+non-root one-off container and its own loop mount; no existing P23 volume
+or service was changed.
+
 **Latest T12 negative admission checkpoint, 2026-09-28:** [Finite real quota
 receipt and precise source-owner handoffs](./T12_ADMISSION_QUOTA_CHECKPOINT_2026-09-28.md)
 prove eight accepted preflights/actor, a ninth typed 503, another workspace
