@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest T08 cold-cache checkpoint, 2026-09-28:** [Exact isolated first-read
+and warm Library regression](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md).
+Two P23-only volumes were evicted without host-wide cache drop or any shared
+container restart; 20 real principals × six cold GETs all met cold SLO, with
+423,473,152-byte capped peak. Warm Library p95 failed twice (709/815 ms versus
+500-ms target), and no simultaneous HEAVY+queued cold W06 was measured.
+Therefore T08 is PARTIAL and full P23 remains NOT_QUALIFIED.
+
 **Latest T03 disk-pressure checkpoint, 2026-09-28:** [Real 64-MiB ext4
 ENOSPC receipt and source handoff](./T03_DISK_PRESSURE_CHECKPOINT_2026-09-28.md)
 proves typed refusal on Parquet append, unchanged sealed reads, clean abort

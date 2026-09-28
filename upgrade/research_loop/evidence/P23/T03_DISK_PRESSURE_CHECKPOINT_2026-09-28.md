@@ -15,7 +15,8 @@ source market data, existing P23 volumes, DB row or runtime flag was changed.
 - Created one **new 64-MiB ext4 loop image** under private
   /home/bobby/.local/state/portal-research-p23/20260928/t03-disk/.
   findmnt identified /dev/loop4, ext4, rw,nosuid,nodev,noexec;
-  available filesystem bytes read by the non-root container: **58,675,200**.
+  total filesystem capacity read by the non-root container: **58,675,200**
+  bytes (not its initial free-space measurement).
   Host root had **260 GB available** before the drill; no host/shared volume
   was filled. The image contains only synthetic P23 trial rows.
 - Each mounted one-off container used UID/GID 10001, no network, read-only root,

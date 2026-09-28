@@ -8,6 +8,7 @@ OL-02 observer proofs are closed; P22 backend real publication is closed.
 
 | Test | Current status, scoped honestly |
 |---|---|
+| T08 | PARTIAL: exact P23 DB+artifact volume cache evicted to zero without host `drop_caches` or shared container restart. Retake 20 real principals × six cold GETs returns all 200 and cold SLO PASS (Library p95 984 ms); eight-sample seven-service cap peak 423473152 bytes, one sample overlaps the reads. Two separate warm Library p95 results 709/815 ms FAIL the 500-ms target; HEAVY+four queued W06 was not simultaneous. No full T08/P23 claim. [Actual private byte hashes and next action](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md). |
 | T03 | PARTIAL / NOT_QUALIFIED: real no-network UID 10001 writer on new 64-MiB ext4 loop image. At 4-MiB free high-water seal succeeds; at 0 free append returns typed RESEARCH_ARTIFACT_DISK_FULL and prior seal/read/recovery remain exact. Corrected >one-block manifest seal at 0 free returns raw OSError errno 28, so CG-P23-T03-01 is OPEN for shared <=P21 source. Full isolated P06 durable-run/API retake remains. [Actual evidence, first false-pressure attempt and exact locator](./T03_DISK_PRESSURE_CHECKPOINT_2026-09-28.md). |
 | T02 | NOT_QUALIFIED: two actual complete/fail/cancel rounds (six terminals); supervisor scratch +42 files/+1006525 bytes. Third round refused by eight-live-preflight actor budget. Earlier API PID1 measures Docker init and cannot qualify Node plateau; corrected probe/pacing needs a new receipt after owner scratch repair. [Exact failure and CG-P23-T02-01](./PLATEAU_CHECKPOINT_2026-09-27.md). |
 | T01 | Scoped real mixed-load PASS on clean application `b2e8b868`: twenty readers, one HEAVY/four queued, actual completion, 120 GET 200, Library p95 490 ms, 618209280-byte peak, zero implicit jobs. Final qualification aggregation/image-index binding remains separate. Prior 789 ms FAIL retained. |
@@ -70,7 +71,7 @@ this is a test-setup error, not a schema or runtime failure.
 | T05 | PARTIAL: focused controller/auth/CSRF/actor and bounded-read regressions pass; full cross-tenant file/cache/export matrix not yet run. |
 | T06 | NOT_RUN: artifact-corruption and DB+artifact restore hash/readback. |
 | T07 | PARTIAL: current WFO profile tests pass; new engine build, defaults and in-flight pinning not exercised. |
-| T08 | NOT_RUN: isolated cold cache; no host-wide cache drop permitted. |
+| T08 | HISTORICAL_NOT_RUN at this earlier checkpoint; superseded by the current PARTIAL row above. No host-wide cache drop was used. |
 | T09 | PARTIAL: P23 has no Execution code/config mutation; no concurrent Execution behavior comparison under W06. |
 | T10 | PARTIAL: focused suites above, not full required regression matrix. |
 | T11 | NOT_RUN: 20-user inspect/slider/far-seek plus job-count/cgroup samples. |
