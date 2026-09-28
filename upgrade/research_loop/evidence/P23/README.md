@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest T08/W06 concurrency diagnostic, 2026-09-28:**
+[Real running-WFO Library gradient](./T08_RUNNING_WFO_GRADIENT_2026-09-28.md)
+returned 20/20 HTTP 200 in each 1/4/8/20-reader cohort. The 20-reader
+warm p95 was **547 ms**, over the 500-ms target even with one active WFO;
+the earlier one-active/four-queued W06 retake remained worse at 773 ms.
+This narrows the workload trigger, not the server stage or root cause.
+T08/W06/P23 remain open; no queue, pool, SLO or source behavior was changed.
+
 **Latest T13 current-route negative checkpoint, 2026-09-28:**
 [Exact named preflight refusal](./T13_CURRENT_ROUTE_NEGATIVE_CHECKPOINT_2026-09-28.md)
 shows the existing `options` catalogue entry is not auto-admitted: 409 typed
