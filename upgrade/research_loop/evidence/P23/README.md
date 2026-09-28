@@ -5,9 +5,11 @@
 Owner/member capability+manifest signatures, anonymous 401, and both
 same-host outside-P23 Portal health/container identities stayed identical
 before/during/after. This is a scoped T09 pass, not an AWS-HK or full P23
-claim. W06 failed concurrently: Library 3×503/p95 1263 ms and
-Progress/Evidence over 500 ms. The typed-code retake then hit the genuine
-eight-live-preflight actor quota; no expiry or quota was changed.
+claim. The first W06 failed: Library 3×503/p95 1263 ms and Progress/Evidence
+over 500 ms. A second attempt met the genuine eight-live-preflight quota;
+after natural expiry, a full retake returned all 120 GETs at 200 but Library
+still failed warm p95 (773 ms versus 500 ms). An unloaded 1/4/8/20-reader
+gradient stayed under 500 ms, so the exact W06 stage still needs profiling.
 
 **Latest T08 cold-cache checkpoint, 2026-09-28:** [Exact isolated first-read
 and warm Library regression](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md).

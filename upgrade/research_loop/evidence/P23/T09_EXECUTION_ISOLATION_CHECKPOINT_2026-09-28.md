@@ -48,6 +48,43 @@ retake must wait for *natural* expiry and then repeat with the P23 sampler
 that records only bounded typed error codes. The earlier 3 Library 503
 responses cannot be attributed to a specific error code retroactively.
 
+## Natural-expiry retake, same pinned cell
+
+After all eight actor preflights expired naturally (read-only census: 0 active),
+the same existing-account sessions were checked through normal password login;
+no credential, role, TTL, quota or run row was reset. A fresh W06 used one
+real HEAVY plus four queued intents again, with 0 active/0 queued jobs before
+and after. The bounded sampler retained only typed codes, not server prose or
+business responses. This time all six routes returned **20/20 HTTP 200**, so
+there was no error code to attribute. The five non-Library routes met their
+warm targets (Progress 290 ms, Evidence 386 ms, Search 279 ms, Report 213 ms,
+Replay 284 ms p95); Library still missed **500 ms**, at **773 ms p95**. The
+seven-service cap peak was **679,227,392 bytes** and T09's scoped Execution
+sentinels again stayed unchanged. The prior 3×503 remains a real intermittent
+failure; the retake does not erase it.
+
+A separate read-only Library gradient on this same enlarged cell, **without**
+HEAVY/queued work, used the same 20 authenticated reader identities and one
+named GET per identity at concurrency 1/4/8/20. All 80 GETs were 200; p95 was
+72/109/181/375 ms respectively. This is an inline diagnostic preserved only
+in the operator transcript, not a separately archived acceptance receipt. It
+supports contention under concurrent
+compute as a hypothesis but does not identify whether admission wait,
+PostgreSQL, auth, reconciliation or serialization dominates W06. No admission
+limit, pool size, response contract or SLO was changed. The next source-owner
+step is a bounded stage-timing measurement on the exact W06 route; fix only the
+measured stage, then retake both current-size W06 and cold T08 on one pinned
+candidate.
+
+The retake private receipts (same 0600 root) are:
+
+| Receipt | SHA-256 |
+|---|---|
+| `t09-codes-20260928.json` | `676df31fa7c30294eca05068035d817b8eb1a4b4bbd644cfe492005a281d932b` |
+| `t09-codes-20260928-w06-workload.json` | `4bec51aec8129f4dbab051d06de014d5a02f3f60597e0a222ca046ffd87858d5` |
+| `t09-codes-20260928-w06-read.json` | `a8c29b4b273540d44ddb1a9a27feceb9799bed391b818406339cdf2a67902511` |
+| `t09-codes-20260928-w06-resource-series.json` | `27d8ac53b35d8bb54de435fa3611198d259ce931b6bd6a26d8c97a48056367e7` |
+
 ## Evidence and exact scope
 
 Private 0600 root:
