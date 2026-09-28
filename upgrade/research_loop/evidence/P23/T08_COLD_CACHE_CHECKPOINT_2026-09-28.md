@@ -76,6 +76,37 @@ The 521-ms burst is also above the 500-ms target. Its private 0600 receipt is
 `t08-library-isolation.json`, SHA-256
 `34ff34dd70ff4597e174f5f689735e71d5ffba2c5a426ecd2fc8e8c6b3bf873d`.
 
+## Warm Library owner handoff — 2026-09-28 follow-up
+
+After renewing only the same P23 test sessions through their existing passwords,
+the unchanged pinned cell repeated the 20-principal/six-GET warm read twice.
+Library p95 was **606 ms** and **692 ms**, both above 500 ms; all 20 Library
+responses were 200 with the same 67,798-byte maximum body. These diagnostic
+commands did not modify application source, schema, business rows or thresholds.
+One further unmonitored retake was persisted privately as `t08-warm-followup.json`
+(SHA-256 `5564616e9021a855a3c41d5798cf91d7eb6c33c36b52e3e27c2c1335623ba5cd`):
+20/20 Library 200, p95 **765 ms**, overall warm SLO FAIL. Its full bounded
+response-timing receipt is 0600; no business rows are logged.
+A third 20-principal read deliberately overlapped 55 aggregate-only PostgreSQL
+activity samples: Library p95 was **735 ms**, all 20 responses were 200, sampled
+`active` peaked at five, no sampled lock wait occurred, and `idle in transaction`
+peaked at seven. The PostgreSQL monitor itself adds load, so **735 ms is not an
+acceptance result or proof that PostgreSQL/queue is the root cause**. The two
+unmonitored repeats independently confirm the warm SLO failure.
+
+Source locators for the shared <=P21 owner: `run-library.controller.ts:39-47`
+does workspace membership and awaits `progress.reconcileBestEffort` before the
+reader; `run-library.repository.ts:238,285-287` admits only four active and 16
+queued Library reads; `run-library.repository.ts:301-440` obtains a bounded
+page, same-snapshot summary and rich card facts; `progress.service.ts:341-379`
+throttles reconciliation/sweep. None is proven to be the sole culprit by this
+receipt. Please measure the actual auth/membership, reconciliation, admission
+queue, DB page/summary and response-body stages separately on the same pinned
+image/40-run workspace. Preserve RLS, one-snapshot counts, exact card truth,
+bounded admission and the 5-GB cap; do not just increase slots or cache a stale
+whole response to force p95 green. Retake the full 20-principal warm/cold W06
+with one HEAVY plus four queued intents after a justified fix.
+
 ## Private exact bytes (0600, not Git)
 
 All locators are under

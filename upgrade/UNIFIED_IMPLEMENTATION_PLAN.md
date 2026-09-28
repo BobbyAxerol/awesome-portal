@@ -3686,6 +3686,12 @@ the 500-ms target and the cold reader was not simultaneous with a HEAVY+four
 queued W06. No ≤P21 source change or threshold relaxation was made. Codex
 profiles the Library/admission path and coordinates any source fix with Claude;
 final-candidate W06/cold retake and P23/P24 remain required.
+Follow-up on the unchanged pinned cell reproduced unmonitored warm Library p95
+at 606/692/765 ms for 20 distinct principals (all HTTP 200). The last run is
+private byte-hashed; a separate aggregate-only DB sampler found no sampled
+lock wait but is diagnostic, not an acceptance result or root-cause proof.
+The exact <=P21 owner handoff and source locators are appended to the T08
+checkpoint; no admission limit, snapshot/RLS semantics or SLO was changed.
 
 #### B. Frontend / test còn mở (không phải backend)
 
