@@ -1,13 +1,13 @@
 {
-  "phase": "FG slice 1",
+  "phase": "FG slice 1 · cập nhật slice 2 (2026-09-29)",
   "owner": "Thanhvuong (frontend)",
   "date": "2026-09-28",
   "tree": "feat/gap_frontend_thanhvuong — code slice 1 đã commit: FG-04a + resolver `b896d98d`, FG-05 `f0f7cc3d`, spec FG-04b/c `e4b9447e`; commit tài liệu này: xem `git log`",
   "head": "8783461e",
-  "note": "Mọi locator @HEAD 8783461e (A1/A3: git show HEAD); code slice FG-04a/FG-05 dịch số dòng S01/S02/S11/S13. Không có dòng nào là VERIFIED; real lane BLOCKED_BY_RUNTIME. Nguồn: audit-A1…A6 (authoritative), a1/a2/a3 summary+matrix, A4/A5/A6 report. Neo locator \"@HEAD 8783461e\" được giữ có chủ ý sau khi commit slice. Kết quả browser: gói B `~/tv-shots/fg/final/B-report.md` `a8a5b3f59739fd0d` (chỉ lane fixture).",
+  "note": "Mọi locator @HEAD 8783461e (A1/A3: git show HEAD); code slice FG-04a/FG-05 dịch số dòng S01/S02/S11/S13. Không có dòng nào là VERIFIED; real lane BLOCKED_BY_RUNTIME. Nguồn: audit-A1…A6 (authoritative), a1/a2/a3 summary+matrix, A4/A5/A6 report. Neo locator \"@HEAD 8783461e\" được giữ có chủ ý sau khi commit slice. Kết quả browser: gói B `~/tv-shots/fg/final/B-report.md` `a8a5b3f59739fd0d` (chỉ lane fixture). Cập nhật slice 2 (2026-09-29): FE-A1-01/03/04 và `S14-ALPHAIMPORT-RAW-COLOR` → `resolved_in_slice_2` kèm digest evidence; thêm FE-FG2-01…05 (`resolved_in_slice_2`); đính chính mô tả fail `r2Ledger` (`CG-P22-C`) → packet mới `CG-FG-R2-01`. Code slice 2: `ad404196`, `a1d7bf3f`, `602e8410`, `0607e7a7`. Receipt: `FG-slice2-receipt.md`. Không có dòng nào VERIFIED trên lane real-API.",
   "counts": {
-    "open_fe_gap": 113,
-    "inherited_test_failures": 2,
+    "open_fe_gap": 110,
+    "inherited_test_failures": 1,
     "fg07_lane_findings": 17,
     "not_run": 28
   },
@@ -20,9 +20,10 @@
       "what": "dataset catalog refusal prints the server message",
       "locator": "`R/NewRun.tsx:660`; `R/datasetClient.ts:48–50, 60–65` @HEAD 8783461e",
       "proposed_fix": "câu cố định theo state (F-04 cho 401/403/404, câu unavailable cho ≥500); `error.message` vào diagnostics thu gọn",
-      "proposed_slice": "FG-08-SERVER-PROSE",
+      "proposed_slice": "FG-08-SERVER-PROSE (làm trong slice 2 cho S02)",
       "owner": "Thanhvuong (FE)",
-      "state": "OPEN"
+      "state": "resolved_in_slice_2",
+      "note": "FIXED · VERIFIED fixture lane — commit `a1d7bf3f` (`datasetClient.ts:48` `CATALOG_FAILURE_COPY`, `:80` `catalogFailureState`; `NewRun.tsx:730`). B G3 40/40 (`COMPONENT_FIXTURE_BROWSER_RECEIPT`, sentinel không có trong innerText/textContent), `~/tv-shots/fg2/final/g3-s02-run.log` `a91de90fd5cd394d`; unit A2 91/91 `~/tv-shots/fg2/a2/vitest.log` `a0fa93a25b8b9d4c`; B report `b6c316d3135c5e5b`. Denial chỉ in request id (FE-FG2-05, UNIT_ONLY)."
     },
     {
       "id": "FE-A1-03",
@@ -32,9 +33,10 @@
       "what": "preflight 422 with a field_path shows the server message",
       "locator": "`R/NewRun.tsx:1950`; `R/preflightClient.ts:218–248` @HEAD 8783461e",
       "proposed_fix": "dựng câu alert từ `gate` + nhãn field (copy cố định); `error.message` vào diagnostics",
-      "proposed_slice": "FG-08-SERVER-PROSE",
+      "proposed_slice": "FG-08-SERVER-PROSE (làm trong slice 2 cho S02)",
       "owner": "Thanhvuong (FE)",
-      "state": "OPEN"
+      "state": "resolved_in_slice_2",
+      "note": "FIXED · VERIFIED fixture lane — commit `a1d7bf3f` (`preflightClient.ts:164` câu cố định cho 20 code, `:152` câu generic; `NewRun.tsx:2032`). B G3 40/40 (`COMPONENT_FIXTURE_BROWSER_RECEIPT`, sentinel không có trong innerText/textContent), `~/tv-shots/fg2/final/g3-s02-run.log` `a91de90fd5cd394d`; unit A2 91/91 `~/tv-shots/fg2/a2/vitest.log` `a0fa93a25b8b9d4c`; B report `b6c316d3135c5e5b`."
     },
     {
       "id": "FE-A1-04",
@@ -44,9 +46,10 @@
       "what": "preflight 422 without a field_path shows no visible refusal",
       "locator": "`R/NewRun.tsx:1942`, `:1972–1979` @HEAD 8783461e",
       "proposed_fix": "render `role=alert` khi có `preflightRefusal` (copy cố định); bỏ summary \"none read yet\" khi đã có refusal",
-      "proposed_slice": "FG-08-SERVER-PROSE",
+      "proposed_slice": "FG-08-SERVER-PROSE (làm trong slice 2 cho S02)",
       "owner": "Thanhvuong (FE)",
-      "state": "OPEN"
+      "state": "resolved_in_slice_2",
+      "note": "FIXED · VERIFIED fixture lane — commit `a1d7bf3f` (`NewRun.tsx:2039`, `:2068`: alert với mọi refusal ở Review, preview mở). B G3 40/40 (`COMPONENT_FIXTURE_BROWSER_RECEIPT`, sentinel không có trong innerText/textContent), `~/tv-shots/fg2/final/g3-s02-run.log` `a91de90fd5cd394d`; unit A2 91/91 `~/tv-shots/fg2/a2/vitest.log` `a0fa93a25b8b9d4c`; B report `b6c316d3135c5e5b`."
     },
     {
       "id": "FE-A1-05",
@@ -1427,18 +1430,83 @@
       "proposed_slice": "Bobby chọn",
       "owner": "Thanhvuong (FE)",
       "state": "OPEN"
+    },
+    {
+      "id": "FE-FG2-01",
+      "audit": "A2 D4 / A2b",
+      "screen": "S02",
+      "severity": "P1 (cùng lớp server prose với FE-A1-01/03; không chấm riêng)",
+      "what": "run create failure printed server prose",
+      "locator": "`R/runCreateClient.ts:189` `message: error.message` → `R/useNewRun.ts:177` `reason: createRefusal.message` @96ac0f46",
+      "proposed_fix": "câu cố định cho 13 code run-create, 403 = 404, uncoded = outcome unknown; facts có type ở `detail`",
+      "proposed_slice": "FG-08-SERVER-PROSE (slice 2)",
+      "owner": "Thanhvuong (FE)",
+      "state": "resolved_in_slice_2",
+      "note": "FIXED — commit `a1d7bf3f` (`runCreateClient.ts:140` `REFUSAL`, `:112–131`, `:289` `runCreateRefusalFacts`; `useNewRun.ts:180–181`). Unit A2b 145/145 `~/tv-shots/fg2/a2b/vitest.log` `380f5c1583338e41`, mutation `0a75912abae8b857`; ô create 403/404/409/503 của B G3 (fixture) `a91de90fd5cd394d`."
+    },
+    {
+      "id": "FE-FG2-02",
+      "audit": "A2 / A2b",
+      "screen": "S02",
+      "severity": "P1 (cùng lớp server prose với FE-A1-01/03; không chấm riêng)",
+      "what": "`usePreflight` hook carried server prose in its panel state",
+      "locator": "`R/usePreflight.ts:131` `reason: refusal.message` @96ac0f46",
+      "proposed_fix": "`reason: refusal.copy`",
+      "proposed_slice": "FG-08-SERVER-PROSE (slice 2)",
+      "owner": "Thanhvuong (FE)",
+      "state": "resolved_in_slice_2",
+      "note": "FIXED — commit `a1d7bf3f` (`usePreflight.ts:133`). Unit A2b 145/145 `380f5c1583338e41`; panel preflight của B G3 in cùng câu client `a91de90fd5cd394d`."
+    },
+    {
+      "id": "FE-FG2-03",
+      "audit": "A2b step 3",
+      "screen": "S02",
+      "severity": "P1 (cùng lớp server prose với FE-A1-01/03; không chấm riêng)",
+      "what": "clone read (`runCloneClient.ts`) printed server prose and 403 ≠ 404",
+      "locator": "`R/runCloneClient.ts:34`, `:37`, `:44` @96ac0f46",
+      "proposed_fix": "một câu denied cho 401/403/404; copy client cho 5xx/4xx khác; facts có type ở `detail`",
+      "proposed_slice": "FG-08-SERVER-PROSE (slice 2)",
+      "owner": "Thanhvuong (FE)",
+      "state": "resolved_in_slice_2",
+      "note": "FIXED — commit `a1d7bf3f` (`runCloneClient.ts:33–55`, test mới `runCloneClient.test.ts`). B G3 clone 403 = 404 byte-identical (fixture) `a91de90fd5cd394d`."
+    },
+    {
+      "id": "FE-FG2-04",
+      "audit": "B D-B1",
+      "screen": "S11",
+      "severity": "chưa chấm riêng",
+      "what": "S11 `decisions recorded:` blank with an empty `decision_outcomes` list",
+      "locator": "`R/ReleaseCandidateDetail.tsx:1743` `decisionLine` @96ac0f46 (blame `f0f7cc3d`, slice 1)",
+      "proposed_fix": "`decisions recorded: none`",
+      "proposed_slice": "FG-05 follow-up (slice 2)",
+      "owner": "Thanhvuong (FE)",
+      "state": "resolved_in_slice_2",
+      "note": "FIXED — commit `ad404196` (`ReleaseCandidateDetail.tsx:1754`). Fable sửa SAU lượt browser của B: `UNIT_ONLY`, browser receipt pending. B evidence của defect: `fgb2/s11/s11-run-nodecisions-empty-1280-mirror.png` (B report `b6c316d3135c5e5b`)."
+    },
+    {
+      "id": "FE-FG2-05",
+      "audit": "B F-B2",
+      "screen": "S02",
+      "severity": "chưa chấm riêng",
+      "what": "dataset catalog denial printed the code, so 403 text ≠ 404 text",
+      "locator": "`R/datasetClient.ts` `catalogFailureFacts` (cây slice 2 trước bản sửa), `NewRun.tsx:727–731`",
+      "proposed_fix": "denial chỉ in request id",
+      "proposed_slice": "FG-08-SERVER-PROSE (slice 2)",
+      "owner": "Thanhvuong (FE)",
+      "state": "resolved_in_slice_2",
+      "note": "FIXED — commit `a1d7bf3f` (`datasetClient.ts:55` `catalogFailureFacts(error, withCode)`, `:90–91`). Fable sửa SAU lượt browser của B: `UNIT_ONLY`, browser receipt pending. B evidence của defect: `fgb2/s02/s02-catalog-40{3,4}-*.png`, `g3-s02-run.log` `a91de90fd5cd394d`."
     }
   ],
   "inherited_test_failures": [
     {
       "id": "CG-P22-C",
       "test": "src/execution/r2Ledger.test.ts",
-      "what": "capability inventory thiếu route P22",
+      "what": "~~capability inventory thiếu route P22~~ — ĐÍNH CHÍNH 2026-09-29 (slice 2, A3): không phải thiếu route (test \"covers exactly the routes the controllers publish\" pass ở head, base và baseline). Assertion fail là rule câu chữ evidence của route `INTENTIONALLY_UNEXPOSED` `POST /internal/research/progress/sources/imported` (`capability-inventory.v1.json:1628–1637`, thêm bởi `5a5c79b7`, BobbyAxerol 2026-09-27; tổ tiên của base, không của baseline `a00df203` nơi test pass 22/22) → packet mới `CG-FG-R2-01` (owner codex; exit gate `npx vitest run src/execution/r2Ledger.test.ts` xanh)",
       "owner": "Bobby (inventory ngoài phạm vi contributor)",
       "state": "OPEN",
       "source": "audit-A6",
       "introduced": "kế thừa từ HEAD 8783461e, không do slice 1",
-      "evidence": "full vitest trên tree cuối: 197 file (195 pass, 2 fail), 3889 test (3886 pass, 2 fail, 1 skip); `~/tv-shots/fg/audit/vitest-full-2.log` `7f2715c4e8a12ff7`"
+      "evidence": "full vitest trên tree cuối: 197 file (195 pass, 2 fail), 3889 test (3886 pass, 2 fail, 1 skip); `~/tv-shots/fg/audit/vitest-full-2.log` `7f2715c4e8a12ff7` — slice 2: vẫn là fail duy nhất của full suite: 201 file (200 pass / 1 fail), 3930 test (3928 pass / 1 fail / 1 skip), `~/tv-shots/fg2/audit/vitest-full-2.log` `a12c4e9d392aa55d`; A3 `2f745a065fca04b1` (head `c019014538761fd4`, base `65452be367015505`, baseline `2d13f5f850746d94`)"
     },
     {
       "id": "S14-ALPHAIMPORT-RAW-COLOR",
@@ -1447,10 +1515,10 @@
       "proposed_fix": "dùng `var(--shadow-e1)` và bỏ hex khỏi comment",
       "proposed_slice": "slice nhỏ riêng, trình Bobby (màn S14 đã duyệt)",
       "owner": "Thanhvuong (FE)",
-      "state": "OPEN",
+      "state": "resolved_in_slice_2",
       "source": "audit-A6",
-      "introduced": "kế thừa từ HEAD 8783461e; AlphaImport.tsx không có diff so với HEAD",
-      "evidence": "full vitest trên tree cuối: 197 file (195 pass, 2 fail), 3889 test (3886 pass, 2 fail, 1 skip); `~/tv-shots/fg/audit/vitest-full-2.log` `7f2715c4e8a12ff7`"
+      "introduced": "kế thừa từ HEAD 8783461e; AlphaImport.tsx không có diff so với HEAD — slice 2 (A3): do `4550f4ba` (BobbyAxerol, 2026-09-26) đưa vào, tổ tiên của base và của baseline → INHERITED_FROM_BASE",
+      "evidence": "full vitest trên tree cuối: 197 file (195 pass, 2 fail), 3889 test (3886 pass, 2 fail, 1 skip); `~/tv-shots/fg/audit/vitest-full-2.log` `7f2715c4e8a12ff7` — slice 2: FIXED ở commit `602e8410` (`box-shadow` → `var(--shadow-e1)`, giá trị computed giống hệt; B G4 48/48 lượt đọc giống HEAD, `g4-s14-current-run.log` `0e67d6c1c65f79e1` / `g4-s14-head-run.log` `717f994942fea3a6`); A3 `~/tv-shots/fg2/a3/A3-report.md` `2f745a065fca04b1`, sau sửa 82/82 `vitest-after-fix.log` `94ca7d782ba120bb`; full suite slice 2 không còn fail token gate `a12c4e9d392aa55d`"
     }
   ],
   "fg07_test_lane_findings": [
@@ -1632,7 +1700,7 @@
     {
       "scope": "mọi màn",
       "not_run": "visual baseline pinned",
-      "reason": "cần docker + image ghim (grant G7), FG-07"
+      "reason": "cần docker + image ghim (grant G7), FG-07 — slice 2 (2026-09-29): ĐÃ CHẠY (gói B, image ghim, chỉ compare): 324 pass / 8 fail / 16 skipped, exit 1, `~/tv-shots/fg2/final/visual.log` `37cab119e1adfc3a` → `FAIL — 8 snapshots`; không còn NOT_RUN"
     },
     {
       "scope": "mọi màn đọc",

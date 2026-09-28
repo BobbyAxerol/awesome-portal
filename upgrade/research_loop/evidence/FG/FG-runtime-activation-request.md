@@ -1,6 +1,7 @@
 # RESEARCH_DEV_ACTIVATION_REQUEST — FG slice 1 (FG-02, FG-03 và nửa real của FG-01/04/05/06/07)
 
 **Trạng thái:** `BLOCKED_BY_RUNTIME` · **Người yêu cầu:** Thanhvuong (frontend, gói FG) · **Người quyết:** Bobby · **Ngày:** 2026-09-28 · **Candidate:** `feat/gap_frontend_thanhvuong` @ `8783461e` + code slice 1 đã commit (`b896d98d`, `f0f7cc3d`, `e4b9447e`; commit tài liệu này: xem `git log`).
+**Cập nhật slice 2 (2026-09-29):** G7 (visual gate pinned) **không còn được xin — đã chạy** (xem G7 ở §3). G1–G6 giữ nguyên; FG-02, FG-03, OL-24 và mọi lane real-API vẫn `BLOCKED_BY_RUNTIME`. Không có receipt real-API nào trong slice 2.
 **Căn cứ:** `upgrade/research_loop/CLAUDE-FOR-thanhvuong.md` A7.2 — chỉ deploy qua helper/CI/job Bobby đã cấp; thiếu helper thì gửi request này với exact requirements, patch proposal, rollback. Thiếu DNS/auth/permission là `BLOCKED_DEV_REVIEW`, không phải quyền mở port public hay tắt auth. Không dùng rootless container để vượt giới hạn.
 **Nguồn khảo sát:** `~/tv-shots/fg/plan/R2-runtime.md` (recon chỉ đọc, 2026-09-28) và `~/tv-shots/fg/plan/RUNTIME-GRANT.draft.md`.
 
@@ -15,7 +16,7 @@ Request này không xin quyền sửa infra chung. Không đổi `portal.primuss
 | Unit (vitest) | chạy được | slice 1: FG-04a, FG-05 unit lane PASS |
 | `REAL_API_E2E_RECEIPT` | **`BLOCKED_BY_RUNTIME`** | không có cell riêng build từ HEAD (G1–G5) |
 | axe (4 probe + `axeBlocking()`) | **không chạy** | `@axe-core/playwright`, `axe-core` thiếu trong node_modules cũ (G6) |
-| Visual pinned image | **không chạy** | image chưa có trong store rootless; chính sách chưa xác nhận (G7) |
+| Visual pinned image | **không chạy** | image chưa có trong store rootless; chính sách chưa xác nhận (G7) **Slice 2 (2026-09-29):** đã chạy (gói B): image `mcr.microsoft.com/playwright:v1.62.1-noble` ghim, docker rootless, chỉ compare, không `--update` — 324 pass / 8 fail / 16 skipped, exit 1 → `FAIL — 8 snapshots` | |
 
 ## 2. Trạng thái theo FG
 
@@ -27,7 +28,7 @@ Request này không xin quyền sửa infra chung. Không đổi `portal.primuss
 | FG-04 | S13 ladder (a), S08 caption (b), S09 print (c) | (a) unit lane PASS; `VERIFIED — COMPONENT_FIXTURE_BROWSER_RECEIPT` (B G1; 3+1 ở 1280 khớp HiFi 13, giữ nguyên theo quyết định D-1); resolver S13 sửa trong slice, `VERIFIED — fixture lane` · (b)(c) PASS fixture lane 11/11 (A5), chạy lại B G6 dưới tên spec mới: 11 passed / 0 failed (`g6-fg04.log` `a7c9500458129de8`) | `BLOCKED_BY_RUNTIME` | G1, G4; visual G7 |
 | FG-05 | P22 consumer S01/S02/S10/S11 | unit lane PASS; `VERIFIED — fixture lane` cho S01 (B G3 20/20), S02 (B G4 24/24), S11 (B G5 PASS mọi tiêu chí product: 38 test, 35 pass, 3 chỉ bị bộ lọc console của harness đánh fail vì thiếu 422); S10 không đổi code (A6 G4 MATCH, `VD-FG-05-05`) | `BLOCKED_BY_RUNTIME` | G1 (cờ P22 publication như overlay `p22-publication.sh`), G4 |
 | FG-06 | D1-O1 `display_label` | packet `CG-FG-D1-O1`; typed absence giữ nguyên | chờ Codex giao contract, sau đó `BLOCKED_BY_RUNTIME` | Codex, rồi G1 |
-| FG-07 | visual baseline + P23 runner | P23 runner trên 4417 B G7a 14 passed / 64 failed — cả 64 là ENOENT journey-v2 ở `e2e/fixtures.ts:262` (fixture đã xoá ở `8d5dd579`); không fail nào do slice; tín hiệu yếu; findings T1–T17 (FG-01 §6) | visual pinned và real `BLOCKED_BY_RUNTIME` | G7; G1 |
+| FG-07 | visual baseline + P23 runner | P23 runner trên 4417 B G7a 14 passed / 64 failed — cả 64 là ENOENT journey-v2 ở `e2e/fixtures.ts:262` (fixture đã xoá ở `8d5dd579`); không fail nào do slice; tín hiệu yếu; findings T1–T17 (FG-01 §6) | visual pinned và real `BLOCKED_BY_RUNTIME` | G7; G1 **Slice 2 (2026-09-29):** runner qualification sửa + mở rộng 7 state (`0607e7a7`): 134 test, 119 pass / 15 fail, cả 15 = D1 (`VD-FG-01-01`) → `PARTIAL — harness green, 15 cells red on an open owner decision`. Visual gate G7 **RAN**: 324 pass / 8 fail / 16 skipped → `FAIL — 8 snapshots` (không update baseline; `VD-FG-07-01`). Nửa real vẫn `BLOCKED_BY_RUNTIME` (G1) |
 
 ## 3. Yêu cầu chính xác
 
@@ -39,7 +40,7 @@ Request này không xin quyền sửa infra chung. Không đổi `portal.primuss
 | G4 | Identity test (actor researcher, và ADMIN nếu cần cho S14 activate) + credential một lần trong thư mục 0600 của thanhvuong; run P04/WFO đã seed | spec `e2e/_preview-research-real-api.spec.ts:17-21`, `:152` đọc `~/.config/portal-research-preview/{claude-preview.password,seeded-run.json,seeded-wfo-run.json}` — thanhvuong không có | (a) Bobby quyết | Bobby |
 | G5 | Stack **writable isolated** cho FG-03 + quyền cleanup/thu hồi identity sau lane | preview hiện read-only (Unified F5 :3809); lane "real-API" cũ stub ghi S11/S14 bằng `page.route` (spec :447, :455, :460, :539–541, :947) nên không tính là write receipt | (a) Bobby quyết | Bobby |
 | G6 | Cho phép `npm ci` trong `apps/portal/frontend` theo lockfile HEAD | lockfile HEAD thêm `@axe-core/playwright` 4.13.0 và `axe-core`; node_modules cài 2026-09-23 thiếu cả hai | (a) Bobby quyết; (b) agent chạy được khi được phép | Bobby OK, Thanhvuong chạy |
-| G7 | Xác nhận contributor được chạy `./scripts/portal-web-visual.sh` bằng docker rootless và pull `mcr.microsoft.com/playwright:v1.62.1-noble` (ghim tag, chưa có trong store) | handoff FG-07 yêu cầu script; rules A1/A7.2 cấm dùng rootless để vượt giới hạn — cần Bobby nói rõ đây không phải vượt giới hạn; script không publish host port, bind rw repo | (a) Bobby quyết; (b) agent chạy được khi được phép | Bobby OK, Thanhvuong chạy |
+| G7 | Xác nhận contributor được chạy `./scripts/portal-web-visual.sh` bằng docker rootless và pull `mcr.microsoft.com/playwright:v1.62.1-noble` (ghim tag, chưa có trong store) | handoff FG-07 yêu cầu script; rules A1/A7.2 cấm dùng rootless để vượt giới hạn — cần Bobby nói rõ đây không phải vượt giới hạn; script không publish host port, bind rw repo | (a) Bobby quyết; (b) agent chạy được khi được phép | Bobby OK, Thanhvuong chạy **Slice 2 (2026-09-29):** **RAN — không còn xin.** Gói B chạy đúng `./scripts/portal-web-visual.sh` từ root repo (image ghim pull lần đầu thành công, digest `sha256:dcc5531e9784…`; không `npm ci`; không publish host port; không `--update`): **324 passed / 8 failed / 16 skipped, exit 1**, log `~/tv-shots/fg2/final/visual.log` sha256/16 `37cab119e1adfc3a`. 8 snapshot drift đều là màn Run Workspace @laptop; không snapshot nào của S01/S02/S11/S14 drift (suite không phủ Run Library, RC detail, alpha-import wizard). Status `FAIL — 8 snapshots`; quy trách nhiệm ở [FG-slice2-receipt.md](./FG-slice2-receipt.md) §8; quyết định re-record/revert = `VD-FG-07-01` (Bobby) |
 
 ## 4. Phân loại
 

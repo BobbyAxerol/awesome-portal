@@ -1,6 +1,6 @@
 # FG slice 1 — Backend requests (CG-FG-*) cho Codex
 
-**Người yêu cầu:** Thanhvuong (frontend, gói FG) · **Owner mọi packet:** Codex (backend/contract) · **State mọi packet:** OPEN · **Ngày:** 2026-09-28 · **Candidate:** `feat/gap_frontend_thanhvuong` @ `8783461e`.
+**Người yêu cầu:** Thanhvuong (frontend, gói FG) · **Owner mọi packet:** Codex (backend/contract) · **State mọi packet:** OPEN · **Ngày:** 2026-09-28 · **Candidate:** `feat/gap_frontend_thanhvuong` @ `8783461e`. **Cập nhật slice 2 (2026-09-29):** thêm `CG-FG-R2-01` (§7) và đính chính mô tả fail `r2Ledger` (§8).
 
 Nguồn: `FG-01-screen-audit-matrix.md` (ma trận hợp nhất của A1/A2/A3) và audit A1/A2/A3/A6 (authoritative khi khác báo cáo agent). Mỗi packet theo template Backend request của `CLAUDE.md` §5, kèm source locator, fallback FE hôm nay và exit gate. Thanhvuong không sửa OpenAPI, service, migration hay `packages/contracts/**`; field nào chưa có thì màn giữ typed absence có reason, không hiện `0`/`-`/`N/A`, không suy từ id, thứ tự hay cache trình duyệt. Tên field trong ô "Đề xuất schema" chỉ là đề xuất — Codex quyết hình dạng.
 
@@ -49,11 +49,14 @@ Viết tắt locator: `R/` = `apps/portal/frontend/src/research/`; `*.d.ts` = `p
 | `CG-FG-S14-02` | S14 | mã `may_activate_reason` | 14-11 |  |
 | `CG-FG-S14-03` | S14 | fact run-admission theo version (`may_create_run` / execution binding) | 14-12 |  |
 | `CG-FG-S14-04` | S14 | `total` / cursor cho registry list | 14-16 |  |
+| `CG-FG-R2-01` | — (unit gate, không phải màn) | evidence của route `INTENTIONALLY_UNEXPOSED` `POST /internal/research/progress/sources/imported` trong R2 capability inventory phải nêu lý do (hoặc nới regex của test) | — | slice 2 (2026-09-29); owner codex; §7 |
 | `CG-FG-S09-01` | S09 | — | 09-01 | gộp vào `CG-FG-D1-O1` |
 | `CG-FG-S11-01` | S11 | — | 11-01 | gộp vào `CG-FG-D1-O1` |
 | `CG-FG-S13-01` | S13 | — | 13-04 | gộp vào `CG-FG-D1-O1` |
 
 Tổng: 39 packet mở (1 gộp D1-O1 + 1 P22 + 37 theo màn, trong đó 2 có điều kiện) và 3 id đã gộp.
+
+Slice 2 (2026-09-29): +1 packet `CG-FG-R2-01` (§7) → 40 packet mở, vẫn 3 id đã gộp.
 
 ## 2. CG-FG-D1-O1 — `display_label` trên ba named read (S09 / S11 / S13)
 
@@ -805,3 +808,29 @@ Backend request (@codex) — 2026-09-28
 - `CG-FG-S10-02`: cho tới khi có field, suy `lineage_status` ở FE (LD:195–210) là vi phạm rule 5 của `CLAUDE.md` và được ghi trong debt register; không sửa trong slice 1.
 - `CG-FG-S10-04` và `CG-FG-S11-03` chỉ mở sau `VD-FG-01-18`, `VD-FG-01-21`, `VD-FG-01-26` (FG-owner-decisions.md).
 - Mọi exit gate real-API phụ thuộc cell thanhvuong (FG-runtime-activation-request.md); không có cell thì trạng thái là `BLOCKED_BY_RUNTIME`, không VERIFIED.
+
+## 7. Slice 2 (2026-09-29) — CG-FG-R2-01 — evidence route `INTENTIONALLY_UNEXPOSED` trong R2 capability inventory
+
+```text
+Backend request (@codex) — 2026-09-29
+- Endpoint/field cần: sửa evidence của route INTENTIONALLY_UNEXPOSED `POST /internal/research/progress/sources/imported` trong `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger/capability-inventory.v1.json` :1628–1637, hoặc nới regex của test.
+- Lý do UI: không phải UI. Unit gate `src/execution/r2Ledger.test.ts` > "R2-0 · capability inventory" > "makes every INTENTIONALLY_UNEXPOSED route say why" (:83–87) đòi evidence khớp `/design|infrastructure|probe|forbidden|auth/i`; evidence hiện tại mô tả custody bằng principal ký nhưng không chứa từ nào trong năm từ đó. Đây là fail duy nhất còn lại của full suite frontend.
+- Ảnh hưởng hiện tại: full vitest trên tree slice 2: 201 file (200 pass / 1 fail); 3930 test (3928 pass / 1 fail / 1 skip). Gate NOT GREEN. FE không được sửa ledger hay `src/execution/**`.
+- Đề xuất schema (chỉ đề xuất — codex quyết): (a) viết lại evidence cho nó nêu lý do auth (route chỉ tới được bằng principal `research_progress_writer` đã ký), hoặc (b) nới regex (ví dụ thêm `principal|custody|worker`).
+```
+
+| Mục | Nội dung |
+|---|---|
+| Source locator | ledger `capability-inventory.v1.json:1628–1637` (owner `codex`, test_owner `codex`, controller `research/progress-ingress.controller.ts`); route `apps/control-api/src/research/progress-ingress.controller.ts:124` `@Post("sources/imported")`; test `apps/portal/frontend/src/execution/r2Ledger.test.ts:83–87` |
+| Nguồn gốc | entry ledger và decorator route cùng được thêm bởi `5a5c79b7` (BobbyAxerol, 2026-09-27, "feat(research): qualify imported DRAFT execution end to end"): tổ tiên của base `8783461e`, **không** phải tổ tiên của baseline `a00df203` (ở baseline file test pass 22/22). Phân loại `INHERITED_FROM_BASE`; slice 1 và slice 2 không đụng ledger |
+| Bằng chứng (ngoài repo, sha256/16) | A3 report `~/tv-shots/fg2/a3/A3-report.md` `2f745a065fca04b1`; vitest head `c019014538761fd4` (FAIL), base `65452be367015505` (FAIL, giống hệt), baseline `2d13f5f850746d94` (PASS 22/22); full suite `~/tv-shots/fg2/audit/vitest-full-2.log` `a12c4e9d392aa55d` |
+| Đếm theo revision | head: 192 route, 12 `INTENTIONALLY_UNEXPOSED`, 1 vi phạm (chỉ route này); base: giống head; baseline: 190 / 11 / 0 |
+| Owner / state | codex (Bobby duyệt) · OPEN |
+| Fallback FE hôm nay | không có — FE không sửa ledger, regex hay `src/execution/**` |
+| Exit gate | `npx vitest run src/execution/r2Ledger.test.ts` xanh (trong `apps/portal/frontend`), rồi full suite xanh. Không tự ghi CLOSED |
+
+## 8. Đính chính slice 1 (2026-09-29) — mô tả fail `r2Ledger`
+
+- Rà soát file này: **không có** câu slice 1 nào trong file này mô tả fail `r2Ledger` là thiếu route, nên không có câu nào phải gạch ở đây.
+- Câu sai của slice 1 nằm ở [FG-debt-register.json](./FG-debt-register.json) (`inherited_test_failures` → `CG-P22-C`, trường `what`: "capability inventory thiếu route P22"). Câu cũ được giữ, gạch ngang, kèm ghi chú đính chính có ngày tại chỗ. Dòng T14 ở [FG-01 §6](./FG-01-screen-audit-matrix.md) được nối thêm cùng đính chính. Note slice 1 trong Unified §13 (dòng "`r2Ledger` → `CG-P22-C`") không được sửa; đính chính nằm trong note slice 2.
+- Đúng là: test "covers exactly the routes the controllers publish" **pass** ở head, base và baseline. Assertion fail là rule câu chữ evidence của route `INTENTIONALLY_UNEXPOSED` `POST /internal/research/progress/sources/imported` (xem §7). Packet mới: `CG-FG-R2-01`.
