@@ -23,13 +23,16 @@ hooks, protected surfaces, quality và reporting ở phần A vẫn nguyên vẹ
 | Working branch | `feat/gap_frontend_thanhvuong` trong workspace cô lập của user `thanhvuong`; không dùng worktree hay Git metadata của Bobby |
 | Scope | [Frontend gap handoff](./evidence/FRONTEND_GAP_HANDOFF_THANHVUONG_2026-09-28.md) FG-01…FG-07: Research S00–S14 current-build audit, UI/data-binding, browser/visual/print/write receipts và docs/CG requests. Không tiếp quản P23 backend goal hoặc P24 release |
 | Baseline bảo vệ | FE/BE của Codex và Claude trên `docs/research-loop-plan` là điểm xuất phát; giữ commit/thiết kế/contract đã duyệt, không reset hoặc port nguyên branch contributor P17–P21 cũ |
-| Push/handoff | Chỉ push branch này lên `primus-origin`; một PR `feat/gap_frontend_thanhvuong` → `docs/research-loop-plan` cho Bobby review; commit + receipt sau từng slice, không tự merge/rebase/force-push |
+| Push/handoff | Chỉ push branch này lên `primus-origin`; commit + receipt sau từng slice. PR `feat/gap_frontend_thanhvuong` → `docs/research-loop-plan` **chỉ khi Bobby xác nhận Primus base đã bắt kịp assigned baseline**; nếu chưa, giao commit list/receipt để Bobby nhập có kiểm soát. Không tự merge/rebase/force-push |
 | Backend gap | Ghi typed `CG-FG-*` packet, Unified §13 owner/exit gate và báo Bobby/Codex; không tự sửa backend service/OpenAPI/migration/runtime, không gọi nguồn trực tiếp |
 
 Trước mỗi slice, đọc lại Unified §13 và handoff mới nhất, nhất là trạng thái
 đã supersede receipt cũ. Nếu baseline di chuyển, báo Bobby cả hai SHA; không tự
 đuổi theo `dev`, `main` hay nhánh cũ. Việc viết docs/evidence **không** cho
 quyền nâng P23/P24 thành PASS. A4/A5/A7–A10 vẫn là quality bar cho từng slice.
+Tại lúc giao, `primus-origin/docs/research-loop-plan` còn ở `a00df203`, trong
+khi branch mới chứa thêm 47 commit đã có của Bobby/Claude; mở PR ngay sẽ lẫn
+toàn bộ baseline vào diff. Thanhvuong không tự đồng bộ base hoặc đổi PR target.
 
 ## A0. Historical assignment — frontend P17–P21 (superseded by A0.1)
 

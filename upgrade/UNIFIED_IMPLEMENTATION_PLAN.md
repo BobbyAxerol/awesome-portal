@@ -3825,6 +3825,9 @@ chưa đạt 500 ms. Đây là lộ trình sửa khi goal được tiếp tục,
 quyền bật runtime. [Handoff frontend `FG-01…FG-07`](./research_loop/evidence/FRONTEND_GAP_HANDOFF_THANHVUONG_2026-09-28.md)
 là phạm vi hiện hành cho Thanhvuong trên `feat/gap_frontend_thanhvuong`, link tới
 [rules contributor A0.1](./research_loop/CLAUDE-FOR-thanhvuong.md#rl-thanhvuong-gap-2026-09-28).
+Primus `docs/research-loop-plan` còn ở `a00df203`; branch handoff chứa baseline
+`2e44ffcc`, nên **chưa mở PR** vào Primus base cũ (sẽ lẫn 47 commit của Bobby/Claude).
+Bobby quyết đồng bộ base hoặc nhập có chọn lọc sau review; Thanhvuong chỉ push branch riêng.
 F3/F5/F12/F13 và S01/S02/S10/S11 P22 consumer được Thanhvuong audit/đóng bằng
 candidate hiện tại; status trong các dòng lịch sử trên **không tự nâng thành DONE**.
 `D1-O1` mới: S09/S11/S13 deep-link còn thiếu `display_label` trong chính named read;
