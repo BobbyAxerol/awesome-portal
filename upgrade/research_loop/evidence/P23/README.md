@@ -1,11 +1,11 @@
 # P23 backend qualification packet
 
-**Latest T03/T05 runtime retake, 2026-09-29:** [Clean-image ext4 and named-read
-receipt](./T03_T05_RUNTIME_RETAKE_2026-09-29.md) passes real 0-byte-free
-append/manifest recovery and all 10 tenant/cache GETs on candidate `d4021790`.
-The prior source-only checkpoint below is historical. Full P06/API disk-full
-and private file/export negatives remain, as does W06 latency; T03/T05/P23
-are not marked complete.
+**Latest T03/T05 runtime retake, 2026-09-29:** [Clean-image ext4, named-read
+and export receipts](./T03_T05_RUNTIME_RETAKE_2026-09-29.md) pass real
+0-byte-free append/manifest recovery on `d4021790`, then 10/10 authenticated
+tenant/cache reads and 12/12 existing JSON/CSV status/download GETs on
+`eae7a40d`. Full P06/API disk-full and remaining private file/object/legacy
+route negatives remain, as does W06 latency; T03/T05/P23 are not complete.
 
 **T03/T05 source repair checkpoint, 2026-09-29:** [Approved backend-only
 repair and focused tests](./T03_T05_SOURCE_REPAIR_2026-09-29.md) maps genuine

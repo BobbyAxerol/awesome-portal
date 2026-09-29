@@ -73,3 +73,33 @@ their personalized status GET under the clean `d4021790` image. Download is
 already `private, no-store`. The exact status route was amended with
 `private, no-store`, 10 focused Control API tests and build passed; a new clean
 image is required before counting the file/export boundary as runtime PASS.
+
+## Follow-up: eae7a40d clean-candidate export retake
+
+The clean source eae7a40dabfd2e264dc4ec8901d99c3369b0d5c1 rebuilt only
+Control API and its owned gateway in the isolated P23 cell. Other services,
+volumes, credentials and data stayed healthy and unchanged. Private
+identity.json reports dirty:false. Control API image:
+sha256:541481ab8c270f5922b6e1bc198d0c160546b8d76ab328a86e290557012f910b.
+
+Private 0600 t05-eae7a40d.json repeats the ten named GETs: owner 200,
+nonmember 404, anonymous 401, private cache and weak-ETag revalidation PASS.
+Private 0600 t05-export-eae7a40d.json adds 12 GET-only probes against two
+already READY export jobs (JSON/CSV): owner status/download 200 with
+private,no-store; nonmember 404; anonymous 401. JSON is 97,960 bytes,
+SHA-256 31d9334b7180ac20254e8cb5ce2a45fcfc90e8c58fa93024aa842ef968473eb8;
+CSV is 10,818 bytes, SHA-256
+4a624815ad854c28c2553c21ed508b94398ef91558d76e53e7b54d0ca94c9ef1.
+Both receipts are under the private P23 runtime directory. No job was
+created or immutable byte changed. Earlier 19 export checks remain the
+creation/READY and cross-actor/workspace evidence.
+
+Research Report download is the only Research file-serving controller.
+Legacy /api/runs/:run_id/export is a separate QuantBT/facade route backed by
+export_bundle, not the workspace-scoped Research Report contract. Direct
+MinIO/raw-object and guessed-file URLs were not exercised. Thus named
+Research reads and Report export subsets PASS; complete P23-T05 stays OPEN
+pending classification/test of remaining file/object and legacy-path
+authority/cache boundaries. T03 lacks a full P06 durable-run/API disk-full
+negative. W06 and P23/P24 remain OPEN. The helper's full_t05_passed:false
+is intentional.
