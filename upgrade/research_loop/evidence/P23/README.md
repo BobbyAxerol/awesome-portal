@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**T03/T05 source repair checkpoint, 2026-09-29:** [Approved backend-only
+repair and focused tests](./T03_T05_SOURCE_REPAIR_2026-09-29.md) maps genuine
+artifact ENOSPC/EDQUOT to a bounded refusal and fixes personalized conditional
+read/cache headers. Changed Python modules pass 25/25 and Control API focused
+tests pass 9/9 plus build. This is **not** the clean-image runtime retake;
+T03/T05 remain OPEN pending isolated ext4, full durable-run/API and ten-read
+tenant/cache receipts. The prior failed receipts below are preserved.
+
 **Latest W06 read-SLO checkpoint, 2026-09-29:**
 [Identity-barrier retake and real mixed-load failure](./READ_SLO_IDENTITY_BARRIER_2026-09-29.md)
 keeps 20-reader Library p95 **896 ms FAIL** under one real WFO/four queued;

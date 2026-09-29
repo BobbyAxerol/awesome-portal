@@ -11,6 +11,7 @@ the supervisor hard-kills after the grace period.
 from __future__ import annotations
 
 import asyncio
+import errno
 import hashlib
 import json
 import logging
@@ -29,6 +30,7 @@ from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.domain.research_imported_alpha_profile import IMPORTED_ALPHA_CPU_SECONDS
 from portal_api.domain.research_whatif_profile import WHATIF_CPU_SECONDS
 from portal_api.services.artifact_store import ContentAddressedArtifactStore
+from portal_api.services.research_artifacts import ResearchArtifactError
 from portal_api.services.durable_runs import (
     DEFAULT_GRACE_SECONDS,
     DEFAULT_LEASE_SECONDS,
@@ -650,6 +652,7 @@ class DurableQuantWorker:
             raise
         except Exception as exc:  # noqa: BLE001 - standardized failure codes below
             failure_code = self._classify(exc)
+            failure_message = "artifact storage capacity exhausted" if self._storage_full(exc) else str(exc)
             should_write_terminal_progress = not isinstance(exc, _ProgressJournalRecoveryRequired)
             if progress_journal is not None and should_write_terminal_progress:
                 try:
@@ -660,7 +663,7 @@ class DurableQuantWorker:
                     # notification.
                     progress_journal.emit("run_failed", {
                         "code": "USER_CANCELLED" if failure_code == "CANCELLED" else failure_code,
-                        "message": "run cancelled by researcher" if failure_code == "CANCELLED" else str(exc)[:1024],
+                        "message": "run cancelled by researcher" if failure_code == "CANCELLED" else failure_message[:1024],
                         "usage": self._p11_usage({}),
                     })
                 except (ResearchProgressError, ResearchProgressRelayError):
@@ -677,7 +680,7 @@ class DurableQuantWorker:
                     ),
                     lease_token=lease_token,
                     failure_code=failure_code if failure_code != "CANCELLED" else None,
-                    failure_message=str(exc),
+                    failure_message=failure_message,
                 )
             except DurableRunError:
                 logger.exception("failed attempt transition after engine error")
@@ -835,7 +838,15 @@ class DurableQuantWorker:
                 progress_journal.emit("heartbeat")
 
     @staticmethod
+    def _storage_full(exc: Exception) -> bool:
+        return (
+            isinstance(exc, ResearchArtifactError) and exc.reason == "RESEARCH_ARTIFACT_DISK_FULL"
+        ) or (isinstance(exc, OSError) and exc.errno in {errno.ENOSPC, errno.EDQUOT})
+
+    @staticmethod
     def _classify(exc: Exception) -> str:
+        if DurableQuantWorker._storage_full(exc):
+            return "RESOURCE_EXCEEDED"
         if isinstance(exc, asyncio.CancelledError):
             return "CANCELLED"
         if isinstance(exc, DurableRunError):

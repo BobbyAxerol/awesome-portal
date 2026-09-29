@@ -509,3 +509,80 @@ def test_p05_t11_grid_mapping_is_deduplicated_and_t12_cursor_handles_noncontiguo
             cursor=first.next_cursor + "tampered",
             limit=1,
         )
+
+
+def test_p23_t03_disk_full_fence_document_and_manifest_are_typed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import errno
+    from portal_api.services import research_artifacts as artifacts
+
+    store = ResearchArtifactStore(tmp_path / "research-store")
+    baseline = _seal(store, "art_p23_baseline")
+    original_digest = store.reader(cursor_secret=_SECRET).inspect(baseline.artifact_id).manifest_digest
+    writer = _writer(store, "art_p23_manifest")
+    writer.append_batch("trial_index", _batch())
+
+    def no_space(*_args, **_kwargs):
+        raise OSError(errno.ENOSPC, "no space")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(artifacts.tempfile, "mkstemp", no_space)
+        for action in (lambda: writer.write_small_document("selection", {"trial": "one"}), writer.seal):
+            with pytest.raises(ResearchArtifactError) as failure:
+                action()
+            assert failure.value.reason == "RESEARCH_ARTIFACT_DISK_FULL"
+    writer.abort()
+    assert store.reconcile()["staging"] == ()
+    assert store.reader(cursor_secret=_SECRET).inspect(baseline.artifact_id).manifest_digest == original_digest
+
+    with monkeypatch.context() as patch:
+        patch.setattr(artifacts.tempfile, "mkstemp", no_space)
+        with pytest.raises(ResearchArtifactError) as failure:
+            _writer(store, "art_p23_fence")
+        assert failure.value.reason == "RESEARCH_ARTIFACT_DISK_FULL"
+    assert store.reconcile()["staging"] == ()
+
+
+def test_p23_t03_part_directory_and_seal_rename_map_only_storage_full(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import errno
+    from portal_api.services import research_artifacts as artifacts
+
+    store = ResearchArtifactStore(tmp_path / "research-store")
+    part = _writer(store, "art_p23_part")
+    original_mkdir = Path.mkdir
+
+    def mkdir_no_space(path: Path, *args, **kwargs):
+        if path.name == "trial_index":
+            raise OSError(errno.ENOSPC, "no space")
+        return original_mkdir(path, *args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "mkdir", mkdir_no_space)
+        with pytest.raises(ResearchArtifactError) as failure:
+            part.append_batch("trial_index", _batch())
+        assert failure.value.reason == "RESEARCH_ARTIFACT_DISK_FULL"
+    part.abort()
+
+    renamed = _writer(store, "art_p23_rename")
+    renamed.append_batch("trial_index", _batch())
+    original_replace = artifacts.os.replace
+
+    def rename_no_space(source, target):
+        if Path(source) == renamed.staging_dir:
+            raise OSError(errno.EDQUOT, "quota")
+        return original_replace(source, target)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(artifacts.os, "replace", rename_no_space)
+        with pytest.raises(ResearchArtifactError) as failure:
+            renamed.seal()
+        assert failure.value.reason == "RESEARCH_ARTIFACT_DISK_FULL"
+    renamed.abort()
+    assert store.reconcile()["staging"] == ()
+
+    unrelated = _writer(store, "art_p23_eio")
+    with monkeypatch.context() as patch:
+        patch.setattr(artifacts.tempfile, "mkstemp", lambda *_a, **_kw: (_ for _ in ()).throw(OSError(errno.EIO, "I/O")))
+        with pytest.raises(OSError) as failure:
+            unrelated.write_small_document("selection", {"trial": "one"})
+        assert failure.value.errno == errno.EIO
+    unrelated.abort()

@@ -12,6 +12,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { ResearchFreezeReadQuerySchema, ResearchFreezeRunIdSchema } from "./freeze.contract";
 import { ResearchFreezeError } from "./freeze.error";
 import { ResearchFreezeService } from "./freeze.service";
+import { sendRevalidatable } from "./etag";
 
 interface FreezeRequest extends FastifyRequest {
   portalUser: { userId: string };
@@ -42,12 +43,7 @@ export class ResearchFreezeController {
       { workspaceId, actorUserId: request.portalUser.userId }, runId,
       { ...(query.fold === undefined ? {} : { fold: query.fold }) },
     );
-    if (body.etag) {
-      reply.header("etag", body.etag);
-      const candidate = request.headers["if-none-match"];
-      if (!Array.isArray(candidate) && candidate === body.etag) return reply.code(304).send();
-    }
-    return reply.send(body);
+    return sendRevalidatable(reply, request, body);
   }
 
   /**

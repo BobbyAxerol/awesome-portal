@@ -14,6 +14,24 @@ function request(overrides: Record<string, unknown> = {}) {
 }
 
 describe("P18 same-origin Report controller boundary", () => {
+  it("revalidates the browser-visible weak ETag only after workspace authority", async () => {
+    const etag = `"p18r1_${"a".repeat(64)}"`;
+    const service = { read: vi.fn().mockResolvedValue({ etag }) };
+    const workspaces = { isMember: vi.fn().mockResolvedValue(true) };
+    const controller = new ResearchReportController(service as never, workspaces as never, config as never);
+    const reply = { header: vi.fn().mockReturnThis(), send: vi.fn(), code: vi.fn().mockReturnThis() };
+    await controller.detail(request({ headers: { "if-none-match": `W/${etag}` } }) as never, reply as never, "run_p18", {});
+    expect(reply.header).toHaveBeenCalledWith("cache-control", "private, no-cache");
+    expect(reply.header).toHaveBeenCalledWith("etag", etag);
+    expect(reply.code).toHaveBeenCalledWith(304);
+    expect(reply.send).toHaveBeenCalledWith();
+
+    workspaces.isMember.mockResolvedValue(false);
+    await expect(controller.detail(request({ headers: { "if-none-match": `W/${etag}` } }) as never,
+      reply as never, "run_p18", {})).rejects.toMatchObject({ code: "RESEARCH_REPORT_NOT_FOUND", status: 404 });
+    expect(service.read).toHaveBeenCalledTimes(1);
+  });
+
   it("P18-T04/T06 authorizes report/status/download separately and does not disclose cross-workspace IDs", async () => {
     const service = {
       read: vi.fn().mockResolvedValue({ etag: '"p18r1_' + "a".repeat(64) + '"' }),

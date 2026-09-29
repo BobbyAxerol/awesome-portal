@@ -18,6 +18,7 @@ import {
 } from "./report.contract";
 import { ResearchReportError } from "./report.error";
 import { ResearchReportService } from "./report.service";
+import { sendRevalidatable } from "./etag";
 
 interface ReportRequest extends FastifyRequest {
   portalUser: { userId: string };
@@ -45,11 +46,7 @@ export class ResearchReportController {
     const query = this.readQuery(rawQuery);
     const workspaceId = await this.workspace(request, query.workspace_id);
     const body = await this.service.read({ workspaceId, actorUserId: request.portalUser.userId }, runId);
-    reply.header("etag", body.etag);
-    reply.header("cache-control", "private, max-age=0, must-revalidate");
-    const candidate = request.headers["if-none-match"];
-    if (!Array.isArray(candidate) && candidate === body.etag) return reply.code(304).send();
-    return reply.send(body);
+    return sendRevalidatable(reply, request, body);
   }
 
   @Post(":runId/report/exports")

@@ -447,19 +447,35 @@ class ResearchArtifactStore:
             / _safe_component(fence.worker_attempt_id)
             / random_staging
         )
-        staging.mkdir(parents=True, exist_ok=False)
-        _write_durable(
-            staging / ".lease-fence.json",
-            _canonical_json_bytes(
-                {
-                    "workspace_id": fence.workspace_id,
-                    "run_id": fence.run_id,
-                    "worker_attempt_id": fence.worker_attempt_id,
-                    "lease_epoch": fence.lease_epoch,
-                }
-            ),
-        )
-        _fsync_directory(staging.parent)
+        try:
+            staging.mkdir(parents=True, exist_ok=False)
+        except OSError as exc:
+            _raise_if_disk_full(exc)
+            raise
+        try:
+            _write_durable(
+                staging / ".lease-fence.json",
+                _canonical_json_bytes(
+                    {
+                        "workspace_id": fence.workspace_id,
+                        "run_id": fence.run_id,
+                        "worker_attempt_id": fence.worker_attempt_id,
+                        "lease_epoch": fence.lease_epoch,
+                    }
+                ),
+            )
+            _fsync_directory(staging.parent)
+        except Exception:
+            # A failed fence write has no returned writer to abort. Remove only
+            # this newly allocated random staging directory; keep the error.
+            try:
+                if staging.is_dir() and not staging.is_symlink() and staging.resolve().is_relative_to(
+                    self.scratch_dir.resolve()
+                ):
+                    shutil.rmtree(staging)
+            except OSError:
+                pass
+            raise
         return ResearchArtifactWriter(
             store=self,
             identity=identity,
@@ -633,8 +649,8 @@ class ResearchArtifactWriter:
         ordinal = len(self._parts.get(table_kind, ())) + 1
         relative_path = f"tables/{table_kind}/part-{ordinal:06d}.parquet"
         target = _safe_child(self.staging_dir, relative_path)
-        target.parent.mkdir(parents=True, exist_ok=True)
         try:
+            target.parent.mkdir(parents=True, exist_ok=True)
             # ``from_batches`` holds exactly this input batch, not a completed
             # run.  A separate part per bounded batch avoids hidden writer
             # buffers and leaves compaction explicitly for P23.
@@ -642,8 +658,7 @@ class ResearchArtifactWriter:
             pq.write_table(table, target, compression="zstd", row_group_size=batch.num_rows)
             _fsync_file(target)
         except OSError as exc:
-            if exc.errno in {errno.ENOSPC, errno.EDQUOT}:
-                raise ResearchArtifactError("RESEARCH_ARTIFACT_DISK_FULL", "artifact staging disk is full") from exc
+            _raise_if_disk_full(exc)
             raise
         finally:
             # Drop native table references before the next batch.  The caller
@@ -685,7 +700,6 @@ class ResearchArtifactWriter:
             raise ResearchArtifactError("RESEARCH_ARTIFACT_CONFLICT", "document name is already immutable")
         relative_path = f"documents/{name}.json"
         target = _safe_child(self.staging_dir, relative_path)
-        target.parent.mkdir(parents=True, exist_ok=True)
         _write_durable(target, encoded)
         digest = _sha256_bytes(encoded)
         self._documents.append({"name": name, "relative_path": relative_path, "sha256": digest, "bytes": len(encoded)})
@@ -720,7 +734,11 @@ class ResearchArtifactWriter:
             self._candidate = _candidate_from_manifest(existing, existing_digest)
             return self._candidate
         self._hit("before_rename")
-        os.replace(self.staging_dir, final_dir)
+        try:
+            os.replace(self.staging_dir, final_dir)
+        except OSError as exc:
+            _raise_if_disk_full(exc)
+            raise
         _fsync_directory(final_dir.parent)
         self._closed = True
         self._hit("after_rename_before_register")
@@ -1319,19 +1337,29 @@ def _canonical_json_value(value: Any) -> Any:
     raise ResearchArtifactError("RESEARCH_ARTIFACT_INVALID", f"unsupported artifact JSON type {type(value).__name__}")
 
 
+def _raise_if_disk_full(exc: OSError) -> None:
+    if exc.errno in {errno.ENOSPC, errno.EDQUOT}:
+        raise ResearchArtifactError("RESEARCH_ARTIFACT_DISK_FULL", "artifact staging disk is full") from exc
+
+
 def _write_durable(path: Path, payload: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
-    temporary_path = Path(temporary)
+    temporary_path: Path | None = None
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        temporary_path = Path(temporary)
         with os.fdopen(fd, "wb") as handle:
             handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary_path, path)
         _fsync_directory(path.parent)
+    except OSError as exc:
+        _raise_if_disk_full(exc)
+        raise
     finally:
-        temporary_path.unlink(missing_ok=True)
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _fsync_file(path: Path) -> None:
@@ -1340,11 +1368,15 @@ def _fsync_file(path: Path) -> None:
 
 
 def _fsync_directory(path: Path) -> None:
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     try:
-        os.fsync(descriptor)
-    finally:
-        os.close(descriptor)
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    except OSError as exc:
+        _raise_if_disk_full(exc)
+        raise
 
 
 def _sha256_file(path: Path) -> str:

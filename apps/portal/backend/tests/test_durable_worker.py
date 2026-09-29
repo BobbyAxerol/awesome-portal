@@ -330,3 +330,17 @@ async def test_worker_cancel_is_cooperative_and_terminal(tmp_path: Path) -> None
     assert stored.status in {"CANCELLED", "FAILED"}
 
     await worker.stop()
+
+
+def test_p23_t03_storage_full_uses_existing_safe_terminal_code() -> None:
+    import errno
+    from portal_api.services.research_artifacts import ResearchArtifactError
+
+    typed = ResearchArtifactError("RESEARCH_ARTIFACT_DISK_FULL", "artifact staging disk is full")
+    raw = OSError(errno.ENOSPC, "private /mnt/path must not enter the receipt")
+    assert DurableQuantWorker._storage_full(typed)
+    assert DurableQuantWorker._storage_full(raw)
+    assert DurableQuantWorker._classify(typed) == "RESOURCE_EXCEEDED"
+    assert DurableQuantWorker._classify(raw) == "RESOURCE_EXCEEDED"
+    assert not DurableQuantWorker._storage_full(OSError(errno.EIO, "other I/O"))
+    assert DurableQuantWorker._classify(OSError(errno.EIO, "other I/O")) == "ENGINE_ERROR"

@@ -1,3 +1,4 @@
+import { HEADERS_METADATA } from "@nestjs/common/constants";
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchRunLibraryController } from "../src/research/run-library.controller";
@@ -8,6 +9,14 @@ const request = {
 };
 
 describe("P12 Run Library same-origin boundary", () => {
+  it("marks both personalized reads private and non-cacheable", () => {
+    for (const method of [ResearchRunLibraryController.prototype.list, ResearchRunLibraryController.prototype.sparkline]) {
+      expect(Reflect.getMetadata(HEADERS_METADATA, method)).toContainEqual({
+        name: "Cache-Control", value: "private, no-store",
+      });
+    }
+  });
+
   it("resolves the session workspace once and passes only normalized named input to the service", async () => {
     const service = {
       list: vi.fn().mockResolvedValue({ schema_version: "research.run-library.v1" }),

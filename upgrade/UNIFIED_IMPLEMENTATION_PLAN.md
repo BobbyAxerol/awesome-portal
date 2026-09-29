@@ -6180,6 +6180,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 <a id="rl-p23"></a>
 ### P23 — Resource, security, recovery và upgrade qualification
 
+**T03/T05 backend repair 2026-09-29:** [source checkpoint](./research_loop/evidence/P23/T03_T05_SOURCE_REPAIR_2026-09-29.md) records Bobby-approved shared-backend changes and focused tests. T03/T05 remain OPEN until the clean owned-cell ext4/full-P06/API and tenant/cache retakes; three unrelated current Python-suite baseline failures are recorded, not silently waived. W06 and P23 remain OPEN.
+
 **Checkpoint 2026-09-29:** [W06 identity-barrier retake](./research_loop/evidence/P23/READ_SLO_IDENTITY_BARRIER_2026-09-29.md) giữ Library p95 896 ms FAIL dưới một WFO thật/bốn queued và 20 principal; năm read khác cùng memory cap PASS. P23 vẫn OPEN, không nới SLO/pool hoặc gọi đây là release evidence.
 
 **Diagnostic 2026-09-29:** [Run Library SQL/CPU boundary](./research_loop/evidence/P23/READ_SLO_SQL_CPU_DIAGNOSTIC_2026-09-29.md) confirms 20/20 GETs but unstable warm p95 (384–598 ms) without heavy compute. nginx is not established as the cause; PostgreSQL and Control API CPU are material. No admission/pool/cache/plan-policy change; W06/P23 remain FAIL/OPEN.

@@ -1,6 +1,6 @@
 /** P12 same-origin, session-scoped Run Library read routes. */
 
-import { Controller, Get, Inject, Optional, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Optional, Param, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 
 import { PortalUser } from "../domain";
@@ -36,6 +36,7 @@ export class ResearchRunLibraryController {
   ) {}
 
   @Get()
+  @Header("Cache-Control", "private, no-store")
   async list(@Req() request: RunLibraryRequest, @Query() rawQuery: unknown) {
     const query = ResearchRunLibraryQuerySchema.safeParse(rawQuery);
     if (!query.success) this.invalid();
@@ -48,6 +49,7 @@ export class ResearchRunLibraryController {
   }
 
   @Get(":runId/sparkline")
+  @Header("Cache-Control", "private, no-store")
   async sparkline(
     @Req() request: RunLibraryRequest,
     @Param("runId") rawRunId: string,

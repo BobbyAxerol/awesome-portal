@@ -19,14 +19,23 @@ describe("P16 Freeze controller", () => {
     const response = reply();
 
     await controller.detail({
-      portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: { "if-none-match": etag },
+      portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: { "if-none-match": `W/${etag}` },
     } as never, response as never, "run_p16", { fold: "2" });
 
     expect(service.detail).toHaveBeenCalledWith(
       { workspaceId: "workspace", actorUserId: "user" }, "run_p16", { fold: 2 },
     );
     expect(response.header).toHaveBeenCalledWith("etag", etag);
+    expect(response.header).toHaveBeenCalledWith("cache-control", "private, no-cache");
     expect(response.code).toHaveBeenCalledWith(304);
+    expect(response.send).toHaveBeenCalledWith();
+
+    const fresh = reply();
+    await controller.detail({
+      portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: {},
+    } as never, fresh as never, "run_p16", { fold: "2" });
+    expect(fresh.header).toHaveBeenCalledWith("cache-control", "private, no-cache");
+    expect(fresh.send).toHaveBeenCalledWith({ etag });
   });
 
   it("keeps explicit re-verification same-origin/CSRF protected although it writes no receipt", async () => {
