@@ -97,6 +97,7 @@ export interface EvidenceReadBundle {
 }
 
 interface HubQueryRow {
+  as_of_utc_ms: string | number;
   run_id: string;
   run_state: string | null;
   run_created_at_utc_ms: string | number | null;
@@ -119,8 +120,7 @@ interface HubQueryRow {
   display_ordinal: string | number | null;
 }
 
-interface LegacyRunRow { run_id: string; }
-interface TimestampRow { as_of_utc_ms: string | number; }
+interface LegacyRunRow { run_id: string; as_of_utc_ms: string | number; }
 interface SeriesQueryRow {
   projection_revision: string;
   series_kind: EvidenceSeriesRow["kind"];
@@ -347,12 +347,9 @@ export class ResearchEvidenceRepository {
   }
 
   private async readHub(client: PoolClient, scope: ResearchScope, runId: string): Promise<EvidenceHubRow | null> {
-      const timestamp = await client.query<TimestampRow>(
-        "SELECT floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms",
-      );
-      const asOfUtcMs = asSafeNonNegative(timestamp.rows[0]?.as_of_utc_ms ?? null, "snapshot timestamp");
       const durable = await client.query<HubQueryRow>(
-        `SELECT producer.run_id,
+        `SELECT floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms,
+                producer.run_id,
                 durable_run.state AS run_state,
                 floor(extract(epoch FROM durable_run.created_at) * 1000)::bigint AS run_created_at_utc_ms,
                 producer.alpha_id,
@@ -424,11 +421,13 @@ export class ResearchEvidenceRepository {
           readiness: row.readiness,
           sourceEvidenceDigest: row.source_evidence_digest,
           receivedAt: row.received_at,
-          asOfUtcMs,
+          asOfUtcMs: asSafeNonNegative(row.as_of_utc_ms, "snapshot timestamp"),
         };
       }
       const legacy = await client.query<LegacyRunRow>(
-        "SELECT run_id FROM public.run_read_models WHERE workspace_id = $1 AND run_id = $2 LIMIT 1",
+        `SELECT run_id,
+                floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms
+           FROM public.run_read_models WHERE workspace_id = $1 AND run_id = $2 LIMIT 1`,
         [scope.workspaceId, runId],
       );
       if (legacy.rowCount !== 1) return null;
@@ -438,7 +437,8 @@ export class ResearchEvidenceRepository {
         requestedSpec: null,
         requestedSpecDigest: null, effectiveSpecDigest: null, datasetBindingDigest: null, manifestDigest: null,
         progressSnapshot: null, displayLabel: null, jobState: null, revision: null, projection: null, readiness: null,
-        sourceEvidenceDigest: null, receivedAt: null, asOfUtcMs,
+        sourceEvidenceDigest: null, receivedAt: null,
+        asOfUtcMs: asSafeNonNegative(legacy.rows[0]?.as_of_utc_ms ?? null, "snapshot timestamp"),
       };
   }
 

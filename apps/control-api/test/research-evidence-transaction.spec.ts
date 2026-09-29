@@ -5,13 +5,16 @@ import { ResearchEvidenceRepository } from "../src/research/evidence.repository"
 
 const scope = { workspaceId: "ws-evidence", actorUserId: "usr-evidence" };
 
-function harness(member: boolean) {
+function harness(member: boolean, legacy = false) {
   const calls: Array<{ sql: string; values: unknown[] | undefined }> = [];
   const client = {
     query: vi.fn(async (sql: string, values?: unknown[]) => {
       calls.push({ sql, values });
       if (sql.includes("FROM workspace_members")) return { rows: member ? [{ one: 1 }] : [], rowCount: member ? 1 : 0 };
-      if (sql.includes("transaction_timestamp()")) return { rows: [{ as_of_utc_ms: "1" }], rowCount: 1 };
+      if (sql.includes("FROM research.run_producers producer")) return { rows: [], rowCount: 0 };
+      if (sql.includes("FROM public.run_read_models")) return legacy
+        ? { rows: [{ run_id: "rrun-evidence", as_of_utc_ms: "1234" }], rowCount: 1 }
+        : { rows: [], rowCount: 0 };
       return { rows: [], rowCount: 0 };
     }),
     release: vi.fn(),
@@ -41,6 +44,17 @@ describe("P23 W06 · Evidence transaction setup", () => {
     expect(calls.indexOf(setup[0]!)).toBeLessThan(calls.findIndex(({ sql }) => sql.includes("FROM workspace_members")));
     expect(calls.at(-1)?.sql).toBe("COMMIT");
     expect(client.release).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the DB transaction timestamp in matched rows without a standalone SQL trip", async () => {
+    const { repository, calls } = harness(true, true);
+    const hub = await repository.hub(scope, "rrun-evidence");
+    expect(hub).toMatchObject({ kind: "LEGACY", asOfUtcMs: 1234 });
+    expect(calls).toHaveLength(7);
+    expect(calls.filter(({ sql }) => sql.includes("transaction_timestamp()"))).toHaveLength(2);
+    expect(calls.filter(({ sql }) => sql.includes("transaction_timestamp()")).every(({ sql }) =>
+      sql.includes("FROM research.run_producers producer") || sql.includes("FROM public.run_read_models"))).toBe(true);
+    expect(calls.at(-1)?.sql).toBe("COMMIT");
   });
 
   it("still denies nonmembers before reading a run and rolls back", async () => {

@@ -1,6 +1,12 @@
 # P23 backend report — 2026-09-25
 
-**Current W06/T08 addendum, 2026-09-29:** [clean exact W06 retake](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#clean-exact-retake-after-natural-expiry)
+**Latest W06 repeatability, 2026-09-29:** [same-image mixed retake](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#repeatability-retake-and-next-narrow-candidate)
+FAILS 500-ms warm summaries (Library/Evidence p95 527/618 ms; Evidence
+also exceeds 600 ms). All 120 GETs are 200; real WFO completed under
+616,951,808-byte peak. P13 timestamp-row follow-up is source-tested,
+not runtime-accepted. W06 reliability and full P23/P24 remain OPEN.
+
+**Earlier individual W06 PASS/T08 subgate, 2026-09-29:** [clean exact W06 retake](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#clean-exact-retake-after-natural-expiry)
 PASS on `2436b118` at the original warm SLO with one real HEAVY/four queued
 and twenty principals (120/120 GET 200; Library/Evidence p95 365/352 ms;
 774,123,520-byte seven-service peak). The preceding same-image 655/666-ms

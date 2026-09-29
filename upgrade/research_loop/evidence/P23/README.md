@@ -1,6 +1,11 @@
 # P23 backend qualification packet
 
-**Current 2026-09-29 (supersedes W06 verdict below, not its raw failure):**
+**Latest 2026-09-29:** exact same-image repeat `54749346` [W06 FAILS reliability](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#repeatability-retake-and-next-narrow-candidate):
+Library/Evidence p95 527/618 ms despite 120/120 GET 200 and completed WFO.
+The prior 365/352-ms PASS is retained, not promoted to stable qualification.
+P13 timestamp-row follow-up is source-tested only; P23/P24 stay OPEN.
+
+**Earlier 2026-09-29 individual PASS (not a stable W06 verdict):**
 clean `2436b118` [W06 exact retake](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#clean-exact-retake-after-natural-expiry)
 PASS at original 500-ms warm SLO (Library 365, Evidence 352 ms), 120/120
 GET 200, real HEAVY/four queued and 774-MB aggregate peak. Prior same-image

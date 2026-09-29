@@ -140,3 +140,32 @@ Private 0600 receipt SHA-256:
 | `w06-p13-retake-2436b118-workload.json` | `1eca6e2f5e84dd25f69bc118d18edc6393ba563aa68d086f531e4cbb8c92e610` |
 | `w06-p13-retake-2436b118-read.json` | `7827f1a59193da8ceb61bc79847419d7f71e82a04f1661b9d2e26024dea0a3d9` |
 | `w06-p13-retake-2436b118-resource-series.json` | `6f81f13c171f11000536158995c601d861b91718b4328570b9ccaef1d2f36283` |
+
+## Repeatability retake and next narrow candidate
+
+A third exact run, `w06-repeat-54749346`, used the **same P13 application
+image** after the T08 owned-cell restart; only the evidence-docs commit/identity
+changed. Its five new preflight manifests were admitted only after natural
+expiry. The real WFO completed, four durable intents were queued then
+cancelled, **120/120 GET returned 200**, `diagnostic_only=false`, and strict
+seven-service memory peaked at **616,951,808 bytes**. The repeatability verdict
+is **FAIL**: warm Library p95 **527 ms** and Evidence **618 ms** exceed the
+original 500-ms target; Evidence also exceeds Bobby's possible 600-ms upper
+band. Progress 363, Search 546, Report 280 and Replay 580 ms meet their
+respective unchanged targets. Therefore the preceding 365/352-ms PASS is a
+valid individual receipt but **W06 is not yet reliably qualified**. P23/P24
+remain OPEN; no SLO was relaxed.
+
+| Private 0600 receipt | SHA-256 |
+| --- | --- |
+| `w06-repeat-54749346-workload.json` | `7ffebe308b16e5b0fd101f6f652497482bb6ecb4f5aabb50472a706e65a3c98f` |
+| `w06-repeat-54749346-read.json` | `4d3076c5e715e442a369b60d1cf9f11f0762dfa55cb7459bbf357a0a9cd661a1` |
+| `w06-repeat-54749346-resource-series.json` | `adfa3a613d53ccaaf4f0acb099c7160d08fbfe7700f50f493380d321b1e10ee0` |
+
+A further **source-only** P13 candidate removes the standalone transaction
+timestamp SELECT by projecting `transaction_timestamp()` in the durable or
+legacy matched-row query of the same repeatable-read transaction. It preserves
+the DB-authoritative `as_of_utc_ms`, RLS/membership, 2/18 admission and API.
+Focused 16/16 Evidence tests and Control API build pass. It is **not** a
+runtime W06 fix until a clean commit/image and repeated real mixed retakes
+prove it. No frontend, shared service or production change was made.
