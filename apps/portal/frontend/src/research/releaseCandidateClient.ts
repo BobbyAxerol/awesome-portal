@@ -39,6 +39,7 @@ import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import { lineageHref, toLineageRefusal, type LineageRefusal } from "./lineageClient";
+import { rememberRunLabel } from "./runLabels";
 import type { ResearchState } from "./state";
 import { REFUSAL_COPY } from "./researchRefusal";
 
@@ -196,7 +197,11 @@ type Options = { workspaceId?: string; signal?: AbortSignal };
 
 export const releaseCandidateApi = {
   /** `researchReleaseCandidateComposeGetV1` */
-  compose: (runId: string, options: Options = {}) => call<RcCompose>(composePath(runId, options.workspaceId), { signal: options.signal }),
+  compose: (runId: string, options: Options = {}) =>
+    call<RcCompose>(composePath(runId, options.workspaceId), { signal: options.signal }).then((answer) => {
+      if (answer.run_id === runId) rememberRunLabel(answer.run_id, answer.display_label);
+      return answer;
+    }),
 
   /** `researchReleaseCandidateDraftPatchV1` — only ever from an explicit save. */
   patchDraft: (runId: string, body: RcDraftPatch, options: Options = {}) =>
@@ -208,7 +213,10 @@ export const releaseCandidateApi = {
 
   /** `researchReleaseCandidatePackGetV1` */
   pack: (releaseCandidateId: string, options: Options = {}) =>
-    call<RcPack>(packPath(releaseCandidateId, options.workspaceId), { signal: options.signal }),
+    call<RcPack>(packPath(releaseCandidateId, options.workspaceId), { signal: options.signal }).then((answer) => {
+      rememberRunLabel(answer.run_id, answer.display_label);
+      return answer;
+    }),
 
   /** `researchReleaseCandidatePublicationGetV1` (P22): state, gate and the R1 mirror. */
   publication: (releaseCandidateId: string, options: Options = {}) =>

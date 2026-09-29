@@ -80,6 +80,7 @@ import type { RcDeclarations, RcPackController, RcWriteOp, RcWriteSlot, ReleaseC
 import type { RcPublicationController, RcPublicationView, RcReadFailure } from "./useReleaseCandidatePublication";
 import { iso } from "./utcMinute";
 import { shortDigest, shortId } from "./researchFormat";
+import { runLabelFor } from "./runLabels";
 
 export { releaseCandidateHref, releaseCandidatePackHref };
 
@@ -570,7 +571,7 @@ function Header({ runId, here, chips }: { runId: string | null; here: ReactNode;
               </Link>
               <span className="sep">/</span>
               <span className="rc-mono" data-crumb-run title={runId}>
-                {shortId(runId)}
+                {runLabelFor(runId) ?? shortId(runId)}
               </span>
               <span className="sep">/</span>
             </>
@@ -710,10 +711,10 @@ function Rail({ compose, sealedId }: { compose: RcCompose; sealedId: string | nu
             <span className="v" data-rail-value>
               {linkedPack ? (
                 <Link to={releaseCandidatePackHref(node.value)} data-action="open-pack">
-                  {shortId(node.value)}
+                  {node.key === "run" ? runLabelFor(node.value) ?? shortId(node.value) : shortId(node.value)}
                 </Link>
               ) : (
-                shortId(node.value)
+                node.key === "run" ? runLabelFor(node.value) ?? shortId(node.value) : shortId(node.value)
               )}
             </span>
             {node.detail !== null ? (
@@ -2176,7 +2177,7 @@ function PackIdentity({ pack, state }: { pack: RcPack | null; state: ResearchSta
             <li>
               <Link className="rc-node" to={runHref(pack.run_id, "evidence")} data-rail-node="run" data-tone="ink">
                 <span className="k">{RAIL_LABEL.run}</span>
-                <span className="v" title={pack.run_id}>{shortId(pack.run_id)}</span>
+                <span className="v" title={pack.run_id}>{runLabelFor(pack.run_id) ?? shortId(pack.run_id)}</span>
               </Link>
               <span className="rc-arrow" aria-hidden="true">
                 →

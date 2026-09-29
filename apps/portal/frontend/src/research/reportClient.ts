@@ -27,6 +27,7 @@ import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
 import { NOT_MODIFIED, type Fresh } from "./evidenceClient";
 import { REPLAY_REFUSAL_COPY } from "./replayClient";
+import { rememberRunLabel } from "./runLabels";
 import type { ResearchState } from "./state";
 
 type ReportSchemas = ReportComponents["schemas"];
@@ -158,6 +159,11 @@ export const reportApi = {
     call<ReportDetail>(`${runPath(runId)}${query(options.workspaceId)}`, {
       etag: options.etag,
       signal: options.signal,
+    }).then((answer) => {
+      if (answer !== NOT_MODIFIED && answer.run_id === runId) {
+        rememberRunLabel(answer.run_id, answer.display_label);
+      }
+      return answer;
     }),
 
   /** `researchReportExportCreateV1` — only ever from an explicit click. */

@@ -85,13 +85,14 @@ import { LineageLink, lineageHref } from "./LineageLink";
 import { foldBars } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
 import { formatAxisValue, formatCorrelation, formatMetric, shortId } from "./researchFormat";
+import { runLabelFor } from "./runLabels";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
 import { iso } from "./utcMinute";
 
 /** An id on screen (E1): prefix + 8 hex; callers keep the full value in a title. */
 function sid(id: string): string {
-  return shortId(id) ?? id;
+  return runLabelFor(id) ?? shortId(id) ?? id;
 }
 
 /**

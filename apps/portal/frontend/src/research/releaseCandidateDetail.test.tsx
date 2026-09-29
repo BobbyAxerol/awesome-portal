@@ -91,6 +91,7 @@ import { PortalApiError } from "../lib/api";
 import { onSessionExpired } from "../auth/sessionExpiry";
 import { iso } from "./utcMinute";
 import real from "./w5cRealRc.fixture.json";
+import { forgetRunLabels } from "./runLabels";
 
 vi.mock("../auth/authApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../auth/authApi")>()),
@@ -100,6 +101,7 @@ vi.mock("../auth/authApi", async (importOriginal) => ({
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  forgetRunLabels();
   vi.useRealTimers();
   Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
 });
@@ -477,6 +479,19 @@ describe("S11 composition as served (P21)", () => {
     expect(sealButton().textContent).toBe(SEAL_LABEL);
     expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
     expect(q("[data-action='run-report']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
+  });
+
+  it("D1-O1 cold Compose read prints the server's run label without changing its identity", async () => {
+    const body = clone(P04);
+    body.display_label = "R-P04-001";
+    server({ COMPOSE: [ok(body)] });
+    renderCompose();
+    await ready();
+    const crumb = q("[data-crumb-run]")!;
+    expect(crumb.textContent).toBe("R-P04-001");
+    expect(crumb.getAttribute("title")).toBe(RUN);
+    const rail = q('[data-rail] [data-rail-node="run"] [data-rail-value]')!;
+    expect(rail.textContent).toBe("R-P04-001");
   });
 
   it("S11-U04 prints the meta line from the composition: authority, as-of, fingerprint and draft", async () => {
@@ -1395,6 +1410,18 @@ describe("S11 sealed pack route", () => {
     expect(panel("mirror-ghost")).toBeNull();
     expect(panel("publish-ghost")).toBeNull();
     expect(panel("mirror")!.querySelector("[data-mirror-status]")!.textContent).toBe("PENDING");
+  });
+
+  it("D1-O1 cold sealed-pack read prints its own published run label", async () => {
+    const body = pack();
+    body.display_label = "R-WFO-011";
+    server({ PACK: [ok(body)], PUBLICATION: [ok(publication())] });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    expect(q("[data-crumb-run]")!.textContent).toBe("R-WFO-011");
+    const run = q('[data-rail-node="run"] .v')!;
+    expect(run.textContent).toBe("R-WFO-011");
+    expect(run.getAttribute("title")).toBe(RUN);
   });
 
   it("S11-U49 a pack read refused with 403 and with 404 says the same neutral sentence", async () => {

@@ -49,10 +49,12 @@ import {
   type MarketChart,
   type PairComparable,
 } from "./compareClient";
+import { forgetRunLabels } from "./runLabels";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  forgetRunLabels();
 });
 
 /* ---------------------------------------------------------------- fixtures */
@@ -405,6 +407,17 @@ describe("S13 Compare — reads and order", () => {
     fireEvent.click(folded.querySelector('[data-action="toggle-unclaimed"]') as HTMLElement);
     expect(Array.from(folded.querySelectorAll("[data-unclaimed-run]")).map((el) => el.getAttribute("data-unclaimed-run"))).toEqual(["run_m"]);
     expect(panels()).toEqual([...COMPARE_PANELS.attempts]);
+  });
+
+  it("D1-O1 cold Compare read prints the server's run label and keeps the full link id", async () => {
+    const labelledRun = "rrun_e1fa9e5c0f2b41d3a0c7e3b54a17d5aa";
+    server([{ status: 200, body: attempts([run(labelledRun, { display_label: "R-WFO-075" })]) }]);
+    renderAt(base);
+    await settled();
+    const link = page().querySelector(`[data-run-link="${labelledRun}"]`) as HTMLAnchorElement;
+    expect(link.textContent).toBe("R-WFO-075");
+    expect(link.getAttribute("href")).toContain(labelledRun);
+    expect(link.getAttribute("title")).toBe(labelledRun);
   });
 
   it("S13-U03 the claim rank map covers all five families with spec ranks and palette tokens only", () => {

@@ -26,6 +26,7 @@ import { NOT_MODIFIED, type Fresh } from "./evidenceClient";
 import { toLineageRefusal, type LineageRefusal } from "./lineageClient";
 import type { ResearchState } from "./state";
 import { REFUSAL_COPY } from "./researchRefusal";
+import { rememberRunLabels } from "./runLabels";
 
 type CompareSchemas = CompareComponents["schemas"];
 
@@ -257,7 +258,17 @@ async function call<T>(path: string, etag?: string | null, signal?: AbortSignal)
 export const compareApi = {
   /** `researchCompareGetV1` */
   get: (alphaId: string, request: CompareRequest & { etag?: string | null; signal?: AbortSignal }) =>
-    call<Compare>(comparePath(alphaId, request), request.etag, request.signal),
+    call<Compare>(comparePath(alphaId, request), request.etag, request.signal).then((answer) => {
+      if (answer === NOT_MODIFIED) return answer;
+      if (answer.result.mode === "attempts") {
+        rememberRunLabels(answer.result.attempts);
+      } else if (answer.result.mode === "markets") {
+        rememberRunLabels(answer.result.cards.map((card) => card.run));
+      } else if (answer.result.pair) {
+        rememberRunLabels(answer.result.pair.runs);
+      }
+      return answer;
+    }),
 } as const;
 
 /* -------------------------------------------------------------------------
