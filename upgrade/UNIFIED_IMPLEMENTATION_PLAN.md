@@ -6206,6 +6206,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 
 **P23 W06 clean-candidate checkpoint 2026-09-29:** [pinned source/image and private receipt hashes](./research_loop/evidence/P23/W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md) now supersede the dirty-image diagnostic: `2e90412d`, one real WFO/four queued/20 principals, 120/120 GET 200, Library p95 **383 ms PASS**, but Evidence p95 **571 ms FAIL** versus 500 ms; aggregate cgroup peak 704,425,984 bytes. A quota-bound attempted retake did not reach the read load and is not counted. **W06, P23 and P24 remain OPEN** pending a scoped Evidence read-path repair and exact clean-candidate mixed/cold retake; no API/UI, pool/admission cap, SLO, dev or production change.
 
+**P23 W06 P13 candidate retake 2026-09-29:** [exact mixed receipt](./research_loop/evidence/P23/W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#p13-setup-trip-candidate-and-exact-w06-retake) on clean `3f9a7fae`: 120/120 GET 200, real WFO complete, four queued, 756,875,264-byte peak; Library p95 655 ms and Evidence 666 ms FAIL even against Bobby's possible 600-ms band. Same-image GET-only comparison passes (391/313 ms), indicating compute-contention sensitivity but **not** W06 acceptance. No SLO/admission/pool/API/UI change. Natural preflight expiry is required before exact retake; P23/P24 OPEN.
+
 
 **Đọc chi tiết:** [Guide P23](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p23); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.

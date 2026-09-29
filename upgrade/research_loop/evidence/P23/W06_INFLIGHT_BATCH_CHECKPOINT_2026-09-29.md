@@ -76,3 +76,37 @@ admission, exact membership, snapshot, API/UI or SLO. Then build a clean
 candidate and retake mixed W06 after the natural preflight expiry. Cold-cache
 T08 must use that same final candidate; this old candidate does not close it.
 P23/P24 and the full goal remain OPEN.
+
+## P13 setup-trip candidate and exact W06 retake
+
+Commit `3f9a7fae` combines five transaction-local Evidence settings into one
+parameterized PostgreSQL round trip; it does not change membership, RLS,
+repeatable-read, two-reader admission, API/UI, pool size or the 500-ms SLO.
+The clean Control API image was rebuilt in the owned P23 cell, all seven
+services were healthy, and the candidate identity recorded `dirty=false`.
+Focused Evidence tests, Control API build and the full repository hook passed.
+
+The first official mixed retake, `w06-p13-3f9a7fae`, ran a real WFO with four
+durable queued intents and twenty distinct readers. It returned **120/120 HTTP
+200**, completed the WFO, cancelled the four queued intents afterward and kept
+strict seven-service cgroup peak at **756,875,264 bytes** (<5 GB). Identity
+check was exact (`diagnostic_only=false`). Nonetheless W06 **FAILS**: Library
+p95 **655 ms** and Evidence p95 **666 ms** exceed even the owner-permitted
+600-ms consideration band; Progress 374, Search 479, Report 268 and Replay
+520 ms meet their existing per-route targets. No threshold was changed.
+
+A subsequent GET-only twenty-reader comparison on the *same image* passed all
+six routes (Library p95 391 ms, Evidence 313 ms). This establishes that the
+first mixed failure coincides with real WFO contention; it does not establish
+a permanent per-request Evidence SQL failure, nor qualify W06. The operator
+has five unexpired owned preflight manifests from the run; another mixed
+retake must await natural expiry. Do not delete manifests or bypass quota.
+
+Private 0600 receipt SHA-256 for the exact mixed retake:
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `w06-p13-3f9a7fae-workload.json` | `d46b3b2b89f2609d06e48735c6ff6f7d53c0b5c1735c562934bf26af7effd83c` |
+| `w06-p13-3f9a7fae-read.json` | `0ab34e99d4a2e0e9fae38ee9de2be9ec7925bc6472bb8ccaceffc69e0db62c2b` |
+| `w06-p13-3f9a7fae-resource-series.json` | `06772a6007a893c91dfd519fc194377b5d1017e0347a60675f4e92cfbcd19521` |
+
