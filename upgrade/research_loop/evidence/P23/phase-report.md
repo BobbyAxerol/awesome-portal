@@ -1,5 +1,8 @@
 # P23 backend report — 2026-09-25
 
+**T09 current-candidate 2026-09-29:** [same-host Execution isolation retake](./T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md#current-clean-candidate-retake--2026-09-29) scoped PASS: stable Execution/health before–during–after 1 HEAVY/4 queued; 120/120 W06 GET 200, Library/Evidence p95 392/494 ms, 605,261,824-B peak. Earlier setup/W06 failures remain historical; P23/P24 OPEN.
+
+
 **W07 2026-09-29:** [bounded interaction checkpoint](./W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) Corrected real WFO-overlap retake passed 7/7 scoped checks: eight 200 GETs, AVAILABLE P04 Evidence with revision, 3,046-ms bounded export hold/hash match, no implicit jobs, 550,375,424-B cell peak. Scoped W07 PASS; P23/P24 remain OPEN.
 
 **Latest T08, 2026-09-29:** [cold-start mixed retake](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#current-candidate-cold-start-mixed-retake--2026-09-29)

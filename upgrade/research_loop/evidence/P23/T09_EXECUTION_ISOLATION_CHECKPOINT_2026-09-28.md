@@ -107,3 +107,45 @@ The companion test only verifies the sampler saves a whitelisted error code,
 not server messages. Full P23-T09 still needs the complete final-candidate
 cross-stack/Execution regression and any AWS-HK-facing smoke chosen in P24;
 T01/W06 latency/backpressure is independently failed and remains mandatory.
+
+## Current clean-candidate retake — 2026-09-29
+
+Current source `f5e03d0d319be75f18430a55118ce1df011b9eed` added only a P23
+test-harness guard: all 20 private reader cookies must match the current
+session manifest before HEAVY admission. Focused tests 3/3 and the full
+repository hook passed. Application auth, API, UI and runtime images did
+not change.
+
+Two failed setups remain private and are **not** T09 acceptance: the first
+child install received `401 SESSION_REQUIRED` (receipt SHA-256
+`720431e7dfe8fd13181396780e63abf0721c378c9b31887da0d6391051d33454`);
+the second observed stable Execution sentinels but W06 refused stale
+reader cookies (receipt SHA-256
+`ac3ffa8ff92590a8567100543029b6e1ca745f0d515d67895f75e7e53fa95005`).
+Queued-only intents were cancelled via the public API; zero jobs remained.
+
+After normal existing-account login, `prepare-readers.mjs` refreshed the
+private manifest. Actor preflight count returned to **0 by natural expiry**.
+The clean seven-image cell then ran one real HEAVY WFO plus four durable
+queued intents: before/during/after census **0/0 → 1/4 → 0/0**. The primary
+completed; all four queued-only intents were cancelled through the public
+API. Owner/member Execution capability and runtime-manifest response
+signatures stayed identical; anonymous probes remained 401. Four outside-
+P23 dev/stable container identities, restart counts, healthy states and
+four loopback health response digests did not change.
+
+T09 scoped assessment returned `passed=true`. Companion W06 exited **0**:
+120/120 named GETs 200, Library/Evidence p95 **392/494 ms** under the
+original 500-ms limit, one completed WFO, seven-service peak **605,261,824 B**
+under 5 GB, no implicit reader jobs. Private 0600 receipt SHA-256:
+
+| Receipt | SHA-256 |
+|---|---|
+| `t09-execution-final-20260929.json` | `67d3e623c003e8375c123d7bb5ff9a3fd63ae0ebf69cd3df153b90201b06ad85` |
+| `t09-execution-final-20260929-w06-workload.json` | `b9833c7cb6132f22cdc8fe0afb6deeb94f9a524b6143a48e1c7cbc882f6c21e1` |
+| `t09-execution-final-20260929-w06-read.json` | `66343bf27149b94790efd26257d68b04f1288564c8091be06f1bf9020563816d` |
+
+Read-only post-run check found zero active/queued jobs. The P23 cell was
+stopped without `-v`, retaining volumes and receipts. **Scoped T09 PASS**
+is same-host read/health isolation for this workload—not AWS-HK remote
+behavior, full T01–T15, browser-real acceptance or P23/P24 readiness.

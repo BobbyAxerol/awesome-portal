@@ -6180,6 +6180,9 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 <a id="rl-p23"></a>
 ### P23 — Resource, security, recovery và upgrade qualification
 
+**P23-T09 current-candidate scoped PASS, 2026-09-29:** [same-host Execution isolation retake](./research_loop/evidence/P23/T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md#current-clean-candidate-retake--2026-09-29) on clean `f5e03d0d`: one real HEAVY/four queued, unchanged Execution/health signatures before–during–after, 120/120 W06 GET 200, Library/Evidence p95 392/494 ms without SLO relaxation, 605,261,824-B peak. Two setup failures preserved. No AWS-HK or P23/P24 full qualification claim.
+
+
 **P23 W07 2026-09-29:** [bounded export/seek/projection checkpoint](./research_loop/evidence/P23/W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) The corrected real WFO-overlap retake passed all 7 scoped checks: eight named 200 GETs, AVAILABLE P04 Evidence/revision, 3,046-ms bounded export stall with hash match, unchanged job count, 550,375,424-B seven-service peak. Private receipt SHA-256 `1379cfceb33aa852b356eb46b688efc054b8e3b7969e921de39b59117ca0ef71`. Scoped W07 PASS; P23/P24 stay OPEN.
 
 **P23-T08 current-candidate scoped PASS, 2026-09-29:** [guarded cold-start

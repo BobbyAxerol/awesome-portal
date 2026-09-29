@@ -1,5 +1,8 @@
 # P23 backend qualification packet
 
+**T09 current-candidate 2026-09-29:** [same-host Execution isolation retake](./T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md#current-clean-candidate-retake--2026-09-29) scoped PASS: 1 real HEAVY/4 queued, 120/120 reads, Library/Evidence p95 392/494 ms, unchanged Execution/health signatures, 605,261,824-B peak. Two setup failures retained; P23/P24 OPEN.
+
+
 **W07 2026-09-29:** [bounded interaction checkpoint](./W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) The corrected harness passed 2/2 focused tests and an actual WFO-overlap retake: eight named reads, AVAILABLE P04 Evidence, 3,046-ms stalled bounded export with matching digest, unchanged job count, 550,375,424-B peak. Scoped W07 PASS; P23/P24 remain OPEN.
 
 **Latest T08/W06 qualification, 2026-09-29:** [current-candidate
