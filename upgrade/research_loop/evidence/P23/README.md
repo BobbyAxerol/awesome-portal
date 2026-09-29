@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**V11-P23-DR 2026-09-29:** [one real Delta direct/persistence/API parity receipt](./V11_DIRECT_PARITY_2026-09-29.md) confirms three exact engine-direct scalars with zero numerical difference on a verified HMD snapshot. This is a scoped data-truth subset, not all workloads or P23 product acceptance. W06's two clean-image passes below used the original 500-ms SLO; Bobby's possible 500–600-ms relaxation was not applied.
+
 **T09 current-candidate 2026-09-29:** [same-host Execution isolation retake](./T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md#current-clean-candidate-retake--2026-09-29) scoped PASS: 1 real HEAVY/4 queued, 120/120 reads, Library/Evidence p95 392/494 ms, unchanged Execution/health signatures, 605,261,824-B peak. Two setup failures retained; P23/P24 OPEN.
 
 
