@@ -1,5 +1,7 @@
 # P23 backend report — 2026-09-25
 
+**W07 2026-09-29:** [bounded interaction checkpoint](./W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) has tested harness logic but the actual attempts stopped before W07 reads at test-session manifest and then finite preflight admission. The isolated project was stopped without volume deletion. W07/P23/P24 remain OPEN.
+
 **Latest T08, 2026-09-29:** [cold-start mixed retake](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#current-candidate-cold-start-mixed-retake--2026-09-29)
 on the unchanged Control API image passes after exact P23-only cache
 eviction: one real WFO RUNNING plus four queued at read onset, 120/120 GET

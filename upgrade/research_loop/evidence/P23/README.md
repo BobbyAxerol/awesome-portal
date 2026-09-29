@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**W07 2026-09-29:** [bounded interaction checkpoint](./W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) adds a focused harness and records two setup refusals (stale reader manifest, then natural preflight quota). No W07 read sample or PASS yet; P23/P24 stay OPEN.
+
 **Latest T08/W06 qualification, 2026-09-29:** [current-candidate
 cold-start mixed receipt](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#current-candidate-cold-start-mixed-retake--2026-09-29)
 passes 120/120 named GET 200 while one real WFO is RUNNING and four intents

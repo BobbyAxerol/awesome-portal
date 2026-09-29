@@ -25,7 +25,8 @@ export function assessW07(r) {
       && r.export.bytes <= 512 * 1024 && r.export.digest_matches,
     far_seek: r.replay?.depth >= 2 && r.replay.ordinal > 0,
     projection: r.reads?.length === 8 && r.reads.every(row => row.status === 200
-      && row.replay_ordinal === r.replay.ordinal),
+      && row.replay_ordinal === r.replay.ordinal
+      && (row.kind !== 'evidence_projection' || (row.projection_state === 'AVAILABLE' && row.revision_present))),
     no_implicit_jobs: r.jobs_before === r.jobs_after,
     bounded_cell: r.resources?.length >= 2 && r.resources.every(row => row.within_base_limit
       && row.all_active_services_bounded),
@@ -109,7 +110,9 @@ async function main() {
       const value = await makeClient(user).call('GET', path);
       return { kind: index ? 'evidence_projection' : 'deep_replay', status: value.status,
         duration_ms: Math.round(performance.now() - started),
-        replay_ordinal: index ? point.source_ordinal : value.body.replay?.state_at_cursor?.source_ordinal };
+        replay_ordinal: index ? point.source_ordinal : value.body.replay?.state_at_cursor?.source_ordinal,
+        projection_state: index ? value.body.availability?.state : null,
+        revision_present: index ? Boolean(value.body.revision) : null };
     })));
     r.resources.push(takeSnapshot(PROJECT, true));
     r.jobs_after = jobCount(workspace);
