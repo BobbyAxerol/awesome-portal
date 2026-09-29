@@ -6202,6 +6202,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 
 **P23 W06 P12 query follow-up 2026-09-29:** [two rejected isolated prototypes](./research_loop/evidence/P23/W06_UNFILTERED_CENSUS_TRIAL_2026-09-29.md#two-rejected-p12-follow-ups--2026-09-29) preserved card JSON but did not sustain 500-ms warm p95 (key-first 841 ms; one-snapshot combined 726/627/551 ms GET-only; earlier real WFO 686 ms). Both experiments were reverted, unused images removed, and the P23 cell restored. W06/P23/P24 remain OPEN; no SLO, admission, pool, contract or UI change.
 
+**P23 W06 timing checkpoint 2026-09-29:** [twenty-principal GET-only diagnostic](./research_loop/evidence/P23/W06_UNFILTERED_CENSUS_TRIAL_2026-09-29.md#timing-only-diagnostic-after-bobby-authorized-p12-backend-repair) isolates P12 admission p95 **642 ms** versus repository work p95 190 ms; 20/20 HTTP 200 but overall p95 **992 ms**, so this is a diagnostic FAIL, not an official mixed-WFO retake. Temporary instrumentation/images were removed and the isolated service restored to the healthy pinned image. No pool/admission/SLO/UI change; W06/P23/P24 remain OPEN.
+
 
 **Đọc chi tiết:** [Guide P23](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p23); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.

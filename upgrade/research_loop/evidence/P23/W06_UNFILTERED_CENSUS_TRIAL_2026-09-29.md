@@ -67,3 +67,39 @@ prototype was also reverted and its unused image deleted. No new mixed WFO
 trial was run for either rejected candidate; the earlier real-WFO **686-ms**
 FAIL remains the authoritative W06 observation. The P23 Control API is back
 on the healthy `qualification` image; Git is unchanged except this evidence.
+
+## Timing-only diagnostic after Bobby authorized P12 backend repair
+
+One more disposable image instrumented only controller, admission and SQL
+durations (no identities, SQL parameters or business rows). Under a twenty-
+principal GET-only Library burst, 20/20 responses were HTTP 200 and p95 was
+**992 ms**. Across the twenty corresponding timing records, p50/p95 were:
+
+| Stage | p50 / p95 |
+| --- | ---: |
+| Controller workspace authority | 4 / 8 ms |
+| E10 best-effort convergence | 0 / 69 ms (maximum 132 ms) |
+| P12 admission queue | **270 / 642 ms** |
+| PostgreSQL pool acquire | 12 / 42 ms |
+| Transaction setup + membership | 23 / 93 ms |
+| Repository work | 104 / 190 ms |
+| Page SQL | 74 / 156 ms |
+| Census SQL | 34 / 57 ms |
+| Commit | 10 / 30 ms |
+
+This isolates admission queueing as the largest measured stage. It does not
+prove that E10 can be removed: the controller's reconciliation is a correctness
+path and was cheap on most requests. It also does not justify increasing the
+four-reader lane: the shared ten-connection pool reserves four P03 lanes and
+two other connections. The two rejected SQL variants above did not reduce
+enough work to keep twenty readers below 500 ms. Read-only runtime-role
+`EXPLAIN ANALYZE` of the current Library view showed 72 rows, planning
+15.729 ms and execution 11.030 ms for the bounded base-view page; this is
+not an end-to-end page+joins or W06 result.
+
+After the measurement, the temporary timing-only code was reverted; the
+isolated P23 Control API was restored to the healthy pinned `qualification`
+image, and only the three unused `w06timing*` images were removed. No API,
+UI, admission/pool/SLO, data, migration or production state changed. W06 and
+P23 remain **FAIL/OPEN** pending an exact, authorization-safe read-path fix
+and clean-image mixed-WFO retake.
