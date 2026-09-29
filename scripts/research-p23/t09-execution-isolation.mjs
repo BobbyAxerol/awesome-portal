@@ -48,6 +48,18 @@ export function assessExecutionIsolation(before, during, after) {
       && after.queue.active === 0 && after.queue.queued === 0 };
 }
 
+export function readerManifestMatchesSessions(manifest, sessions) {
+  const readers = sessions.identities.filter(user => /^p23-reader-\d{2}$/.test(user.username));
+  if (readers.length !== 20 || manifest.users?.length !== 20) return false;
+  const actual = new Map(readers.map(user => [user.id, user]));
+  return new Set(manifest.users.map(row => row.id)).size === 20
+    && manifest.users.every(row => {
+      const user = actual.get(row.id);
+      return user && row.access_email === user.username + '@azdag.com'
+        && row.cookie === Object.entries(user.cookies).map(([key, value]) => key + '=' + value).join('; ');
+    });
+}
+
 function queue() {
   return dbQuery(`SELECT count(*) FILTER (WHERE state IN ('CLAIMED','RUNNING','CANCEL_REQUESTED'))::int AS active,
     count(*) FILTER (WHERE state='QUEUED')::int AS queued FROM research.jobs`).rows[0];
@@ -112,6 +124,8 @@ async function main() {
     'PINNED_CLEAN_OWNED_CELL_REQUIRED');
   const sessions = loadSessions(home);
   assert(sessions.preparation_complete && sessions.identities.length === 22, 'P23_REAL_TEST_USERS_REQUIRED');
+  assert(readerManifestMatchesSessions(privateJson(join(home, 'read-manifest.json')), sessions),
+    'READER_MANIFEST_STALE_REFRESH_BEFORE_HEAVY');
   const owner = await operatorClient(home);
   const reader = makeClient(sessions.identities.find(user => user.username === 'p23-reader-01'));
   const context = await reader.call('GET', '/api/auth/context');
@@ -121,6 +135,8 @@ async function main() {
     started_at_utc: new Date().toISOString(), scope: 'P23 cell Execution GET/denial plus same-host Portal health/identity; no AWS-HK source probe',
     before: await snapshot(owner, reader), during: null, after: null, w06: null, assessment: null };
   assert(receipt.before.queue.active === 0 && receipt.before.queue.queued === 0, 'EXISTING_JOB_MUST_NOT_BE_DISTURBED');
+  assert(readerManifestMatchesSessions(privateJson(join(home, 'read-manifest.json')), sessions),
+    'READER_MANIFEST_STALE_REFRESH_BEFORE_HEAVY');
   savePrivate(target, receipt);
   const child = spawn(process.execPath, [fileURLToPath(new URL('./mixed-workload.mjs', import.meta.url)),
     `--home=${home}`, `--label=${label}-w06`], { stdio: ['ignore', 'pipe', 'pipe'] });
