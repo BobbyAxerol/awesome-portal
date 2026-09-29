@@ -10,7 +10,8 @@ its pre-decision measurement and is not rewritten. The legacy security slice
 and other P23 gates remain OPEN; this does not qualify P23 or legacy export.
 
 This is a **GET-only negative and route-classification receipt** on the owned
-P23 cell, not full T05. The clean deployed candidate was `eae7a40d`, with a
+P23 cell. It contributes to the owner-scoped Research T05 pass above, but is
+not a legacy-export or whole-P23 pass. The clean deployed candidate was `eae7a40d`, with a
 private `identity.json` reporting `dirty:false`; only loopback `:8096` was
 contacted. No archive was created, no business byte was printed, and no
 production/dev/shared-preview service or volume was changed.
@@ -60,4 +61,5 @@ artifact paths without a Research workspace key, and the facade currently
 allows authenticated read access to legacy runs. Do not relabel that surface
 as a Research-authorized file API or call all T05 PASS. A nonempty legacy
 export needs a separate product/security decision and safe read model; do not
-exercise its mutating GET in this qualification cell. P23-T05 remains PARTIAL.
+exercise its mutating GET in this qualification cell. Research T05 is scoped
+PASS; legacy export remains an open security slice and P23 remains OPEN.

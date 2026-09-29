@@ -17,7 +17,7 @@ in the disposable read-only-source P23 test container after two stale test
 expectations and the canonical freeze manifest were corrected. See the
 [exact scoped receipt](./T10_PYTHON_BASELINE_RETAKE_2026-09-29.md). This
 supersedes only the Python-regression portion of the historical T10 row below;
-browser/engine/resource qualification on one immutable candidate is still
+browser/engine/resource qualification on one immutable candidate is still OPEN.
 
 ## Current addendum — 2026-09-27
 

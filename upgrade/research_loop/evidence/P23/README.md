@@ -11,8 +11,8 @@ this verdict. P23 still fails other gates, including T03 and W06.
 finds no exposed raw Research artifact/object route; guessed API paths are
 404, non-API paths serve only the same public HTML shell. The separate legacy
 export has a mutating GET and no Research workspace key; the empty legacy
-registry permits only an absent-run 404/401 check. T05 stays PARTIAL pending a
-nonempty legacy-surface security decision, not a fabricated isolation PASS.
+registry permits only an absent-run 404/401 check. Research T05 is scoped PASS;
+legacy export is a separate open security slice, not a fabricated isolation PASS.
 
 **Latest T10 Python baseline retake, 2026-09-29:** [Full isolated suite](./T10_PYTHON_BASELINE_RETAKE_2026-09-29.md)
 passes with corrected stale P17/P13 test expectations and canonical BAR-05
