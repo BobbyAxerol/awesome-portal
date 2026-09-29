@@ -1,5 +1,14 @@
 # P23-T05 file/object/legacy route classification — 2026-09-29
 
+**Owner scope decision after this receipt:** Bobby chose to handle the
+non-workspace-scoped legacy export in a separate security slice. Under that
+boundary, the published Research Report file/export and gateway raw-object
+surfaces are **T05_RESEARCH_SCOPE_PASS** on candidate `eae7a40d`, combining
+this negative with the prior owner/foreign/anonymous JSON+CSV export and ten
+named-read receipts. The raw private receipt's `full_t05_passed:false` records
+its pre-decision measurement and is not rewritten. The legacy security slice
+and other P23 gates remain OPEN; this does not qualify P23 or legacy export.
+
 This is a **GET-only negative and route-classification receipt** on the owned
 P23 cell, not full T05. The clean deployed candidate was `eae7a40d`, with a
 private `identity.json` reporting `dirty:false`; only loopback `:8096` was

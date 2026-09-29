@@ -1,5 +1,11 @@
 # P23 backend report — 2026-09-25
 
+**T05 owner decision, 2026-09-29:** `T05_RESEARCH_SCOPE_PASS` on clean
+`eae7a40d` for the published Research read/Report export and gateway
+raw-object surfaces; previous PARTIAL rows below are pre-decision history.
+The legacy mutating-on-GET export is a separate open security slice by Bobby's
+choice, not silently waived or called isolated. P23 remains OPEN.
+
 **T05 addendum, 2026-09-29:** [file/object/legacy classification](./T05_FILE_OBJECT_LEGACY_CLASSIFICATION_2026-09-29.md)
 adds bounded GET-only negatives against a real sealed artifact: no raw-object
 API or byte leak through the gateway. The legacy export route is a distinct

@@ -1,5 +1,11 @@
 # P23 backend qualification packet
 
+**Owner scope decision, 2026-09-29:** Research-surface T05 is
+`T05_RESEARCH_SCOPE_PASS` on clean `eae7a40d` using the named-read, Report
+JSON/CSV and raw-object negative receipts. Bobby explicitly separated legacy
+`/api/runs/:run_id/export` into a security slice; it is **not** certified by
+this verdict. P23 still fails other gates, including T03 and W06.
+
 **Latest T05 file/object route classification, 2026-09-29:**
 [GET-only owned-cell receipt](./T05_FILE_OBJECT_LEGACY_CLASSIFICATION_2026-09-29.md)
 finds no exposed raw Research artifact/object route; guessed API paths are
