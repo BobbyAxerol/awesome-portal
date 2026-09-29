@@ -2,7 +2,7 @@
 /** W01/W02/W06: real public producer intents, never fabricated queue rows. */
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,6 +29,35 @@ export function assertQueue(rows, expected) {
   assert(queued.length >= 4, 'FOUR_DISTINCT_DURABLE_QUEUED_INTENTS_REQUIRED');
   return { heavy_active_peak: active.length, distinct_heavy_intents_queued: queued.length };
 }
+export function candidateDrift(identity, currentSha, sourceDirty, containers) {
+  const reasons = [];
+  if (identity.dirty) reasons.push('IDENTITY_RECORDED_DIRTY');
+  if (sourceDirty) reasons.push('SOURCE_DIRTY');
+  if (identity.candidate_source_sha !== currentSha) reasons.push('SOURCE_COMMIT_DRIFT');
+  const expected = identity.images ?? {};
+  if (Object.keys(expected).length !== 7 || Object.keys(containers).length !== 7) {
+    reasons.push('INCOMPLETE_SERVICE_INVENTORY');
+  }
+  for (const [service, image] of Object.entries(expected)) {
+    const actual = containers[service];
+    if (!actual || actual.container_id !== image.container_id) reasons.push(`CONTAINER_DRIFT:${service}`);
+    if (!actual || actual.image_id !== image.image_id) reasons.push(`IMAGE_DRIFT:${service}`);
+  }
+  return reasons;
+}
+
+function currentCandidate(identity) {
+  const cwd = fileURLToPath(new URL('../..', import.meta.url));
+  const currentSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
+  const dirty = execFileSync('git', ['status', '--porcelain'], { cwd, encoding: 'utf8' }).trim() !== '';
+  const containers = Object.fromEntries(Object.keys(identity.images ?? {}).map(service => {
+    const current = JSON.parse(docker(['inspect', '--format', '{{json .}}', `${PROJECT}-${service}-1`]));
+    assert.equal(current.Config.Labels['com.docker.compose.project'], PROJECT);
+    return [service, { container_id: current.Id, image_id: current.Image }];
+  }));
+  return candidateDrift(identity, currentSha, dirty, containers);
+}
+
 
 function queryJobs(intents) {
   return dbQuery(`SELECT p.client_intent_id,p.workspace_id,p.run_id,j.job_id,j.queue_class,j.state,
@@ -48,8 +77,10 @@ async function main() {
   const active = dbQuery(`SELECT count(*)::int AS count FROM research.jobs WHERE state IN ('CLAIMED','RUNNING','CANCEL_REQUESTED')`).rows[0];
   assert.equal(active.count, 0, 'DO_NOT_PAUSE_EXISTING_ACTIVE_COMPUTE');
   const runHome = privateJson(join(home, 'identity.json'));
+  const diagnosticReasons = currentCandidate(runHome);
   const receipt = { schema_version: 'research.p23-mixed-workload.v1', project: PROJECT, base_url: BASE_URL + '/',
-    candidate_source_sha: runHome.candidate_source_sha, identity: runHome, diagnostic_only: runHome.dirty,
+    candidate_source_sha: runHome.candidate_source_sha, identity: runHome,
+    diagnostic_only: diagnosticReasons.length > 0, diagnostic_reasons: diagnosticReasons,
     started_at_utc: new Date().toISOString(), jobs: [], queue_samples: [], passed: false };
   savePrivate(target, receipt);
   let sampler;

@@ -232,6 +232,22 @@ interface BuiltFilter {
   whereSql: string;
   params: unknown[];
 }
+interface PendingPageRead {
+  scope: ResearchScope;
+  resolve: (page: RunLibraryPage) => void;
+  reject: (error: unknown) => void;
+}
+interface PendingPageBatch {
+  query: ResearchRunLibraryQuery;
+  boundary: RunLibraryBoundary | null;
+  entries: PendingPageRead[];
+  timer: NodeJS.Timeout;
+}
+interface SharedPageRead {
+  page: RunLibraryPage;
+  members: ReadonlySet<string>;
+  drafts: ReadonlyMap<string, string>;
+}
 
 // Four Library + four P03 operations leave two of the unchanged ten pooled
 // connections for identity/other work. Admit one finite twenty-viewer burst.
@@ -289,15 +305,98 @@ export class ResearchRunLibraryRepository {
       "RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Research Run Library admission is temporarily saturated; retry shortly.", 503,
     ),
   });
+  private readonly pendingPages = new Map<string, PendingPageBatch>();
+  private pendingPageReaders = 0;
 
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
   async list(
-    scope: ResearchScope,
-    query: ResearchRunLibraryQuery,
-    boundary: RunLibraryBoundary | null,
+    scope: ResearchScope, query: ResearchRunLibraryQuery, boundary: RunLibraryBoundary | null,
   ): Promise<RunLibraryPage> {
     this.assertScope(scope);
+    // No cache survives this bounded in-flight batch. One database snapshot
+    // serves identical page queries; actor-owned drafts are joined separately
+    // under that same snapshot and membership is checked for every actor.
+    if (this.pendingPageReaders >= 20) {
+      throw new ResearchRunLibraryError(
+        "RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Research Run Library admission is temporarily saturated; retry shortly.", 503,
+      );
+    }
+    this.pendingPageReaders += 1;
+    const key = JSON.stringify([scope.workspaceId, query, boundary]);
+    return new Promise<RunLibraryPage>((resolve, reject) => {
+      let batch = this.pendingPages.get(key);
+      if (!batch) {
+        batch = { query, boundary, entries: [], timer: setTimeout(() => this.flushPageBatch(key), 20) };
+        this.pendingPages.set(key, batch);
+      }
+      batch.entries.push({ scope, resolve, reject });
+      if (batch.entries.length === 20) {
+        clearTimeout(batch.timer);
+        queueMicrotask(() => this.flushPageBatch(key));
+      }
+    });
+  }
+
+  private async flushPageBatch(key: string): Promise<void> {
+    const batch = this.pendingPages.get(key);
+    if (!batch) return;
+    this.pendingPages.delete(key);
+    clearTimeout(batch.timer);
+    const entries = batch.entries;
+    const leader = entries[0]!;
+    try {
+      if (entries.length === 1) {
+        leader.resolve(await this.listOnce(leader.scope, batch.query, batch.boundary));
+        return;
+      }
+      const actors = [...new Set(entries.map((entry) => entry.scope.actorUserId))];
+      let shared: SharedPageRead;
+      try {
+        shared = await this.listOnce(leader.scope, batch.query, batch.boundary, actors);
+      } catch (error) {
+        // If the elected leader was revoked after controller authorization,
+        // preserve every other actor's individual membership decision.
+        if (!(error instanceof ResearchRunLibraryError) || error.status !== 403) throw error;
+        const settled = await Promise.allSettled(entries.map((entry) =>
+          this.listOnce(entry.scope, batch.query, batch.boundary)));
+        settled.forEach((result, index) => {
+          if (result.status === "fulfilled") entries[index]!.resolve(result.value);
+          else entries[index]!.reject(result.reason);
+        });
+        return;
+      }
+      for (const entry of entries) {
+        if (!shared.members.has(entry.scope.actorUserId)) {
+          entry.reject(new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_FORBIDDEN", "Access denied.", 403));
+          continue;
+        }
+        entry.resolve({
+          ...shared.page,
+          rows: shared.page.rows.map((row) => ({
+            ...row,
+            rc_draft_id: shared.drafts.get(`${entry.scope.actorUserId}\0${row.run_id}`) ?? null,
+          })),
+        });
+      }
+    } catch (error) {
+      for (const entry of entries) entry.reject(error);
+    } finally {
+      this.pendingPageReaders -= entries.length;
+    }
+  }
+
+  private async listOnce(
+    scope: ResearchScope, query: ResearchRunLibraryQuery, boundary: RunLibraryBoundary | null,
+  ): Promise<RunLibraryPage>;
+  private async listOnce(
+    scope: ResearchScope, query: ResearchRunLibraryQuery, boundary: RunLibraryBoundary | null,
+    actors: readonly string[],
+  ): Promise<SharedPageRead>;
+  private async listOnce(
+    scope: ResearchScope, query: ResearchRunLibraryQuery, boundary: RunLibraryBoundary | null,
+    actors?: readonly string[],
+  ): Promise<RunLibraryPage | SharedPageRead> {
     return this.withScopedRead(scope, async (client) => {
       const filter = this.buildFilter(scope.workspaceId, query);
       // The unfiltered Screen-01 census is exactly the workspace catalog.
@@ -330,9 +429,9 @@ export class ResearchRunLibraryRepository {
             ORDER BY ${order}
             LIMIT $${pageParams.length}
          )
-         ${ResearchRunLibraryRepository.selectColumns()}
+         ${ResearchRunLibraryRepository.selectColumns(!actors)}
            FROM library_page library
-           ${ResearchRunLibraryRepository.pageJoins()}
+           ${ResearchRunLibraryRepository.pageJoins(!actors)}
           ORDER BY ${order}`, pageParams),
       });
       const pageRows = rows.rows.slice(0, query.limit);
@@ -430,7 +529,7 @@ export class ResearchRunLibraryRepository {
       const asOfUtcMs = asNonNegativeInteger(counter?.as_of_utc_ms, "snapshot timestamp");
       const claim = counter;
       const status = counter;
-      return {
+      const page: RunLibraryPage = {
         rows: orderedRows,
         retainedFacts: orderedRows.flatMap((row) => row.retained_card_facts ? [row.retained_card_facts] : []),
         asOfUtcMs,
@@ -467,6 +566,23 @@ export class ResearchRunLibraryRepository {
           scratchAvailable: counter?.scratch_available === true,
         },
       };
+      if (!actors) return page;
+      const memberRows = await client.query<{ user_id: string }>(
+        "SELECT user_id FROM workspace_members WHERE workspace_id = $1 AND user_id = ANY($2::text[])",
+        [scope.workspaceId, actors],
+      );
+      const members = new Set(memberRows.rows.map((row) => row.user_id));
+      const drafts = new Map<string, string>();
+      if (page.rows.length > 0 && members.size > 0) {
+        const draftRows = await client.query<{ actor_user_id: string; run_id: string; draft_id: string }>(
+          `SELECT actor_user_id, run_id, draft_id
+             FROM research.release_candidate_drafts_v1
+            WHERE workspace_id = $1 AND actor_user_id = ANY($2::text[]) AND run_id = ANY($3::text[])`,
+          [scope.workspaceId, [...members], page.rows.map((row) => row.run_id)],
+        );
+        for (const row of draftRows.rows) drafts.set(`${row.actor_user_id}\0${row.run_id}`, row.draft_id);
+      }
+      return { page, members, drafts };
     });
   }
 
@@ -645,7 +761,7 @@ export class ResearchRunLibraryRepository {
    * to a Library card or the shared P19 card mapping.
    */
   /** Shared with the P19 lineage reader (W6b CG-P19-05), which reads the same rows in its own snapshot. */
-  static pageJoins(): string {
+  static pageJoins(includeActorDraft = true): string {
     return `LEFT JOIN LATERAL (
              SELECT projection.projection_revision,
                     jsonb_build_object(
@@ -718,7 +834,7 @@ export class ResearchRunLibraryRepository {
               ORDER BY pack.sealed_at DESC, pack.release_candidate_id DESC
               LIMIT 1
            ) rc_pack ON true
-           LEFT JOIN LATERAL (
+           ${includeActorDraft ? `LEFT JOIN LATERAL (
              SELECT draft.draft_id
                FROM research.release_candidate_drafts_v1 draft
               WHERE library.source_kind = 'RESEARCH_DURABLE'
@@ -726,13 +842,13 @@ export class ResearchRunLibraryRepository {
                 AND draft.run_id = library.run_id
                 AND draft.actor_user_id = current_setting('research.actor_user_id', true)
               LIMIT 1
-           ) rc_draft ON true
+           ) rc_draft ON true` : ""}
            LEFT JOIN research.run_producers label_producer
              ON label_producer.workspace_id = library.workspace_id
             AND label_producer.run_id = library.run_id`;
   }
 
-  static selectColumns(): string {
+  static selectColumns(includeActorDraft = true): string {
     return `SELECT library.workspace_id, library.run_id, library.attempt_id, library.source_kind,
               library.run_kind, library.relationship_kind, library.logical_run_key, library.parent_run_id,
               library.created_at, library.updated_at, library.effective_status, library.intent_kind,
@@ -759,7 +875,7 @@ export class ResearchRunLibraryRepository {
               rc_pack.delivery_state AS rc_delivery_state,
               rc_pack.approval_state AS rc_approval_state,
               rc_pack.sealed_at_utc_ms AS rc_sealed_at_utc_ms,
-              rc_draft.draft_id AS rc_draft_id,
+              ${includeActorDraft ? "rc_draft.draft_id" : "NULL::text"} AS rc_draft_id,
               label_producer.execution_profile_id AS display_profile_id,
               ${runDisplayOrdinalSql("library", "label_producer")} AS display_ordinal`;
   }

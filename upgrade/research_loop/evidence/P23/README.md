@@ -1,4 +1,6 @@
 # P23 backend qualification packet
+**W06 bounded-batch checkpoint 2026-09-29:** [diagnostic mixed-load result and provenance correction](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md) reports 20/20 Library reads with 407-ms warm p95 alongside a real WFO and four queued intents, but the candidate was uncommitted and the recorded identity stale. **Not a qualification PASS.** A clean exact-image/source retake is still required.
+
 
 **T03 clean-commit acceptance, 2026-09-29:** [real durable WFO disk-pressure and
 recovery receipt](./T03_CLEAN_COMMIT_ACCEPTANCE_2026-09-29.md) is scoped PASS on
