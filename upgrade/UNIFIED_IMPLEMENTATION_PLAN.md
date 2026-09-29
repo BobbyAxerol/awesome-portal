@@ -3636,6 +3636,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P23](#rl-p23) | P11–P22 | mọi màn | 12 | **OWNED REAL QUALIFICATION IN_PROGRESS · FULL_QUALIFICATION_PENDING (2026-09-29)** — Codex / [P23 packet](./research_loop/evidence/P23/README.md): P22 real publication closed. On one clean current image, exact W06 mixed HEAVY+four queued/20 principals passed twice at the original 500-ms warm SLO; T08 cold-start mixed and W07 bounded interaction also passed in scope. [W05 storage-only scale](./research_loop/evidence/P23/W05_STORAGE_SCALE_2026-09-29.md) measured 100k trial + 100k evaluation + 1M replay rows with indexed keysets and 823-MB seven-service peak; [V11-P23-DR](./research_loop/evidence/P23/V11_DIRECT_PARITY_2026-09-29.md) proved exact direct-engine/sealed/API parity for three real P04 facts. Earlier W06 failures remain history. T03/T04/T05/T06/T09/T10/T11 have scoped receipts; **T02 scratch, T07/T13 new-engine upgrade, T12 quota/audit, T14 exposure/audit-child, T15 browser-real and full DR/BR/GX remain OPEN**. No full P23/product/deployment acceptance or SLO relaxation. |
 | [P24](#rl-p24) | P23 | mọi màn | 12 | PLANNED / unassigned / — |
 
+**P23-T15 scoped addendum 2026-09-29:** [browser-real WFO/P04 receipt](./research_loop/evidence/P23/T15_BROWSER_REAL_SCOPED_2026-09-29.md) qua 1280/660 px trên cell riêng: causal prefix 100→1→2, deep link và chuyển run đúng, zero overflow/page error, jobs 155→155. Không có cold-cache/concurrent-WFO browser window và không rebuild exact HEAD; T15/F3/F5/OL-24/P23 vẫn OPEN.
+
 <a id="rl-open-ledger"></a>
 ### 13.4.1. Sổ việc còn mở — một nguồn trạng thái duy nhất (Claude, 2026-09-26)
 

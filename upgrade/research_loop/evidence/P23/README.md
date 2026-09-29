@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**T15 2026-09-29:** [owned-cell browser-real subset](./T15_BROWSER_REAL_SCOPED_2026-09-29.md) passed at 1280 and 660 px: real WFO causal prefix 100→1→2 candles, deep-link and cross-run navigation, zero overflow/page errors and jobs 155→155. It did not overlap cold cache or WFO compute and is not full T15, F3/F5/OL-24 or P23 acceptance.
+
 **W05 2026-09-29:** [storage-only synthetic scale](./W05_STORAGE_SCALE_2026-09-29.md) exercised the current trial/evaluation/replay column/index shapes at 100k/100k/1M rows in rollback-only temp tables; 200-row indexed pages and strict seven-service cgroup sampling passed. This does not qualify an alpha, retained importer, million-row BFF or P23 as a whole.
 
 **V11-P23-DR 2026-09-29:** [one real Delta direct/persistence/API parity receipt](./V11_DIRECT_PARITY_2026-09-29.md) confirms three exact engine-direct scalars with zero numerical difference on a verified HMD snapshot. This is a scoped data-truth subset, not all workloads or P23 product acceptance. W06's two clean-image passes below used the original 500-ms SLO; Bobby's possible 500–600-ms relaxation was not applied.
