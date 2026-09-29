@@ -214,6 +214,7 @@ function pack(delivery: RcPack["delivery"] = sealed().local_seal): RcPack {
     read_authority: "PORTAL_PERSISTED_RESEARCH",
     release_candidate_id: RC_ID,
     run_id: RUN,
+    display_label: null,
     pack_digest: PACK_DIGEST,
     sealed_at_utc_ms: SEALED_AT,
     frozen_core: {

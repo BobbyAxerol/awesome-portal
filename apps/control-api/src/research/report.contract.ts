@@ -460,6 +460,7 @@ export const ResearchReportDetailResponseSchema = z.object({
   schema_version: z.literal("research.report-detail.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchReportRunIdSchema,
+  display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
   report_revision: z.string().regex(/^p18r1_[0-9a-f]{64}$/),
   etag: z.string().regex(/^"p18r1_[0-9a-f]{64}"$/),
   sealed_at_utc_ms: UtcMsSchema,

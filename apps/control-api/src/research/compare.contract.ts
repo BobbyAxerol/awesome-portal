@@ -119,6 +119,7 @@ const IntentDifferenceSchema = z.object({
 
 const RunSchema = z.object({
   run_id: ResearchCompareRunIdSchema,
+  display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
   attempt_id: OpaqueIdSchema,
   alpha_version_id: OpaqueIdSchema,
   alpha_version_label: z.string().min(1).max(160),

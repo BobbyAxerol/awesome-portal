@@ -75,6 +75,7 @@ function key(symbol: string, timeframe = "4h") {
 function run(id: string, overrides: Partial<CompareRun> = {}): CompareRun {
   return {
     run_id: id,
+    display_label: null,
     attempt_id: `att_${id}`,
     alpha_version_id: "alphaver_1",
     alpha_version_label: "av_0_9_2",

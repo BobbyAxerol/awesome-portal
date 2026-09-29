@@ -18,6 +18,7 @@ import { CONTROL_API_POOL } from "../tokens";
 import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bounded-read";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchCompareError } from "./compare.error";
+import { runDisplayOrdinalSql } from "./run-display-label";
 
 /** PostgreSQL json/jsonb columns may be an object, an array or a serialized value. */
 type JsonColumn = Record<string, unknown> | unknown[] | string | null;
@@ -37,6 +38,8 @@ export interface CompareRunRow {
   run_id: string | null;
   run_state: string | null;
   run_created_at: Date | null;
+  display_profile_id: string | null;
+  display_ordinal: string | number | null;
   requested_spec_digest: string | null;
   effective_spec_digest: string | null;
   dataset_binding_digest: string | null;
@@ -374,6 +377,8 @@ export class ResearchCompareRepository {
                 COALESCE('av_' || replace(version.declared_contract->>'version', '.', '_'), version.alpha_version_id) AS alpha_version_label,
                 attempt.state AS attempt_state, attempt.intent_kind, attempt.created_at AS attempt_created_at,
                 primary_run.run_id, primary_run.state AS run_state, primary_run.created_at AS run_created_at,
+                producer.execution_profile_id AS display_profile_id,
+                ${runDisplayOrdinalSql("primary_run", "producer")} AS display_ordinal,
                 producer.requested_spec_digest, producer.effective_spec_digest, producer.dataset_binding_digest,
                 producer.manifest_digest, preflight.requested_spec,
                 snapshot.snapshot AS progress_snapshot,
@@ -410,7 +415,7 @@ export class ResearchCompareRepository {
            JOIN research.alpha_versions version
              ON version.workspace_id = attempt.workspace_id AND version.alpha_version_id = attempt.alpha_version_id
            LEFT JOIN LATERAL (
-             SELECT run_id, state, created_at
+             SELECT workspace_id, run_id, state, created_at, relationship_kind
                FROM research.runs run
               WHERE run.workspace_id = attempt.workspace_id AND run.attempt_id = attempt.attempt_id
                 AND run.relationship_kind = 'PRIMARY'

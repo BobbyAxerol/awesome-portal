@@ -335,8 +335,8 @@ export class ResearchReportService {
       schema_version: "research.report-detail.v1" as const,
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
       run_id: stored.runId,
+      display_label: stored.displayLabel ?? null,
       report_revision: stored.reportRevision,
-      etag: `"${stored.reportRevision}"`,
       sealed_at_utc_ms: stored.sealedAtUtcMs,
       presentation_revision: "research.report-presentation.v1" as const,
       frozen_core: stored.frozenCore,
@@ -362,7 +362,11 @@ export class ResearchReportService {
         ],
       },
     };
-    const parsed = ResearchReportDetailResponseSchema.safeParse(response);
+    // The core revision is immutable; the delivered representation also has a
+    // mutable annotation and a presentation-only label. A core-only ETag could
+    // return 304 after either changed, hiding the new truth from the browser.
+    const etag = `"p18r1_${createHash("sha256").update(canonicalResearchJson(response), "utf8").digest("hex")}"`;
+    const parsed = ResearchReportDetailResponseSchema.safeParse({ ...response, etag });
     if (!parsed.success) throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored report is incompatible.", 503);
     return parsed.data;
   }

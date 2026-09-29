@@ -163,6 +163,7 @@ export interface components {
             /** @constant */
             read_authority: "PORTAL_PERSISTED_RESEARCH";
             run_id: components["schemas"]["RunId"];
+            display_label: string | null;
             /** @constant */
             state: "DRAFT";
             availability: components["schemas"]["Availability"];
@@ -237,6 +238,7 @@ export interface components {
             /** @constant */
             read_authority: "PORTAL_PERSISTED_RESEARCH";
             run_id: components["schemas"]["RunId"];
+            display_label: string | null;
             /** @constant */
             state: "DRAFT";
             availability: components["schemas"]["Availability"];
@@ -325,6 +327,7 @@ export interface components {
             read_authority: "PORTAL_PERSISTED_RESEARCH";
             release_candidate_id: components["schemas"]["ReleaseCandidateId"];
             run_id: components["schemas"]["RunId"];
+            display_label: string | null;
             pack_digest: components["schemas"]["Digest"];
             sealed_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             frozen_core: {

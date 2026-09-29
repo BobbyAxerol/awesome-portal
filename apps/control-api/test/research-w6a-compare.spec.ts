@@ -63,6 +63,7 @@ function wfoRow(runId: string, seed: number, overrides: Partial<CompareRunRow> =
     attempt_id: `att-${runId}`, alpha_version_id: "av-w6a", alpha_version_label: "av_1_0_0",
     attempt_state: "READY", intent_kind: "NEW", attempt_created_at: new Date("2026-09-25T00:00:00.000Z"),
     run_id: runId, run_state: "READY", run_created_at: new Date(`2026-09-25T00:0${seed % 10}:00.000Z`),
+    display_profile_id: null, display_ordinal: null,
     requested_spec_digest: digest("d"), effective_spec_digest: digest("e"), dataset_binding_digest: digest("f"),
     manifest_digest: digest("b"), requested_spec: requested(seed),
     progress_snapshot: null,

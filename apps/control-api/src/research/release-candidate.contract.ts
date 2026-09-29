@@ -153,6 +153,7 @@ export const ResearchReleaseCandidateComposeResponseSchema = z.object({
   schema_version: z.literal("research.release-candidate-compose.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchReleaseCandidateRunIdSchema,
+  display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
   state: z.literal("DRAFT"),
   availability: AvailabilitySchema,
   as_of_utc_ms: UtcMsSchema,
@@ -250,6 +251,7 @@ export const ResearchReleaseCandidatePackResponseSchema = z.object({
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   release_candidate_id: ResearchReleaseCandidateIdSchema,
   run_id: ResearchReleaseCandidateRunIdSchema,
+  display_label: z.string().regex(/^R-[A-Z0-9]{1,8}-[0-9]{3,6}$/).nullable(),
   pack_digest: DigestSchema,
   sealed_at_utc_ms: UtcMsSchema,
   frozen_core: z.object({

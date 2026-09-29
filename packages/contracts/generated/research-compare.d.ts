@@ -74,6 +74,7 @@ export interface components {
         };
         Run: {
             run_id: components["schemas"]["RunId"];
+            display_label: string | null;
             attempt_id: components["schemas"]["OpaqueId"];
             alpha_version_id: components["schemas"]["OpaqueId"];
             alpha_version_label: string;

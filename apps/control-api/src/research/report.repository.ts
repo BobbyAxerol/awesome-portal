@@ -10,6 +10,7 @@ import { CONTROL_API_POOL } from "../tokens";
 import { canonicalResearchJson } from "./preflight.service";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchReportError } from "./report.error";
+import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReportAuditRelation } from "./report-core-v2";
 import {
   ResearchReportFrozenCoreSchema,
@@ -21,6 +22,7 @@ type JsonValue = Record<string, unknown> | unknown[] | string | null;
 
 export interface StoredResearchReport {
   runId: string;
+  displayLabel?: string | null;
   reportRevision: string;
   frozenCoreDigest: string;
   frozenCore: ResearchReportFrozenCore;
@@ -226,7 +228,18 @@ export class ResearchReportRepository {
           LIMIT 1`,
         [scope.workspaceId, runId],
       );
-      return result.rowCount === 1 ? this.toStored(result.rows[0]!) : null;
+      if (result.rowCount !== 1) return null;
+      const label = await client.query<{ display_profile_id: string | null; display_ordinal: string | null }>(
+        `SELECT producer.execution_profile_id AS display_profile_id,
+                ${runDisplayOrdinalSql("run", "producer")} AS display_ordinal
+           FROM research.runs run
+           LEFT JOIN research.run_producers producer
+             ON producer.workspace_id = run.workspace_id AND producer.run_id = run.run_id
+          WHERE run.workspace_id = $1 AND run.run_id = $2`,
+        [scope.workspaceId, runId],
+      );
+      const display = label.rows[0];
+      return { ...this.toStored(result.rows[0]!), displayLabel: runDisplayLabel(display?.display_profile_id, runDisplayOrdinal(display?.display_ordinal)) };
     });
   }
 

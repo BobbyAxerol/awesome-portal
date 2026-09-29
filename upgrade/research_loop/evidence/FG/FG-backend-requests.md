@@ -60,6 +60,11 @@ Slice 2 (2026-09-29): +1 packet `CG-FG-R2-01` (§7) → 40 packet mở, vẫn 3 
 
 ## 2. CG-FG-D1-O1 — `display_label` trên ba named read (S09 / S11 / S13)
 
+**Codex backend checkpoint 2026-09-29 — SOURCE/CONTRACT READY, real-API và FE receipt còn mở.** Report detail, Release Candidate compose/pack và mọi Compare run nay trả `display_label: string | null` theo cùng `runDisplayLabel`/`runDisplayOrdinalSql` của Library/Progress/Evidence. Chỉ run PRIMARY có profile đã biết mới có nhãn; run lịch sử/child/profile lạ trả `null`, không đoán từ ID hay browser cache. OpenAPI và ba generated type đã cập nhật; hai fixture FE chỉ thêm `null`, không đổi UI. Report ETag nay bám đúng representation (kể cả nhãn và approval annotation), còn `report_revision`, `frozen_core`, RC fingerprint/pack digest không đổi.
+
+**Test scope:** Control API build; 58/58 focused Report/RC/Compare tests; 196/196 contract tests; 187/187 focused FE tests; FE typecheck; fixture comparison xác nhận frozen core/revision nguyên byte-semantic. Disposable PostgreSQL migration/read suite sẽ chạy trong commit hook đúng test cell; lệnh Vitest trực tiếp trên host không có PostgreSQL ở `127.0.0.1:5432` và không được tính là PASS. P23 cell vẫn là image trước commit: cần real-API GET cho một WFO và một P04, rồi Thanhvuong bind 3 deep link từ chính named read + browser receipt. Không ghi `CLOSED` trước các receipt đó.
+
+
 Toàn văn lấy từ `~/tv-shots/fg/plan/CG-FG-D1-O1.draft.md` (không đổi nội dung):
 
 **Owner:** Codex (backend/contract) · **Người yêu cầu:** Thanhvuong (FG-06) · **State:** OPEN · **Ngày:** 2026-09-28 · **Candidate:** `feat/gap_frontend_thanhvuong` @ `8783461e`.

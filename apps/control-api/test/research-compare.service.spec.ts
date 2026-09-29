@@ -57,6 +57,8 @@ function row(runId: string, overrides: Partial<CompareRunRow> = {}): CompareRunR
     run_id: runId,
     run_state: "READY",
     run_created_at: new Date(runId.endsWith("left") ? "2026-09-22T00:00:00.000Z" : "2026-09-22T00:01:00.000Z"),
+    display_profile_id: null,
+    display_ordinal: null,
     requested_spec_digest: digest("d"),
     effective_spec_digest: digest("e"),
     dataset_binding_digest: digest("f"),
@@ -326,6 +328,18 @@ describe("P20 bounded Compare persisted truth", () => {
     expect(unknown).toHaveLength(2);
     expect(unknown.length).toBe(response.result.cards.filter((card) => card.market.symbol === null || card.market.timeframe === null).length);
     for (const card of unknown) expect(card.runs_in_market).toBe(1);
+  });
+
+  it("publishes the same server-derived run label in Compare and keeps unknown profiles nullable", async () => {
+    const { service } = subject(snapshot([
+      row("run-p20-left", { display_profile_id: "p04.fixed-qualification.v1", display_ordinal: "1" }),
+      row("run-p20-right", { display_profile_id: "unmapped-profile", display_ordinal: "2" }),
+    ]));
+    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    if (response.result.mode !== "attempts") throw new Error("test guard");
+    const labels = new Map(response.result.attempts.map((attempt) => [attempt.run_id, attempt.display_label]));
+    expect(labels.get("run-p20-left")).toBe("R-P04-001");
+    expect(labels.get("run-p20-right")).toBeNull();
   });
 
   it("fails closed while its retained-reader prerequisites are dark", async () => {

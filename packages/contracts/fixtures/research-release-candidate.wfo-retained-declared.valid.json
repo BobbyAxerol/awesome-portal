@@ -2,6 +2,7 @@
   "schema_version": "research.release-candidate-compose.v1",
   "read_authority": "PORTAL_PERSISTED_RESEARCH",
   "run_id": "rrun_e1fa9e5cae3bcef8f8e38311905a17d5",
+  "display_label": null,
   "state": "DRAFT",
   "availability": {
     "state": "AVAILABLE",

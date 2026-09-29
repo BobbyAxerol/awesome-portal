@@ -524,6 +524,7 @@ export interface components {
             /** @constant */
             read_authority: "PORTAL_PERSISTED_RESEARCH";
             run_id: components["schemas"]["RunId"];
+            display_label: string | null;
             report_revision: components["schemas"]["Revision"];
             etag: string;
             sealed_at_utc_ms: components["schemas"]["UtcMilliseconds"];
@@ -583,7 +584,7 @@ export interface components {
     };
     requestBodies: never;
     headers: {
-        /** @description Quoted immutable P18 report revision. */
+        /** @description Quoted private validator of the delivered Report representation, including presentation label and approval annotation; report_revision remains the immutable core identity. */
         ReportEtag: string;
     };
     pathItems: never;

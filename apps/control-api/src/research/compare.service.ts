@@ -21,6 +21,7 @@ import {
   type ResearchCompareRun,
 } from "./compare.contract";
 import { ResearchCompareError } from "./compare.error";
+import { runDisplayLabel, runDisplayOrdinal } from "./run-display-label";
 import {
   compareDigest,
   type ComparePairRawInput,
@@ -393,6 +394,7 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
     : { value: null, availability: absent("P20_ALPHA_VERSION_LIFECYCLE_NOT_AVAILABLE") };
   const run: ResearchCompareRun = {
     run_id: row.run_id,
+    display_label: runDisplayLabel(row.display_profile_id, runDisplayOrdinal(row.display_ordinal)),
     attempt_id: row.attempt_id,
     alpha_version_id: row.alpha_version_id,
     alpha_version_label: row.alpha_version_label,

@@ -30,6 +30,7 @@ describe("P21 Release Candidate contract invariants", () => {
     ];
     const base = {
       schema_version: "research.release-candidate-compose.v1", read_authority: "PORTAL_PERSISTED_RESEARCH", run_id: "run-p21", state: "DRAFT",
+      display_label: null,
       availability: { state: "AVAILABLE", reason_code: null }, as_of_utc_ms: 1, source_fingerprint: "a".repeat(64),
       run: { id: "run-p21", attempt: "att-p21", binding: null },
       rail: Array.from({ length: 5 }, () => ({ key: "run", value: "run-p21", detail: null, tone: "ink" })),

@@ -268,6 +268,20 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     });
   });
 
+  it("adds a read-only display label without changing the sealed Report core", async () => {
+    const value = subject();
+    const sealed = await value.service.materialize(scope, "run_p18");
+    value.stored!.displayLabel = "R-P04-001";
+    const read = await value.service.read(scope, "run_p18");
+    expect(read.display_label).toBe("R-P04-001");
+    expect(read.frozen_core).toEqual(sealed.frozen_core);
+    expect(read.etag).not.toBe(sealed.etag);
+    value.stored!.annotation = { state: "AVAILABLE", text: "Approval annotation changed.", sourceUpdatedAtUtcMs: 1_727_000_003_000 };
+    const annotated = await value.service.read(scope, "run_p18");
+    expect(annotated.etag).not.toBe(read.etag);
+    expect(annotated.report_revision).toBe(sealed.report_revision);
+  });
+
   it("fails closed while the independently admitted P18 reader is dark", async () => {
     const readers = sourceReaders();
     const service = new ResearchReportService({} as never, readers.evidence as never, readers.split as never, readers.search as never, readers.freeze as never, readers.replay as never, {} as never, { ...enabledConfig(), FEATURE_RESEARCH_REPORTS: "false" } as never);

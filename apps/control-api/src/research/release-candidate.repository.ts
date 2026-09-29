@@ -23,6 +23,7 @@ import {
 } from "./current-source.repository";
 import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
+import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
 
 export type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
@@ -38,6 +39,7 @@ export interface ReleaseCandidateArtifact {
 
 export interface ReleaseCandidateSource {
   runId: string;
+  displayLabel?: string | null;
   attemptId: string;
   runState: string;
   runKind: string;
@@ -123,6 +125,7 @@ export interface ReleaseCandidateDraft {
 export interface ReleaseCandidateStoredPack {
   releaseCandidateId: string;
   runId: string;
+  displayLabel?: string | null;
   packDigest: string;
   sourceFingerprint: string;
   frozenCore: Record<string, unknown>;
@@ -391,7 +394,9 @@ export class ResearchReleaseCandidateRepository {
       await this.requireMembership(client, scope);
       const result = await client.query<PackRow>(`${this.packSelect()}
         WHERE pack.workspace_id = $1 AND pack.release_candidate_id = $2`, [scope.workspaceId, releaseCandidateId]);
-      return result.rowCount === 1 ? this.pack(result.rows[0]!) : null;
+      if (result.rowCount !== 1) return null;
+      const pack = this.pack(result.rows[0]!);
+      return { ...pack, displayLabel: await this.readDisplayLabel(client, scope.workspaceId, pack.runId) };
     });
   }
 
@@ -642,6 +647,7 @@ export class ResearchReleaseCandidateRepository {
     );
     return {
       runId: row.run_id,
+      displayLabel: await this.readDisplayLabel(client, workspaceId, row.run_id),
       attemptId: row.attempt_id,
       runState: row.run_state,
       runKind: row.run_kind,
@@ -852,6 +858,20 @@ export class ResearchReleaseCandidateRepository {
     if (releaseCandidateSourceFingerprint(source) !== expected) {
       throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Evidence changed since composing; review the pack.", 409);
     }
+  }
+
+  private async readDisplayLabel(client: PoolClient, workspaceId: string, runId: string): Promise<string | null> {
+    const result = await client.query<{ display_profile_id: string | null; display_ordinal: string | null }>(
+      `SELECT producer.execution_profile_id AS display_profile_id,
+              ${runDisplayOrdinalSql("run", "producer")} AS display_ordinal
+         FROM research.runs run
+         LEFT JOIN research.run_producers producer
+           ON producer.workspace_id = run.workspace_id AND producer.run_id = run.run_id
+        WHERE run.workspace_id = $1 AND run.run_id = $2`,
+      [workspaceId, runId],
+    );
+    const row = result.rows[0];
+    return runDisplayLabel(row?.display_profile_id, runDisplayOrdinal(row?.display_ordinal));
   }
 
   private async requireMembership(client: PoolClient, scope: ResearchScope): Promise<void> {

@@ -328,6 +328,12 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     expect(unpinned.gate_verdict).toEqual(baseline.gate_verdict);
   });
 
+  it("publishes a read-only run label without changing the source fingerprint", async () => {
+    const sourceValue = source({ displayLabel: "R-WFO-118" });
+    const response = await subject(sourceValue).service.detail(scope, sourceValue.runId);
+    expect(response.display_label).toBe("R-WFO-118");
+  });
+
   it("fails closed while the separately admitted P21 feature is dark", async () => {
     const sourceValue = source();
     const { repository } = subject(sourceValue, persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(sourceValue) }));

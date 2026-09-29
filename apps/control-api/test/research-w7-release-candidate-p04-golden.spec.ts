@@ -150,6 +150,14 @@ async function observe(): Promise<Record<string, unknown>> {
 describe("W7 · P21 P04 lane golden (byte-for-byte)", () => {
   it("composes, fingerprints and seals every P04 variant exactly as before the retained lane existed", async () => {
     const observed = JSON.parse(JSON.stringify(await observe()));
+    // The deep-link label is an additive read-only response field, not part of
+    // the pre-retained P04 fingerprint, frozen core or sealed pack golden.
+    for (const result of Object.values(observed) as Array<{ virtual: { display_label?: string | null }; declared: { display_label?: string | null } }>) {
+      expect(result.virtual.display_label).toBeNull();
+      expect(result.declared.display_label).toBeNull();
+      delete result.virtual.display_label;
+      delete result.declared.display_label;
+    }
     if (process.env.W7_WRITE_GOLDEN === "1") writeFileSync(GOLDEN, gzipSync(`${JSON.stringify(observed, null, 1)}\n`, { level: 9 }));
     const golden = JSON.parse(gunzipSync(readFileSync(GOLDEN)).toString("utf8"));
     expect(Object.keys(observed)).toEqual(Object.keys(golden));
