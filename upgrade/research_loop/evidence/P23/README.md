@@ -1,5 +1,6 @@
 # P23 backend qualification packet
-**W06 bounded-batch checkpoint 2026-09-29:** [diagnostic mixed-load result and provenance correction](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md) reports 20/20 Library reads with 407-ms warm p95 alongside a real WFO and four queued intents, but the candidate was uncommitted and the recorded identity stale. **Not a qualification PASS.** A clean exact-image/source retake is still required.
+
+**Latest W06 clean-candidate checkpoint 2026-09-29:** [exact image, source and mixed-load receipts](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md) show Library p95 **383 ms PASS** but Evidence p95 **571 ms FAIL** under a real WFO/four queued/20 authenticated readers. All 120 GETs returned 200; the 5-GB cap passed. The old 407-ms dirty-image trial remains diagnostic only. **W06/P23 OPEN; no product qualification claim.**
 
 
 **T03 clean-commit acceptance, 2026-09-29:** [real durable WFO disk-pressure and
