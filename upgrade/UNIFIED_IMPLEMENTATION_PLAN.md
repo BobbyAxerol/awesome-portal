@@ -6188,6 +6188,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 <a id="rl-p23"></a>
 ### P23 — Resource, security, recovery và upgrade qualification
 
+**P23 upstream-connect fault 2026-09-29:** [owned-cell receipt](./research_loop/evidence/P23/GATEWAY_UPSTREAM_TIMEOUT_2026-09-29.md) records a prior 5-second/no-byte timeout, then bounded 504 in about 3 seconds on auth and Research API with Control API stopped, followed by 200/401 recovery. This is a scoped gateway fail-fast improvement, not F5 typed-502, W06 reacceptance or full P23/P24 qualification.
+
 **P23-T09 current-candidate scoped PASS, 2026-09-29:** [same-host Execution isolation retake](./research_loop/evidence/P23/T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md#current-clean-candidate-retake--2026-09-29) on clean `f5e03d0d`: one real HEAVY/four queued, unchanged Execution/health signatures before–during–after, 120/120 W06 GET 200, Library/Evidence p95 392/494 ms without SLO relaxation, 605,261,824-B peak. Two setup failures preserved. No AWS-HK or P23/P24 full qualification claim.
 
 
