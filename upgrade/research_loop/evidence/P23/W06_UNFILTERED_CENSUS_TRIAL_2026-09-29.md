@@ -44,3 +44,26 @@ same workload, then repeat on a clean image with warm p95 <=500 ms, cold
 p95 <=1,500 ms, 20/20 complete responses, real WFO/queue and strict cgroup
 proof. W06/P23 remain red. Do not cache personalized truth or weaken the
 security/read reserve to manufacture a pass.
+
+## Two rejected P12 follow-ups — 2026-09-29
+
+The owned `:8096` cell used the same 20 authenticated readers and the
+committed `qualification` image as its comparator. A key-first page CTE
+returned 20 cards with exact JSON parity except `as_of_utc_ms` and the
+time-issued next cursor, but its GET-only Library p95 was **841 ms** (20/20
+HTTP 200); the restored baseline immediately measured **874 ms**. No reliable
+speedup or W06 PASS follows. That candidate was reverted and its unused
+image deleted.
+
+Read-only RLS-correct `EXPLAIN ANALYZE` on the actual P12 SQL found page
+planning/execution **29.705/25.609 ms** and census **5.435/14.015 ms**.
+A one-snapshot shared-catalogue prototype reduced those isolated timings to
+**22.235/20.805 ms** and preserved the same 20-card API response except
+time-issued fields. Yet three authenticated GET-only bursts after a clean
+candidate restart measured Library p95 **726, 627, 551 ms**, all above the
+500-ms warm target. The original image's three warm bursts measured
+**688, 539, 473 ms**, illustrating run-to-run variation. The combined-query
+prototype was also reverted and its unused image deleted. No new mixed WFO
+trial was run for either rejected candidate; the earlier real-WFO **686-ms**
+FAIL remains the authoritative W06 observation. The P23 Control API is back
+on the healthy `qualification` image; Git is unchanged except this evidence.
