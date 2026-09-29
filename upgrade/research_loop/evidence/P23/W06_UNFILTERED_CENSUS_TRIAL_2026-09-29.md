@@ -27,6 +27,18 @@ cell Control API was restored to original `qualification` and verified healthy.
 A V8 CPU sample during a twenty-reader burst was mostly idle; this does not
 identify the dominant PostgreSQL stage or admission wait. Prior scoped SQL
 page+census p50/p95 was 27/62 ms while concurrent wall latency varied.
+
+Follow-up on the isolated cell temporarily logged only PostgreSQL statements
+lasting >=20 ms with parameter values disabled. In one twenty-reader GET
+burst, the P12 page query had five parses (mean 44.1 ms), nine binds (mean
+46.5 ms) and seventeen executions above the log threshold (mean 37.0 ms);
+the census had one parse (22.2 ms), three binds (21.2 ms) and nine executions
+(mean 29.3 ms). Thresholding omits faster calls, so these are not complete
+request timings. A local, uncommitted trial forcing a generic plan only for
+unfiltered P12 transactions returned all 20 GETs 200 but p95 1,123 ms then
+731 ms without WFO; it was rejected and fully reverted. Both PostgreSQL log
+settings were reset to `-1`, and the unused trial image was deleted.
+
 Next: partition admission wait, scoped SQL and response mapping under the
 same workload, then repeat on a clean image with warm p95 <=500 ms, cold
 p95 <=1,500 ms, 20/20 complete responses, real WFO/queue and strict cgroup

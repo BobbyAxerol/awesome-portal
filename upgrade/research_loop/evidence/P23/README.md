@@ -1,5 +1,10 @@
 # P23 backend qualification packet
 
+**T03 clean-commit acceptance, 2026-09-29:** [real durable WFO disk-pressure and
+recovery receipt](./T03_CLEAN_COMMIT_ACCEPTANCE_2026-09-29.md) is scoped PASS on
+`761bc243`: `FAILED/READY` with `RESOURCE_EXCEEDED` then new `COMPLETED/READY`;
+the original cell volume/image were restored. W06/P23 still OPEN.
+
 **Latest W06 trial, 2026-09-29:** [unfiltered census query](./W06_UNFILTERED_CENSUS_TRIAL_2026-09-29.md)
 preserves current response except its time-issued cursor, and exact mixed load
 returns 20/20 Library 200. Warm p95 is **686 ms FAIL** against 500 ms; five
@@ -7,14 +12,13 @@ other reads and 5 GB cap pass. Not clean-commit acceptance. W06/P23 OPEN.
 
 **Latest T03 durable-run checkpoint, 2026-09-29:** [real disk pressure and recovery](./T03_FULL_DURABLE_RUN_2026-09-29.md)
 observes typed `RESOURCE_EXCEEDED` then successful WFO recovery. Zero-free did
-not durably terminalize and is not counted; clean-commit acceptance remains.
+not durably terminalize and is not counted; clean acceptance now supersedes this checkpoint.
 
 **Owner scope decision, 2026-09-29:** Research-surface T05 is
 `T05_RESEARCH_SCOPE_PASS` on clean `eae7a40d` using the named-read, Report
 JSON/CSV and raw-object negative receipts. Bobby explicitly separated legacy
 `/api/runs/:run_id/export` into a security slice; it is **not** certified by
-this verdict. P23 still fails other gates, including W06; T03 needs final
-clean-commit acceptance.
+this verdict. P23 still fails other gates, including W06.
 
 **Latest T05 file/object route classification, 2026-09-29:**
 [GET-only owned-cell receipt](./T05_FILE_OBJECT_LEGACY_CLASSIFICATION_2026-09-29.md)

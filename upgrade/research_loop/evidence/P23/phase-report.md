@@ -1,5 +1,10 @@
 # P23 backend report — 2026-09-25
 
+**T03 current addendum, 2026-09-29:** [clean committed-image full-run
+receipt](./T03_CLEAN_COMMIT_ACCEPTANCE_2026-09-29.md) is scoped PASS: real
+`FAILED/READY`/`RESOURCE_EXCEEDED` at high-water, then new `COMPLETED/READY`
+after removal of synthetic pressure. Prior PARTIAL rows are historical.
+
 **T05 owner decision, 2026-09-29:** `T05_RESEARCH_SCOPE_PASS` on clean
 `eae7a40d` for the published Research read/Report export and gateway
 raw-object surfaces; previous PARTIAL rows below are pre-decision history.

@@ -6198,6 +6198,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 
 **W06 unfiltered census trial 2026-09-29:** [candidate and mixed-load receipt](./research_loop/evidence/P23/W06_UNFILTERED_CENSUS_TRIAL_2026-09-29.md) keeps current Run Library response parity except its time-issued cursor, but the real twenty-reader p95 is **686 ms FAIL** versus 500 ms. Other five reads, completed WFO and 5 GB cap pass in this scoped trial; no admission/pool/SLO or UI change. W06/P23/P24 remain OPEN pending a measured clean-image fix.
 
+**P23-T03 clean-commit acceptance 2026-09-29:** [isolated full durable-run receipt](./research_loop/evidence/P23/T03_CLEAN_COMMIT_ACCEPTANCE_2026-09-29.md) closes the T03 backend fault/recovery subset on committed `761bc243`: `FAILED/READY`/`RESOURCE_EXCEEDED`, then a new `COMPLETED/READY` run after synthetic pressure removal. The exact test mount/image were deleted after both P23 services returned to original volume/image. W06 and remaining P23/P24 matrix remain OPEN; this is not product GO.
+
 
 **Đọc chi tiết:** [Guide P23](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p23); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
