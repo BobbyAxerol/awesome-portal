@@ -49,8 +49,9 @@ export async function browserImportReceipt({ home = DEFAULT_HOME, label = 'f5-s1
   assert(user?.password && sessions.preparation_complete, 'OWNED_TEST_LOGIN_REQUIRED');
   const owner = await operatorClient(home);
   const workspace = privateJson(join(home, 'reader-authorization.json')).workspace_id;
-  const source = acceptedSource();
   const alphaId = `p23-f5-${randomUUID().slice(0, 8)}`;
+  // A digest may be registered only once. Use a distinct inert test artifact.
+  const source = `# P23 F5 browser subject ${alphaId}\n${acceptedSource()}`;
   const receipt = {
     schema_version: 'research.p23-f5-s14-browser-write.v1', project: PROJECT, base_url: BASE_URL,
     candidate_source_sha: identity.candidate_source_sha,
@@ -92,10 +93,12 @@ export async function browserImportReceipt({ home = DEFAULT_HOME, label = 'f5-s1
       source_digest: parse.body.source_digest };
     await root.locator('[data-nav="2"]').click();
     const gates = await posted(page, '/api/v1/research/alphas/import/gates', () => root.locator('[data-action="run-gates"]').click());
+    receipt.checks.gates = { status: gates.status, all_pass: gates.body.all_pass,
+      rows: gates.body.gates?.map(gate => ({ name: gate.name, state: gate.state })),
+      gate_receipt_id: gates.body.gate_receipt_id };
     assert.equal(gates.body.all_pass, true, 'SEVEN_REAL_GATES_MUST_PASS');
     assert.equal(gates.body.gates?.length, 7);
     await page.waitForFunction(() => document.querySelectorAll('[data-screen="alpha-import"] [data-gate-state="PASS"]').length === 7);
-    receipt.checks.gates = { status: gates.status, passed: 7, gate_receipt_id: gates.body.gate_receipt_id };
     await root.locator('[data-nav="3"]').click();
     await root.getByLabel('Alpha id').fill(alphaId);
     const registration = await posted(page, '/api/v1/research/alphas/import/register', () => root.locator('[data-action="register"]').click());
@@ -127,6 +130,9 @@ export async function browserImportReceipt({ home = DEFAULT_HOME, label = 'f5-s1
       `POST ${activatePath}`,
     ], 'UNEXPECTED_BROWSER_WRITE');
     assert.deepEqual(receipt.page_errors, [], 'BROWSER_PAGE_ERROR');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    assert(overflow <= 1, `HORIZONTAL_OVERFLOW:${overflow}`);
+    receipt.checks.viewport_overflow_px = overflow;
     receipt.jobs_after = jobCount(workspace);
     assert.equal(receipt.jobs_after, receipt.jobs_before, 'IMPORT_CREATED_IMPLICIT_JOB');
     receipt.checks.no_implicit_job = true;
