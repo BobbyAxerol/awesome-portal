@@ -6180,7 +6180,7 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 <a id="rl-p23"></a>
 ### P23 — Resource, security, recovery và upgrade qualification
 
-**P23 W07 2026-09-29:** [bounded export/seek/projection checkpoint](./research_loop/evidence/P23/W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) records a focused companion harness and two genuine setup refusals, not an accepted W07 sample. Reader manifest corrected; owner preflight budget must expire naturally before retake. P23/P24 remain OPEN.
+**P23 W07 2026-09-29:** [bounded export/seek/projection checkpoint](./research_loop/evidence/P23/W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) The measured W07 companion passed active WFO/export/deep-seek/no-implicit-job/5-GB checks but failed typed Evidence projection because the archived WFO Hub was NOT_PUBLISHED. The harness now selects the sealed P04 Hub; a committed runtime retake remains before W07 may pass. P23/P24 stay OPEN.
 
 **P23-T08 current-candidate scoped PASS, 2026-09-29:** [guarded cold-start
 mixed receipt](./research_loop/evidence/P23/T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#current-candidate-cold-start-mixed-retake--2026-09-29)

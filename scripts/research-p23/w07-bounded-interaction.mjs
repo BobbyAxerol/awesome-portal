@@ -16,6 +16,12 @@ const pause = ms => new Promise(done => setTimeout(done, ms));
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const jobCount = workspace => dbQuery('SELECT count(*)::int count FROM research.jobs WHERE workspace_id=$1', [workspace]).rows[0].count;
 
+export function projectionRunId(scope) {
+  assert(scope?.project === PROJECT && scope?.base_url === BASE_URL
+    && /^rrun_[a-z0-9]{16,64}$/.test(scope.named_run_id ?? ''), 'OWNED_PUBLISHED_PROJECTION_RUN_REQUIRED');
+  return scope.named_run_id;
+}
+
 export function assessW07(r) {
   const checks = {
     real_primary: r.running?.effective_status === 'RUNNING' && r.running.source_latest_sequence > 0,
@@ -48,6 +54,7 @@ async function main() {
   const scope = privateJson(join(home, 'reader-authorization.json'));
   assert(scope.project === PROJECT && scope.base_url === BASE_URL);
   const workspace = scope.workspace_id;
+  const projectionRun = projectionRunId(scope);
   const owner = await operatorClient(home);
   const users = loadSessions(home).identities;
   const readers = users.filter(user => /^p23-reader-0[1-4]$/.test(user.username));
@@ -68,7 +75,7 @@ async function main() {
   const running = (await owner.call('GET', '/api/v1/research/runs/' + active[0].run_id + '/progress')).body.current;
   assert(running.effective_status === 'RUNNING' && running.source_latest_sequence > 0);
   const r = { schema_version: 'research.p23-w07-companion.v1', project: PROJECT,
-    candidate_source_sha: identity.candidate_source_sha, archived_run_id: archived,
+    candidate_source_sha: identity.candidate_source_sha, archived_run_id: archived, projection_run_id: projectionRun,
     active_run_id: active[0].run_id, running, started_at_utc: new Date().toISOString(),
     resources: [], reads: [], full_p23_passed: false };
   savePrivate(target, r);
@@ -104,7 +111,7 @@ async function main() {
     r.jobs_before = jobCount(workspace);
     r.resources.push(takeSnapshot(PROJECT, true));
     const paths = [base + '&at=' + encodeURIComponent(point.playback_cursor),
-      '/api/v1/quantbt/runs/' + archived + '/evidence?workspace_id=' + encodeURIComponent(workspace)];
+      '/api/v1/quantbt/runs/' + projectionRun + '/evidence?workspace_id=' + encodeURIComponent(workspace)];
     r.reads = await Promise.all(readers.flatMap(user => paths.map(async (path, index) => {
       const started = performance.now();
       const value = await makeClient(user).call('GET', path);

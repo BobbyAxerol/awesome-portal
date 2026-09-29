@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assessW07 } from './w07-bounded-interaction.mjs';
+import { assessW07, projectionRunId } from './w07-bounded-interaction.mjs';
 
 const valid = () => ({
   running: { effective_status: 'RUNNING', source_latest_sequence: 1 },
@@ -32,4 +32,12 @@ test('W07 scoped receipt requires real overlap, bounded body and unchanged jobs'
     assert.equal(assessW07(r).scoped_passed, false);
   }
   assert.equal(assessW07(valid()).full_p23_passed, false);
+});
+
+test('W07 projection is owned P04, never inferred from the archived WFO', () => {
+  const scope = { project: 'portal-research-p23-ol12',
+    base_url: 'http://127.0.0.1:8096', named_run_id: 'rrun_' + 'a'.repeat(32) };
+  assert.equal(projectionRunId(scope), scope.named_run_id);
+  assert.throws(() => projectionRunId({ ...scope, named_run_id: undefined }));
+  assert.throws(() => projectionRunId({ ...scope, project: 'portal-research-preview' }));
 });
