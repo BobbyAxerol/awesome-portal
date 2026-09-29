@@ -14,6 +14,7 @@ single server-installed ``p04.delta-rsi.v1`` qualification adapter only.
 from __future__ import annotations
 
 import asyncio
+import errno
 import hashlib
 import json
 import math
@@ -83,6 +84,17 @@ class ResearchRunProducerError(RuntimeError):
     def __init__(self, message: str, *, code: str = "ENGINE_ERROR") -> None:
         super().__init__(message)
         self.code = code
+
+
+def _storage_exhausted(exc: BaseException) -> bool:
+    """Classify bounded Arrow/Python disk exhaustion without exposing paths."""
+
+    if isinstance(exc, OSError) and exc.errno in (errno.ENOSPC, errno.EDQUOT):
+        return True
+    # ArrowIOError is an OSError with errno=None on the pinned PyArrow wheel.
+    return isinstance(exc, (OSError, pa.ArrowException)) and bool(
+        re.search(r"(?:\[errno (?:28|122)\]|no space left on device|disk quota exceeded)", str(exc), re.I)
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1034,6 +1046,11 @@ class ResearchRunProducerExecutor:
         except ResearchRunProducerError:
             raise
         except (OSError, pa.ArrowException, TypeError, ValueError) as exc:
+            if _storage_exhausted(exc):
+                raise ResearchRunProducerError(
+                    "P10 immutable snapshot tape exhausted its disk or filesystem quota",
+                    code="RESOURCE_EXCEEDED",
+                ) from exc
             raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded IS/OOS tape") from exc
         finally:
             if writer is not None:

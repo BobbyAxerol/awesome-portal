@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import errno
 import hashlib
 import hmac
 import json
@@ -10,6 +11,7 @@ from pathlib import Path
 
 import httpx
 import pandas as pd
+import pyarrow as pa
 import pytest
 
 from portal_api.main import create_app
@@ -34,6 +36,7 @@ from portal_api.services.research_run_producer import (
     ResearchRunProducerError,
     ResearchRunProducerExecutor,
     _cpu_budget_tick_payload,
+    _storage_exhausted,
 )
 from portal_api.services.research_imported_source import ImportedSource
 from portal_api.services.research_supervisor import IsolatedResearchSupervisor
@@ -52,6 +55,14 @@ P04_PARAMETERS: dict[str, int | float] = {
     "len_vol": 16,
     "slpercent": 1.3,
 }
+
+
+def test_p23_t03_tape_writer_classifies_python_and_arrow_disk_full() -> None:
+    assert _storage_exhausted(OSError(errno.ENOSPC, "private path"))
+    assert _storage_exhausted(OSError(errno.EDQUOT, "private path"))
+    assert _storage_exhausted(pa.ArrowIOError("Error writing bytes. Detail: [errno 28] No space left on device"))
+    assert not _storage_exhausted(OSError(errno.EIO, "other I/O error"))
+    assert not _storage_exhausted(pa.ArrowInvalid("not a disk failure"))
 
 
 def _object_keys(value: object) -> set[str]:

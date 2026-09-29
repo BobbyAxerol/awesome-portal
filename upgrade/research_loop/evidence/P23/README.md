@@ -82,6 +82,11 @@ T03 is PARTIAL, not product-qualified. The test used only a no-network,
 non-root one-off container and its own loop mount; no existing P23 volume
 or service was changed.
 
+**T03 full durable-run retake, 2026-09-29:** [real API disk pressure and
+recovery](./T03_FULL_DURABLE_RUN_2026-09-29.md) passes the scoped WFO
+`RESOURCE_EXCEEDED` terminal and post-pressure completed run. Final clean-candidate
+P23 qualification and W06 remain open; the earlier failed checkpoint is retained.
+
 **Latest T12 negative admission checkpoint, 2026-09-28:** [Finite real quota
 receipt and precise source-owner handoffs](./T12_ADMISSION_QUOTA_CHECKPOINT_2026-09-28.md)
 prove eight accepted preflights/actor, a ninth typed 503, another workspace

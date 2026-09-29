@@ -12,11 +12,24 @@ from portal_api.services.research_supervisor import (
     ResearchChildLimits,
     ResearchChildReceipt,
     ResearchSupervisorError,
+    _child_resource_exhausted,
 )
 
 
 BACKEND_ROOT = Path(__file__).parents[1]
 MARKET_PATH = BACKEND_ROOT / "tests" / "fixtures" / "golden_market.parquet"
+
+
+@pytest.mark.parametrize("errno", (28, 122))
+def test_p23_t03_supervisor_preserves_wrapped_child_storage_failure(errno: int) -> None:
+    traceback = (
+        f"OSError: [Errno {errno}] No space left on device\n\n"
+        "The above exception was the direct cause of the following exception:\n"
+        "RuntimeError: walk-forward endpoint scoring failed\n"
+    )
+    assert _child_resource_exhausted(traceback)
+    assert not _child_resource_exhausted("RuntimeError: walk-forward endpoint scoring failed")
+    assert not _child_resource_exhausted("OSError: [Errno 5] Input/output error")
 
 
 def _receipt(tmp_path: Path, suffix: str = "one") -> ResearchChildReceipt:

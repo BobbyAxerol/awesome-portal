@@ -41,6 +41,12 @@ class ResearchSupervisorError(RuntimeError):
         self.code = code
 
 
+def _child_resource_exhausted(stderr_tail: str) -> bool:
+    """Recognize Python's bounded errno line after an engine wrapper fails."""
+
+    return bool(re.search(r"(?:OSError|PermissionError): \[Errno (?:28|122)\]", stderr_tail))
+
+
 @dataclass(frozen=True, slots=True)
 class ResearchChildLimits:
     # Numba/Arrow reserve virtual address ranges while their resident use is
@@ -798,8 +804,19 @@ class IsolatedResearchSupervisor:
                     "P06 child exceeded its CPU limit and was killed",
                     code="RESOURCE_EXCEEDED",
                 )
+            stderr_tail = self._read_tail(stderr_path)
+            # QuantBT/Optuna can wrap an OSError from its on-disk JIT cache in
+            # RuntimeError before the isolated child exits. The bounded tail
+            # still contains Python's errno line; never forward its traceback
+            # (which may contain private paths or strategy parameters) into a
+            # user-visible failure receipt.
+            if _child_resource_exhausted(stderr_tail):
+                raise ResearchSupervisorError(
+                    "P06 child exhausted its disk or filesystem quota",
+                    code="RESOURCE_EXCEEDED",
+                )
             raise ResearchSupervisorError(
-                f"P06 child exited {return_code}: {self._read_tail(stderr_path)!r}"
+                f"P06 child exited {return_code}: {stderr_tail!r}"
             )
         payload = self._read_result(result_path)
         try:

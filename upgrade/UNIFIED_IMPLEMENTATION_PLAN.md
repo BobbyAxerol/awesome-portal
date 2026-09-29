@@ -6194,6 +6194,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 
 **Diagnostic 2026-09-29:** [Run Library SQL/CPU boundary](./research_loop/evidence/P23/READ_SLO_SQL_CPU_DIAGNOSTIC_2026-09-29.md) confirms 20/20 GETs but unstable warm p95 (384–598 ms) without heavy compute. nginx is not established as the cause; PostgreSQL and Control API CPU are material. No admission/pool/cache/plan-policy change; W06/P23 remain FAIL/OPEN.
 
+**T03 full durable-run checkpoint 2026-09-29:** [scoped real WFO disk-pressure/recovery receipt](./research_loop/evidence/P23/T03_FULL_DURABLE_RUN_2026-09-29.md) proves authenticated `FAILED/READY` with `RESOURCE_EXCEEDED` followed by `COMPLETED/READY` after pressure removal. The zero-free attempt did not form a durable terminal and was cancelled; it is not counted. Source repair still needs clean-commit image acceptance; W06 and full P23/P24 remain OPEN. Legacy export remains its separate security slice.
+
 
 **Đọc chi tiết:** [Guide P23](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p23); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
