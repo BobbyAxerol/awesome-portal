@@ -137,3 +137,32 @@ repair to Claude rather than change her current code without coordination.
 P23/P24 and the eight-group goal remain active; this is no release/Production
 activation. The exact test cell, volumes and 22 TTL identities remain owned by
 P23 qualification and are not pruned while still needed.
+
+## Same final-candidate cold subgate — 2026-09-29
+
+After the clean passing W06 retake on `2436b118`, the exact P23 cell had
+zero active/queued jobs. Only its five named web/API/worker/PostgreSQL
+containers were stopped; the guarded helper accepted only the P23 PostgreSQL
+and artifact volumes. It reported **3,536 regular files**, **207,654,452
+bytes** on those volumes and **143,867,904 → 0 resident page-cache bytes**.
+It reported `file_bytes_modified=false`, `host_drop_caches_used=false`.
+The trap restored the same seven-service cell healthy, with `dirty=false`
+identity; no shared Execution/dev/production service or volume was touched.
+
+Twenty real authenticated principals then made the same 120 bounded named
+GETs with the `cold` SLO profile: **120/120 HTTP 200**. Cold p95 was Library
+**462 ms**, Progress **241 ms**, Evidence **476 ms**, Search **322 ms**,
+Report **148 ms**, Replay **326 ms**; all six are below their cold targets.
+A strict 24-sample, seven-service resource series overlapped the read interval
+and peaked at **420,196,352 bytes** (<5 GB). All three receipts are 0600.
+
+| Private receipt | SHA-256 |
+| --- | --- |
+| `t08-candidate-2436b118-eviction.json` | `931136baaf6edfc2f7a3a738fb9bb3ce996e1d633124156f36a2034f87ae42e9` |
+| `t08-candidate-2436b118-cold-read.json` | `9c62b42a16a0d9852ebab173edb408c16030719cddafa1b1fdb766cb61768bd7` |
+| `t08-candidate-2436b118-resource-series.json` | `e807958daff658cb69ab817d70ec4c99d8aa7107944f45095a7f7ceab14c5513` |
+
+This closes the **current-candidate isolated cold GET-only subgate**. It does
+not claim a simultaneous cold-read + active WFO/four-queued T08 run. The
+passing warm W06 receipt is separate, and the earlier warm FAIL remains
+preserved. Therefore T08 and P23 remain PARTIAL/OPEN.

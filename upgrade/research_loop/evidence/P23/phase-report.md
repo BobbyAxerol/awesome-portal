@@ -1,5 +1,13 @@
 # P23 backend report — 2026-09-25
 
+**Current W06/T08 addendum, 2026-09-29:** [clean exact W06 retake](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#clean-exact-retake-after-natural-expiry)
+PASS on `2436b118` at the original warm SLO with one real HEAVY/four queued
+and twenty principals (120/120 GET 200; Library/Evidence p95 365/352 ms;
+774,123,520-byte seven-service peak). The preceding same-image 655/666-ms
+FAIL remains recorded as latency variance. [Same-candidate T08 cold GET-only](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#same-final-candidate-cold-subgate--2026-09-29)
+also passes its scoped cold targets after P23-only page-cache eviction.
+Simultaneous cold/WFO, other matrix gates, full P23 and P24 remain OPEN.
+
 **T03 current addendum, 2026-09-29:** [clean committed-image full-run
 receipt](./T03_CLEAN_COMMIT_ACCEPTANCE_2026-09-29.md) is scoped PASS: real
 `FAILED/READY`/`RESOURCE_EXCEEDED` at high-water, then new `COMPLETED/READY`

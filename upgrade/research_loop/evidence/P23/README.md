@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Current 2026-09-29 (supersedes W06 verdict below, not its raw failure):**
+clean `2436b118` [W06 exact retake](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#clean-exact-retake-after-natural-expiry)
+PASS at original 500-ms warm SLO (Library 365, Evidence 352 ms), 120/120
+GET 200, real HEAVY/four queued and 774-MB aggregate peak. Prior same-image
+655/666-ms FAIL remains a variability warning. [T08 same-candidate cold
+GET-only](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#same-final-candidate-cold-subgate--2026-09-29)
+PASS in scope; mixed cold/WFO and full P23/P24 remain OPEN.
+
 **Latest W06 clean-candidate checkpoint 2026-09-29:** [exact image, source and mixed-load receipts](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md) show Library p95 **383 ms PASS** but Evidence p95 **571 ms FAIL** under a real WFO/four queued/20 authenticated readers. All 120 GETs returned 200; the 5-GB cap passed. The old 407-ms dirty-image trial remains diagnostic only. **W06/P23 OPEN; no product qualification claim.**
 
 

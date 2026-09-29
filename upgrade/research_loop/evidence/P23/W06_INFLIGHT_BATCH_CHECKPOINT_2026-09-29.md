@@ -110,3 +110,33 @@ Private 0600 receipt SHA-256 for the exact mixed retake:
 | `w06-p13-3f9a7fae-read.json` | `0ab34e99d4a2e0e9fae38ee9de2be9ec7925bc6472bb8ccaceffc69e0db62c2b` |
 | `w06-p13-3f9a7fae-resource-series.json` | `06772a6007a893c91dfd519fc194377b5d1017e0347a60675f4e92cfbcd19521` |
 
+
+## Clean exact retake after natural expiry
+
+On docs-only source commit `2436b118`, the same P13 Control API image was
+retained and all seven running image/container IDs were recorded anew with
+`dirty=false`. The five owned preflight manifests had naturally expired;
+neither quota nor business data was reset. The
+`w06-p13-retake-2436b118` workload again used one real HEAVY WFO, four
+durable queued intents, twenty distinct authenticated readers and the same six
+named routes. It returned **120/120 HTTP 200**, completed the WFO, cancelled
+the queued intents via the public API and kept peak aggregate cgroup memory at
+**774,123,520 bytes**, well below 5,000,000,000. No viewer created a job and
+`diagnostic_only=false`.
+
+Warm p95: Library **365 ms**, Progress **240 ms**, Evidence **352 ms**,
+Search **172 ms**, Report **118 ms**, Replay **301 ms**. All six meet their
+original Guide §16.3 targets, including the 500-ms summary target; Bobby's
+possible 500–600-ms relaxation was **not used**. This is an exact W06 **PASS
+receipt on this retake**, not proof that the prior 655/666-ms miss never
+occurred. The opposite outcomes on the same application image leave a
+load-variance concern for ongoing qualification. T08, other P23 gates and
+P24 remain OPEN; no production/dev runtime changed.
+
+Private 0600 receipt SHA-256:
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `w06-p13-retake-2436b118-workload.json` | `1eca6e2f5e84dd25f69bc118d18edc6393ba563aa68d086f531e4cbb8c92e610` |
+| `w06-p13-retake-2436b118-read.json` | `7827f1a59193da8ceb61bc79847419d7f71e82a04f1661b9d2e26024dea0a3d9` |
+| `w06-p13-retake-2436b118-resource-series.json` | `6f81f13c171f11000536158995c601d861b91718b4328570b9ccaef1d2f36283` |
