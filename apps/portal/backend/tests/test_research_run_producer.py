@@ -39,6 +39,7 @@ from portal_api.services.research_imported_source import ImportedSource
 from portal_api.services.research_supervisor import IsolatedResearchSupervisor
 import portal_api.workers.durable_worker as durable_worker_module
 from portal_api.workers.durable_worker import DurableQuantWorker
+from portal_api.workers.research_child import _MAX_CANDLE_OVERVIEW_BUCKETS
 
 
 P04_PARAMETERS: dict[str, int | float] = {
@@ -330,7 +331,7 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
     for forbidden in ("market_path", "snapshot_id", "worker_attempt_id", "lease_epoch"):
         assert forbidden not in public_keys
     overview = evidence["candle_overview"]
-    assert 1 <= overview["emitted_bucket_count"] == len(overview["values"]) <= 12
+    assert 1 <= overview["emitted_bucket_count"] == len(overview["values"]) <= _MAX_CANDLE_OVERVIEW_BUCKETS
     assert overview["source_bar_count"] >= overview["emitted_bucket_count"]
     assert overview["sampling"] in {"FULL", "OHLC_BUCKET_V1"}
     assert overview["values"][0]["first_ordinal"] == 0

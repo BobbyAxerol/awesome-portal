@@ -1,5 +1,10 @@
 # P23 backend qualification packet
 
+**Latest T10 Python baseline retake, 2026-09-29:** [Full isolated suite](./T10_PYTHON_BASELINE_RETAKE_2026-09-29.md)
+passes with corrected stale P17/P13 test expectations and canonical BAR-05
+manifest regeneration. No runtime source or frontend was changed. Full T10
+browser/engine/resource evidence and P23 qualification remain OPEN.
+
 **Latest T03/T05 runtime retake, 2026-09-29:** [Clean-image ext4, named-read
 and export receipts](./T03_T05_RUNTIME_RETAKE_2026-09-29.md) pass real
 0-byte-free append/manifest recovery on `d4021790`, then 10/10 authenticated

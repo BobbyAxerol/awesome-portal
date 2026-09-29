@@ -6182,6 +6182,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 
 **Latest T03/T05 scoped retake 2026-09-29:** [clean-image runtime receipt](./research_loop/evidence/P23/T03_T05_RUNTIME_RETAKE_2026-09-29.md) passes real isolated ext4 append+manifest ENOSPC recovery on `d4021790`; clean `eae7a40d` passes ten authenticated tenant/cache GETs and twelve existing JSON/CSV export status/download GETs. Full P06/API disk-full and remaining T05 private file/object/legacy-route negatives remain; W06 latency and P23/P24 remain OPEN. The source-only note below is historical.
 
+**P23-T10 Python regression 2026-09-29:** [isolated full-suite receipt](./research_loop/evidence/P23/T10_PYTHON_BASELINE_RETAKE_2026-09-29.md) exits 0 after correcting stale P17/P13 test expectations and regenerating the canonical BAR-05 freeze manifest. This closes only the Python-suite slice; browser/engine/resource qualification on one immutable candidate and P23 remain OPEN.
+
 **T03/T05 backend repair 2026-09-29:** [source checkpoint](./research_loop/evidence/P23/T03_T05_SOURCE_REPAIR_2026-09-29.md) records Bobby-approved shared-backend changes and focused tests. T03/T05 remain OPEN until the clean owned-cell ext4/full-P06/API and tenant/cache retakes; three unrelated current Python-suite baseline failures are recorded, not silently waived. W06 and P23 remain OPEN.
 
 **Checkpoint 2026-09-29:** [W06 identity-barrier retake](./research_loop/evidence/P23/READ_SLO_IDENTITY_BARRIER_2026-09-29.md) giữ Library p95 896 ms FAIL dưới một WFO thật/bốn queued và 20 principal; năm read khác cùng memory cap PASS. P23 vẫn OPEN, không nới SLO/pool hoặc gọi đây là release evidence.
