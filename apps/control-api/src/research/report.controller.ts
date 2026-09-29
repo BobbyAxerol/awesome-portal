@@ -1,6 +1,6 @@
 /** P18 same-origin Report and authenticated bounded-export routes. */
 
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, HttpCode, Inject, Param, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { constantTimeEqual, sha256 } from "../auth/argon";
@@ -70,6 +70,7 @@ export class ResearchReportController {
   }
 
   @Get(":runId/report/exports/:jobId")
+  @Header("Cache-Control", "private, no-store")
   async exportStatus(
     @Req() request: ReportRequest,
     @Param("runId") rawRunId: string,

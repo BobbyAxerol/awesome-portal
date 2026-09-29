@@ -344,3 +344,37 @@ def test_p23_t03_storage_full_uses_existing_safe_terminal_code() -> None:
     assert DurableQuantWorker._classify(raw) == "RESOURCE_EXCEEDED"
     assert not DurableQuantWorker._storage_full(OSError(errno.EIO, "other I/O"))
     assert DurableQuantWorker._classify(OSError(errno.EIO, "other I/O")) == "ENGINE_ERROR"
+
+
+@pytest.mark.anyio
+async def test_p23_t03_worker_disk_full_is_failed_without_private_path(tmp_path: Path) -> None:
+    from portal_api.services.research_artifacts import ResearchArtifactError
+
+    broker = InMemoryJobBroker()
+    registry = AttemptRegistry(tmp_path / "runs")
+    registry.create_run_intent(_intent("run_t03_full"))
+    attempt = registry.create_attempt("run_t03_full")
+
+    async def full_executor(request_json, run_id, artifact_root):
+        raise ResearchArtifactError("RESEARCH_ARTIFACT_DISK_FULL", "private /mnt/t03 path")
+
+    worker = DurableQuantWorker(
+        broker=broker,
+        registry=registry,
+        artifact_store=ContentAddressedArtifactStore(tmp_path / "artifacts"),
+        executor=full_executor,
+    )
+    await worker.start()
+    await broker.publish("quant.run.requested", {
+        "run_id": "run_t03_full", "run_attempt_id": attempt.run_attempt_id, "request_json": {},
+    })
+    stored = registry.attempt("run_t03_full", attempt.run_attempt_id)
+    assert stored is not None
+    assert stored.status == "FAILED"
+    assert stored.failure_code == "RESOURCE_EXCEEDED"
+    assert stored.failure_message == "artifact storage capacity exhausted"
+    failed = [payload for subject, payload in broker.published if subject == "quant.run.failed"]
+    succeeded = [payload for subject, payload in broker.published if subject == "quant.run.succeeded"]
+    assert len(failed) == 1 and failed[0]["failure_code"] == "RESOURCE_EXCEEDED"
+    assert succeeded == []
+    await worker.stop()

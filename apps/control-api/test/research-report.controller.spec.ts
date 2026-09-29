@@ -1,3 +1,4 @@
+import { HEADERS_METADATA } from "@nestjs/common/constants";
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchReportController } from "../src/research/report.controller";
@@ -14,6 +15,11 @@ function request(overrides: Record<string, unknown> = {}) {
 }
 
 describe("P18 same-origin Report controller boundary", () => {
+  it("does not cache personalized export status", () => {
+    expect(Reflect.getMetadata(HEADERS_METADATA, ResearchReportController.prototype.exportStatus))
+      .toContainEqual({ name: "Cache-Control", value: "private, no-store" });
+  });
+
   it("revalidates the browser-visible weak ETag only after workspace authority", async () => {
     const etag = `"p18r1_${"a".repeat(64)}"`;
     const service = { read: vi.fn().mockResolvedValue({ etag }) };
@@ -44,6 +50,7 @@ describe("P18 same-origin Report controller boundary", () => {
     await controller.detail(request() as never, reply as never, "run_p18", {});
     await controller.exportStatus(request() as never, "run_p18", `rpex_01J00000000000000000000000`, {});
     await controller.download(request() as never, reply as never, "run_p18", `rpex_01J00000000000000000000000`, {});
+    expect(reply.header).toHaveBeenCalledWith("cache-control", "private, no-store");
     expect(workspaces.isMember).toHaveBeenCalledTimes(3);
     expect(service.read).toHaveBeenCalledWith({ workspaceId: "workspace-p18", actorUserId: "p18-user" }, "run_p18");
     expect(service.readExport).toHaveBeenCalledWith({ workspaceId: "workspace-p18", actorUserId: "p18-user" }, "run_p18", expect.any(String));
