@@ -6182,6 +6182,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 
 **Checkpoint 2026-09-29:** [W06 identity-barrier retake](./research_loop/evidence/P23/READ_SLO_IDENTITY_BARRIER_2026-09-29.md) giữ Library p95 896 ms FAIL dưới một WFO thật/bốn queued và 20 principal; năm read khác cùng memory cap PASS. P23 vẫn OPEN, không nới SLO/pool hoặc gọi đây là release evidence.
 
+**Diagnostic 2026-09-29:** [Run Library SQL/CPU boundary](./research_loop/evidence/P23/READ_SLO_SQL_CPU_DIAGNOSTIC_2026-09-29.md) confirms 20/20 GETs but unstable warm p95 (384–598 ms) without heavy compute. nginx is not established as the cause; PostgreSQL and Control API CPU are material. No admission/pool/cache/plan-policy change; W06/P23 remain FAIL/OPEN.
+
 
 **Đọc chi tiết:** [Guide P23](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p23); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
