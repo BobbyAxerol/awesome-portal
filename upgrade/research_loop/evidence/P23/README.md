@@ -1,5 +1,17 @@
 # P23 backend qualification packet
 
+**Current candidate, 2026-09-29:** [Two exact W06 mixed-load receipts](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#current-88be2acd-candidate--two-clean-mixed-retakes)
+on committed source 88be2acd and the same clean seven-image P23 cell PASS the
+original warm targets twice: Library/Evidence p95 363/445 and 405/305 ms,
+120/120 GET 200 each time, real WFO completed with four queued intents, and
+seven-service peaks 679/620 MB (<5 GB). No 500–600-ms SLO relaxation was used.
+[Same-image T08 cold GET-only](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#current-88be2acd-candidate--two-clean-mixed-retakes)
+also passes 120/120 named GETs after P23-only guarded eviction. Historical
+same-image failures on the previous P13 candidate remain documented below;
+they are not rewritten. W06 current-candidate subgate PASS; T08 mixed-cold,
+other P23 tests, P24 and Product acceptance remain OPEN. No dev/Production
+runtime or Frontend changed and no push was made.
+
 **Latest 2026-09-29:** exact same-image repeat `54749346` [W06 FAILS reliability](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#repeatability-retake-and-next-narrow-candidate):
 Library/Evidence p95 527/618 ms despite 120/120 GET 200 and completed WFO.
 The prior 365/352-ms PASS is retained, not promoted to stable qualification.

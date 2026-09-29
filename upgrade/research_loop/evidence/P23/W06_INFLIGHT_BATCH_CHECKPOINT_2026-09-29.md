@@ -1,6 +1,6 @@
 # P23 W06 — bounded in-flight Library batch checkpoint, 2026-09-29
 
-Status: **clean-candidate W06 FAIL; P23 OPEN**. This is a P12
+Status: **current 88be2acd candidate W06 PASS twice; P23 OPEN**. The initial P12
 backend-only change in the isolated `portal-research-p23-ol12` cell on :8096.
 No API/contract/UI, pool limit, admission cap, SLO, migration, dev or production
 runtime changed.
@@ -169,3 +169,63 @@ the DB-authoritative `as_of_utc_ms`, RLS/membership, 2/18 admission and API.
 Focused 16/16 Evidence tests and Control API build pass. It is **not** a
 runtime W06 fix until a clean commit/image and repeated real mixed retakes
 prove it. No frontend, shared service or production change was made.
+
+
+## Current 88be2acd candidate — two clean mixed retakes
+
+The source-only statement above is historical. Commit
+88be2acd23189b83109116c6d1b8c98f280a9af5 passed 16/16 focused
+Evidence tests, Control API build and the full repository hook. Only the
+isolated P23 Control API was rebuilt. Seven running image/container IDs were
+pinned, including Control API image
+sha256:c65403a1e3de199a0ffeb5a82b6c9e9744710638146eac327da6a195f95c9f03.
+Both workload receipts have diagnostic_only=false, zero drift reasons and the
+same clean source/image identity. Five owned preflights expired naturally
+between retakes; neither quota nor business rows were cleared.
+
+| Exact W06 run | Library p95 | Evidence p95 | Progress/Search/Report/Replay p95 | 7-service peak |
+| --- | ---: | ---: | --- | ---: |
+| w06-timestamp-88be2acd | 363 ms | 445 ms | 287/369/180/264 ms | 679,182,336 bytes |
+| w06-timestamp-repeat-88be2acd | 405 ms | 305 ms | 203/187/114/313 ms | 619,872,256 bytes |
+
+Each run admitted one real HEAVY WFO, observed four distinct durable queued
+intents, completed the WFO, returned 120/120 GET 200 across twenty
+authenticated readers/six routes and cancelled queued intents through the
+public API. No viewer created a job; the post-run ledger had zero active or
+queued jobs. Both summary routes meet the unchanged 500-ms warm target; all
+other named reads meet their original targets. Bobby's possible 500–600-ms
+relaxation was not used. This is a current-candidate exact mixed W06 subgate
+PASS, not whole-P23 qualification or a guarantee against future host-load
+variance. Earlier 655/666 and 527/618-ms failed receipts remain immutable
+history.
+
+The same image passed the scoped T08 cold GET-only subgate. After stopping
+only five owned containers, guarded P23-only PostgreSQL/artifact-volume
+eviction measured 85,966,848→0 resident bytes across 3,638 files/218,069,087
+file bytes, with no byte modification or host cache drop. All seven services
+recovered healthy. Cold 20-reader × six-route requests were 120/120 GET 200;
+Library/Progress/Evidence/Search/Report/Replay p95 were
+572/306/498/215/190/257 ms, all below cold targets. The overlapping
+24-sample resource series peaked at 427,020,288 bytes. Same-image warm
+GET-only Library/Evidence were 388/282 ms. This does not claim a simultaneous
+cold-read+HEAVY T08 run.
+
+Private mode-0600 receipts under
+/home/bobby/.local/state/portal-research-p23/20260927/runtime/:
+
+| Receipt | SHA-256 |
+| --- | --- |
+| w06-timestamp-88be2acd-workload.json | f6df05f7b6b8da545a221cd563fd6f48da1a643de6770c50e73e80f54d874d27 |
+| w06-timestamp-88be2acd-read.json | 48685cf86844e0f44f104d5c576785e2fd06bed08a0ef6b6b4826e93f17bf802 |
+| w06-timestamp-88be2acd-resource-series.json | eda77dbf3e631b6386b623cf70882ed6104f93435c0e5a14f6bf0fd4a85b5fb5 |
+| w06-timestamp-repeat-88be2acd-workload.json | 6a31db726ee58be60069aa7ef48a2733f72fdbad7df903fa74a327a3ee443e5a |
+| w06-timestamp-repeat-88be2acd-read.json | 6882fb6644ed7e201da6a772c916a8309579785eaf7e626f236f48bf37fc881e |
+| w06-timestamp-repeat-88be2acd-resource-series.json | d899c828754da193c2ada120158b0f4f47d98b5b40167063b69e6666d5c72848 |
+| t08-timestamp-88be2acd-eviction.json | 178e1d9dbe86b1782cd62a5635077129cb87ff845c4b698d9f3189e058631849 |
+| t08-timestamp-88be2acd-cold-read.json | 80465a2f2112c6e84ce632d322aa06ba70e7f91d28ec64e7358196e20d0d6385 |
+| t08-timestamp-88be2acd-resource-series.json | dc0d3bfcb77a584220bef5798af3a0bca07096f389c6472351adeb0b927a4dcd |
+
+P23 still needs T02 plateau, T07/T13 upgrade/default/pins, T12
+utility/audit admission, T14 exposure/audit-child, T15 browser-real and
+final DR/BR/GX aggregation. No dev/Production runtime or Frontend changed;
+no push was made.

@@ -1,5 +1,16 @@
 # P23 backend report — 2026-09-25
 
+**Current W06/T08 candidate, 2026-09-29:** committed source 88be2acd
+passes two exact clean-image W06 retakes at the unchanged warm SLO. Twenty
+principals × six GETs return 120/120 200 per retake while a real HEAVY WFO
+completes and four durable intents queue; Library/Evidence p95 are 363/445
+and 405/305 ms, seven-service peaks 679,182,336/619,872,256 bytes.
+The same-image guarded cold GET-only subgate also returns 120/120 200 under
+every cold target. [Receipt hashes and historical failures](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#current-88be2acd-candidate--two-clean-mixed-retakes).
+W06 current-candidate subgate PASS; T08 simultaneous cold+WFO and full
+P23/P24 remain OPEN. No threshold, pool, admission, API/UI, shared runtime
+or production flag changed; no push was made.
+
 **Latest W06 repeatability, 2026-09-29:** [same-image mixed retake](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#repeatability-retake-and-next-narrow-candidate)
 FAILS 500-ms warm summaries (Library/Evidence p95 527/618 ms; Evidence
 also exceeds 600 ms). All 120 GETs are 200; real WFO completed under

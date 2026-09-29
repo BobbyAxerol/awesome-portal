@@ -166,3 +166,31 @@ This closes the **current-candidate isolated cold GET-only subgate**. It does
 not claim a simultaneous cold-read + active WFO/four-queued T08 run. The
 passing warm W06 receipt is separate, and the earlier warm FAIL remains
 preserved. Therefore T08 and P23 remain PARTIAL/OPEN.
+
+
+## Same current 88be2acd image — guarded cold GET-only retake
+
+After the first W06 PASS on source commit
+88be2acd23189b83109116c6d1b8c98f280a9af5, the isolated P23 cell had zero
+active/queued jobs. Only its five named web/API/worker/PostgreSQL containers
+were stopped. The guarded P23-only DB/artifact-volume helper observed 3,638
+files/218,069,087 file bytes and evicted 85,966,848→0 resident bytes using
+read-only descriptors; no bytes changed and no host drop_caches was called.
+All seven services recovered healthy with exact source/image identity and
+dirty=false. Twenty distinct authenticated readers then made six cold GETs
+each: 120/120 HTTP 200. Cold p95 Library/Progress/Evidence/Search/Report/Replay
+was 572/306/498/215/190/257 ms, all below the original cold targets. The
+24-sample overlapping seven-service series peaked at 427,020,288 bytes.
+Same-image warm GET-only p95 Library/Evidence was 388/282 ms; a later
+second exact W06 mixed retake also PASS (405/305 ms, one real HEAVY WFO,
+four queued, 120/120 GET 200; see W06 packet).
+
+Mode-0600 receipt SHA-256: eviction
+178e1d9dbe86b1782cd62a5635077129cb87ff845c4b698d9f3189e058631849;
+cold-read
+80465a2f2112c6e84ce632d322aa06ba70e7f91d28ec64e7358196e20d0d6385;
+resource-series
+dc0d3bfcb77a584220bef5798af3a0bca07096f389c6472351adeb0b927a4dcd.
+This closes the current-candidate isolated cold GET-only subgate. It does not
+prove simultaneous cold-read plus active WFO/four queued. T08/P23 remain
+PARTIAL/OPEN; no shared Execution/dev/Production volume or service changed.

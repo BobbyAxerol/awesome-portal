@@ -6180,6 +6180,18 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 <a id="rl-p23"></a>
 ### P23 — Resource, security, recovery và upgrade qualification
 
+**Current W06 candidate, 2026-09-29 (Codex):** [two exact clean-image
+retakes](./research_loop/evidence/P23/W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#current-88be2acd-candidate--two-clean-mixed-retakes)
+on committed 88be2acd pass the original 500-ms warm summary SLO (Library /
+Evidence p95 363/445 and 405/305 ms), with 120/120 GET 200 per run, one
+completed real HEAVY WFO, four durable queued intents and seven-service peaks
+679/620 MB. The unchanged candidate also passes the P23-only guarded
+cold GET-only T08 subgate (120/120 200, all cold SLOs); simultaneous cold
+HEAVY remains unmeasured. The old same-image FAIL receipts remain linked as
+history, not erased. W06 current-candidate subgate PASS; T08 and P23/P24
+overall OPEN for T02, T07/T13, T12, T14, T15 and DR/BR/GX. No 500–600-ms
+relaxation, API/UI or dev/Production runtime change; no push.
+
 **Latest T03/T05 scoped retake 2026-09-29:** [clean-image runtime receipt](./research_loop/evidence/P23/T03_T05_RUNTIME_RETAKE_2026-09-29.md) passes real isolated ext4 append+manifest ENOSPC recovery on `d4021790`; clean `eae7a40d` passes ten authenticated tenant/cache GETs and twelve existing JSON/CSV export status/download GETs. Full P06/API disk-full and remaining T05 private file/object/legacy-route negatives remain; W06 latency and P23/P24 remain OPEN. The source-only note below is historical.
 
 **P23-T10 Python regression 2026-09-29:** [isolated full-suite receipt](./research_loop/evidence/P23/T10_PYTHON_BASELINE_RETAKE_2026-09-29.md) exits 0 after correcting stale P17/P13 test expectations and regenerating the canonical BAR-05 freeze manifest. This closes only the Python-suite slice; browser/engine/resource qualification on one immutable candidate and P23 remain OPEN.
