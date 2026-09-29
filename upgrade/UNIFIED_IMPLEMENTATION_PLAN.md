@@ -3642,6 +3642,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 
 **F5/S02 scoped addendum 2026-09-29:** [S02 browser-real write receipt](./research_loop/evidence/P23/F5_S02_BROWSER_REAL_WRITE_2026-09-29.md) trên cell riêng cùng pinned image: 1280/660 px copy declaration P04 thật qua `?from=`, preflight 201, create 202, đúng một job mới/lượt và cả hai run `COMPLETED/READY`; preflight/create giữ nguyên SHA requested spec, lineage `CLONE_OF` đúng, overflow/page errors 0. Diagnostic dirty-source được giữ riêng và không tính acceptance. Positive S02/S14 write subgates có evidence; F5/FG-03 negative matrix, S00–S14 exact-HEAD lane, F3/OL-24, P23/P24 vẫn OPEN.
 
+**F5 refusal addendum 2026-09-29:** [S02/S14 real API negatives](./research_loop/evidence/P23/F5_NEGATIVE_API_MATRIX_2026-09-29.md) trên cùng cell sạch: 10 trường hợp typed 400/401/403/404/409, stale activation không đổi DRAFT/revision, jobs 158→158; preflight quota sẵn có trả 503 ở lượt 9, actor độc lập vẫn 201, không compute. Đây là API subset, chưa phải browser refusal receipt; không có 502 nguồn thật, chưa revoke identity test và chưa đóng F5/FG-03/P23/P24. Cell đã dừng, volumes/evidence giữ lại; không đổi dev/prod.
+
 <a id="rl-open-ledger"></a>
 ### 13.4.1. Sổ việc còn mở — một nguồn trạng thái duy nhất (Claude, 2026-09-26)
 

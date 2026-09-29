@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**F5 refusal subset 2026-09-29:** [real S02/S14 negative API matrix](./F5_NEGATIVE_API_MATRIX_2026-09-29.md) confirms typed 400/401/403/404/409 and bounded real S02 preflight 503 on the same clean isolated candidate, without implicit jobs. Real 502, browser refusal rendering, identity revocation and full F5/P23 remain open.
+
 **F5 S02 2026-09-29:** [owned-cell real browser write](./F5_S02_BROWSER_REAL_WRITE_2026-09-29.md) passed at 1280 and 660 px: clone → fresh preflight → create, exactly one durable job per attempt and terminal `COMPLETED/READY`; no stubs. F5 negative matrix and full cross-stack acceptance remain open.
 
 **F5 S14 2026-09-29:** [owned-cell real browser write](./F5_S14_BROWSER_REAL_WRITE_2026-09-29.md) passed at 660 and 1280 px with parse, seven gates, DRAFT, ACTIVE and registry readback; no stubs, no implicit job. F5 overall remains open for the negative matrix and cross-stack acceptance.
