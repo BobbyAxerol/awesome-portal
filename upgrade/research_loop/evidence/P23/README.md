@@ -1,6 +1,6 @@
 # P23 backend qualification packet
 
-**W07 2026-09-29:** [bounded interaction checkpoint](./W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) The source-corrected harness has 2/2 focused tests; a real measured W07 retake passed overlap/export/replay/job/resource checks but failed because the historical WFO Evidence was legitimately NOT_PUBLISHED. It now selects the owned sealed P04 Hub; runtime retake remains, so W07/P23/P24 stay OPEN.
+**W07 2026-09-29:** [bounded interaction checkpoint](./W07_BOUNDED_INTERACTION_CHECKPOINT_2026-09-29.md) The corrected harness passed 2/2 focused tests and an actual WFO-overlap retake: eight named reads, AVAILABLE P04 Evidence, 3,046-ms stalled bounded export with matching digest, unchanged job count, 550,375,424-B peak. Scoped W07 PASS; P23/P24 remain OPEN.
 
 **Latest T08/W06 qualification, 2026-09-29:** [current-candidate
 cold-start mixed receipt](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#current-candidate-cold-start-mixed-retake--2026-09-29)
