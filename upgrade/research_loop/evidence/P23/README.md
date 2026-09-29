@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**F5 S14 2026-09-29:** [owned-cell real browser write](./F5_S14_BROWSER_REAL_WRITE_2026-09-29.md) passed at 660 and 1280 px with parse, seven gates, DRAFT, ACTIVE and registry readback; no stubs, no implicit job. F5 overall remains open for S02 and cross-stack acceptance.
+
 **T15 2026-09-29:** [owned-cell browser-real subset](./T15_BROWSER_REAL_SCOPED_2026-09-29.md) passed at 1280 and 660 px: real WFO causal prefix 100→1→2 candles, deep-link and cross-run navigation, zero overflow/page errors and jobs 155→155. It did not overlap cold cache or WFO compute and is not full T15, F3/F5/OL-24 or P23 acceptance.
 
 **W05 2026-09-29:** [storage-only synthetic scale](./W05_STORAGE_SCALE_2026-09-29.md) exercised the current trial/evaluation/replay column/index shapes at 100k/100k/1M rows in rollback-only temp tables; 200-row indexed pages and strict seven-service cgroup sampling passed. This does not qualify an alpha, retained importer, million-row BFF or P23 as a whole.

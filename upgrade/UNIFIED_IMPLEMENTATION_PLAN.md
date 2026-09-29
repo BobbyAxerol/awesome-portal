@@ -3638,6 +3638,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 
 **P23-T15 scoped addendum 2026-09-29:** [browser-real WFO/P04 receipt](./research_loop/evidence/P23/T15_BROWSER_REAL_SCOPED_2026-09-29.md) qua 1280/660 px trên cell riêng: causal prefix 100→1→2, deep link và chuyển run đúng, zero overflow/page error, jobs 155→155. Không có cold-cache/concurrent-WFO browser window và không rebuild exact HEAD; T15/F3/F5/OL-24/P23 vẫn OPEN.
 
+**F5/S14 scoped addendum 2026-09-29:** [S14 browser-real write receipt](./research_loop/evidence/P23/F5_S14_BROWSER_REAL_WRITE_2026-09-29.md) trên cùng cell riêng: cả 660/1280 px gọi bốn POST thật qua same-origin, parse 16 mirror rows, 7/7 gates PASS, DRAFT→ACTIVE và registry readback, jobs 155→155, overflow/page errors 0. Lượt thử 660 đầu tiên bị gate digest trùng từ chối đúng thiết kế; harness tạo artifact test riêng và giữ receipt lỗi. F5 đầy đủ, F3/OL-24, P23/P24 và exact-HEAD build vẫn OPEN; W06 đã pass 500 ms, không dùng nới 500–600 ms.
+
 <a id="rl-open-ledger"></a>
 ### 13.4.1. Sổ việc còn mở — một nguồn trạng thái duy nhất (Claude, 2026-09-26)
 
