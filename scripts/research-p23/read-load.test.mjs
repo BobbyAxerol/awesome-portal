@@ -53,6 +53,30 @@ test('dev access identity is optional but restricted to the 20 owned readers and
   assert.equal(result.passed, true);
 });
 
+test('all identities are proven before any named read enters the measured burst', async () => {
+  const releaseIdentity = [];
+  let namedReads = 0;
+  const running = runReadLoad(input, (url, init) => {
+    const index = Number(init.headers.cookie.split('-').at(-1));
+    if (String(url).endsWith('/api/auth/context')) {
+      return new Promise(resolve => releaseIdentity[index] = () => resolve(new Response(
+        JSON.stringify({ state: 'AUTHENTICATED', principal: { principalId: 'user_' + index } }),
+        { headers: { 'content-type': 'application/json' } },
+      )));
+    }
+    namedReads += 1;
+    return Promise.resolve(new Response('{}', { headers: { 'content-type': 'application/json' } }));
+  });
+  assert.equal(releaseIdentity.length, 20);
+  releaseIdentity.slice(0, 19).forEach(release => release());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(namedReads, 0);
+  releaseIdentity[19]();
+  const result = await running;
+  assert.equal(namedReads, 20);
+  assert.equal(result.passed, true);
+});
+
 test('the canonical Library and sparkline are allowed without admitting the legacy producer or other namespaces', () => {
   for (const path of ['/api/v1/quantbt/runs?limit=20','/api/v1/quantbt/runs/rrun_abcdef/sparkline']) {
     assert.equal(validateManifest({...input,paths:[path]}).paths[0],path);

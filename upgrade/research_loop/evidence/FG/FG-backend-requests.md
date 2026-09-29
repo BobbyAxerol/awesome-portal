@@ -819,6 +819,8 @@ Backend request (@codex) — 2026-09-29
 - Đề xuất schema (chỉ đề xuất — codex quyết): (a) viết lại evidence cho nó nêu lý do auth (route chỉ tới được bằng principal `research_progress_writer` đã ký), hoặc (b) nới regex (ví dụ thêm `principal|custody|worker`).
 ```
 
+Codex closeout 2026-09-29: CG-FG-R2-01 DELIVERED 0b868c6f; r2Ledger 22/22 and full Vitest 201 files, 3929 pass, 1 skip, 0 fail. Earlier OPEN/40 counts in this packet are the Thanhvuong handoff snapshot; 39 other packets remain open.
+
 | Mục | Nội dung |
 |---|---|
 | Source locator | ledger `capability-inventory.v1.json:1628–1637` (owner `codex`, test_owner `codex`, controller `research/progress-ingress.controller.ts`); route `apps/control-api/src/research/progress-ingress.controller.ts:124` `@Post("sources/imported")`; test `apps/portal/frontend/src/execution/r2Ledger.test.ts:83–87` |

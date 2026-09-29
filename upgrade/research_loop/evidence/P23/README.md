@@ -1,5 +1,11 @@
 # P23 backend qualification packet
 
+**Latest W06 read-SLO checkpoint, 2026-09-29:**
+[Identity-barrier retake and real mixed-load failure](./READ_SLO_IDENTITY_BARRIER_2026-09-29.md)
+keeps 20-reader Library p95 **896 ms FAIL** under one real WFO/four queued;
+other five named reads and 5 GB memory gate pass. This is not P23 qualification.
+
+
 **Latest T08/W06 concurrency diagnostic, 2026-09-28:**
 [Real running-WFO Library gradient](./T08_RUNNING_WFO_GRADIENT_2026-09-28.md)
 returned 20/20 HTTP 200 in each 1/4/8/20-reader cohort. The 20-reader

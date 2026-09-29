@@ -97,6 +97,9 @@ export async function runReadLoad(input, fetchFn = fetch) {
   const startedAt = new Date().toISOString();
   const origin = new URL(manifest.base_url).origin;
   const samples = [];
+  // Verify all principals before the measured burst. Otherwise staggered
+  // identity checks overlap named reads and contaminate the read-only SLO
+  // with a variable auth warm-up that is not part of any timed sample.
   await Promise.all(manifest.users.map(async user => {
     const headers = { cookie: user.cookie, accept: 'application/json',
       ...(user.access_email ? { 'x-dev-access-email': user.access_email } : {}) };
@@ -109,6 +112,10 @@ export async function runReadLoad(input, fetchFn = fetch) {
     if (context?.state !== 'AUTHENTICATED' || context?.principal?.principalId !== user.id) {
       throw new Error('IDENTITY_MISMATCH_OR_PREVIEW_AUTO_LOGIN');
     }
+  }));
+  await Promise.all(manifest.users.map(async user => {
+    const headers = { cookie: user.cookie, accept: 'application/json',
+      ...(user.access_email ? { 'x-dev-access-email': user.access_email } : {}) };
     for (const path of manifest.paths) {
       const url = new URL(path, origin);
       const start = performance.now();
