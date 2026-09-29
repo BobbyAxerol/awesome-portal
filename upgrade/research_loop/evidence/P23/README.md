@@ -1,5 +1,13 @@
 # P23 backend qualification packet
 
+**Latest T05 file/object route classification, 2026-09-29:**
+[GET-only owned-cell receipt](./T05_FILE_OBJECT_LEGACY_CLASSIFICATION_2026-09-29.md)
+finds no exposed raw Research artifact/object route; guessed API paths are
+404, non-API paths serve only the same public HTML shell. The separate legacy
+export has a mutating GET and no Research workspace key; the empty legacy
+registry permits only an absent-run 404/401 check. T05 stays PARTIAL pending a
+nonempty legacy-surface security decision, not a fabricated isolation PASS.
+
 **Latest T10 Python baseline retake, 2026-09-29:** [Full isolated suite](./T10_PYTHON_BASELINE_RETAKE_2026-09-29.md)
 passes with corrected stale P17/P13 test expectations and canonical BAR-05
 manifest regeneration. No runtime source or frontend was changed. Full T10

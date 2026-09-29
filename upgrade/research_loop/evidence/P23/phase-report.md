@@ -1,5 +1,11 @@
 # P23 backend report — 2026-09-25
 
+**T05 addendum, 2026-09-29:** [file/object/legacy classification](./T05_FILE_OBJECT_LEGACY_CLASSIFICATION_2026-09-29.md)
+adds bounded GET-only negatives against a real sealed artifact: no raw-object
+API or byte leak through the gateway. The legacy export route is a distinct
+mutating-on-GET, non-workspace-scoped surface; an absent Research run returns
+404/401, but no nonempty legacy tenant-isolation claim is made. T05 is PARTIAL.
+
 **T10 addendum, 2026-09-29:** the full Research backend Python suite exits 0
 in the disposable read-only-source P23 test container after two stale test
 expectations and the canonical freeze manifest were corrected. See the
