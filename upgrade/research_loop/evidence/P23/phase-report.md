@@ -1,5 +1,15 @@
 # P23 backend report — 2026-09-25
 
+**Latest T08, 2026-09-29:** [cold-start mixed retake](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#current-candidate-cold-start-mixed-retake--2026-09-29)
+on the unchanged Control API image passes after exact P23-only cache
+eviction: one real WFO RUNNING plus four queued at read onset, 120/120 GET
+200, Library/Evidence p95 414/404 ms at original warm targets, strict
+seven-service peak 617,881,600 bytes. Combined with 120/120 genuine
+cold GET-only PASS, T08's isolated cache/restart and mixed-load subgates
+are scoped PASS. The earlier expired-cookie/stale-manifest attempts produced
+no read samples and were cleaned through public API. Not a guarantee every
+page remained cold during WFO; full P23/P24 remain OPEN.
+
 **Current W06/T08 candidate, 2026-09-29:** committed source 88be2acd
 passes two exact clean-image W06 retakes at the unchanged warm SLO. Twenty
 principals × six GETs return 120/120 200 per retake while a real HEAVY WFO

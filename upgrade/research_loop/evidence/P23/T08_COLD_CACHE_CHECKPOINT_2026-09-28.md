@@ -194,3 +194,70 @@ dc0d3bfcb77a584220bef5798af3a0bca07096f389c6472351adeb0b927a4dcd.
 This closes the current-candidate isolated cold GET-only subgate. It does not
 prove simultaneous cold-read plus active WFO/four queued. T08/P23 remain
 PARTIAL/OPEN; no shared Execution/dev/Production volume or service changed.
+
+
+## Current-candidate cold-start mixed retake — 2026-09-29
+
+The immediately preceding cold GET-only result remains valid. A further
+test on the same Control API image
+sha256:c65403a1e3de199a0ffeb5a82b6c9e9744710638146eac327da6a195f95c9f03
+and clean docs-only source identity f0c88c54 added one active HEAVY WFO and
+four durable queued intents after an exact P23-only cold-cache eviction.
+Five owned containers were stopped; the guarded helper measured 3,793 files,
+233,497,794 file bytes and 26,300,416→0 resident bytes across only P23
+PostgreSQL/artifact volumes. No file bytes changed and no host drop_caches
+was called. All seven services recovered healthy, and a post-restart probe
+verified the operator and all twenty distinct reader identities before any
+new job was created.
+
+The final receipt t08-mixed-cold-final-f0c88c54 has diagnostic_only=false
+and zero source/container/image drift. A queue sample at 15:37:25.697 UTC
+shows RUNNING + four QUEUED. The measured read window was
+15:37:26.241–15:37:27.990 UTC; WFO completion was observed at 15:37:36.239.
+Thus the read overlapped a real running WFO, not merely a queued or finished
+run. Twenty readers made six named GETs each, all 120 returned HTTP 200.
+Library/Progress/Evidence/Search/Report/Replay p95 were
+414/288/404/424/168/326 ms, respectively, each meeting its original warm
+target; the overlapping strict 24-sample seven-service series peaked at
+617,881,600 bytes (<5,000,000,000). WFO ended COMPLETED/READY, all four
+queued intents were cancelled via the public API, and a read-only ledger
+check found zero active/queued jobs. No SLO relaxation was used.
+
+This is a **cold-start mixed-workload PASS**, not proof that every individual
+page was still cold at the read instant: auth identity probes and the WFO
+itself may warm some pages after eviction. Combined with the separate exact
+cold GET-only receipt above, it closes the P23-only T08 cache/restart and
+mixed-WFO subgates on this candidate, without claiming a host-wide cache
+flush or whole-P23/Product acceptance.
+
+Two preceding attempted cold-start measurements are deliberately retained
+as **INCONCLUSIVE SETUP FAILURES**, not latency samples. Attempt one created
+one WFO/four queued but the old operator cookie reached SESSION_REQUIRED
+during progress polling; after owned password login the four queued were
+cancelled by public API and the WFO succeeded. Attempt two used refreshed
+operator credentials but a stale reader manifest; 20-reader identity precheck
+refused before any named GET. Its four queued intents were cancelled by the
+harness and WFO succeeded. Both left zero active/queued jobs. Before the
+third attempt the exact reader manifest was regenerated and 20/20 identity
+probes passed. No preflight row or quota was manually cleared; each five-token
+set expired naturally. These two failures must not be reinterpreted as
+Evidence/Library SLO failures or hidden as passing reads.
+
+Private mode-0600 receipt hashes in the P23 runtime home:
+
+| Receipt | SHA-256 |
+| --- | --- |
+| t08-mixed-cold-start-f0c88c54-eviction.json | a5f9f6222d260a590d70d75de27d293e1c5b7f02e830d836358bc3a3f4a9e6df |
+| t08-mixed-cold-f0c88c54-workload.json | 5b1f90ee048b01470f3c29bc1e411b52cd138663e7b89fc9421a52fd04c116fb |
+| t08-mixed-cold-f0c88c54-cleanup.json | c648008154ff2fdea32446c192b7da2eb0b56bce1b5f4d7f24abbb8ebe45b285 |
+| t08-mixed-cold-retry-f0c88c54-eviction.json | 174d2eda759ac9ed36935a11347908396983eeb4fd09fa1d3d21b0745923264b |
+| t08-mixed-cold-retry-f0c88c54-workload.json | 6ced21aeb7d5d61d19adcfd0e2205be663968002d9e780687b4dc5d90b3bd587 |
+| t08-mixed-cold-retry-f0c88c54-cleanup.json | 6cd96ffb1768e9a2498cf39cc66dc6087338bcd28d58acb1d7491f52a2921613 |
+| t08-mixed-cold-final-f0c88c54-eviction.json | 39595388f4d37ce97453a3cf94d27531391e60ebc6bbc53eb22524efaf19d7de |
+| t08-mixed-cold-final-f0c88c54-workload.json | ba4d6b9b42773efc40dc787bbcc5a76fe87fcb427c5b39f235eaac23e8e3b440 |
+| t08-mixed-cold-final-f0c88c54-read.json | dcd6e3ef1aa196f302866319b02de77bace4e42bc492e14d9769c637ac2ab37a |
+| t08-mixed-cold-final-f0c88c54-resource-series.json | 73e2c1ffa34cf944df83aba5190afff38e4b23c415efb7e7df876ad791cc211f |
+
+T08 is a scoped current-candidate PASS; T02, T07/T13, T12, T14, T15 and
+final P23 DR/BR/GX remain OPEN. No shared Execution/dev/Production runtime,
+source data, UI or SLO was changed.

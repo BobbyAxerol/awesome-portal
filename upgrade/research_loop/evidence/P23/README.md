@@ -1,5 +1,16 @@
 # P23 backend qualification packet
 
+**Latest T08/W06 qualification, 2026-09-29:** [current-candidate
+cold-start mixed receipt](./T08_COLD_CACHE_CHECKPOINT_2026-09-28.md#current-candidate-cold-start-mixed-retake--2026-09-29)
+passes 120/120 named GET 200 while one real WFO is RUNNING and four intents
+queue after P23-only guarded cache eviction; Library/Evidence p95 414/404 ms,
+seven-service peak 617,881,600 bytes. The separate cold GET-only subgate and
+two exact W06 mixed retakes also pass on this Control API image without SLO
+relaxation. Two pre-read setup failures (expired operator cookie, stale reader
+manifest) and their public-API cleanup receipts are preserved, not counted as
+latency samples. T08 current-candidate P23-only scope PASS; this does not
+prove every page remained cold after WFO start. Full P23/P24 remain OPEN.
+
 **Current candidate, 2026-09-29:** [Two exact W06 mixed-load receipts](./W06_INFLIGHT_BATCH_CHECKPOINT_2026-09-29.md#current-88be2acd-candidate--two-clean-mixed-retakes)
 on committed source 88be2acd and the same clean seven-image P23 cell PASS the
 original warm targets twice: Library/Evidence p95 363/445 and 405/305 ms,
