@@ -6196,6 +6196,8 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 
 **T03 full durable-run checkpoint 2026-09-29:** [scoped real WFO disk-pressure/recovery receipt](./research_loop/evidence/P23/T03_FULL_DURABLE_RUN_2026-09-29.md) proves authenticated `FAILED/READY` with `RESOURCE_EXCEEDED` followed by `COMPLETED/READY` after pressure removal. The zero-free attempt did not form a durable terminal and was cancelled; it is not counted. Source repair still needs clean-commit image acceptance; W06 and full P23/P24 remain OPEN. Legacy export remains its separate security slice.
 
+**W06 unfiltered census trial 2026-09-29:** [candidate and mixed-load receipt](./research_loop/evidence/P23/W06_UNFILTERED_CENSUS_TRIAL_2026-09-29.md) keeps current Run Library response parity except its time-issued cursor, but the real twenty-reader p95 is **686 ms FAIL** versus 500 ms. Other five reads, completed WFO and 5 GB cap pass in this scoped trial; no admission/pool/SLO or UI change. W06/P23/P24 remain OPEN pending a measured clean-image fix.
+
 
 **Đọc chi tiết:** [Guide P23](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p23); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.

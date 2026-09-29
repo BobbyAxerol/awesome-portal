@@ -102,6 +102,16 @@ describe("P23 bounded Run Library admission", () => {
       .toEqual(["other-owned-workspace", "other-owned-reader"]);
     expect(other.name).not.toContain(scope.workspaceId);
     expect(client.release).toHaveBeenCalledTimes(3);
+    const filteredSummary = queries.filter(query => query.sql.includes("AS filtered_rows")).at(-1)!;
+    expect(filteredSummary.sql).toContain("search.search_document ILIKE");
+    const before = queries.length;
+    await repository.list(scope, ResearchRunLibraryQuerySchema.parse({ limit: 5 }), null);
+    const unfilteredSummary = queries.slice(before).find(query => query.sql.includes("AS filtered_rows"))!;
+    expect(unfilteredSummary.sql).toContain("FROM workspace_catalog library");
+    expect(unfilteredSummary.sql).toContain("library.claim_state");
+    expect(unfilteredSummary.sql.match(/FROM research\.run_library_rows_v1/g)).toHaveLength(1);
+    expect(unfilteredSummary.values).toEqual([scope.workspaceId]);
+    expect(client.release).toHaveBeenCalledTimes(4);
   });
 
   it("admits twenty reads with only four DB clients and rejects the twenty-first", async () => {

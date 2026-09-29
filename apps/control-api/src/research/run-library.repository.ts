@@ -300,6 +300,14 @@ export class ResearchRunLibraryRepository {
     this.assertScope(scope);
     return this.withScopedRead(scope, async (client) => {
       const filter = this.buildFilter(scope.workspaceId, query);
+      // The unfiltered Screen-01 census is exactly the workspace catalog.
+      // Reuse one narrow materialized view scan for its facets and counts;
+      // filtered searches retain their indexed source and exact predicate.
+      const unfiltered = !query.q && query.status.length === 0 && query.mode.length === 0
+        && query.alpha.length === 0 && query.ids.length === 0;
+      const aggregateSource = unfiltered ? "workspace_catalog library" : filter.fromSql;
+      const aggregatePredicate = unfiltered ? "TRUE" : filter.whereSql;
+      const claimState = unfiltered ? "library.claim_state" : "library.progress_snapshot->'claim'->>'state'";
       // This is deliberately PostgreSQL's transaction timestamp, rather than
       // the Control API process clock.  The page, counts, facets and this
       // provenance marker are therefore one repeatable-read snapshot even if
@@ -364,6 +372,7 @@ export class ResearchRunLibraryRepository {
         ...this.preparedRead(`WITH workspace_catalog AS MATERIALIZED (
            SELECT alpha_id, alpha_name, source_kind, alpha_filter_key,
                   requested_spec->>'optimization_mode' AS mode_key
+                  ${unfiltered ? ", relationship_kind, run_kind, current_worker_ordinal, effective_status, progress_snapshot->'claim'->>'state' AS claim_state" : ""}
              FROM research.run_library_rows_v1 WHERE workspace_id = $1
          )
          SELECT
@@ -396,17 +405,17 @@ export class ResearchRunLibraryRepository {
                                 AND library.source_kind = 'LEGACY_1_0_8_METADATA') AS legacy_metadata_only,
              count(*) FILTER (WHERE library.effective_status <> 'FAILED'
                                 AND library.source_kind = 'RESEARCH_DURABLE'
-                                AND library.progress_snapshot->'claim'->>'state' = 'ISSUED') AS issued,
+                                AND ${claimState} = 'ISSUED') AS issued,
              count(*) FILTER (WHERE library.effective_status <> 'FAILED'
                                 AND library.source_kind = 'RESEARCH_DURABLE'
-                                AND library.progress_snapshot->'claim'->>'state' IN ('FORECAST', 'NOT_ISSUED')) AS not_issued,
+                                AND ${claimState} IN ('FORECAST', 'NOT_ISSUED')) AS not_issued,
              count(*) FILTER (WHERE library.effective_status = 'CANCELLED'
                                 AND library.source_kind = 'RESEARCH_DURABLE'
-                                AND COALESCE(library.progress_snapshot->'claim'->>'state', '')
+                                AND COALESCE(${claimState}, '')
                                     NOT IN ('ISSUED', 'FORECAST', 'NOT_ISSUED')) AS cancelled_before_source,
              count(*) FILTER (WHERE library.effective_status NOT IN ('FAILED', 'CANCELLED')
                                 AND library.source_kind = 'RESEARCH_DURABLE'
-                                AND COALESCE(library.progress_snapshot->'claim'->>'state', '')
+                                AND COALESCE(${claimState}, '')
                                     NOT IN ('ISSUED', 'FORECAST', 'NOT_ISSUED')) AS pending_source,
              count(*) FILTER (WHERE library.effective_status = 'COMPLETED') AS completed,
              count(*) FILTER (WHERE library.effective_status = 'RUNNING') AS running,
@@ -414,8 +423,8 @@ export class ResearchRunLibraryRepository {
              count(*) FILTER (WHERE library.effective_status = 'DRAFT') AS draft,
              count(*) FILTER (WHERE library.effective_status = 'CANCELLED') AS cancelled,
              count(*) FILTER (WHERE library.effective_status = 'RECOVERY_REQUIRED') AS recovery_required
-             FROM ${filter.fromSql}
-            WHERE ${filter.whereSql}`, filter.params),
+             FROM ${aggregateSource}
+            WHERE ${aggregatePredicate}`, filter.params),
       });
       const counter = summary.rows[0];
       const asOfUtcMs = asNonNegativeInteger(counter?.as_of_utc_ms, "snapshot timestamp");
