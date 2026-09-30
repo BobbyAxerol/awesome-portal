@@ -104,3 +104,117 @@ E6-BR-01 (chữ ký/SBOM, S14) · E5-O1/O2 (engine: max_dd từng candidate, K t
 
 **Điều kiện đóng P15–P21:** F3 xanh 54/54 · G6 chạy xong · G10 làm xong với receipt thật · G1–G4 xong hoặc Bobby chấp nhận hoãn ·
 các mục (a) được duyệt. **P22/P23** chờ Codex (OL-03…OL-13).
+
+## 6. Cập nhật cùng ngày — Bobby duyệt, G10 chạy (2026-09-30, sau `d3d99f26`)
+
+**Bobby đã duyệt:** phương án A (seed run mới trên preview), VD-RF04-01 + VD-RF04-02 (RF-04 đóng), bảng lệch HiFi S14 (E6 đóng).
+
+**G10 — receipt thật** (`G10_WRITABLE_PREVIEW_RECEIPT_CLAUDE_2026-09-30.md`, S14: `P10/S14_REAL_WRITE_RECEIPT_CLAUDE_2026-09-30.md`):
+
+| Gói | Kết quả |
+|---|---|
+| E14 (NET_RETURN + qualifier) | PASS trên R-P04-018 / R-WFO-017 |
+| E16-R1 (dải nến P04) | PASS — 744 bar → 47 nến × 16 |
+| S02 create + preflight | PASS — 201 → 202, tạo R-P04-019 |
+| E13 (cây lồng) | PASS — kèm sửa lỗi thứ tự cây S10 |
+| E10 một trạng thái | PASS — 36/36 khớp |
+| E10-O1/O3 hội tụ | **NOT_RUN** — cần Bobby cho phép cố ý làm kẹt một run |
+| S14 ghi thật | PASS — 2 entry ACTIVE; 3 backend request mới (dưới) |
+
+**Hai lỗi frontend chỉ dữ liệu thật mới lộ — đã sửa:** S02 im lặng với mọi refusal không có field (403/401/503/mạng); S10 vẽ clone dưới sai cha.
+
+**Gap mới phát sinh:**
+
+| Id | Gap | Chủ |
+|---|---|---|
+| G13 | S08 mở thẳng link in `rrun_464bf9c3` thay vì `R-P04-018` — giao cho agent G3 (mở rộng D1-O1 sang S05–S08) | Claude |
+| S14-RW-BR-01 | register replay sau khi activate → 500 (CHECK supersedes) | Codex |
+| S14-RW-BR-02 | FAIL ghi vào nhầm hàng mirror | Codex |
+| S14-RW-BR-03 | trả 201, OpenAPI ghi 200 | Codex |
+| S14-C1 | Câu refusal origin ở S14 mô tả sai lý do; ghi chú DRAFT ở bước 3 — quyết copy | Bobby |
+
+**Sự cố bảo mật:** agent S14 đã `cat` file activation code của preview (bobby, claude-preview), nên mã nằm trong transcript agent đó. Đề nghị xoay (rotate) hai mã.
+
+## 7. Batch G1–G8 — agents đã xong, chờ gộp một commit (2026-09-30)
+
+| Gói | Worktree / commit | Kết quả | Còn mở |
+|---|---|---|---|
+| G1 D7 play across folds (S08) | agent-afd8…, chưa commit | 36 test mới + S08 109/109; browser trên preview WFO: đúng 1 read mỗi biên | lane real-API chưa có ô; nhãn rộng hơn HiFi (406 vs 154 px) |
+| G2 D4 prefill (S02) | `ed33db0d` (qua hook) | 33 test mới; chỉ điền 4 biên ngoài theo coverage | preflight có thể từ chối IS start (warmup) — cần receipt ghi; BR-D4-1..3 |
+| G3 D1-O1 nhãn cold link (S05–S09, S11, S13) | agent-ab5c…, chưa commit, +1380/−61 (có backend) | backend 605 pass, FE 233 pass; S05–S08 thật trên preview | ETag report giờ phủ toàn bộ body (RF-05) — chấp nhận, addendum P18; một read thừa trên WFO |
+| G4 ladder S13 + G7 probe | agent-a12f…, chưa commit | ladder dạng grid, 0 mũi tên treo; probe axe 15 màn × 3 cỡ | axe đỏ S01/S03/S04/S10 (màu HiFi/dim có chủ ý — Bobby), S02/S06/S08 heading-order |
+| G5 S09 print | `d7db1cb3` đã vào w1-build | 4 lỗi in/trục sửa | đọc dữ liệu thật chưa chạy |
+| G8 S06 dải glyph fold | agent-a935…, staged | 41 test mới; hình học khớp HiFi | F-1: chip OOS nói `selection input`, dải nói retrospective — Bobby |
+| Token gate S14 | w1-build, chưa commit | `tokens.test.ts` đỏ từ E6 — sửa bằng `--shadow-e1` | hook không chạy vitest frontend → lỗ gate |
+| G14 topbar — **Bobby chọn A** | w1-build, chưa commit (`TopBar.tsx`, `shell.css`, test mới 3/3) | chỉ màn run: <1440 px bỏ đoạn `QuantBT Backtest`, <1366 px bỏ tên màn; giữ `Research / R-WFO-017`. Đo trên preview thật: 1280/1440/1728 cao 56 px một hàng; 1440 = đúng HiFi. Bản agent (cuộn ngang mọi màn) **bỏ** | 660 px vẫn xuống dòng như cũ (không đổi). Baseline Research laptop sẽ đổi (crumb ngắn hơn) |
+
+**Chặn:** gộp diff của agent vào w1-build (`cherry-pick -n`) bị bộ phân loại quyền chặn là "CI bypass" — cần Bobby cho phép; hook vẫn chạy trên commit gộp.
+
+## 8. Báo cáo tổng cho Bobby — FE gap, backend Codex, tương thích, việc còn lại (2026-09-30 chiều)
+
+Nguồn: mục 7 ở trên + `P21/CODEX_BACKEND_AND_COMPAT_SURVEY_CLAUDE_2026-09-30.md` (khảo sát chỉ đọc, merge thử bằng `git merge-tree`).
+
+### 8.1 Phát hiện lớn nhất: hai nhánh đã tách xa nhau
+
+- Nhánh Codex (`/home/bobby/portal-research`, `2bfeb53e`) **đi trước origin 123 commit, chưa push**; chứa cả `codex/research-ol-p22-p24`. Trong đó ~9 commit là **slice frontend FG** (44 file FE).
+- Ba thứ tôi/agent làm hôm nay **trùng** với việc Codex đã làm: sửa refusal S02 (trùng FG-08 `a1d7bf3f`), mũi tên ladder S13 G4 (trùng FG-04a `b896d98d`, thiết kế khác: grid vs flex), `display_label` G3 (trùng CG-FG-D1-O1 `08fa8ee0`/`8ad39e83`).
+- Codex **đổi số migration 068→075, 069→076**. DB preview đã chạy 068/069 → phải sửa bảng `pgmigrations` trước khi deploy nhánh Codex, không thì migration chạy lại và hỏng (075/076 không idempotent).
+- Codex **xoá fixture journey v2**, nhưng 3 file e2e còn nạp nó → hỏng cả fixture lane + visual suite sau merge (nguyên nhân 64 lỗi ENOENT của OL-24). Việc của tôi.
+
+### 8.2 Backend Codex đang ở đâu
+
+| Mục | Trạng thái |
+|---|---|
+| P22 (OL-03…OL-11, OL-13; migration 070–073) | backend real-preview **xong**; product browser còn |
+| OL-01 imported/DRAFT (074) | **mới chứng minh trên môi trường cô lập**; Research production chưa bật (sửa theo phản biện Codex) |
+| OL-02 byte verify | xong |
+| E11/E14 analytics, E13 lineage, E15, E16 `market_overview` + `engine_pin` (trả lời E16-R2) | xong |
+| E6-BR-01 chữ ký/SBOM | chỉ "not published" có kiểu |
+| **P23 (OL-12)** | **đang làm**: nhiều pass scoped xong (F3 WFO 12/12, F5 ghi S02/S14…, T10 Python suite xanh); còn F3 54/54 real-API, F5 502 + nghiệm thu đủ, T07/T13 với engine thứ hai, T10 trên cùng candidate, **T14 exposure/audit-child**, **bộ DR/BR/GX tổng thể**, bảo mật export cũ |
+| P24 | **đã giao Codex** (backend P22–P24); chưa triển khai, chờ P23 + nghiệm thu frontend |
+| Request còn mở | E5-O1/O2 là request tới **QuantBT engine** (drawdown từng candidate; K + membership pool) — Portal không tự tính trung thực được, đã hiện typed absence; 37 gói CG-FG-S02…S14 còn phải triage/triển khai (CG-FG-D1-O1 và **CG-FG-R2-01 đã đóng**); CG-FG-P22-01 |
+
+### 8.3 Tương thích FE ↔ BE
+
+- **Contract:** không field nào bị xoá/đổi tên — chỉ thêm. Frontend hiện tại không vỡ vì contract.
+- **Lỗi thật nếu merge G3 nguyên trạng:** G3 đọc nhãn RC ở `run.display_label`, Codex trả ở top-level → nhãn mất âm thầm. ⇒ **không merge G3 nguyên**; cắt còn phần Codex chưa có (nhãn S05–S08, crumb topbar).
+- `engine_pin` giờ bắt buộc → vài fixture typed cũ có thể lỗi tsc sau merge.
+- Hai field overview P04 song song: `candle_overview` (tôi, E16-R1) và `market_overview` (Codex) → **Bobby chọn một**.
+- **Codex publish nhưng FE chưa đọc:** `replay.market_overview`, `import_attestation`, `imported_alpha`, `reproduction` + quan hệ `REPRODUCTION_OF`, `imported_*` (portal-api).
+- Conflict merge: `NewRun.tsx` 2 hunk, `AlphaImport.tsx` 1, G3 ~40, G4 6; G1, G2, G8, topbar A sạch.
+
+### 8.4 Gap frontend còn lại (sau batch hôm nay)
+
+**(b) Claude làm, không chờ ai**
+1. Hợp nhất với nhánh Codex (sau khi Codex push) + sửa tham chiếu journey v2→v3.
+2. Cắt G3; chọn bản ladder (Bobby); merge G1, G2, G8, topbar A, token S14.
+3. Đọc các field Codex đã publish (8.3).
+4. a11y: heading-order S02/S06/S08; từ ngữ imported-alpha ở `SplitDetail`.
+5. S09: đọc dữ liệu thật (G5 nửa sau); `OOS_SHARPE` in dấu `-` thay vì `−`.
+6. Lane F3 54/54, F5 đủ; G9 cap S14; receipt G11/OL-02 phía FE.
+7. Backend ≤P21 của tôi: S14-RW-BR-01..03 (500 khi replay bản active — ưu tiên), CG-P21-01..05, BR-D4-1..3.
+8. Lỗ gate: hook không chạy vitest frontend (token test đỏ lọt qua).
+
+**(a) Bobby quyết**
+- Ladder S13: G4 (grid) hay FG-04a của Codex.
+- P04 overview: `candle_overview` hay `market_overview`.
+- a11y màu HiFi S01/S03/S04/S10; chip OOS S06 (đề xuất `retrospective`); chữ S14; D-B1.
+- Cập nhật baseline visual Research (sau khi merge xong).
+- Rotate activation code; cho phép làm kẹt run (E10-O1/O3).
+- Cách gộp diff agent (A: áp vào cây rồi 1 commit qua hook; B: mỗi agent tự commit).
+
+**(c) Chờ Codex**
+- **Push `2bfeb53e`** (việc chặn mọi thứ phía trên).
+- P23 phần còn lại, P24, E5-O1/O2.
+
+### 8.5 Có nên rebuild research-portal bây giờ?
+
+**Chưa.** Preview đang chạy `d3d99f26`; nhánh của tôi thiếu 123 commit của Codex, còn nhánh Codex thiếu việc hôm nay của tôi. Build lúc này cho Bobby xem một bản **sẽ bị thay ngay** sau hợp nhất, và build nhánh Codex lên DB preview hiện tại sẽ đụng lỗi migration 068/069→075/076. Thứ tự đề xuất — mỗi bước chạy **một lần**:
+1. Codex push `2bfeb53e` (fast-forward, không force).
+2. Tôi merge vào `w1-build`, cắt G3, gộp batch, sửa journey v2→v3 → **một** commit qua hook.
+3. Sửa `pgmigrations` trên DB preview (068→075, 069→076).
+4. **Một** lần rebuild preview → Bobby xem → quyết tiếp. Lane + visual chạy sau khi Bobby xem, lúc máy rảnh.
+
+Nếu Bobby muốn xem ngay: preview hiện tại (`d3d99f26`) đã có G10 (E14, E16-R1, S02 tạo run, E13) trên dữ liệu thật; chưa có các sửa hôm nay.
+
+> **Sửa theo phản biện Codex (2026-09-30):** câu "OL-01…OL-11 xong" và "P24 chưa ai nhận" ở bản trước là sai; P23 còn nhiều hơn bốn mục. Đã sửa bảng 8.2. Rà soát sâu từng phase đang chạy (backend / nối FE↔BE / HiFi 00–07 / HiFi 08–14 / kiểm kê commit rơi).
