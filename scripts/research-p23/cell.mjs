@@ -67,6 +67,12 @@ export function composeArguments(envFile) {
       'deploy/research-preview/compose.research-p23-5gb.yaml'].flatMap(file => ['-f', join(ROOT, file)])];
 }
 
+export function executionPreviewBuildArg(value) {
+  assert(value === undefined || value === 'true' || value === 'false',
+    'P23_EXECUTION_PREVIEW_BUILD_ARG_INVALID');
+  return `EXECUTION_PREVIEW_ENABLED=${value ?? 'false'}`;
+}
+
 async function main() {
   const command = process.argv[2];
   assert(['init', 'build', 'up', 'status', 'down', 'credentials', 'compose', 'observer-copy', 'observer-normal'].includes(command),
@@ -137,7 +143,11 @@ async function main() {
       docker(['image','inspect',current.Image]);
       docker(['image','tag',current.Image,tag]);
     }
+    // `sudo docker` strips shell env; pass the UI compile gate literally.
+    // This grants no Execution API or command authority.
+    const webPreviewArg = executionPreviewBuildArg(process.env.PORTAL_EXECUTION_PREVIEW_ENABLED);
     compose(['build', '--build-arg', 'PORTAL_HMD_READER_REQUIRED=true',
+      '--build-arg', webPreviewArg,
       'portal-api', 'control-api', 'portal-web', 'roadmap-task-board-api']);
   } else if (command === 'up') {
     const previousControl = docker(['ps', '-a', '-q', '--filter', `label=com.docker.compose.project=${PROJECT}`,

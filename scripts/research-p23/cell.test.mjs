@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { BASE_URL, PROJECT, TEST_USERS, composeArguments, validateHome, retainedImageTag, imageReplacements } from './cell.mjs';
+import { BASE_URL, PROJECT, TEST_USERS, composeArguments, executionPreviewBuildArg, validateHome, retainedImageTag, imageReplacements } from './cell.mjs';
 
 test('qualification cell has its own fixed project, loopback and 20 distinct readers', () => {
   assert.equal(PROJECT, 'portal-research-p23-ol12');
@@ -22,6 +22,14 @@ test('configuration refuses a shared directory and cannot concatenate duplicate 
   assert.equal(args.filter(arg => arg.endsWith('compose.research-progress.yaml')).length, 1);
   assert(!args.some(arg => arg.endsWith('compose.research-preview.yaml')));
   assert(args.at(-1).endsWith('compose.research-p23-5gb.yaml'));
+});
+test('sudo-safe test-only Execution UI build arg is explicit and bounded', () => {
+  assert.equal(executionPreviewBuildArg(undefined), 'EXECUTION_PREVIEW_ENABLED=false');
+  assert.equal(executionPreviewBuildArg('false'), 'EXECUTION_PREVIEW_ENABLED=false');
+  assert.equal(executionPreviewBuildArg('true'), 'EXECUTION_PREVIEW_ENABLED=true');
+  assert.throws(() => executionPreviewBuildArg('1'), /P23_EXECUTION_PREVIEW_BUILD_ARG_INVALID/);
+  assert.throws(() => executionPreviewBuildArg('true --build-arg FEATURE_EXECUTION_COMMAND_RELAY=true'),
+    /P23_EXECUTION_PREVIEW_BUILD_ARG_INVALID/);
 });
 test('isolated activation uses private credentials, disables auto-login and adds no Execution authority or ports', () => {
   const source = readFileSync(new URL('../../deploy/research-preview/compose.research-p23-activation.yaml', import.meta.url), 'utf8');

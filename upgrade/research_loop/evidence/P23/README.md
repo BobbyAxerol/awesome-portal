@@ -1,5 +1,8 @@
 # P23 backend qualification packet
 
+**F3 scoped real browser, 2026-09-29:** [Research route and S11→R1 bridge receipt](./F3_REAL_ROUTE_AND_PUBLICATION_BRIDGE_2026-09-29.md) passed 30/30 Research deep links and 2/2 publication/Governance R1 browser paths on the exact loopback image with Execution UI routes compiled. Two earlier failed test-profile attempts are retained. This is not the full 54/54 F3 lane or P23/P24 qualification.
+
+
 **Gateway fault 2026-09-29:** [isolated upstream-connect timeout receipt](./GATEWAY_UPSTREAM_TIMEOUT_2026-09-29.md) shows a 5-second client timeout before repair and bounded 504 after about 3 seconds on the new web image, followed by 200/401 recovery. F5 typed-502 and full P23 remain OPEN.
 
 **F5 refusal subset 2026-09-29:** [real S02/S14 negative API matrix](./F5_NEGATIVE_API_MATRIX_2026-09-29.md) confirms typed 400/401/403/404/409 and bounded real S02 preflight 503 on the same clean isolated candidate, without implicit jobs. Real 502, browser refusal rendering, identity revocation and full F5/P23 remain open.

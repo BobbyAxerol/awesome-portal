@@ -47,3 +47,24 @@ Execution-route-enabled test-only build. P23 T07/T12/T13/T14/T15 and P24
 remain open independently. The original 500-ms W06 target has already passed
 twice on the current candidate; Bobby's permitted 500–600-ms relaxation was
 not needed and is not applied here.
+
+## Superseding route-enabled retake
+
+The pending-retake wording above records the first checkpoint, not the current
+bridge verdict. A second attempt at clean `9c524fde` still failed **0/2**
+(`f3-publication-governance-execution-read.json`, SHA-256
+`c6b837ed0b266e7b6d0082fcb414c61dac4f8909e00ee916e9dbaec5029d92d6`):
+the helper invoked Docker via `sudo`, which stripped the shell-provided
+`PORTAL_EXECUTION_PREVIEW_ENABLED=true`; effective Compose config was `false`.
+The helper now passes a validated literal build arg. With the explicit
+`EXECUTION_PREVIEW_ENABLED=true` web build, the served JS contained the
+registry-filter route branch instead of an empty preview list.
+
+On the same clean seven-image cell, `f3-publication-governance-routes-enabled.json`
+passed **2/2** at 1280/660, SHA-256
+`667527fb954f2ea1ec33bb20a1dd2219c3bbbef080bbce20367e1fecdf3c9221`.
+S11 clicked through to R1; browser GET Governance R1 was observed, approval
+ID/status/hash matched the named API, overflow and page errors were zero,
+and jobs stayed `158 → 158`. The route-enabled image ID was
+`sha256:3f5086ea687fb34f47762af00baaf7e7b9e64d33ebebbd0b9cdc84862041a75f`.
+The same image also passed Research S00–S14 **30/30** (SHA-256
