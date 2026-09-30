@@ -336,6 +336,17 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
       [scopeA.workspaceId],
     );
     expect(active.rows[0]).toMatchObject({ active_version_id: first.result.alpha_version_id, revision: "2" });
+    const activeReplay = await service.register(admin, scopeA, {
+      sourceFileRef: first.parsed.source_file_ref, alphaId: "p07-alpha", gateReceiptId: first.gates.gate_receipt_id,
+    }, "p07-request");
+    expect(activeReplay).toMatchObject({
+      alpha_version_id: first.result.alpha_version_id, replayed: true,
+      supersedes: null, alpha_revision: 2,
+    });
+    expect((await pool.query(
+      `SELECT count(*)::integer AS count FROM research.alpha_versions WHERE workspace_id = $1 AND alpha_id = $2`,
+      [scopeA.workspaceId, "p07-alpha"],
+    )).rows[0]?.count).toBe(1);
   });
 
   it("V11-P07-DR: expiry cleanup is bounded, actor-owned and needs no UPDATE on immutable bytes", async () => {

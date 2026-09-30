@@ -1071,6 +1071,10 @@ export class ResearchMetadataRepository {
         );
       }
 
+      // The CHECK constraint runs before ON CONFLICT. A replay of the active
+      // version must not propose itself as its own immutable predecessor.
+      const registrationPredecessorCandidate = alphaRow.active_version_id === input.alphaVersionId
+        ? null : alphaRow.active_version_id;
       const inserted = await client.query<{ alpha_version_id: string }>(
         `INSERT INTO research.alpha_versions
            (workspace_id, alpha_version_id, alpha_id, code_digest, entrypoint,
@@ -1089,12 +1093,12 @@ export class ResearchMetadataRepository {
           JSON.stringify(input.declaredContract),
           input.sourceFileRef,
           scope.actorUserId,
-          alphaRow.active_version_id,
+          registrationPredecessorCandidate,
         ],
       );
 
       let replayed = false;
-      let registrationPredecessor = alphaRow.active_version_id;
+      let registrationPredecessor = registrationPredecessorCandidate;
       if (inserted.rowCount === 0) {
         const existing = await client.query<AlphaImportVersionRow>(
           `SELECT alpha_id, alpha_version_id, source_file_ref, code_digest,
