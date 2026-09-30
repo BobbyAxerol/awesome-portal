@@ -8,11 +8,11 @@
 # the checkout. Volumes are namespaced by the project, so the preview has its
 # own PostgreSQL, NATS, MinIO and artifact store.
 #
-# What it turns on: the Research reads and producer that S01–S07, S02 and S12
-# need (P10/P11 producer and progress, run library, evidence, split, search,
-# freeze, retained current source) and the approved historical market data,
-# read-only. What it leaves dark: P17–P21 (replay, reports, lineage, compare,
-# release candidates) — those belong to the Thanhvuong campaign.
+# What it turns on (Bobby 2026-09-30: every Research Loop flag, nothing held
+# back): each Research read and producer S00–S14 need, the approved historical
+# market data read-only, and — through the env file — replay, reports, lineage,
+# compare, release candidates + publication, imported execution, artifact byte
+# verify and the what-if lane. Execution flags stay off; they are not Research.
 services:
   portal-api:
     environment:
@@ -30,6 +30,8 @@ services:
       PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:?preview needs PORTAL_PUBLIC_ORIGIN}
       FEATURE_RESEARCH_RUN_LIBRARY: ${CONTROL_API_FEATURE_RESEARCH_RUN_LIBRARY:-false}
       FEATURE_RESEARCH_CURRENT_SOURCE: ${CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE:-false}
+      FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY: ${CONTROL_API_FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY:-false}
+      FEATURE_RESEARCH_WHATIF: ${CONTROL_API_FEATURE_RESEARCH_WHATIF:-false}
       # Quick-look preview: no login screen; the browser is signed in as this
       # user. The Control API refuses it outside AUTH_MODE=dev + PORTAL_ENV=local.
       PREVIEW_AUTO_LOGIN_USERNAME: ${PREVIEW_AUTO_LOGIN_USERNAME:-}
@@ -55,6 +57,10 @@ services:
   # Proven in the worker image: sandbox OK, bind mount refused, a mount
   # outside the child's own namespace refused.
   quant-worker-py:
+    environment:
+      # Must match Control API's what-if lane, or the durable diagnostic is
+      # admitted but can never emit its source event.
+      PORTAL_FEATURE_RESEARCH_WHATIF: ${PORTAL_FEATURE_RESEARCH_WHATIF:-false}
     security_opt:
       - seccomp=./deploy/research-preview/seccomp-research-child.json
       - apparmor=portal-research-child

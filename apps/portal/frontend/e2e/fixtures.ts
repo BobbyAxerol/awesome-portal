@@ -259,7 +259,7 @@ export async function stubPortalApi(
   );
 
   await page.route("**/api/v1/research/journey*", (route) =>
-    void json(route, contractFixture("research-foundation.journey-v2.valid.json")),
+    void json(route, contractFixture("research-foundation.journey-v3.valid.json")),
   );
   await page.route("**/api/v1/research/quantbt/atlas*", (route) => {
     const url = new URL(route.request().url());

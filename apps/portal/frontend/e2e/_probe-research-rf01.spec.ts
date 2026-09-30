@@ -231,7 +231,7 @@ test("RF01-F5 S00 hands its cursor to S04 through the same codec", async ({ page
     /* E12 / CG-P09-02: the canonical contract fixture, not a local copy that
        had drifted to descriptor revision 1. */
     const body = JSON.parse(
-      readFileSync(join(HERE, "..", "..", "..", "..", "packages", "contracts", "fixtures", "research-foundation.journey-v2.valid.json"), "utf8"),
+      readFileSync(join(HERE, "..", "..", "..", "..", "packages", "contracts", "fixtures", "research-foundation.journey-v3.valid.json"), "utf8"),
     ) as {
       inspection: Record<string, unknown>;
     };

@@ -45,7 +45,7 @@ for (const [name, width, height] of [
     await page.setViewportSize({ width, height });
     const journeyV2 = JSON.parse(readFileSync(resolve(
       process.cwd(),
-      "../../../packages/contracts/fixtures/research-foundation.journey-v2.valid.json",
+      "../../../packages/contracts/fixtures/research-foundation.journey-v3.valid.json",
     ), "utf8")) as { descriptor: { phases: { cards: unknown[] }[] } };
     await page.route("**/api/v1/research/journey*", (route) => route.fulfill({
       status: 200,
@@ -170,7 +170,9 @@ test("an unrouted card is drawn and says so", async ({ page }) => {
   await expect(picker).toHaveAttribute("data-card-availability", "AVAILABLE");
   await expect(picker).not.toHaveAttribute("data-card-unreachable", /./);
   await expect(picker).toHaveAttribute("href", /\/runs\?to=alpha_version_legacy$/);
-  expect(await unrouted.evaluate((n) => n.tagName)).not.toBe("A");
+  // (An `unrouted.evaluate(...)` line stood here after the card it named was
+  // routed; it threw ReferenceError before any later assertion could run, on
+  // every host. The href assertion above is what the card now owes.)
 
   // E12 / D2: a card that needs a run is a link to the Run Library carrying
   // its own target, not a dead "SELECT RUN" badge.
