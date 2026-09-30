@@ -56,6 +56,8 @@ export interface components {
             /** @enum {unknown} */
             availability: "AVAILABLE" | "PLANNED" | "DEPENDENCY_REQUIRED";
             requires_run: boolean;
+            /** @description Revision 4: an alpha selection is required independently of requires_run. */
+            requires_alpha?: boolean;
             target_fragment: string | null;
         };
         JourneyPhase: {

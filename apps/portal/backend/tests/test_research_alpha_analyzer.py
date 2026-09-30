@@ -112,6 +112,14 @@ def test_w4_cg_p07_03_a_failed_gate_marks_its_fields_fail() -> None:
     assert row["check"] == "FAIL" and row["gate"] == "determinism-declared"
 
 
+def test_s14_rw_br_02_bad_warmup_fails_only_its_mirror_row() -> None:
+    source = valid_source().replace('"warmup_bars": 32', '"warmup_bars": 100001')
+    result = analyze_alpha_source(source, "alpha.py")
+    assert result.gate_facts.contract_complete is False
+    assert {row["field"] for row in result.mirror if row["check"] == "FAIL"} == {"warmup_bars"}
+    assert next(row for row in result.mirror if row["field"] == "version")["check"] == "PASS"
+
+
 def test_w4_cg_p07_04_timings_are_measured_per_check_and_outside_the_digest() -> None:
     first = analyze_alpha_source(valid_source(), "alpha.py")
     second = analyze_alpha_source(valid_source(), "alpha.py")

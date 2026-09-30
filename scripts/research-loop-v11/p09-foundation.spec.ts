@@ -15,7 +15,7 @@ import { ResearchFoundationError } from "../../apps/control-api/src/research/fou
 import { ResearchFoundationService } from "../../apps/control-api/src/research/foundation.service";
 import {
   RESEARCH_JOURNEY_DESCRIPTOR_SHA256,
-} from "../../apps/control-api/src/research/journey.descriptor.v3";
+} from "../../apps/control-api/src/research/journey.descriptor.v4";
 import { ResearchMetadataRepository } from "../../apps/control-api/src/research/repository";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
 import { Pool } from "../../apps/control-api/node_modules/pg";
@@ -108,7 +108,7 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     });
     expect(response).toMatchObject({
       schema_version: "research.journey-response.v1",
-      descriptor: { revision: 3, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      descriptor: { revision: 4, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
       inspection: {
         canonical_query: "?run_id=run-p09&study=study-p09&trial=trial-p09&pick=pick-p09&seq=42",
         pick_effect: "INSPECTION_ONLY", ambiguity_state: "NOT_APPLICABLE",
@@ -123,11 +123,16 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     for (const cardId of ["execute-replay", "attempt-lineage", "compare", "release-candidate", "run-report"]) {
       expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === cardId)).toMatchObject({ availability: "AVAILABLE" });
     }
+    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === "alpha-version")).toMatchObject({
+      requires_run: false, requires_alpha: true,
+    });
+    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).filter((card: any) => card.requires_alpha)).toHaveLength(1);
     expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).filter((card: any) => card.availability === "PLANNED")).toHaveLength(0);
     expect((await pool.query("SELECT revision, content_sha256 FROM research.journey_descriptor_registry ORDER BY revision")).rows).toEqual([
       { revision: "1", content_sha256: expect.any(String) },
       { revision: "2", content_sha256: expect.any(String) },
-      { revision: "3", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      { revision: "3", content_sha256: expect.any(String) },
+      { revision: "4", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
     ]);
     expect(response.inspection.cursor).not.toHaveProperty("event_seq");
     expect(response.inspection.codec).toBe("p02-cursor.v2");

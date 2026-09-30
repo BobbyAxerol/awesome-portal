@@ -110,6 +110,17 @@ describe("P09 published Research foundation contract", () => {
     }
     expect(journey.inspection.codec).toBe("p02-cursor.v2");
     const historical = fixture("research-foundation.historical-identity.valid.json");
+    const journeyV4 = fixture("research-foundation.journey-v4.valid.json");
+    expect(journeyV4.descriptor).toMatchObject({ revision: 4, content_sha256: expect.stringMatching(/^[0-9a-f]{64}$/) });
+    const v4Cards = journeyV4.descriptor.phases.flatMap((phase: any) => phase.cards);
+    expect(v4Cards.filter((card: any) => card.requires_alpha).map((card: any) => card.card_id)).toEqual(["alpha-version"]);
+    expect(v4Cards.find((card: any) => card.card_id === "alpha-version")).toMatchObject({
+      requires_run: false, requires_alpha: true,
+    });
+    expect(JSON.parse(readFileSync(openApiPath, "utf8")).components.schemas.JourneyCard.properties.requires_alpha).toMatchObject({
+      type: "boolean",
+    });
+    expect(readFileSync(generatedPath, "utf8")).toContain("requires_alpha?: boolean");
     expect(historical).toMatchObject({ selected_release_kind: "HISTORICAL", atlas: null,
       historical_identity: { release_id: "er_quantbt_108", facts_state: "NOT_PUBLISHED" } });
     const current = fixture("research-foundation.atlas-current.valid.json");

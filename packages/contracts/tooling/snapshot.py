@@ -67,6 +67,7 @@ TRACKED = (
     "schemas/execution-market-context.v1.schema.json",
     "fixtures/problem.valid.json",
     "fixtures/research-foundation.journey-v3.valid.json",
+    "fixtures/research-foundation.journey-v4.valid.json",
     "fixtures/research-foundation.historical-identity.valid.json",
     "fixtures/research-foundation.atlas-current.valid.json",
     "fixtures/research-preflight.response.valid.json",

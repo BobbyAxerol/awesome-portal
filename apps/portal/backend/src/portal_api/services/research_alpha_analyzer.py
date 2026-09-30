@@ -470,8 +470,14 @@ def _mirror(
 
     determinism = contract.get("determinism") if isinstance(contract.get("determinism"), dict) else None
     seed_required = determinism.get("seed_required") if determinism else None
+    version = contract.get("version")
+    warmup = contract.get("warmup_bars")
+    # The contract-complete gate is aggregate; a mirror row reports only its
+    # own field's validity, not every other field that shares that gate.
+    version_valid = isinstance(version, str) and bool(_SEMVER_RE.fullmatch(version)) if facts else None
+    warmup_valid = isinstance(warmup, int) and not isinstance(warmup, bool) and 0 <= warmup <= 100_000 if facts else None
     parsed_rows = (
-        ("version", contract.get("version"), "contract-complete", facts.contract_complete if facts else None,
+        ("version", version, "contract-complete", version_valid,
          "Semantic version; a new version is a new immutable AlphaVersion."),
         ("entrypoint", contract.get("entrypoint"), "entrypoint-importable",
          facts.entrypoint_restricted_definition_load if facts else None,
@@ -480,7 +486,7 @@ def _mirror(
          "Declared bar intervals; New Run offers only these."),
         ("required_columns", contract.get("required_columns"), "data-contract-known",
          facts.data_contract_known if facts else None, "Must be a subset of the published OHLCV candle columns."),
-        ("warmup_bars", contract.get("warmup_bars"), "contract-complete", facts.contract_complete if facts else None,
+        ("warmup_bars", warmup, "contract-complete", warmup_valid,
          "Bars before the first window; preflight checks the source has them."),
         ("determinism.seed_required", seed_required, "determinism-declared",
          facts.determinism_declared if facts else None, "Declared true or false; a required seed is enforced at preflight."),
