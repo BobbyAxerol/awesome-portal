@@ -65,4 +65,16 @@ describe("G14 option A — run crumb collapses by segment", () => {
     expect(css).toContain("@media (max-width: 1439px) { .portal-crumb--run-context { display: none; } }");
     expect(css).toContain("@media (max-width: 1365px) { .portal-crumb--run-screen { display: none; } }");
   });
+
+  it("lets a long screen name give way on one row at desktop widths, with its words kept in title", () => {
+    rememberRunLabel("rrun_17f762128acf8c998ac7cc44d13f663f", "R-WFO-017");
+    mount("/research/quantbt/runs/rrun_17f762128acf8c998ac7cc44d13f663f/release-candidate");
+    const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(nav.className).toContain("portal-breadcrumbs--run");
+    const tail = nav.querySelector(".portal-crumb-tail") as HTMLElement;
+    expect(tail.textContent).toBe("Release Candidate & Publish");
+    expect(tail.getAttribute("title")).toBe("Release Candidate & Publish");
+    const css = readFileSync(join(__dirname, "../styles/shell.css"), "utf8").replace(/\s+/g, " ");
+    expect(css).toContain("@media (min-width: 1024px) { .portal-breadcrumbs--run { flex: 1 1 0; }");
+  });
 });

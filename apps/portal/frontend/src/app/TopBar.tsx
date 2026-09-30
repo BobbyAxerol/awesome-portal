@@ -79,7 +79,7 @@ export function TopBar({
 
       {environment ? <EnvironmentBadge environment={environment} /> : null}
 
-      <nav aria-label="Breadcrumb" className="portal-breadcrumbs">
+      <nav aria-label="Breadcrumb" className={runCrumb ? "portal-breadcrumbs portal-breadcrumbs--run" : "portal-breadcrumbs"}>
         {breadcrumbs.map((crumb, index) => (
           <span
             key={`${crumb.label}-${index}`}
@@ -102,7 +102,7 @@ export function TopBar({
         {crumbTail ? (
           <span className={runCrumb ? "portal-crumb portal-crumb--run-screen" : "portal-crumb"}>
             <span aria-hidden="true" className="portal-crumb-sep">/</span>
-            <span>{crumbTail}</span>
+            <span className={runCrumb ? "portal-crumb-tail" : undefined} title={runCrumb ? crumbTail : undefined}>{crumbTail}</span>
           </span>
         ) : null}
       </nav>

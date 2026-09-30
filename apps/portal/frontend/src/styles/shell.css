@@ -76,6 +76,14 @@
 @media (max-width: 1365px) {
   .portal-crumb--run-screen { display: none; }
 }
+/* A long screen name ("Release Candidate & Publish") must not push the bar to
+   a second row either: on a run page the trail takes only the room left and the
+   screen name gives way first, with its full words in `title`. */
+@media (min-width: 1024px) {
+  .portal-breadcrumbs--run { flex: 1 1 0; }
+  .portal-crumb--run-screen { min-width: 0; }
+  .portal-crumb-tail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 
 .portal-crumb-sep {
   color: var(--ink-faint);

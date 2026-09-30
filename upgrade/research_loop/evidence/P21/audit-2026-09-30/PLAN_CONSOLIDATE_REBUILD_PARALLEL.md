@@ -119,3 +119,21 @@ Cờ Execution (`FEATURE_EXECUTION_*`) giữ tắt — không thuộc Research L
 4. Bật cả 4 cờ đang tắt trên preview (khuyến nghị: có — preview cô lập).
 
 Các quyết định HiFi (VD-FG-*, contrast, chữ S14…) không chặn việc gom; để sau khi Bobby xem bản rebuild.
+
+## 6. Đã thực hiện (2026-09-30, Bobby duyệt)
+
+| Bước | Kết quả |
+|---|---|
+| Sao lưu | ref `backup/rl-0930/{codex,claude,g2}`; patch + file untracked của 5 worktree ở `~/.local/share/rl-0930-patches/fresh/`; `pg_dump` preview trước khi sửa sổ migration |
+| Nhánh gom | `integrate/research-loop-2026-09-30` từ `c2ec1443`, worktree `/home/bobby/portal-research-integrate`. Commit: S14 `fcb9bc2a`, G5 `27747ab7`, batch FE `925d4f22`, e2e/probe/cờ preview `ac0b3101`, docs `ef973e2a`, compose `77714769` — **mỗi commit qua hook** |
+| Xử lý trùng | refusal S02: lấy FG-08 của Codex + một sửa (403/404 không có field → câu F-04, không bảo "sửa field"); token S14: Codex đã có; G3 chỉ phần S05–S08; G4 bỏ (giữ FG-04a); G14 bản cuộn ngang bỏ |
+| Lỗi có sẵn trên nhánh Codex được sửa khi gom | `security_opt` của worker lặp giữa hai overlay → compose từ chối build preview (`77714769`) |
+| Test | vitest frontend **207 file, 4080 pass, 3 skip**; tsc sạch; contracts snapshot 219/219; cell test P23 6/6; hook ×4 xanh |
+| Preview | sổ migration: 068→075, 069→076, áp 070–074 (run_on trước 075), 077 chạy khi up; **25/25 cờ Research bật** (19 control-api + 6 portal, cả worker); mọi image chạy = tag; host công khai phục vụ đúng bundle `index-DpnlgzGD.js` |
+| Activation code | đã rotate; file mã cũ bị lộ đã `shred`; `claude-preview` tự kích hoạt lại; **mã mới của Bobby** ở `~/.config/portal-research-preview/activation-bobby-2026-09-30.txt` (600) — dùng một lần để đặt mật khẩu |
+| Lane real-API | **46/54** lần đầu → sửa 2 ô cũ (S09 identity nay có qualifier E14; S11 404 publication của seal DOUBLE = trạng thái denied F-04) → **50/54**. Còn 4: **X1 P22 publish DOUBLE** ×2 (stub dựng theo contract trước FG-05 — dựng lại từ contract P22, đợt F4) · **S00 alpha-version** ×2 (FE bắt chọn run, descriptor nói `requires_run=false` — lệch contract, request **CG-S00-AV-01** bên dưới) |
+| Đi 15 màn trên trình duyệt | 56 lần tải, 0 lỗi console, 0 overflow, 0 lệnh ghi. 11 lỗi — [6_browser_walk_after_rebuild.md](6_browser_walk_after_rebuild.md). **D1 (topbar RC rớt 2 hàng ở 1440) đã sửa** trong commit này (crumb run co lại, tên màn có "…" + title, chỉ ≥1024px). D2 thực ra href đúng (full id) — chỉ nhãn ngắn trông như URL: hạ xuống thấp |
+
+**Thêm vào đợt F1 của Claude** (từ lần đi màn): S02 banner `COPIED FROM rrun_…` → nhãn run; S03 tiêu đề "Run completed — rrun_…" → nhãn; S10 dùng `display_label` + **chip ACTIVE trên cả 19 run FAILED** (trung thực — ưu tiên); S02 timeframe Review 4h vs dropdown 1h; S07 what-if in float thô; S09 legend "IS account" trong khi source-absence nói IS account không publish (trung thực); S08 660 nhãn trục bị cắt + `carry_position` thô + giá thiếu phân tách nghìn; nhãn topbar nháy `rrun_` 150–300 ms khi tải lạnh.
+
+**Backend request mới — CG-S00-AV-01** (owner đề xuất: Codex): thẻ `alpha-version` (`alpha_version_legacy`, SHIPPED) cần một Alpha để mở, nhưng descriptor v3 chỉ nói `requires_run=false` và không cấp Alpha nào. Đề xuất nhỏ nhất: descriptor thêm `requires_alpha: true` (hoặc route tới danh sách Alpha). FE hiện chọn run để suy ra Alpha — lane S00 đỏ đúng chỗ này.

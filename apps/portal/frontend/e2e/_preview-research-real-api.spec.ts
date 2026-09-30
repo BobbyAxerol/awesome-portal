@@ -482,12 +482,12 @@ for (const [name, width, height] of VIEWPORTS) {
     await expect(root.locator("[data-sealed]")).toHaveAttribute("data-sealed", rcId);
     await expect(root.locator("[data-seal-chip]")).toHaveText("SEALED_LOCAL");
     await expect(root.locator("[data-state-chip]")).toHaveText("DRAFT");
-    /* The publication read goes to the real preview. An older preview serves no P22 route: the screen says so, typed, and publishes nothing. */
+    /* The publication read goes to the real preview. The seal above is a DOUBLE, so the server has no such
+       candidate and answers 404 — which P22's screen reads as the one F-04 "denied" state (FG-05). */
     const publicationRead = await pageGet(page, `/api/v1/research/release-candidates/${rcId}/publication`);
-    if (publicationRead.status === 404) {
-      await expect(root.locator("[data-publication-read='not-found']")).toContainText("This build serves no publication for this candidate.");
-    } else {
-      await expect(root.locator("[data-panel='publish']")).toHaveAttribute("data-publish-state", /.+/);
+    await expect(root.locator("[data-panel='publish']")).toHaveAttribute("data-publish-state", /.+/);
+    if (publicationRead.status === 404 || publicationRead.status === 403) {
+      await expect(root.locator("[data-publication-read='denied']")).toBeVisible();
     }
     await expect(root.locator("[data-action='publish']")).toHaveAttribute("aria-disabled", "true");
     await expect(root.locator("[data-panel='mirror-ghost']")).toBeVisible();
@@ -587,7 +587,18 @@ for (const [name, width, height] of VIEWPORTS) {
           else await expect(root.locator(`[data-headline='${cell.key}'] [data-headline-withheld]`)).toContainText(cell.availability.reason_code ?? cell.availability.state);
         }
         for (const field of api.frozen_core.identity) {
-          if (field.value !== null) await expect(root.locator(`[data-identity='${field.key}'] dd`)).toHaveText(field.value);
+          /* E14 · 9.7: a served qualifier prints under the value, in the same cell. */
+          const qualifier = (field as { qualifier?: { state: string; text: string; reason_code: string } | null }).qualifier ?? null;
+          if (field.value !== null) {
+            await expect(root.locator(`[data-identity='${field.key}'] dd`)).toHaveText(
+              qualifier ? `${field.value}${qualifier.text} · ${qualifier.reason_code}` : field.value,
+            );
+          }
+          if (qualifier) {
+            await expect(root.locator(`[data-identity='${field.key}'] [data-identity-qualifier]`)).toHaveAttribute("data-identity-qualifier", qualifier.state);
+          } else {
+            await expect(root.locator(`[data-identity='${field.key}'] [data-identity-qualifier]`)).toHaveCount(0);
+          }
         }
         await expect(root.locator("[data-passport-fact]")).toHaveCount(api.frozen_core.passport.length);
         if (api.frozen_core.schema_version === "research.report-frozen-core.v2") {
