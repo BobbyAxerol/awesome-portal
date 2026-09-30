@@ -11,6 +11,7 @@ export class ResearchWhatIfError extends Error {
       | "RESEARCH_WHATIF_IN_FLIGHT"
       | "RESEARCH_WHATIF_CONFLICT"
       | "RESEARCH_WHATIF_UPSTREAM_REJECTED"
+      | "RESEARCH_WHATIF_ADMISSION_SATURATED"
       | "RESEARCH_WHATIF_UNAVAILABLE",
     message: string,
     readonly status: 400 | 403 | 404 | 409 | 502 | 503,

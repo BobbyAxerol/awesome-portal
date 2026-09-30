@@ -10,6 +10,7 @@ import { CONTROL_API_POOL } from "../tokens";
 import { canonicalResearchJson } from "./preflight.service";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchReportError } from "./report.error";
+import { ResearchUtilitySaturated, assertUtilityCapacity } from "./utility-admission";
 import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReportAuditRelation } from "./report-core-v2";
 import {
@@ -341,6 +342,14 @@ export class ResearchReportRepository {
         [scope.workspaceId, runId, reportRevision, scope.actorUserId, format],
       );
       if (prior.rowCount === 1) return job(prior.rows[0]!);
+      try {
+        await assertUtilityCapacity(client, scope.workspaceId, scope.actorUserId);
+      } catch (error) {
+        if (error instanceof ResearchUtilitySaturated) {
+          throw new ResearchReportError("RESEARCH_REPORT_ADMISSION_SATURATED", error.message, 503);
+        }
+        throw error;
+      }
       const jobId = newUlid("rpex");
       const inserted = await client.query<JobRow>(
         `INSERT INTO research.run_report_export_jobs_v1

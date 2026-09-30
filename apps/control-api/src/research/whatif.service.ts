@@ -542,6 +542,7 @@ export class ResearchWhatIfService {
     if (error instanceof ResearchMetadataError) {
       if (error.code === "RESEARCH_WORKSPACE_FORBIDDEN") return new ResearchWhatIfError("RESEARCH_WHATIF_FORBIDDEN", "Access denied.", 403);
       if (error.code === "RESEARCH_WHATIF_IN_FLIGHT") return new ResearchWhatIfError("RESEARCH_WHATIF_IN_FLIGHT", error.message, 409);
+      if (error.code === "RESEARCH_ADMISSION_SATURATED") return new ResearchWhatIfError("RESEARCH_WHATIF_ADMISSION_SATURATED", error.message, 503);
       return new ResearchWhatIfError("RESEARCH_WHATIF_UNAVAILABLE", "The what-if diagnostic is temporarily unavailable.", error.status >= 500 ? 503 : 409);
     }
     return new ResearchWhatIfError("RESEARCH_WHATIF_UNAVAILABLE", "The what-if diagnostic is temporarily unavailable.", 503);

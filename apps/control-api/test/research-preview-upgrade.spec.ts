@@ -75,21 +75,27 @@ describe("P23 Research preview forward upgrade without ledger/data/auth rewrite"
     finally { await admin.end(); rmSync(oldDir, { recursive: true, force: true }); }
   });
 
-  it("upgrades actual preview 067 through 076, preserving every historical ledger row and data/auth byte", async () => {
+  it("upgrades actual preview 067 through 077, preserving every historical ledger row and data/auth byte", async () => {
     expect(oldNames.at(-1)).toBe("1723680000067_research-journey-descriptor-v3.sql");
     await runControlApiMigrations(urlFor(databaseName), allDir, () => {});
     expect(await ledger(oldNames.map(name => name.slice(0,-4)))).toBe(oldLedger);
     expect(await sentinelDigest()).toBe(sentinels);
     const last = await database.query(`SELECT name FROM pgmigrations ORDER BY run_on DESC,id DESC LIMIT 1`);
-    expect(last.rows[0].name).toBe("1723680000076_research-run-convergence-sweep-v1");
+    expect(last.rows[0].name).toBe("1723680000077_research-utility-admission-v1");
     const shape = await database.query(`SELECT
       EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='research.run_evidence_projections_v1'::regclass
         AND conname='run_evidence_projections_v1_candle_overview_bound_check') AS overview,
-      to_regclass('research.research_jobs_convergence_sweep_v1_idx') IS NOT NULL AS convergence`);
-    expect(shape.rows[0]).toEqual({ overview:true, convergence:true });
+      to_regclass('research.research_jobs_convergence_sweep_v1_idx') IS NOT NULL AS convergence,
+      to_regclass('research.utility_verify_slots_v1') IS NOT NULL AS utility_slots,
+      has_table_privilege('portal_research_runtime','research.utility_verify_slots_v1','SELECT') AS utility_select,
+      has_table_privilege('portal_research_runtime','research.utility_verify_slots_v1','INSERT') AS utility_insert,
+      has_table_privilege('portal_research_runtime','research.utility_verify_slots_v1','DELETE') AS utility_delete,
+      has_table_privilege('portal_research_runtime','research.utility_verify_slots_v1','UPDATE') AS utility_update`);
+    expect(shape.rows[0]).toEqual({ overview:true, convergence:true, utility_slots:true,
+      utility_select:true, utility_insert:true, utility_delete:true, utility_update:false });
   }, 120_000);
 
-  it("restarts the already-current 076 migrator without another ledger row or data/auth change", async () => {
+  it("restarts the already-current 077 migrator without another ledger row or data/auth change", async () => {
     const before = await ledger();
     await runControlApiMigrations(urlFor(databaseName), allDir, () => {});
     expect(await ledger()).toBe(before);

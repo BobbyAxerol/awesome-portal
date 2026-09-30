@@ -13,6 +13,8 @@ import { ResearchFreezeReadQuerySchema, ResearchFreezeRunIdSchema } from "./free
 import { ResearchFreezeError } from "./freeze.error";
 import { ResearchFreezeService } from "./freeze.service";
 import { sendRevalidatable } from "./etag";
+import { ResearchUtilitySaturated } from "./utility-admission";
+import { ResearchUtilityVerifyAdmissionService } from "./utility-verify-admission.service";
 
 interface FreezeRequest extends FastifyRequest {
   portalUser: { userId: string };
@@ -27,6 +29,7 @@ export class ResearchFreezeController {
     @Inject(ResearchFreezeService) private readonly service: ResearchFreezeService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Inject(ResearchUtilityVerifyAdmissionService) private readonly utility: ResearchUtilityVerifyAdmissionService,
   ) {}
 
   @Get(":runId/freeze")
@@ -47,9 +50,8 @@ export class ResearchFreezeController {
   }
 
   /**
-   * This is a CSRF/origin-protected user-requested re-read. It persists no
-   * receipt, does not fetch artifact bytes and cannot enqueue diagnostics;
-   * POST preserves the explicit-action semantics of the Screen-07 button.
+   * CSRF/origin-protected user-requested byte observation. Its cross-replica
+   * utility slot is held only while the private observer and receipt run.
    */
   @Post(":runId/freeze/verify")
   @HttpCode(200)
@@ -62,10 +64,18 @@ export class ResearchFreezeController {
     const runId = this.runId(rawRunId);
     const query = this.query(rawQuery);
     const workspaceId = await this.workspace(request, query.workspace_id);
-    return this.service.verify(
-      { workspaceId, actorUserId: request.portalUser.userId }, runId,
-      { ...(query.fold === undefined ? {} : { fold: query.fold }) },
-    );
+    const scope = { workspaceId, actorUserId: request.portalUser.userId };
+    try {
+      return await this.utility.withSlot(scope, runId, () => this.service.verify(
+        scope, runId, { ...(query.fold === undefined ? {} : { fold: query.fold }) },
+      ));
+    } catch (error) {
+      if (error instanceof ResearchUtilitySaturated) {
+        throw new ResearchFreezeError("RESEARCH_FREEZE_ADMISSION_SATURATED", error.message, 503);
+      }
+      if (error instanceof ResearchFreezeError) throw error;
+      throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Research verification admission is temporarily unavailable.", 503);
+    }
   }
 
   private runId(raw: string): string {

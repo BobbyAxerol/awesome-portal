@@ -59,6 +59,7 @@ import {
   IMPORTED_ALPHA_PROFILE_ID,
 } from "./imported-alpha.profile";
 import { RETRY_WAIT_DISPATCH_GRACE_SECONDS, retryNotDispatchedReason } from "./run-state";
+import { ResearchUtilitySaturated, assertUtilityCapacity } from "./utility-admission";
 
 type ScopedClient = PoolClient;
 
@@ -1935,6 +1936,14 @@ export class ResearchMetadataRepository {
           parent_run_id: input.parentRunId, grid_key: input.gridKey,
         });
         return { producer, replayed: true };
+      }
+      try {
+        await assertUtilityCapacity(client, scope.workspaceId, scope.actorUserId);
+      } catch (error) {
+        if (error instanceof ResearchUtilitySaturated) {
+          throw new ResearchMetadataError("RESEARCH_ADMISSION_SATURATED", error.message, 503);
+        }
+        throw error;
       }
       const busy = await client.query(
         `SELECT 1

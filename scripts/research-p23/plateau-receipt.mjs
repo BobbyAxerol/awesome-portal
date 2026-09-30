@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_HOME, privateJson, savePrivate } from './api-client.mjs';
+import { DEFAULT_HOME, privateJson, refreshTestSessions, savePrivate } from './api-client.mjs';
 import { PROJECT, validateHome } from './cell.mjs';
 import { admitRealRun } from './real-run.mjs';
 import { container, dbQuery, docker } from './runtime-tools.mjs';
@@ -120,7 +120,7 @@ async function waitForPreflightSlot(receipt,warm,path) {
       WHERE p.run_id=$1`,[warm.run_id]).rows[0];
     if(preflightBudgetReady({...budget,capacity})) {
       if(wait){wait.completed_at_utc=new Date().toISOString();savePrivate(path,receipt);}
-      return;
+      return Boolean(wait);
     }
     assert(Date.now()<deadline,'BOUNDED_NATURAL_PREFLIGHT_EXPIRY_REQUIRED');
     if(!wait){wait={started_at_utc:new Date().toISOString(),capacity,initial_count:budget.count,samples:0};(receipt.budget_waits??=[]).push(wait);}
@@ -148,7 +148,10 @@ export async function plateauReceipt(home=DEFAULT_HOME,label='wfo-cycles') {
   try {
     for(let round=0;round<PLATEAU_LIMITS.rounds;round++)for(const mode of ['complete','fail','cancel']) {
       assert.equal(active(),0,'ONE_OWNED_JOB_AT_A_TIME');
-      await waitForPreflightSlot(receipt,warm,path);
+      if (await waitForPreflightSlot(receipt,warm,path)) {
+        // The finite preflight token wait can outlive the test session. Renew
+        // only the existing owned identities through their real password login.
+        await refreshTestSessions(home);
       const entry=await admitRealRun(home,'wfo',`plateau-${label}-${round}-${mode}`);
       currentEntry=entry;
       const cycle={round,mode,run_id:entry.receipt.run_id,started_at_utc:new Date().toISOString(),fault:null};

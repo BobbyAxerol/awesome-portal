@@ -142,6 +142,7 @@ import { ResearchSearchController } from "./research/search.controller";
 import { ResearchSearchService } from "./research/search.service";
 import { ResearchFreezeController } from "./research/freeze.controller";
 import { ResearchFreezeService } from "./research/freeze.service";
+import { ResearchUtilityVerifyAdmissionService } from "./research/utility-verify-admission.service";
 import { ResearchArtifactVerifyClient } from "./research/artifact-verify.client";
 import { ResearchArtifactVerifyRepository } from "./research/artifact-verify.repository";
 import { ResearchArtifactVerifyService } from "./research/artifact-verify.service";
@@ -307,6 +308,7 @@ export class AppModule {
         ResearchSplitService,
         ResearchSearchService,
         ResearchFreezeService,
+        ResearchUtilityVerifyAdmissionService,
         // W5a · A10a: explicit byte verification; dark behind its own flag.
         ResearchArtifactVerifyClient,
         ResearchArtifactVerifyRepository,

@@ -10,12 +10,16 @@ function reply() {
   return value;
 }
 
+function utility() {
+  return { withSlot: vi.fn((_scope: unknown, _runId: string, work: () => Promise<unknown>) => work()) };
+}
+
 describe("P16 Freeze controller", () => {
   it("keeps the reader workspace-scoped, carries the bounded fold, and honors immutable ETag", async () => {
     const etag = "\"p16r1_" + "a".repeat(64) + "\"";
     const service = { detail: vi.fn().mockResolvedValue({ etag }), verify: vi.fn() };
     const workspaces = { isMember: vi.fn().mockResolvedValue(true) };
-    const controller = new ResearchFreezeController(service as never, workspaces as never, {} as never);
+    const controller = new ResearchFreezeController(service as never, workspaces as never, {} as never, utility() as never);
     const response = reply();
 
     await controller.detail({
@@ -38,14 +42,14 @@ describe("P16 Freeze controller", () => {
     expect(fresh.send).toHaveBeenCalledWith({ etag });
   });
 
-  it("keeps explicit re-verification same-origin/CSRF protected although it writes no receipt", async () => {
+  it("keeps explicit re-verification same-origin/CSRF protected and admitted", async () => {
     const csrf = "p16-csrf";
     const verification = { schema_version: "research.freeze-verification.v1", result: "PARTIAL_MATCH" };
     const service = { detail: vi.fn(), verify: vi.fn().mockResolvedValue(verification) };
     const workspaces = { isMember: vi.fn().mockResolvedValue(true) };
     const controller = new ResearchFreezeController(service as never, workspaces as never, {
       PORTAL_PUBLIC_ORIGIN: "https://portal.example.test",
-    } as never);
+    } as never, utility() as never);
     const request = {
       portalUser: { userId: "user" },
       portalWorkspaceId: "workspace",
@@ -71,6 +75,7 @@ describe("P16 Freeze controller", () => {
       { detail: vi.fn(), verify: vi.fn() } as never,
       { isMember: vi.fn().mockResolvedValue(false) } as never,
       {} as never,
+      utility() as never,
     );
     await expect(controller.detail({
       portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: {},
