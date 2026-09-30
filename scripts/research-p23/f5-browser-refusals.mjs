@@ -50,8 +50,9 @@ export async function browserRefusalReceipt({ home = DEFAULT_HOME, label = 'f5-b
   try {
     browser = await chromium.launch({ headless: true });
     for (const width of [1280, 660]) {
-      for (const screen of ['S14', 'S02']) {
-        const record = { screen, width, page_errors: [], off_origin: [], requests: [] };
+      for (const [screen, scenario] of [['S14', 'invalid_source'], ['S02', 'missing_csrf'],
+        ['S14', 'session_expired'], ['S02', 'session_expired']]) {
+        const record = { screen, scenario, width, page_errors: [], off_origin: [], requests: [] };
         receipt.cases.push(record);
         const context = await browser.newContext({ baseURL: BASE_URL,
           viewport: { width, height: 900 }, extraHTTPHeaders: { 'x-dev-access-email': 'p23-owner@azdag.com' } });
@@ -78,11 +79,13 @@ export async function browserRefusalReceipt({ home = DEFAULT_HOME, label = 'f5-b
               const input = document.querySelector('[data-screen="alpha-import"] textarea[aria-label="Alpha source text"]');
               return input instanceof HTMLTextAreaElement && input.value === 'x';
             });
+            if (scenario === 'session_expired') await context.clearCookies();
             record.api = await captureRefusal(page, '/api/v1/research/alphas/import/parse',
               () => root.locator('[data-action="parse"]').click());
-            assert.equal(record.api.status, 400);
-            assert.equal(record.api.code, 'RESEARCH_ALPHA_IMPORT_INVALID');
-            const alert = root.locator('[role="alert"][data-refusal="RESEARCH_ALPHA_IMPORT_INVALID"]');
+            assert.equal(record.api.status, scenario === 'session_expired' ? 401 : 400);
+            assert.equal(record.api.code, scenario === 'session_expired'
+              ? 'SESSION_REQUIRED' : 'RESEARCH_ALPHA_IMPORT_INVALID');
+            const alert = root.locator(`[role="alert"][data-refusal="${record.api.code}"]`);
             await alert.waitFor();
             record.visible_copy = (await alert.innerText()).trim();
             assert(record.visible_copy.length > 20, 'VISIBLE_REFUSAL_COPY_REQUIRED');
@@ -96,12 +99,14 @@ export async function browserRefusalReceipt({ home = DEFAULT_HOME, label = 'f5-b
               const action = document.querySelector('[data-screen="new-run"] [data-action="preflight"]');
               return action instanceof HTMLButtonElement && !action.disabled;
             });
-            // Keep the authenticated session; remove only its CSRF proof.
-            await context.clearCookies({ name: '__Host-portal_csrf' });
+            // Test a dead session separately from a live session missing only CSRF.
+            if (scenario === 'session_expired') await context.clearCookies();
+            else await context.clearCookies({ name: '__Host-portal_csrf' });
             record.api = await captureRefusal(page, '/api/v1/research/preflights',
               () => root.locator('[data-action="preflight"]').click());
-            assert.equal(record.api.status, 403);
-            assert.equal(record.api.code, 'RESEARCH_PREFLIGHT_INVALID');
+            assert.equal(record.api.status, scenario === 'session_expired' ? 401 : 403);
+            assert.equal(record.api.code, scenario === 'session_expired'
+              ? 'SESSION_REQUIRED' : 'RESEARCH_PREFLIGHT_INVALID');
             const alert = root.locator('[role="alert"] [data-refusal-copy]');
             await alert.waitFor();
             record.visible_copy = (await alert.innerText()).trim();
@@ -126,7 +131,7 @@ export async function browserRefusalReceipt({ home = DEFAULT_HOME, label = 'f5-b
     }
     receipt.jobs_after = jobs(workspace);
     assert.equal(receipt.jobs_after, receipt.jobs_before, 'REFUSAL_CREATED_ENGINE_JOB');
-    receipt.scoped_passed = receipt.cases.length === 4 && receipt.cases.every(record => record.passed);
+    receipt.scoped_passed = receipt.cases.length === 8 && receipt.cases.every(record => record.passed);
   } finally {
     receipt.jobs_after ??= jobs(workspace);
     savePrivate(target, receipt);
