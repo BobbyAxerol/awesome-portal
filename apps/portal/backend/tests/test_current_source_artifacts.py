@@ -172,11 +172,21 @@ def test_current_source_adapter_retains_real_wfo_rows_once(exported) -> None:
     assert analytics_v2["metrics"]["benchmark_return_fraction"]["state"] == "AVAILABLE"
     assert analytics_v2["last_30d"]["label"] == "last 30D"
     assert "rolling_sharpe_63" not in analytics_v2
-    assert receipt.summary["derived"]["monthly_returns"]["source_observation_count"] == receipt.table_rows["observations"]
+    stitched = pd.read_parquet(source.run_directory("run-rs02-advanced") / "series" / "stitched.parquet")
+    fold_frame = pd.read_parquet(source.run_directory("run-rs02-advanced") / "wfo" / "folds.parquet")
+    oos_mask = pd.Series(False, index=stitched.index)
+    for _, fold in fold_frame.iterrows():
+        start = pd.Timestamp(fold["test_start"]).tz_convert("UTC")
+        end = pd.Timestamp(fold["test_end"]).tz_convert("UTC")
+        oos_mask |= (stitched.index >= start) & (stitched.index <= end)
+    oos_count = int(oos_mask.sum())
+    assert receipt.summary["derived_scope"] == "OUTER_TEST_UNION_INCLUSIVE_V1"
+    assert receipt.summary["derived"]["monthly_returns"]["source_observation_count"] == oos_count
+    assert oos_count < receipt.table_rows["observations"]
     assert receipt.summary["derived"]["return_distribution"]["state"] in {"AVAILABLE", "NOT_APPLICABLE"}
     distribution = receipt.summary["derived"]["return_distribution"]
     if distribution["state"] == "AVAILABLE":
-        assert sum(int(bucket["count"]) for bucket in distribution["values"]) == receipt.table_rows["observations"]
+        assert sum(int(bucket["count"]) for bucket in distribution["values"]) == oos_count
     assert len(json.dumps(receipt.summary, sort_keys=True).encode("utf-8")) <= 65_536
 
     reader = retained.reader(cursor_secret=b"rs02-current-source-cursor-secret-at-least-32-bytes")

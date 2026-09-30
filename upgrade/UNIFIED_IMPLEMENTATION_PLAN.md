@@ -6585,7 +6585,30 @@ profile, with a persisted 60-second cooldown. Terminal sidecar failures now
 write a typed failure code; report reads return 503/409 rather than a silent
 permanent 404. The immutable report manifest, source retention and QuantBT
 execution paths are unchanged. Control API build, focused 43/43 and disposable
-PostgreSQL migration 5/5 passed. Preview real-API receipt remains pending;
-do not mark LW-02 accepted from tests alone.
+PostgreSQL migration 5/5 passed. Real preview R-WFO-020 returned HTTP 200
+twice with one immutable report revision; retry state SEALED, attempt 1, on
+image pinned to 9ea4351e. LW-02 is accepted; no FE route was changed.
 [LW-02 receipt](./research_loop/evidence/P18/LW-02_report_repair_receipt_2026-09-30.md)
+
+### LW-03 QuantBT child-audit source boundary — 2026-09-30
+
+QuantBT capped the lifecycle table before Portal intake and reports 2,212
+dropped records. The retained 2,000 rows lack the fold OOS-generation facts;
+Portal cannot prove them from an absent source row. Keep the existing typed
+missing-fact verdict and do not fabricate a freeze seal. This source-owned
+gap does not block unrelated current-source Search or Report acceptance.
+· [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).
+
+### LW-04 outer-test-only derived series checkpoint — 2026-09-30
+
+WFO source-time compact monthly/rolling/distribution data now uses the
+inclusive union of outer-test windows rather than the full stitched account
+tape. The full tape remains immutable for Replay. New seals carry an internal
+OOS scope marker; older seals without it return a typed derived-series absence
+instead of a mislabeled pre-OOS chart. S01 retained sparkline samples only
+OOS observations. Real preview DB read-only measurement on R-WFO-020:
+2,184 full versus 1,440 OOS bars. Focused Control API 29/29 and two actual
+QuantBT 1.1.1 golden WFO tests pass. Exact-HEAD preview endpoint acceptance
+is still pending and will be appended to the same receipt.
+[LW-04 receipt](./research_loop/evidence/P13/LW-04_oos_scope_2026-09-30.md)
 · [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).

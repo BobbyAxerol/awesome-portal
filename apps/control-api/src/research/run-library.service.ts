@@ -624,7 +624,6 @@ export class ResearchRunLibraryService {
       scope,
       runId,
       lane.artifactRevision,
-      lane.observationCount,
       RETAINED_SPARKLINE_READ_LIMIT,
     );
     const points = rows.flatMap((row) => {
@@ -634,7 +633,8 @@ export class ResearchRunLibraryService {
         ? [{ at, equity: row.equity, numeric: Number(row.equity) }]
         : [];
     });
-    if (points.length < 2) {
+    const oosCount = Number(rows[0]?.oos_count ?? 0);
+    if (!Number.isSafeInteger(oosCount) || oosCount < points.length || points.length < 2) {
       return {
         schema_version: "research.run-sparkline.v1" as const,
         run_id: runId,
@@ -653,12 +653,12 @@ export class ResearchRunLibraryService {
       source_revision: `rs02r${lane.artifactRevision}`,
       source: {
         lane: "PORTAL_RETAINED_CURRENT_SOURCE" as const,
-        series_kind: "EQUITY" as const,
+        series_kind: "EQUITY_OOS" as const,
         value_field: "equity" as const,
         projection_revision: `rs02r${lane.artifactRevision}`,
         series_digest: null,
-        source_observation_count: lane.observationCount,
-        source_sampling: lane.observationCount > RETAINED_SPARKLINE_READ_LIMIT
+        source_observation_count: oosCount,
+        source_sampling: oosCount > RETAINED_SPARKLINE_READ_LIMIT
           ? "OBSERVATION_EXTREMA_BUCKET_V2"
           : "FULL",
         persisted_point_count: points.length,

@@ -527,6 +527,24 @@ describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub 
     });
   });
 
+  it("LW-04: retained WFO sparkline uses OOS count, not full stitched tape count", async () => {
+    const repository = {
+      findSparklineSource: vi.fn().mockResolvedValue(hubless()),
+      retainedFacts: vi.fn().mockResolvedValue([retainedRow({ observation_count: "2184" })]),
+      findRetainedSparklineValues: vi.fn().mockResolvedValue([
+        { at_utc_ms: "1725000000000", equity: "100", oos_count: "1440" },
+        { at_utc_ms: "1725003600000", equity: "110", oos_count: "1440" },
+      ]),
+    };
+    const response = await new ResearchRunLibraryService(repository as never, config).sparkline(scope, "rrun_unit");
+    expect(response.availability.state).toBe("AVAILABLE");
+    expect(response.source).toMatchObject({
+      series_kind: "EQUITY_OOS", source_observation_count: 1440,
+      first_at_utc_ms: 1725000000000, last_at_utc_ms: 1725003600000,
+    });
+    expect(repository.findRetainedSparklineValues).toHaveBeenCalledWith(scope, "rrun_unit", 1, 192);
+  });
+
   it("reads a retained row into the card's shape, and refuses one that is not a seal", () => {
     expect(retainedCardFacts(retainedRow())).toMatchObject({
       artifactRevision: 1, meanOosSharpe: "-5.354970424211971", meanDecay: "3.911439612138451",

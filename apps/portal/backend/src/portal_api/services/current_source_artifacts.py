@@ -1801,7 +1801,8 @@ class CurrentSourceArtifactAdapter:
             # Source facts only when QuantBT published their exact semantics
             # (W3 `source_facts`); otherwise the typed absences stay.
             "data_use": data_use,
-            "derived": CurrentSourceArtifactAdapter._derived_series(observations),
+            "derived": CurrentSourceArtifactAdapter._derived_series(observations, folds),
+            "derived_scope": "OUTER_TEST_UNION_INCLUSIVE_V1",
             "counts": {
                 "folds": len(folds),
                 "trials": len(trials),
@@ -1813,24 +1814,53 @@ class CurrentSourceArtifactAdapter:
         return body
 
     @staticmethod
-    def _derived_series(observations: list[dict[str, Any]]) -> dict[str, Any]:
-        """Produce finite source-derived chart facts once, before retention.
+    def _derived_series(observations: list[dict[str, Any]], folds: list[dict[str, Any]]) -> dict[str, Any]:
+        """Seal display-only OOS facts from the exact inclusive outer-test windows.
 
-        Full-resolution observation rows remain in their P05 relation and are
-        imported into Portal-local storage.  These compact projections are
-        only display aids: all direct passport metrics above still use full
-        exact rows, so chart sampling can never change a financial fact.
+        The full stitched account tape stays in P05 for Replay and audit. A
+        pre-OOS prefix must not be labelled as OOS distribution or rolling
+        return. Each overlapping fold contributes a bar once, not twice.
         """
 
-        equities = [Decimal(str(row["equity"])) for row in observations]
-        returns = [Decimal(str(row["return_fraction"])) for row in observations]
-        monthly = CurrentSourceArtifactAdapter._monthly_returns(observations, equities)
-        rolling = CurrentSourceArtifactAdapter._rolling_returns(observations, equities)
-        distribution = CurrentSourceArtifactAdapter._return_distribution(returns)
+        windows: list[tuple[int, int]] = []
+        for fold in folds:
+            start, end = fold.get("test_start_utc_ms"), fold.get("test_end_utc_ms")
+            if not isinstance(start, int) or not isinstance(end, int) or start < 0 or end < start:
+                raise CurrentSourceArtifactError(
+                    "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID",
+                    "A fold lacks a valid outer-test window for chart derivation.",
+                )
+            windows.append((start, end))
+        # Merge overlapping inclusive folds, then walk the chronological tape
+        # once. The admission ceiling is 2M bars / 256 folds; N×F scans are
+        # not acceptable at source seal time.
+        merged: list[tuple[int, int]] = []
+        for start, end in sorted(windows):
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+            else:
+                merged.append((start, end))
+        scoped: list[dict[str, Any]] = []
+        window_index = 0
+        for row in observations:
+            at = row["at_utc_ms"]
+            while window_index < len(merged) and at > merged[window_index][1]:
+                window_index += 1
+            if window_index == len(merged):
+                break
+            if at >= merged[window_index][0]:
+                scoped.append(row)
+        if not scoped:
+            raise CurrentSourceArtifactError(
+                "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID",
+                "The stitched series has no bar in the declared outer-test windows.",
+            )
+        equities = [Decimal(str(row["equity"])) for row in scoped]
+        returns = [Decimal(str(row["return_fraction"])) for row in scoped]
         return {
-            "monthly_returns": monthly,
-            "rolling_returns_20": rolling,
-            "return_distribution": distribution,
+            "monthly_returns": CurrentSourceArtifactAdapter._monthly_returns(scoped, equities),
+            "rolling_returns_20": CurrentSourceArtifactAdapter._rolling_returns(scoped, equities),
+            "return_distribution": CurrentSourceArtifactAdapter._return_distribution(returns),
         }
 
     @staticmethod

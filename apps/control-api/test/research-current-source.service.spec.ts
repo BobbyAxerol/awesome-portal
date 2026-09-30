@@ -33,6 +33,7 @@ const seal: CurrentSourceSealRow = {
   retainedAtUtcMs: 1_725_000_000_000,
   summary: {
     schema_version: "research.current-source-summary.v1",
+    derived_scope: "OUTER_TEST_UNION_INCLUSIVE_V1",
     metrics: {
       initial_equity: "100", final_equity: "110", net_return_fraction: "0.1", max_drawdown_fraction: "-0.02",
     },
@@ -158,6 +159,24 @@ describe("RS-02 retained current-source named read models", () => {
     const distribution = sealed(await current.evidenceSeries(scope, "run-rs02", "RETURN_DISTRIBUTION"));
     expect(distribution.values).toHaveLength(2);
     expect(repository.rows).toHaveBeenCalled();
+  });
+
+  it("LW-04: immutable pre-fix seals do not publish pre-OOS derived rows as OOS", async () => {
+    const oldSeal = structuredClone(seal);
+    delete (oldSeal.summary as Record<string, unknown>).derived_scope;
+    const repository = { sealForRead: vi.fn().mockResolvedValue(oldSeal), runState: vi.fn() };
+    const current = service(repository);
+    for (const kind of ["MONTHLY_RETURNS", "ROLLING_RETURNS_20", "RETURN_DISTRIBUTION"] as const) {
+      const response = sealed(await current.evidenceSeries(scope, "run-rs02", kind));
+      expect(response.availability).toEqual({
+        state: "NOT_PUBLISHED", reason_code: "PORTAL_DERIVED_SERIES_SCOPE_NOT_OOS",
+      });
+      expect(response.values).toEqual([]);
+      expect(response.source_sample.emitted_point_count).toBe(0);
+    }
+    const modern = service({ sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn() });
+    const distribution = sealed(await modern.evidenceSeries(scope, "run-rs02", "RETURN_DISTRIBUTION"));
+    expect(distribution.values).toHaveLength(2);
   });
 
   it("binds a playhead to its relation and reports a local receipt mismatch without reopening source bytes", async () => {

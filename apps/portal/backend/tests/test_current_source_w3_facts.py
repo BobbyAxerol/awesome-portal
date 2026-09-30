@@ -273,9 +273,16 @@ def test_a_source_tree_without_the_new_documents_keeps_typed_absences(wfo, tmp_p
 def test_rolling_returns_20_match_an_independent_reference(wfo) -> None:
     """A12 P13-T02: every emitted rolling-20 point equals equity[t]/equity[t-20]−1 of the raw series."""
 
-    _, source, exported, _ = wfo
+    _, source, exported, rows = wfo
     stitched = pd.read_parquet(source.run_directory(RUN_ID) / "series" / "stitched.parquet")
-    reference = (stitched["equity"] / stitched["equity"].shift(20) - 1).dropna()
+    mask = pd.Series(False, index=stitched.index)
+    for fold in rows["FOLD"]:
+        start = pd.Timestamp(fold["payload"]["test_start_utc_ms"], unit="ms", tz="UTC")
+        end = pd.Timestamp(fold["payload"]["test_end_utc_ms"], unit="ms", tz="UTC")
+        mask |= (stitched.index >= start) & (stitched.index <= end)
+    scoped = stitched.loc[mask]
+    assert len(scoped) == sum(fold["payload"]["fold_facts"]["test_bars"] for fold in rows["FOLD"])
+    reference = (scoped["equity"] / scoped["equity"].shift(20) - 1).dropna()
     rolling = exported.receipt.summary["derived"]["rolling_returns_20"]
     assert rolling["source_observation_count"] == len(reference)
     by_ms = {int(index.value // 1_000_000): value for index, value in reference.items()}

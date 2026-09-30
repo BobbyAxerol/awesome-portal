@@ -1253,6 +1253,22 @@ export class ResearchCurrentSourceService {
         }),
       };
     }
+    const derivedAvailability = this.seriesAvailability(summary, kind);
+    if (derivedAvailability.state === "NOT_PUBLISHED") {
+      const sourceCount = kind === "MONTHLY_RETURNS"
+        ? summary.derived.monthly_returns.source_observation_count
+        : kind === "ROLLING_RETURNS_20"
+          ? summary.derived.rolling_returns_20.source_observation_count
+          : summary.derived.return_distribution.source_observation_count;
+      return {
+        availability: derivedAvailability,
+        source_sample: {
+          source_observation_count: sourceCount, emitted_point_count: 0,
+          sampling: "NOT_APPLICABLE", envelope: null,
+        },
+        values: [],
+      };
+    }
     if (kind === "MONTHLY_RETURNS") {
       const source = summary.derived.monthly_returns;
       return {
@@ -1352,6 +1368,12 @@ export class ResearchCurrentSourceService {
     summary: ReturnType<typeof parseSummary>,
     kind: "EQUITY" | "RETURNS" | "POSITIONS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION",
   ): Availability {
+    if (kind === "EQUITY" || kind === "RETURNS" || kind === "POSITIONS") return available();
+    // Immutable older seals used the entire stitched tape, including pre-OOS
+    // bars. Preserve their raw rows, but never label those compact facts OOS.
+    if (summary.derived_scope !== "OUTER_TEST_UNION_INCLUSIVE_V1") {
+      return { state: "NOT_PUBLISHED", reason_code: "PORTAL_DERIVED_SERIES_SCOPE_NOT_OOS" };
+    }
     if (kind === "ROLLING_RETURNS_20" && summary.derived.rolling_returns_20.sampling === "NOT_APPLICABLE") {
       return { state: "NOT_APPLICABLE", reason_code: "QUANTBT_ADVANCED_WFO_OBSERVATIONS_BELOW_ROLLING_WINDOW" };
     }

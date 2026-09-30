@@ -669,38 +669,44 @@ export class ResearchRunLibraryRepository {
     scope: ResearchScope,
     runId: string,
     artifactRevision: number,
-    totalRows: number,
     maximum: number,
-  ): Promise<Array<{ at_utc_ms: string | number | null; equity: string }>> {
+  ): Promise<Array<{ at_utc_ms: string | number | null; equity: string; oos_count: string | number }>> {
     this.assertScope(scope);
     const buckets = Math.max(1, Math.floor(maximum / 4));
     return this.withScopedRead(scope, async (client) => {
-      const result = await client.query<{ at_utc_ms: string | number | null; equity: string }>(
-        totalRows <= maximum
-          ? `SELECT occurred_at_utc_ms AS at_utc_ms, payload->>'equity' AS equity
-               FROM research.current_source_rows_v1
-              WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'OBSERVATION'
-              ORDER BY source_ordinal ASC
-              LIMIT $4`
-          : `WITH obs AS (
-               SELECT source_ordinal, occurred_at_utc_ms, payload->>'equity' AS equity,
-                      (payload->>'equity')::numeric AS equity_numeric,
-                      (source_ordinal * $5::bigint) / $6::bigint AS bucket
-                 FROM research.current_source_rows_v1
-                WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'OBSERVATION'
-             ), picks AS (
-               (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, source_ordinal ASC)
-               UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, source_ordinal DESC)
-               UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, equity_numeric ASC, source_ordinal ASC)
-               UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, equity_numeric DESC, source_ordinal ASC)
-             )
-             SELECT obs.occurred_at_utc_ms AS at_utc_ms, obs.equity
-               FROM obs JOIN picks ON picks.source_ordinal = obs.source_ordinal
-              ORDER BY obs.source_ordinal ASC
-              LIMIT $4`,
-        totalRows <= maximum
-          ? [scope.workspaceId, runId, artifactRevision, maximum]
-          : [scope.workspaceId, runId, artifactRevision, maximum, buckets, totalRows],
+      const result = await client.query<{ at_utc_ms: string | number | null; equity: string; oos_count: string | number }>(
+        `WITH scoped AS (
+           SELECT observation.source_ordinal, observation.occurred_at_utc_ms,
+                  observation.payload->>'equity' AS equity,
+                  (observation.payload->>'equity')::numeric AS equity_numeric,
+                  row_number() OVER (ORDER BY observation.source_ordinal) - 1 AS oos_ordinal,
+                  count(*) OVER () AS oos_count
+             FROM research.current_source_rows_v1 observation
+            WHERE observation.workspace_id = $1 AND observation.run_id = $2
+              AND observation.artifact_revision = $3 AND observation.table_kind = 'OBSERVATION'
+              AND EXISTS (
+                SELECT 1 FROM research.current_source_rows_v1 fold
+                 WHERE fold.workspace_id = observation.workspace_id
+                   AND fold.run_id = observation.run_id
+                   AND fold.artifact_revision = observation.artifact_revision
+                   AND fold.table_kind = 'FOLD'
+                   AND observation.occurred_at_utc_ms BETWEEN
+                       (fold.payload->>'test_start_utc_ms')::bigint AND
+                       (fold.payload->>'test_end_utc_ms')::bigint
+              )
+         ), obs AS (
+           SELECT *, (oos_ordinal * $5::bigint) / oos_count AS bucket FROM scoped
+         ), picks AS (
+           (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, source_ordinal ASC)
+           UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, source_ordinal DESC)
+           UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, equity_numeric ASC, source_ordinal ASC)
+           UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, equity_numeric DESC, source_ordinal ASC)
+         )
+         SELECT obs.occurred_at_utc_ms AS at_utc_ms, obs.equity, obs.oos_count
+           FROM obs JOIN picks ON picks.source_ordinal = obs.source_ordinal
+          ORDER BY obs.source_ordinal ASC
+          LIMIT $4`,
+        [scope.workspaceId, runId, artifactRevision, maximum, buckets],
       );
       return result.rows;
     });

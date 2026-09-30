@@ -391,6 +391,8 @@ export const CurrentSourceSummarySchema = z.object({
   replay: CurrentSourceReplaySummarySchema.optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
+  // Absent on immutable older seals whose compact chart series included the pre-OOS prefix.
+  derived_scope: z.literal("OUTER_TEST_UNION_INCLUSIVE_V1").optional(),
   derived: z.object({
     monthly_returns: z.object({
       source_observation_count: z.number().int().nonnegative().max(2_000_000),
