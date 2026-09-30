@@ -42,6 +42,9 @@ export interface LineageVersionRow {
   promotion_source_contract_rev: string | null;
   promotion_source_digest: string | null;
   promotion_source_as_of: Date | null;
+  promotion_receipt_count?: number | null;
+  promotion_selected_trial_id?: string | null;
+  promotion_selected_params_digest?: string | null;
 }
 
 export interface LineageAttemptRow {
@@ -203,11 +206,28 @@ export class ResearchLineageRepository {
                 pick.attempt_id AS promotion_attempt_id, pick.run_id AS promotion_run_id,
                 pick.source_contract_rev AS promotion_source_contract_rev,
                 pick.source_digest AS promotion_source_digest,
-                pick.source_as_of AS promotion_source_as_of
+                pick.source_as_of AS promotion_source_as_of,
+                receipt.receipt_count AS promotion_receipt_count,
+                receipt.selected_trial_id AS promotion_selected_trial_id,
+                receipt.selected_params_digest AS promotion_selected_params_digest
            FROM research.alpha_versions version
            LEFT JOIN research.attempt_promotion_pick_facts_v1 pick
              ON pick.workspace_id = version.workspace_id
             AND pick.alpha_version_id = version.alpha_version_id
+           LEFT JOIN LATERAL (
+             SELECT count(*)::integer AS receipt_count,
+                    max(source_receipt.selected_trial_id) AS selected_trial_id,
+                    max(selection.parameter_bundle_digest) AS selected_params_digest
+               FROM research.p22_promotion_pick_receipts_v1 source_receipt
+               LEFT JOIN research.selection_records selection
+                 ON selection.workspace_id = source_receipt.workspace_id
+                AND selection.selection_id = source_receipt.selection_id
+                AND selection.selected_trial_id IS NOT DISTINCT FROM source_receipt.selected_trial_id
+              WHERE source_receipt.workspace_id = version.workspace_id
+                AND source_receipt.alpha_version_id = version.alpha_version_id
+                AND source_receipt.run_id = pick.run_id
+                AND source_receipt.fact_digest = pick.source_digest
+           ) receipt ON pick.alpha_version_id IS NOT NULL
           WHERE version.workspace_id = $1 AND version.alpha_id = $2
           ORDER BY version.registered_at ASC, version.alpha_version_id ASC`,
         [scope.workspaceId, alphaId],

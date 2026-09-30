@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { migrateTestDatabase } from "./harness";
+import { ResearchLineageRepository } from "../src/research/lineage.repository";
 
 const baseUrl = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
 const databaseName = "portal_p22_settle_" + randomUUID().replaceAll("-", "");
@@ -137,6 +138,18 @@ describe("P22 approval-version settlement on disposable PostgreSQL", () => {
         settlements: 2, approval_status: "APPROVED", approval_version: 2,
         delivery_approval: "APPROVED", p19_facts: 1,
       });
+      const lineage = await new ResearchLineageRepository(database).read(
+        { workspaceId: "ws_p22_settle", actorUserId: "usr_p22_settle" },
+        "alpha_p22_settle", 128,
+      );
+      expect(lineage?.versions).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          alpha_version_id: "av_p22_settle",
+          promotion_receipt_count: 1,
+          promotion_selected_trial_id: null,
+          promotion_selected_params_digest: null,
+        }),
+      ]));
       await expect(database.query(`UPDATE research.p22_approval_settlements_v1
         SET approval_status='DENIED' WHERE workspace_id='ws_p22_settle'`))
         .rejects.toMatchObject({ code: "55000" });

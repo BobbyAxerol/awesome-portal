@@ -125,6 +125,10 @@
           "source_contract_rev": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] },
           "source_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] },
           "source_as_of_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] },
+          "selected_trial_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
+          "selected_trial_availability": { "$ref": "#/components/schemas/Availability" },
+          "selected_params_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] },
+          "selected_params_availability": { "$ref": "#/components/schemas/Availability" },
           "availability": { "$ref": "#/components/schemas/Availability" },
           "source_authority": {
             "type": "object", "additionalProperties": false, "required": ["owner", "state"],

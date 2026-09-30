@@ -108,6 +108,11 @@ const PromotionPickSchema = z.object({
   source_contract_rev: z.string().min(1).max(160).nullable(),
   source_digest: DigestSchema.nullable(),
   source_as_of_utc_ms: UtcMsSchema.nullable(),
+  /** CG-FG-S10-01: exact P22 receipt → P21 selection, never the approval digest. */
+  selected_trial_id: OpaqueIdSchema.nullable().optional(),
+  selected_trial_availability: ResearchLineageAvailabilitySchema.optional(),
+  selected_params_digest: DigestSchema.nullable().optional(),
+  selected_params_availability: ResearchLineageAvailabilitySchema.optional(),
   availability: ResearchLineageAvailabilitySchema,
   /**
    * W6b DR-03: the only authority that may publish a pick is a governed

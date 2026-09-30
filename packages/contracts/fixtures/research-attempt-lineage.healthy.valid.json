@@ -25,6 +25,16 @@
           "source_contract_rev": null,
           "source_digest": null,
           "source_as_of_utc_ms": null,
+          "selected_trial_id": null,
+          "selected_trial_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
+          "selected_params_digest": null,
+          "selected_params_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
           "availability": {
             "state": "NOT_PUBLISHED",
             "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
@@ -127,6 +137,16 @@
           "source_contract_rev": "p22.release-approval.v1",
           "source_digest": "9999999999999999999999999999999999999999999999999999999999999999",
           "source_as_of_utc_ms": 1790046000000,
+          "selected_trial_id": null,
+          "selected_trial_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_P22_PICK_RECEIPT_NOT_AVAILABLE"
+          },
+          "selected_params_digest": null,
+          "selected_params_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_P22_PICK_RECEIPT_NOT_AVAILABLE"
+          },
           "availability": {
             "state": "AVAILABLE",
             "reason_code": null
@@ -1204,6 +1224,6 @@
     }
   },
   "as_of_utc_ms": 1790035200000,
-  "lineage_revision": "p19r2_61649cec68b8c0f91f15b0736b13481b293475115a5f27dd04bf691a96a69ca3",
-  "etag": "\"p19r2_61649cec68b8c0f91f15b0736b13481b293475115a5f27dd04bf691a96a69ca3\""
+  "lineage_revision": "p19r2_e24647cdfd54758ddcb30773f4198c13b51281baa0e8803b67f1166e7fc1abe0",
+  "etag": "\"p19r2_e24647cdfd54758ddcb30773f4198c13b51281baa0e8803b67f1166e7fc1abe0\""
 }

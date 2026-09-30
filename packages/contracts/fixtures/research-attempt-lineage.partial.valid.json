@@ -25,6 +25,16 @@
           "source_contract_rev": null,
           "source_digest": null,
           "source_as_of_utc_ms": null,
+          "selected_trial_id": null,
+          "selected_trial_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
+          "selected_params_digest": null,
+          "selected_params_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
           "availability": {
             "state": "NOT_PUBLISHED",
             "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
@@ -764,6 +774,6 @@
     }
   },
   "as_of_utc_ms": 1790035200000,
-  "lineage_revision": "p19r2_be7d7a11de456cf508f85315834f7bd2379f1464968694edf6b21a38066422f0",
-  "etag": "\"p19r2_be7d7a11de456cf508f85315834f7bd2379f1464968694edf6b21a38066422f0\""
+  "lineage_revision": "p19r2_c87a623ee0d007c25a0ffd3797992b9c79c6b79210840ece2781daea1d54dc91",
+  "etag": "\"p19r2_c87a623ee0d007c25a0ffd3797992b9c79c6b79210840ece2781daea1d54dc91\""
 }

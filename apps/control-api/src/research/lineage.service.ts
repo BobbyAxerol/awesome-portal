@@ -643,6 +643,13 @@ export class ResearchLineageService {
         ? rcFor(row.promotion_run_id, library.get(row.promotion_run_id!), this.runLibrary !== undefined)
         : { ref: null, availability: notApplicable("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK") };
       const sourceAuthority = { owner: "P22_RELEASE_CANDIDATE_APPROVAL" as const, state: published ? "CONNECTED" as const : "NOT_CONNECTED" as const };
+      const receiptCount = Number(row.promotion_receipt_count ?? 0);
+      const exactReceipt = published && receiptCount === 1;
+      const selectionAbsent = !published
+        ? notApplicable("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK")
+        : absent(receiptCount > 1 ? "P19_P22_PICK_RECEIPT_AMBIGUOUS" : "P19_P22_PICK_RECEIPT_NOT_AVAILABLE");
+      const selectedTrialId = exactReceipt ? row.promotion_selected_trial_id ?? null : null;
+      const selectedParamsDigest = exactReceipt ? row.promotion_selected_params_digest ?? null : null;
       return {
         alpha_version_id: row.alpha_version_id,
         label: labels.get(row.alpha_version_id)!,
@@ -659,6 +666,12 @@ export class ResearchLineageService {
             source_digest: row.promotion_source_digest,
             source_as_of_utc_ms: requiredUtcMs(row.promotion_source_as_of!, "promotion source timestamp"),
             availability: available(),
+            selected_trial_id: selectedTrialId,
+            selected_trial_availability: selectedTrialId ? available()
+              : exactReceipt ? absent("P19_P22_SELECTED_TRIAL_NOT_PUBLISHED") : selectionAbsent,
+            selected_params_digest: selectedParamsDigest,
+            selected_params_availability: selectedParamsDigest ? available()
+              : exactReceipt ? absent("P19_P21_SELECTED_PARAMS_DIGEST_NOT_PUBLISHED") : selectionAbsent,
             source_authority: sourceAuthority,
             release_candidate: pickRc.ref,
             release_candidate_availability: pickRc.availability,
@@ -671,6 +684,10 @@ export class ResearchLineageService {
             source_digest: null,
             source_as_of_utc_ms: null,
             availability: absent("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"),
+            selected_trial_id: null,
+            selected_trial_availability: selectionAbsent,
+            selected_params_digest: null,
+            selected_params_availability: selectionAbsent,
             source_authority: sourceAuthority,
             release_candidate: null,
             release_candidate_availability: pickRc.availability,

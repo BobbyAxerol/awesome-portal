@@ -132,4 +132,10 @@ Unified: U:3636 (board P23), U:3637 (P24 → Codex), U:3691 (OL-12), U:3692/3695
 | S14-RW-BR-01 | `1829f998` | P07 disposable PostgreSQL 9/9; Control API full hook 1349/1349 | Không | ACTIVE same-version register trả replay 201, predecessor không tự trỏ. |
 | S14-RW-BR-02 | `a293b4a2` | Alpha analyzer Python 14/14; full hook xanh | Không | Mirror FAIL theo field, không theo aggregate gate. |
 | CG-S00-AV-01 | `a293b4a2` | P09 disposable PostgreSQL 7/7; contracts 197/197; forward upgrade 067→078; full hook xanh | `JourneyCard.requires_alpha?: boolean`; fixture v4; Claude nối S00 | Revision 4 bất biến, v3 giữ nguyên; chỉ Alpha Version cần chọn alpha, không cần run. |
-| | | | | |
+| AN-21 | `659bcf6b` | Report focused 11/11; full hook Control API 1356/1356 | Không | New P04 report seals read Hub v3 OOS_SHARPE; old seals immutable. Receipt P18. |
+| AN-22 / CMP-V3-01 | `659bcf6b` | Compare focused 13/13; full hook xanh | Không | Only locator-verified P13 OOS Sharpe reaches S13. Receipt P20. |
+| CG-FG-S13-02 | `659bcf6b` | Compare 13/13; contracts 197/197 | `ResearchCompareRun.certification` AVAILABLE grade A–D when progress claim ISSUED | Typed absence otherwise; Claude nối S13. Receipt P20. |
+| X7 / WS-LEAK-01 | `659bcf6b` | Report + W6a 33/33; full hook xanh | `ResearchReportExportStatus.download_href` requires workspace_id | Worker/status/download remain workspace scoped. Receipt P18. |
+| CSRF-DOC-01 / CG-FG-S14-01 | `659bcf6b` | Contracts 197/197 | Four write OpenAPI/generated clients now use `x-portal-csrf` | Runtime unchanged; Claude regenerate consumer. Receipt P10. |
+| CG-FG-S05-01 | `659bcf6b` | S05 helper 4/4, service 6/6, W3 17/17; full hook xanh | `ResearchCurrentSourceSplit.guards.train_test_disjoint?` PASS/FAIL/NOT_CHECKABLE | Canonical PASS/FAIL fixture; Claude remove inferred tick. Receipt P14. |
+| CG-FG-S10-01 | B1 P19/P22 local commit (see `git log`) | P19 10/10; P22 disposable PostgreSQL 1/1; contracts 197/197 | `PromotionPick.selected_trial_id`, `selected_params_digest` plus typed availability | Exact P22 receipt and matching P13 selection only; no approval-digest substitution. Receipt P19. |

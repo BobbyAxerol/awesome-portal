@@ -161,12 +161,15 @@ describe("P19 Attempt Lineage persisted truth", () => {
       promotion_attempt_id: "att-p19-root", promotion_run_id: "run-p19-root",
       promotion_source_contract_rev: "dr03.v1", promotion_source_digest: digest("9"),
       promotion_source_as_of: new Date("2026-09-22T00:06:00.000Z"),
+      promotion_receipt_count: 1, promotion_selected_trial_id: "trial-p19", promotion_selected_params_digest: digest("8"),
     }] })).service.read(scope, "alpha-p19", { limit: 128 });
     expect(response.alpha.versions[0]?.promotion_pick).toEqual({
       state: "PUBLISHED", attempt_id: "att-p19-root", run_id: "run-p19-root",
       source_contract_rev: "dr03.v1", source_digest: digest("9"),
       source_as_of_utc_ms: 1_790_035_560_000,
       availability: { state: "AVAILABLE", reason_code: null },
+      selected_trial_id: "trial-p19", selected_trial_availability: { state: "AVAILABLE", reason_code: null },
+      selected_params_digest: digest("8"), selected_params_availability: { state: "AVAILABLE", reason_code: null },
       // W6b DR-03 / CG-P19-04 additive facts.
       source_authority: { owner: "P22_RELEASE_CANDIDATE_APPROVAL", state: "CONNECTED" },
       release_candidate: null,

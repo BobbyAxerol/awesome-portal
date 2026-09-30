@@ -98,6 +98,10 @@ export interface components {
             source_contract_rev: string | null;
             source_digest: components["schemas"]["Digest"] | null;
             source_as_of_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            selected_trial_id?: components["schemas"]["OpaqueId"] | null;
+            selected_trial_availability?: components["schemas"]["Availability"];
+            selected_params_digest?: components["schemas"]["Digest"] | null;
+            selected_params_availability?: components["schemas"]["Availability"];
             availability: components["schemas"]["Availability"];
             /** @description W6b DR-03: the only authority that may publish a pick is a governed approval of a sealed release candidate (P22). NOT_CONNECTED keeps the pick NOT_PUBLISHED. */
             source_authority: {
