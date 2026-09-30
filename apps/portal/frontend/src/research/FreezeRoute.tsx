@@ -16,7 +16,7 @@ import { useFreeze } from "./useFreeze";
 import { useRunIdentity } from "./retainedLane";
 import { StageDenied } from "./StageDenied";
 
-export function FreezeRoute() {
+export function FreezeRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const { runId = "" } = useParams<{ runId: string }>();
   const { cursor, problems } = useEvidenceCursor({ stage: "freeze" });
   const freeze = useFreeze(runId, cursor.fold);
@@ -29,7 +29,7 @@ export function FreezeRoute() {
   }
   return (
     <>
-      <RouteCursorNotice problems={problems} />
+      {embedded ? null : <RouteCursorNotice problems={problems} />}
       <FreezeScreen
         runId={runId}
         detail={freeze.detail}
@@ -43,6 +43,7 @@ export function FreezeRoute() {
         identity={identity}
         whatIfEvaluate={freeze.evaluate}
         onWhatIfEvaluate={freeze.runEvaluate}
+        embedded={embedded}
       />
     </>
   );

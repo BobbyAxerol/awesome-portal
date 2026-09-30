@@ -16,6 +16,7 @@
  * route paints strip, header and tabs before ECharts is fetched (spec 04 §11).
  */
 
+import { HubAtlasBody } from "./hubStageAtlas";
 import { Component, lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { LineageLink, lineageHref } from "./LineageLink";
 import { Link } from "react-router-dom";
@@ -57,11 +58,16 @@ import {
   type EvidenceStage,
 } from "./evidenceCursor";
 import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, REFUSAL_COPY, refusalDetail } from "./researchRefusal";
-import { claimToken, formatMetric, shortDigest } from "./researchFormat";
+import { claimToken, formatBytes, formatMetric, shortDigest } from "./researchFormat";
+import { ARTIFACT_NO_READER, ArtifactsTable } from "./RunProgress";
 import type { PassportSlot, RetainedSeriesSlot, SeriesSlot } from "./useEvidence";
 import { isRetainedAnswer, retainedReadiness, type RunIdentitySlot } from "./retainedLane";
 import type { ResearchState } from "./state";
 import { ShortId } from "./ShortId";
+import { HubSplitBody } from "./hubStageSplit";
+import { HubSearchBody } from "./hubStageSearch";
+import { HubFreezeBody } from "./hubStageFreeze";
+import { HubExecuteBody } from "./hubStageExecute";
 
 /* The chart chunk. Five entry points, one module, fetched once. */
 const EquityChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.EquityChart })));
@@ -3477,11 +3483,14 @@ function StagePreviewTab({
   cursor,
   hub,
   runId,
+  body,
 }: {
   stage: PreviewStage;
   cursor: EvidenceCursor;
   hub: EvidenceHub;
   runId: string;
+  /** The stage's own body (the deep dive's blocks, embedded), drawn in place of the preview shells. */
+  body?: ReactNode;
 }) {
   const dive = DEEP_DIVE[stage];
   const preview = STAGE_PREVIEW[stage];
@@ -3513,6 +3522,8 @@ function StagePreviewTab({
         )}
       </div>
 
+      {body ?? (
+      <>
       <section
         className="flex flex-wrap items-baseline gap-3 rounded-[8px] border px-3.5 py-2.5"
         data-stage-row={key}
@@ -3562,6 +3573,8 @@ function StagePreviewTab({
       <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-carried-cursor>
         carries {deepDiveHref("", cursor)}
       </span>
+      </>
+      )}
     </section>
   );
 }
@@ -3592,7 +3605,272 @@ function SoonHook({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ClaimTab({ hub }: { hub: EvidenceHub }) {
+/* --------------------------------------------------- S5 claim · HiFi tables */
+
+/** The HiFi table-card chrome: a 6px card, a header strip, then the body. */
+function TableCard({
+  title,
+  meta,
+  children,
+  footer,
+  ...rest
+}: {
+  title: string;
+  meta?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+} & Record<string, unknown>) {
+  return (
+    <section className="min-w-0 overflow-x-auto rounded-[6px] border" style={{ ...PANEL_STYLE, boxShadow: "none" }} {...rest}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
+        <PanelLabel>{title}</PanelLabel>
+        {meta ? (
+          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
+            {meta}
+          </span>
+        ) : null}
+      </div>
+      {children}
+      {footer}
+    </section>
+  );
+}
+
+const TH = "border-b px-3 py-2 text-left text-[10px] font-medium uppercase tracking-[.07em]";
+const TH_STYLE = { borderColor: "var(--line)", color: "var(--ink-faint)" } as const;
+
+/**
+ * The HiFi certification table. The engine publishes the certificate it
+ * issued, never the per-stage caps behind it, so the table keeps its header
+ * and says so in one row; the resulting level is the served certificate.
+ */
+function CertificationTable({ certificate }: { certificate: EvidenceHub["claim"]["methodology_certificate"] }) {
+  const issued = certificate.state === "ISSUED" && certificate.grade !== null;
+  return (
+    <TableCard
+      title="certification — min of the caps, never issued here"
+      data-cert-table
+      style={{ ...PANEL_STYLE, boxShadow: "none", flex: "1.4 1 0", minWidth: "min(460px, 100%)" }}
+      footer={
+        <div
+          className="flex flex-wrap items-center gap-2.5 border-t px-3 py-2"
+          style={{ borderColor: "var(--line)", background: "var(--paper-sunken)" }}
+          data-cert-level={issued ? certificate.grade ?? undefined : certificate.state}
+        >
+          <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+            resulting level
+          </span>
+          {issued ? (
+            <span
+              className="mono rounded-[3px] border px-2 text-[13px] font-bold"
+              title={CERT_TOOLTIP}
+              style={{ color: "var(--role-holdout)", borderColor: "var(--role-holdout)", background: "var(--accent-2-soft)" }}
+            >
+              {certificate.grade}
+            </span>
+          ) : certificate.state === "NOT_ISSUED" ? (
+            <span className="mono text-[11px] font-semibold" style={{ color: "var(--ink-soft)" }} title={certificate.reason_code ?? undefined} data-reason-code={certificate.reason_code ?? undefined}>
+              NOT_ISSUED
+            </span>
+          ) : (
+            <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: certificate.reason_code }} />
+          )}
+          <span className="text-[11px]" style={{ color: "var(--ink-soft)" }} title={CERT_TOOLTIP} data-cert-binding>
+            binding: not published — the rule is the engine's, never applied here.
+          </span>
+        </div>
+      }
+    >
+      <table className="w-full border-collapse text-[12px]">
+        <thead>
+          <tr>
+            <th className={TH} style={TH_STYLE}>stage</th>
+            <th className={TH} style={TH_STYLE}>condition observed</th>
+            <th className={TH} style={TH_STYLE}>cap</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-cert-caps="NOT_PUBLISHED">
+            <td className="px-3 py-[7px] text-[11px] leading-[1.5]" colSpan={3} style={{ color: "var(--ink-soft)" }}>
+              <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="per-stage caps" />
+              <span> — the engine publishes the certificate it issued, not the caps behind it; this screen never recomputes a grade.</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </TableCard>
+  );
+}
+
+type RetainedClaimStrip = CurrentSourceClaimStrip;
+
+/** One served claim fact, verbatim, or its typed absence. */
+function FactCell({ fact, label }: { fact: CurrentSourceClaimFact | null; label: string }) {
+  if (fact === null) return <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={label} />;
+  if (fact.value === null) {
+    const availability = (fact.availability.state === "AVAILABLE"
+      ? { state: fact.state, reason_code: fact.reason_code }
+      : fact.availability) as Availability;
+    return <Withheld availability={availability} what={label} />;
+  }
+  return (
+    <span className="mono whitespace-nowrap" title={`QuantBT ${fact.source_key}`} data-window-fact={label}>
+      {label} {String(fact.value)}
+    </span>
+  );
+}
+
+/**
+ * The HiFi window table, filled only from facts a read on this screen
+ * publishes: the retained claim strip (validation claim, OOS use, holdout),
+ * the hub's fold navigation and the progress read's denied artifacts. A
+ * window no read describes keeps its row with a typed absence — the HiFi's
+ * card counts are never invented.
+ */
+function WindowDisclosureTable({
+  hub,
+  retainedClaim,
+  runIdentity,
+}: {
+  hub: EvidenceHub;
+  retainedClaim: RetainedClaimStrip | null;
+  runIdentity: RunIdentitySlot;
+}) {
+  const navigation = hub.core.fold_navigation;
+  const folds =
+    navigation && navigation.availability.state === "AVAILABLE" && navigation.published_fold_count !== null
+      ? `${navigation.observed_folds.length}/${navigation.published_fold_count} folds`
+      : null;
+  const read = runIdentity.state === "ready" ? runIdentity.identity.progress : null;
+  const denied = read?.denied_artifacts ?? null;
+  const cell = "px-3 py-[7px] align-baseline";
+  const none = (what?: string) => <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={what} />;
+  const rows: { key: string; tone: string; who: ReactNode; count: ReactNode }[] = [
+    { key: "IS", tone: "var(--role-is)", who: none("read permission, card count"), count: none() },
+    {
+      key: "OOS",
+      tone: "var(--role-oos)",
+      who: (
+        <span className="flex flex-wrap gap-x-2.5 gap-y-0.5">
+          <span>{WINDOW_DISCLOSURE}</span>
+          <FactCell fact={retainedClaim?.validation_claim ?? null} label="validation_claim" />
+          <FactCell fact={retainedClaim?.oos_used_for_selection ?? null} label="oos_used_for_selection" />
+        </span>
+      ),
+      count: folds ?? <Withheld availability={navigation?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />,
+    },
+    {
+      key: "Holdout",
+      tone: "var(--role-holdout)",
+      who: <FactCell fact={retainedClaim?.holdout ?? null} label="holdout" />,
+      count:
+        denied === null ? none() : (
+          <span style={{ color: denied.length > 0 ? "var(--role-holdout)" : undefined }}>{denied.length} denied</span>
+        ),
+    },
+    { key: "Compare", tone: "var(--ink-faint)", who: none("compare scope, state"), count: none() },
+  ];
+  return (
+    <TableCard
+      title="window disclosure — who may read what"
+      data-window-disclosure-panel
+      style={{ ...PANEL_STYLE, boxShadow: "none", flex: "1 1 0", minWidth: "min(340px, 100%)" }}
+      footer={
+        <p className="border-t px-3 py-2 text-[10px] leading-[1.5]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}>
+          Each row prints only what a read on this screen publishes; a window no read describes keeps its row, marked.
+        </p>
+      }
+    >
+      <table className="w-full border-collapse text-[12px]">
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={row.key} data-window-row={row.key} className={index < rows.length - 1 ? "border-b" : undefined} style={{ borderColor: "var(--line-soft)" }}>
+              <td className={`${cell} mono`} style={{ color: row.tone }}>{row.key}</td>
+              <td className={cell} style={{ color: "var(--ink-soft)" }}>{row.who}</td>
+              <td className={`${cell} mono whitespace-nowrap text-right`} data-window-count>{row.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </TableCard>
+  );
+}
+
+/**
+ * The whole-run artifact manifest, from the run's progress read (P11 / E15) —
+ * the same read and the same rows Screen 03 draws. States are the read's
+ * (`SEALED`, `WRITING`, `PENDING`, `ABORTED`, `DENIED`); none is inferred.
+ */
+function ArtifactManifest({ runIdentity }: { runIdentity: RunIdentitySlot }) {
+  const read = runIdentity.state === "ready" ? runIdentity.identity.progress : null;
+  const snapshot = read?.progress ?? null;
+  const bundle = snapshot?.mandatory_bundle ?? null;
+  let body: ReactNode;
+  let state: string;
+  if (runIdentity.state !== "ready") {
+    state = runIdentity.state;
+    body = (
+      <p className="text-[11px]" style={{ color: "var(--ink-faint)" }} data-manifest-absence={runIdentity.state}>
+        {runIdentity.state === "loading" ? "Reading the run's progress read…" : "The run's progress read has not been asked on this screen."}
+      </p>
+    );
+  } else if (read === null) {
+    state = "UNAVAILABLE";
+    body = (
+      <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-manifest-absence="UNAVAILABLE">
+        <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+          artifact manifest — progress read unavailable
+        </span>{" "}
+        — the progress read did not answer this viewer, so no artifact row is drawn.
+      </p>
+    );
+  } else if (snapshot === null) {
+    state = read.availability;
+    body = (
+      <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-manifest-absence={read.availability} data-reason-code={read.availability}>
+        <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: read.availability }} what="artifact manifest" /> — the
+        progress read answered {read.availability}; it publishes no artifact before its source does.
+      </p>
+    );
+  } else {
+    state = "AVAILABLE";
+    body = (
+      <>
+        <ArtifactsTable artifacts={snapshot.artifacts} denied={read.denied_artifacts ?? []} />
+        <span className="pt-1 text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-artifact-no-reader>
+          {ARTIFACT_NO_READER}
+        </span>
+      </>
+    );
+  }
+  return (
+    <TableCard
+      title="artifact manifest — whole run"
+      data-artifact-manifest={state}
+      meta={
+        bundle ? (
+          <span title={`${bundle.size} bytes · ${bundle.digest}`}>
+            progress read · bundle {formatBytes(Number(bundle.size)) ?? bundle.size} · sha256:{shortDigest(bundle.digest)}…
+          </span>
+        ) : (
+          "progress read"
+        )
+      }
+    >
+      <div className="flex flex-col px-3 py-1.5">{body}</div>
+    </TableCard>
+  );
+}
+
+function ClaimTab({
+  hub,
+  retainedClaim,
+  runIdentity,
+}: {
+  hub: EvidenceHub;
+  retainedClaim: RetainedClaimStrip | null;
+  runIdentity: RunIdentitySlot;
+}) {
   const claim = hub.claim;
   const certificate = claim.methodology_certificate;
   const issuedClaim = claim.state === "ISSUED";
@@ -3665,25 +3943,12 @@ function ClaimTab({ hub }: { hub: EvidenceHub }) {
         </div>
       </section>
 
-      <div className="grid gap-3.5 md:grid-cols-[1.4fr_1fr]">
-        <SourceGap
-          id="cert-chain"
-          title="certification — min of the caps, never issued here"
-          reason={`the Hub publishes the certificate the engine issued, not the per-stage caps behind it. The chain is the engine's arithmetic — "${CERT_TOOLTIP}" — and this screen renders a grade rather than recomputing one from caps it cannot see.`}
-        />
-        <section className="flex flex-col gap-1.5 rounded-[8px] border px-3.5 py-3" data-window-disclosure-panel style={PANEL_STYLE}>
-          <PanelLabel>window disclosure — who may read what</PanelLabel>
-          <p className="text-[11.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            {WINDOW_DISCLOSURE}
-          </p>
-        </section>
+      <div className="flex flex-wrap gap-3.5">
+        <CertificationTable certificate={certificate} />
+        <WindowDisclosureTable hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} />
       </div>
 
-      <SourceGap
-        id="artifact-manifest"
-        title="artifact manifest — whole run"
-        reason="no artifact state is published on this screen. A manifest row here would describe files the Evidence contract deliberately never opens."
-      />
+      <ArtifactManifest runIdentity={runIdentity} />
 
       <section className="flex flex-col gap-1.5 rounded-[8px] border px-3.5 py-3" data-absences style={PANEL_STYLE}>
         <PanelLabel>declared source absences</PanelLabel>
@@ -3760,20 +4025,19 @@ function AtlasTab({ runId, hub }: { runId: string; hub: EvidenceHub }) {
         title="Atlas — how to read modes and routes"
         subtitle="Reference, not a stage. Every cell deep-links into the stages with the cursor it describes."
       />
-      <SourceGap
-        id="atlas-preview"
-        title="engine atlas preview"
-        reason="the mode × route atlas is published by the Research foundation contract, which this screen does not read. Rather than a preview assembled from nothing, the Atlas itself is one click away and is the same source Screen 12 renders."
+      {/* V2 (2026-09-30): the matrix itself, from the same read Screen 12 renders (HiFi 04 Atlas tab). */}
+      <Link
+        to={`/research/quantbt/atlas#${params.toString()}`}
+        className="mono self-end rounded-[6px] border px-3 py-1 text-[10px] uppercase"
+        style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+        data-action="open-atlas"
       >
-        <Link
-          to={`/research/quantbt/atlas#${params.toString()}`}
-          className="mono self-start rounded-[6px] border px-3 py-1 text-[10px] uppercase"
-          style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
-          data-action="open-atlas"
-        >
-          full atlas →
-        </Link>
-      </SourceGap>
+        full atlas → 12
+      </Link>
+      <HubAtlasBody
+        runId={runId}
+        identity={{ mode: params.get("mode"), schedule: params.get("schedule"), route: params.get("route") }}
+      />
     </section>
   );
 }
@@ -4213,9 +4477,30 @@ export function EvidenceFlow({
             data-panel={cursor.stage}
           >
             {cursor.stage === "claim" ? (
-              <ClaimTab hub={hub} />
+              <ClaimTab hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} />
             ) : cursor.stage === "atlas" ? (
               <AtlasTab runId={runId} hub={hub} />
+            ) : cursor.stage === "split" ? (
+              /* V2 (2026-09-30): HiFi 04 draws each stage's body inside its tab — the deep dive's own body, embedded. */
+              <StagePreviewTab
+                stage="split"
+                cursor={cursor}
+                hub={hub}
+                runId={runId}
+                body={<HubSplitBody runId={runId} cursor={cursor} onFold={onFold} />}
+              />
+            ) : cursor.stage === "search" ? (
+              <StagePreviewTab stage="search" cursor={cursor} hub={hub} runId={runId} body={<HubSearchBody />} />
+            ) : cursor.stage === "freeze" ? (
+              <StagePreviewTab stage="freeze" cursor={cursor} hub={hub} runId={runId} body={<HubFreezeBody />} />
+            ) : cursor.stage === "execute" ? (
+              <StagePreviewTab
+                stage="execute"
+                cursor={cursor}
+                hub={hub}
+                runId={runId}
+                body={<HubExecuteBody runId={runId} fold={cursor.fold} onFold={onFold} />}
+              />
             ) : (
               <StagePreviewTab stage={cursor.stage} cursor={cursor} hub={hub} runId={runId} />
             )}

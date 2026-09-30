@@ -1260,9 +1260,22 @@ export interface ExecuteScreenProps {
    * function of what its container already holds.
    */
   band?: SplitBandSlot;
+  /**
+   * Drawn inside the Evidence Hub's Execute tab (Screen 04): the hub owns the
+   * frame, the title and the cursor, so the screen draws only its body — the
+   * same reads and the same blocks as on its own route.
+   */
+  embedded?: boolean;
 }
 
-export function ExecuteScreen({ runId, cursor, controller, transport, band = { state: "idle" } }: ExecuteScreenProps) {
+export function ExecuteScreen({
+  runId,
+  cursor,
+  controller,
+  transport,
+  band = { state: "idle" },
+  embedded = false,
+}: ExecuteScreenProps) {
   const { replay, state } = controller;
   const replayWindow = replay?.equity_replay;
   const items = useMemo(() => replayWindow?.items ?? [], [replayWindow]);
@@ -1291,7 +1304,15 @@ export function ExecuteScreen({ runId, cursor, controller, transport, band = { s
   const playheadPoint = items[snapshot.index];
 
   return (
-    <div className={`${SCREEN_FRAME} max-w-[1440px]`} data-screen="execute-replay" data-run={runId} data-lane={lane}>
+    <div
+      className={embedded ? "flex w-full min-w-0 flex-col gap-[14px]" : `${SCREEN_FRAME} max-w-[1440px]`}
+      data-screen="execute-replay"
+      data-run={runId}
+      data-lane={lane}
+      data-embedded={embedded ? "hub" : undefined}
+    >
+      {embedded ? null : (
+      <>
       <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "execute" })}
@@ -1341,6 +1362,8 @@ export function ExecuteScreen({ runId, cursor, controller, transport, band = { s
       <div className="flex flex-wrap items-center gap-3" data-header-actions>
         <CopyEvidenceLink />
       </div>
+      </>
+      )}
 
       {lane === "retained" && retainedReplay && controller.retained.state === "ready" && hasBarLedger(retainedReplay) ? (
         <CandleReplayBody

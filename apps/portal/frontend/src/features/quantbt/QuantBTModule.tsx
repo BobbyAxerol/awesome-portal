@@ -442,7 +442,8 @@ export function QuantBTModule() {
         <Route path="runs/:runId/*" element={<RunWorkspace />} />
         <Route path=":tab" element={<LegacyTabRedirect />} />
         {/* The module opens on S01; the latest legacy run is one click away in it. */}
-        <Route index element={<Navigate to={`${QUANTBT_ROOT}/runs`} replace />} />
+        {/* HiFi index.html opens the Journey Map: the QuantBT entry point is Screen 00, not the Run Library. */}
+        <Route index element={<JourneyMapRoute />} />
         <Route path="*" element={<Navigate to={QUANTBT_ROOT} replace />} />
       </Routes>
       </div>

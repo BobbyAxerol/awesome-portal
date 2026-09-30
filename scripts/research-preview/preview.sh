@@ -64,6 +64,9 @@ PORTAL_IMAGE_TAG=rf02
 PORTAL_ENV=local
 PORTAL_PUBLIC_ORIGIN=http://localhost:$port
 CONTROL_API_AUTH_MODE=dev
+# Bobby 2026-09-30: research-portal is a quick-look site — no login screen. The automation
+# account holds the preview's runs; Control API refuses this outside AUTH_MODE=dev + PORTAL_ENV=local.
+PREVIEW_AUTO_LOGIN_USERNAME=claude-preview
 CONTROL_API_SECRETS_DIR=$ENV_DIR/control-api-secrets
 CONTROL_API_INTERNAL_PRINCIPAL_SECRET=$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 48)
 PORTAL_HISTORICAL_DATA_MODE=required

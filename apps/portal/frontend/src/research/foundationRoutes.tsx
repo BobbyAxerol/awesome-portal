@@ -51,7 +51,7 @@ interface ReadResult<T> {
  * and a second cache above the ETag cache would decide freshness from a
  * duration instead of from the server's validator.
  */
-function useFoundationRead<T>(
+export function useFoundationRead<T>(
   run: (signal: AbortSignal) => Promise<T>,
   deps: readonly unknown[],
 ): ReadResult<T> {

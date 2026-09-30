@@ -32,7 +32,8 @@ function EvidenceFlowRun({ runId }: { runId: string }) {
   const evidence = useEvidence(runId);
   /* W3b: a retained answer brings the run's P11 identity with it (readiness, global selection). */
   const retained = evidence.passport.state === "ready" && isRetainedAnswer(evidence.passport.evidence);
-  const runIdentity = useRunIdentity(runId, undefined, retained);
+  /* S5 Claim draws the whole-run artifact manifest from the same progress read (P11/E15), for any run. */
+  const runIdentity = useRunIdentity(runId, undefined, retained || cursor.stage === "claim");
 
   /* RF-06 FE-S04-06: a linked fold the run never observed is moved to the
      nearest observed one, with a notice — not kept with both steppers dead and

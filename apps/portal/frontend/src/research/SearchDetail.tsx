@@ -1755,6 +1755,12 @@ export interface SearchScreenProps {
   /** X2 · F4 (T07/T08): the trial the reader is inspecting — the hash's `pick=`, never θ*. */
   pick?: string | null;
   onPick?: (trialId: string) => void;
+  /**
+   * Drawn inside the Evidence Hub's Search tab (HiFi 04): the hub owns the
+   * page frame, the breadcrumb and the title, so this screen leaves out its
+   * own. Every read, panel and data-* attribute below is unchanged.
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -1824,6 +1830,7 @@ export function SearchScreen({
   modeReads,
   pick: controlledPick,
   onPick: controlledOnPick,
+  embedded = false,
 }: SearchScreenProps) {
   const modeReadsLabel = useId();
   /* Controlled by the route (the hash's `pick=`); a bare screen keeps its own. */
@@ -1860,8 +1867,14 @@ export function SearchScreen({
   const absences = lane ? [] : hubAbsences;
 
   return (
-    <div className={`${SCREEN_FRAME} max-w-[1560px]`} data-screen="search-detail" data-run={runId}>
+    <div
+      className={embedded ? "flex w-full min-w-0 flex-col gap-[14px]" : `${SCREEN_FRAME} max-w-[1560px]`}
+      data-screen="search-detail"
+      data-run={runId}
+      data-embedded={embedded ? "hub" : undefined}
+    >
       {/* ------------------------------------------------------ header */}
+      {embedded ? null : (
       <header
         className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5 border-b pb-[10px]"
         style={{ borderColor: "var(--line)" }}
@@ -1922,6 +1935,7 @@ export function SearchScreen({
           </div>
         ) : null}
       </header>
+      )}
 
       {notFound ? <RunNotFound runId={runId} /> : null}
 

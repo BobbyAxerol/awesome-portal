@@ -13,12 +13,41 @@ import { useParams } from "react-router-dom";
 
 import { SplitScreen } from "./SplitDetail";
 import { RouteCursorNotice } from "./CursorNotice";
-import { observedFoldsFor, useEvidenceCursor } from "./evidenceCursor";
+import { observedFoldsFor, useEvidenceCursor, type EvidenceCursor } from "./evidenceCursor";
 import { useSplit } from "./useSplit";
 
 export function SplitRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
   const { cursor, setFold, problems, notes, clampToObserved } = useEvidenceCursor({ stage: "split" });
+
+  return (
+    <>
+      <RouteCursorNotice problems={problems} notes={notes} frame={1440} />
+      <SplitRouteBody runId={runId} cursor={cursor} onFold={setFold} clampToObserved={clampToObserved} />
+    </>
+  );
+}
+
+/**
+ * The reads and the screen, for a cursor someone else owns: this route's own
+ * hook above, or Screen 04's hub when the split tab draws this body inline
+ * (`embedded`). One cursor per page — the hub's fold chip and this body's
+ * fold rows move the same fold.
+ */
+export function SplitRouteBody({
+  runId,
+  cursor,
+  onFold,
+  clampToObserved,
+  embedded = false,
+}: {
+  runId: string;
+  cursor: EvidenceCursor;
+  onFold: (fold: number) => void;
+  /** Absent in the hub: the hub clamps its cursor to the folds it published. */
+  clampToObserved?: (observed: readonly number[]) => void;
+  embedded?: boolean;
+}) {
   const split = useSplit(runId);
 
   /* FE-S04-06: once the retained source publishes its observed folds, a fold
@@ -29,6 +58,7 @@ export function SplitRoute() {
   const known = observedFoldsFor(runId);
   const knownKey = known ? known.join(",") : "";
   useEffect(() => {
+    if (!clampToObserved) return;
     if (observed > 0) clampToObserved(Array.from({ length: observed }, (_, index) => index + 1));
     else if (known && known.length > 0) clampToObserved(known);
     // `knownKey` carries the set; the array identity is stable per run.
@@ -36,20 +66,18 @@ export function SplitRoute() {
   }, [clampToObserved, observed, knownKey, cursor.fold]);
 
   return (
-    <>
-      <RouteCursorNotice problems={problems} notes={notes} frame={1440} />
-      <SplitScreen
-        runId={runId}
-        detail={split.detail}
-        state={split.state}
-        notFound={split.refusal?.notFound === true}
-        cursor={cursor}
-        onFold={setFold}
-        folds={split.folds}
-        retained={split.retained}
-        ensureFolds={split.ensureFolds}
-        onReread={split.reread}
-      />
-    </>
+    <SplitScreen
+      runId={runId}
+      detail={split.detail}
+      state={split.state}
+      notFound={split.refusal?.notFound === true}
+      cursor={cursor}
+      onFold={onFold}
+      folds={split.folds}
+      retained={split.retained}
+      ensureFolds={split.ensureFolds}
+      onReread={split.reread}
+      embedded={embedded}
+    />
   );
 }

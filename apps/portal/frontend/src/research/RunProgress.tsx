@@ -47,6 +47,7 @@ import { ArtifactPanel } from "./ArtifactPanel";
 import { decodeInspectionCursor, encodeInspectionCursor, type InspectionCursor } from "./inspectionCursor";
 import { ServedAttempts } from "./QueuePanel";
 import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
+import { useRunLabel } from "./runLabels";
 import { NotPublished, RunMetaStrip } from "./RunMetaStrip";
 import { StageLedger, utcClock } from "./StageLedger";
 import type { Transport } from "./useRunProgress";
@@ -1024,7 +1025,7 @@ function DeniedRow({ artifact }: { artifact: DeniedArtifact }) {
   );
 }
 
-function ArtifactsTable({ artifacts, denied = [] }: { artifacts: readonly Artifact[]; denied?: readonly DeniedArtifact[] }) {
+export function ArtifactsTable({ artifacts, denied = [] }: { artifacts: readonly Artifact[]; denied?: readonly DeniedArtifact[] }) {
   return (
     <div data-artifacts style={{ display: "flex", flexDirection: "column" }}>
       {artifacts.length === 0 && denied.length === 0 ? (
@@ -1912,6 +1913,8 @@ export function RunProgress(props: RunProgressProps) {
     refusal = null,
     foldTrials = {},
   } = props;
+  /* D1: the heading names the run as every other screen does — the server's label when a read published one. */
+  const runLabel = useRunLabel(runId);
 
   const [confirming, setConfirming] = useState(false);
   const [tab, setTab] = useState<"live" | "stage">("live");
@@ -2005,7 +2008,7 @@ export function RunProgress(props: RunProgressProps) {
   const handoffLabel = cursor.fold && cursor.trial ? `fold ${cursor.fold} · trial ${cursor.trial}` : null;
   const cursorFold = folds.find((f) => f.fold === foldCursor) ?? null;
   const terminalStatus = status === "FAILED" || status === "CANCELLED";
-  const title = `${status === "COMPLETED" ? "Run completed" : "Run progress"} — ${shortId(runId)}`;
+  const title = `${status === "COMPLETED" ? "Run completed" : "Run progress"} — ${runLabel ?? shortId(runId)}`;
 
   const tabButton = (key: "live" | "stage", label: string) => (
     <button

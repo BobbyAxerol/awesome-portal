@@ -613,10 +613,15 @@ describe("P13-T05 — seven tabs over one cursor", () => {
     ).toBe(false);
   });
 
-  it("carries the cursor into a deep dive it cannot yet open", () => {
+  it("carries the cursor into a deep dive it cannot yet open", async () => {
+    stub(() => [404, { error: { code: "RESEARCH_RUN_NOT_FOUND" } }]);
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "search", fold: 4 } });
-    expect(container.querySelector("[data-carried-cursor]")?.textContent).toContain("fold=4");
-    // P15 opened Screen 06, so this is a link that carries the cursor.
+    // The embedded Screen 06 body asks its read; let it settle inside the test.
+    await waitFor(() => expect(requested.length).toBeGreaterThan(0));
+    await waitFor(() => expect(container.querySelector("[data-panel='search']")?.textContent).not.toMatch(/reading…/));
+    // P15 opened Screen 06, so this is a link that carries the cursor. The
+    // Search tab now draws Screen 06's body, so the preview's "carries …"
+    // line is gone; the link's hash is where the cursor is carried.
     const dive = container.querySelector("[data-deep-dive='search']");
     expect(dive?.tagName).toBe("A");
     expect(dive?.getAttribute("href")).toContain("/runs/R-WFO-118/search#");
@@ -1105,8 +1110,10 @@ describe("RF-06 FE-S04-07 — the drawer gives focus back", () => {
 });
 
 describe("RF-06 FE-S04-08 — the Atlas link carries this run's cell", () => {
-  it("names the run's mode, schedule and route in the Atlas hash", () => {
+  it("names the run's mode, schedule and route in the Atlas hash", async () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "atlas" } });
+    /* V2: the tab now reads the Atlas itself; let that read settle inside act. */
+    await waitFor(() => expect(container.querySelector("[data-hub-atlas-body]")?.getAttribute("data-atlas-read")).not.toBe("loading"));
     const href = container.querySelector("[data-action='open-atlas']")?.getAttribute("href") ?? "";
     const params = new URLSearchParams(href.split("#")[1]);
     expect(params.get("run")).toBe("R-WFO-118");
@@ -1174,9 +1181,8 @@ describe("RF-06 FE-S04-11 — durable strings are rendered exactly", () => {
     const foot = container.querySelector("[data-metric='FINAL_EQUITY'] [data-metric-scope]");
     expect(foot?.textContent).toBe("oos · currency · engine-direct");
     expect(foot?.getAttribute("title")).toContain("OOS · CURRENCY · ENGINE_DIRECT");
-    cleanup();
-    const split = view({ cursor: { ...DEFAULT_CURSOR, stage: "split" } });
-    expect(split.container.querySelector("[data-stage-state]")?.textContent).toBe("DONE");
+    // The split tab now draws Screen 05's body (hubStageSplit); the stage's state rides on its tab.
+    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("DONE · fold 1");
   });
 });
 
@@ -1250,14 +1256,18 @@ describe("RF-06 FE-S04-13 — the HiFi layout", () => {
     }
   });
 
-  it("gives each stage tab its HiFi heading and honest panel shells", () => {
+  it("gives each stage tab its HiFi heading and honest panel shells", async () => {
+    stub(() => [404, { error: { code: "NOT_FOUND" } }]);
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "freeze" } });
+    /* The embedded Screen 07 body reads on mount; let that read settle. */
+    await waitFor(() => expect(requested.length).toBeGreaterThan(0));
+    await act(async () => undefined);
     expect(container.querySelector("[data-tab-heading]")?.textContent).toContain(
       "Stage 3 · Freeze — the hinge between Search and Execute",
     );
-    const shells = container.querySelectorAll("[data-stage-shells='freeze'] [data-gap]");
-    expect(shells.length).toBe(2);
-    for (const shell of shells) expect(shell.textContent).toContain("not published");
+    /* HiFi 04 isFreeze: the tab draws Screen 07's body (hubStageFreeze), not shells. */
+    expect(container.querySelector("[data-stage-shells='freeze']")).toBeNull();
+    expect(container.querySelector("[data-panel='freeze'] [data-hub-stage-body='freeze']")).toBeTruthy();
   });
 
   it("links the built report and the P21 release candidate composer", () => {
@@ -1788,5 +1798,108 @@ describe("E11 · sealed summary analytics are bound without recomputation or aut
     expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"]')?.textContent).toContain("1.23456789");
     expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"]')?.getAttribute("data-series-state")).toBe("ready");
     expect(ensureSeries.mock.calls.some(([kind]) => kind === "ROLLING_SHARPE_63")).toBe(false);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * P13 · S5 Claim — the HiFi tables, filled from reads this screen already has
+ *
+ * The manifest is the run's progress read (P11/E15) — the real capture in
+ * `w3bRealWfo.fixture.json`, the same body Screen 03 draws. Nothing is
+ * inferred: rows carry the read's states, and an absence carries its reason.
+ * ---------------------------------------------------------------------- */
+
+describe("S5 Claim — certification, window disclosure and the whole-run manifest", () => {
+  const CLAIM = { ...DEFAULT_CURSOR, stage: "claim" as const };
+  const claimView = (runIdentity?: React.ComponentProps<typeof EvidenceFlow>["runIdentity"]) =>
+    view({ hub: W3B.hub_evidence, passport: retainedPassport, runIdentity, cursor: CLAIM });
+
+  it("draws every artifact the progress read publishes, in its own state, unlinked", () => {
+    const { container } = claimView(W3B_IDENTITY);
+    const manifest = container.querySelector("[data-artifact-manifest]") as HTMLElement;
+    expect(manifest.getAttribute("data-artifact-manifest")).toBe("AVAILABLE");
+    const served = W3B.progress.progress!.artifacts;
+    expect(served.length).toBeGreaterThan(0);
+    const rows = [...manifest.querySelectorAll("[data-artifact]")];
+    expect(rows.map((row) => [row.getAttribute("data-artifact"), row.getAttribute("data-artifact-state")])).toEqual(
+      served.map((artifact) => [artifact.name, artifact.state]),
+    );
+    for (const artifact of served) {
+      if (artifact.digest) expect(manifest.textContent).toContain(`sha256:${artifact.digest.slice(0, 8)}…`);
+    }
+    expect(manifest.querySelector("a")).toBeNull();
+    expect(manifest.querySelector("[data-artifact-no-reader]")).toBeTruthy();
+    // The panel that said "no artifact state is published on this screen" is gone.
+    expect(container.querySelector("[data-gap='artifact-manifest']")).toBeNull();
+  });
+
+  it("lists the sealed holdout the read denies, with the read's reason code", () => {
+    const denied = {
+      ...W3B.progress,
+      // The contract's constant shape (`ProgressDeniedArtifact`), as Screen 03's w2 test serves it.
+      denied_artifacts: [{
+        name: "sealed holdout" as const, state: "DENIED" as const, reason_code: "P08_SEALED_HOLDOUT_UNLOCK_NOT_INSTALLED" as const,
+        rows: "336", range: { start_utc_ms: 1786060800000, end_exclusive_utc_ms: 1787270400000 }, reader_href: null,
+      }],
+    };
+    const { container } = claimView({ state: "ready", identity: { progress: denied, requested: W3B.requested_spec } });
+    const row = container.querySelector("[data-artifact-manifest] [data-artifact-state='DENIED']") as HTMLElement;
+    expect(row.getAttribute("title")).toContain("P08_SEALED_HOLDOUT_UNLOCK_NOT_INSTALLED");
+    expect(row.querySelector("a")).toBeNull();
+    expect(container.querySelector("[data-window-row='Holdout'] [data-window-count]")?.textContent).toBe("1 denied");
+  });
+
+  it("keeps a typed absence, with the read's own availability, when the read publishes no snapshot", () => {
+    const queued = { ...W3B.progress, availability: "QUEUED_NO_SOURCE" as const, progress: null };
+    const { container } = claimView({ state: "ready", identity: { progress: queued, requested: null } });
+    const absence = container.querySelector("[data-manifest-absence]") as HTMLElement;
+    expect(absence.getAttribute("data-manifest-absence")).toBe("QUEUED_NO_SOURCE");
+    expect(absence.querySelector("[data-withheld]")?.getAttribute("data-reason-code")).toBe("QUEUED_NO_SOURCE");
+    expect(container.querySelector("[data-artifact-manifest] [data-artifact]")).toBeNull();
+  });
+
+  it("says the read did not answer, and draws no row, when it was refused", () => {
+    const { container } = claimView({ state: "ready", identity: { progress: null, requested: null } });
+    expect(container.querySelector("[data-manifest-absence]")?.getAttribute("data-manifest-absence")).toBe("UNAVAILABLE");
+    expect(container.querySelector("[data-artifact-manifest] [data-artifact]")).toBeNull();
+  });
+
+  it("draws the certification table shape with one absence row and the served level", () => {
+    const { container } = claimView(W3B_IDENTITY);
+    const table = container.querySelector("[data-cert-table]") as HTMLElement;
+    expect([...table.querySelectorAll("th")].map((th) => th.textContent)).toEqual(["stage", "condition observed", "cap"]);
+    expect(table.querySelectorAll("tbody tr")).toHaveLength(1);
+    expect(table.querySelector("[data-cert-caps='NOT_PUBLISHED'] [data-withheld]")?.textContent).toContain("per-stage caps");
+    const level = table.querySelector("[data-cert-level]") as HTMLElement;
+    const certificate = W3B.hub_evidence.claim.methodology_certificate;
+    expect(level.getAttribute("data-cert-level")).toBe(certificate.state);
+    expect(level.querySelector("[data-withheld]")?.getAttribute("data-reason-code")).toBe(certificate.reason_code);
+  });
+
+  it("fills window rows only from served facts; unpublished windows keep a marked row, no count invented", () => {
+    const { container } = claimView(W3B_IDENTITY);
+    const row = (key: string) => container.querySelector(`[data-window-row='${key}']`) as HTMLElement;
+    expect([...container.querySelectorAll("[data-window-row]")].map((r) => r.getAttribute("data-window-row"))).toEqual([
+      "IS", "OOS", "Holdout", "Compare",
+    ]);
+    expect(row("OOS").textContent).toContain(WINDOW_DISCLOSURE);
+    expect(row("OOS").querySelector("[data-window-fact='validation_claim']")?.textContent).toBe("validation_claim walk_forward_oos");
+    expect(row("OOS").querySelector("[data-window-fact='oos_used_for_selection']")?.textContent).toBe("oos_used_for_selection true");
+    const nav = W3B.hub_evidence.core.fold_navigation!;
+    expect(row("OOS").querySelector("[data-window-count]")?.textContent).toBe(`${nav.observed_folds.length}/${nav.published_fold_count} folds`);
+    const holdout = row("Holdout").querySelector("[data-withheld]") as HTMLElement;
+    expect(holdout.getAttribute("data-withheld")).toBe("NOT_APPLICABLE");
+    expect(holdout.getAttribute("data-reason-code")).toBe(W3.evidence.claim.holdout.reason_code);
+    expect(row("Holdout").querySelector("[data-window-count]")?.textContent).toBe("0 denied");
+    for (const key of ["IS", "Compare"]) {
+      expect(row(key).querySelectorAll("[data-withheld='NOT_PUBLISHED']")).toHaveLength(2);
+      expect(row(key).textContent).not.toMatch(/\d+\/\d+/);
+    }
+  });
+
+  it("does not claim a manifest before the progress read was asked", () => {
+    const { container } = view({ cursor: CLAIM });
+    expect(container.querySelector("[data-manifest-absence]")?.getAttribute("data-manifest-absence")).toBe("idle");
+    expect(container.querySelector("[data-artifact-manifest] [data-artifact]")).toBeNull();
   });
 });

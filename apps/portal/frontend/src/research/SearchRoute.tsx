@@ -21,7 +21,7 @@ import { RouteCursorNotice } from "./CursorNotice";
 import { DEFAULT_CURSOR, clampFold, observedFoldsFor, useEvidenceCursor } from "./evidenceCursor";
 import { SEARCH_FOLD_MAX, retainedSearchOf, useRetainedRunFacts, useSearch } from "./useSearch";
 
-export function SearchRoute() {
+export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const { runId = "" } = useParams<{ runId: string }>();
   const { cursor, problems, notes, replaceFold, decline, clampToObserved, update } = useEvidenceCursor({ stage: "search" });
   /* X2 · F4 (T07/T08): the inspected trial lives in the hash as `pick=`, so a
@@ -73,7 +73,7 @@ export function SearchRoute() {
 
   return (
     <>
-      <RouteCursorNotice problems={problems} notes={notes} frame={1560} />
+      {embedded ? null : <RouteCursorNotice problems={problems} notes={notes} frame={1560} />}
       <SearchScreen
         runId={runId}
         detail={search.detail}
@@ -87,6 +87,7 @@ export function SearchRoute() {
         onPick={onPick}
         ensureLedger={search.ensureLedger}
         onReread={search.reread}
+        embedded={embedded}
       />
     </>
   );

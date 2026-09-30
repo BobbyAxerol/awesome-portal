@@ -1377,6 +1377,12 @@ export interface SplitScreenProps {
   retained?: RetainedFacts | null;
   ensureFolds: () => void;
   onReread: () => void;
+  /**
+   * Mounted inside Screen 04's split tab: the hub owns the frame, the
+   * breadcrumb, the title and the evidence link, so this screen draws its
+   * body only — same reads, same blocks.
+   */
+  embedded?: boolean;
 }
 
 export function SplitScreen({
@@ -1390,6 +1396,7 @@ export function SplitScreen({
   retained = null,
   ensureFolds,
   onReread,
+  embedded = false,
 }: SplitScreenProps) {
   /* W3b: when the retained WFO lane is this run's source, it answers every frame it covers. */
   const lane = useMemo(() => laneViewOf(detail, folds, retained), [detail, folds, retained]);
@@ -1430,8 +1437,14 @@ export function SplitScreen({
   const retainedGuards = folds.state === "ready" ? (folds.split as Partial<CurrentSourceSplit>).guards ?? null : null;
 
   return (
-    <div className={`${SCREEN_FRAME} max-w-[1440px]`} data-screen="split-detail" data-run={runId}>
+    <div
+      className={embedded ? "flex w-full min-w-0 flex-col gap-[14px]" : `${SCREEN_FRAME} max-w-[1440px]`}
+      data-screen="split-detail"
+      data-run={runId}
+      data-embedded={embedded ? "hub" : undefined}
+    >
       {/* ------------------------------------------------------ header */}
+      {embedded ? null : (
       <header
         className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5 border-b pb-[10px]"
         style={{ borderColor: "var(--line)" }}
@@ -1492,6 +1505,7 @@ export function SplitScreen({
           </div>
         ) : null}
       </header>
+      )}
 
       {notFound ? <RunNotFound runId={runId} /> : null}
 

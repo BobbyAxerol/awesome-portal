@@ -7,7 +7,7 @@
  * only when the playhead comes to rest — never on a playback tick.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { ExecuteScreen, executeLane, useTransportInput } from "./ExecuteDetail";
@@ -24,7 +24,26 @@ export function ExecuteRoute() {
   return <ExecuteContainer key={runId} runId={runId} />;
 }
 
-function ExecuteContainer({ runId }: { runId: string }) {
+/**
+ * The route's container. `embedded` draws only the screen's body, for the
+ * Evidence Hub's Execute tab — same reads, same hash cursor, same `:runId`.
+ *
+ * Inside the hub the fold belongs to the hub's cursor bar, which keeps its own
+ * copy of the cursor: `hubFold` is that fold and `onHubFold` hands the fold on
+ * screen back, so the pill and the replay never name two different folds.
+ * Both are absent on the deep-dive route.
+ */
+export function ExecuteContainer({
+  runId,
+  embedded = false,
+  hubFold,
+  onHubFold,
+}: {
+  runId: string;
+  embedded?: boolean;
+  hubFold?: number | null;
+  onHubFold?: (fold: number) => void;
+}) {
   const { cursor, update } = useEvidenceCursor({ stage: "execute" });
   const [arrivalSeq] = useState(cursor.seq);
   const [arrivalFold] = useState(cursor.fold);
@@ -44,6 +63,29 @@ function ExecuteContainer({ runId }: { runId: string }) {
   useEffect(() => {
     if (retainedFold !== null && retainedFold !== cursor.fold) update({ fold: retainedFold });
   }, [cursor.fold, retainedFold, update]);
+
+  /* Hub only. The hub's fold stepper reads that fold's window with the same
+     one read the body's own fold chips send; a fold window the body reached
+     by itself (a chip, play across folds) is handed back to the hub. */
+  const segments =
+    retained && isRetainedReplay(retained) && retained.execution?.state === "AVAILABLE"
+      ? retained.execution.fold_capital.segments
+      : null;
+  const shown = useRef(retainedFold);
+  const readFold = controller.retainedFold;
+  useEffect(() => {
+    if (hubFold == null || !segments || !readFold || retainedFold === null || hubFold === retainedFold) return;
+    if (shown.current !== retainedFold) return; // the body just moved; the hub hears it below first
+    const segment = segments[hubFold - 1];
+    if (segment) readFold(segment);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a move of the hub's fold reads
+  }, [hubFold]);
+  useEffect(() => {
+    if (retainedFold === null || shown.current === retainedFold) return;
+    shown.current = retainedFold;
+    if (onHubFold && hubFold !== undefined && hubFold !== retainedFold) onHubFold(retainedFold);
+  }, [hubFold, onHubFold, retainedFold]);
+
   const [transport] = useState(() => new ReplayTransport());
   useEffect(() => () => transport.dispose(), [transport]);
   useTransportInput(transport);
@@ -69,5 +111,5 @@ function ExecuteContainer({ runId }: { runId: string }) {
   if (controller.state.state === "denied" && controller.replay === null) {
     return <StageDenied runId={runId} stage="Stage 4 · Execute Replay" screen="execute-replay" />;
   }
-  return <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} band={band} />;
+  return <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} band={band} embedded={embedded} />;
 }

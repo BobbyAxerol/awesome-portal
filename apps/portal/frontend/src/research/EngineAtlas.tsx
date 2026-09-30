@@ -1289,6 +1289,8 @@ export interface EngineAtlasProps {
   onLocationChange?: (change: Partial<Omit<AtlasLocation, "tab">>) => void;
   /** 12-3: the mode × schedule of `location.run`, as its progress identity publishes it. */
   runCell?: AtlasRunCell;
+  /** V2 (2026-09-30): inside Screen 04's Atlas tab — the hub already names the screen, so no own crumb/title. */
+  embedded?: boolean;
 }
 
 export function EngineAtlas({
@@ -1301,6 +1303,7 @@ export function EngineAtlas({
   location = { mode: null, schedule: null, route: null, run: null },
   onLocationChange,
   runCell,
+  embedded = false,
 }: EngineAtlasProps) {
   const release = doc ? currentReleaseLabel(doc.current_release) : null;
   const history = doc ? historicalReleaseLabels(doc) : [];
@@ -1325,6 +1328,7 @@ export function EngineAtlas({
         className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5 border-b pb-2.5"
         style={{ borderColor: "var(--line)" }}
       >
+        {embedded ? null : (
         <div className="flex flex-col gap-[3px]">
           <nav className="flex items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" data-breadcrumb>
             {location.run ? (
@@ -1355,6 +1359,7 @@ export function EngineAtlas({
             {doc ? ` Read from ${doc.current_release.release_id}.` : ""}
           </p>
         </div>
+        )}
 
         {release || selectedReleaseId ? (
           /* 12-9: right-aligned beside the title at desktop width, stacked left under it at 660.

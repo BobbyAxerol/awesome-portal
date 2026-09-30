@@ -1548,6 +1548,11 @@ export interface FreezeScreenProps {
   /** A10c: the one explicit "evaluate grid" action (retained WFO lane only). */
   whatIfEvaluate?: WhatIfEvaluateSlot;
   onWhatIfEvaluate?: (gridKey: string) => void;
+  /**
+   * Hub tab (Screen 04, Stage 3): the same body without this screen's own
+   * frame, breadcrumb, title and header actions — the hub draws those.
+   */
+  embedded?: boolean;
 }
 
 export function FreezeScreen({
@@ -1563,6 +1568,7 @@ export function FreezeScreen({
   identity = { state: "idle" },
   whatIfEvaluate = { state: "idle" },
   onWhatIfEvaluate = () => undefined,
+  embedded = false,
 }: FreezeScreenProps) {
   /* W3b: the hub delegated this run and the retained lane answered — read it from there. */
   const lane = readsRetainedLane(detail, retained) ? retained.freeze : null;
@@ -1582,7 +1588,13 @@ export function FreezeScreen({
           : null) ?? null;
 
   return (
-    <div className={`${SCREEN_FRAME} max-w-[1440px]`} data-screen="freeze-detail" data-run={runId}>
+    <div
+      className={embedded ? "flex w-full min-w-0 flex-col gap-[14px]" : `${SCREEN_FRAME} max-w-[1440px]`}
+      data-screen="freeze-detail"
+      data-run={runId}
+      data-embedded={embedded ? "hub" : undefined}
+    >
+      {embedded ? null : (
       <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link
           to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/evidence`, cursor)}
@@ -1632,9 +1644,12 @@ export function FreezeScreen({
           </>
         ) : null}
       </nav>
+      )}
 
       {bytes && bytesBlock(bytes) ? <BlockedBanner bytes={bytes} /> : null}
 
+      {embedded ? null : (
+      <>
       <div className="flex flex-col gap-[3px]">
         <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
           S3 · Freeze — ordering &amp; integrity
@@ -1655,6 +1670,8 @@ export function FreezeScreen({
           propose new attempt →
         </Link>
       </div>
+      </>
+      )}
 
       {detail && freeze ? (
         <div
