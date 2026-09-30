@@ -14,7 +14,7 @@
  *  - E1 display rules: short ids with the full value kept, no ISO-millisecond
  *    timestamp, one 403/404 sentence.
  */
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -376,6 +376,54 @@ describe("E1 — display rules on Screen 14", () => {
     expect(text).not.toMatch(/\.\d{3}Z/);
     // A 64-hex digest never reaches the screen whole.
     expect(text).not.toMatch(/[0-9a-f]{64}/);
+  });
+
+  it("prints a real server receipt id (a ULID tail) short and keeps the full value", () => {
+    // The canonical gates fixture with the one field the real server answered differently: on the
+    // preview's first real write (2026-09-30) the receipt was `rgate_` + 26 base32 characters, which
+    // the E1 hex-only cut left whole on screen. `rgate-demo-01` in the fixture is short enough to hide it.
+    const REAL_RECEIPT = "rgate_06GF2AWT45559T5YQ32P3V7TY5";
+    const gates: GatesResponse = { ...GATES, gate_receipt_id: REAL_RECEIPT };
+    render(<AlphaImport {...props({ parse: SOURCE, parseState: OK, gates, gatesState: OK })} />);
+    const step2 = panel(2);
+    const id = step2.querySelector("[data-full-id]") as HTMLElement;
+    expect(id.textContent).toBe("rgate_06GF2AWT");
+    expect(id.getAttribute("data-full-id")).toBe(REAL_RECEIPT);
+    expect(id.getAttribute("title")).toBe(`${REAL_RECEIPT} — click to copy`);
+    expect(id.getAttribute("aria-label")).toBe(`gate receipt ${REAL_RECEIPT}, copy`);
+    expect(step2.textContent).not.toContain(REAL_RECEIPT);
+    expect(step2.textContent).not.toMatch(/[A-Za-z0-9_-]{30,}/);
+  });
+
+  it("copies the full receipt id, not the short one", async () => {
+    const REAL_RECEIPT = "rgate_06GF2AWT45559T5YQ32P3V7TY5";
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    // Reduced motion: the gate rows mount at once, so nothing but the click updates state.
+    const media = { matches: true, media: "", onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false };
+    const priorClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    const priorMedia = Object.getOwnPropertyDescriptor(window, "matchMedia");
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    Object.defineProperty(window, "matchMedia", { value: () => media, configurable: true });
+    try {
+      render(<AlphaImport {...props({ parse: SOURCE, parseState: OK, gates: { ...GATES, gate_receipt_id: REAL_RECEIPT }, gatesState: OK })} />);
+      await act(async () => {
+        fireEvent.click(panel(2).querySelector("[data-full-id]") as HTMLElement);
+      });
+      expect(writeText).toHaveBeenCalledWith(REAL_RECEIPT);
+      expect(panel(2).querySelector("[data-full-id]")?.getAttribute("title")).toBe(`${REAL_RECEIPT} — copied`);
+    } finally {
+      if (priorClipboard) Object.defineProperty(navigator, "clipboard", priorClipboard);
+      else delete (navigator as unknown as Record<string, unknown>).clipboard;
+      if (priorMedia) Object.defineProperty(window, "matchMedia", priorMedia);
+      else delete (window as unknown as Record<string, unknown>).matchMedia;
+    }
+  });
+
+  it("keeps the canonical fixture's short receipt id as it was", () => {
+    render(<AlphaImport {...props({ parse: SOURCE, parseState: OK, gates: GATES, gatesState: OK })} />);
+    const id = panel(2).querySelector("[data-full-id]") as HTMLElement;
+    expect(id.textContent).toBe(GATES.gate_receipt_id);
+    expect(id.getAttribute("data-full-id")).toBe(GATES.gate_receipt_id);
   });
 
   it("uses the one F-04 sentence for 403 and 404, coded or not", () => {

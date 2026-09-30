@@ -328,6 +328,44 @@ function Digest({ value, label }: { value: string; label: string }) {
   );
 }
 
+/**
+ * A receipt id the server minted (`rgate_…`): a type prefix plus a 26-character
+ * ULID (upper-case Crockford base32). The shared E1 `shortId` cuts only hex
+ * tails, so a real receipt printed whole — 32 characters — while the canonical
+ * fixture's `rgate-demo-01` never showed it. Same contract as `ShortId`: eight
+ * characters on screen; the full value in the title, `data-full-id`, the
+ * accessible name and the copy.
+ */
+const ULID_ID = /^([a-z][a-z0-9]{0,7}_)([0-9A-HJKMNP-TV-Z]{26})$/;
+
+function UlidId({ id, shown, label }: { id: string; shown: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="mono"
+      data-full-id={id}
+      data-copied={copied || undefined}
+      onClick={() => {
+        void navigator.clipboard?.writeText(id).then(
+          () => setCopied(true),
+          () => undefined,
+        );
+      }}
+      title={copied ? `${id} — copied` : `${id} — click to copy`}
+      aria-label={`${label} ${id}, copy`}
+      style={{ border: 0, padding: 0, background: "transparent", color: "inherit", fontSize: "inherit", fontWeight: "inherit", cursor: "copy", whiteSpace: "nowrap" }}
+    >
+      {shown}
+    </button>
+  );
+}
+
+function ReceiptId({ id, label }: { id: string; label: string }) {
+  const match = ULID_ID.exec(id);
+  return match ? <UlidId id={id} shown={`${match[1]}${match[2].slice(0, 8)}`} label={label} /> : <ShortId id={id} label={label} />;
+}
+
 /* ----------------------------------------------------------------- mirror */
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1074,7 +1112,7 @@ export function AlphaImport(props: AlphaImportProps) {
               {gates ? (
                 <>
                   {"receipt "}
-                  <ShortId id={gates.gate_receipt_id} label="gate receipt" />
+                  <ReceiptId id={gates.gate_receipt_id} label="gate receipt" />
                   {" · expires "}
                   {formatUtc(gates.expires_at_utc_ms) ?? "time not published"}
                 </>
