@@ -165,7 +165,7 @@
     "openapi/research-alpha-import.openapi.json": "sha256:773fb20227e6b88777b1e543c5a82a2214485420a55d946b12b4ddbae8f6a1c3",
     "openapi/research-attempt-lineage.openapi.json": "sha256:f99c8d6b02138caba8157e60f6a6689dd9844c9a6f0736c9c99f8cd23c5b8ffa",
     "openapi/research-compare.openapi.json": "sha256:ed7cd040975c379a06ac92a2cad703fcf93562ca43f9d991d34f6f0036fff389",
-    "openapi/research-current-source.openapi.json": "sha256:ebf5f53dafc5cca6b1dc5573cf79a8fc6351e48a061133b10e2d03737fc2abdd",
+    "openapi/research-current-source.openapi.json": "sha256:7cb404517694913f353232f385a2e80c89858aec076fba89927a76f5555e7ec4",
     "openapi/research-evidence.openapi.json": "sha256:f6bf6fa998f69ac2d685c6dc02fda0803b35fb5bc097b2a23826d9aec1e0fedd",
     "openapi/research-foundation.openapi.json": "sha256:40ad73dcacd019049678e95f0b7e910da57f45c8f417c84830ce2331b138e9ae",
     "openapi/research-freeze.openapi.json": "sha256:1e4d6dcee6b11a377ceb9cd38fe0cb3ab38324d98beb414a0173c00172975d65",

@@ -6563,3 +6563,15 @@ backfill awaits Bobby, with typed absence as default. Claude owns v2 FE binding.
 [Exact fields, focused tests, old-seal checks and handoff](./research_loop/evidence/P13/BR-AN-01_backend_receipt_2026-09-30.md)
 · [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).
 
+
+### LW-01 preview 400-trial Search bound checkpoint — 2026-09-30
+
+The B0 400-trial audit found that Search's objective probe still capped at 128
+even though the isolated preview profile admits 400 trials and at most 64
+candidates. Zod and OpenAPI now use the derived maximum 464; the normal
+64-trial seal, 64-candidate seal, 200-row page and 1-MiB response cap stay
+unchanged. A canonical 400-trial fixture and OpenAPI/Zod parity test pass.
+This is contract implementation only; the real preview 400-row keyset/API
+receipt remains open before LW-01 may be called product-accepted.
+[LW-01 receipt](./research_loop/evidence/P15/LW-01_search_400_trial_bound_2026-09-30.md)
+· [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).

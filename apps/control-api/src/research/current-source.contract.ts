@@ -42,6 +42,12 @@ const SourceIdentifierSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,1
  * up to 400. A sealed artifact never exceeds what its own seal admitted.
  */
 export const CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS = 400;
+/**
+ * Every admitted preview search trial may publish one objective probe, and
+ * each retained candidate (at most 64) may publish one more. The seal guards
+ * both cardinalities before any read reaches this response contract.
+ */
+export const CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS = CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS + 64;
 
 export const ResearchCurrentSourceAvailabilitySchema = z.object({
   state: z.enum([
@@ -814,8 +820,8 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     /** W3 · CG-P15-04: what the capability probe found in the retained source. */
     probe: z.object({
       schema_version: z.literal("research.current-source-search-probe.v1"),
-      objective_rows: z.number().int().nonnegative().max(128),
-      objective_rows_recomposed: z.number().int().nonnegative().max(128),
+      objective_rows: z.number().int().nonnegative().max(CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS),
+      objective_rows_recomposed: z.number().int().nonnegative().max(CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS),
       pruned_trial_count: z.number().int().nonnegative().max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS).nullable(),
       decay_lambda: DecimalSchema.nullable(),
       decay_gamma: DecimalSchema.nullable(),

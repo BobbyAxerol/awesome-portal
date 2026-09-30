@@ -4,7 +4,12 @@
  * limits. Off, every refusal, cost and cap is the locked W1 behaviour.
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
+
+import { CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS, ResearchCurrentSourceSearchResponseSchema } from "../src/research/current-source.contract";
 
 import { loadConfig } from "../src/config";
 import { ResearchCurrentSourceRepository } from "../src/research/current-source.repository";
@@ -217,5 +222,43 @@ describe("preview long WFO RS-02 seal ceiling", () => {
     await expect(repository(true, custody).seal(scope, seal(400) as never))
       .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE" });
     expect(custody.connect).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("LW-01 preview long-WFO Search response", () => {
+  it("accepts the 400-trial plus 64-candidate probe while keeping the response under 1 MiB", () => {
+    const fixturePath = resolve(
+      process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"),
+      "fixtures/research-current-source.search-surface.valid.json",
+    );
+    const source = JSON.parse(readFileSync(fixturePath, "utf8"));
+    const trial = source.ledger.trials[0];
+    const point = source.surface.points[0];
+    source.ledger.source_trial_count = 400;
+    source.ledger.returned_rows = 200;
+    source.ledger.trials = Array.from({ length: 200 }, (_, ordinal) => ({
+      ...trial, source_ordinal: ordinal, trial_id: String(ordinal),
+    }));
+    source.surface.source_trial_count = 400;
+    source.surface.complete_trial_count = 400;
+    source.surface.emitted_point_count = 400;
+    source.surface.points = Array.from({ length: 400 }, (_, ordinal) => ({
+      ...point, source_ordinal: ordinal, trial_id: String(ordinal),
+    }));
+    source.diagnostics.probe.objective_rows = CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS;
+    source.diagnostics.probe.objective_rows_recomposed = CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS;
+    const openapiPath = resolve(
+      process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"),
+      "openapi/research-current-source.openapi.json",
+    );
+    const search = JSON.parse(readFileSync(openapiPath, "utf8")).components.schemas.Search;
+    const probe = search.allOf[1].properties.diagnostics.properties.probe.properties;
+    expect(probe.objective_rows.maximum).toBe(CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS);
+    expect(probe.objective_rows_recomposed.maximum).toBe(CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS);
+    expect(source.diagnostics.probe.objective_rows_recomposed).toBe(464);
+    expect(Buffer.byteLength(JSON.stringify(source))).toBeLessThan(1_048_576);
+    expect(ResearchCurrentSourceSearchResponseSchema.safeParse(source).success).toBe(true);
+    source.diagnostics.probe.objective_rows += 1;
+    expect(ResearchCurrentSourceSearchResponseSchema.safeParse(source).success).toBe(false);
   });
 });
