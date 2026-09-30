@@ -85,9 +85,18 @@ export async function browserRefusalReceipt({ home = DEFAULT_HOME, label = 'f5-b
             assert.equal(record.api.status, scenario === 'session_expired' ? 401 : 400);
             assert.equal(record.api.code, scenario === 'session_expired'
               ? 'SESSION_REQUIRED' : 'RESEARCH_ALPHA_IMPORT_INVALID');
-            const alert = root.locator(`[role="alert"][data-refusal="${record.api.code}"]`);
-            await alert.waitFor();
-            record.visible_copy = (await alert.innerText()).trim();
+            if (scenario === 'session_expired') {
+              const frame = page.locator('[data-testid="access-problem-screen"][data-problem="SESSION_EXPIRED"]');
+              await frame.waitFor();
+              record.visible_copy = (await frame.innerText()).trim();
+              assert(record.visible_copy.includes('Portal session expired'), 'SESSION_EXPIRED_FRAME_REQUIRED');
+              assert.equal(new URL(page.url()).pathname, '/research/quantbt/alpha-import', 'DEEP_LINK_LOST_ON_401');
+              assert.equal(await root.count(), 0, 'EXPIRED_SHELL_MUST_UNMOUNT');
+            } else {
+              const alert = root.locator(`[role="alert"][data-refusal="${record.api.code}"]`);
+              await alert.waitFor();
+              record.visible_copy = (await alert.innerText()).trim();
+            }
             assert(record.visible_copy.length > 20, 'VISIBLE_REFUSAL_COPY_REQUIRED');
             assert(!record.visible_copy.includes(record.api.server_message), 'SERVER_DETAIL_RENDERED_AS_COPY');
           } else {
@@ -107,9 +116,18 @@ export async function browserRefusalReceipt({ home = DEFAULT_HOME, label = 'f5-b
             assert.equal(record.api.status, scenario === 'session_expired' ? 401 : 403);
             assert.equal(record.api.code, scenario === 'session_expired'
               ? 'SESSION_REQUIRED' : 'RESEARCH_PREFLIGHT_INVALID');
-            const alert = root.locator('[role="alert"] [data-refusal-copy]');
-            await alert.waitFor();
-            record.visible_copy = (await alert.innerText()).trim();
+            if (scenario === 'session_expired') {
+              const frame = page.locator('[data-testid="access-problem-screen"][data-problem="SESSION_EXPIRED"]');
+              await frame.waitFor();
+              record.visible_copy = (await frame.innerText()).trim();
+              assert(record.visible_copy.includes('Portal session expired'), 'SESSION_EXPIRED_FRAME_REQUIRED');
+              assert.equal(new URL(page.url()).pathname, '/research/quantbt/runs/new', 'DEEP_LINK_LOST_ON_401');
+              assert.equal(await root.count(), 0, 'EXPIRED_SHELL_MUST_UNMOUNT');
+            } else {
+              const alert = root.locator('[role="alert"] [data-refusal-copy]');
+              await alert.waitFor();
+              record.visible_copy = (await alert.innerText()).trim();
+            }
             assert(record.visible_copy.length > 20, 'VISIBLE_REFUSAL_COPY_REQUIRED');
             assert(!record.visible_copy.includes(record.api.server_message), 'SERVER_DETAIL_RENDERED_AS_COPY');
           }
