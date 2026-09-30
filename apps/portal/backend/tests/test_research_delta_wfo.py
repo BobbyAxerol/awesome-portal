@@ -7,10 +7,13 @@ isolated QuantBT child on the golden tape (1h, 2024-01-01..01-21, first OOS
 
 from __future__ import annotations
 
+import asyncio
+
 import copy
 import hashlib
 import json
 import os
+import threading
 from pathlib import Path
 
 import pytest
@@ -545,6 +548,8 @@ async def test_w1_worker_retains_before_run_completed_and_claims_three_trials(
     assert set(artifacts) == mandatory
     assert all(row["state"] == "SEALED" and len(row["digest"]) == 64 for row in artifacts.values())
     assert not list(store.temp_dir(run_id, attempt_id).iterdir())
+    # P23-T02: only the immutable bundle/attempt ledger survives terminal.
+    assert not (tmp_path / "child-scratch" / payload["job_id"]).exists()
 
 
 @pytest.mark.anyio
@@ -597,3 +602,27 @@ def test_w1_p11_usage_clamps_to_the_profile_cap(tmp_path: Path) -> None:
         "code": "USER_CANCELLED", "message": "cancelled",
         "usage": {"peak_rss_bytes": None, "cpu_seconds": None, "scratch_bytes": None, "fd_peak": None},
     })
+
+
+@pytest.mark.anyio
+async def test_p23_cancel_joins_running_producer_thread_before_terminal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    snapshots, identity = _snapshot(tmp_path)
+    executor = _wfo_executor(tmp_path, snapshots)
+    started = threading.Event()
+    release = threading.Event()
+
+    def pending_child(_self, _request, _root, _journal):
+        started.set()
+        assert release.wait(timeout=2)
+        return {"status": "COMPLETED"}
+
+    monkeypatch.setattr(ResearchRunProducerExecutor, "_execute_sync", pending_child)
+    request = wfo_request(snapshot_id=identity.snapshot_id, snapshot_content_hash=identity.content_hash)
+    task = asyncio.create_task(executor(request, request["run_id"], tmp_path / "engine"))
+    assert await asyncio.to_thread(started.wait, 1)
+    task.cancel()
+    await asyncio.sleep(0.02)
+    assert not task.done(), "a cancelled worker must not close its lease while its child still runs"
+    release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task

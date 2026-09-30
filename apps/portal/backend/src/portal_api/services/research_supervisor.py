@@ -415,6 +415,49 @@ class IsolatedResearchSupervisor:
         if lease_epoch < 1:
             raise ResearchSupervisorError("lease_epoch must be positive")
 
+    def retire_terminal_scratch(
+        self, *, job_id: str, run_id: str, worker_attempt_id: str, lease_epoch: int
+    ) -> bool:
+        """Retire one finished child receipt after the durable worker commits terminal.
+
+        The caller first proves its executor settled and this exact attempt is
+        terminal in the durable ledger. The receipt check prevents an old
+        lease from removing another child's scratch. The attempt ledger, not
+        this disposable directory, remains the launch-once authority.
+        """
+
+        self._validate_launch_identity(
+            job_id=job_id, run_id=run_id,
+            worker_attempt_id=worker_attempt_id, lease_epoch=lease_epoch,
+        )
+        job_dir = self._scratch_root / job_id
+        work = job_dir / worker_attempt_id
+        if not work.exists():
+            return False
+        if work.is_symlink() or not work.is_dir() or job_dir.is_symlink():
+            raise ResearchSupervisorError("terminal scratch is not a directory")
+        receipt_path = work / "receipt.json"
+        if receipt_path.is_symlink() or not receipt_path.is_file():
+            raise ResearchSupervisorError("terminal scratch has no launch receipt")
+        try:
+            payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ResearchSupervisorError("terminal scratch launch receipt is invalid") from exc
+        if (
+            not isinstance(payload, dict)
+            or payload.get("job_id") != job_id
+            or payload.get("run_id") != run_id
+            or payload.get("worker_attempt_id") != worker_attempt_id
+            or payload.get("lease_epoch") != lease_epoch
+        ):
+            raise ResearchSupervisorError("terminal scratch launch identity changed")
+        shutil.rmtree(work)
+        try:
+            job_dir.rmdir()  # Never remove another attempt's scratch.
+        except OSError:
+            pass
+        return True
+
     def _approved_market_input(self, market_path: Path) -> Path:
         resolved = market_path.resolve(strict=True)
         if resolved.suffix != ".parquet" or not resolved.is_relative_to(self._allowed_market_root):

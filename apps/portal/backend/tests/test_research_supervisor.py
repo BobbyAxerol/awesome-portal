@@ -159,3 +159,45 @@ def test_e16_supervisor_rejects_an_overview_that_does_not_cover_its_source_range
     }
     with pytest.raises(ResearchSupervisorError, match="source coverage"):
         IsolatedResearchSupervisor._validate_evidence_source(invalid)
+
+
+def test_p23_terminal_scratch_retirement_is_exact_and_idempotent(tmp_path: Path) -> None:
+    supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=MARKET_PATH.parent)
+    job = tmp_path / "scratch" / "job-one"
+    first = job / "attempt-one"
+    second = job / "attempt-two"
+    first.mkdir(parents=True)
+    second.mkdir()
+    receipt = first / "receipt.json"
+    receipt.write_text(
+        '{"job_id":"job-one","run_id":"run-one","worker_attempt_id":"attempt-one","lease_epoch":1}',
+        encoding="utf-8",
+    )
+    (first / "stderr.log").write_text("private child log", encoding="utf-8")
+    with pytest.raises(ResearchSupervisorError, match="identity changed"):
+        supervisor.retire_terminal_scratch(
+            job_id="job-one", run_id="run-other", worker_attempt_id="attempt-one", lease_epoch=1,
+        )
+    assert first.exists() and second.exists()
+    assert supervisor.retire_terminal_scratch(
+        job_id="job-one", run_id="run-one", worker_attempt_id="attempt-one", lease_epoch=1,
+    )
+    assert not first.exists() and second.exists()
+    assert not supervisor.retire_terminal_scratch(
+        job_id="job-one", run_id="run-one", worker_attempt_id="attempt-one", lease_epoch=1,
+    )
+
+
+def test_p23_terminal_scratch_retirement_refuses_symlink(tmp_path: Path) -> None:
+    supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=MARKET_PATH.parent)
+    unrelated = tmp_path / "unrelated"
+    unrelated.mkdir()
+    (unrelated / "receipt.json").write_text("{}", encoding="utf-8")
+    job = tmp_path / "scratch" / "job-one"
+    job.mkdir()
+    (job / "attempt-one").symlink_to(unrelated, target_is_directory=True)
+    with pytest.raises(ResearchSupervisorError, match="not a directory"):
+        supervisor.retire_terminal_scratch(
+            job_id="job-one", run_id="run-one", worker_attempt_id="attempt-one", lease_epoch=1,
+        )
+    assert (unrelated / "receipt.json").is_file()

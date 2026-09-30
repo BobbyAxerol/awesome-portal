@@ -247,6 +247,7 @@ class DurableQuantWorker:
         # an RS-02 current-source lane.
         is_whatif = is_research_producer and research_request.research.is_whatif
         is_imported_alpha = is_research_producer and research_request.research.is_imported_alpha
+        executor_settled = False
         whatif_job = research_request.research.whatif if is_whatif else None
         try:
             if is_imported_alpha and not (
@@ -380,15 +381,20 @@ class DurableQuantWorker:
             else:
                 engine_root = Path(self._artifact_store.root)
             progress_executor = getattr(executor, "execute_with_progress", None)
-            if is_research_producer and progress_journal is not None and callable(progress_executor):
-                result = await progress_executor(
-                    request_json,
-                    run_id,
-                    engine_root,
-                    progress_journal,
-                )
-            else:
-                result = await executor(request_json, run_id, engine_root)
+            try:
+                if is_research_producer and progress_journal is not None and callable(progress_executor):
+                    result = await progress_executor(
+                        request_json,
+                        run_id,
+                        engine_root,
+                        progress_journal,
+                    )
+                else:
+                    result = await executor(request_json, run_id, engine_root)
+            finally:
+                # The research executor joins its bounded to_thread child even
+                # on cancellation. No terminal cleanup can race a live child.
+                executor_settled = True
             if result.get("status") != "COMPLETED":
                 raise DurableRunError(
                     f"engine returned {result.get('status')}"
@@ -697,6 +703,27 @@ class DurableQuantWorker:
                 "producer": "research.run-producer.v1" if is_research_producer else "legacy",
             })
         finally:
+            if is_research_producer and executor_settled:
+                persisted = self._registry.attempt(run_id, attempt.run_attempt_id)
+                retire = getattr(executor, "retire_terminal_scratch", None)
+                if (
+                    persisted is not None
+                    and persisted.status in {"SUCCEEDED", "FAILED", "CANCELLED", "LEASE_LOST"}
+                    and persisted.lease_token == lease_token
+                    and callable(retire)
+                ):
+                    try:
+                        retire(
+                            job_id=research_request.job_id,
+                            run_id=run_id,
+                            worker_attempt_id=attempt.run_attempt_id,
+                            lease_epoch=research_request.lease_epoch,
+                        )
+                    except Exception:
+                        # A cleanup failure cannot rewrite a terminal run or
+                        # conceal its sealed evidence. The plateau gate will
+                        # still detect and report retained scratch.
+                        logger.exception("P23 terminal scratch retirement failed")
             if p10_temp_dir is not None:
                 # Covers child failure, cancellation and staging/commit
                 # failure. The immutable bundle (if any) is already outside

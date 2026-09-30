@@ -320,11 +320,36 @@ class ResearchRunProducerExecutor:
             raise ResearchRunProducerError("P10 durable request no longer satisfies its private contract") from exc
         if request.run_id != run_id:
             raise ResearchRunProducerError("P10 durable run identity does not match its worker envelope")
-        return await asyncio.to_thread(
-            self._execute_sync,
-            request,
-            artifact_root,
-            progress_journal,
+        # asyncio.to_thread cannot cancel its running child. Join its bounded
+        # supervisor thread before the worker can mark the lease terminal or
+        # retire scratch; otherwise it could delete a still-running child's
+        # files and allow post-terminal writes.
+        running = asyncio.create_task(
+            asyncio.to_thread(self._execute_sync, request, artifact_root, progress_journal)
+        )
+        try:
+            return await asyncio.shield(running)
+        except asyncio.CancelledError:
+            while not running.done():
+                try:
+                    await asyncio.shield(running)
+                except asyncio.CancelledError:
+                    continue
+                except Exception:
+                    break
+            if running.done() and not running.cancelled():
+                running.exception()  # Consume a child failure after cancellation.
+            raise
+
+    def retire_terminal_scratch(
+        self, *, job_id: str, run_id: str, worker_attempt_id: str, lease_epoch: int
+    ) -> bool:
+        """Worker-only cleanup after an exact durable terminal transition."""
+        return self.supervisor.retire_terminal_scratch(
+            job_id=job_id,
+            run_id=run_id,
+            worker_attempt_id=worker_attempt_id,
+            lease_epoch=lease_epoch,
         )
 
     async def execute_with_progress(
