@@ -291,21 +291,21 @@ export class ResearchReportService {
   async requestExport(scope: ResearchScope, runId: string, format: ResearchReportExportFormat): Promise<ResearchReportExportStatus> {
     this.requireEnabled();
     const created = await this.repository.requestExport(scope, runId, format);
-    return this.exportStatus(created);
+    return this.exportStatus(created, scope.workspaceId);
   }
 
   async readExport(scope: ResearchScope, runId: string, jobId: string): Promise<ResearchReportExportStatus> {
     this.requireEnabled();
     const stored = await this.repository.readExport(scope, runId, jobId);
     if (!stored) throw new ResearchReportError("RESEARCH_REPORT_NOT_FOUND", "Research report export was not found.", 404);
-    return this.exportStatus(stored);
+    return this.exportStatus(stored, scope.workspaceId);
   }
 
   async download(scope: ResearchScope, runId: string, jobId: string): Promise<{ status: ResearchReportExportStatus; bytes: Buffer }> {
     this.requireEnabled();
     const stored = await this.repository.download(scope, runId, jobId);
     if (!stored) throw new ResearchReportError("RESEARCH_REPORT_NOT_FOUND", "Research report export was not found.", 404);
-    const status = this.exportStatus(stored.status);
+    const status = this.exportStatus(stored.status, scope.workspaceId);
     if (status.state !== "READY") {
       throw new ResearchReportError("RESEARCH_REPORT_EXPORT_NOT_READY", "Research report export is not ready.", 409);
     }
@@ -320,7 +320,7 @@ export class ResearchReportService {
     try {
       const rendered = this.renderExport(claim);
       const completed = await this.repository.completeClaim(claim, rendered);
-      return { processed: true, job: this.exportStatus(completed) };
+      return { processed: true, job: this.exportStatus(completed, claim.workspaceId) };
     } catch (error) {
       // A transform failure is a durable typed outcome. It must not start a
       // source recomputation or retain a partially built disk/scratch file.
@@ -371,7 +371,7 @@ export class ResearchReportService {
     return parsed.data;
   }
 
-  private exportStatus(job: ResearchReportExportJob): ResearchReportExportStatus {
+  private exportStatus(job: ResearchReportExportJob, workspaceId: string): ResearchReportExportStatus {
     const response = {
       schema_version: "research.report-export.v1" as const,
       job_id: job.jobId,
@@ -385,7 +385,7 @@ export class ResearchReportService {
       sha256: job.sha256,
       content_type: job.contentType,
       filename: job.filename,
-      download_href: job.state === "READY" ? `/api/v1/quantbt/runs/${job.runId}/report/exports/${job.jobId}/download` : null,
+      download_href: job.state === "READY" ? `/api/v1/quantbt/runs/${job.runId}/report/exports/${job.jobId}/download?workspace_id=${encodeURIComponent(workspaceId)}` : null,
       failure_code: job.failureCode,
     };
     const parsed = ResearchReportExportStatusSchema.safeParse(response);

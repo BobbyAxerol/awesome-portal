@@ -98,7 +98,7 @@
       "AfterSeq": { "name": "after_seq", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 0, "maximum": 9007199254740991, "default": 0 } },
       "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 500, "default": 500 } },
       "LastEventId": { "name": "Last-Event-ID", "in": "header", "required": false, "schema": { "type": "string", "pattern": "^[0-9]{1,16}$" } },
-      "Csrf": { "name": "x-csrf-token", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } }
+      "Csrf": { "name": "x-portal-csrf", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } }
     },
     "responses": {
       "Problem": { "description": "Typed same-origin refusal. No private source transport, worker handle, secret, process output or artifact-store location is disclosed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }

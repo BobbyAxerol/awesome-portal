@@ -106,6 +106,13 @@ export interface components {
         };
         RunCertification: {
             /** @constant */
+            state: "AVAILABLE";
+            /** @enum {unknown} */
+            grade: "A" | "B" | "C" | "D";
+            reason_code: null;
+            availability: components["schemas"]["Availability"];
+        } | {
+            /** @constant */
             state: "NOT_PUBLISHED";
             grade: null;
             reason_code: components["schemas"]["ReasonCode"];

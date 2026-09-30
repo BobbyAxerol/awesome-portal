@@ -138,6 +138,47 @@ function subject(value = snapshot()) {
 }
 
 describe("P20 bounded Compare persisted truth", () => {
+  it("CG-FG-S13-02 publishes only the persisted ISSUED methodology grade", async () => {
+    const certified = row("run-p20-left", { progress_snapshot: {
+      claim: { state: "ISSUED", text: "Claim issued",
+        methodology_certificate: { state: "ISSUED", grade: "B", issued_at_utc_ms: 1_790_000_000_000, reason_code: null } },
+    } });
+    const { service } = subject(snapshot([certified, row("run-p20-right")]));
+    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    if (response.result.mode !== "attempts") throw new Error("test guard");
+    expect(response.result.attempts.find((item) => item.run_id === "run-p20-left")?.certification).toEqual({
+      state: "AVAILABLE", grade: "B", reason_code: null, availability: { state: "AVAILABLE", reason_code: null },
+    });
+    expect(response.result.attempts.find((item) => item.run_id === "run-p20-right")?.certification).toMatchObject({
+      state: "NOT_PUBLISHED", grade: null, availability: { state: "NOT_PUBLISHED" },
+    });
+  });
+  it("AN-22 projects only locator-verified P13 OOS Sharpe into the P04 Compare run", async () => {
+    const withMetric = (runId: string, locator: string) => {
+      const base = row(runId);
+      return row(runId, { evidence_projection: {
+        ...(base.evidence_projection as Record<string, unknown>),
+        oos_analytics: { state: "AVAILABLE", metrics: { sharpe: {
+          state: "AVAILABLE", reason_code: null, value: "0.744", locator,
+        } } },
+      } });
+    };
+    const { service } = subject(snapshot([
+      withMetric("run-p20-left", "full_report.sharpe"),
+      withMetric("run-p20-right", "unrelated.sharpe"),
+    ]));
+    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    if (response.result.mode !== "attempts") throw new Error("test guard");
+    const good = response.result.attempts.find((item) => item.run_id === "run-p20-left");
+    const bad = response.result.attempts.find((item) => item.run_id === "run-p20-right");
+    expect(good?.original_metrics.find((item) => item.key === "OOS_SHARPE")).toMatchObject({
+      scope: "OOS", value: "0.744", availability: { state: "AVAILABLE", reason_code: null },
+    });
+    expect(bad?.original_metrics.find((item) => item.key === "OOS_SHARPE")).toMatchObject({
+      value: null, availability: { state: "NOT_PUBLISHED" },
+    });
+  });
+
   it("P20-T04/T07/T09 sorts claim before metrics and cannot obtain a promotion or command collaborator", async () => {
     const noClaim = row("run-p20-no-claim", {
       split_projection: null,

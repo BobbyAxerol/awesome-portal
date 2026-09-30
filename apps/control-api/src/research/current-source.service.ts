@@ -47,6 +47,7 @@ import {
   trialFacts,
 } from "./current-source-facts";
 import { splitGapScan, splitStitch } from "./current-source-split-integrity";
+import { trainTestDisjoint } from "./train-test-disjoint";
 import {
   ResearchCurrentSourceRepository,
   type CurrentSourcePage,
@@ -481,6 +482,7 @@ export class ResearchCurrentSourceService {
       test_start_utc_ms: fold.test_start_utc_ms,
       test_end_utc_ms: fold.test_end_utc_ms,
     }));
+    const temporalGuards = splitGuards(summary.source_facts);
     const value = {
       schema_version: "research.current-source-split.v1" as const,
       ...this.common("split", seal),
@@ -496,7 +498,14 @@ export class ResearchCurrentSourceService {
         embargo: this.summaryFact(summary.data_use.embargo),
         strict_outer_oos_selection: this.summaryFact(summary.data_use.strict_outer_oos_selection),
       },
-      guards: splitGuards(summary.source_facts),
+      guards: {
+        ...temporalGuards,
+        train_test_disjoint: trainTestDisjoint(
+          folds,
+          temporalGuards.purge_bars,
+          temporalGuards.embargo_bars,
+        ),
+      },
       gap_scan: splitGapScan(summary.replay, windows),
       stitch: splitStitch(summary.replay, windows),
     };

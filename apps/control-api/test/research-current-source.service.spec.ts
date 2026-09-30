@@ -139,6 +139,9 @@ describe("RS-02 retained current-source named read models", () => {
 
     expect(evidence.passport.artifact_table_rows).toMatchObject({ observations: 3, trials: 2 });
     expect(split.fold_plan.folds).toHaveLength(2);
+    expect(split.guards.train_test_disjoint).toMatchObject({
+      verdict: "NOT_CHECKABLE", reason_code: "S05_TEMPORAL_GUARDS_NOT_PUBLISHED",
+    });
     expect(search.ledger.trials).toHaveLength(2);
     expect(search.candidates.rows).toHaveLength(1);
     expect(search.selection.selected_trial_id).toBe("trial-1");

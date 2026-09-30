@@ -655,7 +655,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                "x-csrf-token": components["parameters"]["Csrf"];
+                "x-portal-csrf": components["parameters"]["Csrf"];
             };
             path?: never;
             cookie?: never;

@@ -661,6 +661,11 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     warmup_bars: GuardFactSchema,
     inner_folds: GuardFactSchema,
     oos_used_for_selection: GuardFactSchema,
+    train_test_disjoint: z.object({
+      verdict: z.enum(["PASS", "FAIL", "NOT_CHECKABLE"]),
+      basis: z.literal("RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1"),
+      reason_code: ReasonCodeSchema.nullable(),
+    }).strict().optional(),
   }).strict(),
   /** E14 · 5.11 — boundary integrity, read from the retained lane. */
   gap_scan: SplitGapScanSchema,

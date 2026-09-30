@@ -305,6 +305,9 @@ describe("W3 · S05 split: fold anatomy and guards (CG-P14-02)", () => {
       warmup_bars: { value: null, state: "NOT_APPLICABLE", reason_code: "QUANTBT_WARMUP_POLICY_IS_NONE" },
       inner_folds: { value: null, state: "NOT_APPLICABLE", reason_code: "QUANTBT_SCHEDULE_HAS_NO_NESTED_INNER_VALIDATION" },
       oos_used_for_selection: { value: true, state: "AVAILABLE", reason_code: null },
+      train_test_disjoint: {
+        verdict: "PASS", basis: "RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1", reason_code: null,
+      },
     });
     expect(split.fold_plan.folds.map((fold) => fold.score)).toEqual(real.expected.folds.map((fold) => expect.objectContaining({
       state: "AVAILABLE", oos_sharpe: fold.oos_sharpe, decay: fold.decay,

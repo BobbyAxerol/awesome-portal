@@ -490,7 +490,7 @@ export const ResearchReportExportStatusSchema = z.object({
   sha256: DigestSchema.nullable(),
   content_type: z.enum(["application/json", "text/csv"]).nullable(),
   filename: z.string().regex(/^quantbt-[A-Za-z0-9._-]+-p18r1_[0-9a-f]{64}\.(json|csv)$/).nullable(),
-  download_href: z.string().regex(/^\/api\/v1\/quantbt\/runs\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/report\/exports\/rpex_[0-9A-HJKMNP-TV-Z]{26}\/download$/).nullable(),
+  download_href: z.string().regex(/^\/api\/v1\/quantbt\/runs\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/report\/exports\/rpex_[0-9A-HJKMNP-TV-Z]{26}\/download\?workspace_id=[A-Za-z0-9._-]{1,128}$/).nullable(),
   failure_code: ReasonCodeSchema.nullable(),
 }).strict();
 

@@ -391,7 +391,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                "x-csrf-token": components["parameters"]["Csrf"];
+                "x-portal-csrf": components["parameters"]["Csrf"];
             };
             path?: never;
             cookie?: never;
@@ -423,7 +423,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                "x-csrf-token": components["parameters"]["Csrf"];
+                "x-portal-csrf": components["parameters"]["Csrf"];
             };
             path?: never;
             cookie?: never;
@@ -456,7 +456,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                "x-csrf-token": components["parameters"]["Csrf"];
+                "x-portal-csrf": components["parameters"]["Csrf"];
             };
             path?: never;
             cookie?: never;
@@ -489,7 +489,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                "x-csrf-token": components["parameters"]["Csrf"];
+                "x-portal-csrf": components["parameters"]["Csrf"];
             };
             path: {
                 alpha_version_id: components["parameters"]["AlphaVersionId"];

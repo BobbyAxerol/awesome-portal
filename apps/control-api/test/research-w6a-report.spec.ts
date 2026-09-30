@@ -358,7 +358,7 @@ describe("CG-P18-09 · published report fixtures", () => {
         size_bytes: state === "READY" ? 4_096 : null, sha256: state === "READY" ? digest("c") : null,
         content_type: state === "READY" ? "text/csv" : null,
         filename: state === "READY" ? `quantbt-${real.run_id}-${revision}.csv` : null,
-        download_href: state === "READY" ? `/api/v1/quantbt/runs/${real.run_id}/report/exports/rpex_01J0000000000000000000000${"QRYF".indexOf(state[0]!)}/download` : null,
+        download_href: state === "READY" ? `/api/v1/quantbt/runs/${real.run_id}/report/exports/rpex_01J0000000000000000000000${"QRYF".indexOf(state[0]!)}/download?workspace_id=${scope.workspaceId}` : null,
         failure_code: state === "FAILED" ? "P18_EXPORT_TRANSFORM_FAILED" : null,
       });
       const problem = (status: number, code: string, message: string) => ({ status, body: { error: { code, message }, request_id: "req_fixture" } });

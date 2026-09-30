@@ -113,6 +113,20 @@ function subject() {
 }
 
 describe("P18 immutable Report and bounded reproducible export", () => {
+  it("AN-21 uses the issued Hub v3 OOS Sharpe in a new P04 report", async () => {
+    const value = subject();
+    const existing = await value.readers.evidence.bundle();
+    value.readers.evidence.bundle.mockResolvedValue({
+      ...existing, hub: { ...existing.hub, oos_performance: {
+        metrics: [{ key: "OOS_SHARPE", value: "0.744", availability: availability() }],
+      } },
+    } as never);
+    const report = await value.service.materialize(scope, "run_p18");
+    expect(report.frozen_core.headline.find((item) => item.key === "OOS_SHARPE")).toMatchObject({
+      scope: "OOS", value: "0.744", availability: availability(),
+    });
+  });
+
   it("E14 seals the new FIXED engine OOS fact without replacing the broader Hub metric or resealing old reports", async () => {
     const value = subject();
     const existing = await value.readers.evidence.bundle();
@@ -180,6 +194,10 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     subjectValue.repository.completeClaim.mockImplementation(async (_claim, output) => ({ ...claim, state: "READY", completedAtUtcMs: 2, sizeBytes: output.bytes.byteLength, sha256: output.sha256, contentType: output.contentType, filename: output.filename, failureCode: null }));
     const result = await subjectValue.service.processOneExport();
     expect(result).toMatchObject({ processed: true, job: { state: "READY", content_type: "application/json" } });
+    if (!result.processed) throw new Error("expected processed export");
+    expect(result.job.download_href).toBe(
+      `/api/v1/quantbt/runs/run_p18/report/exports/${claim.jobId}/download?workspace_id=p18-workspace`,
+    );
     const output = subjectValue.repository.completeClaim.mock.calls[0]![1];
     expect(JSON.parse(output.bytes.toString("utf8"))).toMatchObject({ report_revision: stored.reportRevision, frozen_core_sha256: stored.frozenCoreDigest, sealed_at_utc_ms: stored.sealedAtUtcMs, frozen_core: { source_revisions: stored.frozenCore.source_revisions } });
     expect(subjectValue.readers.evidence.bundle).toHaveBeenCalledTimes(1);

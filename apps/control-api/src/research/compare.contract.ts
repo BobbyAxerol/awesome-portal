@@ -97,13 +97,21 @@ const RunScheduleSchema = z.object({
   availability: ResearchCompareAvailabilitySchema,
 }).strict();
 
-/** CG-P20-03 · no source or Portal policy publishes a certification grade (same answer as CG-P18-02/CG-P19-05). */
-const RunCertificationSchema = z.object({
-  state: z.literal("NOT_PUBLISHED"),
-  grade: z.null(),
-  reason_code: ReasonCodeSchema,
-  availability: ResearchCompareAvailabilitySchema,
-}).strict();
+/** An issued progress claim is the only authority for a compare grade. */
+const RunCertificationSchema = z.discriminatedUnion("state", [
+  z.object({
+    state: z.literal("AVAILABLE"),
+    grade: z.enum(["A", "B", "C", "D"]),
+    reason_code: z.null(),
+    availability: ResearchCompareAvailabilitySchema,
+  }).strict(),
+  z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    grade: z.null(),
+    reason_code: ReasonCodeSchema,
+    availability: ResearchCompareAvailabilitySchema,
+  }).strict(),
+]);
 
 /** CG-P20-08 · the alpha version's registered lifecycle, as P19 lineage reads it. */
 const RunLifecycleSchema = z.object({

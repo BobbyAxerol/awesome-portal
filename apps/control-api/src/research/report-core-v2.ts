@@ -701,6 +701,7 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
     availability: (metric(key)?.availability ?? NOT_PUBLISHED("P18_METRIC_NOT_PUBLISHED")) as Availability,
   });
   const metricScope = (key: string) => (metric(key)?.scope ?? "NOT_PUBLISHED") as CoreV2["headline"][number]["scope"];
+  const oosSharpe = hub.oos_performance?.metrics.find((item) => item.key === "OOS_SHARPE");
   const netOos = hub.summary_analytics?.net_oos_return;
   const netOosFact = netOos ? {
     value: netOos.value,
@@ -782,7 +783,11 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       netOosFact
         ? { key: "NET_RETURN", label: "Net OOS return", scope: "OOS", ...netOosFact }
         : { key: "NET_RETURN", label: "Net return", scope: metricScope("NET_RETURN_FRACTION"), ...metricFact("NET_RETURN_FRACTION") },
-      { key: "OOS_SHARPE", label: "OOS Sharpe", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE") },
+      { key: "OOS_SHARPE", label: "OOS Sharpe",
+        scope: oosSharpe ? "OOS" : "NOT_PUBLISHED",
+        value: oosSharpe?.value ?? null,
+        availability: (oosSharpe?.availability ?? NOT_PUBLISHED("P13_OOS_ANALYTICS_NOT_PUBLISHED")) as Availability,
+      },
       { key: "DECAY_MEAN", label: "Decay mean", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_DECAY_MEAN") },
       { key: "MAX_DRAWDOWN", label: "Max drawdown", scope: metricScope("MAX_DRAWDOWN_FRACTION"), ...metricFact("MAX_DRAWDOWN_FRACTION") },
       { key: "TRADES", label: "Trades", scope: metricScope("TRADE_COUNT"), ...metricFact("TRADE_COUNT") },

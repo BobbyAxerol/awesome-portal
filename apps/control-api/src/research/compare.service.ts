@@ -33,6 +33,7 @@ import {
 } from "./compare.repository";
 import { CurrentSourceSummarySchema } from "./current-source.payload";
 import { RS02_DELTA_WFO_GLOBAL_PROFILE_ID, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
+import { RESEARCH_PERFORMANCE_METRIC_DEFINITIONS } from "./evidence-metric-registry";
 import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import { extremaPreservingSample } from "./run-library.service";
@@ -125,6 +126,17 @@ const CERTIFICATION_NOT_PUBLISHED = {
   availability: { state: "NOT_PUBLISHED" as const, reason_code: "P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE" },
 };
 const LIFECYCLES = new Set(["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"]);
+
+/** Only an issued methodology certificate in the persisted progress claim carries a grade. */
+function certification(row: CompareRunRow): ResearchCompareRun["certification"] {
+  const claim = record(record(row.progress_snapshot)?.claim);
+  const certificate = record(claim?.methodology_certificate);
+  const grade = certificate?.grade;
+  if (certificate?.state === "ISSUED" && (grade === "A" || grade === "B" || grade === "C" || grade === "D")) {
+    return { state: "AVAILABLE", grade, reason_code: null, availability: available() };
+  }
+  return CERTIFICATION_NOT_PUBLISHED;
+}
 
 function available(): Availability { return { state: "AVAILABLE", reason_code: null }; }
 function absent(reasonCode: string): Availability { return { state: "NOT_PUBLISHED", reason_code: reasonCode }; }
@@ -339,6 +351,16 @@ function retainedMetrics(retained: Retained) {
 
 function originalMetrics(row: CompareRunRow) {
   const evidence = asEvidence(row.evidence_projection);
+  const analytics = record(evidence?.oos_analytics);
+  const sourceMetric = record(record(analytics?.metrics)?.sharpe);
+  const definition = RESEARCH_PERFORMANCE_METRIC_DEFINITIONS.find((item) => item.key === "OOS_SHARPE");
+  const oosSharpe = analytics?.state === "AVAILABLE"
+    && sourceMetric?.state === "AVAILABLE"
+    && definition?.origin === "ENGINE_DIRECT"
+    && sourceMetric.locator === definition.sourceLocator
+    && typeof sourceMetric.value === "string"
+    ? exactDecimal(sourceMetric.value)
+    : null;
   const source = evidence ? available() : absent("P20_P13_EVIDENCE_PROJECTION_NOT_AVAILABLE");
   return [
     {
@@ -365,9 +387,9 @@ function originalMetrics(row: CompareRunRow) {
     {
       key: "OOS_SHARPE" as const,
       definition_id: "research.compare.metric.v1.oos-sharpe",
-      scope: "NOT_PUBLISHED",
-      value: null,
-      availability: absent("P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE"),
+      scope: oosSharpe === null ? "NOT_PUBLISHED" : "OOS",
+      value: oosSharpe,
+      availability: oosSharpe === null ? absent("P20_P13_OOS_SHARPE_NOT_AVAILABLE") : available(),
     },
     {
       key: "DECAY" as const,
@@ -407,7 +429,7 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
     schedule: requested
       ? { mode: requested.optimization_mode ?? null, schedule: requested.optimization_schedule ?? null, availability: requested.optimization_mode && requested.optimization_schedule ? available() : absent("P20_REQUESTED_SPEC_HAS_NO_OPTIMIZATION_SCHEDULE") }
       : { mode: null, schedule: null, availability: absent("P20_REQUESTED_SPEC_NOT_AVAILABLE") },
-    certification: CERTIFICATION_NOT_PUBLISHED,
+    certification: certification(row),
     alpha_version_lifecycle: lifecycle,
     provenance: {
       requested_spec_digest: row.requested_spec_digest,

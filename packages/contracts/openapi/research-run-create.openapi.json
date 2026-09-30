@@ -133,7 +133,7 @@
     },
     "parameters": {
       "Csrf": {
-        "name": "x-csrf-token",
+        "name": "x-portal-csrf",
         "in": "header",
         "required": true,
         "schema": {

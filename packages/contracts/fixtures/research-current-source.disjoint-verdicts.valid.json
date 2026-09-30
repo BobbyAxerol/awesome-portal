@@ -1,0 +1,26 @@
+{
+  "schema_version": "research.train-test-disjoint-fixture.v1",
+  "basis": "RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1",
+  "cases": [
+    {
+      "name": "published-disjoint",
+      "folds": [
+        {"fold_id":"f-0","train_start_utc_ms":0,"train_end_utc_ms":100,"test_start_utc_ms":101,"test_end_utc_ms":200},
+        {"fold_id":"f-1","train_start_utc_ms":100,"train_end_utc_ms":200,"test_start_utc_ms":201,"test_end_utc_ms":300}
+      ],
+      "purge": {"state":"AVAILABLE","value":1},
+      "embargo": {"state":"AVAILABLE","value":1},
+      "expected": {"verdict":"PASS","reason_code":null}
+    },
+    {
+      "name": "retained-overlap",
+      "folds": [
+        {"fold_id":"f-0","train_start_utc_ms":0,"train_end_utc_ms":100,"test_start_utc_ms":101,"test_end_utc_ms":200},
+        {"fold_id":"f-1","train_start_utc_ms":100,"train_end_utc_ms":230,"test_start_utc_ms":201,"test_end_utc_ms":300}
+      ],
+      "purge": {"state":"AVAILABLE","value":1},
+      "embargo": {"state":"AVAILABLE","value":1},
+      "expected": {"verdict":"FAIL","reason_code":"S05_TRAIN_TEST_WINDOWS_OVERLAP"}
+    }
+  ]
+}

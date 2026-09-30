@@ -471,6 +471,13 @@ export interface components {
                 warmup_bars: components["schemas"]["GuardFact"];
                 inner_folds: components["schemas"]["GuardFact"];
                 oos_used_for_selection: components["schemas"]["GuardFact"];
+                train_test_disjoint?: {
+                    /** @enum {unknown} */
+                    verdict: "PASS" | "FAIL" | "NOT_CHECKABLE";
+                    /** @constant */
+                    basis: "RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1";
+                    reason_code: string | null;
+                };
             };
             gap_scan: components["schemas"]["SplitGapScan"];
             stitch: components["schemas"]["SplitStitch"];

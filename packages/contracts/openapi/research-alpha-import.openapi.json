@@ -104,7 +104,7 @@
       "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
     },
     "parameters": {
-      "Csrf": { "name": "x-csrf-token", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } },
+      "Csrf": { "name": "x-portal-csrf", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } },
       "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" } },
       "AlphaIdOptional": { "name": "alpha_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/AlphaId" } },
       "AlphaVersionId": { "name": "alpha_version_id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/OpaqueId" } }
