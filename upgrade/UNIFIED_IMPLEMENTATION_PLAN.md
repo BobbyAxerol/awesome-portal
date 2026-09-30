@@ -3654,6 +3654,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 <a id="rl-open-ledger"></a>
 ### 13.4.1. Sổ việc còn mở — một nguồn trạng thái duy nhất (Claude, 2026-09-26)
 
+**P23 current-candidate supersession 2026-09-30:** Bobby explicitly approved Codex backend-only repairs in the formerly Claude-owned supervisor scratch and shared utility admission paths, preserving API/UI and lease/fencing. [Exact clean-cell T02/T12 receipts](./research_loop/evidence/P23/T02_T12_SOURCE_CLOSEOUT_2026-09-30.md) supersede the historical `CG-P23-T02-01` OPEN row below: **T02 PASS**, nine real WFO terminals, unchanged scratch. They also supersede the historical `CG-P23-T12-02` no-quota source claim: typed shared quota negative/recovery and the real primary + audit-reuse/what-if/verify/export overlap **PASS for the currently eligible WFO reuse profile**. A non-reusable frozen selection still requires a genuine pinned linked audit child or typed `NOT_PUBLISHED`; this candidate does not certify that profile. P23/P24 remain OPEN. No remote push or deploy.
+
 Bobby (2026-09-26): mọi kế hoạch/request còn thiếu phải nằm ở đây để track. Mục này **thắng** các
 đoạn lịch sử cũ trong §13.5, README phase, file request và debt register khi chúng nói khác —
 những đoạn đó giữ lại làm lịch sử, không phải trạng thái. Code base: `080baf5d`

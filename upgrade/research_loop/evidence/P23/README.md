@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**T02/T12 current-candidate 2026-09-30:** [exact three-round WFO plateau and shared utility/audit-reuse receipts](./T02_T12_SOURCE_CLOSEOUT_2026-09-30.md) closes T02 (nine real complete/fail/cancel, unchanged scratch) and qualifies T12 for the currently supported eligible WFO audit-reuse profile on clean `af18707a`: real primary/diagnostic/verify/export overlap plus typed quota negative/recovery. Non-reusable linked-audit-child is still a typed gap; P23/P24 remain OPEN.
+
 **F3 WFO real-browser subset 2026-09-30:** [12/12 named-BFF-to-DOM parity receipt](./F3_WFO_BROWSER_PARITY_2026-09-30.md) passed S03–S08 at 1280/660 px on clean `bae2a78c`, with zero off-origin calls, implicit jobs, page errors or overflow; jobs stayed 173→173. The first two harness-race failures are preserved. Canonical 54/54 F3, F5 and full P23/P24 remain OPEN.
 
 **V11-P23-DR WFO retained subset 2026-09-30:** [one real completed WFO artifact/DB/BFF parity receipt](./V11_WFO_RETAINED_PARITY_2026-09-30.md) rehashes 10 sealed Parquet parts, checks all 1,063 retained rows across five relations and four exact summary decimals against the owner BFF; 5/5 focused refusals pass. It is not direct QuantBT WFO recomputation or full V11/P23/P24 acceptance.

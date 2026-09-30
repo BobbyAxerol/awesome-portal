@@ -152,6 +152,7 @@ export async function plateauReceipt(home=DEFAULT_HOME,label='wfo-cycles') {
         // The finite preflight token wait can outlive the test session. Renew
         // only the existing owned identities through their real password login.
         await refreshTestSessions(home);
+      }
       const entry=await admitRealRun(home,'wfo',`plateau-${label}-${round}-${mode}`);
       currentEntry=entry;
       const cycle={round,mode,run_id:entry.receipt.run_id,started_at_utc:new Date().toISOString(),fault:null};

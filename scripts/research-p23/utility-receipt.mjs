@@ -26,7 +26,7 @@ export function utilityTarget(runId, label) {
   return { runId, label };
 }
 
-export function assessUtility(receipt) {
+export function assessUtility(receipt, expectedExports = 8, requireAudit = false) {
   const checks = {
     exact_owned_scope: receipt.project === PROJECT && receipt.base_url === BASE_URL,
     measured_budget: receipt.samples.length >= 2 && receipt.samples.every(s =>
@@ -49,10 +49,14 @@ export function assessUtility(receipt) {
     grid_sealed: receipt.freeze_after.body.what_if?.actions?.evaluate_grid?.state === 'NOTHING_TO_EVALUATE'
       && receipt.freeze_after.body.what_if.coverage.evaluated_unique === receipt.freeze_after.body.what_if.coverage.unique_evaluations,
     only_explicit_compute: receipt.jobs_added === 2 && receipt.diagnostic_rows - receipt.diagnostic_rows_before === 1,
-    bounded_exports: receipt.exports.length === 8 && new Set(receipt.exports.map(x => x.created.body.job_id)).size === 8
+    bounded_exports: receipt.exports.length === expectedExports && new Set(receipt.exports.map(x => x.created.body.job_id)).size === expectedExports
       && receipt.exports.every(x => x.created.body.job_id === x.retry.body.job_id && x.final.body.state === 'READY'
         && x.final.body.size_bytes > 0 && x.final.body.size_bytes <= 512 * 1024),
     observed_bytes: receipt.verifies.length === 6 && receipt.verifies.every(x => x.status === 200 && x.body.artifact_bytes.state === 'MATCH'),
+    audit_reuse: !requireAudit || (receipt.audit_reuse?.status === 200
+      && receipt.audit_reuse.body.fields?.find(x => x.key === 'final_audit_run_id')?.value === receipt.parent_run_id
+      && receipt.audit_reuse.body.pack?.find(x => x.key === 'FINAL_AUDIT_REPLAY')?.status === 'COMPLETE'
+      && receipt.audit_split?.body?.stitch?.boundary_check === 'MATCH'),
   };
   return { checks, scoped_passed: Object.values(checks).every(Boolean), full_t12_passed: false };
 }
@@ -90,7 +94,7 @@ function finiteExportWorker() {
   });
 }
 
-export async function utilityReceipt(home, parentRunId, label) {
+export async function utilityReceipt(home, parentRunId, label, bounded = false) {
   home = validateHome(home); utilityTarget(parentRunId, label);
   const path = join(home, `${label}.json`);
   assert(!existsSync(path), 'INSPECT_PRIOR_RECEIPT_DO_NOT_SILENTLY_REPEAT');
@@ -101,8 +105,8 @@ export async function utilityReceipt(home, parentRunId, label) {
   const sessions = loadSessions(home);
   const exportedBy = new Set(dbQuery(`SELECT requested_by_user_id FROM research.run_report_export_jobs_v1
     WHERE workspace_id=$1 AND run_id=$2 AND state IN ('QUEUED','RUNNING','READY')`, [workspaceId, parentRunId]).rows.map(r => r.requested_by_user_id));
-  const readers = sessions.identities.filter(u => /^p23-reader-[0-9]{2}$/.test(u.username) && !exportedBy.has(u.id)).slice(0, 4);
-  assert.equal(readers.length, 4, 'FOUR_UNEXPORTED_REAL_MEMBERS_REQUIRED');
+  const readers = sessions.identities.filter(u => /^p23-reader-[0-9]{2}$/.test(u.username) && !exportedBy.has(u.id)).slice(0, bounded ? 1 : 4);
+  assert.equal(readers.length, bounded ? 1 : 4, 'UNEXPORTED_REAL_MEMBERS_REQUIRED');
   assert.equal(jobs().length, 0, 'DO_NOT_OVERLAP_UNOWNED_COMPUTE');
   assert.equal(dbQuery("SELECT count(*)::int count FROM research.run_report_export_jobs_v1 WHERE state IN ('QUEUED','RUNNING')").rows[0].count,
     0, 'PREEXISTING_EXPORTS_MUST_NOT_BE_CLAIMED');
@@ -139,7 +143,7 @@ export async function utilityReceipt(home, parentRunId, label) {
         receipt.exports.push({ username: user.username, route, created, retry }); savePrivate(path, receipt);
       }
     }
-    assert.equal(receipt.exports.length, 8, 'FOUR_REAL_MEMBERS_TWO_FORMATS_REQUIRED');
+    assert.equal(receipt.exports.length, bounded ? 2 : 8, 'REAL_MEMBERS_TWO_FORMATS_REQUIRED');
     const binding = (await client.call('POST', '/api/v1/research/run-producer/p04-delta/install', {}, [200, 201])).body;
     const atlas = (await client.call('GET', '/api/v1/research/quantbt/atlas')).body;
     const spec = requestedSpec(binding, atlas.atlas.current_release, 'wfo');
@@ -157,6 +161,13 @@ export async function utilityReceipt(home, parentRunId, label) {
       sample(); await new Promise(res => setTimeout(res, 1500));
     }
     assert.equal(receipt.primary_running.body.current.effective_status, 'RUNNING', 'REAL_PRIMARY_SOURCE_RUNNING_REQUIRED');
+    if (bounded) {
+      // Guide section 5.6 permits exact retained WFO audit reuse. Observe
+      // typed persisted source while primary runs; no second optimizer.
+      receipt.audit_reuse = await client.call('GET', `/api/v1/quantbt/runs/${parentRunId}/release-candidate`);
+      receipt.audit_split = await client.call('GET', `/api/v1/quantbt/runs/${parentRunId}/current-source/split`);
+      savePrivate(path, receipt);
+    }
     receipt.evaluate = await client.call('POST', frozenPath + '/what-if/evaluate', {
       schema_version: 'research.whatif-evaluate.v1', grid_key: grid.grid.grid_key }, [200, 409, 502, 503]);
     savePrivate(path, receipt);
@@ -168,8 +179,11 @@ export async function utilityReceipt(home, parentRunId, label) {
     receipt.changed_grid = await client.call('POST', frozenPath + '/what-if/evaluate', {
       schema_version: 'research.whatif-evaluate.v1', grid_key: different }, [409]);
     sample();
-    receipt.verifies = await Promise.all(Array.from({ length: 6 }, () =>
+    receipt.verifies = bounded ? [] : await Promise.all(Array.from({ length: 6 }, () =>
       client.call('POST', `/api/v1/quantbt/runs/${parentRunId}/freeze/verify`, {})));
+    if (bounded) for (let i = 0; i < 6; i++) {
+      receipt.verifies.push(await client.call('POST', `/api/v1/quantbt/runs/${parentRunId}/freeze/verify`, {}));
+    }
     workerTask = finiteExportWorker(); void workerTask.catch(() => undefined);
     const deadline = Date.now() + 480000;
     while (Date.now() < deadline && receipt.samples.length < 120) {
@@ -195,7 +209,7 @@ export async function utilityReceipt(home, parentRunId, label) {
     receipt.jobs_added = dbQuery('SELECT count(*)::int count FROM research.jobs').rows[0].count - receipt.job_count_before;
     receipt.diagnostic_rows = dbQuery('SELECT count(*)::int count FROM research.whatif_jobs_v1 WHERE parent_run_id=$1 AND workspace_id=$2',
       [parentRunId, workspaceId]).rows[0].count;
-    receipt.assessment = assessUtility(receipt);
+    receipt.assessment = assessUtility(receipt, bounded ? 2 : 8, bounded);
     receipt.completed_at_utc = new Date().toISOString(); savePrivate(path, receipt);
     console.log(JSON.stringify(receipt.assessment));
     assert(receipt.assessment.scoped_passed, 'UTILITY_SCOPE_FAILED_NOT_A_FULL_T12_PASS');
@@ -224,6 +238,7 @@ export async function utilityReceipt(home, parentRunId, label) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   utilityReceipt(process.argv.find(a => a.startsWith('--home='))?.slice(7) ?? DEFAULT_HOME,
-    process.argv.find(a => a.startsWith('--parent='))?.slice(9), process.argv.find(a => a.startsWith('--label='))?.slice(8))
+    process.argv.find(a => a.startsWith('--parent='))?.slice(9), process.argv.find(a => a.startsWith('--label='))?.slice(8),
+    process.argv.includes('--bounded'))
     .catch(error => { console.error('P23 utility observation refused:', error.message); process.exitCode = 1; });
 }

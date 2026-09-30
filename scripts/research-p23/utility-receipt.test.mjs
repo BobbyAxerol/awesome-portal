@@ -27,6 +27,19 @@ test('utility receipt is scoped: neither a unit fixture nor a runtime subset cer
   assert.equal(assessUtility(good()).scoped_passed, true);
   assert.equal(assessUtility(good()).full_t12_passed, false);
 });
+test('bounded utility overlap requires typed retained audit reuse, not prose or a fabricated child', () => {
+  const receipt = good();
+  receipt.exports = receipt.exports.slice(0, 2);
+  receipt.parent_run_id = 'rrun_' + 'a'.repeat(32);
+  receipt.audit_reuse = { status: 200, body: {
+    fields: [{ key: 'final_audit_run_id', value: receipt.parent_run_id }],
+    pack: [{ key: 'FINAL_AUDIT_REPLAY', status: 'COMPLETE' }],
+  } };
+  receipt.audit_split = { body: { stitch: { boundary_check: 'MATCH' } } };
+  assert.equal(assessUtility(receipt, 2, true).scoped_passed, true);
+  receipt.audit_reuse.body.fields[0].value = 'other';
+  assert.equal(assessUtility(receipt, 2, true).checks.audit_reuse, false);
+});
 test('overlap, caps, source pins, dedupe, sealed results and bytes are all required', () => {
   const mutations = [r => { r.project = 'production'; }, r => { r.samples[0].resource.within_base_limit = false; },
     r => { r.samples.forEach(s => { s.jobs[0].state = 'COMPLETED'; }); }, r => { r.pins_after = 'changed'; },
