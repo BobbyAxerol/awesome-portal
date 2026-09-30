@@ -13,6 +13,7 @@
    - `A3_p13_p21.md` — CG-P13…P21, E*-O*, S14-RW-BR, BR-D4, extras
    - `A4_p22_p24.md` — CG-P22/P23, OL, T01–T15, V11, F3/F5, P24 + thứ tự đề xuất §3
    - `A5_analytics_d_an_01.md` — AN-01…AN-29 (công thức, đầu vào, test)
+   - `A2b_*`, `A3b_*` — lượt kiểm thứ hai độc lập của P01–P12 và P13–P21 (cùng kết luận; A2b thêm CG-P08-02 và `PreflightPanel` in 0 cho null — phần FE của Claude)
 5. **Cách đọc Unified plan** (`upgrade/UNIFIED_IMPLEMENTATION_PLAN.md` §13): board phase ~L3600–3720 (một dòng/phase — trạng thái tóm tắt); note chi tiết dưới anchor `#rl-pXX`; quyết định ở §13.4.1 (E/F/G, D1–D10, VD-*). **Addendum đến sau thắng bản gốc** nhưng không xoá critique cũ (A13.1). Khi dòng board mâu thuẫn với phụ lục ở trên → phụ lục (đã kiểm code) đúng hơn; sửa dòng board (§7).
 
 ## 1. Nhánh, worktree, cách hạ cánh
@@ -94,7 +95,7 @@ Chi tiết + locator: `A1_cg_fg.md`. Thứ tự:
 | CG-FG-P22-01 | sửa câu handoff CO:39 (`downstream_code` ở top-level) — hoặc thêm `details` vào Problem nếu cần |
 | CG-FG-S12-02 | đóng N/A (không contract nào có `CandidateSelector`) kèm trỏ `atlas.modes[]` |
 | CG-RF02-05 | `test-p02-python-pin.sh:9` đang mặc định image dev (quantbt 1.0.8) → image pin 1.1.1 |
-| CG-P02-02 (dư) | requested-spec v2 qua preflight nhưng P10 từ chối khi create (`run-admission.service.ts:215-222`) |
+| **CG-P02-02 + CG-P08-02** | **preflight nhận requested-spec v2 (rolling window, purge/embargo, inner folds) nhưng create P10 từ chối mọi spec v2** (`run-admission.service.ts:215-222`) → không run nào dùng được các tùy chọn đó dù S02 cho chọn. Hoặc cho create nhận v2 (cùng kiểm như preflight), hoặc preflight từ chối sớm cùng mã — không để lệch |
 | CG-P23-T12-01 | admission child `AUDIT_OF_SELECTION` từ θ* đã pin (idempotent, chung budget/fencing, không chọn lại) — hoặc typed `NOT_PUBLISHED` |
 | T14-EXP | `recordExposureFact` (`repository.ts:4304`) chưa có caller production → producer hoặc Bobby cho N/A |
 | MIG-075/076 | mọi DB khác :8095 từng chạy 068/069 cũ: sửa sổ `pgmigrations` trước deploy (không idempotent) |
