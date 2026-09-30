@@ -313,6 +313,9 @@ export interface ResearchAlphaRegistryRecord {
   supersedes: string | null;
   supersedesRecorded: boolean;
   lifecycleState: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
+  isImported: boolean;
+  isCurrentActive: boolean;
+  binding: ResearchExecutionAdapterBinding | null;
   entrypoint: string;
   declaredContract: Record<string, unknown>;
   sourceDigestPrefix: string;

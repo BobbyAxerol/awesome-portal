@@ -307,6 +307,20 @@
         "may_activate": {
           "type": "boolean",
           "description": "Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role."
+        },
+        "may_activate_reason": {
+          "enum": ["ROLE_NOT_ADMIN", "VERSION_NOT_IMPORTED", "VERSION_NOT_ACTIVATABLE", null],
+          "description": "Null only when this caller may activate or replay this exact version."
+        },
+        "run_admission": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["may_create_run", "code"],
+          "description": "P10 caller/version precheck only. A positive result does not authorize a run without a fresh matching preflight and create-time admission.",
+          "properties": {
+            "may_create_run": { "type": "boolean" },
+            "code": { "enum": ["RESEARCH_RUN_PRODUCER_UNAVAILABLE", "RESEARCH_RUN_CREATE_FORBIDDEN", "RESEARCH_RUN_ALPHA_NOT_ACTIVE", "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", null] }
+          }
         }
       }
     },
@@ -337,7 +351,8 @@
         "may_activate": {
           "type": "boolean",
           "description": "Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role."
-        }
+        },
+        "may_activate_reason": { "enum": ["ROLE_NOT_ADMIN", null] }
       }
     },
     "ActivationResponse": {

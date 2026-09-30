@@ -35,6 +35,7 @@ import { ResearchMetadataRepository } from "./repository";
 import { parseDecimal } from "./whatif.grid";
 import { WHATIF_PROFILE } from "./whatif.profile";
 import { ResearchRunCreateError } from "./run-create.error";
+import { researchRunVersionPrecheck } from "./version-admission";
 import {
   IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
   IMPORTED_ALPHA_ADAPTER_ID,
@@ -162,6 +163,10 @@ export class ResearchRunAdmissionService {
     );
     if (!eligibility) {
       return denied("RESEARCH_RUN_PREFLIGHT_NOT_READY", "The preflight AlphaVersion is no longer available in this workspace.");
+    }
+    const versionPrecheck = researchRunVersionPrecheck(user, this.config, eligibility);
+    if (!versionPrecheck.may_create_run) {
+      return denied(versionPrecheck.code!, versionPrecheck.message!);
     }
     // An immutable imported declaration identifies the missing executor, not
     // permission to execute. Preserve the legacy lifecycle denial when the

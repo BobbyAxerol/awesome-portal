@@ -127,6 +127,10 @@ interface AlphaImportRegistryRow {
   supersedes_alpha_version_id: string | null;
   supersedes_recorded: boolean;
   registered_at: Date;
+  is_imported: boolean;
+  is_current_active: boolean;
+  adapter_id: string | null;
+  contract_digest: string | null;
 }
 
 interface AlphaVersionDataContractRow {
@@ -1318,6 +1322,9 @@ export class ResearchMetadataRepository {
         `SELECT version.alpha_id, version.alpha_version_id,
                 COALESCE('av_' || replace(version.declared_contract->>'version', '.', '_'), version.alpha_version_id) AS version_label,
                 version.lifecycle_state,
+                (version.source_file_ref IS NOT NULL) AS is_imported,
+                COALESCE(alpha.active_version_id = version.alpha_version_id, false) AS is_current_active,
+                binding.adapter_id, binding.contract_digest,
                 version.entrypoint,
                 version.declared_contract,
                 alpha.name AS display_name,
@@ -1332,6 +1339,8 @@ export class ResearchMetadataRepository {
              ON alpha.workspace_id = version.workspace_id AND alpha.alpha_id = version.alpha_id
            LEFT JOIN research.import_sources source
              ON source.workspace_id = version.workspace_id AND source.source_file_ref = version.source_file_ref
+           LEFT JOIN research.execution_adapter_bindings binding
+             ON binding.workspace_id = version.workspace_id AND binding.alpha_version_id = version.alpha_version_id
           WHERE version.workspace_id = $1
             -- P07 imported versions retain a source receipt. P10's one
             -- installed P04 binding is also safe to disclose as a declaration
@@ -1358,6 +1367,16 @@ export class ResearchMetadataRepository {
         sourceDigest: row.source_digest,
         versionLabel: row.version_label,
         lifecycleState: row.lifecycle_state,
+        isImported: row.is_imported,
+        isCurrentActive: row.is_current_active,
+        binding: (row.adapter_id === "p04.delta-rsi.v1" ||
+                  row.adapter_id === "p17.imported-signal-notional.v1") &&
+          typeof row.contract_digest === "string"
+          ? {
+              alphaId: row.alpha_id, alphaVersionId: row.alpha_version_id,
+              adapterId: row.adapter_id, contractDigest: row.contract_digest,
+            } satisfies ResearchExecutionAdapterBinding
+          : null,
         supersedes: row.supersedes_alpha_version_id,
         supersedesRecorded: row.supersedes_recorded,
         entrypoint: row.entrypoint,

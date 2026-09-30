@@ -204,8 +204,22 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     ]);
     expect(gates.gates[6]!.ms).toBe(2);
     expect(gates.static_scan_disclosure).toBe("Static scan — runtime causality is proven per run at Stage 3/4.");
-    expect(result).toMatchObject({ schema_version: "research.alpha-registration.v1", lifecycle_state: "DRAFT", replayed: false, alpha_id: "p07-alpha", may_activate: true });
+    expect(result).toMatchObject({ schema_version: "research.alpha-registration.v1", lifecycle_state: "DRAFT", replayed: false, alpha_id: "p07-alpha", may_activate: true, may_activate_reason: null });
     expect(result.supersedes).toBeNull();
+    const runEnabled = new ResearchAlphaImportService(
+      repository,
+      new DeterministicAnalysisClient() as unknown as ResearchAlphaAnalysisClient,
+      {
+        FEATURE_RESEARCH_RUN_PRODUCER: "true",
+        FEATURE_RESEARCH_IMPORTED_EXECUTION: "true",
+      } as ControlApiConfig,
+    );
+    expect((await runEnabled.list(admin, scopeA))[0]?.run_admission).toEqual({
+      may_create_run: true, code: null,
+    });
+    expect((await runEnabled.list({ ...admin, role: "USER" }, scopeA))[0]?.run_admission).toEqual({
+      may_create_run: false, code: "RESEARCH_RUN_CREATE_FORBIDDEN",
+    });
 
     const activated = await service.activate(admin, scopeA, {
       alphaVersionId: result.alpha_version_id,
@@ -215,7 +229,8 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     expect(await service.list(admin, scopeA)).toMatchObject([{
       alpha_id: "p07-alpha", alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE",
       display_name: "p07-alpha", strategy_id: "p07-alpha", source_digest: parsed.source_digest,
-      source_digest_prefix: parsed.source_digest.slice(0, 12), may_activate: true,
+      source_digest_prefix: parsed.source_digest.slice(0, 12), may_activate: true, may_activate_reason: null,
+      run_admission: { may_create_run: false, code: "RESEARCH_RUN_PRODUCER_UNAVAILABLE" },
       supersedes: null, supersedes_state: "RECORDED",
       declaration: {
         schema_version: "research.alpha-version-declaration.v1",
@@ -264,7 +279,9 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
       gateReceiptId: gates.gate_receipt_id,
     }, "p07-request");
     expect(registered.may_activate).toBe(false);
-    expect((await service.list(member, scopeB)).every((entry) => entry.may_activate === false)).toBe(true);
+    expect(registered.may_activate_reason).toBe("ROLE_NOT_ADMIN");
+    expect((await service.list(member, scopeB)).every((entry) =>
+      entry.may_activate === false && entry.may_activate_reason === "ROLE_NOT_ADMIN")).toBe(true);
     await expectImportError(
       service.activate(member, scopeB, {
         alphaVersionId: registered.alpha_version_id,

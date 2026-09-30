@@ -219,6 +219,17 @@ export interface components {
             import_attestation?: components["schemas"]["ImportAttestation"];
             /** @description Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role. */
             may_activate: boolean;
+            /**
+             * @description Null only when this caller may activate or replay this exact version.
+             * @enum {unknown}
+             */
+            may_activate_reason?: "ROLE_NOT_ADMIN" | "VERSION_NOT_IMPORTED" | "VERSION_NOT_ACTIVATABLE" | null;
+            /** @description P10 caller/version precheck only. A positive result does not authorize a run without a fresh matching preflight and create-time admission. */
+            run_admission?: {
+                may_create_run: boolean;
+                /** @enum {unknown} */
+                code: "RESEARCH_RUN_PRODUCER_UNAVAILABLE" | "RESEARCH_RUN_CREATE_FORBIDDEN" | "RESEARCH_RUN_ALPHA_NOT_ACTIVE" | "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE" | null;
+            };
         };
         RegistryListResponse: {
             /** @constant */
@@ -295,6 +306,8 @@ export interface components {
             replayed: boolean;
             /** @description Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role. */
             may_activate: boolean;
+            /** @enum {unknown} */
+            may_activate_reason?: "ROLE_NOT_ADMIN" | null;
         };
         ActivationResponse: {
             /** @constant */

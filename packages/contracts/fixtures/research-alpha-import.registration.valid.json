@@ -9,6 +9,7 @@
   "alpha_revision": 1,
   "replayed": false,
   "may_activate": true,
+  "may_activate_reason": null,
   "import_attestation": {
     "schema_version": "research.alpha-import-attestation.v1",
     "scope": "REGISTERED_ALPHA_SOURCE_ONLY",

@@ -23,6 +23,7 @@ import { ResearchAlphaAnalysisClient } from "./alpha-analysis.client";
 import { ResearchAlphaImportError } from "./alpha-import.error";
 import { type ResearchScope, ResearchMetadataError } from "./contracts";
 import { ResearchMetadataRepository } from "./repository";
+import { researchRunVersionPrecheck } from "./version-admission";
 import {
   IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
   IMPORTED_ALPHA_ADAPTER_ID,
@@ -202,6 +203,7 @@ export class ResearchAlphaImportService {
       alpha_revision: registration.alphaRevision,
       replayed: registration.replayed,
       may_activate: mayActivateResearchAlpha(user),
+      may_activate_reason: mayActivateResearchAlpha(user) ? null : "ROLE_NOT_ADMIN",
       import_attestation: researchAlphaImportAttestation(registration.sourceDigest),
     };
   }
@@ -234,30 +236,48 @@ export class ResearchAlphaImportService {
   }
 
   async list(
-    user: Pick<PortalUser, "role">,
+    user: PortalUser,
     scope: ResearchScope,
     alphaId?: string,
   ): Promise<readonly ResearchAlphaRegistryEntry[]> {
     const rows = await this.repository.listImportedAlphaVersions(scope, alphaId);
     try {
-      return rows.map((row) => ({
-        alpha_id: row.alphaId,
-        alpha_version_id: row.alphaVersionId,
-        display_name: row.displayName,
-        strategy_id: row.alphaId,
-        source_digest: row.sourceDigest,
-        supersedes: row.supersedes,
-        supersedes_state: row.supersedesRecorded ? "RECORDED" : "HISTORICAL_NOT_RECORDED",
-        version_label: row.versionLabel,
-        lifecycle_state: row.lifecycleState,
-        entrypoint: row.entrypoint,
-        declaration: projectResearchAlphaVersionDeclaration(row.declaredContract, row.entrypoint),
-        source_digest_prefix: row.sourceDigestPrefix,
-        alpha_revision: row.alphaRevision,
-        registered_at_utc_ms: row.registeredAt.getTime(),
-        may_activate: mayActivateResearchAlpha(user),
-        import_attestation: researchAlphaImportAttestation(row.sourceDigest),
-      }));
+      return rows.map((row) => {
+        const runAdmission = researchRunVersionPrecheck(user, this.config, {
+          alphaId: row.alphaId,
+          alphaVersionId: row.alphaVersionId,
+          lifecycleState: row.lifecycleState,
+          declaredContract: row.declaredContract,
+          entrypoint: row.entrypoint,
+          sourceDigest: row.isImported ? row.sourceDigest : null,
+          binding: row.binding,
+        });
+        return {
+          alpha_id: row.alphaId,
+          alpha_version_id: row.alphaVersionId,
+          display_name: row.displayName,
+          strategy_id: row.alphaId,
+          source_digest: row.sourceDigest,
+          supersedes: row.supersedes,
+          supersedes_state: row.supersedesRecorded ? "RECORDED" : "HISTORICAL_NOT_RECORDED",
+          version_label: row.versionLabel,
+          lifecycle_state: row.lifecycleState,
+          entrypoint: row.entrypoint,
+          declaration: projectResearchAlphaVersionDeclaration(row.declaredContract, row.entrypoint),
+          source_digest_prefix: row.sourceDigestPrefix,
+          alpha_revision: row.alphaRevision,
+          registered_at_utc_ms: row.registeredAt.getTime(),
+          may_activate: mayActivateResearchAlpha(user) && row.isImported &&
+            (row.lifecycleState === "DRAFT" || (row.lifecycleState === "ACTIVE" && row.isCurrentActive)),
+          may_activate_reason: !mayActivateResearchAlpha(user) ? "ROLE_NOT_ADMIN"
+            : !row.isImported ? "VERSION_NOT_IMPORTED"
+            : row.lifecycleState === "DRAFT" || (row.lifecycleState === "ACTIVE" && row.isCurrentActive)
+              ? null
+              : "VERSION_NOT_ACTIVATABLE",
+          import_attestation: researchAlphaImportAttestation(row.sourceDigest),
+          run_admission: { may_create_run: runAdmission.may_create_run, code: runAdmission.code },
+        };
+      });
     } catch (error) {
       if (error instanceof ResearchAlphaVersionDeclarationError) {
         throw new ResearchAlphaImportError(

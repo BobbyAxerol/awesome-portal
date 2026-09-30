@@ -27,6 +27,11 @@
       "alpha_revision": 1,
       "registered_at_utc_ms": 1780000000000,
       "may_activate": true,
+      "may_activate_reason": null,
+      "run_admission": {
+        "may_create_run": false,
+        "code": "RESEARCH_RUN_PRODUCER_UNAVAILABLE"
+      },
       "import_attestation": {
         "schema_version": "research.alpha-import-attestation.v1",
         "scope": "REGISTERED_ALPHA_SOURCE_ONLY",

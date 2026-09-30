@@ -176,6 +176,13 @@ export interface ResearchAlphaRegistryEntry {
   registered_at_utc_ms: number;
   /** Caller-specific server admission, evaluated by the same policy as activate. */
   may_activate: boolean;
+  may_activate_reason: "ROLE_NOT_ADMIN" | "VERSION_NOT_IMPORTED" | "VERSION_NOT_ACTIVATABLE" | null;
+  /** Version-level P10 precheck only; exact spec/token/capacity are checked by POST create. */
+  run_admission: {
+    may_create_run: boolean;
+    code: "RESEARCH_RUN_PRODUCER_UNAVAILABLE" | "RESEARCH_RUN_CREATE_FORBIDDEN" |
+      "RESEARCH_RUN_ALPHA_NOT_ACTIVE" | "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE" | null;
+  };
   /** Additive for old clients; new server responses always publish it. */
   import_attestation?: ResearchAlphaImportAttestation;
 }
@@ -192,6 +199,7 @@ export interface ResearchAlphaImportRegisterResponse {
   replayed: boolean;
   /** Caller-specific server admission, evaluated by the same policy as activate. */
   may_activate: boolean;
+  may_activate_reason: "ROLE_NOT_ADMIN" | null;
   /** No signing authority is inferred from DRAFT/ACTIVE or image provenance. */
   import_attestation?: ResearchAlphaImportAttestation;
 }

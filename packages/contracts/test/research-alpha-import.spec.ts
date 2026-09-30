@@ -95,6 +95,16 @@ describe("P07 published Research Alpha Import contract", () => {
 
     const generated = readFileSync(generatedPath, "utf8");
     expect(generated).toContain("may_activate: boolean");
+    expect(generated).toContain("may_activate_reason?");
+    expect(generated).toContain("run_admission?");
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    const contract = json(schemaPath);
+    ajv.addSchema(contract);
+    const validate = ajv.getSchema(contract.$id as string)!;
+    const registry = json(join(ROOT, "fixtures", "research-alpha-import.registry.valid.json"));
+    expect(validate(registry)).toBe(true);
+    const entries = registry.entries as Record<string, unknown>[];
+    expect(validate({ ...registry, entries: [{ ...entries[0], may_activate_reason: "MADE_UP" }] })).toBe(false);
     expect(generated).toContain('supersedes_state?: "RECORDED" | "HISTORICAL_NOT_RECORDED"');
     expect(generated).toContain('supersedes?: components["schemas"]["AlphaVersionId"] | null');
   });
