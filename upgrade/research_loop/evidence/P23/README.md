@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**T07/T13 release-pin gap 2026-09-30:** [compiled P04 admission probe and repair request](./T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md) confirm that a matching newer preflight release can pass the installed P04 predicate although its child remains pinned to `er_quantbt_111`. The <=P21 owner boundary is respected: this packet requests the minimal admission fix; it does not claim an installed newer QuantBT engine or full T07/T13 acceptance.
+
 **T02/T12 current-candidate 2026-09-30:** [exact three-round WFO plateau and shared utility/audit-reuse receipts](./T02_T12_SOURCE_CLOSEOUT_2026-09-30.md) closes T02 (nine real complete/fail/cancel, unchanged scratch) and qualifies T12 for the currently supported eligible WFO audit-reuse profile on clean `af18707a`: real primary/diagnostic/verify/export overlap plus typed quota negative/recovery. Non-reusable linked-audit-child is still a typed gap; P23/P24 remain OPEN.
 
 **F3 WFO real-browser subset 2026-09-30:** [12/12 named-BFF-to-DOM parity receipt](./F3_WFO_BROWSER_PARITY_2026-09-30.md) passed S03–S08 at 1280/660 px on clean `bae2a78c`, with zero off-origin calls, implicit jobs, page errors or overflow; jobs stayed 173→173. The first two harness-race failures are preserved. Canonical 54/54 F3, F5 and full P23/P24 remain OPEN.
