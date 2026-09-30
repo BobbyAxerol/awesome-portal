@@ -6546,3 +6546,20 @@ zero page errors, off-origin requests or overflow. Two earlier failed harness
 attempts are preserved with hashes. This is **scoped PASS only**: canonical
 54/54 F3, F5, OL-24, remaining P23 gates and P24 stay OPEN. No dev/production
 runtime, product UI, command or source system changed.
+
+### BR-AN-01 Research descriptive analytics backend checkpoint — 2026-09-30
+
+Bobby's D-AN-01 all-time decision supersedes older rolling/benchmark absence
+assumptions without deleting historical critique. The backend source-time WFO
+and fixed lanes now seal additive `research.retained-analytics.v2` facts from
+admitted QuantBT results and the run's already-loaded HMD close. S01 receives
+a separate last-30D block; S09 freezes the same all-time values; S13 derives
+UTC-daily common-window Sharpe from exact retained matched observations. P04
+single-window per-fold is NOT_APPLICABLE. V1/old seals remain readable and
+immutable; no read-time HMD call or PnL/fill/objective recomputation was added.
+This is a backend/contract checkpoint, **not** a 54/54 F3, preview browser,
+P23/P24 or Product GO verdict. AN-25/27 remain QuantBT-owned; AN-29 old-seal
+backfill awaits Bobby, with typed absence as default. Claude owns v2 FE binding.
+[Exact fields, focused tests, old-seal checks and handoff](./research_loop/evidence/P13/BR-AN-01_backend_receipt_2026-09-30.md)
+· [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).
+

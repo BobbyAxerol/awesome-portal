@@ -11,6 +11,7 @@
  */
 
 import type { ResearchEvidenceHubResponse } from "./evidence.contract";
+import type { ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 import type {
   ResearchCurrentSourceEvidenceResponse,
   ResearchCurrentSourceEvidenceSeriesResponse,
@@ -434,6 +435,54 @@ export interface RetainedReads {
   parts: SealedArtifactParts | null;
 }
 
+type AnalyticsFact = ResearchRetainedAnalyticsV2["metrics"]["sharpe"];
+const REPORT_ANALYTICS: Array<{
+  key: string; label: string; unit: CoreV2["metrics"][number]["unit"];
+  fact: (block: ResearchRetainedAnalyticsV2) => AnalyticsFact;
+}> = [
+  ["ALL_TIME_OOS_SHARPE", "All-time OOS Sharpe", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.metrics.sharpe],
+  ["OOS_SORTINO", "OOS Sortino", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.metrics.sortino],
+  ["OOS_CAGR_FRACTION", "OOS CAGR", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.metrics.cagr_fraction],
+  ["OOS_PROFIT_FACTOR", "OOS profit factor · bar returns", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.metrics.profit_factor],
+  ["OOS_LONG_HIT_RATE_FRACTION", "Long-bar hit rate", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.metrics.long_hit_rate_fraction],
+  ["OOS_SHORT_HIT_RATE_FRACTION", "Short-bar hit rate", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.metrics.short_hit_rate_fraction],
+  ["OOS_VOLATILITY_FRACTION", "OOS annualised volatility", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.metrics.volatility_fraction],
+  ["OOS_SKEW", "OOS skew", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.metrics.skew],
+  ["OOS_EXCESS_KURTOSIS", "OOS excess kurtosis", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.metrics.excess_kurtosis],
+  ["OOS_BETA", "OOS beta vs run benchmark", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.metrics.beta],
+  ["OOS_CORRELATION", "OOS correlation vs run benchmark", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.metrics.correlation],
+  ["OOS_BENCHMARK_RETURN_FRACTION", "OOS benchmark return", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.metrics.benchmark_return_fraction],
+  ["OOS_MAX_DRAWDOWN_DURATION_DAYS", "OOS max drawdown duration · days", "COUNT", (b: ResearchRetainedAnalyticsV2) => b.metrics.max_drawdown_duration_days],
+  ["OOS_SHARPE_DECAY", "IS minus OOS Sharpe", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.metrics.sharpe_decay],
+  ["OOS_EXPOSURE_LONG_FRACTION", "OOS long exposure", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.behaviour.exposure_long_fraction],
+  ["OOS_EXPOSURE_SHORT_FRACTION", "OOS short exposure", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.behaviour.exposure_short_fraction],
+  ["OOS_EXPOSURE_FLAT_FRACTION", "OOS flat exposure", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.behaviour.exposure_flat_fraction],
+  ["OOS_EPISODE_WIN_RATE", "OOS episode win rate · not audited trades", "FRACTION", (b: ResearchRetainedAnalyticsV2) => b.behaviour.win_rate],
+  ["OOS_EPISODE_PAYOFF_RATIO", "OOS episode payoff · not audited trades", "RATIO", (b: ResearchRetainedAnalyticsV2) => b.behaviour.payoff_ratio],
+  ["OOS_EPISODE_AVG_HOLD_SECONDS", "OOS episode average hold · seconds", "COUNT", (b: ResearchRetainedAnalyticsV2) => b.behaviour.average_hold_seconds],
+  ["OOS_EPISODE_MAX_CONSECUTIVE_LOSSES", "OOS episode max consecutive losses", "COUNT", (b: ResearchRetainedAnalyticsV2) => b.behaviour.max_consecutive_losses],
+  ["OOS_TURNOVER_NOTIONAL", "OOS turnover notional", "CURRENCY", (b: ResearchRetainedAnalyticsV2) => b.behaviour.turnover_notional],
+].map(([key, label, unit, fact]) => ({ key, label, unit, fact })) as typeof REPORT_ANALYTICS;
+
+function descriptiveMetrics(block: ResearchRetainedAnalyticsV2 | undefined): CoreV2["metrics"] {
+  if (!block) return [];
+  return REPORT_ANALYTICS.map(({ key, label, unit, fact }) => {
+    const value = fact(block);
+    return {
+      key, label, unit, scope: "OOS" as const, origin: value.origin,
+      definition_id: `research.metric.v2.portal_${key.toLowerCase()}`,
+      value: value.value,
+      availability: { state: value.state, reason_code: value.reason_code },
+    };
+  });
+}
+
+function descriptiveFact(fact: AnalyticsFact | undefined, fallback: string) {
+  return fact
+    ? { value: fact.value, availability: { state: fact.state, reason_code: fact.reason_code } as Availability }
+    : { value: null, availability: NOT_PUBLISHED(fallback) };
+}
+
 /** The Delta WFO lane: every fact from the retained current-source reads. */
 export function retainedCore(reads: RetainedReads): CoreV2 {
   const { hub, evidence, split, search, freeze, replay, equity, parts } = reads;
@@ -484,6 +533,7 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
   const netOos = evidence.summary_analytics?.net_oos_return;
   const netOosValue = netOos?.state === "AVAILABLE" ? netOos.value : null;
   const netOosReason = netOos?.reason_code ?? "RS02_SOURCE_PREDATES_RETAINED_OOS_RETURN";
+  const analyticsV2 = evidence.summary_analytics_v2;
   const scoped = (key: string, label: string, unit: "CURRENCY" | "FRACTION" | "COUNT" | "RATIO", scope: CoreV2["metrics"][number]["scope"], origin: "ENGINE_DIRECT" | "SOURCE_DERIVED", value: string | null, reason: string) =>
     ({ key, label, unit, scope, origin, definition_id: `research.metric.v1.rs02_${key.toLowerCase()}`, value, availability: value === null ? NOT_PUBLISHED(reason) : AVAILABLE });
   const oosUsed = claim.oos_used_for_selection.value;
@@ -554,18 +604,19 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       scoped("MEAN_OOS_SHARPE", "Mean OOS Sharpe", "RATIO", "OOS_MEAN_OF_FOLDS", "ENGINE_DIRECT", verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED"),
       scoped("MEAN_DECAY", "Mean decay", "RATIO", "OOS_MEAN_OF_FOLDS", "ENGINE_DIRECT", verdicts.mean_decay, "QUANTBT_SELECTED_CANDIDATE_DECAY_NOT_PUBLISHED"),
       scoped("OOS_TRADE_COUNT", "OOS trades", "COUNT", "OOS_SUM_OF_FOLDS", "SOURCE_DERIVED", oosTrades, "QUANTBT_FOLD_OOS_TRADES_NOT_PUBLISHED"),
+      ...descriptiveMetrics(analyticsV2),
     ],
     headline: [
       // Real engine OOS fact; old seals stay absent, never relabelled on GET.
       { key: "NET_RETURN", label: "Net OOS return", scope: "OOS", ...decimalFact(netOosValue, netOosReason) },
-      { key: "OOS_SHARPE", label: "OOS Sharpe", scope: "OOS_MEAN_OF_FOLDS", ...decimalFact(verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED") },
+      { key: "OOS_SHARPE", label: analyticsV2 ? "All-time OOS Sharpe" : "OOS Sharpe · fold mean", scope: analyticsV2 ? "OOS" : "OOS_MEAN_OF_FOLDS", ...(analyticsV2 ? descriptiveFact(analyticsV2.metrics.sharpe, "PORTAL_ANALYTICS_SHARPE_NOT_AVAILABLE") : decimalFact(verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED")) },
       { key: "DECAY_MEAN", label: "Decay mean", scope: "OOS_MEAN_OF_FOLDS", ...decimalFact(verdicts.mean_decay, "QUANTBT_SELECTED_CANDIDATE_DECAY_NOT_PUBLISHED") },
       { key: "MAX_DRAWDOWN", label: "Max drawdown", scope: "IS_PLUS_OOS", ...decimalFact(passport.max_drawdown_fraction, "RS02_MAX_DRAWDOWN_NOT_PUBLISHED") },
       { key: "TRADES", label: "OOS trades", scope: "OOS_SUM_OF_FOLDS", ...decimalFact(oosTrades, "QUANTBT_FOLD_OOS_TRADES_NOT_PUBLISHED") },
-      { key: "WIN_RATE", label: "Win rate", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS") },
+      { key: "WIN_RATE", label: analyticsV2 ? "Episode win rate · not audited trades" : "Win rate", scope: analyticsV2 ? "OOS" : "NOT_PUBLISHED", ...(analyticsV2 ? descriptiveFact(analyticsV2.behaviour.win_rate, "PORTAL_ANALYTICS_EPISODE_WIN_RATE_UNAVAILABLE") : { value: null, availability: NOT_PUBLISHED("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS") }) },
       { key: "FUNDING", label: "Funding", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("RS02_SUMMARY_PUBLISHES_NO_FUNDING_TOTAL") },
     ],
-    headline_footnote: "Net OOS return is QuantBT full_report(total_return_pct)/100 on its union of outer-test windows; gaps and leading IS are excluded. Older seals without that engine fact remain not published. Drawdown is the whole retained final-account path, not OOS-only. OOS Sharpe and decay are means over outer folds; OOS trades is the exact sum of fold rows, not an audited trade ledger.",
+    headline_footnote: "Net OOS return is QuantBT full_report(total_return_pct)/100 on outer-test windows. New seals carry all-time OOS Sharpe and descriptive episode win rate. Older seals retain typed fold-mean/absence. Drawdown covers the whole retained account path; decay remains a fold mean and trade count is not an audited trade ledger.",
     equity: equityBlock("RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
     equity_is: equityBlock("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST", isPoints, seriesSampling, 300, "RS02_NO_RETAINED_OBSERVATION_BEFORE_FIRST_OUTER_TEST"),
     folds: {
@@ -694,6 +745,7 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
   const { hub, equity, split, search, freeze, replay } = reads;
   const sourceAvailability = hub.availability as Availability;
   const core = hub.core;
+  const analyticsV2 = hub.summary_analytics_v2;
   const ids = hubIdentity(hub);
   const metric = (key: string) => hub.metrics.find((item) => item.key === key);
   const metricFact = (key: string) => ({
@@ -712,7 +764,7 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
   const optimizerQualifier = search.requestedOptimizerState === "DECLARED_NOT_EXECUTED"
     ? OPTIMIZER_DECLARED_NOT_EXECUTED
     : null;
-  const noFold = NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
+  const noFold = NOT_APPLICABLE("P04_SINGLE_WINDOW_HAS_NO_PER_FOLD_METRICS");
   const absent = (reasonCode: string) => ({ state: "NOT_PUBLISHED" as const, text: null, reason_code: reasonCode, availability: NOT_PUBLISHED(reasonCode) });
   const sampling = equity.source_sample.sampling === "FULL" || equity.source_sample.sampling === "EXTREMA_BUCKET_V1" ? equity.source_sample.sampling : null;
   const integrity = freeze.integrityState;
@@ -777,21 +829,23 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       key: "NET_OOS_RETURN_FRACTION", label: "Net OOS return", unit: "FRACTION" as const, scope: "OOS" as const,
       origin: "ENGINE_DIRECT" as const, definition_id: "research.metric.v1.p04_net_oos_return_fraction",
       ...netOosFact,
-    }] : [])],
+    }] : []), ...descriptiveMetrics(analyticsV2)],
     headline: [
       // New source-time seals supply the actual engine OOS report, not a renamed full-account ratio.
       netOosFact
         ? { key: "NET_RETURN", label: "Net OOS return", scope: "OOS", ...netOosFact }
         : { key: "NET_RETURN", label: "Net return", scope: metricScope("NET_RETURN_FRACTION"), ...metricFact("NET_RETURN_FRACTION") },
-      { key: "OOS_SHARPE", label: "OOS Sharpe",
-        scope: oosSharpe ? "OOS" : "NOT_PUBLISHED",
-        value: oosSharpe?.value ?? null,
-        availability: (oosSharpe?.availability ?? NOT_PUBLISHED("P13_OOS_ANALYTICS_NOT_PUBLISHED")) as Availability,
+      { key: "OOS_SHARPE", label: "All-time OOS Sharpe",
+        scope: analyticsV2 || oosSharpe ? "OOS" : "NOT_PUBLISHED",
+        ...(analyticsV2 ? descriptiveFact(analyticsV2.metrics.sharpe, "PORTAL_ANALYTICS_SHARPE_NOT_AVAILABLE") : {
+          value: oosSharpe?.value ?? null,
+          availability: (oosSharpe?.availability ?? NOT_PUBLISHED("P13_OOS_ANALYTICS_NOT_PUBLISHED")) as Availability,
+        }),
       },
-      { key: "DECAY_MEAN", label: "Decay mean", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_DECAY_MEAN") },
+      { key: "DECAY_MEAN", label: "IS–OOS Sharpe decay", scope: analyticsV2 ? "OOS" : "NOT_PUBLISHED", ...descriptiveFact(analyticsV2?.metrics.sharpe_decay, "PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL") },
       { key: "MAX_DRAWDOWN", label: "Max drawdown", scope: metricScope("MAX_DRAWDOWN_FRACTION"), ...metricFact("MAX_DRAWDOWN_FRACTION") },
       { key: "TRADES", label: "Trades", scope: metricScope("TRADE_COUNT"), ...metricFact("TRADE_COUNT") },
-      { key: "WIN_RATE", label: "Win rate", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_WIN_RATE") },
+      { key: "WIN_RATE", label: "Episode win rate · not audited trades", scope: analyticsV2 ? "OOS" : "NOT_PUBLISHED", ...descriptiveFact(analyticsV2?.behaviour.win_rate, "PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL") },
       { key: "FUNDING", label: "Funding", scope: metricScope("FUNDING_TOTAL"), ...metricFact("FUNDING_TOTAL") },
     ],
     headline_footnote: netOosFact
@@ -816,7 +870,7 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       sampling: null, points: [], availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_IS_EQUITY_SERIES"),
     },
     folds: {
-      state: "NOT_PUBLISHED",
+      state: "NOT_APPLICABLE",
       reason_code: noFold.reason_code,
       rule: null,
       order: "SOURCE_ORDINAL_ASC",
@@ -854,8 +908,14 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       verdict_rule_revision: "research.report-verdict-rule.v1",
     },
     source_absences: {
-      ...Object.fromEntries(Object.entries(hub.source_absences).map(([key, availability]) => [key, absent((availability as Availability).reason_code ?? "P18_SOURCE_FACT_NOT_PUBLISHED")])),
-      per_fold_rows: absent("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS"),
+      ...Object.fromEntries(Object.entries(hub.source_absences).map(([key, source]) => {
+        const item = source as Availability;
+        const reason = item.reason_code ?? "P18_SOURCE_FACT_NOT_PUBLISHED";
+        return [key, item.state === "NOT_APPLICABLE"
+          ? { state: "NOT_APPLICABLE", text: null, reason_code: reason, availability: item }
+          : absent(reason)];
+      })),
+      per_fold_rows: { state: "NOT_APPLICABLE", text: null, reason_code: noFold.reason_code!, availability: noFold },
       approval_annotation: absent("P18_APPROVAL_ANNOTATION_NOT_PUBLISHED"),
       replay_execution_state: absent("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS"),
     },

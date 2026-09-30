@@ -122,6 +122,9 @@ export interface ComparePairRawStats {
   rightCommonReturnFraction: string | null;
   leftCommonMaxDrawdownFraction: string | null;
   rightCommonMaxDrawdownFraction: string | null;
+  commonDailyReturnCount: number;
+  leftCommonDailySharpe: string | null;
+  rightCommonDailySharpe: string | null;
 }
 
 export interface ComparePairOverlayPoint {
@@ -150,6 +153,9 @@ interface PairStatsQueryRow {
   right_common_return_fraction: string | null;
   left_common_max_drawdown_fraction: string | null;
   right_common_max_drawdown_fraction: string | null;
+  common_daily_return_count: string | number;
+  left_common_daily_sharpe: string | null;
+  right_common_daily_sharpe: string | null;
 }
 interface OverlayQueryRow { at_utc_ms: string | number; left_equity: string; right_equity: string; }
 interface CacheRow { projection: JsonColumn; }
@@ -254,6 +260,26 @@ const PAIR_STATS_SQL = `
       max(right_equity) OVER (ORDER BY occurred_at_utc_ms ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS right_running_peak
     FROM aligned
   ),
+  daily_close AS (
+    SELECT DISTINCT ON (floor(occurred_at_utc_ms::numeric / 86400000))
+           floor(occurred_at_utc_ms::numeric / 86400000) AS utc_day,
+           left_equity, right_equity
+      FROM aligned
+     ORDER BY floor(occurred_at_utc_ms::numeric / 86400000), occurred_at_utc_ms DESC
+  ),
+  daily_returns AS (
+    SELECT left_equity / NULLIF(lag(left_equity) OVER (ORDER BY utc_day), 0) - 1 AS left_daily_return,
+           right_equity / NULLIF(lag(right_equity) OVER (ORDER BY utc_day), 0) - 1 AS right_daily_return
+      FROM daily_close
+  ),
+  daily_stats AS (
+    SELECT count(*) FILTER (WHERE left_daily_return IS NOT NULL AND right_daily_return IS NOT NULL)::bigint AS return_count,
+           avg(left_daily_return) AS left_mean,
+           avg(right_daily_return) AS right_mean,
+           stddev_samp(left_daily_return) AS left_std,
+           stddev_samp(right_daily_return) AS right_std
+      FROM daily_returns
+  ),
   aggregate AS (
     SELECT count(*)::bigint AS matched_count,
       min(occurred_at_utc_ms)::bigint AS start_utc_ms,
@@ -282,6 +308,13 @@ const PAIR_STATS_SQL = `
          aggregate.matched_count,
          aggregate.start_utc_ms,
          aggregate.end_utc_ms,
+         daily_stats.return_count AS common_daily_return_count,
+         CASE WHEN daily_stats.return_count >= 2 AND daily_stats.left_std > 0
+           THEN round(daily_stats.left_mean / daily_stats.left_std * sqrt(365::numeric), 12)::text
+           ELSE NULL END AS left_common_daily_sharpe,
+         CASE WHEN daily_stats.return_count >= 2 AND daily_stats.right_std > 0
+           THEN round(daily_stats.right_mean / daily_stats.right_std * sqrt(365::numeric), 12)::text
+           ELSE NULL END AS right_common_daily_sharpe,
          CASE
            WHEN aggregate.matched_count >= 3
             AND (aggregate.matched_count * aggregate.sum_left_squared - aggregate.sum_left * aggregate.sum_left) > 0
@@ -304,7 +337,7 @@ const PAIR_STATS_SQL = `
            ELSE NULL END AS right_common_return_fraction,
          aggregate.left_common_max_drawdown_fraction::text AS left_common_max_drawdown_fraction,
          aggregate.right_common_max_drawdown_fraction::text AS right_common_max_drawdown_fraction
-    FROM left_stats CROSS JOIN right_stats CROSS JOIN aggregate
+    FROM left_stats CROSS JOIN right_stats CROSS JOIN aggregate CROSS JOIN daily_stats
 `;
 
 const PAIR_OVERLAY_SQL = `
@@ -602,6 +635,9 @@ export class ResearchCompareRepository {
         rightCommonReturnFraction: row.right_common_return_fraction,
         leftCommonMaxDrawdownFraction: row.left_common_max_drawdown_fraction,
         rightCommonMaxDrawdownFraction: row.right_common_max_drawdown_fraction,
+        commonDailyReturnCount: safeInteger(row.common_daily_return_count, "common daily return count"),
+        leftCommonDailySharpe: row.left_common_daily_sharpe,
+        rightCommonDailySharpe: row.right_common_daily_sharpe,
       };
     });
   }

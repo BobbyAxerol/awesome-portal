@@ -234,10 +234,10 @@ describe("W6a · Compare reads the retained WFO lane and answers CG-P20-02…11"
     if (response.result.mode !== "pair" || response.result.pair === null) throw new Error("expected a comparable pair");
     const common = response.result.pair.common_window;
     expect(common.delta_definition).toBe("RIGHT_MINUS_LEFT");
-    expect(common.metrics.map((item) => item.key)).toEqual(["NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "OOS_SHARPE", "WIN_RATE_FRACTION"]);
+    expect(common.metrics.map((item) => item.key)).toEqual(["NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "WIN_RATE_FRACTION", "OOS_SHARPE"]);
     expect(common.metrics[0]!.delta).toBe("0.0013");
-    expect(common.metrics[3]).toMatchObject({ left_value: null, right_value: null, delta: null, availability: { state: "NOT_APPLICABLE", reason_code: "P20_COMMON_WINDOW_SHARPE_NEEDS_SOURCE_ANNUALIZATION" } });
-    expect(common.metrics[4]!.availability.reason_code).toBe("P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE");
+    expect(common.metrics[3]!.availability.reason_code).toBe("P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE");
+    expect(common.metrics[4]).toMatchObject({ left_value: null, right_value: null, delta: null, availability: { state: "NOT_PUBLISHED", reason_code: "PORTAL_ANALYTICS_COMMON_WINDOW_ZERO_VARIANCE" } });
     expect(response.result.pair.correlation).toMatchObject({ state: "AVAILABLE", value: "0.873421000000", n: 336 });
   });
 

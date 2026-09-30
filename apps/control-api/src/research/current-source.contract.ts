@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
+import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { WhatIfSchema } from "./whatif.contract";
@@ -415,6 +416,7 @@ const FoldVerdictsSchema = z.object({
 
 export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
+  summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
   schema_version: z.literal("research.current-source-evidence.v1"),
   passport: z.object({
     artifact_table_rows: z.object({

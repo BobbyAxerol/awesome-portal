@@ -129,6 +129,8 @@ export interface RunLibraryRetainedFacts {
   artifact_revision: string | number;
   /** `trial_facts.metrics` of the selected trial's candidate row, or null. */
   metrics: JsonColumn;
+  /** Sealed D-AN-01 block, null for immutable pre-v2 runs. */
+  analytics_v2?: JsonColumn;
   /** Folds retained for this seal. */
   fold_count: string | number;
   /** Folds whose `oos_score.oos_trade_count` is published. */
@@ -613,6 +615,7 @@ export class ResearchRunLibraryRepository {
         `SELECT seal.run_id,
                 seal.artifact_revision,
                 candidate.payload->'trial_facts'->'metrics' AS metrics,
+                seal.summary->'summary_analytics_v2' AS analytics_v2,
                 folds.fold_count,
                 folds.trade_fold_count,
                 folds.trade_sum,

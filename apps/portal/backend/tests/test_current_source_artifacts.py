@@ -163,6 +163,15 @@ def test_current_source_adapter_retains_real_wfo_rows_once(exported) -> None:
     assert analytics["net_oos_return"]["scope"] == "OOS"
     assert analytics["total_trade_count"]["scope"] == "CHILD_TAPE"
     assert analytics["in_sample_equity"]["reason_code"] == "QUANTBT_WFO_HAS_NO_SELECTED_CANDIDATE_IS_ACCOUNT"
+    analytics_v2 = receipt.summary["summary_analytics_v2"]
+    source_v2 = source.read_json("run-rs02-advanced", "wfo/retained_analytics.v2.json")
+    assert analytics_v2 == {key: value for key, value in source_v2.items()
+                            if key not in {"producer", "artifact_schema_version"}}
+    assert analytics_v2["schema_version"] == "research.retained-analytics.v2"
+    assert analytics_v2["metrics"]["sharpe"]["origin"] == "ENGINE_DIRECT"
+    assert analytics_v2["metrics"]["benchmark_return_fraction"]["state"] == "AVAILABLE"
+    assert analytics_v2["last_30d"]["label"] == "last 30D"
+    assert "rolling_sharpe_63" not in analytics_v2
     assert receipt.summary["derived"]["monthly_returns"]["source_observation_count"] == receipt.table_rows["observations"]
     assert receipt.summary["derived"]["return_distribution"]["state"] in {"AVAILABLE", "NOT_APPLICABLE"}
     distribution = receipt.summary["derived"]["return_distribution"]

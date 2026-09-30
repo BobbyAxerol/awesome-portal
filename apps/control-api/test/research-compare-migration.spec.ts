@@ -143,6 +143,37 @@ describe("P20 disposable PostgreSQL cache and exact-correlation proof", () => {
         .resolves.toEqual({ schema_version: "research.compare.v1", cache_fixture: true });
       const sourceRows = await database.query(`SELECT count(*)::integer AS count FROM research.current_source_rows_v1`);
       expect(sourceRows.rows[0]?.count).toBe(8);
+
+      // AN-23: compare takes the last exact matched observation of each UTC day,
+      // then derives daily close returns; a 2x benchmark path has the same Sharpe.
+      const t0 = 1_704_672_000_000;
+      const dailyEquity = {
+        "run-p20-daily-left": ["100", "101", "103.02", "106.1106"],
+        "run-p20-daily-right": ["200", "204", "212.16", "224.8896"],
+      };
+      for (const [runId, equityRows] of Object.entries(dailyEquity)) {
+        for (let index = 0; index < equityRows.length; index += 1) {
+          await database.query(`INSERT INTO research.current_source_rows_v1
+            (workspace_id, run_id, artifact_revision, table_kind, source_ordinal, source_id,
+             occurred_at_utc_ms, payload)
+            VALUES ($1, $2, 1, 'OBSERVATION', $3, $4, $5,
+                    jsonb_build_object('return_fraction', $6::text, 'equity', $7::text))`, [
+            fixture.workspaceId, runId, index, `${runId}-${index}`,
+            t0 + index * 86_400_000, "0", equityRows[index],
+          ]);
+        }
+      }
+      const daily = await repository.pairRaw(scope, {
+        left: { runId: "run-p20-daily-left", artifactRevision: 1,
+          outerOosStartUtcMs: t0, outerOosEndExclusiveUtcMs: t0 + 4 * 86_400_000,
+          expectedOuterOosBars: 4 },
+        right: { runId: "run-p20-daily-right", artifactRevision: 1,
+          outerOosStartUtcMs: t0, outerOosEndExclusiveUtcMs: t0 + 4 * 86_400_000,
+          expectedOuterOosBars: 4 },
+      });
+      expect(daily.commonDailyReturnCount).toBe(3);
+      expect(daily.leftCommonDailySharpe).toBe(daily.rightCommonDailySharpe);
+      expect(Number(daily.leftCommonDailySharpe)).toBeCloseTo(2 * Math.sqrt(365), 10);
     } finally {
       await database.end();
     }

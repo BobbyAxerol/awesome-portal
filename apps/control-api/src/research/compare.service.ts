@@ -590,7 +590,7 @@ function unavailableCommon(reasonCode: string) {
  */
 const UNDEFINED_COMMON_METRICS = [
   { key: "TRADE_COUNT" as const, definition_id: "research.compare.metric.v1.common-window-trade-count", left_value: null, right_value: null, delta: null, availability: notApplicable("P20_COMMON_WINDOW_DOES_NOT_DEFINE_TRADE_COUNT") },
-  { key: "OOS_SHARPE" as const, definition_id: "research.compare.metric.v1.common-window-oos-sharpe", left_value: null, right_value: null, delta: null, availability: notApplicable("P20_COMMON_WINDOW_SHARPE_NEEDS_SOURCE_ANNUALIZATION") },
+  { key: "OOS_SHARPE" as const, definition_id: "research.compare.metric.v2.common-window-utc-daily-sharpe-365", left_value: null, right_value: null, delta: null, availability: absent("PORTAL_ANALYTICS_COMMON_WINDOW_NOT_AVAILABLE") },
   { key: "WIN_RATE_FRACTION" as const, definition_id: "research.compare.metric.v1.common-window-win-rate", left_value: null, right_value: null, delta: null, availability: notApplicable("P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE") },
 ];
 
@@ -661,6 +661,12 @@ function commonFromRaw(raw: ComparePairRawStats) {
   const rightReturn = exactDecimal(raw.rightCommonReturnFraction);
   const leftDrawdown = exactDecimal(raw.leftCommonMaxDrawdownFraction);
   const rightDrawdown = exactDecimal(raw.rightCommonMaxDrawdownFraction);
+  const leftDailySharpe = exactDecimal(raw.leftCommonDailySharpe);
+  const rightDailySharpe = exactDecimal(raw.rightCommonDailySharpe);
+  const sharpeAvailability = raw.commonDailyReturnCount < 2
+    ? absent("PORTAL_ANALYTICS_COMMON_WINDOW_TOO_FEW_DAILY_RETURNS")
+    : leftDailySharpe === null || rightDailySharpe === null
+      ? absent("PORTAL_ANALYTICS_COMMON_WINDOW_ZERO_VARIANCE") : available();
   if (!leftReturn || !rightReturn || !leftDrawdown || !rightDrawdown) {
     return { common: unavailableCommon("P20_COMMON_WINDOW_NUMERIC_FACTS_INCOMPATIBLE"), correlation: unavailableCorrelation("P20_COMMON_WINDOW_NUMERIC_FACTS_INCOMPATIBLE", raw.matchedCount, raw.startUtcMs, raw.endUtcMs) };
   }
@@ -676,7 +682,12 @@ function commonFromRaw(raw: ComparePairRawStats) {
     metrics: [
       { key: "NET_RETURN_FRACTION" as const, definition_id: "research.compare.metric.v1.common-window-net-return", left_value: leftReturn, right_value: rightReturn, delta: subtractDecimal(leftReturn, rightReturn), availability: available() },
       { key: "MAX_DRAWDOWN_FRACTION" as const, definition_id: "research.compare.metric.v1.common-window-max-drawdown", left_value: leftDrawdown, right_value: rightDrawdown, delta: subtractDecimal(leftDrawdown, rightDrawdown), availability: available() },
-      ...UNDEFINED_COMMON_METRICS,
+      ...UNDEFINED_COMMON_METRICS.filter((metric) => metric.key !== "OOS_SHARPE"),
+      { key: "OOS_SHARPE" as const, definition_id: "research.compare.metric.v2.common-window-utc-daily-sharpe-365",
+        left_value: sharpeAvailability.state === "AVAILABLE" ? leftDailySharpe : null,
+        right_value: sharpeAvailability.state === "AVAILABLE" ? rightDailySharpe : null,
+        delta: sharpeAvailability.state === "AVAILABLE" ? subtractDecimal(leftDailySharpe!, rightDailySharpe!) : null,
+        availability: sharpeAvailability },
     ],
     availability: available(),
   };

@@ -269,7 +269,7 @@ export interface components {
             /** @enum {unknown} */
             scope: "OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "NOT_PUBLISHED" | "OOS_MEAN_OF_FOLDS" | "OOS_SUM_OF_FOLDS";
             /** @enum {unknown} */
-            origin: "ENGINE_DIRECT" | "SOURCE_DERIVED" | "NOT_PUBLISHED";
+            origin: "ENGINE_DIRECT" | "SOURCE_DERIVED" | "PORTAL_DERIVED" | "NOT_PUBLISHED";
             definition_id: string;
             value: components["schemas"]["ExactDecimal"] | null;
             availability: components["schemas"]["Availability"];

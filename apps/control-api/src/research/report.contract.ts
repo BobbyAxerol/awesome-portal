@@ -204,6 +204,8 @@ const ReportFactV2Schema = ReportFactSchema.extend({
 const ReportMetricV2Schema = ReportMetricSchema.extend({
   unit: z.enum(["CURRENCY", "FRACTION", "COUNT", "RATIO"]),
   scope: ReportScopeV2Schema,
+  origin: z.enum(["ENGINE_DIRECT", "SOURCE_DERIVED", "PORTAL_DERIVED", "NOT_PUBLISHED"]),
+  definition_id: z.string().regex(/^research\.metric\.v[12]\.[a-z0-9_.-]{2,96}$/),
 }).strict();
 const HeadlineV2Schema = HeadlineSchema.extend({ scope: ReportScopeV2Schema }).strict();
 
@@ -362,7 +364,7 @@ export const ResearchReportFrozenCoreV2Schema = z.object({
   }).strict(),
   passport: z.array(ReportFactV2Schema).length(6),
   identity: z.array(IdentityFieldSchema).min(12).max(24),
-  metrics: z.array(ReportMetricV2Schema).min(1).max(16),
+  metrics: z.array(ReportMetricV2Schema).min(1).max(40),
   headline: z.array(HeadlineV2Schema).min(6).max(7),
   headline_footnote: z.string().min(1).max(512),
   equity: EquityV2Schema,

@@ -3,6 +3,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema, type ResearchRetainedAnalytics } from "./retained-analytics.contract";
+import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -65,6 +66,7 @@ type StoredOosAnalytics = Omit<ResearchEvidenceOosAnalyticsSource, "rolling_shar
 
 interface StoredProjection {
   summary_analytics?: ResearchRetainedAnalytics;
+  summary_analytics_v2?: ResearchRetainedAnalyticsV2;
   schema_version: "research.evidence-projection.v1";
   source: ResearchEvidenceSource["source"];
   /** Bound into the immutable projection digest; never reconstructed on read. */
@@ -268,6 +270,7 @@ const StoredProjectionSchema = z.object({
     reason_code: z.literal("P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS"),
   }).strict().optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
+  summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
   /**
    * E16-R1.  Read back loosely on purpose: the block is re-validated against
    * its own schema in `bundle()`, so a stored overview that a later contract
@@ -575,6 +578,7 @@ export class ResearchEvidenceService {
       ...(monthlyLeadingNote ? { monthly_leading: monthlyLeadingNote } : {}),
       ...(source.candle_overview ? { candle_overview: source.candle_overview } : {}),
       ...(source.summary_analytics ? { summary_analytics: source.summary_analytics } : {}),
+      ...(source.summary_analytics_v2 ? { summary_analytics_v2: source.summary_analytics_v2 } : {}),
       series: Object.fromEntries(series.map((item) => [item.kind, {
         state: item.availabilityState,
         reason_code: item.reasonCode,
@@ -651,7 +655,7 @@ export class ResearchEvidenceService {
     const runIdentity = this.runIdentity(row, fallback);
     const foldNavigation = this.foldNavigation(row, progress, fallback);
     const revision = row.revision;
-    const sourceAbsences = projection
+    const sourceAbsences: Record<string, Availability> = projection
       ? Object.fromEntries(Object.entries(projection.unavailable).map(([key, value]) => [key, sourceAbsenceAvailability(value)]))
       : {
         benchmark: fallback,
@@ -659,6 +663,10 @@ export class ResearchEvidenceService {
         audited_fills: fallback,
         per_fold_metrics: fallback,
       };
+    // D-AN-01: the child now derives the run-bound buy-and-hold benchmark
+    // from its already-loaded HMD close. Do not repeat the old source gap.
+    const benchmarkV2 = projection?.summary_analytics_v2?.metrics.benchmark_return_fraction;
+    if (benchmarkV2) sourceAbsences.benchmark = availability(benchmarkV2.state, benchmarkV2.reason_code);
     const metricValues: Record<string, string | null> = projection ? {
       INITIAL_EQUITY: projection.direct.initial_equity,
       FINAL_EQUITY: projection.direct.final_equity,
@@ -708,6 +716,7 @@ export class ResearchEvidenceService {
     const response = {
       schema_version: "research.evidence-hub.v1",
       ...(projection?.summary_analytics ? { summary_analytics: projection.summary_analytics } : {}),
+      ...(projection?.summary_analytics_v2 ? { summary_analytics_v2: projection.summary_analytics_v2 } : {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: row.runId,
       revision,

@@ -10,6 +10,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import * as metricRegistry from "./evidence-metric-registry";
 import type { ResearchMetricDefinition, ResearchMetricRegistryVersion } from "./evidence-metric-registry";
 import { ResearchProgressSnapshotSchema, type ResearchProgressSnapshot } from "./progress.contract";
+import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
 import {
   ResearchRunIdSchema,
@@ -54,6 +55,7 @@ export interface RetainedCardFacts {
   oosTradesReason: string | null;
   /** OBSERVATION rows the seal declares. */
   observationCount: number;
+  analyticsV2: ResearchRetainedAnalyticsV2 | null;
 }
 
 /** The three definition ids Screen 10 already publishes for these values. */
@@ -92,6 +94,7 @@ export function retainedCardFacts(row: RunLibraryRetainedFacts): RetainedCardFac
         ? "RS02_SEAL_RETAINED_NO_FOLD_ROWS"
         : "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT",
     observationCount: Number.isSafeInteger(observations) && observations >= 0 ? observations : 0,
+    analyticsV2: ResearchRetainedAnalyticsV2Schema.safeParse(row.analytics_v2).data ?? null,
   };
 }
 
@@ -786,6 +789,8 @@ export class ResearchRunLibraryService {
     const currentOrdinal = positiveOrdinal(row.current_worker_ordinal);
     const sourceUpdated = row.progress_received_at ?? row.updated_at;
     const status = safeStatus(row.effective_status);
+    const fixedAnalytics = ResearchRetainedAnalyticsV2Schema.safeParse(asObject(row.evidence_projection)?.summary_analytics_v2);
+    const analyticsV2 = retained?.analyticsV2 ?? (fixedAnalytics.success ? fixedAnalytics.data : null);
     const item = {
       run_id: row.run_id,
       // D1: server-derived, never minted here as an identity — see
@@ -813,6 +818,11 @@ export class ResearchRunLibraryService {
       claim: this.claim(progress, source),
       stages: this.stages(progress, source, status),
       stats: this.stats(row, progress, source, retained),
+      last_30d: analyticsV2
+        ? { availability: available(), input_digest: analyticsV2.input_digest, data: analyticsV2.last_30d }
+        : { availability: status === "COMPLETED"
+            ? unavailable("NOT_PUBLISHED", "PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL")
+            : source, input_digest: null, data: null },
       superseded_note: currentOrdinal > 1 && row.source_kind === "RESEARCH_DURABLE"
         ? `Technical worker retry ${currentOrdinal} of the same durable job; it is not another logical research run.`
         : null,

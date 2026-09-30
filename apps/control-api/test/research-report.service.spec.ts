@@ -127,6 +127,26 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     });
   });
 
+  it("D-AN-01 seals the same all-time v2 facts in S09 as Evidence without reading source again", async () => {
+    const value = subject();
+    const existing = await value.readers.evidence.bundle();
+    const analytics = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    value.readers.evidence.bundle.mockResolvedValue({ ...existing, hub: { ...existing.hub, summary_analytics_v2: analytics } });
+    const report = await value.service.materialize(scope, "run_p18");
+    const core = report.frozen_core;
+    if (core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected v2");
+    expect(core.metrics.find((item) => item.key === "ALL_TIME_OOS_SHARPE")).toMatchObject({
+      value: analytics.metrics.sharpe.value, origin: analytics.metrics.sharpe.origin, scope: "OOS",
+    });
+    expect(core.headline.find((item) => item.key === "WIN_RATE")).toMatchObject({
+      value: analytics.behaviour.win_rate.value, scope: "OOS",
+    });
+    expect(core.metrics.find((item) => item.key === "OOS_BETA")?.value).toBe(analytics.metrics.beta.value);
+    openApiValidator("research-report.openapi.json", "ReportDetail").assert(report);
+    value.readers.evidence.bundle.mockRejectedValue(new Error("sealed report must not reopen Evidence"));
+    expect((await value.service.read(scope, "run_p18")).frozen_core).toEqual(core);
+  });
+
   it("E14 seals the new FIXED engine OOS fact without replacing the broader Hub metric or resealing old reports", async () => {
     const value = subject();
     const existing = await value.readers.evidence.bundle();
@@ -151,7 +171,7 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     expect(report.frozen_core.metrics.find((item) => item.key === "FINAL_EQUITY")).toMatchObject({ value: "110", scope: "OOS" });
     expect(report.frozen_core.headline.find((item) => item.key === "OOS_SHARPE")).toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED" } });
     expect(report.frozen_core.equity.points).toHaveLength(3);
-    expect(report.frozen_core.folds).toMatchObject({ state: "NOT_PUBLISHED", rows: [] });
+    expect(report.frozen_core.folds).toMatchObject({ state: "NOT_APPLICABLE", rows: [], availability: { reason_code: "P04_SINGLE_WINDOW_HAS_NO_PER_FOLD_METRICS" } });
     // W6a: every new seal is v2; the P04 lane keeps its hubs and adds typed v2 facts.
     const core = report.frozen_core;
     if (core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected a v2 core");

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/research-retained-analytics.v2.schema.json",
+  "title": "ResearchRetainedAnalyticsV2",
+  "description": "D-AN-01 source-time all-time OOS descriptive analytics. v1 remains readable. No rolling detailed-screen metrics or reconstructed PnL/fills/objectives.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "input_digest", "scope_locator", "benchmark_locator", "oos_observation_count", "drawdown_recovered", "metrics", "behaviour", "strategy_curve", "benchmark_curve", "last_30d"],
+  "properties": {
+    "schema_version": {"const": "research.retained-analytics.v2"},
+    "input_digest": {"$ref": "#/$defs/Digest"},
+    "scope_locator": {"$ref": "#/$defs/Locator"},
+    "benchmark_locator": {"$ref": "#/$defs/Locator"},
+    "oos_observation_count": {"$ref": "#/$defs/PositiveCount"},
+    "drawdown_recovered": {"type": "boolean"},
+    "metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sharpe", "sortino", "cagr_fraction", "profit_factor", "long_hit_rate_fraction", "short_hit_rate_fraction", "volatility_fraction", "skew", "excess_kurtosis", "beta", "correlation", "benchmark_return_fraction", "max_drawdown_duration_days", "sharpe_decay"],
+      "properties": {
+        "sharpe": {"$ref": "#/$defs/Fact"},
+        "sortino": {"$ref": "#/$defs/Fact"},
+        "cagr_fraction": {"$ref": "#/$defs/Fact"},
+        "profit_factor": {"$ref": "#/$defs/Fact"},
+        "long_hit_rate_fraction": {"$ref": "#/$defs/Fact"},
+        "short_hit_rate_fraction": {"$ref": "#/$defs/Fact"},
+        "volatility_fraction": {"$ref": "#/$defs/Fact"},
+        "skew": {"$ref": "#/$defs/Fact"},
+        "excess_kurtosis": {"$ref": "#/$defs/Fact"},
+        "beta": {"$ref": "#/$defs/Fact"},
+        "correlation": {"$ref": "#/$defs/Fact"},
+        "benchmark_return_fraction": {"$ref": "#/$defs/Fact"},
+        "max_drawdown_duration_days": {"$ref": "#/$defs/Fact"},
+        "sharpe_decay": {"$ref": "#/$defs/Fact"}
+      }
+    },
+    "behaviour": {
+      "type": "object", "additionalProperties": false,
+      "required": ["exposure_long_fraction", "exposure_short_fraction", "exposure_flat_fraction", "win_rate", "payoff_ratio", "average_hold_seconds", "max_consecutive_losses", "turnover_notional"],
+      "properties": {
+        "exposure_long_fraction": {"$ref": "#/$defs/Fact"},
+        "exposure_short_fraction": {"$ref": "#/$defs/Fact"},
+        "exposure_flat_fraction": {"$ref": "#/$defs/Fact"},
+        "win_rate": {"$ref": "#/$defs/Fact"},
+        "payoff_ratio": {"$ref": "#/$defs/Fact"},
+        "average_hold_seconds": {"$ref": "#/$defs/Fact"},
+        "max_consecutive_losses": {"$ref": "#/$defs/Fact"},
+        "turnover_notional": {"$ref": "#/$defs/Fact"}
+      }
+    },
+    "strategy_curve": {"$ref": "#/$defs/Curve"},
+    "benchmark_curve": {"$ref": "#/$defs/Curve"},
+    "last_30d": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "window_start_utc_ms", "window_end_utc_ms", "partial_window", "source_observation_count", "points", "return_fraction", "sharpe"],
+      "properties": {
+        "label": {"const": "last 30D"},
+        "window_start_utc_ms": {"$ref": "#/$defs/UtcMs"},
+        "window_end_utc_ms": {"$ref": "#/$defs/UtcMs"},
+        "partial_window": {"type": "boolean"},
+        "source_observation_count": {"$ref": "#/$defs/Count"},
+        "points": {"$ref": "#/$defs/Curve"},
+        "return_fraction": {"$ref": "#/$defs/Fact"},
+        "sharpe": {"$ref": "#/$defs/Fact"}
+      }
+    }
+  },
+  "$defs": {
+    "Decimal": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$", "maxLength": 96},
+    "Digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "UtcMs": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "Count": {"type": "integer", "minimum": 0, "maximum": 2000000},
+    "PositiveCount": {"type": "integer", "minimum": 1, "maximum": 2000000},
+    "Locator": {"type": "string", "minLength": 1, "maxLength": 256},
+    "Reason": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,159}$"},
+    "Fact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "value", "origin", "scope", "source_locator", "input_digest"],
+      "properties": {
+        "state": {"enum": ["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]},
+        "reason_code": {"anyOf": [{"$ref": "#/$defs/Reason"}, {"type": "null"}]},
+        "value": {"anyOf": [{"$ref": "#/$defs/Decimal"}, {"type": "null"}]},
+        "origin": {"enum": ["ENGINE_DIRECT", "PORTAL_DERIVED"]},
+        "scope": {"const": "OOS"},
+        "source_locator": {"$ref": "#/$defs/Locator"},
+        "input_digest": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [{"if": {"properties": {"state": {"const": "AVAILABLE"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/Decimal"}, "reason_code": {"type": "null"}}}, "else": {"properties": {"value": {"type": "null"}, "reason_code": {"$ref": "#/$defs/Reason"}}}}]
+    },
+    "Curve": {"type": "array", "maxItems": 24, "items": {"type": "object", "additionalProperties": false, "required": ["at_utc_ms", "value"], "properties": {"at_utc_ms": {"$ref": "#/$defs/UtcMs"}, "value": {"$ref": "#/$defs/Decimal"}}}}
+  }
+}

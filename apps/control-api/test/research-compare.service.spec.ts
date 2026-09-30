@@ -112,6 +112,7 @@ function raw(overrides: Record<string, unknown> = {}) {
     correlation: "0.5",
     leftCommonReturnFraction: "0.1", rightCommonReturnFraction: "0.2",
     leftCommonMaxDrawdownFraction: "-0.02", rightCommonMaxDrawdownFraction: "-0.01",
+    commonDailyReturnCount: 3, leftCommonDailySharpe: "1.25", rightCommonDailySharpe: "2.5",
     ...overrides,
   };
 }
@@ -225,6 +226,10 @@ describe("P20 bounded Compare persisted truth", () => {
     });
     expect(response.result.pair.runs[0].original_metrics[0]).toMatchObject({ scope: "P13_OOS_EQUITY_SERIES", value: "0.1" });
     expect(response.result.pair.common_window.metrics[2]).toMatchObject({ key: "TRADE_COUNT", availability: { state: "NOT_APPLICABLE" } });
+    expect(response.result.pair.common_window.metrics.find((metric) => metric.key === "OOS_SHARPE")).toMatchObject({
+      definition_id: "research.compare.metric.v2.common-window-utc-daily-sharpe-365",
+      left_value: "1.25", right_value: "2.5", delta: "1.25", availability: { state: "AVAILABLE" },
+    });
   });
 
   /*

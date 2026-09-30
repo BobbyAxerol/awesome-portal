@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
+import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
 import type { CurrentSourceTableKind } from "./current-source.repository";
 
@@ -389,6 +390,7 @@ export const CurrentSourceSummarySchema = z.object({
   // W5b (P17): the signal-notional replay ledger summary; absent before W5b.
   replay: CurrentSourceReplaySummarySchema.optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
+  summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
   derived: z.object({
     monthly_returns: z.object({
       source_observation_count: z.number().int().nonnegative().max(2_000_000),

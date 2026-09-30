@@ -250,6 +250,81 @@ export interface components {
                 sharpe: components["schemas"]["RetainedAnalyticsDecimal"];
             }[];
         } & unknown;
+        /**
+         * ResearchRetainedAnalyticsV2
+         * @description D-AN-01 source-time all-time OOS descriptive analytics. v1 remains readable. No rolling detailed-screen metrics or reconstructed PnL/fills/objectives.
+         */
+        RetainedAnalyticsV2: {
+            /** @constant */
+            schema_version: "research.retained-analytics.v2";
+            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
+            scope_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            benchmark_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            oos_observation_count: components["schemas"]["RetainedAnalyticsV2PositiveCount"];
+            drawdown_recovered: boolean;
+            metrics: {
+                sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sortino: components["schemas"]["RetainedAnalyticsV2Fact"];
+                cagr_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                profit_factor: components["schemas"]["RetainedAnalyticsV2Fact"];
+                long_hit_rate_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                short_hit_rate_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                volatility_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                skew: components["schemas"]["RetainedAnalyticsV2Fact"];
+                excess_kurtosis: components["schemas"]["RetainedAnalyticsV2Fact"];
+                beta: components["schemas"]["RetainedAnalyticsV2Fact"];
+                correlation: components["schemas"]["RetainedAnalyticsV2Fact"];
+                benchmark_return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                max_drawdown_duration_days: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sharpe_decay: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+            behaviour: {
+                exposure_long_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                exposure_short_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                exposure_flat_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                win_rate: components["schemas"]["RetainedAnalyticsV2Fact"];
+                payoff_ratio: components["schemas"]["RetainedAnalyticsV2Fact"];
+                average_hold_seconds: components["schemas"]["RetainedAnalyticsV2Fact"];
+                max_consecutive_losses: components["schemas"]["RetainedAnalyticsV2Fact"];
+                turnover_notional: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+            strategy_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
+            benchmark_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
+            last_30d: {
+                /** @constant */
+                label: "last 30D";
+                window_start_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+                window_end_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+                partial_window: boolean;
+                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                points: components["schemas"]["RetainedAnalyticsV2Curve"];
+                return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+        };
+        RetainedAnalyticsV2Decimal: string;
+        RetainedAnalyticsV2Digest: string;
+        RetainedAnalyticsV2UtcMs: number;
+        RetainedAnalyticsV2Count: number;
+        RetainedAnalyticsV2PositiveCount: number;
+        RetainedAnalyticsV2Locator: string;
+        RetainedAnalyticsV2Reason: string;
+        RetainedAnalyticsV2Fact: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
+            value: components["schemas"]["RetainedAnalyticsV2Decimal"] | null;
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            /** @constant */
+            scope: "OOS";
+            source_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
+        } & unknown;
+        RetainedAnalyticsV2Curve: {
+            at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+            value: components["schemas"]["RetainedAnalyticsV2Decimal"];
+        }[];
         RunId: string;
         WorkspaceId: string;
         Digest: string;
@@ -407,6 +482,7 @@ export interface components {
             /** @constant */
             schema_version: "research.current-source-evidence.v1";
             summary_analytics?: components["schemas"]["RetainedAnalytics"];
+            summary_analytics_v2?: components["schemas"]["RetainedAnalyticsV2"];
             passport: {
                 artifact_table_rows: {
                     observations: number;

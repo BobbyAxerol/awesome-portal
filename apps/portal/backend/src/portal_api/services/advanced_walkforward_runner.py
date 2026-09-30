@@ -232,6 +232,14 @@ class AdvancedWalkForwardRunner:
             run_id, "wfo/retained_analytics.v1.json",
             with_portal_provenance("retained_analytics.v1.json", retained_analytics(result=result, mode="WFO")),
         )
+        from portal_api.services.research_portal_analytics import portal_analytics_v2
+        self._artifacts.write_json(
+            run_id, "wfo/retained_analytics.v2.json",
+            with_portal_provenance("retained_analytics.v2.json", portal_analytics_v2(
+                result=result, mode="WFO", market_close=active_market.frame["close"],
+                benchmark_locator=f"P08.snapshot:{active_market.content_hash}:{request.symbol}:{request.timeframe}:close:OOS",
+            )),
+        )
         series = _stitched_series(active_market.frame, result)
         self._artifacts.write_frame(run_id, "series/stitched.parquet", series)
         self._write_account_ledger(run_id, active_market.frame, result, wf)

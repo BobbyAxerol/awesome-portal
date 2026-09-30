@@ -430,6 +430,20 @@ describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub 
     return { item: response.items[0]!, response, repository };
   }
 
+  it("D-AN-01 maps only sealed last-30D card facts and types old-seal absence", async () => {
+    const analytics = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const { item } = await card([retainedRow({ analytics_v2: analytics })]);
+    expect(item.last_30d).toMatchObject({
+      availability: { state: "AVAILABLE" }, input_digest: analytics.input_digest,
+      data: { label: "last 30D", points: analytics.last_30d.points },
+    });
+    const oldSeal = await card([retainedRow()]);
+    expect(oldSeal.item.last_30d).toMatchObject({
+      availability: { state: "NOT_PUBLISHED", reason_code: "PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL" },
+      data: null,
+    });
+  });
+
   it("prints QuantBT's own fold means and the summed OOS trades instead of P13_SOURCE_EVIDENCE_NOT_PUBLISHED", async () => {
     const { item } = await card([retainedRow()]);
     expect(ResearchRunLibraryItemSchema.safeParse(item).success).toBe(true);

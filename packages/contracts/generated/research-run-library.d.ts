@@ -48,6 +48,171 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ResearchRetainedAnalytics
+         * @description E11/E14 source-time analytics sealed with one immutable artifact/projection. UTC milliseconds, exact decimals, no compute on GET. Child-tape trade count is not an audited ledger.
+         */
+        RetainedAnalytics: {
+            /** @constant */
+            schema_version: "research.retained-analytics.v1";
+            input_digest: string;
+            scope_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            oos_observation_count: number;
+            trade_ledger_record_count: components["schemas"]["RetainedAnalyticsCount"];
+            net_oos_return: components["schemas"]["RetainedAnalyticsFact"] & {
+                /** @constant */
+                scope?: "OOS";
+                /** @constant */
+                origin?: "ENGINE_DIRECT";
+            };
+            total_trade_count: components["schemas"]["RetainedAnalyticsFact"] & {
+                /** @constant */
+                scope?: "CHILD_TAPE";
+                /** @constant */
+                origin?: "ENGINE_DIRECT";
+                value?: null | string;
+            };
+            rolling_sharpe_63: components["schemas"]["RetainedAnalyticsRolling"];
+            in_sample_equity: components["schemas"]["RetainedAnalyticsCurve"];
+            behaviour: {
+                win_rate: components["schemas"]["RetainedAnalyticsOosFact"];
+                payoff_ratio: components["schemas"]["RetainedAnalyticsOosFact"];
+                average_hold_seconds: components["schemas"]["RetainedAnalyticsOosFact"];
+                max_consecutive_losses: components["schemas"]["RetainedAnalyticsOosFact"];
+                turnover_notional: components["schemas"]["RetainedAnalyticsOosFact"];
+                exposure_fraction: components["schemas"]["RetainedAnalyticsOosFact"];
+            };
+        };
+        RetainedAnalyticsDecimal: string;
+        RetainedAnalyticsUtcMs: number;
+        RetainedAnalyticsCount: number;
+        RetainedAnalyticsLocator: string;
+        RetainedAnalyticsReason: string;
+        /** @enum {unknown} */
+        RetainedAnalyticsState: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+        RetainedAnalyticsFact: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+            value: components["schemas"]["RetainedAnalyticsDecimal"] | null;
+            source_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            /** @enum {unknown} */
+            scope: "OOS" | "CHILD_TAPE";
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "SOURCE_DERIVED";
+        } & unknown;
+        RetainedAnalyticsOosFact: components["schemas"]["RetainedAnalyticsFact"] & {
+            /** @constant */
+            scope?: "OOS";
+        };
+        RetainedAnalyticsCurve: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+            /** @enum {unknown} */
+            scope: "DECLARED_IS" | "SELECTED_CANDIDATE_IS";
+            source_locator: components["schemas"]["RetainedAnalyticsLocator"];
+            start_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"] | null;
+            end_exclusive_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"] | null;
+            source_observation_count: components["schemas"]["RetainedAnalyticsCount"];
+            emitted_point_count: number;
+            /** @enum {unknown} */
+            sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
+            points: {
+                at_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"];
+                equity: components["schemas"]["RetainedAnalyticsDecimal"];
+            }[];
+        } & unknown;
+        RetainedAnalyticsRolling: {
+            state: components["schemas"]["RetainedAnalyticsState"];
+            reason_code: components["schemas"]["RetainedAnalyticsReason"] | null;
+            /** @constant */
+            window_days: 63;
+            daily_return_count: components["schemas"]["RetainedAnalyticsCount"] | null;
+            locator: components["schemas"]["RetainedAnalyticsLocator"] | null;
+            source_observation_count: components["schemas"]["RetainedAnalyticsCount"];
+            omitted_non_finite_count: components["schemas"]["RetainedAnalyticsCount"];
+            emitted_point_count: number;
+            /** @enum {unknown} */
+            sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
+            points: {
+                at_utc_ms: components["schemas"]["RetainedAnalyticsUtcMs"];
+                sharpe: components["schemas"]["RetainedAnalyticsDecimal"];
+            }[];
+        } & unknown;
+        /**
+         * ResearchRetainedAnalyticsV2
+         * @description D-AN-01 source-time all-time OOS descriptive analytics. v1 remains readable. No rolling detailed-screen metrics or reconstructed PnL/fills/objectives.
+         */
+        RetainedAnalyticsV2: {
+            /** @constant */
+            schema_version: "research.retained-analytics.v2";
+            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
+            scope_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            benchmark_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            oos_observation_count: components["schemas"]["RetainedAnalyticsV2PositiveCount"];
+            drawdown_recovered: boolean;
+            metrics: {
+                sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sortino: components["schemas"]["RetainedAnalyticsV2Fact"];
+                cagr_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                profit_factor: components["schemas"]["RetainedAnalyticsV2Fact"];
+                long_hit_rate_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                short_hit_rate_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                volatility_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                skew: components["schemas"]["RetainedAnalyticsV2Fact"];
+                excess_kurtosis: components["schemas"]["RetainedAnalyticsV2Fact"];
+                beta: components["schemas"]["RetainedAnalyticsV2Fact"];
+                correlation: components["schemas"]["RetainedAnalyticsV2Fact"];
+                benchmark_return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                max_drawdown_duration_days: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sharpe_decay: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+            behaviour: {
+                exposure_long_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                exposure_short_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                exposure_flat_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                win_rate: components["schemas"]["RetainedAnalyticsV2Fact"];
+                payoff_ratio: components["schemas"]["RetainedAnalyticsV2Fact"];
+                average_hold_seconds: components["schemas"]["RetainedAnalyticsV2Fact"];
+                max_consecutive_losses: components["schemas"]["RetainedAnalyticsV2Fact"];
+                turnover_notional: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+            strategy_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
+            benchmark_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
+            last_30d: {
+                /** @constant */
+                label: "last 30D";
+                window_start_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+                window_end_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+                partial_window: boolean;
+                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                points: components["schemas"]["RetainedAnalyticsV2Curve"];
+                return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
+                sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+        };
+        RetainedAnalyticsV2Decimal: string;
+        RetainedAnalyticsV2Digest: string;
+        RetainedAnalyticsV2UtcMs: number;
+        RetainedAnalyticsV2Count: number;
+        RetainedAnalyticsV2PositiveCount: number;
+        RetainedAnalyticsV2Locator: string;
+        RetainedAnalyticsV2Reason: string;
+        RetainedAnalyticsV2Fact: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
+            value: components["schemas"]["RetainedAnalyticsV2Decimal"] | null;
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            /** @constant */
+            scope: "OOS";
+            source_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
+        } & unknown;
+        RetainedAnalyticsV2Curve: {
+            at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+            value: components["schemas"]["RetainedAnalyticsV2Decimal"];
+        }[];
         WorkspaceId: string;
         RunId: string;
         AlphaId: string;
@@ -166,6 +331,11 @@ export interface components {
             };
             stages: components["schemas"]["StageCell"][];
             stats: components["schemas"]["MetricCell"][];
+            last_30d?: {
+                availability: components["schemas"]["Availability"];
+                input_digest: string | null;
+                data: components["schemas"]["RetainedAnalyticsV2"]["last_30d"] | null;
+            };
             superseded_note: string | null;
             comparison: {
                 key: string | null;

@@ -622,6 +622,10 @@ class CurrentSourceArtifactAdapter:
         source_contract = self._optional_json(raw_dir / "wfo" / "source_contract.v1.json", "source contract")
         fold_metrics = self._optional_json(raw_dir / "wfo" / "selected_fold_metrics.v1.json", "selected fold metrics")
         summary_analytics = self._optional_json(raw_dir / "wfo" / "retained_analytics.v1.json", "retained analytics")
+        summary_analytics_v2 = self._optional_json(raw_dir / "wfo" / "retained_analytics.v2.json", "Portal analytics v2")
+        if summary_analytics_v2 is not None:
+            summary_analytics_v2 = {key: value for key, value in summary_analytics_v2.items()
+                                    if key not in {"producer", "artifact_schema_version"}}
         if summary_analytics is not None:
             # The source file has Portal artifact provenance; the named public
             # analytics DTO does not expose writer metadata. Older raw blocks
@@ -687,6 +691,7 @@ class CurrentSourceArtifactAdapter:
                     ("source_contract", source_contract),
                     ("selected_fold_metrics", fold_metrics),
                     ("summary_analytics", summary_analytics),
+                    ("summary_analytics_v2", summary_analytics_v2),
                     ("account_contract", account_contract if account_ledger is not None else None),
                     ("strategy_lifecycle_contract", lifecycle_contract if child_audit_summary is not None else None),
                 )
@@ -715,6 +720,8 @@ class CurrentSourceArtifactAdapter:
                 summary["replay"]["child_audit"] = child_audit_summary
         if summary_analytics is not None:
             summary["summary_analytics"] = summary_analytics
+        if summary_analytics_v2 is not None:
+            summary["summary_analytics_v2"] = summary_analytics_v2
         if len(json.dumps(canonicalize(summary), ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")) > 65_536:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE",
@@ -754,6 +761,8 @@ class CurrentSourceArtifactAdapter:
                 writer.write_small_document("source_selected_fold_metrics", self._document(fold_metrics))
             if summary_analytics is not None:
                 writer.write_small_document("source_retained_analytics", self._document(summary_analytics))
+            if summary_analytics_v2 is not None:
+                writer.write_small_document("source_retained_analytics_v2", self._document(summary_analytics_v2))
             if account_ledger is not None and account_contract is not None:
                 writer.write_small_document("source_account_contract", self._document(account_contract))
             writer.write_small_document("current_source_summary", self._document(summary))

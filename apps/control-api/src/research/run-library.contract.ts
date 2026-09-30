@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { ResearchRetainedAnalyticsV2Last30dSchema } from "./retained-analytics-v2.contract";
 
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 export const ResearchRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
@@ -230,6 +231,12 @@ export const ResearchRunLibraryItemSchema = z.object({
   claim: ClaimSchema,
   stages: z.tuple([StageCellSchema, StageCellSchema, StageCellSchema, StageCellSchema, StageCellSchema]),
   stats: z.tuple([MetricCellSchema, MetricCellSchema, MetricCellSchema]),
+  /** Source-time D-AN-01 card data; old seals remain explicitly typed absent. */
+  last_30d: z.object({
+    availability: FieldAvailabilitySchema,
+    input_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+    data: ResearchRetainedAnalyticsV2Last30dSchema.nullable(),
+  }).strict().optional(),
   superseded_note: z.string().min(1).max(1_024).nullable(),
   comparison: ComparisonSchema,
   sparkline: z.object({

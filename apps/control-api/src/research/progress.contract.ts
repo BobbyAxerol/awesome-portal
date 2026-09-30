@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
+import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 export { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
@@ -327,6 +328,7 @@ export const ResearchEvidenceSourceSchema = z.object({
   /** RF-05 (P13 evidence owner): additive engine OOS analytics; see evidence.contract.ts. */
   oos_analytics: ResearchEvidenceOosAnalyticsSourceSchema.optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
+  summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
 }).strict().superRefine((value, context) => {
   if (value.source.emitted_equity_points !== value.equity_points.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count is inconsistent" });

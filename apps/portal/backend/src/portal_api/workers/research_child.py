@@ -641,13 +641,20 @@ def _p13_evidence_source(
             "benchmark": {"state": "NOT_PUBLISHED", "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK"},
             "funding": {"state": "NOT_PUBLISHED", "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_FUNDING"},
             "audited_fills": {"state": "NOT_PUBLISHED", "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS"},
-            "per_fold_metrics": {"state": "NOT_PUBLISHED", "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_METRICS"},
+            "per_fold_metrics": {"state": "NOT_APPLICABLE", "reason_code": "P04_SINGLE_WINDOW_HAS_NO_PER_FOLD_METRICS"},
         },
     }
     from portal_api.services.research_retained_analytics import retained_analytics
     receipt["summary_analytics"] = retained_analytics(
         result=result, mode="FIXED", is_start_utc_ms=is_start_utc_ms,
         oos_start_utc_ms=oos_start_utc_ms,
+    )
+    from portal_api.services.research_portal_analytics import portal_analytics_v2
+    close_digest = hashlib.sha256(market["close"].to_numpy(dtype="<f8").tobytes()).hexdigest()
+    receipt["summary_analytics_v2"] = portal_analytics_v2(
+        result=result, mode="FIXED", market_close=market["close"],
+        benchmark_locator=f"P08.verified_tape:{close_digest}:close:OOS",
+        is_start_utc_ms=is_start_utc_ms, oos_start_utc_ms=oos_start_utc_ms,
     )
     # RF-05 CG-P13-03/04/06: additive engine OOS analytics (services/research_evidence_metrics.py).
     # An analytics failure is a typed absence, never a failed child run.

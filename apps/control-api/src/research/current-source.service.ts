@@ -385,6 +385,7 @@ export class ResearchCurrentSourceService {
     const value = {
       schema_version: "research.current-source-evidence.v1" as const,
       ...(summary.summary_analytics ? { summary_analytics: summary.summary_analytics } : {}),
+      ...(summary.summary_analytics_v2 ? { summary_analytics_v2: summary.summary_analytics_v2 } : {}),
       ...this.common("evidence", seal),
       passport: {
         artifact_table_rows: {
@@ -408,7 +409,10 @@ export class ResearchCurrentSourceService {
       source_absences: {
         route_ledger: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_ROUTE_LEDGER"),
         audited_fills: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS"),
-        benchmark: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES"),
+        benchmark: summary.summary_analytics_v2?.metrics.benchmark_return_fraction.state === "AVAILABLE"
+          ? fact("AVAILABLE", null)
+          : sourceGap(summary.summary_analytics_v2?.metrics.benchmark_return_fraction.reason_code
+            ?? "PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL"),
         /* E11: named so Screen 04 can state them instead of leaving EChart 1
            one legend entry short and EChart 3 half empty with a UI-authored
            code. Both are structural facts of this lane, not this run. */

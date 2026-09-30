@@ -63,11 +63,14 @@ const seal: CurrentSourceSealRow = {
   retainedAtUtcMs: 1_790_269_236_911,
 };
 
-function currentSource(importDigest = seal.retainedImportDigest, summaryAnalytics?: Record<string, unknown>) {
+function currentSource(importDigest = seal.retainedImportDigest, summaryAnalytics?: Record<string, unknown>, summaryAnalyticsV2?: Record<string, unknown>) {
   const sorted = (kind: Kind) => [...(real.rows[kind] ?? [])].sort((left, right) => left.sourceOrdinal - right.sourceOrdinal);
   const repository = {
-    sealForRead: vi.fn().mockResolvedValue(summaryAnalytics
-      ? { ...seal, summary: { ...seal.summary, summary_analytics: summaryAnalytics } }
+    sealForRead: vi.fn().mockResolvedValue(summaryAnalytics || summaryAnalyticsV2
+      ? { ...seal, summary: { ...seal.summary,
+          ...(summaryAnalytics ? { summary_analytics: summaryAnalytics } : {}),
+          ...(summaryAnalyticsV2 ? { summary_analytics_v2: summaryAnalyticsV2 } : {}),
+        } }
       : seal),
     runState: vi.fn(),
     rows: vi.fn(async (_scope: unknown, _runId: string, _revision: number, kind: Kind, selection: { afterOrdinal?: number; atOrdinal?: number; limit: number }) => {
@@ -132,6 +135,7 @@ function parts(manifestDigest = real.manifest_digest) {
 
 function subject(options: {
   summaryAnalytics?: Record<string, unknown>;
+  summaryAnalyticsV2?: Record<string, unknown>;
   binding?: "PUBLISHABLE" | "SCRATCH";
   manifestDigest?: string;
   importDigest?: string;
@@ -158,7 +162,7 @@ function subject(options: {
   const unused = { detail: vi.fn().mockRejectedValue(new Error("a WFO report never reads a P04 hub")) };
   const service = new ResearchReportService(
     repository as never, evidence as never, unused as never, unused as never, unused as never, unused as never,
-    currentSource(options.importDigest, options.summaryAnalytics),
+    currentSource(options.importDigest, options.summaryAnalytics, options.summaryAnalyticsV2),
     {
       FEATURE_RESEARCH_REPORTS: "true", FEATURE_RESEARCH_CURRENT_SOURCE: "true",
       RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES: 512 * 1024, RESEARCH_REPORT_EXPORT_LEASE_SECONDS: 90,
@@ -289,6 +293,25 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
     expect(byKey.OOS_SHARPE).toMatchObject({ value: evidence.fold_verdicts.mean_oos_sharpe, scope: "OOS_MEAN_OF_FOLDS" });
     expect(byKey.TRADES!.value).toBe(String(evidence.fold_verdicts.rows.reduce((sum, row) => sum + Number(row.oos_trades), 0)));
     expect(byKey.WIN_RATE).toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS" } });
+  });
+
+  it("D-AN-01 keeps fold mean separate when a new WFO seal has all-time v2 facts", async () => {
+    const analytics = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const evidence = await currentSource(undefined, undefined, analytics).evidence(scope, real.run_id);
+    expect(evidence).toHaveProperty("summary_analytics_v2", analytics);
+    openApiValidator("research-current-source.openapi.json", "Evidence").assert(evidence);
+    const report = await subject({ summaryAnalyticsV2: analytics }).service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE");
+    const core = v2(report);
+    expect(core.headline.find((item) => item.key === "OOS_SHARPE")).toMatchObject({
+      value: analytics.metrics.sharpe.value, scope: "OOS",
+    });
+    expect(core.metrics.find((item) => item.key === "MEAN_OOS_SHARPE")).toMatchObject({
+      scope: "OOS_MEAN_OF_FOLDS",
+    });
+    expect(core.metrics.find((item) => item.key === "ALL_TIME_OOS_SHARPE")).toMatchObject({
+      value: analytics.metrics.sharpe.value, origin: analytics.metrics.sharpe.origin,
+    });
+    reportValidator.assert(report);
   });
 
   /* E14 · 9.7/9.8 on the retained lane. */

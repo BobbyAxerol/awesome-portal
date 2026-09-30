@@ -8,6 +8,7 @@
 
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
+import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 
 export const ResearchEvidenceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
@@ -472,6 +473,7 @@ const FoldNavigationSchema = z.object({
 
 export const ResearchEvidenceHubResponseSchema = z.object({
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
+  summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
   schema_version: z.literal("research.evidence-hub.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchEvidenceRunIdSchema,
