@@ -79,6 +79,46 @@ export function syntheticFoldWindow(scaled: CurrentSourceReplay, fold: number): 
   return body;
 }
 
+const BAR_MS = 3_600_000;
+
+/**
+ * D7 · the fold-`fold` window on that fold's own published span. The real
+ * fold-0 bars are kept and moved onto `first_ordinal … last_ordinal` of
+ * `segments[fold]` (one hour per bar, as the fixture's own rows are spaced),
+ * labelled with the fold id. Unlike `syntheticFoldWindow` the ordinals agree
+ * with the segment, which is what "the last bar of a fold" means — and what a
+ * window read for the next fold must start at. The last fold's page has no
+ * next window, as the real API answers for the run's last fold (checked on the
+ * preview's WFO run: fold 1 → `has_more: false`, `next_cursor: null`).
+ */
+export function alignedFoldWindow(scaled: CurrentSourceReplay, fold: number): CurrentSourceReplay {
+  const segments = scaled.execution.fold_capital.segments;
+  const segment = segments[fold];
+  const source = scaled.replay.rows;
+  if (!segment || source.length === 0) throw new Error(`no fold ${fold} in this fixture`);
+  const body = structuredClone(scaled);
+  const shift = segment.first_ordinal - source[0]!.source_ordinal;
+  const move = <T extends { source_ordinal: number; source_index_utc: string; at_utc_ms: number; bar?: { fold_id?: string | null } | null }>(row: T): T => ({
+    ...row,
+    source_ordinal: row.source_ordinal + shift,
+    at_utc_ms: row.at_utc_ms + shift * BAR_MS,
+    source_index_utc: new Date(row.at_utc_ms + shift * BAR_MS).toISOString().replace(".000Z", "Z"),
+    ...(row.bar ? { bar: { ...row.bar, fold_id: String(fold) } } : {}),
+  });
+  body.replay.rows = body.replay.rows.map(move);
+  const at = body.replay.state_at_cursor;
+  body.replay.state_at_cursor = {
+    ...at,
+    source_ordinal: at.source_ordinal === null ? null : at.source_ordinal + shift,
+    at_utc_ms: at.at_utc_ms === null ? null : at.at_utc_ms + shift * BAR_MS,
+    ...(at.bar ? { bar: { ...at.bar, fold_id: String(fold) } } : {}),
+  };
+  if (fold === segments.length - 1) {
+    body.replay.page = { ...body.replay.page, has_more: false, next_cursor: null };
+  }
+  return body;
+}
+
 export function syntheticChildAudit(real: ReplayChildAudit, fold: number): ReplayChildAudit {
   const body = structuredClone(real);
   body.fold_id = String(fold);

@@ -23,10 +23,18 @@
  * the read published it (DQ-15).
  */
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip, type ProvenanceFacts } from "./ProvenanceStrip";
+import {
+  FoldStrip,
+  FoldStripAbsence,
+  hubModeReadsAbsence,
+  modeReadsView,
+  type ModeReadsSlots,
+  type ModeReadsView,
+} from "./SearchFoldStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import type { DeclaredParameter } from "./alphaImportClient";
 import { reasonCodeSentence } from "./researchRefusal";
@@ -1533,15 +1541,33 @@ function RetainedThetaJourney({ search }: { search: CurrentSourceSearch }) {
   );
 }
 
-/** "What this mode reads" on a retained run: the search contract's own tokens, verbatim. */
-function RetainedModeReads({ search, runId }: { search: CurrentSourceSearch; runId: string }) {
+/**
+ * "What this mode reads" on a retained run (HiFi 6.4, G8): the per-fold glyph
+ * strip and its note, drawn from the fold plan and the Atlas's own mode
+ * descriptor; then, on a line of their own, the search contract's tokens and
+ * the Atlas's, verbatim.
+ */
+function RetainedModeReads({ search, runId, view }: { search: CurrentSourceSearch; runId: string; view: ModeReadsView }) {
   const contract = search.search_contract;
   const probe = search.diagnostics.probe;
+  /*
+   * The Atlas's own words for this mode × schedule, when the strip was drawn
+   * from them: what the mode reads, what it retains, and — when the engine
+   * states no condition on it — whether it uses OOS. The claim row above
+   * already prints the contract's claim tokens, so they are not repeated here.
+   */
+  const atlasTokens: [string, string | null, string?][] =
+    view.kind === "strip"
+      ? [
+          view.reads.state === "PUBLISHED"
+            ? ["selection_inputs", view.reads.inputs.join(" · ")]
+            : ["selection_inputs", null, view.reads.reason],
+          view.reads.state === "PUBLISHED" ? ["retention", view.reads.retention] : ["retention", null, view.reads.reason],
+          ["atlas_release", view.release.id],
+          ...(view.oos.condition === null ? ([["oos_use", view.oos.use]] as [string, string | null][]) : []),
+        ]
+      : [];
   const tokens: [string, string | null][] = [
-    ["validation_claim", contract.validation_claim],
-    ["chronological_claim", contract.chronological_claim],
-    ["oos_used_for_selection", contract.oos_used_for_selection === null ? null : String(contract.oos_used_for_selection)],
-    ["candidate_selection_metric", contract.candidate_selection_metric],
     contract.top_is_fraction !== null ? ["top_is_fraction", contract.top_is_fraction] : ["top_is_k", contract.top_is_k === null ? null : String(contract.top_is_k)],
     ["decay_lambda", probe.decay_lambda],
     ["decay_gamma", probe.decay_gamma],
@@ -1555,35 +1581,43 @@ function RetainedModeReads({ search, runId }: { search: CurrentSourceSearch; run
   const schedule = contract.optimization_schedule;
   return (
     <>
-      {mode !== null && schedule !== null ? (
-        <Link
-          to={atlasModeHref({ mode, schedule } as NonNullable<ClaimRow["mode_reference"]>, runId)}
-          className="mono text-[10.5px]"
-          style={{ color: "var(--accent)" }}
-          data-action="open-atlas-mode"
-        >
-          {mode} · {schedule} in the Engine Atlas →
-        </Link>
-      ) : null}
-      <span className="flex flex-wrap gap-x-3 gap-y-1" data-mode-reads-tokens title="this run's search contract and probe, as QuantBT published them">
-        {tokens.map(([key, value]) => (
-          <span key={key} className="mono text-[10.5px]" data-mode-read={key}>
-            <span style={{ color: "var(--ink-faint)" }}>{key}</span>{" "}
-            {value ?? (
-              <span className="italic" style={{ color: "var(--ink-faint)" }} title={RETAINED_NO_FIELD}>
-                not published
-              </span>
-            )}
-          </span>
-        ))}
-      </span>
-      {stageA !== null && stageB !== null ? (
-        <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-mode-reads-stages>
-          Stage A (<span className="mono">{stageA}</span>) scores trials on IS
-          {optunaBlind ? " — no trial's OOS was seen by Optuna" : ""}; Stage B (<span className="mono">{stageB}</span>) re-scores
-          the frozen pool on OOS and ranks it by <span className="mono">{contract.candidate_selection_metric ?? "a metric not published"}</span>.
+      <FoldStrip view={view} />
+      <div className="flex w-full flex-wrap items-center gap-x-[14px] gap-y-1" data-mode-reads-detail>
+        {mode !== null && schedule !== null ? (
+          <Link
+            to={atlasModeHref({ mode, schedule } as NonNullable<ClaimRow["mode_reference"]>, runId)}
+            className="mono text-[10.5px]"
+            style={{ color: "var(--accent)" }}
+            data-action="open-atlas-mode"
+          >
+            {mode} · {schedule} in the Engine Atlas →
+          </Link>
+        ) : null}
+        <span className="flex flex-wrap gap-x-3 gap-y-1" data-mode-reads-tokens title="this run's search contract and probe, and the Atlas's descriptor for this mode × schedule, as published">
+          {[...atlasTokens, ...tokens].map(([key, value, why]) => (
+            <span key={key} className="mono text-[10.5px]" data-mode-read={key}>
+              <span style={{ color: "var(--ink-faint)" }}>{key}</span>{" "}
+              {value ?? (
+                <span className="italic" style={{ color: "var(--ink-faint)" }} title={why ?? RETAINED_NO_FIELD}>
+                  not published
+                </span>
+              )}
+            </span>
+          ))}
         </span>
-      ) : null}
+        {view.kind === "strip" && view.oos.condition !== null ? (
+          <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-oos-use-condition>
+            <span className="mono">oos_use {view.oos.use}</span> — {view.oos.condition}
+          </span>
+        ) : null}
+        {stageA !== null && stageB !== null ? (
+          <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-mode-reads-stages>
+            Stage A (<span className="mono">{stageA}</span>) scores trials on IS
+            {optunaBlind ? " — no trial's OOS was seen by Optuna" : ""}; Stage B (<span className="mono">{stageB}</span>) re-scores
+            the frozen pool on OOS and ranks it by <span className="mono">{contract.candidate_selection_metric ?? "a metric not published"}</span>.
+          </span>
+        ) : null}
+      </div>
     </>
   );
 }
@@ -1716,6 +1750,8 @@ export interface SearchScreenProps {
   onReread: () => void;
   /** W3b: a retained run's identity and declared space (asked only once the retained lane answered). */
   retainedRun?: RetainedRunFacts;
+  /** G8: the fold plan and the Atlas, the two reads the "what this mode reads" strip is drawn from (retained runs only). */
+  modeReads?: ModeReadsSlots;
   /** X2 · F4 (T07/T08): the trial the reader is inspecting — the hash's `pick=`, never θ*. */
   pick?: string | null;
   onPick?: (trialId: string) => void;
@@ -1785,9 +1821,11 @@ export function SearchScreen({
   ensureLedger,
   onReread,
   retainedRun,
+  modeReads,
   pick: controlledPick,
   onPick: controlledOnPick,
 }: SearchScreenProps) {
+  const modeReadsLabel = useId();
   /* Controlled by the route (the hash's `pick=`); a bare screen keeps its own. */
   const [localPick, setLocalPick] = useState<string | null>(null);
   const pick = controlledPick !== undefined ? controlledPick : localPick;
@@ -1808,6 +1846,16 @@ export function SearchScreen({
   const lane = retained && retainedClaims && isRetainedAnswer(retained) ? retained : null;
   const runMode = lane ? lane.search_contract.optimization_mode : detail?.requested_optimizer.mode ?? null;
   const runSchedule = lane ? lane.search_contract.optimization_schedule : detail?.requested_optimizer.schedule ?? null;
+  /* G8: the strip is drawn from the fold plan, the search contract and the Atlas — the retained lane only. */
+  const stripView: ModeReadsView | null = lane
+    ? modeReadsView({
+        mode: lane.search_contract.optimization_mode,
+        schedule: lane.search_contract.optimization_schedule,
+        engineVersion: lane.provenance.engine_version,
+        plan: modeReads?.plan ?? { state: "idle" },
+        atlas: modeReads?.atlas ?? { state: "idle" },
+      })
+    : null;
   /* The hub's source_absences describe the hub on a retained run; each panel above states the lane's own. */
   const absences = lane ? [] : hubAbsences;
 
@@ -2094,53 +2142,57 @@ export function SearchScreen({
                 </div>
               </div>
 
-              {/* HiFi "what this mode reads": what a mode reads is Atlas release
-                  metadata for the declared mode (claim_row.mode_reference), never
-                  run evidence — so it is a link there, tagged so, not cells here. */}
+              {/* HiFi "what this mode reads" (6.4, G8). A retained run draws the
+                  per-fold strip from the fold plan, its search contract and the
+                  Atlas's own mode descriptor. A run that executed no search has
+                  no per-fold read: the strip is a typed absence there, and what
+                  its declared mode reads is Atlas release metadata (claim_row.
+                  mode_reference), never run evidence — a link, tagged so. */}
               <div
+                role="group"
+                aria-labelledby={modeReadsLabel}
                 className="flex flex-wrap items-center gap-[14px] rounded-b-[6px] border-t px-[14px] py-2"
                 style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
                 data-mode-reads={lane ? "retained" : detail.claim_row.mode_reference ? "reference" : "shell"}
               >
-                <span className={`${LABEL} flex-none`} style={{ color: "var(--ink-faint)" }}>
+                <span id={modeReadsLabel} className={`${LABEL} flex-none`} style={{ color: "var(--ink-faint)" }}>
                   what this mode reads
                 </span>
-                {lane ? (
-                  <RetainedModeReads search={lane} runId={runId} />
+                {lane && stripView ? (
+                  <RetainedModeReads search={lane} runId={runId} view={stripView} />
                 ) : detail.claim_row.mode_reference ? (
                   <>
-                    <Link
-                      to={atlasModeHref(detail.claim_row.mode_reference, runId)}
-                      className="mono text-[10.5px]"
-                      style={{ color: "var(--accent)" }}
-                      data-action="open-atlas-mode"
-                      title={`${detail.claim_row.mode_reference.operation_id} · ${detail.claim_row.mode_reference.relation}`}
-                    >
-                      {detail.claim_row.mode_reference.mode} · {detail.claim_row.mode_reference.schedule} in the Engine Atlas →
-                    </Link>
-                    <Chip data-mode-relation={detail.claim_row.mode_reference.relation} tone="var(--ink-faint)">
-                      release metadata · not run evidence
-                    </Chip>
-                    <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                      {detail.claim_row.basis === "DECLARED_NOT_EXECUTED"
-                        ? "The request declared this mode and the source did not execute it. What the mode reads on each side of the freeze is described for the release in the Atlas; nothing from it is drawn here as this run's evidence."
-                        : "What the mode reads on each side of the freeze is described for the release in the Atlas; nothing from it is drawn here as this run's evidence."}
-                    </span>
+                    <FoldStripAbsence view={hubModeReadsAbsence(detail)} />
+                    <div className="flex w-full flex-wrap items-center gap-x-[14px] gap-y-1" data-mode-reads-detail>
+                      <Link
+                        to={atlasModeHref(detail.claim_row.mode_reference, runId)}
+                        className="mono text-[10.5px]"
+                        style={{ color: "var(--accent)" }}
+                        data-action="open-atlas-mode"
+                        title={`${detail.claim_row.mode_reference.operation_id} · ${detail.claim_row.mode_reference.relation}`}
+                      >
+                        {detail.claim_row.mode_reference.mode} · {detail.claim_row.mode_reference.schedule} in the Engine Atlas →
+                      </Link>
+                      <Chip data-mode-relation={detail.claim_row.mode_reference.relation} tone="var(--ink-faint)">
+                        release metadata · not run evidence
+                      </Chip>
+                      <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                        {detail.claim_row.basis === "DECLARED_NOT_EXECUTED"
+                          ? "The request declared this mode and the source did not execute it. What the mode reads on each side of the freeze is described for the release in the Atlas; nothing from it is drawn here as this run's evidence."
+                          : "What the mode reads on each side of the freeze is described for the release in the Atlas; nothing from it is drawn here as this run's evidence."}
+                      </span>
+                    </div>
                   </>
                 ) : (
-                  <>
-                    <span
-                      className="mono text-[10.5px] italic"
-                      style={{ color: "var(--ink-faint)" }}
-                      title={`claim basis ${detail.claim_row.basis}`}
-                    >
-                      not published
-                    </span>
-                    <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                      The search read names no declared mode for this run, so there is no Atlas entry to point at and no
-                      cell is drawn.
-                    </span>
-                  </>
+                  <FoldStripAbsence
+                    view={{
+                      kind: "absent",
+                      state: "NOT_PUBLISHED",
+                      code: detail.claim_row.basis,
+                      sentence:
+                        "The search read names no declared mode for this run, so there is no Atlas entry to point at and no cell is drawn.",
+                    }}
+                  />
                 )}
               </div>
             </section>

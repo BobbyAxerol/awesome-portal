@@ -1037,21 +1037,31 @@ describe("S10 Attempt Lineage — scale and pure parts", () => {
     expect(VIRTUAL_THRESHOLD).toBe(40);
   });
 
-  it("S10-U39 treeOrder keeps the server's order and only nests under a returned parent", () => {
+  it("S10-U39 treeOrder nests each child under its own parent, keeping the server's order among siblings and roots", () => {
     const a = attempt("b_root", { minute: 5 });
     const b = attempt("a_child", { minute: 6, parent_attempt_id: "b_root", parent_state: "RETURNED" });
     const c = attempt("c_orphan", { minute: 7, parent_attempt_id: "gone", parent_state: "OUTSIDE_RETURNED_GRAPH" });
     const d = attempt("0_child", { minute: 8, parent_attempt_id: "b_root", parent_state: "RETURNED" });
     const e = attempt("grandchild", { minute: 9, parent_attempt_id: "0_child", parent_state: "RETURNED" });
+    /* G10 (first real clone, 2026-09-30): the flat server order drew `0_child` right under
+       `c_orphan`, so the rail named the wrong parent. Each child now follows its parent's
+       subtree; `b_root`'s two children keep their server order, and so do the two roots. */
     expect(treeOrder([a, b, c, d, e]).map((n) => [n.attempt.attempt_id, n.depth])).toEqual([
       ["b_root", 0],
       ["a_child", 1],
+      ["0_child", 1],
+      ["grandchild", 2],
       ["c_orphan", 0],
+    ]);
+    /* A child listed before its parent is still placed under it, with its depth. */
+    expect(treeOrder([e, d, a]).map((n) => [n.attempt.attempt_id, n.depth])).toEqual([
+      ["b_root", 0],
       ["0_child", 1],
       ["grandchild", 2],
     ]);
-    /* A child listed before its parent still gets its depth; a (refused) cycle cannot loop. */
-    expect(treeOrder([e, d, a]).map((n) => n.depth)).toEqual([2, 1, 0]);
+    /* Every attempt the server returned is on screen exactly once. */
+    expect(treeOrder([a, b, c, d, e])).toHaveLength(5);
+    /* A (refused) cycle cannot loop and drops nothing. */
     const x = attempt("x", { parent_attempt_id: "y", parent_state: "RETURNED" });
     const y = attempt("y", { parent_attempt_id: "x", parent_state: "RETURNED" });
     expect(treeOrder([x, y])).toHaveLength(2);

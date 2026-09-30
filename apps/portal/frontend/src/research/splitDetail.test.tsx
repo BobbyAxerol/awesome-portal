@@ -1549,3 +1549,27 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
     expect(second.container.textContent).toContain("stitch digest — not in the split read");
   });
 });
+
+describe("G7 — axe `scrollable-region-focusable` on the fold table", () => {
+  it("makes the sideways-scrolling fold table a named region a keyboard can reach", () => {
+    const { container } = view({ folds: { state: "ready", split: sourceSplit() } });
+    const table = container.querySelector("[data-card='fold-table']") as HTMLElement;
+    /* The table is 760px wide inside a card that is narrower at 1280 and 660: a scroll container with no
+       focusable content of its own is a region a keyboard cannot scroll. */
+    expect(table.getAttribute("tabindex")).toBe("0");
+    expect(table.getAttribute("aria-label")).toBe("fold table (scrolls sideways)");
+    expect(table.className).toContain("overflow-x-auto");
+  });
+});
+
+describe("G7 — axe `color-contrast` on the month ticks", () => {
+  it("paints tick text in the faint-text token, not the legend-inactive swatch grey (1.72:1 on white)", () => {
+    const { container } = view();
+    const ticks = Array.from(container.querySelectorAll<HTMLElement>("[data-tick]"));
+    expect(ticks.length).toBeGreaterThan(1);
+    for (const tick of ticks) {
+      expect(tick.style.color, tick.dataset.tick).toBe("var(--ink-faint)");
+      expect(tick.style.color).not.toContain("legend-inactive");
+    }
+  });
+});

@@ -14,6 +14,7 @@ import { EnvironmentBadge } from "../components/semantic";
 import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
 import { useRunLabel } from "../research/runLabels";
+import { useRunLabelRead } from "../research/useRunLabelRead";
 import { researchRunCrumb } from "./researchRunCrumb";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePreferences } from "./preferences";
@@ -43,6 +44,8 @@ export function TopBar({
    */
   const runCrumb = researchRunCrumb(location.pathname);
   useRunLabel(runCrumb?.runId);
+  /* G3: Stages 1–4 make no read that carries the label, so the shell asks the Run Library for it. */
+  useRunLabelRead(runCrumb?.needsLabelRead ? runCrumb.runId : null);
   const crumbTail = entityLabel ?? runCrumb?.screen ?? null;
 
   return (
@@ -78,7 +81,10 @@ export function TopBar({
 
       <nav aria-label="Breadcrumb" className="portal-breadcrumbs">
         {breadcrumbs.map((crumb, index) => (
-          <span key={`${crumb.label}-${index}`} className="portal-crumb">
+          <span
+            key={`${crumb.label}-${index}`}
+            className={runCrumb && index > 0 ? "portal-crumb portal-crumb--run-context" : "portal-crumb"}
+          >
             {index > 0 ? <span aria-hidden="true" className="portal-crumb-sep">/</span> : null}
             {crumb.route ? <Link to={crumb.route}>{crumb.label}</Link> : <span>{crumb.label}</span>}
           </span>
@@ -94,7 +100,7 @@ export function TopBar({
           </span>
         ) : null}
         {crumbTail ? (
-          <span className="portal-crumb">
+          <span className={runCrumb ? "portal-crumb portal-crumb--run-screen" : "portal-crumb"}>
             <span aria-hidden="true" className="portal-crumb-sep">/</span>
             <span>{crumbTail}</span>
           </span>

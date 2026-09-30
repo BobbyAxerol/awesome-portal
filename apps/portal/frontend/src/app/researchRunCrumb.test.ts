@@ -10,7 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { forgetRunLabels, rememberRunLabel } from "../research/runLabels";
-import { RUN_SCREEN_CRUMBS, researchRunCrumb } from "./researchRunCrumb";
+import { RUN_LABEL_READ_SEGMENTS, RUN_SCREEN_CRUMBS, researchRunCrumb } from "./researchRunCrumb";
 
 const RUN = "rrun_e1fa9e5c0f2b41d3a0c7e3b54a17d5aa";
 
@@ -78,5 +78,21 @@ describe("the shell's Research run crumb", () => {
     const crumb = researchRunCrumb(`/research/quantbt/runs/${RUN}/something-new`);
     expect(crumb?.runId).toBe(RUN);
     expect(crumb?.screen).toBeNull();
+  });
+});
+
+describe("which run-scoped screens the shell must ask a label for", () => {
+  it("flags the four stage screens, whose own reads carry no label, and no other", () => {
+    /* G3 · D1-O1: Stages 1-4 read the P14-P17 hub, which names a run by id only. */
+    for (const segment of Object.keys(RUN_SCREEN_CRUMBS)) {
+      expect(researchRunCrumb(`/research/quantbt/runs/${RUN}/${segment}`)?.needsLabelRead, segment)
+        .toBe(["split", "search", "freeze", "execute"].includes(segment));
+    }
+    expect([...RUN_LABEL_READ_SEGMENTS].sort()).toEqual(["execute", "freeze", "search", "split"]);
+  });
+
+  it("never flags an address it does not know a screen for", () => {
+    expect(researchRunCrumb(`/research/quantbt/runs/${RUN}/something-new`)?.needsLabelRead).toBe(false);
+    expect(researchRunCrumb(`/research/quantbt/runs/${RUN}`)?.needsLabelRead).toBe(false);
   });
 });

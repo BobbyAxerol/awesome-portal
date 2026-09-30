@@ -1,0 +1,560 @@
+{
+ "_provenance": "G8: real bodies served by the Research preview (images of d3d99f26) for the P04 fixed-qualification run rrun_464bf9c3dd8979af87e44388ea6910ef (Delta RSI, QuantBT 1.1.1), captured 2026-09-30 by GET only. hub_search is researchSearchDetailGetV1; lane_search and lane_split are the typed not-applicable answers the retained lane gives that run. No packages/contracts fixture carries the P04 hub search read.",
+ "hub_search": {
+  "schema_version": "research.search-detail.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "rrun_464bf9c3dd8979af87e44388ea6910ef",
+  "revision": "p15r1_052bfd981bbb4252db058429169a58cfc012c734c23770ed8639e4ddc1fb075d",
+  "etag": "\"p15r1_40a93f422293a820b23d24896edb6b2f0a44153e6904894c23863f92ae0c6baa\"",
+  "availability": {
+   "state": "AVAILABLE",
+   "reason_code": null
+  },
+  "readiness": "PARTIAL",
+  "as_of_utc_ms": 1790751966053,
+  "as_of_basis": "P14_PROJECTION_RECEIVED_AT",
+  "provenance": {
+   "source_adapter_id": "p04.delta-rsi.v1",
+   "adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+   "engine_version": "1.1.1",
+   "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
+   "source_transform_digest": "8924794d8e61094ebe3bf7b709b2a432c73694a04ba200fbc5474f5f0dec532b",
+   "requested_spec_digest": "cbe11c236d51027dc4089f6914e9057e4b63d71e73dfec78270f4b20ab81d705",
+   "effective_spec_digest": "0cfe2330d5fc743525011928ab9c6e4088042fb6b813c9a068384ffac8ef5e7d",
+   "dataset_binding_digest": "16cc048b2605839be82718e77ca1c9f0333ed0e5b58317665dc4836ea0b0a5ab",
+   "manifest_digest": "3fd03a552ea9db6bfe4634477ab92dfddc66331da18034a2dc7abf97021d7977"
+  },
+  "source_profile": {
+   "state": "FIXED_PROFILE_NO_SEARCH",
+   "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   }
+  },
+  "requested_optimizer": {
+   "mode": "mode_1_decay",
+   "schedule": "global",
+   "state": "DECLARED_NOT_EXECUTED",
+   "candidate_selection_metric": {
+    "state": "NOT_PUBLISHED",
+    "value": null,
+    "provenance": "NONE",
+    "reason_code": "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+    "availability": {
+     "state": "NOT_PUBLISHED",
+     "reason_code": "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC"
+    }
+   },
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   }
+  },
+  "claim_row": {
+   "basis": "DECLARED_NOT_EXECUTED",
+   "validation_claim": {
+    "state": "NOT_APPLICABLE",
+    "value": null,
+    "provenance": "NONE",
+    "reason_code": "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_VALIDATION_CLAIM",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_VALIDATION_CLAIM"
+    }
+   },
+   "chronological_claim": {
+    "state": "NOT_APPLICABLE",
+    "value": null,
+    "provenance": "NONE",
+    "reason_code": "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_CHRONOLOGICAL_CLAIM",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_CHRONOLOGICAL_CLAIM"
+    }
+   },
+   "oos_used_for_selection": {
+    "state": "NOT_ASSERTED",
+    "value": null,
+    "provenance": "NONE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
+    "availability": {
+     "state": "NOT_PUBLISHED",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS"
+    }
+   },
+   "oos_column": {
+    "state": "REPORT_ONLY",
+    "source_evaluation_state": "P04_OBSERVED_AFTER_FIXED_PROFILE",
+    "provenance": "P14_SOURCE_RECEIPT",
+    "reason_code": null,
+    "availability": {
+     "state": "AVAILABLE",
+     "reason_code": null
+    }
+   },
+   "scoring_backend": {
+    "state": "NOT_APPLICABLE",
+    "declared_value": null,
+    "provenance": "NONE",
+    "reason_code": "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND"
+    }
+   },
+   "mode_reference": {
+    "mode": "mode_1_decay",
+    "schedule": "global",
+    "operation_id": "researchEngineAtlasGetV1",
+    "relation": "DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE"
+   }
+  },
+  "fixed_profile": {
+   "state": "FIXED_PROFILE_NO_SEARCH",
+   "adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+   "parameter_bundle_digest": "2486e573470e8d1bec72937abd17cd17b1530de0565901fa1484591dc3726139",
+   "parameters": [
+    {
+     "name": "window",
+     "kind": "NUMERIC",
+     "minimum": "20",
+     "maximum": "60",
+     "step": "2",
+     "effective_value": "32",
+     "position_percent": 30,
+     "bound_state": "WITHIN_DECLARED_RANGE",
+     "bound_warning": {
+      "definition_id": "research.bound-warning.v1",
+      "copy_version": "research.bound-warning-copy.v1",
+      "reference_space": "DECLARED_RANGE",
+      "state": "INTERIOR",
+      "side": null,
+      "reason_code": null
+     }
+    },
+    {
+     "name": "rsi_l",
+     "kind": "NUMERIC",
+     "minimum": "12",
+     "maximum": "30",
+     "step": "1",
+     "effective_value": "20",
+     "position_percent": 44.44,
+     "bound_state": "WITHIN_DECLARED_RANGE",
+     "bound_warning": {
+      "definition_id": "research.bound-warning.v1",
+      "copy_version": "research.bound-warning-copy.v1",
+      "reference_space": "DECLARED_RANGE",
+      "state": "INTERIOR",
+      "side": null,
+      "reason_code": null
+     }
+    },
+    {
+     "name": "signalLength",
+     "kind": "NUMERIC",
+     "minimum": "3",
+     "maximum": "20",
+     "step": "1",
+     "effective_value": "9",
+     "position_percent": 35.29,
+     "bound_state": "WITHIN_DECLARED_RANGE",
+     "bound_warning": {
+      "definition_id": "research.bound-warning.v1",
+      "copy_version": "research.bound-warning-copy.v1",
+      "reference_space": "DECLARED_RANGE",
+      "state": "INTERIOR",
+      "side": null,
+      "reason_code": null
+     }
+    },
+    {
+     "name": "len_atr1",
+     "kind": "NUMERIC",
+     "minimum": "5",
+     "maximum": "20",
+     "step": "1",
+     "effective_value": "10",
+     "position_percent": 33.33,
+     "bound_state": "WITHIN_DECLARED_RANGE",
+     "bound_warning": {
+      "definition_id": "research.bound-warning.v1",
+      "copy_version": "research.bound-warning-copy.v1",
+      "reference_space": "DECLARED_RANGE",
+      "state": "INTERIOR",
+      "side": null,
+      "reason_code": null
+     }
+    },
+    {
+     "name": "len_atr2",
+     "kind": "NUMERIC",
+     "minimum": "25",
+     "maximum": "60",
+     "step": "1",
+     "effective_value": "42",
+     "position_percent": 48.57,
+     "bound_state": "WITHIN_DECLARED_RANGE",
+     "bound_warning": {
+      "definition_id": "research.bound-warning.v1",
+      "copy_version": "research.bound-warning-copy.v1",
+      "reference_space": "DECLARED_RANGE",
+      "state": "INTERIOR",
+      "side": null,
+      "reason_code": null
+     }
+    },
+    {
+     "name": "rvol",
+     "kind": "NUMERIC",
+     "minimum": "1",
+     "maximum": "2.5",
+     "step": "0.1",
+     "effective_value": "1.6",
+     "position_percent": 40,
+     "bound_state": "WITHIN_DECLARED_RANGE",
+     "bound_warning": {
+      "definition_id": "research.bound-warning.v1",
+      "copy_version": "research.bound-warning-copy.v1",
+      "reference_space": "DECLARED_RANGE",
+      "state": "INTERIOR",
+      "side": null,
+      "reason_code": null
+     }
+    },
+    {
+     "name": "len_vol",
+     "kind": "NUMERIC",
+     "minimum": "8",
+     "maximum": "40",
+     "step": "2",
+     "effective_value": "16",
+     "position_percent": 25,
+     "bound_state": "WITHIN_DECLARED_RANGE",
+     "bound_warning": {
+      "definition_id": "research.bound-warning.v1",
+      "copy_version": "research.bound-warning-copy.v1",
+      "reference_space": "DECLARED_RANGE",
+      "state": "INTERIOR",
+      "side": null,
+      "reason_code": null
+     }
+    },
+    {
+     "name": "slpercent",
+     "kind": "NUMERIC",
+     "minimum": "0.7",
+     "maximum": "2.5",
+     "step": "0.1",
+     "effective_value": "1.3",
+     "position_percent": 33.33,
+     "bound_state": "WITHIN_DECLARED_RANGE",
+     "bound_warning": {
+      "definition_id": "research.bound-warning.v1",
+      "copy_version": "research.bound-warning-copy.v1",
+      "reference_space": "DECLARED_RANGE",
+      "state": "INTERIOR",
+      "side": null,
+      "reason_code": null
+     }
+    }
+   ],
+   "strict_outer_oos": {
+    "state": "NOT_ASSERTED",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
+    "availability": {
+     "state": "NOT_PUBLISHED",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS"
+    }
+   },
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   }
+  },
+  "selection": {
+   "state": "FIXED_PARAMETER_PROFILE",
+   "selected_trial_ref": null,
+   "parameter_bundle_digest": "2486e573470e8d1bec72937abd17cd17b1530de0565901fa1484591dc3726139",
+   "selection_trace": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE"
+    }
+   },
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   }
+  },
+  "inspection": {
+   "requested_fold": null,
+   "state": "NOT_APPLICABLE",
+   "availability": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+   }
+  },
+  "ledger": {
+   "state": "NOT_APPLICABLE",
+   "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+   "total_rows": null,
+   "sampled_rows": null,
+   "page": null,
+   "availability": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+   }
+  },
+  "diagnostics": {
+   "state": "NOT_APPLICABLE",
+   "availability": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+   },
+   "scatter": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "distributions": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "parameter_frequency": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "progression": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "prune_reasons": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "importance": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "interactions": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   }
+  },
+  "source_absences": {
+   "study": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+    }
+   },
+   "trial_ledger": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+    }
+   },
+   "trial_detail": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+    }
+   },
+   "trial_jump": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+    }
+   },
+   "candidate_pool": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+    }
+   },
+   "objective_components": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+    }
+   },
+   "selection_trace": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE"
+    }
+   },
+   "sampler_seed_warm_start": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+    }
+   },
+   "scatter": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "distributions": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "parameter_frequency": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "progression": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "prune_reasons": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "importance": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "interactions": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS"
+    }
+   },
+   "search_fold": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+    "availability": {
+     "state": "NOT_APPLICABLE",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY"
+    }
+   },
+   "strict_outer_oos": {
+    "state": "NOT_ASSERTED",
+    "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
+    "availability": {
+     "state": "NOT_PUBLISHED",
+     "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS"
+    }
+   },
+   "candidate_selection_metric": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+    "availability": {
+     "state": "NOT_PUBLISHED",
+     "reason_code": "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC"
+    }
+   }
+  }
+ },
+ "lane_search": {
+  "schema_version": "research.current-source-not-applicable.v1",
+  "read_authority": "PORTAL_RETAINED_CURRENT_SOURCE",
+  "run_id": "rrun_464bf9c3dd8979af87e44388ea6910ef",
+  "revision": "rs02_not-applicable_7d300957058933a607bc8d8f1a6c58ee87d25b0623dabe214faef724e16ab9ee",
+  "etag": "\"rs02_not-applicable_7d300957058933a607bc8d8f1a6c58ee87d25b0623dabe214faef724e16ab9ee\"",
+  "availability": {
+   "state": "NOT_APPLICABLE",
+   "reason_code": "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION"
+  },
+  "lane": {
+   "state": "NOT_APPLICABLE",
+   "operation": "search",
+   "run_profile": "P04_FIXED_QUALIFICATION",
+   "run_adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+   "retainable_profile_id": "rs02.delta-wfo-global.v1",
+   "reason_code": "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION"
+  }
+ },
+ "lane_split": {
+  "schema_version": "research.current-source-not-applicable.v1",
+  "read_authority": "PORTAL_RETAINED_CURRENT_SOURCE",
+  "run_id": "rrun_464bf9c3dd8979af87e44388ea6910ef",
+  "revision": "rs02_not-applicable_c301b8c6f1f475a18652ce2ac2ab2c056ee872a46df25eefc0b0f0c454545d67",
+  "etag": "\"rs02_not-applicable_c301b8c6f1f475a18652ce2ac2ab2c056ee872a46df25eefc0b0f0c454545d67\"",
+  "availability": {
+   "state": "NOT_APPLICABLE",
+   "reason_code": "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION"
+  },
+  "lane": {
+   "state": "NOT_APPLICABLE",
+   "operation": "split",
+   "run_profile": "P04_FIXED_QUALIFICATION",
+   "run_adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+   "retainable_profile_id": "rs02.delta-wfo-global.v1",
+   "reason_code": "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION"
+  }
+ }
+}

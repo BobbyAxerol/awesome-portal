@@ -42,6 +42,21 @@ export const RUN_SCREEN_CRUMBS: Readonly<Record<string, string>> = {
   "release-candidate": "Release Candidate & Publish",
 };
 
+/**
+ * The segments whose screens make NO read that carries the run's label on the
+ * P04 hub lane (G3 · D1-O1 follow-up).
+ *
+ * Screens 03 and 04 read the run's identity, Screens 09, 11 and 13 publish the
+ * label in their own read, and Screen 10 reads it off the lineage — each feeds
+ * the shared registry by itself. Stages 1–4 read the P14–P17 hub, which names
+ * the run by id only; a retained Delta WFO run reaches its label through the
+ * identity read a retained answer triggers, but a fixed-profile run never asks
+ * for one, so a cold link to `…/execute` printed `rrun_464bf9c3` where
+ * `R-P04-018` belongs. The shell asks the Run Library for the one row instead
+ * (see `useRunLabelRead`), and only for these four screens.
+ */
+export const RUN_LABEL_READ_SEGMENTS: ReadonlySet<string> = new Set(["split", "search", "freeze", "execute"]);
+
 export interface ResearchRunCrumb {
   /** `R-WFO-118` when a read published one, else the short id. */
   label: string;
@@ -51,6 +66,8 @@ export interface ResearchRunCrumb {
   route: string;
   /** The screen inside the run, or `null` when this segment names none. */
   screen: string | null;
+  /** True on a screen whose own reads publish no run label, so the shell must ask for it. */
+  needsLabelRead: boolean;
 }
 
 /**
@@ -72,5 +89,6 @@ export function researchRunCrumb(pathname: string): ResearchRunCrumb | null {
     runId,
     route: `/research/quantbt/runs/${encodeURIComponent(runId)}/evidence`,
     screen: RUN_SCREEN_CRUMBS[rest] ?? null,
+    needsLabelRead: RUN_LABEL_READ_SEGMENTS.has(rest),
   };
 }

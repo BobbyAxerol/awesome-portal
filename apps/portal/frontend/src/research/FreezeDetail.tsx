@@ -191,9 +191,9 @@ function IntegrityPanel({
       }}
     >
       <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           retained binding check
-        </h3>
+        </h2>
         <Chip
           data-integrity-state={integrity.state}
           tone={blocked ? "var(--bad)" : "var(--role-holdout)"}
@@ -698,9 +698,9 @@ function Stage4Binding({ bundleDigest }: { bundleDigest: string | null }) {
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
       <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           binding down to stage 4
-        </h3>
+        </h2>
         <span className="mono ml-auto text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
           not compared
         </span>
@@ -749,9 +749,9 @@ function RetainedPanel({ slot, onNeeded }: { slot: RetainedSlot; onNeeded: () =>
       data-retained={slot.state}
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
-      <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+      <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         retained custody check
-      </h3>
+      </h2>
 
       {slot.state === "ready" ? (
         <RetainedRows freeze={slot.freeze} />
@@ -1035,9 +1035,9 @@ function RetainedIntegrity({
       }}
     >
       <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           digest chain · retained custody
-        </h3>
+        </h2>
         <Chip data-retained-state={integrity.state} tone={tone} border={tone}>
           {integrity.state.toLowerCase()}
         </Chip>
@@ -1170,9 +1170,9 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
         className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2"
         style={{ borderColor: "var(--line)" }}
       >
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           frozen θ* — {global ? "one shared set" : "retained selection"}
-        </h3>
+        </h2>
         <span className="flex flex-wrap items-center gap-2">
           {thetaDigest !== null ? (
             <span className="flex items-baseline gap-1.5" data-params-digest={thetaDigest}>
@@ -1446,9 +1446,9 @@ function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null
       data-ordering-state={ordering ? ordering.selection_scope : "NOT_PUBLISHED"}
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
-      <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+      <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         ordering
-      </h3>
+      </h2>
       <div className="flex flex-col gap-1" data-data-time="REQUESTED_WINDOW">
         <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           data time · requested walk-forward window
@@ -1728,9 +1728,9 @@ export function FreezeScreen({
               style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
             >
               <div className="flex flex-wrap items-baseline gap-2">
-                <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+                <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
                   ordering
-                </h3>
+                </h2>
                 {/*
                   * `NOT_ASSERTED` is not a failed causality check and not a
                   * passed one. No verdict chip is drawn for it at all.
@@ -1776,9 +1776,9 @@ export function FreezeScreen({
                 style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
               >
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+                  <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
                     frozen parameters
-                  </h3>
+                  </h2>
                   {freeze.selection.parameter_bundle_digest !== null ? (
                     <>
                       <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-bundle-digest>
@@ -1823,9 +1823,9 @@ export function FreezeScreen({
               data-inspection-state={freeze.inspection.state}
               style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
             >
-              <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+              <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
                 fold inspection
-              </h3>
+              </h2>
               <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
                 {freeze.inspection.requested_fold === null
                   ? "No fold was requested."

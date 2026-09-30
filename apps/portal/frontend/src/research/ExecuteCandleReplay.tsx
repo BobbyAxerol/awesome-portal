@@ -17,9 +17,13 @@
  *  - **what the route cannot produce** is a named absence with the server's
  *    reason (the engine counted 0 orders/fills/trades; OCO, SL/TP, partial
  *    fills and multi-leg are not applicable by the run's own configuration).
+ *  - **play across folds (D7, HiFi 8.10)** is a switch, off by default, that
+ *    lets playback read the next window at a boundary instead of stopping. The
+ *    rules live in `usePlayAcrossFolds`; this file draws the switch and says
+ *    what it did.
  */
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { paletteNow } from "../charts/theme";
 import { ProvenanceStrip } from "./ProvenanceStrip";
@@ -36,6 +40,7 @@ import {
 import { ReplayTransport, SPEEDS, useTransport } from "./replayTransport";
 import { retainedReadiness } from "./retainedLane";
 import { SplitBand, SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
+import { ACROSS_HELP, ACROSS_LABEL, pageRefusalWords, usePlayAcrossFolds, type PlayAcross } from "./usePlayAcrossFolds";
 import type { ChildAuditSlot, ReplayController, RetainedReplaySlot, TransitionsSlot } from "./useReplay";
 import { iso } from "./utcMinute";
 
@@ -558,12 +563,15 @@ function Transport({
   onFoldStep,
   onTransitionStep,
   canFold,
+  acrossControl,
 }: {
   transport: ReplayTransport;
   rows: readonly CurrentSourceObservation[];
   onFoldStep: (direction: -1 | 1) => void;
   onTransitionStep: (direction: -1 | 1) => void;
   canFold: { previous: boolean; next: boolean };
+  /** D7 (8.10): the HiFi puts "play across folds" in the transport row, between the speeds and the seek bar. */
+  acrossControl?: ReactNode;
 }) {
   const snap = useTransport(transport);
   const row = rows[snap.index];
@@ -610,6 +618,7 @@ function Transport({
           </button>
         ))}
       </span>
+      {acrossControl}
       <input
         type="range"
         className="min-w-[140px] flex-1"
@@ -633,6 +642,68 @@ function Transport({
         </span>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * D7 (HiFi 8.10): "play across folds". The HiFi pill is `padding:3px 10px;
+ * font:10.5px JetBrains Mono; border-radius:3px; flex:none`, active = accent
+ * border on the sunken paper (the speed pills' own active state), and it sits
+ * between the speed group and the seek bar. Its label is longer than the HiFi's
+ * bare `· ON` on purpose: the switch issues reads, and this screen says so
+ * before the reader turns it on. The state is colour and the word ON / off, and
+ * is exposed as a real switch (name = the visible label, state = aria-checked).
+ */
+function AcrossSwitch({ across }: { across: PlayAcross }) {
+  const help = useId();
+  const on = across.enabled;
+  const reason = across.unavailable;
+  return (
+    <>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-describedby={help}
+        disabled={reason !== null}
+        className="mono flex-none rounded-[3px] border"
+        style={{
+          padding: "3px 10px",
+          fontSize: "10.5px",
+          lineHeight: "18px",
+          borderColor: on ? "var(--accent)" : "var(--line)",
+          background: on ? "var(--paper-sunken)" : "var(--paper-raised)",
+          color: on ? "var(--accent)" : "var(--ink-soft)",
+        }}
+        title={reason ?? ACROSS_HELP}
+        data-action="play-across-folds"
+        data-across={on ? "on" : "off"}
+        onClick={() => across.setEnabled(!on)}
+      >
+        {ACROSS_LABEL}
+        <span aria-hidden="true"> · {on ? "ON" : "off"}</span>
+      </button>
+      <span id={help} className="sr-only">
+        {reason ?? ACROSS_HELP}
+      </span>
+    </>
+  );
+}
+
+/** What the switch just did, or why it stopped — one line, in the screen's own words. */
+function AcrossNotice({ across }: { across: PlayAcross }) {
+  const { status } = across;
+  if (status.kind === "idle") return null;
+  return (
+    <p
+      className="mono text-[10px]"
+      role="status"
+      style={{ color: status.tone === "warn" ? "var(--warn)" : "var(--ink-soft)" }}
+      data-across-status={status.kind}
+      data-across-reads={across.reads}
+    >
+      {status.text}
+    </p>
   );
 }
 
@@ -791,15 +862,31 @@ const short = (value: string | null | undefined, n = 10) => (value ? `${value.sl
  * per child strategy instance, with its original ids (row in QuantBT's table,
  * candidate id, seed). The row that generated the replayed bars is marked.
  */
-function ChildAuditCard({ replay, slot, fold }: { replay: CurrentSourceReplay; slot: ChildAuditSlot | undefined; fold: string | null }) {
+function ChildAuditCard({
+  replay,
+  slot,
+  fold,
+  waiting = false,
+}: {
+  replay: CurrentSourceReplay;
+  slot: ChildAuditSlot | undefined;
+  fold: string | null;
+  /** D7: play across folds is running, so this fold's audit is not asked for until playback rests. */
+  waiting?: boolean;
+}) {
   const summary = replay.execution.child_audit;
   const fact = replay.route_capabilities.child_audit;
+  const loaded = slot && slot.state !== "idle" && slot.state !== "loading" && slot.fold === fold;
   return (
     <Card title="child audit — strategy isolation, per fold" data-panel="child-audit" aside={<FactLine label="child audit" fact={fact} name="child_audit" />}>
       {summary.state !== "AVAILABLE" ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>This seal carries no child-audit records.</p>
       ) : fold === null ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>The bars on screen are in-sample; child audit is read per OOS fold.</p>
+      ) : waiting && !loaded ? (
+        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="waiting">
+          fold {fold}'s child audit is read when playback rests — play across folds reads only windows.
+        </p>
       ) : !slot || slot.state === "idle" || slot.state === "loading" || slot.fold !== fold ? (
         <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="loading">reading fold {fold}'s child audit…</p>
       ) : slot.state === "refused" ? (
@@ -1016,15 +1103,24 @@ export function CandleReplayBody({
     transport.load(rows.length, Math.max(0, at));
   }, [rows, selectedOrdinal, transport]);
 
+  /* D7 (8.10). Declared right after the effect that loads a window into the
+     transport: on a window's arrival the transport is loaded first, then play
+     across folds decides whether to go on. */
+  const across = usePlayAcrossFolds({ transport, controller, replay, slot });
+
   const playRow = rows[snap.index];
   const activeFold = playRow?.bar?.fold_id ?? rows.find((row) => row.bar?.fold_id)?.bar?.fold_id ?? null;
-  /* P17-T14: one child-audit read per fold window, never per tick. */
+  /* P17-T14: one child-audit read per fold window, never per tick. While play
+     across folds is running the read waits for playback to rest, so a boundary
+     sends exactly one request — the window read the reader switched on. */
   const windowFold = rows.find((row) => row.bar?.fold_id)?.bar?.fold_id ?? null;
   const childAuditAvailable = execution.child_audit?.state === "AVAILABLE";
   const readChildAudit = controller.readChildAudit;
+  const acrossRunning = across.running;
   useEffect(() => {
-    if (childAuditAvailable && windowFold !== null) readChildAudit?.(windowFold);
-  }, [childAuditAvailable, windowFold, readChildAudit]);
+    if (!childAuditAvailable || windowFold === null || acrossRunning()) return;
+    readChildAudit?.(windowFold);
+  }, [childAuditAvailable, windowFold, readChildAudit, acrossRunning, across.holding]);
   const foldIndex = segments.findIndex((segment) => segment.fold_id === activeFold);
 
   const goFold = (segment: FoldSegment) => controller.retainedFold?.(segment);
@@ -1131,11 +1227,11 @@ export function CandleReplayBody({
         data-retained-in-flight={String(inFlight)}
       >
         <FoldStrip replay={replay} activeFold={activeFold} onFold={goFold} disabled={inFlight} reveal={reveal} cutOrdinal={reveal ? (playRow?.source_ordinal ?? null) : null} />
-        {slot.pageRefusal ? (
+        {/* When play across folds asked for the read that was refused, its own notice under the
+            transport carries this same sentence; it is said once, not twice. */}
+        {slot.pageRefusal && across.status.refusal !== slot.pageRefusal ? (
           <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-page-refusal={slot.pageRefusal.code ?? slot.pageRefusal.status}>
-            {slot.pageRefusal.code === "RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP"
-              ? "The retained bars have a gap here, so this window is not replayed; nothing is filled in. The window below is the last one read."
-              : slot.pageRefusal.message}
+            {pageRefusalWords(slot.pageRefusal)}
           </p>
         ) : null}
         {slot.recovered ? (
@@ -1194,7 +1290,9 @@ export function CandleReplayBody({
           onFoldStep={foldStep}
           onTransitionStep={transitionStep}
           canFold={{ previous: !inFlight && foldIndex > 0, next: !inFlight && foldIndex < segments.length - 1 && segments.length > 0 }}
+          acrossControl={<AcrossSwitch across={across} />}
         />
+        <AcrossNotice across={across} />
         <PlayheadState transport={transport} rows={rows} reveal={reveal} totals={execution.totals} />
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="btn-ghost mono text-[10px]" data-action="previous-window" disabled={!replay.replay.page.has_previous || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_previous ? undefined : "This window starts at the fold's first bar."} onClick={() => controller.retainedPreviousWindow?.()}>
@@ -1203,8 +1301,10 @@ export function CandleReplayBody({
           <button type="button" className="btn-ghost mono text-[10px]" data-action="next-window" disabled={!replay.replay.page.has_more || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_more ? undefined : "This window ends at the fold's last bar."} onClick={() => controller.retainedNextWindow?.()}>
             next window ›
           </button>
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-            a fold, a window or a transition outside it is read only when you ask; playing stops at the end of this window.
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-read-rule={across.enabled ? "across" : "asked"}>
+            {across.enabled
+              ? "play across folds is on: at the last bar of this window the screen reads the next window itself, one at a time and never past the last fold; a fold or a transition outside it is still read only when you ask."
+              : "a fold, a window or a transition outside it is read only when you ask; playing stops at the end of this window."}
           </span>
         </div>
       </section>
@@ -1253,7 +1353,7 @@ export function CandleReplayBody({
             ) : null}
           </Card>
           <Anatomy replay={replay} selected={selected} childAudit={controller.childAudit} />
-          <ChildAuditCard replay={replay} slot={controller.childAudit} fold={windowFold} />
+          <ChildAuditCard replay={replay} slot={controller.childAudit} fold={windowFold} waiting={across.holding} />
         </div>
         <div className="flex min-w-0 flex-col gap-3">
           <Card title="trade blotter" data-absent-panel="trade-blotter">

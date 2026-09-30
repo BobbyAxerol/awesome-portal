@@ -64,6 +64,19 @@
   gap: var(--space-1);
   white-space: nowrap;
 }
+/* G14 (Bobby, option A, 2026-09-30): a run-scoped crumb reads
+   `Research / QuantBT Backtest / R-WFO-017 / Stage 1 · Split` (hi-fi) only
+   where it fits on one row. Short of room it drops, in order, the feature
+   segment and then the screen name (the page's own heading names it), and
+   keeps `Research / <run>`. Pages that are not run pages are untouched, and
+   narrow widths keep the shell's existing wrap. */
+@media (max-width: 1439px) {
+  .portal-crumb--run-context { display: none; }
+}
+@media (max-width: 1365px) {
+  .portal-crumb--run-screen { display: none; }
+}
+
 .portal-crumb-sep {
   color: var(--ink-faint);
 }

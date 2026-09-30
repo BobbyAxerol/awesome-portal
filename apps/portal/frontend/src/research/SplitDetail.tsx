@@ -515,7 +515,10 @@ function WindowAnatomy({
               style={{
                 left: `${placeInTimeline(timeline, { start_utc_ms: mark.at_utc_ms, end_exclusive_utc_ms: mark.at_utc_ms }).leftPercent}%`,
                 borderColor: "var(--line-soft)",
-                color: "var(--viz-legend-inactive)",
+                /* G7: the hi-fi paints the month labels in its legend-inactive grey (1.72:1 on white — axe
+                   `color-contrast`, unreadable at 8.5px). That token is for swatches and borders; label text takes
+                   the faint-text token (--ink-faint), so it moves with D-B1 instead of hiding from it. */
+                color: "var(--ink-faint)",
                 transform: index === marks.length - 1 && marks.length > 2 ? "translateX(-100%)" : undefined,
               }}
             >
@@ -2489,7 +2492,7 @@ function FoldTable({
   const embargo = <ProtocolCell fact={detail.protocol.embargo} />;
 
   return (
-    <section className="overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-card="fold-table">
+    <section className="overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-card="fold-table" tabIndex={0} aria-label="fold table (scrolls sideways)">
       <table className="w-full min-w-[760px] border-collapse text-[12px]">
         <thead>
           <tr>

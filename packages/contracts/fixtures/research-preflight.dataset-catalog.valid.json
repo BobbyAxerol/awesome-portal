@@ -1,0 +1,140 @@
+{
+  "schema_version": "research.dataset-catalog.v1",
+  "coverage_rule": "Coverage is the month partitions present in the approved reader's storage layout (hive-symbol-year-month-v1). It is not the exact first or last bar; preflight queries the bounded range and refuses what is absent.",
+  "datasets": [
+    {
+      "dataset_id": "crypto-binance-1m",
+      "venue": "BINANCE",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": ["backtest", "research"],
+      "excluded_scopes": ["realtime_market_data", "paper_execution", "paper_account_state"],
+      "source_timezone": "UTC",
+      "calendar_policy": "CRYPTO_24_7",
+      "timeframes": ["1min", "5min", "15min", "30min", "1h", "4h", "1D"],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "items": [
+          {
+            "symbol": "BTCUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": { "first_month": "2020-01", "last_month": "2026-09", "months": 81, "granularity": "MONTH_PARTITION" }
+          },
+          {
+            "symbol": "BTCUSDT_210326",
+            "contract_kind": "QUARTERLY",
+            "coverage": { "first_month": "2021-02", "last_month": "2021-03", "months": 2, "granularity": "MONTH_PARTITION" }
+          },
+          {
+            "symbol": "BTCUSDT_260327",
+            "contract_kind": "QUARTERLY",
+            "coverage": { "first_month": "2025-09", "last_month": "2026-04", "months": 8, "granularity": "MONTH_PARTITION" }
+          },
+          {
+            "symbol": "ETHUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": { "first_month": "2020-01", "last_month": "2026-09", "months": 81, "granularity": "MONTH_PARTITION" }
+          },
+          {
+            "symbol": "SOLUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": { "first_month": "2020-09", "last_month": "2026-09", "months": 73, "granularity": "MONTH_PARTITION" }
+          }
+        ],
+        "total": 5,
+        "truncated": false
+      }
+    },
+    {
+      "dataset_id": "fixture-bybit-1h",
+      "venue": "BYBIT",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": ["backtest", "research"],
+      "excluded_scopes": ["realtime_market_data", "paper_execution", "paper_account_state"],
+      "source_timezone": "UTC",
+      "calendar_policy": "SOURCE_DECLARED",
+      "timeframes": ["1h", "4h"],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "items": [
+          {
+            "symbol": "BTCUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": { "first_month": "2022-05", "last_month": "2025-11", "months": 43, "granularity": "MONTH_PARTITION" }
+          },
+          {
+            "symbol": "ETHUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": { "first_month": "2022-05", "last_month": "2025-11", "months": 40, "granularity": "MONTH_PARTITION" }
+          }
+        ],
+        "total": 2,
+        "truncated": false
+      }
+    },
+    {
+      "dataset_id": "fixture-single-symbol-1d",
+      "venue": "FIXTURE",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": ["backtest", "research"],
+      "excluded_scopes": ["realtime_market_data", "paper_execution", "paper_account_state"],
+      "source_timezone": "Asia/Ho_Chi_Minh",
+      "calendar_policy": "SOURCE_DECLARED",
+      "timeframes": ["1D"],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "items": [
+          { "symbol": "VN30F1M", "contract_kind": null, "coverage": null }
+        ],
+        "total": 1,
+        "truncated": false
+      }
+    },
+    {
+      "dataset_id": "fixture-query-any-symbol",
+      "venue": "FIXTURE",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": ["backtest", "research"],
+      "excluded_scopes": ["realtime_market_data", "paper_execution", "paper_account_state"],
+      "source_timezone": "UTC",
+      "calendar_policy": "SOURCE_DECLARED",
+      "timeframes": ["1h"],
+      "symbols": {
+        "state": "NOT_PUBLISHED",
+        "reason": "This source answers any symbol by query and publishes no symbol list.",
+        "items": [],
+        "total": null,
+        "truncated": false
+      }
+    },
+    {
+      "dataset_id": "fixture-unavailable-1h",
+      "venue": "FIXTURE",
+      "availability": "unavailable",
+      "unavailable_reason": "The approved historical source is not mounted on this host.",
+      "source_class": "historical_market_data",
+      "usage_scopes": ["backtest", "research"],
+      "excluded_scopes": ["realtime_market_data", "paper_execution", "paper_account_state"],
+      "source_timezone": "UTC",
+      "calendar_policy": "SOURCE_DECLARED",
+      "timeframes": ["1h"],
+      "symbols": {
+        "state": "NOT_PUBLISHED",
+        "reason": "The dataset is unavailable, so no symbol can be listed.",
+        "items": [],
+        "total": null,
+        "truncated": false
+      }
+    }
+  ]
+}

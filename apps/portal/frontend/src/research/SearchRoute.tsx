@@ -16,6 +16,7 @@ import { useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 import { SearchScreen } from "./SearchDetail";
+import { useModeReads } from "./SearchFoldStrip";
 import { RouteCursorNotice } from "./CursorNotice";
 import { DEFAULT_CURSOR, clampFold, observedFoldsFor, useEvidenceCursor } from "./evidenceCursor";
 import { SEARCH_FOLD_MAX, retainedSearchOf, useRetainedRunFacts, useSearch } from "./useSearch";
@@ -42,6 +43,8 @@ export function SearchRoute() {
   const search = useSearch(runId, inRange ? target : DEFAULT_CURSOR.fold);
   /* W3b: a retained WFO run is read against its own identity and declared space. */
   const retainedRun = useRetainedRunFacts(runId, undefined, search.ledger);
+  /* G8: the fold plan and the Atlas, for the "what this mode reads" strip — asked only on a retained run. */
+  const modeReads = useModeReads(runId, search.ledger);
 
   useEffect(() => {
     if (known && known.length > 0) clampToObserved(known);
@@ -79,6 +82,7 @@ export function SearchRoute() {
         cursor={cursor}
         ledger={search.ledger}
         retainedRun={retainedRun}
+        modeReads={modeReads}
         pick={pick}
         onPick={onPick}
         ensureLedger={search.ensureLedger}

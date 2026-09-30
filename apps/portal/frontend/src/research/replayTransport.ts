@@ -6,6 +6,13 @@
  * screen around them. It moves over samples that are already loaded and over
  * nothing else: reaching the end of the window stops playback. It never
  * fetches — asking for another window is a separate, explicit reader action.
+ *
+ * D7 (play across folds) adds two read-only facts here and nothing else: the
+ * loop announces when it *itself* ran out of loaded samples (`subscribeEnd`),
+ * and the store counts the reader's own transport actions (`userActions`). A
+ * step, a seek, a pause, a hidden tab or a new window are never an "end", so
+ * nothing that listens to it can be woken by anything but playback running
+ * dry. The transport still never fetches; whoever listens decides.
  */
 
 import { useSyncExternalStore } from "react";
@@ -45,6 +52,8 @@ const browserScheduler: TransportScheduler = {
 export class ReplayTransport {
   private snapshot: TransportSnapshot = { playing: false, speed: 1, index: 0, length: 0, pausedHidden: false };
   private listeners = new Set<Listener>();
+  private endListeners = new Set<Listener>();
+  private actions = 0;
   private frame: number | null = null;
   private last = 0;
   private carry = 0;
@@ -57,6 +66,20 @@ export class ReplayTransport {
   };
 
   getSnapshot = (): TransportSnapshot => this.snapshot;
+
+  /**
+   * Called once each time the playback loop reaches the last loaded sample by
+   * itself. Not called for a step, a seek, a pause, a hidden tab or a load.
+   */
+  subscribeEnd = (listener: Listener): (() => void) => {
+    this.endListeners.add(listener);
+    return () => this.endListeners.delete(listener);
+  };
+
+  /** How many times the reader has played, paused, stepped or sought. The loop, a load and a hidden tab are not the reader. */
+  get userActions(): number {
+    return this.actions;
+  }
 
   private set(patch: Partial<TransportSnapshot>): void {
     const next = { ...this.snapshot, ...patch };
@@ -98,6 +121,7 @@ export class ReplayTransport {
   }
 
   play(): void {
+    this.actions += 1;
     if (this.snapshot.length < 2) return;
     /* Play from the end starts over, as a player does. */
     const index = this.snapshot.index >= this.snapshot.length - 1 ? 0 : this.snapshot.index;
@@ -108,6 +132,7 @@ export class ReplayTransport {
   }
 
   pause(): void {
+    this.actions += 1;
     this.stopLoop();
     this.set({ playing: false });
   }
@@ -127,6 +152,7 @@ export class ReplayTransport {
   dispose(): void {
     this.stopLoop();
     this.listeners.clear();
+    this.endListeners.clear();
   }
 
   private stopLoop(): void {
@@ -147,7 +173,10 @@ export class ReplayTransport {
         const last = this.snapshot.length - 1;
         const index = Math.min(last, this.snapshot.index + advance);
         this.set({ index, playing: index < last });
-        if (index >= last) return;
+        if (index >= last) {
+          this.endListeners.forEach((listener) => listener());
+          return;
+        }
       }
       this.loop();
     });

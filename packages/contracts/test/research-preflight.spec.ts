@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { components } from "../generated/research-preflight";
 
+import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..");
@@ -97,5 +98,35 @@ describe("P08 published Research preflight contract", () => {
     });
     expect(fixture.snapshot).not.toHaveProperty("source_path");
     expect(fixture.snapshot).not.toHaveProperty("market_rows");
+  });
+
+  it("pins one dataset catalog that carries every symbol state Screen 02 must tell apart (D4)", () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as { components: { schemas: Record<string, object> } };
+    const validate = new Ajv2020({ allErrors: true, strict: true }).compile(openApi.components.schemas.DatasetCatalog!);
+    const catalog: components["schemas"]["DatasetCatalog"] = JSON.parse(
+      readFileSync(join(ROOT, "fixtures", "research-preflight.dataset-catalog.valid.json"), "utf8"),
+    );
+    expect(validate(catalog), JSON.stringify(validate.errors)).toBe(true);
+    // The fixture has teeth: a month that is not YYYY-MM is refused by the schema.
+    const broken = structuredClone(catalog);
+    broken.datasets[0]!.symbols.items[0]!.coverage!.first_month = "2020-1";
+    expect(validate(broken)).toBe(false);
+
+    const byId = new Map(catalog.datasets.map((dataset) => [dataset.dataset_id, dataset]));
+    // Coverage published, and the same symbol name with different coverage on another dataset.
+    const btc = (id: string) => byId.get(id)!.symbols.items.find((item) => item.symbol === "BTCUSDT")!.coverage;
+    expect(btc("crypto-binance-1m")).toMatchObject({ first_month: "2020-01", last_month: "2026-09", months: 81 });
+    expect(btc("fixture-bybit-1h")).toMatchObject({ first_month: "2022-05", last_month: "2025-11", months: 43 });
+    // Partitions with holes: fewer months present than the first-to-last range spans.
+    expect(byId.get("fixture-bybit-1h")!.symbols.items.find((item) => item.symbol === "ETHUSDT")!.coverage!.months).toBe(40);
+    // A listed symbol whose coverage is not published, with a non-UTC source clock.
+    expect(byId.get("fixture-single-symbol-1d")!.symbols.items).toEqual([{ symbol: "VN30F1M", contract_kind: null, coverage: null }]);
+    expect(byId.get("fixture-single-symbol-1d")!.source_timezone).toBe("Asia/Ho_Chi_Minh");
+    // Symbols not published, and an unavailable dataset, each with the server's reason.
+    expect(byId.get("fixture-query-any-symbol")!.symbols).toMatchObject({ state: "NOT_PUBLISHED", total: null });
+    expect(byId.get("fixture-unavailable-1h")).toMatchObject({ availability: "unavailable" });
+    expect(byId.get("fixture-unavailable-1h")!.unavailable_reason).toEqual(expect.any(String));
+    // The catalog states what coverage is not, in its own words.
+    expect(catalog.coverage_rule).toContain("not the exact first or last bar");
   });
 });

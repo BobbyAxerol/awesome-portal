@@ -38,15 +38,23 @@ import type { PreflightRefusal } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
 import { PreflightPanel } from "./PreflightPanel";
 import {
+  type CoveragePlan,
+  type CoverageSource,
   type DraftConstraints,
   type ParameterEntry,
+  type PrefillField,
   type RunDraft,
   type StepId,
   STEPS,
   SWEEP_CEILING,
+  applyCoveragePrefill,
   blockingProblems,
+  carriedCoverage,
   effectiveStrategyId,
+  markPrefillTouched,
   missingConstraints,
+  outerFields,
+  planCoverage,
   stepForFieldPath,
   parameterStatus,
   pinnedCount,
@@ -141,7 +149,7 @@ function Field({
 }: {
   label: string;
   children: React.ReactNode;
-  hint?: string;
+  hint?: React.ReactNode;
 }) {
   return (
     <label className="flex min-w-0 flex-1 flex-col gap-1">
@@ -660,6 +668,55 @@ function RoutePanel({ route }: { route: AtlasDocument["routes"][number] | null }
   );
 }
 
+/* ------------------------------------------------- coverage prefill (D4) */
+
+/** The coverage as the reader reads it: `2020-01 → 2026-09 · 81 months`. */
+function coverageSpan(source: CoverageSource): string {
+  const months =
+    source.months === source.monthsSpanned
+      ? `${source.months} month${source.months === 1 ? "" : "s"}`
+      : `${source.months} of ${source.monthsSpanned} months present`;
+  return `${source.firstMonth} → ${source.lastMonth} · ${months}`;
+}
+
+/** The caption under a prefilled field: its source, and which edge of the coverage it is. */
+function prefillCaption(field: PrefillField, source: CoverageSource): string {
+  const edge = field === "is.start" || field === "walkForward.start"
+    ? `first day of ${source.firstMonth}`
+    : `end of ${source.lastMonth}`;
+  return `prefilled from ${source.symbol} coverage · ${edge}`;
+}
+
+/** The field's caption node, or nothing when the field holds a value that is not from coverage. */
+function prefillHint(draft: RunDraft, field: PrefillField | null): React.ReactNode {
+  const source = field === null ? null : carriedCoverage(draft, field);
+  if (field === null || source === null) return undefined;
+  return <span style={{ color: "var(--ink-soft)" }} data-prefill-caption={field}>{prefillCaption(field, source)}</span>;
+}
+
+/**
+ * The same caption for a three-window row. It sits on its own line under the
+ * row, because a hint under one input would lift that input out of line with
+ * its neighbour (the row aligns its inputs by their bottom edge).
+ */
+function PrefillLine({ draft, field, label }: { draft: RunDraft; field: PrefillField | null; label: string }) {
+  const source = field === null ? null : carriedCoverage(draft, field);
+  if (field === null || source === null) return null;
+  return (
+    <p className="w-full pl-[82px] text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
+      {label} <span data-prefill-caption={field}>{prefillCaption(field, source)}</span>
+    </p>
+  );
+}
+
+/**
+ * The reader's own edit of a field. For one of the four outer bounds it also
+ * records that the value is theirs, so no later pick replaces it.
+ */
+function touchPatch(draft: RunDraft, field: PrefillField | null): Pick<RunDraft, "coveragePrefill"> | Record<string, never> {
+  return field === null ? {} : { coveragePrefill: markPrefillTouched(draft, field) };
+}
+
 function DataStep({
   draft,
   patch,
@@ -681,6 +738,16 @@ function DataStep({
   const catalogNote = catalogReason ? splitCatalogReason(catalogReason) : null;
   const symbols = dataset?.symbols.state === "PUBLISHED" ? dataset.symbols.items : [];
   const selectedSymbol = symbols.find((item) => item.symbol === draft.symbol.trim().toUpperCase()) ?? null;
+  /* D4: picking a dataset or symbol is what prefills the outer window bounds
+     (and re-picking replaces them). It is done here, in the reader's own
+     handler, and never in an effect — so a catalog that arrives late, a
+     re-render or a copied run cannot overwrite anything. */
+  const pickDataset = (datasetId: string) =>
+    patch({ datasetId, ...applyCoveragePrefill(draft, planCoverage(catalog, datasetId, draft.symbol)) });
+  const pickSymbol = (symbol: string) =>
+    patch({ symbol, ...applyCoveragePrefill(draft, planCoverage(catalog, draft.datasetId, symbol)) });
+  const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol);
+  const prefilledNow = outerFields(draft.protocol).some((field) => carriedCoverage(draft, field) !== null);
   const publishedTimeframes = limits.declaredTimeframes ?? [];
   const timeframeOptions = publishedTimeframes.length > 0
     ? publishedTimeframes
@@ -698,7 +765,7 @@ function DataStep({
               className={INPUT_CLASS}
               style={inputStyle()}
               value={draft.datasetId}
-              onChange={(e) => patch({ datasetId: e.target.value })}
+              onChange={(e) => pickDataset(e.target.value)}
               aria-label="Dataset"
               data-dataset-select
             >
@@ -714,7 +781,7 @@ function DataStep({
               className={INPUT_CLASS}
               style={inputStyle()}
               value={draft.datasetId}
-              onChange={(e) => patch({ datasetId: e.target.value })}
+              onChange={(e) => pickDataset(e.target.value)}
               aria-label="Dataset"
             />
           )}
@@ -738,7 +805,7 @@ function DataStep({
             className={INPUT_CLASS}
             style={inputStyle(draft.symbol.trim().length === 0)}
             value={draft.symbol}
-            onChange={(e) => patch({ symbol: e.target.value.toUpperCase() })}
+            onChange={(e) => pickSymbol(e.target.value.toUpperCase())}
             aria-label="Symbol"
             list={symbols.length > 0 ? "research-dataset-symbols" : undefined}
           />
@@ -791,6 +858,17 @@ function DataStep({
           ) : null}
         </Field>
       </div>
+      {/* D4: what the pick did to the walk-forward dates — filled, kept, or
+          why nothing was. Silent until a dataset is chosen. */}
+      {draft.datasetId !== "" ? (
+        <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-window-prefill-status data-prefill-state={prefillPlan.state}>
+          {prefillPlan.state !== "ready"
+            ? prefillPlan.reason
+            : prefilledNow
+              ? "Outer walk-forward bounds prefilled from this coverage — edit them in the Walk-forward step."
+              : "Coverage is published; the outer walk-forward bounds already hold your own values, so nothing was prefilled."}
+        </p>
+      ) : null}
       {/* E4 (audit 02-12): the HiFi's declaration box. The registry already
           publishes all four facts and the form ignored them, so the reader
           could not see what the run needs until preflight refused. Shown, not
@@ -894,18 +972,77 @@ function PublishedSelect({
   );
 }
 
+/**
+ * D4 — what filled the outer bounds, in words the reader can check.
+ *
+ * Three honest cases, never blended: values are on screen that a coverage put
+ * there (name the dataset, symbol and the coverage, and say what was left
+ * empty and why); coverage exists but every outer bound is the reader's own;
+ * or nothing could be prefilled, with the reason this pick gave.
+ */
+/**
+ * What a month edge is not. The warmup is the version's own declared fact (the
+ * registry's `warmup_bars`); saying it here is a reminder, not a date — the
+ * preflight owns the arithmetic and refuses what does not fit.
+ */
+function edgesSentence(warmupBars: number | null, protocol: RunDraft["protocol"]): string {
+  const first = protocol === "advanced" ? "the analysis start" : "IS start";
+  const warmup =
+    warmupBars === null
+      ? " and the declared warmup"
+      : warmupBars > 0
+        ? `, and the ${warmupBars} warmup bars the version declares must fit before ${first}`
+        : "";
+  return `Month edges, not bar times — preflight checks the exact range${warmup}. Every value stays editable.`;
+}
+
+function WindowPrefillNote({ draft, plan, warmupBars }: { draft: RunDraft; plan: CoveragePlan; warmupBars: number | null }) {
+  const carried = outerFields(draft.protocol).flatMap((field) => carriedCoverage(draft, field) ?? []);
+  const source = carried[0] ?? null;
+  return (
+    <div className="flex flex-col gap-0.5 text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-window-prefill-note data-prefill-state={source ? "prefilled" : plan.state}>
+      {source ? (
+        <>
+          <p data-prefill-source>
+            Prefilled from the coverage of {source.datasetId} · {source.symbol}: {coverageSpan(source)}, {source.timezone} month partitions.
+          </p>
+          <p data-prefill-edges>{edgesSentence(warmupBars, draft.protocol)}</p>
+          <p data-prefill-interior>
+            {draft.protocol === "advanced"
+              ? "First OOS instant is left empty: the release publishes no default for it."
+              : "IS end, OOS and holdout start are left empty: the server publishes no rule for splitting coverage into windows."}
+          </p>
+        </>
+      ) : plan.state === "ready" ? (
+        <p data-prefill-reason>
+          The coverage of {plan.source.datasetId} · {plan.source.symbol} is {coverageSpan(plan.source)}. The outer bounds here hold your own values, so nothing was prefilled.
+        </p>
+      ) : (
+        <p data-prefill-reason>{plan.reason}</p>
+      )}
+    </div>
+  );
+}
+
 function WindowsStep({
   draft,
   patch,
   atlas,
   error,
+  catalog = null,
+  warmupBars = null,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   atlas: AtlasDocument | null;
   error: string | null;
+  /** D4: the catalog the outer bounds were prefilled from. */
+  catalog?: DatasetCatalog | null;
+  /** D4: the warmup the bound version declares, or null when it was not read. */
+  warmupBars?: number | null;
 }) {
   const options = atlas?.current_release.walk_forward_options ?? null;
+  const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol);
   const modes = atlas?.modes ?? [];
   const selectedMode = modes.find((mode) => mode.mode_id === draft.optimizationMode) ?? null;
   const scheduleOptions = atlas && selectedMode ? scheduleChoices(atlas, selectedMode) : [];
@@ -925,8 +1062,19 @@ function WindowsStep({
     ["holdout", "Holdout"],
   ] as const;
 
+  /* D4: of the six three-window inputs only the IS start and the holdout end
+     are outer bounds a coverage can fill; the four between them are not. */
+  const outerField = (key: (typeof rows)[number][0], edge: "start" | "endExclusive"): PrefillField | null =>
+    key === "is" && edge === "start" ? "is.start" : key === "holdout" && edge === "endExclusive" ? "holdout.endExclusive" : null;
+  const setWindow = (key: (typeof rows)[number][0], edge: "start" | "endExclusive", value: string) =>
+    patch({
+      windows: { ...draft.windows, [key]: { ...draft.windows[key], [edge]: value } },
+      ...touchPatch(draft, outerField(key, edge)),
+    });
+
   return (
     <Card title="Walk-forward">
+      <WindowPrefillNote draft={draft} plan={prefillPlan} warmupBars={warmupBars} />
       {draft.protocol === "three_window_decay" ? (
         <div className="flex flex-col gap-2" data-three-window>
           {rows.map(([key, label]) => (
@@ -938,14 +1086,7 @@ function WindowsStep({
                   className={INPUT_CLASS}
                   style={inputStyle(Boolean(error))}
                   value={draft.windows[key].start}
-                  onChange={(e) =>
-                    patch({
-                      windows: {
-                        ...draft.windows,
-                        [key]: { ...draft.windows[key], start: e.target.value },
-                      },
-                    })
-                  }
+                  onChange={(e) => setWindow(key, "start", e.target.value)}
                   aria-label={`${label} start`}
                 />
               </Field>
@@ -955,40 +1096,43 @@ function WindowsStep({
                   className={INPUT_CLASS}
                   style={inputStyle(Boolean(error))}
                   value={draft.windows[key].endExclusive}
-                  onChange={(e) =>
-                    patch({
-                      windows: {
-                        ...draft.windows,
-                        [key]: { ...draft.windows[key], endExclusive: e.target.value },
-                      },
-                    })
-                  }
+                  onChange={(e) => setWindow(key, "endExclusive", e.target.value)}
                   aria-label={`${label} end exclusive`}
                 />
               </Field>
+              <PrefillLine draft={draft} field={outerField(key, "start")} label={`${label} start`} />
+              <PrefillLine draft={draft} field={outerField(key, "endExclusive")} label={`${label} end`} />
             </div>
           ))}
         </div>
       ) : (
         <div className="flex flex-wrap gap-2.5" data-advanced-window>
-          <Field label="Analysis start">
+          <Field label="Analysis start" hint={prefillHint(draft, "walkForward.start")}>
             <input
               type="datetime-local"
               className={INPUT_CLASS}
               style={inputStyle()}
               value={draft.walkForward.start}
-              onChange={(e) => patch({ walkForward: { ...draft.walkForward, start: e.target.value } })}
+              onChange={(e) =>
+                patch({
+                  walkForward: { ...draft.walkForward, start: e.target.value },
+                  ...touchPatch(draft, "walkForward.start"),
+                })
+              }
               aria-label="Analysis start"
             />
           </Field>
-          <Field label="End exclusive">
+          <Field label="End exclusive" hint={prefillHint(draft, "walkForward.endExclusive")}>
             <input
               type="datetime-local"
               className={INPUT_CLASS}
               style={inputStyle()}
               value={draft.walkForward.endExclusive}
               onChange={(e) =>
-                patch({ walkForward: { ...draft.walkForward, endExclusive: e.target.value } })
+                patch({
+                  walkForward: { ...draft.walkForward, endExclusive: e.target.value },
+                  ...touchPatch(draft, "walkForward.endExclusive"),
+                })
               }
               aria-label="Analysis end exclusive"
             />
@@ -1567,6 +1711,16 @@ function ReviewRail({
             {" · "}{draft.walkForward.windowMode || "window mode not declared"}
           </p>
         )}
+        {(() => {
+          /* D4: a date the reader is about to send that they did not type. */
+          const carried = outerFields(draft.protocol).flatMap((field) => carriedCoverage(draft, field) ?? []);
+          const source = carried[0] ?? null;
+          return source ? (
+            <p className="mt-1 text-[9px]" style={{ color: "var(--ink-soft)" }} data-window-prefill-rail>
+              Outer bounds prefilled from {source.symbol} coverage ({source.firstMonth} → {source.lastMonth}) until edited.
+            </p>
+          ) : null;
+        })()}
         <p className="mt-1 text-[9px]" style={{ color: "var(--ink-faint)" }}>
           Declaration only · fold boundaries are decided by preflight.
         </p>
@@ -1960,7 +2114,7 @@ export function NewRun(props: NewRunProps) {
             <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={patch} atlas={atlas} error={errorByStep.get("windows") ?? null} />
+            <WindowsStep draft={draft} patch={patch} atlas={atlas} error={errorByStep.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={patch} error={errorByStep.get("parameters") ?? null} ceiling={sweepCeiling} />

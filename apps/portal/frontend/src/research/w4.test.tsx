@@ -32,6 +32,7 @@ import {
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
 import { runLineageFor } from "./useNewRun";
+import { REFUSAL_COPY } from "./researchRefusal";
 
 afterEach(cleanup);
 
@@ -161,6 +162,35 @@ describe("CG-P08-03 refusals go to the step that owns the field", () => {
     expect(document.querySelector('[data-step-pill="windows"]')?.getAttribute("data-step-state")).toBe("error");
     fireEvent.click(document.querySelector('[data-action="go-to-refused-step"]') as HTMLElement);
     expect(document.querySelector('[data-step-pill="windows"]')?.getAttribute("aria-current")).toBe("step");
+  });
+});
+
+describe("G10 — a refusal that names no field is still shown (real-server receipt 2026-09-30)", () => {
+  /* The first real preflight against a server refused the request (403, origin not allowed) and the
+     screen said nothing: only refusals carrying a `field_path` had somewhere to render. */
+  const cases: Array<[string, unknown]> = [
+    ["403", new PreflightApiError("Request origin is not allowed.", 403, "RESEARCH_PREFLIGHT_INVALID", "req_o", {})],
+    ["503", new PreflightApiError("Preflight is unavailable.", 503, null, "req_u", {})],
+    ["transport", new TypeError("offline")],
+  ];
+  it.each(cases)("shows the %s refusal on the Review step, with no field to fix", (_label, error) => {
+    const refusal = toPreflightRefusal(error);
+    view({ initialStep: "review", preflightRefusal: refusal });
+    const alert = document.querySelector("[data-refusal-field]") as HTMLElement;
+    expect(alert, "the refusal must be on screen").not.toBeNull();
+    expect(alert.textContent).not.toBe("");
+    /* No field, so nothing to navigate to. */
+    expect(document.querySelector('[data-action="go-to-refused-step"]')).toBeNull();
+    /* The retry stays available: the action is the same button. */
+    expect(document.querySelector('[data-action="preflight"]')).not.toBeNull();
+  });
+
+  it("reads a 403 as the one neutral sentence and never echoes the server's prose", () => {
+    const refusal = toPreflightRefusal(new PreflightApiError("SECRET-SERVER-PROSE", 403, "RESEARCH_PREFLIGHT_INVALID", "r", {}));
+    view({ initialStep: "review", preflightRefusal: refusal });
+    const text = (document.querySelector("[data-refusal-field]") as HTMLElement).textContent ?? "";
+    expect(text).toContain(REFUSAL_COPY.denied);
+    expect(text).not.toContain("SECRET-SERVER-PROSE");
   });
 });
 

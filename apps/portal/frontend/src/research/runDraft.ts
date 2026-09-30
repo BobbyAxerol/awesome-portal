@@ -20,6 +20,7 @@
  */
 
 import type { DeclaredParameter } from "./alphaImportClient";
+import type { DatasetCatalog } from "./datasetClient";
 import type { RequestedSpec } from "./preflightClient";
 
 /* ------------------------------------------------------------------ model */
@@ -101,6 +102,12 @@ export interface RunDraft {
   /* Client identity of the installed release the form was built from. */
   engineReleaseId: string;
   configDigest: string;
+  /**
+   * D4: where the outermost window bounds came from, when a dataset's coverage
+   * filled them. Provenance for the screen only — `serializeRequestedSpec`
+   * never reads it, so it can neither reach a payload nor change a digest.
+   */
+  coveragePrefill?: CoveragePrefill;
 }
 
 /**
@@ -507,6 +514,304 @@ export function serializeRequestedSpec(draft: RunDraft): RequestedSpec {
   return spec;
 }
 
+/* ------------------------------------------------- coverage prefill (D4) */
+
+/**
+ * D4 — the outermost window bounds, filled from the coverage the reader's
+ * dataset and symbol published.
+ *
+ * What is filled, and why only that. The catalog states coverage as **month
+ * partitions** (`first_month` … `last_month`) and says itself that this "is not
+ * the exact first or last bar". The one thing that statement fixes literally is
+ * the outer envelope: nothing can lie before the first day of the first
+ * partition or after the last day of the last one. So exactly four fields may
+ * take a value — the lower and upper bound of the outermost window of each
+ * protocol.
+ *
+ * What is not filled: every interior boundary (IS end, OOS start and end,
+ * holdout start, the first out-of-sample instant). No server fact defines them.
+ * The Atlas says of the walk-forward split "there is no release default to fall
+ * back on", and the three-window declaration carries no length or ratio at all.
+ * A rule such as "OOS = the last N days" would be the browser's own methodology,
+ * so those stay empty and are the reader's to choose.
+ *
+ * Nothing is derived beyond calendar text: `2020-01` → `2020-01-01T00:00`, and
+ * the month after `last_month` for the exclusive end. There is no bar
+ * arithmetic — warmup, timeframe and the last closed bar are the preflight's.
+ */
+export type PrefillField =
+  | "is.start"
+  | "holdout.endExclusive"
+  | "walkForward.start"
+  | "walkForward.endExclusive";
+
+export const PREFILL_FIELDS: readonly PrefillField[] = [
+  "is.start",
+  "holdout.endExclusive",
+  "walkForward.start",
+  "walkForward.endExclusive",
+];
+
+/** The two outer bounds the active protocol actually sends. */
+export function outerFields(protocol: RunDraft["protocol"]): readonly PrefillField[] {
+  return protocol === "advanced"
+    ? ["walkForward.start", "walkForward.endExclusive"]
+    : ["is.start", "holdout.endExclusive"];
+}
+
+/** The published coverage a placed value was read from. */
+export interface CoverageSource {
+  datasetId: string;
+  symbol: string;
+  firstMonth: string;
+  lastMonth: string;
+  /** Month partitions the server says are present. */
+  months: number;
+  /** Month partitions the first → last range spans; more than `months` means holes. */
+  monthsSpanned: number;
+  /** The dataset's own clock — the server reads a naive boundary in this zone. */
+  timezone: string;
+}
+
+export interface CoveragePrefill {
+  /** The coverage the placed values came from; null when nothing is placed. */
+  source: CoverageSource | null;
+  /**
+   * The exact value the coverage put in each field. A field carries a prefill
+   * only while it still holds this value; any other value is the reader's (or a
+   * copied run's) and is never replaced.
+   */
+  placed: Readonly<Partial<Record<PrefillField, string>>>;
+  /** Fields the reader edited, including to empty. A touched field is never prefilled again. */
+  touched: readonly PrefillField[];
+}
+
+export type CoveragePlan =
+  | { state: "ready"; reason: null; source: CoverageSource; lower: string; upperExclusive: string }
+  | {
+      state:
+        | "no-dataset"
+        | "no-catalog"
+        | "dataset-unlisted"
+        | "dataset-unavailable"
+        | "symbols-not-published"
+        | "no-symbol"
+        | "symbol-unlisted"
+        | "coverage-not-published"
+        | "coverage-unreadable";
+      /** A full sentence for the screen; each state is worded on its own. */
+      reason: string;
+    };
+
+const MONTH_TEXT = /^(\d{4})-(\d{2})$/;
+
+function monthIndex(value: string): number | null {
+  const match = MONTH_TEXT.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (year < 1 || month < 1 || month > 12) return null;
+  return year * 12 + (month - 1);
+}
+
+function monthStart(index: number): string | null {
+  const year = Math.floor(index / 12);
+  if (year > 9999) return null;
+  return `${String(year).padStart(4, "0")}-${String((index % 12) + 1).padStart(2, "0")}-01T00:00`;
+}
+
+/**
+ * The outer envelope of a month range, as datetime-local text: the first day of
+ * `firstMonth`, and the first day of the month after `lastMonth` (end-exclusive).
+ * Null when either month is not a real `YYYY-MM` or the range runs backwards.
+ */
+export function coverageMonthEdges(
+  firstMonth: string,
+  lastMonth: string,
+): { lower: string; upperExclusive: string; monthsSpanned: number } | null {
+  const first = monthIndex(firstMonth);
+  const last = monthIndex(lastMonth);
+  if (first === null || last === null || last < first) return null;
+  const lower = monthStart(first);
+  const upperExclusive = monthStart(last + 1);
+  if (lower === null || upperExclusive === null) return null;
+  return { lower, upperExclusive, monthsSpanned: last - first + 1 };
+}
+
+/**
+ * What the chosen dataset and symbol allow to be prefilled, and if nothing,
+ * why. Every state is distinct — "no dataset", "catalog unread", "symbol not
+ * listed" and "coverage not published" are four different facts and read as such.
+ */
+export function planCoverage(catalog: DatasetCatalog | null, datasetId: string, symbol: string): CoveragePlan {
+  if (datasetId === "") {
+    return { state: "no-dataset", reason: "No dataset is chosen, so nothing is prefilled." };
+  }
+  if (catalog === null) {
+    return { state: "no-catalog", reason: "The dataset catalog was not read, so there is no coverage to prefill from." };
+  }
+  const dataset = catalog.datasets.find((item) => item.dataset_id === datasetId);
+  if (!dataset) {
+    return { state: "dataset-unlisted", reason: `${datasetId} is not in the dataset catalog, so there is no coverage to prefill from.` };
+  }
+  if (dataset.availability !== "available") {
+    return {
+      state: "dataset-unavailable",
+      reason: `${dataset.unavailable_reason ?? "This dataset is unavailable."} Nothing is prefilled.`,
+    };
+  }
+  if (dataset.symbols.state !== "PUBLISHED") {
+    return {
+      state: "symbols-not-published",
+      reason: `${dataset.symbols.reason ?? "This dataset publishes no symbol list."} Nothing is prefilled.`,
+    };
+  }
+  const wanted = symbol.trim().toUpperCase();
+  if (wanted === "") {
+    return { state: "no-symbol", reason: "No symbol is chosen, so nothing is prefilled." };
+  }
+  const listed = dataset.symbols.items.find((item) => item.symbol === wanted);
+  if (!listed) {
+    return {
+      state: "symbol-unlisted",
+      reason: dataset.symbols.truncated
+        ? `${wanted} is not among the ${dataset.symbols.items.length} symbols listed (the list is truncated), so nothing is prefilled.`
+        : `${wanted} is not among this dataset's ${dataset.symbols.total ?? dataset.symbols.items.length} listed symbols, so nothing is prefilled.`,
+    };
+  }
+  const coverage = listed.coverage;
+  if (coverage === null) {
+    return { state: "coverage-not-published", reason: `Coverage is not published for ${wanted} in ${datasetId}, so nothing is prefilled.` };
+  }
+  const edges = coverageMonthEdges(coverage.first_month, coverage.last_month);
+  if (edges === null || coverage.months > edges.monthsSpanned) {
+    return {
+      state: "coverage-unreadable",
+      reason: `The published coverage of ${wanted} (${coverage.first_month} → ${coverage.last_month}, ${coverage.months} months) is not a consistent month range, so nothing is prefilled.`,
+    };
+  }
+  return {
+    state: "ready",
+    reason: null,
+    lower: edges.lower,
+    upperExclusive: edges.upperExclusive,
+    source: {
+      datasetId,
+      symbol: wanted,
+      firstMonth: coverage.first_month,
+      lastMonth: coverage.last_month,
+      months: coverage.months,
+      monthsSpanned: edges.monthsSpanned,
+      timezone: dataset.source_timezone,
+    },
+  };
+}
+
+type PrefillTarget = Pick<RunDraft, "windows" | "walkForward">;
+
+function readPrefillField(target: PrefillTarget, field: PrefillField): string {
+  switch (field) {
+    case "is.start":
+      return target.windows.is.start;
+    case "holdout.endExclusive":
+      return target.windows.holdout.endExclusive;
+    case "walkForward.start":
+      return target.walkForward.start;
+    case "walkForward.endExclusive":
+      return target.walkForward.endExclusive;
+  }
+}
+
+function writePrefillField(target: PrefillTarget, field: PrefillField, value: string): PrefillTarget {
+  switch (field) {
+    case "is.start":
+      return { ...target, windows: { ...target.windows, is: { ...target.windows.is, start: value } } };
+    case "holdout.endExclusive":
+      return { ...target, windows: { ...target.windows, holdout: { ...target.windows.holdout, endExclusive: value } } };
+    case "walkForward.start":
+      return { ...target, walkForward: { ...target.walkForward, start: value } };
+    case "walkForward.endExclusive":
+      return { ...target, walkForward: { ...target.walkForward, endExclusive: value } };
+  }
+}
+
+const NO_PREFILL: CoveragePrefill = { source: null, placed: {}, touched: [] };
+
+/**
+ * The patch a dataset / symbol pick makes to the four outer bounds.
+ *
+ * Per field, exactly one of three things happens:
+ *  - it still holds the value a previous coverage put there → **replaced** by
+ *    the new coverage's value, or emptied when the new pick publishes none (a
+ *    stale bound is never kept and never merged with the new one);
+ *  - it is empty and the reader never touched it → filled;
+ *  - anything else — a value the reader typed, a value copied from another run,
+ *    a field the reader cleared → left exactly as it is.
+ *
+ * It only ever runs from the reader's own pick, never from an effect, so a
+ * catalog that arrives late or a re-render cannot overwrite a value.
+ */
+export function applyCoveragePrefill(
+  draft: Pick<RunDraft, "windows" | "walkForward" | "coveragePrefill">,
+  plan: CoveragePlan,
+): Pick<RunDraft, "windows" | "walkForward" | "coveragePrefill"> {
+  const prior = draft.coveragePrefill ?? NO_PREFILL;
+  const offered: Partial<Record<PrefillField, string>> =
+    plan.state === "ready"
+      ? {
+          "is.start": plan.lower,
+          "holdout.endExclusive": plan.upperExclusive,
+          "walkForward.start": plan.lower,
+          "walkForward.endExclusive": plan.upperExclusive,
+        }
+      : {};
+  let target: PrefillTarget = { windows: draft.windows, walkForward: draft.walkForward };
+  const placed: Partial<Record<PrefillField, string>> = {};
+  for (const field of PREFILL_FIELDS) {
+    const current = readPrefillField(target, field);
+    const carriesPrefill = prior.placed[field] !== undefined && prior.placed[field] === current;
+    const fillable = current === "" && !prior.touched.includes(field);
+    if (!carriesPrefill && !fillable) continue;
+    const next = offered[field] ?? "";
+    target = writePrefillField(target, field, next);
+    if (next !== "") placed[field] = next;
+  }
+  return {
+    windows: target.windows,
+    walkForward: target.walkForward,
+    coveragePrefill: {
+      source: Object.keys(placed).length > 0 && plan.state === "ready" ? plan.source : null,
+      placed,
+      touched: prior.touched,
+    },
+  };
+}
+
+/** The provenance after the reader edited `field`: it is theirs from now on. */
+export function markPrefillTouched(draft: Pick<RunDraft, "coveragePrefill">, field: PrefillField): CoveragePrefill {
+  const prior = draft.coveragePrefill ?? NO_PREFILL;
+  return {
+    source: prior.source,
+    placed: Object.fromEntries(Object.entries(prior.placed).filter(([key]) => key !== field)),
+    touched: prior.touched.includes(field) ? prior.touched : [...prior.touched, field],
+  };
+}
+
+/**
+ * The coverage a field's current value was read from, or null when the field
+ * holds anything else — an edit, a copy, a different dataset or symbol.
+ */
+export function carriedCoverage(
+  draft: Pick<RunDraft, "windows" | "walkForward" | "datasetId" | "symbol" | "coveragePrefill">,
+  field: PrefillField,
+): CoverageSource | null {
+  const prefill = draft.coveragePrefill;
+  const placed = prefill?.placed[field];
+  if (!prefill?.source || placed === undefined || placed !== readPrefillField(draft, field)) return null;
+  if (prefill.source.datasetId !== draft.datasetId || prefill.source.symbol !== draft.symbol.trim().toUpperCase()) return null;
+  return prefill.source;
+}
+
 /* ----------------------------------------------------- field path → step */
 
 /**
@@ -598,6 +903,8 @@ export function draftFromRequestedSpec(spec: RequestedSpec, base: RunDraft): Run
     earlyStopping: text(spec.early_stopping),
     randomSeed: text(spec.random_seed),
     optimizationConfigOverrides: { ...spec.optimization_config },
+    /* Copied windows are a declaration, not a prefill — drop any provenance. */
+    coveragePrefill: undefined,
   };
 }
 

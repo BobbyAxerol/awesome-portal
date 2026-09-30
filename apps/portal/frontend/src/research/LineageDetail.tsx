@@ -253,7 +253,39 @@ export function treeOrder(attempts: readonly LineageAttempt[]): TreeNode[] {
       level += 1;
     }
   }
-  return attempts.map((attempt) => ({ attempt, depth: depth.get(attempt.attempt_id) ?? 0 }));
+  /*
+   * G10 (first real clone, 2026-09-30): keeping the flat server order put a child under
+   * whichever node happened to precede it in time. The first real clone
+   * (`ratt_6d431f0d…`, parent `ratt_464bf9c3…`) was drawn indented beneath an unrelated
+   * attempt created in between, so the rail named the wrong parent. A tree is read
+   * top-down: each child now follows its parent's subtree. Roots, and siblings under one
+   * parent, keep the server's (chronological) order, so nothing is re-ranked — the fixture
+   * order, where every parent precedes its children, is unchanged.
+   */
+  const childrenOf = new Map<string, LineageAttempt[]>();
+  const roots: LineageAttempt[] = [];
+  for (const attempt of attempts) {
+    const parent = parentOf(attempt);
+    if (parent && parent.attempt_id !== attempt.attempt_id) {
+      const list = childrenOf.get(parent.attempt_id) ?? [];
+      list.push(attempt);
+      childrenOf.set(parent.attempt_id, list);
+    } else {
+      roots.push(attempt);
+    }
+  }
+  const ordered: TreeNode[] = [];
+  const placed = new Set<string>();
+  const visit = (attempt: LineageAttempt) => {
+    if (placed.has(attempt.attempt_id)) return;
+    placed.add(attempt.attempt_id);
+    ordered.push({ attempt, depth: depth.get(attempt.attempt_id) ?? 0 });
+    for (const child of childrenOf.get(attempt.attempt_id) ?? []) visit(child);
+  };
+  for (const root of roots) visit(root);
+  /* A cycle the service would refuse leaves nodes unplaced; never drop one. */
+  for (const attempt of attempts) visit(attempt);
+  return ordered;
 }
 
 /** The window of rows to render for one scroll position. Pure, for tests. */

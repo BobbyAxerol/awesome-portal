@@ -28,6 +28,7 @@ import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
 import { reportSessionExpired } from "../auth/sessionExpiry";
+import { REFUSAL_COPY } from "./researchRefusal";
 
 type Schemas = components["schemas"];
 
@@ -248,8 +249,17 @@ export function toPreflightRefusal(error: unknown): PreflightRefusal {
   if (error.status === 401) reportSessionExpired();
   const known =
     error.code && error.code in REFUSAL ? REFUSAL[error.code as PreflightProblemCode] : null;
+  const fieldPath = error instanceof PreflightApiError
+    ? (error.details?.field_path ?? error.details?.field_paths?.[0] ?? null)
+    : null;
+  /* G10 (real preview, 2026-09-30): a 403/404 that names no field is an
+     access refusal (e.g. origin not allowed), not a declaration error — it
+     reads the one F-04 sentence instead of "fix a field" with nothing to fix. */
+  const denied = (error.status === 403 || error.status === 404) && !(fieldPath && fieldPath.length > 0);
   return {
-    ...(known ?? {
+    ...(denied
+      ? { ...NO, state: "denied" as const, copy: REFUSAL_COPY.denied }
+      : known ?? {
       ...NO,
       state: error.status >= 500 ? "unavailable" : "terminal",
       copy: PREFLIGHT_REFUSAL_GENERIC_COPY,
@@ -259,9 +269,7 @@ export function toPreflightRefusal(error: unknown): PreflightRefusal {
     status: error.status,
     requestId: error.requestId,
     gate: error instanceof PreflightApiError ? (error.details?.gate ?? null) : null,
-    fieldPath: error instanceof PreflightApiError
-      ? (error.details?.field_path ?? error.details?.field_paths?.[0] ?? null)
-      : null,
+    fieldPath,
   };
 }
 

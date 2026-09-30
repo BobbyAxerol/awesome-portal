@@ -24,6 +24,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { shortId } from "./researchFormat";
+
 /** runId -> the server's label, or `null` when the server published none. */
 const labels = new Map<string, string | null>();
 const listeners = new Set<() => void>();
@@ -89,6 +91,26 @@ export function rememberRunLabels(rows: readonly RunLabelBearer[] | null | undef
 export function runLabelFor(id: string | null | undefined): string | null {
   if (typeof id !== "string") return null;
   return labels.get(id) ?? null;
+}
+
+/** Whether any read has told the registry about this id: a label, or that the run has none. */
+export function runLabelKnown(id: string | null | undefined): boolean {
+  return typeof id === "string" && labels.has(id);
+}
+
+/**
+ * How a screen that prints an id as plain text (not through `ShortId`) should
+ * write a RUN id: the server's label when a read has published one, else the
+ * short id every screen already used.
+ *
+ * It is a plain read, not a subscription, so it belongs at a print site that
+ * re-renders when the read that fed the registry lands — which is every screen
+ * that takes the label from its own read. The registry is keyed by run id, so
+ * an attempt id, a digest or an alpha version passed through here comes back
+ * exactly as `shortId` wrote it (asserted in `runLabels.test.tsx`).
+ */
+export function runLabelOrShortId(id: string | null | undefined): string | null {
+  return runLabelFor(id) ?? shortId(id);
 }
 
 /** Test seam: the registry outlives a render, so a test must be able to clear it. */

@@ -1212,3 +1212,19 @@ describe("E2c · 7.9 — the P04 digest chain draws the hub's own provenance", (
     expect(done.container.querySelector("[data-panel='digest-chain'] button")).toBeNull();
   });
 });
+
+describe("G7 — axe `heading-order` on Screen 07", () => {
+  it("has one h1 and every panel heading one level below it, never a level skipped", () => {
+    const { container } = view();
+    const levels = Array.from(container.querySelectorAll("h1, h2, h3, h4, h5, h6")).map((heading) => Number(heading.tagName.slice(1)));
+    expect(levels.filter((level) => level === 1)).toHaveLength(1);
+    expect(levels.filter((level) => level === 2).length).toBeGreaterThan(3);
+    /* The first heading after the title is an h2 (it was an h3: h1 → h3 skips a level). Headings inside the shared
+       panels stay h3, and sit under an h2 now. */
+    expect(levels[1]).toBe(2);
+    /* No heading is more than one level deeper than the one before it (what axe's heading-order checks). */
+    levels.forEach((level, index) => {
+      if (index > 0) expect(level - levels[index - 1]!, `heading ${index}`).toBeLessThanOrEqual(1);
+    });
+  });
+});

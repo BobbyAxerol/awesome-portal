@@ -12,7 +12,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ShortId } from "./ShortId";
-import { forgetRunLabels, rememberRunLabel, rememberRunLabels, runLabelFor } from "./runLabels";
+import { forgetRunLabels, rememberRunLabel, rememberRunLabels, runLabelFor, runLabelKnown, runLabelOrShortId } from "./runLabels";
 
 const RUN = "rrun_e1fa9e5c0f2b41d3a0c7e3b54a17d5aa";
 const OTHER = "rrun_8c9c1f2a3b4c5d6e7f8091a2b3c41150";
@@ -106,5 +106,37 @@ describe("ShortId with a label in hand", () => {
     expect(screen.getByRole("button").textContent).toBe("rrun_e1fa9e5c");
     act(() => rememberRunLabel(RUN, "R-WFO-118"));
     expect(screen.getByRole("button").textContent).toBe("R-WFO-118");
+  });
+});
+
+describe("printing a run id as plain text (the screens that do not use ShortId)", () => {
+  it("writes the label when a read published one, the short id when none did", () => {
+    expect(runLabelOrShortId(RUN)).toBe("rrun_e1fa9e5c");
+    rememberRunLabel(RUN, "R-WFO-118");
+    expect(runLabelOrShortId(RUN)).toBe("R-WFO-118");
+    /* The server said this run has no label: the short id, never a number. */
+    rememberRunLabel(RUN, null);
+    expect(runLabelOrShortId(RUN)).toBe("rrun_e1fa9e5c");
+  });
+
+  it("leaves everything that is not a labelled run exactly as shortId wrote it", () => {
+    /* The registry is keyed by run id, so a digest, an alpha version or an attempt id can never be relabelled. */
+    rememberRunLabel(RUN, "R-WFO-118");
+    expect(runLabelOrShortId(DIGEST)).toBe("9f0a9066");
+    expect(runLabelOrShortId("av_delta_rsi_polynomial_alpha_1_0_0")).toBe("av_delta_rsi_polynomial_alpha_1_0_0");
+    expect(runLabelOrShortId("att_run-w6a-wfo-a")).toBe("att_run-w6a-wfo-a");
+    expect(runLabelOrShortId(null)).toBeNull();
+    expect(runLabelOrShortId(undefined)).toBeNull();
+  });
+
+  it("says whether any read has told the registry about an id, a null included", () => {
+    expect(runLabelKnown(RUN)).toBe(false);
+    rememberRunLabel(RUN, null);
+    expect(runLabelKnown(RUN)).toBe(true);
+    rememberRunLabel(OTHER, "R-P04-007");
+    expect(runLabelKnown(OTHER)).toBe(true);
+    expect(runLabelKnown(DIGEST)).toBe(false);
+    expect(runLabelKnown(null)).toBe(false);
+    expect(runLabelKnown(undefined)).toBe(false);
   });
 });
