@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**F5 real-browser refusal subset 2026-09-30:** [owned-cell S02/S14 receipt](./F5_BROWSER_REFUSAL_RECEIPT_2026-09-30.md) passes 8/8 real 400/401/403 presentation cases at 1280/660 px on clean `2bfeb53e`; jobs 194→194, no off-origin request, page error or horizontal overflow. Real 502, revocation, canonical 54/54 F3 and full F5/P23/P24 remain OPEN.
+
 **T07/T13 release-pin repair 2026-09-30:** [pre-fix probe and approved P10 repair](./T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md) preserve the proven gap and close the source predicate with a typed 409 and 45/45 focused tests. No newer QuantBT engine is installed by this change; full upgrade/default/rollback T07/T13 acceptance remains OPEN.
 
 **T02/T12 current-candidate 2026-09-30:** [exact three-round WFO plateau and shared utility/audit-reuse receipts](./T02_T12_SOURCE_CLOSEOUT_2026-09-30.md) closes T02 (nine real complete/fail/cancel, unchanged scratch) and qualifies T12 for the currently supported eligible WFO audit-reuse profile on clean `af18707a`: real primary/diagnostic/verify/export overlap plus typed quota negative/recovery. Non-reusable linked-audit-child is still a typed gap; P23/P24 remain OPEN.
