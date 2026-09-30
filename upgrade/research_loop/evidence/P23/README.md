@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**V11-P23-DR WFO retained subset 2026-09-30:** [one real completed WFO artifact/DB/BFF parity receipt](./V11_WFO_RETAINED_PARITY_2026-09-30.md) rehashes 10 sealed Parquet parts, checks all 1,063 retained rows across five relations and four exact summary decimals against the owner BFF; 5/5 focused refusals pass. It is not direct QuantBT WFO recomputation or full V11/P23/P24 acceptance.
+
 **T15 current-candidate 2026-09-30:** [cold-cache browser/WFO receipt](./T15_COLD_BROWSER_OVERLAP_2026-09-30.md) closes the isolated T15 gate on clean `b4e5d09b`: two real viewports overlap one RUNNING WFO/four queued intents, 120/120 cold GET 200, six cold p95 gates and the seven-service 5-GB cap pass. The historical 2026-09-29 T15 subset and failed 2026-09-30 attempts remain recorded. F3/F5/OL-24 and full P23/P24 remain open.
 
 **F3 scoped real browser, 2026-09-29:** [Research route and S11→R1 bridge receipt](./F3_REAL_ROUTE_AND_PUBLICATION_BRIDGE_2026-09-29.md) passed 30/30 Research deep links and 2/2 publication/Governance R1 browser paths on the exact loopback image with Execution UI routes compiled. Two earlier failed test-profile attempts are retained. This is not the full 54/54 F3 lane or P23/P24 qualification.
