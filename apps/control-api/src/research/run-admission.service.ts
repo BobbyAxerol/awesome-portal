@@ -440,6 +440,9 @@ export class ResearchRunAdmissionService {
         (engine as Record<string, unknown>).engine_release_id !== requested.client.engine_release_id) {
       return "The effective preflight engine binding no longer matches the submitted request.";
     }
+    if (requested.client.engine_release_id !== P04_DELTA_DECLARED_CONTRACT.execution.engine_release_id) {
+      return "The installed Delta adapter is bound to engine release er_quantbt_111.";
+    }
     if (requested.execution_route !== "signal_notional" || requested.protocol !== "three_window_decay") {
       return "The installed Delta adapter currently accepts only the signal-notional three-window profile.";
     }

@@ -1,6 +1,6 @@
 # P23 backend qualification packet
 
-**T07/T13 release-pin gap 2026-09-30:** [compiled P04 admission probe and repair request](./T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md) confirm that a matching newer preflight release can pass the installed P04 predicate although its child remains pinned to `er_quantbt_111`. The <=P21 owner boundary is respected: this packet requests the minimal admission fix; it does not claim an installed newer QuantBT engine or full T07/T13 acceptance.
+**T07/T13 release-pin repair 2026-09-30:** [pre-fix probe and approved P10 repair](./T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md) preserve the proven gap and close the source predicate with a typed 409 and 45/45 focused tests. No newer QuantBT engine is installed by this change; full upgrade/default/rollback T07/T13 acceptance remains OPEN.
 
 **T02/T12 current-candidate 2026-09-30:** [exact three-round WFO plateau and shared utility/audit-reuse receipts](./T02_T12_SOURCE_CLOSEOUT_2026-09-30.md) closes T02 (nine real complete/fail/cancel, unchanged scratch) and qualifies T12 for the currently supported eligible WFO audit-reuse profile on clean `af18707a`: real primary/diagnostic/verify/export overlap plus typed quota negative/recovery. Non-reusable linked-audit-child is still a typed gap; P23/P24 remain OPEN.
 

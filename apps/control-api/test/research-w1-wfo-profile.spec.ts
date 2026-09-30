@@ -106,6 +106,18 @@ describe("W1 run admission matrix", () => {
     }
   });
 
+  it("refuses a future release even when the effective preflight agrees with the request", async () => {
+    const spec = p04Requested({ client: { engine_release_id: "er_quantbt_112", config_digest: "a".repeat(64) } });
+    for (const wfo of [false, true]) {
+      const error = await refusal(admit(spec, { wfo, manifest: manifestFor(spec) }));
+      expect(error).toMatchObject({
+        code: "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
+        status: 409,
+        message: "The installed Delta adapter is bound to engine release er_quantbt_111.",
+      });
+    }
+  });
+
   it("admits the exact §1.1 WFO request only with the flag on", async () => {
     const accepted = await admit(wfoRequested());
     expect(accepted.profile).toEqual({ id: DELTA_WFO_PROFILE_ID, digest: DELTA_WFO_PROFILE_DIGEST });

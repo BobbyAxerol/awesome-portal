@@ -178,6 +178,7 @@ export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly stri
   "The imported Alpha fixed profile accepts parameter pins only; sweeps require a separately versioned adapter.": ["parameter_space_overrides"],
   "No installed executor runs requested-spec v2 temporal guards, rolling width or inner folds yet; preflight validates them only.": ["schema_version"],
   "The effective preflight engine binding no longer matches the submitted request.": ["client", "engine_release_id"],
+  "The installed Delta adapter is bound to engine release er_quantbt_111.": ["client", "engine_release_id"],
   "The Delta walk-forward profile is bound to engine release er_quantbt_111.": ["client", "engine_release_id"],
   "The Delta walk-forward profile accepts only the signal-notional route.": ["execution_route"],
   "The Delta walk-forward profile accepts only the advanced walk-forward protocol.": ["protocol"],

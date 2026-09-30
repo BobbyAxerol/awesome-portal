@@ -6237,7 +6237,7 @@ has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged
 <a id="rl-p23"></a>
 ### P23 — Resource, security, recovery và upgrade qualification
 
-**P23-T07/T13 2026-09-30 — CONFIRMED GAP:** [P04 installed-release pin probe](./research_loop/evidence/P23/T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md) shows P10 currently accepts a matching `er_quantbt_112` preflight for the installed `er_quantbt_111` P04 child. Minimal <=P21 repair request and regression bar are in the packet; no P10 source was edited across its owner boundary. A real alternate engine/default/rollback receipt remains required before T07/T13 PASS. P23/P24 stay OPEN.
+**P23-T07/T13 2026-09-30 — SOURCE REPAIRED, RUNTIME OPEN:** [P04 installed-release pin packet](./research_loop/evidence/P23/T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md) preserves the pre-fix `er_quantbt_112` probe and records Bobby-approved P10 predicate repair. Matching future preflight/request release now gets a typed 409 against installed `er_quantbt_111`; 45/45 focused tests and Control API build pass, with 1.1.1 golden admission retained. A real alternate engine/default/rollback receipt is still required before T07/T13 PASS. P23/P24 stay OPEN.
 
 **P23 upstream-connect fault 2026-09-29:** [owned-cell receipt](./research_loop/evidence/P23/GATEWAY_UPSTREAM_TIMEOUT_2026-09-29.md) records a prior 5-second/no-byte timeout, then bounded 504 in about 3 seconds on auth and Research API with Control API stopped, followed by 200/401 recovery. This is a scoped gateway fail-fast improvement, not F5 typed-502, W06 reacceptance or full P23/P24 qualification.
 

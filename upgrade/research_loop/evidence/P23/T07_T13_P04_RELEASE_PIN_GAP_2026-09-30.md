@@ -1,8 +1,8 @@
 # P23-T07/T13 — P04 installed-release pin gap
 
-2026-09-30 · Codex · `docs/research-loop-plan` · **CONFIRMED BACKEND GAP / T07,T13 OPEN**.
+2026-09-30 · Codex · `docs/research-loop-plan` · **SOURCE REPAIRED / T07,T13 OPEN**.
 
-This is a source-level and compiled-module probe, not an engine-upgrade runtime
+The finding below was a pre-fix compiled-module probe, not an engine-upgrade runtime
 receipt. No P23 cell, shared preview, dev, Production, database, or frontend was
 changed. It does not imply that QuantBT 1.1.2 is installed or accepted.
 
@@ -39,6 +39,18 @@ typed `RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE` refusal. Add tests for both
 `er_quantbt_112` with a matching effective preflight and the existing 1.1.1
 golden run, with WFO enabled and disabled. No new route, default, mapper,
 frontend field, or migration is needed for this repair.
+
+## Owner-approved source repair and test
+
+Bobby approved the exact P10 backend fix on 2026-09-30. P04 admission now
+compares the requested release to the installed P04 binding after checking
+preflight/request agreement. A simulated `er_quantbt_112` request with a
+matching effective preflight is refused with typed 409
+`RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE` and field path
+`client.engine_release_id`; the existing `er_quantbt_111` golden request remains
+admitted with WFO on and off. Focused Control API tests: **45/45 PASS** across
+the WFO profile and admission-field-path suites; Control API TypeScript build:
+**PASS**. No route, schema, frontend, migration or runtime flag changed.
 
 After the repair, T07/T13 still require a **real, separately pinned engine
 upgrade/default and rollback receipt**: in-flight 1.1.1 run stays on its old
