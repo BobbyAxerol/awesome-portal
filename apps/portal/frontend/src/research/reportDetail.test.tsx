@@ -1318,6 +1318,77 @@ describe("E14 — S09 headline return, identity qualifier, equity grid and evide
     expect(flat.yRulePcts).toHaveLength(1);
   });
 
+  /* -------------------------------------------------------------------
+   * G5 — defects the Letter/A4 print re-run and the 660px look found.
+   * ---------------------------------------------------------------- */
+
+  const seriesOf = (body: { frozen_core: Record<string, any> }) => [
+    ...(body.frozen_core.equity_is?.points ?? []),
+    ...body.frozen_core.equity.points,
+  ] as { at_utc_ms: number; equity: string; drawdown_fraction: string }[];
+
+  it("G5 the x axis labels stand at equal steps of time, so a dense OOS run never overprints them", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    /* The retained lane's IS segment is sparse and its stitched OOS one dense: stepping by point
+       count put four of the six days inside the last 15% of the axis. */
+    const geometry = equitySvg(seriesOf(body));
+    expect(geometry.xLabels.length).toBeGreaterThan(1);
+    expect(geometry.xLabels.length).toBeLessThanOrEqual(6);
+    const gaps = geometry.xLabels.slice(1).map((label, index) => label.pct - geometry.xLabels[index]!.pct);
+    /* Six labels over five gaps are 20% apart; nearest-point snapping may shave a little, never most of it. */
+    expect(Math.min(...gaps)).toBeGreaterThan(14);
+    /* Each label is still the UTC day of a sealed point's own timestamp. */
+    const days = new Set(seriesOf(body).map((point) => new Date(point.at_utc_ms).toISOString().slice(0, 10)));
+    for (const label of geometry.xLabels) expect(days.has(label.text)).toBe(true);
+    /* And the screen prints exactly those labels. */
+    expect([...panel("equity").querySelectorAll("[data-x-label]")].map((el) => el.textContent)).toEqual(geometry.xLabels.map((label) => label.text));
+  });
+
+  it("G5 a deepest-drawdown mark at the right edge hangs its label inward, so it stays inside the figure and on the page", async () => {
+    /* The fixed-profile fixture's deepest drawdown is its last point: the label centred on it left the figure. */
+    const p04 = await open("research-report.p04-fixed-profile.valid.json");
+    const geometry = equitySvg(seriesOf(p04));
+    expect(geometry.deepest?.xPct).toBeGreaterThanOrEqual(88);
+    expect(geometry.deepest?.align).toBe("end");
+    expect(panel("equity").querySelector("[data-dd-deepest]")?.getAttribute("data-align")).toBe("end");
+    cleanup();
+    forgetHeldReports();
+    /* The retained WFO fixture's trough is at ~93% of the axis: also an end mark, at 660px too close to centre. */
+    const wfo = await open("research-report.wfo-retained.valid.json");
+    const trough = equitySvg(seriesOf(wfo)).deepest!;
+    expect(trough.xPct).toBeGreaterThanOrEqual(88);
+    expect(trough.align).toBe("end");
+    expect(panel("equity").querySelector("[data-dd-deepest]")?.getAttribute("data-align")).toBe("end");
+    /* A mark in the body of the strip keeps its centred label. */
+    const mid = equitySvg([
+      { at_utc_ms: T0, equity: "100", drawdown_fraction: "0" },
+      { at_utc_ms: T0 + 60_000, equity: "98", drawdown_fraction: "-0.20" },
+      { at_utc_ms: T0 + 120_000, equity: "101", drawdown_fraction: "-0.01" },
+    ]).deepest!;
+    expect(mid.xPct).toBe(50);
+    expect(mid.align).toBe("center");
+    /* The mirror case: a mark at the left edge hangs its label to the right. */
+    const first = equitySvg([
+      { at_utc_ms: T0, equity: "100", drawdown_fraction: "-0.30" },
+      { at_utc_ms: T0 + 60_000, equity: "101", drawdown_fraction: "-0.01" },
+      { at_utc_ms: T0 + 120_000, equity: "102", drawdown_fraction: "0" },
+    ]);
+    expect(first.deepest?.xPct).toBe(0);
+    expect(first.deepest?.align).toBe("start");
+  });
+
+  it("G5 on paper a block's title bar stays with its first row, and the promotion + provenance card flows instead of jumping", async () => {
+    await open("research-report.wfo-retained.valid.json");
+    const css = document.querySelector('[data-screen="run-report"] > style')!.textContent ?? "";
+    const print = css.slice(css.indexOf("@media print {"));
+    expect(print).toContain(".rr-block > .t, .rr-t2 { break-after: avoid; }");
+    expect(print).toContain(".rr-pp.rr-keep { break-inside: auto; }");
+    expect(print).toContain(".rr-pp .rr-id .k, .rr-pp .rr-id .v { break-inside: avoid; }");
+    /* The screen keeps the hanging-label rules that pair with data-align. */
+    expect(css).toContain('.rr-dd-marklbl[data-align="end"] { transform: translate(-100%, 6px); }');
+    expect(css).toContain('.rr-dd-marklbl[data-align="start"] { transform: translate(0, 6px); }');
+  });
+
   it("9.15 provenance carries an evidence link to this sheet at the revision the reader is on", async () => {
     const body = await open("research-report.wfo-retained.valid.json");
     const link = panel("provenance").querySelector("[data-evidence-link] a") as HTMLAnchorElement;

@@ -259,6 +259,9 @@ const SHEET_CSS = `
 .rr-eq-legend [data-legend="is"] .sw { background: none; border: 1px dashed var(--ink-faint); }
 .rr-dd-mark { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--bad); transform: translate(-50%, -50%); }
 .rr-dd-marklbl { position: absolute; color: var(--bad); font-size: 8.5px; white-space: nowrap; transform: translate(-50%, 6px); background: var(--paper-raised); padding: 0 3px; }
+/* G5: a mark at an edge of the plot hangs its label inward, so the label stays inside the figure (on paper the page box clips it). */
+.rr-dd-marklbl[data-align="end"] { transform: translate(-100%, 6px); }
+.rr-dd-marklbl[data-align="start"] { transform: translate(0, 6px); }
 .rr-eq-frame { fill: var(--paper-sunken); stroke: var(--line); }
 .rr-caption { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); margin: 0; }
 .rr-absent { font-family: var(--font-mono); font-style: italic; color: var(--ink-faint); }
@@ -324,6 +327,17 @@ const SHEET_CSS = `
      sheet's tables are rows of facts that must flow (spec 09 §3: break-inside
      avoid-ROW, thead repeat) — so only a row is kept whole here. */
   .rr-page table.rr-table { break-inside: auto; }
+  /* G5: a block's title bar travels with the first row under it. Without this
+     the bar was left alone at a page foot (Metrics, Certification chain) and
+     its table started on the next page. */
+  .rr-block > .t, .rr-t2 { break-after: avoid; }
+  /* G5: the promotion + provenance card is about one page tall once its 64-hex
+     digests wrap in a half-width column. Kept whole it jumped to a page of its
+     own, left the page before it half empty and pushed the footer (or two
+     lines of it) onto a last page by itself; on paper it flows instead. */
+  .rr-pp.rr-keep { break-inside: auto; }
+  /* ...but a label and its 64-hex value are never split by the page break. */
+  .rr-pp .rr-id .k, .rr-pp .rr-id .v { break-inside: avoid; }
   .rr-block > .b { display: block; }
   .rr-block > .b > * + * { margin-top: 6px; }
   /* Stage checks and artifacts print as two full-width blocks (spec 09 §2.8/§2.9
@@ -783,7 +797,7 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
                       {drawdownLabel(drawn.deepest.text) ?? drawn.deepest.text}
                     </span>
                     <span className="rr-dd-mark" style={{ left: `${drawn.deepest.xPct}%`, top: `${drawn.deepest.yPct}%` }} />
-                    <span className="rr-dd-marklbl" style={{ left: `${drawn.deepest.xPct}%`, top: `${drawn.deepest.yPct}%` }} data-dd-deepest title={`${drawn.deepest.text} (fraction)`}>
+                    <span className="rr-dd-marklbl" style={{ left: `${drawn.deepest.xPct}%`, top: `${drawn.deepest.yPct}%` }} data-dd-deepest data-align={drawn.deepest.align} title={`${drawn.deepest.text} (fraction)`}>
                       deepest {drawdownLabel(drawn.deepest.text) ?? drawn.deepest.text}
                     </span>
                   </>

@@ -67,8 +67,14 @@ export interface EquityGeometry {
   xLabels: AxisLabel[];
   /** Drawdown fraction of the shallowest point, verbatim, at the strip's top. */
   drawdownTop: string | null;
-  /** The deepest point of the strip: its verbatim fraction and where it sits. */
-  deepest: { text: string; xPct: number; yPct: number } | null;
+  /**
+   * The deepest point of the strip: its verbatim fraction and where it sits.
+   * `align` says which side of the mark its label hangs on, so a mark near an
+   * edge of the plot keeps its label inside the figure (on paper the page box
+   * clips whatever leaves it): `end` near the right edge, `start` near the
+   * left, `center` otherwise.
+   */
+  deepest: { text: string; xPct: number; yPct: number; align: "start" | "center" | "end" } | null;
   /** Points drawn, and points skipped because a coordinate did not parse. */
   drawn: number;
   dropped: number;
@@ -76,6 +82,8 @@ export interface EquityGeometry {
 
 const BOX = 1000;
 const X_LABELS = 6;
+/** A mark this close (percent of the plot width) to an edge hangs its label inward. */
+const EDGE_ALIGN_PCT = 12;
 /** The deepest drawdown sits a little above the strip's floor, so its mark is not cut. */
 const UNDERWATER_DEPTH = 0.9;
 
@@ -89,6 +97,11 @@ function at(x: number, y: number): string {
 
 function pct(value: number): number {
   return round2((value / BOX) * 100);
+}
+
+function deepestMark(text: string, xPct: number, yPct: number): NonNullable<EquityGeometry["deepest"]> {
+  const align = xPct >= 100 - EDGE_ALIGN_PCT ? "end" : xPct <= EDGE_ALIGN_PCT ? "start" : "center";
+  return { text, xPct, yPct, align };
 }
 
 export function equitySvg(
@@ -179,10 +192,16 @@ export function equitySvg(
     ? [top]
     : Array.from({ length: Y_RULES }, (_, index) => round2(top + ((bottom - top) * index) / (Y_RULES - 1)));
 
+  /* The x axis is time, so its labels stand at equal steps of time and each
+     names the sealed point nearest to that step. Stepping by point count put
+     them in a cluster wherever the points are dense (an IS segment followed by
+     a stitched OOS one), and at 660px the labels overprinted each other. */
   const xLabels: AxisLabel[] = [];
   const steps = Math.min(X_LABELS, parsed.length);
   for (let k = 0; k < steps; k += 1) {
-    const point = parsed[steps === 1 ? 0 : Math.round((k * (parsed.length - 1)) / (steps - 1))]!;
+    const target = steps === 1 ? t0 : t0 + (span * k) / (steps - 1);
+    let point = parsed[0]!;
+    for (const candidate of parsed) if (Math.abs(candidate.t - target) < Math.abs(point.t - target)) point = candidate;
     const day = iso(point.t).slice(0, 10);
     if (xLabels.some((label) => label.text === day)) continue;
     xLabels.push({ text: day, pct: pct(xs(point)) });
@@ -206,7 +225,7 @@ export function equitySvg(
     yRulePcts,
     xLabels,
     drawdownTop: shallow.source.drawdown_fraction,
-    deepest: deep.d > 0 ? { text: deep.source.drawdown_fraction, xPct: pct(xs(deep)), yPct: pct(uy(deep.d)) } : null,
+    deepest: deep.d > 0 ? deepestMark(deep.source.drawdown_fraction, pct(xs(deep)), pct(uy(deep.d))) : null,
     drawn: parsed.length,
     dropped,
   };
