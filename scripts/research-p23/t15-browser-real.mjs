@@ -16,7 +16,33 @@ const { chromium } = requireFrontend('playwright');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const jobCount = workspace => dbQuery('SELECT count(*)::int count FROM research.jobs WHERE workspace_id=$1', [workspace]).rows[0].count;
 
-export async function browserReplayReceipt({ home = DEFAULT_HOME, wfoRun, p04Run, label = 't15-browser-real', width = 1280 }) {
+export function mixedWindow(rows) {
+  const active = rows.filter(row => row.state === 'RUNNING');
+  const queued = rows.filter(row => row.state === 'QUEUED');
+  if (active.length !== 1 || queued.length < 4) return null;
+  assert.equal(new Set(rows.map(row => row.job_id)).size, rows.length, 'DUPLICATE_MIXED_JOB');
+  assert(rows.every(row => row.workspace_id === active[0].workspace_id), 'MIXED_WORKSPACE_MISMATCH');
+  return { active_job_id: active[0].job_id, active_run_id: active[0].run_id,
+    queued_job_ids: queued.map(row => row.job_id) };
+}
+function mixedJobsAfter(armedAt, workspace) {
+  return dbQuery(`SELECT j.workspace_id,j.job_id,j.run_id,j.state FROM research.jobs j
+    JOIN research.run_producers p USING(workspace_id,job_id)
+    WHERE p.client_intent_id LIKE 'p23-mixed-%' AND j.created_at >= $1::timestamptz
+      AND j.workspace_id = $2
+    ORDER BY j.created_at,j.job_id`, [armedAt, workspace]).rows;
+}
+async function waitForMixedWindow(armedAt, workspace) {
+  const deadline = Date.now() + 120000;
+  while (Date.now() < deadline) {
+    const gate = mixedWindow(mixedJobsAfter(armedAt, workspace));
+    if (gate) return { ...gate, observed_at_utc: new Date().toISOString() };
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error('MIXED_WFO_WITH_FOUR_QUEUED_NOT_OBSERVED');
+}
+
+export async function browserReplayReceipt({ home = DEFAULT_HOME, wfoRun, p04Run, label = 't15-browser-real', width = 1280, requireMixed = false }) {
   home = validateHome(home);
   assert(/^[a-z][a-z0-9-]{0,63}$/.test(label), 'P23_RECEIPT_LABEL_REQUIRED');
   assert([660, 1280].includes(width), 'PINNED_BROWSER_VIEWPORT_REQUIRED');
@@ -44,7 +70,8 @@ export async function browserReplayReceipt({ home = DEFAULT_HOME, wfoRun, p04Run
     tested_at_utc: new Date().toISOString(), viewport: { width, height: 900 },
     wfo_run_id: wfoRun, p04_run_id: p04Run,
     wfo_api_sha256: sha256(JSON.stringify(wfoApi)), p04_api_sha256: sha256(JSON.stringify(p04Api)),
-    jobs_before: before, checks: {}, requests: [], page_errors: [], scope: 'OWNED_CELL_BROWSER_REAL_REPLAY_NO_COLD_OR_MIXED_LOAD',
+    jobs_before: before, jobs_before_arm: before, checks: {}, requests: [], page_errors: [],
+    scope: requireMixed ? 'OWNED_CELL_BROWSER_REAL_REPLAY_WFO_MIXED_GATE' : 'OWNED_CELL_BROWSER_REAL_REPLAY_NO_COLD_OR_MIXED_LOAD',
     scoped_passed: false, full_t15_passed: false, full_p23_passed: false,
   };
   let browser;
@@ -64,6 +91,13 @@ export async function browserReplayReceipt({ home = DEFAULT_HOME, wfoRun, p04Run
       data: { username: user.username, credential: user.password }, headers: { origin: BASE_URL },
     });
     assert.equal(login.status(), 201, 'OWNED_REAL_LOGIN_REQUIRED');
+    if (requireMixed) {
+      const armedAt = new Date().toISOString();
+      console.log('P23 T15 browser armed', label, width);
+      receipt.checks.mixed_gate = { armed_at_utc: armedAt, ...(await waitForMixedWindow(armedAt, workspace)) };
+      receipt.jobs_before = jobCount(workspace); // Five producer jobs now exist; browser must add none.
+    }
+    receipt.navigation_started_at_utc = new Date().toISOString();
     const wfoUrl = `/research/quantbt/runs/${wfoRun}/execute#fold=1`;
     await page.goto(wfoUrl);
     const root = page.locator('[data-screen="execute-replay"]');
@@ -107,8 +141,17 @@ export async function browserReplayReceipt({ home = DEFAULT_HOME, wfoRun, p04Run
       'UNEXPECTED_BROWSER_MUTATION');
     assert(receipt.requests.every(request => !request.includes('/internal/')), 'PRIVATE_ROUTE_EXPOSED_TO_BROWSER');
     receipt.jobs_after = jobCount(workspace);
-    assert.equal(receipt.jobs_after, before, 'BROWSER_CREATED_IMPLICIT_JOB');
+    assert.equal(receipt.jobs_after, receipt.jobs_before, 'BROWSER_CREATED_IMPLICIT_JOB');
     receipt.checks.no_implicit_jobs = true;
+    receipt.navigation_finished_at_utc = new Date().toISOString();
+    if (requireMixed) {
+      const gate = receipt.checks.mixed_gate;
+      const state = dbQuery('SELECT state FROM research.jobs WHERE job_id=$1 AND workspace_id=$2',
+        [gate.active_job_id, workspace]).rows[0]?.state;
+      gate.active_state_at_finish = state ?? null;
+      assert.equal(state, 'RUNNING', 'MIXED_WFO_ENDED_BEFORE_BROWSER_FINISHED');
+      gate.active_through_browser = true;
+    }
     receipt.scoped_passed = true;
     await context.close();
   } catch (error) {
@@ -130,5 +173,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     p04Run: process.argv.find(arg => arg.startsWith('--p04-run='))?.slice(10),
     label: process.argv.find(arg => arg.startsWith('--label='))?.slice(8) ?? 't15-browser-real',
     width: Number(process.argv.find(arg => arg.startsWith('--width='))?.slice(8) ?? 1280),
+    requireMixed: process.argv.includes('--require-mixed'),
   }).catch(error => { console.error('P23 T15 browser-real refused:', error.message); process.exitCode = 1; });
 }
