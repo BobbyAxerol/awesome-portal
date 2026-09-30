@@ -3310,6 +3310,55 @@
       "writer_state": "P05_OWNED_NOT_ACTIVE"
     }
   },
+  "portal_admission": {
+    "schema_version": "research.portal-admission.v1",
+    "profiles": [
+      {
+        "profile_id": "p04.fixed-qualification.v1",
+        "state": "ENABLED",
+        "reason": null,
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "protocol": "three_window_decay",
+        "trial_count": {
+          "min": 1,
+          "max": 1
+        },
+        "random_seed": null,
+        "max_span_days": null,
+        "fold_bounds": null,
+        "frequency": null,
+        "window_mode": null
+      },
+      {
+        "profile_id": "p10.delta-signal-notional-wfo.v1",
+        "state": "ENABLED",
+        "reason": null,
+        "engine_release_id": "er_quantbt_111",
+        "execution_route": "signal_notional",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "timeframe": "1h",
+        "protocol": "advanced",
+        "trial_count": {
+          "min": 2,
+          "max": 400
+        },
+        "random_seed": 42,
+        "max_span_days": 92,
+        "fold_bounds": {
+          "min": 2,
+          "max": 16
+        },
+        "frequency": "weekly",
+        "window_mode": "expanding"
+      }
+    ],
+    "note": "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE"
+  },
   "historical_identity": null,
   "etag": "W/\"research-atlas-41b0a84240ff493e04b15bdd\""
 }

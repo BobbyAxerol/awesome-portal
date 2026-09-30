@@ -410,6 +410,38 @@ export interface components {
             claims: components["schemas"]["ClaimDescriptor"][];
             evidence_contract: components["schemas"]["EvidenceContract"];
         };
+        PortalAdmission: {
+            /** @constant */
+            schema_version: "research.portal-admission.v1";
+            profiles: {
+                /** @enum {string} */
+                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+                /** @enum {unknown} */
+                state: "ENABLED" | "DISABLED";
+                /** @enum {unknown} */
+                reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | null;
+                engine_release_id: components["schemas"]["Identifier"];
+                execution_route: string;
+                protocol: string;
+                optimization_mode: string;
+                optimization_schedule: string;
+                timeframe: string;
+                trial_count: {
+                    min: number;
+                    max: number;
+                };
+                random_seed: number | null;
+                max_span_days: number | null;
+                fold_bounds: {
+                    min: number;
+                    max: number;
+                } | null;
+                frequency: string | null;
+                window_mode: string | null;
+            }[];
+            /** @constant */
+            note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
+        };
         AtlasResponse: {
             /** @constant */
             schema_version: "research.engine-atlas-response.v1";
@@ -418,6 +450,7 @@ export interface components {
             /** @constant */
             selected_release_kind: "CURRENT";
             atlas: components["schemas"]["Atlas"];
+            portal_admission: components["schemas"]["PortalAdmission"];
             historical_identity: null;
         } | {
             /** @constant */

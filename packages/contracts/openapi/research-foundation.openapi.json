@@ -2095,6 +2095,161 @@
           }
         }
       },
+      "PortalAdmission": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "profiles",
+          "note"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.portal-admission.v1"
+          },
+          "profiles": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "profile_id",
+                "state",
+                "reason",
+                "engine_release_id",
+                "execution_route",
+                "protocol",
+                "optimization_mode",
+                "optimization_schedule",
+                "timeframe",
+                "trial_count",
+                "random_seed",
+                "max_span_days",
+                "fold_bounds",
+                "frequency",
+                "window_mode"
+              ],
+              "properties": {
+                "profile_id": {
+                  "type": "string",
+                  "enum": [
+                    "p04.fixed-qualification.v1",
+                    "p10.delta-signal-notional-wfo.v1"
+                  ]
+                },
+                "state": {
+                  "enum": [
+                    "ENABLED",
+                    "DISABLED"
+                  ]
+                },
+                "reason": {
+                  "enum": [
+                    "PROFILE_FLAG_OFF",
+                    "RUN_PRODUCER_OFF",
+                    "ENGINE_RELEASE_MISMATCH",
+                    "SOURCE_RELEASE_UNVERIFIED",
+                    null
+                  ]
+                },
+                "engine_release_id": {
+                  "$ref": "#/components/schemas/Identifier"
+                },
+                "execution_route": {
+                  "type": "string"
+                },
+                "protocol": {
+                  "type": "string"
+                },
+                "optimization_mode": {
+                  "type": "string"
+                },
+                "optimization_schedule": {
+                  "type": "string"
+                },
+                "timeframe": {
+                  "type": "string"
+                },
+                "trial_count": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "properties": {
+                    "min": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 400
+                    },
+                    "max": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 400
+                    }
+                  }
+                },
+                "random_seed": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "max_span_days": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1
+                },
+                "fold_bounds": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "min",
+                        "max"
+                      ],
+                      "properties": {
+                        "min": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "max": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "frequency": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "window_mode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "note": {
+            "const": "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE"
+          }
+        }
+      },
       "AtlasResponse": {
         "oneOf": [
           {
@@ -2105,6 +2260,7 @@
               "selected_release_id",
               "selected_release_kind",
               "atlas",
+              "portal_admission",
               "historical_identity",
               "etag"
             ],
@@ -2124,6 +2280,9 @@
               },
               "atlas": {
                 "$ref": "#/components/schemas/Atlas"
+              },
+              "portal_admission": {
+                "$ref": "#/components/schemas/PortalAdmission"
               },
               "historical_identity": {
                 "type": "null"

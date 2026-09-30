@@ -381,11 +381,35 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
 
 export type ResearchEngineAtlasPrivate = z.infer<typeof ResearchEngineAtlasPrivateSchema>;
 
+/** Portal admission is separate from the pinned QuantBT source catalogue. */
+export interface ResearchPortalAdmission {
+  schema_version: "research.portal-admission.v1";
+  profiles: Array<{
+    profile_id: string;
+    state: "ENABLED" | "DISABLED";
+    reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | null;
+    engine_release_id: string;
+    execution_route: string;
+    protocol: string;
+    optimization_mode: string;
+    optimization_schedule: string;
+    timeframe: string;
+    trial_count: { min: number; max: number };
+    random_seed: number | null;
+    max_span_days: number | null;
+    fold_bounds: { min: number; max: number } | null;
+    frequency: string | null;
+    window_mode: string | null;
+  }>;
+  note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
+}
+
 export type ResearchAtlasResponse = {
   schema_version: "research.engine-atlas-response.v1";
   selected_release_id: string;
   selected_release_kind: "CURRENT";
   atlas: ResearchEngineAtlasPrivate;
+  portal_admission: ResearchPortalAdmission;
   historical_identity: null;
   etag: string;
 } | {

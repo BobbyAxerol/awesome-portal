@@ -173,4 +173,20 @@ describe("P09 published Research foundation contract", () => {
     expect(document).toContain("same-origin");
     expect(document).toContain("private Atlas");
   });
+  it("LW-07 separates Portal run admission from immutable QuantBT release facts", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      components: { schemas: Record<string, any> };
+    };
+    const schemas = document.components.schemas;
+    expect(schemas.AtlasResponse.oneOf[0].required).toContain("portal_admission");
+    expect(schemas.AtlasResponse.oneOf[1].properties.portal_admission).toBeUndefined();
+    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(2);
+    const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
+    expect(current.atlas.current_release.submission_constraints.profile_id).toBe("p10.fixed-qualification.v1");
+    expect(current.portal_admission.profiles).toMatchObject([
+      { profile_id: "p04.fixed-qualification.v1", trial_count: { min: 1, max: 1 }, random_seed: null },
+      { profile_id: "p10.delta-signal-notional-wfo.v1", trial_count: { min: 2, max: 400 }, random_seed: 42 },
+    ]);
+    expect(readFileSync(generatedPath, "utf8")).toContain("PortalAdmission");
+  });
 });

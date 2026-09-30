@@ -6628,3 +6628,35 @@ the IS figure correctly. OpenAPI generated types and a canonical fixture
 are provided for Claude; source journals and FE design remain untouched.
 [LW-05 receipt](./research_loop/evidence/P11/LW-05_selection_scope_2026-09-30.md)
 · [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).
+
+### LW-06 fold trade-count scope versus audited Replay rows — 2026-09-30
+
+Research Library and Compare use the source's sum of published OOS fold
+trade counts. Replay has zero audited trade-record rows and six settled
+target transitions; these are three distinct units, not conflicting copies
+of one ledger. The retained Library label is now "OOS fold trades" while its
+scope and definition ID remain exact. Claude should keep separate captions
+for S13/S08, not synthesize fills from target transitions.
+[LW-06 receipt](./research_loop/evidence/P20/LW-06_trade_scope_2026-09-30.md).
+
+### LW-07 current Atlas Portal admission — 2026-09-30
+
+The QuantBT release catalogue stays pinned and unchanged. The current Atlas
+BFF adds a separate Portal-owned `portal_admission` descriptor for the fixed
+P04 profile and gated WFO profile: exact mode/route/seed, normal three-trial
+count, dev-preview 2–400 bound and disabled/source-refusal reasons. Historical
+identity responses are unchanged; preflight and run admission remain
+authoritative. Claude should bind S02 to the new descriptor rather than
+treating the source catalogue's fixed profile as every Portal run profile.
+[LW-07 receipt](./research_loop/evidence/P09/LW-07_portal_admission_2026-09-30.md).
+
+### LW-08 Research Library versus legacy global run shell — 2026-09-30
+
+The isolated preview showed a legacy global artifact row marked COMPLETED,
+while old Research metadata for that id says QUEUED and the row is not in
+the current workspace's Research Library. The backend must not import it or
+fabricate status. Research Library already publishes its own workspace-scoped
+count/status ledger; Claude should use it for the Research shell and keep
+legacy `/api/runs` separate. The old export security slice remains gated
+separately.
+[LW-08 receipt](./research_loop/evidence/P12/LW-08_legacy_count_boundary_2026-09-30.md).

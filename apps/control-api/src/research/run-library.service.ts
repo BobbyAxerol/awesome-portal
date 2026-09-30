@@ -1219,8 +1219,8 @@ export class ResearchRunLibraryService {
               ? metric("decay", "Δ decay", "DECAY", retained.meanDecay, available(), "DEFAULT", "OOS", RETAINED_DEFINITION.decay)
               : metric("decay", "Δ decay", "DECAY", null, unavailable("NOT_PUBLISHED", "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS")),
             retained.oosTrades !== null
-              ? metric("trade_count", "trades", "TRADE_COUNT", String(retained.oosTrades), available(), "DEFAULT", "OOS", RETAINED_DEFINITION.trades)
-              : metric("trade_count", "trades", "TRADE_COUNT", null,
+              ? metric("trade_count", "OOS fold trades", "TRADE_COUNT", String(retained.oosTrades), available(), "DEFAULT", "OOS", RETAINED_DEFINITION.trades)
+              : metric("trade_count", "OOS fold trades", "TRADE_COUNT", null,
                 unavailable("NOT_PUBLISHED", retained.oosTradesReason ?? "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT")),
           ] as ResearchRunLibraryItem["stats"];
         }

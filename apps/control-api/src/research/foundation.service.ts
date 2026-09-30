@@ -1,7 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 
+import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
+import { CONTROL_API_CONFIG } from "../tokens";
 import { type ResearchScope, ResearchMetadataError } from "./contracts";
 import {
   RESEARCH_CURSOR_CODEC,
@@ -23,12 +25,14 @@ import {
   RESEARCH_JOURNEY_SCHEMA_VERSION,
 } from "./journey.descriptor.v4";
 import { ResearchMetadataRepository } from "./repository";
+import { researchPortalAdmission } from "./portal-admission";
 
 @Injectable()
 export class ResearchFoundationService {
   constructor(
     private readonly repository: ResearchMetadataRepository,
     private readonly atlasClient: ResearchFoundationAtlasClient,
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
   async journey(scope: ResearchScope, query: ResearchJourneyQuery): Promise<ResearchJourneyResponse> {
@@ -96,15 +100,17 @@ export class ResearchFoundationService {
         404,
       );
     }
+    const portalAdmission = researchPortalAdmission(this.config, atlas.current_release);
     return {
       schema_version: "research.engine-atlas-response.v1",
       selected_release_id: selected.releaseId,
       selected_release_kind: selected.kind,
       atlas,
+      portal_admission: portalAdmission,
       historical_identity: null,
       etag: this.etag(
         "atlas",
-        `${atlas.manifest_revision}:${selected.releaseId}:${query.route ?? ""}:${query.mode ?? ""}`,
+        `${atlas.manifest_revision}:${selected.releaseId}:${query.route ?? ""}:${query.mode ?? ""}:${JSON.stringify(portalAdmission)}`,
       ),
     };
   }

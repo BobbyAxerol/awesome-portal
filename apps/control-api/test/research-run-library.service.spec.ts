@@ -507,6 +507,10 @@ describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub 
     };
     const response = await new ResearchRunLibraryService(repository as never, config).list(scope, QUERY);
     expect(response.items[0]!.stats.map(cell => cell.value)).toEqual(["-5.354970424211971", "3.911439612138451", "10"]);
+    expect(response.items[0]!.stats[2]).toMatchObject({
+      label: "OOS fold trades", scope: "OOS",
+      definition_id: "research.current-source.v1.sum-of-published-fold-oos-trade-counts",
+    });
     expect(repository.retainedFacts).not.toHaveBeenCalled();
   });
 
