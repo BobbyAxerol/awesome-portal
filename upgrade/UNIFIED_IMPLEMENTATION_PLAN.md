@@ -6488,3 +6488,13 @@ The imported P23 Playwright lane is explicitly `FIXTURE_ONLY`, optional, and doe
 not qualify real API, cgroup, DR or browser-real acceptance. P22/P23 product gates
 remain exactly as their canonical packets state: pending real preview/browser and
 resource/DR receipts. P24 is untouched.
+
+### P23 F3 WFO real-browser parity subset — 2026-09-30
+
+[P23 evidence](./research_loop/evidence/P23/F3_WFO_BROWSER_PARITY_2026-09-30.md)
+records 12/12 real, non-intercepted named-BFF-to-DOM cases across S03–S08 at
+1280/660 px, completed WFO, clean seven-image cell `bae2a78c`, jobs 173→173,
+zero page errors, off-origin requests or overflow. Two earlier failed harness
+attempts are preserved with hashes. This is **scoped PASS only**: canonical
+54/54 F3, F5, OL-24, remaining P23 gates and P24 stay OPEN. No dev/production
+runtime, product UI, command or source system changed.

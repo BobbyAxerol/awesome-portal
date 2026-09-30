@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**F3 WFO real-browser subset 2026-09-30:** [12/12 named-BFF-to-DOM parity receipt](./F3_WFO_BROWSER_PARITY_2026-09-30.md) passed S03–S08 at 1280/660 px on clean `bae2a78c`, with zero off-origin calls, implicit jobs, page errors or overflow; jobs stayed 173→173. The first two harness-race failures are preserved. Canonical 54/54 F3, F5 and full P23/P24 remain OPEN.
+
 **V11-P23-DR WFO retained subset 2026-09-30:** [one real completed WFO artifact/DB/BFF parity receipt](./V11_WFO_RETAINED_PARITY_2026-09-30.md) rehashes 10 sealed Parquet parts, checks all 1,063 retained rows across five relations and four exact summary decimals against the owner BFF; 5/5 focused refusals pass. It is not direct QuantBT WFO recomputation or full V11/P23/P24 acceptance.
 
 **T15 current-candidate 2026-09-30:** [cold-cache browser/WFO receipt](./T15_COLD_BROWSER_OVERLAP_2026-09-30.md) closes the isolated T15 gate on clean `b4e5d09b`: two real viewports overlap one RUNNING WFO/four queued intents, 120/120 cold GET 200, six cold p95 gates and the seven-service 5-GB cap pass. The historical 2026-09-29 T15 subset and failed 2026-09-30 attempts remain recorded. F3/F5/OL-24 and full P23/P24 remain open.

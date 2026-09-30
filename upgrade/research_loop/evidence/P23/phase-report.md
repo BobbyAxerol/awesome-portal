@@ -1,5 +1,7 @@
 # P23 backend report — 2026-09-25
 
+**F3 WFO real-browser subset 2026-09-30:** [scoped 12/12 parity receipt](./F3_WFO_BROWSER_PARITY_2026-09-30.md) ties the clean seven-image cell and completed WFO named BFF reads to S03–S08 DOM at desktop/mobile widths. Zero implicit jobs, off-origin calls, page errors or overflow; failed pre-wait harness attempts remain recorded. This is not canonical 54/54 F3 or full P23/P24.
+
 **V11-P23-DR WFO retained subset 2026-09-30:** [scoped read-only parity](./V11_WFO_RETAINED_PARITY_2026-09-30.md) verifies the real WFO's 10 Parquet part hashes, 1,063 sealed/DB/BFF rows, four exact decimal values and source pins. Direct WFO engine recomputation and full P23/P24 remain OPEN.
 
 **T15 current-candidate 2026-09-30:** [cold-cache browser/WFO overlap](./T15_COLD_BROWSER_OVERLAP_2026-09-30.md) PASS on clean `b4e5d09b`: both viewports, one running WFO/four queued, 120/120 cold named GET 200, six cold SLOs and 625,160,192-byte seven-service peak. Earlier T15 `OPEN` rows below are historical. Full F3/F5/OL-24, remaining T gates, P23 and P24 stay OPEN.
