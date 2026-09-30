@@ -1085,6 +1085,8 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
     """
 
     from portal_api.domain.research_delta_wfo_profile import (
+        DELTA_WFO_PREVIEW_LONG_MAX_TRIALS,
+        DELTA_WFO_PREVIEW_LONG_MIN_TRIALS,
         DELTA_WFO_PROFILE,
         DELTA_WFO_PROFILE_DIGEST,
         DELTA_WFO_PROFILE_ID,
@@ -1098,7 +1100,19 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
         or delta_wfo_profile_digest(DELTA_WFO_PROFILE) != DELTA_WFO_PROFILE_DIGEST
     ):
         raise ValueError("P10 WFO child profile digest does not match the installed profile")
-    return _run_delta_wfo_study(receipt, output_root, optuna_trials=int(DELTA_WFO_PROFILE["optuna_trials"]))
+    optuna_trials = int(DELTA_WFO_PROFILE["optuna_trials"])
+    if "optuna_trials" in receipt:
+        # Research preview only: the parent adds this key solely when its
+        # PORTAL_ENV=local preview flag admitted a long study (the child's
+        # clean environment cannot see that flag itself).
+        requested = receipt["optuna_trials"]
+        if (
+            isinstance(requested, bool) or not isinstance(requested, int)
+            or not DELTA_WFO_PREVIEW_LONG_MIN_TRIALS <= requested <= DELTA_WFO_PREVIEW_LONG_MAX_TRIALS
+        ):
+            raise ValueError("P10 WFO child preview trial count is outside its admitted bound")
+        optuna_trials = requested
+    return _run_delta_wfo_study(receipt, output_root, optuna_trials=optuna_trials)
 
 
 def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_trials: int) -> dict[str, Any]:
@@ -1129,7 +1143,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     from portal_api.services.advanced_walkforward_runner import AdvancedWalkForwardRunner
     from strategy.specification import DELTA_RSI_SPECIFICATION
 
-    if isinstance(optuna_trials, bool) or not 1 <= optuna_trials <= 81:
+    # 81 is the what-if grid's own bound; 400 the research-preview long WFO.
+    if isinstance(optuna_trials, bool) or not 1 <= optuna_trials <= 400:
         raise ValueError("P10 WFO study trial count is outside its admitted bound")
     raw_pins = receipt.get("pinned_parameters") or {}
     if not isinstance(raw_pins, dict) or not set(raw_pins) <= {"rvol", "slpercent"}:

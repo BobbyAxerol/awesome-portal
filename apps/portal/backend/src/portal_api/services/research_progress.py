@@ -24,6 +24,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from portal_api.domain.research_delta_wfo_profile import (
+    DELTA_WFO_PREVIEW_LONG_CPU_SECONDS,
+    delta_wfo_preview_long_enabled,
+)
 from portal_api.serialization import canonicalize
 
 
@@ -36,6 +40,12 @@ _METHODOLOGY_CERTIFICATE_GRADES = {"A", "B", "C", "D"}
 _MAX_EVENT_BYTES = 2_048
 _P04_CPU_SECONDS = 45
 _MAX_PROFILE_CPU_SECONDS = 120
+
+
+def _max_profile_cpu_seconds() -> int:
+    """120, or the research-preview long WFO cap while that flag is on."""
+
+    return DELTA_WFO_PREVIEW_LONG_CPU_SECONDS if delta_wfo_preview_long_enabled() else _MAX_PROFILE_CPU_SECONDS
 _MAX_EVIDENCE_BYTES = 28 * 1024
 # P14's chronology receipt contains only named time-role facts.  It is much
 # smaller than a P13 chart/evidence passport and may never become a market
@@ -486,6 +496,8 @@ def _valid_usage(value: object) -> None:
     if not isinstance(value, dict) or set(value) != set(_USAGE_MAXIMA):
         raise ResearchProgressError("P11 terminal usage is invalid")
     for key, maximum in _USAGE_MAXIMA.items():
+        if key == "cpu_seconds":
+            maximum = _max_profile_cpu_seconds()
         item = value.get(key)
         if item is None:
             continue
@@ -521,7 +533,7 @@ class ResearchProgressJournal:
             raise ResearchProgressError("P11 planned trial count is invalid")
         if (
             not isinstance(cpu_cap_seconds, int) or isinstance(cpu_cap_seconds, bool)
-            or not 1 <= cpu_cap_seconds <= _MAX_PROFILE_CPU_SECONDS
+            or not 1 <= cpu_cap_seconds <= _max_profile_cpu_seconds()
         ):
             raise ResearchProgressError("P11 CPU cap is invalid")
         if profile not in _PROFILE_COPY:

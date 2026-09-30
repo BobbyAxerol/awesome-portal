@@ -18,7 +18,9 @@ import {
   DELTA_WFO_PROFILE,
   DELTA_WFO_PROFILE_DIGEST,
   DELTA_WFO_PROFILE_ID,
+  DELTA_WFO_PREVIEW_LONG_LIMITS,
   P04_FIXED_QUALIFICATION_PROFILE_ID,
+  deltaWfoPreviewLongEnabled,
   type ResearchExecutionProfileId,
 } from "./delta-wfo.profile";
 import {
@@ -389,7 +391,14 @@ export class ResearchRunAdmissionService {
         (requested.optimization_config && Object.keys(requested.optimization_config).length !== 0)) {
       return pinReason ?? "The Delta walk-forward profile searches only the installed Delta parameter space and accepts no overrides.";
     }
-    if (requested.optuna_trials !== profile.optuna_trials) {
+    if (deltaWfoPreviewLongEnabled(this.config)) {
+      // Research preview only: a long study, bounded; the seed stays locked.
+      const trials = requested.optuna_trials;
+      if (!Number.isSafeInteger(trials) || trials < DELTA_WFO_PREVIEW_LONG_LIMITS.min_trials ||
+          trials > DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials) {
+        return "The preview long walk-forward profile admits 2 to 400 Optuna trials.";
+      }
+    } else if (requested.optuna_trials !== profile.optuna_trials) {
       return "The Delta walk-forward profile runs exactly 3 Optuna trials.";
     }
     if (requested.random_seed !== profile.random_seed) {

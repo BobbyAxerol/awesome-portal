@@ -21,8 +21,10 @@ import { ResearchRunAdmissionService } from "./run-admission.service";
 import {
   DELTA_WFO_PROFILE_ID,
   DELTA_WFO_RESOURCE_CLASS,
+  DELTA_WFO_PREVIEW_LONG_RESOURCE_PROFILE,
   DELTA_WFO_RESOURCE_PROFILE,
   DELTA_WFO_WORK_SCHEMA_VERSION,
+  deltaWfoPreviewLongEnabled,
 } from "./delta-wfo.profile";
 import {
   IMPORTED_ALPHA_PROFILE_ID,
@@ -288,7 +290,12 @@ export class ResearchRunCreateService {
         workDigest,
         engineReleaseId: requested.client.engine_release_id,
         legacyRequest,
-        cost: imported ? IMPORTED_ALPHA_RESOURCE_PROFILE : wfo ? DELTA_WFO_RESOURCE_PROFILE : P10_RESOURCE_PROFILE,
+        cost: imported
+          ? IMPORTED_ALPHA_RESOURCE_PROFILE
+          : wfo
+            // Research preview only: the long WFO declares its own child CPU cap.
+            ? (deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_RESOURCE_PROFILE : DELTA_WFO_RESOURCE_PROFILE)
+            : P10_RESOURCE_PROFILE,
         // The wide confined profiles are compute, not viewer interactions.
         // P06's existing one-heavy-per-workspace admission must see them;
         // otherwise several creates reserve leases before a single worker

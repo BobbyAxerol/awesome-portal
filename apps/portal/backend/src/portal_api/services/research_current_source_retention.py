@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 from urllib.parse import urlparse
 
+from portal_api.domain.research_delta_wfo_profile import delta_wfo_admitted_trials
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.repositories.artifacts import ArtifactRepository
 from portal_api.services.current_source_artifacts import (
@@ -222,7 +223,8 @@ class ResearchCurrentSourceRetentionClient:
             run_id=request.run_id,
             identity=identity,
             fence=fence,
-            admission=signal_notional_current_source_admission(),
+            # The locked 3, or the preview long WFO's admitted count (flag on only).
+            admission=signal_notional_current_source_admission(delta_wfo_admitted_trials(research.requested_spec)),
             fence_validator=fence_validator,
         )
         receipt = export.receipt

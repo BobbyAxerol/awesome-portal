@@ -24,6 +24,9 @@ from .research_delta_wfo_profile import (
     DELTA_WFO_PROFILE_DIGEST,
     DELTA_WFO_PROFILE_ID,
     P04_FIXED_QUALIFICATION_PROFILE_ID,
+    DeltaWfoPreviewLongMisconfigured,
+    delta_wfo_admitted_trials,
+    delta_wfo_preview_long_enabled,
 )
 from .research_imported_alpha_profile import (
     IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
@@ -259,7 +262,14 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("the Delta WFO profile accepts only the advanced protocol")
         if "windows" in spec:
             raise ValueError("the Delta WFO profile forbids three-window boundaries")
-        if spec.get("optuna_trials") != profile["optuna_trials"] or isinstance(spec.get("optuna_trials"), bool):
+        try:
+            preview_long = delta_wfo_preview_long_enabled()
+        except DeltaWfoPreviewLongMisconfigured as exc:
+            raise ValueError(str(exc)) from exc
+        if preview_long:
+            # Research preview only: 2..400 trials, the seed and all else locked.
+            delta_wfo_admitted_trials(spec)
+        elif spec.get("optuna_trials") != profile["optuna_trials"] or isinstance(spec.get("optuna_trials"), bool):
             raise ValueError("the Delta WFO profile accepts exactly 3 Optuna trials")
         if spec.get("random_seed") != profile["random_seed"] or isinstance(spec.get("random_seed"), bool):
             raise ValueError("the Delta WFO profile accepts exactly random seed 42")

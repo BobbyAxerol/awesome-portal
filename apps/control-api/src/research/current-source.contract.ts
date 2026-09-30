@@ -34,6 +34,13 @@ const UtcMsSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const ReasonCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
 const OpaqueCursorSchema = z.string().regex(/^kc1\.[A-Za-z0-9_-]{1,32}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/).max(4096);
 const SourceIdentifierSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/);
+/**
+ * Read-side ceiling on retained TRIAL rows. The RS-02 seal still admits at
+ * most 64 (current-source.repository.ts); only the research-preview long WFO
+ * (FEATURE_RESEARCH_PREVIEW_LONG_WFO, AUTH_MODE=dev + PORTAL_ENV=local) seals
+ * up to 400. A sealed artifact never exceeds what its own seal admitted.
+ */
+export const CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS = 400;
 
 export const ResearchCurrentSourceAvailabilitySchema = z.object({
   state: z.enum([
@@ -413,7 +420,7 @@ export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
     artifact_table_rows: z.object({
       observations: z.number().int().positive().max(2_000_000),
       folds: z.number().int().positive().max(256),
-      trials: z.number().int().min(2).max(64),
+      trials: z.number().int().min(2).max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
       candidates: z.number().int().positive().max(64),
       selection: z.literal(1),
     }).strict(),
@@ -780,7 +787,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
   ledger: z.object({
-    source_trial_count: z.number().int().min(2).max(64),
+    source_trial_count: z.number().int().min(2).max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
     returned_rows: z.number().int().min(0).max(200),
     trials: z.array(TrialSchema).max(200),
     page: PageSchema,
@@ -789,7 +796,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     fold_filter: z.object({
       fold_id: SourceIdentifierSchema.nullable(),
       rule: z.literal("TRIAL_FOLD_SCOPE_COVERS_FOLD"),
-      matched_rows: z.number().int().nonnegative().max(64),
+      matched_rows: z.number().int().nonnegative().max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS),
     }).strict(),
   }).strict(),
   candidates: z.object({
@@ -807,7 +814,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
       schema_version: z.literal("research.current-source-search-probe.v1"),
       objective_rows: z.number().int().nonnegative().max(128),
       objective_rows_recomposed: z.number().int().nonnegative().max(128),
-      pruned_trial_count: z.number().int().nonnegative().max(64).nullable(),
+      pruned_trial_count: z.number().int().nonnegative().max(CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS).nullable(),
       decay_lambda: DecimalSchema.nullable(),
       decay_gamma: DecimalSchema.nullable(),
       sampler: ResearchCurrentSourceFactSchema,

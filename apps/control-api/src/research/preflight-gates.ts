@@ -190,6 +190,7 @@ export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly stri
   "The what-if pin rvol must lie on its declared step inside 1–2.5.": ["parameter_space_overrides"],
   "The what-if pin slpercent must lie on its declared step inside 0.7–2.5.": ["parameter_space_overrides"],
   "The Delta walk-forward profile runs exactly 3 Optuna trials.": ["optuna_trials"],
+  "The preview long walk-forward profile admits 2 to 400 Optuna trials.": ["optuna_trials"],
   "The Delta walk-forward profile runs exactly random seed 42.": ["random_seed"],
   "The Delta walk-forward profile does not admit early stopping.": ["early_stopping"],
   "The Delta walk-forward profile accepts only the 1h timeframe.": ["data", "timeframe"],

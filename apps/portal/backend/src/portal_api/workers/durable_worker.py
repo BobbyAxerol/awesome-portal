@@ -25,7 +25,13 @@ from typing import Any, Awaitable, Callable
 
 from pydantic import ValidationError
 
-from portal_api.domain.research_delta_wfo_profile import DELTA_WFO_CPU_SECONDS, DELTA_WFO_OPTUNA_TRIALS
+from portal_api.domain.research_delta_wfo_profile import (
+    DELTA_WFO_CPU_SECONDS,
+    DELTA_WFO_OPTUNA_TRIALS,
+    DeltaWfoPreviewLongMisconfigured,
+    delta_wfo_admitted_trials,
+    delta_wfo_child_cpu_seconds,
+)
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.domain.research_imported_alpha_profile import IMPORTED_ALPHA_CPU_SECONDS
 from portal_api.domain.research_whatif_profile import WHATIF_CPU_SECONDS
@@ -282,6 +288,16 @@ class DurableQuantWorker:
                     "P10 Delta WFO profile requires PORTAL_FEATURE_RESEARCH_WFO_PROFILE, "
                     "PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS and PORTAL_FEATURE_RESEARCH_PROGRESS"
                 )
+            # Research preview only: a long WFO declares its admitted trial
+            # count and the preview child CPU cap. Off, both stay locked.
+            wfo_trials = DELTA_WFO_OPTUNA_TRIALS
+            wfo_cpu_cap = DELTA_WFO_CPU_SECONDS
+            if is_delta_wfo and not is_whatif:
+                try:
+                    wfo_trials = delta_wfo_admitted_trials(research_request.research.requested_spec)
+                    wfo_cpu_cap = delta_wfo_child_cpu_seconds()
+                except (DeltaWfoPreviewLongMisconfigured, ValueError) as exc:
+                    raise _DeltaWfoProfileUnavailable(str(exc)) from exc
             progress_enabled = (
                 is_research_producer
                 and os.getenv("PORTAL_FEATURE_RESEARCH_PROGRESS", "false").strip().lower() == "true"
@@ -297,11 +313,11 @@ class DurableQuantWorker:
                     lease_epoch=research_request.lease_epoch,
                     planned_trials=(
                         len(whatif_job.evaluations) if whatif_job is not None
-                        else DELTA_WFO_OPTUNA_TRIALS if is_delta_wfo else 1
+                        else wfo_trials if is_delta_wfo else 1
                     ),
                     cpu_cap_seconds=(
                         WHATIF_CPU_SECONDS if is_whatif else IMPORTED_ALPHA_CPU_SECONDS
-                        if is_imported_alpha else DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45
+                        if is_imported_alpha else wfo_cpu_cap if is_delta_wfo else 45
                     ),
                     profile=(
                         "DELTA_WHATIF" if is_whatif else "IMPORTED_ALPHA"
@@ -599,7 +615,7 @@ class DurableQuantWorker:
                     # (CG-P11-09), never a zero that reads as a measurement.
                     "usage": self._p11_usage(
                         result,
-                        cpu_cap_seconds=WHATIF_CPU_SECONDS if is_whatif else DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
+                        cpu_cap_seconds=WHATIF_CPU_SECONDS if is_whatif else wfo_cpu_cap if is_delta_wfo else 45,
                     ),
                 }
                 if evidence_digest is not None:

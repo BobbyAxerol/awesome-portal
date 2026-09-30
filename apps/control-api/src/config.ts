@@ -149,6 +149,12 @@ const EnvSchema = z.object({
   // grid" action admits one bounded diagnostic Research job through P10/P06.
   // Nothing is evaluated on a GET, on mount or on a slider move.
   FEATURE_RESEARCH_WHATIF: z.enum(["true", "false"]).default("false"),
+  // Research preview only (Bobby 2026-09-30): the Delta WFO profile admits
+  // 2..400 Optuna trials (seed 42, everything else locked) with preview child
+  // limits of 1800 CPU-s / 3600 wall-s. The profile identity and digest do
+  // not change; the run's requested spec records its real trial count.
+  // Refused at startup unless AUTH_MODE=dev and PORTAL_ENV=local.
+  FEATURE_RESEARCH_PREVIEW_LONG_WFO: z.enum(["true", "false"]).default("false"),
   // P18 is a persisted Report/Export projection.  It is independently dark
   // until the source readers, the additive migration and the generated
   // consumer contract are accepted together.  Enabling it never starts
@@ -534,6 +540,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     ].filter(([, value]) => value !== "true").map(([name]) => name);
     if (missing.length > 0) {
       throw new Error(`FEATURE_RESEARCH_WHATIF=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_PREVIEW_LONG_WFO === "true") {
+    if (config.AUTH_MODE !== "dev" || config.PORTAL_ENV !== "local") {
+      throw new Error("FEATURE_RESEARCH_PREVIEW_LONG_WFO is only allowed with AUTH_MODE=dev and PORTAL_ENV=local");
+    }
+    if (config.FEATURE_RESEARCH_WFO_PROFILE !== "true") {
+      throw new Error("FEATURE_RESEARCH_PREVIEW_LONG_WFO=true requires FEATURE_RESEARCH_WFO_PROFILE=true");
     }
   }
   if (config.FEATURE_RESEARCH_REPLAY === "true" && config.FEATURE_RESEARCH_EVIDENCE !== "true") {

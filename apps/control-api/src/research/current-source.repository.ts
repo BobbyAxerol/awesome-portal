@@ -8,10 +8,11 @@
  */
 
 import { createHash } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
 
-import { CONTROL_API_POOL } from "../tokens";
+import type { ControlApiConfig } from "../config";
+import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bounded-read";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchCurrentSourceError } from "./current-source.error";
@@ -20,6 +21,8 @@ import {
   RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
   RS02_SIGNAL_NOTIONAL_PROFILE_ID,
   RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID,
+  DELTA_WFO_PREVIEW_LONG_LIMITS,
+  deltaWfoPreviewLongEnabled,
 } from "./delta-wfo.profile";
 
 export type CurrentSourceTableKind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
@@ -278,7 +281,11 @@ export class ResearchCurrentSourceRepository {
     ),
   });
 
-  constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(CONTROL_API_POOL) private readonly pool: Pool,
+    // Only the research-preview long WFO flag is read (seal TRIAL ceiling).
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
+  ) {}
 
   /** Private worker-only batch append; no HTTP controller mounts this method. */
   async append(scope: ResearchScope, input: CurrentSourceAppendBatch): Promise<{ replayed: boolean }> {
@@ -819,10 +826,12 @@ export class ResearchCurrentSourceRepository {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal is invalid.", 400);
     }
     let total = 0;
+    // Research preview only: the long WFO seals up to 400 TRIAL rows.
+    const maximumTrials = deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;
     for (const kind of TABLE_KINDS) {
       const count = input.tableRows[kind];
       if (!Number.isSafeInteger(count) || count < 0 || (kind !== "SELECTION" && count < 1) || (kind === "SELECTION" && count !== 1)
-        || (kind === "TRIAL" && (count < 2 || count > 64)) || (kind === "CANDIDATE" && count > 64)) {
+        || (kind === "TRIAL" && (count < 2 || count > maximumTrials)) || (kind === "CANDIDATE" && count > 64)) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source table counts are invalid.", 400);
       }
       total += count;

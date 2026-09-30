@@ -24,6 +24,13 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Callable
 
+from portal_api.domain.research_delta_wfo_profile import (
+    DELTA_WFO_PREVIEW_LONG_CPU_SECONDS,
+    DELTA_WFO_PREVIEW_LONG_MAX_TRIALS,
+    DELTA_WFO_PREVIEW_LONG_MIN_TRIALS,
+    DELTA_WFO_PREVIEW_LONG_WALL_SECONDS,
+    delta_wfo_preview_long_enabled,
+)
 from portal_api.domain.research_imported_alpha_profile import (
     IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
     IMPORTED_ALPHA_ADAPTER_ID,
@@ -63,7 +70,12 @@ class ResearchChildLimits:
     def validate(self) -> None:
         if not (2 * 1024 * 1024 * 1024 <= self.memory_bytes <= 8 * 1024 * 1024 * 1024):
             raise ResearchSupervisorError("memory_bytes is outside P06's bounded child range")
-        if not (1 <= self.cpu_seconds <= 300 and 1 <= self.wall_seconds <= 600):
+        if not (1 <= self.cpu_seconds <= 300 and 1 <= self.wall_seconds <= 600) and not (
+            # Research preview only: the long WFO child's own ceiling.
+            delta_wfo_preview_long_enabled()
+            and 1 <= self.cpu_seconds <= DELTA_WFO_PREVIEW_LONG_CPU_SECONDS
+            and 1 <= self.wall_seconds <= DELTA_WFO_PREVIEW_LONG_WALL_SECONDS
+        ):
             raise ResearchSupervisorError("CPU and wall clock limits are outside P06's bounded child range")
         if not (1 * 1024 * 1024 <= self.scratch_bytes <= 512 * 1024 * 1024):
             raise ResearchSupervisorError("scratch_bytes is outside P06's bounded child range")
@@ -138,6 +150,16 @@ class ResearchChildResult:
 DELTA_WFO_CHILD_LIMITS = ResearchChildLimits(
     cpu_seconds=120,
     wall_seconds=240,
+    scratch_bytes=128 * 1024 * 1024,
+    file_bytes=16 * 1024 * 1024,
+)
+
+# Research preview only (PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO, PORTAL_ENV=
+# local): a 2..400-trial study needs more than the locked 120/240 s. Validated
+# only while that flag is on; every other lane keeps its limits above.
+DELTA_WFO_PREVIEW_LONG_CHILD_LIMITS = ResearchChildLimits(
+    cpu_seconds=DELTA_WFO_PREVIEW_LONG_CPU_SECONDS,
+    wall_seconds=DELTA_WFO_PREVIEW_LONG_WALL_SECONDS,
     scratch_bytes=128 * 1024 * 1024,
     file_bytes=16 * 1024 * 1024,
 )
@@ -220,6 +242,9 @@ class DeltaWfoChildReceipt:
     pinned_parameters: tuple[tuple[str, str], ...] = ()
     whatif_grid_key: str | None = None
     whatif_evaluations: tuple[dict[str, Any], ...] = ()
+    # Research preview only: the admitted long-WFO trial count. None keeps
+    # the locked profile's count and the receipt bytes of every other run.
+    optuna_trials: int | None = None
 
     def as_payload(self, *, output_root: Path) -> dict[str, Any]:
         if self.task not in {"P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"}:
@@ -246,6 +271,15 @@ class DeltaWfoChildReceipt:
             if self.task != "P10_DELTA_WFO":
                 raise ResearchSupervisorError("P06 only a WFO study may carry pinned parameters")
             payload["pinned_parameters"] = dict(self.pinned_parameters)
+        if self.optuna_trials is not None:
+            if (
+                self.task != "P10_DELTA_WFO"
+                or isinstance(self.optuna_trials, bool)
+                or not isinstance(self.optuna_trials, int)
+                or not DELTA_WFO_PREVIEW_LONG_MIN_TRIALS <= self.optuna_trials <= DELTA_WFO_PREVIEW_LONG_MAX_TRIALS
+            ):
+                raise ResearchSupervisorError("P06 only a preview long WFO study may carry a bounded trial count")
+            payload["optuna_trials"] = self.optuna_trials
         if self.task == "P16_DELTA_WHATIF_GRID":
             if not self.whatif_grid_key or not 1 <= len(self.whatif_evaluations) <= 81:
                 raise ResearchSupervisorError("P06 what-if child receipt carries no bounded evaluation list")
@@ -1064,6 +1098,7 @@ class IsolatedResearchSupervisor:
 
 __all__ = [
     "DELTA_WFO_CHILD_LIMITS",
+    "DELTA_WFO_PREVIEW_LONG_CHILD_LIMITS",
     "DeltaWfoChildReceipt",
     "DeltaWfoChildResult",
     "IsolatedResearchSupervisor",

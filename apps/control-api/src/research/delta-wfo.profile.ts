@@ -91,6 +91,30 @@ export const DELTA_WFO_RESOURCE_PROFILE = Object.freeze({
   ioBytes: 512 * 1024 * 1024,
 });
 
+/**
+ * Research preview only (FEATURE_RESEARCH_PREVIEW_LONG_WFO, AUTH_MODE=dev +
+ * PORTAL_ENV=local). The locked profile above keeps its identity and digest;
+ * a preview run records its real trial count in its requested spec. 2 is the
+ * floor because the retained RS-02 lane seals at least two TRIAL rows.
+ */
+export const DELTA_WFO_PREVIEW_LONG_LIMITS = Object.freeze({
+  min_trials: 2,
+  max_trials: 400,
+  cpu_seconds: 1_800,
+  wall_seconds: 3_600,
+} as const);
+
+export const DELTA_WFO_PREVIEW_LONG_RESOURCE_PROFILE = Object.freeze({
+  ...DELTA_WFO_RESOURCE_PROFILE,
+  cpuSeconds: DELTA_WFO_PREVIEW_LONG_LIMITS.cpu_seconds,
+});
+
+export function deltaWfoPreviewLongEnabled(
+  config: { FEATURE_RESEARCH_PREVIEW_LONG_WFO?: "true" | "false" } | null | undefined,
+): boolean {
+  return config?.FEATURE_RESEARCH_PREVIEW_LONG_WFO === "true";
+}
+
 export const DELTA_WFO_RESOURCE_CLASS = "p10-delta-wfo-v1" as const;
 export const DELTA_WFO_WORK_SCHEMA_VERSION = "research.p10.delta-wfo-work.v1" as const;
 

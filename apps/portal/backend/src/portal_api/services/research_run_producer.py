@@ -37,6 +37,9 @@ from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_OPTUNA_TRIALS,
     DELTA_WFO_PROFILE_DIGEST,
     DELTA_WFO_PROFILE_ID,
+    DeltaWfoPreviewLongMisconfigured,
+    delta_wfo_admitted_trials,
+    delta_wfo_preview_long_enabled,
 )
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest, sibling_pins
 from portal_api.domain.research_whatif_profile import WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
@@ -44,6 +47,7 @@ from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
 from portal_api.services.research_supervisor import (
     DELTA_WFO_CHILD_LIMITS,
+    DELTA_WFO_PREVIEW_LONG_CHILD_LIMITS,
     IMPORTED_ALPHA_CHILD_LIMITS,
     DeltaWfoChildReceipt,
     ImportedAlphaChildReceipt,
@@ -706,6 +710,20 @@ class ResearchRunProducerExecutor:
                 raise ResearchRunProducerError("P16 what-if profile digest no longer matches", code="CAPABILITY_MISMATCH")
         elif research.execution_profile_digest != DELTA_WFO_PROFILE_DIGEST:
             raise ResearchRunProducerError("P10 Delta WFO profile digest no longer matches", code="CAPABILITY_MISMATCH")
+        # Research preview only: a long study runs the spec's own admitted
+        # trial count under the preview child limits. Off, both stay locked.
+        try:
+            preview_long = whatif is None and delta_wfo_preview_long_enabled()
+            study_trials = (
+                delta_wfo_admitted_trials(research.requested_spec) if preview_long else DELTA_WFO_OPTUNA_TRIALS
+            )
+        except (DeltaWfoPreviewLongMisconfigured, ValueError) as exc:
+            raise ResearchRunProducerError(str(exc), code="CAPABILITY_MISMATCH") from exc
+        child_limits = (
+            DELTA_WFO_PREVIEW_LONG_CHILD_LIMITS
+            if preview_long and self.wfo_child_limits is DELTA_WFO_CHILD_LIMITS
+            else self.wfo_child_limits
+        )
         progress("stage_started", {"stage": "S1"})
         try:
             identity, _ = self.snapshots.describe(research.snapshot_id)
@@ -772,18 +790,19 @@ class ResearchRunProducerExecutor:
                     {"evaluation_key": entry.evaluation_key, "parameters": dict(entry.parameters)}
                     for entry in whatif.evaluations
                 ) if whatif is not None else (),
+                optuna_trials=study_trials if preview_long else None,
             )
             progress("stage_completed", {"stage": "S2"})
             progress("stage_started", {"stage": "S3"})
             progress("stage_completed", {"stage": "S3"})
             progress("stage_started", {"stage": "S4"})
-            cpu_cap = min(self.wfo_child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
+            cpu_cap = child_limits.cpu_seconds if preview_long else min(child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
             progress("budget_tick", _cpu_budget_tick_payload(0, cpu_cap))
-            declared_trials = len(whatif.evaluations) if whatif is not None else DELTA_WFO_OPTUNA_TRIALS
+            declared_trials = len(whatif.evaluations) if whatif is not None else study_trials
             live = LiveStudyProgress(progress, trials_declared=declared_trials, cpu_cap_seconds=cpu_cap)
             child = self.supervisor.run_delta_wfo(
                 receipt,
-                limits=self.wfo_child_limits,
+                limits=child_limits,
                 on_child_alive=(lambda: progress("heartbeat", {})),
                 on_child_progress=live,
             )

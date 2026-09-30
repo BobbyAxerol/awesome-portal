@@ -312,7 +312,7 @@ export interface components {
         ProgressUsage: {
             /** @description The child's own peak resident set size when it reports one; null when unobservable. */
             peak_rss_bytes: number | null;
-            /** @description Profile-bounded: a P04 fixed-qualification attempt is refused above 45 at ingest; a Delta WFO attempt above 120. Null when no child ran (e.g. cancelled before start). */
+            /** @description Profile-bounded: a P04 fixed-qualification attempt is refused above 45 at ingest; a Delta WFO attempt above 120, or above 1800 on a research-preview long WFO (PORTAL_ENV=local only). Null when no child ran (e.g. cancelled before start). */
             cpu_seconds: number | null;
             /** @description No peak-scratch probe is installed for the P06 child; null. */
             scratch_bytes: number | null;

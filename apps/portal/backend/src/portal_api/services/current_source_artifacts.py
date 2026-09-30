@@ -35,6 +35,11 @@ import pandas as pd
 import pyarrow as pa
 
 from portal_api.adapters.quantbt import QUANTBT_ENGINE_VERSION
+from portal_api.domain.research_delta_wfo_profile import (
+    DELTA_WFO_OPTUNA_TRIALS,
+    DELTA_WFO_PREVIEW_LONG_MAX_TRIALS,
+    delta_wfo_preview_long_enabled,
+)
 from portal_api.repositories.artifacts import ArtifactRepository
 from portal_api.serialization import canonicalize
 from portal_api.services.research_artifacts import (
@@ -56,6 +61,15 @@ CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-wfo-global.v1"
 SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID: Final = "rs02.quantbt-signal-notional-wfo.v1"
 SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-signal-notional-wfo.v1"
 MAXIMUM_OPTUNA_TRIALS: Final = 64
+
+
+def _maximum_optuna_trials() -> int:
+    """64, or 400 while the research-preview long WFO flag is on (PORTAL_ENV=local).
+
+    Candidates keep the 64 ceiling: the global schedule keeps the top 10 %.
+    """
+
+    return DELTA_WFO_PREVIEW_LONG_MAX_TRIALS if delta_wfo_preview_long_enabled() else MAXIMUM_OPTUNA_TRIALS
 MAXIMUM_TABLE_BATCH_ROWS: Final = 200
 MAXIMUM_DERIVED_SERIES_POINTS: Final = 192
 MAXIMUM_PARAMETER_FIELDS: Final = 24
@@ -126,10 +140,11 @@ class CurrentSourceAdmission:
                 "RESEARCH_CURRENT_SOURCE_SEED_REJECTED",
                 "The current-source adapter requires one non-negative deterministic seed.",
             )
-        if isinstance(self.optuna_trials, bool) or not isinstance(self.optuna_trials, int) or not 2 <= self.optuna_trials <= MAXIMUM_OPTUNA_TRIALS:
+        maximum_trials = _maximum_optuna_trials()
+        if isinstance(self.optuna_trials, bool) or not isinstance(self.optuna_trials, int) or not 2 <= self.optuna_trials <= maximum_trials:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_TRIAL_BUDGET_REJECTED",
-                f"The current-source adapter accepts 2..{MAXIMUM_OPTUNA_TRIALS} trials.",
+                f"The current-source adapter accepts 2..{maximum_trials} trials.",
             )
         caps = (
             ("maximum_runtime_seconds", self.maximum_runtime_seconds, 1, 86_400),
@@ -232,14 +247,22 @@ def default_current_source_admission() -> CurrentSourceAdmission:
     )
 
 
-def signal_notional_current_source_admission() -> CurrentSourceAdmission:
+def signal_notional_current_source_admission(optuna_trials: int = DELTA_WFO_OPTUNA_TRIALS) -> CurrentSourceAdmission:
     """Return the separately versioned real-HMD-qualified Signal Notional profile.
 
     The first qualification is pinned to the measured three-trial run, one
     deterministic seed and global Mode 1. It is not a generic strategy
     executor and grants no authority to execute imported Python source.
-    Widening this profile requires a new measured source receipt.
+    Widening this profile requires a new measured source receipt. The one
+    exception is the research-preview long WFO: its caller passes the run's
+    admitted trial count only while that PORTAL_ENV=local flag is on.
     """
+
+    if optuna_trials != DELTA_WFO_OPTUNA_TRIALS and not delta_wfo_preview_long_enabled():
+        raise CurrentSourceArtifactError(
+            "RESEARCH_CURRENT_SOURCE_TRIAL_BUDGET_REJECTED",
+            "The Signal Notional current-source profile runs exactly 3 trials.",
+        )
 
     return CurrentSourceAdmission(
         profile_id=SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID,
@@ -248,7 +271,7 @@ def signal_notional_current_source_admission() -> CurrentSourceAdmission:
         optimization_mode="mode_1_decay",
         optimization_schedule="global",
         random_seed=42,
-        optuna_trials=3,
+        optuna_trials=optuna_trials,
         maximum_runtime_seconds=300,
         maximum_rss_bytes=2 * 1024 * 1024 * 1024,
         maximum_disk_bytes=4 * 1024 * 1024 * 1024,
@@ -812,7 +835,7 @@ class CurrentSourceArtifactAdapter:
         bounds = (
             ("observations", len(observations), 1, 2_000_000),
             ("folds", len(folds), 2, 256),
-            ("trials", len(trials), 2, MAXIMUM_OPTUNA_TRIALS),
+            ("trials", len(trials), 2, _maximum_optuna_trials()),
             ("candidates", len(candidates), 1, MAXIMUM_OPTUNA_TRIALS),
             ("selection", len(selection), 1, 1),
         )

@@ -9,6 +9,7 @@ import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../quer
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import {
+  CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS,
   ResearchCurrentSourceEvidenceResponseSchema,
   ResearchCurrentSourceEvidenceSeriesResponseSchema,
   ResearchCurrentSourceFreezeResponseSchema,
@@ -90,8 +91,8 @@ const RESPONSE_MAX_BYTES = 1_048_576;
  * an extrema-preserving bucket sample with a whole-relation envelope.
  */
 const OBSERVATION_SERIES_LIMIT = 2_000;
-/** The RS-02 admitted bound on trial rows (`current-source.contract.ts` ledger). */
-const MAXIMUM_TRIAL_ROWS = 64;
+/** The read bound on trial rows (`current-source.contract.ts`): 64 sealed by RS-02, 400 by the preview long WFO. */
+const MAXIMUM_TRIAL_ROWS = CURRENT_SOURCE_MAXIMUM_TRIAL_ROWS;
 
 type Availability = {
   state: "AVAILABLE" | "PENDING_RETENTION" | "NOT_RETAINED_LEGACY" | "NOT_PUBLISHED" | "NOT_APPLICABLE";

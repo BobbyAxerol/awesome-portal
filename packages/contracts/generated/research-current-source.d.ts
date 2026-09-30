@@ -487,6 +487,7 @@ export interface components {
             schema_version: "research.current-source-search.v1";
             selection: components["schemas"]["Selection"];
             ledger: {
+                /** @description Retained TRIAL rows. The RS-02 seal admits at most 64; only the research-preview long WFO (PORTAL_ENV=local) seals up to 400. */
                 source_trial_count: number;
                 returned_rows: number;
                 trials: components["schemas"]["Trial"][];

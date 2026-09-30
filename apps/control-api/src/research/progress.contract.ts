@@ -54,10 +54,12 @@ const ConsoleObservationSchema = z.object({
 // a probe the child does not have (scratch/fd today, RSS when unobservable).
 const UsageSchema = z.object({
   peak_rss_bytes: z.number().int().nonnegative().max(4 * 1024 * 1024 * 1024).nullable(),
-  // Wire ceiling is the largest installed child limit (W1 Delta WFO: 120 s).
-  // The per-profile cap is enforced after lease resolution: a P04 fixed
-  // qualification attempt is still refused above its 45 s child limit.
-  cpu_seconds: z.number().int().nonnegative().max(120).nullable(),
+  // Wire ceiling is the largest installed child limit: the research-preview
+  // long WFO's 1800 s (W1 Delta WFO itself: 120 s). The per-profile cap is
+  // enforced after lease resolution: a P04 fixed qualification attempt is
+  // still refused above 45 s, and a Delta WFO above 120 s unless the preview
+  // flag (AUTH_MODE=dev + PORTAL_ENV=local only) is on.
+  cpu_seconds: z.number().int().nonnegative().max(1_800).nullable(),
   scratch_bytes: z.number().int().nonnegative().max(4 * 1024 * 1024 * 1024).nullable(),
   fd_peak: z.number().int().nonnegative().max(65_536).nullable(),
 }).strict();

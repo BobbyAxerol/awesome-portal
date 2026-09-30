@@ -32,6 +32,10 @@ services:
       FEATURE_RESEARCH_CURRENT_SOURCE: ${CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE:-false}
       FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY: ${CONTROL_API_FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY:-false}
       FEATURE_RESEARCH_WHATIF: ${CONTROL_API_FEATURE_RESEARCH_WHATIF:-false}
+      # Bobby 2026-09-30: the Delta WFO admits 2..400 Optuna trials with 1800 s
+      # CPU / 3600 s wall child limits. Refused outside AUTH_MODE=dev +
+      # PORTAL_ENV=local; must match the worker's flag below.
+      FEATURE_RESEARCH_PREVIEW_LONG_WFO: ${CONTROL_API_FEATURE_RESEARCH_PREVIEW_LONG_WFO:-false}
       # Quick-look preview: no login screen; the browser is signed in as this
       # user. The Control API refuses it outside AUTH_MODE=dev + PORTAL_ENV=local.
       PREVIEW_AUTO_LOGIN_USERNAME: ${PREVIEW_AUTO_LOGIN_USERNAME:-}
@@ -61,5 +65,10 @@ services:
       # Must match Control API's what-if lane, or the durable diagnostic is
       # admitted but can never emit its source event.
       PORTAL_FEATURE_RESEARCH_WHATIF: ${PORTAL_FEATURE_RESEARCH_WHATIF:-false}
+      # Must match Control API's preview long WFO flag: the worker runs the
+      # admitted trial count under the 1800/3600 s child limits. The worker
+      # refuses the flag unless PORTAL_ENV=local.
+      PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO: ${PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO:-false}
+      PORTAL_ENV: ${PORTAL_ENV:-research}
     # security_opt now lives in deploy/compose.research-progress.yaml (same three
     # entries); repeating it here made compose reject the duplicate list items.

@@ -29,7 +29,12 @@ import { ResearchMetadataRepository } from "./repository";
 import { ResearchEvidenceService } from "./evidence.service";
 import { ResearchSplitService } from "./split.service";
 import { ResearchReportService } from "./report.service";
-import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
+import {
+  DELTA_WFO_PREVIEW_LONG_LIMITS,
+  DELTA_WFO_PROFILE,
+  DELTA_WFO_PROFILE_ID,
+  deltaWfoPreviewLongEnabled,
+} from "./delta-wfo.profile";
 import { WHATIF_PROFILE, WHATIF_PROFILE_ID } from "./whatif.profile";
 import {
   RETRY_WAIT_DISPATCH_GRACE_SECONDS,
@@ -780,7 +785,12 @@ export class ResearchProgressService {
       const cpu = (usage as Record<string, unknown>).cpu_seconds;
       const cap = whatIf
         ? WHATIF_PROFILE.child_limits.cpu_seconds
-        : wfo ? DELTA_WFO_PROFILE.child_limits.cpu_seconds : P04_FIXED_CHILD_CPU_SECONDS;
+        : wfo
+          // Research preview only: the long WFO child's own CPU cap.
+          ? (deltaWfoPreviewLongEnabled(this.config)
+            ? DELTA_WFO_PREVIEW_LONG_LIMITS.cpu_seconds
+            : DELTA_WFO_PROFILE.child_limits.cpu_seconds)
+          : P04_FIXED_CHILD_CPU_SECONDS;
       if (typeof cpu === "number" && cpu > cap) {
         throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research progress usage exceeds the run profile's child limit.", 400);
       }

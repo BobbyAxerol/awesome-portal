@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from types import MappingProxyType
 from typing import Any, Final, Mapping
 
@@ -83,9 +84,72 @@ DELTA_WFO_MIN_FOLDS: Final[int] = int(_PROFILE["fold_bounds"]["min"])
 DELTA_WFO_MAX_FOLDS: Final[int] = int(_PROFILE["fold_bounds"]["max"])
 DELTA_WFO_MAX_SPAN_DAYS: Final[int] = int(_PROFILE["max_span_days"])
 
+# Research-preview-only long WFO (Bobby 2026-09-30). The locked profile above,
+# its identity and digest are unchanged; a preview run records its real trial
+# count in its requested spec. Off by default; refused outside PORTAL_ENV=local.
+DELTA_WFO_PREVIEW_LONG_FLAG: Final = "PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO"
+DELTA_WFO_PREVIEW_LONG_MIN_TRIALS: Final[int] = 2
+DELTA_WFO_PREVIEW_LONG_MAX_TRIALS: Final[int] = 400
+DELTA_WFO_PREVIEW_LONG_CPU_SECONDS: Final[int] = 1800
+DELTA_WFO_PREVIEW_LONG_WALL_SECONDS: Final[int] = 3600
+
+
+class DeltaWfoPreviewLongMisconfigured(RuntimeError):
+    """The preview-only flag is set on a stack that is not the local preview."""
+
+
+def delta_wfo_preview_long_enabled(env: Mapping[str, str] | None = None) -> bool:
+    """True only on a PORTAL_ENV=local stack that sets the preview flag.
+
+    A set flag anywhere else is a configuration error, never a silent no-op.
+    """
+
+    source = os.environ if env is None else env
+    if source.get(DELTA_WFO_PREVIEW_LONG_FLAG, "false").strip().lower() != "true":
+        return False
+    if source.get("PORTAL_ENV", "").strip() != "local":
+        raise DeltaWfoPreviewLongMisconfigured(
+            f"{DELTA_WFO_PREVIEW_LONG_FLAG}=true is only allowed with PORTAL_ENV=local"
+        )
+    return True
+
+
+def delta_wfo_admitted_trials(requested_spec: Mapping[str, Any], env: Mapping[str, str] | None = None) -> int:
+    """The WFO trial count this worker runs for one admitted requested spec.
+
+    Flag off: the locked profile's 3, whatever the spec says (Control API
+    already refused anything else). Flag on: the spec's own count, 2..400.
+    """
+
+    if not delta_wfo_preview_long_enabled(env):
+        return DELTA_WFO_OPTUNA_TRIALS
+    trials = requested_spec.get("optuna_trials")
+    if (
+        isinstance(trials, bool) or not isinstance(trials, int)
+        or not DELTA_WFO_PREVIEW_LONG_MIN_TRIALS <= trials <= DELTA_WFO_PREVIEW_LONG_MAX_TRIALS
+    ):
+        raise ValueError(
+            "The preview long walk-forward admits "
+            f"{DELTA_WFO_PREVIEW_LONG_MIN_TRIALS} to {DELTA_WFO_PREVIEW_LONG_MAX_TRIALS} Optuna trials."
+        )
+    return trials
+
+
+def delta_wfo_child_cpu_seconds(env: Mapping[str, str] | None = None) -> int:
+    return DELTA_WFO_PREVIEW_LONG_CPU_SECONDS if delta_wfo_preview_long_enabled(env) else DELTA_WFO_CPU_SECONDS
+
 
 __all__ = [
     "DELTA_WFO_CPU_SECONDS",
+    "DELTA_WFO_PREVIEW_LONG_CPU_SECONDS",
+    "DELTA_WFO_PREVIEW_LONG_FLAG",
+    "DELTA_WFO_PREVIEW_LONG_MAX_TRIALS",
+    "DELTA_WFO_PREVIEW_LONG_MIN_TRIALS",
+    "DELTA_WFO_PREVIEW_LONG_WALL_SECONDS",
+    "DeltaWfoPreviewLongMisconfigured",
+    "delta_wfo_admitted_trials",
+    "delta_wfo_child_cpu_seconds",
+    "delta_wfo_preview_long_enabled",
     "DELTA_WFO_MAX_FOLDS",
     "DELTA_WFO_MAX_SPAN_DAYS",
     "DELTA_WFO_MIN_FOLDS",
