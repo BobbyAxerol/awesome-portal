@@ -31,6 +31,7 @@ async function assertScreenParity(page, item, api) {
   await root.waitFor({ state: 'visible', timeout: 30000 });
   if (item.id === 'S03') {
     assert.equal(api.current.effective_status, 'COMPLETED', 'WFO_NOT_COMPLETED');
+    await root.locator('[data-meta="binding"]').waitFor({ timeout: 30000 });
     assert((await root.innerText()).includes(api.run.instrument.symbol), 'PROGRESS_SYMBOL_NOT_RENDERED');
   } else if (item.id === 'S04') {
     await root.locator('[data-retained-verdicts="AVAILABLE"] [data-verdict-row]').first().waitFor();
