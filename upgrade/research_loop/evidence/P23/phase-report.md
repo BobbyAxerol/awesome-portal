@@ -1,5 +1,7 @@
 # P23 backend report — 2026-09-25
 
+**T15 current-candidate 2026-09-30:** [cold-cache browser/WFO overlap](./T15_COLD_BROWSER_OVERLAP_2026-09-30.md) PASS on clean `b4e5d09b`: both viewports, one running WFO/four queued, 120/120 cold named GET 200, six cold SLOs and 625,160,192-byte seven-service peak. Earlier T15 `OPEN` rows below are historical. Full F3/F5/OL-24, remaining T gates, P23 and P24 stay OPEN.
+
 **T09 current-candidate 2026-09-29:** [same-host Execution isolation retake](./T09_EXECUTION_ISOLATION_CHECKPOINT_2026-09-28.md#current-clean-candidate-retake--2026-09-29) scoped PASS: stable Execution/health before–during–after 1 HEAVY/4 queued; 120/120 W06 GET 200, Library/Evidence p95 392/494 ms, 605,261,824-B peak. Earlier setup/W06 failures remain historical; P23/P24 OPEN.
 
 
