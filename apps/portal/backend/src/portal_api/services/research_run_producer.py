@@ -228,12 +228,12 @@ class LiveStudyProgress:
             "best_objective": best,
             "eta_s": eta,
             "tqdm_line": (
-                f"global study · trial {trial}/{self._declared} · best J\u2081 {_short_objective(best)}"
+                f"global study · trial {trial}/{self._declared} · best IS Sharpe {_short_objective(best)}"
                 f" · pruned {self._pruned}/{trial}"
             ),
             "console": {
                 "tone": tone,
-                "text": f"global trial {trial} J\u2081={_short_objective(objective)} state={state}",
+                "text": f"global trial {trial} IS Sharpe={_short_objective(objective)} state={state}",
                 "trial": trial,
             },
         })

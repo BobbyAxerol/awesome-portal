@@ -210,9 +210,9 @@ def test_live_study_progress_emits_observed_trials_eta_and_budget_ticks() -> Non
     trials = [payload for kind, payload in emitted if kind == "trial_completed"]
     assert [trial["trial"] for trial in trials] == [1, 2, 3]
     assert [trial["eta_s"] for trial in trials] == [12, 5, None]  # ceil(6/1*2), ceil(10/2*1), done
-    assert trials[0]["tqdm_line"] == "global study · trial 1/3 · best J₁ -9.806 · pruned 0/1"
-    assert trials[1]["tqdm_line"] == "global study · trial 2/3 · best J₁ -9.806 · pruned 1/2"
-    assert trials[1]["console"] == {"tone": "INFO", "text": "global trial 2 J₁=— state=PRUNED", "trial": 2}
+    assert trials[0]["tqdm_line"] == "global study · trial 1/3 · best IS Sharpe -9.806 · pruned 0/1"
+    assert trials[1]["tqdm_line"] == "global study · trial 2/3 · best IS Sharpe -9.806 · pruned 1/2"
+    assert trials[1]["console"] == {"tone": "INFO", "text": "global trial 2 IS Sharpe=— state=PRUNED", "trial": 2}
     assert all(trial["study"] == "GLOBAL" and "fold" not in trial for trial in trials)
     ticks = [payload for kind, payload in emitted if kind == "budget_tick"]
     # One tick per change of the published percentage (the ignored replay

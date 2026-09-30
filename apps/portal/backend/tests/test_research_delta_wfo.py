@@ -413,7 +413,7 @@ def test_w1_producer_runs_real_wfo_child_and_stages_source(tmp_path: Path, monke
     assert all(isinstance(trial["eta_s"], int) and trial["eta_s"] >= 0 for trial in trials[:-1])
     assert trials[-1]["eta_s"] is None
     assert [trial["overall_pct"] for trial in trials] == [33, 56, 80]
-    assert trials[-1]["tqdm_line"].startswith("global study · trial 3/3 · best J\u2081 ")
+    assert trials[-1]["tqdm_line"].startswith("global study · trial 3/3 · best IS Sharpe ")
     snapshot = journal.snapshot()
     assert snapshot["folds"] == []  # a global study opens no fold row
     assert snapshot["overall"]["trials_done"] == 3 and snapshot["overall"]["eta_s"] is None

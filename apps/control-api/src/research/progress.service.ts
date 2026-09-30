@@ -576,7 +576,7 @@ export class ResearchProgressService {
     this.requireEnabled();
     return this.fanout.subscribe(runId, (envelope: ResearchProgressEnvelope) => listener({
       event: toPublicResearchProgressEvent(envelope.event),
-      snapshot: envelope.snapshot ? toPublicResearchProgressSnapshot(envelope.snapshot) : null,
+      snapshot: envelope.snapshot ? toPublicResearchProgressSnapshot(envelope.snapshot, envelope.run?.identity?.executionProfileId) : null,
       read: envelope.run ? this.readResponse(user, envelope.run) : null,
     }));
   }
@@ -653,7 +653,7 @@ export class ResearchProgressService {
         failed_at: effectiveStatus === "FAILED" ? failedAt(current.progress) : null,
         terminal_reason: effectiveStatus === "FAILED" ? this.terminalReason(current) : null,
       },
-      progress: current.progress ? toPublicResearchProgressSnapshot(current.progress) : null,
+      progress: current.progress ? toPublicResearchProgressSnapshot(current.progress, identity?.executionProfileId) : null,
       retained_artifacts: current.retainedArtifacts.map((artifact) => ({
         table_kind: artifact.tableKind,
         state: artifact.state,

@@ -6609,6 +6609,22 @@ instead of a mislabeled pre-OOS chart. S01 retained sparkline samples only
 OOS observations. Real preview DB read-only measurement on R-WFO-020:
 2,184 full versus 1,440 OOS bars. Focused Control API 29/29 and two actual
 QuantBT 1.1.1 golden WFO tests pass. Exact-HEAD preview endpoint acceptance
-is still pending and will be appended to the same receipt.
+passed on the exact-HEAD isolated preview: Control API image
+sha256:bf708bcd26d9d9ccb744e1218fd7cfb309d17192efa238c6b106acd4d7926666,
+sparkline HTTP 200 with 1,440 OOS observations, and old monthly/rolling/
+distribution sealed views each typed NOT_PUBLISHED (no false values).
 [LW-04 receipt](./research_loop/evidence/P13/LW-04_oos_scope_2026-09-30.md)
+· [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).
+
+### LW-05 selected trial identity and objective scope — 2026-09-30
+
+R-WFO-020's Progress trial 394 is the one-based journal ordinal for retained
+Optuna source trial id 393; both name the same selected candidate. The
+selection objective -4.796929242668172 is MODE_1_DECAY_J, while the raw
+trial callback's +4.948278702312006 is best IS Sharpe. Public Progress now
+names the source trial and objective kind only under the exact WFO profile;
+producer text and read-time copies of older immutable snapshots/events label
+the IS figure correctly. OpenAPI generated types and a canonical fixture
+are provided for Claude; source journals and FE design remain untouched.
+[LW-05 receipt](./research_loop/evidence/P11/LW-05_selection_scope_2026-09-30.md)
 · [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).

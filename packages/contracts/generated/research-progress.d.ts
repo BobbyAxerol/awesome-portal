@@ -343,6 +343,13 @@ export interface components {
             objective: components["schemas"]["SignedDecimal"] | null;
             params_digest: components["schemas"]["Digest"] | null;
             reason_code: "SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION" | null;
+            /** @description Optional public WFO source Optuna id, zero-based; trial remains the one-based progress ordinal. Added only when the run profile is p10.delta-signal-notional-wfo.v1. */
+            source_trial_id?: string;
+            /**
+             * @description Optional selected objective kind; distinct from the live trial callback best IS Sharpe.
+             * @constant
+             */
+            objective_kind?: "MODE_1_DECAY_J";
         };
         ProgressIssuedClaim: {
             /** @constant */

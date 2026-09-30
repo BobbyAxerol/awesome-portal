@@ -95,6 +95,30 @@ describe("P11 published Research Progress contract", () => {
     expect(terminalReason({ code: "X", message: "y", origin: "BROWSER" })).toBe(false);
   });
 
+  it("LW-05: publishes a typed WFO source trial id distinct from the progress ordinal", () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as { components: { schemas: Record<string, unknown> } };
+    const rewrite = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(rewrite);
+      if (value && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+          key,
+          key === "$ref" && typeof item === "string" ? item.replace("#/components/schemas/", "#/$defs/") : rewrite(item),
+        ]));
+      }
+      return value;
+    };
+    const ajv = new Ajv2020({ allErrors: true, strict: false });
+    ajv.addSchema({ $id: "research-progress", $defs: rewrite(openApi.components.schemas) });
+    const selection = ajv.getSchema("research-progress#/$defs/ProgressFoldSelection")!;
+    const fixture = JSON.parse(readFileSync(
+      join(ROOT, "fixtures", "research-progress.wfo-selection.valid.json"), "utf8",
+    )) as Record<string, unknown>;
+    expect(selection(fixture), JSON.stringify(selection.errors)).toBe(true);
+    expect(selection({ ...fixture, source_trial_id: 393 })).toBe(false);
+    expect(selection({ ...fixture, objective_kind: "IS_MEAN_SHARPE" })).toBe(false);
+    expect(readFileSync(generatedPath, "utf8")).toContain("source_trial_id?: string");
+  });
+
   it("does not publish private worker, source, broker or terminal-control inputs", () => {
     const document = readFileSync(openApiPath, "utf8");
     for (const forbidden of [

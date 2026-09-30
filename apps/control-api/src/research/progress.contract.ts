@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
@@ -101,6 +102,8 @@ const SnapshotFoldSelectionSchema = z.object({
   objective: SignedDecimalSchema.nullable(),
   params_digest: DigestSchema.nullable(),
   reason_code: z.literal("SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION").nullable(),
+  source_trial_id: z.string().regex(/^(?:0|[1-9][0-9]*)$/).optional(),
+  objective_kind: z.literal("MODE_1_DECAY_J").optional(),
 }).strict().superRefine((value, context) => {
   if (value.state === "AVAILABLE") {
     if (value.scope === null || value.trial === null || value.params_digest === null || value.reason_code !== null
@@ -110,6 +113,13 @@ const SnapshotFoldSelectionSchema = z.object({
   } else if (value.scope !== null || value.trial !== null || value.objective !== null
     || value.params_digest !== null || value.reason_code === null) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "not-published fold selection is inconsistent" });
+  }
+  if (value.source_trial_id !== undefined || value.objective_kind !== undefined) {
+    if (value.state !== "AVAILABLE" || value.scope !== "GLOBAL_STUDY"
+      || value.trial === null || value.source_trial_id !== String(value.trial - 1)
+      || value.objective_kind !== "MODE_1_DECAY_J") {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "WFO source trial id and selected objective kind are inconsistent" });
+    }
   }
 });
 const FoldSegmentSchema = z.object({
@@ -897,12 +907,53 @@ export type ResearchProgressPublicSnapshot = Omit<ResearchProgressSnapshot, "att
 
 export function toPublicResearchProgressEvent(event: ResearchProgressEvent): ResearchProgressPublicEvent {
   const { attempt_id: _attemptId, lease_epoch: _leaseEpoch, ...publicEvent } = event;
+  if (publicEvent.event_type === "trial_completed" && publicEvent.payload.study === "GLOBAL") {
+    const payload = publicEvent.payload as { study: "GLOBAL"; tqdm_line?: string; console?: { text: string; [key: string]: unknown } };
+    return {
+      ...publicEvent,
+      payload: {
+        ...payload,
+        tqdm_line: payload.tqdm_line?.replace(" · best J₁ ", " · best IS Sharpe "),
+        console: payload.console ? {
+          ...payload.console,
+          text: payload.console.text.replace(" J₁=", " IS Sharpe="),
+        } : undefined,
+      },
+    };
+  }
   return publicEvent;
 }
 
 export function toPublicResearchProgressSnapshot(
   snapshot: ResearchProgressSnapshot,
+  executionProfileId?: string | null,
 ): ResearchProgressPublicSnapshot {
   const { attempt_id: _attemptId, lease_epoch: _leaseEpoch, ...publicSnapshot } = snapshot;
-  return publicSnapshot;
+  // Legacy source journals are immutable. Only their public display copy is
+  // corrected: the live Optuna callback reported raw IS Sharpe, not selected J.
+  const line = publicSnapshot.overall.tqdm_line;
+  return {
+    ...publicSnapshot,
+    overall: {
+      ...publicSnapshot.overall,
+      tqdm_line: line.startsWith("global study · trial ")
+        ? line.replace(" · best J₁ ", " · best IS Sharpe ")
+        : line,
+    },
+    folds: publicSnapshot.folds.map((fold) => ({
+      ...fold,
+      selection: executionProfileId === DELTA_WFO_PROFILE_ID
+        && fold.selection.state === "AVAILABLE"
+        && fold.selection.scope === "GLOBAL_STUDY"
+        && fold.selection.trial !== null
+        ? {
+            ...fold.selection,
+            // The P10 WFO journal uses a 1-based ordinal; Optuna and the
+            // retained current-source/Freeze use a 0-based source trial id.
+            source_trial_id: String(fold.selection.trial - 1),
+            objective_kind: "MODE_1_DECAY_J" as const,
+          }
+        : fold.selection,
+    })),
+  };
 }

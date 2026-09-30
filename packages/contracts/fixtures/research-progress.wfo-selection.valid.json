@@ -1,0 +1,10 @@
+{
+  "state": "AVAILABLE",
+  "scope": "GLOBAL_STUDY",
+  "trial": 394,
+  "source_trial_id": "393",
+  "objective": "-4.796929242668172",
+  "objective_kind": "MODE_1_DECAY_J",
+  "params_digest": "aeb7bab2d51cc6fce821c2cfa0458f30ed59db073390ce7223088d8582b9e54c",
+  "reason_code": null
+}
