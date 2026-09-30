@@ -26,6 +26,21 @@
 - **Mỗi mục xong:** test (unit/PG/contract) + receipt ngắn trong `upgrade/research_loop/evidence/P<phase>/` + đánh dấu mục trong §8 của file này (id, commit, test). Gate N29/EDS-12: nếu hook báo digest đổi → `python3 scripts/execution-n29-product-acceptance.py --refresh-evidence --write` rồi `python3 scripts/execution-eds12-qualification.py refresh-static-input-digests --write`.
 - **Preview** (`research-portal.primusspark.com`, stack cô lập `portal-research-preview`, :8095): build từ checkout chính sau khi hạ cánh (`scripts/research-preview/preview.sh build && up`); so image chạy = tag. DB preview đã chạy tới 077 (sổ 068/069 đã đổi sang 075/076). Tự đăng nhập bật (`claude-preview`). Đủ 25 cờ Research bật.
 
+## 1b. Đợt B0 — lỗi server lộ ra khi chạy 400 trials trên preview (2026-09-30, **làm trước B1 còn lại**)
+
+Chi tiết: `evidence/P21/audit-2026-09-30/fe-inventory/B3_cells_s00_s07_400trials.md`, `B4_cells_s08_s14_400trials.md`, §6.1 của `FRONTEND_GAPS_FOR_SONNET_2026-09-30.md`. Run thử: R-WFO-020 `rrun_3258a4c450816129d2d285f25b801061` (claude-preview), R-WFO-002 `rrun_d61c000dc6d1dc2ce05d5b341b4aabea` (bobby).
+
+| # | Id | Việc | Locator | Nghiệm thu |
+|---|---|---|---|---|
+| 1 | **LW-01** search read 503 ở 400 trials | `current-source/search` trả `RESEARCH_CURRENT_SOURCE_UNAVAILABLE` ("exceeds its bounded budget", kể cả `?limit=1`). Commit `8c376879` (Claude, cờ `PREVIEW_LONG_WFO`) nâng trần trial 400 nhưng để `probe.objective_rows ≤128`, mảng candidate `≤64`, ngân sách byte của read. Nâng các trần dưới cùng cờ (hoặc phân trang ledger/probe), contract + test | `apps/control-api/src/research/current-source.contract.ts:803-816`; search service | R-WFO-020: S06 đủ, ledger phân trang 400 dòng |
+| 2 | **LW-02** report sidecar nuốt lỗi | sidecar seal report gọi search, lỗi thì im → không report nào seal (cả vài run 3 trials cũ R-WFO-010…014). Lỗi phải thành trạng thái có mã (FAILED/RETRY) + đọc lại được; seal lại khi search sửa | report sidecar (control-api) | R-WFO-020 có report; run lỗi hiện mã, không 404 im lặng |
+| 3 | **LW-03** child-audit mất bản ghi OOS generation | QuantBT giữ 2.000 bản ghi child-audit, bỏ 2.212; trên cả 9 fold phần bị bỏ gồm mọi bản ghi "out-of-sample generation" → `QUANTBT_CHILD_AUDIT_HAS_NO_OUT_OF_SAMPLE_GENERATION_RECORD`, S11 mục 6 MISSING, run không seal được. Khi cắt, ưu tiên giữ bản ghi OOS generation (mỗi fold ≥1), hoặc engine tăng giới hạn | retention child-audit (Portal worker) / QuantBT | freeze mỗi fold có bản ghi OOS generation; S11 seal được |
+| 4 | **LW-04** "stitched OOS" gồm 744 bar trước OOS | chuỗi return distribution / rolling-20 / sparkline S01 lấy cả phần trước OOS đầu (2.184 điểm) thay vì 1.440 OOS (`oos_observation_count`) | current-source evidence series + run-library sparkline | số điểm = `oos_observation_count` |
+| 5 | **LW-05** θ* lệch giữa read | progress/cursor nói trial 394, freeze/RC nói 393; "Best J₁" hai giá trị khác dấu | progress `selection` vs freeze | một θ* duy nhất trên mọi read |
+| 6 | **LW-06** trades mâu thuẫn | S13/Library "trades 19" vs S08 "0 trade records, 6 transitions" — ghi rõ scope/định nghĩa hoặc thống nhất | run-library metric `TRADE_COUNT` vs replay counts | cùng số hoặc nhãn scope khác nhau rõ ràng |
+| 7 | **LW-07** atlas nêu profile cũ | atlas trả `p10.fixed-qualification.v1`, "seed MUST_BE_NULL" cho run WFO seed 42; trial chấp nhận = 1 → FE nhân bản run 400 trials thành nháp 1 trial | foundation atlas | atlas nêu đúng profile WFO + giới hạn trial khi cờ bật |
+| 8 | **LW-08** shell "Runs (1)" / legacy row | đếm một dòng legacy ETHUSDT; dòng đó QUEUED ở Library nhưng `/api/runs` COMPLETED | run library projection legacy | đếm đúng, trạng thái khớp |
+
 ## 2. Đợt B1 — chặn nghiệm thu frontend (làm trước; nhỏ)
 
 | # | Id | Việc (tối thiểu) | Locator | Nghiệm thu |

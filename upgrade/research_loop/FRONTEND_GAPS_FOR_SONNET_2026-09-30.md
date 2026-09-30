@@ -80,9 +80,46 @@ Bảng đầy đủ (156 chuỗi, file:line, chữ gốc, câu HiFi tương ứn
 - Test đơn vị đang ghim nguyên văn các hằng này (runLibrary.rf06, splitDetail, searchDetail, freezeDetail, executeReplay, compareDetail) và `e2e/research-foundation/atlas.json` → sửa test cùng lúc; baseline visual sẽ đổi → trình Bobby, không tự `--update`.
 - Lỗi kèm theo: `WhatIfCard.tsx:367` viết thường enum → "over the global study is folds" (đọc như động từ "is"). Chữ server dài (S09 58 chữ "Net return and drawdown are the retained final-account path…") → xin Codex bản ≤12 chữ. Help ẩn `usePlayAcrossFolds.ts:48` (68 chữ) quá dài kể cả cho tooltip.
 
-## 6. Kiểm từng ô trên run dài 400 trials (R-WFO-long)
+## 6. Kiểm từng ô trên run dài 400 trials (2026-09-30)
 
-_(chờ run 400 trials trên preview — bobby + claude-preview)_
+**Run:** hai run Delta WFO 400 trials, BTCUSDT 1h, 2026-05-01 → 2026-07-31, OOS đầu 2026-06-01, fold weekly expanding (9 fold): **R-WFO-020** `rrun_3258a4c4…` (claude-preview) và **R-WFO-002** `rrun_d61c000d…` (bobby). Cả hai COMPLETED/READY trong ~50 s. Preview build `8c376879` (cờ `PREVIEW_LONG_WFO`). Hai workspace cho **cùng** kết quả mọi màn (chỉ khác nhãn/digest/giờ). Không bấm gì ghi dữ liệu.
+
+**Bảng từng ô (block | ô | loại | giá trị màn | field/giá trị API | chủ | ghi chú):** [`fe-inventory/B3_cells_s00_s07_400trials.md`](evidence/P21/audit-2026-09-30/fe-inventory/B3_cells_s00_s07_400trials.md) (210 ô) · [`fe-inventory/B4_cells_s08_s14_400trials.md`](evidence/P21/audit-2026-09-30/fe-inventory/B4_cells_s08_s14_400trials.md). Ảnh + JSON API đã chụp nằm trong scratchpad của lần kiểm.
+
+| Màn | OK | WRONG | EMPTY-HONEST | NO-API | SCALE | FE-LOCAL |
+|---|---|---|---|---|---|---|
+| S00–S07 | 100 | 53 | 30 | 9 | 15 | 3 |
+| S08–S14 | 68 | 35 | 24 | 4 (+2 unbound) | 7 | 3 |
+
+### 6.1 Lỗi server chỉ lộ ở 400 trials (chặn nghiệm thu — đã thêm vào hàng đợi Codex, mục B0)
+
+1. **Search read 503 ở 400 trials** (`current-source/search` → `RESEARCH_CURRENT_SOURCE_UNAVAILABLE`, kể cả `?limit=1`; run 3 trials vẫn 200). Hệ quả: S06 trống, θ* S05 trống, tab Search S04 trống, report sidecar gọi search thất bại **và nuốt lỗi** → **không report nào được seal** (S09 404, S11 mục 7 MISSING, link report S10 chết). Nguyên nhân khả dĩ: commit `8c376879` (Claude) nâng trần trial lên 400 nhưng để `probe.objective_rows ≤128`, mảng candidate `≤64` và ngân sách byte của search read (`current-source.contract.ts:803-816`). **Lỗi do Claude gây ra ở thay đổi preview** — sửa: nâng các trần đó dưới cùng cờ, phân trang ledger; report sidecar không được nuốt lỗi.
+2. **Child-audit mất bản ghi OOS generation**: QuantBT giữ 2.000 bản ghi child-audit và bỏ 2.212; trên cả 9 fold phần bị bỏ gồm **mọi** bản ghi "out-of-sample generation" → freeze báo `QUANTBT_CHILD_AUDIT_HAS_NO_OUT_OF_SAMPLE_GENERATION_RECORD` từng fold; S08 link "child" treo "reading…", bảng audit 64 dòng in-sample giống nhau (~2.950 px) không dòng nào được đánh dấu; S11 mục 6 MISSING → **run 400 trials không bao giờ seal được**. Cần: Portal giữ ưu tiên bản ghi OOS generation khi cắt (hoặc engine tăng giới hạn) — Codex/engine.
+3. Một số run 3 trials cũ (R-WFO-010…014) cũng không có report → sidecar nuốt lỗi không chỉ ở 400 trials.
+
+### 6.2 Sai trên màn (FE, theo mức nặng)
+
+- **S09 báo "DENIED — You don't have access"** trên run của chính mình khi thật ra là "chưa có report được seal"; crumb/tiêu đề in `rrun_…`; hộp certification tả một report không tồn tại; bản in Letter trống.
+- **Cùng một run, số mâu thuẫn giữa các màn:** trades — S08 "0 trade records, 6 transitions" vs S13/Library "trades 19"; θ* — trial 394 (S03, cursor S04) vs 393 (S07, S11); "Best J₁" 4,948 ở chỗ này, −4,797 chỗ kia; S13 pair gắn "total return (OOS)" cho return cửa sổ chung −0,79% trong khi return của run +1,28%; hai max drawdown (−0,80% / −1,07%) không nhãn scope.
+- **"Stitched OOS" chứa 744 bar trước OOS** (phân phối return S04, rolling-20, sparkline S01 2.184 điểm) — OOS thật 1.440 (`oos_observation_count`).
+- **S02 `?from=` run 400 trials → nháp 1 trial** (FE điền theo trial được atlas chấp nhận, `NewRunRoute.tsx:342-347`; atlas còn nêu profile cũ `p10.fixed-qualification.v1`, "seed MUST_BE_NULL" cạnh seed 42); ô ngày `datetime-local` trống vì không nhận "Z"; ngày OOS đầu không hiện ở đâu.
+- **S06 khi search lỗi nói sai:** in mã P04 `P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED` trên run WFO, "mode/schedule not published", "POOL FREEZE · NONE — NO SEARCH RAN" trong khi tab hub ghi "S2 SEARCH · DONE".
+- **S04 tab Claim** lấy danh sách vắng từ hub cũ ("per_fold_metrics — not published") trong khi tab Summary cùng hub vẽ bảng per-fold.
+- **S07 "sealed params digest" in candidate id** (`2944fed1…`), digest thật (`aeb7bab2…`) nằm ngay trên màn; what-if in float thô và lộ tên slider giả của HiFi ("entry_z", "atr_mult").
+- **S00:** thẻ Alpha version vẫn bắt chọn run dù descriptor nay trả `requires_alpha: true` (Codex B1#3 đã giao); thẻ Compare ngược lại (`requires_run: true` mà không cho chọn run).
+- **S05:** vẫn tự vẽ ✓ train∩test dù server nay trả `train_test_disjoint` (Codex B1#9 đã giao).
+- **S10/S13:** chip ACTIVE trên mọi attempt (FAILED, CANCELLED, READY) — lấy từ lifecycle version; S13 config-diff so với một run P04 tuỳ ý (R-P04-006) do FE chọn; S10 mặc định chỉ hiện 1 attempt FAILED, R-WFO-020 bị giấu trong 38 "probes".
+- **Shell "Runs (1)"** đếm một dòng legacy ETHUSDT; Library có 39/17; dòng legacy đó QUEUED ở Library nhưng `/api/runs` nói COMPLETED.
+- Alpha thử `s14-ui-receipt`, `s14-api-receipt` hiện trong bộ chọn alpha của New Run (claude-preview).
+- S09 vẫn liệt kê vắng "rolling sharpe" dù D-AN-01 đã bỏ rolling; S13 vẽ Sharpe 0 của fold phẳng như số đo thật; S12 không hiện `trial_ceiling` (4000) đã được trả; S14 hiện "new run with this av_ →" trước khi đăng ký gì.
+
+### 6.3 Quy mô (400 trials)
+
+S04 bảng a11y ẩn 955 dòng (5.179 node DOM) · S08 bảng child-audit ~2.950 px · S13 16 thẻ ladder với "claim ↑ →" giữa claim bằng nhau · S13 biểu đồ per-fold 7/10 đường chồng lên nhau, 3 màu xám gần giống · S13 config diff rộng 1.831 px không nhãn "N of M". Thời gian tải 0,95–4,7 s, không phải nút cổ chai. 660 px: không cuộn ngang toàn trang.
+
+### 6.4 Đối chiếu danh sách cũ
+
+Đã giao phía backend, FE chưa đọc: `requires_alpha` (S00), `train_test_disjoint` (S05); AN-22 OOS Sharpe P04 ở S13 đã có (trừ R-P04-006). CG-FG-S08-01 không cần backend (`params_digest` đã có ở progress). Không tái hiện: D6 (Review 4h vs 1h) trên `?from=`. Xác nhận lại khoảng 40 dòng đã biết (04-H, 04-S, AN-16/17/18, X3, D7, 07-12, FG 12-02, D11, 08-16, 08-06/07, D10, 09-02/03, D8, FG 10-11, CG-FG-S10-02, 13-04, CG-FG-S14-03…).
 
 ## 7. Danh sách sửa UI/UX của Bobby
 
