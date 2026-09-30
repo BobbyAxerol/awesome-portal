@@ -61,7 +61,5 @@ services:
       # Must match Control API's what-if lane, or the durable diagnostic is
       # admitted but can never emit its source event.
       PORTAL_FEATURE_RESEARCH_WHATIF: ${PORTAL_FEATURE_RESEARCH_WHATIF:-false}
-    security_opt:
-      - seccomp=./deploy/research-preview/seccomp-research-child.json
-      - apparmor=portal-research-child
-      - systempaths=unconfined
+    # security_opt now lives in deploy/compose.research-progress.yaml (same three
+    # entries); repeating it here made compose reject the duplicate list items.
