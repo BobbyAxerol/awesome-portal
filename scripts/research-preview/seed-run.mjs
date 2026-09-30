@@ -18,8 +18,10 @@ const env = Object.fromEntries(
     .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]),
 );
 const base = env.PORTAL_PUBLIC_ORIGIN;
-const password = readFileSync(`${home}/claude-preview.password`, "utf8").trim();
-const email = "claude-preview@azdag.com";
+// SEED_USER=bobby seeds into Bobby's own workspace (his activated preview account).
+const seedUser = process.env.SEED_USER ?? "claude-preview";
+const password = readFileSync(`${home}/${seedUser}.password`, "utf8").trim();
+const email = seedUser === "bobby" ? "dev@azdag.com" : "claude-preview@azdag.com";
 const jar = new Map();
 
 const cookieHeader = () => [...jar].map(([key, value]) => `${key}=${value}`).join("; ");
@@ -56,7 +58,7 @@ function need(result, label) {
   return result.json;
 }
 
-need(await call("POST", "/api/auth/login", { username: "claude-preview", credential: password }), "login");
+need(await call("POST", "/api/auth/login", { username: seedUser, credential: password }), "login");
 const binding = need(await call("POST", "/api/v1/research/run-producer/p04-delta/install", {}), "install binding");
 console.log("binding", binding.alpha_version_id, binding.replayed ? "replayed" : "installed");
 
@@ -79,9 +81,10 @@ const requested_spec = {
     ? {
         protocol: "advanced",
         walk_forward: {
-          start: "2026-06-01T00:00:00Z",
-          end_exclusive: "2026-07-15T00:00:00Z",
-          split_mode: "2026-07-01T00:00:00Z",
+          // SEED_WFO_START/END/SPLIT widen the span (profile max 92 days, 2–16 weekly folds).
+          start: process.env.SEED_WFO_START ?? "2026-06-01T00:00:00Z",
+          end_exclusive: process.env.SEED_WFO_END ?? "2026-07-15T00:00:00Z",
+          split_mode: process.env.SEED_WFO_SPLIT ?? "2026-07-01T00:00:00Z",
           frequency: "weekly",
           window_mode: "expanding",
         },
@@ -97,7 +100,8 @@ const requested_spec = {
   optimization_mode: "mode_1_decay",
   optimization_schedule: "global",
   parameter_space_overrides: [],
-  optuna_trials: wfo ? 3 : 1,
+  // SEED_TRIALS > 3 needs the preview-only long-WFO flag (P10 PREVIEW_LONG_WFO).
+  optuna_trials: wfo ? Number(process.env.SEED_TRIALS ?? 3) : 1,
   early_stopping: null,
   random_seed: wfo ? 42 : null,
   optimization_config: {},
@@ -120,7 +124,7 @@ const created = need(
 const runId = created.run_id ?? created.run?.run_id;
 console.log("run", runId);
 
-const deadline = Date.now() + Number(process.env.SEED_TIMEOUT_MS ?? 20 * 60_000);
+const deadline = Date.now() + Number(process.env.SEED_TIMEOUT_MS ?? 20 * 60_000); // long runs: SEED_TIMEOUT_MS=5400000
 let last = "";
 while (Date.now() < deadline) {
   const read = await call("GET", `/api/v1/research/runs/${encodeURIComponent(runId)}/progress`);
@@ -133,5 +137,5 @@ while (Date.now() < deadline) {
   if (["COMPLETED", "FAILED", "CANCELLED"].includes(status) && materialized !== "PENDING") break;
   await new Promise((resolve) => setTimeout(resolve, 5000));
 }
-writeFileSync(`${home}/${wfo ? "seeded-wfo-run.json" : "seeded-run.json"}`, JSON.stringify({ run_id: runId, profile: wfo ? "wfo" : "p04", final: last, at: new Date().toISOString() }, null, 2), { mode: 0o600 });
+writeFileSync(`${home}/${process.env.SEED_OUT ?? (wfo ? "seeded-wfo-run.json" : "seeded-run.json")}`, JSON.stringify({ run_id: runId, profile: wfo ? "wfo" : "p04", final: last, at: new Date().toISOString() }, null, 2), { mode: 0o600 });
 console.log("done", runId, last);

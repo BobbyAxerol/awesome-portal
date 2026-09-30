@@ -20,6 +20,10 @@ services:
       # P10's intake publishes the durable request; the research-progress
       # overlay only turns the flag on for the worker that consumes it.
       PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: ${PORTAL_FEATURE_RESEARCH_RUN_PRODUCER:-false}
+      # P10 intake (POST /api/runs) validates the trial count too: it needs the
+      # same preview-only long-WFO flag and PORTAL_ENV guard as the worker.
+      PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO: ${PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO:-false}
+      PORTAL_ENV: ${PORTAL_ENV:-research}
       NATS_URL: nats://portal-nats:4222
     depends_on:
       portal-nats:
