@@ -1,5 +1,7 @@
 # P23 backend qualification packet
 
+**F5 server-revocation harness 2026-09-30:** [exact stale-cookie lane](./F5_BROWSER_REVOCATION_HARNESS_2026-09-30.md) uses real logout while Chromium retains its cookie. Debug 4/4 passed; clean-source receipt is pending. Real 502 and full F5/P23/P24 remain OPEN.
+
 **F5 real-browser refusal subset 2026-09-30:** [owned-cell S02/S14 receipt](./F5_BROWSER_REFUSAL_RECEIPT_2026-09-30.md) passes 8/8 real 400/401/403 presentation cases at 1280/660 px on clean `2bfeb53e`; jobs 194→194, no off-origin request, page error or horizontal overflow. Real 502, revocation, canonical 54/54 F3 and full F5/P23/P24 remain OPEN.
 
 **T07/T13 release-pin repair 2026-09-30:** [pre-fix probe and approved P10 repair](./T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md) preserve the proven gap and close the source predicate with a typed 409 and 45/45 focused tests. No newer QuantBT engine is installed by this change; full upgrade/default/rollback T07/T13 acceptance remains OPEN.
