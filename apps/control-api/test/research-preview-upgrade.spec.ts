@@ -75,13 +75,13 @@ describe("P23 Research preview forward upgrade without ledger/data/auth rewrite"
     finally { await admin.end(); rmSync(oldDir, { recursive: true, force: true }); }
   });
 
-  it("upgrades actual preview 067 through 078, preserving every historical ledger row and data/auth byte", async () => {
+  it("upgrades actual preview 067 through 079, preserving every historical ledger row and data/auth byte", async () => {
     expect(oldNames.at(-1)).toBe("1723680000067_research-journey-descriptor-v3.sql");
     await runControlApiMigrations(urlFor(databaseName), allDir, () => {});
     expect(await ledger(oldNames.map(name => name.slice(0,-4)))).toBe(oldLedger);
     expect(await sentinelDigest()).toBe(sentinels);
     const last = await database.query(`SELECT name FROM pgmigrations ORDER BY run_on DESC,id DESC LIMIT 1`);
-    expect(last.rows[0].name).toBe("1723680000078_research-journey-descriptor-v4");
+    expect(last.rows[0].name).toBe("1723680000079_research-report-materialization-retry-v1");
     const journey = await database.query(`SELECT revision, content_sha256 FROM research.journey_descriptor_registry ORDER BY revision`);
     expect(journey.rows.map((row) => Number(row.revision))).toEqual([1, 2, 3, 4]);
     expect(journey.rows[3].content_sha256).toBe(
@@ -100,7 +100,7 @@ describe("P23 Research preview forward upgrade without ledger/data/auth rewrite"
       utility_select:true, utility_insert:true, utility_delete:true, utility_update:false });
   }, 120_000);
 
-  it("restarts the already-current 078 migrator without another ledger row or data/auth change", async () => {
+  it("restarts the already-current 079 migrator without another ledger row or data/auth change", async () => {
     const before = await ledger();
     await runControlApiMigrations(urlFor(databaseName), allDir, () => {});
     expect(await ledger()).toBe(before);

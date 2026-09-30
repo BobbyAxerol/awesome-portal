@@ -6571,7 +6571,21 @@ even though the isolated preview profile admits 400 trials and at most 64
 candidates. Zod and OpenAPI now use the derived maximum 464; the normal
 64-trial seal, 64-candidate seal, 200-row page and 1-MiB response cap stay
 unchanged. A canonical 400-trial fixture and OpenAPI/Zod parity test pass.
-This is contract implementation only; the real preview 400-row keyset/API
-receipt remains open before LW-01 may be called product-accepted.
+Real isolated-preview GET now accepted R-WFO-020 with 400 distinct trial IDs
+in two 200-row keyset pages, both below 1 MiB (Control API image and response
+sizes in receipt). LW-01 is accepted without changing the normal profile.
 [LW-01 receipt](./research_loop/evidence/P15/LW-01_search_400_trial_bound_2026-09-30.md)
+· [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).
+
+### LW-02 WFO report recovery checkpoint — 2026-09-30
+
+Migration 079 records a bounded, workspace-scoped RETRY/FAILED/SEALED state.
+The report GET may repair only a SUCCEEDED run bound to the exact Delta WFO
+profile, with a persisted 60-second cooldown. Terminal sidecar failures now
+write a typed failure code; report reads return 503/409 rather than a silent
+permanent 404. The immutable report manifest, source retention and QuantBT
+execution paths are unchanged. Control API build, focused 43/43 and disposable
+PostgreSQL migration 5/5 passed. Preview real-API receipt remains pending;
+do not mark LW-02 accepted from tests alone.
+[LW-02 receipt](./research_loop/evidence/P18/LW-02_report_repair_receipt_2026-09-30.md)
 · [backend queue §9](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md).

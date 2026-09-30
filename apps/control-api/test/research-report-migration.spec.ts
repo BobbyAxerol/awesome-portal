@@ -112,6 +112,26 @@ describe("P18 disposable PostgreSQL migration proof", () => {
     const admin = new Pool({ connectionString: databaseUrlFor("postgres") });
     try { await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`); } finally { await admin.end(); }
   });
+  it("LW-02 stores typed failure and repair outcome under the scoped runtime role", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    try {
+      const scope = await seedRun(database, "_lw02");
+      const repository = new ResearchReportRepository(database);
+      // A run without a succeeded WFO producer is ineligible, even if the
+      // browser guesses its ID. This also parses the claim SQL on PostgreSQL.
+      expect(await repository.claimMissingWfo(scope, scope.runId, "p10.delta-signal-notional-wfo.v1")).toBe(false);
+      await repository.markRepairOutcome(scope, scope.runId, "FAILED", "RESEARCH_CURRENT_SOURCE_UNAVAILABLE");
+      expect(await repository.repairStatus(scope, scope.runId)).toEqual({
+        state: "FAILED", failureCode: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE",
+      });
+      await repository.markRepairOutcome(scope, scope.runId, "SEALED", null);
+      expect(await repository.repairStatus(scope, scope.runId)).toEqual({ state: "SEALED", failureCode: null });
+      await expect(repository.repairStatus({ ...scope, actorUserId: "unknown_p18" }, scope.runId))
+        .rejects.toMatchObject({ code: "RESEARCH_REPORT_FORBIDDEN", status: 403 });
+    } finally {
+      await database.end();
+    }
+  });
 
   it("installs immutable report cores, separate annotations and bounded export jobs with only scoped runtime grants", async () => {
     const database = new Pool({ connectionString: databaseUrlFor(databaseName) });

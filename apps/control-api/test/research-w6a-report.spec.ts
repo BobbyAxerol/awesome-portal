@@ -153,6 +153,9 @@ function subject(options: {
       return stored;
     }),
     read: vi.fn(async () => stored ?? null),
+    claimMissingWfo: vi.fn().mockResolvedValue(false),
+    markRepairOutcome: vi.fn().mockResolvedValue(undefined),
+    repairStatus: vi.fn().mockResolvedValue(null),
     sealedArtifactParts: vi.fn().mockResolvedValue(parts(options.manifestDigest)),
     auditRelation: vi.fn().mockResolvedValue(
       "relation" in options ? options.relation : { relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [] },
@@ -176,6 +179,28 @@ function v2(report: ResearchReportDetailResponse): ResearchReportFrozenCoreV2 {
   return report.frozen_core;
 }
 
+  it("LW-02 keeps failed WFO report materialization typed and retries an immutable seal", async () => {
+    const { service, repository } = subject();
+    repository.claimMissingWfo.mockResolvedValueOnce(true).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const failure = Object.assign(new Error("retained Search unavailable"), { code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE" });
+    vi.spyOn(service, "materialize").mockRejectedValueOnce(failure);
+    await expect(service.read(scope, real.run_id)).rejects.toMatchObject({
+      code: "RESEARCH_REPORT_UNAVAILABLE", status: 503,
+    });
+    expect(repository.markRepairOutcome).toHaveBeenCalledWith(
+      scope, real.run_id, "FAILED", "RESEARCH_CURRENT_SOURCE_UNAVAILABLE",
+    );
+    repository.repairStatus.mockResolvedValueOnce({
+      state: "FAILED", failureCode: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE",
+    });
+    await expect(service.read(scope, real.run_id)).rejects.toMatchObject({
+      code: "RESEARCH_REPORT_UNAVAILABLE", status: 503,
+    });
+    const repaired = await service.read(scope, real.run_id);
+    expect(repaired.schema_version).toBe("research.report-detail.v1");
+    expect(repository.markRepairOutcome).toHaveBeenCalledWith(scope, real.run_id, "SEALED", null);
+    expect(repository.seal).toHaveBeenCalledTimes(1);
+  });
 describe("W6a · P18 report sealed from the retained WFO lane", () => {
   it("W6a fix: a W5b-retained fold row serves the split read without its child-audit block", async () => {
     const split = await currentSource().split(scope, real.run_id) as { fold_plan: { folds: Array<Record<string, unknown>> } };

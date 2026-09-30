@@ -38,6 +38,7 @@ export const TEST_TABLES = [
   // P18 report manifests are immutable dependants of a run; annotations and
   // bounded export jobs must be reset explicitly in disposable test cells.
   "research.run_report_export_jobs_v1",
+  "research.run_report_materialization_retries_v1",
   // P19 immutable promotion facts reference the Alpha version, attempt and
   // run below.  Name this dependency explicitly so reused test cells cannot
   // preserve a source-attested decision by accidental CASCADE behaviour.

@@ -172,6 +172,67 @@ function job(row: JobRow): ResearchReportExportJob {
 export class ResearchReportRepository {
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
+  /**
+   * LW-02: claim one completed WFO run whose report was not sealed. The
+   * row-backed cooldown survives process restarts and bounds repeated GETs.
+   * A duplicate claim cannot bypass the immutable report advisory lock.
+   */
+  async claimMissingWfo(scope: ResearchScope, runId: string, profileId: string): Promise<boolean> {
+    return this.withTransaction(scope.workspaceId, scope.actorUserId, false, async (client) => {
+      await this.requireMembership(client, scope);
+      const result = await client.query(
+        `INSERT INTO research.run_report_materialization_retries_v1
+           (workspace_id, run_id, state, failure_code, attempt_count, last_attempt_at, next_attempt_at)
+         SELECT producer.workspace_id, producer.run_id, 'RETRY', NULL, 1, now(), now() + interval '60 seconds'
+           FROM research.run_producers producer
+           JOIN research.jobs job ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
+          WHERE producer.workspace_id = $1 AND producer.run_id = $2
+            AND producer.execution_profile_id = $3 AND job.state = 'SUCCEEDED'
+            AND NOT EXISTS (
+              SELECT 1 FROM research.run_report_manifests_v1 manifest
+               WHERE manifest.workspace_id = producer.workspace_id AND manifest.run_id = producer.run_id
+            )
+         ON CONFLICT (workspace_id, run_id) DO UPDATE
+           SET state = 'RETRY', failure_code = NULL,
+               attempt_count = research.run_report_materialization_retries_v1.attempt_count + 1,
+               last_attempt_at = now(), next_attempt_at = now() + interval '60 seconds'
+         WHERE research.run_report_materialization_retries_v1.state <> 'SEALED'
+           AND research.run_report_materialization_retries_v1.next_attempt_at <= now()
+         RETURNING run_id`,
+        [scope.workspaceId, runId, profileId],
+      );
+      return result.rowCount === 1;
+    });
+  }
+
+  async markRepairOutcome(scope: ResearchScope, runId: string, state: "SEALED" | "FAILED", failureCode: string | null): Promise<void> {
+    await this.withTransaction(scope.workspaceId, scope.actorUserId, false, async (client) => {
+      await this.requireMembership(client, scope);
+      await client.query(
+        `INSERT INTO research.run_report_materialization_retries_v1
+           (workspace_id, run_id, state, failure_code, attempt_count, last_attempt_at, next_attempt_at)
+         VALUES ($1, $2, $3, $4, 1, now(),
+                 CASE WHEN $3 = 'SEALED' THEN NULL ELSE now() + interval '60 seconds' END)
+         ON CONFLICT (workspace_id, run_id) DO UPDATE
+           SET state = EXCLUDED.state, failure_code = EXCLUDED.failure_code,
+               last_attempt_at = now(), next_attempt_at = EXCLUDED.next_attempt_at`,
+        [scope.workspaceId, runId, state, failureCode],
+      );
+    });
+  }
+
+  async repairStatus(scope: ResearchScope, runId: string): Promise<{ state: "RETRY" | "FAILED" | "SEALED"; failureCode: string | null } | null> {
+    return this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
+      await this.requireMembership(client, scope);
+      const result = await client.query<{ state: "RETRY" | "FAILED" | "SEALED"; failure_code: string | null }>(
+        `SELECT state, failure_code FROM research.run_report_materialization_retries_v1
+          WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, runId],
+      );
+      return result.rows[0] ? { state: result.rows[0].state, failureCode: result.rows[0].failure_code } : null;
+    });
+  }
+
   async seal(scope: ResearchScope, runId: string, frozenCore: ResearchReportFrozenCore): Promise<StoredResearchReport> {
     const frozenCoreDigest = this.digest(frozenCore);
     const reportRevision = `p18r1_${frozenCoreDigest}`;

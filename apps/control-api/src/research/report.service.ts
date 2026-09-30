@@ -8,6 +8,7 @@ import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import { ResearchCurrentSourcePageQuerySchema, type ResearchCurrentSourceNotApplicableResponse } from "./current-source.contract";
+import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchCurrentSourceService } from "./current-source.service";
 import { ResearchEvidenceSeriesKindSchema } from "./evidence.contract";
@@ -94,6 +95,19 @@ export class ResearchReportService {
     if (input.event.event_type === "run_failed") return this.materializeFailureBestEffort(scope, input);
     if (input.event.event_type !== "run_completed") return false;
     if (lane === "RS02_RETAINED_CURRENT_SOURCE" && this.config.FEATURE_RESEARCH_CURRENT_SOURCE !== "true") return false;
+    if (lane === "RS02_RETAINED_CURRENT_SOURCE") {
+      try {
+        await this.materialize(scope, input.run_id, lane);
+      } catch (error) {
+        const candidate = typeof error === "object" && error !== null && "code" in error
+          ? String((error as { code: unknown }).code) : "";
+        const failureCode = /^[A-Z][A-Z0-9_]{2,159}$/.test(candidate) ? candidate : "RESEARCH_REPORT_UNAVAILABLE";
+        await this.repository.markRepairOutcome(scope, input.run_id, "FAILED", failureCode);
+        throw error;
+      }
+      await this.repository.markRepairOutcome(scope, input.run_id, "SEALED", null).catch(() => undefined);
+      return true;
+    }
     await this.materialize(scope, input.run_id, lane);
     return true;
   }
@@ -284,8 +298,36 @@ export class ResearchReportService {
   async read(scope: ResearchScope, runId: string): Promise<ResearchReportDetailResponse> {
     this.requireEnabled();
     const stored = await this.repository.read(scope, runId);
-    if (!stored) throw new ResearchReportError("RESEARCH_REPORT_NOT_FOUND", "Research report was not found.", 404);
-    return this.detail(stored);
+    if (stored) return this.detail(stored);
+
+    // LW-02: an old or newly completed WFO terminal may have missed its
+    // best-effort report sidecar. Repair only a SUCCEEDED, profile-bound run,
+    // once per durable 60-second window. The inputs are already-retained
+    // Portal reads; this path never invokes QuantBT or opens artifact bytes.
+    if (this.config.FEATURE_RESEARCH_CURRENT_SOURCE === "true") {
+      const claimed = await this.repository.claimMissingWfo(scope, runId, DELTA_WFO_PROFILE_ID);
+      if (claimed) {
+        try {
+          const report = await this.materialize(scope, runId, "RS02_RETAINED_CURRENT_SOURCE");
+          await this.repository.markRepairOutcome(scope, runId, "SEALED", null).catch(() => undefined);
+          return report;
+        } catch (error) {
+          const candidate = typeof error === "object" && error !== null && "code" in error
+            ? String((error as { code: unknown }).code) : "";
+          const failureCode = /^[A-Z][A-Z0-9_]{2,159}$/.test(candidate) ? candidate : "RESEARCH_REPORT_UNAVAILABLE";
+          await this.repository.markRepairOutcome(scope, runId, "FAILED", failureCode);
+          throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", `Report materialization failed (${failureCode}); retry is scheduled.`, 503);
+        }
+      }
+      const retry = await this.repository.repairStatus(scope, runId);
+      if (retry?.state === "FAILED") {
+        throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", `Report materialization failed (${retry.failureCode ?? "RESEARCH_REPORT_UNAVAILABLE"}); retry is scheduled.`, 503);
+      }
+      if (retry?.state === "RETRY") {
+        throw new ResearchReportError("RESEARCH_REPORT_NOT_READY", "Report materialization is retrying.", 409);
+      }
+    }
+    throw new ResearchReportError("RESEARCH_REPORT_NOT_FOUND", "Research report was not found.", 404);
   }
 
   async requestExport(scope: ResearchScope, runId: string, format: ResearchReportExportFormat): Promise<ResearchReportExportStatus> {

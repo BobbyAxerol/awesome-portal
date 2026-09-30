@@ -17,3 +17,10 @@ canonical response with 400 surface points, a 200-row ledger, 464 probe rows,
 OpenAPI/Zod parity, sub-1-MiB size, and refusal at 465. The real preview API
 receipt is still required before marking LW-01 closed; this test establishes
 contract acceptance, not that the currently deployed image has changed.
+
+Real isolated-preview API receipt (2026-09-30, commit d5c4e1f3; Control API
+image sha256:faf48410ae94faa24a2e836350bcedccebf027f2d7fc114ac218d6aec38e9450):
+R-WFO-020, run rrun_3258a4c450816129d2d285f25b801061, returned HTTP 200,
+trial_count=400 and probe.objective_rows=439. Two limit=200 keyset pages
+returned 200 + 200 distinct trial ids, has_more=true then false; response
+bodies were 662454 and 663151 bytes. No source or business rows were copied.
