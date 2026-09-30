@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Real WFO Screen 03–08 browser/owner-BFF parity, with no route interception. */
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -40,7 +41,7 @@ async function assertScreenParity(page, item, api) {
       await value.first().waitFor();
       assert.equal(await value.first().getAttribute('data-exact'), api.passport[key], `${metric}_DECIMAL_DIFF`);
     }
-    assert.equal(await root.locator('[data-not-ready]').count(), 0, 'EVIDENCE_NOT_READY');
+    await root.locator('[data-not-ready]').waitFor({ state: 'detached', timeout: 30000 });
   } else if (item.id === 'S05') {
     await root.locator('[data-fold-table-row]').first().waitFor();
     assert.equal(await root.locator('[data-fold-table-row]').count(), api.fold_plan.folds.length, 'SPLIT_FOLD_COUNT_DIFF');
@@ -56,6 +57,8 @@ async function assertScreenParity(page, item, api) {
     assert.equal(await root.locator('[data-integrity-state]').first().getAttribute('data-integrity-state'),
       api.integrity.state, 'FREEZE_INTEGRITY_DIFF');
   } else if (item.id === 'S08') {
+    await page.locator('[data-screen="execute-replay"][data-lane="retained"]').waitFor({ timeout: 30000 });
+    await root.locator('[data-route-id="signal_notional"]').first().waitFor({ timeout: 30000 });
     assert.equal(await root.getAttribute('data-lane'), 'retained', 'REPLAY_LANE_DIFF');
     assert((await root.locator('[data-route-id]').first().innerText()).includes('signal_notional'), 'REPLAY_ROUTE_DIFF');
     if (api.execution) {
@@ -76,6 +79,10 @@ export async function wfoBrowserParityReceipt({ home = DEFAULT_HOME, label = 'f3
   const identity = privateJson(join(home, 'identity.json'));
   assert(identity.project === PROJECT && identity.base_url === BASE_URL && identity.dirty === false
     && Object.keys(identity.images).length === 7, 'CLEAN_PINNED_CELL_REQUIRED');
+  assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: ROOT, encoding: 'utf8' }).trim(), '',
+    'LIVE_SOURCE_DIRTY');
+  assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim(),
+    identity.candidate_source_sha, 'LIVE_SOURCE_IDENTITY_DRIFT');
   const run = privateJson(join(home, RUN_RECEIPT));
   assert(run.project === PROJECT && run.profile === 'wfo' && run.final?.body?.current?.effective_status === 'COMPLETED',
     'REAL_COMPLETED_WFO_REQUIRED');
