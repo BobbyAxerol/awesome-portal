@@ -3636,6 +3636,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P23](#rl-p23) | P11–P22 | mọi màn | 12 | **OWNED REAL QUALIFICATION IN_PROGRESS · FULL_QUALIFICATION_PENDING (2026-09-29)** — Codex / [P23 packet](./research_loop/evidence/P23/README.md): P22 real publication closed. On one clean current image, exact W06 mixed HEAVY+four queued/20 principals passed twice at the original 500-ms warm SLO; T08 cold-start mixed and W07 bounded interaction also passed in scope. [W05 storage-only scale](./research_loop/evidence/P23/W05_STORAGE_SCALE_2026-09-29.md) measured 100k trial + 100k evaluation + 1M replay rows with indexed keysets and 823-MB seven-service peak; [V11-P23-DR](./research_loop/evidence/P23/V11_DIRECT_PARITY_2026-09-29.md) proved exact direct-engine/sealed/API parity for three real P04 facts. Earlier W06 failures remain history. T03/T04/T05/T06/T09/T10/T11 have scoped receipts; **T02 scratch, T07/T13 new-engine upgrade, T12 quota/audit, T14 exposure/audit-child, T15 browser-real and full DR/BR/GX remain OPEN**. No full P23/product/deployment acceptance or SLO relaxation. |
 | [P24](#rl-p24) | P23 | mọi màn | 12 | PLANNED / unassigned / — |
 
+**Frontend status 2026-09-30:** Claude's newer P15–P21 status and the remaining G1–G12 work are in [§13.4.1 G](#rl-open-ledger) and the [frontend gap evidence](./research_loop/evidence/FRONTEND_GAPS_STATUS_CLAUDE_2026-09-30.md); they supersede only the historical FE snippets in the rows above. The local P22/P23 backend acceptance rows and current P23 receipt remain authoritative. E11–E17 source/real-API closeouts below remain intact; the new E14 field record is linked from the frontend gap evidence.
+
 **P23-T15 scoped addendum 2026-09-29:** [browser-real WFO/P04 receipt](./research_loop/evidence/P23/T15_BROWSER_REAL_SCOPED_2026-09-29.md) qua 1280/660 px trên cell riêng: causal prefix 100→1→2, deep link và chuyển run đúng, zero overflow/page error, jobs 155→155. Không có cold-cache/concurrent-WFO browser window và không rebuild exact HEAD; T15/F3/F5/OL-24/P23 vẫn OPEN.
 
 **P23-T15 current-candidate addendum 2026-09-30:** [cold-cache/WFO/browser receipt](./research_loop/evidence/P23/T15_COLD_BROWSER_OVERLAP_2026-09-30.md) closes T15 on clean `b4e5d09b`: two viewport causal/deep-link/cross-run checks overlap one running WFO/four queued intents; 20 principals × 6 GET all 200, cold SLOs pass, seven-service peak 625,160,192 B < 5 GB. The preceding 2026-09-29 T15 `OPEN` line is historical; a warm-classified cold attempt remains FAIL and was not overwritten. No 500–600-ms warm relaxation was used. F3/F5/OL-24, T02/T07/T12/T13/T14, full DR/BR/GX, P23 and P24 remain OPEN.
@@ -3823,9 +3825,10 @@ mốc (rebuild preview, trước báo cáo "đóng").
 
 #### F. Còn phải làm, chốt lúc 2026-09-27 (ghi ngay để không rơi mất)
 
-Trạng thái lúc ghi: lane real-API 54 ô (52 xanh so với preview `c81e8dc2` vì preview còn phục vụ
-bundle trước khi sửa S00), E10-O3 đã xong. **Hai việc đang làm dở, có code trong worktree nhưng
-chưa commit** — phải lấy lại, đừng làm lại từ đầu:
+Trạng thái lúc ghi (27/9): lane real-API 54 ô (52 xanh so với preview `c81e8dc2` vì preview còn phục vụ
+bundle trước khi sửa S00), E10-O3 đã xong. F1 và F2 là hai việc bị cắt quota lúc đó — **cả hai đã xong và
+gộp vào `a00df203`**; bảng ngay dưới giữ lại làm lịch sử. **Danh sách frontend còn lại cập nhật ở mục G
+(2026-09-30); F4 + F5 nay gộp vào G10.**
 
 | Id | Việc | Ở đâu | Đã có gì | Còn gì |
 |---|---|---|---|---|
@@ -3924,6 +3927,43 @@ The test project was removed without `-v`, preserving three volumes and all
 private receipts. E rows above supersede pending historical checkpoints only
 within their tested scope; unrelated F3/F4/F5/visual/print/P24 gates stay open.
 [Full integration packet](./research_loop/evidence/P17/E11_E17_INTEGRATION_ACCEPTANCE_2026-09-27.md).
+
+#### G. Frontend — gap còn lại, chốt 2026-09-30 (đọc lại toàn plan; lý do và bằng chứng ở [`FRONTEND_GAPS_STATUS_CLAUDE_2026-09-30.md`](research_loop/evidence/FRONTEND_GAPS_STATUS_CLAUDE_2026-09-30.md))
+
+Gate trên HEAD `a00df203`: `tsc` exit 0 · vitest 52 file **1512 pass** / 1 skip. **Chưa chạy hôm nay:** lane real-API, visual
+baseline. Preview `c81e8dc2` (đọc-only, migration 067) **không** chứa E16-R1 (068), E10-O3 (069), RF-04.
+
+Sổ đã ghi sai/thiếu và đã sửa hôm nay: record E14 không tồn tại (đã viết); E14 ghi "ĐÓNG" quá tay (đã sửa dòng E14); đoạn mở
+đầu mục F tự mâu thuẫn (đã sửa); 7 dòng board P15–P21 còn trạng thái 26/9 (đã thêm dòng NOW); OL-02, OL-24, D1-O1 rơi khỏi
+mục F (vào G3, G11, G12). **Hai quyết định thiết kế đã chốt nhưng chưa ai build: D4 và D7** (G2, G1).
+
+**(b) Claude làm được, không chờ ai**
+
+| Id | Gap frontend | Cỡ | Điều kiện đóng |
+|---|---|---|---|
+| G1 | **D7** — S08 công tắc "play across folds", mặc định tắt; bật thì đọc cửa sổ kế ở biên fold | S–M | Test: không request nào khi tắt; bật thì đọc đúng một cửa sổ kế; receipt real-API |
+| G2 | **D4** — S02 prefill IS/OOS từ coverage của dataset đã chọn (sửa được; không dataset thì trống). Hiện chỉ prefill theo `?alpha=&av=` | S | Test + ảnh S02 ở 1440/660 |
+| G3 | **D1-O1** — nhãn `R-WFO-###` khi mở thẳng S09/S11/S13 bằng link (3 read chưa trả `display_label`; backend ≤P21 nhỏ). D1-O2 (card S01) **đã đóng** ở `05f0d6a0` | S | 3 read mang `display_label` (contract + fixture + test) + ảnh |
+| G4 | Ladder S13: mũi tên `claim ↑ →` treo ở cuối hàng | S | Ảnh 1440/660 |
+| G5 | S09: chạy lại in Letter/A4; nhìn lưới 6 đường trên dữ liệu thật; ô `NET_RETURN` + qualifier P04 chờ G10 | S | Ảnh + PDF hai khổ giấy |
+| G6 | Visual baseline chạy lại sau S08/S12 — **chỉ** `./scripts/portal-web-visual.sh` (image ghim); ô nào lệch thì trình Bobby, không tự sinh lại | S (~18 phút chạy) | 332 pass hoặc danh sách ô lệch đã duyệt |
+| G7 | Probe a11y RF-04 không thấy `[data-screen]` trên dev server (mọi màn) — lỗi harness | S | Probe chạy được, axe trên từng màn |
+| G8 | S06 dải glyph theo fold "what this mode reads" (HiFi 6.4) | M | Ảnh so HiFi + test |
+| G9 | S14 registry strip: cap "top N / total" (chưa cần ở 1 entry) | S | Khi > 1 màn hình entry |
+| G10 | **Stack ghi được + run mới** — cổng chung cho receipt thật của E13, E14 (`NET_RETURN` + qualifier), E16-R1 (dải nến P04), E10-O1/O3, S02 create + preflight, S14 write. Gộp F4 + F5 | — | Receipt cho từng mục; **cần Bobby gật** (phương án ở file trạng thái §4a) |
+| G11 | **OL-02** — receipt verify byte: MATCH + một MISMATCH có chủ ý, observer bật | S (cần G10) | Hai receipt lưu vào P16 |
+| G12 | **OL-24** — P23 browser-real / research-dev | Codex + Claude | Receipt trên research-dev |
+
+**(c) Chờ Codex** — frontend đã hiện typed absence, tự sáng khi field có: OL-13 (rc chip S01, "last published RC" S02) ·
+OL-07 + OL-09 (S11: mirror + lỗi publish) · OL-03 (pick S10) · OL-05 (S11 publish thật) · E16-R2 (engine pin S07) ·
+E6-BR-01 (chữ ký/SBOM S14) · E5-O1/O2 (engine).
+
+**(a) Bobby quyết/duyệt:** gật G10 · duyệt **VD-RF04-01** (S12 cao hơn HiFi 205 px) và **VD-RF04-02** · bảng lệch HiFi S14 (E6) ·
+D-B1 token `--ink-faint` · độ phân giải dải nến S08 (WFO 160 / P04 48) · mật độ S13 khi > 12 attempt có claim ·
+migration cho `CLONE_OF` (E13-O3) · backfill overview P04 cũ.
+
+**Điều kiện đóng P15–P21:** F3 (build lại preview + lane xanh 54/54) · G6 · G10 với receipt thật · G1–G4 xong hoặc Bobby chấp nhận
+hoãn · các mục (a) được duyệt.
 
 #### C. Nợ tài liệu
 
@@ -4079,7 +4119,7 @@ test and scoped cleanup](./research_loop/evidence/P23/APPROVAL_GRAPH_RESTORE_CHE
 
 Đã sửa trong commit này: README P16/P17 (ghi chú 2026-09-26 cũ), file audit P15–P23 (đánh dấu
 đã bị thay bởi sổ này), header request P19. Còn lại: các đoạn "chưa đóng" lịch sử trong §13.5
-(P10, P13–P20) — **không xoá** (luật A13.1), sổ này thắng chúng.
+(P10, P13–P20) — **không xoá** (luật A13.1), sổ này thắng chúng. 2026-09-30: dòng board P15–P21 đã có dòng NOW đứng đầu; link record E14 hết gãy.
 
 #### D. Thứ tự
 
