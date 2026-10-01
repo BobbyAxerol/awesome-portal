@@ -55,6 +55,18 @@ describe("P13 published Research Evidence Flow contract", () => {
     expect(core.required).not.toContain("dataset_coverage");
     const coverage = document.components.schemas.DatasetCoverage;
     expect(coverage.required).toContain("range_scope");
+    expect(core.properties.window_disclosure).toEqual(expect.objectContaining({
+      $ref: "#/components/schemas/WindowDisclosure",
+    }));
+    expect(core.required).not.toContain("window_disclosure");
+    const windows = document.components.schemas.WindowDisclosure;
+    expect(windows.required).toContain("holdout_bars");
+    const windowFixture = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-evidence.window-disclosure.valid.json"), "utf8"));
+    expect(windowFixture).toMatchObject({
+      aggregation_scope: "SUM_OF_FOLD_WINDOWS_MAY_OVERLAP", is_bars: 144, oos_bars: 96,
+      holdout_bars: { state: "DENIED", value: null },
+    });
+    expect(readFileSync(generatedPath, "utf8")).toContain("WindowDisclosure");
     const fixture = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-evidence.dataset-coverage.valid.json"), "utf8"));
     expect(fixture).toMatchObject({
       range_scope: "FULL_SNAPSHOT_QUERY", rows: 336, gaps: 0, missing_bar_count: 0,

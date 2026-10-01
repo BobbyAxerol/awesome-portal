@@ -499,6 +499,40 @@ export const ResearchEvidenceDatasetCoverageSchema = z.object({
   }
 });
 
+export const ResearchEvidenceWindowDisclosureSchema = z.object({
+  availability: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+  }).strict(),
+  /** Each IS can overlap another fold; totals count fold windows, not unique bars. */
+  aggregation_scope: z.literal("SUM_OF_FOLD_WINDOWS_MAY_OVERLAP").nullable(),
+  is_bars: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable(),
+  oos_bars: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable(),
+  folds: z.array(z.object({
+    fold: z.number().int().min(1).max(128),
+    is_bars: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    oos_bars: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  }).strict()).max(128),
+  holdout_bars: z.object({
+    state: z.enum(["DENIED", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema,
+    value: z.null(),
+  }).strict(),
+}).strict().superRefine((value, context) => {
+  const published = value.availability.state === "AVAILABLE";
+  if (published && (value.aggregation_scope === null || value.is_bars === null ||
+      value.oos_bars === null || value.folds.length === 0 || value.availability.reason_code !== null ||
+      value.folds.reduce((sum, fold) => sum + fold.is_bars, 0) !== value.is_bars ||
+      value.folds.reduce((sum, fold) => sum + fold.oos_bars, 0) !== value.oos_bars)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "available window disclosure requires consistent per-fold counts" });
+  }
+  if (!published && (value.aggregation_scope !== null || value.is_bars !== null ||
+      value.oos_bars !== null || value.folds.length !== 0 || value.availability.reason_code === null ||
+      value.holdout_bars.state !== "NOT_PUBLISHED")) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "unpublished window disclosure cannot carry counts" });
+  }
+});
+
 export const ResearchEvidenceHubResponseSchema = z.object({
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
@@ -529,6 +563,7 @@ export const ResearchEvidenceHubResponseSchema = z.object({
     }).strict(),
     /** P08 immutable snapshot metadata, optional for rolling deploy compatibility. */
     dataset_coverage: ResearchEvidenceDatasetCoverageSchema.optional(),
+    window_disclosure: ResearchEvidenceWindowDisclosureSchema.optional(),
     /**
      * Optional only for bounded rolling deploy compatibility.  New Control
      * readers always emit both fields; consumers must render typed absence if

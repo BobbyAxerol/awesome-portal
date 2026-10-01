@@ -5,6 +5,7 @@ import { sha256ResearchJson } from "../src/research/preflight.service";
 import type { ResearchProgressIngress } from "../src/research/progress.contract";
 import { p13EvidenceSourceFixture } from "./research-evidence.fixture";
 import { b3RetainedSnapshot } from "./research-b3-snapshot.fixture";
+import { p13WindowTopology } from "./research-evidence-window-disclosure.fixture";
 
 const scope = { workspaceId: "p13-workspace", actorUserId: "p13-user" };
 const ingressScope = { ...scope, jobId: "job_p13", workerAttemptId: "attempt_p13", leaseEpoch: 1 };
@@ -243,6 +244,7 @@ describe("P13 Evidence Flow projection authority", () => {
       runState: "READY", runCreatedAtUtcMs: 1_725_000_000_000,
       alphaId: "alpha-p13", alphaName: "P13 Alpha", alphaVersionId: "av_p13",
       requestedSpec: requestedSpec(), preflightSnapshot: b3RetainedSnapshot,
+      preflightTopology: p13WindowTopology,
       requestedSpecDigest: "a".repeat(64), effectiveSpecDigest: "b".repeat(64), datasetBindingDigest: "c".repeat(64),
       manifestDigest: "d".repeat(64), progressSnapshot: progressSnapshot([1, 2, 3]), jobState: "SUCCEEDED",
       revision: write.projectionRevision, projection: write.projection, readiness: write.readiness,
@@ -254,6 +256,10 @@ describe("P13 Evidence Flow projection authority", () => {
     /* D1: the Hub carries the short run label; this row has none derived, and
        `null` is the honest answer that makes the screen print the short id. */
     expect(first.core.run_identity?.display_label).toBeNull();
+    expect(first.core.window_disclosure).toMatchObject({
+      availability: { state: "AVAILABLE" }, is_bars: 144, oos_bars: 96,
+      holdout_bars: { state: "DENIED", value: null },
+    });
     expect(first.core.dataset_coverage).toMatchObject({ availability: { state: "AVAILABLE" }, range_scope: "FULL_SNAPSHOT_QUERY", rows: 336, gaps: 0 });
     repository.hub.mockResolvedValue({ ...row, displayLabel: "R-WFO-118" });
     expect((await service.hub(scope, "run_p13")).core.run_identity?.display_label).toBe("R-WFO-118");

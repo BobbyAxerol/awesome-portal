@@ -382,6 +382,29 @@ export interface components {
             missing_bar_count: number | null;
             columns: string[];
         };
+        /** @description P08 immutable per-fold IS/OOS bar counts. Totals sum fold windows and may overlap; sealed holdout count is denied. No results or raw market rows. */
+        WindowDisclosure: {
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+            };
+            /** @enum {unknown} */
+            aggregation_scope: "SUM_OF_FOLD_WINDOWS_MAY_OVERLAP" | null;
+            is_bars: number | null;
+            oos_bars: number | null;
+            folds: {
+                fold: number;
+                is_bars: number;
+                oos_bars: number;
+            }[];
+            holdout_bars: {
+                /** @enum {unknown} */
+                state: "DENIED" | "NOT_APPLICABLE" | "NOT_PUBLISHED";
+                reason_code: string;
+                value: null;
+            };
+        };
         MethodologyClaim: {
             /** @enum {unknown} */
             kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
@@ -452,6 +475,8 @@ export interface components {
                 };
                 /** @description Optional during bounded rollout; current Hub readers always emit a typed coverage fact. */
                 dataset_coverage?: components["schemas"]["DatasetCoverage"];
+                /** @description Optional during rolling deployment; current Hub readers emit a typed window fact. */
+                window_disclosure?: components["schemas"]["WindowDisclosure"];
                 /** @description Optional during a bounded rolling deployment; new Hub responders always emit it. */
                 run_identity?: components["schemas"]["RunIdentity"];
                 /** @description Optional during a bounded rolling deployment; it bounds only the published observed P11 fold set. */

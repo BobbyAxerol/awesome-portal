@@ -6724,8 +6724,12 @@ Commit `bfee4737` closed S06-05/S06-02; commit `2d4744bc` closed S06-06/S06-01/S
 ### B3 CG-FG-S11-02 — compose-only selected-params truth, 2026-10-01
 
 P21 Screen 11 now has a typed selected trial number from the retained source (one-based display) and a typed `param_set_id` absence. It never aliases a digest or selection receipt as a param-set identity. This is additive to the composer only; local sealed packs and their digests remain immutable. Claude owns the frontend binding and browser receipt.
+[B3 receipt](./research_loop/evidence/P21/CG-FG-S11-02_backend_receipt_2026-10-01.md)
 
 ### B3 CG-FG-S14-04 — Alpha Registry exact total and cursor, 2026-10-01
 
 P07 Registry emits exact workspace/filter `total` and a signed opaque `next_cursor` over a bounded 200-row page. Source timestamp microseconds plus `alpha_version_id` preserve order; count and page share one repeatable-read snapshot. Cross-workspace/filter or tampered cursors fail typed 400. Disposable PostgreSQL traversed 201 rows (200+1) without duplicate, 10/10; contract 6/6. Claude owns S14 binding, not a layout rewrite. [Receipt](./research_loop/evidence/P07/CG-FG-S14-04_backend_receipt_2026-10-01.md).
-[B3 receipt](./research_loop/evidence/P21/CG-FG-S11-02_backend_receipt_2026-10-01.md)
+
+### B3 #13–14 — S02/S04 window authority and existing Portal admission, 2026-10-01
+
+The P08 preflight already returns exact admitted `train.bars` / `outer_oos.bars` per fold. New P13 Hub `core.window_disclosure` reuses that immutable topology for S04, publishes bounded fold-window counts with overlap scope, denies P04 holdout bar count, and keeps old digest-only manifests typed absent. Focused Control API 15/15, contracts 204/204, disposable P13 PostgreSQL 5/5 passed. Exact before-preflight dataset edges are not available from the current HMD month-partition catalog; BR-D4-1 remains blocked on a bounded metadata index, not guessed from partitions. BR-D4-3 was already delivered by LW-07 through `Atlas.portal_admission`. Claude owns FE binding. [P13 receipt](./research_loop/evidence/P13/CG-FG-S04-07_window_disclosure_2026-10-01.md).

@@ -164,6 +164,7 @@ TRACKED = (
     "fixtures/research-alpha-import.activation.valid.json",
     "generated/portal-api.d.ts",
     "fixtures/research-evidence.dataset-coverage.valid.json",
+    "fixtures/research-evidence.window-disclosure.valid.json",
     "generated/execution-analytics.d.ts",
     "generated/execution-analytics-series.d.ts",
     "generated/execution-query-analytics.d.ts",

@@ -50,3 +50,61 @@ export function evidenceDatasetCoverage(snapshot: unknown) {
     columns: source.columns,
   };
 }
+
+/** B3 CG-FG-S04-07: immutable P08 topology, never result/holdout data. */
+export function evidenceWindowDisclosure(topology: unknown) {
+  const absent = (reasonCode: string) => ({
+    availability: { state: "NOT_PUBLISHED" as const, reason_code: reasonCode },
+    aggregation_scope: null,
+    is_bars: null,
+    oos_bars: null,
+    folds: [] as Array<{ fold: number; is_bars: number; oos_bars: number }>,
+    holdout_bars: { state: "NOT_PUBLISHED" as const, reason_code: reasonCode, value: null },
+  });
+  if (topology === null || topology === undefined) return absent("P08_TOPOLOGY_NOT_RETAINED");
+  // Early P10 manifests deliberately retained a digest-only topology. Keep
+  // their Hub readable; only a partial/full incompatible topology fails closed.
+  if (typeof topology === "object" && !Array.isArray(topology) &&
+      /^[0-9a-f]{64}$/.test(String((topology as Record<string, unknown>).topology_digest)) &&
+      !("protocol" in topology) && !("folds" in topology)) {
+    return absent("P08_TOPOLOGY_BAR_COUNTS_NOT_RETAINED");
+  }
+  const parsed = ResearchPreflightPrivateResponseSchema.shape.topology.safeParse(topology);
+  if (!parsed.success) {
+    throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Retained preflight topology is incompatible.", 503);
+  }
+  const source = parsed.data;
+  if (source.folds.some((fold) => fold.train.bars === undefined || fold.outer_oos.bars === undefined)) {
+    return absent("P08_TOPOLOGY_BAR_COUNTS_NOT_RETAINED");
+  }
+  const foldIds = new Set<string>();
+  let isBars = 0;
+  let oosBars = 0;
+  const folds = source.folds.map((fold, index) => {
+    const train = fold.train.bars!;
+    const oos = fold.outer_oos.bars!;
+    if (foldIds.has(fold.fold_id) || fold.fold_id !== ("fold_" + String(index).padStart(3, "0")) ||
+        !Number.isSafeInteger(train) || train < 1 || !Number.isSafeInteger(oos) || oos < 1) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Retained preflight fold counts are incompatible.", 503);
+    }
+    foldIds.add(fold.fold_id);
+    isBars += train;
+    oosBars += oos;
+    return { fold: index + 1, is_bars: train, oos_bars: oos };
+  });
+  if (!Number.isSafeInteger(isBars) || !Number.isSafeInteger(oosBars)) {
+    throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Retained preflight fold totals are incompatible.", 503);
+  }
+  return {
+    availability: { state: "AVAILABLE" as const, reason_code: null },
+    // Expanding IS windows overlap. These are sums of per-fold inputs, not
+    // unique market bars or a claim about the headline's calculation.
+    aggregation_scope: "SUM_OF_FOLD_WINDOWS_MAY_OVERLAP" as const,
+    is_bars: isBars,
+    oos_bars: oosBars,
+    folds,
+    holdout_bars: source.protocol === "three_window_decay"
+      ? { state: "DENIED" as const, reason_code: "P13_SEALED_HOLDOUT_BAR_COUNT_DENIED", value: null }
+      : { state: "NOT_APPLICABLE" as const, reason_code: "P13_PROTOCOL_HAS_NO_SEALED_HOLDOUT", value: null },
+  };
+}
