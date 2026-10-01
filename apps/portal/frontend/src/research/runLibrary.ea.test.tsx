@@ -1,8 +1,8 @@
 /**
  * Batch EA · S01 - the Library card reads `analytics_all_time`
- * (`research.enriched-analysis.v1` `library_summary`).
+ * (`research.enriched-analysis.v1` `library_summary`; canonical since B6).
  *
- * Value path: the proposed fixture's `library_summary`, drawn all time.
+ * Value path: the canonical fixtures' `library_summary`, drawn all time.
  * Fallback: no block -> today's sparkline, its own label, untouched.
  * Refusal: a basis that is not ALL_TIME (or a rolling figure) is a typed
  * absence, never drawn and never relabelled.
@@ -15,6 +15,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RunLibrary, allTimePath } from "./RunLibrary";
+import { healthy, partialMonth } from "./enrichedAnalysis.fixtures";
 import { readAllTime, type RunLibraryItem, type RunLibraryResponse } from "./runLibraryClient";
 import { researchState } from "./state";
 import { useRunLibrary, type LibraryFilters, type SparklineRead } from "./useRunLibrary";
@@ -23,17 +24,8 @@ const base = JSON.parse(
   readFileSync(join(__dirname, "../../e2e/research-foundation/run-library.json"), "utf8"),
 ) as RunLibraryResponse;
 const EMPTY: LibraryFilters = { q: "", status: [], mode: [], alpha: [], group: false, sel: [] };
-/* Read from the repo root at run time: `upgrade/` is outside the frontend build context, so a static JSON import
-   would break `tsc -b` inside the Docker image (it did, once). */
-const enriched = JSON.parse(
-  readFileSync(join(process.cwd(), "..", "..", "..", "upgrade", "research_loop", "evidence", "P21", "enrich-analysis", "enriched-analysis.proposed.fixture.json"), "utf8"),
-) as {
-  library_summary: {
-    sparkline: { at_utc_ms: number; value: string }[];
-    [key: string]: unknown;
-  };
-};
-const SUMMARY = enriched.library_summary;
+const SUMMARY = healthy().library_summary;
+const SAMPLED = partialMonth().library_summary;
 
 afterEach(() => {
   cleanup();
@@ -64,7 +56,7 @@ function draw(item: RunLibraryItem, sparklines: ReadonlyMap<string, SparklineRea
   return document.querySelector<HTMLElement>(`[data-sparkline="${item.run_id}"]`)!;
 }
 
-describe("EA S01 - value path (the fixture's library_summary)", () => {
+describe("EA S01 - value path (the canonical healthy library_summary)", () => {
   it("draws every served point under the label 'all time' with the all-time trio", () => {
     const box = draw(withAllTime(SUMMARY));
     expect(box.getAttribute("data-sparkline-source")).toBe("all-time");
@@ -76,14 +68,28 @@ describe("EA S01 - value path (the fixture's library_summary)", () => {
     const points = svg.querySelector("polyline")!.getAttribute("points")!.split(" ");
     expect(points).toHaveLength(SUMMARY.sparkline.length);
     expect(box.querySelector("[data-all-time-caption]")!.textContent).toBe(`${SUMMARY.sparkline.length} pts`);
+    /* full retained coverage: no "sampled" chip */
+    expect(box.querySelector("[data-coverage-chip]")).toBeNull();
 
     const cell = (name: string) => box.querySelector<HTMLElement>(`[data-all-time-cell="${name}"]`)!;
-    expect(cell("return").textContent).toContain("+1.66%");
-    expect(cell("sharpe").textContent).toContain("4.34");
+    expect(cell("return").textContent).toContain("+13.94%");
+    expect(cell("sharpe").textContent).toContain("3.65");
     // Typographic minus, exact server decimal kept in the title.
-    expect(cell("max-dd").textContent).toContain("−0.47%");
-    expect(cell("max-dd").textContent).not.toContain("-0.47");
+    expect(cell("max-dd").textContent).toContain("−1.77%");
+    expect(cell("max-dd").textContent).not.toContain("-1.77");
     expect(cell("max-dd").querySelector("[title]")!.getAttribute("title")).toBe(SUMMARY.max_drawdown_fraction);
+  });
+
+  it("SAMPLED_RETAINED_EQUITY coverage shows a small 'sampled' chip with the source count in its tooltip", () => {
+    const box = draw(withAllTime(SAMPLED));
+    const chip = box.querySelector<HTMLElement>("[data-coverage-chip]")!;
+    expect(chip.getAttribute("data-coverage-chip")).toBe("SAMPLED_RETAINED_EQUITY");
+    expect(chip.textContent).toBe("sampled");
+    expect(chip.getAttribute("title")).toContain("10 of 744 source observations");
+    expect(chip.getAttribute("title")).toContain("not a full daily ledger");
+    expect(chip.getAttribute("aria-label")).toContain("not a full daily ledger");
+    expect(box.querySelector("[data-all-time-caption]")!.textContent).toBe("10 pts · sampled");
+    expect(box.querySelector("svg title")!.textContent).toContain("10 of 744 points");
   });
 
   it("allTimePath keeps every point, in time order, inside the box", () => {
@@ -133,7 +139,7 @@ describe("EA S01 - typed absence", () => {
     expect(sharpe.textContent).toBe("not published");
     expect(sharpe.getAttribute("data-reason-code")).toBe("AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED");
     expect(box.querySelector('[data-all-time-cell="max-dd"] [data-withheld]')!.textContent).toBe("not published");
-    expect(box.querySelector('[data-all-time-cell="return"]')!.textContent).toContain("+1.66%");
+    expect(box.querySelector('[data-all-time-cell="return"]')!.textContent).toContain("+13.94%");
   });
 });
 
@@ -142,6 +148,10 @@ describe("EA S01 - refusal of a non-ALL_TIME basis", () => {
     ["ROLLING_30D basis", { ...SUMMARY, basis: "ROLLING_30D", label: "last 30D" }],
     ["missing basis", { ...SUMMARY, basis: undefined }],
     ["a rolling figure beside it", { ...SUMMARY, rolling: { window: "30D" } }],
+    ["no declared coverage", { ...SUMMARY, coverage: undefined }],
+    ["a sampling the contract does not name", { ...SUMMARY, sampling: "EXTREMA_BUCKET_V2" }],
+    ["a source count that is not an integer", { ...SUMMARY, source_observation_count: "60" }],
+    ["no input digest", { ...SUMMARY, input_digest: undefined }],
   ])("%s is not drawn and not relabelled", (_name, block) => {
     const item = withAllTime(block);
     expect(readAllTime(item).kind).toBe("refused");

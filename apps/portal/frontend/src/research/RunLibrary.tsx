@@ -713,7 +713,7 @@ function AllTime({ runId, summary }: { runId: string; summary: AllTimeSummary })
             aria-label={`${summary.label} equity, ${n} points`}
             data-all-time-points={n}
           >
-            <title>{`${summary.label} · ${n} points as served${first && last ? ` · ${first} → ${last}` : ""}`}</title>
+            <title>{`${summary.label} · ${n} of ${summary.source_observation_count} points as served${first && last ? ` · ${first} → ${last}` : ""}`}</title>
             <polyline
               points={path}
               fill="none"
@@ -728,6 +728,19 @@ function AllTime({ runId, summary }: { runId: string; summary: AllTimeSummary })
             data-all-time-caption
           >
             {n} pts
+            {summary.coverage === "SAMPLED_RETAINED_EQUITY" ? (
+              <>
+                {" · "}
+                <span
+                  data-coverage-chip={summary.coverage}
+                  style={{ color: "var(--accent-2)" }}
+                  title={`sampled · ${n} of ${summary.source_observation_count} source observations · not a full daily ledger`}
+                  aria-label={`sampled, ${n} of ${summary.source_observation_count} source observations, not a full daily ledger`}
+                >
+                  sampled
+                </span>
+              </>
+            ) : null}
           </span>
         </>
       ) : (

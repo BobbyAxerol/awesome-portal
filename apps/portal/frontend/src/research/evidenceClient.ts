@@ -187,6 +187,8 @@ export const evidenceApi = {
        */
       if (answer !== NOT_MODIFIED) {
         rememberRunLabel(runId, (answer as EvidenceHub).core?.run_identity?.display_label);
+        /* B6: the Hub's block is TOP-LEVEL `enriched_analysis` (not `core.`), guarded once here. */
+        enrichedOf(answer as EvidenceHub);
       }
       return answer;
     }),
@@ -237,11 +239,12 @@ export const evidenceApi = {
 const enrichedReads = new WeakMap<object, EnrichedRead>();
 
 /**
- * The guarded `enriched_analysis` of a current-source Evidence response: absent when the backend
+ * The guarded `enriched_analysis` of a current-source Evidence response, an Evidence Hub (top level) or
+ * a Report (top level): absent when the backend
  * does not serve it (old seal), refused with a screen-local marker when it is not the contract's
  * (wrong `basis`, a `rolling` block, a bad shape), otherwise the block. Read once per response.
  */
-export function enrichedOf(evidence: CurrentSourceEvidence | null | undefined): EnrichedRead {
+export function enrichedOf(evidence: CurrentSourceEvidence | EvidenceHub | { enriched_analysis?: unknown } | null | undefined): EnrichedRead {
   if (evidence === null || evidence === undefined) return { kind: "absent" };
   const known = enrichedReads.get(evidence);
   if (known !== undefined) return known;

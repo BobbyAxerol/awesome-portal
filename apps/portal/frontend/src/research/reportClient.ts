@@ -21,6 +21,7 @@
  */
 
 import type { components as ReportComponents } from "@portal/contracts-research-report";
+import { readEnrichedAnalysis, type EnrichedRead } from "./enrichedAnalysis";
 
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { reportSessionExpired } from "../auth/sessionExpiry";
@@ -151,6 +152,22 @@ async function fresh<T>(promise: Promise<Fresh<T>>): Promise<T> {
   /* Only the detail read sends a validator, so only it can answer 304. */
   if (answer === NOT_MODIFIED) throw new PortalApiError("304 unexpected", 304, null, null);
   return answer;
+}
+
+const enrichedReads = new WeakMap<object, EnrichedRead>();
+
+/**
+ * B6: the Report's supplemental all-time block is TOP-LEVEL `enriched_analysis` (never inside the frozen
+ * core). Absent on a report sealed before the enrichment; refused (never drawn) when it is not the
+ * contract's. Read once per response.
+ */
+export function enrichedOfReport(report: ReportDetail | null | undefined): EnrichedRead {
+  if (report === null || report === undefined) return { kind: "absent" };
+  const known = enrichedReads.get(report);
+  if (known !== undefined) return known;
+  const read = readEnrichedAnalysis((report as { enriched_analysis?: unknown }).enriched_analysis);
+  enrichedReads.set(report, read);
+  return read;
 }
 
 export const reportApi = {

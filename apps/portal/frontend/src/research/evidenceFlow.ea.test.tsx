@@ -1,10 +1,10 @@
 /**
- * Screen 04 — the `enrich_analysis` block (group S04_EA).
+ * Screen 04 — the `enrich_analysis` block (group S04_EA, rebound to Codex's canonical contract in B6).
  *
- * The block is the frontend's own proposal (`ENRICH_ANALYSIS_SERVICE_SPEC_2026-10-01.md`); the backend
- * does not serve it yet, so the value path loads the PROPOSED fixture, not a backend capture. Absence
- * path: the real retained capture with no block (an old seal), a block the guard refuses, and the
- * block's own typed absences. The guard refuses any `basis` that is not ALL_TIME and any `rolling`.
+ * Value path: the canonical fixtures in `packages/contracts/fixtures/` (synthetic, not a real-run
+ * receipt). Absence path: the real retained capture with no block (an old seal), a block the guard
+ * refuses, and the block's own typed absences. The guard refuses any `basis` that is not ALL_TIME and
+ * any `rolling`.
  */
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -15,7 +15,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { EvidenceFlow, retainedTiles } from "./EvidenceFlow";
 import { enrichedOf, type CurrentSourceEvidence, type EvidenceHub } from "./evidenceClient";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
-import { readEnrichedAnalysis, type EnrichedAnalysis } from "./enrichedAnalysis";
+import { readEnrichedAnalysis } from "./enrichedAnalysis";
+import { healthy, noBenchmark, oldSealAbsent, partialMonth } from "./enrichedAnalysis.fixtures";
 import { researchState } from "./state";
 
 afterEach(() => {
@@ -24,11 +25,7 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-/* Same relative path the spec names (`upgrade/research_loop/evidence/P21/enrich-analysis/`), from the repo root. */
-const ROOT = join(process.cwd(), "..", "..", "..");
-const PROPOSED = JSON.parse(
-  readFileSync(join(ROOT, "upgrade", "research_loop", "evidence", "P21", "enrich-analysis", "enriched-analysis.proposed.fixture.json"), "utf8"),
-) as EnrichedAnalysis;
+const PROPOSED = healthy();
 const local = <T,>(name: string) => JSON.parse(readFileSync(join(process.cwd(), "src", "research", name), "utf8")) as T;
 const W3 = local<{ evidence: CurrentSourceEvidence }>("w3RealWfo.fixture.json");
 const W3B = local<{ hub_evidence: EvidenceHub; progress: import("./progressClient").ProgressRead; requested_spec: import("./progressClient").RunRequestedSpec }>(
@@ -72,9 +69,18 @@ const settle = (container: HTMLElement) =>
 const settleOld = (container: HTMLElement) => waitFor(() => expect(container.querySelector("[data-metrics]")).toBeTruthy(), { timeout: 15_000 });
 
 describe("enrich_analysis guard", () => {
-  it("reads the proposed fixture as a block", () => {
-    const read = readEnrichedAnalysis(clone(PROPOSED));
-    expect(read.kind).toBe("block");
+  it.each([
+    ["healthy", healthy],
+    ["no-benchmark", noBenchmark],
+    ["partial-month", partialMonth],
+  ])("reads the canonical %s fixture as a block", (_name, load) => {
+    expect(readEnrichedAnalysis(load()).kind).toBe("block");
+  });
+
+  it("the old-seal guard fixture carries no block: absent, never refused", () => {
+    const guard = oldSealAbsent();
+    expect(guard.reason_code).toBe("SEALED_ENRICHMENT_NOT_COMPUTED");
+    expect(readEnrichedAnalysis(guard.enriched_analysis)).toEqual({ kind: "absent" });
   });
 
   it("an absent field is absent, not refused", () => {
@@ -118,13 +124,13 @@ describe("enrich_analysis guard", () => {
   });
 });
 
-describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
+describe("S04 · enrich_analysis — value path (canonical healthy fixture)", () => {
   it("the hero Sharpe is the block's all-time Sharpe, labelled all time", async () => {
     const { container } = view(clone(PROPOSED));
     await settle(container);
     const sharpe = container.querySelector("[data-metric-value='OOS_SHARPE']") as HTMLElement;
     expect(sharpe.getAttribute("data-exact")).toBe(PROPOSED.facts.metrics.sharpe.value);
-    expect(sharpe.textContent).toBe("4.34");
+    expect(sharpe.textContent).toBe("3.65");
     expect(container.querySelector("[data-metric='OOS_SHARPE'] [data-metric-scope]")?.textContent).toContain("all time");
     const tile = retainedTiles({ ...W3.evidence, enriched_analysis: clone(PROPOSED) } as CurrentSourceEvidence).find((t) => t.key === "OOS_SHARPE");
     expect(tile?.value).toBe(PROPOSED.facts.metrics.sharpe.value);
@@ -140,7 +146,7 @@ describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
     expect(rows).toHaveLength(PROPOSED.curves.strategy_rebased_100.length + PROPOSED.curves.benchmark_rebased_100.length);
     const chip = figure.querySelector("[data-enriched-chip]") as HTMLElement;
     expect(chip.textContent).toBe("enrich_analysis · all time");
-    expect(chip.getAttribute("title")).toContain("EXTREMA_BUCKET_V2");
+    expect(chip.getAttribute("title")).toContain("EXTREMA_BUCKET_V1");
     const exact = (id: string) => figure.querySelector(`[data-behavior-tile='${id}'] [data-exact]`)?.getAttribute("data-exact");
     expect(exact("beta")).toBe(PROPOSED.facts.metrics.beta.value);
     expect(exact("benchmark")).toBe(PROPOSED.facts.metrics.benchmark_return_fraction.value);
@@ -171,15 +177,16 @@ describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
     expect(monthly.querySelector("[data-enriched-chip]")?.textContent).toBe("enrich_analysis · all time");
     expect(monthly.textContent).toContain("monthly returns — all time");
     const months = monthly.querySelectorAll("[data-month]");
-    expect(months).toHaveLength(2);
-    expect([...months].map((m) => m.getAttribute("data-month"))).toEqual(["2026-07", "2026-08"]);
-    expect(months[0]!.getAttribute("data-exact")).toBe("0.013993856266");
-    expect(months[0]!.querySelector("[data-month-value]")?.textContent).toBe("+1.40%");
-    expect(months[0]!.getAttribute("data-month-partial")).toBeNull();
+    expect(months).toHaveLength(3);
+    expect([...months].map((m) => m.getAttribute("data-month"))).toEqual(["2026-07", "2026-08", "2026-09"]);
+    expect(months[0]!.getAttribute("data-exact")).toBe(PROPOSED.monthly_returns.values[0]!.return_fraction);
+    expect(months[0]!.querySelector("[data-month-value]")?.textContent).toBe("+6.26%");
+    /* the first and last months only part-cover the scope; the middle one is whole */
+    expect([...months].map((m) => m.getAttribute("data-month-partial"))).toEqual(["true", null, "true"]);
 
     const dist = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']") as HTMLElement;
     expect(dist.getAttribute("data-series-state")).toBe("ready");
-    expect(dist.querySelector("[data-enriched-chip]")?.getAttribute("title")).toContain("FULL_RETURN_HISTOGRAM_V2");
+    expect(dist.querySelector("[data-enriched-chip]")?.getAttribute("title")).toContain("ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1");
     expect(dist.querySelectorAll("[data-chart-table='distribution'] tbody tr")).toHaveLength(PROPOSED.return_distribution.buckets.length);
     expect(dist.textContent).toContain("Return distribution — all time");
     expect(ensureRetainedKind).not.toHaveBeenCalled();
@@ -187,13 +194,11 @@ describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
   }, 20_000);
 
   it("a partial month is drawn hatched, with its observation count in the tooltip", async () => {
-    const block = clone(PROPOSED);
-    block.monthly_returns.values[0] = { ...block.monthly_returns.values[0]!, partial: true, observation_count: 312, expected_observation_count: 744 };
-    const { container } = view(block);
+    const { container } = view(clone(PROPOSED));
     await settle(container);
     const [first, second] = [...container.querySelectorAll("[data-series-panel='MONTHLY_RETURNS'] [data-month]")] as HTMLElement[];
     expect(first!.getAttribute("data-month-partial")).toBe("true");
-    expect(first!.getAttribute("title")).toContain("partial month · 312 of 744 observations");
+    expect(first!.getAttribute("title")).toContain("partial month · 22 of 31 observations");
     expect((first!.querySelector("[data-month-cell]") as HTMLElement).style.border).toContain("dashed");
     expect((first!.querySelector("[data-month-cell]") as HTMLElement).style.background).toContain("repeating-linear-gradient");
     expect(second!.getAttribute("data-month-partial")).toBeNull();
@@ -201,7 +206,7 @@ describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
     expect((second!.querySelector("[data-month-cell]") as HTMLElement).style.border).toBe("");
   }, 20_000);
 
-  it("Behavior reads the block's facts and carries the chip; no 'open' mark is invented", async () => {
+  it("Behavior reads the block's facts and carries the chip; the 'open' mark follows longest_open", async () => {
     const { container } = view(clone(PROPOSED));
     await settle(container);
     const card = container.querySelector("[data-behavior-scope='all-time']") as HTMLElement;
@@ -209,33 +214,53 @@ describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
     const cell = (label: string) => card.querySelector(`[data-behavior-tile='${label}'] [data-exact]`) as HTMLElement;
     expect(cell("sortino").getAttribute("data-exact")).toBe(PROPOSED.facts.metrics.sortino.value);
     expect(cell("turnover").getAttribute("data-exact")).toBe(PROPOSED.facts.behaviour.turnover_notional.value);
-    expect(cell("drawdown duration").textContent).toBe("17.4 d");
+    expect(cell("drawdown duration").textContent).toBe("2 d");
+    /* longest_open is false in the canonical block: no open mark */
+    expect(card.querySelector("[data-behavior-tile='drawdown duration']")?.textContent).not.toContain("open");
     /* sharpe_decay is NOT_APPLICABLE in the block: the cell keeps its typed absence, never 0. */
     const decay = card.querySelector("[data-behavior-tile='sharpe decay'] [data-withheld]") as HTMLElement;
     expect(decay.getAttribute("data-withheld")).toBe("NOT_APPLICABLE");
     expect(decay.getAttribute("data-reason-code")).toBe("PORTAL_ANALYTICS_IS_OR_OOS_SHARPE_UNAVAILABLE");
   }, 20_000);
 
-  it("Drawdown episodes: top rows with start, depth, duration, recovery; an open episode says open", async () => {
+  it("Drawdown episodes: top 10 of 11 with start, depth, duration, recovery; all recovered", async () => {
     const { container } = view(clone(PROPOSED));
     await settle(container);
     const card = container.querySelector("[data-drawdown-episodes='ready']") as HTMLElement;
     const rows = [...card.querySelectorAll("tbody tr")] as HTMLElement[];
-    expect(rows).toHaveLength(8);
-    /* the first is open (recovery_utc_ms: null) */
-    expect(rows[0]!.getAttribute("data-episode-open")).toBe("true");
-    expect(rows[0]!.textContent).toContain("open");
-    expect(rows[0]!.textContent).toContain("2026-08-17");
-    expect(rows[0]!.querySelector("[data-exact]")?.getAttribute("data-exact")).toBe("-0.004713280512");
-    expect(rows[0]!.querySelector("[data-exact]")?.textContent).toBe("−0.47%");
-    expect(rows[0]!.getAttribute("title")).toContain("recovery open at the end of the scope");
+    expect(rows).toHaveLength(10);
+    expect(rows[0]!.getAttribute("data-episode-open")).toBe("false");
+    expect(rows[0]!.textContent).toContain("2026-07-14");
+    expect(rows[0]!.textContent).toContain("2026-07-16");
+    expect(rows[0]!.querySelector("[data-exact]")?.getAttribute("data-exact")).toBe("-0.017681728880157177");
+    expect(rows[0]!.querySelector("[data-exact]")?.textContent).toBe("−1.77%");
+    expect(rows[0]!.getAttribute("title")).toContain("recovery 2026-07-16");
     expect(rows[0]!.getAttribute("title")).toContain(PROPOSED.scope.locator);
     expect(rows[0]!.getAttribute("aria-label")).toContain("trough");
-    expect(rows[1]!.getAttribute("data-episode-open")).toBe("false");
-    expect(rows[1]!.textContent).toContain("2026-08-04");
-    expect(card.querySelector("[data-episodes-count]")?.textContent).toBe("8");
+    /* total, open and longest_open exactly as the block discloses them */
+    expect(card.querySelector("[data-episodes-count]")?.textContent).toBe("top 10 / 11 · all recovered");
+    expect(card.querySelector("[data-open-episode]")?.getAttribute("data-open-episode")).toBe("false");
+    expect(card.querySelector("[data-open-episode]")?.getAttribute("data-longest-open")).toBe("false");
     /* typographic minus only */
     expect(card.textContent).not.toMatch(/(?<!\d)-\d/);
+  }, 20_000);
+
+  it("an open episode says open, and longest_open is disclosed (and the Behavior duration is marked open)", async () => {
+    const block = clone(PROPOSED);
+    block.drawdown_episodes.values[0] = { ...block.drawdown_episodes.values[0]!, recovery_utc_ms: null };
+    block.drawdown_episodes.open_episode_present = true;
+    block.drawdown_episodes.longest_open = true;
+    const { container } = view(block);
+    await settle(container);
+    const card = container.querySelector("[data-drawdown-episodes='ready']") as HTMLElement;
+    const rows = [...card.querySelectorAll("tbody tr")] as HTMLElement[];
+    expect(rows[0]!.getAttribute("data-episode-open")).toBe("true");
+    expect(rows[0]!.textContent).toContain("open");
+    expect(rows[0]!.getAttribute("title")).toContain("recovery open at the end of the scope");
+    expect(rows[1]!.getAttribute("data-episode-open")).toBe("false");
+    expect(card.querySelector("[data-episodes-count]")?.textContent).toBe("top 10 / 11 · open · longest");
+    expect(card.querySelector("[data-open-episode]")?.getAttribute("data-longest-open")).toBe("true");
+    expect(container.querySelector("[data-behavior-tile='drawdown duration']")?.textContent).toContain("open");
   }, 20_000);
 
   it("Drawdown episodes says top n / total when the server has more than it sent", async () => {
@@ -243,12 +268,12 @@ describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
     block.drawdown_episodes.total = 37;
     const { container } = view(block);
     await settle(container);
-    expect(container.querySelector("[data-episodes-count]")?.textContent).toBe("top 8 / 37");
+    expect(container.querySelector("[data-episodes-count]")?.textContent).toBe("top 10 / 37 · all recovered");
   }, 20_000);
 
   it("a block whose episodes are NOT_PUBLISHED shows one typed line, not an empty frame", async () => {
     const block = clone(PROPOSED);
-    block.drawdown_episodes = { state: "NOT_PUBLISHED", reason_code: "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED", origin: "PORTAL_DERIVED", total: 0, values: [] };
+    block.drawdown_episodes = { state: "NOT_PUBLISHED", reason_code: "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED", origin: "PORTAL_DERIVED", total: 0, open_episode_present: false, longest_open: false, values: [] };
     const { container } = view(block);
     await settle(container);
     const line = container.querySelector("[data-drawdown-episodes='absent']") as HTMLElement;
@@ -262,10 +287,10 @@ describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
     const { container } = view(clone(PROPOSED));
     await settle(container);
     const title = (segment: string) => container.querySelector(`[data-window-switcher] [data-segment='${segment}']`)?.getAttribute("title") ?? "";
-    expect(title("IS")).toContain("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT");
+    expect(title("IS")).toContain("RETAINED_NO_IN_SAMPLE_ACCOUNT_PAYLOAD");
     expect(title("IS")).toContain("not published");
-    expect(title("Holdout Live")).toContain("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
-    expect(title("Holdout Live")).toContain("not applicable");
+    expect(title("Holdout Live")).toContain("RETAINED_NO_HOLDOUT_ACCOUNT_PAYLOAD");
+    expect(title("Holdout Live")).toContain("not published");
     expect(title("OOS")).not.toContain("not published");
   }, 20_000);
 
@@ -274,21 +299,22 @@ describe("S04 · enrich_analysis — value path (proposed fixture)", () => {
     const { container } = view(clone(PROPOSED), {}, "/?window=holdout");
     await waitFor(() => expect(container.querySelector("[data-window-absent='holdout']")).toBeTruthy());
     const absent = container.querySelector("[data-window-absent='holdout'] [data-withheld]") as HTMLElement;
-    expect(absent.getAttribute("data-withheld")).toBe("NOT_APPLICABLE");
-    expect(absent.getAttribute("data-reason-code")).toBe("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
+    expect(absent.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
+    expect(absent.getAttribute("data-reason-code")).toBe("RETAINED_NO_HOLDOUT_ACCOUNT_PAYLOAD");
     await settle(container);
   }, 20_000);
 
-  it("a monthly block that is not available falls back to the series endpoint (and its own absence)", async () => {
+  it("a monthly block the service did not publish is a typed absence with ITS reason, and no series is asked", async () => {
     const ensureRetainedKind = vi.fn();
     const block = clone(PROPOSED);
-    block.monthly_returns = { state: "NOT_PUBLISHED", reason_code: "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED", origin: "PORTAL_DERIVED", includes_partial_months: false, values: [] };
+    block.monthly_returns = { ...block.monthly_returns, state: "NOT_PUBLISHED", reason_code: "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED", values: [] };
     const { container } = view(block, { ensureRetainedKind });
     await settle(container);
     const monthly = container.querySelector("[data-series-panel='MONTHLY_RETURNS']") as HTMLElement;
     expect(monthly.querySelector("[data-enriched-chip]")).toBeNull();
-    expect(monthly.textContent).toContain("monthly returns — stitched OOS");
     expect(monthly.querySelector("[data-month]")).toBeNull();
+    expect(monthly.querySelector("[data-withheld]")?.getAttribute("data-reason-code")).toBe("AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED");
+    expect(ensureRetainedKind).not.toHaveBeenCalledWith("MONTHLY_RETURNS");
     /* the distribution is still the block's */
     expect(container.querySelector("[data-series-panel='RETURN_DISTRIBUTION'] [data-enriched-chip]")).toBeTruthy();
   }, 20_000);
@@ -328,18 +354,11 @@ describe("S04 · enrich_analysis — absence and refusal", () => {
     expect(container.querySelector("[data-metric-value='OOS_SHARPE']")?.getAttribute("data-exact") ?? null).not.toBe(PROPOSED.facts.metrics.sharpe.value);
   }, 20_000);
 
-  it("without a benchmark curve the figure keeps its typed line and the block's chip", async () => {
-    const block = clone(PROPOSED);
-    block.curves.benchmark_rebased_100 = [];
-    block.facts.metrics.benchmark_return_fraction = {
-      ...block.facts.metrics.benchmark_return_fraction,
-      state: "NOT_PUBLISHED",
-      reason_code: "P08_BENCHMARK_NOT_RETAINED",
-      value: null,
-    };
+  it("without a benchmark curve (canonical no-benchmark) the figure keeps its typed line and the block's chip", async () => {
+    const block = noBenchmark();
     const { container } = view(block);
     await settle(container);
     const line = container.querySelector("[data-benchmark-curve-absent] [data-withheld]") as HTMLElement;
-    expect(line.getAttribute("data-reason-code")).toBe("P08_BENCHMARK_NOT_RETAINED");
+    expect(line.getAttribute("data-reason-code")).toBe(block.facts.metrics.benchmark_return_fraction.reason_code);
   }, 20_000);
 });

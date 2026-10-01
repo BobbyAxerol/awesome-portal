@@ -40,6 +40,7 @@ import {
   STAGE_LABEL,
   coreFailed,
   coreV2,
+  enrichedOfReport,
   exportDownloadHref,
   exportPending,
   factReason,
@@ -61,6 +62,7 @@ import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
 import { FailedSheet, FinalAuditBlock } from "./ReportFailedSheet";
+import { ALL_TIME_CSS, AllTimeSupplement } from "./ReportAllTime";
 import { ShortId } from "./ShortId";
 
 /* --------------------------------------------------------------- verbatim */
@@ -130,6 +132,7 @@ export const REPORT_PANELS = [
   "stages",
   "artifacts",
   "warnings",
+  "all-time",
   "promotion",
   "provenance",
   "footer",
@@ -1506,6 +1509,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
   return (
     <div className="rr-page" data-screen="run-report" data-run={runId} data-report-state={state.state} data-report-revision={report?.report_revision ?? ""}>
       <style>{SHEET_CSS}</style>
+      <style>{ALL_TIME_CSS}</style>
       <NoPrintBar runId={runId} cursor={cursor} report={report} exporter={exporter} />
       <article className="rr-sheet" aria-label="Run report sheet">
         <Header runId={runId} report={report} phase={state.state === "loading" ? "loading" : "not-read"} />
@@ -1528,6 +1532,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
             </div>
             {coreV2(core)?.final_audit ? <FinalAuditBlock audit={coreV2(core)!.final_audit!} /> : null}
             <Warnings core={core} />
+            <AllTimeSupplement read={enrichedOfReport(report)} />
             <div className="rr-pp rr-keep" data-promotion-provenance>
               <Promotion core={core} runId={runId} />
               <Provenance core={core} runId={runId} report={report} />

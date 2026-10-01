@@ -150,10 +150,10 @@ export const runLibraryApi = {
  * ---------------------------------------------------------------------- */
 
 /**
- * The proposed `analytics_all_time` block of a Library item
- * (`research.enriched-analysis.v1` `library_summary`). The backend does not
- * serve it yet and the generated contract does not declare it, so the item is
- * read through a guard: nothing here is trusted until it has the shape.
+ * The `analytics_all_time` block of a Library item (the generated
+ * `EnrichedAnalysisLibrarySummary`, = `library_summary` of the enrichment).
+ * It is optional (an old seal has none), so the item is read through a guard:
+ * nothing here is trusted until it has the canonical shape.
  */
 export interface AllTimeFact {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
@@ -162,6 +162,10 @@ export interface AllTimeFact {
 }
 export interface AllTimeSummary {
   label: string;
+  /** FULL_RETAINED_OOS, or SAMPLED_RETAINED_EQUITY (a sampled curve, not a full daily ledger). */
+  coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY";
+  source_observation_count: number;
+  input_digest: string;
   state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
   reason_code: string | null;
   sparkline: readonly { at_utc_ms: number; value: string }[];
@@ -195,7 +199,7 @@ function stringOrNull(value: unknown): string | null | undefined {
 }
 
 export function readAllTime(item: RunLibraryItem): AllTimeRead {
-  const raw = (item as unknown as { analytics_all_time?: unknown }).analytics_all_time;
+  const raw: unknown = item.analytics_all_time;
   if (raw === undefined || raw === null) return { kind: "absent" };
   if (!isRecord(raw)) return { kind: "refused", why: "the block is not an object" };
   if (raw.basis !== "ALL_TIME") {
@@ -208,6 +212,14 @@ export function readAllTime(item: RunLibraryItem): AllTimeRead {
   if (typeof state !== "string" || !FACT_STATES.includes(state)) {
     return { kind: "refused", why: "the block has no state" };
   }
+  if (raw.sampling !== "EXTREMA_BUCKET_V1") return { kind: "refused", why: "the block's sampling is not the contract's" };
+  if (raw.coverage !== "FULL_RETAINED_OOS" && raw.coverage !== "SAMPLED_RETAINED_EQUITY") {
+    return { kind: "refused", why: "the block declares no coverage" };
+  }
+  if (typeof raw.source_observation_count !== "number" || !Number.isInteger(raw.source_observation_count) || raw.source_observation_count < 0) {
+    return { kind: "refused", why: "the block's source count is not an integer" };
+  }
+  if (typeof raw.input_digest !== "string" || raw.input_digest === "") return { kind: "refused", why: "the block has no input digest" };
   const reason = stringOrNull(raw.reason_code);
   const ret = stringOrNull(raw.return_fraction);
   const drawdown = stringOrNull(raw.max_drawdown_fraction);
@@ -241,6 +253,9 @@ export function readAllTime(item: RunLibraryItem): AllTimeRead {
     kind: "summary",
     summary: {
       label: typeof raw.label !== "string" ? "all time" : raw.label,
+      coverage: raw.coverage,
+      source_observation_count: raw.source_observation_count,
+      input_digest: raw.input_digest,
       state: state as AllTimeSummary["state"],
       reason_code: reason,
       sparkline: points as AllTimeSummary["sparkline"],

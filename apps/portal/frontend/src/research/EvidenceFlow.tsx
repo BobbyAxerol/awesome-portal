@@ -79,6 +79,7 @@ import {
   EnrichedRefusedLine,
   enrichedAsCore,
   enrichedDistribution,
+  enrichedAbsence,
   enrichedMonthly,
   underwaterPoints,
   type EnrichedMonthPoint,
@@ -3484,21 +3485,27 @@ function SummaryTab({
   );
   /* enrich_analysis: the all-time block, read once per response and already guarded (basis, rolling, shape).
      A panel it can fill is drawn from it; every other panel keeps today's source and its typed absence. */
-  const enrichedRead = enrichedOf(retained);
+  const enrichedRead = enrichedOf(retained ?? hub);
   const enriched = enrichedBlock(enrichedRead);
   const enrichedSeries = new Map<SeriesKind, EvidenceSeries>();
+  const enrichedAbsent = new Map<SeriesKind, Availability>();
   if (enriched !== null) {
     const monthly = enrichedMonthly(enriched);
     const distribution = enrichedDistribution(enriched);
     if (monthly !== null) enrichedSeries.set("MONTHLY_RETURNS", monthly);
     if (distribution !== null) enrichedSeries.set("RETURN_DISTRIBUTION", distribution);
+    /* A block the service served without values answers with ITS typed absence and reason, not another route's. */
+    for (const kind of ["MONTHLY_RETURNS", "RETURN_DISTRIBUTION"] as const) {
+      const absence = enrichedAbsence(enriched, kind);
+      if (absence !== null) enrichedAbsent.set(kind, absence as Availability);
+    }
   }
   /* F6: `summary_analytics_v2.distributions` answers before the series endpoint, after enrich_analysis. AVAILABLE draws
      the same panels; NOT_APPLICABLE is the typed absence with the server's reason code (no request is made). */
   const companionSeries = new Map<SeriesKind, EvidenceSeries>();
   const companionAbsent = new Map<SeriesKind, Availability>();
   for (const kind of ["MONTHLY_RETURNS", "RETURN_DISTRIBUTION"] as const) {
-    if (enrichedSeries.has(kind) || retained === null) continue;
+    if (enrichedSeries.has(kind) || enrichedAbsent.has(kind) || retained === null) continue;
     const read = companionRead(v2Of(retained, hub), kind, runId);
     if (read?.kind === "series") companionSeries.set(kind, read.series);
     else if (read?.kind === "absent") companionAbsent.set(kind, { state: read.state, reason_code: read.reason_code } as Availability);
@@ -3506,15 +3513,15 @@ function SummaryTab({
   const linkFor = (kind: SeriesKind) =>
     enrichedSeries.has(kind) || companionSeries.has(kind)
       ? ({ kind, availability: { state: "AVAILABLE", reason_code: null }, href: null } as unknown as EvidenceHub["series"][number])
-      : companionAbsent.has(kind)
-        ? ({ kind, availability: companionAbsent.get(kind), href: null } as unknown as EvidenceHub["series"][number])
+      : enrichedAbsent.has(kind) || companionAbsent.has(kind)
+        ? ({ kind, availability: enrichedAbsent.get(kind) ?? companionAbsent.get(kind), href: null } as unknown as EvidenceHub["series"][number])
         : laneHub.series.find((entry) => entry.kind === kind);
   const slotFor = (kind: SeriesKind): SeriesSlot | undefined => {
     const fromBlock = enrichedSeries.get(kind) ?? companionSeries.get(kind);
     return fromBlock ? { state: "ready", series: fromBlock } : laneSeries.get(kind);
   };
   const needFor = (kind: SeriesKind) => {
-    if (!enrichedSeries.has(kind) && !companionSeries.has(kind) && !companionAbsent.has(kind)) laneEnsure(kind);
+    if (!enrichedSeries.has(kind) && !enrichedAbsent.has(kind) && !companionSeries.has(kind) && !companionAbsent.has(kind)) laneEnsure(kind);
   };
   const allTimeTitle = (kind: SeriesKind, derivedWords: string, legacyWords: string) => (loaded: EvidenceSeries | null) =>
     enrichedSeries.has(kind) || (loaded !== null && derivationOf(loaded) !== null) ? derivedWords : legacyWords;

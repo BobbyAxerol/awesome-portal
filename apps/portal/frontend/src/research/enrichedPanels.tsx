@@ -28,8 +28,8 @@ export function enrichedAsCore(block: EnrichedAnalysis): V2Core {
     input_digest: block.input_digest,
     scope_locator: block.scope.locator,
     benchmark_locator: block.scope.benchmark_locator,
-    /* The block does not say whether the longest drawdown recovered; no "open" mark is invented. */
-    drawdown_recovered: null,
+    /* The block discloses `longest_open`; with no episodes published there is nothing to say and no mark is drawn. */
+    drawdown_recovered: block.drawdown_episodes.state === "AVAILABLE" ? !block.drawdown_episodes.longest_open : null,
     metrics: block.facts.metrics,
     behaviour: block.facts.behaviour,
     strategy_curve: block.curves.strategy_rebased_100,
@@ -81,17 +81,44 @@ export function enrichedDistribution(block: EnrichedAnalysis): EvidenceSeries | 
     lower_inclusive: bucket.lower_inclusive,
     upper: bucket.upper,
     upper_inclusive: bucket.upper_inclusive,
+    /* The block's counts are integers; the shared chart reads the legacy string form, so only the type is adapted here. */
     count: String(bucket.count),
   }));
   return seriesFrame(block, "RETURN_DISTRIBUTION", values.length, d.observation_count, values);
+}
+
+/** The typed absence of a block the service served without values: its state and its own reason, never the series route's. */
+export function enrichedAbsence(block: EnrichedAnalysis, kind: "MONTHLY_RETURNS" | "RETURN_DISTRIBUTION"): { state: "NOT_PUBLISHED" | "NOT_APPLICABLE"; reason_code: string | null } | null {
+  const head = kind === "MONTHLY_RETURNS" ? block.monthly_returns : block.return_distribution;
+  if (head.state === "AVAILABLE") return null;
+  return { state: head.state, reason_code: head.reason_code };
+}
+
+/** Sampled coverage: not a complete daily ledger. Drawn only when the block declares it. */
+export function SampledChip({ block }: { block: EnrichedAnalysis }) {
+  if (block.scope.coverage !== "SAMPLED_RETAINED_EQUITY") return null;
+  const title = `sampled · ${formatMetric(block.scope.observation_count, "count")} of ${formatMetric(block.scope.source_observation_count, "count")} source observations · not a full daily ledger`;
+  return (
+    <span
+      className="mono rounded-[3px] border px-1.5 text-[9.5px]"
+      style={{ color: "var(--accent-2)", borderColor: "var(--line-soft)" }}
+      data-coverage-chip={block.scope.coverage}
+      title={title}
+      aria-label={title}
+    >
+      sampled
+    </span>
+  );
 }
 
 /** The provenance chip every panel drawn from the block carries; the tooltip names the service's inputs. */
 export function EnrichedChip({ block, extra }: { block: EnrichedAnalysis; extra?: string }) {
   const tables = block.source_tables.map((table) => `${table.name} · ${formatMetric(table.row_count, "count")} rows · ${shortDigest(table.digest)}`);
   return (
+    <span className="ml-auto inline-flex items-center gap-1">
+    <SampledChip block={block} />
     <span
-      className="mono ml-auto rounded-[3px] border px-1.5 text-[9.5px]"
+      className="mono rounded-[3px] border px-1.5 text-[9.5px]"
       style={{ color: "var(--ink-faint)", borderColor: "var(--line-soft)" }}
       data-enriched-chip
       title={[
@@ -105,6 +132,7 @@ export function EnrichedChip({ block, extra }: { block: EnrichedAnalysis; extra?
         .join("\n")}
     >
       {ENRICHED_CHIP}
+    </span>
     </span>
   );
 }
@@ -192,6 +220,15 @@ export function DrawdownEpisodes({ block }: { block: EnrichedAnalysis }) {
         </h3>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-episodes-count title={`${ENRICHED_CHIP} · ${head.origin.toLowerCase().replace(/_/g, "-")}\n${block.scope.locator}`}>
           {shown < head.total ? `top ${shown} / ${formatMetric(head.total, "count")}` : formatMetric(head.total, "count")}
+          {" · "}
+          <span
+            data-open-episode={head.open_episode_present ? "true" : "false"}
+            data-longest-open={head.longest_open ? "true" : "false"}
+            style={head.open_episode_present ? { color: "var(--accent-2)" } : undefined}
+            title={head.open_episode_present ? "An episode is still below its prior peak at the end of the scope." : "Every episode recovered by the end of the scope."}
+          >
+            {head.open_episode_present ? (head.longest_open ? "open · longest" : "open") : "all recovered"}
+          </span>
         </span>
       </div>
       <table className="w-full border-collapse" data-episodes-table>
