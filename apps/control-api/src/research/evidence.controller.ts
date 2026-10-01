@@ -5,6 +5,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
+import type { PortalUser } from "../domain";
 import { sendRevalidatable } from "./etag";
 import {
   ResearchEvidenceReadQuerySchema,
@@ -15,7 +16,7 @@ import { ResearchEvidenceError } from "./evidence.error";
 import { ResearchEvidenceService } from "./evidence.service";
 
 interface EvidenceRequest extends FastifyRequest {
-  portalUser: { userId: string };
+  portalUser: PortalUser;
   portalWorkspaceId: string;
 }
 @UseGuards(SessionGuard)
@@ -38,7 +39,7 @@ export class ResearchEvidenceController {
     if (!query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
     const body = await this.withAbort(request, (signal) => this.service.hub(
-      { workspaceId, actorUserId: request.portalUser.userId }, runId, signal,
+      { workspaceId, actorUserId: request.portalUser.userId }, runId, signal, request.portalUser,
     ));
     return this.conditional(reply, request, body);
   }

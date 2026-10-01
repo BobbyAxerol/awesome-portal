@@ -6700,3 +6700,15 @@ an extra HMD call. Historical manifests with no fold plan answer
 `NOT_PUBLISHED`; malformed or mismatched immutable topology fails closed.
 Claude owns the S03 Gantt binding and visual/browser acceptance.
 [B3 receipt](./research_loop/evidence/P11/CG-FG-S03-01_planned_folds_2026-10-01.md)
+
+### B3 CG-FG-S03-02 / S04-01 — shared methodology claim strip, 2026-10-01
+
+P11 Progress now projects four mode×schedule claims from the run-pinned current
+Atlas as `FORECAST`; only the matching immutable QuantBT WFO seal can change
+a particular fact to `ISSUED`. The same projector gives P13 Evidence Hub all
+seven S04 claim-strip cells, with honest `NOT_PUBLISHED` / `NOT_APPLICABLE`
+for P04 holdout/runtime gaps. The P11 singular claim and certificate are not
+parsed or multiplied into unsupported source claims. Both generated contracts
+are additive for a bounded rollout. Claude owns FE binding and browser/HiFi
+acceptance; no frontend file or runtime service was changed in this slice.
+[B3 receipt](./research_loop/evidence/P13/CG-FG-S03-02_S04-01_claim_strip_2026-10-01.md)

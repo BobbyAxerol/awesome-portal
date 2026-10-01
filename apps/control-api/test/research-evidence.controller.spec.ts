@@ -29,7 +29,7 @@ describe("P13 Evidence Flow same-origin boundary", () => {
     const hubReply = reply();
     await controller.hub(request as never, hubReply as never, "run_p13", {});
     expect(service.hub).toHaveBeenCalledWith(
-      { workspaceId: "p13-workspace", actorUserId: "p13-user" }, "run_p13", expect.any(AbortSignal),
+      { workspaceId: "p13-workspace", actorUserId: "p13-user" }, "run_p13", expect.any(AbortSignal), request.portalUser,
     );
     expect(hubReply.header).toHaveBeenCalledWith("etag", `W/"p13h1_${"a".repeat(64)}"`);
 

@@ -382,7 +382,44 @@ export interface components {
             missing_bar_count: number | null;
             columns: string[];
         };
+        MethodologyClaim: {
+            /** @enum {unknown} */
+            kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
+            /** @constant */
+            state: "FORECAST";
+            text: string;
+            reason_code: null;
+            /** @constant */
+            source: "ATLAS_MODE_SCHEDULE";
+        } | {
+            /** @enum {unknown} */
+            kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
+            /** @constant */
+            state: "ISSUED";
+            text: string;
+            reason_code: null;
+            /** @constant */
+            source: "SEALED_QUANTBT_CLAIM";
+        } | {
+            /** @enum {unknown} */
+            kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            text: null;
+            reason_code: string;
+            source: null;
+        } | {
+            /** @enum {unknown} */
+            kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
+            /** @constant */
+            state: "NOT_APPLICABLE";
+            text: null;
+            reason_code: string;
+            source: null;
+        };
         EvidenceHub: {
+            /** @description Seven S04 claim-strip facts; optional during additive rollout. ISSUED requires a sealed QuantBT source fact. */
+            claims?: components["schemas"]["MethodologyClaim"][];
             /** @constant */
             schema_version: "research.evidence-hub.v1";
             summary_analytics?: components["schemas"]["RetainedAnalytics"];

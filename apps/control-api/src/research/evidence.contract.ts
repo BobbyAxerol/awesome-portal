@@ -11,6 +11,7 @@ import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 
+import { MethodologyClaimSchema } from "./methodology-claims";
 export const ResearchEvidenceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
@@ -550,6 +551,7 @@ export const ResearchEvidenceHubResponseSchema = z.object({
   lifecycle: LifecycleSchema.optional(),
   revision_binding: RevisionBindingSchema.optional(),
   claim: ClaimSchema,
+  claims: z.array(MethodologyClaimSchema).length(7).optional(),
   stages: z.array(StageSummarySchema).length(5),
   series: z.array(z.object({
     kind: ResearchEvidenceSeriesKindSchema,

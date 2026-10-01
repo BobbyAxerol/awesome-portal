@@ -1,13 +1,15 @@
 /** P13 Evidence Flow Hub projection builder and same-origin reader. */
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema, type ResearchRetainedAnalytics } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 
 import { ControlApiConfig } from "../config";
+import type { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
+import { ResearchMethodologyClaimsService, type MethodologyClaim } from "./methodology-claims";
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 import {
   ResearchEvidenceCandleOverviewSourceSchema,
@@ -349,6 +351,7 @@ export class ResearchEvidenceService {
   constructor(
     private readonly repository: ResearchEvidenceRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() private readonly methodologyClaims?: ResearchMethodologyClaimsService,
   ) {}
 
   /** Materialize only the source document bound to a terminal P11 event. */
@@ -371,13 +374,20 @@ export class ResearchEvidenceService {
     await this.repository.persist(scope, write);
   }
 
-  async hub(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchEvidenceHubResponse> {
+  async hub(scope: ResearchScope, runId: string, signal?: AbortSignal, user?: PortalUser): Promise<ResearchEvidenceHubResponse> {
     this.requireEnabled();
     const row = await this.repository.hub(scope, runId, signal);
     if (!row) {
       throw new ResearchEvidenceError("RESEARCH_EVIDENCE_NOT_FOUND", "Research run was not found.", 404);
     }
-    const response = this.mapHub(row);
+    const requested = ResearchRequestedSpecSchema.safeParse(row.requestedSpec);
+    const claims = user && this.methodologyClaims ? await this.methodologyClaims.read(user, scope, runId, {
+      releaseId: requested.success ? requested.data.client.engine_release_id : null,
+      mode: requested.success ? requested.data.optimization_mode : null,
+      schedule: requested.success ? requested.data.optimization_schedule : null,
+      routeId: requested.success ? requested.data.execution_route : null,
+    }, row.runState === "READY" || row.jobState === "SUCCEEDED", "EVIDENCE") : undefined;
+    const response = this.mapHub(row, claims);
     const parsed = ResearchEvidenceHubResponseSchema.safeParse(response);
     if (!parsed.success) {
       throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence Hub response is incompatible.", 503);
@@ -643,7 +653,7 @@ export class ResearchEvidenceService {
     return { months: [leading.point, ...months], note: undefined };
   }
 
-  private mapHub(row: EvidenceHubRow): unknown {
+  private mapHub(row: EvidenceHubRow, claims?: MethodologyClaim[]): unknown {
     const fallback = this.rowAvailability(row);
     const projection = row.projection ? parseProjection(row.projection) : null;
     if (row.projection && !projection) {
@@ -761,6 +771,7 @@ export class ResearchEvidenceService {
       series,
       warnings,
       source_absences: sourceAbsences,
+      ...(claims ? { claims } : {}),
     };
     // `as_of_utc_ms` is a transaction-observation timestamp, not a document
     // fact.  A weak validator may omit it while still invalidating whenever

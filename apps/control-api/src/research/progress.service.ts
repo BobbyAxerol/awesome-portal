@@ -1,6 +1,6 @@
 /** P11 durable Research Progress BFF/service authority. */
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import { ControlApiConfig } from "../config";
 import type { PortalUser } from "../domain";
@@ -29,6 +29,7 @@ import { ResearchMetadataRepository } from "./repository";
 import { ResearchEvidenceService } from "./evidence.service";
 import { ResearchSplitService } from "./split.service";
 import { ResearchReportService } from "./report.service";
+import { ResearchMethodologyClaimsService, type MethodologyClaim } from "./methodology-claims";
 import {
   DELTA_WFO_PREVIEW_LONG_LIMITS,
   DELTA_WFO_PROFILE,
@@ -115,6 +116,8 @@ export interface ResearchProgressReadResponse {
   schema_version: "research.progress-read.v1";
   run_id: string;
   run: ResearchProgressRunIdentity | null;
+  /** Four run-scoped methodology facts. Optional on older/SSE read frames. */
+  claims?: MethodologyClaim[];
   queue: {
     queue_class: "INTERACTIVE" | "HEAVY" | "BACKGROUND";
     queued_at_utc_ms: number;
@@ -233,6 +236,7 @@ export class ResearchProgressService {
     private readonly split: ResearchSplitService,
     private readonly reports: ResearchReportService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() private readonly methodologyClaims?: ResearchMethodologyClaimsService,
   ) {}
 
   async ingest(input: ResearchProgressIngress): Promise<{ accepted: true; latest_sequence: number }> {
@@ -307,7 +311,14 @@ export class ResearchProgressService {
     this.requireEnabled();
     await this.reconcileBestEffort(scope);
     const current = await this.progress.readRun(scope, runId);
-    return this.readResponse(user, current);
+    const response = this.readResponse(user, current);
+    const identity = current.identity;
+    if (this.methodologyClaims) {
+      response.claims = await this.methodologyClaims.read(user, scope, runId, {
+        releaseId: identity?.engineReleaseId ?? null, mode: identity?.mode ?? null, schedule: identity?.schedule ?? null,
+      }, response.current.effective_status === "COMPLETED");
+    }
+    return response;
   }
 
   /**

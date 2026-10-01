@@ -117,6 +117,7 @@ import { ResearchPreflightSnapshotClient } from "./research/preflight.client";
 import { ResearchPreflightService } from "./research/preflight.service";
 import { ResearchFoundationController } from "./research/foundation.controller";
 import { ResearchFoundationAtlasClient } from "./research/foundation.client";
+import { ResearchMethodologyClaimsService } from "./research/methodology-claims";
 import { ResearchFoundationService } from "./research/foundation.service";
 import { ResearchRunAdmissionService } from "./research/run-admission.service";
 import { ResearchRunCreateController } from "./research/run-create.controller";
@@ -335,6 +336,7 @@ export class AppModule {
         ResearchReleaseCandidatePublicationRepository,
         ResearchReleaseCandidatePublicationService,
         ResearchFoundationAtlasClient,
+        ResearchMethodologyClaimsService,
         ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to
         // NATS, schedule a child or mount a route at bootstrap; P10 supplies

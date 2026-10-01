@@ -632,7 +632,44 @@ export interface components {
              */
             origin: "SOURCE" | "CONTROL";
         };
+        MethodologyClaim: {
+            /** @enum {unknown} */
+            kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
+            /** @constant */
+            state: "FORECAST";
+            text: string;
+            reason_code: null;
+            /** @constant */
+            source: "ATLAS_MODE_SCHEDULE";
+        } | {
+            /** @enum {unknown} */
+            kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
+            /** @constant */
+            state: "ISSUED";
+            text: string;
+            reason_code: null;
+            /** @constant */
+            source: "SEALED_QUANTBT_CLAIM";
+        } | {
+            /** @enum {unknown} */
+            kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            text: null;
+            reason_code: string;
+            source: null;
+        } | {
+            /** @enum {unknown} */
+            kind: "VALIDATION" | "CHRONOLOGY" | "CAUSALITY" | "OOS_SELECTION" | "HOLDOUT_STATE" | "EXECUTION_CONTRACT" | "RUNTIME_AUTHORITY";
+            /** @constant */
+            state: "NOT_APPLICABLE";
+            text: null;
+            reason_code: string;
+            source: null;
+        };
         ProgressRead: {
+            /** @description Four run-scoped methodology facts; optional during additive rollout and on SSE read frames. ISSUED requires a sealed QuantBT source fact. */
+            claims?: components["schemas"]["MethodologyClaim"][];
             /** @constant */
             schema_version: "research.progress-read.v1";
             run_id: components["schemas"]["RunId"];
