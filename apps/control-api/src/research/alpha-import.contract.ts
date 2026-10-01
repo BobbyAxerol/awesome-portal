@@ -42,6 +42,7 @@ export const ResearchAlphaActivateRequestSchema = z.object({
 export const ResearchAlphaListQuerySchema = z.object({
   workspace_id: WorkspaceIdSchema,
   alpha_id: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/).optional(),
+  cursor: z.string().min(1).max(4096).optional(),
 }).strict();
 
 export const ResearchAlphaAnalysisResponseSchema = z.object({
@@ -222,4 +223,6 @@ export interface ResearchAlphaActivateResponse {
 export interface ResearchAlphaRegistryListResponse {
   schema_version: "research.alpha-registry.v1";
   entries: readonly ResearchAlphaRegistryEntry[];
+  total: number;
+  next_cursor: string | null;
 }

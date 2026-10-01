@@ -18,7 +18,8 @@ const allDir = join(__dirname, "..", "migrations");
 const urlFor = (name: string) => {
   const url = new URL(baseUrl); url.pathname = "/" + name; return url.toString();
 };
-const oldNames = readdirSync(allDir).filter(name => name.endsWith(".sql") && name < "1723680000070").sort();
+const migrationNames = readdirSync(allDir).filter(name => name.endsWith(".sql")).sort();
+const oldNames = migrationNames.filter(name => name < "1723680000070");
 let database: Pool;
 let oldLedger: string;
 let sentinels: string;
@@ -75,13 +76,13 @@ describe("P23 Research preview forward upgrade without ledger/data/auth rewrite"
     finally { await admin.end(); rmSync(oldDir, { recursive: true, force: true }); }
   });
 
-  it("upgrades actual preview 067 through 079, preserving every historical ledger row and data/auth byte", async () => {
+  it("upgrades actual preview 067 through the current migration chain, preserving every historical ledger row and data/auth byte", async () => {
     expect(oldNames.at(-1)).toBe("1723680000067_research-journey-descriptor-v3.sql");
     await runControlApiMigrations(urlFor(databaseName), allDir, () => {});
     expect(await ledger(oldNames.map(name => name.slice(0,-4)))).toBe(oldLedger);
     expect(await sentinelDigest()).toBe(sentinels);
-    const last = await database.query(`SELECT name FROM pgmigrations ORDER BY run_on DESC,id DESC LIMIT 1`);
-    expect(last.rows[0].name).toBe("1723680000079_research-report-materialization-retry-v1");
+    const applied = await database.query<{ name: string }>(`SELECT name FROM pgmigrations ORDER BY name`);
+    expect(applied.rows.map(row => row.name)).toEqual(migrationNames.map(name => name.slice(0, -4)));
     const journey = await database.query(`SELECT revision, content_sha256 FROM research.journey_descriptor_registry ORDER BY revision`);
     expect(journey.rows.map((row) => Number(row.revision))).toEqual([1, 2, 3, 4]);
     expect(journey.rows[3].content_sha256).toBe(
@@ -91,16 +92,17 @@ describe("P23 Research preview forward upgrade without ledger/data/auth rewrite"
       EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='research.run_evidence_projections_v1'::regclass
         AND conname='run_evidence_projections_v1_candle_overview_bound_check') AS overview,
       to_regclass('research.research_jobs_convergence_sweep_v1_idx') IS NOT NULL AS convergence,
+      to_regclass('research.research_alpha_versions_registry_keyset_idx') IS NOT NULL AS registry_keyset,
       to_regclass('research.utility_verify_slots_v1') IS NOT NULL AS utility_slots,
       has_table_privilege('portal_research_runtime','research.utility_verify_slots_v1','SELECT') AS utility_select,
       has_table_privilege('portal_research_runtime','research.utility_verify_slots_v1','INSERT') AS utility_insert,
       has_table_privilege('portal_research_runtime','research.utility_verify_slots_v1','DELETE') AS utility_delete,
       has_table_privilege('portal_research_runtime','research.utility_verify_slots_v1','UPDATE') AS utility_update`);
-    expect(shape.rows[0]).toEqual({ overview:true, convergence:true, utility_slots:true,
+    expect(shape.rows[0]).toEqual({ overview:true, convergence:true, registry_keyset:true, utility_slots:true,
       utility_select:true, utility_insert:true, utility_delete:true, utility_update:false });
   }, 120_000);
 
-  it("restarts the already-current 079 migrator without another ledger row or data/auth change", async () => {
+  it("restarts the already-current migrator without another ledger row or data/auth change", async () => {
     const before = await ledger();
     await runControlApiMigrations(urlFor(databaseName), allDir, () => {});
     expect(await ledger()).toBe(before);

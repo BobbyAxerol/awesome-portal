@@ -2,6 +2,7 @@ export class ResearchAlphaImportError extends Error {
   constructor(
     readonly code:
       | "RESEARCH_ALPHA_IMPORT_INVALID"
+      | "RESEARCH_ALPHA_REGISTRY_CURSOR_INVALID"
       | "RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE"
       | "RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED"
       | "RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH"

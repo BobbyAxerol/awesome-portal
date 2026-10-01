@@ -235,6 +235,8 @@ export interface components {
             /** @constant */
             schema_version: "research.alpha-registry.v1";
             entries: components["schemas"]["RegistryEntry"][];
+            total: number;
+            next_cursor: string | null;
         };
         MirrorField: {
             field: string;
@@ -366,6 +368,7 @@ export interface components {
         Csrf: string;
         WorkspaceId: string;
         AlphaIdOptional: components["schemas"]["AlphaId"];
+        RegistryCursor: string;
         AlphaVersionId: components["schemas"]["OpaqueId"];
     };
     requestBodies: never;
@@ -379,6 +382,7 @@ export interface operations {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
                 alpha_id?: components["parameters"]["AlphaIdOptional"];
+                cursor?: components["parameters"]["RegistryCursor"];
             };
             header?: never;
             path?: never;

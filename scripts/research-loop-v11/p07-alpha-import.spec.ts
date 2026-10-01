@@ -138,6 +138,9 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
       {
         RESEARCH_ALPHA_IMPORT_TTL_SECONDS: 600,
         RESEARCH_ALPHA_IMPORT_MAXIMUM_ACTIVE_SOURCES_PER_ACTOR: 3,
+        QUERY_CURSOR_ACTIVE_KEY_ID: "p07-key",
+        QUERY_CURSOR_KEYS_JSON: JSON.stringify({ "p07-key": "p07-test-signing-key".repeat(3) }),
+        QUERY_CURSOR_TTL_SECONDS: 900,
       } as ControlApiConfig,
     );
   }, 60_000);
@@ -251,6 +254,7 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     } as never, {});
     expect(listEnvelope).toMatchObject({
       schema_version: "research.alpha-registry.v1",
+      total: 1, next_cursor: null,
       entries: [{
         alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE", may_activate: true,
         declaration: { schema_version: "research.alpha-version-declaration.v1" },
@@ -267,6 +271,44 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     );
     expect(provenance.rows[0]).toMatchObject({ source_file_ref: parsed.source_file_ref, code_digest: parsed.source_digest, source_digest: parsed.source_digest, entrypoint: "generate_signals" });
   });
+
+  it("CG-FG-S14-04: exact total and opaque cursor traverse 201 same-millisecond imported versions without duplicate or filter leak", async () => {
+    await seedIdentity();
+    const { parsed } = await parseAndGate(source());
+    await pool.query(
+      `INSERT INTO research.alphas (workspace_id, alpha_id, name, owner_user_id, execution_subject_id)
+       SELECT $1, 'bulk-' || lpad(n::text, 3, '0'), 'Bulk Alpha ' || n, $2, 'p07.bulk:' || n
+         FROM generate_series(1, 201) AS n`,
+      [scopeA.workspaceId, scopeA.actorUserId],
+    );
+    await pool.query(
+      `INSERT INTO research.alpha_versions (
+         workspace_id, alpha_version_id, alpha_id, code_digest, entrypoint,
+         dependency_ref, declared_contract, source_file_ref, lifecycle_state,
+         registered_by_user_id, registered_at
+       )
+       SELECT $1, 'av_bulk_' || n || '_0_0_0', 'bulk-' || lpad(n::text, 3, '0'),
+              $2, 'generate_signals', 'quantbt==1.1.1', $3::jsonb, $4,
+              'DRAFT', $5, '2026-09-23T12:00:00Z'::timestamptz + n * interval '1 microsecond'
+         FROM generate_series(1, 201) AS n`,
+      [scopeA.workspaceId, parsed.source_digest, JSON.stringify(analysisFor(source()).declared_contract), parsed.source_file_ref, scopeA.actorUserId],
+    );
+    const first = await service.listPage(admin, scopeA);
+    expect(first.total).toBe(201);
+    expect(first.entries).toHaveLength(200);
+    expect(first.next_cursor).toMatch(/^kc1[.]/);
+    expect(first.next_cursor).not.toContain("bulk-");
+    const second = await service.listPage(admin, scopeA, undefined, first.next_cursor!);
+    expect(second).toMatchObject({ total: 201, next_cursor: null });
+    expect(second.entries).toHaveLength(1);
+    expect(new Set([...first.entries, ...second.entries].map((entry) => entry.alpha_version_id)).size).toBe(201);
+    const filtered = await service.listPage(admin, scopeA, "bulk-001");
+    expect(filtered).toMatchObject({ total: 1, next_cursor: null });
+    await expectImportError(service.listPage(admin, scopeA, "bulk-001", first.next_cursor!), "RESEARCH_ALPHA_REGISTRY_CURSOR_INVALID");
+    await expectImportError(service.listPage(admin, { ...scopeA, workspaceId: "other-workspace" }, undefined, first.next_cursor!), "RESEARCH_ALPHA_REGISTRY_CURSOR_INVALID");
+    await expectImportError(service.listPage(admin, scopeA, undefined, first.next_cursor!.slice(0, -1) + "x"), "RESEARCH_ALPHA_REGISTRY_CURSOR_INVALID");
+  });
+
 
   it("P07 caller admission is server-derived and exactly mirrors activation enforcement", async () => {
     await seedIdentity();

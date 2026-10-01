@@ -327,10 +327,12 @@
     "RegistryListResponse": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "entries"],
+      "required": ["schema_version", "entries", "total", "next_cursor"],
       "properties": {
         "schema_version": { "const": "research.alpha-registry.v1" },
-        "entries": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/RegistryEntry" } }
+        "entries": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/RegistryEntry" } },
+        "total": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "next_cursor": { "type": ["string", "null"], "minLength": 1, "maxLength": 4096 }
       }
     },
     "RegistrationResponse": {

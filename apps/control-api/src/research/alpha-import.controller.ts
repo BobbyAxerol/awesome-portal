@@ -15,7 +15,6 @@ import {
   ResearchAlphaImportParseRequestSchema,
   ResearchAlphaImportRegisterRequestSchema,
   ResearchAlphaListQuerySchema,
-  type ResearchAlphaRegistryListResponse,
 } from "./alpha-import.contract";
 import { ResearchAlphaImportError } from "./alpha-import.error";
 import { asResearchAlphaImportError, ResearchAlphaImportService } from "./alpha-import.service";
@@ -42,16 +41,12 @@ export class ResearchAlphaImportController {
     if (!query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
     try {
-      const entries = await this.service.list(
+      return await this.service.listPage(
         request.portalUser,
         { workspaceId, actorUserId: request.portalUser.userId },
         query.data.alpha_id,
+        query.data.cursor,
       );
-      const response: ResearchAlphaRegistryListResponse = {
-        schema_version: "research.alpha-registry.v1",
-        entries,
-      };
-      return response;
     } catch (error) {
       return asResearchAlphaImportError(error);
     }

@@ -6724,4 +6724,8 @@ Commit `bfee4737` closed S06-05/S06-02; commit `2d4744bc` closed S06-06/S06-01/S
 ### B3 CG-FG-S11-02 — compose-only selected-params truth, 2026-10-01
 
 P21 Screen 11 now has a typed selected trial number from the retained source (one-based display) and a typed `param_set_id` absence. It never aliases a digest or selection receipt as a param-set identity. This is additive to the composer only; local sealed packs and their digests remain immutable. Claude owns the frontend binding and browser receipt.
+
+### B3 CG-FG-S14-04 — Alpha Registry exact total and cursor, 2026-10-01
+
+P07 Registry emits exact workspace/filter `total` and a signed opaque `next_cursor` over a bounded 200-row page. Source timestamp microseconds plus `alpha_version_id` preserve order; count and page share one repeatable-read snapshot. Cross-workspace/filter or tampered cursors fail typed 400. Disposable PostgreSQL traversed 201 rows (200+1) without duplicate, 10/10; contract 6/6. Claude owns S14 binding, not a layout rewrite. [Receipt](./research_loop/evidence/P07/CG-FG-S14-04_backend_receipt_2026-10-01.md).
 [B3 receipt](./research_loop/evidence/P21/CG-FG-S11-02_backend_receipt_2026-10-01.md)

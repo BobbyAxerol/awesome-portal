@@ -127,6 +127,7 @@ interface AlphaImportRegistryRow {
   supersedes_alpha_version_id: string | null;
   supersedes_recorded: boolean;
   registered_at: Date;
+  registered_at_cursor: string;
   is_imported: boolean;
   is_current_active: boolean;
   adapter_id: string | null;
@@ -1314,10 +1315,24 @@ export class ResearchMetadataRepository {
   }
 
   /** Safe registry strip: never return raw source bytes or opaque file refs. */
-  async listImportedAlphaVersions(scope: ResearchScope, alphaId?: string): Promise<ResearchAlphaRegistryRecord[]> {
+  async listImportedAlphaVersions(
+    scope: ResearchScope, alphaId?: string,
+    boundary: { registeredAt: string; alphaVersionId: string } | null = null,
+  ): Promise<{ rows: ResearchAlphaRegistryRecord[]; total: number; hasMore: boolean }> {
     this.assertScope(scope);
     if (alphaId !== undefined) requireAlphaId(alphaId);
     return this.withScopedRead(scope, async (client) => {
+      // Count and page share this scoped REPEATABLE READ snapshot.
+      const count = await client.query<{ total: string }>(
+        `SELECT count(*)::text AS total FROM research.alpha_versions version
+          WHERE version.workspace_id = $1
+            AND ($2::text IS NULL OR version.alpha_id = $2)
+            AND (version.source_file_ref IS NOT NULL OR EXISTS (
+              SELECT 1 FROM research.execution_adapter_bindings binding
+               WHERE binding.workspace_id = version.workspace_id
+                 AND binding.alpha_version_id = version.alpha_version_id
+            ))`, [scope.workspaceId, alphaId ?? null],
+      );
       const result = await client.query<AlphaImportRegistryRow>(
         `SELECT version.alpha_id, version.alpha_version_id,
                 COALESCE('av_' || replace(version.declared_contract->>'version', '.', '_'), version.alpha_version_id) AS version_label,
@@ -1333,7 +1348,8 @@ export class ResearchMetadataRepository {
                 version.supersedes_recorded,
                 substring(COALESCE(source.source_digest, version.code_digest) FROM 1 FOR 12) AS source_digest_prefix,
                 alpha.revision AS alpha_revision,
-                version.registered_at
+                version.registered_at,
+                to_char(version.registered_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS registered_at_cursor
            FROM research.alpha_versions version
            JOIN research.alphas alpha
              ON alpha.workspace_id = version.workspace_id AND alpha.alpha_id = version.alpha_id
@@ -1356,11 +1372,13 @@ export class ResearchMetadataRepository {
               )
             )
             AND ($2::text IS NULL OR version.alpha_id = $2)
+            AND ($3::timestamptz IS NULL OR (version.registered_at, version.alpha_version_id) < ($3::timestamptz, $4::text))
           ORDER BY version.registered_at DESC, version.alpha_version_id DESC
-          LIMIT 200`,
-        [scope.workspaceId, alphaId ?? null],
+          LIMIT 201`,
+        [scope.workspaceId, alphaId ?? null, boundary?.registeredAt ?? null, boundary?.alphaVersionId ?? null],
       );
-      return result.rows.map((row) => ({
+      const hasMore = result.rows.length > 200;
+      const rows = result.rows.slice(0, 200).map((row) => ({
         alphaId: row.alpha_id,
         alphaVersionId: row.alpha_version_id,
         displayName: row.display_name,
@@ -1384,7 +1402,9 @@ export class ResearchMetadataRepository {
         sourceDigestPrefix: row.source_digest_prefix,
         alphaRevision: asNumber(row.alpha_revision),
         registeredAt: row.registered_at,
+        registeredAtCursor: row.registered_at_cursor,
       }));
+      return { rows, total: asNumber(count.rows[0]!.total), hasMore };
     });
   }
 

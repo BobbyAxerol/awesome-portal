@@ -1,7 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, querySigningKeys } from "../config";
+import { KeysetCursorCodec, queryFingerprint } from "../query";
 import { PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -14,6 +15,7 @@ import {
   type ResearchAlphaImportParseResponse,
   type ResearchAlphaImportRegisterResponse,
   type ResearchAlphaRegistryEntry,
+  type ResearchAlphaRegistryListResponse,
 } from "./alpha-import.contract";
 import {
   projectResearchAlphaVersionDeclaration,
@@ -240,9 +242,37 @@ export class ResearchAlphaImportService {
     scope: ResearchScope,
     alphaId?: string,
   ): Promise<readonly ResearchAlphaRegistryEntry[]> {
-    const rows = await this.repository.listImportedAlphaVersions(scope, alphaId);
+    return (await this.listPage(user, scope, alphaId)).entries;
+  }
+
+  async listPage(
+    user: PortalUser, scope: ResearchScope, alphaId?: string, cursor?: string,
+  ): Promise<ResearchAlphaRegistryListResponse> {
+    const resourceId = "research.alpha-registry.v1";
+    const fingerprint = queryFingerprint({
+      resourceId, limit: 200,
+      filters: alphaId ? [{ field: "alpha_id", op: "eq", value: alphaId, values: [alphaId] }] : [],
+      sort: [{ field: "registered_at", direction: "desc" }, { field: "alpha_version_id", direction: "desc" }],
+    });
+    let boundary: { registeredAt: string; alphaVersionId: string } | null = null;
+    if (cursor) {
+      try {
+        const [timestamp, versionId] = this.registryCursorCodec().decode(cursor, {
+          resourceId, workspaceId: scope.workspaceId, direction: "after", queryFingerprint: fingerprint, boundarySize: 2,
+        });
+        if (typeof timestamp !== "string" || typeof versionId !== "string"
+          || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(timestamp)
+          || !Number.isFinite(Date.parse(timestamp)) || !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/.test(versionId)) {
+          throw new Error("invalid Alpha registry boundary");
+        }
+        boundary = { registeredAt: timestamp, alphaVersionId: versionId };
+      } catch {
+        throw new ResearchAlphaImportError("RESEARCH_ALPHA_REGISTRY_CURSOR_INVALID", "Alpha registry cursor is invalid or expired for this workspace or filter.", 400);
+      }
+    }
+    const page = await this.repository.listImportedAlphaVersions(scope, alphaId, boundary);
     try {
-      return rows.map((row) => {
+      const entries: ResearchAlphaRegistryEntry[] = page.rows.map((row) => {
         const runAdmission = researchRunVersionPrecheck(user, this.config, {
           alphaId: row.alphaId,
           alphaVersionId: row.alphaVersionId,
@@ -278,6 +308,14 @@ export class ResearchAlphaImportService {
           run_admission: { may_create_run: runAdmission.may_create_run, code: runAdmission.code },
         };
       });
+      const last = page.rows[page.rows.length - 1];
+      return {
+        schema_version: "research.alpha-registry.v1", entries, total: page.total,
+        next_cursor: page.hasMore && last ? this.registryCursorCodec().encode({
+          resource_id: resourceId, workspace_id: scope.workspaceId, direction: "after",
+          query_fingerprint: fingerprint, boundary: [last.registeredAtCursor, last.alphaVersionId],
+        }) : null,
+      };
     } catch (error) {
       if (error instanceof ResearchAlphaVersionDeclarationError) {
         throw new ResearchAlphaImportError(
@@ -288,6 +326,14 @@ export class ResearchAlphaImportService {
       }
       throw error;
     }
+  }
+
+  private registryCursorCodec(): KeysetCursorCodec {
+    return new KeysetCursorCodec({
+      activeKeyId: this.config.QUERY_CURSOR_ACTIVE_KEY_ID,
+      keys: querySigningKeys(this.config),
+      ttlSeconds: this.config.QUERY_CURSOR_TTL_SECONDS,
+    });
   }
 
   private async analyzeStoredSource(

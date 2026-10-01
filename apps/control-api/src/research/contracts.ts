@@ -321,6 +321,7 @@ export interface ResearchAlphaRegistryRecord {
   sourceDigestPrefix: string;
   alphaRevision: number;
   registeredAt: Date;
+  registeredAtCursor: string;
 }
 
 export interface ResearchAttemptInput {
