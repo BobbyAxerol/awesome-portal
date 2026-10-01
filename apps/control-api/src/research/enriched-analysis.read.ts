@@ -2,6 +2,25 @@
 import type { PoolClient } from "pg";
 import { verifiedEnriched } from "./enriched-analysis.contract";
 
+/** Operator backfill uses the run's immutable producer receipt, not an expiring preflight. */
+export const ENRICHED_RETAINED_SOURCE_SQL = `
+  SELECT seal.artifact_revision, seal.retained_import_digest, seal.table_rows, seal.summary,
+         producer.legacy_request #>> '{research,requested_spec,data,timeframe}' AS timeframe
+    FROM research.current_source_seals_v1 seal
+    JOIN research.run_producers producer ON producer.workspace_id=seal.workspace_id AND producer.run_id=seal.run_id
+   WHERE seal.workspace_id=$1 AND seal.run_id=$2 ORDER BY seal.artifact_revision DESC LIMIT 1`;
+
+export const ENRICHED_FIXED_SOURCE_SQL = `
+  SELECT source.source_evidence_digest, source.source_payload, projection.projection_revision,
+         producer.legacy_request #>> '{research,requested_spec,data,timeframe}' AS timeframe
+    FROM research.run_producers producer
+    JOIN research.run_evidence_sources_v1 source ON source.workspace_id=producer.workspace_id
+      AND source.run_id=producer.run_id AND source.worker_attempt_id=producer.worker_attempt_id
+    JOIN research.run_evidence_projections_v1 projection ON projection.workspace_id=source.workspace_id
+      AND projection.run_id=source.run_id AND projection.worker_attempt_id=source.worker_attempt_id
+      AND projection.source_evidence_digest=source.source_evidence_digest
+   WHERE source.workspace_id=$1 AND source.run_id=$2 ORDER BY projection.received_at DESC LIMIT 1`;
+
 export function enrichedJoin(workspace: string, run: string): string {
   // Arguments are static SQL identifiers from repository code, never request input.
   return `LEFT JOIN LATERAL (

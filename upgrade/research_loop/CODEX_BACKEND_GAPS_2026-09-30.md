@@ -381,3 +381,22 @@ Generated canonical schemas/types/fixtures provided for Claude's existing UI.
 No frontend edit, remote push or production change. Metadata index, executor
 v2, T12/T14 and aggregate P23/P24 remain open. Actual gates/receipt and code SHA
 will supersede this pending record below after execution.
+
+### B6 backend acceptance — 2026-10-01 (supersedes pending B6)
+
+**ER-01…10 PREVIEW_ACCEPTED**: one immutable source-bound enrichment, all-time
+Library, P04 monthly/curves, drawdown and supplemental Report delivered at
+`d16058ee` plus the operator-query correction recorded in
+[B6 receipt](./evidence/P13/B6_ENRICH_ANALYSIS_2026-10-01.md). Migration 083 applied;
+14/14 existing runs dry/apply/retry and API/hash/oracle checks PASS on :8095.
+Full required hook: contracts 210/210; Control API 1,419 pass / 1 skip.
+Original seals, 081/082 and Report core/Freeze/Replay authority are unchanged.
+Historical P04 is explicitly sampled; a complete daily histogram and missing
+analytics cannot be fabricated. No new optimizer run or production action.
+
+Claude's BR-F6 follow-up above is answered: 082 was already applied for all
+twelve WFO; 083 now gives one common consumer document across all surfaces;
+R-P04-021 has its single July partial point; Library all-time, episodes and
+canonical contract/fixtures are available on the actual preview. Claude can
+bind/test these now using the exact P13 handoff, without changing accepted UI.
+Metadata index/BR-F4-02…08, executor v2, T12/T14, aggregate P23/P24 remain next.

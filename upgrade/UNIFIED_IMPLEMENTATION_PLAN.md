@@ -6886,3 +6886,23 @@ production. No HMD/optimizer run or browser-side derivation for backfill.
   Backend acceptance does not assert visual acceptance or close metadata index,
   executor v2, audit/exposure, P23/P24. Work only on the Research lane, no remote
   push, frontend edits, dev/main merge or production rollout.
+
+#### B6 backend acceptance — 2026-10-01
+
+**ER-01…10 PREVIEW_ACCEPTED**, scoped to backend. Code `d16058ee` preserves
+Claude `320c361d`; shared builder, migration083, source-time writer and explicit
+historical companion, all-time Library, P04 and supplemental Report published.
+Contracts **210/210**, required Control API hook **1,419 pass / 1 skip**, real
+PostgreSQL migration/grants/writer **10/10**, pinned Python **30 pass / 2 skips**.
+An operator SQL-column error found by dry-run was corrected to the immutable
+producer receipt and regression-tested against actual migrated SQL.
+
+**14/14 real preview runs** (12 WFO + P04-018/021): dry/apply/idempotent retry,
+Hub/monthly/histogram/Library/Report parity, 304 validators, independent retained
+WFO oracle and original seal/passport/081/082/frozen-core/Freeze/Replay authority
+unchanged. P04 partial sample coverage and unavailable daily ledger/analytics
+remain typed. No optimizer run, UI edit, remote push or production action.
+See [complete receipt, ER table, exact identities/digests and Claude handoff](./research_loop/evidence/P13/B6_ENRICH_ANALYSIS_2026-10-01.md).
+Backend is available for Claude's all-time consumer integration now; visual
+acceptance is not asserted. Metadata index, executor v2, audit/exposure and
+whole-candidate P23/P24 remain open; this record does not close them.

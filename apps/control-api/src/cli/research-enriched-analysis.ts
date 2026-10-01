@@ -9,6 +9,7 @@ import { buildPool } from "../db/pool";
 import { canonicalResearchJson, sha256ResearchJson } from "../research/preflight.service";
 import { currentSourceImportDigest } from "../research/current-source.repository";
 import { ResearchEnrichedAnalysisSchema, verifiedEnriched } from "../research/enriched-analysis.contract";
+import { ENRICHED_RETAINED_SOURCE_SQL, ENRICHED_FIXED_SOURCE_SQL } from "../research/enriched-analysis.read";
 
 async function main() {
   const [workspaceArg, workspaceId, runArg, runId, action] = process.argv.slice(2);
@@ -25,21 +26,9 @@ async function main() {
     await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); transaction = true;
     await client.query("SET LOCAL statement_timeout = '15s'");
     const source = (await client.query(
-      `SELECT seal.artifact_revision, seal.retained_import_digest, seal.table_rows, seal.summary,
-              producer.requested_spec->>'timeframe' AS timeframe
-         FROM research.current_source_seals_v1 seal
-         JOIN research.run_producers producer ON producer.workspace_id=seal.workspace_id AND producer.run_id=seal.run_id
-        WHERE seal.workspace_id=$1 AND seal.run_id=$2 ORDER BY seal.artifact_revision DESC LIMIT 1`, [workspaceId, runId])).rows[0];
+      ENRICHED_RETAINED_SOURCE_SQL, [workspaceId, runId])).rows[0];
     const fixed = source ? null : (await client.query(
-      `SELECT source.source_evidence_digest, source.source_payload, projection.projection_revision,
-              producer.requested_spec->>'timeframe' AS timeframe
-         FROM research.run_producers producer
-         JOIN research.run_evidence_sources_v1 source ON source.workspace_id=producer.workspace_id
-          AND source.run_id=producer.run_id AND source.worker_attempt_id=producer.worker_attempt_id
-         JOIN research.run_evidence_projections_v1 projection ON projection.workspace_id=source.workspace_id
-          AND projection.run_id=source.run_id AND projection.worker_attempt_id=source.worker_attempt_id
-          AND projection.source_evidence_digest=source.source_evidence_digest
-        WHERE source.workspace_id=$1 AND source.run_id=$2 ORDER BY projection.received_at DESC LIMIT 1`, [workspaceId, runId])).rows[0];
+      ENRICHED_FIXED_SOURCE_SQL, [workspaceId, runId])).rows[0];
     if (!source && !fixed) throw new Error("No sealed retained account/passport was found");
     const kind = source ? "WFO_RETAINED" : "P04_SOURCE";
     const revision = String(source?.artifact_revision ?? fixed.projection_revision);

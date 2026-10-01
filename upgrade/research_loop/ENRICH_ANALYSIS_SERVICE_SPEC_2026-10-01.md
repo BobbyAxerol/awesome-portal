@@ -69,3 +69,18 @@ Catalog dataset/symbol/timeframe cho S02 vẫn đi theo BR-F4-02…08 (coverage 
 5. Vị trí khối ở hub P04: chốt đường (`core.enriched_analysis` hoặc top-level `enriched_analysis`, cùng tên với current-source) — FE đọc hub P04 từ top-level `summary_analytics_v2` hiện tại.
 6. Đã dùng được ngay không cần đổi: hero Sharpe all-time ở hub P04 đọc từ `summary_analytics_v2.metrics.sharpe` (R-P04-021 trả 0.744).
 
+## 8. Backend delivery — 2026-10-01
+
+ER-01…10 **PREVIEW_ACCEPTED**; [receipt and exact generated contract handoff](./evidence/P13/B6_ENRICH_ANALYSIS_2026-10-01.md).
+Fourteen existing immutable preview runs passed dry/apply/retry and real API
+parity, including R-WFO-020/023 and R-P04-018/021. This is backend acceptance,
+not browser/visual or production acceptance. No existing seal/Report rewrite.
+
+Final wire: P04 Hub, WFO Evidence and Report **top-level `enriched_analysis`**;
+Library `analytics_all_time = library_summary`. Histogram new-block counts are
+integers; legacy named-route string counts remain compatible. `open_episode_present`
+and `longest_open` included. IS/Holdout payload is absent and typed, not AVAILABLE
+without payload. Historical P04 declares sampled coverage and partial months;
+no sampled points are mislabeled a complete daily ledger. Generated canonical
+fixtures replace the proposed fixture in FE tests; rich UI design remains
+Claude's. The retained original v2 facts survive on R-P04-021.

@@ -14,6 +14,7 @@ import {
 } from "../src/research/current-source.repository";
 import { ResearchCurrentSourceIngestService } from "../src/research/current-source-ingest.service";
 import { RESEARCH_DB_RUNTIME_ROLE } from "../src/research/contracts";
+import { ENRICHED_RETAINED_SOURCE_SQL, ENRICHED_FIXED_SOURCE_SQL } from "../src/research/enriched-analysis.read";
 import { DELTA_WFO_PROFILE_DIGEST } from "../src/research/delta-wfo.profile";
 import { ResearchP04DeltaBindingService } from "../src/research/p04-delta-binding.service";
 import { ResearchMetadataRepository } from "../src/research/repository";
@@ -45,6 +46,13 @@ describe("RS-02 disposable PostgreSQL retained-current-source proof", () => {
     await migrateTestDatabase(databaseUrl);
     const database = new Pool({ connectionString: databaseUrl });
     try {
+      // Compile the exact CLI statements against real migrated columns. A
+      // nonexistent producer.requested_spec must not escape unit mocks again.
+      for (const sql of [ENRICHED_RETAINED_SOURCE_SQL, ENRICHED_FIXED_SOURCE_SQL]) {
+        expect((await database.query(`EXPLAIN ${sql}`, ["ws_rs02", "run_rs02"])).rows.length).toBeGreaterThan(0);
+      }
+      expect((await database.query(`SELECT $1::jsonb #>> '{research,requested_spec,data,timeframe}' AS timeframe`,
+        [JSON.stringify({ research: { requested_spec: { data: { timeframe: "1h" } } } })])).rows[0].timeframe).toBe("1h");
       const result = await database.query<{
         batches: boolean; rows: boolean; seals: boolean; retained_import_digest: boolean; append_guard: boolean; immutable_guard: boolean;
         runtime_select: boolean; runtime_insert: boolean; runtime_update: boolean;
