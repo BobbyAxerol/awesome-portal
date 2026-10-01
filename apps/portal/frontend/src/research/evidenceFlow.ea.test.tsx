@@ -14,6 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EvidenceFlow, retainedTiles } from "./EvidenceFlow";
 import { enrichedOf, type CurrentSourceEvidence, type EvidenceHub } from "./evidenceClient";
+import { compactUnderwater } from "./EvidenceCharts";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
 import { readEnrichedAnalysis } from "./enrichedAnalysis";
 import { healthy, noBenchmark, oldSealAbsent, partialMonth } from "./enrichedAnalysis.fixtures";
@@ -361,4 +362,12 @@ describe("S04 · enrich_analysis — absence and refusal", () => {
     const line = container.querySelector("[data-benchmark-curve-absent] [data-withheld]") as HTMLElement;
     expect(line.getAttribute("data-reason-code")).toBe(block.facts.metrics.benchmark_return_fraction.reason_code);
   }, 20_000);
+});
+
+describe("the compact underwater strip keeps its y labels apart", () => {
+  it("asks for two ticks below the full height and leaves the full-height chart alone", () => {
+    const option = { yAxis: { type: "value" } };
+    expect((compactUnderwater(option, 132).yAxis as { splitNumber?: number }).splitNumber).toBe(2);
+    expect(compactUnderwater(option, 180)).toBe(option);
+  });
 });

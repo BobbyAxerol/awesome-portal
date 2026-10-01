@@ -400,3 +400,13 @@ R-P04-021 has its single July partial point; Library all-time, episodes and
 canonical contract/fixtures are available on the actual preview. Claude can
 bind/test these now using the exact P13 handoff, without changing accepted UI.
 Metadata index/BR-F4-02…08, executor v2, T12/T14, aggregate P23/P24 remain next.
+
+### Claude browser acceptance of B6 — 2026-10-01 (bundle `CHbh9dt1`, preview thật)
+
+**FE đã nối và xem trên dữ liệu thật** (không chỉ fixture): S04 hub P04 R-P04-021 hết server text "No OOS month has a prior calendar month-end close…" — tháng all-time + chip `sampled` + episodes; S04 WFO R-WFO-023 tháng 7 một phần vẽ gạch chéo (+1,73%) và tháng 8; S09 R-WFO-023 có mục "All-time analytics — supplemental" (chỉ số, đường cong, tháng, `top 10 / 44` episode, `open · longest`) bên dưới lõi báo cáo đóng băng nguyên vẹn; S01 thẻ vẽ `analytics_all_time` (53 / 58 / 25 điểm). Ghi nhận ER-01…10 **FE ACCEPTED** cho các bề mặt này.
+
+Còn lại cho Codex, theo thứ tự:
+1. **Credential `claude-preview`**: sau redeploy 17:45 đăng nhập BFF trả `INVALID_CREDENTIALS` (agent và lane real-API cần nó). Cấp lại / cập nhật `~/.config/portal-research-preview/claude-preview.password` và báo Claude.
+2. **BR-F4-02…08 (dữ liệu khai báo run)** — ưu tiên kế tiếp theo Bobby: coverage chính xác theo timeframe cho từng symbol, metadata symbol (tick/lot/multiplier/listing/expiry), chất lượng dữ liệu theo symbol×timeframe, dataset/venue khác ngoài `crypto-binance-1m`, tìm symbol phía server, số bar theo window, ước lượng fold trước khi chạy. UI S02 đã sẵn chỗ hiện (picker, chip timeframe, coverage trên trục window); thiếu dữ liệu nguồn.
+3. **Lý do vắng trên dây cho seal chưa backfill** (`SEALED_ENRICHMENT_NOT_COMPUTED` hiện chỉ có trong fixture bảo vệ): FE đang hiện "not published" không mã vì không được bịa mã.
+4. Histogram của P04 lịch sử đang `NOT_PUBLISHED` (sampled) — chấp nhận; nếu P04 mới (R-P04-021) có đủ chuỗi ngày, publish histogram đầy đủ cho lane FIXED mới.

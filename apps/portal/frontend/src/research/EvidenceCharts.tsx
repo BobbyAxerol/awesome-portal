@@ -658,6 +658,11 @@ export function EquityChart({
  * figure as the HiFi draws it. It reads the same response: not a second
  * measurement, and no second request.
  */
+/** The compact strip is too short for the default tick count: its y labels overprint. Two ticks keep it legible. */
+export function compactUnderwater<T extends { yAxis?: unknown }>(option: T, height: number): T {
+  return height < CHART_HEIGHT.underwater ? ({ ...option, yAxis: { ...(option.yAxis as object), splitNumber: 2 } } as T) : option;
+}
+
 export function DrawdownChart({
   series,
   points: given,
@@ -673,7 +678,9 @@ export function DrawdownChart({
   chart?: string;
 }) {
   const points = given ?? ((series?.values ?? []) as EquityPoint[]);
-  const drawdown = useMemo(() => drawdownOption(points, boundaries), [points, boundaries]);
+  const drawdown = useMemo(() => {
+    return compactUnderwater(drawdownOption(points, boundaries), height);
+  }, [points, boundaries, height]);
   return (
     <div data-chart={chart}>
       <EChart option={drawdown} height={height} />
