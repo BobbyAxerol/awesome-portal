@@ -74,7 +74,7 @@ describe("F4 S01 - last 30D", () => {
     expect(ret.textContent).toContain("last 30D return");
     expect(ret.textContent).toContain("−0.27%");
     expect(ret.querySelector("[title]")!.getAttribute("title")).toContain(v2.last_30d.return_fraction.value);
-    expect(document.querySelector('[data-metric="LAST_30D_SHARPE"]')!.textContent).toContain("-2.21");
+    expect(document.querySelector('[data-metric="LAST_30D_SHARPE"]')!.textContent).toContain("−2.21");
   });
 
   it("never draws the window when it is absent, and never labels an all-time series 30D", () => {

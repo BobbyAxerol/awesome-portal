@@ -56,7 +56,7 @@ import {
 import { compareEntryHref } from "./compareClient";
 import { lineageHref } from "./lineageClient";
 import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
-import { formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
+import { formatDuration, formatMetric, formatUtc, shortDigest, shortId, typographicMinus } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
 import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
@@ -767,7 +767,7 @@ export function statDisplay(metric: Pick<MetricCell, "role" | "value">): string 
   switch (metric.role) {
     case "OOS_SHARPE":
     case "DECAY":
-      return Number.isFinite(parsed) && metric.value.trim() !== "" ? TWO_DP.format(parsed) : metric.value;
+      return Number.isFinite(parsed) && metric.value.trim() !== "" ? typographicMinus(TWO_DP.format(parsed)) : metric.value;
     case "TRADE_COUNT":
       return formatMetric(metric.value, "count") ?? metric.value;
     case "ELAPSED":

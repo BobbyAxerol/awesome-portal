@@ -1697,6 +1697,8 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     expect(container.querySelector("[data-month='2026-07'] [data-month-value]")?.textContent).toBe("−0.37%");
     const distribution = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']");
     expect(distribution?.getAttribute("data-series-state")).toBe("ready");
+    /* A panel with a figure keeps the row's height; an absent one does not stretch to a blank frame. */
+    expect(distribution?.className).toContain("self-stretch");
     expect(distribution?.querySelector("[data-sampling]")?.getAttribute("data-sampling")).toBe("FULL_RETURN_HISTOGRAM_V2");
     /* D-AN-01: no rolling Sharpe/beta panel and no request for either series. */
     expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'], [data-series-panel='ROLLING_BETA_63'], [data-rolling-figure]")).toBeNull();

@@ -253,3 +253,9 @@ Bản ghi: `evidence/P21/audit-2026-09-30/f4/*.md`.
 - **S04 D-AN-01:** "Strategy vs benchmark — all time", 5 tile hero, khối Behavior (`portal-derived`), seal cũ → một dòng vắng có mã; `window_disclosure` ở bảng claim. R-WFO-020 có v2 thật; R-WFO-017 là seal cũ.
 - **Quyết định đã áp dụng (theo khuyến nghị):** câu server dài trong ô từ chối → tooltip (mã lý do vẫn hiện); S10 luôn hiện CLONE/REPRODUCTION, hàng mờ dùng `--ink-soft`; S13 một cột "single OOS window"; S06 một chữ `retrospective`; `--ink-faint` đạt ≥ 4.5:1 trong `.research-screen` (Execution Loop giữ nguyên); HT-3 chấp nhận hub nhúng deep-dive.
 - Yêu cầu backend mới: BR-F4-01…14 trong `CODEX_BACKEND_GAPS_2026-09-30.md`.
+
+### F6 — panel trống ở S04, dấu trừ (2026-10-01)
+
+- **Điều tra:** "Return distribution" và "Monthly returns" trống trên R-WFO-020 là do server từ chối với seal cũ (`PORTAL_DERIVED_SERIES_SCOPE_NOT_OOS`), không phải FE; seal mới (R-WFO-022/023) hiện đủ. Đường để hiện cho run cũ là BR-F6-01 (đưa hai chuỗi vào sidecar v2, all-time); BR-F6-02 (tháng đầu bị bỏ). FE vẫn không tự dẫn xuất.
+- **UI:** panel vắng không còn kéo cao bằng panel bên cạnh (`self-start`), vẫn hiện đủ khung kèm mã lý do; panel có hình giữ chiều cao hàng.
+- **Quyết định dấu trừ (của tôi):** mọi số UI tự định dạng dùng `−` (U+2212), gồm thẻ Library; chuỗi server viết sẵn (log console, cụm tiến độ `best IS Sharpe -1.444`, bảng "exact values") giữ nguyên như server gửi.

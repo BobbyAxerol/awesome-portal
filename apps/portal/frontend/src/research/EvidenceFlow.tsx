@@ -1915,7 +1915,7 @@ function SeriesPanel({
 
   return (
     <figure
-      className={`m-0 min-w-0 rounded-[8px] border p-4 ${className ?? ""}`}
+      className={`m-0 min-w-0 rounded-[8px] border p-4 ${ready ? "self-stretch" : "self-start"} ${className ?? ""}`}
       data-series-panel={kind}
       data-series-state={state}
       style={{ ...PANEL_STYLE, ...style }}
@@ -3528,7 +3528,7 @@ function SummaryTab({
         <VerdictTable hub={hub} />
       )}
 
-      <div className="flex flex-wrap gap-3.5">
+      <div className="flex flex-wrap items-start gap-3.5">
         {v2 ? (
           <StrategyBenchmarkFigure
             v2={v2}

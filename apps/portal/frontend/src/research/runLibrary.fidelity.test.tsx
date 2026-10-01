@@ -133,6 +133,9 @@ describe("S01 fidelity — stat values", () => {
   it("shows ratios at the hi-fi's two places and keeps the server string in title", () => {
     expect(statDisplay({ role: "OOS_SHARPE", value: "1.049" })).toBe("1.05");
     expect(statDisplay({ role: "DECAY", value: "0.2312" })).toBe("0.23");
+    /* Display only: a negative reads with the typographic minus like every other figure (F6). */
+    expect(statDisplay({ role: "OOS_SHARPE", value: "-0.584" })).toBe("−0.58");
+    expect(statDisplay({ role: "DECAY", value: "-6.4" })).toBe("−6.40");
     expect(statDisplay({ role: "TRADE_COUNT", value: "214" })).toBe("214");
     expect(statDisplay({ role: "TRADE_COUNT", value: "1214" })).toBe("1,214");
     expect(statDisplay({ role: "PROGRESS" as never, value: "fold 3/5" })).toBe("fold 3/5");
