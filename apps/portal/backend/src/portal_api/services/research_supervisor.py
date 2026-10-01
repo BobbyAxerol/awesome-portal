@@ -941,8 +941,14 @@ class IsolatedResearchSupervisor:
         if not isinstance(value, dict):
             raise ResearchSupervisorError("P06 child evidence receipt is invalid")
         encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-        if len(encoded) > 28 * 1024:
+        core = {key: item for key, item in value.items() if key != "enriched_analysis"}
+        if len(json.dumps(core, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()) > 28 * 1024:
             raise ResearchSupervisorError("P06 child evidence receipt exceeds its bounded budget")
+        enrichment = value.get("enriched_analysis")
+        if enrichment is not None and (not isinstance(enrichment, dict)
+                or enrichment.get("schema_version") != "research.enriched-analysis.v1"
+                or len(json.dumps(enrichment, separators=(",", ":")).encode()) > 65_536):
+            raise ResearchSupervisorError("P06 child enrichment is invalid or unbounded")
         if value.get("schema_version") != "research.p13.evidence-source.v1":
             raise ResearchSupervisorError("P06 child evidence receipt has an unsupported schema")
         source = value.get("source")
@@ -1081,11 +1087,20 @@ class IsolatedResearchSupervisor:
         process.wait(timeout=5)
 
     def _read_result(self, path: Path) -> dict[str, Any]:
-        if not path.is_file() or path.stat().st_size > self._MAX_RESULT_BYTES:
+        if not path.is_file() or path.stat().st_size > self._MAX_RESULT_BYTES + 65_536:
             raise ResearchSupervisorError("P06 child result is absent or exceeds the bounded receipt limit")
         value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict):
             raise ResearchSupervisorError("P06 child result must be a JSON object")
+        core = dict(value)
+        evidence = core.get("evidence_source")
+        if isinstance(evidence, dict):
+            core["evidence_source"] = {key: item for key, item in evidence.items() if key != "enriched_analysis"}
+            enrichment = evidence.get("enriched_analysis")
+            if enrichment is not None and len(json.dumps(enrichment, separators=(",", ":")).encode()) > 65_536:
+                raise ResearchSupervisorError("P06 child enrichment exceeds its independent bound")
+        if len(json.dumps(core, separators=(",", ":")).encode()) > self._MAX_RESULT_BYTES:
+            raise ResearchSupervisorError("P06 child core result exceeds its original bounded receipt limit")
         return value
 
     def _read_tail(self, path: Path) -> str:

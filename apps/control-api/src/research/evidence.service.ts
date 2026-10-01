@@ -463,7 +463,20 @@ export class ResearchEvidenceService {
       )) {
         throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence bundle series binding is incompatible.", 503);
       }
-      const response = row ? this.mapStoredSeries(runId, row) : this.absentSeries(stored.hub, kind);
+      let response = row ? this.mapStoredSeries(runId, row) : this.absentSeries(stored.hub, kind);
+      const enriched = stored.hub.enrichedAnalysis;
+      if (enriched && parsedHub.data.revision && (kind === "MONTHLY_RETURNS" || kind === "RETURN_DISTRIBUTION")) {
+        const monthly = kind === "MONTHLY_RETURNS";
+        const head = monthly ? enriched.monthly_returns : enriched.return_distribution;
+        const body = { schema_version: "research.evidence-series.v1" as const, run_id: runId,
+          revision: parsedHub.data.revision, kind, availability: availability(head.state, head.reason_code),
+          source_sample: { source_observation_count: monthly ? enriched.scope.observation_count : enriched.return_distribution.observation_count,
+            emitted_point_count: monthly ? enriched.monthly_returns.values.length : enriched.return_distribution.buckets.length,
+            sampling: head.state === "AVAILABLE" ? monthly ? enriched.monthly_returns.sampling : "FULL_RETURN_HISTOGRAM_V2" as const : null },
+          values: monthly ? enriched.monthly_returns.values.map(point => ({ month_start_utc_ms: point.month_start_utc_ms, return_fraction: point.return_fraction }))
+            : enriched.return_distribution.buckets.map(point => ({ ...point, count: String(point.count) })) };
+        response = { ...body, etag: `"p13r1_${sha256ResearchJson(body)}"` };
+      }
       const parsed = ResearchEvidenceSeriesResponseSchema.safeParse(response);
       if (!parsed.success || (row && parsed.data.revision !== parsedHub.data.revision)) {
         throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence bundle is incompatible.", 503);
@@ -731,6 +744,7 @@ export class ResearchEvidenceService {
     const warnings = projection ? this.warnings(projection, sourceAbsences) : [];
     const response = {
       schema_version: "research.evidence-hub.v1",
+      ...(row.enrichedAnalysis ? { enriched_analysis: row.enrichedAnalysis } : {}),
       ...(projection?.summary_analytics ? { summary_analytics: projection.summary_analytics } : {}),
       ...(projection?.summary_analytics_v2 ? { summary_analytics_v2: projection.summary_analytics_v2 } : {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH",

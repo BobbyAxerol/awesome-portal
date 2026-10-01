@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runner as migrate } from "node-pg-migrate";
 import { Pool, type PoolClient } from "pg";
@@ -110,6 +110,30 @@ describe("RS-02 disposable PostgreSQL retained-current-source proof", () => {
         `SELECT has_table_privilege('portal_research_runtime', 'research.current_source_distributions_v1', 'SELECT') AS can_read,
                 has_table_privilege('portal_research_runtime', 'research.current_source_distributions_v1', 'INSERT') AS can_write`);
       expect(distributionPrivilege.rows[0]).toEqual({ can_read: true, can_write: false });
+      const enrichmentPrivilege = await database.query(`SELECT
+        has_table_privilege('portal_research_runtime','research.enriched_analysis_v1','SELECT') AS can_read,
+        has_table_privilege('portal_research_runtime','research.enriched_analysis_v1','INSERT') AS can_write`);
+      expect(enrichmentPrivilege.rows[0]).toEqual({ can_read: true, can_write: false });
+      // Storage fixture only: omit unrelated attempt parents, then restore all
+      // triggers before testing actual enrichment UPDATE/DELETE/retry guards.
+      const seed = await database.connect();
+      try {
+        await seed.query("SET session_replication_role=replica");
+        await seed.query(`INSERT INTO research.runs
+          (workspace_id,run_id,attempt_id,run_kind,relationship_kind,logical_run_key,request_spec_digest,effective_spec_digest,
+           engine_release_id,dataset_binding_digest,state,submitted_by_user_id)
+          VALUES ('ws_rs02','run_rs02','att_rs02','PRIMARY','PRIMARY','rs02',$1,$1,'er_quantbt_111',$1,'READY','usr_rs02')`, [digest]);
+      } finally { await seed.query("SET session_replication_role=origin"); seed.release(); }
+      await database.query(`INSERT INTO research.enriched_analysis_v1
+        (workspace_id,run_id,source_kind,source_revision,source_digest,source_rows_digest,enriched_digest,enriched)
+        VALUES ('ws_rs02','run_rs02','WFO_RETAINED','1',$1,$1,$1,'{}')`, [digest]);
+      await expect(database.query(`UPDATE research.enriched_analysis_v1 SET enriched='{"changed":true}'
+        WHERE workspace_id='ws_rs02' AND run_id='run_rs02'`)).rejects.toMatchObject({ code: "55000" });
+      await expect(database.query(`DELETE FROM research.enriched_analysis_v1
+        WHERE workspace_id='ws_rs02' AND run_id='run_rs02'`)).rejects.toMatchObject({ code: "55000" });
+      expect((await database.query(`INSERT INTO research.enriched_analysis_v1
+        (workspace_id,run_id,source_kind,source_revision,source_digest,source_rows_digest,enriched_digest,enriched)
+        VALUES ('ws_rs02','run_rs02','WFO_RETAINED','1',$1,$1,$1,'{}') ON CONFLICT DO NOTHING`, [digest])).rowCount).toBe(0);
       await database.query(`INSERT INTO research.current_source_distributions_v1
         (workspace_id, run_id, artifact_revision, retained_import_digest, source_rows_digest, distributions_digest, distributions)
         VALUES ('ws_rs02', 'run_rs02', 1, $1, $1, $1, '{}'::jsonb)`, [digest]);
@@ -132,6 +156,36 @@ describe("RS-02 disposable PostgreSQL retained-current-source proof", () => {
     } finally {
       await database.end();
     }
+  });
+
+  it("B6 allows only the source-bound writer and forbids arbitrary runtime companion inserts", async () => {
+    const database = new Pool({ connectionString: databaseUrl }), client = await database.connect();
+    const block = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
+    block.run_id = "run_rs02";
+    try {
+      await client.query(`INSERT INTO research.current_source_seals_v1
+        (workspace_id,run_id,artifact_revision,source_adapter_id,profile_id,manifest_digest,
+         source_transform_digest,requested_spec_digest,effective_spec_digest,dataset_binding_digest,
+         retained_import_digest,table_rows,total_rows,summary)
+        SELECT workspace_id,run_id,2,source_adapter_id,profile_id,manifest_digest,
+          source_transform_digest,requested_spec_digest,effective_spec_digest,dataset_binding_digest,
+          retained_import_digest,table_rows,total_rows,$1::jsonb
+        FROM research.current_source_seals_v1 WHERE workspace_id='ws_rs02' AND run_id='run_rs02' AND artifact_revision=1`,
+        [JSON.stringify({ enriched_analysis: block })]);
+      await client.query("SET ROLE portal_research_runtime");
+      await client.query("SELECT set_config('research.workspace_id','ws_rs02',false)");
+      await expect(client.query("INSERT INTO research.enriched_analysis_v1 DEFAULT VALUES")).rejects.toMatchObject({code:"42501"});
+      const write = (ws: string, revision: string, value: unknown) => client.query(
+        "SELECT research.append_source_enrichment_v1($1,'run_rs02','WFO_RETAINED',$2,$3,$3,$3,$4::jsonb)",
+        [ws,revision,"a".repeat(64),JSON.stringify(value)]);
+      await expect(write("wrong-workspace","2",block)).rejects.toMatchObject({code:"23514"});
+      await expect(write("ws_rs02","99",block)).rejects.toMatchObject({code:"23514"});
+      await expect(write("ws_rs02","2",{...block,basis:"LAST_30D"})).rejects.toMatchObject({code:"23514"});
+      await write("ws_rs02","2",block);
+      await write("ws_rs02","2",block);
+      const rows = await client.query("SELECT count(*)::int AS n FROM research.enriched_analysis_v1 WHERE workspace_id='ws_rs02' AND run_id='run_rs02' AND source_revision='2'");
+      expect(rows.rows[0].n).toBe(1);
+    } finally { await client.query("RESET ROLE"); client.release(); await database.end(); }
   });
 
   it("runs the no-seal run-state join as the runtime role (library view + P10 binding)", async () => {

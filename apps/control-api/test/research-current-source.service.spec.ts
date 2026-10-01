@@ -202,6 +202,33 @@ describe("RS-02 retained current-source named read models", () => {
     expect(distribution.values).toHaveLength(2);
   });
 
+  it("B6 reads one shared all-time block, updates ETags and leaves the original seal identity intact", async () => {
+    const enriched = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
+    const oldSeal = structuredClone(seal);
+    oldSeal.runId = enriched.run_id;
+    delete (oldSeal.summary as Record<string, unknown>).derived_scope;
+    const enrichedSeal = { ...oldSeal, enrichedAnalysis: enriched };
+    expect(currentSourceSealDigest(enrichedSeal)).toBe(currentSourceSealDigest(oldSeal));
+    const forbidden = vi.fn(() => { throw new Error("GET must not reread or calculate retained source"); });
+    const old = service({ sealForRead: vi.fn().mockResolvedValue(oldSeal), rows: forbidden });
+    const current = service({ sealForRead: vi.fn().mockResolvedValue(enrichedSeal), rows: forbidden });
+    for (const kind of ["MONTHLY_RETURNS", "RETURN_DISTRIBUTION"] as const) {
+      const before = sealed(await old.evidenceSeries(scope, enriched.run_id, kind));
+      const after = sealed(await current.evidenceSeries(scope, enriched.run_id, kind));
+      expect(after.availability.state).toBe("AVAILABLE");
+      expect(after.etag).not.toBe(before.etag);
+      expect(after.source_sample.derivation?.input_digest).toBe(enriched.input_digest);
+      expect(after.values.length).toBe(kind === "MONTHLY_RETURNS" ? 3 : 12);
+    }
+    expect(forbidden).not.toHaveBeenCalled();
+    // Existing Hub passport still legitimately reads bounded fold/candidate
+    // facts; those aren't a request-time enrichment calculation.
+    const hubReader = service({ sealForRead: vi.fn().mockResolvedValue(enrichedSeal),
+      rows: vi.fn().mockImplementation((_scope, _run, _revision, kind) => page(kind === "FOLD" ? folds : candidates)) });
+    const hub = sealed(await hubReader.evidence(scope, enriched.run_id));
+    expect(hub.enriched_analysis).toEqual(enriched);
+  });
+
   it("BR-F6: old seals read verified precomputed companions without source queries or seal revision changes", async () => {
     const distributions = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-all-time-distributions.valid.json"), "utf8"));
     const oldSeal = structuredClone(seal);

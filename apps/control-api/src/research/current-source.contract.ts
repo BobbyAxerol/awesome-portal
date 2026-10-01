@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { ResearchMonthlyPointSchema } from "./all-time-distributions.contract";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
@@ -426,6 +427,7 @@ const FoldVerdictsSchema = z.object({
 }).strict();
 
 export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
+  enriched_analysis: ResearchEnrichedAnalysisSchema.optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
   schema_version: z.literal("research.current-source-evidence.v1"),

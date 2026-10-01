@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
@@ -401,6 +402,7 @@ export const CurrentSourceSummarySchema = z.object({
   replay: CurrentSourceReplaySummarySchema.optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
+  enriched_analysis: ResearchEnrichedAnalysisSchema.optional(),
   // Absent on immutable older seals whose compact chart series included the pre-OOS prefix.
   derived_scope: z.literal("OUTER_TEST_UNION_INCLUSIVE_V1").optional(),
   derived: z.object({

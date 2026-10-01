@@ -1,6 +1,7 @@
 /** P12 server-side mapping from persisted Research rows to Screen-01 DTOs. */
 
 import { createHash } from "node:crypto";
+import { verifiedEnriched } from "./enriched-analysis.contract";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -788,6 +789,9 @@ export class ResearchRunLibraryService {
   }
 
   mapRow(row: RunLibraryRow, retained?: RetainedCardFacts): ResearchRunLibraryItem {
+    let enriched;
+    try { enriched = verifiedEnriched(row.enriched_analysis, row.enriched_digest, row.run_id); }
+    catch { throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503); }
     const requested = this.requestedSpec(row.requested_spec);
     const progress = this.progress(row.progress_snapshot);
     const source = sourceAvailability(row, progress);
@@ -800,6 +804,7 @@ export class ResearchRunLibraryService {
     const fixedAnalytics = ResearchRetainedAnalyticsV2Schema.safeParse(asObject(row.evidence_projection)?.summary_analytics_v2);
     const analyticsV2 = retained?.analyticsV2 ?? (fixedAnalytics.success ? fixedAnalytics.data : null);
     const item = {
+      ...(enriched ? { analytics_all_time: enriched.library_summary } : {}),
       run_id: row.run_id,
       // D1: server-derived, never minted here as an identity — see
       // run-display-label.ts. `null` stays distinct from a label.

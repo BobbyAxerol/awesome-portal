@@ -2,6 +2,10 @@
 
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
+import { readEnriched } from "./enriched-analysis.read";
+import type { ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
+import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
+import { sha256ResearchJson } from "./preflight.service";
 import type { Pool, PoolClient } from "pg";
 
 import { CONTROL_API_POOL } from "../tokens";
@@ -52,6 +56,7 @@ export interface EvidenceProjectionWrite {
 }
 
 export interface EvidenceHubRow {
+  enrichedAnalysis?: ResearchEnrichedAnalysis;
   kind: "DURABLE" | "LEGACY";
   runId: string;
   /** Durable run identity for the Screen-04 header; never worker/job identity. */
@@ -230,6 +235,7 @@ export class ResearchEvidenceRepository {
         );
       }
       const projectionExisting = await client.query<{ projection_digest: string; source_evidence_digest: string }>(
+        // The independent enrichment does not relax the legacy source budget.
         `SELECT projection_digest, source_evidence_digest
            FROM research.run_evidence_projections_v1
           WHERE workspace_id = $1 AND run_id = $2 AND worker_attempt_id = $3 AND projection_revision = $4`,
@@ -296,6 +302,14 @@ export class ResearchEvidenceRepository {
             series.emittedPointCount, series.sampling, JSON.stringify(series.values), series.digest,
           ],
         );
+      }
+      const source = write.sourcePayload as { enriched_analysis?: unknown };
+      if (source.enriched_analysis !== undefined) {
+        const enriched = ResearchEnrichedAnalysisSchema.parse(source.enriched_analysis);
+        if (enriched.run_id !== write.runId) throw new ResearchEvidenceError("RESEARCH_EVIDENCE_INVALID", "Enrichment run binding is incompatible.", 400);
+        await client.query(`SELECT research.append_source_enrichment_v1($1,$2,'P04_SOURCE',$3,$4,$5,$6,$7::jsonb)`,
+          [scope.workspaceId,write.runId,write.projectionRevision,write.sourceEvidenceDigest,
+            sha256ResearchJson(enriched.source_tables),sha256ResearchJson(enriched),JSON.stringify(enriched)]);
       }
     });
   }
@@ -405,7 +419,10 @@ export class ResearchEvidenceRepository {
       );
       const row = durable.rows[0];
       if (row) {
+        const enrichedAnalysis = await readEnriched(client, scope.workspaceId, runId,
+          () => new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503));
         return {
+          ...(enrichedAnalysis ? { enrichedAnalysis } : {}),
           kind: "DURABLE" as const,
           runId: row.run_id,
           runState: row.run_state,

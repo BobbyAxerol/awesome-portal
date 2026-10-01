@@ -254,6 +254,17 @@ def test_child_receipt_carries_the_block_and_stays_inside_its_budget(long_run, m
     assert receipt["derived"]["monthly_returns"][0]["month_start_utc_ms"] > start_ms
 
 
+def test_b6_child_enrichment_has_its_own_budget_and_keeps_legacy_core(long_run) -> None:
+    market, result, start_ms = long_run
+    receipt = _p13_evidence_source(market=market, result=result, report=result.full_report(),
+        oos_start_utc_ms=start_ms, run_id="rrun_" + "a" * 32)
+    enriched = receipt.pop("enriched_analysis")
+    assert enriched["lane"] == "FIXED" and enriched["scope"]["coverage"] == "FULL_RETAINED_OOS"
+    assert enriched["return_distribution"]["observation_count"] < enriched["scope"]["observation_count"]
+    assert len(json.dumps(enriched, separators=(",", ":")).encode()) <= 65_536
+    assert len(json.dumps(receipt, separators=(",", ":")).encode()) <= _MAX_EVIDENCE_RECEIPT_BYTES
+
+
 def _hand_result(equity: list[float], positions: dict[str, list[float]]):
     """A real QuantBT result over a hand-built daily tape (engine math, our inputs)."""
     from quantbt.core.results import BacktestResultV2

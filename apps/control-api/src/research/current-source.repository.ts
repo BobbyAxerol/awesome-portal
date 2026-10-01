@@ -9,6 +9,8 @@
 
 import { createHash } from "node:crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { readEnriched } from "./enriched-analysis.read";
+import { ResearchEnrichedAnalysisSchema, type ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
 import type { Pool, PoolClient } from "pg";
 
 import type { ControlApiConfig } from "../config";
@@ -95,6 +97,7 @@ export type CurrentSourceSealRow = CurrentSourceLanePair & {
   summary: Record<string, unknown>;
   analyticsSidecar?: { digest: string; sourceRowsDigest: string; analytics: ResearchRetainedAnalyticsV2 };
   distributionsSidecar?: { digest: string; distributions: ResearchAllTimeDistributions };
+  enrichedAnalysis?: ResearchEnrichedAnalysis;
   retainedAtUtcMs: number;
 };
 
@@ -464,6 +467,15 @@ export class ResearchCurrentSourceRepository {
           input.effectiveSpecDigest, input.datasetBindingDigest, retainedImportDigest,
           canonicalJson(input.tableRows), input.totalRows, canonicalJson(input.summary)],
       );
+      if (input.summary.enriched_analysis !== undefined) {
+        const enriched = ResearchEnrichedAnalysisSchema.parse(input.summary.enriched_analysis);
+        if (enriched.run_id !== input.runId || enriched.scope.observation_count > input.tableRows.OBSERVATION) {
+          throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Enrichment source binding is incompatible.", 400);
+        }
+        await client.query(`SELECT research.append_source_enrichment_v1($1,$2,'WFO_RETAINED',$3,$4,$5,$6,$7::jsonb)`,
+          [scope.workspaceId,input.runId,String(input.artifactRevision),retainedImportDigest,
+            sha256ResearchJson(enriched.source_tables),sha256ResearchJson(enriched),JSON.stringify(enriched)]);
+      }
       return { replayed: false, retainedImportDigest };
     });
   }
@@ -537,7 +549,10 @@ export class ResearchCurrentSourceRepository {
           LIMIT 1`,
         [scope.workspaceId, runId],
       );
-      return result.rowCount === 1 ? this.toSeal(result.rows[0]!) : null;
+      if (result.rowCount !== 1) return null;
+      const enrichedAnalysis = await readEnriched(client, scope.workspaceId, runId,
+        () => new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503));
+      return { ...this.toSeal(result.rows[0]!), ...(enrichedAnalysis ? { enrichedAnalysis } : {}) };
     }, signal);
   }
 

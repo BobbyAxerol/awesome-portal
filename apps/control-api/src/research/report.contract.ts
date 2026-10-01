@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 
 export const ResearchReportRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 export const ResearchReportExportJobIdSchema = z.string().regex(/^rpex_[0-9A-HJKMNP-TV-Z]{26}$/);
@@ -464,6 +465,7 @@ const ApprovalAnnotationSchema = z.object({
 }).strict();
 
 export const ResearchReportDetailResponseSchema = z.object({
+  enriched_analysis: ResearchEnrichedAnalysisSchema.optional(),
   schema_version: z.literal("research.report-detail.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchReportRunIdSchema,

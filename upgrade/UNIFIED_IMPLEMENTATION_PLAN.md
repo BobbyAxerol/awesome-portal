@@ -6852,3 +6852,37 @@ drawdown episodes) remains next, not silently marked done. Metadata index,
 executor v2, audit/exposure and whole-candidate P23/P24 still open. No remote
 push, dev/main merge or production change. C4: disposable test cells cleaned,
 active preview retained, 224 GiB root free / 16 GiB RAM available; no prune.
+
+#### B6 delivery plan — shared `enrich_analysis`, 2026-10-01
+
+Bobby approved ER-01…10 in the [service spec](./research_loop/ENRICH_ANALYSIS_SERVICE_SPEC_2026-10-01.md).
+Codex owns backend/contracts; Claude owns existing UI-first consumers. Reuse
+the verified analytics/distribution arithmetic through one deterministic builder,
+not endpoint-specific calculations. Append-only migration 083 binds an enriched
+document to the original run, source revision and source digests; runtime SELECT
+only. Original source seals, analytics companions, frozen Report and exports stay
+immutable. Operator dry/apply/retry uses the same builder as future source-time
+production. No HMD/optimizer run or browser-side derivation for backfill.
+
+- Publish `research.enriched-analysis.v1`, `lane`, all-time facts/curves,
+  integer histogram counts, partial months, top-ten drawdown episodes plus
+  open/longest-open disclosure, ≤64 extrema-preserving Library points. Report
+  and P04 Hub use **top-level `enriched_analysis`**, matching current-source
+  Evidence. Library uses `analytics_all_time = library_summary`; deprecated
+  `last_30d` stays wire-compatible, never relabelled all-time.
+- Read paths only select verified precomputed companions. Revision/ETag includes
+  the supplement; Report frozen core/export revision remains unchanged. Existing
+  monthly/distribution routes consume that same block. IS/Holdout remain typed
+  absent when their payload was not retained. P04 historical sampled equity is
+  explicitly partial; it must not pretend to be a complete daily/bar ledger.
+- Tests: deterministic bytes/digests, partial/single month, daily-vs-bar grain,
+  episode recovery/open/top-ten, missing benchmark/turnover/IS, bounded curves,
+  strict schema/count/source binding, generated canonical fixtures, PostgreSQL
+  immutable grants/migration/retry, scoped readers and ETags. Group backend
+  gates before one preview refresh; reuse real R-WFO-020/023 and P04 seals for
+  operator/API receipts, checking original core/seal checksums before/after.
+- Exit: ER results and any truthful input absences recorded per run in P13,
+  fixture/type/path handoff to Claude, scoped cleanup and exact preview identity.
+  Backend acceptance does not assert visual acceptance or close metadata index,
+  executor v2, audit/exposure, P23/P24. Work only on the Research lane, no remote
+  push, frontend edits, dev/main merge or production rollout.

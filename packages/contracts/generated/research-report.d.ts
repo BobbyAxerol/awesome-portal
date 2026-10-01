@@ -82,6 +82,257 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        EnrichedAnalysis: {
+            /** @constant */
+            schema_version: "research.enriched-analysis.v1";
+            /** @constant */
+            service: "enrich_analysis";
+            /** @constant */
+            basis: "ALL_TIME";
+            /** @enum {unknown} */
+            lane: "FIXED" | "WFO";
+            run_id: string;
+            input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+            source_tables: {
+                name: string;
+                row_count: components["schemas"]["EnrichedAnalysisCount"];
+                digest: components["schemas"]["EnrichedAnalysisDigest"];
+            }[];
+            scope: {
+                /** @constant */
+                window: "OOS";
+                first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                observation_count: number;
+                fold_count: number;
+                locator: components["schemas"]["EnrichedAnalysisLocator"];
+                benchmark_locator: components["schemas"]["EnrichedAnalysisLocator"];
+                /** @enum {unknown} */
+                coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY";
+                source_observation_count: number;
+            };
+            windows: {
+                is: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                    reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                };
+                oos: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                    reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                };
+                holdout: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                    reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                };
+            };
+            facts: {
+                metrics: {
+                    sharpe: components["schemas"]["EnrichedAnalysisFact"];
+                    sortino: components["schemas"]["EnrichedAnalysisFact"];
+                    cagr_fraction: components["schemas"]["EnrichedAnalysisFact"];
+                    profit_factor: components["schemas"]["EnrichedAnalysisFact"];
+                    long_hit_rate_fraction: components["schemas"]["EnrichedAnalysisFact"];
+                    short_hit_rate_fraction: components["schemas"]["EnrichedAnalysisFact"];
+                    volatility_fraction: components["schemas"]["EnrichedAnalysisFact"];
+                    skew: components["schemas"]["EnrichedAnalysisFact"];
+                    excess_kurtosis: components["schemas"]["EnrichedAnalysisFact"];
+                    beta: components["schemas"]["EnrichedAnalysisFact"];
+                    correlation: components["schemas"]["EnrichedAnalysisFact"];
+                    benchmark_return_fraction: components["schemas"]["EnrichedAnalysisFact"];
+                    max_drawdown_duration_days: components["schemas"]["EnrichedAnalysisFact"];
+                    sharpe_decay: components["schemas"]["EnrichedAnalysisFact"];
+                };
+                behaviour: {
+                    exposure_long_fraction: components["schemas"]["EnrichedAnalysisFact"];
+                    exposure_short_fraction: components["schemas"]["EnrichedAnalysisFact"];
+                    exposure_flat_fraction: components["schemas"]["EnrichedAnalysisFact"];
+                    win_rate: components["schemas"]["EnrichedAnalysisFact"];
+                    payoff_ratio: components["schemas"]["EnrichedAnalysisFact"];
+                    average_hold_seconds: components["schemas"]["EnrichedAnalysisFact"];
+                    max_consecutive_losses: components["schemas"]["EnrichedAnalysisFact"];
+                    turnover_notional: components["schemas"]["EnrichedAnalysisFact"];
+                };
+            };
+            curves: {
+                sampling: {
+                    source_observation_count: components["schemas"]["EnrichedAnalysisCount"];
+                    emitted_point_count: number;
+                    /** @constant */
+                    method: "EXTREMA_BUCKET_V1";
+                };
+                strategy_rebased_100: components["schemas"]["EnrichedAnalysisCurve"];
+                benchmark_rebased_100: components["schemas"]["EnrichedAnalysisCurve"];
+                drawdown_fraction: components["schemas"]["EnrichedAnalysisCurve"];
+            };
+            monthly_returns: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                /** @constant */
+                origin: "PORTAL_DERIVED";
+                /** @constant */
+                includes_partial_months: true;
+                /** @enum {unknown} */
+                sampling: "FULL" | "TAIL_WINDOW_V1";
+                total_period_count: components["schemas"]["EnrichedAnalysisCount"];
+                omitted_transport_period_count: components["schemas"]["EnrichedAnalysisCount"];
+                /** @constant */
+                definition_id: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+                values: {
+                    month_start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    return_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
+                    observation_count: components["schemas"]["EnrichedAnalysisCount"];
+                    expected_observation_count: components["schemas"]["EnrichedAnalysisCount"];
+                    partial: boolean;
+                    /** @enum {unknown} */
+                    basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+                    base_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    close_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                }[];
+            };
+            return_distribution: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                /** @constant */
+                origin: "PORTAL_DERIVED";
+                /** @constant */
+                sampling: "UTC_DAY";
+                observation_count: components["schemas"]["EnrichedAnalysisCount"];
+                /** @constant */
+                bucket_basis: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
+                buckets: {
+                    lower_inclusive: components["schemas"]["EnrichedAnalysisDecimal"];
+                    upper: components["schemas"]["EnrichedAnalysisDecimal"];
+                    /** @enum {unknown} */
+                    upper_inclusive: "true" | "false";
+                    count: components["schemas"]["EnrichedAnalysisCount"];
+                }[];
+            };
+            drawdown_episodes: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                /** @constant */
+                origin: "PORTAL_DERIVED";
+                total: components["schemas"]["EnrichedAnalysisCount"];
+                open_episode_present: boolean;
+                longest_open: boolean;
+                values: {
+                    start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    trough_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    recovery_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"] | null;
+                    depth_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
+                    duration_seconds: components["schemas"]["EnrichedAnalysisUtcMs"];
+                }[];
+            };
+            library_summary: components["schemas"]["EnrichedAnalysisLibrarySummary"];
+            rolling: null;
+        };
+        EnrichedAnalysisMonthlyPoint: {
+            month_start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+            return_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
+            partial: boolean;
+            observation_count: components["schemas"]["EnrichedAnalysisPositiveCount"];
+            /** @enum {unknown} */
+            basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+            base_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+            close_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+        };
+        EnrichedAnalysisDistributionBucket: {
+            lower_inclusive: components["schemas"]["EnrichedAnalysisDecimal"];
+            upper: components["schemas"]["EnrichedAnalysisDecimal"];
+            /** @enum {unknown} */
+            upper_inclusive: "true" | "false";
+            count: string;
+        };
+        /**
+         * ResearchAllTimeDistributions
+         * @description Additive precomputed OOS companion, including a partial leading month. Daily histogram is all-time, not a trade or per-bar histogram. Original seals remain immutable.
+         */
+        EnrichedAnalysisDistributions: {
+            /** @constant */
+            schema_version: "research.all-time-distributions.v1";
+            /** @constant */
+            origin: "PORTAL_DERIVED";
+            /** @constant */
+            scope: "OOS";
+            scope_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+            oos_observation_count: number;
+            /** @constant */
+            monthly_definition: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+            /** @constant */
+            distribution_definition: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
+            monthly_returns: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                source_observation_count: components["schemas"]["EnrichedAnalysisCount"];
+                emitted_point_count: number;
+                total_period_count: components["schemas"]["EnrichedAnalysisCount"];
+                omitted_leading_period_count: components["schemas"]["EnrichedAnalysisCount"];
+                omitted_transport_period_count: components["schemas"]["EnrichedAnalysisCount"];
+                /** @enum {unknown} */
+                sampling: "FULL" | "TAIL_WINDOW_V1";
+                values: components["schemas"]["EnrichedAnalysisMonthlyPoint"][];
+            };
+            return_distribution: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                source_observation_count: components["schemas"]["EnrichedAnalysisCount"];
+                emitted_point_count: number;
+                /** @enum {unknown} */
+                sampling: "FULL_RETURN_HISTOGRAM_V2" | "NOT_APPLICABLE";
+                values: components["schemas"]["EnrichedAnalysisDistributionBucket"][];
+            };
+        };
+        EnrichedAnalysisDecimal: string;
+        EnrichedAnalysisDigest: string;
+        EnrichedAnalysisUtcMs: number;
+        EnrichedAnalysisCount: number;
+        EnrichedAnalysisPositiveCount: number;
+        EnrichedAnalysisLocator: string;
+        EnrichedAnalysisReason: string;
+        EnrichedAnalysisFact: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+            value: components["schemas"]["EnrichedAnalysisDecimal"] | null;
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            /** @constant */
+            scope: "OOS";
+            source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+        } & unknown;
+        EnrichedAnalysisCurve: {
+            at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+            value: components["schemas"]["EnrichedAnalysisDecimal"];
+        }[];
+        EnrichedAnalysisLibrarySummary: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+            /** @constant */
+            label: "all time";
+            /** @constant */
+            basis: "ALL_TIME";
+            sparkline: components["schemas"]["EnrichedAnalysisCurve"];
+            /** @constant */
+            sampling: "EXTREMA_BUCKET_V1";
+            source_observation_count: components["schemas"]["EnrichedAnalysisCount"];
+            /** @enum {unknown} */
+            coverage: "FULL_RETAINED_OOS" | "SAMPLED_RETAINED_EQUITY";
+            return_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
+            sharpe: components["schemas"]["EnrichedAnalysisFact"];
+            max_drawdown_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
+            input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+        };
         WorkspaceId: string;
         RunId: string;
         JobId: string;
@@ -523,6 +774,7 @@ export interface components {
             availability: components["schemas"]["Availability"];
         };
         ReportDetail: {
+            enriched_analysis?: components["schemas"]["EnrichedAnalysis"];
             /** @constant */
             schema_version: "research.report-detail.v1";
             /** @constant */

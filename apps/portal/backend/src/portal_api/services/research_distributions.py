@@ -13,7 +13,7 @@ from portal_api.services.research_evidence_metrics import decimal_text
 
 
 def all_time_distributions(*, equity: Any, daily_returns: Any, digest: str,
-                           scope_locator: str) -> dict[str, Any]:
+                           scope_locator: str, maximum_months: int = 32) -> dict[str, Any]:
     import numpy as np
     import pandas as pd
 
@@ -57,7 +57,9 @@ def all_time_distributions(*, equity: Any, daily_returns: Any, digest: str,
                     "basis": basis, "base_at_utc_ms": base_at, "close_at_utc_ms": close_at,
                 })
             prior_close, prior_at = close, close_at
-    emitted = monthly_values[-32:]
+    if not 1 <= maximum_months <= 120:
+        raise ValueError("monthly transport bound must be 1..120")
+    emitted = monthly_values[-maximum_months:]
     monthly = {
         "state": "AVAILABLE" if emitted else "NOT_APPLICABLE",
         "reason_code": None if emitted else "PORTAL_MONTHLY_TOO_FEW_OOS_OBSERVATIONS",

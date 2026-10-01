@@ -738,6 +738,8 @@ class CurrentSourceArtifactAdapter:
             summary["summary_analytics"] = summary_analytics
         if summary_analytics_v2 is not None:
             summary["summary_analytics_v2"] = summary_analytics_v2
+        from portal_api.services.research_enrich_analysis import enrich_retained
+        summary["enriched_analysis"] = enrich_retained(run_id=identity.run_id, observations=observations, folds=folds)
         self._fit_summary_budget(summary, observations)
         writer = self._retained_artifacts.begin_write(
             identity=identity,

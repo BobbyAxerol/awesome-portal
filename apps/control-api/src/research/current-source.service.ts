@@ -129,6 +129,10 @@ export function currentSourceSealDigest(seal: Pick<CurrentSourceSealRow,
 }
 
 function revision(kind: string, seal: CurrentSourceSealRow): string {
+  if (seal.enrichedAnalysis && ["evidence", "evidence-monthly_returns", "evidence-return_distribution"].includes(kind)) {
+    return `rs02_${kind}_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
+      enrichment: sha256ResearchJson(seal.enrichedAnalysis) })}`;
+  }
   if (seal.distributionsSidecar && ["evidence", "evidence-monthly_returns", "evidence-return_distribution"].includes(kind)) {
     return `rs02_${kind}_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
       ...(kind === "evidence" && seal.analyticsSidecar ? { analytics_sidecar_digest: seal.analyticsSidecar.digest } : {}),
@@ -405,6 +409,7 @@ export class ResearchCurrentSourceService {
       && candidate.objective === summary.selection.objective) ?? null;
     const value = {
       schema_version: "research.current-source-evidence.v1" as const,
+      ...(seal.enrichedAnalysis ? { enriched_analysis: seal.enrichedAnalysis } : {}),
       ...(summary.summary_analytics ? { summary_analytics: summary.summary_analytics } : {}),
       ...(summary.summary_analytics_v2 ? { summary_analytics_v2: summary.summary_analytics_v2 } : {}),
       ...(summary.source_series_artifact ? { source_series_artifact: summary.source_series_artifact } : {}),
@@ -1304,6 +1309,20 @@ export class ResearchCurrentSourceService {
         }),
       };
     }
+    if (seal.enrichedAnalysis && (kind === "MONTHLY_RETURNS" || kind === "RETURN_DISTRIBUTION")) {
+      const enriched = seal.enrichedAnalysis;
+      const source = kind === "MONTHLY_RETURNS" ? enriched.monthly_returns : enriched.return_distribution;
+      const values = kind === "MONTHLY_RETURNS" ? enriched.monthly_returns.values.map(({ expected_observation_count: _expected, ...row }) => row)
+        : enriched.return_distribution.buckets.map(row => ({ ...row, count: String(row.count) }));
+      return { availability: { state: source.state, reason_code: source.reason_code },
+        source_sample: { source_observation_count: kind === "MONTHLY_RETURNS" ? enriched.scope.observation_count : enriched.return_distribution.observation_count,
+          emitted_point_count: values.length, sampling: source.state === "AVAILABLE" ? kind === "MONTHLY_RETURNS" ? enriched.monthly_returns.sampling : "FULL_RETURN_HISTOGRAM_V2" : "NOT_APPLICABLE", envelope: null,
+          derivation: { origin: "PORTAL_DERIVED", scope: "OOS", input_digest: enriched.input_digest, source_locator: enriched.scope.locator,
+            definition_id: kind === "MONTHLY_RETURNS" ? enriched.monthly_returns.definition_id : enriched.return_distribution.bucket_basis,
+            grain: kind === "MONTHLY_RETURNS" ? "UTC_CALENDAR_MONTH" : "UTC_DAY", oos_observation_count: enriched.scope.observation_count,
+            ...(kind === "MONTHLY_RETURNS" ? { total_period_count: enriched.monthly_returns.total_period_count,
+              omitted_transport_period_count: enriched.monthly_returns.omitted_transport_period_count } : {}) } }, values };
+    }
     const distributions = seal.distributionsSidecar?.distributions ?? summary.summary_analytics_v2?.distributions;
     if (distributions && (kind === "MONTHLY_RETURNS" || kind === "RETURN_DISTRIBUTION")) {
       const source = kind === "MONTHLY_RETURNS" ? distributions.monthly_returns : distributions.return_distribution;
@@ -1442,6 +1461,10 @@ export class ResearchCurrentSourceService {
     seal?: CurrentSourceSealRow,
   ): Availability {
     if (kind === "EQUITY" || kind === "RETURNS" || kind === "POSITIONS") return available();
+    if (seal?.enrichedAnalysis && (kind === "MONTHLY_RETURNS" || kind === "RETURN_DISTRIBUTION")) {
+      const source = kind === "MONTHLY_RETURNS" ? seal.enrichedAnalysis.monthly_returns : seal.enrichedAnalysis.return_distribution;
+      return { state: source.state, reason_code: source.reason_code };
+    }
     const distributions = seal?.distributionsSidecar?.distributions ?? summary.summary_analytics_v2?.distributions;
     if (distributions && (kind === "MONTHLY_RETURNS" || kind === "RETURN_DISTRIBUTION")) {
       const source = kind === "MONTHLY_RETURNS" ? distributions.monthly_returns : distributions.return_distribution;

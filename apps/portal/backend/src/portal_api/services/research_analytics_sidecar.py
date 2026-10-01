@@ -15,7 +15,7 @@ from typing import Any
 from portal_api.services.research_portal_analytics import portal_analytics_v2
 
 
-def derive_sidecar(observations: list[dict[str, Any]], folds: list[dict[str, Any]]) -> dict[str, Any]:
+def retained_result(observations: list[dict[str, Any]], folds: list[dict[str, Any]]):
     import pandas as pd
     from quantbt.core.results import BacktestResultV2
 
@@ -68,11 +68,19 @@ def derive_sidecar(observations: list[dict[str, Any]], folds: list[dict[str, Any
         symbols=["retained_symbol"],
         initial_capital=equity[0],
         metadata={"walk_forward": {"fold_table": pd.DataFrame(windows)}},
+        diagnostics=pd.DataFrame({"turnover": [
+            (row.get("bar") or {}).get("turnover") for row in observations
+        ]}, index=index).astype(float),
     )
+    return result, pd.Series(closes, index=index)
+
+
+def derive_sidecar(observations: list[dict[str, Any]], folds: list[dict[str, Any]]) -> dict[str, Any]:
+    result, close = retained_result(observations, folds)
     block = portal_analytics_v2(
         result=result,
         mode="WFO",
-        market_close=pd.Series(closes, index=index),
+        market_close=close,
         benchmark_locator="P05.retained_OBSERVATION.bar.candle.close_or_NOT_PUBLISHED",
     )
     # These are descriptive bar/position metrics from retained arrays. Their
@@ -83,7 +91,7 @@ def derive_sidecar(observations: list[dict[str, Any]], folds: list[dict[str, Any
     # The engine hit-rate formula needs source close returns, whereas profit
     # factor needs only the retained return sample. Missing candles cannot be
     # replaced by account returns to infer directional hit rates.
-    if not all(math.isfinite(value) for value in closes):
+    if not all(math.isfinite(value) for value in close):
         for key in ("long_hit_rate_fraction", "short_hit_rate_fraction"):
             fact = block["metrics"][key]
             fact.update(state="NOT_PUBLISHED", reason_code="AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED", value=None)
@@ -94,6 +102,8 @@ def main() -> None:
     observations: list[dict[str, Any]] = []
     folds: list[dict[str, Any]] = []
     expected: dict[str, int] | None = None
+    enrichment = None
+    passport = None
     for raw in sys.stdin:
         item = json.loads(raw)
         kind, ordinal, payload = item.get("kind"), item.get("ordinal"), item.get("payload")
@@ -101,6 +111,10 @@ def main() -> None:
             if expected is not None or observations or folds:
                 raise ValueError("AN-29 metadata must be first")
             expected = item["expected"]
+            enrichment = item.get("enrichment")
+            continue
+        if kind == "P04_SOURCE" and enrichment and passport is None:
+            passport = payload
             continue
         if expected is None or not isinstance(payload, dict):
             raise ValueError("AN-29 row protocol is invalid")
@@ -110,7 +124,15 @@ def main() -> None:
         target.append(payload)
     if expected is None or len(observations) != expected["OBSERVATION"] or len(folds) != expected["FOLD"]:
         raise ValueError("AN-29 retained rows differ from the immutable seal")
-    print(json.dumps(derive_sidecar(observations, folds), separators=(",", ":"), allow_nan=False))
+    if enrichment:
+        from portal_api.services.research_enrich_analysis import enrich_retained, enrich_fixed_passport
+        block = enrich_fixed_passport(run_id=enrichment["run_id"], passport=passport,
+            nominal_bar_ms=enrichment.get("nominal_bar_ms")) if passport else enrich_retained(
+            run_id=enrichment["run_id"], observations=observations, folds=folds,
+            nominal_bar_ms=enrichment.get("nominal_bar_ms"))
+    else:
+        block = derive_sidecar(observations, folds)
+    print(json.dumps(block, separators=(",", ":"), allow_nan=False))
 
 
 if __name__ == "__main__":

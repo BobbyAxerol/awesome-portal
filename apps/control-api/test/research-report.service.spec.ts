@@ -113,6 +113,20 @@ function subject() {
 }
 
 describe("P18 immutable Report and bounded reproducible export", () => {
+  it("B6 returns a supplemental block without resealing the frozen Report core", async () => {
+    const value = subject();
+    const before = await value.service.materialize(scope, "run_p18");
+    const enriched = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
+    value.stored!.enrichedAnalysis = enriched;
+    value.readers.evidence.bundle.mockRejectedValue(new Error("no source refresh on Report GET"));
+    const after = await value.service.read(scope, "run_p18");
+    expect(after.enriched_analysis).toEqual(enriched);
+    expect(after.frozen_core).toEqual(before.frozen_core);
+    expect(after.report_revision).toBe(before.report_revision);
+    expect(after.etag).not.toBe(before.etag);
+    openApiValidator("research-report.openapi.json", "ReportDetail").assert(after);
+  });
+
   it("AN-21 uses the issued Hub v3 OOS Sharpe in a new P04 report", async () => {
     const value = subject();
     const existing = await value.readers.evidence.bundle();

@@ -9,6 +9,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { enrichedJoin } from "./enriched-analysis.read";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
 
@@ -35,6 +36,8 @@ export interface RunLibraryBoundary {
 }
 
 export interface RunLibraryRow {
+  enriched_analysis?: JsonColumn;
+  enriched_digest?: string | null;
   workspace_id: string;
   run_id: string;
   attempt_id: string | null;
@@ -778,6 +781,11 @@ export class ResearchRunLibraryRepository {
   /** Shared with the P19 lineage reader (W6b CG-P19-05), which reads the same rows in its own snapshot. */
   static pageJoins(includeActorDraft = true): string {
     return `LEFT JOIN LATERAL (
+             SELECT enrichment.enriched,enrichment.enriched_digest
+               FROM (SELECT library.workspace_id,library.run_id) wanted
+               ${enrichedJoin("wanted.workspace_id", "wanted.run_id")}
+           ) enriched ON true
+           LEFT JOIN LATERAL (
              SELECT projection.projection_revision,
                     jsonb_build_object(
                       'metric_registry_version', projection.projection->'metric_registry_version',
@@ -881,6 +889,7 @@ export class ResearchRunLibraryRepository {
               library.alpha_filter_key, library.mode_key, library.job_terminal_reason,
               ${CREATED_AT_CURSOR_SQL} AS created_at_cursor,
               evidence.projection_revision AS evidence_revision,
+              enriched.enriched AS enriched_analysis, enriched.enriched_digest,
               evidence.projection AS evidence_projection,
               evidence.equity_state AS evidence_equity_state,
               evidence.equity_reason AS evidence_equity_reason,

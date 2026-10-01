@@ -1,6 +1,7 @@
 /** P18 durable report-manifest and bounded export-job persistence. */
 
 import { createHash, randomBytes } from "node:crypto";
+import { readEnriched } from "./enriched-analysis.read";
 
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
@@ -22,6 +23,7 @@ import {
 type JsonValue = Record<string, unknown> | unknown[] | string | null;
 
 export interface StoredResearchReport {
+  enrichedAnalysis?: import("./enriched-analysis.contract").ResearchEnrichedAnalysis;
   runId: string;
   displayLabel?: string | null;
   reportRevision: string;
@@ -301,7 +303,10 @@ export class ResearchReportRepository {
         [scope.workspaceId, runId],
       );
       const display = label.rows[0];
-      return { ...this.toStored(result.rows[0]!), displayLabel: runDisplayLabel(display?.display_profile_id, runDisplayOrdinal(display?.display_ordinal)) };
+      const enrichedAnalysis = await readEnriched(client, scope.workspaceId, runId,
+        () => new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503));
+      return { ...this.toStored(result.rows[0]!), ...(enrichedAnalysis ? { enrichedAnalysis } : {}),
+        displayLabel: runDisplayLabel(display?.display_profile_id, runDisplayOrdinal(display?.display_ordinal)) };
     });
   }
 

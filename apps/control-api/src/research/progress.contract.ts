@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
@@ -339,6 +340,7 @@ export const ResearchEvidenceSourceSchema = z.object({
   oos_analytics: ResearchEvidenceOosAnalyticsSourceSchema.optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
+  enriched_analysis: ResearchEnrichedAnalysisSchema.optional(),
 }).strict().superRefine((value, context) => {
   if (value.source.emitted_equity_points !== value.equity_points.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count is inconsistent" });
@@ -853,7 +855,8 @@ export const ResearchProgressIngressSchema = z.object({
   if ((terminalEvidenceDigest === undefined) !== (value.evidence === undefined)) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence document and terminal digest must be paired" });
   }
-  if (value.evidence !== undefined && Buffer.byteLength(JSON.stringify(value.evidence), "utf8") > MAX_EVIDENCE_BYTES) {
+  const evidenceCore = value.evidence && { ...value.evidence, enriched_analysis: undefined };
+  if (evidenceCore !== undefined && Buffer.byteLength(JSON.stringify(evidenceCore), "utf8") > MAX_EVIDENCE_BYTES) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence document exceeds its bounded transport budget" });
   }
   if (value.split !== undefined && value.event.event_type !== "run_completed") {

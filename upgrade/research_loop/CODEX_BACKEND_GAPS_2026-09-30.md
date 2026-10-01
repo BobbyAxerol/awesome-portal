@@ -367,3 +367,17 @@ Cần Codex làm tiếp, theo thứ tự:
 2. **Gom một service (quy tắc Bobby #2):** companion phân phối được làm riêng (`research_distributions.py`, migration 082, CLI `--distributions`) thay vì nằm trong `enrich_analysis`. Chấp nhận như bước đệm, nhưng ER-01/ER-02 (một service, một sidecar) vẫn là yêu cầu: khi làm ER-01, đưa `research_distributions` và `retained_analytics_v2` về cùng một đường mã/cùng một sidecar thay vì hai bảng + hai CLI.
 3. **Hub P04**: R-P04-021 trả monthly `not applicable` ("No OOS month has a prior calendar month-end close…"). Áp quy tắc tháng đầu một phần của BR-F6-02 cho lane P04 (OOS một tháng → một điểm `partial`).
 4. Phần còn lại của §13 giữ nguyên: ER-05 `analytics_all_time` cho thẻ Library (all-time, không `last_30d`), ER-06 drawdown episodes, ER-07 fact còn vắng, ER-09 fixture/OpenAPI chuẩn cho khối `enriched_analysis`.
+
+### B6 implementation — shared `enrich_analysis`, 2026-10-01
+
+ER-01…10 implementation and exact frontend binding handoff are recorded in
+[P13 B6 receipt](./evidence/P13/B6_ENRICH_ANALYSIS_2026-10-01.md).
+Migration 083, deterministic builder, source-time/explicit historical companion,
+all-time Library and supplemental Report are **CODE_READY / PREVIEW_PENDING**.
+Do not substitute prior BR-F6 acceptance for this new receipt. Original source
+seals/reports and 081/082 companions stay immutable; historical P04 declares
+sampled coverage, with missing daily ledger typed rather than fabricated.
+Generated canonical schemas/types/fixtures provided for Claude's existing UI.
+No frontend edit, remote push or production change. Metadata index, executor
+v2, T12/T14 and aggregate P23/P24 remain open. Actual gates/receipt and code SHA
+will supersede this pending record below after execution.

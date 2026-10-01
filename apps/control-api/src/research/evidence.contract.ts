@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
@@ -534,6 +535,7 @@ export const ResearchEvidenceWindowDisclosureSchema = z.object({
 });
 
 export const ResearchEvidenceHubResponseSchema = z.object({
+  enriched_analysis: ResearchEnrichedAnalysisSchema.optional(),
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
   schema_version: z.literal("research.evidence-hub.v1"),

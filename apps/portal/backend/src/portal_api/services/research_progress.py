@@ -581,7 +581,10 @@ class ResearchProgressJournal:
             encoded = json.dumps(canonicalize(source), sort_keys=True, separators=(",", ":")).encode("utf-8")
         except (TypeError, ValueError) as exc:
             raise ResearchProgressError("P13 evidence source receipt is not serializable") from exc
-        if len(encoded) == 0 or len(encoded) > _MAX_EVIDENCE_BYTES:
+        core = {key: value for key, value in source.items() if key != "enriched_analysis"}
+        enrichment = source.get("enriched_analysis")
+        if len(encoded) == 0 or len(json.dumps(core, sort_keys=True, separators=(",", ":")).encode()) > _MAX_EVIDENCE_BYTES \
+                or (enrichment is not None and len(json.dumps(enrichment, separators=(",", ":")).encode()) > 65_536):
             raise ResearchProgressError("P13 evidence source receipt exceeds its bounded budget")
         digest = hashlib.sha256(encoded).hexdigest()
         with self._locked():

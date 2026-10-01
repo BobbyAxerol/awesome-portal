@@ -546,6 +546,18 @@ def _fit_evidence_display(receipt: dict[str, Any], *, byte_budget: int, reserve_
             selected = _evidence_indices([float(row["return_fraction"]) for row in rolling], maximum_points=maximum)
             receipt["derived"]["rolling_returns_20_observations"] = [rolling[index] for index in selected]
             metadata["rolling_returns_20"].update(emitted_point_count=len(selected), sampling="EXTREMA_BUCKET_V1")
+        # Additive v2 curves share the legacy core budget too. Coarsen only
+        # display points; source counts, scalar facts and source digests stay.
+        v2 = receipt["summary_analytics_v2"]
+        for curve in (v2["strategy_curve"], v2["benchmark_curve"], v2["last_30d"]["points"]):
+            if len(curve) > maximum:
+                selected = _evidence_indices([float(row["value"]) for row in curve], maximum_points=maximum)
+                curve[:] = [curve[index] for index in selected]
+        is_curve = receipt["summary_analytics"]["in_sample_equity"]
+        if len(is_curve["points"]) > maximum:
+            selected = _evidence_indices([float(row["equity"]) for row in is_curve["points"]], maximum_points=maximum)
+            is_curve["points"] = [is_curve["points"][index] for index in selected]
+            is_curve.update(emitted_point_count=len(selected), sampling="EXTREMA_BUCKET_V1")
     if size() + reserve_bytes > byte_budget:
         raise ValueError("P13 mandatory evidence facts exceed the child byte budget")
 
@@ -558,6 +570,7 @@ def _p13_evidence_source(
     oos_start_utc_ms: int,
     execution_adapter_id: str = "p04.delta-rsi.v1",
     is_start_utc_ms: int | None = None,
+    run_id: str | None = None,
 ) -> dict[str, Any]:
     """Build the bounded evidence passport from the actual QuantBT result.
 
@@ -733,6 +746,18 @@ def _p13_evidence_source(
         # journalled.  It is therefore a deterministic source error rather
         # than a late, unrecoverable sidecar-storage failure.
         raise ValueError("P13 evidence receipt exceeds the child byte budget")
+    if run_id is not None:
+        from portal_api.services.research_enrich_analysis import enrich_analysis, digest_rows
+        from portal_api.services.research_evidence_metrics import decimal_text
+        raw_rows = [{"at_utc_ms": _utc_ms(at, label="OOS"), "equity": decimal_text(value),
+            "return_fraction": decimal_text(result.returns.loc[at]),
+            "position": [decimal_text(v) for v in result.positions.loc[at]],
+            "close": decimal_text(market.loc[at, "close"])} for at, value in oos.items()]
+        receipt["enriched_analysis"] = enrich_analysis(run_id=run_id, result=result, mode="FIXED", market_close=market["close"],
+            benchmark_locator=receipt["summary_analytics_v2"]["benchmark_locator"],
+            is_start_utc_ms=is_start_utc_ms, oos_start_utc_ms=oos_start_utc_ms,
+            source_tables=[{"name": "OBSERVATION", "row_count": len(raw_rows), "digest": digest_rows(raw_rows)}],
+            analytics=receipt["summary_analytics_v2"])
     return receipt
 
 
@@ -829,6 +854,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any]) -> dict[str, Any]:
             report=report,
             oos_start_utc_ms=oos_start_utc_ms,
             is_start_utc_ms=receipt.get("is_start_utc_ms"),
+            run_id=receipt.get("run_id"),
         )
     return output
 
@@ -999,6 +1025,7 @@ def _run_p17_imported_signal_notional(receipt: dict[str, Any]) -> dict[str, Any]
             oos_start_utc_ms=oos_start_utc_ms,
             execution_adapter_id=IMPORTED_ALPHA_ADAPTER_ID,
             is_start_utc_ms=receipt.get("is_start_utc_ms"),
+            run_id=receipt.get("run_id"),
         )
     return output
 

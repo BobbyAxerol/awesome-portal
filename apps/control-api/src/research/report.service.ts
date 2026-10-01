@@ -375,6 +375,7 @@ export class ResearchReportService {
   private detail(stored: StoredResearchReport): ResearchReportDetailResponse {
     const response = {
       schema_version: "research.report-detail.v1" as const,
+      ...(stored.enrichedAnalysis ? { enriched_analysis: stored.enrichedAnalysis } : {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
       run_id: stored.runId,
       display_label: stored.displayLabel ?? null,
