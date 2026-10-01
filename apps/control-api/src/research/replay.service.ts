@@ -276,6 +276,12 @@ export class ResearchReplayService {
       child_audit_provenance: gap("NOT_PUBLISHED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_CHILD_AUDIT_REPLAY_PROVENANCE"), absenceAvailability),
       cross_stream_order: gap("NOT_ASSERTED", sourceReason("P04_SOURCE_DID_NOT_PUBLISH_CROSS_STREAM_EXECUTION_ORDER"), absenceAvailability),
     };
+    const retainedCandle = this.candleOverview(candleOverview, sourceIsAvailable, compatibilityAvailability);
+    const tradeMetric = hub.metrics.find((metric) => metric.key === "TRADE_COUNT");
+    const tradeReported = sourceIsAvailable && tradeMetric?.availability.state === "AVAILABLE"
+      && (tradeMetric.scope === "CHILD_TAPE" || tradeMetric.scope === "IS_PLUS_OOS")
+      && tradeMetric.value !== null && /^[0-9]+$/.test(tradeMetric.value);
+    const noLedger = (reason: string) => this.routeGap(sourceReason(reason), absenceAvailability);
     return {
       schema_version: "research.replay.v1",
       read_authority: "PORTAL_PERSISTED_RESEARCH",
@@ -299,7 +305,22 @@ export class ResearchReplayService {
       },
       equity_replay: window,
       market_overview: marketOverview,
-      candle_overview: this.candleOverview(candleOverview, sourceIsAvailable, compatibilityAvailability),
+      candle_overview: retainedCandle,
+      ...(sourceIsCurrentP04 ? { execution: { counts: {
+        bars: retainedCandle.state === "AVAILABLE"
+          ? { value: retainedCandle.source_bar_count, scope: "OOS_EQUITY_WINDOW", availability: availability("AVAILABLE", null) }
+          : { value: null, scope: null, availability: retainedCandle.availability },
+        trades_reported: tradeReported
+          ? { value: tradeMetric!.value, scope: tradeMetric!.scope, availability: availability("AVAILABLE", null) }
+          : { value: null, scope: null, availability: tradeMetric?.availability.state === "AVAILABLE"
+            ? notPublished("P04_SOURCE_TRADE_COUNT_SCOPE_INCOMPATIBLE")
+            : tradeMetric ? responseAvailability(tradeMetric.availability)
+              : notPublished("P04_SOURCE_DID_NOT_PUBLISH_TRADE_COUNT") },
+        orders_published: noLedger("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER"),
+        fills_published: noLedger("P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS"),
+        trades_published: noLedger("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER"),
+        transitions: noLedger("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM"),
+      } } } : {}),
       route_capabilities: routeCapabilities,
       source_absences: sourceAbsences,
     };

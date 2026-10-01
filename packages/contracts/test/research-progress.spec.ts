@@ -48,7 +48,7 @@ describe("P11 published Research Progress contract", () => {
       "researchRunRequestedSpecGetV1", "RunRequestedSpec", "ProgressRunIdentity", "declared_folds",
       "ProgressDeniedArtifact", "denied_artifacts", "ProgressFoldSelection", "ProgressHandoffCursor",
       "handoff_cursor", "lease_expired_at_utc_ms", "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC", "new_run_from",
-      "P11_STREAM_READ_OVER_FRAME_BUDGET", "evidence_digest", "split_digest", "best_objective",
+      "P11_STREAM_READ_OVER_FRAME_BUDGET", "evidence_digest", "split_digest", "best_objective", "rate_trials_per_s",
       // E10: where a FAILED run stopped and why.
       "ProgressFailedAt", "ProgressTerminalReason", "failed_at", "terminal_reason",
       "SOURCE_RUNNING_STAGE", "FIRST_UNFINISHED_STAGE",

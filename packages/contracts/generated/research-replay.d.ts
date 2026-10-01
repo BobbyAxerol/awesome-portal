@@ -184,6 +184,25 @@ export interface components {
             equity_replay: components["schemas"]["ReplayWindow"];
             market_overview?: components["schemas"]["MarketOverview"];
             candle_overview: components["schemas"]["CandleOverview"];
+            /** @description P04 retained count subset. bars is OOS only; trades_reported is an exact child-tape/IS_PLUS_OOS QuantBT count, not a published trade ledger. Ledger counts remain typed absent. */
+            execution?: {
+                counts: {
+                    bars: {
+                        value: number | null;
+                        scope: "OOS_EQUITY_WINDOW" | null;
+                        availability: components["schemas"]["Availability"];
+                    };
+                    trades_reported: {
+                        value: string | null;
+                        scope: ("CHILD_TAPE" | "IS_PLUS_OOS") | null;
+                        availability: components["schemas"]["Availability"];
+                    };
+                    orders_published: components["schemas"]["RouteCapability"];
+                    fills_published: components["schemas"]["RouteCapability"];
+                    trades_published: components["schemas"]["RouteCapability"];
+                    transitions: components["schemas"]["RouteCapability"];
+                };
+            };
             route_capabilities: {
                 orders: components["schemas"]["RouteCapability"];
                 fills: components["schemas"]["RouteCapability"];

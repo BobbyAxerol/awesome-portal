@@ -624,6 +624,8 @@ function validatePayload(
       best_objective: SignedDecimalSchema.nullable().optional(),
       /** Remaining search seconds at the observed trial rate; null when not computable. */
       eta_s: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable().optional(),
+      /** Cumulative source study trials / monotonic elapsed seconds; null if not computable. */
+      rate_trials_per_s: z.string().regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(24).nullable().optional(),
       overall_pct: z.number().int().min(0).max(100).optional(),
       tqdm_line: z.string().min(1).max(512).optional(),
       console: ConsoleObservationSchema.optional(),
@@ -777,6 +779,7 @@ export const ResearchProgressSnapshotSchema = z.object({
     pct: z.number().int().min(0).max(100),
     elapsed_s: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     eta_s: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
+    rate_trials_per_s: z.string().regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(24).nullable().optional(),
     trials_done: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     trials_declared: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
     tqdm_line: z.string().min(1).max(512),

@@ -345,6 +345,7 @@ def _validate_payload(event_type: str, payload: dict[str, Any]) -> None:
             required={"trial"},
             optional={
                 "fold", "study", "state", "objective", "best_objective", "eta_s",
+                "rate_trials_per_s",
                 "overall_pct", "tqdm_line", "console",
             },
         )
@@ -364,6 +365,12 @@ def _validate_payload(event_type: str, payload: dict[str, Any]) -> None:
             not isinstance(eta, int) or isinstance(eta, bool) or not 0 <= eta <= 9_007_199_254_740_991
         ):
             raise ResearchProgressError("P11 trial ETA is invalid")
+        rate = payload.get("rate_trials_per_s")
+        if rate is not None and (
+            not isinstance(rate, str) or len(rate) > 24
+            or re.fullmatch(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?", rate) is None
+        ):
+            raise ResearchProgressError("P11 trial rate is invalid")
         state = payload.get("state")
         if state is not None and state not in {"COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"}:
             raise ResearchProgressError("P11 trial state is invalid")
@@ -829,6 +836,7 @@ class ResearchProgressJournal:
                     "pct": 0,
                     "elapsed_s": 0,
                     "eta_s": None,
+                    "rate_trials_per_s": None,
                     "trials_done": 0,
                     "trials_declared": self.planned_trials,
                     "tqdm_line": "queued — waiting for a worker…",
@@ -902,6 +910,8 @@ class ResearchProgressJournal:
                 overall["tqdm_line"] = line
             if "eta_s" in payload:
                 overall["eta_s"] = payload["eta_s"]
+            if "rate_trials_per_s" in payload:
+                overall["rate_trials_per_s"] = payload["rate_trials_per_s"]
             # A global-study trial scores every fold at once; it opens no fold
             # row, so no fold is drawn running before its OOS is evaluated.
             if fold is not None and not any(item.get("fold") == fold for item in snapshot["folds"]):
@@ -1169,6 +1179,13 @@ class ResearchProgressJournal:
             if not isinstance(value[key], int) or isinstance(value[key], bool) or value[key] < 0:
                 raise ResearchProgressError("P11 snapshot has invalid timestamps")
         overall = value["overall"]
+        rate = overall.get("rate_trials_per_s") if isinstance(overall, dict) else None
+        if rate is not None and (
+            not isinstance(rate, str) or len(rate) > 24
+            or re.fullmatch(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?", rate) is None
+        ):
+            raise ResearchProgressError("P11 snapshot trial rate is invalid")
+
         readiness = value["readiness"]
         if (
             not isinstance(overall, dict)

@@ -283,6 +283,25 @@ export const ResearchReplayResponseSchema = z.object({
    * typed absence under `route_capabilities.candle_windows`.
    */
   candle_overview: ReplayCandleOverviewSchema,
+  /** Additive P04 projection; reported trades are not published trade records. */
+  execution: z.object({
+    counts: z.object({
+      bars: z.object({
+        value: z.number().int().nonnegative().nullable(),
+        scope: z.literal("OOS_EQUITY_WINDOW").nullable(),
+        availability: ResearchReplayAvailabilitySchema,
+      }).strict(),
+      trades_reported: z.object({
+        value: z.string().regex(/^[0-9]+$/).max(24).nullable(),
+        scope: z.enum(["CHILD_TAPE", "IS_PLUS_OOS"]).nullable(),
+        availability: ResearchReplayAvailabilitySchema,
+      }).strict(),
+      orders_published: RouteCapabilitySchema,
+      fills_published: RouteCapabilitySchema,
+      trades_published: RouteCapabilitySchema,
+      transitions: RouteCapabilitySchema,
+    }).strict(),
+  }).strict().optional(),
   /**
    * Route-specific execution panels. P04 does not publish their source
    * records, so these are structured absences rather than decorative rows.

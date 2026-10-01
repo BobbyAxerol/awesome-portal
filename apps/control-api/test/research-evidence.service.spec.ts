@@ -121,6 +121,9 @@ describe("P13 Evidence Flow projection authority", () => {
       });
       const bundle = await service.bundle(scope, "run_p13", []);
       expect(bundle.hub.availability.state).toBe("AVAILABLE");
+      expect(bundle.hub.source_absences.per_fold_metrics).toEqual({
+        state: "NOT_APPLICABLE", reason_code: "P04_SINGLE_WINDOW_HAS_NO_PER_FOLD_METRICS",
+      });
       if (shape === "CORRUPT") {
         expect(bundle.candleOverview).toEqual({
           state: "NOT_PUBLISHED", reason_code: "P13_RETAINED_CANDLE_OVERVIEW_IS_INCOMPATIBLE", value: null,

@@ -62,6 +62,9 @@ function evidenceFixture(pointCount = 120, options: {
         },
       } : {}),
     },
+    metrics: [{ key: "TRADE_COUNT", value: "7", scope: "CHILD_TAPE", availability: {
+      state: availability, reason_code: availability === "AVAILABLE" ? null : "P17_SOURCE_CALLBACK_PENDING",
+    } }],
   };
   const series = {
     schema_version: "research.evidence-series.v1",
@@ -165,6 +168,7 @@ describe("P17 route-aware, current-source replay authority", () => {
       route: { id: "signal_notional", replay_contract: "P17_IMPORTED_FIXED_EQUITY_SAMPLE_V1" },
       equity_replay: { state: "AVAILABLE" } });
     expect(result.equity_replay.items).toHaveLength(2);
+    expect(result.execution).toBeUndefined();
     expect(result.equity_replay.page.next_cursor).toEqual(expect.any(String));
   });
   it("preserves exact source sample order and supports a direct late seek without compute, ledger synthesis or source-path access", async () => {
@@ -183,6 +187,14 @@ describe("P17 route-aware, current-source replay authority", () => {
         semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY",
         data: { emitted_bucket_count: 2, sampling: "FULL" },
       },
+    });
+    expect(first.execution?.counts).toMatchObject({
+      bars: { value: 120, scope: "OOS_EQUITY_WINDOW", availability: { state: "AVAILABLE" } },
+      trades_reported: { value: "7", scope: "CHILD_TAPE", availability: { state: "AVAILABLE" } },
+      orders_published: { state: "NOT_PUBLISHED" },
+      fills_published: { state: "NOT_PUBLISHED" },
+      trades_published: { state: "NOT_PUBLISHED" },
+      transitions: { state: "NOT_PUBLISHED" },
     });
     expect(first.route_capabilities.candle_windows).toMatchObject({
       state: "NOT_PUBLISHED",

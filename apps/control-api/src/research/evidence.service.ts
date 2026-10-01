@@ -674,6 +674,11 @@ export class ResearchEvidenceService {
         audited_fills: fallback,
         per_fold_metrics: fallback,
       };
+    // P04 is one fixed IS/OOS window, not a walk-forward fold population.
+    // Preserve the sealed source receipt; correct only this read-side applicability.
+    if (projection?.source.execution_adapter_id === "p04.delta-rsi.v1") {
+      sourceAbsences.per_fold_metrics = notApplicable("P04_SINGLE_WINDOW_HAS_NO_PER_FOLD_METRICS");
+    }
     // D-AN-01: the child now derives the run-bound buy-and-hold benchmark
     // from its already-loaded HMD close. Do not repeat the old source gap.
     const benchmarkV2 = projection?.summary_analytics_v2?.metrics.benchmark_return_fraction;

@@ -86,11 +86,13 @@ def test_global_trial_opens_no_fold_and_eta_is_withdrawn_when_the_search_ends(tm
     _to_study(journal)
     journal.emit("trial_completed", {
         "study": "GLOBAL", "trial": 1, "state": "COMPLETE", "objective": "-9.8", "best_objective": "-9.8",
-        "eta_s": 12, "tqdm_line": "global study · trial 1/3",
+        "eta_s": 12, "rate_trials_per_s": "0.166666667", "tqdm_line": "global study · trial 1/3",
     })
     snapshot = journal.snapshot()
     assert snapshot["folds"] == []
     assert snapshot["overall"]["eta_s"] == 12
+    assert snapshot["overall"]["rate_trials_per_s"] == "0.166666667"
+    assert _journal(tmp_path, profile="DELTA_WFO").snapshot()["overall"]["rate_trials_per_s"] == "0.166666667"
     assert snapshot["overall"]["tqdm_line"] == "global study · trial 1/3"
     journal.emit("stage_completed", {"stage": "S4"})
     assert journal.snapshot()["overall"]["eta_s"] is None
@@ -103,6 +105,7 @@ def test_global_trial_opens_no_fold_and_eta_is_withdrawn_when_the_search_ends(tm
     ({"study": "GLOBAL", "trial": 1, "objective": "1e-3"}, "objective"),
     ({"study": "GLOBAL", "trial": 1, "best_objective": 1.5}, "best objective"),
     ({"study": "GLOBAL", "trial": 1, "eta_s": -1}, "ETA"),
+    ({"study": "GLOBAL", "trial": 1, "rate_trials_per_s": "1e3"}, "rate"),
     ({"study": "GLOBAL", "trial": 4}, "declared"),
 ])
 def test_trial_facts_are_validated_before_the_journal_accepts_them(tmp_path: Path, payload: dict, message: str) -> None:
@@ -210,6 +213,7 @@ def test_live_study_progress_emits_observed_trials_eta_and_budget_ticks() -> Non
     trials = [payload for kind, payload in emitted if kind == "trial_completed"]
     assert [trial["trial"] for trial in trials] == [1, 2, 3]
     assert [trial["eta_s"] for trial in trials] == [12, 5, None]  # ceil(6/1*2), ceil(10/2*1), done
+    assert [trial["rate_trials_per_s"] for trial in trials] == ["0.166666667", "0.2", "0.25"]
     assert trials[0]["tqdm_line"] == "global study · trial 1/3 · best IS Sharpe -9.806 · pruned 0/1"
     assert trials[1]["tqdm_line"] == "global study · trial 2/3 · best IS Sharpe -9.806 · pruned 1/2"
     assert trials[1]["console"] == {"tone": "INFO", "text": "global trial 2 IS Sharpe=— state=PRUNED", "trial": 2}

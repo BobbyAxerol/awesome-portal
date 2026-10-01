@@ -175,6 +175,8 @@ export interface components {
                 pct: number;
                 elapsed_s: components["schemas"]["UtcMilliseconds"];
                 eta_s: components["schemas"]["UtcMilliseconds"] | null;
+                /** @description Cumulative source-observed GLOBAL study trials per monotonic elapsed second; null when not computable. Optional for pre-rate receipts. */
+                rate_trials_per_s?: string | null;
                 trials_done: components["schemas"]["UtcMilliseconds"];
                 trials_declared: number;
                 tqdm_line: string;
@@ -276,6 +278,8 @@ export interface components {
             best_objective?: components["schemas"]["SignedDecimal"] | null;
             /** @description Remaining search seconds at the observed trial rate; null when not computable (no completed trial yet, or the search is done). */
             eta_s?: number | null;
+            /** @description Cumulative source-observed GLOBAL study trials per monotonic elapsed second; null when not computable. Optional for pre-rate receipts. */
+            rate_trials_per_s?: string | null;
             overall_pct?: number;
             tqdm_line?: string;
             console?: components["schemas"]["ProgressConsoleObservation"];

@@ -19,6 +19,7 @@ describe("P17 published Research Replay contract", () => {
     for (const needle of [
       "researchReplayDetailGetV1", "playback_cursor", "RETROSPECTIVE_EQUITY_NOT_EXECUTION_STATE",
       "SOURCE_CHRONOLOGICAL_SAMPLE_ORDINAL_ASC", "child_audit_provenance", "P17_CURRENT_P04_EQUITY_SAMPLE_V1",
+      "trades_reported", "orders_published", "OOS_EQUITY_WINDOW",
     ]) expect(generated).toContain(needle);
   });
 

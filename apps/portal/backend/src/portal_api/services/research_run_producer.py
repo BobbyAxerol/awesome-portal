@@ -219,6 +219,11 @@ class LiveStudyProgress:
         elapsed = max(0.0, self._clock() - self._started)
         remaining = self._declared - trial
         eta = math.ceil(elapsed / trial * remaining) if remaining > 0 and trial > 0 else None
+        # Source-observed cumulative study throughput, not a browser clock or
+        # an instantaneous/rolling rate. The decimal is bounded for the wire.
+        rate = format(trial / elapsed, ".9f").rstrip("0").rstrip(".") if elapsed > 0 and math.isfinite(elapsed) else None
+        if rate is not None and len(rate) > 24:
+            rate = None
         tone = {"COMPLETE": "COMPLETE", "PRUNED": "INFO", "INFEASIBLE": "WARN", "FAILED": "ERROR"}[state]
         self._progress("trial_completed", {
             "study": "GLOBAL",
@@ -227,6 +232,7 @@ class LiveStudyProgress:
             "objective": objective,
             "best_objective": best,
             "eta_s": eta,
+            "rate_trials_per_s": rate,
             "tqdm_line": (
                 f"global study · trial {trial}/{self._declared} · best IS Sharpe {_short_objective(best)}"
                 f" · pruned {self._pruned}/{trial}"
