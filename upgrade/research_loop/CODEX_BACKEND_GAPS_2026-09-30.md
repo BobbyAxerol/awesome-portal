@@ -309,3 +309,18 @@ BR-F4-01 actual catalog GET now PASS with canonical `1d`; BR-F4-11 already PASS 
 |---|---|---|
 | BR-F6-01 | Đưa `monthly_returns` và `return_distribution` (all-time, scope OOS, `PORTAL_DERIVED`) vào analytics v2 sidecar, cùng pipeline `source_fold_table` đã dựng `strategy_curve`, và cho `MONTHLY_RETURNS`/`RETURN_DISTRIBUTION` đọc từ đó với seal cũ. Bobby: phải hiện bằng được, all-time (không rolling 20/60D) | **Cao** — 12 run WFO cũ đang trống |
 | BR-F6-02 | R-WFO-023: OOS trải 2026-07-01 → 2026-08-31 (1.488 quan sát = 62 ngày) nhưng `MONTHLY_RETURNS` chỉ có **1 điểm** (tháng 8, `month_start_utc_ms` 1785542400000); tháng 7 bị bỏ. Cần gồm tháng đầu (một phần) với cờ `partial`/số quan sát, hoặc mã lý do vì sao bỏ | Cao — heatmap tháng gần như trống với WFO ngắn |
+
+## 13. Đợt B6 — service `enrich_analysis` (QUEUE TIẾP THEO sau §12; Bobby giao 2026-10-01)
+
+**Spec đầy đủ, contract đề xuất, ER-01…10 và nghiệm thu: [`ENRICH_ANALYSIS_SERVICE_SPEC_2026-10-01.md`](./ENRICH_ANALYSIS_SERVICE_SPEC_2026-10-01.md). Fixture đề xuất: `evidence/P21/enrich-analysis/enriched-analysis.proposed.fixture.json` (số thật của R-WFO-023, hình dạng do FE chốt).** FE đã/đang đọc đúng hình này; backend làm cho khớp rồi gửi fixture canonical.
+
+Bốn quy tắc Bobby: (1) nguồn là dữ liệu thô QuantBT; (2) mọi số cần tính từ thô tính ở **một** service `enrich_analysis`, một đường mã cho mọi lane và backfill; (3) **all-time**, không cắt 30D/60D, không rolling làm số chính (thẻ Library cũng all-time); (4) UI/UX và contract chốt trước, backend theo.
+
+Làm theo thứ tự: ER-01 service → ER-02 sidecar → ER-03 tháng một phần (R-WFO-023 đang thiếu tháng 7) → ER-04 seal cũ hết bị từ chối (R-WFO-020 và 12 run WFO cũ) → ER-05 `analytics_all_time` cho Library → ER-06 drawdown → ER-07 fact còn vắng → ER-08 hub P04 → ER-09 fixture/OpenAPI → ER-10 receipt. **Hợp nhất và thay thế**: BR-F4-09, BR-F4-10, BR-F4-11, BR-F4-14 (phần analytics), BR-F6-01, BR-F6-02, và `last_30d` của D-AN-01 §1.3.
+
+Không đổi: nhóm dữ liệu khai báo run BR-F4-02…08 (coverage theo timeframe, metadata symbol, chất lượng dữ liệu, dataset/venue khác, tìm symbol, số bar/window, ước lượng fold) vẫn là hàng đợi riêng ở trên; cùng nguyên tắc nguồn thô từ HMD.
+
+**Bằng chứng mới cho ER-03 (R-P04-021, run P04 mới của Codex, đã xem trên preview 2026-10-01):** OOS chỉ đúng một tháng (2026-07-01 → 08-01) nên panel "Monthly returns" hiện server text *"No OOS month has a prior calendar month-end close to measure from, so no monthly return exists"* (`not applicable`). Cùng gốc với R-WFO-023 mất tháng 7: tháng đầu bị bỏ vì không có "month-end trước". Với run ngắn (một đến hai tháng — đúng loại đang chạy trên preview) heatmap tháng luôn trống. ER-03 cần cơ sở thay thế cho tháng đầu (vốn đầu kỳ hoặc quan sát OOS đầu) và cờ `partial`, để run một tháng vẫn có một ô có nhãn "partial".
+
+**Đã xác nhận trên preview thật, không cần Codex làm lại:** R-P04-021 hub trả analytics v2 và FE vẽ đủ "Strategy vs benchmark — all time" (Beta 0.01, Corr 0.26, Sharpe 0.74, Sortino 0.61, benchmark +7.36%), phân phối (12 bucket, 744 quan sát), Behavior; Library last-30D 19 điểm. BR-F4-09 và BR-F4-11 được FE chấp nhận (browser acceptance, Claude 2026-10-01).
+

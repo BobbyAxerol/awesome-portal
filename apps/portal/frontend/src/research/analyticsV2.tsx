@@ -31,6 +31,15 @@ export const V2_NOT_COMPUTED = "PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL";
 
 export type V2Unit = "ratio" | "signed" | "percent" | "count" | "days" | "duration";
 
+/**
+ * What the all-time cells read: the v2 block's fields, or the same fields drawn out of the
+ * `enrich_analysis` block. `drawdown_recovered` is `null` when the source does not say, and then
+ * no "open" mark is drawn (the episodes card carries each episode's own recovery).
+ */
+export type V2Core = Pick<RetainedAnalyticsV2, "input_digest" | "scope_locator" | "benchmark_locator" | "metrics" | "behaviour" | "strategy_curve" | "benchmark_curve"> & {
+  drawdown_recovered: boolean | null;
+};
+
 /** The v2 block the screen reads: the retained lane's when it answered, else the Hub's. */
 export function v2Of(retained: CurrentSourceEvidence | null, hub: EvidenceHub): RetainedAnalyticsV2 | null {
   return retained ? ((retained as Partial<CurrentSourceEvidence>).summary_analytics_v2 ?? null) : (hub.summary_analytics_v2 ?? null);
@@ -157,7 +166,19 @@ export function AnalyticsAbsentLine({ availability }: { availability: Availabili
  * with the screen); the cells under it are the all-time Beta / Corr / Sharpe / Sortino plus the
  * benchmark's own return.
  */
-export function StrategyBenchmarkFigure({ v2, chart }: { v2: RetainedAnalyticsV2; chart: ReactNode }) {
+export function StrategyBenchmarkFigure({
+  v2,
+  chart,
+  chip,
+  underwater,
+}: {
+  v2: V2Core;
+  chart: ReactNode;
+  /** Provenance chip when the figure is drawn from the `enrich_analysis` block. */
+  chip?: ReactNode;
+  /** The compact underwater strip, drawn only from a served `drawdown_fraction` curve. */
+  underwater?: ReactNode;
+}) {
   const m = v2.metrics;
   const cells: [string, string, RetainedAnalyticsV2Fact, V2Unit][] = [
     ["beta", "Beta", m.beta, "ratio"],
@@ -178,6 +199,7 @@ export function StrategyBenchmarkFigure({ v2, chart }: { v2: RetainedAnalyticsV2
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={`${v2.scope_locator}\nbenchmark ${v2.benchmark_locator}`}>
           rebased 100
         </span>
+        {chip ?? null}
       </figcaption>
       {v2.strategy_curve.length > 0 ? (
         chart
@@ -194,6 +216,7 @@ export function StrategyBenchmarkFigure({ v2, chart }: { v2: RetainedAnalyticsV2
           />
         </p>
       ) : null}
+      {underwater ?? null}
       <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-5" data-strategy-cells>
         {cells.map(([id, label, fact, unit]) => (
           <Cell key={id} id={id} label={label}>
@@ -206,7 +229,7 @@ export function StrategyBenchmarkFigure({ v2, chart }: { v2: RetainedAnalyticsV2
 }
 
 /** The Behavior block, all time: bar-return statistics, exposure and position episodes. */
-export function BehaviorV2({ v2 }: { v2: RetainedAnalyticsV2 }) {
+export function BehaviorV2({ v2, chip }: { v2: V2Core; chip?: string }) {
   const m = v2.metrics;
   const b = v2.behaviour;
   const rows: [string, string, RetainedAnalyticsV2Fact, V2Unit, ReactNode?][] = [
@@ -217,7 +240,7 @@ export function BehaviorV2({ v2 }: { v2: RetainedAnalyticsV2 }) {
     ["long-hit", "Long-bar hit", m.long_hit_rate_fraction, "percent"],
     ["short-hit", "Short-bar hit", m.short_hit_rate_fraction, "percent"],
     ["dd-duration", "Drawdown duration", m.max_drawdown_duration_days, "days",
-      v2.drawdown_recovered ? null : <span className="ml-1 text-[9px] font-normal" style={{ color: "var(--ink-faint)" }} title="Still below the prior peak at the end of the scope.">open</span>],
+      v2.drawdown_recovered !== false ? null : <span className="ml-1 text-[9px] font-normal" style={{ color: "var(--ink-faint)" }} title="Still below the prior peak at the end of the scope.">open</span>],
     ["skew", "Skew", m.skew, "ratio"],
     ["kurtosis", "Excess kurtosis", m.excess_kurtosis, "ratio"],
     ["decay", "Sharpe decay", m.sharpe_decay, "ratio"],
@@ -246,7 +269,7 @@ export function BehaviorV2({ v2 }: { v2: RetainedAnalyticsV2 }) {
           behavior
         </h3>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={`${v2.scope_locator}\ninput ${shortDigest(v2.input_digest)}`}>
-          all time · OOS
+          {chip ?? "all time · OOS"}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3" data-behavior-grid>

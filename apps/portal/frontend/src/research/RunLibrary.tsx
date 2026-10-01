@@ -45,7 +45,9 @@ import {
   type StageCell,
   isAvailable,
   mayCompare,
+  readAllTime,
   unavailableReason as stateSentence,
+  type AllTimeSummary,
 } from "./runLibraryClient";
 import {
   ALPHA_VERSION_PUBLICATION_WORDS,
@@ -597,6 +599,192 @@ export function sparkProvenance(
   return parts.filter(Boolean).join(" · ");
 }
 
+/* -------------------------------------------------------------------------
+ * All time (`enrich_analysis` library_summary)
+ * ---------------------------------------------------------------------- */
+
+const ALL_TIME_WIDTH = 150;
+const ALL_TIME_HEIGHT = 26;
+
+/**
+ * Polyline points for the served all-time series: x by time, y min-max over
+ * the points. Every point as served is drawn - none is dropped to fit a
+ * column count. Null when fewer than two points or any value is not a number.
+ */
+export function allTimePath(points: AllTimeSummary["sparkline"]): string | null {
+  if (points.length < 2) return null;
+  const xs = points.map((p) => p.at_utc_ms);
+  const ys = points.map((p) => Number(p.value));
+  if (ys.some((y) => !Number.isFinite(y))) return null;
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...xs);
+  const y0 = Math.min(...ys);
+  const y1 = Math.max(...ys);
+  const pad = 2;
+  return points
+    .map((_, index) => {
+      const px = x1 === x0 ? ALL_TIME_WIDTH / 2 : ((xs[index] - x0) / (x1 - x0)) * ALL_TIME_WIDTH;
+      const py =
+        y1 === y0 ? ALL_TIME_HEIGHT / 2 : pad + (1 - (ys[index] - y0) / (y1 - y0)) * (ALL_TIME_HEIGHT - 2 * pad);
+      return `${px.toFixed(1)},${py.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+type AllTimeAbsence = { state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE"; reason_code: string | null };
+
+/** The served reason's sentence; NOT_APPLICABLE is the contract's other absence state. */
+function absenceSentence(absent: AllTimeAbsence): string {
+  return absent.state === "NOT_APPLICABLE"
+    ? "This figure does not apply to this run."
+    : reasonSentence({ state: absent.state, reason_code: absent.reason_code });
+}
+
+const ALL_TIME_ABSENT: CSSProperties = {
+  fontFamily: MONO,
+  fontSize: 10,
+  fontStyle: "italic",
+  lineHeight: "17px",
+  color: "var(--ink-faint)",
+  whiteSpace: "nowrap",
+};
+
+function AllTimeCell({
+  name,
+  label,
+  exact,
+  face,
+  absent,
+}: {
+  name: string;
+  label: string;
+  exact: string | null;
+  face: string | null;
+  absent: AllTimeAbsence;
+}) {
+  return (
+    <span className="flex flex-col" style={{ gap: 1 }} data-all-time-cell={name}>
+      <span style={LABEL_9}>{label}</span>
+      {face !== null ? (
+        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "var(--ink)" }} title={exact ?? undefined}>
+          {face}
+        </span>
+      ) : (
+        <span
+          style={ALL_TIME_ABSENT}
+          data-withheld={absent.state}
+          data-reason-code={absent.reason_code ?? undefined}
+          title={absenceSentence(absent)}
+        >
+          not published
+        </span>
+      )}
+    </span>
+  );
+}
+
+const NO_REASON: AllTimeAbsence = {
+  state: "NOT_PUBLISHED",
+  reason_code: null,
+};
+
+/** The all-time block of a card: the curve over every sealed OOS observation and its trio. */
+function AllTime({ runId, summary }: { runId: string; summary: AllTimeSummary }) {
+  const available = summary.state === "AVAILABLE";
+  const path = available ? allTimePath(summary.sparkline) : null;
+  const n = summary.sparkline.length;
+  const first = formatUtc(summary.sparkline[0]?.at_utc_ms);
+  const last = formatUtc(summary.sparkline[n - 1]?.at_utc_ms);
+  const sharpe = summary.sharpe;
+  const sharpeFace =
+    sharpe && sharpe.state === "AVAILABLE" && sharpe.value !== null && Number.isFinite(Number(sharpe.value))
+      ? typographicMinus(TWO_DP.format(Number(sharpe.value)))
+      : null;
+  return (
+    <span className="flex flex-none flex-col" style={{ gap: 3 }} data-all-time={runId}>
+      <span style={LABEL_9}>{summary.label}</span>
+      {path !== null ? (
+        <>
+          <svg
+            width={ALL_TIME_WIDTH}
+            height={ALL_TIME_HEIGHT}
+            viewBox={`0 0 ${ALL_TIME_WIDTH} ${ALL_TIME_HEIGHT}`}
+            role="img"
+            aria-label={`${summary.label} equity, ${n} points`}
+            data-all-time-points={n}
+          >
+            <title>{`${summary.label} · ${n} points as served${first && last ? ` · ${first} → ${last}` : ""}`}</title>
+            <polyline
+              points={path}
+              fill="none"
+              stroke="var(--role-oos)"
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span
+            style={{ fontFamily: MONO, fontSize: 8.5, lineHeight: "11px", height: 11, color: "var(--ink-faint)", whiteSpace: "nowrap" }}
+            data-all-time-caption
+          >
+            {n} pts
+          </span>
+        </>
+      ) : (
+        <span
+          className="flex items-center"
+          style={{ ...SPARK_BOX, ...ALL_TIME_ABSENT }}
+          data-all-time-absent={available ? "SERIES" : summary.state}
+          data-reason-code={summary.reason_code ?? undefined}
+          title={
+            available
+              ? "The served all-time points cannot be drawn: fewer than two, or not numbers."
+              : absenceSentence(summary)
+          }
+        >
+          not published
+        </span>
+      )}
+      {available ? (
+        <span className="flex" style={{ gap: 10 }} data-all-time-trio>
+          <AllTimeCell
+            name="return"
+            label="return"
+            exact={summary.return_fraction}
+            face={formatMetric(summary.return_fraction, "fraction")}
+            absent={NO_REASON}
+          />
+          <AllTimeCell name="sharpe" label="sharpe" exact={sharpe?.value ?? null} face={sharpeFace} absent={sharpe ?? NO_REASON} />
+          <AllTimeCell
+            name="max-dd"
+            label="max DD"
+            exact={summary.max_drawdown_fraction}
+            face={formatMetric(summary.max_drawdown_fraction, "fraction")}
+            absent={NO_REASON}
+          />
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** A refused all-time block: a typed absence in the sparkline's slot, never a relabel. */
+function AllTimeRefused({ runId, why }: { runId: string; why: string }) {
+  return (
+    <span className="flex flex-none flex-col" style={{ gap: 3 }} data-all-time={runId}>
+      <span style={LABEL_9}>all time</span>
+      <span
+        className="flex items-center"
+        style={{ ...SPARK_BOX, ...ALL_TIME_ABSENT }}
+        data-all-time-refused
+        title={`Not drawn: ${why}.`}
+      >
+        not published
+      </span>
+    </span>
+  );
+}
+
 /**
  * The lazy sparkline.
  *
@@ -642,6 +830,19 @@ function Sparkline({
       onVisible(item.run_id, false);
     };
   }, [item.run_id, onVisible]);
+
+  const allTime = readAllTime(item);
+  if (allTime.kind !== "absent") {
+    return (
+      <span className="flex flex-none flex-col" ref={box} data-sparkline={item.run_id} data-sparkline-source="all-time">
+        {allTime.kind === "summary" ? (
+          <AllTime runId={item.run_id} summary={allTime.summary} />
+        ) : (
+          <AllTimeRefused runId={item.run_id} why={allTime.why} />
+        )}
+      </span>
+    );
+  }
 
   const label = last30dSeries(item)
     ? "last 30D equity"

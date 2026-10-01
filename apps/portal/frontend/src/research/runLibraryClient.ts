@@ -146,6 +146,112 @@ export const runLibraryApi = {
 } as const;
 
 /* -------------------------------------------------------------------------
+ * All-time summary (`enrich_analysis`, `library_summary`)
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The proposed `analytics_all_time` block of a Library item
+ * (`research.enriched-analysis.v1` `library_summary`). The backend does not
+ * serve it yet and the generated contract does not declare it, so the item is
+ * read through a guard: nothing here is trusted until it has the shape.
+ */
+export interface AllTimeFact {
+  state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+  reason_code: string | null;
+  value: string | null;
+}
+export interface AllTimeSummary {
+  label: string;
+  state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+  reason_code: string | null;
+  sparkline: readonly { at_utc_ms: number; value: string }[];
+  return_fraction: string | null;
+  sharpe: AllTimeFact | null;
+  max_drawdown_fraction: string | null;
+}
+
+/**
+ * What a card knows about its all-time block.
+ *
+ *  - `absent`  - the server did not send one: the card keeps its own source,
+ *    labelled as that source labels itself.
+ *  - `refused` - it sent one whose basis is not `ALL_TIME`, whose `rolling`
+ *    is not null, or whose shape is wrong: a typed absence, never drawn and
+ *    never relabelled.
+ *  - `summary` - drawn.
+ */
+export type AllTimeRead =
+  | { kind: "absent" }
+  | { kind: "refused"; why: string }
+  | { kind: "summary"; summary: AllTimeSummary };
+
+const FACT_STATES = ["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function stringOrNull(value: unknown): string | null | undefined {
+  return value === null ? null : typeof value === "string" ? value : undefined;
+}
+
+export function readAllTime(item: RunLibraryItem): AllTimeRead {
+  const raw = (item as unknown as { analytics_all_time?: unknown }).analytics_all_time;
+  if (raw === undefined || raw === null) return { kind: "absent" };
+  if (!isRecord(raw)) return { kind: "refused", why: "the block is not an object" };
+  if (raw.basis !== "ALL_TIME") {
+    return { kind: "refused", why: `the server labelled this block ${JSON.stringify(raw.basis ?? null)}, not ALL_TIME` };
+  }
+  if (raw.rolling !== undefined && raw.rolling !== null) {
+    return { kind: "refused", why: "a rolling figure came with the all-time block" };
+  }
+  const state = raw.state;
+  if (typeof state !== "string" || !FACT_STATES.includes(state)) {
+    return { kind: "refused", why: "the block has no state" };
+  }
+  const reason = stringOrNull(raw.reason_code);
+  const ret = stringOrNull(raw.return_fraction);
+  const drawdown = stringOrNull(raw.max_drawdown_fraction);
+  if (reason === undefined || ret === undefined || drawdown === undefined) {
+    return { kind: "refused", why: "the block's figures are not strings" };
+  }
+  let sharpe: AllTimeFact | null = null;
+  if (isRecord(raw.sharpe)) {
+    const value = stringOrNull(raw.sharpe.value);
+    const why = stringOrNull(raw.sharpe.reason_code);
+    if (
+      typeof raw.sharpe.state !== "string" ||
+      !FACT_STATES.includes(raw.sharpe.state) ||
+      value === undefined ||
+      why === undefined
+    ) {
+      return { kind: "refused", why: "the sharpe fact is malformed" };
+    }
+    sharpe = { state: raw.sharpe.state as AllTimeFact["state"], reason_code: why, value };
+  } else if (raw.sharpe !== null && raw.sharpe !== undefined) {
+    return { kind: "refused", why: "the sharpe fact is malformed" };
+  }
+  const points = raw.sparkline;
+  if (
+    !Array.isArray(points) ||
+    !points.every((p) => isRecord(p) && Number.isFinite(p.at_utc_ms) && typeof p.value === "string")
+  ) {
+    return { kind: "refused", why: "the sparkline points are malformed" };
+  }
+  return {
+    kind: "summary",
+    summary: {
+      label: typeof raw.label !== "string" ? "all time" : raw.label,
+      state: state as AllTimeSummary["state"],
+      reason_code: reason,
+      sparkline: points as AllTimeSummary["sparkline"],
+      return_fraction: ret,
+      sharpe,
+      max_drawdown_fraction: drawdown,
+    },
+  };
+}
+
+/* -------------------------------------------------------------------------
  * Comparison
  * ---------------------------------------------------------------------- */
 

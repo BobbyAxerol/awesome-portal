@@ -656,16 +656,21 @@ export function DrawdownChart({
   series,
   points: given,
   boundaries = NO_BOUNDARIES,
+  height = CHART_HEIGHT.underwater,
+  chart = "drawdown",
 }: {
   series?: EvidenceSeries;
   points?: EquityPoint[];
   boundaries?: readonly FoldBoundary[];
+  /** enrich_analysis: the compact underwater strip under the strategy-vs-benchmark figure. */
+  height?: number;
+  chart?: string;
 }) {
   const points = given ?? ((series?.values ?? []) as EquityPoint[]);
   const drawdown = useMemo(() => drawdownOption(points, boundaries), [points, boundaries]);
   return (
-    <div data-chart="drawdown">
-      <EChart option={drawdown} height={CHART_HEIGHT.underwater} />
+    <div data-chart={chart}>
+      <EChart option={drawdown} height={height} />
     </div>
   );
 }

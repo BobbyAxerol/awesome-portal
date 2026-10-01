@@ -260,3 +260,21 @@ Bản ghi: `evidence/P21/audit-2026-09-30/f4/*.md`.
 - **UI:** panel vắng không còn kéo cao bằng panel bên cạnh (`self-start`), vẫn hiện đủ khung kèm mã lý do; panel có hình giữ chiều cao hàng.
 - **Quyết định dấu trừ (của tôi):** mọi số UI tự định dạng dùng `−` (U+2212), gồm thẻ Library; chuỗi server viết sẵn (log console, cụm tiến độ `best IS Sharpe -1.444`, bảng "exact values") giữ nguyên như server gửi.
 - **BR-F4-01 đã đóng bởi Codex (`83201af3`):** catalog trả `1d` (cùng chữ với phiên bản alpha), nên chip timeframe ngày chọn được; test S02 cập nhật theo fixture mới. BR-F4-11 (Library last-30D) cũng đã đóng ở runtime đã sửa (19 điểm trùng Evidence).
+
+### F5 ledger — sổ §13.4.1 đối chiếu với code `71aed3e6` (2026-10-01)
+
+**F5 ledger: 50 rows verified, 17 corrected.** Chi tiết từng dòng + locator: `evidence/P21/audit-2026-09-30/f4/LEDGER.md`; bản đính chính nằm trong `UNIFIED_IMPLEMENTATION_PLAN.md` §13.4.1 (khối "F5 ledger", cùng ghi chú ngay dưới dòng E1, E4, E15; chữ cũ giữ nguyên, không xoá). Cách kiểm: đọc/grep code và test, không chạy test, không trình duyệt; dòng nào không có locator hoặc test thì không nâng thành DONE.
+
+| Trạng thái | Dòng |
+|---|---|
+| DONE | E2, E5 (FE), E6 (FE), E7 (FE), E15 (consumer S03), D1, D2, D3, D4, D7, D8, D10, F2, G2, G3, G4, G8, G9, VD-F1-01, VD-F1-02, VD-F1-03, VD-FG-01-01, VD-FG-05-02/-06/-07/-11 |
+| PARTIAL | E1, E3, E4, D9, F1, F5, F9, F12, G1, G5, G7, VD-TEXT-01, VD-FG-04-01/-04/-05 |
+| OPEN | F3, F13, G6, G10, G11, VD-RF04-01, VD-RF04-02, VD-FG-07-01, VD-FG-08-01…05, VD-FG-01-17, VD-FG-01-18/-21/-26 |
+| WONT_DO(decision) | D5, D6 |
+| BLOCKED_BY_CODEX | G12 (OL-24); phần S03 của E4 (CG-FG-S03-02); E5-O1/O2; E6-BR-01; 2 ô S00 của F3 (CG-S00-AV-01) |
+
+**Hai điều Bobby nêu, trả lời thẳng:**
+- *"E4/E15 ghi đóng nhưng S03 chưa có code"* — đúng với E4: `ClaimPassport` chỉ có claim/certification/seal/hand-off (`RunProgress.tsx:1474`), thiếu 4 methodology claim, run QUEUED không có passport forecast (`:2150-2185`) → E4 = PARTIAL, S03 = BLOCKED_BY_CODEX(CG-FG-S03-02). E15 thì S03 manifest là consumer sẵn có từ 2026-09-24, không do E15.
+- *"E1 ghi đã làm tròn bảng a11y S04 nhưng chưa"* — đúng: `EvidenceCharts.tsx:152` `ExactTable` (và S08) vẫn in ISO-ms + float đầy đủ; ISO-ms còn ở S01 `RunLibrary.tsx:1181` và S11 `ReleaseCandidateDetail.tsx:1815,1980`. E1 = PARTIAL. Việc sửa (làm tròn hiển thị, giữ chuỗi chính xác ở `title`/cột riêng) chưa làm.
+
+**Việc F5 còn lại cần chạy (không phải docs):** lane real-API 54 ô (F3), axe (G7, F9), visual qua `./scripts/portal-web-visual.sh` (F13/G6, Bobby duyệt từng ô), receipt real cho D7 (G1).

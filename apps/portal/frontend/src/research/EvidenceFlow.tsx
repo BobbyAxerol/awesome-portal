@@ -26,6 +26,7 @@ import { usePresentation } from "../app/presentation";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
   WITHHELD_WORDS,
+  enrichedOf,
   isAvailable,
   unavailableReason,
   type Availability,
@@ -70,12 +71,24 @@ import { HubSearchBody } from "./hubStageSearch";
 import { HubFreezeBody } from "./hubStageFreeze";
 import { HubExecuteBody } from "./hubStageExecute";
 import { AnalyticsAbsentLine, BehaviorV2, StrategyBenchmarkFigure, v2Absence, v2Of } from "./analyticsV2";
+import { enrichedBlock, type EnrichedAnalysis } from "./enrichedAnalysis";
+import {
+  DrawdownEpisodes,
+  EnrichedChip,
+  EnrichedRefusedLine,
+  enrichedAsCore,
+  enrichedDistribution,
+  enrichedMonthly,
+  underwaterPoints,
+  type EnrichedMonthPoint,
+} from "./enrichedPanels";
 
 /* The chart chunk. Five entry points, one module, fetched once. */
 const EquityChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.EquityChart })));
 const DrawdownChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DrawdownChart })));
 const StrategyBenchmarkChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.StrategyBenchmarkChart })));
 const DistributionChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DistributionChart })));
+const UnderwaterStrip = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DrawdownChart })));
 
 /**
  * A UTC instant the way the HiFi writes one that carries a time:
@@ -1868,10 +1881,13 @@ function SeriesPanel({
   absentExtra,
   className,
   style,
+  chip,
   children,
 }: {
   kind: SeriesKind;
   title: string;
+  /** enrich_analysis: a panel drawn from the block shows its provenance chip in place of the sampling line. */
+  chip?: ReactNode;
   /** The HiFi's `EChart n` label; figures only. */
   chartNo?: number;
   variant?: "figure" | "card";
@@ -1901,7 +1917,7 @@ function SeriesPanel({
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <PanelLabel>{title}</PanelLabel>
-          {ready ? <SamplingLine series={ready} /> : null}
+          {chip ?? (ready ? <SamplingLine series={ready} /> : null)}
         </div>
         {body}
         {footnote ? (
@@ -1929,7 +1945,7 @@ function SeriesPanel({
         <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
           {title}
         </span>
-        {ready ? <SamplingLine series={ready} /> : null}
+        {chip ?? (ready ? <SamplingLine series={ready} /> : null)}
       </figcaption>
       {body}
       {footer ? footer(ready) : null}
@@ -1992,11 +2008,14 @@ export function monthTint(returnFraction: string): number {
 }
 
 function MonthlyHeat({ series }: { series: EvidenceSeries }) {
-  const points = series.values as MonthlyReturnPoint[];
+  const points = series.values as (MonthlyReturnPoint & Partial<EnrichedMonthPoint>)[];
   return (
     <div className="flex items-end gap-[3px]" data-chart="monthly">
       {points.map((point) => {
         const negative = point.return_fraction.trim().startsWith("-");
+        /* enrich_analysis: a first/last month the scope only part-covers is drawn hatched, with its observation count. */
+        const partial = point.partial === true;
+        const coverage = partial ? ` · partial month · ${formatMetric(point.observation_count, "count")} of ${formatMetric(point.expected_observation_count, "count")} observations` : "";
         const month = new Date(point.month_start_utc_ms).toISOString().slice(0, 7);
         const shown = formatMetric(point.return_fraction, "fraction");
         /* HiFi tick: `7/26` — month without its zero, two-digit year. */
@@ -2007,12 +2026,21 @@ function MonthlyHeat({ series }: { series: EvidenceSeries }) {
             className="flex min-w-0 max-w-[56px] flex-1 flex-col gap-0.5"
             data-month={month}
             data-exact={point.return_fraction}
-            title={`${month} · ${shown ?? point.return_fraction} · exact ${point.return_fraction}`}
+            data-month-partial={partial ? "true" : undefined}
+            title={`${month} · ${shown ?? point.return_fraction} · exact ${point.return_fraction}${coverage}`}
           >
             <span
               className="block h-[26px] rounded-[3px]"
               data-month-cell
-              style={{ background: negative ? "var(--bad)" : "var(--good)", opacity: monthTint(point.return_fraction) }}
+              style={
+                partial
+                  ? {
+                      border: `1.5px dashed ${negative ? "var(--bad)" : "var(--good)"}`,
+                      background: `repeating-linear-gradient(135deg, ${negative ? "var(--bad)" : "var(--good)"} 0 2px, transparent 2px 5px)`,
+                      opacity: Math.max(0.6, monthTint(point.return_fraction)),
+                    }
+                  : { background: negative ? "var(--bad)" : "var(--good)", opacity: monthTint(point.return_fraction) }
+              }
             />
             <span
               className="mono text-center text-[8.5px]"
@@ -2797,12 +2825,28 @@ function Segmented({
   );
 }
 
+/** A window's tooltip: the block's state word and its reason code, else the Hub's own sentence. */
+function windowWhy(window: { state: string; reason_code: string | null } | undefined, fallback: string): string {
+  if (window === undefined || window.state === "AVAILABLE") return fallback;
+  const word = WITHHELD_WORDS[window.state as keyof typeof WITHHELD_WORDS] ?? window.state;
+  return window.reason_code !== null ? `${word} · ${window.reason_code}` : word;
+}
+
 /**
  * The HiFi window switcher and the capital toggle. The Hub publishes the OOS
  * window only and one equity series in account currency, so OOS and Capital
  * are the live choices and the others keep their place with the reason.
  */
-function WindowSwitcher({ window: active, onWindow }: { window: EvidenceWindow; onWindow: (next: EvidenceWindow) => void }) {
+function WindowSwitcher({
+  window: active,
+  onWindow,
+  windows = null,
+}: {
+  window: EvidenceWindow;
+  onWindow: (next: EvidenceWindow) => void;
+  /** enrich_analysis: each window's own state and reason code, in place of the Hub's blanket sentence. */
+  windows?: EnrichedAnalysis["windows"] | null;
+}) {
   /* F2b: IS / OOS / Holdout write `?window=` (the vocabulary S08 reads). The Hub still publishes OOS only,
      so the other two say so in place of the numbers instead of showing OOS under the wrong label. */
   const notWindow = "the Evidence Hub publishes the OOS window only";
@@ -2818,9 +2862,9 @@ function WindowSwitcher({ window: active, onWindow }: { window: EvidenceWindow; 
         <Segmented
           label="window"
           options={[
-            choice("is", "IS", `?window=is — ${notWindow}`),
-            choice("oos", "OOS", "?window=oos — the window every metric and series on this tab describes"),
-            choice("holdout", "Holdout Live", `?window=holdout — ${notWindow}`),
+            choice("is", "IS", `?window=is — ${windowWhy(windows?.is, notWindow)}`),
+            choice("oos", "OOS", `?window=oos — the window every metric and series on this tab describes${windows && windows.oos.state !== "AVAILABLE" ? ` · ${windowWhy(windows.oos, "")}` : ""}`),
+            choice("holdout", "Holdout Live", `?window=holdout — ${windowWhy(windows?.holdout, notWindow)}`),
             { label: "Compare", on: false, why: notWindow },
           ]}
         />
@@ -2849,7 +2893,18 @@ function WindowSwitcher({ window: active, onWindow }: { window: EvidenceWindow; 
  * F2b: what a window the Hub does not publish shows in place of the OOS numbers.
  * A typed absence, with the two screens that do read that window one click away.
  */
-function WindowAbsent({ window: active, runId, cursor }: { window: EvidenceWindow; runId: string; cursor: EvidenceCursor }) {
+function WindowAbsent({
+  window: active,
+  runId,
+  cursor,
+  availability = { state: "NOT_PUBLISHED", reason_code: null },
+}: {
+  window: EvidenceWindow;
+  runId: string;
+  cursor: EvidenceCursor;
+  /** enrich_analysis: the window's own typed state and reason code. */
+  availability?: Availability;
+}) {
   const base = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
   const label = active === "is" ? "IS" : "Holdout";
   return (
@@ -2859,7 +2914,7 @@ function WindowAbsent({ window: active, runId, cursor }: { window: EvidenceWindo
       style={PANEL_STYLE}
     >
       <PanelLabel>{label} window</PanelLabel>
-      <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={`${label} window metrics`} />
+      <Withheld availability={availability} what={`${label} window metrics`} />
       <span className="ml-auto inline-flex flex-wrap gap-2">
         <Link
           to={withWindow(deepDiveHref(`${base}/split`, { ...cursor, stage: "split" }), active)}
@@ -3112,7 +3167,9 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
         return fact(key, passport.artifact_table_rows.observations, "count", "retained observations · count · source-derived");
       case "OOS_SHARPE": {
         /* D-AN-01: the hero is the all-time OOS Sharpe over the whole scope; the fold mean is the foot. */
-        const all = (evidence as Partial<CurrentSourceEvidence>).summary_analytics_v2?.metrics.sharpe ?? null;
+        /* enrich_analysis (all time) first; then the v2 block; else the fold mean below. */
+        const enriched = enrichedBlock(enrichedOf(evidence));
+        const all = enriched?.facts.metrics.sharpe ?? (evidence as Partial<CurrentSourceEvidence>).summary_analytics_v2?.metrics.sharpe ?? null;
         const foldMean = verdictsOk && verdicts.mean_oos_sharpe !== null && verdicts.mean_oos_sharpe !== undefined ? formatRatio(String(verdicts.mean_oos_sharpe)) : null;
         if (all !== null) {
           const origin = all.origin === "ENGINE_DIRECT" ? "engine-direct" : "portal-derived";
@@ -3407,11 +3464,33 @@ function SummaryTab({
     },
     [retained, ensureSeries, ensureRetainedKind],
   );
-  const linkFor = (kind: SeriesKind) => laneHub.series.find((entry) => entry.kind === kind);
+  /* enrich_analysis: the all-time block, read once per response and already guarded (basis, rolling, shape).
+     A panel it can fill is drawn from it; every other panel keeps today's source and its typed absence. */
+  const enrichedRead = enrichedOf(retained);
+  const enriched = enrichedBlock(enrichedRead);
+  const enrichedSeries = new Map<SeriesKind, EvidenceSeries>();
+  if (enriched !== null) {
+    const monthly = enrichedMonthly(enriched);
+    const distribution = enrichedDistribution(enriched);
+    if (monthly !== null) enrichedSeries.set("MONTHLY_RETURNS", monthly);
+    if (distribution !== null) enrichedSeries.set("RETURN_DISTRIBUTION", distribution);
+  }
+  const linkFor = (kind: SeriesKind) =>
+    enrichedSeries.has(kind)
+      ? ({ kind, availability: { state: "AVAILABLE", reason_code: null }, href: null } as unknown as EvidenceHub["series"][number])
+      : laneHub.series.find((entry) => entry.kind === kind);
+  const slotFor = (kind: SeriesKind): SeriesSlot | undefined => {
+    const fromBlock = enrichedSeries.get(kind);
+    return fromBlock ? { state: "ready", series: fromBlock } : laneSeries.get(kind);
+  };
+  const needFor = (kind: SeriesKind) => {
+    if (!enrichedSeries.has(kind)) laneEnsure(kind);
+  };
+  const underwater = enriched !== null ? underwaterPoints(enriched) : null;
   const performance = hub.oos_performance ?? null;
   /* D-AN-01: all-time analytics. With a v2 block (or on a retained run, where the rest is one absence
      line) the headline is the HiFi's five hero tiles; the other numbers are in the Behavior block. */
-  const v2 = v2Of(retained, hub);
+  const v2 = enriched !== null ? enrichedAsCore(enriched) : v2Of(retained, hub);
   const heroOnly = v2 !== null || retained !== null;
   const tileKeys = heroOnly ? TILE_ORDER.slice(0, HERO_TILES) : TILE_ORDER;
   /* One grid, HiFi row first. A registry-v3 key appears only when the Hub
@@ -3431,11 +3510,39 @@ function SummaryTab({
         .filter((metric) => !TILE_ORDER.includes(metric.key))
         .map((metric) => <MetricTile key={metric.key} metric={metric} />);
   const passportSkip = passportSkipOf(hub);
+  const monthlyPanel = (
+    <SeriesPanel
+      kind="MONTHLY_RETURNS"
+      variant="card"
+      title={enrichedSeries.has("MONTHLY_RETURNS") ? "monthly returns — all time" : "monthly returns — stitched OOS"}
+      className={enriched !== null ? "" : "flex-[1.3_1_460px]"}
+      link={linkFor("MONTHLY_RETURNS")}
+      slot={slotFor("MONTHLY_RETURNS")}
+      onNeeded={needFor}
+      chip={enriched !== null && enrichedSeries.has("MONTHLY_RETURNS") ? <EnrichedChip block={enriched} extra={`${enriched.monthly_returns.origin.toLowerCase().replace(/_/g, "-")}${enriched.monthly_returns.includes_partial_months ? " · partial months hatched" : ""}`} /> : undefined}
+      emptyReason="no calendar month was published for this run — the source emitted 0 monthly values, so no cell is drawn. A month is never reduced from the equity series here."
+      footnote="monthly return, % · tint = magnitude"
+    >
+      {(loaded) => <MonthlyHeat series={loaded} />}
+    </SeriesPanel>
+  );
 
   return (
     <section data-screen-label="Summary" className="flex flex-col gap-3.5">
-      <WindowSwitcher window={evidenceWindow} onWindow={onWindow} />
-      {evidenceWindow !== "oos" ? <WindowAbsent window={evidenceWindow} runId={runId} cursor={cursor} /> : null}
+      <WindowSwitcher window={evidenceWindow} onWindow={onWindow} windows={enriched?.windows ?? null} />
+      {evidenceWindow !== "oos" ? (
+        <WindowAbsent
+          window={evidenceWindow}
+          runId={runId}
+          cursor={cursor}
+          availability={
+            enriched !== null && enriched.windows[evidenceWindow].state !== "AVAILABLE"
+              ? { state: enriched.windows[evidenceWindow].state as Availability["state"], reason_code: enriched.windows[evidenceWindow].reason_code }
+              : undefined
+          }
+        />
+      ) : null}
+      <EnrichedRefusedLine read={enrichedRead} />
 
       {/* Every block below describes the OOS window, the only one the Hub publishes. It stays mounted (its charts
           are not rebuilt) and is hidden while another window is chosen, so OOS numbers never sit under an IS label. */}
@@ -3532,21 +3639,32 @@ function SummaryTab({
         {v2 ? (
           <StrategyBenchmarkFigure
             v2={v2}
+            chip={enriched !== null ? <EnrichedChip block={enriched} extra={`curves ${enriched.curves.sampling.method} · ${formatMetric(enriched.curves.sampling.emitted_point_count, "count")} of ${formatMetric(enriched.curves.sampling.source_observation_count, "count")} observations, extrema kept`} /> : undefined}
             chart={
               <ChartFrame height={230}>
                 <StrategyBenchmarkChart strategy={v2.strategy_curve} benchmark={v2.benchmark_curve} />
               </ChartFrame>
+            }
+            underwater={
+              underwater !== null && v2.strategy_curve.length > 0 ? (
+                <div className="mt-2" data-underwater-strip title="Drawdown from the running peak, all time. Same curve sample as the lines above.">
+                  <ChartFrame height={132}>
+                    <UnderwaterStrip points={underwater} height={132} chart="underwater-strip" />
+                  </ChartFrame>
+                </div>
+              ) : undefined
             }
           />
         ) : null}
         <SeriesPanel
           kind="RETURN_DISTRIBUTION"
           chartNo={4}
-          title="Return distribution — stitched OOS"
+          title={enrichedSeries.has("RETURN_DISTRIBUTION") ? "Return distribution — all time" : "Return distribution — stitched OOS"}
           className="flex-[1_1_380px]"
           link={linkFor("RETURN_DISTRIBUTION")}
-          slot={laneSeries.get("RETURN_DISTRIBUTION")}
-          onNeeded={laneEnsure}
+          slot={slotFor("RETURN_DISTRIBUTION")}
+          onNeeded={needFor}
+          chip={enriched !== null && enrichedSeries.has("RETURN_DISTRIBUTION") ? <EnrichedChip block={enriched} extra={`${enriched.return_distribution.sampling} · ${enriched.return_distribution.bucket_basis} · ${formatMetric(enriched.return_distribution.observation_count, "count")} observations`} /> : undefined}
           emptyReason="the source published no histogram bucket for this run, so no bar is drawn."
         >
           {(loaded) => (
@@ -3558,20 +3676,9 @@ function SummaryTab({
       </div>
 
       <div className="flex flex-wrap items-start gap-3.5" data-monthly-row>
-        <SeriesPanel
-          kind="MONTHLY_RETURNS"
-          variant="card"
-          title="monthly returns — stitched OOS"
-          className="flex-[1.3_1_460px]"
-          link={linkFor("MONTHLY_RETURNS")}
-          slot={laneSeries.get("MONTHLY_RETURNS")}
-          onNeeded={laneEnsure}
-          emptyReason="no calendar month was published for this run — the source emitted 0 monthly values, so no cell is drawn. A month is never reduced from the equity series here."
-          footnote="monthly return, % · tint = magnitude"
-        >
-          {(loaded) => <MonthlyHeat series={loaded} />}
-        </SeriesPanel>
-        {v2 ? <BehaviorV2 v2={v2} /> : <BehaviorCard retained={retained} summary={summary} absent={retained ? v2Absence(retained) : null} />}
+        {/* enrich_analysis: the episodes card stacks under the monthly strip, filling the column the short strip leaves. */}
+        {enriched !== null ? <div className="flex min-w-0 flex-[1.3_1_460px] flex-col gap-3.5" data-monthly-column>{monthlyPanel}<DrawdownEpisodes block={enriched} /></div> : monthlyPanel}
+        {v2 ? <BehaviorV2 v2={v2} chip={enriched !== null ? "enrich_analysis · all time" : undefined} /> : <BehaviorCard retained={retained} summary={summary} absent={retained ? v2Absence(retained) : null} />}
       </div>
 
       {summary ? (

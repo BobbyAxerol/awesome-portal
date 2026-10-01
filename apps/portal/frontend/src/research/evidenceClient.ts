@@ -35,6 +35,7 @@ import type { components as CurrentSourceComponents } from "@portal/contracts-re
 import { PortalApiError } from "../lib/api";
 import { ResearchLaneConflictError, readLaneState, toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 import { rememberRunLabel } from "./runLabels";
+import { readEnrichedAnalysis, type EnrichedRead } from "./enrichedAnalysis";
 
 type HubSchemas = EvidenceComponents["schemas"];
 type SourceSchemas = CurrentSourceComponents["schemas"];
@@ -208,7 +209,13 @@ export const evidenceApi = {
       `${RUNS}/${encodeURIComponent(runId)}/current-source/evidence${query(options.workspaceId)}`,
       null,
       options.signal,
-    ),
+    ).then((answer) => {
+      /* enrich_analysis: the optional block is guarded once, where the response is read. */
+      if (answer !== NOT_MODIFIED && !isLaneNotApplicable(answer as CurrentSourceEvidence | CurrentSourceNotApplicable)) {
+        enrichedOf(answer as CurrentSourceEvidence);
+      }
+      return answer;
+    }),
 
   /**
    * `researchCurrentSourceEvidenceSeriesGetV1` — W3 CG-P13-05: every retained
@@ -222,6 +229,26 @@ export const evidenceApi = {
       options.signal,
     ),
 } as const;
+
+/* -------------------------------------------------------------------------
+ * enrich_analysis (research.enriched-analysis.v1)
+ * ---------------------------------------------------------------------- */
+
+const enrichedReads = new WeakMap<object, EnrichedRead>();
+
+/**
+ * The guarded `enriched_analysis` of a current-source Evidence response: absent when the backend
+ * does not serve it (old seal), refused with a screen-local marker when it is not the contract's
+ * (wrong `basis`, a `rolling` block, a bad shape), otherwise the block. Read once per response.
+ */
+export function enrichedOf(evidence: CurrentSourceEvidence | null | undefined): EnrichedRead {
+  if (evidence === null || evidence === undefined) return { kind: "absent" };
+  const known = enrichedReads.get(evidence);
+  if (known !== undefined) return known;
+  const read = readEnrichedAnalysis((evidence as { enriched_analysis?: unknown }).enriched_analysis);
+  enrichedReads.set(evidence, read);
+  return read;
+}
 
 /* -------------------------------------------------------------------------
  * Revision binding

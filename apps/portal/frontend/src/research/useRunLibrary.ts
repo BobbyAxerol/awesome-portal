@@ -28,6 +28,7 @@ import {
   type RunStatus,
   runLibraryApi,
   toLibraryRefusal,
+  readAllTime,
 } from "./runLibraryClient";
 import { needsRunToOpen } from "./screenRoutes";
 import { researchState, type ResearchState } from "./state";
@@ -493,6 +494,9 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
          a lazy read for a `NOT_PUBLISHED` series would be a request whose only
          possible answer is "no". */
       if (item.sparkline.availability.state !== "AVAILABLE") return;
+      /* An all-time block on the card replaces every other series; asking for the
+         per-run one as well would draw nothing and cost a request. */
+      if (readAllTime(item).kind !== "absent") return;
       /* AN-19: a COMPLETED card that carries its last-30D window draws that and
          never shows the all-time series, so the read would be unused. */
       if (

@@ -1,0 +1,829 @@
+{
+ "_comment": "PROPOSED FIXTURE for the enrich_analysis contract. Shape: Claude (frontend). Numbers: derived by script from R-WFO-023's published analytics v2 and series on the preview (rrun_3d5633d2adb712722fe4ba108102aa5d), NOT backend output \u2014 it exists so the UI can be built against a realistic shape. Codex decides the final schema.",
+ "schema_version": "research.enriched-analysis.v1",
+ "service": "enrich_analysis",
+ "basis": "ALL_TIME",
+ "run_id": "rrun_3d5633d2adb712722fe4ba108102aa5d",
+ "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60",
+ "source_tables": [
+  {
+   "name": "P05.retained_OBSERVATION",
+   "row_count": 1488,
+   "digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+  }
+ ],
+ "scope": {
+  "window": "OOS",
+  "first_at_utc_ms": 1782864000000,
+  "last_at_utc_ms": 1788217200000,
+  "observation_count": 1488,
+  "fold_count": 9,
+  "locator": "quantbt==1.1.1:scoped_result(scope='oos',source_fold_table)",
+  "benchmark_locator": "P08.snapshot:11ade3c2a7da8371818b7249d68626d7bfb6bd609eab8e359b1be08c3a96bef3:BTCUSDT:1h:close:OOS"
+ },
+ "windows": {
+  "is": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT"
+  },
+  "oos": {
+   "state": "AVAILABLE",
+   "reason_code": null
+  },
+  "holdout": {
+   "state": "NOT_APPLICABLE",
+   "reason_code": "P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT"
+  }
+ },
+ "facts": {
+  "metrics": {
+   "sharpe": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "4.337143589613738",
+    "origin": "ENGINE_DIRECT",
+    "scope": "OOS",
+    "source_locator": "quantbt.full_report.sharpe",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "sortino": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "5.112804454906078",
+    "origin": "ENGINE_DIRECT",
+    "scope": "OOS",
+    "source_locator": "quantbt.full_report.sortino",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "cagr_fraction": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.10202683579868276",
+    "origin": "ENGINE_DIRECT",
+    "scope": "OOS",
+    "source_locator": "quantbt.full_report.cagr_fraction",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "profit_factor": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "2.094750979956519",
+    "origin": "ENGINE_DIRECT",
+    "scope": "OOS",
+    "source_locator": "quantbt.full_report.profit_factor",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "long_hit_rate_fraction": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.5020576131687243",
+    "origin": "ENGINE_DIRECT",
+    "scope": "OOS",
+    "source_locator": "quantbt.full_report.long_hit_rate_fraction",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "short_hit_rate_fraction": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.4699140401146132",
+    "origin": "ENGINE_DIRECT",
+    "scope": "OOS",
+    "source_locator": "quantbt.full_report.short_hit_rate_fraction",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "volatility_fraction": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.020670608660881305",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "scoped.daily_returns:std_ddof1*sqrt365",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "skew": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "1.1095257288119993",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "scoped.daily_returns:population_m3/m2^1.5",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "excess_kurtosis": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "2.4922411278795753",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "scoped.daily_returns:population_m4/m2^2-3",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "beta": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.0025664195910988404",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "scoped.daily_returns+HMD.close:UTC_day_inner_join:population_covariance",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "correlation": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.04645170120717077",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "scoped.daily_returns+HMD.close:UTC_day_inner_join:population_covariance",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "benchmark_return_fraction": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.3416113423526057",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "HMD.close:OOS_first_last_buy_and_hold",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "max_drawdown_duration_days": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "17.375",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.equity:longest_peak_to_recovery_or_scope_end_days",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "sharpe_decay": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "PORTAL_ANALYTICS_IS_OR_OOS_SHARPE_UNAVAILABLE",
+    "value": null,
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "quantbt.full_report.sharpe:sealed_IS_minus_OOS",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   }
+  },
+  "behaviour": {
+   "exposure_long_fraction": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.32661290322580644",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.positions:OOS_bar_side_fraction",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "exposure_short_fraction": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.23454301075268819",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.positions:OOS_bar_side_fraction",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "exposure_flat_fraction": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.4388440860215054",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.positions:OOS_bar_side_fraction",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "win_rate": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "0.625",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.positions+returns:account_exposure_episodes_not_audited_trades",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "payoff_ratio": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "2.6279149946630698",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.positions+returns:account_exposure_episodes_not_audited_trades",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "average_hold_seconds": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "187875",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.positions+returns:account_exposure_episodes_not_audited_trades",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "max_consecutive_losses": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "3",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.positions+returns:account_exposure_episodes_not_audited_trades",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   },
+   "turnover_notional": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "value": "64235.58326858411",
+    "origin": "PORTAL_DERIVED",
+    "scope": "OOS",
+    "source_locator": "QuantBT.result.diagnostics.turnover:OOS_sum",
+    "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+   }
+  }
+ },
+ "curves": {
+  "sampling": {
+   "source_observation_count": 1488,
+   "emitted_point_count": 24,
+   "method": "EXTREMA_BUCKET_V2"
+  },
+  "strategy_rebased_100": [
+   {
+    "at_utc_ms": 1782864000000,
+    "value": "100"
+   },
+   {
+    "at_utc_ms": 1782907200000,
+    "value": "99.89888278338664"
+   },
+   {
+    "at_utc_ms": 1783296000000,
+    "value": "100.7848475025946"
+   },
+   {
+    "at_utc_ms": 1783429200000,
+    "value": "100.60860014066088"
+   },
+   {
+    "at_utc_ms": 1783522800000,
+    "value": "100.93933358155995"
+   },
+   {
+    "at_utc_ms": 1783962000000,
+    "value": "100.67729420756575"
+   },
+   {
+    "at_utc_ms": 1784127600000,
+    "value": "101.24181603608575"
+   },
+   {
+    "at_utc_ms": 1784332800000,
+    "value": "100.99927692464622"
+   },
+   {
+    "at_utc_ms": 1784624400000,
+    "value": "101.37617136391508"
+   },
+   {
+    "at_utc_ms": 1785128400000,
+    "value": "101.33212552455993"
+   },
+   {
+    "at_utc_ms": 1785243600000,
+    "value": "101.69349515134611"
+   },
+   {
+    "at_utc_ms": 1785416400000,
+    "value": "101.39938562661601"
+   },
+   {
+    "at_utc_ms": 1785610800000,
+    "value": "101.7819888257667"
+   },
+   {
+    "at_utc_ms": 1785801600000,
+    "value": "101.46934275099333"
+   },
+   {
+    "at_utc_ms": 1786104000000,
+    "value": "101.71730755824939"
+   },
+   {
+    "at_utc_ms": 1786341600000,
+    "value": "101.5959842008144"
+   },
+   {
+    "at_utc_ms": 1786716000000,
+    "value": "102.0105106410789"
+   },
+   {
+    "at_utc_ms": 1786946400000,
+    "value": "101.95506262468376"
+   },
+   {
+    "at_utc_ms": 1787238000000,
+    "value": "101.71878199324868"
+   },
+   {
+    "at_utc_ms": 1787608800000,
+    "value": "101.84465654520018"
+   },
+   {
+    "at_utc_ms": 1787623200000,
+    "value": "101.60048053467577"
+   },
+   {
+    "at_utc_ms": 1787875200000,
+    "value": "101.52970648926633"
+   },
+   {
+    "at_utc_ms": 1788141600000,
+    "value": "101.79909366207835"
+   },
+   {
+    "at_utc_ms": 1788217200000,
+    "value": "101.66165384181384"
+   }
+  ],
+  "benchmark_rebased_100": [
+   {
+    "at_utc_ms": 1782864000000,
+    "value": "100"
+   },
+   {
+    "at_utc_ms": 1782907200000,
+    "value": "99.90930626982323"
+   },
+   {
+    "at_utc_ms": 1783296000000,
+    "value": "108.84682324287303"
+   },
+   {
+    "at_utc_ms": 1783371600000,
+    "value": "110.1235381827436"
+   },
+   {
+    "at_utc_ms": 1783522800000,
+    "value": "105.33880342347481"
+   },
+   {
+    "at_utc_ms": 1783962000000,
+    "value": "105.68466934364042"
+   },
+   {
+    "at_utc_ms": 1784127600000,
+    "value": "111.6875353338332"
+   },
+   {
+    "at_utc_ms": 1784332800000,
+    "value": "109.10848575630203"
+   },
+   {
+    "at_utc_ms": 1784642400000,
+    "value": "114.10039847169963"
+   },
+   {
+    "at_utc_ms": 1784876400000,
+    "value": "111.82144095428251"
+   },
+   {
+    "at_utc_ms": 1785243600000,
+    "value": "107.7374903285641"
+   },
+   {
+    "at_utc_ms": 1785416400000,
+    "value": "111.01168770613184"
+   },
+   {
+    "at_utc_ms": 1785610800000,
+    "value": "106.75232754954422"
+   },
+   {
+    "at_utc_ms": 1785801600000,
+    "value": "108.17934471644972"
+   },
+   {
+    "at_utc_ms": 1786104000000,
+    "value": "111.46122800335448"
+   },
+   {
+    "at_utc_ms": 1786341600000,
+    "value": "111.48531051927712"
+   },
+   {
+    "at_utc_ms": 1786716000000,
+    "value": "106.88708715991986"
+   },
+   {
+    "at_utc_ms": 1786921200000,
+    "value": "107.39094121645742"
+   },
+   {
+    "at_utc_ms": 1787238000000,
+    "value": "123.70727274901066"
+   },
+   {
+    "at_utc_ms": 1787248800000,
+    "value": "123.65500856551897"
+   },
+   {
+    "at_utc_ms": 1787634000000,
+    "value": "137.85054151501228"
+   },
+   {
+    "at_utc_ms": 1787875200000,
+    "value": "137.55642738438257"
+   },
+   {
+    "at_utc_ms": 1787950800000,
+    "value": "132.0984069671914"
+   },
+   {
+    "at_utc_ms": 1788217200000,
+    "value": "134.16113423526056"
+   }
+  ],
+  "drawdown_fraction": [
+   {
+    "at_utc_ms": 1782864000000,
+    "value": "0.000000000000"
+   },
+   {
+    "at_utc_ms": 1782907200000,
+    "value": "-0.001011172166"
+   },
+   {
+    "at_utc_ms": 1783296000000,
+    "value": "0.000000000000"
+   },
+   {
+    "at_utc_ms": 1783429200000,
+    "value": "-0.001748748610"
+   },
+   {
+    "at_utc_ms": 1783522800000,
+    "value": "0.000000000000"
+   },
+   {
+    "at_utc_ms": 1783962000000,
+    "value": "-0.002596008560"
+   },
+   {
+    "at_utc_ms": 1784127600000,
+    "value": "0.000000000000"
+   },
+   {
+    "at_utc_ms": 1784332800000,
+    "value": "-0.002395641652"
+   },
+   {
+    "at_utc_ms": 1784624400000,
+    "value": "0.000000000000"
+   },
+   {
+    "at_utc_ms": 1785128400000,
+    "value": "-0.000434479215"
+   },
+   {
+    "at_utc_ms": 1785243600000,
+    "value": "0.000000000000"
+   },
+   {
+    "at_utc_ms": 1785416400000,
+    "value": "-0.002892117380"
+   },
+   {
+    "at_utc_ms": 1785610800000,
+    "value": "0.000000000000"
+   },
+   {
+    "at_utc_ms": 1785801600000,
+    "value": "-0.003071722987"
+   },
+   {
+    "at_utc_ms": 1786104000000,
+    "value": "-0.000635488344"
+   },
+   {
+    "at_utc_ms": 1786341600000,
+    "value": "-0.001827480747"
+   },
+   {
+    "at_utc_ms": 1786716000000,
+    "value": "0.000000000000"
+   },
+   {
+    "at_utc_ms": 1786946400000,
+    "value": "-0.000543551993"
+   },
+   {
+    "at_utc_ms": 1787238000000,
+    "value": "-0.002859790094"
+   },
+   {
+    "at_utc_ms": 1787608800000,
+    "value": "-0.001625853011"
+   },
+   {
+    "at_utc_ms": 1787623200000,
+    "value": "-0.004019488814"
+   },
+   {
+    "at_utc_ms": 1787875200000,
+    "value": "-0.004713280512"
+   },
+   {
+    "at_utc_ms": 1788141600000,
+    "value": "-0.002072501918"
+   },
+   {
+    "at_utc_ms": 1788217200000,
+    "value": "-0.003419812302"
+   }
+  ]
+ },
+ "monthly_returns": {
+  "state": "AVAILABLE",
+  "reason_code": null,
+  "origin": "PORTAL_DERIVED",
+  "includes_partial_months": true,
+  "values": [
+   {
+    "month_start_utc_ms": 1782864000000,
+    "return_fraction": "0.013993856266",
+    "observation_count": 744,
+    "expected_observation_count": 744,
+    "partial": false,
+    "basis": "MONTH_END_OVER_PRIOR_MONTH_END_OR_INITIAL"
+   },
+   {
+    "month_start_utc_ms": 1785542400000,
+    "return_fraction": "0.002586487222",
+    "observation_count": 744,
+    "expected_observation_count": 744,
+    "partial": false,
+    "basis": "MONTH_END_OVER_PRIOR_MONTH_END_OR_INITIAL"
+   }
+  ]
+ },
+ "return_distribution": {
+  "state": "AVAILABLE",
+  "reason_code": null,
+  "origin": "PORTAL_DERIVED",
+  "sampling": "FULL_RETURN_HISTOGRAM_V2",
+  "observation_count": 1488,
+  "bucket_basis": "PER_OBSERVATION_RETURN_FRACTION",
+  "buckets": [
+   {
+    "lower_inclusive": "-0.0010387031945641167",
+    "upper": "-0.0007962734884350193583333333333",
+    "upper_inclusive": "false",
+    "count": 10
+   },
+   {
+    "lower_inclusive": "-0.0007962734884350193583333333333",
+    "upper": "-0.0005538437823059220166666666666",
+    "upper_inclusive": "false",
+    "count": 15
+   },
+   {
+    "lower_inclusive": "-0.0005538437823059220166666666666",
+    "upper": "-0.0003114140761768246749999999999",
+    "upper_inclusive": "false",
+    "count": 63
+   },
+   {
+    "lower_inclusive": "-0.0003114140761768246749999999999",
+    "upper": "-0.0000689843700477273333333333332",
+    "upper_inclusive": "false",
+    "count": 213
+   },
+   {
+    "lower_inclusive": "-0.0000689843700477273333333333332",
+    "upper": "0.000173445336081370008333333334",
+    "upper_inclusive": "false",
+    "count": 988
+   },
+   {
+    "lower_inclusive": "0.000173445336081370008333333334",
+    "upper": "0.00041587504221046735",
+    "upper_inclusive": "false",
+    "count": 132
+   },
+   {
+    "lower_inclusive": "0.00041587504221046735",
+    "upper": "0.000658304748339564691666666667",
+    "upper_inclusive": "false",
+    "count": 33
+   },
+   {
+    "lower_inclusive": "0.000658304748339564691666666667",
+    "upper": "0.000900734454468662033333333334",
+    "upper_inclusive": "false",
+    "count": 18
+   },
+   {
+    "lower_inclusive": "0.000900734454468662033333333334",
+    "upper": "0.001143164160597759375",
+    "upper_inclusive": "false",
+    "count": 9
+   },
+   {
+    "lower_inclusive": "0.001143164160597759375",
+    "upper": "0.001385593866726856716666666667",
+    "upper_inclusive": "false",
+    "count": 2
+   },
+   {
+    "lower_inclusive": "0.001385593866726856716666666667",
+    "upper": "0.001628023572855954058333333334",
+    "upper_inclusive": "false",
+    "count": 2
+   },
+   {
+    "lower_inclusive": "0.001628023572855954058333333334",
+    "upper": "0.0018704532789850514",
+    "upper_inclusive": "true",
+    "count": 3
+   }
+  ]
+ },
+ "drawdown_episodes": {
+  "state": "AVAILABLE",
+  "reason_code": null,
+  "origin": "PORTAL_DERIVED",
+  "total": 8,
+  "values": [
+   {
+    "start_utc_ms": 1786946400000,
+    "trough_utc_ms": 1787875200000,
+    "recovery_utc_ms": null,
+    "depth_fraction": "-0.004713280512",
+    "duration_seconds": 1270800
+   },
+   {
+    "start_utc_ms": 1785801600000,
+    "trough_utc_ms": 1785801600000,
+    "recovery_utc_ms": 1786716000000,
+    "depth_fraction": "-0.003071722987",
+    "duration_seconds": 914400
+   },
+   {
+    "start_utc_ms": 1785416400000,
+    "trough_utc_ms": 1785416400000,
+    "recovery_utc_ms": 1785610800000,
+    "depth_fraction": "-0.002892117380",
+    "duration_seconds": 194400
+   },
+   {
+    "start_utc_ms": 1783962000000,
+    "trough_utc_ms": 1783962000000,
+    "recovery_utc_ms": 1784127600000,
+    "depth_fraction": "-0.002596008560",
+    "duration_seconds": 165600
+   },
+   {
+    "start_utc_ms": 1784332800000,
+    "trough_utc_ms": 1784332800000,
+    "recovery_utc_ms": 1784624400000,
+    "depth_fraction": "-0.002395641652",
+    "duration_seconds": 291600
+   },
+   {
+    "start_utc_ms": 1783429200000,
+    "trough_utc_ms": 1783429200000,
+    "recovery_utc_ms": 1783522800000,
+    "depth_fraction": "-0.001748748610",
+    "duration_seconds": 93600
+   },
+   {
+    "start_utc_ms": 1782907200000,
+    "trough_utc_ms": 1782907200000,
+    "recovery_utc_ms": 1783296000000,
+    "depth_fraction": "-0.001011172166",
+    "duration_seconds": 388800
+   },
+   {
+    "start_utc_ms": 1785128400000,
+    "trough_utc_ms": 1785128400000,
+    "recovery_utc_ms": 1785243600000,
+    "depth_fraction": "-0.000434479215",
+    "duration_seconds": 115200
+   }
+  ]
+ },
+ "library_summary": {
+  "label": "all time",
+  "basis": "ALL_TIME",
+  "state": "AVAILABLE",
+  "reason_code": null,
+  "sparkline": [
+   {
+    "at_utc_ms": 1782864000000,
+    "value": "100.00000000"
+   },
+   {
+    "at_utc_ms": 1782907200000,
+    "value": "99.89888278"
+   },
+   {
+    "at_utc_ms": 1783296000000,
+    "value": "100.78484750"
+   },
+   {
+    "at_utc_ms": 1783429200000,
+    "value": "100.60860014"
+   },
+   {
+    "at_utc_ms": 1783522800000,
+    "value": "100.93933358"
+   },
+   {
+    "at_utc_ms": 1783962000000,
+    "value": "100.67729421"
+   },
+   {
+    "at_utc_ms": 1784127600000,
+    "value": "101.24181604"
+   },
+   {
+    "at_utc_ms": 1784332800000,
+    "value": "100.99927692"
+   },
+   {
+    "at_utc_ms": 1784624400000,
+    "value": "101.37617136"
+   },
+   {
+    "at_utc_ms": 1785128400000,
+    "value": "101.33212552"
+   },
+   {
+    "at_utc_ms": 1785243600000,
+    "value": "101.69349515"
+   },
+   {
+    "at_utc_ms": 1785416400000,
+    "value": "101.39938563"
+   },
+   {
+    "at_utc_ms": 1785610800000,
+    "value": "101.78198883"
+   },
+   {
+    "at_utc_ms": 1785801600000,
+    "value": "101.46934275"
+   },
+   {
+    "at_utc_ms": 1786104000000,
+    "value": "101.71730756"
+   },
+   {
+    "at_utc_ms": 1786341600000,
+    "value": "101.59598420"
+   },
+   {
+    "at_utc_ms": 1786716000000,
+    "value": "102.01051064"
+   },
+   {
+    "at_utc_ms": 1786946400000,
+    "value": "101.95506262"
+   },
+   {
+    "at_utc_ms": 1787238000000,
+    "value": "101.71878199"
+   },
+   {
+    "at_utc_ms": 1787608800000,
+    "value": "101.84465655"
+   },
+   {
+    "at_utc_ms": 1787623200000,
+    "value": "101.60048053"
+   },
+   {
+    "at_utc_ms": 1787875200000,
+    "value": "101.52970649"
+   },
+   {
+    "at_utc_ms": 1788141600000,
+    "value": "101.79909366"
+   },
+   {
+    "at_utc_ms": 1788217200000,
+    "value": "101.66165384"
+   }
+  ],
+  "return_fraction": "0.016616538418",
+  "sharpe": {
+   "state": "AVAILABLE",
+   "reason_code": null,
+   "value": "4.337143589613738",
+   "origin": "ENGINE_DIRECT",
+   "scope": "OOS",
+   "source_locator": "quantbt.full_report.sharpe",
+   "input_digest": "24954a58dc62b2696bd50ead2bd9a7d26c7683d1c5231214642ecc3b99da4b60"
+  },
+  "max_drawdown_fraction": "-0.004713280512"
+ },
+ "rolling": null
+}

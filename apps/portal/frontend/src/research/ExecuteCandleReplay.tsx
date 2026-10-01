@@ -29,7 +29,7 @@ import { Link } from "react-router-dom";
 import { paletteNow } from "../charts/theme";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
-import { foldLabel, formatCount, formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { foldLabel, formatCount, formatMetric, formatUtc, shortDigest, typographicMinus } from "./researchFormat";
 import type { CurrentSourceSplit } from "./splitClient";
 import {
   REPLAY_GAP_WORDS,
@@ -195,9 +195,10 @@ const AXIS_END_ROOM_BARS = 5;
 /** A price on a chart axis: grouped thousands, two places from 1 up, finer below — the readout's own grouping. */
 export function chartPrice(value: number): string {
   if (!Number.isFinite(value)) return "";
-  return Math.abs(value) >= 1
+  const text = Math.abs(value) >= 1
     ? value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  return typographicMinus(text);
 }
 
 /* ------------------------------------------------------------------ parts */
@@ -207,7 +208,7 @@ function Exact({ value, unit }: { value: string | null | undefined; unit: "curre
   const shown = formatMetric(value, unit) ?? value;
   return (
     <span title={value} data-exact={value}>
-      {shown.replace(/^-/, "−")}
+      {typographicMinus(shown)}
     </span>
   );
 }
@@ -325,6 +326,31 @@ export function withLedger(markers: readonly CandleMarker[], ledger: readonly Tr
   });
 }
 
+/** The chart's colours as one options object per target, from one palette. */
+export function applyChartPalette(
+  c: {
+    lib: { ColorType: { Solid: unknown } };
+    api: { applyOptions: (options: object) => void };
+    candles: { applyOptions: (options: object) => void };
+    position: { applyOptions: (options: object) => void };
+    equity: { applyOptions: (options: object) => void };
+  },
+  pal: ReturnType<typeof paletteNow>,
+): void {
+  c.api.applyOptions({
+    layout: { background: { type: c.lib.ColorType.Solid, color: pal.paperRaised }, textColor: pal.inkFaint, panes: { separatorColor: pal.lineSoft } },
+    grid: { vertLines: { color: pal.lineSoft }, horzLines: { color: pal.lineSoft } },
+    timeScale: { borderColor: pal.lineSoft },
+    rightPriceScale: { borderColor: pal.lineSoft },
+  });
+  c.candles.applyOptions({
+    upColor: pal.good, downColor: pal.bad, borderUpColor: pal.good, borderDownColor: pal.bad,
+    wickUpColor: pal.good, wickDownColor: pal.bad,
+  });
+  c.position.applyOptions({ color: pal.accent });
+  c.equity.applyOptions({ color: pal.ink });
+}
+
 function CandleChart({
   rows,
   transport,
@@ -349,6 +375,7 @@ function CandleChart({
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const chart = useRef<{
+    lib: typeof import("lightweight-charts");
     api: import("lightweight-charts").IChartApi;
     candles: import("lightweight-charts").ISeriesApi<"Candlestick">;
     position: import("lightweight-charts").ISeriesApi<"Line">;
@@ -407,7 +434,7 @@ function CandleChart({
         } catch {
           /* pane sizing is cosmetic */
         }
-        chart.current = { api, candles, position, equity };
+        chart.current = { lib, api, candles, position, equity };
         /* The marker layer follows the chart: any pan/zoom/resize re-reads coordinates on the next frame. */
         let frame = 0;
         const bump = () => {
@@ -444,6 +471,21 @@ function CandleChart({
       chart.current = null;
     };
   }, []);
+
+  /* The page theme can change while this screen is open. The chart paints to a
+     canvas, so it cannot inherit CSS variables: re-read the tokens on every
+     `data-theme` change and hand them to the chart and each series. The marker
+     layer and the strip are SVG on CSS variables and follow on their own. */
+  useEffect(() => {
+    if (status !== "ready" || typeof MutationObserver === "undefined") return undefined;
+    const repaint = () => {
+      const c = chart.current;
+      if (c) applyChartPalette(c, paletteNow());
+    };
+    const observer = new MutationObserver(repaint);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+    return () => observer.disconnect();
+  }, [status]);
 
   /* Data changes with the window and, under reveal, with the cursor. */
   useEffect(() => {

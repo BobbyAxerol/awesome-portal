@@ -26,6 +26,7 @@ import { SYNTHETIC_FOLDS, scaleToFolds, syntheticChildAudit, syntheticFoldOf, sy
 import { bandPieces, retainedSplitBand } from "./SplitBand";
 
 const chartOptions = vi.hoisted(() => [] as Record<string, unknown>[]);
+const built = vi.hoisted(() => [] as { api: { applyOptions: ReturnType<typeof vi.fn> }; series: { applyOptions: ReturnType<typeof vi.fn> }[] }[]);
 const visibleRanges = vi.hoisted(() => [] as { from: number; to: number }[]);
 
 vi.mock("lightweight-charts", () => {
@@ -40,8 +41,11 @@ vi.mock("lightweight-charts", () => {
     createSeriesMarkers: () => markers,
     createChart: (_element: unknown, options: Record<string, unknown>) => {
       chartOptions.push(options);
+      const record = { api: { applyOptions: vi.fn() }, series: [] as { applyOptions: ReturnType<typeof vi.fn> }[] };
+      built.push(record);
       return {
-        addSeries: () => series(),
+        applyOptions: record.api.applyOptions,
+        addSeries: () => { const one = series(); record.series.push(one); return one; },
         panes: () => [],
         remove: vi.fn(),
         setCrosshairPosition: vi.fn(),
@@ -532,8 +536,32 @@ describe("F1 · D11 — fold capital reads in words, the price axis groups thous
     expect(localization.priceFormatter(58744.4)).toBe("58,744.40");
     expect(chartPrice(0.5)).toBe("0.50");
     expect(chartPrice(0.0123)).toBe("0.0123");
-    expect(chartPrice(-1234.5)).toBe("-1,234.50");
+    /* F5a: a negative price on the axis uses the typographic minus, like every other number. */
+    expect(chartPrice(-1234.5)).toBe("−1,234.50");
+    expect(chartPrice(-0.5)).toBe("−0.50");
     expect(chartPrice(Number.NaN)).toBe("");
+  });
+});
+
+describe("F5a · the chart follows the theme while the screen is open", () => {
+  it("a data-theme switch re-reads the palette and repaints the chart and every series", async () => {
+    document.documentElement.setAttribute("data-theme", "research");
+    built.length = 0;
+    await settled();
+    const chart = built.at(-1)!;
+    expect(chart.series).toHaveLength(3);
+    const lightBackground = (chartOptions.at(-1)!.layout as { background: { color: string } }).background.color;
+    expect(chart.api.applyOptions).not.toHaveBeenCalled();
+    document.documentElement.setAttribute("data-theme", "operations");
+    await waitFor(() => expect(chart.api.applyOptions).toHaveBeenCalled());
+    const layout = (chart.api.applyOptions.mock.calls.at(-1)![0] as { layout: { background: { color: string; type: string }; textColor: string } }).layout;
+    expect(layout.background.type).toBe("solid");
+    expect(layout.background.color).not.toBe(lightBackground);
+    for (const one of chart.series) expect(one.applyOptions.mock.calls.length).toBeGreaterThan(0);
+    /* Back again: the light palette returns, so it is a re-read and not a one-way switch. */
+    document.documentElement.setAttribute("data-theme", "research");
+    await waitFor(() => expect((chart.api.applyOptions.mock.calls.at(-1)![0] as { layout: { background: { color: string } } }).layout.background.color).toBe(lightBackground));
+    document.documentElement.removeAttribute("data-theme");
   });
 });
 
