@@ -107,6 +107,7 @@ function memory(seal: CurrentSourceSealRow, tables: Partial<Record<Kind, Current
     sealForRead: vi.fn().mockResolvedValue(seal),
     runState: vi.fn(),
     poolFrozenAt: vi.fn().mockResolvedValue(null),
+    admittedRequestedSpec: vi.fn().mockResolvedValue(null),
     rows,
     observationSeries: vi.fn(),
     verifyRetainedImport: vi.fn().mockResolvedValue(seal.retainedImportDigest),

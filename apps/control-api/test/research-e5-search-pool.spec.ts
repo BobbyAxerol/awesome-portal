@@ -21,7 +21,9 @@ import {
 import type { CurrentSourceSealRow, CurrentSourceStoredRow } from "../src/research/current-source.repository";
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
 import { POOL_REASONS, SEARCH_POOL_RULE, candidateDrawdown, quantbtPoolSize } from "../src/research/current-source-pool";
+import { sha256ResearchJson } from "../src/research/preflight.service";
 import { openApiValidator } from "./research-rf05-openapi";
+import { wfoRequested } from "./research-w1-wfo.fixture";
 
 type Kind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
 interface Fixture {
@@ -48,7 +50,7 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function serviceFor(fixture: Fixture) {
+function serviceFor(fixture: Fixture, requestedSpec: Record<string, unknown> | null = null) {
   const seal: CurrentSourceSealRow = {
     runId: fixture.run_id,
     artifactRevision: 1,
@@ -70,6 +72,7 @@ function serviceFor(fixture: Fixture) {
     sealForRead: vi.fn().mockResolvedValue(seal),
     runState: vi.fn(),
     poolFrozenAt: vi.fn().mockResolvedValue(1_790_269_230_000),
+    admittedRequestedSpec: vi.fn().mockResolvedValue(requestedSpec),
     rows: vi.fn(async (_s: unknown, _r: string, _v: number, kind: Kind, selection: { limit: number }) => {
       const all = sorted(kind);
       return { rows: all.slice(0, selection.limit), hasMore: all.length > selection.limit, hasPrevious: false, totalRows: all.length };
@@ -97,6 +100,38 @@ function withSearchFacts(fixture: Fixture, patch: Record<string, unknown>): Fixt
 }
 
 describe("E5 · 6.7/6.8 the frozen pool, from the retained ledger", () => {
+  it("S06 trial digest matches canonical selected θ*; the P08 seed is request-scoped, never per-trial", async () => {
+    const request = wfoRequested();
+    const value = await serviceFor(w5b, request).search(scope, w5b.run_id, { limit: 100 } as never);
+    expect(value.schema_version).toBe("research.current-source-search.v1");
+    const body = value as ResearchCurrentSourceSearchResponse;
+    expect(body.search_contract.requested_seed).toEqual({
+      value: 42, scope: "ADMITTED_RUN_REQUEST_BASE_SEED", availability: { state: "AVAILABLE", reason_code: null },
+    });
+    for (const trial of body.ledger.trials) {
+      expect(trial.params_digest).toBe(sha256ResearchJson(trial.parameters));
+      expect(trial.params_digest_source).toBe("PORTAL_CANONICAL_TRIAL_PARAMETERS_V1");
+      expect("seed" in trial).toBe(false);
+    }
+    expect(body.ledger.trials.find((trial) => trial.trial_id === "0")?.params_digest)
+      .toBe(sha256ResearchJson(w5b.summary.selection.parameters));
+    expect((await search(w5b)).search_contract.requested_seed).toMatchObject({
+      value: null, scope: "ADMITTED_RUN_REQUEST_BASE_SEED",
+      availability: { state: "NOT_PUBLISHED", reason_code: "P08_REQUESTED_SPEC_NOT_RETAINED" },
+    });
+  });
+
+  it("S06 selector confidence is source-confirmed only for a sealed metric; no Portal default is invented", async () => {
+    const confirmed = await search(w5b);
+    expect(confirmed.search_contract.selector_confidence).toEqual({
+      state: "CONFIRMED", reason_code: null, source: "QUANTBT_SEALED_SEARCH_FACT",
+    });
+    const missing = await search(withSearchFacts(w5b, { candidate_selection_metric: null }));
+    expect(missing.search_contract.selector_confidence).toEqual({
+      state: "NOT_PUBLISHED", reason_code: "QUANTBT_SELECTOR_METRIC_NOT_IN_SEALED_SEARCH_FACT", source: null,
+    });
+  });
+
   it.each([["W5b", w5b], ["W3", w3]] as const)("%s real seal: 3 trials, feasible does not arise, K = 1 by ⌈3 × 0.1⌉, 1 re-evaluated on every outer fold, 1 selected", async (_name, fixture) => {
     const body = await search(fixture);
     expect(body.pool.frozen_at_utc_ms).toBe(1_790_269_230_000);

@@ -448,6 +448,9 @@ export interface components {
             };
             playback_cursor: components["schemas"]["OpaqueCursor"];
             facts: components["schemas"]["TrialFacts"];
+            params_digest?: components["schemas"]["Digest"];
+            /** @constant */
+            params_digest_source?: "PORTAL_CANONICAL_TRIAL_PARAMETERS_V1";
         };
         Candidate: {
             source_ordinal: number;
@@ -614,6 +617,18 @@ export interface components {
                 oos_used_for_selection: boolean | null;
                 scoring_backend: string | null;
                 availability: components["schemas"]["Availability"];
+                requested_seed?: {
+                    value: number | null;
+                    /** @constant */
+                    scope: "ADMITTED_RUN_REQUEST_BASE_SEED";
+                    availability: components["schemas"]["Availability"];
+                };
+                selector_confidence?: {
+                    /** @enum {unknown} */
+                    state: "CONFIRMED" | "INFERRED" | "NOT_PUBLISHED";
+                    reason_code: string | null;
+                    source: ("QUANTBT_SEALED_SEARCH_FACT" | "PORTAL_INFERENCE_RULE") | null;
+                };
             };
             declared_space?: components["schemas"]["DeclaredSpace"];
             surface?: components["schemas"]["SearchSurface"];
@@ -1072,6 +1087,24 @@ export interface components {
                 /** @constant */
                 state: "NOT_PUBLISHED";
                 reason_code: string;
+            };
+            grid?: {
+                /** @constant */
+                rule: "COMPLETE_TRIAL_MEAN_IS_OBJECTIVE_2D_6X6_V1";
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_APPLICABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                x_param: string | null;
+                y_param: string | null;
+                /** @constant */
+                bins_per_axis: 6;
+                included_trial_count: number;
+                cells: {
+                    x: number;
+                    y: number;
+                    n: number;
+                    mean_is_objective: string | null;
+                }[];
             };
         };
         Stage4BindingRow: {

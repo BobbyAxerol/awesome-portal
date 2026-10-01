@@ -76,6 +76,7 @@ function serviceFor(fixture: Fixture) {
     sealForRead: vi.fn().mockResolvedValue(seal),
     runState: vi.fn(),
     poolFrozenAt: vi.fn().mockResolvedValue(null),
+    admittedRequestedSpec: vi.fn().mockResolvedValue(null),
     rows: vi.fn(async (_s: unknown, _r: string, _v: number, kind: Kind, selection: { limit: number }) => {
       const all = sorted(kind);
       return { rows: all.slice(0, selection.limit), hasMore: all.length > selection.limit, hasPrevious: false, totalRows: all.length };

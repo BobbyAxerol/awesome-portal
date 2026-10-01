@@ -739,6 +739,9 @@ const TrialSchema = z.object({
   state: z.enum(["COMPLETE", "PRUNED", "FAIL", "RUNNING", "WAITING"]),
   objective: DecimalSchema.nullable(),
   parameters: ParameterMapSchema,
+  /** Same canonical parameter map used for the sealed selected-parameter digest. */
+  params_digest: DigestSchema.optional(),
+  params_digest_source: z.literal("PORTAL_CANONICAL_TRIAL_PARAMETERS_V1").optional(),
   facts: TrialFactsSchema,
   playback_cursor: OpaqueCursorSchema,
 }).strict();
@@ -787,7 +790,18 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     optuna_trials_scope: FactTokenValueSchema.nullable(),
     optuna_trials_per_study: z.number().int().nonnegative().max(1_000_000).nullable(),
     trial_ledger_mode: FactTokenValueSchema.nullable(),
+    /** P08 admitted request seed; never presented as a per-trial sampler seed. */
+    requested_seed: z.object({
+      value: z.number().int().nonnegative().nullable(),
+      scope: z.literal("ADMITTED_RUN_REQUEST_BASE_SEED"),
+      availability: ResearchCurrentSourceAvailabilitySchema,
+    }).strict().optional(),
     candidate_selection_metric: FactTokenValueSchema.nullable(),
+    selector_confidence: z.object({
+      state: z.enum(["CONFIRMED", "INFERRED", "NOT_PUBLISHED"]),
+      reason_code: ReasonCodeSchema.nullable(),
+      source: z.enum(["QUANTBT_SEALED_SEARCH_FACT", "PORTAL_INFERENCE_RULE"]).nullable(),
+    }).strict().optional(),
     top_is_fraction: DecimalSchema.nullable(),
     top_is_k: z.number().int().nonnegative().max(1_000_000).nullable(),
     /** The S06 claim row, the same verbatim QuantBT tokens as the S04 claim strip. */

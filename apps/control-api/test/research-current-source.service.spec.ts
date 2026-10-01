@@ -104,7 +104,7 @@ function page(rows: Array<{ sourceOrdinal: number; sourceId: string; occurredAtU
 }
 
 function service(repository: Record<string, unknown>) {
-  return new ResearchCurrentSourceService({ poolFrozenAt: vi.fn().mockResolvedValue(null), ...repository } as never, {
+  return new ResearchCurrentSourceService({ poolFrozenAt: vi.fn().mockResolvedValue(null), admittedRequestedSpec: vi.fn().mockResolvedValue(null), ...repository } as never, {
     FEATURE_RESEARCH_CURRENT_SOURCE: "true",
     QUERY_CURSOR_ACTIVE_KEY_ID: "query-k1",
     QUERY_CURSOR_KEYS_JSON: '{"query-k1":"current-source-test-key-is-at-least-32-bytes"}',

@@ -107,6 +107,7 @@ function memory(seal: CurrentSourceSealRow, tables: Partial<Record<Kind, Current
     sealForRead: vi.fn().mockResolvedValue(seal),
     runState: vi.fn(),
     poolFrozenAt: vi.fn().mockResolvedValue(null),
+    admittedRequestedSpec: vi.fn().mockResolvedValue(null),
     rows: vi.fn(async (_scope: unknown, _runId: string, _revision: number, kind: Kind, selection: Parameters<typeof window>[1]) => window(sorted(kind), selection)),
     transitions: vi.fn(async (_scope: unknown, _runId: string, _revision: number, selection: Parameters<typeof window>[1]) =>
       window(sorted("OBSERVATION").filter(isTransition), selection)),

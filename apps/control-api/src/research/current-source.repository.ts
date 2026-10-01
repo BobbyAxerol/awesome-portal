@@ -567,6 +567,33 @@ export class ResearchCurrentSourceRepository {
         ? asSafeNonNegative(result.rows[0]!.occurred_at_utc_ms, "S4 completion timestamp") : null;
     }, signal);
   }
+  /** CG-FG-S06-06: immutable P08 request, pinned to the P05 seal digest. */
+  async admittedRequestedSpec(
+    scope: ResearchScope,
+    runId: string,
+    requestedSpecDigest: string,
+    signal?: AbortSignal,
+  ): Promise<Record<string, unknown> | null> {
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<{ requested_spec: JsonColumn }>(
+        `SELECT preflight.requested_spec
+           FROM research.run_producers producer
+           JOIN research.preflight_manifests preflight
+             ON preflight.workspace_id = producer.workspace_id
+            AND preflight.preflight_token = producer.preflight_token
+            AND preflight.actor_user_id = producer.actor_user_id
+            AND preflight.requested_spec_digest = $3
+          WHERE producer.workspace_id = $1 AND producer.run_id = $2
+            AND producer.requested_spec_digest = $3
+          ORDER BY producer.created_at DESC
+          LIMIT 1`,
+        [scope.workspaceId, runId, requestedSpecDigest],
+      );
+      return result.rowCount === 1
+        ? asJsonRecord(result.rows[0]!.requested_spec, "admitted requested spec") : null;
+    }, signal);
+  }
+
 
   async rows(
     scope: ResearchScope,

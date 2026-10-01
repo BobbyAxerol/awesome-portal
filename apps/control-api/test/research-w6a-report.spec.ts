@@ -74,6 +74,7 @@ function currentSource(importDigest = seal.retainedImportDigest, summaryAnalytic
       : seal),
     runState: vi.fn(),
     poolFrozenAt: vi.fn().mockResolvedValue(null),
+    admittedRequestedSpec: vi.fn().mockResolvedValue(null),
     rows: vi.fn(async (_scope: unknown, _runId: string, _revision: number, kind: Kind, selection: { afterOrdinal?: number; atOrdinal?: number; limit: number }) => {
       const all = sorted(kind);
       const from = selection.afterOrdinal !== undefined ? all.filter((row) => row.sourceOrdinal > selection.afterOrdinal!)

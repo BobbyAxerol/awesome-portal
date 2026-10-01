@@ -86,7 +86,8 @@ function serviceFor(fixture: Fixture, rows: Partial<Record<Kind, CurrentSourceSt
   const repository = {
     sealForRead: vi.fn().mockResolvedValue(seal),
     runState: vi.fn(),
-    poolFrozenAt: vi.fn().mockResolvedValue(null),
+    poolFrozenAt: vi.fn().mockResolvedValue(1_790_269_230_000),
+    admittedRequestedSpec: vi.fn().mockResolvedValue(null),
     rows: vi.fn(async (_s: unknown, _r: string, _v: number, kind: Kind, selection: { limit: number }) => {
       const all = sorted(kind);
       return { rows: all.slice(0, selection.limit), hasMore: all.length > selection.limit, hasPrevious: false, totalRows: all.length };
@@ -207,6 +208,24 @@ describe("B3 · the S06 trial surface is derived on the server from every retain
     const shared = rvol.bins.find((bin) => bin.count === 2)!;
     expect(shared.mean_objective).toBe("-1.963054060545"); // −1.96305406054468925, half away from zero
     expect(rvol.regions_sampled).toBe(2);
+  });
+
+  it("S06 grid bins every retained COMPLETE trial into a named 6×6 mean-IS-objective rule, even when ledger page is one", async () => {
+    const response = await search(serviceFor(w5b), w5b.run_id, 1);
+    const grid = response.surface.grid;
+    expect(grid).toMatchObject({
+      state: "AVAILABLE", rule: "COMPLETE_TRIAL_MEAN_IS_OBJECTIVE_2D_6X6_V1",
+      x_param: "window", y_param: "rvol", bins_per_axis: 6, included_trial_count: 3,
+    });
+    expect(grid?.cells).toHaveLength(36);
+    expect(grid?.cells.reduce((sum, cell) => sum + cell.n, 0)).toBe(3);
+    expect(grid?.cells.find((cell) => cell.x === 1 && cell.y === 0)).toMatchObject({
+      n: 1, mean_is_objective: "-2.482577309016",
+    });
+    expect(grid?.cells.find((cell) => cell.x === 2 && cell.y === 0)).toMatchObject({
+      n: 1, mean_is_objective: "-1.443530812074",
+    });
+    expect(grid?.cells.find((cell) => cell.x === 0 && cell.y === 0)).toMatchObject({ n: 0, mean_is_objective: null });
   });
 
   it("B4 · top-decile share at θ*, and A5's Spearman proxy is NOT_APPLICABLE under 8 complete trials", async () => {

@@ -70,6 +70,7 @@ import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } 
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
 import { sha256ResearchJson } from "./preflight.service";
+import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
 import { inertWhatIf, ResearchWhatIfService, type WhatIfBasis } from "./whatif.service";
 import { foldOrdering } from "./fold-ordering";
@@ -589,6 +590,14 @@ export class ResearchCurrentSourceService {
     });
     const contract = searchContract(facts);
     const poolFrozenAt = await this.repository.poolFrozenAt(scope, runId, signal);
+    const rawRequest = await this.repository.admittedRequestedSpec(scope, runId, seal.requestedSpecDigest, signal);
+    const admitted = rawRequest === null ? null : ResearchRequestedSpecSchema.safeParse(rawRequest);
+    if (admitted !== null && !admitted.success) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained P08 request is incompatible.", 503);
+    }
+    const requestSeed = admitted?.data.random_seed ?? null;
+    const seedAvailability = admitted === null ? fact("NOT_PUBLISHED", "P08_REQUESTED_SPEC_NOT_RETAINED").availability
+      : requestSeed === null ? fact("NOT_APPLICABLE", "P08_RANDOM_SEED_NOT_SELECTED").availability : available();
     const value = {
       schema_version: "research.current-source-search.v1" as const,
       ...this.common("search", seal),
@@ -602,7 +611,10 @@ export class ResearchCurrentSourceService {
         roles,
       },
       // E5 · 6.7: K from the retained pool when QuantBT's own rule agrees; otherwise the configured value (null stays null).
-      search_contract: { ...contract, top_is_k: pool.top_is_k.value ?? contract.top_is_k },
+      search_contract: {
+        ...contract, top_is_k: pool.top_is_k.value ?? contract.top_is_k,
+        requested_seed: { value: requestSeed, scope: "ADMITTED_RUN_REQUEST_BASE_SEED" as const, availability: seedAvailability },
+      },
       ledger: {
         source_trial_count: seal.tableRows.TRIAL,
         returned_rows: page.rows.length,
@@ -614,6 +626,8 @@ export class ResearchCurrentSourceService {
             state: typedTrialState(trial.state),
             objective: trial.objective,
             parameters: trial.parameters,
+            params_digest: sha256ResearchJson(trial.parameters),
+            params_digest_source: "PORTAL_CANONICAL_TRIAL_PARAMETERS_V1" as const,
             facts: trialFacts(rowFacts, ledgerMode),
             playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "TRIAL", row.sourceOrdinal),
           };

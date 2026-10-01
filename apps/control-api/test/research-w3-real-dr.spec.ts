@@ -73,6 +73,7 @@ describe.skipIf(!exportPath)("W3 real-HMD DR receipt (V11-P13/P14/P15-DR)", () =
       sealForRead: vi.fn().mockResolvedValue(seal),
       runState: vi.fn(),
       poolFrozenAt: vi.fn().mockResolvedValue(null),
+      admittedRequestedSpec: vi.fn().mockResolvedValue(null),
       rows: vi.fn(async (_scope: unknown, _run: string, _revision: number, kind: CurrentSourceTableKind, selection: { limit: number }) => {
         const rows = all(kind);
         return { rows: rows.slice(0, selection.limit), hasMore: rows.length > selection.limit, hasPrevious: false, totalRows: rows.length };

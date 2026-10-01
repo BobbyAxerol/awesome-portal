@@ -425,6 +425,9 @@ export function searchContract(facts: CurrentSourceFacts | undefined) {
     optuna_trials_per_study: search?.optuna_trials_per_study ?? null,
     trial_ledger_mode: search?.trial_ledger_mode ?? null,
     candidate_selection_metric: search?.candidate_selection_metric ?? null,
+    selector_confidence: search?.candidate_selection_metric
+      ? { state: "CONFIRMED" as const, reason_code: null, source: "QUANTBT_SEALED_SEARCH_FACT" as const }
+      : { state: "NOT_PUBLISHED" as const, reason_code: "QUANTBT_SELECTOR_METRIC_NOT_IN_SEALED_SEARCH_FACT", source: null },
     top_is_fraction: search?.top_is_fraction ?? null,
     top_is_k: search?.top_is_k ?? null,
     validation_claim: facts?.claims.validation_claim ?? null,

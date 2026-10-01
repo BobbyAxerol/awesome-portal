@@ -37,6 +37,8 @@ export const SEARCH_SURFACE_RULE = "research.current-source-search-surface.v1" a
 export const SURFACE_POINT_LIMIT = 600;
 /** Spec 06 §3 A4: twelve regions per parameter. */
 export const DISTRIBUTION_BIN_COUNT = 12;
+/** S06: bounded two-dimensional mean-IS-objective heatmap. */
+export const SURFACE_GRID_BINS = 6;
 /** Spec 06 §15.3: five ramp steps. */
 export const OBJECTIVE_RAMP_STEPS = 5;
 /** A5 proxy: fewer complete trials than this give no rank correlation worth printing. */
@@ -49,6 +51,8 @@ export const SURFACE_REASONS = {
   selectionOutsideDeclaration: "P16_SELECTION_OUTSIDE_HISTORICAL_DECLARATION",
   noCompleteTrial: "QUANTBT_LEDGER_HAS_NO_COMPLETE_TRIAL_WITH_AN_OBJECTIVE",
   tooFewForImportance: "TOO_FEW_COMPLETE_TRIALS_FOR_A_RANK_CORRELATION",
+  gridAxes: "TWO_DECLARED_NUMERIC_PARAMETERS_REQUIRED_FOR_SURFACE_GRID",
+  gridObjective: "IS_OBJECTIVE_NOT_PUBLISHED_FOR_SURFACE_GRID",
   constantParameter: "PARAMETER_TOOK_ONE_VALUE_IN_EVERY_COMPLETE_TRIAL",
   constantObjective: "OBJECTIVE_TOOK_ONE_VALUE_IN_EVERY_COMPLETE_TRIAL",
   interactions: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_INTERACTIONS",
@@ -143,6 +147,22 @@ const ImportanceSchema = z.object({
   rho: z.string().regex(/^-?[01]\.[0-9]{4}$/).nullable(),
 }).strict();
 
+const SurfaceGridSchema = z.object({
+  rule: z.literal("COMPLETE_TRIAL_MEAN_IS_OBJECTIVE_2D_6X6_V1"),
+  state: z.enum(["AVAILABLE", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+  reason_code: Reason.nullable(),
+  x_param: Name.nullable(),
+  y_param: Name.nullable(),
+  bins_per_axis: z.literal(SURFACE_GRID_BINS),
+  included_trial_count: z.number().int().nonnegative().max(1_000_000),
+  cells: z.array(z.object({
+    x: z.number().int().min(0).max(SURFACE_GRID_BINS - 1),
+    y: z.number().int().min(0).max(SURFACE_GRID_BINS - 1),
+    n: z.number().int().nonnegative().max(1_000_000),
+    mean_is_objective: Decimal.nullable(),
+  }).strict()).max(SURFACE_GRID_BINS * SURFACE_GRID_BINS),
+}).strict();
+
 export const SearchSurfaceSchema = z.object({
   schema_version: z.literal(SEARCH_SURFACE_RULE),
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
@@ -165,6 +185,8 @@ export const SearchSurfaceSchema = z.object({
   /** Declared numeric parameters a point is placed on (the axis picker's choices). */
   axes: z.array(Name).max(24),
   points: z.array(SurfacePointSchema).max(SURFACE_POINT_LIMIT),
+  /** Additive S06 heatmap; older sealed search clients may omit it. */
+  grid: SurfaceGridSchema.optional(),
   distributions: z.object({
     rule: z.literal("COMPLETE_TRIALS_BINNED_OVER_DECLARED_RANGE_V1"),
     bins: z.literal(DISTRIBUTION_BIN_COUNT),
@@ -424,6 +446,19 @@ export interface SurfaceTrial {
   parameters: Readonly<Record<string, string>>;
 }
 
+function emptyGrid(state: "NOT_APPLICABLE" | "NOT_PUBLISHED", reason: string) {
+  return {
+    rule: "COMPLETE_TRIAL_MEAN_IS_OBJECTIVE_2D_6X6_V1" as const,
+    state,
+    reason_code: reason,
+    x_param: null,
+    y_param: null,
+    bins_per_axis: SURFACE_GRID_BINS as typeof SURFACE_GRID_BINS,
+    included_trial_count: 0,
+    cells: [],
+  };
+}
+
 function emptySurface(reason: string, sourceTrials: number): SearchSurface {
   return {
     schema_version: SEARCH_SURFACE_RULE,
@@ -440,6 +475,7 @@ function emptySurface(reason: string, sourceTrials: number): SearchSurface {
     best_is_trial_id: null,
     axes: [],
     points: [],
+    grid: emptyGrid("NOT_PUBLISHED", reason),
     distributions: { rule: "COMPLETE_TRIALS_BINNED_OVER_DECLARED_RANGE_V1", bins: DISTRIBUTION_BIN_COUNT, parameters: [] },
     parameter_frequency: { rule: "TOP_DECILE_IS_TRIALS_AT_THETA_VALUE_V1", state: "NOT_PUBLISHED", reason_code: reason, pool_count: 0, parameters: [] },
     importance: { rule: "SPEARMAN_RANK_CORRELATION_PROXY_NOT_FANOVA_V1", state: "NOT_APPLICABLE", reason_code: reason, minimum_trials: IMPORTANCE_MINIMUM_TRIALS, parameters: [] },
@@ -543,6 +579,40 @@ export function searchSurface(input: {
     };
   });
 
+  const grid = (() => {
+    if (input.objectiveKind !== "IS_MEAN_SHARPE") return emptyGrid("NOT_PUBLISHED", SURFACE_REASONS.gridObjective);
+    const x = space.parameters.find((parameter) => parameter.name === "window") ?? space.parameters[0];
+    const y = space.parameters.find((parameter) => parameter.name === "rvol" && parameter.name !== x?.name)
+      ?? space.parameters.find((parameter) => parameter.name !== x?.name);
+    if (!x || !y) return emptyGrid("NOT_APPLICABLE", SURFACE_REASONS.gridAxes);
+    const members: Exact[][] = Array.from({ length: SURFACE_GRID_BINS * SURFACE_GRID_BINS }, () => []);
+    let included = 0;
+    for (const { trial, objective } of complete) {
+      const xValue = exact(trial.parameters[x.name] ?? "");
+      const yValue = exact(trial.parameters[y.name] ?? "");
+      const xi = xValue === null ? null : binIndex(xValue, exact(x.minimum)!, exact(x.maximum)!, SURFACE_GRID_BINS);
+      const yi = yValue === null ? null : binIndex(yValue, exact(y.minimum)!, exact(y.maximum)!, SURFACE_GRID_BINS);
+      if (xi === null || yi === null) continue;
+      members[yi * SURFACE_GRID_BINS + xi]!.push(objective);
+      included++;
+    }
+    return {
+      rule: "COMPLETE_TRIAL_MEAN_IS_OBJECTIVE_2D_6X6_V1" as const,
+      state: "AVAILABLE" as const,
+      reason_code: null,
+      x_param: x.name,
+      y_param: y.name,
+      bins_per_axis: SURFACE_GRID_BINS as typeof SURFACE_GRID_BINS,
+      included_trial_count: included,
+      cells: members.map((values, index) => ({
+        x: index % SURFACE_GRID_BINS,
+        y: Math.floor(index / SURFACE_GRID_BINS),
+        n: values.length,
+        mean_is_objective: mean(values),
+      })),
+    };
+  })();
+
   // B4 · the share of the top-decile trials (by IS objective, ties kept
   // together at the cut) whose value of each parameter equals θ*'s.
   const poolSize = Math.ceil((complete.length * TOP_DECILE_FRACTION_PERCENT) / 100);
@@ -606,6 +676,7 @@ export function searchSurface(input: {
     best_is_trial_id: input.bestIsTrialId,
     axes,
     points: sampled.rows.map((row) => row.point),
+    grid,
     distributions: { rule: "COMPLETE_TRIALS_BINNED_OVER_DECLARED_RANGE_V1", bins: DISTRIBUTION_BIN_COUNT, parameters: distributions },
     parameter_frequency: {
       rule: "TOP_DECILE_IS_TRIALS_AT_THETA_VALUE_V1",
