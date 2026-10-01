@@ -1517,6 +1517,10 @@ export interface components {
             transitions: number;
             fee: components["schemas"]["Decimal"] | null;
             turnover: components["schemas"]["Decimal"] | null;
+            /** @description Sealed global-study selection digest; not proof of per-bar replay-runtime parameter equality. */
+            params_digest: components["schemas"]["Digest"] | null;
+            /** @enum {unknown} */
+            params_digest_reason_code: "RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS" | null;
             start_cursor: components["schemas"]["OpaqueCursor"];
         };
         /** @description W5b: what the signal-notional route really produced, retained at seal time. */

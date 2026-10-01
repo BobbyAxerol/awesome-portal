@@ -32,6 +32,7 @@ import { ResearchCurrentSourceError } from "../src/research/current-source.error
 import { CurrentSourceSummarySchema, currentSourceRowMatchesKind } from "../src/research/current-source.payload";
 import type { CurrentSourceSealRow, CurrentSourceStoredRow } from "../src/research/current-source.repository";
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
+import { sha256ResearchJson } from "../src/research/preflight.service";
 import { openApiValidator } from "./research-rf05-openapi";
 
 type Kind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
@@ -208,6 +209,10 @@ describe("P17-T03/T14 · fold capital is QuantBT's convention, fold switch keeps
     const { service } = memory(realSeal, real.rows);
     const value = await replay(service);
     const capital = value.execution.fold_capital;
+    const sealedParamsDigest = sha256ResearchJson(CurrentSourceSummarySchema.parse(real.summary).selection.parameters);
+    for (const segment of capital.segments) {
+      expect(segment).toMatchObject({ params_digest: sealedParamsDigest, params_digest_reason_code: null });
+    }
     expect(capital).toMatchObject({ policy: "carry_position", account_execution: "single_stitched_run", equity_continuity: "CONTINUOUS_ACROSS_FOLDS", reason_code: null });
     const [fold0, fold1] = capital.segments;
     expect(fold0).toMatchObject({ fold_id: "0", first_ordinal: 720, last_ordinal: 887, bars: 168, start_equity: "20000", end_equity: "19931.280844135865", transitions: 4 });
@@ -232,6 +237,17 @@ describe("P17-T03/T14 · fold capital is QuantBT's convention, fold switch keeps
     expect(repository.runState).not.toHaveBeenCalled();
     expect(repository.observationSeries).not.toHaveBeenCalled();
   });
+  it("keeps an old seal's missing selected parameters typed rather than inventing a fold digest", async () => {
+    const summary = structuredClone(real.summary);
+    (summary.selection as { parameters: Record<string, string> }).parameters = {};
+    const { service } = memory(sealRow(summary, real.table_rows), real.rows);
+    const value = await replay(service);
+    expect(value.execution.fold_capital.segments).toHaveLength(2);
+    for (const segment of value.execution.fold_capital.segments) {
+      expect(segment).toMatchObject({ params_digest: null, params_digest_reason_code: "RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS" });
+    }
+  });
+
 
   it("a reset_flat policy is never presented as one compounding account", async () => {
     const summary = structuredClone(real.summary);

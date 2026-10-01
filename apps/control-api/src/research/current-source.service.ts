@@ -840,7 +840,11 @@ export class ResearchCurrentSourceService {
         },
       },
       route_capabilities: replayCapabilities(ledger, summary.source_facts ?? null),
-      execution: this.replayExecution(scope.workspaceId, runId, currentRevision, ledger, summary.source_facts ?? null),
+      execution: this.replayExecution(
+        scope.workspaceId, runId, currentRevision, ledger, summary.source_facts ?? null,
+        Object.keys(summary.selection.parameters).length > 0
+          ? sha256ResearchJson(summary.selection.parameters) : null,
+      ),
     };
     return this.valid(ResearchCurrentSourceReplayResponseSchema, value);
   }
@@ -996,6 +1000,7 @@ export class ResearchCurrentSourceService {
     currentRevision: string,
     ledger: CurrentSourceReplaySummary | null,
     facts: CurrentSourceFacts | null,
+    selectedParamsDigest: string | null,
   ) {
     const execution = facts?.execution ?? null;
     const contract = ledger?.account_contract ?? null;
@@ -1044,6 +1049,8 @@ export class ResearchCurrentSourceService {
         reason_code: policy === null ? "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FOLD_ACCOUNT_POLICY" : null,
         segments: (ledger?.fold_segments ?? []).map((segment) => ({
           ...segment,
+          params_digest: selectedParamsDigest,
+          params_digest_reason_code: selectedParamsDigest === null ? "RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS" : null,
           start_cursor: this.playbackCursor(workspaceId, runId, currentRevision, "OBSERVATION", segment.first_ordinal),
         })),
         boundary_events: capital?.boundary_events ?? [],

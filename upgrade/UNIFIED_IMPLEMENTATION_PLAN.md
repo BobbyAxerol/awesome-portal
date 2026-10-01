@@ -6670,5 +6670,15 @@ missing-bar count and columns. No new HMD read or raw/holdout data is exposed.
 Old manifests with only identity digests remain readable and answer
 `NOT_PUBLISHED/P08_SNAPSHOT_COVERAGE_NOT_RETAINED`; corrupt partial metadata
 fails closed. Control API build, focused Hub/contract tests and the disposable
-P13 PostgreSQL test passed. Real-run preview acceptance is still pending.
+P13 PostgreSQL test passed. Exact-HEAD isolated-preview R-WFO-020 Evidence
+GET returned HTTP 200 with 2,484 source-retained rows, zero gaps/missing
+bars, and a typed `AVAILABLE` coverage panel; backend fact accepted.
 [B3 receipt](./research_loop/evidence/P13/CG-FG-S04-02_dataset_coverage_2026-10-01.md)
+
+### B3 CG-FG-S08-01 — sealed fold parameter identity, 2026-10-01
+
+Replay fold segments now carry the canonical digest of the retained global-study
+selected parameter map, the same identity already visible in Progress and Freeze
+on the real WFO run. This is not a false claim that the QuantBT OOS-generation
+child executed those parameters; LW-03 remains a source gap. Old seals answer a
+typed absence. Claude may bind the S08 strip without changing approved visuals.

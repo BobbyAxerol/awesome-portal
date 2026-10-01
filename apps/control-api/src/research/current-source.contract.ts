@@ -186,6 +186,9 @@ const ObservationSchema = z.object({
 }).strict();
 
 const FoldSegmentSchema = z.object({
+  /** Sealed global-study θ* identity, not proof of the replay child's runtime parameters. */
+  params_digest: DigestSchema.nullable(),
+  params_digest_reason_code: z.literal("RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS").nullable(),
   fold_id: TokenSchema,
   first_ordinal: CountSchema,
   last_ordinal: CountSchema,
