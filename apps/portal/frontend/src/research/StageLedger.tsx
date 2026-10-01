@@ -11,7 +11,7 @@
 
 import type { CSSProperties } from "react";
 
-import { NOT_PUBLISHED_SELECTION, type ProgressSnapshot } from "./progressClient";
+import { NOT_PUBLISHED_SELECTION, type FoldSelection, type ProgressSnapshot } from "./progressClient";
 import { formatMetric, shortDigest } from "./researchFormat";
 import { NotPublished } from "./RunMetaStrip";
 
@@ -26,6 +26,24 @@ export const LEDGER_FOOT =
 
 /** A global study's objective is study-wide; a fixed profile has none. */
 export const GLOBAL_OBJECTIVE_NOTE = "One global study selected this bundle for every fold; the objective is study-wide.";
+
+/**
+ * 03-M: which selection scopes ran no search. `IMPORTED_FIXED_PROFILE` is an
+ * imported alpha's fixed profile — the same absence of a study as
+ * `FIXED_PROFILE`, so it must not print a per-fold "study N / M" line. Keyed by
+ * the generated union (not a prefix match) so a scope the contract adds later
+ * fails to compile here instead of defaulting to "a search ran".
+ */
+const SCOPE_RAN_NO_SEARCH: Record<NonNullable<FoldSelection["scope"]>, boolean> = {
+  GLOBAL_STUDY: false,
+  FIXED_PROFILE: true,
+  IMPORTED_FIXED_PROFILE: true,
+};
+
+/** Whether this scope is a fixed profile: no search ran, no objective exists. */
+export function isFixedProfileScope(scope: FoldSelection["scope"] | undefined): boolean {
+  return scope !== null && scope !== undefined && SCOPE_RAN_NO_SEARCH[scope];
+}
 
 /** `HH:MM:SSZ` from a server timestamp; never the local clock. */
 export function utcClock(ms: number | null): string | null {
@@ -109,7 +127,7 @@ export function StageLedger({ folds, foldTrials, cursor, studyTrials = null }: S
             ? `latest ${trial.toLocaleString("en-US")}`
             : global && studyTrials
               ? `${studyTrials.done.toLocaleString("en-US")} · global`
-              : available && selection.scope === "FIXED_PROFILE"
+              : available && isFixedProfileScope(selection.scope)
                 ? "1 · fixed"
                 : null;
           return (

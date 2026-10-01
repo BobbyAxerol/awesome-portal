@@ -10,7 +10,8 @@
  *  - **An unavailable fact keeps its place and states its reason** (DQ-14).
  *    A `NOT_PUBLISHED` metric is not `0`, a `LEGACY_METADATA_ONLY` row is not
  *    current engine evidence, a null certificate is `cert —`, and `rc: null`
- *    reserves no chip at all. Tooltips carry a sentence, never a raw code;
+ *    is a short "rc — not published" carrying the served `rc_availability`
+ *    reason (2_wiring S01), never a silent gap. Tooltips carry a sentence, never a raw code;
  *    the code rides on `data-reason-code` for diagnostics.
  *  - **Copy that asserts a fact appears only when the run published it**
  *    (DQ-15). The claim line prints the Stage-5 state and sentence the server
@@ -1133,9 +1134,35 @@ export const PICK_TARGET_LABEL: Record<string, string> = {
   compare_runs: "Compare",
 };
 
-/** Where a card's one link goes, by what the row is (spec 01 §15.4). */
-function openTarget(item: RunLibraryItem, pickTarget?: string): { to: string; label: string; title?: string } {
+/** Where a card's one link goes, by what the row is (spec 01 §15.4). `to: null` = nothing to open. */
+export function openTarget(
+  item: RunLibraryItem,
+  pickTarget?: string,
+): { to: string | null; label: string; title?: string } {
   const id = encodeURIComponent(item.run_id);
+  /*
+   * FG 01-13: a legacy 1.0.8 row is judged FIRST. It has no Evidence Flow, no
+   * Progress, no Split/Search/Freeze/Execute, no Report and no Alpha binding,
+   * so a `?to=` pick that resolved to any of those (or the alpha-scoped
+   * fallback to `/evidence` below) pointed at a path the row does not have.
+   * The only screen a legacy row opens is the legacy workspace; a pick for
+   * anything else is a non-link that says why, never a link to a missing screen.
+   */
+  if (item.source_kind === "LEGACY_1_0_8_METADATA") {
+    if (pickTarget && pickTarget !== "run_progress_legacy") {
+      const name = PICK_TARGET_LABEL[pickTarget] ?? pickTarget;
+      return {
+        to: null,
+        label: "cannot open here",
+        title: `${name} reads a current-engine run, and a legacy 1.0.8 row has none of it. This row opens only in the legacy run workspace.`,
+      };
+    }
+    return {
+      to: `/research/quantbt/runs/${id}/overview`,
+      label: "open legacy run →",
+      title: "A legacy 1.0.8 row opens in the legacy run workspace; it has no Evidence Flow.",
+    };
+  }
   /*
    * D2: the reader came from a Journey Map card, so the card's one link opens
    * that screen for this run instead of the default. An alpha-scoped screen
@@ -1165,13 +1192,6 @@ function openTarget(item: RunLibraryItem, pickTarget?: string): { to: string; la
         title: `${name} opens per Alpha, and this row names no alpha version.`,
       };
     }
-  }
-  if (item.source_kind === "LEGACY_1_0_8_METADATA") {
-    return {
-      to: `/research/quantbt/runs/${id}/overview`,
-      label: "open legacy run →",
-      title: "A legacy 1.0.8 row opens in the legacy run workspace; it has no Evidence Flow.",
-    };
   }
   if (item.status === "RUNNING" || item.status === "QUEUED") {
     return { to: `/research/quantbt/runs/${id}/progress`, label: "watch progress →" };
@@ -1377,8 +1397,13 @@ function RunCard({
           <Withheld availability={item.instrument.availability} what="instrument" />
         )}
 
-        {/* Spec 01 §4.4: a null rc reserves no chip and no space. */}
-        {item.rc !== null ? <RcChip rc={item.rc} runId={item.run_id} alphaVersionId={item.binding?.alpha_version_id ?? null} /> : null}
+        {/* 2_wiring S01: a null rc is a typed absence carrying the served
+            `rc_availability` reason (never a silent gap, never a chip). */}
+        {item.rc !== null ? (
+          <RcChip rc={item.rc} runId={item.run_id} alphaVersionId={item.binding?.alpha_version_id ?? null} />
+        ) : (
+          <Withheld availability={item.rc_availability} what="rc" />
+        )}
 
         <span
           data-certificate={cert ?? "none"}
@@ -1407,16 +1432,35 @@ function RunCard({
           >
             {new Date(item.created_at_utc_ms).toISOString().slice(0, 16).replace("T", " ")}Z
           </span>
-          <Link
-            to={open.to}
-            title={open.title}
-            className="text-[color:var(--accent)]"
-            style={{ fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em" }}
-            data-open={item.run_id}
-            {...(open.label === "open evidence →" ? { "data-open-evidence": item.run_id } : {})}
-          >
-            {open.label}
-          </Link>
+          {open.to !== null ? (
+            <Link
+              to={open.to}
+              title={open.title}
+              className="text-[color:var(--accent)]"
+              style={{ fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em" }}
+              data-open={item.run_id}
+              {...(open.label === "open evidence →" ? { "data-open-evidence": item.run_id } : {})}
+            >
+              {open.label}
+            </Link>
+          ) : (
+            /* FG 01-13: nothing this row can open for the picked screen — a
+               word with the reason, not a link to a path the row lacks. */
+            <span
+              data-open-unavailable={item.run_id}
+              title={open.title}
+              style={{
+                fontFamily: MONO,
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: ".05em",
+                color: "var(--ink-faint)",
+                fontStyle: "italic",
+              }}
+            >
+              {open.label}
+            </span>
+          )}
         </span>
       </header>
 

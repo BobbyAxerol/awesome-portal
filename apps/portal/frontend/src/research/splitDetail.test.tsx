@@ -1573,3 +1573,161 @@ describe("G7 — axe `color-contrast` on the month ticks", () => {
     }
   });
 });
+
+/* -------------------------------------------------------------------------
+ * F1 (2026-10-01) — Screen 05 honesty: the disjointness verdict is the
+ * server's, the gap scan never turns a null into 0, an imported run reads
+ * like a fixed-profile one.
+ * ---------------------------------------------------------------------- */
+
+const DISJOINT_CASES = (JSON.parse(
+  readFileSync(join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures", "research-current-source.disjoint-verdicts.valid.json"), "utf8"),
+) as { basis: string; cases: { name: string; expected: { verdict: "PASS" | "FAIL"; reason_code: string | null } }[] }).cases;
+const DISJOINT_BASIS = "RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1" as const;
+
+function withDisjoint(verdict: Record<string, unknown> | undefined): CurrentSourceSplit {
+  const { train_test_disjoint: _drop, ...guards } = (W3_SPLIT.guards ?? {}) as Record<string, unknown>;
+  return { ...W3_SPLIT, guards: verdict ? { ...guards, train_test_disjoint: verdict } : guards } as unknown as CurrentSourceSplit;
+}
+
+function disjointRow(container: HTMLElement): HTMLElement {
+  return container.querySelector("[data-train-test-disjoint]") as HTMLElement;
+}
+
+describe("F1 · FG 05-15 — train ∩ test = ∅ is the served verdict, never a ✓ for having a fold plan", () => {
+  it("a retained fold plan with NO served verdict keeps the row but draws no ✓ and says the field is absent", () => {
+    const { container } = view({ folds: { state: "ready", split: withDisjoint(undefined) } });
+    const row = disjointRow(container);
+    expect(row.getAttribute("data-integrity-mark")).toBe("none");
+    expect(row.getAttribute("data-train-test-disjoint")).toBe("NO_FIELD");
+    expect(row.textContent).not.toContain("✓");
+    expect(row.textContent).not.toContain("retained fold plan");
+    expect(row.querySelector("[data-lane-absent]")?.getAttribute("data-lane-reason")).toBe("UI_RETAINED_LANE_HAS_NO_FIELD");
+  });
+
+  it("PASS from the server draws ✓ and nothing else does", () => {
+    const pass = DISJOINT_CASES.find((c) => c.name === "published-disjoint")!;
+    expect(pass.expected.verdict).toBe("PASS");
+    const { container } = view({
+      folds: { state: "ready", split: withDisjoint({ verdict: pass.expected.verdict, basis: DISJOINT_BASIS, reason_code: pass.expected.reason_code }) },
+    });
+    const row = disjointRow(container);
+    expect(row.getAttribute("data-integrity-mark")).toBe("pass");
+    expect(row.getAttribute("data-train-test-disjoint")).toBe("PASS");
+    expect(row.textContent).toContain("✓");
+    expect(row.querySelector("[data-train-test-basis]")?.getAttribute("title")).toContain(DISJOINT_BASIS);
+  });
+
+  it("FAIL from the server draws ✕ with the server's reason code, never a ✓", () => {
+    const fail = DISJOINT_CASES.find((c) => c.name === "retained-overlap")!;
+    expect(fail.expected.verdict).toBe("FAIL");
+    const { container } = view({
+      folds: { state: "ready", split: withDisjoint({ verdict: fail.expected.verdict, basis: DISJOINT_BASIS, reason_code: fail.expected.reason_code }) },
+    });
+    const row = disjointRow(container);
+    expect(row.getAttribute("data-integrity-mark")).toBe("fail");
+    expect(row.getAttribute("data-integrity")).toBe("failed");
+    expect(row.textContent).toContain("✕");
+    expect(row.textContent).not.toContain("✓");
+    expect(row.textContent).toContain("S05_TRAIN_TEST_WINDOWS_OVERLAP");
+  });
+
+  it("NOT_CHECKABLE is a typed absence with the served reason code — neither ✓ nor ✕", () => {
+    const { container } = view({
+      folds: {
+        state: "ready",
+        split: withDisjoint({ verdict: "NOT_CHECKABLE", basis: DISJOINT_BASIS, reason_code: "S05_TEMPORAL_GUARDS_NOT_PUBLISHED" }),
+      },
+    });
+    const row = disjointRow(container);
+    expect(row.getAttribute("data-integrity-mark")).toBe("none");
+    expect(row.getAttribute("data-train-test-disjoint")).toBe("NOT_CHECKABLE");
+    expect(row.textContent).toContain("not checkable");
+    expect(row.textContent).toContain("S05_TEMPORAL_GUARDS_NOT_PUBLISHED");
+    expect(row.textContent).not.toMatch(/[✓✕]/);
+  });
+
+  it("P04 lane (the retained lane answered not-applicable) is a typed absence with the lane's code", () => {
+    const { container } = view();
+    const row = disjointRow(container);
+    expect(row.getAttribute("data-integrity-mark")).toBe("none");
+    expect(row.querySelector("[data-lane-absent]")?.getAttribute("data-lane-reason")).toBe(
+      "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION",
+    );
+    expect(row.textContent).not.toContain("needs a fold plan");
+  });
+
+  it("a fold plan still being read is 'reading', not an absence and not a ✓", () => {
+    const { container } = view({ folds: { state: "loading" } });
+    const row = disjointRow(container);
+    expect(row.getAttribute("data-train-test-disjoint")).toBe("READING");
+    expect(row.querySelector("[data-lane-reading]")).toBeTruthy();
+    expect(row.getAttribute("data-integrity-mark")).toBe("none");
+  });
+});
+
+describe("F1 · FG 05-17 — a gap-scan count the server left null is absence text, never 0", () => {
+  beforeEach(() => {
+    forgetRunIdentities();
+    forgetObservedFolds();
+  });
+
+  async function scanWith(patch: Record<string, unknown>) {
+    stub(w3bResponder(e14Lane({ gap_scan: { ...E14_SPLIT.gap_scan, ...patch } })));
+    const view2 = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(view2.container.querySelector("[data-holdout-lane]")).toBeTruthy());
+    return view2.container;
+  }
+
+  it("null measured_count says so and keeps the row out of 'pass'", async () => {
+    const container = await scanWith({ measured_count: null, max_gap_bars: null });
+    const scan = container.querySelector("[data-gap-scan]") as HTMLElement;
+    expect(scan.querySelector("[data-gap-scan-null='measured count']")?.textContent).toBe("measured count — not published");
+    expect(scan.textContent).not.toMatch(/none measured|no gap|of 0|\b0\b/);
+    expect(scan.closest("[data-integrity]")!.getAttribute("data-integrity-mark")).toBe("none");
+  });
+
+  it("null boundary_count says so instead of '0 of 0 fold boundaries'", async () => {
+    const container = await scanWith({ boundary_count: null });
+    const scan = container.querySelector("[data-gap-scan]") as HTMLElement;
+    expect(scan.querySelector("[data-gap-scan-null='boundary count']")?.textContent).toBe("boundary count — not published");
+    expect(scan.textContent).not.toMatch(/of 0|\b0 fold/);
+  });
+
+  it("measured crossings with a null widest gap never print 'widest null bars'", async () => {
+    const container = await scanWith({ max_gap_bars: null });
+    const scan = container.querySelector("[data-gap-scan]") as HTMLElement;
+    expect(scan.querySelector("[data-gap-scan-null='widest gap']")).toBeTruthy();
+    expect(scan.textContent).not.toMatch(/null|no gap/);
+    expect(scan.closest("[data-integrity]")!.getAttribute("data-integrity-mark")).toBe("none");
+  });
+
+  it("an unknown expected_boundary_count does not claim 'N of N'", async () => {
+    const container = await scanWith({ expected_boundary_count: null });
+    const text = (container.querySelector("[data-gap-scan]") as HTMLElement).textContent!;
+    expect(text).toContain("1 fold boundary");
+    expect(text).not.toContain("1 of 1");
+  });
+});
+
+describe("F1 · X5 — an imported run's OOS window reads like a fixed-profile one", () => {
+  function withEvaluation(state: string) {
+    const base = detail();
+    return detail({
+      windows: { ...base.windows, outer_oos: { ...(base.windows.outer_oos as object), evaluation_state: state } } as SplitDetail["windows"],
+    });
+  }
+
+  it.each(["P04_OBSERVED_AFTER_FIXED_PROFILE", "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE"])("%s → 'observed after the profile was fixed'", (state) => {
+    const { container } = view({ detail: withEvaluation(state) });
+    const note = container.querySelector("[data-protocol-note]")!.textContent!;
+    expect(note).toContain("the OOS window was observed after the profile was fixed");
+  });
+
+  it("an evaluation state this screen does not know keeps the weaker sentence", () => {
+    const { container } = view({ detail: withEvaluation("SOMETHING_NEW") });
+    const note = container.querySelector("[data-protocol-note]")!.textContent!;
+    expect(note).toContain("the OOS window was observed");
+    expect(note).not.toContain("after the profile was fixed");
+  });
+});

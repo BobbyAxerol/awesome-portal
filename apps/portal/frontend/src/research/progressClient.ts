@@ -126,6 +126,11 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+/** `&workspace_id=…` (encoded, never spliced) or "": the suffix every progress read appends (X7). */
+function workspaceSuffix(workspaceId?: string): string {
+  return workspaceId ? `&workspace_id=${encodeURIComponent(workspaceId)}` : "";
+}
+
 /** The console page size the contract caps at. */
 export const CONSOLE_PAGE_LIMIT = 500;
 
@@ -154,10 +159,15 @@ export const progressApi = {
       return answer;
     }),
 
-  /** One bounded console page. Never a full-history read. */
-  console: (runId: string, afterSeq: number, signal?: AbortSignal) =>
+  /**
+   * One bounded console page. Never a full-history read.
+   *
+   * X7: the workspace travels like `read`'s, so a viewer on a non-default
+   * workspace reads this run's console and not an empty or wrong one.
+   */
+  console: (runId: string, afterSeq: number, workspaceId?: string, signal?: AbortSignal) =>
     call<ConsolePage>(
-      runPath(runId, `/console?after_seq=${afterSeq}&limit=${CONSOLE_PAGE_LIMIT}`),
+      runPath(runId, `/console?after_seq=${afterSeq}&limit=${CONSOLE_PAGE_LIMIT}${workspaceSuffix(workspaceId)}`),
       { signal },
     ),
 
@@ -183,10 +193,15 @@ export const progressApi = {
    *
    * Built here so the one place that knows the contract's paths also knows
    * this one — `EventSource` cannot be given a body, so the resume cursor
-   * travels as `after_seq`.
+   * travels as `after_seq`. X7: `workspace_id` rides beside it, as on `read`.
    */
-  streamUrl: (runId: string, afterSeq: number | null): string =>
-    runPath(runId, `/events${afterSeq === null ? "" : `?after_seq=${afterSeq}`}`),
+  streamUrl: (runId: string, afterSeq: number | null, workspaceId?: string): string =>
+    runPath(
+      runId,
+      afterSeq === null
+        ? `/events${workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : ""}`
+        : `/events?after_seq=${afterSeq}${workspaceSuffix(workspaceId)}`,
+    ),
 } as const;
 
 /* -------------------------------------------------------------------------

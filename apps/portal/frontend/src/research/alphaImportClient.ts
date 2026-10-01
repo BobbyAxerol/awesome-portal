@@ -37,6 +37,9 @@ export type RegistrationResponse = Schemas["RegistrationResponse"];
 export type ActivationResponse = Schemas["ActivationResponse"];
 export type RegistryListResponse = Schemas["RegistryListResponse"];
 
+/** Evidence for the registered Alpha source only; served on registration and on each registry row (14-09). */
+export type ImportAttestation = Schemas["ImportAttestation"];
+
 export type MirrorField = Schemas["MirrorField"];
 export type GateRow = Schemas["GateRow"];
 export type RegistryEntry = Schemas["RegistryEntry"];
@@ -237,7 +240,29 @@ export interface ImportRefusal extends RefusalPresentation {
   detail?: string | null;
   status: number;
   requestId: string | null;
+  /**
+   * True when the screen's words are the one F-04 sentence for a 403 or a 404
+   * (14-21/22). Such a refusal prints that sentence alone; the code, the
+   * server's text and the request id ride in a details disclosure so a 403 and
+   * a 404 are not told apart on the surface.
+   */
+  neutral?: boolean;
+  /**
+   * True when the banner keeps the raw `RESEARCH_*` code, the server's text and
+   * the request id out of its surface and shows them under a details disclosure
+   * only: the neutral 403/404 (F-04) and the origin/CSRF refusal, whose code
+   * (`…_INVALID`) would contradict its own sentence.
+   */
+  codeInDetails?: boolean;
 }
+
+/**
+ * S14-C1: the mutating routes refuse a request whose origin or CSRF check fails
+ * with `403 RESEARCH_ALPHA_IMPORT_INVALID`. That is not an invalid import, so it
+ * must not borrow the invalid-import sentence. Short and factual; the exact
+ * wording is Bobby's to review.
+ */
+export const IMPORT_ORIGIN_REFUSED = "The request origin or CSRF check was refused. Reload this page and try again.";
 
 /**
  * The screen's sentence per contract code (VD-P23-01): specific enough to act
@@ -285,13 +310,23 @@ export function toRefusal(error: unknown): ImportRefusal {
   if (error.status === 401) reportSessionExpired();
   const known = error.code && error.code in REFUSAL ? REFUSAL[error.code as ProblemCode] : null;
   const state = known?.state ?? stateOfStatus(error.status);
+  /* S14-C1: a 403 carrying INVALID is the origin/CSRF check, not a bad import. */
+  const originRefused = error.status === 403 && error.code === "RESEARCH_ALPHA_IMPORT_INVALID";
+  /* 14-21/22: every other 403 and 404 reads as the one F-04 sentence, whatever its code. */
+  const neutral = (error.status === 403 || error.status === 404) && !originRefused;
   return {
     code: (error.code as ProblemCode | null) ?? null,
     /* VD-P23-01: the words on screen are the screen's; the server's sentence is detail. */
-    message: (known && error.code ? IMPORT_REFUSAL_SENTENCE[error.code as ProblemCode] : undefined) ?? refusalCopy(state, error.status),
+    message: originRefused
+      ? IMPORT_ORIGIN_REFUSED
+      : neutral
+        ? REFUSAL_COPY.denied
+        : (known && error.code ? IMPORT_REFUSAL_SENTENCE[error.code as ProblemCode] : undefined) ?? refusalCopy(state, error.status),
     detail: error.message || null,
     status: error.status,
     requestId: error.requestId,
+    neutral,
+    codeInDetails: neutral || originRefused,
     state,
     mayRetry: known?.mayRetry ?? state === "unavailable",
     requiresRefresh: known?.requiresRefresh ?? false,

@@ -20,7 +20,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { formatUtc, shortDigest } from "./researchFormat";
+import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import type { WhatIf, WhatIfCell, WhatIfEvaluateSlot } from "./freezeClient";
 import { RefusalNote } from "./ResearchPanel";
 import { ShortId } from "./ShortId";
@@ -57,6 +57,55 @@ export function whatIfReason(code: string | null | undefined): string {
 export function signedDecimal(value: string): string {
   if (value.startsWith("-")) return `−${value.slice(1)}`;
   return value === "0" ? "0" : `+${value}`;
+}
+
+/**
+ * A served decimal as the card prints it: grouped and at most six significant
+ * digits (`formatMetric`'s default), a true minus. The exact string stays in
+ * the caller's `title`. A value that is not a number comes back unchanged —
+ * never `0`.
+ */
+export function shownDecimal(value: string): string {
+  const shown = formatMetric(value, null) ?? value;
+  return shown.startsWith("-") ? `−${shown.slice(1)}` : shown;
+}
+
+/** `shownDecimal` with the sign ΔJ always carries (`+0.041`, `−0.087`); zero stays `0`. */
+export function shownSignedDecimal(value: string): string {
+  const shown = shownDecimal(value);
+  if (shown.startsWith("−") || shown === "0") return shown;
+  return `+${shown}`;
+}
+
+/** Tokens a server enum keeps in capitals when it is read as words. */
+const KEEP_UPPER = new Set(["IS", "OOS", "WFO"]);
+
+/**
+ * A server enum read as words without turning an abbreviation into a verb:
+ * `GLOBAL_STUDY_IS_FOLDS` → "global study · IS folds"; unknown enums fall back
+ * to their tokens with IS / OOS / single letters kept in capitals. The raw
+ * code is the caller's `title`.
+ */
+export function enumWords(code: string): string {
+  if (code === "GLOBAL_STUDY_IS_FOLDS") return "global study · IS folds";
+  return code
+    .split("_")
+    .map((token) => (token.length <= 1 || KEEP_UPPER.has(token) ? token : token.toLowerCase()))
+    .join(" ");
+}
+
+/** The node whose value is nearest `target`; among equal distances (clamped duplicates) the one nearest `from`. */
+function nearestNode(nodes: number[], target: number, from: number): number {
+  let best = from;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  nodes.forEach((node, index) => {
+    const distance = Math.abs(node - target);
+    if (distance < bestDistance || (distance === bestDistance && Math.abs(index - from) < Math.abs(best - from))) {
+      best = index;
+      bestDistance = distance;
+    }
+  });
+  return best;
 }
 
 function cellAt(whatIf: WhatIf, x: number, y: number): WhatIfCell | null {
@@ -103,11 +152,12 @@ export function WhatIfCard(props: {
 }
 
 /**
- * The two Delta axes the what-if grid moves (W5a A10c: `rvol` and
- * `slpercent`). The HiFi's `entry_z` / `atr_mult` are demo names from another
- * alpha and never label this one's controls.
+ * A card with no served slider names no parameter: the HiFi's `entry_z` /
+ * `atr_mult` belong to another alpha, and a Delta name typed here would be a
+ * guess. Two disabled controls keep the card's place (A11); each is labelled by
+ * the server's reason alone.
  */
-const WHAT_IF_AXES = ["rvol", "slpercent"] as const;
+const INERT_SLIDERS = [0, 1] as const;
 
 function InertWhatIf({ state, reason }: { state: string; reason: string | null }) {
   return (
@@ -130,13 +180,8 @@ function InertWhatIf({ state, reason }: { state: string; reason: string | null }
       </div>
       <div className="flex flex-col gap-2" data-what-if-inert>
         {/* A11: the card keeps its place; controls exist but cannot move, with the server's reason. */}
-        {WHAT_IF_AXES.map((name) => (
-          <label key={name} className="flex flex-col gap-1">
-            <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
-              {name}
-            </span>
-            <input type="range" disabled aria-disabled="true" aria-label={`${name} — ${whatIfReason(reason)}`} style={{ width: "100%" }} />
-          </label>
+        {INERT_SLIDERS.map((slot) => (
+          <input key={slot} type="range" disabled aria-disabled="true" aria-label={`parameter ${slot + 1} — ${whatIfReason(reason)}`} style={{ width: "100%" }} />
         ))}
         <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-what-if-reason>
           {whatIfReason(reason) || "No evaluated neighbourhood is published for this run."}
@@ -190,7 +235,7 @@ function LiveWhatIf({
 
   const preview = cell
     ? cell.state === "EVALUATED" && cell.delta_j !== null
-      ? `ΔJ₁ ${signedDecimal(cell.delta_j)}`
+      ? `ΔJ₁ ${shownSignedDecimal(cell.delta_j)}`
       : cell.state === "EVALUATED"
         ? "ΔJ₁ — base objective not evaluated"
         : `ΔJ₁ — ${CELL_WORDS[cell.state]}`
@@ -201,14 +246,24 @@ function LiveWhatIf({
     const node = spec.values[value]!;
     const target = index === 0 ? cellAt(whatIf, value, y) : cellAt(whatIf, x, value);
     const valueText = target && target.state === "EVALUATED" && target.delta_j !== null
-      ? `${node} (ΔJ ${signedDecimal(target.delta_j)})`
+      ? `${node} (ΔJ ${shownSignedDecimal(target.delta_j)})`
       : `${node} (${target ? CELL_WORDS[target.state] : "not evaluated"})`;
+    /*
+     * The track is the labelled range: the thumb sits where the node's value
+     * falls between the two end labels. Nodes are not evenly spaced in value
+     * where the declared bound clamps them, so an index track would park the
+     * thumb mid-track at θ* while the ends read e.g. 1 and 1.6. A drag snaps
+     * to the nearest served node (no off-node value exists); the arrow keys
+     * walk the nodes. A set the server sent unusable falls back to the node
+     * index.
+     */
+    const nodes = spec.values.map(Number);
+    const linear = nodes.length === 9 && nodes.every((n) => Number.isFinite(n)) && nodes[8]! > nodes[0]!;
+    const move = (next: number) => set(Math.min(8, Math.max(0, next)));
     return (
       <label className="flex flex-col gap-1" data-slider={spec.parameter}>
         <span className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="mono text-[10.5px]">
-            {spec.hifi_name} <span style={{ color: "var(--ink-faint)" }}>→ {spec.parameter}</span>
-          </span>
+          <span className="mono text-[10.5px]">{spec.parameter}</span>
           <span className="mono text-[10.5px] tabular-nums" data-slider-value={spec.parameter}>
             {spec.clamped[value] ? "≈ " : ""}
             {node}
@@ -218,14 +273,27 @@ function LiveWhatIf({
         <input
           type="range"
           className="fz-slider"
-          min={0}
-          max={8}
-          step={1}
-          value={value}
+          min={linear ? nodes[0] : 0}
+          max={linear ? nodes[8] : 8}
+          step={linear ? "any" : 1}
+          value={linear ? nodes[value] : value}
           disabled={!available}
           aria-valuetext={valueText}
-          aria-label={`${spec.hifi_name} (${spec.parameter}), node ${value + 1} of 9`}
-          onChange={(event) => set(Number(event.target.value))}
+          aria-label={`${spec.parameter}, node ${value + 1} of 9`}
+          data-slider-track={linear ? "value" : "node"}
+          onChange={(event) => {
+            const raw = Number(event.target.value);
+            move(linear ? nearestNode(nodes, raw, value) : raw);
+          }}
+          onKeyDown={(event) => {
+            if (!linear) return;
+            const stepBy: Record<string, number> = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 3, PageDown: -3 };
+            if (event.key === "Home") move(0);
+            else if (event.key === "End") move(8);
+            else if (event.key in stepBy) move(value + stepBy[event.key]!);
+            else return;
+            event.preventDefault();
+          }}
           style={{ accentColor: "var(--warn)", width: "100%" }}
         />
         <span className="mono flex justify-between text-[9px]" style={{ color: "var(--ink-faint)" }}>
@@ -280,12 +348,22 @@ function LiveWhatIf({
               data-preview={cell?.state ?? "NONE"}
               data-cell={cell?.cell_id ?? ""}
             >
-              <span className="mono text-[13px] font-semibold tabular-nums" data-delta-j={cell?.delta_j ?? ""}>
+              <span
+                className="mono text-[13px] font-semibold tabular-nums"
+                data-delta-j={cell?.delta_j ?? ""}
+                title={cell?.delta_j != null ? `ΔJ₁ ${signedDecimal(cell.delta_j)} (exact)` : undefined}
+              >
                 {preview}
               </span>
               {cell?.objective ? (
-                <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-                  J₁ {cell.objective} · base {whatIf.grid?.base_objective ?? "not evaluated"}
+                <span
+                  className="mono text-[10px]"
+                  style={{ color: "var(--ink-faint)" }}
+                  data-objective={cell.objective}
+                  title={`J₁ ${cell.objective} · base ${whatIf.grid?.base_objective ?? "not evaluated"} (exact)`}
+                >
+                  J₁ {shownDecimal(cell.objective)} · base{" "}
+                  {whatIf.grid?.base_objective ? shownDecimal(whatIf.grid.base_objective) : "not evaluated"}
                 </span>
               ) : null}
               {cell?.source ? (
@@ -302,7 +380,7 @@ function LiveWhatIf({
           </div>
           <div className="flex flex-col items-start gap-1" data-heatmap>
             <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
-              9 × 9 · {sliders[1]!.hifi_name} ↑ · {sliders[0]!.hifi_name} →
+              9 × 9 · {sliders[1]!.parameter} ↑ · {sliders[0]!.parameter} →
             </span>
             <div className="grid grid-cols-9 gap-[2px]" role="img" aria-label={`what-if grid, ${coverage?.label ?? "0 / 81"} cells evaluated`}>
               {heat.flat().map((entry) => (
@@ -314,7 +392,7 @@ function LiveWhatIf({
                   data-heat-state={entry.state}
                   aria-label={`${entry.cell_id} ${CELL_WORDS[entry.state]}`}
                   title={`${Object.entries(entry.parameters).map(([k, v]) => `${k} ${v}`).join(" · ")} — ${
-                    entry.delta_j !== null ? `ΔJ ${signedDecimal(entry.delta_j)}` : CELL_WORDS[entry.state]
+                    entry.delta_j !== null ? `ΔJ ${shownSignedDecimal(entry.delta_j)}` : CELL_WORDS[entry.state]
                   }`}
                   onClick={() => {
                     setX(entry.x_index);
@@ -344,14 +422,26 @@ function LiveWhatIf({
       ) : (
         <div className="flex flex-col gap-2" data-what-if-inert>
           {/* A11: the card keeps its place; controls exist but cannot move, with the server's reason. */}
-          {WHAT_IF_AXES.map((name) => (
-            <label key={name} className="flex flex-col gap-1">
-              <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
-                {name}
-              </span>
-              <input type="range" disabled aria-disabled="true" aria-label={`${name} — ${whatIfReason(whatIf.reason_code)}`} style={{ width: "100%" }} />
-            </label>
-          ))}
+          {INERT_SLIDERS.map((slot) => {
+            /* A served slider keeps its served parameter name; none served, none invented. */
+            const name = sliders[slot]?.parameter;
+            return (
+              <label key={slot} className="flex flex-col gap-1">
+                {name ? (
+                  <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
+                    {name}
+                  </span>
+                ) : null}
+                <input
+                  type="range"
+                  disabled
+                  aria-disabled="true"
+                  aria-label={`${name ?? `parameter ${slot + 1}`} — ${whatIfReason(whatIf.reason_code)}`}
+                  style={{ width: "100%" }}
+                />
+              </label>
+            );
+          })}
           <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-what-if-reason>
             {whatIfReason(whatIf.reason_code)}
           </p>
@@ -364,8 +454,15 @@ function LiveWhatIf({
 
       {whatIf.definition ? (
         <p className="mono text-[9px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-what-if-definition>
-          ΔJ₁ = J at the node − J at θ* · {whatIf.definition.objective_kind.toLowerCase().replace(/_/g, " ")} over the{" "}
-          {whatIf.definition.objective_scope.toLowerCase().replace(/_/g, " ")} · seed {whatIf.definition.random_seed} ·{" "}
+          ΔJ₁ = J at the node − J at θ* ·{" "}
+          <span title={whatIf.definition.objective_kind} data-objective-kind={whatIf.definition.objective_kind}>
+            {enumWords(whatIf.definition.objective_kind)}
+          </span>{" "}
+          ·{" "}
+          <span title={whatIf.definition.objective_scope} data-objective-scope={whatIf.definition.objective_scope}>
+            {enumWords(whatIf.definition.objective_scope)}
+          </span>{" "}
+          · seed {whatIf.definition.random_seed} ·{" "}
           {whatIf.definition.engine_release_id} · dataset {shortDigest(whatIf.definition.dataset_binding_digest)} · no
           interpolation
         </p>

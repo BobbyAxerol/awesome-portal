@@ -55,6 +55,7 @@ export function HubAtlasBody({ runId, identity }: { runId: string; identity: Hub
         runCell={runCell}
         selectedReleaseId={read.data?.selected_release_id ?? null}
         selectedReleaseKind={read.data?.selected_release_kind ?? null}
+        historicalIdentity={read.data?.historical_identity ?? null}
       />
     </div>
   );

@@ -1972,9 +1972,35 @@ function publishSlot(compose: RcCompose | null, publication: RcPublication | nul
   return "publish";
 }
 
+/**
+ * 11-26: what a publication read says when it is not delivered — the state word
+ * the server sent and, only when the server sent one, its `blocked_reason`.
+ * No code is made from the state: `P22_PENDING`, `P22_UNKNOWN`, `P22_REFUSED`
+ * and the like are not codes the server publishes.
+ */
+export function publicationStateWord(state: RcPublication["state"]): string {
+  return `publication ${state.toLowerCase().replace(/_/g, " ")}`;
+}
+
+function PublicationReason({ publication }: { publication: RcPublication }) {
+  return (
+    <>
+      <span className="rc-reason" data-publication-state={publication.state}>
+        {publicationStateWord(publication.state)}
+      </span>
+      {publication.blocked_reason ? (
+        <>
+          {" · "}
+          <Reason code={publication.blocked_reason} what="publication" />
+        </>
+      ) : null}
+    </>
+  );
+}
+
 function ghostFoot(compose: RcCompose | null, publication: RcPublication | null): ReactNode {
   if (publication !== null) {
-    return <Reason code={publication.blocked_reason ?? `P22_${publication.state}`} what="publication" />;
+    return <PublicationReason publication={publication} />;
   }
   const absence = compose?.source_absences.approval_mirror;
   return absence ? <Reason code={reasonOf(absence)} what="approval_mirror" /> : "mirror not published";
@@ -2144,7 +2170,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
               <section className="rc-ghost" data-panel="publish-ghost" aria-label="publish, on the run's composition">
                 <h3 className="k">{PUBLISH_GHOST_LABEL}</h3>
                 <p>{PUBLISH_GHOST_COPY}</p>
-                {current ? <Reason code={current.blocked_reason ?? `P22_${current.state}`} what="publication" /> : <ReadFailure view={publication.view} />}
+                {current ? <PublicationReason publication={current} /> : <ReadFailure view={publication.view} />}
                 <PublicationConflict publication={current} />
                 {pack ? (
                   <span>
@@ -2154,7 +2180,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
                   </span>
                 ) : null}
               </section>
-              <MirrorGhost foot={current ? <Reason code={current.blocked_reason ?? `P22_${current.state}`} what="publication" /> : "the mirror is read on the run's composition"} />
+              <MirrorGhost foot={current ? <PublicationReason publication={current} /> : "the mirror is read on the run's composition"} />
             </>
           )}
         </div>

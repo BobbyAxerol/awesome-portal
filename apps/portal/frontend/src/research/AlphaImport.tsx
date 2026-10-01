@@ -42,6 +42,7 @@ import type {
   ActivationResponse,
   GateRow,
   GatesResponse,
+  ImportAttestation,
   ImportRefusal,
   MirrorField,
   RegistrationResponse,
@@ -57,6 +58,7 @@ import {
 } from "./codeAnatomy";
 import { ResearchPanel } from "./ResearchPanel";
 import { formatBytes, formatUtc, groupDecimalString } from "./researchFormat";
+import { refusalDetail } from "./researchRefusal";
 import { ShortId } from "./ShortId";
 import type { ResearchState } from "./state";
 
@@ -110,16 +112,54 @@ export const SCREEN_RULES =
   "No browser upload executes code. The server computes the digest before anything else. Routes are decided by the installed release and each run's preflight — never by this page, never inferred from the file. A new import is always a new immutable av_; nothing is ever patched in place.";
 
 /**
- * OL-01 — running an imported version is not admitted yet. Run admission
- * accepts only the installed built-in adapter (`run-admission.service.ts:153,160`),
- * so the HiFi's "new run with this av_ →" is a typed absence, not a link.
+ * Run admission for one registered version, as the server serves it
+ * (`RegistryEntry.run_admission`, F1 CG-FG-S14-03). It is a caller/version
+ * precheck, not an authorisation: a fresh preflight and create-time admission
+ * still decide. The browser binds the answer; it never decides one.
+ *
+ * One sentence per contract code, typed over the contract's union so a new
+ * code breaks the build instead of falling through to a guess.
  */
-export const RUN_NOT_ADMITTED = {
-  code: "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
-  label: "new run with this av_",
-  reason:
-    "Not admitted yet (OL-01): run admission has no installed executor for an imported version, and refuses a DRAFT as RESEARCH_RUN_ALPHA_NOT_ACTIVE.",
-} as const;
+export type RunAdmission = NonNullable<RegistryEntry["run_admission"]>;
+export type RunAdmissionCode = NonNullable<RunAdmission["code"]>;
+
+export const RUN_ADMISSION_COPY: Record<RunAdmissionCode, string> = {
+  RESEARCH_RUN_PRODUCER_UNAVAILABLE: "no run producer is available for this version",
+  RESEARCH_RUN_CREATE_FORBIDDEN: "this account may not create runs",
+  RESEARCH_RUN_ALPHA_NOT_ACTIVE: "this version is not ACTIVE",
+  RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE: "no executor is installed for this version",
+};
+
+export const RUN_LINK_LABEL = "new run with this av_";
+
+/** The New Run route's own prefill contract (`NewRunRoute`: `?alpha=` + `?av=`). */
+export function newRunHref(alphaId: string, alphaVersionId: string): string {
+  return `/research/quantbt/runs/new?${new URLSearchParams({ alpha: alphaId, av: alphaVersionId }).toString()}`;
+}
+
+/** What the "new run with this av_" slot shows, from what the server has served. */
+export type RunSlot =
+  | { kind: "none" }
+  | { kind: "admitted"; href: string }
+  | { kind: "refused"; code: RunAdmissionCode | null; sentence: string | null }
+  | { kind: "absent"; code: "REGISTRY_NOT_READ" | "NOT_PUBLISHED"; sentence: string };
+
+/**
+ * Nothing registered → nothing to run (`none`: no link, no reason). A registered
+ * version whose registry row has not returned, or whose row carries no
+ * `run_admission`, is a typed absence — never a guess either way.
+ */
+export function runSlot(registration: RegistrationResponse | null, entry: RegistryEntry | null): RunSlot {
+  if (!registration) return { kind: "none" };
+  if (!entry) {
+    return { kind: "absent", code: "REGISTRY_NOT_READ", sentence: "run admission not read yet — the registry list has not returned this version" };
+  }
+  const admission = entry.run_admission;
+  if (!admission) return { kind: "absent", code: "NOT_PUBLISHED", sentence: "run admission — not published" };
+  if (admission.may_create_run) return { kind: "admitted", href: newRunHref(entry.alpha_id, entry.alpha_version_id) };
+  const code = admission.code ?? null;
+  return { kind: "refused", code, sentence: code ? (RUN_ADMISSION_COPY as Record<string, string | undefined>)[code] ?? null : null };
+}
 
 /** Registry rows the HiFi draws that no v1 response carries (typed absences). */
 export const REGISTRATION_ABSENT = {
@@ -127,11 +167,53 @@ export const REGISTRATION_ABSENT = {
     code: "NOT_IN_V1_CONTRACT",
     text: "not recorded at import — the installed release and each run's preflight decide routes (DQ-05)",
   },
-  signature: {
-    code: "NOT_PUBLISHED",
-    text: "not part of registration — no signature or SBOM is produced for an import in this release",
+  /* No hard-coded signature fact: the "signed publication" row prints the
+     attestation the server served, or says none was served (14-09). */
+  attestationNotServed: {
+    code: "ATTESTATION_NOT_SERVED",
+    text: "not published — this response carried no import attestation",
   },
 } as const;
+
+/**
+ * Why activation is not permitted, from the server's `may_activate_reason`
+ * (F1 CG-FG-S14-02). Typed over the contract's union. With no served reason the
+ * line says "not permitted" and nothing about a cause.
+ */
+export type ActivationReasonCode = NonNullable<RegistryEntry["may_activate_reason"]>;
+
+export const ACTIVATION_REASON_COPY: Record<ActivationReasonCode, string> = {
+  ROLE_NOT_ADMIN: "needs a workspace ADMIN",
+  VERSION_NOT_IMPORTED: "not an imported version",
+  VERSION_NOT_ACTIVATABLE: "this version cannot be activated",
+};
+
+export const ACTIVATION_NOT_PERMITTED = "Activation not permitted";
+export const ACTIVATION_NO_REASON = "reason not published";
+
+export function activationNotPermitted(reason: string | null | undefined): { sentence: string; code: string | null } {
+  if (!reason) return { sentence: `${ACTIVATION_NOT_PERMITTED} — ${ACTIVATION_NO_REASON}`, code: null };
+  const known = (ACTIVATION_REASON_COPY as Record<string, string | undefined>)[reason];
+  return { sentence: known ? `${ACTIVATION_NOT_PERMITTED} — ${known}` : ACTIVATION_NOT_PERMITTED, code: reason };
+}
+
+/** The "not permitted" line: the served reason's sentence and its code (mono). */
+function ActivationNotPermitted({ reason }: { reason: string | null | undefined }) {
+  const { sentence, code } = activationNotPermitted(reason);
+  return (
+    <>
+      {sentence}
+      {code ? (
+        <>
+          {" · "}
+          <span className="mono" data-activation-reason={code}>
+            {code}
+          </span>
+        </>
+      ) : null}
+    </>
+  );
+}
 
 /**
  * The state of a panel whose request has not been made yet.
@@ -611,8 +693,10 @@ function RegistryChip({
         >
           {busy ? "Activating…" : "Activate"}
         </button>
-      ) : entry.lifecycle_state === "DRAFT" ? (
-        <span style={{ color: "var(--ink-mute)" }}>{ACTIVATION_NOT_ADMITTED}</span>
+      ) : entry.lifecycle_state === "DRAFT" && !entry.may_activate ? (
+        <span style={{ color: "var(--ink-mute)" }} data-activation-not-permitted>
+          <ActivationNotPermitted reason={entry.may_activate_reason} />
+        </span>
       ) : null}
       {refusal ? <p role="alert" className="m-0 w-full" style={{ color: "var(--bad)" }}>{refusal.message}</p> : null}
     </div>
@@ -748,10 +832,6 @@ export interface AlphaImportProps {
   activationRefusal?: ImportRefusal | null;
 }
 
-/** Shown when a DRAFT is registered but this account may not activate it. */
-export const ACTIVATION_NOT_ADMITTED =
-  "Activation needs a workspace ADMIN. This account can register a draft but not activate it.";
-
 export type ImportStep = 1 | 2 | 3;
 
 /** The three authority states (DQ-06), with the HiFi's label + sub-line shape. */
@@ -855,6 +935,10 @@ export function AlphaImport(props: AlphaImportProps) {
     ? registry.find((entry) => entry.alpha_version_id === registration.alpha_version_id) ?? null
     : null;
   const chip = importChip(parse, registration, activation);
+  const run = runSlot(registration, registeredEntry);
+  const quietDetail = refusal?.codeInDetails
+    ? refusalDetail({ code: refusal.code, detail: refusal.detail ?? null, requestId: refusal.requestId })
+    : null;
 
   const progress: Record<ImportStep, StepProgress> = {
     1: parse ? (parsedOk ? "done" : "failed") : "open",
@@ -886,8 +970,8 @@ export function AlphaImport(props: AlphaImportProps) {
             <span className="sep" aria-hidden="true">/</span>
             <span className="here" aria-current="page">Alpha Import</span>
             <span className="sep" aria-hidden="true">·</span>
-            {/* Plain navigation to the preflight screen. It is not a way to run
-                this import: that is not admitted yet (OL-01, step 3). */}
+            {/* Plain navigation to the preflight screen. It does not bind this import;
+                the version-bound link is step 3's, from the server's run_admission. */}
             <a className="next" href="/research/quantbt/runs/new">next: New Run →</a>
           </nav>
           <div className="ai-titlerow">
@@ -908,15 +992,31 @@ export function AlphaImport(props: AlphaImportProps) {
       </header>
 
       {refusal ? (
-        <div role="alert" className="ai-alert" data-refusal={refusal.code ?? "UNKNOWN"}>
-          <span className="mono text-[10px] uppercase tracking-[.06em]" style={{ color: "var(--bad)" }}>
-            {refusal.code ?? `http ${refusal.status}`}
-          </span>
+        <div role="alert" className="ai-alert" data-refusal={refusal.neutral ? "DENIED" : (refusal.code ?? "UNKNOWN")}>
+          {/* 14-21/22 + S14-C1: a 403 and a 404 are one neutral sentence on the surface (F-04), and the
+              origin refusal's `…_INVALID` code would contradict its own sentence; the code, the server's
+              text and the request id are details only. */}
+          {refusal.codeInDetails ? null : (
+            <span className="mono text-[10px] uppercase tracking-[.06em]" style={{ color: "var(--bad)" }}>
+              {refusal.code ?? `http ${refusal.status}`}
+            </span>
+          )}
           {/* The screen's sentence for the code (VD-P23-01); the server's text is detail. */}
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
             {refusal.message}
           </span>
-          {refusal.requestId ? (
+          {refusal.codeInDetails ? (
+            quietDetail ? (
+              <details data-refusal-details>
+                <summary className="text-[9.5px]" style={{ color: "var(--ink-mute)", cursor: "pointer" }}>
+                  details
+                </summary>
+                <span className="mono text-[9.5px]" style={{ color: "var(--ink-mute)" }}>
+                  {quietDetail}
+                </span>
+              </details>
+            ) : null
+          ) : refusal.requestId ? (
             <span className="mono text-[9.5px]" style={{ color: "var(--ink-mute)" }}>
               request {refusal.requestId}
             </span>
@@ -1250,9 +1350,10 @@ export function AlphaImport(props: AlphaImportProps) {
                   </p>
                 ) : null}
               </>
-            ) : registration && lifecycle === "DRAFT" ? (
+            ) : registration && lifecycle === "DRAFT" && !registration.may_activate ? (
+              /* The reason is the server's (`may_activate_reason`); none served → no cause is named. */
               <p className="m-0 text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-activation-not-admitted>
-                {ACTIVATION_NOT_ADMITTED}
+                <ActivationNotPermitted reason={registration.may_activate_reason ?? registeredEntry?.may_activate_reason} />
               </p>
             ) : null}
           </div>
@@ -1270,15 +1371,27 @@ export function AlphaImport(props: AlphaImportProps) {
               <p>Nothing is registered yet. A version exists only after all seven gates pass and you register it.</p>
             )}
             <div className="links">
-              {/* OL-01: a typed absence, never a working link. */}
-              <span
-                className="absent"
-                title={RUN_NOT_ADMITTED.reason}
-                data-absent-action="new-run"
-                data-absent-code={RUN_NOT_ADMITTED.code}
-              >
-                {RUN_NOT_ADMITTED.label} →
-              </span>
+              {/* F1 CG-FG-S14-03: the slot follows the server's `run_admission` for this
+                  version. Before anything is registered there is no slot at all. */}
+              {run.kind === "admitted" ? (
+                <a
+                  href={run.href}
+                  title="Preflight still decides admission."
+                  data-run-admission="admitted"
+                >
+                  {RUN_LINK_LABEL} →
+                </a>
+              ) : run.kind !== "none" ? (
+                <span
+                  className="absent"
+                  data-absent-action="new-run"
+                  data-absent-code={run.code ?? "NOT_PUBLISHED"}
+                  title={run.kind === "refused" ? (run.sentence ?? undefined) : run.sentence}
+                  data-run-admission={run.kind}
+                >
+                  {RUN_LINK_LABEL} →
+                </span>
+              ) : null}
               {registration ? (
                 <LineageLink to={lineageHref(registration.alpha_id)} action="open-lineage">
                   lineage
@@ -1286,9 +1399,21 @@ export function AlphaImport(props: AlphaImportProps) {
               ) : null}
               <a href="/research/quantbt/runs">run library</a>
             </div>
-            <p className="ai-reason" data-run-not-admitted>
-              {RUN_NOT_ADMITTED.reason}
-            </p>
+            {run.kind === "refused" ? (
+              <p className="ai-reason" data-run-not-admitted data-run-admission-code={run.code ?? undefined}>
+                {run.sentence ?? "run not admitted — reason not published"}
+                {run.code ? (
+                  <>
+                    {" · "}
+                    <span className="mono">{run.code}</span>
+                  </>
+                ) : null}
+              </p>
+            ) : run.kind === "absent" ? (
+              <p className="ai-reason" data-run-not-admitted data-run-admission-code={run.code}>
+                {run.sentence}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -1333,6 +1458,40 @@ function Row({ k, children, absent }: { k: string; children: ReactNode; absent?:
     <div className="ai-kv" data-reg-row={k}>
       <dt>{k}</dt>
       <dd data-absent={absent}>{children}</dd>
+    </div>
+  );
+}
+
+/**
+ * The HiFi's "signed publication" row, from the attestation the server served
+ * (14-09). It prints each part's served state and reason code — whatever they
+ * are — and asserts no fact of its own. With no attestation in the response it
+ * says so, rather than stating what this release does or does not produce.
+ */
+function SignedPublicationRow({ attestation }: { attestation: ImportAttestation | null }) {
+  if (!attestation) {
+    return (
+      <Row k="signed publication" absent={REGISTRATION_ABSENT.attestationNotServed.code}>
+        {REGISTRATION_ABSENT.attestationNotServed.text}
+      </Row>
+    );
+  }
+  const parts = [
+    { key: "signature", label: "signature", part: attestation.signature },
+    { key: "sbom", label: "SBOM", part: attestation.sbom },
+  ];
+  return (
+    <div className="ai-kv" data-reg-row="signed publication" title={`scope ${attestation.scope}`} data-attestation-scope={attestation.scope}>
+      <dt>signed publication</dt>
+      <dd data-absent={parts.every(({ part }) => part.state === "NOT_PUBLISHED") ? attestation.signature.reason_code : undefined}>
+        {parts.map(({ key, label, part }) => (
+          <span key={key} className="block" data-attestation-part={key} data-attestation-state={part.state} data-attestation-code={part.reason_code}>
+            {label} {part.state.toLowerCase().replace(/_/g, " ")}
+            {" · "}
+            {part.reason_code}
+          </span>
+        ))}
+      </dd>
     </div>
   );
 }
@@ -1406,9 +1565,7 @@ function RegistrationRows({
         <Row k="capability registration" absent={REGISTRATION_ABSENT.capability.code}>
           {REGISTRATION_ABSENT.capability.text}
         </Row>
-        <Row k="signed publication" absent={REGISTRATION_ABSENT.signature.code}>
-          {REGISTRATION_ABSENT.signature.text}
-        </Row>
+        <SignedPublicationRow attestation={registration.import_attestation ?? entry?.import_attestation ?? null} />
       </dl>
       {registration.replayed ? (
         <span className="mono pt-1 text-[9.5px]" style={{ color: "var(--ink-mute)" }}>

@@ -30,7 +30,7 @@
  */
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -1397,8 +1397,83 @@ describe("S11 sealed pack route", () => {
     expect(qa("[data-action='edit-declaration'], [data-action='local-seal'], [data-action='publish']")).toHaveLength(0);
     const ghost = panel("publish-ghost")!;
     expect(within(ghost).getByRole("link", { name: "open the run's composition →" }).getAttribute("href")).toBe(releaseCandidateHref(RUN));
-    await waitFor(() => expect(ghost.querySelector("[data-reason-code='P22_NOT_PUBLISHED']")).not.toBeNull());
+    /* 11-26: the state word is the server's; no `P22_NOT_PUBLISHED` is made from it. */
+    await waitFor(() => expect(ghost.querySelector("[data-publication-state='NOT_PUBLISHED']")).not.toBeNull());
+    expect(ghost.querySelector("[data-reason-code]")).toBeNull();
     expect(q("[data-pack-counts-absent]")!.textContent).toBe("counts are not part of the frozen pack");
+  });
+
+  it.each(["NOT_PUBLISHED", "PENDING", "UNKNOWN", "REFUSED"] as const)(
+    "S11-F1-26 a %s publication with no served blocked_reason prints the state word and no reason code, on every slot",
+    async (state) => {
+      server({ PACK: [ok(pack())], PUBLICATION: [ok(publication({ state, may_publish: false, blocked_reason: null }))] });
+      renderAt(releaseCandidatePackHref(RC_ID));
+      await ready();
+      const ghost = panel("publish-ghost")!;
+      const mirror = panel("mirror-ghost")!;
+      await waitFor(() => expect(ghost.querySelector(`[data-publication-state='${state}']`)).not.toBeNull());
+      const word = `publication ${state.toLowerCase().replace(/_/g, " ")}`;
+      expect(ghost.querySelector("[data-publication-state]")!.textContent).toBe(word);
+      expect(mirror.querySelector("[data-mirror-foot]")!.textContent).toBe(word);
+      expect(ghost.querySelector("[data-reason-code]")).toBeNull();
+      expect(mirror.querySelector("[data-reason-code]")).toBeNull();
+      expect(`${ghost.textContent}${mirror.textContent}`).not.toContain(`P22_${state}`);
+    },
+  );
+
+  it("S11-F1-26 the compose route's mirror ghost prints the state word, not a made-up code", async () => {
+    server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication({ state: "PENDING", may_publish: false, blocked_reason: null }))] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(q("[data-mirror-foot] [data-publication-state='PENDING']")).not.toBeNull());
+    expect(q("[data-mirror-foot]")!.textContent).toBe("publication pending");
+    expect(q("[data-mirror-foot] [data-reason-code]")).toBeNull();
+    expect(page().textContent).not.toContain("P22_PENDING");
+  });
+
+  it("S11-F1-26 a served blocked_reason is the only code printed beside the state word", async () => {
+    server({
+      PACK: [ok(pack())],
+      PUBLICATION: [ok(publication({ state: "REFUSED", may_publish: false, blocked_reason: "P22_PUBLICATION_REFUSED" }))],
+    });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    const ghost = panel("publish-ghost")!;
+    await waitFor(() => expect(ghost.querySelector("[data-reason-code]")).not.toBeNull());
+    expect(qa("[data-panel='publish-ghost'] [data-reason-code], [data-panel='mirror-ghost'] [data-reason-code]").map((el) => el.getAttribute("data-reason-code"))).toEqual([
+      "P22_PUBLICATION_REFUSED",
+      "P22_PUBLICATION_REFUSED",
+    ]);
+    expect(ghost.querySelector("[data-publication-state]")!.textContent).toBe("publication refused");
+  });
+
+  it("S11-F1-26 no reason code outside the codes the server publishes is ever printed", async () => {
+    /* The universe: every `P2x_` code the control-api release-candidate sources can emit, plus the
+       frozen sentence table the screen reads. A code the screen would mint from a state is in neither. */
+    const dir = join(__dirname, "..", "..", "..", "..", "control-api", "src", "research");
+    const emitted = new Set<string>();
+    for (const file of readdirSync(dir).filter((name) => /^release-candidate.*\.ts$/.test(name) && !name.endsWith(".test.ts"))) {
+      for (const match of readFileSync(join(dir, file), "utf8").matchAll(/\bP2[12]_[A-Z0-9_]+/g)) emitted.add(match[0]);
+    }
+    expect(emitted.has("P22_PUBLICATION_REFUSED")).toBe(true);
+    const universe = new Set<string>([...emitted, ...Object.keys(RC_REASON_SENTENCES)]);
+    for (const invented of ["P22_PENDING", "P22_UNKNOWN", "P22_REFUSED", "P22_DELIVERED"]) expect(universe.has(invented), invented).toBe(false);
+
+    const states = ["NOT_PUBLISHED", "PENDING", "UNKNOWN", "REFUSED", "DELIVERED"] as const;
+    for (const state of states) {
+      server({
+        PACK: [ok(pack())],
+        PUBLICATION: [ok(state === "DELIVERED" ? deliveredRead() : publication({ state, may_publish: false, blocked_reason: null }))],
+      });
+      renderAt(releaseCandidatePackHref(RC_ID));
+      await ready();
+      await flush();
+      const printed = qa("[data-screen='release-candidate'] [data-reason-code]").map((el) => el.getAttribute("data-reason-code")!);
+      for (const code of printed) expect(universe.has(code), `${state}: ${code}`).toBe(true);
+      expect(`${page().textContent}`).not.toMatch(new RegExp(`P22_${state}\\b`));
+      cleanup();
+      vi.restoreAllMocks();
+    }
   });
 
   it("S11-U48 a delivered pack shows PUBLISHED, the receipt and the mirror, never the ghost", async () => {

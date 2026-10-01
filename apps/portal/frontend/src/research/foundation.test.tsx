@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EngineAtlasRoute, JourneyMapRoute, atlasQueryFromSearch } from "./foundationRoutes";
-import { JourneyMap } from "./JourneyMap";
+import { JourneyMap, PICK_ALPHA_BADGE } from "./JourneyMap";
 import type { AtlasDocument } from "./atlas";
 import {
   FOUNDATION_PROBLEM_CODES,
@@ -369,7 +369,7 @@ describe("P09-T02b — an unrouted screen says so rather than blaming the roadma
 
 describe("E12 — the map opens every screen this build serves (audit 00-3, D2)", () => {
   /** A one-card descriptor for the key under test. */
-  const oneCard = (targetKey: string, requiresRun: boolean) =>
+  const oneCard = (targetKey: string, requiresRun: boolean, requiresAlpha?: boolean) =>
     journey({
       descriptor: {
         ...DESCRIPTOR,
@@ -388,6 +388,7 @@ describe("E12 — the map opens every screen this build serves (audit 00-3, D2)"
                 target_key: targetKey,
                 availability: "AVAILABLE",
                 requires_run: requiresRun,
+                ...(requiresAlpha === undefined ? {} : { requires_alpha: requiresAlpha }),
                 target_fragment: null,
               },
             ],
@@ -445,14 +446,18 @@ describe("E12 — the map opens every screen this build serves (audit 00-3, D2)"
     expect(card.tagName).not.toBe("A");
   });
 
-  it("the shipped alpha-version card is a run picker, not a dead end", async () => {
-    stub(() => [200, oneCard("alpha_version_legacy", false), 'W/"journey-e12c"']);
+  it("the shipped alpha-version card is an alpha picker (served requires_alpha), not a run picker", async () => {
+    stub(() => [200, oneCard("alpha_version_legacy", false, true), 'W/"journey-e12c"']);
     renderAt("/research/quantbt/journey", <JourneyMapRoute />);
     await waitFor(() => expect(document.querySelector('[data-card="c_e12"]')).toBeTruthy());
 
     const card = document.querySelector('[data-card="c_e12"]') as HTMLElement;
     expect(card.getAttribute("data-card-unreachable")).toBeNull();
-    expect(card.textContent).toContain("pick a run");
+    expect(card.textContent).toContain("pick an alpha");
+    expect(card.textContent).not.toContain("pick a run");
+    expect(card.textContent).toContain(PICK_ALPHA_BADGE);
+    expect(card.getAttribute("data-card-picks-alpha")).toBe("alpha_version_legacy");
+    expect(card.getAttribute("data-card-picks-run")).toBeNull();
     /* Resolved against a row: the Alpha and the version both come from its binding. */
     expect(resolveJourneyCardRoute("alpha_version_legacy", "rrun_1", "alpha_a", "av_a_1_0_0")).toBe(
       "/research/quantbt/alphas/alpha_a/av_a_1_0_0",
@@ -550,18 +555,33 @@ describe("P09-T04 — the Atlas renders from the manifest response", () => {
     );
   });
 
-  it("states that a historical selection cannot run", async () => {
-    stub(() => [
-      200,
-      atlas({ selected_release_id: "er_quantbt_1_0_8", selected_release_kind: "HISTORICAL" }),
-      'W/"atlas-2"',
-    ]);
-    renderAt("/research/quantbt/atlas?release_id=er_quantbt_1_0_8", <EngineAtlasRoute />);
+  it("CG-FG-S12-01: a historical selection shows the identity and facts the server served", async () => {
+    /* The canonical union member, not a hand-built body: `atlas: null` plus
+       `historical_identity` (generated/research-foundation.d.ts). */
+    const served = JSON.parse(
+      readFileSync(
+        join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures", "research-foundation.historical-identity.valid.json"),
+        "utf8",
+      ),
+    ) as AtlasResponse;
+    expect(served.atlas).toBeNull();
+    stub(() => [200, served, 'W/"atlas-2"']);
+    renderAt("/research/quantbt/atlas?release_id=er_quantbt_108", <EngineAtlasRoute />);
 
     await waitFor(() => expect(document.querySelector("[data-historical-note]")).toBeTruthy());
+    const identity = served.historical_identity!;
     expect(document.querySelector("[data-historical-note]")?.textContent).toBe(
-      "Historical identity retained — this release is not installed and cannot run.",
+      `${identity.package} ${identity.version} · ${identity.status}`,
     );
+    /* The panel says what is absent and why, in the server's own words — not an empty body. */
+    const absent = document.querySelector("[data-atlas-facts-absent]") as HTMLElement;
+    expect(absent.getAttribute("data-atlas-facts-absent")).toBe(identity.facts_state);
+    expect(absent.querySelector("[data-facts-state]")?.textContent).toBe("NOT_PUBLISHED");
+    expect(absent.querySelector("[data-facts-reason]")?.textContent).toBe(identity.facts_reason);
+    expect(absent.textContent).toContain("route, mode and claim facts —");
+    /* The retired hard-coded claim is gone. */
+    expect(document.body.textContent).not.toContain("not installed and cannot run");
+    expect(document.querySelector("[role='tabpanel']")).toBeNull();
   });
 
   it("forwards only the four selection keys the contract accepts", () => {

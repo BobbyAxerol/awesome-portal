@@ -1174,11 +1174,36 @@ function GapScanValue({ scan }: { scan: LaneGapScan }) {
   if (scan.state !== "AVAILABLE") {
     return <LaneAbsent reason={scan.reason_code ?? scan.availability.state} what="gap scan" />;
   }
-  const measured = scan.measured_count ?? 0;
+  const measured = scan.measured_count;
   const expected = scan.expected_boundary_count;
-  const boundaries = scan.boundary_count ?? 0;
-  const covered = expected === null || boundaries === expected;
+  const boundaries = scan.boundary_count;
   const widest = scan.max_gap_bars;
+  /* A count the scan did not publish is said as absent, never drawn as 0. */
+  const unpublished = (what: string) => (
+    <span className="italic" style={{ color: "var(--ink-faint)" }} data-gap-scan-null={what} title={`${what} — the scan is available but published no value`}>
+      {what} — not published
+    </span>
+  );
+  const boundaryText =
+    boundaries === null
+      ? unpublished("boundary count")
+      : expected === null
+        ? `${boundaries} fold ${boundaries === 1 ? "boundary" : "boundaries"}`
+        : boundaries === expected
+          ? `${boundaries} of ${boundaries} fold ${boundaries === 1 ? "boundary" : "boundaries"}`
+          : `${boundaries} of ${expected} fold boundaries`;
+  const measuredText =
+    measured === null ? (
+      unpublished("measured count")
+    ) : measured === 0 ? (
+      "none measured"
+    ) : widest === null ? (
+      unpublished("widest gap")
+    ) : widest === 0 ? (
+      `no gap at any of ${measured}`
+    ) : (
+      `widest ${widest} ${widest === 1 ? "bar" : "bars"} of ${measured}`
+    );
   return (
     <span
       className="inline-flex flex-wrap items-baseline gap-x-1.5"
@@ -1187,21 +1212,71 @@ function GapScanValue({ scan }: { scan: LaneGapScan }) {
       data-gap-scan-max={widest === null ? undefined : String(widest)}
       title={`QuantBT's account execution plan, verbatim (${scan.basis}).`}
     >
-      <span className="mono">
-        {covered
-          ? `${boundaries} of ${boundaries} fold ${boundaries === 1 ? "boundary" : "boundaries"}`
-          : `${boundaries} of ${expected} fold boundaries`}
-      </span>
+      <span className="mono">{boundaryText}</span>
       <span>·</span>
-      <span className="mono">
-        {measured === 0
-          ? "none measured"
-          : widest === 0
-            ? `no gap at any of ${measured}`
-            : `widest ${widest} ${widest === 1 ? "bar" : "bars"} of ${measured}`}
-      </span>
+      <span className="mono">{measuredText}</span>
     </span>
   );
+}
+
+type LaneDisjoint = NonNullable<NonNullable<CurrentSourceSplit["guards"]>["train_test_disjoint"]>;
+
+/**
+ * FG 05-15 — "train ∩ test = ∅, every fold" is the retained split read's own
+ * verdict (`guards.train_test_disjoint`). ✓ only for a served PASS, ✕ only for
+ * a served FAIL; NOT_CHECKABLE, a read that predates the field, a read still in
+ * flight or a run the retained lane never holds are said apart, each with the
+ * server's reason code where one exists. The browser never infers it from the
+ * fact that a fold plan was drawn.
+ */
+function disjointRowOf(
+  slot: FoldsSlot,
+  verdict: LaneDisjoint | undefined,
+): { mark: keyof typeof INTEGRITY_MARK; body: ReactNode; state: string } {
+  const absent = (state: string, reason: string, word = "not published") => ({
+    mark: "none" as const,
+    state,
+    body: <LaneAbsent reason={reason} what="train/test disjointness" word={word} />,
+  });
+  if (slot.state === "idle" || slot.state === "loading") {
+    return { mark: "none", state: "READING", body: <Reading what="the fold plan" /> };
+  }
+  if (slot.state === "not-applicable") return absent("NOT_PUBLISHED", slot.answer.lane.reason_code);
+  if (slot.state === "refused") return absent("NOT_PUBLISHED", slot.refusal.code ?? slot.laneState ?? "REFUSED");
+  if (!verdict) return absent("NO_FIELD", NO_RETAINED_FIELD_ON_SERVER, "no field in the retained lane");
+  const basis = `${verdict.basis} — read from the retained fold windows and published purge/embargo`;
+  if (verdict.verdict === "PASS") {
+    return {
+      mark: "pass",
+      state: "PASS",
+      body: (
+        <span title={basis} data-train-test-basis={verdict.basis}>
+          disjoint at every retained fold
+        </span>
+      ),
+    };
+  }
+  if (verdict.verdict === "FAIL") {
+    return {
+      mark: "fail",
+      state: "FAIL",
+      body: (
+        <span className="inline-flex flex-wrap items-baseline gap-x-1.5" title={basis} data-train-test-basis={verdict.basis}>
+          <span style={{ color: "var(--bad)" }}>windows overlap</span>
+          {verdict.reason_code ? (
+            <span className="mono text-[9px] break-all" data-train-test-reason={verdict.reason_code}>
+              {verdict.reason_code}
+            </span>
+          ) : null}
+        </span>
+      ),
+    };
+  }
+  return {
+    mark: "none",
+    state: "NOT_CHECKABLE",
+    body: <LaneAbsent reason={verdict.reason_code ?? "NOT_CHECKABLE"} what="train/test disjointness" word="not checkable" />,
+  };
 }
 
 /**
@@ -1845,7 +1920,17 @@ export function SplitScreen({
                       )}
                     </IntegrityRow>
                     {/* E14 · 5.11: QuantBT's own boundary events, or the lane's reason. */}
-                    <IntegrityRow mark={lane.split.gap_scan?.state === "AVAILABLE" && lane.split.gap_scan.max_gap_bars === 0 ? "pass" : "none"} label="gap scan">
+                    <IntegrityRow
+                      mark={
+                        lane.split.gap_scan?.state === "AVAILABLE" &&
+                        lane.split.gap_scan.max_gap_bars === 0 &&
+                        lane.split.gap_scan.measured_count !== null &&
+                        lane.split.gap_scan.measured_count > 0
+                          ? "pass"
+                          : "none"
+                      }
+                      label="gap scan"
+                    >
                       <GapScanValue scan={lane.split.gap_scan} />
                     </IntegrityRow>
                   </>
@@ -1887,9 +1972,14 @@ export function SplitScreen({
                 </IntegrityRow>
                 </>
                 )}
-                <IntegrityRow mark={foldPlanReady ? "pass" : "none"} label="train ∩ test = ∅, every fold">
-                  {foldPlanReady ? "retained fold plan" : "needs a fold plan"}
-                </IntegrityRow>
+                {(() => {
+                  const row = disjointRowOf(folds, retainedGuards?.train_test_disjoint);
+                  return (
+                    <IntegrityRow mark={row.mark} label="train ∩ test = ∅, every fold" rest={{ "data-train-test-disjoint": row.state }}>
+                      {row.body}
+                    </IntegrityRow>
+                  );
+                })()}
               </section>
 
               <section className={`${CARD} gap-[6px] p-[14px]`} style={CARD_STYLE} data-card="stitched-oos">
@@ -2024,15 +2114,21 @@ function extraAbsences(detail: SplitDetailDocument): [SplitDetailDocument["absen
     .filter((pair): pair is [SplitDetailDocument["absence_index"][number], AbsentFact] => pair[1] !== null);
 }
 
+/** `windows.outer_oos.evaluation_state` members that name a profile fixed before the window was observed. */
+const FIXED_PROFILE_EVALUATION_STATES: ReadonlySet<string> = new Set([
+  "P04_OBSERVED_AFTER_FIXED_PROFILE",
+  "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE",
+]);
+
 /** The protocol note, built only from facts this read published (DQ-15). */
 function protocolSentence(detail: SplitDetailDocument, foldPlanReady: boolean): string {
   const parts: string[] = [];
   if (detail.protocol.kind === "THREE_WINDOW_CURRENT") {
     parts.push("three_window_current: one IS window and one outer OOS window");
     if (hasRange(detail.windows.outer_oos)) {
-      parts.push(
-        `— the OOS window ${(detail.windows.outer_oos as { evaluation_state: string }).evaluation_state === "P04_OBSERVED_AFTER_FIXED_PROFILE" ? "was observed after the profile was fixed" : "was observed"}`,
-      );
+      /* X5: a fixed-profile run (P04) and an imported fixed-profile run say the same thing. */
+      const evaluation = (detail.windows.outer_oos as { evaluation_state: string }).evaluation_state;
+      parts.push(`— the OOS window ${FIXED_PROFILE_EVALUATION_STATES.has(evaluation) ? "was observed after the profile was fixed" : "was observed"}`);
     }
     if (hasRange(detail.windows.holdout)) parts.push("and a holdout the child tape never received.");
     else parts.push(".");
@@ -2080,25 +2176,28 @@ function IntegrityRow({
   mark,
   label,
   children,
+  rest,
 }: {
   mark: keyof typeof INTEGRITY_MARK;
   label: string;
   children: ReactNode;
+  rest?: Record<string, string>;
 }) {
   return (
     <span
       className="flex items-baseline gap-2 border-b py-[2px] text-[11.5px]"
       style={{ borderColor: "var(--paper-sunken)" }}
-      data-integrity={mark === "pass" ? "published" : "absent"}
+      data-integrity={mark === "pass" ? "published" : mark === "fail" ? "failed" : "absent"}
       data-integrity-mark={mark}
+      {...rest}
     >
       <span className="mono w-4 flex-none font-bold" style={{ color: INTEGRITY_MARK[mark].tone }} aria-hidden="true">
         {INTEGRITY_MARK[mark].glyph}
       </span>
-      <span className="mono flex-1" style={{ color: "var(--ink)" }}>
+      <span className="mono min-w-[45%] flex-1" style={{ color: "var(--ink)" }}>
         {label}
       </span>
-      <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
+      <span className="min-w-0 text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
         {children}
       </span>
     </span>

@@ -1130,7 +1130,12 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
 
   it("S09-U45 CG-P18-06 the figure draws the IS account dashed before the stitched OOS", async () => {
     const body = await open("research-report.wfo-retained.valid.json");
-    expect(panel("equity").querySelector("[data-equity-title]")?.textContent).toBe("Equity — IS account vs stitched OOS (2 folds, frozen params each)");
+    /* F1 / D8 walk: `equity_is` is scoped RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST — the account before the first OOS
+       window, not an in-sample curve — so the sheet no longer calls it "IS" while its source absences say there is no IS account. */
+    expect(body.frozen_core.equity_is.scope).toBe("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST");
+    expect(panel("equity").querySelector("[data-equity-title]")?.textContent).toBe(
+      "Equity — account before first OOS window vs stitched OOS (2 folds, frozen params each)",
+    );
     expect(panel("equity").querySelector("[data-equity-is-path]")).not.toBeNull();
     expect(panel("equity").querySelector("[data-equity-oos-path]")).not.toBeNull();
     expect(panel("equity").querySelector('[data-legend="is"]')?.getAttribute("data-legend-state")).toBe("published");
@@ -1395,14 +1400,15 @@ describe("E14 — S09 headline return, identity qualifier, equity grid and evide
     expect(link.getAttribute("data-evidence-href")).toBe(
       `${window.location.origin}/research/quantbt/runs/${encodeURIComponent(body.run_id)}/report?report_revision=${encodeURIComponent(body.report_revision)}`,
     );
-    /* E1: the printed address is short, the whole one stays in href and title. */
+    /* F1 / D2 walk: the printed address IS the address — a shortened one 404s when typed. */
     expect(link.getAttribute("title")).toBe(link.getAttribute("data-evidence-href"));
     expect(link.textContent).toBe(reportEvidenceLinkLabel(body.run_id, body as unknown as ReportDetail));
-    /* The 64-hex revision is cut to its prefix + 8, as every other id is. */
-    expect(link.textContent).toContain(`report_revision=${body.report_revision.slice(0, "p18r1_".length + 8)}`);
-    expect(link.textContent).not.toContain(body.report_revision);
+    expect(link.textContent).toBe(link.getAttribute("href"));
+    expect(link.textContent).toBe(link.getAttribute("data-evidence-href"));
+    expect(link.textContent).toContain(`/runs/${body.run_id}/report?report_revision=${body.report_revision}`);
     expect(link.textContent).not.toContain("portal://");
-    expect(link.textContent!.length).toBeLessThan(80);
+    /* It wraps like the sheet's digests do, instead of being cut: the cell breaks anywhere. */
+    expect((link.closest("dd") as HTMLElement).className).toContain("rr-long");
   });
 
   it("9.15 with no report in hand there is no link, and no address is invented", () => {

@@ -111,6 +111,7 @@ function identity(): NonNullable<ProgressRead["run"]> {
     requested_spec_digest: "e".repeat(64),
     created_at_utc_ms: 1789836572000,
     declared_folds: { state: "DECLARED", count: 5, reason_code: null },
+    planned_folds: { state: "NOT_PUBLISHED", folds: [], reason_code: null },
   };
 }
 

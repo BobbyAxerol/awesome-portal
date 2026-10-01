@@ -925,3 +925,28 @@ describe("E2c · 8.5 — the P04 band is P14's three-window truth", () => {
     expect(document.querySelector("[data-split-band='hub']")!.getAttribute("data-split-band-drawn")).toBe("3");
   });
 });
+
+describe("F1 · FG 08-05 — the P04 'state at cursor' prints formatted numbers with the exact string in title", () => {
+  it("equity as currency, drawdown as a percentage, no raw float on the line", () => {
+    const body = replay({ start: 40, selected: 45 });
+    body.equity_replay.state_at_cursor = {
+      ...body.equity_replay.state_at_cursor,
+      equity: "19931.280844135865",
+      drawdown_fraction: "0.012345678901234",
+    } as typeof body.equity_replay.state_at_cursor;
+    renderScreen(controllerOf(body));
+    const at = document.querySelector("[data-state-at-cursor]") as HTMLElement;
+    expect(at.textContent).toContain("equity 19,931.28");
+    expect(at.textContent).toContain("drawdown +1.23%");
+    expect(at.textContent).not.toMatch(/\d\.\d{7,}/);
+    const exact = [...at.querySelectorAll("[data-exact]")].map((node) => node.getAttribute("title"));
+    expect(exact).toEqual(["19931.280844135865", "0.012345678901234"]);
+  });
+
+  it("a cursor with no equity prints no equity and no zero", () => {
+    const body = replay({ start: 40, selected: null });
+    renderScreen(controllerOf(body));
+    const at = document.querySelector("[data-state-at-cursor]") as HTMLElement;
+    expect(at.textContent).not.toMatch(/· equity |· drawdown /);
+  });
+});

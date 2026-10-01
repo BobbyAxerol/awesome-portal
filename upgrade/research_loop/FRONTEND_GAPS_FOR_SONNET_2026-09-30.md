@@ -1,6 +1,6 @@
 # Research Loop — gap frontend còn lại (cho Sonnet làm) · Claude soạn, 2026-09-30
 
-> Trạng thái: **CHỜ BOBBY DUYỆT** — chưa làm mục nào trong file này. Chưa gồm danh sách sửa UI/UX Bobby sẽ gửi sau (sẽ thêm thành §7).
+> Trạng thái (2026-10-01): **đợt F1 đã làm xong — xem §8**. F2–F5 chưa làm. §5 (bớt chữ) vẫn chờ Bobby duyệt. Chưa gồm danh sách sửa UI/UX Bobby sẽ gửi sau (§7).
 
 ## 0. Bạn là ai, làm ở đâu
 
@@ -127,6 +127,47 @@ _(Bobby sẽ gửi)_
 
 ## 8. Trạng thái
 
-| Id | Commit | Test | Ảnh HiFi / live | Ghi chú |
-|---|---|---|---|---|
-| | | | | |
+### Đợt F1 — trung thực (2026-10-01) · commit: batch F1 trên `claude/fe-parity` (hash ghi ở báo cáo) · base `4ad9ac59`
+
+Bằng chứng từng mục (trước/sau, tên test, ảnh + SHA-256): `evidence/P21/audit-2026-09-30/f1/{S02,S05_S07_S08,S10_S13,S14_S11,S01_S03,S04_S09,S12}.md`. Gate đã chạy: **vitest toàn bộ frontend 222 file / 4300 pass / 3 skip**; `tsc -b --noEmit` sạch; hook ở commit. **Chưa chạy:** build, visual, lane real-API, axe (theo luật test theo tầng — mốc sau).
+
+| Nhóm | Mục | Kết quả | Ghi chú còn lại |
+|---|---|---|---|
+| S02 | A2b-PF (null→0 ở preflight) | DONE | live preflight bị từ chối cho actor auto-login → kiểm bằng fixture canonical |
+| S02 | S02-01 cert ceiling | DONE | in `cert_cap.reason` của atlas |
+| S02 | FG 02-8b ✓ xanh bước chưa vào | DONE | Review không bao giờ có ✓ (verdict là của preflight server) |
+| S02 | D6 Review 4h vs select 1h | DONE | chọn hiện giá trị không khai báo ("4h · not declared") thay vì tự snap; tái hiện được trên mọi nháp gắn version chỉ 1h |
+| S02 | CG-P02-02/P08-02 create từ chối v2 | DONE | câu tĩnh "Preflight accepts this; create does not admit it yet." — Codex có thể thêm fact để bind |
+| S02 | `?from=` run 400 trials → nháp 1 trial; ô ngày trống | DONE | race trong `NewRunRoute.tsx` đã sửa; **cần Codex** B3#14: atlas `submission_constraints` còn nêu profile cũ (count 1, seed MUST_BE_NULL); banner "COPIED FROM" in `rrun_…` vì nhãn không có trong requested-spec |
+| S05 | FG 05-15 ✓ train∩test | DONE | bind `guards.train_test_disjoint` (PASS ✓ / FAIL ✕ / vắng có mã) |
+| S05 | FG 05-17 gap scan null→0 | DONE | |
+| S05 | X5 imported | DONE | chỉ unit (preview không có run imported) |
+| S07 | D7 what-if float thô / slider / tên giả / enum | DONE | ΔJ₁ cũng định dạng (nới mốc P16-T06 "exact string" ở mặt hiển thị; exact vẫn ở `title`) |
+| S08 | FG 08-05 float thô; D11 `carry_position` + trục giá; FG 08-06/07 FE tự tính | DONE | còn: `usePlayAcrossFolds.ts` status line vẫn in `carry_position` (test pin), caption overview chưa nhóm nghìn |
+| S10 | CG-FG-S10-01 digest sai ô | DONE | bind `selected_trial_id`/`selected_params_digest`; nhánh có pick chỉ kiểm bằng fixture (preview không có pick) |
+| S10 | CG-FG-S10-02 chip ACTIVE trên FAILED | DONE (quy tắc **tạm**) | chip chỉ là "version ACTIVE/…" hoặc trạng thái attempt; **vẫn chờ Bobby chốt từ vựng** + field server |
+| S13 | mũi tên "claim ↑" giữa claim bằng nhau + câu luật | DONE | "same claim →"; câu luật có điều kiện; chờ Bobby duyệt chữ |
+| S13 | (audit 400) nhãn scope pair + baseline config-diff tuỳ ý | DONE | còn thẻ trajectory "release candidate" dùng `.at(-1)` ACTIVE do FE chọn |
+| S14 | S14-02 lý do ADMIN tự đặt | DONE | bind `may_activate_reason` |
+| S14 | S14-03 copy "OL-01" cũ + link trước khi đăng ký | DONE | bind `run_admission` |
+| S14 | 14-09 dòng chữ ký | DONE | bind `import_attestation` |
+| S14 | 14-21/22 + S14-C1 banner 403/404 | DONE | **câu origin-refusal cần Bobby duyệt**; `DRAFT_NOTE` giữ nguyên (quyết định chữ của Bobby); `IMPORT_META` còn "activation ADMIN-only" cứng |
+| S11 | 11-26 mã `P22_${state}` tự chế | DONE | contract không có enum cho Reason (chỉ pattern) → test đối chiếu mã control-api phát ra |
+| S01 | FG 01-13 legacy link `/evidence` | DONE | |
+| S01 | chip rc im lặng | DONE | `rc — not published` hiện trên cả 39 thẻ (nếu quá ồn: chỉ hiện khi lý do ≠ `P21_NO_PERSISTED_RELEASE_CANDIDATE`) |
+| S03 | FG 03-T nhãn transport | DONE | |
+| S03 | X7 console/events thiếu `workspace_id` | DONE | nguồn workspace hiện = `?workspace_id=` trên URL (FE chưa có nguồn khác) |
+| S03 | 03-M scope IMPORTED_* | DONE | |
+| S03 | CG-P10-04 trial rate | DONE | typed absence; còn 3 chuỗi vắng dạng câu (FOLD_SELECTION…) ngoài phạm vi |
+| S04 | FG 04-F "not published" lúc đang tải | DONE | `reading…` / `not read` |
+| S04 | Net return tile | DONE | |
+| S04 | mã lý do FE tự bịa | DONE | |
+| S04 | tab Claim mâu thuẫn Summary | DONE | |
+| S09 | D8 legend "IS account" | DONE | quyết định nằm trong record |
+| S09 | D2 evidence link | DONE | |
+| S09 | "DENIED" nhầm khi chưa seal report | **PARTIAL** | FE làm tạm bằng request Run Library thứ hai để phân biệt "chưa seal" với "không thấy"; **cần Codex LW-02** (404 có mã riêng) để bỏ request đó; crumb/tiêu đề đã dùng nhãn R-WFO |
+| S12 | CG-FG-S12-01 `historical_identity` | DONE | e2e `atlas-historical.json` đã sửa đúng union; view lịch sử vẫn hiện 3 tab rỗng + footer (HiFi không có trạng thái này — Bobby quyết) |
+| S00 | thẻ Alpha version / Compare theo `requires_alpha` / `requires_run` | DONE | |
+| S12 | `trial_ceiling` | REPORT | đã hiện ở "release facts" (mặc định gập); không đổi |
+
+**Mục mới phát hiện khi làm F1 (đưa vào F2/F3):** `PICK_TARGET_LABEL` (S01 `RunLibrary.tsx:~1122`) thiếu `alpha_version_legacy` → banner "Pick a run to open alpha_version_legacy" lộ token thô (sau khi bấm thẻ Alpha version ở S00) · `e2e/fixtures.ts` và `e2e/research-qualification/stubs.ts` còn phục vụ `journey-v3` (descriptor đã v4) · caption overview S08 chưa nhóm nghìn.

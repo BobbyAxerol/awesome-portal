@@ -142,17 +142,23 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Wide enough for `05/01/2026, 12:00 AM` and the picker icon at the input's 11px mono. */
+const INSTANT_FIELD_WIDTH = 196;
+
 function Field({
   label,
   children,
   hint,
+  minWidth,
 }: {
   label: string;
   children: React.ReactNode;
   hint?: React.ReactNode;
+  /** Pixels the field keeps before the row wraps (a date-time input must show its time, not "12:" cut by the picker icon). */
+  minWidth?: number;
 }) {
   return (
-    <label className="flex min-w-0 flex-1 flex-col gap-1">
+    <label className="flex min-w-0 flex-1 flex-col gap-1" style={minWidth ? { minWidth } : undefined}>
       <Label>{label}</Label>
       {children}
       {hint ? (
@@ -206,10 +212,13 @@ function WizardBar({
   current,
   onPick,
   errors,
+  visited,
 }: {
   current: StepId;
   onPick: (step: StepId) => void;
   errors: ReadonlySet<StepId>;
+  /** Steps the reader has reached. A step nobody opened has not been checked, so it is never "valid". */
+  visited: ReadonlySet<StepId>;
 }) {
   return (
     /* Wraps rather than scrolls.
@@ -227,7 +236,12 @@ function WizardBar({
       {STEPS.map((step, index) => {
         const isCurrent = step.id === current;
         const hasError = errors.has(step.id);
-        const tone = hasError ? "var(--bad)" : isCurrent ? "var(--accent)" : "var(--good)";
+        /* FG 02-8b: ✓ "valid" is a verdict on a step the reader has been to and
+           that passed the form's own checks. Review's verdict is the server's
+           preflight, which this bar cannot see, so Review never gets a ✓. */
+        const checked = !hasError && !isCurrent && visited.has(step.id) && step.id !== "review";
+        const stepState = hasError ? "error" : isCurrent ? "current" : checked ? "valid" : "not-visited";
+        const tone = hasError ? "var(--bad)" : isCurrent ? "var(--accent)" : checked ? "var(--good)" : "var(--ink-faint)";
         return (
           <button
             key={step.id}
@@ -236,7 +250,7 @@ function WizardBar({
             aria-selected={isCurrent}
             aria-current={isCurrent ? "step" : undefined}
             data-step-pill={step.id}
-            data-step-state={hasError ? "error" : isCurrent ? "current" : "valid"}
+            data-step-state={stepState}
             onClick={() => onPick(step.id)}
             onKeyDown={(event) => {
               const next = event.key === "Home" ? 0 : event.key === "End" ? STEPS.length - 1
@@ -254,7 +268,7 @@ function WizardBar({
               className="mono inline-flex h-5 w-5 items-center justify-center rounded-full border-[1.5px] text-[10px] font-bold"
               style={{ color: tone, borderColor: tone }}
             >
-              {hasError ? "!" : isCurrent ? index + 1 : "✓"}
+              {hasError ? "!" : checked ? "✓" : index + 1}
             </span>
             <span className="flex flex-col items-start">
               <span className="text-[11px] font-medium">{step.label}</span>
@@ -262,7 +276,7 @@ function WizardBar({
                 className="text-[9px]"
                 style={{ color: hasError ? "var(--bad)" : "var(--ink-faint)" }}
               >
-                {hasError ? "needs attention" : step.sub}
+                {hasError ? "needs attention" : stepState === "not-visited" && step.id !== "review" ? "not visited" : step.sub}
               </span>
             </span>
           </button>
@@ -841,6 +855,18 @@ function DataStep({
             disabled={publishedTimeframes.length === 0}
             title={publishedTimeframes.length === 0 ? "The bound version has not published its timeframes." : undefined}
           >
+            {/* D6: a controlled <select> whose value matches no option silently
+                shows its first option, so a draft on 4h read as "1h" here while
+                Review (which prints the draft) said 4h. The draft's own value is
+                always an option, marked when the version does not declare it. */}
+            {publishedTimeframes.length > 0 && draft.timeframe === "" ? (
+              <option value="">choose a timeframe</option>
+            ) : null}
+            {publishedTimeframes.length > 0 && draft.timeframe !== "" && !timeframeDeclared ? (
+              <option value={draft.timeframe} data-undeclared-timeframe>
+                {draft.timeframe} · not declared
+              </option>
+            ) : null}
             {timeframeOptions.map((tf) => (
               <option key={tf} value={tf}>
                 {tf}
@@ -911,6 +937,77 @@ function DataStep({
 }
 
 /**
+ * What a `datetime-local` input can be handed for a draft instant.
+ *
+ * A copied run carries its instants as the server stored them
+ * (`2026-05-01T00:00:00Z`); the input only takes local text with no zone, so
+ * with the "Z" on it the browser dropped the value and showed a blank
+ * `mm/dd/yyyy` box over a draft that held a real date. The draft keeps its own
+ * text; only what the input is given loses the trailing "Z" (the form reads
+ * these instants as UTC everywhere). An instant the input cannot show at all -
+ * an explicit offset, a stray format - comes back as `raw`, to be printed
+ * beside the input instead of vanishing.
+ */
+export function datetimeInputValue(draftValue: string): { input: string; raw: string | null } {
+  if (draftValue === "") return { input: "", raw: null };
+  const local = draftValue.endsWith("Z") ? draftValue.slice(0, -1) : draftValue;
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/.test(local)
+    ? { input: local, raw: null }
+    : { input: "", raw: draftValue };
+}
+
+function DateTimeInput({
+  value,
+  onChange,
+  label,
+  style,
+  dataSplitMode = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  style: React.CSSProperties;
+  dataSplitMode?: boolean;
+}) {
+  const shown = datetimeInputValue(value);
+  return (
+    <>
+      <input
+        type="datetime-local"
+        className={INPUT_CLASS}
+        style={style}
+        value={shown.input}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={label}
+        data-split-mode={dataSplitMode ? "" : undefined}
+      />
+      {shown.raw !== null ? (
+        <span className="mono text-[9.5px]" style={{ color: "var(--accent-2)" }} data-instant-unshown>
+          copied as {shown.raw} — this input cannot show it
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * CG-P02-02 / CG-P08-02: preflight accepts the requested-spec v2 controls
+ * (rolling width, label/purge/embargo, inner folds) but run creation has
+ * refused every v2 spec so far. Offering the control without saying so
+ * teaches the reader that Create fails. The note states the observed fact and
+ * no cause — a cause is the server's to state, at Review, once it has spoken —
+ * and it steps aside when a served `run_admission` says creation is admitted.
+ */
+function V2CreateNote({ where, admitted }: { where: string; admitted: boolean }) {
+  if (admitted) return null;
+  return (
+    <span className="block w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--role-holdout)" }} data-v2-create-note={where}>
+      Preflight accepts this; create does not admit it yet.
+    </span>
+  );
+}
+
+/**
  * One published walk-forward choice (RF02-F2).
  *
  * The values come from the Atlas (`walk_forward_options`), never from a list in
@@ -924,16 +1021,18 @@ function PublishedSelect({
   options,
   fallback,
   onChange,
+  minWidth,
 }: {
   label: string;
   value: string;
   options: readonly { value: string; admission: string; reason?: string | null }[] | null;
   fallback: string;
   onChange: (value: string) => void;
+  minWidth?: number;
 }) {
   if (options === null) {
     return (
-      <Field label={label}>
+      <Field label={label} minWidth={minWidth}>
         <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-options-unpublished={label}>
           not published by this release
         </span>
@@ -942,7 +1041,7 @@ function PublishedSelect({
   }
   const refused = options.filter((option) => option.admission !== "ADMITTED");
   return (
-    <Field label={label}>
+    <Field label={label} minWidth={minWidth}>
       <select
         className={INPUT_CLASS}
         style={inputStyle()}
@@ -1031,6 +1130,7 @@ function WindowsStep({
   error,
   catalog = null,
   warmupBars = null,
+  createAdmitted = false,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
@@ -1040,6 +1140,8 @@ function WindowsStep({
   catalog?: DatasetCatalog | null;
   /** D4: the warmup the bound version declares, or null when it was not read. */
   warmupBars?: number | null;
+  /** The preflight's served `run_admission.may_create_run === true`; hides the v2 create note. */
+  createAdmitted?: boolean;
 }) {
   const options = atlas?.current_release.walk_forward_options ?? null;
   const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol);
@@ -1080,24 +1182,20 @@ function WindowsStep({
           {rows.map(([key, label]) => (
             <div key={key} className="flex flex-wrap items-end gap-2.5" data-window={key}>
               <span className="mono w-[72px] flex-none text-[10.5px] font-semibold">{label}</span>
-              <Field label="start">
-                <input
-                  type="datetime-local"
-                  className={INPUT_CLASS}
+              <Field minWidth={INSTANT_FIELD_WIDTH} label="start">
+                <DateTimeInput
                   style={inputStyle(Boolean(error))}
                   value={draft.windows[key].start}
-                  onChange={(e) => setWindow(key, "start", e.target.value)}
-                  aria-label={`${label} start`}
+                  onChange={(value) => setWindow(key, "start", value)}
+                  label={`${label} start`}
                 />
               </Field>
-              <Field label="end exclusive">
-                <input
-                  type="datetime-local"
-                  className={INPUT_CLASS}
+              <Field minWidth={INSTANT_FIELD_WIDTH} label="end exclusive">
+                <DateTimeInput
                   style={inputStyle(Boolean(error))}
                   value={draft.windows[key].endExclusive}
-                  onChange={(e) => setWindow(key, "endExclusive", e.target.value)}
-                  aria-label={`${label} end exclusive`}
+                  onChange={(value) => setWindow(key, "endExclusive", value)}
+                  label={`${label} end exclusive`}
                 />
               </Field>
               <PrefillLine draft={draft} field={outerField(key, "start")} label={`${label} start`} />
@@ -1107,45 +1205,39 @@ function WindowsStep({
         </div>
       ) : (
         <div className="flex flex-wrap gap-2.5" data-advanced-window>
-          <Field label="Analysis start" hint={prefillHint(draft, "walkForward.start")}>
-            <input
-              type="datetime-local"
-              className={INPUT_CLASS}
+          <Field minWidth={INSTANT_FIELD_WIDTH} label="Analysis start" hint={prefillHint(draft, "walkForward.start")}>
+            <DateTimeInput
               style={inputStyle()}
               value={draft.walkForward.start}
-              onChange={(e) =>
+              onChange={(value) =>
                 patch({
-                  walkForward: { ...draft.walkForward, start: e.target.value },
+                  walkForward: { ...draft.walkForward, start: value },
                   ...touchPatch(draft, "walkForward.start"),
                 })
               }
-              aria-label="Analysis start"
+              label="Analysis start"
             />
           </Field>
-          <Field label="End exclusive" hint={prefillHint(draft, "walkForward.endExclusive")}>
-            <input
-              type="datetime-local"
-              className={INPUT_CLASS}
+          <Field minWidth={INSTANT_FIELD_WIDTH} label="End exclusive" hint={prefillHint(draft, "walkForward.endExclusive")}>
+            <DateTimeInput
               style={inputStyle()}
               value={draft.walkForward.endExclusive}
-              onChange={(e) =>
+              onChange={(value) =>
                 patch({
-                  walkForward: { ...draft.walkForward, endExclusive: e.target.value },
+                  walkForward: { ...draft.walkForward, endExclusive: value },
                   ...touchPatch(draft, "walkForward.endExclusive"),
                 })
               }
-              aria-label="Analysis end exclusive"
+              label="Analysis end exclusive"
             />
           </Field>
-          <Field label="First OOS instant">
-            <input
-              type="datetime-local"
-              className={INPUT_CLASS}
+          <Field minWidth={INSTANT_FIELD_WIDTH} label="First OOS instant">
+            <DateTimeInput
               style={inputStyle()}
               value={draft.walkForward.splitMode}
-              onChange={(e) => patch({ walkForward: { ...draft.walkForward, splitMode: e.target.value } })}
-              aria-label="First OOS instant"
-              data-split-mode
+              onChange={(value) => patch({ walkForward: { ...draft.walkForward, splitMode: value } })}
+              label="First OOS instant"
+              dataSplitMode
             />
           </Field>
           <PublishedSelect
@@ -1153,6 +1245,7 @@ function WindowsStep({
             value={draft.walkForward.frequency}
             options={options?.frequency ?? null}
             fallback={options?.frequency_default ?? ""}
+            minWidth={120}
             onChange={(frequency) => patch({ walkForward: { ...draft.walkForward, frequency } })}
           />
           <PublishedSelect
@@ -1160,6 +1253,7 @@ function WindowsStep({
             value={draft.walkForward.windowMode}
             options={options?.window_mode ?? null}
             fallback={options?.window_mode_default ?? ""}
+            minWidth={120}
             onChange={(windowMode) => patch({ walkForward: { ...draft.walkForward, windowMode } })}
           />
           {draft.walkForward.windowMode === "rolling" ? (
@@ -1173,6 +1267,7 @@ function WindowsStep({
                 placeholder="180D"
                 data-train-window
               />
+              <V2CreateNote where="train-window" admitted={createAdmitted} />
             </Field>
           ) : null}
           {options ? (
@@ -1200,6 +1295,7 @@ function WindowsStep({
                 </Field>
               ))}
               <p className="w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{options.temporal_guards.rule}</p>
+              <V2CreateNote where="temporal-guards" admitted={createAdmitted} />
             </div>
           ) : null}
         </div>
@@ -1281,6 +1377,7 @@ function WindowsStep({
                 {options?.inner_folds ? (
                   <p className="w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{options.inner_folds.rule}</p>
                 ) : null}
+                <V2CreateNote where="inner-folds" admitted={createAdmitted} />
               </>
             );
           })()}
@@ -1552,6 +1649,48 @@ function SubmissionConstraints({ release }: { release: AtlasRelease }) {
   );
 }
 
+/** Declared values that differ from the Atlas's listed submission profile, one sentence each. */
+export function outsideProfileNotes(
+  draft: Pick<RunDraft, "optunaTrials" | "earlyStopping" | "randomSeed">,
+  constraints: AtlasRelease["submission_constraints"],
+): readonly { field: "trials" | "early_stopping" | "random_seed"; text: string }[] {
+  const notes: { field: "trials" | "early_stopping" | "random_seed"; text: string }[] = [];
+  const trials = draft.optunaTrials.trim();
+  if (trials !== "" && trials !== String(constraints.accepted_trial_count)) {
+    notes.push({
+      field: "trials",
+      text: `Trials ${trials} — the profile lists ${constraints.accepted_trial_count}. Kept as entered.`,
+    });
+  }
+  if (draft.earlyStopping.trim() !== "") {
+    notes.push({
+      field: "early_stopping",
+      text: `Early stopping ${draft.earlyStopping.trim()} — the profile admits no value. Kept as entered.`,
+    });
+  }
+  if (draft.randomSeed.trim() !== "") {
+    notes.push({
+      field: "random_seed",
+      text: `Random seed ${draft.randomSeed.trim()} — the profile admits no value. Kept as entered.`,
+    });
+  }
+  return notes;
+}
+
+function OutsideProfileNotes({ draft, constraints }: { draft: RunDraft; constraints: AtlasRelease["submission_constraints"] }) {
+  const notes = outsideProfileNotes(draft, constraints);
+  if (notes.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-0.5" data-outside-profile>
+      {notes.map((note) => (
+        <li key={note.field} className="mono text-[10px]" style={{ color: "var(--accent-2)" }} data-outside-profile-field={note.field}>
+          {note.text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function OptimizationStep({
   draft,
   patch,
@@ -1604,6 +1743,13 @@ function OptimizationStep({
           />
         </Field>
       </div>
+
+      {/* A copied run (or a typed value) can sit outside the submission profile
+          the Atlas lists. It is kept as entered — never replaced — and said so;
+          preflight and create decide, not this note. */}
+      {release ? (
+        <OutsideProfileNotes draft={draft} constraints={release.submission_constraints} />
+      ) : null}
 
       <div
         className="flex flex-col gap-1 rounded-[6px] border px-3 py-2"
@@ -1709,6 +1855,7 @@ function ReviewRail({
             {draft.walkForward.start || "not declared"} → {draft.walkForward.endExclusive || "not declared"}
             {" · "}{draft.walkForward.frequency || "frequency not declared"}
             {" · "}{draft.walkForward.windowMode || "window mode not declared"}
+            {" · first OOS "}{draft.walkForward.splitMode || "not declared"}
           </p>
         )}
         {(() => {
@@ -1736,7 +1883,18 @@ function ReviewRail({
               </p>
             ) : null}
             <p className="mono mt-1 text-[9px]" style={{ color: "var(--ink-faint)" }}>
-              {mode.mode_id} × {scheduleFact.schedule} · cert ceiling not published
+              {mode.mode_id} × {scheduleFact.schedule}
+            </p>
+            {/* CG-P04-05 / S02-01: the cap is an Atlas fact. The sentence below
+                is the server's own reason for it, not a line written here. */}
+            <p className="mt-1 text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-cert-cap={scheduleFact.cert_cap?.state ?? "NOT_SERVED"}>
+              <span className="mono text-[9px] font-bold uppercase tracking-[.06em]">cert ceiling — not published</span>
+              {scheduleFact.cert_cap?.reason ? (
+                <>
+                  {" "}
+                  <span data-cert-cap-reason>{scheduleFact.cert_cap.reason}</span>
+                </>
+              ) : null}
             </p>
           </>
         ) : (
@@ -2068,7 +2226,7 @@ export function NewRun(props: NewRunProps) {
       <WizardBar current={step} onPick={(next) => {
         setVisited((previous) => new Set([...previous, step, next]));
         setStep(next);
-      }} errors={errorSteps} />
+      }} errors={errorSteps} visited={visited} />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -2114,7 +2272,7 @@ export function NewRun(props: NewRunProps) {
             <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={patch} atlas={atlas} error={errorByStep.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} />
+            <WindowsStep draft={draft} patch={patch} atlas={atlas} error={errorByStep.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={patch} error={errorByStep.get("parameters") ?? null} ceiling={sweepCeiling} />

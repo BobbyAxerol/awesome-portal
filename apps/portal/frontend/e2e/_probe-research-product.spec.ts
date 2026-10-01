@@ -154,6 +154,18 @@ test("an unrouted card is drawn and says so", async ({ page }) => {
   await freezeClock(page);
   await stubPortalApi(page, "healthy");
   await page.setViewportSize({ width: 1280, height: 900 });
+  /* CG-S00-AV-01: the shared stub still serves revision 3, which carries no
+     `requires_alpha`. This cell is about the served scope, so it answers with
+     the newest canonical descriptor (registered after the stub, so it wins). */
+  const journeyV4 = readFileSync(resolve(
+    process.cwd(),
+    "../../../packages/contracts/fixtures/research-foundation.journey-v4.valid.json",
+  ), "utf8");
+  await page.route("**/api/v1/research/journey*", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: journeyV4,
+  }));
   await page.goto(JOURNEY);
   await settle(page);
 
@@ -163,13 +175,17 @@ test("an unrouted card is drawn and says so", async ({ page }) => {
   await expect(card).toHaveAttribute("href", ALPHA_IMPORT);
 
   // `alpha_version_legacy` names a shipped screen under an Alpha and a version.
-  // The map holds neither, so it goes through the Run Library picker like the
-  // other context-scoped cards instead of drawing a dead NOT ROUTED tile.
+  // The descriptor serves `requires_alpha: true` for it, so it is an ALPHA
+  // picker (the Run Library grouped by Alpha) — not a run picker, and not a
+  // dead NOT ROUTED tile.
   const picker = page.locator("[data-card='alpha-version']");
   await expect(picker).toBeVisible();
   await expect(picker).toHaveAttribute("data-card-availability", "AVAILABLE");
   await expect(picker).not.toHaveAttribute("data-card-unreachable", /./);
-  await expect(picker).toHaveAttribute("href", /\/runs\?to=alpha_version_legacy$/);
+  await expect(picker).toHaveAttribute("data-card-picks-alpha", "alpha_version_legacy");
+  await expect(picker).not.toHaveAttribute("data-card-picks-run", /./);
+  await expect(picker).toHaveAttribute("href", /\/runs\?to=alpha_version_legacy&group=1$/);
+  await expect(picker).toContainText("pick an alpha →");
   // (An `unrouted.evaluate(...)` line stood here after the card it named was
   // routed; it threw ReferenceError before any later assertion could run, on
   // every host. The href assertion above is what the card now owes.)
@@ -206,7 +222,7 @@ test("a journey deep link inspects and never dispatches", async ({ page }) => {
   expect(noise, noise.join("\n")).toEqual([]);
 });
 
-test("a historical selection says it cannot run", async ({ page }) => {
+test("a historical selection shows the identity and facts the server served (CG-FG-S12-01)", async ({ page }) => {
   await freezeClock(page);
   await stubPortalApi(page, "healthy");
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -217,9 +233,17 @@ test("a historical selection says it cannot run", async ({ page }) => {
     "data-selected-kind",
     "HISTORICAL",
   );
-  await expect(page.locator("[data-historical-note]")).toHaveText(
-    "Historical identity retained — this release is not installed and cannot run.",
-  );
+  /* The stub body is the canonical `atlas: null` + `historical_identity` union
+     member (e2e/research-foundation/atlas-historical.json), so the words below
+     are the server's, read from the same file. */
+  const served = JSON.parse(
+    readFileSync(resolve(process.cwd(), "e2e/research-foundation/atlas-historical.json"), "utf8"),
+  ) as { historical_identity: { package: string; version: string; status: string; facts_state: string; facts_reason: string } };
+  const identity = served.historical_identity;
+  await expect(page.locator("[data-historical-note]")).toHaveText(`${identity.package} ${identity.version} · ${identity.status}`);
+  await expect(page.locator("[data-atlas-facts-absent]")).toHaveAttribute("data-atlas-facts-absent", identity.facts_state);
+  await expect(page.locator("[data-facts-reason]")).toHaveText(identity.facts_reason);
+  await expect(page.locator("body")).not.toContainText("not installed and cannot run");
 });
 
 test("the Atlas tabs are reachable by keyboard", async ({ page }) => {

@@ -627,7 +627,10 @@ describe("RF-04 FE-S02-06 — timeframe choices come only from the bound declara
     view({ atlas: manifest.atlas, draft: draft({ optimizationMode: manifest.atlas.modes[0]!.mode_id, optimizationSchedule: selected.schedule }) });
     expect(document.querySelector("[data-window-timeline]")?.textContent).toContain("2022-01-01T00:00");
     expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain(selected.chronological_validation_claim.toUpperCase());
-    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("cert ceiling not published");
+    /* S02-01: the ceiling line carries the server's own reason for the absence,
+       not a sentence written in the form. */
+    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("cert ceiling — not published");
+    expect(document.querySelector("[data-cert-cap-reason]")?.textContent).toBe(selected.cert_cap.reason);
   });
 });
 
@@ -673,7 +676,8 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
   it("marks a step with a problem and says what needs attention", () => {
     view({ draft: draft({ symbol: "" }) });
     const pill = document.querySelector('[data-step-pill="data"]') as HTMLElement;
-    expect(pill.getAttribute("data-step-state")).toBe("valid");
+    /* FG 02-8b: a step nobody has opened has not been checked — not "valid". */
+    expect(pill.getAttribute("data-step-state")).toBe("not-visited");
     fireEvent.click(pill);
     expect(pill.getAttribute("data-step-state")).toBe("error");
     expect(pill.textContent).toContain("needs attention");

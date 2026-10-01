@@ -907,8 +907,18 @@ function RetainedStateAtCursor({ replay, pinned }: { replay: CurrentSourceReplay
         {words(at.state)} · {words(at.semantics)}
         {at.source_ordinal !== null ? ` · observation ${at.source_ordinal + 1}` : ""}
         {at.at_utc_ms !== null ? ` · ${iso(at.at_utc_ms)}` : ""}
-        {at.accepted_position !== null ? ` · position ${at.accepted_position}` : ""}
-        {at.equity !== null ? ` · equity ${at.equity}` : ""}
+        {at.accepted_position !== null ? (
+          <>
+            {" · position "}
+            <Exact value={at.accepted_position} unit={null} />
+          </>
+        ) : null}
+        {at.equity !== null ? (
+          <>
+            {" · equity "}
+            <Exact value={at.equity} unit="currency" />
+          </>
+        ) : null}
       </span>
       <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-execution-state="NO_RETAINED_FIELD">
         execution state — not published · the retained WFO lane publishes no execution state; a model position is not
@@ -1668,8 +1678,18 @@ function StateAtCursor({ replay, pinnedAt }: { replay: Replay; pinnedAt: number 
       <span className="mono text-[10px]">
         {words(at.state)} · {words(at.semantics)}
         {at.playback_ordinal !== null ? ` · sample ${at.playback_ordinal + 1}` : ""}
-        {at.equity !== null ? ` · equity ${at.equity}` : ""}
-        {at.drawdown_fraction !== null ? ` · drawdown ${at.drawdown_fraction}` : ""}
+        {at.equity !== null ? (
+          <>
+            {" · equity "}
+            <Exact value={at.equity} unit="currency" />
+          </>
+        ) : null}
+        {at.drawdown_fraction !== null ? (
+          <>
+            {" · drawdown "}
+            <Exact value={at.drawdown_fraction} unit="fraction" />
+          </>
+        ) : null}
       </span>
       <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-execution-state={at.execution_state.state}>
         execution state — {REPLAY_GAP_WORDS[at.execution_state.state]} · {gapReason(at.execution_state)}

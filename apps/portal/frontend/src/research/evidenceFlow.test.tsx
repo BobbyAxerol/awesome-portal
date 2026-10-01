@@ -1329,9 +1329,18 @@ describe("RF-06 fidelity — cursor bar", () => {
     expect(loud.container.querySelector("[data-fold-bound]")?.className).not.toBe("sr-only");
   });
 
-  it("carries seq, schedule and window chips, saying not published where the Hub is silent", () => {
-    const { container } = view();
-    expect(container.querySelector("[data-cursor-seq]")?.textContent).toContain("not published");
+  it("carries seq, schedule and window chips, saying 'not served for this lane' where the Hub is silent (F1: a screen note, never a P13_ code)", () => {
+    /* The lane's own read has settled (it does not hold a P04 run), so nothing is still on its way. */
+    const { container } = view({
+      passport: {
+        state: "refused",
+        refusal: toEvidenceRefusal(new PortalApiError("not admitted", 404, "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED", null)),
+      },
+    });
+    expect(container.querySelector("[data-cursor-seq]")?.textContent).toContain("not served for this lane");
+    expect(container.querySelector("[data-cursor-seq] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe("hub-lane-has-no-event-seq");
+    expect(container.querySelector("[data-cursor-seq] [data-reason-code]")).toBeNull();
+    expect(container.querySelector("[data-cursor-bar]")?.innerHTML).not.toMatch(/P13_PUBLISHES_NO/);
     expect(container.querySelector("[data-cursor-schedule]")?.textContent).toContain("per_fold_causal");
     expect(container.querySelector("[data-cursor-window]")?.textContent).toContain("oos");
     cleanup();
@@ -1392,11 +1401,14 @@ describe("RF-06 fidelity — summary panels", () => {
     const row = container.querySelector("[data-provenance='EQUITY_OOS']");
     const cell = (label: string) => row?.querySelector(`[data-provenance-cell='${label}']`)?.textContent ?? "";
     expect(cell("source")).toContain("EQUITY_OOS");
-    expect(cell("segment")).toContain("not published");
-    expect(cell("units")).toContain("not published");
+    /* F1: the three gaps are screen notes, not SERIES_*_NOT_PUBLISHED codes that look served. */
+    expect(cell("segment")).toContain("not served for this lane");
+    expect(cell("units")).toContain("not served for this lane");
     expect(cell("timezone")).toContain("UTC");
     expect(cell("as-of")).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}Z/);
-    expect(cell("digest")).toContain("not published");
+    expect(cell("digest")).toContain("not served for this lane");
+    expect(row?.innerHTML).not.toMatch(/SERIES_(SEGMENT|UNITS|DIGEST)_NOT_PUBLISHED/);
+    expect(row?.querySelector("[data-reason-code]")).toBeNull();
   });
 
   it("keeps the per-fold verdict table with the HiFi's nine columns and no invented row", () => {
@@ -1626,9 +1638,10 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     expect(shown("OOS_SHARPE")).toBe("−5.35");
     expect(container.querySelector("[data-metric='FINAL_EQUITY'] [data-metric-scope]")?.textContent).toContain("source-derived");
     // A tile the lane has no field for names the lane; the benchmark tile carries the lane's own reason.
-    expect(container.querySelector("[data-metric='OOS_SORTINO'] [data-withheld]")?.getAttribute("data-reason-code")).toBe(
-      "UI_RETAINED_LANE_HAS_NO_FIELD",
-    );
+    /* F1: the lane having no field is a screen note, not a code that looks like the server's. */
+    expect(container.querySelector("[data-metric='OOS_SORTINO'] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe("retained-lane-has-no-field");
+    expect(container.querySelector("[data-metric='OOS_SORTINO'] [data-reason-code]")).toBeNull();
+    expect(container.querySelector("[data-metric='OOS_SORTINO']")?.textContent).toContain("not served for this lane");
     expect(container.querySelector("[data-metric='BENCHMARK_RETURN_FRACTION'] [data-withheld]")?.getAttribute("data-reason-code")).toBe(
       "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES",
     );
@@ -1638,7 +1651,7 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     const { container } = view({ hub: W3B.hub_evidence, passport: retainedPassport, runIdentity: W3B_IDENTITY });
     expect(container.querySelector("[data-not-ready]")).toBeNull();
     expect(container.querySelector("[data-readiness]")?.getAttribute("data-readiness")).toBe("READY");
-    expect(container.innerHTML).not.toMatch(/P13_SOURCE_EVIDENCE_NOT_PUBLISHED|P13_PUBLISHES_NO_BEHAVIOR_ANALYTIC/);
+    expect(container.innerHTML).not.toMatch(/P13_SOURCE_EVIDENCE_NOT_PUBLISHED|P13_PUBLISHES_NO_BEHAVIOR_ANALYTIC|UI_RETAINED_LANE_HAS_NO|UI_HUB_LANE_HAS_NO/);
     expect(container.textContent).not.toContain("This run published no sealed evidence");
     // The engine is the retained provenance's, not "engine — not published".
     expect(container.querySelector("[data-engine]")?.getAttribute("data-engine")).toBe("1.1.1");
@@ -1669,9 +1682,10 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     const distribution = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']");
     expect(distribution?.getAttribute("data-series-state")).toBe("ready");
     expect(distribution?.querySelector("[data-sampling]")?.getAttribute("data-sampling")).toBe("FULL_RETURN_HISTOGRAM_V2");
-    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-absence-note]")?.getAttribute("data-reason-code")).toBe(
-      "UI_RETAINED_LANE_HAS_NO_SERIES",
+    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-absence-note] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe(
+      "retained-lane-has-no-series",
     );
+    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-reason-code]")).toBeNull();
     expect(container.querySelector("[data-series-panel='ROLLING_BETA_63'] [data-absence-note]")?.getAttribute("data-reason-code")).toBe(
       "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES",
     );

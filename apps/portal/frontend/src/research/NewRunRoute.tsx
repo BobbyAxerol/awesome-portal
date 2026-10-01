@@ -340,11 +340,19 @@ export function NewRunRoute() {
    * overwritten after that.
    */
   const accepted = document?.current_release.submission_constraints?.accepted_trial_count;
+  /* A `?from=` copy owns the trial count. Until the read of that run has
+     settled — and for good once it landed — this default must not run: it fired
+     in the same commit as the copy, saw the still-empty field, and wrote the
+     profile's 1 over the copied 400, so a 400-trial run came back as a 1-trial
+     draft with nothing to say so. Only a copy that failed gets the default. */
+  const cloneOwnsTrials = fromRun !== null
+    && !(clone !== null && clone.runId === fromRun && clone.spec === null && clone.state.state !== "loading");
   useEffect(() => {
+    if (cloneOwnsTrials) return;
     if (accepted !== undefined && run.draft.optunaTrials === "") {
       run.patch({ optunaTrials: String(accepted) });
     }
-  }, [accepted, run]);
+  }, [accepted, run, cloneOwnsTrials]);
 
   /*
    * Spec 02 T26 / §outbound: a created run leaves the form for its own

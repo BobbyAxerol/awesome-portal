@@ -49,7 +49,7 @@ import { ServedAttempts } from "./QueuePanel";
 import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { useRunLabel } from "./runLabels";
 import { NotPublished, RunMetaStrip } from "./RunMetaStrip";
-import { StageLedger, utcClock } from "./StageLedger";
+import { StageLedger, isFixedProfileScope, utcClock } from "./StageLedger";
 import type { Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
@@ -67,7 +67,76 @@ export const SSE_LIVE = "SSE streaming · poll floor 5s underneath";
 export const SSE_POLL = "stream dropped · polling every 5s";
 /** Live, stream closed (hidden tab, typed gap, reconnect pending): the floor still runs. */
 export const SSE_RESTING = "stream closed · poll floor 5s underneath";
+/** The run is final (COMPLETED / FAILED / CANCELLED, or the source's terminal frame landed). */
 export const SSE_CLOSED = "stream closed at terminal frame";
+/**
+ * FG 03-T: a stream that never opened is not one that closed at a terminal
+ * frame. Three more states, each worded for what is actually true of it.
+ */
+/** No read has landed yet, and none was refused: the page is still loading. */
+export const SSE_WAITING = "no stream yet · waiting for the first read";
+/** The run was cancelled before its source reported: no stream ever existed for it. */
+export const SSE_NEVER_OPENED = "no stream · cancelled before the source reported";
+
+/**
+ * A refused read: the server answered and said no (or did not answer). The
+ * status the server gave is on the label; it is never turned into a guess about
+ * the run. Only used when nothing is carrying the page — a live stream, or a
+ * poll floor that is still allowed to run, keeps its own label.
+ */
+export function sseRefused(refusal: Pick<ProgressRefusal, "status" | "state">): string {
+  const code = refusal.status > 0 ? ` (${refusal.status})` : "";
+  if (refusal.status === 0) return "no stream · the server did not answer";
+  if (refusal.state === "denied") return `no stream · access refused${code}`;
+  if (refusal.status === 409) return `stream closed · the run's state moved${code}`;
+  if (refusal.state === "unavailable" || refusal.state === "failed-retryable" || refusal.state === "stale") {
+    return `no stream · server unavailable${code}`;
+  }
+  return `no stream · request refused${code}`;
+}
+
+export type TransportFaceState = "terminal" | "never-opened" | "waiting" | "refused" | Transport;
+
+/**
+ * Which words the transport indicator prints, and why (FG 03-T).
+ *
+ * Before this, `!live` printed "stream closed at terminal frame" for every
+ * state with no live status — including a page that had not read anything yet
+ * and a read the server refused with a 503, 409 or 400.
+ *
+ * Order matters: a final run is final whatever a later console read said; a
+ * run that never had a source never had a terminal frame; a live run whose
+ * transport is carrying keeps the transport's label; only a page with no read
+ * (or whose floor is stopped by the refusal) says the read was refused.
+ */
+export function transportFace(input: {
+  transport: Transport;
+  /** Live per the screen: a live status and no source terminal frame. */
+  live: boolean;
+  status: EffectiveStatus | null;
+  availability: ProgressRead["availability"] | null;
+  sourceTerminal: boolean;
+  refusal: Pick<ProgressRefusal, "status" | "state" | "mayRetry"> | null;
+}): { state: TransportFaceState; label: string } {
+  const { transport, live, status, availability, sourceTerminal, refusal } = input;
+  const finalStatus = status === "COMPLETED" || status === "FAILED" || status === "CANCELLED";
+  if (availability === "CANCELLED_BEFORE_SOURCE") return { state: "never-opened", label: SSE_NEVER_OPENED };
+  if (finalStatus || sourceTerminal) return { state: "terminal", label: SSE_CLOSED };
+  if (status === null) {
+    return refusal === null
+      ? { state: "waiting", label: SSE_WAITING }
+      : { state: "refused", label: sseRefused(refusal) };
+  }
+  /* A read exists and the run is live. The poll floor stops on a refusal that cannot be retried. */
+  if (refusal !== null && !refusal.mayRetry && transport !== "stream") {
+    return { state: "refused", label: sseRefused(refusal) };
+  }
+  if (!live) return { state: "terminal", label: SSE_CLOSED };
+  return {
+    state: transport,
+    label: transport === "stream" ? SSE_LIVE : transport === "poll" ? SSE_POLL : SSE_RESTING,
+  };
+}
 
 export const NOT_ISSUED_NOTE =
   "the run failed before Stage 5 — no claim exists. Failure detail is in the console above.";
@@ -100,9 +169,6 @@ export const DENIED_HOLDOUT_NOTE = "sealed — unlock is a one-time audited work
 export const NEW_RUN_FROM_LABEL = "new run with same draft →";
 export const NEW_RUN_FROM_UNAVAILABLE =
   "This run's requested spec is not retained, so no new run can be seeded from it.";
-
-/** HiFi `rate` cell: the source publishes an ETA from its trial rate, not the rate. */
-export const RATE_NOT_PUBLISHED = "The source publishes an ETA derived from its trial rate, not the rate itself.";
 
 const STAGE_LABEL: Record<Stage["key"], string> = {
   S1: "Split",
@@ -241,13 +307,22 @@ function StatusChip({ status, live }: { status: EffectiveStatus; live: boolean }
  * is a grey dot and a changed label, never a banner: the page is still correct
  * on the poll floor (spec 03 pitfall 5).
  */
-function TransportDot({ transport, live }: { transport: Transport; live: boolean }) {
-  const streaming = transport === "stream" && live;
-  const label = !live ? SSE_CLOSED : transport === "stream" ? SSE_LIVE : transport === "poll" ? SSE_POLL : SSE_RESTING;
+function TransportDot({
+  transport,
+  live,
+  face,
+}: {
+  transport: Transport;
+  live: boolean;
+  face: { state: TransportFaceState; label: string };
+}) {
+  const streaming = transport === "stream" && live && face.state === "stream";
+  const label = face.label;
   const motion = streaming ? pulse("1.4s") : null;
   return (
     <span
       data-transport={transport}
+      data-transport-state={face.state}
       style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: MONO, fontSize: 10, color: "var(--ink-soft)" }}
     >
       <span
@@ -439,16 +514,17 @@ function StagePills({
 /* --------------------------------------------------------------- progress */
 
 /** How the study row names the study the source ran (CG-P10-04). */
-function studyLabel(snapshot: ProgressSnapshot, foldCount: number | null): ReactNode {
+function studyLabel(snapshot: ProgressSnapshot, foldCount: number | null, foldCountReason: string | null): ReactNode {
   const scope = snapshot.folds.find((f) => (f.selection ?? NOT_PUBLISHED_SELECTION).state === "AVAILABLE")?.selection?.scope;
-  if (scope === "FIXED_PROFILE") return "fixed profile — no search";
+  /* 03-M: an imported fixed profile ran no search either — never a per-fold "study N / M". */
+  if (isFixedProfileScope(scope)) return "fixed profile — no search";
   const global = scope === "GLOBAL_STUDY" || (snapshot.folds.length === 0 && snapshot.overall.trials_done > 0);
   if (global) return foldCount === null ? "global — scores every fold" : `global — scores all ${count(foldCount)} folds`;
   const latest = snapshot.folds.length > 0 ? snapshot.folds[snapshot.folds.length - 1].fold : null;
   if (latest === null) return null;
   return (
     <>
-      {latest} / {foldCount === null ? <NotPublished reason="The fold count is not declared." /> : count(foldCount)}
+      {latest} / {foldCount === null ? <NotPublished reason={foldCountReason} /> : count(foldCount)}
     </>
   );
 }
@@ -457,11 +533,14 @@ function ProgressCard({
   snapshot,
   live,
   foldCount,
+  foldCountReason,
 }: {
   snapshot: ProgressSnapshot;
   live: boolean;
   /** `run.declared_folds` from the progress read, when declared. */
   foldCount: number | null;
+  /** CG-P10-04: the server's `declared_folds.reason_code` when the count is not declared. */
+  foldCountReason: string | null;
 }) {
   const { overall, budget } = snapshot;
   const pct = Math.max(0, Math.min(100, overall.pct));
@@ -480,7 +559,7 @@ function ProgressCard({
     ) : (
       <Absent />
     );
-  const study = studyLabel(snapshot, foldCount);
+  const study = studyLabel(snapshot, foldCount, foldCountReason);
 
   return (
     <div data-overall style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -558,7 +637,7 @@ function ProgressCard({
           eta <span style={{ color: "var(--ink)" }}>{eta}</span>
         </span>
         <span data-rate>
-          rate <NotPublished reason={RATE_NOT_PUBLISHED} what="not reported" />
+          rate <NotPublished what="not published" />
         </span>
         {/* The server builds this string; the page does not reformat it. */}
         <span data-tqdm style={{ color: "var(--ink-faint)" }}>
@@ -1927,12 +2006,24 @@ export function RunProgress(props: RunProgressProps) {
      and a cancel button on a finished run is a control that cannot work. */
   const sourceTerminal = snapshot?.status === "COMPLETED" || snapshot?.status === "FAILED";
   const live = (status === "QUEUED" || status === "RUNNING" || status === "FINISHING") && !sourceTerminal;
+  /* FG 03-T: the transport words follow what is true of the transport — not-yet-read,
+     refused and final are three different states (see `transportFace`). */
+  const face = transportFace({
+    transport,
+    live,
+    status,
+    availability: read?.availability ?? null,
+    sourceTerminal,
+    refusal,
+  });
   /* Completion is the source's seal and nothing else. */
   const sealed = snapshot?.readiness.mandatory === "SEALED";
   /* CG-P11-03: identity and the declared fold count come with the read. */
   const identity = read === null ? undefined : (read.run ?? null);
   const declared = identity?.declared_folds;
   const foldCount = declared?.state === "DECLARED" ? declared.count : null;
+  /* The server's own code for an undeclared count; nothing is worded here. */
+  const foldCountReason = declared?.state === "NOT_PUBLISHED" ? declared.reason_code : null;
   const engineVersion = identity?.engine_release_id ?? null;
 
   const statusSlot =
@@ -1974,7 +2065,7 @@ export function RunProgress(props: RunProgressProps) {
         <Header
           runId={runId}
           title={`${queued ? "Run queued" : "Run cancelled"} — ${shortId(runId)}`}
-          right={<TransportDot transport={transport} live={live} />}
+          right={<TransportDot transport={transport} live={live} face={face} />}
         />
         <RunMetaStrip runId={runId} identity={identity} status={statusSlot} />
         <section style={{ ...CARD, gap: 8 }}>
@@ -2061,7 +2152,7 @@ export function RunProgress(props: RunProgressProps) {
 
   return (
     <div data-screen="run-progress" style={ROOT}>
-      <Header runId={runId} title={title} right={<TransportDot transport={transport} live={live} />}>
+      <Header runId={runId} title={title} right={<TransportDot transport={transport} live={live} face={face} />}>
         {read?.availability === "PENDING_SOURCE_CALLBACK" ? (
           <p style={{ fontSize: 10.5, color: "var(--role-holdout)", margin: 0 }} data-pending-source>
             The run exists. Waiting for its source to report progress.
@@ -2120,7 +2211,7 @@ export function RunProgress(props: RunProgressProps) {
               cursor={cursor}
               failedAt={read?.current.failed_at ?? null}
             />
-            <ProgressCard snapshot={snapshot} live={live} foldCount={foldCount} />
+            <ProgressCard snapshot={snapshot} live={live} foldCount={foldCount} foldCountReason={foldCountReason} />
           </>
         ) : (
           <Skeleton height={86} />

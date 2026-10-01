@@ -27,7 +27,7 @@ import {
   IMPORT_TITLE,
   REGISTRATION_ABSENT,
   RULE_PATTERNS,
-  RUN_NOT_ADMITTED,
+  RUN_ADMISSION_COPY,
   SCREEN_RULES,
   awaitingStep,
   importChip,
@@ -322,13 +322,16 @@ describe("step 3 — registration rows, where it goes next, and OL-01", () => {
     expect(row("registered at").textContent).toBe(formatUtc(entry.registered_at_utc_ms));
   });
 
-  it("renders the rows no v1 response carries as typed absences", () => {
+  it("renders the capability row as a typed absence and the signed-publication row from the served attestation", () => {
     render(<AlphaImport {...registered()} />);
     const capability = document.querySelector('[data-reg-row="capability registration"] dd') as HTMLElement;
     const signature = document.querySelector('[data-reg-row="signed publication"] dd') as HTMLElement;
     expect(capability.getAttribute("data-absent")).toBe(REGISTRATION_ABSENT.capability.code);
-    expect(signature.getAttribute("data-absent")).toBe(REGISTRATION_ABSENT.signature.code);
     expect(capability.textContent).toBe(REGISTRATION_ABSENT.capability.text);
+    // 14-09: the codes are the server's, from the canonical registration fixture.
+    expect(signature.getAttribute("data-absent")).toBe(REGISTRATION.import_attestation?.signature.reason_code);
+    expect(signature.textContent).toContain("RESEARCH_ALPHA_IMPORT_SIGNATURE_NOT_PRODUCED");
+    expect(signature.textContent).toContain("RESEARCH_ALPHA_IMPORT_SBOM_NOT_PRODUCED");
   });
 
   it("says the entrypoint was not read when the registry has not returned the version", () => {
@@ -336,15 +339,19 @@ describe("step 3 — registration rows, where it goes next, and OL-01", () => {
     expect(document.querySelector('[data-reg-row="entrypoint"] dd')?.getAttribute("data-absent")).toBe("REGISTRY_NOT_READ");
   });
 
-  it("OL-01: running the imported version is a typed absence, never a link or a button", () => {
+  it("14-12: the run slot follows the served run_admission; no OL-01 copy, no link while it refuses", () => {
     render(<AlphaImport {...registered({ activation: ACTIVATION })} />);
+    const served = REGISTRY.entries[0].run_admission!;
+    expect(served.may_create_run).toBe(false);
     const absent = document.querySelector('[data-absent-action="new-run"]') as HTMLElement;
     expect(absent.tagName).toBe("SPAN");
     expect(absent.getAttribute("href")).toBeNull();
     expect(absent.getAttribute("tabindex")).toBeNull();
-    expect(absent.getAttribute("data-absent-code")).toBe(RUN_NOT_ADMITTED.code);
-    expect(absent.getAttribute("title")).toBe(RUN_NOT_ADMITTED.reason);
-    expect(document.querySelector("[data-run-not-admitted]")?.textContent).toBe(RUN_NOT_ADMITTED.reason);
+    expect(absent.getAttribute("data-absent-code")).toBe(served.code);
+    const reason = document.querySelector("[data-run-not-admitted]") as HTMLElement;
+    expect(reason.textContent).toContain(RUN_ADMISSION_COPY[served.code!]);
+    expect(reason.textContent).toContain(served.code!);
+    expect(document.body.textContent).not.toMatch(/OL-01|Not admitted yet/);
     // No anchor anywhere hands this version to New Run.
     for (const anchor of Array.from(document.querySelectorAll("a[href]"))) {
       expect(anchor.getAttribute("href")).not.toMatch(/runs\/new\?/);

@@ -18,12 +18,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CandleOverviewStrip, CLOSE_TARGET_NOTICE, REVEAL_HIDDEN, paddedRange, windowMarkers } from "./ExecuteCandleReplay";
+import { CandleOverviewStrip, CLOSE_TARGET_NOTICE, REVEAL_HIDDEN, chartPrice, exactPercent, foldCapitalPolicyWords, paddedRange, windowMarkers } from "./ExecuteCandleReplay";
 import { ExecuteRoute } from "./ExecuteRoute";
 import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
 import { SYNTHETIC_FOLDS, scaleToFolds, syntheticChildAudit, syntheticFoldOf, syntheticFoldWindow } from "./w5bFoldScale.fixture";
 import { bandPieces, retainedSplitBand } from "./SplitBand";
+
+const chartOptions = vi.hoisted(() => [] as Record<string, unknown>[]);
 
 vi.mock("lightweight-charts", () => {
   /* jsdom has no canvas: a recording double, so the tests read the data the chart was given. */
@@ -35,13 +37,16 @@ vi.mock("lightweight-charts", () => {
     CandlestickSeries: "candles",
     LineSeries: "line",
     createSeriesMarkers: () => markers,
-    createChart: () => ({
-      addSeries: () => series(),
-      panes: () => [],
-      remove: vi.fn(),
-      setCrosshairPosition: vi.fn(),
-      timeScale: () => ({ getVisibleLogicalRange: () => null, setVisibleLogicalRange: vi.fn(), fitContent: vi.fn() }),
-    }),
+    createChart: (_element: unknown, options: Record<string, unknown>) => {
+      chartOptions.push(options);
+      return {
+        addSeries: () => series(),
+        panes: () => [],
+        remove: vi.fn(),
+        setCrosshairPosition: vi.fn(),
+        timeScale: () => ({ getVisibleLogicalRange: () => null, setVisibleLogicalRange: vi.fn(), fitContent: vi.fn() }),
+      };
+    },
     __markers: markers,
   };
 });
@@ -243,7 +248,8 @@ describe("P17-T12/T14 · fold arrival, fold switch and capital convention", () =
     const boundary = container.querySelector("[data-fold-boundary]");
     expect(boundary?.getAttribute("data-fold-boundary")).toBe("CONTINUOUS_ACROSS_FOLDS");
     expect(boundary?.getAttribute("title")).toContain("fold 1 starts at fold 0's end equity");
-    expect(container.querySelector("[data-fold-capital]")?.textContent).toContain("carry_position");
+    expect(container.querySelector("[data-fold-capital]")?.textContent).toContain("carried across folds");
+    expect(container.querySelector("[data-fold-capital]")?.textContent).not.toContain("carry_position");
     const before = fetchMock.mock.calls.length;
     fireEvent.click(container.querySelector("[data-fold='1']")!);
     await waitFor(() => expect(fetchMock.mock.calls.length).toBe(before + 1));
@@ -482,5 +488,126 @@ describe("E2c · 8.5 — the band above the chart is the fold's published window
     });
     expect(container.querySelector("[data-split-band]")).toBeNull();
     expect(container.querySelector("[data-split-band-absent]")!.textContent).toContain("never holds this run's fold plan");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * F1 (2026-10-01) · Screen 08 honesty — D11 words and axis, FG 08-05 cursor
+ * numbers, FG 08-06 / 08-07 nothing derived in the browser.
+ * ---------------------------------------------------------------------- */
+
+describe("F1 · D11 — fold capital reads in words, the price axis groups thousands", () => {
+  it("the tile, the strip line and the hover say 'carried across folds'; the raw code is a title only", async () => {
+    const { container } = await settled();
+    const tile = container.querySelector("[data-tile='fold capital']") as HTMLElement;
+    expect(tile.textContent).toContain("carried across folds");
+    expect(tile.textContent).not.toContain("carry_position");
+    expect(tile.querySelector("[data-tile-code]")?.getAttribute("title")).toBe("carry_position");
+    const line = container.querySelector("[data-fold-capital]") as HTMLElement;
+    expect(line.textContent).toContain("capital carried across folds · continuous across folds");
+    expect(line.getAttribute("title")).toBe("carry_position");
+    expect(container.querySelector("[data-fold-boundary]")?.getAttribute("title")).toContain("carry_position — one stitched account");
+  });
+
+  it("an unknown policy is 'source-defined' in the headline and appears only in a title", async () => {
+    const body = { ...FOLD0, execution: { ...FOLD0.execution, fold_capital: { ...FOLD0.execution.fold_capital, policy: "future_policy_v9" } } } as CurrentSourceReplay;
+    const { container } = await settled("", body);
+    const tile = container.querySelector("[data-tile='fold capital']") as HTMLElement;
+    expect(tile.textContent).toContain("source-defined");
+    expect(tile.textContent).not.toContain("future_policy_v9");
+    expect(tile.querySelector("[data-tile-code]")?.getAttribute("title")).toBe("future_policy_v9");
+    expect(container.querySelector("[data-fold-capital]")?.textContent).not.toContain("future_policy_v9");
+  });
+
+  it("a policy the server did not publish stays 'not published', never a word", () => {
+    expect(foldCapitalPolicyWords(null)).toEqual({ text: "not published", code: null, mapped: false });
+    expect(foldCapitalPolicyWords("close_at_boundary").text).toBe("closed at each fold boundary");
+  });
+
+  it("the chart is built with a grouped price formatter, so the axis reads like the readout", async () => {
+    chartOptions.length = 0;
+    await settled();
+    await waitFor(() => expect(chartOptions.length).toBeGreaterThan(0));
+    const localization = chartOptions.at(-1)!.localization as { priceFormatter: (price: number) => string };
+    expect(localization.priceFormatter(66000)).toBe("66,000.00");
+    expect(localization.priceFormatter(58744.4)).toBe("58,744.40");
+    expect(chartPrice(0.5)).toBe("0.50");
+    expect(chartPrice(0.0123)).toBe("0.0123");
+    expect(chartPrice(-1234.5)).toBe("-1,234.50");
+    expect(chartPrice(Number.NaN)).toBe("");
+  });
+});
+
+describe("F1 · FG 08-06 / 08-07 — the browser derives no return and sums no fee", () => {
+  it("a fold chip shows the served end equity, never a return computed from start and end", async () => {
+    const { container } = await settled();
+    const segments = FOLD0.execution.fold_capital.segments;
+    const chips = [...container.querySelectorAll<HTMLElement>("[data-fold-strip] button[data-fold]")];
+    expect(chips).toHaveLength(segments.length);
+    chips.forEach((chip, position) => {
+      expect(chip.textContent).not.toContain("%");
+      expect(chip.querySelector("[data-fold-end-equity]")?.getAttribute("data-fold-end-equity")).toBe(segments[position]!.end_equity);
+      expect(chip.getAttribute("title")).toContain("fold return not published");
+    });
+    expect(chips[0]!.textContent).toContain("end 19,931.28");
+    expect(chips[0]!.querySelector("[data-exact]")?.getAttribute("title")).toBe(segments[0]!.end_equity);
+  });
+
+  it("the cost timeline prints no window total; it says it is not published, keeps the served full-run fee", async () => {
+    const { container } = await settled();
+    const windowLine = container.querySelector("[data-cost-window]") as HTMLElement;
+    expect(windowLine.querySelector("[data-window-fee='NOT_PUBLISHED']")?.textContent).toBe("not published for a window");
+    expect(windowLine.textContent).not.toMatch(/fee\s*[\d−-]/);
+    const total = container.querySelector("[data-cost-total='shown']") as HTMLElement;
+    expect(total.querySelector("[data-exact]")?.getAttribute("title")).toBe(FOLD0.execution.totals.fee);
+  });
+
+  it("the fee rate is a percentage of the served decimal with the exact string in the title", async () => {
+    const { container } = await settled();
+    const rate = container.querySelector("[data-fee-rate]") as HTMLElement;
+    expect(rate.getAttribute("data-fee-rate")).toBe("0.0005");
+    expect(rate.textContent).toBe("0.05%");
+    expect(rate.getAttribute("title")).toBe("0.0005 (exact)");
+    expect(container.querySelector("[data-panel='cost-timeline']")?.textContent).not.toContain("Fee rate 0.0005");
+  });
+
+  it("exactPercent moves the decimal point and never rounds", () => {
+    expect(exactPercent("0.0005")).toBe("0.05%");
+    expect(exactPercent("0.00025")).toBe("0.025%");
+    expect(exactPercent("0.001")).toBe("0.1%");
+    expect(exactPercent("0.01")).toBe("1%");
+    expect(exactPercent("1")).toBe("100%");
+    expect(exactPercent("0")).toBe("0%");
+    expect(exactPercent("-0.01")).toBeNull();
+    expect(exactPercent("1e-4")).toBeNull();
+  });
+});
+
+describe("F1 · FG 08-05 — the retained 'state at cursor' prints formatted numbers, exact in title", () => {
+  it("equity and position go through the shared formatter; no raw float on the line", async () => {
+    forgetRunIdentities();
+    const body = {
+      ...LEGACY,
+      replay: {
+        ...LEGACY.replay,
+        state_at_cursor: {
+          ...LEGACY.replay.state_at_cursor,
+          state: "AVAILABLE_RETAINED_MODEL_SAMPLE",
+          semantics: "RESEARCH_MODEL_SAMPLE_NOT_BROKER_EXECUTION_STATE",
+          source_ordinal: 5,
+          at_utc_ms: LEGACY.replay.rows[0]!.at_utc_ms,
+          accepted_position: "0.3333333333333333",
+          equity: "19931.280844135865",
+        },
+      },
+    } as unknown as CurrentSourceReplay;
+    fetchFor(body);
+    const { container } = mount();
+    await waitFor(() => expect(container.querySelector("[data-state-at-cursor='AVAILABLE_RETAINED_MODEL_SAMPLE']")).toBeTruthy());
+    const at = container.querySelector("[data-state-at-cursor]") as HTMLElement;
+    expect(at.textContent).toContain("equity 19,931.28");
+    expect(at.textContent).toContain("position 0.333333");
+    expect(at.textContent).not.toMatch(/\d\.\d{7,}/);
+    expect([...at.querySelectorAll("[data-exact]")].map((node) => node.getAttribute("title"))).toEqual(["0.3333333333333333", "19931.280844135865"]);
   });
 });

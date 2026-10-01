@@ -36,7 +36,7 @@ import {
   toFoundationRefusal,
 } from "./foundationClient";
 import { researchState, type ResearchState } from "./state";
-import journeySnapshot from "../../../../../packages/contracts/fixtures/research-foundation.journey-v3.valid.json";
+import journeySnapshot from "../../../../../packages/contracts/fixtures/research-foundation.journey-v4.valid.json";
 
 /** What a foundation read produced, as the screen needs to see it. */
 interface ReadResult<T> {
@@ -237,6 +237,7 @@ export function EngineAtlasRoute() {
       runCell={runCell}
       selectedReleaseId={read.data?.selected_release_id ?? null}
       selectedReleaseKind={read.data?.selected_release_kind ?? null}
+      historicalIdentity={read.data?.historical_identity ?? null}
       state={state}
     />
   );

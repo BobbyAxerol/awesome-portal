@@ -338,9 +338,11 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
     expect(screen.getByText(LEGACY_NOTE)).toBeTruthy();
   });
 
-  it("reserves no chip for a null rc", () => {
+  it("shows a typed absence, not a chip, for a null rc (2_wiring S01)", () => {
     view();
     expect(document.querySelector("[data-rc]")).toBeNull();
+    const absent = document.querySelector("[data-run] [data-withheld][data-reason-code='P21_NO_PERSISTED_RELEASE_CANDIDATE']");
+    expect(absent?.textContent).toBe("rc — not published");
     expect(document.body.textContent).not.toMatch(/\brc_\b/);
   });
 

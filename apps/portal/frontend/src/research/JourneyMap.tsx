@@ -30,7 +30,7 @@ import type {
   JourneyPhase,
 } from "./foundationClient";
 import { ResearchPanel } from "./ResearchPanel";
-import { needsRunToOpen, pickRunHref, resolveJourneyCardRoute } from "./screenRoutes";
+import { journeyCardScope, needsRunToOpen, opensWithRunId, pickRunHref, resolveJourneyCardRoute } from "./screenRoutes";
 import type { ResearchState } from "./state";
 import { CursorNotice } from "./CursorNotice";
 import { decodeInspectionCursor, encodeInspectionCursor, type CursorProblem } from "./inspectionCursor";
@@ -112,6 +112,8 @@ const CARD_CLASS =
 
 /** D2: the badge on a card that opens the Run Library to choose its run. */
 export const PICK_RUN_BADGE = "PICK A RUN";
+/** CG-S00-AV-01: the badge on a card whose served scope is an Alpha, not a run. */
+export const PICK_ALPHA_BADGE = "PICK AN ALPHA";
 
 function CardBody({ card, blocked }: { card: JourneyCard; blocked: string | null }) {
   const tone = TAG_STYLE[card.target_kind];
@@ -147,29 +149,41 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
    * carrying its own target, and the Library opens this screen for the run
    * the reader picks. We do not guess "the latest run" — the reader chooses.
    */
-  const picksRun = card.availability === "AVAILABLE" && !route && needsRunToOpen(card.target_key);
-  const blocked = picksRun ? null : unreachableReason(card, route);
+  /*
+   * CG-S00-AV-01 / 2_wiring S00: which context a card needs is the server's
+   * word (`requires_run` / `requires_alpha`), not something this build derives
+   * from its own route table. A card with a declared scope opens directly only
+   * when the context in hand already is that scope (a run id on a per-run
+   * screen); otherwise it opens the picker the scope calls for.
+   */
+  const scope = journeyCardScope(card);
+  const opensDirectly = scope === "NONE" || (scope === "RUN" && runId !== null && opensWithRunId(card.target_key));
+  const picksContext = card.availability === "AVAILABLE" && !opensDirectly && needsRunToOpen(card.target_key);
+  const picksRun = picksContext && scope === "RUN";
+  const picksAlpha = picksContext && scope === "ALPHA";
+  const blocked = picksContext ? null : unreachableReason(card, route);
   const tone = TAG_STYLE[card.target_kind];
 
-  if (picksRun) {
+  if (picksContext) {
     return (
       <Link
         data-card={card.card_id}
         data-card-kind={card.target_kind}
         data-card-availability={card.availability}
-        data-card-picks-run={card.target_key}
+        data-card-picks-run={picksRun ? card.target_key : undefined}
+        data-card-picks-alpha={picksAlpha ? card.target_key : undefined}
         className={CARD_CLASS}
         style={{
           border: `${card.target_kind === "RESEARCH_SCREEN" ? 1.5 : 1}px solid ${tone.border}`,
           background: tone.background,
           cursor: "pointer",
         }}
-        to={pickRunHref(card.target_key)}
-        data-card-route={pickRunHref(card.target_key)}
+        to={pickRunHref(card.target_key, scope)}
+        data-card-route={pickRunHref(card.target_key, scope)}
       >
-        <CardBody card={card} blocked={PICK_RUN_BADGE} />
+        <CardBody card={card} blocked={picksAlpha ? PICK_ALPHA_BADGE : PICK_RUN_BADGE} />
         <span className="mono text-[8.5px] font-bold" style={{ color: "var(--accent)" }}>
-          pick a run →
+          {picksAlpha ? "pick an alpha →" : "pick a run →"}
         </span>
       </Link>
     );

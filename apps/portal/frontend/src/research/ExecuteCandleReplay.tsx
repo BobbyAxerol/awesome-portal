@@ -65,6 +65,46 @@ function words(value: string): string {
   return value.toLowerCase().replace(/_/g, " ");
 }
 
+/**
+ * D11 · the words for QuantBT's `FoldAccountPolicyV1` (the only two values the
+ * server maps to a continuous account). Anything else is the source's own
+ * policy this screen has no sentence for: the headline says so and the raw
+ * code rides in a mono title, never in the headline.
+ */
+const FOLD_CAPITAL_POLICY_WORDS: Record<string, string> = {
+  carry_position: "carried across folds",
+  close_at_boundary: "closed at each fold boundary",
+};
+
+export function foldCapitalPolicyWords(policy: string | null): { text: string; code: string | null; mapped: boolean } {
+  if (policy === null) return { text: "not published", code: null, mapped: false };
+  const known = FOLD_CAPITAL_POLICY_WORDS[policy];
+  return known ? { text: known, code: policy, mapped: true } : { text: "source-defined", code: policy, mapped: false };
+}
+
+/**
+ * A non-negative decimal string as a percentage by moving the decimal point two
+ * places in the text (`0.0005` → `0.05%`): a change of unit, never a rounding.
+ * Anything that is not a plain decimal is `null`, so the caller keeps the raw
+ * string.
+ */
+export function exactPercent(value: string): string | null {
+  const match = /^(\d+)(?:\.(\d+))?$/.exec(value);
+  if (!match) return null;
+  const fraction = (match[2] ?? "").padEnd(2, "0");
+  const whole = `${match[1]}${fraction.slice(0, 2)}`.replace(/^0+(?=\d)/, "");
+  const rest = fraction.slice(2).replace(/0+$/, "");
+  return `${whole}${rest ? `.${rest}` : ""}%`;
+}
+
+/** A price on a chart axis: grouped thousands, two places from 1 up, finer below — the readout's own grouping. */
+export function chartPrice(value: number): string {
+  if (!Number.isFinite(value)) return "";
+  return Math.abs(value) >= 1
+    ? value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+}
+
 /* ------------------------------------------------------------------ parts */
 
 function Exact({ value, unit }: { value: string | null | undefined; unit: "currency" | "fraction" | "count" | null }) {
@@ -207,6 +247,8 @@ function CandleChart({
           grid: { vertLines: { color: pal.lineSoft }, horzLines: { color: pal.lineSoft } },
           timeScale: { timeVisible: true, borderColor: pal.lineSoft },
           rightPriceScale: { borderColor: pal.lineSoft },
+          /* The axis groups thousands like the readout beside it (`66,000.00`, not `66000.00`). */
+          localization: { priceFormatter: chartPrice },
         });
         const candles = api.addSeries(lib.CandlestickSeries, {
           upColor: pal.good, downColor: pal.bad, borderUpColor: pal.good, borderDownColor: pal.bad,
@@ -356,6 +398,7 @@ function FoldStrip({
 }) {
   const activeAt = replay.execution.fold_capital.segments.findIndex((segment) => segment.fold_id === activeFold);
   const capital = replay.execution.fold_capital;
+  const policyWords = foldCapitalPolicyWords(capital.policy);
   const overview = replay.execution.candle_overview;
   /* S08 T17: past a dozen folds the strip is one scrolling, snapping row
      (spec 08 §2.2) that keeps the active fold in view; fewer folds wrap. */
@@ -379,7 +422,6 @@ function FoldStrip({
         >
         {capital.segments.map((segment, position) => {
           const current = segment.fold_id === activeFold;
-          const ret = Number(segment.end_equity) / Number(segment.start_equity) - 1;
           return (
             <span key={segment.fold_id} className={`flex items-center gap-1.5${scrolls ? " flex-none snap-start" : ""}`}>
               {position > 0 ? (
@@ -389,9 +431,9 @@ function FoldStrip({
                   data-fold-boundary={capital.equity_continuity}
                   title={
                     capital.equity_continuity === "CONTINUOUS_ACROSS_FOLDS"
-                      ? `${capital.policy} — one stitched account: fold ${segment.fold_id} starts at fold ${capital.segments[position - 1]!.fold_id}'s end equity and carries its position`
+                      ? `${policyWords.code ?? "policy"} — one stitched account: fold ${segment.fold_id} starts at fold ${capital.segments[position - 1]!.fold_id}'s end equity and carries its position`
                       : capital.equity_continuity === "RESET_PER_FOLD"
-                        ? `${capital.policy} — each fold is its own account; the folds are not compounded`
+                        ? `${policyWords.code ?? "policy"} — each fold is its own account; the folds are not compounded`
                         : "the source did not publish how capital crosses this boundary"
                   }
                 >
@@ -410,14 +452,19 @@ function FoldStrip({
                 data-fold={segment.fold_id}
                 disabled={disabled}
                 onClick={() => onFold(segment)}
-                title={reveal && position >= activeAt ? `fold ${segment.fold_id}: ${segment.bars} bars` : `fold ${segment.fold_id}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity}`}
+                title={
+                  reveal && position >= activeAt
+                    ? `fold ${segment.fold_id}: ${segment.bars} bars`
+                    : `fold ${segment.fold_id}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · fold return not published`
+                }
               >
+                {/* F1 FG 08-06: the server publishes each fold's start and end equity, not a return — the chip shows the served end equity and never divides. */}
                 {foldLabel(segment.fold_id)} · {segment.bars} bars ·{" "}
                 {reveal && position >= activeAt ? (
                   <em data-reveal-hidden>{REVEAL_HIDDEN}</em>
                 ) : (
-                  <span style={{ color: ret < 0 ? "var(--bad)" : ret > 0 ? "var(--good)" : undefined }}>
-                    {formatMetric(ret, "fraction")?.replace(/^-/, "−")}
+                  <span data-fold-end-equity={segment.end_equity}>
+                    end <Exact value={segment.end_equity} unit="currency" />
                   </span>
                 )}
               </button>
@@ -425,8 +472,8 @@ function FoldStrip({
           );
         })}
         </div>
-        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-fold-capital={capital.policy ?? ""}>
-          capital {capital.policy ?? "not published"} · {words(capital.equity_continuity)}
+        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-fold-capital={capital.policy ?? ""} title={policyWords.code ?? undefined}>
+          capital {policyWords.text} · {words(capital.equity_continuity)}
           {capital.account_execution ? ` · ${words(capital.account_execution)}` : ""}
         </span>
       </div>
@@ -1030,14 +1077,16 @@ function CostTimeline({ rows, replay, reveal, transport }: {
   const { index } = useTransport(transport);
   const cut = reveal ? index + 1 : rows.length;
   const charged = rows.slice(0, cut).filter((row) => row.bar?.fee && Number(row.bar.fee) !== 0);
-  const windowFee = charged.reduce((sum, row) => sum + Number(row.bar!.fee), 0);
   const totals = replay.execution.totals;
   const funding = replay.route_capabilities.funding;
   return (
     <Card title="cost timeline" data-panel="cost-timeline" aside={<FactLine label="fees" fact={replay.route_capabilities.fees} name="fees" />}>
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px]">
         <span className="mono" data-cost-window>
-          this window{reveal ? " to the cursor" : ""}: {charged.length} charged bars · fee <Exact value={String(windowFee)} unit="currency" />
+          this window{reveal ? " to the cursor" : ""}: {charged.length} charged bars · fee{" "}
+          <em data-window-fee="NOT_PUBLISHED" title="The server publishes a fee per bar and per fold, not per loaded window; the browser does not add them up.">
+            not published for a window
+          </em>
         </span>
         <span className="mono" data-cost-total={reveal ? "hidden" : "shown"}>
           full run (retrospective): {reveal ? <em>{REVEAL_HIDDEN}</em> : (
@@ -1062,7 +1111,15 @@ function CostTimeline({ rows, replay, reveal, transport }: {
         })}
       </div>
       <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-        One column per bar in the window; a full column is a bar the account paid a fee on. Fee rate {replay.execution.route.fee_rate_oneway ?? "not published"} one way, slippage {replay.execution.route.slippage_bps ?? "not published"} bps.
+        One column per bar in the window; a full column is a bar the account paid a fee on. Fee rate{" "}
+        {replay.execution.route.fee_rate_oneway === null || replay.execution.route.fee_rate_oneway === undefined ? (
+          "not published"
+        ) : (
+          <span className="mono" data-fee-rate={replay.execution.route.fee_rate_oneway} title={`${replay.execution.route.fee_rate_oneway} (exact)`}>
+            {exactPercent(replay.execution.route.fee_rate_oneway) ?? replay.execution.route.fee_rate_oneway}
+          </span>
+        )}{" "}
+        one way, slippage {replay.execution.route.slippage_bps ?? "not published"} bps.
       </span>
     </Card>
   );
@@ -1315,8 +1372,8 @@ export function CandleReplayBody({
           { k: "target transitions", v: reveal ? REVEAL_HIDDEN : String(counts.transitions ?? "—"), sub: "full run · retrospective", hidden: reveal },
           { k: "fees paid", v: reveal ? REVEAL_HIDDEN : (formatMetric(execution.totals.fee, "currency") ?? "not published"), sub: "full run · retrospective", hidden: reveal },
           { k: "rejected orders", v: String(counts.rejected_orders ?? "—"), sub: "engine diagnostics" },
-          { k: "fold capital", v: execution.fold_capital.policy ?? "not published", sub: words(execution.fold_capital.equity_continuity) },
-        ].map((tile) => (
+          { k: "fold capital", v: foldCapitalPolicyWords(execution.fold_capital.policy).text, vTitle: foldCapitalPolicyWords(execution.fold_capital.policy).code, sub: words(execution.fold_capital.equity_continuity) },
+        ].map((tile: { k: string; v: string; sub: string; hidden?: boolean; vTitle?: string | null }) => (
           <div
             key={tile.k}
             className="flex min-w-[150px] flex-1 flex-col gap-0.5 rounded-[6px] border px-3 py-2"
@@ -1324,7 +1381,7 @@ export function CandleReplayBody({
             data-tile={tile.k}
           >
             <span className="text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{tile.k}</span>
-            <span className="mono text-[17px] font-semibold" style={{ fontStyle: tile.hidden ? "italic" : undefined, fontSize: tile.hidden ? 12 : undefined }}>{tile.v}</span>
+            <span className="mono text-[17px] font-semibold" style={{ fontStyle: tile.hidden ? "italic" : undefined, fontSize: tile.hidden ? 12 : undefined }} title={tile.vTitle ?? undefined} data-tile-code={tile.vTitle ?? undefined}>{tile.v}</span>
             <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>{tile.sub}</span>
           </div>
         ))}

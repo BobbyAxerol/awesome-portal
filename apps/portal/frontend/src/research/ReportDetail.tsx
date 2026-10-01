@@ -23,6 +23,8 @@ import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ResearchPanel } from "./ResearchPanel";
+import { researchState, type ResearchState } from "./state";
+import { useRunVisibility, type RunVisibility } from "./useRunVisibility";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import {
   ARTIFACT_LABEL,
@@ -50,7 +52,7 @@ import {
   type ReportEquity,
   type ReportFolds,
 } from "./reportClient";
-import { foldLabel, formatMetric, shortDigest, shortId } from "./researchFormat";
+import { foldLabel, formatMetric, shortDigest } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
 import { equitySvg } from "./reportEquity";
 import { releaseCandidateHref } from "./releaseCandidateClient";
@@ -483,7 +485,7 @@ function NoPrintBar({
   );
 }
 
-function Header({ runId, report }: { runId: string; report: ReportDetail | null }) {
+function Header({ runId, report, phase }: { runId: string; report: ReportDetail | null; phase: "loading" | "not-read" }) {
   const v2 = report ? coreV2(report.frozen_core) : null;
   const failed = report ? coreFailed(report.frozen_core) : null;
   const title = v2?.title.text ?? failed?.title.text ?? REPORT_TITLE;
@@ -507,15 +509,26 @@ function Header({ runId, report }: { runId: string; report: ReportDetail | null 
           </div>
         ) : null}
       </div>
-      <div className="rr-cert" data-cert data-cert-box data-cert-state={v2 ? v2.certification.state : "NOT_A_FIELD"}>
-        <div className="k">certification</div>
-        <div className="rr-absent" style={{ fontSize: 12 }} title={v2 ? CERTIFICATION_NOT_GRADED : CERTIFICATION_ABSENT}>
-          not published
+      {report === null ? (
+        /* F1 (400-trial audit): with no report in hand the box has nothing to describe — it used to say
+           "not published · not a field of the report contract" about a sheet that was never read. */
+        <div className="rr-cert" data-cert data-cert-box data-cert-state="NOT_READ">
+          <div className="k">certification</div>
+          <div className="rr-absent" style={{ fontSize: 12 }} data-cert-unread={phase}>
+            {phase === "loading" ? "reading…" : "not read"}
+          </div>
         </div>
-        <div className="rr-reason" data-reason-code>
-          {v2 ? v2.certification.reason_code : failed ? "no claim — the run did not complete" : "not a field of the report contract"}
+      ) : (
+        <div className="rr-cert" data-cert data-cert-box data-cert-state={v2 ? v2.certification.state : "NOT_A_FIELD"}>
+          <div className="k">certification</div>
+          <div className="rr-absent" style={{ fontSize: 12 }} title={v2 ? CERTIFICATION_NOT_GRADED : CERTIFICATION_ABSENT}>
+            not published
+          </div>
+          <div className="rr-reason" data-reason-code>
+            {v2 ? v2.certification.reason_code : failed ? "no claim — the run did not complete" : "not a field of the report contract"}
+          </div>
         </div>
-      </div>
+      )}
     </header>
   );
 }
@@ -663,11 +676,30 @@ function Metrics({ core }: { core: FrozenCore }) {
 /** Hi-fi legend names. A v1 report publishes no IS account; a v2 one says why when it has none. */
 export const EQUITY_LEGEND_OOS = "Stitched OOS";
 export const EQUITY_LEGEND_IS = "IS account — not published (CG-P18-06)";
-export const EQUITY_LEGEND_IS_PUBLISHED = "IS account";
+/**
+ * F1 / D8 walk. The `equity_is` block a v2 report publishes is scoped
+ * `RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST`: the final account standing
+ * still before the first outer-test window (on the real WFO runs every point
+ * sits at the opening equity). It is not the selected candidate's in-sample
+ * curve — the same sheet's source absences say "in sample account — not
+ * published". The legend therefore says what the points are, in the words
+ * Screen 04's `preOosSplit` uses for the same stretch, so the two statements
+ * on this sheet agree.
+ */
+export const EQUITY_LEGEND_BEFORE_OOS = "Account before the first OOS window";
+/** Kept for importers: the published-IS legend is now the account-before-OOS one. */
+export const EQUITY_LEGEND_IS_PUBLISHED = EQUITY_LEGEND_BEFORE_OOS;
+
+/** The legend for a published `equity_is` block, from its served scope — nothing is assumed beyond it. */
+function equityIsLegend(equityIs: ReportEquity): string {
+  const scope = "scope" in equityIs ? equityIs.scope : null;
+  if (scope === "RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST") return EQUITY_LEGEND_BEFORE_OOS;
+  return scope !== null ? `Equity — ${words(scope)}` : "Equity before OOS — scope not published";
+}
 
 function equityTitle(folds: ReportFolds, withIs: boolean): string {
   /* The hi-fi names the fold count; only a published fold table can say it. */
-  const lead = withIs ? "Equity — IS account vs stitched OOS" : "Equity — stitched OOS";
+  const lead = withIs ? "Equity — account before first OOS window vs stitched OOS" : "Equity — stitched OOS";
   if (folds.state === "AVAILABLE" && folds.rows.length > 0) {
     const handoff = "params_handoff" in folds && folds.params_handoff.scope === "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" ? ", frozen params each" : "";
     return `${lead} (${folds.rows.length} ${folds.rows.length === 1 ? "fold" : "folds"}${handoff})`;
@@ -716,7 +748,7 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
           {equityTitle(folds, withIs)}
         </span>
         <span className="rr-eq-meta" data-equity-counts>
-          {withIs ? `IS ${countLine(equityIs!)} · OOS ` : ""}
+          {withIs ? `before OOS ${countLine(equityIs!)} · OOS ` : ""}
           {countLine(equity)} · sampling {equity.sampling ? words(equity.sampling) : "not published"} · UTC
         </span>
       </figcaption>
@@ -726,7 +758,7 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
             <div className="rr-eq-legend" aria-hidden="true" data-equity-legend>
               <span data-legend="is" data-legend-state={withIs ? "published" : "absent"}>
                 <span className="sw" />
-                {withIs ? EQUITY_LEGEND_IS_PUBLISHED : equityIs ? `IS account — ${factReason(equityIs)}` : EQUITY_LEGEND_IS}
+                {withIs ? equityIsLegend(equityIs!) : equityIs ? `IS account — ${factReason(equityIs)}` : EQUITY_LEGEND_IS}
               </span>
               <span data-legend="oos">
                 <span className="sw" />
@@ -738,7 +770,7 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
                 viewBox={`0 0 ${drawn.width} ${drawn.height}`}
                 preserveAspectRatio="none"
                 role="img"
-                aria-label={`${withIs ? "IS account and stitched OOS" : "Stitched OOS"} equity, ${drawn.drawn} sealed points, with drawdown below`}
+                aria-label={`${withIs ? "Account before the first OOS window and stitched OOS" : "Stitched OOS"} equity, ${drawn.drawn} sealed points, with drawdown below`}
                 data-equity-svg
               >
                 {/* E14 · 9.10: the hi-fi's six-rule grid (VD-P20-27: only the
@@ -1113,12 +1145,19 @@ export function reportEvidenceLink(runId: string, report: ReportDetail | null): 
 }
 
 /**
- * E14 · 9.15 (E1) — the same link, short enough to read on the sheet: the run
- * id and the revision keep their prefix and their first 8 hex, exactly as
- * `ShortId` does. The whole address stays in the anchor's `href` and `title`.
+ * E14 · 9.15, F1 / D2 walk — the printed address is the whole address.
+ *
+ * E1 once printed it shortened (`/runs/rrun_3258a4c4/report?report_revision=
+ * p18r1_649daeca`). A reader who types what the sheet prints — or reads it off
+ * paper — got a 404, because a short id is not an address. The sheet already
+ * wraps its 64-hex digests in full, so the link wraps the same way: what is
+ * printed is exactly the `href`.
  */
 export function reportEvidenceLinkLabel(runId: string, report: ReportDetail): string {
-  return `/research/quantbt/runs/${shortId(runId) ?? runId}/report?report_revision=${shortId(report.report_revision) ?? report.report_revision}`;
+  return (
+    reportEvidenceLink(runId, report) ??
+    `/research/quantbt/runs/${encodeURIComponent(runId)}/report?report_revision=${encodeURIComponent(report.report_revision)}`
+  );
 }
 
 function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; report: ReportDetail | null }) {
@@ -1313,8 +1352,16 @@ function Warnings({ core }: { core: FrozenCore }) {
  * the panel because a 503 is exactly when reading again is the useful action,
  * and the panel offers actions only in available/stale/partial.
  */
-function ReportNotice({ controller, minBodyHeight }: { controller: ReportController; minBodyHeight: number }) {
-  const { state } = controller;
+function ReportNotice({
+  controller,
+  state,
+  minBodyHeight,
+}: {
+  controller: ReportController;
+  /** The state to print: the controller's, or `reportNoticeState`'s refinement of a 404. */
+  state: ResearchState;
+  minBodyHeight: number;
+}) {
   return (
     <div className="no-print flex flex-col gap-1.5" data-report-notice={state.state}>
       <ResearchPanel title="run report" state={state} minBodyHeight={minBodyHeight} />
@@ -1329,6 +1376,44 @@ function ReportNotice({ controller, minBodyHeight }: { controller: ReportControl
   );
 }
 
+/**
+ * F1 / 400-trial audit — what the notice says when the report read answered 404.
+ *
+ * The 404 body is the same for an unknown run, a run that is not the reader's
+ * and an own run with no sealed report, so the answer alone proves nothing
+ * about which (audit F-04: the denial must not confirm a run exists). The
+ * Run Library already tells this reader which runs are theirs; when it lists
+ * this run, "you don't have access" is false and the notice says what the
+ * server did say: no report is sealed. When it does not list the run, or could
+ * not be read, the F-04 sentence stands exactly as before.
+ *
+ * Pure, so a test can hand it each combination.
+ */
+export function reportNoticeState(controller: ReportController, visibility: RunVisibility): ResearchState {
+  const { refusal } = controller;
+  const missing = refusal !== null && refusal.status === 404 && refusal.code === "RESEARCH_REPORT_NOT_FOUND";
+  if (!missing) return controller.state;
+  /* Not yet known which 404 this is: say nothing about access either way. */
+  if (visibility.state === "idle" || visibility.state === "reading") {
+    return researchState({ kind: "in-flight", hasAcceptedResponse: false });
+  }
+  if (visibility.state !== "listed") return controller.state;
+  const live = visibility.status !== null && ["DRAFT", "QUEUED", "RUNNING", "SEALING"].includes(visibility.status);
+  return {
+    state: "empty",
+    reason: "No sealed report is available for this run.",
+    detail: [
+      visibility.status !== null ? `run status ${visibility.status}` : null,
+      `report read answered 404 ${refusal.code}`,
+      refusal.requestId !== null ? `request ${refusal.requestId}` : null,
+    ]
+      .filter((part): part is string => part !== null)
+      .join(" · "),
+    mayRetry: live,
+    retainsContent: false,
+  };
+}
+
 /* ---------------------------------------------------------------- screen */
 
 export interface ReportScreenProps {
@@ -1339,7 +1424,11 @@ export interface ReportScreenProps {
 }
 
 export function ReportScreen({ runId, cursor, controller, exporter }: ReportScreenProps) {
-  const { report, state } = controller;
+  const { report } = controller;
+  /* F1: ask the Run Library which 404 this is — only when the report read answered one. */
+  const reportMissing = controller.refusal !== null && controller.refusal.status === 404 && controller.refusal.code === "RESEARCH_REPORT_NOT_FOUND";
+  const visibility = useRunVisibility(runId, reportMissing);
+  const state = reportNoticeState(controller, visibility);
   /* X2 · spec 09 T06: a failed run's sheet has no claim blocks; it is drawn by its own component. */
   const failed = report ? coreFailed(report.frozen_core) : null;
   const core = report && !failed ? (report.frozen_core as FrozenCore) : null;
@@ -1349,12 +1438,12 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
       <style>{SHEET_CSS}</style>
       <NoPrintBar runId={runId} cursor={cursor} report={report} exporter={exporter} />
       <article className="rr-sheet" aria-label="Run report sheet">
-        <Header runId={runId} report={report} />
+        <Header runId={runId} report={report} phase={state.state === "loading" ? "loading" : "not-read"} />
         {report && failed ? (
           <FailedSheet core={failed} runId={runId} seriesUnavailable={SERIES_UNAVAILABLE} />
         ) : report && core ? (
           <>
-            {state.state !== "available" ? <ReportNotice controller={controller} minBodyHeight={0} /> : null}
+            {state.state !== "available" ? <ReportNotice controller={controller} state={state} minBodyHeight={0} /> : null}
             <Passport core={core} />
             <div className="rr-idrow rr-keep">
               <Identity core={core} />
@@ -1375,7 +1464,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
             </div>
           </>
         ) : (
-          <ReportNotice controller={controller} minBodyHeight={160} />
+          <ReportNotice controller={controller} state={state} minBodyHeight={160} />
         )}
         <Footer runId={runId} report={report} />
       </article>

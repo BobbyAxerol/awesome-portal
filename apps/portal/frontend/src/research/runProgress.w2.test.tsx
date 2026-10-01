@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { act, cleanup, render, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DENIED_HOLDOUT_NOTE, RATE_NOT_PUBLISHED, RunProgress } from "./RunProgress";
+import { DENIED_HOLDOUT_NOTE, RunProgress } from "./RunProgress";
 import { classifyFrame, type ProgressRead, type ProgressSnapshot } from "./progressClient";
 import { patchSnapshot, useRunProgress } from "./useRunProgress";
 import { researchState } from "./state";
@@ -72,6 +72,7 @@ function read(overrides: Partial<ProgressRead> = {}, snap: Partial<ProgressSnaps
       requested_spec_digest: "e".repeat(64),
       created_at_utc_ms: 1789836572000,
       declared_folds: { state: "DECLARED", count: 2, reason_code: null },
+      planned_folds: { state: "NOT_PUBLISHED", folds: [], reason_code: null },
     },
     queue: { queue_class: "HEAVY", queued_at_utc_ms: 1789836572000, retry_not_before_utc_ms: null },
     attempts: [],
@@ -148,7 +149,9 @@ describe("CG-P11-03 — fold selection, hand-off cursor, declared folds", () => 
     view(read());
     expect($("[data-study]").textContent).toBe("study global — scores all 2 folds");
     expect($("[data-eta]").textContent).toBe("eta 5s");
-    expect($("[data-rate] [data-not-published]").getAttribute("title")).toBe(RATE_NOT_PUBLISHED);
+    /* CG-P10-04: no rate field is published, so the cell is a short absence — no invented sentence. */
+    expect($("[data-rate]").textContent).toBe("rate not published");
+    expect($("[data-rate] [data-not-published]").getAttribute("title")).toBeNull();
     expect($('[data-research-panel="folds"]').textContent).toContain("0 of 2 folds reported");
     // A global study opens no fold row: nothing is drawn running.
     expect(document.querySelectorAll("[data-fold-row]")).toHaveLength(0);

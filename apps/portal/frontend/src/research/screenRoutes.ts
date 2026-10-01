@@ -148,9 +148,43 @@ export function needsAlphaToOpen(targetKey: string): boolean {
   );
 }
 
-/** `/research/quantbt/runs?to=<key>` — the Run Library as a run picker (D2). */
-export function pickRunHref(targetKey: string): string {
-  return `${QUANTBT_ROOT}/runs?to=${encodeURIComponent(targetKey)}`;
+/** What a served journey card says it needs in hand before it can open. */
+export type JourneyCardScope = "RUN" | "ALPHA" | "NONE";
+
+/**
+ * The scope the SERVER declares for a card (CG-S00-AV-01, 2_wiring S00).
+ *
+ * `requires_run` and `requires_alpha` are served facts. This build's route
+ * tables only say *how* a key opens once its context is known; they do not
+ * decide which context a card needs. A card that needs a run is a run picker
+ * even if its screen would also open bare (Compare); a card that needs an
+ * alpha is not a run picker (Alpha version). A run-scoped card wins when both
+ * flags are set: a run's own binding names the alpha as well.
+ *
+ * A descriptor older than revision 4 does not serve `requires_alpha`; absence
+ * is read as "not declared", never as a guess from the key.
+ */
+export function journeyCardScope(card: { requires_run: boolean; requires_alpha?: boolean }): JourneyCardScope {
+  if (card.requires_run) return "RUN";
+  if (card.requires_alpha === true) return "ALPHA";
+  return "NONE";
+}
+
+/** Whether a run id alone opens this key (the per-run screens). */
+export function opensWithRunId(targetKey: string): boolean {
+  return targetKey in RUN_SCREEN_SUFFIX;
+}
+
+/**
+ * `/research/quantbt/runs?to=<key>` — the Run Library as the picker (D2).
+ *
+ * An alpha-scoped card opens it grouped by Alpha, because the Library is the
+ * one surface that holds an alpha binding (alpha id + version) per row and no
+ * alpha index exists in this build.
+ */
+export function pickRunHref(targetKey: string, scope: JourneyCardScope = "RUN"): string {
+  const base = `${QUANTBT_ROOT}/runs?to=${encodeURIComponent(targetKey)}`;
+  return scope === "ALPHA" ? `${base}&group=1` : base;
 }
 
 /** Every key this build can reach, for tests and for the journey composition. */

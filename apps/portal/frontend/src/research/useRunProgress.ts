@@ -403,7 +403,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
       return;
     }
 
-    const stream = new EventSource(progressApi.streamUrl(runId, appliedSeq.current || null), {
+    const stream = new EventSource(progressApi.streamUrl(runId, appliedSeq.current || null, workspaceId), {
       withCredentials: true,
     });
     source.current = stream;
@@ -450,7 +450,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
       stream.close();
       if (source.current === stream) source.current = null;
     };
-  }, [applyEvent, closeStream, live, refresh, runId, visible]);
+  }, [applyEvent, closeStream, live, refresh, runId, visible, workspaceId]);
 
   /* Visibility: a tab hidden for a minute gives its stream up; coming back
      reads a snapshot and reopens it. Closing at once and never reopening froze
@@ -534,13 +534,13 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     const after = Math.max(0, retention_floor_sequence - 1, latest_sequence - CONSOLE_WINDOW);
     setOldestAfter(after);
     void progressApi
-      .console(runId, after, controller.signal)
+      .console(runId, after, workspaceId, controller.signal)
       .then((page) => appendLines(page.lines))
       .catch((error: unknown) => {
         if (!controller.signal.aborted) fail(error);
       });
     return () => controller.abort();
-  }, [appendLines, consoleAvailable, fail, runId]);
+  }, [appendLines, consoleAvailable, fail, runId, workspaceId]);
 
   const loadOlder = useCallback(() => {
     const floor = read?.progress?.retention_floor_sequence ?? 0;
@@ -549,7 +549,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     const after = Math.max(0, floor - 1, oldest - CONSOLE_WINDOW - 1);
     setOldestAfter((previous) => (previous === null ? after : Math.min(previous, after)));
     progressApi
-      .console(runId, after)
+      .console(runId, after, workspaceId)
       .then((page) => {
         const earlier = page.lines.filter((line) => line.sequence < oldest);
         setOlderLines((previous) => {
@@ -558,7 +558,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
         });
       })
       .catch(fail);
-  }, [fail, olderLines, read, runId]);
+  }, [fail, olderLines, read, runId, workspaceId]);
 
   /* Nothing older exists once the view has read from the retention floor. */
   const floorSequence = read?.progress?.retention_floor_sequence ?? 0;

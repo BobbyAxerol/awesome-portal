@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Link } from "react-router-dom";
 
 import { Formula } from "./Formula";
+import type { AtlasResponse } from "./foundationClient";
 import { encodeInspectionCursor } from "./inspectionCursor";
 import {
   ENGINE_SCHEDULES,
@@ -45,6 +46,9 @@ import {
 import { ResearchPanel } from "./ResearchPanel";
 import { claimToken, groupDecimalString, shortId } from "./researchFormat";
 import type { ResearchState } from "./state";
+
+/** The identity a HISTORICAL atlas response serves in place of the document (CG-FG-S12-01). */
+export type AtlasHistoricalIdentity = NonNullable<AtlasResponse["historical_identity"]>;
 
 export const ATLAS_TABS = ["modes", "routes", "claims"] as const;
 export type AtlasTab = (typeof ATLAS_TABS)[number];
@@ -1258,6 +1262,46 @@ export function atlasHash(location: AtlasLocation): string {
   return `#${params.toString()}`;
 }
 
+/**
+ * CG-FG-S12-01: the body of a response that carries no atlas document.
+ *
+ * An `atlas: null` read used to leave an empty panel that said "available"
+ * about nothing. A historical release now says why, in the server's words: the
+ * `facts_state` code and its own `facts_reason`. A response with neither a
+ * document nor a served identity is an absence with no reason, because none
+ * was served.
+ */
+function AtlasFactsAbsent({
+  kind,
+  identity,
+}: {
+  kind: "CURRENT" | "HISTORICAL" | null;
+  identity: AtlasHistoricalIdentity | null;
+}) {
+  const what = kind === "HISTORICAL" ? "route, mode and claim facts" : "atlas";
+  return (
+    <div
+      className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px]"
+      style={{ color: "var(--ink-soft)" }}
+      role="status"
+      data-atlas-facts-absent={identity?.facts_state ?? "NOT_PUBLISHED"}
+    >
+      {/* With a served state the code says it; without one, the words must. */}
+      <span>{identity ? `${what} —` : `${what} — not published`}</span>
+      {identity ? (
+        <>
+          <span className="mono text-[9px] font-bold uppercase tracking-[.06em]" data-facts-state>
+            {identity.facts_state}
+          </span>
+          <span className="text-[10.5px] leading-[1.55]" data-facts-reason>
+            {identity.facts_reason}
+          </span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------------------
  * Screen
  * ---------------------------------------------------------------------- */
@@ -1284,6 +1328,13 @@ export interface EngineAtlasProps {
    */
   selectedReleaseId?: string | null;
   selectedReleaseKind?: "CURRENT" | "HISTORICAL" | null;
+  /**
+   * CG-FG-S12-01: the identity a HISTORICAL response serves in place of the
+   * atlas (`atlas: null`). It is the only fact the server publishes for such a
+   * release, so it is drawn as served — package, version, status and the
+   * server's own `facts_state` / `facts_reason` — never reworded here.
+   */
+  historicalIdentity?: AtlasHistoricalIdentity | null;
   /** RF02-F1: the rest of the hash — mode, schedule, route and the run it came from. */
   location?: Omit<AtlasLocation, "tab">;
   onLocationChange?: (change: Partial<Omit<AtlasLocation, "tab">>) => void;
@@ -1300,6 +1351,7 @@ export function EngineAtlas({
   onTabChange,
   selectedReleaseId = null,
   selectedReleaseKind = null,
+  historicalIdentity = null,
   location = { mode: null, schedule: null, route: null, run: null },
   onLocationChange,
   runCell,
@@ -1400,16 +1452,19 @@ export function EngineAtlas({
               </span>
             ))}
             </span>
-            {/* A retained historical identity is not a promise that it runs,
-                so the kind is stated rather than left to the version string.
-                It keeps its own line: a warning is not a chip. */}
-            {selectedReleaseKind === "HISTORICAL" ? (
+            {/* CG-FG-S12-01: a historical selection states the identity the
+                server served for it, in the server's own vocabulary. The old
+                hard-coded "not installed and cannot run" was a claim the
+                response never made. It keeps its own line: a warning is not a chip. */}
+            {selectedReleaseKind === "HISTORICAL" && historicalIdentity ? (
               <span
-                className="text-[10px]"
+                className="mono text-[10px]"
                 style={{ color: "var(--role-holdout)" }}
                 data-historical-note
+                data-historical-identity={historicalIdentity.release_id}
+                data-historical-status={historicalIdentity.status}
               >
-                Historical identity retained — this release is not installed and cannot run.
+                {historicalIdentity.package} {historicalIdentity.version} · {historicalIdentity.status}
               </span>
             ) : null}
             {location.run ? (
@@ -1478,6 +1533,9 @@ export function EngineAtlas({
         state={state}
         minBodyHeight={160}
       >
+        {!doc && state.state === "available" ? (
+          <AtlasFactsAbsent kind={selectedReleaseKind} identity={historicalIdentity} />
+        ) : null}
         {doc ? (
           <div role="tabpanel" aria-label={TAB_LABEL[tab]}>
             {tab === "routes" ? (

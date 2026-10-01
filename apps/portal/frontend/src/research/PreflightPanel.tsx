@@ -359,8 +359,28 @@ function SealedHoldoutCard({
 
 const VERDICT_COLOR: Record<string, string> = { PASS: "var(--good)", WATCH: "var(--accent-2)", CRITICAL: "var(--bad)" };
 
+/**
+ * One numeric cell of the gap scan. A count the server did not publish is
+ * a typed absence, never a `0` — a window that "misses 0 bars" and a window
+ * whose missing-bar count is unknown are different facts.
+ */
+function GapCount({ value, field }: { value: number | null | undefined; field: string }) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return (
+      <td className="py-[2px] pr-2 text-right text-[9px] italic" style={{ color: "var(--ink-faint)" }} data-gap-absent={field}>
+        not published
+      </td>
+    );
+  }
+  return (
+    <td className="mono py-[2px] pr-2 text-right" data-gap-count={field}>
+      {groupDigits(value)}
+    </td>
+  );
+}
+
 /** Per-window gap scan of the sealed snapshot (timestamps only, never prices). */
-function GapScanBlock({ scan }: { scan: NonNullable<Snapshot["gap_scan"]> }) {
+export function GapScanBlock({ scan }: { scan: NonNullable<Snapshot["gap_scan"]> }) {
   if (scan.state === "NOT_PUBLISHED") {
     return (
       <p className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-gap-scan="NOT_PUBLISHED">
@@ -378,11 +398,12 @@ function GapScanBlock({ scan }: { scan: NonNullable<Snapshot["gap_scan"]> }) {
         {scanned.length} windows · {critical} critical · {watch} watch
       </span>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[480px] text-[10px]">
+        <table className="w-full min-w-[540px] text-[10px]">
           <thead>
             <tr className="mono text-[8.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
               <th className="pr-2 text-left font-normal">window</th>
               <th className="pr-2 text-right font-normal">bars</th>
+              <th className="pr-2 text-right font-normal">expected</th>
               <th className="pr-2 text-right font-normal">missing</th>
               <th className="pr-2 text-right font-normal">gap runs</th>
               <th className="text-left font-normal">verdict</th>
@@ -393,14 +414,19 @@ function GapScanBlock({ scan }: { scan: NonNullable<Snapshot["gap_scan"]> }) {
               <tr key={window.window} className="border-t" style={{ borderColor: "var(--line-soft)" }} data-gap-window={window.window} data-gap-verdict={window.verdict ?? window.state}>
                 <td className="mono py-[2px] pr-2">{window.window}</td>
                 {window.state === "SEALED" ? (
-                  <td colSpan={4} className="py-[2px] italic" style={{ color: "var(--ink-faint)" }}>{window.note}</td>
+                  <td colSpan={5} className="py-[2px] italic" style={{ color: "var(--ink-faint)" }}>{window.note}</td>
                 ) : (
                   <>
-                    <td className="mono py-[2px] pr-2 text-right">{groupDigits(window.bars ?? 0)}</td>
-                    <td className="mono py-[2px] pr-2 text-right">{groupDigits(window.missing_bars ?? 0)}</td>
-                    <td className="mono py-[2px] pr-2 text-right">{groupDigits(window.gap_runs ?? 0)}</td>
+                    <GapCount value={window.bars} field="bars" />
+                    <GapCount value={window.expected_bars} field="expected_bars" />
+                    <GapCount value={window.missing_bars} field="missing_bars" />
+                    <GapCount value={window.gap_runs} field="gap_runs" />
                     <td className="py-[2px]">
-                      <span className="mono text-[9px] font-bold" style={{ color: VERDICT_COLOR[window.verdict ?? ""] ?? "var(--ink-soft)" }}>{window.verdict}</span>
+                      {window.verdict ? (
+                        <span className="mono text-[9px] font-bold" style={{ color: VERDICT_COLOR[window.verdict] ?? "var(--ink-soft)" }}>{window.verdict}</span>
+                      ) : (
+                        <span className="text-[9px] italic" style={{ color: "var(--ink-faint)" }} data-gap-absent="verdict">verdict not published</span>
+                      )}
                       {window.items.length > 0 ? (
                         <span className="mono ml-2 text-[9px]" style={{ color: "var(--ink-faint)" }}>
                           {window.items.map((item) => `${formatUtc(item.start_utc_ms)} · ${item.missing_bars} bar${item.missing_bars === 1 ? "" : "s"}`).join(" / ")}

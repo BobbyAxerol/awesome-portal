@@ -538,9 +538,12 @@ describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P
     expect(face.title).toMatch(/^rc_0123456789abcdef0123 —/);
   });
 
-  it("reserves no chip when no candidate exists, and says why in words", () => {
+  it("reserves no chip when no candidate exists; the typed absence says why in words (2_wiring S01)", () => {
     view([item()]);
     expect(document.querySelector("[data-rc]")).toBeNull();
+    const absent = card(item().run_id).querySelector("[data-withheld][data-reason-code='P21_NO_PERSISTED_RELEASE_CANDIDATE']") as HTMLElement;
+    expect(absent.textContent).toBe("rc — not published");
+    expect(absent.getAttribute("title")).toBe("No release candidate has been composed from this run.");
     expect(reasonSentence({ state: "NOT_PUBLISHED", reason_code: "P21_NO_PERSISTED_RELEASE_CANDIDATE" })).toBe(
       "No release candidate has been composed from this run.",
     );

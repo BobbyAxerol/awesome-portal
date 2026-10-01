@@ -12,7 +12,7 @@ import { act, cleanup, fireEvent, render, renderHook, waitFor } from "@testing-l
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { WhatIfCard, signedDecimal } from "./WhatIfCard";
+import { WhatIfCard, enumWords, shownDecimal, shownSignedDecimal, signedDecimal } from "./WhatIfCard";
 import type { WhatIf, WhatIfCell } from "./freezeClient";
 import { useFreeze } from "./useFreeze";
 
@@ -107,20 +107,22 @@ function renderCard(props: Partial<Parameters<typeof WhatIfCard>[0]> = {}) {
 }
 
 describe("A10c WhatIfCard — the preview reads the server's node, never a formula", () => {
-  it("T07/P16-T06: the ΔJ₁ preview is the cell's exact string; θ* starts at 0", () => {
+  it("T07/P16-T06: the ΔJ₁ preview is the cell's own value, shown to 6 digits with the exact string in title; θ* starts at 0", () => {
     const { container } = renderCard();
     expect(container.querySelector("[data-delta-j]")?.textContent).toBe("ΔJ₁ 0");
     const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
-    fireEvent.change(rvol!, { target: { value: "6" } });
+    fireEvent.change(rvol!, { target: { value: RVOL[6]! } });
     expect(container.querySelector("[data-preview]")?.getAttribute("data-cell")).toBe("x6y4");
-    expect(container.querySelector("[data-delta-j]")?.textContent).toBe("ΔJ₁ −0.6564691879264798");
+    expect(container.querySelector("[data-delta-j]")?.textContent).toBe("ΔJ₁ −0.656469");
+    expect(container.querySelector("[data-delta-j]")?.getAttribute("title")).toBe("ΔJ₁ −0.6564691879264798 (exact)");
+    expect(container.querySelector("[data-delta-j]")?.getAttribute("data-delta-j")).toBe("-0.6564691879264798");
     expect(container.querySelector("[data-cell-source='PARENT_TRIAL']")).not.toBeNull();
   });
 
   it("P16-T12: a missing node prints a word, never 0 or an interpolated number", () => {
     const { container } = renderCard();
     const [, sl] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
-    fireEvent.change(sl!, { target: { value: "5" } });
+    fireEvent.change(sl!, { target: { value: SL[5]! } });
     const preview = container.querySelector("[data-preview]");
     expect(preview?.getAttribute("data-preview")).toBe("MISSING");
     expect(preview?.textContent).toContain("not evaluated");
@@ -130,7 +132,7 @@ describe("A10c WhatIfCard — the preview reads the server's node, never a formu
   it("T08: a clamped node says ≈ and names the evaluation it shares", () => {
     const { container } = renderCard();
     const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
-    fireEvent.change(rvol!, { target: { value: "0" } });
+    fireEvent.keyDown(rvol!, { key: "Home" });
     expect(container.querySelector("[data-slider-value='rvol']")?.textContent).toContain("≈ 1");
     expect(container.querySelector("[data-cell-clamped]")?.textContent).toContain("same evaluation as x2y4");
   });
@@ -139,9 +141,9 @@ describe("A10c WhatIfCard — the preview reads the server's node, never a formu
     const { container } = renderCard();
     const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
     expect(rvol?.getAttribute("aria-valuetext")).toBe("1.2 (ΔJ 0)");
-    fireEvent.change(rvol!, { target: { value: "6" } });
+    fireEvent.change(rvol!, { target: { value: RVOL[6]! } });
     expect(container.querySelectorAll<HTMLInputElement>("input[type='range']")[0]?.getAttribute("aria-valuetext"))
-      .toBe("1.4 (ΔJ −0.6564691879264798)");
+      .toBe("1.4 (ΔJ −0.656469)");
     expect(container.querySelector("[data-preview]")?.getAttribute("role")).toBe("status");
   });
 
@@ -149,7 +151,7 @@ describe("A10c WhatIfCard — the preview reads the server's node, never a formu
     const { container } = renderCard();
     expect(container.querySelector("[data-preview-badge]")?.getAttribute("data-motion")).toBeNull();
     const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
-    fireEvent.change(rvol!, { target: { value: "5" } });
+    fireEvent.change(rvol!, { target: { value: RVOL[5]! } });
     expect(container.querySelector("[data-preview-badge]")?.getAttribute("data-motion")).toBe("blink-once");
   });
 
@@ -165,7 +167,7 @@ describe("A10c WhatIfCard — actions", () => {
   it("P16-T13: 'evaluate grid' hands the grid key to the one explicit action; sliders never do", () => {
     const { container, onEvaluate } = renderCard();
     for (const input of container.querySelectorAll<HTMLInputElement>("input[type='range']")) {
-      fireEvent.change(input, { target: { value: "7" } });
+      fireEvent.change(input, { target: { value: input.max } });
     }
     expect(onEvaluate).not.toHaveBeenCalled();
     const button = container.querySelector<HTMLButtonElement>("[data-action='evaluate-grid']");
@@ -181,7 +183,7 @@ describe("A10c WhatIfCard — actions", () => {
     expect(sibling()?.disabled).toBe(true);
     expect(sibling()?.getAttribute("title")).toContain("move a slider first");
     const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
-    fireEvent.change(rvol!, { target: { value: "6" } });
+    fireEvent.change(rvol!, { target: { value: RVOL[6]! } });
     fireEvent.click(sibling()!);
     expect(container.querySelector("[data-location]")?.textContent).toBe("/research/quantbt/runs/new?from=rrun_parent&fork=x6y4");
   });
@@ -268,5 +270,116 @@ describe("A10c useFreeze.runEvaluate — one POST, from one click", () => {
     await waitFor(() => expect(requests.filter((entry) => entry.url.includes("/current-source/freeze") && entry.method === "GET").length).toBeGreaterThanOrEqual(2));
     const reread = requests.filter((entry) => entry.url.includes("/current-source/freeze") && entry.method === "GET").at(-1);
     expect(reread?.headers["if-none-match"]).toBe("\"rs02_freeze_a\"");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * F1 (2026-10-01) · D7 walk — the card prints no raw float, no invented
+ * parameter name, and its slider track is the labelled range.
+ * ---------------------------------------------------------------------- */
+
+describe("F1 · D7 — what-if honesty", () => {
+  it("J₁ and base are shown to 6 digits, the exact decimals ride in the title, no 16-digit float on the face", () => {
+    const { container } = renderCard();
+    const line = container.querySelector("[data-objective]") as HTMLElement;
+    expect(line.textContent).toBe("J₁ −1.44353 · base −1.44353");
+    expect(line.getAttribute("title")).toBe("J₁ -1.4435308120735202 · base -1.4435308120735202 (exact)");
+    expect(container.querySelector("[data-preview]")?.textContent).not.toMatch(/\d\.\d{7,}/);
+    expect(container.querySelector("[data-heatmap]")?.textContent).not.toMatch(/\d\.\d{7,}/);
+    const heat = container.querySelector("[data-heat-cell='x6y4']") as HTMLElement;
+    expect(heat.getAttribute("title")).toContain("ΔJ −0.656469");
+    expect(heat.getAttribute("title")).not.toContain("0.6564691879264798");
+  });
+
+  it("sliders are named by the served parameter alone — no HiFi placeholder anywhere", () => {
+    const { container } = renderCard();
+    expect(container.querySelector("[data-slider='rvol']")?.textContent).toContain("rvol");
+    expect(container.querySelector("[data-slider='slpercent']")?.textContent).toContain("slpercent");
+    expect(container.textContent).not.toMatch(/entry_z|atr_mult/);
+    for (const input of container.querySelectorAll("input[type='range']")) {
+      expect(input.getAttribute("aria-label")).not.toMatch(/entry_z|atr_mult/);
+    }
+    expect(container.querySelector("[data-heatmap]")?.textContent).toContain("9 × 9 · slpercent ↑ · rvol →");
+  });
+
+  it("a card with no served slider names no parameter at all (inert and a served-but-unavailable body)", () => {
+    const inert = renderCard({ whatIf: null, inert: { state: "NOT_APPLICABLE", reason_code: "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF_GRID" } });
+    expect(inert.container.textContent).not.toMatch(/rvol|slpercent|entry_z|atr_mult/);
+    expect(inert.container.querySelectorAll("input[type='range']")).toHaveLength(2);
+    inert.unmount();
+    const dark = renderCard({ whatIf: whatIf({ state: "NOT_ENABLED", reason_code: "P16_WHATIF_NOT_ENABLED", sliders: [], grid: null, coverage: null }) });
+    expect(dark.container.textContent).not.toMatch(/rvol|slpercent|entry_z|atr_mult/);
+    expect(dark.container.querySelectorAll<HTMLInputElement>("input[type='range']")).toHaveLength(2);
+  });
+
+  it("the track IS the labelled range: min/max are the end labels and the thumb sits at the node's value", () => {
+    const { container } = renderCard();
+    const [rvol, sl] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
+    expect(rvol!.getAttribute("data-slider-track")).toBe("value");
+    expect(rvol!.min).toBe(RVOL[0]);
+    expect(rvol!.max).toBe(RVOL[8]);
+    expect(Number(rvol!.value)).toBe(Number(RVOL[4]));
+    expect(sl!.min).toBe(SL[0]);
+    expect(sl!.max).toBe(SL[8]);
+    const ends = container.querySelector("[data-slider='rvol'] .justify-between:last-child")!.textContent!;
+    expect(ends.startsWith(RVOL[0]!)).toBe(true);
+    expect(ends.endsWith(RVOL[8]!)).toBe(true);
+    /* θ* = 1.2 on a 1 → 1.6 track is a third of the way, not the middle. */
+    const share = (Number(rvol!.value) - Number(rvol!.min)) / (Number(rvol!.max) - Number(rvol!.min));
+    expect(share).toBeCloseTo(1 / 3, 5);
+  });
+
+  it("a drag snaps to the nearest served node; clamped duplicates resolve to the one nearest the thumb", () => {
+    const { container } = renderCard();
+    const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
+    fireEvent.change(rvol!, { target: { value: "1.33" } });
+    expect(container.querySelector("[data-preview]")?.getAttribute("data-cell")).toBe("x5y4");
+    fireEvent.change(rvol!, { target: { value: "1.0" } });
+    expect(container.querySelector("[data-preview]")?.getAttribute("data-cell")).toBe("x2y4");
+  });
+
+  it("arrow keys walk the nodes, Home/End jump to the ends, and nothing leaves 0..8", () => {
+    const { container } = renderCard();
+    const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
+    fireEvent.keyDown(rvol!, { key: "ArrowRight" });
+    expect(container.querySelector("[data-preview]")?.getAttribute("data-cell")).toBe("x5y4");
+    fireEvent.keyDown(rvol!, { key: "ArrowLeft" });
+    fireEvent.keyDown(rvol!, { key: "ArrowLeft" });
+    expect(container.querySelector("[data-preview]")?.getAttribute("data-cell")).toBe("x3y4");
+    fireEvent.keyDown(rvol!, { key: "End" });
+    fireEvent.keyDown(rvol!, { key: "ArrowRight" });
+    expect(container.querySelector("[data-preview]")?.getAttribute("data-cell")).toBe("x8y4");
+    fireEvent.keyDown(rvol!, { key: "Home" });
+    fireEvent.keyDown(rvol!, { key: "ArrowLeft" });
+    expect(container.querySelector("[data-preview]")?.getAttribute("data-cell")).toBe("x0y4");
+  });
+
+  it("an unusable node set falls back to the node-index track instead of drawing a wrong one", () => {
+    const base = whatIf({}, EVALUATED);
+    const broken = { ...base, sliders: [{ ...base.sliders[0]!, values: base.sliders[0]!.values.map(() => "1") }, base.sliders[1]!] } as WhatIf;
+    const { container } = renderCard({ whatIf: broken });
+    const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
+    expect(rvol!.getAttribute("data-slider-track")).toBe("node");
+    expect(rvol!.max).toBe("8");
+  });
+
+  it("the objective scope reads as words without turning 'IS' into a verb; the raw code is the title", () => {
+    const { container } = renderCard();
+    const definition = container.querySelector("[data-what-if-definition]") as HTMLElement;
+    expect(definition.textContent).toContain("mode 1 decay J · global study · IS folds");
+    expect(definition.textContent).not.toMatch(/over the|is folds/);
+    expect(definition.querySelector("[data-objective-scope]")?.getAttribute("title")).toBe("GLOBAL_STUDY_IS_FOLDS");
+    expect(definition.querySelector("[data-objective-kind]")?.getAttribute("title")).toBe("MODE_1_DECAY_J");
+  });
+
+  it("shownDecimal / enumWords: no zero for a non-number, abbreviations stay capitals", () => {
+    expect(shownDecimal("-1.4435308120735202")).toBe("−1.44353");
+    expect(shownDecimal("0")).toBe("0");
+    expect(shownDecimal("not-a-number")).toBe("not-a-number");
+    expect(shownSignedDecimal("0.041")).toBe("+0.041");
+    expect(shownSignedDecimal("-0.087")).toBe("−0.087");
+    expect(shownSignedDecimal("0")).toBe("0");
+    expect(enumWords("GLOBAL_STUDY_IS_FOLDS")).toBe("global study · IS folds");
+    expect(enumWords("PER_FOLD_OOS_SCORE")).toBe("per fold OOS score");
   });
 });

@@ -21,6 +21,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ATTEMPTS_RULE,
+  ATTEMPTS_RULE_BASE,
   CLAIM_SENTENCE,
   scopeWords,
   COMPARE_PANELS,
@@ -400,7 +401,8 @@ describe("S13 Compare — reads and order", () => {
     expect(document.querySelector("[data-ladder-order]")?.getAttribute("data-ladder-order")).toBe("server-reversed");
     const arrows = Array.from(document.querySelectorAll("[data-ladder-arrow]"));
     expect(arrows).toHaveLength(1);
-    expect(arrows.map((el) => el.textContent?.trim())).toEqual(["claim ↑ →"]);
+    /* F1: both ladder cards carry rank 3, so the connector says "same claim →" — never "claim ↑ →". */
+    expect(arrows.map((el) => el.textContent?.trim())).toEqual(["same claim →"]);
     const folded = document.querySelector("[data-unclaimed]") as HTMLElement;
     expect(folded.getAttribute("data-unclaimed")).toBe("1");
     expect(folded.querySelector("[data-unclaimed-run]")).toBeNull();
@@ -444,7 +446,9 @@ describe("S13 Compare — reads and order", () => {
     expect(panel("fold-chart")?.querySelector("[data-fold-chart-absent]")?.textContent).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
     expect(document.querySelector("[data-ladder-header]")?.textContent).toBe(LADDER_HEADER);
     expect(document.querySelector("[data-trajectory-text]")?.textContent).toBe(TRAJECTORY.text);
-    expect(panel("rule")?.textContent).toContain(ATTEMPTS_RULE);
+    /* One claimed attempt: no step, so no "strengthens at every step" sentence (F1). */
+    expect(panel("rule")?.textContent).toContain(ATTEMPTS_RULE_BASE);
+    expect(panel("rule")?.textContent).not.toContain("strengthens at every step");
     expect(panel("rules")?.textContent).toContain(COMPARE_RULES);
     expect(panel("diff")?.textContent).toContain("P20_CONFIG_DIFF_NEEDS_TWO_ATTEMPTS");
   });
@@ -1032,7 +1036,7 @@ describe("S13 Compare — X3 decisions and debt", () => {
     const heads = Array.from(document.querySelectorAll(".cp-difftable thead th")).map((el) => el.textContent);
     expect(heads).toEqual(["key", ...[...body.result.attempts].reverse().map((item) => item.attempt_id)]);
     const active = body.result.attempts.find((item) => item.alpha_version_lifecycle.value === "ACTIVE")!;
-    expect(document.querySelector("[data-config-diff-legend]")?.textContent).toBe(`gold = differs from ACTIVE ${active.attempt_id}`);
+    expect(document.querySelector("[data-config-diff-legend]")?.textContent).toBe(`gold = differs from ${active.attempt_id} · baseline picked by this screen`);
     for (const path of body.result.config_diff.paths) {
       const reference = path.values.find((entry) => entry.run_id === active.run_id)?.value ?? null;
       for (const entry of path.values) {
@@ -1157,9 +1161,9 @@ describe("S13 Compare — ladder arrows between cards, never after one", () => {
   ];
 
   /** `count` claimed attempts in the server's order, claim families deliberately unsorted. */
-  function claimedRuns(count: number): CompareRun[] {
+  function claimedRuns(count: number, claims: ReadonlyArray<Pick<CompareRun["claim"], "family" | "rank">> = CLAIMS): CompareRun[] {
     return Array.from({ length: count }, (_, index) => {
-      const claim = CLAIMS[index % CLAIMS.length]!;
+      const claim = claims[index % claims.length]!;
       return run(`run_${String(index + 1).padStart(2, "0")}`, {
         claim: { ...run("x").claim, family: claim.family, rank: claim.rank },
       });
@@ -1200,7 +1204,8 @@ describe("S13 Compare — ladder arrows between cards, never after one", () => {
   });
 
   it("two claimed attempts are joined by one claim arrow that leads the second card, outside either card's text", async () => {
-    const { ladder, steps, arrows } = await renderLadder(claimedRuns(2));
+    /* The server orders strongest first (CLAIM_RANK_ASC…); the ladder lays it out reversed, so run_02 (rank 3) then run_01 (rank 1) is a real strengthening step. */
+    const { ladder, steps, arrows } = await renderLadder(claimedRuns(2, [CLAIMS[1]!, CLAIMS[0]!]));
     expect(steps).toHaveLength(2);
     expect(arrows).toHaveLength(1);
     expectArrowsLeadTheirCards(ladder, steps, arrows);

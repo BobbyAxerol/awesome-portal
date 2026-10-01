@@ -14,7 +14,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  ACTIVATION_NOT_ADMITTED,
+  ACTIVATION_NOT_PERMITTED,
   AlphaImport,
   DRAFT_NOTE,
   FAIL_CLOSED_NOTE,
@@ -800,9 +800,11 @@ describe("RF-04 FE-S14-07 — no write is posted twice, and a refusal sits by it
     if (!refusal.mayRetry) expect(action("activate").disabled).toBe(true);
   });
 
-  it("says why Activate is absent for an account that may not activate", () => {
+  it("says Activate is not permitted, without naming a cause the server did not serve", () => {
     render(<AlphaImport {...props({ registration: registration({ may_activate: false }), registerState: OK })} />);
-    expect(screen.getByText(ACTIVATION_NOT_ADMITTED)).toBeTruthy();
+    const line = document.querySelector("[data-activation-not-admitted]") as HTMLElement;
+    expect(line.textContent).toBe(`${ACTIVATION_NOT_PERMITTED} — reason not published`);
+    expect(line.textContent).not.toMatch(/ADMIN/);
   });
 
   it("shows the activation's revision once activated", () => {

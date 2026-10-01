@@ -176,37 +176,68 @@ export function railWidth(depth: number): number {
 /* -------------------------------------------------------------- filters */
 
 /**
- * The hi-fi's four statuses. The contract has no attempt-level
- * ACTIVE/SUPERSEDED; this is how the screen derives them from what it does
- * carry (attempt `state` and the version's `lifecycle_state`), first match wins:
+ * CG-FG-S10-02 — the ONE place a node's chip is decided; replace this function's
+ * body with the server's `lineage_status` when Codex serves it and Bobby fixes the
+ * vocabulary. INTERIM rule (batch F1):
  *
- * | status     | from the contract                                                   |
- * |------------|---------------------------------------------------------------------|
- * | ABANDONED  | attempt.state = ABANDONED                                           |
- * | DRAFT      | attempt.state ∈ {DRAFT, PREFLIGHT_VALID}, or version lifecycle DRAFT |
- * | ACTIVE     | version lifecycle ACTIVE                                            |
- * | SUPERSEDED | version lifecycle SUPERSEDED or ABANDONED                           |
+ *  - the contract has no attempt-level ACTIVE / SUPERSEDED. The word ACTIVE,
+ *    SUPERSEDED or ABANDONED may appear on a chip only as what it is — the ALPHA
+ *    VERSION's lifecycle — and is written "version ACTIVE" so it cannot read as the
+ *    run's state (before F1 a FAILED attempt in an ACTIVE version wore an ACTIVE chip);
+ *  - an attempt whose own state is terminal-unsuccessful (FAILED, CANCELLED,
+ *    RECOVERY_REQUIRED, ABANDONED) or a draft shows that ATTEMPT state instead;
+ *  - an attempt that says nothing itself and whose version was not returned has no
+ *    chip (`null`): its pill reads "NO VERSION".
  *
- * Operational states (QUEUED, RUNNING, FAILED, CANCELLED, RECOVERY_REQUIRED…)
- * are not hidden: the attempt stays in its version's status and its raw state
- * is printed beside it. An attempt whose version was not returned has no
- * status (`null`): it shows with no filter on and matches no filter chip.
+ * `filter` is the bucket the four filter chips match; each chip is labelled with what
+ * it filters (FILTER_WORDS): the version's lifecycle, or the attempt's own
+ * ABANDONED / DRAFT.
  */
-export type LineageStatus = "ACTIVE" | "DRAFT" | "SUPERSEDED" | "ABANDONED";
+export type LineageFilter = "ACTIVE" | "DRAFT" | "SUPERSEDED" | "ABANDONED";
+
+export interface LineageStatus {
+  /** What the chip reads, e.g. "version ACTIVE" or "FAILED". */
+  label: string;
+  /** Whose state the chip speaks for. */
+  scope: "VERSION" | "ATTEMPT";
+  /** CSS hook (`data-status`): the version lifecycle, or the attempt state. */
+  key: string;
+  /** The filter chip this node matches; `null` = no version and no filterable attempt state. */
+  filter: LineageFilter | null;
+}
 
 /** The hi-fi's chip order (script `statusFilter`). */
-export const LINEAGE_STATUSES: readonly LineageStatus[] = ["ACTIVE", "DRAFT", "SUPERSEDED", "ABANDONED"];
+export const LINEAGE_STATUSES: readonly LineageFilter[] = ["ACTIVE", "DRAFT", "SUPERSEDED", "ABANDONED"];
+
+/** What each filter chip filters, in words (visible text + title). */
+export const FILTER_WORDS: Record<LineageFilter, { text: string; title: string }> = {
+  ACTIVE: { text: "version active", title: "attempts of an ACTIVE alpha version" },
+  DRAFT: { text: "draft", title: "draft attempts, and attempts of a DRAFT alpha version" },
+  SUPERSEDED: { text: "version superseded", title: "attempts of a SUPERSEDED alpha version" },
+  ABANDONED: { text: "abandoned", title: "abandoned attempts, and attempts of an ABANDONED alpha version" },
+};
+
+/** Attempt states that speak for themselves on the chip: terminal-unsuccessful, or a draft. */
+const ATTEMPT_CHIP_STATES: ReadonlySet<LineageAttemptState> = new Set<LineageAttemptState>([
+  "FAILED",
+  "CANCELLED",
+  "RECOVERY_REQUIRED",
+  "ABANDONED",
+  "DRAFT",
+  "PREFLIGHT_VALID",
+]);
 
 export function lineageStatus(
   state: LineageAttemptState,
   versionState: LineageVersion["lifecycle_state"] | null,
 ): LineageStatus | null {
-  if (state === "ABANDONED") return "ABANDONED";
-  if (state === "DRAFT" || state === "PREFLIGHT_VALID") return "DRAFT";
-  if (versionState === "ACTIVE") return "ACTIVE";
-  if (versionState === "SUPERSEDED" || versionState === "ABANDONED") return "SUPERSEDED";
-  if (versionState === "DRAFT") return "DRAFT";
-  return null;
+  if (ATTEMPT_CHIP_STATES.has(state)) {
+    const filter: LineageFilter | null =
+      state === "ABANDONED" ? "ABANDONED" : state === "DRAFT" || state === "PREFLIGHT_VALID" ? "DRAFT" : versionState;
+    return { label: state.replace(/_/g, " "), scope: "ATTEMPT", key: state === "PREFLIGHT_VALID" ? "DRAFT" : state, filter };
+  }
+  if (versionState === null) return null;
+  return { label: `version ${versionState}`, scope: "VERSION", key: versionState, filter: versionState };
 }
 
 /** Hi-fi counter; when the graph is bounded the server's total follows. */
@@ -376,7 +407,8 @@ const LINEAGE_CSS = `
 .ln-chip { flex: none; font-family: var(--font-mono); font-size: 9.5px; line-height: 16px; border: 1px solid var(--line); border-radius: 999px;
   padding: 0 8px; background: var(--paper-raised); color: var(--ink-soft); cursor: pointer; }
 .ln-chip[data-status="ACTIVE"] { color: var(--good); border-color: var(--good); }
-.ln-chip[data-status="ABANDONED"] { color: var(--bad); }
+.ln-chip[data-status="ABANDONED"], .ln-chip[data-status="FAILED"] { color: var(--bad); }
+.ln-chip[data-status="CANCELLED"], .ln-chip[data-status="RECOVERY_REQUIRED"] { color: var(--warn); }
 .ln-chip[data-status="SUPERSEDED"] { opacity: .75; }
 /* The current chip keeps white ground (green/gold text on --accent-soft is < 4.5:1, axe) and marks itself with a double accent ring. */
 .ln-chip[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
@@ -434,7 +466,8 @@ const LINEAGE_CSS = `
 .ln-st { font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; letter-spacing: .06em; border-radius: 999px; padding: 1px 8px;
   border: 1px solid var(--ink-faint); color: var(--ink-faint); background: var(--paper-raised); }
 .ln-st[data-status="ACTIVE"] { border-color: var(--good); color: var(--good); }
-.ln-st[data-status="ABANDONED"] { border-color: var(--bad); color: var(--bad); }
+.ln-st[data-status="ABANDONED"], .ln-st[data-status="FAILED"] { border-color: var(--bad); color: var(--bad); }
+.ln-st[data-status="CANCELLED"], .ln-st[data-status="RECOVERY_REQUIRED"] { border-color: var(--warn); color: var(--warn); }
 .ln-st[data-status="DRAFT"] { border-color: var(--accent-2); color: var(--accent-2); }
 .ln-st[data-fill="true"][data-status="ACTIVE"] { background: var(--good); color: var(--accent-contrast); }
 .ln-cert { font-family: var(--font-mono); font-size: 9px; font-weight: 700; border: 1px dashed var(--line); color: var(--ink-faint); border-radius: 3px; padding: 0 6px; background: var(--paper-raised); }
@@ -555,16 +588,24 @@ function AvailabilityAbsent({ availability, what }: { availability: LineageAvail
  * An attempt whose version was not returned has no status: its pill says so.
  */
 function StatusChips({ status, state, fill = false }: { status: LineageStatus | null; state: LineageAttemptState; fill?: boolean }) {
-  const differs = status !== state;
+  /* A version-scope chip (or no chip) does not say the attempt's own state, so that rides beside it. */
+  const differs = status === null || status.scope === "VERSION";
   return (
     <span
       className="ln-st"
-      data-status={status ?? undefined}
+      data-status={status?.key}
+      data-chip-scope={status?.scope}
       data-fill={fill ? "true" : undefined}
       data-raw-state={differs ? state : undefined}
-      title={differs ? `attempt state ${state} (as the lineage recorded it)` : undefined}
+      title={
+        status?.scope === "VERSION"
+          ? `alpha version lifecycle ${status.key} — not the run's state; attempt state ${state} (as the lineage recorded it)`
+          : differs
+            ? `attempt state ${state} (as the lineage recorded it)`
+            : undefined
+      }
     >
-      {status ?? "NO VERSION"}
+      {status?.label ?? "NO VERSION"}
     </span>
   );
 }
@@ -586,8 +627,8 @@ export const CLAIM_STATE_WORDS: Record<"FORECAST" | "NOT_ISSUED" | "ISSUED", str
 };
 
 function chipLabel(attemptId: string, status: LineageStatus | null, state: LineageAttemptState): string {
-  const head = status ?? "NO VERSION";
-  return `attempt ${attemptId} — ${status === state ? head : `${head} · ${state}`}`;
+  const head = status?.label ?? "NO VERSION";
+  return `attempt ${attemptId} — ${status?.scope === "ATTEMPT" ? head : `${head} · ${state}`}`;
 }
 
 /** An id on a card, chip or row (E1): prefix + 8 hex on screen; the caller keeps the full id in a title. */
@@ -981,7 +1022,7 @@ function VersionBand({
                   className="ln-chip"
                   data-chip={attempt.attempt_id}
                   data-state={attempt.state}
-                  data-status={status ?? undefined}
+                  data-status={status?.key}
                   data-rc={rc ? rc.kind : undefined}
                   aria-label={chipLabel(attempt.attempt_id, status, attempt.state)}
                   title={`${attempt.attempt_id} · ${attempt.primary_run.run_id ?? "no run"} · ${attempt.state}${rc ? ` · ${rcLabel(rc)}` : ""}`}
@@ -1050,6 +1091,47 @@ function Untried({ version }: { version: LineageVersion | null }) {
   );
 }
 
+/**
+ * CG-FG-S10-01 — one slot of a published pick (the selected trial, the selected
+ * param set): the value the lineage served, else a SHORT typed absence with the
+ * server's reason code. The approval's `source_digest` is a different fact (the
+ * receipt of the approval) and is never printed in a parameter slot.
+ */
+function PickFact({
+  what,
+  value,
+  availability,
+  format,
+}: {
+  what: string;
+  value: string | null | undefined;
+  availability: LineageAvailability | undefined;
+  format: (id: string) => string;
+}) {
+  if (value) {
+    return (
+      <span data-pick-fact={what} title={value}>
+        {what} {format(value)}
+      </span>
+    );
+  }
+  /* A server that predates the field sends no availability: say "not published" and invent no code. */
+  const state = availability && availability.state !== "AVAILABLE" ? LINEAGE_WITHHELD_WORDS[availability.state] : "not published";
+  const reason = availability?.reason_code ?? null;
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-pick-fact={what} data-absent={what} data-absent-state={state}>
+      <span className="ln-absent">
+        {what} — {state}
+      </span>
+      {reason ? (
+        <span className="ln-reason" data-reason-code>
+          {reason}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function PickRow({
   version,
   returnedIds,
@@ -1083,7 +1165,10 @@ function PickRow({
               </Link>
             </>
           ) : null}
-          {pick.source_digest ? <span title={pick.source_digest}>{` · ${short(pick.source_digest)}`}</span> : null}
+          {" · "}
+          <PickFact what="trial" value={pick.selected_trial_id} availability={pick.selected_trial_availability} format={sid} />
+          {" · "}
+          <PickFact what="param set" value={pick.selected_params_digest} availability={pick.selected_params_availability} format={short} />
           {" → "}
           {pick.release_candidate ? (
             <span data-pick-rc={pick.release_candidate.kind}>
@@ -1096,7 +1181,7 @@ function PickRow({
             </Link>
           ) : null}
         </span>
-        <span className="ln-faint ln-long" data-pick-source>
+        <span className="ln-faint ln-long" data-pick-source title={pick.source_digest ? `approval source digest ${pick.source_digest}` : undefined}>
           source {pick.source_contract_rev ?? "revision not published"}
           {pick.source_as_of_utc_ms !== null ? ` · as of ${iso(pick.source_as_of_utc_ms)}` : ""}
         </span>
@@ -1262,8 +1347,8 @@ function Filters({
   showProbes,
   onToggleProbes,
 }: {
-  active: ReadonlySet<LineageStatus>;
-  onToggle: (status: LineageStatus) => void;
+  active: ReadonlySet<LineageFilter>;
+  onToggle: (status: LineageFilter) => void;
   shown: number;
   lineage: Lineage;
   presentationKnown: boolean;
@@ -1279,9 +1364,10 @@ function Filters({
           className="ln-fchip"
           data-filter={status}
           aria-pressed={active.has(status)}
+          title={FILTER_WORDS[status].title}
           onClick={() => onToggle(status)}
         >
-          {status.toLowerCase()}
+          {FILTER_WORDS[status].text}
         </button>
       ))}
       <ProbesToggle known={presentationKnown} count={lineage.counts.probe_returned ?? 0} pressed={showProbes} onToggle={onToggleProbes} />
@@ -1346,7 +1432,7 @@ interface NodeProps {
 function Rail({ depth, status }: { depth: number; status: LineageStatus | null }) {
   return (
     <div className="ln-rail" style={{ width: railWidth(depth) }} aria-hidden="true" data-rail={depth}>
-      <span className="ln-dot" data-status={status ?? undefined} />
+      <span className="ln-dot" data-status={status?.key} />
     </div>
   );
 }
@@ -1374,7 +1460,7 @@ function AttemptCard({ node, status, versionState, selected, expanded, onToggle 
       className="ln-node"
       data-attempt={attempt.attempt_id}
       data-state={attempt.state}
-      data-status={status ?? undefined}
+      data-status={status?.key}
       data-depth={depth}
       data-selected={selected ? "true" : "false"}
     >
@@ -1454,7 +1540,7 @@ function AttemptRow({ node, status, selected, expanded, onToggle }: NodeProps) {
       className="ln-node"
       data-attempt={attempt.attempt_id}
       data-state={attempt.state}
-      data-status={status ?? undefined}
+      data-status={status?.key}
       data-depth={depth}
       data-selected={selected ? "true" : "false"}
     >
@@ -1688,7 +1774,7 @@ function Selected({
         <Row k="mode × schedule">
           {attempt.spec_label.text ?? <AvailabilityAbsent availability={attempt.spec_label.availability} />}
         </Row>
-        {status !== attempt.state ? (
+        {status?.scope !== "ATTEMPT" ? (
           <Row k="state">
             <span data-attempt-state={attempt.state}>{stateWords(attempt.state)}</span>
           </Row>
@@ -2036,7 +2122,7 @@ function PendingFrame({ state }: { state: ResearchState["state"] }) {
           <div className="ln-filters" data-panel="filters" data-panel-state={state} role="group" aria-label="attempt filters">
             {LINEAGE_STATUSES.map((status) => (
               <button key={status} type="button" className="ln-fchip" data-filter={status} aria-pressed={false} disabled title={why}>
-                {status.toLowerCase()}
+                {FILTER_WORDS[status].text}
               </button>
             ))}
             <ProbesToggle known count={0} pressed={false} />
@@ -2159,7 +2245,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
     return map;
   }, [lineage]);
 
-  const [filters, setFilters] = useState<ReadonlySet<LineageStatus>>(() => new Set());
+  const [filters, setFilters] = useState<ReadonlySet<LineageFilter>>(() => new Set());
   const [chosen, setChosen] = useState<string | null>(null);
   const [band, setBand] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string> | null>(null);
@@ -2170,10 +2256,10 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
   const deepLinked = useRef(false);
 
   const matches = useCallback(
-    (attempt: LineageAttempt, active: ReadonlySet<LineageStatus>) => {
+    (attempt: LineageAttempt, active: ReadonlySet<LineageFilter>) => {
       if (active.size === 0) return true;
-      const status = statusOf(attempt);
-      return status !== null && active.has(status);
+      const filter = statusOf(attempt)?.filter ?? null;
+      return filter !== null && active.has(filter);
     },
     [statusOf],
   );
@@ -2301,7 +2387,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
     [openSet, select],
   );
 
-  const onFilter = useCallback((status: LineageStatus) => {
+  const onFilter = useCallback((status: LineageFilter) => {
     setFilters((current) => {
       const next = new Set(current);
       if (next.has(status)) next.delete(status);

@@ -198,6 +198,9 @@ export function Withheld({
   availability: Availability | { state: keyof typeof WITHHELD_WORDS; reason_code: string | null };
   what?: string;
 }) {
+  /* F1: a token this screen coined itself is shown as a screen note, never as a server code. */
+  const local = feLocalAbsenceId(availability.reason_code);
+  if (local !== null) return <FeLocalAbsent id={local} what={what} />;
   return (
     <span
       className="mono text-[10px] italic leading-[16px]"
@@ -213,12 +216,75 @@ export function Withheld({
 }
 
 /**
+ * F1 (2_wiring S04 codes): the markers this screen's own lane logic attaches to
+ * an absence the lane simply does not carry. They travel inside `Availability`
+ * objects (the typed shape every absence component takes) but are not server
+ * codes: `Withheld` and `AbsenceNote` print them as a screen-local note.
+ */
+const FE_LOCAL_ABSENCE_IDS: Record<string, string> = {
+  UI_RETAINED_LANE_HAS_NO_FIELD: "retained-lane-has-no-field",
+  UI_RETAINED_LANE_HAS_NO_SERIES: "retained-lane-has-no-series",
+  UI_HUB_LANE_HAS_NO_BEHAVIOR_ANALYTIC: "hub-lane-has-no-behavior-analytic",
+};
+
+function feLocalAbsenceId(code: string | null): string | null {
+  return code !== null && Object.prototype.hasOwnProperty.call(FE_LOCAL_ABSENCE_IDS, code) ? FE_LOCAL_ABSENCE_IDS[code]! : null;
+}
+
+/**
  * A reason for a person, with its code kept for diagnostics: the RF-05
  * sentence when the shared module has one, else the bare code or state.
  */
 export function reasonTitle(availability: Availability): string {
   const sentence = reasonCodeSentence(availability.reason_code);
-  return sentence !== null ? `${sentence} (${availability.reason_code})` : unavailableReason(availability);
+  if (sentence !== null) return `${sentence} (${availability.reason_code})`;
+  /* F1 (FG 04-F): an absence with no served code says so, instead of leaving the
+     reader to wonder whether a code was dropped on the way to the screen. */
+  if (availability.reason_code === null && availability.state !== "AVAILABLE") {
+    return `${availability.state} — the server sent no reason code`;
+  }
+  return unavailableReason(availability);
+}
+
+/**
+ * F1 (FG 04-F): a fact this screen has not read yet is not "not published".
+ * While the Hub is loading the word is `reading…`; after a refusal it is
+ * `not read`. Neither is a server state, so neither carries a reason code.
+ */
+export function NotRead({ phase, what }: { phase: "loading" | "not-read"; what?: string }) {
+  return (
+    <span
+      className="mono text-[10px] italic leading-[16px]"
+      style={{ color: "var(--ink-faint)" }}
+      data-withheld="NOT_READ"
+      data-read-phase={phase}
+      title={phase === "loading" ? "The Evidence Hub is still being read." : "The Evidence Hub was not read, so this fact is unknown."}
+    >
+      {what ? `${what} — ` : ""}
+      {phase === "loading" ? "reading…" : "not read"}
+    </span>
+  );
+}
+
+/**
+ * F1 (2_wiring S04 codes): a gap this screen knows about by itself — the lane
+ * has no such field, the hub names no trial cursor — shown as what it is, a
+ * screen-local note, rather than as a `P13_…` / `UI_…` token that looks like a
+ * reason the server sent. `id` stays in a data attribute for diagnostics only.
+ */
+export function FeLocalAbsent({ id, what, text = "not served for this lane" }: { id: string; what?: string; text?: string }) {
+  return (
+    <span
+      className="mono text-[10px] italic leading-[16px]"
+      style={{ color: "var(--ink-faint)" }}
+      data-withheld="NOT_SERVED"
+      data-fe-absence={id}
+      title="Not served by the server for this lane. This is a note from the screen, not a server reason code."
+    >
+      {what ? `${what} — ` : ""}
+      {text}
+    </span>
+  );
 }
 
 /**
@@ -235,13 +301,14 @@ function AbsenceNote({
   what?: string;
   extra?: ReactNode;
 }) {
-  const sentence = reasonCodeSentence(availability.reason_code);
+  const local = feLocalAbsenceId(availability.reason_code);
+  const sentence = local !== null ? null : reasonCodeSentence(availability.reason_code);
   return (
     <p
       className="text-[11px] leading-[1.5]"
       style={{ color: "var(--ink-soft)" }}
       data-absence-note={availability.state}
-      data-reason-code={availability.reason_code ?? undefined}
+      data-reason-code={local !== null ? undefined : availability.reason_code ?? undefined}
     >
       <Withheld availability={availability} what={what} />
       {sentence !== null ? <span data-reason-sentence> — {sentence}</span> : null}
@@ -392,7 +459,15 @@ function PassportField({
   );
 }
 
-function AbsentClaimField({ name, bar }: { name: string; bar?: boolean }) {
+function AbsentClaimField({ name, bar, unread = null }: { name: string; bar?: boolean; unread?: "loading" | "not-read" | null }) {
+  /* F1 (FG 04-F): with no hub in hand the field is unknown, not unpublished. */
+  if (unread !== null) {
+    return (
+      <PassportField name={name} bar={bar} data-withheld="NOT_READ" title={`${name} — the Evidence Hub was not read`}>
+        <NotRead phase={unread} />
+      </PassportField>
+    );
+  }
   return (
     <PassportField name={name} bar={bar} data-withheld="NOT_PUBLISHED" title={`${name} — not published by the Evidence Hub for this run`}>
       <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} />
@@ -430,6 +505,8 @@ function ClaimPassport({
   const issued = certificate?.state === "ISSUED" && certificate.grade !== null;
   const contract = hub?.core.run_identity?.route.contract ?? null;
   const engine = hub?.core.engine_version ?? null;
+  /* F1 (FG 04-F): no hub means loading or refused — "not read", never "not published". */
+  const unread: "loading" | "not-read" | null = hub === null ? (state.state === "loading" ? "loading" : "not-read") : null;
 
   return (
     <div
@@ -492,7 +569,7 @@ function ClaimPassport({
         {retained ? <RetainedClaimFields claim={retained} onJump={onJump} /> : null}
 
         {retained ? null : UNPUBLISHED_CLAIM_FIELDS.map((name, index) => (
-          <AbsentClaimField key={name} name={name} bar={index === 0} />
+          <AbsentClaimField key={name} name={name} bar={index === 0} unread={unread} />
         ))}
 
         {retained ? null : contract !== null && isAvailable(contract.availability) && contract.value !== null ? (
@@ -510,11 +587,15 @@ function ClaimPassport({
           </PassportField>
         ) : (
           <PassportField name="execution_contract">
-            <Withheld availability={contract?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
+            {unread !== null ? (
+              <NotRead phase={unread} />
+            ) : (
+              <Withheld availability={contract?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
+            )}
           </PassportField>
         )}
 
-        {retained ? null : <AbsentClaimField name="runtime authority" />}
+        {retained ? null : <AbsentClaimField name="runtime authority" unread={unread} />}
 
         <PassportField name="certification">
           {issued && certificate ? (
@@ -540,6 +621,10 @@ function ClaimPassport({
           ) : certificate?.state === "NOT_ISSUED" ? (
             <span data-certificate-state="NOT_ISSUED" title={certificate.reason_code ?? undefined}>
               NOT_ISSUED
+            </span>
+          ) : certificate === null && unread !== null ? (
+            <span data-certificate-state="NOT_READ">
+              <NotRead phase={unread} />
             </span>
           ) : (
             <span data-certificate-state="NOT_PUBLISHED">
@@ -810,6 +895,51 @@ function PanelRow({
 }
 
 /**
+ * F1 (FG 04-F, line :915): the dataset drawer used to print "not published" for coverage with a
+ * sentence that the contract carries none. The Hub now serves `dataset_coverage`, so a served
+ * fact is shown as the server sent it (nothing is drawn as a bar: no ratio is computed here) and
+ * an absence keeps the code the server gave it — or says that none came.
+ */
+function CoverageFacts({ coverage }: { coverage: EvidenceHub["core"]["dataset_coverage"] }) {
+  if (coverage === undefined) {
+    return (
+      <span className="text-[10px] leading-[1.5]" data-coverage="UNSENT">
+        <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="dataset coverage" />
+      </span>
+    );
+  }
+  if (!isAvailable(coverage.availability)) {
+    return (
+      <span className="text-[10px] leading-[1.5]" data-coverage={coverage.availability.state}>
+        <Withheld availability={coverage.availability} what="dataset coverage" />
+      </span>
+    );
+  }
+  const count = (value: number | null, what: string) =>
+    value === null ? (
+      <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={what} />
+    ) : (
+      <span data-exact={String(value)}>{formatMetric(value, "count")}</span>
+    );
+  return (
+    <span className="mono flex flex-col gap-px text-[10.5px] leading-[1.5]" style={{ color: "var(--ink)" }} data-coverage="AVAILABLE">
+      <span data-coverage-fact="range">
+        {coverage.range !== null ? (
+          `${utcZ(coverage.range.start_utc_ms)} → ${utcZ(coverage.range.end_exclusive_utc_ms)}`
+        ) : (
+          <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="range" />
+        )}
+        {coverage.range_scope !== null ? ` · ${coverage.range_scope.toLowerCase().replace(/_/g, " ")}` : ""}
+      </span>
+      <span data-coverage-fact="rows">rows {count(coverage.rows, "rows")}</span>
+      <span data-coverage-fact="gaps">gaps {count(coverage.gaps, "gaps")}</span>
+      <span data-coverage-fact="missing_bar_count">missing bars {count(coverage.missing_bar_count, "missing bars")}</span>
+      <span data-coverage-fact="columns">columns {coverage.columns.length > 0 ? coverage.columns.join(" · ") : "none listed"}</span>
+    </span>
+  );
+}
+
+/**
  * The dataset identity, inline under the header as the HiFi opens it (DQ-02;
  * spec 04 §2.3 drew a right drawer). The run's other pinned facts sit in the
  * same grid. Escape closes it and hands focus back to the chip (FE-S04-07).
@@ -906,16 +1036,15 @@ function DatasetPanel({ hub, id, onClose }: { hub: EvidenceHub; id: string; onCl
           <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
             coverage · gap scan · vendor
           </span>
-          <div
-            className="h-4 rounded-full border"
-            style={{ background: "var(--paper-sunken)", borderColor: "var(--line-soft)" }}
-            aria-hidden="true"
-          />
-          <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} /> — the Evidence contract publishes
-            the dataset&apos;s identity and digests, not its coverage bar, gap scan or vendor. They are read from a dataset
-            manifest no operation on this screen exposes.
-          </span>
+          {/* F1: an empty track beside served coverage reads as "0 covered"; it is drawn only while there is nothing to show. */}
+          {core.dataset_coverage !== undefined && isAvailable(core.dataset_coverage.availability) ? null : (
+            <div
+              className="h-4 rounded-full border"
+              style={{ background: "var(--paper-sunken)", borderColor: "var(--line-soft)" }}
+              aria-hidden="true"
+            />
+          )}
+          <CoverageFacts coverage={core.dataset_coverage} />
         </div>
       </div>
     </section>
@@ -1067,6 +1196,13 @@ export function foldId(fold: number): string {
   return `fold_${String(fold).padStart(2, "0")}`;
 }
 
+/** A cursor pill the Hub does not carry: unread while a read is outstanding, a screen note once none is. */
+function CursorGap({ id, unread, lanePending }: { id: string; unread: "loading" | "not-read" | null; lanePending: boolean }) {
+  if (unread !== null) return <NotRead phase={unread} />;
+  if (lanePending) return <NotRead phase="loading" />;
+  return <FeLocalAbsent id={id} />;
+}
+
 function CursorBar({
   runId,
   cursor,
@@ -1075,10 +1211,19 @@ function CursorBar({
   onFold,
   onReset,
   laneSelection = null,
+  unread = null,
+  lanePending = false,
 }: {
   runId: string;
   cursor: EvidenceCursor;
   hub: EvidenceHub | null;
+  /** F1 (FG 04-F): why there is no hub in hand — still loading, or refused. Null when it was read. */
+  unread?: "loading" | "not-read" | null;
+  /**
+   * F1: the Hub is in hand but the retained lane's own reads (passport, run identity) have not answered.
+   * The lane may yet supply the trial / params / seq the Hub cannot, so "not served" is not yet true.
+   */
+  lanePending?: boolean;
   folds: FoldNavigation | undefined;
   onFold: (fold: number) => void;
   onReset: () => void;
@@ -1106,7 +1251,12 @@ function CursorBar({
     const next = published[index + delta];
     if (next !== undefined) onFold(next);
   };
-  const reason = unavailableReason(folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null });
+  const reason =
+    unread !== null
+      ? unread === "loading"
+        ? "the Evidence Hub is still being read"
+        : "the Evidence Hub was not read"
+      : unavailableReason(folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null });
   /* The bound is read aloud always, and shown only when it says something the
      dropdown does not: an unpublished set, or a fold outside it. */
   const anomalous = published.length === 0 || index === -1;
@@ -1198,7 +1348,12 @@ function CursorBar({
           </>
         ) : (
           <>
-            of <Withheld availability={folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} what="observed folds" />
+            of{" "}
+            {unread !== null ? (
+              <NotRead phase={unread} what="observed folds" />
+            ) : (
+              <Withheld availability={folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} what="observed folds" />
+            )}
           </>
         )}
       </span>
@@ -1212,7 +1367,7 @@ function CursorBar({
             #{laneSelection.trial} · global
           </span>
         ) : (
-          <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_TRIAL_CURSOR" }} />
+          <CursorGap id="hub-lane-has-no-trial-cursor" unread={unread} lanePending={lanePending} />
         )}
       </CursorPill>
 
@@ -1225,7 +1380,7 @@ function CursorBar({
             {shortDigest(laneSelection.paramsDigest)}
           </span>
         ) : (
-          <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_PARAMS_DIGEST" }} />
+          <CursorGap id="hub-lane-has-no-params-digest" unread={unread} lanePending={lanePending} />
         )}
       </CursorPill>
 
@@ -1238,7 +1393,7 @@ function CursorBar({
             none selected
           </span>
         ) : (
-          <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_EVENT_SEQ" }} />
+          <CursorGap id="hub-lane-has-no-event-seq" unread={unread} lanePending={lanePending} />
         )}
       </CursorPill>
 
@@ -1246,6 +1401,8 @@ function CursorBar({
         schedule{" "}
         {schedule && isAvailable(schedule.availability) && schedule.value !== null ? (
           <span style={{ color: "var(--ink)" }}>{schedule.value}</span>
+        ) : unread !== null ? (
+          <NotRead phase={unread} />
         ) : (
           <Withheld availability={schedule?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
         )}
@@ -1758,13 +1915,13 @@ function SeriesPanel({
 function ProvenanceRow({ hub, series, kind }: { hub: EvidenceHub; series: EvidenceSeries | null; kind: SeriesKind }) {
   const cells: [string, ReactNode][] = [
     ["source", `evidence series ${series?.kind ?? kind}`],
-    ["segment", <Withheld key="segment" availability={{ state: "NOT_PUBLISHED", reason_code: "SERIES_SEGMENT_NOT_PUBLISHED" }} />],
-    ["units", <Withheld key="units" availability={{ state: "NOT_PUBLISHED", reason_code: "SERIES_UNITS_NOT_PUBLISHED" }} />],
+    ["segment", <FeLocalAbsent key="segment" id="series-segment-not-served" />],
+    ["units", <FeLocalAbsent key="units" id="series-units-not-served" />],
     ["timezone", "UTC"],
     ["as-of", utcZ(hub.as_of_utc_ms)],
     [
       "digest",
-      <Withheld key="digest" availability={{ state: "NOT_PUBLISHED", reason_code: "SERIES_DIGEST_NOT_PUBLISHED" }} />,
+      <FeLocalAbsent key="digest" id="series-digest-not-served" />,
     ],
   ];
   return (
@@ -2144,7 +2301,7 @@ function RetainedPassport({ evidence }: { evidence: CurrentSourceEvidence }) {
   const rows: [string, string, string][] = [
     ["initial equity", passport.initial_equity, "currency"],
     ["final equity", passport.final_equity, "currency"],
-    ["net return", passport.net_return_fraction, "fraction"],
+    ["account return", passport.net_return_fraction, "fraction"],
     ["max drawdown", passport.max_drawdown_fraction, "fraction"],
     ["retained positions", String(passport.retained_position_count), "count"],
     ["observations", String(passport.artifact_table_rows.observations), "count"],
@@ -2620,10 +2777,10 @@ function RetainedEquityPanels({
           className="mt-2 text-[11px] leading-[1.45]"
           style={{ color: "var(--ink-soft)" }}
           data-series-absent="EQUITY_IS"
-          data-absence-reason={inSampleAbsence.reason_code ?? undefined}
+          data-absence-reason={feLocalAbsenceId(inSampleAbsence.reason_code) === null ? inSampleAbsence.reason_code ?? undefined : undefined}
         >
           No IS equity series is drawn:{" "}
-          {reasonCodeSentence(inSampleAbsence.reason_code)
+          {(feLocalAbsenceId(inSampleAbsence.reason_code) === null ? reasonCodeSentence(inSampleAbsence.reason_code) : null)
             ?? "the retained walk-forward lane publishes no in-sample account, and this screen does not compute one."}
         </p>}
         {ready ? (
@@ -2972,8 +3129,18 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
     switch (key) {
       case "FINAL_EQUITY":
         return fact(key, passport.final_equity, "currency", `${ACCOUNT} · currency · source-derived`);
-      case "NET_RETURN_FRACTION":
-        return fact(key, passport.net_return_fraction, "fraction", `${ACCOUNT} · percent · source-derived`);
+      case "NET_RETURN_FRACTION": {
+        /* F1 (2_wiring S04): the passport's `net_return_fraction` is the stitched ACCOUNT's return,
+           not the OOS return. E14 serves the OOS one as `summary_analytics.net_oos_return`; when it
+           is served the tile is that fact under its own scope, otherwise the account value is kept
+           and called what it is. */
+        const oos = (evidence as Partial<CurrentSourceEvidence>).summary_analytics?.net_oos_return ?? null;
+        if (oos !== null && oos.state === "AVAILABLE" && oos.value !== null) {
+          const origin = oos.origin === "ENGINE_DIRECT" ? "engine-direct" : "source-derived";
+          return fact(key, oos.value, "fraction", `${oos.scope.toLowerCase()} · percent · ${origin}`, RETAINED_NO_FIELD, "Net OOS return");
+        }
+        return fact(key, passport.net_return_fraction, "fraction", `${ACCOUNT} · percent · source-derived`, RETAINED_NO_FIELD, "Account return");
+      }
       case "MAX_DRAWDOWN_FRACTION":
         return fact(key, passport.max_drawdown_fraction, "fraction", `${ACCOUNT} · percent · source-derived`);
       case "INITIAL_EQUITY":
@@ -3156,7 +3323,7 @@ function BehaviorCard({ retained = null, summary = null }: { retained?: CurrentS
   const benchmark = retained ? ((retained as Partial<CurrentSourceEvidence>).source_absences?.benchmark ?? null) : null;
   const reasonFor = (label: string): Availability =>
     retained === null
-      ? { state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_BEHAVIOR_ANALYTIC" }
+      ? { state: "NOT_PUBLISHED", reason_code: "UI_HUB_LANE_HAS_NO_BEHAVIOR_ANALYTIC" }
       : label.includes("benchmark") && benchmark
         ? { state: benchmark.state as Availability["state"], reason_code: benchmark.reason_code ?? null }
         : RETAINED_NO_FIELD;
@@ -3704,8 +3871,25 @@ function CertificationTable({ certificate }: { certificate: EvidenceHub["claim"]
 
 type RetainedClaimStrip = CurrentSourceClaimStrip;
 
+/**
+ * F1 (FG 04-F): why a retained-lane fact is missing from the Claim tab — the
+ * lane is still being read, was not read, or answered "not applicable" for
+ * this run. `null` means the lane answered and the fact itself is absent.
+ */
+type LaneGap = { phase: "loading" | "not-read" } | { availability: Availability } | null;
+
+function laneGapOf(passport: PassportSlot): LaneGap {
+  if (passport.state === "loading") return { phase: "loading" };
+  if (passport.state === "idle" || passport.state === "refused") return { phase: "not-read" };
+  if (passport.state === "not-applicable") return { availability: passport.answer.availability as Availability };
+  return null;
+}
+
 /** One served claim fact, verbatim, or its typed absence. */
-function FactCell({ fact, label }: { fact: CurrentSourceClaimFact | null; label: string }) {
+function FactCell({ fact, label, gap = null }: { fact: CurrentSourceClaimFact | null; label: string; gap?: LaneGap }) {
+  if (fact === null && gap !== null) {
+    return "phase" in gap ? <NotRead phase={gap.phase} what={label} /> : <Withheld availability={gap.availability} what={label} />;
+  }
   if (fact === null) return <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={label} />;
   if (fact.value === null) {
     const availability = (fact.availability.state === "AVAILABLE"
@@ -3731,10 +3915,12 @@ function WindowDisclosureTable({
   hub,
   retainedClaim,
   runIdentity,
+  gap = null,
 }: {
   hub: EvidenceHub;
   retainedClaim: RetainedClaimStrip | null;
   runIdentity: RunIdentitySlot;
+  gap?: LaneGap;
 }) {
   const navigation = hub.core.fold_navigation;
   const folds =
@@ -3753,8 +3939,8 @@ function WindowDisclosureTable({
       who: (
         <span className="flex flex-wrap gap-x-2.5 gap-y-0.5">
           <span>{WINDOW_DISCLOSURE}</span>
-          <FactCell fact={retainedClaim?.validation_claim ?? null} label="validation_claim" />
-          <FactCell fact={retainedClaim?.oos_used_for_selection ?? null} label="oos_used_for_selection" />
+          <FactCell fact={retainedClaim?.validation_claim ?? null} label="validation_claim" gap={gap} />
+          <FactCell fact={retainedClaim?.oos_used_for_selection ?? null} label="oos_used_for_selection" gap={gap} />
         </span>
       ),
       count: folds ?? <Withheld availability={navigation?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />,
@@ -3762,9 +3948,12 @@ function WindowDisclosureTable({
     {
       key: "Holdout",
       tone: "var(--role-holdout)",
-      who: <FactCell fact={retainedClaim?.holdout ?? null} label="holdout" />,
+      who: <FactCell fact={retainedClaim?.holdout ?? null} label="holdout" gap={gap} />,
       count:
-        denied === null ? none() : (
+        denied === null ? (
+          /* F1: the progress read decides this count; until it answers it is unread, not unpublished. */
+          runIdentity.state === "ready" && read !== null ? none() : <NotRead phase={runIdentity.state === "loading" ? "loading" : "not-read"} />
+        ) : (
           <span style={{ color: denied.length > 0 ? "var(--role-holdout)" : undefined }}>{denied.length} denied</span>
         ),
     },
@@ -3866,14 +4055,36 @@ function ClaimTab({
   hub,
   retainedClaim,
   runIdentity,
+  passport = IDLE_PASSPORT,
 }: {
   hub: EvidenceHub;
   retainedClaim: RetainedClaimStrip | null;
   runIdentity: RunIdentitySlot;
+  /** F1: the retained lane's read — what the Summary tab's per-fold table is drawn from. */
+  passport?: PassportSlot;
 }) {
   const claim = hub.claim;
   const certificate = claim.methodology_certificate;
   const issuedClaim = claim.state === "ISSUED";
+  /* F1 (400-trial audit): on a sealed retained run the Summary tab draws its per-fold table (and
+     every other panel) from the retained lane. The Hub's own absence list then describes the hub
+     lane — "per_fold_metrics — not published" under a table drawn from the same screen's lane —
+     so the list is read from that same lane: its `source_absences`, plus the per-fold rows only
+     when the lane itself did not publish them. */
+  const lane = passport.state === "ready" && isRetainedAnswer(passport.evidence) ? passport.evidence : null;
+  const laneVerdicts = lane !== null ? (lane as Partial<CurrentSourceEvidence>).fold_verdicts ?? null : null;
+  const laneAbsences: [string, Availability][] =
+    lane === null
+      ? []
+      : [
+          ...Object.entries((lane as Partial<CurrentSourceEvidence>).source_absences ?? {}).map(
+            ([name, fact]): [string, Availability] => [name, (fact as { availability: Availability }).availability],
+          ),
+          ...(laneVerdicts !== null && laneVerdicts.state !== "AVAILABLE"
+            ? [["per_fold_metrics", laneVerdicts.availability as Availability] as [string, Availability]]
+            : []),
+        ];
+  const absences: [string, Availability][] = lane !== null ? laneAbsences : Object.entries(hub.source_absences);
   return (
     <section data-screen-label="Stage 5 · Claim" className="flex flex-col gap-3.5">
       <TabHeading
@@ -3945,20 +4156,21 @@ function ClaimTab({
 
       <div className="flex flex-wrap gap-3.5">
         <CertificationTable certificate={certificate} />
-        <WindowDisclosureTable hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} />
+        <WindowDisclosureTable hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} gap={laneGapOf(passport)} />
       </div>
 
       <ArtifactManifest runIdentity={runIdentity} />
 
       <section className="flex flex-col gap-1.5 rounded-[8px] border px-3.5 py-3" data-absences style={PANEL_STYLE}>
         <PanelLabel>declared source absences</PanelLabel>
-        {Object.keys(hub.source_absences).length === 0 ? (
-          <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
-            The Hub declares no absence for this run.
+        {/* Which read declared them: the hub's list and the retained lane's list differ. */}
+        {absences.length === 0 ? (
+          <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-absences-empty={lane !== null ? "lane" : "hub"}>
+            {lane !== null ? "The retained lane declares no absence for this run." : "The Hub declares no absence for this run."}
           </p>
         ) : (
           <ul className="flex flex-col gap-1">
-            {Object.entries(hub.source_absences).map(([name, availability]) => (
+            {absences.map(([name, availability]) => (
               <li key={name} className="flex flex-wrap items-baseline gap-2" data-absence={name}>
                 <span className="mono text-[10px]">{name}</span>
                 <Withheld availability={availability} />
@@ -4289,6 +4501,7 @@ function useTopbarCrumb(label: string | null) {
 }
 
 const IDLE_RETAINED: RetainedSeriesSlot = { state: "idle" };
+const IDLE_PASSPORT: PassportSlot = { state: "idle" };
 const NOOP = () => {};
 const IDLE_IDENTITY: RunIdentitySlot = { state: "idle" };
 const NO_KINDS: ReadonlyMap<RetainedSeriesKind, RetainedSeriesSlot> = new Map();
@@ -4449,6 +4662,12 @@ export function EvidenceFlow({
           runId={runId}
           cursor={cursor}
           hub={hub}
+          unread={hub === null ? (state.state === "loading" ? "loading" : "not-read") : null}
+          lanePending={
+            hub !== null &&
+            passportSkip === null &&
+            (passport.state === "idle" || passport.state === "loading" || (laneEvidence !== null && runIdentity.state !== "ready"))
+          }
           folds={hub?.core.fold_navigation}
           onFold={onFold}
           onReset={onResetCursor}
@@ -4477,7 +4696,7 @@ export function EvidenceFlow({
             data-panel={cursor.stage}
           >
             {cursor.stage === "claim" ? (
-              <ClaimTab hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} />
+              <ClaimTab hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} passport={passport} />
             ) : cursor.stage === "atlas" ? (
               <AtlasTab runId={runId} hub={hub} />
             ) : cursor.stage === "split" ? (

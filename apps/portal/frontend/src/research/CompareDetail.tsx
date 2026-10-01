@@ -156,8 +156,57 @@ export const MODE_LABELS: Record<CompareMode, string> = {
  * alpha's numbers. The sentence keeps the hi-fi's order and every rule it
  * states, without a number the server did not send.
  */
-export const ATTEMPTS_RULE =
-  "Same alpha, same key — every chart may overlay. But numbers across claim classes never rank each other: a retrospective number does not beat a strict one, however much higher it reads. Read the ladder left to right: the claim strengthens at every step, and where the number falls, that gap is the selection luck the weaker claims were counting.";
+export const ATTEMPTS_RULE_BASE =
+  "Same alpha, same key — every chart may overlay. But numbers across claim classes never rank each other: a retrospective number does not beat a strict one, however much higher it reads.";
+/** The hi-fi's last sentence, true only when EVERY step of the ladder strengthens the claim. */
+const ATTEMPTS_RULE_ALL_UP =
+  "Read the ladder left to right: the claim strengthens at every step, and where the number falls, that gap is the selection luck the weaker claims were counting.";
+/** Some steps strengthen, some do not: the arrows say which. */
+const ATTEMPTS_RULE_SOME_UP =
+  "Read the ladder left to right: a claim ↑ step is a stronger claim, and where the number falls across one, that gap is the selection luck the weaker claim was counting.";
+/** The hi-fi's full sentence — what the screen prints when every step strengthens the claim. */
+export const ATTEMPTS_RULE = `${ATTEMPTS_RULE_BASE} ${ATTEMPTS_RULE_ALL_UP}`;
+
+/**
+ * F1 (S13 equal claim): how one ladder step relates to the card before it, from the
+ * two `claim.rank` values the server sent (1 = strongest). "UP" = a stronger claim
+ * than the previous card; "SAME" = equal rank; "DOWN" = a weaker one; "UNKNOWN" =
+ * a rank is not published. Display-only comparison of two served integers.
+ */
+export type LadderStepKind = "UP" | "SAME" | "DOWN" | "UNKNOWN";
+
+export function ladderStepKind(previous: CompareRun, run: CompareRun): LadderStepKind {
+  const before = previous.claim.rank;
+  const now = run.claim.rank;
+  if (before === null || now === null) return "UNKNOWN";
+  return now < before ? "UP" : now === before ? "SAME" : "DOWN";
+}
+
+/** The kind of every step of a weak → strong ladder (card 2 against card 1, …). */
+export function ladderSteps(claimed: readonly CompareRun[]): LadderStepKind[] {
+  return claimed.slice(1).map((run, index) => ladderStepKind(claimed[index]!, run));
+}
+
+/** The gold rule: the hi-fi's sentence only as far as the ladder really strengthens at each step. */
+export function attemptsRule(steps: readonly LadderStepKind[]): string {
+  if (steps.length === 0 || !steps.includes("UP")) return ATTEMPTS_RULE_BASE;
+  return `${ATTEMPTS_RULE_BASE} ${steps.every((kind) => kind === "UP") ? ATTEMPTS_RULE_ALL_UP : ATTEMPTS_RULE_SOME_UP}`;
+}
+
+/** The connector between two cards, in words (what it prints, what it is called). */
+export const STEP_CONNECTOR: Record<LadderStepKind, { text: string; label: string }> = {
+  UP: { text: "claim ↑ →", label: "claim strengthens along the ladder" },
+  SAME: { text: "same claim →", label: "same claim rank as the previous card" },
+  DOWN: { text: "claim ↓ →", label: "claim weakens along the ladder" },
+  UNKNOWN: { text: "→", label: "claim rank not published for one of these cards" },
+};
+
+/** The ladder header's order note: only a ladder that never weakens and strengthens somewhere has a strongest end. */
+export function ladderOrderNote(steps: readonly LadderStepKind[]): string | null {
+  if (steps.length === 0) return null;
+  if (steps.every((kind) => kind === "SAME")) return "same claim on every card";
+  return steps.includes("UP") && steps.every((kind) => kind === "UP" || kind === "SAME") ? "strongest claim on the right" : null;
+}
 
 /**
  * Hi-fi markets rule after the server's caption. The hi-fi's own first clause
@@ -314,6 +363,7 @@ const COMPARE_CSS = `
 .cp-att { font-family: var(--font-mono); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
 .cp-arrow { position: absolute; top: 0; bottom: 0; right: 100%; width: var(--cp-link); display: flex; align-items: center; justify-content: center;
   white-space: nowrap; font-family: var(--font-mono); font-size: 11px; color: var(--warn); }
+.cp-arrow[data-step-kind="SAME"] { font-size: 10px; color: var(--ink-faint); }
 .cp-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
 .cp-bignum { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
 .cp-note { font-size: 10px; color: var(--ink-soft); line-height: 1.45; overflow-wrap: anywhere; min-width: 0; }
@@ -616,8 +666,9 @@ function CertAbsent({ run }: { run: CompareRun }) {
 function Lifecycle({ run }: { run: CompareRun }) {
   const life = run.alpha_version_lifecycle;
   return life.value !== null && life.availability.state === "AVAILABLE" ? (
-    <span className="cp-life" data-life={life.value}>
-      {life.value}
+    /* F1 / CG-FG-S10-02 (same defect on S13): the pill is the ALPHA VERSION's lifecycle, never the run's state. */
+    <span className="cp-life" data-life={life.value} title={`alpha version lifecycle ${life.value} — not the run's state (${run.run_state})`}>
+      version {life.value}
     </span>
   ) : (
     <AvailabilityAbsent availability={life.availability} what="lifecycle" />
@@ -979,12 +1030,13 @@ function LadderCard({ run }: { run: CompareRun }) {
 
 function Ladder({ result }: { result: AttemptResult }) {
   const claimed = ladderOrder(result);
+  const orderNote = ladderOrderNote(ladderSteps(claimed));
   return (
     <section data-panel="ladder" aria-label="claim ladder">
       <h3 className="cp-ladderhead">
         <span data-ladder-header>{LADDER_HEADER}</span>
         <span className="cp-faint" data-ladder-order-key={result.order} title={`server order: ${result.order}, laid out reversed`}>
-          {claimed.length} with a claim · {result.attempts.length} returned · strongest claim on the right
+          {claimed.length} with a claim · {result.attempts.length} returned{orderNote ? ` · ${orderNote}` : ""}
         </span>
       </h3>
       {result.attempts.length === 0 ? (
@@ -999,7 +1051,7 @@ function Ladder({ result }: { result: AttemptResult }) {
         <div className="cp-ladder" data-ladder-order="server-reversed">
           {/* Reversed for the hi-fi's reading direction (VD-P20-14); the server's order is the inverse. */}
           {claimed.map((run, index) => (
-            <LadderStep key={run.run_id} run={run} first={index === 0} />
+            <LadderStep key={run.run_id} run={run} step={index === 0 ? null : ladderStepKind(claimed[index - 1]!, run)} />
           ))}
         </div>
       )}
@@ -1060,18 +1112,20 @@ function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
 }
 
 /**
- * One ladder step: the hi-fi's arrow "claim ↑ →" from the previous card, then
- * the card (the ladder is laid out weak→strong, VD-P20-14). The first card has
- * no arrow, so none ever follows the last one. The arrow leads its own card
+ * One ladder step: the hi-fi's connector from the previous card, then the card
+ * (the ladder is laid out weak→strong, VD-P20-14). F1: the connector says what the
+ * two served ranks say — "claim ↑ →" only where the claim really strengthens,
+ * "same claim →" between equal ranks (all fifteen real attempts share one claim
+ * family). The first card has no connector, so none ever follows the last one. The arrow leads its own card
  * inside one wrapping box (FG-04a): a line that wraps never ends on an arrow
  * pointing at nothing. DOM and reading order stay card, arrow, card, …
  */
-function LadderStep({ run, first }: { run: CompareRun; first: boolean }) {
+function LadderStep({ run, step }: { run: CompareRun; step: LadderStepKind | null }) {
   return (
     <div className="cp-lstep" data-ladder-step={run.run_id}>
-      {first ? null : (
-        <span className="cp-arrow" aria-label="claim strengthens along the ladder" data-ladder-arrow>
-          claim ↑ →
+      {step === null ? null : (
+        <span className="cp-arrow" aria-label={STEP_CONNECTOR[step].label} data-ladder-arrow data-step-kind={step}>
+          {STEP_CONNECTOR[step].text}
         </span>
       )}
       <LadderCard run={run} />
@@ -1273,12 +1327,21 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
     <section className="cp-tcard cp-diffcard" data-panel="diff" aria-label="config diff" data-config-diff={diff.availability.state}>
       <h3 className="t">
         <span>{DIFF_TITLE}</span>
-        <span className="cp-faint" data-config-diff-legend>
+        <span
+          className="cp-faint"
+          data-config-diff-legend
+          data-baseline-chosen={active ? "screen" : "none"}
+          title={
+            active
+              ? `The server publishes no baseline attempt. This screen compares every column with the first attempt of an ACTIVE alpha version on the ladder (${active.attempt_id}); it is a reading aid, not a server fact.`
+              : "The server publishes no baseline attempt and no returned attempt belongs to an ACTIVE alpha version, so nothing is compared."
+          }
+        >
           {diff.availability.state !== "AVAILABLE"
             ? COMPARE_WITHHELD_WORDS[diff.availability.state]
             : active
-              ? `gold = differs from ACTIVE ${sid(active.attempt_id)}`
-              : `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"} · no ACTIVE version returned`}
+              ? `gold = differs from ${sid(active.attempt_id)} · baseline picked by this screen`
+              : `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"} · no baseline — the server names none`}
         </span>
       </h3>
       <div className="body cp-scroll" tabIndex={0} role="region" aria-label="config diff table">
@@ -1294,7 +1357,12 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
               <tr>
                 <th scope="col">key</th>
                 {runs.map((run) => (
-                  <th key={run.run_id} scope="col" data-active={run === active ? "true" : undefined} title={run.attempt_id}>
+                  <th
+                    key={run.run_id}
+                    scope="col"
+                    data-active={run === active ? "true" : undefined}
+                    title={run === active ? `${run.attempt_id} — baseline picked by this screen (the server names none)` : run.attempt_id}
+                  >
                     {sid(run.attempt_id)}
                   </th>
                 ))}
@@ -1388,7 +1456,7 @@ function TrajectoryCard({ result, alphaId }: { result: AttemptResult; alphaId: s
 function AttemptsBody({ result, alphaId }: { result: AttemptResult; alphaId: string | null }) {
   return (
     <>
-      <Rule tone="gold">{ATTEMPTS_RULE}</Rule>
+      <Rule tone="gold">{attemptsRule(ladderSteps(ladderOrder(result)))}</Rule>
       <Ladder result={result} />
       <FoldChart result={result} />
       <div className="cp-grid">
@@ -1679,11 +1747,14 @@ interface DeltaRowView {
   sign: "pos" | "neg" | null;
 }
 
+/** The scope of every figure that comes from `pair.common_window` (the foot of the table prints the window). */
+const COMMON_WINDOW_SCOPE = "common window";
+
 function commonRow(result: PairComparable, id: CommonMetric["key"], label: string): DeltaRowView {
   const metric = commonOf(result, id);
   if (!metric) {
     const absent = <Absent what={label} state="not returned" reason="metric absent from common_window" />;
-    return { id, label, scope: "common window", left: absent, right: absent, delta: absent, sign: null };
+    return { id, label, scope: COMMON_WINDOW_SCOPE, left: absent, right: absent, delta: absent, sign: null };
   }
   const unit = id === "TRADE_COUNT" ? "count" : id === "OOS_SHARPE" ? "ratio" : "fraction";
   const delta =
@@ -1697,7 +1768,8 @@ function commonRow(result: PairComparable, id: CommonMetric["key"], label: strin
   return {
     id,
     label,
-    scope: "",
+    /* F1: the figure is the COMMON window's, not the run's own — say so under the label. */
+    scope: COMMON_WINDOW_SCOPE,
     definition: metric.definition_id,
     left: <SideValue value={metric.left_value} availability={metric.availability} what="A" unit={unit} />,
     right: <SideValue value={metric.right_value} availability={metric.availability} what="B" unit={unit} />,
@@ -1727,6 +1799,9 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
   const sharpeCommon = commonOf(result, "OOS_SHARPE");
   const winCommon = commonOf(result, "WIN_RATE_FRACTION");
   const weaker = result.pair.weaker_claim;
+  /* F1: a server that publishes the common window's Sharpe (research.compare.metric.v2) serves A, B and Δ for that scope. Its Δ belongs
+     to its own row — beside the fold-mean A/B above it, it would read as their difference ("Δ — available AVAILABLE" before this). */
+  const sharpeCommonServed = sharpeCommon !== undefined && sharpeCommon.availability.state === "AVAILABLE" && sharpeCommon.delta !== null;
   return [
     {
       id: "OOS_SHARPE",
@@ -1735,14 +1810,17 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
       left: <MetricValue metric={sharpeLeft} what="A" />,
       right: <MetricValue metric={sharpeRight} what="B" />,
       /* CG-P20-06: the common window types its Sharpe NOT_APPLICABLE with the server's reason. */
-      delta: sharpeCommon ? (
+      delta: sharpeCommonServed ? (
+        <Absent what="Δ" state="not published" reason="none for this scope — see common window" />
+      ) : sharpeCommon ? (
         <AvailabilityAbsent availability={sharpeCommon.availability} what="Δ" />
       ) : (
         <Absent what="Δ" state="not returned" reason="metric absent from common_window" />
       ),
       sign: null,
     },
-    commonRow(result, "NET_RETURN_FRACTION", "total return (OOS)"),
+    ...(sharpeCommonServed ? [{ ...commonRow(result, "OOS_SHARPE", "OOS sharpe"), id: "OOS_SHARPE_COMMON" }] : []),
+    commonRow(result, "NET_RETURN_FRACTION", "net return"),
     commonRow(result, "MAX_DRAWDOWN_FRACTION", "max drawdown"),
     {
       id: "TRADE_COUNT",
@@ -1761,7 +1839,7 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
       ? {
           id: "WIN_RATE",
           label: "win rate",
-          scope: "",
+          scope: COMMON_WINDOW_SCOPE,
           definition: winCommon.definition_id,
           left: <AvailabilityAbsent availability={winCommon.availability} what="A" />,
           right: <AvailabilityAbsent availability={winCommon.availability} what="B" />,
@@ -2092,7 +2170,7 @@ function PendingBody({
   }
   return (
     <>
-      <Rule tone="gold">{ATTEMPTS_RULE}</Rule>
+      <Rule tone="gold">{ATTEMPTS_RULE_BASE}</Rule>
       <section data-panel="ladder" data-panel-state={state} aria-label="claim ladder">
         <h3 className="cp-ladderhead">
           <span data-ladder-header>{LADDER_HEADER}</span>
