@@ -471,6 +471,33 @@ const FoldNavigationSchema = z.object({
   }
 });
 
+export const ResearchEvidenceDatasetCoverageSchema = z.object({
+  availability: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+  }).strict(),
+  range_scope: z.literal("FULL_SNAPSHOT_QUERY").nullable(),
+  range: z.object({
+    start_utc_ms: UtcMsSchema,
+    end_exclusive_utc_ms: UtcMsSchema,
+  }).strict().nullable(),
+  rows: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable(),
+  gaps: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
+  missing_bar_count: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
+  columns: z.array(z.string().min(1).max(64)).max(16),
+}).strict().superRefine((value, context) => {
+  const present = value.availability.state === "AVAILABLE";
+  const values = [value.range, value.range_scope, value.rows, value.gaps, value.missing_bar_count];
+  if (present && (values.some((item) => item === null) || value.columns.length === 0 ||
+      value.range!.start_utc_ms >= value.range!.end_exclusive_utc_ms || value.availability.reason_code !== null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "available coverage requires complete bounded metadata" });
+  }
+  if (!present && (values.some((item) => item !== null) || value.columns.length !== 0 ||
+      value.availability.reason_code === null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "unpublished coverage cannot carry values" });
+  }
+});
+
 export const ResearchEvidenceHubResponseSchema = z.object({
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
@@ -499,6 +526,8 @@ export const ResearchEvidenceHubResponseSchema = z.object({
       timeframe: z.string().min(1).max(191).nullable(),
       oos_observation_count: z.number().int().positive().max(2_000_000).nullable(),
     }).strict(),
+    /** P08 immutable snapshot metadata, optional for rolling deploy compatibility. */
+    dataset_coverage: ResearchEvidenceDatasetCoverageSchema.optional(),
     /**
      * Optional only for bounded rolling deploy compatibility.  New Control
      * readers always emit both fields; consumers must render typed absence if

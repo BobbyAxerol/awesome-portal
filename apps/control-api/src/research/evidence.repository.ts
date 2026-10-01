@@ -61,6 +61,7 @@ export interface EvidenceHubRow {
   alphaName: string | null;
   alphaVersionId: string | null;
   requestedSpec: JsonValue;
+  preflightSnapshot: JsonValue;
   requestedSpecDigest: string | null;
   effectiveSpecDigest: string | null;
   datasetBindingDigest: string | null;
@@ -105,6 +106,7 @@ interface HubQueryRow {
   alpha_name: string | null;
   alpha_version_id: string | null;
   requested_spec: JsonValue;
+  preflight_snapshot: JsonValue;
   requested_spec_digest: string | null;
   effective_spec_digest: string | null;
   dataset_binding_digest: string | null;
@@ -356,6 +358,7 @@ export class ResearchEvidenceRepository {
                 alpha.name AS alpha_name,
                 producer.alpha_version_id,
                 preflight.requested_spec,
+                preflight.snapshot AS preflight_snapshot,
                 producer.requested_spec_digest,
                 producer.effective_spec_digest,
                 producer.dataset_binding_digest,
@@ -408,6 +411,7 @@ export class ResearchEvidenceRepository {
           alphaName: row.alpha_name,
           alphaVersionId: row.alpha_version_id,
           requestedSpec: row.requested_spec,
+          preflightSnapshot: row.preflight_snapshot,
           requestedSpecDigest: row.requested_spec_digest,
           effectiveSpecDigest: row.effective_spec_digest,
           datasetBindingDigest: row.dataset_binding_digest,
@@ -434,7 +438,7 @@ export class ResearchEvidenceRepository {
       return {
         kind: "LEGACY" as const, runId,
         runState: null, runCreatedAtUtcMs: null, alphaId: null, alphaName: null, alphaVersionId: null,
-        requestedSpec: null,
+        requestedSpec: null, preflightSnapshot: null,
         requestedSpecDigest: null, effectiveSpecDigest: null, datasetBindingDigest: null, manifestDigest: null,
         progressSnapshot: null, displayLabel: null, jobState: null, revision: null, projection: null, readiness: null,
         sourceEvidenceDigest: null, receivedAt: null,

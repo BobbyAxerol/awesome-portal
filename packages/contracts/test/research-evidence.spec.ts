@@ -46,4 +46,20 @@ describe("P13 published Research Evidence Flow contract", () => {
     expect(document).toContain("immutable");
     expect(document).toContain("At most 192");
   });
+  it("B3 publishes only bounded P08 snapshot metadata with an explicit full-query scope", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8")) as { components: { schemas: Record<string, any> } };
+    const core = document.components.schemas.EvidenceHub.properties.core;
+    expect(core.properties.dataset_coverage).toEqual(expect.objectContaining({
+      $ref: "#/components/schemas/DatasetCoverage",
+    }));
+    expect(core.required).not.toContain("dataset_coverage");
+    const coverage = document.components.schemas.DatasetCoverage;
+    expect(coverage.required).toContain("range_scope");
+    const fixture = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-evidence.dataset-coverage.valid.json"), "utf8"));
+    expect(fixture).toMatchObject({
+      range_scope: "FULL_SNAPSHOT_QUERY", rows: 336, gaps: 0, missing_bar_count: 0,
+      columns: ["open", "high", "low", "close", "volume"],
+    });
+    expect(readFileSync(generatedPath, "utf8")).toContain("DatasetCoverage");
+  });
 });

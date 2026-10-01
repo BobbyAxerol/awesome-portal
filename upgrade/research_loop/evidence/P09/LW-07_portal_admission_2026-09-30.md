@@ -23,3 +23,10 @@ fixture and focused backend/contract tests cover fixed, WFO, preview bounds
 and disabled/source-unverified states. Claude should bind the **Portal
 admission** object for S02 run-copy; it must not infer a 1-trial WFO from
 the QuantBT source-catalogue field. Historical Atlas remains identity-only.
+
+Pinned isolated-preview acceptance on source commit `d88121e6`, Control API
+image `sha256:a4342a9f90a00b209176dae23c8e26d9a7848384b168e416260a1d8a09fb2f23`:
+GET `/api/v1/research/quantbt/atlas` returned HTTP 200. The current Portal
+admission advertised P04 ENABLED (one trial, null seed) and WFO ENABLED
+(2–400 trials, seed 42, max span 92 days, folds 2–16). The note is
+`PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE`.

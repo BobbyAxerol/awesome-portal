@@ -6660,3 +6660,15 @@ count/status ledger; Claude should use it for the Research shell and keep
 legacy `/api/runs` separate. The old export security slice remains gated
 separately.
 [LW-08 receipt](./research_loop/evidence/P12/LW-08_legacy_count_boundary_2026-09-30.md).
+
+### B3 CG-FG-S04-02 — retained P08 dataset coverage, 2026-10-01
+
+The P13 Evidence Hub now selects the admitted P08 snapshot in its existing
+workspace/actor/preflight-token join and publishes a typed, bounded
+`core.dataset_coverage`: full snapshot-query UTC range, rows, gaps,
+missing-bar count and columns. No new HMD read or raw/holdout data is exposed.
+Old manifests with only identity digests remain readable and answer
+`NOT_PUBLISHED/P08_SNAPSHOT_COVERAGE_NOT_RETAINED`; corrupt partial metadata
+fails closed. Control API build, focused Hub/contract tests and the disposable
+P13 PostgreSQL test passed. Real-run preview acceptance is still pending.
+[B3 receipt](./research_loop/evidence/P13/CG-FG-S04-02_dataset_coverage_2026-10-01.md)

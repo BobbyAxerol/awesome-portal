@@ -603,6 +603,11 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       revision: expect.stringMatching(/^p13r1_[0-9a-f]{64}$/),
       etag: expect.stringMatching(/^W\/"p13h1_[0-9a-f]{64}"$/),
     });
+    // This historical manifest has only snapshot digests. The new Hub join
+    // must preserve the run read and mark coverage absent, not return 503.
+    expect(hub.core.dataset_coverage).toMatchObject({
+      availability: { state: "NOT_PUBLISHED", reason_code: "P08_SNAPSHOT_COVERAGE_NOT_RETAINED" },
+    });
     expect(hub.core.run_identity).toMatchObject({
       status: { value: "READY", availability: { state: "AVAILABLE", reason_code: null } },
       binding: {

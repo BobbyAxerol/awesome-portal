@@ -21,3 +21,11 @@ trades** (value, scope and definition unchanged). The legacy full-child
 `trades` label is not altered. Claude's S13/S08 binding should show the
 definition/scope already in the DTO and use separate captions; no new
 QuantBT fact or frontend design change is requested here.
+
+Pinned isolated-preview acceptance after the label correction: source
+commit `d88121e6`, Control API image
+`sha256:a4342a9f90a00b209176dae23c8e26d9a7848384b168e416260a1d8a09fb2f23`.
+GET `/api/v1/quantbt/runs?limit=50` returned HTTP 200; R-WFO-020's
+`stats[key=trade_count]` is value `19`, role `TRADE_COUNT`, label
+`OOS fold trades`, scope `OOS`, definition
+`research.current-source.v1.sum-of-published-fold-oos-trade-counts`.

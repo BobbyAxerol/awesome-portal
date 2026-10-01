@@ -37,6 +37,7 @@ import {
 } from "./evidence.repository";
 import { sha256ResearchJson } from "./preflight.service";
 import { ResearchRequestedSpecSchema } from "./preflight.contract";
+import { evidenceDatasetCoverage } from "./evidence.coverage";
 import {
   ResearchEvidenceSourceSchema,
   ResearchProgressSnapshotSchema,
@@ -744,6 +745,7 @@ export class ResearchEvidenceService {
           timeframe: typeof data?.timeframe === "string" ? data.timeframe : null,
           oos_observation_count: projection?.source.oos_observation_count ?? null,
         },
+        dataset_coverage: evidenceDatasetCoverage(row.preflightSnapshot),
         run_identity: runIdentity,
         fold_navigation: foldNavigation,
         market_overview: marketOverviewOf(projection),

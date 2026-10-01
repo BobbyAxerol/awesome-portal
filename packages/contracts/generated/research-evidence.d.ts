@@ -364,6 +364,24 @@ export interface components {
             availability: components["schemas"]["Availability"];
             href: string | null;
         };
+        /** @description Immutable P08 snapshot metadata joined inside the run-scoped Hub transaction; no HMD rows or paths. */
+        DatasetCoverage: {
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+            };
+            /** @enum {unknown} */
+            range_scope: "FULL_SNAPSHOT_QUERY" | null;
+            range: {
+                start_utc_ms: components["schemas"]["UtcMilliseconds"];
+                end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+            } | null;
+            rows: number | null;
+            gaps: number | null;
+            missing_bar_count: number | null;
+            columns: string[];
+        };
         EvidenceHub: {
             /** @constant */
             schema_version: "research.evidence-hub.v1";
@@ -395,6 +413,8 @@ export interface components {
                     timeframe: string | null;
                     oos_observation_count: number | null;
                 };
+                /** @description Optional during bounded rollout; current Hub readers always emit a typed coverage fact. */
+                dataset_coverage?: components["schemas"]["DatasetCoverage"];
                 /** @description Optional during a bounded rolling deployment; new Hub responders always emit it. */
                 run_identity?: components["schemas"]["RunIdentity"];
                 /** @description Optional during a bounded rolling deployment; it bounds only the published observed P11 fold set. */
