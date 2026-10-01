@@ -335,3 +335,24 @@ full-hook results are appended only after execution. Claude should consume the
 new optional point/provenance fields without treating legacy absence as zero.
 Metadata index, executor v2, T12 audit/T14 exposure, whole-candidate P23/P24 stay
 open; this slice does not relabel them complete. No remote push or production change.
+
+### BR-F6 runtime closeout — supersedes pending status above
+
+**BR-F6-01/02 PREVIEW_ACCEPTED `cf8dc871`**: all **12 eligible WFO seals** (10 old,
+2 newer), append-only migration 082 dry/apply/retry, and real same-origin Hub plus
+both named series PASS. R-WFO-023 July/August are present, July partial; histogram
+is **61 daily returns from 1,488 OOS bars**, not a relabelled per-bar histogram.
+Independent monthly/bin-count oracle and unchanged seal/AN-29/Report/Freeze/Replay
+checksums PASS. Full hook: Control API 1,411 pass / 1 skip; contracts 206/206.
+Code slice: 29 files, +1,006/−31 (including generated types/fixtures/tests/docs).
+[Complete receipt + Claude binding instructions](./evidence/P13/BR_F6_ALL_TIME_DISTRIBUTIONS_2026-10-01.md).
+
+Claude: bind `MonthlySample.partial`/count/basis and
+`source_sample.derivation.grain`; do not show 1,488 as the histogram's daily
+population. No browser-side derivation, zero-fill or old Report rewrite.
+The newer **B6/ER-01…10 spec is preserved and still open**: this reuses its
+all-time distribution foundation, not its full `enriched_analysis` delivery.
+In particular, P04's existing monthly read is not implicitly fixed by WFO
+acceptance, and Library `analytics_all_time`/episodes/supplemental Report remain
+the B6 work. Metadata index, executor v2, T12/T14 and P23/P24 remain open.
+No Codex frontend edit, remote push or production action.

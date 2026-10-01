@@ -6831,3 +6831,24 @@ Bobby giao tiếp tục queue; ưu tiên panel S04 đang trống. Codex owns bac
 - Named MONTHLY_RETURNS/RETURN_DISTRIBUTION reads and Evidence revision/ETag include the companion. Unrelated Freeze/Replay/Report revisions remain unchanged. Old clients still accept the existing value shape; additional partial/count/basis fields and typed metadata are generated from OpenAPI, not hand-written frontend types.
 - Tests: independent monthly arithmetic and daily-histogram counts, mid-month/one-month/gaps/constant/invalid/bounded inputs; schema/digest/count consistency; PostgreSQL forward migration/immutable grants and replay/conflict; old-scope refusal without companion; real preview old-WFO + R-WFO-023 read receipts, unchanged original seal/report checksums. One backend refresh only after grouped code/tests; no optimizer or frontend rebuild for this slice.
 - Exit: both named series AVAILABLE with truthful scope/counts on the verified preview runs, July retained for R-WFO-023, companion idempotent, old seal/report unchanged, generated contract/FE handoff recorded. This scoped closeout does not turn remaining B3–B5/P23/P24 into PASS. No remote push or production action.
+
+#### BR-F6 actual-image closeout — 2026-10-01
+
+`cf8dc871` landed after Claude `7e98a18d` / `31a61da6`; both sides' docs and
+frontend commits preserved. **BR-F6-01/02 PREVIEW_ACCEPTED** on twelve eligible
+WFO seals (ten old + two new): migration 082 append-only companions, operator
+dry/apply/idempotent retry and two named series/Hubs passed. R-WFO-023 has July
+and August, first month partial, histogram 61 UTC daily returns from 1,488 OOS
+bars. Independent raw-row oracle and original seal/AN-29/Report/Freeze/Replay
+immutability PASS. Full hook Control API 1,411 pass/1 skip, contracts 206/206;
+focused pinned Python 34/34. Exact images/hashes/Claude handoff in
+[P13 receipt](./research_loop/evidence/P13/BR_F6_ALL_TIME_DISTRIBUTIONS_2026-10-01.md).
+
+Codex changed no frontend file, ran no optimizer and rebuilt only preview backend
+images. Claude can bind the new partial/basis/count and daily-grain metadata now.
+The new B6 `enrich_analysis` spec survives the queue conflict intact; its full
+ER-01…10 implementation (including all-time Library, P04 monthly binding and
+drawdown episodes) remains next, not silently marked done. Metadata index,
+executor v2, audit/exposure and whole-candidate P23/P24 still open. No remote
+push, dev/main merge or production change. C4: disposable test cells cleaned,
+active preview retained, 224 GiB root free / 16 GiB RAM available; no prune.

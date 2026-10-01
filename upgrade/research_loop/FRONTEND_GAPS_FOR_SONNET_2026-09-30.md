@@ -256,6 +256,17 @@ Bản ghi: `evidence/P21/audit-2026-09-30/f4/*.md`.
 
 ### F6 — panel trống ở S04, dấu trừ (2026-10-01)
 
+**Backend follow-up `cf8dc871`: BR-F6-01/02 PREVIEW_ACCEPTED** for twelve eligible
+WFO seals on the actual :8095 image. Existing MONTHLY_RETURNS/RETURN_DISTRIBUTION
+named reads are now AVAILABLE, including old R-WFO-020. R-WFO-023 emits July +
+August (July partial), 61 daily returns rather than 1,488 per-bar samples. Use
+generated optional `MonthlySample.partial`/`observation_count`/`basis` and
+`source_sample.derivation.grain`; counts from `source_sample.source_observation_count`.
+No FE recomputation or zero-fill. [Actual receipt and full typed handoff](./evidence/P13/BR_F6_ALL_TIME_DISTRIBUTIONS_2026-10-01.md).
+Browser/visual acceptance is not claimed by Codex. B6 `enriched_analysis`,
+Library all-time and P04's month read remain separately open; preserve the
+UI-first contract and fallback readers until that complete block is published.
+
 - **Điều tra:** "Return distribution" và "Monthly returns" trống trên R-WFO-020 là do server từ chối với seal cũ (`PORTAL_DERIVED_SERIES_SCOPE_NOT_OOS`), không phải FE; seal mới (R-WFO-022/023) hiện đủ. Đường để hiện cho run cũ là BR-F6-01 (đưa hai chuỗi vào sidecar v2, all-time); BR-F6-02 (tháng đầu bị bỏ). FE vẫn không tự dẫn xuất.
 - **UI:** panel vắng không còn kéo cao bằng panel bên cạnh (`self-start`), vẫn hiện đủ khung kèm mã lý do; panel có hình giữ chiều cao hàng.
 - **Quyết định dấu trừ (của tôi):** mọi số UI tự định dạng dùng `−` (U+2212), gồm thẻ Library; chuỗi server viết sẵn (log console, cụm tiến độ `best IS Sharpe -1.444`, bảng "exact values") giữ nguyên như server gửi.
