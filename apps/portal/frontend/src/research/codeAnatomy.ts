@@ -57,19 +57,19 @@ export const CODE_ANATOMY: readonly AnatomySection[] = [
   "required_columns":["open","high","low","close","volume"],
   "warmup_bars":32,"determinism":{"seed_required":true},
   "parameter_space":{"window":{"kind":"int_range","low":8,"high":64,"step":1}}}`,
-    note: "The restricted parser reads one literal declaration; the server verifies and gates each mirrored field. Browser edits do not change it.",
+    note: "One literal declaration; the server verifies each field.",
   },
   {
     section: "one restricted entrypoint",
     unlocks: [unlock("entrypoint-importable gate")],
     code: `def generate_signals(context):\n    return context`,
-    note: "The current importer accepts one .py source and one restricted function definition. It installs no dependencies and does not execute an arbitrary package at import.",
+    note: "One .py file, one restricted function.",
   },
   {
     section: "seven ordered gates",
     unlocks: [unlock("quarantine gates")],
     code: `contract-complete · entrypoint-importable · digest-unique\nparameter-space-sane · determinism-declared · data-contract-known\nno-lookahead-static-scan`,
-    note: "A FAIL makes later gates SKIPPED. Gate 7 is static only; runtime causality is proven per run at Stage 3/4. PASS permits registration, not automatic activation or every route.",
+    note: "A FAIL skips later gates; gate 7 static.",
   },
 ];
 
@@ -81,15 +81,15 @@ export interface UnlockRow {
 }
 
 export const UNLOCK_MAP: readonly UnlockRow[] = [
-  { output: "Literal contract", routes: "Parsed fields are mirrored with VERIFY/GATED labels; no route is admitted yet." },
-  { output: "Seven passing gates", routes: "The exact source may be registered; static scan is not runtime proof." },
-  { output: "Admitted version", routes: "Run eligibility is decided by the installed release manifest and preflight, not by this page." },
+  { output: "Literal contract", routes: "Fields mirrored; no route admitted yet." },
+  { output: "Seven passing gates", routes: "This exact source may be registered." },
+  { output: "Admitted version", routes: "Run eligibility comes from preflight." },
 ];
 
 /** Current-authority disclosure for the reference panel. */
 export const UNLOCK_FOOTER =
-  "This page does not certify runtime behaviour. The installed release and each run preflight decide admissible routes.";
+  "Not runtime proof. Preflight decides admissible routes.";
 
 /** Says what this substage is, so it cannot be read as a stage of the import. */
 export const ANATOMY_SUBSTAGE_NOTE =
-  "Reference for writing the module — not a step of this import. The authority states are parse, the seven gates, then register and activate.";
+  "Reference only, not an import step.";

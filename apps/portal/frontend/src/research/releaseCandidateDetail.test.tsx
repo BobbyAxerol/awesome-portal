@@ -1797,6 +1797,84 @@ describe("S11 P22 closeout bindings (FG-05)", () => {
   });
 });
 
+/* ------------------------------------- F2 · the publication's promotion_pick */
+
+describe("S11 F2 promotion_pick in the lineage rail", () => {
+  const FACT = `sha256:${"e".repeat(64)}`;
+  const PICK: NonNullable<RcPublication["promotion_pick"]> = {
+    state: "WRITTEN",
+    approval_id: APPROVAL,
+    approval_status: "APPROVED_WITH_CONDITION",
+    approval_version: 2,
+    run_id: RUN,
+    selected_trial_id: "trial_0007",
+    artifact_id: "art_selected_params_01",
+    fact_digest: FACT,
+  };
+
+  it("F2-S11-01 the served pick state, approval status, trial, artifact and fact digest are read (pack route)", async () => {
+    server({ PACK: [ok(pack())], PUBLICATION: [ok(deliveredRead({ promotion_pick: PICK }))] });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    const node = await until("[data-rail-node='promotion_pick'][data-pick-state]");
+    expect(node.getAttribute("data-pick-state")).toBe("WRITTEN");
+    expect(node.getAttribute("data-pick-status")).toBe("APPROVED_WITH_CONDITION");
+    expect(node.querySelector("[data-state-chip]")!.textContent).toBe("APPROVED_WITH_CONDITION");
+    expect(node.querySelector("[data-pick-state-word]")!.textContent!.trim()).toBe("WRITTEN");
+    expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("trial trial_0007");
+    expect(node.querySelector("[data-pick-artifact]")!.textContent).toBe("artifact art_selected_params_01");
+    expect(node.querySelector("[data-pick-digest]")!.getAttribute("title")).toBe(FACT);
+    expect(node.getAttribute("title")).toContain(FACT);
+  });
+
+  it("F2-S11-02 a pending pick shows the served PENDING status and PENDING_APPROVAL state as sent", async () => {
+    server({
+      PACK: [ok(pack())],
+      PUBLICATION: [ok(publication({ state: "PENDING", promotion_pick: { ...PICK, state: "PENDING_APPROVAL", approval_status: "PENDING", approval_version: null } }))],
+    });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    const node = await until("[data-rail-node='promotion_pick'][data-pick-state]");
+    expect(node.getAttribute("data-pick-state")).toBe("PENDING_APPROVAL");
+    expect(node.querySelector("[data-state-chip]")!.textContent).toBe("PENDING");
+  });
+
+  it("F2-S11-03 a pick whose trial and artifact are null says each is not published, never 0 or a dash", async () => {
+    server({ PACK: [ok(pack())], PUBLICATION: [ok(publication({ promotion_pick: { ...PICK, selected_trial_id: null, artifact_id: null } }))] });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    const node = await until("[data-rail-node='promotion_pick'][data-pick-state]");
+    expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("trial — not published");
+    expect(node.querySelector("[data-pick-artifact]")!.textContent).toBe("artifact — not published");
+  });
+
+  it("F2-S11-04 no pick on the read is a typed absence (pack route)", async () => {
+    server({ PACK: [ok(pack())], PUBLICATION: [ok(publication({ promotion_pick: null }))] });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    const node = await until("[data-rail-node='promotion_pick']");
+    expect(node.getAttribute("data-pick-absent")).toBe("true");
+    expect(node.textContent).toBe("promotion pickpromotion pick — not published");
+    expect(node.querySelector("[data-state-chip]")).toBeNull();
+  });
+
+  it("F2-S11-05 the sealed composition reads the same served pick, and its absence", async () => {
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(deliveredRead({ promotion_pick: PICK }))] });
+    renderCompose();
+    await ready();
+    const node = await until("[data-rail] [data-rail-node='promotion_pick'][data-pick-state]");
+    expect(node.getAttribute("data-pick-status")).toBe("APPROVED_WITH_CONDITION");
+    expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("trial trial_0007");
+    cleanup();
+
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(deliveredRead())] });
+    renderCompose();
+    await ready();
+    const absent = await until("[data-rail] [data-rail-node='promotion_pick'][data-pick-absent]");
+    expect(absent.textContent).toContain("promotion pick — not published");
+  });
+});
+
 /* -------------------------------------------- file-wide route guard (last) */
 
 describe("S11 P22 route guard across this file", () => {

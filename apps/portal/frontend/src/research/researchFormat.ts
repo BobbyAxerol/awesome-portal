@@ -161,3 +161,12 @@ export function foldLabel(foldId: string | number): string {
   const text = String(foldId);
   return /^\d+$/.test(text) ? `fold_${String(Number(text) + 1).padStart(2, "0")}` : text;
 }
+
+/**
+ * A served integer count, thousands-grouped (`10,000`). `null` for an absent
+ * count so the caller renders its own typed absence, never `0` or `—`.
+ */
+export function formatCount(value: number | null | undefined): string | null {
+  if (value === null || value === undefined || !Number.isFinite(value)) return null;
+  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
+}

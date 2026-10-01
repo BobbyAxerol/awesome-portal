@@ -47,6 +47,10 @@ export interface AlphaImportController {
   registration: RegistrationResponse | null;
   activation: ActivationResponse | null;
   registry: readonly RegistryEntry[];
+  /** `total` the server published for the list it served; null until a list returns. */
+  registryTotal?: number | null;
+  /** The `alpha_id` the served list was requested with ("" = unfiltered). */
+  registryAlpha?: string;
 
   parseState: ResearchState;
   gatesState: ResearchState;
@@ -72,6 +76,8 @@ export interface AlphaImportController {
   activationRefusal: ImportRefusal | null;
 }
 
+const ALPHA_ID_PATTERN = /^[a-z][a-z0-9-]{2,63}$/;
+
 export function useAlphaImport(workspaceId?: string): AlphaImportController {
   const [sourceText, setSourceText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -84,6 +90,11 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
   const [activation, setActivation] = useState<ActivationResponse | null>(null);
   const [activationAttemptId, setActivationAttemptId] = useState<string | null>(null);
   const [registry, setRegistry] = useState<readonly RegistryEntry[]>([]);
+  const [registryTotal, setRegistryTotal] = useState<number | null>(null);
+  const [registryAlpha, setRegistryAlpha] = useState("");
+  /* The server filters by alpha_id. The field is sent only once it is a whole,
+     valid id and the typist has paused, so a half-typed id is never a request. */
+  const [registryFilter, setRegistryFilter] = useState("");
 
   const [pending, setPending] = useState<Step | null>(null);
   const [refusal, setRefusal] = useState<ImportRefusal | null>(null);
@@ -95,10 +106,13 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
      this container whether the caller may activate. A 403 on the write path is
      not something to discover by offering the button and watching it fail. */
   const loadRegistry = useCallback(() => {
+    const requested = registryFilter;
     alphaImportApi
-      .registry(workspaceId)
+      .registry(workspaceId, requested || undefined)
       .then((response) => {
         setRegistry(response.entries);
+        setRegistryAlpha(requested);
+        setRegistryTotal(typeof response.total === "number" ? response.total : null);
         setRegistryState(researchState({ kind: "ok", rowCount: response.entries.length }));
       })
       .catch((error: unknown) => {
@@ -110,9 +124,17 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
           retainsContent: false,
         });
       });
-  }, [workspaceId]);
+  }, [registryFilter, workspaceId]);
 
   useEffect(loadRegistry, [loadRegistry]);
+
+  useEffect(() => {
+    const typed = alphaId.trim();
+    const next = ALPHA_ID_PATTERN.test(typed) ? typed : "";
+    if (next === registryFilter) return;
+    const timer = setTimeout(() => setRegistryFilter(next), 250);
+    return () => clearTimeout(timer);
+  }, [alphaId, registryFilter]);
 
   /** Everything the current bytes produced. Dropped whenever the bytes change. */
   const dropReceipts = useCallback(() => {
@@ -275,6 +297,8 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
     registration,
     activation,
     registry,
+    registryTotal,
+    registryAlpha,
 
     parseState: stepState("parse", parse !== null, IDLE.parse),
     gatesState: stepState("gates", gates !== null, IDLE.gates),

@@ -28,7 +28,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "rea
 import { paletteNow } from "../charts/theme";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
-import { foldLabel, formatMetric } from "./researchFormat";
+import { foldLabel, formatCount, formatMetric, shortDigest } from "./researchFormat";
 import {
   REPLAY_GAP_WORDS,
   type CurrentSourceObservation,
@@ -38,6 +38,7 @@ import {
   type ChildAuditRecord,
 } from "./replayClient";
 import { ReplayTransport, SPEEDS, useTransport } from "./replayTransport";
+import type { ProgressRead } from "./progressClient";
 import { retainedReadiness } from "./retainedLane";
 import { SplitBand, SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
 import { ACROSS_HELP, ACROSS_LABEL, pageRefusalWords, usePlayAcrossFolds, type PlayAcross } from "./usePlayAcrossFolds";
@@ -60,7 +61,89 @@ export const REVEAL_NOTE = "Hides everything after the cursor — no re-run.";
 export const REVEAL_HIDDEN = "hidden by causal reveal";
 
 function counted(value: number | null, noun: string): string {
-  return value === null ? `${noun} not published` : `${value} ${noun}`;
+  return value === null ? `${noun} not published` : `${formatCount(value)} ${noun}`;
+}
+
+/** A served count, grouped; an unpublished one says so (never `0`, never a dash). */
+function countCell(value: number | null): string {
+  return formatCount(value) ?? "not published";
+}
+
+/** A route fact's served reason code (its own, else its availability's). */
+function factCode(fact: { reason_code?: string | null; availability: { reason_code: string | null } }): string | null {
+  return fact.reason_code ?? fact.availability.reason_code ?? null;
+}
+
+type ProgressFold = NonNullable<NonNullable<ProgressRead["progress"]>["folds"]>[number];
+
+/**
+ * The parameter bundle the P11 progress read says a fold was evaluated with.
+ * The engine numbers folds from 0 and the progress read from 1 (`foldLabel`),
+ * so the join is on that one rule. Absent progress is "unread"; a fold the
+ * progress read does not carry, or whose selection is not published, is an
+ * absence with the served reason code when there is one.
+ */
+export type FoldParams =
+  | { state: "value"; digest: string }
+  | { state: "absent"; code: string | null }
+  | { state: "unread"; answered: boolean };
+
+export function foldParams(progress: ProgressRead | null, foldId: string | null, answered: boolean): FoldParams {
+  if (progress === null || foldId === null || !/^\d+$/.test(foldId)) return { state: "unread", answered };
+  const fold: ProgressFold | undefined = progress.progress?.folds?.find((candidate) => candidate.fold === Number(foldId) + 1);
+  const selection = fold?.selection;
+  if (!selection) return { state: "absent", code: null };
+  if (selection.state === "AVAILABLE" && selection.params_digest) return { state: "value", digest: selection.params_digest };
+  return { state: "absent", code: selection.reason_code };
+}
+
+type ClaimFactLike = {
+  value: string | boolean | null;
+  reason_code: string | null;
+  availability: { reason_code: string | null };
+};
+
+/** A claim token as served; unread is "reading…", a null value is "not published" with its served reason code. */
+function claimToken(slotState: string | undefined, fact: ClaimFactLike | undefined): ReactNode {
+  if (slotState !== "ready") return "reading…";
+  if (fact === undefined) return "not published";
+  if (fact.value !== null) return String(fact.value);
+  const code = fact.reason_code ?? fact.availability.reason_code;
+  return (
+    <>
+      not published
+      {code ? (
+        <>
+          {" "}
+          <span className="font-normal" data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>{code}</span>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function FoldParamsText({ params }: { params: FoldParams }) {
+  if (params.state === "value") {
+    return (
+      <span data-fold-params={params.digest} title={params.digest}>
+        params {shortDigest(params.digest, 8)}
+      </span>
+    );
+  }
+  if (params.state === "unread") {
+    return <span data-fold-params="unread">{params.answered ? "params — the progress read did not answer" : "params — reading…"}</span>;
+  }
+  return (
+    <span data-fold-params="absent">
+      params — not published
+      {params.code ? (
+        <>
+          {" "}
+          <span data-reason-code={params.code} title={reasonCodeSentence(params.code) ?? undefined}>{params.code}</span>
+        </>
+      ) : null}
+    </span>
+  );
 }
 
 function words(value: string): string {
@@ -390,8 +473,13 @@ function FoldStrip({
   disabled,
   reveal,
   cutOrdinal = null,
+  progress = null,
+  progressAnswered = false,
 }: {
   replay: CurrentSourceReplay;
+  /** The P11 progress read, for each fold's selected params digest. */
+  progress?: ProgressRead | null;
+  progressAnswered?: boolean;
   activeFold: string | null;
   onFold: (segment: FoldSegment) => void;
   disabled: boolean;
@@ -455,11 +543,13 @@ function FoldStrip({
                 data-fold={segment.fold_id}
                 disabled={disabled}
                 onClick={() => onFold(segment)}
-                title={
-                  reveal && position >= activeAt
+                title={(() => {
+                  const params = foldParams(progress, segment.fold_id, progressAnswered);
+                  const paramsText = params.state === "value" ? `params ${params.digest}` : params.state === "absent" ? `params not published${params.code ? ` ${params.code}` : ""}` : "params not read";
+                  return reveal && position >= activeAt
                     ? `fold ${segment.fold_id}: ${segment.bars} bars`
-                    : `fold ${segment.fold_id}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · fold return not published`
-                }
+                    : `fold ${segment.fold_id}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · ${paramsText} · fold return not published`;
+                })()}
               >
                 {/* F1 FG 08-06: the server publishes each fold's start and end equity, not a return — the chip shows the served end equity and never divides. */}
                 {foldLabel(segment.fold_id)} · {segment.bars} bars ·{" "}
@@ -597,10 +687,10 @@ export function CandleOverviewStrip({
         data-overview-caption
         title={overview.sampling === "FULL" ? undefined : "Each candle's high and low are the true extremes of its bars."}
       >
-        {scope} · {n.toLocaleString("en-US")} bars
+        {scope} · {formatCount(n)} bars
         {overview.sampling === "FULL"
           ? " · every bar"
-          : ` → ${overview.emitted_bucket_count} candles of ${overview.bucket_bars}`}
+          : ` → ${formatCount(overview.emitted_bucket_count)} candles of ${formatCount(overview.bucket_bars)}`}
         {high !== null && low !== null
           ? ` · ${cutOrdinal === null ? "range" : "revealed range"} ${low} – ${high}`
           : " · range withheld — no complete bucket at cursor"}
@@ -984,7 +1074,7 @@ function ChildAuditCard({
                         {record.certified_isolation === true ? " · certified" : record.certified_isolation === false ? " · not certified" : ""}
                       </td>
                       <td className="whitespace-nowrap py-[3px]">
-                        {record.test_start_utc_ms !== null ? iso(record.test_start_utc_ms) : "—"} → {record.test_end_utc_ms !== null ? iso(record.test_end_utc_ms) : "—"}
+                        {record.test_start_utc_ms !== null ? iso(record.test_start_utc_ms) : "not published"} → {record.test_end_utc_ms !== null ? iso(record.test_end_utc_ms) : "not published"}
                       </td>
                     </tr>
                   );
@@ -993,9 +1083,9 @@ function ChildAuditCard({
             </table>
           </div>
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-child-audit-caption>
-            {slot.audit.records.length} of {slot.audit.source_record_count ?? "an unpublished number of"} records for this fold
-            {slot.audit.truncated ? " (capped at 64)" : ""} · run total {summary.source_record_count ?? "—"} · policy {summary.policy ?? "not published"} ·
-            dropped by QuantBT {summary.records_dropped_by_source ?? "not published"} · run fingerprint {short(summary.source_run_fingerprint, 12)}
+            {formatCount(slot.audit.records.length)} of {formatCount(slot.audit.source_record_count) ?? "an unpublished number of"} records for this fold
+            {slot.audit.truncated ? " (capped at 64)" : ""} · run total {formatCount(summary.source_record_count) ?? "not published"} · policy {summary.policy ?? "not published"} ·
+            dropped by QuantBT {formatCount(summary.records_dropped_by_source) ?? "not published"} · run fingerprint {short(summary.source_run_fingerprint, 12)}
           </span>
         </div>
       )}
@@ -1228,7 +1318,7 @@ export function CandleReplayBody({
   const claim = controller.retainedContext?.claim;
   const claimStrip = claim?.state === "ready" ? claim.claim : null;
   const provenance = replay.provenance;
-  const window = rows.length > 0 ? `${rows[0]!.source_ordinal + 1}–${rows.at(-1)!.source_ordinal + 1}` : "—";
+  const window = rows.length > 0 ? `${rows[0]!.source_ordinal + 1}–${rows.at(-1)!.source_ordinal + 1}` : "none read";
   const segment = foldIndex >= 0 ? segments[foldIndex]! : null;
 
   return (
@@ -1269,8 +1359,8 @@ export function CandleReplayBody({
             {readiness ? `readiness ${words(readiness)}` : "readiness — reading…"}
           </span>
           <span className="mono ml-auto flex flex-wrap gap-3 text-[10px]" style={{ color: "var(--ink-soft)" }}>
-            <span data-claim>claim <b style={{ color: "var(--warn)" }}>{claimStrip?.validation_claim.value ?? "—"}</b></span>
-            <span>causality <b>{String(claimStrip?.causality_claim.value ?? "—")}</b></span>
+            <span data-claim>claim <b style={{ color: "var(--warn)" }}>{claimToken(claim?.state, claimStrip?.validation_claim)}</b></span>
+            <span>causality <b>{claimToken(claim?.state, claimStrip?.causality_claim)}</b></span>
           </span>
         </div>
         <p
@@ -1290,7 +1380,7 @@ export function CandleReplayBody({
         data-replay-window="RETAINED_BARS"
         data-retained-in-flight={String(inFlight)}
       >
-        <FoldStrip replay={replay} activeFold={activeFold} onFold={goFold} disabled={inFlight} reveal={reveal} cutOrdinal={reveal ? (playRow?.source_ordinal ?? null) : null} />
+        <FoldStrip replay={replay} progress={progress} progressAnswered={identity?.state === "ready"} activeFold={activeFold} onFold={goFold} disabled={inFlight} reveal={reveal} cutOrdinal={reveal ? (playRow?.source_ordinal ?? null) : null} />
         {/* When play across folds asked for the read that was refused, its own notice under the
             transport carries this same sentence; it is said once, not twice. */}
         {slot.pageRefusal && across.status.refusal !== slot.pageRefusal ? (
@@ -1312,13 +1402,18 @@ export function CandleReplayBody({
           <span className="mono flex-none text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }} data-band-fold>
             {segment ? foldLabel(segment.fold_id) : "in-sample bars (no fold)"}
           </span>
+          {segment ? (
+            <span className="mono flex-none text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+              <FoldParamsText params={foldParams(progress, segment.fold_id, identity?.state === "ready")} />
+            </span>
+          ) : null}
           {band.state === "ready" && band.folds ? (
             <SplitBand band={retainedSplitBand(band.folds, activeFold, claimStrip?.holdout ?? null)} />
           ) : (
             <SplitBandNote slot={band} />
           )}
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-counts>
-            source bars {replay.replay.source_observation_count} · window {window} of {replay.replay.source_observation_count}
+            source bars {formatCount(replay.replay.source_observation_count) ?? "not published"} · window {window} of {formatCount(replay.replay.source_observation_count) ?? "not published"}
             {segment ? ` · fold bars ${segment.first_ordinal + 1}–${segment.last_ordinal + 1}` : ""}
           </span>
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
@@ -1374,12 +1469,29 @@ export function CandleReplayBody({
 
       <div className="flex flex-wrap gap-2" data-verdict-tiles>
         {[
-          { k: "orders · fills · trades", v: `${counts.orders_published ?? "—"} · ${counts.fills_published ?? "—"} · ${counts.trades_published ?? "—"}`, sub: "records QuantBT emitted on this route" },
-          { k: "target transitions", v: reveal ? REVEAL_HIDDEN : String(counts.transitions ?? "—"), sub: "full run · retrospective", hidden: reveal },
+          {
+            k: "orders · fills · trades",
+            v: `${countCell(counts.orders_published)} · ${countCell(counts.fills_published)} · ${countCell(counts.trades_published)}`,
+            sub: "records QuantBT emitted on this route",
+            absent: counts.orders_published === null || counts.fills_published === null || counts.trades_published === null,
+            codes: [
+              counts.orders_published === null ? factCode(replay.route_capabilities.orders) : null,
+              counts.fills_published === null ? factCode(replay.route_capabilities.fills) : null,
+              counts.trades_published === null ? factCode(replay.route_capabilities.trades) : null,
+            ],
+          },
+          {
+            k: "target transitions",
+            v: reveal ? REVEAL_HIDDEN : countCell(counts.transitions),
+            sub: "full run · retrospective",
+            hidden: reveal,
+            absent: !reveal && counts.transitions === null,
+            codes: [!reveal && counts.transitions === null ? factCode(replay.route_capabilities.execution_events) : null],
+          },
           { k: "fees paid", v: reveal ? REVEAL_HIDDEN : (formatMetric(execution.totals.fee, "currency") ?? "not published"), sub: "full run · retrospective", hidden: reveal },
-          { k: "rejected orders", v: String(counts.rejected_orders ?? "—"), sub: "engine diagnostics" },
+          { k: "rejected orders", v: countCell(counts.rejected_orders), sub: "engine diagnostics", absent: counts.rejected_orders === null },
           { k: "fold capital", v: foldCapitalPolicyWords(execution.fold_capital.policy).text, vTitle: foldCapitalPolicyWords(execution.fold_capital.policy).code, sub: words(execution.fold_capital.equity_continuity) },
-        ].map((tile: { k: string; v: string; sub: string; hidden?: boolean; vTitle?: string | null }) => (
+        ].map((tile: { k: string; v: string; sub: string; hidden?: boolean; absent?: boolean; codes?: Array<string | null>; vTitle?: string | null }) => (
           <div
             key={tile.k}
             className="flex min-w-[150px] flex-1 flex-col gap-0.5 rounded-[6px] border px-3 py-2"
@@ -1387,7 +1499,10 @@ export function CandleReplayBody({
             data-tile={tile.k}
           >
             <span className="text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{tile.k}</span>
-            <span className="mono text-[17px] font-semibold" style={{ fontStyle: tile.hidden ? "italic" : undefined, fontSize: tile.hidden ? 12 : undefined }} title={tile.vTitle ?? undefined} data-tile-code={tile.vTitle ?? undefined}>{tile.v}</span>
+            <span className="mono text-[17px] font-semibold" style={{ fontStyle: tile.hidden || tile.absent ? "italic" : undefined, fontSize: tile.hidden || tile.absent ? 12 : undefined }} title={tile.vTitle ?? undefined} data-tile-code={tile.vTitle ?? undefined} data-tile-absent={tile.absent ? "" : undefined}>{tile.v}</span>
+            {(tile.codes ?? []).filter((code): code is string => code !== null).map((code) => (
+              <span key={code} className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>{code}</span>
+            ))}
             <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>{tile.sub}</span>
           </div>
         ))}

@@ -584,6 +584,15 @@ describe("P09-T04 — the Atlas renders from the manifest response", () => {
     expect(document.querySelector("[role='tabpanel']")).toBeNull();
   });
 
+  it("F2-S12-03 the e2e historical atlas body is exactly the canonical union member", () => {
+    const read = (...parts: string[]) => JSON.parse(readFileSync(join(process.cwd(), ...parts), "utf8")) as AtlasResponse;
+    const canonical = read("..", "..", "..", "packages", "contracts", "fixtures", "research-foundation.historical-identity.valid.json");
+    const e2e = read("e2e", "research-foundation", "atlas-historical.json");
+    expect(e2e).toEqual(canonical);
+    expect(e2e.atlas).toBeNull();
+    expect(Object.keys(e2e.historical_identity!).sort()).toEqual(["facts_reason", "facts_state", "package", "release_id", "status", "version"]);
+  });
+
   it("forwards only the four selection keys the contract accepts", () => {
     expect(atlasQueryFromSearch("?release_id=r&route=x&mode=m&workspace_id=w&run=1&admin=1")).toEqual(
       { release_id: "r", route: "x", mode: "m", workspace_id: "w" },

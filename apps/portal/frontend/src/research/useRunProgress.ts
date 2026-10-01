@@ -50,6 +50,17 @@ export function isLive(status: ProgressRead["current"]["effective_status"]): boo
 /** How long a hidden tab keeps its stream (spec 03: one minute). */
 export const HIDDEN_STREAM_GRACE_MS = 60_000;
 
+/**
+ * The study's best objective as the last trial event published it (`best_objective`).
+ * `value: null` is a served null ("no trial has completed yet"), distinct from
+ * `null` (no trial event seen by this view, so nothing to say).
+ */
+export interface LiveBestObjective {
+  /** The fold the trial named, or null for a global-study trial. */
+  fold: number | null;
+  value: string | null;
+}
+
 /** How the screen is currently being fed. */
 export type Transport = "stream" | "poll" | "closed";
 
@@ -197,6 +208,8 @@ export interface RunProgressController {
   foldCursor: number | null;
   pinFold: (fold: number) => void;
 
+  /** The latest `trial_completed.best_objective` this view has seen; null until one arrives. */
+  bestObjective: LiveBestObjective | null;
   cancelling: boolean;
   cancelResult: CancelResponse | null;
   cancel: (reason: string) => void;
@@ -213,6 +226,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   const [eventTrials, setEventTrials] = useState<Readonly<Record<number, number>>>({});
   /* The earliest `after_seq` this view has asked the console for. */
   const [oldestAfter, setOldestAfter] = useState<number | null>(null);
+  const [bestObjective, setBestObjective] = useState<LiveBestObjective | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResponse | null>(null);
   const [linesDropped, setLinesDropped] = useState(false);
@@ -328,6 +342,13 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
 
       if (event.event_type === "trial_completed") {
         const { fold, trial } = event.payload;
+        /* An event that omits `best_objective` says nothing; a served null is kept as null. */
+        if (event.payload.best_objective !== undefined) {
+          const best: LiveBestObjective = { fold: fold ?? null, value: event.payload.best_objective };
+          setBestObjective((previous) =>
+            previous !== null && previous.fold === best.fold && previous.value === best.value ? previous : best,
+          );
+        }
         if (fold !== undefined) {
           setEventTrials((previous) => (previous[fold] === trial ? previous : { ...previous, [fold]: trial }));
         }
@@ -656,6 +677,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     transport,
     foldCursor,
     pinFold: setPinnedFold,
+    bestObjective,
     cancelling,
     cancelResult,
     cancel,

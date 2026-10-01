@@ -20,7 +20,7 @@
 import type { ReactNode } from "react";
 
 import { Formula } from "./Formula";
-import { foldLabel, groupDecimalString } from "./researchFormat";
+import { foldLabel, formatUtc, groupDecimalString } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
 import type { CurrentSourceSearch } from "./searchClient";
 
@@ -144,6 +144,37 @@ export function freezeLineLabel(pool: Pool | undefined): { text: string; title: 
   return { text: "POOL FROZEN · K NOT PUBLISHED", title: `${reasonWords(pool.top_is_k.reason_code)} (${pool.top_is_k.reason_code ?? "no reason"})` };
 }
 
+/**
+ * F2: when the pool froze — the source's own P11 S4 completion time. A served
+ * time is printed as UTC; a served absence is "not published" with the
+ * server's reason code; a server that sends neither field says only "not
+ * published" (no code is invented).
+ */
+export function FrozenAt({ pool }: { pool: Pool }) {
+  const at = typeof pool.frozen_at_utc_ms === "number" ? formatUtc(pool.frozen_at_utc_ms) : null;
+  return (
+    <span className="mono flex min-w-0 items-center gap-2 text-[10.5px]" data-pool-row="frozen-at">
+      <span className="w-[158px] flex-none text-[10.5px] [font-family:var(--font-body)]" style={{ color: "var(--ink-soft)" }}>
+        frozen at
+      </span>
+      {at !== null ? (
+        <span data-frozen-at={pool.frozen_at_utc_ms} title={pool.frozen_at_source ?? undefined}>
+          {at}
+        </span>
+      ) : (
+        <>
+          <Absent code={pool.frozen_at_reason_code} data-frozen-at="absent" />
+          {pool.frozen_at_reason_code ? (
+            <span className="text-[9px]" style={FAINT} data-frozen-at-reason>
+              {pool.frozen_at_reason_code}
+            </span>
+          ) : null}
+        </>
+      )}
+    </span>
+  );
+}
+
 export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
   const pool = search.pool;
   const contract = search.search_contract;
@@ -197,6 +228,7 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
         }
       />
       <FunnelRow id="selected" label="selected by policy" count={pool.selected} of={of} note={contract.candidate_selection_metric ?? "selector not published"} />
+      <FrozenAt pool={pool} />
       {expression ? (
         <span
           className="mono mt-1 border px-[10px] py-[5px] text-[10.5px] leading-[1.6]"

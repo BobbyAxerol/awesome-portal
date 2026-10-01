@@ -19,6 +19,7 @@ import { SearchScreen } from "./SearchDetail";
 import { useModeReads } from "./SearchFoldStrip";
 import { RouteCursorNotice } from "./CursorNotice";
 import { DEFAULT_CURSOR, clampFold, observedFoldsFor, useEvidenceCursor } from "./evidenceCursor";
+import { useFoldLedger } from "./useFoldLedger";
 import { SEARCH_FOLD_MAX, retainedSearchOf, useRetainedRunFacts, useSearch } from "./useSearch";
 
 export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
@@ -45,6 +46,8 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
   const retainedRun = useRetainedRunFacts(runId, undefined, search.ledger);
   /* G8: the fold plan and the Atlas, for the "what this mode reads" strip — asked only on a retained run. */
   const modeReads = useModeReads(runId, search.ledger);
+  /* F2: the retained trial ledger asked with the cursor's fold, named by the fold plan. */
+  const foldLedger = useFoldLedger(runId, search.ledger, modeReads.plan, inRange ? target : DEFAULT_CURSOR.fold);
 
   useEffect(() => {
     if (known && known.length > 0) clampToObserved(known);
@@ -81,6 +84,7 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
         notFound={search.refusal?.notFound === true}
         cursor={cursor}
         ledger={search.ledger}
+        foldLedger={foldLedger}
         retainedRun={retainedRun}
         modeReads={modeReads}
         pick={pick}

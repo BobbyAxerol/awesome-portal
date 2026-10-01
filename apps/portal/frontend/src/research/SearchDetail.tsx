@@ -38,9 +38,11 @@ import {
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import type { DeclaredParameter } from "./alphaImportClient";
 import { reasonCodeSentence } from "./researchRefusal";
-import { claimToken, groupDecimalString } from "./researchFormat";
+import { claimToken, formatUtc, groupDecimalString, shortDigest } from "./researchFormat";
 import { InfoMark } from "../components/InfoMark";
 import { ShortId } from "./ShortId";
+import { ImportedAlphaLine } from "./ImportedAlphaLine";
+import type { FoldLedgerSlot } from "./useFoldLedger";
 import {
   BestVsSelectedCards,
   FoldDecayBars,
@@ -861,8 +863,12 @@ function LedgerRows({ search, pick, onPick }: { search: CurrentSourceSearch; pic
                 <NotPublished title="the retained ledger publishes no OOS value per trial (CG-P15-03)" />
               )}
             </span>
-            <span className={columnClass(LEDGER_COLUMNS[5])} style={columnStyle(LEDGER_COLUMNS[5])}>
-              <NotPublished title="the retained ledger publishes no parameter digest per trial" />
+            <span className={columnClass(LEDGER_COLUMNS[5])} style={columnStyle(LEDGER_COLUMNS[5])} data-trial-digest={trial.params_digest ?? ""}>
+              {trial.params_digest ? (
+                <span title={trial.params_digest}>{shortDigest(trial.params_digest)}</span>
+              ) : (
+                <NotPublished title="this trial row carries no params_digest" />
+              )}
             </span>
             <span className={`${columnClass(LEDGER_COLUMNS[6])} text-[9.5px]`} style={{ color: "var(--ink-faint)" }} data-trial-note>
               {facts && facts.state === "AVAILABLE"
@@ -1669,7 +1675,14 @@ function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument;
         <span
           className="mono whitespace-nowrap text-[9.5px] font-bold tracking-[.14em] min-[1100px]:[transform:rotate(180deg)] min-[1100px]:[writing-mode:vertical-rl]"
           style={{ color: "var(--accent-2)" }}
-          title={served ? `${title} ${served.title}.` : title}
+          title={
+            [
+              served ? `${title} ${served.title}.` : title,
+              typeof retained?.pool?.frozen_at_utc_ms === "number" ? `frozen at ${formatUtc(retained.pool.frozen_at_utc_ms)}` : null,
+            ]
+              .filter(Boolean)
+              .join(" ")
+          }
           data-freeze-label={served ? "served" : "rule"}
         >
           {served ? served.text : `${FREEZE_LABEL} · ${froze ? "FROZEN" : retained !== null ? "RULE NOT PUBLISHED" : "NONE — NO SEARCH RAN"}`}
@@ -1705,6 +1718,8 @@ export interface SearchScreenProps {
   cursor: EvidenceCursor;
   ledger: LedgerSlot;
   ensureLedger: () => void;
+  /** F2: the retained ledger asked with the cursor's fold as `fold` — feeds the trial ledger and the fold inspection only. */
+  foldLedger?: FoldLedgerSlot;
   onReread: () => void;
   /** W3b: a retained run's identity and declared space (asked only once the retained lane answered). */
   retainedRun?: RetainedRunFacts;
@@ -1783,6 +1798,7 @@ export function SearchScreen({
   cursor,
   ledger,
   ensureLedger,
+  foldLedger = { state: "idle" },
   onReread,
   retainedRun,
   modeReads,
@@ -1823,6 +1839,10 @@ export function SearchScreen({
     : null;
   /* The hub's source_absences describe the hub on a retained run; each panel above states the lane's own. */
   const absences = lane ? [] : hubAbsences;
+  /* F2: the fold-filtered answer replaces the unfiltered one for the trial ledger and the inspection panel only. */
+  const folded = lane && foldLedger.state === "ready" ? foldLedger.search : null;
+  const ledgerSlot: LedgerSlot = folded ? { state: "ready", search: folded } : ledger;
+  const inspected = folded ?? lane;
 
   return (
     <div
@@ -1905,6 +1925,8 @@ export function SearchScreen({
       >
         {detail ? (
           <div className="flex flex-col gap-[14px]">
+            {/* F2: an imported alpha's served identity; a built-in alpha publishes none, so nothing is drawn. */}
+            <ImportedAlphaLine binding={detail.imported_alpha} />
             {/* --------------------------------------- mode × schedule card */}
             <section className="rounded-[6px] border" style={RAISED_STYLE} data-source-strip={detail.source_profile.state}>
               <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--line-soft)" }}>
@@ -2321,16 +2343,21 @@ export function SearchScreen({
                     <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
                       fold inspection
                     </h3>
-                    <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-inspection-fold={lane.ledger.fold_filter?.fold_id ?? ""}>
-                      {lane.ledger.fold_filter?.fold_id ? `fold ${lane.ledger.fold_filter.fold_id}` : "no fold filter"} ·{" "}
+                    <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-inspection-fold={inspected!.ledger.fold_filter?.fold_id ?? ""}>
+                      {inspected!.ledger.fold_filter?.fold_id ? `fold ${inspected!.ledger.fold_filter.fold_id}` : "no fold filter"} ·{" "}
                       <span className="mono">
-                        {lane.ledger.fold_filter?.matched_rows ?? lane.ledger.returned_rows} of {lane.ledger.source_trial_count}
+                        {inspected!.ledger.fold_filter?.matched_rows ?? inspected!.ledger.returned_rows} of {inspected!.ledger.source_trial_count}
                       </span>{" "}
                       trials
                     </p>
-                    {lane.ledger.fold_filter ? (
+                    {inspected!.ledger.fold_filter ? (
                       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
-                        {lane.ledger.fold_filter.rule}
+                        {inspected!.ledger.fold_filter.rule}
+                      </span>
+                    ) : null}
+                    {foldLedger.state === "refused" ? (
+                      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-fold-filter-refused={foldLedger.refusal.code ?? ""}>
+                        fold filter — not applied · {foldLedger.refusal.code ?? `HTTP ${foldLedger.refusal.status}`}
                       </span>
                     ) : null}
                   </section>
@@ -2357,7 +2384,7 @@ export function SearchScreen({
             </div>
 
             {/* ------------------------------------------ ledger, full width */}
-            <LedgerPanel slot={ledger} detail={detail} onNeeded={ensureLedger} pick={pick} onPick={onPick} />
+            <LedgerPanel slot={ledgerSlot} detail={detail} onNeeded={ensureLedger} pick={pick} onPick={onPick} />
 
             {absences.length > 0 ? (
               <section className="flex flex-wrap gap-x-5 gap-y-1.5 px-1" data-source-absences>

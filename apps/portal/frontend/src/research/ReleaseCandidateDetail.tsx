@@ -696,7 +696,53 @@ function Banner({ availability }: { availability: RcAvailability }) {
 
 /* -------------------------------------------------------------- identity */
 
-function Rail({ compose, sealedId }: { compose: RcCompose; sealedId: string | null }) {
+/**
+ * S11 · the publication's `promotion_pick`, as the last node of the lineage rail.
+ * The chip is the served `approval_status`; the node carries the served pick
+ * `state`, `selected_trial_id`, `artifact_id` and `fact_digest`. No pick on the
+ * read is a typed absence — the contract serves no reason for it, so none is shown.
+ */
+function PromotionPickNode({ publication }: { publication: RcPublication | null }) {
+  const pick = publication?.promotion_pick ?? null;
+  if (pick === null) {
+    return (
+      <div className="rc-node" data-rail-node="promotion_pick" data-tone="dim" data-pick-absent="true">
+        <span className="k">promotion pick</span>
+        <span className="v">
+          <span className="rc-absent">promotion pick — not published</span>
+        </span>
+      </div>
+    );
+  }
+  const title = `promotion pick — ${pick.state} · approval ${pick.approval_id} (${pick.approval_status}) · fact ${pick.fact_digest}`;
+  return (
+    <div
+      className="rc-node"
+      data-rail-node="promotion_pick"
+      data-tone={pick.state === "WRITTEN" ? "green" : "gold"}
+      data-pick-state={pick.state}
+      data-pick-status={pick.approval_status}
+      title={title}
+    >
+      <span className="k">promotion pick</span>
+      <span className="v" data-pick-chip>
+        <StateChip value={pick.approval_status} />
+        <span data-pick-state-word> {pick.state}</span>
+      </span>
+      <span className="sub" data-pick-trial>
+        {pick.selected_trial_id !== null ? `trial ${pick.selected_trial_id}` : <span className="rc-absent">trial — not published</span>}
+      </span>
+      <span className="sub" data-pick-artifact>
+        {pick.artifact_id !== null ? `artifact ${pick.artifact_id}` : <span className="rc-absent">artifact — not published</span>}
+      </span>
+      <span className="sub" data-pick-digest title={pick.fact_digest}>
+        fact {shortDigest(pick.fact_digest)}
+      </span>
+    </div>
+  );
+}
+
+function Rail({ compose, sealedId, pick }: { compose: RcCompose; sealedId: string | null; pick?: ReactNode }) {
   const nodes = compose.rail;
   return (
     <ol className="rc-rail" data-rail aria-label="lineage rail">
@@ -735,7 +781,7 @@ function Rail({ compose, sealedId }: { compose: RcCompose; sealedId: string | nu
                 {body}
               </div>
             )}
-            {index < nodes.length - 1 ? (
+            {index < nodes.length - 1 || pick ? (
               <span className="rc-arrow" aria-hidden="true">
                 →
               </span>
@@ -743,6 +789,7 @@ function Rail({ compose, sealedId }: { compose: RcCompose; sealedId: string | nu
           </li>
         );
       })}
+      {pick ? <li>{pick}</li> : null}
     </ol>
   );
 }
@@ -788,7 +835,7 @@ function Taxonomy({ rows, comparison }: { rows: readonly RcTaxonomyRow[]; compar
   );
 }
 
-function IdentityBlock({ compose, state }: { compose: RcCompose | null; state: ResearchState }) {
+function IdentityBlock({ compose, state, publication }: { compose: RcCompose | null; state: ResearchState; publication: RcPublication | null }) {
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
@@ -797,7 +844,11 @@ function IdentityBlock({ compose, state }: { compose: RcCompose | null; state: R
       </div>
       {compose ? (
         <>
-          <Rail compose={compose} sealedId={compose.local_seal.state === "SEALED_LOCAL" ? compose.local_seal.release_candidate_id : null} />
+          <Rail
+            compose={compose}
+            sealedId={compose.local_seal.state === "SEALED_LOCAL" ? compose.local_seal.release_candidate_id : null}
+            pick={compose.local_seal.state === "SEALED_LOCAL" ? <PromotionPickNode publication={publication} /> : null}
+          />
           <div className="rc-taxrow">
             <Taxonomy rows={compose.taxonomy} comparison={compose.published_comparison} />
             <div className="rc-verdict" data-panel-part="verdict">
@@ -2062,7 +2113,7 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
         <Notice state={state} requestId={controller.refusal?.requestId ?? null} code={controller.refusal?.code ?? null} onRetry={controller.retry} inFlight={controller.inFlight} />
       ) : null}
       {compose && compose.run.binding === null ? <Banner availability={unbound ?? { state: "NOT_PUBLISHED", reason_code: "P21_SCRATCH_RUN_UNBOUND" }} /> : null}
-      <IdentityBlock compose={compose} state={state} />
+      <IdentityBlock compose={compose} state={state} publication={publication.publication} />
       <PackBlock
         items={compose?.pack ?? null}
         runId={compose?.run_id ?? null}
@@ -2140,7 +2191,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
       {state.state !== "available" ? (
         <Notice state={state} requestId={controller.refusal?.requestId ?? null} code={controller.refusal?.code ?? null} onRetry={controller.retry} inFlight={controller.inFlight} />
       ) : null}
-      <PackIdentity pack={pack} state={state} />
+      <PackIdentity pack={pack} state={state} publication={current} />
       <PackBlock
         items={pack?.frozen_core.pack ?? null}
         runId={pack?.run_id ?? null}
@@ -2190,7 +2241,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
   );
 }
 
-function PackIdentity({ pack, state }: { pack: RcPack | null; state: ResearchState }) {
+function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state: ResearchState; publication: RcPublication | null }) {
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
@@ -2215,6 +2266,12 @@ function PackIdentity({ pack, state }: { pack: RcPack | null; state: ResearchSta
                 <span className="v">{pack.release_candidate_id}</span>
                 <span className="sub">{pack.delivery.state}</span>
               </div>
+              <span className="rc-arrow" aria-hidden="true">
+                →
+              </span>
+            </li>
+            <li>
+              <PromotionPickNode publication={publication} />
             </li>
           </ol>
           <p className="rc-verdict b" style={{ borderLeft: 0, paddingLeft: 0 }} data-pack-identity-note>

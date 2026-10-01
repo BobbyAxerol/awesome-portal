@@ -33,6 +33,7 @@ import {
   NOT_PUBLISHED_TIMELINE,
   type Artifact,
   type ConsoleLine,
+  type CancelResponse,
   type DeniedArtifact,
   type EffectiveStatus,
   type FoldSegment,
@@ -50,7 +51,7 @@ import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest, shor
 import { useRunLabel } from "./runLabels";
 import { NotPublished, RunMetaStrip } from "./RunMetaStrip";
 import { StageLedger, isFixedProfileScope, utcClock } from "./StageLedger";
-import type { Transport } from "./useRunProgress";
+import type { LiveBestObjective, Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
 import { ShortId } from "./ShortId";
@@ -535,8 +536,11 @@ function ProgressCard({
   live,
   foldCount,
   foldCountReason,
+  bestObjective = null,
 }: {
   snapshot: ProgressSnapshot;
+  /** The study's live best objective, exact as the last trial event served it. */
+  bestObjective?: LiveBestObjective | null;
   live: boolean;
   /** `run.declared_folds` from the progress read, when declared. */
   foldCount: number | null;
@@ -628,6 +632,18 @@ function ProgressCard({
         {study !== null ? (
           <span data-study>
             study <span style={{ color: "var(--ink)" }}>{study}</span>
+          </span>
+        ) : null}
+        {bestObjective !== null ? (
+          <span
+            data-best-objective={bestObjective.value ?? "not-published"}
+            title={bestObjective.fold === null ? "best objective · global study" : `best objective · fold ${bestObjective.fold}`}
+          >
+            best{" "}
+            <span style={{ color: "var(--ink)" }}>
+              {/* Exact decimal string as served; the tqdm line carries its 3-place rendering. */}
+              {bestObjective.value === null ? <NotPublished what="not published" /> : bestObjective.value}
+            </span>
           </span>
         ) : null}
         <span data-elapsed>
@@ -1959,6 +1975,10 @@ export interface RunProgressProps {
   onPinFold: (fold: number) => void;
   cancelling: boolean;
   onCancel: (reason: string) => void;
+  /** `trial_completed.best_objective` as the last event served it. */
+  bestObjective?: LiveBestObjective | null;
+  /** The server's answer to this view's cancel request. */
+  cancelResult?: CancelResponse | null;
   refusal?: ProgressRefusal | null;
   foldTrials?: Readonly<Record<number, number>>;
 }
@@ -1979,6 +1999,8 @@ export function RunProgress(props: RunProgressProps) {
     onPinFold,
     cancelling,
     onCancel,
+    bestObjective = null,
+    cancelResult = null,
     refusal = null,
     foldTrials = {},
   } = props;
@@ -2026,6 +2048,17 @@ export function RunProgress(props: RunProgressProps) {
             style={{ fontFamily: MONO, fontSize: 10, color: "var(--accent-2)", border: "1px solid var(--accent-2)", borderRadius: 3, padding: "0 5px" }}
           >
             resolved by cancellation
+          </span>
+        ) : null}
+        {cancelResult !== null ? (
+          <span
+            data-cancel-marker={cancelResult.source_marker}
+            data-cancel-status={cancelResult.status}
+            aria-label={`cancel ${cancelResult.status}, source ${cancelResult.source_marker}`}
+            title={`cancel ${cancelResult.status}`}
+            style={{ fontFamily: MONO, fontSize: 10, color: "var(--accent-2)", border: "1px solid var(--accent-2)", borderRadius: 3, padding: "0 5px" }}
+          >
+            {cancelResult.source_marker}
           </span>
         ) : null}
       </>
@@ -2200,7 +2233,13 @@ export function RunProgress(props: RunProgressProps) {
               cursor={cursor}
               failedAt={read?.current.failed_at ?? null}
             />
-            <ProgressCard snapshot={snapshot} live={live} foldCount={foldCount} foldCountReason={foldCountReason} />
+            <ProgressCard
+              snapshot={snapshot}
+              live={live}
+              foldCount={foldCount}
+              foldCountReason={foldCountReason}
+              bestObjective={bestObjective}
+            />
           </>
         ) : (
           <Skeleton height={86} />

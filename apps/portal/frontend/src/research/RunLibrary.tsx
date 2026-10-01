@@ -1133,6 +1133,8 @@ export const PICK_TARGET_LABEL: Record<string, string> = {
   run_report: "Run Report",
   attempt_lineage: "Attempt Lineage",
   compare_runs: "Compare",
+  /* The journey card's own words (HiFi S00 "Alpha version"); a raw key must never reach the banner. */
+  alpha_version_legacy: "Alpha version",
 };
 
 /** Where a card's one link goes, by what the row is (spec 01 §15.4). `to: null` = nothing to open. */
@@ -1294,6 +1296,38 @@ function CompareCheck({ runId, selected, onToggle }: { runId: string; selected: 
   );
 }
 
+/**
+ * F2 · S01: the served `relationship` of a child row, as one small mono mark on
+ * the card head. A plain run (`PRIMARY`, or a legacy row with no relationship)
+ * shows nothing. REPRODUCTION_OF_RUN / AUDIT_OF_SELECTION read "reproduction of"
+ * / "audit of"; any other kind prints the token exactly as served - the browser
+ * invents no wording for a kind it does not know. The parent is named by its
+ * display label when the list carried one, else by its short id.
+ */
+const RELATIONSHIP_WORDS: Readonly<Record<string, string>> = {
+  REPRODUCTION_OF_RUN: "reproduction of",
+  AUDIT_OF_SELECTION: "audit of",
+};
+const NO_RELATIONSHIP_MARK: readonly string[] = ["PRIMARY", "LEGACY_UNKNOWN"];
+
+function RelationshipMark({ relationship }: { relationship: RunLibraryItem["relationship"] }) {
+  const parentId = relationship.parent_run_id;
+  const parentLabel = useRunLabel(parentId ?? "");
+  if (NO_RELATIONSHIP_MARK.includes(relationship.kind)) return null;
+  const words = RELATIONSHIP_WORDS[relationship.kind] ?? relationship.kind;
+  const parent = parentId === null ? null : (parentLabel ?? shortId(parentId));
+  return (
+    <span
+      data-relationship={relationship.kind}
+      data-parent-run={parentId ?? undefined}
+      title={parentId === null ? relationship.kind : `${relationship.kind} · ${parentId}`}
+      style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}
+    >
+      {parent === null ? words : `${words} ${parent}`}
+    </span>
+  );
+}
+
 function RunCard({
   item,
   selected,
@@ -1331,6 +1365,7 @@ function RunCard({
       >
         <CompareCheck runId={item.run_id} selected={selected} onToggle={() => onToggle(item.run_id)} />
         <RunId runId={item.run_id} />
+        <RelationshipMark relationship={item.relationship} />
         <StatusPill item={item} />
 
         {item.mode.display !== null && (isAvailable(item.mode.availability) || item.mode.availability.state === "LEGACY_METADATA_ONLY") ? (

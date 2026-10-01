@@ -201,3 +201,18 @@ Quyết định: `evidence/P21/VD_F1_TEXT_DECISIONS_2026-10-01.md` (VD-F1-01…0
 | S03 + S01 + S12 | DONE | S03 R-WFO-017 ≈143 → ≈8; S01 ≈137 → ≈0; S12 ≈139 → ≈19 | `AtlasNotPublishedFact` không có `reason_code` (chỉ `reason`) → chip mã không thể có, xin Codex thêm field; tooltip không hiện trên cảm ứng (câu từ chối compare vẫn in trong thanh) |
 
 **Việc nhỏ còn lại từ F1b → F2/F3:** `?? "—"` ở S08 · `codeAnatomy.ts` (S14) · `replayClient.ts` + `splitClient.ts` + `researchRefusal.ts` + `runLibraryClient.ts` (`COMPARE_PICK_ONE_MORE` đã không dùng) trim chữ dùng chung · dấu "ⓘ" không render trong Chromium headless → đã thay bằng "i" CSS (kiểm trên trình duyệt thật của Bobby) · tooltip chỉ-title kém khám phá được trên cảm ứng.
+
+### F1c — nhỏ, theo yêu cầu Bobby (2026-10-01) · `8b4a7477`
+
+| Mục | Kết quả |
+|---|---|
+| S13 chip "version ACTIVE" ×16 | Bỏ khi ladder cùng một lifecycle; chỉ hiện từng thẻ khi ladder trộn lifecycle (test mới) |
+| S03 Gantt trống khi 2 fold | Hàng Gantt/Artifacts căn theo đỉnh |
+| Nền sidebar "dừng ~1000px" | Không phải lỗi: chụp viewport sau khi cuộn thật thì sidebar ghim đúng; chỉ là artifact ảnh full-page |
+| Glyph "ⓘ" | Thay bằng SVG dùng chung `components/InfoMark.tsx` (S04 chân verdict, S06, heading Stage 4) |
+| Run 400-trial R-WFO-020 / R-WFO-002 | Giữ trong workspace |
+
+### F2 — bind field đã có (2026-10-01)
+
+Bản ghi từng nhóm: `evidence/P21/audit-2026-09-30/f2/*.md`. Đã bind: S01 `relationship` + nhãn `alpha_version_legacy` · S03 `best_objective` + cancel `source_marker` · S06 `imported_alpha`, `fold` cho sổ trial, `Trial.params_digest`, `pool.frozen_at_utc_ms` · S07 `imported_alpha` · S08 bỏ `?? "—"`, params digest từ progress, đếm nhóm nghìn · S11 `promotion_pick` · S14 `alpha_id` + "top N / total" · stub e2e journey-v4 (và stub compose thêm `display_label`, `selected_params`).
+Đã kiểm, không cần sửa: `net_oos_return`, `historical_identity` (e2e `atlas-historical.json` đã trùng fixture chuẩn), `import_attestation`, `rc_availability`, `requires_run`, `cert_cap.reason`. Cố ý không render: `walk_forward_status` (HiFi S12 không có cột). Chờ Bobby: `market_overview` vs `candle_overview` (S08). Còn lại ngoài F2: `next_cursor` S14 (chưa có phân trang con trỏ).

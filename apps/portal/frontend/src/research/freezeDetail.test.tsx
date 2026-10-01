@@ -1249,3 +1249,31 @@ describe("G7 — axe `heading-order` on Screen 07", () => {
     });
   });
 });
+
+describe("F2 · S07 — imported_alpha on the freeze read", () => {
+  const IMPORTED = {
+    schema_version: "research.imported-alpha-read-binding.v1",
+    source_digest: "abcd1234ef567890abcd1234ef567890abcd1234ef567890abcd1234ef567890",
+    entrypoint: "delta_signal",
+    parameter_bundle_digest: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    parameters: [
+      { name: "window", kind: "int_range", value: 34 },
+      { name: "ma_kind", kind: "categorical", value: "ema" },
+    ],
+  };
+
+  it("an imported run shows `imported · entrypoint · sha256:abcd1234…` and the categorical params in the header", () => {
+    const { container } = view({ detail: detail({ imported_alpha: IMPORTED }) });
+    const line = container.querySelector("[data-imported-alpha]") as HTMLElement;
+    expect(line).toBeTruthy();
+    expect(line.querySelector("[data-imported-entrypoint]")?.textContent).toBe("delta_signal");
+    expect(line.querySelector("[data-imported-digest]")?.textContent).toBe("sha256:abcd1234…");
+    expect(line.querySelector("[data-imported-param='ma_kind']")?.textContent).toBe("ma_kind=ema");
+    expect(line.getAttribute("title")).toContain(`source_digest sha256:${IMPORTED.source_digest}`);
+  });
+
+  it("a built-in alpha (no imported_alpha) draws nothing", () => {
+    const { container } = view({ detail: detail() });
+    expect(container.querySelector("[data-imported-alpha]")).toBeNull();
+  });
+});

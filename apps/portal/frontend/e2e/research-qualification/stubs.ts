@@ -445,6 +445,8 @@ export function rcCompose(runId: string = RC_RUN, rcId: string = RC_ID, publishe
     schema_version: "research.release-candidate-compose.v1",
     read_authority: "PORTAL_PERSISTED_RESEARCH",
     run_id: runId,
+    display_label: null,
+    selected_params: { param_set_id: null, param_set_id_availability: np("P22_NOT_PUBLISHED"), selected_trial_number: null, selected_trial_number_availability: np("P22_NOT_PUBLISHED") },
     state: "DRAFT",
     availability: AV,
     as_of_utc_ms: RC_T0,
@@ -570,13 +572,13 @@ export function datasetCatalog(): DatasetCatalog {
 }
 
 /* ======================================================================
- * S00 — the journey descriptor. The canonical v3 contract fixture, read from
- * the contracts package on every call. The shared `stubPortalApi` still reads
- * the removed v2 file (`e2e/fixtures.ts:262`, not this package's to change),
- * so `installLane` registers this route after it and wins.
+ * S00 — the journey descriptor. The canonical v4 contract fixture (revision 4:
+ * `requires_run` / `requires_alpha`, 15 cards incl. `alpha_version_legacy`),
+ * read from the contracts package on every call. `stubPortalApi` in
+ * `e2e/fixtures.ts` serves the same v4 file.
  * ==================================================================== */
 
-export const JOURNEY_FIXTURE = "research-foundation.journey-v3";
+export const JOURNEY_FIXTURE = "research-foundation.journey-v4";
 
 export function journey(): JourneyResponse {
   return contractFixture<JourneyResponse>(JOURNEY_FIXTURE);

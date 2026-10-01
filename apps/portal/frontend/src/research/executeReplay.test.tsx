@@ -405,7 +405,7 @@ describe("S08-U03 — sampling is shown as a limit", () => {
     renderScreen(controllerOf(replay({ sampling: "EXTREMA_BUCKET_V1" })));
     expect(document.querySelector("[data-sampling]")!.getAttribute("data-sampling")).toBe("EXTREMA_BUCKET_V1");
     expect(document.querySelector("[data-sampling-note]")!.textContent).toBe("bucket extrema, not every observation");
-    expect(document.querySelector("[data-counts]")!.textContent).toContain("source observations 5000 · emitted samples 240");
+    expect(document.querySelector("[data-counts]")!.textContent).toContain("source observations 5,000 · emitted samples 240");
   });
 });
 
@@ -784,7 +784,7 @@ describe("W3b — Execute on the retained WFO lane", () => {
   it("counts the 1056 retained source observations", async () => {
     const { container } = await settled();
     expect(W3B_EXEC.replay.replay.source_observation_count).toBe(1056);
-    expect(container.querySelector("[data-counts]")?.textContent).toMatch(/^source observations 1056 · window 1–24 of 1056$/);
+    expect(container.querySelector("[data-counts]")?.textContent).toMatch(/^source observations 1,056 · window 1–24 of 1,056$/);
   });
 
   it("names orders, fills and candles absent with the retained lane's own QuantBT codes", async () => {

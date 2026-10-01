@@ -787,6 +787,10 @@ export interface AlphaImportProps {
   registration: RegistrationResponse | null;
   activation: ActivationResponse | null;
   registry: readonly RegistryEntry[];
+  /** Server `total` for the served list; shown as "top N / total" only when the list is capped. */
+  registryTotal?: number | null;
+  /** The `alpha_id` the served list was requested with; the server already filtered by it. */
+  registryAlpha?: string;
 
   parseState: ResearchState;
   gatesState: ResearchState;
@@ -864,6 +868,8 @@ export function AlphaImport(props: AlphaImportProps) {
     registration,
     activation,
     registry,
+    registryTotal = null,
+    registryAlpha = "",
     parseState,
     gatesState,
     registerState,
@@ -912,7 +918,12 @@ export function AlphaImport(props: AlphaImportProps) {
   const gatesAllPass = gates?.all_pass === true;
   /* Lifecycle may only ever report the server's own word. */
   const lifecycle = activation?.lifecycle_state ?? registration?.lifecycle_state ?? null;
-  const visibleRegistry = alphaId.trim() ? registry.filter((entry) => entry.alpha_id === alphaId.trim()) : registry;
+  /* The server filters by alpha_id. Only while the typed id is ahead of the
+     served list (not yet requested) is the exact match applied locally, so a
+     half-typed id never shows another alpha's versions. */
+  const typedAlpha = alphaId.trim();
+  const visibleRegistry = typedAlpha && typedAlpha !== registryAlpha ? registry.filter((entry) => entry.alpha_id === typedAlpha) : registry;
+  const registryCapped = typeof registryTotal === "number" && registryTotal > registry.length;
   const registeredEntry = registration
     ? registry.find((entry) => entry.alpha_version_id === registration.alpha_version_id) ?? null
     : null;
@@ -1378,7 +1389,14 @@ export function AlphaImport(props: AlphaImportProps) {
 
         {/* -------------------------------------------------------- registry */}
         <div className="ai-card" data-pad>
-          <h2 className="ai-label">alpha registry{alphaId.trim() ? ` — ${alphaId.trim()}` : ""}</h2>
+          <h2 className="ai-label">
+            alpha registry{alphaId.trim() ? ` — ${alphaId.trim()}` : ""}
+            {registryCapped ? (
+              <span className="mono" data-registry-total title="The server lists the newest versions only; the total is the server's count.">
+                {" "}· top {registry.length} / {registryTotal}
+              </span>
+            ) : null}
+          </h2>
           <ResearchPanel title="alpha registry" state={registryState} variant="plain" minBodyHeight={0}>
             <div className="ai-registry" data-registry-strip>
               {visibleRegistry.length === 0 ? (

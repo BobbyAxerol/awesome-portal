@@ -25,6 +25,8 @@ export function AlphaImportRoute() {
       registration={controller.registration}
       activation={controller.activation}
       registry={controller.registry}
+      registryTotal={controller.registryTotal}
+      registryAlpha={controller.registryAlpha}
       parseState={controller.parseState}
       gatesState={controller.gatesState}
       registerState={controller.registerState}

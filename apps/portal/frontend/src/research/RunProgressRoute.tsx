@@ -40,6 +40,8 @@ export function RunProgressRoute() {
       foldTrials={progress.foldTrials}
       foldCursor={progress.foldCursor}
       onPinFold={progress.pinFold}
+      bestObjective={progress.bestObjective}
+      cancelResult={progress.cancelResult}
       cancelling={progress.cancelling}
       onCancel={progress.cancel}
     />

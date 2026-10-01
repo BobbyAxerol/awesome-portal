@@ -71,6 +71,7 @@ import {
 } from "./retainedLane";
 import type { ProgressRead } from "./progressClient";
 import { ShortId } from "./ShortId";
+import { ImportedAlphaLine } from "./ImportedAlphaLine";
 import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
 
 /* --------------------------------------------------------------- verbatim */
@@ -1669,6 +1670,9 @@ export function FreezeScreen({
       </div>
       </>
       )}
+
+      {/* F2: an imported alpha's served identity; a built-in alpha publishes none, so nothing is drawn. */}
+      {detail && freeze ? <ImportedAlphaLine binding={detail.imported_alpha} /> : null}
 
       {detail && freeze ? (
         <div

@@ -53,7 +53,7 @@ import { SplitBand, SplitBandNote, hubSplitBand, type SplitBandSlot } from "./Sp
 import type { ResearchState } from "./state";
 import type { ReplayController, RetainedContext, RetainedReplaySlot } from "./useReplay";
 import { iso } from "./utcMinute";
-import { formatAxisValue, formatFractionAxis, formatMetric, shortId } from "./researchFormat";
+import { formatAxisValue, formatCount, formatFractionAxis, formatMetric, shortId } from "./researchFormat";
 import { ShortId } from "./ShortId";
 import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
 
@@ -602,7 +602,7 @@ function RetainedReplayPanel({ slot, onRead }: { slot: RetainedReplaySlot; onRea
       ) : (
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-baseline gap-2">
-            <Chip>{slot.replay.replay.source_observation_count} retained observations</Chip>
+            <Chip>{formatCount(slot.replay.replay.source_observation_count) ?? "not published"} retained observations</Chip>
             <Chip>{slot.replay.replay.rows.length} in this window</Chip>
             <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
               engine {slot.replay.provenance.engine_version} · {slot.replay.provenance.profile_id}
@@ -1094,9 +1094,9 @@ function RetainedBody({
               {contiguous ? "every retained observation" : "sampling — not published by the retained lane"}
             </Chip>
             <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-counts>
-              source observations {count}
+              source observations {formatCount(count) ?? "not published"}
               {rows.length > 0
-                ? ` · window ${rows[0]!.source_ordinal + 1}–${rows.at(-1)!.source_ordinal + 1} of ${count}`
+                ? ` · window ${rows[0]!.source_ordinal + 1}–${rows.at(-1)!.source_ordinal + 1} of ${formatCount(count) ?? "not published"}`
                 : ""}
             </span>
             <RetainedGap replay={replay} capability="candle_windows" />
@@ -1446,8 +1446,8 @@ export function ExecuteScreen({
                 <Chip>sampling — {REPLAY_WITHHELD_WORDS[replayWindow.availability.state]}</Chip>
               )}
               <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-counts>
-                source observations {replayWindow.source_observation_count ?? "not published"} · emitted samples{" "}
-                {replayWindow.emitted_point_count ?? "not published"}
+                source observations {formatCount(replayWindow.source_observation_count) ?? "not published"} · emitted samples{" "}
+                {formatCount(replayWindow.emitted_point_count) ?? "not published"}
                 {items.length > 0
                   ? ` · window ${items[0]!.playback_ordinal + 1}–${items.at(-1)!.playback_ordinal + 1}`
                   : ""}
