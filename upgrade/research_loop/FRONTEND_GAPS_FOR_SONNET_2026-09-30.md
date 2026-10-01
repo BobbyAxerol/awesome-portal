@@ -235,3 +235,12 @@ Việc dùng chung do tôi làm sau khi gộp:
 - **Dấu `−` (U+2212)** cho số âm trong `researchFormat.ts` (`typographicMinus`), chỉ hiển thị. Chuỗi thập phân chính xác server trả (vd `-0.0340458` trong sổ transition) giữ nguyên như server công bố.
 - `screenRoutes.ts` (thêm): `run_*_legacy` → thẻ S00 cột "shipped" thành link.
 - Bị chặn / chờ Codex: BR-F3-01…05 (`CODEX_BACKEND_GAPS`); 02-15, 05-14 verdict, HT-6 độ rộng cột là việc của S03.
+
+### Backend handoff — 2026-10-01, sidecar and canonical P21 fixtures
+
+- S11 tests can load `packages/contracts/fixtures/research-release-candidate.consumer.fixtures.json`: service-generated compose `degraded_sealable/sealed/unbound/missing/partial`, local seal/replay, pack and typed 400/401/403/404/409/422/503 Problems. These replace manually composed bodies; do not call fixture validation a real-API receipt. [Contract receipt](./evidence/P21/CG-P21-01_canonical_consumer_fixtures_2026-10-01.md).
+- AN-29 supplies `summary_analytics_v2` on Current Source Evidence and `last_30d` on Library for an old run **after** operator backfill. Bind all-time analytics to S04 and last-30D to S01. An old S09 frozen core keeps its original facts; optional supplemental analytics must come from Evidence with its own digest/provenance. Missing retained candles preserve typed absence; bar-return profit factor does not imply an audited trade ledger. [Sidecar receipt](./evidence/P13/AN-29_immutable_sidecar_v2_2026-10-01.md).
+- Published fields still needing FE verification: S03 `planned_folds`/`rate_trials_per_s`, S04 `core.window_disclosure`, S09 `equity.digest`/`digest_scope`/`digest_availability` on a new seal, S14 `next_cursor`, and workspace-scoped Research Library count (`LW-08`). Existing F2/F2b mappings remain accepted; add only the missing mappings, preserving HiFi composition.
+- Legacy export now requires the protected prepare POST followed by read-only GET with workspace. Keep its button hidden until the consumer implements this sequence and typed 403/409 states. Backend preparation never belongs in a GET.
+
+The backend slice does not modify frontend source or visual baselines. Migration 081 and fresh-run/backfill receipts are backend acceptance dependencies, tracked in the backend queue §10.

@@ -1,6 +1,17 @@
 import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
+import { HttpErrorFilter } from "../src/http-error.filter";
+import { AuthError } from "../src/auth/auth.service";
+import { ResearchReleaseCandidateError } from "../src/research/release-candidate.error";
+import {
+  ResearchReleaseCandidateComposeResponseSchema,
+  ResearchReleaseCandidatePackResponseSchema,
+  ResearchReleaseCandidateSealResponseSchema,
+} from "../src/research/release-candidate.contract";
+import { openApiValidator } from "./research-rf05-openapi";
 import { canonicalResearchJson } from "../src/research/preflight.service";
 import { ResearchReleaseCandidateService } from "../src/research/release-candidate.service";
 import type {
@@ -110,6 +121,82 @@ function subject(sourceValue = source(), draftValue: ReleaseCandidateDraft | nul
   const config = { FEATURE_RESEARCH_RELEASE_CANDIDATES: "true" };
   return { service: new ResearchReleaseCandidateService(repository as never, config as never), repository };
 }
+
+/** CG-P21-01: canonical service/filter outputs, consumed without FE-authored bodies. */
+describe("P21 canonical consumer fixture pack", () => {
+  const path = resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"),
+    "fixtures/research-release-candidate.consumer.fixtures.json");
+
+  it("generates and validates compose states, immutable pack, seal/replay and typed refusals", async () => {
+    if (process.env.P21_WRITE_FIXTURES === "1") {
+      const value = source({ displayLabel: "R-P04-123" });
+      const draft = persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(value) });
+      const { service, repository } = subject(value, draft);
+      const sealInput = { draft_id: draftId, expected_draft_revision: 1,
+        expected_source_fingerprint: releaseCandidateSourceFingerprint(value) };
+      const seal = await service.seal(scope, value.runId, sealInput);
+      const replay = await service.seal(scope, value.runId, sealInput);
+      const built = repository.seal.mock.calls[0]![3](value, draft, releaseCandidateId);
+      const stored = storedPack({ packDigest: built.packDigest, frozenCore: built.frozenCore,
+        sourceFingerprint: releaseCandidateSourceFingerprint(value), displayLabel: value.displayLabel });
+      repository.readPack.mockResolvedValue(stored);
+      repository.latestPack.mockResolvedValue(stored);
+      const unbound = source({ alpha: { ...value.alpha, alphaId: null, alphaVersionId: null,
+        lifecycleState: null, codeDigest: null, entrypoint: null } });
+      const missing = source({ runKind: "PRIMARY", relationshipKind: "ROOT" });
+      const partial = source({ currentSource: { ...value.currentSource, manifestDigest: "invalid" } });
+      const problems: Array<ResearchReleaseCandidateError | AuthError> = [
+        new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_INVALID", "Invalid Release Candidate request.", 400),
+        new AuthError("SESSION_REQUIRED", "Invalid session.", 401),
+        new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_FORBIDDEN", "Access denied.", 403),
+        new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Research run was not found.", 404),
+        new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Evidence changed since composing; review the pack.", 409),
+        new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", "Release Candidate service is temporarily unavailable.", 503),
+      ];
+      try {
+        await subject(partial, draft).service.seal(scope, partial.runId, sealInput);
+        throw new Error("partial evidence unexpectedly sealed");
+      } catch (error) {
+        if (!(error instanceof ResearchReleaseCandidateError)) throw error;
+        problems.push(error);
+      }
+      const problemBodies = problems.map((error) => {
+        let body: unknown;
+        const reply = { status: vi.fn().mockReturnThis(), send: vi.fn((value: unknown) => { body = value; }) };
+        new HttpErrorFilter().catch(error, { switchToHttp: () => ({ getResponse: () => reply,
+          getRequest: () => ({ headers: { "x-request-id": "req_p21_fixture" } }) }) } as never);
+        return { status: error.status, body };
+      });
+      writeFileSync(path, JSON.stringify({
+        fixture_authority: "SERVICE_GENERATED_CONTRACT_FIXTURE_NOT_PRODUCT_EVIDENCE",
+        compose: {
+          degraded_sealable: await subject(value, draft).service.detail(scope, value.runId),
+          sealed: await service.detail(scope, value.runId),
+          unbound: await subject(unbound, null).service.detail(scope, unbound.runId),
+          missing: await subject(missing, null).service.detail(scope, missing.runId),
+          partial: await subject(partial, draft).service.detail(scope, partial.runId),
+        }, seal, seal_replay: replay, pack: await service.pack(scope, releaseCandidateId), problems: problemBodies,
+      }) + "\n");
+    }
+    const fixture = JSON.parse(readFileSync(path, "utf8"));
+    for (const body of Object.values(fixture.compose)) {
+      ResearchReleaseCandidateComposeResponseSchema.parse(body);
+      openApiValidator("research-release-candidate.openapi.json", "ComposeResponseP21").assert(body);
+    }
+    for (const body of [fixture.seal, fixture.seal_replay]) {
+      ResearchReleaseCandidateSealResponseSchema.parse(body);
+      openApiValidator("research-release-candidate.openapi.json", "SealResponse").assert(body);
+    }
+    ResearchReleaseCandidatePackResponseSchema.parse(fixture.pack);
+    openApiValidator("research-release-candidate.openapi.json", "PackResponse").assert(fixture.pack);
+    for (const problem of fixture.problems) openApiValidator("research-release-candidate.openapi.json", "Problem").assert(problem.body);
+    expect(fixture.seal_replay).toEqual(fixture.seal);
+    expect(fixture.compose.unbound.actions.seal_blocked_reason).toBe("P21_SCRATCH_RUN_UNBOUND");
+    expect(fixture.compose.missing.pack_counts.missing).toBeGreaterThan(0);
+    expect(fixture.compose.partial.actions.may_seal).toBe(false);
+    expect(fixture.problems.map((problem: { status: number }) => problem.status)).toContain(422);
+  });
+});
 
 describe("P21 Release Candidate composer and local immutable pack", () => {
   it("P21-T01/T03/T11/T12 emits exactly 17 source-built fields and 12 items, accepts a persisted centroid with no trial, and does no compute", async () => {

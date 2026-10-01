@@ -129,11 +129,17 @@ export function currentSourceSealDigest(seal: Pick<CurrentSourceSealRow,
 }
 
 function revision(kind: string, seal: CurrentSourceSealRow): string {
+  if (kind === "evidence" && seal.analyticsSidecar) {
+    return `rs02_evidence_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
+      analytics_sidecar_digest: seal.analyticsSidecar.digest })}`;
+  }
   return `rs02_${kind}_${currentSourceSealDigest(seal)}`;
 }
 
 function parseSummary(seal: CurrentSourceSealRow) {
-  const parsed = SummarySchema.safeParse(seal.summary);
+  const parsed = SummarySchema.safeParse(seal.analyticsSidecar
+    ? { ...seal.summary, summary_analytics_v2: seal.analyticsSidecar.analytics }
+    : seal.summary);
   if (!parsed.success) {
     throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained current-source summary is incompatible.", 503);
   }

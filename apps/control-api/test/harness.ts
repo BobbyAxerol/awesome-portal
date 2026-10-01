@@ -11,6 +11,12 @@ export const TEST_TABLES = [
   // listing it keeps test cleanup bounded and makes a new relation visible to
   // the shared harness rather than relying on an incidental CASCADE path.
   "research.audit_log",
+  // AN-29/P05 retained rows have no FK to runs. A reused test cell must not
+  // inherit an old seal or a derived sidecar after its run metadata is reset.
+  "research.current_source_analytics_sidecars_v2",
+  "research.current_source_seals_v1",
+  "research.current_source_rows_v1",
+  "research.current_source_import_batches_v1",
   // P21 local Release Candidate evidence must be discarded before its legacy
   // compatibility row and all source parents.  Keeping the full four-table
   // plane named prevents a reusable test database from inheriting a local

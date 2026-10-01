@@ -12,6 +12,7 @@ import type { ResearchMetricDefinition, ResearchMetricRegistryVersion } from "./
 import { ResearchProgressSnapshotSchema, type ResearchProgressSnapshot } from "./progress.contract";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
+import { sha256ResearchJson } from "./preflight.service";
 import {
   ResearchRunIdSchema,
   ResearchRunLibraryItemSchema,
@@ -83,6 +84,13 @@ export function retainedCardFacts(row: RunLibraryRetainedFacts): RetainedCardFac
   const complete =
     Number.isSafeInteger(folds) && folds > 0 && counted === folds && sum !== null && Number.isSafeInteger(sum) && sum >= 0;
   const observations = Number(row.observation_count);
+  const analytics = ResearchRetainedAnalyticsV2Schema.safeParse(row.analytics_v2);
+  if (row.analytics_v2_digest && (!analytics.success
+    || sha256ResearchJson(analytics.data) !== row.analytics_v2_digest)) {
+    throw new ResearchRunLibraryError(
+      "RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Retained analytics sidecar digest is incompatible.", 503,
+    );
+  }
   return {
     artifactRevision: revision,
     meanOosSharpe: decimal(metrics?.mean_oos_sharpe),
@@ -94,7 +102,7 @@ export function retainedCardFacts(row: RunLibraryRetainedFacts): RetainedCardFac
         ? "RS02_SEAL_RETAINED_NO_FOLD_ROWS"
         : "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT",
     observationCount: Number.isSafeInteger(observations) && observations >= 0 ? observations : 0,
-    analyticsV2: ResearchRetainedAnalyticsV2Schema.safeParse(row.analytics_v2).data ?? null,
+    analyticsV2: analytics.data ?? null,
   };
 }
 

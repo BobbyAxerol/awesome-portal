@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ControlApiConfig } from "../src/config";
+import { sha256ResearchJson } from "../src/research/preflight.service";
 import { ResearchRunLibraryItemSchema, ResearchRunLibraryResponseSchema } from "../src/research/run-library.contract";
 import type {
   RunLibraryRetainedFacts,
@@ -443,6 +444,15 @@ describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub 
       data: null,
     });
   });
+  it("AN-29 accepts a digest-bound sidecar and rejects a changed block", async () => {
+    const analytics = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const digest = sha256ResearchJson(analytics);
+    const { item } = await card([retainedRow({ analytics_v2: analytics, analytics_v2_digest: digest })]);
+    expect(item.last_30d.availability.state).toBe("AVAILABLE");
+    await expect(card([retainedRow({ analytics_v2: analytics, analytics_v2_digest: "0".repeat(64) })]))
+      .rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_UNAVAILABLE" });
+  });
+
 
   it("prints QuantBT's own fold means and the summed OOS trades instead of P13_SOURCE_EVIDENCE_NOT_PUBLISHED", async () => {
     const { item } = await card([retainedRow()]);

@@ -16,6 +16,8 @@ import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bounded-read";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchCurrentSourceError } from "./current-source.error";
+import { sha256ResearchJson } from "./preflight.service";
+import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 import {
   RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID,
   RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
@@ -90,6 +92,7 @@ export type CurrentSourceSealRow = CurrentSourceLanePair & {
   tableRows: Record<CurrentSourceTableKind, number>;
   totalRows: number;
   summary: Record<string, unknown>;
+  analyticsSidecar?: { digest: string; sourceRowsDigest: string; analytics: ResearchRetainedAnalyticsV2 };
   retainedAtUtcMs: number;
 };
 
@@ -140,6 +143,10 @@ interface SealQueryRow {
   total_rows: string | number;
   summary: JsonColumn;
   retained_at_utc_ms: string | number;
+  sidecar_retained_import_digest?: string | null;
+  sidecar_source_rows_digest?: string | null;
+  sidecar_analytics_digest?: string | null;
+  sidecar_analytics?: JsonColumn;
 }
 
 interface SourceRowQueryRow {
@@ -501,12 +508,20 @@ export class ResearchCurrentSourceRepository {
   async sealForRead(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<CurrentSourceSealRow | null> {
     return this.withScopedRead(scope, async (client) => {
       const result = await client.query<SealQueryRow>(
-        `SELECT run_id, artifact_revision, source_adapter_id, profile_id, manifest_digest, source_transform_digest, retained_import_digest,
-                requested_spec_digest, effective_spec_digest, dataset_binding_digest, table_rows, total_rows,
-                summary, floor(extract(epoch FROM retained_at) * 1000)::bigint AS retained_at_utc_ms
-           FROM research.current_source_seals_v1
-          WHERE workspace_id = $1 AND run_id = $2
-          ORDER BY artifact_revision DESC
+        `SELECT seal.run_id, seal.artifact_revision, seal.source_adapter_id, seal.profile_id, seal.manifest_digest,
+                seal.source_transform_digest, seal.retained_import_digest, seal.requested_spec_digest,
+                seal.effective_spec_digest, seal.dataset_binding_digest, seal.table_rows, seal.total_rows,
+                seal.summary, floor(extract(epoch FROM seal.retained_at) * 1000)::bigint AS retained_at_utc_ms,
+                sidecar.retained_import_digest AS sidecar_retained_import_digest,
+                sidecar.source_rows_digest AS sidecar_source_rows_digest,
+                sidecar.analytics_digest AS sidecar_analytics_digest,
+                sidecar.analytics AS sidecar_analytics
+           FROM research.current_source_seals_v1 seal
+           LEFT JOIN research.current_source_analytics_sidecars_v2 sidecar
+             ON sidecar.workspace_id = seal.workspace_id AND sidecar.run_id = seal.run_id
+            AND sidecar.artifact_revision = seal.artifact_revision
+          WHERE seal.workspace_id = $1 AND seal.run_id = $2
+          ORDER BY seal.artifact_revision DESC
           LIMIT 1`,
         [scope.workspaceId, runId],
       );
@@ -906,6 +921,23 @@ export class ResearchCurrentSourceRepository {
     if (!isCurrentSourceLanePair(row.source_adapter_id, row.profile_id)) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Current-source lane pair is incompatible.", 503);
     }
+    const summary = asJsonRecord(row.summary, "summary");
+    let analyticsSidecar: CurrentSourceSealRow["analyticsSidecar"];
+    if (row.sidecar_analytics != null) {
+      const parsed = ResearchRetainedAnalyticsV2Schema.safeParse(asJsonRecord(row.sidecar_analytics, "analytics sidecar"));
+      const digest = parsed.success ? sha256ResearchJson(parsed.data) : null;
+      if (!parsed.success || !row.sidecar_analytics_digest || digest !== row.sidecar_analytics_digest
+        || !row.sidecar_source_rows_digest || !/^[0-9a-f]{64}$/.test(row.sidecar_source_rows_digest)
+        || row.sidecar_retained_import_digest !== row.retained_import_digest
+        || summary.summary_analytics_v2 !== undefined) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained analytics sidecar is incompatible with its immutable seal.", 503);
+      }
+      analyticsSidecar = {
+        digest: row.sidecar_analytics_digest,
+        sourceRowsDigest: row.sidecar_source_rows_digest,
+        analytics: parsed.data,
+      };
+    }
     return {
       runId: row.run_id,
       artifactRevision: asSafeNonNegative(row.artifact_revision, "artifact revision"),
@@ -918,7 +950,8 @@ export class ResearchCurrentSourceRepository {
       datasetBindingDigest: row.dataset_binding_digest,
       tableRows: mapped,
       totalRows: asSafeNonNegative(row.total_rows, "total rows"),
-      summary: asJsonRecord(row.summary, "summary"),
+      summary,
+      ...(analyticsSidecar ? { analyticsSidecar } : {}),
       retainedAtUtcMs: asSafeNonNegative(row.retained_at_utc_ms, "retained timestamp"),
     };
   }

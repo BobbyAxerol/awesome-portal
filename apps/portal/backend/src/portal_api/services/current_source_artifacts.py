@@ -1254,11 +1254,25 @@ class CurrentSourceArtifactAdapter:
             })
         for fold in folds:
             records = by_fold[fold["fold_id"]]
+            # QuantBT appends the OOS-generation child after trial search.
+            # A first-64 sample can hide the exact child that generated the
+            # replay even when the source retained it. Reserve that record
+            # before filling the bounded display sample; keep source ordinals.
+            generation = [row for row in records if row["context"] == "out-of-sample generation"]
+            if len(generation) > MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD:
+                raise CurrentSourceArtifactError(
+                    "RESEARCH_CURRENT_SOURCE_CHILD_AUDIT_INVALID",
+                    "The source published more OOS-generation children than the admitted fold budget.",
+                )
+            generation_ordinals = {row["audit_ordinal"] for row in generation}
+            selected = generation + [row for row in records if row["audit_ordinal"] not in generation_ordinals][
+                :MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD - len(generation)]
+            selected.sort(key=lambda row: row["audit_ordinal"])
             block = {
                 "schema_version": "research.current-source-fold-child-audit.v1",
                 "source_record_count": len(records),
                 "truncated": len(records) > MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD,
-                "records": records[:MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD],
+                "records": selected,
             }
             record = json.loads(fold["payload_json"])
             record["child_audit"] = block

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-import { ResearchCurrentSourceService } from "../src/research/current-source.service";
+import { ResearchCurrentSourceService, currentSourceSealDigest } from "../src/research/current-source.service";
+import { sha256ResearchJson } from "../src/research/preflight.service";
 import type { ResearchCurrentSourceNotApplicableResponse } from "../src/research/current-source.contract";
 
 /** RF-05: these fixtures are sealed RS-02 runs; a not-applicable lane answer here is a test failure. */
@@ -163,6 +166,23 @@ describe("RS-02 retained current-source named read models", () => {
     expect(distribution.values).toHaveLength(2);
     expect(repository.rows).toHaveBeenCalled();
   });
+  it("AN-29 adds v2 only to Evidence while preserving the immutable seal and unrelated revisions", async () => {
+    const analytics = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const withSidecar: CurrentSourceSealRow = { ...seal, analyticsSidecar: {
+      digest: sha256ResearchJson(analytics), sourceRowsDigest: "1".repeat(64), analytics,
+    } };
+    expect(currentSourceSealDigest(withSidecar)).toBe(currentSourceSealDigest(seal));
+    const read = (source: CurrentSourceSealRow) => service({
+      sealForRead: vi.fn().mockResolvedValue(source),
+      rows: vi.fn().mockImplementation((_scope, _runId, _revision, kind: string) =>
+        kind === "FOLD" ? page(folds, 2) : page(candidates, 1)),
+    }).evidence(scope, "run-rs02");
+    const oldEvidence = sealed(await read(seal));
+    const newEvidence = sealed(await read(withSidecar));
+    expect(newEvidence.revision).not.toBe(oldEvidence.revision);
+    expect(newEvidence.summary_analytics_v2).toEqual(analytics);
+  });
+
 
   it("LW-04: immutable pre-fix seals do not publish pre-OOS derived rows as OOS", async () => {
     const oldSeal = structuredClone(seal);

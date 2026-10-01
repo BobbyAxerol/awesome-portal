@@ -54,6 +54,13 @@ FOLD_TABLE_V1_COLUMNS = (
 )
 
 
+# QuantBT 1.1.1 accepts this bounded metadata cap. Its default 2,000 rows
+# drops late OOS-generation records on admitted 400-trial WFO runs. The
+# admitted profile is at most 400 trials x 16 folds; 20,000 covers that
+# lifecycle without an unbounded engine-side list.
+LIFECYCLE_LEDGER_MAX_ROWS = 20_000
+
+
 def _utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -77,6 +84,7 @@ def _config_fields(
         "optimization_schedule": config.optimization_schedule.value,
         "fold_boundary_position_policy": config.fold_boundary_position_policy,
         "optuna_trials": config.optuna_trials,
+        "metadata": {"lifecycle_ledger_max_rows": LIFECYCLE_LEDGER_MAX_ROWS},
         "optuna_early_stopping": config.optuna_early_stopping,
         "random_seed": config.random_seed,
         "decay_lambda": opt.decay_lambda,

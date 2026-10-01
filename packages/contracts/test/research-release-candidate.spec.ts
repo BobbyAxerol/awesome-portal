@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import Ajv2020 from "ajv/dist/2020";
 
 import { describe, expect, it } from "vitest";
 
@@ -8,6 +9,26 @@ const openApiPath = join(ROOT, "openapi", "research-release-candidate.openapi.js
 const generatedPath = join(ROOT, "generated", "research-release-candidate.d.ts");
 
 describe("P21 published Research Release Candidate contract", () => {
+  it("publishes service-generated fixture bodies for all Screen-11 states and refusals", () => {
+    const fixture = JSON.parse(readFileSync(join(ROOT, "fixtures/research-release-candidate.consumer.fixtures.json"), "utf8"));
+    const schemas = JSON.parse(readFileSync(openApiPath, "utf8")).components.schemas;
+    const defs = JSON.parse(JSON.stringify(schemas).replaceAll("#/components/schemas/", "#/$defs/"));
+    const ajv = new Ajv2020({ strict: false, allErrors: true, allowUnionTypes: true, unicodeRegExp: false });
+    const check = (name: string, body: unknown) => {
+      const validate = ajv.compile({ $defs: defs, $ref: `#/$defs/${name}` });
+      expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+    };
+    for (const body of Object.values(fixture.compose)) check("ComposeResponseP21", body);
+    check("PackResponse", fixture.pack);
+    check("SealResponse", fixture.seal);
+    check("SealResponse", fixture.seal_replay);
+    for (const problem of fixture.problems) check("Problem", problem.body);
+    expect(fixture.problems.map((problem: { status: number }) => problem.status).sort()).toEqual([400, 401, 403, 404, 409, 422, 503]);
+    expect(fixture.compose.degraded_sealable.pack_counts.degraded).toBeGreaterThan(0);
+    expect(fixture.compose.degraded_sealable.actions.may_seal).toBe(true);
+    expect(fixture.compose.sealed.local_seal.state).toBe("SEALED_LOCAL");
+  });
+
   it("publishes only compose, actor-local draft CAS, local seal, and immutable pack read", () => {
     const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as {
       paths: Record<string, Record<string, unknown>>;

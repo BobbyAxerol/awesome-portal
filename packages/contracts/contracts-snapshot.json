@@ -109,6 +109,7 @@
     "fixtures/research-preflight.response.valid.json": "sha256:2c09892ab75ece51d028e2f622518be9b2bb5e8b9be574d0ce554f83f541d641",
     "fixtures/research-progress.attempts.valid.json": "sha256:13058d02e9db247465b05bfec5ce34f232b36329c22f1606cf1c6c6dc8d731b6",
     "fixtures/research-progress.failed-at.valid.json": "sha256:3b1163f9745808d1421555de76cbaac4191d6ba1d3ee11943fe5484ada7f3f28",
+    "fixtures/research-release-candidate.consumer.fixtures.json": "sha256:95c9ddde5f8482213583e05f77b835150d126b8e202340f3b3356198fd45cbdc",
     "fixtures/research-retained-analytics.fixed.valid.json": "sha256:c93e7864bfc88ec84cd6e958086a41bc6baaac1195c0bb395ba39a907b0881b4",
     "generated/execution-analytics-series.d.ts": "sha256:c0f407caebf5e4591771b3819e2a4843b2bfd96fcdac65a3467735e0e8c0ad75",
     "generated/execution-analytics.d.ts": "sha256:1845b35265ded763173e17322ba8cc4ef675c6e14806f39f7de6184cd26676ae",

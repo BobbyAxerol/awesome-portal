@@ -224,3 +224,16 @@ Dữ liệu thật đã kiểm (R-WFO-017, R-P04-018): route `close_target_v2` t
 | BR-F3-03 | S10: nhãn attempt (vd `att_03`) trên `LineageAttempt` | HiFi in `att_03 · R-WFO-118` | In `ratt_9c3f2081 · R-P04-001` |
 | BR-F3-04 | S04: facts cho phụ đề tab hub — holdout seal state, trials/fold, freeze digest count/order verdict | HiFi "5 folds · holdout sealed", "600 trials / fold" | `state · fold N` |
 | BR-F3-05 | Manifest artifact của engine (HiFi 10, hiện 2) | S04 tab claim | Hiện 2 |
+
+## 10. Addendum 2026-10-01 — security, LW-03 and AN-29 (supersedes older row statuses)
+
+| Id | Current verdict | What is actually done | Remaining acceptance |
+|---|---|---|---|
+| LEGACY-EXPORT-SEC | CODE_ACCEPTED `fc76a1a9` | Legacy GET no longer writes ZIP; workspace/admin authorization, CSRF POST prepare, read-only GET and atomic ZIP publish passed Python 2/2, disposable PostgreSQL 1/1 and full Control API hook 1403 pass/1 skip. [Receipt](./evidence/P23/LEGACY_EXPORT_SECURITY_AND_REMAINING_HANDOFF_2026-10-01.md). | Frontend link must use prepare→download or remain hidden; no production deployment yet. Supersedes `BLOCKED_BY_AUTO_REVIEW` above. |
+| LW-03 | CODE_READY / NEW_RUN_RECEIPT_PENDING | Portal now requests a bounded 20,000-row QuantBT lifecycle ledger (instead of default 2,000) and preserves OOS-generation records in its 64-per-fold sample. Focused Python regression passed. [Receipt](./evidence/P17/LW-03_new_run_custody_2026-10-01.md). | An old child that already dropped 2,212 rows cannot be repaired; fresh pinned HMD WFO must prove ≥1 OOS-generation fact per fold and a successful S11 seal. Supersedes `BLOCKED_BY_ENGINE_SOURCE` above for **new** runs only. |
+| AN-29 | CODE_READY / HISTORICAL_APPLY_PENDING | Bobby approved append-only analytics v2 sidecar. Migration 081, operator dry-run/apply, digest-bound Evidence/Library readers and focused tests are in [receipt](./evidence/P13/AN-29_immutable_sidecar_v2_2026-10-01.md). Original P05 seal and frozen P18 Report remain unchanged. | Deploy migration before readers; operator applies to one eligible old seal; capture old/new digest and Evidence/Library GET parity. FE may render supplemental Evidence facts without rewriting the old report. |
+| CG-P21-01 | CODE_READY / CANONICAL_FIXTURES_VALIDATED | Service/filter-generated compose state, seal/replay, pack and seven Problem fixtures passed Zod/OpenAPI validation: Control API 12/12, contracts 4/4. [Receipt](./evidence/P21/CG-P21-01_canonical_consumer_fixtures_2026-10-01.md). | Claude consumes the canonical pack in S11 tests; fixture lane does not replace real publication acceptance. |
+
+Frontend handoff: `planned_folds`, `rate_trials_per_s`, S04 `core.window_disclosure`, S09 new-seal `equity.digest`/digest scope/availability, S14 `next_cursor`, workspace-scoped Library count and analytics v2 all-time/last-30D are already published or code-ready as recorded above. Claude should bind them without changing layout and preserve typed absence for old seals. The legacy export button must not issue the old direct GET as a write.
+
+This addendum does not close BR-D4-1, requested-spec v2 executor, T12 audit child, T14 exposure writer, fresh HMD WFO proof, one-candidate P23 retake or P24 signed-release rehearsal. Those remain in B3–B5; no claim that 48/48 route parity proves all parameters/profiles.

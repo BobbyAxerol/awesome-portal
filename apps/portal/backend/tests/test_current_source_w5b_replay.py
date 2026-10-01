@@ -168,7 +168,7 @@ def _assert_replay_ledger(source: ArtifactRepository, run_id: str, exported, row
     assert sum(value["transitions"] for value in overview["values"]) == transitions
     assert overview["values"][0]["first_ordinal"] == 0
     assert overview["values"][-1]["last_ordinal"] == len(bars) - 1
-    assert len(json.dumps(exported.receipt.summary, sort_keys=True).encode("utf-8")) <= 65_536
+    assert len(json.dumps(exported.receipt.summary, sort_keys=True, separators=(",", ":")).encode("utf-8")) <= 65_536
 
     # P17-T14: QuantBT's strategy-isolation records, retained verbatim per
     # fold with their original ids (row in QuantBT's table, candidate, fold, seed).

@@ -131,6 +131,7 @@ export interface RunLibraryRetainedFacts {
   metrics: JsonColumn;
   /** Sealed D-AN-01 block, null for immutable pre-v2 runs. */
   analytics_v2?: JsonColumn;
+  analytics_v2_digest?: string | null;
   /** Folds retained for this seal. */
   fold_count: string | number;
   /** Folds whose `oos_score.oos_trade_count` is published. */
@@ -615,19 +616,24 @@ export class ResearchRunLibraryRepository {
         `SELECT seal.run_id,
                 seal.artifact_revision,
                 candidate.payload->'trial_facts'->'metrics' AS metrics,
-                seal.summary->'summary_analytics_v2' AS analytics_v2,
+                COALESCE(seal.summary->'summary_analytics_v2', sidecar.analytics) AS analytics_v2,
+                sidecar.analytics_digest AS analytics_v2_digest,
                 folds.fold_count,
                 folds.trade_fold_count,
                 folds.trade_sum,
                 COALESCE((seal.table_rows->>'OBSERVATION')::bigint, 0) AS observation_count
            FROM unnest($2::text[]) AS wanted(run_id)
            JOIN LATERAL (
-             SELECT source.workspace_id, source.run_id, source.artifact_revision, source.summary, source.table_rows
+             SELECT source.workspace_id, source.run_id, source.artifact_revision, source.retained_import_digest, source.summary, source.table_rows
                FROM research.current_source_seals_v1 source
               WHERE source.workspace_id = $1 AND source.run_id = wanted.run_id
               ORDER BY source.artifact_revision DESC
               LIMIT 1
            ) seal ON TRUE
+           LEFT JOIN research.current_source_analytics_sidecars_v2 sidecar
+             ON sidecar.workspace_id = seal.workspace_id AND sidecar.run_id = seal.run_id
+            AND sidecar.artifact_revision = seal.artifact_revision
+            AND sidecar.retained_import_digest = seal.retained_import_digest
            LEFT JOIN LATERAL (
              SELECT row.payload
                FROM research.current_source_rows_v1 row

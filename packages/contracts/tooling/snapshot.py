@@ -183,6 +183,7 @@ TRACKED = (
     "generated/research-report.d.ts",
     "generated/research-attempt-lineage.d.ts",
     "generated/research-compare.d.ts",
+    "fixtures/research-release-candidate.consumer.fixtures.json",
     "generated/research-release-candidate.d.ts",
     "generated/research-release-candidate-publication.d.ts",
     "generated/execution-manager-lists.d.ts",
