@@ -14,7 +14,6 @@ import { act, cleanup, render, renderHook } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import enriched from "../../../../../upgrade/research_loop/evidence/P21/enrich-analysis/enriched-analysis.proposed.fixture.json";
 import { RunLibrary, allTimePath } from "./RunLibrary";
 import { readAllTime, type RunLibraryItem, type RunLibraryResponse } from "./runLibraryClient";
 import { researchState } from "./state";
@@ -24,6 +23,16 @@ const base = JSON.parse(
   readFileSync(join(__dirname, "../../e2e/research-foundation/run-library.json"), "utf8"),
 ) as RunLibraryResponse;
 const EMPTY: LibraryFilters = { q: "", status: [], mode: [], alpha: [], group: false, sel: [] };
+/* Read from the repo root at run time: `upgrade/` is outside the frontend build context, so a static JSON import
+   would break `tsc -b` inside the Docker image (it did, once). */
+const enriched = JSON.parse(
+  readFileSync(join(process.cwd(), "..", "..", "..", "upgrade", "research_loop", "evidence", "P21", "enrich-analysis", "enriched-analysis.proposed.fixture.json"), "utf8"),
+) as {
+  library_summary: {
+    sparkline: { at_utc_ms: number; value: string }[];
+    [key: string]: unknown;
+  };
+};
 const SUMMARY = enriched.library_summary;
 
 afterEach(() => {
@@ -116,7 +125,7 @@ describe("EA S01 - typed absence", () => {
     const box = draw(
       withAllTime({
         ...SUMMARY,
-        sharpe: { ...SUMMARY.sharpe, state: "NOT_PUBLISHED", reason_code: "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED", value: null },
+        sharpe: { ...(SUMMARY.sharpe as Record<string, unknown>), state: "NOT_PUBLISHED", reason_code: "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED", value: null },
         max_drawdown_fraction: null,
       }),
     );

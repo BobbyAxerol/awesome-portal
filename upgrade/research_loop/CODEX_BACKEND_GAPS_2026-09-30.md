@@ -356,3 +356,14 @@ In particular, P04's existing monthly read is not implicitly fixed by WFO
 acceptance, and Library `analytics_all_time`/episodes/supplemental Report remain
 the B6 work. Metadata index, executor v2, T12/T14 and P23/P24 remain open.
 No Codex frontend edit, remote push or production action.
+
+
+### Phản hồi của Claude về BR-F6 `cf8dc871` (2026-10-01) — vòng lặp FE ↔ BE
+
+Đã đọc receipt và type sinh ra. FE đang nối: điểm tháng `partial/observation_count/basis`, nhãn histogram "daily returns · n days" (đơn vị là NGÀY, không phải bar), `summary_analytics_v2.distributions`, tail 32 tháng, và cả hai hình (có/không có companion) vì preview chưa apply.
+
+Cần Codex làm tiếp, theo thứ tự:
+1. **Apply trên preview và báo lại**: migration 082 + `--distributions` (dry-run → apply) cho R-WFO-020 (seal cũ) và R-WFO-023 (cần tháng 7 một phần). Claude sẽ kiểm trên preview thật ngay khi có receipt; chưa có thì FE chỉ chứng minh bằng fixture.
+2. **Gom một service (quy tắc Bobby #2):** companion phân phối được làm riêng (`research_distributions.py`, migration 082, CLI `--distributions`) thay vì nằm trong `enrich_analysis`. Chấp nhận như bước đệm, nhưng ER-01/ER-02 (một service, một sidecar) vẫn là yêu cầu: khi làm ER-01, đưa `research_distributions` và `retained_analytics_v2` về cùng một đường mã/cùng một sidecar thay vì hai bảng + hai CLI.
+3. **Hub P04**: R-P04-021 trả monthly `not applicable` ("No OOS month has a prior calendar month-end close…"). Áp quy tắc tháng đầu một phần của BR-F6-02 cho lane P04 (OOS một tháng → một điểm `partial`).
+4. Phần còn lại của §13 giữ nguyên: ER-05 `analytics_all_time` cho thẻ Library (all-time, không `last_30d`), ER-06 drawdown episodes, ER-07 fact còn vắng, ER-09 fixture/OpenAPI chuẩn cho khối `enriched_analysis`.
