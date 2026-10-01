@@ -738,11 +738,7 @@ class CurrentSourceArtifactAdapter:
             summary["summary_analytics"] = summary_analytics
         if summary_analytics_v2 is not None:
             summary["summary_analytics_v2"] = summary_analytics_v2
-        if len(json.dumps(canonicalize(summary), ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")) > 65_536:
-            raise CurrentSourceArtifactError(
-                "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE",
-                "The current-source summary exceeds the sealed local read-model budget.",
-            )
+        self._fit_summary_budget(summary, observations)
         writer = self._retained_artifacts.begin_write(
             identity=identity,
             fence=fence,
@@ -1376,7 +1372,32 @@ class CurrentSourceArtifactAdapter:
             "candle_overview": self._candle_overview(observations) if has_candle else None,
         }
 
-    def _candle_overview(self, observations: list[dict[str, Any]]) -> dict[str, Any]:
+    def _fit_summary_budget(self, summary: dict[str, Any], observations: list[dict[str, Any]]) -> None:
+        """Keep the 64-KiB seal bound without removing any source authority.
+
+        Only the declared OHLC display sampling is coarsened, with all bars
+        represented and price extrema preserved. Retained observation rows,
+        analytics, selection, child audit and fold facts are never discarded.
+        A summary that cannot fit even with one candle still fails closed.
+        """
+        def size() -> int:
+            return len(self._canonical_json(summary).encode("utf-8"))
+
+        replay = summary.get("replay")
+        overview = replay.get("candle_overview") if isinstance(replay, dict) else None
+        ceiling = MAXIMUM_CANDLE_OVERVIEW_BUCKETS
+        while size() > 65_536 and isinstance(overview, dict) and ceiling > 1:
+            ceiling = max(1, ceiling // 2)
+            overview = self._candle_overview(observations, maximum_buckets=ceiling)
+            replay["candle_overview"] = overview
+        if size() > 65_536:
+            raise CurrentSourceArtifactError(
+                "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE",
+                "The current-source summary exceeds the sealed local read-model budget.",
+            )
+
+    def _candle_overview(self, observations: list[dict[str, Any]], *,
+                         maximum_buckets: int = MAXIMUM_CANDLE_OVERVIEW_BUCKETS) -> dict[str, Any]:
         """At most 160 OHLC buckets over the whole run, extrema kept by construction.
 
         A bucket's high is the maximum high and its low the minimum low of the
@@ -1385,7 +1406,7 @@ class CurrentSourceArtifactAdapter:
         """
 
         count = len(observations)
-        bucket_bars = max(1, math.ceil(count / MAXIMUM_CANDLE_OVERVIEW_BUCKETS))
+        bucket_bars = max(1, math.ceil(count / maximum_buckets))
         values = []
         max_high: tuple[Decimal, int] | None = None
         min_low: tuple[Decimal, int] | None = None

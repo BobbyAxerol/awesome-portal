@@ -64,6 +64,12 @@ describe("P12 bounded in-flight page coalescing", () => {
     expect(pageSql).toContain("NULL::text AS rc_draft_id");
     expect(ResearchRunLibraryRepository.pageJoins()).toContain("rc_draft ON true");
     expect(ResearchRunLibraryRepository.selectColumns()).toContain("rc_draft.draft_id AS rc_draft_id");
+    // AN-29 must use this production fast path too, not only retainedFacts().
+    expect(pageSql).toContain("research.current_source_analytics_sidecars_v2 retained_sidecar");
+    expect(pageSql).toContain("retained_sidecar.retained_import_digest = retained.retained_import_digest");
+    expect(pageSql).toContain("'analytics_v2', COALESCE(retained.analytics_v2, retained_sidecar.analytics)");
+    expect(pageSql).toContain("'analytics_v2_digest', retained_sidecar.analytics_digest");
+    expect(pageSql).toContain("'summary_analytics_v2', projection.projection->'summary_analytics_v2'");
   });
 
   it("preserves the twenty-reader cap even when all page queries are identical", async () => {

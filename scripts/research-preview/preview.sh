@@ -148,6 +148,16 @@ cmd_up() {
   local sha
   sha="$(git -C "$ROOT" rev-parse HEAD)"
   PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build portal-web quant-worker-py
+  # A backend-only build leaves nginx running, with its startup-resolved old
+  # Docker addresses. Re-resolve after Compose has made the new APIs healthy;
+  # never report a healthy static index while all same-origin APIs return 502.
+  compose exec -T portal-web nginx -t
+  compose exec -T portal-web nginx -s reload
+  local port
+  port="$(sed -n 's/^PORTAL_HTTP_PORT=//p' "$ENV_FILE")"
+  curl --fail --silent --show-error --retry 5 --retry-delay 1 --retry-all-errors \
+    --connect-timeout 3 --max-time 5 --output /dev/null \
+    "http://127.0.0.1:$port/api/control/readyz"
   record_identity
 }
 

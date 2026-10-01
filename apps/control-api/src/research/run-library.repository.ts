@@ -784,7 +784,8 @@ export class ResearchRunLibraryRepository {
                       'metrics', projection.projection->'metrics',
                       'direct', projection.projection->'direct',
                       'derived', projection.projection->'derived',
-                      'oos_analytics', projection.projection->'oos_analytics') AS projection,
+                      'oos_analytics', projection.projection->'oos_analytics',
+                      'summary_analytics_v2', projection.projection->'summary_analytics_v2') AS projection,
                     series.availability_state AS equity_state,
                     series.reason_code AS equity_reason
                FROM research.run_producers producer
@@ -805,7 +806,8 @@ export class ResearchRunLibraryRepository {
               LIMIT 1
            ) evidence ON true
            LEFT JOIN LATERAL (
-             SELECT seal.artifact_revision, seal.summary->'selection' AS selection, seal.table_rows
+             SELECT seal.artifact_revision, seal.summary->'selection' AS selection, seal.table_rows,
+                    seal.retained_import_digest, seal.summary->'summary_analytics_v2' AS analytics_v2
                FROM research.current_source_seals_v1 seal
               WHERE library.source_kind = 'RESEARCH_DURABLE'
                 AND seal.workspace_id = library.workspace_id
@@ -813,6 +815,11 @@ export class ResearchRunLibraryRepository {
               ORDER BY seal.artifact_revision DESC
               LIMIT 1
            ) retained ON true
+           LEFT JOIN research.current_source_analytics_sidecars_v2 retained_sidecar
+             ON retained_sidecar.workspace_id = library.workspace_id
+            AND retained_sidecar.run_id = library.run_id
+            AND retained_sidecar.artifact_revision = retained.artifact_revision
+            AND retained_sidecar.retained_import_digest = retained.retained_import_digest
            LEFT JOIN LATERAL (
              SELECT row.payload->'trial_facts'->'metrics' AS metrics
                FROM research.current_source_rows_v1 row
@@ -881,6 +888,8 @@ export class ResearchRunLibraryRepository {
                         AND library.source_kind = 'RESEARCH_DURABLE' AND library.effective_status = 'COMPLETED'
                    THEN jsonb_build_object('run_id', library.run_id, 'artifact_revision', retained.artifact_revision::text,
                      'metrics', retained_selected.metrics,
+                     'analytics_v2', COALESCE(retained.analytics_v2, retained_sidecar.analytics),
+                     'analytics_v2_digest', retained_sidecar.analytics_digest,
                      'fold_count', retained_card_counts.fold_count::text,
                      'trade_fold_count', retained_card_counts.trade_fold_count::text,
                      'trade_sum', retained_card_counts.trade_sum::text,

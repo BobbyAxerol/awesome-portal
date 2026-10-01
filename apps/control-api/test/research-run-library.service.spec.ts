@@ -453,6 +453,21 @@ describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub 
       .rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_UNAVAILABLE" });
   });
 
+  it("AN-29 consumes the production same-snapshot page facts without an extra read", async () => {
+    const analytics = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const repository = {
+      list: vi.fn().mockResolvedValue({ ...page([hubless()]), retainedFacts: [retainedRow({
+        analytics_v2: analytics, analytics_v2_digest: sha256ResearchJson(analytics),
+      })] }),
+      retainedFacts: vi.fn(),
+    };
+    const response = await new ResearchRunLibraryService(repository as never, config).list(scope, QUERY);
+    expect(response.items[0]!.last_30d).toMatchObject({
+      availability: { state: "AVAILABLE" }, data: analytics.last_30d,
+    });
+    expect(repository.retainedFacts).not.toHaveBeenCalled();
+  });
+
 
   it("prints QuantBT's own fold means and the summed OOS trades instead of P13_SOURCE_EVIDENCE_NOT_PUBLISHED", async () => {
     const { item } = await card([retainedRow()]);

@@ -237,3 +237,9 @@ Dữ liệu thật đã kiểm (R-WFO-017, R-P04-018): route `close_target_v2` t
 Frontend handoff: `planned_folds`, `rate_trials_per_s`, S04 `core.window_disclosure`, S09 new-seal `equity.digest`/digest scope/availability, S14 `next_cursor`, workspace-scoped Library count and analytics v2 all-time/last-30D are already published or code-ready as recorded above. Claude should bind them without changing layout and preserve typed absence for old seals. The legacy export button must not issue the old direct GET as a write.
 
 This addendum does not close BR-D4-1, requested-spec v2 executor, T12 audit child, T14 exposure writer, fresh HMD WFO proof, one-candidate P23 retake or P24 signed-release rehearsal. Those remain in B3–B5; no claim that 48/48 route parity proves all parameters/profiles.
+
+### Runtime follow-up — 2026-10-01
+
+`999be160` passed the required full hook (Control API 1,406 pass / 1 skip), was rebased over Claude F3 `5fad25cf`, and landed cleanly on the shared research branch; no remote push. AN-29 was applied additively on :8095 R-WFO-020 only. Real reads exposed an optimized Library query omission, now fixed and verified against the actual DB (26/26 focused tests); API acceptance awaits the corrected image. See [AN-29 follow-up](./evidence/P13/AN-29_immutable_sidecar_v2_2026-10-01.md).
+
+The fresh 400-trial run failed the compact P05 summary limit after optimization. The follow-up coarsens only declared display candles, keeps all retained/source authority facts and the same 64-KiB bound, and adds regression tests. It also makes preview-only nginx re-resolution plus same-origin API readiness mandatory after backend refresh. [Failure/correction receipt](./evidence/P05/WFO_SUMMARY_BUDGET_AND_PREVIEW_GATE_2026-10-01.md). LW-03 / S09 digest / real trial-rate are **not yet accepted** on that failed run; fresh corrected-image proof remains next. Production, frontend and old seals are unchanged.

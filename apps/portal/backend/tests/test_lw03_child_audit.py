@@ -5,13 +5,14 @@ from __future__ import annotations
 import json
 
 import pandas as pd
+import pytest
 
 from portal_api.domain.requests import AdvancedWalkForwardConfig
 from portal_api.services.advanced_walkforward_runner import (
     LIFECYCLE_LEDGER_MAX_ROWS,
     _config_fields,
 )
-from portal_api.services.current_source_artifacts import CurrentSourceArtifactAdapter
+from portal_api.services.current_source_artifacts import CurrentSourceArtifactAdapter, CurrentSourceArtifactError
 
 
 def test_admitted_wfo_passes_bounded_lifecycle_cap_to_pinned_quantbt() -> None:
@@ -50,3 +51,38 @@ def test_retained_fold_keeps_late_source_oos_generation_with_original_ordinal() 
     assert [row["audit_ordinal"] for row in block["records"]] == [*range(63), 80]
     assert block["records"][-1]["context"] == "out-of-sample generation"
     assert block["records"][-1]["candidate_id"] == "b" * 24
+
+
+def test_seal_byte_budget_resamples_only_candles_and_preserves_full_source_envelope() -> None:
+    adapter = CurrentSourceArtifactAdapter(source_artifacts=None, retained_artifacts=None)
+    observations = [{
+        "at_utc_ms": 1_700_000_000_000 + ordinal * 3_600_000,
+        "bar_json": json.dumps({"candle": {
+            "open": "100", "close": "101", "high": str(102 + ordinal),
+            "low": str(99 - ordinal), "volume": "1",
+        }, "transition": ordinal % 2 == 0}),
+    } for ordinal in range(600)]
+    original = adapter._candle_overview(observations)
+    summary = {"immutable_source_fact": "x" * 40_000, "replay": {"candle_overview": original}}
+    assert len(adapter._canonical_json(summary).encode()) > 65_536
+    adapter._fit_summary_budget(summary, observations)
+    actual = summary["replay"]["candle_overview"]
+    assert len(adapter._canonical_json(summary).encode()) <= 65_536
+    assert actual["emitted_bucket_count"] < original["emitted_bucket_count"]
+    assert actual["envelope"] == original["envelope"]
+    assert actual["source_bar_count"] == 600
+    assert actual["values"][0]["first_ordinal"] == 0
+    assert actual["values"][-1]["last_ordinal"] == 599
+    assert sum(int(row["volume"]) for row in actual["values"]) == 600
+    assert sum(row["transitions"] for row in actual["values"]) == 300
+    assert summary["immutable_source_fact"] == "x" * 40_000
+    unchanged = adapter._canonical_json(summary)
+    adapter._fit_summary_budget(summary, observations)
+    assert adapter._canonical_json(summary) == unchanged
+
+
+def test_seal_byte_budget_never_drops_authority_to_fit() -> None:
+    adapter = CurrentSourceArtifactAdapter(source_artifacts=None, retained_artifacts=None)
+    with pytest.raises(CurrentSourceArtifactError) as failure:
+        adapter._fit_summary_budget({"immutable_source_fact": "x" * 65_536}, [])
+    assert failure.value.code == "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE"
