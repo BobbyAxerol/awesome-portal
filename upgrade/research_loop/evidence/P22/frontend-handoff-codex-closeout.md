@@ -36,7 +36,7 @@ reconciliation. The browser never scans release candidates by alpha version.
   `P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED` today; do not render “Quant
   Reviewers” or any inferred team.
 - `candidate_relation` / `rc_superseded` are server-derived.
-- `conflicting_approval_href` and `details.downstream_code` are preserved.
+- `conflicting_approval_href` and top-level `publication.downstream_code` on the compose/pack reread are preserved; a Problem body does not promise `details.downstream_code`.
 - All timestamps and decimal/digest strings are display-only exact values; the
   browser must not recalculate authority or hash identity.
 

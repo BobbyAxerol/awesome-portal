@@ -222,6 +222,11 @@ const EquityV2Schema = z.object({
   emitted_point_count: z.number().int().nonnegative().max(600).nullable(),
   sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1", "OBSERVATION_EXTREMA_BUCKET_V2"]).nullable(),
   points: z.array(EquityPointSchema).max(600),
+  /** Digest of full source Parquet bytes, not sampled OOS chart points. */
+  digest: DigestSchema.nullable().optional(),
+  digest_scope: z.literal("FULL_STITCHED_SOURCE_SERIES").nullable().optional(),
+  logical_name: z.literal("series/stitched.parquet").nullable().optional(),
+  digest_availability: AvailabilitySchema.optional(),
   availability: AvailabilitySchema,
 }).strict();
 

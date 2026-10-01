@@ -359,8 +359,18 @@ export type CurrentSourceFoldFacts = z.infer<typeof CurrentSourceFoldFactsSchema
 export type CurrentSourceTrialFacts = z.infer<typeof CurrentSourceTrialFactsSchema>;
 export type CurrentSourceFacts = z.infer<typeof CurrentSourceFactsSchema>;
 
+export const CurrentSourceSourceSeriesArtifactSchema = z.object({
+  algorithm: z.literal("SHA-256"),
+  digest: z.string().regex(/^[0-9a-f]{64}$/),
+  logical_name: z.literal("series/stitched.parquet"),
+  size_bytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  scope: z.literal("FULL_STITCHED_SOURCE_SERIES"),
+}).strict();
+
 export const CurrentSourceSummarySchema = z.object({
   schema_version: z.literal("research.current-source-summary.v1"),
+  // Older immutable seals predate source-byte custody; never infer their hash from sampled points.
+  source_series_artifact: CurrentSourceSourceSeriesArtifactSchema.optional(),
   metrics: z.object({
     initial_equity: CurrentSourceDecimalSchema,
     final_equity: CurrentSourceDecimalSchema,

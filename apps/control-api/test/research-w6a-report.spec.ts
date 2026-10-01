@@ -63,13 +63,14 @@ const seal: CurrentSourceSealRow = {
   retainedAtUtcMs: 1_790_269_236_911,
 };
 
-function currentSource(importDigest = seal.retainedImportDigest, summaryAnalytics?: Record<string, unknown>, summaryAnalyticsV2?: Record<string, unknown>) {
+function currentSource(importDigest = seal.retainedImportDigest, summaryAnalytics?: Record<string, unknown>, summaryAnalyticsV2?: Record<string, unknown>, sourceSeriesArtifact?: Record<string, unknown>) {
   const sorted = (kind: Kind) => [...(real.rows[kind] ?? [])].sort((left, right) => left.sourceOrdinal - right.sourceOrdinal);
   const repository = {
-    sealForRead: vi.fn().mockResolvedValue(summaryAnalytics || summaryAnalyticsV2
+    sealForRead: vi.fn().mockResolvedValue(summaryAnalytics || summaryAnalyticsV2 || sourceSeriesArtifact
       ? { ...seal, summary: { ...seal.summary,
           ...(summaryAnalytics ? { summary_analytics: summaryAnalytics } : {}),
           ...(summaryAnalyticsV2 ? { summary_analytics_v2: summaryAnalyticsV2 } : {}),
+          ...(sourceSeriesArtifact ? { source_series_artifact: sourceSeriesArtifact } : {}),
         } }
       : seal),
     runState: vi.fn(),
@@ -138,6 +139,7 @@ function parts(manifestDigest = real.manifest_digest) {
 function subject(options: {
   summaryAnalytics?: Record<string, unknown>;
   summaryAnalyticsV2?: Record<string, unknown>;
+  sourceSeriesArtifact?: Record<string, unknown>;
   binding?: "PUBLISHABLE" | "SCRATCH";
   manifestDigest?: string;
   importDigest?: string;
@@ -167,7 +169,7 @@ function subject(options: {
   const unused = { detail: vi.fn().mockRejectedValue(new Error("a WFO report never reads a P04 hub")) };
   const service = new ResearchReportService(
     repository as never, evidence as never, unused as never, unused as never, unused as never, unused as never,
-    currentSource(options.importDigest, options.summaryAnalytics, options.summaryAnalyticsV2),
+    currentSource(options.importDigest, options.summaryAnalytics, options.summaryAnalyticsV2, options.sourceSeriesArtifact),
     {
       FEATURE_RESEARCH_REPORTS: "true", FEATURE_RESEARCH_CURRENT_SOURCE: "true",
       RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES: 512 * 1024, RESEARCH_REPORT_EXPORT_LEASE_SECONDS: 90,
@@ -298,6 +300,27 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
     expect(core.equity_is.sampling).toBe("EXTREMA_BUCKET_V1");
     expect(core.equity.points.every((point) => point.at_utc_ms >= firstTest)).toBe(true);
     expect(core.equity_is.points.every((point) => point.at_utc_ms < firstTest)).toBe(true);
+  });
+
+  it("CG-FG-S09-02 keeps old seals absent and publishes only a sealed full-source byte digest", async () => {
+    const oldCore = v2(await subject().service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"));
+    expect(oldCore.equity).toMatchObject({
+      digest: null, logical_name: null,
+      digest_availability: { state: "NOT_PUBLISHED", reason_code: "P05_SEAL_PREDATES_SOURCE_SERIES_BYTE_DIGEST" },
+    });
+    const sourceSeriesArtifact = {
+      algorithm: "SHA-256", digest: digest("a"), logical_name: "series/stitched.parquet",
+      size_bytes: 42, scope: "FULL_STITCHED_SOURCE_SERIES",
+    };
+    const evidence = await currentSource(undefined, undefined, undefined, sourceSeriesArtifact).evidence(scope, real.run_id);
+    expect(evidence).toHaveProperty("source_series_artifact", sourceSeriesArtifact);
+    openApiValidator("research-current-source.openapi.json", "Evidence").assert(evidence);
+    const report = await subject({ sourceSeriesArtifact }).service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE");
+    expect(v2(report).equity).toMatchObject({
+      digest: digest("a"), logical_name: "series/stitched.parquet",
+      digest_scope: "FULL_STITCHED_SOURCE_SERIES", digest_availability: available,
+    });
+    reportValidator.assert(report);
   });
 
   it("CG-P18-07 artifacts bind to the sealed P05 parts of the retained manifest, never a download", async () => {

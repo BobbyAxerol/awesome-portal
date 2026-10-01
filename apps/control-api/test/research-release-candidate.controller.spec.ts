@@ -26,6 +26,9 @@ describe("P21 same-origin controller boundary", () => {
     await expect(controller.pack(request as never, response as never, rcId, {})).resolves.toEqual({ pack_digest: "b".repeat(64) });
     expect(service.detail).toHaveBeenCalledWith({ workspaceId: "ws-p21", actorUserId: "usr-p21" }, runId);
     expect(response.header).toHaveBeenCalledWith("cache-control", "private, no-store");
+    // Compose draft and pack downstream state can change without changing
+    // source_fingerprint/pack_digest, so neither is a body validator.
+    expect(response.header).not.toHaveBeenCalledWith("etag", expect.anything());
   });
 
   it("rejects malformed/cross-workspace IDs before any P21 source read", async () => {

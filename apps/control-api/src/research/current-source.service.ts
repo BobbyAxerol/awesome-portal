@@ -387,6 +387,7 @@ export class ResearchCurrentSourceService {
       schema_version: "research.current-source-evidence.v1" as const,
       ...(summary.summary_analytics ? { summary_analytics: summary.summary_analytics } : {}),
       ...(summary.summary_analytics_v2 ? { summary_analytics_v2: summary.summary_analytics_v2 } : {}),
+      ...(summary.source_series_artifact ? { source_series_artifact: summary.source_series_artifact } : {}),
       ...this.common("evidence", seal),
       passport: {
         artifact_table_rows: {

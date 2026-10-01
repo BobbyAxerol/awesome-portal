@@ -7,6 +7,7 @@ retains actual WFO output rather than a fixture or a browser-time rerun.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -154,6 +155,15 @@ def test_current_source_adapter_retains_real_wfo_rows_once(exported) -> None:
     assert receipt.summary["schema_version"] == "research.current-source-summary.v1"
     assert receipt.summary["metrics"]["initial_equity"]
     assert receipt.summary["selection"]["parameters"]
+    source_file = source.run_directory("run-rs02-advanced") / "series" / "stitched.parquet"
+    source_bytes = source_file.read_bytes()
+    assert receipt.summary["source_series_artifact"] == {
+        "algorithm": "SHA-256",
+        "digest": hashlib.sha256(source_bytes).hexdigest(),
+        "logical_name": "series/stitched.parquet",
+        "size_bytes": len(source_bytes),
+        "scope": "FULL_STITCHED_SOURCE_SERIES",
+    }
     # E11/E14 source-time block survives the actual P05 seal, not a GET rerun.
     analytics = receipt.summary["summary_analytics"]
     original = source.read_json("run-rs02-advanced", "wfo/retained_analytics.v1.json")

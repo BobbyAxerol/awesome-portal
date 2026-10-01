@@ -617,7 +617,14 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       { key: "FUNDING", label: "Funding", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("RS02_SUMMARY_PUBLISHES_NO_FUNDING_TOTAL") },
     ],
     headline_footnote: "Net OOS return is QuantBT full_report(total_return_pct)/100 on outer-test windows. New seals carry all-time OOS Sharpe and descriptive episode win rate. Older seals retain typed fold-mean/absence. Drawdown covers the whole retained account path; decay remains a fold mean and trade count is not an audited trade ledger.",
-    equity: equityBlock("RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
+    equity: {
+      ...equityBlock("RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
+      digest: evidence.source_series_artifact?.digest ?? null,
+      digest_scope: evidence.source_series_artifact?.scope ?? null,
+      logical_name: evidence.source_series_artifact?.logical_name ?? null,
+      digest_availability: evidence.source_series_artifact
+        ? AVAILABLE : NOT_PUBLISHED("P05_SEAL_PREDATES_SOURCE_SERIES_BYTE_DIGEST"),
+    },
     equity_is: equityBlock("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST", isPoints, seriesSampling, 300, "RS02_NO_RETAINED_OBSERVATION_BEFORE_FIRST_OUTER_TEST"),
     folds: {
       state: verdicts.state === "AVAILABLE" ? "AVAILABLE" : "NOT_PUBLISHED",

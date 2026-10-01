@@ -292,6 +292,10 @@ export interface components {
             emitted_point_count: number | null;
             sampling: ("FULL" | "EXTREMA_BUCKET_V1" | "OBSERVATION_EXTREMA_BUCKET_V2") | null;
             points: components["schemas"]["EquityPoint"][];
+            digest?: components["schemas"]["Digest"] | null;
+            digest_scope?: "FULL_STITCHED_SOURCE_SERIES" | null;
+            logical_name?: "series/stitched.parquet" | null;
+            digest_availability?: components["schemas"]["Availability"];
             availability: components["schemas"]["Availability"];
         };
         FoldFact: {

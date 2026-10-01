@@ -486,6 +486,16 @@ export interface components {
             schema_version: "research.current-source-evidence.v1";
             summary_analytics?: components["schemas"]["RetainedAnalytics"];
             summary_analytics_v2?: components["schemas"]["RetainedAnalyticsV2"];
+            source_series_artifact?: {
+                /** @constant */
+                algorithm: "SHA-256";
+                digest: components["schemas"]["Digest"];
+                /** @constant */
+                logical_name: "series/stitched.parquet";
+                size_bytes: number;
+                /** @constant */
+                scope: "FULL_STITCHED_SOURCE_SERIES";
+            };
             passport: {
                 artifact_table_rows: {
                     observations: number;

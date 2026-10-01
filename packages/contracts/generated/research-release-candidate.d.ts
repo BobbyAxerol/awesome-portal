@@ -352,6 +352,7 @@ export interface components {
         Problem: {
             error: {
                 code: string;
+                /** @description Diagnostic only, not UI copy; render the typed code and request_id with client-owned wording. */
                 message: string;
             };
             request_id?: string;
@@ -392,7 +393,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded local composer view; browser cache is private/no-store. */
+            /** @description Bounded local composer view; private/no-store, no ETag because draft/publication state can change independently of source_fingerprint. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -490,7 +491,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Immutable local pack and separate downstream state. */
+            /** @description Immutable local pack and separate mutable downstream state; private/no-store, no ETag because pack_digest covers only the pack. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -51,7 +51,6 @@ export class ResearchReleaseCandidateController {
     const workspaceId = await this.workspace(request, query.workspace_id);
     const body = await this.service.detail({ workspaceId, actorUserId: request.portalUser.userId }, runId);
     reply.header("cache-control", "private, no-store");
-    reply.header("etag", `\"${body.source_fingerprint}\"`);
     return reply.send(body);
   }
 
@@ -106,7 +105,6 @@ export class ResearchReleaseCandidateController {
     const workspaceId = await this.workspace(request, query.workspace_id);
     const body = await this.service.pack({ workspaceId, actorUserId: request.portalUser.userId }, rawReleaseCandidateId);
     reply.header("cache-control", "private, no-store");
-    reply.header("etag", `\"${body.pack_digest}\"`);
     return reply.send(body);
   }
 

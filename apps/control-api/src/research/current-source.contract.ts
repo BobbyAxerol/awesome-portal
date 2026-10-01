@@ -18,6 +18,7 @@ import { FoldOrderingSchema } from "./fold-ordering";
 import { DeclaredSpaceSchema, SearchSurfaceSchema } from "./current-source-surface";
 import { CandidateDrawdownSchema, SearchPoolSchema } from "./current-source-pool";
 import { ParameterAuthoritySchema, Stage4BindingSchema } from "./stage4-binding";
+import { CurrentSourceSourceSeriesArtifactSchema } from "./current-source.payload";
 
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -427,6 +428,7 @@ export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
   summary_analytics: ResearchRetainedAnalyticsSchema.optional(),
   summary_analytics_v2: ResearchRetainedAnalyticsV2Schema.optional(),
   schema_version: z.literal("research.current-source-evidence.v1"),
+  source_series_artifact: CurrentSourceSourceSeriesArtifactSchema.optional(),
   passport: z.object({
     artifact_table_rows: z.object({
       observations: z.number().int().positive().max(2_000_000),

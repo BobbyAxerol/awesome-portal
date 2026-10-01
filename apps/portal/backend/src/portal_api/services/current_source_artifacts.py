@@ -714,6 +714,22 @@ class CurrentSourceArtifactAdapter:
                 selection=selection_rows[0],
             ),
         )
+        # The retained table/manifest hashes authenticate the projection,
+        # not the source equity file itself. Seal its actual bytes once here.
+        series_path = raw_dir / "series" / "stitched.parquet"
+        series_hash = hashlib.sha256()
+        series_size = 0
+        with series_path.open("rb") as source_series:
+            for chunk in iter(lambda: source_series.read(1024 * 1024), b""):
+                series_hash.update(chunk)
+                series_size += len(chunk)
+        summary["source_series_artifact"] = {
+            "algorithm": "SHA-256",
+            "digest": series_hash.hexdigest(),
+            "logical_name": "series/stitched.parquet",
+            "size_bytes": series_size,
+            "scope": "FULL_STITCHED_SOURCE_SERIES",
+        }
         if replay_summary is not None:
             summary["replay"] = replay_summary
             if child_audit_summary is not None:
