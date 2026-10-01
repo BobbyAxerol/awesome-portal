@@ -643,7 +643,11 @@ describe("P13-T06 — the retained-source passport is a panel, not the route", (
         ),
       },
     });
-    expect(container.querySelector("[data-passport-refusal]")?.textContent).toContain("admitted Advanced-WFO");
+    // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip, not text.
+    const panel = container.querySelector("[data-passport-refusal]");
+    expect(panel?.querySelector("[data-refusal-code]")?.textContent).toBe("RESEARCH_CURRENT_SOURCE_NOT_ADMITTED");
+    expect(panel?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toContain("admitted Advanced-WFO");
+    expect(panel?.textContent).not.toContain("admitted Advanced-WFO");
     // The rest of the screen is untouched: the hub is still a hub.
     expect(container.querySelector("[data-metrics]")).toBeTruthy();
     expect(container.querySelector("[data-claim-passport]")).toBeTruthy();
@@ -729,14 +733,12 @@ describe("P13-T08 — the surface requests only the four named operations", () =
     expect(code).not.toMatch(/\/internal\/|parquet|artifact|journal/i);
   });
 
-  it("declares every series kind the contract publishes and no other", () => {
+  it("declares the series kinds the screen asks for (D-AN-01: no rolling Sharpe or beta) and no other", () => {
     expect([...SERIES_KINDS]).toEqual([
       "EQUITY_OOS",
       "MONTHLY_RETURNS",
       "ROLLING_RETURNS_20",
       "RETURN_DISTRIBUTION",
-      "ROLLING_SHARPE_63",
-      "ROLLING_BETA_63",
     ]);
   });
 
@@ -1649,20 +1651,15 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     const shown = (key: string) => container.querySelector(`[data-metric-value='${key}']`)?.textContent;
     expect(exact("FINAL_EQUITY")).toBe(W3.evidence.passport.final_equity);
     expect(shown("FINAL_EQUITY")).toBe("19,926.51");
-    expect(shown("INITIAL_EQUITY")).toBe("20,000.00");
+    /* D-AN-01: five hero tiles; the other ten are not drawn (they moved to the Behavior block). */
+    expect(container.querySelectorAll("[data-metric-lane='retained']")).toHaveLength(5);
     expect(shown("NET_RETURN_FRACTION")).toBe("−0.37%");
     expect(shown("MAX_DRAWDOWN_FRACTION")).toBe("−0.67%");
-    expect(shown("BARS_PROCESSED")).toBe("1,056");
     expect(shown("OOS_SHARPE")).toBe("−5.35");
     expect(container.querySelector("[data-metric='FINAL_EQUITY'] [data-metric-scope]")?.textContent).toContain("source-derived");
-    // A tile the lane has no field for names the lane; the benchmark tile carries the lane's own reason.
-    /* F1: the lane having no field is a screen note, not a code that looks like the server's. */
-    expect(container.querySelector("[data-metric='OOS_SORTINO'] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe("retained-lane-has-no-field");
-    expect(container.querySelector("[data-metric='OOS_SORTINO'] [data-reason-code]")).toBeNull();
-    expect(container.querySelector("[data-metric='OOS_SORTINO']")?.textContent).toContain("not served for this lane");
-    expect(container.querySelector("[data-metric='BENCHMARK_RETURN_FRACTION'] [data-withheld]")?.getAttribute("data-reason-code")).toBe(
-      "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES",
-    );
+    /* Old seal, no v2: no empty tiles for the rest — one typed line with the served code (see s04an tests). */
+    expect(container.querySelector("[data-metric='OOS_SORTINO']")).toBeNull();
+    expect(container.querySelector("[data-metric='BENCHMARK_RETURN_FRACTION']")).toBeNull();
   });
 
   it("shows no P04-hub banner or reason code once the retained seal is READY", () => {
@@ -1682,7 +1679,7 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     expect(container.querySelector("[data-readiness]")?.getAttribute("data-readiness")).toBe("not read");
   });
 
-  it("reads the retained derived series: monthly strip, distribution; rolling Sharpe/beta keep the lane's absences", async () => {
+  it("reads the retained derived series: monthly strip, distribution; no rolling series", async () => {
     const ensureRetainedKind = vi.fn();
     const retainedKinds = new Map([
       ["MONTHLY_RETURNS", { state: "ready" as const, series: W3B.series_monthly }],
@@ -1701,13 +1698,10 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     const distribution = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']");
     expect(distribution?.getAttribute("data-series-state")).toBe("ready");
     expect(distribution?.querySelector("[data-sampling]")?.getAttribute("data-sampling")).toBe("FULL_RETURN_HISTOGRAM_V2");
-    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-absence-note] [data-fe-absence]")?.getAttribute("data-fe-absence")).toBe(
-      "retained-lane-has-no-series",
-    );
-    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-reason-code]")).toBeNull();
-    expect(container.querySelector("[data-series-panel='ROLLING_BETA_63'] [data-absence-note]")?.getAttribute("data-reason-code")).toBe(
-      "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES",
-    );
+    /* D-AN-01: no rolling Sharpe/beta panel and no request for either series. */
+    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'], [data-series-panel='ROLLING_BETA_63'], [data-rolling-figure]")).toBeNull();
+    expect(ensureRetainedKind).not.toHaveBeenCalledWith("ROLLING_SHARPE_63");
+    expect(ensureRetainedKind).not.toHaveBeenCalledWith("ROLLING_BETA_63");
     // The lazy chart chunk settles before the test ends (console guard).
     await waitFor(() => expect(container.querySelector("[data-chart-table='distribution']")).toBeTruthy(), { timeout: 15_000 });
   }, 20_000);
@@ -1785,10 +1779,10 @@ describe("E11 — what the retained lane now publishes, and what it names as abs
     );
   });
 
-  it("audit 04-10: rolling Sharpe carries the lane's own cause, not the UI's placeholder", () => {
+  it("D-AN-01: the retained lane's rolling_sharpe absence is no longer drawn (no rolling figure)", () => {
     const { container } = view({ hub: W3B.hub_evidence, passport: e11Passport, runIdentity: W3B_IDENTITY });
-    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63'] [data-absence-note]")?.getAttribute("data-reason-code"))
-      .toBe("RS02_RETAINED_LANE_HAS_NO_DAILY_RETURN_SERIES");
+    expect(container.querySelector("[data-rolling-figure]")).toBeNull();
+    expect(container.querySelector("[data-series-panel='ROLLING_SHARPE_63']")).toBeNull();
   });
 });
 
@@ -1816,27 +1810,11 @@ describe("E11 · sealed summary analytics are bound without recomputation or aut
     expect(container.querySelector('[data-behavior-tile="win rate"]')?.innerHTML).toContain("QUANTBT_ROUTE_PUBLISHES_NO_AUDITED_TRADE_LEDGER");
   });
 
-  it("consumes inline rolling Sharpe without requesting another series or inventing a short-window value", () => {
+  it("D-AN-01: the v1 rolling_sharpe_63 block is not drawn and its series is never requested", () => {
     const ensureSeries = vi.fn();
     const { container } = view({ hub: hub({ summary_analytics: E11_ANALYTICS }), ensureSeries });
-    const panel = container.querySelector('[data-series-panel="ROLLING_SHARPE_63"]');
-    expect(panel?.getAttribute("data-series-state")).toBe("absent");
-    expect(panel?.innerHTML).toContain("P13_OOS_DAILY_RETURNS_BELOW_ROLLING_WINDOW");
-    expect(ensureSeries.mock.calls.some(([kind]) => kind === "ROLLING_SHARPE_63")).toBe(false);
-  });
-
-  it("draws available inline rolling Sharpe, preserving the server's exact value", async () => {
-    const summary: RetainedAnalytics = { ...E11_ANALYTICS, rolling_sharpe_63: {
-      ...E11_ANALYTICS.rolling_sharpe_63, state: "AVAILABLE", reason_code: null,
-      daily_return_count: 70, source_observation_count: 7, emitted_point_count: 1, sampling: "EXTREMA_BUCKET_V1",
-      points: [{ at_utc_ms: 1725000000000, sharpe: "1.23456789" }],
-    } };
-    const ensureSeries = vi.fn();
-    const { container } = view({ hub: hub({ summary_analytics: summary }), ensureSeries });
-    await waitFor(() => expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"] [data-chart-table]')).toBeTruthy());
-    expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"]')?.textContent).toContain("1.23456789");
-    expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"]')?.getAttribute("data-series-state")).toBe("ready");
-    expect(ensureSeries.mock.calls.some(([kind]) => kind === "ROLLING_SHARPE_63")).toBe(false);
+    expect(container.querySelector('[data-series-panel="ROLLING_SHARPE_63"], [data-rolling-figure], [data-strategy-figure]')).toBeNull();
+    expect(ensureSeries.mock.calls.some(([kind]) => String(kind).startsWith("ROLLING_"))).toBe(false);
   });
 });
 

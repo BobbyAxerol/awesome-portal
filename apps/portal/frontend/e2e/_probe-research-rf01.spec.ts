@@ -133,12 +133,13 @@ for (const [name, width, height] of VIEWPORTS) {
 
     const panel = page.locator("[data-research-panel][data-state='unavailable']").first();
     await expect(panel).toBeVisible();
-    // Fixed copy on screen; the server's sentence only inside details.
+    // Fixed copy on screen; the code is a chip and the server's sentence is its tooltip only (VD-FG-01-01).
     await expect(panel.locator("[data-research-state]")).toContainText("The Research service did not answer. Try again.");
-    const details = panel.locator("[data-research-detail]");
-    await expect(details).toHaveCount(1);
-    await expect(details).not.toHaveAttribute("open", "");
-    await expect(details).toContainText("upstream split reader timed out");
+    const chips = panel.locator("[data-refusal-detail]");
+    await expect(chips).toHaveCount(1);
+    await expect(chips.locator("[data-refusal-code]")).toHaveText("RESEARCH_SPLIT_UNAVAILABLE");
+    await expect(chips).toHaveAttribute("title", /upstream split reader timed out/);
+    await expect(panel.locator("[data-research-state]")).not.toContainText("upstream split reader timed out");
 
     const retry = panel.locator("[data-research-recovery] [data-action='reread']");
     await expect(retry).toBeVisible();

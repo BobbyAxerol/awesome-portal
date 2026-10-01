@@ -493,6 +493,15 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
          a lazy read for a `NOT_PUBLISHED` series would be a request whose only
          possible answer is "no". */
       if (item.sparkline.availability.state !== "AVAILABLE") return;
+      /* AN-19: a COMPLETED card that carries its last-30D window draws that and
+         never shows the all-time series, so the read would be unused. */
+      if (
+        item.status === "COMPLETED" &&
+        item.last_30d?.availability.state === "AVAILABLE" &&
+        (item.last_30d.data?.points.length ?? 0) > 0
+      ) {
+        return;
+      }
       const key = `${item.run_id}@${item.evidence_revision ?? ""}`;
       if (sparklineAsked.current.has(key)) return;
       sparklineAsked.current.add(key);

@@ -210,6 +210,11 @@ export interface RunProgressController {
 
   /** The latest `trial_completed.best_objective` this view has seen; null until one arrives. */
   bestObjective: LiveBestObjective | null;
+  /**
+   * The latest `trial_completed.rate_trials_per_s` this view has seen: the server's exact decimal
+   * string, `null` when the event served a null rate, `undefined` when no event carried the field.
+   */
+  liveRate: string | null | undefined;
   cancelling: boolean;
   cancelResult: CancelResponse | null;
   cancel: (reason: string) => void;
@@ -227,6 +232,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   /* The earliest `after_seq` this view has asked the console for. */
   const [oldestAfter, setOldestAfter] = useState<number | null>(null);
   const [bestObjective, setBestObjective] = useState<LiveBestObjective | null>(null);
+  const [liveRate, setLiveRate] = useState<string | null | undefined>(undefined);
   const [cancelling, setCancelling] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResponse | null>(null);
   const [linesDropped, setLinesDropped] = useState(false);
@@ -349,6 +355,8 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
             previous !== null && previous.fold === best.fold && previous.value === best.value ? previous : best,
           );
         }
+        /* Same rule for the rate: an omitted field says nothing; a served null is kept as null. */
+        if (event.payload.rate_trials_per_s !== undefined) setLiveRate(event.payload.rate_trials_per_s);
         if (fold !== undefined) {
           setEventTrials((previous) => (previous[fold] === trial ? previous : { ...previous, [fold]: trial }));
         }
@@ -678,6 +686,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     foldCursor,
     pinFold: setPinnedFold,
     bestObjective,
+    liveRate,
     cancelling,
     cancelResult,
     cancel,

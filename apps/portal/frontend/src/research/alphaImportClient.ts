@@ -95,8 +95,11 @@ function query(workspaceId?: string, extra?: Record<string, string>): string {
 }
 
 export const alphaImportApi = {
-  registry: (workspaceId?: string, alphaId?: string) =>
-    call<RegistryListResponse>(`${BASE}${query(workspaceId, alphaId ? { alpha_id: alphaId } : undefined)}`),
+  /** `cursor` is the server's opaque `next_cursor`, sent back exactly as served and never parsed. */
+  registry: (workspaceId?: string, alphaId?: string, cursor?: string) =>
+    call<RegistryListResponse>(
+      `${BASE}${query(workspaceId, { ...(alphaId ? { alpha_id: alphaId } : {}), ...(cursor ? { cursor } : {}) })}`,
+    ),
 
   parse: (body: ParseRequest) =>
     call<SourceResponse>(`${BASE}/import/parse`, { method: "POST", body: JSON.stringify(body) }),

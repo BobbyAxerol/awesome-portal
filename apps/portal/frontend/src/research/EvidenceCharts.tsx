@@ -538,6 +538,71 @@ export function rollingSharpeOption(points: RollingSharpePoint[]) {
   });
 }
 
+/** D-AN-01: one rebased-to-100 curve as the server sent it (`value` is an exact decimal string). */
+export interface RebasedPoint {
+  at_utc_ms: number;
+  value: string;
+}
+
+export const SERIES_NAME_V2 = { strategy: "Strategy", benchmark: "Benchmark (buy and hold)" } as const;
+
+/**
+ * "Strategy vs benchmark — all time": both curves rebased to 100 by the server on
+ * the same scope. Two lines on one time axis; nothing is rebased or resampled here.
+ */
+export function strategyBenchmarkOption(strategy: readonly RebasedPoint[], benchmark: readonly RebasedPoint[]) {
+  const role = roleColorsNow();
+  const { inkFaint } = paletteNow();
+  const lookup = (points: readonly RebasedPoint[], param: AxisParam | undefined) => points[param?.dataIndex ?? -1];
+  return baseOption({
+    ...noChartApparatus(),
+    ...(benchmark.length > 0
+      ? {
+        legend: {
+          show: true, top: 0, right: 8, itemWidth: 10, itemHeight: 8,
+          textStyle: { fontSize: 10, fontFamily: "JetBrains Mono, monospace" },
+          data: [SERIES_NAME_V2.strategy, SERIES_NAME_V2.benchmark],
+        },
+      }
+      : {}),
+    useUTC: true,
+    grid: { left: 50, right: 20, top: 30, bottom: 40, containLabel: true },
+    xAxis: TIME_AXIS,
+    yAxis: {
+      type: "value",
+      scale: true,
+      axisLabel: { formatter: (value: number) => withMinus(formatMetric(value, "count")) },
+    },
+    tooltip: {
+      ...hifiTooltip(),
+      formatter: (params: unknown) => {
+        const list = (Array.isArray(params) ? params : [params]) as AxisParam[];
+        const rows = list.map((param) => {
+          const point = lookup(param.seriesName === SERIES_NAME_V2.benchmark ? benchmark : strategy, param);
+          return point ? tooltipRow(param, param.seriesName ?? "", ratio(point.value)) : "";
+        });
+        const first = list[0];
+        const at = lookup(first?.seriesName === SERIES_NAME_V2.benchmark ? benchmark : strategy, first)?.at_utc_ms;
+        return `${utcZ(at)}<br/>${rows.filter(Boolean).join("<br/>")}`;
+      },
+    },
+    series: [
+      {
+        type: "line", name: SERIES_NAME_V2.strategy, showSymbol: false,
+        data: strategy.map((point) => [point.at_utc_ms, Number(point.value)]),
+        lineStyle: { width: 1.75, color: role.oos }, itemStyle: { color: role.oos },
+      },
+      ...(benchmark.length > 0
+        ? [{
+          type: "line" as const, name: SERIES_NAME_V2.benchmark, showSymbol: false,
+          data: benchmark.map((point) => [point.at_utc_ms, Number(point.value)]),
+          lineStyle: { width: 1.25, color: inkFaint, type: "dashed" as const }, itemStyle: { color: inkFaint },
+        }]
+        : []),
+    ],
+  });
+}
+
 /* ---------------------------------------------------------- components */
 
 const NO_BOUNDARIES: readonly FoldBoundary[] = [];
@@ -638,6 +703,30 @@ export function RollingSharpeChart({ series, points: supplied }: { series?: Evid
           key: String(point.at_utc_ms),
           cells: [new Date(point.at_utc_ms).toISOString(), point.sharpe],
         }))}
+      />
+    </div>
+  );
+}
+
+export function StrategyBenchmarkChart({
+  strategy,
+  benchmark,
+}: {
+  strategy: readonly RebasedPoint[];
+  benchmark: readonly RebasedPoint[];
+}) {
+  const option = useMemo(() => strategyBenchmarkOption(strategy, benchmark), [strategy, benchmark]);
+  return (
+    <div data-chart="strategy-benchmark">
+      <EChart option={option} height={CHART_HEIGHT.rolling} />
+      <ExactTable
+        id="strategy-benchmark"
+        caption="Strategy and benchmark rebased to 100, exact values"
+        head={["series", "time (UTC)", "value"]}
+        rows={[
+          ...strategy.map((point) => ({ key: `s${point.at_utc_ms}`, cells: [SERIES_NAME_V2.strategy, new Date(point.at_utc_ms).toISOString(), point.value] })),
+          ...benchmark.map((point) => ({ key: `b${point.at_utc_ms}`, cells: [SERIES_NAME_V2.benchmark, new Date(point.at_utc_ms).toISOString(), point.value] })),
+        ]}
       />
     </div>
   );

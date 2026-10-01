@@ -60,6 +60,9 @@ export function AlphaImportRoute() {
       registry={controller.registry}
       registryTotal={controller.registryTotal}
       registryAlpha={controller.registryAlpha}
+      registryNext={controller.registryNext}
+      registryMore={controller.registryMore}
+      onLoadMoreRegistry={controller.onLoadMoreRegistry}
       parseState={controller.parseState}
       gatesState={controller.gatesState}
       registerState={controller.registerState}

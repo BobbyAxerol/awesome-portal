@@ -33,6 +33,7 @@ import {
   hubModeReadsAbsence,
   modeReadsView,
   type ModeReadsSlots,
+  type OosReading,
   type ModeReadsView,
 } from "./SearchFoldStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
@@ -398,17 +399,20 @@ function OosColumnChip({ column }: { column: OosColumn }) {
  * QuantBT's search contract is the HiFi "selection input" state stated
  * outright; any other answer is not a column state the lane publishes.
  */
-function RetainedOosColumn({ used }: { used: boolean | null }) {
+function RetainedOosColumn({ used, reading = null }: { used: boolean | null; reading?: OosReading | null }) {
   if (used !== true) return <ClaimAbsence state="NOT_PUBLISHED" reason={RETAINED_NO_FIELD} what="oos column" />;
-  const chip = OOS_COLUMN_CHIP.SELECTION_INPUT;
+  /* G8 F-1: the fold strip reads this run's mode × schedule from the Atlas. Where it says RETROSPECTIVE, the chip says
+     the same one word — the contract's `oos_used_for_selection: true` alone would call it "selection input". */
+  const state = reading === "RETROSPECTIVE" ? "RETROSPECTIVE" : "SELECTION_INPUT";
+  const chip = OOS_COLUMN_CHIP[state];
   return (
     <span
       className="mono self-start rounded-[3px] border px-[6px] text-[11px] font-semibold"
       style={{ color: chip.tone, borderColor: chip.tone }}
-      title={`${OOS_COLUMN_TITLE.SELECTION_INPUT} · oos_used_for_selection true in QuantBT's search contract`}
+      title={`${OOS_COLUMN_TITLE[state]} · oos_used_for_selection true in QuantBT's search contract`}
       data-claim-fact="oos column"
       data-claim-state="RETAINED_SOURCE"
-      data-oos-column="SELECTION_INPUT"
+      data-oos-column={state}
     >
       {chip.words}
     </span>
@@ -2030,7 +2034,10 @@ export function SearchScreen({
                   </Claim>
                   <Claim k="OOS column state">
                     {lane ? (
-                      <RetainedOosColumn used={lane.search_contract.oos_used_for_selection} />
+                      <RetainedOosColumn
+                        used={lane.search_contract.oos_used_for_selection}
+                        reading={stripView?.kind === "strip" ? stripView.oos.state : null}
+                      />
                     ) : (
                       <OosColumnChip column={detail.claim_row.oos_column} />
                     )}

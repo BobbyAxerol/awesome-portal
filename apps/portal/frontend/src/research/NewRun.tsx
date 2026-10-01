@@ -34,6 +34,22 @@ import {
 import { scheduleChoices } from "./atlas";
 import type { AtlasDocument } from "./atlas";
 import { type CatalogDataset, type DatasetCatalog, coverageLabel, splitCatalogReason } from "./datasetClient";
+import {
+  CoverageWarnings,
+  DatasetIdentity,
+  SymbolCombobox,
+  TimeframeChips,
+  UnavailableDatasets,
+} from "./DataDeclaration";
+import {
+  type FoldPlan,
+  type ProfileFoldBounds,
+  coverageRange,
+  coverageWarnings,
+  foldPlan,
+  sharedAxis,
+  timeframeChips,
+} from "./dataDeclaration";
 import { OOS_STATE_LABEL, statusTone } from "./EngineAtlas";
 import type { PreflightRefusal } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
@@ -121,9 +137,6 @@ export function bindingChip(
     title: label ? `${label} — ${draft.alphaVersionId}` : draft.alphaVersionId,
   };
 }
-
-export const DATA_REQUIREMENTS_NOTE =
-  "Timeframe and seed are checked in this form. Required columns and warmup are checked by the server at preflight — the Review step names whichever gate failed.";
 
 export const DEFAULTS_FOOTER =
   "Defaults come from the release manifest — an untouched field is NOT serialized. Missing objective metrics raise MissingOptimizationMetricError, there is no silent fallback.";
@@ -708,7 +721,7 @@ function RouteStep({
       meta={
         <span className="flex items-baseline gap-3">
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-            {atlas ? `${atlas.routes.length} routes from the installed release` : null}
+            {atlas ? `${atlas.routes.filter((route) => !limits.blockedRoutes[route.route_id]).length} of ${atlas.routes.length} routes admitted` : null}
           </span>
           {/* HiFi 02-11: the atlas link lives in the route card. */}
           <Link to="/research/quantbt/atlas" data-link="atlas" className="mono text-[10px] font-semibold" style={{ color: "var(--accent)" }} title="Every route, protocol and ceiling the installed engine publishes">
@@ -725,65 +738,88 @@ function RouteStep({
           offered — the form does not carry a local copy of the release's routes.
         </p>
       ) : (
-        <div className="flex flex-wrap gap-2" data-route-grid>
-          {atlas.routes.map((route) => {
-            const blocked = limits.blockedRoutes[route.route_id];
-            const selected = draft.executionRoute === route.route_id;
-            return (
-              <button
-                key={route.route_id}
-                type="button"
-                data-route-card={route.route_id}
-                data-route-blocked={blocked ? "true" : undefined}
-                data-selected={selected}
-                /* Shown with its reason rather than hidden (§13-3). */
-                title={blocked ?? undefined}
-                onClick={() => {
-                  if (!blocked) patch({ executionRoute: route.route_id as RunDraft["executionRoute"] });
-                }}
-                disabled={Boolean(blocked)}
-                className="flex w-[calc(25%-6px)] min-w-[190px] flex-col gap-[3px] rounded-[6px] border px-2.5 py-2 text-left"
-                style={{
-                  borderColor: selected ? "var(--accent)" : blocked ? "var(--line-strong)" : "var(--line)",
-                  borderStyle: blocked ? "dashed" : "solid",
-                  background: selected ? "var(--accent-soft)" : "var(--paper-raised)",
-                  opacity: blocked ? 0.6 : 1,
-                  cursor: blocked ? "not-allowed" : "pointer",
-                }}
-              >
-                <span className="flex items-baseline justify-between gap-1.5">
-                  <span className="mono text-[10.5px] font-semibold">{route.route_id}</span>
-                  {route.status_word ? (
-                    <span
-                      className="mono rounded-[3px] border px-1 text-[8.5px] font-bold leading-[13px]"
-                      style={{
-                        color: statusTone(route.status_word).color,
-                        borderColor: statusTone(route.status_word).color,
-                        borderStyle: statusTone(route.status_word).dashed ? "dashed" : "solid",
-                      }}
-                      data-route-status={route.status_word}
-                    >
-                      {route.status_word}
+        <>
+          {/* Admitted routes first, as selectable cards. */}
+          <div className="flex flex-wrap gap-2" data-route-grid>
+            {atlas.routes
+              .filter((route) => !limits.blockedRoutes[route.route_id])
+              .map((route) => {
+                const selected = draft.executionRoute === route.route_id;
+                return (
+                  <button
+                    key={route.route_id}
+                    type="button"
+                    data-route-card={route.route_id}
+                    data-selected={selected}
+                    aria-pressed={selected}
+                    onClick={() => patch({ executionRoute: route.route_id as RunDraft["executionRoute"] })}
+                    className="flex w-[calc(25%-6px)] min-w-[190px] flex-col gap-[3px] rounded-[6px] border px-2.5 py-2 text-left"
+                    style={{
+                      borderColor: selected ? "var(--accent)" : "var(--line)",
+                      background: selected ? "var(--accent-soft)" : "var(--paper-raised)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span className="flex items-baseline justify-between gap-1.5">
+                      <span className="mono text-[10.5px] font-semibold">{route.route_id}</span>
+                      {route.status_word ? (
+                        <span
+                          className="mono rounded-[3px] border px-1 text-[8.5px] font-bold leading-[13px]"
+                          style={{
+                            color: statusTone(route.status_word).color,
+                            borderColor: statusTone(route.status_word).color,
+                            borderStyle: statusTone(route.status_word).dashed ? "dashed" : "solid",
+                          }}
+                          data-route-status={route.status_word}
+                        >
+                          {route.status_word}
+                        </span>
+                      ) : null}
                     </span>
-                  ) : null}
-                </span>
-                {route.engine_facts ? (
-                  <span className="text-[9.5px] leading-[1.4]" style={{ color: "var(--ink-soft)" }} data-route-desc={route.route_id}>
-                    {route.engine_facts.description}
-                  </span>
-                ) : null}
-                <span className="mono text-[8.5px]" style={{ color: "var(--ink-faint)" }}>
-                  {route.family} · {route.execution_contract}
-                </span>
-                {blocked ? (
-                  <span className="text-[9.5px] leading-[1.45]" style={{ color: "var(--bad)" }}>
-                    {blocked}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
+                    {route.engine_facts ? (
+                      <span className="text-[9.5px] leading-[1.4]" style={{ color: "var(--ink-soft)" }} data-route-desc={route.route_id}>
+                        {route.engine_facts.description}
+                      </span>
+                    ) : null}
+                    <span className="mono text-[8.5px]" style={{ color: "var(--ink-faint)" }}>
+                      {route.family} · {route.execution_contract}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+          {/* The rest under one line; each route's served reason is its tooltip. */}
+          {atlas.routes.some((route) => limits.blockedRoutes[route.route_id]) ? (
+            <details data-routes-not-admitted>
+              <summary className="mono cursor-pointer text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-routes-not-admitted-summary>
+                {atlas.routes.filter((route) => limits.blockedRoutes[route.route_id]).length} routes not admitted
+              </summary>
+              <div className="flex flex-wrap gap-1.5 pt-1.5">
+                {atlas.routes
+                  .filter((route) => limits.blockedRoutes[route.route_id])
+                  .map((route) => {
+                    const blocked = limits.blockedRoutes[route.route_id]!;
+                    return (
+                      <button
+                        key={route.route_id}
+                        type="button"
+                        disabled
+                        aria-label={`${route.route_id}, not admitted — ${blocked}`}
+                        title={blocked}
+                        data-route-card={route.route_id}
+                        data-route-blocked="true"
+                        className="mono rounded-[6px] border border-dashed px-2 py-[3px] text-[10px]"
+                        style={{ borderColor: "var(--line-strong)", color: "var(--ink-faint)", background: "var(--paper)", cursor: "not-allowed" }}
+                      >
+                        {route.route_id}
+                        {route.status_word ? <span className="ml-1.5 text-[8.5px]">{route.status_word}</span> : null}
+                      </button>
+                    );
+                  })}
+              </div>
+            </details>
+          ) : null}
+        </>
       )}
       {atlas ? <RoutePanel route={atlas.routes.find((route) => route.route_id === draft.executionRoute) ?? null} /> : null}
       {error ? <ErrorBlock message={error} /> : null}
@@ -922,6 +958,15 @@ function touchPatch(draft: RunDraft, field: PrefillField | null): Pick<RunDraft,
   return field === null ? {} : { coveragePrefill: markPrefillTouched(draft, field) };
 }
 
+/**
+ * The Market data step (S02_DATA): dataset identity, a searchable symbol
+ * picker with served coverage, a chip per served timeframe, and the version's
+ * declaration as chips. Every value is a served catalog or registry fact; the
+ * coverage-vs-window comparison draws on the review rail's timeline.
+ *
+ * Prefill (`planCoverage`) is done in the reader's own handlers, never in an
+ * effect, so a late catalog or a copied run cannot overwrite anything.
+ */
 function DataStep({
   draft,
   patch,
@@ -929,6 +974,7 @@ function DataStep({
   error,
   catalog = null,
   catalogReason = null,
+  registry = [],
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
@@ -937,16 +983,13 @@ function DataStep({
   /** CG-P08-04: the research dataset catalog, or null when it was not read. */
   catalog?: DatasetCatalog | null;
   catalogReason?: string | null;
+  registry?: readonly RegistryEntry[];
 }) {
   const dataset: CatalogDataset | null = catalog?.datasets.find((item) => item.dataset_id === draft.datasetId) ?? null;
   /* FG-08 (FE-A1-01): client sentence, then the typed facts in mono. */
   const catalogNote = catalogReason ? splitCatalogReason(catalogReason) : null;
   const symbols = dataset?.symbols.state === "PUBLISHED" ? dataset.symbols.items : [];
   const selectedSymbol = symbols.find((item) => item.symbol === draft.symbol.trim().toUpperCase()) ?? null;
-  /* D4: picking a dataset or symbol is what prefills the outer window bounds
-     (and re-picking replaces them). It is done here, in the reader's own
-     handler, and never in an effect — so a catalog that arrives late, a
-     re-render or a copied run cannot overwrite anything. */
   const pickDataset = (datasetId: string) =>
     patch({ datasetId, ...applyCoveragePrefill(draft, planCoverage(catalog, datasetId, draft.symbol)) });
   const pickSymbol = (symbol: string) =>
@@ -954,18 +997,46 @@ function DataStep({
   const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol);
   const prefilledNow = outerFields(draft.protocol).some((field) => carriedCoverage(draft, field) !== null);
   const publishedTimeframes = limits.declaredTimeframes ?? [];
-  const timeframeOptions = publishedTimeframes.length > 0
-    ? publishedTimeframes
-    : draft.timeframe ? [draft.timeframe] : [];
   const timeframeDeclared = publishedTimeframes.includes(draft.timeframe);
+  const versionLabel = bindingVersionLabel(draft, registry);
+  const chips = timeframeChips(dataset, limits.declaredTimeframes, draft.timeframe);
+  const warnings = coverageWarnings(draft, coverageRange(prefillPlan));
+  const available = catalog?.datasets.filter((item) => item.availability === "available") ?? [];
+  const unavailable = catalog?.datasets.filter((item) => item.availability !== "available") ?? [];
+  /* One available dataset is the only choice: identity row, no select. */
+  const soleDataset = catalog !== null && available.length === 1 ? available[0]! : null;
   return (
     <Card title="Market data">
-      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-data-note>
-        {DATA_REQUIREMENTS_NOTE}
-      </p>
-      <div className="flex flex-wrap gap-2.5">
-        <Field label="Dataset" hint="Historical source — backtest only. Realtime and paper are separate services.">
-          {catalog ? (
+      <div className="flex flex-col gap-1.5" data-dataset-block>
+        <span title="Historical source — backtest only. Realtime and paper are separate services."><Label>Dataset</Label></span>
+        {catalog === null ? (
+          <>
+            <input
+              className={INPUT_CLASS}
+              style={inputStyle()}
+              value={draft.datasetId}
+              onChange={(e) => pickDataset(e.target.value)}
+              aria-label="Dataset"
+            />
+            {catalogNote ? (
+              <span className="text-[10px]" style={{ color: "var(--ink-faint)" }} data-catalog-unread>
+                Dataset catalog not read: {catalogNote.sentence}
+                {catalogNote.facts ? (
+                  <>
+                    {" "}
+                    <span className="mono text-[9.5px]" data-catalog-facts>{catalogNote.facts}</span>
+                  </>
+                ) : null}
+              </span>
+            ) : null}
+          </>
+        ) : soleDataset ? (
+          <>
+            <DatasetIdentity labelled dataset={soleDataset} chosen={draft.datasetId === soleDataset.dataset_id} onUse={() => pickDataset(soleDataset.dataset_id)} />
+            <UnavailableDatasets datasets={unavailable} />
+          </>
+        ) : (
+          <>
             <select
               className={INPUT_CLASS}
               style={inputStyle()}
@@ -976,53 +1047,36 @@ function DataStep({
             >
               <option value="">choose a dataset</option>
               {catalog.datasets.map((item) => (
-                <option key={item.dataset_id} value={item.dataset_id} disabled={item.availability !== "available"}>
+                <option
+                  key={item.dataset_id}
+                  value={item.dataset_id}
+                  disabled={item.availability !== "available"}
+                  title={item.availability !== "available" ? item.unavailable_reason ?? "unavailable" : undefined}
+                >
                   {item.dataset_id} · {item.availability}
                 </option>
               ))}
             </select>
-          ) : (
-            <input
-              className={INPUT_CLASS}
-              style={inputStyle()}
-              value={draft.datasetId}
-              onChange={(e) => pickDataset(e.target.value)}
-              aria-label="Dataset"
-            />
-          )}
-          {dataset && dataset.availability !== "available" ? (
-            <span className="text-[10px]" style={{ color: "var(--bad)" }}>{dataset.unavailable_reason ?? "This dataset is unavailable."}</span>
-          ) : null}
-          {!catalog && catalogNote ? (
-            <span className="text-[10px]" style={{ color: "var(--ink-faint)" }} data-catalog-unread>
-              Dataset catalog not read: {catalogNote.sentence}
-              {catalogNote.facts ? (
-                <>
-                  {" "}
-                  <span className="mono text-[9.5px]" data-catalog-facts>{catalogNote.facts}</span>
-                </>
-              ) : null}
-            </span>
-          ) : null}
-        </Field>
-        <Field label="Symbol *">
-          <input
-            className={INPUT_CLASS}
-            style={inputStyle(draft.symbol.trim().length === 0)}
+            {dataset ? <DatasetIdentity dataset={dataset} chosen onUse={() => pickDataset(dataset.dataset_id)} /> : null}
+            {available.length === 0 ? <UnavailableDatasets datasets={unavailable} /> : null}
+          </>
+        )}
+        {dataset && dataset.availability !== "available" ? (
+          <span className="text-[10px]" style={{ color: "var(--bad)" }}>{dataset.unavailable_reason ?? "This dataset is unavailable."}</span>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-2.5">
+        <div className="flex min-w-[220px] flex-1 flex-col gap-1">
+          <span title={catalog?.coverage_rule ?? undefined}><Label>Symbol *</Label></span>
+          <SymbolCombobox
             value={draft.symbol}
-            onChange={(e) => pickSymbol(e.target.value.toUpperCase())}
-            aria-label="Symbol"
-            list={symbols.length > 0 ? "research-dataset-symbols" : undefined}
+            symbols={symbols}
+            total={dataset?.symbols.total ?? null}
+            truncated={dataset?.symbols.truncated === true}
+            bad={draft.symbol.trim().length === 0}
+            onChange={pickSymbol}
           />
-          {symbols.length > 0 ? (
-            <datalist id="research-dataset-symbols" data-symbol-list>
-              {symbols.map((item) => (
-                <option key={item.symbol} value={item.symbol}>
-                  {item.contract_kind ?? ""} {coverageLabel(item) ?? ""}
-                </option>
-              ))}
-            </datalist>
-          ) : null}
           {selectedSymbol ? (
             <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-symbol-coverage>
               {selectedSymbol.contract_kind ? `${selectedSymbol.contract_kind.toLowerCase()} · ` : ""}
@@ -1035,46 +1089,20 @@ function DataStep({
           ) : dataset?.symbols.state === "NOT_PUBLISHED" ? (
             <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>{dataset.symbols.reason}</span>
           ) : null}
-        </Field>
-        <Field label="Timeframe *">
-          <select
-            className={INPUT_CLASS}
-            style={inputStyle(publishedTimeframes.length > 0 && !timeframeDeclared)}
-            value={draft.timeframe}
-            onChange={(e) => patch({ timeframe: e.target.value })}
-            aria-label="Timeframe"
-            disabled={publishedTimeframes.length === 0}
-            title={publishedTimeframes.length === 0 ? "The bound version has not published its timeframes." : undefined}
-          >
-            {/* D6: a controlled <select> whose value matches no option silently
-                shows its first option, so a draft on 4h read as "1h" here while
-                Review (which prints the draft) said 4h. The draft's own value is
-                always an option, marked when the version does not declare it. */}
-            {publishedTimeframes.length > 0 && draft.timeframe === "" ? (
-              <option value="">choose a timeframe</option>
-            ) : null}
-            {publishedTimeframes.length > 0 && draft.timeframe !== "" && !timeframeDeclared ? (
-              <option value={draft.timeframe} data-undeclared-timeframe>
-                {draft.timeframe} · not declared
-              </option>
-            ) : null}
-            {timeframeOptions.map((tf) => (
-              <option key={tf} value={tf}>
-                {tf}
-              </option>
-            ))}
-          </select>
-          {publishedTimeframes.length === 0 ? (
-            <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
-              Version timeframes not published; preflight remains authoritative.
-            </span>
-          ) : !timeframeDeclared ? (
-            <span className="text-[10px]" style={{ color: "var(--bad)" }}>
-              The bound version does not declare {draft.timeframe}. Select one of its published timeframes.
-            </span>
-          ) : null}
-        </Field>
+        </div>
+        <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+          <Label>Timeframe *</Label>
+          <TimeframeChips
+            chips={chips}
+            version={versionLabel}
+            bad={publishedTimeframes.length > 0 && !timeframeDeclared}
+            onPick={(timeframe) => patch({ timeframe })}
+          />
+        </div>
       </div>
+
+      <CoverageWarnings warnings={warnings} coverage={coverageRange(prefillPlan)} />
+
       {/* D4: what the pick did to the walk-forward dates — filled, kept, or
           why nothing was. Silent until a dataset is chosen. */}
       {draft.datasetId !== "" ? (
@@ -1098,23 +1126,23 @@ function DataStep({
               : "Not prefilled — bounds already set"}
         </p>
       ) : null}
-      {/* E4 (audit 02-12): the HiFi's declaration box. The registry already
-          publishes all four facts and the form ignored them, so the reader
-          could not see what the run needs until preflight refused. Shown, not
-          checked: the server is still the authority at preflight. */}
-      <div
-        className="flex flex-wrap gap-x-5 gap-y-1 rounded-[6px] border px-3 py-2"
-        style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
-        data-declaration-box
-      >
-        <Label>version declaration</Label>
+
+      {/* E4 (audit 02-12): what the bound version needs, as chips. Shown, not
+          checked: the server is still the authority at preflight. The long
+          sentence that used to sit here is the chips' tooltips. */}
+      <div className="flex flex-wrap items-center gap-1.5" data-declaration-box>
         {([
-          ["required columns", limits.requiredColumns?.join(" · ") ?? null],
-          ["warmup bars", limits.warmupBars === null ? null : String(limits.warmupBars)],
-          ["declared timeframes", limits.declaredTimeframes?.join(" · ") || null],
-          ["seed", limits.seedRequired === null ? null : limits.seedRequired ? "required" : "not required"],
-        ] as const).map(([label, value]) => (
-          <span key={label} className="flex items-baseline gap-1.5" data-declaration-fact={label}>
+          ["required columns", limits.requiredColumns === null ? null : limits.requiredColumns.join(" · "), "Columns the version declares; the server checks them at preflight."],
+          ["warmup bars", limits.warmupBars === null ? null : String(limits.warmupBars), "Bars the version declares it needs before the analysis start; the server checks the exact range at preflight."],
+          ["seed", limits.seedRequired === null ? null : limits.seedRequired ? "required" : "not required", "determinism.seed_required, as the version declares it."],
+        ] as const).map(([label, value, hint]) => (
+          <span
+            key={label}
+            className="flex items-baseline gap-1.5 rounded-[3px] border px-1.5 py-[1px]"
+            style={{ borderColor: "var(--line-soft)", background: "var(--paper)" }}
+            title={hint}
+            data-declaration-fact={label}
+          >
             <Label>{label}</Label>
             {value === null ? (
               <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -1126,16 +1154,17 @@ function DataStep({
           </span>
         ))}
       </div>
-      {dataset ? (
-        <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-dataset-facts>
-          {dataset.venue} · {dataset.source_timezone} · {dataset.calendar_policy} · timeframes {dataset.timeframes.join(" · ")}
-        </p>
-      ) : null}
-      {catalog ? (
-        <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{catalog.coverage_rule}</p>
-      ) : null}
       {error ? <ErrorBlock message={error} /> : null}
     </Card>
+  );
+}
+
+/** The short label the header chip prints for the bound version; the id when the registry has none. */
+function bindingVersionLabel(draft: Pick<RunDraft, "alphaId" | "alphaVersionId">, registry: readonly RegistryEntry[]): string {
+  if (!draft.alphaVersionId) return "the bound version";
+  return (
+    registry.find((entry) => entry.alpha_version_id === draft.alphaVersionId && (draft.alphaId === "" || entry.alpha_id === draft.alphaId))
+      ?.version_label ?? draft.alphaVersionId
   );
 }
 
@@ -1503,12 +1532,6 @@ function WindowsStep({
           ) : null}
         </div>
       )}
-
-      {/* The authoritative fold plan is the server's; anything drawn here
-          would be a second number for the same fact. */}
-      <p className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-fold-note>
-        The server derives the authoritative fold plan at preflight — the Review step shows it.
-      </p>
 
       {/* Keep invalid schedules visible but disabled; the source explains why. */}
       <div className="flex flex-wrap gap-2.5">
@@ -2050,7 +2073,11 @@ function halfOpen(start: string, end: string): string {
  * bar counts per window need a served per-window count (CG-FG-S02-02), so none
  * is printed here. A window with a missing or reversed edge draws nothing.
  */
-export function timelineRows(draft: Pick<RunDraft, "protocol" | "windows" | "walkForward">): readonly TimelineRow[] {
+export function timelineRows(
+  draft: Pick<RunDraft, "protocol" | "windows" | "walkForward">,
+  /** S02_DATA: a clock shared with the served coverage bar; absent, each row spans its own windows. */
+  axis: { from: number; to: number } | null = null,
+): readonly TimelineRow[] {
   if (draft.protocol === "three_window_decay") {
     const parsed = (["is", "oos", "holdout"] as const).map((key) => {
       const window = draft.windows[key];
@@ -2059,8 +2086,8 @@ export function timelineRows(draft: Pick<RunDraft, "protocol" | "windows" | "wal
       return { key, window, from, to, drawn: from !== null && to !== null && to > from };
     });
     const drawn = parsed.filter((row) => row.drawn);
-    const t0 = Math.min(...drawn.map((row) => row.from as number));
-    const t1 = Math.max(...drawn.map((row) => row.to as number));
+    const t0 = axis ? axis.from : Math.min(...drawn.map((row) => row.from as number));
+    const t1 = axis ? axis.to : Math.max(...drawn.map((row) => row.to as number));
     const span = Math.max(1, t1 - t0);
     return parsed.map(({ key, window, from, to, drawn: isDrawn }) => ({
       key,
@@ -2082,23 +2109,70 @@ export function timelineRows(draft: Pick<RunDraft, "protocol" | "windows" | "wal
   const to = utcMs(endExclusive);
   const split = utcMs(splitMode);
   const drawn = from !== null && to !== null && to > from;
-  const span = drawn ? to - from : 1;
+  const origin = axis && drawn ? axis.from : (from ?? 0);
+  const span = axis && drawn ? Math.max(1, axis.to - axis.from) : drawn ? to - from : 1;
+  const at = (instant: number) => ((instant - origin) / span) * 100;
   const segments: TimelineSegment[] = [];
   if (drawn) {
     if (split !== null && split > from && split < to) {
       segments.push(
-        { left: 0, width: ((split - from) / span) * 100, tone: ROLE_TONE.is, title: `before the first OOS instant ${halfOpen(start, splitMode)}` },
-        { left: ((split - from) / span) * 100, width: ((to - split) / span) * 100, tone: ROLE_TONE.oos, title: `from the first OOS instant ${halfOpen(splitMode, endExclusive)}` },
+        { left: at(from), width: ((split - from) / span) * 100, tone: ROLE_TONE.is, title: `before the first OOS instant ${halfOpen(start, splitMode)}` },
+        { left: at(split), width: ((to - split) / span) * 100, tone: ROLE_TONE.oos, title: `from the first OOS instant ${halfOpen(splitMode, endExclusive)}` },
       );
     } else {
-      segments.push({ left: 0, width: 100, tone: "var(--line-strong)", title: `analysis span ${halfOpen(start, endExclusive)}` });
+      segments.push({ left: at(from), width: ((to - from) / span) * 100, tone: "var(--line-strong)", title: `analysis span ${halfOpen(start, endExclusive)}` });
     }
   }
   return [{ key: "span", label: "span", tone: ROLE_TONE.span, text: `${start || NOT_DECLARED} → ${endExclusive || NOT_DECLARED}`, segments }];
 }
 
-function WindowTimeline({ draft }: { draft: RunDraft }) {
-  const rows = timelineRows(draft);
+/** The fold count as a served fact: "≈ 14 outer folds · server plan", a served range, or a typed absence. */
+function FoldPlanLine({ plan }: { plan: FoldPlan }) {
+  const text =
+    plan.kind === "server-plan"
+      ? `≈ ${plan.count} outer folds`
+      : plan.kind === "profile-bounds"
+        ? `folds ${plan.min}–${plan.max}`
+        : "outer folds — not published";
+  const source =
+    plan.kind === "server-plan"
+      ? "server plan · preflight"
+      : plan.kind === "profile-bounds"
+        ? `server profile · ${plan.profileId}`
+        : plan.reason;
+  return (
+    <p
+      className="mono text-[9.5px]"
+      style={{ color: plan.kind === "absent" ? "var(--ink-faint)" : "var(--ink-soft)", fontStyle: plan.kind === "absent" ? "italic" : "normal" }}
+      data-fold-plan={plan.kind}
+      title={
+        plan.kind === "server-plan"
+          ? "The outer fold count the server's preflight planned for this declaration."
+          : plan.kind === "profile-bounds"
+            ? "The admitted profile's served fold bounds; the preflight plans the exact count."
+            : `The server has not published a fold count yet: ${plan.reason}.`
+      }
+    >
+      {text} <span style={{ color: "var(--ink-faint)" }}>· {source}</span>
+    </p>
+  );
+}
+
+function WindowTimeline({
+  draft,
+  catalog = null,
+  fold,
+}: {
+  draft: RunDraft;
+  catalog?: DatasetCatalog | null;
+  fold: FoldPlan;
+}) {
+  /* S02_DATA: the chosen symbol's served coverage on the same clock as the windows. */
+  const coverage = coverageRange(planCoverage(catalog, draft.datasetId, draft.symbol));
+  const axis = sharedAxis(draft, coverage);
+  const warnings = coverageWarnings(draft, coverage);
+  const rows = timelineRows(draft, axis);
+  const coverageSpan = axis && coverage ? { left: ((coverage.from - axis.from) / (axis.to - axis.from)) * 100, width: Math.max(((coverage.to - coverage.from) / (axis.to - axis.from)) * 100, 0.5) } : null;
   /* D4: a date the reader is about to send that they did not type. */
   const carried = outerFields(draft.protocol).flatMap((field) => carriedCoverage(draft, field) ?? []);
   const source = carried[0] ?? null;
@@ -2108,6 +2182,29 @@ function WindowTimeline({ draft }: { draft: RunDraft }) {
         Window timeline
       </h4>
       <div className="mt-1.5 flex flex-col gap-1.5">
+        {coverage && coverageSpan ? (
+          <div className="grid grid-cols-[48px_1fr] items-center gap-x-1.5 gap-y-0.5" data-timeline-row="coverage">
+            <span className="mono text-[9.5px]" style={{ color: "var(--accent-2)" }}>data</span>
+            <span
+              className="relative block h-[10px] rounded-full"
+              style={{ background: "var(--paper-sunken)" }}
+              role="img"
+              aria-label={`${coverage.symbol} served coverage ${coverage.firstMonth} to ${coverage.lastMonth}`}
+              data-timeline-track="coverage"
+            >
+              <span
+                className="absolute top-0 h-full rounded-full"
+                style={{ left: `${coverageSpan.left}%`, width: `${coverageSpan.width}%`, background: "var(--accent-2)", opacity: 0.55 }}
+                title={`${coverage.symbol} served coverage ${coverage.firstMonth} → ${coverage.lastMonth} (month partitions)`}
+                data-timeline-segment="coverage"
+              />
+            </span>
+            <span />
+            <span className="mono break-words text-[9px]" style={{ color: "var(--ink-faint)" }} data-timeline-text="coverage">
+              {coverage.symbol} {coverage.firstMonth} → {coverage.lastMonth}
+            </span>
+          </div>
+        ) : null}
         {rows.map((row) => (
           <div key={row.key} className="grid grid-cols-[48px_1fr] items-center gap-x-1.5 gap-y-0.5" data-timeline-row={row.key}>
             <span className="mono text-[9.5px]" style={{ color: row.tone }}>{row.label}</span>
@@ -2141,6 +2238,10 @@ function WindowTimeline({ draft }: { draft: RunDraft }) {
             {" · first OOS "}{draft.walkForward.splitMode || NOT_DECLARED}
           </p>
         ) : null}
+      </div>
+      <div className="mt-1 flex flex-col gap-0.5">
+        <CoverageWarnings warnings={warnings} coverage={coverage} />
+        <FoldPlanLine plan={fold} />
       </div>
       {source ? (
         <p className="mt-1 text-[9px]" style={{ color: "var(--ink-soft)" }} data-window-prefill-rail>
@@ -2244,6 +2345,11 @@ function ClaimForecast({
 
 /* ------------------------------------------------------------- review rows */
 
+/** Typed absence in a review row: italic, never a digit. */
+function NotDeclared({ children }: { children: React.ReactNode }) {
+  return <span className="italic" style={{ color: "var(--ink-faint)" }} data-not-declared>{children}</span>;
+}
+
 /** The draft as one line per declaration — the same serializer facts the submit sends (HiFi `reviewRows`). */
 function ReviewRows({
   draft,
@@ -2252,17 +2358,23 @@ function ReviewRows({
   registry,
   labelWidth,
   withWindows = false,
+  versionDeclared = false,
 }: {
   draft: RunDraft;
   sweepCeiling: number | null;
   usesV2: boolean;
   registry: readonly RegistryEntry[];
+  /** True when the bound version's declaration was read (so an empty parameter space is the version's own). */
+  versionDeclared?: boolean;
   labelWidth?: number;
   /** The Review table has a windows row (the rail has the timeline instead). */
   withWindows?: boolean;
 }) {
   const overrides = Object.keys(draft.optimizationConfigOverrides);
   const day = (value: string) => (value === "" ? NOT_DECLARED : value.slice(0, 10));
+  /* Scratch is its own declaration; a bound run has nothing to show until a version is chosen. */
+  const chosen = !draft.bound || draft.alphaVersionId !== "";
+  const versionRead = chosen && versionDeclared;
   return (
     <div className="flex flex-col" data-review-rows>
       <Row label="alpha binding" labelWidth={labelWidth}>
@@ -2296,8 +2408,16 @@ function ReviewRows({
         </Row>
       ) : null}
       <Row label="parameter_space" labelWidth={labelWidth}>
-        {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
-        {sweepCeiling === null ? " (sweep ceiling not published)" : ` (sweep ceiling ${sweepCeiling})`}
+        {/* A real 0 is a version that published an empty space; before a version
+            is chosen there is nothing to count. */}
+        {draft.parameters.length === 0 && !versionRead ? (
+          <NotDeclared>{chosen ? "not declared" : "no version chosen"}</NotDeclared>
+        ) : (
+          <>
+            {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
+            {sweepCeiling === null ? " (sweep ceiling not published)" : ` (sweep ceiling ${sweepCeiling})`}
+          </>
+        )}
       </Row>
       {draft.protocol === "advanced" && usesV2 ? (
         <Row label="walk-forward v2" labelWidth={labelWidth}>
@@ -2322,8 +2442,18 @@ function ReviewRows({
         )}
       </Row>
       <Row label="trials · stop · seed" labelWidth={labelWidth}>
-        {draft.optunaTrials || "not set"} · {draft.earlyStopping || "none"} ·{" "}
-        {draft.randomSeed || "none"}
+        {/* Each part is its own value: one the step has not supplied says so,
+            and nothing is shown before a version is chosen. */}
+        {[
+          chosen ? draft.optunaTrials : "",
+          chosen ? draft.earlyStopping : "",
+          chosen ? draft.randomSeed : "",
+        ].map((value, index) => (
+          <span key={index}>
+            {index > 0 ? " · " : ""}
+            {value !== "" ? value : <NotDeclared>not declared</NotDeclared>}
+          </span>
+        ))}
       </Row>
       <Row label="optimization_config" labelWidth={labelWidth}>
         {overrides.length === 0
@@ -2361,7 +2491,14 @@ function ReviewRail({
   registry,
   preflight,
   showRows,
+  catalog = null,
+  portalAdmission = null,
+  versionDeclared = false,
 }: {
+  /** S02_DATA: the catalog the coverage bar reads, the Atlas's admitted profiles, and whether the version's declaration was read. */
+  catalog?: DatasetCatalog | null;
+  portalAdmission?: ProfileFoldBounds | null;
+  versionDeclared?: boolean;
   draft: RunDraft;
   blocking: readonly { step: StepId; message: string }[];
   atlas: AtlasDocument | null;
@@ -2384,9 +2521,13 @@ function ReviewRail({
       <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         review
       </h3>
-      <WindowTimeline draft={draft} />
+      <WindowTimeline
+        draft={draft}
+        catalog={catalog}
+        fold={foldPlan(draft, preflight?.resource_estimate?.outer_fold_count ?? null, portalAdmission)}
+      />
       <ClaimForecast draft={draft} atlas={atlas} preflight={preflight} />
-      {showRows ? <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={usesV2} registry={registry} /> : null}
+      {showRows ? <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={usesV2} registry={registry} versionDeclared={versionDeclared} /> : null}
       <BlockingList blocking={blocking} />
     </aside>
   );
@@ -2430,6 +2571,8 @@ export interface NewRunProps {
   /** CG-P08-04: research dataset catalog for the data step. */
   catalog?: DatasetCatalog | null;
   catalogReason?: string | null;
+  /** The Atlas response's admitted profiles (`portal_admission.profiles`), for the served fold bounds. */
+  portalAdmission?: ProfileFoldBounds | null;
   /** CG-P11-07 `?from=`: the run this draft was copied from, and the read's state. */
   cloneSource?: { runId: string; state: ResearchState; copiedAt?: number | null } | null;
   /** W5a: the Screen-07 what-if node this draft forks, read from the server's grid. */
@@ -2470,6 +2613,7 @@ export function NewRun(props: NewRunProps) {
     preflightRefusal = null,
     catalog = null,
     catalogReason = null,
+    portalAdmission = null,
     cloneSource = null,
     forkSource = null,
   } = props;
@@ -2699,7 +2843,7 @@ export function NewRun(props: NewRunProps) {
             />
           ) : null}
           {step === "data" ? (
-            <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} />
+            <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} />
           ) : null}
           {step === "windows" ? (
             <WindowsStep draft={draft} patch={patch} atlas={atlas} error={errorByStep.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
@@ -2723,7 +2867,7 @@ export function NewRun(props: NewRunProps) {
                   block, the same rows the submit serializes; the rail keeps the
                   timeline and the forecast. */}
               <Card title="Review &amp; run">
-                <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} labelWidth={150} withWindows />
+                <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} labelWidth={150} withWindows versionDeclared={declarationBound ?? false} />
               </Card>
               {clearedBecause && preflight === null ? (
                 <p role="status" className="text-[11px]" style={{ color: "var(--role-holdout)" }} data-cleared-note>
@@ -2887,7 +3031,7 @@ export function NewRun(props: NewRunProps) {
           ) : null}
         </div>
 
-        <ReviewRail draft={draft} blocking={visibleBlocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} />
+        <ReviewRail draft={draft} blocking={visibleBlocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} />
       </div>
     </div>
   );

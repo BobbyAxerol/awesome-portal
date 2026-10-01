@@ -148,36 +148,34 @@ describe("FG 02-8b — the stepper does not call an unvisited step valid", () =>
 describe("D6 — the Data select shows the draft's timeframe, not its first option", () => {
   const onlyOneHour = { ...LIMITS, declaredTimeframes: ["1h"] as const };
 
-  it("a draft on 4h against a strategy that declares only 1h: the select says 4h, marked not declared", () => {
+  const chip = (tf: string) => document.querySelector(`[data-timeframe-chip="${tf}"]`) as HTMLElement | null;
+
+  it("a draft on 4h against a strategy that declares only 1h: the 4h chip is selected, marked not declared", () => {
     mount({ draft: draft({ timeframe: "4h" }), limits: onlyOneHour });
     go("data");
-    const select = screen.getByLabelText("Timeframe") as HTMLSelectElement;
-    expect(select.value).toBe("4h");
-    const shown = select.options[select.selectedIndex]!;
-    expect(shown.textContent).toBe("4h · not declared");
-    expect(shown.hasAttribute("data-undeclared-timeframe")).toBe(true);
-    /* The declared choice is still offered, and is not what is displayed. */
-    expect([...select.options].map((option) => option.value)).toEqual(["4h", "1h"]);
+    expect(chip("4h")!.getAttribute("aria-checked")).toBe("true");
+    expect(chip("4h")!.getAttribute("data-chip-reason")).toBe("not-declared");
+    expect(chip("4h")!.getAttribute("title")).toMatch(/^not declared by /);
+    /* The declared choice is still offered, and is not what is selected. */
+    expect(chip("1h")!.getAttribute("aria-checked")).toBe("false");
+    expect(chip("1h")!.getAttribute("aria-disabled")).toBe("false");
     /* The cause of the error is on screen, naming the same value Review prints. */
-    expect(screen.getByText(/does not declare 4h/)).toBeTruthy();
+    expect(document.querySelector("[data-step-error]")?.textContent).toContain("declares only 1h");
     expect(document.querySelector("[data-review-rail]")?.textContent).toContain("4h");
   });
 
-  it("a declared timeframe adds no extra option", () => {
+  it("a declared timeframe adds no extra chip", () => {
     mount({ draft: draft({ timeframe: "1h" }), limits: onlyOneHour });
     go("data");
-    const select = screen.getByLabelText("Timeframe") as HTMLSelectElement;
-    expect([...select.options].map((option) => option.value)).toEqual(["1h"]);
-    expect(select.value).toBe("1h");
-    expect(document.querySelector("[data-undeclared-timeframe]")).toBeNull();
+    expect([...document.querySelectorAll("[data-timeframe-chip]")].map((node) => node.getAttribute("data-timeframe-chip"))).toEqual(["1h"]);
+    expect(chip("1h")!.getAttribute("aria-checked")).toBe("true");
   });
 
-  it("an empty draft timeframe is a visible 'choose', not a silent 1h", () => {
+  it("an empty draft timeframe selects no chip, not a silent 1h", () => {
     mount({ draft: draft({ timeframe: "" }), limits: onlyOneHour });
     go("data");
-    const select = screen.getByLabelText("Timeframe") as HTMLSelectElement;
-    expect(select.value).toBe("");
-    expect(select.options[select.selectedIndex]!.textContent).toBe("choose a timeframe");
+    expect(chip("1h")!.getAttribute("aria-checked")).toBe("false");
+    expect(document.querySelector('[data-timeframe-chip][aria-checked="true"]')).toBeNull();
   });
 });
 

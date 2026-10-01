@@ -243,3 +243,24 @@ This addendum does not close BR-D4-1, requested-spec v2 executor, T12 audit chil
 `999be160` passed the required full hook (Control API 1,406 pass / 1 skip), was rebased over Claude F3 `5fad25cf`, and landed cleanly on the shared research branch; no remote push. AN-29 was applied additively on :8095 R-WFO-020 only. Real reads exposed an optimized Library query omission, now fixed and verified against the actual DB (26/26 focused tests); API acceptance awaits the corrected image. See [AN-29 follow-up](./evidence/P13/AN-29_immutable_sidecar_v2_2026-10-01.md).
 
 The fresh 400-trial run failed the compact P05 summary limit after optimization. The follow-up coarsens only declared display candles, keeps all retained/source authority facts and the same 64-KiB bound, and adds regression tests. It also makes preview-only nginx re-resolution plus same-origin API readiness mandatory after backend refresh. [Failure/correction receipt](./evidence/P05/WFO_SUMMARY_BUDGET_AND_PREVIEW_GATE_2026-10-01.md). LW-03 / S09 digest / real trial-rate are **not yet accepted** on that failed run; fresh corrected-image proof remains next. Production, frontend and old seals are unchanged.
+
+## Yêu cầu mới từ đợt F4 — khai báo dữ liệu, analytics v2, Library/Report (Claude, 2026-10-01)
+
+Chi tiết từng yêu cầu (mẫu §5): `evidence/P21/audit-2026-09-30/f4/{S02_DATA,S04_AN,S01_S09,MISC}.md`. Dữ liệu thật đã kiểm: `GET /api/v1/research/datasets` chỉ công bố `crypto-binance-1m` (BINANCE, 7 timeframe, 29 symbol: 5 PERPETUAL + 24 QUARTERLY, coverage theo tháng).
+
+| Mã | Cần gì | Hiện FE làm gì |
+|---|---|---|
+| BR-F4-01 | **Từ vựng timeframe**: catalog trả `1D`, phiên bản alpha khai `1d`; gate `alpha_declaration` so khớp chính xác nên không chip ngày nào chọn được. Công bố chuẩn hoá hoặc bảng ánh xạ trong catalog | Hai chip bị tắt kèm lý do; 1h/4h dùng được |
+| BR-F4-02 | Coverage chính xác theo timeframe cho từng symbol: `coverage_by_timeframe[{timeframe, first_bar_utc_ms, last_bar_utc_ms}]` | So với biên tháng; preflight quyết |
+| BR-F4-03 | Metadata symbol: `tick_size`, `lot_size`, `contract_multiplier`, `listing_utc_ms`, `expiry_utc_ms` (QUARTERLY) | Hàng symbol chỉ có tên + coverage tháng |
+| BR-F4-04 | Chất lượng dữ liệu theo symbol × timeframe: `gap_count`, `missing_ratio`, `as_of_utc_ms` | Chỉ "n of m tháng có dữ liệu" |
+| BR-F4-05 | Dataset/venue/asset class khác mà HMD reader phục vụ (hiện chỉ một dataset) | Một dataset → hàng danh tính; nhiều → select |
+| BR-F4-06 | Tìm kiếm và phân trang symbol phía server: `GET /research/datasets/{id}/symbols?q=&cursor=&limit=` + `total` | Lọc phía client trên toàn danh sách (29) |
+| BR-F4-07 | Số bar theo window và warmup khả dụng trước IS (BR-D4-1) | Không in số bar |
+| BR-F4-08 | Ước lượng số fold trước khi chạy cho một khoảng khai báo (hoặc `planned_folds` theo khoảng trong `portal_admission.profiles`) | Hiện khoảng 2–16 từ `fold_bounds`; số chính xác sau preflight |
+| BR-F4-09 | Hub P04: `summary_analytics_v2` cho run profile cố định (như Current Source) | R-P04-018 giữ ô cũ |
+| BR-F4-10 | R-WFO-020: `turnover_notional`, `sharpe_decay` trong v2 trả vắng dù v1 có turnover 11,646.76 — cùng nguồn v1 hoặc mã lý do | Vắng có mã server |
+| BR-F4-11 | Library `last_30d` cho seal v2: R-WFO-020 có `summary_analytics_v2` ở Current Source nhưng Library báo `PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL` (18/18 hàng); hoặc deploy service 999be160 lên preview | Ô "last 30D — not published" |
+| BR-F4-12 | Report: luôn trả `equity.digest_availability` (seal cũ: `NOT_PUBLISHED` + `P05_SEAL_PREDATES_SOURCE_SERIES_BYTE_DIGEST`); thêm fixture `research-report` có digest | Không dòng digest, không vắng có mã |
+| BR-F4-13 | Progress: `progress.overall.fold {index,total}` để hiện `fold 3/5` | Chỉ phần trăm |
+| BR-F4-14 | S13: Sharpe OOS của run P04 (`OOS_SHARPE` + scope window) — 30/40 attempt báo `P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE` | Cột "single OOS window" hiện vắng có mã |

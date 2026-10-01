@@ -604,22 +604,25 @@ describe("P10-T13 — the four release-default groups stay locked", () => {
  * ---------------------------------------------------------------------- */
 
 describe("RF-04 FE-S02-06 — timeframe choices come only from the bound declaration", () => {
+  const chips = () => [...document.querySelectorAll("[data-timeframe-chip]")] as HTMLElement[];
+
   it("offers only the published choices", () => {
     view();
     goToStep("data");
-    const select = screen.getByLabelText("Timeframe") as HTMLSelectElement;
-    expect([...select.options].map((option) => option.value)).toEqual(["1h", "4h"]);
-    expect([...select.options].map((option) => option.textContent?.trim())).toEqual(["1h", "4h"]);
-    expect([...select.options].map((option) => option.value)).not.toContain("1d");
+    expect(screen.getByRole("radiogroup", { name: "Timeframe" })).toBeTruthy();
+    expect(chips().map((chip) => chip.getAttribute("data-timeframe-chip"))).toEqual(["1h", "4h"]);
+    expect(chips().every((chip) => chip.getAttribute("aria-disabled") === "false")).toBe(true);
+    expect(chips().map((chip) => chip.getAttribute("data-timeframe-chip"))).not.toContain("1d");
   });
 
   it("does not invent a selectable timeframe when declaration is unavailable", () => {
     view({ limits: { ...LIMITS, declaredTimeframes: null } });
     goToStep("data");
-    const select = screen.getByLabelText("Timeframe") as HTMLSelectElement;
-    expect(select.disabled).toBe(true);
-    expect(select.value).toBe("4h");
-    expect(screen.getByText(/Version timeframes not published/)).toBeTruthy();
+    /* Only the draft's own value, disabled, with the typed reason. */
+    expect(chips().map((chip) => chip.getAttribute("data-timeframe-chip"))).toEqual(["4h"]);
+    expect(chips()[0]!.getAttribute("aria-disabled")).toBe("true");
+    expect(chips()[0]!.getAttribute("data-chip-reason")).toBe("declaration-not-published");
+    expect(chips()[0]!.getAttribute("title")).toContain("not published");
   });
   it("shows draft windows and only the selected published mode×schedule claim", () => {
     const manifest = JSON.parse(readFileSync(join(__dirname, "../../e2e/research-foundation/atlas.json"), "utf8")) as { atlas: AtlasDocument };
@@ -659,10 +662,12 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
     const card = document.querySelector('[data-route-card="options"]') as HTMLButtonElement;
     expect(card).toBeTruthy();
     expect(card.disabled).toBe(true);
+    /* The served reason is the tooltip and the accessible name, not inline text. */
     expect(card.getAttribute("title")).toBe(
       "options route is deferred this round — no portal parameters are declared for it yet.",
     );
-    expect(card.textContent).toContain("deferred this round");
+    expect(card.getAttribute("aria-label")).toContain("deferred this round");
+    expect(card.textContent).not.toContain("deferred this round");
   });
 
   it("offers no route at all when the Atlas cannot be read", () => {
@@ -992,7 +997,7 @@ describe("RF02-F2 — the P02 field map is covered 24/24", () => {
         const card = document.querySelector(`[data-route-card="${route}"]`) as HTMLButtonElement;
         expect(card, route).toBeTruthy();
         expect(card.disabled).toBe(true);
-        expect(card.textContent).toContain(blockedRoutes[route]);
+        expect(card.getAttribute("title")).toContain(blockedRoutes[route]);
         outcome[control.source_control_id] = "refused";
         continue;
       }

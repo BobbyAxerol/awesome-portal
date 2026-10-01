@@ -46,6 +46,7 @@ import {
 } from "./progressClient";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { decodeInspectionCursor, encodeInspectionCursor, type InspectionCursor } from "./inspectionCursor";
+import { PlannedWindows } from "./PlannedWindows";
 import { ServedAttempts } from "./QueuePanel";
 import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { useRunLabel } from "./runLabels";
@@ -537,8 +538,11 @@ function ProgressCard({
   foldCount,
   foldCountReason,
   bestObjective = null,
+  liveRate,
 }: {
   snapshot: ProgressSnapshot;
+  /** `trial_completed.rate_trials_per_s` from the stream: the server's decimal string, null, or undefined when no event carried it. */
+  liveRate?: string | null;
   /** The study's live best objective, exact as the last trial event served it. */
   bestObjective?: LiveBestObjective | null;
   live: boolean;
@@ -565,6 +569,8 @@ function ProgressCard({
       <Absent />
     );
   const study = studyLabel(snapshot, foldCount, foldCountReason);
+  /* S03: the source's cumulative GLOBAL-study throughput, exactly as served (a decimal string, never re-rounded). */
+  const rate = liveRate !== undefined ? liveRate : (overall.rate_trials_per_s ?? null);
 
   return (
     <div data-overall style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -653,8 +659,13 @@ function ProgressCard({
           {/* The server owns the ETA. A null one is absent, never computed. */}
           eta <span style={{ color: "var(--ink)" }}>{eta}</span>
         </span>
-        <span data-rate>
-          rate <NotPublished what="not published" />
+        <span data-rate={rate ?? "not-published"} title="Source-observed global study trials per second, cumulative">
+          rate{" "}
+          {rate === null ? (
+            <NotPublished what="not published" />
+          ) : (
+            <span style={{ color: "var(--ink)" }}>{rate} trials/s</span>
+          )}
         </span>
         {/* The server builds this string; the page does not reformat it. */}
         <span data-tqdm style={{ color: "var(--ink-faint)" }}>
@@ -2026,6 +2037,8 @@ export interface RunProgressProps {
   onCancel: (reason: string) => void;
   /** `trial_completed.best_objective` as the last event served it. */
   bestObjective?: LiveBestObjective | null;
+  /** `trial_completed.rate_trials_per_s` as the last event served it (undefined = no event carried it). */
+  liveRate?: string | null;
   /** The server's answer to this view's cancel request. */
   cancelResult?: CancelResponse | null;
   refusal?: ProgressRefusal | null;
@@ -2049,6 +2062,7 @@ export function RunProgress(props: RunProgressProps) {
     cancelling,
     onCancel,
     bestObjective = null,
+    liveRate,
     cancelResult = null,
     refusal = null,
     foldTrials = {},
@@ -2301,6 +2315,7 @@ export function RunProgress(props: RunProgressProps) {
               foldCount={foldCount}
               foldCountReason={foldCountReason}
               bestObjective={bestObjective}
+              liveRate={liveRate}
             />
           </>
         ) : (
@@ -2319,6 +2334,7 @@ export function RunProgress(props: RunProgressProps) {
         >
           {content && snapshot ? (
             <>
+              {identity ? <PlannedWindows planned={identity.planned_folds} observed={folds} /> : null}
               <FoldGantt
                 folds={folds}
                 cursor={foldCursor}

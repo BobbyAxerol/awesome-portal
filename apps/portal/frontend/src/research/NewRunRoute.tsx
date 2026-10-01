@@ -18,7 +18,7 @@ import { NewRun } from "./NewRun";
 import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom } from "./runDraft";
+import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom, planCoverage } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
@@ -316,6 +316,25 @@ export function NewRunRoute() {
     run.patch({ alphaId: only.alpha_id, alphaVersionId: only.alpha_version_id, strategyId: only.strategy_id ?? only.alpha_id });
   }, [location.search, registry, run]);
 
+  /* S02_DATA: when the catalog serves exactly one available dataset it is the
+     only choice, so a plain visit opens on it (with its coverage prefill). Done
+     here, once, in the same way as the sole ACTIVE version: a `?from=` copy owns
+     its dataset, and a dataset the reader (or a copy) already holds is kept. */
+  const datasetPreselected = useRef(false);
+  useEffect(() => {
+    if (datasetPreselected.current || catalog === null) return;
+    if (new URLSearchParams(location.search).get("from")) return;
+    const available = catalog.datasets.filter((item) => item.availability === "available");
+    if (available.length !== 1) return;
+    datasetPreselected.current = true;
+    if (run.draft.datasetId !== "") return;
+    const only = available[0]!;
+    run.patch({
+      datasetId: only.dataset_id,
+      ...applyCoveragePrefill(run.draft, planCoverage(catalog, only.dataset_id, run.draft.symbol)),
+    });
+  }, [catalog, location.search, run]);
+
   /*
    * Binding a version adopts its declared parameter space, once.
    *
@@ -444,6 +463,7 @@ export function NewRunRoute() {
       preflightRefusal={run.preflight.refusal}
       catalog={catalog}
       catalogReason={catalogReason}
+      portalAdmission={atlas?.selected_release_kind === "CURRENT" ? atlas.portal_admission.profiles : null}
       cloneSource={clone ? { runId: clone.runId, state: clone.state } : null}
       forkSource={fork}
       mayCreateRun={run.mayCreateRun}

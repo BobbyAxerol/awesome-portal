@@ -40,6 +40,11 @@ export interface FoldLine {
  */
 export const LINES_PAST_FOLDS = 8;
 
+/** The label of the one outer-OOS window of a fixed-profile (P04) attempt; its group sits left of fold_01. */
+export const SINGLE_OOS_WINDOW = "single OOS window";
+/** Source ordinal of that group: before every real fold, so it never shares a group with fold_01. */
+export const SINGLE_OOS_ORDINAL = -1;
+
 export interface FoldBarGeometry {
   width: number;
   height: number;

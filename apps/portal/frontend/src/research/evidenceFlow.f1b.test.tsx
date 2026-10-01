@@ -111,7 +111,8 @@ describe("F1b · Summary tab", () => {
   });
 
   it("the behavior tiles keep their typed absences (not published / not served), the footnote is gone", () => {
-    const { container } = view();
+    /* The Hub lane (no retained answer) keeps its eight typed cells. */
+    const { container } = view({ passport: { state: "idle" } });
     const card = container.querySelector("[data-gap='behavior-tiles']") as HTMLElement;
     expect(card.querySelectorAll("[data-behavior-tile]").length).toBe(8);
     expect(card.querySelectorAll("[data-withheld]").length).toBe(8);

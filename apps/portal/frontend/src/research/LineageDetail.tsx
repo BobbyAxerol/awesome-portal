@@ -130,6 +130,20 @@ export const PRESENTATION_WORDS: Record<LineageAttempt["presentation_reasons"][n
   MATERIAL_CHANGES: "changes two or more declared keys",
 };
 
+/**
+ * S10: an attempt the reader made from another one (a clone or a reproduction) is a step of the trace
+ * (S01 marks the same relation), so it is never folded behind "show probe attempts", whatever the
+ * server's presentation class says. Only a plain probe stays hideable.
+ */
+export function isTracedChild(attempt: Pick<LineageAttempt, "intent_kind">): boolean {
+  return attempt.intent_kind === "CLONE_FOR_EXPERIMENT" || attempt.intent_kind === "REPRODUCE_EXISTING";
+}
+
+/** A probe the "show probe attempts" toggle may hide: the server's PROBE class, minus the traced children. */
+export function isHideableProbe(attempt: Pick<LineageAttempt, "presentation_kind" | "intent_kind">): boolean {
+  return attempt.presentation_kind === "PROBE" && !isTracedChild(attempt);
+}
+
 /** The GATES RESET chip's suffix, spec 10 §2.3. */
 export const GATES_RESET = "GATES RESET";
 
@@ -423,7 +437,8 @@ const LINEAGE_CSS = `
   background: var(--paper-raised); padding: 8px 12px; margin: 4px 0; box-shadow: var(--shadow-e1); }
 .ln-card::before { content: ""; position: absolute; left: -13px; top: 50%; width: 12px; height: 1px; background: var(--line-strong); }
 .ln-node[data-status="READY"] .ln-card { border-color: var(--good); }
-.ln-node[data-status="ABANDONED"] .ln-card, .ln-node[data-status="ABANDONED"] .ln-row { opacity: .82; }
+/* A dimmed ABANDONED row is a quieter ink, not a fainter box: opacity would drag every child's contrast under AA (axe). */
+.ln-node[data-status="ABANDONED"] .ln-card, .ln-node[data-status="ABANDONED"] .ln-row { color: var(--ink-soft); }
 .ln-node[data-selected="true"] .ln-card, .ln-node[data-selected="true"] .ln-row { border-color: var(--accent); background: var(--accent-soft); }
 /* Gold diff text on the selected card's pale teal reads 3.95:1 (axe); it sits on raised paper there. */
 .ln-node[data-selected="true"] .ln-diff:not([data-gates="true"]) { background: var(--paper-raised); border-radius: 3px; padding: 0 4px; }
@@ -922,7 +937,7 @@ function VersionBand({
 }) {
   const pick = version.promotion_pick;
   /* Hi-fi: the band names its storied attempts; its probes are one "+N probes" chip. */
-  const storied = presentationKnown ? attempts.filter((attempt) => attempt.presentation_kind === "STORIED") : attempts;
+  const storied = presentationKnown ? attempts.filter((attempt) => !isHideableProbe(attempt)) : attempts;
   const probes = presentationKnown ? attempts.length - storied.length : null;
   return (
     <div
@@ -1292,6 +1307,7 @@ function Filters({
   onToggle,
   shown,
   lineage,
+  probeCount,
   presentationKnown,
   showProbes,
   onToggleProbes,
@@ -1300,6 +1316,8 @@ function Filters({
   onToggle: (status: LineageFilter) => void;
   shown: number;
   lineage: Lineage;
+  /** The probes the toggle can hide: traced clone/reproduction children are not among them. */
+  probeCount: number;
   presentationKnown: boolean;
   showProbes: boolean;
   onToggleProbes: () => void;
@@ -1319,7 +1337,7 @@ function Filters({
           {FILTER_WORDS[status].text}
         </button>
       ))}
-      <ProbesToggle known={presentationKnown} count={lineage.counts.probe_returned ?? 0} pressed={showProbes} onToggle={onToggleProbes} />
+      <ProbesToggle known={presentationKnown} count={probeCount} pressed={showProbes} onToggle={onToggleProbes} />
       <span className="ln-count" data-counter aria-live="polite">
         {counterText(shown, lineage.counts.returned_attempts, lineage.counts.total_attempts)}
       </span>
@@ -2242,6 +2260,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
   );
   /* CG-P19-03: probes are the server's classification; hidden until asked for (hi-fi), and always counted. */
   const presentationKnown = lineage ? lineageHasPresentation(lineage) : false;
+  const isHideable = (attempt: LineageAttempt | undefined) => attempt !== undefined && isHideableProbe(attempt);
   const [probesChoice, setProbesChoice] = useState<boolean | null>(null);
 
   /* Cards stay compact as in the hi-fi (spec line + reason); run detail opens
@@ -2262,11 +2281,12 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
   }, [initialAttempt, initialAv, lineage, returnedIds, tree]);
 
   /* A deep link to a probe opens the probes (spec T04); otherwise the reader's choice, hidden by default. */
-  const linkedProbe = fromLink.attempt !== null && byId.get(fromLink.attempt)?.presentation_kind === "PROBE";
+  const linkedProbe = fromLink.attempt !== null && isHideable(byId.get(fromLink.attempt));
+  const probeCount = useMemo(() => tree.filter((node) => isHideableProbe(node.attempt)).length, [tree]);
   const showProbes = !presentationKnown || (probesChoice ?? linkedProbe);
   const onToggleProbes = useCallback(() => setProbesChoice((current) => !(current ?? linkedProbe)), [linkedProbe]);
   const visible = useMemo(
-    () => tree.filter((node) => matches(node.attempt, filters) && (showProbes || node.attempt.presentation_kind !== "PROBE")),
+    () => tree.filter((node) => matches(node.attempt, filters) && (showProbes || !isHideableProbe(node.attempt))),
     [filters, matches, showProbes, tree],
   );
 
@@ -2340,7 +2360,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       select(attemptId);
       const attempt = byId.get(attemptId);
       if (attempt && !matches(attempt, filters)) setFilters(new Set());
-      if (attempt?.presentation_kind === "PROBE") setProbesChoice(true);
+      if (isHideable(attempt)) setProbesChoice(true);
       setExpanded((current) => {
         const base = new Set(current ?? openSet);
         base.add(attemptId);
@@ -2414,6 +2434,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
                 onToggle={onFilter}
                 shown={visible.length}
                 lineage={lineage}
+                probeCount={probeCount}
                 presentationKnown={presentationKnown}
                 showProbes={showProbes}
                 onToggleProbes={onToggleProbes}

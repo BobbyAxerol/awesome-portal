@@ -69,11 +69,12 @@ import { HubSplitBody } from "./hubStageSplit";
 import { HubSearchBody } from "./hubStageSearch";
 import { HubFreezeBody } from "./hubStageFreeze";
 import { HubExecuteBody } from "./hubStageExecute";
+import { AnalyticsAbsentLine, BehaviorV2, StrategyBenchmarkFigure, v2Absence, v2Of } from "./analyticsV2";
 
 /* The chart chunk. Five entry points, one module, fetched once. */
 const EquityChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.EquityChart })));
 const DrawdownChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DrawdownChart })));
-const RollingSharpeChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.RollingSharpeChart })));
+const StrategyBenchmarkChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.StrategyBenchmarkChart })));
 const DistributionChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DistributionChart })));
 
 /**
@@ -1608,6 +1609,9 @@ export const TILE_ORDER: TileKey[] = [
   "FUNDING_TOTAL",
 ];
 
+/** D-AN-01: the HiFi hero row is the first five tiles; the rest of the numbers live in the Behavior block. */
+export const HERO_TILES = 5;
+
 /** QuantBT's long/short hit rates count bars, not trades: never "win rate". */
 const HIT_RATE_KEYS = new Set<PerformanceMetric["key"]>(["OOS_LONG_HIT_RATE_FRACTION", "OOS_SHORT_HIT_RATE_FRACTION"]);
 
@@ -1973,149 +1977,6 @@ function ProvenanceRow({ hub, series, kind }: { hub: EvidenceHub; series: Eviden
         </span>
       ))}
     </div>
-  );
-}
-
-/**
- * One half of the rolling figure: its own label, its own lazy series, and — as
- * an empty shell of the chart's height (DQ-14) — its typed reason when the
- * source did not publish it.
- */
-function RollingHalf({
-  kind,
-  label,
-  link,
-  slot,
-  onNeeded,
-  absentExtra,
-  children,
-  inline,
-}: {
-  kind: SeriesKind;
-  label: string;
-  link: EvidenceHub["series"][number] | undefined;
-  slot: SeriesSlot | undefined;
-  onNeeded: (kind: SeriesKind) => void;
-  absentExtra?: ReactNode;
-  children: (series: EvidenceSeries) => ReactNode;
-  inline?: RetainedAnalytics["rolling_sharpe_63"];
-}) {
-  const served = useSeriesBody({
-    kind,
-    link: inline === undefined ? link : undefined,
-    slot,
-    onNeeded,
-    emptyReason: "the source published this window with no points, so no line is drawn.",
-    absentExtra,
-    children,
-  });
-  const ready = served.ready;
-  const drawn = inline === undefined ? ready !== null && ready.values.length > 0 : inline.state === "AVAILABLE" && inline.points.length > 0;
-  const state = inline === undefined ? served.state : drawn ? "ready" : "absent";
-  const body = inline === undefined ? served.body : drawn ? (
-    <ChartFrame height={230}><RollingSharpeChart points={inline.points} /></ChartFrame>
-  ) : <AbsenceNote availability={{ state: inline.state, reason_code: inline.reason_code }} extra={
-    inline.daily_return_count === null ? undefined : <span className="mono">({inline.daily_return_count} daily UTC returns published; the window needs 63.)</span>
-  } />;
-  return (
-    <div className="flex min-w-0 flex-col gap-1.5" data-series-panel={kind} data-series-state={state}>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="mono text-[10.5px]" style={{ color: "var(--ink-soft)" }}>
-          {label}
-        </span>
-        {ready ? <SamplingLine series={ready} /> : null}
-        {inline?.state === "AVAILABLE" ? <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-sampling={inline.sampling ?? undefined}>
-          {inline.emitted_point_count} points from {inline.source_observation_count} source observations · {inline.sampling}
-        </span> : null}
-      </div>
-      {drawn ? (
-        body
-      ) : (
-        <div
-          className="flex items-center rounded-[4px] border border-dashed px-3"
-          style={{ minHeight: 230, borderColor: "var(--line)", background: "var(--paper-sunken)" }}
-          data-rolling-shell={kind}
-        >
-          {body}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * HiFi EChart 3 — "Strategy behavior": rolling Sharpe and rolling beta. The
- * HiFi draws both on one chart with two axes; spec 04 §2.6 draws them as two
- * small charts side by side, which is what this does, so each keeps its own
- * reason when absent. Beta needs a benchmark series, and none is published
- * (the contract types `ROLLING_BETA_63` as an absence until one is).
- */
-function RollingFigure({
-  hub,
-  series,
-  ensureSeries,
-  summary = null,
-}: {
-  hub: EvidenceHub;
-  series: ReadonlyMap<SeriesKind, SeriesSlot>;
-  ensureSeries: (kind: SeriesKind) => void;
-  summary?: RetainedAnalytics | null;
-}) {
-  const linkFor = (kind: SeriesKind) => hub.series.find((entry) => entry.kind === kind);
-  const sample = hub.oos_performance?.return_sample ?? null;
-  const sharpeLink = linkFor("ROLLING_SHARPE_63");
-  /* DQ-15: the concrete count is printed only when the Hub published it. */
-  const belowWindow =
-    sharpeLink?.availability.reason_code === "P13_OOS_DAILY_RETURNS_BELOW_ROLLING_WINDOW" &&
-    sample !== null &&
-    sample.kind === "DAILY_UTC_EQUITY" ? (
-      <span className="mono" data-return-sample={sample.observation_count}>
-        ({sample.observation_count} daily UTC returns published; the window needs 63.)
-      </span>
-    ) : undefined;
-  return (
-    <figure className="m-0 min-w-0 flex-[1.4_1_520px] rounded-[8px] border p-4" data-rolling-figure style={PANEL_STYLE}>
-      <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
-        <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
-          EChart 3
-        </span>
-        <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
-          Strategy behavior — rolling 63-day Sharpe · rolling beta vs benchmark
-        </span>
-      </figcaption>
-      <div className="grid gap-3.5 sm:grid-cols-2">
-        <RollingHalf
-          kind="ROLLING_SHARPE_63"
-          label="rolling 63-day Sharpe"
-          link={sharpeLink}
-          slot={series.get("ROLLING_SHARPE_63")}
-          onNeeded={ensureSeries}
-          absentExtra={belowWindow}
-          inline={summary?.rolling_sharpe_63}
-        >
-          {(loaded) => (
-            <ChartFrame height={230}>
-              <RollingSharpeChart series={loaded} />
-            </ChartFrame>
-          )}
-        </RollingHalf>
-        <RollingHalf
-          kind="ROLLING_BETA_63"
-          label="rolling 63-day beta vs benchmark"
-          link={linkFor("ROLLING_BETA_63")}
-          slot={series.get("ROLLING_BETA_63")}
-          onNeeded={ensureSeries}
-        >
-          {/* The contract never gives this series values; if it ever did, this
-              screen has no beta chart yet and says so instead of drawing one. */}
-          {(loaded) => (
-            <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
-              {formatMetric(loaded.values.length, "count")} points published; this screen draws no beta chart yet.
-            </p>
-          )}
-        </RollingHalf>
-      </div>
-    </figure>
   );
 }
 
@@ -3227,7 +3088,7 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
     foot,
     absence: value === null || value === undefined ? absence : null,
   });
-  return TILE_ORDER.map((key) => {
+  return TILE_ORDER.slice(0, HERO_TILES).map((key) => {
     switch (key) {
       case "FINAL_EQUITY":
         return fact(key, passport.final_equity, "currency", `${ACCOUNT} · currency · source-derived`);
@@ -3249,15 +3110,23 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
         return fact(key, passport.initial_equity, "currency", `${ACCOUNT} · currency · source-derived`);
       case "BARS_PROCESSED":
         return fact(key, passport.artifact_table_rows.observations, "count", "retained observations · count · source-derived");
-      case "OOS_SHARPE":
-        return fact(
-          key,
-          verdictsOk ? verdicts.mean_oos_sharpe : null,
-          "ratio",
-          "OOS · mean of folds",
-          RETAINED_NO_FIELD,
-          "OOS Sharpe · fold mean",
-        );
+      case "OOS_SHARPE": {
+        /* D-AN-01: the hero is the all-time OOS Sharpe over the whole scope; the fold mean is the foot. */
+        const all = (evidence as Partial<CurrentSourceEvidence>).summary_analytics_v2?.metrics.sharpe ?? null;
+        const foldMean = verdictsOk && verdicts.mean_oos_sharpe !== null && verdicts.mean_oos_sharpe !== undefined ? formatRatio(String(verdicts.mean_oos_sharpe)) : null;
+        if (all !== null) {
+          const origin = all.origin === "ENGINE_DIRECT" ? "engine-direct" : "portal-derived";
+          return fact(
+            key,
+            all.state === "AVAILABLE" ? all.value : null,
+            "ratio",
+            `all time · ${origin}${foldMean !== null ? ` · fold mean ${foldMean}` : ""}`,
+            { state: all.state === "AVAILABLE" ? "NOT_PUBLISHED" : (all.state as Availability["state"]), reason_code: all.reason_code },
+            "OOS Sharpe",
+          );
+        }
+        return fact(key, verdictsOk ? verdicts.mean_oos_sharpe : null, "ratio", "OOS · mean of folds", RETAINED_NO_FIELD, "OOS Sharpe · fold mean");
+      }
       case "OOS_SHARPE_DECAY":
         return fact(
           key,
@@ -3339,11 +3208,10 @@ function RetainedTile({ tile }: { tile: RetainedTileFact }) {
 
 /**
  * W3b — the Hub-shaped series links of a retained run: the lane's own derived
- * series where it publishes one, its typed absence where it does not (a
- * rolling beta needs the benchmark the lane names as unpublished).
+ * series where it publishes one, its typed absence where it does not.
+ * D-AN-01: no rolling series is linked — the all-time figure reads `summary_analytics_v2`.
  */
 export function retainedSeriesLinks(evidence: CurrentSourceEvidence): EvidenceHub["series"] {
-  const absences = (evidence as Partial<CurrentSourceEvidence>).source_absences ?? null;
   const mapped = (kind: RetainedSeriesKind) => {
     const entry = evidence.series.find((candidate) => candidate.kind === kind);
     return {
@@ -3355,20 +3223,6 @@ export function retainedSeriesLinks(evidence: CurrentSourceEvidence): EvidenceHu
   return [
     mapped("MONTHLY_RETURNS"),
     mapped("RETURN_DISTRIBUTION"),
-    {
-      kind: "ROLLING_SHARPE_63",
-      /* E11: the lane now names the cause itself — an hourly tape carries no
-         daily-return series, so QuantBT's rolling Sharpe(63 daily returns)
-         has no input here. The UI's older "no such series" stands in only
-         for a capture taken before the lane published the reason. */
-      availability: laneAbsence(absences?.rolling_sharpe, RETAINED_NO_SERIES),
-      href: null,
-    } as EvidenceHub["series"][number],
-    {
-      kind: "ROLLING_BETA_63",
-      availability: laneAbsence(absences?.benchmark, RETAINED_NO_SERIES),
-      href: null,
-    } as EvidenceHub["series"][number],
   ];
 }
 
@@ -3420,7 +3274,16 @@ function InSampleNote({ curve }: { curve: RetainedAnalytics["in_sample_equity"] 
   </p>;
 }
 
-function BehaviorCard({ retained = null, summary = null }: { retained?: CurrentSourceEvidence | null; summary?: RetainedAnalytics | null }) {
+function BehaviorCard({
+  retained = null,
+  summary = null,
+  absent = null,
+}: {
+  retained?: CurrentSourceEvidence | null;
+  summary?: RetainedAnalytics | null;
+  /** D-AN-01: the seal has no v2 block — keep only the v1 facts that have a value and say so once. */
+  absent?: Availability | null;
+}) {
   const benchmark = retained ? ((retained as Partial<CurrentSourceEvidence>).source_absences?.benchmark ?? null) : null;
   const reasonFor = (label: string): Availability =>
     retained === null
@@ -3430,7 +3293,13 @@ function BehaviorCard({ retained = null, summary = null }: { retained?: CurrentS
         : RETAINED_NO_FIELD;
   // Keep the existing eight-cell frame: the six named source facts and two
   // benchmark cells. Old responders keep their original typed placeholders.
-  const labels: readonly string[] = summary ? [...SUMMARY_BEHAVIOR.map(([label]) => label), "beta vs benchmark", "corr vs benchmark"] : BEHAVIOR_TILES;
+  const labels: readonly string[] = absent
+    ? SUMMARY_BEHAVIOR.map(([label]) => label as string).filter((label) => {
+        const definition = SUMMARY_BEHAVIOR.find(([name]) => name === label);
+        const fact = summary && definition ? summary.behaviour[definition[1]] : null;
+        return fact?.state === "AVAILABLE" && fact.value !== null;
+      })
+    : summary ? [...SUMMARY_BEHAVIOR.map(([label]) => label), "beta vs benchmark", "corr vs benchmark"] : BEHAVIOR_TILES;
   return (
     <section
       className="flex min-w-0 flex-[1_1_340px] flex-col gap-1.5 rounded-[8px] border p-3.5"
@@ -3440,7 +3309,7 @@ function BehaviorCard({ retained = null, summary = null }: { retained?: CurrentS
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <PanelLabel>behavior</PanelLabel>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          {summary ? "segment OOS" : retained ? "retained walk-forward lane" : "segment not published"}
+          {absent ? "all time · OOS" : summary ? "segment OOS" : retained ? "retained walk-forward lane" : "segment not published"}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -3465,6 +3334,7 @@ function BehaviorCard({ retained = null, summary = null }: { retained?: CurrentS
           </span>
         ); })}
       </div>
+      {absent ? <AnalyticsAbsentLine availability={absent} /> : null}
     </section>
   );
 }
@@ -3539,18 +3409,23 @@ function SummaryTab({
   );
   const linkFor = (kind: SeriesKind) => laneHub.series.find((entry) => entry.kind === kind);
   const performance = hub.oos_performance ?? null;
+  /* D-AN-01: all-time analytics. With a v2 block (or on a retained run, where the rest is one absence
+     line) the headline is the HiFi's five hero tiles; the other numbers are in the Behavior block. */
+  const v2 = v2Of(retained, hub);
+  const heroOnly = v2 !== null || retained !== null;
+  const tileKeys = heroOnly ? TILE_ORDER.slice(0, HERO_TILES) : TILE_ORDER;
   /* One grid, HiFi row first. A registry-v3 key appears only when the Hub
      sends the block (an older responder does not); a v2 key only when sent. */
   const tiles = retained
     ? retainedTiles(retained).map((tile) => <RetainedTile key={tile.key} tile={tile} />)
-    : TILE_ORDER.flatMap((key): ReactNode[] => {
+    : tileKeys.flatMap((key): ReactNode[] => {
         const v2 = hub.metrics.find((metric) => metric.key === key);
         if (v2) return [<MetricTile key={key} metric={v2} />];
         const v3 = performance?.metrics.find((metric) => metric.key === key);
         return v3 && performance ? [<PerformanceTile key={key} metric={v3} block={performance} />] : [];
       });
   /* A v2 key this screen does not order still gets its tile, after the rest. */
-  const unordered = retained
+  const unordered = retained || heroOnly
     ? []
     : hub.metrics
         .filter((metric) => !TILE_ORDER.includes(metric.key))
@@ -3654,7 +3529,16 @@ function SummaryTab({
       )}
 
       <div className="flex flex-wrap gap-3.5">
-        <RollingFigure hub={laneHub} series={laneSeries} ensureSeries={laneEnsure} summary={summary} />
+        {v2 ? (
+          <StrategyBenchmarkFigure
+            v2={v2}
+            chart={
+              <ChartFrame height={230}>
+                <StrategyBenchmarkChart strategy={v2.strategy_curve} benchmark={v2.benchmark_curve} />
+              </ChartFrame>
+            }
+          />
+        ) : null}
         <SeriesPanel
           kind="RETURN_DISTRIBUTION"
           chartNo={4}
@@ -3687,7 +3571,7 @@ function SummaryTab({
         >
           {(loaded) => <MonthlyHeat series={loaded} />}
         </SeriesPanel>
-        <BehaviorCard retained={retained} summary={summary} />
+        {v2 ? <BehaviorV2 v2={v2} /> : <BehaviorCard retained={retained} summary={summary} absent={retained ? v2Absence(retained) : null} />}
       </div>
 
       {summary ? (
@@ -4004,8 +3888,22 @@ function WindowDisclosureTable({
   const denied = read?.denied_artifacts ?? null;
   const cell = "px-3 py-[7px] align-baseline";
   const none = (what?: string) => <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={what} />;
+  /* CG-FG-S04-07: the P08 per-fold bar counts, as the Hub published them. Sums may overlap (tooltip). */
+  const disclosure = hub.core.window_disclosure ?? null;
+  const barsTitle = disclosure?.availability.state === "AVAILABLE"
+    ? [
+        "Sum of the fold windows — windows may overlap, so this is not a count of distinct bars.",
+        ...disclosure.folds.map((fold) => `fold ${fold.fold}: IS ${fold.is_bars} · OOS ${fold.oos_bars}`),
+      ].join("\n")
+    : undefined;
+  const bars = (value: number | null | undefined) =>
+    disclosure === null ? none() : disclosure.availability.state === "AVAILABLE" && value !== null && value !== undefined ? (
+      <span data-window-bars title={barsTitle}>Σ {formatMetric(value, "count")} bars</span>
+    ) : (
+      <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: disclosure.availability.reason_code }} what="bars" />
+    );
   const rows: { key: string; tone: string; who: ReactNode; count: ReactNode }[] = [
-    { key: "IS", tone: "var(--role-is)", who: none("read permission, card count"), count: none() },
+    { key: "IS", tone: "var(--role-is)", who: none("read permission, card count"), count: bars(disclosure?.is_bars) },
     {
       key: "OOS",
       tone: "var(--role-oos)",
@@ -4016,19 +3914,43 @@ function WindowDisclosureTable({
           <FactCell fact={retainedClaim?.oos_used_for_selection ?? null} label="oos_used_for_selection" gap={gap} />
         </span>
       ),
-      count: folds ?? <Withheld availability={navigation?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />,
+      count: (
+        <span className="inline-flex flex-wrap justify-end gap-x-2">
+          {folds ?? <Withheld availability={navigation?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />}
+          {disclosure !== null ? bars(disclosure.oos_bars) : null}
+        </span>
+      ),
     },
     {
       key: "Holdout",
       tone: "var(--role-holdout)",
       who: <FactCell fact={retainedClaim?.holdout ?? null} label="holdout" gap={gap} />,
-      count:
-        denied === null ? (
-          /* F1: the progress read decides this count; until it answers it is unread, not unpublished. */
-          runIdentity.state === "ready" && read !== null ? none() : <NotRead phase={runIdentity.state === "loading" ? "loading" : "not-read"} />
-        ) : (
-          <span style={{ color: denied.length > 0 ? "var(--role-holdout)" : undefined }}>{denied.length} denied</span>
-        ),
+      count: (
+        <span className="inline-flex flex-wrap justify-end gap-x-2">
+          {denied === null ? (
+            /* F1: the progress read decides this count; until it answers it is unread, not unpublished. */
+            runIdentity.state === "ready" && read !== null ? none() : <NotRead phase={runIdentity.state === "loading" ? "loading" : "not-read"} />
+          ) : (
+            <span style={{ color: denied.length > 0 ? "var(--role-holdout)" : undefined }}>{denied.length} denied</span>
+          )}
+          {disclosure !== null ? (
+            <span data-holdout-bars={disclosure.holdout_bars.state}>
+              {disclosure.holdout_bars.state === "DENIED" ? (
+                <span
+                  className="mono text-[10px] italic"
+                  style={{ color: "var(--role-holdout)" }}
+                  data-reason-code={disclosure.holdout_bars.reason_code}
+                  title={reasonTitle({ state: "NOT_PUBLISHED", reason_code: disclosure.holdout_bars.reason_code })}
+                >
+                  bars — denied
+                </span>
+              ) : (
+                <Withheld availability={{ state: disclosure.holdout_bars.state, reason_code: disclosure.holdout_bars.reason_code }} what="bars" />
+              )}
+            </span>
+          ) : null}
+        </span>
+      ),
     },
     { key: "Compare", tone: "var(--ink-faint)", who: none("compare scope, state"), count: none() },
   ];

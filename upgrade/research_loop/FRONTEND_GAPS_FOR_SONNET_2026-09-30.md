@@ -244,3 +244,12 @@ Việc dùng chung do tôi làm sau khi gộp:
 - Legacy export now requires the protected prepare POST followed by read-only GET with workspace. Keep its button hidden until the consumer implements this sequence and typed 403/409 states. Backend preparation never belongs in a GET.
 
 The backend slice does not modify frontend source or visual baselines. Migration 081 and fresh-run/backfill receipts are backend acceptance dependencies, tracked in the backend queue §10.
+
+### F4/F5 — khai báo dữ liệu thật, analytics v2, quyết định đã chốt (2026-10-01)
+
+Bản ghi: `evidence/P21/audit-2026-09-30/f4/*.md`.
+- **S02 khai báo dữ liệu theo catalog backend:** dataset (hàng danh tính khi chỉ có một); symbol là combobox tìm kiếm cho toàn bộ 29 symbol, nhóm PERPETUAL/QUARTERLY, coverage kèm thanh tỉ lệ chung trục; timeframe là chip cho đủ 7 timeframe của dataset (bật khi phiên bản khai, tắt kèm lý do); coverage nằm cùng trục với IS/OOS/Holdout, cảnh báo khi biên window ra ngoài tháng có dữ liệu; route: card cho route được nhận, "N routes not admitted" gập lại. Lỗi trung thực đã sửa: cột Review không còn in `0 entries · 0 swept` hay `1 · none · none` trước khi chọn phiên bản. Số fold = "server plan" khi server trả, khoảng 2–16 khi chỉ có `fold_bounds`.
+- **Vướng thật cần Codex:** BR-F4-01 — catalog trả `1D` còn phiên bản khai `1d`, so khớp chính xác nên chưa chọn được timeframe ngày.
+- **S04 D-AN-01:** "Strategy vs benchmark — all time", 5 tile hero, khối Behavior (`portal-derived`), seal cũ → một dòng vắng có mã; `window_disclosure` ở bảng claim. R-WFO-020 có v2 thật; R-WFO-017 là seal cũ.
+- **Quyết định đã áp dụng (theo khuyến nghị):** câu server dài trong ô từ chối → tooltip (mã lý do vẫn hiện); S10 luôn hiện CLONE/REPRODUCTION, hàng mờ dùng `--ink-soft`; S13 một cột "single OOS window"; S06 một chữ `retrospective`; `--ink-faint` đạt ≥ 4.5:1 trong `.research-screen` (Execution Loop giữ nguyên); HT-3 chấp nhận hub nhúng deep-dive.
+- Yêu cầu backend mới: BR-F4-01…14 trong `CODEX_BACKEND_GAPS_2026-09-30.md`.

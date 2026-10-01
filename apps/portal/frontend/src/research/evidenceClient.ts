@@ -41,6 +41,10 @@ type SourceSchemas = CurrentSourceComponents["schemas"];
 
 export type EvidenceHub = HubSchemas["EvidenceHub"];
 export type RetainedAnalytics = HubSchemas["RetainedAnalytics"];
+/** D-AN-01: all-time OOS descriptive analytics (`research.retained-analytics.v2`); optional on both reads. */
+export type RetainedAnalyticsV2 = HubSchemas["RetainedAnalyticsV2"];
+export type RetainedAnalyticsV2Fact = HubSchemas["RetainedAnalyticsV2Fact"];
+export type WindowDisclosure = HubSchemas["WindowDisclosure"];
 export type InSampleEquityPoint = RetainedAnalytics["in_sample_equity"]["points"][number];
 export type EvidenceSeries = HubSchemas["EvidenceSeries"];
 export type SeriesKind = HubSchemas["SeriesKind"];
@@ -110,10 +114,8 @@ export const SERIES_KINDS: readonly SeriesKind[] = [
   "MONTHLY_RETURNS",
   "ROLLING_RETURNS_20",
   "RETURN_DISTRIBUTION",
-  /* RF-05 CG-P13-04: rolling Sharpe over 63 UTC daily OOS returns, and rolling
-     beta, which stays a typed absence until a benchmark is published. */
-  "ROLLING_SHARPE_63",
-  "ROLLING_BETA_63",
+  /* D-AN-01 (AN-16/17): the rolling 63-day Sharpe and beta kinds are no longer asked for;
+     the all-time figure reads `summary_analytics_v2` instead. The contract still lists them. */
 ] as const;
 
 /** The contract's own ceiling, named once so a test can assert the screen honours it. */

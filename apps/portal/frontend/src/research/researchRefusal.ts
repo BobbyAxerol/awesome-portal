@@ -243,8 +243,41 @@ export function toResearchRefusal(error: unknown): ResearchRefusal {
   };
 }
 
-/** The panel state a refusal resolves to; the server's text rides as detail. */
-export function refusalState(refusal: ResearchRefusal, retainsContent: boolean): ResearchState {
+/**
+ * What a refusal shows beside its fixed sentence: the reason code and request
+ * id as visible chips, the server's own sentence as a tooltip only
+ * (VD-FG-01-01). Nothing here is invented: an absent part stays null.
+ */
+export interface RefusalDiagnostics {
+  code: string | null;
+  requestId: string | null;
+  /** The server's sentence. Reaches the screen as `title` + accessible name, never as text. */
+  sentence: string | null;
+}
+
+/** A panel state that also carries the refusal's diagnostics (additive over `ResearchState`). */
+export type ResearchStateWithDiagnostics = ResearchState & { diagnostics?: RefusalDiagnostics | null };
+
+export function refusalDiagnostics(
+  refusal: Pick<ResearchRefusal, "code" | "detail" | "requestId"> & { notFound?: boolean },
+): RefusalDiagnostics | null {
+  /* F-04: a 403 and a 404 are deliberately not told apart, so for those neutral
+     refusals the server's sentence (which may name an owner or a workspace) is
+     not offered even as a tooltip. A typed lane code such as NOT_ADMITTED keeps it. */
+  const kind = refusal.code !== null && refusal.code in SURFACE_CODES ? SURFACE_CODES[refusal.code] : null;
+  const neutral =
+    refusal.notFound === true &&
+    (refusal.code === null || refusal.code === "RESEARCH_WORKSPACE_FORBIDDEN" || kind === "FORBIDDEN" || kind === "NOT_FOUND");
+  const diagnostics = {
+    code: refusal.code,
+    requestId: refusal.requestId,
+    sentence: neutral ? null : refusal.detail,
+  };
+  return diagnostics.code || diagnostics.requestId || diagnostics.sentence ? diagnostics : null;
+}
+
+/** The panel state a refusal resolves to; the server's text rides as detail and in `diagnostics`. */
+export function refusalState(refusal: ResearchRefusal, retainsContent: boolean): ResearchStateWithDiagnostics {
   /* RF-06 FE-X-11: `stale` means a retained value is shown with a newer one
      pending. A conflict on a first read has nothing retained, so it is a
      retryable failure, not "this changed since it was read". */
@@ -253,6 +286,7 @@ export function refusalState(refusal: ResearchRefusal, retainsContent: boolean):
       state: "failed-retryable",
       reason: REFUSAL_COPY.conflict,
       detail: refusalDetail(refusal),
+      diagnostics: refusalDiagnostics(refusal),
       mayRetry: true,
       retainsContent: false,
     };
@@ -261,6 +295,7 @@ export function refusalState(refusal: ResearchRefusal, retainsContent: boolean):
     state: refusal.state,
     reason: refusal.message,
     detail: refusalDetail(refusal),
+    diagnostics: refusalDiagnostics(refusal),
     mayRetry: refusal.mayRetry,
     retainsContent,
   };

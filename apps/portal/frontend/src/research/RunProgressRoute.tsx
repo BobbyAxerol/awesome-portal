@@ -41,6 +41,7 @@ export function RunProgressRoute() {
       foldCursor={progress.foldCursor}
       onPinFold={progress.pinFold}
       bestObjective={progress.bestObjective}
+      liveRate={progress.liveRate}
       cancelResult={progress.cancelResult}
       cancelling={progress.cancelling}
       onCancel={progress.cancel}

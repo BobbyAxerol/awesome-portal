@@ -606,7 +606,7 @@ export type CoveragePlan =
 
 const MONTH_TEXT = /^(\d{4})-(\d{2})$/;
 
-function monthIndex(value: string): number | null {
+export function monthIndex(value: string): number | null {
   const match = MONTH_TEXT.exec(value);
   if (!match) return null;
   const year = Number(match[1]);

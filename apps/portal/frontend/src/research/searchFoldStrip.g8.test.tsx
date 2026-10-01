@@ -620,3 +620,25 @@ describe("G8 · the fold cells are the fold plan's, through the E1 helpers", () 
     expect(Object.keys(OOS_READING_WORDS).sort()).toEqual(["NOT_APPLICABLE", "REPORT_ONLY", "RETROSPECTIVE", "SELECTION_INPUT", "WITHHELD_UNTIL_S4"]);
   });
 });
+
+/* ---------------------------------------------------- F4/MISC · one word */
+
+describe("G8 F-1 · the OOS column chip and the fold strip say the same word", () => {
+  it("mode_1_decay × global: the strip reads RETROSPECTIVE, so the claim row's chip says 'retrospective' too", async () => {
+    const root = await settledWfo();
+    expect(strip(root).getAttribute("data-strip-oos")).toBe("RETROSPECTIVE");
+    const chip = root.querySelector("[data-claim-fact='oos column']") as HTMLElement;
+    expect(chip.getAttribute("data-oos-column")).toBe("RETROSPECTIVE");
+    expect(chip.textContent).toBe(OOS_READING_WORDS.RETROSPECTIVE);
+    expect(chip.getAttribute("title")).toContain("retrospective evidence, never a deployment claim");
+    expect(root.querySelector("[data-oos-column='SELECTION_INPUT']")).toBeNull();
+  });
+
+  it("with no Atlas reading the chip keeps what the search contract states: 'selection input'", async () => {
+    const root = await settledWfo({ atlas: [503, { error: { code: "RESEARCH_FOUNDATION_UNAVAILABLE", message: "down" } }] });
+    expect(strip(root).getAttribute("data-fold-strip")).toBe("absent");
+    const chip = root.querySelector("[data-claim-fact='oos column']") as HTMLElement;
+    expect(chip.getAttribute("data-oos-column")).toBe("SELECTION_INPUT");
+    expect(chip.textContent).toBe(OOS_READING_WORDS.SELECTION_INPUT);
+  });
+});

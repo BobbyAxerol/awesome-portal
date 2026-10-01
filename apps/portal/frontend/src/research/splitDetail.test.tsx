@@ -608,7 +608,11 @@ describe("P14-T05 — folds come from the one operation that publishes them", ()
         laneState: null,
       },
     });
-    expect(container.querySelector("[data-fold-refusal]")?.textContent).toContain("Not an admitted profile.");
+    // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip, not text.
+    const note = container.querySelector("[data-fold-refusal]");
+    expect(note?.querySelector("[data-refusal-code]")?.textContent).toBe("NOT_ADMITTED");
+    expect(note?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBe("Not an admitted profile.");
+    expect(note?.textContent).not.toContain("Not an admitted profile.");
     // The windows above it are untouched.
     expect(container.querySelector("[data-window-anatomy]")).toBeTruthy();
     expect(container.querySelector("[data-holdout]")).toBeTruthy();

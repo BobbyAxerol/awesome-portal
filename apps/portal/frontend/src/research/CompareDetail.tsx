@@ -94,7 +94,7 @@ import {
   type FoldSeries,
 } from "./compareClient";
 import { LineageLink, lineageHref } from "./LineageLink";
-import { foldBars } from "./compareFoldBars";
+import { foldBars, LINES_PAST_FOLDS, SINGLE_OOS_ORDINAL, SINGLE_OOS_WINDOW } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
 import { foldLabel, formatAxisValue, formatCorrelation, formatMetric, shortId } from "./researchFormat";
 import { runLabelFor } from "./runLabels";
@@ -1235,13 +1235,45 @@ function foldLegend(run: CompareRun | undefined, runId: string): string {
  * Compare"). The printed axis values are the server's highest and lowest
  * strings, shown by unit with the exact string in the title (DQ-08).
  */
+/** The figure's group count in words: real folds, plus the one-window group a fixed-profile attempt contributes. */
+function foldWords(groups: ReadonlyArray<{ ordinal: number }>): string {
+  const single = groups.some((group) => group.ordinal === SINGLE_OOS_ORDINAL);
+  const folds = groups.length - (single ? 1 : 0);
+  if (!single) return `${folds} folds`;
+  return folds === 0 ? SINGLE_OOS_WINDOW : `${folds} folds + ${SINGLE_OOS_WINDOW}`;
+}
+
 function FoldChart({ result }: { result: AttemptResult }) {
   /* F2b: hovering or focusing a legend entry dims every other attempt's bars/line (display only). */
   const [hovered, setHovered] = useState<string | null>(null);
   const dim = (runId: string): number | undefined => (hovered !== null && hovered !== runId ? 0.18 : undefined);
   const runs = ladderOrder(result);
   const byRun = new Map(runs.map((run) => [run.run_id, run] as const));
-  const drawable = result.fold_series.filter((item: FoldSeries) => item.state === "AVAILABLE" && item.folds.length > 0);
+  const realDrawable = result.fold_series.filter((item: FoldSeries) => item.state === "AVAILABLE" && item.folds.length > 0);
+  /* F4/MISC (S13): a fixed-profile attempt has ONE outer-OOS window and no per-fold rows. When the source
+     published its OOS Sharpe, that value is the window's bar — the served metric, labelled as what it is.
+     No value, or a chart that would already draw lines (a single vertex draws nothing), stays an absence. */
+  const realOrdinals = new Set(realDrawable.flatMap((item) => item.folds.map((fold) => fold.source_ordinal)));
+  const singleWindow: FoldSeries[] =
+    realOrdinals.size >= LINES_PAST_FOLDS
+      ? []
+      : result.fold_series.flatMap((item: FoldSeries) => {
+          if (item.state === "AVAILABLE" && item.folds.length > 0) return [];
+          const run = result.attempts.find((attempt) => attempt.run_id === item.run_id);
+          const metric = run?.original_metrics.find((entry) => entry.key === "OOS_SHARPE");
+          if (run?.lane !== "P04_FIXED_PROFILE" || !metric || metric.value === null || metric.availability.state !== "AVAILABLE") return [];
+          return [
+            {
+              run_id: item.run_id,
+              state: "AVAILABLE" as const,
+              source_fold_count: 1,
+              truncated: false,
+              folds: [{ fold_id: SINGLE_OOS_WINDOW, source_ordinal: SINGLE_OOS_ORDINAL, oos_sharpe: metric.value, availability: metric.availability }],
+              availability: metric.availability,
+            },
+          ];
+        });
+  const drawable = [...realDrawable, ...singleWindow];
   /* Ladder order for the series; a series whose run is not among the attempts keeps the server's place after them. */
   /* Ladder attempts in ladder order; a drawable series of an attempt without a claim keeps the server's place after them. */
   const published = [
@@ -1250,7 +1282,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
   ];
   const byRunAll = new Map(result.attempts.map((run) => [run.run_id, run] as const));
   const geometry = foldBars(published.map((item) => ({ runId: item.run_id, folds: item.folds })));
-  const absent = result.fold_series.filter((item: FoldSeries) => item.state !== "AVAILABLE");
+  const absent = result.fold_series.filter((item: FoldSeries) => item.state !== "AVAILABLE" && !singleWindow.some((one) => one.run_id === item.run_id));
   const truncated = published.filter((item) => item.truncated);
   const tone = (runId: string) => foldTone(byRun.get(runId), published.findIndex((item) => item.run_id === runId), published.length);
   const axis = (text: string) => formatMetric(text, "ratio") ?? text;
@@ -1260,7 +1292,8 @@ function FoldChart({ result }: { result: AttemptResult }) {
         <span className="cp-figtitle">{FOLD_CHART_TITLE}</span>
         {geometry ? (
           <span className="cp-figmeta" data-fold-meta title="Retained per-fold QuantBT metric">
-            {published.length} {published.length === 1 ? "attempt" : "attempts"} · {geometry.groups.length} folds
+            {published.length} {published.length === 1 ? "attempt" : "attempts"} ·{" "}
+            {foldWords(geometry.groups)}
             {truncated.length > 0 ? ` · first 32 folds of ${truncated.map((item) => item.source_fold_count ?? "?").join(", ")}` : ""}
           </span>
         ) : null}

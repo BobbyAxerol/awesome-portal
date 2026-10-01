@@ -574,9 +574,10 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(within(node("att_04")).getByText("abandoned — decay unstable across seeds; kept for the record.")).toBeTruthy();
     expect(within(node("att_07")).getByText("abandoned — reason not published")).toBeTruthy();
     const css = document.querySelector("style")?.textContent ?? "";
-    /* Hi-fi card opacity .82 for SUPERSEDED and ABANDONED (spec §9.2 says .72 for ABANDONED; the hi-fi wins). */
+    /* F4/MISC (axe): a dimmed ABANDONED row is the quieter ink token, never a fainter box. */
     expect(css).toContain('.ln-node[data-status="ABANDONED"] .ln-card');
-    expect(css).toMatch(/\.ln-node\[data-status="ABANDONED"\] \.ln-row \{ opacity: \.82; \}/);
+    expect(css).toMatch(/\.ln-node\[data-status="ABANDONED"\] \.ln-row \{ color: var\(--ink-soft\); \}/);
+    expect(css).not.toMatch(/\.ln-node\[data-status="(ABANDONED|SUPERSEDED)"\][^{]*\{[^}]*opacity/);
   });
 
   it("S10-U13 shows a failed attempt with the reason the server returned", async () => {

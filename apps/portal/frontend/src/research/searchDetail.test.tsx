@@ -545,7 +545,10 @@ describe("P15-T05 — the ledger comes from the one operation that retains it", 
       },
     });
     const refusal = container.querySelector("[data-ledger-refusal]");
-    expect(refusal?.textContent).toContain("Not an admitted profile.");
+    // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip, not text.
+    expect(refusal?.querySelector("[data-refusal-code]")?.textContent).toBe("NOT_ADMITTED");
+    expect(refusal?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBe("Not an admitted profile.");
+    expect(refusal?.textContent).not.toContain("Not an admitted profile.");
     expect(refusal?.querySelector("[data-ledger-gap-state='NOT_APPLICABLE']")).toBeTruthy();
     expect(refusal?.textContent).toContain("P04_RAN_NO_TRIALS");
     // The rest of the screen stands.

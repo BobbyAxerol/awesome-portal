@@ -12,7 +12,7 @@
  * bug this file exists to prevent.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   type ActivationResponse,
@@ -51,6 +51,11 @@ export interface AlphaImportController {
   registryTotal?: number | null;
   /** The `alpha_id` the served list was requested with ("" = unfiltered). */
   registryAlpha?: string;
+  /** The server's opaque `next_cursor` (null = list complete). Sent back as served, never parsed. */
+  registryNext?: string | null;
+  /** State of the "load more" read; the rows already loaded stay whatever it answers. */
+  registryMore?: "idle" | "loading" | "failed";
+  onLoadMoreRegistry?: () => void;
 
   parseState: ResearchState;
   gatesState: ResearchState;
@@ -94,6 +99,10 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
   const [registry, setRegistry] = useState<readonly RegistryEntry[]>([]);
   const [registryTotal, setRegistryTotal] = useState<number | null>(null);
   const [registryAlpha, setRegistryAlpha] = useState("");
+  const [registryNext, setRegistryNext] = useState<string | null>(null);
+  const [registryMore, setRegistryMore] = useState<"idle" | "loading" | "failed">("idle");
+  /* A list read that is no longer the latest (new filter, reload) must not append to the new list. */
+  const registryEpoch = useRef(0);
   /* The server filters by alpha_id. The field is sent only once it is a whole,
      valid id and the typist has paused, so a half-typed id is never a request. */
   const [registryFilter, setRegistryFilter] = useState("");
@@ -109,15 +118,20 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
      not something to discover by offering the button and watching it fail. */
   const loadRegistry = useCallback(() => {
     const requested = registryFilter;
+    const epoch = ++registryEpoch.current;
     alphaImportApi
       .registry(workspaceId, requested || undefined)
       .then((response) => {
+        if (epoch !== registryEpoch.current) return;
         setRegistry(response.entries);
         setRegistryAlpha(requested);
+        setRegistryNext(response.next_cursor ?? null);
+        setRegistryMore("idle");
         setRegistryTotal(typeof response.total === "number" ? response.total : null);
         setRegistryState(researchState({ kind: "ok", rowCount: response.entries.length }));
       })
       .catch((error: unknown) => {
+        if (epoch !== registryEpoch.current) return;
         const next = toRefusal(error);
         setRegistryState({
           state: next.state,
@@ -129,6 +143,30 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
   }, [registryFilter, workspaceId]);
 
   useEffect(loadRegistry, [loadRegistry]);
+
+  /* S14: the next page of the same list, by the server's opaque cursor. Rows append; a failed
+     page keeps what is loaded and offers the same button again. */
+  const onLoadMoreRegistry = useCallback(() => {
+    if (registryNext === null || registryMore === "loading") return;
+    const epoch = registryEpoch.current;
+    setRegistryMore("loading");
+    alphaImportApi
+      .registry(workspaceId, registryAlpha || undefined, registryNext)
+      .then((response) => {
+        if (epoch !== registryEpoch.current) return;
+        setRegistry((current) => {
+          const seen = new Set(current.map((entry) => entry.alpha_version_id));
+          return [...current, ...response.entries.filter((entry) => !seen.has(entry.alpha_version_id))];
+        });
+        setRegistryNext(response.next_cursor ?? null);
+        setRegistryTotal(typeof response.total === "number" ? response.total : null);
+        setRegistryMore("idle");
+      })
+      .catch(() => {
+        if (epoch !== registryEpoch.current) return;
+        setRegistryMore("failed");
+      });
+  }, [registryAlpha, registryMore, registryNext, workspaceId]);
 
   useEffect(() => {
     const typed = alphaId.trim();
@@ -301,6 +339,9 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
     registry,
     registryTotal,
     registryAlpha,
+    registryNext,
+    registryMore,
+    onLoadMoreRegistry,
 
     parseState: stepState("parse", parse !== null, IDLE.parse),
     gatesState: stepState("gates", gates !== null, IDLE.gates),

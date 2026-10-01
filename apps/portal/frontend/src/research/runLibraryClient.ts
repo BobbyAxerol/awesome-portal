@@ -36,6 +36,7 @@ export type MetricCell = Schemas["MetricCell"];
 export type AlphaBinding = Schemas["AlphaBinding"];
 export type ReleaseCandidateRef = Schemas["ReleaseCandidateRef"];
 export type RunSparklineSource = Schemas["RunSparklineSource"];
+export type RetainedFact = Schemas["RetainedAnalyticsV2Fact"];
 
 /**
  * The two published paths, spelled exactly as

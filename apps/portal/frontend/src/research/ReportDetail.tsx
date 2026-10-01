@@ -775,6 +775,33 @@ function countLine(equity: ReportEquity): string {
   }`;
 }
 
+/**
+ * CG-FG-S09-02: a new seal publishes the byte digest of the whole stitched
+ * source series beside its scope; an old seal publishes a typed absence. A v1
+ * core, or a core that carries neither field, shows nothing here: its original
+ * facts are not relabelled and no digest is made up.
+ */
+function EquityDigest({ equity }: { equity: ReportEquity }) {
+  const digest = "digest" in equity ? (equity.digest ?? null) : null;
+  const availability = "digest_availability" in equity ? (equity.digest_availability ?? null) : null;
+  if (digest === null && availability === null) return null;
+  const scope = "digest_scope" in equity && equity.digest_scope ? words(equity.digest_scope) : null;
+  return (
+    <p className="rr-caption mt-1" data-equity-digest data-digest-state={digest !== null ? "AVAILABLE" : (availability?.state ?? "NOT_PUBLISHED")}>
+      {digest !== null && (availability === null || availability.state === "AVAILABLE") ? (
+        <>
+          <span className="rr-mono rr-long" data-digest-value={digest} title={`sha256:${digest}${scope ? ` · ${scope}` : ""}`}>
+            series sha256:{shortDigest(digest, 12)}…
+          </span>
+          {scope ? <span data-digest-scope> · {scope}</span> : null}
+        </>
+      ) : (
+        <AvailabilityAbsent what="series digest" availability={availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
+      )}
+    </p>
+  );
+}
+
 function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds: ReportFolds; equityIs: ReportEquity | null }) {
   const withIs = equityIs !== null && equityIs.state === "AVAILABLE" && equityIs.points.length > 0;
   const points = withIs ? [...equityIs!.points, ...equity.points] : equity.points;
@@ -913,6 +940,7 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
           : `fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]} · ${folds.reason_code ?? factReason(folds)}`}
         {geometry && geometry.dropped > 0 ? ` · ${geometry.dropped} points did not parse and were not drawn` : ""}
       </p>
+      <EquityDigest equity={equity} />
       {drawable ? (
         <div className="rr-sr sr-only" data-sr-equity-table>
           <table>

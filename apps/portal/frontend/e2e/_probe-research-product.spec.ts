@@ -1213,7 +1213,9 @@ test("S04 says what it was never given, in the words of the state it is in", asy
   // The retained-source lane refused this profile: the panel states it and the
   // rest of the hub is untouched.
   await expect(page.locator("[data-passport='refused']")).toBeVisible();
-  await expect(page.locator("[data-passport-refusal]")).toContainText("does not admit");
+  // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip.
+  await expect(page.locator("[data-passport-refusal] [data-refusal-code]")).toHaveText("RESEARCH_CURRENT_SOURCE_NOT_ADMITTED");
+  await expect(page.locator("[data-passport-refusal] [data-refusal-detail]")).toHaveAttribute("title", /does not admit/);
   await expect(page.locator("[data-metrics]")).toBeVisible();
 
   // Panels the contract does not fill keep their frame and their reason.
@@ -1460,7 +1462,8 @@ test("S05 keeps a fold refusal inside the fold panel", async ({ page }) => {
   await settle(page);
 
   await expect(page.locator("[data-fold-anatomy='refused']")).toBeVisible();
-  await expect(page.locator("[data-fold-refusal]")).toContainText("does not admit");
+  await expect(page.locator("[data-fold-refusal] [data-refusal-code]")).toHaveText("RESEARCH_CURRENT_SOURCE_NOT_ADMITTED");
+  await expect(page.locator("[data-fold-refusal] [data-refusal-detail]")).toHaveAttribute("title", /does not admit/);
   // The rest of the screen is a screen.
   await expect(page.locator("[data-window-anatomy]")).toBeVisible();
   await expect(page.locator("[data-holdout]")).toBeVisible();
@@ -1743,7 +1746,8 @@ test("S07 keeps the retained custody refusal inside its panel", async ({ page })
   await settle(page);
 
   await expect(page.locator("[data-retained='refused']")).toBeVisible();
-  await expect(page.locator("[data-retained-refusal]")).toContainText("does not admit");
+  await expect(page.locator("[data-retained-refusal] [data-refusal-code]")).toHaveText("RESEARCH_CURRENT_SOURCE_NOT_ADMITTED");
+  await expect(page.locator("[data-retained-refusal] [data-refusal-detail]")).toHaveAttribute("title", /does not admit/);
   await expect(page.locator("[data-integrity='PARTIAL']")).toBeVisible();
   await expect(page.locator("[data-panel='frozen-parameters']")).toBeVisible();
 });

@@ -219,7 +219,9 @@ describe("CG-P08-04 dataset step reads the catalog", () => {
   };
   it("offers the catalog's datasets and shows the symbol's coverage", () => {
     view({ initialStep: "data", catalog });
-    expect((screen.getByLabelText("Dataset") as HTMLSelectElement).value).toBe("crypto-binance-1m");
+    /* One available dataset: an identity row, not a select. */
+    expect(screen.getByLabelText("Dataset").getAttribute("data-dataset-identity")).toBe("crypto-binance-1m");
+    expect(document.querySelector("[data-dataset-select]")).toBeNull();
     expect(document.querySelector("[data-symbol-coverage]")?.textContent).toBe("perpetual · 2020-01 → 2026-09 · 81 months");
   });
   it("names an unlisted symbol and a catalog it could not read", () => {

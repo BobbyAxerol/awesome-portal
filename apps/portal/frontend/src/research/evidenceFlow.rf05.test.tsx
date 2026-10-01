@@ -1143,24 +1143,6 @@ const MONTHLY_ONE_MONTH_JSON = {
   ]
 };
 
-const ROLLING_SHARPE_NOT_APPLICABLE_JSON = {
-  "schema_version": "research.evidence-series.v1",
-  "run_id": "rrun_3935d7d16bbccabcc43382108ffca89d",
-  "revision": "p13r1_cc2dd29666fec16271f7c39b0afa5eec6472e78a0fc85613429c543d10d5854c",
-  "etag": "\"p13r1_cc2dd29666fec16271f7c39b0afa5eec6472e78a0fc85613429c543d10d5854c\"",
-  "kind": "ROLLING_SHARPE_63",
-  "availability": {
-    "state": "NOT_APPLICABLE",
-    "reason_code": "P13_OOS_DAILY_RETURNS_BELOW_ROLLING_WINDOW"
-  },
-  "source_sample": {
-    "source_observation_count": 0,
-    "emitted_point_count": 0,
-    "sampling": null
-  },
-  "values": []
-};
-
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 function hubAnalytics(): EvidenceHub {
@@ -1349,65 +1331,31 @@ describe("RF-06 wave C — the verdict header states only what is published", ()
  * CG-P13-04 — rolling row
  * ---------------------------------------------------------------------- */
 
-describe("RF-06 wave C — the rolling row", () => {
-  it("lists the two new series kinds", () => {
-    expect(SERIES_KINDS).toContain("ROLLING_SHARPE_63");
-    expect(SERIES_KINDS).toContain("ROLLING_BETA_63");
+describe("RF-06 wave C — the rolling row (superseded by D-AN-01)", () => {
+  it("no longer lists the rolling Sharpe/beta kinds among the series the screen asks for", () => {
+    expect(SERIES_KINDS).not.toContain("ROLLING_SHARPE_63");
+    expect(SERIES_KINDS).not.toContain("ROLLING_BETA_63");
   });
 
-  it("keeps rolling Sharpe's shell with its reason and the published sample size, and does not read it", () => {
-    const ensureSeries = vi.fn();
-    const { container } = view({ ensureSeries });
-    const half = container.querySelector("[data-rolling-figure] [data-series-panel='ROLLING_SHARPE_63']");
-    expect(half?.querySelector("[data-rolling-shell]")).toBeTruthy();
-    const note = half?.querySelector("[data-absence-note]");
-    expect(note?.getAttribute("data-absence-note")).toBe("NOT_APPLICABLE");
-    expect(note?.textContent).toContain("fewer daily returns than the 63-day rolling window");
-    expect(note?.textContent).toContain("(30 daily UTC returns published; the window needs 63.)");
-    expect(ensureSeries).not.toHaveBeenCalledWith("ROLLING_SHARPE_63");
-  });
-
-  it("types rolling beta as not published for want of a benchmark", () => {
-    const { container } = view();
-    const half = container.querySelector("[data-rolling-figure] [data-series-panel='ROLLING_BETA_63']");
-    expect(half?.querySelector("[data-absence-note]")?.getAttribute("data-absence-note")).toBe("NOT_PUBLISHED");
-    expect(half?.textContent).toContain("published no benchmark series");
-  });
-
-  it("reads rolling Sharpe when the Hub publishes it, and draws it from the server's values", () => {
+  it("draws no rolling figure and reads no rolling series, even when the Hub links one as AVAILABLE", () => {
     const hub = hubAnalytics();
     hub.series = hub.series.map((link) =>
       link.kind === "ROLLING_SHARPE_63" ? { ...link, availability: { state: "AVAILABLE", reason_code: null } } : link,
     );
     const ensureSeries = vi.fn();
-    view({ hub, ensureSeries });
-    expect(ensureSeries).toHaveBeenCalledWith("ROLLING_SHARPE_63");
+    const { container } = view({ hub, ensureSeries });
+    expect(container.querySelector("[data-rolling-figure], [data-series-panel='ROLLING_SHARPE_63'], [data-series-panel='ROLLING_BETA_63']")).toBeNull();
+    expect(ensureSeries.mock.calls.some(([kind]) => String(kind).startsWith("ROLLING_"))).toBe(false);
+  });
+
+  it("keeps the rolling-Sharpe chart builder's rounding (kept for the S01 last-30D card)", () => {
     const option = rollingSharpeOption([
       { at_utc_ms: 1782864000000, sharpe: "-0.4567" },
       { at_utc_ms: 1782950400000, sharpe: "1.2" },
     ]) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
     expect(option.xAxis.type).toBe("time");
-    expect(option.series[0].data).toEqual([
-      [1782864000000, -0.4567],
-      [1782950400000, 1.2],
-    ]);
     expect(option.tooltip.formatter([{ dataIndex: 0, seriesName: "rolling 63-day Sharpe", marker: "" }])).toContain("−0.46");
     expect(ratio(1.2)).toBe("1.20");
-  });
-
-  it("says why a series that answered NOT_APPLICABLE has no line, instead of an empty chart", () => {
-    const hub = hubAnalytics();
-    hub.series = hub.series.map((link) =>
-      link.kind === "ROLLING_SHARPE_63" ? { ...link, availability: { state: "AVAILABLE", reason_code: null } } : link,
-    );
-    const answered = clone(ROLLING_SHARPE_NOT_APPLICABLE_JSON) as unknown as EvidenceSeries;
-    const { container } = view({
-      hub,
-      series: new Map<SeriesKind, SeriesSlot>([["ROLLING_SHARPE_63", { state: "ready", series: answered }]]),
-    });
-    const half = container.querySelector("[data-series-panel='ROLLING_SHARPE_63']");
-    expect(half?.getAttribute("data-series-state")).toBe("absent");
-    expect(half?.querySelector("[data-reason-sentence]")?.textContent).toContain("63-day rolling window");
   });
 });
 

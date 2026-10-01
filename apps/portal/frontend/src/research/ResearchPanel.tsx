@@ -20,7 +20,12 @@
 
 import type { ReactNode } from "react";
 
-import { refusalDetail, type ResearchRefusal } from "./researchRefusal";
+import {
+  refusalDiagnostics,
+  type RefusalDiagnostics,
+  type ResearchRefusal,
+  type ResearchStateWithDiagnostics,
+} from "./researchRefusal";
 import type { ResearchState } from "./state";
 
 export interface ResearchPanelProps {
@@ -28,7 +33,7 @@ export interface ResearchPanelProps {
   /** Small right-aligned provenance line: source name, revision, as-of. */
   meta?: ReactNode;
   /** Resolved state for this panel's own named request. */
-  state: ResearchState;
+  state: ResearchStateWithDiagnostics;
   /** Real content. Rendered whenever the state retains content. */
   children?: ReactNode;
   /** Actions the server has admitted. Hidden whenever content is withheld. */
@@ -67,7 +72,7 @@ function showsContent(state: ResearchState): boolean {
   return state.state === "available" || state.retainsContent;
 }
 
-function StateNotice({ state }: { state: ResearchState }) {
+function StateNotice({ state }: { state: ResearchStateWithDiagnostics }) {
   const isWithheld = !showsContent(state);
   return (
     <div
@@ -99,7 +104,9 @@ function StateNotice({ state }: { state: ResearchState }) {
             {state.reason}
           </span>
         ) : null}
-        {state.detail ? (
+        {state.diagnostics ? (
+          <RefusalChips diagnostics={state.diagnostics} />
+        ) : state.detail ? (
           <details data-research-detail>
             <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
               details
@@ -233,20 +240,49 @@ export function ResearchValue({
 }
 
 /**
+ * The reason-code chip and the request id. The server's sentence is the
+ * tooltip and the accessible name, never printed (VD-FG-01-01).
+ */
+function RefusalChips({ diagnostics }: { diagnostics: RefusalDiagnostics }) {
+  const { code, requestId, sentence } = diagnostics;
+  return (
+    <span
+      className="mono inline-flex flex-wrap items-baseline gap-x-2 text-[9.5px]"
+      style={{ color: "var(--ink-faint)" }}
+      data-refusal-detail
+      role={sentence ? "note" : undefined}
+      title={sentence ?? undefined}
+      aria-label={sentence ? [code, sentence, requestId ? `request_id ${requestId}` : null].filter(Boolean).join(" — ") : undefined}
+    >
+      {code ? (
+        <span
+          className="rounded-[3px] border px-1 uppercase tracking-[.04em]"
+          style={{ borderColor: "var(--line)", background: "var(--paper-sunken)" }}
+          data-refusal-code={code}
+        >
+          {code}
+        </span>
+      ) : null}
+      {requestId ? <span data-refusal-request>request_id {requestId}</span> : null}
+    </span>
+  );
+}
+
+/**
  * A refusal inside a sub-panel (a slot that failed while the screen stands).
  *
- * The fixed sentence reads as the answer; the server's text, code and request
- * id follow as faint diagnostics, never as the headline (RF01-F4). Inline, so
- * it can sit inside the paragraph a screen already wraps around it.
+ * The fixed sentence reads as the answer; the code and request id follow as
+ * faint chips and the server's sentence is their tooltip (RF01-F4, VD-FG-01-01).
+ * Inline, so it can sit inside the paragraph a screen already wraps around it.
  */
 export function RefusalNote({ refusal }: { refusal: ResearchRefusal }) {
-  const detail = refusalDetail(refusal);
+  const diagnostics = refusalDiagnostics(refusal);
   return (
     <>
       {refusal.message}
-      {detail ? (
-        <span className="mono ml-1 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-refusal-detail>
-          ({detail})
+      {diagnostics ? (
+        <span className="ml-1">
+          <RefusalChips diagnostics={diagnostics} />
         </span>
       ) : null}
     </>

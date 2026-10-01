@@ -39,6 +39,7 @@ import {
   type ReleaseCandidateRef,
   type RunLibraryItem,
   type RunLibraryResponse,
+  type RetainedFact,
   type RunSparklineSource,
   type RunStatus,
   type StageCell,
@@ -55,7 +56,7 @@ import {
 import { compareEntryHref } from "./compareClient";
 import { lineageHref } from "./lineageClient";
 import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
-import { formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
+import { formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
 import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
@@ -173,6 +174,13 @@ export const REASON_SENTENCES: Record<string, string> = {
   RS02_SEAL_RETAINED_NO_FOLD_ROWS: "This run's retained seal holds no fold rows, so there is nothing to total.",
   RS02_RETAINED_OBSERVATIONS_DO_NOT_FORM_A_SERIES:
     "The retained tape holds fewer than two usable observations, so no curve is drawn.",
+  /* AN-19: the card's last-30D facts are Portal-derived from the seal's retained OOS series. */
+  PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL:
+    "This seal predates Portal analytics v2, so no last-30D figure was computed for it. It is never filled from the all-time series.",
+  PORTAL_ANALYTICS_SHARPE_NOT_AVAILABLE: "The last-30D window has too few daily returns for a Sharpe.",
+  PORTAL_ANALYTICS_COMMON_WINDOW_TOO_FEW_DAILY_RETURNS: "The last-30D window has too few daily returns for this figure.",
+  PORTAL_ANALYTICS_COMMON_WINDOW_ZERO_VARIANCE: "Returns in the last-30D window have zero variance, so a ratio is not defined.",
+  PORTAL_ANALYTICS_COMMON_WINDOW_NOT_AVAILABLE: "The last-30D window is not available for this seal.",
 };
 
 /** The sentence for a withheld fact: its code's own, else its state's. */
@@ -456,6 +464,60 @@ const SPARK_LABEL: Record<string, string> = {
   failed: "equity — none",
 };
 
+
+/**
+ * AN-19: the card's own series. A COMPLETED card whose seal carries `last_30d`
+ * draws that window - the server already reduced it to at most 24 points -
+ * under a "last 30D" label. A seal without it keeps the all-time series under
+ * its own all-time label; one is never drawn under the other's name.
+ */
+export interface Last30dSeries {
+  values: string[];
+  caption: string;
+  title: string;
+  partial: boolean;
+}
+
+export function last30dSeries(item: Pick<RunLibraryItem, "status" | "last_30d">): Last30dSeries | null {
+  const block = item.last_30d;
+  if (item.status !== "COMPLETED" || !block || !isAvailable(block.availability) || !block.data) return null;
+  const { points, partial_window: partial, source_observation_count: observed } = block.data;
+  if (points.length === 0) return null;
+  const span = [formatUtc(block.data.window_start_utc_ms), formatUtc(block.data.window_end_utc_ms)].filter(Boolean).join(" → ");
+  return {
+    values: points.map((point) => point.value),
+    caption: `last 30D${partial ? " partial" : ""} · ${points.length} of ${observed}`,
+    title: [
+      "Last 30D OOS equity (Portal-derived from the sealed series)",
+      span,
+      `${points.length} points drawn of ${observed} observations`,
+      partial ? "the seal holds less than 30 days, so the window is partial" : null,
+      block.input_digest ? `input ${shortDigest(block.input_digest, 8)}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    partial,
+  };
+}
+
+/** The last-30D stat cells: a figure per fact, or one typed absence. */
+interface Last30dCell {
+  key: string;
+  label: string;
+  fact: RetainedFact;
+  kind: "return" | "sharpe";
+}
+
+function last30dCells(item: Pick<RunLibraryItem, "status" | "last_30d">): Last30dCell[] | "absent" | null {
+  if (item.status !== "COMPLETED") return null;
+  const block = item.last_30d;
+  if (!block || !isAvailable(block.availability) || !block.data) return "absent";
+  return [
+    { key: "last30d_return", label: "last 30D return", fact: block.data.return_fraction, kind: "return" },
+    { key: "last30d_sharpe", label: "last 30D sharpe", fact: block.data.sharpe, kind: "sharpe" },
+  ];
+}
+
 /** The hi-fi draws 24 columns in a 150 × 26 box. */
 const SPARK_COLUMNS = 24;
 
@@ -581,11 +643,16 @@ function Sparkline({
     };
   }, [item.run_id, onVisible]);
 
-  const label = item.sparkline.kind ? SPARK_LABEL[item.sparkline.kind] ?? "equity" : "equity";
+  const label = last30dSeries(item)
+    ? "last 30D equity"
+    : item.sparkline.kind
+      ? (SPARK_LABEL[item.sparkline.kind] ?? "equity")
+      : "equity";
   const listed = isAvailable(item.sparkline.availability);
+  const thirty = last30dSeries(item);
   const series = listed && read?.kind === "series" ? read : null;
-  const shown = series ? series.values.slice(-SPARK_COLUMNS) : [];
-  const heights = series ? sparkHeights(shown) : null;
+  const shown = thirty ? thirty.values.slice(-SPARK_COLUMNS) : series ? series.values.slice(-SPARK_COLUMNS) : [];
+  const heights = thirty || series ? sparkHeights(shown) : null;
   /* Hi-fi column ink by what the run is: a finished series in the OOS
      accent, a series still being searched in the train tint, a failed one
      in the quiet line colour. */
@@ -626,16 +693,18 @@ function Sparkline({
   return (
     <span className="flex flex-none flex-col" style={{ gap: 3 }} data-sparkline={item.run_id} ref={box}>
       <span style={LABEL_9}>{label}</span>
-      {series && heights ? (
+      {(thirty || series) && heights ? (
         <>
           <span
             className="flex items-end"
             style={SPARK_BOX}
             data-sparkline-values={shown.length}
-            data-sparkline-revision={series.revision ?? undefined}
+            data-sparkline-window={thirty ? "last_30d" : "all_time"}
+            data-sparkline-partial={thirty?.partial ? "true" : undefined}
+            data-sparkline-revision={thirty ? undefined : (series?.revision ?? undefined)}
             role="img"
-            aria-label={`OOS equity, ${sparkCaption(shown.length, series.source)}`}
-            title={sparkProvenance(shown.length, series.source, item.evidence_revision)}
+            aria-label={thirty ? `Last 30 days OOS equity, ${thirty.caption}` : `OOS equity, ${sparkCaption(shown.length, series?.source ?? null)}`}
+            title={thirty ? thirty.title : sparkProvenance(shown.length, series?.source ?? null, item.evidence_revision)}
           >
             {heights.map((height, index) => (
               <span
@@ -649,9 +718,9 @@ function Sparkline({
           <span
             style={caption}
             data-sparkline-caption
-            data-display-sampling={series.source?.display_sampling ?? undefined}
+            data-display-sampling={thirty ? undefined : (series?.source?.display_sampling ?? undefined)}
           >
-            {sparkCaption(shown.length, series.source)}
+            {thirty ? thirty.caption : sparkCaption(shown.length, series?.source ?? null)}
           </span>
         </>
       ) : (
@@ -701,6 +770,12 @@ export function statDisplay(metric: Pick<MetricCell, "role" | "value">): string 
       return Number.isFinite(parsed) && metric.value.trim() !== "" ? TWO_DP.format(parsed) : metric.value;
     case "TRADE_COUNT":
       return formatMetric(metric.value, "count") ?? metric.value;
+    case "ELAPSED":
+    case "RUNTIME": {
+      /* The server writes `2520 s`; the card says `42m 00s`. Same served number, reader's units; the exact string rides in the title. */
+      const seconds = /^(\d+(?:\.\d+)?) s$/.exec(metric.value);
+      return (seconds ? formatDuration(Number(seconds[1])) : null) ?? metric.value;
+    }
     default:
       /* E1: a timestamp cell (e.g. FAILED AT) never prints ISO with milliseconds. */
       return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(metric.value) ? (formatUtc(metric.value) ?? metric.value) : metric.value;
@@ -750,12 +825,51 @@ export function withheldFace(availability: Availability): string {
   return WITHHELD_WORDS[availability.state];
 }
 
-function Stats({ stats }: { stats: readonly MetricCell[] }) {
+function Stats({ stats, item }: { stats: readonly MetricCell[]; item: RunLibraryItem }) {
+  const cells = last30dCells(item);
   return (
     /* Grows like the hi-fi's `flex:1` but never shrinks below its three
        cells: a long claim line wraps under them instead of folding the
        stats into two rows. */
     <span className="flex flex-wrap" style={{ gap: 18, flex: "1 0 auto" }} data-stats>
+      {cells === "absent" ? (
+        <span className="flex flex-col" style={{ gap: 1 }} data-metric="LAST_30D" data-last30d="absent" data-reason-code={item.last_30d?.availability.reason_code ?? undefined}>
+          <span style={LABEL_9}>last 30D</span>
+          <span
+            style={{ fontFamily: MONO, fontSize: 10, fontStyle: "italic", lineHeight: "17px", color: "var(--ink-faint)", whiteSpace: "nowrap" }}
+            title={reasonSentence(item.last_30d?.availability ?? { state: "NOT_PUBLISHED", reason_code: null })}
+          >
+            not published
+          </span>
+        </span>
+      ) : (
+        cells?.map((cell) => {
+          const shown = isAvailable({ state: cell.fact.state === "AVAILABLE" ? "AVAILABLE" : "NOT_PUBLISHED", reason_code: cell.fact.reason_code })
+            ? cell.kind === "return"
+              ? formatMetric(cell.fact.value, "fraction")
+              : statDisplay({ role: "OOS_SHARPE", value: cell.fact.value })
+            : null;
+          return (
+            <span key={cell.key} className="flex flex-col" style={{ gap: 1 }} data-metric={`LAST_30D_${cell.kind.toUpperCase()}`} data-window="last_30d">
+              <span style={LABEL_9}>{cell.label}</span>
+              {shown !== null ? (
+                <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "var(--ink)" }} title={`${cell.fact.value} · Portal-derived, last 30D OOS window`}>
+                  {shown}
+                </span>
+              ) : (
+                <span
+                  style={{ fontFamily: MONO, fontSize: 10, fontStyle: "italic", lineHeight: "17px", color: "var(--ink-faint)", whiteSpace: "nowrap" }}
+                  data-withheld={cell.fact.state}
+                  data-reason-code={cell.fact.reason_code ?? undefined}
+                  title={reasonSentence({ state: "NOT_PUBLISHED", reason_code: cell.fact.reason_code })}
+                >
+                  {cell.fact.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}
+                </span>
+              )}
+            </span>
+          );
+        })
+      )}
       {stats.map((metric) => {
         const shown = isAvailable(metric.availability) ? statDisplay(metric) : null;
         const scope = metric.scope ? SCOPE_SENTENCE[metric.scope] : null;
@@ -1535,7 +1649,7 @@ function RunCard({
       <div className="flex flex-wrap items-center" style={{ gap: 18, paddingTop: 8 }}>
         <EvidenceTrail stages={item.stages} runId={item.run_id} linkable={!legacy} />
         <Sparkline item={item} read={sparkline} onVisible={onVisible} />
-        <Stats stats={item.stats} />
+        <Stats stats={item.stats} item={item} />
         <ClaimQuote item={item} />
       </div>
 

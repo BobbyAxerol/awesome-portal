@@ -330,6 +330,7 @@ const AI_CSS = `
 .ai-lifecycle { font-family: var(--font-mono); font-size: 9px; font-weight: 700; border: 1px solid var(--accent-2); color: var(--accent-2); border-radius: 3px; padding: 0 5px; line-height: 15px; }
 .ai-lifecycle[data-lifecycle="ACTIVE"] { border-color: var(--good); color: var(--good); }
 .ai-registry { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-more { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; font-size: 10.5px; }
 .ai-regentry { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); padding: 6px 10px; font-size: 10px; }
 .ai-alert { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--bad); border-radius: 6px; background: var(--bad-bg-soft); padding: 8px 12px; }
 .ai-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -848,6 +849,10 @@ export interface AlphaImportProps {
   registryTotal?: number | null;
   /** The `alpha_id` the served list was requested with; the server already filtered by it. */
   registryAlpha?: string;
+  /** The server's opaque `next_cursor`; a "load more" row shows only while it is non-null. */
+  registryNext?: string | null;
+  registryMore?: "idle" | "loading" | "failed";
+  onLoadMoreRegistry?: () => void;
 
   parseState: ResearchState;
   gatesState: ResearchState;
@@ -931,6 +936,9 @@ export function AlphaImport(props: AlphaImportProps) {
     registry,
     registryTotal = null,
     registryAlpha = "",
+    registryNext = null,
+    registryMore = "idle",
+    onLoadMoreRegistry,
     parseState,
     gatesState,
     registerState,
@@ -1517,6 +1525,26 @@ export function AlphaImport(props: AlphaImportProps) {
                 ))
               )}
             </div>
+            {registryNext !== null && onLoadMoreRegistry ? (
+              <div className="ai-more" data-registry-more={registryMore}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  data-action="load-more-registry"
+                  disabled={registryMore === "loading"}
+                  aria-busy={registryMore === "loading"}
+                  title="Read the next page of the registry from the server"
+                  onClick={onLoadMoreRegistry}
+                >
+                  {registryMore === "loading" ? "loading…" : "load more"}
+                </button>
+                {registryMore === "failed" ? (
+                  <span role="alert" data-registry-more-failed style={{ color: "var(--bad)" }}>
+                    the next page could not be read — the {registry.length} loaded stay
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </ResearchPanel>
         </div>
       </section>

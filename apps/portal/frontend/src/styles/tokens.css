@@ -647,3 +647,17 @@
   --warn: #f1c21b;
   --bad: #fa4d56;
 }
+
+/* ---------------------------------------------------------------------------
+ * Research Loop screens: faint ink at >= 4.5:1 (axe reported 2,389 nodes).
+ * `--ink-faint` is shared with the Execution Loop and its baselines, which keep
+ * the value above; the override applies inside `.research-screen` only.
+ * Light 4.64-4.93:1 on sunken/paper · Operations Dark 4.80-5.38:1.
+ * ------------------------------------------------------------------------- */
+.research-screen {
+  --ink-faint: #626d85;
+}
+
+:root[data-theme="operations"] .research-screen {
+  --ink-faint: #7d8aa0;
+}

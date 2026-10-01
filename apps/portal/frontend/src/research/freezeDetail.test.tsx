@@ -671,7 +671,11 @@ describe("P16-T05 — retained custody is narrow, and says so", () => {
         laneState: null,
       },
     });
-    expect(container.querySelector("[data-retained-refusal]")?.textContent).toContain("Not an admitted profile.");
+    // VD-FG-01-01: the code chip is on screen; the server's sentence is its tooltip, not text.
+    const note = container.querySelector("[data-retained-refusal]");
+    expect(note?.querySelector("[data-refusal-code]")?.textContent).toBe("NOT_ADMITTED");
+    expect(note?.querySelector("[data-refusal-detail]")?.getAttribute("title")).toBe("Not an admitted profile.");
+    expect(note?.textContent).not.toContain("Not an admitted profile.");
     expect(container.querySelector("[data-integrity]")).toBeTruthy();
   });
 

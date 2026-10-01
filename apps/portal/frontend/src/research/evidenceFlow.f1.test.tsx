@@ -213,11 +213,11 @@ describe("F1 2_wiring S04 codes — no screen-coined token looks like a server r
   it("retained lane: the lane's missing fields are screen notes while the lane's own served codes stay codes", () => {
     const { container } = view({ passport: retained(), runIdentity: IDENTITY });
     expect(container.innerHTML).not.toMatch(FORBIDDEN);
-    const sortino = container.querySelector("[data-metric='OOS_SORTINO']") as HTMLElement;
-    expect(sortino.querySelector("[data-fe-absence]")?.getAttribute("data-fe-absence")).toBe("retained-lane-has-no-field");
-    const benchmark = container.querySelector("[data-metric='BENCHMARK_RETURN_FRACTION'] [data-withheld]") as HTMLElement;
-    expect(benchmark.getAttribute("data-reason-code")).toBe(W3.evidence.source_absences.benchmark.reason_code);
-    expect(benchmark.hasAttribute("data-fe-absence")).toBe(false);
+    /* D-AN-01: the ten tiles the lane never carried are one line; its code is the served one. */
+    expect(container.querySelector("[data-metric='OOS_SORTINO']")).toBeNull();
+    const absent = container.querySelector("[data-analytics-v2-absent] [data-withheld]") as HTMLElement;
+    expect(absent.getAttribute("data-reason-code")).toBe(W3.evidence.source_absences.benchmark.reason_code);
+    expect(absent.hasAttribute("data-fe-absence")).toBe(false);
   });
 });
 

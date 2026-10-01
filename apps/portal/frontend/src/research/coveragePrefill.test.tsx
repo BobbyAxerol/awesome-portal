@@ -486,7 +486,7 @@ describe("D4 — Screen 02, real route and hook", () => {
 
   it("a prefill is an ordinary declaration: it sends what is on screen, and a held preflight dies with any change", async () => {
     const { served } = await mountRoute("data");
-    fireEvent.change(field("Timeframe"), { target: { value: "1h" } });
+    fireEvent.click(document.querySelector('[data-timeframe-chip="1h"]') as HTMLElement);
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
     /* The interior boundaries are the reader's to choose. */
