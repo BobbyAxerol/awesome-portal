@@ -519,6 +519,37 @@ def _candle_overview(market, index, *, receipt_bytes: int, byte_budget: int) -> 
     return _candle_overview_absence("P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET")
 
 
+def _fit_evidence_display(receipt: dict[str, Any], *, byte_budget: int, reserve_bytes: int) -> None:
+    """Fit only declared display samples; all source metrics/digests stay exact.
+
+    V1 and additive v2 facts share the original 24-KiB passport. Sampling
+    each block independently does not bound their sum. Keep endpoints and
+    extrema of the already extrema-preserving samples, updating coverage;
+    never discard a metric, change a source count, or increase the budget.
+    """
+    def size() -> int:
+        return len(json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
+
+    metadata = receipt["source"]["series_metadata"]
+    for maximum in (16, 8, 4):
+        if size() + reserve_bytes <= byte_budget:
+            return
+        points = receipt["equity_points"]
+        if len(points) > maximum:
+            selected = _evidence_indices([float(row["equity"]) for row in points], maximum_points=maximum)
+            receipt["equity_points"] = [points[index] for index in selected]
+            receipt["source"]["emitted_equity_points"] = len(selected)
+            receipt["source"]["chart_sampling"] = "EXTREMA_BUCKET_V1"
+            metadata["equity_oos"].update(emitted_point_count=len(selected), sampling="EXTREMA_BUCKET_V1")
+        rolling = receipt["derived"]["rolling_returns_20_observations"]
+        if len(rolling) > maximum:
+            selected = _evidence_indices([float(row["return_fraction"]) for row in rolling], maximum_points=maximum)
+            receipt["derived"]["rolling_returns_20_observations"] = [rolling[index] for index in selected]
+            metadata["rolling_returns_20"].update(emitted_point_count=len(selected), sampling="EXTREMA_BUCKET_V1")
+    if size() + reserve_bytes > byte_budget:
+        raise ValueError("P13 mandatory evidence facts exceed the child byte budget")
+
+
 def _p13_evidence_source(
     *,
     market,
@@ -660,10 +691,20 @@ def _p13_evidence_source(
     # An analytics failure is a typed absence, never a failed child run.
     from portal_api.services import research_evidence_metrics as analytics
     from quantbt.errors import QuantBTEngineError
+    # Reserve truthful absence envelopes before fitting display points. The
+    # optional analytics may consume remaining space, but must leave room
+    # for the final candle block even when no overview fits.
+    absent_analytics = analytics.not_published_block()
+    absent_candles = _candle_overview_absence("P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET")
+    def block_bytes(key: str, value: object) -> int:
+        return len(json.dumps({key: value}, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
+    candle_reserve = block_bytes("candle_overview", absent_candles)
+    _fit_evidence_display(receipt, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES,
+                          reserve_bytes=block_bytes("oos_analytics", absent_analytics) + candle_reserve)
     try:
-        receipt["oos_analytics"] = analytics.oos_analytics(result=result, market=market, oos_start_utc_ms=oos_start_utc_ms, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES, receipt_bytes=len(json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8")))
+        receipt["oos_analytics"] = analytics.oos_analytics(result=result, market=market, oos_start_utc_ms=oos_start_utc_ms, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES - candle_reserve, receipt_bytes=len(json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8")))
     except (ValueError, QuantBTEngineError):
-        receipt["oos_analytics"] = analytics.not_published_block()
+        receipt["oos_analytics"] = absent_analytics
     # E16-R1: last, so it measures itself against the finished receipt and
     # never pushes an existing series out of the budget.  An overview failure
     # is a typed absence, never a failed child run.

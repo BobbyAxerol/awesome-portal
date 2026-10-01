@@ -276,3 +276,19 @@ BR-F4-01 is code-ready: catalog returns canonical `1d`; 1D remains schema-compat
 Claude F4/F5 `fedfac44` is in this BE baseline. No frontend file is edited here. Other F4 requests are not implicitly delivered: exact catalog boundaries/quality need source metadata, P04 v2 Hub, runtime fold counter and old-report digest absence still need their separate named work. No claim of universal parameter/profile availability, P23 aggregate PASS or P24 release completion.
 
 C4 capacity: root 231 GiB free (37%); RAM 16 GiB available; active Research preview and other agents' resources retained. **NO_ACTION_NEEDED** for destructive cleanup. No Docker prune, data/volume removal or production/remote change.
+
+## 12. Real WFO closeout and fixed-profile regression — 2026-10-01
+
+`83201af3` landed fast-forward over Claude `fedfac44`; full hook Control API 1,408 pass / 1 skip and contracts 205/205. [P16 actual-image packet](./evidence/P16/CANDIDATE_IDENTITY_AND_CURRENT_SOURCE_CLOSEOUT_2026-10-01.md) supersedes the new-run-pending statuses above:
+
+| Id | Current result | Real proof / remaining limit |
+|---|---|---|
+| LW-03 | PREVIEW_ACCEPTED_NEW_RUN | R-WFO-023: 400 trials, 9 folds, source drop=0, each fold one real OOS-generation record, 9 child MATCH, Stage-4 BOUND, S11 local seal/pack. Old dropped records remain unrecoverable. |
+| CG-FG-S09-02 | PREVIEW_ACCEPTED_NEW_SEAL | Actual Parquet byte SHA-256/size/scope agrees with frozen Report; no chart/input-digest substitution. |
+| S03 trial rate | PREVIEW_ACCEPTED_NEW_RUN | Actual running-child rate `9.152993995`; old journals remain absent. |
+| Candidate identity / S11 | PREVIEW_ACCEPTED | Historical scalar-kind hash correct; unknown kinds fail closed; old frozen Report unchanged. RC pack accepted locally, not delivered/approved. |
+| BR-F4-01 | CODE_ACCEPTED `83201af3` | Catalog/fixture/generated description canonical `1d`; uppercase compatibility preserved. No blanket timeframe/profile activation. |
+| BR-TXT-02 | PREVIEW_ACCEPTED_NEW_REPORT | Future S09 affected captions are ≤12 words; old frozen copy unchanged. BR-TXT-01 elsewhere remains partial. |
+| BR-F4-09 / P04 | NEW_BACKEND_FIX_TESTED | P04 actual create failed at combined 24-KiB passport budget. Bounded display-only correction + pinned real-HMD regression passed; corrected-image actual product receipt still required. [P13 packet](./evidence/P13/P04_COMBINED_PASSPORT_BUDGET_2026-10-01.md). |
+
+Fresh WFO API receipt SHA-256 `92d6b6be8570c604be56fa96cbe48c3076421159aa5381c987c0a548ef9cc2ad`; R-WFO-023 `rrun_3d5633d2adb712722fe4ba108102aa5d`. Exact images/response bounds/RC digest in P16 packet. Not every endpoint parameter/profile, P23 aggregate, T12 linked-child/T14 writer, HMD index or P24 release acceptance. Claude must consume the published fields (no Codex frontend edit); frontend visual/browser gates remain independently owned. No remote push or production rollout.

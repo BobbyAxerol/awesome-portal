@@ -30,11 +30,53 @@ from portal_api.workers.research_child import (
     _MAX_CANDLE_OVERVIEW_BUCKETS,
     _MAX_EVIDENCE_RECEIPT_BYTES,
     _candle_overview,
+    _fit_evidence_display,
     _monthly_returns,
     _p13_evidence_source,
     _return_distribution,
     _rolling_returns,
 )
+
+
+def test_combined_passport_budget_coarsens_only_declared_display_samples() -> None:
+    from copy import deepcopy
+
+    points = [{"at_utc_ms": 1_725_000_000_000 + index * 3_600_000,
+               "equity": str(100 + (index * 7) % 23), "drawdown_fraction": "-0.01234567890123456789"}
+              for index in range(32)]
+    rolling = [{"at_utc_ms": points[index]["at_utc_ms"],
+                "return_fraction": str(((index * 3) % 11 - 5) / 100)} for index in range(16)]
+    receipt = {
+        "source": {"oos_observation_count": 744, "source_transform_digest": "a" * 64,
+                   "emitted_equity_points": 32, "chart_sampling": "EXTREMA_BUCKET_V1",
+                   "series_metadata": {
+                       "equity_oos": {"source_observation_count": 744, "emitted_point_count": 32, "sampling": "EXTREMA_BUCKET_V1"},
+                       "rolling_returns_20": {"source_observation_count": 724, "emitted_point_count": 16, "sampling": "EXTREMA_BUCKET_V1"},
+                   }},
+        "equity_points": points,
+        "derived": {"net_return_fraction": "0.123", "max_drawdown_fraction": "-0.08",
+                    "rolling_returns_20_observations": rolling},
+        "summary_analytics": {"input_digest": "b" * 64, "net_oos_return": "0.123"},
+        "summary_analytics_v2": {"input_digest": "c" * 64, "sharpe": "1.25"},
+    }
+    before = deepcopy(receipt)
+    budget = len(json.dumps(receipt, separators=(",", ":")).encode()) - 500
+    _fit_evidence_display(receipt, byte_budget=budget, reserve_bytes=100)
+    assert len(json.dumps(receipt, separators=(",", ":")).encode()) + 100 <= budget
+    assert receipt["source"]["oos_observation_count"] == 744
+    assert receipt["source"]["source_transform_digest"] == "a" * 64
+    for key in ("summary_analytics", "summary_analytics_v2"):
+        assert receipt[key] == before[key]
+    assert receipt["derived"]["net_return_fraction"] == "0.123"
+    assert receipt["derived"]["max_drawdown_fraction"] == "-0.08"
+    sampled = receipt["equity_points"]
+    assert sampled[0] == points[0] and sampled[-1] == points[-1]
+    assert min(float(row["equity"]) for row in sampled) == min(float(row["equity"]) for row in points)
+    assert max(float(row["equity"]) for row in sampled) == max(float(row["equity"]) for row in points)
+    assert receipt["source"]["emitted_equity_points"] == len(sampled)
+    assert receipt["source"]["series_metadata"]["equity_oos"]["emitted_point_count"] == len(sampled)
+    with pytest.raises(ValueError, match="mandatory evidence facts"):
+        _fit_evidence_display(deepcopy(before), byte_budget=1, reserve_bytes=100)
 
 
 def test_monthly_return_uses_previous_calendar_close_across_month_boundary() -> None:
