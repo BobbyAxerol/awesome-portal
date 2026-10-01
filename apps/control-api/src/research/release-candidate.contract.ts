@@ -173,6 +173,12 @@ export const ResearchReleaseCandidateComposeResponseSchema = z.object({
     detail: z.string().min(1).max(1_024).nullable(),
     tone: z.enum(["ink", "gold", "green", "dim"]),
   }).strict()).length(5),
+  selected_params: z.object({
+    param_set_id: z.string().min(1).max(191).nullable(),
+    param_set_id_availability: AvailabilitySchema,
+    selected_trial_number: z.number().int().positive().max(1_000_000).nullable(),
+    selected_trial_number_availability: AvailabilitySchema,
+  }).strict(),
   taxonomy: z.array(z.object({
     what: z.string().min(1).max(120),
     state: z.enum(["UNCHANGED", "CHANGED", "UNSET"]),

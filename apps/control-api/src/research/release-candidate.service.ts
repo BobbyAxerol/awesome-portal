@@ -239,7 +239,7 @@ export class ResearchReleaseCandidateService {
     context: ReleaseCandidatePublicationContext,
   ): ResearchReleaseCandidateComposeResponse {
     const sourceFingerprint = releaseCandidateSourceFingerprint(source);
-    const { values, pack, sourceIntegrity, selectedDetail } = this.lane(source, draft, null);
+    const { values, pack, sourceIntegrity, selectedDetail, selectedTrialId } = this.lane(source, draft, null);
     const missingCount = pack.filter((item) => item.status === "MISSING").length;
     const hasInput = draft.knownLimitations === null || draft.proposedUseRestrictions === null;
     const isScratch = source.alpha.alphaVersionId === null;
@@ -257,6 +257,12 @@ export class ResearchReleaseCandidateService {
     }, { complete: 0, degraded: 0, input: 0, missing: 0 });
     const fields = values.fields;
     const publication = this.publicationFacts(fields, localSeal, context);
+    // Source trial ids are zero-based; the displayed trial number is one-based.
+    // No source publishes a param_set_id; a digest or selection id is not one.
+    const trialNumber = selectedTrialId !== null && /^(0|[1-9][0-9]*)$/.test(selectedTrialId)
+      ? Number(selectedTrialId) + 1 : null;
+    const selectedTrialNumber = trialNumber !== null && Number.isSafeInteger(trialNumber) && trialNumber <= 1_000_000
+      ? trialNumber : null;
     const response = {
       schema_version: "research.release-candidate-compose.v1" as const,
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
@@ -280,6 +286,14 @@ export class ResearchReleaseCandidateService {
         { key: "selected_params", value: values.parameterBundle ?? "— selection not published", detail: selectedDetail, tone: values.parameterBundle ? "ink" : "dim" },
         { key: "release_candidate", value: localSeal.release_candidate_id ?? "rc_(draft)", detail: localSeal.state === "SEALED_LOCAL" ? "sealed locally — not delivered" : "assigned on local seal", tone: localSeal.state === "SEALED_LOCAL" ? "green" : "gold" },
       ],
+      selected_params: {
+        param_set_id: null,
+        param_set_id_availability: absent("P21_PARAM_SET_ID_NOT_PUBLISHED"),
+        selected_trial_number: selectedTrialNumber,
+        selected_trial_number_availability: selectedTrialNumber !== null ? AVAILABLE
+          : source.selection.targetKind === "CENTROID" || source.selection.targetKind === "COMPOSITE_POLICY"
+            ? notApplicable("P21_TRIAL_ORDINAL_NOT_APPLICABLE") : absent("P21_SELECTED_TRIAL_ORDINAL_NOT_PUBLISHED"),
+      },
       taxonomy: publication.taxonomy ?? [
         { what: "code / entrypoint (av_)", state: "UNSET", consequence: "No P22-published predecessor is available, so no code-change or gate conclusion is inferred." },
         { what: "selected strategy params", state: "UNSET", consequence: values.parameterBundle ? "Current exact parameter bundle is pinned, but no predecessor comparison is published." : "Selection provenance is not published." },
@@ -600,6 +614,7 @@ export class ResearchReleaseCandidateService {
         pack: this.packItems(source, draft, values),
         sourceIntegrity: this.sourceIntegrity(source, values),
         selectedDetail: source.selection.targetKind,
+        selectedTrialId: source.selection.selectedTrialId,
       };
     }
     const values = this.retainedValues(source, draft, releaseCandidateId);
@@ -608,6 +623,7 @@ export class ResearchReleaseCandidateService {
       pack: this.retainedPackItems(source, draft, values),
       sourceIntegrity: this.retainedIntegrity(source, values),
       selectedDetail: values.facts.selection ? `retained trial ${values.facts.selection.trialId} · global` : null,
+      selectedTrialId: values.facts.selection?.trialId ?? null,
     };
   }
 

@@ -200,6 +200,10 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
     expect(composed.certification_axes.methodology_claim).toEqual({ value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED" } });
     expect(composed.pack[3]!.note).toMatch(/walk_forward_oos.*NOT_ISSUED/);
     expect(composed.rail[3]).toMatchObject({ value: preview.progress.claim.handoff_cursor.params_digest, detail: "retained trial 0 · global", tone: "ink" });
+    expect(composed.selected_params).toEqual({
+      param_set_id: null, param_set_id_availability: { state: "NOT_PUBLISHED", reason_code: "P21_PARAM_SET_ID_NOT_PUBLISHED" },
+      selected_trial_number: 1, selected_trial_number_availability: { state: "AVAILABLE", reason_code: null },
+    });
     expect(composed.actions).toMatchObject({ may_seal: false, seal_blocked_reason: "P21_RESEARCHER_DECLARATIONS_REQUIRED", publish: { enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED" } });
     expect(composed.gate_verdict.title).toBe("local seal blocked — review evidence");
   });

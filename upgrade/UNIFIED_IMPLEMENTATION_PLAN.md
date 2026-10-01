@@ -6712,3 +6712,16 @@ parsed or multiplied into unsupported source claims. Both generated contracts
 are additive for a bounded rollout. Claude owns FE binding and browser/HiFi
 acceptance; no frontend file or runtime service was changed in this slice.
 [B3 receipt](./research_loop/evidence/P13/CG-FG-S03-02_S04-01_claim_strip_2026-10-01.md)
+
+### B3 CG-FG-S06-05 / S06-02 / S06-06 / S06-01 / S06-03 — source-bound Search facts, 2026-10-01
+
+The P15 Search read now distinguishes P11 S4 completion time from an engine pool-freeze claim, publishes exact P04 parameter levels, canonical trial parameter digests, the P08 *request-scoped* seed, and selector confidence only when the sealed QuantBT metric exists. A 6×6 mean-IS-objective grid uses all retained COMPLETE trials, not the current ledger page. It is typed absent when IS objective or two declared axes are unavailable. No per-trial seed, inferred selector, or missing-trial value is fabricated.
+
+Commit `bfee4737` closed S06-05/S06-02; commit `2d4744bc` closed S06-06/S06-01/S06-03. Full hook at the latter: 1397 Control API tests passed (1 skipped), 204 contract tests. Isolated preview `:8095` at that exact SHA returned R-WFO-020 Search HTTP 200: seed 42 scoped to admitted request, sealed selector CONFIRMED, 389 COMPLETE trials represented by 36 grid cells; both one-row and 200-row pages were <1 MiB. Claude owns the S06 typed-client binding and browser/HiFi receipt; neither frontend nor dev/stable runtime changed in this slice.
+
+[B3 freeze/levels receipt](./research_loop/evidence/P15/CG-FG-S06-05_S06-02_backend_receipt_2026-10-01.md) · [B3 digest/selector/grid receipt](./research_loop/evidence/P15/CG-FG-S06-06_S06-01_S06-03_backend_receipt_2026-10-01.md)
+
+### B3 CG-FG-S11-02 — compose-only selected-params truth, 2026-10-01
+
+P21 Screen 11 now has a typed selected trial number from the retained source (one-based display) and a typed `param_set_id` absence. It never aliases a digest or selection receipt as a param-set identity. This is additive to the composer only; local sealed packs and their digests remain immutable. Claude owns the frontend binding and browser receipt.
+[B3 receipt](./research_loop/evidence/P21/CG-FG-S11-02_backend_receipt_2026-10-01.md)

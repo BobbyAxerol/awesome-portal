@@ -29,6 +29,7 @@ describe("P21 published Research Release Candidate contract", () => {
       "PROPOSED_USE_RESTRICTIONS", "SEALED_LOCAL", "NOT_DELIVERED", "NOT_APPROVED",
       "PORTAL_PERSISTED_RESEARCH",
       "PublishedComparison", "CertificationAxes", "published_comparison", "certification_axes",
+      "SelectedParams", "param_set_id_availability", "selected_trial_number_availability",
     ]) expect(generated).toContain(needle);
   });
 

@@ -1,10 +1,13 @@
 # B3 S06 digest, selector and grid — backend receipt
 
-Status: BACKEND_CANDIDATE; exact-HEAD preview receipt required before acceptance.
+Status: BACKEND_ACCEPTED `2d4744bc`; Claude FE binding/browser acceptance is separate.
 
 - CG-FG-S06-06: `Trial.params_digest` uses `sha256ResearchJson(trial.parameters)`, same canonical rule as selected θ*. `search_contract.requested_seed` comes only from the immutable P08 admitted request joined by run, preflight token, actor and digest. It is labeled `ADMITTED_RUN_REQUEST_BASE_SEED`, never a per-trial sampler seed. Missing P08 request is typed `P08_REQUESTED_SPEC_NOT_RETAINED`.
 - CG-FG-S06-01: `search_contract.selector_confidence` is CONFIRMED only when `candidate_selection_metric` exists in the sealed QuantBT source fact; otherwise NOT_PUBLISHED with `QUANTBT_SELECTOR_METRIC_NOT_IN_SEALED_SEARCH_FACT`. No inferred/default selector is manufactured.
 - CG-FG-S06-03: `surface.grid` is a bounded 6×6 mean-IS-objective grid from every retained COMPLETE trial, independent of ledger pagination. It names its derivation rule, axes, covered count and each cell's n/mean. Zero-count cells have null mean; non-IS or single-axis sources have typed absence.
 - Generated contract: `packages/contracts/generated/research-current-source.d.ts` (`Trial`, `Search.search_contract`, `SearchSurface.grid`); canonical example: `packages/contracts/fixtures/research-current-source.search-surface.valid.json`. Additive fields preserve old-client omission.
-- Focused tests: S06 E5/X2 34/34; contracts 204/204; Control API TypeScript build green. Full hook and exact-HEAD preview pending.
+- Focused tests: S06 E5/X2 34/34; contracts 204/204; Control API TypeScript build green. Full hook: 183 Control API files passed (1 skipped), 1397 tests passed (1 skipped); all contract and static gates passed.
+- Isolated preview :8095 at exact shared SHA `2d4744bc121e27ccd1d1978ec88d42c811998d95`, Control API image `sha256:1323b0b4a81398c7f9f309a80aecfeaec8ef8f5e0bfec37b243387c4a5388c8c`, authenticated same-origin GET on R-WFO-020 `rrun_3258a4c450816129d2d285f25b801061`: HTTP 200, revision `rs02_search_a32dede7286464e4c8c209d8e4276bd378b597ff9b7a232444b91390c5e1ebcb`.
+- Real request seed: 42, `ADMITTED_RUN_REQUEST_BASE_SEED`, AVAILABLE; selector CONFIRMED from `QUANTBT_SEALED_SEARCH_FACT`; first trial has canonical digest/source, no `seed` field.
+- `limit=1`: 228055 bytes; `limit=200`: 693950 bytes (both under 1 MiB). Source trial count 400, COMPLETE 389; the 36 grid cells sum to 389 in both pages, 27 nonempty. Axis pair `window` × `rvol`; no page-dependent heatmap.
 - Claude FE handoff: bind exact digest, request-scoped seed, confirmed/absent selector and named grid; keep the approved S06 layout and typed absences. Do not display the request seed as a per-trial seed or relabel `rvol` as `entry_z` without an explicit mapping.

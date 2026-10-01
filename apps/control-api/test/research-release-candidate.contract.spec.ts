@@ -34,6 +34,10 @@ describe("P21 Release Candidate contract invariants", () => {
       availability: { state: "AVAILABLE", reason_code: null }, as_of_utc_ms: 1, source_fingerprint: "a".repeat(64),
       run: { id: "run-p21", attempt: "att-p21", binding: null },
       rail: Array.from({ length: 5 }, () => ({ key: "run", value: "run-p21", detail: null, tone: "ink" })),
+      selected_params: {
+        param_set_id: null, param_set_id_availability: { state: "NOT_PUBLISHED", reason_code: "P21_PARAM_SET_ID_NOT_PUBLISHED" },
+        selected_trial_number: null, selected_trial_number_availability: { state: "NOT_PUBLISHED", reason_code: "P21_SELECTED_TRIAL_ORDINAL_NOT_PUBLISHED" },
+      },
       taxonomy: Array.from({ length: 4 }, () => ({ what: "x", state: "UNSET", consequence: "x" })),
       published_comparison: {
         last_release_candidate_id: null,
@@ -60,6 +64,7 @@ describe("P21 Release Candidate contract invariants", () => {
       mirror: null, source_absences: {},
     };
     expect(ResearchReleaseCandidateComposeResponseSchema.safeParse(base).success).toBe(true);
+    expect(ResearchReleaseCandidateComposeResponseSchema.safeParse({ ...base, selected_params: { ...base.selected_params, selected_trial_number: 0 } }).success).toBe(false);
     expect(ResearchReleaseCandidateComposeResponseSchema.safeParse({ ...base, fields: base.fields.slice(1) }).success).toBe(false);
     expect(ResearchReleaseCandidateComposeResponseSchema.safeParse({ ...base, pack_counts: { ...base.pack_counts, missing: 1 } }).success).toBe(false);
     expect(ResearchReleaseCandidateComposeResponseSchema.safeParse({ ...base, yaml: [...base.yaml.slice(0, 16), { ...base.yaml[16]!, value: "drift" }] }).success).toBe(false);

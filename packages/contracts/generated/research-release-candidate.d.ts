@@ -131,6 +131,12 @@ export interface components {
             /** @enum {unknown} */
             tone: "ink" | "gold" | "green" | "dim";
         };
+        SelectedParams: {
+            param_set_id: string | null;
+            param_set_id_availability: components["schemas"]["Availability"];
+            selected_trial_number: number | null;
+            selected_trial_number_availability: components["schemas"]["Availability"];
+        };
         ComposeTaxonomyRow: {
             what: string;
             /** @enum {unknown} */
@@ -171,6 +177,7 @@ export interface components {
             source_fingerprint: components["schemas"]["Digest"];
             run: components["schemas"]["ComposeRun"];
             rail: components["schemas"]["ComposeRailNode"][];
+            selected_params: components["schemas"]["SelectedParams"];
             taxonomy: components["schemas"]["ComposeTaxonomyRow"][];
             published_comparison: components["schemas"]["PublishedComparison"];
             certification_axes: components["schemas"]["CertificationAxes"];
@@ -262,6 +269,7 @@ export interface components {
                 /** @enum {unknown} */
                 tone: "ink" | "gold" | "green" | "dim";
             }[];
+            selected_params: components["schemas"]["SelectedParams"];
             taxonomy: {
                 what: string;
                 /** @enum {unknown} */

@@ -51,6 +51,18 @@
       "tone": "gold"
     }
   ],
+  "selected_params": {
+    "param_set_id": null,
+    "param_set_id_availability": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P21_PARAM_SET_ID_NOT_PUBLISHED"
+    },
+    "selected_trial_number": 1,
+    "selected_trial_number_availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
   "taxonomy": [
     {
       "what": "code / entrypoint (av_)",

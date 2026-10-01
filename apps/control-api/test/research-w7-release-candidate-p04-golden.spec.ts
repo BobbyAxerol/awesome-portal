@@ -156,7 +156,9 @@ describe("W7 · P21 P04 lane golden (byte-for-byte)", () => {
       expect(result.virtual.display_label).toBeNull();
       expect(result.declared.display_label).toBeNull();
       delete result.virtual.display_label;
+      delete (result.virtual as { selected_params?: unknown }).selected_params;
       delete result.declared.display_label;
+      delete (result.declared as { selected_params?: unknown }).selected_params;
     }
     if (process.env.W7_WRITE_GOLDEN === "1") writeFileSync(GOLDEN, gzipSync(`${JSON.stringify(observed, null, 1)}\n`, { level: 9 }));
     const golden = JSON.parse(gunzipSync(readFileSync(GOLDEN)).toString("utf8"));
