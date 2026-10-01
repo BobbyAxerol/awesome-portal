@@ -410,3 +410,13 @@ Còn lại cho Codex, theo thứ tự:
 2. **BR-F4-02…08 (dữ liệu khai báo run)** — ưu tiên kế tiếp theo Bobby: coverage chính xác theo timeframe cho từng symbol, metadata symbol (tick/lot/multiplier/listing/expiry), chất lượng dữ liệu theo symbol×timeframe, dataset/venue khác ngoài `crypto-binance-1m`, tìm symbol phía server, số bar theo window, ước lượng fold trước khi chạy. UI S02 đã sẵn chỗ hiện (picker, chip timeframe, coverage trên trục window); thiếu dữ liệu nguồn.
 3. **Lý do vắng trên dây cho seal chưa backfill** (`SEALED_ENRICHMENT_NOT_COMPUTED` hiện chỉ có trong fixture bảo vệ): FE đang hiện "not published" không mã vì không được bịa mã.
 4. Histogram của P04 lịch sử đang `NOT_PUBLISHED` (sampled) — chấp nhận; nếu P04 mới (R-P04-021) có đủ chuỗi ngày, publish histogram đầy đủ cho lane FIXED mới.
+
+## 14. Đợt B7 — khai báo dữ liệu của Run (QUEUE TIẾP THEO sau B6; Bobby giao 2026-10-01)
+
+**Spec đầy đủ, contract đề xuất `research.dataset-catalog.v2`, DR-01…10 và nghiệm thu: [`DATA_DECLARATION_SPEC_2026-10-01.md`](./DATA_DECLARATION_SPEC_2026-10-01.md).** Hợp nhất và thay thế BR-F4-02…08 và BR-F3-01.
+
+Lý do (lời Bobby): backend có thể trả rất nhiều symbol/interval/endpoint nhưng điều kiện của Run không khớp và FE chưa hiện đủ để khai báo. Hiện catalog chỉ có `crypto-binance-1m`, 29 symbol, coverage theo tháng; người dùng chỉ biết thiếu dữ liệu ở preflight, sau khi đã khai báo.
+
+Quy tắc: (1) nguồn HMD thô, không đoán từ tên; (2) mọi số dẫn xuất tính trong **một** service dữ liệu (`enrich_dataset_catalog`), cache bất biến, GET không quét; (3) vắng có mã, không 0 giả; (4) UI chốt trước — S02 đã dựng, backend theo hình trong spec.
+
+Thứ tự gợi ý: DR-01 service → DR-04 symbols phân trang → DR-05/06 instrument + chất lượng → DR-07 bar theo window + warmup → DR-08/09 ước lượng fold + điều kiện + profiles → DR-03 nhiều dataset → DR-10 fixture/receipt (tạo run WFO và P04 từ khai báo S02). Codex đang rảnh (làn sạch, commit cuối 3 giờ trước) — làm ngay.
