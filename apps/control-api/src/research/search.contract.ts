@@ -54,6 +54,8 @@ const ParameterSchema = z.object({
   minimum: ExactDecimalSchema,
   maximum: ExactDecimalSchema,
   step: ExactDecimalSchema,
+  /** Exact declared grid count, shared with the retained WFO surface. */
+  levels: z.number().int().positive().max(1_000_000).nullable().optional(),
   effective_value: ExactDecimalSchema,
   // This is a bounded display projection of the declared numeric range, not
   // an optimizer score or a browser-side search calculation.

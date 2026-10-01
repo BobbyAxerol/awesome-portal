@@ -104,7 +104,7 @@ function page(rows: Array<{ sourceOrdinal: number; sourceId: string; occurredAtU
 }
 
 function service(repository: Record<string, unknown>) {
-  return new ResearchCurrentSourceService(repository as never, {
+  return new ResearchCurrentSourceService({ poolFrozenAt: vi.fn().mockResolvedValue(null), ...repository } as never, {
     FEATURE_RESEARCH_CURRENT_SOURCE: "true",
     QUERY_CURSOR_ACTIVE_KEY_ID: "query-k1",
     QUERY_CURSOR_KEYS_JSON: '{"query-k1":"current-source-test-key-is-at-least-32-bytes"}',
@@ -131,6 +131,9 @@ describe("RS-02 retained current-source named read models", () => {
     const evidence = sealed(await current.evidence(scope, "run-rs02"));
     const split = sealed(await current.split(scope, "run-rs02"));
     const search = sealed(await current.search(scope, "run-rs02", { limit: 100 }));
+    expect(search.pool.frozen_at_utc_ms).toBeNull();
+    expect(search.pool.frozen_at_source).toBeNull();
+    expect(search.pool.frozen_at_reason_code).toBe("P11_S4_COMPLETION_EVENT_NOT_RETAINED");
     const freeze = sealed(await current.freeze(scope, "run-rs02"));
     const initialReplay = sealed(await current.replay(scope, "run-rs02", { limit: 100 }));
     const replay = sealed(await current.replay(scope, "run-rs02", {

@@ -70,6 +70,7 @@ function serviceFor(fixture: Fixture, rows: Partial<Record<Kind, CurrentSourceSt
   const repository = {
     sealForRead: vi.fn().mockResolvedValue(sealOf(fixture, summary)),
     runState: vi.fn(),
+    poolFrozenAt: vi.fn().mockResolvedValue(null),
     rows: vi.fn(async (_s: unknown, _r: string, _v: number, kind: Kind, selection: { limit: number }) => {
       const all = sorted(kind);
       return { rows: all.slice(0, selection.limit), hasMore: all.length > selection.limit, hasPrevious: false, totalRows: all.length };

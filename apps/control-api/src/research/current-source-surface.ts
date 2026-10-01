@@ -242,7 +242,7 @@ function mean(values: readonly Exact[]): string | null {
 }
 
 /** Levels of a declared numeric range: (max − min) / step + 1 when the step divides the span exactly. */
-function levelsOf(range: DeclaredRange): number | null {
+export function levelsOf(range: DeclaredRange): number | null {
   const minimum = exactDecimalText(range.minimum);
   const maximum = exactDecimalText(range.maximum);
   const step = exactDecimalText(range.step);

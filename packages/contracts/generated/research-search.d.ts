@@ -75,6 +75,8 @@ export interface components {
             minimum: components["schemas"]["ExactDecimal"];
             maximum: components["schemas"]["ExactDecimal"];
             step: components["schemas"]["ExactDecimal"];
+            /** @description Exact declared grid count: (maximum - minimum) / step + 1 when divisible. */
+            levels?: number | null;
             effective_value: components["schemas"]["ExactDecimal"];
             position_percent: number;
             /** @constant */

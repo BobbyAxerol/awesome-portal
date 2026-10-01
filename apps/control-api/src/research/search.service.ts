@@ -13,6 +13,7 @@ import {
   ResearchParameterBindingRegistry,
   type HistoricalParameterBinding,
 } from "./parameter-binding.registry";
+import { levelsOf } from "./current-source-surface";
 import { sha256ResearchJson } from "./preflight.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
@@ -240,6 +241,7 @@ function historicalParameters(binding: HistoricalParameterBinding) {
     maximum: row.maximum,
     step: row.step,
     effective_value: row.value,
+    levels: levelsOf(binding.parameterSpace[row.name]!),
     position_percent: row.position_percent,
     bound_state: "WITHIN_DECLARED_RANGE" as const,
     bound_warning: row.bound_warning,

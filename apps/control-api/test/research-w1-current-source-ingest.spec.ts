@@ -461,7 +461,7 @@ describe("W1 current-source readers by execution profile", () => {
       const found = table[kind] ?? [];
       return { rows: found, hasMore: false, hasPrevious: false, totalRows: found.length };
     });
-    const service = new ResearchCurrentSourceService({ sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn(), rows } as never, readerConfig as never);
+    const service = new ResearchCurrentSourceService({ sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn(), poolFrozenAt: vi.fn().mockResolvedValue(null), rows } as never, readerConfig as never);
     const evidence = await service.evidence({ workspaceId: "ws_w1", actorUserId: "usr_w1" }, "rrun_w1");
     expect(ResearchCurrentSourceEvidenceResponseSchema.safeParse(evidence).success).toBe(true);
     expect((evidence as { provenance: Record<string, unknown> }).provenance).toMatchObject({

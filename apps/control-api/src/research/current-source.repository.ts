@@ -538,6 +538,36 @@ export class ResearchCurrentSourceRepository {
     }, signal);
   }
 
+  /**
+   * CG-FG-S06-05: the pool's source-side S4 completion clock, never the
+   * retained import time or a browser clock. Bind to the latest producer's
+   * worker attempt so a failed earlier attempt cannot lend its timestamp.
+   */
+  async poolFrozenAt(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<number | null> {
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<{ occurred_at_utc_ms: string | number }>(
+        `SELECT event.occurred_at_utc_ms
+           FROM (
+             SELECT worker_attempt_id
+               FROM research.run_producers
+              WHERE workspace_id = $1 AND run_id = $2
+              ORDER BY created_at DESC
+              LIMIT 1
+           ) producer
+           JOIN research.run_progress_events event
+             ON event.workspace_id = $1 AND event.run_id = $2
+            AND event.worker_attempt_id = producer.worker_attempt_id
+          WHERE event.event_type = 'stage_completed'
+            AND event.event_payload->>'stage' = 'S4'
+          ORDER BY event.source_sequence DESC
+          LIMIT 1`,
+        [scope.workspaceId, runId],
+      );
+      return result.rowCount === 1
+        ? asSafeNonNegative(result.rows[0]!.occurred_at_utc_ms, "S4 completion timestamp") : null;
+    }, signal);
+  }
+
   async rows(
     scope: ResearchScope,
     runId: string,

@@ -69,6 +69,7 @@ function serviceFor(fixture: Fixture) {
   const repository = {
     sealForRead: vi.fn().mockResolvedValue(seal),
     runState: vi.fn(),
+    poolFrozenAt: vi.fn().mockResolvedValue(1_790_269_230_000),
     rows: vi.fn(async (_s: unknown, _r: string, _v: number, kind: Kind, selection: { limit: number }) => {
       const all = sorted(kind);
       return { rows: all.slice(0, selection.limit), hasMore: all.length > selection.limit, hasPrevious: false, totalRows: all.length };
@@ -98,6 +99,9 @@ function withSearchFacts(fixture: Fixture, patch: Record<string, unknown>): Fixt
 describe("E5 · 6.7/6.8 the frozen pool, from the retained ledger", () => {
   it.each([["W5b", w5b], ["W3", w3]] as const)("%s real seal: 3 trials, feasible does not arise, K = 1 by ⌈3 × 0.1⌉, 1 re-evaluated on every outer fold, 1 selected", async (_name, fixture) => {
     const body = await search(fixture);
+    expect(body.pool.frozen_at_utc_ms).toBe(1_790_269_230_000);
+    expect(body.pool.frozen_at_source).toBe("P11_STAGE_COMPLETED_S4_EVENT");
+    expect(body.pool.frozen_at_reason_code).toBeNull();
     expect(body.pool.schema_version).toBe(SEARCH_POOL_RULE);
     expect(body.pool.trials_evaluated).toEqual({ state: "AVAILABLE", value: 3, reason_code: null, source: "RETAINED_TRIAL_LEDGER" });
     expect(body.pool.scored_unpruned).toEqual({ state: "AVAILABLE", value: 3, reason_code: null, source: "RETAINED_TRIAL_LEDGER" });

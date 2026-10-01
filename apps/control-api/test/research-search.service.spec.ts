@@ -102,6 +102,7 @@ describe("P15 current-source Search / ledger / diagnostics authority", () => {
       minimum: "1",
       maximum: "2.5",
       step: "0.1",
+      levels: 16,
       effective_value: "1.6",
       position_percent: 40,
     });

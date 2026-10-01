@@ -588,6 +588,7 @@ export class ResearchCurrentSourceService {
       selectedTrialId: summary.selection.trial_id,
     });
     const contract = searchContract(facts);
+    const poolFrozenAt = await this.repository.poolFrozenAt(scope, runId, signal);
     const value = {
       schema_version: "research.current-source-search.v1" as const,
       ...this.common("search", seal),
@@ -648,7 +649,12 @@ export class ResearchCurrentSourceService {
         bestIsTrialId: roles.raw_best_is.trial_id,
         objectiveKind: firstFacts?.objective_kind ?? "NOT_PUBLISHED",
       }),
-      pool,
+      pool: {
+        ...pool,
+        frozen_at_utc_ms: poolFrozenAt,
+        frozen_at_source: poolFrozenAt === null ? null : "P11_STAGE_COMPLETED_S4_EVENT" as const,
+        frozen_at_reason_code: poolFrozenAt === null ? "P11_S4_COMPLETION_EVENT_NOT_RETAINED" as const : null,
+      },
     };
     return this.valid(ResearchCurrentSourceSearchResponseSchema, value);
   }

@@ -939,6 +939,10 @@ export interface components {
         SearchPool: {
             /** @constant */
             schema_version: "research.current-source-search-pool.v1";
+            /** @description Source UTC milliseconds of the latest producer attempt P11 S4 completion, or null. */
+            frozen_at_utc_ms?: number | null;
+            frozen_at_source?: "P11_STAGE_COMPLETED_S4_EVENT" | null;
+            frozen_at_reason_code?: "P11_S4_COMPLETION_EVENT_NOT_RETAINED" | null;
             trials_evaluated: components["schemas"]["PoolCount"];
             scored_unpruned: components["schemas"]["PoolCount"];
             feasible: components["schemas"]["PoolCount"];

@@ -106,6 +106,7 @@ function memory(seal: CurrentSourceSealRow, tables: Partial<Record<Kind, Current
   const repository = {
     sealForRead: vi.fn().mockResolvedValue(seal),
     runState: vi.fn(),
+    poolFrozenAt: vi.fn().mockResolvedValue(null),
     rows,
     observationSeries: vi.fn(),
     verifyRetainedImport: vi.fn().mockResolvedValue(seal.retainedImportDigest),
