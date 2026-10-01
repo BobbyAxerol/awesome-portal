@@ -290,6 +290,7 @@ export interface components {
             };
             strategy_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
             benchmark_curve: components["schemas"]["RetainedAnalyticsV2Curve"];
+            distributions?: components["schemas"]["RetainedAnalyticsV2Distributions"];
             last_30d: {
                 /** @constant */
                 label: "last 30D";
@@ -300,6 +301,65 @@ export interface components {
                 points: components["schemas"]["RetainedAnalyticsV2Curve"];
                 return_fraction: components["schemas"]["RetainedAnalyticsV2Fact"];
                 sharpe: components["schemas"]["RetainedAnalyticsV2Fact"];
+            };
+        };
+        RetainedAnalyticsV2MonthlyPoint: {
+            month_start_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+            return_fraction: components["schemas"]["RetainedAnalyticsV2Decimal"];
+            partial: boolean;
+            observation_count: components["schemas"]["RetainedAnalyticsV2PositiveCount"];
+            /** @enum {unknown} */
+            basis: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+            base_at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+            close_at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
+        };
+        RetainedAnalyticsV2DistributionBucket: {
+            lower_inclusive: components["schemas"]["RetainedAnalyticsV2Decimal"];
+            upper: components["schemas"]["RetainedAnalyticsV2Decimal"];
+            /** @enum {unknown} */
+            upper_inclusive: "true" | "false";
+            count: string;
+        };
+        /**
+         * ResearchAllTimeDistributions
+         * @description Additive precomputed OOS companion, including a partial leading month. Daily histogram is all-time, not a trade or per-bar histogram. Original seals remain immutable.
+         */
+        RetainedAnalyticsV2Distributions: {
+            /** @constant */
+            schema_version: "research.all-time-distributions.v1";
+            /** @constant */
+            origin: "PORTAL_DERIVED";
+            /** @constant */
+            scope: "OOS";
+            scope_locator: components["schemas"]["RetainedAnalyticsV2Locator"];
+            input_digest: components["schemas"]["RetainedAnalyticsV2Digest"];
+            oos_observation_count: number;
+            /** @constant */
+            monthly_definition: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1";
+            /** @constant */
+            distribution_definition: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
+            monthly_returns: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
+                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                emitted_point_count: number;
+                total_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                omitted_leading_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                omitted_transport_period_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                /** @enum {unknown} */
+                sampling: "FULL" | "TAIL_WINDOW_V1";
+                values: components["schemas"]["RetainedAnalyticsV2MonthlyPoint"][];
+            };
+            return_distribution: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["RetainedAnalyticsV2Reason"] | null;
+                source_observation_count: components["schemas"]["RetainedAnalyticsV2Count"];
+                emitted_point_count: number;
+                /** @enum {unknown} */
+                sampling: "FULL_RETURN_HISTOGRAM_V2" | "NOT_APPLICABLE";
+                values: components["schemas"]["RetainedAnalyticsV2DistributionBucket"][];
             };
         };
         RetainedAnalyticsV2Decimal: string;
@@ -400,6 +460,12 @@ export interface components {
         MonthlySample: {
             month_start_utc_ms: components["schemas"]["UtcMs"];
             return_fraction: components["schemas"]["Decimal"];
+            partial?: boolean;
+            observation_count?: number;
+            /** @enum {unknown} */
+            basis?: "FIRST_OOS_CLOSE" | "PREVIOUS_OBSERVED_MONTH_CLOSE";
+            base_at_utc_ms?: components["schemas"]["UtcMs"];
+            close_at_utc_ms?: components["schemas"]["UtcMs"];
         };
         RollingSample: {
             at_utc_ms: components["schemas"]["UtcMs"];
@@ -412,12 +478,28 @@ export interface components {
             upper_inclusive: "true" | "false";
             count: string;
         };
+        SeriesDerivation: {
+            /** @constant */
+            origin: "PORTAL_DERIVED";
+            /** @constant */
+            scope: "OOS";
+            input_digest: components["schemas"]["Digest"];
+            source_locator: string;
+            /** @enum {unknown} */
+            definition_id: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1" | "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
+            /** @enum {unknown} */
+            grain: "UTC_CALENDAR_MONTH" | "UTC_DAY";
+            oos_observation_count: number;
+            total_period_count?: number;
+            omitted_transport_period_count?: number;
+        };
         SourceSample: {
             source_observation_count: number;
             emitted_point_count: number;
             /** @enum {string} */
             sampling: "FULL" | "RETENTION_STRIDE_V1" | "TAIL_WINDOW_V1" | "EXTREMA_BUCKET_V1" | "OBSERVATION_EXTREMA_BUCKET_V2" | "FULL_RETURN_HISTOGRAM_V2" | "NOT_APPLICABLE";
             envelope: components["schemas"]["SeriesEnvelope"] | null;
+            derivation?: components["schemas"]["SeriesDerivation"];
         };
         Fold: {
             source_ordinal: number;

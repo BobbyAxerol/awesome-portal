@@ -12,6 +12,8 @@ import json
 import math
 from typing import Any
 
+from portal_api.services.research_distributions import all_time_distributions
+
 from portal_api.services.research_evidence_metrics import (
     decimal_text,
     engine_oos_metrics,
@@ -268,6 +270,8 @@ def portal_analytics_v2(*, result: Any, mode: str, market_close: Any,
         "behaviour": behaviour,
         "strategy_curve": strategy_curve, "benchmark_curve": benchmark_curve,
         "last_30d": last_30d,
+        "distributions": all_time_distributions(equity=scoped.equity, daily_returns=daily,
+            digest=digest, scope_locator=scope_locator),
     }
     if len(json.dumps(block, separators=(",", ":"), allow_nan=False).encode()) > MAX_BLOCK_BYTES:
         raise ValueError("Portal analytics v2 exceed immutable transport budget")

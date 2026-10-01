@@ -202,6 +202,34 @@ describe("RS-02 retained current-source named read models", () => {
     expect(distribution.values).toHaveLength(2);
   });
 
+  it("BR-F6: old seals read verified precomputed companions without source queries or seal revision changes", async () => {
+    const distributions = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-all-time-distributions.valid.json"), "utf8"));
+    const oldSeal = structuredClone(seal);
+    delete (oldSeal.summary as Record<string, unknown>).derived_scope;
+    oldSeal.tableRows.OBSERVATION = distributions.oos_observation_count;
+    const withCompanion: CurrentSourceSealRow = { ...oldSeal, distributionsSidecar: {
+      digest: sha256ResearchJson(distributions), distributions,
+    } };
+    expect(currentSourceSealDigest(withCompanion)).toBe(currentSourceSealDigest(oldSeal));
+    const noSourceRows = vi.fn(() => { throw new Error("read may not request retained rows or compute distributions"); });
+    const old = service({ sealForRead: vi.fn().mockResolvedValue(oldSeal), rows: noSourceRows });
+    const current = service({ sealForRead: vi.fn().mockResolvedValue(withCompanion), rows: noSourceRows });
+    for (const kind of ["MONTHLY_RETURNS", "RETURN_DISTRIBUTION"] as const) {
+      const before = sealed(await old.evidenceSeries(scope, "run-rs02", kind));
+      const after = sealed(await current.evidenceSeries(scope, "run-rs02", kind));
+      expect(after.revision).not.toBe(before.revision);
+      expect(after.availability.state).toBe("AVAILABLE");
+      expect(after.source_sample.derivation?.grain).toBe(kind === "MONTHLY_RETURNS" ? "UTC_CALENDAR_MONTH" : "UTC_DAY");
+      expect(after.source_sample.derivation?.origin).toBe("PORTAL_DERIVED");
+      expect(after.source_sample.derivation?.input_digest).toBe(distributions.input_digest);
+      expect(after.values).toEqual(kind === "MONTHLY_RETURNS" ? distributions.monthly_returns.values : distributions.return_distribution.values);
+    }
+    expect(noSourceRows).not.toHaveBeenCalled();
+    const oldRolling = sealed(await old.evidenceSeries(scope, "run-rs02", "ROLLING_RETURNS_20"));
+    const newRolling = sealed(await current.evidenceSeries(scope, "run-rs02", "ROLLING_RETURNS_20"));
+    expect(newRolling).toEqual(oldRolling); // No accidental revival of non-OOS/rolling facts.
+  });
+
   it("binds a playhead to its relation and reports a local receipt mismatch without reopening source bytes", async () => {
     const repository = {
       sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn(),

@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { ResearchMonthlyPointSchema } from "./all-time-distributions.contract";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
@@ -501,6 +502,15 @@ export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.ex
       min_drawdown_at_utc_ms: UtcMsSchema,
       extrema_emitted: z.boolean(),
     }).strict().nullable(),
+    derivation: z.object({
+      origin: z.literal("PORTAL_DERIVED"), scope: z.literal("OOS"),
+      input_digest: DigestSchema, source_locator: z.string().min(1).max(256),
+      definition_id: z.enum(["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1", "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"]),
+      grain: z.enum(["UTC_CALENDAR_MONTH", "UTC_DAY"]),
+      oos_observation_count: z.number().int().nonnegative().max(2_000_000),
+      total_period_count: z.number().int().nonnegative().max(2_000_000).optional(),
+      omitted_transport_period_count: z.number().int().nonnegative().max(2_000_000).optional(),
+    }).strict().optional(),
   }).strict(),
   values: z.array(z.union([
     z.object({
@@ -511,7 +521,7 @@ export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.ex
       drawdown_fraction: DecimalSchema,
       signal_target: DecimalSchema.nullable(),
     }).strict(),
-    z.object({ month_start_utc_ms: UtcMsSchema, return_fraction: DecimalSchema }).strict(),
+    ResearchMonthlyPointSchema,
     z.object({ at_utc_ms: UtcMsSchema, return_fraction: DecimalSchema }).strict(),
     z.object({
       lower_inclusive: DecimalSchema,
@@ -528,7 +538,7 @@ export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.ex
     context.addIssue({ code: z.ZodIssueCode.custom, message: "unavailable current-source series must have no values" });
   }
   const itemSchema = value.kind === "MONTHLY_RETURNS"
-    ? z.object({ month_start_utc_ms: UtcMsSchema, return_fraction: DecimalSchema }).strict()
+    ? ResearchMonthlyPointSchema
     : value.kind === "ROLLING_RETURNS_20"
       ? z.object({ at_utc_ms: UtcMsSchema, return_fraction: DecimalSchema }).strict()
       : value.kind === "RETURN_DISTRIBUTION"

@@ -106,6 +106,17 @@ describe("RS-02 disposable PostgreSQL retained-current-source proof", () => {
                 has_table_privilege('portal_research_runtime', 'research.current_source_analytics_sidecars_v2', 'INSERT') AS can_write`,
       );
       expect(sidecarPrivilege.rows[0]).toEqual({ can_read: true, can_write: false });
+      const distributionPrivilege = await database.query<{ can_read: boolean; can_write: boolean }>(
+        `SELECT has_table_privilege('portal_research_runtime', 'research.current_source_distributions_v1', 'SELECT') AS can_read,
+                has_table_privilege('portal_research_runtime', 'research.current_source_distributions_v1', 'INSERT') AS can_write`);
+      expect(distributionPrivilege.rows[0]).toEqual({ can_read: true, can_write: false });
+      await database.query(`INSERT INTO research.current_source_distributions_v1
+        (workspace_id, run_id, artifact_revision, retained_import_digest, source_rows_digest, distributions_digest, distributions)
+        VALUES ('ws_rs02', 'run_rs02', 1, $1, $1, $1, '{}'::jsonb)`, [digest]);
+      await expect(database.query(`UPDATE research.current_source_distributions_v1 SET distributions = '{"changed":true}'::jsonb
+        WHERE workspace_id = 'ws_rs02' AND run_id = 'run_rs02'`)).rejects.toMatchObject({ code: "55000" });
+      await expect(database.query(`DELETE FROM research.current_source_distributions_v1
+        WHERE workspace_id = 'ws_rs02' AND run_id = 'run_rs02'`)).rejects.toMatchObject({ code: "55000" });
       await database.query(`INSERT INTO research.current_source_analytics_sidecars_v2
         (workspace_id, run_id, artifact_revision, retained_import_digest, source_rows_digest, analytics_digest, analytics)
         VALUES ('ws_rs02', 'run_rs02', 1, $1, $1, $1, '{}'::jsonb)`, [digest]);

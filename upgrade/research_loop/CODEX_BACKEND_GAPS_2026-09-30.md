@@ -324,3 +324,14 @@ Không đổi: nhóm dữ liệu khai báo run BR-F4-02…08 (coverage theo time
 
 **Đã xác nhận trên preview thật, không cần Codex làm lại:** R-P04-021 hub trả analytics v2 và FE vẽ đủ "Strategy vs benchmark — all time" (Beta 0.01, Corr 0.26, Sharpe 0.74, Sortino 0.61, benchmark +7.36%), phân phối (12 bucket, 744 quan sát), Behavior; Library last-30D 19 điểm. BR-F4-09 và BR-F4-11 được FE chấp nhận (browser acceptance, Claude 2026-10-01).
 
+### BR-F6 implementation — 2026-10-01
+
+BR-F6-01/02 are **CODE_READY / PREVIEW_RECEIPT_PENDING**: append-only migration 082,
+operator `--distributions`, generated v2/named chart types and compatible reader.
+No seal/AN-29/Report rewrite or strategy rerun. All-time monthly includes the first
+partial month; histogram grain is UTC_DAY, not bar count. [P13 receipt and Claude
+handoff](./evidence/P13/BR_F6_ALL_TIME_DISTRIBUTIONS_2026-10-01.md). Runtime and
+full-hook results are appended only after execution. Claude should consume the
+new optional point/provenance fields without treating legacy absence as zero.
+Metadata index, executor v2, T12 audit/T14 exposure, whole-candidate P23/P24 stay
+open; this slice does not relabel them complete. No remote push or production change.

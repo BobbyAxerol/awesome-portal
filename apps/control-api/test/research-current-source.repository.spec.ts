@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { sha256ResearchJson } from "../src/research/preflight.service";
 
 import {
   currentSourceBatchDigest,
@@ -44,6 +47,37 @@ function fakeRepository(respond: (sql: string, params: readonly unknown[]) => { 
 }
 
 describe("RS-02 retained-current-source custody writes", () => {
+  it("BR-F6: companion digest and import binding are verified in the scoped read", async () => {
+    const distributions = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-all-time-distributions.valid.json"), "utf8"));
+    const input = sealInput();
+    const row = {
+      run_id: input.runId, artifact_revision: 1,
+      source_adapter_id: input.sourceAdapterId, profile_id: input.profileId,
+      manifest_digest: input.manifestDigest, source_transform_digest: input.sourceTransformDigest,
+      retained_import_digest: digest("f"), requested_spec_digest: input.requestedSpecDigest,
+      effective_spec_digest: input.effectiveSpecDigest, dataset_binding_digest: input.datasetBindingDigest,
+      table_rows: { ...input.tableRows, OBSERVATION: 4 }, total_rows: 10,
+      summary: {}, retained_at_utc_ms: 1_725_000_000_000,
+      distributions, distributions_digest: sha256ResearchJson(distributions),
+      distributions_retained_import_digest: digest("f"), distributions_source_rows_digest: digest("9"),
+    };
+    const make = (overrides: Record<string, unknown>) => fakeRepository((sql) => {
+      if (sql.includes("FROM workspace_members")) return { rowCount: 1, rows: [{}] };
+      if (sql.includes("FROM research.current_source_seals_v1")) return { rowCount: 1, rows: [{ ...row, ...overrides }] };
+      return {};
+    }).repository;
+    expect((await make({}).sealForRead(scope, input.runId))?.distributionsSidecar?.digest).toBe(row.distributions_digest);
+    for (const malformed of [
+      { distributions_digest: digest("0") },
+      { distributions_retained_import_digest: digest("0") },
+      { distributions_source_rows_digest: null },
+      { table_rows: input.tableRows },
+    ]) {
+      await expect(make(malformed).sealForRead(scope, input.runId)).rejects.toMatchObject({
+        code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE", status: 503,
+      });
+    }
+  });
   it("uses one shared custody lock and one JSON recordset insert per admitted batch", async () => {
     const { repository, calls, client } = fakeRepository((sql) => {
       if (sql.includes("FROM research.current_source_import_batches_v1")) return { rowCount: 0, rows: [] };

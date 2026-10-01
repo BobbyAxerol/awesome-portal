@@ -1,5 +1,6 @@
 /** D-AN-01 Portal-derived all-time facts sealed by the QuantBT child. */
 import { z } from "zod";
+import { ResearchAllTimeDistributionsSchema } from "./all-time-distributions.contract";
 
 const Decimal = z.string().regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(96);
 const Digest = z.string().regex(/^[0-9a-f]{64}$/);
@@ -83,6 +84,7 @@ export const ResearchRetainedAnalyticsV2Schema = z.object({
   strategy_curve: Curve,
   benchmark_curve: Curve,
   last_30d: ResearchRetainedAnalyticsV2Last30dSchema,
+  distributions: ResearchAllTimeDistributionsSchema.optional(),
 }).strict().superRefine((block, context) => {
   const facts = [
     ...Object.values(block.metrics), ...Object.values(block.behaviour),

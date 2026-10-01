@@ -129,6 +129,11 @@ export function currentSourceSealDigest(seal: Pick<CurrentSourceSealRow,
 }
 
 function revision(kind: string, seal: CurrentSourceSealRow): string {
+  if (seal.distributionsSidecar && ["evidence", "evidence-monthly_returns", "evidence-return_distribution"].includes(kind)) {
+    return `rs02_${kind}_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
+      ...(kind === "evidence" && seal.analyticsSidecar ? { analytics_sidecar_digest: seal.analyticsSidecar.digest } : {}),
+      distributions_digest: seal.distributionsSidecar.digest })}`;
+  }
   if (kind === "evidence" && seal.analyticsSidecar) {
     return `rs02_evidence_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
       analytics_sidecar_digest: seal.analyticsSidecar.digest })}`;
@@ -137,8 +142,17 @@ function revision(kind: string, seal: CurrentSourceSealRow): string {
 }
 
 function parseSummary(seal: CurrentSourceSealRow) {
-  const parsed = SummarySchema.safeParse(seal.analyticsSidecar
-    ? { ...seal.summary, summary_analytics_v2: seal.analyticsSidecar.analytics }
+  const analytics = seal.analyticsSidecar?.analytics ?? seal.summary.summary_analytics_v2;
+  const supplemented = analytics && seal.distributionsSidecar
+    ? { ...(analytics as Record<string, unknown>), distributions: seal.distributionsSidecar.distributions }
+    : analytics;
+  // A historic v2 block is immutable too. A full 32-month companion can
+  // exceed its 16-KiB budget; keep that block intact and serve distributions
+  // from their existing named reads, rather than break an otherwise valid Hub.
+  const boundedAnalytics = supplemented && Buffer.byteLength(JSON.stringify(supplemented), "utf8") <= 16_384
+    ? supplemented : analytics;
+  const parsed = SummarySchema.safeParse(analytics
+    ? { ...seal.summary, summary_analytics_v2: boundedAnalytics }
     : seal.summary);
   if (!parsed.success) {
     throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained current-source summary is incompatible.", 503);
@@ -411,7 +425,7 @@ export class ResearchCurrentSourceService {
       },
       series: (["EQUITY", "RETURNS", "POSITIONS", "MONTHLY_RETURNS", "ROLLING_RETURNS_20", "RETURN_DISTRIBUTION"] as const).map((kind) => ({
         kind,
-        availability: this.seriesAvailability(summary, kind),
+        availability: this.seriesAvailability(summary, kind, seal),
         href: `/api/v1/quantbt/runs/${runId}/current-source/evidence/series?kind=${kind}`,
       })),
       source_absences: {
@@ -1290,7 +1304,28 @@ export class ResearchCurrentSourceService {
         }),
       };
     }
-    const derivedAvailability = this.seriesAvailability(summary, kind);
+    const distributions = seal.distributionsSidecar?.distributions ?? summary.summary_analytics_v2?.distributions;
+    if (distributions && (kind === "MONTHLY_RETURNS" || kind === "RETURN_DISTRIBUTION")) {
+      const source = kind === "MONTHLY_RETURNS" ? distributions.monthly_returns : distributions.return_distribution;
+      return {
+        availability: { state: source.state, reason_code: source.reason_code },
+        source_sample: {
+          source_observation_count: source.source_observation_count,
+          emitted_point_count: source.emitted_point_count, sampling: source.sampling, envelope: null,
+          derivation: { origin: distributions.origin, scope: distributions.scope,
+            input_digest: distributions.input_digest, source_locator: distributions.scope_locator,
+            definition_id: kind === "MONTHLY_RETURNS" ? distributions.monthly_definition : distributions.distribution_definition,
+            grain: kind === "MONTHLY_RETURNS" ? "UTC_CALENDAR_MONTH" : "UTC_DAY",
+            oos_observation_count: distributions.oos_observation_count,
+            ...(kind === "MONTHLY_RETURNS" ? {
+              total_period_count: distributions.monthly_returns.total_period_count,
+              omitted_transport_period_count: distributions.monthly_returns.omitted_transport_period_count,
+            } : {}) },
+        },
+        values: source.values,
+      };
+    }
+    const derivedAvailability = this.seriesAvailability(summary, kind, seal);
     if (derivedAvailability.state === "NOT_PUBLISHED") {
       const sourceCount = kind === "MONTHLY_RETURNS"
         ? summary.derived.monthly_returns.source_observation_count
@@ -1404,8 +1439,14 @@ export class ResearchCurrentSourceService {
   private seriesAvailability(
     summary: ReturnType<typeof parseSummary>,
     kind: "EQUITY" | "RETURNS" | "POSITIONS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION",
+    seal?: CurrentSourceSealRow,
   ): Availability {
     if (kind === "EQUITY" || kind === "RETURNS" || kind === "POSITIONS") return available();
+    const distributions = seal?.distributionsSidecar?.distributions ?? summary.summary_analytics_v2?.distributions;
+    if (distributions && (kind === "MONTHLY_RETURNS" || kind === "RETURN_DISTRIBUTION")) {
+      const source = kind === "MONTHLY_RETURNS" ? distributions.monthly_returns : distributions.return_distribution;
+      return { state: source.state, reason_code: source.reason_code };
+    }
     // Immutable older seals used the entire stitched tape, including pre-OOS
     // bars. Preserve their raw rows, but never label those compact facts OOS.
     if (summary.derived_scope !== "OUTER_TEST_UNION_INCLUSIVE_V1") {

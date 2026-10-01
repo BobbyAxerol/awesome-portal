@@ -18,6 +18,7 @@ import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { sha256ResearchJson } from "./preflight.service";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
+import { ResearchAllTimeDistributionsSchema, type ResearchAllTimeDistributions } from "./all-time-distributions.contract";
 import {
   RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID,
   RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
@@ -93,6 +94,7 @@ export type CurrentSourceSealRow = CurrentSourceLanePair & {
   totalRows: number;
   summary: Record<string, unknown>;
   analyticsSidecar?: { digest: string; sourceRowsDigest: string; analytics: ResearchRetainedAnalyticsV2 };
+  distributionsSidecar?: { digest: string; distributions: ResearchAllTimeDistributions };
   retainedAtUtcMs: number;
 };
 
@@ -147,6 +149,10 @@ interface SealQueryRow {
   sidecar_source_rows_digest?: string | null;
   sidecar_analytics_digest?: string | null;
   sidecar_analytics?: JsonColumn;
+  distributions_retained_import_digest?: string | null;
+  distributions_source_rows_digest?: string | null;
+  distributions_digest?: string | null;
+  distributions?: JsonColumn;
 }
 
 interface SourceRowQueryRow {
@@ -515,11 +521,17 @@ export class ResearchCurrentSourceRepository {
                 sidecar.retained_import_digest AS sidecar_retained_import_digest,
                 sidecar.source_rows_digest AS sidecar_source_rows_digest,
                 sidecar.analytics_digest AS sidecar_analytics_digest,
-                sidecar.analytics AS sidecar_analytics
+                sidecar.analytics AS sidecar_analytics,
+                distributions.retained_import_digest AS distributions_retained_import_digest,
+                distributions.source_rows_digest AS distributions_source_rows_digest,
+                distributions.distributions_digest, distributions.distributions
            FROM research.current_source_seals_v1 seal
            LEFT JOIN research.current_source_analytics_sidecars_v2 sidecar
              ON sidecar.workspace_id = seal.workspace_id AND sidecar.run_id = seal.run_id
             AND sidecar.artifact_revision = seal.artifact_revision
+           LEFT JOIN research.current_source_distributions_v1 distributions
+             ON distributions.workspace_id = seal.workspace_id AND distributions.run_id = seal.run_id
+            AND distributions.artifact_revision = seal.artifact_revision
           WHERE seal.workspace_id = $1 AND seal.run_id = $2
           ORDER BY seal.artifact_revision DESC
           LIMIT 1`,
@@ -938,6 +950,18 @@ export class ResearchCurrentSourceRepository {
         analytics: parsed.data,
       };
     }
+    let distributionsSidecar: CurrentSourceSealRow["distributionsSidecar"];
+    if (row.distributions != null) {
+      const parsed = ResearchAllTimeDistributionsSchema.safeParse(asJsonRecord(row.distributions, "distributions sidecar"));
+      if (!parsed.success || sha256ResearchJson(parsed.data) !== row.distributions_digest
+        || row.distributions_retained_import_digest !== row.retained_import_digest
+        || !row.distributions_source_rows_digest || !/^[0-9a-f]{64}$/.test(row.distributions_source_rows_digest)
+        || (analyticsSidecar && row.distributions_source_rows_digest !== analyticsSidecar.sourceRowsDigest)
+        || parsed.data.oos_observation_count > mapped.OBSERVATION) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Distribution companion does not match its immutable source seal.", 503);
+      }
+      distributionsSidecar = { digest: row.distributions_digest!, distributions: parsed.data };
+    }
     return {
       runId: row.run_id,
       artifactRevision: asSafeNonNegative(row.artifact_revision, "artifact revision"),
@@ -952,6 +976,7 @@ export class ResearchCurrentSourceRepository {
       totalRows: asSafeNonNegative(row.total_rows, "total rows"),
       summary,
       ...(analyticsSidecar ? { analyticsSidecar } : {}),
+      ...(distributionsSidecar ? { distributionsSidecar } : {}),
       retainedAtUtcMs: asSafeNonNegative(row.retained_at_utc_ms, "retained timestamp"),
     };
   }

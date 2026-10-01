@@ -699,6 +699,16 @@ def _p13_evidence_source(
     def block_bytes(key: str, value: object) -> int:
         return len(json.dumps({key: value}, separators=(",", ":"), ensure_ascii=True).encode("utf-8"))
     candle_reserve = block_bytes("candle_overview", absent_candles)
+    # Additive distribution facts must not starve an already available candle
+    # overview. Reserve its smallest truthful bucket before fitting display
+    # samples; never widen the receipt budget or change source metrics.
+    try:
+        minimum_overview = _candle_overview_buckets(market.reindex(oos.index),
+            bucket_bars=max(1, math.ceil(len(oos) / _MIN_CANDLE_OVERVIEW_BUCKETS)),
+            has_volume="volume" in market.columns)
+        candle_reserve = max(candle_reserve, block_bytes("candle_overview", minimum_overview))
+    except (KeyError, ValueError):
+        pass  # The final bounded producer retains the existing typed refusal.
     _fit_evidence_display(receipt, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES,
                           reserve_bytes=block_bytes("oos_analytics", absent_analytics) + candle_reserve)
     try:
