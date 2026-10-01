@@ -211,6 +211,27 @@ export class FacadeController {
     const query = (request.url.split("?")[1] as string | undefined) ?? undefined;
     const method = request.method.toUpperCase();
     const user = request.portalUser;
+    // Legacy export was a mutating GET. Scope even ADMIN sessions to the
+    // selected workspace; unmirrored runs cannot be exported.
+    let decodedPath: string;
+    try {
+      decodedPath = decodeURIComponent(path);
+    } catch {
+      throw new FacadeError("UPSTREAM_PATH_INVALID", "The Portal API path is invalid.", 400);
+    }
+    const legacyExport = /^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/export$/.exec(decodedPath);
+    if (legacyExport) {
+      if (decodedPath !== path) {
+        throw new FacadeError("UPSTREAM_PATH_INVALID", "The Portal API path is invalid.", 400);
+      }
+      const run = await this.runs.findByRunId(legacyExport[1]!);
+      if (!run || run.workspaceId !== request.portalWorkspaceId) {
+        throw new FacadeError("RUN_NOT_FOUND", "Run not found.", 404);
+      }
+      if (user.role !== "ADMIN") {
+        throw new FacadeError("PERMISSION_DENIED", "Access denied.", 403);
+      }
+    }
 
     const write = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
     // Mutations (creating runs, importing alphas, editing config) are

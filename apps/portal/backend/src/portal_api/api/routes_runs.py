@@ -616,8 +616,30 @@ async def run_audit(run_id: str, request: Request) -> dict:
     }
 
 
-@router.get("/{run_id}/export")
-async def run_export(run_id: str, request: Request) -> FileResponse:
+def _require_export_admin(request: Request) -> None:
+    try:
+        principal = require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    if principal.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="legacy export requires administrator access")
+
+
+@router.post("/{run_id}/export", status_code=201)
+async def prepare_run_export(run_id: str, request: Request) -> dict:
+    # The façade checks the run/workspace binding and CSRF before proxying.
+    # This private API independently requires a signed administrator.
+    _require_export_admin(request)
     _require_completed(request, run_id)
     bundle = export_bundle(_artifacts(request), run_id)
+    return {"download_href": f"/api/runs/{run_id}/export", "size_bytes": bundle.stat().st_size}
+
+
+@router.get("/{run_id}/export")
+async def run_export(run_id: str, request: Request) -> FileResponse:
+    _require_export_admin(request)
+    _require_completed(request, run_id)
+    bundle = _artifacts(request).run_directory(run_id) / "export" / f"{run_id}-export.zip"
+    if not bundle.is_file():
+        raise HTTPException(status_code=404, detail="legacy export has not been prepared")
     return FileResponse(bundle, media_type="application/zip", filename=bundle.name)

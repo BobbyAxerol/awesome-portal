@@ -382,7 +382,7 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
     expect(core.equity_is.scope).toBe("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST");
     expect(core.equity_is.state).toBe("AVAILABLE");
     expect(core.metrics.find(value => value.key === "NET_RETURN_FRACTION")?.value).toBe(evidence.passport.net_return_fraction);
-    expect(core.headline_footnote).toContain("Older seals");
+    expect(core.headline_footnote).toContain("retained account path");
   });
 
   it("E11/E14 new sealed engine OOS fact reaches the named Evidence and frozen Report unchanged", async () => {

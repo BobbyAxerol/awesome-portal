@@ -616,7 +616,7 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       { key: "WIN_RATE", label: analyticsV2 ? "Episode win rate · not audited trades" : "Win rate", scope: analyticsV2 ? "OOS" : "NOT_PUBLISHED", ...(analyticsV2 ? descriptiveFact(analyticsV2.behaviour.win_rate, "PORTAL_ANALYTICS_EPISODE_WIN_RATE_UNAVAILABLE") : { value: null, availability: NOT_PUBLISHED("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS") }) },
       { key: "FUNDING", label: "Funding", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("RS02_SUMMARY_PUBLISHES_NO_FUNDING_TOTAL") },
     ],
-    headline_footnote: "Net OOS return is QuantBT full_report(total_return_pct)/100 on outer-test windows. New seals carry all-time OOS Sharpe and descriptive episode win rate. Older seals retain typed fold-mean/absence. Drawdown covers the whole retained account path; decay remains a fold mean and trade count is not an audited trade ledger.",
+    headline_footnote: "OOS return and Sharpe use outer tests; drawdown spans the retained account path.",
     equity: {
       ...equityBlock("RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
       digest: evidence.source_series_artifact?.digest ?? null,
@@ -856,8 +856,8 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       { key: "FUNDING", label: "Funding", scope: metricScope("FUNDING_TOTAL"), ...metricFact("FUNDING_TOTAL") },
     ],
     headline_footnote: netOosFact
-      ? "Net OOS return is QuantBT full_report(total_return_pct)/100 on the immutable P08 OOS slice. Other values retain their sealed Evidence Hub scopes; child-tape trade count is not an audited OOS trade ledger."
-      : "All values retain the scope and availability stated by the sealed Evidence Hub; missing optimizer and execution facts are not inferred.",
+      ? "OOS return uses the sealed OOS slice; other values retain Hub scopes."
+      : "Scopes and availability come from the sealed Evidence Hub.",
     equity: equity.availability.state === "AVAILABLE" && equity.points.length > 0
       ? {
         state: "AVAILABLE",
