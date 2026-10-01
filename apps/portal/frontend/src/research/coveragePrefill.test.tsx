@@ -372,6 +372,7 @@ const choose = (dataset: string, symbol: string) => {
   fireEvent.change(field("Symbol"), { target: { value: symbol } });
 };
 const text = (selector: string) => document.querySelector(selector)?.textContent ?? null;
+const tip = (selector: string) => document.querySelector(selector)?.getAttribute("title") ?? null;
 
 describe("D4 — Screen 02, real route and hook", () => {
   it("nothing chosen → every date is blank, and the reason is on screen", async () => {
@@ -395,10 +396,12 @@ describe("D4 — Screen 02, real route and hook", () => {
     expect(windowValues()).toEqual([BTC.lower, "", "", "", "", BTC.upper]);
     expect(text('[data-prefill-caption="is.start"]')).toBe("prefilled from BTCUSDT coverage · first day of 2020-01");
     expect(text('[data-prefill-caption="holdout.endExclusive"]')).toBe("prefilled from BTCUSDT coverage · end of 2026-09");
-    expect(text("[data-prefill-source]")).toBe("Prefilled from the coverage of crypto-binance-1m · BTCUSDT: 2020-01 → 2026-09 · 81 months, UTC month partitions.");
+    expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2020-01 → 2026-09 · 81 months");
+    expect(tip("[data-prefill-source]")).toContain("UTC month partitions.");
     /* The version's own declared warmup (the registry fixture's 32 bars) is named, not converted into a date. */
-    expect(text("[data-prefill-edges]")).toBe("Month edges, not bar times — preflight checks the exact range, and the 32 warmup bars the version declares must fit before IS start. Every value stays editable.");
-    expect(text("[data-prefill-interior]")).toBe("IS end, OOS and holdout start are left empty: the server publishes no rule for splitting coverage into windows.");
+    expect(tip("[data-prefill-source]")).toContain("Month edges, not bar times — preflight checks the exact range, and the 32 warmup bars the version declares must fit before IS start. Every value stays editable.");
+    expect(tip("[data-prefill-source]")).toContain("IS end, OOS and holdout start are left empty: the server publishes no rule for splitting coverage into windows.");
+    expect(document.querySelector("[data-prefill-edges], [data-prefill-interior]")).toBeNull();
     expect(text("[data-window-prefill-rail]")).toBe("Outer bounds prefilled from BTCUSDT coverage (2020-01 → 2026-09) until edited.");
     /* Nothing is locked: every input stays enabled and editable. */
     for (const label of WINDOW_LABELS) expect(field(label).disabled).toBe(false);
@@ -431,7 +434,7 @@ describe("D4 — Screen 02, real route and hook", () => {
     fireEvent.change(field("Symbol"), { target: { value: QUARTERLY.symbol } });
     goTo("windows");
     expect(windowValues()).toEqual(["2021-03-04T05:00", "", "", "", "", QUARTERLY.upper]);
-    expect(text("[data-prefill-source]")).toContain("BTCUSDT_260327: 2025-09 → 2026-04 · 8 months");
+    expect(text("[data-prefill-source]")).toContain("BTCUSDT_260327 · 2025-09 → 2026-04 · 8 months");
   });
 
   it("change the dataset → the prefilled bounds are replaced by the new coverage, not merged", async () => {
@@ -444,7 +447,7 @@ describe("D4 — Screen 02, real route and hook", () => {
     fireEvent.change(field("Dataset"), { target: { value: BTC_BYBIT.dataset } });
     goTo("windows");
     expect(windowValues()).toEqual([BTC_BYBIT.lower, "", "", "", "", BTC_BYBIT.upper]);
-    expect(text("[data-prefill-source]")).toContain("fixture-bybit-1h · BTCUSDT: 2022-05 → 2025-11 · 43 months");
+    expect(text("[data-prefill-source]")).toContain("fixture-bybit-1h · BTCUSDT · 2022-05 → 2025-11 · 43 months");
 
     /* A dataset that does not list the symbol takes the bounds away rather than keeping the old ones. */
     goTo("data");
@@ -575,8 +578,8 @@ describe("D4 — the advanced protocol fills its own outer bounds and leaves the
     expect(field("Analysis end exclusive").value).toBe(BTC.upper);
     expect(field("First OOS instant").value).toBe("");
     expect(text('[data-prefill-caption="walkForward.start"]')).toBe("prefilled from BTCUSDT coverage · first day of 2020-01");
-    expect(text("[data-prefill-interior]")).toBe("First OOS instant is left empty: the release publishes no default for it.");
-    expect(text("[data-prefill-edges]")).toContain("must fit before the analysis start.");
+    expect(tip("[data-prefill-source]")).toContain("First OOS instant is left empty: the release publishes no default for it.");
+    expect(tip("[data-prefill-source]")).toContain("must fit before the analysis start.");
 
     fireEvent.change(field("Analysis end exclusive"), { target: { value: "2020-06-01T00:00" } });
     expect(field("Analysis end exclusive").value).toBe("2020-06-01T00:00");
@@ -597,7 +600,7 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     render(<Harness initial={emptyDraft()} step="data" />);
     choose(BTC_BYBIT.dataset, "ETHUSDT");
     goTo("windows");
-    expect(text("[data-prefill-source]")).toBe("Prefilled from the coverage of fixture-bybit-1h · ETHUSDT: 2022-05 → 2025-11 · 40 of 43 months present, UTC month partitions.");
+    expect(text("[data-prefill-source]")).toBe("Prefilled from fixture-bybit-1h · ETHUSDT · 2022-05 → 2025-11 · 40 of 43 months present");
     expect(field("IS start").value).toBe("2022-05-01T00:00");
   });
 
@@ -621,19 +624,20 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     expect(field("Holdout end exclusive").value).toBe("");
     /* Nothing of the coverage is left to caption: both bounds are the reader's. */
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();
-    expect(text("[data-prefill-reason]")).toBe("The coverage of crypto-binance-1m · SOLUSDT is 2020-09 → 2026-09 · 73 months. The outer bounds here hold your own values, so nothing was prefilled.");
+    expect(text("[data-prefill-reason]")).toBe("Your bounds kept · coverage 2020-09 → 2026-09 · 73 months");
+    expect(tip("[data-prefill-reason]")).toBe("The coverage of crypto-binance-1m · SOLUSDT is 2020-09 → 2026-09 · 73 months. The outer bounds here hold your own values, so nothing was prefilled.");
   });
 
   it("names no warmup it was not told, and none when the version declares none", () => {
     render(<Harness initial={emptyDraft()} step="data" limits={{ ...LIMITS, warmupBars: null }} />);
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
-    expect(text("[data-prefill-edges]")).toBe("Month edges, not bar times — preflight checks the exact range and the declared warmup. Every value stays editable.");
+    expect(tip("[data-prefill-source]")).toContain("Month edges, not bar times — preflight checks the exact range and the declared warmup. Every value stays editable.");
     cleanup();
     render(<Harness initial={emptyDraft()} step="data" limits={{ ...LIMITS, warmupBars: 0 }} />);
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
-    expect(text("[data-prefill-edges]")).toBe("Month edges, not bar times — preflight checks the exact range. Every value stays editable.");
+    expect(tip("[data-prefill-source]")).toContain("Month edges, not bar times — preflight checks the exact range. Every value stays editable.");
   });
 
   it("names the dataset's own clock, because the server reads a naive boundary in it", () => {
@@ -641,7 +645,7 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     render(<Harness initial={emptyDraft()} step="data" catalog={zoned} />);
     choose(BTC.dataset, BTC.symbol);
     goTo("windows");
-    expect(text("[data-prefill-source]")).toContain("Asia/Ho_Chi_Minh month partitions");
+    expect(tip("[data-prefill-source]")).toContain("Asia/Ho_Chi_Minh month partitions");
   });
 
   it("does not say a coverage filled anything once every outer bound is the reader's own", () => {
@@ -653,7 +657,8 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     expect(text("[data-window-prefill-status]")).toBe("Not prefilled — bounds already set");
     goTo("windows");
     expect(windowValues()).toEqual(["2021-01-01T00:00", "", "", "", "", "2025-01-01T00:00"]);
-    expect(text("[data-prefill-reason]")).toBe("The coverage of crypto-binance-1m · BTCUSDT is 2020-01 → 2026-09 · 81 months. The outer bounds here hold your own values, so nothing was prefilled.");
+    expect(text("[data-prefill-reason]")).toBe("Your bounds kept · coverage 2020-01 → 2026-09 · 81 months");
+    expect(tip("[data-prefill-reason]")).toContain("nothing was prefilled.");
     expect(document.querySelector("[data-prefill-caption]")).toBeNull();
     expect(document.querySelector("[data-window-prefill-rail]")).toBeNull();
   });

@@ -161,6 +161,17 @@ describe("S04 · D-AN-01 — value path (published v2 block)", () => {
     expect(container.querySelector("[data-strategy-figure]")).toBeTruthy();
     expect(container.querySelector("[data-behavior-scope='all-time']")).toBeTruthy();
   });
+
+  it("the Hub hero Sharpe tile shows the all-time v2 Sharpe, not 'not published' beside the same number in the cells (R-P04-021)", async () => {
+    const hub = { ...clone(W3B.hub_evidence), summary_analytics_v2: V2 } as EvidenceHub;
+    const { container } = view({ hub, passport: { state: "idle" } });
+    await settle(container);
+    const tile = container.querySelector("[data-tile='OOS_SHARPE'], [data-metric='OOS_SHARPE']");
+    const text = tile?.textContent ?? "";
+    expect(text).toContain("all time");
+    expect(text).not.toMatch(/not published/i);
+    expect(text).toContain(Number(V2.metrics.sharpe.value).toFixed(2).replace(/^-/, "−"));
+  });
 });
 
 describe("S04 · D-AN-01 — absence path", () => {

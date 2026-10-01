@@ -40,7 +40,8 @@ export function emptyDraft(): RunDraft {
     routeParams: {},
     datasetId: "",
     symbol: "",
-    timeframe: "4h",
+    /* No version is chosen yet, so no timeframe is declared; the version's first declared one is adopted once it is. */
+    timeframe: "",
     windows: {
       is: { start: "", endExclusive: "" },
       oos: { start: "", endExclusive: "" },
@@ -315,6 +316,15 @@ export function NewRunRoute() {
     if (run.draft.alphaId !== "" || run.draft.alphaVersionId !== "") return;
     run.patch({ alphaId: only.alpha_id, alphaVersionId: only.alpha_version_id, strategyId: only.strategy_id ?? only.alpha_id });
   }, [location.search, registry, run]);
+
+  /* Once a version is chosen its first declared timeframe fills an empty field
+     (the chip row already shows the declared set). Only an empty field: a
+     copied run or the reader's own pick is never overwritten. */
+  useEffect(() => {
+    const first = limits.declaredTimeframes?.[0];
+    if (run.draft.timeframe !== "" || run.draft.alphaVersionId === "" || first === undefined) return;
+    run.patch({ timeframe: first });
+  }, [limits.declaredTimeframes, run]);
 
   /* S02_DATA: when the catalog serves exactly one available dataset it is the
      only choice, so a plain visit opens on it (with its coverage prefill). Done

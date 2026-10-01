@@ -447,13 +447,13 @@ describe("the review rail declares nothing it was not given", () => {
 
   it("a value the step has not supplied says so on its own, not as a default", () => {
     mount(bound({ optunaTrials: "400", earlyStopping: "", randomSeed: "" }), { declarationBound: true });
-    expect(row("trials · stop · seed").textContent).toBe("400 · not declared · not declared");
+    expect(row("trials · stop · seed").textContent).toBe("400 · not set · not set");
     expect(row("trials · stop · seed").textContent).not.toMatch(/none/);
   });
 
   it("a scratch run is its own declaration", () => {
     mount({ ...emptyDraft(), bound: false, strategyId: "s", optunaTrials: "400", randomSeed: "42" }, { declarationBound: false });
-    expect(row("trials · stop · seed").textContent).toBe("400 · not declared · 42");
+    expect(row("trials · stop · seed").textContent).toBe("400 · not set · 42");
   });
 });
 

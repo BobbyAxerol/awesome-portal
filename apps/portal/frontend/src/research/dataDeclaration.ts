@@ -191,6 +191,8 @@ export function timeframeChips(
   dataset: Pick<CatalogDataset, "timeframes"> | null,
   declared: readonly string[] | null,
   current: string,
+  /** A scratch run binds no version, so there is no declaration to wait for: the dataset's own timeframes are the choice. */
+  scratch = false,
 ): readonly TimeframeChip[] {
   const offered = dataset?.timeframes ?? [];
   const declaredList = declared ?? [];
@@ -200,7 +202,11 @@ export function timeframeChips(
     const isOffered = dataset === null || offered.includes(timeframe);
     const isDeclared = declared === null || declared.length === 0 ? null : declared.includes(timeframe);
     const disabledReason: TimeframeChip["disabledReason"] =
-      declared === null || declared.length === 0
+      scratch
+        ? isOffered
+          ? null
+          : "not-offered"
+        : declared === null || declared.length === 0
         ? "declaration-not-published"
         : !isOffered
           ? "not-offered"

@@ -685,6 +685,10 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
     /* FG 02-8b: a step nobody has opened has not been checked — not "valid". */
     expect(pill.getAttribute("data-step-state")).toBe("not-visited");
     fireEvent.click(pill);
+    expect(pill.getAttribute("data-step-state")).toBe("current");
+    expect(pill.textContent).toContain("in progress");
+    /* Leaving it with the problem unsolved is what makes it need attention. */
+    fireEvent.click(document.querySelector('[data-step-pill="route"]') as HTMLElement);
     expect(pill.getAttribute("data-step-state")).toBe("error");
     expect(pill.textContent).toContain("needs attention");
   });

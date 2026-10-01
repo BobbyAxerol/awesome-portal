@@ -375,8 +375,10 @@ describe("02-7 — live captions", () => {
     expect(caption("context")).toBe("valid");
     expect(caption("data")).toBe("not visited");
     go("data");
-    expect(caption("data")).toBe("needs attention");
+    /* On the step, nothing typed yet: not "needs attention" and never "valid". */
+    expect(caption("data")).toBe("in progress");
     go("route");
+    expect(caption("data")).toBe("needs attention");
     expect(caption("route")).toBe("valid");
     expect(caption("strategy")).toBe("not visited");
   });

@@ -3498,8 +3498,18 @@ function SummaryTab({
   const tiles = retained
     ? retainedTiles(retained).map((tile) => <RetainedTile key={tile.key} tile={tile} />)
     : tileKeys.flatMap((key): ReactNode[] => {
-        const v2 = hub.metrics.find((metric) => metric.key === key);
-        if (v2) return [<MetricTile key={key} metric={v2} />];
+        /* D-AN-01: the hero Sharpe is the all-time one. When the Hub publishes it (enrich_analysis, else its v2
+           block) the tile shows it; the Hub's own per-registry metric may be NOT_PUBLISHED while the same
+           page's benchmark cells already show the number. */
+        if (key === "OOS_SHARPE") {
+          const all = enriched?.facts.metrics.sharpe ?? v2?.metrics.sharpe ?? null;
+          if (all !== null && all.state === "AVAILABLE" && all.value !== null) {
+            const origin = all.origin === "ENGINE_DIRECT" ? "engine-direct" : "portal-derived";
+            return [<RetainedTile key={key} tile={{ key, label: "OOS Sharpe", value: String(all.value), unit: "ratio", foot: `all time · ${origin}`, absence: null }} />];
+          }
+        }
+        const hubMetric = hub.metrics.find((metric) => metric.key === key);
+        if (hubMetric) return [<MetricTile key={key} metric={hubMetric} />];
         const v3 = performance?.metrics.find((metric) => metric.key === key);
         return v3 && performance ? [<PerformanceTile key={key} metric={v3} block={performance} />] : [];
       });

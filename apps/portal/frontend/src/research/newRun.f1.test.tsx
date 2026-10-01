@@ -20,7 +20,7 @@ import { NewRun, datetimeInputValue, outsideProfileNotes } from "./NewRun";
 import { NewRunRoute, constraintsFrom, emptyDraft } from "./NewRunRoute";
 import type { PreflightResponse } from "./preflightClient";
 import type { RunDraft } from "./runDraft";
-import { serializeRequestedSpec } from "./runDraft";
+import { blockingProblems, serializeRequestedSpec } from "./runDraft";
 import { researchState } from "./state";
 
 afterEach(() => {
@@ -121,14 +121,50 @@ describe("FG 02-8b — the stepper does not call an unvisited step valid", () =>
     mount({ draft: draft({ symbol: "" }) });
     expect(pill("data").getAttribute("data-step-state")).toBe("not-visited");
     go("data");
-    /* Reaching the step is what makes its problem count: it reads error at once. */
-    expect(pill("data").getAttribute("data-step-state")).toBe("error");
+    /* Reaching the step is not enough: a form nobody typed in does not read wrong. */
+    expect(pill("data").getAttribute("data-step-state")).toBe("current");
+    expect(pill("data").textContent).toContain("in progress");
+    expect(document.querySelector("[data-step-error]")).toBeNull();
+    expect(document.body.textContent).not.toContain("A symbol is required.");
+    expect(document.querySelector("[data-review-rail]")?.textContent).not.toContain("A symbol is required.");
     go("route");
     expect(pill("data").getAttribute("data-step-state")).toBe("error");
     expect(pill("data").textContent).toContain("needs attention");
   });
 
-  it("a visited step that passes its own checks reads valid; Review never earns a ✓ it cannot see", () => {
+  it("typing in a required field shows its error at once; leaving also shows it; Review always lists it", () => {
+    const patch = vi.fn();
+    mount({ draft: draft({ symbol: "" }), patch });
+    go("data");
+    expect(document.querySelector("[data-step-error]")).toBeNull();
+    expect(pill("data").getAttribute("data-step-state")).toBe("current");
+    /* The harness keeps the draft empty, so typed-then-still-empty is the touched path. */
+    fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "B" } });
+    expect(patch).toHaveBeenCalled();
+    expect(document.querySelector("[data-step-error]")?.textContent).toBe("A symbol is required.");
+    expect(pill("data").textContent).toContain("needs attention");
+    cleanup();
+    mount({ draft: draft({ symbol: "" }) });
+    go("data");
+    go("route");
+    expect(pill("data").getAttribute("data-step-state")).toBe("error");
+    go("data");
+    expect(document.querySelector("[data-step-error]")?.textContent).toBe("A symbol is required.");
+    cleanup();
+    mount({ draft: draft({ symbol: "" }) });
+    go("data");
+    go("review");
+    expect(document.body.textContent).toContain("A symbol is required.");
+  });
+
+  it("a step nobody opened stays not visited even when it has a problem; the preflight guard still sees every problem", () => {
+    mount({ draft: draft({ symbol: "" }) });
+    expect(pill("data").getAttribute("data-step-state")).toBe("not-visited");
+    expect(pill("data").textContent).toContain("not visited");
+    expect(blockingProblems(draft({ symbol: "" }), LIMITS).map((problem) => problem.message)).toContain("A symbol is required.");
+  });
+
+  it("a step that passes its own checks reads valid; Review never earns a ✓ it cannot see", () => {
     mount();
     go("data");
     go("route");
@@ -152,6 +188,8 @@ describe("D6 — the Data select shows the draft's timeframe, not its first opti
 
   it("a draft on 4h against a strategy that declares only 1h: the 4h chip is selected, marked not declared", () => {
     mount({ draft: draft({ timeframe: "4h" }), limits: onlyOneHour });
+    go("data");
+    go("route");
     go("data");
     expect(chip("4h")!.getAttribute("aria-checked")).toBe("true");
     expect(chip("4h")!.getAttribute("data-chip-reason")).toBe("not-declared");

@@ -217,6 +217,8 @@ export function effectiveStrategyId(draft: RunDraft): string {
 
 export function validateData(draft: RunDraft, limits: DraftConstraints): string | null {
   if (draft.symbol.trim().length === 0) return "A symbol is required.";
+  /* No version's timeframe is assumed: the reader (or the chosen version's first declared one) supplies it. */
+  if (draft.timeframe.trim().length === 0) return "A timeframe is required.";
   /* No declaration read means no rule to enforce — not a rule that passes. */
   if (limits.declaredTimeframes === null) return null;
   if (

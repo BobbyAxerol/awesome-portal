@@ -22,7 +22,7 @@
  */
 
 import { LineageLink, lineageHref } from "./LineageLink";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useInRouterContext } from "react-router-dom";
 
 import {
@@ -275,6 +275,7 @@ export function stepCaption({
   step,
   current,
   hasError,
+  unfinished = false,
   visited,
   contextChosen,
   reviewCaption,
@@ -282,6 +283,8 @@ export function stepCaption({
   step: StepId;
   current: boolean;
   hasError: boolean;
+  /** The step has a required field still empty that is not flagged yet (reached, not edited, not left). It never reads "valid". */
+  unfinished?: boolean;
   visited: boolean;
   /** Context has no validator of its own: it passes once a version is chosen, or for a scratch run. */
   contextChosen: boolean;
@@ -292,6 +295,7 @@ export function stepCaption({
      Review never gets a tick; its caption is the preflight's own state. */
   if (step === "review") return { state: current ? "current" : visited ? "visited" : "not-visited", caption: reviewCaption };
   if (!visited) return { state: "not-visited", caption: "not visited" };
+  if (unfinished) return { state: current ? "current" : "incomplete", caption: "in progress" };
   if (step === "context" && !contextChosen) return { state: current ? "current" : "incomplete", caption: "no version chosen" };
   return { state: current ? "current" : "valid", caption: "valid" };
 }
@@ -300,6 +304,7 @@ function WizardBar({
   current,
   onPick,
   errors,
+  unfinished,
   visited,
   contextChosen,
   reviewCaption,
@@ -307,6 +312,8 @@ function WizardBar({
   current: StepId;
   onPick: (step: StepId) => void;
   errors: ReadonlySet<StepId>;
+  /** Steps whose problems are not shown yet (reached, not edited or left). */
+  unfinished: ReadonlySet<StepId>;
   /** Steps the reader has reached. A step nobody opened has not been checked, so it is never "valid". */
   visited: ReadonlySet<StepId>;
   contextChosen: boolean;
@@ -342,6 +349,7 @@ function WizardBar({
           step: step.id,
           current: isCurrent,
           hasError,
+          unfinished: unfinished.has(step.id),
           visited: visited.has(step.id),
           contextChosen,
           reviewCaption,
@@ -999,7 +1007,7 @@ function DataStep({
   const publishedTimeframes = limits.declaredTimeframes ?? [];
   const timeframeDeclared = publishedTimeframes.includes(draft.timeframe);
   const versionLabel = bindingVersionLabel(draft, registry);
-  const chips = timeframeChips(dataset, limits.declaredTimeframes, draft.timeframe);
+  const chips = timeframeChips(dataset, limits.declaredTimeframes, draft.timeframe, !draft.bound);
   const warnings = coverageWarnings(draft, coverageRange(prefillPlan));
   const available = catalog?.datasets.filter((item) => item.availability === "available") ?? [];
   const unavailable = catalog?.datasets.filter((item) => item.availability !== "available") ?? [];
@@ -1074,7 +1082,7 @@ function DataStep({
             symbols={symbols}
             total={dataset?.symbols.total ?? null}
             truncated={dataset?.symbols.truncated === true}
-            bad={draft.symbol.trim().length === 0}
+            bad={error !== null && draft.symbol.trim().length === 0}
             onChange={pickSymbol}
           />
           {selectedSymbol ? (
@@ -1095,7 +1103,7 @@ function DataStep({
           <TimeframeChips
             chips={chips}
             version={versionLabel}
-            bad={publishedTimeframes.length > 0 && !timeframeDeclared}
+            bad={draft.bound && publishedTimeframes.length > 0 && !timeframeDeclared}
             onPick={(timeframe) => patch({ timeframe })}
           />
         </div>
@@ -1333,20 +1341,24 @@ function WindowPrefillNote({ draft, plan, warmupBars }: { draft: RunDraft; plan:
   return (
     <div className="flex flex-col gap-0.5 text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-window-prefill-note data-prefill-state={source ? "prefilled" : plan.state}>
       {source ? (
-        <>
-          <p data-prefill-source>
-            Prefilled from the coverage of {source.datasetId} · {source.symbol}: {coverageSpan(source)}, {source.timezone} month partitions.
-          </p>
-          <p data-prefill-edges>{edgesSentence(warmupBars, draft.protocol)}</p>
-          <p data-prefill-interior>
-            {draft.protocol === "advanced"
+        <p
+          data-prefill-source
+          title={[
+            `${source.timezone} month partitions.`,
+            edgesSentence(warmupBars, draft.protocol),
+            draft.protocol === "advanced"
               ? "First OOS instant is left empty: the release publishes no default for it."
-              : "IS end, OOS and holdout start are left empty: the server publishes no rule for splitting coverage into windows."}
-          </p>
-        </>
+              : "IS end, OOS and holdout start are left empty: the server publishes no rule for splitting coverage into windows.",
+          ].join(" ")}
+        >
+          Prefilled from {source.datasetId} · {source.symbol} · {coverageSpan(source)}
+        </p>
       ) : plan.state === "ready" ? (
-        <p data-prefill-reason>
-          The coverage of {plan.source.datasetId} · {plan.source.symbol} is {coverageSpan(plan.source)}. The outer bounds here hold your own values, so nothing was prefilled.
+        <p
+          data-prefill-reason
+          title={`The coverage of ${plan.source.datasetId} · ${plan.source.symbol} is ${coverageSpan(plan.source)}. The outer bounds here hold your own values, so nothing was prefilled.`}
+        >
+          Your bounds kept · coverage {coverageSpan(plan.source)}
         </p>
       ) : (
         <p data-prefill-reason>{plan.reason}</p>
@@ -1358,6 +1370,7 @@ function WindowPrefillNote({ draft, plan, warmupBars }: { draft: RunDraft; plan:
 function WindowsStep({
   draft,
   patch,
+  adopt = patch,
   atlas,
   error,
   catalog = null,
@@ -1366,6 +1379,8 @@ function WindowsStep({
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
+  /** Where the release defaults are adopted on arrival: not a reader edit, so it must not mark the step as touched. */
+  adopt?: (change: Partial<RunDraft>) => void;
   atlas: AtlasDocument | null;
   error: string | null;
   /** D4: the catalog the outer bounds were prefilled from. */
@@ -1388,8 +1403,8 @@ function WindowsStep({
     const change: Partial<RunDraft["walkForward"]> = {};
     if (!draft.walkForward.frequency) change.frequency = options.frequency_default;
     if (!draft.walkForward.windowMode) change.windowMode = options.window_mode_default;
-    if (Object.keys(change).length > 0) patch({ walkForward: { ...draft.walkForward, ...change } });
-  }, [options, draft.protocol, draft.walkForward, patch]);
+    if (Object.keys(change).length > 0) adopt({ walkForward: { ...draft.walkForward, ...change } });
+  }, [options, draft.protocol, draft.walkForward, adopt]);
   const rows = [
     ["is", "IS"],
     ["oos", "OOS"],
@@ -1508,7 +1523,7 @@ function WindowsStep({
             </p>
           ) : null}
           {options?.temporal_guards ? (
-            <div className="flex w-full flex-wrap items-end gap-2.5" data-temporal-guards>
+            <div className="flex w-full flex-wrap items-end gap-2.5" data-temporal-guards data-release-default={options.temporal_guards.release_default}>
               {([
                 ["labelHorizonBars", "Label horizon (bars)"],
                 ["purgeBars", "Purge (bars)"],
@@ -1522,7 +1537,7 @@ function WindowsStep({
                     value={draft.walkForward[key] ?? ""}
                     onChange={(e) => patch({ walkForward: { ...draft.walkForward, [key]: e.target.value.trim() || undefined } })}
                     aria-label={label}
-                    placeholder="0"
+                    placeholder={String(options?.temporal_guards?.release_default ?? "")}
                   />
                 </Field>
               ))}
@@ -1598,7 +1613,7 @@ function WindowsStep({
                   <input className={INPUT_CLASS} style={inputStyle()} value={inner.trainWindow} onChange={(e) => set({ trainWindow: e.target.value.trim() })} aria-label="Inner train width" placeholder="90D" />
                 </Field>
                 <Field label="Minimum inner folds" hint={options?.inner_folds ? `release default ${options.inner_folds.min_folds_release_default}` : undefined}>
-                  <input className={INPUT_CLASS} style={inputStyle()} inputMode="numeric" value={inner.minFolds} onChange={(e) => set({ minFolds: e.target.value.trim() })} aria-label="Minimum inner folds" placeholder={String(options?.inner_folds?.min_folds_release_default ?? 2)} />
+                  <input className={INPUT_CLASS} style={inputStyle()} inputMode="numeric" value={inner.minFolds} onChange={(e) => set({ minFolds: e.target.value.trim() })} aria-label="Minimum inner folds" placeholder={options?.inner_folds ? String(options.inner_folds.min_folds_release_default) : undefined} />
                 </Field>
                 {options?.inner_folds ? (
                   <p className="w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{options.inner_folds.rule}</p>
@@ -2397,7 +2412,7 @@ function ReviewRows({
         {" · "}
         {draft.symbol || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
         {" · "}
-        {draft.timeframe}
+        {draft.timeframe || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
       </Row>
       <Row label="protocol" labelWidth={labelWidth}>{draft.protocol}</Row>
       {withWindows ? (
@@ -2451,7 +2466,7 @@ function ReviewRows({
         ].map((value, index) => (
           <span key={index}>
             {index > 0 ? " · " : ""}
-            {value !== "" ? value : <NotDeclared>not declared</NotDeclared>}
+            {value !== "" ? value : <NotDeclared>{index === 0 ? "not declared" : "not set"}</NotDeclared>}
           </span>
         ))}
       </Row>
@@ -2642,17 +2657,43 @@ export function NewRun(props: NewRunProps) {
   useEffect(() => {
     onStepChange?.(step);
   }, [step, onStepChange]);
+  /* Reaching a step is not enough to call its empty required fields wrong: a
+     fresh form opened on Market data read "A symbol is required." before a key
+     was pressed. A step's own problems show once the reader has edited it or
+     left it; Review always lists every one. */
+  const [engaged, setEngaged] = useState<ReadonlySet<StepId>>(() => new Set());
+  const previousStep = useRef<StepId>(step);
+  useEffect(() => {
+    const left = previousStep.current;
+    previousStep.current = step;
+    if (left !== step) setEngaged((previous) => (previous.has(left) ? previous : new Set([...previous, left])));
+  }, [step]);
+  const stepPatch = useCallback(
+    (change: Partial<RunDraft>) => {
+      setEngaged((previous) => (previous.has(step) ? previous : new Set([...previous, step])));
+      patch(change);
+    },
+    [patch, step],
+  );
   const blocking = useMemo(() => blockingProblems(draft, limits), [draft, limits]);
   const errorByStep = useMemo(
     () => new Map(blocking.map((problem) => [problem.step, problem.message])),
     [blocking],
   );
+  const shownError = useMemo(
+    () => new Map([...errorByStep].filter(([key]) => engaged.has(key))),
+    [errorByStep, engaged],
+  );
+  const unfinishedSteps = useMemo(
+    () => new Set([...errorByStep.keys()].filter((key) => !engaged.has(key))),
+    [errorByStep, engaged],
+  );
   const errorSteps = useMemo(() => {
-    const steps = new Set([...errorByStep.keys()].filter((key) => visited.has(key)));
+    const steps = new Set([...errorByStep.keys()].filter((key) => engaged.has(key)));
     /* CG-P08-03: a server refusal marks the step that owns its field path. */
     if (refusalStep && refusalStep !== "review") steps.add(refusalStep);
     return steps;
-  }, [errorByStep, visited, refusalStep]);
+  }, [errorByStep, engaged, refusalStep]);
   const missing = useMemo(() => missingConstraints(limits), [limits]);
   /*
    * E4 (audit 02-8): a form that opens on a red box has told the reader they
@@ -2663,8 +2704,8 @@ export function NewRun(props: NewRunProps) {
    * unchanged, so the preflight button's own guard still sees everything.
    */
   const visibleBlocking = useMemo(
-    () => (step === "review" ? blocking : blocking.filter((problem) => visited.has(problem.step))),
-    [blocking, visited, step],
+    () => (step === "review" ? blocking : blocking.filter((problem) => engaged.has(problem.step))),
+    [blocking, engaged, step],
   );
   const chip = bindingChip(draft, registry);
 
@@ -2794,6 +2835,7 @@ export function NewRun(props: NewRunProps) {
           setStep(next);
         }}
         errors={errorSteps}
+        unfinished={unfinishedSteps}
         visited={visited}
         contextChosen={!draft.bound || draft.alphaVersionId !== ""}
         reviewCaption={preflightRefusal ? "preflight refused" : preflight ? "preflight issued" : "preflight pending"}
@@ -2803,7 +2845,7 @@ export function NewRun(props: NewRunProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           {step === "context" ? (
             <>
-              <ContextStep draft={draft} patch={patch} limits={limits} registry={registry} />
+              <ContextStep draft={draft} patch={stepPatch} limits={limits} registry={registry} />
               {/* What could not be read, named. A rule the browser did not get
                   is not a rule that passed — and a blank space would read as
                   the second thing. */}
@@ -2830,34 +2872,34 @@ export function NewRun(props: NewRunProps) {
             </>
           ) : null}
           {step === "strategy" ? (
-            <StrategyStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("strategy") ?? null} />
+            <StrategyStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("strategy") ?? null} />
           ) : null}
           {step === "route" ? (
             <RouteStep
               draft={draft}
-              patch={patch}
+              patch={stepPatch}
               atlas={atlas}
               atlasState={atlasState}
               limits={limits}
-              error={errorByStep.get("route") ?? null}
+              error={shownError.get("route") ?? null}
             />
           ) : null}
           {step === "data" ? (
-            <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} />
+            <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={patch} atlas={atlas} error={errorByStep.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
+            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
           ) : null}
           {step === "parameters" ? (
-            <ParametersStep draft={draft} patch={patch} error={errorByStep.get("parameters") ?? null} ceiling={sweepCeiling} />
+            <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />
           ) : null}
           {step === "optimization" ? (
             <OptimizationStep
               draft={draft}
-              patch={patch}
+              patch={stepPatch}
               limits={limits}
               release={atlas?.current_release ?? null}
-              error={errorByStep.get("optimization") ?? null}
+              error={shownError.get("optimization") ?? null}
             />
           ) : null}
 

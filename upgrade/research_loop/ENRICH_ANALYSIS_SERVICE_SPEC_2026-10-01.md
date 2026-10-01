@@ -59,3 +59,13 @@ Catalog dataset/symbol/timeframe cho S02 vẫn đi theo BR-F4-02…08 (coverage 
 ## 6. Phía FE (đã/đang làm trước khi yêu cầu này được giao)
 
 Đọc `enriched_analysis` khi có và dùng nó thay cho series rời cho S04 (curve all-time, monthly, distribution, episodes), thẻ S01 `analytics_all_time` (nhãn "all time"; chưa có thì giữ `last_30d` đúng nhãn của nó, không đổi nhãn), S09 chỉ bổ sung. Khi backend giao, FE chỉ đổi fixture đề xuất → fixture chuẩn.
+
+## 7. Góp ý contract từ phía UI sau khi dựng thử (2026-10-01, `evidence/P21/audit-2026-09-30/f4/S04_EA.md`)
+
+1. `drawdown_episodes`: thêm cờ `longest_open` (hoặc `open_episode_present`) — khối Behavior cần biết "drawdown dài nhất còn mở" khi chỉ đọc từ khối.
+2. `monthly_returns` fixture phải có ít nhất một tháng `partial: true` (đầu hoặc cuối) và một run chỉ một tháng (như R-P04-021) — thuộc ER-03/ER-09.
+3. `return_distribution.buckets[].count`: chọn **một kiểu** (số nguyên). Fixture dùng số; type của hub hiện là chuỗi.
+4. `windows.is`/`windows.holdout` có thể `AVAILABLE` nhưng khối chưa có payload cho chúng: nếu dự định phục vụ, thêm `facts`/`curves` theo window (`by_window`); chưa có thì giữ `NOT_PUBLISHED` + mã.
+5. Vị trí khối ở hub P04: chốt đường (`core.enriched_analysis` hoặc top-level `enriched_analysis`, cùng tên với current-source) — FE đọc hub P04 từ top-level `summary_analytics_v2` hiện tại.
+6. Đã dùng được ngay không cần đổi: hero Sharpe all-time ở hub P04 đọc từ `summary_analytics_v2.metrics.sharpe` (R-P04-021 trả 0.744).
+
