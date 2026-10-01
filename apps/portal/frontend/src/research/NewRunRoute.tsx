@@ -20,6 +20,7 @@ import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
 import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom, planCoverage } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
+import { profileTrialDefault, readPreflightEstimate, readProfiles, seedPinned, selectProfile } from "./dataDeclaration";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
 import { useRunLabelRead } from "./useRunLabelRead";
@@ -398,7 +399,21 @@ export function NewRunRoute() {
    * one the server admits. The reader can still change it; it is never
    * overwritten after that.
    */
-  const accepted = document?.current_release.submission_constraints?.accepted_trial_count;
+  /* LW-07: when the Atlas serves `portal_admission`, the profile the draft falls under fixes the trial
+     count (or serves a default) and the seed; the single-profile `submission_constraints` (1 trial, no
+     seed) is then not the source. Without profiles the old behaviour stands. */
+  const profiles = useMemo(
+    () => (atlas?.selected_release_kind === "CURRENT" ? readProfiles(atlas.portal_admission?.profiles ?? null) : null),
+    [atlas],
+  );
+  const profile = selectProfile(profiles, {
+    protocol: run.draft.protocol,
+    executionRoute: run.draft.executionRoute,
+    optimizationMode: run.draft.optimizationMode,
+  });
+  const staleAccepted = document?.current_release.submission_constraints?.accepted_trial_count;
+  const accepted = profiles !== null ? (profileTrialDefault(profile) ?? undefined) : staleAccepted;
+  const pinnedSeed = seedPinned(profile);
   /* A `?from=` copy owns the trial count. Until the read of that run has
      settled — and for good once it landed — this default must not run: it fired
      in the same commit as the copy, saw the still-empty field, and wrote the
@@ -412,6 +427,12 @@ export function NewRunRoute() {
       run.patch({ optunaTrials: String(accepted) });
     }
   }, [accepted, run, cloneOwnsTrials]);
+  useEffect(() => {
+    if (cloneOwnsTrials) return;
+    if (pinnedSeed !== null && run.draft.randomSeed === "") {
+      run.patch({ randomSeed: String(pinnedSeed) });
+    }
+  }, [pinnedSeed, run, cloneOwnsTrials]);
 
   /*
    * Spec 02 T26 / §outbound: a created run leaves the form for its own
@@ -454,6 +475,9 @@ export function NewRunRoute() {
   /* Keeps this component's copy of the draft in step with the controller's. */
   useEffect(() => setDraft(run.draft), [run.draft]);
 
+  /* The optional `preflight_estimate` of the answer on screen; absent means nothing new renders. */
+  const estimate = useMemo(() => readPreflightEstimate(run.preflight.preflight), [run.preflight.preflight]);
+
   return (
     <NewRun
       initialStep={STEPS.find((step) => step.id === new URLSearchParams(location.search).get("step"))?.id ?? "context"}
@@ -474,6 +498,7 @@ export function NewRunRoute() {
       catalog={catalog}
       catalogReason={catalogReason}
       portalAdmission={atlas?.selected_release_kind === "CURRENT" ? (atlas.portal_admission?.profiles ?? null) : null}
+      estimate={estimate}
       cloneSource={clone ? { runId: clone.runId, state: clone.state } : null}
       forkSource={fork}
       mayCreateRun={run.mayCreateRun}

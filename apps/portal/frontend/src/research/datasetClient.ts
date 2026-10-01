@@ -11,6 +11,7 @@ import type { components } from "@portal/contracts-research-preflight";
 
 import { PortalApiError } from "../lib/api";
 import { reportSessionExpired } from "../auth/sessionExpiry";
+import { type SymbolPage, normalizeCatalog, readSymbolPage } from "./dataDeclarationV2";
 import type { ResearchState } from "./state";
 
 type Schemas = components["schemas"];
@@ -36,7 +37,52 @@ export async function readDatasetCatalog(workspaceId?: string, signal?: AbortSig
     }
     throw new PortalApiError(message, response.status, code, requestId);
   }
-  return (await response.json()) as DatasetCatalog;
+  /* v2 publishes timeframes as objects; the rest of the screen reads names. A v1 body is returned as it was. */
+  return normalizeCatalog(await response.json());
+}
+
+/** What a server-side symbol search came back with. A route the server does not have is `absent`, never an error. */
+export type SymbolSearchResult = { state: "page"; page: SymbolPage } | { state: "absent" } | { state: "failed" };
+
+export interface SymbolSearch {
+  q?: string;
+  kind?: string;
+  timeframe?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+/**
+ * `GET /api/v1/research/datasets/{id}/symbols?q&kind&timeframe&cursor&limit`
+ * (DR-04, proposed). Asked only when the catalog says more symbols exist than it
+ * served. A 404 (older server), any other refusal and a body that is not a page
+ * all leave the served list in place, silently; a 401 still ends the session the
+ * way every other read does.
+ */
+export async function readDatasetSymbols(
+  datasetId: string,
+  search: SymbolSearch,
+  signal?: AbortSignal,
+): Promise<SymbolSearchResult> {
+  const params = new URLSearchParams();
+  if (search.q) params.set("q", search.q);
+  if (search.kind) params.set("kind", search.kind);
+  if (search.timeframe) params.set("timeframe", search.timeframe);
+  if (search.cursor) params.set("cursor", search.cursor);
+  params.set("limit", String(search.limit ?? 25));
+  try {
+    const response = await fetch(`/api/v1/research/datasets/${encodeURIComponent(datasetId)}/symbols?${params.toString()}`, {
+      credentials: "same-origin",
+      signal,
+    });
+    if (response.status === 401) reportSessionExpired();
+    if (response.status === 404 || response.status === 405 || response.status === 501) return { state: "absent" };
+    if (!response.ok) return { state: "failed" };
+    const page = readSymbolPage(await response.json());
+    return page === null ? { state: "failed" } : { state: "page", page };
+  } catch {
+    return { state: "failed" };
+  }
 }
 
 /**

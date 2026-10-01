@@ -8,18 +8,32 @@
  * zero or a dash. Nothing is estimated.
  */
 
-import { useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
-import type { CatalogDataset, CatalogSymbol } from "./datasetClient";
+import { type CatalogDataset, type CatalogSymbol, type SymbolSearchResult, coverageLabel, readDatasetSymbols } from "./datasetClient";
 import {
   type CoverageRange,
   type CoverageWarning,
   type MonthAxis,
+  type SymbolQuality,
   type TimeframeChip,
   barGeometry,
+  barsLine,
+  coverageFor,
   coverageShort,
+  datasetExtras,
+  expiryDay,
+  gapDetail,
+  group as thousands,
   groupSymbols,
+  hasDeclarationFacts,
+  instrumentTerms,
+  qualityTitle,
+  readCoverageByTimeframe,
+  readInstrument,
+  readQuality,
   symbolAxis,
+  utcDay,
 } from "./dataDeclaration";
 
 const monthText = (index: number) => `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
@@ -53,7 +67,10 @@ export function DatasetIdentity({
   /** The row is the dataset control itself (the only dataset), so it carries the control's name. */
   labelled?: boolean;
 }) {
-  const scopes = `Usage: ${dataset.usage_scopes.join(", ") || "none published"}. Excluded: ${dataset.excluded_scopes.join(", ") || "none published"}.`;
+  const extras = datasetExtras(dataset);
+  const scopes = `Usage: ${dataset.usage_scopes.join(", ") || "none published"}. Excluded: ${dataset.excluded_scopes.join(", ") || "none published"}.${
+    extras.catalogRevision ? ` Catalog ${extras.catalogRevision}.` : ""
+  }`;
   return (
     <div
       className="flex flex-wrap items-center gap-1.5 rounded-[6px] border px-2.5 py-1.5"
@@ -69,6 +86,8 @@ export function DatasetIdentity({
       <Chip data-chip="calendar" title="calendar policy">{dataset.calendar_policy}</Chip>
       <Chip data-chip="timezone" title="source timezone">{dataset.source_timezone}</Chip>
       <Chip data-chip="source-class" title="source class">{dataset.source_class}</Chip>
+      {extras.assetClass ? <Chip data-chip="asset-class" title="asset class">{extras.assetClass}</Chip> : null}
+      {extras.quoteCurrency ? <Chip data-chip="quote-currency" title="quote currency">{extras.quoteCurrency}</Chip> : null}
       {chosen ? null : (
         <button type="button" className="btn-ghost mono ml-auto text-[10px]" data-action="use-dataset" onClick={onUse}>
           use this dataset
@@ -83,26 +102,32 @@ export function UnavailableDatasets({ datasets }: { datasets: readonly CatalogDa
   if (datasets.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5" data-unavailable-datasets>
-      {datasets.map((item) => (
-        <span
-          key={item.dataset_id}
-          className="mono rounded-[3px] border border-dashed px-1.5 text-[9.5px] leading-[16px]"
-          style={{ borderColor: "var(--line-strong)", color: "var(--ink-faint)", cursor: "not-allowed" }}
-          title={item.unavailable_reason ?? "unavailable — no reason published"}
-          aria-label={`${item.dataset_id}, unavailable${item.unavailable_reason ? ` — ${item.unavailable_reason}` : ""}`}
-          data-unavailable-dataset={item.dataset_id}
-        >
-          {item.dataset_id} · unavailable
-        </span>
-      ))}
+      {datasets.map((item) => {
+        /* v2: the server's reason code rides with its sentence. */
+        const code = datasetExtras(item).unavailableReasonCode;
+        const reason = item.unavailable_reason ?? "unavailable — no reason published";
+        return (
+          <span
+            key={item.dataset_id}
+            className="mono rounded-[3px] border border-dashed px-1.5 text-[9.5px] leading-[16px]"
+            style={{ borderColor: "var(--line-strong)", color: "var(--ink-faint)", cursor: "not-allowed" }}
+            title={code ? `${reason} · ${code}` : reason}
+            aria-label={`${item.dataset_id}, unavailable${item.unavailable_reason ? ` — ${item.unavailable_reason}` : ""}${code ? ` · ${code}` : ""}`}
+            data-unavailable-dataset={item.dataset_id}
+            data-reason-code={code ?? undefined}
+          >
+            {item.dataset_id} · unavailable
+          </span>
+        );
+      })}
     </div>
   );
 }
 
 /* --------------------------------------------------------- symbol picker */
 
-function CoverageBar({ symbol, axis }: { symbol: CatalogSymbol; axis: MonthAxis | null }) {
-  const geometry = barGeometry(symbol, axis);
+function CoverageBar({ symbol, axis, timeframe }: { symbol: CatalogSymbol; axis: MonthAxis | null; timeframe?: string }) {
+  const geometry = barGeometry(symbol, axis, timeframe);
   return (
     <span
       className="relative block h-[6px] w-[96px] flex-none rounded-full"
@@ -129,6 +154,15 @@ function CoverageBar({ symbol, axis }: { symbol: CatalogSymbol; axis: MonthAxis 
  * move, Enter to pick, Escape to close. The input still takes any text: a
  * symbol that is not listed is the caller's typed `symbol-unlisted` state.
  */
+export const SYMBOL_SEARCH_DEBOUNCE_MS = 250;
+const PAGE_LIMIT = 25;
+
+type Remote =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "absent" }
+  | { state: "ok"; q: string; items: readonly CatalogSymbol[]; total: number | null; nextCursor: string | null };
+
 export function SymbolCombobox({
   value,
   symbols,
@@ -136,6 +170,13 @@ export function SymbolCombobox({
   truncated,
   bad,
   onChange,
+  datasetId = "",
+  timeframe = "",
+  nextCursor = null,
+  search = readDatasetSymbols,
+  debounceMs = SYMBOL_SEARCH_DEBOUNCE_MS,
+  onServerMiss,
+  onServerItems,
 }: {
   value: string;
   symbols: readonly CatalogSymbol[];
@@ -144,18 +185,100 @@ export function SymbolCombobox({
   bad: boolean;
   /** Called with the picked or typed symbol (upper-cased). */
   onChange: (symbol: string) => void;
+  /** The dataset the list belongs to; the server is asked about its symbols only when it is partial. */
+  datasetId?: string;
+  /** The chosen timeframe: the coverage line and bar follow it, and the server search filters by it. */
+  timeframe?: string;
+  /** The catalog's own cursor, when it served a first page only. */
+  nextCursor?: string | null;
+  search?: typeof readDatasetSymbols;
+  debounceMs?: number;
+  /** Told the symbol the server was asked for and answered "none" for; null otherwise. */
+  onServerMiss?: (symbol: string | null) => void;
+  /** The symbols the server last returned, so the picked one's facts can be shown though the catalog did not serve it. */
+  onServerItems?: (items: readonly CatalogSymbol[]) => void;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
   /* null = untouched since opening: show every symbol, whatever the field holds. */
   const [query, setQuery] = useState<string | null>(null);
   const [active, setActive] = useState(0);
+  const [kind, setKind] = useState("");
+  const [remote, setRemote] = useState<Remote>({ state: "idle" });
+  /* A server without the route answers 404 once; from then on the served list is the list, silently. */
+  const absentFor = useRef<string | null>(null);
   const listed = symbols.length > 0;
-  const groups = useMemo(() => groupSymbols(symbols, query), [symbols, query]);
-  const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  /* More exist than were served: ask the server, not the local list. */
+  const partial = nextCursor !== null || (total !== null && total > symbols.length);
+  const needle = (query ?? "").trim().toUpperCase();
+  const kinds = useMemo(
+    () => [...new Set(symbols.map((item) => item.contract_kind).filter((entry): entry is NonNullable<typeof entry> => entry !== null))],
+    [symbols],
+  );
+
+  useEffect(() => {
+    if (!partial || datasetId === "" || absentFor.current === datasetId) return;
+    if (needle === "" && kind === "") {
+      setRemote({ state: "idle" });
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setRemote({ state: "loading" });
+      void search(datasetId, { q: needle, kind, timeframe, limit: PAGE_LIMIT }, controller.signal).then((result: SymbolSearchResult) => {
+        if (controller.signal.aborted) return;
+        if (result.state === "absent") {
+          absentFor.current = datasetId;
+          setRemote({ state: "absent" });
+        } else if (result.state === "failed") {
+          setRemote({ state: "idle" });
+        } else {
+          setRemote({ state: "ok", q: needle, items: result.page.items, total: result.page.total, nextCursor: result.page.nextCursor });
+        }
+      });
+    }, debounceMs);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [partial, datasetId, needle, kind, timeframe, search, debounceMs]);
+
+  const fromServer = remote.state === "ok";
+  const shownSymbols = fromServer ? remote.items : kind === "" ? symbols : symbols.filter((item) => item.contract_kind === kind);
+  const shownTotal = fromServer ? remote.total : total;
+  const cursor = fromServer ? remote.nextCursor : remote.state === "absent" ? null : nextCursor;
+  const loadMore = useCallback(() => {
+    if (cursor === null || datasetId === "") return;
+    void search(datasetId, { q: needle, kind, timeframe, cursor, limit: PAGE_LIMIT }).then((result) => {
+      if (result.state !== "page") return;
+      setRemote((current) => {
+        const base = current.state === "ok" ? current.items : symbols;
+        const seen = new Set(base.map((item) => item.symbol));
+        return {
+          state: "ok",
+          q: needle,
+          items: [...base, ...result.page.items.filter((item) => !seen.has(item.symbol))],
+          total: result.page.total ?? (current.state === "ok" ? current.total : total),
+          nextCursor: result.page.nextCursor,
+        };
+      });
+    });
+  }, [cursor, datasetId, search, needle, kind, timeframe, symbols, total]);
+  const missed = fromServer && remote.total === 0 && remote.q === value.trim().toUpperCase() ? remote.q : null;
+  useEffect(() => {
+    onServerMiss?.(missed);
+  }, [missed, onServerMiss]);
+  const serverItems = fromServer ? remote.items : null;
+  useEffect(() => {
+    if (serverItems !== null) onServerItems?.(serverItems);
+  }, [serverItems, onServerItems]);
+
+  const groups = useMemo(() => groupSymbols(shownSymbols, fromServer ? null : query), [shownSymbols, fromServer, query]);
+  const flat = useMemo(() => groups.flatMap((entry) => entry.items), [groups]);
   const axis = useMemo(() => symbolAxis(symbols), [symbols]);
   const expanded = listed && open;
   const optionId = (index: number) => `${id}-opt-${index}`;
+  const rich = useMemo(() => symbols.some(hasDeclarationFacts), [symbols]);
 
   const pick = (symbol: string) => {
     onChange(symbol);
@@ -213,15 +336,38 @@ export function SymbolCombobox({
           id={`${id}-list`}
           role="listbox"
           aria-label="Published symbols"
-          className="absolute left-0 top-full z-20 mt-1 max-h-[280px] w-[min(460px,calc(100vw-48px))] overflow-auto rounded-[6px] border"
+          className="absolute left-0 top-full z-20 mt-1 max-h-[280px] w-[min(520px,calc(100vw-48px))] overflow-auto rounded-[6px] border"
           style={{ borderColor: "var(--line-strong)", background: "var(--paper-raised)", boxShadow: "var(--shadow-e2)" }}
           data-symbol-listbox
           /* Options take the click without moving focus off the input. */
           onMouseDown={(event) => event.preventDefault()}
         >
+          {kinds.length > 1 && partial ? (
+            <div className="flex items-center gap-1 px-2.5 py-1" role="group" aria-label="Contract kind">
+              {["", ...kinds].map((entry) => (
+                <button
+                  key={entry || "all"}
+                  type="button"
+                  className="mono rounded-[3px] border px-1.5 text-[9px] leading-[16px]"
+                  style={{
+                    borderColor: kind === entry ? "var(--accent)" : "var(--line-strong)",
+                    color: kind === entry ? "var(--accent)" : "var(--ink-soft)",
+                  }}
+                  aria-pressed={kind === entry}
+                  onClick={() => {
+                    setKind(entry);
+                    setActive(0);
+                  }}
+                  data-symbol-kind={entry || "all"}
+                >
+                  {entry === "" ? "all" : entry.toLowerCase()}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {flat.length === 0 ? (
             <p className="px-2.5 py-2 text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-symbol-no-match>
-              no listed symbol matches
+              {remote.state === "loading" ? "searching" : "no listed symbol matches"}
             </p>
           ) : null}
           {groups.map((group) => (
@@ -251,23 +397,32 @@ export function SymbolCombobox({
                     onClick={() => pick(item.symbol)}
                   >
                     <span className="mono w-[128px] flex-none text-[10.5px] font-semibold">{item.symbol}</span>
-                    <span
-                      className="mono min-w-0 flex-1 text-[9.5px]"
-                      style={{ color: "var(--ink-faint)", fontStyle: item.coverage ? "normal" : "italic" }}
-                      data-option-coverage
-                    >
-                      {coverageShort(item) ?? "coverage not published"}
-                    </span>
-                    <CoverageBar symbol={item} axis={axis} />
+                    <OptionFacts item={item} timeframe={timeframe} rich={rich} />
+                    <CoverageBar symbol={item} axis={axis} timeframe={timeframe} />
                   </div>
                 );
               })}
             </div>
           ))}
-          {truncated ? (
+          {fromServer ? (
+            <p className="mono px-2.5 py-1 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-symbol-caption>
+              top {thousands(shownSymbols.length)}{shownTotal !== null ? ` / ${thousands(shownTotal)}` : ""}
+            </p>
+          ) : truncated ? (
             <p className="px-2.5 py-1.5 text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-symbol-truncated>
               list truncated — {symbols.length} of {total ?? "an unpublished total"} shown; type any symbol, preflight checks it
             </p>
+          ) : null}
+          {cursor !== null ? (
+            <button
+              type="button"
+              className="mono m-1.5 rounded-[3px] border px-2 text-[9.5px] leading-[18px]"
+              style={{ borderColor: "var(--line-strong)", color: "var(--ink-soft)" }}
+              onClick={loadMore}
+              data-symbol-more
+            >
+              more
+            </button>
           ) : null}
         </div>
       ) : null}
@@ -275,12 +430,139 @@ export function SymbolCombobox({
   );
 }
 
+/* ------------------------------------------------- v2 symbol facts (optional) */
+
+const QUALITY_TONE: Readonly<Record<string, string>> = { OK: "var(--good)", PARTIAL: "var(--accent-2)" };
+
+/** The quality word as the server wrote it; every number it rests on is in the tooltip. */
+export function QualityChip({ quality }: { quality: SymbolQuality }) {
+  const title = qualityTitle(quality);
+  return (
+    <span
+      className="mono flex-none rounded-[3px] border px-1 text-[8.5px] font-bold leading-[14px]"
+      style={{ color: QUALITY_TONE[quality.state] ?? "var(--ink-soft)", borderColor: "var(--line-strong)" }}
+      title={title}
+      aria-label={title}
+      tabIndex={0}
+      data-quality-chip={quality.state}
+    >
+      {quality.state}
+    </span>
+  );
+}
+
+/** What the server published for the chosen timeframe, or the months when it published no bars for it. */
+function coverageText(item: CatalogSymbol, timeframe: string, long = false): { text: string; title?: string; served: boolean } {
+  const frame = timeframe ? coverageFor(item, timeframe) : null;
+  const line = frame ? barsLine(frame) : null;
+  if (frame && line) {
+    const span =
+      frame.firstBarUtcMs !== null && frame.lastBarUtcMs !== null ? `${utcDay(frame.firstBarUtcMs)} → ${utcDay(frame.lastBarUtcMs)}` : null;
+    /* The picked symbol's line carries the span; a list row keeps it short and puts the span in the tooltip. */
+    return {
+      text: long && span ? `${span} · ${line}` : line,
+      title: [long ? null : span, gapDetail(frame)].filter(Boolean).join(" · ") || undefined,
+      served: true,
+    };
+  }
+  const months = long ? coverageLabel(item) : coverageShort(item);
+  const framesPublished = readCoverageByTimeframe(item) !== null;
+  if (months === null) return { text: "coverage not published", served: false };
+  return { text: framesPublished && timeframe ? `${months} · ${timeframe} bars not published` : months, served: false };
+}
+
+/** One option's facts: coverage on the chosen timeframe, instrument terms, quality. Absent facts are typed, never zero. */
+function OptionFacts({ item, timeframe, rich }: { item: CatalogSymbol; timeframe: string; rich: boolean }) {
+  const instrument = readInstrument(item);
+  const quality = readQuality(item);
+  const coverage = coverageText(item, timeframe);
+  const expiry = expiryDay(item);
+  const terms = instrument ? instrumentTerms(instrument) : "";
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span
+          className="mono text-[9.5px]"
+          style={{ color: "var(--ink-faint)", fontStyle: item.coverage ? "normal" : "italic" }}
+          title={coverage.title}
+          data-option-coverage
+          data-option-bars={coverage.served ? timeframe : undefined}
+        >
+          {coverage.text}
+        </span>
+        {instrument ? (
+          <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }} data-option-instrument>
+            {[terms, expiry ? `exp ${expiry}` : null].filter(Boolean).join(" · ")}
+          </span>
+        ) : rich ? (
+          <span className="text-[9px] italic" style={{ color: "var(--ink-faint)" }} data-option-instrument-absent>
+            instrument — not published
+          </span>
+        ) : null}
+      </span>
+      {quality ? <QualityChip quality={quality} /> : null}
+    </span>
+  );
+}
+
+/**
+ * What the picked symbol is, under the field: the instrument, quality, and its
+ * coverage. Without any v2 fact this is the single line the screen always had;
+ * with them, the chosen timeframe's bars and gaps replace the month span, and
+ * what the server left out reads "not published".
+ */
+export function SymbolFacts({ symbol, timeframe, rich }: { symbol: CatalogSymbol; timeframe: string; rich: boolean }) {
+  const instrument = readInstrument(symbol);
+  const quality = readQuality(symbol);
+  const coverage = coverageText(symbol, timeframe, true);
+  const expiry = expiryDay(symbol);
+  const kind = symbol.contract_kind ? `${symbol.contract_kind.toLowerCase()} · ` : "";
+  const frame = timeframe ? coverageFor(symbol, timeframe) : null;
+  return (
+    <span className="flex flex-col gap-0.5" data-symbol-facts>
+      {instrument || rich ? (
+        <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          {instrument ? (
+            <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-instrument>
+              {[instrument.displayName, instrumentTerms(instrument), expiry ? `exp ${expiry}` : null].filter(Boolean).join(" · ")}
+            </span>
+          ) : (
+            <span className="text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-instrument-absent>
+              instrument — not published
+            </span>
+          )}
+          {quality ? (
+            <QualityChip quality={quality} />
+          ) : (
+            <span className="text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-quality-absent>
+              quality — not published
+            </span>
+          )}
+        </span>
+      ) : null}
+      <span
+        className="mono text-[9.5px]"
+        style={{ color: "var(--ink-faint)" }}
+        title={coverage.title}
+        aria-label={coverage.title ? `${timeframe} coverage · ${coverage.title}` : undefined}
+        data-symbol-coverage
+        data-coverage-timeframe={frame ? timeframe : undefined}
+      >
+        {kind}
+        {coverage.served ? `${timeframe} · ` : ""}
+        {coverage.text}
+      </span>
+    </span>
+  );
+}
+
 /* ------------------------------------------------------------ timeframes */
 
-const CHIP_REASON: Record<NonNullable<TimeframeChip["disabledReason"]>, (version: string) => string> = {
+const CHIP_REASON: Record<NonNullable<TimeframeChip["disabledReason"]>, (version: string, code: string | null) => string> = {
   "not-declared": (version) => `not declared by ${version}`,
   "not-offered": () => "not offered by dataset",
   "declaration-not-published": () => "version timeframes not published — preflight decides",
+  unavailable: (_version, code) => `dataset cannot serve it${code ? ` · ${code}` : ""}`,
 };
 
 /** One chip per dataset timeframe: enabled when the bound version declares it. */
@@ -306,7 +588,7 @@ export function TimeframeChips({
   return (
     <div role="radiogroup" aria-label="Timeframe" className="flex flex-wrap gap-1.5" data-timeframe-chips>
       {chips.map((chip) => {
-        const reason = chip.disabledReason ? CHIP_REASON[chip.disabledReason](version) : `declared by ${version}`;
+        const reason = chip.disabledReason ? CHIP_REASON[chip.disabledReason](version, chip.reasonCode) : `declared by ${version}`;
         return (
           <button
             key={chip.timeframe}

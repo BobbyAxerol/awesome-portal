@@ -33,23 +33,33 @@ import {
 } from "./alphaVersionPublication";
 import { scheduleChoices } from "./atlas";
 import type { AtlasDocument } from "./atlas";
-import { type CatalogDataset, type DatasetCatalog, coverageLabel, splitCatalogReason } from "./datasetClient";
+import { type CatalogDataset, type CatalogSymbol, type DatasetCatalog, splitCatalogReason } from "./datasetClient";
 import {
   CoverageWarnings,
   DatasetIdentity,
   SymbolCombobox,
+  SymbolFacts,
   TimeframeChips,
   UnavailableDatasets,
 } from "./DataDeclaration";
 import {
   type FoldPlan,
+  type PreflightEstimate,
   type ProfileFoldBounds,
+  type ProfilePins,
   coverageRange,
   coverageWarnings,
   foldPlan,
+  hasDeclarationFacts,
+  readProfiles,
+  seedPinned,
+  selectProfile,
   sharedAxis,
+  symbolListing,
   timeframeChips,
+  trialsPinned,
 } from "./dataDeclaration";
+import { ConditionsChecklist, PlannedFolds, WarmupChip, WindowBars, WindowBarsLine, hasEstimateStrip } from "./EstimateParts";
 import { OOS_STATE_LABEL, statusTone } from "./EngineAtlas";
 import type { PreflightRefusal } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
@@ -997,7 +1007,13 @@ function DataStep({
   /* FG-08 (FE-A1-01): client sentence, then the typed facts in mono. */
   const catalogNote = catalogReason ? splitCatalogReason(catalogReason) : null;
   const symbols = dataset?.symbols.state === "PUBLISHED" ? dataset.symbols.items : [];
-  const selectedSymbol = symbols.find((item) => item.symbol === draft.symbol.trim().toUpperCase()) ?? null;
+  /* v2: a list the catalog served only in part is searched on the server; its answer, not this list, says "unlisted". */
+  const listing = symbolListing(dataset);
+  const [serverMiss, setServerMiss] = useState<string | null>(null);
+  const [serverItems, setServerItems] = useState<readonly CatalogSymbol[]>([]);
+  const richSymbols = symbols.some(hasDeclarationFacts);
+  const typedSymbol = draft.symbol.trim().toUpperCase();
+  const selectedSymbol = symbols.find((item) => item.symbol === typedSymbol) ?? serverItems.find((item) => item.symbol === typedSymbol) ?? null;
   const pickDataset = (datasetId: string) =>
     patch({ datasetId, ...applyCoveragePrefill(draft, planCoverage(catalog, datasetId, draft.symbol)) });
   const pickSymbol = (symbol: string) =>
@@ -1066,7 +1082,7 @@ function DataStep({
               ))}
             </select>
             {dataset ? <DatasetIdentity dataset={dataset} chosen onUse={() => pickDataset(dataset.dataset_id)} /> : null}
-            {available.length === 0 ? <UnavailableDatasets datasets={unavailable} /> : null}
+            <UnavailableDatasets datasets={unavailable} />
           </>
         )}
         {dataset && dataset.availability !== "available" ? (
@@ -1084,13 +1100,15 @@ function DataStep({
             truncated={dataset?.symbols.truncated === true}
             bad={error !== null && draft.symbol.trim().length === 0}
             onChange={pickSymbol}
+            datasetId={dataset?.dataset_id ?? ""}
+            timeframe={draft.timeframe}
+            nextCursor={listing?.nextCursor ?? null}
+            onServerMiss={setServerMiss}
+            onServerItems={setServerItems}
           />
           {selectedSymbol ? (
-            <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-symbol-coverage>
-              {selectedSymbol.contract_kind ? `${selectedSymbol.contract_kind.toLowerCase()} · ` : ""}
-              {coverageLabel(selectedSymbol) ?? "coverage not published"}
-            </span>
-          ) : dataset && dataset.symbols.state === "PUBLISHED" && draft.symbol.trim() ? (
+            <SymbolFacts symbol={selectedSymbol} timeframe={draft.timeframe} rich={richSymbols} />
+          ) : dataset && dataset.symbols.state === "PUBLISHED" && typedSymbol !== "" && (listing?.partial !== true || serverMiss === typedSymbol) ? (
             <span className="text-[10px]" style={{ color: "var(--accent-2)" }} data-symbol-unlisted>
               {draft.symbol.trim().toUpperCase()} is not in this dataset&rsquo;s {dataset.symbols.total} listed symbols — preflight will refuse it.
             </span>
@@ -1247,6 +1265,11 @@ function V2CreateNote({ where, admitted }: { where: string; admitted: boolean })
   );
 }
 
+/** The profile id that fixes a value, when the draft holds exactly that value; else undefined (the field stays editable). */
+function pinnedBy(profile: ProfilePins | null, pinned: string | null, current: string): string | undefined {
+  return profile?.enabled && pinned !== null && pinned === current ? profile.profileId : undefined;
+}
+
 /**
  * One published walk-forward choice (RF02-F2).
  *
@@ -1262,6 +1285,7 @@ function PublishedSelect({
   fallback,
   onChange,
   minWidth,
+  pinnedBy,
 }: {
   label: string;
   value: string;
@@ -1269,6 +1293,8 @@ function PublishedSelect({
   fallback: string;
   onChange: (value: string) => void;
   minWidth?: number;
+  /** The profile that fixes this value: the select is then read-only and says by whom. */
+  pinnedBy?: string;
 }) {
   if (options === null) {
     return (
@@ -1289,6 +1315,9 @@ function PublishedSelect({
         onChange={(e) => onChange(e.target.value)}
         aria-label={label}
         data-published-select={label}
+        disabled={pinnedBy !== undefined}
+        title={pinnedBy !== undefined ? `pinned by ${pinnedBy}` : undefined}
+        data-pinned-by={pinnedBy}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value} disabled={option.admission !== "ADMITTED"}>
@@ -1376,11 +1405,14 @@ function WindowsStep({
   catalog = null,
   warmupBars = null,
   createAdmitted = false,
+  profile = null,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   /** Where the release defaults are adopted on arrival: not a reader edit, so it must not mark the step as touched. */
   adopt?: (change: Partial<RunDraft>) => void;
+  /** LW-07: the profile this declaration falls under; it pins the fold granularity and window mode it serves. */
+  profile?: ProfilePins | null;
   atlas: AtlasDocument | null;
   error: string | null;
   /** D4: the catalog the outer bounds were prefilled from. */
@@ -1401,10 +1433,16 @@ function WindowsStep({
   useEffect(() => {
     if (!options || draft.protocol !== "advanced") return;
     const change: Partial<RunDraft["walkForward"]> = {};
-    if (!draft.walkForward.frequency) change.frequency = options.frequency_default;
-    if (!draft.walkForward.windowMode) change.windowMode = options.window_mode_default;
+    /* LW-07: a profile that serves the fold granularity or window mode supplies the
+       default, when the release lists it as admitted; otherwise the release's own. */
+    const admitted = (list: readonly { value: string; admission: string }[], value: string | null) =>
+      value !== null && list.some((option) => option.value === value && option.admission === "ADMITTED") ? value : null;
+    const profileFrequency = profile?.enabled ? admitted(options.frequency, profile.granularity) : null;
+    const profileWindowMode = profile?.enabled ? admitted(options.window_mode, profile.windowMode) : null;
+    if (!draft.walkForward.frequency) change.frequency = profileFrequency ?? options.frequency_default;
+    if (!draft.walkForward.windowMode) change.windowMode = profileWindowMode ?? options.window_mode_default;
     if (Object.keys(change).length > 0) adopt({ walkForward: { ...draft.walkForward, ...change } });
-  }, [options, draft.protocol, draft.walkForward, adopt]);
+  }, [options, draft.protocol, draft.walkForward, adopt, profile]);
   const rows = [
     ["is", "IS"],
     ["oos", "OOS"],
@@ -1493,6 +1531,7 @@ function WindowsStep({
             options={options?.frequency ?? null}
             fallback={options?.frequency_default ?? ""}
             minWidth={120}
+            pinnedBy={pinnedBy(profile, profile?.granularity ?? null, draft.walkForward.frequency || options?.frequency_default || "")}
             onChange={(frequency) => patch({ walkForward: { ...draft.walkForward, frequency } })}
           />
           <PublishedSelect
@@ -1501,6 +1540,7 @@ function WindowsStep({
             options={options?.window_mode ?? null}
             fallback={options?.window_mode_default ?? ""}
             minWidth={120}
+            pinnedBy={pinnedBy(profile, profile?.windowMode ?? null, draft.walkForward.windowMode || options?.window_mode_default || "")}
             onChange={(windowMode) => patch({ walkForward: { ...draft.walkForward, windowMode } })}
           />
           {draft.walkForward.windowMode === "rolling" ? (
@@ -1547,6 +1587,22 @@ function WindowsStep({
           ) : null}
         </div>
       )}
+
+      {profile?.enabled && (profile.folds !== null || profile.maxSpanDays !== null) ? (
+        <p className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} title={`profile ${profile.profileId}`} data-profile-folds={profile.profileId}>
+          {[
+            profile.folds ? `folds ${profile.folds.min}–${profile.folds.max}` : null,
+            profile.maxSpanDays !== null ? `span ≤ ${profile.maxSpanDays} days` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      ) : null}
+      {profile?.enabled && draft.protocol === "advanced" && profile.granularity !== null && draft.walkForward.frequency !== "" && draft.walkForward.frequency !== profile.granularity ? (
+        <p className="mono text-[10px]" style={{ color: "var(--accent-2)" }} data-outside-profile-field="frequency">
+          Frequency {draft.walkForward.frequency} — profile {profile.granularity}. Kept as entered.
+        </p>
+      ) : null}
 
       {/* Keep invalid schedules visible but disabled; the source explains why. */}
       <div className="flex flex-wrap gap-2.5">
@@ -1932,37 +1988,123 @@ function OutsideProfileNotes({ draft, constraints }: { draft: RunDraft; constrai
   );
 }
 
+function SelectedProfileNotes({ draft, profile }: { draft: RunDraft; profile: ProfilePins }) {
+  const notes = outsideSelectedProfileNotes(draft, profile);
+  if (notes.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-0.5" data-outside-profile>
+      {notes.map((note) => (
+        <li key={note.field} className="mono text-[10px]" style={{ color: "var(--accent-2)" }} data-outside-profile-field={note.field}>
+          {note.text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** What the selected profile fixes, in its own numbers (LW-07). Replaces the stale single-profile card when profiles are served. */
+function ProfileCard({ profile }: { profile: ProfilePins }) {
+  const parts = [
+    profile.trials ? (profile.trials.min === profile.trials.max ? `trials ${profile.trials.min}` : `trials ${profile.trials.min}–${profile.trials.max}`) : null,
+    profile.seed.state === "fixed" ? `seed ${profile.seed.value}` : profile.seed.state === "forbidden" ? "no seed" : null,
+    profile.folds ? `folds ${profile.folds.min}–${profile.folds.max}` : null,
+    profile.granularity,
+    profile.windowMode,
+    profile.maxSpanDays !== null ? `span ≤ ${profile.maxSpanDays} days` : null,
+  ].filter((part): part is string => part !== null);
+  return (
+    <div
+      className="flex flex-col gap-1 rounded-[6px] border px-3 py-2"
+      style={{ borderColor: "var(--role-holdout)", background: "var(--paper)" }}
+      data-profile-card={profile.profileId}
+      data-profile-state={profile.enabled ? "ENABLED" : "DISABLED"}
+    >
+      <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--role-holdout)" }}>
+        profile · {profile.profileId}
+      </span>
+      {profile.enabled ? (
+        <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>{parts.join(" · ")}</span>
+      ) : (
+        <span className="mono text-[10px]" style={{ color: "var(--bad)" }}>disabled{profile.reason ? ` · ${profile.reason}` : ""}</span>
+      )}
+    </div>
+  );
+}
+
+/** Declared trials/seed outside the selected profile's pins, one sentence each; the value stays as entered. */
+export function outsideSelectedProfileNotes(
+  draft: Pick<RunDraft, "optunaTrials" | "randomSeed">,
+  profile: ProfilePins,
+): readonly { field: "trials" | "random_seed"; text: string }[] {
+  const notes: { field: "trials" | "random_seed"; text: string }[] = [];
+  const trials = draft.optunaTrials.trim();
+  const trialRange = profile.trials;
+  if (trials !== "" && trialRange !== null) {
+    const n = Number(trials);
+    if (Number.isFinite(n) && (n < trialRange.min || n > trialRange.max)) {
+      notes.push({ field: "trials", text: `Trials ${trials} — profile ${trialRange.min}–${trialRange.max}. Kept as entered.` });
+    }
+  }
+  const seed = draft.randomSeed.trim();
+  if (seed !== "") {
+    if (profile.seed.state === "fixed" && seed !== String(profile.seed.value)) {
+      notes.push({ field: "random_seed", text: `Seed ${seed} — profile pins ${profile.seed.value}. Kept as entered.` });
+    } else if (profile.seed.state === "forbidden") {
+      notes.push({ field: "random_seed", text: `Seed ${seed} — profile admits none. Kept as entered.` });
+    }
+  }
+  return notes;
+}
+
 function OptimizationStep({
   draft,
   patch,
   limits,
   release,
   error,
+  profile = null,
+  profilesServed = false,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   limits: DraftConstraints;
   release: AtlasRelease | null;
   error: string | null;
+  /** LW-07: the one profile this declaration falls under; it pins what it pins, the rest stays editable. */
+  profile?: ProfilePins | null;
+  /** The Atlas served its profiles: the single-profile `submission_constraints` is then no longer the source. */
+  profilesServed?: boolean;
 }) {
   const overrides = Object.keys(draft.optimizationConfigOverrides);
+  const pinnedTrials = trialsPinned(profile);
+  const trialsLocked = pinnedTrials !== null && draft.optunaTrials.trim() === String(pinnedTrials);
+  const pinnedSeed = seedPinned(profile);
+  const seedLocked = pinnedSeed !== null && draft.randomSeed.trim() === String(pinnedSeed);
+  const lockStyle = { background: "var(--paper-sunken)", cursor: "not-allowed" } as const;
   return (
     <Card title="Optimization">
       <div className="flex flex-wrap gap-2.5">
           <Field
           label="Optuna trials"
           hint={
-            limits.trialCeiling === null
-              ? "the release's ceiling could not be read"
-              : `ceiling ${limits.trialCeiling}`
+            trialsLocked
+              ? `pinned · ${profile?.profileId}`
+              : profile?.enabled && profile.trials
+                ? `profile ${profile.trials.min}–${profile.trials.max}`
+                : limits.trialCeiling === null
+                  ? "the release's ceiling could not be read"
+                  : `ceiling ${limits.trialCeiling}`
           }
         >
           <input
             className={INPUT_CLASS}
-            style={inputStyle(Boolean(error))}
+            style={trialsLocked ? { ...inputStyle(), ...lockStyle } : inputStyle(Boolean(error))}
             value={draft.optunaTrials}
             onChange={(e) => patch({ optunaTrials: e.target.value })}
             aria-label="Optuna trials"
+            readOnly={trialsLocked}
+            title={trialsLocked ? `pinned by ${profile?.profileId}` : undefined}
+            data-pinned-by={trialsLocked ? profile?.profileId : undefined}
           />
         </Field>
         <Field label="Early stopping" hint="stagnation patience — actual trials may land lower">
@@ -1974,13 +2116,16 @@ function OptimizationStep({
             aria-label="Early stopping"
           />
         </Field>
-        <Field label={limits.seedRequired === true ? "Random seed *" : "Random seed"}>
+        <Field label={limits.seedRequired === true ? "Random seed *" : "Random seed"} hint={seedLocked ? `pinned · ${profile?.profileId}` : undefined}>
           <input
             className={INPUT_CLASS}
-            style={inputStyle(limits.seedRequired === true && draft.randomSeed.trim() === "")}
+            style={seedLocked ? { ...inputStyle(), ...lockStyle } : inputStyle(limits.seedRequired === true && draft.randomSeed.trim() === "")}
             value={draft.randomSeed}
             onChange={(e) => patch({ randomSeed: e.target.value })}
             aria-label="Random seed"
+            readOnly={seedLocked}
+            title={seedLocked ? `pinned by ${profile?.profileId}` : undefined}
+            data-pinned-by={seedLocked ? profile?.profileId : undefined}
           />
         </Field>
       </div>
@@ -1988,7 +2133,9 @@ function OptimizationStep({
       {/* A copied run (or a typed value) can sit outside the submission profile
           the Atlas lists. It is kept as entered — never replaced — and said so;
           preflight and create decide, not this note. */}
-      {release ? (
+      {profile?.enabled ? (
+        <SelectedProfileNotes draft={draft} profile={profile} />
+      ) : release && !profilesServed ? (
         <OutsideProfileNotes draft={draft} constraints={release.submission_constraints} />
       ) : null}
 
@@ -2016,7 +2163,7 @@ function OptimizationStep({
 
       {release ? (
         <>
-          <SubmissionConstraints release={release} />
+          {profile ? <ProfileCard profile={profile} /> : profilesServed ? null : <SubmissionConstraints release={release} />}
           <OptimizerDefaults release={release} />
         </>
       ) : (
@@ -2177,10 +2324,13 @@ function WindowTimeline({
   draft,
   catalog = null,
   fold,
+  estimate = null,
 }: {
   draft: RunDraft;
   catalog?: DatasetCatalog | null;
   fold: FoldPlan;
+  /** The server's optional `preflight_estimate`: bars per window, warmup, planned folds. Null prints none of it. */
+  estimate?: PreflightEstimate | null;
 }) {
   /* S02_DATA: the chosen symbol's served coverage on the same clock as the windows. */
   const coverage = coverageRange(planCoverage(catalog, draft.datasetId, draft.symbol));
@@ -2241,16 +2391,28 @@ function WindowTimeline({
               ))}
             </span>
             <span />
-            <span className="mono break-words text-[9px]" style={{ color: "var(--ink-faint)" }} data-timeline-text={row.key}>
-              {row.text}
+            <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="mono break-words text-[9px]" style={{ color: "var(--ink-faint)" }} data-timeline-text={row.key}>
+                {row.text}
+              </span>
+              {row.key === "is" || row.key === "oos" || row.key === "holdout" ? <WindowBars estimate={estimate} window={row.key} /> : null}
             </span>
           </div>
         ))}
         {draft.protocol === "advanced" ? (
-          <p className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-advanced-timeline>
-            {draft.walkForward.frequency || "frequency not declared"}
-            {" · "}{draft.walkForward.windowMode || "window mode not declared"}
-            {" · first OOS "}{draft.walkForward.splitMode || NOT_DECLARED}
+          <>
+            <p className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-advanced-timeline>
+              {draft.walkForward.frequency || "frequency not declared"}
+              {" · "}{draft.walkForward.windowMode || "window mode not declared"}
+              {" · first OOS "}{draft.walkForward.splitMode || NOT_DECLARED}
+            </p>
+            <WindowBarsLine estimate={estimate} />
+          </>
+        ) : null}
+        {hasEstimateStrip(estimate) ? (
+          <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1" data-estimate-strip>
+            <WarmupChip estimate={estimate} />
+            <PlannedFolds estimate={estimate} />
           </p>
         ) : null}
       </div>
@@ -2509,7 +2671,10 @@ function ReviewRail({
   catalog = null,
   portalAdmission = null,
   versionDeclared = false,
+  estimate = null,
 }: {
+  /** The server's optional `preflight_estimate` (bars, warmup, folds, conditions); null when none was served. */
+  estimate?: PreflightEstimate | null;
   /** S02_DATA: the catalog the coverage bar reads, the Atlas's admitted profiles, and whether the version's declaration was read. */
   catalog?: DatasetCatalog | null;
   portalAdmission?: ProfileFoldBounds | null;
@@ -2540,7 +2705,9 @@ function ReviewRail({
         draft={draft}
         catalog={catalog}
         fold={foldPlan(draft, preflight?.resource_estimate?.outer_fold_count ?? null, portalAdmission)}
+        estimate={estimate}
       />
+      <ConditionsChecklist estimate={estimate} />
       <ClaimForecast draft={draft} atlas={atlas} preflight={preflight} />
       {showRows ? <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={usesV2} registry={registry} versionDeclared={versionDeclared} /> : null}
       <BlockingList blocking={blocking} />
@@ -2586,8 +2753,10 @@ export interface NewRunProps {
   /** CG-P08-04: research dataset catalog for the data step. */
   catalog?: DatasetCatalog | null;
   catalogReason?: string | null;
-  /** The Atlas response's admitted profiles (`portal_admission.profiles`), for the served fold bounds. */
+  /** The Atlas response's admitted profiles (`portal_admission.profiles`): fold bounds, and the pins on trials, seed, frequency and window mode. */
   portalAdmission?: ProfileFoldBounds | null;
+  /** The server's optional `preflight_estimate` (bars per window, warmup, planned folds, conditions), or null. */
+  estimate?: PreflightEstimate | null;
   /** CG-P11-07 `?from=`: the run this draft was copied from, and the read's state. */
   cloneSource?: { runId: string; state: ResearchState; copiedAt?: number | null } | null;
   /** W5a: the Screen-07 what-if node this draft forks, read from the server's grid. */
@@ -2629,9 +2798,16 @@ export function NewRun(props: NewRunProps) {
     catalog = null,
     catalogReason = null,
     portalAdmission = null,
+    estimate = null,
     cloneSource = null,
     forkSource = null,
   } = props;
+  /* LW-07: the profile this declaration falls under, when exactly one does. */
+  const profiles = useMemo(() => readProfiles(portalAdmission), [portalAdmission]);
+  const profile = useMemo(
+    () => selectProfile(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode }),
+    [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode],
+  );
   const sweepCeiling = limits.sweepCeiling === undefined ? SWEEP_CEILING : limits.sweepCeiling;
   const v2 = usesSpecV2(draft);
   const refusalStep = preflightRefusal?.fieldPath ? stepForFieldPath(preflightRefusal.fieldPath) : null;
@@ -2888,7 +3064,7 @@ export function NewRun(props: NewRunProps) {
             <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
+            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />
@@ -2900,6 +3076,8 @@ export function NewRun(props: NewRunProps) {
               limits={limits}
               release={atlas?.current_release ?? null}
               error={shownError.get("optimization") ?? null}
+              profile={profile}
+              profilesServed={profiles !== null}
             />
           ) : null}
 
@@ -3073,7 +3251,7 @@ export function NewRun(props: NewRunProps) {
           ) : null}
         </div>
 
-        <ReviewRail draft={draft} blocking={visibleBlocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} />
+        <ReviewRail draft={draft} blocking={visibleBlocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} estimate={estimate} />
       </div>
     </div>
   );

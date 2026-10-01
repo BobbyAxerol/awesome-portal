@@ -8,6 +8,7 @@
  */
 
 import type { CatalogDataset, CatalogSymbol } from "./datasetClient";
+import { coverageFor, sortByExpiry, timeframeFacts, utcMonthIndex } from "./dataDeclarationV2";
 import {
   type CoveragePlan,
   type RunDraft,
@@ -15,6 +16,9 @@ import {
   monthIndex,
   utcMs,
 } from "./runDraft";
+
+/* The optional v2 facts (instrument, per-timeframe coverage, quality, profiles, estimate) live in their own module. */
+export * from "./dataDeclarationV2";
 
 /** `2020-01 → 2026-10 · 82 mo`, or null when the source published none. */
 export function coverageShort(symbol: CatalogSymbol): string | null {
@@ -45,7 +49,7 @@ export function groupSymbols(items: readonly CatalogSymbol[], query: string | nu
   return GROUPS.map(({ kind, label }) => ({
     kind,
     label,
-    items: shown.filter((item) => (item.contract_kind ?? "UNCLASSIFIED") === kind),
+    items: sortByExpiry(shown.filter((item) => (item.contract_kind ?? "UNCLASSIFIED") === kind)),
   })).filter((group) => group.items.length > 0);
 }
 
@@ -70,10 +74,20 @@ export function symbolAxis(items: readonly CatalogSymbol[]): MonthAxis | null {
 }
 
 /** Percent geometry of one symbol's served month range on the shared axis; null when it has no readable coverage. */
-export function barGeometry(symbol: CatalogSymbol, axis: MonthAxis | null): { left: number; width: number } | null {
+export function barGeometry(
+  symbol: CatalogSymbol,
+  axis: MonthAxis | null,
+  /** v2: when the server published bars for this timeframe, the bar spans its first to last bar instead of the month partitions. */
+  timeframe?: string,
+): { left: number; width: number } | null {
   if (!axis || !symbol.coverage) return null;
-  const a = monthIndex(symbol.coverage.first_month);
-  const b = monthIndex(symbol.coverage.last_month);
+  const frame = timeframe ? coverageFor(symbol, timeframe) : null;
+  const served =
+    frame && frame.firstBarUtcMs !== null && frame.lastBarUtcMs !== null && frame.lastBarUtcMs >= frame.firstBarUtcMs
+      ? { a: utcMonthIndex(frame.firstBarUtcMs), b: utcMonthIndex(frame.lastBarUtcMs) }
+      : null;
+  const a = served ? Math.max(served.a, axis.first) : monthIndex(symbol.coverage.first_month);
+  const b = served ? Math.min(served.b, axis.last) : monthIndex(symbol.coverage.last_month);
   if (a === null || b === null || b < a) return null;
   const span = axis.last - axis.first + 1;
   return { left: ((a - axis.first) / span) * 100, width: Math.max(((b - a + 1) / span) * 100, 1.5) };
@@ -179,7 +193,9 @@ export interface TimeframeChip {
   selected: boolean;
   enabled: boolean;
   /** Why it cannot be chosen; null when it can. */
-  disabledReason: "not-declared" | "not-offered" | "declaration-not-published" | null;
+  disabledReason: "not-declared" | "not-offered" | "declaration-not-published" | "unavailable" | null;
+  /** The server's code when the dataset names this timeframe as unavailable (v2), else null. */
+  reasonCode: string | null;
 }
 
 /**
@@ -198,11 +214,17 @@ export function timeframeChips(
   const declaredList = declared ?? [];
   const all = [...offered, ...declaredList.filter((tf) => !offered.includes(tf))];
   if (current !== "" && !all.includes(current)) all.push(current);
+  const facts = timeframeFacts(dataset);
   return all.map((timeframe) => {
     const isOffered = dataset === null || offered.includes(timeframe);
     const isDeclared = declared === null || declared.length === 0 ? null : declared.includes(timeframe);
+    /* v2: the dataset names the timeframe but says it cannot serve it (`TIMEFRAME_NOT_BUILT`, ...). */
+    const fact = facts?.find((entry) => entry.timeframe === timeframe);
+    const unavailable = fact !== undefined && fact.availability !== "available";
     const disabledReason: TimeframeChip["disabledReason"] =
-      scratch
+      unavailable
+        ? "unavailable"
+        : scratch
         ? isOffered
           ? null
           : "not-offered"
@@ -213,7 +235,13 @@ export function timeframeChips(
           : isDeclared
             ? null
             : "not-declared";
-    return { timeframe, selected: timeframe === current, enabled: disabledReason === null, disabledReason };
+    return {
+      timeframe,
+      selected: timeframe === current,
+      enabled: disabledReason === null,
+      disabledReason,
+      reasonCode: unavailable ? (fact.reasonCode ?? fact.availability) : null,
+    };
   });
 }
 

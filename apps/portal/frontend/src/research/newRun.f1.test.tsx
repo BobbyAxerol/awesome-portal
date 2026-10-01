@@ -421,10 +421,14 @@ describe("400-trial audit — ?from=<400-trial run> copies the run's own values"
     await mountClone("ok");
     expect((screen.getByLabelText("Optuna trials") as HTMLInputElement).value).toBe("400");
     expect((screen.getByLabelText("Random seed") as HTMLInputElement).value).toBe("42");
-    /* And the difference from the listed profile is on screen, not silently resolved. */
-    expect(document.querySelector('[data-outside-profile-field="trials"]')?.textContent).toBe(
-      `Trials 400 — the profile lists ${ATLAS.current_release.submission_constraints.accepted_trial_count}. Kept as entered.`,
-    );
+    /* S02_V2B (LW-07): the copy is a WFO draft, so the profile it falls under is the served p10 one
+       (trials 2-400, seed 42), not the stale single-profile `submission_constraints` (1 trial, no seed).
+       400 and 42 sit inside it, so there is nothing to flag; the seed is the profile's pin. */
+    expect(document.querySelector("[data-profile-card]")?.getAttribute("data-profile-card")).toBe("p10.delta-signal-notional-wfo.v1");
+    expect(document.querySelector("[data-outside-profile]")).toBeNull();
+    expect(document.querySelector("[data-submission-constraints]")).toBeNull();
+    expect((screen.getByLabelText("Random seed") as HTMLInputElement).readOnly).toBe(true);
+    expect((screen.getByLabelText("Optuna trials") as HTMLInputElement).readOnly).toBe(false);
   });
 
   it("shows the copied walk-forward instants in their inputs", async () => {
