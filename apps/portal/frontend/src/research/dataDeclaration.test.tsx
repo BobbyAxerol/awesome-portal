@@ -150,11 +150,11 @@ describe("grouped symbols with served coverage", () => {
 describe("timeframe chips", () => {
   it("every dataset timeframe: declared ones enabled, the rest disabled with their reason", () => {
     const chips = timeframeChips(CRYPTO, ["1h", "4h", "2h"], "1h");
-    expect(chips.map((chip) => chip.timeframe)).toEqual(["1min", "5min", "15min", "30min", "1h", "4h", "1D", "2h"]);
+    expect(chips.map((chip) => chip.timeframe)).toEqual(["1min", "5min", "15min", "30min", "1h", "4h", "1d", "2h"]);
     const by = (tf: string) => chips.find((chip) => chip.timeframe === tf)!;
     expect(by("1h")).toMatchObject({ enabled: true, selected: true, disabledReason: null });
     expect(by("4h").enabled).toBe(true);
-    expect(by("1D")).toMatchObject({ enabled: false, disabledReason: "not-declared" });
+    expect(by("1d")).toMatchObject({ enabled: false, disabledReason: "not-declared" });
     expect(by("2h")).toMatchObject({ enabled: false, disabledReason: "not-offered" });
   });
 
@@ -322,12 +322,20 @@ describe("timeframe chips on the screen", () => {
 
   it("shows every dataset timeframe; the version-declared one is enabled, the others say why not", () => {
     mount(bound({ datasetId: "crypto-binance-1m", symbol: "BTCUSDT" }), { catalog: SOLE });
-    expect(qa("[data-timeframe-chip]").map((node) => node.getAttribute("data-timeframe-chip"))).toEqual(["1min", "5min", "15min", "30min", "1h", "4h", "1D"]);
+    expect(qa("[data-timeframe-chip]").map((node) => node.getAttribute("data-timeframe-chip"))).toEqual(["1min", "5min", "15min", "30min", "1h", "4h", "1d"]);
     expect(chip("1h").getAttribute("aria-checked")).toBe("true");
     expect(chip("1h").getAttribute("aria-disabled")).toBe("false");
     expect(chip("4h").getAttribute("aria-disabled")).toBe("true");
     expect(chip("4h").getAttribute("title")).toBe(`not declared by ${ALPHA.version_label}`);
     expect(chip("4h").getAttribute("aria-label")).toBe(`4h, not declared by ${ALPHA.version_label}`);
+  });
+
+  it("the catalog and the version spell the day alike (1d), so the daily chip is selectable (BR-F4-01 closed)", () => {
+    const daily = { ...LIMITS, declaredTimeframes: ["1h", "4h", "1d"] as const };
+    mount(bound({ datasetId: "crypto-binance-1m", symbol: "BTCUSDT" }), { catalog: SOLE, limits: daily });
+    expect(chip("1d").getAttribute("aria-disabled")).toBe("false");
+    fireEvent.click(chip("1d"));
+    expect(chip("1d").getAttribute("aria-checked")).toBe("true");
   });
 
   it("a version timeframe the dataset does not offer is shown disabled, 'not offered by dataset'", () => {
@@ -340,7 +348,7 @@ describe("timeframe chips on the screen", () => {
   it("picking an enabled chip selects it; a disabled chip changes nothing", () => {
     const two = { ...LIMITS, declaredTimeframes: ["1h", "4h"] as const };
     mount(bound({ datasetId: "crypto-binance-1m", symbol: "BTCUSDT" }), { catalog: SOLE, limits: two });
-    fireEvent.click(chip("1D"));
+    fireEvent.click(chip("1d"));
     expect(chip("1h").getAttribute("aria-checked")).toBe("true");
     fireEvent.click(chip("4h"));
     expect(chip("4h").getAttribute("aria-checked")).toBe("true");
