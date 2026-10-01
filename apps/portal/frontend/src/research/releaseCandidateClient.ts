@@ -380,8 +380,12 @@ export function packSourceRoute(item: RcPackItem, runId: string, alphaId: string
 /** Rail links (W5c D-10): `alpha` → Screen 10 lineage, `run` → Screen 04 hub; a dim node never links. */
 export function railRoute(node: RcRailNode, compose: Pick<RcCompose, "run" | "run_id">): string | null {
   if (node.tone === "dim") return null;
-  if (node.key === "alpha" && compose.run.binding) return lineageHref(compose.run.binding.alpha_id);
+  /* F2b: the alpha and its version both open Screen 10 on the bound version; the selected params open Screen 07 on this run. */
+  if ((node.key === "alpha" || node.key === "alpha_version") && compose.run.binding) {
+    return lineageHref(compose.run.binding.alpha_id, { av: compose.run.binding.alpha_version_id });
+  }
   if (node.key === "run") return `/research/quantbt/runs/${encodeURIComponent(compose.run_id)}/evidence`;
+  if (node.key === "selected_params") return `/research/quantbt/runs/${encodeURIComponent(compose.run_id)}/freeze`;
   return null;
 }
 

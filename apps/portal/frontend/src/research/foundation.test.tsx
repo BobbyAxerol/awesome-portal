@@ -531,6 +531,30 @@ describe("P09-T03 — a journey deep link inspects and never dispatches", () => 
     expect(document.querySelectorAll("button")).toHaveLength(0);
   });
 
+  it("F2b: the way out and back in keeps the run — crumb to Library and Evidence Flow, Atlas card remembers the run", async () => {
+    stub(() => [200, journey(), 'W/"journey-1"']);
+    renderAt("/research/quantbt/journey?run_id=rrun_abc123", <JourneyMapRoute />);
+    await waitFor(() => expect(document.querySelector("[data-breadcrumb]")).toBeTruthy());
+    expect(document.querySelector("[data-crumb-library]")?.getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(document.querySelector("[data-crumb-evidence]")?.getAttribute("href")).toBe("/research/quantbt/runs/rrun_abc123/evidence");
+    await waitFor(() => expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')).toBeTruthy());
+    expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')?.getAttribute("data-card-route")).toBe(
+      "/research/quantbt/atlas#tab=modes&run=rrun_abc123",
+    );
+    // The sentence under the title is a tooltip now.
+    expect(document.querySelector("h1")?.getAttribute("title")).toContain("reading map");
+    expect(document.body.textContent).not.toContain("A reading map of the domain");
+  });
+
+  it("F2b: without a run the crumb has no Evidence Flow link and the Atlas card has no hash", async () => {
+    stub(() => [200, journey(), 'W/"journey-1"']);
+    renderAt("/research/quantbt/journey", <JourneyMapRoute />);
+    await waitFor(() => expect(document.querySelector("[data-breadcrumb]")).toBeTruthy());
+    expect(document.querySelector("[data-crumb-evidence]")).toBeNull();
+    await waitFor(() => expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')).toBeTruthy());
+    expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')?.getAttribute("data-card-route")).toBe("/research/quantbt/atlas");
+  });
+
   it("says a link carries no cursor instead of printing an empty strip", async () => {
     stub(() => [200, journey(), 'W/"journey-1"']);
     renderAt("/research/quantbt/journey", <JourneyMapRoute />);

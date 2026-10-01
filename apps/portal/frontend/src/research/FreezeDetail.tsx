@@ -1197,10 +1197,8 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
           style={{ borderColor: "var(--line-soft)", background: "var(--accent-soft)", color: "var(--ink-soft)" }}
           data-shared-banner
         >
-          <span className="mono">shared params — global schedule, one θ* for {foldSpan(foldNumbers)}</span>
-          <span style={{ color: "var(--ink-faint)" }}>
-            {" "}
-            · objective is study-wide
+          <span className="mono" title="Global schedule: one θ* for every fold; the objective is study-wide">
+            shared θ* · {foldSpan(foldNumbers)}
           </span>
         </p>
       ) : identity === null ? (
@@ -1492,6 +1490,22 @@ function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null
   );
 }
 
+/** F4 → S4: the way on from the binding card to the replay that uses these digests; keeps the cursor. */
+function ExecuteLink({ href }: { href: string | null }) {
+  if (href === null) return null;
+  return (
+    <Link
+      to={href}
+      className="mono self-end text-[10px] uppercase tracking-[.06em]"
+      style={{ color: "var(--accent)" }}
+      data-action="binding-to-execute"
+      title="Open S4 · Execute — the replay that must run these sealed digests"
+    >
+      replay in S4 →
+    </Link>
+  );
+}
+
 function RetainedFreezeBody({
   freeze,
   identity,
@@ -1499,7 +1513,9 @@ function RetainedFreezeBody({
   onVerify,
   evaluate,
   onEvaluate,
+  executeHref,
 }: {
+  executeHref: string | null;
   freeze: RetainedFreeze;
   identity: RunIdentitySlot;
   verify: VerifySlot;
@@ -1520,6 +1536,7 @@ function RetainedFreezeBody({
           {freeze.stage4_binding ? (
             <ServedStage4Binding binding={freeze.stage4_binding} authority={freeze.parameter_authority ?? null} />
           ) : null}
+          <ExecuteLink href={executeHref} />
         </div>
       </div>
       <WhatIfCard
@@ -1821,6 +1838,7 @@ export function FreezeScreen({
                 ) : (
                   <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
                 )}
+                {embedded ? null : <ExecuteLink href={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })} />}
               </div>
             </div>
 
@@ -1866,6 +1884,7 @@ export function FreezeScreen({
             onVerify={onVerify}
             evaluate={whatIfEvaluate}
             onEvaluate={onWhatIfEvaluate}
+            executeHref={embedded ? null : deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })}
           />
         ) : null}
       </ResearchPanel>

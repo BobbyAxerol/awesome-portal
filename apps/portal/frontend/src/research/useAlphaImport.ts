@@ -78,11 +78,11 @@ export interface AlphaImportController {
 
 const ALPHA_ID_PATTERN = /^[a-z][a-z0-9-]{2,63}$/;
 
-export function useAlphaImport(workspaceId?: string): AlphaImportController {
+export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): AlphaImportController {
   const [sourceText, setSourceText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [multiFileRejected, setMultiFileRejected] = useState(false);
-  const [alphaId, setAlphaId] = useState("");
+  const [alphaId, setAlphaId] = useState(initialAlphaId);
 
   const [parse, setParse] = useState<SourceResponse | null>(null);
   const [gates, setGates] = useState<GatesResponse | null>(null);

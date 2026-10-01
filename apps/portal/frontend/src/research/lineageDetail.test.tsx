@@ -865,7 +865,8 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(rc.getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/release-candidate");
     expect(root.querySelector('[data-action-unrouted="release-candidate"]')).toBeNull();
     expect(root.querySelector('[data-action="runs"]')?.getAttribute("href")).toBe(`/research/quantbt/runs?group=1&alpha=${ALPHA}`);
-    expect(root.querySelector('[data-action="declare-at-new-run"]')?.getAttribute("href")).toBe("/research/quantbt/runs/new");
+    /* F2b: the way into Screen 02 keeps the alpha (and the active version when there is one). */
+    expect(root.querySelector('[data-action="declare-at-new-run"]')?.getAttribute("href")).toMatch(/^\/research\/quantbt\/runs\/new\?alpha=/);
     for (const key of ["OOS sharpe", "decay", "cert"]) {
       expect(panel("selected").querySelector(`[data-row-key="${key}"]`)?.textContent, key).toMatch(/not published/);
       expect(panel("selected").querySelector(`[data-row-key="${key}"]`)?.textContent, key).not.toMatch(/\b0\b/);
@@ -1119,7 +1120,7 @@ describe("S10 Attempt Lineage — scale and pure parts", () => {
     const library = readFileSync(join(process.cwd(), "src", "research", "RunLibrary.tsx"), "utf8");
     expect(library).toContain("lineageHref(group.alphaId)");
     const importer = readFileSync(join(process.cwd(), "src", "research", "AlphaImport.tsx"), "utf8");
-    expect(importer).toContain("lineageHref(registration.alpha_id)");
+    expect(importer).toContain("lineageHref(registration.alpha_id");
   });
 
   it("S10-U43 the button font reset has zero specificity, so every chip class keeps its mono size", () => {
@@ -1264,7 +1265,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     const root = panel("root");
     expect(root.querySelector(".ln-k")?.textContent).toBe("root · alpha");
     expect([...root.querySelectorAll(".ln-links > *")].map((l) => l.textContent)).toEqual(["runs →", "new run →", "rc & publish →"]);
-    expect(within(root).getByText("declare at New Run →").getAttribute("href")).toBe("/research/quantbt/runs/new");
+    expect(within(root).getByText("declare at New Run →").getAttribute("href")).toMatch(/^\/research\/quantbt\/runs\/new\?alpha=/);
     expect(panel("selected").querySelector("h3")?.textContent).toContain("selected attempt — att_01");
     expect(panel("diff").querySelector("h3")?.textContent).toBe("diff vs parent — config keys only");
   });

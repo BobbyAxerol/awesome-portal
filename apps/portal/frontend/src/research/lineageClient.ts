@@ -63,6 +63,22 @@ export function lineageHref(alphaId: string, options: { attempt?: string | null;
   return "/research/quantbt/alphas/" + encodeURIComponent(alphaId) + "/lineage" + (query ? `?${query}` : "");
 }
 
+/**
+ * F2b: Screen 02's own prefill contract (`NewRunRoute`: `?alpha=` + `?av=`), so a
+ * "new run" link leaves the Alpha (and, when the screen knows it, the version)
+ * in the URL instead of dropping the reader on an empty declaration.
+ */
+export function newRunPrefillHref(alphaId: string, alphaVersionId: string | null = null): string {
+  const params = new URLSearchParams({ alpha: alphaId });
+  if (alphaVersionId) params.set("av", alphaVersionId);
+  return `/research/quantbt/runs/new?${params.toString()}`;
+}
+
+/** F2b: Screen 14 opened for one Alpha (`AlphaImportRoute` reads `?alpha=`). */
+export function alphaImportHref(alphaId: string | null = null): string {
+  return alphaId ? `/research/quantbt/alpha-import?${new URLSearchParams({ alpha: alphaId }).toString()}` : "/research/quantbt/alpha-import";
+}
+
 /** Reason codes the P19 service publishes (`lineage.service.ts`). */
 export const LINEAGE_REASON = {
   boundedGraph: "P19_BOUNDED_GRAPH_LIMIT_REACHED",

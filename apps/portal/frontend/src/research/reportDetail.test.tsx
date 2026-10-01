@@ -817,7 +817,7 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     expect(rule(css, '.rr-pp > [data-panel="provenance"]')).toContain("border-left: 1px solid var(--line-soft); padding-left: 16px");
     const spans = [...panel("footer").children].map((el) => el.textContent);
     expect(spans[0]).toBe("Quant Ecosystem Portal · Research · confidential");
-    expect(spans[1]).toBe(`${RUN} · report 2024-09-22 10:13Z · page prints on letter or A4`);
+    expect(spans[1]).toBe(`${RUN} · report 2024-09-22 10:13Z`);
     expect(rule(css, ".rr-title")).toContain("font-size: 27px");
     expect(rule(css, ".rr-meta")).toContain("font-size: 10px");
     expect(rule(css, ".rr-head")).toContain("border-bottom: 2px solid var(--ink)");
@@ -1057,7 +1057,7 @@ describe("S09 Run Report — pure parts and source rules", () => {
     const module = readFileSync(join(process.cwd(), "src", "features", "quantbt", "QuantBTModule.tsx"), "utf8");
     expect(module).toContain('<Route path="runs/:runId/report" element={<ReportRoute />} />');
     const execute = readFileSync(join(process.cwd(), "src", "research", "ExecuteDetail.tsx"), "utf8");
-    expect(execute).toMatch(/to=\{`\/research\/quantbt\/runs\/\$\{run\}\/report`\}\s+className="mono text-\[10px\]"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
+    expect(execute).toMatch(/to=\{withWindow\(deepDiveHref\(`\/research\/quantbt\/runs\/\$\{run\}\/report`, \{ \.\.\.cursor, stage: "execute" \}\), windowKey\)\}\s+className="mono text-\[10px\]"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
     const hub = readFileSync(join(process.cwd(), "src", "research", "EvidenceFlow.tsx"), "utf8");
     expect(hub).toContain('data-action="generate-report"');
     expect(hub).toContain('data-action="release-candidate"');
@@ -1168,7 +1168,7 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
        window, not an in-sample curve — so the sheet no longer calls it "IS" while its source absences say there is no IS account. */
     expect(body.frozen_core.equity_is.scope).toBe("RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST");
     expect(panel("equity").querySelector("[data-equity-title]")?.textContent).toBe(
-      "Equity — account before first OOS window vs stitched OOS (2 folds, frozen params each)",
+      "Equity — before OOS vs stitched OOS (2 folds)",
     );
     expect(panel("equity").querySelector("[data-equity-is-path]")).not.toBeNull();
     expect(panel("equity").querySelector("[data-equity-oos-path]")).not.toBeNull();

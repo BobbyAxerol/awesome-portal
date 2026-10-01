@@ -216,3 +216,12 @@ Quyết định: `evidence/P21/VD_F1_TEXT_DECISIONS_2026-10-01.md` (VD-F1-01…0
 
 Bản ghi từng nhóm: `evidence/P21/audit-2026-09-30/f2/*.md`. Đã bind: S01 `relationship` + nhãn `alpha_version_legacy` · S03 `best_objective` + cancel `source_marker` · S06 `imported_alpha`, `fold` cho sổ trial, `Trial.params_digest`, `pool.frozen_at_utc_ms` · S07 `imported_alpha` · S08 bỏ `?? "—"`, params digest từ progress, đếm nhóm nghìn · S11 `promotion_pick` · S14 `alpha_id` + "top N / total" · stub e2e journey-v4 (và stub compose thêm `display_label`, `selected_params`).
 Đã kiểm, không cần sửa: `net_oos_return`, `historical_identity` (e2e `atlas-historical.json` đã trùng fixture chuẩn), `import_attestation`, `rc_availability`, `requires_run`, `cert_cap.reason`. Cố ý không render: `walk_forward_status` (HiFi S12 không có cột). Chờ Bobby: `market_overview` vs `candle_overview` (S08). Còn lại ngoài F2: `next_cursor` S14 (chưa có phân trang con trỏ).
+
+### F2b — luồng UX, bớt chữ, S08 refine (2026-10-01)
+
+Bản ghi từng nhóm: `evidence/P21/audit-2026-09-30/f2b/*.md`. Quyết định theo ủy quyền của Bobby:
+- **S08 nguồn nến:** `candle_overview` là nguồn duy nhất (cùng hình dạng cho cả hai lane); `market_overview` chỉ dự phòng khi `candle_overview` vắng, kèm chip "source overview". Trên R-P04-018 hai trường trùng hẳn (744 bar, 47 bucket, `values` giống từng byte).
+- **S08 ba window:** dải tổng quan IS (gạch chéo) / OOS (đặc, fold đang chọn đậm) / HOLDOUT (vắng có mã); công tắc `IS | OOS | HOLDOUT` cạnh chuỗi fold; `?window=is|oos|holdout` trên URL cùng `fold`.
+- **S08 marker:** glyph 12–18px có viền sáng 2px, đủ ENTRY/EXIT/FLIP/RESIZE × LONG/SHORT/FLAT, nhãn + giá, đường nối entry→exit, vòng xung khi chọn (tôn trọng reduced-motion), thẻ hover, nổi bật hai chiều với sổ chuyển trạng thái.
+- **Order/fill/SL-TP:** không vẽ vì QuantBT route hiện tại không trả; hiện chip khả năng + mã lý do; yêu cầu BR-S08-01 gửi Codex.
+- **Mọi màn:** link vào/ra giữ run/fold/window, câu dài → tooltip, thêm hình thay chữ. Yêu cầu backend mới: `CODEX_BACKEND_GAPS_2026-09-30.md` (BR-S08-01…03, BR-S04-WIN, BR-S11-01, BR-TXT-02).

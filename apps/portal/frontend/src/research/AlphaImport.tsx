@@ -50,6 +50,8 @@ import type {
   SourceResponse,
 } from "./alphaImportClient";
 import { LineageLink, lineageHref } from "./LineageLink";
+import { newRunPrefillHref } from "./lineageClient";
+import { smokeMotionAllowed } from "../execution/smokeMotion";
 import {
   ANATOMY_SUBSTAGE_NOTE,
   CODE_ANATOMY,
@@ -121,7 +123,7 @@ export const RUN_LINK_LABEL = "new run with this av_";
 
 /** The New Run route's own prefill contract (`NewRunRoute`: `?alpha=` + `?av=`). */
 export function newRunHref(alphaId: string, alphaVersionId: string): string {
-  return `/research/quantbt/runs/new?${new URLSearchParams({ alpha: alphaId, av: alphaVersionId }).toString()}`;
+  return newRunPrefillHref(alphaId, alphaVersionId);
 }
 
 /** What the "new run with this av_" slot shows, from what the server has served. */
@@ -314,6 +316,17 @@ const AI_CSS = `
 .ai-next .links { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .ai-next .links a, .ai-next .links .absent { border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); color: var(--ink-soft); padding: 6px 14px; font-family: var(--font-mono); font-size: 10px; text-decoration: none; }
 .ai-next .links .absent { border-style: dashed; border-color: var(--accent-2); color: var(--accent-2); background: var(--paper-raised); cursor: not-allowed; }
+.ai-gatestrip { display: flex; gap: 3px; height: 6px; }
+.ai-gatestrip li { flex: 1 1 0; border-radius: 3px; }
+.ai-gatestrip li[data-gate-cell="SKIPPED"] { opacity: .35; }
+.ai-gatestrip li[data-motion="pulse"] { animation: ai-pulse 900ms ease-in-out infinite alternate; }
+@keyframes ai-pulse { from { opacity: .35; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ai-gatestrip li[data-motion="pulse"] { animation: none; } }
+.ai-next[data-motion="true"] { animation: ai-reveal 180ms ease-out; }
+@keyframes ai-reveal { from { opacity: .4; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+.ai-next .links a[data-primary="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-contrast); }
+.ai-next .links a[data-primary="true"]:hover { color: var(--accent-contrast); text-decoration: none; filter: brightness(1.08); }
+.ai-reglinks { display: inline-flex; gap: 6px; font-family: var(--font-mono); font-size: 9.5px; }
 .ai-lifecycle { font-family: var(--font-mono); font-size: 9px; font-weight: 700; border: 1px solid var(--accent-2); color: var(--accent-2); border-radius: 3px; padding: 0 5px; line-height: 15px; }
 .ai-lifecycle[data-lifecycle="ACTIVE"] { border-color: var(--good); color: var(--good); }
 .ai-registry { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -591,6 +604,30 @@ function RunningGates() {
   );
 }
 
+/**
+ * F2b: one cell per gate, in the server's order, coloured by that row's own
+ * `state` — a glance version of the list below. Before a receipt there are no
+ * cells (never seven empty ones); while the request is in flight all seven pulse.
+ */
+function GateStrip({ gates, running }: { gates: readonly GateRow[] | null; running: boolean }) {
+  if (!running && (gates === null || gates.length === 0)) return null;
+  const cells = running ? GATE_ORDER.map((name, index) => ({ n: index + 1, name: name as string, state: "RUNNING" as const })) : gates!.map((gate) => ({ n: gate.n, name: gate.name, state: gate.state }));
+  return (
+    <ol className="ai-gatestrip m-0 list-none p-0" data-gate-strip aria-label="gate results" role="list">
+      {cells.map((cell) => (
+        <li
+          key={cell.n}
+          data-gate-cell={cell.state}
+          data-motion={running ? "pulse" : undefined}
+          title={`gate ${cell.n} · ${cell.name} — ${cell.state}`}
+          aria-label={`gate ${cell.n} ${cell.name} ${cell.state}`}
+          style={{ background: gateTone(cell.state) }}
+        />
+      ))}
+    </ol>
+  );
+}
+
 function GateList({ gates, reducedMotion }: { gates: readonly GateRow[]; reducedMotion: boolean }) {
   const [revealed, setRevealed] = useState(() => (reducedMotion ? gates.length : 0));
 
@@ -662,6 +699,22 @@ function RegistryChip({
         <span className="ai-lifecycle" data-lifecycle={entry.lifecycle_state}>{entry.lifecycle_state}</span>
         <span className="mono" style={{ color: "var(--ink-mute)" }}>rev {entry.alpha_revision}</span>
         {registered ? <span className="mono" style={{ color: "var(--ink-mute)" }}>{registered}</span> : null}
+        {/* F2b: every version names its way on. The run link follows the server's own
+            `run_admission` for that version; no row guesses an admission. */}
+        <span className="ai-reglinks" data-registry-links>
+          <LineageLink
+            to={lineageHref(entry.alpha_id, { av: entry.alpha_version_id })}
+            action="registry-lineage"
+            title={`Attempt Lineage of ${entry.alpha_id}, at ${entry.version_label}`}
+          >
+            lineage →
+          </LineageLink>
+          {entry.run_admission?.may_create_run ? (
+            <LineageLink to={newRunHref(entry.alpha_id, entry.alpha_version_id)} action="registry-new-run" title="Screen 02 with this version preselected — preflight still decides admission">
+              run →
+            </LineageLink>
+          ) : null}
+        </span>
       </div>
       {canActivate ? (
         <button
@@ -714,7 +767,7 @@ function CodeAnatomy() {
                 style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
                 data-anatomy-section={entry.section}
               >
-                <header className="flex flex-wrap items-center gap-2 border-b px-3 py-[7px]" style={{ borderColor: "var(--line-soft)" }}>
+                <header className="flex flex-wrap items-center gap-2 border-b px-3 py-[7px]" style={{ borderColor: "var(--line-soft)" }} title={entry.note}>
                   <h3 className="ai-label">{entry.section}</h3>
                   <span className="ml-auto flex flex-wrap gap-1">
                     {entry.unlocks.map((item) => (
@@ -735,12 +788,9 @@ function CodeAnatomy() {
                   </span>
                 </header>
                 {/* Read-only by construction: a `pre`, not an editor. */}
-                <pre className="mono m-0 overflow-x-auto px-3 py-[9px] text-[10.5px] leading-[1.65]" style={{ background: "var(--paper)", color: "var(--ink)" }}>
+                <pre className="mono m-0 overflow-x-auto px-3 py-[9px] text-[10.5px] leading-[1.65]" style={{ background: "var(--paper)", color: "var(--ink)" }} title={entry.note} data-anatomy-note-for={entry.section}>
                   {entry.code}
                 </pre>
-                <p className="m-0 border-t px-3 py-1.5 text-[10.5px] leading-[1.5]" style={{ borderColor: "var(--paper-sunken)", color: "var(--ink-soft)" }}>
-                  {entry.note}
-                </p>
               </section>
             ))}
           </div>
@@ -816,6 +866,8 @@ export interface AlphaImportProps {
   busyStep?: "parse" | "gates" | "register" | "activate" | null;
   /** A refusal of the activate request, shown beside its button. */
   activationRefusal?: ImportRefusal | null;
+  /** F2b: the alpha this screen was opened for (`?alpha=`), if any — gives the header a way back to its lineage. */
+  contextAlpha?: string | null;
 }
 
 export type ImportStep = 1 | 2 | 3;
@@ -887,6 +939,7 @@ export function AlphaImport(props: AlphaImportProps) {
     activationAdmitted,
     busyStep = null,
     activationRefusal = null,
+    contextAlpha = null,
   } = props;
   /* RF-04 FE-S14-07: a button stays pressable neither while its request is in
      flight nor after it succeeded for these bytes. */
@@ -929,6 +982,8 @@ export function AlphaImport(props: AlphaImportProps) {
     : null;
   const chip = importChip(parse, registration, activation);
   const run = runSlot(registration, registeredEntry);
+  /* The alpha the reader named: the registered one, else a whole typed id, else the one the screen was opened for. */
+  const nextAlpha = registration?.alpha_id ?? (/^[a-z][a-z0-9-]{2,63}$/.test(typedAlpha) ? typedAlpha : contextAlpha);
   const quietDetail = refusal?.codeInDetails
     ? refusalDetail({ code: refusal.code, detail: refusal.detail ?? null, requestId: refusal.requestId })
     : null;
@@ -959,13 +1014,29 @@ export function AlphaImport(props: AlphaImportProps) {
       <header className="ai-head" data-panel="header">
         <div className="l">
           <nav className="ai-crumb" aria-label="Breadcrumb">
-            <a href="/research/quantbt/journey">Journey</a>
+            {contextAlpha ? (
+              <>
+                <LineageLink to={lineageHref(contextAlpha)} action="back-to-lineage" title={`Attempt Lineage of ${contextAlpha}`}>
+                  ← lineage
+                </LineageLink>
+                <span className="sep" aria-hidden="true">/</span>
+              </>
+            ) : null}
+            <LineageLink to="/research/quantbt/journey" title="Journey Map">Journey</LineageLink>
             <span className="sep" aria-hidden="true">/</span>
             <span className="here" aria-current="page">Alpha Import</span>
             <span className="sep" aria-hidden="true">·</span>
-            {/* Plain navigation to the preflight screen. It does not bind this import;
-                the version-bound link is step 3's, from the server's run_admission. */}
-            <a className="next" href="/research/quantbt/runs/new">next: New Run →</a>
+            {/* Screen 02. Once the server admits a run for the registered version the link is
+                version-bound (its `run_admission`); otherwise it carries only the alpha in
+                hand, never a guessed version. */}
+            <LineageLink
+              className="next"
+              action="next-new-run"
+              to={run.kind === "admitted" ? run.href : nextAlpha ? newRunPrefillHref(nextAlpha) : "/research/quantbt/runs/new"}
+              title={run.kind === "admitted" ? "Screen 02 with this version preselected" : nextAlpha ? `Screen 02 for ${nextAlpha}` : "Screen 02"}
+            >
+              next: New Run →
+            </LineageLink>
           </nav>
           <div className="ai-titlerow">
             <h1 className="ai-title">{IMPORT_TITLE}</h1>
@@ -1163,9 +1234,8 @@ export function AlphaImport(props: AlphaImportProps) {
             </div>
 
             <div className="ai-card" data-pad data-entrypoint-card>
-              <h2 className="ai-label">entrypoint shape (v1 single-file contract)</h2>
-              <pre className="ai-entry">{"ALPHA_CONTRACT = { … }     # one literal\ndef generate_signals(context): …"}</pre>
-              <p className="ai-note">One literal, one plain function. No classes, decorators or imports.</p>
+              <h2 className="ai-label" title="One literal, one plain function. No classes, decorators or imports.">entrypoint shape (v1 single-file contract)</h2>
+              <pre className="ai-entry" title="One literal, one plain function. No classes, decorators or imports.">{"ALPHA_CONTRACT = { … }     # one literal\ndef generate_signals(context): …"}</pre>
             </div>
           </div>
         </div>
@@ -1214,6 +1284,8 @@ export function AlphaImport(props: AlphaImportProps) {
             }
           />
 
+          <GateStrip gates={gates?.gates ?? null} running={busyStep === "gates"} />
+
           {busyStep === "gates" ? (
             <RunningGates />
           ) : (
@@ -1235,7 +1307,7 @@ export function AlphaImport(props: AlphaImportProps) {
             </p>
           ) : null}
 
-          <p className="ai-amber">No override — fix the .py and import again.</p>
+          <p className="ai-amber" title="No override — fix the .py and import again." data-no-override>No override.</p>
 
           {gatesAllPass ? (
             <button type="button" className="ai-btn self-start" data-quiet data-nav="3" onClick={() => setView(3)}>
@@ -1329,7 +1401,12 @@ export function AlphaImport(props: AlphaImportProps) {
             ) : null}
           </div>
 
-          <div className="ai-next" data-where-next>
+          <div
+            key={registration?.alpha_version_id ?? "none"}
+            className="ai-next"
+            data-where-next
+            data-motion={registration && smokeMotionAllowed() ? "true" : "false"}
+          >
             <h2 className="ai-label">where it goes next</h2>
             {registration ? (
               <p>
@@ -1344,13 +1421,9 @@ export function AlphaImport(props: AlphaImportProps) {
               {/* F1 CG-FG-S14-03: the slot follows the server's `run_admission` for this
                   version. Before anything is registered there is no slot at all. */}
               {run.kind === "admitted" ? (
-                <a
-                  href={run.href}
-                  title="Preflight still decides admission."
-                  data-run-admission="admitted"
-                >
+                <LineageLink to={run.href} primary action="new-run-with-version" title="Preflight still decides admission." extra={{ "data-run-admission": "admitted" }}>
                   {RUN_LINK_LABEL} →
-                </a>
+                </LineageLink>
               ) : run.kind !== "none" ? (
                 <span
                   className="absent"
@@ -1363,11 +1436,22 @@ export function AlphaImport(props: AlphaImportProps) {
                 </span>
               ) : null}
               {registration ? (
-                <LineageLink to={lineageHref(registration.alpha_id)} action="open-lineage">
-                  lineage
+                <LineageLink
+                  to={lineageHref(registration.alpha_id, { av: registration.alpha_version_id })}
+                  action="open-lineage"
+                  primary={run.kind !== "admitted"}
+                  title={`Attempt Lineage of ${registration.alpha_id}, at ${registration.version_label}`}
+                >
+                  lineage →
                 </LineageLink>
               ) : null}
-              <a href="/research/quantbt/runs">run library</a>
+              <LineageLink
+                to={nextAlpha ? `/research/quantbt/runs?group=1&alpha=${encodeURIComponent(nextAlpha)}` : "/research/quantbt/runs"}
+                action="open-run-library"
+                title={nextAlpha ? `Run Library, filtered to ${nextAlpha}` : "Run Library"}
+              >
+                run library
+              </LineageLink>
             </div>
             {run.kind === "refused" ? (
               <p className="ai-reason" data-run-not-admitted data-run-admission-code={run.code ?? undefined}>

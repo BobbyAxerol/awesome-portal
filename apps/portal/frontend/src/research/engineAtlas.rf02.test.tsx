@@ -48,9 +48,12 @@ describe("spec 12 T01 — three verbatim tabs and the full hash", () => {
     view("modes");
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["WFO modes", "Execution routes", "Claims by contract"]);
     const crumb = document.querySelector("[data-breadcrumb]") as HTMLElement;
-    expect(crumb.textContent).toBe("Evidence Flow/Engine Atlas");
-    // No run: the crumb names Evidence Flow without pretending to link.
-    expect(within(crumb).queryByRole("link")).toBeNull();
+    // F2b: no run means no Evidence Flow to return to, so the way out is the Journey Map.
+    expect(crumb.textContent).toBe("Journey Map/Engine Atlas");
+    expect(within(crumb).getByRole("link", { name: "Journey Map" }).getAttribute("href")).toBe("/research/quantbt/journey");
+    const exits = document.querySelector("[data-atlas-exits]") as HTMLElement;
+    expect(within(exits).getByRole("link", { name: /Run Library/ }).getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(within(exits).getByRole("link", { name: /New Run/ }).getAttribute("href")).toBe("/research/quantbt/runs/new?step=route");
     cleanup();
     view("modes", { run: "R-WFO-118" });
     expect(within(document.querySelector("[data-breadcrumb]") as HTMLElement).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toBe(
@@ -204,6 +207,31 @@ describe("Q4 / D-4 and the release facts panel", () => {
     cleanup();
     view("claims");
     expect(document.querySelector('[data-contract="event_lifecycle"] [data-claim-qualifier]')?.getAttribute("data-claim-qualifier")).toBe("ENGINE_DERIVES_OTHER_LEVEL");
+    // F2b: the sentence is a tooltip; the row keeps the function name and the token.
+    const qualifier = document.querySelector('[data-contract="event_lifecycle"] [data-claim-qualifier]') as HTMLElement;
+    expect(qualifier.textContent).toMatch(/certify_result_metadata ≠ L\d /);
+    expect(qualifier.getAttribute("title")).toContain("the catalog level is the Portal record");
+  });
+
+  it("F2b: the status badge tooltip carries walk_forward_status; no new visible text", () => {
+    view("routes");
+    const badges = [...document.querySelectorAll("[data-route] [data-status-word]")] as HTMLElement[];
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) {
+      expect(badge.getAttribute("title")).toMatch(/walk-forward: (supported|partial|not_listed|not published)/);
+      expect(badge.textContent).not.toMatch(/walk-forward/);
+    }
+    const options = document.querySelector('[data-route="options"] [data-status-word]') as HTMLElement;
+    expect(options.getAttribute("title")).toContain("DEFERRED · walk-forward: ");
+    expect(document.querySelector('[data-route="signal_notional"] [data-route-dot]')?.getAttribute("data-route-dot")).toBe("admitted");
+  });
+
+  it("F2b: every mode card links to New Run at the Optimization step", () => {
+    view("modes");
+    const link = document.querySelector('[data-mode="mode_1_decay"] [data-declare-mode]') as HTMLElement;
+    expect(link.getAttribute("href")).toBe("/research/quantbt/runs/new?step=optimization");
+    expect(link.getAttribute("title")).toContain("mode_1_decay");
+    expect(document.querySelectorAll("[data-declare-mode]").length).toBe(document.querySelectorAll("[data-mode]").length);
   });
 
   it("publishes the release facts a researcher needs before declaring a run", () => {

@@ -1077,8 +1077,17 @@ function RetainedFormula({ search }: { search: CurrentSourceSearch }) {
   );
 }
 
+/** A quiet stage-to-stage link (mono 10px, accent) that keeps the cursor it was built with. */
+function StageLink({ to, action, title, children }: { to: string; action: string; title: string; children: ReactNode }) {
+  return (
+    <Link to={to} className="mono text-[10px] normal-case tracking-normal" style={{ color: "var(--accent)" }} data-action={action} title={title}>
+      {children}
+    </Link>
+  );
+}
+
 /** W3 · B3: raw IS best, the selected candidate and a centroid kept apart. */
-function RetainedBestVsSelected({ search }: { search: CurrentSourceSearch }) {
+function RetainedBestVsSelected({ search, freezeHref }: { search: CurrentSourceSearch; freezeHref: string | null }) {
   const roles = search.selection.roles;
   const card = (role: typeof roles.raw_best_is, title: string, tone: string, tag: string, key: string) => (
     <div className="flex flex-1 flex-col gap-1 rounded-[6px] border px-3 py-2.5" style={{ borderColor: key === "selected" ? "var(--accent-2)" : "var(--line)", background: key === "selected" ? "var(--paper)" : "transparent" }} data-role-card={key}>
@@ -1125,6 +1134,11 @@ function RetainedBestVsSelected({ search }: { search: CurrentSourceSearch }) {
           Centroid — {roles.centroid.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}
         </span>
       </span>
+      {freezeHref !== null && roles.selected.state === "AVAILABLE" ? (
+        <StageLink to={freezeHref} action="selected-to-freeze" title="Open S3 · Freeze — this selected θ* as sealed, with its digest">
+          θ* sealed in S3 →
+        </StageLink>
+      ) : null}
     </div>
   );
 }
@@ -2291,8 +2305,9 @@ export function SearchScreen({
                 </div>
 
                 <section className={CARD} style={CARD_STYLE} data-panel="pool-freeze">
-                  <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
-                    B1 · pool freeze
+                  <h3 className={`${LABEL} flex items-baseline justify-between gap-2`} style={{ color: "var(--ink-faint)" }}>
+                    <span>B1 · pool freeze</span>
+                    {!fixed && !notFound ? <StageLink to={deepDiveHref(`${runPath}/freeze`, { ...cursor, stage: "freeze" })} action="pool-to-freeze" title="Open S3 · Freeze — the sealed θ* and its digest chain">S3 Freeze →</StageLink> : null}
                   </h3>
                   {retained ? (retained.pool ? <PoolFunnel search={retained} /> : <RetainedPoolFreeze search={retained} />) : gapOf("candidate_pool") ? <Gap gap={gapOf("candidate_pool") as SearchSourceGap} what="candidate pool" showReason /> : null}
                 </section>
@@ -2313,7 +2328,10 @@ export function SearchScreen({
                     B3 · best trial ≠ selected params
                   </h3>
                   {retained ? (
-                    <RetainedBestVsSelected search={retained} />
+                    <RetainedBestVsSelected
+                      search={retained}
+                      freezeHref={notFound ? null : deepDiveHref(`${runPath}/freeze`, { ...cursor, stage: "freeze" })}
+                    />
                   ) : (
                     <>
                   <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>

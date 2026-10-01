@@ -382,7 +382,10 @@ function StatusPill({ item }: { item: RunLibraryItem }) {
  * `DERIVED_FROM_PERSISTED_STATE` is labelled as derived so it cannot be read
  * as a methodology narrative the source never told.
  */
-function EvidenceTrail({ stages }: { stages: readonly StageCell[] }) {
+/** Each stage chip opens its own stage screen for this run (HiFi 01 evidence trail → S1…S5). */
+const STAGE_SUFFIX: Record<StageCell["key"], string> = { S1: "split", S2: "search", S3: "freeze", S4: "execute", S5: "report" };
+
+function EvidenceTrail({ stages, runId, linkable }: { stages: readonly StageCell[]; runId: string; linkable: boolean }) {
   const byKey = new Map(stages.map((stage) => [stage.key, stage]));
   return (
     <span className="flex flex-none flex-col" style={{ gap: 3 }} data-trail>
@@ -398,7 +401,7 @@ function EvidenceTrail({ stages }: { stages: readonly StageCell[] }) {
               : provenance === "DERIVED_FROM_PERSISTED_STATE" && stage?.tip
                 ? `derived from persisted state — ${stage.tip}`
                 : "no stage narrative was published";
-          return (
+          const cell = (
             <span
               key={key}
               role="img"
@@ -425,6 +428,20 @@ function EvidenceTrail({ stages }: { stages: readonly StageCell[] }) {
             >
               {key}
             </span>
+          );
+          return linkable && stage && stage.state !== "pend" ? (
+            <Link
+              key={key}
+              to={`/research/quantbt/runs/${encodeURIComponent(runId)}/${STAGE_SUFFIX[key]}`}
+              data-stage-link={key}
+              aria-label={`open ${key} for this run`}
+              title={`open ${key} · ${title}`}
+              style={{ textDecoration: "none" }}
+            >
+              {cell}
+            </Link>
+          ) : (
+            cell
           );
         })}
       </span>
@@ -1199,6 +1216,13 @@ export function openTarget(
   if (item.status === "RUNNING" || item.status === "QUEUED") {
     return { to: `/research/quantbt/runs/${id}/progress`, label: "watch progress →" };
   }
+  if (item.status === "FAILED") {
+    return {
+      to: `/research/quantbt/runs/${id}/progress`,
+      label: "open progress →",
+      title: "A failed run's stage and reason are on Run Progress; the stage chips open the stages that ran.",
+    };
+  }
   if (item.status === "CANCELLED") {
     return {
       to: `/research/quantbt/runs/${id}/progress`,
@@ -1507,7 +1531,7 @@ function RunCard({
       ) : null}
 
       <div className="flex flex-wrap items-center" style={{ gap: 18, paddingTop: 8 }}>
-        <EvidenceTrail stages={item.stages} />
+        <EvidenceTrail stages={item.stages} runId={item.run_id} linkable={!legacy} />
         <Sparkline item={item} read={sparkline} onVisible={onVisible} />
         <Stats stats={item.stats} />
         <ClaimQuote item={item} />
@@ -1579,6 +1603,9 @@ function SkeletonCards() {
 
 /* --------------------------------------------------------------- compare */
 
+/** The bar says it in five words; the full rule is the tooltip (VD-TEXT-01). */
+const REFUSED_SHORT = "different contract key — compare refused";
+
 type CompareMode = "pending" | "reading" | "ready" | "refused";
 
 function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[]; onClear: () => void }) {
@@ -1597,14 +1624,14 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
     mode === "pending"
       ? COMPARE_PICK_SECOND
       : mode === "reading"
-        ? "reading the selected run hidden by the filter, to learn its ComparisonContractKey…"
+        ? "reading the hidden run's contract key…"
         : mode === "ready"
-          ? "same Alpha and ComparisonContractKey — open Compare to inspect them."
+          ? "same alpha · same contract key"
           : unknown
-            ? "one selected run could not be read, so its ComparisonContractKey is unknown — the button refuses."
+            ? "contract key unknown for one run — compare refused"
             : sameContract
-              ? "Compare reads one Alpha at a time; these runs are not bound to the same Alpha."
-              : COMPARE_REFUSAL;
+              ? "not bound to the same alpha — compare refused"
+              : REFUSED_SHORT;
 
   const border =
     mode === "ready" ? "var(--accent)" : mode === "refused" ? "var(--bad)" : mode === "pending" ? "var(--accent-2)" : "var(--line)";
@@ -1635,7 +1662,11 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
         compare · {selection.length} selected
       </span>
       <span className="flex min-w-[200px] flex-1 flex-col" style={{ fontSize: 11.5, lineHeight: 1.5 }}>
-        <span data-compare-note {...(mode === "refused" && !unknown ? { "data-compare-refusal": true } : {})}>
+        <span
+          data-compare-note
+          title={note === REFUSED_SHORT ? COMPARE_REFUSAL : undefined}
+          {...(mode === "refused" && !unknown ? { "data-compare-refusal": true } : {})}
+        >
           {note}
         </span>
         {/* The hi-fi bar is one line. The ids join it only when a selected
@@ -1666,7 +1697,7 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
           type="button"
           disabled
           data-action="open-compare"
-          title={mode === "refused" ? note : `${note} — ${COMPARE_RULE_TITLE}`}
+          title={mode === "refused" && note === REFUSED_SHORT ? COMPARE_REFUSAL : `${note} — ${COMPARE_RULE_TITLE}`}
           className="mono rounded-[6px] border border-dashed px-[14px] py-[5px] text-[10px] uppercase tracking-[.05em]"
           style={{ borderColor: "var(--line-strong)", background: "var(--paper-sunken)", color: "var(--ink-faint)", cursor: "not-allowed" }}
         >
@@ -2001,6 +2032,9 @@ export function RunLibrary(props: RunLibraryProps) {
   const clearAll = () => onFilters(clearedFilters(filters));
 
   const ledger = response?.claim_ledger;
+  /* One bound alpha on the list: the lineage link needs no grouping first. */
+  const alphaIds = [...new Set(items.map((item) => item.binding?.alpha_id ?? null))];
+  const lineageAlpha = alphaIds.length === 1 && alphaIds[0] !== null ? alphaIds[0] : null;
   /* D3: optional at the wire, because a deployment can be older than the
      contract. `statusCaption` is never fed a guess. */
   const statusCounts = (response as { status_counts?: StatusCounts } | null)?.status_counts ?? null;
@@ -2059,12 +2093,31 @@ export function RunLibrary(props: RunLibraryProps) {
           </h1>
         </div>
         <span className="flex flex-none flex-wrap items-center" style={{ gap: 8 }}>
-          <span
-            data-lineage-hint
-            style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}
-          >
-            lineage ↗ select an alpha group below
-          </span>
+          {lineageAlpha !== null ? (
+            <Link
+              to={lineageHref(lineageAlpha)}
+              data-lineage-hint
+              data-lineage-alpha={lineageAlpha}
+              title="Attempt lineage of the alpha on this list"
+              className="text-[color:var(--accent)]"
+              style={{ fontFamily: MONO, fontSize: 10 }}
+            >
+              attempt lineage →
+            </Link>
+          ) : (
+            <button
+              type="button"
+              data-lineage-hint
+              data-action="group-for-lineage"
+              aria-pressed={filters.group}
+              title="Group by alpha, then open an alpha's lineage"
+              onClick={() => onFilters({ ...filters, group: true })}
+              className="text-[color:var(--accent)]"
+              style={{ fontFamily: MONO, fontSize: 10, background: "none", border: 0, padding: 0, cursor: "pointer" }}
+            >
+              attempt lineage ↗
+            </button>
+          )}
           <Link
             to={JOURNEY_MAP}
             data-link="journey-map"
@@ -2112,9 +2165,8 @@ export function RunLibrary(props: RunLibraryProps) {
             color: "var(--ink-soft)",
           }}
         >
-          <span>
-            Pick a run to open <strong style={{ color: "var(--ink)" }}>{PICK_TARGET_LABEL[filters.to] ?? filters.to}</strong>. Each
-            card&rsquo;s link opens it for that run.
+          <span title="Each card's link opens it for that run.">
+            Pick a run to open <strong style={{ color: "var(--ink)" }}>{PICK_TARGET_LABEL[filters.to] ?? filters.to}</strong>
           </span>
           <Link
             to={JOURNEY_MAP}

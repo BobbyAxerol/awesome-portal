@@ -373,9 +373,9 @@ describe("P11-T01c — the source owns the segmentation and the certificate", ()
     });
     // One fact exists; the other two are not invented to complete the picture.
     expect(document.querySelectorAll("[data-fold-segment]")).toHaveLength(1);
-    expect(document.querySelector("[data-timeline-partial]")?.textContent).toContain(
-      "gaps not filled",
-    );
+    // F2b: the line is two words; the condition rides in its tooltip.
+    expect(document.querySelector("[data-timeline-partial]")?.textContent).toBe("partial folds");
+    expect(document.querySelector("[data-timeline-partial]")?.getAttribute("title")).toContain("gaps are not filled");
   });
 
   it("keeps the whole-fold fill on NOT_PUBLISHED", () => {
@@ -973,7 +973,8 @@ describe("RF-04 — console and truthful no-source states", () => {
 describe("P11-T09 — typed availability and refusals keep the composition", () => {
   it("reports PENDING_SOURCE_CALLBACK inside the screen", () => {
     view({ read: read({ availability: "PENDING_SOURCE_CALLBACK" }) });
-    expect(document.querySelector("[data-pending-source]")?.textContent).toContain(
+    expect(document.querySelector("[data-pending-source]")?.textContent).toBe("waiting for the source");
+    expect(document.querySelector("[data-pending-source]")?.getAttribute("title")).toContain(
       "Waiting for its source to report progress",
     );
     // The composition is intact, not replaced by an envelope.

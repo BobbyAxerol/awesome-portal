@@ -477,6 +477,18 @@ function HoldoutSealBlock({ seal, issuedAt }: { seal: NonNullable<Snapshot["hold
 /** CG-P08-03: every server gate this manifest passed, as the server named it. */
 function GateRows({ gates }: { gates: NonNullable<PreflightResponse["gates"]> }) {
   return (
+    <>
+    {/* One segment per gate the server named, coloured by its own state — a glance before the rows. */}
+    <div className="mb-1.5 flex gap-[2px]" data-gate-strip aria-hidden="true">
+      {gates.map((gate) => (
+        <span
+          key={gate.gate}
+          data-gate-segment={gate.state}
+          title={`${gate.gate} · ${gate.state}`}
+          style={{ flex: 1, height: 6, borderRadius: 2, background: gate.state === "PASS" ? "var(--good)" : "var(--line-strong)" }}
+        />
+      ))}
+    </div>
     <ol className="flex flex-col" role="list" data-preflight-gates>
       {gates.map((gate) => (
         <li key={gate.gate} className="flex items-baseline gap-2 border-b py-[2px] text-[10.5px] last:border-b-0" style={{ borderColor: "var(--line-soft)" }} data-preflight-gate={gate.gate} data-gate-state={gate.state}>
@@ -491,6 +503,7 @@ function GateRows({ gates }: { gates: NonNullable<PreflightResponse["gates"]> })
         </li>
       ))}
     </ol>
+    </>
   );
 }
 

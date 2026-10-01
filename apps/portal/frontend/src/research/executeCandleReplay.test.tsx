@@ -328,7 +328,7 @@ describe("P17-T06/T08 · bounded DOM, no certificate", () => {
     const { container } = await settled();
     expect(container.querySelector("[data-certificate]")).toBeNull();
     expect(container.textContent).not.toMatch(/certificate|cert L\d/i);
-    expect(container.querySelector("[data-replay-contract]")?.textContent).toContain("accounting certified by QuantBT");
+    expect(container.querySelector("[data-accounting-certified]")?.textContent).toBe("accounting certified by QuantBT");
   });
 });
 
@@ -414,56 +414,36 @@ describe("S08 T17 · a 32-fold run (synthetic, derived from the real-HMD fixture
  * publish is never given a width.
  * --------------------------------------------------------------------- */
 describe("E2c · 8.5 — the band above the chart is the fold's published windows", () => {
-  const FOLD_0 = W3.split.fold_plan.folds[0]!;
 
-  it("shades IS and the plotted OOS from the fold's own train and test spans, in proportion", async () => {
+  it("F2b · the overview strip carries the three windows: IS hatched, every fold's OOS solid (the active one stronger), from served boundaries", async () => {
     const { container } = await settled();
-    const band = container.querySelector("[data-split-band='retained']") as HTMLElement;
-    expect(band).toBeTruthy();
-    /* Two spans are published for this fold, so two bands are drawn. */
-    expect(band.getAttribute("data-split-band-drawn")).toBe("2");
-    const is = band.querySelector("[data-band='is']") as HTMLElement;
-    const oos = band.querySelector("[data-band='outer_oos']") as HTMLElement;
-    expect(is.getAttribute("data-band-state")).toBe("AVAILABLE");
-    expect(oos.getAttribute("data-band-state")).toBe("AVAILABLE");
-    /* Width is the published duration and nothing else. */
-    const trainMs = FOLD_0.train_end_utc_ms - FOLD_0.train_start_utc_ms;
-    const testMs = FOLD_0.test_end_utc_ms - FOLD_0.test_start_utc_ms;
-    expect(is.parentElement!.style.flexGrow).toBe(String(trainMs));
-    expect(oos.parentElement!.style.flexGrow).toBe(String(testMs));
-    expect(trainMs).toBeGreaterThan(testMs);
-    /* Each band names its own span in words for a reader who cannot see it. */
-    expect(is.getAttribute("title")).toContain("IS · 2026-06-01");
-    expect(oos.getAttribute("title")).toContain("OOS (plotted) · 2026-07-01");
-    expect(band.querySelector("[data-band-label='outer_oos']")!.textContent).toBe("OOS (plotted)");
+    const is = container.querySelectorAll("[data-overview-band='is']");
+    const oos = [...container.querySelectorAll("[data-overview-band='oos']")] as HTMLElement[];
+    expect(is).toHaveLength(1);
+    expect(oos).toHaveLength(FOLD0.execution.fold_capital.segments.length);
+    expect(is[0]!.getAttribute("title")).toContain("IS (train) · 2026-06-01");
+    const active = oos.filter((band) => band.getAttribute("data-band-active") === "true");
+    expect(active).toHaveLength(1);
+    expect(active[0]!.getAttribute("data-band-fold-id")).toBe("0");
+    expect(active[0]!.getAttribute("title")).toContain("OOS · 2026-07-01");
+    expect(active[0]!.getAttribute("title")).toContain(`${FOLD0.execution.fold_capital.segments[0]!.bars} bars`);
+    /* IS is the train window: it ends where the OOS band begins or before, never over it. */
+    const pct = (value: string) => Number(value.replace("%", ""));
+    const isEdge = pct((is[0] as HTMLElement).style.left) + pct((is[0] as HTMLElement).style.width);
+    expect(isEdge).toBeLessThanOrEqual(pct(active[0]!.style.left) + 0.001);
   });
 
-  it("draws the gap between the train and test windows as a gap, never closed up", async () => {
+  it("F2b · a profile with no holdout says 'not applicable' with the served code as a typed absence, and draws no holdout band", async () => {
     const { container } = await settled();
-    const gap = container.querySelector("[data-split-band='retained'] [data-band-gap]") as HTMLElement;
-    expect(gap).toBeTruthy();
-    expect(gap.style.flexGrow).toBe(String(FOLD_0.test_start_utc_ms - FOLD_0.train_end_utc_ms));
-    expect(gap.getAttribute("title")).toContain("Not covered by a published window");
-  });
-
-  it("a profile with no holdout segment says not applicable, not 'not published', and gets no box", async () => {
-    const { container } = await settled();
-    const holdout = container.querySelector("[data-split-band='retained'] [data-band='holdout']") as HTMLElement;
+    expect(container.querySelector("[data-overview-band='holdout']")).toBeNull();
+    const holdout = container.querySelector("[data-legend-window='holdout']") as HTMLElement;
     /* The retained claim says this profile declares no holdout at all — a
        different fact from "the source has not published it yet", kept different. */
     expect(holdout.getAttribute("data-band-state")).toBe("NOT_APPLICABLE");
     expect(holdout.textContent).toContain("not applicable");
     expect(holdout.textContent).not.toContain("not published");
-    expect(holdout.querySelector("[data-band-reason]")!.getAttribute("data-band-reason")).toBe(
-      "P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT",
-    );
-    expect(holdout.querySelector("[data-band-reason]")!.getAttribute("title")).toBe(
-      "This walk-forward profile declares no holdout segment.",
-    );
-    /* A band without a published span never gets a width. */
-    expect(holdout.querySelector("[style*='flex']")).toBeNull();
-    expect(holdout.textContent).not.toContain("0");
-    expect(holdout.textContent).not.toContain("—");
+    expect(holdout.querySelector("[data-reason-code]")!.getAttribute("data-reason-code")).toBe("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
+    expect(holdout.getAttribute("title")).toContain("This walk-forward profile declares no holdout segment.");
   });
 
   it("every fold's windows come from the one fold-plan read; changing fold reads no split", async () => {
@@ -522,8 +502,8 @@ describe("F1 · D11 — fold capital reads in words, the price axis groups thous
     expect(tile.textContent).not.toContain("carry_position");
     expect(tile.querySelector("[data-tile-code]")?.getAttribute("title")).toBe("carry_position");
     const line = container.querySelector("[data-fold-capital]") as HTMLElement;
-    expect(line.textContent).toContain("capital carried across folds · continuous across folds");
-    expect(line.getAttribute("title")).toBe("carry_position");
+    expect(line.textContent).toBe("capital carried across folds");
+    expect(line.getAttribute("title")).toContain("carry_position · continuous across folds");
     expect(container.querySelector("[data-fold-boundary]")?.getAttribute("title")).toContain("carry_position — one stitched account");
   });
 
@@ -574,7 +554,7 @@ describe("F1 · FG 08-06 / 08-07 — the browser derives no return and sums no f
   it("the cost timeline prints no window total; it says it is not published, keeps the served full-run fee", async () => {
     const { container } = await settled();
     const windowLine = container.querySelector("[data-cost-window]") as HTMLElement;
-    expect(windowLine.querySelector("[data-window-fee='NOT_PUBLISHED']")?.textContent).toBe("not published for a window");
+    expect(windowLine.querySelector("[data-window-fee='NOT_PUBLISHED']")?.textContent).toBe("not published");
     expect(windowLine.textContent).not.toMatch(/fee\s*[\d−-]/);
     const total = container.querySelector("[data-cost-total='shown']") as HTMLElement;
     expect(total.querySelector("[data-exact]")?.getAttribute("title")).toBe(FOLD0.execution.totals.fee);

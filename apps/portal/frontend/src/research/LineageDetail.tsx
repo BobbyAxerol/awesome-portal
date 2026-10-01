@@ -28,6 +28,8 @@
 import { Fragment, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router-dom";
 
+import { smokeMotionAllowed } from "../execution/smokeMotion";
+
 import { releaseCandidateHref } from "./releaseCandidateClient";
 import { compareHref } from "./compareClient";
 import { ResearchPanel } from "./ResearchPanel";
@@ -35,8 +37,10 @@ import {
   LINEAGE_REASON,
   LINEAGE_WITHHELD_WORDS,
   absenceReason,
+  alphaImportHref,
   lineageGaps,
   lineageHasPresentation,
+  newRunPrefillHref,
   type ChildRun,
   type Exposure,
   type Lineage,
@@ -490,6 +494,11 @@ const LINEAGE_CSS = `
 .ln-rule .t { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--accent-2); margin: 0;
   align-self: flex-start; background: var(--paper-raised); border-radius: 3px; padding: 0 6px; }
 .ln-rule p { font-size: 11px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
+.ln-storybar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--paper-sunken); gap: 1px; }
+.ln-storybar [data-seg="storied"] { background: var(--accent); min-width: 3px; }
+.ln-storybar [data-seg="probes"] { background: var(--line-strong); }
+.ln-reveal[data-motion="true"] { animation: ln-reveal 160ms ease-out; }
+@keyframes ln-reveal { from { opacity: .35; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 .ln-counts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); }
 .ln-counts .c { display: flex; gap: 5px; align-items: baseline; }
 .ln-counts .c .n { color: var(--ink); font-weight: 600; }
@@ -887,6 +896,7 @@ function Exercised({ version }: { version: LineageVersion }) {
 }
 
 function VersionBand({
+  alphaId,
   version,
   attempts,
   statusOf,
@@ -897,6 +907,7 @@ function VersionBand({
   showProbes,
   onToggleProbes,
 }: {
+  alphaId: string;
   version: LineageVersion;
   attempts: readonly LineageAttempt[];
   statusOf: (attempt: LineageAttempt) => LineageStatus;
@@ -934,7 +945,7 @@ function VersionBand({
         ) : null}
         <VersionOutcome version={version} />
         {version.lifecycle_state === "ACTIVE" ? (
-          <Link to="/research/quantbt/alpha-import" className="ln-faint" data-action="import-new-version">
+          <Link to={alphaImportHref(alphaId)} className="ln-faint" data-action="import-new-version" title="Screen 14 — register a new immutable version of this alpha">
             import new version →
           </Link>
         ) : null}
@@ -994,7 +1005,7 @@ function VersionBand({
 }
 
 /** Hi-fi `untried` row: Engine Atlas routes the active version never declared, then the way to declare one. */
-function Untried({ version }: { version: LineageVersion | null }) {
+function Untried({ alphaId, version }: { alphaId: string; version: LineageVersion | null }) {
   const untried = version?.untried ?? null;
   return (
     <div className="ln-untried" data-untried={untried?.availability.state ?? "NONE"}>
@@ -1018,7 +1029,7 @@ function Untried({ version }: { version: LineageVersion | null }) {
       {untried && untried.availability.state === "PARTIAL" ? <span className="ln-reason">{absenceReason(untried.availability)}</span> : null}
       <span className="ln-faint">
         {" — "}
-        <Link to={`${RUNS_ROOT}/new`} data-action="declare-at-new-run">
+        <Link to={newRunPrefillHref(alphaId, version?.alpha_version_id ?? null)} data-action="declare-at-new-run" title="Screen 02 with this alpha and version preselected">
           declare at New Run →
         </Link>
       </span>
@@ -1183,10 +1194,10 @@ function RootCard({
           </span>
         ) : null}
         <span className="ln-links">
-          <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(alpha.alpha_id)}`} data-action="runs">
+          <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(alpha.alpha_id)}`} data-action="runs" title="Run Library, grouped, filtered to this alpha">
             runs →
           </Link>
-          <Link to={`${RUNS_ROOT}/new`} data-action="new-run">
+          <Link to={newRunPrefillHref(alpha.alpha_id, active[0]?.alpha_version_id ?? null)} data-action="new-run" title="Screen 02 with this alpha and its active version preselected">
             new run →
           </Link>
           {pickRun ? (
@@ -1217,6 +1228,7 @@ function RootCard({
           bands.map((version) => (
             <VersionBand
               key={version.alpha_version_id}
+              alphaId={alpha.alpha_id}
               version={version}
               attempts={bandsByVersion.get(version.alpha_version_id) ?? []}
               statusOf={statusOf}
@@ -1230,7 +1242,7 @@ function RootCard({
           ))
         )}
       </div>
-      <Untried version={active[0] ?? null} />
+      <Untried alphaId={alpha.alpha_id} version={active[0] ?? null} />
       {active.length === 0 ? (
         <PickRow version={null} returnedIds={returnedIds} onSelect={onChip} />
       ) : (
@@ -1677,7 +1689,14 @@ function Selected({
   const facts = attempt.run_facts;
   const claim = facts.claim;
   return (
-    <section className="ln-block" data-panel="selected" aria-label="selected attempt" data-selected-attempt={attempt.attempt_id}>
+    <section
+      key={attempt.attempt_id}
+      className="ln-block ln-reveal"
+      data-motion={smokeMotionAllowed() ? "true" : "false"}
+      data-panel="selected"
+      aria-label="selected attempt"
+      data-selected-attempt={attempt.attempt_id}
+    >
       <h3 className="t">
         <span>
           selected attempt — <ShortId id={attempt.attempt_id} className="ln-selid" label="attempt" />
@@ -1789,27 +1808,36 @@ function Selected({
       </span>
       <ExposureLine exposure={attempt.exposure} />
       {run.run_id ? (
-        <span className="ln-btnlinks">
-          <Link className="ln-btnlink" to={evidenceHref(run.run_id)} data-action="open-evidence">
+        <span className="ln-btnlinks" data-run-actions={run.run_id}>
+          <Link className="ln-btnlink" to={evidenceHref(run.run_id)} data-action="open-evidence" title={`Evidence Flow of ${run.run_id}`}>
             open evidence →
           </Link>
-          <Link className="ln-btnlink soft" to={reportHref(run.run_id)} data-action="run-report">
+          <Link className="ln-btnlink soft" to={reportHref(run.run_id)} data-action="run-report" title={`Run report of ${run.run_id}`}>
             run report
           </Link>
-          <Link className="ln-btnlink soft" to={`${RUNS_ROOT}/${encodeURIComponent(run.run_id)}/freeze`} data-action="open-freeze">
+          {parentRunId ? (
+            <Link
+              className="ln-btnlink soft"
+              to={compareHref(alphaId, { mode: "pair", runs: [parentRunId, run.run_id] })}
+              data-action="compare-with-parent"
+              title="Compare this run with its parent's run"
+            >
+              compare with parent →
+            </Link>
+          ) : (
+            <Link className="ln-btnlink soft" to={compareHref(alphaId)} data-action="open-compare-alpha" title="Screen 13 inside this alpha — pick the runs there">
+              compare →
+            </Link>
+          )}
+          <Link className="ln-btnlink soft" to={`${RUNS_ROOT}/${encodeURIComponent(run.run_id)}/freeze`} data-action="open-freeze" title="Freeze (Screen 04) of this run">
             freeze
           </Link>
-          <Link className="ln-btnlink soft" to={releaseCandidateHref(run.run_id)} data-action="open-release-candidate">
+          <Link className="ln-btnlink soft" to={releaseCandidateHref(run.run_id)} data-action="open-release-candidate" title="Screen 11 for this run">
             release candidate
           </Link>
           <Link className="ln-btnlink soft" to={`${RUNS_ROOT}/new?from=${encodeURIComponent(run.run_id)}`} data-action="clone-at-new-run" title="copy this run's declaration into a new draft on Screen 02 (a new attempt, never an edit)">
             clone →
           </Link>
-          {parentRunId ? (
-            <Link className="ln-btnlink soft" to={compareHref(alphaId, { mode: "pair", runs: [parentRunId, run.run_id] })} data-action="compare-with-parent">
-              compare with parent →
-            </Link>
-          ) : null}
         </span>
       ) : null}
     </section>
@@ -1824,7 +1852,7 @@ function DiffPanel({ attempt }: { attempt: LineageAttempt | null }) {
     <section className="ln-block" data-panel="diff" aria-label="diff vs parent" data-diff-state={diff?.state ?? "NONE"} style={{ gap: 5 }}>
       <h3 className="t">diff vs parent — config keys only</h3>
       {diff === null ? (
-        <p className="ln-dnote">Select an attempt to read its diff against its parent.</p>
+        <p className="ln-dnote" title="Select an attempt to read its diff against its parent.">No attempt selected.</p>
       ) : diff.state === "ROOT" ? (
         <p className="ln-dnote">Root attempt — nothing to diff against.</p>
       ) : diff.state !== "AVAILABLE" ? (
@@ -1925,6 +1953,22 @@ const COUNT_LABELS: [keyof Lineage["counts"], string][] = [
   ["probe_returned", "probes (returned)"],
 ];
 
+/**
+ * F2b: the two served numbers that partition the returned graph, drawn as one
+ * bar. Widths are the two integers' own proportion; a number the server did not
+ * publish draws nothing (never an empty segment standing for 0).
+ */
+function StoryBar({ storied, probes }: { storied: unknown; probes: unknown }) {
+  if (typeof storied !== "number" || typeof probes !== "number" || storied + probes <= 0) return null;
+  const label = `storied ${storied} · probes ${probes} of the returned attempts`;
+  return (
+    <span className="ln-storybar" data-story-bar role="img" aria-label={label} title={label}>
+      <span data-seg="storied" style={{ flexGrow: storied }} />
+      <span data-seg="probes" style={{ flexGrow: probes }} />
+    </span>
+  );
+}
+
 function Counts({ lineage }: { lineage: Lineage }) {
   const { counts, coverage } = lineage;
   /* CG-P19-13: the server's definition of each count, and its Run Library twin. */
@@ -1937,6 +1981,7 @@ function Counts({ lineage }: { lineage: Lineage }) {
           {lineage.read_authority} · as of {iso(lineage.as_of_utc_ms)}
         </span>
       </h3>
+      <StoryBar storied={counts.storied_returned} probes={counts.probe_returned} />
       <div className="ln-counts">
         {COUNT_LABELS.map(([key, label]) => {
           const value = counts[key];
@@ -2095,6 +2140,15 @@ function scrollAncestor(element: HTMLElement): HTMLElement | null {
   return (document.scrollingElement as HTMLElement | null) ?? null;
 }
 
+/** CSS for the one cross-highlighted attempt; the id goes into a quoted attribute value, so every non-word char is escaped. */
+export function hotCss(id: string): string {
+  const q = id.replace(/[^A-Za-z0-9_-]/g, (c) => "\\" + c);
+  return (
+    `.ln-grid [data-chip="${q}"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }` +
+    `.ln-grid [data-attempt="${q}"] .ln-card, .ln-grid [data-attempt="${q}"] .ln-row { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }`
+  );
+}
+
 function findVersion(lineage: Lineage, av: string | null): LineageVersion | null {
   if (!av) return null;
   return (
@@ -2162,6 +2216,15 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
   const [expanded, setExpanded] = useState<ReadonlySet<string> | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [pendingScroll, setPendingScroll] = useState<string | null>(null);
+  /* F2b: hovering (or focusing) a band chip lights its tree node and vice versa.
+     Written straight into one <style> element: a hover is not render state, and the
+     windowed list must not re-render on every mouse move. */
+  const hotStyle = useRef<HTMLStyleElement>(null);
+  const setHot = useCallback((event: { target: EventTarget } | null) => {
+    const element = (event?.target as HTMLElement | null)?.closest?.("[data-chip],[data-attempt]");
+    const id = element ? (element.getAttribute("data-chip") ?? element.getAttribute("data-attempt")) : null;
+    if (hotStyle.current) hotStyle.current.textContent = id ? hotCss(id) : "";
+  }, []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bandsRef = useRef<HTMLDivElement>(null);
   const deepLinked = useRef(false);
@@ -2321,7 +2384,14 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       {lineage ? (
         <>
           {state.state !== "available" && !(state.state === "partial" && onlyPickGap(lineage)) ? <Notice controller={controller} /> : null}
-          <div className="ln-grid">
+          <div
+            className="ln-grid"
+            onMouseOver={setHot}
+            onMouseLeave={() => setHot(null)}
+            onFocus={setHot}
+            onBlur={() => setHot(null)}
+          >
+            <style ref={hotStyle} data-hot-style />
             <div className="ln-left">
               <RootCard
                 lineage={lineage}

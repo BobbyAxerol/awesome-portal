@@ -711,3 +711,17 @@ describe("groupDigits", () => {
     expect(groupDigits(Number.POSITIVE_INFINITY)).toBe("Infinity");
   });
 });
+
+describe("F2b S02 — the gate strip", () => {
+  it("draws one segment per served gate, coloured by its own state, with the gate name as tooltip", () => {
+    const gates = [
+      { gate: "dataset_binding", state: "PASS", message: "bound" },
+      { gate: "warmup", state: "NOT_RECORDED", message: "not recorded" },
+    ] as NonNullable<PreflightResponse["gates"]>;
+    render(<PreflightPanel preflight={preflight({ gates })} state={OK} />);
+    const segments = [...document.querySelectorAll("[data-gate-segment]")] as HTMLElement[];
+    expect(segments.map((node) => node.getAttribute("data-gate-segment"))).toEqual(["PASS", "NOT_RECORDED"]);
+    expect(segments[0].getAttribute("title")).toBe("dataset_binding · PASS");
+    cleanup();
+  });
+});

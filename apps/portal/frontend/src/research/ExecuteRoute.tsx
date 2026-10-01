@@ -12,6 +12,7 @@ import { useParams } from "react-router-dom";
 
 import { ExecuteScreen, executeLane, useTransportInput } from "./ExecuteDetail";
 import { useSplitBand } from "./SplitBand";
+import { useExecuteWindow } from "./executeWindows";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { ReplayTransport, useTransport } from "./replayTransport";
 import { isRetainedReplay } from "./replayClient";
@@ -45,6 +46,7 @@ export function ExecuteContainer({
   onHubFold?: (fold: number) => void;
 }) {
   const { cursor, update } = useEvidenceCursor({ stage: "execute" });
+  const [windowKey, setWindowKey] = useExecuteWindow();
   const [arrivalSeq] = useState(cursor.seq);
   const [arrivalFold] = useState(cursor.fold);
   const controller = useReplay(runId, arrivalSeq === null ? null : arrivalSeq - 1, { arrivalFold });
@@ -111,5 +113,5 @@ export function ExecuteContainer({
   if (controller.state.state === "denied" && controller.replay === null) {
     return <StageDenied runId={runId} stage="Stage 4 · Execute Replay" screen="execute-replay" />;
   }
-  return <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} band={band} embedded={embedded} />;
+  return <ExecuteScreen runId={runId} cursor={cursor} controller={controller} transport={transport} band={band} embedded={embedded} windowKey={windowKey} onWindow={setWindowKey} />;
 }

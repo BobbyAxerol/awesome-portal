@@ -389,7 +389,7 @@ describe("D4 — Screen 02, real route and hook", () => {
     fireEvent.change(field("Dataset"), { target: { value: BTC.dataset } });
     expect(text("[data-window-prefill-status]")).toBe("No symbol is chosen, so nothing is prefilled.");
     fireEvent.change(field("Symbol"), { target: { value: BTC.symbol } });
-    expect(text("[data-window-prefill-status]")).toBe("Outer walk-forward bounds prefilled from this coverage — edit them in the Walk-forward step.");
+    expect(text("[data-window-prefill-status]")).toBe("Bounds prefilled from coverage");
 
     goTo("windows");
     expect(windowValues()).toEqual([BTC.lower, "", "", "", "", BTC.upper]);
@@ -650,7 +650,7 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     fireEvent.change(field("Holdout end exclusive"), { target: { value: "2025-01-01T00:00" } });
     goTo("data");
     choose(BTC.dataset, BTC.symbol);
-    expect(text("[data-window-prefill-status]")).toBe("Coverage is published; the outer walk-forward bounds already hold your own values, so nothing was prefilled.");
+    expect(text("[data-window-prefill-status]")).toBe("Not prefilled — bounds already set");
     goTo("windows");
     expect(windowValues()).toEqual(["2021-01-01T00:00", "", "", "", "", "2025-01-01T00:00"]);
     expect(text("[data-prefill-reason]")).toBe("The coverage of crypto-binance-1m · BTCUSDT is 2020-01 → 2026-09 · 81 months. The outer bounds here hold your own values, so nothing was prefilled.");

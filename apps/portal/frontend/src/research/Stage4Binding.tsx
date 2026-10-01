@@ -141,8 +141,13 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
           <span data-binding-reason={binding.reason_code}>{reasonCodeSentence(binding.reason_code)} ({binding.reason_code})</span>
         </span>
       ) : binding.state === "DRIFT" ? (
-        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--bad)" }} data-binding-note>
-          Stage 5 must refuse this run — re-run Execute or re-seal as a new attempt.
+        <span
+          className="text-[10px] leading-[1.5]"
+          style={{ color: "var(--bad)" }}
+          data-binding-note
+          title="Re-run Execute, or re-seal as a new attempt."
+        >
+          Stage 5 must refuse this run.
         </span>
       ) : null}
       {authority ? <ParameterAuthorityNote authority={authority} /> : null}
@@ -156,7 +161,7 @@ function ParameterAuthorityNote({ authority }: { authority: ParameterAuthorityVa
   return (
     <div className="flex flex-col gap-0.5 border-t pt-1.5 text-[10px] leading-[1.5]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-parameter-authority={fixed.state} title="Code-fixed values sit outside the params digest; they are covered by the code digest inside the adapter contract.">
       <span>
-        <span className="mono">{authority.declared.names.length}</span> declared parameters are inside the params digest.
+        <span className="mono">{authority.declared.names.length}</span> declared · inside the params digest
       </span>
       <span>
         Code-fixed values{" "}

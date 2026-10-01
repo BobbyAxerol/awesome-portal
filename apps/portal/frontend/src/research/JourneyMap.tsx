@@ -30,6 +30,7 @@ import type {
   JourneyPhase,
 } from "./foundationClient";
 import { ResearchPanel } from "./ResearchPanel";
+import { shortId } from "./researchFormat";
 import { journeyCardScope, needsRunToOpen, opensWithRunId, pickRunHref, resolveJourneyCardRoute } from "./screenRoutes";
 import type { ResearchState } from "./state";
 import { CursorNotice } from "./CursorNotice";
@@ -58,6 +59,13 @@ const TAG_STYLE: Record<
     ink: "var(--ink)",
     weight: 700,
   },
+};
+
+/** F2b: what each card kind means, as the tooltip of its tag (spec 00 §3.2). */
+const TAG_TITLE: Record<JourneyCard["target_kind"], string> = {
+  SHIPPED: "Shipped hi-fi capture, unchanged",
+  RESEARCH_SCREEN: "Redesigned Research screen",
+  EXECUTION_HANDOFF: "Hands off to the Execution loop",
 };
 
 const TAG_LABEL: Record<JourneyCard["target_kind"], string> = {
@@ -90,6 +98,7 @@ function TagLegend() {
           <span
             key={kind}
             data-legend-tag={kind}
+            title={TAG_TITLE[kind]}
             className="mono rounded-[3px] border px-[5px] text-[8.5px] uppercase leading-[15px]"
             style={{
               color: tone.ink,
@@ -141,7 +150,9 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
   const route = resolveJourneyCardRoute(card.target_key, runId);
   const decoded = card.target_fragment ? decodeInspectionCursor(card.target_fragment) : null;
   const fragment = decoded && decoded.problems.length === 0 ? encodeInspectionCursor(decoded.cursor) : "";
-  const href = route && fragment ? `${route}#${fragment}` : route;
+  /* F2b: the Atlas opened from a run's map remembers that run, so its crumb returns to the run's Evidence Flow. */
+  const atlasRun = card.target_key === "engine_atlas" && runId && !fragment ? `#tab=modes&run=${encodeURIComponent(runId)}` : "";
+  const href = route && fragment ? `${route}#${fragment}` : route ? `${route}${atlasRun}` : route;
   /*
    * D2 (audit 00-4): a card that needs a run is not a dead end. Before, 14
    * cards greyed to "SELECT RUN" with nowhere to select one, so the map
@@ -350,18 +361,34 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
       className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col gap-3 px-2 pb-8"
     >
       <header className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" role="group" data-breadcrumb>
+          <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }} data-crumb-library>
+            Run Library
+          </Link>
+          <span style={{ color: "var(--ink-faint)" }}>/</span>
+          {runId ? (
+            <>
+              <Link
+                to={`/research/quantbt/runs/${encodeURIComponent(runId)}/evidence`}
+                className="mono"
+                style={{ color: "var(--accent)" }}
+                data-crumb-evidence
+                title={`Evidence Flow of ${runId}`}
+              >
+                {shortId(runId)}
+              </Link>
+              <span style={{ color: "var(--ink-faint)" }}>/</span>
+            </>
+          ) : null}
+          <span style={{ color: "var(--ink)" }} aria-current="page">Journey Map</span>
+        </div>
         <h1
           className="text-[22px] font-light tracking-[-.01em]"
           style={{ fontFamily: "Newsreader, Georgia, serif" }}
+          title="A reading map of the domain: where each screen sits, and what it adds."
         >
           QuantBT Backtest — journey map
         </h1>
-        <p
-          className="text-[13.5px] italic"
-          style={{ fontFamily: "Newsreader, Georgia, serif", color: "var(--ink-faint)" }}
-        >
-          A reading map of the domain: where each screen sits, and what it adds.
-        </p>
         <TagLegend />
         {/* `ResearchPanel` prints `meta` only in its framed variant, and this screen is
             plain, so the descriptor revision never reached the reader: the map said which

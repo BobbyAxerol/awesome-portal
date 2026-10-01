@@ -47,6 +47,11 @@ import {
   MIRROR_PUBLISHED_NOTE,
   MIRROR_SUPERSEDED,
   NOT_PUBLISHABLE_BADGE,
+  NOT_PUBLISHABLE_TITLE,
+  PUBLISH_SENTENCE,
+  SEALED_SENTENCE,
+  UNKNOWN_SHORT,
+  PACK_FOOT_TITLE,
   PUBLISH_CONFIRM,
   PUBLISH_UNBOUND_LABEL,
   PUBLISHED_SENTENCE,
@@ -442,9 +447,11 @@ describe("S11 composition as served (P21)", () => {
     expect(screen.getByRole("heading", { level: 2, name: RC_TITLE })).toBeTruthy();
     expect(page().getAttribute("data-rc-state")).toBe("loading");
     expect(screen.getAllByRole("status", { name: "Loading" }).length).toBeGreaterThan(0);
-    expect(panelOrder()).toEqual(["header", "meta", "notice", "identity", "pack", "record", "seal", "publish", "mirror-ghost", "rules"]);
+    expect(panelOrder()).toEqual(["header", "meta", "notice", "identity", "pack", "record", "seal", "publish", "mirror-ghost"]);
     expect(sealButton().getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByText(RC_RULES)).toBeTruthy();
+    /* F2b: the rules footer is gone from the page; its words are the heading's tooltip. */
+    expect(q("[data-panel='rules']")).toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: RC_TITLE }).getAttribute("title")).toContain(RC_RULES);
   });
 
   it("S11-U02 renders the blocks in the hi-fi order RC_PANELS names", async () => {
@@ -464,18 +471,18 @@ describe("S11 composition as served (P21)", () => {
     server({ COMPOSE: [ok(P04)] });
     renderCompose();
     await ready();
-    expect(screen.getByText(RC_SUBTITLE)).toBeTruthy();
+    /* F2b: the subtitle is a tooltip on the title, not a line of prose. */
+    expect(q("[data-subtitle]")!.getAttribute("title")).toContain(RC_SUBTITLE);
+    expect(screen.queryByText(RC_SUBTITLE)).toBeNull();
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(crumb.textContent).toBe(`Evidence Flow/${RUN.slice(0, 13)}/Release Candidate & Publish`);
     expect(q("[data-crumb-run]")!.getAttribute("title")).toBe(RUN);
     expect(within(crumb).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`));
-    expect(screen.getByText(SEAL_SENTENCE)).toBeTruthy();
-    expect(within(panel("publish")!).getByText(SOD_NOTE)).toBeTruthy();
+    expect(panel("seal")!.querySelector("h3")!.getAttribute("title")).toBe(SEAL_SENTENCE);
+    expect(within(panel("publish")!).getByTitle(SOD_NOTE)).toBeTruthy();
     expect(panel("seal")!.textContent).not.toContain(SOD_NOTE);
-    expect(screen.getByText(MIRROR_NOTE)).toBeTruthy();
-    expect(panel("pack")!.textContent).toContain(
-      "DEGRADED travels as DEGRADED — the reviewer sees it. MISSING blocks publish. The two INPUT rows are the researcher's own signed declarations.",
-    );
+    expect(panel("mirror-ghost")!.querySelector("h3")!.getAttribute("title")).toBe(MIRROR_NOTE);
+    expect(panel("pack")!.querySelector("th[title]")!.getAttribute("title")).toBe(PACK_FOOT_TITLE);
     expect(sealButton().textContent).toBe(SEAL_LABEL);
     expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
     expect(q("[data-action='run-report']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
@@ -513,7 +520,15 @@ describe("S11 composition as served (P21)", () => {
     const nodes = qa("[data-rail-node]");
     expect(nodes.map((node) => node.getAttribute("data-rail-node"))).toEqual(P04.rail.map((node) => node.key));
     expect(nodes.map((node) => node.getAttribute("data-tone"))).toEqual(P04.rail.map((node) => node.tone));
-    expect(q("[data-rail-node='alpha']")!.getAttribute("href")).toBe(`/research/quantbt/alphas/${ALPHA}/lineage`);
+    const avId = P04.run.binding!.alpha_version_id;
+    expect(q("[data-rail-node='alpha']")!.getAttribute("href")).toBe(`/research/quantbt/alphas/${ALPHA}/lineage?av=${encodeURIComponent(avId)}`);
+    /* F2b: version → Screen 10 on that version; selected params → Screen 07 on this run. */
+    expect(q("[data-rail-node='alpha_version']")!.getAttribute("href")).toBe(`/research/quantbt/alphas/${ALPHA}/lineage?av=${encodeURIComponent(avId)}`);
+    expect(q("[data-rail-node='selected_params']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/freeze`);
+    /* F2b: the header's way out to lineage and the report, with the run and version kept. */
+    expect(q("[data-action='open-lineage']")!.getAttribute("href")).toBe(`/research/quantbt/alphas/${ALPHA}/lineage?av=${encodeURIComponent(avId)}`);
+    expect(q("[data-action='open-lineage']")!.getAttribute("title")).toContain("Screen 10");
+    expect(q("[data-action='run-report']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
     expect(q("[data-rail-node='run']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence`);
     expect(q("[data-rail-node='release_candidate']")!.tagName).toBe("DIV");
     cleanup();
@@ -532,9 +547,10 @@ describe("S11 composition as served (P21)", () => {
     expect(chip.textContent).toBe(NOT_PUBLISHABLE_BADGE);
     expect(chip.getAttribute("data-s")).toBe("NOT_PUBLISHABLE");
     const banner = panel("banner")!;
-    expect(banner.textContent).toContain(
-      "This run was submitted without an alpha_version binding — a scratch research run. It stays fully usable as evidence for you, but no release candidate can be composed from it. Bind a version at New Run and re-run to publish.",
-    );
+    expect(banner.textContent).toContain("Scratch run — no alpha_version bound. Bind one at New Run and re-run.");
+    expect(banner.getAttribute("title")).toBe(NOT_PUBLISHABLE_TITLE);
+    /* a scratch run has no binding, so no lineage link is offered */
+    expect(q("[data-action='open-lineage']")).toBeNull();
     expect(within(banner).getByRole("link", { name: "New Run" }).getAttribute("href")).toBe("/research/quantbt/runs/new");
     expect(describedBy(sealButton())).toBe("bind alpha_version first — a scratch run cannot be sealed · P21_SCRATCH_RUN_UNBOUND");
     expect(publishButton()!.textContent).toBe(PUBLISH_UNBOUND_LABEL);
@@ -1007,9 +1023,9 @@ describe("S11 publish (P22, two routes)", () => {
     await waitFor(() => expect(publishButton()!.getAttribute("data-publish-enabled")).toBe("true"));
     expect(publishButton()!.textContent).toBe(`Publish release candidate ${RC_ID}`);
     expect(publishButton()!.getAttribute("aria-describedby")).toBeNull();
-    expect(q("[data-publish-sentence]")!.textContent).toBe(
-      `Publishing freezes this exact combination as ${RC_ID} in the portal governance store. It creates no account, no allocation, and does not start Paper — it only makes the candidate reviewable.`,
-    );
+    expect(q("[data-publish-sentence]")!.textContent).toBe(RC_ID);
+    expect(panel("publish")!.querySelector("h3")!.getAttribute("title")).toBe(`${PUBLISH_SENTENCE[0]}${RC_ID}${PUBLISH_SENTENCE[1]}`);
+    expect(q("[data-sod]")!.getAttribute("title")).toBe(SOD_NOTE);
     expect(api.of("PUBLICATION")[0]!.headers["x-portal-csrf"]).toBeUndefined();
     expect(api.of("PUBLISH")).toHaveLength(0);
     expect(api.calls.filter((call) => call.url.includes("/mirror") || call.url.includes("reconcile"))).toHaveLength(0);
@@ -1069,8 +1085,9 @@ describe("S11 publish (P22, two routes)", () => {
     expect(q("[data-seal-chip]")).toBeNull();
     const card = panel("published")!;
     expect(card.querySelector("[data-published-facts]")!.textContent).toBe(
-      `published_at ${iso(PUBLISHED_AT)} · by researcher@bobby · evidence digest sha256:${"c".repeat(64)}. ${PUBLISHED_SENTENCE}`,
+      `published_at ${iso(PUBLISHED_AT)} · by researcher@bobby · evidence digest sha256:${"c".repeat(64)}`,
     );
+    expect(card.querySelector("h3")!.getAttribute("title")).toBe(PUBLISHED_SENTENCE);
     expect(card.querySelector("[data-published-receipt]")!.textContent).toBe(`receipt ${"d".repeat(64)} · approval ${APPROVAL}`);
     /* No ghost after publish: the solid mirror, with the server's facts only. */
     expect(panel("mirror-ghost")).toBeNull();
@@ -1084,7 +1101,7 @@ describe("S11 publish (P22, two routes)", () => {
     );
     expect(mirror.querySelector("[data-mirror-pool]")!.getAttribute("data-mirror-pool")).toBe("NOT_PUBLISHED");
     expect(mirror.querySelector("[data-mirror-decisions]")!.textContent).toBe("decisions recorded: not published");
-    expect(within(mirror).getByText(MIRROR_PUBLISHED_NOTE)).toBeTruthy();
+    expect(mirror.querySelector("h3")!.getAttribute("title")).toBe(MIRROR_PUBLISHED_NOTE);
     expect(within(mirror).getByRole("link", { name: MIRROR_INBOX_LINK }).getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
     expect(mirror.querySelectorAll("button, input, textarea, select")).toHaveLength(0);
     /* T07: the published candidate's declarations are read-only; the seal and publish cards are gone. */
@@ -1120,7 +1137,8 @@ describe("S11 publish (P22, two routes)", () => {
     renderCompose();
     await ready();
     const card = await until("[data-panel='publish-unknown']");
-    expect(card.textContent).toContain(UNKNOWN_COPY);
+    expect(card.textContent).toContain(UNKNOWN_SHORT);
+    expect(card.querySelector("[data-unknown-copy]")!.getAttribute("title")).toBe(UNKNOWN_COPY);
     expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
     expect(panel("publish")).toBeNull();
     expect(panel("mirror-ghost")).not.toBeNull();
@@ -1822,9 +1840,17 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     expect(node.querySelector("[data-state-chip]")!.textContent).toBe("APPROVED_WITH_CONDITION");
     expect(node.querySelector("[data-pick-state-word]")!.textContent!.trim()).toBe("WRITTEN");
     expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("trial trial_0007");
-    expect(node.querySelector("[data-pick-artifact]")!.textContent).toBe("artifact art_selected_params_01");
-    expect(node.querySelector("[data-pick-digest]")!.getAttribute("title")).toBe(FACT);
+    /* F2b: the artifact and the fact digest are the node's tooltip and data, not two more lines. */
+    expect(node.getAttribute("data-pick-artifact")).toBe("art_selected_params_01");
+    expect(node.getAttribute("data-pick-fact")).toBe(FACT);
     expect(node.getAttribute("title")).toContain(FACT);
+    expect(node.getAttribute("title")).toContain("artifact art_selected_params_01");
+    /* the trial opens Screen 06 with the trial selected (hash pick=), on the pick's own run */
+    const trial = node.querySelector("[data-pick-trial] a")!;
+    expect(trial.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/search#stage=search&pick=trial_0007`);
+    expect(trial.getAttribute("title")).toContain("Screen 06");
+    /* the approval chip opens the mirror's own href, because the mirror served this approval */
+    expect(node.querySelector("[data-action='open-pick-approval']")!.getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
   });
 
   it("F2-S11-02 a pending pick shows the served PENDING status and PENDING_APPROVAL state as sent", async () => {
@@ -1845,7 +1871,8 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     await ready();
     const node = await until("[data-rail-node='promotion_pick'][data-pick-state]");
     expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("trial — not published");
-    expect(node.querySelector("[data-pick-artifact]")!.textContent).toBe("artifact — not published");
+    expect(node.querySelector("[data-pick-artifact-absent]")!.textContent).toBe("artifact — not published");
+    expect(node.querySelector("[data-pick-trial] a")).toBeNull();
   });
 
   it("F2-S11-04 no pick on the read is a typed absence (pack route)", async () => {
@@ -1872,6 +1899,62 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     await ready();
     const absent = await until("[data-rail] [data-rail-node='promotion_pick'][data-pick-absent]");
     expect(absent.textContent).toContain("promotion pick — not published");
+  });
+});
+
+/* --------------------------------------------- F2b · flow, tooltips, visuals */
+
+describe("S11 F2b flow links, tooltips and the pack strip", () => {
+  it("F2b-S11-01 the pack route's crumb returns to the run's composition and the header keeps report and lineage", async () => {
+    server({ PACK: [ok(pack())], PUBLICATION: [ok(publication())] });
+    renderAt(releaseCandidatePackHref(RC_ID));
+    await ready();
+    expect(q("[data-action='crumb-composition']")!.getAttribute("href")).toBe(releaseCandidateHref(RUN));
+    expect(q("[data-action='run-report']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
+    const lineage = q("[data-action='open-lineage']")!.getAttribute("href")!;
+    expect(lineage).toContain(`/research/quantbt/alphas/${ALPHA}/lineage`);
+    expect(lineage).toContain(`av=`);
+  });
+
+  it("F2b-S11-02 the long sentences are tooltips: seal, sealed, mirror, ghost and pack headings", async () => {
+    server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    expect(panel("seal")!.querySelector("h3")!.getAttribute("title")).toBe(SEAL_SENTENCE);
+    expect(sealButton().getAttribute("title")).toBe(SEAL_SENTENCE);
+    expect(panel("sealed")!.querySelector("h3")!.getAttribute("title")).toBe(SEALED_SENTENCE);
+    expect(panel("mirror-ghost")!.querySelector("h3")!.getAttribute("title")).toBe(MIRROR_NOTE);
+    expect(screen.queryByText(MIRROR_NOTE)).toBeNull();
+    expect(screen.queryByText(SEAL_SENTENCE)).toBeNull();
+    expect(q("[data-pack-counts]")!.getAttribute("title")).toBe(PACK_FOOT_TITLE);
+    /* the typed legend of outcomes stays on the page */
+    expect(q("[data-mirror-outcomes='legend']")!.textContent).toBe(MIRROR_OUTCOMES);
+  });
+
+  it("F2b-S11-03 the pack strip has one cell per served row, in served order and status, and hover lights the row", async () => {
+    server({ COMPOSE: [ok(P04)] });
+    renderCompose();
+    await ready();
+    const cells = qa("[data-pack-strip] .cell");
+    expect(cells.map((cell) => cell.getAttribute("data-s"))).toEqual(P04.pack.map((item) => item.status));
+    expect(cells[0]!.getAttribute("title")).toBe(`${P04.pack[0]!.n} · ${P04.pack[0]!.item} — ${P04.pack[0]!.status}`);
+    fireEvent.mouseEnter(cells[3]!);
+    expect(q(`[data-pack-row][data-n='${P04.pack[3]!.n}']`)!.getAttribute("data-hl")).toBe("true");
+    fireEvent.mouseLeave(cells[3]!);
+    expect(q("[data-pack-row][data-hl='true']")).toBeNull();
+  });
+
+  it("F2b-S11-04 the progress dots follow the seal and the delivery the server stated", async () => {
+    server({ COMPOSE: [ok(P04)] });
+    renderCompose();
+    await ready();
+    const on = () => qa("[data-steps] .step").map((step) => step.getAttribute("data-on") === "true");
+    expect(on()).toEqual([true, false, false]);
+    cleanup();
+    server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(deliveredRead())] });
+    renderCompose();
+    await ready();
+    await waitFor(() => expect(on()).toEqual([true, true, true]));
   });
 });
 

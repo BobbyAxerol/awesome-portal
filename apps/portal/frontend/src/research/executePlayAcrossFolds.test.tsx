@@ -379,7 +379,7 @@ describe("D7 · the switch: off by default, a real switch, its label says it rea
     expect(control.getAttribute("aria-checked")).toBe("false");
     expect(control.tagName).toBe("BUTTON");
     expect(control.getAttribute("type")).toBe("button");
-    expect(ACROSS_LABEL).toBe("play across folds · reads the next window at each boundary");
+    expect(ACROSS_LABEL).toBe("play across folds");
     expect(control.textContent).toContain("off");
     expect(m.container.querySelector(`[id='${control.getAttribute("aria-describedby")}']`)?.textContent).toBe(ACROSS_HELP);
     expect(control.getAttribute("title")).toBe(ACROSS_HELP);

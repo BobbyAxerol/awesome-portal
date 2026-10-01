@@ -336,7 +336,7 @@ describe("FE-S01-04 — compare looks a hidden selection up by id", () => {
     mountRoute("?sel=A,B");
     await flush(50);
     expect(document.querySelector("[data-compare-bar]")?.getAttribute("data-compare-bar")).toBe("refused");
-    expect(screen.getByText(COMPARE_REFUSAL)).toBeTruthy();
+    expect(screen.getByText("different contract key — compare refused").getAttribute("title")).toBe(COMPARE_REFUSAL);
   });
 });
 
@@ -488,7 +488,10 @@ describe("FE-S01-13 — header, frame, certificate, footer", () => {
     view({ filters: { ...EMPTY, group: true } });
     expect(screen.getByText(TITLE)).toBeTruthy();
     expect(screen.getByText("journey map ↗").getAttribute("href")).toBe("/research/quantbt/journey");
-    expect(document.querySelector("[data-lineage-hint]")?.textContent).toContain("select an alpha group");
+    /* F2b: one bound alpha on the list → the hint is a real link to its lineage. */
+    const hint = document.querySelector("[data-lineage-hint]") as HTMLAnchorElement;
+    expect(hint.textContent).toBe("attempt lineage →");
+    expect(hint.getAttribute("href")).toBe("/research/quantbt/alphas/delta-rsi/lineage");
     const lineage = document.querySelector('[data-action="open-lineage"]') as HTMLAnchorElement;
     expect(lineage.getAttribute("href")).toBe("/research/quantbt/alphas/delta-rsi/lineage");
     expect(lineage.getAttribute("data-lineage-alpha")).toBe("delta-rsi");

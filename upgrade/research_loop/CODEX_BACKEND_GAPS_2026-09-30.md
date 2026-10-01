@@ -200,3 +200,17 @@ Unified: U:3636 (board P23), U:3637 (P24 → Codex), U:3691 (OL-12), U:3692/3695
 | CG-P02-02 / CG-P08-02 | PLANNING_ONLY / EXECUTOR_GAP | P08 preflight can structurally validate v2 temporal controls, but P10 admission returns `may_create_run:false` with `RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE`; atomic create rejects the same mode | Do not claim v2 executable because schema accepted; existing W4 tests cover refusal | Backend could refuse earlier, but that would remove the useful structural preview. An actual v2 executor remains a separate source/worker task. |
 | Research endpoint census | PARTIAL_RUNTIME_PROOF | 48/48 external method/path parity; 29 read-only GET responses across 25 named operations on real P04/WFO preview runs | P10 profile/parameter scope and unprobed SSE, export, publication, preflight token and write paths remain explicit | [Receipt](./evidence/P23/BE_GAPS_SOURCE_ENDPOINT_CENSUS_2026-10-01.md). |
 | CG-FG-S09-02 release | NEW_SEAL_RECEIPT_PENDING | New P05 byte digest cannot appear in already sealed WFO runs | Fresh isolated WFO import/seal then Evidence/Report parity required | [P05 receipt](./evidence/P05/CG-FG-S09-02_source_series_digest_2026-10-01.md). |
+
+
+## Yêu cầu mới từ đợt F2b (Claude, 2026-10-01) — từ chữ ký "Backend request" §5
+
+Dữ liệu thật đã kiểm (R-WFO-017, R-P04-018): route `close_target_v2` trả `orders/fills/trades = 0`, chỉ có `TransitionRow` (ENTRY/EXIT/FLIP/RESIZE); `route_capabilities` (orders, fills, trades, sl_tp_ambiguity, oco_tree, mae_mfe…) đều `NOT_PUBLISHED` kèm mã lý do. FE đã vẽ đủ mọi loại transition được trả và hiện từng khả năng vắng thành chip có mã lý do; **không** vẽ order/fill/SL/TP vì không có dữ liệu.
+
+| Mã | Cần gì | Vì sao FE cần | Đề xuất nhỏ nhất | Hiện FE làm gì |
+|---|---|---|---|---|
+| BR-S08-01 | Sổ lệnh `orders`, `fills` và lệnh điều kiện (SL/TP/OCO cha→con, giá kích hoạt, mơ hồ intrabar) cho các route có chúng (`intrabar_bracket_v1`, `event_lifecycle_v2`, `reactive_r2`, `dca_ladder`; **không** `close_target_v2`) | Bobby: marker vào/thoát lệnh phải đủ entry, exit, order, fill, lệnh điều kiện nếu QuantBT có | Cùng dạng phân trang con trỏ như `TransitionRow`: `source_ordinal`, `at_utc_ms`, `side`, `price`, `qty`, `status`, `parent_id`, `trigger_price` | Chip năng lực "orders / fills / SL-TP / OCO — not published" + mã lý do |
+| BR-S08-02 | `is_window`, `oos_window`, `holdout_window` trên phản hồi replay: `start_utc_ms`, `end_utc_ms`, `bars`, `availability` | S08 phải bám ba window; hiện IS bar count là "not published" và ranh giới lấy từ hợp đồng split | Ba object cùng dạng, `holdout` có lý do khi bị giữ lại | FE ghép từ split |
+| BR-S08-03 / S09 | `alpha_id` (và `alpha_version_id`) tường minh trên replay và trên danh tính report | Link S08→Compare/Lineage và S09→Lineage đang dựa vào dòng hiển thị `alpha` | Thêm field | S09 dùng giá trị `alpha` trong identity; S08 không link được |
+| BR-S04-WIN | Hub S04 chưa có dữ liệu theo window: series và chỉ số IS / holdout | Công tắc window IS/OOS/Holdout của hub chỉ OOS có dữ liệu | Publish theo window kèm mã lý do (liên quan CG-FG-S04-07 `window_disclosure`) | Chỉ OOS; IS/holdout dẫn sang S05/S08 |
+| BR-S11-01 | `promotion_pick` thiếu `fold` (trial id của WFO tính theo fold) và route tới approval | Chip pick không link được tới trial S06 / approval | `fold`, `approval_href?` | Chip chỉ hiển thị |
+| BR-TXT-02 | Câu server của S09 "Net return and drawdown are the retained final-account path…" (~58 chữ) | Bobby: bớt chữ | Biến thể ≤ 12 chữ | Hiển thị nguyên văn |

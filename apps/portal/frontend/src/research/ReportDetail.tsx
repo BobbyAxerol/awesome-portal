@@ -56,6 +56,7 @@ import { foldLabel, formatMetric, shortDigest } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
 import { equitySvg } from "./reportEquity";
 import { releaseCandidateHref } from "./releaseCandidateClient";
+import { lineageHref } from "./lineageClient";
 import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
@@ -222,6 +223,16 @@ const SHEET_CSS = `
   clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .rr-table tr { break-inside: avoid; }
 .rr-verdict { font-weight: 700; }
+.rr-verdict::before, .rr-chain td.st::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 0; background: var(--ink-faint); }
+.rr-verdict[data-v="PASS"]::before { background: var(--good); }
+.rr-verdict[data-v="WARN"]::before { background: var(--accent-2); }
+.rr-verdict[data-v="DRAG"]::before { background: var(--bad); }
+.rr-chain td.st[data-s="PASS"]::before, .rr-chain td.st[data-s="COMPLETED"]::before { background: var(--good); }
+.rr-chain td.st[data-s="CAVEAT"]::before { background: var(--accent-2); }
+.rr-chain td.st[data-s="FAIL"]::before { background: var(--bad); }
+.rr-chain td.st[data-s="RUNNING"]::before { background: var(--accent); }
+.rr-table tbody tr[data-fold]:hover td, .rr-table tbody tr[data-fold]:focus-within td { background: var(--paper-sunken); }
+.rr-table tbody tr[data-stage]:hover td { background: var(--paper-sunken); }
 .rr-verdict[data-v="PASS"] { color: var(--good); }
 .rr-verdict[data-v="WARN"] { color: var(--accent-2); }
 .rr-verdict[data-v="DRAG"] { color: var(--bad); }
@@ -414,6 +425,27 @@ function Block({
 
 /* ----------------------------------------------------------------- blocks */
 
+/**
+ * F2b (Bobby 2026-10-01): the bar is the sheet's way out and back in. It names the
+ * stage before (S04 Claim hub, S08 Execute replay), the neighbours that read this
+ * run (Lineage of its Alpha, S11 Release candidate) and carries the run id and the
+ * evidence cursor into each, so Back / "copy link" restore the same view.
+ * The Alpha and version are the report's own identity facts; with either absent
+ * or not an identifier the Lineage link is not drawn (nothing is guessed).
+ */
+const LINK_IDENTIFIER = /^[A-Za-z0-9_.-]{1,128}$/;
+
+export function reportAlphaScope(report: ReportDetail | null): { alphaId: string; version: string | null } | null {
+  if (report === null || coreFailed(report.frozen_core)) return null;
+  const identity = (report.frozen_core as FrozenCore).identity;
+  const pick = (key: string): string | null => {
+    const field = identity.find((entry) => entry.key === key);
+    return field && field.availability.state === "AVAILABLE" && field.value !== null && LINK_IDENTIFIER.test(field.value) ? field.value : null;
+  };
+  const alphaId = pick("alpha");
+  return alphaId === null ? null : { alphaId, version: pick("alpha_version") };
+}
+
 function NoPrintBar({
   runId,
   cursor,
@@ -427,21 +459,43 @@ function NoPrintBar({
 }) {
   const run = encodeURIComponent(runId);
   const offered = report ? EXPORT_FORMATS.filter((format) => report.exports.formats.includes(format)) : [];
+  const scope = reportAlphaScope(report);
   return (
     <nav className="rr-noprint no-print" data-panel="noprint-bar" aria-label="Report actions">
       <Link
         to={deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "claim" })}
         data-action="back-to-hub"
+        title="Evidence Flow · Stage 5 Claim"
       >
         ← Hub · Stage 5 Claim
       </Link>
       <span style={{ color: "var(--ink-faint)" }}>·</span>
-      {/* P21: Screen 11 composes and locally seals the candidate for this run. */}
-      <Link to={releaseCandidateHref(runId)} data-action="release-candidate">
-        Release Candidate &amp; Publish
+      <Link
+        to={deepDiveHref(`/research/quantbt/runs/${run}/execute`, { ...cursor, stage: "execute" })}
+        data-action="back-to-execute"
+        title="Stage 4 · Execute replay of this run"
+      >
+        ← Execute replay
       </Link>
+      <span style={{ color: "var(--ink-faint)" }}>·</span>
+      {/* P21: Screen 11 composes and locally seals the candidate for this run. */}
+      <Link to={releaseCandidateHref(runId)} data-action="release-candidate" title="Next: release candidate for this run">
+        Release Candidate &amp; Publish →
+      </Link>
+      {scope ? (
+        <>
+          <span style={{ color: "var(--ink-faint)" }}>·</span>
+          <Link
+            to={lineageHref(scope.alphaId, { av: scope.version })}
+            data-action="attempt-lineage"
+            title={`Attempt lineage of ${scope.alphaId}`}
+          >
+            Attempt lineage
+          </Link>
+        </>
+      ) : null}
       <span style={{ color: "var(--ink-faint)" }}>/</span>
-      <span>Run Report</span>
+      <span aria-current="page">Run Report</span>
       <span className="flex flex-wrap items-center gap-1.5">
         <button type="button" className="rr-btn" data-action="print" title={NOPRINT_NOTE} onClick={() => window.print()}>
           Print
@@ -694,9 +748,9 @@ function equityIsLegend(equityIs: ReportEquity): string {
 
 function equityTitle(folds: ReportFolds, withIs: boolean): string {
   /* The hi-fi names the fold count; only a published fold table can say it. */
-  const lead = withIs ? "Equity — account before first OOS window vs stitched OOS" : "Equity — stitched OOS";
+  const lead = withIs ? "Equity — before OOS vs stitched OOS" : "Equity — stitched OOS";
   if (folds.state === "AVAILABLE" && folds.rows.length > 0) {
-    const handoff = "params_handoff" in folds && folds.params_handoff.scope === "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" ? ", frozen params each" : "";
+    const handoff = "";
     return `${lead} (${folds.rows.length} ${folds.rows.length === 1 ? "fold" : "folds"}${handoff})`;
   }
   return lead;
@@ -1099,8 +1153,8 @@ function Promotion({ core, runId }: { core: FrozenCore; runId: string }) {
       <AvailabilityAbsent what="promotion" availability={core.promotion.availability} />
       {/* Spec 11 §1 inbound "09 promotion line"; the printed sheet keeps only the line. */}
       <p className="rr-note no-print">
-        <Link to={releaseCandidateHref(runId)} data-action="promotion-release-candidate">
-          compose the release candidate for this run →
+        <Link to={releaseCandidateHref(runId)} data-action="promotion-release-candidate" title="Compose the release candidate for this run">
+          Release candidate →
         </Link>
       </p>
     </section>
@@ -1218,10 +1272,10 @@ function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; 
 function Footer({ runId, report }: { runId: string; report: ReportDetail | null }) {
   return (
     <footer className="rr-foot" data-panel="footer">
-      <span>Quant Ecosystem Portal · Research · confidential</span>
+      <span title="Page prints on letter or A4">Quant Ecosystem Portal · Research · confidential</span>
       <span className="rr-long">
         <ShortId id={report?.run_id ?? runId} label="run" />
-        {report ? ` · report ${iso(report.sealed_at_utc_ms)}` : ""} · page prints on letter or A4
+        {report ? ` · report ${iso(report.sealed_at_utc_ms)}` : ""}
       </span>
     </footer>
   );

@@ -421,7 +421,7 @@ describe("S13 Compare — reads and order", () => {
     const link = page().querySelector(`[data-run-link="${labelledRun}"]`) as HTMLAnchorElement;
     expect(link.textContent).toBe("R-WFO-075");
     expect(link.getAttribute("href")).toContain(labelledRun);
-    expect(link.getAttribute("title")).toBe(labelledRun);
+    expect(link.getAttribute("title")).toBe(`${labelledRun} — open in Evidence Flow`);
   });
 
   it("S13-U03 the claim rank map covers all five families with spec ranks and palette tokens only", () => {
@@ -486,8 +486,8 @@ describe("S13 Compare — markets", () => {
     /* D10: a card is a market; it says which run stands for it and how many ran there. */
     const btc = document.querySelector('[data-market-run="run_btc"]') as HTMLElement;
     expect(btc.querySelector("[data-market-key]")?.textContent).toBe("BTCUSDT · 4h");
-    expect(btc.querySelector("[data-market-selection-words]")?.textContent).toBe("latest run of the ACTIVE version · 1 of 3 runs on this market");
-    expect(eth.querySelector("[data-market-selection-words]")?.textContent).toBe("latest run — no ACTIVE version ran this market · the only run on this market");
+    expect(btc.querySelector("[data-market-selection-words]")?.textContent).toBe("1 of 3 runs on this market");
+    expect(eth.querySelector("[data-market-selection-words]")?.textContent).toBe("only run on this market");
     expect(panels()).toEqual([...COMPARE_PANELS.markets]);
   });
 });
@@ -513,7 +513,7 @@ describe("S13 Compare — pair", () => {
     expect(document.querySelector("[data-correlation-source]")?.textContent).toContain("PORTAL_DERIVED");
     expect(document.querySelector("[data-correlation-meta]")?.textContent).toContain("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
     expect(document.querySelector("[data-promotes-under]")?.textContent).toBe(
-      "the pair promotes under its weaker claim: WALK_FORWARD_OOS_COMPATIBILITY",
+      "WALK_FORWARD_OOS_COMPATIBILITY",
     );
     expect(document.querySelector('[data-difference="random_seed"]')?.textContent).toContain("11");
     expect(panels()).toEqual([...COMPARE_PANELS.pair]);

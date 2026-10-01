@@ -81,6 +81,8 @@ import type { RcPublicationController, RcPublicationView, RcReadFailure } from "
 import { iso } from "./utcMinute";
 import { shortDigest, shortId } from "./researchFormat";
 import { runLabelFor } from "./runLabels";
+import { lineageHref } from "./lineageClient";
+import { encodeInspectionCursor } from "./inspectionCursor";
 
 export { releaseCandidateHref, releaseCandidatePackHref };
 
@@ -96,16 +98,16 @@ export const RC_CRUMB = "Release Candidate & Publish";
 
 /** Hi-fi scratch banner, verbatim (split around the two inline elements). */
 export const NOT_PUBLISHABLE_BADGE = "NOT_PUBLISHABLE";
-export const NOT_PUBLISHABLE_COPY = [
-  "This run was submitted without an ",
-  "alpha_version",
-  " binding — a scratch research run. It stays fully usable as evidence for you, but no release candidate can be composed from it. Bind a version at ",
-  "New Run",
-  " and re-run to publish.",
-] as const;
+export const NOT_PUBLISHABLE_COPY = ["Scratch run — no ", "alpha_version", " bound. Bind one at ", "New Run", " and re-run."] as const;
+/** S11 F2b: the full hi-fi sentence, now the banner's tooltip. */
+export const NOT_PUBLISHABLE_TITLE =
+  "This run was submitted without an alpha_version binding — a scratch research run. It stays fully usable as evidence for you, but no release candidate can be composed from it. Bind a version at New Run and re-run to publish.";
 
-export const IDENTITY_LABEL = "1 · identity & lineage — the unit that travels";
-export const IDENTITY_SPEC = "spec v0.7 §3.1 — binding goes through rc_, never alpha↔run directly";
+export const IDENTITY_LABEL = "1 · identity & lineage";
+/** F2b: the hi-fi tail of the heading, now its tooltip. */
+export const IDENTITY_TITLE = "the unit that travels";
+export const IDENTITY_SPEC = "spec v0.7 §3.1";
+export const IDENTITY_SPEC_TITLE = "binding goes through rc_, never alpha↔run directly";
 export const TAXONOMY_CAPTION = "change taxonomy vs last published rc — ";
 export const VERDICT_LABEL = "gate verdict for this candidate";
 
@@ -118,7 +120,10 @@ export const RAIL_LABEL: Record<RcRailNode["key"], string> = {
   release_candidate: "release candidate",
 };
 
-export const PACK_HEADER = "2 · evidence pack — 12 items of gate R1, each linked to the screen that proves it";
+export const PACK_HEADER = "2 · evidence pack · gate R1";
+export const PACK_TITLE = "12 items of gate R1, each linked to the screen that proves it";
+export const PACK_FOOT_TITLE =
+  "DEGRADED travels as DEGRADED — the reviewer sees it. MISSING blocks publish. The two INPUT rows are the researcher's own signed declarations.";
 /** Spec 11 §7 chip titles, verbatim. */
 export const CEILING_TITLE = "methodology claim ceiling — holdout locked, unlock lifts B → A";
 export const ENGCERT_TITLE = "engine execution-contract certification (0–4) — separate axis from the methodology claim";
@@ -133,18 +138,21 @@ export const STATUS_TITLE: Record<Exclude<RcPackItem["status"], "MISSING">, stri
   INPUT: "researcher declaration — part of the signed pack",
 };
 
-export const RECORD_HEADER = "3 · record preview — exactly what is written, byte for byte (spec v0.7 §3.2)";
+export const RECORD_HEADER = "3 · record preview · spec v0.7 §3.2";
+export const RECORD_TITLE = "exactly what is written, byte for byte";
 
 /** Handoff wording (VD-P21-02): the seal button never says Publish. */
 export const SEAL_LABEL = "Local seal evidence pack";
 export const SEAL_SENTENCE =
   "Sealing freezes this exact combination as a Portal-local immutable evidence pack. It creates no publication, no approval, no delivery, and does not start Paper.";
-export const SEAL_CONFIRM = "Seal now? The pack below is frozen as it is composed; a later change to code, params or evidence composes a new candidate.";
+export const SEAL_CONFIRM = "Seal now? Frozen as composed.";
+export const SEAL_CONFIRM_TITLE = "The pack below is frozen as it is composed; a later change to code, params or evidence composes a new candidate.";
 export const SEAL_CONFIRM_BUTTON = "Confirm local seal";
 export const SEAL_DIRTY = "save your declarations first — the seal fences the saved draft revision";
 export const SEALED_SENTENCE =
   "This evidence pack is Portal-local and immutable. A further change to code, params or methodology composes a new candidate.";
-export const SEALED_REPLAY = "The server returned this same pack for the same draft and evidence — a replay, not a second candidate.";
+export const SEALED_REPLAY = "replay — same pack returned";
+export const SEALED_REPLAY_TITLE = "The server returned this same pack for the same draft and evidence — a replay, not a second candidate.";
 /** E1: the read authority in words; the token stays in `data-read-authority`. */
 const READ_AUTHORITY_WORDS: Record<string, string> = {
   PORTAL_PERSISTED_RESEARCH: "portal-persisted research record",
@@ -171,9 +179,11 @@ export const PUBLISH_BLOCKED_LABEL = "publish blocked";
 /** Spec 11 §3: the button while the request is in flight. */
 export const PUBLISHING_LABEL = "publishing…";
 /** Hi-fi separation-of-duties note, verbatim (VD-P22-13: on the publish card, as in the hi-fi). */
+export const SOD_SHORT = "separation of duties applies · R1 expiry +90d (default)";
 export const SOD_NOTE =
   "Separation of duties: the publisher cannot be the sole R1 approver where policy requires it. R1 approval default expiry: approved_at + 90d (policy default — confirm).";
-export const PUBLISH_CONFIRM =
+export const PUBLISH_CONFIRM = "Publish now? One R1 approval request is created.";
+export const PUBLISH_CONFIRM_TITLE =
   "Publish now? One R1 approval request is created in the governance store for this exact pack. It cannot be edited afterwards — only superseded by a new candidate.";
 export const PUBLISH_CONFIRM_BUTTON = "Confirm publish";
 /** VD-P22-06: several mirrored claims, chosen from the server's list. */
@@ -188,12 +198,14 @@ export const PUBLISHED_SENTENCE =
 
 /** VD-P22-05: a recorded attempt the governance store did not confirm — no hi-fi cell. */
 export const UNKNOWN_LABEL = "publication outcome unknown";
+export const UNKNOWN_SHORT = "Not confirmed by the governance store — neither published nor refused.";
 export const UNKNOWN_COPY =
   "The governance store did not confirm the last attempt. It is neither published nor refused. Only the researcher who recorded it may send the same request again; nothing is re-submitted with a different payload.";
 export const RETRY_LABEL = "publish again — same request";
 
 /** The pack route: publication is operated on the run's composition. */
 export const PUBLISH_GHOST_LABEL = "publish — on the run's composition";
+export const PUBLISH_GHOST_SHORT = "Publish on the run's composition.";
 export const PUBLISH_GHOST_COPY =
   "A sealed pack is read-only. Publishing is operated on the run's composition; this route prints the publication and its mirror once they exist.";
 
@@ -225,6 +237,7 @@ export const MIRROR_INBOX_LINK = "open in Approval Inbox";
 export const RC_RULES =
   "The promotable unit is rc_, never a bare run_id. Digests pinned at publish are verified downstream. This screen never computes, approves, or mutates — its one verb is publish.";
 
+export const PACK_ROUTE_SHORT = "sealed identity";
 export const PACK_ROUTE_IDENTITY =
   "A sealed pack freezes fields, pack rows and declarations; the lineage rail and taxonomy belong to the run's live composition.";
 
@@ -241,8 +254,8 @@ export const PUBLICATION_READ_WORDS: Record<Exclude<RcPublicationView["state"], 
 
 /** Every block, in the order the screen renders it. */
 export const RC_PANELS = {
-  compose: ["header", "meta", "banner", "identity", "pack", "record", "seal", "sealed", "publish", "publish-unknown", "published", "mirror", "mirror-ghost", "rules"],
-  pack: ["header", "meta", "identity", "pack", "record", "sealed", "published", "publish-ghost", "mirror", "mirror-ghost", "rules"],
+  compose: ["header", "meta", "banner", "identity", "pack", "record", "seal", "sealed", "publish", "publish-unknown", "published", "mirror", "mirror-ghost"],
+  pack: ["header", "meta", "identity", "pack", "record", "sealed", "published", "publish-ghost", "mirror", "mirror-ghost"],
 } as const;
 
 /** The two INPUT rows and the draft field each one edits. */
@@ -452,6 +465,24 @@ a.rc-node:hover { border-color: var(--accent); text-decoration: none; }
 .rc-absent { font-family: var(--font-mono); font-style: italic; color: var(--ink-soft); font-size: 9.5px; }
 .rc-pending { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); padding: 10px 16px; }
 .rc-skel { display: block; border-radius: 4px; background: var(--paper-sunken); height: 12px; }
+.rc-chiplink { text-decoration: none !important; }
+.rc-chiplink:hover .rc-state { border-color: var(--accent); }
+.rc-strip { display: inline-flex; gap: 2px; align-items: center; }
+.rc-strip .cell { width: 10px; height: 14px; padding: 0; border: 0; border-radius: 2px; background: var(--line-strong); cursor: default; transition: transform 120ms ease-out; }
+.rc-strip .cell[data-s="COMPLETE"] { background: var(--good); }
+.rc-strip .cell[data-s="DEGRADED"] { background: var(--accent-2); }
+.rc-strip .cell[data-s="INPUT"] { background: var(--accent); }
+.rc-strip .cell[data-s="MISSING"] { background: var(--bad); }
+.rc-strip .cell[data-on="true"] { transform: scaleY(1.35); box-shadow: 0 0 0 2px var(--paper-raised), 0 0 0 3px var(--ink-soft); }
+.rc-pack tbody tr[data-hl="true"] > td, .rc-pack tbody tr[data-hl="true"] > th { background: var(--accent-soft); }
+.rc-steps { display: inline-flex; align-items: center; }
+.rc-steps .step { display: inline-flex; align-items: center; }
+.rc-steps .dot { width: 9px; height: 9px; border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--paper-raised); transition: background-color 160ms ease-out, border-color 160ms ease-out; }
+.rc-steps .bar { width: 14px; height: 2px; background: var(--line-strong); }
+.rc-steps .step[data-on="true"] .dot { background: var(--good); border-color: var(--good); }
+.rc-steps .step[data-on="true"] .bar { background: var(--good); }
+.rc-steps .step[data-current="true"] .dot { box-shadow: 0 0 0 3px var(--paper-raised), 0 0 0 4px var(--good); }
+@media (prefers-reduced-motion: reduce) { .rc-strip .cell, .rc-steps .dot { transition: none; } }
 .rc-foot { display: flex; flex-direction: column; gap: 3px; border-top: 1px solid var(--line); padding-top: 8px; }
 .rc-foot .t { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin: 0; font-weight: 400; }
 .rc-foot p { font-size: 11px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
@@ -528,9 +559,10 @@ function Pending({ state }: { state: ResearchState }) {
 }
 
 /** Inline confirmation (spec 11 §5.6: no optimistic write). Focus moves to the confirm button. */
-function Confirm({ label, sentence, detail, confirm, onConfirm, onCancel, action }: {
+function Confirm({ label, sentence, sentenceTitle, detail, confirm, onConfirm, onCancel, action }: {
   label: string;
   sentence: string;
+  sentenceTitle?: string;
   detail: ReactNode;
   confirm: string;
   onConfirm: () => void;
@@ -541,7 +573,7 @@ function Confirm({ label, sentence, detail, confirm, onConfirm, onCancel, action
   useEffect(() => ref.current?.focus(), []);
   return (
     <div className="rc-confirm" role="alertdialog" aria-label={label} data-confirm={action}>
-      <span>{sentence}</span>
+      <span title={sentenceTitle}>{sentence}</span>
       <span className="rc-mono rc-long" style={{ fontSize: 10, color: "var(--ink-soft)" }}>
         {detail}
       </span>
@@ -559,7 +591,15 @@ function Confirm({ label, sentence, detail, confirm, onConfirm, onCancel, action
 
 /* ---------------------------------------------------------------- header */
 
-function Header({ runId, here, chips }: { runId: string | null; here: ReactNode; chips: ReactNode }) {
+function Header({ runId, here, chips, alpha = null, composeRun = null }: {
+  runId: string | null;
+  here: ReactNode;
+  chips: ReactNode;
+  /** The bound alpha (and version) — the way out to Screen 10, context kept. */
+  alpha?: { alphaId: string; alphaVersionId: string | null } | null;
+  /** Pack route only: the run whose live composition this sealed pack came from. */
+  composeRun?: string | null;
+}) {
   return (
     <header className="rc-head" data-panel="header">
       <div className="l">
@@ -576,18 +616,36 @@ function Header({ runId, here, chips }: { runId: string | null; here: ReactNode;
               <span className="sep">/</span>
             </>
           ) : null}
+          {composeRun !== null ? (
+            <>
+              <Link to={releaseCandidateHref(composeRun)} data-action="crumb-composition" title="the run's live composition">
+                {RC_CRUMB}
+              </Link>
+              <span className="sep">/</span>
+            </>
+          ) : null}
           <span className="here rc-long">{here}</span>
         </nav>
-        <h2 className="rc-title">{RC_TITLE}</h2>
-        <p className="rc-sub" data-subtitle>
-          {RC_SUBTITLE}
-        </p>
+        {/* F2b: the hi-fi subtitle and rules footer are this heading's tooltip, not two lines of prose. */}
+        <h2 className="rc-title" data-subtitle title={`${RC_SUBTITLE} ${RC_RULES}`}>
+          {RC_TITLE}
+        </h2>
       </div>
       <div className="r">
         {chips}
         {runId ? (
-          <Link to={runHref(runId, "report")} className="rc-linkbtn" data-action="run-report">
+          <Link to={runHref(runId, "report")} className="rc-linkbtn" data-action="run-report" title="Screen 09 — the run report this candidate is built from">
             run report
+          </Link>
+        ) : null}
+        {alpha !== null ? (
+          <Link
+            to={lineageHref(alpha.alphaId, { av: alpha.alphaVersionId })}
+            className="rc-linkbtn"
+            data-action="open-lineage"
+            title="Screen 10 — this alpha's attempt lineage, on this version"
+          >
+            lineage
           </Link>
         ) : null}
       </div>
@@ -676,7 +734,7 @@ function Notice({ state, requestId, code, onRetry, inFlight }: {
 function Banner({ availability }: { availability: RcAvailability }) {
   const [before, mono, middle, link, after] = NOT_PUBLISHABLE_COPY;
   return (
-    <div className="rc-banner" data-panel="banner" data-banner="NOT_PUBLISHABLE" role="note">
+    <div className="rc-banner" data-panel="banner" data-banner="NOT_PUBLISHABLE" role="note" title={NOT_PUBLISHABLE_TITLE}>
       <span className="badge">{NOT_PUBLISHABLE_BADGE}</span>
       <span className="txt">
         {before}
@@ -714,7 +772,15 @@ function PromotionPickNode({ publication }: { publication: RcPublication | null 
       </div>
     );
   }
-  const title = `promotion pick — ${pick.state} · approval ${pick.approval_id} (${pick.approval_status}) · fact ${pick.fact_digest}`;
+  /* F2b: the artifact and the fact digest are in the tooltip; only a typed absence is printed. */
+  const title = `promotion pick — ${pick.state} · approval ${pick.approval_id} (${pick.approval_status}) · artifact ${pick.artifact_id ?? "not published"} · fact ${pick.fact_digest}`;
+  /* The trial opens on Screen 06 (the hash's `pick=`); the approval opens only where the mirror served this approval's own href. */
+  const trialHref =
+    pick.selected_trial_id !== null && IDENTIFIER_OK.test(pick.selected_trial_id) && IDENTIFIER_OK.test(pick.run_id)
+      ? `${runHref(pick.run_id, "search")}#${encodeInspectionCursor({ stage: "search", pick: pick.selected_trial_id })}`
+      : null;
+  const mirror = publication?.approval_read === "AVAILABLE" ? publication.approval : null;
+  const approvalHref = mirror !== null && mirror.approval_id === pick.approval_id && isLocalPath(mirror.href) ? mirror.href : null;
   return (
     <div
       className="rc-node"
@@ -722,23 +788,56 @@ function PromotionPickNode({ publication }: { publication: RcPublication | null 
       data-tone={pick.state === "WRITTEN" ? "green" : "gold"}
       data-pick-state={pick.state}
       data-pick-status={pick.approval_status}
+      data-pick-fact={pick.fact_digest}
+      data-pick-artifact={pick.artifact_id ?? undefined}
       title={title}
     >
       <span className="k">promotion pick</span>
       <span className="v" data-pick-chip>
-        <StateChip value={pick.approval_status} />
+        {approvalHref !== null ? (
+          <Link to={approvalHref} data-action="open-pick-approval" title={`approval ${pick.approval_id} — where the decision lives`} className="rc-chiplink">
+            <StateChip value={pick.approval_status} />
+          </Link>
+        ) : (
+          <StateChip value={pick.approval_status} />
+        )}
         <span data-pick-state-word> {pick.state}</span>
       </span>
       <span className="sub" data-pick-trial>
-        {pick.selected_trial_id !== null ? `trial ${pick.selected_trial_id}` : <span className="rc-absent">trial — not published</span>}
+        {pick.selected_trial_id === null ? (
+          <span className="rc-absent">trial — not published</span>
+        ) : trialHref !== null ? (
+          <Link to={trialHref} data-action="open-pick-trial" title="Screen 06 — the picked trial, selected in the trial ledger">
+            trial {pick.selected_trial_id}
+          </Link>
+        ) : (
+          `trial ${pick.selected_trial_id}`
+        )}
       </span>
-      <span className="sub" data-pick-artifact>
-        {pick.artifact_id !== null ? `artifact ${pick.artifact_id}` : <span className="rc-absent">artifact — not published</span>}
-      </span>
-      <span className="sub" data-pick-digest title={pick.fact_digest}>
-        fact {shortDigest(pick.fact_digest)}
-      </span>
+      {pick.artifact_id === null ? (
+        <span className="sub" data-pick-artifact-absent>
+          <span className="rc-absent">artifact — not published</span>
+        </span>
+      ) : null}
     </div>
+  );
+}
+
+const IDENTIFIER_OK = /^[A-Za-z0-9_-]{1,128}$/;
+
+/** F2b: composed → sealed → published, from the two facts the screen already holds. */
+function Steps({ composed, sealed, published }: { composed: boolean; sealed: boolean; published: boolean }) {
+  const steps: [string, boolean][] = [["composed", composed], ["sealed", sealed], ["published", published]];
+  const current = published ? 2 : sealed ? 1 : 0;
+  return (
+    <span className="rc-steps" data-steps role="img" aria-label={`progress: ${steps.map(([name, on]) => `${name} ${on ? "yes" : "no"}`).join(", ")}`}>
+      {steps.map(([name, on], index) => (
+        <span key={name} className="step" data-on={on ? "true" : undefined} data-current={index === current && on ? "true" : undefined} title={`${name}${on ? "" : " — not yet"}`}>
+          {index > 0 ? <span className="bar" aria-hidden="true" /> : null}
+          <span className="dot" aria-hidden="true" />
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -839,8 +938,8 @@ function IdentityBlock({ compose, state, publication }: { compose: RcCompose | n
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
-        <h3 className="rc-k">{IDENTITY_LABEL}</h3>
-        <span className="rc-spec">{IDENTITY_SPEC}</span>
+        <h3 className="rc-k" title={IDENTITY_TITLE}>{IDENTITY_LABEL}</h3>
+        <span className="rc-spec" title={IDENTITY_SPEC_TITLE}>{IDENTITY_SPEC}</span>
       </div>
       {compose ? (
         <>
@@ -1022,17 +1121,27 @@ function DeclarationRow({ item, editor }: { item: RcPackItem; editor: Declaratio
   );
 }
 
-function PackRow({ item, route, declared, editor }: {
+function PackRow({ item, route, declared, editor, highlighted = false, onHover }: {
   item: RcPackItem;
   route: string | null;
   declared: string | null | undefined;
   editor: DeclarationEditor | null;
+  highlighted?: boolean;
+  onHover?: (n: number | null) => void;
 }) {
   const decl = declarationKey(item.key);
   const editing = decl !== null && editor !== null && editor.edits[decl] !== undefined;
   return (
     <>
-      <tr data-pack-row={item.key} data-s={item.status} data-status={item.status} data-n={item.n}>
+      <tr
+        data-pack-row={item.key}
+        data-s={item.status}
+        data-status={item.status}
+        data-n={item.n}
+        data-hl={highlighted ? "true" : undefined}
+        onMouseEnter={onHover ? () => onHover(item.n) : undefined}
+        onMouseLeave={onHover ? () => onHover(null) : undefined}
+      >
         <td className="n">{item.n}</td>
         <th scope="row" className="item">
           {item.item}
@@ -1086,6 +1195,34 @@ function PackRow({ item, route, declared, editor }: {
   );
 }
 
+/**
+ * F2b: the 12 pack rows as 12 cells, one per served row, in the served order and
+ * the served status colour. Nothing is counted here; the cell is the row's status.
+ * Hover or focus a cell and its table row lights up (and the reverse).
+ */
+function PackStrip({ items, hl, setHl }: { items: readonly RcPackItem[]; hl: number | null; setHl: (n: number | null) => void }) {
+  return (
+    <span className="rc-strip" data-pack-strip role="group" aria-label="pack rows by status">
+      {items.map((item) => (
+        <button
+          key={`${item.key}-${item.n}`}
+          type="button"
+          className="cell"
+          data-s={item.status}
+          data-n={item.n}
+          data-on={hl === item.n ? "true" : undefined}
+          title={`${item.n} · ${item.item} — ${item.status}`}
+          aria-label={`${item.n} ${item.item}, ${item.status}`}
+          onMouseEnter={() => setHl(item.n)}
+          onMouseLeave={() => setHl(null)}
+          onFocus={() => setHl(item.n)}
+          onBlur={() => setHl(null)}
+        />
+      ))}
+    </span>
+  );
+}
+
 function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, state }: {
   items: readonly RcPackItem[] | null;
   runId: string | null;
@@ -1096,14 +1233,17 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
   editor: DeclarationEditor | null;
   state: ResearchState;
 }) {
+  /* F2b: the strip's hovered/focused cell and the table row are one selection. */
+  const [hl, setHl] = useState<number | null>(null);
   return (
     <section className="rc-card rc-packcard" data-panel="pack" aria-label="evidence pack">
       <div className="rc-packhead">
-        <h3 className="rc-k">{PACK_HEADER}</h3>
+        <h3 className="rc-k" title={PACK_TITLE}>{PACK_HEADER}</h3>
         <div className="rc-chips">
+          {items ? <PackStrip items={items} hl={hl} setHl={setHl} /> : null}
           {items ? <CertChips axes={axes} /> : null}
           {counts ? (
-            <span className="rc-count" data-pack-counts>
+            <span className="rc-count" data-pack-counts title={PACK_FOOT_TITLE}>
               {counts.complete} COMPLETE · {counts.degraded} DEGRADED · {counts.input} INPUT · {counts.missing} MISSING
             </span>
           ) : items ? (
@@ -1128,7 +1268,7 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
               <tr>
                 <th scope="col">#</th>
                 <th scope="col">item</th>
-                <th scope="col">status</th>
+                <th scope="col" title={PACK_FOOT_TITLE}>status</th>
                 <th scope="col">digest / value</th>
                 <th scope="col">source</th>
                 <th scope="col">note</th>
@@ -1144,6 +1284,8 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
                     route={runId !== null ? packSourceRoute(item, runId, alphaId) : null}
                     declared={decl !== null && declarations ? declarations[DECLARATION_FIELD[decl]] : undefined}
                     editor={editor}
+                    highlighted={hl === item.n}
+                    onHover={setHl}
                   />
                 );
               })}
@@ -1154,9 +1296,6 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
         <Pending state={state} />
       )}
       {editor?.notice ?? null}
-      <p className="rc-packfoot">
-        DEGRADED travels <em>as</em> DEGRADED — the reviewer sees it. MISSING blocks publish. The two INPUT rows are the researcher's own signed declarations.
-      </p>
     </section>
   );
 }
@@ -1202,7 +1341,7 @@ function RecordBlock({ fields, state }: { fields: readonly RcField[] | null; sta
   return (
     <section className="rc-card rc-record" data-panel="record" aria-label="record preview">
       <div className="h">
-        <h3 className="rc-k">{RECORD_HEADER}</h3>
+        <h3 className="rc-k" title={RECORD_TITLE}>{RECORD_HEADER}</h3>
         <button type="button" className="rc-copy" data-action="copy-yaml" aria-disabled={fields === null || undefined} aria-live="polite" onClick={onCopy}>
           {copy === "copied" ? "✓ copied" : copy === "failed" ? "copy unavailable" : "copy yaml"}
         </button>
@@ -1290,13 +1429,13 @@ function SealCard({ compose, controller, dirty, publishing }: {
 
   return (
     <section className="rc-seal" data-panel="seal" aria-label="local seal">
-      <h3 className="k">local seal</h3>
-      <p>{SEAL_SENTENCE}</p>
+      <h3 className="k" title={SEAL_SENTENCE}>local seal</h3>
       {confirming && blocked === null && compose ? (
         <Confirm
           label="confirm local seal"
           action="local-seal"
           sentence={SEAL_CONFIRM}
+          sentenceTitle={SEAL_CONFIRM_TITLE}
           confirm={SEAL_CONFIRM_BUTTON}
           detail={`draft revision ${compose.draft.revision} · source ${compose.source_fingerprint}`}
           onConfirm={() => {
@@ -1309,6 +1448,7 @@ function SealCard({ compose, controller, dirty, publishing }: {
         <button
           type="button"
           className="rc-sealbtn"
+          title={SEAL_SENTENCE}
           data-action="local-seal"
           data-seal-enabled={blocked === null ? "true" : "false"}
           aria-disabled={blocked !== null || undefined}
@@ -1345,7 +1485,7 @@ function SealedCard({ seal, replayed }: {
 }) {
   return (
     <section className="rc-sealed" data-panel="sealed" data-sealed={seal.release_candidate_id ?? ""} aria-label="sealed locally">
-      <h3 className="k">sealed locally — immutable</h3>
+      <h3 className="k" title={SEALED_SENTENCE}>sealed locally — immutable</h3>
       <span className="id" data-sealed-id>
         {seal.release_candidate_id !== null ? (
           <Link to={releaseCandidatePackHref(seal.release_candidate_id)} data-action="open-pack">
@@ -1367,8 +1507,11 @@ function SealedCard({ seal, replayed }: {
           <Absent what="this seal" availability={seal.availability} />
         </p>
       ) : null}
-      {replayed ? <p data-seal-replayed>{SEALED_REPLAY}</p> : null}
-      <p>{SEALED_SENTENCE}</p>
+      {replayed ? (
+        <p data-seal-replayed title={SEALED_REPLAY_TITLE}>
+          {SEALED_REPLAY}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -1535,9 +1678,10 @@ function PublishCard({ compose, controller, publication }: {
 
   return (
     <section className="rc-seal" data-panel="publish" aria-label="publish" data-publish-state={view.state === "fresh" ? view.publication.state : view.state}>
-      <h3 className="k">{PUBLISH_LABEL}</h3>
+      <h3 className="k" title={`${before}${releaseCandidateId ?? "rc_(draft)"}${after}`}>
+        {PUBLISH_LABEL}
+      </h3>
       <p data-publish-sentence>
-        {before}
         {releaseCandidateId !== null ? (
           <span className="rc-mono" data-publish-rc>
             {releaseCandidateId}
@@ -1547,7 +1691,6 @@ function PublishCard({ compose, controller, publication }: {
             rc_(draft)
           </span>
         )}
-        {after}
       </p>
       {view.state === "fresh" && claims.length > 1 && view.publication.may_publish ? (
         <fieldset className="rc-claims" data-claim-choice>
@@ -1573,6 +1716,7 @@ function PublishCard({ compose, controller, publication }: {
           label="confirm publish"
           action="publish"
           sentence={PUBLISH_CONFIRM}
+          sentenceTitle={PUBLISH_CONFIRM_TITLE}
           confirm={PUBLISH_CONFIRM_BUTTON}
           detail={`${releaseCandidateId} · pack ${view.publication.pack_digest} · claim ${choice ?? ""}`}
           onConfirm={() => {
@@ -1606,7 +1750,9 @@ function PublishCard({ compose, controller, publication }: {
       <PublicationConflict publication={publication.publication} />
       <ReadFailure view={view} retry={publication.retry} />
       <PublishWriteNotice publication={publication} />
-      <p className="sod">{SOD_NOTE}</p>
+      <p className="sod" title={SOD_NOTE} tabIndex={0} data-sod>
+        {SOD_SHORT}
+      </p>
     </section>
   );
 }
@@ -1637,7 +1783,9 @@ function UnknownOutcomeCard({ publication, controller }: { publication: RcPublic
   return (
     <section className="rc-unknown" data-panel="publish-unknown" aria-label={UNKNOWN_LABEL} data-publication-state={current.state}>
       <h3 className="k">{UNKNOWN_LABEL}</h3>
-      <p>{UNKNOWN_COPY}</p>
+      <p title={UNKNOWN_COPY} data-unknown-copy>
+        {UNKNOWN_SHORT}
+      </p>
       <p className="rc-pubfacts" data-publication-facts={current.state}>
         publication {current.state} · {current.release_candidate_id} · as of {iso(current.as_of_utc_ms)}
       </p>
@@ -1695,7 +1843,9 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
   const approval = current?.approval_read === "AVAILABLE" ? current.approval : null;
   return (
     <section className="rc-sealed" data-panel="published" aria-label="published">
-      <h3 className="k">{PUBLISHED_LABEL}</h3>
+      <h3 className="k" title={PUBLISHED_SENTENCE}>
+        {PUBLISHED_LABEL}
+      </h3>
       <span className="id" data-published-id>
         {releaseCandidateId !== null ? (
           <Link to={releaseCandidatePackHref(releaseCandidateId)} data-action="open-pack">
@@ -1723,8 +1873,6 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
                 not read ({current?.approval_read ?? "no publication read"})
               </span>
             )}
-            {". "}
-            {PUBLISHED_SENTENCE}
           </p>
           <p className="rc-mono" data-published-receipt>
             receipt {published.receipt_digest} · approval {published.approval_id}
@@ -1732,7 +1880,7 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
         </>
       ) : (
         <p data-published-facts-absent>
-          <span className="rc-absent">publication facts — not read in this session</span> {PUBLISHED_SENTENCE}
+          <span className="rc-absent">publication facts — not read in this session</span>
         </p>
       )}
       <PublicationConflict publication={current} />
@@ -1746,7 +1894,7 @@ function MirrorGhost({ foot }: { foot: ReactNode }) {
   return (
     <section className="rc-ghost" data-panel="mirror-ghost" data-mirror-ghost aria-label="approval inbox mirror, not published">
       <div className="rc-cardhead">
-        <h3 className="k">{MIRROR_LABEL}</h3>
+        <h3 className="k" title={MIRROR_NOTE}>{MIRROR_LABEL}</h3>
         <span className="rc-spec">{MIRROR_SIDE}</span>
       </div>
       <div className="rc-mirrorrow">
@@ -1768,7 +1916,6 @@ function MirrorGhost({ foot }: { foot: ReactNode }) {
         </span>
         <span data-mirror-outcomes="legend">{MIRROR_OUTCOMES}</span>
       </div>
-      <p>{MIRROR_NOTE}</p>
       <span className="rc-reason" data-mirror-foot>
         {foot}
       </span>
@@ -1842,7 +1989,7 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
   return (
     <section className="rc-mirror" data-panel="mirror" data-mirror-read={read ?? view.state} aria-label="approval inbox mirror">
       <div className="rc-cardhead">
-        <h3 className="k">{MIRROR_LABEL}</h3>
+        <h3 className="k" title={MIRROR_PUBLISHED_NOTE}>{MIRROR_LABEL}</h3>
         <span className="rc-spec">{MIRROR_SIDE}</span>
       </div>
       {current === null ? (
@@ -1913,10 +2060,9 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
               {MIRROR_SUPERSEDED}
             </span>
           ) : null}
-          <p>{MIRROR_PUBLISHED_NOTE}</p>
           {approval !== null && isLocalPath(approval.href) ? (
             <span>
-              <Link to={approval.href} data-action="open-approval">
+              <Link to={approval.href} data-action="open-approval" title="Execution side — where the reviewer records the decision">
                 {MIRROR_INBOX_LINK}
               </Link>
             </span>
@@ -1924,15 +2070,6 @@ function MirrorCard({ publication }: { publication: RcPublicationController }) {
         </>
       )}
     </section>
-  );
-}
-
-function Rules() {
-  return (
-    <footer className="rc-foot" data-panel="rules">
-      <h3 className="t">rules of this screen</h3>
-      <p>{RC_RULES}</p>
-    </footer>
   );
 }
 
@@ -2085,9 +2222,11 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
       <Header
         runId={runId}
         here={RC_CRUMB}
+        alpha={compose?.run.binding ? { alphaId: compose.run.binding.alpha_id, alphaVersionId: compose.run.binding.alpha_version_id ?? null } : null}
         chips={
           compose && chip ? (
             <>
+              <Steps composed sealed={sealed !== null} published={delivered} />
               <StateChip value={chip} />
               <SealChips seal={compose.local_seal} delivered={delivered} />
             </>
@@ -2139,7 +2278,6 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
           {delivered ? <MirrorCard publication={publication} /> : <MirrorGhost foot={ghostFoot(compose, current)} />}
         </div>
       </div>
-      <Rules />
     </div>
   );
 }
@@ -2148,6 +2286,9 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
   const { pack, state } = controller;
   const current = publication.publication;
   const delivered = pack !== null && isDelivered({ local_seal: pack.delivery }, current);
+  /* The sealed pack names its alpha in the frozen record; the version comes from the publication read. */
+  const packAlphaId = pack?.frozen_core.fields.find((field) => field.key === "alpha_id")?.value ?? null;
+  const packAlpha = packAlphaId !== null && packAlphaId !== undefined ? { alphaId: packAlphaId, alphaVersionId: current?.alpha_version_id ?? pack?.frozen_core.fields.find((field) => field.key === "alpha_version_id")?.value ?? null } : null;
   return (
     <div
       className="rc-page"
@@ -2162,14 +2303,13 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
       <style>{RC_CSS}</style>
       <Header
         runId={pack?.run_id ?? null}
-        here={
-          <>
-            {RC_CRUMB} / <span className="rc-mono">{releaseCandidateId}</span>
-          </>
-        }
+        composeRun={pack?.run_id ?? null}
+        alpha={packAlpha}
+        here={<span className="rc-mono">{releaseCandidateId}</span>}
         chips={
           pack ? (
             <>
+              <Steps composed sealed published={delivered} />
               {delivered ? <StateChip value="PUBLISHED" /> : null}
               <SealChips seal={pack.delivery} delivered={delivered} />
             </>
@@ -2220,7 +2360,7 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
             <>
               <section className="rc-ghost" data-panel="publish-ghost" aria-label="publish, on the run's composition">
                 <h3 className="k">{PUBLISH_GHOST_LABEL}</h3>
-                <p>{PUBLISH_GHOST_COPY}</p>
+                <p title={PUBLISH_GHOST_COPY}>{PUBLISH_GHOST_SHORT}</p>
                 {current ? <PublicationReason publication={current} /> : <ReadFailure view={publication.view} />}
                 <PublicationConflict publication={current} />
                 {pack ? (
@@ -2236,7 +2376,6 @@ function PackScreen({ releaseCandidateId, controller, publication }: { releaseCa
           )}
         </div>
       </div>
-      <Rules />
     </div>
   );
 }
@@ -2245,8 +2384,8 @@ function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state
   return (
     <section className="rc-card rc-ident" data-panel="identity" aria-label="identity and lineage">
       <div className="rc-cardhead">
-        <h3 className="rc-k">{IDENTITY_LABEL}</h3>
-        <span className="rc-spec">{IDENTITY_SPEC}</span>
+        <h3 className="rc-k" title={IDENTITY_TITLE}>{IDENTITY_LABEL}</h3>
+        <span className="rc-spec" title={IDENTITY_SPEC_TITLE}>{IDENTITY_SPEC}</span>
       </div>
       {pack ? (
         <>
@@ -2274,8 +2413,8 @@ function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state
               <PromotionPickNode publication={publication} />
             </li>
           </ol>
-          <p className="rc-verdict b" style={{ borderLeft: 0, paddingLeft: 0 }} data-pack-identity-note>
-            {PACK_ROUTE_IDENTITY}{" "}
+          <p className="rc-verdict b" style={{ borderLeft: 0, paddingLeft: 0 }} data-pack-identity-note title={PACK_ROUTE_IDENTITY}>
+            {PACK_ROUTE_SHORT}{" "}
             <Link to={releaseCandidateHref(pack.run_id)} data-action="open-composition">
               open the run's composition →
             </Link>

@@ -56,6 +56,7 @@ import {
   type EvidenceCursor,
   type EvidenceStage,
 } from "./evidenceCursor";
+import { NamedWindowContext, useEvidenceWindow, useNamedWindow, withWindow, type EvidenceWindow } from "./evidenceWindow";
 import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, REFUSAL_COPY, refusalDetail } from "./researchRefusal";
 import { claimToken, formatBytes, formatMetric, shortDigest } from "./researchFormat";
 import { ARTIFACT_NO_READER, ArtifactsTable } from "./RunProgress";
@@ -1065,6 +1066,22 @@ function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub |
   return `${state} · fold ${cursor.fold}`;
 }
 
+/** The state a stage row publishes, as a colour. Read from the row; no state is derived here. */
+function StageDot({ stage, hub }: { stage: EvidenceStage; hub: EvidenceHub | null }) {
+  if (hub === null || !(stage in STAGE_KEY)) return null;
+  const row = hub.stages.find((entry) => entry.key === STAGE_KEY[stage as PreviewStage]);
+  if (!row) return null;
+  const tone = statusTone(row.state === "DONE" ? "READY" : row.state);
+  return (
+    <span
+      aria-hidden="true"
+      data-stage-dot={row.state}
+      className="inline-block h-[6px] w-[6px] flex-none rounded-full"
+      style={{ background: tone.color }}
+    />
+  );
+}
+
 function StageTabs({
   cursor,
   hub,
@@ -1135,7 +1152,9 @@ function StageTabs({
                 </span>
                 <span className="text-[12px] font-medium uppercase tracking-[.05em]">{name}</span>
               </span>
-              <span className="mono whitespace-nowrap text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-tab-sub>
+              <span className="mono flex items-center gap-1 whitespace-nowrap text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-tab-sub>
+                {/* F2b: the stage's state as a dot, so the row reads at a glance; the word stays beside it. */}
+                <StageDot stage={stage} hub={hub} />
                 {tabSub(stage, cursor, hub, summary)}
               </span>
             </button>
@@ -1202,10 +1221,15 @@ function CursorBar({
   laneSelection = null,
   unread = null,
   lanePending = false,
+  evidenceWindow = "oos",
+  windowNamed = null,
 }: {
   runId: string;
   cursor: EvidenceCursor;
   hub: EvidenceHub | null;
+  /** F2b: the window the screen shows, and the one the URL names (links carry only the named one). */
+  evidenceWindow?: EvidenceWindow;
+  windowNamed?: EvidenceWindow | null;
   /** F1 (FG 04-F): why there is no hub in hand — still loading, or refused. Null when it was read. */
   unread?: "loading" | "not-read" | null;
   /**
@@ -1251,11 +1275,11 @@ function CursorBar({
   const anomalous = published.length === 0 || index === -1;
 
   const copyLink = useCallback(() => {
-    const href = `${window.location.origin}${window.location.pathname}${deepDiveHref("", cursor)}`;
+    const href = `${window.location.origin}${window.location.pathname}${withWindow(deepDiveHref("", cursor), windowNamed)}`;
     void navigator.clipboard?.writeText(href).catch(() => undefined);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
-  }, [cursor]);
+  }, [cursor, windowNamed]);
 
   const schedule = hub?.core.run_identity?.schedule;
   const base = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
@@ -1397,33 +1421,47 @@ function CursorBar({
         )}
       </CursorPill>
 
-      {/* The Hub publishes one window, OOS; the switcher below says so. */}
-      <CursorPill data-cursor-window>
-        window <span style={{ color: "var(--ink)" }}>oos</span>
+      {/* The window the URL names (`?window=`), else the Hub's own, OOS. */}
+      <CursorPill data-cursor-window title="the evidence window — written to ?window= in the link">
+        window <span style={{ color: "var(--ink)" }}>{evidenceWindow}</span>
       </CursorPill>
 
-      <span className="ml-1 text-[10px]" style={{ color: "var(--ink-faint)" }} data-deep-dives>
-        deep dives:{" "}
-        <Link to={deepDiveHref(`${base}/search`, { ...cursor, stage: "search" })} style={{ color: "var(--accent)" }}>
-          S2 search
-        </Link>{" "}
-        ·{" "}
-        <Link to={deepDiveHref(`${base}/freeze`, { ...cursor, stage: "freeze" })} style={{ color: "var(--accent)" }}>
-          S3 freeze
-        </Link>{" "}
-        ·{" "}
-        <Link to={deepDiveHref(`${base}/execute`, { ...cursor, stage: "execute" })} style={{ color: "var(--accent)" }}>
-          S4 replay
-        </Link>{" "}
-        ·{" "}
-        <Link to={`${base}/release-candidate`} style={{ color: "var(--accent)" }}>
-          promotion
-        </Link>{" "}
-        ·{" "}
-        <Link to="/research/quantbt/journey" style={{ color: "var(--accent)" }}>
-          journey map ↗
+      {/* F2b: the way OUT to every full stage screen. Each keeps the run, fold, trial and window. */}
+      <nav className="ml-1 flex flex-wrap items-center gap-x-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-deep-dives aria-label="full stage screens">
+        <span aria-hidden="true" title="open the full stage screen, with this cursor">
+          ↗
+        </span>
+        {(
+          [
+            ["split", "S1 split", "Stage 1 · Split"],
+            ["search", "S2 search", "Stage 2 · Search"],
+            ["freeze", "S3 freeze", "Stage 3 · Freeze"],
+            ["execute", "S4 replay", "Stage 4 · Execute replay"],
+          ] as const
+        ).map(([stage, label, title]) => (
+          <Link
+            key={stage}
+            to={withWindow(deepDiveHref(`${base}/${stage}`, { ...cursor, stage }), windowNamed)}
+            title={`${title} — full screen, fold ${cursor.fold}${windowNamed ? `, ${windowNamed} window` : ""}`}
+            data-nav-stage={stage}
+            style={{ color: "var(--accent)" }}
+          >
+            {label}
+          </Link>
+        ))}
+        <Link to={`${base}/report`} data-nav-stage="report" title="Run report" style={{ color: "var(--accent)" }}>
+          report
         </Link>
-      </span>
+        <Link to={`${base}/release-candidate`} title="Release candidate — promotion" style={{ color: "var(--accent)" }}>
+          promotion
+        </Link>
+        <Link to="/research/quantbt/runs" title="Run Library" data-nav-stage="library" style={{ color: "var(--accent)" }}>
+          runs
+        </Link>
+        <Link to="/research/quantbt/journey" title="Journey map" style={{ color: "var(--accent)" }}>
+          journey ↗
+        </Link>
+      </nav>
 
       <span className="ml-auto flex items-center gap-1.5">
         <button
@@ -2445,6 +2483,7 @@ function RetainedVerdictTable({
   cursor: EvidenceCursor;
   onFold: (fold: number) => void;
 }) {
+  const namedWindow = useNamedWindow();
   const [order, setOrder] = useState<"worst" | "fold">("worst");
   const rows = order === "worst" ? verdicts.rows : [...verdicts.rows].sort((a, b) => a.source_ordinal - b.source_ordinal);
   const { counts, rule } = verdicts;
@@ -2631,7 +2670,7 @@ function RetainedVerdictTable({
                 </td>
                 <td className="whitespace-nowrap px-3 py-1.5" onClick={(event) => event.stopPropagation()}>
                   <Link
-                    to={deepDiveHref(`${runPath}/search`, { ...cursor, fold, stage: "search" })}
+                    to={withWindow(deepDiveHref(`${runPath}/search`, { ...cursor, fold, stage: "search" }), namedWindow)}
                     className="mono text-[10px]"
                     style={{ color: row.drag_target === "search" ? "var(--bad)" : "var(--accent)" }}
                     data-verdict-open="search"
@@ -2640,7 +2679,7 @@ function RetainedVerdictTable({
                   </Link>{" "}
                   <span style={{ color: "var(--line)" }}>·</span>{" "}
                   <Link
-                    to={deepDiveHref(`${runPath}/execute`, { ...cursor, fold, stage: "execute" })}
+                    to={withWindow(deepDiveHref(`${runPath}/execute`, { ...cursor, fold, stage: "execute" }), namedWindow)}
                     className="mono text-[10px]"
                     style={{ color: row.drag_target === "execute" ? "var(--bad)" : "var(--accent)" }}
                     data-verdict-open="replay"
@@ -2805,11 +2844,40 @@ function RetainedEquityPanels({
 
 /* ------------------------------------------------------------------ tabs */
 
-function TabHeading({ title, subtitle }: { title: string; subtitle?: string }) {
+function TabHeading({
+  title,
+  subtitle,
+  to,
+  tip,
+  dive,
+}: {
+  title: string;
+  subtitle?: string;
+  /** F2b: the full stage screen this heading opens, with the run, fold and window kept. */
+  to?: string;
+  tip?: string;
+  dive?: string;
+}) {
   return (
     <div data-tab-heading>
       <h2 className="text-[23px] font-normal" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
-        {title}
+        {to ? (
+          <Link
+            to={to}
+            data-deep-dive={dive}
+            title={tip}
+            aria-label={tip ? `${title} — ${tip}` : title}
+            className="group inline-flex items-baseline gap-1.5"
+            style={{ color: "inherit" }}
+          >
+            {title}
+            <svg aria-hidden="true" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-60 transition-opacity group-hover:opacity-100" style={{ color: "var(--accent)" }}>
+              <path d="M3 9 9 3M4.5 3H9v4.5" />
+            </svg>
+          </Link>
+        ) : (
+          title
+        )}
       </h2>
       {subtitle ? (
         <p className="mt-0.5 text-[13.5px] italic" style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }}>
@@ -2826,7 +2894,7 @@ function Segmented({
   label,
   ...rest
 }: {
-  options: { label: string; on: boolean; why?: string }[];
+  options: { label: string; on: boolean; why?: string; onSelect?: () => void }[];
   label: string;
 } & Record<string, unknown>) {
   return (
@@ -2843,16 +2911,17 @@ function Segmented({
           type="button"
           /* Only the published choice is live; the rest keep their place, and
              their title says why they cannot be chosen. */
-          disabled={!entry.on}
+          disabled={!entry.on && !entry.onSelect}
           aria-pressed={entry.on}
           title={entry.why}
           data-segment={entry.label}
+          onClick={entry.onSelect && !entry.on ? entry.onSelect : undefined}
           className="mono border-r px-3.5 py-1 text-[11px] last:border-r-0"
           style={{
             borderColor: "var(--line)",
             background: entry.on ? "var(--accent-soft)" : "var(--paper-raised)",
             color: entry.on ? "var(--accent)" : "var(--ink-soft)",
-            cursor: entry.on ? "default" : "not-allowed",
+            cursor: entry.on ? "default" : entry.onSelect ? "pointer" : "not-allowed",
           }}
         >
           {entry.label}
@@ -2867,17 +2936,25 @@ function Segmented({
  * window only and one equity series in account currency, so OOS and Capital
  * are the live choices and the others keep their place with the reason.
  */
-function WindowSwitcher() {
+function WindowSwitcher({ window: active, onWindow }: { window: EvidenceWindow; onWindow: (next: EvidenceWindow) => void }) {
+  /* F2b: IS / OOS / Holdout write `?window=` (the vocabulary S08 reads). The Hub still publishes OOS only,
+     so the other two say so in place of the numbers instead of showing OOS under the wrong label. */
   const notWindow = "the Evidence Hub publishes the OOS window only";
+  const choice = (value: EvidenceWindow, label: string, why: string) => ({
+    label,
+    on: active === value,
+    why,
+    onSelect: () => onWindow(value),
+  });
   return (
     <div className="flex flex-wrap items-center justify-between gap-2.5" data-window-switcher>
       <div className="flex flex-wrap items-center gap-2.5">
         <Segmented
           label="window"
           options={[
-            { label: "IS", on: false, why: notWindow },
-            { label: "OOS", on: true, why: "the window every metric and series on this tab describes" },
-            { label: "Holdout Live", on: false, why: notWindow },
+            choice("is", "IS", `?window=is — ${notWindow}`),
+            choice("oos", "OOS", "?window=oos — the window every metric and series on this tab describes"),
+            choice("holdout", "Holdout Live", `?window=holdout — ${notWindow}`),
             { label: "Compare", on: false, why: notWindow },
           ]}
         />
@@ -2899,6 +2976,45 @@ function WindowSwitcher() {
         ]}
       />
     </div>
+  );
+}
+
+/**
+ * F2b: what a window the Hub does not publish shows in place of the OOS numbers.
+ * A typed absence, with the two screens that do read that window one click away.
+ */
+function WindowAbsent({ window: active, runId, cursor }: { window: EvidenceWindow; runId: string; cursor: EvidenceCursor }) {
+  const base = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
+  const label = active === "is" ? "IS" : "Holdout";
+  return (
+    <section
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[8px] border px-3.5 py-3"
+      data-window-absent={active}
+      style={PANEL_STYLE}
+    >
+      <PanelLabel>{label} window</PanelLabel>
+      <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={`${label} window metrics`} />
+      <span className="ml-auto inline-flex flex-wrap gap-2">
+        <Link
+          to={withWindow(deepDiveHref(`${base}/split`, { ...cursor, stage: "split" }), active)}
+          data-window-open="split"
+          title={`Stage 1 · Split — the ${label} bands, fold ${cursor.fold}`}
+          className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
+          style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+        >
+          S1 split →
+        </Link>
+        <Link
+          to={withWindow(deepDiveHref(`${base}/execute`, { ...cursor, stage: "execute" }), active)}
+          data-window-open="execute"
+          title={`Stage 4 · Execute replay — the ${label} window, fold ${cursor.fold}`}
+          className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
+          style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+        >
+          S4 replay →
+        </Link>
+      </span>
+    </section>
   );
 }
 
@@ -3353,6 +3469,8 @@ function SummaryTab({
   hub,
   runId,
   cursor,
+  evidenceWindow,
+  onWindow,
   onFold,
   series,
   ensureSeries,
@@ -3366,6 +3484,8 @@ function SummaryTab({
   hub: EvidenceHub;
   runId: string;
   cursor: EvidenceCursor;
+  evidenceWindow: EvidenceWindow;
+  onWindow: (next: EvidenceWindow) => void;
   onFold: (fold: number) => void;
   series: ReadonlyMap<SeriesKind, SeriesSlot>;
   ensureSeries: (kind: SeriesKind) => void;
@@ -3435,8 +3555,12 @@ function SummaryTab({
 
   return (
     <section data-screen-label="Summary" className="flex flex-col gap-3.5">
-      <WindowSwitcher />
+      <WindowSwitcher window={evidenceWindow} onWindow={onWindow} />
+      {evidenceWindow !== "oos" ? <WindowAbsent window={evidenceWindow} runId={runId} cursor={cursor} /> : null}
 
+      {/* Every block below describes the OOS window, the only one the Hub publishes. It stays mounted (its charts
+          are not rebuilt) and is hidden while another window is chosen, so OOS numbers never sit under an IS label. */}
+      <div className="flex flex-col gap-3.5" data-window-body={evidenceWindow} style={evidenceWindow === "oos" ? undefined : { display: "none" }}>
       {/* HiFi: five tiles to a row, never narrower than 150px. */}
       <div
         className="grid gap-2"
@@ -3600,6 +3724,7 @@ function SummaryTab({
       ) : null}
 
       <PassportPanel slot={passport} onNeeded={ensurePassport} skip={passportSkip} />
+      </div>
     </section>
   );
 }
@@ -3610,11 +3735,14 @@ function StagePreviewTab({
   hub,
   runId,
   body,
+  windowNamed = null,
 }: {
   stage: PreviewStage;
   cursor: EvidenceCursor;
   hub: EvidenceHub;
   runId: string;
+  /** F2b: the window the URL names, carried into the full screen's link. */
+  windowNamed?: EvidenceWindow | null;
   /** The stage's own body (the deep dive's blocks, embedded), drawn in place of the preview shells. */
   body?: ReactNode;
 }) {
@@ -3626,25 +3754,25 @@ function StagePreviewTab({
   return (
     <section data-screen-label={STAGE_CRUMB[stage]} className="flex flex-col gap-3.5">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <TabHeading title={preview.title} />
         {dive.path !== null ? (
-          <Link
-            to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/${dive.path}`, cursor)}
-            data-deep-dive={stage}
-            className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
-            style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
-          >
-            open deep dive → {dive.screen}
-          </Link>
+          <TabHeading
+            title={preview.title}
+            to={withWindow(deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/${dive.path}`, cursor), windowNamed)}
+            tip={`Open the full ${dive.screen} screen — fold ${cursor.fold}${windowNamed ? `, ${windowNamed} window` : ""}`}
+            dive={stage}
+          />
         ) : (
-          <span
-            data-deep-dive={stage}
-            title={`Screen ${dive.screen} has no published route yet (${dive.phase}), so this link would go nowhere.`}
-            className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
-            style={{ color: "var(--ink-faint)", borderColor: "var(--line)", opacity: 0.55, cursor: "not-allowed" }}
-          >
-            open deep dive → {dive.screen}
-          </span>
+          <>
+            <TabHeading title={preview.title} />
+            <span
+              data-deep-dive={stage}
+              title={`Screen ${dive.screen} has no published route yet (${dive.phase}), so this link would go nowhere.`}
+              className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
+              style={{ color: "var(--ink-faint)", borderColor: "var(--line)", opacity: 0.55, cursor: "not-allowed" }}
+            >
+              open deep dive → {dive.screen}
+            </span>
+          </>
         )}
       </div>
 
@@ -4134,10 +4262,11 @@ function ClaimTab({
             <Link
               to={`/research/quantbt/runs/${encodeURIComponent(hub.run_id)}/report`}
               data-action="generate-report"
+              title="Run report"
               className="mono rounded-[6px] border px-3 py-1 text-[10px] font-semibold uppercase tracking-[.05em]"
               style={{ color: "var(--accent-contrast)", borderColor: "var(--accent)", background: "var(--accent)" }}
             >
-              generate run report →
+              open report →
             </Link>
             {/* P21 · Screen 11 composes and locally seals the candidate for this run. */}
             <Link
@@ -4201,6 +4330,65 @@ function AtlasTab({ runId, hub }: { runId: string; hub: EvidenceHub }) {
 /* ------------------------------------------------------------ run states */
 
 /** FE-S04-05: a 404 is its own page with a way back, not an empty hub. */
+/**
+ * F2b: previous / next along the stage line, at the foot of every tab. The tabs
+ * are the hub's own, so these are anchors to the same cursor with another stage
+ * (a plain click moves the tab in place; a modified click opens the link). The
+ * last tab hands on to the run report, the next room of the journey.
+ */
+function StageNav({
+  runId,
+  cursor,
+  windowNamed,
+  onStage,
+}: {
+  runId: string;
+  cursor: EvidenceCursor;
+  windowNamed: EvidenceWindow | null;
+  onStage: (stage: EvidenceStage) => void;
+}) {
+  const index = EVIDENCE_STAGES.indexOf(cursor.stage);
+  const prev = index > 0 ? EVIDENCE_STAGES[index - 1] : null;
+  const next = cursor.stage === "atlas" ? null : index < EVIDENCE_STAGES.length - 1 ? EVIDENCE_STAGES[index + 1] : null;
+  const toStage = (stage: EvidenceStage) => withWindow(deepDiveHref("", { ...cursor, stage }), windowNamed);
+  const word = (stage: EvidenceStage) => `${STAGE_TAB[stage].num} ${STAGE_TAB[stage].name}`;
+  const go = (stage: EvidenceStage) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    onStage(stage);
+    document.querySelector("[data-stage-card]")?.scrollIntoView?.({ block: "start" });
+  };
+  const linkStyle = { color: "var(--accent)", borderColor: "var(--line)", background: "var(--paper-raised)" };
+  const cls = "mono rounded-[6px] border px-3 py-1 text-[10.5px] uppercase tracking-[.05em]";
+  return (
+    <nav className="mt-1 flex flex-wrap items-center justify-between gap-2" aria-label="stage navigation" data-stage-nav>
+      {prev !== null ? (
+        <a href={toStage(prev)} onClick={go(prev)} data-stage-prev={prev} title={`Previous stage · ${STAGE_CRUMB[prev]}`} className={cls} style={linkStyle}>
+          ← {word(prev)}
+        </a>
+      ) : (
+        <span />
+      )}
+      {next !== null ? (
+        <a href={toStage(next)} onClick={go(next)} data-stage-next={next} title={`Next stage · ${STAGE_CRUMB[next]}`} className={cls} style={linkStyle}>
+          {word(next)} →
+        </a>
+      ) : null}
+      {cursor.stage === "claim" ? (
+        <Link
+          to={`/research/quantbt/runs/${encodeURIComponent(runId)}/report`}
+          data-stage-next="report"
+          title="Next · the run report"
+          className={cls}
+          style={linkStyle}
+        >
+          report →
+        </Link>
+      ) : null}
+    </nav>
+  );
+}
+
 function RunNotFound({ runId }: { runId: string }) {
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-2 px-7 pb-16 pt-5" data-screen="evidence-flow" data-run={runId} data-run-not-found>
@@ -4388,15 +4576,21 @@ function SealNotice({ runId, hub }: { runId: string; hub: EvidenceHub }) {
   const notice = sealNoticeOf(runId, hub);
   if (notice === null) return null;
   const lifecycle = lifecycleOf(hub);
+  /* F2b: the first sentence is the state; the rest explains it and rides in the tooltip. A sentence that
+     carries a typed reason in brackets is kept whole — a reason is never moved out of sight. */
+  const cut = notice.sentence.includes("(") ? -1 : notice.sentence.indexOf(". ");
+  const lead = cut === -1 ? notice.sentence : notice.sentence.slice(0, cut + 1);
   return (
     <section
       className="flex flex-wrap items-center gap-3 rounded-[8px] border px-4 py-2.5"
       data-not-ready={notice.key}
       data-phase={lifecycle?.phase ?? undefined}
+      title={cut === -1 ? undefined : notice.sentence}
       style={{ borderColor: "var(--role-holdout)", background: "var(--paper-sunken)" }}
     >
-      <p className="text-[11.5px]" style={{ color: "var(--ink-soft)" }}>
-        {notice.sentence}
+      <span aria-hidden="true" className="inline-block h-[7px] w-[7px] flex-none rounded-full" style={{ background: "var(--role-holdout)" }} />
+      <p className="text-[11.5px]" style={{ color: "var(--ink-soft)" }} data-seal-sentence>
+        {lead}
       </p>
       {notice.action}
     </section>
@@ -4519,6 +4713,7 @@ export function EvidenceFlow({
   const laneSummary = laneEvidence
     ? `${retainedTiles(laneEvidence).filter((tile) => tile.value !== null).length} of ${TILE_ORDER.length} metrics · ${laneEvidence.series.length} series`
     : null;
+  const evidenceWindow = useEvidenceWindow();
   const [datasetOpen, setDatasetOpen] = useState(false);
   const datasetTrigger = useRef<HTMLButtonElement>(null);
   const datasetWasOpen = useRef(false);
@@ -4565,6 +4760,7 @@ export function EvidenceFlow({
   if (notFound) return <RunNotFound runId={runId} />;
 
   return (
+    <NamedWindowContext.Provider value={evidenceWindow.named}>
     <div
       className="mx-auto flex w-full max-w-[1440px] flex-col gap-3.5 px-7 pb-16 pt-5"
       data-screen="evidence-flow"
@@ -4616,6 +4812,8 @@ export function EvidenceFlow({
           onFold={onFold}
           onReset={onResetCursor}
           laneSelection={laneSelection}
+          evidenceWindow={evidenceWindow.window}
+          windowNamed={evidenceWindow.named}
         />
       </div>
 
@@ -4647,18 +4845,20 @@ export function EvidenceFlow({
               /* V2 (2026-09-30): HiFi 04 draws each stage's body inside its tab — the deep dive's own body, embedded. */
               <StagePreviewTab
                 stage="split"
+                windowNamed={evidenceWindow.named}
                 cursor={cursor}
                 hub={hub}
                 runId={runId}
                 body={<HubSplitBody runId={runId} cursor={cursor} onFold={onFold} />}
               />
             ) : cursor.stage === "search" ? (
-              <StagePreviewTab stage="search" cursor={cursor} hub={hub} runId={runId} body={<HubSearchBody />} />
+              <StagePreviewTab stage="search" windowNamed={evidenceWindow.named} cursor={cursor} hub={hub} runId={runId} body={<HubSearchBody />} />
             ) : cursor.stage === "freeze" ? (
-              <StagePreviewTab stage="freeze" cursor={cursor} hub={hub} runId={runId} body={<HubFreezeBody />} />
+              <StagePreviewTab stage="freeze" windowNamed={evidenceWindow.named} cursor={cursor} hub={hub} runId={runId} body={<HubFreezeBody />} />
             ) : cursor.stage === "execute" ? (
               <StagePreviewTab
                 stage="execute"
+                windowNamed={evidenceWindow.named}
                 cursor={cursor}
                 hub={hub}
                 runId={runId}
@@ -4687,6 +4887,8 @@ export function EvidenceFlow({
               hub={hub}
               runId={runId}
               cursor={cursor}
+              evidenceWindow={evidenceWindow.window}
+              onWindow={evidenceWindow.setWindow}
               onFold={onFold}
               series={series}
               ensureSeries={ensureSeries}
@@ -4699,7 +4901,9 @@ export function EvidenceFlow({
             />
           </div>
         ) : null}
+        {hub ? <StageNav runId={runId} cursor={cursor} windowNamed={evidenceWindow.named} onStage={onStage} /> : null}
       </ResearchPanel>
     </div>
+    </NamedWindowContext.Provider>
   );
 }

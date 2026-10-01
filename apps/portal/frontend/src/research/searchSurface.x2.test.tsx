@@ -158,6 +158,19 @@ describe("X2 · F4 — pick is a cursor in the hash (T07/T08)", () => {
     expect(container.querySelector("[data-surface-point='2']")?.getAttribute("data-picked")).toBe("true");
     expect(container.querySelector("[data-action='next-stage']")?.getAttribute("href")).toContain("pick=2");
   });
+
+  it("F2b: the pool and the selected card link on to S3 Freeze with the run, fold and pick kept, each with a tooltip", async () => {
+    const { container } = await settled("#stage=search&fold=1&pick=2");
+    for (const action of ["pool-to-freeze", "selected-to-freeze"]) {
+      const link = container.querySelector(`[data-action='${action}']`);
+      expect(link, action).toBeTruthy();
+      const href = link?.getAttribute("href") ?? "";
+      expect(href).toContain("/freeze");
+      expect(href).toContain("pick=2");
+      expect(href).toContain("fold=1");
+      expect(link?.getAttribute("title")).toMatch(/S3 · Freeze/);
+    }
+  });
 });
 
 describe("X2 · B3 — A3/A4/A5/A6 and B4 from the server", () => {
@@ -185,8 +198,9 @@ describe("X2 · B3 — A3/A4/A5/A6 and B4 from the server", () => {
     const { container } = await settled();
     expect(container.querySelectorAll("[data-journey]")).toHaveLength(8);
     expect(container.querySelector("[data-journey='rsi_l'] [data-frequency]")?.textContent).toBe("100% top-decile");
-    expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("global θ* — no per-fold journey");
-    expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("right: top-decile share");
+    expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("global θ* · top-decile share (1 of 3)");
+    expect(container.querySelector("[data-journey-caption]")?.getAttribute("title")).toContain("no per-fold journey");
+    expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("top-decile share");
     for (const id of ["search-space", "scatter", "parameter_frequency", "interactions"]) {
       expect(container.querySelector(`[data-panel='${id}']`)?.textContent).not.toContain("UI_RETAINED_LANE_HAS_NO_FIELD");
     }

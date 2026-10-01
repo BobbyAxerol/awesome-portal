@@ -25,6 +25,7 @@ import {
   foldKeyTarget,
   halfOpen,
   halfOpenShort,
+  HOLDOUT_NEVER_READ,
   HOLDOUT_RULE_NO_READ,
   HOLDOUT_RULE_UNLOCK,
   SPLIT_TITLE,
@@ -519,7 +520,11 @@ describe("P14-T03 — the holdout is described, never opened", () => {
 
   it("keeps the rule that holds whatever the source published, and no unlock workflow it did not", () => {
     const { container } = view();
-    expect(screen.getByText(HOLDOUT_RULE_NO_READ)).toBeTruthy();
+    // F2b: the rule is a two-word label; the sentence rides in its tooltip.
+    const rule = container.querySelector("[data-holdout-rule='no-read']") as HTMLElement;
+    expect(rule.textContent).toContain(HOLDOUT_NEVER_READ);
+    expect(rule.getAttribute("title")).toBe(HOLDOUT_RULE_NO_READ);
+    expect(screen.queryByText(HOLDOUT_RULE_NO_READ)).toBeNull();
     // RF-06 DQ-15: the unlock record and authority are not published, so the
     // sentence describing an unlock workflow is not shown as fact.
     expect(screen.queryByText(HOLDOUT_RULE_UNLOCK)).toBeNull();
@@ -838,8 +843,12 @@ describe("RF-06 wave C — the fold lane is asked once and its answer is rendere
     ]);
     expect(container.querySelector("[data-absent-reason='fold plan']")?.textContent).toBe("P04_PUBLISHES_NO_FOLD_PLAN");
     const lane = container.querySelector("[data-fold-lane='not-applicable']");
-    expect(lane?.textContent).toContain("P04 fixed qualification");
-    expect(lane?.textContent).toContain("Nothing is pending");
+    // F2b: the visible line is short and keeps the server's code; the sentence is the tooltip.
+    expect(lane?.textContent).toContain("not applicable");
+    expect(lane?.textContent).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
+    expect(lane?.textContent).not.toContain("Nothing is pending");
+    expect(lane?.getAttribute("title")).toContain("P04 fixed qualification");
+    expect(lane?.getAttribute("title")).toContain("Nothing is pending");
     expect(lane?.getAttribute("title")).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
   });
 
@@ -957,7 +966,13 @@ describe("RF-06 FE-S05-05…08 — the HiFi frames stay, as shells", () => {
     expect(warmup.style.background).not.toContain("--role-holdout");
     for (const key of ["warmup", "is", "outer_oos", "holdout"]) {
       const segment = container.querySelector(`[data-window='${key}']`);
-      expect(segment?.getAttribute("role"), key).toBe("img");
+      // F2b: IS and outer OOS are links into Screen 08 (a link is not an image); warmup and holdout stay images.
+      if (key === "is" || key === "outer_oos") {
+        expect(segment?.tagName, key).toBe("A");
+        expect(segment?.getAttribute("aria-label"), key).toContain("open in Execute Replay");
+      } else {
+        expect(segment?.getAttribute("role"), key).toBe("img");
+      }
       expect(segment?.getAttribute("aria-label"), key).toBeTruthy();
     }
   });
@@ -1187,8 +1202,11 @@ describe("RF-06 wave C — S05 consumes the RF-05 split fields", () => {
     const { container } = view();
     const bars = container.querySelectorAll("[data-absence-key='holdout_bars']");
     expect(bars).toHaveLength(1);
-    expect(bars[0].textContent).toContain("not counted — P10 counts only rows copied into the child tape");
-    expect(bars[0].querySelector("[title]")?.getAttribute("title")).toBe("P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE");
+    // F2b: the visible clause is short; the full words and the server's code ride in the tooltip.
+    expect(bars[0].textContent).toContain("not counted");
+    expect(bars[0].textContent).not.toContain("P10 counts only rows");
+    expect(bars[0].querySelector("[title]")?.getAttribute("title")).toContain("P10 counts only rows copied into the child tape");
+    expect(bars[0].querySelector("[title]")?.getAttribute("title")).toContain("P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE");
     expect(container.querySelector("[data-holdout-note]")?.contains(bars[0])).toBe(true);
   });
 
@@ -1506,17 +1524,45 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
     expect(stitch.getAttribute("data-stitch-check")).toBe("MATCH");
     expect(container.querySelector("[data-stitch-digest-value]")?.getAttribute("data-stitch-digest-value")).toBe(E14_SPLIT.stitch.digest);
     expect(stitch.textContent).toContain(`stitch digest ${E14_SPLIT.stitch.digest!.slice(0, 12)}…`);
-    expect(stitch.textContent).toContain("verified against fold boundaries · 2 segments, 336 retained observations");
+    expect(stitch.textContent).toContain("verified · 2 segments · 336 observations");
+    expect((container.querySelector("[data-stitch-verdict]") as HTMLElement).getAttribute("title")).toContain("Verified against the fold boundaries");
     expect(stitch.textContent).toContain("Portal digest · QuantBT: not published");
     expect(stitch.textContent).not.toContain("the Portal's digest of the retained stitch plan");
     expect(container.textContent).not.toContain("stitch digest — not in the split read");
+  });
+
+  it("F2b · every fold row opens its OOS window in Execute Replay, on that fold, and the series links to the hub", async () => {
+    const { container } = await laneRoute(e14Lane());
+    const replay = container.querySelector("[data-fold-replay='2']") as HTMLAnchorElement;
+    expect(replay.tagName).toBe("A");
+    const href = replay.getAttribute("href") ?? "";
+    expect(href).toContain(`/research/quantbt/runs/${W3B_RUN}/execute?window=oos#`);
+    expect(href).toContain("stage=execute");
+    expect(href).toContain("fold=2");
+    expect(replay.getAttribute("aria-label")).toContain("open in Execute Replay");
+    expect(replay.getAttribute("title")).toBe("open this fold's OOS window in Execute Replay");
+    const series = container.querySelector("[data-action='stitched-series']") as HTMLAnchorElement;
+    expect(series.getAttribute("href")).toContain(`/research/quantbt/runs/${W3B_RUN}/evidence#stage=summary`);
+    // IS / OOS bands and the holdout label open the same screen on their own window.
+    expect(container.querySelector("[data-window-link='is']")?.getAttribute("href")).toContain("execute?window=is#");
+    expect(container.querySelector("[data-window-link='oos']")?.getAttribute("href")).toContain("execute?window=oos#");
+    expect(container.querySelector("[data-window-open='holdout']")?.getAttribute("href")).toContain("execute?window=holdout#");
+  });
+
+  it("F2b · a key pressed on a row's replay link is the link's, not the row's", async () => {
+    const { container } = await laneRoute(e14Lane());
+    const row = container.querySelector("[data-fold-table-row='1']") as HTMLElement;
+    const link = row.querySelector("[data-fold-replay]") as HTMLElement;
+    const stopped = fireEvent.keyDown(link, { key: "Enter" });
+    expect(stopped).toBe(true); // not default-prevented: the browser follows the link
   });
 
   it("VD-TEXT-01 · the retained lane's prose is one fact line, not paragraphs", async () => {
     const { container } = await laneRoute(e14Lane());
     const note = (container.querySelector("[data-protocol-note]") as HTMLElement).textContent ?? "";
     expect(note.split(/\s+/).length).toBeLessThanOrEqual(14);
-    expect(note).toContain("one global θ* traded on every fold");
+    expect(note).toContain("one global θ* · OOS used for selection");
+    expect(note.split(/\s+/).length).toBeLessThanOrEqual(8);
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/Shared params \(global schedule\): one study|Stage 2 ran one global study|never constructs a fold/);
     expect(container.querySelector("[data-theta-note]")).toBeNull();
@@ -1743,5 +1789,50 @@ describe("F1 · X5 — an imported run's OOS window reads like a fixed-profile o
     const note = container.querySelector("[data-protocol-note]")!.textContent!;
     expect(note).toContain("OOS observed");
     expect(note).not.toContain("after the profile was fixed");
+  });
+});
+
+describe("F2b · windows and flow", () => {
+  it("IS, outer OOS and holdout each deep-link to Execute Replay with ?window= and the fold in the hash", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, fold: 3, stage: "split" } });
+    for (const [key, window] of [
+      ["is", "is"],
+      ["outer_oos", "oos"],
+    ] as const) {
+      const bar = container.querySelector(`a[data-window='${key}']`) as HTMLAnchorElement;
+      expect(bar.getAttribute("href"), key).toBe(`/research/quantbt/runs/R-WFO-118/execute?window=${window}#stage=execute&fold=3`);
+      const legend = container.querySelector(`[data-window-legend='${key}'] a[data-window-open='${window}']`) as HTMLAnchorElement;
+      expect(legend.getAttribute("href"), key).toBe(bar.getAttribute("href"));
+      expect(legend.getAttribute("aria-label")).toContain("open in Execute Replay");
+    }
+    // The warmup is read by nothing: an image, not a link.
+    expect(container.querySelector("[data-window='warmup']")?.tagName).toBe("SPAN");
+    const holdout = container.querySelector("a[data-window-open='holdout']") as HTMLAnchorElement;
+    expect(holdout.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/execute?window=holdout#stage=execute&fold=3");
+    expect(holdout.getAttribute("title")).toContain("no bar is read");
+  });
+
+  it("the three-window table row opens the IS and the OOS window", () => {
+    const { container } = view();
+    const row = container.querySelector("[data-fold-table-row='three-window']") as HTMLElement;
+    expect(row.querySelector("a[data-window-open='is']")?.getAttribute("href")).toContain("execute?window=is#");
+    expect(row.querySelector("a[data-window-open='oos']")?.getAttribute("href")).toContain("execute?window=oos#");
+  });
+
+  it("the way out stays: the breadcrumb returns to Evidence Flow on this cursor and the next stage carries it on", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, fold: 2, stage: "split" } });
+    expect(container.querySelector("[data-action='back-to-hub']")?.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/evidence#stage=split&fold=2");
+    expect(container.querySelector("[data-action='next-stage']")?.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/search#stage=search&fold=2");
+    expect(container.querySelector("[data-action='next-execute']")?.getAttribute("href")).toBe("/research/quantbt/runs/R-WFO-118/execute#stage=execute&fold=2");
+  });
+
+  it("the prose that restated the strip is a tooltip, and the colour key is swatches", () => {
+    const { container } = view();
+    expect(container.textContent).not.toContain("a run's protocol is fixed at submit");
+    expect(container.querySelector("[data-protocol-label]")?.getAttribute("title")).toBe("A run's protocol is fixed at submit.");
+    const key = container.querySelector("[data-window-key]") as HTMLElement;
+    expect(key.textContent).toBe("warmupISouter OOSholdout");
+    expect(key.querySelectorAll("[aria-hidden='true']")).toHaveLength(4);
+    expect(container.textContent).not.toContain("warmup = grey");
   });
 });

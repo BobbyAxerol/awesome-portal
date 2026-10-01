@@ -895,8 +895,11 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: 
               );
             })}
           </div>
-          <span style={{ fontSize: 9.5, color: "var(--ink-faint)", margin: "2px 0 4px" }}>
-            compact plan — one cell per fold · click a cell to inspect it below · detail rows show the picked fold ± neighbours
+          <span
+            style={{ fontSize: 9.5, color: "var(--ink-faint)", margin: "2px 0 4px" }}
+            title="Compact plan: click a cell to inspect it below; the detail rows show the picked fold and its neighbours."
+          >
+            one cell per fold
           </span>
         </>
       ) : null}
@@ -989,8 +992,8 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: 
         );
       })}
       {folds.some((f) => (f.fold_timeline ?? NOT_PUBLISHED_TIMELINE).state === "PARTIAL") ? (
-        <p style={{ fontSize: 9.5, color: "var(--role-holdout)", margin: 0 }} data-timeline-partial>
-          Partial folds — published segments only, gaps not filled.
+        <p style={{ fontSize: 9.5, color: "var(--role-holdout)", margin: 0 }} data-timeline-partial title="Published segments only; gaps are not filled.">
+          partial folds
         </p>
       ) : null}
     </div>
@@ -1002,12 +1005,15 @@ function CursorRow({
   foldState,
   cursor,
   liveTrial,
+  evidenceHref = null,
 }: {
   fold: number | null;
   foldState: string | null;
   /** The evidence cursor for this fold, from published facts only. */
   cursor: InspectionCursor;
   liveTrial: number | undefined;
+  /** F2b: Evidence Flow on this exact fold, offered once the fold is done. */
+  evidenceHref?: string | null;
 }) {
   const trial = cursor.trial ?? (liveTrial !== undefined ? count(liveTrial) : null);
   const params = cursor.params ? paramsTag(cursor.params) : null;
@@ -1053,6 +1059,17 @@ function CursorRow({
           <NotPublished reason="The progress read publishes no params digest for this fold." />
         )}
       </span>
+      {evidenceHref !== null && fold !== null && foldState === "DONE" ? (
+        <a
+          data-action="open-fold-evidence"
+          href={evidenceHref}
+          aria-label={`open ${foldId(fold)} in Evidence Flow`}
+          title={`Open ${foldId(fold)} in Evidence Flow`}
+          style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 10, color: "var(--accent)" }}
+        >
+          evidence →
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -1479,6 +1496,8 @@ function ClaimPassport({
         ? "the run failed before Stage 5"
         : "the run ended without a claim";
   const textKind = issued ? "issued" : forecast ? "forecast" : status === "FAILED" ? "bad" : "neutral";
+  /* F2b: a note longer than a short phrase rides in the badge's tooltip. */
+  const noteIsLong = note.split(/\s+/).length > 8;
 
   return (
     <section
@@ -1507,11 +1526,12 @@ function ClaimPassport({
       >
         <span
           data-claim-badge
+          title={noteIsLong ? note : undefined}
           style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".07em", fontWeight: 600, color: tone.head }}
         >
           claim passport — {stateWord}
         </span>
-        <span style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>{note}</span>
+        {noteIsLong ? null : <span style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>{note}</span>}
         {sealed ? (
           <a
             data-open-evidence
@@ -1566,6 +1586,18 @@ function ClaimPassport({
         </Field>
         <Field label="seal" name="readiness">
           <span style={valueStyle(sealed ? "issued" : "neutral")} data-readiness>
+            <span
+              aria-hidden="true"
+              data-readiness-dot={sealed ? "sealed" : "open"}
+              style={{
+                display: "inline-block",
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                marginRight: 6,
+                background: sealed ? "var(--good)" : "var(--viz-legend-inactive)",
+              }}
+            />
             mandatory {readiness.mandatory} · optional {readiness.optional}
           </span>
         </Field>
@@ -1637,10 +1669,8 @@ function DoneBanner({
       <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "var(--good)" }}>
         {issued ? "✓ RUN COMPLETE — CLAIMS ISSUED" : "✓ RUN COMPLETE — ARTIFACTS SEALED"}
       </span>
-      <span style={{ fontSize: 11.5, color: "var(--ink-soft)", flex: 1, minWidth: 260 }}>
-        {issued
-          ? "open the evidence at:"
-          : "no claim issued · open the evidence at:"}
+      <span style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--ink-soft)", flex: 1, minWidth: 120 }} data-done-claim={issued ? "issued" : "none"}>
+        {issued ? null : "no claim issued"}
       </span>
       <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
         {links.map(([key, label]) => {
@@ -1649,6 +1679,7 @@ function DoneBanner({
             <a
               key={key}
               data-done-link={key}
+              title={`Open Stage ${key.slice(1)} ${STAGE_LABEL[key]}${cursor.fold ? ` at fold ${cursor.fold}` : ""}`}
               href={runHref(runId, target.path, { ...(target.stage ? { stage: target.stage } : {}), ...cursor })}
               style={{
                 border: "1px solid var(--accent)",
@@ -1863,11 +1894,14 @@ function Header({
   runId,
   title,
   right,
+  next,
   children,
 }: {
   runId: string;
   title: string;
   right?: ReactNode;
+  /** F2b: where this run goes next — Evidence Flow, on the cursor this page already holds. */
+  next?: { href: string; label: string; title: string };
   children?: ReactNode;
 }) {
   return (
@@ -1900,6 +1934,21 @@ function Header({
             /
           </span>
           <span style={{ color: "var(--ink)" }}>Progress</span>
+          {next ? (
+            <>
+              <span aria-hidden="true" style={{ color: "var(--ink-faint)" }}>
+                ·
+              </span>
+              <a
+                data-action="next-evidence"
+                href={next.href}
+                title={next.title}
+                style={{ fontFamily: MONO, fontSize: 10, color: "var(--accent)" }}
+              >
+                {next.label}
+              </a>
+            </>
+          ) : null}
         </nav>
         <h1
           style={{
@@ -2092,15 +2141,19 @@ export function RunProgress(props: RunProgressProps) {
         />
         <RunMetaStrip runId={runId} identity={identity} status={statusSlot} />
         <section style={{ ...CARD, gap: 8 }}>
-          <h2 style={{ ...CARD_TITLE, margin: 0 }}>{queued ? "queued — waiting for a worker" : "cancelled before the source reported"}</h2>
-          <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>
-            {queued
-              ? "The run is queued; no source progress has been published yet. This page updates on its own when a worker claims it."
-              : "The run was cancelled before source progress began. No progress, artifact or claim exists for it."}
-          </p>
+          <h2
+            style={{ ...CARD_TITLE, margin: 0 }}
+            title={
+              queued
+                ? "The run is queued; no source progress has been published yet. This page updates on its own when a worker claims it."
+                : "The run was cancelled before source progress began. No progress, artifact or claim exists for it."
+            }
+          >
+            {queued ? "queued — waiting for a worker" : "cancelled before the source reported"}
+          </h2>
           {read.current.terminal_materialization === "PENDING" && !queued ? (
-            <span data-terminal-materialization style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>
-              The cancellation is recorded; its terminal record is still being written.
+            <span data-terminal-materialization style={{ fontSize: 10.5, color: "var(--ink-faint)" }} title="The cancellation is recorded; its terminal record is still being written.">
+              writing terminal record…
             </span>
           ) : null}
           <ServedAttempts queue={read.queue} attempts={read.attempts} open />
@@ -2174,10 +2227,19 @@ export function RunProgress(props: RunProgressProps) {
 
   return (
     <div data-screen="run-progress" style={ROOT}>
-      <Header runId={runId} title={title} right={<TransportDot transport={transport} live={live} face={face} />}>
+      <Header
+        runId={runId}
+        title={title}
+        right={<TransportDot transport={transport} live={live} face={face} />}
+        next={{
+          href: handoffHref,
+          label: "next: Evidence Flow →",
+          title: handoffLabel ? `Opens Evidence Flow at ${handoffLabel}` : "Opens Evidence Flow on this run",
+        }}
+      >
         {read?.availability === "PENDING_SOURCE_CALLBACK" ? (
-          <p style={{ fontSize: 10.5, color: "var(--role-holdout)", margin: 0 }} data-pending-source>
-            The run exists. Waiting for its source to report progress.
+          <p style={{ fontSize: 10.5, color: "var(--role-holdout)", margin: 0 }} data-pending-source title="The run exists. Waiting for its source to report progress.">
+            waiting for the source
           </p>
         ) : null}
         {snapshot?.source.partial ? (
@@ -2186,8 +2248,8 @@ export function RunProgress(props: RunProgressProps) {
           </p>
         ) : null}
         {status !== null && !live && read?.current.terminal_materialization === "PENDING" ? (
-          <p style={{ fontSize: 10.5, color: "var(--ink-faint)", margin: 0 }} data-terminal-materialization>
-            The run is final; its terminal record is still being written.
+          <p style={{ fontSize: 10.5, color: "var(--ink-faint)", margin: 0 }} data-terminal-materialization title="The run is final; its terminal record is still being written.">
+            writing terminal record…
           </p>
         ) : null}
       </Header>
@@ -2270,6 +2332,7 @@ export function RunProgress(props: RunProgressProps) {
                 foldState={cursorFold?.state ?? null}
                 cursor={cursor}
                 liveTrial={foldCursor !== null && cursorFold?.state === "RUNNING" ? foldTrials[foldCursor] : undefined}
+                evidenceHref={handoffHref}
               />
             </>
           ) : (

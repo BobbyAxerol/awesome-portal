@@ -1041,6 +1041,14 @@ describe("RF-06 FE-S04-05 — state vocabulary", () => {
     expect(notice?.textContent).not.toMatch(/has not sealed its evidence yet/);
   });
 
+  it("F2b: a live run's notice says the state in one sentence; the explanation rides in the tooltip", () => {
+    const { container } = view({ hub: withStatus("RUNNING", { readiness: "NOT_READY" }) });
+    const notice = container.querySelector("[data-not-ready]") as HTMLElement;
+    expect(notice.querySelector("[data-seal-sentence]")?.textContent).toBe("This run is RUNNING and has not sealed its evidence yet.");
+    expect(notice.getAttribute("title")).toContain("the run's live state lives on its progress screen");
+    expect(notice.querySelector("[data-action='watch-progress']")?.getAttribute("href")).toContain("/progress");
+  });
+
   it("keeps strip, header and tabs as shells when the first read is refused", () => {
     for (const refused of [
       { state: "failed-retryable" as const, reason: "This changed while it was being read. Read it again." },
@@ -1349,13 +1357,13 @@ describe("RF-06 fidelity — cursor bar", () => {
 });
 
 describe("RF-06 fidelity — window switcher and tiles", () => {
-  it("draws the window choices as buttons, only OOS live, each refused one titled", () => {
+  it("draws the window choices as buttons; IS, OOS and Holdout write ?window=, Compare and Rebased stay refused, each titled", () => {
     const { container } = view();
     const buttons = [...container.querySelectorAll("[data-window-switcher] [data-segment]")] as HTMLButtonElement[];
     expect(buttons.map((button) => button.textContent)).toEqual(["IS", "OOS", "Holdout Live", "Compare", "Capital", "Rebased 100"]);
     for (const button of buttons) {
       expect(button.tagName).toBe("BUTTON");
-      const live = button.textContent === "OOS" || button.textContent === "Capital";
+      const live = ["IS", "OOS", "Holdout Live", "Capital"].includes(button.textContent ?? "");
       expect(button.disabled, button.textContent ?? "").toBe(!live);
       expect(button.getAttribute("title"), button.textContent ?? "").toBeTruthy();
     }

@@ -42,7 +42,8 @@ import type { ReplayController, RetainedReplaySlot } from "./useReplay";
 
 /* ------------------------------------------------------------------ words */
 
-export const ACROSS_LABEL = "play across folds · reads the next window at each boundary";
+/** F2b: the switch says what it is; what it does (reads the next window at a boundary) is its tooltip and accessible description. */
+export const ACROSS_LABEL = "play across folds";
 
 /** VD-TEXT-01: was 68 words; this is the switch's tooltip and its accessible description. */
 export const ACROSS_HELP = "Off by default. Reads the next window when playback reaches the end.";

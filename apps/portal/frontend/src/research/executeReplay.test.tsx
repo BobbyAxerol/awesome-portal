@@ -954,3 +954,51 @@ describe("F1 · FG 08-05 — the P04 'state at cursor' prints formatted numbers 
     expect(at.textContent).not.toMatch(/· equity |· drawdown /);
   });
 });
+
+describe("F2b · S08 draws ONE overview: candle_overview, with market_overview only as the rolling-deploy fallback", () => {
+  const legacyOf = (bars: number) => {
+    const { state: _s, reason_code: _r, scope: _c, availability: _a, ...data } = candleOverview(bars);
+    return {
+      state: "AVAILABLE",
+      reason_code: null,
+      semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY",
+      data,
+      availability: AVAILABLE,
+    };
+  };
+
+  it("a responder without candle_overview but with an AVAILABLE market_overview draws it once, with the source-overview chip", () => {
+    const body = { ...replay({ overviewReason: null }), market_overview: legacyOf(240) } as unknown as Replay;
+    renderScreen(controllerOf(body));
+    const blocks = document.querySelectorAll("[data-candle-overview]");
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.getAttribute("data-overview-source")).toBe("market_overview");
+    expect(blocks[0]!.querySelector("[data-overview-chip='source']")!.textContent).toBe("source overview");
+    expect(blocks[0]!.querySelector("[data-overview-chip='source']")!.getAttribute("title")).toContain("legacy market overview");
+    expect(blocks[0]!.querySelectorAll("svg line")).toHaveLength(4);
+  });
+
+  it("when candle_overview is served, market_overview is never drawn — not as a second chart, not as a chip", () => {
+    const body = { ...replay(), market_overview: legacyOf(240) } as unknown as Replay;
+    renderScreen(controllerOf(body));
+    expect(document.querySelectorAll("[data-candle-overview]")).toHaveLength(1);
+    expect(document.querySelector("[data-overview-source]")).toBeNull();
+    expect(document.querySelector("[data-overview-chip]")).toBeNull();
+    expect(document.querySelectorAll("[data-overview]")).toHaveLength(1);
+  });
+
+  it("a NOT_PUBLISHED market_overview is no fallback: the absence keeps its own reason code", () => {
+    const absent = { state: "NOT_PUBLISHED", reason_code: "P13_SOURCE_PREDATES_RETAINED_CANDLE_OVERVIEW", semantics: "BOUNDED_SOURCE_OVERVIEW_NOT_PER_BAR_REPLAY", data: null, availability: AVAILABLE };
+    const body = { ...replay({ overviewReason: null }), market_overview: absent } as unknown as Replay;
+    renderScreen(controllerOf(body));
+    const block = document.querySelector("[data-candle-overview]")!;
+    expect(block.getAttribute("data-candle-overview")).toBe("NOT_PUBLISHED");
+    expect(document.querySelector("[data-overview-chip]")).toBeNull();
+  });
+
+  it("the earlier / later buttons are not named 'window', so they cannot be mistaken for the IS / OOS / HOLDOUT switch", () => {
+    renderScreen(controllerOf(replay()));
+    expect(document.querySelector("[data-action='previous-window']")!.textContent).toBe("‹ earlier");
+    expect(document.querySelector("[data-action='next-window']")!.textContent).toBe("later ›");
+  });
+});

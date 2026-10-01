@@ -535,10 +535,10 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
         className="text-[9.5px] leading-[1.5]"
         style={{ color: "var(--ink-faint)" }}
         data-journey-caption
-        title="Right column: of the top decile of complete trials by IS objective, the share carrying θ*'s value — computed on the server from the retained ledger."
+        title={`${schedule === "global" ? "Global θ* — one value for every fold, so there is no per-fold journey. " : ""}Right column: of the top decile of complete trials by IS objective, the share carrying θ*'s value — computed on the server from the retained ledger.`}
       >
-        {schedule === "global" ? "global θ* — no per-fold journey · " : ""}
-        right: top-decile share ({surface.parameter_frequency.pool_count} of {surface.complete_trial_count} trials)
+        {schedule === "global" ? "global θ* · " : ""}
+        top-decile share ({surface.parameter_frequency.pool_count} of {surface.complete_trial_count})
       </span>
     </SurfacePanel>
   );

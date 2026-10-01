@@ -363,8 +363,8 @@ export function PoolPlane({ search, selected }: { search: CurrentSourceSearch; s
   const at = (value: number) => ((value - from) / (to - from)) * 100;
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-[3px]" data-pool-plane={placed.length}>
-      <span className="text-[9.5px]" style={FAINT}>
-        pool on the S_IS × S̄_OOS plane · diagonal = zero decay
+      <span className="text-[9.5px]" style={FAINT} title="Pool on the S_IS × S̄_OOS plane — a point on the diagonal has zero decay">
+        S_IS × S̄_OOS · diagonal = 0 decay
       </span>
       <div
         className="relative h-[118px] overflow-hidden border"
@@ -398,8 +398,8 @@ export function PoolPlane({ search, selected }: { search: CurrentSourceSearch; s
           );
         })}
       </div>
-      <span className="text-[9px]" style={FAINT}>
-        x S_IS · y S̄_OOS · below the diagonal = positive decay (IS &gt; OOS)
+      <span className="text-[9px]" style={FAINT} title="Below the diagonal = positive decay (IS > OOS)">
+        x S_IS · y S̄_OOS · below = decay
         {placed.length < search.candidates.rows.length ? ` · ${search.candidates.rows.length - placed.length} without both means, not placed` : ""}
       </span>
     </div>

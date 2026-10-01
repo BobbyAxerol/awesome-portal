@@ -110,7 +110,7 @@ describe("X2 · B4 — F4 binding down to Stage 4 is the server's verdict (CG-P1
     const authority = card.querySelector("[data-parameter-authority]") as HTMLElement;
     expect(authority.getAttribute("data-parameter-authority")).toBe("NOT_PUBLISHED");
     expect(authority.querySelector("[data-code-fixed-reason]")?.getAttribute("data-code-fixed-reason")).toBe("P04_DELTA_KERNEL_PUBLISHES_NO_CODE_FIXED_VALUE_LIST");
-    expect(authority.textContent).toContain("8 declared parameters are inside the params digest");
+    expect(authority.textContent).toContain("8 declared · inside the params digest");
   });
 
   it("a drifted generation child reads ✕ DRIFT — BLOCKED on the fold that drifted", async () => {
@@ -125,6 +125,8 @@ describe("X2 · B4 — F4 binding down to Stage 4 is the server's verdict (CG-P1
     expect(card.querySelector("[data-binding-row='REPLAY_PARAMS']")?.textContent).toContain("differs by fold ✕");
     expect(card.querySelector("[data-binding-fold='1']")?.getAttribute("data-binding-fold-state")).toBe("MISMATCH");
     expect(card.textContent).toContain("Stage 5 must refuse this run");
+    /* F2b: the remedy rides in the tooltip, not in a second sentence. */
+    expect(card.querySelector("[data-binding-note]")?.getAttribute("title")).toBe("Re-run Execute, or re-seal as a new attempt.");
   });
 });
 

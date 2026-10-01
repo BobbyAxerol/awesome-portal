@@ -254,7 +254,9 @@ export const TRAJECTORY_TITLE = "what this trajectory says";
 /** Hi-fi guard, mismatch sentence verbatim. */
 export const GUARD_MISMATCH = "The two runs publish different ComparisonContractKeys. The screen refuses to draw.";
 /** Hi-fi guard, match sentence with the demo key and "both alphas" removed (VD-P20-01). */
-export const GUARD_MATCH = "both runs publish the same ComparisonContractKey, so overlay, deltas and the correlation card are legal.";
+export const GUARD_MATCH = "same ComparisonContractKey";
+/** F2b: the hi-fi sentence rides the guard's title. */
+export const GUARD_MATCH_TITLE = "Both runs publish the same ComparisonContractKey, so overlay, deltas and the correlation card are legal.";
 
 /** Hi-fi refusal card, verbatim. */
 export const REFUSED_TAG = "COMPARISON REFUSED";
@@ -370,6 +372,10 @@ const COMPARE_CSS = `
 .cp-foldbar { fill-opacity: 1; }
 .cp-foldzero { stroke: var(--ink); stroke-width: 1; }
 .cp-foldlegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); margin-bottom: 6px; }
+.cp-legendrun { cursor: default; border-radius: 3px; }
+.cp-legendrun:hover, .cp-legendrun:focus-visible { color: var(--ink); }
+.cp-foldbar, .cp-foldline { transition: opacity .15s; }
+@media (prefers-reduced-motion: reduce) { .cp-foldbar, .cp-foldline { transition: none; } }
 .cp-foldlegend .sw { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
 .cp-foldline { fill: none; stroke-width: 1.25; }
 .cp-foldline[data-active="true"] { stroke-width: 2.25; }
@@ -556,6 +562,10 @@ function runsHref(alphaId: string | null): string {
   return alphaId ? `${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(alphaId)}` : RUNS_ROOT;
 }
 
+function reportHref(runId: string): string {
+  return `${RUNS_ROOT}/${encodeURIComponent(runId)}/report`;
+}
+
 function evidenceHref(runId: string): string {
   return `${RUNS_ROOT}/${encodeURIComponent(runId)}/evidence`;
 }
@@ -653,7 +663,7 @@ function RunState({ state }: { state: CompareRun["run_state"] }) {
 function RunLine({ run, withState = false }: { run: CompareRun; withState?: boolean }) {
   return (
     <span className="cp-faint" data-run-line>
-      <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={run.run_id}>
+      <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={`${run.run_id} — open in Evidence Flow`}>
         {sid(run.run_id)}
       </Link>
       {withState ? (
@@ -666,8 +676,12 @@ function RunLine({ run, withState = false }: { run: CompareRun; withState?: bool
         </>
       ) : null}
       {" · "}
+      <Link to={reportHref(run.run_id)} data-report-link={run.run_id} title="Run report of this run (Screen 9)" aria-label={`Run report of ${sid(run.run_id)}`}>
+        report
+      </Link>
+      {" · "}
       {/* Spec 13 §1 outbound 11: this run's release candidate (P21). */}
-      <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)">
+      <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)" aria-label={`Release candidate of ${sid(run.run_id)}`}>
         rc_
       </Link>
       {" · "}
@@ -1214,6 +1228,9 @@ function foldLegend(run: CompareRun | undefined, runId: string): string {
  * strings, shown by unit with the exact string in the title (DQ-08).
  */
 function FoldChart({ result }: { result: AttemptResult }) {
+  /* F2b: hovering or focusing a legend entry dims every other attempt's bars/line (display only). */
+  const [hovered, setHovered] = useState<string | null>(null);
+  const dim = (runId: string): number | undefined => (hovered !== null && hovered !== runId ? 0.18 : undefined);
   const runs = ladderOrder(result);
   const byRun = new Map(runs.map((run) => [run.run_id, run] as const));
   const drawable = result.fold_series.filter((item: FoldSeries) => item.state === "AVAILABLE" && item.folds.length > 0);
@@ -1234,8 +1251,8 @@ function FoldChart({ result }: { result: AttemptResult }) {
       <figcaption>
         <span className="cp-figtitle">{FOLD_CHART_TITLE}</span>
         {geometry ? (
-          <span className="cp-figmeta" data-fold-meta>
-            {published.length} {published.length === 1 ? "attempt" : "attempts"} · {geometry.groups.length} folds · retained per-fold QuantBT metric
+          <span className="cp-figmeta" data-fold-meta title="Retained per-fold QuantBT metric">
+            {published.length} {published.length === 1 ? "attempt" : "attempts"} · {geometry.groups.length} folds
             {truncated.length > 0 ? ` · first 32 folds of ${truncated.map((item) => item.source_fold_count ?? "?").join(", ")}` : ""}
           </span>
         ) : null}
@@ -1244,7 +1261,17 @@ function FoldChart({ result }: { result: AttemptResult }) {
         <>
           <div className="cp-foldlegend" data-fold-legend>
             {published.map((item) => (
-              <span key={item.run_id} data-fold-legend-run={item.run_id} title={item.run_id}>
+              <span
+                key={item.run_id}
+                className="cp-legendrun"
+                data-fold-legend-run={item.run_id}
+                title={`${item.run_id} — hover to isolate`}
+                tabIndex={0}
+                onMouseEnter={() => setHovered(item.run_id)}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setHovered(item.run_id)}
+                onBlur={() => setHovered(null)}
+              >
                 <span className="sw" style={{ background: tone(item.run_id) }} aria-hidden="true" />
                 {foldLegend(byRunAll.get(item.run_id), item.run_id)}
               </span>
@@ -1278,7 +1305,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
                         data-sign={bar.sign}
                         data-fold-bar={`${bar.runId}:${bar.foldId}`}
                         data-exact={bar.value}
-                        style={{ fill: tone(bar.runId) }}
+                        style={{ fill: tone(bar.runId), opacity: dim(bar.runId) }}
                       >
                         <title>{`${byRun.get(bar.runId)?.attempt_id ?? bar.runId} · fold_id ${bar.foldId} · OOS Sharpe ${bar.value}`}</title>
                       </rect>
@@ -1290,7 +1317,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
                         d={line.path}
                         data-fold-line={line.runId}
                         data-active={byRun.get(line.runId)?.alpha_version_lifecycle.value === "ACTIVE" ? "true" : "false"}
-                        style={{ stroke: tone(line.runId) }}
+                        style={{ stroke: tone(line.runId), opacity: dim(line.runId) }}
                       />
                     ))}
                 <line className="cp-foldzero" x1={0} x2={geometry.width} y1={geometry.zeroPct * 10} y2={geometry.zeroPct * 10} />
@@ -1531,9 +1558,8 @@ function MarketTile({ card }: { card: MarketCard }) {
         <RunState state={run.run_state} />
       </div>
       {grouped ? (
-        <span className="cp-faint" data-market-selection-words>
-          {MARKET_SELECTION_WORDS[card.selection]}
-          {card.runs_in_market > 1 ? ` · 1 of ${card.runs_in_market} runs on this market` : " · the only run on this market"}
+        <span className="cp-faint" data-market-selection-words title={MARKET_SELECTION_WORDS[card.selection]}>
+          {card.runs_in_market > 1 ? `1 of ${card.runs_in_market} runs on this market` : "only run on this market"}
         </span>
       ) : null}
       <span className="cp-faint" data-market-route>
@@ -1618,7 +1644,9 @@ function RunChips({ runs }: { runs: readonly string[] | null }) {
       {(runs ?? []).map((runId, index) => (
         <span key={`${index}:${runId}`} className="cp-runchip" data-run-chip={runId} title={runId}>
           {index === 0 ? "A " : "B "}
-          {sid(runId)}
+          <Link to={reportHref(runId)} data-run-chip-report={runId} title={`Run report of ${sid(runId)}`}>
+            {sid(runId)}
+          </Link>
         </span>
       ))}
     </span>
@@ -1678,7 +1706,7 @@ function ComparableGuard({ result, runs }: { result: PairComparable; runs: reado
       <div className="cp-guardcard" data-verdict="match">
         <div className="head">
           <span className="tag">contract key match</span>
-          <span className="txt">{GUARD_MATCH}</span>
+          <span className="txt" title={GUARD_MATCH_TITLE}>{GUARD_MATCH}</span>
         </div>
         <KeyParts keyFact={pair.key} side="both" />
         {result.state === "PARTIAL" ? (
@@ -2042,7 +2070,7 @@ function WeakerClaim({ result }: { result: PairComparable }) {
     <div className="cp-weaker" data-panel="weaker" data-weaker-claim={weaker.availability.state}>
       <span className="k">weaker claim</span>
       {shown ? (
-        <span data-promotes-under>{promotesUnder(weaker.family)}</span>
+        <span data-promotes-under title={promotesUnder(weaker.family)}>{weaker.family}</span>
       ) : (
         <AvailabilityAbsent availability={weaker.availability} what="weaker claim" />
       )}

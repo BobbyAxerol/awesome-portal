@@ -135,7 +135,9 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     expect(band93.querySelector("[data-exercised-count]")?.textContent).toBe("4 attempts read · 1 without a persisted spec");
     const untried = panel("root").querySelector("[data-untried-routes]") as HTMLElement;
     expect(untried.textContent).toBe(v93!.untried.routes.map((route) => route.route_id).join(" · "));
-    expect(panel("root").querySelector('[data-action="declare-at-new-run"]')?.getAttribute("href")).toBe("/research/quantbt/runs/new");
+    expect(panel("root").querySelector('[data-action="declare-at-new-run"]')?.getAttribute("href")).toBe(
+      `/research/quantbt/runs/new?alpha=${encodeURIComponent(ALPHA)}&av=${encodeURIComponent(v93!.alpha_version_id)}`,
+    );
   });
 
   it("W6b-U04 CG-P19-04/10 a published pick links its attempt, run and release-candidate draft (Screen 11)", async () => {

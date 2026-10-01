@@ -139,10 +139,23 @@ export function statusTone(word: string | null | undefined): { color: string; da
   return { color: "var(--accent-2)", dashed: false };
 }
 
+/* F2b: the long wording is the tooltip; the row carries the short token. */
+const METHOD_TITLE: Record<string, string> = {
+  wfo: "Strategy-param route — walk-forward search applies.",
+  tape: "Tape-driven — single-pass replay; the walk-forward step collapses to the tape span.",
+  single_pass: "Single pass — the engine lists no walk-forward target for this route.",
+};
+
+/** F2b: the walk-forward word the engine facts publish, carried by the status badge's tooltip only. */
+export function routeStatusTitle(word: string | null, facts: { walk_forward_status: string } | null): string {
+  const wf = facts ? `walk-forward: ${facts.walk_forward_status}` : "walk-forward: not published";
+  return word ? `${word} · ${wf}` : `no engine facts for this route · ${wf}`;
+}
+
 const METHOD_LABEL: Record<string, string> = {
-  wfo: "strategy-param route — walk-forward search applies",
-  tape: "tape-driven — single-pass replay; the walk-forward step collapses to the tape span",
-  single_pass: "single pass — the engine lists no walk-forward target for this route",
+  wfo: "walk-forward",
+  tape: "tape · single pass",
+  single_pass: "single pass",
 };
 
 type EngineFacts = NonNullable<AtlasDocument["routes"][number]["engine_facts"]>;
@@ -155,7 +168,7 @@ function RouteEngineDetail({ routeId, facts }: { routeId: string; facts: EngineF
       <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink)" }} data-route-description={routeId}>
         {facts.description}
       </span>
-      <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-route-method={facts.method} title={facts.method_basis}>
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-route-method={facts.method} title={`${METHOD_TITLE[facts.method] ?? facts.method} ${facts.method_basis}`}>
         {METHOD_LABEL[facts.method] ?? facts.method}
       </span>
       {matrix ? (
@@ -302,6 +315,12 @@ function RoutesTab({
             >
               <div className="flex flex-wrap items-baseline gap-y-0.5">
                 <span className="mono text-[11px] font-semibold" style={{ width: ROUTE_COLUMNS[0].width, flex: "none" }}>
+                  <span
+                    aria-hidden="true"
+                    data-route-dot={row.admitted ? "admitted" : "blocked"}
+                    className="mr-1.5 inline-block h-[7px] w-[7px] rounded-full align-middle"
+                    style={{ background: row.admitted ? tone.color : "transparent", border: `1.5px ${row.admitted ? "solid" : "dashed"} ${tone.color}` }}
+                  />
                   <button
                     type="button"
                     className="mono text-left font-semibold"
@@ -320,12 +339,13 @@ function RoutesTab({
                       className="mono rounded-[3px] border px-[5px] text-[9px] font-bold leading-[15px]"
                       style={{ color: tone.color, borderColor: tone.color, borderStyle: tone.dashed ? "dashed" : "solid" }}
                       data-status-word={word}
+                      title={routeStatusTitle(word, facts)}
                     >
                       {word}
                     </span>
                   ) : (
                     /* An older manifest has no engine facts: say so, never a dash. */
-                    <span className="mono text-[8.5px] italic" style={{ color: "var(--ink-soft)" }} data-status-word="none" title="This manifest publishes no engine facts for this route.">
+                    <span className="mono text-[8.5px] italic" style={{ color: "var(--ink-soft)" }} data-status-word="none" title={routeStatusTitle(null, facts)}>
                       not published
                     </span>
                   )}
@@ -431,14 +451,25 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
             </span>
           </div>
           {claim.qualifier ? (
-            <span className="mono text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-claim-qualifier={claim.qualifier.result_metadata_derivation}>
+            <span
+              className="mono text-[9.5px] leading-[1.5]"
+              style={{ color: "var(--ink-soft)" }}
+              data-claim-qualifier={claim.qualifier.result_metadata_derivation}
+              title={
+                claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_SAME_LEVEL"
+                  ? "certify_result_metadata derives the same level as the catalog."
+                  : claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_OTHER_LEVEL"
+                    ? `certify_result_metadata derives L${claim.qualifier.result_metadata_level}; the catalog level is the Portal record.`
+                    : "certify_result_metadata has no branch for this contract; the catalog level is the Portal record."
+              }
+            >
               {claim.qualifier.level_description} ·{" "}
               {/* E1: the engine's certification token is printed as a token (`CLOSE_TARGET_CERTIFIED`), never as prose. */}
               {claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_SAME_LEVEL"
-                ? `certify_result_metadata derives the same level (${claimToken(claim.qualifier.result_metadata_status ?? "not published")})`
+                ? `certify_result_metadata = ${claimToken(claim.qualifier.result_metadata_status ?? "not published")}`
                 : claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_OTHER_LEVEL"
-                  ? `certify_result_metadata derives L${claim.qualifier.result_metadata_level} (${claimToken(claim.qualifier.result_metadata_status ?? "not published")}) — the catalog level is the Portal record`
-                  : "certify_result_metadata has no branch for this contract — the catalog level is the Portal record"}
+                  ? `certify_result_metadata ≠ L${claim.qualifier.result_metadata_level} ${claimToken(claim.qualifier.result_metadata_status ?? "not published")}`
+                  : "certify_result_metadata — no branch"}
             </span>
           ) : null}
         </div>
@@ -521,7 +552,8 @@ function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
       ) : null}
       {fact.required_request_fields && fact.required_request_fields.length > 0 ? (
         <span className="text-[10px]" style={{ color: "var(--ink-soft)" }} data-required-fields={fact.schedule}>
-          needs <span className="mono">{fact.required_request_fields.join(", ")}</span> (requested-spec v2) — preflight refuses it without them.
+          <span title="Requested-spec v2 fields; preflight refuses the run without them." className="cursor-help">needs</span>{" "}
+          <span className="mono">{fact.required_request_fields.join(", ")}</span>
         </span>
       ) : null}
       <details className="text-[10.5px]" data-claim-facts={fact.schedule}>
@@ -812,15 +844,26 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
             ← this run
           </span>
         ) : null}
-        <span className="ml-auto">
+        <span className="ml-auto flex flex-wrap items-baseline gap-x-3">
+          <Link
+            to="/research/quantbt/runs/new?step=optimization"
+            className="mono text-[10px] font-semibold uppercase tracking-[.05em]"
+            style={{ color: "var(--ink-soft)" }}
+            data-declare-mode={mode.mode_id}
+            title={`Declare a run: New Run opens at Optimization, where ${mode.mode_id} is chosen`}
+            aria-label={`Declare a run in ${mode.mode_id}`}
+          >
+            declare →
+          </Link>
           {opensSearch && runId ? (
             <Link
               to={`/research/quantbt/runs/${encodeURIComponent(runId)}/search#${encodeInspectionCursor({ stage: "search", mode: mode.mode_id, schedule })}`}
               className="mono text-[10px] font-semibold uppercase tracking-[.05em]"
               style={{ color: "var(--accent)" }}
               data-open-search={mode.mode_id}
+              title="Open this run's Search & Selection with this mode and schedule"
             >
-              open search &amp; selection →
+              search &amp; selection →
             </Link>
           ) : (
             <Link
@@ -828,9 +871,9 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
               className="mono text-[10px] font-semibold uppercase tracking-[.05em]"
               style={{ color: "var(--accent)" }}
               data-find-runs={mode.mode_id}
-              title={known ? "not this run's mode — find runs that ran it" : undefined}
+              title={known ? "Not this run's mode — find runs that ran it" : "Find runs that ran this mode"}
             >
-              find runs in this mode →
+              runs in mode →
             </Link>
           )}
         </span>
@@ -861,7 +904,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
           ) : facts ? (
             <NotPublished fact={facts.reads as AtlasNotPublishedFact} label="reads" />
           ) : (
-            <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }}>This manifest publishes no reads for this mode.</span>
+            <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} title="This manifest publishes no reads for this mode.">reads — not published</span>
           )}
           <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
             {mode.objective_summary}
@@ -945,8 +988,8 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
           {fact ? (
             <ScheduleClaim fact={fact} />
           ) : (
-            <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-facts-unpublished>
-              This manifest publishes no engine facts for this mode × schedule.
+            <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-facts-unpublished title="This manifest publishes no engine facts for this mode × schedule.">
+              engine facts — not published
             </span>
           )}
         </div>
@@ -1378,14 +1421,14 @@ export function EngineAtlas({
                 Evidence Flow
               </Link>
             ) : (
-              /* Without a run there is no Evidence Flow to return to; the
-                 crumb says where the Atlas sits without pretending to link. */
-              <span style={{ color: "var(--ink-soft)" }} title="Open the Atlas from a run's Evidence Flow to link back to it.">
-                Evidence Flow
-              </span>
+              /* Without a run there is no Evidence Flow to return to; the way
+                 out is the Journey Map the Atlas is a reference page of. */
+              <Link to="/research/quantbt/journey" style={{ color: "var(--accent)" }} data-crumb-journey>
+                Journey Map
+              </Link>
             )}
             <span style={{ color: "var(--ink-faint)" }}>/</span>
-            <span style={{ color: "var(--ink)" }}>Engine Atlas</span>
+            <span style={{ color: "var(--ink)" }} aria-current="page">Engine Atlas</span>
           </nav>
           <h1
             className="text-[22px] font-light tracking-[-.01em]"
@@ -1401,6 +1444,14 @@ export function EngineAtlas({
               Read from {doc.current_release.release_id}
             </p>
           ) : null}
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-3" data-atlas-exits>
+              <Link to="/research/quantbt/runs" className="mono text-[10px]" style={{ color: "var(--accent)" }} data-exit-library title="Run Library">
+                Run Library →
+              </Link>
+              <Link to="/research/quantbt/runs/new?step=route" className="mono text-[10px]" style={{ color: "var(--accent)" }} data-exit-new-run title="Declare a run: New Run at the Route step">
+                New Run →
+              </Link>
+            </span>
         </div>
         )}
 

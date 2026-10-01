@@ -8,13 +8,46 @@
  * unmounted.
  */
 
+import { useCallback, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+
 import { AlphaImport } from "./AlphaImport";
 import { useAlphaImport } from "./useAlphaImport";
 
+/** Same shape `useAlphaImport` admits for a registry filter; anything else is not mirrored into the URL. */
+const ALPHA_QUERY = /^[a-z][a-z0-9-]{2,63}$/;
+
+/**
+ * F2b: `?alpha=<id>` is the screen's one piece of context. It arrives from
+ * Lineage ("import new version →"), pre-fills the alpha id (so the registry is
+ * already filtered to it), and is kept in step with a valid typed id with
+ * `replace`, so "copy link" and Back land on the same alpha. The uploaded bytes
+ * and receipts are never in the URL: they belong to this tab.
+ */
 export function AlphaImportRoute() {
-  const controller = useAlphaImport();
+  const [params, setParams] = useSearchParams();
+  const [initialAlpha] = useState(() => params.get("alpha") ?? "");
+  const controller = useAlphaImport(undefined, initialAlpha);
+  const { onAlphaIdChange } = controller;
+  const mirrorAlpha = useCallback(
+    (value: string) => {
+      onAlphaIdChange(value);
+      const typed = value.trim();
+      if (!ALPHA_QUERY.test(typed)) return;
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.set("alpha", typed);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [onAlphaIdChange, setParams],
+  );
   return (
     <AlphaImport
+      contextAlpha={ALPHA_QUERY.test(initialAlpha) ? initialAlpha : null}
       sourceText={controller.sourceText}
       fileName={controller.fileName}
       onSourceChange={controller.onSourceChange}
@@ -34,7 +67,7 @@ export function AlphaImportRoute() {
       activationPending={controller.activationPending}
       refusal={controller.refusal}
       alphaId={controller.alphaId}
-      onAlphaIdChange={controller.onAlphaIdChange}
+      onAlphaIdChange={mirrorAlpha}
       onParse={controller.onParse}
       onRunGates={controller.onRunGates}
       onRegister={controller.onRegister}

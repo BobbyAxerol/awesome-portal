@@ -90,6 +90,27 @@ export const INNER_CAPTION =
 
 export const HOLDOUT_RULE_NO_READ = "No panel on any screen reads a bar inside this span.";
 
+/** F2b: the short word the holdout note prints; the sentence above rides in its tooltip. */
+export const HOLDOUT_NEVER_READ = "never read";
+
+/** The three windows Screen 08 can show (`?window=`, default `oos`). */
+export type ExecuteWindow = "is" | "oos" | "holdout";
+
+/**
+ * F2b: where a window of this screen opens Screen 08 — the window in the query
+ * (`?window=is|oos|holdout`), the fold and the rest of the cursor in the hash,
+ * exactly as every other deep-dive link carries them, so Back and "copy link"
+ * restore the same view.
+ */
+export function executeWindowHref(runPath: string, window: ExecuteWindow, cursor: EvidenceCursor, fold?: number): string {
+  return deepDiveHref(`${runPath}/execute?window=${window}`, { ...cursor, ...(fold === undefined ? {} : { fold }), stage: "execute" });
+}
+
+/** A drawn window key → the Screen 08 window it opens; the warmup is read by nothing and opens nothing. */
+function executeWindowOf(key: string): ExecuteWindow | null {
+  return key === "is" ? "is" : key === "outer_oos" ? "oos" : null;
+}
+
 export const HOLDOUT_RULE_UNLOCK =
   "Unlock is a one-time audited read that creates a sibling attempt — never a mutation of this run.";
 
@@ -468,11 +489,16 @@ function WindowAnatomy({
   timeline,
   windows,
   timelineClosed = false,
+  runPath,
+  cursor,
 }: {
   timeline: Range;
   windows: DrawnWindow[];
   /** W3b: an axis read from the fold plan ends on its last bar, inclusive. */
   timelineClosed?: boolean;
+  /** F2b: the run's path and the cursor, so a window opens Screen 08 on itself. */
+  runPath: string;
+  cursor: EvidenceCursor;
 }) {
   const placed = useMemo(
     () =>
@@ -532,20 +558,29 @@ function WindowAnatomy({
             const text = `${window.label} · ${exact(window.span.start_utc_ms)} → ${exact(window.span.end_exclusive_utc_ms)}${
               window.bars === null ? "" : ` · ${bars(window.bars)}`
             } · ${window.role}`;
-            return (
-              <span
+            const opens = executeWindowOf(window.key);
+            const common = {
+              "data-window": window.key,
+              "data-hairline": window.hairline ? "true" : "false",
+              className: "absolute top-0 h-full rounded-[3px]",
+              style: {
+                left: `${window.leftPercent}%`,
+                width: `${Math.max(window.widthPercent, HAIRLINE_PERCENT)}%`,
+                background: WINDOW_TONE[window.key] ?? "var(--line)",
+              },
+            } as const;
+            /* F2b: IS and outer OOS open Screen 08 on that window; the legend row below is the keyboard path. */
+            return opens === null ? (
+              <span key={window.key} {...common} role="img" aria-label={text} title={text} />
+            ) : (
+              <Link
                 key={window.key}
-                data-window={window.key}
-                data-hairline={window.hairline ? "true" : "false"}
-                role="img"
-                aria-label={text}
-                title={text}
-                className="absolute top-0 h-full rounded-[3px]"
-                style={{
-                  left: `${window.leftPercent}%`,
-                  width: `${Math.max(window.widthPercent, HAIRLINE_PERCENT)}%`,
-                  background: WINDOW_TONE[window.key] ?? "var(--line)",
-                }}
+                {...common}
+                to={executeWindowHref(runPath, opens, cursor)}
+                tabIndex={-1}
+                aria-label={`${text} — open in Execute Replay`}
+                title={`${text}\nopen ${opens.toUpperCase()} in Execute Replay`}
+                data-window-link={opens}
               />
             );
           })}
@@ -570,7 +605,20 @@ function WindowAnatomy({
               className="inline-block h-[8px] w-[8px] rounded-[1px]"
               style={{ background: WINDOW_TONE[window.key] ?? "var(--line)" }}
             />
-            <span className="mono text-[10px]">{window.label}</span>
+            {executeWindowOf(window.key) === null ? (
+              <span className="mono text-[10px]">{window.label}</span>
+            ) : (
+              <Link
+                to={executeWindowHref(runPath, executeWindowOf(window.key) as ExecuteWindow, cursor)}
+                className="mono text-[10px] underline decoration-dotted underline-offset-2"
+                style={{ color: "var(--accent)" }}
+                data-window-open={executeWindowOf(window.key) ?? undefined}
+                aria-label={`${window.label} — open in Execute Replay`}
+                title="open this window in Execute Replay"
+              >
+                {window.label} ↗
+              </Link>
+            )}
             <span
               className="mono text-[9.5px]"
               style={{ color: "var(--ink-faint)" }}
@@ -665,9 +713,10 @@ function FoldLane({ slot }: { slot: FoldsSlot }) {
         className="text-[10.5px] leading-[1.5]"
         style={{ color: "var(--ink-faint)" }}
         data-fold-lane="not-applicable"
-        title={`${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
+        title={`${laneNotApplicableSentence(slot.answer)}\n${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
       >
-        retained fold lane — {laneNotApplicableSentence(slot.answer)}
+        retained fold lane — not applicable{" "}
+        <span className="mono text-[9px] break-all">{slot.answer.lane.reason_code}</span>
       </span>
     );
   }
@@ -681,7 +730,7 @@ function FoldLane({ slot }: { slot: FoldsSlot }) {
             <RefusalNote refusal={slot.refusal} />
           </span>
         )}
-        <span>No fold row is drawn — a fold here would be this screen's invention.</span>
+        <span title="A fold row here would be this screen's invention, so none is drawn.">no fold row drawn</span>
       </span>
     );
   }
@@ -864,6 +913,26 @@ function FoldRows({
   );
 }
 
+/**
+ * F2b: the row label is the way into Screen 08's HOLDOUT window. That window
+ * answers with the typed absence the server gives for a sealed or absent
+ * holdout; the link reads no bar inside the span.
+ */
+function HoldoutLabel({ runPath, cursor }: { runPath: string; cursor: EvidenceCursor }) {
+  return (
+    <Link
+      to={executeWindowHref(runPath, "holdout", cursor)}
+      className="mono w-[64px] flex-none text-left text-[11px] underline decoration-dotted underline-offset-2"
+      style={{ color: "var(--accent-2)" }}
+      data-window-open="holdout"
+      aria-label="holdout — open the holdout window in Execute Replay"
+      title="open the HOLDOUT window in Execute Replay (shows what the server publishes about it; no bar is read)"
+    >
+      holdout
+    </Link>
+  );
+}
+
 /* ------------------------------------------------------------ holdout row */
 
 /**
@@ -872,7 +941,7 @@ function FoldRows({
  * gold mono 9 px. The HiFi label is `SEALED · LOCKED · never read`; no seal
  * record is published, so the label is the server's own state words.
  */
-function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timeline: Range | null }) {
+function HoldoutBlock({ detail, timeline, runPath, cursor }: { detail: SplitDetailDocument; timeline: Range | null; runPath: string; cursor: EvidenceCursor }) {
   const holdout = detail.windows.holdout;
   const unlock = detail.actions.holdout_unlock;
   const bound = hasRange(holdout);
@@ -896,9 +965,7 @@ function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timel
   return (
     <div className="flex flex-col gap-[6px]" data-holdout={bound ? "bound" : "absent"}>
       <div className="flex items-center gap-2 pt-1">
-        <span className="mono w-[64px] flex-none text-[11px]" style={{ color: "var(--accent-2)" }}>
-          holdout
-        </span>
+        <HoldoutLabel runPath={runPath} cursor={cursor} />
         {facts ? (
           <span className="relative h-[16px] min-w-0 flex-1" data-holdout-track>
             {geometry ? (
@@ -956,8 +1023,8 @@ function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timel
         style={{ borderColor: "var(--accent-2)", color: "var(--ink-soft)" }}
         data-holdout-note
       >
-        <span data-holdout-rule="no-read">
-          {HOLDOUT_RULE_NO_READ}
+        <span data-holdout-rule="no-read" title={HOLDOUT_RULE_NO_READ}>
+          <span className="mono text-[10px] uppercase tracking-[.07em]">{HOLDOUT_NEVER_READ}</span>
           {facts ? (
             <>
               {" "}
@@ -1018,8 +1085,8 @@ function HoldoutBars({ fact }: { fact: AbsentFact }) {
       data-absence-key="holdout_bars"
     >
       · bars{" "}
-      <span className="mono italic" title={reason} data-holdout-bars-reason={reason}>
-        {words ?? `${ABSENT_WORDS[fact.state]} (${reason})`}
+      <span className="mono italic" title={words ? `${words}\n${reason}` : reason} data-holdout-bars-reason={reason}>
+        {words ? words.split(" — ")[0] : `${ABSENT_WORDS[fact.state]} (${reason})`}
       </span>
     </span>
   );
@@ -1303,13 +1370,13 @@ function StitchDigest({ stitch }: { stitch: LaneStitch }) {
         style={{ color: verified ? "var(--ink-faint)" : "var(--bad)" }}
         title={
           verified
-            ? "Every retained segment names a fold of this plan, each fold has one segment, and the segments run in plan order over disjoint observations."
+            ? "Verified against the fold boundaries: every retained segment names a fold of this plan, each fold has one segment, and the segments run in plan order over disjoint observations."
             : reasonCodeSentence(stitch.boundary_check_reason_code) ?? undefined
         }
         data-stitch-verdict={stitch.boundary_check}
       >
         {verified
-          ? `verified against fold boundaries · ${stitch.segment_count} segments, ${stitch.observation_count} retained observations`
+          ? `verified · ${stitch.segment_count} segments · ${stitch.observation_count} observations`
           : `does not line up with the fold boundaries · ${stitch.boundary_check_reason_code ?? stitch.boundary_check}`}
       </span>
       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-stitch-basis={stitch.basis}>
@@ -1360,15 +1427,13 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
 }
 
 /** The retained holdout fact (current-source evidence `claim.holdout`), stated once with its code. */
-function LaneHoldout({ lane }: { lane: LaneView }) {
+function LaneHoldout({ lane, runPath, cursor }: { lane: LaneView; runPath: string; cursor: EvidenceCursor }) {
   const fact = lane.holdout;
   const applicable = !(fact.state === "ready" && fact.value.state === "NOT_APPLICABLE");
   return (
     <div className="flex flex-col gap-[6px]" data-holdout="retained">
       <div className="flex items-baseline gap-2 pt-1">
-        <span className="mono w-[64px] flex-none text-[11px]" style={{ color: "var(--accent-2)" }}>
-          holdout
-        </span>
+        <HoldoutLabel runPath={runPath} cursor={cursor} />
         <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-[11px]" style={{ color: "var(--ink-soft)" }}>
           {fact.state === "loading" ? (
             <Reading what="the retained claim" />
@@ -1403,7 +1468,11 @@ function LaneHoldout({ lane }: { lane: LaneView }) {
         style={{ borderColor: "var(--accent-2)", color: "var(--ink-soft)" }}
         data-holdout-note
       >
-        {applicable ? <span data-holdout-rule="no-read">{HOLDOUT_RULE_NO_READ}</span> : null}
+        {applicable ? (
+          <span data-holdout-rule="no-read" title={HOLDOUT_RULE_NO_READ} className="mono text-[10px] uppercase tracking-[.07em]">
+            {HOLDOUT_NEVER_READ}
+          </span>
+        ) : null}
         <span className="flex flex-wrap items-center gap-2" data-holdout-rule="unlock">
           <span
             data-action-unlock={applicable ? "NOT_PUBLISHED" : "NOT_APPLICABLE"}
@@ -1584,7 +1653,7 @@ export function SplitScreen({
             {/* ------------------------------------------- protocol card */}
             <section className="rounded-[6px] border" style={RAISED_STYLE} data-protocol-strip>
               <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--line-soft)" }}>
-                <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
+                <span className={LABEL} style={{ color: "var(--ink-faint)" }} title="A run's protocol is fixed at submit." data-protocol-label>
                   protocol
                 </span>
                 {kind !== null ? (
@@ -1618,9 +1687,6 @@ export function SplitScreen({
                     <Pill on={fixed}>{detail.protocol.selection.state}</Pill>
                   </span>
                 )}
-                <span className="ml-auto text-[10px]" style={{ color: "var(--ink-faint)" }}>
-                  a run's protocol is fixed at submit
-                </span>
               </div>
 
               <div
@@ -1800,13 +1866,27 @@ export function SplitScreen({
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                   S1 · fold construction{kind ? ` — ${kind}` : ""}
                 </span>
-                <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-                  warmup = grey · IS = mist · outer OOS = accent · holdout = gold hatch
+                <span className="mono flex flex-wrap items-center gap-x-3 text-[10px]" style={{ color: "var(--ink-faint)" }} data-window-key>
+                  {[
+                    ["warmup", "var(--line)", "grey"],
+                    ["IS", "var(--viz-train)", "mist"],
+                    ["outer OOS", "var(--role-oos)", "accent"],
+                    ["holdout", HOLDOUT_HATCH, "gold hatch"],
+                  ].map(([label, fill, tone]) => (
+                    <span key={label} className="inline-flex items-center gap-1" title={`${label} = ${tone}`}>
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-[8px] w-[12px] rounded-[1px]"
+                        style={{ background: fill, border: label === "holdout" ? "1px dashed var(--accent-2)" : undefined }}
+                      />
+                      {label}
+                    </span>
+                  ))}
                 </span>
               </div>
 
               {timeline ? (
-                <WindowAnatomy timeline={timeline} windows={drawn} timelineClosed={lane?.span?.closed ?? false} />
+                <WindowAnatomy timeline={timeline} windows={drawn} timelineClosed={lane?.span?.closed ?? false} runPath={runPath} cursor={cursor} />
               ) : lane ? (
                 lane.identityLoading ? <Reading what="the walk-forward span" /> : <LaneAbsent reason={NO_RETAINED_FIELD} what="timeline" />
               ) : (
@@ -1856,14 +1936,14 @@ export function SplitScreen({
 
               <FoldAnatomy slot={folds} detail={detail} cursor={cursor} onFold={onFold} onNeeded={ensureFolds} />
 
-              {lane ? <LaneHoldout lane={lane} /> : <HoldoutBlock detail={detail} timeline={timeline} />}
+              {lane ? <LaneHoldout lane={lane} runPath={runPath} cursor={cursor} /> : <HoldoutBlock detail={detail} timeline={timeline} runPath={runPath} cursor={cursor} />}
             </section>
 
             {/* ----------------------------------------- S2 · θ* flow */}
             <ThetaFlow detail={detail} folds={folds} cursor={cursor} onFold={onFold} lane={lane} />
 
             {/* --------------------------------------------- fold table */}
-            <FoldTable detail={detail} folds={folds} cursor={cursor} onFold={onFold} lane={lane} />
+            <FoldTable detail={detail} folds={folds} cursor={cursor} onFold={onFold} runPath={runPath} lane={lane} />
 
             {/* ------------------------------------------ three cards */}
             <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-[1.1fr_1fr_1fr]">
@@ -1967,12 +2047,23 @@ export function SplitScreen({
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                   stitched OOS provenance
                 </span>
-                <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
+                <p className="flex flex-wrap items-baseline gap-x-2 text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
                   {lane
-                    ? `${lane.split.fold_plan.folds.length} test windows · series on Evidence Flow`
+                    ? `${lane.split.fold_plan.folds.length} test windows`
                     : hasRange(detail.windows.outer_oos)
-                      ? "one outer OOS window · no stitched series published"
+                      ? "one outer OOS window · no stitched series"
                       : "no outer OOS window published"}
+                  {lane ? (
+                    <Link
+                      to={deepDiveHref(`${runPath}/evidence`, { ...cursor, stage: "summary" })}
+                      className="mono text-[10px]"
+                      style={{ color: "var(--accent)" }}
+                      data-action="stitched-series"
+                      title="The stitched OOS series is drawn on the Evidence Flow Summary tab."
+                    >
+                      series on Evidence Flow →
+                    </Link>
+                  ) : null}
                 </p>
                 {lane && lane.split.fold_plan.folds.length > 0 ? (
                   <span className="flex h-[10px] gap-[2px]" data-stitch-segments={lane.split.fold_plan.folds.length}>
@@ -2109,9 +2200,9 @@ function protocolSentence(detail: SplitDetailDocument, foldPlanReady: boolean): 
 /** W3b · the protocol note on a retained WFO run: one fact line from what the lane published. */
 function laneSentence(lane: LaneView): string {
   const parts: string[] = [];
-  if (lane.schedule === "global") parts.push("one global θ* traded on every fold");
+  if (lane.schedule === "global") parts.push("one global θ*");
   const oos = lane.split.guards?.oos_used_for_selection;
-  if (oos?.state === "AVAILABLE" && oos.value === true) parts.push("OOS used for selection (QuantBT)");
+  if (oos?.state === "AVAILABLE" && oos.value === true) parts.push("OOS used for selection");
   if (parts.length === 0) parts.push(`${lane.split.fold_plan.folds.length} outer folds · retained source`);
   return parts.join(" · ");
 }
@@ -2331,7 +2422,7 @@ function ThetaFlow({
             return (
               <ThetaLane
                 key={fold.fold_id}
-                id={fold.fold_id}
+                id={foldLabel(fold.fold_id)}
                 track={bounds}
                 is={train}
                 oos={test}
@@ -2539,12 +2630,14 @@ function FoldTable({
   folds,
   cursor,
   onFold,
+  runPath,
   lane = null,
 }: {
   detail: SplitDetailDocument;
   folds: FoldsSlot;
   cursor: EvidenceCursor;
   onFold: (fold: number) => void;
+  runPath: string;
   lane?: LaneView | null;
 }) {
   const is = hasRange(detail.windows.is) ? (detail.windows.is as Range) : null;
@@ -2593,6 +2686,8 @@ function FoldTable({
                   style={{ background: current ? "var(--accent-soft)" : "transparent" }}
                   onClick={() => onFold(number)}
                   onKeyDown={(event) => {
+                    /* A key pressed on the replay link inside the row is the link's, not the row's. */
+                    if (event.target !== event.currentTarget) return;
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       onFold(number);
@@ -2605,7 +2700,18 @@ function FoldTable({
                     className={TD}
                     style={{ boxShadow: `inset 2px 0 0 ${current ? "var(--accent)" : "transparent"}` }}
                   >
-                    {foldLabel(fold.fold_id)}
+                    {foldLabel(fold.fold_id)}{" "}
+                    <Link
+                      to={executeWindowHref(runPath, "oos", cursor, number)}
+                      className="ml-1 text-[11px]"
+                      style={{ color: "var(--accent)" }}
+                      data-fold-replay={number}
+                      aria-label={`${foldLabel(fold.fold_id)} test window — open in Execute Replay`}
+                      title="open this fold's OOS window in Execute Replay"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      ↗
+                    </Link>
                   </td>
                   <SpanCell range={train} closed />
                   <CountCell value={anatomy?.train_bars ?? null} reason={anatomy?.reason_code ?? null} />
@@ -2633,7 +2739,15 @@ function FoldTable({
             })
           ) : is && oos ? (
             <tr data-fold-table-row="three-window">
-              <td className={TD}>IS / OOS</td>
+              <td className={TD}>
+                <Link to={executeWindowHref(runPath, "is", cursor)} style={{ color: "var(--accent)" }} data-window-open="is" title="open the IS window in Execute Replay">
+                  IS
+                </Link>
+                {" / "}
+                <Link to={executeWindowHref(runPath, "oos", cursor)} style={{ color: "var(--accent)" }} data-window-open="oos" title="open the OOS window in Execute Replay">
+                  OOS
+                </Link>
+              </td>
               <SpanCell range={is} />
               <td className={`${TD} text-right`} style={{ color: "var(--ink-soft)" }}>
                 {formatMetric(barsOf(detail.windows.is), "bars") ?? "not published"}

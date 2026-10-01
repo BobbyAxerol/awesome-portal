@@ -354,17 +354,24 @@ describe("step 3 — registration rows, where it goes next, and OL-01", () => {
     expect(reason.textContent).toContain(RUN_ADMISSION_COPY[served.code!]);
     expect(reason.textContent).toContain(served.code!);
     expect(document.body.textContent).not.toMatch(/OL-01|Not admitted yet/);
-    // No anchor anywhere hands this version to New Run.
+    // No anchor anywhere hands this version to New Run. (F2b: the header's plain "next" link may carry the alpha, never the version.)
     for (const anchor of Array.from(document.querySelectorAll("a[href]"))) {
-      expect(anchor.getAttribute("href")).not.toMatch(/runs\/new\?/);
+      expect(anchor.getAttribute("href")).not.toMatch(/runs\/new\?.*av=/);
     }
   });
 
   it("keeps the lineage and run-library links working", () => {
     render(<AlphaImport {...registered()} />);
     const links = document.querySelector("[data-where-next] .links") as HTMLElement;
-    expect(within(links).getByText("lineage").getAttribute("href")).toContain(REGISTRATION.alpha_id);
-    expect(within(links).getByText("run library").getAttribute("href")).toBe("/research/quantbt/runs");
+    /* F2b: both links keep the alpha, and the lineage link names the registered version. */
+    const lineage = within(links).getByText("lineage →");
+    expect(lineage.getAttribute("href")).toBe(
+      `/research/quantbt/alphas/${encodeURIComponent(REGISTRATION.alpha_id)}/lineage?av=${encodeURIComponent(REGISTRATION.alpha_version_id)}`,
+    );
+    expect(lineage.getAttribute("title")).toContain(REGISTRATION.version_label);
+    expect(within(links).getByText("run library").getAttribute("href")).toBe(
+      `/research/quantbt/runs?group=1&alpha=${encodeURIComponent(REGISTRATION.alpha_id)}`,
+    );
   });
 });
 

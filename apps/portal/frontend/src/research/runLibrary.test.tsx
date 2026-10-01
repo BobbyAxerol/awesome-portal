@@ -284,7 +284,8 @@ describe("P12-T03 — the server owns comparability", () => {
     view({ response: page([a, b]), filters: { ...EMPTY_FILTERS, sel: ["A", "B"] } });
 
     expect(document.querySelector("[data-compare-bar]")?.getAttribute("data-compare-bar")).toBe("refused");
-    expect(screen.getByText(COMPARE_REFUSAL)).toBeTruthy();
+    /* F2b: five words in the bar, the verbatim rule is the tooltip on the note and on the button. */
+    expect(screen.getByText("different contract key — compare refused").getAttribute("title")).toBe(COMPARE_REFUSAL);
     const button = document.querySelector('[data-action="open-compare"]') as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     expect(button.getAttribute("title")).toBe(COMPARE_REFUSAL);

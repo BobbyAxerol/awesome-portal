@@ -56,6 +56,8 @@ import { iso } from "./utcMinute";
 import { formatAxisValue, formatCount, formatFractionAxis, formatMetric, shortId } from "./researchFormat";
 import { ShortId } from "./ShortId";
 import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
+import { withWindow, type ExecWindow } from "./executeWindows";
+import { QUANTBT_ROOT } from "../features/quantbt/routes";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -175,6 +177,37 @@ function HubCandleOverview({ replay }: { replay: Replay }) {
    * screen must name that rather than imply the run had no bars.
    */
   const overview = replay.candle_overview as Replay["candle_overview"] | undefined;
+  /*
+   * F2b: `candle_overview` and `market_overview` describe the same bounded
+   * OHLC overview (same scope, same bucket count and envelope on a real P04
+   * run), so there is ONE chart, from `candle_overview`. `market_overview`
+   * is drawn only when a responder that has not rolled forward publishes no
+   * `candle_overview` at all and its own state is AVAILABLE — with a
+   * "source overview" chip, and never both.
+   */
+  const legacy = replay.market_overview;
+  if (!overview && legacy?.state === "AVAILABLE" && legacy.data) {
+    return (
+      <div className="flex flex-col gap-1 border-b pb-1.5" style={{ borderColor: "var(--line-soft)" }} data-candle-overview="AVAILABLE" data-overview-source="market_overview">
+        <span className="mono flex items-center gap-2 text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
+          price overview
+          <span
+            className="rounded-[3px] border px-[5px] text-[9px] normal-case leading-[14px] tracking-normal"
+            style={{ borderColor: "var(--line)" }}
+            title="This server answered with the legacy market overview (market_overview): the same bounded OHLC overview, not a per-bar replay."
+            data-overview-chip="source"
+          >
+            source overview
+          </span>
+        </span>
+        <CandleOverviewStrip
+          overview={legacy.data}
+          scope="out-of-sample window"
+          label="out-of-sample window price range, as the source's bounded OHLC overview"
+        />
+      </div>
+    );
+  }
   if (
     !overview
     || overview.state !== "AVAILABLE"
@@ -1128,7 +1161,7 @@ function RetainedBody({
                   title={inFlight ? "A window is being read." : !page.has_previous ? "This window starts at the first observation." : undefined}
                   onClick={() => controller.retainedPreviousWindow?.()}
                 >
-                  ‹ previous window
+                  ‹ earlier
                 </button>
                 <button
                   type="button"
@@ -1138,7 +1171,7 @@ function RetainedBody({
                   title={inFlight ? "A window is being read." : !page.has_more ? "This window ends at the last observation." : undefined}
                   onClick={() => controller.retainedNextWindow?.()}
                 >
-                  next window ›
+                  later ›
                 </button>
                 <button
                   type="button"
@@ -1263,6 +1296,9 @@ export interface ExecuteScreenProps {
    * same reads and the same blocks as on its own route.
    */
   embedded?: boolean;
+  /** `?window=` — IS | OOS | HOLDOUT (default OOS), owned by the container so the URL carries it. */
+  windowKey?: ExecWindow;
+  onWindow?: (next: ExecWindow) => void;
 }
 
 export function ExecuteScreen({
@@ -1272,6 +1308,8 @@ export function ExecuteScreen({
   transport,
   band = { state: "idle" },
   embedded = false,
+  windowKey = "oos",
+  onWindow,
 }: ExecuteScreenProps) {
   const { replay, state } = controller;
   const replayWindow = replay?.equity_replay;
@@ -1312,7 +1350,7 @@ export function ExecuteScreen({
       <>
       <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link
-          to={deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "execute" })}
+          to={withWindow(deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "execute" }), windowKey)}
           style={{ color: "var(--accent)" }}
           data-action="back-to-hub"
         >
@@ -1326,7 +1364,7 @@ export function ExecuteScreen({
         </span>
         <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
-          to={deepDiveHref(`/research/quantbt/runs/${run}/freeze`, { ...cursor, stage: "freeze" })}
+          to={withWindow(deepDiveHref(`/research/quantbt/runs/${run}/freeze`, { ...cursor, stage: "freeze" }), windowKey)}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="back-to-freeze"
@@ -1335,7 +1373,7 @@ export function ExecuteScreen({
         </Link>
         <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
-          to={`/research/quantbt/runs/${run}/report`}
+          to={withWindow(deepDiveHref(`/research/quantbt/runs/${run}/report`, { ...cursor, stage: "execute" }), windowKey)}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-next="run-report"
@@ -1351,6 +1389,25 @@ export function ExecuteScreen({
       </div>
       <div className="flex flex-wrap items-center gap-3" data-header-actions>
         <CopyEvidenceLink />
+        {/* Ways out that keep the run in hand: the windows' own screen, and the library the run came from. */}
+        <Link
+          to={withWindow(deepDiveHref(`/research/quantbt/runs/${run}/split`, { ...cursor, stage: "split" }), windowKey)}
+          className="mono text-[10px]"
+          style={{ color: "var(--accent)" }}
+          data-action="to-split"
+          title="Split — the IS / OOS / holdout windows of this run"
+        >
+          Split ↗
+        </Link>
+        <Link
+          to={`${QUANTBT_ROOT}/runs`}
+          className="mono text-[10px]"
+          style={{ color: "var(--accent)" }}
+          data-action="to-run-library"
+          title="Run Library"
+        >
+          Run Library ↗
+        </Link>
       </div>
       </>
       )}
@@ -1362,6 +1419,8 @@ export function ExecuteScreen({
           controller={controller}
           transport={transport}
           band={band}
+          windowKey={windowKey}
+          onWindow={onWindow}
         />
       ) : lane === "retained" && retainedReplay && controller.retained.state === "ready" ? (
         <RetainedBody
@@ -1509,7 +1568,7 @@ export function ExecuteScreen({
                     }
                     onClick={controller.previousWindow}
                   >
-                    ‹ previous window
+                    ‹ earlier
                   </button>
                   <button
                     type="button"
@@ -1525,7 +1584,7 @@ export function ExecuteScreen({
                     }
                     onClick={controller.nextWindow}
                   >
-                    next window ›
+                    later ›
                   </button>
                   <button
                     type="button"

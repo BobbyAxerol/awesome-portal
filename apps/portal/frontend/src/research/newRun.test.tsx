@@ -1077,7 +1077,9 @@ describe("W5a · P16/P19 — a what-if fork opens as a sibling, never an edit", 
     expect(banner.getAttribute("data-fork-state")).toBe("ready");
     expect(banner.textContent).toContain("sibling of");
     expect(banner.querySelector("[data-fork-pins]")?.textContent).toBe("rvol 1.4 · slpercent 2.3");
-    expect(banner.textContent).toContain("The frozen run is untouched.");
+    /* F2b: the sentence is a tooltip now; the banner carries the two-word state. */
+    expect(banner.querySelector("[title*='The frozen run is untouched.']")).not.toBeNull();
+    expect(banner.textContent).not.toContain("The frozen run is untouched.");
     expect(banner.querySelector("a")?.getAttribute("href")).toBe("/research/quantbt/runs/rrun_parent/freeze");
   });
 
@@ -1304,7 +1306,7 @@ describe("FG-08 — Screen 02 never renders the server's refusal prose", () => {
     const preview = document.querySelector("[data-preflight-preview]") as HTMLDetailsElement;
     expect(preview.open).toBe(false);
     expect(document.querySelector("[data-preflight-preview-summary]")!.textContent).toBe(
-      "what preflight will check — 6 panels, none read yet",
+      "preflight checks · 6 panels · not read",
     );
   });
 });
@@ -1400,5 +1402,42 @@ describe("FG-08 (A2b) — Screen 02 run create and preflight hook never carry se
     expect(preflightState.reason).not.toContain(SENTINEL);
     expect(preflightState.detail ?? "").not.toContain(SENTINEL);
     expect(refusal!.message).toBe(SENTINEL);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * F2b · S02 — flow links and less prose
+ * ---------------------------------------------------------------------- */
+
+describe("F2b S02 — the way out and the way back", () => {
+  it("the header links the Library, the import and the atlas, and carries no subtitle sentence", () => {
+    view();
+    const href = (name: string) => document.querySelector(`[data-link="${name}"]`)?.getAttribute("href");
+    expect(href("run-library")).toBe("/research/quantbt/runs");
+    expect(href("alpha-import")).toBe("/research/quantbt/alpha-import");
+    expect(href("atlas")).toBe("/research/quantbt/atlas");
+    expect(document.body.textContent).not.toContain("Each step validates on its own");
+    expect(document.querySelector("h1")?.getAttribute("title")).toContain("Each step validates on its own");
+  });
+
+  it("the release note is the pinned engine; the sentence is its tooltip", () => {
+    view();
+    const note = document.querySelector("[data-release-note]") as HTMLElement;
+    expect(note.textContent).toContain("engine ");
+    expect(note.textContent).not.toContain("read from the INSTALLED");
+    expect(note.getAttribute("title")).toContain("installed engine release");
+  });
+
+  it("a copied run's banner links the source run and keeps the sentence in a tooltip", () => {
+    view({ cloneSource: { runId: "rrun_src", state: OK } });
+    const banner = document.querySelector("[data-clone-source]") as HTMLElement;
+    expect(banner.querySelector('[data-link="clone-source"]')?.getAttribute("href")).toBe("/research/quantbt/runs/rrun_src/progress");
+    expect(banner.textContent).not.toContain("The original run is untouched");
+    expect(banner.querySelector("[title*='The original run is untouched']")).not.toBeNull();
+  });
+
+  it("the folded preview names its state in eight words or fewer", () => {
+    view({ initialStep: "review" });
+    expect(document.querySelector("[data-preflight-preview-summary]")!.textContent!.split(/\s+/).length).toBeLessThanOrEqual(8);
   });
 });

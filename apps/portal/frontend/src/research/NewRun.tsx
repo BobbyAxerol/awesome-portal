@@ -23,6 +23,7 @@
 
 import { LineageLink, lineageHref } from "./LineageLink";
 import { useEffect, useMemo, useState } from "react";
+import { Link as RouterLink, useInRouterContext } from "react-router-dom";
 
 import {
   ALPHA_VERSION_PUBLICATION_WORDS,
@@ -128,6 +129,20 @@ export const DEFAULTS_FOOTER =
 /** Spec 02 §10 — shown while the run's existence is unknown. */
 export const UNKNOWN_OUTCOME_NOTE =
   "The server did not say whether this run was created. Check again with the same request — a second submit could create a second run.";
+
+/** Router navigation inside the app (no page reload); a same-origin anchor in isolated panels and tests. */
+function Link({ to, children, ...rest }: { to: string; children: React.ReactNode } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href">) {
+  const inRouter = useInRouterContext();
+  return inRouter ? (
+    <RouterLink to={to} {...rest}>
+      {children}
+    </RouterLink>
+  ) : (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  );
+}
 
 /* ------------------------------------------------------------------ parts */
 
@@ -384,8 +399,8 @@ function ContextStep({
           >
             NOT_PUBLISHABLE
           </span>
-          <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            {SCRATCH_BANNER}
+          <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} title={SCRATCH_BANNER}>
+            no release candidate from a scratch run
           </span>
         </div>
       )}
@@ -887,12 +902,24 @@ function DataStep({
       {/* D4: what the pick did to the walk-forward dates — filled, kept, or
           why nothing was. Silent until a dataset is chosen. */}
       {draft.datasetId !== "" ? (
-        <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-window-prefill-status data-prefill-state={prefillPlan.state}>
+        <p
+          className="text-[9.5px] leading-[1.5]"
+          style={{ color: "var(--ink-soft)" }}
+          data-window-prefill-status
+          data-prefill-state={prefillPlan.state}
+          title={
+            prefillPlan.state !== "ready"
+              ? undefined
+              : prefilledNow
+                ? "Outer walk-forward bounds prefilled from this coverage — edit them in the Walk-forward step."
+                : "Coverage is published; the outer walk-forward bounds already hold your own values, so nothing was prefilled."
+          }
+        >
           {prefillPlan.state !== "ready"
             ? prefillPlan.reason
             : prefilledNow
-              ? "Outer walk-forward bounds prefilled from this coverage — edit them in the Walk-forward step."
-              : "Coverage is published; the outer walk-forward bounds already hold your own values, so nothing was prefilled."}
+              ? "Bounds prefilled from coverage"
+              : "Not prefilled — bounds already set"}
         </p>
       ) : null}
       {/* E4 (audit 02-12): the HiFi's declaration box. The registry already
@@ -1769,7 +1796,7 @@ function OptimizationStep({
           </span>
         ))}
         <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-defaults-footer>
-          {DEFAULTS_FOOTER}
+          <span title={DEFAULTS_FOOTER}>release-manifest defaults · untouched fields not serialized</span>
         </p>
       </div>
 
@@ -1901,7 +1928,7 @@ function ReviewRail({
           <p className="mt-1 text-[10px]" style={{ color: "var(--ink-faint)" }}>
             {draft.optimizationMode && draft.optimizationSchedule
               ? "No admitted mode × schedule fact was published for this selection."
-              : "Choose an admitted mode and schedule to read the release claim."}
+              : <span title="Choose an admitted mode and schedule to read the release claim.">Pick a mode and schedule.</span>}
           </p>
         )}
       </section>
@@ -2117,14 +2144,15 @@ export function NewRun(props: NewRunProps) {
     >
       <header className="flex flex-col gap-1.5 border-b pb-2.5" style={{ borderColor: "var(--line)" }}>
         <div className="flex flex-wrap gap-3 text-[10px] font-semibold" style={{ color: "var(--accent)" }}>
-          <a href="/research/quantbt/runs">Run Library</a>
-          <a href="/research/quantbt/alpha-import">Import a version</a>
-          <a href="/research/quantbt/atlas">Full route atlas</a>
+          <Link to="/research/quantbt/runs" data-link="run-library" title="Back to the Run Library">← Run Library</Link>
+          <Link to="/research/quantbt/alpha-import" data-link="alpha-import" title="Import a new alpha version, then come back here">Import a version</Link>
+          <Link to="/research/quantbt/atlas" data-link="atlas" title="Every route, protocol and ceiling the installed engine publishes">Full route atlas</Link>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <h1
             className="text-[22px] font-light tracking-[-.01em]"
             style={{ fontFamily: "Newsreader, Georgia, serif" }}
+            title={SUBTITLE}
           >
             New Run
           </h1>
@@ -2142,17 +2170,16 @@ export function NewRun(props: NewRunProps) {
           >
             {chip.text}
           </span>
-          <span className="mono ml-auto text-[10px]" style={{ color: "var(--ink-faint)" }} data-release-note>
-            routes, protocols and ceilings read from the INSTALLED engine release —{" "}
+          <span
+            className="mono ml-auto text-[10px]"
+            style={{ color: "var(--ink-faint)" }}
+            data-release-note
+            title="Routes, protocols and ceilings are read from the installed engine release."
+          >
+            engine{" "}
             {atlas ? `${atlas.current_release.package}==${atlas.current_release.expected_version} · ${atlas.current_release.release_id}` : "release not available"}
           </span>
         </div>
-        <p
-          className="text-[13px] italic"
-          style={{ fontFamily: "Newsreader, Georgia, serif", color: "var(--ink-faint)" }}
-        >
-          {SUBTITLE}
-        </p>
       </header>
 
       {cloneSource ? (
@@ -2169,9 +2196,9 @@ export function NewRun(props: NewRunProps) {
           {cloneSource.state.state === "available" ? (
             <>
               <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--accent)" }}>copied from</span>
-              <a className="mono" href={`/research/quantbt/runs/${encodeURIComponent(cloneSource.runId)}/progress`}>{shortId(cloneSource.runId)}</a>
-              <span style={{ color: "var(--ink-soft)" }}>
-                A new run with a NEW intent: change anything, then run a fresh preflight. The original run is untouched.
+              <Link className="mono" data-link="clone-source" title="Open the source run" to={`/research/quantbt/runs/${encodeURIComponent(cloneSource.runId)}/progress`}>{shortId(cloneSource.runId)}</Link>
+              <span style={{ color: "var(--ink-soft)" }} title="A new run with a NEW intent: change anything, then run a fresh preflight. The original run is untouched.">
+                new intent · fresh preflight
               </span>
               {draft.alphaId ? (
                 <LineageLink to={lineageHref(draft.alphaId, { av: draft.alphaVersionId || null })} className="mono" action="open-lineage">
@@ -2199,15 +2226,18 @@ export function NewRun(props: NewRunProps) {
           <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--warn)" }}>
             sibling of
           </span>
-          <a className="mono" href={`/research/quantbt/runs/${encodeURIComponent(forkSource.runId)}/freeze`}>{shortId(forkSource.runId)}</a>
+          <Link className="mono" data-link="fork-source" title="Open the frozen run this what-if forks" to={`/research/quantbt/runs/${encodeURIComponent(forkSource.runId)}/freeze`}>{shortId(forkSource.runId)}</Link>
           <span className="mono" style={{ color: "var(--ink-faint)" }}>· what-if {forkSource.cellId}</span>
           {forkSource.state === "ready" && forkSource.parameters ? (
             <>
               <span className="mono" data-fork-pins>
                 {Object.entries(forkSource.parameters).map(([name, value]) => `${name} ${value}`).join(" · ")}
               </span>
-              <span style={{ color: "var(--ink-soft)" }}>
-                forked from {forkSource.runId} · what-if — a new intent with its own preflight and config_hash, lineage-linked to that run. The frozen run is untouched.
+              <span
+                style={{ color: "var(--ink-soft)" }}
+                title={`Forked from ${forkSource.runId} · what-if — a new intent with its own preflight and config_hash, lineage-linked to that run. The frozen run is untouched.`}
+              >
+                new intent · own preflight
               </span>
               {draft.alphaId ? (
                 <LineageLink to={lineageHref(draft.alphaId, { av: draft.alphaVersionId || null })} className="mono" action="open-lineage">
@@ -2243,8 +2273,9 @@ export function NewRun(props: NewRunProps) {
                   minBodyHeight={48}
                 >
                   <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-missing-constraints>
-                    Not read for this declaration: {missing.join(", ")}. The checks that depend on
-                    them do not run here; the server still applies its own at preflight.
+                    <span title="The checks that depend on them do not run here; the server still applies its own at preflight.">
+                      Not read for this declaration: {missing.join(", ")}.
+                    </span>
                   </p>
                 </ResearchPanel>
               ) : (
@@ -2376,9 +2407,7 @@ export function NewRun(props: NewRunProps) {
                     style={{ color: "var(--ink-soft)" }}
                     data-preflight-preview-summary
                   >
-                    {preflightRefusal
-                      ? "what preflight checks — 6 panels, preflight refused this request"
-                      : "what preflight will check — 6 panels, none read yet"}
+                    {preflightRefusal ? "preflight checks · 6 panels · refused" : "preflight checks · 6 panels · not read"}
                   </summary>
                   <div className="flex flex-col gap-2.5 pt-2">
                     <PreflightPanel preflight={preflight} state={previewState} />

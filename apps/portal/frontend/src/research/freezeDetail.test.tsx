@@ -1009,7 +1009,15 @@ describe("W3b — Freeze on the retained WFO lane", () => {
     expect(new Set(rows.map((row) => row.getAttribute("data-frozen-param")))).toEqual(new Set(published));
     expect(container.querySelector("[data-frozen-table]")?.getAttribute("data-frozen")).toBe("8");
     expect(container.querySelector("[data-panel='frozen-parameters']")?.getAttribute("data-frozen-scope")).toBe("GLOBAL");
-    expect(container.querySelector("[data-shared-banner]")?.textContent).toMatch(/shared params — global schedule/);
+    expect(container.querySelector("[data-shared-banner]")?.textContent).toMatch(/shared θ\* · folds 1–2/);
+    expect(container.querySelector("[data-shared-banner] [title]")?.getAttribute("title")).toMatch(/one θ\* for every fold/);
+  });
+
+  it("F2b: the binding card links on to S4 Execute with the run kept, and says why in a tooltip", async () => {
+    const { container } = await settled();
+    const link = container.querySelector("[data-action='binding-to-execute']");
+    expect(link?.getAttribute("href")).toMatch(/\/runs\/[^/]+\/execute/);
+    expect(link?.getAttribute("title")).toMatch(/S4 · Execute/);
   });
 
   it("integrity MATCH for the manifest and retained import digests, over 1,063 retained rows", async () => {

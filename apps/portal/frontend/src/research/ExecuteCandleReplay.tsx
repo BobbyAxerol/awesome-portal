@@ -24,11 +24,13 @@
  */
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 import { paletteNow } from "../charts/theme";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
-import { foldLabel, formatCount, formatMetric, shortDigest } from "./researchFormat";
+import { foldLabel, formatCount, formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import type { CurrentSourceSplit } from "./splitClient";
 import {
   REPLAY_GAP_WORDS,
   type CurrentSourceObservation,
@@ -38,9 +40,12 @@ import {
   type ChildAuditRecord,
 } from "./replayClient";
 import { ReplayTransport, SPEEDS, useTransport } from "./replayTransport";
+import { CapabilityStrip, GlyphShape, MarkerLayer, MarkerLegend, type CandleMarker, type ChartHandles } from "./ExecuteMarkers";
+import { EXEC_WINDOWS, bucketsInSpan, ordinalAt, withWindow, type ExecWindow, type OverviewBand } from "./executeWindows";
+import { DEFAULT_CURSOR, deepDiveHref } from "./evidenceCursor";
 import type { ProgressRead } from "./progressClient";
 import { retainedReadiness } from "./retainedLane";
-import { SplitBand, SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
+import { SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
 import { ACROSS_HELP, ACROSS_LABEL, pageRefusalWords, usePlayAcrossFolds, type PlayAcross } from "./usePlayAcrossFolds";
 import type { ChildAuditSlot, ReplayController, RetainedReplaySlot, TransitionsSlot } from "./useReplay";
 import { iso } from "./utcMinute";
@@ -74,7 +79,9 @@ function factCode(fact: { reason_code?: string | null; availability: { reason_co
   return fact.reason_code ?? fact.availability.reason_code ?? null;
 }
 
-type ProgressFold = NonNullable<NonNullable<ProgressRead["progress"]>["folds"]>[number];
+type HoldoutFact = Parameters<typeof retainedSplitBand>[2];
+
+type ProgressFold =NonNullable<NonNullable<ProgressRead["progress"]>["folds"]>[number];
 
 /**
  * The parameter bundle the P11 progress read says a fold was evaluated with.
@@ -268,12 +275,7 @@ export function paddedRange(values: readonly number[]): { min: number; max: numb
   return { min: Math.floor((lo - pad) / step) * step, max: Math.ceil((hi + pad) / step) * step };
 }
 
-export interface CandleMarker {
-  ordinal: number;
-  at: number;
-  side: "LONG" | "SHORT" | "FLAT";
-  kind: "ENTRY" | "EXIT" | "FLIP" | "RESIZE";
-}
+export type { CandleMarker };
 
 /** Transitions in the loaded window, from each bar's own block — never guessed from price. */
 export function windowMarkers(rows: readonly CurrentSourceObservation[]): CandleMarker[] {
@@ -284,20 +286,63 @@ export function windowMarkers(rows: readonly CurrentSourceObservation[]): Candle
     const after = Number(row.accepted_position);
     const before = bar.position_before === null ? 0 : Number(bar.position_before);
     const side = after > 0 ? "LONG" : after < 0 ? "SHORT" : "FLAT";
+    const sideBefore = before > 0 ? "LONG" : before < 0 ? "SHORT" : "FLAT";
     const kind = before === 0 ? "ENTRY" : after === 0 ? "EXIT" : Math.sign(before) !== Math.sign(after) ? "FLIP" : "RESIZE";
-    markers.push({ ordinal: row.source_ordinal, at: row.at_utc_ms, side, kind });
+    markers.push({
+      ordinal: row.source_ordinal,
+      at: row.at_utc_ms,
+      side,
+      kind,
+      sideBefore,
+      high: bar.candle?.high ?? null,
+      low: bar.candle?.low ?? null,
+      close: bar.candle?.close ?? null,
+      fee: bar.fee,
+      turnover: bar.turnover,
+    });
   }
   return markers;
+}
+
+/** The served ledger row, where one was read, overrides the kind/side/close/fee the window's own bar implies. */
+export function withLedger(markers: readonly CandleMarker[], ledger: readonly TransitionRow[] | null): CandleMarker[] {
+  if (!ledger || ledger.length === 0) return [...markers];
+  const byOrdinal = new Map(ledger.map((row) => [row.source_ordinal, row]));
+  return markers.map((marker) => {
+    const row = byOrdinal.get(marker.ordinal);
+    if (!row) return marker;
+    return {
+      ...marker,
+      kind: row.kind,
+      side: row.side_after,
+      close: row.close ?? marker.close,
+      fee: row.fee ?? marker.fee,
+      turnover: row.turnover ?? marker.turnover,
+    };
+  });
 }
 
 function CandleChart({
   rows,
   transport,
   reveal,
+  markers,
+  hover,
+  selected,
+  onHover,
+  onPick,
 }: {
   rows: readonly CurrentSourceObservation[];
   transport: ReplayTransport;
   reveal: boolean;
+  /** The window's served transitions (ledger-enriched where a ledger page was read). */
+  markers: readonly CandleMarker[];
+  /** The marker under the pointer, on the chart or in the ledger. */
+  hover: number | null;
+  /** The marker the anatomy is open on. */
+  selected: number | null;
+  onHover: (ordinal: number | null) => void;
+  onPick: (marker: CandleMarker) => void;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const chart = useRef<{
@@ -305,13 +350,16 @@ function CandleChart({
     candles: import("lightweight-charts").ISeriesApi<"Candlestick">;
     position: import("lightweight-charts").ISeriesApi<"Line">;
     equity: import("lightweight-charts").ISeriesApi<"Line">;
-    markers: import("lightweight-charts").ISeriesMarkersPluginApi<import("lightweight-charts").Time> | null;
   } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  /* Bumped whenever the chart's own geometry moves (pan, zoom, resize, new data) so the overlay re-reads coordinates. */
+  const [geometry, setGeometry] = useState(0);
+  const [box, setBox] = useState({ width: 0, height: 0 });
   const fitted = useRef<readonly CurrentSourceObservation[] | null>(null);
   const revealed = useRef(false);
+  const resizeObserver = useRef<ResizeObserver | null>(null);
+  const justFitted = useRef(false);
   const { index } = useTransport(transport);
-  const markers = useMemo(() => windowMarkers(rows), [rows]);
   const cut = reveal ? index + 1 : rows.length;
 
   useEffect(() => {
@@ -356,7 +404,30 @@ function CandleChart({
         } catch {
           /* pane sizing is cosmetic */
         }
-        chart.current = { api, candles, position, equity, markers: lib.createSeriesMarkers ? lib.createSeriesMarkers(candles, []) : null };
+        chart.current = { api, candles, position, equity };
+        /* The marker layer follows the chart: any pan/zoom/resize re-reads coordinates on the next frame. */
+        let frame = 0;
+        const bump = () => {
+          if (frame) return;
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            if (!disposed) setGeometry((value) => value + 1);
+          });
+        };
+        try {
+          api.timeScale().subscribeVisibleLogicalRangeChange?.(bump);
+        } catch {
+          /* geometry events are a convenience */
+        }
+        if (typeof ResizeObserver !== "undefined") {
+          const observer = new ResizeObserver((entries) => {
+            const rect = entries[0]?.contentRect;
+            if (rect) { setBox({ width: Math.round(rect.width), height: Math.round(rect.height) }); }
+            bump();
+          });
+          observer.observe(element);
+          resizeObserver.current = observer;
+        }
         setStatus("ready");
       })
       .catch(() => {
@@ -364,6 +435,8 @@ function CandleChart({
       });
     return () => {
       disposed = true;
+      resizeObserver.current?.disconnect();
+      resizeObserver.current = null;
       chart.current?.api.remove();
       chart.current = null;
     };
@@ -386,6 +459,7 @@ function CandleChart({
     if (fitted.current !== rows) {
       /* A new window opens on the whole window; the playhead then scrolls it. */
       fitted.current = rows;
+      justFitted.current = true;
       c.api.timeScale().fitContent();
     }
     if (reveal !== revealed.current) {
@@ -394,15 +468,37 @@ function CandleChart({
       revealed.current = reveal;
       c.api.timeScale().setVisibleLogicalRange({ from: -1, to: rows.length });
     }
-    const pal = paletteNow();
-    c.markers?.setMarkers(markers.filter((marker) => rows.findIndex((row) => row.source_ordinal === marker.ordinal) < cut).map((marker) => ({
-      time: sec(marker.at),
-      position: marker.side === "LONG" || (marker.kind === "EXIT" && marker.side === "FLAT") ? "belowBar" : "aboveBar",
-      shape: marker.side === "LONG" ? "arrowUp" : marker.side === "SHORT" ? "arrowDown" : "circle",
-      color: marker.side === "LONG" ? pal.good : marker.side === "SHORT" ? pal.bad : pal.inkFaint,
-      text: marker.kind === "EXIT" ? "T·exit" : "T",
-    })));
-  }, [rows, cut, markers, status, reveal]);
+    setGeometry((value) => value + 1);
+  }, [rows, cut, status, reveal]);
+
+  /* Markers inside the revealed window, in order; coordinates come from the chart itself. */
+  const visibleMarkers = useMemo(() => {
+    const at = new Map(rows.map((row, position) => [row.source_ordinal, position]));
+    return markers.filter((marker) => (at.get(marker.ordinal) ?? Infinity) < cut);
+  }, [markers, rows, cut]);
+  const handles = useMemo<ChartHandles | null>(() => {
+    const c = chart.current;
+    if (status !== "ready" || !c || typeof c.candles.priceToCoordinate !== "function") return null;
+    return {
+      timeX: (atMs) => {
+        const x = c.api.timeScale().timeToCoordinate?.(sec(atMs));
+        return x === null || x === undefined ? null : Number(x);
+      },
+      priceY: (price) => {
+        const y = c.candles.priceToCoordinate(price);
+        return y === null || y === undefined ? null : Number(y);
+      },
+    };
+    // `geometry` is the dependency that says the chart moved; the handles themselves are stable closures.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, geometry]);
+  const barSpacing = useMemo(() => {
+    if (!handles || rows.length < 2) return null;
+    const a = handles.timeX(rows[0]!.at_utc_ms);
+    const b = handles.timeX(rows[1]!.at_utc_ms);
+    return a === null || b === null ? null : Math.abs(b - a);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handles, rows]);
 
   /* The playhead: crosshair on the bar, and the visible range follows it. */
   useEffect(() => {
@@ -412,7 +508,10 @@ function CandleChart({
     try {
       if (row.bar?.candle) c.api.setCrosshairPosition(Number(row.bar.candle.close), sec(row.at_utc_ms), c.candles);
       const range = c.api.timeScale().getVisibleLogicalRange();
-      if (range && (index < range.from || index > range.to)) {
+      if (justFitted.current) {
+        /* The range read straight after fitContent can still be the previous window's; a new window opens fit, so there is nothing to slide. */
+        justFitted.current = false;
+      } else if (range && (index < range.from || index > range.to)) {
         /* Slide, never rescale: keep the reader's zoom and put the playhead at 70%. */
         const span = range.to - range.from;
         const from = Math.max(-2, index - span * 0.7);
@@ -431,9 +530,20 @@ function CandleChart({
           {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; the table below carries every bar"}
         </span>
       ) : null}
-      <span className="mono pointer-events-none absolute left-3 top-1 text-[9px]" style={{ color: "var(--ink-faint)" }}>
-        candles · position (units) · equity — {rows.length} bars in this window
+      <span className="mono pointer-events-none absolute left-3 top-1 text-[9px]" style={{ color: "var(--ink-faint)" }} title="Panes: candles with transition markers, model position (units), equity.">
+        {rows.length} bars
       </span>
+      <MarkerLayer
+        markers={visibleMarkers}
+        handles={handles}
+        barSpacing={barSpacing}
+        hover={hover}
+        selected={selected}
+        onHover={onHover}
+        onPick={onPick}
+        width={box.width || 1}
+        height={260}
+      />
       {/* A table ignores width/overflow, so the visually-hidden box is a wrapper. */}
       <div className="sr-only">
       <table data-chart-table="replay-candles">
@@ -454,7 +564,7 @@ function CandleChart({
       </table>
       </div>
       <ul className="sr-only" data-marker-list>
-        {markers.filter((marker) => rows.findIndex((row) => row.source_ordinal === marker.ordinal) < cut).map((marker) => (
+        {visibleMarkers.map((marker) => (
           <li key={marker.ordinal} data-marker={marker.ordinal} data-marker-kind={marker.kind} data-marker-side={marker.side}>
             target transition {words(marker.kind)} to {words(marker.side)} at {iso(marker.at)}
           </li>
@@ -475,8 +585,22 @@ function FoldStrip({
   cutOrdinal = null,
   progress = null,
   progressAnswered = false,
+  windowKey = "oos",
+  onWindow,
+  split = null,
+  holdout = null,
+  playhead = null,
 }: {
   replay: CurrentSourceReplay;
+  /** The window switch (IS | OOS | HOLDOUT): which span is on show; the fold chips pick WHICH OOS slice. */
+  windowKey?: ExecWindow;
+  onWindow?: (next: ExecWindow) => void;
+  /** The run's own fold plan, for the served train/test boundaries behind the three bands. */
+  split?: CurrentSourceSplit | null;
+  /** The evidence claim's holdout fact: a withheld holdout is a typed absence, not an empty band. */
+  holdout?: HoldoutFact;
+  /** Source ordinal under the playhead, for the cursor line on the overview. */
+  playhead?: number | null;
   /** The P11 progress read, for each fold's selected params digest. */
   progress?: ProgressRead | null;
   progressAnswered?: boolean;
@@ -503,9 +627,37 @@ function FoldStrip({
   return (
     <div className="flex min-w-0 flex-col gap-1.5" data-fold-strip={capital.segments.length} data-fold-strip-mode={scrolls ? "scroll" : "wrap"}>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <span className="mono text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
+        <span className="mono text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }} title="One account stitched across the fold windows">
           stitched account{scrolls ? ` · ${capital.segments.length} folds` : ""}
         </span>
+        {/* One control with the fold chain, same chip style: the window picks WHICH SPAN, the fold chips pick WHICH OOS SLICE. */}
+        <span className="flex items-center gap-1" role="group" aria-label="window" data-window-switch={windowKey}>
+          {EXEC_WINDOWS.map((key) => (
+            <button
+              key={key}
+              type="button"
+              className="mono rounded-[4px] border px-2 text-[10px] leading-[22px]"
+              style={{
+                borderColor: windowKey === key ? "var(--accent)" : "var(--line)",
+                background: windowKey === key ? "var(--paper-sunken)" : "var(--paper-raised)",
+                color: windowKey === key ? "var(--accent)" : "var(--ink-soft)",
+              }}
+              aria-pressed={windowKey === key}
+              data-window={key}
+              title={
+                key === "is"
+                  ? "IS — the in-sample (train) span of this fold, as overview candles"
+                  : key === "oos"
+                    ? "OOS — the replayable out-of-sample fold window"
+                    : "HOLDOUT — the sealed window, if the run published one"
+              }
+              onClick={() => onWindow?.(key)}
+            >
+              {key.toUpperCase()}
+            </button>
+          ))}
+        </span>
+        <span aria-hidden="true" className="mono text-[10px]" style={{ color: "var(--line-strong)" }}>│</span>
         <div
           ref={strip}
           className={scrolls ? "order-last flex w-full min-w-0 basis-full snap-x items-center gap-1.5 overflow-x-auto pb-1" : "contents"}
@@ -565,18 +717,89 @@ function FoldStrip({
           );
         })}
         </div>
-        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-fold-capital={capital.policy ?? ""} title={policyWords.code ?? undefined}>
-          capital {policyWords.text} · {words(capital.equity_continuity)}
-          {capital.account_execution ? ` · ${words(capital.account_execution)}` : ""}
+        <span
+          className="mono text-[9px]"
+          style={{ color: "var(--ink-faint)" }}
+          data-fold-capital={capital.policy ?? ""}
+          title={[policyWords.code, words(capital.equity_continuity), capital.account_execution ? words(capital.account_execution) : null].filter(Boolean).join(" · ")}
+        >
+          capital {policyWords.text}
         </span>
       </div>
-      {overview ? <OverviewStrip replay={replay} activeFold={activeFold} cutOrdinal={cutOrdinal} /> : null}
+      {overview ? (
+        <OverviewStrip replay={replay} activeFold={activeFold} cutOrdinal={cutOrdinal} onFold={onFold} split={split} holdout={holdout} playhead={playhead} />
+      ) : null}
     </div>
   );
 }
 
 /** The whole run as extrema-keeping OHLC buckets, with the fold windows shaded. */
-function OverviewStrip({ replay, activeFold, cutOrdinal }: { replay: CurrentSourceReplay; activeFold: string | null; cutOrdinal: number | null }) {
+/**
+ * The three windows over the whole run, from served boundaries only:
+ * IS (the active fold's train window, hatched) and every fold's OOS window
+ * (solid, the active one stronger). Each band's tooltip is its served start,
+ * end and bar count. An IS span the bucket times cannot place is not drawn.
+ */
+export function overviewBands(replay: CurrentSourceReplay, split: CurrentSourceSplit | null, activeFold: string | null): OverviewBand[] {
+  const overview = replay.execution.candle_overview;
+  if (!overview) return [];
+  const buckets = overview.values.filter((bucket): bucket is typeof bucket & { open_utc_ms: number; close_utc_ms: number } => typeof bucket.open_utc_ms === "number" && typeof bucket.close_utc_ms === "number");
+  const plan = new Map((split?.fold_plan.folds ?? []).map((fold) => [fold.fold_id, fold]));
+  const bands: OverviewBand[] = replay.execution.fold_capital.segments.map((segment) => {
+    const fold = plan.get(segment.fold_id);
+    const window = fold && fold.test_start_utc_ms !== null && fold.test_end_utc_ms !== null
+      ? ` · ${formatUtc(fold.test_start_utc_ms)} → ${formatUtc(fold.test_end_utc_ms)}`
+      : "";
+    return {
+      key: "oos" as const,
+      from: segment.first_ordinal,
+      to: segment.last_ordinal,
+      active: segment.fold_id === activeFold,
+      foldId: segment.fold_id,
+      title: `${foldLabel(segment.fold_id)} · OOS${window} · ${segment.bars} bars`,
+    };
+  });
+  const train = activeFold === null ? null : plan.get(activeFold);
+  if (train && train.train_start_utc_ms !== null && train.train_end_utc_ms !== null && buckets.length > 0) {
+    const from = ordinalAt(buckets, train.train_start_utc_ms);
+    const to = ordinalAt(buckets, train.train_end_utc_ms);
+    if (from !== null && to !== null && to > from) {
+      bands.push({
+        key: "is",
+        from,
+        to,
+        active: true,
+        foldId: train.fold_id,
+        title: `${foldLabel(train.fold_id)} · IS (train) · ${formatUtc(train.train_start_utc_ms)} → ${formatUtc(train.train_end_utc_ms)} · bars not published`,
+      });
+    }
+  }
+  return bands;
+}
+
+function OverviewStrip({
+  replay,
+  activeFold,
+  cutOrdinal,
+  onFold,
+  split,
+  holdout,
+  playhead,
+}: {
+  replay: CurrentSourceReplay;
+  activeFold: string | null;
+  cutOrdinal: number | null;
+  onFold: (segment: FoldSegment) => void;
+  split: CurrentSourceSplit | null;
+  holdout: HoldoutFact;
+  playhead: number | null;
+}) {
+  const bands = overviewBands(replay, split, activeFold);
+  const facts = split ? retainedSplitBand(split, activeFold, holdout ?? null) : null;
+  const isFact = facts?.segments.find((segment) => segment.key === "is");
+  const holdoutFact = facts?.segments.find((segment) => segment.key === "holdout");
+  const hasIs = bands.some((band) => band.key === "is");
+  const holdoutCode = holdoutFact?.reasonCode ?? null;
   return (
     <CandleOverviewStrip
       overview={replay.execution.candle_overview!}
@@ -586,11 +809,109 @@ function OverviewStrip({ replay, activeFold, cutOrdinal }: { replay: CurrentSour
         last_ordinal: segment.last_ordinal,
         active: segment.fold_id === activeFold,
       }))}
+      bands={split ? bands : undefined}
+      onBand={(band) => {
+        const segment = replay.execution.fold_capital.segments.find((candidate) => candidate.fold_id === band.foldId);
+        if (segment) onFold(segment);
+      }}
+      playhead={cutOrdinal === null ? playhead : null}
       cutOrdinal={cutOrdinal}
       scope="whole run"
-      shading="shaded = OOS fold windows"
-      label="whole-run price range with the fold windows"
+      label="whole-run price range with the IS, OOS and holdout windows"
+      footer={
+        <span className="mono flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[9px]" style={{ color: "var(--ink-faint)" }} data-overview-legend>
+          <span className="flex items-center gap-1" title={hasIs ? "IS — the active fold's train window" : isFact ? `IS not drawn — ${isFact.reasonCode ?? "not published"}` : "IS — needs the split read"} data-legend-window="is">
+            <i aria-hidden="true" className="inline-block h-[8px] w-[14px]" style={{ background: "repeating-linear-gradient(135deg, var(--viz-train) 0 2px, transparent 2px 5px)", border: "1px solid var(--viz-train)" }} />
+            IS
+          </span>
+          <span className="flex items-center gap-1" title="OOS — each fold's replayable test window; the active fold is stronger. Click a band to open that fold." data-legend-window="oos">
+            <i aria-hidden="true" className="inline-block h-[8px] w-[14px]" style={{ background: "var(--role-oos)", opacity: 0.5 }} />
+            OOS
+          </span>
+          <span
+            className="flex items-center gap-1"
+            title={holdoutFact ? `${reasonCodeSentence(holdoutCode) ?? "The run published no holdout window."}${holdoutCode ? ` (${holdoutCode})` : ""}` : "HOLDOUT — needs the split read"}
+            data-legend-window="holdout"
+            data-band-state={holdoutFact?.state ?? "NOT_PUBLISHED"}
+          >
+            <i aria-hidden="true" className="inline-block h-[8px] w-[14px]" style={{ border: "1px dashed var(--role-holdout)" }} />
+            HOLDOUT <em>{holdoutFact?.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}</em>
+            {holdoutCode ? <span data-reason-code={holdoutCode} className="sr-only">{holdoutCode}</span> : null}
+          </span>
+        </span>
+      }
     />
+  );
+}
+
+/**
+ * IS window of the active fold: the overview buckets that fall inside the
+ * served train span, drawn as candles. It is an overview (bucketed, no
+ * transition markers, no replay): the label says so. Without a served train
+ * span or bucket times the panel is a typed absence, never an empty chart.
+ */
+function IsWindowPanel({ replay, band, activeFold, onJumpOos }: { replay: CurrentSourceReplay; band: SplitBandSlot; activeFold: string | null; onJumpOos: () => void }) {
+  const overview = replay.execution.candle_overview;
+  const fold = band.state === "ready" && band.folds ? band.folds.fold_plan.folds.find((candidate) => candidate.fold_id === activeFold) ?? null : null;
+  const start = fold?.train_start_utc_ms ?? null;
+  const end = fold?.train_end_utc_ms ?? null;
+  const inSpan = overview && start !== null && end !== null
+    ? bucketsInSpan(overview.values.filter((bucket): bucket is typeof bucket & { open_utc_ms: number; close_utc_ms: number } => typeof bucket.open_utc_ms === "number" && typeof bucket.close_utc_ms === "number"), start, end)
+    : [];
+  if (band.state !== "ready" || !fold || start === null || end === null || inSpan.length === 0) {
+    const facts = band.state === "ready" && band.folds ? retainedSplitBand(band.folds, activeFold, null).segments.find((segment) => segment.key === "is") : null;
+    const code = facts?.reasonCode ?? null;
+    return (
+      <div className="flex min-h-[120px] flex-col items-start justify-center gap-1.5 rounded-[6px] border border-dashed px-4 py-3" style={{ borderColor: "var(--line)" }} data-window-panel="is" data-window-absent>
+        <span className="mono text-[10px] uppercase tracking-[.08em]" style={{ color: "var(--ink-soft)" }}>IS overview — not published</span>
+        {band.state !== "ready" ? <SplitBandNote slot={band} /> : null}
+        {code ? <span className="mono text-[9.5px]" data-reason-code={code} title={reasonCodeSentence(code) ?? undefined} style={{ color: "var(--ink-faint)" }}>{code}</span> : null}
+        <button type="button" className="btn-ghost mono text-[10px]" onClick={onJumpOos}>OOS window →</button>
+      </div>
+    );
+  }
+  const high = Math.max(...inSpan.map((bucket) => Number(bucket.high)));
+  const low = Math.min(...inSpan.map((bucket) => Number(bucket.low)));
+  const height = 200;
+  const y = (value: number) => (high === low ? height / 2 : 8 + (1 - (value - low) / (high - low)) * (height - 16));
+  const width = Math.max(1, inSpan.length);
+  return (
+    <div className="flex flex-col gap-1" data-window-panel="is" data-is-buckets={inSpan.length}>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-[220px] w-full rounded-[6px] border" style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }} role="img" aria-label={`${foldLabel(fold.fold_id)} in-sample overview candles`}>
+        {inSpan.map((bucket, position) => {
+          const up = Number(bucket.close) >= Number(bucket.open);
+          const ink = up ? "var(--good)" : "var(--bad)";
+          const top = y(Math.max(Number(bucket.open), Number(bucket.close)));
+          const bottom = y(Math.min(Number(bucket.open), Number(bucket.close)));
+          return (
+            <g key={bucket.first_ordinal}>
+              <title>{`${formatUtc(bucket.open_utc_ms)} → ${formatUtc(bucket.close_utc_ms)} · O ${bucket.open} H ${bucket.high} L ${bucket.low} C ${bucket.close}`}</title>
+              <line x1={position + 0.5} x2={position + 0.5} y1={y(Number(bucket.high))} y2={y(Number(bucket.low))} stroke={ink} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
+              <rect x={position + 0.12} width={0.76} y={top} height={Math.max(1, bottom - top)} fill={ink} />
+            </g>
+          );
+        })}
+      </svg>
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-is-caption title="Each candle's high and low are the true extremes of its bars; there is no per-bar replay in the IS window.">
+        overview · {foldLabel(fold.fold_id)} IS · {formatUtc(start)} → {formatUtc(end)} · {formatCount(inSpan.length)} candles of {formatCount(overview!.bucket_bars)} · range {low} – {high}
+      </span>
+    </div>
+  );
+}
+
+/** HOLDOUT window: the served absence, with the code and a way to the split screen that owns it. */
+function HoldoutWindowPanel({ band, activeFold, holdout, splitHref }: { band: SplitBandSlot; activeFold: string | null; holdout: HoldoutFact; splitHref: string }) {
+  const facts = band.state === "ready" && band.folds ? retainedSplitBand(band.folds, activeFold, holdout ?? null).segments.find((segment) => segment.key === "holdout") : null;
+  const code = facts?.reasonCode ?? null;
+  return (
+    <div className="flex min-h-[120px] flex-col items-start justify-center gap-1.5 rounded-[6px] border border-dashed px-4 py-3" style={{ borderColor: "var(--role-holdout)" }} data-window-panel="holdout" data-window-absent data-band-state={facts?.state ?? "NOT_PUBLISHED"}>
+      <span className="mono text-[10px] uppercase tracking-[.08em]" style={{ color: "var(--role-holdout)" }}>
+        HOLDOUT — {facts?.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}
+      </span>
+      {band.state !== "ready" ? <SplitBandNote slot={band} /> : null}
+      {code ? <span className="mono text-[9.5px]" data-reason-code={code} title={reasonCodeSentence(code) ?? undefined} style={{ color: "var(--ink-faint)" }}>{code}</span> : null}
+      <Link to={splitHref} className="mono text-[10px]" style={{ color: "var(--accent)" }} data-action="to-split">Split · windows →</Link>
+    </div>
   );
 }
 
@@ -613,6 +934,9 @@ export type CandleOverviewBucket = {
   high: string;
   low: string;
   close: string;
+  /** Served bucket times (the retained and P04 overviews both publish them); they position bands, never shown. */
+  open_utc_ms?: number;
+  close_utc_ms?: number;
 };
 
 export type CandleOverviewFacts = {
@@ -631,6 +955,10 @@ export function CandleOverviewStrip({
   scope,
   shading,
   label,
+  bands,
+  onBand,
+  playhead = null,
+  footer,
 }: {
   overview: CandleOverviewFacts;
   segments?: readonly { key: string; first_ordinal: number; last_ordinal: number; active: boolean }[];
@@ -638,6 +966,12 @@ export function CandleOverviewStrip({
   scope: string;
   shading?: string;
   label: string;
+  /** IS / OOS windows from served boundaries, drawn over the buckets; each carries its own tooltip. */
+  bands?: readonly OverviewBand[];
+  onBand?: (band: OverviewBand) => void;
+  /** Source ordinal under the playhead: a thin cursor line on the strip. */
+  playhead?: number | null;
+  footer?: ReactNode;
 }) {
   // A multi-bar bucket is known only after its last bar. Neither a wick,
   // colour, autoscale bound nor caption may reveal its future suffix.
@@ -655,8 +989,9 @@ export function CandleOverviewStrip({
   const x = (ordinal: number) => (ordinal / Math.max(1, n - 1)) * 100;
   return (
     <div className="flex flex-col gap-0.5" data-overview={overview.sampling}>
-      <svg viewBox="0 0 100 24" preserveAspectRatio="none" className="h-[34px] w-full" role="img" aria-label={label}>
-        {segments.map((segment) => (
+      <div className="relative">
+      <svg viewBox="0 0 100 24" preserveAspectRatio="none" className="pointer-events-none relative z-[1] h-[34px] w-full" role="img" aria-label={label}>
+        {(bands ? [] : segments).map((segment) => (
           <rect
             key={segment.key}
             x={x(segment.first_ordinal)}
@@ -681,6 +1016,45 @@ export function CandleOverviewStrip({
           />
         ))}
       </svg>
+      {bands
+        ? [...bands]
+            .sort((left, right) => (left.key === right.key ? 0 : left.key === "is" ? -1 : 1))
+            .map((band) => {
+              const left = x(band.from);
+              const width = Math.max(0.4, x(band.to) - left);
+              const isOos = band.key === "oos";
+              return (
+                <div
+                  key={`${band.key}-${band.foldId ?? "is"}-${band.from}`}
+                  className="absolute bottom-0 top-0"
+                  style={{
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    background: isOos ? "var(--role-oos)" : "repeating-linear-gradient(135deg, var(--viz-train) 0 2px, transparent 2px 5px)",
+                    opacity: isOos ? (band.active ? 0.34 : 0.16) : 0.4,
+                    borderLeft: band.active && isOos ? "1px solid var(--role-oos)" : undefined,
+                    borderRight: band.active && isOos ? "1px solid var(--role-oos)" : undefined,
+                    cursor: isOos && onBand ? "pointer" : "default",
+                  }}
+                  title={band.title}
+                  data-overview-band={band.key}
+                  data-band-active={band.active ? "true" : undefined}
+                  data-band-fold-id={band.foldId ?? undefined}
+                  onClick={isOos && onBand ? () => onBand(band) : undefined}
+                />
+              );
+            })
+        : null}
+      {playhead !== null ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-0 top-0"
+          style={{ left: `${x(playhead)}%`, borderLeft: "1.5px solid var(--accent)" }}
+          data-overview-playhead={playhead}
+        />
+      ) : null}
+      </div>
+      {footer}
       <span
         className="mono text-[9px]"
         style={{ color: "var(--ink-faint)" }}
@@ -728,9 +1102,9 @@ function Transport({
   return (
     <div className="flex flex-wrap items-center gap-2 border-t pt-2" style={{ borderColor: "var(--line-soft)" }} data-transport data-playing={String(snap.playing)}>
       <span className="flex gap-1">
-        <button type="button" className={button} style={style} aria-label="previous fold" disabled={!canFold.previous} title={canFold.previous ? undefined : "Already on the first fold of this run."} onClick={() => onFoldStep(-1)}>|◀</button>
-        <button type="button" className={button} style={style} aria-label="previous transition" disabled={disabled} title={stepReason} onClick={() => onTransitionStep(-1)}>◀◀</button>
-        <button type="button" className={button} style={style} aria-label="step back" disabled={disabled} title={stepReason} onClick={() => transport.step(-1)}>◀</button>
+        <button type="button" className={button} style={style} aria-label="previous fold" disabled={!canFold.previous} title={canFold.previous ? "Previous fold" : "Already on the first fold of this run."} onClick={() => onFoldStep(-1)}>|◀</button>
+        <button type="button" className={button} style={style} aria-label="previous transition" disabled={disabled} title={stepReason ?? "Previous transition (marker)"} onClick={() => onTransitionStep(-1)}>◀◀</button>
+        <button type="button" className={button} style={style} aria-label="step back" disabled={disabled} title={stepReason ?? "Step back one bar"} onClick={() => transport.step(-1)}>◀</button>
         <button
           type="button"
           className={button}
@@ -739,14 +1113,14 @@ function Transport({
           aria-pressed={snap.playing}
           data-action="play"
           disabled={disabled}
-          title={stepReason}
+          title={stepReason ?? (snap.playing ? "Pause" : "Play")}
           onClick={() => transport.toggle()}
         >
           {snap.playing ? "❚❚" : "▶"}
         </button>
-        <button type="button" className={button} style={style} aria-label="step forward" disabled={disabled} title={stepReason} onClick={() => transport.step(1)}>▶</button>
-        <button type="button" className={button} style={style} aria-label="next transition" disabled={disabled} title={stepReason} onClick={() => onTransitionStep(1)}>▶▶</button>
-        <button type="button" className={button} style={style} aria-label="next fold" disabled={!canFold.next} title={canFold.next ? undefined : "Already on the last fold of this run."} onClick={() => onFoldStep(1)}>▶|</button>
+        <button type="button" className={button} style={style} aria-label="step forward" disabled={disabled} title={stepReason ?? "Step forward one bar"} onClick={() => transport.step(1)}>▶</button>
+        <button type="button" className={button} style={style} aria-label="next transition" disabled={disabled} title={stepReason ?? "Next transition (marker)"} onClick={() => onTransitionStep(1)}>▶▶</button>
+        <button type="button" className={button} style={style} aria-label="next fold" disabled={!canFold.next} title={canFold.next ? "Next fold" : "Already on the last fold of this run."} onClick={() => onFoldStep(1)}>▶|</button>
       </span>
       <span className="flex gap-1" role="group" aria-label="speed">
         {SPEEDS.map((speed) => (
@@ -880,8 +1254,8 @@ function PlayheadState({ transport, rows, reveal, totals }: {
         full-run fees{" "}
         {reveal ? <em data-reveal-hidden>{REVEAL_HIDDEN}</em> : <b><Exact value={totals.fee} unit="currency" /></b>}
       </span>
-      <span className="italic" style={{ color: "var(--ink-faint)" }} data-playhead-note>
-        model state, not a broker account
+      <span className="italic" style={{ color: "var(--ink-faint)" }} data-playhead-note title="Model state replayed from the retained bars — not a broker account.">
+        model state
       </span>
     </div>
   );
@@ -896,6 +1270,9 @@ function TransitionLedger({
   reveal,
   onSeek,
   onPage,
+  hover,
+  selected,
+  onHover,
 }: {
   slot: TransitionsSlot;
   rows: readonly CurrentSourceObservation[];
@@ -903,6 +1280,10 @@ function TransitionLedger({
   reveal: boolean;
   onSeek: (row: TransitionRow) => void;
   onPage: (direction: "next" | "previous") => void;
+  /** The marker under the pointer (chart or ledger) and the one the anatomy is open on: rows and glyphs light together. */
+  hover: number | null;
+  selected: number | null;
+  onHover: (ordinal: number | null) => void;
 }) {
   const { index } = useTransport(transport);
   const cursorAt = rows[index]?.at_utc_ms ?? null;
@@ -941,9 +1322,18 @@ function TransitionLedger({
                   data-transition-kind={row.kind}
                   data-play={String(current)}
                   data-revealed={future ? "hidden" : "shown"}
+                  data-hover={hover === row.source_ordinal ? "true" : undefined}
+                  data-selected={selected === row.source_ordinal ? "true" : undefined}
                   /* E2 (audit 8.14): the whole row selects; the number stays the keyboard target. */
                   onClick={() => onSeek(row)}
-                  style={{ background: current ? "var(--paper-sunken)" : undefined, borderBottom: "1px solid var(--line-soft)", cursor: "pointer" }}
+                  onMouseEnter={() => onHover(row.source_ordinal)}
+                  onMouseLeave={() => onHover(null)}
+                  style={{
+                    background: current || hover === row.source_ordinal || selected === row.source_ordinal ? "var(--paper-sunken)" : undefined,
+                    boxShadow: selected === row.source_ordinal ? "inset 2px 0 0 var(--accent)" : undefined,
+                    borderBottom: "1px solid var(--line-soft)",
+                    cursor: "pointer",
+                  }}
                 >
                   <td className="py-[3px] pr-3">
                     <button type="button" className="mono underline-offset-2 hover:underline" onClick={(event) => { event.stopPropagation(); onSeek(row); }} title="move the cursor to this bar">
@@ -962,6 +1352,9 @@ function TransitionLedger({
                   ) : (
                     <>
                       <td className="py-[3px] pr-3" style={{ color: row.side_after === "SHORT" ? "var(--bad)" : row.side_after === "LONG" ? "var(--good)" : "var(--ink-soft)" }}>
+                        <svg width={14} height={14} viewBox="-8 -8 16 16" aria-hidden="true" className="mr-1 inline-block align-[-3px]" data-ledger-glyph={row.kind}>
+                          <GlyphShape marker={{ kind: row.kind, side: row.side_after, sideBefore: Number(row.position_before ?? 0) > 0 ? "LONG" : Number(row.position_before ?? 0) < 0 ? "SHORT" : "FLAT" }} s={11} />
+                        </svg>
                         {words(row.kind)} → {words(row.side_after)}
                       </td>
                       <td className="whitespace-nowrap py-[3px] pr-3">
@@ -1038,8 +1431,8 @@ function ChildAuditCard({
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-child-audit="refused">{slot.message}</p>
       ) : (
         <div className="flex flex-col gap-1" data-child-audit={slot.fold}>
-          <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
-            fold {slot.fold} instances · marked = OOS generation
+          <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} title="The shaded row is the strategy instance that generated this fold's out-of-sample bars.">
+            fold {slot.fold} · shaded = OOS generation
           </p>
           {/* Keyboard users can scroll this table sideways at narrow widths (axe scrollable-region-focusable). */}
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of fold ${slot.fold}`}>
@@ -1182,7 +1575,7 @@ function CostTimeline({ rows, replay, reveal, transport }: {
         <span className="mono" data-cost-window>
           this window{reveal ? " to the cursor" : ""}: {charged.length} charged bars · fee{" "}
           <em data-window-fee="NOT_PUBLISHED" title="The server publishes a fee per bar and per fold, not per loaded window; the browser does not add them up.">
-            not published for a window
+            not published
           </em>
         </span>
         <span className="mono" data-cost-total={reveal ? "hidden" : "shown"}>
@@ -1192,7 +1585,7 @@ function CostTimeline({ rows, replay, reveal, transport }: {
         </span>
         <FactLine label="funding" fact={funding} name="funding" />
       </div>
-      <div className="flex h-[36px] items-end gap-px" aria-hidden="true">
+      <div className="flex h-[36px] items-end gap-px" aria-hidden="true" title="Each column is a bar; a tall column is a bar that was charged a fee.">
         {rows.map((row, position) => {
           const fee = Number(row.bar?.fee ?? 0);
           return (
@@ -1208,7 +1601,7 @@ function CostTimeline({ rows, replay, reveal, transport }: {
         })}
       </div>
       <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-        columns = fee-charged bars · fee rate{" "}
+        fee rate{" "}
         {replay.execution.route.fee_rate_oneway === null || replay.execution.route.fee_rate_oneway === undefined ? (
           "not published"
         ) : (
@@ -1235,6 +1628,8 @@ export function CandleReplayBody({
   controller,
   transport,
   band,
+  windowKey = "oos",
+  onWindow,
 }: {
   replay: CurrentSourceReplay;
   slot: Extract<RetainedReplaySlot, { state: "ready" }>;
@@ -1242,6 +1637,9 @@ export function CandleReplayBody({
   transport: ReplayTransport;
   /** E2c (8.5): the run's own fold plan, for the IS / OOS / HOLDOUT band. */
   band: SplitBandSlot;
+  /** Which span is on show (`?window=`); OOS is the replayable fold window. */
+  windowKey?: ExecWindow;
+  onWindow?: (next: ExecWindow) => void;
 }) {
   const rows = replay.replay.rows;
   const execution = replay.execution;
@@ -1249,6 +1647,8 @@ export function CandleReplayBody({
   const selectedOrdinal = replay.replay.state_at_cursor.source_ordinal;
   const [reveal, setReveal] = useState(false);
   const [selected, setSelected] = useState<TransitionRow | null>(null);
+  /* One hover across chart and ledger: a marker and its ledger row light together. */
+  const [hover, setHover] = useState<number | null>(null);
   const inFlight = slot.inFlight === true;
   const snap = useTransport(transport);
 
@@ -1310,6 +1710,18 @@ export function CandleReplayBody({
     else controller.retainedSeek?.(row.playback_cursor);
   };
 
+  /* The chart's markers: the window's own transition bars, upgraded by the served ledger row where one was read. */
+  const markers = useMemo(() => withLedger(windowMarkers(rows), ledgerRows), [rows, ledgerRows]);
+  const pickMarker = (marker: CandleMarker) => {
+    const row = ledgerRows?.find((candidate) => candidate.source_ordinal === marker.ordinal);
+    if (row) {
+      seekTransition(row);
+      return;
+    }
+    const at = rows.findIndex((candidate) => candidate.source_ordinal === marker.ordinal);
+    if (at >= 0) transport.seek(at);
+  };
+
   const route = execution.route;
   const counts = execution.counts;
   const identity = controller.retainedContext?.identity;
@@ -1320,6 +1732,22 @@ export function CandleReplayBody({
   const provenance = replay.provenance;
   const window = rows.length > 0 ? `${rows[0]!.source_ordinal + 1}–${rows.at(-1)!.source_ordinal + 1}` : "none read";
   const segment = foldIndex >= 0 ? segments[foldIndex]! : null;
+  const runPath = `/research/quantbt/runs/${encodeURIComponent(replay.run_id)}`;
+  const splitHref = withWindow(deepDiveHref(`${runPath}/split`, { ...DEFAULT_CURSOR, stage: "split", fold: foldIndex >= 0 ? foldIndex + 1 : 1 }), windowKey);
+  const caps = replay.route_capabilities;
+  const capabilityItems = [
+    { name: "orders", label: "orders", fact: caps.orders },
+    { name: "fills", label: "fills", fact: caps.fills },
+    { name: "partial_fills", label: "partial", fact: caps.partial_fills },
+    { name: "trades", label: "trades", fact: caps.trades },
+    { name: "sl_tp", label: "SL/TP", fact: caps.sl_tp },
+    { name: "oco", label: "OCO", fact: caps.oco },
+    { name: "multi_leg", label: "multi-leg", fact: caps.multi_leg },
+  ] as const;
+  const routePhases = [
+    route.signal_phase ? `signal ${words(route.signal_phase)}` : null,
+    route.fill_phase ? `fill ${words(route.fill_phase)}${route.fill_price_policy ? ` @ ${route.fill_price_policy}` : ""}` : null,
+  ].filter((value): value is string => value !== null);
 
   return (
     <>
@@ -1339,8 +1767,8 @@ export function CandleReplayBody({
         title="execution contract"
         data-route-state="RETAINED_BAR_LEDGER"
         aside={
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
-            revision {replay.revision.slice(0, 26)}… · as of {iso(replay.as_of_utc_ms)}
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of title={`revision ${replay.revision}`}>
+            as of {iso(replay.as_of_utc_ms)}
           </span>
         }
       >
@@ -1348,13 +1776,23 @@ export function CandleReplayBody({
           <span className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]" style={{ color: "var(--accent)", borderColor: "var(--accent)" }} data-route-id={progress?.run?.execution_route ?? ""}>
             {progress?.run?.execution_route ?? (identity?.state === "ready" ? "route — the progress read did not answer" : "route — reading…")}
           </span>
-          <span className="mono text-[10px]" data-replay-contract={route.engine_id ?? ""}>
+          <span
+            className="mono text-[10px]"
+            data-replay-contract={route.engine_id ?? ""}
+            title={`${routePhases.join(" · ")}${route.accounting_certified === true ? " · accounting certified by QuantBT" : ""}`}
+          >
             → contract {route.engine_id ?? "not published"}
-            {route.signal_phase ? ` · signal ${words(route.signal_phase)}` : ""}
-            {route.fill_phase ? ` · fill ${words(route.fill_phase)}` : ""}
-            {route.fill_price_policy ? ` @ ${route.fill_price_policy}` : ""}
-            {route.accounting_certified === true ? " · accounting certified by QuantBT" : ""}
           </span>
+          {routePhases.map((phase) => (
+            <span key={phase} className="mono rounded-[3px] border px-[5px] text-[9.5px] leading-[16px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-route-phase>
+              {phase}
+            </span>
+          ))}
+          {route.accounting_certified === true ? (
+            <span className="mono rounded-[3px] border px-[5px] text-[9.5px] leading-[16px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-accounting-certified>
+              accounting certified by QuantBT
+            </span>
+          ) : null}
           <span className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]" style={{ borderColor: "var(--line)" }} data-readiness={readiness ?? ""}>
             {readiness ? `readiness ${words(readiness)}` : "readiness — reading…"}
           </span>
@@ -1363,12 +1801,7 @@ export function CandleReplayBody({
             <span>causality <b>{claimToken(claim?.state, claimStrip?.causality_claim)}</b></span>
           </span>
         </div>
-        <p
-          className="rounded-[4px] border-l-2 px-3 py-1.5 text-[11.5px] leading-[1.55]"
-          style={{ borderColor: "var(--accent)", background: "var(--paper-sunken)", color: "var(--ink-soft)" }}
-          data-route-note
-        >
-          <span className="mono mr-2 text-[9.5px] font-semibold uppercase tracking-[.1em]">route contract</span>
+        <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-route-note>
           {CLOSE_TARGET_NOTICE(counts.orders_published, counts.fills_published, counts.trades_published)}
         </p>
       </Card>
@@ -1378,9 +1811,24 @@ export function CandleReplayBody({
         style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
         aria-label="stitched account replay"
         data-replay-window="RETAINED_BARS"
+        data-window-key={windowKey}
         data-retained-in-flight={String(inFlight)}
       >
-        <FoldStrip replay={replay} progress={progress} progressAnswered={identity?.state === "ready"} activeFold={activeFold} onFold={goFold} disabled={inFlight} reveal={reveal} cutOrdinal={reveal ? (playRow?.source_ordinal ?? null) : null} />
+        <FoldStrip
+          replay={replay}
+          progress={progress}
+          progressAnswered={identity?.state === "ready"}
+          activeFold={activeFold}
+          onFold={goFold}
+          disabled={inFlight}
+          reveal={reveal}
+          cutOrdinal={reveal ? (playRow?.source_ordinal ?? null) : null}
+          windowKey={windowKey}
+          onWindow={onWindow}
+          split={band.state === "ready" ? band.folds : null}
+          holdout={claimStrip?.holdout ?? null}
+          playhead={playRow?.source_ordinal ?? null}
+        />
         {/* When play across folds asked for the read that was refused, its own notice under the
             transport carries this same sentence; it is said once, not twice. */}
         {slot.pageRefusal && across.status.refusal !== slot.pageRefusal ? (
@@ -1394,11 +1842,12 @@ export function CandleReplayBody({
           </p>
         ) : null}
         {/*
-          * E2c (8.5): the hi-fi's IS / OOS / HOLDOUT band. The windows come
-          * from this run's own retained fold plan, so the shading is the
-          * fold's published train and test spans and nothing else.
+          * The three windows are on the overview strip above (served IS / OOS
+          * boundaries, holdout as a typed absence). This row carries what the
+          * chart needs: the fold, the bars on show, the marker legend, what the
+          * route cannot draw (capability chips) and the causal-reveal switch.
           */}
-        <div className="flex flex-wrap items-center gap-3 border-y py-1.5" style={{ borderColor: "var(--line-soft)" }}>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-y py-1.5" style={{ borderColor: "var(--line-soft)" }}>
           <span className="mono flex-none text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }} data-band-fold>
             {segment ? foldLabel(segment.fold_id) : "in-sample bars (no fold)"}
           </span>
@@ -1407,64 +1856,70 @@ export function CandleReplayBody({
               <FoldParamsText params={foldParams(progress, segment.fold_id, identity?.state === "ready")} />
             </span>
           ) : null}
-          {band.state === "ready" && band.folds ? (
-            <SplitBand band={retainedSplitBand(band.folds, activeFold, claimStrip?.holdout ?? null)} />
-          ) : (
-            <SplitBandNote slot={band} />
-          )}
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-counts>
-            source bars {formatCount(replay.replay.source_observation_count) ?? "not published"} · window {window} of {formatCount(replay.replay.source_observation_count) ?? "not published"}
-            {segment ? ` · fold bars ${segment.first_ordinal + 1}–${segment.last_ordinal + 1}` : ""}
-          </span>
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-            markers: T = target transition at the close (▼ short · ▲ long · ● flat)
-          </span>
-          <button
-            type="button"
-            className="mono ml-auto flex items-center gap-1.5 text-[10px]"
-            aria-pressed={reveal}
-            data-action="causal-reveal"
-            title={REVEAL_NOTE}
-            onClick={() => setReveal((value) => !value)}
+          {band.state !== "ready" ? <SplitBandNote slot={band} /> : null}
+          <span
+            className="mono text-[9.5px]"
+            style={{ color: "var(--ink-faint)" }}
+            data-counts
+            title={`source bars ${formatCount(replay.replay.source_observation_count) ?? "not published"}${segment ? ` · fold bars ${segment.first_ordinal + 1}–${segment.last_ordinal + 1}` : ""}`}
           >
-            <span
-              className="inline-flex h-[11px] w-[11px] items-center justify-center border text-[9px]"
-              style={{ borderColor: reveal ? "var(--accent)" : "var(--ink-faint)", color: "var(--accent)" }}
+            bars {window} of {formatCount(replay.replay.source_observation_count) ?? "not published"}
+          </span>
+          {windowKey === "oos" ? <MarkerLegend /> : null}
+          <CapabilityStrip items={capabilityItems} />
+          {windowKey === "oos" ? (
+            <button
+              type="button"
+              className="mono ml-auto flex items-center gap-1.5 text-[10px]"
+              aria-pressed={reveal}
+              data-action="causal-reveal"
+              title={REVEAL_NOTE}
+              onClick={() => setReveal((value) => !value)}
             >
-              {reveal ? "×" : ""}
-            </span>
-            causal reveal
-          </button>
+              <span
+                className="inline-flex h-[11px] w-[11px] items-center justify-center border text-[9px]"
+                style={{ borderColor: reveal ? "var(--accent)" : "var(--ink-faint)", color: "var(--accent)" }}
+              >
+                {reveal ? "×" : ""}
+              </span>
+              causal reveal
+            </button>
+          ) : null}
         </div>
-        {reveal ? (
-          <p className="text-[10px]" style={{ color: "var(--ink-faint)" }} data-reveal-note>
-            {REVEAL_NOTE}
-          </p>
-        ) : null}
 
-        {rows.length > 0 ? <CandleChart rows={rows} transport={transport} reveal={reveal} /> : null}
-        <Transport
-          transport={transport}
-          rows={rows}
-          onFoldStep={foldStep}
-          onTransitionStep={transitionStep}
-          canFold={{ previous: !inFlight && foldIndex > 0, next: !inFlight && foldIndex < segments.length - 1 && segments.length > 0 }}
-          acrossControl={<AcrossSwitch across={across} />}
-        />
-        <AcrossNotice across={across} />
-        <PlayheadState transport={transport} rows={rows} reveal={reveal} totals={execution.totals} />
-        <div
-          className="flex flex-wrap items-center gap-2"
-          data-read-rule={across.enabled ? "across" : "asked"}
-          title={across.enabled ? "Play across folds is on: the next window is read at the end of this one." : "Windows are read only when you ask."}
-        >
-          <button type="button" className="btn-ghost mono text-[10px]" data-action="previous-window" disabled={!replay.replay.page.has_previous || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_previous ? undefined : "This window starts at the fold's first bar."} onClick={() => controller.retainedPreviousWindow?.()}>
-            ‹ previous window
-          </button>
-          <button type="button" className="btn-ghost mono text-[10px]" data-action="next-window" disabled={!replay.replay.page.has_more || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_more ? undefined : "This window ends at the fold's last bar."} onClick={() => controller.retainedNextWindow?.()}>
-            next window ›
-          </button>
-        </div>
+        {windowKey === "is" ? (
+          <IsWindowPanel replay={replay} band={band} activeFold={activeFold} onJumpOos={() => onWindow?.("oos")} />
+        ) : windowKey === "holdout" ? (
+          <HoldoutWindowPanel band={band} activeFold={activeFold} holdout={claimStrip?.holdout ?? null} splitHref={splitHref} />
+        ) : (
+          <>
+            {rows.length > 0 ? (
+              <CandleChart rows={rows} transport={transport} reveal={reveal} markers={markers} hover={hover} selected={selected?.source_ordinal ?? null} onHover={setHover} onPick={pickMarker} />
+            ) : null}
+            <Transport
+              transport={transport}
+              rows={rows}
+              onFoldStep={foldStep}
+              onTransitionStep={transitionStep}
+              canFold={{ previous: !inFlight && foldIndex > 0, next: !inFlight && foldIndex < segments.length - 1 && segments.length > 0 }}
+              acrossControl={<AcrossSwitch across={across} />}
+            />
+            <AcrossNotice across={across} />
+            <PlayheadState transport={transport} rows={rows} reveal={reveal} totals={execution.totals} />
+            <div
+              className="flex flex-wrap items-center gap-2"
+              data-read-rule={across.enabled ? "across" : "asked"}
+              title={across.enabled ? "Play across folds is on: the next window is read at the end of this one." : "Windows are read only when you ask."}
+            >
+              <button type="button" className="btn-ghost mono text-[10px]" data-action="previous-window" disabled={!replay.replay.page.has_previous || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_previous ? "Read the earlier bars of this fold" : "This window starts at the fold's first bar."} onClick={() => controller.retainedPreviousWindow?.()}>
+                ‹ earlier bars
+              </button>
+              <button type="button" className="btn-ghost mono text-[10px]" data-action="next-window" disabled={!replay.replay.page.has_more || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_more ? "Read the later bars of this fold" : "This window ends at the fold's last bar."} onClick={() => controller.retainedNextWindow?.()}>
+                later bars ›
+              </button>
+            </div>
+          </>
+        )}
       </section>
 
       <div className="flex flex-wrap gap-2" data-verdict-tiles>
@@ -1472,7 +1927,7 @@ export function CandleReplayBody({
           {
             k: "orders · fills · trades",
             v: `${countCell(counts.orders_published)} · ${countCell(counts.fills_published)} · ${countCell(counts.trades_published)}`,
-            sub: "records QuantBT emitted on this route",
+            tip: "Records QuantBT emitted on this route.",
             absent: counts.orders_published === null || counts.fills_published === null || counts.trades_published === null,
             codes: [
               counts.orders_published === null ? factCode(replay.route_capabilities.orders) : null,
@@ -1483,27 +1938,29 @@ export function CandleReplayBody({
           {
             k: "target transitions",
             v: reveal ? REVEAL_HIDDEN : countCell(counts.transitions),
-            sub: "full run · retrospective",
+            sub: "full run",
+            tip: "Full run, retrospective: counted over the whole run, not up to the cursor.",
             hidden: reveal,
             absent: !reveal && counts.transitions === null,
             codes: [!reveal && counts.transitions === null ? factCode(replay.route_capabilities.execution_events) : null],
           },
-          { k: "fees paid", v: reveal ? REVEAL_HIDDEN : (formatMetric(execution.totals.fee, "currency") ?? "not published"), sub: "full run · retrospective", hidden: reveal },
-          { k: "rejected orders", v: countCell(counts.rejected_orders), sub: "engine diagnostics", absent: counts.rejected_orders === null },
-          { k: "fold capital", v: foldCapitalPolicyWords(execution.fold_capital.policy).text, vTitle: foldCapitalPolicyWords(execution.fold_capital.policy).code, sub: words(execution.fold_capital.equity_continuity) },
-        ].map((tile: { k: string; v: string; sub: string; hidden?: boolean; absent?: boolean; codes?: Array<string | null>; vTitle?: string | null }) => (
+          { k: "fees paid", v: reveal ? REVEAL_HIDDEN : (formatMetric(execution.totals.fee, "currency") ?? "not published"), sub: "full run", tip: "Full run, retrospective: the whole run's fee, not up to the cursor.", hidden: reveal },
+          { k: "rejected orders", v: countCell(counts.rejected_orders), tip: "Engine diagnostics.", absent: counts.rejected_orders === null },
+          { k: "fold capital", v: foldCapitalPolicyWords(execution.fold_capital.policy).text, vTitle: foldCapitalPolicyWords(execution.fold_capital.policy).code, tip: words(execution.fold_capital.equity_continuity) },
+        ].map((tile: { k: string; v: string; sub?: string; tip?: string; hidden?: boolean; absent?: boolean; codes?: Array<string | null>; vTitle?: string | null }) => (
           <div
             key={tile.k}
             className="flex min-w-[150px] flex-1 flex-col gap-0.5 rounded-[6px] border px-3 py-2"
             style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
             data-tile={tile.k}
+            title={tile.tip}
           >
             <span className="text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{tile.k}</span>
             <span className="mono text-[17px] font-semibold" style={{ fontStyle: tile.hidden || tile.absent ? "italic" : undefined, fontSize: tile.hidden || tile.absent ? 12 : undefined }} title={tile.vTitle ?? undefined} data-tile-code={tile.vTitle ?? undefined} data-tile-absent={tile.absent ? "" : undefined}>{tile.v}</span>
             {(tile.codes ?? []).filter((code): code is string => code !== null).map((code) => (
               <span key={code} className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>{code}</span>
             ))}
-            <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>{tile.sub}</span>
+            {tile.sub ? <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>{tile.sub}</span> : null}
           </div>
         ))}
       </div>
@@ -1524,6 +1981,9 @@ export function CandleReplayBody({
                 reveal={reveal}
                 onSeek={seekTransition}
                 onPage={(direction) => controller.transitionsPage?.(direction)}
+                hover={hover}
+                selected={selected?.source_ordinal ?? null}
+                onHover={setHover}
               />
             ) : null}
           </Card>
@@ -1531,27 +1991,17 @@ export function CandleReplayBody({
           <ChildAuditCard replay={replay} slot={controller.childAudit} fold={windowFold} waiting={across.holding} />
         </div>
         <div className="flex min-w-0 flex-col gap-3">
-          <Card title="trade blotter" data-absent-panel="trade-blotter">
-            <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-              {counts.trades_published === null ? "trade record count not published" : `${counts.trades_published} trade records on this route`}
-            </p>
-            <FactLine label="trades" fact={replay.route_capabilities.trades} name="trades" />
+          <Card
+            title="trade blotter"
+            hint={counts.trades_published === null ? "Trade record count not published." : `${counts.trades_published} trade records on this route.`}
+            data-absent-panel="trade-blotter"
+          >
+            <FactLine label={counts.trades_published === null ? "trades · count" : `trades · ${counts.trades_published}`} fact={replay.route_capabilities.trades} name="trades" />
           </Card>
-          <Card title="MAE × MFE" data-absent-panel="mae-mfe">
-            <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>needs trade records; this route has none</p>
+          <Card title="MAE × MFE" hint="Needs trade records; this route has none." data-absent-panel="mae-mfe">
             <FactLine label="MAE × MFE" fact={replay.route_capabilities.mae_mfe} name="mae_mfe" />
           </Card>
           <CostTimeline rows={rows} replay={replay} reveal={reveal} transport={transport} />
-          <Card title="route-aware facts" data-panel="route-panel">
-            <div className="flex flex-col gap-1">
-              <FactLine label="orders" fact={replay.route_capabilities.orders} name="orders" />
-              <FactLine label="fills" fact={replay.route_capabilities.fills} name="fills" />
-              <FactLine label="partial fills" fact={replay.route_capabilities.partial_fills} name="partial_fills" />
-              <FactLine label="OCO" fact={replay.route_capabilities.oco} name="oco" />
-              <FactLine label="SL/TP" fact={replay.route_capabilities.sl_tp} name="sl_tp" />
-              <FactLine label="multi-leg" fact={replay.route_capabilities.multi_leg} name="multi_leg" />
-            </div>
-          </Card>
         </div>
       </div>
     </>
