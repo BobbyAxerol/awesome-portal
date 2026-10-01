@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
+import { InfoMark } from "../components/InfoMark";
 import { reasonCodeSentence } from "./researchRefusal";
 import { foldLabel, shortDigest } from "./researchFormat";
 
@@ -72,7 +73,7 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
           title={bindingRule(binding.lane)}
           data-binding-rule
         >
-          F4 · binding down to Stage 4
+          F4 · binding down to Stage 4 <InfoMark />
         </h3>
         <span
           role="status"

@@ -2208,7 +2208,7 @@ export function RunProgress(props: RunProgressProps) {
       </section>
 
       {/* 3 · Gantt beside the artifact manifest (FE-S03-16). */}
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "stretch" }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-start" }}>
         <Card
           name="folds"
           title={live ? "fold gantt · live" : "fold gantt"}

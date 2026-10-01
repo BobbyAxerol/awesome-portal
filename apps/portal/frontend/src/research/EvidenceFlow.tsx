@@ -62,6 +62,7 @@ import { ARTIFACT_NO_READER, ArtifactsTable } from "./RunProgress";
 import type { PassportSlot, RetainedSeriesSlot, SeriesSlot } from "./useEvidence";
 import { isRetainedAnswer, retainedReadiness, type RunIdentitySlot } from "./retainedLane";
 import type { ResearchState } from "./state";
+import { InfoMark } from "../components/InfoMark";
 import { ShortId } from "./ShortId";
 import { HubSplitBody } from "./hubStageSplit";
 import { HubSearchBody } from "./hubStageSearch";
@@ -2676,13 +2677,7 @@ function RetainedVerdictTable({
           className="cursor-help"
         >
           rule {ruleShort}{" "}
-          <span
-            aria-hidden="true"
-            className="mono inline-flex h-[11px] w-[11px] items-center justify-center rounded-full border align-middle text-[8px] leading-none"
-            style={{ borderColor: "var(--ink-faint)" }}
-          >
-            i
-          </span>
+          <InfoMark />
         </span>
       </div>
     </section>

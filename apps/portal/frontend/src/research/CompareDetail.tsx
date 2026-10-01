@@ -1012,14 +1012,19 @@ function Rule({ tone, title, children }: { tone: "gold" | "bad"; title?: string;
 
 /* --------------------------------------------------------------- attempts */
 
-function LadderCard({ run }: { run: CompareRun }) {
+/**
+ * Bobby 2026-10-01 (VD-F1-02, same principle on S13): the alpha version's lifecycle is not repeated on
+ * every card. Cards say it only when the ladder MIXES lifecycles (then the accent border + pill tell
+ * the ACTIVE version's attempt from the others); a ladder of one lifecycle names it once in the heading.
+ */
+function LadderCard({ run, showLifecycle }: { run: CompareRun; showLifecycle: boolean }) {
   return (
-    <article className="cp-lcard" data-ladder-run={run.run_id} data-attempt={run.attempt_id} data-lifecycle={run.alpha_version_lifecycle.value ?? undefined} data-lane={run.lane}>
+    <article className="cp-lcard" data-ladder-run={run.run_id} data-attempt={run.attempt_id} data-lifecycle={showLifecycle ? (run.alpha_version_lifecycle.value ?? undefined) : undefined} data-lane={run.lane}>
       <div className="top">
         <span className="cp-att" title={run.attempt_id}>
           {sid(run.attempt_id)}
         </span>
-        <Lifecycle run={run} />
+        {showLifecycle ? <Lifecycle run={run} /> : null}
       </div>
       <RunLine run={run} withState />
       <ClaimChip claim={run.claim} />
@@ -1049,6 +1054,7 @@ function Ladder({ result }: { result: AttemptResult }) {
   /* VD-F1-03: every card the same claim — one line and a plain grid. Two cards of equal published rank can still name different families, so the family must be one too. */
   const oneFamily = ladderOneClaim(steps) ? new Set(claimed.map((run) => run.claim.family)) : null;
   const oneClaim = oneFamily !== null && oneFamily.size === 1 ? [...oneFamily][0]! : null;
+  const mixedLifecycle = new Set(claimed.map((run) => run.alpha_version_lifecycle.value)).size > 1;
   return (
     <section data-panel="ladder" aria-label="claim ladder">
       {/* VD-F1-03: the rule sentences ride the heading's title, in the hi-fi's order, as far as the ladder really strengthens. */}
@@ -1079,7 +1085,7 @@ function Ladder({ result }: { result: AttemptResult }) {
         <div className="cp-ladder" data-ladder-order="server-reversed" data-ladder-layout={oneClaim !== null ? "one-claim" : "ladder"}>
           {/* Reversed for the hi-fi's reading direction (VD-P20-14); the server's order is the inverse. */}
           {claimed.map((run, index) => (
-            <LadderStep key={run.run_id} run={run} step={index === 0 || oneClaim !== null ? null : ladderStepKind(claimed[index - 1]!, run)} />
+            <LadderStep key={run.run_id} run={run} showLifecycle={mixedLifecycle} step={index === 0 || oneClaim !== null ? null : ladderStepKind(claimed[index - 1]!, run)} />
           ))}
         </div>
       )}
@@ -1148,7 +1154,7 @@ function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
  * inside one wrapping box (FG-04a): a line that wraps never ends on an arrow
  * pointing at nothing. DOM and reading order stay card, arrow, card, …
  */
-function LadderStep({ run, step }: { run: CompareRun; step: LadderStepKind | null }) {
+function LadderStep({ run, step, showLifecycle }: { run: CompareRun; step: LadderStepKind | null; showLifecycle: boolean }) {
   return (
     <div className="cp-lstep" data-ladder-step={run.run_id}>
       {step === null ? null : (
@@ -1156,7 +1162,7 @@ function LadderStep({ run, step }: { run: CompareRun; step: LadderStepKind | nul
           {STEP_CONNECTOR[step].text}
         </span>
       )}
-      <LadderCard run={run} />
+      <LadderCard run={run} showLifecycle={showLifecycle} />
     </div>
   );
 }

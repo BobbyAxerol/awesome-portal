@@ -1545,7 +1545,9 @@ describe("W3 — per-fold verdicts from the server rule (CG-P13-08)", () => {
     /* F1b VD-TEXT-01: the footer is one line; the rule's version stays in the header and its thresholds in the (i) tooltip. */
     expect(table.textContent).toContain("research.fold-verdict.v1");
     const foot = table.querySelector("[data-verdict-foot]") as HTMLElement;
-    expect(foot.textContent).toBe("fold_01, fold_02 drag · rule v1 i");
+    expect(foot.textContent).toBe("fold_01, fold_02 drag · rule v1 ");
+    /* The cue is the shared SVG InfoMark, not a hand-drawn "i" (Bobby 2026-10-01). */
+    expect(foot.querySelector("[data-info-mark]")).not.toBeNull();
     const rule = foot.querySelector("[data-verdict-rule]") as HTMLElement;
     expect(rule.getAttribute("data-verdict-rule")).toBe("research.fold-verdict.v1");
     expect(rule.getAttribute("title")).toContain("PASS needs S_OOS ≥");

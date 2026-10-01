@@ -39,6 +39,7 @@ import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import type { DeclaredParameter } from "./alphaImportClient";
 import { reasonCodeSentence } from "./researchRefusal";
 import { claimToken, groupDecimalString } from "./researchFormat";
+import { InfoMark } from "../components/InfoMark";
 import { ShortId } from "./ShortId";
 import {
   BestVsSelectedCards,
@@ -1909,13 +1910,7 @@ export function SearchScreen({
               <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--line-soft)" }}>
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }} title={SELECTOR_LAYERS_HELP} data-selector-layers>
                   optimization_mode{" "}
-                  <span
-                    aria-hidden="true"
-                    className="mono inline-flex h-[11px] w-[11px] items-center justify-center rounded-full border align-middle text-[8px] normal-case"
-                    style={{ borderColor: "var(--line-strong)" }}
-                  >
-                    i
-                  </span>
+                  <InfoMark />
                 </span>
                 {/* One run is one mode: the run's own, read-only — never a switcher. */}
                 <span data-requested-optimizer={lane ? "RETAINED_SOURCE" : detail.requested_optimizer.state} className="flex flex-wrap items-center gap-2">

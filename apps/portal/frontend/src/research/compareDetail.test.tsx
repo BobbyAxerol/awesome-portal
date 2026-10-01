@@ -1049,7 +1049,7 @@ describe("S13 Compare — X3 decisions and debt", () => {
     }
   });
 
-  it("S13-U37 VD decisions: rule without demo digits, one lifecycle pill, family-only claim chip, one-line title block, headings in the body face", async () => {
+  it("S13-U37 VD decisions: rule without demo digits, no lifecycle pill on a one-lifecycle ladder, family-only claim chip, one-line title block, headings in the body face", async () => {
     server([{ status: 200, body: attempts([run("run_a")]) }]);
     renderAt(base);
     await settled();
@@ -1058,11 +1058,28 @@ describe("S13 Compare — X3 decisions and debt", () => {
     const chip = card.querySelector(".cp-claimchip") as HTMLElement;
     expect(chip.getAttribute("title")).toContain("rank 3");
     expect(chip.getAttribute("title")).toContain("origin PORTAL_DERIVED_FROM_SOURCE_PROTOCOL");
-    expect(card.querySelectorAll("[data-life]")).toHaveLength(1);
+    /* Bobby 2026-10-01: a ladder whose attempts all share one lifecycle does not repeat it on every card. */
+    expect(card.querySelectorAll("[data-life]")).toHaveLength(0);
+    expect(card.hasAttribute("data-lifecycle")).toBe(false);
     expect(card.querySelector("[data-run-state]")?.textContent).toBe("READY");
     const css = document.querySelector('[data-screen="compare"] style')?.textContent ?? "";
     expect(css).toMatch(/\.cp-head > \.l \{[^}]*flex: 0 1 auto/);
     expect(css).toMatch(/\.cp-card > \.t, \.cp-tcard > \.t \{[^}]*font-family: var\(--font-body\)/);
+  });
+});
+
+describe("S13 — the version lifecycle shows on a card only when the ladder mixes lifecycles", () => {
+  it("a mixed ladder pills each card with its own lifecycle; a uniform one pills none", async () => {
+    server([{ status: 200, body: attempts([run("run_a"), run("run_b", { attempt_id: "att_b", alpha_version_lifecycle: { value: "SUPERSEDED", availability: AVAILABLE } })]) }]);
+    renderAt(base);
+    await settled();
+    expect(document.querySelector('[data-ladder-run="run_a"] [data-life="ACTIVE"]')).not.toBeNull();
+    expect(document.querySelector('[data-ladder-run="run_b"] [data-life="SUPERSEDED"]')).not.toBeNull();
+    cleanup();
+    server([{ status: 200, body: attempts([run("run_a"), run("run_c", { attempt_id: "att_c" })]) }]);
+    renderAt(base);
+    await settled();
+    expect(document.querySelectorAll("[data-ladder-run] [data-life]")).toHaveLength(0);
   });
 });
 
