@@ -705,6 +705,7 @@ def test_w4_dataset_catalog_lists_symbols_and_month_coverage_from_names_only(tmp
     (dataset,) = catalog["datasets"]
     assert dataset["dataset_id"] == "crypto-binance-1m" and dataset["calendar_policy"] == "CRYPTO_24_7"
     assert "1h" in dataset["timeframes"]
+    assert "1d" in dataset["timeframes"] and "1D" not in dataset["timeframes"]
     symbols = {row["symbol"]: row for row in dataset["symbols"]["items"]}
     assert dataset["symbols"]["state"] == "PUBLISHED" and dataset["symbols"]["total"] == 3
     assert symbols["BTCUSDT"] == {
@@ -714,6 +715,12 @@ def test_w4_dataset_catalog_lists_symbols_and_month_coverage_from_names_only(tmp
     assert symbols["BTCUSDT_250328"]["contract_kind"] == "QUARTERLY"
     assert symbols["ETHUSDT"]["coverage"] is None
     assert str(tmp_path) not in json.dumps(catalog)
+
+
+def test_research_catalog_day_token_is_the_same_fixed_interval_as_hmd() -> None:
+    from portal_api.services.research_preflight_snapshot import _timeframe_delta
+
+    assert _timeframe_delta("1d") == _timeframe_delta("1D") == pd.Timedelta(days=1)
 
 
 def test_w4_dataset_catalog_says_not_published_rather_than_inventing_symbols(service) -> None:

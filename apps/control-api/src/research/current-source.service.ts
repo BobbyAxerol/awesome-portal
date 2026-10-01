@@ -711,6 +711,7 @@ export class ResearchCurrentSourceService {
       }),
       summary.source_facts,
       summary.selection.parameters,
+      binding?.candidateParameterKinds,
     );
     // The ETag must move when a new receipt, a job state or a sealed grid
     // lands, or a 304 would hide it.
@@ -718,6 +719,7 @@ export class ResearchCurrentSourceService {
       base: common.revision,
       byte_receipt: byteVerification.receipt_id,
       byte_state: byteVerification.state,
+      fold_ordering: ordering,
       what_if: {
         state: whatIf.state,
         coverage: whatIf.coverage?.label ?? null,
@@ -757,6 +759,7 @@ export class ResearchCurrentSourceService {
         [...foldRows]
           .sort((left, right) => left.row.sourceOrdinal - right.row.sourceOrdinal)
           .map(({ fold }) => ({ foldId: fold.fold_id, records: fold.child_audit?.records })),
+        binding?.candidateParameterKinds,
       ),
       parameter_authority: parameterAuthority({
         names: space.parameters.map((parameter) => parameter.name),

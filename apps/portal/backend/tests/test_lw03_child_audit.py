@@ -81,6 +81,27 @@ def test_seal_byte_budget_resamples_only_candles_and_preserves_full_source_envel
     assert adapter._canonical_json(summary) == unchanged
 
 
+def test_late_generation_keeps_its_real_selection_bundle_witness() -> None:
+    adapter = CurrentSourceArtifactAdapter(source_artifacts=None, retained_artifacts=None)
+    fold = {"fold_id": "1", "payload_json": "{}"}
+    lifecycle = pd.DataFrame([{
+        "fold_id": "1", "candidate_id": "a" * 24,
+        "context": "anti-leakage in-sample search", "strategy_fingerprint": "c" * 64,
+    } for _ in range(80)] + [{
+        "fold_id": "1", "candidate_id": "b" * 24,
+        "context": "out-of-sample scoring", "strategy_fingerprint": "d" * 64,
+    }, {
+        "fold_id": "1", "candidate_id": "b" * 24,
+        "context": "out-of-sample generation", "strategy_fingerprint": "d" * 64,
+    }])
+    adapter._attach_child_audit([fold], lifecycle=lifecycle, contract={"records_dropped": 0})
+    block = json.loads(fold["payload_json"])["child_audit"]
+    assert len(block["records"]) == 64 and block["source_record_count"] == 82
+    assert [row["audit_ordinal"] for row in block["records"]] == [*range(62), 80, 81]
+    assert block["records"][-2]["context"] == "out-of-sample scoring"
+    assert block["records"][-2]["strategy_fingerprint"] == "d" * 64
+
+
 def test_seal_byte_budget_never_drops_authority_to_fit() -> None:
     adapter = CurrentSourceArtifactAdapter(source_artifacts=None, retained_artifacts=None)
     with pytest.raises(CurrentSourceArtifactError) as failure:

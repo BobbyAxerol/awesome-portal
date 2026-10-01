@@ -42,9 +42,14 @@ def build_research_dataset_catalog(provider: MarketDataProvider) -> dict[str, ob
     for descriptor in descriptors[:MAXIMUM_CATALOG_DATASETS]:
         if "research" not in descriptor.usage_scopes and descriptor.source_class == "historical_market_data":
             continue
-        timeframes = [item for item in descriptor.supported_timeframes if _TIMEFRAME.fullmatch(item)]
+        # Research alpha declarations and requested specs use lower-case day
+        # tokens. HMD's pandas-style 1D is the same fixed interval, not a
+        # different capability; do not make the browser guess that alias.
+        timeframes = list(dict.fromkeys(
+            item.lower() for item in descriptor.supported_timeframes if _TIMEFRAME.fullmatch(item)
+        ))
         if not timeframes and descriptor.timeframe and _TIMEFRAME.fullmatch(descriptor.timeframe):
-            timeframes = [descriptor.timeframe]
+            timeframes = [descriptor.timeframe.lower()]
         symbols: dict[str, object]
         if descriptor.availability != "available":
             symbols = {

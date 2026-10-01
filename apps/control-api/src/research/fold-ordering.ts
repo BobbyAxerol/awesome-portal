@@ -25,6 +25,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import type { CurrentSourceFacts } from "./current-source.payload";
+import type { HistoricalProfileBinding } from "./parameter-binding.registry";
 
 export const FOLD_ORDERING_RULE = "research.freeze-fold-ordering.v1" as const;
 export const QUANTBT_CANDIDATE_IDENTITY_RULE = "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1" as const;
@@ -119,18 +120,28 @@ const EXACT_JSON_NUMBER = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
 
 /**
  * QuantBT's candidate identity for a parameter map it produced. The retained
- * map holds the engine's own decimal text, which is exactly the JSON number
- * Python's `json.dumps` wrote; a non-numeric value cannot be re-typed and
- * answers null (typed NOT_COMPUTABLE), never a guess.
+ * map is normalized decimal text, not Python JSON: 1.0 becomes "1" in P05.
+ * Restore the scalar kind only from the admitted historical child binding.
+ * Python json.dumps writes an integral float as 1.0, not 1; hashing the
+ * normalized map otherwise creates a false candidate MISMATCH. Unknown
+ * kinds answer null (typed NOT_COMPUTABLE), never borrow a child-audit ID.
  */
-export function quantbtCandidateId(parameters: Readonly<Record<string, string>>): string | null {
+export function quantbtCandidateId(
+  parameters: Readonly<Record<string, string>>,
+  kinds: HistoricalProfileBinding["candidateParameterKinds"],
+): string | null {
   const names = Object.keys(parameters).sort();
-  if (names.length === 0) return null;
+  if (names.length === 0 || !kinds) return null;
   const parts: string[] = [];
   for (const name of names) {
     const value = parameters[name]!;
     if (!EXACT_JSON_NUMBER.test(value)) return null;
-    parts.push(`${JSON.stringify(name)}:${value}`);
+    const kind = kinds[name];
+    if (!kind || kind === "int" && !/^-?(?:0|[1-9][0-9]*)$/.test(value)) return null;
+    // This pinned positive Delta range uses ordinary fixed-point Python
+    // floats (no exponent/negative zero); preserve the source decimal digits.
+    const token = kind === "float" && !value.includes(".") ? `${value}.0` : value;
+    parts.push(`${JSON.stringify(name)}:${token}`);
   }
   return createHash("sha256").update(`{${parts.join(",")}}`, "utf8").digest("hex").slice(0, 24);
 }
@@ -190,9 +201,10 @@ export function foldOrdering(
   folds: readonly FoldOrderingInput[],
   facts: CurrentSourceFacts | undefined,
   frozenParameters: Readonly<Record<string, string>>,
+  candidateParameterKinds?: HistoricalProfileBinding["candidateParameterKinds"],
 ): FoldOrdering {
   const { scope, verdict, reason } = scopeOf(facts);
-  const frozen = quantbtCandidateId(frozenParameters);
+  const frozen = quantbtCandidateId(frozenParameters, candidateParameterKinds);
   const rows = [...folds]
     .sort((a, b) => a.sourceOrdinal - b.sourceOrdinal)
     .map((fold) => ({

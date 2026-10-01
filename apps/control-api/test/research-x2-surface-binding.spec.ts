@@ -269,7 +269,7 @@ describe("B3 · the S06 trial surface is derived on the server from every retain
 describe("B4 · CG-P16-02 · binding down to Stage 4 is compared on the server", () => {
   it("real W5b seal: the sealed θ* is the candidate every fold's generation child ran, under one strategy fingerprint — BOUND", async () => {
     const binding = (await freeze(serviceFor(w5b), w5b.run_id)).stage4_binding;
-    const frozen = quantbtCandidateId(theta);
+    const frozen = quantbtCandidateId(theta, DEFAULT_PARAMETER_BINDING_REGISTRY.byRetainedLaneProfile(LANE_PROFILE)!.candidateParameterKinds);
     expect(frozen).toBe("2671e27b827ab2701d52e6ce");
     expect(binding).toMatchObject({ lane: "RS02_RETAINED_CHILD_AUDIT", state: "BOUND", reason_code: null, pairs: { params: "MATCH", bundle: "MATCH" } });
     // The θ* digest Screen 07 copies is P11's fold params_digest: sha256 of the canonical sealed map.

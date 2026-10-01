@@ -82,6 +82,8 @@ export interface HistoricalProfileBinding {
   adapterContractDigest: string;
   /** Declared space the WFO study searched, from the bound adapter contract. */
   parameterSpace: Readonly<Record<string, DeclaredRange>>;
+  /** Python scalar kinds of this exact child, not inferred from decimal text. */
+  candidateParameterKinds?: Readonly<Record<string, "int" | "float">>;
   installedInRelease: string;
   /**
    * RS-02 lane profiles a seal of this P10 profile is retained under. The
@@ -126,6 +128,14 @@ const WFO_V1: HistoricalProfileBinding = Object.freeze({
   profileDigest: DELTA_WFO_PROFILE_DIGEST,
   adapterContractDigest: DELTA_WFO_PROFILE.adapter_contract_digest,
   parameterSpace: P04_DELTA_DECLARED_CONTRACT.parameter_space,
+  // strategy/specification.py parameter tuples + research_child's pinned
+  // WFO producer: Optuna preserves int_range vs float_range; what-if pins
+  // are allowed only on the same two float axes. Keep this with the binding
+  // if a later release changes the child or its declarations.
+  candidateParameterKinds: Object.freeze({
+    window: "int", rsi_l: "int", signalLength: "int", len_atr1: "int",
+    len_atr2: "int", rvol: "float", len_vol: "int", slpercent: "float",
+  } as const),
   installedInRelease: "research-loop-v1.1/W1",
   retainedLaneProfileIds: Object.freeze([RS02_SIGNAL_NOTIONAL_PROFILE_ID]),
   codeFixed: DELTA_CODE_FIXED,

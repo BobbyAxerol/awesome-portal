@@ -23,6 +23,7 @@ import {
 import type { CurrentSourceSealRow, CurrentSourceStoredRow } from "../src/research/current-source.repository";
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
 import { FOLD_ORDERING_REASONS, foldOrdering, quantbtCandidateId } from "../src/research/fold-ordering";
+import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "../src/research/parameter-binding.registry";
 import { openApiValidator } from "./research-rf05-openapi";
 
 type Kind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
@@ -45,6 +46,7 @@ const config = {
   QUERY_CURSOR_TTL_SECONDS: 900,
 };
 const freezeValidator = openApiValidator("research-current-source.openapi.json", "Freeze");
+const candidateKinds = DEFAULT_PARAMETER_BINDING_REGISTRY.byRetainedLaneProfile("rs02.delta-signal-notional-wfo.v1")!.candidateParameterKinds;
 
 function sealOf(fixture: Fixture, summary = fixture.summary): CurrentSourceSealRow {
   return {
@@ -148,15 +150,17 @@ describe("P16-T02 · the causal boundary is checked per fold, on two axes, never
 
 describe("P16-T11 · the final-audit target is the frozen selection", () => {
   it("QuantBT's candidate identity of the frozen θ* is reproduced exactly", () => {
-    expect(quantbtCandidateId(w5b.summary.selection.parameters)).toBe("2671e27b827ab2701d52e6ce");
-    expect(quantbtCandidateId({ mode: "sma" })).toBeNull();
-    expect(quantbtCandidateId({})).toBeNull();
+    expect(quantbtCandidateId(w5b.summary.selection.parameters, candidateKinds)).toBe("2671e27b827ab2701d52e6ce");
+    expect(quantbtCandidateId({ mode: "sma" }, candidateKinds)).toBeNull();
+    expect(quantbtCandidateId({}, candidateKinds)).toBeNull();
+    expect(quantbtCandidateId({ rvol: "1" }, undefined)).toBeNull();
+    expect(quantbtCandidateId({ window: "54.5" }, candidateKinds)).toBeNull();
   });
 
   it("every fold's out-of-sample generation child in the replay child audit is the frozen selection — no reselect, no fold-last", async () => {
     const { service } = serviceFor(w5b);
     const value = await freeze(service, w5b.run_id);
-    const frozen = quantbtCandidateId(value.frozen_selection.parameters);
+    const frozen = quantbtCandidateId(value.frozen_selection.parameters, candidateKinds);
     expect(value.fold_ordering.frozen_candidate.candidate_id).toBe(frozen);
     expect(value.fold_ordering.counts).toMatchObject({ folds: 2, oos_child_match: 2, oos_child_mismatch: 0 });
     for (const fold of value.fold_ordering.folds) {
@@ -173,6 +177,25 @@ describe("P16-T11 · the final-audit target is the frozen selection", () => {
     // The in-sample search saw other candidates; only the frozen one generated OOS bars.
     const searched = new Set(w5b.rows.FOLD.flatMap((row) => (row.payload.child_audit as { records: Array<{ candidate_id: string }> }).records.map((r) => r.candidate_id)));
     expect(searched.size).toBeGreaterThan(1);
+  });
+
+  it("restores a Python integral float without changing the sealed parameter digest or hiding real mismatches", async () => {
+    // Independent QuantBT 1.1.1 _strategy_candidate_id on the real 400-trial
+    // preview selection: rvol=1.0, all six integer axes keep their int kind.
+    const parameters = { rvol: "1", rsi_l: "14", window: "54", len_vol: "28",
+      len_atr1: "20", len_atr2: "47", slpercent: "1.6", signalLength: "15" };
+    expect(quantbtCandidateId(parameters, candidateKinds)).toBe("00b18de5ca922d3223fc317e");
+    const rows = structuredClone(w5b.rows);
+    const summary = structuredClone(w5b.summary);
+    summary.selection.parameters = parameters;
+    for (const row of rows.FOLD) {
+      const records = (row.payload.child_audit as { records: Array<{ context: string; candidate_id: string }> }).records;
+      records.find((record) => record.context === "out-of-sample generation")!.candidate_id = "00b18de5ca922d3223fc317e";
+    }
+    const { service } = serviceFor(w5b, rows, summary);
+    const value = await freeze(service, w5b.run_id);
+    expect(value.frozen_selection.parameters).toEqual(parameters);
+    expect(value.fold_ordering.counts).toMatchObject({ oos_child_match: 2, oos_child_mismatch: 0 });
   });
 
   it("an OOS child that is not the frozen θ* is a MISMATCH on that fold, never re-targeted", async () => {

@@ -12,7 +12,7 @@
       "excluded_scopes": ["realtime_market_data", "paper_execution", "paper_account_state"],
       "source_timezone": "UTC",
       "calendar_policy": "CRYPTO_24_7",
-      "timeframes": ["1min", "5min", "15min", "30min", "1h", "4h", "1D"],
+      "timeframes": ["1min", "5min", "15min", "30min", "1h", "4h", "1d"],
       "symbols": {
         "state": "PUBLISHED",
         "reason": null,
@@ -87,7 +87,7 @@
       "excluded_scopes": ["realtime_market_data", "paper_execution", "paper_account_state"],
       "source_timezone": "Asia/Ho_Chi_Minh",
       "calendar_policy": "SOURCE_DECLARED",
-      "timeframes": ["1D"],
+      "timeframes": ["1d"],
       "symbols": {
         "state": "PUBLISHED",
         "reason": null,

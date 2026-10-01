@@ -153,6 +153,10 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
     // The retained selection's P14-rule digest is the run's hand-off cursor digest.
     expect(facts.parameterDigest).toBe(preview.progress.claim.handoff_cursor.params_digest);
     expect(facts.selection!.parameters).toEqual(preview.search.selection.parameters);
+    // A historical profile that cannot be resolved must not borrow current kinds.
+    const unknown = retainedLaneFacts(lane({ executionProfileDigest: "0".repeat(64) }));
+    expect(unknown.ordering!.frozen_candidate.candidate_id).toBeNull();
+    expect(unknown.laneConsistent).toBe(false);
   });
 
   it("binds all seven formerly MISSING rows to retained facts; only the uncertified claim and robustness stay DEGRADED", async () => {

@@ -195,8 +195,9 @@ export function retainedStage4Binding(
   theta: Readonly<Record<string, string>>,
   sealedParamsSha256: string | null,
   folds: readonly ChildAuditFold[],
+  candidateParameterKinds?: import("./parameter-binding.registry").HistoricalProfileBinding["candidateParameterKinds"],
 ): Stage4Binding {
-  const frozen = quantbtCandidateId(theta);
+  const frozen = quantbtCandidateId(theta, candidateParameterKinds);
   const sealedParams = row("SEALED_PARAMS", {
     value: frozen,
     identity_rule: QUANTBT_CANDIDATE_IDENTITY_RULE,

@@ -385,7 +385,7 @@ export interface components {
             message: string | null;
             field_path: components["schemas"]["FieldPath"];
         };
-        /** @description CG-P08-04: read-only, bounded research dataset catalog for Screen 02. Datasets, timeframes, availability and, where the approved reader's storage layout is mounted, symbols with month-partition coverage. No path, row or price; exact bar availability is decided at preflight. */
+        /** @description CG-P08-04: read-only, bounded research dataset catalog for Screen 02. Public timeframes use lower-case day tokens (1d); the HMD reader's 1D is the same fixed interval. Older uppercase tokens remain accepted for compatibility. Datasets, timeframes, availability and, where the approved reader's storage layout is mounted, symbols with month-partition coverage. No path, row or price; exact bar availability is decided at preflight. */
         DatasetCatalog: {
             /** @constant */
             schema_version: "research.dataset-catalog.v1";

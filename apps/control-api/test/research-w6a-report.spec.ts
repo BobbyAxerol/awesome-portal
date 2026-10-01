@@ -383,6 +383,15 @@ describe("W6a · P18 report sealed from the retained WFO lane", () => {
     expect(core.equity_is.state).toBe("AVAILABLE");
     expect(core.metrics.find(value => value.key === "NET_RETURN_FRACTION")?.value).toBe(evidence.passport.net_return_fraction);
     expect(core.headline_footnote).toContain("retained account path");
+    // BR-TXT-02: concise new-core copy must retain scope/selection warnings.
+    for (const copy of [core.headline_footnote, core.promotion.line, core.provenance.line,
+      ...core.warnings.map((warning) => warning.copy)]) {
+      expect(copy.trim().split(/\s+/).length).toBeLessThanOrEqual(12);
+    }
+    expect(core.warnings).toContainEqual(expect.objectContaining({
+      reason_code: "QUANTBT_OOS_USED_FOR_SELECTION",
+      copy: "Selection used outer tests; OOS is not untouched holdout.",
+    }));
   });
 
   it("E11/E14 new sealed engine OOS fact reaches the named Evidence and frozen Report unchanged", async () => {

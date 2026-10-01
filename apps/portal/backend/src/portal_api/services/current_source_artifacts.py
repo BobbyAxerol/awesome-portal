@@ -1261,8 +1261,28 @@ class CurrentSourceArtifactAdapter:
                     "The source published more OOS-generation children than the admitted fold budget.",
                 )
             generation_ordinals = {row["audit_ordinal"] for row in generation}
-            selected = generation + [row for row in records if row["audit_ordinal"] not in generation_ordinals][
-                :MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD - len(generation)]
+            # Keep a selection-stage witness for each retained generation
+            # candidate too. A long study otherwise keeps the generated
+            # child but drops its real pre-generation bundle fingerprint.
+            witnesses: list[dict[str, Any]] = []
+            for child in generation:
+                if child["candidate_id"] is None:
+                    continue
+                witness = next((row for row in records
+                    if row["audit_ordinal"] < child["audit_ordinal"]
+                    and row["context"] != "out-of-sample generation"
+                    and row["candidate_id"] == child["candidate_id"]), None)
+                if witness is not None and witness["audit_ordinal"] not in generation_ordinals:
+                    witnesses.append(witness)
+                    generation_ordinals.add(witness["audit_ordinal"])
+            required = generation + witnesses
+            if len(required) > MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD:
+                raise CurrentSourceArtifactError(
+                    "RESEARCH_CURRENT_SOURCE_CHILD_AUDIT_INVALID",
+                    "The source generation witnesses exceed the admitted fold budget.",
+                )
+            selected = required + [row for row in records if row["audit_ordinal"] not in generation_ordinals][
+                :MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD - len(required)]
             selected.sort(key=lambda row: row["audit_ordinal"])
             block = {
                 "schema_version": "research.current-source-fold-child-audit.v1",

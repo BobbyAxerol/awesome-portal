@@ -616,7 +616,7 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       { key: "WIN_RATE", label: analyticsV2 ? "Episode win rate · not audited trades" : "Win rate", scope: analyticsV2 ? "OOS" : "NOT_PUBLISHED", ...(analyticsV2 ? descriptiveFact(analyticsV2.behaviour.win_rate, "PORTAL_ANALYTICS_EPISODE_WIN_RATE_UNAVAILABLE") : { value: null, availability: NOT_PUBLISHED("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS") }) },
       { key: "FUNDING", label: "Funding", scope: "NOT_PUBLISHED", value: null, availability: NOT_PUBLISHED("RS02_SUMMARY_PUBLISHES_NO_FUNDING_TOTAL") },
     ],
-    headline_footnote: "OOS return and Sharpe use outer tests; drawdown spans the retained account path.",
+    headline_footnote: "OOS return/Sharpe use outer tests; drawdown spans retained account path.",
     equity: {
       ...equityBlock("RS02_STITCHED_OUTER_TEST_WINDOWS", oosPoints, seriesSampling, 600, "RS02_OUTER_TEST_WINDOWS_HAVE_NO_RETAINED_OBSERVATIONS"),
       digest: evidence.source_series_artifact?.digest ?? null,
@@ -699,22 +699,22 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
         definition_id: "research.warning.v1.oos-used-for-selection",
         state: "ACTIVE" as const,
         reason_code: "QUANTBT_OOS_USED_FOR_SELECTION",
-        copy: "QuantBT reports that selection saw the outer test windows (walk_forward.oos_used_for_selection); these OOS figures are not an untouched holdout.",
+        copy: "Selection used outer tests; OOS is not untouched holdout.",
       }] : []),
       ...(claim.causality_claim.value === "retrospective_global_calibration" ? [{
         definition_id: "research.warning.v1.retrospective-global-calibration",
         state: "ACTIVE" as const,
         reason_code: "QUANTBT_RETROSPECTIVE_GLOBAL_CALIBRATION",
-        copy: "QuantBT reports a retrospective global calibration (walk_forward.causality_claim): one parameter set chosen over every fold, not a causal per-fold refit.",
+        copy: "Retrospective global selection; not a causal per-fold refit.",
       }] : []),
     ],
     promotion: {
       state: "NOT_PUBLISHED",
-      line: "Promotion/governance approval is not published by the retained Delta WFO source; a report never promotes a run.",
+      line: "No source promotion approval; this report never promotes.",
       availability: NOT_PUBLISHED("RS02_SOURCE_DID_NOT_PUBLISH_PROMOTION_APPROVAL"),
     },
     provenance: {
-      line: `P18 report sealed from ${evidence.revision}, ${split.revision}, ${search.revision}, ${freeze.revision} and ${replay.revision}; every value is copied from the retained current-source reads.`.slice(0, 1_024),
+      line: "Sealed from retained current-source reads; revisions and digests above.",
       metric_registry_version: "research.current-source-metrics.v1",
       data_signature: provenance.dataset_binding_digest,
       read_model_revision: "research.report-read-model.v2",
@@ -856,7 +856,7 @@ export function fixedProfileCore(reads: FixedProfileReads): CoreV2 {
       { key: "FUNDING", label: "Funding", scope: metricScope("FUNDING_TOTAL"), ...metricFact("FUNDING_TOTAL") },
     ],
     headline_footnote: netOosFact
-      ? "OOS return uses the sealed OOS slice; other values retain Hub scopes."
+      ? "OOS return: sealed OOS slice; other metrics retain Hub scopes."
       : "Scopes and availability come from the sealed Evidence Hub.",
     equity: equity.availability.state === "AVAILABLE" && equity.points.length > 0
       ? {

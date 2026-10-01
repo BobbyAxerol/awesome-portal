@@ -36,6 +36,7 @@ import {
   isDeltaWfoProfile,
 } from "./delta-wfo.profile";
 import { canonicalResearchJson } from "./preflight.service";
+import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
 
 const DIGEST = /^[0-9a-f]{64}$/;
 
@@ -138,7 +139,8 @@ export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedL
         testEndUtcMs: data?.test_end_utc_ms ?? null,
         childAudit: data?.child_audit?.records,
       };
-    }), parsed.source_facts, selection.parameters)
+    }), parsed.source_facts, selection.parameters,
+    DEFAULT_PARAMETER_BINDING_REGISTRY.byProfileDigest(lane.executionProfileDigest)?.candidateParameterKinds)
     : null;
   const laneConsistent = isDeltaWfoProfile(lane.executionProfileId, lane.executionProfileDigest) && (seal === null || (
     seal.sourceAdapterId === DELTA_WFO_PROFILE.current_source.source_adapter_id
