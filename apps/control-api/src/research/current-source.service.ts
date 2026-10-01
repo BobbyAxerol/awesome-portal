@@ -2,6 +2,7 @@
 
 import { Buffer } from "node:buffer";
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { enrichedAvailability } from "./enriched-analysis.contract";
 import { z } from "zod";
 
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -410,6 +411,7 @@ export class ResearchCurrentSourceService {
     const value = {
       schema_version: "research.current-source-evidence.v1" as const,
       ...(seal.enrichedAnalysis ? { enriched_analysis: seal.enrichedAnalysis } : {}),
+      enriched_analysis_availability: enrichedAvailability(seal.enrichedAnalysis),
       ...(summary.summary_analytics ? { summary_analytics: summary.summary_analytics } : {}),
       ...(summary.summary_analytics_v2 ? { summary_analytics_v2: summary.summary_analytics_v2 } : {}),
       ...(summary.source_series_artifact ? { source_series_artifact: summary.source_series_artifact } : {}),

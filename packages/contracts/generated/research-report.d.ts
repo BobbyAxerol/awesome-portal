@@ -333,6 +333,16 @@ export interface components {
             max_drawdown_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
         };
+        EnrichedAnalysisAvailability: {
+            /** @constant */
+            state: "AVAILABLE";
+            reason_code: null;
+        } | {
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            /** @enum {unknown} */
+            reason_code: "SEALED_ENRICHMENT_NOT_COMPUTED" | "SOURCE_EVIDENCE_NOT_SEALED";
+        };
         WorkspaceId: string;
         RunId: string;
         JobId: string;
@@ -774,6 +784,7 @@ export interface components {
             availability: components["schemas"]["Availability"];
         };
         ReportDetail: {
+            enriched_analysis_availability?: components["schemas"]["EnrichedAnalysisAvailability"];
             enriched_analysis?: components["schemas"]["EnrichedAnalysis"];
             /** @constant */
             schema_version: "research.report-detail.v1";

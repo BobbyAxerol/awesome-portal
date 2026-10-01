@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,6 +27,9 @@ from portal_api.services.research_artifacts import ResearchArtifactError, observ
 from portal_api.services.research_preflight_snapshot import (
     ResearchPreflightSnapshotError,
     refusal_detail,
+)
+from portal_api.services.enrich_dataset_catalog import (
+    DatasetIndexError, DatasetIndexStore, enrich_dataset_catalog, source_digest, window_metadata,
 )
 
 router = APIRouter(prefix="/internal/research", include_in_schema=False)
@@ -130,6 +133,52 @@ async def read_research_dataset_catalog(request: Request) -> dict[str, object]:
         return build_research_dataset_catalog(request.app.state.market_data_provider)
     except ResearchDatasetCatalogError as exc:
         raise HTTPException(status_code=503, detail="historical dataset catalog is unavailable") from exc
+
+
+def dataset_index_store(request: Request) -> DatasetIndexStore:
+    if not hasattr(request.app.state, "research_dataset_index"):
+        request.app.state.research_dataset_index = DatasetIndexStore()
+    return request.app.state.research_dataset_index
+
+
+@router.get("/datasets-v2")
+async def read_indexed_dataset_catalog(request: Request) -> dict[str, object]:
+    try:
+        require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    try:
+        return enrich_dataset_catalog(request.app.state.market_data_provider, dataset_index_store(request))
+    except (DatasetIndexError, ResearchDatasetCatalogError, OSError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="historical metadata index is unavailable") from exc
+
+
+@router.get("/dataset-bar-metadata")
+async def read_dataset_bar_metadata(request: Request, dataset_id: str, symbol: str, timeframe: str,
+        start_utc_ms: int = Query(ge=0), end_exclusive_utc_ms: int = Query(ge=0),
+        warmup_bars: int = Query(default=0, ge=0, le=100_000)) -> dict[str, object]:
+    try:
+        require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    try:
+        provider = request.app.state.market_data_provider
+        revision, document, reason = dataset_index_store(request).read(source_digest(provider))
+        metadata = window_metadata(document, dataset_id=dataset_id, symbol=symbol, timeframe=timeframe,
+            start_ms=start_utc_ms, end_ms=end_exclusive_utc_ms, warmup_bars=warmup_bars)
+        if reason:
+            metadata["reason_code"] = reason
+        return {"schema_version": "research.dataset-bar-metadata.v1", "catalog_revision": revision,
+            "as_of_utc_ms": document["as_of_utc_ms"] if document else None,
+            "dataset_id": dataset_id, "symbol": symbol, "timeframe": timeframe.lower(),
+            "start_utc_ms": start_utc_ms, "end_exclusive_utc_ms": end_exclusive_utc_ms,
+            "scope": "INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION", **metadata}
+    except DatasetIndexError as exc:
+        code = str(exc)
+        raise HTTPException(status_code=400 if code.startswith("DATASET_WINDOW") or code == "DATASET_INTERVAL_INVALID" else 503,
+            detail="historical metadata query refused") from exc
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="historical metadata index is unavailable") from exc
 
 
 @router.post("/preflight-snapshots")

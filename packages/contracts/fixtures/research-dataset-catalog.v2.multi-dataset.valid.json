@@ -1,0 +1,580 @@
+{
+  "schema_version": "research.dataset-catalog.v2",
+  "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "as_of_utc_ms": 1783036800000,
+  "index_availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "datasets": [
+    {
+      "dataset_id": "crypto-binance-1m",
+      "venue": "BINANCE",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "UTC",
+      "calendar_policy": "CRYPTO_24_7",
+      "timeframes": [
+        {
+          "timeframe": "1min",
+          "resolution_seconds": 60,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "5min",
+          "resolution_seconds": 300,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "15min",
+          "resolution_seconds": 900,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "30min",
+          "resolution_seconds": 1800,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "1h",
+          "resolution_seconds": 3600,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "4h",
+          "resolution_seconds": 14400,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "1d",
+          "resolution_seconds": 86400,
+          "availability": "available",
+          "reason_code": null
+        }
+      ],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "items": [
+          {
+            "symbol": "BTCUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-01",
+              "last_month": "2026-09",
+              "months": 81,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [],
+            "coverage_availability": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED"
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "BTCUSDT_210326",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2021-02",
+              "last_month": "2021-03",
+              "months": 2,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [],
+            "coverage_availability": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED"
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "BTCUSDT_260327",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2025-09",
+              "last_month": "2026-04",
+              "months": 8,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [],
+            "coverage_availability": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED"
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "ETHUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-01",
+              "last_month": "2026-09",
+              "months": 81,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [],
+            "coverage_availability": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED"
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "SOLUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-09",
+              "last_month": "2026-09",
+              "months": 73,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [],
+            "coverage_availability": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED"
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          }
+        ],
+        "total": 5,
+        "truncated": false
+      },
+      "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "as_of_utc_ms": 1783036800000,
+      "asset_class": null,
+      "asset_class_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "HMD_READER_ASSET_CLASS_NOT_PUBLISHED"
+      }
+    },
+    {
+      "dataset_id": "fixture-bybit-1h",
+      "venue": "BYBIT",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "UTC",
+      "calendar_policy": "SOURCE_DECLARED",
+      "timeframes": [
+        {
+          "timeframe": "1h",
+          "resolution_seconds": 3600,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "4h",
+          "resolution_seconds": 14400,
+          "availability": "available",
+          "reason_code": null
+        }
+      ],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "items": [
+          {
+            "symbol": "BTCUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2022-05",
+              "last_month": "2025-11",
+              "months": 43,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [],
+            "coverage_availability": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED"
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "ETHUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2022-05",
+              "last_month": "2025-11",
+              "months": 40,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [],
+            "coverage_availability": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED"
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          }
+        ],
+        "total": 2,
+        "truncated": false
+      },
+      "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "as_of_utc_ms": 1783036800000,
+      "asset_class": null,
+      "asset_class_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "HMD_READER_ASSET_CLASS_NOT_PUBLISHED"
+      }
+    },
+    {
+      "dataset_id": "fixture-single-symbol-1d",
+      "venue": "FIXTURE",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "Asia/Ho_Chi_Minh",
+      "calendar_policy": "SOURCE_DECLARED",
+      "timeframes": [
+        {
+          "timeframe": "1d",
+          "resolution_seconds": 86400,
+          "availability": "available",
+          "reason_code": null
+        }
+      ],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "items": [
+          {
+            "symbol": "VN30F1M",
+            "contract_kind": null,
+            "coverage": null,
+            "coverage_by_timeframe": [],
+            "coverage_availability": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED"
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          }
+        ],
+        "total": 1,
+        "truncated": false
+      },
+      "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "as_of_utc_ms": 1783036800000,
+      "asset_class": null,
+      "asset_class_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "HMD_READER_ASSET_CLASS_NOT_PUBLISHED"
+      }
+    },
+    {
+      "dataset_id": "fixture-query-any-symbol",
+      "venue": "FIXTURE",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "UTC",
+      "calendar_policy": "SOURCE_DECLARED",
+      "timeframes": [
+        {
+          "timeframe": "1h",
+          "resolution_seconds": 3600,
+          "availability": "available",
+          "reason_code": null
+        }
+      ],
+      "symbols": {
+        "state": "NOT_PUBLISHED",
+        "reason": "This source answers any symbol by query and publishes no symbol list.",
+        "items": [],
+        "total": null,
+        "truncated": false
+      },
+      "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "as_of_utc_ms": 1783036800000,
+      "asset_class": null,
+      "asset_class_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "HMD_READER_ASSET_CLASS_NOT_PUBLISHED"
+      }
+    },
+    {
+      "dataset_id": "fixture-unavailable-1h",
+      "venue": "FIXTURE",
+      "availability": "unavailable",
+      "unavailable_reason": "The approved historical source is not mounted on this host.",
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "UTC",
+      "calendar_policy": "SOURCE_DECLARED",
+      "timeframes": [
+        {
+          "timeframe": "1h",
+          "resolution_seconds": 3600,
+          "availability": "unavailable",
+          "reason_code": "HMD_DATASET_NOT_AVAILABLE"
+        }
+      ],
+      "symbols": {
+        "state": "NOT_PUBLISHED",
+        "reason": "The dataset is unavailable, so no symbol can be listed.",
+        "items": [],
+        "total": null,
+        "truncated": false
+      },
+      "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "as_of_utc_ms": 1783036800000,
+      "asset_class": null,
+      "asset_class_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "HMD_READER_ASSET_CLASS_NOT_PUBLISHED"
+      }
+    }
+  ],
+  "coverage_rule": "Exact target bars in the declared indexed range; preflight is authoritative. No prices or instrument guesses."
+}

@@ -1,0 +1,1344 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Research indexed data declaration",
+    "version": "1.0.0",
+    "description": "Explicit operator-built immutable index. Fixed UTC timestamps/exact counts over declared indexed ranges only; not instrument authority, constituent-minute completeness, a preflight token, engine admission or sealed-holdout values. GET does not build/scan HMD. V1 remains unchanged."
+  },
+  "paths": {
+    "/api/v1/research/datasets/catalog-v2": {
+      "get": {
+        "operationId": "researchDatasetCatalogGetV2",
+        "summary": "Read bounded Research historical metadata without scanning market data",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Named metadata response; absence remains typed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetCatalogV2"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/datasets/{dataset_id}/symbols": {
+      "get": {
+        "operationId": "researchDatasetSymbolsGetV1",
+        "summary": "Read bounded Research historical metadata without scanning market data",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{1,128}$"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{0,32}$",
+              "default": ""
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "PERPETUAL",
+                "QUARTERLY"
+              ]
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*(?:min|m|h|d)$"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Named metadata response; absence remains typed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SymbolPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/datasets/{dataset_id}/bar-metadata": {
+      "get": {
+        "operationId": "researchDatasetBarMetadataGetV1",
+        "summary": "Read bounded Research historical metadata without scanning market data",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{1,128}$"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9][A-Z0-9_-]{1,31}$"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*(?:min|m|h|d)$"
+            }
+          },
+          {
+            "name": "start_utc_ms",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "end_exclusive_utc_ms",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "warmup_bars",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Named metadata response; absence remains typed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BarMetadata"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal; never a market-data fallback",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
+    "schemas": {
+      "DatasetCatalogV2": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "catalog_revision",
+          "as_of_utc_ms",
+          "index_availability",
+          "datasets",
+          "coverage_rule"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.dataset-catalog.v2"
+          },
+          "catalog_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "as_of_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "index_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "dataset_id",
+                "venue",
+                "availability",
+                "unavailable_reason",
+                "source_class",
+                "usage_scopes",
+                "excluded_scopes",
+                "source_timezone",
+                "calendar_policy",
+                "timeframes",
+                "symbols",
+                "catalog_revision",
+                "as_of_utc_ms",
+                "asset_class",
+                "asset_class_availability"
+              ],
+              "properties": {
+                "dataset_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "venue": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "availability": {
+                  "enum": [
+                    "available",
+                    "unavailable"
+                  ]
+                },
+                "unavailable_reason": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 400
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "source_class": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "usage_scopes": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "excluded_scopes": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "source_timezone": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "calendar_policy": {
+                  "enum": [
+                    "CRYPTO_24_7",
+                    "SOURCE_DECLARED"
+                  ]
+                },
+                "timeframes": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "timeframe",
+                      "resolution_seconds",
+                      "availability",
+                      "reason_code"
+                    ],
+                    "properties": {
+                      "timeframe": {
+                        "type": "string",
+                        "pattern": "^[1-9][0-9]*(?:min|m|h|d)$"
+                      },
+                      "resolution_seconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000000
+                      },
+                      "availability": {
+                        "enum": [
+                          "available",
+                          "unavailable"
+                        ]
+                      },
+                      "reason_code": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "symbols": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "state",
+                    "reason",
+                    "items",
+                    "total",
+                    "truncated"
+                  ],
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "PUBLISHED",
+                        "NOT_PUBLISHED"
+                      ]
+                    },
+                    "reason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "maxItems": 256,
+                      "items": {
+                        "$ref": "#/components/schemas/IndexedSymbol"
+                      }
+                    }
+                  }
+                },
+                "catalog_revision": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "as_of_utc_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "asset_class": {
+                  "type": "null"
+                },
+                "asset_class_availability": {
+                  "$ref": "#/components/schemas/Availability"
+                }
+              }
+            },
+            "maxItems": 16
+          },
+          "coverage_rule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          }
+        }
+      },
+      "IndexedSymbol": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "symbol",
+          "contract_kind",
+          "coverage",
+          "coverage_by_timeframe",
+          "coverage_availability",
+          "instrument",
+          "quality"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "pattern": "^[A-Z0-9][A-Z0-9_-]{1,31}$"
+          },
+          "contract_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PERPETUAL",
+                  "QUARTERLY"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "first_month",
+                  "last_month",
+                  "months",
+                  "granularity"
+                ],
+                "properties": {
+                  "first_month": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}$"
+                  },
+                  "last_month": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}$"
+                  },
+                  "months": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1200
+                  },
+                  "granularity": {
+                    "const": "MONTH_PARTITION"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverage_by_timeframe": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Coverage"
+            },
+            "maxItems": 16
+          },
+          "coverage_availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "instrument": {
+            "$ref": "#/components/schemas/Instrument"
+          },
+          "quality": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason_code",
+              "origin",
+              "gap_count",
+              "missing_ratio",
+              "duplicate_bar_count",
+              "as_of_utc_ms"
+            ],
+            "properties": {
+              "state": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason_code": {
+                "const": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC"
+              },
+              "origin": {
+                "const": "PORTAL_DERIVED"
+              },
+              "gap_count": {
+                "type": "null"
+              },
+              "missing_ratio": {
+                "type": "null"
+              },
+              "duplicate_bar_count": {
+                "type": "null"
+              },
+              "as_of_utc_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "timeframe",
+          "resolution_seconds",
+          "availability",
+          "reason_code",
+          "origin",
+          "as_of_utc_ms",
+          "first_bar_utc_ms",
+          "last_bar_utc_ms",
+          "last_closed_bar_end_utc_ms",
+          "bar_count",
+          "expected_bar_count",
+          "missing_ratio",
+          "gap_count",
+          "largest_gap_seconds",
+          "duplicate_bar_count",
+          "coverage_scope",
+          "indexed_start_utc_ms",
+          "indexed_end_exclusive_utc_ms",
+          "closed_bar_policy"
+        ],
+        "properties": {
+          "timeframe": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*(?:min|m|h|d)$"
+          },
+          "resolution_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000000
+          },
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin": {
+            "const": "PORTAL_DERIVED"
+          },
+          "as_of_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "first_bar_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_bar_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_closed_bar_end_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bar_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "expected_bar_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "missing_ratio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^0\\.\\d{12}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gap_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "largest_gap_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "duplicate_bar_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "coverage_scope": {
+            "const": "INDEXED_RANGE"
+          },
+          "indexed_start_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "indexed_end_exclusive_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "closed_bar_policy": {
+            "const": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
+          }
+        }
+      },
+      "Availability": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason_code"
+            ],
+            "properties": {
+              "state": {
+                "const": "AVAILABLE"
+              },
+              "reason_code": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason_code"
+            ],
+            "properties": {
+              "state": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason_code": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+              }
+            }
+          }
+        ]
+      },
+      "Instrument": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reason_code",
+          "origin",
+          "as_of_utc_ms",
+          "contract_kind",
+          "display_name",
+          "underlying",
+          "base",
+          "quote",
+          "settle_currency",
+          "tick_size",
+          "lot_size",
+          "contract_multiplier",
+          "listing_utc_ms",
+          "expiry_utc_ms"
+        ],
+        "properties": {
+          "state": {
+            "const": "NOT_PUBLISHED"
+          },
+          "reason_code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+          },
+          "origin": {
+            "const": "HMD_DIRECT"
+          },
+          "as_of_utc_ms": {
+            "type": "null"
+          },
+          "contract_kind": {
+            "type": "null"
+          },
+          "display_name": {
+            "type": "null"
+          },
+          "underlying": {
+            "type": "null"
+          },
+          "base": {
+            "type": "null"
+          },
+          "quote": {
+            "type": "null"
+          },
+          "settle_currency": {
+            "type": "null"
+          },
+          "tick_size": {
+            "type": "null"
+          },
+          "lot_size": {
+            "type": "null"
+          },
+          "contract_multiplier": {
+            "type": "null"
+          },
+          "listing_utc_ms": {
+            "type": "null"
+          },
+          "expiry_utc_ms": {
+            "type": "null"
+          }
+        }
+      },
+      "SymbolPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "dataset_id",
+          "catalog_revision",
+          "as_of_utc_ms",
+          "availability",
+          "items",
+          "total",
+          "next_cursor"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.dataset-symbols.v1"
+          },
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+          },
+          "catalog_revision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "as_of_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndexedSymbol"
+            },
+            "maxItems": 200
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "BarMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "catalog_revision",
+          "as_of_utc_ms",
+          "dataset_id",
+          "symbol",
+          "timeframe",
+          "start_utc_ms",
+          "end_exclusive_utc_ms",
+          "scope",
+          "availability",
+          "reason_code",
+          "bars",
+          "first_bar_utc_ms",
+          "last_bar_utc_ms",
+          "warmup_bars_required",
+          "warmup_bars_available_before_start"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.dataset-bar-metadata.v1"
+          },
+          "catalog_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "as_of_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+          },
+          "symbol": {
+            "type": "string",
+            "pattern": "^[A-Z0-9][A-Z0-9_-]{1,31}$"
+          },
+          "timeframe": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*(?:min|m|h|d)$"
+          },
+          "start_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "end_exclusive_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "scope": {
+            "const": "INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION"
+          },
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bars": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "first_bar_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_bar_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warmup_bars_required": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "warmup_bars_available_before_start": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "FieldPath": {
+        "description": "Requested-spec key path (never a value), e.g. [\"walk_forward\", \"train_window\"]; Screen 02 maps it to the owning wizard step.",
+        "type": "array",
+        "maxItems": 6,
+        "items": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_]{1,64}$"
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "enum": [
+                  "SESSION_REQUIRED",
+                  "REQUEST_REJECTED",
+                  "RESEARCH_PREFLIGHT_INVALID",
+                  "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED",
+                  "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN",
+                  "RESEARCH_PREFLIGHT_RELEASE_STALE",
+                  "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED",
+                  "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID",
+                  "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+                  "RESEARCH_PREFLIGHT_RESOURCE_REFUSED",
+                  "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE",
+                  "RESEARCH_PREFLIGHT_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_REJECTED",
+                  "RESEARCH_PREFLIGHT_NOT_FOUND",
+                  "RESEARCH_PREFLIGHT_EXPIRED",
+                  "RESEARCH_PREFLIGHT_STALE"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "details": {
+            "description": "CG-P08-03: the failed gate and requested-spec field path of a 409 refusal, or every invalid field path of a 400.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gate": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{1,63}$"
+              },
+              "field_path": {
+                "$ref": "#/components/schemas/FieldPath"
+              },
+              "field_paths": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "$ref": "#/components/schemas/FieldPath"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

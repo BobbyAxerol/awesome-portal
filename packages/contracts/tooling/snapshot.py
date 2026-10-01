@@ -20,6 +20,13 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "openapi/research-dataset-index.openapi.json",
+    "generated/research-dataset-index.d.ts",
+    "tooling/generate-research-dataset-index.mjs",
+    "fixtures/research-dataset-catalog.v2.healthy.valid.json",
+    "fixtures/research-dataset-catalog.v2.multi-dataset.valid.json",
+    "fixtures/research-dataset-catalog.v2.partial-quality.valid.json",
+    "fixtures/research-dataset-catalog.v2.symbol-absent.valid.json",
     "schemas/research-retained-analytics.v2.schema.json",
     "fixtures/research-all-time-distributions.valid.json",
     "schemas/research-retained-analytics.v1.schema.json",

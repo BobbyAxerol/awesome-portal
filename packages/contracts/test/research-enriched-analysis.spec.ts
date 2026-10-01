@@ -24,6 +24,10 @@ describe("B6 UI-first enrichment contract", () => {
       const field = name === "research-run-library" ? "analytics_all_time" : "enriched_analysis";
       expect(properties[field].$ref).toContain("EnrichedAnalysis");
       expect(schemas.Availability?.properties?.enriched_analysis).toBeUndefined();
+      if (name !== "research-run-library") {
+        expect(properties.enriched_analysis_availability.$ref).toBe("#/components/schemas/EnrichedAnalysisAvailability");
+        expect(generated).toContain("SEALED_ENRICHMENT_NOT_COMPUTED");
+      }
     }
     expect(read("fixtures/research-enriched-analysis.old-seal-absent.valid.json").enriched_analysis).toBeNull();
   });

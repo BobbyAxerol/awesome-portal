@@ -113,6 +113,8 @@ import { ResearchAlphaAnalysisClient } from "./research/alpha-analysis.client";
 import { ResearchPreflightController } from "./research/preflight.controller";
 import { ResearchDatasetCatalogController } from "./research/dataset-catalog.controller";
 import { ResearchDatasetCatalogClient } from "./research/dataset-catalog.client";
+import { ResearchDatasetIndexClient } from "./research/dataset-index.client";
+import { ResearchDatasetIndexController } from "./research/dataset-index.controller";
 import { ResearchPreflightSnapshotClient } from "./research/preflight.client";
 import { ResearchPreflightService } from "./research/preflight.service";
 import { ResearchFoundationController } from "./research/foundation.controller";
@@ -222,6 +224,7 @@ export class AppModule {
         ResearchAlphaImportController,
         ResearchPreflightController,
         ResearchDatasetCatalogController,
+        ResearchDatasetIndexController,
         ResearchFoundationController,
         ResearchRunCreateController,
         ResearchP04DeltaBindingController,
@@ -293,6 +296,7 @@ export class AppModule {
         ResearchAlphaImportService,
         ResearchPreflightSnapshotClient,
         ResearchDatasetCatalogClient,
+        ResearchDatasetIndexClient,
         ResearchPreflightService,
         ResearchRunAdmissionService,
         ResearchRunCreateService,

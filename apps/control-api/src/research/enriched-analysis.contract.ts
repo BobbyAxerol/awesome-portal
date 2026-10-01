@@ -9,6 +9,19 @@ const Ms = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const Count = z.number().int().nonnegative().max(2_000_000);
 const Reason = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
 const Head = z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]), reason_code: Reason.nullable() });
+/** B6 follow-up: block absence is a wire fact, not copy invented by a client. */
+export const ResearchEnrichedAvailabilitySchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("AVAILABLE"), reason_code: z.null() }).strict(),
+  z.object({ state: z.literal("NOT_PUBLISHED"), reason_code: z.enum([
+    "SEALED_ENRICHMENT_NOT_COMPUTED", "SOURCE_EVIDENCE_NOT_SEALED",
+  ]) }).strict(),
+]);
+export function enrichedAvailability(block: ResearchEnrichedAnalysis | undefined, sourceSealed = true) {
+  return ResearchEnrichedAvailabilitySchema.parse(block
+    ? { state: "AVAILABLE", reason_code: null }
+    : { state: "NOT_PUBLISHED", reason_code: sourceSealed
+      ? "SEALED_ENRICHMENT_NOT_COMPUTED" : "SOURCE_EVIDENCE_NOT_SEALED" });
+}
 const Derived = Head.extend({ origin: z.literal("PORTAL_DERIVED") });
 const Curve = z.array(z.object({ at_utc_ms: Ms, value: Decimal }).strict()).max(64);
 const Coverage = z.enum(["FULL_RETAINED_OOS", "SAMPLED_RETAINED_EQUITY"]);

@@ -6906,3 +6906,30 @@ See [complete receipt, ER table, exact identities/digests and Claude handoff](./
 Backend is available for Claude's all-time consumer integration now; visual
 acceptance is not asserted. Metadata index, executor v2, audit/exposure and
 whole-candidate P23/P24 remain open; this record does not close them.
+
+#### B7 delivery slice — indexed data declaration and enrichment absence
+
+Owner continuation: Bobby, 2026-10-01. Read Claude's latest B6 browser record,
+`BIND_B6.md`, queue and the B7 `DATA_DECLARATION_SPEC_2026-10-01.md` currently
+being committed in his frontend lane. No frontend implementation is edited.
+
+- Publish `enriched_analysis_availability` on Evidence/current-source/Report:
+  available means a verified companion; missing means an explicit source-bound
+  reason, not an inferred zero. Frozen core/seal authority remains unchanged.
+- Implement one bounded `enrich_dataset_catalog` service and an explicit HMD
+  index operator. Source reads use the approved installed reader only, in
+  bounded chunks. Persist timestamps/metadata, never market prices in Git.
+  Immutable revisions bind source manifest, observation clock, indexed range
+  and exact target-timeframe bars. GET reads the index; it does not build it.
+- Preserve v1; add a named v2 catalog and workspace-scoped symbol search/page
+  contract. Exact boundaries/counts/quality expose indexed coverage explicitly;
+  missing instruments, datasets and unindexed ranges are typed. Never infer
+  listing/expiry/tick/lot from a symbol suffix or label a partial index complete.
+- Tests: deterministic build/hash, gap/closed-edge/window/warmup semantics,
+  bounds/concurrency/retry/corruption, query/cursor isolation, auth/404, schema
+  and generated parity; then real preview HMD/API receipts and source immutability.
+  Group focused gates before the mandatory commit hook; rebuild backend only.
+- Exit for this slice is a precise field/type/API handoff plus real receipt,
+  not all DR-01…10 or product acceptance. Profile-aware conditions/fold admission,
+  fresh S02-created runs, executor v2, T12/T14 and aggregate P23/P24 remain
+  separately tracked until their own gates run. No push or production rollout.

@@ -227,6 +227,11 @@ describe("RS-02 retained current-source named read models", () => {
       rows: vi.fn().mockImplementation((_scope, _run, _revision, kind) => page(kind === "FOLD" ? folds : candidates)) });
     const hub = sealed(await hubReader.evidence(scope, enriched.run_id));
     expect(hub.enriched_analysis).toEqual(enriched);
+    expect(hub.enriched_analysis_availability).toEqual({ state: "AVAILABLE", reason_code: null });
+    const oldHubReader = service({ sealForRead: vi.fn().mockResolvedValue(oldSeal),
+      rows: vi.fn().mockImplementation((_scope, _run, _revision, kind) => page(kind === "FOLD" ? folds : candidates)) });
+    const oldHub = sealed(await oldHubReader.evidence(scope, enriched.run_id));
+    expect(oldHub.enriched_analysis_availability).toEqual({ state: "NOT_PUBLISHED", reason_code: "SEALED_ENRICHMENT_NOT_COMPUTED" });
   });
 
   it("BR-F6: old seals read verified precomputed companions without source queries or seal revision changes", async () => {

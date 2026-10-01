@@ -299,6 +299,16 @@ export interface components {
             max_drawdown_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
         };
+        EnrichedAnalysisAvailability: {
+            /** @constant */
+            state: "AVAILABLE";
+            reason_code: null;
+        } | {
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            /** @enum {unknown} */
+            reason_code: "SEALED_ENRICHMENT_NOT_COMPUTED" | "SOURCE_EVIDENCE_NOT_SEALED";
+        };
         /**
          * ResearchRetainedAnalytics
          * @description E11/E14 source-time analytics sealed with one immutable artifact/projection. UTC milliseconds, exact decimals, no compute on GET. Child-tape trade count is not an audited ledger.

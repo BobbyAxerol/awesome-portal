@@ -1456,6 +1456,36 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/research/datasets/catalog-v2",
+   "controller": "research/dataset-index.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "B7: named indexed catalog, workspace membership, installed approved reader and explicit immutable timestamp metadata; GET never builds or scans market data. Claude owns S02 consumer acceptance.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/datasets/:dataset_id/symbols",
+   "controller": "research/dataset-index.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "B7: bounded metadata-only symbol search; signed cursor binds workspace/dataset/query/limit and exact catalog snapshot, 200-row cap, honest unknown/truncated source states.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/datasets/:dataset_id/bar-metadata",
+   "controller": "research/dataset-index.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "B7: exact indexed half-open window/warmup counts from timestamp metadata only; no price, holdout value, preflight token or admission. Out-of-index windows are typed absent, never source-scanned on GET.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "GET /api/v1/research/datasets",
    "controller": "research/dataset-catalog.controller.ts",
    "interaction_class": "AUTO_READ",

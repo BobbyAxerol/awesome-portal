@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Portal canonical contract workspace (U09): schemas, fixtures, generated types",
   "scripts": {
-    "pregenerate": "node tooling/generate-research-retained-analytics.mjs && node tooling/generate-research-enriched-analysis.mjs",
+    "pregenerate": "node tooling/generate-research-retained-analytics.mjs && node tooling/generate-research-enriched-analysis.mjs && node tooling/generate-research-dataset-index.mjs",
+    "postgenerate": "npm run generate:research-dataset-index",
+    "generate:research-dataset-index": "node tooling/generate-research-dataset-index.mjs && openapi-typescript openapi/research-dataset-index.openapi.json -o generated/research-dataset-index.d.ts",
     "generate:research-enriched-analysis": "node tooling/generate-research-enriched-analysis.mjs && npm run generate:research-evidence && npm run generate:research-current-source && npm run generate:research-run-library && npm run generate:research-report",
     "generate:research-retained-analytics": "node tooling/generate-research-retained-analytics.mjs && npm run generate:research-evidence && npm run generate:research-current-source",
     "test": "vitest run",

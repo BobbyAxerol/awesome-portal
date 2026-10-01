@@ -42,6 +42,8 @@ generate_and_compare openapi/execution-contract-authority.openapi.json generated
 generate_and_compare openapi/execution-market-context.openapi.json generated/execution-market-context.d.ts
 generate_and_compare openapi/research-alpha-import.openapi.json generated/research-alpha-import.d.ts
 generate_and_compare openapi/research-preflight.openapi.json generated/research-preflight.d.ts
+node tooling/generate-research-dataset-index.mjs --check
+generate_and_compare openapi/research-dataset-index.openapi.json generated/research-dataset-index.d.ts
 generate_and_compare openapi/research-foundation.openapi.json generated/research-foundation.d.ts
 generate_and_compare openapi/research-run-create.openapi.json generated/research-run-create.d.ts
 generate_and_compare openapi/research-progress.openapi.json generated/research-progress.d.ts

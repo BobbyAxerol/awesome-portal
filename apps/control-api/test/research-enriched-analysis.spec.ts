@@ -1,13 +1,19 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ResearchEnrichedAnalysisSchema, verifiedEnriched } from "../src/research/enriched-analysis.contract";
+import { ResearchEnrichedAnalysisSchema, ResearchEnrichedAvailabilitySchema, enrichedAvailability, verifiedEnriched } from "../src/research/enriched-analysis.contract";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import { enrichedJoin } from "../src/research/enriched-analysis.read";
 
 const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const read = (name: string) => JSON.parse(readFileSync(resolve(root, `fixtures/research-enriched-analysis.${name}.valid.json`), "utf8"));
 describe("B6 shared enriched analysis", () => {
+  it("publishes block absence, source-pending and available without invented zero or code", () => {
+    expect(enrichedAvailability(undefined)).toEqual({ state: "NOT_PUBLISHED", reason_code: "SEALED_ENRICHMENT_NOT_COMPUTED" });
+    expect(enrichedAvailability(undefined, false).reason_code).toBe("SOURCE_EVIDENCE_NOT_SEALED");
+    expect(enrichedAvailability(read("healthy"))).toEqual({ state: "AVAILABLE", reason_code: null });
+    expect(ResearchEnrichedAvailabilitySchema.safeParse({ state: "AVAILABLE", reason_code: "SEALED_ENRICHMENT_NOT_COMPUTED" }).success).toBe(false);
+  });
   it.each(["healthy", "partial-month", "no-benchmark"])("accepts Python-derived %s with exact binding", name => {
     const block = read(name);
     expect(ResearchEnrichedAnalysisSchema.safeParse(block).success).toBe(true);

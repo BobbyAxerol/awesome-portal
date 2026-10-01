@@ -48,6 +48,12 @@ emit("schemas/research-enriched-analysis.v1.schema.json", JSON.stringify(schema,
 const local = value => JSON.parse(JSON.stringify(value).replaceAll("#/$defs/", "#/components/schemas/EnrichedAnalysis"));
 const { $schema, $id, $defs, ...body } = schema;
 const components = { EnrichedAnalysis: local(body), ...Object.fromEntries(Object.entries(defs).map(([name, value]) => [`EnrichedAnalysis${name}`, local(value)])) };
+components.EnrichedAnalysisAvailability = { oneOf: [
+  object({ state: { const: "AVAILABLE" }, reason_code: { type: "null" } }),
+  object({ state: { const: "NOT_PUBLISHED" }, reason_code: {
+    enum: ["SEALED_ENRICHMENT_NOT_COMPUTED", "SOURCE_EVIDENCE_NOT_SEALED"],
+  } }),
+] };
 for (const [file, dto, property, definition] of [
   ["research-current-source", "Evidence", "enriched_analysis", "EnrichedAnalysis"],
   ["research-evidence", "EvidenceHub", "enriched_analysis", "EnrichedAnalysis"],
@@ -68,6 +74,13 @@ for (const [file, dto, property, definition] of [
   if (!properties[property]) next = next.slice(0, props + 15) + ` "${property}": { "$ref": "#/components/schemas/${definition}" },` + next.slice(props + 15);
   const updated = JSON.parse(next).components.schemas[dto];
   if (!(updated.properties ?? updated.allOf.find(x => x.properties).properties)[property]) throw new Error(`Missing additive field: ${dto}.${property}`);
+  if (file !== "research-run-library") {
+    const field = "enriched_analysis_availability", definition = "EnrichedAnalysisAvailability";
+    next = next.replace(new RegExp(` ?"${field}": \\{ "\\$ref": "#/components/schemas/${definition}" \\},`, "g"), "");
+    const start = next.indexOf(`      "${dto}":`, next.indexOf('"schemas": {'));
+    const props = next.indexOf('"properties": {', start);
+    next = next.slice(0, props + 15) + ` "${field}": { "$ref": "#/components/schemas/${definition}" },` + next.slice(props + 15);
+  }
   emit(path, next);
 }
 process.stdout.write(`Enrichment components ${check ? "verified" : "generated"}.\n`);

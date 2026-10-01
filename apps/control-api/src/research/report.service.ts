@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
+import { enrichedAvailability } from "./enriched-analysis.contract";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -376,6 +377,7 @@ export class ResearchReportService {
     const response = {
       schema_version: "research.report-detail.v1" as const,
       ...(stored.enrichedAnalysis ? { enriched_analysis: stored.enrichedAnalysis } : {}),
+      enriched_analysis_availability: enrichedAvailability(stored.enrichedAnalysis),
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
       run_id: stored.runId,
       display_label: stored.displayLabel ?? null,

@@ -146,6 +146,8 @@ Unified: U:3636 (board P23), U:3637 (P24 → Codex), U:3691 (OL-12), U:3692/3695
 
 | Id | Commit | Test | Contract đổi (Claude cần nối FE) | Ghi chú |
 |---|---|---|---|---|
+| B7 / BR-D4-1 index foundation | CODE_READY / hook-preview pending | Python 18/18; real HMD 21/21 oracle, 29 symbols × 7 intervals | New `research-dataset-index.d.ts`: named catalog-v2 / symbols / bar-metadata; V1 unchanged | [Receipt and precise DR-01…10 status](./evidence/P13/B7_DATA_DECLARATION_INDEX_2026-10-01.md). Exact source-clock/range/target-bar semantics; other mounted-source adapters, profile conditions/folds and S02 run acceptance remain open. |
+| B6 wire absence | CODE_READY / hook-preview pending | Availability discriminant + current-source/Hub/Report regressions | `EnrichedAnalysisAvailability` on three generated surfaces | Source/seal authority unchanged; no frontend-invented absence reason. Same B7 receipt. |
 | S14-RW-BR-01 | `1829f998` | P07 disposable PostgreSQL 9/9; Control API full hook 1349/1349 | Không | ACTIVE same-version register trả replay 201, predecessor không tự trỏ. |
 | S14-RW-BR-02 | `a293b4a2` | Alpha analyzer Python 14/14; full hook xanh | Không | Mirror FAIL theo field, không theo aggregate gate. |
 | CG-S00-AV-01 | `a293b4a2` | P09 disposable PostgreSQL 7/7; contracts 197/197; forward upgrade 067→078; full hook xanh | `JourneyCard.requires_alpha?: boolean`; fixture v4; Claude nối S00 | Revision 4 bất biến, v3 giữ nguyên; chỉ Alpha Version cần chọn alpha, không cần run. |

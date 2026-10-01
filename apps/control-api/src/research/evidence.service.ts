@@ -1,6 +1,7 @@
 /** P13 Evidence Flow Hub projection builder and same-origin reader. */
 
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { enrichedAvailability } from "./enriched-analysis.contract";
 import { z } from "zod";
 import { ResearchRetainedAnalyticsSchema, type ResearchRetainedAnalytics } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
@@ -745,6 +746,7 @@ export class ResearchEvidenceService {
     const response = {
       schema_version: "research.evidence-hub.v1",
       ...(row.enrichedAnalysis ? { enriched_analysis: row.enrichedAnalysis } : {}),
+      enriched_analysis_availability: enrichedAvailability(row.enrichedAnalysis, !!projection),
       ...(projection?.summary_analytics ? { summary_analytics: projection.summary_analytics } : {}),
       ...(projection?.summary_analytics_v2 ? { summary_analytics_v2: projection.summary_analytics_v2 } : {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH",

@@ -218,6 +218,7 @@ describe("P13 Evidence Flow projection authority", () => {
 
     const hub = await service.hub(scope, "run_p13");
     expect(hub.availability).toEqual({ state: "AVAILABLE", reason_code: null });
+    expect(hub.enriched_analysis_availability).toEqual({ state: "NOT_PUBLISHED", reason_code: "SEALED_ENRICHMENT_NOT_COMPUTED" });
     expect(hub.metrics.find((item) => item.key === "FINAL_EQUITY")).toMatchObject({ value: "110", origin: "ENGINE_DIRECT" });
     expect(hub.metrics.find((item) => item.key === "BENCHMARK_RETURN_FRACTION")).toMatchObject({
       value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK" },

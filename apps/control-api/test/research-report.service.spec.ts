@@ -116,11 +116,13 @@ describe("P18 immutable Report and bounded reproducible export", () => {
   it("B6 returns a supplemental block without resealing the frozen Report core", async () => {
     const value = subject();
     const before = await value.service.materialize(scope, "run_p18");
+    expect(before.enriched_analysis_availability).toEqual({ state: "NOT_PUBLISHED", reason_code: "SEALED_ENRICHMENT_NOT_COMPUTED" });
     const enriched = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
     value.stored!.enrichedAnalysis = enriched;
     value.readers.evidence.bundle.mockRejectedValue(new Error("no source refresh on Report GET"));
     const after = await value.service.read(scope, "run_p18");
     expect(after.enriched_analysis).toEqual(enriched);
+    expect(after.enriched_analysis_availability).toEqual({ state: "AVAILABLE", reason_code: null });
     expect(after.frozen_core).toEqual(before.frozen_core);
     expect(after.report_revision).toBe(before.report_revision);
     expect(after.etag).not.toBe(before.etag);
