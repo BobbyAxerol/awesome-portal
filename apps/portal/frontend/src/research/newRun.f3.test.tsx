@@ -210,9 +210,9 @@ describe("02-2 — frame and typography", () => {
     expect(root.className).not.toMatch(/(^|\s)px-/);
   });
 
-  it("panel titles are Inter (the body face), not the serif an h3 inherits", () => {
+  it("panel titles are Inter (the body face), not the serif an h2 inherits", () => {
     mount();
-    const title = document.querySelector("[data-step-card] h3") as HTMLElement;
+    const title = document.querySelector("[data-step-card] h2") as HTMLElement;
     expect(title.style.fontFamily).toBe("var(--font-body)");
     expect(title.className).toContain("font-semibold");
     expect(title.className).toContain("uppercase");
@@ -562,10 +562,10 @@ describe("02-11 — one heading on the route card", () => {
   it("the card is titled 'Execution route — how orders come to exist' and the panel around it has no second heading", () => {
     mount();
     go("route");
-    const headings = [...document.querySelectorAll("h3")].map((heading) => heading.textContent);
+    const headings = [...document.querySelectorAll("h2")].map((heading) => heading.textContent);
     expect(headings).toContain("Execution route — how orders come to exist");
     const panel = document.querySelector('[data-research-panel="engine routes"]') as HTMLElement;
-    expect(panel.querySelector("h3")).toBeNull();
+    expect(panel.querySelector("h2, h3")).toBeNull();
     expect(headings.filter((text) => /route/i.test(text ?? "") && text !== "Execution route — how orders come to exist")).toEqual([]);
   });
 
@@ -582,7 +582,7 @@ describe("02-11 — one heading on the route card", () => {
   it("an unavailable Atlas keeps the card's heading and the link, and withholds the grid", () => {
     mount({ atlas: null, atlasState: researchState({ kind: "transport", status: 503, retryable: false }) });
     go("route");
-    expect(document.querySelector("[data-step-card] h3")?.textContent).toBe("Execution route — how orders come to exist");
+    expect(document.querySelector("[data-step-card] h2")?.textContent).toBe("Execution route — how orders come to exist");
     expect(document.querySelector('[data-link="atlas"]')).not.toBeNull();
     expect(document.querySelector("[data-route-grid]")).toBeNull();
   });
@@ -591,7 +591,7 @@ describe("02-11 — one heading on the route card", () => {
     mount();
     expect(pill("data").textContent).toContain("Market data");
     go("data");
-    expect(document.querySelector("[data-step-card] h3")?.textContent).toBe("Market data");
+    expect(document.querySelector("[data-step-card] h2")?.textContent).toBe("Market data");
   });
 });
 

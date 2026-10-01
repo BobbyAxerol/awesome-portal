@@ -176,8 +176,8 @@ export const CLAIM_REASON_WORDS: Record<string, string> = {
 export const OOS_COLUMN_CHIP: Record<Exclude<OosColumn["state"], "NOT_PUBLISHED">, { words: string; tone: string }> = {
   SELECTION_INPUT: { words: "selection input", tone: "var(--accent-2)" },
   RETROSPECTIVE: { words: "retrospective", tone: "var(--accent-2)" },
-  REPORT_ONLY: { words: "report only", tone: "var(--state-unavailable)" },
-  WITHHELD: { words: "withheld", tone: "var(--role-is)" },
+  REPORT_ONLY: { words: "report only", tone: "var(--ink-mute)" },
+  WITHHELD: { words: "withheld", tone: "var(--ink-faint)" },
   NOT_APPLICABLE: { words: "n/a", tone: "var(--bad)" },
 };
 
@@ -1272,7 +1272,7 @@ function ServedSearchSpace({ search, space, run }: { search: CurrentSourceSearch
   const pending = run?.identity.state === "loading";
   const levels = Object.fromEntries(space.parameters.map((parameter) => [parameter.name, parameter.levels]));
   return (
-    <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} data-panel="search-space" data-panel-lane="retained" data-space-state={space.state}>
+    <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} tabIndex={0} aria-label="search space as declared" data-panel="search-space" data-panel-lane="retained" data-space-state={space.state}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
           A1 · search space as declared
@@ -1343,7 +1343,7 @@ function RetainedSearchSpace({ search, run }: { search: CurrentSourceSearch; run
   const pending = declared?.state === "loading" || run?.identity.state === "loading";
 
   return (
-    <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} data-panel="search-space" data-panel-lane="retained">
+    <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} tabIndex={0} aria-label="search space as declared" data-panel="search-space" data-panel-lane="retained">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
           A1 · search space as declared
@@ -2217,7 +2217,7 @@ export function SearchScreen({
             >
               <div className="flex min-w-0 flex-col gap-3" data-stage="A">
                 <div className="flex flex-wrap items-baseline gap-2.5">
-                  <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--role-is)" }}>
+                  <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--ink-faint)" }}>
                     Stage A · search
                   </h2>
                   <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
@@ -2227,7 +2227,7 @@ export function SearchScreen({
 
                 {lane ? <RetainedSearchSpace search={lane} run={retainedRun} /> : null}
                 {lane ? null : (
-                <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} data-panel="search-space">
+                <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} tabIndex={0} aria-label="search space as declared" data-panel="search-space">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
                       A1 · search space as declared

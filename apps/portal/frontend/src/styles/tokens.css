@@ -649,15 +649,34 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Research Loop screens: faint ink at >= 4.5:1 (axe reported 2,389 nodes).
- * `--ink-faint` is shared with the Execution Loop and its baselines, which keep
- * the value above; the override applies inside `.research-screen` only.
- * Light 4.64-4.93:1 on sunken/paper · Operations Dark 4.80-5.38:1.
+ * Research Loop screens: faint ink and warn ink at >= 4.5:1 (axe reported 2,389
+ * nodes; the residual 84 were the sunken blue tint and the warn tint).
+ * `--ink-faint`, `--accent-2` and `--role-holdout` are shared with the Execution
+ * Loop and its baselines, which keep the values above; the overrides apply
+ * inside `.research-screen` only.
+ *
+ * Light, WCAG 2.x contrast of each value on the surfaces it meets here
+ * (paper #faf9f5 · raised #fff · sunken #f4f2ec · blue tint #e2edf0 · warn tint #f4ecdb):
+ *   --ink-faint #5c6780   5.38 · 5.67 · 5.06 · 4.75 · 4.82
+ *   --accent-2  #8f6118   5.12 · 5.40 · 4.82 · 4.52 · 4.59   (warn ink; was #9a6a1f 4.47 · 4.71 · 4.21 · 3.95 · 4.01)
+ * Operations Dark, on paper #101720 · raised #161e2a · sunken #0c121a · surface-2 #1c2634 · surface-3 #16202c:
+ *   --ink-faint #8696ab   5.98 · 5.56 · 6.23 · 5.06 · 5.45
+ *   --accent-2  #d4a75e   7.57 on raised, 6.89 on surface-2 (the dark palette's own value, restated
+ *                         because the dark selector below out-ranks the light override)
+ *   --warn      #d4a75e   the Operations Dark block never defined `--warn` / `--ink-mute`, so the
+ *   --ink-mute  #98a6ba   light values (#8e6a00 3.36, #68738a 3.51 on raised) leaked onto the dark
+ *                         surface; 6.78 on raised for #98a6ba
  * ------------------------------------------------------------------------- */
 .research-screen {
-  --ink-faint: #626d85;
+  --ink-faint: #5c6780;
+  --accent-2: #8f6118;
+  --role-holdout: #8f6118;
 }
 
 :root[data-theme="operations"] .research-screen {
-  --ink-faint: #7d8aa0;
+  --ink-faint: #8696ab;
+  --ink-mute: #98a6ba;
+  --warn: #d4a75e;
+  --accent-2: #d4a75e;
+  --role-holdout: #d4a75e;
 }

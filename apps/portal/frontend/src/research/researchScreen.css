@@ -47,6 +47,15 @@
   text-decoration: underline;
 }
 
+/* Links that sit inside running text (Compare's run line: run · report · RC) are told apart from the
+   words around them by more than colour (axe `link-in-text-block`: 1.83:1 link-to-text). A thin
+   underline, offset 2px; navigation and button-like links keep their own look. */
+.research-screen a:is([data-run-link], [data-report-link], [data-rc-link]) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
 /* HiFi focus ring: a paper gap, then the accent ring. */
 .research-screen :focus-visible {
   outline: none;

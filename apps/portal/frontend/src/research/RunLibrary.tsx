@@ -1864,8 +1864,8 @@ function RunCard({
             gap: 10,
             fontFamily: MONO,
             fontSize: 10,
-            color: "var(--ink-faint)",
-            opacity: 0.7,
+            color: "var(--ink-soft)",
+            fontStyle: "italic",
           }}
           data-superseded
         >

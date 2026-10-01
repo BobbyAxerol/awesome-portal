@@ -1573,7 +1573,7 @@ function ClaimPassport({
         <Field label="claim" name="claim">
           {/* The server builds this sentence for every state; the page never
               composes a claim string of its own. */}
-          <span style={{ ...valueStyle(textKind), opacity: issued ? 1 : 0.85 }} data-claim-text>
+          <span style={valueStyle(textKind)} data-claim-text>
             {claim.state === "NOT_ISSUED" ? notIssuedText(claim.text, status) : claim.text}
           </span>
         </Field>

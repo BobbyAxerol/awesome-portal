@@ -97,6 +97,16 @@ describe("X2 · B3 — A1 is the declared space the run searched, with DR-02 on 
     expect(panel.textContent).not.toContain("UI_RETAINED_LANE_HAS_NO_FIELD");
   });
 
+  it("the panel scrolls sideways at narrow widths, so the keyboard can reach it: tabbable and named (axe scrollable-region-focusable)", async () => {
+    const { container } = await settled();
+    const panel = container.querySelector("[data-panel='search-space']") as HTMLElement;
+    expect(panel.getAttribute("tabindex")).toBe("0");
+    expect(panel.getAttribute("aria-label")).toBe("search space as declared");
+    expect(panel.className).toContain("overflow-x-auto");
+    panel.focus();
+    expect(document.activeElement).toBe(panel);
+  });
+
   it("a server that answers the declared space absent prints its own reason", async () => {
     stub({ ...SURFACE, declared_space: { ...SURFACE.declared_space!, state: "NOT_PUBLISHED", reason_code: "P16_HISTORICAL_PARAMETER_BINDING_NOT_REGISTERED", binding: null, parameters: [], grid_size: null } });
     const view = mount();

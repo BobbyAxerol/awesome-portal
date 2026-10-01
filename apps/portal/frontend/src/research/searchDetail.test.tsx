@@ -1038,15 +1038,15 @@ describe("RF-06 wave C — S06 consumes claim_row and as_of_basis", () => {
     const chip = field(container, "oos column");
     expect(chip?.getAttribute("data-oos-column")).toBe("REPORT_ONLY");
     expect(chip?.textContent).toBe("report only");
-    expect((chip as HTMLElement).style.color).toBe("var(--state-unavailable)");
-    expect((chip as HTMLElement).style.borderColor).toBe("var(--state-unavailable)");
+    expect((chip as HTMLElement).style.color).toBe("var(--ink-mute)");
+    expect((chip as HTMLElement).style.borderColor).toBe("var(--ink-mute)");
     expect(chip?.getAttribute("title")).toContain("P04_OBSERVED_AFTER_FIXED_PROFILE");
   });
 
   it("OOS column: each HiFi state has its own words and tone; NOT_PUBLISHED is no chip", () => {
     expect(OOS_COLUMN_CHIP.SELECTION_INPUT).toEqual({ words: "selection input", tone: "var(--accent-2)" });
     expect(OOS_COLUMN_CHIP.RETROSPECTIVE).toEqual({ words: "retrospective", tone: "var(--accent-2)" });
-    expect(OOS_COLUMN_CHIP.WITHHELD).toEqual({ words: "withheld", tone: "var(--role-is)" });
+    expect(OOS_COLUMN_CHIP.WITHHELD).toEqual({ words: "withheld", tone: "var(--ink-faint)" });
     expect(OOS_COLUMN_CHIP.NOT_APPLICABLE).toEqual({ words: "n/a", tone: "var(--bad)" });
     const { container } = view({
       detail: detail({

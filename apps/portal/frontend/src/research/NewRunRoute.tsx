@@ -473,7 +473,7 @@ export function NewRunRoute() {
       preflightRefusal={run.preflight.refusal}
       catalog={catalog}
       catalogReason={catalogReason}
-      portalAdmission={atlas?.selected_release_kind === "CURRENT" ? atlas.portal_admission.profiles : null}
+      portalAdmission={atlas?.selected_release_kind === "CURRENT" ? (atlas.portal_admission?.profiles ?? null) : null}
       cloneSource={clone ? { runId: clone.runId, state: clone.state } : null}
       forkSource={fork}
       mayCreateRun={run.mayCreateRun}

@@ -293,3 +293,11 @@ UI-first contract and fallback readers until that complete block is published.
 ### F6b — nối BR-F6 của Codex (2026-10-01)
 
 S04 đọc `cf8dc871`: điểm tháng `partial` + số quan sát + `basis` (vẽ gạch chéo, tooltip), histogram "daily returns · n days" (đơn vị ngày), `summary_analytics_v2.distributions`, disclosure tail 32 tháng, panel đặt nhãn "— all time" khi series có `derivation`. Trên preview thật R-WFO-020 đã trả hình mới (Codex đã apply): 2 tháng một phần, "12 bins · 59 days". Bản ghi: `evidence/P21/audit-2026-09-30/f4/S04_F6.md`. Cũng sửa: lỗi build image web do import JSON ngoài context Docker (ac62146f); test `searchF2` chập chờn → thêm ngân sách thời gian.
+
+### F5 — lane, axe, trạng thái cuối (2026-10-01)
+
+Bản ghi: `evidence/P21/audit-2026-09-30/f5/{REALAPI,AXE,AXEFIX,LANESPEC,VISUAL}.md`.
+- **Real-API lane** (`RESEARCH_PREVIEW_ORIGIN=https://research-portal.primusspark.com RESEARCH_PREVIEW_BASE_URL=http://localhost:8095 npx playwright test -c playwright.research-preview.config.ts`): lần đầu 36/18 (16 ô là spec ghim hành vi đã đổi có chủ ý; 2 ô lỗi axe thật) → sau cập nhật spec 48/6 → 6 ô còn lại là tương phản màu, sửa ở F5c.
+- **Axe (probe rf04, 45 ô × 2 theme):** trước 18/45 sạch (84 nút tương phản, 27 link-in-text-block, 6 heading-order, 2 vùng cuộn); sau 90/90 sạch ở cả Research Light và Operations Dark. Giá trị Research-scoped: faint ink `#5c6780` (≥4.75 trên 5 nền), warn ink `#8f6118`; Operations Dark định nghĩa lại `--warn`, `--ink-mute`, `--ink-faint` trong `.research-screen`. Token chung của Execution Loop không đổi.
+- **Visual:** chưa chạy (cần `sudo -n docker`; bị chặn quyền) — baseline Research sẽ lệch (khung 272px, màu mới, gạch chân link, chữ nghiêng hàng superseded). Chờ Bobby chạy hoặc cho phép; không `--update` tự động.
+- **Sai khác HiFi chờ Bobby duyệt:** warn ink `#9a6a1f → #8f6118`, faint ink → `#5c6780`, chip withheld/report-only cùng xám, gạch chân link S13.

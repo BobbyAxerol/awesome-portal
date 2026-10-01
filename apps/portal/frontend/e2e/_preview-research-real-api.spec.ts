@@ -210,7 +210,29 @@ for (const [name, width, height] of VIEWPORTS) {
       if (screenId === "S04") {
         const evidence = await read("evidence");
         await expect(page.locator("[data-metric-value='FINAL_EQUITY']")).toHaveAttribute("data-exact", evidence.passport.final_equity);
-        await expect(page.locator("[data-metric-value='INITIAL_EQUITY']")).toHaveAttribute("data-exact", evidence.passport.initial_equity);
+        /* F4 / D-AN-01 (HERO_TILES = 5): the hero row is five tiles and INITIAL_EQUITY is not one of them. Each hero tile's
+           `data-exact` is what the lane served: final equity and max drawdown from the passport, the net OOS return from
+           `summary_analytics` (the account return when that is not served), the all-time OOS Sharpe from
+           `summary_analytics_v2.metrics.sharpe`, the trade count from the verdict block's `total_oos_trades`. */
+        await expect(page.locator("[data-metric-lane='retained'][data-metric='INITIAL_EQUITY']")).toHaveCount(0);
+        await expect(page.locator("[data-metric-lane='retained'][data-metric='FINAL_EQUITY']")).toHaveCount(1);
+        const netOos = evidence.summary_analytics?.net_oos_return;
+        const sharpeAll = evidence.summary_analytics_v2?.metrics?.sharpe;
+        const tradeTotal = evidence.fold_verdicts?.total_oos_trades;
+        const heroExpected: Array<[string, string | null]> = [
+          ["NET_RETURN_FRACTION", netOos?.state === "AVAILABLE" && netOos.value !== null ? String(netOos.value) : String(evidence.passport.net_return_fraction)],
+          /* D-AN-01: all-time `summary_analytics_v2.metrics.sharpe` when served; an older seal serves none, so the tile
+             falls back to the verdict block's fold mean (labelled "OOS Sharpe · fold mean"). */
+          ["OOS_SHARPE", sharpeAll?.state === "AVAILABLE" && sharpeAll.value !== null ? String(sharpeAll.value) : evidence.fold_verdicts?.mean_oos_sharpe != null ? String(evidence.fold_verdicts.mean_oos_sharpe) : null],
+          ["MAX_DRAWDOWN_FRACTION", String(evidence.passport.max_drawdown_fraction)],
+          ["TRADE_COUNT", tradeTotal?.state === "AVAILABLE" && tradeTotal.value !== null ? String(tradeTotal.value) : null],
+        ];
+        for (const [key, exact] of heroExpected) {
+          const tile = page.locator(`[data-metric-lane='retained'][data-metric='${key}']`);
+          await expect(tile, `hero tile ${key}`).toHaveCount(1);
+          if (exact !== null) await expect(tile.locator(`[data-metric-value='${key}']`)).toHaveAttribute("data-exact", exact);
+          else await expect(tile.locator("[data-metric-value]")).toHaveCount(0);
+        }
         await expect(page.locator("[data-not-ready]")).toHaveCount(0);
         await expect(page.locator("[data-series-panel='MONTHLY_RETURNS'] [data-month]")).toHaveCount(
           ((await (await page.request.get(`/api/v1/quantbt/runs/${WFO_RUN}/current-source/evidence/series?kind=MONTHLY_RETURNS`)).json()) as any).values.length,
@@ -384,7 +406,13 @@ for (const [name, width, height] of VIEWPORTS) {
       /* Rail tones and links, the server's seal and publish gates, the state chip. */
       const tones = await root.locator("[data-rail-node]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-rail-node"), node.getAttribute("data-tone")]));
       expect(tones).toEqual(api.rail.map((node: any) => [node.key, node.tone]));
-      if (api.run.binding) await expect(root.locator("[data-rail-node='alpha']")).toHaveAttribute("href", `/research/quantbt/alphas/${api.run.binding.alpha_id}/lineage`);
+      /* F2b: the alpha rail node keeps the bound version — `/lineage?av=<alpha_version_id>`. */
+      if (api.run.binding) {
+        const alphaHref = (await root.locator("[data-rail-node='alpha']").getAttribute("href")) ?? "";
+        const alphaUrl = new URL(alphaHref, "http://rail.invalid");
+        expect(alphaUrl.pathname).toBe(`/research/quantbt/alphas/${api.run.binding.alpha_id}/lineage`);
+        expect(alphaUrl.searchParams.get("av")).toBe(api.run.binding.alpha_version_id);
+      }
       await expect(root.locator("[data-rail-node='run']")).toHaveAttribute("href", `/research/quantbt/runs/${run}/evidence`);
       await expect(root.locator("[data-seal-blocked]")).toHaveAttribute("data-seal-blocked", api.actions.seal_blocked_reason ?? "LOCAL");
       await expect(root.locator("[data-action='local-seal']")).toHaveAttribute("aria-disabled", "true");
@@ -480,7 +508,9 @@ for (const [name, width, height] of VIEWPORTS) {
     await page.screenshot({ path: `${OUT}/X1-S11-DOUBLE-confirm-${name}.png`, fullPage: true });
     await root.locator("[data-action='confirm-local-seal']").click();
     await expect(root.locator("[data-sealed]")).toHaveAttribute("data-sealed", rcId);
-    await expect(root.locator("[data-seal-chip]")).toHaveText("SEALED_LOCAL");
+    /* F1/F3: the chip reads in words ("sealed locally"); the state stays on `data-s`. */
+    await expect(root.locator("[data-seal-chip]")).toHaveAttribute("data-s", "SEALED_LOCAL");
+    await expect(root.locator("[data-seal-chip]")).toHaveText("sealed locally");
     await expect(root.locator("[data-state-chip]")).toHaveText("DRAFT");
     /* The publication read goes to the real preview. The seal above is a DOUBLE, so the server has no such
        candidate and answers 404 — which P22's screen reads as the one F-04 "denied" state (FG-05). */
@@ -531,7 +561,7 @@ for (const [name, width, height] of VIEWPORTS) {
       state: published ? "DELIVERED" : "NOT_PUBLISHED", candidate_relation: "CURRENT", may_publish: !published, blocked_reason: published ? "P22_ALREADY_DELIVERED" : null,
       published: published ? { by_user_id: "usr_claude_preview", by_username: "claude-preview", approval_id: "apr_x1_double", at_utc_ms: real.as_of_utc_ms, receipt_digest: "d".repeat(64) } : null,
       approval_read: published ? "AVAILABLE" : "NOT_PUBLISHED",
-      approval: published ? { approval_id: "apr_x1_double", gate: "R1", status: "PENDING", subject_id: binding.alpha_id, requester_user_id: "usr_claude_preview", evidence_set_hash: `sha256:${"c".repeat(64)}`, sla_due_at: "2026-09-27T09:12:00.000Z", expires_at: "2026-12-25T09:12:00.000Z", created_at: "2026-09-26T09:12:00.000Z", read_at: "2026-09-26T09:13:00.000Z", conditions: [], href: "/governance/approvals/apr_x1_double/r1" } : null,
+      approval: published ? { approval_id: "apr_x1_double", gate: "R1", status: "PENDING", subject_id: binding.alpha_id, requester_user_id: "usr_claude_preview", evidence_set_hash: `sha256:${"c".repeat(64)}`, sla_due_at: "2026-09-27T09:12:00.000Z", expires_at: "2026-12-25T09:12:00.000Z", created_at: "2026-09-26T09:12:00.000Z", read_at: "2026-09-26T09:13:00.000Z", conditions: [], href: "/governance/approvals/apr_x1_double/r1", /* stub drift: `assignee_pool_availability` is a REQUIRED ApprovalMirror field (P22 governance fixture); the pool is not published here. */ assignee_pool_availability: { state: "NOT_PUBLISHED", reason_code: "P22_GOVERNANCE_ASSIGNEE_POOL_NOT_PUBLISHED" } } : null,
       as_of_utc_ms: real.as_of_utc_ms, replayed: false,
     });
     let publishedYet = false;
@@ -666,17 +696,31 @@ for (const [name, width, height] of VIEWPORTS) {
       /* E7 (D10): an attempt without a claim family folds into a compact row, not a ladder card. */
       const unclaimed = (result.attempts ?? []).filter((run: any) => run.claim?.family === "NOT_PUBLISHED");
       if (unclaimed.length > 0) await expect(root.locator("[data-unclaimed]")).toHaveAttribute("data-unclaimed", String(unclaimed.length));
-      for (const run of (result.attempts ?? []).filter((item: any) => item.claim?.family !== "NOT_PUBLISHED")) {
+      const claimedRuns = (result.attempts ?? []).filter((item: any) => item.claim?.family !== "NOT_PUBLISHED");
+      const mixedLifecycle = new Set(claimedRuns.map((item: any) => item.alpha_version_lifecycle.value)).size > 1;
+      for (const run of claimedRuns) {
         const card = root.locator(`[data-ladder-run='${run.run_id}']`);
         const sharpe = run.original_metrics.find((metric: any) => metric.key === "OOS_SHARPE");
         if (sharpe?.availability.state === "AVAILABLE") await expect(card.locator("[data-oos-sharpe]")).toHaveAttribute("data-oos-sharpe", sharpe.value);
         if (run.schedule.availability.state === "AVAILABLE") await expect(card.locator("[data-schedule]")).toHaveText(`${run.schedule.mode} × ${run.schedule.schedule}`); /* E7: no "sched" prefix, as the HiFi card head */
-        if (run.alpha_version_lifecycle.value) await expect(card).toHaveAttribute("data-lifecycle", run.alpha_version_lifecycle.value);
+        /* F1c (VD-F1-02): a card carries `data-lifecycle` only when the claimed ladder MIXES lifecycles; otherwise it is absent. */
+        if (mixedLifecycle && run.alpha_version_lifecycle.value) await expect(card).toHaveAttribute("data-lifecycle", run.alpha_version_lifecycle.value);
+        else await expect(card).not.toHaveAttribute("data-lifecycle", /.*/);
         await expect(card.locator("[data-cert-absent]")).toContainText(run.certification.reason_code);
       }
       const bars = (result.fold_series ?? []).filter((item: any) => item.state === "AVAILABLE").flatMap((item: any) => item.folds.filter((fold: any) => fold.oos_sharpe !== null).map((fold: any) => [item.run_id, fold]));
-      await expect(root.locator("[data-fold-bar]")).toHaveCount(bars.length);
-      for (const [runId, fold] of bars) await expect(root.locator(`[data-fold-bar='${runId}:${fold.fold_id}']`)).toHaveAttribute("data-exact", fold.oos_sharpe);
+      /* CG-P20-04 (compareFoldBars LINES_PAST_FOLDS = 8): bars up to eight fold positions, past that one line per attempt
+         (a line has no per-fold element, so the bar-by-bar check applies to the bars mode only). */
+      const drawn = (result.fold_series ?? []).filter((item: any) => item.state === "AVAILABLE" && item.folds.length > 0);
+      const positions = new Set(drawn.flatMap((item: any) => item.folds.map((fold: any) => fold.source_ordinal))).size;
+      if (drawn.length > 0 && positions > 8) {
+        await expect(root.locator("[data-panel='fold-chart']")).toHaveAttribute("data-fold-mode", "lines");
+        await expect(root.locator("[data-fold-bar]")).toHaveCount(0);
+        await expect(root.locator("[data-fold-line]")).toHaveCount(drawn.length);
+      } else {
+        await expect(root.locator("[data-fold-bar]")).toHaveCount(bars.length);
+        for (const [runId, fold] of bars) await expect(root.locator(`[data-fold-bar='${runId}:${fold.fold_id}']`)).toHaveAttribute("data-exact", fold.oos_sharpe);
+      }
       if (result.config_diff?.availability.state === "AVAILABLE") {
         await expect(root.locator("[data-config-diff-path]")).toHaveCount(result.config_diff.paths.length);
       }
@@ -752,7 +796,8 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
         const metric = row(key).locator("[data-metric]");
         if (fact.value !== null) {
           await expect(metric).toHaveAttribute("data-metric-value", fact.value);
-          await expect(metric).toContainText(Number(fact.value).toFixed(3));
+          /* F3: negatives print U+2212, not the ASCII hyphen. */
+          await expect(metric).toContainText(Number(fact.value).toFixed(3).replace(/^-/, "−"));
         } else {
           await expect(metric).toHaveAttribute("data-metric-state", fact.availability.state);
           expect(await metric.innerText(), `${key} prints no digit for a null`).not.toMatch(/\d/);
@@ -1058,19 +1103,37 @@ for (const [name, width, height] of VIEWPORTS) {
     await expect(root.locator("[data-reg-row='artifact digest']")).toContainText(registration.source_digest.slice(0, 8));
     await expect(root.locator("[data-reg-row='import state']")).toContainText(`${registration.lifecycle_state} · rev ${registration.alpha_revision}`);
     await expect(root.locator("[data-chip]")).toHaveAttribute("data-chip", registration.lifecycle_state);
-    for (const [key, code] of [["entrypoint", "REGISTRY_NOT_READ"], ["capability registration", "NOT_IN_V1_CONTRACT"], ["signed publication", "NOT_PUBLISHED"]] as const) {
+    for (const [key, code] of [["entrypoint", "REGISTRY_NOT_READ"], ["capability registration", "NOT_IN_V1_CONTRACT"]] as const) {
       await expect(root.locator(`[data-reg-row='${key}'] dd`)).toHaveAttribute("data-absent", code);
+    }
+    /* F1 (14-09): "signed publication" prints the attestation the server SERVED; its `data-absent` is the served signature
+       reason code (it exists only while signature and SBOM are both NOT_PUBLISHED), never a literal. */
+    {
+      const attestation = (registration as any).import_attestation;
+      expect(attestation, "the real read serves an import_attestation").toBeTruthy();
+      const bothAbsent = attestation.signature.state === "NOT_PUBLISHED" && attestation.sbom.state === "NOT_PUBLISHED";
+      const signed = root.locator("[data-reg-row='signed publication'] dd");
+      if (bothAbsent) await expect(signed).toHaveAttribute("data-absent", attestation.signature.reason_code);
+      else await expect(signed).not.toHaveAttribute("data-absent", /.*/);
+      await expect(signed.locator("[data-attestation-part='signature']")).toHaveAttribute("data-attestation-code", attestation.signature.reason_code);
     }
     await expect.poll(stepper, { timeout: 15_000 }).toEqual(["1:done", "2:done", "3:done"]);
 
     /* OL-01: running an imported version is a typed absence, never a live link. */
+    /* F1 CG-FG-S14-03 (runSlot): the slot follows the registry row's served `run_admission`. The registration here is the
+       fixture double and the registry read is the real preview, which has no row for that version — so the slot is the typed
+       absence "run admission not read yet" (REGISTRY_NOT_READ), not a literal OL-01 adapter code. */
+    const registeredRow = registryBefore.entries.find((entry: any) => entry.alpha_version_id === registration.alpha_version_id);
+    expect(registeredRow, "the real registry has no row for the fixture version, so no run_admission is served").toBeUndefined();
     const notAdmitted = root.locator("[data-absent-action='new-run']");
-    await expect(notAdmitted).toHaveAttribute("data-absent-code", "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE");
+    await expect(notAdmitted).toHaveAttribute("data-absent-code", "REGISTRY_NOT_READ");
+    await expect(notAdmitted).toHaveAttribute("data-run-admission", "absent");
     expect(await notAdmitted.evaluate((node) => node.tagName), "the OL-01 absence is an element that can be followed").toBe("SPAN");
     expect(await notAdmitted.getAttribute("href")).toBeNull();
     expect(await notAdmitted.getAttribute("tabindex")).toBeNull();
     await expect(root.locator("[data-where-next] a[href*='/runs/new']")).toHaveCount(0);
-    await expect(root.locator("[data-run-not-admitted]")).toContainText("Not admitted yet (OL-01)");
+    await expect(root.locator("[data-run-not-admitted]")).toHaveAttribute("data-run-admission-code", "REGISTRY_NOT_READ");
+    await expect(root.locator("[data-run-not-admitted]")).toContainText("run admission not read yet");
 
     /* Activation is a registry action: the chip and the state row take the served lifecycle. */
     await root.locator("[data-action='activate']").click();

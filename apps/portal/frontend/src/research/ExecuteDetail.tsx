@@ -131,9 +131,9 @@ function Card({
       {...rest}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           {title}
-        </h3>
+        </h2>
         {aside}
       </div>
       {children}

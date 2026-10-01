@@ -30,28 +30,34 @@
  * Output: one JSON receipt (`RESEARCH_A11Y_RECEIPT`, else
  * `$RESEARCH_SHOT_DIR/rf04-a11y-receipt.json`) with every axe finding per
  * screen and width — all impact levels, node by node with the measured colour
- * pair. The one accepted finding is D-B1, the shared `--ink-faint` (#939db0)
- * colour contrast; it is marked in the receipt and does not fail a cell.
- * Everything else does.
+ * pair, once per theme (Research light, then Operations Dark). Nothing is
+ * accepted: contrast is judged strictly against 4.5:1. (The old D-B1 clause,
+ * "fg == #939db0 is accepted", is gone — `.research-screen` carries its own
+ * `--ink-faint`, so that colour no longer appears on these screens.) This stays a
+ * probe: it measures and writes a receipt, it is not a gate.
  */
 import { expect, test } from "@playwright/test";
 
-import { analyze, recordRow, unaccepted } from "./axeReceipt";
-import { freezeClock } from "./fixtures";
+import { analyze, recordRow } from "./axeReceipt";
+import { freezeClock, usePreferences } from "./fixtures";
 import { quiet } from "./research-qualification/harness";
 import { SCREENS, installLane, watchConsole, watchNetwork, type ScreenDef } from "./research-qualification/stubs";
 
 const WIDTHS = [1440, 1280, 660] as const;
+/** Light first, then the dark workstation theme: the Research tokens are re-scoped for each (`tokens.css`, end of file). */
+const THEME_PASSES = ["research", "operations"] as const;
 const ROOT_TIMEOUT_MS = 30_000;
 
 /** Screens whose bundle must not pull the charting chunks (production builds only: the names mean nothing on the dev server). */
 const NO_CHART_BUNDLE = new Set(["00", "02", "03", "12", "14"]);
 
+for (const theme of THEME_PASSES) {
 for (const def of SCREENS as readonly ScreenDef[]) {
   for (const width of WIDTHS) {
-    test(`S${def.id} ${def.title}: axe finds nothing but D-B1 at ${width}px`, async ({ page, baseURL }) => {
+    test(`${theme} · S${def.id} ${def.title}: axe finds nothing at ${width}px`, async ({ page, baseURL }) => {
       await freezeClock(page);
       await installLane(page);
+      await usePreferences(page, theme);
       const net = watchNetwork(page);
       const { noise } = watchConsole(page, net);
       await page.setViewportSize({ width, height: 900 });
@@ -87,9 +93,15 @@ for (const def of SCREENS as readonly ScreenDef[]) {
       expect(await page.locator(def.root).count(), "one screen root").toBe(1);
 
       const result = await analyze(page, def.root);
-      const failing = unaccepted(result);
-      const accepted = result.violations.flatMap((rule) => rule.nodes).filter((node) => node.accepted === "D-B1").length;
-      recordRow("RF-04 axe per Research screen (G7)", `S${def.id}@${width}`, {
+      /* Strictly 4.5:1 and every other rule: nothing is accepted. D-B1 (the shared #939db0) is not a Research colour
+         any more — `.research-screen` re-scopes `--ink-faint` — so a node in that colour is a failure like any other. */
+      const failing = result.violations.flatMap((rule) =>
+        rule.nodes.map((node) => ({ rule: rule.rule, impact: rule.impact, target: node.target, foreground: node.foreground, background: node.background, contrast: node.contrast, summary: node.summary })),
+      );
+      const darkTheme = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+      expect(darkTheme, "the theme the pass asked for is the one on <html>").toBe(theme);
+      recordRow("RF-04 axe per Research screen (G7)", `${theme}:S${def.id}@${width}`, {
+        theme,
         screen: `S${def.id}`,
         title: def.title,
         base_url: baseURL,
@@ -100,8 +112,7 @@ for (const def of SCREENS as readonly ScreenDef[]) {
         axe_version: result.axe_version,
         passes: result.passes,
         incomplete: result.incomplete,
-        accepted_d_b1_nodes: accepted,
-        unaccepted_nodes: failing.length,
+        failing_nodes: failing.length,
         violations: result.violations,
       });
 
@@ -114,7 +125,8 @@ for (const def of SCREENS as readonly ScreenDef[]) {
         );
         expect(jsFiles.filter((path) => /\/(?:theme|echarts)-/.test(path))).toEqual([]);
       }
-      expect(failing, `${failing.length} axe node(s) other than D-B1 on S${def.id} at ${width}px`).toEqual([]);
+      expect(failing, `${failing.length} axe node(s) on S${def.id} at ${width}px (${theme})`).toEqual([]);
     });
   }
+}
 }

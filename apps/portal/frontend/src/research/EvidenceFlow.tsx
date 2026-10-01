@@ -1184,7 +1184,7 @@ function StageTabs({
       {/* The HiFi's next room: not a stage of this run, and not built. */}
       <div
         className="flex flex-none flex-col justify-center gap-0.5 border-l border-dashed px-3.5 py-2"
-        style={{ borderColor: "var(--viz-legend-inactive)", opacity: 0.62 }}
+        style={{ borderColor: "var(--viz-legend-inactive)" }}
         aria-hidden="true"
         data-promotion-soon
       >
@@ -1192,7 +1192,7 @@ function StageTabs({
           <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
             →
           </span>
-          <span className="text-[12px] font-medium uppercase tracking-[.05em]" style={{ color: "var(--ink-soft)" }}>
+          <span className="text-[12px] font-medium uppercase tracking-[.05em]" style={{ color: "var(--ink-faint)", fontStyle: "italic" }}>
             Promotion
           </span>
           <span className="mono rounded-[3px] border border-dashed px-1 text-[9px] font-semibold" style={{ color: "var(--ink-faint)", borderColor: "var(--ink-faint)" }}>

@@ -229,7 +229,7 @@ function Card({ title, children, meta }: { title: string; children: React.ReactN
     >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         {/* HiFi 02-2: panel titles are Inter 12/600 caps; the global h3 rule would make them serif. */}
-        <h3 className="text-[12px] font-semibold uppercase tracking-[.05em]" style={{ fontFamily: "var(--font-body)" }}>{title}</h3>
+        <h2 className="text-[12px] font-semibold uppercase tracking-[.05em]" style={{ fontFamily: "var(--font-body)" }}>{title}</h2>
         {meta}
       </header>
       {children}
@@ -2222,7 +2222,7 @@ function WindowTimeline({
         ) : null}
         {rows.map((row) => (
           <div key={row.key} className="grid grid-cols-[48px_1fr] items-center gap-x-1.5 gap-y-0.5" data-timeline-row={row.key}>
-            <span className="mono text-[9.5px]" style={{ color: row.tone }}>{row.label}</span>
+            <span className="mono text-[9.5px]" style={{ color: row.key === "is" || row.key === "span" ? "var(--ink-faint)" : row.tone }}>{row.label}</span>
             <span
               className="relative block h-[10px] rounded-full"
               style={{ background: "var(--paper-sunken)" }}
