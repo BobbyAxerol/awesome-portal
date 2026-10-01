@@ -40,6 +40,7 @@ import type {
   RollingSharpePoint,
 } from "./evidenceClient";
 import { formatFractionAxis, formatMetric } from "./researchFormat";
+import { isDailyDistribution, safeCount } from "./allTimeSeries";
 
 /** HiFi heights (measured on the `.dc.html`): equity 380, underwater 180, rolling/distribution 230. */
 export const CHART_HEIGHT = { equity: 380, underwater: 180, rolling: 230, distribution: 230 } as const;
@@ -441,7 +442,11 @@ export function tickInterval(count: number): number {
   return Math.max(0, Math.ceil(count / 6) - 1);
 }
 
-export function distributionOption(buckets: Bucket[]) {
+/** A bucket count shown as served; a count that is not a number is printed as it came, never as NaN or 0. */
+const countShown = (count: unknown): string => formatMetric(safeCount(count), "count") ?? String(count);
+
+/** `daily` is the all-time UTC daily histogram: the axis says "daily returns" and a count is a number of days. */
+export function distributionOption(buckets: Bucket[], daily = false) {
   const { accent, accent2 } = canvasTokens(activeTheme());
   const zero = zeroBucketIndex(buckets);
   return baseOption({
@@ -452,6 +457,7 @@ export function distributionOption(buckets: Bucket[]) {
     xAxis: {
       type: "category",
       data: buckets.map(bucketLabel),
+      ...(daily ? { name: "daily returns", nameLocation: "middle", nameGap: 28, nameTextStyle: { fontSize: 10 } } : {}),
       axisLabel: {
         fontSize: 10,
         rotate: 0,
@@ -470,7 +476,7 @@ export function distributionOption(buckets: Bucket[]) {
         const param = first(params);
         const bucket = buckets[param?.dataIndex ?? -1];
         return bucket
-          ? `${bucketLabel(bucket)}<br/>${tooltipRow(param, SERIES_NAME.distribution, formatMetric(bucket.count, "count"))}`
+          ? `${bucketLabel(bucket)}<br/>${tooltipRow(param, daily ? "days" : SERIES_NAME.distribution, countShown(bucket.count))}`
           : "";
       },
     },
@@ -478,7 +484,7 @@ export function distributionOption(buckets: Bucket[]) {
       {
         type: "bar",
         name: SERIES_NAME.distribution,
-        data: buckets.map((bucket) => Number(bucket.count)),
+        data: buckets.map((bucket) => safeCount(bucket.count)),
         barCategoryGap: "14%",
         itemStyle: { color: withAlpha(accent, 0.55) },
         ...(zero !== null
@@ -739,18 +745,19 @@ export function StrategyBenchmarkChart({
 
 export function DistributionChart({ series }: { series: EvidenceSeries }) {
   const buckets = series.values as Bucket[];
-  const option = useMemo(() => distributionOption(buckets), [buckets]);
+  const daily = isDailyDistribution(series);
+  const option = useMemo(() => distributionOption(buckets, daily), [buckets, daily]);
   return (
-    <div data-chart="distribution">
+    <div data-chart="distribution" data-distribution-grain={daily ? "UTC_DAY" : undefined}>
       <EChart option={option} height={CHART_HEIGHT.distribution} />
       <ExactTable
         id="distribution"
-        caption="Return distribution, exact bucket edges"
-        head={["bucket", "count"]}
+        caption={daily ? "Daily return distribution, exact bucket edges" : "Return distribution, exact bucket edges"}
+        head={["bucket", daily ? "days" : "count"]}
         rows={buckets.map((bucket) => {
           const { lower, upper, closing } = bucketEdges(bucket);
           const label = `[${lower}, ${upper}${closing}`;
-          return { key: label, cells: [label, bucket.count] };
+          return { key: label, cells: [label, String(bucket.count)] };
         })}
       />
     </div>

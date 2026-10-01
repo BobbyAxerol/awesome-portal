@@ -289,3 +289,7 @@ UI-first contract and fallback readers until that complete block is published.
 - *"E1 ghi đã làm tròn bảng a11y S04 nhưng chưa"* — đúng: `EvidenceCharts.tsx:152` `ExactTable` (và S08) vẫn in ISO-ms + float đầy đủ; ISO-ms còn ở S01 `RunLibrary.tsx:1181` và S11 `ReleaseCandidateDetail.tsx:1815,1980`. E1 = PARTIAL. Việc sửa (làm tròn hiển thị, giữ chuỗi chính xác ở `title`/cột riêng) chưa làm.
 
 **Việc F5 còn lại cần chạy (không phải docs):** lane real-API 54 ô (F3), axe (G7, F9), visual qua `./scripts/portal-web-visual.sh` (F13/G6, Bobby duyệt từng ô), receipt real cho D7 (G1).
+
+### F6b — nối BR-F6 của Codex (2026-10-01)
+
+S04 đọc `cf8dc871`: điểm tháng `partial` + số quan sát + `basis` (vẽ gạch chéo, tooltip), histogram "daily returns · n days" (đơn vị ngày), `summary_analytics_v2.distributions`, disclosure tail 32 tháng, panel đặt nhãn "— all time" khi series có `derivation`. Trên preview thật R-WFO-020 đã trả hình mới (Codex đã apply): 2 tháng một phần, "12 bins · 59 days". Bản ghi: `evidence/P21/audit-2026-09-30/f4/S04_F6.md`. Cũng sửa: lỗi build image web do import JSON ngoài context Docker (ac62146f); test `searchF2` chập chờn → thêm ngân sách thời gian.

@@ -12,7 +12,7 @@
  * (`research-current-source.search-surface` and `.split`); a test changes only
  * the one field it is about.
  */
-import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, configure, render, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -27,6 +27,11 @@ import { forgetSearchReads } from "./useSearch";
 import { forgetRunIdentities } from "./retainedLane";
 import { researchState } from "./state";
 import type { CurrentSourceSearch, SearchDetail } from "./searchClient";
+
+/* This file mounts the whole Search screen several times; under the full parallel suite the default 1 s waitFor
+   and 5 s test timeout expired three times while it passed alone. A longer budget, not a retry. */
+configure({ asyncUtilTimeout: 6000 });
+vi.setConfig({ testTimeout: 20000 });
 
 afterEach(cleanup);
 

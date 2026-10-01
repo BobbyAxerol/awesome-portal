@@ -72,6 +72,7 @@ import { HubFreezeBody } from "./hubStageFreeze";
 import { HubExecuteBody } from "./hubStageExecute";
 import { AnalyticsAbsentLine, BehaviorV2, StrategyBenchmarkFigure, v2Absence, v2Of } from "./analyticsV2";
 import { enrichedBlock, type EnrichedAnalysis } from "./enrichedAnalysis";
+import { companionRead, derivationTitle, derivedHeadline, derivationOf, monthCoverage, type MonthFacts } from "./allTimeSeries";
 import {
   DrawdownEpisodes,
   EnrichedChip,
@@ -1777,18 +1778,31 @@ function ChartFrame({ height, children }: { height: number; children: ReactNode 
 
 /** The sampling line a panel shows once its series has answered. */
 function SamplingLine({ series }: { series: EvidenceSeries }) {
+  /* F6: a series that names its derivation says what it is (months, daily bins and days) and carries
+     the provenance in its tooltip; a legacy answer keeps the sampling line it always had. */
+  const headline = derivedHeadline(series);
+  const provenance = headline !== null ? derivationTitle(series) : null;
   return (
     <span
       className="mono ml-auto text-[9.5px]"
       style={{ color: "var(--ink-faint)" }}
       data-sampling={series.source_sample.sampling ?? "NOT_PUBLISHED"}
+      data-derivation={headline !== null ? (derivationOf(series)?.grain ?? "unspecified") : undefined}
+      title={provenance ?? undefined}
+      aria-label={provenance !== null ? `${headline}, ${provenance.replace(/\n/g, ", ")}` : undefined}
     >
-      {formatMetric(series.source_sample.emitted_point_count, "count")}{" "}
-      {series.source_sample.emitted_point_count === 1 ? "point" : "points"} from{" "}
-      {series.source_sample.source_observation_count === null
-        ? "an unpublished number of"
-        : formatMetric(series.source_sample.source_observation_count, "count")}{" "}
-      source observations · {series.source_sample.sampling ?? "sampling not published"}
+      {headline !== null ? (
+        headline
+      ) : (
+        <>
+          {formatMetric(series.source_sample.emitted_point_count, "count")}{" "}
+          {series.source_sample.emitted_point_count === 1 ? "point" : "points"} from{" "}
+          {series.source_sample.source_observation_count === null
+            ? "an unpublished number of"
+            : formatMetric(series.source_sample.source_observation_count, "count")}{" "}
+          source observations · {series.source_sample.sampling ?? "sampling not published"}
+        </>
+      )}
     </span>
   );
 }
@@ -1869,7 +1883,7 @@ function useSeriesBody({
  */
 function SeriesPanel({
   kind,
-  title,
+  title: titleProp,
   chartNo,
   variant = "figure",
   footnote,
@@ -1885,7 +1899,8 @@ function SeriesPanel({
   children,
 }: {
   kind: SeriesKind;
-  title: string;
+  /** A function is asked once the series is read: a derived all-time series retitles its panel. */
+  title: string | ((series: EvidenceSeries | null) => string);
   /** enrich_analysis: a panel drawn from the block shows its provenance chip in place of the sampling line. */
   chip?: ReactNode;
   /** The HiFi's `EChart n` label; figures only. */
@@ -1906,6 +1921,7 @@ function SeriesPanel({
   children: (series: EvidenceSeries) => ReactNode;
 }) {
   const { body, state, ready } = useSeriesBody({ kind, link, slot, onNeeded, emptyReason, absentExtra, children });
+  const title = typeof titleProp === "function" ? titleProp(ready) : titleProp;
 
   if (variant === "card") {
     return (
@@ -2008,14 +2024,14 @@ export function monthTint(returnFraction: string): number {
 }
 
 function MonthlyHeat({ series }: { series: EvidenceSeries }) {
-  const points = series.values as (MonthlyReturnPoint & Partial<EnrichedMonthPoint>)[];
+  const points = series.values as (MonthlyReturnPoint & Partial<EnrichedMonthPoint> & MonthFacts)[];
   return (
-    <div className="flex items-end gap-[3px]" data-chart="monthly">
+    <div className="flex flex-wrap items-end gap-x-[3px] gap-y-2" data-chart="monthly">
       {points.map((point) => {
         const negative = point.return_fraction.trim().startsWith("-");
         /* enrich_analysis: a first/last month the scope only part-covers is drawn hatched, with its observation count. */
         const partial = point.partial === true;
-        const coverage = partial ? ` · partial month · ${formatMetric(point.observation_count, "count")} of ${formatMetric(point.expected_observation_count, "count")} observations` : "";
+        const coverage = monthCoverage(point);
         const month = new Date(point.month_start_utc_ms).toISOString().slice(0, 7);
         const shown = formatMetric(point.return_fraction, "fraction");
         /* HiFi tick: `7/26` — month without its zero, two-digit year. */
@@ -2023,7 +2039,7 @@ function MonthlyHeat({ series }: { series: EvidenceSeries }) {
         return (
           <span
             key={point.month_start_utc_ms}
-            className="flex min-w-0 max-w-[56px] flex-1 flex-col gap-0.5"
+            className="flex min-w-[38px] max-w-[56px] flex-1 flex-col gap-0.5"
             data-month={month}
             data-exact={point.return_fraction}
             data-month-partial={partial ? "true" : undefined}
@@ -3299,6 +3315,8 @@ export function asHubSeries(series: CurrentSourceEvidenceSeries): EvidenceSeries
       source_observation_count: series.source_sample.source_observation_count,
       emitted_point_count: series.source_sample.emitted_point_count,
       sampling: series.source_sample.sampling,
+      /* F6: the all-time derivation (grain, definition, omitted months) rides along when the lane serves it. */
+      ...(series.source_sample.derivation !== undefined ? { derivation: series.source_sample.derivation } : {}),
     },
     values: series.values,
   } as unknown as EvidenceSeries;
@@ -3475,17 +3493,31 @@ function SummaryTab({
     if (monthly !== null) enrichedSeries.set("MONTHLY_RETURNS", monthly);
     if (distribution !== null) enrichedSeries.set("RETURN_DISTRIBUTION", distribution);
   }
+  /* F6: `summary_analytics_v2.distributions` answers before the series endpoint, after enrich_analysis. AVAILABLE draws
+     the same panels; NOT_APPLICABLE is the typed absence with the server's reason code (no request is made). */
+  const companionSeries = new Map<SeriesKind, EvidenceSeries>();
+  const companionAbsent = new Map<SeriesKind, Availability>();
+  for (const kind of ["MONTHLY_RETURNS", "RETURN_DISTRIBUTION"] as const) {
+    if (enrichedSeries.has(kind) || retained === null) continue;
+    const read = companionRead(v2Of(retained, hub), kind, runId);
+    if (read?.kind === "series") companionSeries.set(kind, read.series);
+    else if (read?.kind === "absent") companionAbsent.set(kind, { state: read.state, reason_code: read.reason_code } as Availability);
+  }
   const linkFor = (kind: SeriesKind) =>
-    enrichedSeries.has(kind)
+    enrichedSeries.has(kind) || companionSeries.has(kind)
       ? ({ kind, availability: { state: "AVAILABLE", reason_code: null }, href: null } as unknown as EvidenceHub["series"][number])
-      : laneHub.series.find((entry) => entry.kind === kind);
+      : companionAbsent.has(kind)
+        ? ({ kind, availability: companionAbsent.get(kind), href: null } as unknown as EvidenceHub["series"][number])
+        : laneHub.series.find((entry) => entry.kind === kind);
   const slotFor = (kind: SeriesKind): SeriesSlot | undefined => {
-    const fromBlock = enrichedSeries.get(kind);
+    const fromBlock = enrichedSeries.get(kind) ?? companionSeries.get(kind);
     return fromBlock ? { state: "ready", series: fromBlock } : laneSeries.get(kind);
   };
   const needFor = (kind: SeriesKind) => {
-    if (!enrichedSeries.has(kind)) laneEnsure(kind);
+    if (!enrichedSeries.has(kind) && !companionSeries.has(kind) && !companionAbsent.has(kind)) laneEnsure(kind);
   };
+  const allTimeTitle = (kind: SeriesKind, derivedWords: string, legacyWords: string) => (loaded: EvidenceSeries | null) =>
+    enrichedSeries.has(kind) || (loaded !== null && derivationOf(loaded) !== null) ? derivedWords : legacyWords;
   const underwater = enriched !== null ? underwaterPoints(enriched) : null;
   const performance = hub.oos_performance ?? null;
   /* D-AN-01: all-time analytics. With a v2 block (or on a retained run, where the rest is one absence
@@ -3524,7 +3556,7 @@ function SummaryTab({
     <SeriesPanel
       kind="MONTHLY_RETURNS"
       variant="card"
-      title={enrichedSeries.has("MONTHLY_RETURNS") ? "monthly returns — all time" : "monthly returns — stitched OOS"}
+      title={allTimeTitle("MONTHLY_RETURNS", "monthly returns — all time", "monthly returns — stitched OOS")}
       className={enriched !== null ? "" : "flex-[1.3_1_460px]"}
       link={linkFor("MONTHLY_RETURNS")}
       slot={slotFor("MONTHLY_RETURNS")}
@@ -3669,7 +3701,7 @@ function SummaryTab({
         <SeriesPanel
           kind="RETURN_DISTRIBUTION"
           chartNo={4}
-          title={enrichedSeries.has("RETURN_DISTRIBUTION") ? "Return distribution — all time" : "Return distribution — stitched OOS"}
+          title={allTimeTitle("RETURN_DISTRIBUTION", "Return distribution — all time", "Return distribution — stitched OOS")}
           className="flex-[1_1_380px]"
           link={linkFor("RETURN_DISTRIBUTION")}
           slot={slotFor("RETURN_DISTRIBUTION")}
