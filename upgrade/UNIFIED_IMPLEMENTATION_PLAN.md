@@ -6933,3 +6933,28 @@ being committed in his frontend lane. No frontend implementation is edited.
   not all DR-01…10 or product acceptance. Profile-aware conditions/fold admission,
   fresh S02-created runs, executor v2, T12/T14 and aggregate P23/P24 remain
   separately tracked until their own gates run. No push or production rollout.
+
+#### B7 index/BFF backend acceptance — 2026-10-01
+
+Scoped slice **PREVIEW_ACCEPTED `8829f7a0`**: immutable HMD timestamp index,
+three named workspace-scoped BFF reads and B6 typed enrichment absence.
+29 symbols × seven intervals, 203 entries, 54,983 metadata bytes. Independent
+target-reader oracle **21/21**, three IS/OOS/Holdout/warmup checks and real
+same-origin preview **46/46 GETs** PASS. Mandatory hook: contracts **215/215**,
+Control API **1,429 pass / 1 skip**, zero route collisions and protected hash
+unchanged. Source read-only, immutable Report core equal prior B6 receipt;
+backend images updated, exact frontend image preserved. No new optimizer run,
+FE modification, remote push or production rollout.
+
+Full [receipt, image/hash pins, DR table, C4 and precise Claude binding instructions](./research_loop/evidence/P13/B7_DATA_DECLARATION_INDEX_2026-10-01.md).
+Claude must switch the V1/proposed S02 consumer to these generated v2/named
+clients and show selected-interval quality/window facts plus truthful absence;
+backend proof does not constitute browser acceptance. HMD contains other real
+datasets, but Portal adapters/calendar/profile qualification are still DR-03
+implementation, not missing-source claims. Official instrument facts are not
+published by this installed Binance loader and are not inferred.
+
+Still open: DR-08/09 profile-aware fold/conditions, complete DR-10 S02-created
+WFO/P04/browser receipt, broader adapter qualification, requested-spec v2 executor,
+T12/T14 writers and whole-candidate P23/P24. Keep original pending notes above
+as history; this addendum supersedes only the proven slice, not the whole queue.

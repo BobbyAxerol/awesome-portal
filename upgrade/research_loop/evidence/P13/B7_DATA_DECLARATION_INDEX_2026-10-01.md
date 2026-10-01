@@ -3,7 +3,7 @@
 Owner: Codex; branch `codex/be-gaps`, landing `docs/research-loop-plan`.
 Scope: [B7 spec](../../DATA_DECLARATION_SPEC_2026-10-01.md), DR-01/02/04,
 target-bar parts of DR-06/07, canonical contracts, and B6 wire absence.
-**Code/source proof complete; exact preview/API acceptance pending at this record.**
+**Initial code/source record; superseded by PREVIEW_ACCEPTED journal in §6 below.**
 Do not read this as complete DR-01…10, frontend acceptance, P23 or P24.
 
 ## 1. Implementation and protected authority
@@ -124,9 +124,87 @@ Do not modify the accepted rich composition, browser design or frozen Report cor
 S04/S09 absence text reads the new generated `EnrichedAnalysisAvailability`,
 not a frontend-created reason. Canonical fixtures live in `packages/contracts`.
 
-## 6. Preview acceptance journal
+## 6. Preview acceptance journal — supersedes initial pending record
 
-Pending exact backend image build, owned index publication and named API receipts.
+**B7 index/BFF slice PREVIEW_ACCEPTED**, code `8829f7a0`, 46 files,
+**+4,988 / −19** (includes generated contract/fixtures, tests and docs).
+Required hook PASS: contracts **215/215**, Control API **1,429 pass / 1 skip**;
+route census **247 / zero collisions**, N29/EDS static digests unchanged,
+protected strategy hash unchanged. Focused Python **18/18** and independent
+reader oracle **21/21**, plus three window/warmup checks, PASS.
+
+Rebuilt only Control API/Python backend, then used the existing preview helper.
+Its migration/bootstrap jobs exited 0; no new migration was introduced. Same
+web image before/after, no frontend build or modification. The short readiness
+retry observed one gateway 502 while nginx re-resolved backend addresses, then
+the ready gate and all API requests succeeded.
+
+| Preview component | Exact running image |
+|---|---|
+| Control API | `sha256:9f5c0c0ff834f978c70b3971970fcecbb36cfa548a90a7ae930ddebe3b770ed1` |
+| Python API / existing worker service | `sha256:d18a3196653bdcfc754884b46b259293c805563e19cc87a7cc45c5c4f552818e` |
+| Frontend (unchanged) | `sha256:10311d69db2b481d85b9e2a6945c8d8106a6060be646949e280e3516a5f23fa2` |
+
+Before publication: v2 catalog returned 29 source symbols, **typed
+`HMD_METADATA_INDEX_NOT_BUILT`**, empty coverage arrays and null clock, not fake
+available data. Published the exact verified 54,983-byte immutable index into
+this preview's artifact volume; no second source scan. Operator retry returned
+the same revision and one stored revision, no duplicate storage.
+
+**46/46 real same-origin GETs PASS**, via the owner-approved preview identity:
+
+Automation uses the existing preview-only auto-login `GET /api/auth/context`;
+the receipt verified `AUTHENTICATED` and retained its cookie privately. No Bobby
+password/reset/grant or automation-account password file was changed. An old
+password login failure is not a blocker for this approved preview lane; do not
+claim that the old password itself was repaired.
+
+- V2 full catalog matches the independent source-oracle document exactly;
+  V1 remains the V1 shape. 29 symbols/203 interval records, bounded JSON.
+- Three keyset pages exhaust exactly 29 distinct symbols; changed filter/limit
+  cursor is 400, foreign workspace 404, unknown dataset 404. `q` + timeframe
+  filter has the exact source-derived total.
+- 21 window counts/edges agree with independent target-reader checks. Separate
+  BTCUSDT 1h windows: IS **744 + 100 warmup**, OOS **744**, Holdout **720**.
+- Unaligned boundaries/excessive warmup are 400; unindexed symbol/out-of-range
+  window stays null/typed absence, not zero. Reads do not admit/create a run.
+- R-WFO-020 and R-P04-021 Evidence/Report carry typed enrichment availability,
+  same supplemental block and **304** conditional Evidence reads. Frozen Report
+  cores equal the prior B6 real receipt, byte-for-byte field parity.
+
+Private real API receipt **file-byte SHA-256**:
+`a2dac63c8756e9307f7e1e1c9705a594dfa2ee411cef226bef8e5d3fffb19716`.
+Its separately canonicalized object digest (not file-byte hash) is
+`87ae7d3898eaa0cb7527f68f9f58f93fa0b3e424ce4921ca24f2094d769872f5`.
+Three-window oracle receipt byte hash:
+`09a6db8341ee071587124eb46b95eaae5eee7b6c885c26a03437855dcec183b8`.
+Private state remains outside Git; no cookie/principal, raw price or credential
+is included in this public handoff.
+
+C4: isolated gate containers cleaned by their EXIT traps; no matching test cell
+left after the hook. Preview services healthy, retained volume/source intact;
+HMD bind inspected **read-write=false**. Approx. **214 GiB disk free / 15 GiB
+RAM available**. Keep the preview and rollback images; no global prune, source
+or business deletion, unrelated agent restart, remote push or production change.
+The Docker build reported four existing high-severity npm advisory findings;
+dependency changes were not smuggled into this data contract slice. Triage/pin
+belongs to the pending P23/P24 candidate security qualification, not a silent
+`npm audit fix` or a claim that security acceptance is complete.
+
+### Consumer wiring still required (read-only audit of Claude's WIP)
+
+Read-only audit at Claude's newly landed **`138300f1`** (preserved during rebase):
+`datasetClient.ts` still calls V1 `/datasets` and normalizes
+unknown proposed v2 extras. It will **not** see this new v2 data until switched
+to the named generated client in §5. Replace proposed/manual wire types with
+the published `DatasetCatalogV2` / `SymbolPage` / `BarMetadata`; supply workspace
+to symbol search, preserve refusal/partial reason instead of silently presenting
+the old list as complete. Read quality from the selected interval, not aggregate
+unknown `symbols[].quality`. Wire window/warmup metadata without assuming it is
+fold/profile/admission acceptance. No Codex frontend path was changed.
+
+DR-01/02/04 and the scoped DR-06/07 backend foundation have actual proof now;
+**DR-03 expansion, DR-05 official facts, DR-08/09 and complete DR-10 remain open**.
 Browser/S02 new-run acceptance remains Claude's next consumer task, not implied
 by source or fixture gates. Next backend: DR-08/09, DR-03 qualification, executor
-v2, audit-of-selection/exposure and whole-candidate P23/P24, in the queue order.
+v2, audit-of-selection/exposure and whole-candidate P23/P24, in queue order.

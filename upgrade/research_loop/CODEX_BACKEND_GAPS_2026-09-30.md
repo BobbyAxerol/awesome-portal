@@ -146,8 +146,8 @@ Unified: U:3636 (board P23), U:3637 (P24 → Codex), U:3691 (OL-12), U:3692/3695
 
 | Id | Commit | Test | Contract đổi (Claude cần nối FE) | Ghi chú |
 |---|---|---|---|---|
-| B7 / BR-D4-1 index foundation | CODE_READY / hook-preview pending | Python 18/18; real HMD 21/21 oracle, 29 symbols × 7 intervals | New `research-dataset-index.d.ts`: named catalog-v2 / symbols / bar-metadata; V1 unchanged | [Receipt and precise DR-01…10 status](./evidence/P13/B7_DATA_DECLARATION_INDEX_2026-10-01.md). Exact source-clock/range/target-bar semantics; other mounted-source adapters, profile conditions/folds and S02 run acceptance remain open. |
-| B6 wire absence | CODE_READY / hook-preview pending | Availability discriminant + current-source/Hub/Report regressions | `EnrichedAnalysisAvailability` on three generated surfaces | Source/seal authority unchanged; no frontend-invented absence reason. Same B7 receipt. |
+| B7 / BR-D4-1 index foundation | PREVIEW_ACCEPTED `8829f7a0` (scoped foundation, not all DR) | Python 18/18; real HMD 21/21 + three windows; preview 46/46; hook Control API 1,429 pass / 1 skip, contracts 215/215 | New `research-dataset-index.d.ts`: named catalog-v2 / symbols / bar-metadata; V1 unchanged | [Receipt and precise DR-01…10 status](./evidence/P13/B7_DATA_DECLARATION_INDEX_2026-10-01.md). 29 symbols × 7 intervals. Other source adapters, profile conditions/folds and S02 run acceptance remain open. |
+| B6 wire absence | PREVIEW_ACCEPTED `8829f7a0` | Availability discriminant, current-source/Hub/Report regressions and real 200/304 parity | `EnrichedAnalysisAvailability` on three generated surfaces | Source/seal/core authority unchanged; no frontend-invented absence reason. Same B7 receipt. |
 | S14-RW-BR-01 | `1829f998` | P07 disposable PostgreSQL 9/9; Control API full hook 1349/1349 | Không | ACTIVE same-version register trả replay 201, predecessor không tự trỏ. |
 | S14-RW-BR-02 | `a293b4a2` | Alpha analyzer Python 14/14; full hook xanh | Không | Mirror FAIL theo field, không theo aggregate gate. |
 | CG-S00-AV-01 | `a293b4a2` | P09 disposable PostgreSQL 7/7; contracts 197/197; forward upgrade 067→078; full hook xanh | `JourneyCard.requires_alpha?: boolean`; fixture v4; Claude nối S00 | Revision 4 bất biến, v3 giữ nguyên; chỉ Alpha Version cần chọn alpha, không cần run. |
@@ -188,7 +188,7 @@ Unified: U:3636 (board P23), U:3637 (P24 → Codex), U:3691 (OL-12), U:3692/3695
 | CG-FG-S11-02 | BACKEND_ACCEPTED `ae715219` | Full hook 1397 pass/1 skip; exact-head preview WFO Compose GET 200 | `ComposeResponseP21.selected_params` (trial number + typed param-set absence) | Source trial 393 displays 394; sealed packs unchanged. `evidence/P21/CG-FG-S11-02_backend_receipt_2026-10-01.md`. |
 | CG-FG-S14-04 | BACKEND_ACCEPTED `84cdb199` | P07 isolated PostgreSQL 10/10 on 201 rows; contracts 6/6; full hook Control API 1397 pass/1 skip; exact-HEAD preview GET 200 total=3/filter total=1/invalid cursor 400 | `ResearchAlphaRegistryV1.total`, `next_cursor`; GET `cursor` query | Signed workspace/filter-bound 200-row keyset; Claude binds S14. `evidence/P07/CG-FG-S14-04_backend_receipt_2026-10-01.md`. |
 | CG-FG-S04-07 | BACKEND_ACCEPTED `3d3a7950` | Focused Control API 15/15; contracts 204/204; P13 PostgreSQL 5/5; exact-head isolated preview P04/WFO GET 200 | `EvidenceHub.core.window_disclosure?: WindowDisclosure` | Retained P08 per-fold IS/OOS bars; fold-window sums explicitly may overlap; P04 holdout count DENIED; old manifest typed absent. `evidence/P13/CG-FG-S04-07_window_disclosure_2026-10-01.md`. |
-| BR-D4-1 / CG-FG-S02-02 | PARTIAL / BLOCKED_BY_HMD_INDEX | P08 typed topology already has admitted per-window `bars`; read-only catalog inspection showed month partitions only | No speculative exact catalog edge | Before-preflight first/last closed/nth-warmup bar requires approved bounded HMD metadata index; do not infer from partition month or 1m footer. Same P13 receipt. |
+| BR-D4-1 / CG-FG-S02-02 | PARTIAL / INDEX_FOUNDATION_AVAILABLE `8829f7a0` | Exact 29-symbol × 7-interval index and named window/warmup reads, 46/46 real preview GETs | New generated dataset index DTOs; Claude binds S02 | Supersedes BLOCKED_BY_HMD_INDEX. Exact metadata now available; earliest admissible start/profile-aware fold/conditions and S02 new-run acceptance remain B7 work. Do not infer bar edges from month partitions. |
 | BR-D4-3 | ALREADY_DELIVERED `d88121e6` (LW-07) | P09 Atlas current-release GET 200 on pinned preview | `PortalAdmission.profiles[]`: WFO 92 days, folds 2–16, 1h, weekly, expanding | Claude bind Portal admission; QuantBT `current_release.submission_constraints` has different authority. `evidence/P09/LW-07_portal_admission_2026-09-30.md`. |
 | CG-FG-S08-03 | BACKEND_ACCEPTED `b4965e34` | Full hook Control API 1401 pass/1 skip; contracts 204/204; exact-head isolated preview P04 Replay GET 200 | `ResearchReplayResponse.execution.counts?`: OOS bars, scoped child-tape trade count, typed ledger absence | Real P04: 744 bars, 45 `CHILD_TAPE` trades reported, no audited order/fill/trade/event ledger. Claude binds S08 without interpreting reported trades as records. `evidence/P17/CG-FG-S08-03_replay_counts_2026-10-01.md`. |
 | CG-FG-S09-02 | CODE_READY / NEW_SEAL_RECEIPT_PENDING | P05 now hashes actual `series/stitched.parquet` bytes and seals digest, size, logical name and scope in `current_source_summary`; P18 WFO `EquityV2.digest` reads that sealed fact | `CurrentSourceEvidence.source_series_artifact`, `ResearchReportFrozenCoreV2.equity.digest`; old seals typed `NOT_PUBLISHED/P05_SEAL_PREDATES_SOURCE_SERIES_BYTE_DIGEST` | Golden-tape QuantBT 1.1.1 byte-hash test and focused Control API/OpenAPI tests passed. Need one fresh isolated HMD-backed WFO seal/Report receipt before product acceptance. [Receipt](./evidence/P05/CG-FG-S09-02_source_series_digest_2026-10-01.md). |
@@ -422,3 +422,20 @@ Lý do (lời Bobby): backend có thể trả rất nhiều symbol/interval/endp
 Quy tắc: (1) nguồn HMD thô, không đoán từ tên; (2) mọi số dẫn xuất tính trong **một** service dữ liệu (`enrich_dataset_catalog`), cache bất biến, GET không quét; (3) vắng có mã, không 0 giả; (4) UI chốt trước — S02 đã dựng, backend theo hình trong spec.
 
 Thứ tự gợi ý: DR-01 service → DR-04 symbols phân trang → DR-05/06 instrument + chất lượng → DR-07 bar theo window + warmup → DR-08/09 ước lượng fold + điều kiện + profiles → DR-03 nhiều dataset → DR-10 fixture/receipt (tạo run WFO và P04 từ khai báo S02). Codex đang rảnh (làn sạch, commit cuối 3 giờ trước) — làm ngay.
+
+### B7 index/BFF runtime journal — supersedes initial queue state
+
+`8829f7a0` **PREVIEW_ACCEPTED for the index/BFF slice**: real HMD 29 symbols ×
+seven intervals, 203 metadata records; source oracle 21/21, three window/warmup
+checks, real preview 46/46 GETs. New named generated types and V1-compatible
+absence delivered; [receipt and exact Claude handoff](./evidence/P13/B7_DATA_DECLARATION_INDEX_2026-10-01.md).
+The existing preview `GET /api/auth/context` establishes the owner-approved
+automation session; no password reset was needed or claimed.
+
+Next backend remains **DR-08/09 conditions/folds → DR-03 source-specific adapter
+qualification → executor v2 → T12/T14 → aggregate P23/P24**. Official instrument
+facts are not published by the installed Binance loader; other HMD datasets
+exist but their Portal adapters/profile compatibility still need implementation.
+Complete DR-10 S02-created WFO/P04/browser acceptance is not closed by source
+or GET receipts. Claude must switch his proposed V1-normalizing S02 client to
+the published named v2 operations so backend-ready facts actually reach UI.

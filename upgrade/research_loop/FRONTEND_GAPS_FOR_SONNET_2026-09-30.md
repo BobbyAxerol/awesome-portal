@@ -301,3 +301,40 @@ Bản ghi: `evidence/P21/audit-2026-09-30/f5/{REALAPI,AXE,AXEFIX,LANESPEC,VISUAL
 - **Axe (probe rf04, 45 ô × 2 theme):** trước 18/45 sạch (84 nút tương phản, 27 link-in-text-block, 6 heading-order, 2 vùng cuộn); sau 90/90 sạch ở cả Research Light và Operations Dark. Giá trị Research-scoped: faint ink `#5c6780` (≥4.75 trên 5 nền), warn ink `#8f6118`; Operations Dark định nghĩa lại `--warn`, `--ink-mute`, `--ink-faint` trong `.research-screen`. Token chung của Execution Loop không đổi.
 - **Visual:** chưa chạy (cần `sudo -n docker`; bị chặn quyền) — baseline Research sẽ lệch (khung 272px, màu mới, gạch chân link, chữ nghiêng hàng superseded). Chờ Bobby chạy hoặc cho phép; không `--update` tự động.
 - **Sai khác HiFi chờ Bobby duyệt:** warn ink `#9a6a1f → #8f6118`, faint ink → `#5c6780`, chip withheld/report-only cùng xám, gạch chân link S13.
+
+### B7 backend → Claude handoff — 2026-10-01
+
+Backend `8829f7a0` is landed on the shared Research branch and **PREVIEW_ACCEPTED**:
+29 symbols × seven intervals, exact indexed edges/counts/gaps and window/warmup,
+46/46 real same-origin GETs, V1 preserved. [Complete receipt and operation/type
+map](./evidence/P13/B7_DATA_DECLARATION_INDEX_2026-10-01.md#5-exact-handoff-to-claude).
+
+Please bind the existing S02 composition, not redesign it:
+
+Claude `138300f1` is preserved on the same branch. Its S02 visual/data declaration
+parts are present, but the current client still fetches V1 and uses proposed
+wire readers. This handoff is the remaining integration, not a request to redo
+that composition or a claim that the browser already renders the real v2 facts.
+
+- `readDatasetCatalog` must use named `researchDatasetCatalogGetV2` at
+  `/api/v1/research/datasets/catalog-v2`, importing `DatasetCatalogV2` from the
+  newly generated `research-dataset-index.d.ts`; V1 `/datasets` intentionally
+  remains V1. Proposed unknown/manual wire readers are no longer canonical types.
+- Bind `coverage_by_timeframe` for the selected interval and its `as_of` /
+  `INDEXED_RANGE` disclosure. Real gaps are target-bar gaps, not a constituent-
+  minute guarantee. Official instrument fields are currently typed absent; do
+  not parse expiry or create tick/lot data from a symbol name.
+- Named symbol paging/search includes the workspace and unchanged filter/limit
+  cursor. Unknown/incomplete total is null, not zero or a complete fallback list.
+  Keep safe typed refusal/partial state visible; do not swallow it as success.
+- Named `researchDatasetBarMetadataGetV1` supplies IS/OOS/Holdout/warmup counts
+  by UTC half-open boundaries. Debounce/abort stale requests. This is metadata
+  only: fold estimate/conditions/profile admission is **not yet delivered**.
+- S04/S09 can render `enriched_analysis_availability` from the generated
+  Evidence/current-source/Report types: true reason on wire, no invented code.
+
+Canonical fixtures: `research-dataset-catalog.v2.{healthy,multi-dataset,
+partial-quality,symbol-absent}.valid.json` in `packages/contracts` (synthetic,
+not real-data evidence). The actual preview has all current 29 symbols indexed.
+FE/browser acceptance and complete DR-10 S02-created WFO/P04 runs remain open;
+Codex did not edit or mark completion of Claude's frontend paths.
