@@ -217,11 +217,12 @@ for (const [name, width, height] of VIEWPORTS) {
         await expect(page.locator("[data-metric-lane='retained'][data-metric='INITIAL_EQUITY']")).toHaveCount(0);
         await expect(page.locator("[data-metric-lane='retained'][data-metric='FINAL_EQUITY']")).toHaveCount(1);
         const netOos = evidence.summary_analytics?.net_oos_return;
-        const sharpeAll = evidence.summary_analytics_v2?.metrics?.sharpe;
+        /* B6: the shared `enriched_analysis` block comes first (the UI's source order: enrich_analysis, then v2, then the fold mean). */
+        const sharpeAll = evidence.enriched_analysis?.facts?.metrics?.sharpe ?? evidence.summary_analytics_v2?.metrics?.sharpe;
         const tradeTotal = evidence.fold_verdicts?.total_oos_trades;
         const heroExpected: Array<[string, string | null]> = [
           ["NET_RETURN_FRACTION", netOos?.state === "AVAILABLE" && netOos.value !== null ? String(netOos.value) : String(evidence.passport.net_return_fraction)],
-          /* D-AN-01: all-time `summary_analytics_v2.metrics.sharpe` when served; an older seal serves none, so the tile
+          /* D-AN-01 / B6: all-time `enriched_analysis.facts.metrics.sharpe`, else `summary_analytics_v2.metrics.sharpe`; a seal that serves neither, so the tile
              falls back to the verdict block's fold mean (labelled "OOS Sharpe · fold mean"). */
           ["OOS_SHARPE", sharpeAll?.state === "AVAILABLE" && sharpeAll.value !== null ? String(sharpeAll.value) : evidence.fold_verdicts?.mean_oos_sharpe != null ? String(evidence.fold_verdicts.mean_oos_sharpe) : null],
           ["MAX_DRAWDOWN_FRACTION", String(evidence.passport.max_drawdown_fraction)],
