@@ -29,7 +29,7 @@ import {
   toReplayRefusal,
   type Replay,
 } from "./replayClient";
-import { JUMP, ReplayTransport, transportKey, type TransportScheduler } from "./replayTransport";
+import { DEFAULT_SPEED, JUMP, ReplayTransport, transportKey, type TransportScheduler } from "./replayTransport";
 import { useReplay, type ReplayController } from "./useReplay";
 import { PortalApiError } from "../lib/api";
 import { ExecuteRoute } from "./ExecuteRoute";
@@ -321,6 +321,11 @@ describe("S08-U01 — the transport moves over loaded samples and never fetches"
     expect(transport.getSnapshot().index).toBe(10);
     transport.seek(999);
     expect(transport.getSnapshot().index).toBe(23);
+  });
+
+  it("opens at 4×, the HiFi default, and the 4× pill is the pressed one", () => {
+    expect(DEFAULT_SPEED).toBe(4);
+    expect(new ReplayTransport(manualScheduler().scheduler).getSnapshot().speed).toBe(4);
   });
 
   it("plays by elapsed time and speed, then stops at the end of the window", () => {

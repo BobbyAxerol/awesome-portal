@@ -22,7 +22,7 @@
  */
 
 import { LineageLink, lineageHref } from "./LineageLink";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useInRouterContext } from "react-router-dom";
 
 import {
@@ -57,6 +57,7 @@ import {
   outerFields,
   planCoverage,
   stepForFieldPath,
+  utcMs,
   parameterStatus,
   pinnedCount,
   sweptCount,
@@ -68,7 +69,8 @@ import type { RunCreateResponse } from "./runCreateClient";
 import type { PreflightResponse } from "./preflightClient";
 import type { ResearchState } from "./state";
 import { ShortId } from "./ShortId";
-import { claimToken, shortId } from "./researchFormat";
+import { claimToken, formatUtc, shortDigest, shortId } from "./researchFormat";
+import { useRunLabel } from "./runLabels";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -213,7 +215,8 @@ function Card({ title, children, meta }: { title: string; children: React.ReactN
       data-step-card={title}
     >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-[12px] font-semibold uppercase tracking-[.05em]">{title}</h3>
+        {/* HiFi 02-2: panel titles are Inter 12/600 caps; the global h3 rule would make them serif. */}
+        <h3 className="text-[12px] font-semibold uppercase tracking-[.05em]" style={{ fontFamily: "var(--font-body)" }}>{title}</h3>
         {meta}
       </header>
       {children}
@@ -221,42 +224,118 @@ function Card({ title, children, meta }: { title: string; children: React.ReactN
   );
 }
 
+/**
+ * A run named the way the HiFi names it (`R-WFO-020`): the server's label when a
+ * read has published one, else the short id. The full id stays in `data-run-id`.
+ * Never a bare `rrun_…` in a banner (D4 walk).
+ */
+function RunRef({ runId }: { runId: string }) {
+  const label = useRunLabel(runId);
+  return <span data-run-id={runId} data-display-label={label ?? undefined}>{label ?? shortId(runId)}</span>;
+}
+
 /* --------------------------------------------------------------- wizard bar */
+
+/**
+ * Below this width the eight pills with their captions no longer fit one row
+ * (measured in Chromium: the full row needs 916 px). The bar then shows the label and
+ * caption of the current step only; the other seven keep their number or mark
+ * and name themselves in a tooltip and the accessible name. The HiFi scrolls
+ * the row sideways; a first step that is off-screen reads as a wizard that
+ * starts at step three, so this keeps all eight visible instead.
+ */
+export const WIZARD_FULL_WIDTH = 930;
+
+export interface StepCaption {
+  state: "error" | "current" | "valid" | "visited" | "not-visited" | "incomplete";
+  /** The word under the label: valid · needs attention · not visited · preflight pending … */
+  caption: string;
+}
+
+/**
+ * The live caption of one pill (HiFi 02-7: valid / needs attention / preflight
+ * pending). Every word is a fact the form already holds: its own checks, the
+ * reader's visits and the preflight state. A step nobody opened has not been
+ * checked, so it is "not visited", never "valid" (FG 02-8b).
+ */
+export function stepCaption({
+  step,
+  current,
+  hasError,
+  visited,
+  contextChosen,
+  reviewCaption,
+}: {
+  step: StepId;
+  current: boolean;
+  hasError: boolean;
+  visited: boolean;
+  /** Context has no validator of its own: it passes once a version is chosen, or for a scratch run. */
+  contextChosen: boolean;
+  reviewCaption: string;
+}): StepCaption {
+  if (hasError) return { state: "error", caption: "needs attention" };
+  /* Review's verdict is the server's preflight, which the bar cannot see, so
+     Review never gets a tick; its caption is the preflight's own state. */
+  if (step === "review") return { state: current ? "current" : visited ? "visited" : "not-visited", caption: reviewCaption };
+  if (!visited) return { state: "not-visited", caption: "not visited" };
+  if (step === "context" && !contextChosen) return { state: current ? "current" : "incomplete", caption: "no version chosen" };
+  return { state: current ? "current" : "valid", caption: "valid" };
+}
 
 function WizardBar({
   current,
   onPick,
   errors,
   visited,
+  contextChosen,
+  reviewCaption,
 }: {
   current: StepId;
   onPick: (step: StepId) => void;
   errors: ReadonlySet<StepId>;
   /** Steps the reader has reached. A step nobody opened has not been checked, so it is never "valid". */
   visited: ReadonlySet<StepId>;
+  contextChosen: boolean;
+  reviewCaption: string;
 }) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  useLayoutEffect(() => {
+    const element = barRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => setCompact(element.clientWidth > 0 && element.clientWidth < WIZARD_FULL_WIDTH);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   return (
-    /* Wraps rather than scrolls.
-     *
-     * With the Portal sidebar taking 248px of 1280, eight pills overflowed and
-     * the first two steps sat off-screen behind a horizontal scrollbar — a
-     * wizard whose first step is invisible reads as a wizard that starts at
-     * step three. */
+    /* One row at any width the pills fit; narrower, the seven other pills
+     * collapse to their mark (see WIZARD_FULL_WIDTH). Wrapping stays as the
+     * last resort rather than a horizontal scrollbar that hides step one. */
     <div
+      ref={barRef}
       className="flex flex-wrap gap-1 rounded-[6px] border p-[5px]"
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
       role="tablist"
       aria-label="New run steps"
+      data-wizard-compact={compact || undefined}
     >
       {STEPS.map((step, index) => {
         const isCurrent = step.id === current;
         const hasError = errors.has(step.id);
-        /* FG 02-8b: ✓ "valid" is a verdict on a step the reader has been to and
-           that passed the form's own checks. Review's verdict is the server's
-           preflight, which this bar cannot see, so Review never gets a ✓. */
-        const checked = !hasError && !isCurrent && visited.has(step.id) && step.id !== "review";
-        const stepState = hasError ? "error" : isCurrent ? "current" : checked ? "valid" : "not-visited";
+        const { state: stepState, caption } = stepCaption({
+          step: step.id,
+          current: isCurrent,
+          hasError,
+          visited: visited.has(step.id),
+          contextChosen,
+          reviewCaption,
+        });
+        const checked = stepState === "valid" && step.id !== "review";
         const tone = hasError ? "var(--bad)" : isCurrent ? "var(--accent)" : checked ? "var(--good)" : "var(--ink-faint)";
+        const showText = !compact || isCurrent;
         return (
           <button
             key={step.id}
@@ -264,6 +343,8 @@ function WizardBar({
             role="tab"
             aria-selected={isCurrent}
             aria-current={isCurrent ? "step" : undefined}
+            aria-label={showText ? undefined : `${step.label} — ${caption}`}
+            title={showText ? undefined : `${step.label} — ${caption}`}
             data-step-pill={step.id}
             data-step-state={stepState}
             onClick={() => onPick(step.id)}
@@ -276,7 +357,7 @@ function WizardBar({
               onPick(STEPS[next]!.id);
               (event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=tab]")[next])?.focus();
             }}
-            className="flex flex-none items-center gap-2 rounded-[6px] px-3 py-1.5"
+            className={`flex flex-none items-center gap-2 rounded-[6px] py-1.5 ${showText ? "px-3" : "px-1.5"}`}
             style={{ background: isCurrent ? "var(--accent-soft)" : "transparent" }}
           >
             <span
@@ -285,15 +366,18 @@ function WizardBar({
             >
               {hasError ? "!" : checked ? "✓" : index + 1}
             </span>
-            <span className="flex flex-col items-start">
-              <span className="text-[11px] font-medium">{step.label}</span>
-              <span
-                className="text-[9px]"
-                style={{ color: hasError ? "var(--bad)" : "var(--ink-faint)" }}
-              >
-                {hasError ? "needs attention" : stepState === "not-visited" && step.id !== "review" ? "not visited" : step.sub}
+            {showText ? (
+              <span className="flex flex-col items-start">
+                <span className="text-[11px] font-medium">{step.label}</span>
+                <span
+                  className="text-[9px]"
+                  data-step-caption
+                  style={{ color: hasError ? "var(--bad)" : "var(--ink-faint)" }}
+                >
+                  {caption}
+                </span>
               </span>
-            </span>
+            ) : null}
           </button>
         );
       })}
@@ -302,6 +386,40 @@ function WizardBar({
 }
 
 /* ----------------------------------------------------------------- steps */
+
+/**
+ * What the registry says this version supersedes (HiFi 02-5).
+ *
+ * `supersedes_state` decides what a `null` means: RECORDED is authoritative
+ * ("this is a first version"), HISTORICAL_NOT_RECORDED is a row registered
+ * before lineage was captured, so nothing is claimed about it. The server's
+ * own state word is the reason code; a registry read that carries neither is
+ * reported as not reported.
+ */
+export function supersedesFact(
+  entry: Pick<RegistryEntry, "supersedes" | "supersedes_state"> | null,
+  registry: readonly RegistryEntry[],
+): { kind: "version" | "none" | "absent"; text: string; code: string | null } | null {
+  if (entry === null) return null;
+  if (entry.supersedes_state === "RECORDED") {
+    if (typeof entry.supersedes === "string" && entry.supersedes !== "") {
+      const label = registry.find((candidate) => candidate.alpha_version_id === entry.supersedes)?.version_label;
+      return { kind: "version", text: label ?? entry.supersedes, code: null };
+    }
+    return { kind: "none", text: "none · first version", code: null };
+  }
+  if (entry.supersedes_state === "HISTORICAL_NOT_RECORDED") {
+    return { kind: "absent", text: "not recorded", code: "HISTORICAL_NOT_RECORDED" };
+  }
+  return { kind: "absent", text: "not reported", code: null };
+}
+
+/** HiFi `avStateNote`, as the tooltip of the lifecycle value (the sentence itself is no longer printed). */
+const LIFECYCLE_NOTE: Record<string, string> = {
+  ACTIVE: "This version can compose a release candidate after the run completes — the evidence lands in the pack on the Release Candidate screen.",
+  DRAFT: "DRAFT import — runnable as evidence, but activate it before any publish: a draft version cannot compose a release candidate.",
+  SUPERSEDED: "SUPERSEDED — runnable for comparison, but a new release candidate should come from the active version.",
+};
 
 function ContextStep({
   draft,
@@ -319,6 +437,7 @@ function ContextStep({
   /* FG-05: the P22 lookup runs only for a bound version the registry listed. */
   const lookedUp = draft.bound && bound ? bound.alpha_version_id : null;
   const publications = useAlphaVersionPublications(lookedUp !== null ? [lookedUp] : []);
+  const supersedes = supersedesFact(bound ?? null, registry);
   return (
     <Card title="Context — alpha &amp; version binding">
       <div className="flex flex-wrap items-end gap-2.5">
@@ -359,7 +478,9 @@ function ContextStep({
         </div>
       </div>
 
-      {draft.bound ? (
+      {/* HiFi 02-4: nothing chosen, nothing to report — six "not reported"
+          labels before a choice said nothing. */}
+      {draft.bound && draft.alphaVersionId === "" ? null : draft.bound ? (
         <div
           className="flex flex-wrap gap-x-5 gap-y-1.5 rounded-[6px] border px-3 py-2"
           style={{ borderColor: "var(--line-soft)", background: "var(--paper)" }}
@@ -380,12 +501,49 @@ function ContextStep({
                 <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
                   not reported
                 </span>
+              ) : label === "lifecycle" ? (
+                <span
+                  className="mono text-[10.5px]"
+                  data-lifecycle-state={value}
+                  title={LIFECYCLE_NOTE[value]}
+                  style={{ color: value === "ACTIVE" ? "var(--good)" : value === "DRAFT" ? "var(--role-holdout)" : "var(--ink-faint)" }}
+                >
+                  {value}
+                </span>
               ) : (
                 <span className="mono text-[10.5px]">{value}</span>
               )}
             </span>
           ))}
+          {supersedes ? (
+            <span className="flex items-baseline gap-1.5" data-supersedes={supersedes.kind}>
+              <Label>supersedes</Label>
+              {supersedes.kind === "absent" ? (
+                <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+                  {supersedes.text}
+                  {supersedes.code ? <span className="mono not-italic"> · {supersedes.code}</span> : null}
+                </span>
+              ) : (
+                <span className="mono text-[10.5px]">{supersedes.text}</span>
+              )}
+            </span>
+          ) : null}
           {lookedUp !== null ? <LastPublishedRc view={publications.get(lookedUp) ?? { state: "loading" }} /> : null}
+          {/* HiFi 02-5b: where this version goes next. The library filters by
+              alpha (not by version), so the link says "alpha". */}
+          {bound ? (
+            <span className="ml-auto flex items-center gap-3 text-[10px] font-semibold" style={{ color: "var(--accent)" }} data-passport-links>
+              <LineageLink to={lineageHref(bound.alpha_id, { av: bound.alpha_version_id })} className="mono" action="open-lineage" title="This alpha's attempt lineage">
+                lineage →
+              </LineageLink>
+              <Link to={`/research/quantbt/runs?alpha=${encodeURIComponent(bound.alpha_id)}`} className="mono" data-link="alpha-runs" title="Runs of this alpha in the Run Library">
+                runs of this alpha →
+              </Link>
+              <Link to="/research/quantbt/alpha-import" className="mono" data-link="import-version" title="Import a new version of an alpha, then come back here">
+                import new version →
+              </Link>
+            </span>
+          ) : null}
         </div>
       ) : (
         <div
@@ -413,8 +571,8 @@ function ContextStep({
  * version's latest delivered release candidate from
  * `researchAlphaVersionPublicationGetV1`. It shows the rc id, the raw
  * Governance status (the effective status beside it when the server sent
- * one), the server's `candidate_relation` and the publish time as an exact ISO
- * string. Absence is typed with the server's reason code. A refusal shows the
+ * one), the server's `candidate_relation` and the publish time (`formatUtc`;
+ * the exact instant is in the title). Absence is typed with the server's reason code. A refusal shows the
  * screen's own words, never the server's.
  */
 function LastPublishedRc({ view }: { view: AlphaVersionPublicationView }) {
@@ -450,7 +608,13 @@ function LastPublishedRc({ view }: { view: AlphaVersionPublicationView }) {
       <span className="mono text-[10.5px]" data-last-rc={found.release_candidate_id} data-last-rc-status={status.raw ?? found.approval_read}>
         {found.release_candidate_id} · {status.words}
         {effective !== null ? ` (effective ${effective})` : ""} · {found.candidate_relation} ·{" "}
-        {found.published !== null ? `published ${new Date(found.published.at_utc_ms).toISOString()}` : "publish time not published"}
+        {found.published !== null ? (
+          <span title={new Date(found.published.at_utc_ms).toISOString()}>
+            published {formatUtc(found.published.at_utc_ms) ?? "time not published"}
+          </span>
+        ) : (
+          "publish time not published"
+        )}
       </span>
     );
   }
@@ -526,24 +690,35 @@ function RouteStep({
   draft,
   patch,
   atlas,
+  atlasState,
   limits,
   error,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   atlas: AtlasDocument | null;
+  /** State of the Atlas read; the card keeps its one heading in every state. */
+  atlasState: ResearchState;
   limits: DraftConstraints;
   error: string | null;
 }) {
   return (
     <Card
-      title="Route"
+      title="Execution route — how orders come to exist"
       meta={
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          {atlas ? `${atlas.routes.length} routes from the installed release` : null}
+        <span className="flex items-baseline gap-3">
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+            {atlas ? `${atlas.routes.length} routes from the installed release` : null}
+          </span>
+          {/* HiFi 02-11: the atlas link lives in the route card. */}
+          <Link to="/research/quantbt/atlas" data-link="atlas" className="mono text-[10px] font-semibold" style={{ color: "var(--accent)" }} title="Every route, protocol and ceiling the installed engine publishes">
+            full route atlas →
+          </Link>
         </span>
       }
     >
+      {/* One heading: the card's. The panel only carries the Atlas read's state. */}
+      <ResearchPanel title="engine routes" state={atlasState} minBodyHeight={120} variant="plain">
       {atlas === null ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-no-atlas>
           The route grid is read from the Engine Atlas. It is not available, so no route can be
@@ -612,6 +787,7 @@ function RouteStep({
       )}
       {atlas ? <RoutePanel route={atlas.routes.find((route) => route.route_id === draft.executionRoute) ?? null} /> : null}
       {error ? <ErrorBlock message={error} /> : null}
+      </ResearchPanel>
     </Card>
   );
 }
@@ -783,7 +959,7 @@ function DataStep({
     : draft.timeframe ? [draft.timeframe] : [];
   const timeframeDeclared = publishedTimeframes.includes(draft.timeframe);
   return (
-    <Card title="Data">
+    <Card title="Market data">
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-data-note>
         {DATA_REQUIREMENTS_NOTE}
       </p>
@@ -1819,7 +1995,7 @@ function OptimizationStep({
 
 /* ------------------------------------------------------------ review rail */
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, labelWidth = 132 }: { label: string; children: React.ReactNode; labelWidth?: number }) {
   return (
     <div
       className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b py-[3px] last:border-b-0"
@@ -1828,11 +2004,350 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     >
       <span
         className="mono flex-none text-[9px] uppercase tracking-[.06em]"
-        style={{ width: 132, color: "var(--ink-faint)" }}
+        style={{ width: labelWidth, color: "var(--ink-faint)" }}
       >
         {label}
       </span>
       <span className="mono flex-1 break-words text-[10.5px]">{children}</span>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- window timeline */
+
+const ROLE_TONE = { is: "var(--role-is)", oos: "var(--role-oos)", holdout: "var(--role-holdout)", span: "var(--role-is)" } as const;
+
+/** One drawn stretch of a timeline row, in percent of the frame. */
+export interface TimelineSegment {
+  left: number;
+  width: number;
+  tone: string;
+  title: string;
+}
+
+export interface TimelineRow {
+  key: "is" | "oos" | "holdout" | "span";
+  label: string;
+  tone: string;
+  /** The reader's own text for the row's two edges; "not declared" for an empty one. */
+  text: string;
+  /** Empty when the row's edges are missing or out of order — the track stays empty rather than guessing. */
+  segments: readonly TimelineSegment[];
+}
+
+const NOT_DECLARED = "not declared";
+
+function halfOpen(start: string, end: string): string {
+  return `[${start || NOT_DECLARED}, ${end || NOT_DECLARED})`;
+}
+
+/**
+ * HiFi 02-10a: the draft's windows as proportional bars (HiFi `timeline`).
+ *
+ * Pure geometry over the dates the reader typed or a coverage prefilled — the
+ * same declaration the Review table prints. It is a drawing of the draft, not
+ * a fold plan: the authoritative plan is the server's, at preflight, and the
+ * bar counts per window need a served per-window count (CG-FG-S02-02), so none
+ * is printed here. A window with a missing or reversed edge draws nothing.
+ */
+export function timelineRows(draft: Pick<RunDraft, "protocol" | "windows" | "walkForward">): readonly TimelineRow[] {
+  if (draft.protocol === "three_window_decay") {
+    const parsed = (["is", "oos", "holdout"] as const).map((key) => {
+      const window = draft.windows[key];
+      const from = utcMs(window.start);
+      const to = utcMs(window.endExclusive);
+      return { key, window, from, to, drawn: from !== null && to !== null && to > from };
+    });
+    const drawn = parsed.filter((row) => row.drawn);
+    const t0 = Math.min(...drawn.map((row) => row.from as number));
+    const t1 = Math.max(...drawn.map((row) => row.to as number));
+    const span = Math.max(1, t1 - t0);
+    return parsed.map(({ key, window, from, to, drawn: isDrawn }) => ({
+      key,
+      label: key === "holdout" ? "Holdout" : key.toUpperCase(),
+      tone: ROLE_TONE[key],
+      text: `${window.start || NOT_DECLARED} → ${window.endExclusive || NOT_DECLARED}`,
+      segments: isDrawn
+        ? [{
+          left: (((from as number) - t0) / span) * 100,
+          width: Math.max((((to as number) - (from as number)) / span) * 100, 0.5),
+          tone: ROLE_TONE[key],
+          title: `${key.toUpperCase()} ${halfOpen(window.start, window.endExclusive)}`,
+        }]
+        : [],
+    }));
+  }
+  const { start, endExclusive, splitMode } = draft.walkForward;
+  const from = utcMs(start);
+  const to = utcMs(endExclusive);
+  const split = utcMs(splitMode);
+  const drawn = from !== null && to !== null && to > from;
+  const span = drawn ? to - from : 1;
+  const segments: TimelineSegment[] = [];
+  if (drawn) {
+    if (split !== null && split > from && split < to) {
+      segments.push(
+        { left: 0, width: ((split - from) / span) * 100, tone: ROLE_TONE.is, title: `before the first OOS instant ${halfOpen(start, splitMode)}` },
+        { left: ((split - from) / span) * 100, width: ((to - split) / span) * 100, tone: ROLE_TONE.oos, title: `from the first OOS instant ${halfOpen(splitMode, endExclusive)}` },
+      );
+    } else {
+      segments.push({ left: 0, width: 100, tone: "var(--line-strong)", title: `analysis span ${halfOpen(start, endExclusive)}` });
+    }
+  }
+  return [{ key: "span", label: "span", tone: ROLE_TONE.span, text: `${start || NOT_DECLARED} → ${endExclusive || NOT_DECLARED}`, segments }];
+}
+
+function WindowTimeline({ draft }: { draft: RunDraft }) {
+  const rows = timelineRows(draft);
+  /* D4: a date the reader is about to send that they did not type. */
+  const carried = outerFields(draft.protocol).flatMap((field) => carriedCoverage(draft, field) ?? []);
+  const source = carried[0] ?? null;
+  return (
+    <section className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-window-timeline>
+      <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]" style={{ fontFamily: "var(--font-body)" }} title="Half-open windows, end-exclusive. A declaration only: fold boundaries are decided by preflight.">
+        Window timeline
+      </h4>
+      <div className="mt-1.5 flex flex-col gap-1.5">
+        {rows.map((row) => (
+          <div key={row.key} className="grid grid-cols-[48px_1fr] items-center gap-x-1.5 gap-y-0.5" data-timeline-row={row.key}>
+            <span className="mono text-[9.5px]" style={{ color: row.tone }}>{row.label}</span>
+            <span
+              className="relative block h-[10px] rounded-full"
+              style={{ background: "var(--paper-sunken)" }}
+              role="img"
+              aria-label={`${row.label} ${row.segments.length > 0 ? row.text : NOT_DECLARED}`}
+              data-timeline-track={row.key}
+            >
+              {row.segments.map((segment, index) => (
+                <span
+                  key={index}
+                  className="absolute top-0 h-full rounded-full"
+                  style={{ left: `${segment.left}%`, width: `${segment.width}%`, background: segment.tone, opacity: 0.85 }}
+                  title={segment.title}
+                  data-timeline-segment={row.key}
+                />
+              ))}
+            </span>
+            <span />
+            <span className="mono break-words text-[9px]" style={{ color: "var(--ink-faint)" }} data-timeline-text={row.key}>
+              {row.text}
+            </span>
+          </div>
+        ))}
+        {draft.protocol === "advanced" ? (
+          <p className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-advanced-timeline>
+            {draft.walkForward.frequency || "frequency not declared"}
+            {" · "}{draft.walkForward.windowMode || "window mode not declared"}
+            {" · first OOS "}{draft.walkForward.splitMode || NOT_DECLARED}
+          </p>
+        ) : null}
+      </div>
+      {source ? (
+        <p className="mt-1 text-[9px]" style={{ color: "var(--ink-soft)" }} data-window-prefill-rail>
+          Outer bounds prefilled from {source.symbol} coverage ({source.firstMonth} → {source.lastMonth}) until edited.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------- claim forecast */
+
+/** The gold row: a faint label on the left, the value in mono on the right (HiFi `fc`). */
+function ForecastLine({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <span className="flex flex-wrap items-baseline justify-between gap-x-2.5 text-[10.5px]">
+      <span className="flex-none" style={{ color: "var(--ink-faint)" }}>{label}</span>
+      {/* A long enum token (the claim) drops under its label rather than past the card's edge. */}
+      <span className="mono ml-auto min-w-0 break-all text-right">{children}</span>
+    </span>
+  );
+}
+
+/**
+ * HiFi 02-9: the gold claim-forecast card — payload digest, mode × schedule,
+ * source, claim, cert ceiling.
+ *
+ * Every value is one the form or the server already holds: the claim and OOS
+ * state are the Atlas's for the chosen mode × schedule; the payload digest is
+ * the server's `requested_spec_digest` and exists only once a preflight has
+ * answered; the cert ceiling is an Atlas fact that is not published today, so
+ * the card says so with the server's own reason (CG-FG-S02-01) and never
+ * guesses a letter. The HiFi's italic "this card is the augmentation…" line is
+ * the card's tooltip, not printed text.
+ */
+function ClaimForecast({
+  draft,
+  atlas,
+  preflight,
+}: {
+  draft: RunDraft;
+  atlas: AtlasDocument | null;
+  preflight: PreflightResponse | null;
+}) {
+  const mode = atlas?.modes.find((item) => item.mode_id === draft.optimizationMode);
+  const scheduleFact = mode?.facts?.schedules.find((item) => item.schedule === draft.optimizationSchedule);
+  const digest = preflight?.requested_spec_digest ?? null;
+  return (
+    <section
+      className="flex flex-col gap-1.5 rounded-[8px] border px-3 py-2.5"
+      style={{ borderColor: "var(--role-holdout)", background: "var(--paper)", boxShadow: "var(--shadow-e2)" }}
+      data-claim-forecast
+      title="The ceiling is visible before compute is spent. The card reads the payload; it never changes it."
+    >
+      <header className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+        <h4 className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--role-holdout)", fontFamily: "var(--font-body)" }}>
+          Claim forecast
+        </h4>
+        {digest !== null ? (
+          <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={digest} data-payload-digest={digest}>
+            payload sha256:{shortDigest(digest)}
+          </span>
+        ) : (
+          <span className="mono ml-auto text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-payload-digest="pending">
+            payload sha256 · after preflight
+          </span>
+        )}
+      </header>
+      {scheduleFact && mode?.valid_schedules.includes(draft.optimizationSchedule) ? (
+        <>
+          <ForecastLine label="mode × schedule">{mode.mode_id} × {scheduleFact.schedule}</ForecastLine>
+          <ForecastLine label="source">chosen in Walk-forward step</ForecastLine>
+          <ForecastLine label="claim (forecast)">
+            <span style={{ color: "var(--role-holdout)" }}>{claimToken(scheduleFact.chronological_validation_claim)}</span>
+          </ForecastLine>
+          {scheduleFact.oos_use_state ? (
+            <span className="mono text-right text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-forecast-oos={scheduleFact.oos_use_state}>
+              {OOS_STATE_LABEL[scheduleFact.oos_use_state] ?? scheduleFact.oos_use_state}
+            </span>
+          ) : null}
+          {/* CG-P04-05 / S02-01: the cap is an Atlas fact. The sentence below
+              is the server's own reason for it, not a line written here. */}
+          <p className="flex flex-col gap-0.5 text-[9.5px] leading-[1.45]" style={{ color: "var(--ink-soft)" }} data-cert-cap={scheduleFact.cert_cap?.state ?? "NOT_SERVED"}>
+            <span className="flex items-baseline justify-between gap-2.5">
+              <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>cert ceiling</span>
+              <span className="mono text-[10px] font-bold uppercase tracking-[.06em]" data-cert-ceiling-absent>not published</span>
+            </span>
+            {scheduleFact.cert_cap?.reason ? <span data-cert-cap-reason>{scheduleFact.cert_cap.reason}</span> : null}
+          </p>
+        </>
+      ) : (
+        <p className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
+          {draft.optimizationMode && draft.optimizationSchedule
+            ? "No admitted mode × schedule fact was published for this selection."
+            : <span title="Choose an admitted mode and schedule to read the release claim.">Pick a mode and schedule.</span>}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- review rows */
+
+/** The draft as one line per declaration — the same serializer facts the submit sends (HiFi `reviewRows`). */
+function ReviewRows({
+  draft,
+  sweepCeiling,
+  usesV2,
+  registry,
+  labelWidth,
+  withWindows = false,
+}: {
+  draft: RunDraft;
+  sweepCeiling: number | null;
+  usesV2: boolean;
+  registry: readonly RegistryEntry[];
+  labelWidth?: number;
+  /** The Review table has a windows row (the rail has the timeline instead). */
+  withWindows?: boolean;
+}) {
+  const overrides = Object.keys(draft.optimizationConfigOverrides);
+  const day = (value: string) => (value === "" ? NOT_DECLARED : value.slice(0, 10));
+  return (
+    <div className="flex flex-col" data-review-rows>
+      <Row label="alpha binding" labelWidth={labelWidth}>
+        <span title={bindingChip(draft, registry).title}>{bindingChip(draft, registry).text}</span>
+      </Row>
+      <Row label="execution route" labelWidth={labelWidth}>{draft.executionRoute}</Row>
+      <Row label="strategy_id" labelWidth={labelWidth}>
+        {effectiveStrategyId(draft) ? (
+          <>
+            {effectiveStrategyId(draft)}
+            {draft.bound ? " (pinned by alpha_id)" : ""}
+          </>
+        ) : (
+          <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>
+        )}
+      </Row>
+      <Row label="dataset · symbol · tf" labelWidth={labelWidth}>
+        {/* §3.3: an absent value is never a dash. */}
+        {draft.datasetId || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
+        {" · "}
+        {draft.symbol || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
+        {" · "}
+        {draft.timeframe}
+      </Row>
+      <Row label="protocol" labelWidth={labelWidth}>{draft.protocol}</Row>
+      {withWindows ? (
+        <Row label="windows" labelWidth={labelWidth}>
+          {draft.protocol === "three_window_decay"
+            ? `IS ${day(draft.windows.is.start)} → OOS ${day(draft.windows.oos.start)} → holdout ${day(draft.windows.holdout.start)}`
+            : `walk-forward · ${draft.walkForward.frequency || "frequency not declared"} · ${draft.walkForward.windowMode || "window mode not declared"}`}
+        </Row>
+      ) : null}
+      <Row label="parameter_space" labelWidth={labelWidth}>
+        {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
+        {sweepCeiling === null ? " (sweep ceiling not published)" : ` (sweep ceiling ${sweepCeiling})`}
+      </Row>
+      {draft.protocol === "advanced" && usesV2 ? (
+        <Row label="walk-forward v2" labelWidth={labelWidth}>
+          {[
+            draft.walkForward.windowMode === "rolling" && draft.walkForward.trainWindow ? `train ${draft.walkForward.trainWindow}` : null,
+            draft.walkForward.labelHorizonBars ? `label ${draft.walkForward.labelHorizonBars}` : null,
+            draft.walkForward.purgeBars ? `purge ${draft.walkForward.purgeBars}` : null,
+            draft.walkForward.embargoBars ? `embargo ${draft.walkForward.embargoBars}` : null,
+            draft.optimizationSchedule === "per_fold_causal" && draft.walkForward.inner ? `inner ${draft.walkForward.inner.splitFrequency || "?"}/${draft.walkForward.inner.trainWindow || "?"}` : null,
+          ].filter(Boolean).join(" · ") || "requested-spec v2"}
+        </Row>
+      ) : null}
+      <Row label="mode × schedule" labelWidth={labelWidth}>
+        {/* Two empty fields rendered as a bare `×` printed a separator where
+            a value belongs; an undeclared field says so. */}
+        {draft.optimizationMode || draft.optimizationSchedule ? (
+          `${draft.optimizationMode || "not declared"} × ${draft.optimizationSchedule || "not declared"}`
+        ) : (
+          <span className="italic" style={{ color: "var(--ink-faint)" }}>
+            not declared
+          </span>
+        )}
+      </Row>
+      <Row label="trials · stop · seed" labelWidth={labelWidth}>
+        {draft.optunaTrials || "not set"} · {draft.earlyStopping || "none"} ·{" "}
+        {draft.randomSeed || "none"}
+      </Row>
+      <Row label="optimization_config" labelWidth={labelWidth}>
+        {overrides.length === 0
+          ? "release defaults — nothing serialized"
+          : `${overrides.length} overrides (${overrides.join(", ")}) — rest engine defaults`}
+      </Row>
+    </div>
+  );
+}
+
+function BlockingList({ blocking }: { blocking: readonly { step: StepId; message: string }[] }) {
+  if (blocking.length === 0) return null;
+  return (
+    <div
+      role="alert"
+      data-blocking
+      className="flex flex-col gap-1 rounded-[6px] border px-2.5 py-2"
+      style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)" }}
+    >
+      {blocking.map((problem) => (
+        <span key={problem.step} className="text-[10.5px]" style={{ color: "var(--bad)" }}>
+          {problem.message}
+        </span>
+      ))}
     </div>
   );
 }
@@ -1844,6 +2359,8 @@ function ReviewRail({
   sweepCeiling,
   usesV2,
   registry,
+  preflight,
+  showRows,
 }: {
   draft: RunDraft;
   blocking: readonly { step: StepId; message: string }[];
@@ -1852,10 +2369,11 @@ function ReviewRail({
   usesV2: boolean;
   /** E4: the rail prints the registry's short `version_label`, as the header does. */
   registry: readonly RegistryEntry[];
+  /** The server's preflight, for the claim card's payload digest. */
+  preflight: PreflightResponse | null;
+  /** False on the Review step, where the same rows are the main panel's table (HiFi 02-16). */
+  showRows: boolean;
 }) {
-  const overrides = Object.keys(draft.optimizationConfigOverrides);
-  const mode = atlas?.modes.find((item) => item.mode_id === draft.optimizationMode);
-  const scheduleFact = mode?.facts?.schedules.find((item) => item.schedule === draft.optimizationSchedule);
   return (
     <aside
       className="flex w-full flex-col gap-2 rounded-[8px] border px-3 py-2.5 lg:sticky lg:top-3 lg:w-[320px] lg:flex-none"
@@ -1866,147 +2384,10 @@ function ReviewRail({
       <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         review
       </h3>
-      <section className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-window-timeline>
-        <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]">Window timeline</h4>
-        {draft.protocol === "three_window_decay" ? (
-          <div className="mt-1 flex flex-col gap-1">
-            {(["is", "oos", "holdout"] as const).map((key) => (
-              <div key={key} className="grid grid-cols-[42px_1fr] gap-1 text-[10px]">
-                <span className="mono uppercase" style={{ color: "var(--ink-faint)" }}>{key}</span>
-                <span className="mono break-words">{draft.windows[key].start || "not declared"} → {draft.windows[key].endExclusive || "not declared"}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="mono mt-1 text-[10px]" data-advanced-timeline>
-            {draft.walkForward.start || "not declared"} → {draft.walkForward.endExclusive || "not declared"}
-            {" · "}{draft.walkForward.frequency || "frequency not declared"}
-            {" · "}{draft.walkForward.windowMode || "window mode not declared"}
-            {" · first OOS "}{draft.walkForward.splitMode || "not declared"}
-          </p>
-        )}
-        {(() => {
-          /* D4: a date the reader is about to send that they did not type. */
-          const carried = outerFields(draft.protocol).flatMap((field) => carriedCoverage(draft, field) ?? []);
-          const source = carried[0] ?? null;
-          return source ? (
-            <p className="mt-1 text-[9px]" style={{ color: "var(--ink-soft)" }} data-window-prefill-rail>
-              Outer bounds prefilled from {source.symbol} coverage ({source.firstMonth} → {source.lastMonth}) until edited.
-            </p>
-          ) : null;
-        })()}
-        <p className="mt-1 text-[9px]" style={{ color: "var(--ink-faint)" }}>
-          Declaration only · fold boundaries are decided by preflight.
-        </p>
-      </section>
-      <section className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-claim-forecast>
-        <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]">Claim forecast</h4>
-        {scheduleFact && mode?.valid_schedules.includes(draft.optimizationSchedule) ? (
-          <>
-            <p className="mt-1 text-[10.5px] leading-[1.5]">{claimToken(scheduleFact.chronological_validation_claim)}</p>
-            {scheduleFact.oos_use_state ? (
-              <p className="mono mt-1 text-[9.5px]" data-forecast-oos={scheduleFact.oos_use_state}>
-                {OOS_STATE_LABEL[scheduleFact.oos_use_state] ?? scheduleFact.oos_use_state}
-              </p>
-            ) : null}
-            <p className="mono mt-1 text-[9px]" style={{ color: "var(--ink-faint)" }}>
-              {mode.mode_id} × {scheduleFact.schedule}
-            </p>
-            {/* CG-P04-05 / S02-01: the cap is an Atlas fact. The sentence below
-                is the server's own reason for it, not a line written here. */}
-            <p className="mt-1 text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-cert-cap={scheduleFact.cert_cap?.state ?? "NOT_SERVED"}>
-              <span className="mono text-[9px] font-bold uppercase tracking-[.06em]">cert ceiling — not published</span>
-              {scheduleFact.cert_cap?.reason ? (
-                <>
-                  {" "}
-                  <span data-cert-cap-reason>{scheduleFact.cert_cap.reason}</span>
-                </>
-              ) : null}
-            </p>
-          </>
-        ) : (
-          <p className="mt-1 text-[10px]" style={{ color: "var(--ink-faint)" }}>
-            {draft.optimizationMode && draft.optimizationSchedule
-              ? "No admitted mode × schedule fact was published for this selection."
-              : <span title="Choose an admitted mode and schedule to read the release claim.">Pick a mode and schedule.</span>}
-          </p>
-        )}
-      </section>
-      <div className="flex flex-col">
-        <Row label="alpha binding">
-          <span title={bindingChip(draft, registry).title}>{bindingChip(draft, registry).text}</span>
-        </Row>
-        <Row label="execution route">{draft.executionRoute}</Row>
-        <Row label="strategy_id">
-          {effectiveStrategyId(draft) ? (
-            <>
-              {effectiveStrategyId(draft)}
-              {draft.bound ? " (pinned by alpha_id)" : ""}
-            </>
-          ) : (
-            <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>
-          )}
-        </Row>
-        <Row label="dataset · symbol · tf">
-          {/* §3.3: an absent value is never a dash. */}
-          {draft.datasetId || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
-          {" · "}
-          {draft.symbol || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
-          {" · "}
-          {draft.timeframe}
-        </Row>
-        <Row label="protocol">{draft.protocol}</Row>
-        <Row label="parameter_space">
-          {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
-          {sweepCeiling === null ? " (sweep ceiling not published)" : ` (sweep ceiling ${sweepCeiling})`}
-        </Row>
-        {draft.protocol === "advanced" && usesV2 ? (
-          <Row label="walk-forward v2">
-            {[
-              draft.walkForward.windowMode === "rolling" && draft.walkForward.trainWindow ? `train ${draft.walkForward.trainWindow}` : null,
-              draft.walkForward.labelHorizonBars ? `label ${draft.walkForward.labelHorizonBars}` : null,
-              draft.walkForward.purgeBars ? `purge ${draft.walkForward.purgeBars}` : null,
-              draft.walkForward.embargoBars ? `embargo ${draft.walkForward.embargoBars}` : null,
-              draft.optimizationSchedule === "per_fold_causal" && draft.walkForward.inner ? `inner ${draft.walkForward.inner.splitFrequency || "?"}/${draft.walkForward.inner.trainWindow || "?"}` : null,
-            ].filter(Boolean).join(" · ") || "requested-spec v2"}
-          </Row>
-        ) : null}
-        <Row label="mode × schedule">
-          {/* Two empty fields rendered as a bare `×` printed a separator where
-              a value belongs; an undeclared field says so. */}
-          {draft.optimizationMode || draft.optimizationSchedule ? (
-            `${draft.optimizationMode || "not declared"} × ${draft.optimizationSchedule || "not declared"}`
-          ) : (
-            <span className="italic" style={{ color: "var(--ink-faint)" }}>
-              not declared
-            </span>
-          )}
-        </Row>
-        <Row label="trials · stop · seed">
-          {draft.optunaTrials || "not set"} · {draft.earlyStopping || "none"} ·{" "}
-          {draft.randomSeed || "none"}
-        </Row>
-        <Row label="optimization_config">
-          {overrides.length === 0
-            ? "release defaults — nothing serialized"
-            : `${overrides.length} overrides (${overrides.join(", ")}) — rest engine defaults`}
-        </Row>
-      </div>
-
-      {blocking.length > 0 ? (
-        <div
-          role="alert"
-          data-blocking
-          className="flex flex-col gap-1 rounded-[6px] border px-2.5 py-2"
-          style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)" }}
-        >
-          {blocking.map((problem) => (
-            <span key={problem.step} className="text-[10.5px]" style={{ color: "var(--bad)" }}>
-              {problem.message}
-            </span>
-          ))}
-        </div>
-      ) : null}
+      <WindowTimeline draft={draft} />
+      <ClaimForecast draft={draft} atlas={atlas} preflight={preflight} />
+      {showRows ? <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={usesV2} registry={registry} /> : null}
+      <BlockingList blocking={blocking} />
     </aside>
   );
 }
@@ -2037,6 +2418,8 @@ export interface NewRunProps {
   registry?: readonly RegistryEntry[];
   /** Optional deep link; the route accepts only known wizard step ids. */
   initialStep?: StepId;
+  /** HiFi 02-18: called with the step the reader is on, so the route can write `?step=`. */
+  onStepChange?: (step: StepId) => void;
 
   preflight: PreflightResponse | null;
   preflightState: ResearchState;
@@ -2083,6 +2466,7 @@ export function NewRun(props: NewRunProps) {
     onSubmit,
     onRecheck,
     initialStep = "context",
+    onStepChange,
     preflightRefusal = null,
     catalog = null,
     catalogReason = null,
@@ -2110,6 +2494,10 @@ export function NewRun(props: NewRunProps) {
   useEffect(() => {
     setVisited((previous) => (previous.has(step) ? previous : new Set([...previous, step])));
   }, [step]);
+  /* HiFi 02-18: the step is part of the address, so a reload or a shared link lands where the reader was. */
+  useEffect(() => {
+    onStepChange?.(step);
+  }, [step, onStepChange]);
   const blocking = useMemo(() => blockingProblems(draft, limits), [draft, limits]);
   const errorByStep = useMemo(
     () => new Map(blocking.map((problem) => [problem.step, problem.message])),
@@ -2139,47 +2527,49 @@ export function NewRun(props: NewRunProps) {
   return (
     <div
       data-screen="new-run"
-      className="flex flex-col gap-3 px-4 py-4"
+      className="flex flex-col gap-3 pb-4"
       style={{ background: "var(--paper)", color: "var(--ink)" }}
     >
-      <header className="flex flex-col gap-1.5 border-b pb-2.5" style={{ borderColor: "var(--line)" }}>
-        <div className="flex flex-wrap gap-3 text-[10px] font-semibold" style={{ color: "var(--accent)" }}>
-          <Link to="/research/quantbt/runs" data-link="run-library" title="Back to the Run Library">← Run Library</Link>
-          <Link to="/research/quantbt/alpha-import" data-link="alpha-import" title="Import a new alpha version, then come back here">Import a version</Link>
-          <Link to="/research/quantbt/atlas" data-link="atlas" title="Every route, protocol and ceiling the installed engine publishes">Full route atlas</Link>
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1.5 border-b pb-2.5" style={{ borderColor: "var(--line)" }}>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex flex-wrap gap-3 text-[10px] font-semibold" style={{ color: "var(--accent)" }}>
+            <Link to="/research/quantbt/runs" data-link="run-library" title="Back to the Run Library">← Run Library</Link>
+            <Link to="/research/quantbt/alpha-import" data-link="alpha-import" title="Import a new alpha version, then come back here">Import a version</Link>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1
+              className="text-[22px] font-light tracking-[-.01em]"
+              style={{ fontFamily: "Newsreader, Georgia, serif" }}
+              title={SUBTITLE}
+            >
+              New Run
+            </h1>
+            <span
+              className="mono rounded-[3px] border px-[5px] text-[10px] font-bold leading-[16px]"
+              data-binding-chip={chip.state}
+              data-alpha-version-id={draft.alphaVersionId || undefined}
+              title={chip.title}
+              style={{
+                color: chip.state === "PUBLISHABLE" ? "var(--good)" : chip.state === "PENDING_VERSION" ? "var(--ink-faint)" : "var(--role-holdout)",
+                borderColor: chip.state === "PUBLISHABLE" ? "var(--good)" : chip.state === "PENDING_VERSION" ? "var(--line)" : "var(--role-holdout)",
+                borderStyle: chip.state === "PUBLISHABLE" ? "solid" : "dashed",
+                background: chip.state === "PUBLISHABLE" ? "var(--good-bg, var(--paper))" : "var(--paper)",
+              }}
+            >
+              {chip.text}
+            </span>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <h1
-            className="text-[22px] font-light tracking-[-.01em]"
-            style={{ fontFamily: "Newsreader, Georgia, serif" }}
-            title={SUBTITLE}
-          >
-            New Run
-          </h1>
-          <span
-            className="mono rounded-[3px] border px-[5px] text-[10px] font-bold leading-[16px]"
-            data-binding-chip={chip.state}
-            data-alpha-version-id={draft.alphaVersionId || undefined}
-            title={chip.title}
-            style={{
-              color: chip.state === "PUBLISHABLE" ? "var(--good)" : chip.state === "PENDING_VERSION" ? "var(--ink-faint)" : "var(--role-holdout)",
-              borderColor: chip.state === "PUBLISHABLE" ? "var(--good)" : chip.state === "PENDING_VERSION" ? "var(--line)" : "var(--role-holdout)",
-              borderStyle: chip.state === "PUBLISHABLE" ? "solid" : "dashed",
-              background: chip.state === "PUBLISHABLE" ? "var(--good-bg, var(--paper))" : "var(--paper)",
-            }}
-          >
-            {chip.text}
-          </span>
-          <span
-            className="mono ml-auto text-[10px]"
-            style={{ color: "var(--ink-faint)" }}
-            data-release-note
-            title="Routes, protocols and ceilings are read from the installed engine release."
-          >
-            engine{" "}
-            {atlas ? `${atlas.current_release.package}==${atlas.current_release.expected_version} · ${atlas.current_release.release_id}` : "release not available"}
-          </span>
-        </div>
+        {/* HiFi 02-2: the installed-release line sits bottom-right of the header. */}
+        <span
+          className="mono flex-none text-[10px]"
+          style={{ color: "var(--ink-faint)" }}
+          data-release-note
+          title="Routes, protocols and ceilings are read from the installed engine release."
+        >
+          engine{" "}
+          {atlas ? `${atlas.current_release.package}==${atlas.current_release.expected_version} · ${atlas.current_release.release_id}` : "release not available"}
+        </span>
       </header>
 
       {cloneSource ? (
@@ -2196,7 +2586,7 @@ export function NewRun(props: NewRunProps) {
           {cloneSource.state.state === "available" ? (
             <>
               <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--accent)" }}>copied from</span>
-              <Link className="mono" data-link="clone-source" title="Open the source run" to={`/research/quantbt/runs/${encodeURIComponent(cloneSource.runId)}/progress`}>{shortId(cloneSource.runId)}</Link>
+              <Link className="mono" data-link="clone-source" title="Open the source run" to={`/research/quantbt/runs/${encodeURIComponent(cloneSource.runId)}/progress`}><RunRef runId={cloneSource.runId} /></Link>
               <span style={{ color: "var(--ink-soft)" }} title="A new run with a NEW intent: change anything, then run a fresh preflight. The original run is untouched.">
                 new intent · fresh preflight
               </span>
@@ -2207,7 +2597,7 @@ export function NewRun(props: NewRunProps) {
               ) : null}
             </>
           ) : cloneSource.state.state === "loading" ? (
-            <span style={{ color: "var(--ink-soft)" }}>Reading the declaration of {cloneSource.runId}…</span>
+            <span style={{ color: "var(--ink-soft)" }}>Reading the declaration of <RunRef runId={cloneSource.runId} />…</span>
           ) : (
             <span style={{ color: "var(--bad)" }}>{cloneSource.state.reason}</span>
           )}
@@ -2226,7 +2616,7 @@ export function NewRun(props: NewRunProps) {
           <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--warn)" }}>
             sibling of
           </span>
-          <Link className="mono" data-link="fork-source" title="Open the frozen run this what-if forks" to={`/research/quantbt/runs/${encodeURIComponent(forkSource.runId)}/freeze`}>{shortId(forkSource.runId)}</Link>
+          <Link className="mono" data-link="fork-source" title="Open the frozen run this what-if forks" to={`/research/quantbt/runs/${encodeURIComponent(forkSource.runId)}/freeze`}><RunRef runId={forkSource.runId} /></Link>
           <span className="mono" style={{ color: "var(--ink-faint)" }}>· what-if {forkSource.cellId}</span>
           {forkSource.state === "ready" && forkSource.parameters ? (
             <>
@@ -2253,10 +2643,17 @@ export function NewRun(props: NewRunProps) {
         </div>
       ) : null}
 
-      <WizardBar current={step} onPick={(next) => {
-        setVisited((previous) => new Set([...previous, step, next]));
-        setStep(next);
-      }} errors={errorSteps} visited={visited} />
+      <WizardBar
+        current={step}
+        onPick={(next) => {
+          setVisited((previous) => new Set([...previous, step, next]));
+          setStep(next);
+        }}
+        errors={errorSteps}
+        visited={visited}
+        contextChosen={!draft.bound || draft.alphaVersionId !== ""}
+        reviewCaption={preflightRefusal ? "preflight refused" : preflight ? "preflight issued" : "preflight pending"}
+      />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -2266,7 +2663,10 @@ export function NewRun(props: NewRunProps) {
               {/* What could not be read, named. A rule the browser did not get
                   is not a rule that passed — and a blank space would read as
                   the second thing. */}
-              {missing.length > 0 ? (
+              {/* HiFi 02-4: until a version is chosen there is no declaration to
+                  report on, so the panel stays out rather than listing facts
+                  that were never asked for. */}
+              {!draft.bound || draft.alphaVersionId === "" ? null : missing.length > 0 ? (
                 <ResearchPanel
                   title="version declaration"
                   state={declarationState ?? atlasState}
@@ -2289,15 +2689,14 @@ export function NewRun(props: NewRunProps) {
             <StrategyStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("strategy") ?? null} />
           ) : null}
           {step === "route" ? (
-            <ResearchPanel title="engine routes" state={atlasState} minBodyHeight={120}>
-              <RouteStep
-                draft={draft}
-                patch={patch}
-                atlas={atlas}
-                limits={limits}
-                error={errorByStep.get("route") ?? null}
-              />
-            </ResearchPanel>
+            <RouteStep
+              draft={draft}
+              patch={patch}
+              atlas={atlas}
+              atlasState={atlasState}
+              limits={limits}
+              error={errorByStep.get("route") ?? null}
+            />
           ) : null}
           {step === "data" ? (
             <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} />
@@ -2320,6 +2719,12 @@ export function NewRun(props: NewRunProps) {
 
           {step === "review" ? (
             <div className="flex flex-col gap-2.5" data-review-step>
+              {/* HiFi 02-16 (M): the summary table is the main panel's first
+                  block, the same rows the submit serializes; the rail keeps the
+                  timeline and the forecast. */}
+              <Card title="Review &amp; run">
+                <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} labelWidth={150} withWindows />
+              </Card>
               {clearedBecause && preflight === null ? (
                 <p role="status" className="text-[11px]" style={{ color: "var(--role-holdout)" }} data-cleared-note>
                   {clearedBecause}
@@ -2482,7 +2887,7 @@ export function NewRun(props: NewRunProps) {
           ) : null}
         </div>
 
-        <ReviewRail draft={draft} blocking={visibleBlocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} />
+        <ReviewRail draft={draft} blocking={visibleBlocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} />
       </div>
     </div>
   );

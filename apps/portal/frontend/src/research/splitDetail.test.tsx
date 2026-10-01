@@ -1836,3 +1836,95 @@ describe("F2b · windows and flow", () => {
     expect(container.textContent).not.toContain("warmup = grey");
   });
 });
+
+/* -------------------------------------------------------------------------
+ * F3 · S05 — HiFi parity rows (X3 / FG 05-06 / 05-09 / 05-14 / X-08)
+ * ---------------------------------------------------------------------- */
+
+describe("F3 · S05 — fold labels, ranges at 660, integrity and search rows", () => {
+  beforeEach(() => {
+    forgetRunIdentities();
+    forgetObservedFolds();
+  });
+
+  async function lane() {
+    stub(w3bResponder());
+    const mounted = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(mounted.container.querySelector("[data-holdout-lane]")).toBeTruthy());
+    await waitFor(() => expect(mounted.container.querySelector("[data-lane-reading]")).toBeNull());
+    return mounted;
+  }
+
+  it("X3 / FG 05-07/08 · a fold's segment aria-label and title say fold_01, never the raw `0` the fold plan carries", () => {
+    expect(W3_SPLIT.fold_plan.folds[0]!.fold_id).toBe("0");
+    const { container } = view({ folds: { state: "ready", split: W3_SPLIT } });
+    const segments = [...container.querySelectorAll("[data-fold-segment]")] as HTMLElement[];
+    expect(segments.length).toBeGreaterThan(0);
+    for (const segment of segments) {
+      expect(segment.getAttribute("aria-label")).toMatch(/^fold_0[12] · (train|test) /);
+      expect(segment.getAttribute("title")).toMatch(/^fold_0[12] · (train|test) /);
+    }
+  });
+
+  it("FG 05-06 · the per-fold date range is shown from 640px up, not only from 1024px", () => {
+    const { container } = view({ folds: { state: "ready", split: W3_SPLIT } });
+    const ranges = [...container.querySelectorAll("[data-fold-range]")] as HTMLElement[];
+    expect(ranges.length).toBeGreaterThan(0);
+    for (const range of ranges) {
+      expect(range.className).toContain("sm:block");
+      expect(range.className).not.toContain("lg:block");
+    }
+    const endpoints = (container.querySelector("[data-timeline-start]") as HTMLElement).parentElement!;
+    expect(endpoints.className).toContain("sm:block");
+    expect(endpoints.className).not.toContain("lg:block");
+  });
+
+  it("FG 05-14 · boundary integrity lists the served purge and embargo guards, without a ✓ they do not carry", async () => {
+    const { container } = await lane();
+    const purge = container.querySelector("[data-integrity-guard='purge']") as HTMLElement;
+    const embargo = container.querySelector("[data-integrity-guard='embargo']") as HTMLElement;
+    expect(purge.textContent).toContain("purge between train and test");
+    expect(purge.textContent).toContain("0 bars");
+    expect(embargo.textContent).toContain("embargo after each test");
+    expect(embargo.textContent).toContain("0 bars");
+    for (const row of [purge, embargo]) {
+      expect(row.getAttribute("data-integrity-mark")).toBe("none");
+      expect(row.textContent).not.toMatch(/[✓✕]/);
+    }
+  });
+
+  it("FG 05-14 · a guard the read did not publish says so, never 0 bars", async () => {
+    const guards = { ...W3_SPLIT.guards, purge_bars: { state: "NOT_PUBLISHED", value: null, reason_code: "QUANTBT_PURGE_NOT_PUBLISHED" } };
+    stub(w3bResponder({ ...W3_ALL.split, guards }));
+    const { container } = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(container.querySelector("[data-integrity-guard='purge']")).toBeTruthy());
+    const purge = container.querySelector("[data-integrity-guard='purge']") as HTMLElement;
+    expect(purge.textContent).toContain("not published");
+    expect(purge.textContent).not.toContain("0 bars");
+  });
+
+  it("X-08 · inner folds say n/a with the server's reason code on the page, not only in the tooltip", () => {
+    const { container } = view({ folds: { state: "ready", split: W3_SPLIT } });
+    const inner = container.querySelector("[data-fact='inner folds']") as HTMLElement;
+    expect(inner.textContent).toContain("n/a");
+    expect(inner.querySelector("[data-guard-reason='inner_folds']")?.textContent).toBe("QUANTBT_SCHEDULE_HAS_NO_NESTED_INNER_VALIDATION");
+  });
+
+  it("FG 05-09 · each IS bar says `search · N trials`; `IS only` is not claimed while QuantBT says OOS selected", async () => {
+    const { container } = await lane();
+    const bars = [...container.querySelectorAll("[data-theta-is]")] as HTMLElement[];
+    expect(bars.length).toBeGreaterThan(0);
+    for (const bar of bars) {
+      expect(bar.textContent).toBe("search · 3 trials");
+      expect(bar.getAttribute("title")).toContain("3 trials requested in the admitted spec");
+      expect(bar.textContent).not.toContain("IS only");
+    }
+  });
+
+  it("FG 05-09 · `IS only` appears only where oos_used_for_selection is published false", async () => {
+    const guards = { ...W3_SPLIT.guards, oos_used_for_selection: { state: "AVAILABLE", value: false, reason_code: null } };
+    stub(w3bResponder({ ...W3_ALL.split, guards }));
+    const { container } = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(container.querySelector("[data-theta-is]")?.textContent).toBe("search · 3 trials · IS only"));
+  });
+});

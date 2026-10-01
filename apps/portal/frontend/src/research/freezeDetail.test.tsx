@@ -852,8 +852,8 @@ describe("Screen 07 composition — the hi-fi panels carry only published facts"
     expect(style("holdout")?.left).toBe("87.5%");
     expect(style("holdout")?.width).toBe("12.5%");
     // The endpoints are printed exactly; no tick is generated in between.
-    expect(axis?.querySelector("[data-axis-start]")?.textContent).toBe("2024-01-01 00:00Z");
-    expect(axis?.querySelector("[data-axis-end]")?.textContent).toBe("2026-03-11 00:00Z");
+    expect(axis?.querySelector("[data-axis-start]")?.textContent).toBe("2024-01-01 00:00 UTC");
+    expect(axis?.querySelector("[data-axis-end]")?.textContent).toBe("2026-03-11 00:00 UTC");
     expect(axis?.querySelectorAll("[data-tick]")).toHaveLength(0);
   });
 
@@ -1166,8 +1166,8 @@ describe("W5a · P16-T11 — the OOS generation child is the frozen θ*", () => 
       row.getAttribute("data-oos-child"), row.querySelector("[data-child-words]")?.textContent,
     ]);
     expect(children).toEqual([
-      ["MATCH", "OOS child = frozen θ* · 2671e27b"],
-      ["MISMATCH", "OOS child ≠ frozen θ* · baf7c707"],
+      ["MATCH", "OOS child = frozen θ* · 2671e27b827a"],
+      ["MISMATCH", "OOS child ≠ frozen θ* · baf7c707c243"],
     ]);
   });
 });
@@ -1283,5 +1283,26 @@ describe("F2 · S07 — imported_alpha on the freeze read", () => {
   it("a built-in alpha (no imported_alpha) draws nothing", () => {
     const { container } = view({ detail: detail() });
     expect(container.querySelector("[data-imported-alpha]")).toBeNull();
+  });
+});
+
+/* F3 · X6 / 07-10 / 07-17 */
+describe("F3 · S07 — one timestamp format, and a back link that names the stage", () => {
+  it("the hub link says stage=freeze even when the cursor arrived on another stage", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "summary", fold: 2 } });
+    const href = container.querySelector("[data-action='back-to-hub']")?.getAttribute("href") ?? "";
+    expect(href).toContain("stage=freeze");
+    expect(href).toContain("fold=2");
+  });
+
+  it("every timestamp is `YYYY-MM-DD HH:MM UTC` — no `Z` variant", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-as-of]")?.textContent).toMatch(/as of \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$/);
+    expect(container.textContent).not.toMatch(/\d{2}:\d{2}Z/);
+  });
+
+  it("the OOS child candidate id is 12 hex", () => {
+    const { container } = delegatedView(foldOrderingFixture());
+    expect(container.querySelector("[data-child-words]")?.textContent).toMatch(/· 2671e27b827a$/);
   });
 });

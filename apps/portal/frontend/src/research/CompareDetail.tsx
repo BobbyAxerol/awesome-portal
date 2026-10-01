@@ -96,7 +96,7 @@ import {
 import { LineageLink, lineageHref } from "./LineageLink";
 import { foldBars } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
-import { formatAxisValue, formatCorrelation, formatMetric, shortId } from "./researchFormat";
+import { foldLabel, formatAxisValue, formatCorrelation, formatMetric, shortId } from "./researchFormat";
 import { runLabelFor } from "./runLabels";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
@@ -379,6 +379,12 @@ const COMPARE_CSS = `
 .cp-foldlegend .sw { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
 .cp-foldline { fill: none; stroke-width: 1.25; }
 .cp-foldline[data-active="true"] { stroke-width: 2.25; }
+.cp-diffcard > .cp-scroll { background:
+  linear-gradient(to right, var(--paper-raised) 30%, transparent) left center / 24px 100% no-repeat local,
+  linear-gradient(to left, var(--paper-raised) 30%, transparent) right center / 24px 100% no-repeat local,
+  linear-gradient(to right, var(--line), transparent) left center / 8px 100% no-repeat scroll,
+  linear-gradient(to left, var(--line), transparent) right center / 8px 100% no-repeat scroll; }
+.cp-difftable tbody th:first-child, .cp-difftable thead th:first-child { position: sticky; left: 0; background: var(--paper-raised); z-index: 1; }
 .cp-difftable { width: 100%; border-collapse: collapse; font-size: 11px; }
 .cp-difftable thead th { font-family: var(--font-body); font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint);
   text-align: right; border-bottom: 1px solid var(--line); padding: 6px 12px; }
@@ -682,7 +688,7 @@ function RunLine({ run, withState = false }: { run: CompareRun; withState?: bool
       {" · "}
       {/* Spec 13 §1 outbound 11: this run's release candidate (P21). */}
       <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)" aria-label={`Release candidate of ${sid(run.run_id)}`}>
-        rc_
+        RC
       </Link>
       {" · "}
       {run.alpha_version_label}
@@ -915,7 +921,9 @@ function Header({
         <nav className="cp-crumb" aria-label="Breadcrumb">
           <Link to={runsHref(alphaId)}>Runs</Link>
           <span className="sep">/</span>
-          <span className="here cp-long">Compare{compare ? ` — ${compare.alpha.name}` : ""}</span>
+          <span className="here cp-long" title={compare ? compare.alpha.name : undefined}>
+            Compare
+          </span>
         </nav>
         <h2 className="cp-title">{COMPARE_TITLE}</h2>
       </div>
@@ -1328,16 +1336,11 @@ function FoldChart({ result }: { result: AttemptResult }) {
                     {axis(label.text)}
                   </span>
                 ))}
-                {geometry.yLabels.some((label) => Math.abs(label.pct - geometry.zeroPct) < 6) ? null : (
-                  <span className="cp-lbl y" style={{ top: `${geometry.zeroPct}%` }}>
-                    0
-                  </span>
-                )}
                 {geometry.groups.map((group, index) =>
                   geometry.mode === "bars" || index === 0 || index === geometry.groups.length - 1 || index % 4 === 0 ? (
-                    /* 13-4: folds read 1-based, as the hi-fi; the server's fold_id stays in the data attribute. */
+                    /* 13-06: the hi-fi's fold_01 style from the served fold_id; the raw id stays in the data attribute. */
                     <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label} data-fold-position={index + 1}>
-                      fold {index + 1}
+                      {foldLabel(group.label)}
                     </span>
                   ) : null,
                 )}
@@ -1403,6 +1406,11 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
             : active
               ? `gold = differs from ${sid(active.attempt_id)} · baseline picked by this screen`
               : `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"} · no baseline — the server names none`}
+          {diff.availability.state === "AVAILABLE" && diff.paths.length > 0 && runs.length > 4 ? (
+            <span data-config-diff-columns={runs.length} title="The columns are every ladder attempt; the table scrolls sideways">
+              {" "}· {runs.length} attempts ⇄
+            </span>
+          ) : null}
         </span>
       </h3>
       <div className="body cp-scroll" tabIndex={0} role="region" aria-label="config diff table">
@@ -1810,6 +1818,12 @@ interface DeltaRowView {
 /** The scope of every figure that comes from `pair.common_window` (the foot of the table prints the window). */
 const COMMON_WINDOW_SCOPE = "common window";
 
+/** 13-11: the difference of two percentages is percentage points, not a percentage. */
+export function ppDelta(delta: string): string {
+  const shown = formatMetric(delta, "fraction");
+  return shown === null ? delta : `${shown.replace(/%$/, "")} pp`;
+}
+
 function commonRow(result: PairComparable, id: CommonMetric["key"], label: string): DeltaRowView {
   const metric = commonOf(result, id);
   if (!metric) {
@@ -1820,7 +1834,7 @@ function commonRow(result: PairComparable, id: CommonMetric["key"], label: strin
   const delta =
     metric.delta !== null && metric.availability.state === "AVAILABLE" ? (
       <span data-delta-value={metric.delta} title={metric.delta}>
-        {formatMetric(metric.delta, unit) ?? metric.delta}
+        {unit === "fraction" ? ppDelta(metric.delta) : (formatMetric(metric.delta, unit) ?? metric.delta)}
       </span>
     ) : (
       <AvailabilityAbsent availability={metric.availability} what="Δ" />
@@ -1990,7 +2004,7 @@ function DeltaTable({ result }: { result: PairComparable }) {
       <div className="foot" data-common-window={window.state}>
         {window.state === "AVAILABLE" ? (
           <>
-            {window.definition_id} · matched <span className="num">{window.matched_observation_count ?? "not published"}</span> · A source{" "}
+            <span title={window.definition_id}>common window</span> · matched <span className="num">{window.matched_observation_count ?? "not published"}</span> · A source{" "}
             <span className="num">{window.left_source_observation_count ?? "not published"}</span> · B source{" "}
             <span className="num">{window.right_source_observation_count ?? "not published"}</span> ·{" "}
             <span className="num">
@@ -2053,10 +2067,11 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
       <span className="cp-faint" data-correlation-meta>
         {derived ? (
           <>
-            n <span className="num">{correlation.n ?? "not published"}</span> · <span className="num">{window}</span> · {correlation.missing_policy}
+            n <span className="num">{correlation.n ?? "not published"}</span> · <span className="num">{window}</span> ·{" "}
+            <span title={correlation.missing_policy}>{MISSING_POLICY_WORDS[correlation.missing_policy] ?? correlation.missing_policy}</span>
           </>
         ) : (
-          <>{correlation.missing_policy}</>
+          <span title={correlation.missing_policy}>{MISSING_POLICY_WORDS[correlation.missing_policy] ?? correlation.missing_policy}</span>
         )}
       </span>
     </section>

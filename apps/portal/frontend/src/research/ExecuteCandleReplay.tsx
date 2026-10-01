@@ -189,6 +189,9 @@ export function exactPercent(value: string): string | null {
   return `${whole}${rest ? `.${rest}` : ""}%`;
 }
 
+/** Bars of empty room each side of the bars, so the first and last time labels stays inside the plot. */
+const AXIS_END_ROOM_BARS = 5;
+
 /** A price on a chart axis: grouped thousands, two places from 1 up, finer below — the readout's own grouping. */
 export function chartPrice(value: number): string {
   if (!Number.isFinite(value)) return "";
@@ -461,12 +464,14 @@ function CandleChart({
       fitted.current = rows;
       justFitted.current = true;
       c.api.timeScale().fitContent();
+      /* F3 D10: leave a few bars of room each side so the end time labels are not cut at 660px. */
+      c.api.timeScale().setVisibleLogicalRange?.({ from: -AXIS_END_ROOM_BARS, to: rows.length - 1 + AXIS_END_ROOM_BARS });
     }
     if (reveal !== revealed.current) {
       /* E2b (audit 8.15): cutting the data must not rescale the axis to the bars that are
          left — the window keeps its width and the future stays blank. */
       revealed.current = reveal;
-      c.api.timeScale().setVisibleLogicalRange({ from: -1, to: rows.length });
+      c.api.timeScale().setVisibleLogicalRange({ from: -AXIS_END_ROOM_BARS, to: rows.length + AXIS_END_ROOM_BARS });
     }
     setGeometry((value) => value + 1);
   }, [rows, cut, status, reveal]);
@@ -674,7 +679,7 @@ function FoldStrip({
                   data-fold-boundary={capital.equity_continuity}
                   title={
                     capital.equity_continuity === "CONTINUOUS_ACROSS_FOLDS"
-                      ? `${policyWords.code ?? "policy"} — one stitched account: fold ${segment.fold_id} starts at fold ${capital.segments[position - 1]!.fold_id}'s end equity and carries its position`
+                      ? `${policyWords.code ?? "policy"} — one stitched account: ${foldLabel(segment.fold_id)} starts at ${foldLabel(capital.segments[position - 1]!.fold_id)}'s end equity and carries its position`
                       : capital.equity_continuity === "RESET_PER_FOLD"
                         ? `${policyWords.code ?? "policy"} — each fold is its own account; the folds are not compounded`
                         : "the source did not publish how capital crosses this boundary"
@@ -699,8 +704,8 @@ function FoldStrip({
                   const params = foldParams(progress, segment.fold_id, progressAnswered);
                   const paramsText = params.state === "value" ? `params ${params.digest}` : params.state === "absent" ? `params not published${params.code ? ` ${params.code}` : ""}` : "params not read";
                   return reveal && position >= activeAt
-                    ? `fold ${segment.fold_id}: ${segment.bars} bars`
-                    : `fold ${segment.fold_id}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · ${paramsText} · fold return not published`;
+                    ? `${foldLabel(segment.fold_id)}: ${segment.bars} bars`
+                    : `${foldLabel(segment.fold_id)}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · ${paramsText} · fold return not published`;
                 })()}
               >
                 {/* F1 FG 08-06: the server publishes each fold's start and end equity, not a return — the chip shows the served end equity and never divides. */}
@@ -1245,7 +1250,7 @@ function PlayheadState({ transport, rows, reveal, totals }: {
       data-playhead-readout={row.source_ordinal}
     >
       <span className={cell}>t <b>{iso(row.at_utc_ms)}</b></span>
-      <span className={cell}>fold <b>{bar?.fold_id ?? "in-sample (no fold)"}</b></span>
+      <span className={cell} data-readout-fold><b>{bar?.fold_id != null ? foldLabel(bar.fold_id) : "in-sample (no fold)"}</b></span>
       <span className={cell} data-readout-position>position <b><Exact value={row.accepted_position} unit={null} /></b></span>
       <span className={cell}>equity <b><Exact value={row.equity} unit="currency" /></b></span>
       <span className={cell}>fees to here <b><Exact value={bar?.checkpoint.cumulative_fee} unit="currency" /></b></span>
@@ -1423,19 +1428,19 @@ function ChildAuditCard({
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>In-sample bars — child audit is per OOS fold.</p>
       ) : waiting && !loaded ? (
         <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="waiting">
-          fold {fold}'s child audit loads when playback rests.
+          {foldLabel(fold)}'s child audit loads when playback rests.
         </p>
       ) : !slot || slot.state === "idle" || slot.state === "loading" || slot.fold !== fold ? (
-        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="loading">reading fold {fold}'s child audit…</p>
+        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="loading">reading {foldLabel(fold)}'s child audit…</p>
       ) : slot.state === "refused" ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-child-audit="refused">{slot.message}</p>
       ) : (
         <div className="flex flex-col gap-1" data-child-audit={slot.fold}>
           <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} title="The shaded row is the strategy instance that generated this fold's out-of-sample bars.">
-            fold {slot.fold} · shaded = OOS generation
+            {foldLabel(slot.fold)} · shaded = OOS generation
           </p>
           {/* Keyboard users can scroll this table sideways at narrow widths (axe scrollable-region-focusable). */}
-          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of fold ${slot.fold}`}>
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of ${foldLabel(slot.fold)}`}>
             <table className="w-full min-w-[520px] border-collapse">
               <thead>
                 <tr className="mono text-left text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>

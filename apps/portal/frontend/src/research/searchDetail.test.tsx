@@ -1290,3 +1290,18 @@ describe("W3b — Search on the retained WFO lane", () => {
     expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
   });
 });
+
+/* F3 · H06 hero — one typed line holds the search cinema's place. */
+describe("F3 · S06 — search cinema placeholder", () => {
+  it("a run that searched names the missing sampler trace in one line, and invents no code", () => {
+    const { container } = view({ detail: admitted() });
+    const line = container.querySelector("[data-panel='search-cinema']");
+    expect(line?.textContent).toContain("search cinema — sampler trace not published");
+    expect(line?.getAttribute("data-gap-state")).toBe("NOT_PUBLISHED");
+  });
+
+  it("a fixed profile ran no sampler, so no cinema line is drawn", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-panel='search-cinema']")).toBeNull();
+  });
+});

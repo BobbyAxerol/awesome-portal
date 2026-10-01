@@ -1190,7 +1190,7 @@ describe("RF-06 FE-S04-11 — durable strings are rendered exactly", () => {
     expect(foot?.textContent).toBe("oos · currency · engine-direct");
     expect(foot?.getAttribute("title")).toContain("OOS · CURRENCY · ENGINE_DIRECT");
     // The split tab now draws Screen 05's body (hubStageSplit); the stage's state rides on its tab.
-    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("DONE · fold 1");
+    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("DONE · 4 folds");
   });
 });
 
@@ -1695,7 +1695,8 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
       retainedKinds,
       ensureRetainedKind,
     });
-    expect(ensureRetainedKind).toHaveBeenCalledWith("ROLLING_RETURNS_20");
+    /* F3 (AN-18): the rolling 20-observation figure is gone, so its series is never requested. */
+    expect(ensureRetainedKind).not.toHaveBeenCalledWith("ROLLING_RETURNS_20");
     expect(container.querySelector("[data-month='2026-07'] [data-month-value]")?.textContent).toBe("−0.37%");
     const distribution = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']");
     expect(distribution?.getAttribute("data-series-state")).toBe("ready");

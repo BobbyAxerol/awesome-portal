@@ -202,6 +202,13 @@ function InertWhatIf({ state, reason }: { state: string; reason: string | null }
   );
 }
 
+/** The three answers a 2xx evaluate can carry, in words; the enum itself rides in the title. */
+const EVALUATE_OUTCOME_WORDS: Record<"ADMITTED" | "REPLAYED" | "NOTHING_TO_EVALUATE", string> = {
+  ADMITTED: "admitted — one diagnostic job started",
+  REPLAYED: "replayed — the job already running, not a second one",
+  NOTHING_TO_EVALUATE: "nothing to evaluate — every node exists",
+};
+
 function LiveWhatIf({
   whatIf,
   evaluate,
@@ -526,8 +533,24 @@ function LiveWhatIf({
           </Link>
         </div>
       ) : null}
+      {evaluate.state === "done" ? (
+        <p
+          className="mono text-[10px]"
+          style={{ color: "var(--ink-soft)" }}
+          data-evaluate-outcome={evaluate.result.outcome}
+          title={`${evaluate.result.outcome} · grid ${shortDigest(evaluate.result.grid_key) ?? ""}`}
+        >
+          {EVALUATE_OUTCOME_WORDS[evaluate.result.outcome]}
+          {evaluate.result.job ? ` · ${evaluate.result.job.evaluations} evaluations · job ${evaluate.result.job.state.toLowerCase()}` : ""}
+        </p>
+      ) : null}
       {evaluate.state === "refused" ? (
         <p className="text-[11px]" style={{ color: "var(--bad)" }} data-evaluate-refusal>
+          {evaluate.refusal.status === 409 ? (
+            <span className="mono block text-[10px]" data-evaluate-conflict title={evaluate.refusal.code ?? undefined}>
+              the grid changed since you read it — re-read, then evaluate again
+            </span>
+          ) : null}
           <RefusalNote refusal={evaluate.refusal} />
         </p>
       ) : null}

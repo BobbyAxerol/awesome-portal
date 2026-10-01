@@ -241,7 +241,7 @@ describe("P09-T01 — the journey map renders the descriptor the server pinned",
 
     await waitFor(() => expect(document.querySelectorAll("[data-phase]")).toHaveLength(2));
     expect(document.querySelectorAll("[data-card]")).toHaveLength(5);
-    expect(screen.getByText("QuantBT Backtest — journey map")).toBeTruthy();
+    expect(screen.getByText("Journey Map — shipped portal × redesigned evidence flow")).toBeTruthy();
     expect(document.querySelector("[data-descriptor-digest]")?.textContent).toContain(
       "sha256:journey01",
     );
@@ -829,8 +829,8 @@ describe("P09-T09 — the composition survives a document-less render", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText("QuantBT Backtest — journey map")).toBeTruthy();
-    expect(document.querySelectorAll("[data-legend-tag]")).toHaveLength(3);
+    expect(screen.getByText("Journey Map — shipped portal × redesigned evidence flow")).toBeTruthy();
+    expect(document.querySelectorAll("[data-legend-tag]")).toHaveLength(2);
     for (const name of ["journey", "deep link inspection"]) {
       const panel = document.querySelector(`[data-research-panel="${name}"]`) as HTMLElement;
       expect(panel, name).toBeTruthy();
@@ -839,7 +839,7 @@ describe("P09-T09 — the composition survives a document-less render", () => {
     expect(document.querySelectorAll("[data-phase]")).toHaveLength(0);
   });
 
-  it("shows the three card kinds in the legend even with no data", () => {
+  it("shows the two HiFi swatches in the legend even with no data", () => {
     render(
       <MemoryRouter>
         <JourneyMap descriptor={null} inspection={null} state={researchState({ kind: "ok", rowCount: 0 })} />
@@ -848,6 +848,6 @@ describe("P09-T09 — the composition survives a document-less render", () => {
     const kinds = Array.from(document.querySelectorAll("[data-legend-tag]")).map((n) =>
       n.getAttribute("data-legend-tag"),
     );
-    expect(kinds).toEqual(["SHIPPED", "RESEARCH_SCREEN", "EXECUTION_HANDOFF"]);
+    expect(kinds).toEqual(["SHIPPED", "RESEARCH_SCREEN"]);
   });
 });

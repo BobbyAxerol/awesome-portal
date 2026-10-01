@@ -19,6 +19,13 @@
   max-width: none;
 }
 
+/* The screens that keep the shell's gutter (00, 02, 09–13) sit on the HiFi frame too:
+   the sidebar edge + 24px, as the screens that own their frame (x = 272 at 1440). */
+.portal-content:has(.research-screen:not([data-own-frame])) {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
 .research-screen {
   font-size: 13px;
   line-height: normal;

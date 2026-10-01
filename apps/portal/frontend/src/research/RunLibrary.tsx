@@ -890,6 +890,8 @@ function ClaimQuote({ item }: { item: RunLibraryItem }) {
         paddingLeft: 6,
         maxWidth: 300,
         lineHeight: 1.45,
+        /* F3 01-6: stays in the right column when the row wraps, instead of hanging under the trail. */
+        marginLeft: "auto",
       }}
     >
       {/* Never truncated: a claim that is cut is a claim that is changed. */}

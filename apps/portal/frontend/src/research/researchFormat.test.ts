@@ -14,7 +14,7 @@ describe("RF-06 FE-X-13 — display formatting never invents a number", () => {
   });
 
   it("formats axes, durations, times, digests and sizes", () => {
-    expect(formatFractionAxis(-0.00545)).toBe("-0.55%");
+    expect(formatFractionAxis(-0.00545)).toBe("−0.55%");
     expect(formatDuration(8)).toBe("8s");
     expect(formatDuration(192)).toBe("3m 12s");
     expect(formatDuration(3840)).toBe("1h 04m");

@@ -341,7 +341,8 @@ describe("CG-P07-03/04 Screen 14 mirror and gates", () => {
 
   it("formats analyser time per gate and names Control API's registry lookup", () => {
     const base: GateRow = { n: 1, name: "contract-complete", state: "PASS", message: "ok", ms: 0 };
-    expect(gateTiming({ ...base, timing_source: "ANALYSER", analyser_us: 214 })).toBe("0.214 ms · analyser");
+    expect(gateTiming({ ...base, timing_source: "ANALYSER", analyser_us: 214 })).toBe("214 µs · analyser");
+    expect(gateTiming({ ...base, timing_source: "ANALYSER", analyser_us: 2140 })).toBe("2.1 ms · analyser");
     expect(gateTiming({ ...base, n: 3, name: "digest-unique", timing_source: "CONTROL_API", analyser_us: null, ms: 2 })).toBe("2 ms · registry");
     expect(gateTiming({ ...base, state: "SKIPPED" })).toBeNull();
   });

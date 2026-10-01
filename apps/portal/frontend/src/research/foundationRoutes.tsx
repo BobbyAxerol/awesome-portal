@@ -42,6 +42,8 @@ import journeySnapshot from "../../../../../packages/contracts/fixtures/research
 interface ReadResult<T> {
   data: T | null;
   state: ResearchState;
+  /** F3 12-15: the failed read's request id, kept beside the state (which has no field for it). */
+  requestId: string | null;
 }
 
 /**
@@ -59,6 +61,7 @@ export function useFoundationRead<T>(
   const [state, setState] = useState<ResearchState>(() =>
     researchState({ kind: "in-flight", hasAcceptedResponse: false }),
   );
+  const [requestId, setRequestId] = useState<string | null>(null);
 
   const stable = useCallback(run, deps);
 
@@ -80,12 +83,14 @@ export function useFoundationRead<T>(
       .then((response) => {
         if (!live) return;
         setData(response);
+        setRequestId(null);
         setState(researchState({ kind: "ok", rowCount: 1 }));
       })
       .catch((error: unknown) => {
         if (!live || controller.signal.aborted) return;
         const refusal = toFoundationRefusal(error);
         setData(null);
+        setRequestId(refusal.requestId);
         setState({
           state: refusal.state,
           reason: refusal.message,
@@ -100,7 +105,7 @@ export function useFoundationRead<T>(
     };
   }, [stable]);
 
-  return { data, state };
+  return { data, state, requestId };
 }
 
 /* --------------------------------------------------------------- Screen 00 */
@@ -169,6 +174,7 @@ export function EngineAtlasRoute() {
   const location = useLocation();
   useEffect(() => preloadKatex(), []);
   const query = useMemo(() => atlasQueryFromSearch(location.search), [location.search]);
+  const [retry, setRetry] = useState(0);
 
   /* The tab lives in the hash so a link to a specific tab survives a reload
      and a paste, and so it never reaches the server: which tab is open is not
@@ -189,7 +195,7 @@ export function EngineAtlasRoute() {
   const onTabChange = useCallback((next: AtlasTab) => move({ tab: next }), [move]);
   const read = useFoundationRead<AtlasResponse>(
     (signal) => foundationApi.atlas(query, signal),
-    [JSON.stringify(query)],
+    [JSON.stringify(query), retry],
   );
 
   /* 12-3: the run the Atlas was opened from marks its own mode card. Its
@@ -239,6 +245,8 @@ export function EngineAtlasRoute() {
       selectedReleaseKind={read.data?.selected_release_kind ?? null}
       historicalIdentity={read.data?.historical_identity ?? null}
       state={state}
+      requestId={read.requestId}
+      onRetry={() => setRetry((value) => value + 1)}
     />
   );
 }

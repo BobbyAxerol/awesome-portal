@@ -147,8 +147,9 @@ function Chip({
   );
 }
 
-function iso(at: number): string {
-  return new Date(at).toISOString().slice(0, 16).replace("T", " ") + "Z";
+/** The one timestamp format on this screen: `formatUtc`, absence typed. */
+function iso(at: number | null | undefined): string {
+  return formatUtc(at) ?? "not published";
 }
 
 /* --------------------------------------------------------------- integrity */
@@ -1414,7 +1415,7 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
                   ?? (fold.oos_generation_child.candidate_id ? `QuantBT candidate ${fold.oos_generation_child.candidate_id} · child #${fold.oos_generation_child.audit_ordinal}` : undefined)}
               >
                 {CHILD_WORDS[fold.oos_generation_child.state]}
-                {fold.oos_generation_child.candidate_id ? ` · ${fold.oos_generation_child.candidate_id.slice(0, 8)}` : ""}
+                {fold.oos_generation_child.candidate_id ? ` · ${shortDigest(fold.oos_generation_child.candidate_id, 12)}` : ""}
               </span>
             </li>
           ))}
@@ -1615,7 +1616,7 @@ export function FreezeScreen({
       {embedded ? null : (
       <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
         <Link
-          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/evidence`, cursor)}
+          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/evidence`, { ...cursor, stage: "freeze" })}
           style={{ color: "var(--accent)" }}
           data-action="back-to-hub"
         >

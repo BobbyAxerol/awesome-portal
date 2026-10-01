@@ -12,16 +12,17 @@
  */
 
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { NewRun } from "./NewRun";
 import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import { STEPS, type DraftConstraints, type ParameterEntry, type RunDraft, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom } from "./runDraft";
+import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
+import { useRunLabelRead } from "./useRunLabelRead";
 import { NOT_MODIFIED, freezeApi, isFreezeLaneNotApplicable } from "./freezeClient";
 import { isWhatIf } from "./WhatIfCard";
 import type { ForkSource } from "./NewRun";
@@ -105,6 +106,17 @@ export function parametersFor(
 ): readonly ParameterEntry[] {
   const bound = registry.find((entry) => entry.alpha_version_id === alphaVersionId);
   return bound ? parameterEntriesFrom(bound.declaration.parameter_space) : [];
+}
+
+/**
+ * HiFi 02-4: when the registry holds exactly one ACTIVE version, that is the
+ * only thing a bound run could be about, so the form opens on it instead of on
+ * two empty selects. Zero or several ACTIVE entries preselect nothing — the
+ * reader chooses; a near-match is never a match.
+ */
+export function soleActiveEntry(registry: readonly RegistryEntry[]): RegistryEntry | null {
+  const active = registry.filter((entry) => entry.lifecycle_state === "ACTIVE");
+  return active.length === 1 ? active[0]! : null;
 }
 
 export function NewRunRoute() {
@@ -236,6 +248,9 @@ export function NewRunRoute() {
    * was always empty.
    */
   const fromRun = new URLSearchParams(location.search).get("from");
+  /* D4 walk: the "copied from" / "sibling of" banners name the run `R-WFO-020`,
+     not `rrun_…`. A cold link has no list read to learn the label from, so ask. */
+  useRunLabelRead(fromRun);
   const [clone, setClone] = useState<{ runId: string; state: ResearchState; spec: RunRequestedSpec | null } | null>(null);
   useEffect(() => {
     if (!fromRun) return;
@@ -284,6 +299,21 @@ export function NewRunRoute() {
     if (!entry) return;
     prefilledFor.current = version;
     run.patch({ alphaId: entry.alpha_id, alphaVersionId: entry.alpha_version_id, strategyId: entry.strategy_id ?? entry.alpha_id });
+  }, [location.search, registry, run]);
+
+  /* HiFi 02-4: a registry with one ACTIVE version opens on it. Only for a plain
+     visit: a `?alpha=`/`?av=` link, a `?from=` copy or a `?fork=` own the binding,
+     and once the reader has touched the alpha or version this never runs again. */
+  const preselectedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (preselectedFor.current !== null || registry.length === 0) return;
+    const query = new URLSearchParams(location.search);
+    if (query.get("alpha") || query.get("av") || query.get("from") || query.get("fork")) return;
+    const only = soleActiveEntry(registry);
+    if (!only) return;
+    preselectedFor.current = only.alpha_version_id;
+    if (run.draft.alphaId !== "" || run.draft.alphaVersionId !== "") return;
+    run.patch({ alphaId: only.alpha_id, alphaVersionId: only.alpha_version_id, strategyId: only.strategy_id ?? only.alpha_id });
   }, [location.search, registry, run]);
 
   /*
@@ -376,12 +406,29 @@ export function NewRunRoute() {
     }
   }, [routeFromQuery, document, limits, run]);
 
+  /* HiFi 02-18: the wizard step is written to the address (replace, never push:
+     moving through the steps must not fill the Back button). `context` is the
+     default and leaves the address clean; every other parameter is kept. */
+  const locationRef = useRef(location);
+  locationRef.current = location;
+  const writeStep = useCallback((step: StepId) => {
+    const here = locationRef.current;
+    const query = new URLSearchParams(here.search);
+    const current = query.get("step");
+    if (step === "context" ? current === null : current === step) return;
+    if (step === "context") query.delete("step");
+    else query.set("step", step);
+    const text = query.toString();
+    navigate({ pathname: here.pathname, search: text ? `?${text}` : "", hash: here.hash }, { replace: true });
+  }, [navigate]);
+
   /* Keeps this component's copy of the draft in step with the controller's. */
   useEffect(() => setDraft(run.draft), [run.draft]);
 
   return (
     <NewRun
       initialStep={STEPS.find((step) => step.id === new URLSearchParams(location.search).get("step"))?.id ?? "context"}
+      onStepChange={writeStep}
       draft={run.draft}
       patch={run.patch}
       limits={limits}

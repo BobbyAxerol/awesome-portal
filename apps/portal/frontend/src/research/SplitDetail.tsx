@@ -169,7 +169,7 @@ function Absent({
   /** The `absence_index` key this element states — each key is stated once (CG-P14-06). */
   indexKey?: string;
 }) {
-  if (fact.state === "NOT_APPLICABLE") return <NotApplicable fact={fact} what={what} indexKey={indexKey} />;
+  if (fact.state === "NOT_APPLICABLE") return <NotApplicable fact={fact} what={what} indexKey={indexKey} showReason={showReason} />;
   return (
     <span
       className="inline-flex flex-wrap items-baseline gap-x-1.5"
@@ -197,8 +197,9 @@ function Absent({
  */
 const NotApplicableWords = createContext("n/a");
 
-function NotApplicable({ fact, what, indexKey }: { fact: AbsentFact; what: string; indexKey?: string }) {
+function NotApplicable({ fact, what, indexKey, showReason = false }: { fact: AbsentFact; what: string; indexKey?: string; showReason?: boolean }) {
   const reason = reasonOf(fact);
+  const words = useContext(NotApplicableWords);
   return (
     <span
       className="mono"
@@ -208,7 +209,14 @@ function NotApplicable({ fact, what, indexKey }: { fact: AbsentFact; what: strin
       data-absent-state="NOT_APPLICABLE"
       data-absence-key={indexKey}
     >
-      {useContext(NotApplicableWords)}
+      {words}
+      {showReason ? " " : null}
+      {showReason ? (
+        /* F3 X-08: the server's own code beside the n/a, not only in the tooltip. */
+        <span className="break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-absent-reason={what}>
+          {reason}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -277,7 +285,7 @@ function Fact({
  */
 type GuardFact = CurrentSourceSplit["guards"]["purge_bars"];
 
-function GuardValue({ fact, unit, what }: { fact: GuardFact; unit?: "bars"; what: string }) {
+function GuardValue({ fact, unit, what, showReason = false }: { fact: GuardFact; unit?: "bars"; what: string; showReason?: boolean }) {
   if (fact.state === "AVAILABLE" && fact.value !== null) {
     const text = typeof fact.value === "number" && unit === "bars" ? bars(fact.value) : String(fact.value);
     return (
@@ -290,6 +298,13 @@ function GuardValue({ fact, unit, what }: { fact: GuardFact; unit?: "bars"; what
     return (
       <span className="mono" style={{ color: "var(--ink-soft)" }} data-guard={what} data-guard-state="NOT_APPLICABLE" title={fact.reason_code ?? undefined}>
         n/a
+        {showReason && fact.reason_code ? " " : null}
+        {showReason && fact.reason_code ? (
+          /* F3 X-08: the server's own code beside the n/a, not only in the tooltip. */
+          <span className="break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-guard-reason={what}>
+            {fact.reason_code}
+          </span>
+        ) : null}
       </span>
     );
   }
@@ -542,7 +557,7 @@ function WindowAnatomy({
             </span>
           ))}
         </div>
-        <span className="hidden w-[196px] flex-none lg:block" />
+        <span className="hidden w-[196px] flex-none sm:block" />
       </div>
 
       <div className="flex items-center gap-2" data-window-row>
@@ -587,7 +602,7 @@ function WindowAnatomy({
         </div>
         {/* The published endpoints, exactly — the marks above never replace them. */}
         <span
-          className="mono hidden w-[196px] flex-none text-right text-[10px] lg:block"
+          className="mono hidden w-[196px] flex-none text-right text-[10px] sm:block"
           style={{ color: "var(--ink-faint)" }}
           title={`${exact(timeline.start_utc_ms)} → ${exact(timeline.end_exclusive_utc_ms)}`}
         >
@@ -863,8 +878,8 @@ function FoldRows({
                   <span
                     data-fold-segment="train"
                     role="img"
-                    aria-label={`${fold.fold_id} · train ${exact(train.start_utc_ms)} → ${exact(train.end_exclusive_utc_ms)}`}
-                    title={`${fold.fold_id} · train ${exact(train.start_utc_ms)} → ${exact(train.end_exclusive_utc_ms)}`}
+                    aria-label={`${foldLabel(fold.fold_id)} · train ${exact(train.start_utc_ms)} → ${exact(train.end_exclusive_utc_ms)}`}
+                    title={`${foldLabel(fold.fold_id)} · train ${exact(train.start_utc_ms)} → ${exact(train.end_exclusive_utc_ms)}`}
                     className="absolute top-0 h-full rounded-[3px]"
                     style={{
                       left: `${placeInTimeline(bounds, train).leftPercent}%`,
@@ -878,8 +893,8 @@ function FoldRows({
                   <span
                     data-fold-segment="test"
                     role="img"
-                    aria-label={`${fold.fold_id} · test ${exact(test.start_utc_ms)} → ${exact(test.end_exclusive_utc_ms)}`}
-                    title={`${fold.fold_id} · test ${exact(test.start_utc_ms)} → ${exact(test.end_exclusive_utc_ms)}`}
+                    aria-label={`${foldLabel(fold.fold_id)} · test ${exact(test.start_utc_ms)} → ${exact(test.end_exclusive_utc_ms)}`}
+                    title={`${foldLabel(fold.fold_id)} · test ${exact(test.start_utc_ms)} → ${exact(test.end_exclusive_utc_ms)}`}
                     className="absolute top-0 h-full rounded-[3px]"
                     style={{
                       left: `${placeInTimeline(bounds, test).leftPercent}%`,
@@ -897,7 +912,7 @@ function FoldRows({
               ) : start !== null && end !== null ? (
                 /* HiFi `train-start ⋯ test-end`, as the half-open interval it is. */
                 <span
-                  className="mono hidden w-[196px] flex-none text-right text-[10px] lg:block"
+                  className="mono hidden w-[196px] flex-none text-right text-[10px] sm:block"
                   style={{ color: "var(--ink-faint)" }}
                   data-fold-range={number}
                   title={`${exact(start)} → ${exact(end)} (the fold's last bar, inclusive)`}
@@ -1008,7 +1023,7 @@ function HoldoutBlock({ detail, timeline, runPath, cursor }: { detail: SplitDeta
         )}
         {facts ? (
           <span
-            className="mono hidden w-[196px] flex-none text-right text-[10px] lg:block"
+            className="mono hidden w-[196px] flex-none text-right text-[10px] sm:block"
             style={{ color: "var(--accent-2)" }}
             data-holdout-span
             title={`${exact(facts.start_utc_ms)} → ${exact(facts.end_exclusive_utc_ms)}`}
@@ -1116,6 +1131,8 @@ export interface LaneView {
   outerOos: Range | null;
   /** One params digest every fold's GLOBAL_STUDY selection shares, from the progress read. */
   sharedDigest: string | null;
+  /** F3 05-09: the Optuna trials the admitted requested spec asked for (a request, not the retained count). */
+  trials: number | null;
   selection: RetainedFact<CurrentSourceSearch["selection"]>;
   holdout: RetainedFact<CurrentSourceClaimFact>;
   certificateReason: string | null;
@@ -1179,6 +1196,7 @@ export function laneViewOf(
     is,
     outerOos,
     sharedDigest,
+    trials: window.trials,
     selection: retained?.selection ?? { state: "loading" },
     holdout: retained?.holdout ?? { state: "loading" },
     certificateReason: certificate && certificate.state !== "ISSUED" ? certificate.reason_code ?? certificate.state : null,
@@ -1734,7 +1752,7 @@ export function SplitScreen({
                   /* W3 · CG-P14-02: the retained WFO lane publishes the engine's own guards. */
                   <>
                     <Fact k="inner folds" data-fact="inner folds">
-                      <GuardValue fact={retainedGuards.inner_folds} what="inner_folds" />
+                      <GuardValue fact={retainedGuards.inner_folds} what="inner_folds" showReason />
                     </Fact>
                     <Fact k="purge" tone="var(--bad)" data-fact="purge">
                       <GuardValue fact={retainedGuards.purge_bars} unit="bars" what="purge_bars" />
@@ -1753,7 +1771,7 @@ export function SplitScreen({
                   <>
                 {detail.protocol.inner_folds.state === "NOT_APPLICABLE" ? (
                   <Fact k="inner folds" data-fact="inner folds">
-                    <Absent fact={detail.protocol.inner_folds} what="inner folds" indexKey="inner_folds" />
+                    <Absent fact={detail.protocol.inner_folds} what="inner folds" showReason indexKey="inner_folds" />
                   </Fact>
                 ) : null}
                 {/* HiFi tones (purge red, embargo gold) belong to a published value; an absence keeps its own. */}
@@ -1994,6 +2012,18 @@ export function SplitScreen({
                     >
                       <GapScanValue scan={lane.split.gap_scan} />
                     </IntegrityRow>
+                    {/* F3 05-14: HiFi `purge … applied` / `embargo … after every test`. The served guard values, no
+                        verdict: the read publishes a configured width, not a check, so no ✓ is drawn. */}
+                    {retainedGuards ? (
+                      <>
+                        <IntegrityRow mark="none" label="purge between train and test" rest={{ "data-integrity-guard": "purge" }}>
+                          <GuardValue fact={retainedGuards.purge_bars} unit="bars" what="purge_bars" showReason />
+                        </IntegrityRow>
+                        <IntegrityRow mark="none" label="embargo after each test" rest={{ "data-integrity-guard": "embargo" }}>
+                          <GuardValue fact={retainedGuards.embargo_bars} unit="bars" what="embargo_bars" showReason />
+                        </IntegrityRow>
+                      </>
+                    ) : null}
                   </>
                 ) : (
                 <>
@@ -2068,7 +2098,7 @@ export function SplitScreen({
                 {lane && lane.split.fold_plan.folds.length > 0 ? (
                   <span className="flex h-[10px] gap-[2px]" data-stitch-segments={lane.split.fold_plan.folds.length}>
                     {lane.split.fold_plan.folds.map((fold) => (
-                      <span key={fold.fold_id} className="flex-1 rounded-[2px]" style={{ background: "var(--role-oos)" }} title={`fold ${fold.fold_id} · test window`} />
+                      <span key={fold.fold_id} className="flex-1 rounded-[2px]" style={{ background: "var(--role-oos)" }} title={`${foldLabel(fold.fold_id)} · test window`} />
                     ))}
                   </span>
                 ) : !lane && hasRange(detail.windows.outer_oos) ? (
@@ -2258,6 +2288,8 @@ interface LaneProps {
   is: Range | null;
   oos: Range | null;
   isLabel: string;
+  /** Extra tooltip text for the IS bar (the search facts behind `isLabel`). */
+  isTitle?: string;
   digest: ReactNode;
   active: boolean;
   /** Present only when there are folds to move between (HiFi: lanes are controls in walk_forward only). */
@@ -2273,7 +2305,7 @@ interface LaneProps {
  * The HiFi ❖ freeze marker sits at a cutoff; it is drawn only where a freeze
  * was published, and no read publishes one yet — so none is drawn.
  */
-function ThetaLane({ id, track, is, oos, isLabel, digest, active, pick, rest, oosSharpe }: LaneProps) {
+function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick, rest, oosSharpe }: LaneProps) {
   const sharpe = oosSharpe?.value != null ? formatMetric(oosSharpe.value, "ratio") : null;
   const lit = active && pick !== undefined;
   const body = (
@@ -2293,7 +2325,7 @@ function ThetaLane({ id, track, is, oos, isLabel, digest, active, pick, rest, oo
               borderColor: "var(--viz-train)",
               opacity: active ? 1 : 0.6,
             }}
-            title={`IS ${exact(is.start_utc_ms)} → ${exact(is.end_exclusive_utc_ms)}`}
+            title={`${isTitle ? `${isTitle}\n` : ""}IS ${exact(is.start_utc_ms)} → ${exact(is.end_exclusive_utc_ms)}`}
             data-theta-is
           >
             <span className="mono overflow-hidden whitespace-nowrap text-[8.5px]" style={{ color: "var(--ink-soft)" }}>
@@ -2390,6 +2422,13 @@ function ThetaFlow({
   const plan = folds.state === "ready" ? folds.split.fold_plan.folds : null;
   const bounds = useFoldBounds(plan ?? []);
   const tabStop = plan && cursor.fold >= 1 && cursor.fold <= plan.length ? cursor.fold : 1;
+  /* F3 05-09: HiFi `search · N trials · IS only`. N is the admitted request's trial count; `IS only` is
+     said only when QuantBT published oos_used_for_selection = false — a run that selected on OOS says no such thing. */
+  const trials = lane?.trials ?? null;
+  const isOnly = lane?.split.guards?.oos_used_for_selection?.value === false;
+  const searchLabel = trials === null ? "IS" : `search · ${trials} ${trials === 1 ? "trial" : "trials"}${isOnly ? " · IS only" : ""}`;
+  const searchTitle =
+    trials === null ? undefined : `${trials} ${trials === 1 ? "trial" : "trials"} requested in the admitted spec${isOnly ? " · QuantBT oos_used_for_selection = false" : ""}`;
 
   return (
     <section className={`${CARD} gap-2 p-4`} style={RAISED_STYLE} data-card="theta-flow">
@@ -2426,7 +2465,8 @@ function ThetaFlow({
                 track={bounds}
                 is={train}
                 oos={test}
-                isLabel="IS"
+                isLabel={searchLabel}
+                isTitle={searchTitle}
                 active={cursor.fold === index + 1}
                 digest={
                   lane ? (

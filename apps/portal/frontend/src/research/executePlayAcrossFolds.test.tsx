@@ -528,7 +528,7 @@ describe("D7 · ON, on the canonical two-fold run: one read at the boundary, non
     expect(m.server.log.slice(mark).map((entry) => entry.kind)).toEqual(["window"]);
     /* And the card does not pretend to be reading: it says when it will. */
     expect(m.container.querySelector("[data-child-audit='waiting']")?.textContent).toBe(
-      "fold 1's child audit loads when playback rests.",
+      "fold_02's child audit loads when playback rests.",
     );
     expect(m.container.querySelector("[data-child-audit='loading']")).toBeNull();
     await playAcrossOnce(m, "end");
@@ -628,6 +628,7 @@ describe("D7 · no request while paused or stopped, and none after turning it of
     const m = await mountAcross(FOUR);
     const baseline = m.server.windows().length;
     fireEvent.click(m.ui.switch());
+    act(() => m.transport.setSpeed(1)); // the default is 4×; 1× keeps this window from running dry in 20 s
     fireEvent.click(m.ui.play());
     act(() => m.clock.advance(20_000));
     expect(m.ui.playing()).toBe(true);

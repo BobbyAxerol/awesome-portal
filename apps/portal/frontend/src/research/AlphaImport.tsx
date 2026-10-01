@@ -554,11 +554,12 @@ function MirrorTable({ mirror }: { mirror: readonly MirrorField[] }) {
 
 /* ------------------------------------------------------------------ gates */
 
-/** CG-P07-04: `0.214 ms · analyser`, or the whole ms Control API measured. */
+/** CG-P07-04: `214 µs · analyser` (ms from 1 000 µs), or the whole ms Control API measured. */
 export function gateTiming(gate: GateRow): string | null {
   if (gate.state === "SKIPPED") return null;
   if (gate.timing_source === "ANALYSER" && typeof gate.analyser_us === "number") {
-    return `${(gate.analyser_us / 1000).toFixed(3)} ms · analyser`;
+    const us = gate.analyser_us;
+    return `${us < 1000 ? `${us} µs` : `${(us / 1000).toFixed(1)} ms`} · analyser`;
   }
   if (gate.timing_source === "CONTROL_API") return `${gate.ms} ms · registry`;
   return `${gate.ms} ms`;
@@ -658,6 +659,12 @@ function GateList({ gates, reducedMotion }: { gates: readonly GateRow[]; reduced
             {/* The engine's own sentence, wrapped, never cut. */}
             <span className="detail" data-gate-message>
               {gate.message}
+              {gate.quarantine_code ? (
+                <span className="timing" data-gate-quarantine-code={gate.quarantine_code} title="The server's quarantine code for this gate">
+                  {" · "}
+                  {gate.quarantine_code}
+                </span>
+              ) : null}
               {timing ? (
                 <span className="timing" data-gate-timing={gate.timing_source ?? "none"}>
                   {" · "}
@@ -846,6 +853,8 @@ export interface AlphaImportProps {
   gatesState: ResearchState;
   registerState: ResearchState;
   registryState: ResearchState;
+  /** Read the registry again after a failed read. */
+  onRetryRegistry?: () => void;
   /** Whether an activation request is currently in flight. */
   activationPending?: boolean;
 
@@ -926,6 +935,7 @@ export function AlphaImport(props: AlphaImportProps) {
     gatesState,
     registerState,
     registryState,
+    onRetryRegistry,
     activationPending,
     refusal,
     alphaId,
@@ -1481,10 +1491,18 @@ export function AlphaImport(props: AlphaImportProps) {
               </span>
             ) : null}
           </h2>
-          <ResearchPanel title="alpha registry" state={registryState} variant="plain" minBodyHeight={0}>
+          {/* An answered-but-empty read is a state the panel would swallow behind its generic
+              notice; the screen's own sentence is the one that says what is missing. */}
+          <ResearchPanel
+            title="alpha registry"
+            state={registryState.state === "empty" ? { ...registryState, state: "available", reason: "", retainsContent: true } : registryState}
+            variant="plain"
+            minBodyHeight={0}
+            recovery={onRetryRegistry ? <button type="button" onClick={onRetryRegistry} className="btn-ghost self-start" data-action="retry-registry">Retry registry read</button> : undefined}
+          >
             <div className="ai-registry" data-registry-strip>
               {visibleRegistry.length === 0 ? (
-                <span className="text-[10.5px]" style={{ color: "var(--ink-mute)" }}>
+                <span className="text-[10.5px]" style={{ color: "var(--ink-mute)" }} data-registry-empty>
                   {alphaId.trim() ? "No versions for this alpha id." : "No imported versions in this workspace yet."}
                 </span>
               ) : (

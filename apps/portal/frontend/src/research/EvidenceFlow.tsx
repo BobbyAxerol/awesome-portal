@@ -73,7 +73,6 @@ import { HubExecuteBody } from "./hubStageExecute";
 /* The chart chunk. Five entry points, one module, fetched once. */
 const EquityChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.EquityChart })));
 const DrawdownChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DrawdownChart })));
-const RollingChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.RollingChart })));
 const RollingSharpeChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.RollingSharpeChart })));
 const DistributionChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DistributionChart })));
 
@@ -502,7 +501,7 @@ function ClaimPassport({
 
   return (
     <div
-      className="flex items-stretch rounded-[6px] border"
+      className="flex flex-col items-stretch rounded-[6px] border md:flex-row"
       data-claim-passport={claim?.state ?? state.state}
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)", boxShadow: "var(--shadow-e1)" }}
     >
@@ -627,7 +626,7 @@ function ClaimPassport({
       </div>
 
       <div
-        className="hidden max-w-[230px] flex-col justify-center gap-1 border-l px-3.5 py-2.5 sm:flex"
+        className="flex flex-col justify-center gap-1 border-t px-3.5 py-2.5 md:max-w-[230px] md:border-l md:border-t-0"
         style={{ borderColor: "var(--line-soft)" }}
         data-passport-note
       >
@@ -1062,6 +1061,12 @@ function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub |
   if (stage === "execute") {
     const route = hub.core.run_identity?.route.id;
     return route && isAvailable(route.availability) && route.value !== null ? `${state} · ${route.value}` : state;
+  }
+  if (stage === "split") {
+    /* HiFi "5 folds · holdout sealed": the fold count is the one served fact; the seal is not on the Hub, so it is not printed. */
+    const navigation = hub.core.fold_navigation;
+    const count = navigation && isAvailable(navigation.availability) ? navigation.published_fold_count : null;
+    if (count !== null && count !== undefined) return `${state} · ${count} ${count === 1 ? "fold" : "folds"}`;
   }
   return `${state} · fold ${cursor.fold}`;
 }
@@ -3350,7 +3355,6 @@ export function retainedSeriesLinks(evidence: CurrentSourceEvidence): EvidenceHu
   return [
     mapped("MONTHLY_RETURNS"),
     mapped("RETURN_DISTRIBUTION"),
-    mapped("ROLLING_RETURNS_20"),
     {
       kind: "ROLLING_SHARPE_63",
       /* E11: the lane now names the cause itself — an hourly tape carries no
@@ -3369,7 +3373,7 @@ export function retainedSeriesLinks(evidence: CurrentSourceEvidence): EvidenceHu
 }
 
 /** The retained kinds a Summary panel reads through the Hub-shaped panel frame. */
-export const RETAINED_PANEL_KINDS: readonly RetainedSeriesKind[] = ["MONTHLY_RETURNS", "RETURN_DISTRIBUTION", "ROLLING_RETURNS_20"];
+export const RETAINED_PANEL_KINDS: readonly RetainedSeriesKind[] = ["MONTHLY_RETURNS", "RETURN_DISTRIBUTION"];
 
 /** A retained series in the Hub series' shape: the value rows are the same types. */
 export function asHubSeries(series: CurrentSourceEvidenceSeries): EvidenceSeries {
@@ -3669,7 +3673,7 @@ function SummaryTab({
         </SeriesPanel>
       </div>
 
-      <div className="flex flex-wrap gap-3.5">
+      <div className="flex flex-wrap items-start gap-3.5" data-monthly-row>
         <SeriesPanel
           kind="MONTHLY_RETURNS"
           variant="card"
@@ -3685,28 +3689,6 @@ function SummaryTab({
         </SeriesPanel>
         <BehaviorCard retained={retained} summary={summary} />
       </div>
-
-      {/*
-        * Not in the HiFi: before RF-05 this series stood in EChart 3's place.
-        * Rolling Sharpe now takes that place; the 20-observation return is
-        * still published evidence, so it keeps a figure of its own rather
-        * than disappearing from the screen.
-        */}
-      <SeriesPanel
-        kind="ROLLING_RETURNS_20"
-        chartNo={5}
-        title="Rolling 20-observation return — stitched OOS"
-        link={linkFor("ROLLING_RETURNS_20")}
-        slot={laneSeries.get("ROLLING_RETURNS_20")}
-        onNeeded={laneEnsure}
-        emptyReason="the source published no rolling window for this run, so no line is drawn."
-      >
-        {(loaded) => (
-          <ChartFrame height={230}>
-            <RollingChart series={loaded} />
-          </ChartFrame>
-        )}
-      </SeriesPanel>
 
       {summary ? (
         <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-sampling-note>

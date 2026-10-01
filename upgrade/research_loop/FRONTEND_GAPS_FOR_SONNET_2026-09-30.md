@@ -225,3 +225,13 @@ Bản ghi từng nhóm: `evidence/P21/audit-2026-09-30/f2b/*.md`. Quyết địn
 - **S08 marker:** glyph 12–18px có viền sáng 2px, đủ ENTRY/EXIT/FLIP/RESIZE × LONG/SHORT/FLAT, nhãn + giá, đường nối entry→exit, vòng xung khi chọn (tôn trọng reduced-motion), thẻ hover, nổi bật hai chiều với sổ chuyển trạng thái.
 - **Order/fill/SL-TP:** không vẽ vì QuantBT route hiện tại không trả; hiện chip khả năng + mã lý do; yêu cầu BR-S08-01 gửi Codex.
 - **Mọi màn:** link vào/ra giữ run/fold/window, câu dài → tooltip, thêm hình thay chữ. Yêu cầu backend mới: `CODEX_BACKEND_GAPS_2026-09-30.md` (BR-S08-01…03, BR-S04-WIN, BR-S11-01, BR-TXT-02).
+
+### F3 — HiFi parity (2026-10-01)
+
+Bản ghi từng nhóm: `evidence/P21/audit-2026-09-30/f3/*.md` (mỗi dòng kiểm kê HiFi: DONE / ALREADY FIXED / SKIPPED VD-TEXT-01 / BLOCKED).
+Việc dùng chung do tôi làm sau khi gộp:
+- **`<title>` mỗi màn** (`research/documentTitle.ts`): đúng chữ HiFi; màn per-run thêm nhãn run (HiFi chỉ có ở S04/S09 — thêm ở các màn còn lại để nhiều tab không lẫn; **quyết định của tôi, bạn đổi được**).
+- **Khung 280 → 272:** S00, S02, S09–S13 giữ padding của shell (32px) nên lệch 8px so với các màn tự sở hữu khung. `researchScreen.css`: các màn đó nay có lề 24px (x = 272 ở 1440); S00 bỏ `px-2` riêng. **Ảnh baseline visual của các màn này sẽ đổi — Bobby duyệt ở F5, không `--update` tự động.**
+- **Dấu `−` (U+2212)** cho số âm trong `researchFormat.ts` (`typographicMinus`), chỉ hiển thị. Chuỗi thập phân chính xác server trả (vd `-0.0340458` trong sổ transition) giữ nguyên như server công bố.
+- `screenRoutes.ts` (thêm): `run_*_legacy` → thẻ S00 cột "shipped" thành link.
+- Bị chặn / chờ Codex: BR-F3-01…05 (`CODEX_BACKEND_GAPS`); 02-15, 05-14 verdict, HT-6 độ rộng cột là việc của S03.

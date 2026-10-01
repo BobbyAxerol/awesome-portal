@@ -223,6 +223,8 @@ const SHEET_CSS = `
   clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .rr-table tr { break-inside: avoid; }
 .rr-verdict { font-weight: 700; }
+.rr-table td[data-fail="DECAY"] { color: var(--bad); }
+.rr-table tbody tr[data-fold][data-v="DRAG"] td { background: var(--bad-bg); }
 .rr-verdict::before, .rr-chain td.st::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 0; background: var(--ink-faint); }
 .rr-verdict[data-v="PASS"]::before { background: var(--good); }
 .rr-verdict[data-v="WARN"]::before { background: var(--accent-2); }
@@ -648,8 +650,8 @@ function Identity({ core }: { core: FrozenCore }) {
   );
 }
 
-/** Headline cells coloured by sign, as the HiFi does (E3); a count is never coloured. */
-const SIGNED_HEADLINE = new Set<string>(["NET_RETURN", "OOS_SHARPE", "MAX_DRAWDOWN", "FUNDING"]);
+/** Headline money/fraction cells coloured by sign (E3); a ratio (OOS Sharpe) stays in ink like the HiFi, and a count is never coloured. */
+const SIGNED_HEADLINE = new Set<string>(["NET_RETURN", "MAX_DRAWDOWN", "FUNDING"]);
 
 function HeadlineRow({ core }: { core: FrozenCore }) {
   const v2 = coreV2(core);
@@ -761,7 +763,7 @@ function foldBoundaries(folds: ReportFolds): { label: string; at_utc_ms: number 
   if (folds.state !== "AVAILABLE") return [];
   return folds.rows.flatMap((row) => {
     const at = "test_start_utc_ms" in row ? row.test_start_utc_ms : row.start_utc_ms;
-    return at === null ? [] : [{ label: row.fold_id, at_utc_ms: at }];
+    return at === null ? [] : [{ label: foldLabel(row.fold_id), at_utc_ms: at }];
   });
 }
 
@@ -958,7 +960,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
           <tbody>
             {published ? (
               folds.rows.map((row) => (
-                <tr key={row.fold_id} data-fold={row.fold_id}>
+                <tr key={row.fold_id} data-fold={row.fold_id} data-v={row.verdict}>
                   <td title={`QuantBT fold_id ${row.fold_id}`}>{foldLabel(row.fold_id)}</td>
                   <td>
                     {row.test_start_utc_ms !== null ? iso(row.test_start_utc_ms) : "no start published"} →{" "}
@@ -973,7 +975,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
                   </td>
                   <td data-fold-is={row.is_sharpe.value ?? undefined}><FoldValue fact={row.is_sharpe} unit="ratio" /></td>
                   <td data-fold-oos={row.oos_sharpe.value ?? undefined}><FoldValue fact={row.oos_sharpe} unit="ratio" /></td>
-                  <td data-fold-decay={row.decay.value ?? undefined}><FoldValue fact={row.decay} unit="ratio" /></td>
+                  <td data-fold-decay={row.decay.value ?? undefined} data-fail={row.failed_criteria.includes("DECAY") ? "DECAY" : undefined}><FoldValue fact={row.decay} unit="ratio" /></td>
                   <td data-fold-contribution={row.contribution_fraction.value ?? undefined}><FoldValue fact={row.contribution_fraction} unit="fraction" /></td>
                   <td>
                     <span className="rr-verdict" data-v={row.verdict} title={row.failed_criteria.length > 0 ? `failed: ${row.failed_criteria.join(", ")}` : undefined}>

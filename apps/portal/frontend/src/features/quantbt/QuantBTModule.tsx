@@ -35,6 +35,7 @@ import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
 import { PortalApiError } from "../../lib/api";
 import "../../research/researchScreen.css";
+import { useResearchDocumentTitle } from "../../research/documentTitle";
 
 /*
  * Every screen is its own chunk (RF-04, FE-X-01/02).
@@ -260,6 +261,7 @@ export function QuantBTModule() {
      them for a header count and a chip those screens do not show (RF-04,
      FE-X-03). */
   const onResearchScreen = RESEARCH_SCREEN.test(location.pathname);
+  useResearchDocumentTitle(location.pathname);
   const runs = useQuery({
     queryKey: ["runs"],
     queryFn: api.listRuns,

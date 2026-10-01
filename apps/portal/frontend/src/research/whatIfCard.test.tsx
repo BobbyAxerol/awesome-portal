@@ -391,3 +391,42 @@ describe("F1 · D7 — what-if honesty", () => {
     expect(enumWords("PER_FOLD_OOS_SCORE")).toBe("per fold OOS score");
   });
 });
+
+/* F3 · FG 07-04 / 07-05 */
+describe("F3 · what-if evaluate answer", () => {
+  const result = (outcome: "ADMITTED" | "REPLAYED" | "NOTHING_TO_EVALUATE") =>
+    ({
+      schema_version: "research.whatif-evaluate-result.v1",
+      run_id: "rrun_parent",
+      outcome,
+      grid_key: "9".repeat(64),
+      job:
+        outcome === "NOTHING_TO_EVALUATE"
+          ? null
+          : { run_id: "rrun_job", state: "QUEUED", evaluations: 47, grid_key: "9".repeat(64), requested_at_utc_ms: 1, sealed: false, progress_href: "/x" },
+    }) as never;
+
+  it("after a 202 ADMITTED one outcome line says what started", () => {
+    const { container } = renderCard({ evaluate: { state: "done", result: result("ADMITTED") } });
+    expect(container.querySelector("[data-evaluate-outcome='ADMITTED']")?.textContent).toBe(
+      "admitted — one diagnostic job started · 47 evaluations · job queued",
+    );
+  });
+
+  it("REPLAYED and NOTHING_TO_EVALUATE are told apart from ADMITTED", () => {
+    const replayed = renderCard({ evaluate: { state: "done", result: result("REPLAYED") } });
+    expect(replayed.container.querySelector("[data-evaluate-outcome]")?.textContent).toMatch(/^replayed/);
+    cleanup();
+    const none = renderCard({ evaluate: { state: "done", result: result("NOTHING_TO_EVALUATE") } });
+    expect(none.container.querySelector("[data-evaluate-outcome]")?.textContent).toBe("nothing to evaluate — every node exists");
+  });
+
+  it("a 409 says the grid changed and asks for a re-read; other refusals do not", () => {
+    const refusal = (status: number) =>
+      ({ code: "RESEARCH_WHATIF_GRID_CHANGED", message: "m", detail: null, status, requestId: null, state: "stale", mayRetry: true, terminal: false, stopsPolling: false, sessionExpired: false, notFound: false }) as never;
+    const c409 = renderCard({ evaluate: { state: "refused", refusal: refusal(409) } }).container;
+    expect(c409.querySelector("[data-evaluate-conflict]")?.textContent).toBe("the grid changed since you read it — re-read, then evaluate again");
+    cleanup();
+    expect(renderCard({ evaluate: { state: "refused", refusal: refusal(503) } }).container.querySelector("[data-evaluate-conflict]")).toBeNull();
+  });
+});

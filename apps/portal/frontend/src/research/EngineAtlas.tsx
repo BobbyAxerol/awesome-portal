@@ -18,7 +18,7 @@
  * palette value for value — no raw hex, and no change to Execution Carbon.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { Formula } from "./Formula";
@@ -261,7 +261,7 @@ function RoutesTab({
 }: {
   doc: AtlasDocument;
   selectedRoute?: string | null;
-  onRoute?: (route: string) => void;
+  onRoute?: (route: string | null) => void;
 }) {
   const rows = useMemo(() => allRouteDisplays(doc), [doc]);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -324,10 +324,10 @@ function RoutesTab({
                   <button
                     type="button"
                     className="mono text-left font-semibold"
-                    onClick={() => onRoute?.(row.routeId)}
+                    onClick={() => onRoute?.(open ? null : row.routeId)}
                     data-route-link={row.routeId}
                     aria-expanded={open}
-                    title={open ? "selected — its axes and engine facts are open below" : "select this route: open its four axes and engine facts"}
+                    title={open ? "selected — click again to close its axes and engine facts" : "select this route: open its four axes and engine facts"}
                     style={{ color: row.admitted ? "var(--ink)" : "var(--ink-soft)" }}
                   >
                     {row.routeId}
@@ -452,7 +452,7 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
           </div>
           {claim.qualifier ? (
             <span
-              className="mono text-[9.5px] leading-[1.5]"
+              className="mono text-[9.5px] leading-[1.5] [overflow-wrap:anywhere]"
               style={{ color: "var(--ink-soft)" }}
               data-claim-qualifier={claim.qualifier.result_metadata_derivation}
               title={
@@ -560,18 +560,18 @@ function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
         <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }}>
           causality, OOS use, params, cert cap
         </summary>
-        <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
+        <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5">
           <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>causality</dt>
-          <dd className="mono text-[10px]">{fact.causality_claim} · {fact.causality_schedule_v2}</dd>
+          <dd className="mono min-w-0 text-[10px] [overflow-wrap:anywhere]">{fact.causality_claim} · {fact.causality_schedule_v2}</dd>
           <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>outer OOS</dt>
-          <dd className="text-[10.5px]" data-oos-use={fact.oos_use}>
+          <dd className="min-w-0 text-[10.5px] [overflow-wrap:anywhere]" data-oos-use={fact.oos_use}>
             {fact.oos_use === "USED" ? "feeds selection" : "does not feed selection"}
             {fact.oos_use_condition ? <span style={{ color: "var(--ink-soft)" }}> — {fact.oos_use_condition}</span> : null}
           </dd>
           <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>params</dt>
-          <dd className="mono text-[10px]">{fact.params_semantics}</dd>
+          <dd className="mono min-w-0 text-[10px] [overflow-wrap:anywhere]">{fact.params_semantics}</dd>
           <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>cert cap</dt>
-          <dd>
+          <dd className="min-w-0 [overflow-wrap:anywhere]">
             <NotPublished fact={fact.cert_cap} label="cert_cap" />
           </dd>
         </dl>
@@ -793,6 +793,52 @@ export type AtlasRunCell =
   | { state: "loading" }
   | { state: "absent"; reason: string };
 
+/**
+ * F3 7_root: the HiFi's "what it reads" strip, drawn from the SERVED `reads.selection_inputs`
+ * (one cell per input; the server's token is the tooltip). The cell's look is chosen by the
+ * token's name only: nothing is invented, and an input the strip cannot classify is a plain cell.
+ */
+export type ReadsGlyphKind = "oos" | "ghost" | "plateau" | "is" | "other";
+
+export function readsGlyphKind(input: string): ReadsGlyphKind {
+  if (/oos/.test(input)) return "oos";
+  if (/bootstrap|replicate/.test(input)) return "ghost";
+  if (/plateau|coordinate/.test(input)) return "plateau";
+  if (/^(full_)?is_|_is_|^is_/.test(input)) return "is";
+  return "other";
+}
+
+const GLYPH_STYLE: Record<ReadsGlyphKind, { width: number; style: CSSProperties }> = {
+  is: { width: 34, style: { background: "var(--accent-soft)", border: "1px solid var(--accent)" } },
+  oos: {
+    width: 14,
+    style: { background: "repeating-linear-gradient(135deg, var(--accent-2-soft) 0 3px, transparent 3px 6px)", border: "1px solid var(--accent-2)" },
+  },
+  ghost: { width: 34, style: { background: "transparent", border: "1px dashed var(--accent)" } },
+  plateau: { width: 34, style: { background: "var(--paper-sunken)", border: "1px solid var(--line-strong)" } },
+  other: { width: 20, style: { background: "var(--paper-raised)", border: "1px solid var(--line)" } },
+};
+
+function ReadsGlyphs({ inputs }: { inputs: readonly string[] }) {
+  return (
+    <span className="flex w-full flex-wrap items-center gap-[3px] pb-0.5" data-reads-glyphs role="img" aria-label={`reads: ${inputs.join(", ")}`}>
+      {inputs.map((input) => {
+        const kind = readsGlyphKind(input);
+        return (
+          <span
+            key={input}
+            title={input}
+            data-reads-glyph={kind}
+            data-reads-input={input}
+            className="inline-block h-[14px] rounded-[2px]"
+            style={{ width: GLYPH_STYLE[kind].width, ...GLYPH_STYLE[kind].style }}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
 export interface ModeCardProps {
   mode: AtlasMode;
   /** The schedule whose claim is shown. Always one the mode lists. */
@@ -890,6 +936,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
           </span>
           {facts && isPublished<AtlasReadsFact>(facts.reads) ? (
             <span className="flex flex-wrap gap-1" data-reads>
+              <ReadsGlyphs inputs={facts.reads.selection_inputs} />
               {facts.reads.selection_inputs.map((input) => (
                 <span key={input} className="mono rounded-[3px] border px-[5px] text-[9.5px] leading-[16px]" style={{ borderColor: "var(--line)", color: "var(--ink)" }}>
                   {input}
@@ -1169,7 +1216,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="contents">
       <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>{label}</dt>
-      <dd className="mono text-[10.5px]">{children}</dd>
+      <dd className="mono min-w-0 text-[10.5px] [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
 }
@@ -1189,7 +1236,7 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
         release facts · {release.release_id}
       </summary>
       <div className="flex flex-wrap gap-x-8 gap-y-3 pt-2">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+        <dl className="grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
           <Fact label="package">{release.package} · expected {release.expected_version}</Fact>
           <Fact label="native">
             {release.native_package ? `${release.native_package} · expected ${release.native_expected_version ?? "not declared"}` : "none declared"}
@@ -1210,7 +1257,7 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
             </Fact>
           ) : null}
         </dl>
-        <div className="flex min-w-[260px] flex-1 flex-col gap-1">
+        <div className="flex min-w-[min(260px,100%)] flex-1 flex-col gap-1">
           {release.optimizer_defaults.groups.map((group) => (
             <span key={group.group_id} className="mono text-[10px] leading-[1.6]" data-default-group={group.group_id}>
               <span style={{ color: "var(--ink-faint)" }}>{group.group_id}</span>{" "}
@@ -1375,6 +1422,10 @@ export interface EngineAtlasProps {
   runCell?: AtlasRunCell;
   /** V2 (2026-09-30): inside Screen 04's Atlas tab — the hub already names the screen, so no own crumb/title. */
   embedded?: boolean;
+  /** F3 12-15: the failed read's request id, printed with its refusal. */
+  requestId?: string | null;
+  /** F3 12-15: "read again" for a read that can be repeated (unavailable / failed-retryable). */
+  onRetry?: () => void;
 }
 
 export function EngineAtlas({
@@ -1389,7 +1440,10 @@ export function EngineAtlas({
   onLocationChange,
   runCell,
   embedded = false,
+  requestId = null,
+  onRetry,
 }: EngineAtlasProps) {
+  const panelId = useId();
   const release = doc ? currentReleaseLabel(doc.current_release) : null;
   const history = doc ? historicalReleaseLabels(doc) : [];
   const [schedules, setSchedules] = useState<Record<string, string>>(() =>
@@ -1537,6 +1591,8 @@ export function EngineAtlas({
               key={candidate}
               type="button"
               role="tab"
+              id={`${panelId}-tab-${candidate}`}
+              aria-controls={`${panelId}-panel`}
               aria-selected={selected}
               tabIndex={selected ? 0 : -1}
               data-tab={candidate}
@@ -1574,12 +1630,19 @@ export function EngineAtlas({
         meta={doc ? `manifest revision ${doc.manifest_revision}` : undefined}
         state={state}
         minBodyHeight={160}
+        recovery={
+          onRetry ? (
+            <button type="button" onClick={onRetry} className="btn-ghost self-start" data-action="retry-atlas">
+              Read again
+            </button>
+          ) : undefined
+        }
       >
         {!doc && state.state === "available" ? (
           <AtlasFactsAbsent kind={selectedReleaseKind} identity={historicalIdentity} />
         ) : null}
         {doc ? (
-          <div role="tabpanel" aria-label={TAB_LABEL[tab]}>
+          <div role="tabpanel" id={`${panelId}-panel`} aria-labelledby={`${panelId}-tab-${tab}`}>
             {tab === "routes" ? (
               <RoutesTab
                 doc={doc}
@@ -1594,6 +1657,12 @@ export function EngineAtlas({
           </div>
         ) : null}
       </ResearchPanel>
+      {/* F3 12-15: a refusal keeps its request id (403/404 included), so it can be quoted. */}
+      {requestId && !doc && state.state !== "available" ? (
+        <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-request-id>
+          request {requestId}
+        </span>
+      ) : null}
     </div>
   );
 }

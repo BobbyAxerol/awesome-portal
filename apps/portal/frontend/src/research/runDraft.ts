@@ -179,15 +179,16 @@ export type StepId =
 export const STEPS: readonly { id: StepId; label: string; sub: string }[] = [
   { id: "context", label: "Context", sub: "alpha · av_ binding" },
   { id: "strategy", label: "Strategy", sub: "pinned by av_ / free when scratch" },
-  { id: "route", label: "Route", sub: "14 routes · per-route params" },
-  { id: "data", label: "Data", sub: "dataset · symbol · timeframe" },
+  { id: "route", label: "Route", sub: "execution route · per-route params" },
+  { id: "data", label: "Market data", sub: "dataset · symbol · timeframe" },
   { id: "windows", label: "Walk-forward", sub: "three-window / advanced" },
   { id: "parameters", label: "Parameters", sub: `sweep / pin · ceiling ${SWEEP_CEILING}` },
   { id: "optimization", label: "Optimization", sub: "trials · config surface" },
   { id: "review", label: "Review & run", sub: "preflight · create" },
 ];
 
-function utcMs(value: string): number | null {
+/** A draft instant (`2026-05-01T00:00`, read as UTC) in epoch ms; `null` when empty or unreadable. */
+export function utcMs(value: string): number | null {
   if (!value) return null;
   const parsed = Date.parse(value.endsWith("Z") ? value : `${value}:00Z`);
   return Number.isNaN(parsed) ? null : parsed;

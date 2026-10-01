@@ -2185,6 +2185,24 @@ export function SearchScreen({
 
             <ProvenanceStrip provenance={lane ? retainedProvenance(lane, detail) : detail.provenance} />
 
+            {/* F3 · H06 hero: the search cinema stays unbuilt until the engine publishes a sampler trace; one typed line holds its place. */}
+            {fixed ? null : (() => {
+              const samplerCode = lane
+                ? lane.diagnostics.probe.sampler.reason_code
+                : gapOf("sampler_seed_warm_start")?.reason_code ?? null;
+              return (
+                <div
+                  className="mono flex flex-wrap items-baseline gap-x-2 rounded-[6px] border border-dashed px-3 py-1.5 text-[10.5px]"
+                  style={{ borderColor: "var(--line)", color: "var(--ink-faint)" }}
+                  data-panel="search-cinema"
+                  data-gap-state="NOT_PUBLISHED"
+                >
+                  <span className="italic">search cinema — sampler trace not published</span>
+                  {samplerCode ? <span className="text-[9px]">{samplerCode}</span> : null}
+                </div>
+              );
+            })()}
+
             {/* ------------------------------------ Stage A · freeze · Stage B */}
             <div
               className="grid grid-cols-1 gap-3 min-[1100px]:grid-cols-[1.08fr_52px_1fr] min-[1100px]:gap-0"

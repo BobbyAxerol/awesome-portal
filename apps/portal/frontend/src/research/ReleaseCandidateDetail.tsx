@@ -346,13 +346,19 @@ a.rc-node:hover { border-color: var(--accent); text-decoration: none; }
 .rc-verdict .b { font-size: 11px; color: var(--ink-soft); line-height: 1.55; margin: 0; }
 .rc-packcard { overflow: hidden; }
 .rc-packhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--line); }
-.rc-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.rc-chips { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; min-width: 0; margin-left: auto; }
 .rc-ceiling, .rc-engcert { font-family: var(--font-mono); font-size: 10px; font-weight: 700; border-radius: 3px; padding: 1px 7px; overflow-wrap: anywhere; }
 .rc-ceiling { border: 1px solid var(--accent-2); background: var(--paper-raised); color: var(--accent-2); }
 .rc-engcert { border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); }
 .rc-ceiling[data-ghost="true"], .rc-engcert[data-ghost="true"] { border-style: dashed; border-color: var(--line-strong); background: var(--paper-raised); color: var(--ink-soft); font-weight: 400; }
 .rc-count { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); }
-.rc-pack { overflow-x: auto; min-width: 0; }
+.rc-pack { overflow-x: auto; min-width: 0;
+  /* S11 F3: scroll shadows (CSS only) show a sideways-scrolling table at narrow width. */
+  background:
+    linear-gradient(to right, var(--paper-raised) 30%, transparent) 0 0 / 40px 100% no-repeat local,
+    linear-gradient(to left, var(--paper-raised) 30%, transparent) 100% 0 / 40px 100% no-repeat local,
+    linear-gradient(to right, var(--line-strong), transparent) 0 0 / 10px 100% no-repeat scroll,
+    linear-gradient(to left, var(--line-strong), transparent) 100% 0 / 10px 100% no-repeat scroll; }
 .rc-pack table { min-width: 960px; width: 100%; border-collapse: collapse; table-layout: fixed; }
 .rc-pack thead th { font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); font-weight: 400; text-align: left; padding: 5px 0;
   border-bottom: 1px solid var(--line-soft); }
@@ -373,8 +379,7 @@ a.rc-node:hover { border-color: var(--accent); text-decoration: none; }
 .rc-status[data-s="DEGRADED"] { color: var(--accent-2); }
 .rc-status[data-s="INPUT"] { color: var(--accent); }
 .rc-status[data-s="MISSING"] { color: var(--bad); }
-.rc-pack .digest { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rc-pack .digest[data-digest=""] { white-space: normal; overflow-wrap: anywhere; }
+.rc-pack .digest { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); max-width: 250px; overflow-wrap: anywhere; }
 .rc-pack .source { font-family: var(--font-mono); font-size: 10px; overflow-wrap: anywhere; }
 .rc-pack .source .off { color: var(--ink-soft); }
 .rc-pack .note { font-size: 10.5px; color: var(--ink-soft); line-height: 1.5; overflow-wrap: anywhere; }
@@ -393,14 +398,14 @@ a.rc-node:hover { border-color: var(--accent); text-decoration: none; }
 .rc-btn[data-primary="true"] { border-color: var(--accent); color: var(--accent); }
 .rc-btn[aria-disabled="true"] { border-style: dashed; color: var(--ink-soft); cursor: not-allowed; }
 .rc-packfoot { padding: 8px 16px; border-top: 1px solid var(--line-soft); background: var(--paper-sunken); font-size: 11px; color: var(--ink-soft); line-height: 1.55; margin: 0; }
-.rc-group3 { display: flex; gap: 14px; flex-wrap: wrap; align-items: stretch; min-width: 0; }
+.rc-group3 { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; min-width: 0; }
 .rc-record { flex: 1.25 1 440px; min-width: min(440px, 100%); overflow: hidden; display: flex; flex-direction: column; }
 .rc-record .h { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; padding: 8px 14px; border-bottom: 1px solid var(--line); }
 .rc-copy { border: 0; background: transparent; color: var(--accent); font-family: var(--font-mono); font-size: 9.5px; padding: 0; cursor: pointer; }
 .rc-yaml { flex: 1; padding: 10px 14px; background: var(--paper-raised); overflow-x: auto; margin: 0; }
-.rc-yaml .line { display: flex; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.75; white-space: nowrap; }
+.rc-yaml .line { display: flex; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.75; }
 .rc-yaml .k { color: var(--ink-mute); width: 270px; flex: none; }
-.rc-yaml .v { color: var(--ink); }
+.rc-yaml .v { color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
 .rc-yaml .v[data-tone="gold"] { color: var(--accent-2); }
 .rc-yaml .v[data-tone="red"] { color: var(--bad); }
 .rc-yaml .v[data-tone="dim"] { color: var(--ink-mute); }
@@ -660,6 +665,16 @@ export function stateChipOf(compose: RcCompose, publication: RcPublication | nul
   return compose.state;
 }
 
+/** S11 F3: a lifecycle token as words (`NOT_DELIVERED` -> `not delivered`); the token stays in the data attribute. */
+export function stateWords(token: string): string {
+  return token.toLowerCase().replace(/_/g, " ");
+}
+
+/** S11 F3: a hex digest as `shortDigest()` with the full value kept in a title; anything else is printed as served. */
+export function digestText(value: string): string {
+  return /^(sha256:)?[0-9a-f]{16,}$/i.test(value) ? (shortDigest(value) ?? value) : value;
+}
+
 function StateChip({ value }: { value: string }) {
   return (
     <span className="rc-state" data-s={value} data-state-chip={value}>
@@ -674,11 +689,11 @@ function SealChips({ seal, delivered }: { seal: RcLocalSeal; delivered: boolean 
     <>
       {delivered ? null : (
         <span className="rc-state" data-s="SEALED_LOCAL" data-seal-chip title="an immutable Portal-local pack exists">
-          SEALED_LOCAL
+          sealed locally
         </span>
       )}
-      <span className="rc-lifecycle" data-lifecycle>
-        {seal.delivery_state ?? "delivery not published"} · {seal.approval_state ?? "approval not published"}
+      <span className="rc-lifecycle" data-lifecycle title={`${seal.delivery_state ?? "delivery not published"} · ${seal.approval_state ?? "approval not published"}`}>
+        {seal.delivery_state !== null ? stateWords(seal.delivery_state) : "delivery not published"} · {seal.approval_state !== null ? stateWords(seal.approval_state) : "approval not published"}
       </span>
     </>
   );
@@ -1152,7 +1167,7 @@ function PackRow({ item, route, declared, editor, highlighted = false, onHover }
           </span>
         </td>
         <td className="digest" data-digest={item.digest ?? ""} title={item.digest ?? undefined}>
-          {item.digest !== null ? item.digest : decl !== null ? <span className="rc-absent">— not declared</span> : <Absent availability={item.availability} />}
+          {item.digest !== null ? digestText(item.digest) : decl !== null ? <span className="rc-absent">— not declared</span> : <Absent availability={item.availability} />}
         </td>
         <td className="source">
           <SourceCell item={item} route={route} />
@@ -1495,12 +1510,12 @@ function SealedCard({ seal, replayed }: {
           <Absent what="release candidate id" availability={seal.availability} />
         )}
       </span>
-      <p className="rc-mono" data-sealed-facts>
-        sealed_at {seal.sealed_at_utc_ms !== null ? iso(seal.sealed_at_utc_ms) : "not published"} · pack digest {seal.pack_digest ?? "not published"}
+      <p className="rc-mono" data-sealed-facts title={seal.pack_digest !== null ? `pack digest ${seal.pack_digest}` : undefined}>
+        sealed_at {seal.sealed_at_utc_ms !== null ? iso(seal.sealed_at_utc_ms) : "not published"} · pack digest {seal.pack_digest !== null ? digestText(seal.pack_digest) : "not published"}
       </p>
       <p className="rc-mono" data-sealed-lifecycle>
-        <span data-delivery-state={seal.delivery_state ?? ""}>{seal.delivery_state ?? "delivery not published"}</span> ·{" "}
-        <span data-approval-state={seal.approval_state ?? ""}>{seal.approval_state ?? "approval not published"}</span>
+        <span data-delivery-state={seal.delivery_state ?? ""} title={seal.delivery_state ?? undefined}>{seal.delivery_state !== null ? stateWords(seal.delivery_state) : "delivery not published"}</span> ·{" "}
+        <span data-approval-state={seal.approval_state ?? ""} title={seal.approval_state ?? undefined}>{seal.approval_state !== null ? stateWords(seal.approval_state) : "approval not published"}</span>
       </p>
       {seal.availability.state !== "AVAILABLE" ? (
         <p data-sealed-availability>
@@ -1718,7 +1733,7 @@ function PublishCard({ compose, controller, publication }: {
           sentence={PUBLISH_CONFIRM}
           sentenceTitle={PUBLISH_CONFIRM_TITLE}
           confirm={PUBLISH_CONFIRM_BUTTON}
-          detail={`${releaseCandidateId} · pack ${view.publication.pack_digest} · claim ${choice ?? ""}`}
+          detail={<span title={`pack ${view.publication.pack_digest}`}>{`${releaseCandidateId} · pack ${digestText(view.publication.pack_digest)} · claim ${choice ?? ""}`}</span>}
           onConfirm={() => {
             setConfirming(false);
             publication.publish(choice);
@@ -1865,8 +1880,8 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
             <span data-published-by>by {published.by_username}</span>
             {" · evidence digest "}
             {approval !== null ? (
-              <span className="rc-mono" data-evidence-digest>
-                {approval.evidence_set_hash}
+              <span className="rc-mono" data-evidence-digest title={approval.evidence_set_hash}>
+                {digestText(approval.evidence_set_hash)}
               </span>
             ) : (
               <span className="rc-absent" data-evidence-digest-absent>
@@ -1874,8 +1889,8 @@ function PublishedCard({ releaseCandidateId, publication }: { releaseCandidateId
               </span>
             )}
           </p>
-          <p className="rc-mono" data-published-receipt>
-            receipt {published.receipt_digest} · approval {published.approval_id}
+          <p className="rc-mono" data-published-receipt title={`receipt ${published.receipt_digest}`}>
+            receipt {digestText(published.receipt_digest)} · approval {published.approval_id}
           </p>
         </>
       ) : (

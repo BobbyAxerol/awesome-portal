@@ -629,7 +629,8 @@ describe("RF-04 FE-S02-06 — timeframe choices come only from the bound declara
     expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain(selected.chronological_validation_claim.toUpperCase());
     /* S02-01: the ceiling line carries the server's own reason for the absence,
        not a sentence written in the form. */
-    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("cert ceiling — not published");
+    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("cert ceiling");
+    expect(document.querySelector("[data-cert-ceiling-absent]")?.textContent).toBe("not published");
     expect(document.querySelector("[data-cert-cap-reason]")?.textContent).toBe(selected.cert_cap.reason);
   });
 });
@@ -1121,8 +1122,9 @@ describe("FG-05 — last published rc reads the Alpha version's publication", ()
     goToStep("context");
     const row = await lastRc("CURRENT");
     expect(row.querySelector("[data-last-rc]")!.textContent).toBe(
-      `rc_01K5LAST · APPROVED_WITH_CONDITION (effective EXPIRED) · CURRENT · published ${new Date(LOOKUP_PUBLISHED_AT).toISOString()}`,
+      "rc_01K5LAST · APPROVED_WITH_CONDITION (effective EXPIRED) · CURRENT · published 2026-09-25 08:08 UTC",
     );
+    expect(row.querySelector("[data-last-rc] [title]")!.getAttribute("title")).toBe(new Date(LOOKUP_PUBLISHED_AT).toISOString());
     expect(row.querySelector("[data-last-rc]")!.getAttribute("data-last-rc-status")).toBe("APPROVED_WITH_CONDITION");
     expect(sent.map((call) => call.url)).toEqual([LOOKUP_URL]);
   });
@@ -1132,7 +1134,7 @@ describe("FG-05 — last published rc reads the Alpha version's publication", ()
     view({ registry });
     goToStep("context");
     const row = await lastRc("SUPERSEDED");
-    expect(row.querySelector("[data-last-rc]")!.textContent).toBe(`rc_01K5OLD · APPROVED · SUPERSEDED · published ${new Date(LOOKUP_PUBLISHED_AT).toISOString()}`);
+    expect(row.querySelector("[data-last-rc]")!.textContent).toBe("rc_01K5OLD · APPROVED · SUPERSEDED · published 2026-09-25 08:08 UTC");
   });
 
   it("shows a typed absence with the server's reason code, never a dash or a zero", async () => {
@@ -1415,6 +1417,9 @@ describe("F2b S02 — the way out and the way back", () => {
     const href = (name: string) => document.querySelector(`[data-link="${name}"]`)?.getAttribute("href");
     expect(href("run-library")).toBe("/research/quantbt/runs");
     expect(href("alpha-import")).toBe("/research/quantbt/alpha-import");
+    /* HiFi 02-11: the atlas link moved into the route card. */
+    expect(href("atlas")).toBeUndefined();
+    goToStep("route");
     expect(href("atlas")).toBe("/research/quantbt/atlas");
     expect(document.body.textContent).not.toContain("Each step validates on its own");
     expect(document.querySelector("h1")?.getAttribute("title")).toContain("Each step validates on its own");

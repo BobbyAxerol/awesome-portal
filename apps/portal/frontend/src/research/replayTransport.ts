@@ -22,6 +22,8 @@ export type Speed = (typeof SPEEDS)[number];
 
 /** Samples per second at 1×. A sample is not a bar, so the rate is a pace, not time. */
 export const BASE_RATE = 4;
+/** The HiFi (H08) opens at 4×; the replay contract states no default of its own. */
+export const DEFAULT_SPEED: Speed = 4;
 export const JUMP = 10;
 
 export interface TransportSnapshot {
@@ -50,7 +52,7 @@ const browserScheduler: TransportScheduler = {
 };
 
 export class ReplayTransport {
-  private snapshot: TransportSnapshot = { playing: false, speed: 1, index: 0, length: 0, pausedHidden: false };
+  private snapshot: TransportSnapshot = { playing: false, speed: DEFAULT_SPEED, index: 0, length: 0, pausedHidden: false };
   private listeners = new Set<Listener>();
   private endListeners = new Set<Listener>();
   private actions = 0;

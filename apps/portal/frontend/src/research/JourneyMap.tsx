@@ -31,7 +31,7 @@ import type {
 } from "./foundationClient";
 import { ResearchPanel } from "./ResearchPanel";
 import { shortId } from "./researchFormat";
-import { journeyCardScope, needsRunToOpen, opensWithRunId, pickRunHref, resolveJourneyCardRoute } from "./screenRoutes";
+import { journeyCardScope, needsAlphaToOpen, needsRunToOpen, opensWithRunId, pickRunHref, resolveJourneyCardRoute } from "./screenRoutes";
 import type { ResearchState } from "./state";
 import { CursorNotice } from "./CursorNotice";
 import { decodeInspectionCursor, encodeInspectionCursor, type CursorProblem } from "./inspectionCursor";
@@ -89,26 +89,28 @@ export function unreachableReason(card: JourneyCard, route: string | null): stri
   return null;
 }
 
+/** F3 00-1d: HiFi legend — two swatches (shipped / redesigned); the execution tag explains itself on its cards. */
+const LEGEND: readonly { kind: "SHIPPED" | "RESEARCH_SCREEN"; label: string }[] = [
+  { kind: "SHIPPED", label: "shipped hi-fi" },
+  { kind: "RESEARCH_SCREEN", label: "redesigned" },
+];
+
 function TagLegend() {
   return (
-    <div className="flex flex-wrap items-center gap-2" data-legend>
-      {(Object.keys(TAG_LABEL) as JourneyCard["target_kind"][]).map((kind) => {
+    <div className="mono flex flex-none items-center gap-3.5 text-[10px]" style={{ color: "var(--ink-soft)" }} data-legend>
+      {LEGEND.map(({ kind, label }) => {
         const tone = TAG_STYLE[kind];
         return (
-          <span
-            key={kind}
-            data-legend-tag={kind}
-            title={TAG_TITLE[kind]}
-            className="mono rounded-[3px] border px-[5px] text-[8.5px] uppercase leading-[15px]"
-            style={{
-              color: tone.ink,
-              borderColor: tone.border,
-              background: tone.background,
-              fontWeight: tone.weight,
-              borderWidth: kind === "RESEARCH_SCREEN" ? 1.5 : 1,
-            }}
-          >
-            {TAG_LABEL[kind]}
+          <span key={kind} data-legend-tag={kind} title={TAG_TITLE[kind]} className="inline-flex items-center gap-[5px]">
+            <span
+              aria-hidden="true"
+              className="inline-block h-2.5 w-2.5 rounded-[2px]"
+              style={{
+                border: `${kind === "RESEARCH_SCREEN" ? 1.5 : 1}px solid ${tone.border}`,
+                background: kind === "RESEARCH_SCREEN" ? "var(--paper)" : "var(--paper-raised)",
+              }}
+            />
+            {label}
           </span>
         );
       })}
@@ -240,7 +242,7 @@ function PhaseRow({ phase, runId }: { phase: JourneyPhase; runId: string | null 
         <div className="mono text-[11px] font-bold" style={{ color: "var(--accent)" }}>
           P{phase.ordinal}
         </div>
-        <h2 className="text-[13px] font-semibold" style={{ color: "var(--ink)" }}>
+        <h2 className="text-[13px] font-semibold" style={{ color: "var(--ink)", fontFamily: "var(--font-body)" }} data-phase-title>
           {phase.title}
         </h2>
         <div className="text-[10.5px] leading-[1.45]" style={{ color: "var(--ink-faint)" }}>
@@ -333,6 +335,55 @@ function InspectionStrip({ inspection }: { inspection: InspectionCursor }) {
   );
 }
 
+/**
+ * F3 00-8…10: where a mapping column opens. Same resolution as the cards: the run in
+ * hand opens the screen directly, otherwise a run-scoped key opens the Run Library as
+ * the picker; a key this build cannot serve is drawn as plain text, never as a guess.
+ */
+export function mappingHref(targetKey: string, runId: string | null): { href: string; picks: boolean } | null {
+  const direct = resolveJourneyCardRoute(targetKey, runId);
+  if (direct) return { href: direct, picks: false };
+  if (needsRunToOpen(targetKey)) return { href: pickRunHref(targetKey, needsAlphaToOpen(targetKey) ? "ALPHA" : "RUN"), picks: true };
+  return null;
+}
+
+function MappingLink({
+  targetKey,
+  runId,
+  label,
+  column,
+  color,
+}: {
+  targetKey: string;
+  runId: string | null;
+  label: string;
+  column: "shipped" | "mine";
+  color: string;
+}) {
+  const target = mappingHref(targetKey, runId);
+  const common = "mono min-w-0 text-[10.5px]";
+  if (!target) {
+    return (
+      <span className={common} style={{ color: "var(--ink-faint)" }} data-mapping-cell={column} data-mapping-key={targetKey} data-mapping-unrouted title={`${targetKey} — not routed in this build`}>
+        {label}
+      </span>
+    );
+  }
+  return (
+    <Link
+      to={target.href}
+      className={common}
+      style={{ color }}
+      data-mapping-cell={column}
+      data-mapping-key={targetKey}
+      data-mapping-route={target.href}
+      title={target.picks ? "Pick a run to open" : undefined}
+    >
+      {label}
+    </Link>
+  );
+}
+
 export interface JourneyMapProps {
   descriptor: JourneyDescriptor | null;
   inspection: InspectionCursor | null;
@@ -358,7 +409,7 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
   return (
     <div
       data-screen="journey-map"
-      className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col gap-3 px-2 pb-8"
+      className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col gap-3 pb-8"
     >
       <header className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" role="group" data-breadcrumb>
@@ -382,14 +433,29 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
           ) : null}
           <span style={{ color: "var(--ink)" }} aria-current="page">Journey Map</span>
         </div>
-        <h1
-          className="text-[22px] font-light tracking-[-.01em]"
-          style={{ fontFamily: "Newsreader, Georgia, serif" }}
-          title="A reading map of the domain: where each screen sits, and what it adds."
+        <div
+          className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5 border-b pb-2.5"
+          style={{ borderColor: "var(--line)" }}
+          data-journey-head
         >
-          QuantBT Backtest — journey map
-        </h1>
-        <TagLegend />
+          <div className="flex min-w-0 flex-col gap-[3px]">
+            <div
+              className="mono text-[10px] uppercase tracking-[.1em]"
+              style={{ color: "var(--ink-faint)" }}
+              data-journey-kicker
+            >
+              Quant Ecosystem Portal · Research
+            </div>
+            <h1
+              className="text-[27px] font-normal leading-[1.2] tracking-[-.01em]"
+              style={{ fontFamily: "Newsreader, Georgia, serif" }}
+              title="A reading map of the domain: where each screen sits, and what it adds."
+            >
+              Journey Map — shipped portal × redesigned evidence flow
+            </h1>
+          </div>
+          <TagLegend />
+        </div>
         {/* `ResearchPanel` prints `meta` only in its framed variant, and this screen is
             plain, so the descriptor revision never reached the reader: the map said which
             screens exist without saying which published answer it was reading. */}
@@ -421,15 +487,25 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
       </ResearchPanel>
 
       {descriptor?.mapping ? (
-        <section data-mapping className="mt-1 rounded-[8px] border bg-[var(--paper-raised)] px-4 py-3" style={{ borderColor: "var(--line)" }}>
-          <h2 className="text-[13px] font-semibold" style={{ color: "var(--ink)" }}>What the redesign adds</h2>
-          <div className="mt-2 grid gap-1.5">
+        <section data-mapping className="mt-1 flex flex-col gap-2 rounded-[8px] border bg-[var(--paper-raised)] px-4 py-3.5 shadow-[0_1px_2px_rgba(28,37,50,.05)]" style={{ borderColor: "var(--line)" }}>
+          <h2
+            className="text-[10px] font-medium uppercase tracking-[.07em]"
+            style={{ color: "var(--ink-faint)", fontFamily: "var(--font-body)" }}
+          >
+            where the redesign plugs into the shipped run view — tab by tab
+          </h2>
+          <div className="grid">
             {descriptor.mapping.map((row, index) => (
-              <div key={`${row.shipped_target_key}:${row.mine_target_key}:${index}`} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-3 border-t py-2 text-[11px] sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(0,2fr)]" style={{ borderColor: "var(--line-soft)" }}>
-                <span className="mono" style={{ color: "var(--ink-faint)" }}>{row.shipped}</span>
-                <span aria-hidden="true" style={{ color: "var(--accent)" }}>→</span>
-                <span className="font-semibold" style={{ color: "var(--ink)" }}>{row.mine}</span>
-                <span className="col-span-3 text-[10.5px] sm:col-span-1" style={{ color: "var(--ink-soft)" }}>{row.adds}</span>
+              <div
+                key={`${row.shipped_target_key}:${row.mine_target_key}:${index}`}
+                data-mapping-row
+                className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-baseline gap-x-2.5 border-b py-[3px] text-[11.5px] min-[900px]:grid-cols-[minmax(0,200px)_auto_minmax(0,290px)_minmax(0,1fr)]"
+                style={{ borderColor: "var(--line-soft)" }}
+              >
+                <MappingLink targetKey={row.shipped_target_key} runId={runId} label={row.shipped} column="shipped" color="var(--accent)" />
+                <span aria-hidden="true" style={{ color: "var(--line-strong)" }}>→</span>
+                <MappingLink targetKey={row.mine_target_key} runId={runId} label={row.mine} column="mine" color="var(--warn)" />
+                <span className="col-span-3 min-[900px]:col-span-1" style={{ color: "var(--ink-soft)" }}>{row.adds}</span>
               </div>
             ))}
           </div>

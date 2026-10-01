@@ -502,7 +502,7 @@ describe("S13 Compare — pair", () => {
     const rows = Array.from(document.querySelectorAll("[data-delta-row]")).map((el) => el.getAttribute("data-delta-row"));
     expect(rows).toEqual(["OOS_SHARPE", "NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "WIN_RATE", "CLAIM"]);
     const net = document.querySelector('[data-delta-row="NET_RETURN_FRACTION"] td[data-sign]') as HTMLElement;
-    expect(net.textContent).toBe("−3.16%");
+    expect(net.textContent).toBe("−3.16 pp");
     expect(net.querySelector("[data-delta-value]")?.getAttribute("data-delta-value")).toBe("-0.0316");
     expect(net.getAttribute("data-sign")).toBe("neg");
     expect(document.querySelector('[data-delta-row="MAX_DRAWDOWN_FRACTION"] td[data-sign]')?.getAttribute("data-sign")).toBe("pos");
@@ -511,7 +511,7 @@ describe("S13 Compare — pair", () => {
     expect(document.querySelector("[data-rho]")?.getAttribute("data-exact")).toBe("0.412345");
     expect(document.querySelector("[data-rho-caption]")?.textContent).toBe("raw returns · overlapping window only");
     expect(document.querySelector("[data-correlation-source]")?.textContent).toContain("PORTAL_DERIVED");
-    expect(document.querySelector("[data-correlation-meta]")?.textContent).toContain("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
+    expect(document.querySelector("[data-correlation-meta] [title]")?.getAttribute("title")).toBe("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL");
     expect(document.querySelector("[data-promotes-under]")?.textContent).toBe(
       "WALK_FORWARD_OOS_COMPATIBILITY",
     );
@@ -1136,7 +1136,7 @@ describe("E7 / D10 — Screen 13 on the HiFi (Unified 13.4.1)", () => {
     renderAt(`/research/quantbt/alphas/${WFO_ALPHA}/compare`);
     await settled();
     const groups = Array.from(document.querySelectorAll("[data-fold-group]")).map((el) => el.textContent);
-    expect(groups[0]).toBe("fold 1");
+    expect(groups[0]).toBe("fold_01");
     const swatches = Array.from(document.querySelectorAll("[data-fold-legend] .sw")).map((el) => (el as HTMLElement).style.background);
     expect(new Set(swatches).size).toBe(swatches.length);
     /* 13-5: the attempts without per-fold rows are a count and a closed disclosure. */

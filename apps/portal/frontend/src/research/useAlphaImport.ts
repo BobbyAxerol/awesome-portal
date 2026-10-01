@@ -56,6 +56,8 @@ export interface AlphaImportController {
   gatesState: ResearchState;
   registerState: ResearchState;
   registryState: ResearchState;
+  /** Read the registry again (the way back from a failed read). */
+  onRetryRegistry: () => void;
   activationPending: boolean;
 
   refusal: ImportRefusal | null;
@@ -304,6 +306,10 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
     gatesState: stepState("gates", gates !== null, IDLE.gates),
     registerState: stepState("register", registration !== null, IDLE.register),
     registryState,
+    onRetryRegistry: () => {
+      setRegistryState(researchState({ kind: "in-flight", hasAcceptedResponse: false }));
+      loadRegistry();
+    },
     activationPending: pending === "activate",
 
     refusal,

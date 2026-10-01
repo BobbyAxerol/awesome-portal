@@ -22,30 +22,35 @@ function parse(value: string | number | null | undefined): number | null {
 const GROUPED = (digits: number) =>
   new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
+/** The HiFi prints a negative with the typographic minus (U+2212), not a hyphen. Display only: exact decimals the server published stay as served. */
+export function typographicMinus(text: string): string {
+  return text.replace(/^-(?=\d)/, "−");
+}
+
 /** A metric value for a tile or a table cell, by unit. */
 export function formatMetric(value: string | number | null | undefined, unit: string | null | undefined): string | null {
   const parsed = parse(value);
   if (parsed === null) return null;
   switch (unit) {
     case "currency":
-      return GROUPED(2).format(parsed);
+      return typographicMinus(GROUPED(2).format(parsed));
     case "fraction":
       return `${parsed >= 0 ? "+" : "−"}${GROUPED(2).format(Math.abs(parsed * 100))}%`;
     case "count":
     case "bars":
-      return Number.isInteger(parsed) ? GROUPED(0).format(parsed) : GROUPED(2).format(parsed);
+      return typographicMinus(Number.isInteger(parsed) ? GROUPED(0).format(parsed) : GROUPED(2).format(parsed));
     case "seconds":
       return formatDuration(parsed);
     case "ratio":
-      return GROUPED(3).format(parsed);
+      return typographicMinus(GROUPED(3).format(parsed));
     default:
-      return Math.abs(parsed) >= 1000 ? GROUPED(2).format(parsed) : String(Number(parsed.toPrecision(6)));
+      return typographicMinus(Math.abs(parsed) >= 1000 ? GROUPED(2).format(parsed) : String(Number(parsed.toPrecision(6))));
   }
 }
 
 /** A chart axis/tooltip value: a fraction shown as a percentage with sensible precision. */
 export function formatFractionAxis(value: number, digits = 2): string {
-  return `${GROUPED(digits).format(value * 100)}%`;
+  return `${typographicMinus(GROUPED(digits).format(value * 100))}%`;
 }
 
 const AXIS_LARGE = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -60,13 +65,13 @@ const AXIS_SMALL = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 export function formatAxisValue(value: string): string {
   const parsed = parse(value);
   if (parsed === null) return value;
-  return (Math.abs(parsed) >= 1000 ? AXIS_LARGE : AXIS_SMALL).format(parsed);
+  return typographicMinus((Math.abs(parsed) >= 1000 ? AXIS_LARGE : AXIS_SMALL).format(parsed));
 }
 
 /** A correlation coefficient to two places, as the S13 hi-fi prints ρ (DQ-08); `null` when not numeric. */
 export function formatCorrelation(value: string | null | undefined): string | null {
   const parsed = parse(value);
-  return parsed === null ? null : GROUPED(2).format(parsed);
+  return parsed === null ? null : typographicMinus(GROUPED(2).format(parsed));
 }
 
 /** `8s`, `3m 12s`, `1h 04m`. */

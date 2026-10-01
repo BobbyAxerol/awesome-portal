@@ -68,7 +68,9 @@ import {
   SOD_NOTE,
   STATUS_TITLE,
   UNKNOWN_COPY,
+  digestText,
   publishBlock,
+  stateWords,
 } from "./ReleaseCandidateDetail";
 import { ReleaseCandidatePackRoute, ReleaseCandidateRoute } from "./ReleaseCandidateRoute";
 import {
@@ -941,11 +943,15 @@ describe("S11 local seal", () => {
     expect(api.of("SEAL")[0]!.headers["x-portal-csrf"]).toBe("tok_123");
     expect(api.of("COMPOSE")).toHaveLength(2);
     expect(q("[data-sealed]")!.getAttribute("data-sealed")).toBe(RC_ID);
-    expect(q("[data-delivery-state]")!.textContent).toBe("NOT_DELIVERED");
-    expect(q("[data-approval-state]")!.textContent).toBe("NOT_APPROVED");
+    expect(q("[data-delivery-state]")!.textContent).toBe("not delivered");
+    expect(q("[data-delivery-state]")!.getAttribute("title")).toBe("NOT_DELIVERED");
+    expect(q("[data-approval-state]")!.textContent).toBe("not approved");
+    expect(q("[data-sealed-facts]")!.textContent).not.toContain(PACK_DIGEST);
+    expect(q("[data-sealed-facts]")!.getAttribute("title")).toBe(`pack digest ${PACK_DIGEST}`);
     /* SEALED_LOCAL sits beside DRAFT; nothing says PUBLISHED. */
     expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
-    expect(q("[data-seal-chip]")!.textContent).toBe("SEALED_LOCAL");
+    expect(q("[data-seal-chip]")!.textContent).toBe("sealed locally");
+    expect(q("[data-lifecycle]")!.textContent).toBe("not delivered · not approved");
     expect(within(q("[data-panel='sealed']")!).getByRole("link", { name: RC_ID }).getAttribute("href")).toBe(releaseCandidatePackHref(RC_ID));
     expect(q("[data-seal-replayed]")).toBeNull();
     /* The seal opens the P22 read of the new candidate — and only that read. */
@@ -1064,7 +1070,8 @@ describe("S11 publish (P22, two routes)", () => {
     fireEvent.click(publishButton()!);
     const dialog = screen.getByRole("alertdialog", { name: "confirm publish" });
     expect(dialog.textContent).toContain(PUBLISH_CONFIRM);
-    expect(dialog.textContent).toContain(`${RC_ID} · pack ${PACK_DIGEST} · claim ${CLAIM}`);
+    expect(dialog.textContent).toContain(`${RC_ID} · pack 55555555 · claim ${CLAIM}`);
+    expect(dialog.querySelector(`[title="pack ${PACK_DIGEST}"]`)).not.toBeNull();
     expect(api.of("PUBLISH")).toHaveLength(0);
     fireEvent.click(within(dialog).getByRole("button", { name: "Confirm publish" }));
     expect(publishButton()!.textContent).toBe(PUBLISHING_LABEL);
@@ -1085,10 +1092,12 @@ describe("S11 publish (P22, two routes)", () => {
     expect(q("[data-seal-chip]")).toBeNull();
     const card = panel("published")!;
     expect(card.querySelector("[data-published-facts]")!.textContent).toBe(
-      `published_at ${iso(PUBLISHED_AT)} · by researcher@bobby · evidence digest sha256:${"c".repeat(64)}`,
+      `published_at ${iso(PUBLISHED_AT)} · by researcher@bobby · evidence digest cccccccc`,
     );
     expect(card.querySelector("h3")!.getAttribute("title")).toBe(PUBLISHED_SENTENCE);
-    expect(card.querySelector("[data-published-receipt]")!.textContent).toBe(`receipt ${"d".repeat(64)} · approval ${APPROVAL}`);
+    expect(card.querySelector("[data-published-receipt]")!.textContent).toBe(`receipt dddddddd · approval ${APPROVAL}`);
+    expect(card.querySelector("[data-published-receipt]")!.getAttribute("title")).toBe(`receipt ${"d".repeat(64)}`);
+    expect(card.querySelector("[data-evidence-digest]")!.getAttribute("title")).toBe(`sha256:${"c".repeat(64)}`);
     /* No ghost after publish: the solid mirror, with the server's facts only. */
     expect(panel("mirror-ghost")).toBeNull();
     const mirror = panel("mirror")!;
@@ -1959,6 +1968,24 @@ describe("S11 F2b flow links, tooltips and the pack strip", () => {
 });
 
 /* -------------------------------------------- file-wide route guard (last) */
+
+describe("S11 F3 digests, lifecycle words and layout", () => {
+  it("S11-F3-01 prints digests short with the full value in a title and lifecycle tokens as words", () => {
+    expect(digestText(`sha256:${"a".repeat(64)}`)).toBe("aaaaaaaa");
+    expect(digestText("not a digest")).toBe("not a digest");
+    expect(stateWords("NOT_DELIVERED")).toBe("not delivered");
+    expect(stateWords("APPROVED_WITH_CONDITION")).toBe("approved with condition");
+  });
+  it("S11-F3-02 source guards: the pack header keeps chips right, the pack table shows a scroll affordance, the record card does not stretch, YAML values wrap", () => {
+    const detail = readFileSync(join(process.cwd(), "src", "research", "ReleaseCandidateDetail.tsx"), "utf8");
+    expect(detail).toMatch(/\.rc-chips \{[^}]*margin-left: auto/);
+    expect(detail).toMatch(/\.rc-pack \{[^}]*no-repeat local[^}]*no-repeat scroll/s);
+    expect(detail).toMatch(/\.rc-group3 \{[^}]*align-items: flex-start/);
+    expect(detail).toMatch(/\.rc-yaml \.v \{[^}]*overflow-wrap: anywhere/);
+    expect(detail).not.toMatch(/\.rc-yaml \.line \{[^}]*white-space: nowrap/);
+    expect(detail).not.toMatch(/\.rc-pack \.digest \{[^}]*text-overflow: ellipsis/);
+  });
+});
 
 describe("S11 P22 route guard across this file", () => {
   it("S11-U60 no request sent by any test in this file reached /mirror or /publish/reconcile", () => {

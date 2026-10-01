@@ -64,6 +64,7 @@ export function AlphaImportRoute() {
       gatesState={controller.gatesState}
       registerState={controller.registerState}
       registryState={controller.registryState}
+      onRetryRegistry={controller.onRetryRegistry}
       activationPending={controller.activationPending}
       refusal={controller.refusal}
       alphaId={controller.alphaId}

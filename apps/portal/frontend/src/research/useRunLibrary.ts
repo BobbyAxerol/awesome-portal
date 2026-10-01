@@ -91,7 +91,8 @@ export function filtersFromSearch(search: string): LibraryFilters {
     q: params.get("q") ?? "",
     /* A status the contract does not declare is not forwarded: a hand-edited
        URL cannot widen the query. */
-    status: list("status").filter(isStatus),
+    /* F3 01-10: `?status=running` is the same status as RUNNING — case is not a different value. */
+    status: list("status").map((value) => value.toUpperCase()).filter(isStatus),
     mode: list("mode"),
     alpha: list("alpha"),
     group: params.get("group") === "1",

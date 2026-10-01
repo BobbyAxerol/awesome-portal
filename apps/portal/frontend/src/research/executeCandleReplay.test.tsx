@@ -26,6 +26,7 @@ import { SYNTHETIC_FOLDS, scaleToFolds, syntheticChildAudit, syntheticFoldOf, sy
 import { bandPieces, retainedSplitBand } from "./SplitBand";
 
 const chartOptions = vi.hoisted(() => [] as Record<string, unknown>[]);
+const visibleRanges = vi.hoisted(() => [] as { from: number; to: number }[]);
 
 vi.mock("lightweight-charts", () => {
   /* jsdom has no canvas: a recording double, so the tests read the data the chart was given. */
@@ -44,7 +45,7 @@ vi.mock("lightweight-charts", () => {
         panes: () => [],
         remove: vi.fn(),
         setCrosshairPosition: vi.fn(),
-        timeScale: () => ({ getVisibleLogicalRange: () => null, setVisibleLogicalRange: vi.fn(), fitContent: vi.fn() }),
+        timeScale: () => ({ getVisibleLogicalRange: () => null, setVisibleLogicalRange: (range: { from: number; to: number }) => { visibleRanges.push(range); }, fitContent: vi.fn() }),
       };
     },
     __markers: markers,
@@ -265,7 +266,7 @@ describe("P17-T12/T14 · fold arrival, fold switch and capital convention", () =
     const { container, fetchMock } = await settled();
     const boundary = container.querySelector("[data-fold-boundary]");
     expect(boundary?.getAttribute("data-fold-boundary")).toBe("CONTINUOUS_ACROSS_FOLDS");
-    expect(boundary?.getAttribute("title")).toContain("fold 1 starts at fold 0's end equity");
+    expect(boundary?.getAttribute("title")).toContain("fold_02 starts at fold_01's end equity");
     expect(container.querySelector("[data-fold-capital]")?.textContent).toContain("carried across folds");
     expect(container.querySelector("[data-fold-capital]")?.textContent).not.toContain("carry_position");
     const before = fetchMock.mock.calls.length;
@@ -607,5 +608,26 @@ describe("F1 · FG 08-05 — the retained 'state at cursor' prints formatted num
     expect(at.textContent).toContain("position 0.333333");
     expect(at.textContent).not.toMatch(/\d\.\d{7,}/);
     expect([...at.querySelectorAll("[data-exact]")].map((node) => node.getAttribute("title"))).toEqual(["0.3333333333333333", "19931.280844135865"]);
+  });
+});
+
+describe("F3 · S08 — fold_NN everywhere, 4× default, room at both ends of the axis", () => {
+  it("names the fold as fold_01 in the chip title, the playhead readout and the child-audit card", async () => {
+    const { container } = await settled();
+    for (const chip of container.querySelectorAll("[data-fold]")) expect(chip.getAttribute("title")).not.toMatch(/\bfold \d/);
+    expect(container.querySelector("[data-fold='0']")?.getAttribute("title")).toMatch(/^fold_01: /);
+    expect(container.querySelector("[data-playhead-readout] [data-readout-fold]")?.textContent).toBe("fold_01");
+    await waitFor(() => expect(container.querySelector("[data-child-audit='0']")).toBeTruthy());
+    expect(container.querySelector("[data-panel='child-audit']")?.textContent).toContain("fold_01 · shaded = OOS generation");
+    expect(container.querySelector("[aria-label='child audit records of fold_01']")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/\bfold \d/);
+  });
+
+  it("opens the window with empty bars on both sides so the first and last time labels are not clipped", async () => {
+    await settled();
+    expect(visibleRanges.length).toBeGreaterThan(0);
+    const range = visibleRanges[0]!;
+    expect(range.from).toBeLessThan(0);
+    expect(range.to).toBeGreaterThan(167);
   });
 });

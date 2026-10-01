@@ -214,3 +214,13 @@ Dữ liệu thật đã kiểm (R-WFO-017, R-P04-018): route `close_target_v2` t
 | BR-S04-WIN | Hub S04 chưa có dữ liệu theo window: series và chỉ số IS / holdout | Công tắc window IS/OOS/Holdout của hub chỉ OOS có dữ liệu | Publish theo window kèm mã lý do (liên quan CG-FG-S04-07 `window_disclosure`) | Chỉ OOS; IS/holdout dẫn sang S05/S08 |
 | BR-S11-01 | `promotion_pick` thiếu `fold` (trial id của WFO tính theo fold) và route tới approval | Chip pick không link được tới trial S06 / approval | `fold`, `approval_href?` | Chip chỉ hiển thị |
 | BR-TXT-02 | Câu server của S09 "Net return and drawdown are the retained final-account path…" (~58 chữ) | Bobby: bớt chữ | Biến thể ≤ 12 chữ | Hiển thị nguyên văn |
+
+## Yêu cầu mới từ đợt F3 (Claude, 2026-10-01)
+
+| Mã | Cần gì | Vì sao FE cần | Hiện FE làm gì |
+|---|---|---|---|
+| BR-F3-01 | S02: `submission_constraints` của Atlas đang cũ (accepted_trial_count 1, seed MUST_BE_NULL) trong khi server nhận 400 trial / seed 42; cần fact theo profile (`portal_admission.profiles` đã có LW-07 — xác nhận dùng làm nguồn khoá trials/seed) | HiFi "pinned by protocol": ô trials/early-stop/seed chỉ đọc khi profile cấm chỉnh; khoá theo dữ liệu cũ sẽ chặn run hợp lệ | Ô vẫn chỉnh được (02-15 chưa làm) |
+| BR-F3-02 | S05: verdict `guards.purge_applied{verdict,basis,boundary_count}` và `guards.embargo_respected{verdict,basis}` | HiFi hàng "boundary integrity ✓"; FE không tự vẽ ✓ | Chưa hiện hàng |
+| BR-F3-03 | S10: nhãn attempt (vd `att_03`) trên `LineageAttempt` | HiFi in `att_03 · R-WFO-118` | In `ratt_9c3f2081 · R-P04-001` |
+| BR-F3-04 | S04: facts cho phụ đề tab hub — holdout seal state, trials/fold, freeze digest count/order verdict | HiFi "5 folds · holdout sealed", "600 trials / fold" | `state · fold N` |
+| BR-F3-05 | Manifest artifact của engine (HiFi 10, hiện 2) | S04 tab claim | Hiện 2 |

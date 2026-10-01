@@ -52,6 +52,11 @@ const SCREEN_ROUTES: Readonly<Record<string, string>> = {
 const RUN_SCREEN_SUFFIX: Readonly<Record<string, string>> = {
   run_progress: "progress",
   run_progress_legacy: "overview",
+  run_overview_legacy: "overview",
+  run_optimization_legacy: "optimization",
+  run_parameters_legacy: "parameters",
+  run_execution_legacy: "execution",
+  run_audit_legacy: "audit",
   evidence_hub: "evidence",
   split: "split",
   search_selection: "search",

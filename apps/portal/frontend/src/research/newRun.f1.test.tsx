@@ -139,7 +139,7 @@ describe("FG 02-8b — the stepper does not call an unvisited step valid", () =>
     go("data");
     /* Review's verdict is the server's preflight; the bar cannot see it. */
     expect(pill("review").textContent).not.toContain("✓");
-    expect(pill("review").getAttribute("data-step-state")).toBe("not-visited");
+    expect(pill("review").getAttribute("data-step-state")).toBe("visited");
   });
 });
 
@@ -189,7 +189,8 @@ describe("S02-01 — the cert ceiling line carries the Atlas fact, not a sentenc
     mount({ draft: draft({ optimizationMode: "mode_1_decay", optimizationSchedule: "global" }) });
     const line = document.querySelector("[data-cert-cap]") as HTMLElement;
     expect(line.getAttribute("data-cert-cap")).toBe(fact.cert_cap.state);
-    expect(line.textContent).toContain("cert ceiling — not published");
+    expect(line.textContent).toContain("cert ceiling");
+    expect(line.querySelector("[data-cert-ceiling-absent]")?.textContent).toBe("not published");
     expect(document.querySelector("[data-cert-cap-reason]")?.textContent).toBe(fact.cert_cap.reason);
     expect(fact.cert_cap.reason.length).toBeGreaterThan(20);
     /* The old hard-coded tail is gone. */

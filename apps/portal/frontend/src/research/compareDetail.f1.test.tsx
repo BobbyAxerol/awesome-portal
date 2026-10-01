@@ -205,7 +205,7 @@ describe("S13 pair table — every figure carries its served scope", () => {
     expect(row("TRADE_COUNT").textContent).toBe("tradessum of folds");
     expect(row("WIN_RATE").textContent).toContain("common window");
     /* the window the figures belong to is printed under the table */
-    expect(document.querySelector("[data-common-window]")?.textContent).toContain("research.compare-common-window.v1");
+    expect(document.querySelector("[data-common-window] [title]")?.getAttribute("title")).toBe("research.compare-common-window.v1");
   });
 });
 

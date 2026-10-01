@@ -56,6 +56,7 @@ import {
   type SemanticDiff,
 } from "./lineageClient";
 import { formatMetric, shortId } from "./researchFormat";
+import { runLabelOrShortId } from "./runLabels";
 import { ShortId } from "./ShortId";
 import type { ResearchState } from "./state";
 import type { LineageController } from "./useLineage";
@@ -584,9 +585,10 @@ function chipLabel(attemptId: string, status: LineageStatus): string {
   return `attempt ${attemptId} — ${status.label}`;
 }
 
-/** An id on a card, chip or row (E1): prefix + 8 hex on screen; the caller keeps the full id in a title. */
+/** An id on a card, chip or row (E1): a run prints the server's label (`R-WFO-114`, from the lineage read's
+ *  `display_label` via the run-label registry); every other id prints prefix + 8 hex. The caller keeps the full id in a title. */
 function sid(id: string): string {
-  return shortId(id) ?? id;
+  return runLabelOrShortId(id) ?? id;
 }
 
 function evidenceHref(runId: string): string {
