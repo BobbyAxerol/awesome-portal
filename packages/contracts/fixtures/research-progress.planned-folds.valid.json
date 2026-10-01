@@ -1,0 +1,42 @@
+{
+  "alpha": {
+    "alpha_id": "delta-rsi-polynomial-alpha",
+    "alpha_name": "Delta-RSI Polynomial Alpha",
+    "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_0"
+  },
+  "display_label": "R-WFO-020",
+  "execution_profile_id": "p10.delta-signal-notional-wfo.v1",
+  "protocol": "advanced_walk_forward",
+  "mode": "mode_1_decay",
+  "schedule": "global",
+  "instrument": {
+    "symbol": "BTCUSDT",
+    "timeframe": "1h"
+  },
+  "execution_route": "signal_notional",
+  "engine_release_id": "er_quantbt_111",
+  "config_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "requested_spec_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "created_at_utc_ms": 1790274478000,
+  "declared_folds": {
+    "state": "DECLARED",
+    "count": 2,
+    "reason_code": null
+  },
+  "planned_folds": {
+    "state": "AVAILABLE",
+    "folds": [
+      {
+        "fold": 1,
+        "test_start_utc_ms": 1790274478000,
+        "test_end_utc_ms": 1790360878000
+      },
+      {
+        "fold": 2,
+        "test_start_utc_ms": 1790360878000,
+        "test_end_utc_ms": 1790447278000
+      }
+    ],
+    "reason_code": null
+  }
+}

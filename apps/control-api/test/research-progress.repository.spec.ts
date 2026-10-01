@@ -82,4 +82,35 @@ describe("ResearchProgressRepository terminal materialisation requirement", () =
 
     expect(result.terminalMaterialization).toBe("READY");
   });
+
+  it("CG-FG-S03-01: projects bounded P08 planned windows, including the source fold_000 convention", async () => {
+    const { repository, queries } = subject(runRow({
+      alpha_id: "alpha_delta", alpha_version_id: "av_delta_1", requested_spec_digest: "e".repeat(64),
+      declared_fold_count: 2,
+      planned_folds: [
+        { fold_id: "fold_000", outer_oos: { start_utc_ms: 1_700_000_000_000, end_exclusive_utc_ms: 1_700_086_400_000 } },
+        { fold_id: "fold_001", outer_oos: { start_utc_ms: 1_700_086_400_000, end_exclusive_utc_ms: 1_700_172_800_000 } },
+      ],
+    }));
+    const read = await repository.readRun(scope, "run_terminal_truth");
+    expect(queries.some((sql) => sql.includes("preflight.topology->'folds' END AS planned_folds"))).toBe(true);
+    expect(read.identity?.plannedFolds).toEqual([
+      { fold: 1, testStartUtcMs: 1_700_000_000_000, testEndUtcMs: 1_700_086_400_000 },
+      { fold: 2, testStartUtcMs: 1_700_086_400_000, testEndUtcMs: 1_700_172_800_000 },
+    ]);
+  });
+
+  it("CG-FG-S03-01: refuses a malformed or count-mismatched immutable P08 plan", async () => {
+    for (const planned_folds of ["not-json", [{ fold_id: "fold_000", outer_oos: {
+      start_utc_ms: 1_700_000_000_000, end_exclusive_utc_ms: 1_700_086_400_000,
+    } }]]) {
+      const { repository } = subject(runRow({
+        alpha_id: "alpha_delta", alpha_version_id: "av_delta_1", requested_spec_digest: "e".repeat(64),
+        declared_fold_count: 2, planned_folds,
+      }));
+      await expect(repository.readRun(scope, "run_terminal_truth")).rejects.toMatchObject({
+        code: "RESEARCH_PROGRESS_CONFLICT", status: 409,
+      });
+    }
+  });
 });

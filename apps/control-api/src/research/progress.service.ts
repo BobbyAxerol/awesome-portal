@@ -95,6 +95,10 @@ export interface ResearchProgressRunIdentity {
   declared_folds:
     | { state: "DECLARED"; count: number; reason_code: null }
     | { state: "NOT_PUBLISHED"; count: null; reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" };
+  /** P08-admitted boundaries; not a claim that source execution observed each fold. */
+  planned_folds:
+    | { state: "AVAILABLE"; folds: Array<{ fold: number; test_start_utc_ms: number; test_end_utc_ms: number }>; reason_code: null }
+    | { state: "NOT_PUBLISHED"; folds: []; reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" };
 }
 
 /** CG-P11-03: a declared artifact this viewer may not read. Never a link. */
@@ -699,6 +703,11 @@ export class ResearchProgressService {
       declared_folds: identity.declaredFoldCount === null
         ? { state: "NOT_PUBLISHED", count: null, reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" }
         : { state: "DECLARED", count: identity.declaredFoldCount, reason_code: null },
+      planned_folds: identity.plannedFolds === null
+        ? { state: "NOT_PUBLISHED", folds: [], reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" }
+        : { state: "AVAILABLE", folds: identity.plannedFolds.map((fold) => ({
+          fold: fold.fold, test_start_utc_ms: fold.testStartUtcMs, test_end_utc_ms: fold.testEndUtcMs,
+        })), reason_code: null },
     };
   }
 

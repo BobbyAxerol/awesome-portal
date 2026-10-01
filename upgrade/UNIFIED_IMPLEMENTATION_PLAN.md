@@ -6690,3 +6690,13 @@ Compare. WFO requires an accepted RS-02 seal plus its matching SEALED P05
 artifact; P04 requires a valid persisted P14 fixed-profile outer-OOS protocol.
 Claim text alone never establishes family. P19's batched reads remain within
 its workspace-scoped repeatable-read budget; frontend S10 stays Claude-owned.
+
+### B3 CG-FG-S03-01 — admitted planned folds on Progress, 2026-10-01
+
+The P11 Progress read now includes a bounded, typed `run.planned_folds` projection
+from the exact P08 preflight topology retained with the run. It does not
+relabel source-reported folds as planned, infer execution from a plan, or make
+an extra HMD call. Historical manifests with no fold plan answer
+`NOT_PUBLISHED`; malformed or mismatched immutable topology fails closed.
+Claude owns the S03 Gantt binding and visual/browser acceptance.
+[B3 receipt](./research_loop/evidence/P11/CG-FG-S03-01_planned_folds_2026-10-01.md)

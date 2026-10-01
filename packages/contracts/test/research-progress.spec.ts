@@ -69,6 +69,30 @@ describe("P11 published Research Progress contract", () => {
     expect(generated).not.toContain("ProgressEventPayload");
   });
 
+  it("CG-FG-S03-01: validates a bounded planned-fold identity and rejects an invented range", () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as { components: { schemas: Record<string, unknown> } };
+    const rewrite = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(rewrite);
+      if (value && typeof value === "object") return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+          key, key === "$ref" && typeof item === "string"
+            ? item.replace("#/components/schemas/", "#/$defs/") : rewrite(item),
+        ]),
+      );
+      return value;
+    };
+    const ajv = new Ajv2020({ allErrors: true, strict: false });
+    ajv.addSchema({ $id: "research-progress", $defs: rewrite(openApi.components.schemas) });
+    const validate = ajv.getSchema("research-progress#/$defs/ProgressRunIdentity")!;
+    const fixture = JSON.parse(readFileSync(
+      join(ROOT, "fixtures", "research-progress.planned-folds.valid.json"), "utf8",
+    )) as Record<string, unknown>;
+    expect(validate(fixture), JSON.stringify(validate.errors)).toBe(true);
+    const invalid = structuredClone(fixture) as { planned_folds: { folds: Array<{ test_end_utc_ms: number }> } };
+    invalid.planned_folds.folds[0]!.test_end_utc_ms = -1;
+    expect(validate(invalid)).toBe(false);
+  });
+
   it("E10: the canonical failed-at fixture validates against the published read contract", () => {
     const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as { components: { schemas: Record<string, unknown> } };
     const rewrite = (value: unknown): unknown => {

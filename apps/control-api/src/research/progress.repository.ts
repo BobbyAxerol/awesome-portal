@@ -69,6 +69,7 @@ interface ReadRunRow {
   spec_engine_release?: string | null;
   spec_config_digest?: string | null;
   declared_fold_count?: string | number | null;
+  planned_folds?: unknown;
   sealed_holdout?: Record<string, unknown> | string | null;
   requested_spec_retained?: boolean | null;
   /** D1: count(*) of same-kind logical runs created no later than this one. */
@@ -108,6 +109,38 @@ function parseObject(value: Record<string, unknown> | string, label: string): Re
   } catch {
     throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", `Research progress ${label} is incompatible.`, 409);
   }
+}
+
+/** CG-FG-S03-01: P08 admitted topology, not source-observed execution. */
+function plannedFoldRows(value: unknown, declared: number | null): ProgressRunIdentity["plannedFolds"] {
+  if (value === null || value === undefined) return null;
+  let rows: unknown = value;
+  try {
+    if (typeof value === "string") rows = JSON.parse(value) as unknown;
+  } catch {
+    throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research planned fold topology is incompatible.", 409);
+  }
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > 128 || rows.length !== declared) {
+    throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research planned fold topology is incompatible.", 409);
+  }
+  return rows.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research planned fold topology is incompatible.", 409);
+    }
+    const row = entry as Record<string, unknown>;
+    const range = row.outer_oos;
+    if (typeof row.fold_id !== "string" || !/^fold_[0-9]{3}$/.test(row.fold_id)
+      || !range || typeof range !== "object" || Array.isArray(range)) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research planned fold topology is incompatible.", 409);
+    }
+    const test = range as Record<string, unknown>;
+    if (typeof test.start_utc_ms !== "number" || typeof test.end_exclusive_utc_ms !== "number"
+      || !Number.isSafeInteger(test.start_utc_ms) || !Number.isSafeInteger(test.end_exclusive_utc_ms)
+      || test.start_utc_ms < 0 || test.end_exclusive_utc_ms <= test.start_utc_ms) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research planned fold topology is incompatible.", 409);
+    }
+    return { fold: index + 1, testStartUtcMs: test.start_utc_ms, testEndUtcMs: test.end_exclusive_utc_ms };
+  });
 }
 
 function canonical(value: unknown): string {
@@ -194,6 +227,7 @@ export interface ProgressRunIdentity {
   displayLabel: string | null;
   /** Length of the P08 topology's fold list; null when the topology declares none. */
   declaredFoldCount: number | null;
+  plannedFolds: Array<{ fold: number; testStartUtcMs: number; testEndUtcMs: number }> | null;
   /** The P08-declared sealed holdout window, never its values. */
   sealedHoldout: { startUtcMs: number; endExclusiveUtcMs: number; bars: number | null } | null;
   requestedSpecRetained: boolean;
@@ -488,6 +522,8 @@ export class ResearchProgressRepository {
                 preflight.requested_spec->'client'->>'config_digest' AS spec_config_digest,
                 CASE WHEN jsonb_typeof(preflight.topology->'folds') = 'array'
                      THEN jsonb_array_length(preflight.topology->'folds') END AS declared_fold_count,
+                CASE WHEN jsonb_typeof(preflight.topology->'folds') = 'array'
+                     THEN preflight.topology->'folds' END AS planned_folds,
                 CASE WHEN jsonb_typeof(preflight.topology->'sealed_holdout') = 'object'
                      THEN preflight.topology->'sealed_holdout' END AS sealed_holdout,
                 (preflight.requested_spec IS NOT NULL) AS requested_spec_retained,
@@ -711,6 +747,7 @@ export class ResearchProgressRepository {
         runDisplayOrdinal(row.display_ordinal),
       ),
       declaredFoldCount: declared !== null && declared > 0 ? declared : null,
+      plannedFolds: plannedFoldRows(row.planned_folds, declared),
       sealedHoldout,
       requestedSpecRetained: row.requested_spec_retained === true,
     };

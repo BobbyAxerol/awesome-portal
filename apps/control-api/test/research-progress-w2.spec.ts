@@ -224,7 +224,10 @@ function identity(overrides: Record<string, unknown> = {}) {
     symbol: "BTCUSDT", timeframe: "1h", executionRoute: "signal_notional",
     engineReleaseId: "er_quantbt_111", configDigest: "a".repeat(64),
     requestedSpecDigest: "e".repeat(64), createdAt: new Date("2026-09-24T17:00:00.000Z"),
-    declaredFoldCount: 2, sealedHoldout: null, requestedSpecRetained: true,
+    declaredFoldCount: 2, plannedFolds: [
+      { fold: 1, testStartUtcMs: 1_786_060_800_000, testEndUtcMs: 1_787_270_400_000 },
+      { fold: 2, testStartUtcMs: 1_787_270_400_000, testEndUtcMs: 1_788_480_000_000 },
+    ], sealedHoldout: null, requestedSpecRetained: true,
     ...overrides,
   };
 }
@@ -296,6 +299,10 @@ describe("W2 P11 read", () => {
       requested_spec_digest: "e".repeat(64),
       created_at_utc_ms: Date.parse("2026-09-24T17:00:00.000Z"),
       declared_folds: { state: "DECLARED", count: 2, reason_code: null },
+      planned_folds: { state: "AVAILABLE", folds: [
+        { fold: 1, test_start_utc_ms: 1_786_060_800_000, test_end_utc_ms: 1_787_270_400_000 },
+        { fold: 2, test_start_utc_ms: 1_787_270_400_000, test_end_utc_ms: 1_788_480_000_000 },
+      ], reason_code: null },
     });
     expect(read.denied_artifacts).toEqual([]);
   });
@@ -331,7 +338,7 @@ describe("W2 P11 read", () => {
   });
 
   it("CG-P11-03: a missing topology is a typed NOT_PUBLISHED fold declaration", async () => {
-    const { subject } = service(runRead({ identity: identity({ declaredFoldCount: null }) }));
+    const { subject } = service(runRead({ identity: identity({ declaredFoldCount: null, plannedFolds: null }) }));
     const read = await subject.read({ role: "USER" } as never, scope, "run_w2");
     expect(read.run?.declared_folds).toEqual({
       state: "NOT_PUBLISHED", count: null, reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS",

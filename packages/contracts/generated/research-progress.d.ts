@@ -566,6 +566,17 @@ export interface components {
                 count: number | null;
                 reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" | null;
             };
+            /** @description CG-FG-S03-01. Bounded P08-admitted planned outer-OOS windows; not source-observed execution. */
+            planned_folds: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                folds: {
+                    fold: number;
+                    test_start_utc_ms: components["schemas"]["UtcMilliseconds"];
+                    test_end_utc_ms: components["schemas"]["UtcMilliseconds"];
+                }[];
+                reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" | null;
+            };
         };
         /** @description CG-P11-03. A declared artifact this viewer may not read. Today only the P08 sealed holdout: its window and bar count are manifest metadata; its values were never given to the child and no unlock workflow is installed. */
         ProgressDeniedArtifact: {
