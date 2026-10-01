@@ -259,10 +259,11 @@ export interface ImportRefusal extends RefusalPresentation {
 /**
  * S14-C1: the mutating routes refuse a request whose origin or CSRF check fails
  * with `403 RESEARCH_ALPHA_IMPORT_INVALID`. That is not an invalid import, so it
- * must not borrow the invalid-import sentence. Short and factual; the exact
- * wording is Bobby's to review.
+ * must not borrow the invalid-import sentence. VD-F1-01 (Bobby, 2026-10-01):
+ * exactly this sentence — it names no cause; the `RESEARCH_…` code, the server's
+ * text and the request id sit in the details line only.
  */
-export const IMPORT_ORIGIN_REFUSED = "The request origin or CSRF check was refused. Reload this page and try again.";
+export const IMPORT_ORIGIN_REFUSED = "Request refused — reload the page and try again.";
 
 /**
  * The screen's sentence per contract code (VD-P23-01): specific enough to act

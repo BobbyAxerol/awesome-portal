@@ -1262,9 +1262,8 @@ describe("RF-06 FE-S04-13 — the HiFi layout", () => {
     /* The embedded Screen 07 body reads on mount; let that read settle. */
     await waitFor(() => expect(requested.length).toBeGreaterThan(0));
     await act(async () => undefined);
-    expect(container.querySelector("[data-tab-heading]")?.textContent).toContain(
-      "Stage 3 · Freeze — the hinge between Search and Execute",
-    );
+    /* F1b VD-TEXT-01: the heading is the stage name; the "hinge between…" tail and the subtitle are gone. */
+    expect(container.querySelector("[data-tab-heading]")?.textContent).toBe("Stage 3 · Freeze");
     /* HiFi 04 isFreeze: the tab draws Screen 07's body (hubStageFreeze), not shells. */
     expect(container.querySelector("[data-stage-shells='freeze']")).toBeNull();
     expect(container.querySelector("[data-panel='freeze'] [data-hub-stage-body='freeze']")).toBeTruthy();
@@ -1543,7 +1542,16 @@ describe("W3 — per-fold verdicts from the server rule (CG-P13-08)", () => {
     // The exact server string rides in the title; the bar is clamped, not negative.
     expect(rows[0]!.querySelector("[data-exact]")?.getAttribute("data-exact")).toBe("-7.799572637865059");
     expect(rows[0]!.querySelector("[data-oos-bar]")?.getAttribute("data-oos-bar")).toBe("0");
-    expect(table.querySelector("[data-verdict-foot]")?.textContent).toContain("research.fold-verdict.v1");
+    /* F1b VD-TEXT-01: the footer is one line; the rule's version stays in the header and its thresholds in the (i) tooltip. */
+    expect(table.textContent).toContain("research.fold-verdict.v1");
+    const foot = table.querySelector("[data-verdict-foot]") as HTMLElement;
+    expect(foot.textContent).toBe("fold_01, fold_02 drag · rule v1 i");
+    const rule = foot.querySelector("[data-verdict-rule]") as HTMLElement;
+    expect(rule.getAttribute("data-verdict-rule")).toBe("research.fold-verdict.v1");
+    expect(rule.getAttribute("title")).toContain("PASS needs S_OOS ≥");
+    expect(rule.getAttribute("aria-label")).toBe(rule.getAttribute("title"));
+    expect(table.textContent).not.toContain("which fold carries the run");
+    expect(table.textContent).not.toContain("click a row");
   });
 
   it("moves the cursor on a row click and reorders by fold without refetching", () => {
@@ -1730,7 +1738,7 @@ describe("E11 — what the retained lane now publishes, and what it names as abs
     expect(container.querySelector("[data-metric-value='TRADE_COUNT']")?.textContent).toBe("10");
     expect(container.querySelector("[data-metric='TRADE_COUNT'] [data-withheld]")).toBeNull();
     expect(container.querySelector("[data-metric='TRADE_COUNT'] [data-metric-scope]")?.textContent)
-      .toContain("sum of published per-fold OOS trades");
+      .toBe("OOS · sum of folds");
   });
 
   it("audit 04-6: an incomplete sum stays absent, with the lane's reason", () => {
@@ -1759,7 +1767,11 @@ describe("E11 — what the retained lane now publishes, and what it names as abs
     const { container } = view({ hub: W3B.hub_evidence, passport: e11Passport, runIdentity: W3B_IDENTITY });
     const note = container.querySelector("[data-series-absent='EQUITY_IS']");
     expect(note?.getAttribute("data-absence-reason")).toBe("QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT");
-    expect(note?.textContent).toContain("No IS equity series is drawn");
+    /* F1b: the absence is the short typed form, with the server's code on the chip. */
+    expect(note?.textContent).toBe("IS equity — not published");
+    expect(note?.querySelector("[data-withheld]")?.getAttribute("data-reason-code")).toBe(
+      "QUANTBT_ADVANCED_WFO_RETAINED_NO_IN_SAMPLE_ACCOUNT",
+    );
   });
 
   it("audit 04-10: rolling Sharpe carries the lane's own cause, not the UI's placeholder", () => {
@@ -1779,7 +1791,9 @@ describe("E11 · sealed summary analytics are bound without recomputation or aut
     expect(container.querySelector('[data-series-authority="EQUITY_IS"]')?.textContent).toContain("DECLARED_IS");
     expect(container.querySelector('[data-summary-trade-count]')?.getAttribute("data-trade-scope")).toBe("CHILD_TAPE");
     expect(container.querySelector('[data-summary-trade-count] [data-exact]')?.getAttribute("data-exact")).toBe("4");
-    expect(container.querySelector('[data-summary-trade-count]')?.textContent).toContain("not an audited fill count");
+    /* F1b: the caveat moved into the tooltip; the line is the label, scope and number. */
+    expect(container.querySelector('[data-summary-trade-count]')?.textContent).toBe("Engine total trades (CHILD_TAPE): 4");
+    expect(container.querySelector('[data-summary-trade-count]')?.getAttribute("title")).toContain("not an audited fill count");
   });
 
   it("renders source behaviour values in the existing eight cells and missing facts with their own reasons", () => {

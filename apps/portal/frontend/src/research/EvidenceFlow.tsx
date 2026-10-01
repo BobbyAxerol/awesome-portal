@@ -25,7 +25,6 @@ import { releaseCandidateHref } from "./releaseCandidateClient";
 import { usePresentation } from "../app/presentation";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
-  SERIES_POINT_CAP,
   WITHHELD_WORDS,
   isAvailable,
   unavailableReason,
@@ -91,18 +90,15 @@ function utcZ(ms: number | null | undefined): string {
 
 /** Spec 04 §9 — the sentences that must not be paraphrased. */
 export const CERT_TOOLTIP = "min of stage caps — S1 holdout seal binds";
-export const WINDOW_DISCLOSURE =
-  "headline = OOS only — IS and holdout never enter the headline row.";
+export const WINDOW_DISCLOSURE = "headline = OOS only";
+/** The rule behind the short scope label — tooltip text, never printed. */
+export const WINDOW_DISCLOSURE_RULE = "IS and holdout never enter the headline row.";
 export const DRAWER_FOOTER =
   "identity pinned at submit — the run read exactly this snapshot; Data Catalog module is SOON.";
 export const COPY_LINK_IDLE = "copy evidence link";
 export const COPY_LINK_DONE = "✓ evidence link copied";
 /** Spec 04 §28. */
 export const CHART_ENGINE_UNAVAILABLE = "chart engine unavailable — numbers unaffected";
-
-/** Why a chart may be smaller than the run that produced it. */
-export const SAMPLING_NOTE =
-  "a chart is a bounded view of the source series; sampling changes the picture, never a metric above it.";
 
 /** HiFi tab grammar: glyph or stage number, uppercase name. */
 const STAGE_TAB: Record<EvidenceStage, { num: string; name: string }> = {
@@ -145,27 +141,21 @@ const DEEP_DIVE: Record<PreviewStage, { screen: string; path: string | null; pha
  * titles only name what the panel would show; none asserts a fact this run
  * did not publish (DQ-15), so numbers and file names from the demo are gone.
  */
-const STAGE_PREVIEW: Record<PreviewStage, { title: string; subtitle: string; panels: string[] }> = {
+const STAGE_PREVIEW: Record<PreviewStage, { title: string; panels: string[] }> = {
   split: {
     title: "Stage 1 · Split — fold construction",
-    subtitle: "How time was divided before anything was searched. If this is wrong, every later stage is wrong.",
     panels: ["fold timeline", "fold table", "inner validation — containment", "stitched OOS provenance"],
   },
   search: {
     title: "Stage 2 · Search — why these params",
-    subtitle:
-      "Every trial, the funnel that narrowed them, and the decision that picked one — for the fold under the cursor.",
     panels: ["search configuration", "candidate funnel", "selection decision", "lineage — one unbroken chain"],
   },
   freeze: {
-    title: "Stage 3 · Freeze — the hinge between Search and Execute",
-    subtitle: "What was frozen, when, and proof that nothing drifted afterwards.",
+    title: "Stage 3 · Freeze",
     panels: ["three timestamps — ordering is the claim", "digest chain — drift detection"],
   },
   execute: {
     title: "Stage 4 · Execute — candle replay",
-    subtitle:
-      "The frozen params trading the OOS tape, one event at a time. Replay reads immutable artifacts — it never re-runs the strategy.",
     panels: ["candle replay", "event ledger", "event inspector", "why these params?"],
   },
 };
@@ -640,9 +630,7 @@ function ClaimPassport({
         data-passport-note
       >
         <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-          Claims issued by{" "}
-          <span className="mono">{engine !== null ? `quantbt-engine ${engine}` : "the engine"}</span>. The UI renders
-          them — it never infers.
+          issued by <span className="mono">{engine !== null ? `quantbt-engine ${engine}` : "the engine"}</span>
         </span>
         {hub ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
@@ -2022,14 +2010,11 @@ function RollingFigure({
   hub,
   series,
   ensureSeries,
-  retained = false,
   summary = null,
 }: {
   hub: EvidenceHub;
   series: ReadonlyMap<SeriesKind, SeriesSlot>;
   ensureSeries: (kind: SeriesKind) => void;
-  /** W3b: the links are the retained lane's; the footnote says so. */
-  retained?: boolean;
   summary?: RetainedAnalytics | null;
 }) {
   const linkFor = (kind: SeriesKind) => hub.series.find((entry) => entry.kind === kind);
@@ -2085,14 +2070,6 @@ function RollingFigure({
             </p>
           )}
         </RollingHalf>
-      </div>
-      <div className="mt-2 text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
-        {summary?.rolling_sharpe_63.state === "AVAILABLE"
-          ? "Read from the run's sealed source-time analytics — QuantBT rolling Sharpe over 63 daily OOS returns; the UI computes nothing."
-          : retained
-          ? "The retained walk-forward lane publishes neither series, so neither is drawn; the UI computes nothing."
-          : "Read from the Evidence Hub's rolling series — QuantBT's rolling Sharpe over 63 daily OOS returns; the UI computes nothing."} A Sharpe that only lives in one regime, or a beta drifting toward 1, is a behavior
-        finding the headline tiles cannot show.
       </div>
     </figure>
   );
@@ -2474,6 +2451,14 @@ function RetainedVerdictTable({
   const meanOos = formatRatio(verdicts.mean_oos_sharpe);
   const meanDecay = signedRatio(verdicts.mean_decay);
   const dragging = verdicts.rows.filter((row) => row.verdict === "DRAG");
+  /* The thresholds and the provenance of each column are the rule's own words, kept in the (i) tooltip. */
+  const ruleShort = /\bv\d+$/.exec(rule.version)?.[0] ?? rule.version;
+  const ruleText =
+    `${rule.version}: S_OOS, decay and trades are QuantBT's per-fold score of the selected parameters; max dd, contribution ` +
+    `and the worst bar are read from the retained equity inside each test window. ` +
+    `PASS needs S_OOS ≥ ${rule.pass.oos_sharpe_min}, decay ≤ ${rule.pass.decay_max} and max dd ≥ ${percentOf(rule.pass.max_drawdown_min)}; ` +
+    `one criterion inside S_OOS ≥ ${rule.warn.oos_sharpe_min} / decay ≤ ${rule.warn.decay_max} / max dd ≥ ${percentOf(rule.warn.max_drawdown_min)} is WARN; ` +
+    `anything else is DRAG. The server applies the rule.`;
 
   return (
     <section
@@ -2483,7 +2468,7 @@ function RetainedVerdictTable({
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
         <span className="inline-flex flex-wrap items-center gap-2.5">
-          <PanelLabel>per-fold verdict — which fold carries the run, which fold drags it</PanelLabel>
+          <PanelLabel>per-fold verdict</PanelLabel>
           <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }} data-verdict-summary>
             {counts.drag} DRAG · {counts.warn} WARN · {counts.pass} PASS
             {counts.not_evaluated > 0 ? ` · ${counts.not_evaluated} not evaluated` : ""}
@@ -2524,7 +2509,7 @@ function RetainedVerdictTable({
             </button>
           ))}
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-            {rule.version} · click a row to move the cursor
+            {rule.version}
           </span>
         </span>
       </div>
@@ -2566,6 +2551,7 @@ function RetainedVerdictTable({
                 data-current={current}
                 aria-selected={current}
                 tabIndex={0}
+                title="move the cursor to this fold"
                 onClick={() => onFold(fold)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -2679,16 +2665,25 @@ function RetainedVerdictTable({
         data-verdict-foot
       >
         {dragging.length > 0
-          ? `${dragging.map((row) => foldId(row.source_ordinal + 1)).join(", ")} ${dragging.length === 1 ? "drags" : "drag"}${
-              dragging.some((row) => row.drag_target === "search") ? " — decay is a cause, so open search to see how the parameters were picked" : ""
-            }. `
+          ? `${dragging.map((row) => foldId(row.source_ordinal + 1)).join(", ")} ${dragging.length === 1 ? "drags" : "drag"} · `
           : ""}
-        S_OOS, decay and trades are QuantBT&apos;s per-fold score of the selected parameters; max dd, contribution
-        and the worst bar are read from the retained equity inside each test window. Rule {rule.version}: PASS needs
-        S_OOS ≥ {rule.pass.oos_sharpe_min}, decay ≤ {rule.pass.decay_max} and max dd ≥ {percentOf(rule.pass.max_drawdown_min)};
-        one criterion inside S_OOS ≥ {rule.warn.oos_sharpe_min} / decay ≤ {rule.warn.decay_max} / max dd ≥{" "}
-        {percentOf(rule.warn.max_drawdown_min)} is WARN; anything else is DRAG. The server applies the rule — this
-        table only renders it.
+        <span
+          tabIndex={0}
+          role="note"
+          data-verdict-rule={rule.version}
+          aria-label={ruleText}
+          title={ruleText}
+          className="cursor-help"
+        >
+          rule {ruleShort}{" "}
+          <span
+            aria-hidden="true"
+            className="mono inline-flex h-[11px] w-[11px] items-center justify-center rounded-full border align-middle text-[8px] leading-none"
+            style={{ borderColor: "var(--ink-faint)" }}
+          >
+            i
+          </span>
+        </span>
       </div>
     </section>
   );
@@ -2779,9 +2774,7 @@ function RetainedEquityPanels({
           data-series-absent="EQUITY_IS"
           data-absence-reason={feLocalAbsenceId(inSampleAbsence.reason_code) === null ? inSampleAbsence.reason_code ?? undefined : undefined}
         >
-          No IS equity series is drawn:{" "}
-          {(feLocalAbsenceId(inSampleAbsence.reason_code) === null ? reasonCodeSentence(inSampleAbsence.reason_code) : null)
-            ?? "the retained walk-forward lane publishes no in-sample account, and this screen does not compute one."}
+          <Withheld availability={inSampleAbsence} what="IS equity" />
         </p>}
         {ready ? (
           <div className="mono mt-2 flex flex-wrap gap-x-4 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-retained-provenance>
@@ -2806,11 +2799,8 @@ function RetainedEquityPanels({
           </ChartFrame>
         ))}
         <div className="mt-2 text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
-          Drawdown is a restatement of the equity series above, not a separate metric the engine computes.{" "}
           <span data-fold-boundaries={boundaries.length}>
-            {boundaries.length > 0
-              ? "Dashed lines mark where each fold's test window starts, from the retained fold plan."
-              : "Fold boundaries are not marked: no fold start was published."}
+            {boundaries.length > 0 ? "dashed = fold test start" : "fold starts — not published"}
           </span>
         </div>
       </figure>
@@ -2820,15 +2810,17 @@ function RetainedEquityPanels({
 
 /* ------------------------------------------------------------------ tabs */
 
-function TabHeading({ title, subtitle }: { title: string; subtitle: string }) {
+function TabHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div data-tab-heading>
       <h2 className="text-[23px] font-normal" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
         {title}
       </h2>
-      <p className="mt-0.5 text-[13.5px] italic" style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }}>
-        {subtitle}
-      </p>
+      {subtitle ? (
+        <p className="mt-0.5 text-[13.5px] italic" style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }}>
+          {subtitle}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -2898,6 +2890,7 @@ function WindowSwitcher() {
           className="mono border-l-2 pl-1.5 text-[10px]"
           style={{ color: "var(--accent-2)", borderColor: "var(--accent-2)" }}
           data-window-disclosure
+          title={WINDOW_DISCLOSURE_RULE}
         >
           {WINDOW_DISCLOSURE}
         </span>
@@ -2986,7 +2979,7 @@ function VerdictTable({ hub }: { hub: EvidenceHub }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
         <span className="inline-flex flex-wrap items-center gap-2.5">
-          <PanelLabel>per-fold verdict — which fold carries the run, which fold drags it</PanelLabel>
+          <PanelLabel>per-fold verdict</PanelLabel>
           <VerdictSummary hub={hub} />
         </span>
         <span className="inline-flex flex-wrap items-center gap-1.5">
@@ -3038,13 +3031,6 @@ function VerdictTable({ hub }: { hub: EvidenceHub }) {
           </tr>
         </tbody>
       </table>
-      <div
-        className="border-t px-3 py-[7px] text-[10.5px] leading-[1.5]"
-        style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
-      >
-        The Evidence contract publishes run-final metrics and six named series; it publishes no per-fold metric,
-        verdict or threshold rule. A verdict drawn here would be this screen&apos;s opinion, not the engine&apos;s.
-      </div>
     </section>
   );
 }
@@ -3152,7 +3138,7 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
           key,
           verdictsOk ? verdicts.mean_oos_sharpe : null,
           "ratio",
-          "mean of fold OOS Sharpe · QuantBT fold score",
+          "OOS · mean of folds",
           RETAINED_NO_FIELD,
           "OOS Sharpe · fold mean",
         );
@@ -3161,7 +3147,7 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
           key,
           verdictsOk ? verdicts.mean_decay : null,
           "ratio",
-          "mean of fold decay · QuantBT fold score",
+          "OOS · mean of folds",
           RETAINED_NO_FIELD,
           "Sharpe decay · fold mean",
         );
@@ -3177,7 +3163,7 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
           key,
           verdictsOk && total && total.state === "AVAILABLE" ? total.value : null,
           "count",
-          "sum of published per-fold OOS trades · QuantBT fold score",
+          "OOS · sum of folds",
           total
             ? { state: "NOT_PUBLISHED", reason_code: total.reason_code ?? "UI_RETAINED_LANE_HAS_NO_FIELD" }
             : RETAINED_NO_FIELD,
@@ -3315,7 +3301,7 @@ function InSampleNote({ curve }: { curve: RetainedAnalytics["in_sample_equity"] 
     data-series-authority="EQUITY_IS" data-absence-reason={curve.reason_code ?? undefined} title={curve.source_locator}>
     {curve.state === "AVAILABLE"
       ? `${curve.emitted_point_count} of ${curve.source_observation_count} IS observations · ${curve.scope} · ${curve.sampling}`
-      : <>No IS equity series is drawn: <Withheld availability={{ state: curve.state, reason_code: curve.reason_code }} /></>}
+      : <Withheld availability={{ state: curve.state, reason_code: curve.reason_code }} what="IS equity" />}
   </p>;
 }
 
@@ -3337,7 +3323,7 @@ function BehaviorCard({ retained = null, summary = null }: { retained?: CurrentS
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <PanelLabel>behavior — engine-published, UI renders</PanelLabel>
+        <PanelLabel>behavior</PanelLabel>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
           {summary ? "segment OOS" : retained ? "retained walk-forward lane" : "segment not published"}
         </span>
@@ -3364,14 +3350,6 @@ function BehaviorCard({ retained = null, summary = null }: { retained?: CurrentS
           </span>
         ); })}
       </div>
-      <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
-        {summary
-          ? "Values are the run's sealed OOS facts with ENGINE_DIRECT or SOURCE_DERIVED authority; missing facts retain their own reason. "
-          : retained
-          ? "The retained walk-forward lane publishes no behaviour analytic, and no benchmark for the two benchmark tiles. "
-          : "No behaviour analytic is published for this run. "}
-        The UI computes no analytic from the equity series.
-      </span>
     </section>
   );
 }
@@ -3458,7 +3436,6 @@ function SummaryTab({
     : hub.metrics
         .filter((metric) => !TILE_ORDER.includes(metric.key))
         .map((metric) => <MetricTile key={metric.key} metric={metric} />);
-  const publisher = retained ? "the retained lane" : "the Hub";
   const passportSkip = passportSkipOf(hub);
 
   return (
@@ -3536,14 +3513,7 @@ function SummaryTab({
         slot={series.get("EQUITY_OOS")}
         onNeeded={ensureSeries}
         emptyReason="the source published this series with no points, so no drawdown is drawn."
-        footnote={
-          <>
-            Drawdown is a restatement of the equity series above, not a separate metric the engine computes.{" "}
-            <span data-fold-boundaries>
-              Fold boundaries are not marked: the Hub publishes which folds were observed, not where each one starts.
-            </span>
-          </>
-        }
+        footnote={<span data-fold-boundaries>fold starts — not published</span>}
       >
         {(loaded) => (
           <ChartFrame height={180}>
@@ -3561,7 +3531,7 @@ function SummaryTab({
       )}
 
       <div className="flex flex-wrap gap-3.5">
-        <RollingFigure hub={laneHub} series={laneSeries} ensureSeries={laneEnsure} retained={retained !== null} summary={summary} />
+        <RollingFigure hub={laneHub} series={laneSeries} ensureSeries={laneEnsure} summary={summary} />
         <SeriesPanel
           kind="RETURN_DISTRIBUTION"
           chartNo={4}
@@ -3571,7 +3541,6 @@ function SummaryTab({
           slot={laneSeries.get("RETURN_DISTRIBUTION")}
           onNeeded={laneEnsure}
           emptyReason="the source published no histogram bucket for this run, so no bar is drawn."
-          footnote={`Bucket edges and counts as ${publisher} published them — the UI bins nothing.`}
         >
           {(loaded) => (
             <ChartFrame height={230}>
@@ -3591,7 +3560,7 @@ function SummaryTab({
           slot={laneSeries.get("MONTHLY_RETURNS")}
           onNeeded={laneEnsure}
           emptyReason="no calendar month was published for this run — the source emitted 0 monthly values, so no cell is drawn. A month is never reduced from the equity series here."
-          footnote="One cell per calendar month, value in %. Depth of tint = magnitude; the reading to look for is clustering — three red cells in a row is a regime, not noise."
+          footnote="monthly return, % · tint = magnitude"
         >
           {(loaded) => <MonthlyHeat series={loaded} />}
         </SeriesPanel>
@@ -3612,11 +3581,6 @@ function SummaryTab({
         slot={laneSeries.get("ROLLING_RETURNS_20")}
         onNeeded={laneEnsure}
         emptyReason="the source published no rolling window for this run, so no line is drawn."
-        footnote={
-          retained
-            ? "Read from the retained lane's published rolling series — the UI computes nothing."
-            : "Read from the Evidence Hub's published rolling series — the UI computes nothing."
-        }
       >
         {(loaded) => (
           <ChartFrame height={230}>
@@ -3625,20 +3589,20 @@ function SummaryTab({
         )}
       </SeriesPanel>
 
-      <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
-        {SAMPLING_NOTE}{" "}
-        {retained
-          ? "The retained equity above draws every retained observation up to 2,000 and names its extrema past that; each retained series names its own sampling."
-          : `Every Hub series is capped at ${SERIES_POINT_CAP} points by the contract.`}
-        {summary ? <span data-summary-trade-count data-trade-scope={summary.total_trade_count.scope}
-          title={summary.total_trade_count.source_locator}>
-          {" "}Engine total trades ({summary.total_trade_count.scope}):{" "}
-          {summary.total_trade_count.state === "AVAILABLE" && summary.total_trade_count.value !== null
-            ? <span data-exact={summary.total_trade_count.value}>{formatMetric(summary.total_trade_count.value, "count")}</span>
-            : <Withheld availability={{ state: summary.total_trade_count.state, reason_code: summary.total_trade_count.reason_code }} />}.
-          {" "}This is not an audited fill count or the per-fold OOS trade total.
-        </span> : null}
-      </p>
+      {summary ? (
+        <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
+          <span
+            data-summary-trade-count
+            data-trade-scope={summary.total_trade_count.scope}
+            title={`${summary.total_trade_count.source_locator} · not an audited fill count or the per-fold OOS trade total`}
+          >
+            Engine total trades ({summary.total_trade_count.scope}):{" "}
+            {summary.total_trade_count.state === "AVAILABLE" && summary.total_trade_count.value !== null
+              ? <span data-exact={summary.total_trade_count.value}>{formatMetric(summary.total_trade_count.value, "count")}</span>
+              : <Withheld availability={{ state: summary.total_trade_count.state, reason_code: summary.total_trade_count.reason_code }} />}
+          </span>
+        </p>
+      ) : null}
 
       <PassportPanel slot={passport} onNeeded={ensurePassport} skip={passportSkip} />
     </section>
@@ -3667,7 +3631,7 @@ function StagePreviewTab({
   return (
     <section data-screen-label={STAGE_CRUMB[stage]} className="flex flex-col gap-3.5">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <TabHeading title={preview.title} subtitle={preview.subtitle} />
+        <TabHeading title={preview.title} />
         {dive.path !== null ? (
           <Link
             to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/${dive.path}`, cursor)}
@@ -3712,9 +3676,6 @@ function StagePreviewTab({
         ) : (
           <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="stage" />
         )}
-        <span className="mono ml-auto text-[9px]" style={{ color: "var(--ink-faint)" }}>
-          preview — the deep dive owns the full story
-        </span>
       </section>
 
       {/* DQ-14: the HiFi's panels keep their places, each with the reason it is empty. */}
@@ -3727,8 +3688,7 @@ function StagePreviewTab({
             reason={
               <>
                 <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} />{" "}
-                — the Evidence Hub publishes this stage's timeline, not its content.{" "}
-                {dive.path !== null ? `Screen ${dive.screen} reads it.` : `Screen ${dive.screen} is not built yet (${dive.phase}).`}
+                · {dive.path !== null ? `see ${dive.screen}` : `${dive.screen} not built (${dive.phase})`}
               </>
             }
           />
@@ -3747,9 +3707,9 @@ function StagePreviewTab({
 }
 
 /** The HiFi's two gated hooks under NEXT, disabled with SOON. */
-function SoonHook({ label, children }: { label: string; children: ReactNode }) {
+function SoonHook({ label, hint, children }: { label: string; hint?: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-3" data-soon-hook={label}>
+    <div className="flex flex-wrap items-center gap-3" data-soon-hook={label} title={hint}>
       <button
         type="button"
         disabled
@@ -3765,9 +3725,11 @@ function SoonHook({ label, children }: { label: string; children: ReactNode }) {
       >
         SOON
       </span>
-      <span className="text-[11.5px]" style={{ color: "var(--ink-soft)" }}>
-        {children}
-      </span>
+      {children ? (
+        <span className="text-[11.5px]" style={{ color: "var(--ink-soft)" }}>
+          {children}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -3815,7 +3777,7 @@ function CertificationTable({ certificate }: { certificate: EvidenceHub["claim"]
   const issued = certificate.state === "ISSUED" && certificate.grade !== null;
   return (
     <TableCard
-      title="certification — min of the caps, never issued here"
+      title="certification"
       data-cert-table
       style={{ ...PANEL_STYLE, boxShadow: "none", flex: "1.4 1 0", minWidth: "min(460px, 100%)" }}
       footer={
@@ -3842,8 +3804,13 @@ function CertificationTable({ certificate }: { certificate: EvidenceHub["claim"]
           ) : (
             <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: certificate.reason_code }} />
           )}
-          <span className="text-[11px]" style={{ color: "var(--ink-soft)" }} title={CERT_TOOLTIP} data-cert-binding>
-            binding: not published — the rule is the engine's, never applied here.
+          <span
+            className="text-[11px]"
+            style={{ color: "var(--ink-soft)" }}
+            title={`${CERT_TOOLTIP} — the rule is the engine's, never applied here`}
+            data-cert-binding
+          >
+            binding — not published
           </span>
         </div>
       }
@@ -3859,8 +3826,9 @@ function CertificationTable({ certificate }: { certificate: EvidenceHub["claim"]
         <tbody>
           <tr data-cert-caps="NOT_PUBLISHED">
             <td className="px-3 py-[7px] text-[11px] leading-[1.5]" colSpan={3} style={{ color: "var(--ink-soft)" }}>
-              <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="per-stage caps" />
-              <span> — the engine publishes the certificate it issued, not the caps behind it; this screen never recomputes a grade.</span>
+              <span title="The engine publishes the certificate it issued, not the caps behind it.">
+                <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="per-stage caps" />
+              </span>
             </td>
           </tr>
         </tbody>
@@ -3938,7 +3906,7 @@ function WindowDisclosureTable({
       tone: "var(--role-oos)",
       who: (
         <span className="flex flex-wrap gap-x-2.5 gap-y-0.5">
-          <span>{WINDOW_DISCLOSURE}</span>
+          <span title={WINDOW_DISCLOSURE_RULE}>{WINDOW_DISCLOSURE}</span>
           <FactCell fact={retainedClaim?.validation_claim ?? null} label="validation_claim" gap={gap} />
           <FactCell fact={retainedClaim?.oos_used_for_selection ?? null} label="oos_used_for_selection" gap={gap} />
         </span>
@@ -3964,11 +3932,6 @@ function WindowDisclosureTable({
       title="window disclosure — who may read what"
       data-window-disclosure-panel
       style={{ ...PANEL_STYLE, boxShadow: "none", flex: "1 1 0", minWidth: "min(340px, 100%)" }}
-      footer={
-        <p className="border-t px-3 py-2 text-[10px] leading-[1.5]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}>
-          Each row prints only what a read on this screen publishes; a window no read describes keeps its row, marked.
-        </p>
-      }
     >
       <table className="w-full border-collapse text-[12px]">
         <tbody>
@@ -4000,7 +3963,7 @@ function ArtifactManifest({ runIdentity }: { runIdentity: RunIdentitySlot }) {
     state = runIdentity.state;
     body = (
       <p className="text-[11px]" style={{ color: "var(--ink-faint)" }} data-manifest-absence={runIdentity.state}>
-        {runIdentity.state === "loading" ? "Reading the run's progress read…" : "The run's progress read has not been asked on this screen."}
+        {runIdentity.state === "loading" ? "reading…" : "not read"}
       </p>
     );
   } else if (read === null) {
@@ -4009,16 +3972,14 @@ function ArtifactManifest({ runIdentity }: { runIdentity: RunIdentitySlot }) {
       <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-manifest-absence="UNAVAILABLE">
         <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
           artifact manifest — progress read unavailable
-        </span>{" "}
-        — the progress read did not answer this viewer, so no artifact row is drawn.
+        </span>
       </p>
     );
   } else if (snapshot === null) {
     state = read.availability;
     body = (
       <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-manifest-absence={read.availability} data-reason-code={read.availability}>
-        <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: read.availability }} what="artifact manifest" /> — the
-        progress read answered {read.availability}; it publishes no artifact before its source does.
+        <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: read.availability }} what="artifact manifest" />
       </p>
     );
   } else {
@@ -4026,8 +3987,8 @@ function ArtifactManifest({ runIdentity }: { runIdentity: RunIdentitySlot }) {
     body = (
       <>
         <ArtifactsTable artifacts={snapshot.artifacts} denied={read.denied_artifacts ?? []} />
-        <span className="pt-1 text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-artifact-no-reader>
-          {ARTIFACT_NO_READER}
+        <span className="mono pt-1 text-[10px] italic leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-artifact-no-reader title={ARTIFACT_NO_READER}>
+          reader route — not published
         </span>
       </>
     );
@@ -4087,10 +4048,7 @@ function ClaimTab({
   const absences: [string, Availability][] = lane !== null ? laneAbsences : Object.entries(hub.source_absences);
   return (
     <section data-screen-label="Stage 5 · Claim" className="flex flex-col gap-3.5">
-      <TabHeading
-        title="Stage 5 · Claim — what this run is allowed to say"
-        subtitle="The claim passport only aggregates. Nothing here is computed on this screen."
-      />
+      <TabHeading title="Stage 5 · Claim" />
 
       <section className="flex flex-col gap-2 rounded-[8px] border px-3.5 py-3" data-claim-panel={claim.state} style={PANEL_STYLE}>
         <div className="flex flex-wrap items-baseline gap-2">
@@ -4119,12 +4077,6 @@ function ClaimTab({
             what="claim"
           />
         )}
-        {claim.state === "NOT_ISSUED" ? (
-          <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-claim-not-issued-note>
-            The server's own sentence, quoted: no release claim was issued for this run, so nothing on this screen may be
-            read as one.
-          </p>
-        ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
@@ -4209,10 +4161,10 @@ function ClaimTab({
             {certificate.state === "ISSUED" && certificate.grade !== null ? certificate.grade : certificate.state}
           </span>
         </SoonHook>
-        <SoonHook label="Register for Paper Trading">
-          will carry the claim passport and the evidence link; deployment params must equal frozen params or declare a
-          refit.
-        </SoonHook>
+        <SoonHook
+          label="Register for Paper Trading"
+          hint="Will carry the claim passport and the evidence link; deployment params must equal frozen params or declare a refit."
+        />
       </section>
     </section>
   );
@@ -4233,10 +4185,7 @@ function AtlasTab({ runId, hub }: { runId: string; hub: EvidenceHub }) {
   params.set("run", runId);
   return (
     <section data-screen-label="Atlas" className="flex flex-col gap-3.5">
-      <TabHeading
-        title="Atlas — how to read modes and routes"
-        subtitle="Reference, not a stage. Every cell deep-links into the stages with the cursor it describes."
-      />
+      <TabHeading title="Atlas — how to read modes and routes" />
       {/* V2 (2026-09-30): the matrix itself, from the same read Screen 12 renders (HiFi 04 Atlas tab). */}
       <Link
         to={`/research/quantbt/atlas#${params.toString()}`}

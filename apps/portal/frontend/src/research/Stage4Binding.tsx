@@ -45,6 +45,15 @@ function valueText(value: string | null): string | null {
   return value.length > 24 ? `${shortDigest(value, 12)}…` : value;
 }
 
+/** How each lane compares its rows — hover text on the card title (VD-TEXT-01), not a paragraph under it. */
+function bindingRule(lane: Stage4BindingValue["lane"]): string {
+  return lane === "RS02_RETAINED_CHILD_AUDIT"
+    ? "Compared by QuantBT's own identities: the sealed θ*'s candidate id against the candidate each fold's out-of-sample generation child ran, and the strategy fingerprint of the frozen candidate's selection-stage children against the generation child's."
+    : lane === "IMPORTED_FIXED_QUALIFICATION"
+      ? "Compared by exact imported-source and adapter-contract digests against the confined child's persisted execution receipt. This is source identity, not an audited broker fill claim."
+      : "Compared by digest: the registered fixed bundle and adapter contract against what the P04 child executed (its P14 receipt and the run's producer row) — the P04 replay is that child's own tape.";
+}
+
 export function ServedStage4Binding({ binding, authority }: { binding: Stage4BindingValue; authority?: ParameterAuthorityValue | null }) {
   const badge = BADGE[binding.state];
   return (
@@ -57,7 +66,12 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
       style={{ borderColor: binding.state === "DRIFT" ? "var(--bad)" : "var(--line)", background: "var(--paper-raised)" }}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="[font-family:var(--font-body)] text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h3
+          className="[font-family:var(--font-body)] text-[10px] font-medium uppercase tracking-[.07em]"
+          style={{ color: "var(--ink-faint)" }}
+          title={bindingRule(binding.lane)}
+          data-binding-rule
+        >
           F4 · binding down to Stage 4
         </h3>
         <span
@@ -121,18 +135,15 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
           );
         })}
       </ul>
-      <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-binding-note>
-        {binding.lane === "RS02_RETAINED_CHILD_AUDIT"
-          ? "Compared by QuantBT's own identities: the sealed θ*'s candidate id against the candidate each fold's out-of-sample generation child ran, and the strategy fingerprint of the frozen candidate's selection-stage children against the generation child's."
-          : binding.lane === "IMPORTED_FIXED_QUALIFICATION"
-          ? "Compared by exact imported-source and adapter-contract digests against the confined child's persisted execution receipt. This is source identity, not an audited broker fill claim."
-          : "Compared by digest: the registered fixed bundle and adapter contract against what the P04 child executed (its P14 receipt and the run's producer row) — the P04 replay is that child's own tape."}{" "}
-        {binding.state === "NOT_COMPARED" && binding.reason_code ? (
+      {binding.state === "NOT_COMPARED" && binding.reason_code ? (
+        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-binding-note>
           <span data-binding-reason={binding.reason_code}>{reasonCodeSentence(binding.reason_code)} ({binding.reason_code})</span>
-        ) : binding.state === "DRIFT" ? (
-          <span style={{ color: "var(--bad)" }}>Stage 5 must refuse this run; re-run Execute on the sealed selection or re-seal as a new attempt.</span>
-        ) : null}
-      </span>
+        </span>
+      ) : binding.state === "DRIFT" ? (
+        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--bad)" }} data-binding-note>
+          Stage 5 must refuse this run — re-run Execute or re-seal as a new attempt.
+        </span>
+      ) : null}
       {authority ? <ParameterAuthorityNote authority={authority} /> : null}
     </section>
   );
@@ -142,12 +153,12 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
 function ParameterAuthorityNote({ authority }: { authority: ParameterAuthorityValue }) {
   const fixed = authority.code_fixed;
   return (
-    <div className="flex flex-col gap-0.5 border-t pt-1.5 text-[10px] leading-[1.5]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-parameter-authority={fixed.state}>
+    <div className="flex flex-col gap-0.5 border-t pt-1.5 text-[10px] leading-[1.5]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-parameter-authority={fixed.state} title="Code-fixed values sit outside the params digest; they are covered by the code digest inside the adapter contract.">
       <span>
         <span className="mono">{authority.declared.names.length}</span> declared parameters are inside the params digest.
       </span>
       <span>
-        Code-fixed values:{" "}
+        Code-fixed values{" "}
         {fixed.state === "AVAILABLE" ? (
           <span className="mono">{fixed.values.map((value) => `${value.name} = ${value.value}`).join(" · ") || "none"}</span>
         ) : (
@@ -155,15 +166,14 @@ function ParameterAuthorityNote({ authority }: { authority: ParameterAuthorityVa
             not published
           </span>
         )}{" "}
-        — outside the params digest, covered by the code digest{" "}
+        · code digest{" "}
         <span className="mono" title={fixed.code_digest ?? undefined}>
           {fixed.code_digest ? `${shortDigest(fixed.code_digest, 8)}…` : "not published"}
         </span>{" "}
-        inside the adapter contract{" "}
+        · adapter contract{" "}
         <span className="mono" title={fixed.adapter_contract_digest ?? undefined}>
           {fixed.adapter_contract_digest ? `${shortDigest(fixed.adapter_contract_digest, 8)}…` : "not published"}
         </span>
-        .
       </span>
     </div>
   );

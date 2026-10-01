@@ -104,6 +104,8 @@ Chi tiết + locator: `A1_cg_fg.md`. Thứ tự:
 
 | Id | Việc |
 |---|---|
+| **CG-FG-S10-02** | **ĐÓNG won't-do (Bobby 2026-10-01, VD-F1-02):** không làm `lineage_status` / `superseded_by`; FE bỏ chip lifecycle khỏi node, chỉ hiện trạng thái attempt (đã có `attempt.state`) và lifecycle version ở tiêu đề band. Gỡ khỏi mọi danh sách việc |
+| **BR-TXT-01** | Bobby giảm chữ hard-code ở FE (VD-TEXT-01). Chữ **do server trả** quá dài cần bản ngắn: S09 ghi chú "Net return and drawdown are the retained final-account path…" (58 chữ) → ≤12 chữ (hoặc mã lý do để FE tự có câu ngắn); mọi `reason`/`note` dài >20 chữ trong report/compare/search read nên có dạng ngắn. Không đổi nghĩa; contract additive. Danh sách FE đã gặp (F1b): S08 `execution_state` gap reason 25 chữ; S06 `oos_use` condition 20 chữ và ghi chú ledger ~27 chữ/trial (chiếm phần lớn trang 400 trials); S13 trajectory 14 chữ, markets `result.caption` 15 chữ, pair refusal ~40 chữ; S04 câu claim in hai lần ở tab Claim và `rule.description` của verdict; S12 `AtlasNotPublishedFact` chỉ có `reason` — **thêm `reason_code`** để FE hiện chip mã thay vì câu; S01 claim sentences |
 | CG-P21-01 | fixture canonical pack / seal (201+replay) / Problem / compose-unbound/-missing/-partial-seal |
 | CG-P21-03 | khai ETag compose/pack trong OpenAPI (qua `sendRevalidatable`, phủ cả body) hoặc bỏ header |
 | CG-P21-04 | `description` cho `Problem.error.message`: "diagnostic; not UI copy" |
@@ -134,7 +136,7 @@ Theo `A4_p22_p24.md` §3 (thứ tự đã đề xuất): ledger hygiene → gom 
 | S14-RW-OPS-01 | origin localhost cho preview | ops |
 | E6-BR-01 | ký / SBOM thật | P24 |
 
-**Bobby quyết (gom một lần):** BR-D4-2 · E10-O2 · E10-O3a · E10-O4 · E13-O3 (`CLONE_OF` migration 078+) · `candle_overview` vs `market_overview` · E5-O6 · D5 · CG-P21-05 / CG-FG-S11-03 (VD-FG-01-26) · CG-FG-S10-04 (VD-FG-01-18) · CG-FG-S10-02 (từ vựng trạng thái attempt) · CG-FG-S02-01 / S04-06 (chính sách cert cap) · CG-FG-S08-02 (E16-R1 đã đóng per-bar) · CG-FG-S09-02 (lộ path) · AN-29 backfill · owner ≤P21 nếu muốn trả về Claude.
+**Bobby quyết (gom một lần):** BR-D4-2 · E10-O2 · E10-O3a · E10-O4 · E13-O3 (`CLONE_OF` migration 078+) · `candle_overview` vs `market_overview` · E5-O6 · D5 · CG-P21-05 / CG-FG-S11-03 (VD-FG-01-26) · CG-FG-S10-04 (VD-FG-01-18) · CG-FG-S02-01 / S04-06 (chính sách cert cap) · CG-FG-S08-02 (E16-R1 đã đóng per-bar) · CG-FG-S09-02 (lộ path) · AN-29 backfill · owner ≤P21 nếu muốn trả về Claude.
 
 ## 8. Dọn sổ (docs; làm cùng mục liên quan — cập nhật, không xoá, A13.1)
 

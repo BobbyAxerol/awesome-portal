@@ -387,7 +387,7 @@ export function reportState(report: ReportDetail): ResearchState {
   if (absent.length > 0) {
     return {
       state: "partial",
-      reason: `Sealed report. The source did not publish ${absent.join(", ")}; each is named below with its reason code.`,
+      reason: `Partial — not published: ${absent.join(" · ")}`,
       mayRetry: false,
       retainsContent: true,
     };

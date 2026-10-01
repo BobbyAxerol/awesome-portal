@@ -720,9 +720,8 @@ for (const [name, width, height] of [
 
     await expect(page.locator("[data-screen='run-library']")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Run library" })).toBeVisible();
-    await expect(page.locator("[data-screen='run-library']")).toContainText(
-      "The library renders them; it ranks nothing.",
-    );
+    // VD-TEXT-01: no "rules of this screen" footer any more.
+    await expect(page.locator("[data-screen='run-library']")).not.toContainText("it ranks nothing");
 
     // Header, filter bar, ledger, cards, compare-less footer: the whole
     // composition, not a subset that happens to fit.
@@ -1512,7 +1511,7 @@ for (const [name, width, height] of [
     await expect(page.locator("[data-screen='search-detail']")).toBeVisible();
     await expect(page.locator("[data-source-profile='FIXED_PROFILE_NO_SEARCH']")).toBeVisible();
     await expect(page.locator("[data-requested-optimizer]")).toContainText("declared not executed");
-    await expect(page.locator("[data-one-mode]")).toContainText("fixed at submit");
+    await expect(page.locator("[data-one-mode]")).toHaveCount(0); // VD-TEXT-01: the one-mode note is gone
     await expect(page.locator("[data-readiness]")).toContainText("readiness partial");
 
     // Stage A, the freeze line and Stage B all keep their place.

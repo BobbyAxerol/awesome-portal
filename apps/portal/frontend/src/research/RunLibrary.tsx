@@ -32,7 +32,6 @@ import { createContext, useContext, useEffect, useRef, useState, type CSSPropert
 import { Link } from "react-router-dom";
 
 import {
-  COMPARE_PICK_ONE_MORE,
   COMPARE_REFUSAL,
   RC_PHASE,
   type Availability,
@@ -65,20 +64,22 @@ import { useRunLabel } from "./runLabels";
 
 /* --------------------------------------------------------------- verbatim */
 
-/** Hi-fi title and subtitle (DQ-02: the hi-fi wins on copy). */
+/**
+ * Hi-fi title. VD-TEXT-01: the hi-fi subtitle and its "rules of this screen"
+ * footer are gone; the ComparisonContractKey rule lives on the Compare button.
+ */
 export const TITLE = "Run Library — the entry point";
-export const SUBTITLE =
-  "Every run wears its claim, its certification, and its evidence trail on the outside. No number without the conditions it was earned under.";
 
-/** Spec 01 §17 and the hi-fi, verbatim — the two agree word for word. */
-export const RULES_FOOTER =
-  "Certification and claim strings come from each run's Stage 5 — the library renders them, it ranks nothing. Compare only unlocks for runs sharing a ComparisonContractKey (symbol · timeframe · route · protocol); two different contracts side by side would be a comparison lie, so the button refuses instead of obliging. Superseded attempts stay visible for lineage and are excluded from every approval path.";
+/** Tooltip on the Compare button while it is not open: the one rule that gates it. */
+export const COMPARE_RULE_TITLE =
+  "Compare unlocks for two runs of one alpha that share a ComparisonContractKey (symbol · timeframe · route · protocol).";
+/** The compare bar's one-line prompt while a single run is selected. */
+export const COMPARE_PICK_SECOND = "select a second run to compare";
 
-export const CLAIM_PENDING = "claim pending — engine issues it at Stage 5, never before";
-export const CLAIM_FAILED =
-  "no claim — the run failed before Stage 5; failure detail lives in the run console";
+export const CLAIM_PENDING = "claim pending — issued at Stage 5";
+export const CLAIM_FAILED = "no claim — failed before Stage 5";
 /** A cancelled run's claim line — the status is published, so this may say so. */
-export const CLAIM_CANCELLED = "no claim — the run was cancelled before Stage 5";
+export const CLAIM_CANCELLED = "no claim — cancelled before Stage 5";
 /** A NOT_ISSUED claim state published without its sentence (RF-05: the sentence normally travels with it). */
 export const CLAIM_NOT_ISSUED = "claim not issued";
 
@@ -1559,7 +1560,7 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
 
   const note =
     mode === "pending"
-      ? COMPARE_PICK_ONE_MORE
+      ? COMPARE_PICK_SECOND
       : mode === "reading"
         ? "reading the selected run hidden by the filter, to learn its ComparisonContractKey…"
         : mode === "ready"
@@ -1630,7 +1631,7 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
           type="button"
           disabled
           data-action="open-compare"
-          title={note}
+          title={mode === "refused" ? note : `${note} — ${COMPARE_RULE_TITLE}`}
           className="mono rounded-[6px] border border-dashed px-[14px] py-[5px] text-[10px] uppercase tracking-[.05em]"
           style={{ borderColor: "var(--line-strong)", background: "var(--paper-sunken)", color: "var(--ink-faint)", cursor: "not-allowed" }}
         >
@@ -2021,9 +2022,6 @@ export function RunLibrary(props: RunLibraryProps) {
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 300, letterSpacing: "-.01em", lineHeight: 1 }}>
             {TITLE}
           </h1>
-          <p style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: 13.5, color: "var(--ink-faint)" }}>
-            {SUBTITLE}
-          </p>
         </div>
         <span className="flex flex-none flex-wrap items-center" style={{ gap: 8 }}>
           <span
@@ -2366,14 +2364,6 @@ export function RunLibrary(props: RunLibraryProps) {
 
       <CompareBar selection={selection} onClear={() => onFilters({ ...filters, sel: [] })} />
 
-      <footer className="flex flex-col" style={{ gap: 3, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
-        <span style={{ fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--ink-faint)" }}>
-          rules of this screen
-        </span>
-        <p style={{ fontSize: 11, color: "var(--ink-soft)", lineHeight: 1.6 }} data-rules-footer>
-          {RULES_FOOTER}
-        </p>
-      </footer>
     </div>
     </RcPublicationContext.Provider>
   );

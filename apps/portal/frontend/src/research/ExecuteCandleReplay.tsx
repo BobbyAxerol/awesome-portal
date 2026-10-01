@@ -46,19 +46,21 @@ import { iso } from "./utcMinute";
 
 /* --------------------------------------------------------------- verbatim */
 
-export const CANDLE_SUBTITLE =
-  "The run's own candles, one bar at a time. A marker is a target transition QuantBT settled at the bar close; this route emits no order, fill or trade record, so none is drawn.";
-
+/**
+ * VD-TEXT-01: the route's one-line fact. The longer sentence ("markers are
+ * target transitions, not audited fills...") is gone: the legend says what a
+ * marker is and each absent panel carries the server's own reason. A count the
+ * source did not publish says so; it is never printed as 0.
+ */
 export const CLOSE_TARGET_NOTICE = (orders: number | null, fills: number | null, trades: number | null) =>
-  `close_target_v2 — the route this run executed. Accounting happens at the close only: QuantBT emitted ${count(orders)} orders, ${count(fills)} fills and ${count(trades)} trades for this run. Markers are target transitions, not audited fills. The trade anatomy below says so instead of inventing links.`;
+  `close_target_v2 · close-only accounting · ${counted(orders, "orders")} · ${counted(fills, "fills")} · ${counted(trades, "trades")}`;
 
-export const REVEAL_NOTE =
-  "Causal reveal hides bars, transitions and outcomes after the cursor — a prefix cut of the retained bars, never a re-run. It changes no revision or digest.";
+export const REVEAL_NOTE = "Hides everything after the cursor — no re-run.";
 
 export const REVEAL_HIDDEN = "hidden by causal reveal";
 
-function count(value: number | null): string {
-  return value === null ? "an unpublished number of" : String(value);
+function counted(value: number | null, noun: string): string {
+  return value === null ? `${noun} not published` : `${value} ${noun}`;
 }
 
 function words(value: string): string {
@@ -117,7 +119,8 @@ function Exact({ value, unit }: { value: string | null | undefined; unit: "curre
   );
 }
 
-function Card({ title, aside, children, ...rest }: { title: string; aside?: ReactNode; children: ReactNode } & Record<string, unknown>) {
+/** `hint` is the long rule text: it rides in a tooltip on the title, and the title stays the accessible name. */
+function Card({ title, aside, hint, children, ...rest }: { title: string; aside?: ReactNode; hint?: string; children: ReactNode } & Record<string, unknown>) {
   return (
     <section
       className="flex min-w-0 flex-col gap-2 rounded-[8px] border px-4 py-3"
@@ -127,7 +130,7 @@ function Card({ title, aside, children, ...rest }: { title: string; aside?: Reac
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         {/* h2 under the page's h1 (axe heading-order). */}
-        <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }} title={hint}>
           {title}
         </h2>
         {aside}
@@ -351,7 +354,7 @@ function CandleChart({
       {/* A table ignores width/overflow, so the visually-hidden box is a wrapper. */}
       <div className="sr-only">
       <table data-chart-table="replay-candles">
-        <caption>Retained bars in this window: time, open, high, low, close, accepted position and equity, exact values</caption>
+        <caption>Retained bars in this window, exact values</caption>
         <tbody>
           {rows.slice(0, cut).map((row) => (
             <tr key={row.source_ordinal} data-candle-row={row.source_ordinal}>
@@ -588,11 +591,16 @@ export function CandleOverviewStrip({
           />
         ))}
       </svg>
-      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-overview-caption>
+      <span
+        className="mono text-[9px]"
+        style={{ color: "var(--ink-faint)" }}
+        data-overview-caption
+        title={overview.sampling === "FULL" ? undefined : "Each candle's high and low are the true extremes of its bars."}
+      >
         {scope} · {n.toLocaleString("en-US")} bars
         {overview.sampling === "FULL"
           ? " · every bar"
-          : ` in ${overview.emitted_bucket_count} candles of ${overview.bucket_bars} bars — each high/low is the true extreme of its bars`}
+          : ` → ${overview.emitted_bucket_count} candles of ${overview.bucket_bars}`}
         {high !== null && low !== null
           ? ` · ${cutOrdinal === null ? "range" : "revealed range"} ${low} – ${high}`
           : " · range withheld — no complete bucket at cursor"}
@@ -783,7 +791,7 @@ function PlayheadState({ transport, rows, reveal, totals }: {
         {reveal ? <em data-reveal-hidden>{REVEAL_HIDDEN}</em> : <b><Exact value={totals.fee} unit="currency" /></b>}
       </span>
       <span className="italic" style={{ color: "var(--ink-faint)" }} data-playhead-note>
-        the account's own checkpoint at this bar — research model state, not a broker account
+        model state, not a broker account
       </span>
     </div>
   );
@@ -887,8 +895,8 @@ function TransitionLedger({
         <button type="button" className="btn-ghost mono text-[10px]" disabled={!ledger.page.has_more || slot.inFlight} title={slot.inFlight ? "A page of transitions is loading." : ledger.page.has_more ? undefined : "This is the last page of transitions."} onClick={() => onPage("next")} data-action="transitions-next">
           later ›
         </button>
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-transition-count>
-          {ledger.rows.length} of {ledger.source_transition_count ?? "an unpublished number of"} transitions · {words(ledger.semantics)}
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-transition-count title={words(ledger.semantics)}>
+          {ledger.rows.length} of {ledger.source_transition_count ?? "an unpublished number of"} transitions
         </span>
       </div>
     </div>
@@ -929,10 +937,10 @@ function ChildAuditCard({
       {summary.state !== "AVAILABLE" ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>This seal carries no child-audit records.</p>
       ) : fold === null ? (
-        <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>The bars on screen are in-sample; child audit is read per OOS fold.</p>
+        <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>In-sample bars — child audit is per OOS fold.</p>
       ) : waiting && !loaded ? (
         <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="waiting">
-          fold {fold}'s child audit is read when playback rests — play across folds reads only windows.
+          fold {fold}'s child audit loads when playback rests.
         </p>
       ) : !slot || slot.state === "idle" || slot.state === "loading" || slot.fold !== fold ? (
         <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="loading">reading fold {fold}'s child audit…</p>
@@ -940,9 +948,8 @@ function ChildAuditCard({
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-child-audit="refused">{slot.message}</p>
       ) : (
         <div className="flex flex-col gap-1" data-child-audit={slot.fold}>
-          <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            Each row is a strategy instance QuantBT created for fold {slot.fold}, as QuantBT recorded it. The marked row generated
-            the out-of-sample bars replayed above.
+          <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
+            fold {slot.fold} instances · marked = OOS generation
           </p>
           {/* Keyboard users can scroll this table sideways at narrow widths (axe scrollable-region-focusable). */}
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of fold ${slot.fold}`}>
@@ -1006,7 +1013,7 @@ function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay
         {
           key: "order",
           na: true,
-          value: `not_applicable — ${route.engine_id ?? "this route"} emits no order records (${counts.orders_published ?? "?"} published)`,
+          value: `not_applicable — ${route.engine_id ?? "this route"} · ${counted(counts.orders_published, "order records")}`,
         },
         {
           key: "target",
@@ -1019,7 +1026,7 @@ function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay
         {
           key: "fill",
           na: true,
-          value: `not_applicable — accounting settles at the ${route.fill_price_policy ?? "close"} (${words(route.fill_phase ?? "same close")}); ${counts.fills_published ?? "?"} fill records`,
+          value: `not_applicable — settles at the ${route.fill_price_policy ?? "close"} · ${counted(counts.fills_published, "fill records")}`,
         },
         {
           key: "child",
@@ -1042,7 +1049,7 @@ function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay
       ]
     : [];
   return (
-    <Card title="trade anatomy — close-target schema, every link from the retained bar" data-panel="trade-anatomy">
+    <Card title="trade anatomy" data-panel="trade-anatomy">
       {selected ? (
         <div className="flex flex-col" data-anatomy={selected.source_ordinal}>
           {links.map((link) => (
@@ -1060,7 +1067,7 @@ function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay
         </div>
       ) : (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
-          Pick a transition in the ledger to read its links.
+          Pick a transition to read its links.
         </p>
       )}
     </Card>
@@ -1111,7 +1118,7 @@ function CostTimeline({ rows, replay, reveal, transport }: {
         })}
       </div>
       <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-        One column per bar in the window; a full column is a bar the account paid a fee on. Fee rate{" "}
+        columns = fee-charged bars · fee rate{" "}
         {replay.execution.route.fee_rate_oneway === null || replay.execution.route.fee_rate_oneway === undefined ? (
           "not published"
         ) : (
@@ -1119,7 +1126,7 @@ function CostTimeline({ rows, replay, reveal, transport }: {
             {exactPercent(replay.execution.route.fee_rate_oneway) ?? replay.execution.route.fee_rate_oneway}
           </span>
         )}{" "}
-        one way, slippage {replay.execution.route.slippage_bps ?? "not published"} bps.
+        one-way · slippage {replay.execution.route.slippage_bps ?? "not published"} bps
       </span>
     </Card>
   );
@@ -1351,18 +1358,17 @@ export function CandleReplayBody({
         />
         <AcrossNotice across={across} />
         <PlayheadState transport={transport} rows={rows} reveal={reveal} totals={execution.totals} />
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          data-read-rule={across.enabled ? "across" : "asked"}
+          title={across.enabled ? "Play across folds is on: the next window is read at the end of this one." : "Windows are read only when you ask."}
+        >
           <button type="button" className="btn-ghost mono text-[10px]" data-action="previous-window" disabled={!replay.replay.page.has_previous || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_previous ? undefined : "This window starts at the fold's first bar."} onClick={() => controller.retainedPreviousWindow?.()}>
             ‹ previous window
           </button>
           <button type="button" className="btn-ghost mono text-[10px]" data-action="next-window" disabled={!replay.replay.page.has_more || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_more ? undefined : "This window ends at the fold's last bar."} onClick={() => controller.retainedNextWindow?.()}>
             next window ›
           </button>
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-read-rule={across.enabled ? "across" : "asked"}>
-            {across.enabled
-              ? "play across folds is on: at the last bar of this window the screen reads the next window itself, one at a time and never past the last fold; a fold or a transition outside it is still read only when you ask."
-              : "a fold, a window or a transition outside it is read only when you ask; playing stops at the end of this window."}
-          </span>
         </div>
       </section>
 
@@ -1391,13 +1397,10 @@ export function CandleReplayBody({
         <div className="flex min-w-0 flex-col gap-3">
           <Card
             title="target transition ledger"
+            hint="Each row is a bar where QuantBT changed the accepted position. Numbers are original bar ordinals; a gap is bars without a transition."
             data-panel="event-ledger"
             aside={<FactLine label="events" fact={replay.route_capabilities.execution_events} name="execution_events" />}
           >
-            <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-              Each row is a bar where QuantBT changed the accepted position, with the account's own notional and fee. The
-              numbers are original bar ordinals; a gap between them is bars without a transition, not missing data.
-            </p>
             {controller.transitions ? (
               <TransitionLedger
                 slot={controller.transitions}
@@ -1415,20 +1418,16 @@ export function CandleReplayBody({
         <div className="flex min-w-0 flex-col gap-3">
           <Card title="trade blotter" data-absent-panel="trade-blotter">
             <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-              QuantBT emitted {counts.trades_published ?? "no published number of"} trade records on this route. Pairing the
-              transitions above into trades would be the screen's guess, so no blotter is drawn.
+              {counts.trades_published === null ? "trade record count not published" : `${counts.trades_published} trade records on this route`}
             </p>
             <FactLine label="trades" fact={replay.route_capabilities.trades} name="trades" />
           </Card>
-          <Card title="MAE × MFE — pain vs potential per trade" data-absent-panel="mae-mfe">
-            <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>Per-trade excursions need trade records; this route has none.</p>
+          <Card title="MAE × MFE" data-absent-panel="mae-mfe">
+            <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>needs trade records; this route has none</p>
             <FactLine label="MAE × MFE" fact={replay.route_capabilities.mae_mfe} name="mae_mfe" />
           </Card>
           <CostTimeline rows={rows} replay={replay} reveal={reveal} transport={transport} />
           <Card title="route-aware facts" data-panel="route-panel">
-            <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-              What close_target_v2 cannot produce, each with the run's own reason.
-            </p>
             <div className="flex flex-col gap-1">
               <FactLine label="orders" fact={replay.route_capabilities.orders} name="orders" />
               <FactLine label="fills" fact={replay.route_capabilities.fills} name="fills" />

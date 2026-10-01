@@ -44,10 +44,10 @@ import type { ReplayController, RetainedReplaySlot } from "./useReplay";
 
 export const ACROSS_LABEL = "play across folds · reads the next window at each boundary";
 
-export const ACROSS_HELP =
-  "Off by default. When on, and only while playing: at the last bar of the window on screen this screen reads the next window itself — the next fold's first window at a fold's end — and keeps playing. It never reads past the last fold, sends one read at a time, and stops at a refusal. Pause, seek or turn it off and nothing more is read.";
+/** VD-TEXT-01: was 68 words; this is the switch's tooltip and its accessible description. */
+export const ACROSS_HELP = "Off by default. Reads the next window when playback reaches the end.";
 
-export const ACROSS_SINGLE_FOLD = "This run has one fold window, so there is no next fold to read.";
+export const ACROSS_SINGLE_FOLD = "One fold window — no next fold to read.";
 
 /** The retained lane's sequence gap, in the screen's words (also used for a plain window read). */
 export const SEQUENCE_GAP_WORDS =

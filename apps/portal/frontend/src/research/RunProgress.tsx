@@ -58,9 +58,9 @@ import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
 
 /* --------------------------------------------------------------- verbatim */
 
-/** HiFi 03 subtitle (DQ-02: the HiFi wins on copy). */
-export const SUBTITLE =
-  "The same screen becomes the evidence: claims sit in forecast state while the engine works, and flip to issued the moment it finishes — nothing moves, nothing reloads.";
+/* VD-TEXT-01: the HiFi subtitle under the title, the "rules of this screen"
+   footer and the design notes in the console strip are gone — the screen
+   shows its state, not a paragraph about itself. */
 
 /** Transport labels: HiFi wording, the spec's 5 s floor (FE-S03-17). */
 export const SSE_LIVE = "SSE streaming · poll floor 5s underneath";
@@ -138,21 +138,22 @@ export function transportFace(input: {
   };
 }
 
-export const NOT_ISSUED_NOTE =
-  "the run failed before Stage 5 — no claim exists. Failure detail is in the console above.";
+export const NOT_ISSUED_NOTE = "the run failed before Stage 5 — no claim exists";
 
 /** A run that ended without failing and without a claim, when the server gave no sentence. */
 export const NO_CLAIM_NOTE = "This run ended without issuing a claim.";
 
 export const OLDER_DROPPED = "· · · older lines dropped (kept server-side)";
 
-/** HiFi rules footer, without the holdout sentence this build has no stage for (DQ-15). */
-export const RULES_FOOTER =
-  "SSE accelerates, polling underneath never stops — the screen degrades in speed, not in truth. Claims stay in forecast state until the engine issues them; this page never promotes a forecast to a fact.";
-
 /** P11 publishes no reader route; the contract pins `reader_href` to null. */
-export const ARTIFACT_NO_READER =
-  "Sealed means the bytes are ready — reading them is a separate, authorized route this release does not publish.";
+export const ARTIFACT_NO_READER = "reader route — not published";
+
+/** Said once as a tooltip on the evidence-cursor label: what the cursor is for. */
+export const EVIDENCE_CURSOR_TITLE =
+  "Handed to Evidence Flow at completion — you land on the same fold you watched.";
+
+/** Tooltip on the gantt title: what picking a fold does. */
+export const GANTT_TITLE_HINT = "The evidence cursor follows the fold you pick (the running fold while live).";
 
 /** Spec 03 §22–§23, worded for the run state this Portal actually records. */
 export const CANCEL_BODY =
@@ -973,8 +974,7 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: 
       })}
       {folds.some((f) => (f.fold_timeline ?? NOT_PUBLISHED_TIMELINE).state === "PARTIAL") ? (
         <p style={{ fontSize: 9.5, color: "var(--role-holdout)", margin: 0 }} data-timeline-partial>
-          Some folds published only part of their Search / OOS / freeze facts. The published segments are drawn as they
-          are; the gaps are not filled.
+          Partial folds — published segments only, gaps not filled.
         </p>
       ) : null}
     </div>
@@ -1008,7 +1008,9 @@ function CursorRow({
         borderTop: "1px solid var(--line-soft)",
       }}
     >
-      <span style={CARD_TITLE}>evidence cursor</span>
+      <span style={CARD_TITLE} title={EVIDENCE_CURSOR_TITLE}>
+        evidence cursor
+      </span>
       <span style={CHIP} data-cursor-fold>
         fold <span style={{ color: "var(--ink)" }}>{fold === null ? <Absent what="none yet" /> : foldId(fold)}</span>
       </span>
@@ -1034,9 +1036,6 @@ function CursorRow({
         ) : (
           <NotPublished reason="The progress read publishes no params digest for this fold." />
         )}
-      </span>
-      <span style={{ fontSize: 9.5, color: "var(--ink-faint)" }}>
-        handed to Evidence Flow at completion — you land on the same fold you watched
       </span>
     </div>
   );
@@ -1624,8 +1623,8 @@ function DoneBanner({
       </span>
       <span style={{ fontSize: 11.5, color: "var(--ink-soft)", flex: 1, minWidth: 260 }}>
         {issued
-          ? "The claim bar above is now authoritative. Continue into the evidence with the cursor you watched:"
-          : "No claim was issued for this run. Continue into the evidence with the cursor you watched:"}
+          ? "open the evidence at:"
+          : "no claim issued · open the evidence at:"}
       </span>
       <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
         {links.map(([key, label]) => {
@@ -1797,6 +1796,7 @@ function Skeleton({ height }: { height: number }) {
 
 function Card({
   title,
+  hint,
   meta,
   name,
   children,
@@ -1804,6 +1804,8 @@ function Card({
   gap = 6,
 }: {
   title: string;
+  /** Long rule text lives in a tooltip, never in the flow (VD-TEXT-01). */
+  hint?: string;
   meta?: ReactNode;
   name: string;
   children: ReactNode;
@@ -1813,7 +1815,9 @@ function Card({
   return (
     <section data-research-panel={name} aria-label={name} style={{ ...CARD, gap, ...style }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-        <h2 style={{ ...CARD_TITLE, margin: 0 }}>{title}</h2>
+        <h2 style={{ ...CARD_TITLE, margin: 0 }} title={hint}>
+          {title}
+        </h2>
         {meta ? <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)", textAlign: "right" }}>{meta}</span> : null}
       </div>
       {children}
@@ -1894,7 +1898,6 @@ function Header({
         >
           {title}
         </h1>
-        <p style={{ fontFamily: DISPLAY, fontStyle: "italic", fontSize: 13.5, color: "var(--ink-faint)", margin: 0 }}>{SUBTITLE}</p>
         {children}
       </div>
       {right ? <div style={{ flex: "none", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>{right}</div> : null}
@@ -1935,19 +1938,6 @@ function NewRunFrom({ runId, read }: { runId: string; read: ProgressRead }) {
     <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }} data-retry-reason>
       {from ? NEW_RUN_FROM_UNAVAILABLE : "this release does not offer retry from Run Progress"}
     </span>
-  );
-}
-
-function RulesFooter() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
-      <span style={{ fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--ink-faint)" }}>
-        rules of this screen
-      </span>
-      <p style={{ fontSize: 11, color: "var(--ink-soft)", lineHeight: 1.6, margin: 0 }} data-rules-footer>
-        {RULES_FOOTER}
-      </p>
-    </div>
   );
 }
 
@@ -2083,7 +2073,6 @@ export function RunProgress(props: RunProgressProps) {
           <ServedAttempts queue={read.queue} attempts={read.attempts} open />
           {!queued ? <NewRunFrom runId={runId} read={read} /> : null}
         </section>
-        <RulesFooter />
       </div>
     );
   }
@@ -2222,7 +2211,8 @@ export function RunProgress(props: RunProgressProps) {
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "stretch" }}>
         <Card
           name="folds"
-          title={live ? "fold gantt — live · the evidence cursor follows the running fold" : "fold gantt — the evidence cursor follows the fold you pick"}
+          title={live ? "fold gantt · live" : "fold gantt"}
+          hint={GANTT_TITLE_HINT}
           meta={snapshot ? (foldCount !== null ? `${folds.length} of ${foldCount} folds reported` : `${folds.length} reported`) : undefined}
           style={{ flex: "1.15 1 0", minWidth: "min(460px, 100%)" }}
         >
@@ -2250,7 +2240,7 @@ export function RunProgress(props: RunProgressProps) {
 
         <Card
           name="artifacts"
-          title="artifacts — appearing as they are built"
+          title="artifacts"
           meta={
             snapshot?.mandatory_bundle ? (
               <span title={`${snapshot.mandatory_bundle.size} bytes · ${snapshot.mandatory_bundle.digest}`}>
@@ -2284,9 +2274,6 @@ export function RunProgress(props: RunProgressProps) {
         <span role="tablist" aria-label="Console view" style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 6, overflow: "hidden" }}>
           {tabButton("live", "Live console")}
           {tabButton("stage", "Stage log")}
-        </span>
-        <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
-          {tab === "live" ? "terminal surface keeps its own palette in both themes" : "structured ledger — one row per reported fold"}
         </span>
         {tab === "live" ? (
           <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
@@ -2382,8 +2369,6 @@ export function RunProgress(props: RunProgressProps) {
       )}
 
       {sealed && snapshot ? <DoneBanner runId={runId} issued={snapshot.claim.state === "ISSUED"} cursor={cursor} /> : null}
-
-      <RulesFooter />
 
       {confirming ? (
         <CancelDialog

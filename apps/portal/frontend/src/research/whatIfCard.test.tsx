@@ -220,8 +220,16 @@ describe("A10c WhatIfCard — actions", () => {
     const ranges = [...container.querySelectorAll<HTMLInputElement>("input[type='range']")];
     expect(ranges).toHaveLength(2);
     expect(ranges.every((range) => range.disabled)).toBe(true);
-    expect(container.querySelector("[data-what-if-reason]")?.textContent).toContain("no evaluated neighbourhood exists");
+    expect(container.querySelector("[data-what-if-reason]")?.textContent).toContain("no evaluated neighbourhood");
     expect([...container.querySelectorAll<HTMLButtonElement>("button")].every((button) => button.disabled)).toBe(true);
+  });
+
+  it("VD-TEXT-01: the fork rule is a short caption with the full sentence in its title", () => {
+    const { container } = renderCard({ whatIf: null, inert: { state: "NOT_APPLICABLE", reason_code: "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF_GRID" } });
+    const rule = container.querySelector("[data-what-if-rule]");
+    expect(rule?.textContent).toBe("commit → sibling attempt");
+    expect(rule?.getAttribute("title")).toContain("never writes onto frozen params");
+    expect(container.textContent).not.toContain("lineage-linked");
   });
 
   it("signed ΔJ keeps the exact digits", () => {

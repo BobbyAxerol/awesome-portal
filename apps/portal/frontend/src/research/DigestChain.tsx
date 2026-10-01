@@ -420,8 +420,8 @@ export function DigestChain({
         ))}
       </ul>
 
-      <p className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-chain-note>
-        {VERIFY_SCOPE_NOTE}
+      <p className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-chain-note title={VERIFY_SCOPE_NOTE}>
+        checks artifact integrity, not selection
       </p>
     </section>
   );

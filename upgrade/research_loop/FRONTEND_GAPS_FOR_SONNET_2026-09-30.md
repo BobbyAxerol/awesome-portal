@@ -121,7 +121,19 @@ S04 bảng a11y ẩn 955 dòng (5.179 node DOM) · S08 bảng child-audit ~2.950
 
 Đã giao phía backend, FE chưa đọc: `requires_alpha` (S00), `train_test_disjoint` (S05); AN-22 OOS Sharpe P04 ở S13 đã có (trừ R-P04-006). CG-FG-S08-01 không cần backend (`params_digest` đã có ở progress). Không tái hiện: D6 (Review 4h vs 1h) trên `?from=`. Xác nhận lại khoảng 40 dòng đã biết (04-H, 04-S, AN-16/17/18, X3, D7, 07-12, FG 12-02, D11, 08-16, 08-06/07, D10, 09-02/03, D8, FG 10-11, CG-FG-S10-02, 13-04, CG-FG-S14-03…).
 
-## 7. Danh sách sửa UI/UX của Bobby
+## 7. Quyết định của Bobby (2026-10-01: **duyệt cả 3** + VD-TEXT-01) — bản ghi: `evidence/P21/VD_F1_TEXT_DECISIONS_2026-10-01.md`
+
+Nguyên tắc Bobby: chữ/chip nào **không cần cho luồng UX thì bỏ**, nhường chỗ cho biểu đồ và số liệu. Ba quyết định mở sau F1; đề xuất dưới đây theo đúng nguyên tắc đó. **Đã duyệt** (VD-F1-01…03) và mở rộng: giảm chữ hard-code theo §5 = **VD-TEXT-01 đã duyệt**, bố cục giữ HiFi. Việc làm = đợt **F1b** (§8).
+
+| # | Chỗ | Hiện tại (code) | Đề xuất | Vì sao | Hệ quả |
+|---|---|---|---|---|---|
+| 1 | **S14 câu từ chối origin** (`alphaImportClient.ts:265` `IMPORT_ORIGIN_REFUSED`) | "The request origin or CSRF check was refused. Reload this page and try again." (14 chữ, thuật ngữ kỹ thuật) | **"Request refused — reload the page and try again."** Mã (`RESEARCH_…`) chỉ ở dòng chi tiết. Không nêu nguyên nhân | Người dùng thật trên host thật gần như không bao giờ gặp (chỉ khi origin sai/phiên hết); họ chỉ cần biết làm gì tiếp. Câu ngắn vẫn đúng sự thật (không khẳng định thứ không đọc được từ server) | −9 chữ; không đổi backend |
+| 2 | **S10 chip trạng thái attempt** (`LineageDetail.tsx` `lineageStatus`, quy tắc tạm F1) | Chip "version ACTIVE" hoặc trạng thái attempt; 4 filter chip theo lifecycle version | **Bỏ chip lifecycle-version khỏi từng node.** Node chỉ hiện trạng thái **của chính attempt** (COMPLETED / FAILED / CANCELLED / RUNNING / DRAFT — từ `attempt.state`, đã có sẵn). Lifecycle version (ACTIVE / SUPERSEDED / ABANDONED) hiện **một lần ở tiêu đề band** — màn đã gom attempt theo band version rồi nên chip trên từng node là lặp. Filter chip giữ 4 nút nhưng nhãn đúng cái nó lọc: "version active / superseded / abandoned" + "draft" (như hiện tại) | Chip lặp lại thông tin của band và là nguồn của lỗi "FAILED mà ACTIVE"; reader cần biết **attempt này chạy ra sao** và **thuộc version nào**, không cần hai thông tin trộn vào một chip | **Đóng CG-FG-S10-02 là "won't-do"** — Codex khỏi làm field `lineage_status` + `superseded_by` (bớt một việc backend); không cần Bobby chốt từ vựng nữa; lệch HiFi nhỏ (HiFi có chip trên node) → ghi VD-F1-02 |
+| 3 | **S13 "same claim →" và câu luật** (`CompareDetail.tsx:159-210`) | Giữa hai thẻ claim bằng nhau in "same claim →"; câu luật ~35 chữ luôn hiện | **Giữa hai thẻ claim bằng nhau: không in gì** (đường nối mảnh hoặc khoảng trống). Chỉ in "claim ↑" ở bước claim **thật sự tăng**. Câu luật: bỏ khỏi thân màn, đưa vào **tooltip trên tiêu đề ladder**; chỉ hiện một dòng ngắn "claim strengthens →" khi có ít nhất một bước tăng. Khi **mọi** thẻ cùng một claim (trường hợp thật: 15–16 thẻ trên 400 trials) → thu gọn thành một dòng "N attempts · one claim: <family>" + lưới thẻ không mũi tên | Mũi tên giữa claim bằng nhau không mang thông tin; 15 lần "same claim →" chỉ là nhiễu. Giảm chữ khớp §5 (S13 508→56 chữ) | Không đổi backend; lệch HiFi → ghi VD-F1-03 (HiFi luôn vẽ ladder 4 bậc tăng dần, dữ liệu thật không như vậy) |
+
+**Việc cần làm sau khi duyệt (Sonnet, cỡ S):** (1) đổi hằng + test `alphaImport.f1.test.tsx`; (2) bỏ chip node, thêm lifecycle vào header band, đổi test `lineageDetail*`; (3) bỏ connector SAME, chuyển câu luật vào tooltip, thêm chế độ "một claim", đổi test `compareDetail*`. Visual baseline S10/S13 sẽ đổi → trình Bobby, không tự `--update`.
+
+## 7b. Danh sách sửa UI/UX của Bobby
 
 _(Bobby sẽ gửi)_
 
@@ -171,3 +183,21 @@ Bằng chứng từng mục (trước/sau, tên test, ảnh + SHA-256): `evidenc
 | S12 | `trial_ceiling` | REPORT | đã hiện ở "release facts" (mặc định gập); không đổi |
 
 **Mục mới phát hiện khi làm F1 (đưa vào F2/F3):** `PICK_TARGET_LABEL` (S01 `RunLibrary.tsx:~1122`) thiếu `alpha_version_legacy` → banner "Pick a run to open alpha_version_legacy" lộ token thô (sau khi bấm thẻ Alpha version ở S00) · `e2e/fixtures.ts` và `e2e/research-qualification/stubs.ts` còn phục vụ `journey-v3` (descriptor đã v4) · caption overview S08 chưa nhóm nghìn.
+
+### Đợt F1b — 3 quyết định đã duyệt + giảm chữ hard-code (2026-10-01) · base `bfee4737`
+
+Quyết định: `evidence/P21/VD_F1_TEXT_DECISIONS_2026-10-01.md` (VD-F1-01…03, VD-TEXT-01). Bằng chứng từng chuỗi (cũ → mới → file), số chữ trước/sau, ảnh + SHA-256: `evidence/P21/audit-2026-09-30/f1b/{S13,S10_S14,S06,S07,S08,S05_S09,S04,S03_S01_S12}.md`. Gate: vitest toàn bộ frontend **223 file / 4328 pass / 3 skip**, `tsc` sạch; hook ở commit. **Chưa chạy:** build, visual, lane real-API, axe, e2e probe (đã sửa 2 probe pin chữ cũ — `_probe-research-product.spec.ts`, `_probe-fg04-research-s08-s09.spec.ts` — nhưng **chưa chạy**).
+
+| Nhóm | Kết quả | Số chữ hiển thị cứng (≥8 chữ) trước → sau | Còn lại / ghi chú |
+|---|---|---|---|
+| S13 | DONE VD-F1-03 + trim | Attempts 523 → 57; Markets 197 → 41; Pair 96 (trạng thái refused) | claim bằng nhau không in gì (đường nối mảnh); "claim strengthens →" chỉ khi có bước tăng và không bước giảm; mọi thẻ cùng claim → "N attempts · one claim: <family>" + lưới; thêm dòng "release candidate — no ACTIVE attempt" (nhỏ, của Claude) |
+| S10 | DONE VD-F1-02 | 176 → 55 | bỏ chip version khỏi node; lifecycle version ở tiêu đề band; bỏ hàng `state` trùng pill và màu lifecycle trên card (lệch HiFi nhỏ — ghi cùng VD-F1-02) |
+| S14 | DONE VD-F1-01 | step 1: 254 → 21 | "Request refused — reload the page and try again."; `IMPORT_META` "ADMIN-only" bỏ; còn `codeAnatomy.ts` ~110 chữ khi mở (ứng viên trim tiếp) |
+| S06 | DONE | non-ledger 780 → 336 (R-WFO-020) | ghi chú ledger ~27 chữ/trial là chữ server (BR-TXT-01) |
+| S07 | DONE | — (xem record) | sửa thêm `DigestChain.tsx`, `Stage4Binding.tsx` (chỉ chữ); tooltip Stage-4 không có dấu hiệu nhìn thấy |
+| S08 | DONE | — (xem record) | còn `?? "—"` cho đếm null ở tile/bảng child-audit (vi phạm luật null≠—, **đưa vào F2**); `replayClient.ts` PARTIAL banner chưa trim |
+| S05 + S09 | DONE | S05 R-WFO-020: 48 | P04: 132 chữ là câu vắng từ `splitClient.ts` (ngoài file) |
+| S04 | DONE | Summary 397 → ~46 (xem record); 20 test mới | câu vắng từ `researchRefusal.ts` dùng chung (vd 29 chữ rolling) chưa rút; thẻ Claim vẫn có vùng trống dưới "resulting level" (một dòng `mt-auto` nếu muốn) |
+| S03 + S01 + S12 | DONE | S03 R-WFO-017 ≈143 → ≈8; S01 ≈137 → ≈0; S12 ≈139 → ≈19 | `AtlasNotPublishedFact` không có `reason_code` (chỉ `reason`) → chip mã không thể có, xin Codex thêm field; tooltip không hiện trên cảm ứng (câu từ chối compare vẫn in trong thanh) |
+
+**Việc nhỏ còn lại từ F1b → F2/F3:** `?? "—"` ở S08 · `codeAnatomy.ts` (S14) · `replayClient.ts` + `splitClient.ts` + `researchRefusal.ts` + `runLibraryClient.ts` (`COMPARE_PICK_ONE_MORE` đã không dùng) trim chữ dùng chung · dấu "ⓘ" không render trong Chromium headless → đã thay bằng "i" CSS (kiểm trên trình duyệt thật của Bobby) · tooltip chỉ-title kém khám phá được trên cảm ứng.

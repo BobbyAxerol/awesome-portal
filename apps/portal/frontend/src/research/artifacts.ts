@@ -83,7 +83,7 @@ function withheldReason(facts: ArtifactFacts): string | null {
     // The distinction this sentence draws is the whole point of the rule.
     return "Sealed on disk but not registered by the authority.";
   }
-  return "The server has not published an export action for this artifact.";
+  return "export — not published";
 }
 
 export function artifactPanel(facts: ArtifactFacts): ArtifactPanel {

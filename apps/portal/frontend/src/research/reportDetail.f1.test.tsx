@@ -108,7 +108,7 @@ describe("F1 D8 walk — the equity legend and the source absences tell one stor
     };
     server({ report: { status: 200, body } });
     renderRoute(body.run_id);
-    await screen.findByText("Claim passport — issued by the engine, quoted verbatim");
+    await screen.findByText("Claim passport");
 
     const equity = panel("equity");
     expect(equity.querySelector('[data-legend="is"]')?.textContent).toBe(EQUITY_LEGEND_BEFORE_OOS);
@@ -132,7 +132,7 @@ describe("F1 D8 walk — the equity legend and the source absences tell one stor
     expect(body.frozen_core.equity_is.state).toBe("NOT_PUBLISHED");
     server({ report: { status: 200, body } });
     renderRoute(body.run_id);
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     const legend = panel("equity").querySelector('[data-legend="is"]') as HTMLElement;
     expect(legend.getAttribute("data-legend-state")).toBe("absent");
     expect(legend.textContent).toContain(body.frozen_core.equity_is.availability.reason_code);
@@ -146,7 +146,7 @@ describe("F1 D2 walk — the printed evidence link is the whole address", () => 
     const body = fixture("research-report.wfo-retained.valid.json");
     server({ report: { status: 200, body } });
     renderRoute(body.run_id);
-    await screen.findByText("Claim passport — issued by the engine, quoted verbatim");
+    await screen.findByText("Claim passport");
     const link = panel("provenance").querySelector("[data-evidence-link] a") as HTMLAnchorElement;
     const href = link.getAttribute("href")!;
     expect(href).toBe(`${window.location.origin}/research/quantbt/runs/${encodeURIComponent(body.run_id)}/report?report_revision=${encodeURIComponent(body.report_revision)}`);

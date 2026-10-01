@@ -77,10 +77,13 @@ import { ShortId } from "./ShortId";
 
 /* --------------------------------------------------------------- verbatim */
 
-/** HiFi 05 title and subtitle (DQ-02: the HiFi wins on copy). */
+/**
+ * HiFi 05 title. The HiFi subtitle ("The protocol decides what a fold even
+ * is…") and the "rules of this screen" footer are removed by VD-TEXT-01
+ * (Bobby, 2026-10-01): a screen with charts and numbers keeps no prose that
+ * restates what the screen is.
+ */
 export const SPLIT_TITLE = "Split — how time was divided";
-export const SPLIT_SUBTITLE =
-  "The protocol decides what a fold even is. If this stage is wrong, every later stage is wrong — and no metric downstream can repair it.";
 
 export const INNER_CAPTION =
   "inner folds exist so selection can rank WITHOUT touching the outer test — per_fold_causal reads outer OOS exactly once, after freeze.";
@@ -89,19 +92,6 @@ export const HOLDOUT_RULE_NO_READ = "No panel on any screen reads a bar inside t
 
 export const HOLDOUT_RULE_UNLOCK =
   "Unlock is a one-time audited read that creates a sibling attempt — never a mutation of this run.";
-
-/**
- * The footer, in parts (DQ-15). The first sentence is about this screen and
- * always true; the second names a fold_plan source and is shown only when a
- * fold plan was actually published to this screen.
- */
-export const SPLIT_RULES_BASE =
-  "This screen renders the boundaries the server published — it never constructs a fold and never recomputes a date. Where a boundary was not published, its frame stays and says so.";
-export const SPLIT_RULES_FOLD_PLAN =
-  "The fold rows are the retained source's own fold plan; every integrity check is read from it, never recomputed in the frontend.";
-
-/** Kept for callers of the P14 build; the full HiFi footer asserts facts this run may not publish. */
-export const SPLIT_RULES_FOOTER = SPLIT_RULES_BASE;
 
 /**
  * W3b · the reason this screen prints for a fact the retained lane has no
@@ -1324,7 +1314,7 @@ function StitchDigest({ stitch }: { stitch: LaneStitch }) {
       </span>
       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-stitch-basis={stitch.basis}>
         {stitch.basis === "PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1"
-          ? "the Portal's digest of the retained stitch plan — QuantBT publishes none"
+          ? "Portal digest · QuantBT: not published"
           : stitch.basis}
       </span>
     </span>
@@ -1413,9 +1403,7 @@ function LaneHoldout({ lane }: { lane: LaneView }) {
         style={{ borderColor: "var(--accent-2)", color: "var(--ink-soft)" }}
         data-holdout-note
       >
-        {applicable ? <span data-holdout-rule="no-read">{HOLDOUT_RULE_NO_READ}</span> : (
-          <span data-holdout-rule="none">No holdout segment exists in this profile, so nothing is sealed and nothing can be unlocked.</span>
-        )}
+        {applicable ? <span data-holdout-rule="no-read">{HOLDOUT_RULE_NO_READ}</span> : null}
         <span className="flex flex-wrap items-center gap-2" data-holdout-rule="unlock">
           <span
             data-action-unlock={applicable ? "NOT_PUBLISHED" : "NOT_APPLICABLE"}
@@ -1561,13 +1549,6 @@ export function SplitScreen({
           <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
             {SPLIT_TITLE}
           </h1>
-          <p
-            className="text-[13.5px] italic [line-height:normal]"
-            style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }}
-            data-subtitle
-          >
-            {SPLIT_SUBTITLE}
-          </p>
         </div>
         {detail ? (
           <div className="flex flex-none flex-col items-end gap-[5px]">
@@ -1889,7 +1870,7 @@ export function SplitScreen({
               <section className={`${CARD} gap-[6px] p-[14px]`} style={CARD_STYLE} data-card="boundary-integrity">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-                    boundary integrity — read from the split, not recomputed
+                    boundary integrity
                   </span>
                   {(lane ? lane.split.revision : detail.revision) !== null ? (
                     /* HiFi: the digest the checks were read from — here the split read's own revision. */
@@ -1988,10 +1969,10 @@ export function SplitScreen({
                 </span>
                 <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
                   {lane
-                    ? `The retained fold plan publishes ${lane.split.fold_plan.folds.length} test windows, one per fold; the stitched OOS series itself is on Evidence Flow.`
+                    ? `${lane.split.fold_plan.folds.length} test windows · series on Evidence Flow`
                     : hasRange(detail.windows.outer_oos)
-                      ? "The split read publishes one outer OOS window and no stitched series or stitch digest. The series itself is on Evidence Flow."
-                      : "The split read publishes no outer OOS window, so there is no segment to stitch."}
+                      ? "one outer OOS window · no stitched series published"
+                      : "no outer OOS window published"}
                 </p>
                 {lane && lane.split.fold_plan.folds.length > 0 ? (
                   <span className="flex h-[10px] gap-[2px]" data-stitch-segments={lane.split.fold_plan.folds.length}>
@@ -2018,15 +1999,6 @@ export function SplitScreen({
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                   what this stage feeds forward
                 </span>
-                <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                  {lane && lane.schedule === "global"
-                    ? "Stage 2 ran one global study across the whole walk-forward. Stage 3 froze its one selected θ*, and Stage 4 trades every fold's test window with those same parameters."
-                    : fixed
-                      ? "Stage 2 did not search: this run was qualified against a fixed parameter profile. Stage 3 reads that profile's bundle, and Stage 4 replays the outer OOS window with it."
-                      : foldPlanReady
-                        ? "Stage 2 searches inside each train window with the cutoffs shown above. Stage 3 freezes one θ* per fold at that cutoff. Stage 4 replays each test window with its own frozen digest."
-                        : "The later stages read the windows above; how parameters were chosen is on Stage 2."}
-                </p>
                 {/* Screen 08 (Execute / Replay) exists: the next stage, on this cursor. */}
                 <Link
                   to={deepDiveHref(`${runPath}/execute`, { ...cursor, stage: "execute" })}
@@ -2071,16 +2043,6 @@ export function SplitScreen({
           </NotApplicableWords.Provider>
         ) : null}
       </ResearchPanel>
-
-      <footer className="flex flex-col gap-[3px] border-t pt-2" style={{ borderColor: "var(--line)" }}>
-        <span className="text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
-          rules of this screen
-        </span>
-        <p className="text-[11px] leading-[1.6]" style={{ color: "var(--ink-soft)" }} data-rules-footer>
-          {SPLIT_RULES_BASE}
-          {foldPlanReady ? ` ${SPLIT_RULES_FOLD_PLAN}` : ""}
-        </p>
-      </footer>
     </div>
   );
 }
@@ -2120,45 +2082,38 @@ const FIXED_PROFILE_EVALUATION_STATES: ReadonlySet<string> = new Set([
   "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE",
 ]);
 
-/** The protocol note, built only from facts this read published (DQ-15). */
+/**
+ * The protocol note, built only from facts this read published (DQ-15) — one
+ * short fact line (VD-TEXT-01). The fold count, windows and selection scope
+ * are already fields of the strip above, so the note carries only what they do
+ * not: the OOS-use caveat, and the absence of a fold plan.
+ */
 function protocolSentence(detail: SplitDetailDocument, foldPlanReady: boolean): string {
   const parts: string[] = [];
   if (detail.protocol.kind === "THREE_WINDOW_CURRENT") {
-    parts.push("three_window_current: one IS window and one outer OOS window");
+    /* The holdout's child-tape exposure is its own integrity row below; the note names only that it exists. */
+    const holdout = hasRange(detail.windows.holdout) ? " + holdout" : "";
+    parts.push(`three_window_current · IS + outer OOS${holdout}`);
     if (hasRange(detail.windows.outer_oos)) {
       /* X5: a fixed-profile run (P04) and an imported fixed-profile run say the same thing. */
       const evaluation = (detail.windows.outer_oos as { evaluation_state: string }).evaluation_state;
-      parts.push(`— the OOS window ${FIXED_PROFILE_EVALUATION_STATES.has(evaluation) ? "was observed after the profile was fixed" : "was observed"}`);
+      parts.push(FIXED_PROFILE_EVALUATION_STATES.has(evaluation) ? "OOS observed after the profile was fixed" : "OOS observed");
     }
-    if (hasRange(detail.windows.holdout)) parts.push("and a holdout the child tape never received.");
-    else parts.push(".");
   } else {
-    parts.push("The server published no protocol kind for this run.");
+    parts.push("protocol kind — not published");
   }
-  parts.push(
-    foldPlanReady
-      ? "The folds below are the retained source's own."
-      : "No fold plan was published, so no fold is drawn and the cursor's fold does not apply on this screen.",
-  );
-  return parts.join(" ").replace(" .", ".");
+  if (!foldPlanReady) parts.push("fold plan — not published");
+  return parts.join(" · ");
 }
 
-/** W3b · the protocol note on a retained WFO run, built only from facts the lane published. */
+/** W3b · the protocol note on a retained WFO run: one fact line from what the lane published. */
 function laneSentence(lane: LaneView): string {
-  const folds = lane.split.fold_plan.folds.length;
   const parts: string[] = [];
-  parts.push(
-    lane.protocol
-      ? `${lane.protocol}: ${folds} outer folds observed in the retained source.`
-      : `${folds} outer folds observed in the retained source.`,
-  );
-  if (lane.schedule === "global") {
-    parts.push("One global study selected θ* for the whole run, so every fold trades the same parameters.");
-  }
+  if (lane.schedule === "global") parts.push("one global θ* traded on every fold");
   const oos = lane.split.guards?.oos_used_for_selection;
-  if (oos?.state === "AVAILABLE" && oos.value === true) parts.push("QuantBT reports that OOS was used for selection.");
-  parts.push("The folds below are the retained source's own.");
-  return parts.join(" ");
+  if (oos?.state === "AVAILABLE" && oos.value === true) parts.push("OOS used for selection (QuantBT)");
+  if (parts.length === 0) parts.push(`${lane.split.fold_plan.folds.length} outer folds · retained source`);
+  return parts.join(" · ");
 }
 
 /**
@@ -2349,14 +2304,14 @@ function ThetaFlow({
     <section className={`${CARD} gap-2 p-4`} style={RAISED_STYLE} data-card="theta-flow">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-          S2 · θ* flow — how IS parameters reach the OOS backtest
+          S2 · θ* flow
         </span>
         <span className="mono flex items-baseline gap-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-theta-meta>
-          θ* per fold{" "}
+          θ* per fold:{" "}
           {lane ? (
             lane.schedule === "global" ? (
               <span style={{ color: "var(--accent)" }} data-theta-scope="GLOBAL" title="progress read: every fold's selection scope is GLOBAL_STUDY">
-                GLOBAL · one θ* shared by every fold
+                GLOBAL (shared)
               </span>
             ) : lane.identityLoading ? (
               <Reading what="the schedule" />
@@ -2428,15 +2383,12 @@ function ThetaFlow({
 
       {lane ? <ThetaParams lane={lane} /> : null}
 
-      <p className="border-l-2 pl-2 text-[11px] leading-[1.55]" style={{ color: "var(--ink-soft)", borderColor: "var(--accent)" }} data-theta-note>
-        {lane
-          ? lane.schedule === "global"
-            ? "Shared params (global schedule): one study over the whole walk-forward selected θ*, and every fold's test window was traded with it — no fold froze its own θ*."
-            : "Each fold's θ* is the retained search's selection; its parameters are listed above."
-          : fixed
-            ? "No search ran, so nothing was frozen at a cutoff: the outer OOS window was traded with the declared fixed profile, whose bundle digest is on the right. Stage 3 verifies that same digest."
-            : "The θ* each fold froze is not published by the split read."}
-      </p>
+      {/* VD-TEXT-01: the global / per-fold-search caption restated the header scope and every row; only an absence or a fixed profile still needs a line. */}
+      {lane ? null : (
+        <p className="border-l-2 pl-2 text-[11px] leading-[1.55]" style={{ color: "var(--ink-soft)", borderColor: "var(--accent)" }} data-theta-note>
+          {fixed ? "no search · fixed profile traded on the OOS window" : "θ* per fold — not published"}
+        </p>
+      )}
     </section>
   );
 }
@@ -2706,10 +2658,15 @@ function FoldTable({
           ) : null}
         </tbody>
       </table>
-      <div className="mono border-t px-3 py-1.5 text-[10px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }} data-fold-table-foot>
+      <div
+        className="mono border-t px-3 py-1.5 text-[10px]"
+        style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
+        title="Click a row or use the arrow keys to move the cursor — Search follows it"
+        data-fold-table-foot
+      >
         {plan && plan.length > 0
-          ? `${plan.length} folds from the retained source · click a row or use the arrow keys to move the cursor — Search follows it`
-          : `protocol ${detail.protocol.kind ?? "not published"} · one IS/OOS pair · no fold rows were published, so there is no row to move the cursor to`}
+          ? `${plan.length} folds · retained source`
+          : `protocol ${detail.protocol.kind ?? "not published"} · one IS/OOS pair · no fold rows published`}
       </div>
     </section>
   );

@@ -212,7 +212,7 @@ const LANES: readonly OverviewLane[] = [
 
 /** One grammar for both lanes (`CandleOverviewStrip`, ExecuteCandleReplay.tsx). */
 const CAPTION_GRAMMAR =
-  /^(?<scope>whole run|out-of-sample window) · (?<bars>[\d,]+) bars in (?<buckets>\d+) candles of (?<size>\d+) bars — each high\/low is the true extreme of its bars · range (?<lo>\S+) – (?<hi>\S+)(?: · (?<shading>.+))?$/;
+  /^(?<scope>whole run|out-of-sample window) · (?<bars>[\d,]+) bars → (?<buckets>\d+) candles of (?<size>\d+) · range (?<lo>\S+) – (?<hi>\S+)(?: · (?<shading>.+))?$/;
 
 test.describe("S08 candle overview — both lanes print the server's bucket facts and draw one candle per bucket", () => {
   for (const lane of LANES) {
@@ -261,7 +261,7 @@ test.describe("S08 candle overview — both lanes print the server's bucket fact
         const strokeMismatch = drawn.lines.map((line, i) => (line.stroke === expectedStroke[i] ? null : i)).filter((i) => i !== null);
         const grammar = CAPTION_GRAMMAR.exec(drawn.caption);
         const verbatim = {
-          buckets: drawn.caption.includes(` in ${f.emitted_bucket_count} candles of ${f.bucket_bars} bars`),
+          buckets: drawn.caption.includes(` → ${f.emitted_bucket_count} candles of ${f.bucket_bars}`),
           range: drawn.caption.includes(`range ${f.envelope.min_low} – ${f.envelope.max_high}`),
           sourceBarsRaw: drawn.caption.includes(` ${f.source_bar_count} bars`),
           sourceBarsGrouped: drawn.caption.includes(` ${f.source_bar_count.toLocaleString("en-US")} bars`),

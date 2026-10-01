@@ -37,16 +37,16 @@ const CELL_WORDS: Record<WhatIfCell["state"], string> = {
 };
 
 const REASON_WORDS: Record<string, string> = {
-  P16_WHATIF_NOT_ENABLED: "The what-if diagnostic is not enabled in this environment.",
-  P16_WHATIF_PARENT_PROFILE_BINDING_NOT_REGISTERED: "This run has no registered walk-forward declaration to build a grid from.",
-  P16_WHATIF_BLOCKED_UNTIL_THE_FROZEN_CHAIN_IS_RESOLVED: "resolve the chain first — the sealed bytes of this run do not verify.",
-  P16_WHATIF_EVERY_UNIQUE_EVALUATION_ALREADY_EXISTS: "Every node already has an exact evaluation.",
-  P16_WHATIF_DIAGNOSTIC_JOB_IN_FLIGHT: "A diagnostic job for this grid is running.",
+  P16_WHATIF_NOT_ENABLED: "what-if diagnostic not enabled here",
+  P16_WHATIF_PARENT_PROFILE_BINDING_NOT_REGISTERED: "no registered walk-forward declaration to build a grid from",
+  P16_WHATIF_BLOCKED_UNTIL_THE_FROZEN_CHAIN_IS_RESOLVED: "resolve the chain first — sealed bytes do not verify",
+  P16_WHATIF_EVERY_UNIQUE_EVALUATION_ALREADY_EXISTS: "every node already evaluated",
+  P16_WHATIF_DIAGNOSTIC_JOB_IN_FLIGHT: "diagnostic job running",
   P16_SIBLING_DRAFT_BLOCKED_UNTIL_THE_FROZEN_CHAIN_IS_RESOLVED: "resolve the chain first",
   P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF_GRID:
-    "this run froze a fixed profile — no evaluated neighbourhood exists.",
+    "fixed profile — no evaluated neighbourhood",
   RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET:
-    "This server's retained lane predates the what-if grid: a read never enqueues an evaluation, so no neighbourhood is served.",
+    "retained lane predates the what-if grid — nothing served",
 };
 
 export function whatIfReason(code: string | null | undefined): string {
@@ -187,8 +187,8 @@ function InertWhatIf({ state, reason }: { state: string; reason: string | null }
           {whatIfReason(reason) || "No evaluated neighbourhood is published for this run."}
         </p>
       </div>
-      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule>
-        {WHAT_IF_RULE}
+      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule title={WHAT_IF_RULE}>
+        commit → sibling attempt
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className="btn-ghost mono text-[10px]" data-action="evaluate-grid" disabled title={whatIfReason(reason)}>
@@ -448,8 +448,8 @@ function LiveWhatIf({
         </div>
       )}
 
-      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule>
-        {WHAT_IF_RULE}
+      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule title={WHAT_IF_RULE}>
+        commit → sibling attempt
       </p>
 
       {whatIf.definition ? (

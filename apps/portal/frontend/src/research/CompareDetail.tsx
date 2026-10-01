@@ -42,6 +42,19 @@
  *  - VD-P20-15 "EChart N" tags and the hi-fi's demo narratives are not printed.
  *  - VD-P20-16 mismatched key parts are tinted by display-only equality.
  *  - VD-P20-17 the claim chip names its origin.
+ *
+ * F1b (Bobby 2026-10-01, evidence/P21/VD_F1_TEXT_DECISIONS_2026-10-01.md):
+ *  - VD-F1-03 the ladder prints nothing between two cards of equal claim rank
+ *    (a hairline, no words); "claim ↑ →" stands only at a step that really
+ *    strengthens; the long rule sentence rides the ladder heading's title; one
+ *    short "claim strengthens →" line only when a step strengthens; when EVERY
+ *    card has the same claim the ladder is "N attempts · one claim: <family>"
+ *    over a plain grid without connectors. The hi-fi's fixed four-step ladder
+ *    is the approved deviation.
+ *  - VD-TEXT-01 less hard-coded prose: no header subtitle, no "rule of this
+ *    mode" callout on the attempts mode, no "rules of this screen" footer, no
+ *    "— explanatory tail" in block titles, the per-card claim gloss is the
+ *    claim chip's title. Geometry, blocks and charts stay the hi-fi's.
  */
 
 import { Fragment, useState, type CSSProperties, type ReactNode } from "react";
@@ -53,7 +66,6 @@ import {
   CLAIM_RANK_MAP,
   COMPARE_MODES,
   COMPARE_WITHHELD_WORDS,
-  LADDER_HEADER,
   MARKETS_CAPTION,
   compareHref,
   correlationAbsent,
@@ -130,12 +142,8 @@ export { compareHref };
 
 /* --------------------------------------------------------------- verbatim */
 
-/** Hi-fi title, verbatim. */
-export const COMPARE_TITLE = "Compare — three different questions, three different rules";
-
-/** Hi-fi subtitle; "Two ideas on one key" reads "Two runs on one key" (VD-P20-11). */
-export const COMPARE_SUBTITLE =
-  "Attempts of one idea rank by claim before number. One idea across markets refuses overlay. Two runs on one key overlay — and correlation, not level, decides the second slot.";
+/** VD-TEXT-01: the hi-fi's title without its explanatory tail; the subtitle is gone (the three mode tabs carry the three questions). */
+export const COMPARE_TITLE = "Compare";
 
 /** Hi-fi segment labels; the third says "runs" (VD-P20-01). */
 export const MODE_LABELS: Record<CompareMode, string> = {
@@ -164,8 +172,13 @@ const ATTEMPTS_RULE_ALL_UP =
 /** Some steps strengthen, some do not: the arrows say which. */
 const ATTEMPTS_RULE_SOME_UP =
   "Read the ladder left to right: a claim ↑ step is a stronger claim, and where the number falls across one, that gap is the selection luck the weaker claim was counting.";
-/** The hi-fi's full sentence — what the screen prints when every step strengthens the claim. */
+/** The hi-fi's full sentence — what the ladder heading's title says when every step strengthens the claim. */
 export const ATTEMPTS_RULE = `${ATTEMPTS_RULE_BASE} ${ATTEMPTS_RULE_ALL_UP}`;
+
+/** VD-TEXT-01: the ladder's visible heading (compareClient's longer LADDER_HEADER is not printed; the rule sentence is this heading's title). */
+export const LADDER_TITLE = "claims rank before numbers";
+/** VD-F1-03: the one short line a ladder that strengthens somewhere prints. */
+export const LADDER_STRENGTHENS = "claim strengthens →";
 
 /**
  * F1 (S13 equal claim): how one ladder step relates to the card before it, from the
@@ -193,19 +206,30 @@ export function attemptsRule(steps: readonly LadderStepKind[]): string {
   return `${ATTEMPTS_RULE_BASE} ${steps.every((kind) => kind === "UP") ? ATTEMPTS_RULE_ALL_UP : ATTEMPTS_RULE_SOME_UP}`;
 }
 
-/** The connector between two cards, in words (what it prints, what it is called). */
+/**
+ * The connector between two cards, in words (what it prints, what it is called).
+ * VD-F1-03: between two cards of EQUAL rank nothing is printed (`text` is empty:
+ * the card gap carries a hairline only; the label is for assistive tech).
+ */
 export const STEP_CONNECTOR: Record<LadderStepKind, { text: string; label: string }> = {
   UP: { text: "claim ↑ →", label: "claim strengthens along the ladder" },
-  SAME: { text: "same claim →", label: "same claim rank as the previous card" },
+  SAME: { text: "", label: "same claim rank as the previous card" },
   DOWN: { text: "claim ↓ →", label: "claim weakens along the ladder" },
   UNKNOWN: { text: "→", label: "claim rank not published for one of these cards" },
 };
 
-/** The ladder header's order note: only a ladder that never weakens and strengthens somewhere has a strongest end. */
+/**
+ * VD-F1-03: the ladder's one short visible line. Only a ladder with a step that
+ * strengthens (and none that weakens, where the per-step arrows speak instead)
+ * says so; equal-claim ladders print nothing here (see `ladderOneClaim`).
+ */
 export function ladderOrderNote(steps: readonly LadderStepKind[]): string | null {
-  if (steps.length === 0) return null;
-  if (steps.every((kind) => kind === "SAME")) return "same claim on every card";
-  return steps.includes("UP") && steps.every((kind) => kind === "UP" || kind === "SAME") ? "strongest claim on the right" : null;
+  return steps.includes("UP") && !steps.includes("DOWN") ? LADDER_STRENGTHENS : null;
+}
+
+/** VD-F1-03: every card stands on the same claim (two or more cards, every step of equal published rank). */
+export function ladderOneClaim(steps: readonly LadderStepKind[]): boolean {
+  return steps.length > 0 && steps.every((kind) => kind === "SAME");
 }
 
 /**
@@ -217,13 +241,13 @@ export const MARKETS_RULE_TAIL =
   "Read shapes and claims side by side, never subtract across keys. This is the robustness question: does the idea survive a different market at all?";
 
 /** Hi-fi figure caption, verbatim (VD-P20-04 keeps the frame). */
-export const FOLD_CHART_TITLE = "OOS Sharpe per fold, per attempt — same folds, same tape, different honesty";
+export const FOLD_CHART_TITLE = "OOS Sharpe per fold, per attempt";
 
 /** Hi-fi config-diff header, verbatim (VD-P20-05 keeps the frame). */
-export const DIFF_TITLE = "config diff — the only keys that changed anywhere in the tree";
+export const DIFF_TITLE = "config diff";
 
-/** Hi-fi config-diff footer with "attempts.json" replaced by the read authority (VD-P20-05). */
-export const DIFF_FOOTER = "diffs are config keys from PORTAL_PERSISTED_RESEARCH — never inferred from results. Full tree with parents:";
+/** Hi-fi config-diff footer with "attempts.json" replaced by the read authority (VD-P20-05); VD-TEXT-01: it is the footer's title, not its text. */
+export const DIFF_FOOTER = "diffs are config keys from PORTAL_PERSISTED_RESEARCH — never inferred from results";
 
 export const TRAJECTORY_TITLE = "what this trajectory says";
 
@@ -242,18 +266,18 @@ export const REFUSED_MARKETS_HINT =
 export const OVERLAY_TITLE = "Two runs, one key — overlay from retained points";
 
 /** Hi-fi delta header; "engine-published" → "server-published" (VD-P20-13). */
-export const DELTA_TITLE = "metric deltas — server-published; the UI subtracts nothing";
+export const DELTA_TITLE = "metric deltas";
+/** VD-TEXT-01: what the delta header's title attribute carries instead of a visible tail. */
+export const DELTA_NOTE = "server-published; the UI subtracts nothing";
 
 /** Hi-fi correlation header, verbatim; its source chip is the contract's (VD-P20-02). */
-export const CORRELATION_TITLE = "correlation — the number that decides the second slot";
+export const CORRELATION_TITLE = "correlation";
+/** VD-TEXT-01: the title attribute of the correlation header. */
+export const CORRELATION_HELP = "the number that decides the second slot";
 export const CORRELATION_NOTE = "correlation is Portal-derived from sealed raw returns; the browser computes nothing.";
 
 export const DIFFERENCES_TITLE = "intentional specification differences";
 export const NO_DIFFERENCES = "no intentional specification difference published";
-
-/** Hi-fi rules footer, verbatim except the two phrases the contract contradicts (VD-P20-10). */
-export const COMPARE_RULES =
-  "Three modes, three rules. Attempts of one alpha: overlay allowed, but claims rank before numbers and only the ACTIVE node may promote. One alpha across markets: keys differ ⇒ small multiples, no Δ, no overlay. Two runs on one key: overlay + deltas are legal, correlation is Portal-derived from sealed raw returns, and the weaker claim of the pair gates any joint promotion. ComparisonContractKey is an engine artifact — the UI never constructs or compares one; the server refuses.";
 
 /** A pair needs exactly two run ids before anything can be asked (VD-P20-12). */
 export const PAIR_NEEDS_TWO =
@@ -273,10 +297,10 @@ export const CONTRACT_GAPS = {
 
 /** Every block, in the order the screen renders it for each answer. */
 export const COMPARE_PANELS = {
-  attempts: ["header", "meta", "rule", "ladder", "fold-chart", "diff", "trajectory", "rules"],
-  markets: ["header", "meta", "rule", "markets", "rules"],
-  pair: ["header", "meta", "guard", "overlay", "delta", "correlation", "weaker", "differences", "rules"],
-  refused: ["header", "meta", "guard", "refusal", "rules"],
+  attempts: ["header", "meta", "ladder", "fold-chart", "diff", "trajectory"],
+  markets: ["header", "meta", "rule", "markets"],
+  pair: ["header", "meta", "guard", "overlay", "delta", "correlation", "weaker", "differences"],
+  refused: ["header", "meta", "guard", "refusal"],
 } as const;
 
 /* -------------------------------------------------------------------- css */
@@ -301,12 +325,11 @@ const COMPARE_CSS = `
 .cp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px 16px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
 /* VD-P20-22 (decided 2026-09-26, hi-fi): the title block takes its own width, so the
    segmented control wraps below the subtitle and the title stays on one line. */
-.cp-head > .l { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 0 1 auto; max-width: 100%; }
+.cp-head > .l { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 0 1 auto; width: 100%; max-width: 100%; }
 .cp-crumb { font-size: 12px; color: var(--ink-soft); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .cp-crumb .sep { color: var(--ink-faint); }
 .cp-crumb .here { color: var(--ink); }
 .cp-title { font-family: var(--font-display); font-size: 22px; font-weight: 300; letter-spacing: -.01em; line-height: 1.25; margin: 0; }
-.cp-sub { font-family: var(--font-display); font-style: italic; font-size: 13.5px; color: var(--ink-faint); margin: 0; }
 .cp-seg { flex: none; display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .cp-segbtn { border: 0; border-right: 1px solid var(--line); background: var(--paper-raised); color: var(--ink-soft); padding: 5px 14px;
   font-family: var(--font-mono); font-size: 10.5px; cursor: pointer; }
@@ -363,7 +386,10 @@ const COMPARE_CSS = `
 .cp-att { font-family: var(--font-mono); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
 .cp-arrow { position: absolute; top: 0; bottom: 0; right: 100%; width: var(--cp-link); display: flex; align-items: center; justify-content: center;
   white-space: nowrap; font-family: var(--font-mono); font-size: 11px; color: var(--warn); }
-.cp-arrow[data-step-kind="SAME"] { font-size: 10px; color: var(--ink-faint); }
+/* VD-F1-03: equal claim = no words, a hairline in the card gap (the flex ladder's spacing is unchanged). */
+.cp-arrow[data-step-kind="SAME"]::before { content: ""; width: 28px; border-top: 1px solid var(--line-strong); }
+/* One claim on every card: a plain grid, no connector gap. */
+.cp-ladder[data-ladder-layout="one-claim"] { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: 10px; }
 .cp-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
 .cp-bignum { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
 .cp-note { font-size: 10px; color: var(--ink-soft); line-height: 1.45; overflow-wrap: anywhere; min-width: 0; }
@@ -595,9 +621,18 @@ function ClaimChip({ claim }: { claim: CompareClaim }) {
     );
   }
   const detail = `${entry.tier}${claim.rank !== null ? ` · rank ${claim.rank}` : ""} · origin ${claim.origin}`;
+  /* VD-TEXT-01: the screen's one-sentence gloss (once on every card before) rides the chip's title with the server's claim text. */
+  const title = `${CLAIM_SENTENCE[claim.family]} (${detail})${claim.text ? ` · server: ${claim.text}` : ""}`;
   return (
     <span className="flex flex-col" data-claim={claim.family}>
-      <span className="cp-claimchip" data-rank={entry.rank ?? "none"} data-claim-rank={claim.rank ?? undefined} style={style} title={detail}>
+      <span
+        className="cp-claimchip"
+        data-rank={entry.rank ?? "none"}
+        data-claim-rank={claim.rank ?? undefined}
+        data-claim-source-text={claim.text ?? undefined}
+        style={style}
+        title={title}
+      >
         {claim.family.split("_").map((part, index) => (index === 0 ? part : <Fragment key={index}>_<wbr />{part}</Fragment>))}
         <span className="sr-only" data-claim-origin={claim.origin}>
           {` (${detail})`}
@@ -672,14 +707,6 @@ function Lifecycle({ run }: { run: CompareRun }) {
     </span>
   ) : (
     <AvailabilityAbsent availability={life.availability} what="lifecycle" />
-  );
-}
-
-function ClaimNote({ claim }: { claim: CompareClaim }) {
-  return (
-    <span className="cp-note" data-claim-text data-claim-source-text={claim.text ?? undefined} title={claim.text ?? undefined}>
-      {CLAIM_SENTENCE[claim.family]}
-    </span>
   );
 }
 
@@ -877,9 +904,6 @@ function Header({
           <span className="here cp-long">Compare{compare ? ` — ${compare.alpha.name}` : ""}</span>
         </nav>
         <h2 className="cp-title">{COMPARE_TITLE}</h2>
-        <p className="cp-sub" data-subtitle>
-          {COMPARE_SUBTITLE}
-        </p>
       </div>
       <span className="cp-seg" role="group" aria-label="compare mode">
         {COMPARE_MODES.map((mode) => (
@@ -975,23 +999,14 @@ function Notice({
   );
 }
 
-function Rule({ tone, children }: { tone: "gold" | "bad"; children: ReactNode }) {
+function Rule({ tone, title, children }: { tone: "gold" | "bad"; title?: string; children: ReactNode }) {
   return (
-    <div className="cp-rule" data-panel="rule" data-tone={tone}>
+    <div className="cp-rule" data-panel="rule" data-tone={tone} title={title}>
       <span className="tag">rule of this mode</span>
       <span className="txt" data-rule-text>
         {children}
       </span>
     </div>
-  );
-}
-
-function Rules() {
-  return (
-    <footer className="cp-foot" data-panel="rules">
-      <h3 className="t">rules of this screen</h3>
-      <p>{COMPARE_RULES}</p>
-    </footer>
   );
 }
 
@@ -1023,20 +1038,33 @@ function LadderCard({ run }: { run: CompareRun }) {
         })()}
         <CertAbsent run={run} />
       </div>
-      <ClaimNote claim={run.claim} />
     </article>
   );
 }
 
 function Ladder({ result }: { result: AttemptResult }) {
   const claimed = ladderOrder(result);
-  const orderNote = ladderOrderNote(ladderSteps(claimed));
+  const steps = ladderSteps(claimed);
+  const orderNote = ladderOrderNote(steps);
+  /* VD-F1-03: every card the same claim — one line and a plain grid. Two cards of equal published rank can still name different families, so the family must be one too. */
+  const oneFamily = ladderOneClaim(steps) ? new Set(claimed.map((run) => run.claim.family)) : null;
+  const oneClaim = oneFamily !== null && oneFamily.size === 1 ? [...oneFamily][0]! : null;
   return (
     <section data-panel="ladder" aria-label="claim ladder">
-      <h3 className="cp-ladderhead">
-        <span data-ladder-header>{LADDER_HEADER}</span>
+      {/* VD-F1-03: the rule sentences ride the heading's title, in the hi-fi's order, as far as the ladder really strengthens. */}
+      <h3 className="cp-ladderhead" title={attemptsRule(steps)}>
+        <span data-ladder-header>{LADDER_TITLE}</span>
         <span className="cp-faint" data-ladder-order-key={result.order} title={`server order: ${result.order}, laid out reversed`}>
-          {claimed.length} with a claim · {result.attempts.length} returned{orderNote ? ` · ${orderNote}` : ""}
+          {oneClaim !== null ? (
+            <span data-ladder-one-claim={oneClaim}>
+              {claimed.length} attempts · one claim: {oneClaim}
+            </span>
+          ) : (
+            <>
+              {claimed.length} with a claim · {result.attempts.length} returned
+              {orderNote ? <span data-ladder-order-note>{` · ${orderNote}`}</span> : null}
+            </>
+          )}
         </span>
       </h3>
       {result.attempts.length === 0 ? (
@@ -1048,10 +1076,10 @@ function Ladder({ result }: { result: AttemptResult }) {
           no returned attempt publishes a claim — nothing stands on the ladder
         </span>
       ) : (
-        <div className="cp-ladder" data-ladder-order="server-reversed">
+        <div className="cp-ladder" data-ladder-order="server-reversed" data-ladder-layout={oneClaim !== null ? "one-claim" : "ladder"}>
           {/* Reversed for the hi-fi's reading direction (VD-P20-14); the server's order is the inverse. */}
           {claimed.map((run, index) => (
-            <LadderStep key={run.run_id} run={run} step={index === 0 ? null : ladderStepKind(claimed[index - 1]!, run)} />
+            <LadderStep key={run.run_id} run={run} step={index === 0 || oneClaim !== null ? null : ladderStepKind(claimed[index - 1]!, run)} />
           ))}
         </div>
       )}
@@ -1085,7 +1113,7 @@ function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
         {open ? "hide" : "show"} {runs.length} {runs.length === 1 ? "attempt" : "attempts"} without a claim
       </button>
       <span className="cp-faint" data-unclaimed-states>
-        {states.join(" · ")} — no claim family published, so they do not stand on the ladder
+        {states.join(" · ")} — off the ladder
       </span>
       {open ? (
         <ul className="cp-crows" aria-label="attempts without a claim">
@@ -1124,7 +1152,7 @@ function LadderStep({ run, step }: { run: CompareRun; step: LadderStepKind | nul
   return (
     <div className="cp-lstep" data-ladder-step={run.run_id}>
       {step === null ? null : (
-        <span className="cp-arrow" aria-label={STEP_CONNECTOR[step].label} data-ladder-arrow data-step-kind={step}>
+        <span className="cp-arrow" role="img" aria-label={STEP_CONNECTOR[step].label} data-ladder-arrow data-step-kind={step}>
           {STEP_CONNECTOR[step].text}
         </span>
       )}
@@ -1396,17 +1424,16 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
           </table>
         )}
       </div>
-      <div className="foot">
+      <div className="foot" title={DIFF_FOOTER}>
         {result.attempts.length > runs.length ? (
           /* 13-6: the columns are the ladder's attempts; the rest are counted, their keys are on the tree. */
           <span data-config-diff-omitted={result.attempts.length - runs.length}>
-            {result.attempts.length - runs.length} attempts without a claim are not columns here.{" "}
+            {result.attempts.length - runs.length} without a claim not shown ·{" "}
           </span>
         ) : null}
-        {DIFF_FOOTER}{" "}
         {alphaId ? (
           <LineageLink to={lineageHref(alphaId)} action="open-lineage">
-            Attempt Lineage
+            Attempt Lineage →
           </LineageLink>
         ) : (
           "Attempt Lineage"
@@ -1430,24 +1457,25 @@ function TrajectoryCard({ result, alphaId }: { result: AttemptResult; alphaId: s
       ) : (
         <AvailabilityAbsent availability={trajectory.availability} what="trajectory" />
       )}
-      {/* 13-7: the hi-fi's two in-text links, as a line of the screen's own. */}
-      <p data-trajectory-links>
+      {/* 13-7 / VD-TEXT-01: the hi-fi's two in-text links as two short links; the sentence is their title. */}
+      <p data-trajectory-links title="the tree records every attempt, and the release candidate only ever reads the ACTIVE node">
         {alphaId ? (
           <LineageLink to={lineageHref(alphaId)} action="trajectory-tree">
-            the tree
+            Attempt Lineage →
           </LineageLink>
         ) : (
-          "the tree"
-        )}{" "}
-        records every attempt, and{" "}
+          "Attempt Lineage"
+        )}
+        {" · "}
         {active ? (
           <Link to={releaseCandidateHref(active.run_id)} data-action="trajectory-rc" title={active.run_id}>
-            the release candidate
+            release candidate →
           </Link>
         ) : (
-          "the release candidate"
-        )}{" "}
-        only ever reads the ACTIVE node.
+          <span className="cp-absent" data-trajectory-rc-absent>
+            release candidate — no ACTIVE attempt
+          </span>
+        )}
       </p>
     </section>
   );
@@ -1456,7 +1484,6 @@ function TrajectoryCard({ result, alphaId }: { result: AttemptResult; alphaId: s
 function AttemptsBody({ result, alphaId }: { result: AttemptResult; alphaId: string | null }) {
   return (
     <>
-      <Rule tone="gold">{attemptsRule(ladderSteps(ladderOrder(result)))}</Rule>
       <Ladder result={result} />
       <FoldChart result={result} />
       <div className="cp-grid">
@@ -1535,7 +1562,6 @@ function MarketTile({ card }: { card: MarketCard }) {
         <CertAbsent run={run} />
       </div>
       <ClaimChip claim={run.claim} />
-      <ClaimNote claim={run.claim} />
     </article>
   );
 }
@@ -1549,8 +1575,8 @@ function MarketsBody({ result }: { result: MarketResult }) {
           {MARKETS_UNGROUPED}
         </span>
       )}
-      <Rule tone="bad">
-        <span data-caption>{result.caption}</span> {MARKETS_RULE_TAIL}
+      <Rule tone="bad" title={MARKETS_RULE_TAIL}>
+        <span data-caption>{result.caption}</span>
       </Rule>
       <section data-panel="markets" aria-label="small multiples">
         <div className="cp-smallmult">
@@ -1885,7 +1911,7 @@ function DeltaTable({ result }: { result: PairComparable }) {
   const window = result.pair.common_window;
   return (
     <section className="cp-tcard cp-deltacard" data-panel="delta" data-delta-table aria-label="metric deltas">
-      <h3 className="t">
+      <h3 className="t" title={DELTA_NOTE}>
         <span>{DELTA_TITLE}</span>
       </h3>
       <div className="cp-scroll">
@@ -1968,7 +1994,7 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
       : "window not published";
   return (
     <section className="cp-corr" data-panel="correlation" data-correlation={correlation.state} aria-label="correlation">
-      <h3 className="t">
+      <h3 className="t" title={`${CORRELATION_HELP} — ${CORRELATION_NOTE}`}>
         <span className="k">{CORRELATION_TITLE}</span>
         <span className="cp-faint" data-correlation-source>
           {correlation.source_label} · {correlation.formula_id} · {correlation.formula_version}
@@ -1999,7 +2025,6 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
           <>{correlation.missing_policy}</>
         )}
       </span>
-      <p>{CORRELATION_NOTE}</p>
     </section>
   );
 }
@@ -2120,8 +2145,8 @@ function PendingBody({
   if (mode === "markets") {
     return (
       <>
-        <Rule tone="bad">
-          {MARKETS_CAPTION} {MARKETS_RULE_TAIL}
+        <Rule tone="bad" title={MARKETS_RULE_TAIL}>
+          {MARKETS_CAPTION}
         </Rule>
         <section data-panel="markets" data-panel-state={state} aria-label="small multiples">
           <Pending what="market cards" state={state} />
@@ -2151,7 +2176,7 @@ function PendingBody({
         </figure>
         <div className="cp-grid">
           <section className="cp-tcard cp-deltacard" data-panel="delta" data-panel-state={state}>
-            <h3 className="t">
+            <h3 className="t" title={DELTA_NOTE}>
               <span>{DELTA_TITLE}</span>
             </h3>
             <div className="body">
@@ -2159,7 +2184,7 @@ function PendingBody({
             </div>
           </section>
           <section className="cp-corr" data-panel="correlation" data-panel-state={state}>
-            <h3 className="t">
+            <h3 className="t" title={CORRELATION_HELP}>
               <span className="k">{CORRELATION_TITLE}</span>
             </h3>
             <Pending what="correlation" state={state} />
@@ -2170,10 +2195,9 @@ function PendingBody({
   }
   return (
     <>
-      <Rule tone="gold">{ATTEMPTS_RULE_BASE}</Rule>
       <section data-panel="ladder" data-panel-state={state} aria-label="claim ladder">
-        <h3 className="cp-ladderhead">
-          <span data-ladder-header>{LADDER_HEADER}</span>
+        <h3 className="cp-ladderhead" title={ATTEMPTS_RULE_BASE}>
+          <span data-ladder-header>{LADDER_TITLE}</span>
         </h3>
         <Pending what="attempts" state={state} />
       </section>
@@ -2263,7 +2287,6 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
           guardNote={idleReason ? <span data-idle-reason>{idleReason}</span> : undefined}
         />
       )}
-      <Rules />
     </div>
   );
 }

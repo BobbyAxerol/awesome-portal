@@ -175,7 +175,7 @@ describe("CG-FG-S14-03 / 14-12 — the run slot follows the served run_admission
     expect(text()).not.toContain(RUN_LINK_LABEL);
     expect(runSlot(null, ENTRY)).toEqual({ kind: "none" });
     // The rest of "where it goes next" is unchanged.
-    expect(q("[data-where-next]")!.textContent).toContain("Nothing is registered yet.");
+    expect(q("[data-where-next]")!.textContent).toContain("Nothing registered yet.");
   });
 
   it("links to New Run bound to this version when the server admits a run", () => {
@@ -328,7 +328,10 @@ describe("S14-C1 — the origin refusal does not misdescribe its cause", () => {
   it.each([["origin", origin], ["CSRF", csrf]] as const)("a 403 INVALID (%s check) says the request was refused, not that the import is invalid", (_label, error) => {
     const refusal = toRefusal(error);
     expect(refusal.message).toBe(IMPORT_ORIGIN_REFUSED);
-    expect(refusal.message).toMatch(/origin/);
+    // VD-F1-01 (Bobby, 2026-10-01): exactly this sentence; it names no cause, so neither "origin" nor "CSRF" appears.
+    expect(refusal.message).toBe("Request refused — reload the page and try again.");
+    expect(refusal.message).not.toMatch(/origin|csrf|RESEARCH_/i);
+    expect(refusal.codeInDetails).toBe(true);
     expect(refusal.message).not.toMatch(/not valid|invalid|source/i);
     expect(refusal.neutral).toBe(false);
     expect(refusal.detail).toBe(error.message);

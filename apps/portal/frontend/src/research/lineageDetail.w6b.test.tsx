@@ -11,7 +11,7 @@
  *  - CG-P19-09: a bounded newest page and "load older" with the server cursor.
  *  - CG-P19-13: count definitions and the Run Library reconciliation link.
  */
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -71,7 +71,7 @@ const node = (id: string) => document.querySelector(`[data-attempt="${id}"]`) as
 const counter = () => document.querySelector("[data-counter]")?.textContent;
 const screenRoot = () => document.querySelector('[data-screen="attempt-lineage"]') as HTMLElement;
 async function ready() {
-  await screen.findByText("rules of this screen");
+  await waitFor(() => expect(document.querySelector('[data-panel="counts"]')).toBeTruthy());
   await waitFor(() => expect(document.querySelector("[data-band]")).toBeTruthy());
 }
 const attempt = (id: string) => HEALTHY.attempts.find((row) => row.attempt_id === id)!;
@@ -202,8 +202,9 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
       "promotion", "release candidate", "presentation", "intent", "alpha version", "primary run", "run state",
       "execution profile", "engine release", "effective spec", "dataset binding", "technical retries", "space signature", "created", "updated",
     ]);
+    /* VD-F1-02: the pill is the attempt state, so there is no second "state" row. */
     expect([...selected.querySelectorAll('[data-selected-rows="headline"] > dt')].map((dt) => dt.textContent)).toEqual([
-      "parent", "mode × schedule", "state", "claim", "OOS sharpe", "decay", "cert",
+      "parent", "mode × schedule", "claim", "OOS sharpe", "decay", "cert",
     ]);
     /* The hi-fi's verdict line sits on the published promotion pick. */
     expect(selected.querySelector('[data-tree-aim="picked"]')?.textContent).toBe(TREE_AIM);

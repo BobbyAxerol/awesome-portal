@@ -220,7 +220,7 @@ function supportFunctions(doc: AtlasDocument): string[] {
 }
 
 /** The HiFi's card frame for the routes and claims tabs: a title row, a mono source line, the body and a foot. */
-function TabCard({ title, source, foot, children, name }: { title: string; source: ReactNode; foot: ReactNode; children: ReactNode; name: string }) {
+function TabCard({ title, source, foot, children, name }: { title: string; source: ReactNode; foot?: ReactNode; children: ReactNode; name: string }) {
   return (
     <section className="rounded-[6px] border" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-tab-card={name} aria-label={title}>
       <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
@@ -232,9 +232,11 @@ function TabCard({ title, source, foot, children, name }: { title: string; sourc
         </span>
       </div>
       {children}
-      <p className="m-0 border-t px-3 py-[7px] text-[10px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}>
-        {foot}
-      </p>
+      {foot ? (
+        <p className="m-0 border-t px-3 py-[7px] text-[10px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}>
+          {foot}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -260,9 +262,8 @@ function RoutesTab({
   return (
     <TabCard
       name="routes"
-      title="execution routes — support matrix, not aspiration"
+      title="execution routes"
       source={functions.length ? functions.map((name) => `${name}()`).join(" · ") : "no support matrix published by this manifest"}
-      foot={<>Disabled routes render with the engine&rsquo;s refusal reason — a route absent from the support matrix is not a defect.</>}
     >
       <div ref={tableRef}>
         <div
@@ -394,12 +395,11 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
   return (
     <TabCard
       name="claims"
-      title="claims by contract — two axes, never mixed"
+      title="claims by contract"
       source="engine cert ⊥ methodology claim (mode × schedule)"
       foot={
         <>
-          <span className="mono">certificate = min(engine cert, methodology cap, artifact completeness)</span>. The two chips on the
-          Release Candidate screen carry the axes separately.
+          <span className="mono">certificate = min(engine cert, methodology cap, artifact completeness)</span>
         </>
       }
     >
@@ -1012,30 +1012,31 @@ function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
         </tbody>
       </table>
       {shared ? (
-        <p className="m-0 border-t px-3 py-[7px] text-[10px] leading-[1.5]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }} data-avoid-when-shared>
-          <span className="mono text-[9px] font-bold uppercase tracking-[.06em]">avoid when · not published</span>{" "}
-          {shared.reason}
+        /* VD-TEXT-01: the typed absence stays, its sentence is the tooltip. */
+        <p
+          className="m-0 border-t px-3 py-[7px] text-[10px] leading-[1.5]"
+          style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
+          data-avoid-when-shared
+          data-avoid-when-reason={shared.reason}
+          title={shared.reason}
+        >
+          <span className="mono text-[9px] font-bold uppercase tracking-[.06em]">avoid when — not published</span>
         </p>
       ) : null}
     </div>
   );
 }
 
-/** 12-7: the HiFi's footer on every tab, verbatim. */
-function ScreenRules() {
-  return (
-    <div className="flex flex-col gap-[3px] border-t pt-2" style={{ borderColor: "var(--line)" }} data-screen-rules>
-      <span className="text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-soft)" }}>
-        rules of this screen
-      </span>
-      <p className="m-0 text-[11px] leading-[1.6]" style={{ color: "var(--ink-soft)" }}>
-        Claim strings are the engine&rsquo;s, rendered verbatim from the mode × schedule matrix — the UI never composes its own.
-        Invalid schedules render struck-through with the reason, never hidden. A real run locks mode and schedule at submit; this
-        atlas exists so nobody learns that the hard way.
-      </p>
-    </div>
-  );
+/** Rule one's worked example, as a tooltip: a manifest that names only some pairs names only those (DQ-10). */
+export function ruleOneExample(doc: AtlasDocument): string {
+  return doc.modes.find((mode) => mode.mode_id === "mode_1_decay")?.valid_schedules.includes("per_fold_causal")
+    ? "mode_1_decay + per_fold_causal is strict outer OOS; the same mode with per_fold_decay is selection-adjusted. Click the schedule chips below and watch the claim change."
+    : "mode_1_decay + per_fold_decay is selection-adjusted outer OOS; the same mode with global is a global calibration, not causal. Click the schedule chips below and watch the claim change.";
 }
+
+/** Rule two, in full, as a tooltip. */
+export const RULE_TWO_TITLE =
+  "Two selector layers, never mixed: optimization_mode belongs to this page; the execution route does not.";
 
 function ModesTab({
   doc,
@@ -1059,6 +1060,7 @@ function ModesTab({
           className="flex min-w-[min(420px,100%)] flex-[1.4] items-start gap-3 rounded-[6px] border px-3.5 py-2.5"
           style={{ borderColor: "var(--accent-2)", background: "var(--accent-2-soft)" }}
           data-rule-one
+          title={ruleOneExample(doc)}
         >
           {/* D-B2 (2026-09-23): gold on gold-soft is 4.0:1, below AA for this
               size. The gold frame carries the warning; the words are ink. */}
@@ -1066,33 +1068,21 @@ function ModesTab({
             rule one
           </span>
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink)" }}>
-            {/* HiFi copy, restored in W4 (CG-P02-02); an older manifest names only pairs it admits (DQ-10). */}
-            The claim comes from <span className="mono">mode × schedule</span>, never from the mode alone.{" "}
-            {doc.modes.find((mode) => mode.mode_id === "mode_1_decay")?.valid_schedules.includes("per_fold_causal") ? (
-              <>
-                <span className="mono">mode_1_decay + per_fold_causal</span> is strict outer OOS; the same mode with{" "}
-                <span className="mono">per_fold_decay</span> is selection-adjusted.
-              </>
-            ) : (
-              <>
-                <span className="mono">mode_1_decay + per_fold_decay</span> is selection-adjusted outer OOS; the same mode with{" "}
-                <span className="mono">global</span> is a global calibration, not causal.
-              </>
-            )}{" "}
-            Click the schedule chips below and watch the claim change.
+            claim = <span className="mono">mode × schedule</span>, never the mode alone
           </span>
         </div>
         <div
           className="flex min-w-[min(360px,100%)] flex-1 items-start gap-3 rounded-[6px] border px-3.5 py-2.5"
           style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+          data-rule-two
+          title={RULE_TWO_TITLE}
         >
           <span className="mono flex-none text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--ink-soft)" }}>
             rule two
           </span>
           {/* 12-4: the HiFi's CandidateSelector list is not published by QuantBT 1.1.1's manifest; the sentence names no layer it cannot cite. */}
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-            Two selector layers, never mixed: <span className="mono">optimization_mode</span> belongs to this page; the execution
-            route does not.
+            <span className="mono">optimization_mode</span> is this page&rsquo;s · the execution route is separate
           </span>
         </div>
       </div>
@@ -1403,13 +1393,14 @@ export function EngineAtlas({
           >
             Engine Atlas
           </h1>
-          <p
-            className="text-[13.5px] italic"
-            style={{ fontFamily: "Newsreader, Georgia, serif", color: "var(--ink-faint)" }}
-          >
-            Reference, not a stage — modes, execution routes, and what each contract may claim.
-            {doc ? ` Read from ${doc.current_release.release_id}.` : ""}
-          </p>
+          {doc ? (
+            <p
+              className="text-[13.5px] italic"
+              style={{ fontFamily: "Newsreader, Georgia, serif", color: "var(--ink-faint)" }}
+            >
+              Read from {doc.current_release.release_id}
+            </p>
+          ) : null}
         </div>
         )}
 
@@ -1552,7 +1543,6 @@ export function EngineAtlas({
           </div>
         ) : null}
       </ResearchPanel>
-      <ScreenRules />
     </div>
   );
 }

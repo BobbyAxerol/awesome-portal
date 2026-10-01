@@ -186,6 +186,24 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     expect(container.querySelector("[data-tile='orders · fills · trades']")?.textContent).toContain("0 · 0 · 0");
   });
 
+  it("VD-TEXT-01 · the route fact is one line, the explanatory prose is gone, the absences keep their reason codes", async () => {
+    const { container } = await settled();
+    expect(CLOSE_TARGET_NOTICE(0, 0, 0)).toBe("close_target_v2 · close-only accounting · 0 orders · 0 fills · 0 trades");
+    // A count the source did not publish is said so, never printed as 0.
+    expect(CLOSE_TARGET_NOTICE(null, 0, null)).toBe("close_target_v2 · close-only accounting · orders not published · 0 fills · trades not published");
+    expect(container.querySelector("[data-subtitle]")).toBeNull();
+    expect(container.querySelector("[data-rules]")).toBeNull();
+    expect(container.textContent).not.toMatch(
+      /rules of this screen|Each row is a|Pairing the transitions|Per-trade excursions|What close_target_v2 cannot produce|One column per bar|is read only when you ask|research model state/,
+    );
+    expect(container.querySelector("[data-panel='trade-anatomy'] h2")?.textContent).toBe("trade anatomy");
+    // The long ledger rule rides in a tooltip on the (still accessible) title.
+    expect(container.querySelector("[data-panel='event-ledger'] h2")?.getAttribute("title")).toContain("bar where QuantBT changed the accepted position");
+    expect(container.querySelector("[data-transition-count]")?.getAttribute("title")).toBeTruthy();
+    expect(container.querySelector("[data-absent-panel='trade-blotter'] [data-reason-code]")?.getAttribute("data-reason-code")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
+    expect(container.querySelector("[data-absent-panel='mae-mfe'] [data-reason-code]")?.getAttribute("data-reason-code")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
+  });
+
   it("the ledger lists the source's transitions with original bar numbers and the account's fee", async () => {
     const { container } = await settled();
     const rows = [...container.querySelectorAll("[data-transition-row]")];
@@ -199,8 +217,8 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     const { container } = await settled();
     fireEvent.click(within(container.querySelector("[data-transition-row='727']") as HTMLElement).getByRole("button"));
     const anatomy = container.querySelector("[data-anatomy='727']")!;
-    expect(anatomy.querySelector("[data-link='order'][data-na='true']")?.textContent).toContain("emits no order records (0 published)");
-    expect(anatomy.querySelector("[data-link='fill'][data-na='true']")?.textContent).toContain("0 fill records");
+    expect(anatomy.querySelector("[data-link='order'][data-na='true']")?.textContent).toContain("not_applicable — close_target_v2 · 0 order records");
+    expect(anatomy.querySelector("[data-link='fill'][data-na='true']")?.textContent).toContain("not_applicable — settles at the close · 0 fill records");
     expect(anatomy.querySelector("[data-link='account']")?.textContent).toContain("2,000.00");
   });
 });
@@ -254,7 +272,7 @@ describe("P17-T12/T14 · fold arrival, fold switch and capital convention", () =
     fireEvent.click(container.querySelector("[data-fold='1']")!);
     await waitFor(() => expect(fetchMock.mock.calls.length).toBe(before + 1));
     expect(String(fetchMock.mock.calls.at(-1)![0])).toContain(`at=${encodeURIComponent(FOLD0.execution.fold_capital.segments[1]!.start_cursor)}`);
-    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("1,056 bars in 151 candles of 7 bars");
+    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("1,056 bars → 151 candles of 7");
   });
 });
 

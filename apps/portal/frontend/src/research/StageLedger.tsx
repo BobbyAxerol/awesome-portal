@@ -21,9 +21,6 @@ const MONO = "var(--font-mono)";
 export const LEDGER_NOT_PUBLISHED_REASON =
   "The source has not published this fold's selection (objective, selected trial, params digest).";
 
-export const LEDGER_FOOT =
-  "ledger — one row per reported fold · objective, selection and params digest as the source published them";
-
 /** A global study's objective is study-wide; a fixed profile has none. */
 export const GLOBAL_OBJECTIVE_NOTE = "One global study selected this bundle for every fold; the objective is study-wide.";
 
@@ -197,17 +194,6 @@ export function StageLedger({ folds, foldTrials, cursor, studyTrials = null }: S
           );
         })
       )}
-      <div
-        style={{
-          padding: "6px 12px",
-          borderTop: "1px solid var(--line-soft)",
-          fontFamily: MONO,
-          fontSize: 10,
-          color: "var(--ink-faint)",
-        }}
-      >
-        {LEDGER_FOOT}
-      </div>
     </div>
   );
 }

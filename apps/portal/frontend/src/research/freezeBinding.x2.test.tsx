@@ -259,7 +259,8 @@ describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () 
     expect(chain.querySelector("[data-chain-verify]")!.tagName).not.toBe("BUTTON");
     expect(chain.querySelector("button")).toBeNull();
     expect(container.querySelectorAll("[data-action='verify']")).toHaveLength(1);
-    expect(chain.querySelector("[data-chain-note]")!.textContent).toContain("artifact integrity, not selection correctness");
-    expect(chain.querySelector("[data-chain-note]")!.textContent).toContain("never issues a digest of its own");
+    expect(chain.querySelector("[data-chain-note]")!.textContent).toBe("checks artifact integrity, not selection");
+    /* VD-TEXT-01: the longer scope sentence rides in the title, not under the card. */
+    expect(chain.querySelector("[data-chain-note]")!.getAttribute("title")).toContain("never issues a digest of its own");
   });
 });

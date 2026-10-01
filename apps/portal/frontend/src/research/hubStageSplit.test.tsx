@@ -165,6 +165,7 @@ describe("Screen 05 deep dive — unchanged", () => {
     expect(screen.className).toContain("max-w-[1440px]");
     expect(screen.querySelector("h1")).toBeTruthy();
     expect(screen.querySelector("[data-action='back-to-hub']")?.getAttribute("href")).toContain(`/runs/${RUN}/evidence#stage=split`);
-    expect(screen.querySelector("[data-rules-footer]")).toBeTruthy();
+    /* VD-TEXT-01: the "rules of this screen" footer is gone. */
+    expect(screen.querySelector("[data-rules-footer]")).toBeNull();
   });
 });

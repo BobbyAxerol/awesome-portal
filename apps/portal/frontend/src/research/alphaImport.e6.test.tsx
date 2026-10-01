@@ -9,7 +9,7 @@
  *  - 14-2 the shared crumb pattern;
  *  - 14-3 a three-step stepper (DQ-06) whose views keep local input;
  *  - 14-4/14-5 the two-column step 1 and the three-column mirror + rules foot;
- *  - 14-6 the "rules of this screen" footer;
+ *  - 14-6 no "rules of this screen" footer (VD-TEXT-01);
  *  - 14-7 / OL-01 running an imported alpha is a typed absence, not an action;
  *  - E1 display rules: short ids with the full value kept, no ISO-millisecond
  *    timestamp, one 403/404 sentence.
@@ -28,7 +28,6 @@ import {
   REGISTRATION_ABSENT,
   RULE_PATTERNS,
   RUN_ADMISSION_COPY,
-  SCREEN_RULES,
   awaitingStep,
   importChip,
   stepForReceipts,
@@ -131,7 +130,9 @@ describe("14-1/14-2 — header: crumb, title, state chip, meta line", () => {
     expect(document.querySelector("[data-meta]")?.textContent).toBe(IMPORT_META);
     // The meta names the endpoints this client really calls.
     expect(IMPORT_META).toContain("/api/v1/research/alphas/import");
-    expect(IMPORT_META).toContain("activation ADMIN-only");
+    // VD-TEXT-01: no hard-coded permission claim; the subtitle is gone with it.
+    expect(IMPORT_META).not.toMatch(/ADMIN|workspace members|never executes/);
+    expect(document.querySelector("[data-subtitle]")).toBeNull();
   });
 
   it("shows no chip before a parse: nothing is in quarantine yet", () => {
@@ -285,7 +286,8 @@ describe("14-4/14-5 — step 1: mirror table left, drop zone + entrypoint right"
     expect(step1.querySelector(".ai-cols .ai-side [data-dropzone]")).toBeTruthy();
     expect(step1.querySelector(".ai-cols .ai-side [data-entrypoint-card]")).toBeTruthy();
     expect(step1.querySelector(":scope > [data-code-anatomy]")).toBeTruthy();
-    expect(step1.textContent).toContain("mismatch is refused as RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH");
+    // VD-TEXT-01: the explanatory paragraph under the parse button is gone; the refusal sentence covers a digest mismatch.
+    expect(step1.textContent).not.toContain("One file is the whole artifact");
   });
 
   it("shows the parsed source digest short and its byte size formatted", () => {
@@ -366,12 +368,15 @@ describe("step 3 — registration rows, where it goes next, and OL-01", () => {
   });
 });
 
-describe("14-6 — rules of this screen", () => {
-  it("closes the page with the footer every other Research screen has", () => {
+describe("14-6 — no rules footer (VD-TEXT-01)", () => {
+  it("ends the page without a rules footer, and prints none of the removed sentences", () => {
     render(<AlphaImport {...props()} />);
-    const foot = document.querySelector('[data-panel="rules"]') as HTMLElement;
-    expect(foot.tagName).toBe("FOOTER");
-    expect(foot.textContent).toBe(`rules of this screen${SCREEN_RULES}`);
+    expect(document.querySelector('[data-panel="rules"]')).toBeNull();
+    expect(document.querySelector("footer")).toBeNull();
+    const text = document.body.textContent ?? "";
+    for (const gone of ["rules of this screen", "No browser upload executes code", "One .py module with one literal", "activation ADMIN-only"]) {
+      expect(text, gone).not.toContain(gone);
+    }
   });
 });
 

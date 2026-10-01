@@ -71,7 +71,10 @@ import { ShortId } from "./ShortId";
  */
 export const REPORT_TITLE = "QuantBT Run Report";
 
-/** Spec 09 §6, verbatim. */
+/**
+ * Spec 09 §6, verbatim — now the tooltip of the Print button, not a visible
+ * note (VD-TEXT-01, Bobby 2026-10-01).
+ */
 export const NOPRINT_NOTE = "this bar does not print — Export → PDF gives the clean sheet";
 
 /** Spec 09 T10, verbatim. */
@@ -82,21 +85,19 @@ export const SERIES_UNAVAILABLE = "series unavailable — numbers unaffected";
  * passport is six sealed source facts, not the Stage-5 claim (which this
  * source has not published), so the title says what the block is.
  */
-export const PASSPORT_TITLE = "claim passport — sealed source facts, quoted verbatim";
+export const PASSPORT_TITLE = "claim passport";
 
 /** Hi-fi title, used when the passport is the engine's own claim strip (the retained WFO lane). */
-export const PASSPORT_TITLE_ENGINE = "Claim passport — issued by the engine, quoted verbatim";
+export const PASSPORT_TITLE_ENGINE = "Claim passport";
 
-export const PASSPORT_NOTE =
-  "The report contract publishes these facts in order, without a key or label for each, so they are numbered rather than named.";
+export const PASSPORT_NOTE = "facts numbered — the report names none";
 
 export const CERTIFICATION_ABSENT = "The report contract publishes no certification grade for this run.";
 
 /** CG-P18-02 (W6a decision): no source or Portal policy publishes a grade; the box says so. */
 export const CERTIFICATION_NOT_GRADED = "No source publishes a certification grade or stage caps for this run.";
 
-export const FOLD_COLUMNS_ABSENT =
-  "params, IS, OOS, Δ decay and contribution are not columns the report publishes, so they are not drawn.";
+export const FOLD_COLUMNS_ABSENT = "params · IS · OOS · decay — not published";
 
 /** A number for display, with its exact server string kept one hover away (DQ-08). */
 
@@ -114,9 +115,6 @@ function Num({ value, unit, what }: { value: string; unit: string; what?: string
     </span>
   );
 }
-
-export const REPORT_RULES_FOOTER =
-  "Every value on this sheet is read from the sealed report; the sheet computes nothing. An absent fact keeps its place with the reason the report gave.";
 
 /** The blocks, in the order the sheet reads them. Tests assert this order. */
 export const REPORT_PANELS = [
@@ -139,7 +137,7 @@ export const REPORT_PANELS = [
 ] as const;
 
 /** P18 handoff: the annotation is mutable and is not part of the sealed report. */
-export const ANNOTATION_TITLE = "approval annotation — stored separately, not part of the sealed report";
+export const ANNOTATION_TITLE = "approval annotation · not printed";
 
 /* ------------------------------------------------------------------ style */
 
@@ -445,7 +443,7 @@ function NoPrintBar({
       <span style={{ color: "var(--ink-faint)" }}>/</span>
       <span>Run Report</span>
       <span className="flex flex-wrap items-center gap-1.5">
-        <button type="button" className="rr-btn" data-action="print" onClick={() => window.print()}>
+        <button type="button" className="rr-btn" data-action="print" title={NOPRINT_NOTE} onClick={() => window.print()}>
           Print
         </button>
         {offered.map((format) => {
@@ -477,9 +475,6 @@ function NoPrintBar({
             Export {EXPORT_FORMAT_LABEL[unavailable.format]}
           </button>
         ))}
-      </span>
-      <span className="rr-note" data-noprint-note>
-        {NOPRINT_NOTE}
       </span>
     </nav>
   );
@@ -634,7 +629,7 @@ function HeadlineRow({ core }: { core: FrozenCore }) {
 
 function Metrics({ core }: { core: FrozenCore }) {
   return (
-    <Block panel="metrics" title="metrics — as the sealed Evidence Hub published them">
+    <Block panel="metrics" title="metrics">
       <div className="rr-scroll" tabIndex={0} role="region" aria-label="metrics table — scrolls sideways">
         <table className="rr-table">
           <thead>
@@ -854,8 +849,11 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
       <p className="rr-caption mt-1" data-equity-caption>
         {folds.state === "AVAILABLE"
           ? "params_handoff" in folds && folds.params_handoff.text !== null
-            ? `fold boundaries marked at each fold's first OOS bar · params handoff at each boundary: ${folds.params_handoff.text}`
-            : "fold boundaries marked at each fold's start"
+            ? (
+                /* The sealed params handoff stays one hover away; the Identity block already lists the parameters. */
+                <span title={`params handoff at each boundary: ${folds.params_handoff.text}`}>┆ = fold OOS start</span>
+              )
+            : "┆ = fold start"
           : `fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]} · ${folds.reason_code ?? factReason(folds)}`}
         {geometry && geometry.dropped > 0 ? ` · ${geometry.dropped} points did not parse and were not drawn` : ""}
       </p>
@@ -946,10 +944,10 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
       </div>
       <p className="rr-caption" data-verdict-rule>
         {published
-          ? `${worst.length > 0 ? `${worst.join(", ")} ${worst.length === 1 ? "drags" : "drag"} the run. ` : ""}Verdicts under ${folds.rule?.version ?? "the published rule"}${
-              folds.rule ? ` — pass: OOS Sharpe ≥ ${folds.rule.pass.oos_sharpe_min}, decay ≤ ${folds.rule.pass.decay_max}, drawdown ≥ ${folds.rule.pass.max_drawdown_min}` : ""
-            }. Params: ${folds.params_handoff.text ?? words(folds.params_handoff.scope)}.`
-          : `verdict rule ${folds.rule?.version ?? "not published"}.`}
+          ? `${worst.length > 0 ? `${worst.join(", ")} ${worst.length === 1 ? "drags" : "drag"} · ` : ""}rule ${folds.rule?.version ?? "not published"}${
+              folds.rule ? ` (pass: S ≥ ${folds.rule.pass.oos_sharpe_min} · decay ≤ ${folds.rule.pass.decay_max} · dd ≥ ${folds.rule.pass.max_drawdown_min})` : ""
+            }`
+          : `verdict rule ${folds.rule?.version ?? "not published"}`}
       </p>
     </Block>
   );
@@ -999,7 +997,7 @@ function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule:
         </table>
       </div>
       <p className="rr-caption" data-verdict-rule>
-        {FOLD_COLUMNS_ABSENT} verdict rule {verdictRule}.
+        {FOLD_COLUMNS_ABSENT} · verdict rule {verdictRule}
       </p>
     </Block>
   );
@@ -1048,9 +1046,7 @@ function StageChain({ core }: { core: FrozenCore }) {
         </tbody>
       </table>
       <p className="rr-caption">
-        {v2
-          ? "Each check is one sourced fact with its source key; a stage's progress is not its check. No source publishes a certification cap, so no grade is drawn."
-          : "A stage state is progress, not a pass: the report publishes no per-stage check result or certification cap."}
+        {v2 ? "certification cap — not published" : "stage state is progress, not a pass · no check or cap published"}
       </p>
     </Block>
   );
@@ -1086,10 +1082,8 @@ function Artifacts({ core }: { core: FrozenCore }) {
       </div>
       <p className="rr-caption">
         {coreV2(core)
-          ? `Sealed part digests of the retained artifact; bytes are never reopened by a read (${
-              (core.artifacts[0] as { download?: { reason_code: string } }).download?.reason_code ?? "not published"
-            }), so nothing here downloads.`
-          : "Artifact bytes are not published to the report. The source's identifying digests are in the provenance block; none is offered as a download."}
+          ? `download — not available · ${(core.artifacts[0] as { download?: { reason_code: string } }).download?.reason_code ?? "not published"}`
+          : "download — not available"}
       </p>
     </Block>
   );
@@ -1294,10 +1288,6 @@ function Exports({ report, exporter }: { report: ReportDetail; exporter: ReportE
           />
         </div>
       ))}
-      <p className="rr-caption">
-        Exports are built by the server from this sealed report. The file downloads only when you follow its link;
-        no PDF is produced here — Print gives the sheet.
-      </p>
     </Block>
   );
 }
@@ -1318,10 +1308,6 @@ function AnnotationBlock({ report }: { report: ReportDetail }) {
       ) : (
         <AvailabilityAbsent what="annotation" availability={annotation.availability} />
       )}
-      <p className="rr-caption">
-        Display only and never printed: the annotation is a mutable row kept apart from the frozen core, so the printed
-        sheet always matches its report revision.
-      </p>
     </Block>
   );
 }
@@ -1472,9 +1458,6 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
         <div className="rr-screen no-print">
           <Exports report={report} exporter={exporter} />
           <AnnotationBlock report={report} />
-          <p className="rr-caption no-print" data-rules>
-            {REPORT_RULES_FOOTER}
-          </p>
         </div>
       ) : null}
     </div>

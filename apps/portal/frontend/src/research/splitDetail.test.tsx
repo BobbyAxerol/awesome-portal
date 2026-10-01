@@ -27,9 +27,6 @@ import {
   halfOpenShort,
   HOLDOUT_RULE_NO_READ,
   HOLDOUT_RULE_UNLOCK,
-  SPLIT_RULES_BASE,
-  SPLIT_RULES_FOLD_PLAN,
-  SPLIT_SUBTITLE,
   SPLIT_TITLE,
   SplitScreen,
 } from "./SplitDetail";
@@ -711,13 +708,13 @@ describe("P14-T06 — one split read, one optional fold read", () => {
     expect(of(400).state).toBe("terminal");
   });
 
-  it("keeps the shell and the footer when the read is refused", () => {
+  it("keeps the shell, and no rules footer, when the read is refused", () => {
     const { container } = view({
       detail: null,
       state: { state: "denied", reason: "Not your workspace.", mayRetry: false, retainsContent: false },
     });
     expect(container.querySelector("[data-screen='split-detail']")).toBeTruthy();
-    expect(container.querySelector("[data-rules-footer]")).toBeTruthy();
+    expect(container.querySelector("[data-rules-footer]")).toBeNull();
     expect(screen.getAllByText("Not your workspace.").length).toBeGreaterThan(0);
   });
 });
@@ -734,11 +731,12 @@ describe("P14-T07 — the surface requests only the two named operations", () =>
     expect(code).not.toMatch(/\/internal\/|parquet|artifact|fold_plan\.json|journal/i);
   });
 
-  it("keeps the HiFi title and subtitle, and the footer sentence that is always true", () => {
+  it("keeps the HiFi title; the subtitle and the rules footer are gone (VD-TEXT-01)", () => {
     const { container } = view();
     expect(screen.getByText(SPLIT_TITLE)).toBeTruthy();
-    expect(screen.getByText(SPLIT_SUBTITLE)).toBeTruthy();
-    expect(container.querySelector("[data-rules-footer]")?.textContent).toBe(SPLIT_RULES_BASE);
+    expect(container.querySelector("[data-subtitle]")).toBeNull();
+    expect(container.querySelector("[data-rules-footer]")).toBeNull();
+    expect(container.textContent).not.toMatch(/decides what a fold even is|never constructs a fold|rules of this screen/i);
   });
 
   it("carries the cursor back to the hub", () => {
@@ -919,12 +917,14 @@ describe("RF-06 FE-S05-03 — copy asserts only what the run published", () => {
     const { container } = view();
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/sealed holdout|fold_plan artifact|true scale|\bSEALED\b|cert cap: ≤/i);
-    expect(text).not.toContain(SPLIT_RULES_FOLD_PLAN);
   });
 
-  it("adds the fold-plan sentence only when a fold plan was published", () => {
+  it("states the fold count once, in the table foot, with the long hint in its title", () => {
     const { container } = view({ folds: { state: "ready", split: sourceSplit() } });
-    expect(container.querySelector("[data-rules-footer]")?.textContent).toContain(SPLIT_RULES_FOLD_PLAN);
+    const foot = container.querySelector("[data-fold-table-foot]") as HTMLElement;
+    expect(foot.textContent).toMatch(/^\d+ folds · retained source$/);
+    expect(foot.getAttribute("title")).toContain("arrow keys");
+    expect(container.textContent).not.toContain("click a row or use the arrow keys");
   });
 });
 
@@ -1507,8 +1507,22 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
     expect(container.querySelector("[data-stitch-digest-value]")?.getAttribute("data-stitch-digest-value")).toBe(E14_SPLIT.stitch.digest);
     expect(stitch.textContent).toContain(`stitch digest ${E14_SPLIT.stitch.digest!.slice(0, 12)}…`);
     expect(stitch.textContent).toContain("verified against fold boundaries · 2 segments, 336 retained observations");
-    expect(stitch.textContent).toContain("the Portal's digest of the retained stitch plan — QuantBT publishes none");
+    expect(stitch.textContent).toContain("Portal digest · QuantBT: not published");
+    expect(stitch.textContent).not.toContain("the Portal's digest of the retained stitch plan");
     expect(container.textContent).not.toContain("stitch digest — not in the split read");
+  });
+
+  it("VD-TEXT-01 · the retained lane's prose is one fact line, not paragraphs", async () => {
+    const { container } = await laneRoute(e14Lane());
+    const note = (container.querySelector("[data-protocol-note]") as HTMLElement).textContent ?? "";
+    expect(note.split(/\s+/).length).toBeLessThanOrEqual(14);
+    expect(note).toContain("one global θ* traded on every fold");
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/Shared params \(global schedule\): one study|Stage 2 ran one global study|never constructs a fold/);
+    expect(container.querySelector("[data-theta-note]")).toBeNull();
+    expect((container.querySelector("[data-theta-meta]") as HTMLElement).textContent).toContain("GLOBAL (shared)");
+    expect((container.querySelector("[data-card='boundary-integrity']") as HTMLElement).textContent).toContain("boundary integrity");
+    expect(text).not.toContain("not recomputed");
   });
 
   it("5.12 a stitch that does not line up says so with its own code, and is not called verified", async () => {
@@ -1721,13 +1735,13 @@ describe("F1 · X5 — an imported run's OOS window reads like a fixed-profile o
   it.each(["P04_OBSERVED_AFTER_FIXED_PROFILE", "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE"])("%s → 'observed after the profile was fixed'", (state) => {
     const { container } = view({ detail: withEvaluation(state) });
     const note = container.querySelector("[data-protocol-note]")!.textContent!;
-    expect(note).toContain("the OOS window was observed after the profile was fixed");
+    expect(note).toContain("OOS observed after the profile was fixed");
   });
 
   it("an evaluation state this screen does not know keeps the weaker sentence", () => {
     const { container } = view({ detail: withEvaluation("SOMETHING_NEW") });
     const note = container.querySelector("[data-protocol-note]")!.textContent!;
-    expect(note).toContain("the OOS window was observed");
+    expect(note).toContain("OOS observed");
     expect(note).not.toContain("after the profile was fixed");
   });
 });

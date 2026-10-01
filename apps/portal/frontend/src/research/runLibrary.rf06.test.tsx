@@ -12,7 +12,7 @@ import {
   CLAIM_NOT_ISSUED,
   FILTER_DEBOUNCE_MS,
   LEGACY_NOTE,
-  RULES_FOOTER,
+  COMPARE_RULE_TITLE,
   RunLibrary,
   SCRATCH_TITLE,
   TITLE,
@@ -504,12 +504,14 @@ describe("FE-S01-13 — header, frame, certificate, footer", () => {
     expect(document.querySelector("[data-certificate]")?.textContent).toBe("cert —");
   });
 
-  it("prints the rules footer verbatim", () => {
-    view();
-    expect(document.querySelector("[data-rules-footer]")?.textContent).toBe(RULES_FOOTER);
-    // Old code printed an invented paragraph; pin the spec/hi-fi words themselves.
-    expect(RULES_FOOTER).toMatch(/^Certification and claim strings come from each run's Stage 5 — the library renders them, it ranks nothing\./);
-    expect(RULES_FOOTER).toContain("so the button refuses instead of obliging");
+  it("has no rules footer; the ComparisonContractKey rule is on the Compare button (VD-TEXT-01)", () => {
+    view({ response: page([item({ run_id: "A" })]), filters: { ...EMPTY, sel: ["A"] } });
+    expect(document.querySelector("[data-rules-footer]")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/rules of this screen|comparison lie/);
+    const button = document.querySelector('[data-action="open-compare"]') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute("title")).toContain(COMPARE_RULE_TITLE);
+    expect(COMPARE_RULE_TITLE).toContain("ComparisonContractKey");
   });
 });
 

@@ -85,7 +85,7 @@ describe("Screen 04 · Freeze tab draws the Screen 07 body", () => {
     expect(tab.querySelector("h1")).toBeNull();
     expect(tab.querySelector("[data-header-actions]")).toBeNull();
     /* The hub keeps the HiFi tab title and the deep-dive link. */
-    expect(tab.textContent).toContain("Stage 3 · Freeze — the hinge between Search and Execute");
+    expect(tab.querySelector("[data-tab-heading]")?.textContent).toBe("Stage 3 · Freeze");
     const link = tab.querySelector("[data-deep-dive='freeze']") as HTMLAnchorElement;
     expect(link.getAttribute("href")).toContain(`/research/quantbt/runs/${RUN}/freeze`);
     /* The untrue placeholder is gone for this stage. */

@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 
 import { EChart } from "../charts/EChart";
 import { baseOption, roleColorsNow } from "../charts/theme";
-import { CANDLE_SUBTITLE, CandleOverviewStrip, CandleReplayBody, hasBarLedger, paddedRange } from "./ExecuteCandleReplay";
+import { CandleOverviewStrip, CandleReplayBody, hasBarLedger, paddedRange } from "./ExecuteCandleReplay";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
@@ -34,13 +34,10 @@ import {
   REPLAY_WITHHELD_WORDS,
   ROUTE_CAPABILITY_KEYS,
   ROUTE_STATE_NOTE,
-  SAMPLING_NOTE,
   RETAINED_ANSWER_FOR,
   RETAINED_CAPABILITY_KEYS,
   RETAINED_CAPABILITY_LABEL,
   RETAINED_NO_FIELD,
-  RETAINED_ROUTE_NOTE,
-  RETAINED_SAMPLING_NOTE,
   gapReason,
   isRetainedReplay,
   type CurrentSourceObservation,
@@ -65,27 +62,24 @@ import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
 /**
  * Spec 08 §2.1's title — "how orders came to exist" — and the hi-fi's "the
  * frozen params trading the tape" both claim orders this source never
- * published. The stage name is kept; the claim after it is the one the
- * contract supports. Recorded as `VISUAL_DECISION_REQUIRED` in the P17 receipt.
+ * published. The stage name is kept and the claim after it is dropped (VD-TEXT-01):
+ * no subtitle, no "rules of this screen" footer — each panel names its own
+ * absence with the server's reason code.
  */
-export const EXECUTE_TITLE = "S4 · Execute Replay — what this source can replay";
+export const EXECUTE_TITLE = "S4 · Execute Replay";
 
-export const EXECUTE_SUBTITLE =
-  "Retrospective equity samples, one at a time. Orders, fills, positions and candles were not published by this source, so each panel below names that absence instead of drawing it.";
+export const PLAYHEAD_NOTE = "retrospective sample — not an execution state";
 
-/** Spec 08 §2.11, with its one route-only clause restated for this source. */
-export const EXECUTE_RULES_FOOTER =
-  "The transport is the only clock — every panel listens to the same sample. A missing artifact is declared with its reason, never rendered as an empty table. Replays are read-only: nothing here mutates a run, and playing, stepping or seeking never sends a request.";
+export const RETAINED_PLAYHEAD_NOTE = "retained observation — not a broker state";
 
-export const PLAYHEAD_NOTE =
-  "retrospective equity sample — not an execution account, position or order state";
-
-/** The subtitle on a run the retained WFO lane answered. */
-export const EXECUTE_SUBTITLE_RETAINED =
-  "Retained walk-forward observations, one at a time — model position, equity, return and drawdown. Orders, fills and candles were not published by this lane, so each panel below names that absence instead of drawing it.";
-
-export const RETAINED_PLAYHEAD_NOTE =
-  "retained model observation — a research sample, not a broker position, order or execution state";
+/* VD-TEXT-01: the one-line forms of the route and sampling notes (replayClient keeps the long constants, unused here). */
+const RETAINED_ROUTE_SHORT = "model observations only — no orders, fills or candles";
+const SAMPLE_ROUTE_SHORT = "equity samples only — no orders, fills, positions or candles";
+const RETAINED_SAMPLING_SHORT = "every observation · nothing bucketed";
+const SAMPLING_SHORT: Record<"FULL" | "EXTREMA_BUCKET_V1", string> = {
+  FULL: "every observation",
+  EXTREMA_BUCKET_V1: "bucket extrema, not every observation",
+};
 
 /** Spec 08 §7, verbatim. */
 export const PAUSED_HIDDEN = "paused (tab hidden)";
@@ -582,8 +576,7 @@ function RetainedReplayPanel({ slot, onRead }: { slot: RetainedReplaySlot; onRea
       {slot.state === "idle" ? (
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            The retained-source lane replays model samples for one admitted Advanced-WFO profile. It is read
-            only when you ask.
+            retained model samples · read on request
           </p>
           <button type="button" className="btn-ghost mono text-[10px]" data-action="read-retained" onClick={onRead}>
             read retained replay
@@ -616,8 +609,7 @@ function RetainedReplayPanel({ slot, onRead }: { slot: RetainedReplaySlot; onRea
             </span>
           </div>
           <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope>
-            {words(slot.replay.replay.state_at_cursor.semantics)}. Model positions are research samples, not
-            broker positions.
+            {words(slot.replay.replay.state_at_cursor.semantics)}
           </p>
           <div className="flex flex-wrap gap-x-5 gap-y-1">
             {(["orders", "fills", "candles"] as const).map((key) => (
@@ -921,8 +913,7 @@ function RetainedStateAtCursor({ replay, pinned }: { replay: CurrentSourceReplay
         ) : null}
       </span>
       <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-execution-state="NO_RETAINED_FIELD">
-        execution state — not published · the retained WFO lane publishes no execution state; a model position is not
-        one
+        execution state — not published
       </span>
     </div>
   );
@@ -985,7 +976,7 @@ function RetainedContract({ replay, context }: { replay: CurrentSourceReplay; co
         <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           route contract{" "}
         </span>
-        {RETAINED_ROUTE_NOTE}
+        {RETAINED_ROUTE_SHORT}
       </p>
     </Card>
   );
@@ -1112,7 +1103,7 @@ function RetainedBody({
           </div>
           {contiguous ? (
             <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
-              {RETAINED_SAMPLING_NOTE}
+              {RETAINED_SAMPLING_SHORT}
             </p>
           ) : null}
 
@@ -1171,9 +1162,6 @@ function RetainedBody({
                 >
                   read state at playhead
                 </button>
-                <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-                  windows are read only when you ask; playing stops at the end of this one.
-                </span>
               </div>
             </>
           ) : null}
@@ -1190,8 +1178,7 @@ function RetainedBody({
             aside={<RetainedGap replay={replay} capability="execution_events" />}
           >
             <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-              The retained lane publishes no execution event stream, so the rows below are the loaded retained
-              observations around the playhead — observations, not events.
+              observations around the playhead — not events
             </p>
             {rows.length > 0 ? <RetainedLedger transport={transport} rows={rows} /> : null}
           </Card>
@@ -1200,7 +1187,7 @@ function RetainedBody({
             title="trade anatomy — entry → exit"
             replay={replay}
             capabilities={["orders", "fills", "positions", "child_audit_provenance"]}
-            note="A causal chain links a signal to an order to a fill. The retained lane publishes the model's signal target and accepted position per observation, but no orders or fills, so no chain is drawn and none is inferred from the position line."
+            note="No orders or fills published — no chain drawn."
           />
         </div>
         <div className="flex min-w-0 flex-col gap-3">
@@ -1209,35 +1196,35 @@ function RetainedBody({
             title="trade blotter"
             replay={replay}
             capabilities={["trades"]}
-            note="The retained lane publishes no trade ledger. A blotter built from position changes would be a guess at trades, not this run's trades."
+            note="No trade ledger published."
           />
           <RetainedAbsentPanel
             id="mae-mfe"
-            title="MAE × MFE — pain vs potential per trade"
+            title="MAE × MFE"
             replay={replay}
             capabilities={["mae_mfe"]}
-            note="Per-trade excursions need trades and their price paths; the retained lane publishes neither."
+            note="Needs trades and their price paths."
           />
           <RetainedAbsentPanel
             id="pnl-distribution"
             title="trade PnL distribution"
             replay={replay}
             capabilities={["trades"]}
-            note="A PnL distribution counts closed trades. The retained lane's return distribution is per observation, not per trade, so no trade histogram is drawn here."
+            note="Needs closed trades."
           />
           <RetainedAbsentPanel
             id="cost-timeline"
             title="cost timeline"
             replay={replay}
             capabilities={["funding"]}
-            note="The retained lane publishes no funding or cost series."
+            note="No funding or cost series published."
           />
           <RetainedAbsentPanel
             id="route-panel"
             title="route-aware facts"
             replay={replay}
             capabilities={["sl_tp_ambiguity", "oco_tree", "multi_leg"]}
-            note="Intrabar ambiguity, OCO trees and multi-leg facts are each a separate relation. The retained lane has a field for none of them."
+            note="SL/TP, OCO and multi-leg: no field."
           />
         </div>
       </div>
@@ -1361,13 +1348,6 @@ export function ExecuteScreen({
         <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
           {EXECUTE_TITLE}
         </h1>
-        <p className="text-[13.5px] italic [line-height:normal]" style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }} data-subtitle>
-          {lane === "retained" && retainedReplay && hasBarLedger(retainedReplay)
-            ? CANDLE_SUBTITLE
-            : lane === "retained"
-              ? EXECUTE_SUBTITLE_RETAINED
-              : EXECUTE_SUBTITLE}
-        </p>
       </div>
       <div className="flex flex-wrap items-center gap-3" data-header-actions>
         <CopyEvidenceLink />
@@ -1429,7 +1409,7 @@ export function ExecuteScreen({
             <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
               route contract{" "}
             </span>
-            {ROUTE_STATE_NOTE[replay.route.state]}
+            {replay.route.state === "RETROSPECTIVE_EQUITY_ONLY" ? SAMPLE_ROUTE_SHORT : ROUTE_STATE_NOTE[replay.route.state]}
           </p>
         </Card>
       ) : null}
@@ -1476,7 +1456,7 @@ export function ExecuteScreen({
             </div>
             {replayWindow.sampling ? (
               <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
-                {SAMPLING_NOTE[replayWindow.sampling]}
+                {SAMPLING_SHORT[replayWindow.sampling]}
               </p>
             ) : null}
 
@@ -1569,9 +1549,6 @@ export function ExecuteScreen({
                   >
                     read state at playhead
                   </button>
-                  <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-                    windows are read only when you ask; playing stops at the end of this one.
-                  </span>
                 </div>
               </>
             ) : null}
@@ -1591,8 +1568,7 @@ export function ExecuteScreen({
                 aside={<CapabilityGap replay={replay} capability="execution_events" />}
               >
                 <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                  No execution event stream was published, so the rows below are the loaded equity samples
-                  around the playhead — samples, not events.
+                  samples around the playhead — not events
                 </p>
                 {items.length > 0 ? <SampleLedger transport={transport} items={items} /> : null}
               </Card>
@@ -1601,7 +1577,7 @@ export function ExecuteScreen({
                 title="trade anatomy — entry → exit"
                 replay={replay}
                 capabilities={["orders", "fills", "positions", "child_audit_provenance"]}
-                note="A causal chain links a signal to an order to a fill. None of those links was published for this route, so no chain is drawn and none is inferred from the equity line."
+                note="No orders or fills published — no chain drawn."
               />
             </div>
             <div className="flex min-w-0 flex-col gap-3">
@@ -1610,35 +1586,35 @@ export function ExecuteScreen({
                 title="trade blotter"
                 replay={replay}
                 capabilities={["trades"]}
-                note="No trade ledger was published. A blotter built from equity changes would be a guess at trades, not this run's trades."
+                note="No trade ledger published."
               />
               <AbsentPanel
                 id="mae-mfe"
-                title="MAE × MFE — pain vs potential per trade"
+                title="MAE × MFE"
                 replay={replay}
                 capabilities={["mae_mfe"]}
-                note="Per-trade excursions need trades and their price paths; neither was published."
+                note="Needs trades and their price paths."
               />
               <AbsentPanel
                 id="pnl-distribution"
                 title="trade PnL distribution"
                 replay={replay}
                 capabilities={["trades"]}
-                note="A PnL distribution counts closed trades. No trade ledger was published, so there is nothing to count and no histogram is drawn from equity steps."
+                note="Needs closed trades."
               />
               <AbsentPanel
                 id="cost-timeline"
                 title="cost timeline"
                 replay={replay}
                 capabilities={["funding"]}
-                note="Funding and cost series were not published for this route."
+                note="No funding or cost series published."
               />
               <AbsentPanel
                 id="route-panel"
                 title="route-aware facts"
                 replay={replay}
                 capabilities={["sl_tp_ambiguity", "oco_tree", "multi_leg"]}
-                note="Intrabar ambiguity, OCO trees and multi-leg facts are each a separate published relation. The route declared all three."
+                note="SL/TP, OCO and multi-leg: not published."
               />
             </div>
           </div>
@@ -1650,14 +1626,6 @@ export function ExecuteScreen({
       </>
       )}
 
-      <footer className="flex flex-col gap-1 border-t pt-3" style={{ borderColor: "var(--line)" }}>
-        <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-          rules of this screen
-        </span>
-        <p className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-rules>
-          {EXECUTE_RULES_FOOTER}
-        </p>
-      </footer>
     </div>
   );
 }

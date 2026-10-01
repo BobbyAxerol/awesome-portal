@@ -203,9 +203,9 @@ describe("G8 · the strip on the retained WFO run", () => {
       expect(cell.style.borderColor).toBe("var(--accent)");
     }
     expect(text(root, "[data-fold-strip-note]")).toBe(OOS_READING_NOTE.RETROSPECTIVE);
-    expect(text(root, "[data-fold-strip-note]")).toBe(
-      "Refit after reading the full span: the gold OOS pulses against time order — retrospective evidence, never a deployment claim.",
-    );
+    /* VD-TEXT-01: one short line, not the HiFi's sentence. */
+    expect(text(root, "[data-fold-strip-note]")).toBe("retrospective — not a deployment claim");
+    expect(text(root, "[data-fold-strip-note]")).not.toContain("Refit after reading the full span");
   });
 
   it("asks for the fold plan and the Atlas once each, and writes nothing", async () => {
@@ -355,8 +355,8 @@ describe("G8 · what cannot be drawn is a typed absence with its reason", () => 
     expect(absent.getAttribute("data-fold-strip")).toBe("absent");
     expect(absent.getAttribute("data-absence-state")).toBe("NOT_PUBLISHED");
     expect(absent.getAttribute("data-absence-code")).toBe("RESEARCH_FOUNDATION_UNAVAILABLE");
-    expect(text(root, "[data-fold-strip-note]")).toContain("The Engine Atlas could not be read.");
-    expect(text(root, "[data-fold-strip-note]")).toContain("What this mode reads is not drawn");
+    expect(text(root, "[data-fold-strip-note]")).toContain("Engine Atlas could not be read");
+    expect(text(root, "[data-fold-strip-note]")).not.toContain("What this mode reads is not drawn");
     expect(text(root, "[data-absence-word]")).toBe("not published");
     nothingDrawn(root);
   });
@@ -396,7 +396,7 @@ describe("G8 · what cannot be drawn is a typed absence with its reason", () => 
     const root = await settledWfo({ atlas: [200, historical] });
     expect(strip(root).getAttribute("data-fold-strip")).toBe("absent");
     expect(strip(root).getAttribute("data-absence-code")).toBe(UI_MODE_READS_CODES.ATLAS_NOT_CURRENT);
-    expect(text(root, "[data-fold-strip-note]")).toContain("retained historical identity");
+    expect(text(root, "[data-fold-strip-note]")).toContain("historical identity with no mode facts");
     nothingDrawn(root);
   });
 
@@ -405,7 +405,7 @@ describe("G8 · what cannot be drawn is a typed absence with its reason", () => 
     delete atlas.atlas!.modes.find((mode) => mode.mode_id === "mode_1_decay")!.facts;
     const root = await settledWfo({ atlas: [200, atlas] });
     expect(strip(root).getAttribute("data-absence-code")).toBe(UI_MODE_READS_CODES.NO_FACTS);
-    expect(text(root, "[data-fold-strip-note]")).toContain("This manifest publishes no engine facts for this mode × schedule");
+    expect(text(root, "[data-fold-strip-note]")).toContain("manifest publishes no engine facts for this mode × schedule");
     nothingDrawn(root);
   });
 
@@ -458,7 +458,7 @@ describe("G8 · what cannot be drawn is a typed absence with its reason", () => 
       expect(cell.style.border).toContain("dashed");
       expect(cell.getAttribute("data-motion")).toBeNull();
     }
-    expect(text(root, "[data-fold-strip-note]")).toContain("does not state how this mode × schedule uses the OOS window");
+    expect(text(root, "[data-fold-strip-note]")).toContain("OOS use not stated by the engine for this mode × schedule");
   });
 
   it("a reads fact the Atlas withholds is printed as its reason, and the windows are still drawn", async () => {
@@ -559,9 +559,7 @@ describe("G8 · a run that ran no search (the P04 fixed profile) has no per-fold
     expect(absent.getAttribute("data-absence-state")).toBe("NOT_APPLICABLE");
     expect(absent.getAttribute("data-absence-code")).toBe("P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY");
     expect(text(row, "[data-absence-word]")).toBe("not applicable");
-    expect(text(row, "[data-fold-strip-note]")).toBe(
-      "No fold strip is drawn: the source ran a fixed profile and created no optimizer study, so no mode read any fold.",
-    );
+    expect(text(row, "[data-fold-strip-note]")).toBe("no fold strip — fixed profile, no optimizer study");
     expect(row.querySelectorAll("[data-strip-fold], [data-strip-cell]")).toHaveLength(0);
     expect(row.querySelector("[data-mode-relation='DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE']")?.textContent).toBe("release metadata · not run evidence");
     expect(row.querySelector("[data-action='open-atlas-mode']")?.getAttribute("href")).toContain("mode=mode_1_decay&schedule=global");
@@ -578,7 +576,7 @@ describe("G8 · a run that ran no search (the P04 fixed profile) has no per-fold
     expect(hubModeReadsAbsence(pending)).toMatchObject({
       state: "NOT_PUBLISHED",
       code: "PENDING_SOURCE_CALLBACK",
-      sentence: "The source has not published a search for this run, so no fold read is drawn.",
+      sentence: "no search published — no fold read drawn",
     });
   });
 

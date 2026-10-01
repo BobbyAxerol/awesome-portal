@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CLAIM_PENDING, LEGACY_NOTE, RunLibrary, SUBTITLE } from "./RunLibrary";
+import { CLAIM_PENDING, LEGACY_NOTE, RunLibrary } from "./RunLibrary";
 import {
   COMPARE_REFUSAL,
   IDS_LIMIT,
@@ -427,9 +427,9 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
     expect(document.querySelector("[data-counter]")?.textContent).toBe("0 of 12 runs");
   });
 
-  it("shows the subtitle that says the library ranks nothing", () => {
+  it("prints no subtitle under the title (VD-TEXT-01)", () => {
     view();
-    expect(screen.getByText(SUBTITLE)).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/Every run wears its claim|ranks nothing/);
   });
 });
 

@@ -20,7 +20,7 @@
  *
  * Layout (E6, `QuantBT 14 Alpha Import.dc.html`): a header with the state chip
  * and the endpoint meta line, a horizontal stepper card, one step's view at a
- * time, and the "rules of this screen" footer. The HiFi's four stepper entries
+ * time (VD-TEXT-01: no subtitle, no rules footer). The HiFi's four stepper entries
  * are three here: Code anatomy is a presentation substage of step 1
  * (`S14-VIS-01`, DQ-06), never a fourth authority state.
  *
@@ -65,15 +65,13 @@ import type { ResearchState } from "./state";
 /* --------------------------------------------------------------- verbatim */
 
 /** Spec 14 §2.2 — shown whenever a gate has failed. */
-export const FAIL_CLOSED_NOTE =
-  "fail-closed: a red gate stops the import — there is no provisional registration.";
+export const FAIL_CLOSED_NOTE = "fail-closed: a red gate stops the import.";
 
-/** Spec 14 §2.3 — shown on a DRAFT registration. */
-export const DRAFT_NOTE = "a DRAFT version can run as evidence but cannot compose rc_";
+/** Spec 14 §2.3 — shown on a DRAFT registration (VD-TEXT-01: shortened, same meaning). */
+export const DRAFT_NOTE = "a DRAFT can run as evidence, not compose rc_";
 
 /** Spec 14 §4 pitfall 8 — shown when more than one file is offered. */
-export const SINGLE_FILE_ERROR =
-  "single-file contract — bundle imports inside the module or wait for package support (v2).";
+export const SINGLE_FILE_ERROR = "One .py only — single-file contract.";
 
 /** Stagger between gate rows. Suppressed under `prefers-reduced-motion`. */
 export const GATE_STAGGER_MS = 120;
@@ -82,19 +80,12 @@ export const GATE_STAGGER_MS = 120;
 export const IMPORT_TITLE = "Alpha Import — standardize the code artifact";
 
 /**
- * HiFi subtitle, rewritten to what this release does (DQ-05): the HiFi says the
- * contract mirrors the built-in's class module and the artifact is "signed";
- * v1 is a literal `ALPHA_CONTRACT` plus one function, and nothing is signed.
+ * VD-TEXT-01 (2026-10-01): the subtitle under the title and the "rules of this
+ * screen" footer are gone. The meta line keeps only the endpoint family; the
+ * hard-coded permission claim ("activation ADMIN-only") is gone too — whether
+ * this account may activate is the server's `may_activate` / `may_activate_reason`.
  */
-export const IMPORT_SUBTITLE =
-  "One .py module with one literal ALPHA_CONTRACT. Quarantine is fail-closed: nothing is registered until all seven gates pass, and a registration is an immutable av_.";
-
-/**
- * HiFi meta line, with the real endpoint family and the real permission split
- * (`alpha-import.controller.ts:147` membership; activate is ADMIN-only).
- */
-export const IMPORT_META =
-  "POST /api/v1/research/alphas/import/* · workspace members · activation ADMIN-only · browser never executes code";
+export const IMPORT_META = "POST /api/v1/research/alphas/import/*";
 
 /**
  * Field rules under the mirror. Every pattern is the contract's own
@@ -106,10 +97,6 @@ export const RULE_PATTERNS = {
   versionLabel: "^av_[0-9]+(?:_[0-9]+){2}$",
   timeframe: "^[1-9][0-9]*(?:m|h|d|w)$",
 } as const;
-
-/** HiFi "rules of this screen", held to the v1 contract. */
-export const SCREEN_RULES =
-  "No browser upload executes code. The server computes the digest before anything else. Routes are decided by the installed release and each run's preflight — never by this page, never inferred from the file. A new import is always a new immutable av_; nothing is ever patched in place.";
 
 /**
  * Run admission for one registered version, as the server serves it
@@ -152,7 +139,7 @@ export type RunSlot =
 export function runSlot(registration: RegistrationResponse | null, entry: RegistryEntry | null): RunSlot {
   if (!registration) return { kind: "none" };
   if (!entry) {
-    return { kind: "absent", code: "REGISTRY_NOT_READ", sentence: "run admission not read yet — the registry list has not returned this version" };
+    return { kind: "absent", code: "REGISTRY_NOT_READ", sentence: "run admission not read yet" };
   }
   const admission = entry.run_admission;
   if (!admission) return { kind: "absent", code: "NOT_PUBLISHED", sentence: "run admission — not published" };
@@ -165,13 +152,13 @@ export function runSlot(registration: RegistrationResponse | null, entry: Regist
 export const REGISTRATION_ABSENT = {
   capability: {
     code: "NOT_IN_V1_CONTRACT",
-    text: "not recorded at import — the installed release and each run's preflight decide routes (DQ-05)",
+    text: "not recorded at import — preflight decides routes",
   },
   /* No hard-coded signature fact: the "signed publication" row prints the
      attestation the server served, or says none was served (14-09). */
   attestationNotServed: {
     code: "ATTESTATION_NOT_SERVED",
-    text: "not published — this response carried no import attestation",
+    text: "not published — no attestation served",
   },
 } as const;
 
@@ -256,7 +243,6 @@ const AI_CSS = `
 .ai-chip { font-family: var(--font-mono); font-size: 10px; font-weight: 700; border: 1px solid var(--accent-2); color: var(--accent-2); background: var(--paper-raised); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
 .ai-chip[data-chip="QUARANTINE"] { border-style: dashed; }
 .ai-chip[data-chip="ACTIVE"] { border-color: var(--good); color: var(--good); }
-.ai-sub { font-family: var(--font-display); font-style: italic; font-size: 13.5px; color: var(--ink-faint); margin: 0; }
 .ai-meta { flex: 0 1 auto; font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); overflow-wrap: anywhere; }
 .ai-stepper { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); box-shadow: var(--shadow-e1); padding: 5px; overflow-x: auto; }
 .ai-step { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 5px; padding: 5px 12px; background: transparent; color: var(--ink); flex: none; cursor: pointer; text-align: left; }
@@ -296,7 +282,6 @@ const AI_CSS = `
 .ai-drop .file { font-family: var(--font-mono); font-size: 11px; }
 .ai-drop .custody { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-faint); }
 .ai-drop .quarantine { font-size: 10px; color: var(--accent-2); }
-.ai-explain { font-size: 10px; color: var(--ink-soft); line-height: 1.5; margin: 0; }
 .ai-paste { display: flex; flex-direction: column; gap: 3px; }
 .ai-paste textarea { font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); padding: 6px 8px; resize: vertical; min-height: 96px; width: 100%; box-sizing: border-box; color: var(--ink); }
 .ai-entry { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.7; color: var(--ink-soft); white-space: pre-wrap; margin: 0; }
@@ -333,9 +318,6 @@ const AI_CSS = `
 .ai-lifecycle[data-lifecycle="ACTIVE"] { border-color: var(--good); color: var(--good); }
 .ai-registry { display: flex; flex-wrap: wrap; gap: 6px; }
 .ai-regentry { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); padding: 6px 10px; font-size: 10px; }
-.ai-foot { display: flex; flex-direction: column; gap: 3px; border-top: 1px solid var(--line); padding-top: 8px; }
-.ai-foot .t { font-family: var(--font-body); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0; font-weight: 400; }
-.ai-foot p { font-size: 11px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
 .ai-alert { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--bad); border-radius: 6px; background: var(--bad-bg-soft); padding: 8px 12px; }
 .ai-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .ai-anatomy summary { cursor: pointer; padding: 8px 14px; font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 500; color: var(--ink-soft); }
@@ -982,9 +964,6 @@ export function AlphaImport(props: AlphaImportProps) {
               </span>
             ) : null}
           </div>
-          <p className="ai-sub" data-subtitle>
-            {IMPORT_SUBTITLE}
-          </p>
         </div>
         <span className="ai-meta" data-meta>
           {IMPORT_META}
@@ -1066,7 +1045,7 @@ export function AlphaImport(props: AlphaImportProps) {
         <div className="ai-cols">
           <div className="ai-card ai-mirror-card" data-shadow>
             <div className="ai-mirror-head">
-              <h2 className="ai-label">1 · contract mirror — declared inside the .py, field by field</h2>
+              <h2 className="ai-label">1 · contract mirror</h2>
               <span className="m">
                 single file · {parse ? parse.schema_version : "research.alpha-source.v1"}
                 {parse ? (
@@ -1088,11 +1067,9 @@ export function AlphaImport(props: AlphaImportProps) {
               </ResearchPanel>
             </div>
             <p className="ai-rules" data-mirror-rules>
-              Structure rules are in Code anatomy below. Field rules are validation, not suggestion:{" "}
-              <span className="mono">alpha_id {RULE_PATTERNS.alphaId}</span> (assigned at registration) · version →{" "}
-              <span className="mono">{RULE_PATTERNS.versionLabel}</span>, immutable · parameter_space is int_range /
-              float_range (low, high, step), categorical or fixed · timeframes{" "}
-              <span className="mono">{RULE_PATTERNS.timeframe}</span> · a field outside the v1 contract is never inferred.
+              field rules · <span className="mono">alpha_id {RULE_PATTERNS.alphaId}</span> · version{" "}
+              <span className="mono">{RULE_PATTERNS.versionLabel}</span> · timeframes{" "}
+              <span className="mono">{RULE_PATTERNS.timeframe}</span>
             </p>
           </div>
 
@@ -1115,7 +1092,7 @@ export function AlphaImport(props: AlphaImportProps) {
                 }}
               >
                 <label className="file cursor-pointer" style={{ color: fileName ? "var(--ink)" : "var(--accent)" }}>
-                  {fileName ?? "choose one .py file, or drop it here"}
+                  {fileName ?? "choose or drop a .py file"}
                   <input
                     ref={fileRef}
                     type="file"
@@ -1135,9 +1112,9 @@ export function AlphaImport(props: AlphaImportProps) {
                     "digest computed at parse · "
                   ) : null}
                   {byteLength !== null ? `${formatBytes(byteLength)} · ` : null}
-                  ONE .py — contract + code, nothing else
+                  one .py · contract + code
                 </span>
-                <span className="quarantine">held in quarantine — no strategy code is executed at upload</span>
+                <span className="quarantine">held in quarantine · not executed</span>
               </div>
 
               {multiFileRejected ? (
@@ -1163,7 +1140,7 @@ export function AlphaImport(props: AlphaImportProps) {
                 onClick={onParse}
                 reason={
                   sourceText.trim().length === 0
-                    ? "Drop a .py file or paste the module first."
+                    ? "Add a .py file or module first."
                     : busy ?? (parse !== null ? "Parsed. Change the module to parse it again." : null)
                 }
               />
@@ -1172,21 +1149,12 @@ export function AlphaImport(props: AlphaImportProps) {
                   Continue to gates →
                 </button>
               ) : null}
-
-              <p className="ai-explain">
-                One file is the whole artifact: the literal ALPHA_CONTRACT and one plain function live inside it.
-                Engine config, fees and windows are declared at New Run, never in the file. The digest is computed
-                server-side; a mismatch is refused as RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH.
-              </p>
             </div>
 
             <div className="ai-card" data-pad data-entrypoint-card>
               <h2 className="ai-label">entrypoint shape (v1 single-file contract)</h2>
               <pre className="ai-entry">{"ALPHA_CONTRACT = { … }     # one literal\ndef generate_signals(context): …"}</pre>
-              <p className="ai-note">
-                One literal declaration and one plain function, defined in a restricted namespace and never called at
-                import. Classes, decorators and imports are not accepted by this release (DQ-05).
-              </p>
+              <p className="ai-note">One literal, one plain function. No classes, decorators or imports.</p>
             </div>
           </div>
         </div>
@@ -1207,7 +1175,7 @@ export function AlphaImport(props: AlphaImportProps) {
       >
         <div className="ai-card ai-pipe" data-shadow>
           <div className="ai-pipe-head">
-            <h2 className="ai-label">2 · quarantine gates — fail-closed, every gate named</h2>
+            <h2 className="ai-label">2 · quarantine gates</h2>
             <span className="m">
               {gates ? (
                 <>
@@ -1228,9 +1196,9 @@ export function AlphaImport(props: AlphaImportProps) {
             onClick={onRunGates}
             reason={
               parse === null
-                ? "Parse a source first — the gates run against the server's parse receipt."
+                ? "Parse a source first."
                 : !parsedOk
-                  ? "The parse did not complete. The mirror in step 1 shows which fields are missing."
+                  ? "Parse incomplete — see the mirror in step 1."
                   : busy ?? (gates !== null ? "The gates ran for these bytes." : null)
             }
           />
@@ -1256,10 +1224,7 @@ export function AlphaImport(props: AlphaImportProps) {
             </p>
           ) : null}
 
-          <p className="ai-amber">
-            A red gate stops the gates where they stand — later gates are SKIPPED and the source stays in quarantine.
-            No manual override: fix the .py and import it again — new bytes, new digest, new receipt.
-          </p>
+          <p className="ai-amber">No override — fix the .py and import again.</p>
 
           {gatesAllPass ? (
             <button type="button" className="ai-btn self-start" data-quiet data-nav="3" onClick={() => setView(3)}>
@@ -1281,7 +1246,7 @@ export function AlphaImport(props: AlphaImportProps) {
       >
         <div className="ai-cols" data-stretch>
           <div className="ai-card ai-reg" data-pad>
-            <h2 className="ai-label">3 · registration — what the registry writes</h2>
+            <h2 className="ai-label">3 · registration</h2>
 
             <div className="ai-controls py-1">
                 <label className="flex items-center gap-2">
@@ -1302,7 +1267,7 @@ export function AlphaImport(props: AlphaImportProps) {
                     gates === null
                       ? "Run the gates first."
                       : anyGateFailed
-                        ? "A gate failed. Fix the module and submit it again."
+                        ? "A gate failed — fix the module and resubmit."
                         : !gatesAllPass
                           ? "All seven gates must pass."
                           : alphaId.trim().length === 0
@@ -1322,11 +1287,6 @@ export function AlphaImport(props: AlphaImportProps) {
                 />
               ) : null}
             </ResearchPanel>
-
-            <p className="ai-explain">
-              Import states: DRAFT → ACTIVE → SUPERSEDED. Only ACTIVE composes a release candidate. Activation is a
-              registry action, not a code change.
-            </p>
 
             {/* Activation is a separate, permissioned act — never implied by a
                 successful registration, and never offered unless the server said so. */}
@@ -1362,13 +1322,12 @@ export function AlphaImport(props: AlphaImportProps) {
             <h2 className="ai-label">where it goes next</h2>
             {registration ? (
               <p>
-                The registered artifact is <span className="mono">{registration.version_label}</span> of{" "}
-                <span className="mono">{registration.alpha_id}</span>, pinned to source digest{" "}
-                <Digest value={registration.source_digest} label="source digest" />. A run that binds it
-                inherits that digest.
+                <span className="mono">{registration.version_label}</span> of{" "}
+                <span className="mono">{registration.alpha_id}</span> ·{" "}
+                <Digest value={registration.source_digest} label="source digest" />
               </p>
             ) : (
-              <p>Nothing is registered yet. A version exists only after all seven gates pass and you register it.</p>
+              <p>Nothing registered yet.</p>
             )}
             <div className="links">
               {/* F1 CG-FG-S14-03: the slot follows the server's `run_admission` for this
@@ -1442,11 +1401,6 @@ export function AlphaImport(props: AlphaImportProps) {
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ footer */}
-      <footer className="ai-foot" data-panel="rules">
-        <h2 className="t">rules of this screen</h2>
-        <p>{SCREEN_RULES}</p>
-      </footer>
     </div>
   );
 }
@@ -1527,7 +1481,7 @@ function RegistrationRows({
           <Row k="entrypoint">{entry.entrypoint}</Row>
         ) : (
           <Row k="entrypoint" absent="REGISTRY_NOT_READ">
-            not read yet — the registry list has not returned this version
+            not read yet — registry row not returned
           </Row>
         )}
         <Row k="import state">
@@ -1552,7 +1506,7 @@ function RegistrationRows({
               <ShortId id={registration.supersedes} label="superseded version" />
             </>
           ) : (
-            <span className="soft">none — no earlier version of this alpha was recorded</span>
+            <span className="soft">none — no earlier version recorded</span>
           )}
           {activation?.superseded_alpha_version_id ? (
             <>

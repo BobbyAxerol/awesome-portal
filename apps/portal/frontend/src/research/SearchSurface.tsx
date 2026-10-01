@@ -134,8 +134,8 @@ export function SurfaceScatter({
   const scope = schedule === "global" ? "global study" : schedule ?? "study scope not published";
   const sampled =
     surface.sampling === "ALL_RETAINED_TRIALS"
-      ? `all ${surface.emitted_point_count} retained trials drawn — nothing sampled away`
-      : `${surface.emitted_point_count} of ${surface.source_trial_count} trials drawn — stride sample, θ* and the best IS trial always kept`;
+      ? `${surface.emitted_point_count} of ${surface.source_trial_count} trials drawn`
+      : `${surface.emitted_point_count} of ${surface.source_trial_count} trials drawn · stride sample, θ* and best IS kept`;
   return (
     <SurfacePanel
       id="scatter"
@@ -231,11 +231,9 @@ export function SurfaceScatter({
           click a point → lineage lights up
         </span>
       </div>
-      <span className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-surface-caption title={`${surface.schema_version} · ${surface.objective_ramp.rule}`}>
+      <span className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-surface-caption title={`${surface.schema_version} · ${surface.objective_ramp.rule} · positions are the server's placement inside each declared range; colour = how many of the ${surface.complete_trial_count} complete IS objectives' quintile thresholds a trial lies above`}>
         {sampled}
-        {unplaced > 0 ? ` · ${unplaced} not placeable on ${axes.x} × ${axes.y}` : ""}. Positions are the server&apos;s placement inside
-        each declared range; colour = how many of the {surface.complete_trial_count} complete IS objectives&apos; quintile thresholds a
-        trial lies above ({two(surface.objective_ramp.minimum) ?? "—"} … {two(surface.objective_ramp.maximum) ?? "—"}).
+        {unplaced > 0 ? ` · ${unplaced} not placeable on ${axes.x} × ${axes.y}` : ""} · colour = IS quintile ({two(surface.objective_ramp.minimum) ?? "—"} … {two(surface.objective_ramp.maximum) ?? "—"})
       </span>
     </SurfacePanel>
   );
@@ -268,7 +266,7 @@ export function SurfaceProgression({
   return (
     <SurfacePanel
       id="progression"
-      title="A3 · progression — where the sampler contracts"
+      title="A3 · progression"
       aside={
         <span className="flex flex-wrap items-center gap-[6px]" data-conc-picker>
           <span className="text-[9px]" style={{ color: "var(--ink-faint)" }}>
@@ -325,15 +323,22 @@ export function SurfaceProgression({
               );
             })}
           </div>
-          <span className="text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-rail-note>
+          <span
+            className="text-[9.5px]"
+            style={{ color: "var(--ink-soft)" }}
+            data-rail-note
+            title={pruned.length > 0 ? "QuantBT's DuplicatePruner, not epoch pruning" : "capability probe"}
+          >
             {pruned.length > 0
-              ? `${pruned.length} pruned in the sequence — QuantBT's DuplicatePruner, not epoch pruning.`
-              : `No trial was pruned${prunedCount !== null ? ` (capability probe: ${prunedCount} of ${surface.source_trial_count})` : ""}.`}
+              ? `${pruned.length} pruned (duplicate pruner)`
+              : prunedCount !== null
+                ? `pruned ${prunedCount} of ${surface.source_trial_count}`
+                : "no pruned trial"}
           </span>
         </div>
         <div className="flex min-w-[200px] flex-1 flex-col gap-1 border-l pl-[14px]" style={{ borderColor: "var(--line-soft)" }}>
           <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-conc-title>
-            {conc} by trial order — where the sampler contracts
+            {conc} by trial order
           </span>
           <div className="relative h-[130px] border" style={{ borderColor: "var(--line)", background: "var(--paper)" }} data-concentration={conc}>
             {points.map((point, index) => {
@@ -362,10 +367,13 @@ export function SurfaceProgression({
               />
             ) : null}
           </div>
-          <span className="text-[9.5px] leading-[1.45]" style={{ color: "var(--ink-soft)" }} data-conc-note>
-            {points.length < 20
-              ? `${points.length} trials — too few to read where the sampler contracts; each dot is one trial's ${conc}, the green line θ*.`
-              : `Each dot is one trial's ${conc} in trial order; the green line is θ*. Gathering around it late in the sequence is the sampler exploiting a region.`}
+          <span
+            className="text-[9.5px] leading-[1.45]"
+            style={{ color: "var(--ink-soft)" }}
+            data-conc-note
+            title={`each dot is one trial's ${conc} in trial order; the green line is θ*`}
+          >
+            {points.length < 20 ? `too few trials (${points.length}) to read · green = θ*` : "dot = one trial · green = θ*"}
           </span>
         </div>
       </div>
@@ -380,7 +388,7 @@ export function SurfaceDistributions({ surface }: { surface: Surface }) {
   return (
     <SurfacePanel
       id="distributions"
-      title="A4 · per param — sampled regions, mean objective per region"
+      title="A4 · per param — sampled regions"
       aside={
         <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
           darker bar = higher objective · green tick = θ*
@@ -474,8 +482,7 @@ function SurfaceImportance({ surface }: { surface: Surface }) {
           <span className="mono italic" style={{ color: "var(--ink-faint)" }} title={importance.reason_code ?? undefined}>
             not applicable
           </span>{" "}
-          — {surface.complete_trial_count} complete trials; a rank correlation needs at least {importance.minimum_trials}. QuantBT itself publishes
-          no parameter importance for this route.
+          — {surface.complete_trial_count} trials, needs ≥ {importance.minimum_trials}
         </span>
       )}
     </div>
@@ -524,13 +531,14 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
           </span>
         );
       })}
-      <span className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-journey-caption>
-        {schedule === "global"
-          ? "One global study selected θ* for every fold, so each row is a single dot — there is no per-fold journey to draw. "
-          : ""}
-        Right column: of the top decile ({surface.parameter_frequency.pool_count} of {surface.complete_trial_count} complete trials by IS objective),
-        the share carrying θ*&apos;s value — computed on the server from the retained ledger (QuantBT publishes no
-        top_parameter_frequency on this route).
+      <span
+        className="text-[9.5px] leading-[1.5]"
+        style={{ color: "var(--ink-faint)" }}
+        data-journey-caption
+        title="Right column: of the top decile of complete trials by IS objective, the share carrying θ*'s value — computed on the server from the retained ledger."
+      >
+        {schedule === "global" ? "global θ* — no per-fold journey · " : ""}
+        right: top-decile share ({surface.parameter_frequency.pool_count} of {surface.complete_trial_count} trials)
       </span>
     </SurfacePanel>
   );

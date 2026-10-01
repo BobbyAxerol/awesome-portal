@@ -23,9 +23,9 @@ import {
   ATTEMPTS_RULE,
   ATTEMPTS_RULE_BASE,
   CLAIM_SENTENCE,
+  LADDER_TITLE,
   scopeWords,
   COMPARE_PANELS,
-  COMPARE_RULES,
   COMPARE_TITLE,
   MODE_LABELS,
   PAIR_NEEDS_TWO,
@@ -38,7 +38,6 @@ import {
   COMPARE_NEUTRAL_REFUSAL,
   COMPARE_REFUSAL_COPY,
   COMPARE_REFUSAL_MESSAGE,
-  LADDER_HEADER,
   MARKETS_CAPTION,
   compareEntryHref,
   compareHref,
@@ -380,7 +379,10 @@ describe("S13 Compare — reads and order", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
     renderAt(base);
     expect(page().getAttribute("data-compare-state")).toBe("loading");
-    for (const name of ["header", "meta", "rule", "ladder", "fold-chart", "diff", "trajectory", "rules"]) expect(panel(name), name).not.toBeNull();
+    for (const name of ["header", "meta", "ladder", "fold-chart", "diff", "trajectory"]) expect(panel(name), name).not.toBeNull();
+    /* VD-TEXT-01: no rule callout on the attempts mode, no rules footer, no subtitle. */
+    for (const name of ["rule", "rules"]) expect(panel(name), name).toBeNull();
+    expect(document.querySelector("[data-subtitle]")).toBeNull();
     expect(document.querySelectorAll("[data-ladder-run]")).toHaveLength(0);
     expect(panel("ladder")?.textContent).not.toMatch(/\d/);
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(COMPARE_TITLE);
@@ -400,9 +402,9 @@ describe("S13 Compare — reads and order", () => {
     expect(order).toEqual(["run_a", "run_z"]);
     expect(document.querySelector("[data-ladder-order]")?.getAttribute("data-ladder-order")).toBe("server-reversed");
     const arrows = Array.from(document.querySelectorAll("[data-ladder-arrow]"));
-    expect(arrows).toHaveLength(1);
-    /* F1: both ladder cards carry rank 3, so the connector says "same claim →" — never "claim ↑ →". */
-    expect(arrows.map((el) => el.textContent?.trim())).toEqual(["same claim →"]);
+    /* F1 / VD-F1-03: both ladder cards carry rank 3 — an equal-claim step prints nothing (every card one claim: no connector at all). */
+    expect(arrows).toHaveLength(0);
+    expect(document.querySelector("[data-ladder-one-claim]")?.textContent).toBe("2 attempts · one claim: WALK_FORWARD_OOS_COMPATIBILITY");
     const folded = document.querySelector("[data-unclaimed]") as HTMLElement;
     expect(folded.getAttribute("data-unclaimed")).toBe("1");
     expect(folded.querySelector("[data-unclaimed-run]")).toBeNull();
@@ -444,12 +446,13 @@ describe("S13 Compare — reads and order", () => {
     expect(card.querySelector("[data-cert-absent]")?.textContent).toContain("P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE");
     expect(card.querySelector("[data-claim-origin]")?.textContent).toContain("PORTAL_DERIVED_FROM_SOURCE_PROTOCOL");
     expect(panel("fold-chart")?.querySelector("[data-fold-chart-absent]")?.textContent).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
-    expect(document.querySelector("[data-ladder-header]")?.textContent).toBe(LADDER_HEADER);
+    expect(document.querySelector("[data-ladder-header]")?.textContent).toBe(LADDER_TITLE);
     expect(document.querySelector("[data-trajectory-text]")?.textContent).toBe(TRAJECTORY.text);
-    /* One claimed attempt: no step, so no "strengthens at every step" sentence (F1). */
-    expect(panel("rule")?.textContent).toContain(ATTEMPTS_RULE_BASE);
-    expect(panel("rule")?.textContent).not.toContain("strengthens at every step");
-    expect(panel("rules")?.textContent).toContain(COMPARE_RULES);
+    /* One claimed attempt: no step, so the heading's title carries the base rule only, no "strengthens at every step" sentence (F1). The rule is a tooltip, not a callout (VD-F1-03). */
+    expect(panel("ladder")?.querySelector(".cp-ladderhead")?.getAttribute("title")).toBe(ATTEMPTS_RULE_BASE);
+    expect(panel("rule")).toBeNull();
+    expect(panel("rules")).toBeNull();
+    expect(page().textContent).not.toContain(ATTEMPTS_RULE_BASE);
     expect(panel("diff")?.textContent).toContain("P20_CONFIG_DIFF_NEEDS_TWO_ATTEMPTS");
   });
 
@@ -1051,7 +1054,6 @@ describe("S13 Compare — X3 decisions and debt", () => {
     renderAt(base);
     await settled();
     expect(ATTEMPTS_RULE).not.toMatch(/\d/);
-    expect(COMPARE_RULES).toContain("only the ACTIVE node may promote");
     const card = document.querySelector('[data-ladder-run="run_a"]') as HTMLElement;
     const chip = card.querySelector(".cp-claimchip") as HTMLElement;
     expect(chip.getAttribute("title")).toContain("rank 3");
@@ -1074,9 +1076,12 @@ describe("E7 / D10 — Screen 13 on the HiFi (Unified 13.4.1)", () => {
     renderAt(wfoBase);
     await settled();
     const card = document.querySelector('[data-ladder-run="run-w6a-wfo-a"]') as HTMLElement;
-    const note = card.querySelector("[data-claim-text]") as HTMLElement;
-    expect(note.textContent).toBe(CLAIM_SENTENCE.WALK_FORWARD_OOS_COMPATIBILITY);
-    expect(note.getAttribute("title")).toContain("validation_claim=walk_forward_oos");
+    /* VD-TEXT-01: the sentence is the claim chip's title (once, not printed on every card); the key=value text rides there too. */
+    const chip = card.querySelector(".cp-claimchip") as HTMLElement;
+    expect(card.querySelector("[data-claim-text]")).toBeNull();
+    expect(card.textContent).not.toContain(CLAIM_SENTENCE.WALK_FORWARD_OOS_COMPATIBILITY);
+    expect(chip.getAttribute("title")).toContain(CLAIM_SENTENCE.WALK_FORWARD_OOS_COMPATIBILITY);
+    expect(chip.getAttribute("title")).toContain("validation_claim=walk_forward_oos");
     expect(page().textContent).not.toContain("validation_claim=");
     expect(card.querySelector("[data-claim]")?.getAttribute("data-claim")).toBe("WALK_FORWARD_OOS_COMPATIBILITY");
   });

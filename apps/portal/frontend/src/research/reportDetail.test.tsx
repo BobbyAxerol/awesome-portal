@@ -340,7 +340,7 @@ describe("S09 Run Report — the sheet", () => {
   it("S09-U02 renders every block in the sheet's order", async () => {
     server();
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
     expect(order).toEqual([...REPORT_PANELS]);
   });
@@ -362,7 +362,7 @@ describe("S09 Run Report — the sheet", () => {
       ],
     });
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     const sheet = document.querySelector("article.rr-sheet")!;
     const footer = panel("footer");
     expect(sheet.lastElementChild).toBe(footer);
@@ -386,7 +386,7 @@ describe("S09 Run Report — the sheet", () => {
   it("S09-U03 prints exact decimals and full digests as the server sent them", async () => {
     server();
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     /* DQ-08 (W6a): a value is displayed by its unit and keeps the server's exact string beside it. */
     const drawdown = panel("headline").querySelector('[data-headline="MAX_DRAWDOWN"] [data-headline-value]')!;
     expect(drawdown.getAttribute("data-headline-value")).toBe("-0.02");
@@ -404,7 +404,7 @@ describe("S09 Run Report — the sheet", () => {
   it("S09-U04 withholds a null headline with its reason code, never a zero", async () => {
     server();
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     for (const [key, reason] of [
       ["OOS_SHARPE", "P04_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE"],
       ["DECAY_MEAN", "P04_SOURCE_DID_NOT_PUBLISH_DECAY_MEAN"],
@@ -424,7 +424,7 @@ describe("S09 Run Report — the sheet", () => {
   it("S09-U05 names each unpublished passport fact, artifact and promotion with its reason", async () => {
     server();
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     const facts = panel("passport").querySelectorAll("[data-passport-fact]");
     expect(facts).toHaveLength(6);
     expect(facts[0]!.textContent).toContain("p04.delta-rsi.v1");
@@ -447,7 +447,7 @@ describe("S09 Run Report — the sheet", () => {
   it("S09-U06 draws the sealed equity as a static SVG, without a chart library", async () => {
     server();
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     const svg = panel("equity").querySelector("[data-equity-svg]")!;
     expect(svg.getAttribute("aria-label")).toContain("3 sealed points");
     expect(panel("equity").textContent).toContain("emitted 3 of 3 source observations · sampling full");
@@ -484,27 +484,31 @@ describe("S09 Run Report — the sheet", () => {
       "P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS",
     );
     expect(document.querySelector('[data-report-notice="partial"]')?.textContent).toContain("equity series");
+    expect(document.querySelector('[data-report-notice="partial"]')?.textContent).toContain("Partial — not published");
+    expect(document.querySelector('[data-report-notice="partial"]')?.textContent).not.toContain("each is named below");
   });
 
   it("S09-U08 printing sends no request and the chrome is marked no-print", async () => {
     const api = server();
     const print = vi.spyOn(window, "print").mockImplementation(() => {});
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     const before = api.calls.length;
     fireEvent.click(screen.getByRole("button", { name: "Print" }));
     expect(print).toHaveBeenCalledTimes(1);
     expect(api.calls.length).toBe(before);
     expect(panel("noprint-bar").classList.contains("no-print")).toBe(true);
     expect(panel("exports").classList.contains("no-print")).toBe(true);
-    expect(screen.getByText(NOPRINT_NOTE)).toBeTruthy();
+    /* VD-TEXT-01: the note is the Print button's tooltip, not visible prose. */
+    expect(screen.getByRole("button", { name: "Print" }).getAttribute("title")).toBe(NOPRINT_NOTE);
+    expect(screen.queryByText(NOPRINT_NOTE)).toBeNull();
   });
 
   it("S09-U09 the route marks the document for print only while mounted", async () => {
     server();
     const { unmount } = renderRoute();
     expect(document.documentElement.hasAttribute(PRINT_SHEET_ATTRIBUTE)).toBe(true);
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     unmount();
     expect(document.documentElement.hasAttribute(PRINT_SHEET_ATTRIBUTE)).toBe(false);
   });
@@ -512,7 +516,7 @@ describe("S09 Run Report — the sheet", () => {
   it("S09-U10 links back to Stage 5 of the Hub and forward to Screen 11 (P21)", async () => {
     server();
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     const back = screen.getByRole("link", { name: "← Hub · Stage 5 Claim" });
     expect(back.getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`));
     const release = document.querySelector('[data-action="release-candidate"]')!;
@@ -527,7 +531,7 @@ describe("S09 Run Report — the sheet", () => {
   it("S09-U11 offers only the published formats; Parquet and Archive are disabled with their reason", async () => {
     server();
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     expect((screen.getByRole("button", { name: "Export JSON" }) as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByRole("button", { name: "Export CSV" }) as HTMLButtonElement).disabled).toBe(false);
     const parquet = screen.getByRole("button", { name: "Export Parquet" }) as HTMLButtonElement;
@@ -551,7 +555,7 @@ describe("S09 Run Report — layout rules", () => {
   async function sheetCss() {
     server();
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     return document.querySelector('[data-screen="run-report"] > style')!.textContent ?? "";
   }
 
@@ -621,7 +625,7 @@ describe("S09 Run Report — audit fixes (A1/A2)", () => {
   async function loaded(detail?: ReportDetail) {
     server(detail ? { detail: [{ status: 200, body: detail }] } : {});
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     return document.querySelector('[data-screen="run-report"] > style')!.textContent ?? "";
   }
 
@@ -671,7 +675,7 @@ describe("S09 Run Report — audit fixes (A1/A2)", () => {
     const detail = report();
     (detail.frozen_core.provenance as { verdict_rule_revision: string }).verdict_rule_revision = "research.report-verdict-rule.v1";
     await loaded(detail);
-    expect(panel("folds").querySelector("[data-verdict-rule]")!.textContent).toContain("verdict rule research.report-verdict-rule.v1.");
+    expect(panel("folds").querySelector("[data-verdict-rule]")!.textContent).toContain("verdict rule research.report-verdict-rule.v1");
     const source = readFileSync(join(process.cwd(), "src", "research", "ReportDetail.tsx"), "utf8");
     expect(source).not.toContain('"research.report-verdict-rule.v1"');
     expect(source).toContain("verdictRule={core.provenance.verdict_rule_revision}");
@@ -684,7 +688,7 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
   async function loaded(detail?: ReportDetail) {
     server(detail ? { detail: [{ status: 200, body: detail }] } : {});
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     return document.querySelector('[data-screen="run-report"] > style')!.textContent ?? "";
   }
   const rule = (css: string, selector: string) => {
@@ -711,7 +715,7 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
   it("S09-U36 the passport lays its facts side by side, label over value", async () => {
     const css = await loaded();
     const passport = panel("passport");
-    expect(passport.querySelector(":scope > h2.t")?.textContent).toBe("claim passport — sealed source facts, quoted verbatim");
+    expect(passport.querySelector(":scope > h2.t")?.textContent).toBe("claim passport");
     const row = passport.querySelector(".facts")!;
     expect(row.querySelectorAll(":scope > [data-passport-fact]")).toHaveLength(6);
     const first = row.querySelector('[data-passport-fact="1"]')!;
@@ -826,13 +830,13 @@ describe("S09 Run Report — reading", () => {
   it("S09-U12 reads once on arrival; a remount revalidates with If-None-Match and a 304 keeps the report", async () => {
     const api = server({ detail: [{ status: 200, body: report() }, { status: 304 }] });
     const first = renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     expect(api.detailCalls()).toHaveLength(1);
     expect(api.detailCalls()[0]!.headers["If-None-Match"]).toBeUndefined();
     first.unmount();
 
     renderRoute();
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     expect(api.detailCalls()).toHaveLength(2);
     expect(api.detailCalls()[1]!.headers["If-None-Match"]).toBe(`"${REV}"`);
     expect(document.querySelector('[data-screen="run-report"]')?.getAttribute("data-report-revision")).toBe(REV);
@@ -886,7 +890,7 @@ describe("S09 Run Report — reading", () => {
     await screen.findByText(REPORT_REFUSAL_COPY.report[503]);
     expect(api.detailCalls()).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "read again" }));
-    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    await screen.findByText("claim passport");
     expect(api.detailCalls()).toHaveLength(2);
   });
 });
@@ -1088,9 +1092,37 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(panel("header").querySelector("[data-cert] [data-reason-code]")?.textContent).toBe(body.frozen_core.certification.reason_code);
   });
 
+  it("VD-TEXT-01 · the sheet keeps its facts and absences but none of the explanatory prose", async () => {
+    await open("research-report.wfo-retained.valid.json");
+    const text = document.body.textContent ?? "";
+    /* Gone: footers, block tails, "the sheet computes nothing"-style sentences. */
+    for (const gone of [
+      "the sheet computes nothing",
+      "Exports are built by the server",
+      "Display only and never printed",
+      "quoted verbatim",
+      "as the sealed Evidence Hub published them",
+      "stored separately, not part of the sealed report",
+      "Each check is one sourced fact",
+      "Sealed part digests of the retained artifact",
+      "this bar does not print",
+    ]) {
+      expect(text, gone).not.toContain(gone);
+    }
+    expect(document.querySelector("[data-rules]")).toBeNull();
+    expect(document.querySelector("[data-noprint-note]")).toBeNull();
+    /* Kept, shortened: the scope of the boundary marks, the cert-cap absence, the download absence, the verdict rule. */
+    expect(panel("equity").querySelector("[data-equity-caption]")?.textContent).toContain("┆ = fold OOS start");
+    expect(panel("stages").textContent).toContain("certification cap — not published");
+    expect(panel("artifacts").textContent).toContain("download — not available");
+    expect(panel("folds").querySelector("[data-verdict-rule]")?.textContent).toMatch(/rule \S+/);
+    expect(panel("annotation").getAttribute("aria-label")).toBe("approval annotation · not printed");
+    expect(panel("annotation").textContent).toContain("annotation");
+  });
+
   it("S09-U42 CG-P18-01 the passport labels each engine fact by its key, verbatim", async () => {
     const body = await open("research-report.wfo-retained.valid.json");
-    expect(panel("passport").querySelector("h2")?.textContent).toBe("Claim passport — issued by the engine, quoted verbatim");
+    expect(panel("passport").querySelector("h2")?.textContent).toBe("Claim passport");
     const facts = [...panel("passport").querySelectorAll("[data-passport-key]")];
     expect(facts.map((fact) => fact.getAttribute("data-passport-key"))).toEqual(body.frozen_core.passport.map((fact: { key: string }) => fact.key));
     expect(facts[0]!.querySelector(".k")?.textContent).toBe("validation_claim");
@@ -1114,7 +1146,9 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
       expect(tr.querySelector("[data-v]")?.textContent).toBe(row.verdict);
       expect(tr.querySelector("[data-fold-params] [title]")?.getAttribute("title")).toBe(body.frozen_core.folds.params_handoff.text);
     }
-    expect(panel("equity").querySelector("[data-equity-caption]")?.textContent).toContain(`params handoff at each boundary: ${body.frozen_core.folds.params_handoff.text}`);
+    const caption = panel("equity").querySelector("[data-equity-caption]")!;
+    expect(caption.textContent).toContain("┆ = fold OOS start");
+    expect(caption.querySelector("[title]")?.getAttribute("title")).toContain(body.frozen_core.folds.params_handoff.text);
   });
 
   it("S09-U44 CG-P18-05 each stage shows its sourced check, never a pass from progress alone", async () => {
@@ -1160,7 +1194,7 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
 
   it("S09-U48 a P04 v2 report keeps its hub facts, names each passport fact and withholds folds in the 8-column frame", async () => {
     await open("research-report.p04-fixed-profile.valid.json");
-    expect(panel("passport").querySelector("h2")?.textContent).toBe("claim passport — sealed source facts, quoted verbatim");
+    expect(panel("passport").querySelector("h2")?.textContent).toBe("claim passport");
     expect(panel("passport").querySelector('[data-passport-key="split_protocol"] .k')?.textContent).toBe("Split protocol");
     expect(panel("folds").querySelector("[data-folds-absent]")?.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
     expect(panel("equity").querySelector('[data-legend="is"]')?.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_IS_EQUITY_SERIES");

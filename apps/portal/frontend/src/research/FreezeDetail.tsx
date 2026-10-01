@@ -75,23 +75,16 @@ import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
 
 /* --------------------------------------------------------------- verbatim */
 
-/**
- * Spec 07 §2.1 fixes a subtitle this run cannot honestly carry: "Selection
- * closed before any out-of-sample bar was read — and every artifact below can
- * prove it, or the run is BLOCKED." That sentence asserts the ordering the
- * source states it does **not** assert, and the P16 handoff forbids exactly
- * that claim. The title is the spec's, verbatim; the subtitle says what this
- * screen can actually prove.
+/*
+ * VD-TEXT-01 (Bobby, 2026-10-01): the header subtitle, the "rules of this
+ * screen" footer and the two-clocks sentence are gone. The scope each match
+ * carries is printed beside the match itself; the longer rule text lives in
+ * a `title` where a control or label still needs it.
  */
-export const FREEZE_SUBTITLE =
-  "What was frozen, and what that freeze can honestly be checked against. Every match below names what it was checked against — retained digests, and the sealed artifact bytes only where a verify receipt says so.";
 
-export const FREEZE_RULES_FOOTER =
-  "A digest mismatch BLOCKS — it never warns. Verify re-reads the retained bindings and the sealed artifact bytes against the digests stored at seal time; it never re-runs the engine or rewrites an expected digest. What-if is a fork, not an edit: evaluating the grid runs one separate diagnostic job, and frozen artifacts are write-once. Where the source publishes no ordering or no selection artifact, the panels say which kind of absence that is rather than drawing a verdict.";
-
-/** Spec 07 §2.2, verbatim — and the reason the two axes are never merged. */
-export const TWO_CLOCKS_NOTE =
-  "two clocks, never one axis — wall-clock proves WHO knew WHEN; data-time proves WHAT was knowable.";
+/** Hover text for the retained-custody scope line (the line itself is one short clause). */
+const RETAINED_SCOPE_TITLE =
+  "A match here means the retained manifest, its row counts and its batch receipt agree with what Portal imported. It is not a check of artifact bytes, of causal order, of a selection, or of anything a broker saw.";
 
 const CHECK_LABEL: Record<(typeof INTEGRITY_KEYS)[number], string> = {
   P04_ADAPTER_CONTRACT: "adapter contract",
@@ -222,8 +215,13 @@ function IntegrityPanel({
       </div>
 
       {/* The scope, in words, beside every mark it qualifies. */}
-      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-scope-note>
-        {blocked ? BLOCKED_NOTE : PARTIAL_SCOPE_NOTE}
+      <p
+        className="text-[11px] leading-[1.5]"
+        style={{ color: "var(--ink-soft)" }}
+        data-scope-note
+        title={blocked ? BLOCKED_NOTE : PARTIAL_SCOPE_NOTE}
+      >
+        {blocked ? "a retained binding does not match — nothing below is shown as frozen" : "digest comparison only"}
       </p>
 
       <ul className="flex flex-col gap-1">
@@ -292,7 +290,7 @@ function VerifyLive({ verify }: { verify: VerifySlot }) {
           </p>
         ) : verify.state === "verifying" ? (
           <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-verify-pending>
-            re-reading the sealed bytes — no result until the server answers
+            re-reading sealed bytes…
           </p>
         ) : null}
       </div>
@@ -348,7 +346,7 @@ export function ByteReceipt({ bytes }: { bytes: ArtifactBytes }) {
         <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           artifact bytes
         </span>
-        <Chip data-byte-state={bytes.state} tone={tone} border={matched || blocked ? tone : "var(--line)"}>
+        <Chip data-byte-state={bytes.state} tone={tone} border={matched || blocked ? tone : "var(--line)"} title={BYTE_NOTES_FULL[bytes.state]}>
           {BYTE_STATE_WORDS[bytes.state]}
         </Chip>
         {bytes.verified_at_utc_ms !== null ? (
@@ -395,14 +393,27 @@ export function ByteReceipt({ bytes }: { bytes: ArtifactBytes }) {
           ))}
         </ul>
       ) : null}
-      <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-byte-note>
-        {BYTE_NOTES[bytes.state]}
-      </span>
+      {bytes.state === "NOT_VERIFIED" ? null : (
+        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-byte-note title={BYTE_NOTES_FULL[bytes.state]}>
+          {BYTE_NOTES[bytes.state]}
+        </span>
+      )}
     </div>
   );
 }
 
+/** Short visible note per byte state; the full sentence stays in the note's `title`. */
 const BYTE_NOTES: Record<ArtifactBytes["state"], string> = {
+  MATCH: "bytes only — not causal order, not a selection",
+  MISMATCH: "bytes differ from the sealed digests — freeze stays BLOCKED",
+  MISSING: "sealed bytes missing — freeze stays BLOCKED",
+  NOT_VERIFIED: "",
+  NOT_RETAINED: "no P05 artifact sealed — no bytes to re-read",
+  UNAVAILABLE: "private verifier unreachable — nothing read",
+  NOT_ENABLED: "byte verification not enabled here",
+};
+
+const BYTE_NOTES_FULL: Record<ArtifactBytes["state"], string> = {
   MATCH:
     "Every sealed part and document was re-read and hashes to the digest stored when the artifact was sealed. This covers bytes only — not causal order and not a selection.",
   MISMATCH:
@@ -431,7 +442,7 @@ function BlockedBanner({ bytes }: { bytes: ArtifactBytes }) {
           {" "}· sealed {shortDigest(first.expected_digest)} ≠ observed {shortDigest(first.observed_digest) ?? "missing"}
         </span>
       ) : null}{" "}
-      — the run is BLOCKED from promotion until re-verified; nothing downstream of this screen may be trusted.
+      — run BLOCKED from promotion until re-verified
     </div>
   );
 }
@@ -728,9 +739,7 @@ function Stage4Binding({ bundleDigest }: { bundleDigest: string | null }) {
         ))}
       </ul>
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
-        Four values would be compared here — sealed against replayed, for params and for the bundle. This
-        contract publishes only the sealed bundle digest and Stage 4 publishes neither replayed value, so no
-        row is marked bound.
+        only the sealed bundle digest is published — none compared
       </p>
     </section>
   );
@@ -764,9 +773,8 @@ function RetainedPanel({ slot, onNeeded }: { slot: RetainedSlot; onNeeded: () =>
           data-retained-not-applicable
           title={`${slot.answer.lane.reason_code} · profile ${slot.answer.lane.run_profile} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
         >
-          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>not applicable</span> — this run is
-          bound to the P04 fixed qualification, which the retained lane never holds. There is no manifest, row count or
-          batch receipt to compare, and nothing is pending.
+          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>not applicable</span> — P04 run, not
+          retained · nothing pending
         </p>
       ) : slot.state === "refused" ? (
         <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-retained-refusal>
@@ -825,10 +833,8 @@ function RetainedRows({ freeze }: { freeze: CurrentSourceFreeze }) {
         * manifest rows, counts and a batch receipt — and not an artifact-byte,
         * causal-order, selection or broker pass. The sentence travels with it.
         */}
-      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope>
-        A match here means the retained manifest, its row counts and its batch receipt agree with what
-        Portal imported. It is not a check of artifact bytes, of causal order, of a selection, or of
-        anything a broker saw.
+      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope title={RETAINED_SCOPE_TITLE}>
+        match = manifest, row counts, batch receipt only
       </p>
     </div>
   );
@@ -847,21 +853,21 @@ function RetainedRows({ freeze }: { freeze: CurrentSourceFreeze }) {
 /** Sentences for the retained freeze's own reason codes, beside the shared registry. */
 const RETAINED_REASON_SENTENCES: Record<string, string> = {
   P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES:
-    "The source bytes were verified when the run was imported; a read never reopens the private artifact, so no byte-level check is shown here.",
+    "bytes verified at import; a read never reopens them",
   SELECTION_SAW_EVERY_OUTER_FOLD:
-    "One θ* was selected after every outer fold's OOS window had been read, so no fold's OOS is held out from the selection.",
+    "θ* chosen after every fold's OOS was read",
   P10_DELTA_WFO_PROFILE_DOES_NOT_ADMIT_PER_FOLD_CAUSAL_SCHEDULE:
-    "A per-fold causal schedule is not admitted by the Delta walk-forward profile, so no per-fold causal verdict is evaluated.",
+    "profile admits no per-fold causal schedule",
   QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS:
-    "QuantBT publishes no freeze or OOS-read timestamps on this route, so no wall-clock tick is drawn.",
+    "no freeze or OOS-read timestamps published",
   RS02_SEAL_PREDATES_P17_CHILD_AUDIT:
-    "This run was retained before QuantBT's child audit was kept, so the child that generated each fold's OOS bars cannot be named.",
+    "retained before child audit was kept — OOS child not named",
   FROZEN_PARAMETERS_NOT_EXACT_NUMERIC_JSON:
-    "The frozen parameters are not all exact numbers, so QuantBT's candidate identity cannot be recomputed.",
+    "frozen parameters not all exact numbers — identity not recomputed",
   RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET:
-    "A read never enqueues an evaluation, so no neighbourhood around θ* is re-scored and no ΔJ exists to show.",
+    "a read never enqueues an evaluation — no ΔJ",
   SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS:
-    "The source published no per-fold IS/OOS segments, so no fold boundary is drawn.",
+    "no per-fold IS/OOS segments published",
 };
 
 function reasonText(code: string | null | undefined): string | null {
@@ -911,16 +917,11 @@ function TypedAbsence({
           {state.toLowerCase().replace(/_/g, " ")}
         </span>
         {code ? (
-          <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }}>
+          <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} title={sentence ?? undefined}>
             {code}
           </span>
         ) : null}
       </span>
-      {sentence ? (
-        <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-          {sentence}
-        </span>
-      ) : null}
     </div>
   );
 }
@@ -1114,10 +1115,8 @@ function RetainedIntegrity({
       )}
       <VerifyLive verify={verify} />
 
-      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope>
-        A match here means the retained manifest, its row counts and its batch receipt agree with what
-        Portal imported. It is not a check of artifact bytes, of causal order, of a selection, or of
-        anything a broker saw.
+      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope title={RETAINED_SCOPE_TITLE}>
+        match = manifest, row counts, batch receipt only
       </p>
     </section>
   );
@@ -1200,7 +1199,7 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
           <span className="mono">shared params — global schedule, one θ* for {foldSpan(foldNumbers)}</span>
           <span style={{ color: "var(--ink-faint)" }}>
             {" "}
-            · one optimizer study selected it for every fold, so its objective is study-wide, not a per-fold best.
+            · objective is study-wide
           </span>
         </p>
       ) : identity === null ? (
@@ -1291,9 +1290,13 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
         ) : (
           <TypedAbsence what="declared range · range position" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" data-frozen-range />
         )}
-        <span className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-          Read-only by decision: writing onto a frozen set breaks the invariant the claim rests on. Manually entered
-          params have no lineage — no path for them exists.
+        <span
+          className="mono text-[10px]"
+          style={{ color: "var(--ink-soft)" }}
+          data-read-only
+          title="Read-only by decision: writing onto a frozen set breaks the invariant the claim rests on. Manually entered params have no lineage — no path for them exists."
+        >
+          read-only
         </span>
       </div>
     </section>
@@ -1371,11 +1374,11 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
         ) : null}
       </span>
       <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        F1 · two axes — deliberately separate, not the same units
+        F1 · two axes
       </span>
       <div className="flex flex-col gap-1" data-axis="DATA_TIME">
         <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
-          data time — which bars each fold read · {ordering.counts.folds} {ordering.counts.folds === 1 ? "fold" : "folds"}
+          data time · {ordering.counts.folds} {ordering.counts.folds === 1 ? "fold" : "folds"}
         </span>
         <ol className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
           {ordering.folds.map((fold) => (
@@ -1418,13 +1421,13 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
           ))}
         </ol>
         <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-ordering-reason>
-          {reasonText(ordering.folds[0]?.reason_code) ?? ordering.folds[0]?.reason_code ?? "No retained fold."}
-          {global ? " Report evidence only — never a deployment claim." : ""}
+          {reasonText(ordering.folds[0]?.reason_code) ?? ordering.folds[0]?.reason_code ?? "no retained fold"}
+          {global ? " — report evidence only" : ""}
         </span>
       </div>
       <div className="flex flex-col gap-1 border-t border-dashed pt-2" style={{ borderColor: "var(--line-strong)" }} data-axis="WALL_CLOCK">
         <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
-          wall clock — when the events happened
+          wall clock
         </span>
         <TypedAbsence what="wall clock ordering" state={ordering.wall_clock.state} code={ordering.wall_clock.reason_code} />
       </div>
@@ -1484,9 +1487,6 @@ function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null
       ) : (
         <TypedAbsence what="wall clock ordering" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" />
       )}
-      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-two-clocks>
-        {TWO_CLOCKS_NOTE}
-      </p>
     </section>
   );
 }
@@ -1654,9 +1654,6 @@ export function FreezeScreen({
         <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
           S3 · Freeze — ordering &amp; integrity
         </h1>
-        <p className="text-[13.5px] italic [line-height:normal]" style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }} data-subtitle>
-          {FREEZE_SUBTITLE}
-        </p>
       </div>
       {/* E2: the HiFi header actions — copy the evidence link, and propose a new attempt from this run (spec 07 F2), independent of the what-if flag. */}
       <div className="flex flex-wrap items-center gap-3" data-header-actions>
@@ -1775,14 +1772,6 @@ export function FreezeScreen({
                 <WindowRow window={freeze.ordering.data_time.outer_oos} label="outer OOS" />
                 <WindowRow window={freeze.ordering.data_time.holdout} label="holdout" />
               </div>
-              <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-two-clocks>
-                {TWO_CLOCKS_NOTE}
-              </p>
-              <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-ordering-note>
-                Only one of those two clocks is published for this run. These are the data windows —
-                what was knowable. They are not a wall-clock timeline and not a causal verdict, because
-                the source asserted neither.
-              </p>
             </section>
 
             {/* Hi-fi F2 beside F3/F4 at laptop width; stacked below it. */}
@@ -1814,7 +1803,7 @@ export function FreezeScreen({
                 <div className="flex flex-wrap gap-x-5 gap-y-1.5">
                   <Gap gap={freeze.selection.strict_outer_oos} what="strict outer OOS" />
                   <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-selection-refs>
-                    selection artifact · selected trial · selection sequence — none published
+                    selection artifact · trial · sequence — none published
                   </span>
                 </div>
               </section>
@@ -1845,10 +1834,8 @@ export function FreezeScreen({
               </h2>
               <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
                 {freeze.inspection.requested_fold === null
-                  ? "No fold was requested."
-                  : `Fold ${freeze.inspection.requested_fold} was requested.`}{" "}
-                This run has no fold selection artifact, so the request is answered{" "}
-                {freeze.inspection.state.toLowerCase().replace(/_/g, " ")}.
+                  ? "no fold requested"
+                  : `fold ${freeze.inspection.requested_fold} requested`}
               </p>
               <Withheld availability={freeze.inspection.availability} />
             </section>
@@ -1878,15 +1865,6 @@ export function FreezeScreen({
           />
         ) : null}
       </ResearchPanel>
-
-      <footer className="flex flex-col gap-1">
-        <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-          rules of this screen
-        </span>
-        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-rules-footer>
-          {FREEZE_RULES_FOOTER}
-        </p>
-      </footer>
     </div>
   );
 }

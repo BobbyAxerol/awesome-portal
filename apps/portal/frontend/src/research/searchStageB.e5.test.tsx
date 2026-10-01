@@ -85,23 +85,23 @@ describe("E5 · 6.7/6.8 B1 pool freeze and the K callout", () => {
     expect(text(pool, "[data-pool-count='feasible']")).toBe("n/a");
     expect(pool.querySelector("[data-pool-row='feasible']")?.getAttribute("data-pool-state")).toBe("NOT_APPLICABLE");
     expect(pool.querySelector("[data-pool-bar='feasible']")).toBeNull();
-    expect(text(pool, "[data-pool-row='feasible']")).toContain("does not arise — QuantBT's walk-forward study declares no constraints");
+    expect(text(pool, "[data-pool-row='feasible']")).toContain("n/a — no constraints declared");
     expect(text(pool, "[data-pool-count='top-is']")).toBe("1");
     expect(text(pool, "[data-pool-row='top-is']")).toContain("K = ⌈3 × 0.1⌉ = 1");
     expect(text(pool, "[data-pool-count='reevaluated']")).toBe("1");
-    expect(text(pool, "[data-pool-row='reevaluated']")).toContain("on every outer fold — the OOS column enters the ranking");
+    expect(text(pool, "[data-pool-row='reevaluated']")).toContain("every outer fold · OOS ranks");
     expect(text(pool, "[data-pool-count='selected']")).toBe("1");
     expect(text(pool, "[data-pool-row='selected']")).toContain("robust_decay");
     expect(text(pool, "[data-pool-row='trials']")).toContain("3 scored, not pruned");
   });
 
-  it("the callout prints QuantBT's rule with the served inputs, and says what the OOS then does", async () => {
+  it("the callout prints the served K in one line; the rule's long form rides in the title (VD-TEXT-01)", async () => {
     const root = await settled();
     const callout = root.querySelector("[data-k-callout]") as HTMLElement;
     expect(callout.getAttribute("data-k-callout")).toBe("CEIL_N_TIMES_TOP_IS_FRACTION");
-    expect(callout.textContent).toBe(
-      "K = ⌈n_trials × top_is_fraction⌉ = ⌈3 × 0.1⌉ = 1 — the pool closes BEFORE any OOS value is computed. Stage B then ranks the frozen pool on OOS, so the claim is selection-adjusted.",
-    );
+    expect(callout.textContent).toBe("K = ⌈3 × 0.1⌉ = 1 · pool closes before OOS");
+    expect(callout.getAttribute("title")).toContain("K = ⌈n_trials × top_is_fraction⌉");
+    expect(callout.textContent).not.toContain("selection-adjusted");
   });
 
   it("the freeze line reads POOL FROZEN · K = ⌈3 × 0.1⌉ = 1", async () => {

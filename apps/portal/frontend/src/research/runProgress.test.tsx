@@ -24,7 +24,6 @@ import {
   RunProgress,
   SSE_CLOSED,
   SSE_LIVE,
-  SUBTITLE,
 } from "./RunProgress";
 import {
   CONSOLE_PAGE_LIMIT,
@@ -222,7 +221,9 @@ afterEach(() => vi.unstubAllGlobals());
 describe("P11-T01 — every HIFI block is present and reads from the snapshot", () => {
   it("renders the seven blocks with the server's own numbers", () => {
     view();
-    expect(screen.getByText(SUBTITLE)).toBeTruthy();
+    // VD-TEXT-01: no subtitle, no "rules of this screen" footer.
+    expect(document.querySelector("[data-rules-footer]")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/rules of this screen|nothing moves, nothing reloads/);
     expect(document.querySelectorAll("[data-stage]")).toHaveLength(5);
     expect(document.querySelector("[data-tqdm]")?.textContent).toBe(
       "fold 07/32 · study 7 · trial 214/400 · best J₁ 1.049 · prune 12%",
@@ -373,7 +374,7 @@ describe("P11-T01c — the source owns the segmentation and the certificate", ()
     // One fact exists; the other two are not invented to complete the picture.
     expect(document.querySelectorAll("[data-fold-segment]")).toHaveLength(1);
     expect(document.querySelector("[data-timeline-partial]")?.textContent).toContain(
-      "the gaps are not filled",
+      "gaps not filled",
     );
   });
 
@@ -500,7 +501,7 @@ describe("RF01-F6 — retained tables go through ArtifactPanel in the authority'
     expect(tables.textContent).toContain("2026-09-19 16:49 UTC");
     // No reader route is published, so nothing is a link or a download.
     expect(tables.querySelectorAll("a, button")).toHaveLength(0);
-    expect(tables.textContent).toMatch(/has not published an export action/);
+    expect(tables.textContent).toMatch(/export — not published/);
     expect(tables.textContent).not.toMatch(/READY/);
   });
 

@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FREEZE_RULES_FOOTER, FREEZE_SUBTITLE, FreezeScreen } from "./FreezeDetail";
+import { FreezeScreen } from "./FreezeDetail";
 import {
   BLOCKED_NOTE,
   PARTIAL_SCOPE_NOTE,
@@ -367,7 +367,11 @@ describe("P16-T01 — a match is only as wide as its published scope", () => {
   it("shows the scope beside every mark", () => {
     const { container } = view();
     expect(container.querySelector("[data-verification-scope='PORTAL_RETAINED_DIGEST_BINDING_ONLY']")).toBeTruthy();
-    expect(screen.getByText(PARTIAL_SCOPE_NOTE)).toBeTruthy();
+    /* VD-TEXT-01: one short clause beside the mark; the full sentence is its title, never a paragraph. */
+    const note = container.querySelector("[data-scope-note]");
+    expect(note?.textContent).toBe("digest comparison only");
+    expect(note?.getAttribute("title")).toBe(PARTIAL_SCOPE_NOTE);
+    expect(screen.queryByText(PARTIAL_SCOPE_NOTE)).toBeNull();
   });
 
   it("never says the chain is intact", () => {
@@ -409,11 +413,23 @@ describe("P16-T02 — a blocked freeze shows the mismatch and nothing else", () 
     );
   });
 
+  it("VD-TEXT-01: NOT_VERIFIED is the chip alone — its full sentence is the chip title, no repeated note", () => {
+    const { container } = view();
+    const chip = container.querySelector("[data-byte-state='NOT_VERIFIED']");
+    expect(chip?.textContent).toBe("not verified yet");
+    expect(chip?.getAttribute("title")).toContain("A read never re-opens them");
+    expect(container.querySelector("[data-byte-note]")).toBeNull();
+    expect(container.textContent).not.toContain("No verification has been requested");
+  });
+
   it("leaves the frozen table empty and says why", () => {
     const { container } = view({ detail: blockedDetail() });
     expect(container.querySelector("[data-frozen]")).toBeNull();
     expect(container.querySelector("[data-frozen-blocked]")?.textContent).toContain("not this run's");
-    expect(screen.getByText(BLOCKED_NOTE)).toBeTruthy();
+    const note = container.querySelector("[data-scope-note]");
+    expect(note?.getAttribute("title")).toBe(BLOCKED_NOTE);
+    expect(note?.textContent).toContain("nothing below is shown as frozen");
+    expect(screen.queryByText(BLOCKED_NOTE)).toBeNull();
   });
 });
 
@@ -435,7 +451,7 @@ describe("A10a — sealed bytes: a receipt, never a timer", () => {
     const banner = container.querySelector("[data-blocked-banner]");
     expect(banner?.getAttribute("role")).toBe("alert");
     expect(banner?.textContent).toContain("BLOCKED — digest drift");
-    expect(banner?.textContent).toContain("nothing downstream of this screen may be trusted");
+    expect(banner?.textContent).toContain("run BLOCKED from promotion until re-verified");
     const mismatch = container.querySelector("[data-byte-mismatch='PART']");
     expect(mismatch?.textContent).toContain("part trials #1");
     expect(mismatch?.textContent).toContain("≠ observed");
@@ -625,7 +641,7 @@ describe("P16-T04 — an unavailable question keeps its card, with nothing that 
     expect(container.querySelector("[data-panel='inspection']")?.getAttribute("data-inspection-state")).toBe(
       "NOT_APPLICABLE",
     );
-    expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("Fold 2 was requested");
+    expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("fold 2 requested");
     expect(container.querySelector("[data-selection-refs]")?.textContent).toContain("none published");
   });
 });
@@ -641,7 +657,9 @@ describe("P16-T05 — retained custody is narrow, and says so", () => {
     expect(container.querySelector("[data-retained-scope-code]")?.textContent).toContain(
       "manifest row counts and batch receipt",
     );
-    expect(container.querySelector("[data-retained-scope]")?.textContent).toContain("not a check of artifact bytes");
+    const scope = container.querySelector("[data-retained-scope]");
+    expect(scope?.textContent).toBe("match = manifest, row counts, batch receipt only");
+    expect(scope?.getAttribute("title")).toContain("not a check of artifact bytes");
     expect(container.querySelector("[data-retained-rows]")?.textContent).toContain("2190");
   });
 
@@ -681,7 +699,8 @@ describe("P16-T05 — retained custody is narrow, and says so", () => {
     const { container } = view({ retained: { state: "not-applicable", answer } });
     const note = container.querySelector("[data-retained-not-applicable]");
     expect(note?.textContent).toContain("not applicable");
-    expect(note?.textContent).toContain("nothing is pending");
+    expect(note?.textContent).toContain("nothing pending");
+    expect(note?.textContent).not.toContain("which the retained lane never holds");
     expect(container.querySelector("[data-retained-state]")).toBeNull();
     expect(container.querySelector("[data-retained-refusal]")).toBeNull();
   });
@@ -719,14 +738,15 @@ describe("P16-T06 — the surface requests only the three named operations", () 
     expect(code).not.toMatch(/sha256\(|createHash|digest\s*===\s*/);
   });
 
-  it("keeps the shell and the verbatim copy under a refusal", () => {
+  it("keeps the shell under a refusal — and carries no subtitle or rules footer (VD-TEXT-01)", () => {
     const { container } = view({
       detail: null,
       state: { state: "denied", reason: "Not your workspace.", mayRetry: false, retainsContent: false },
     });
     expect(container.querySelector("[data-screen='freeze-detail']")).toBeTruthy();
-    expect(screen.getByText(FREEZE_RULES_FOOTER)).toBeTruthy();
-    expect(screen.getByText(FREEZE_SUBTITLE)).toBeTruthy();
+    expect(container.querySelector("[data-rules-footer]")).toBeNull();
+    expect(container.querySelector("[data-subtitle]")).toBeNull();
+    expect(container.textContent).not.toMatch(/rules of this screen|what that freeze can honestly be checked/i);
   });
 
   it("carries the cursor to the hub and back to S2", () => {
@@ -1108,7 +1128,8 @@ describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
     const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
     expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("⚠ NOT CAUSAL · GLOBAL SELECTION");
     expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
-    expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("every outer fold's OOS window had been read");
+    expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("after every fold's OOS was read");
+    expect(panel.querySelector("[data-two-clocks]")).toBeNull();
     expect(panel.textContent).not.toMatch(/\bPASS\b|causal ✓/);
   });
 

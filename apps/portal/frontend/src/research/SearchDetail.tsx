@@ -69,7 +69,7 @@ import {
 } from "./searchClient";
 import { deepDiveHref, serializeCursor, type EvidenceCursor } from "./evidenceCursor";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME } from "./SplitDetail";
-import { LANE_STATE_COPY, laneNotApplicableSentence } from "./splitClient";
+import { LANE_STATE_COPY } from "./splitClient";
 import type { LedgerSlot, RetainedRunFacts } from "./useSearch";
 import { BoundWarningNote } from "./BoundWarning";
 import type { BoundWarningValue } from "./BoundWarning";
@@ -85,38 +85,20 @@ import type { ResearchState } from "./state";
 
 /* --------------------------------------------------------------- verbatim */
 
-export const SEARCH_TITLE = "Search & Selection — how parameters were searched and selected";
-
-/** Spec 06 §1 and the hi-fi's own header line. */
-export const SEARCH_SUBTITLE =
-  "Stage A searches on IS. The pool freezes. Stage B selects on the frozen pool. Information crosses the freeze line one way — unless the schedule lets OOS in, and then the claim says exactly that.";
-
-/**
- * The footer, in parts (FE-S06-04, DQ-15). The rule is always true of this
- * screen; the fixed-profile sentence is a fact about the run and appears only
- * when the read published that fact — never while loading, refused or 404.
+/*
+ * VD-TEXT-01 (2026-10-01): the header subtitle, the "rules of this screen"
+ * footer and the one-mode note are gone — the screen's own labels carry them.
+ * The title is the HiFi's, without its explanatory tail.
  */
-export const SEARCH_RULES_BASE =
-  "A panel degrades when a field is missing; it never infers one. The frontend never clusters, never ranks and never computes J.";
-export const SEARCH_RULES_FIXED_PROFILE =
-  "This run was qualified against a fixed parameter profile rather than searched, so every optimizer panel above states which kind of absence it is — a question that does not arise, a fact nobody published, or a claim nobody asserted.";
-
-/** Kept for callers of the P15 build: the sentence that is always true. */
-export const SEARCH_RULES_FOOTER = SEARCH_RULES_BASE;
+export const SEARCH_TITLE = "Search & Selection";
 
 export const FREEZE_LABEL = "POOL FREEZE";
-
-/**
- * Spec 06 §10's switcher note, minus its first clause: there is no switcher on
- * a product route, so the half that points at one is left out.
- */
-export const ONE_MODE_NOTE = "a real run's mode is fixed at submit.";
 
 const DIAGNOSTIC_LABEL: Record<DiagnosticKey, string> = {
   scatter: "A2 · trial surface",
   distributions: "A4 · per-parameter sampled regions",
   parameter_frequency: "B4 · θ* journey — parameter frequency",
-  progression: "A3 · progression · concentration · pruned rail",
+  progression: "A3 · progression",
   prune_reasons: "A3 · prune reasons",
   importance: "A5 · importance",
   interactions: "A6 · parameter interactions",
@@ -210,14 +192,12 @@ export function atlasModeHref(reference: NonNullable<ClaimRow["mode_reference"]>
   return `/research/quantbt/atlas#${params.toString()}`;
 }
 
-/** HiFi claim-row aside, verbatim: a fact about this screen, true of every run. */
-export const SELECTOR_LAYERS_NOTE = [
-  "Two selector layers, two enums: ",
-  "optimization_mode",
-  " belongs to the walk-forward endpoint; ",
-  "CandidateSelector.mode",
-  " belongs to the optimization package. This screen never mixes them.",
-] as const;
+/**
+ * The HiFi claim-row aside, now the tooltip of the optimization_mode label
+ * (VD-TEXT-01): two selector layers, two enums, never mixed on this screen.
+ */
+export const SELECTOR_LAYERS_HELP =
+  "Two selector layers, two enums: optimization_mode belongs to the walk-forward endpoint; CandidateSelector.mode belongs to the optimization package.";
 
 function Withheld({ availability, what }: { availability: SearchAvailability; what?: string }) {
   return (
@@ -663,7 +643,7 @@ function LedgerPanel({
     <section className="flex min-w-0 flex-col overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-ledger={slot.state}>
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }} data-ledger-title>
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
-          trial ledger — around θ* · Optuna trials only; candidate replays are a separate ledger
+          trial ledger — Optuna trials
         </h3>
         {slot.state === "ready" ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-ledger-total>
@@ -683,13 +663,11 @@ function LedgerPanel({
               <div className="flex flex-col gap-1" data-ledger-shell>
                 <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
                   {/* "exists" only where the read says the question does not arise. */}
-                  {ledgerGap.state === "NOT_APPLICABLE" ? "No trial ledger exists for this run" : "No trial ledger is shown for this run"}
-                  : the search read says the ledger is{" "}
+                  {ledgerGap.state === "NOT_APPLICABLE" ? "No trial ledger for this run" : "Trial ledger"} —{" "}
                   <span className="mono" data-ledger-gap-state={ledgerGap.state}>
                     {SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}
                   </span>{" "}
-                  — <span className="mono text-[10px]">{ledgerGap.reason_code}</span>. No row, count or zero is shown in
-                  its place.
+                  — <span className="mono text-[10px]">{ledgerGap.reason_code}</span>
                 </p>
                 <p
                   className="text-[10.5px] leading-[1.5]"
@@ -697,7 +675,7 @@ function LedgerPanel({
                   data-ledger-lane="not-applicable"
                   title={`${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
                 >
-                  retained ledger lane — {laneNotApplicableSentence(slot.answer)}
+                  retained ledger lane — not applicable · <span className="mono">{slot.answer.lane.reason_code}</span>
                 </p>
               </div>
             ) : slot.state === "refused" ? (
@@ -710,11 +688,11 @@ function LedgerPanel({
                   )}
                 </p>
                 <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
-                  For this run the search contract says the ledger is{" "}
+                  Search contract: ledger{" "}
                   <span className="mono" data-ledger-gap-state={ledgerGap.state}>
                     {SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}
                   </span>{" "}
-                  — <span className="mono">{ledgerGap.reason_code}</span>. No row, count or zero is shown in its place.
+                  — <span className="mono">{ledgerGap.reason_code}</span>
                 </p>
               </div>
             ) : (
@@ -726,12 +704,6 @@ function LedgerPanel({
         </>
       )}
 
-      {slot.state === "ready" ? (
-        <div className="border-t px-3 py-1.5 text-[10px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}>
-          The OOS column has four states from the mode × schedule matrix — never a boolean. The UI recomputes no
-          objective.
-        </div>
-      ) : null}
     </section>
   );
 }
@@ -958,7 +930,7 @@ function CandidateLedger({ search }: { search: CurrentSourceSearch }) {
     <div className="border-t" style={{ borderColor: "var(--line)" }} data-candidate-ledger={search.candidates.rows.length}>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-3 py-2">
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
-          candidate replays — Stage B, every fold, the selector&apos;s own ledger
+          candidate replays — Stage B
         </h3>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
           {search.candidates.rows.length} of {search.candidates.source_candidate_count} candidates
@@ -1019,7 +991,7 @@ function RetainedPoolFreeze({ search }: { search: CurrentSourceSearch }) {
   return (
     <div className="flex flex-col gap-[5px]" data-retained-pool="pre-e5">
       <span className="mono text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} title={SERVER_PREDATES_POOL} data-gap-reason="pool">
-        this server does not publish the pool counts, K or feasibility — the counts below are the ledger&apos;s row totals
+        pool counts and K — not published · rows below are ledger totals
       </span>
       {rows.map(([label, n, note]) => (
         <span key={label} className="mono flex items-center gap-2 text-[10.5px]" data-pool-row={label}>
@@ -1040,10 +1012,10 @@ function RetainedPoolFreeze({ search }: { search: CurrentSourceSearch }) {
 }
 
 const TERM_WORDS: Record<string, string> = {
-  mean_oos_sharpe: "S̄_OOS — mean OOS Sharpe over the outer folds",
-  std_decay: "σ(decay) — dispersion of per-fold decay, weighted by −λ",
-  positive_mean_decay: "max(0, D̄) — positive mean decay, weighted by −γ",
-  mean_is_sharpe: "S̄_IS — the Stage A objective",
+  mean_oos_sharpe: "mean OOS Sharpe",
+  std_decay: "decay dispersion",
+  positive_mean_decay: "positive mean decay",
+  mean_is_sharpe: "mean IS Sharpe",
 };
 
 /**
@@ -1071,7 +1043,7 @@ function RetainedFormula({ search }: { search: CurrentSourceSearch }) {
             {term.term}
           </span>
           <span className="flex-1" style={{ color: "var(--ink-faint)" }}>
-            {TERM_WORDS[term.term] ?? term.term} · value {ratio2(term.value) ?? "not published"} × weight {term.weight}
+            {TERM_WORDS[term.term] ?? term.term} · {ratio2(term.value) ?? "not published"} × {term.weight}
           </span>
           <span className="mono text-[11px] font-semibold" title={term.contribution}>
             {ratio2(term.contribution) ?? "not published"}
@@ -1083,7 +1055,7 @@ function RetainedFormula({ search }: { search: CurrentSourceSearch }) {
           J (selected)
         </span>
         <span className="flex-1" style={{ color: "var(--ink-faint)" }}>
-          as QuantBT ranked it — {search.diagnostics.probe.objective_rows_recomposed} of {search.diagnostics.probe.objective_rows} retained objectives recompose from their terms
+          {search.diagnostics.probe.objective_rows_recomposed} of {search.diagnostics.probe.objective_rows} recompose
         </span>
         <span className="mono font-semibold" title={search.selection.objective ?? undefined}>
           {ratio2(search.selection.objective) ?? <NotPublished title="the selection publishes no objective" />}
@@ -1138,12 +1110,12 @@ function RetainedBestVsSelected({ search }: { search: CurrentSourceSearch }) {
       )}
       <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-roles-note>
         {same === true
-          ? "The IS best and the selected candidate are the same trial here, but the two numbers measure different things: the IS search scores mean IS Sharpe; the selector ranks the candidate by Mode 1 J over every outer fold."
+          ? "Same trial."
           : same === false
-            ? "The selector did not take the IS best: it ranked the candidate pool by Mode 1 J over every outer fold."
-            : "No selection is published, so the IS best is not promoted in its place."}{" "}
+            ? "Selector did not take the IS best."
+            : "No selection published."}{" "}
         <span data-centroid={roles.centroid.state} title={roles.centroid.reason_code ?? undefined}>
-          Centroid — {roles.centroid.state === "NOT_APPLICABLE" ? "not applicable to this selector" : "not published"}.
+          Centroid — {roles.centroid.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}
         </span>
       </span>
     </div>
@@ -1322,8 +1294,7 @@ function ServedSearchSpace({ search, space, run }: { search: CurrentSourceSearch
       </div>
       {space.state === "AVAILABLE" && space.grid_size ? (
         <span className="text-[10px] leading-[1.5]" style={{ color: "var(--accent-2)" }} data-coverage-note>
-          {search.ledger.source_trial_count} trials sampled a declared grid of {groupDecimalString(String(space.grid_size))} points — every
-          conclusion below is about the sampled region, not the whole space.
+          {search.ledger.source_trial_count} of {groupDecimalString(String(space.grid_size))} grid points sampled
         </span>
       ) : null}
     </section>
@@ -1405,7 +1376,7 @@ function RetainedSearchSpace({ search, run }: { search: CurrentSourceSearch; run
             <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
               {noOverrides || identity === null
                 ? reasonCodeSentence(RETAINED_NO_FIELD)
-                : "The requested spec overrides the declared space, and the retained lane does not publish the space it searched."}
+                : "requested spec overrides the declared space — searched space not published"}
             </span>
           </span>
         ) : null}
@@ -1452,8 +1423,7 @@ function RetainedSurface({ search }: { search: CurrentSourceSearch }) {
   return (
     <RetainedPanel id="scatter" title={DIAGNOSTIC_LABEL.scatter} state="IN_LEDGER">
       <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-        {trialPageWords(search)} retained trials, each with its parameters and IS objective, are rows of the trial ledger
-        below. The retained lane publishes no surface projection, and this screen does not draw one from rows.
+        surface projection — not published · {trialPageWords(search)} trials are rows of the ledger below
       </p>
       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-gap-reason="scatter">
         {RETAINED_NO_FIELD}
@@ -1513,7 +1483,7 @@ function RetainedSampledValues({ search }: { search: CurrentSourceSearch }) {
         ))}
       </div>
       <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
-        {trialPageWords(search)} trials, values exactly as the ledger rows publish them.
+        {trialPageWords(search)} trials · values as in the ledger
       </span>
     </RetainedPanel>
   );
@@ -1531,8 +1501,7 @@ function RetainedThetaJourney({ search }: { search: CurrentSourceSearch }) {
   return (
     <RetainedPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} state="ONE_SELECTION_ALL_FOLDS">
       <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-        The selected candidate (trial <span className="mono">{search.selection.selected_trial_id}</span>) is scoped to all outer
-        folds, so one θ* serves every fold — there is no per-fold journey to draw.
+        global θ* (trial <span className="mono">{search.selection.selected_trial_id}</span>) — no per-fold journey
       </p>
       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
         fold_scope {scope.kind} · schedule {search.search_contract.optimization_schedule ?? "not published"}
@@ -1572,11 +1541,6 @@ function RetainedModeReads({ search, runId, view }: { search: CurrentSourceSearc
     ["decay_lambda", probe.decay_lambda],
     ["decay_gamma", probe.decay_gamma],
   ];
-  const trial = retainedTrials(search)[0] as Partial<RetainedTrial> | undefined;
-  const candidate = search.candidates.rows[0] as Partial<RetainedCandidate> | undefined;
-  const stageA = trial?.facts?.stage ?? null;
-  const stageB = candidate?.facts?.stage ?? null;
-  const optunaBlind = retainedTrials(search).every((row) => (row as Partial<RetainedTrial>).facts?.oos_seen_by_optuna === false);
   const mode = contract.optimization_mode;
   const schedule = contract.optimization_schedule;
   return (
@@ -1608,13 +1572,6 @@ function RetainedModeReads({ search, runId, view }: { search: CurrentSourceSearc
         {view.kind === "strip" && view.oos.condition !== null ? (
           <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-oos-use-condition>
             <span className="mono">oos_use {view.oos.use}</span> — {view.oos.condition}
-          </span>
-        ) : null}
-        {stageA !== null && stageB !== null ? (
-          <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-mode-reads-stages>
-            Stage A (<span className="mono">{stageA}</span>) scores trials on IS
-            {optunaBlind ? " — no trial's OOS was seen by Optuna" : ""}; Stage B (<span className="mono">{stageB}</span>) re-scores
-            the frozen pool on OOS and ranks it by <span className="mono">{contract.candidate_selection_metric ?? "a metric not published"}</span>.
           </span>
         ) : null}
       </div>
@@ -1920,13 +1877,6 @@ export function SearchScreen({
           <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
             {SEARCH_TITLE}
           </h1>
-          <p
-            className="text-[13.5px] italic [line-height:normal]"
-            style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }}
-            data-subtitle
-          >
-            {SEARCH_SUBTITLE}
-          </p>
         </div>
         {detail ? (
           <div className="flex flex-none flex-col items-end gap-[5px]">
@@ -1957,8 +1907,15 @@ export function SearchScreen({
             {/* --------------------------------------- mode × schedule card */}
             <section className="rounded-[6px] border" style={RAISED_STYLE} data-source-strip={detail.source_profile.state}>
               <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--line-soft)" }}>
-                <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-                  optimization_mode
+                <span className={LABEL} style={{ color: "var(--ink-faint)" }} title={SELECTOR_LAYERS_HELP} data-selector-layers>
+                  optimization_mode{" "}
+                  <span
+                    aria-hidden="true"
+                    className="mono inline-flex h-[11px] w-[11px] items-center justify-center rounded-full border align-middle text-[8px] normal-case"
+                    style={{ borderColor: "var(--line-strong)" }}
+                  >
+                    i
+                  </span>
                 </span>
                 {/* One run is one mode: the run's own, read-only — never a switcher. */}
                 <span data-requested-optimizer={lane ? "RETAINED_SOURCE" : detail.requested_optimizer.state} className="flex flex-wrap items-center gap-2">
@@ -2008,9 +1965,6 @@ export function SearchScreen({
                       {detail.requested_optimizer.state.toLowerCase().replace(/_/g, " ")}
                     </span>
                   )}
-                </span>
-                <span className="ml-auto text-[10px]" style={{ color: "var(--ink-faint)" }} data-one-mode>
-                  {ONE_MODE_NOTE}
                 </span>
               </div>
 
@@ -2141,19 +2095,6 @@ export function SearchScreen({
                     </Claim>
                   ) : null}
                 </div>
-                <div
-                  className="flex w-full items-center border-t px-[14px] py-[9px] min-[900px]:w-auto min-[900px]:max-w-[250px] min-[900px]:border-l min-[900px]:border-t-0"
-                  style={{ borderColor: "var(--line-soft)" }}
-                  data-selector-layers
-                >
-                  <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                    {SELECTOR_LAYERS_NOTE[0]}
-                    <span className="mono">{SELECTOR_LAYERS_NOTE[1]}</span>
-                    {SELECTOR_LAYERS_NOTE[2]}
-                    <span className="mono">{SELECTOR_LAYERS_NOTE[3]}</span>
-                    {SELECTOR_LAYERS_NOTE[4]}
-                  </span>
-                </div>
               </div>
 
               {/* HiFi "what this mode reads" (6.4, G8). A retained run draws the
@@ -2190,11 +2131,11 @@ export function SearchScreen({
                       <Chip data-mode-relation={detail.claim_row.mode_reference.relation} tone="var(--ink-faint)">
                         release metadata · not run evidence
                       </Chip>
-                      <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                        {detail.claim_row.basis === "DECLARED_NOT_EXECUTED"
-                          ? "The request declared this mode and the source did not execute it. What the mode reads on each side of the freeze is described for the release in the Atlas; nothing from it is drawn here as this run's evidence."
-                          : "What the mode reads on each side of the freeze is described for the release in the Atlas; nothing from it is drawn here as this run's evidence."}
-                      </span>
+                      {detail.claim_row.basis === "DECLARED_NOT_EXECUTED" ? (
+                        <span className="min-w-[160px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                          declared, not executed by the source
+                        </span>
+                      ) : null}
                     </div>
                   </>
                 ) : (
@@ -2204,7 +2145,7 @@ export function SearchScreen({
                       state: "NOT_PUBLISHED",
                       code: detail.claim_row.basis,
                       sentence:
-                        "The search read names no declared mode for this run, so there is no Atlas entry to point at and no cell is drawn.",
+                        "no declared mode in the search read — no Atlas entry",
                     }}
                   />
                 )}
@@ -2224,7 +2165,7 @@ export function SearchScreen({
                     Stage A · search
                   </h2>
                   <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                    {fixed ? "no sampler ran — the source declared a fixed profile" : "what the sampler searched, on IS"}
+                    {fixed ? "no sampler ran — fixed profile" : "what the sampler searched, on IS"}
                   </span>
                 </div>
 
@@ -2328,7 +2269,7 @@ export function SearchScreen({
                     Stage B · selection
                   </h2>
                   <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                    {fixed ? "no pool was frozen — the declared profile is the selection" : "selects on the frozen pool"}
+                    {fixed ? "no pool frozen — fixed profile" : "selects on the frozen pool"}
                   </span>
                 </div>
 
@@ -2360,8 +2301,8 @@ export function SearchScreen({
                     <>
                   <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
                     {detail.selection.state === "FIXED_PARAMETER_PROFILE"
-                      ? "The parameters in A1 are the profile this run was qualified against. No trial was selected, because no trial was run — there is no best card, no pick and no θ* that came out of a search."
-                      : "The source published no selection for this run."}
+                      ? "Fixed profile — no trial was run, so no best trial or θ*."
+                      : "No selection published."}
                   </p>
                   {/* `selected_trial_ref` is pinned null: nothing points at a trial. */}
                   <Gap gap={detail.selection.selection_trace} what="selection trace" />
@@ -2386,12 +2327,11 @@ export function SearchScreen({
                       fold inspection
                     </h3>
                     <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-inspection-fold={lane.ledger.fold_filter?.fold_id ?? ""}>
-                      The retained ledger was read{" "}
-                      {lane.ledger.fold_filter?.fold_id ? `for fold ${lane.ledger.fold_filter.fold_id}` : "without a fold filter"}:{" "}
+                      {lane.ledger.fold_filter?.fold_id ? `fold ${lane.ledger.fold_filter.fold_id}` : "no fold filter"} ·{" "}
                       <span className="mono">
                         {lane.ledger.fold_filter?.matched_rows ?? lane.ledger.returned_rows} of {lane.ledger.source_trial_count}
                       </span>{" "}
-                      trials matched. Every trial and candidate row states its own fold scope in the ledger below.
+                      trials
                     </p>
                     {lane.ledger.fold_filter ? (
                       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
@@ -2411,11 +2351,9 @@ export function SearchScreen({
                   </h3>
                   <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-inspection-fold={detail.inspection.requested_fold ?? ""}>
                     {detail.inspection.requested_fold === null
-                      ? "No fold was requested."
-                      : `Fold ${detail.inspection.requested_fold} was requested.`}{" "}
-                    {detail.inspection.state === "NOT_APPLICABLE"
-                      ? "This source has no optimizer fold, so the request is answered not applicable rather than by treating a split fold as a trial fold."
-                      : "The source published nothing for it."}
+                      ? "No fold requested."
+                      : `Fold ${detail.inspection.requested_fold} requested.`}{" "}
+                    {detail.inspection.state === "NOT_APPLICABLE" ? "Not applicable — no optimizer fold." : "Not published."}
                   </p>
                   <Withheld availability={detail.inspection.availability} />
                 </section>
@@ -2437,15 +2375,6 @@ export function SearchScreen({
         ) : null}
       </ResearchPanel>
 
-      <footer className="flex flex-col gap-[3px] border-t pt-2" style={{ borderColor: "var(--line)" }}>
-        <span className="text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
-          rules of this screen
-        </span>
-        <p className="text-[11px] leading-[1.6]" style={{ color: "var(--ink-soft)" }} data-rules-footer>
-          {SEARCH_RULES_BASE}
-          {fixed ? ` ${SEARCH_RULES_FIXED_PROFILE}` : ""}
-        </p>
-      </footer>
     </div>
   );
 }

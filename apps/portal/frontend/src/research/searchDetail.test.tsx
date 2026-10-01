@@ -20,13 +20,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   OOS_COLUMN_CHIP,
   atlasModeHref,
-  SEARCH_RULES_BASE,
-  SEARCH_RULES_FIXED_PROFILE,
-  SELECTOR_LAYERS_NOTE,
+  SELECTOR_LAYERS_HELP,
   freezeArrow,
   schedulePillTone,
   trialStateTone,
-  SEARCH_SUBTITLE,
   SEARCH_TITLE,
   SearchScreen,
 } from "./SearchDetail";
@@ -519,7 +516,7 @@ describe("P15-T04 — no trial exists, so nothing points at one", () => {
     const { container } = view();
     const inspection = container.querySelector("[data-panel='inspection']");
     expect(inspection?.getAttribute("data-inspection-state")).toBe("NOT_APPLICABLE");
-    expect(inspection?.textContent).toContain("Fold 3 was requested");
+    expect(inspection?.textContent).toContain("Fold 3 requested");
     expect(inspection?.querySelector("[data-withheld]")?.getAttribute("title")).toBe(
       "P04_HAS_NO_OPTIMIZER_FOLD",
     );
@@ -638,7 +635,9 @@ describe("P15-T06 — one search read, one optional ledger read", () => {
       state: { state: "denied", reason: "Not your workspace.", mayRetry: false, retainsContent: false },
     });
     expect(container.querySelector("[data-screen='search-detail']")).toBeTruthy();
-    expect(container.querySelector("[data-rules-footer]")).toBeTruthy();
+    /* VD-TEXT-01: the "rules of this screen" footer is gone. */
+    expect(container.querySelector("[data-rules-footer]")).toBeNull();
+    expect(container.textContent).not.toContain("rules of this screen");
   });
 
   it("names only the published paths and computes nothing", () => {
@@ -651,13 +650,16 @@ describe("P15-T06 — one search read, one optional ledger read", () => {
     expect(screenCode).not.toMatch(/\.sort\(|Math\.max\(|reduce\(/);
   });
 
-  it("keeps the HiFi title and subtitle, and the footer the read supports", () => {
+  it("keeps the short title; the subtitle, the rules footer and the one-mode note are gone (VD-TEXT-01)", () => {
     const { container } = view();
     expect(screen.getByText(SEARCH_TITLE)).toBeTruthy();
-    expect(screen.getByText(SEARCH_SUBTITLE)).toBeTruthy();
-    expect(container.querySelector("[data-rules-footer]")?.textContent).toBe(
-      `${SEARCH_RULES_BASE} ${SEARCH_RULES_FIXED_PROFILE}`,
-    );
+    expect(SEARCH_TITLE).toBe("Search & Selection");
+    expect(container.querySelector("[data-subtitle]")).toBeNull();
+    expect(container.querySelector("[data-rules-footer]")).toBeNull();
+    expect(container.querySelector("[data-one-mode]")).toBeNull();
+    expect(container.textContent).not.toContain("Stage A searches on IS");
+    expect(container.textContent).not.toContain("never infers");
+    expect(container.textContent).not.toContain("a real run's mode is fixed at submit");
   });
 });
 
@@ -776,20 +778,22 @@ describe("RF-06 wave C — the retained ledger lane answers for itself (replaces
     const shell = container.querySelector("[data-ledger-shell]");
     expect(shell?.textContent).toContain("P04_RAN_NO_TRIALS");
     const lane = shell?.querySelector("[data-ledger-lane='not-applicable']");
-    expect(lane?.textContent).toContain("P04 fixed qualification");
+    expect(lane?.textContent).toContain("not applicable");
+    expect(lane?.textContent).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
+    expect(lane?.textContent).not.toContain("Nothing is pending");
     expect(lane?.getAttribute("title")).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
     expect(container.textContent).not.toMatch(/pending retention/i);
   });
 });
 
-describe("RF-06 FE-S06-04 — the footer asserts a fixed profile only when the read did", () => {
-  it("says nothing about the run while loading, refused or 404", () => {
+describe("RF-06 FE-S06-04 — no footer asserts anything about the run (VD-TEXT-01)", () => {
+  it("prints no footer while loading, refused or 404", () => {
     for (const state of [
       researchState({ kind: "in-flight", hasAcceptedResponse: false }),
       { state: "unavailable", reason: "down", mayRetry: true, retainsContent: false } as const,
     ]) {
       const { container, unmount } = view({ detail: null, state });
-      expect(container.querySelector("[data-rules-footer]")?.textContent).toBe(SEARCH_RULES_BASE);
+      expect(container.querySelector("[data-rules-footer]")).toBeNull();
       unmount();
     }
   });
@@ -828,7 +832,7 @@ describe("RF-06 FE-X-11 — states", () => {
     await waitFor(() => expect(container.querySelector("[data-run-not-found]")).toBeTruthy());
     expect(container.querySelector("[data-action='run-library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
     expect(container.querySelector("[data-action='next-stage']")).toBeNull();
-    expect(container.querySelector("[data-rules-footer]")?.textContent).toBe(SEARCH_RULES_BASE);
+    expect(container.querySelector("[data-rules-footer]")).toBeNull();
   });
 });
 
@@ -910,7 +914,12 @@ describe("RF-06 S06 fidelity — mode card and claim row", () => {
     // CG-P15-05 answered: no claim field is a "not published" shell any more.
     expect(container.querySelectorAll("[data-claim-shell]")).toHaveLength(0);
     expect(container.querySelector("[data-claim-row]")?.textContent).not.toContain("CG-P15-05");
-    expect(container.querySelector("[data-selector-layers]")?.textContent).toBe(SELECTOR_LAYERS_NOTE.join(""));
+    /* VD-TEXT-01: the right-hand aside became the tooltip of the optimization_mode label. */
+    const layers = container.querySelector("[data-selector-layers]") as HTMLElement;
+    expect(layers.getAttribute("title")).toBe(SELECTOR_LAYERS_HELP);
+    expect(layers.textContent).toContain("optimization_mode");
+    expect(SELECTOR_LAYERS_HELP).toContain("CandidateSelector.mode");
+    expect(container.querySelector("[data-claim-row]")?.parentElement?.textContent).not.toContain("This screen never mixes them");
   });
 });
 
@@ -1110,8 +1119,9 @@ describe("RF-06 wave C — S06 consumes claim_row and as_of_basis", () => {
   it("a ledger the read did not publish is 'not shown', never 'does not exist'", () => {
     const { container } = view({ detail: admitted(), ledger: { state: "not-applicable", answer: laneAnswer() } });
     const shell = container.querySelector("[data-ledger-shell]");
-    expect(shell?.textContent).toContain("No trial ledger is shown for this run");
+    expect(shell?.textContent).toContain("Trial ledger — not published");
     expect(shell?.textContent).not.toContain("exists");
+    expect(shell?.textContent).not.toContain("No trial ledger");
   });
 
   it("claim basis rides on the row", () => {
@@ -1166,7 +1176,7 @@ describe("W3 — the retained ledger labels what each number measures", () => {
     expect([...container.querySelectorAll("[data-formula-term]")].map((row) => row.getAttribute("data-formula-term"))).toEqual([
       "mean_oos_sharpe", "std_decay", "positive_mean_decay",
     ]);
-    expect(container.querySelector("[data-formula-total]")?.textContent).toContain("4 of 4 retained objectives recompose");
+    expect(container.querySelector("[data-formula-total]")?.textContent).toContain("4 of 4 recompose");
     expect(container.querySelector("[data-role-card='raw-best']")?.textContent).toContain("best_trial 0");
     expect(container.querySelector("[data-role-card='raw-best']")?.textContent).toContain("−1.44");
     expect(container.querySelector("[data-role-card='selected']")?.textContent).toContain("−9.81");

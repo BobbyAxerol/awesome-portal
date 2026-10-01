@@ -240,8 +240,8 @@ describe("T01 — a clean module mirrors every field and opens step 2", () => {
       ]),
     );
     expect(reasons).toEqual({
-      parse: "Drop a .py file or paste the module first.",
-      "run-gates": "Parse a source first — the gates run against the server's parse receipt.",
+      parse: "Add a .py file or module first.",
+      "run-gates": "Parse a source first.",
       register: "Run the gates first.",
     });
   });
@@ -322,9 +322,8 @@ describe("T03 — a failed gate keeps its message and closes step 3", () => {
     flushStagger();
 
     expect(action("register").disabled).toBe(true);
-    expect(screen.getByText(FAIL_CLOSED_NOTE).textContent).toBe(
-      "fail-closed: a red gate stops the import — there is no provisional registration.",
-    );
+    // VD-TEXT-01: shortened, same meaning.
+    expect(screen.getByText(FAIL_CLOSED_NOTE).textContent).toBe("fail-closed: a red gate stops the import.");
   });
 
   it("says why registration is closed instead of greying a silent button", () => {
@@ -341,7 +340,7 @@ describe("T03 — a failed gate keeps its message and closes step 3", () => {
     );
     flushStagger();
     const reason = document.querySelector('[data-disabled-reason="register"]') as HTMLElement;
-    expect(reason.textContent).toBe("A gate failed. Fix the module and submit it again.");
+    expect(reason.textContent).toBe("A gate failed — fix the module and resubmit.");
     expect(action("register").getAttribute("title")).toBe(reason.textContent);
   });
 
@@ -428,9 +427,7 @@ describe("T05 — registration lands as DRAFT with its supersedes note", () => {
     expect(within(card).getAllByText("av_0_3_0").length).toBeGreaterThan(0);
     expect(card.querySelector("[data-lifecycle]")?.getAttribute("data-lifecycle")).toBe("DRAFT");
     expect(card.textContent).toContain("supersedes av_0_2_0");
-    expect(screen.getByText(DRAFT_NOTE).textContent).toBe(
-      "a DRAFT version can run as evidence but cannot compose rc_",
-    );
+    expect(screen.getByText(DRAFT_NOTE).textContent).toBe("a DRAFT can run as evidence, not compose rc_");
   });
 
   it("updates the registry strip from the server list alone", () => {
@@ -574,9 +571,7 @@ describe("T08 — a multi-file drop is refused verbatim", () => {
     expect(onSourceChange).not.toHaveBeenCalled();
 
     rerender(<AlphaImport {...props({ multiFileRejected: true })} />);
-    expect(screen.getByText(SINGLE_FILE_ERROR).textContent).toBe(
-      "single-file contract — bundle imports inside the module or wait for package support (v2).",
-    );
+    expect(screen.getByText(SINGLE_FILE_ERROR).textContent).toBe("One .py only — single-file contract.");
   });
 
   it("accepts a single dropped file", async () => {
@@ -664,13 +659,12 @@ describe("T10 — accessible names and roles", () => {
 
 describe("T11 — contractual copy is byte-exact", () => {
   it("keeps all three sentences and the contract's own disclosure", () => {
-    expect(FAIL_CLOSED_NOTE).toBe(
-      "fail-closed: a red gate stops the import — there is no provisional registration.",
-    );
-    expect(DRAFT_NOTE).toBe("a DRAFT version can run as evidence but cannot compose rc_");
-    expect(SINGLE_FILE_ERROR).toBe(
-      "single-file contract — bundle imports inside the module or wait for package support (v2).",
-    );
+    // VD-TEXT-01: the short forms, same meanings.
+    expect(FAIL_CLOSED_NOTE).toBe("fail-closed: a red gate stops the import.");
+    expect(DRAFT_NOTE).toBe("a DRAFT can run as evidence, not compose rc_");
+    expect(SINGLE_FILE_ERROR).toBe("One .py only — single-file contract.");
+    // S14-C1 / VD-TEXT-01: Bobby's DRAFT copy stays factual and within 12 words.
+    expect(DRAFT_NOTE.split(/\s+/).length).toBeLessThanOrEqual(12);
     // The disclosure is a contract constant; the component must not hold a copy.
     const source = new URL("./AlphaImport.tsx", import.meta.url);
     expect(source.pathname.endsWith("AlphaImport.tsx")).toBe(true);

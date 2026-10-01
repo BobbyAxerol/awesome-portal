@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EXECUTE_RULES_FOOTER, EXECUTE_SUBTITLE, EXECUTE_TITLE, ExecuteScreen, PLAYHEAD_NOTE } from "./ExecuteDetail";
+import { EXECUTE_TITLE, ExecuteScreen, PLAYHEAD_NOTE } from "./ExecuteDetail";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
 import {
   REPLAY_REFUSAL_COPY,
@@ -404,7 +404,7 @@ describe("S08-U03 — sampling is shown as a limit", () => {
   it("says extrema buckets are not every observation and are not interpolated", () => {
     renderScreen(controllerOf(replay({ sampling: "EXTREMA_BUCKET_V1" })));
     expect(document.querySelector("[data-sampling]")!.getAttribute("data-sampling")).toBe("EXTREMA_BUCKET_V1");
-    expect(document.querySelector("[data-sampling-note]")!.textContent).toMatch(/not every observation.*Nothing is interpolated/);
+    expect(document.querySelector("[data-sampling-note]")!.textContent).toBe("bucket extrema, not every observation");
     expect(document.querySelector("[data-counts]")!.textContent).toContain("source observations 5000 · emitted samples 240");
   });
 });
@@ -420,8 +420,10 @@ describe("S08-E16R1 — the retained OHLC overview on the P04 hub lane", () => {
     expect(strip.querySelectorAll("svg line").length).toBe(4);
     const caption = block.querySelector("[data-overview-caption]")!.textContent!;
     expect(caption).toContain("out-of-sample window · 240 bars");
-    expect(caption).toContain("in 4 candles of 60 bars");
-    expect(caption).toContain("each high/low is the true extreme of its bars");
+    expect(caption).toContain("→ 4 candles of 60");
+    // The long sentence is a tooltip now (VD-TEXT-01); the downsample itself stays on the caption.
+    expect(caption).not.toContain("true extreme");
+    expect(block.querySelector("[data-overview-caption]")!.getAttribute("title")).toContain("true extremes of its bars");
     // The caption prints the envelope, so a reader can check the range drawn.
     expect(caption).toContain("59400.00 – 62700.00");
   });
@@ -504,7 +506,7 @@ describe("S08-U04 — every hi-fi panel keeps its place with a published reason"
   it("draws samples in the ledger and calls them samples, not events", () => {
     renderScreen(controllerOf(replay()));
     const ledger = document.querySelector('[data-panel="event-ledger"]')!;
-    expect(ledger.textContent).toContain("samples, not events");
+    expect(ledger.textContent).toContain("samples around the playhead — not events");
     expect(ledger.querySelectorAll("[data-sample-row]").length).toBe(14);
     expect(document.body.textContent).not.toMatch(/\bFILL\b|\bORDER_NEW\b|\bSIGNAL\b/);
   });
@@ -576,7 +578,7 @@ describe("S08-U06 — refusals speak fixed copy and keep the shell", () => {
     expect(document.body.textContent).not.toMatch(/\bsample 0\b|\b0 of\b/);
   });
 
-  it("renders title, subtitle and footer under a refusal, and no panel content", () => {
+  it("renders the title under a refusal, without subtitle or footer, and no panel content", () => {
     const refusal = toReplayRefusal(new PortalApiError("x", 403, "RESEARCH_REPLAY_FORBIDDEN", null));
     renderScreen(
       controllerOf(null, {
@@ -585,8 +587,10 @@ describe("S08-U06 — refusals speak fixed copy and keep the shell", () => {
       }),
     );
     expect(screen.getByText(EXECUTE_TITLE)).toBeTruthy();
-    expect(screen.getByText(EXECUTE_SUBTITLE)).toBeTruthy();
-    expect(screen.getByText(EXECUTE_RULES_FOOTER)).toBeTruthy();
+    // VD-TEXT-01: no subtitle under the title and no "rules of this screen" footer.
+    expect(document.querySelector("[data-subtitle]")).toBeNull();
+    expect(document.querySelector("[data-rules]")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/rules of this screen/i);
     expect(screen.getByText(REPLAY_REFUSAL_COPY[403])).toBeTruthy();
     expect(document.querySelector("[data-absent-panel]")).toBeNull();
   });

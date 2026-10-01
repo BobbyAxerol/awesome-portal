@@ -119,7 +119,7 @@ describe("X2 · B3 — A2 trial surface (T09) and the honest sampling caption", 
     const served = SURFACE.surface!.points.find((point) => point.trial_id === "0")!;
     expect(parseFloat(theta.style.left)).toBeCloseTo(served.positions.window! * 0.96 + 2, 2);
     expect([...surface.querySelectorAll("[data-surface-point]")].map((dot) => dot.getAttribute("data-point-bucket"))).toEqual(["4", "0", "2"]);
-    expect(container.querySelector("[data-surface-caption]")?.textContent).toContain("all 3 retained trials drawn — nothing sampled away");
+    expect(container.querySelector("[data-surface-caption]")?.textContent).toContain("3 of 3 trials drawn");
     expect(container.querySelector("[data-panel='scatter'] h3")?.textContent).toBe("A2 · trial surface — 3 trials · 0 pruned · global study");
   });
 
@@ -164,7 +164,7 @@ describe("X2 · B3 — A3/A4/A5/A6 and B4 from the server", () => {
   it("A3 draws each objective with the best-so-far line; A4 twelve regions per parameter", async () => {
     const { container } = await settled();
     expect(container.querySelectorAll("[data-progression-trial]")).toHaveLength(3);
-    expect(container.querySelector("[data-rail-note]")?.textContent).toContain("No trial was pruned");
+    expect(container.querySelector("[data-rail-note]")?.textContent).toBe("pruned 0 of 3");
     expect(container.querySelectorAll("[data-distribution]")).toHaveLength(8);
     const rvol = container.querySelector("[data-distribution='rvol']") as HTMLElement;
     expect(rvol.querySelectorAll("[data-bin]")).toHaveLength(12);
@@ -176,7 +176,7 @@ describe("X2 · B3 — A3/A4/A5/A6 and B4 from the server", () => {
     const importance = container.querySelector("[data-panel='importance']") as HTMLElement;
     expect(importance.getAttribute("data-panel-state")).toBe("NOT_APPLICABLE");
     expect(importance.textContent).toContain("Spearman proxy, not fANOVA");
-    expect(importance.textContent).toContain("3 complete trials; a rank correlation needs at least 8");
+    expect(importance.textContent).toContain("3 trials, needs ≥ 8");
     const interactions = container.querySelector("[data-panel='interactions']") as HTMLElement;
     expect(interactions.querySelector("[data-gap-reason='interactions']")?.textContent).toBe("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_INTERACTIONS");
   });
@@ -185,7 +185,8 @@ describe("X2 · B3 — A3/A4/A5/A6 and B4 from the server", () => {
     const { container } = await settled();
     expect(container.querySelectorAll("[data-journey]")).toHaveLength(8);
     expect(container.querySelector("[data-journey='rsi_l'] [data-frequency]")?.textContent).toBe("100% top-decile");
-    expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("One global study selected θ* for every fold");
+    expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("global θ* — no per-fold journey");
+    expect(container.querySelector("[data-journey-caption]")?.textContent).toContain("right: top-decile share");
     for (const id of ["search-space", "scatter", "parameter_frequency", "interactions"]) {
       expect(container.querySelector(`[data-panel='${id}']`)?.textContent).not.toContain("UI_RETAINED_LANE_HAS_NO_FIELD");
     }

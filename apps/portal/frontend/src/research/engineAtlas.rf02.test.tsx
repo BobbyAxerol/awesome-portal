@@ -87,11 +87,14 @@ describe("spec 12 §2 — the claim comes from mode × schedule", () => {
     fireEvent.click(within(card).getByRole("button", { name: /per_fold_causal/ }));
     expect(card.querySelector("[data-claim]")?.textContent).toBe("strict_outer_oos_after_frozen_selection");
     expect(card.querySelector('[data-not-published="cert_cap"]')?.textContent).toMatch(/certifies an execution route/);
-    /* RF-04: the five modes share one avoid-when sentence, so it is said once
-       under the table and the per-row column is gone. It is still said. */
+    /* RF-04 + VD-TEXT-01: the five modes share one avoid-when reason, so the
+       typed absence is said once under the table — "avoid when — not
+       published" — with the server's sentence in its tooltip, not in the flow. */
     const table = document.querySelector("[data-mode-table]") as HTMLElement;
-    expect(within(table).getAllByText(/publishes no avoid-when guidance/)).toHaveLength(1);
-    expect(table.querySelector("[data-avoid-when-shared]")?.textContent).toMatch(/avoid when · not published/);
+    expect(within(table).queryAllByText(/publishes no avoid-when guidance/)).toHaveLength(0);
+    const shared = table.querySelector("[data-avoid-when-shared]") as HTMLElement;
+    expect(shared.textContent).toBe("avoid when — not published");
+    expect(shared.getAttribute("title")).toMatch(/publishes no avoid-when guidance/);
     expect(table.querySelectorAll('[data-mode-row="mode_1_decay"] td')).toHaveLength(2);
     // No cap is invented from the HiFi's sample letters.
     expect(card.textContent).not.toMatch(/≤ C|\bcap B\b/);
@@ -156,16 +159,22 @@ describe("spec 12 T03 — deep links carry mode and schedule", () => {
 });
 
 describe("Q4 / D-4 and the release facts panel", () => {
-  it("draws Rule One in gold, verbatim", () => {
+  it("draws Rule One in gold, short; the worked example is its tooltip (VD-TEXT-01)", () => {
     view("modes");
     const rule = document.querySelector("[data-rule-one]") as HTMLElement;
     expect(rule.getAttribute("style")).toContain("var(--accent-2)");
-    expect(rule.textContent).toContain("Click the schedule chips below and watch the claim change.");
+    expect(rule.textContent).toContain("claim = mode × schedule, never the mode alone");
+    expect(rule.textContent).not.toContain("Click the schedule chips");
+    expect(rule.getAttribute("title")).toContain("Click the schedule chips below and watch the claim change.");
+    // Rule Two keeps its box (HiFi geometry) but says it in one line; the sentence is the tooltip.
+    const two = document.querySelector("[data-rule-two]") as HTMLElement;
+    expect(two.textContent).toContain("optimization_mode");
+    expect(two.getAttribute("title")).toMatch(/Two selector layers, never mixed/);
   });
 
   it("names only mode × schedule pairs the release admits (DQ-10, HiFi copy restored in W4)", () => {
     view("modes");
-    const text = (document.querySelector("[data-rule-one]") as HTMLElement).textContent ?? "";
+    const text = (document.querySelector("[data-rule-one]") as HTMLElement).getAttribute("title") ?? "";
     const mode1 = DOC.modes.find((mode) => mode.mode_id === "mode_1_decay")!;
     const valid = mode1.facts!.schedules.map((fact) => fact.schedule);
     // Every pair the sentence names is a valid pair in the manifest it renders.
@@ -289,7 +298,8 @@ describe("E7 / D9 — the HiFi's density (Unified 13.4.1)", () => {
   it("12-5 routes: one card titled as the HiFi, one line per route; axes and engine facts open only on the selected row", () => {
     view("routes", { route: "arbitrage" });
     const card = document.querySelector('[data-tab-card="routes"]') as HTMLElement;
-    expect(card.querySelector("h2")?.textContent).toBe("execution routes — support matrix, not aspiration");
+    expect(card.querySelector("h2")?.textContent).toBe("execution routes");
+    expect(card.textContent).not.toMatch(/not a defect|not aspiration/);
     expect(card.querySelector("[data-tab-card-source]")?.textContent).toContain("arbitrage_support_matrix()");
     for (const route of DOC.routes) {
       const detail = document.querySelector(`[data-route-detail="${route.route_id}"]`) as HTMLElement;
@@ -303,17 +313,18 @@ describe("E7 / D9 — the HiFi's density (Unified 13.4.1)", () => {
     expect(reason.textContent).toBe(blocked.reason);
   });
 
-  it("12-6 / 12-7 claims: the HiFi's card and cert word; the screen's rules on every tab", () => {
+  it("12-6 claims: the HiFi's card and cert word; no 'rules of this screen' footer on any tab (VD-TEXT-01)", () => {
     for (const tab of ["modes", "routes", "claims"] as const) {
       view(tab);
-      expect(document.querySelectorAll("[data-screen-rules]"), tab).toHaveLength(1);
+      expect(document.querySelectorAll("[data-screen-rules]"), tab).toHaveLength(0);
+      expect(document.body.textContent, tab).not.toMatch(/rules of this screen|the UI never composes/);
       cleanup();
     }
     view("claims");
-    expect(document.querySelector('[data-tab-card="claims"] h2')?.textContent).toBe("claims by contract — two axes, never mixed");
+    expect(document.querySelector('[data-tab-card="claims"] h2')?.textContent).toBe("claims by contract");
     const claim = DOC.claims.find((item) => item.qualifier)!;
     expect(document.querySelector(`[data-contract="${claim.contract_id}"]`)?.textContent).toContain(`${claim.engine_certification} · ${claim.qualifier!.level_name}`);
-    expect(document.querySelector('[data-tab-card="claims"]')?.textContent).toContain("The two chips on the Release Candidate screen carry the axes separately.");
+    expect(document.querySelector('[data-tab-card="claims"]')?.textContent).toContain("certificate = min(engine cert, methodology cap, artifact completeness)");
   });
 });
 

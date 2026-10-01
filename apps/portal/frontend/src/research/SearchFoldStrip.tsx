@@ -126,26 +126,20 @@ export const OOS_READING_WORDS: Record<OosReading, string> = {
 };
 
 /**
- * The HiFi's note per OOS state, verbatim where it survives. Its first
- * sentence ("The sampler pulses on IS") is left out: the train cell does not
- * pulse here, because nothing the fold plan serves says what any window was
- * read by. The test cell pulses exactly where the HiFi's does — the two states
- * in which OOS enters selection.
+ * One short line per OOS state (VD-TEXT-01; the HiFi's sentences are longer).
+ * The train cell does not pulse here, because nothing the fold plan serves says
+ * what any window was read by. The test cell pulses exactly where the HiFi's
+ * does — the two states in which OOS enters selection.
  */
 export const OOS_READING_NOTE: Record<OosReading, string> = {
-  SELECTION_INPUT:
-    "The gold OOS cell pulses: it ENTERS selection across the freeze line — which is why the claim is selection-adjusted.",
-  RETROSPECTIVE:
-    "Refit after reading the full span: the gold OOS pulses against time order — retrospective evidence, never a deployment claim.",
-  WITHHELD_UNTIL_S4:
-    "The hatched OOS cell is withheld — read exactly once after freeze, at Stage 4, not here.",
-  REPORT_ONLY: "The OOS cell is report only — it takes no part in selection.",
-  NOT_APPLICABLE:
-    "No OOS cell is drawn: the engine marks OOS use not applicable for this mode × schedule.",
+  SELECTION_INPUT: "OOS enters selection — claim is selection-adjusted",
+  RETROSPECTIVE: "retrospective — not a deployment claim",
+  WITHHELD_UNTIL_S4: "OOS withheld — read once, at Stage 4",
+  REPORT_ONLY: "OOS is report only — no part in selection",
+  NOT_APPLICABLE: "OOS use not applicable for this mode × schedule",
 };
 
-const OOS_UNSTATED_NOTE =
-  "The engine does not state how this mode × schedule uses the OOS window, so the OOS cell is drawn unstated.";
+const OOS_UNSTATED_NOTE = "OOS use not stated by the engine for this mode × schedule";
 
 /** The screen's own reason codes; a server code is never renamed into one of these. */
 export const UI_MODE_READS_CODES = {
@@ -200,7 +194,7 @@ export function modeReadsView({ mode, schedule, engineVersion, plan, atlas }: Mo
     return absent(
       "NOT_PUBLISHED",
       UI_MODE_READS_CODES.NO_MODE,
-      "The search contract names no mode or schedule for this run, so there is no Atlas entry to read and no fold is drawn.",
+      "search contract names no mode or schedule — no fold drawn",
     );
   }
   if (plan.state === "absent") return absent(plan.absence, plan.code, plan.sentence);
@@ -212,14 +206,14 @@ export function modeReadsView({ mode, schedule, engineVersion, plan, atlas }: Mo
     return absent(
       "NOT_PUBLISHED",
       UI_MODE_READS_CODES.PLAN_LISTS_NO_FOLDS,
-      "The fold plan lists no fold for this run, so there is no window to draw.",
+      "fold plan lists no fold — no window to draw",
     );
   }
   if (atlas.kind !== "CURRENT") {
     return absent(
       "NOT_PUBLISHED",
       UI_MODE_READS_CODES.ATLAS_NOT_CURRENT,
-      "The Atlas answered with a retained historical identity, which carries no mode facts, so what this mode reads is not drawn.",
+      "Atlas answered a historical identity with no mode facts — not drawn",
     );
   }
   const entry: AtlasMode | undefined = atlas.doc.modes.find((candidate) => candidate.mode_id === mode);
@@ -227,7 +221,7 @@ export function modeReadsView({ mode, schedule, engineVersion, plan, atlas }: Mo
     return absent(
       "NOT_PUBLISHED",
       UI_MODE_READS_CODES.NO_MODE_ENTRY,
-      `The Engine Atlas has no entry for ${mode}, so what it reads is not drawn.`,
+      `Engine Atlas has no entry for ${mode} — not drawn`,
     );
   }
   const facts = entry.facts;
@@ -235,7 +229,7 @@ export function modeReadsView({ mode, schedule, engineVersion, plan, atlas }: Mo
     return absent(
       "NOT_PUBLISHED",
       UI_MODE_READS_CODES.NO_FACTS,
-      "This manifest publishes no engine facts for this mode × schedule, so what it reads is not drawn.",
+      "manifest publishes no engine facts for this mode × schedule — not drawn",
     );
   }
   const release = atlas.doc.current_release;
@@ -243,7 +237,7 @@ export function modeReadsView({ mode, schedule, engineVersion, plan, atlas }: Mo
     return absent(
       "NOT_PUBLISHED",
       UI_MODE_READS_CODES.RELEASE_DIFFERS,
-      `The Atlas states this mode for ${release.package} ${release.expected_version}; this run ran on ${engineVersion ?? "a release it does not name"}, so the Atlas's description is not drawn as this run's.`,
+      `Atlas states ${release.package} ${release.expected_version}; this run ran on ${engineVersion ?? "an unnamed release"} — not drawn`,
     );
   }
   const fact = facts.schedules.find((candidate) => candidate.schedule === schedule);
@@ -251,7 +245,7 @@ export function modeReadsView({ mode, schedule, engineVersion, plan, atlas }: Mo
     return absent(
       "NOT_PUBLISHED",
       UI_MODE_READS_CODES.NO_SCHEDULE_FACT,
-      `The Atlas states no ${schedule} fact for ${mode}, so how it uses OOS is not drawn.`,
+      `Atlas states no ${schedule} fact for ${mode} — OOS use not drawn`,
     );
   }
   const reads: ModeReadsStrip["reads"] = isPublished<AtlasReadsFact>(facts.reads)
@@ -280,13 +274,13 @@ export function hubModeReadsAbsence(detail: Pick<SearchDetail, "source_profile" 
     return absent(
       "NOT_APPLICABLE",
       code,
-      "No fold strip is drawn: the source ran a fixed profile and created no optimizer study, so no mode read any fold.",
+      "no fold strip — fixed profile, no optimizer study",
     );
   }
   return absent(
     "NOT_PUBLISHED",
     code,
-    "The source has not published a search for this run, so no fold read is drawn.",
+    "no search published — no fold read drawn",
   );
 }
 
@@ -524,7 +518,7 @@ export function useModeReads(runId: string, ledger: LedgerSlot, workspaceId?: st
             state: "absent",
             absence: "NOT_PUBLISHED",
             code: source.availability.reason_code ?? source.availability.state,
-            sentence: "The fold plan is not available for this run, so no fold is drawn.",
+            sentence: "fold plan not available — no fold drawn",
           });
           return;
         }
@@ -547,7 +541,7 @@ export function useModeReads(runId: string, ledger: LedgerSlot, workspaceId?: st
           settle({
             state: "absent",
             code: UI_MODE_READS_CODES.ATLAS_NOT_CURRENT,
-            sentence: "The Atlas answered with a retained historical identity, which carries no mode facts, so what this mode reads is not drawn.",
+            sentence: "Atlas answered a historical identity with no mode facts — not drawn",
           });
           return;
         }
@@ -558,7 +552,7 @@ export function useModeReads(runId: string, ledger: LedgerSlot, workspaceId?: st
         settle({
           state: "absent",
           code: refusal.code ?? (refusal.status > 0 ? `HTTP_${refusal.status}` : UI_MODE_READS_CODES.ATLAS_NOT_ANSWERED),
-          sentence: `The Engine Atlas could not be read. ${refusal.message} What this mode reads is not drawn.`,
+          sentence: `Engine Atlas could not be read — ${refusal.message}`,
         });
       });
     return () => controller.abort();

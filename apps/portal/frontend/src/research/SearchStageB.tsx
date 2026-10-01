@@ -35,7 +35,7 @@ const FAINT = { color: "var(--ink-faint)" } as const;
 
 /** Reason codes this block explains in words; the code stays in the title. */
 export const STAGE_B_REASON_WORDS: Record<string, string> = {
-  QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS: "QuantBT's walk-forward study declares no constraints",
+  QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS: "no constraints declared",
   QUANTBT_CANDIDATE_LEDGER_DOES_NOT_ISOLATE_THE_TOP_IS_POOL: "the candidate ledger is not exactly the top-IS pool",
   QUANTBT_DID_NOT_PUBLISH_THE_TOP_IS_POOL_RULE: "QuantBT did not publish the pool rule",
   RETAINED_POOL_SIZE_DISAGREES_WITH_THE_QUANTBT_POOL_RULE: "the retained pool and QuantBT's rule disagree",
@@ -152,7 +152,7 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
   const expression = kExpression(pool.rule);
   const optunaBlind = search.ledger.trials.every((trial) => trial.facts?.oos_seen_by_optuna === false);
   const scope =
-    pool.reevaluation_scope === "ALL_OUTER_FOLDS" ? "on every outer fold" : pool.reevaluation_scope === "FOLD" ? "on one fold" : "scope not published";
+    pool.reevaluation_scope === "ALL_OUTER_FOLDS" ? "every outer fold" : pool.reevaluation_scope === "FOLD" ? "one fold" : "scope not published";
   return (
     <div className="flex flex-col gap-[5px]" data-retained-pool data-pool-schema={pool.schema_version}>
       <FunnelRow
@@ -175,7 +175,7 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
         label="feasible (constraint ≤ 0)"
         count={pool.feasible}
         of={of}
-        note={<span title={pool.feasible.reason_code ?? undefined}>{pool.feasible.state === "NOT_APPLICABLE" ? `does not arise — ${reasonWords(pool.feasible.reason_code)}` : reasonWords(pool.feasible.reason_code)}</span>}
+        note={<span title={pool.feasible.reason_code ?? undefined}>{pool.feasible.state === "NOT_APPLICABLE" ? `n/a — ${reasonWords(pool.feasible.reason_code)}` : reasonWords(pool.feasible.reason_code)}</span>}
       />
       <FunnelRow
         id="top-is"
@@ -192,7 +192,7 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
         note={
           <>
             {scope}
-            {contract.oos_used_for_selection === true ? " — the OOS column enters the ranking" : ""}
+            {contract.oos_used_for_selection === true ? " · OOS ranks" : ""}
           </>
         }
       />
@@ -203,15 +203,14 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
           /* HiFi amber on pale amber measures 4.01:1 — below AA. Same call as VD-P20-30: the tint moves to the border, the text sits on white. */
           style={{ color: "var(--accent-2)", borderColor: "var(--accent-2)", background: "var(--paper-raised)" }}
           data-k-callout={pool.rule.expression}
-          title={`QuantBT _candidate_count · n = completed, unpruned IS trials · rule ${pool.rule.expression}`}
+          title={`QuantBT _candidate_count · K = ⌈n_trials × top_is_fraction⌉ · n = completed, unpruned IS trials · rule ${pool.rule.expression}${optunaBlind ? " · the pool closes before any OOS value is computed" : ""}`}
         >
-          {pool.rule.expression === "CEIL_N_TIMES_TOP_IS_FRACTION" ? `K = ⌈n_trials × top_is_fraction⌉ = ⌈${pool.rule.n} × ${pool.rule.top_is_fraction}⌉ = ${pool.rule.k}` : expression}
-          {optunaBlind ? " — the pool closes BEFORE any OOS value is computed." : "."}
-          {contract.oos_used_for_selection === true ? " Stage B then ranks the frozen pool on OOS, so the claim is selection-adjusted." : ""}
+          {expression}
+          {optunaBlind ? " · pool closes before OOS" : ""}
         </span>
       ) : (
         <span className="mono mt-1 border border-dashed px-[10px] py-[5px] text-[10px] leading-[1.6]" style={{ ...FAINT, borderColor: "var(--line)" }} data-k-callout="absent" title={pool.rule.reason_code ?? undefined}>
-          K is not shown: {reasonWords(pool.rule.reason_code)}. No K is worked out here in its place.
+          K not shown — {reasonWords(pool.rule.reason_code)}
         </span>
       )}
     </div>
@@ -255,7 +254,7 @@ export function FoldDecayBars({ pool }: { pool: Pool | undefined }) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-[3px]" data-fold-decay={decay?.state ?? "NOT_PUBLISHED"}>
       <span className="text-[9.5px]" style={FAINT}>
-        per-fold decay of θ* — the sign matters
+        per-fold decay of θ*
       </span>
       {decay && decay.state === "AVAILABLE" ? (
         (() => {

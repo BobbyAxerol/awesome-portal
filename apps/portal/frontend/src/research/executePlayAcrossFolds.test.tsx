@@ -383,6 +383,8 @@ describe("D7 · the switch: off by default, a real switch, its label says it rea
     expect(control.textContent).toContain("off");
     expect(m.container.querySelector(`[id='${control.getAttribute("aria-describedby")}']`)?.textContent).toBe(ACROSS_HELP);
     expect(control.getAttribute("title")).toBe(ACROSS_HELP);
+    /* VD-TEXT-01: the help was 68 words; it is a tooltip and a description, so it stays a short line. */
+    expect(ACROSS_HELP.split(/\s+/).length).toBeLessThanOrEqual(12);
     /* The pill's measured HiFi geometry (padding 3px 10px, 10.5px mono, 3px radius). */
     expect(control.style.padding).toBe("3px 10px");
     expect(control.style.fontSize).toBe("10.5px");
@@ -441,7 +443,7 @@ describe("D7 · OFF: playing stops at the end of the window, and nothing is read
   it("plays the whole window to its last bar and sends zero requests; the screen still says reads are on request", async () => {
     const m = await mountAcross(FOLD0);
     expect(m.container.querySelector("[data-read-rule]")?.getAttribute("data-read-rule")).toBe("asked");
-    expect(m.container.querySelector("[data-read-rule]")?.textContent).toContain("playing stops at the end of this window");
+    expect(m.container.querySelector("[data-read-rule]")?.getAttribute("title")).toBe("Windows are read only when you ask.");
     const before = m.ui.total();
     fireEvent.click(m.ui.play());
     expect(m.ui.playing()).toBe(true);
@@ -526,7 +528,7 @@ describe("D7 · ON, on the canonical two-fold run: one read at the boundary, non
     expect(m.server.log.slice(mark).map((entry) => entry.kind)).toEqual(["window"]);
     /* And the card does not pretend to be reading: it says when it will. */
     expect(m.container.querySelector("[data-child-audit='waiting']")?.textContent).toBe(
-      "fold 1's child audit is read when playback rests — play across folds reads only windows.",
+      "fold 1's child audit loads when playback rests.",
     );
     expect(m.container.querySelector("[data-child-audit='loading']")).toBeNull();
     await playAcrossOnce(m, "end");
