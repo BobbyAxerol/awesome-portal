@@ -35,7 +35,8 @@ import { CurrentSourceSummarySchema } from "./current-source.payload";
 import { RS02_DELTA_WFO_GLOBAL_PROFILE_ID, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
 import { RESEARCH_PERFORMANCE_METRIC_DEFINITIONS } from "./evidence-metric-registry";
 import { ResearchRequestedSpecSchema } from "./preflight.contract";
-import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
+import type { ResearchSplitSource } from "./progress.contract";
+import { claimSplitFromProjection, researchClaimFamily } from "./claim-family";
 import { extremaPreservingSample } from "./run-library.service";
 
 type Availability = {
@@ -45,15 +46,6 @@ type Availability = {
 type RequestedSpec = z.infer<typeof ResearchRequestedSpecSchema>;
 type ClaimFamily = "STRICT_OUTER_OOS" | "SELECTION_ADJUSTED_OOS" | "WALK_FORWARD_OOS_COMPATIBILITY" | "NONE_FULL_SAMPLE_CALIBRATION" | "NOT_PUBLISHED";
 
-interface StoredSplitProjection {
-  schema_version: "research.split-projection.v1";
-  source: ResearchSplitSource;
-}
-
-const StoredSplitProjectionSchema = z.object({
-  schema_version: z.literal("research.split-projection.v1"),
-  source: ResearchSplitSourceSchema,
-}).strict();
 
 const StoredEvidenceProjectionSchema = z.object({
   schema_version: z.literal("research.evidence-projection.v1"),
@@ -176,8 +168,7 @@ function boundedText(value: unknown): string | null {
 }
 
 function asStoredSplit(value: unknown): ResearchSplitSource | null {
-  const parsed = StoredSplitProjectionSchema.safeParse(record(value));
-  return parsed.success ? parsed.data.source : null;
+  return claimSplitFromProjection(record(value));
 }
 
 function asRequestedSpec(value: unknown): RequestedSpec | null {
@@ -291,48 +282,16 @@ function claim(row: CompareRunRow, split: ResearchSplitSource | null, retained: 
   const snapshot = record(row.progress_snapshot);
   const sourceClaim = record(snapshot?.claim);
   const sourceText = sourceClaim?.state === "ISSUED" ? boundedText(sourceClaim.text) : null;
-  if (retained) {
-    // W6a: QuantBT itself attests `walk_forward.validation_claim` on the
-    // retained lane. It never attests a strict or selection-adjusted OOS
-    // claim there (oos_used_for_selection is published beside it), so the
-    // family stays the conservative compatibility tier, now source-attested.
-    const claims = retained.summary.source_facts?.claims;
-    if (claims?.validation_claim === "walk_forward_oos") {
-      const text = [
+  const claims = retained?.summary.source_facts?.claims;
+  const family = researchClaimFamily({ validationClaim: claims?.validation_claim ?? null, split });
+  const sourceFallback = claims?.validation_claim === "walk_forward_oos"
+    ? [
         `validation_claim=${claims.validation_claim}`,
         claims.chronological_validation_claim ? `chronological_claim=${claims.chronological_validation_claim}` : null,
         claims.oos_used_for_selection === null ? null : `oos_used_for_selection=${String(claims.oos_used_for_selection)}`,
-      ].filter((item): item is string => item !== null).join(" · ");
-      return {
-        family: "WALK_FORWARD_OOS_COMPATIBILITY" as const,
-        rank: 3,
-        origin: "SOURCE_ATTESTED" as const,
-        text: sourceText ?? text,
-        availability: available(),
-      };
-    }
-  }
-  // Current P04 does not attest strict/selection-adjusted claims. Its P14
-  // receipt does attest a fixed-profile, outer-OOS observation protocol. That
-  // supports only the conservative compatibility tier below.
-  if (split?.protocol.kind === "THREE_WINDOW_CURRENT"
-    && split.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH"
-    && split.windows.outer_oos.data_role === "OUTER_OOS_OBSERVATION") {
-    return {
-      family: "WALK_FORWARD_OOS_COMPATIBILITY" as const,
-      rank: 3,
-      origin: "PORTAL_DERIVED_FROM_SOURCE_PROTOCOL" as const,
-      text: sourceText,
-      availability: available(),
-    };
-  }
-  return {
-    family: "NOT_PUBLISHED" as const,
-    rank: null,
-    origin: "NOT_PUBLISHED" as const,
-    text: sourceText,
-    availability: absent("P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED"),
-  };
+      ].filter((item): item is string => item !== null).join(" · ")
+    : null;
+  return { ...family, text: sourceText ?? sourceFallback };
 }
 
 function retainedMetrics(retained: Retained) {

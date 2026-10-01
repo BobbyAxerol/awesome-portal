@@ -6682,3 +6682,11 @@ selected parameter map, the same identity already visible in Progress and Freeze
 on the real WFO run. This is not a false claim that the QuantBT OOS-generation
 child executed those parameters; LW-03 remains a source gap. Old seals answer a
 typed absence. Claude may bind the S08 strip without changing approved visuals.
+
+### B3 CG-FG-S10-03 — structured claim family on Lineage, 2026-10-01
+
+P19 Attempt Lineage now shares the conservative claim-family rule with P20
+Compare. WFO requires an accepted RS-02 seal plus its matching SEALED P05
+artifact; P04 requires a valid persisted P14 fixed-profile outer-OOS protocol.
+Claim text alone never establishes family. P19's batched reads remain within
+its workspace-scoped repeatable-read budget; frontend S10 stays Claude-owned.

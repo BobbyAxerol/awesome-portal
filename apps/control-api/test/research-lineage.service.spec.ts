@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ResearchLineageService } from "../src/research/lineage.service";
 import { libraryItem } from "./research-lineage.builders";
+import { p14SplitSourceFixture } from "./research-split.fixture";
 
 const scope = { workspaceId: "ws-p19", actorUserId: "usr-p19" };
 const digest = (character: string) => character.repeat(64);
@@ -103,6 +104,29 @@ function subject(value = snapshot(), config = { FEATURE_RESEARCH_LINEAGE: "true"
 }
 
 describe("P19 Attempt Lineage persisted truth", () => {
+  it("CG-FG-S10-03 derives family only from a sealed WFO claim or the persisted P04 protocol", async () => {
+    const retained = { run_id: "run-p19-root", artifact_revision: 1, metrics: null,
+      profile_id: "rs02.delta-signal-notional-wfo.v1", validation_claim: "walk_forward_oos", source_attested: true };
+    const wfo = await subject(snapshot({ retainedMetrics: [retained] })).service.read(scope, "alpha-p19", { limit: 128 });
+    expect(wfo.attempts[0]?.run_facts.claim).toMatchObject({
+      family: "WALK_FORWARD_OOS_COMPATIBILITY", family_origin: "SOURCE_ATTESTED",
+      family_availability: { state: "AVAILABLE" },
+    });
+    const unsealed = await subject(snapshot({ retainedMetrics: [{ ...retained, source_attested: false }] }))
+      .service.read(scope, "alpha-p19", { limit: 128 });
+    expect(unsealed.attempts[0]?.run_facts.claim).toMatchObject({
+      family: "NOT_PUBLISHED", family_availability: { state: "NOT_PUBLISHED" },
+    });
+    const p04 = await subject(snapshot({ claimSplits: [{
+      run_id: "run-p19-root",
+      projection: { schema_version: "research.split-projection.v1", source: p14SplitSourceFixture() },
+    }] })).service.read(scope, "alpha-p19", { limit: 128 });
+    expect(p04.attempts[0]?.run_facts.claim).toMatchObject({
+      family: "WALK_FORWARD_OOS_COMPATIBILITY", family_origin: "PORTAL_DERIVED_FROM_SOURCE_PROTOCOL",
+      family_availability: { state: "AVAILABLE" },
+    });
+  });
+
   it("P19-T01/T05/T09/T10 keeps one research node despite technical retries and retains child/exposure facts", async () => {
     const { service, repository } = subject();
     const response = await service.read(scope, "alpha-p19", { limit: 128 });

@@ -76,6 +76,11 @@ export interface components {
                 state: ("FORECAST" | "NOT_ISSUED" | "ISSUED") | null;
                 text: string | null;
                 availability: components["schemas"]["Availability"];
+                /** @enum {unknown} */
+                family: "STRICT_OUTER_OOS" | "SELECTION_ADJUSTED_OOS" | "WALK_FORWARD_OOS_COMPATIBILITY" | "NONE_FULL_SAMPLE_CALIBRATION" | "NOT_PUBLISHED";
+                /** @enum {unknown} */
+                family_origin: "SOURCE_ATTESTED" | "PORTAL_DERIVED_FROM_SOURCE_PROTOCOL" | "NOT_PUBLISHED";
+                family_availability: components["schemas"]["Availability"];
             };
             oos_sharpe: components["schemas"]["RunMetricFact"];
             decay: components["schemas"]["RunMetricFact"];

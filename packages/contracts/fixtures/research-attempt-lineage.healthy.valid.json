@@ -330,6 +330,12 @@
           "availability": {
             "state": "AVAILABLE",
             "reason_code": null
+          },
+          "family": "NOT_PUBLISHED",
+          "family_origin": "NOT_PUBLISHED",
+          "family_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED"
           }
         },
         "oos_sharpe": {
@@ -457,6 +463,12 @@
           "availability": {
             "state": "AVAILABLE",
             "reason_code": null
+          },
+          "family": "NOT_PUBLISHED",
+          "family_origin": "NOT_PUBLISHED",
+          "family_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED"
           }
         },
         "oos_sharpe": {
@@ -591,6 +603,12 @@
           "state": "NOT_ISSUED",
           "text": "The Delta walk-forward study sealed its artifacts but did not issue a release claim.",
           "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          },
+          "family": "WALK_FORWARD_OOS_COMPATIBILITY",
+          "family_origin": "SOURCE_ATTESTED",
+          "family_availability": {
             "state": "AVAILABLE",
             "reason_code": null
           }
@@ -750,6 +768,12 @@
           "availability": {
             "state": "AVAILABLE",
             "reason_code": null
+          },
+          "family": "NOT_PUBLISHED",
+          "family_origin": "NOT_PUBLISHED",
+          "family_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED"
           }
         },
         "oos_sharpe": {
@@ -871,6 +895,12 @@
           "availability": {
             "state": "NOT_PUBLISHED",
             "reason_code": "SOURCE_CANCELLED_BEFORE_CLAIM"
+          },
+          "family": "NOT_PUBLISHED",
+          "family_origin": "NOT_PUBLISHED",
+          "family_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED"
           }
         },
         "oos_sharpe": {
@@ -979,6 +1009,12 @@
           "state": null,
           "text": null,
           "availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_ATTEMPT_HAS_NO_PRIMARY_RUN"
+          },
+          "family": "NOT_PUBLISHED",
+          "family_origin": "NOT_PUBLISHED",
+          "family_availability": {
             "state": "NOT_APPLICABLE",
             "reason_code": "P19_ATTEMPT_HAS_NO_PRIMARY_RUN"
           }
@@ -1095,6 +1131,12 @@
           "availability": {
             "state": "NOT_PUBLISHED",
             "reason_code": "SOURCE_CLAIM_NOT_PUBLISHED"
+          },
+          "family": "NOT_PUBLISHED",
+          "family_origin": "NOT_PUBLISHED",
+          "family_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED"
           }
         },
         "oos_sharpe": {
@@ -1224,6 +1266,6 @@
     }
   },
   "as_of_utc_ms": 1790035200000,
-  "lineage_revision": "p19r2_e24647cdfd54758ddcb30773f4198c13b51281baa0e8803b67f1166e7fc1abe0",
-  "etag": "\"p19r2_e24647cdfd54758ddcb30773f4198c13b51281baa0e8803b67f1166e7fc1abe0\""
+  "lineage_revision": "p19r2_549d7bec64b574664b1cd18257204baa99e986347bfb939ec2558488e29e8776",
+  "etag": "\"p19r2_549d7bec64b574664b1cd18257204baa99e986347bfb939ec2558488e29e8776\""
 }

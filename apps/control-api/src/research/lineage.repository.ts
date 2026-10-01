@@ -82,6 +82,14 @@ export interface LineageRetainedMetricsRow {
   run_id: string;
   artifact_revision: string | number;
   metrics: JsonColumn;
+  validation_claim?: string | null;
+  source_attested?: boolean;
+  profile_id?: string | null;
+}
+
+export interface LineageClaimSplitRow {
+  run_id: string;
+  projection: JsonColumn;
 }
 
 /** W6b CG-P19-06: distinct declared (route, mode, schedule, overrides) per version. */
@@ -132,6 +140,8 @@ export interface LineageSnapshot {
   libraryRows?: RunLibraryRow[];
   /** W6b: retained RS-02 selected-trial metrics of the returned primary runs. */
   retainedMetrics?: LineageRetainedMetricsRow[];
+  /** Latest persisted P14 protocol projection for each visible primary run. */
+  claimSplits?: LineageClaimSplitRow[];
   /** W6b: grouped declared specs of every attempt of each version, bounded. */
   exercised?: LineageExercisedRow[];
   /** True when `exercised` hit its bound and is not the whole declaration set. */
@@ -415,10 +425,16 @@ export class ResearchLineageRepository {
       const retainedMetrics = primaryIds.length === 0
         ? []
         : (await client.query<LineageRetainedMetricsRow>(
-          `SELECT seal.run_id, seal.artifact_revision, candidate.payload->'trial_facts'->'metrics' AS metrics
+          `SELECT seal.run_id, seal.artifact_revision, seal.profile_id, candidate.payload->'trial_facts'->'metrics' AS metrics,
+                  seal.summary->'source_facts'->'claims'->>'validation_claim' AS validation_claim,
+                  EXISTS (SELECT 1 FROM research.artifacts artifact
+                           WHERE artifact.workspace_id = seal.workspace_id AND artifact.run_id = seal.run_id
+                             AND artifact.artifact_revision = seal.artifact_revision
+                             AND artifact.manifest_digest = seal.manifest_digest
+                             AND artifact.state = 'SEALED') AS source_attested
              FROM unnest($2::text[]) AS wanted(run_id)
              JOIN LATERAL (
-               SELECT source.workspace_id, source.run_id, source.artifact_revision, source.summary
+               SELECT source.workspace_id, source.run_id, source.artifact_revision, source.profile_id, source.manifest_digest, source.summary
                  FROM research.current_source_seals_v1 source
                 WHERE source.workspace_id = $1 AND source.run_id = wanted.run_id
                 ORDER BY source.artifact_revision DESC
@@ -436,6 +452,16 @@ export class ResearchLineageRepository {
                 ORDER BY row.source_ordinal ASC
                 LIMIT 1
              ) candidate ON TRUE`,
+          [scope.workspaceId, primaryIds],
+        )).rows;
+
+      const claimSplits = primaryIds.length === 0
+        ? []
+        : (await client.query<LineageClaimSplitRow>(
+          `SELECT DISTINCT ON (split.run_id) split.run_id, split.projection
+             FROM research.run_split_projections_v1 split
+            WHERE split.workspace_id = $1 AND split.run_id = ANY($2::text[])
+            ORDER BY split.run_id, split.received_at DESC, split.projection_revision DESC`,
           [scope.workspaceId, primaryIds],
         )).rows;
 
@@ -486,6 +512,7 @@ export class ResearchLineageRepository {
         asOfUtcMs,
         libraryRows,
         retainedMetrics,
+        claimSplits,
         exercised: exercised.slice(0, LINEAGE_EXERCISED_GROUP_BOUND),
         exercisedBounded: exercised.length > LINEAGE_EXERCISED_GROUP_BOUND,
         window: boundary ? "OLDER_PAGE" : "NEWEST",

@@ -7,6 +7,7 @@ import { ControlApiConfig, querySigningKeys } from "../config";
 import type { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { projectResearchAlphaVersionDeclaration, type ResearchAlphaVersionDeclaration } from "./alpha-version-declaration";
+import { claimSplitFromProjection, researchClaimFamily } from "./claim-family";
 import type { ResearchScope } from "./contracts";
 import { CurrentSourceDecimalSchema } from "./current-source.payload";
 import { ResearchFoundationAtlasClient } from "./foundation.client";
@@ -18,6 +19,7 @@ import {
   type ResearchAttemptLineageQuery,
   type ResearchAttemptLineageResponse,
 } from "./lineage.contract";
+import { RS02_DELTA_WFO_GLOBAL_PROFILE_ID, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchLineageError } from "./lineage.error";
 import {
   type LineageAttemptRow,
@@ -499,6 +501,18 @@ export class ResearchLineageService {
       const metrics = record(row.metrics);
       if (metrics) retained.set(row.run_id, metrics);
     }
+    const attestedClaims = new Map<string, string>();
+    for (const row of snapshot.retainedMetrics ?? []) {
+      if (row.source_attested === true && row.validation_claim === "walk_forward_oos"
+        && (row.profile_id === RS02_DELTA_WFO_GLOBAL_PROFILE_ID
+          || row.profile_id === RS02_SIGNAL_NOTIONAL_PROFILE_ID)) {
+        attestedClaims.set(row.run_id, row.validation_claim);
+      }
+    }
+    const claimSplits = new Map((snapshot.claimSplits ?? []).map((row) => [
+      row.run_id, claimSplitFromProjection(record(row.projection)),
+    ]));
+
     const semanticAbsence = snapshot.attempts.some((row) => {
       if (row.parent_attempt_id === null) return false;
       const parent = byId.get(row.parent_attempt_id);
@@ -558,7 +572,11 @@ export class ResearchLineageService {
       const rc = rcFor(row.primary_run_id, item, this.runLibrary !== undefined);
       const spec = requestedSpec(row);
       const space = spec ? specSpace(spec, declarations.get(row.alpha_version_id) ?? null) : null;
-      const runFacts = this.runFacts(row, item, row.primary_run_id ? retained.get(row.primary_run_id) : undefined);
+      const claimFamily = researchClaimFamily({
+        validationClaim: row.primary_run_id ? attestedClaims.get(row.primary_run_id) ?? null : null,
+        split: row.primary_run_id ? claimSplits.get(row.primary_run_id) ?? null : null,
+      });
+      const runFacts = this.runFacts(row, item, row.primary_run_id ? retained.get(row.primary_run_id) : undefined, claimFamily);
       const reason = boundedText(row.reason, "reason");
       return {
         attempt_id: row.attempt_id,
@@ -806,13 +824,17 @@ export class ResearchLineageService {
     row: LineageAttemptRow,
     item: ResearchRunLibraryItem | undefined,
     retained: Record<string, unknown> | undefined,
+    family: ReturnType<typeof researchClaimFamily>,
   ): Node["run_facts"] {
     if (row.primary_run_id === null) {
       const none = notApplicable("P19_ATTEMPT_HAS_NO_PRIMARY_RUN");
       const metric = { value: null, source: null, scope: null, definition_id: null, availability: none };
       return {
         certificate: { grade: null, availability: none },
-        claim: { state: null, text: null, availability: none },
+        claim: {
+          state: null, text: null, availability: none,
+          family: "NOT_PUBLISHED", family_origin: "NOT_PUBLISHED", family_availability: none,
+        },
         oos_sharpe: metric,
         decay: metric,
       };
@@ -838,8 +860,10 @@ export class ResearchLineageService {
         ? { grade: item.certificate.grade, availability: fromLibrary(item.certificate.availability) }
         : { grade: null, availability: unreadable },
       claim: item
-        ? { state: item.claim.state, text: item.claim.text, availability: fromLibrary(item.claim.availability) }
-        : { state: null, text: null, availability: unreadable },
+        ? { state: item.claim.state, text: item.claim.text, availability: fromLibrary(item.claim.availability),
+            family: family.family, family_origin: family.origin, family_availability: family.availability }
+        : { state: null, text: null, availability: unreadable,
+            family: family.family, family_origin: family.origin, family_availability: family.availability },
       oos_sharpe: metric("OOS_SHARPE", "mean_oos_sharpe", "research.current-source.v1.selected-trial-mean-oos-sharpe"),
       decay: metric("DECAY", "mean_decay", "research.current-source.v1.selected-trial-mean-decay"),
     };

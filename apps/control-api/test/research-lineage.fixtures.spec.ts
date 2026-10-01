@@ -87,7 +87,7 @@ async function healthy(): Promise<ResearchAttemptLineageResponse> {
     }],
     counts: { total_attempts: 7, draft_attempts: 1, submitted_attempts: 6, failed_attempts: 1, abandoned_attempts: 1, child_runs: 1, technical_retries: 1 },
     libraryRows: rows("run-att_01", "run-att_02", "run-att_03", "run-att_04", "run-att_05", "run-att_07"),
-    retainedMetrics: [{ run_id: "run-att_03", artifact_revision: 1, metrics: { mean_oos_sharpe: "1.19", mean_decay: "0.21" } }],
+    retainedMetrics: [{ run_id: "run-att_03", artifact_revision: 1, profile_id: "rs02.delta-signal-notional-wfo.v1", metrics: { mean_oos_sharpe: "1.19", mean_decay: "0.21" }, validation_claim: "walk_forward_oos", source_attested: true }],
     exercised: [
       { alpha_version_id: AV1, execution_route: "signal_notional", optimization_mode: "mode_1_decay", optimization_schedule: "global", parameter_space_overrides: [], attempts: 1 },
       { alpha_version_id: AV1, execution_route: "signal_notional", optimization_mode: "mode_1_decay", optimization_schedule: "per_fold_decay", parameter_space_overrides: [], attempts: 1 },

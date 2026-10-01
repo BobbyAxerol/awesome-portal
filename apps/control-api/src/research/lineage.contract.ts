@@ -73,6 +73,13 @@ const RunFactsSchema = z.object({
     state: z.enum(["FORECAST", "NOT_ISSUED", "ISSUED"]).nullable(),
     text: z.string().min(1).max(1_024).nullable(),
     availability: ResearchLineageAvailabilitySchema,
+    /** Same conservative, source-backed family vocabulary as P20 Compare. */
+    family: z.enum([
+      "STRICT_OUTER_OOS", "SELECTION_ADJUSTED_OOS", "WALK_FORWARD_OOS_COMPATIBILITY",
+      "NONE_FULL_SAMPLE_CALIBRATION", "NOT_PUBLISHED",
+    ]),
+    family_origin: z.enum(["SOURCE_ATTESTED", "PORTAL_DERIVED_FROM_SOURCE_PROTOCOL", "NOT_PUBLISHED"]),
+    family_availability: ResearchLineageAvailabilitySchema,
   }).strict(),
   oos_sharpe: RunMetricFactSchema,
   decay: RunMetricFactSchema,
