@@ -201,6 +201,8 @@ function v2(report: ResearchReportDetailResponse): ResearchReportFrozenCoreV2 {
       code: "RESEARCH_REPORT_UNAVAILABLE", status: 503,
     });
     const repaired = await service.read(scope, real.run_id);
+    expect(repository.claimMissingWfo).toHaveBeenCalledWith(scope, real.run_id,
+      ["p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2"]);
     expect(repaired.schema_version).toBe("research.report-detail.v1");
     expect(repository.markRepairOutcome).toHaveBeenCalledWith(scope, real.run_id, "SEALED", null);
     expect(repository.seal).toHaveBeenCalledTimes(1);

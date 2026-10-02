@@ -25,6 +25,7 @@ import {
   P04_DELTA_SPECIFICATION_SHA256,
 } from "./p04-delta.binding";
 import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_DIGEST, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
+import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import { boundWarning, positionPercent, type BoundWarning } from "./bound-warning";
 
 export interface DeclaredRange {
@@ -141,6 +142,15 @@ const WFO_V1: HistoricalProfileBinding = Object.freeze({
   codeFixed: DELTA_CODE_FIXED,
 });
 
+// The temporal executor changes fold controls, not the pinned Delta kernel,
+// parameter space or Python scalar kinds. Keep both historical entries.
+const WFO_V2: HistoricalProfileBinding = Object.freeze({
+  ...WFO_V1,
+  profileId: DELTA_WFO_V2_PROFILE_ID,
+  profileDigest: DELTA_WFO_V2_PROFILE_DIGEST,
+  installedInRelease: "research-loop-v1.1/B8",
+});
+
 /**
  * The injectable lookup. Tests construct one with an older binding and a
  * newer "current" one to prove a release that changes binding keeps its old
@@ -152,7 +162,7 @@ export class ResearchParameterBindingRegistry {
 
   constructor(
     adapters: readonly HistoricalParameterBinding[] = [P04_V1],
-    profiles: readonly HistoricalProfileBinding[] = [WFO_V1],
+    profiles: readonly HistoricalProfileBinding[] = [WFO_V1, WFO_V2],
   ) {
     this.adapters = new Map(adapters.map((entry) => [entry.adapterContractDigest, entry]));
     this.profiles = new Map(profiles.map((entry) => [entry.profileDigest, entry]));

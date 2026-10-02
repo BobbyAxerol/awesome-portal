@@ -21,7 +21,7 @@ import {
   type CurrentSourceBatchDigestRow,
   type CurrentSourceTableKind,
 } from "./current-source.repository";
-import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
+import { isDeltaWfoProfile } from "./delta-wfo.profile";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
 import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
@@ -708,7 +708,7 @@ export class ResearchReleaseCandidateRepository {
    * other execution profile) answers null and its composition is unchanged.
    */
   private async retainedLane(client: PoolClient, workspaceId: string, runId: string, row: SourceRow): Promise<ReleaseCandidateRetainedLane | null> {
-    if (row.execution_profile_id !== DELTA_WFO_PROFILE_ID) return null;
+    if (row.execution_profile_id === null || !isDeltaWfoProfile(row.execution_profile_id, row.execution_profile_digest)) return null;
     const claim = this.claimFacts(row.progress_snapshot);
     const base = {
       executionProfileId: row.execution_profile_id,

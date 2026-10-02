@@ -102,6 +102,13 @@ export class HttpErrorFilter implements ExceptionFilter {
       || exception instanceof ResearchCompareError
       || exception instanceof ResearchReleaseCandidateError
     ) {
+      if (exception instanceof ResearchCurrentSourceError && exception.status === 503) {
+        const cause = (exception as Error & { cause?: { code?: unknown } }).cause;
+        const sqlstate = typeof cause?.code === "string" && /^[A-Z0-9]{5}$/.test(cause.code) ? cause.code : null;
+        // Diagnostics must not log exception text, SQL, rows or private headers.
+        this.logger.warn({event: "research_current_source_unavailable", code: exception.code,
+          sqlstate, request_id: /^[A-Za-z0-9_-]{1,100}$/.test(requestId) ? requestId : "unknown"});
+      }
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },
         request_id: requestId,

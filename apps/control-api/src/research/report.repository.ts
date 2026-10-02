@@ -14,6 +14,8 @@ import { ResearchReportError } from "./report.error";
 import { ResearchUtilitySaturated, assertUtilityCapacity } from "./utility-admission";
 import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReportAuditRelation } from "./report-core-v2";
+import { DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST } from "./delta-wfo.profile";
+import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import {
   ResearchReportFrozenCoreSchema,
   type ResearchReportExportFormat,
@@ -179,7 +181,7 @@ export class ResearchReportRepository {
    * row-backed cooldown survives process restarts and bounds repeated GETs.
    * A duplicate claim cannot bypass the immutable report advisory lock.
    */
-  async claimMissingWfo(scope: ResearchScope, runId: string, profileId: string): Promise<boolean> {
+  async claimMissingWfo(scope: ResearchScope, runId: string, profileId: string | readonly string[]): Promise<boolean> {
     return this.withTransaction(scope.workspaceId, scope.actorUserId, false, async (client) => {
       await this.requireMembership(client, scope);
       const result = await client.query(
@@ -189,7 +191,9 @@ export class ResearchReportRepository {
            FROM research.run_producers producer
            JOIN research.jobs job ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
           WHERE producer.workspace_id = $1 AND producer.run_id = $2
-            AND producer.execution_profile_id = $3 AND job.state = 'SUCCEEDED'
+            AND producer.execution_profile_id = ANY($3::text[]) AND job.state = 'SUCCEEDED'
+            AND ((producer.execution_profile_id = $4 AND producer.execution_profile_digest = $5)
+              OR (producer.execution_profile_id = $6 AND producer.execution_profile_digest = $7))
             AND NOT EXISTS (
               SELECT 1 FROM research.run_report_manifests_v1 manifest
                WHERE manifest.workspace_id = producer.workspace_id AND manifest.run_id = producer.run_id
@@ -201,7 +205,8 @@ export class ResearchReportRepository {
          WHERE research.run_report_materialization_retries_v1.state <> 'SEALED'
            AND research.run_report_materialization_retries_v1.next_attempt_at <= now()
          RETURNING run_id`,
-        [scope.workspaceId, runId, profileId],
+        [scope.workspaceId, runId, typeof profileId === "string" ? [profileId] : profileId,
+          DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST, DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST],
       );
       return result.rowCount === 1;
     });

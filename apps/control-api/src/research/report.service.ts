@@ -10,6 +10,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import { ResearchCurrentSourcePageQuerySchema, type ResearchCurrentSourceNotApplicableResponse } from "./current-source.contract";
 import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
+import { DELTA_WFO_V2_PROFILE_ID } from "./delta-wfo-v2.profile";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchCurrentSourceService } from "./current-source.service";
 import { ResearchEvidenceSeriesKindSchema } from "./evidence.contract";
@@ -306,7 +307,7 @@ export class ResearchReportService {
     // once per durable 60-second window. The inputs are already-retained
     // Portal reads; this path never invokes QuantBT or opens artifact bytes.
     if (this.config.FEATURE_RESEARCH_CURRENT_SOURCE === "true") {
-      const claimed = await this.repository.claimMissingWfo(scope, runId, DELTA_WFO_PROFILE_ID);
+      const claimed = await this.repository.claimMissingWfo(scope, runId, [DELTA_WFO_PROFILE_ID, DELTA_WFO_V2_PROFILE_ID]);
       if (claimed) {
         try {
           const report = await this.materialize(scope, runId, "RS02_RETAINED_CURRENT_SOURCE");

@@ -21,6 +21,7 @@ import { gunzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
 
 import { DELTA_WFO_PROFILE_DIGEST, DELTA_WFO_PROFILE_ID } from "../src/research/delta-wfo.profile";
+import { DELTA_WFO_V2_PROFILE_DIGEST, DELTA_WFO_V2_PROFILE_ID } from "../src/research/delta-wfo-v2.profile";
 import { canonicalResearchJson } from "../src/research/preflight.service";
 import { ResearchReleaseCandidateComposeResponseSchema } from "../src/research/release-candidate.contract";
 import {
@@ -141,6 +142,15 @@ const rows = (compose: Json) => Object.fromEntries((compose.pack as Json[]).map(
 const composeValidator = openApiValidator("research-release-candidate.openapi.json", "ComposeResponseP21");
 
 describe("W7 · P21 retained lane on the real Delta WFO run", () => {
+  it("resolves v2 by its own immutable digest and preserves the retained audit target", async () => {
+    const value = source({}, {executionProfileId: DELTA_WFO_V2_PROFILE_ID, executionProfileDigest: DELTA_WFO_V2_PROFILE_DIGEST});
+    const facts = retainedLaneFacts(value.wfo!);
+    expect(facts.laneConsistent).toBe(true);
+    expect(facts.ordering!.frozen_candidate).toEqual(preview.freeze.fold_ordering.frozen_candidate);
+    const composed = await subject(value, draft(value)).service.detail(scope, value.runId);
+    expect(composed.availability.state).toBe("AVAILABLE");
+    expect(composed.pack.find(item => item.key === "FINAL_AUDIT_REPLAY")?.status).toBe("COMPLETE");
+  });
   it("the W5b seal rows with this run's digests reproduce the revisions the preview served", () => {
     const facts = retainedLaneFacts(lane());
     expect(facts.evidenceRevision).toBe(preview.evidence.revision);

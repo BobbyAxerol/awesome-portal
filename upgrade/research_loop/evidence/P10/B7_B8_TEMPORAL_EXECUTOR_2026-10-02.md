@@ -107,3 +107,24 @@ The correction binds source frequency/window mode to the admitted request;
 W1's earlier exact-set check stays unchanged. Regression fixtures now carry
 actual rolling/monthly/quarterly topology and refuse mismatched source shapes.
 No failed admission is counted as a completed run or product receipt.
+
+### Source namespace and retained audit readback
+
+On `36420654`, metadata BFFs pass 14/14 for Spot BTCUSDT and Quarterly
+BTCUSDT_260925 (Aug 1..Sep 1 × seven intervals), and namespace-crossed cursors
+return typed 400. Declaration API passes 2 folds/20 conditions/300 warmup bars;
+UTC-misaligned 400 creates no job (196→196).
+The v2 expanding product probe `rrun_78d9ef519a64da31aa2fe086cd21b6f7`
+completes READY and writes one SELECTION_INPUT exposure with the producer's
+snapshot hash. Spot probe `rrun_6b076ba549a4f8ffef4307afcc2cfeab` also completes.
+Quarterly probe `rrun_73bb0981470c1468ad92dd6ed3ff08cd` fails at current-source
+seal after retryable private refusals; it is NOT execution-qualified yet.
+
+The v2 RC read still selected the P04 lane because the repository recognized
+only v1; its historical parameter-kind registry also lacked the new v2 digest.
+This correction adds the exact v2 registry entry without deleting v1, loads
+the retained lane only for verified profile/digest pairs, and lets report
+repair use those same exact pairs. It never promotes a diagnostic into audit.
+The P13 Hub is still a separate reader from WFO current-source Evidence;
+its absence is not relabeled AVAILABLE. Bounded SQLSTATE-only diagnostics
+for private 503s log no SQL, rows, credentials or raw exception text.
