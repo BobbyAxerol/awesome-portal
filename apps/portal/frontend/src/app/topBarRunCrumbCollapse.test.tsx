@@ -51,13 +51,13 @@ describe("G14 option A — run crumb collapses by segment", () => {
     mount("/research/quantbt/runs/rrun_17f762128acf8c998ac7cc44d13f663f/split");
     expect(segment("Research").className).toBe("portal-crumb");
     expect(segment("QuantBT Backtest").className).toContain("portal-crumb--run-context");
-    expect(segment("R-WFO-017").className).toBe("portal-crumb");
+    expect(segment("R-WFO-017").className).toBe("portal-crumb portal-crumb--current");
     expect(segment("Stage 1 · Split").className).toContain("portal-crumb--run-screen");
   });
 
   it("leaves a page that is not run-scoped untouched", () => {
     mount("/research/quantbt/runs");
-    expect(segment("QuantBT Backtest").className).toBe("portal-crumb");
+    expect(segment("QuantBT Backtest").className).toBe("portal-crumb portal-crumb--current");
   });
 
   it("drops the feature segment below 1440px and the screen name below 1366px", () => {

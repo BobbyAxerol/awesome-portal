@@ -144,6 +144,23 @@
 }
 
 /*
+ * W3b: the evidence-cursor summary toggle exists for phones only. Above 720px it is not rendered, so
+ * the 1280 / 1440 px cursor bar is exactly what it was. (The mobile rules that read it sit in the one block below.)
+ */
+[data-screen="evidence-flow"] [data-cursor-toggle] {
+  display: none;
+}
+
+/* S07 causal fold rows: a long word or digest wraps inside the row instead of running past the card edge. */
+[data-fold-row] > [data-boundary-words],
+[data-fold-row] > [data-verdict-words],
+[data-fold-row] > [data-child-words] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/*
  * Phone width (QA 2026-10-02): no Research Loop screen may widen the page at 390 / 360 px.
  * Everything below sits inside one max-width media query, so the 1440 px layout is untouched.
  * Long codes wrap; fixed-width cards, stat rows, fold notes and the parameter table either
@@ -207,5 +224,103 @@
   .research-screen [data-pool-row] > :last-child {
     flex: 1 1 100%;
     padding-left: 0;
+  }
+  /* ---- W3b: Evidence Flow hub, Progress and the four stage screens on a phone ---- */
+  /* (2) The evidence cursor is one summary line until opened; open, it scrolls with the page instead of pinning 165px. */
+  [data-screen="evidence-flow"] [data-cursor-toggle] {
+    display: flex;
+    min-height: 36px;
+    padding: 0;
+  }
+  [data-screen="evidence-flow"] [data-cursor-bar][data-collapsed="true"] > :not([data-cursor-toggle]) {
+    display: none;
+  }
+  [data-screen="evidence-flow"] [data-stage-card]:has([data-cursor-bar][data-collapsed="false"]) {
+    position: static !important;
+  }
+  /* (3) The tab strip scrolls and snaps; the "Promotion · soon" cell is not a tab and leaves the row. */
+  [data-screen="evidence-flow"] [data-promotion-soon] {
+    display: none;
+  }
+  [data-screen="evidence-flow"] [data-stage-tabs] {
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  [data-screen="evidence-flow"] [data-stage-tabs] > [role="tablist"] {
+    flex: none;
+  }
+  [data-screen="evidence-flow"] [data-stage-tabs] [role="tab"] {
+    scroll-snap-align: start;
+    min-height: 44px;
+  }
+  /* (4) Hit areas. Controls keep their look; they gain height/width (secondary >= 24px) ... */
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) :is(button, summary, select, input:not([type="range"], [type="checkbox"], [type="radio"]), [role="tab"]) {
+    min-height: 24px;
+  }
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) button {
+    min-width: 24px;
+  }
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) input[type="range"] {
+    min-height: 24px;
+  }
+  /* ... links gain an invisible vertical halo rather than a taller line box ... */
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) a[href]:not(:has(> *)) {
+    position: relative;
+  }
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) a[href]:not(:has(> *))::after {
+    content: "";
+    position: absolute;
+    inset: -6px -2px;
+  }
+  /* ... and the way to the previous/next stage is a full 44px bar-height target. */
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) a[href]:is(
+      [data-action="next-stage"],
+      [data-action="next-execute"],
+      [data-action="next-evidence"],
+      [data-action="back-to-split"],
+      [data-action="back-to-search"],
+      [data-action="back-to-freeze"],
+      [data-action="back-to-hub"],
+      [data-next="run-report"]
+    ) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) a[href]:is(
+      [data-action="next-stage"],
+      [data-action="next-execute"],
+      [data-action="next-evidence"],
+      [data-action="back-to-split"],
+      [data-action="back-to-search"],
+      [data-action="back-to-freeze"],
+      [data-action="back-to-hub"],
+      [data-next="run-report"]
+    )::after {
+    display: none;
+  }
+  /* Breadcrumb and cursor deep-dive links: a 24px row instead of a 13px line. */
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) nav a[href] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+  }
+  /* (5) Progress: the claim chips wrap inside the card, and the console wraps its lines (S03 at 360). */
+  [data-screen="run-progress"] [data-claims] > span {
+    white-space: normal;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  [data-screen="run-progress"] [data-console-box] {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  /* S07 causal fold rows at phone width: label, bar and words stack. */
+  [data-fold-row] {
+    min-width: 0;
+    max-width: 100%;
   }
 }

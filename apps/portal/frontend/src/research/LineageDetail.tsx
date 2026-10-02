@@ -431,6 +431,14 @@ const LINEAGE_CSS = `
   .ln-grid { flex-direction: column; align-items: stretch; }
   .ln-right { position: static; max-width: none; min-width: 0; width: 100%; }
 }
+/* Phone width: the compact row keeps its fixed height (the windowed list measures it), so the id and the spec end in an
+   ellipsis, the status chip stays whole, and the cert chip and timestamp (both also in the detail) drop out. */
+@media (max-width: 720px) {
+  .ln-rowbtn > * { flex: none; }
+  .ln-rowbtn > .ln-rowid { flex: 1 1 auto; width: auto; min-width: 0; }
+  .ln-rowbtn > .ln-rowspec { flex: 0 1 0; min-width: 0; }
+  .ln-rowbtn > .ln-cert, .ln-rowbtn > .ln-rowwhen { display: none; }
+}
 .ln-mono { font-family: var(--font-mono); }
 .ln-faint { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-faint); }
 .ln-soft { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-soft); }

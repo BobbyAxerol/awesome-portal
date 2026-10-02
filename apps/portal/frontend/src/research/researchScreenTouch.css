@@ -1,0 +1,63 @@
+/*
+ * Touch targets of the Research Loop screens at phone width (QA 2026-10-02, W3C).
+ *
+ * Only hit areas live here, and only under one max-width: 720px query, so the
+ * 1024 px+ layout is untouched. Two tiers:
+ *  - primary calls to action and prev/next stage links are at least 44 px tall;
+ *  - every other control has a 24 x 24 px hit area (WCAG 2.5.8): buttons get a
+ *    real min-height, links get an invisible ::after the size of the missing
+ *    part, so running text and tight link rows do not reflow.
+ */
+@media (max-width: 720px) {
+  /* Zero-specificity anchor: a class or an inline style that positions the element still wins. */
+  :where(.research-screen) :where(a[href], summary, [role="tab"], [role="checkbox"]):where(:not(.ln-cardbtn)) {
+    position: relative;
+  }
+
+  /* Invisible hit area: exactly 24 px where the control is smaller, its own size where it is larger. */
+  .research-screen :is(a[href], summary):not(.ln-cardbtn)::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 24px);
+    height: max(100%, 24px);
+    transform: translate(-50%, -50%);
+  }
+
+  /* Buttons: a real 24 px floor (chips, stage chips, zoom ±, copy-id, fold steppers, compare checkbox). */
+  .research-screen button,
+  .research-screen [role="tab"],
+  .research-screen [role="checkbox"] {
+    min-height: 24px;
+    min-width: 24px;
+  }
+
+  /* Library stage chips S1–S5: 34 x 20 links get the 24 px height through the ::after above. */
+
+  /* Report strip of twelve evidence cells: 24 px wide cells, wrapping rather than widening the page. */
+  .research-screen .rc-strip {
+    flex-wrap: wrap;
+  }
+  .research-screen .rc-strip .cell {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Primary calls to action and prev/next stage links: 44 px. */
+  .research-screen :is(.btn-primary, .rc-sealbtn, .ai-btn:not([data-quiet])) {
+    min-height: 44px;
+  }
+  .research-screen
+    :is(
+      a[data-action="back-to-hub"],
+      a[data-action="back-to-execute"],
+      a[data-action="release-candidate"],
+      a[data-action="attempt-lineage"],
+      .ln-btnlink:not(.soft)
+    ) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

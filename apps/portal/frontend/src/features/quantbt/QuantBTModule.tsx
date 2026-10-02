@@ -35,6 +35,7 @@ import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
 import { PortalApiError } from "../../lib/api";
 import "../../research/researchScreen.css";
+import "../../research/researchScreenTouch.css";
 import { useResearchDocumentTitle } from "../../research/documentTitle";
 
 /*

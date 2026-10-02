@@ -2756,3 +2756,134 @@
 .portal-skip-link { position: absolute; left: var(--space-3); top: var(--space-2); z-index: 1000; padding: var(--space-2) var(--space-3); background: var(--paper-raised); color: var(--ink); border: 2px solid var(--accent); border-radius: 4px; transform: translateY(-200%); }
 .portal-skip-link:focus { transform: none; }
 .portal-content:focus { outline: none; }
+
+/* --- Mobile shell (W3A, <=720px) ----------------------------------------
+ * One 56px row: menu button, one crumb (ellipsised), environment badge,
+ * search icon, Display menu. Theme, Density, Planned modules, the workspace
+ * chip and Users & Access live in the Display menu. Everything here is
+ * inside the media query, so >=721px renders as before. */
+.portal-display { display: none; }
+
+@media (max-width: 720px) {
+  .portal-topbar,
+  :root[data-theme="execution-carbon"] .portal-topbar {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+    height: 56px;
+    min-height: 56px;
+    padding: 0 var(--space-3);
+  }
+  .portal-topbar > .portal-brand,
+  .portal-topbar > .portal-wide-only,
+  .portal-topbar > .portal-pref,
+  .portal-topbar > .portal-pref-check,
+  .portal-topbar > .portal-admin-link,
+  .portal-topbar > .portal-price-chip,
+  /* The rail-collapse toggle is a laptop control (tailwind `hidden lg:inline-flex`
+     loses to `.portal-icon-btn { display: inline-flex }` below 1024px). */
+  .portal-topbar > .portal-icon-btn.hidden { display: none; }
+
+  .portal-topbar > .portal-icon-btn,
+  .portal-search-btn,
+  .portal-display-btn {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+  .portal-search-btn { margin-left: 0; }
+  .portal-search-btn kbd { display: none; }
+  .portal-search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .portal-topbar .badge-env { flex: 0 0 auto; }
+
+  /* Only the current crumb stays; it takes the free room and ellipsises. */
+  .portal-breadcrumbs,
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-right: auto;
+  }
+  .portal-breadcrumbs .portal-crumb { display: none; }
+  .portal-breadcrumbs .portal-crumb--current {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .portal-breadcrumbs .portal-crumb--current .portal-crumb-sep { display: none; }
+  .portal-breadcrumbs .portal-crumb--current > a,
+  .portal-breadcrumbs .portal-crumb--current > span:not(.portal-crumb-sep) {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    color: var(--ink);
+    padding: 12px 0;
+  }
+  .portal-alerts-chip { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+  .portal-display { display: block; position: relative; flex: 0 0 auto; }
+  .portal-display-btn {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--ink-soft);
+    background: var(--paper-raised);
+  }
+  .portal-display-btn:hover,
+  .portal-display-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--accent); }
+  .portal-display-panel {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    z-index: 50;
+    width: min(280px, calc(100vw - 2 * var(--space-3)));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-e3);
+  }
+  .portal-display-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-height: 32px;
+  }
+  .portal-display-key { font-size: 11px; color: var(--ink-faint); }
+  .portal-display-panel .portal-pref { display: block; }
+  .portal-display-panel .portal-pref select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .portal-display-panel .portal-pref-check {
+    display: flex;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .portal-display-panel .portal-pref-check input { width: 18px; height: 18px; }
+  .portal-display-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .portal-display-link:hover { color: var(--ink); text-decoration: underline; }
+}

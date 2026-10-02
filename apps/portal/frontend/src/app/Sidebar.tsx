@@ -8,7 +8,7 @@
 import { NavLink } from "react-router-dom";
 
 import { MaturityBadge } from "../components/semantic";
-import { maturityPresentation } from "../lib/portalState";
+import { maturityPresentation, maturityStateName } from "../lib/portalState";
 import {
   EXECUTION_PREVIEW_ENABLED,
   EXECUTION_PREVIEW_FEATURE_DEFAULTS,
@@ -54,6 +54,10 @@ export function Sidebar({
                 EXECUTION_PREVIEW_ENABLED &&
                 (feature.id in EXECUTION_PREVIEW_FEATURE_DEFAULTS ||
                   feature.id.startsWith("EXECUTION_"));
+              /* W3A: SOON / PROTOTYPE are no longer drawn as chips in the rail
+                 (Bobby, 2026-10-02). The dimmed row stays, and the state moves to
+                 the link's accessible name so it is still announced. */
+              const stateName = previewMounted ? null : maturityStateName(feature.maturity);
               return (
                 <li key={feature.id}>
                   <NavLink
@@ -63,6 +67,9 @@ export function Sidebar({
                     style={{ opacity: previewMounted ? 1 : presentation.opacity }}
                     title={collapsed ? `${feature.label} — ${feature.description}` : feature.description}
                     data-maturity={feature.maturity}
+                    aria-label={
+                      collapsed || stateName === null ? undefined : `${feature.label}, ${stateName}`
+                    }
                     onClick={onNavigate}
                   >
                     <Icon size={15} aria-hidden="true" className="shrink-0" />
@@ -76,9 +83,9 @@ export function Sidebar({
                         ) : null}
                         {previewMounted ? (
                           <span className="badge-maturity badge-maturity-preview">PREVIEW</span>
-                        ) : (
+                        ) : stateName === null ? (
                           <MaturityBadge maturity={feature.maturity} />
-                        )}
+                        ) : null}
                       </>
                     )}
                   </NavLink>

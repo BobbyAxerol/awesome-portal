@@ -1190,6 +1190,15 @@ function StageTabs({
 }) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
+  /* W3b phone: the strip scrolls sideways; bring the open tab into view (the strip only, never the page). */
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function" || !window.matchMedia("(max-width: 720px)").matches) return;
+    const tab = refs.current[cursor.stage];
+    const strip = tab?.closest<HTMLElement>("[data-stage-tabs]");
+    if (!tab || !strip) return;
+    strip.scrollLeft = Math.max(0, tab.offsetLeft - (strip.clientWidth - tab.offsetWidth) / 2);
+  }, [cursor.stage]);
+
   const onKeyDown = (event: React.KeyboardEvent) => {
     const index = EVIDENCE_STAGES.indexOf(cursor.stage);
     const last = EVIDENCE_STAGES.length - 1;
@@ -1341,6 +1350,8 @@ function CursorBar({
   laneSelection?: { trial: number | null; sourceId?: number | string | null; paramsDigest: string | null } | null;
 }) {
   const [copied, setCopied] = useState(false);
+  /* W3b mobile: the bar is one summary line until the reader opens it (the CSS only reads this at <=720px). */
+  const [expanded, setExpanded] = useState(false);
   /*
    * The step buttons and the dropdown are bound to the folds P11 actually
    * observed, and to nothing else. This is a published observed set, not the
@@ -1385,8 +1396,34 @@ function CursorBar({
     <div
       className="flex flex-wrap items-center gap-1.5 border-t px-3.5 py-[7px]"
       data-cursor-bar
+      data-collapsed={expanded ? "false" : "true"}
       style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)", borderRadius: "0 0 6px 6px" }}
     >
+      {/* Phone only (hidden by CSS above 720px): one line of the served cursor, and the way to open the rest. */}
+      <button
+        type="button"
+        data-cursor-toggle
+        aria-expanded={expanded}
+        title={expanded ? "hide the cursor controls" : "show the cursor controls"}
+        onClick={() => setExpanded((open) => !open)}
+        className="mono w-full items-center justify-between gap-2 text-left text-[11px]"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        <span data-cursor-summary>
+          {[
+            `fold ${cursor.fold}`,
+            cursor.trial !== null
+              ? trialLabel({ ordinal: cursor.trial })
+              : laneSelection?.trial != null
+                ? trialLabel({ ordinal: laneSelection.trial, sourceId: laneSelection.sourceId })
+                : null,
+            `window ${evidenceWindow === "oos" ? "OOS" : evidenceWindow === "is" ? "IS" : "Holdout"}`,
+          ]
+            .filter((part) => part !== null)
+            .join(" · ")}
+        </span>
+        <span aria-hidden="true">{expanded ? "▴" : "▾"}</span>
+      </button>
       <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         evidence cursor
       </span>
