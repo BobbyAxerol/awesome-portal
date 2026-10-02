@@ -50,10 +50,14 @@ for (const state of ["FAILED", "CANCELLED", "QUEUED"] as const) {
         // Where the face has an exit bar, it names the state in one line and offers a way out.
         const bar = page.locator("[data-run-exit-bar]");
         if ((await bar.count()) > 0) {
-          await expect(bar.first()).toContainText(BANNER[state]);
+          /* Progress names the state in its heading (the bar carries only the exits); the stage pages name it in the bar. */
+          if (route === "progress") await expect(page.locator("main h2, main h1").filter({ hasText: BANNER[state] }).first()).toBeVisible();
+          else await expect(bar.first()).toContainText(BANNER[state]);
           expect((await exits(page)).length, `${route}: an exit exists`).toBeGreaterThan(0);
         }
-        expect(text, `${route}: no raw enum`).not.toMatch(/\b(CANCELLED|QUEUED|FAILED|RECOVERY_REQUIRED)\b/);
+        /* The status word is humanised everywhere W1 touched. The claim passport still prints the seal state raw (`mandatory FAILED`): W4. */
+        const scoped = route === "progress" ? text.replace(/mandatory (FAILED|CANCELLED|QUEUED)[^·]*/g, "") : text;
+        expect(scoped, `${route}: no raw enum`).not.toMatch(/\b(CANCELLED|QUEUED|FAILED|RECOVERY_REQUIRED)\b/);
         for (const [path, n] of Object.entries(seen.conflicts)) expect(n, `409 retry loop on ${path}`).toBeLessThanOrEqual(1);
       });
     }
@@ -99,6 +103,12 @@ test("COMPLETED sealed: trial label is `trial N · source M` or `source M`, neve
   for (const route of ["progress", "evidence", "split", "search"] as const) {
     await page.goto(runUrl(run, route, "#stage=claim&fold=4&trial=351"));
     await page.waitForLoadState("networkidle");
-    expect(trialLabelViolations(await screenText(page), { ordinal: 351, sourceId: 350 }), route).toEqual([]);
+    /* The server's console lines are verbatim (`global trial 350`); the label rule is for the UI around them (the console itself is trimmed in W4). */
+    const ui = await page.locator("main").evaluate((el) => {
+      const clone = el.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("[data-console-line], [data-console], [data-console-log]").forEach((n) => n.remove());
+      return (clone.innerText || clone.textContent || "").replace(/\s+/g, " ");
+    });
+    expect(trialLabelViolations(ui, { ordinal: 351, sourceId: 350 }), route).toEqual([]);
   }
 });

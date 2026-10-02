@@ -35,6 +35,8 @@ export async function signIn(page: Page): Promise<void> {
 
 /** Read the API from inside the page (the session cookie is Secure; see the real-api spec). GET only. */
 export async function pageGet(page: Page, path: string): Promise<{ status: number; body: any }> {
+  /* A relative fetch needs an origin: a blank page has none. */
+  if (page.url() === "about:blank") await page.goto("/research/quantbt/runs", { waitUntil: "domcontentloaded" });
   return page.evaluate(async (url) => {
     const response = await fetch(url, { credentials: "same-origin", method: "GET" });
     let body: unknown = null;
@@ -107,7 +109,8 @@ export async function exits(page: Page): Promise<string[]> {
 
 /** Every href on the page that mentions `needle` (e.g. a missing run id must never appear). */
 export async function hrefsContaining(page: Page, needle: string): Promise<string[]> {
-  return page.locator(`a[href*="${needle}"]`).evaluateAll((els) => els.map((e) => e.getAttribute("href") ?? ""));
+  /* The screen only: the shell's top breadcrumb names the route's run id and is W4's (plain text for an unknown run). */
+  return page.locator(`main a[href*="${needle}"]`).evaluateAll((els) => els.map((e) => e.getAttribute("href") ?? ""));
 }
 
 /** W1 §4.2 "Trial label": no `#350`/`#351`, no bare `trial 350` (a source id is never called a trial). */

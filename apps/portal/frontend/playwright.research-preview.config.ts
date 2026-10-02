@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: ["**/_preview-research-real-api.spec.ts"],
+  testMatch: ["**/_preview-research-real-api.spec.ts", "**/_preview-research-w1-*.spec.ts"],
   timeout: 90_000,
   workers: 1,
   reporter: "list",

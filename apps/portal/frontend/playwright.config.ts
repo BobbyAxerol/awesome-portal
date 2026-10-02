@@ -80,7 +80,7 @@ export default defineConfig({
       name: "chromium",
       // The Research real-API receipt reads the isolated preview stack and its
       // local credentials; it runs only through playwright.research-preview.config.ts.
-      testIgnore: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts", "**/_preview-research-real-api.spec.ts"],
+      testIgnore: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts", "**/_preview-research-*.spec.ts"],
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4174" },
     },
     {

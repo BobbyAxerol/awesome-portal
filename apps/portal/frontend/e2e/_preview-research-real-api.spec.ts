@@ -714,7 +714,8 @@ for (const [name, width, height] of VIEWPORTS) {
         const card = root.locator(`[data-ladder-run='${run.run_id}']`);
         const sharpe = run.original_metrics.find((metric: any) => metric.key === "OOS_SHARPE");
         if (sharpe?.availability.state === "AVAILABLE") await expect(card.locator("[data-oos-sharpe]")).toHaveAttribute("data-oos-sharpe", sharpe.value);
-        if (run.schedule.availability.state === "AVAILABLE") await expect(card.locator("[data-schedule]")).toHaveText(`${run.schedule.mode} × ${run.schedule.schedule}`); /* E7: no "sched" prefix, as the HiFi card head */
+        /* W1 (fewer words): the card's `mode × schedule` line is a tooltip now, not visible text. */
+        if (run.schedule.availability.state === "AVAILABLE") await expect(card.locator(`[title*="${run.schedule.mode} × ${run.schedule.schedule}"]`).first()).toBeAttached();
         /* F1c (VD-F1-02): a card carries `data-lifecycle` only when the claimed ladder MIXES lifecycles; otherwise it is absent. */
         if (mixedLifecycle && run.alpha_version_lifecycle.value) await expect(card).toHaveAttribute("data-lifecycle", run.alpha_version_lifecycle.value);
         else await expect(card).not.toHaveAttribute("data-lifecycle", /.*/);
@@ -826,12 +827,9 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
           expect(await metric.innerText(), `${key} prints no digit for a null`).not.toMatch(/\d/);
         }
       }
-      /* The card of this attempt; a probe opens the probes (spec T04). */
+      /* The card of this attempt; W1: the viewed attempt is always listed, with no need to open the older probes. */
       const card = root.locator(`[data-attempt='${node.attempt_id}']`);
       await expect(card).toBeVisible();
-      if (node.presentation_kind === "PROBE") {
-        await expect(root.locator("[data-action='toggle-probes']")).toHaveAttribute("aria-pressed", "true");
-      }
       const version = api.alpha.versions.find((item: any) => item.alpha_version_id === node.alpha_version_id);
       const band = root.locator(`[data-band='${version.alpha_version_id}']`);
       if (version.outcome.text) await expect(band.locator(".ln-out")).toHaveText(version.outcome.text);
