@@ -171,10 +171,16 @@ function QualityCounters({ quality }: { quality: Quality }) {
     <div className="flex flex-col" data-quality>
       <Row label="rows">{groupDigits(quality.rows)}</Row>
       <Row label="gaps">
-        {/* The ratio is a measured decimal, so it is printed as the server sent
-            it — grouping or rounding it would change the measurement. */}
-        {groupDigits(quality.gaps)} · {groupDigits(quality.missing_bar_count)} missing bars · ratio{" "}
-        {quality.gap_ratio}
+        {quality.gaps === null || quality.missing_bar_count === null || quality.gap_ratio === null ? (
+          /* An observed-date tape (a source with no published session calendar) measures no gaps: the server says null, never 0. */
+          <span title={quality.state}>not measured · observed dates only</span>
+        ) : (
+          /* The ratio is a measured decimal, so it is printed as the server sent
+             it — grouping or rounding it would change the measurement. */
+          <>
+            {groupDigits(quality.gaps)} · {groupDigits(quality.missing_bar_count)} missing bars · ratio {quality.gap_ratio}
+          </>
+        )}
       </Row>
       <Row label="duplicates">{quality.duplicates}</Row>
       <Row label="reason codes">

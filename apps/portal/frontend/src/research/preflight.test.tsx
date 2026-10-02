@@ -301,6 +301,7 @@ describe("P08-T02 — quality counters are measurements, not a verdict", () => {
     const withGaps = preflight();
     withGaps.snapshot.quality = {
       ...withGaps.snapshot.quality,
+      state: "SNAPSHOT_INTEGRITY_ONLY",
       gaps: 3,
       missing_bar_count: 11,
       gap_ratio: 0.00125,
@@ -311,6 +312,26 @@ describe("P08-T02 — quality counters are measurements, not a verdict", () => {
     const quality = document.querySelector("[data-quality]") as HTMLElement;
     expect(quality.textContent).toContain("3 · 11 missing bars · ratio 0.00125");
     expect(quality.textContent).toContain("VENUE_MAINTENANCE · FEED_RESTART");
+  });
+});
+
+describe("observed-date tape — gap counters are absent, never zero", () => {
+  it("prints 'not measured' when the server publishes null gap counters", () => {
+    const observed = preflight();
+    observed.snapshot.quality = {
+      rows: 661,
+      gaps: null,
+      missing_bar_count: null,
+      gap_ratio: null,
+      duplicates: 0,
+      passed: true,
+      reason_codes: [],
+      state: "OBSERVED_TAPE_INTEGRITY_ONLY",
+    };
+    render(<PreflightPanel preflight={observed} state={OK} />);
+    const row = document.querySelector("[data-quality]")?.textContent ?? "";
+    expect(row).toContain("not measured");
+    expect(row).not.toMatch(/\b0 missing bars/);
   });
 });
 
