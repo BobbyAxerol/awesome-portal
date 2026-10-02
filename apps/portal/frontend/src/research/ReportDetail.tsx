@@ -40,6 +40,7 @@ import {
   STAGE_LABEL,
   coreFailed,
   coreV2,
+  enrichedAbsenceOfReport,
   enrichedOfReport,
   exportDownloadHref,
   exportPending,
@@ -1532,7 +1533,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
             </div>
             {coreV2(core)?.final_audit ? <FinalAuditBlock audit={coreV2(core)!.final_audit!} /> : null}
             <Warnings core={core} />
-            <AllTimeSupplement read={enrichedOfReport(report)} />
+            <AllTimeSupplement read={enrichedOfReport(report)} absentCode={enrichedAbsenceOfReport(report)} />
             <div className="rr-pp rr-keep" data-promotion-provenance>
               <Promotion core={core} runId={runId} />
               <Provenance core={core} runId={runId} report={report} />

@@ -20,7 +20,8 @@ import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
 import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom, planCoverage } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
-import { profileTrialDefault, readPreflightEstimate, readProfiles, seedPinned, selectProfile } from "./dataDeclaration";
+import { mergeEstimates, profileTrialDefault, readCatalogIndex, readPreflightEstimate, readProfiles, seedPinned, selectProfile } from "./dataDeclaration";
+import { useWindowMetadata } from "./useWindowMetadata";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
 import { useRunLabelRead } from "./useRunLabelRead";
@@ -476,7 +477,10 @@ export function NewRunRoute() {
   useEffect(() => setDraft(run.draft), [run.draft]);
 
   /* The optional `preflight_estimate` of the answer on screen; absent means nothing new renders. */
-  const estimate = useMemo(() => readPreflightEstimate(run.preflight.preflight), [run.preflight.preflight]);
+  const preflightEstimate = useMemo(() => readPreflightEstimate(run.preflight.preflight), [run.preflight.preflight]);
+  /* B7: bars per declared window and the warmup from the index, only against a v2 catalog; the preflight's own numbers win. */
+  const metadataEstimate = useWindowMetadata(run.draft, limits.warmupBars, readCatalogIndex(catalog) !== null);
+  const estimate = useMemo(() => mergeEstimates(preflightEstimate, metadataEstimate), [preflightEstimate, metadataEstimate]);
 
   return (
     <NewRun

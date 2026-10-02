@@ -26,6 +26,7 @@ import { usePresentation } from "../app/presentation";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
   WITHHELD_WORDS,
+  enrichedAbsenceOf,
   enrichedOf,
   isAvailable,
   unavailableReason,
@@ -72,6 +73,7 @@ import { HubFreezeBody } from "./hubStageFreeze";
 import { HubExecuteBody } from "./hubStageExecute";
 import { AnalyticsAbsentLine, BehaviorV2, StrategyBenchmarkFigure, v2Absence, v2Of } from "./analyticsV2";
 import { enrichedBlock, type EnrichedAnalysis } from "./enrichedAnalysis";
+import { EnrichedAbsenceLine } from "./enrichedAvailability";
 import { companionRead, derivationTitle, derivedHeadline, derivationOf, monthCoverage, type MonthFacts } from "./allTimeSeries";
 import {
   DrawdownEpisodes,
@@ -3487,6 +3489,8 @@ function SummaryTab({
      A panel it can fill is drawn from it; every other panel keeps today's source and its typed absence. */
   const enrichedRead = enrichedOf(retained ?? hub);
   const enriched = enrichedBlock(enrichedRead);
+  /* B7: the served reason there is no block (null when the field is not served or a block is present). */
+  const enrichedAbsentCode = enrichedAbsenceOf(retained ?? hub);
   const enrichedSeries = new Map<SeriesKind, EvidenceSeries>();
   const enrichedAbsent = new Map<SeriesKind, Availability>();
   if (enriched !== null) {
@@ -3592,6 +3596,7 @@ function SummaryTab({
         />
       ) : null}
       <EnrichedRefusedLine read={enrichedRead} />
+      {enrichedAbsentCode !== null ? <EnrichedAbsenceLine code={enrichedAbsentCode} /> : null}
 
       {/* Every block below describes the OOS window, the only one the Hub publishes. It stays mounted (its charts
           are not rebuilt) and is hidden while another window is chosen, so OOS numbers never sit under an IS label. */}

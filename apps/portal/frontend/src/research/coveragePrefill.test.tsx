@@ -334,6 +334,8 @@ function serve(options: { catalog: DatasetCatalog | "not-served" } = { catalog: 
     served.calls.push({ method, path: url.pathname, body: typeof init?.body === "string" ? init.body : null });
     if (method === "GET" && url.pathname === "/api/v1/research/quantbt/atlas") return json(ATLAS_RESPONSE);
     if (method === "GET" && url.pathname === "/api/v1/research/alphas") return json(REGISTRY);
+    /* An older server: the v2 catalog route is not there, so the screen reads v1 (once). */
+    if (method === "GET" && url.pathname === "/api/v1/research/datasets/catalog-v2") return json({ error: { code: "NOT_FOUND", message: "not found" } }, 404);
     if (method === "GET" && url.pathname === "/api/v1/research/datasets") {
       return options.catalog === "not-served"
         ? json({ error: { code: "NOT_FOUND", message: "not found" } }, 404)

@@ -43,6 +43,9 @@
       "@portal/contracts-research-preflight": [
         "../../../packages/contracts/generated/research-preflight.d.ts"
       ],
+      "@portal/contracts-research-dataset-index": [
+        "../../../packages/contracts/generated/research-dataset-index.d.ts"
+      ],
       "@portal/contracts-research-foundation": [
         "../../../packages/contracts/generated/research-foundation.d.ts"
       ],

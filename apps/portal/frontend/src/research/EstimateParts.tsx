@@ -10,29 +10,49 @@
  * (Screen 03's planned OOS rail is `PlannedWindows.tsx`; this is a different thing.)
  */
 
-import { type EstimateCondition, type PreflightEstimate, group, utcMinute } from "./dataDeclaration";
+import { type EstimateCondition, type EstimateWindow, type PreflightEstimate, group, utcMinute } from "./dataDeclaration";
 
-export type EstimateWindowKey = "is" | "oos" | "holdout";
+export type EstimateWindowKey = "is" | "oos" | "holdout" | "analysis";
 
-const WINDOW_LABEL: Readonly<Record<EstimateWindowKey, string>> = { is: "IS", oos: "OOS", holdout: "holdout" };
+const WINDOW_LABEL: Readonly<Record<EstimateWindowKey, string>> = { is: "IS", oos: "OOS", holdout: "holdout", analysis: "analysis" };
 
-/** `1,056 bars` beside a window band; the first and last bar are its tooltip. */
+/** `[2024-01-01 00:00, 2025-01-01 00:00) UTC`: the exact half-open bounds as the server used them. */
+function boundsText(window: EstimateWindow): string | null {
+  return window.startUtcMs != null && window.endExclusiveUtcMs != null
+    ? `[${utcMinute(window.startUtcMs)}, ${utcMinute(window.endExclusiveUtcMs)}) UTC`
+    : null;
+}
+
+/** `1,056 bars` beside a window band; the exact bounds, first and last bar are its tooltip. */
 export function WindowBars({ estimate, window }: { estimate: PreflightEstimate | null; window: EstimateWindowKey }) {
   const served = estimate?.windows[window];
   if (!estimate || !served) return null;
   const label = WINDOW_LABEL[window];
+  const bounds = boundsText(served);
   if (served.bars === null) {
+    const title = [`${label} bars not published`, served.reasonCode, bounds].filter(Boolean).join(" · ");
     return (
-      <span className="text-[9px] italic" style={{ color: "var(--ink-faint)" }} data-window-bars={window} data-window-bars-state="absent">
+      <span
+        className="text-[9px] italic"
+        style={{ color: "var(--ink-faint)" }}
+        title={title}
+        aria-label={title}
+        tabIndex={0}
+        data-window-bars={window}
+        data-window-bars-state="absent"
+        data-reason-code={served.reasonCode ?? undefined}
+      >
         bars — not published
       </span>
     );
   }
   const edges =
     served.firstBarUtcMs !== null && served.lastBarUtcMs !== null
-      ? ` · first ${utcMinute(served.firstBarUtcMs)} · last ${utcMinute(served.lastBarUtcMs)} UTC`
-      : "";
-  const title = `${label} ${group(served.bars)} bars${edges}`;
+      ? `first ${utcMinute(served.firstBarUtcMs)} · last ${utcMinute(served.lastBarUtcMs)} UTC`
+      : null;
+  const title = [`${label} ${group(served.bars)} bars`, bounds, edges, served.asOfUtcMs != null ? `index as of ${utcMinute(served.asOfUtcMs)} UTC` : null]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <span
       className="mono text-[9px]"
@@ -51,7 +71,7 @@ export function WindowBars({ estimate, window }: { estimate: PreflightEstimate |
 /** The windows the estimate names, on one line, for a timeline that has a single track (advanced). */
 export function WindowBarsLine({ estimate }: { estimate: PreflightEstimate | null }) {
   if (!estimate) return null;
-  const keys = (["is", "oos", "holdout"] as const).filter((key) => estimate.windows[key] !== undefined);
+  const keys = (["is", "oos", "holdout", "analysis"] as const).filter((key) => estimate.windows[key] !== undefined);
   if (keys.length === 0) return null;
   return (
     <p className="flex flex-wrap gap-x-2.5 gap-y-0.5" data-window-bars-line>
@@ -70,8 +90,17 @@ export function WarmupChip({ estimate }: { estimate: PreflightEstimate | null })
   const warmup = estimate?.warmup;
   if (!warmup) return null;
   if (warmup.barsRequired === null) {
+    const title = ["warmup not published", warmup.reasonCode].filter(Boolean).join(" · ");
     return (
-      <span className="text-[9px] italic" style={{ color: "var(--ink-faint)" }} data-warmup-chip="absent">
+      <span
+        className="text-[9px] italic"
+        style={{ color: "var(--ink-faint)" }}
+        title={title}
+        aria-label={title}
+        tabIndex={0}
+        data-warmup-chip="absent"
+        data-reason-code={warmup.reasonCode ?? undefined}
+      >
         warmup — not published
       </span>
     );

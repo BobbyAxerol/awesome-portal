@@ -22,6 +22,7 @@
 
 import type { components as ReportComponents } from "@portal/contracts-research-report";
 import { readEnrichedAnalysis, type EnrichedRead } from "./enrichedAnalysis";
+import { enrichedAbsenceCode } from "./enrichedAvailability";
 
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { reportSessionExpired } from "../auth/sessionExpiry";
@@ -168,6 +169,11 @@ export function enrichedOfReport(report: ReportDetail | null | undefined): Enric
   const read = readEnrichedAnalysis((report as { enriched_analysis?: unknown }).enriched_analysis);
   enrichedReads.set(report, read);
   return read;
+}
+
+/** B7: the served reason a Report has no all-time block (`enriched_analysis_availability`), or null. */
+export function enrichedAbsenceOfReport(report: ReportDetail | null | undefined): string | null {
+  return enrichedAbsenceCode(report, enrichedOfReport(report));
 }
 
 export const reportApi = {

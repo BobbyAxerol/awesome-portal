@@ -224,7 +224,7 @@ describe("dataset identity", () => {
     expect(within(row).getByText("UTC")).toBeTruthy();
     expect(within(row).getByText("historical_market_data")).toBeTruthy();
     expect(row.getAttribute("title")).toBe(
-      `Usage: backtest, research. Excluded: ${CRYPTO.excluded_scopes.join(", ")}.`,
+      `Usage: backtest, research. Excluded: ${CRYPTO.excluded_scopes.join(", ")}. Listed by the catalog; preflight decides whether a run is admitted.`,
     );
     const off = q(`[data-unavailable-dataset="${UNAVAILABLE.dataset_id}"]`)!;
     expect(off.getAttribute("title")).toBe(UNAVAILABLE.unavailable_reason);
@@ -512,6 +512,7 @@ describe("the route preselects the only available dataset", () => {
       const method = (init?.method ?? "GET").toUpperCase();
       if (method === "GET" && url.pathname === "/api/v1/research/quantbt/atlas") return json(ATLAS_RESPONSE);
       if (method === "GET" && url.pathname === "/api/v1/research/alphas") return json(REGISTRY);
+      if (method === "GET" && url.pathname === "/api/v1/research/datasets/catalog-v2") return json({ error: { code: "NOT_FOUND", message: "not found" } }, 404);
       if (method === "GET" && url.pathname === "/api/v1/research/datasets") return json(catalog);
       throw new Error(`unexpected request ${method} ${url.pathname}`);
     }));

@@ -36,6 +36,7 @@ import { PortalApiError } from "../lib/api";
 import { ResearchLaneConflictError, readLaneState, toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 import { rememberRunLabel } from "./runLabels";
 import { readEnrichedAnalysis, type EnrichedRead } from "./enrichedAnalysis";
+import { enrichedAbsenceCode } from "./enrichedAvailability";
 
 type HubSchemas = EvidenceComponents["schemas"];
 type SourceSchemas = CurrentSourceComponents["schemas"];
@@ -251,6 +252,11 @@ export function enrichedOf(evidence: CurrentSourceEvidence | EvidenceHub | { enr
   const read = readEnrichedAnalysis((evidence as { enriched_analysis?: unknown }).enriched_analysis);
   enrichedReads.set(evidence, read);
   return read;
+}
+
+/** B7: the served reason an Evidence response / Hub has no all-time block (`enriched_analysis_availability`), or null. */
+export function enrichedAbsenceOf(evidence: CurrentSourceEvidence | EvidenceHub | { enriched_analysis?: unknown } | null | undefined): string | null {
+  return enrichedAbsenceCode(evidence, enrichedOf(evidence));
 }
 
 /* -------------------------------------------------------------------------

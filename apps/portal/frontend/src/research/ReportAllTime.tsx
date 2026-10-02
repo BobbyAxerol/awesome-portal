@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 
 import type { EnrichedAnalysis, EnrichedEpisode, EnrichedFact, EnrichedRead } from "./enrichedAnalysis";
 import { ENRICHED_CHIP, enrichedBlock } from "./enrichedAnalysis";
+import { enrichedAbsenceTitle } from "./enrichedAvailability";
 import { formatMetric, shortDigest } from "./researchFormat";
 
 const DAY = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -42,9 +43,9 @@ export const ALL_TIME_CSS = `
 
 /* ------------------------------------------------------------- the one-line states */
 
-function AbsentLine({ state, reason, what }: { state: string; reason: string | null; what: string }) {
+function AbsentLine({ state, reason, what, title }: { state: string; reason: string | null; what: string; title?: string }) {
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-absent={what} data-absent-state={state}>
+    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-absent={what} data-absent-state={state} title={title} aria-label={title !== undefined ? `${what} not published, server reason ${reason}` : undefined}>
       <span className="rr-absent">{what !== "" ? `${what} — ` : ""}not published</span>
       {reason !== null ? (
         <span className="rr-reason" data-reason-code>
@@ -305,7 +306,7 @@ function Sub({ title, children }: { title: string; children: ReactNode }) {
 
 const TITLE = "All-time analytics — supplemental";
 
-export function AllTimeSupplement({ read }: { read: EnrichedRead }) {
+export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedRead; absentCode?: string | null }) {
   const block = enrichedBlock(read);
   const chipTitle =
     block === null
@@ -366,7 +367,8 @@ export function AllTimeSupplement({ read }: { read: EnrichedRead }) {
             all-time analytics — refused, {REFUSAL_WORDS[read.reason] ?? "not drawn"}
           </p>
         ) : (
-          <AbsentLine state="NOT_PUBLISHED" reason={null} what="all-time analytics" />
+          /* B7: the served `enriched_analysis_availability.reason_code`; null (field not served) keeps the code-less line. */
+          <AbsentLine state="NOT_PUBLISHED" reason={absentCode} what="all-time analytics" title={absentCode !== null ? enrichedAbsenceTitle(absentCode) : undefined} />
         )}
       </div>
     </section>

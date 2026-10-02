@@ -51,6 +51,7 @@ import {
   coverageWarnings,
   foldPlan,
   hasDeclarationFacts,
+  readCatalogIndex,
   readProfiles,
   seedPinned,
   selectProfile,
@@ -1012,6 +1013,8 @@ function DataStep({
   const [serverMiss, setServerMiss] = useState<string | null>(null);
   const [serverItems, setServerItems] = useState<readonly CatalogSymbol[]>([]);
   const richSymbols = symbols.some(hasDeclarationFacts);
+  /* B7: the index's as-of, or why it has none; null for a v1 catalog. */
+  const catalogIndex = readCatalogIndex(catalog);
   const typedSymbol = draft.symbol.trim().toUpperCase();
   const selectedSymbol = symbols.find((item) => item.symbol === typedSymbol) ?? serverItems.find((item) => item.symbol === typedSymbol) ?? null;
   const pickDataset = (datasetId: string) =>
@@ -1056,7 +1059,7 @@ function DataStep({
           </>
         ) : soleDataset ? (
           <>
-            <DatasetIdentity labelled dataset={soleDataset} chosen={draft.datasetId === soleDataset.dataset_id} onUse={() => pickDataset(soleDataset.dataset_id)} />
+            <DatasetIdentity labelled dataset={soleDataset} chosen={draft.datasetId === soleDataset.dataset_id} onUse={() => pickDataset(soleDataset.dataset_id)} index={catalogIndex} />
             <UnavailableDatasets datasets={unavailable} />
           </>
         ) : (
@@ -1081,7 +1084,7 @@ function DataStep({
                 </option>
               ))}
             </select>
-            {dataset ? <DatasetIdentity dataset={dataset} chosen onUse={() => pickDataset(dataset.dataset_id)} /> : null}
+            {dataset ? <DatasetIdentity dataset={dataset} chosen onUse={() => pickDataset(dataset.dataset_id)} index={catalogIndex} /> : null}
             <UnavailableDatasets datasets={unavailable} />
           </>
         )}
@@ -1110,7 +1113,7 @@ function DataStep({
             <SymbolFacts symbol={selectedSymbol} timeframe={draft.timeframe} rich={richSymbols} />
           ) : dataset && dataset.symbols.state === "PUBLISHED" && typedSymbol !== "" && (listing?.partial !== true || serverMiss === typedSymbol) ? (
             <span className="text-[10px]" style={{ color: "var(--accent-2)" }} data-symbol-unlisted>
-              {draft.symbol.trim().toUpperCase()} is not in this dataset&rsquo;s {dataset.symbols.total} listed symbols — preflight will refuse it.
+              {draft.symbol.trim().toUpperCase()} is not in this dataset&rsquo;s {dataset.symbols.total ?? ""} listed symbols — preflight will refuse it.
             </span>
           ) : dataset?.symbols.state === "NOT_PUBLISHED" ? (
             <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>{dataset.symbols.reason}</span>

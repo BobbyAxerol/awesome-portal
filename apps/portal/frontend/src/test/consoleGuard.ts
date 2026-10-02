@@ -7,7 +7,11 @@
  * nesting, controlled/uncontrolled flips); letting them scroll by is how a
  * broken screen stays green.
  */
+import { configure } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
+
+/* Same reason as `testTimeout` in vite.config.ts: waitFor/findBy poll for 5 s, not 1 s, under the parallel suite. */
+configure({ asyncUtilTimeout: 5000 });
 
 /** Each entry documents WHY it is allowed. Keep this list short and named. */
 const ALLOWLIST: readonly { pattern: RegExp; why: string }[] = [
