@@ -382,7 +382,8 @@ describe("02-7 — live captions", () => {
     /* On the step, nothing typed yet: not "needs attention" and never "valid". */
     expect(caption("data")).toBe("in progress");
     go("route");
-    expect(caption("data")).toBe("needs attention");
+    /* U18: passing through is not an edit, so the step is still "in progress". */
+    expect(caption("data")).toBe("in progress");
     expect(caption("route")).toBe("valid");
     expect(caption("strategy")).toBe("not visited");
   });
@@ -628,10 +629,10 @@ describe("02-16 — the summary table is the Review step's main panel", () => {
     expect(document.querySelector("[data-review-rail] [data-review-row=\"windows\"]")).toBeNull();
   });
 
-  it("the windows row names the three starts by day, or says not declared", () => {
+  it("the windows row names the three starts and the end as instants, or says not declared", () => {
     mount({ draft: draft({ windows: { is: { start: "2026-01-01T00:00", endExclusive: "2026-03-01T00:00" }, oos: { start: "2026-03-01T00:00", endExclusive: "2026-04-01T00:00" }, holdout: { start: "", endExclusive: "" } } }) });
     go("review");
-    expect(document.querySelector('[data-review-row="windows"]')?.textContent).toContain("IS 2026-01-01 → OOS 2026-03-01 → holdout not declared");
+    expect(document.querySelector('[data-review-row="windows"]')?.textContent).toContain("IS 2026-01-01T00:00 → OOS 2026-03-01T00:00 → holdout not declared → end not declared");
   });
 
   it("the primary action is still below the table, not buried under panels", () => {

@@ -60,3 +60,27 @@ describe("S04 U1 · stage in the hash", () => {
     expect(hub.result.current.cursor.fold).toBe(99);
   });
 });
+
+describe("S05 U15 · history", () => {
+  it("a picked fold is a history entry, typing is not, and Back returns to the earlier fold", () => {
+    window.history.replaceState(null, "", "/x#stage=summary&fold=1");
+    const hub = renderHook(() => useEvidenceCursor(), { wrapper });
+    const before = window.history.length;
+    act(() => hub.result.current.setFold(4));
+    expect(window.history.length).toBe(before + 1);
+    expect(window.location.hash).toContain("fold=4");
+    act(() => hub.result.current.update({ seq: 7 }));
+    expect(window.history.length).toBe(before + 1);
+    act(() => hub.result.current.setFold(6));
+    expect(window.history.length).toBe(before + 2);
+  });
+
+  it("the mount write and a clamp replace, never push", () => {
+    window.history.replaceState(null, "", "/x");
+    const before = window.history.length;
+    const hub = renderHook(() => useEvidenceCursor(), { wrapper });
+    expect(window.history.length).toBe(before);
+    act(() => hub.result.current.replaceFold(2, "OUT_OF_RANGE"));
+    expect(window.history.length).toBe(before);
+  });
+});

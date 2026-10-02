@@ -688,7 +688,11 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
     fireEvent.click(pill);
     expect(pill.getAttribute("data-step-state")).toBe("current");
     expect(pill.textContent).toContain("in progress");
-    /* Leaving it with the problem unsolved is what makes it need attention. */
+    /* U18: leaving it unedited does not make it need attention; the reader's own edit does. */
+    fireEvent.click(document.querySelector('[data-step-pill="route"]') as HTMLElement);
+    expect(pill.getAttribute("data-step-state")).toBe("incomplete");
+    fireEvent.click(pill);
+    fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "B" } });
     fireEvent.click(document.querySelector('[data-step-pill="route"]') as HTMLElement);
     expect(pill.getAttribute("data-step-state")).toBe("error");
     expect(pill.textContent).toContain("needs attention");

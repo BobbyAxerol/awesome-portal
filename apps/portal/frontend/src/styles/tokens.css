@@ -679,4 +679,19 @@
   --warn: #d4a75e;
   --accent-2: #d4a75e;
   --role-holdout: #d4a75e;
+  /* QA S06 D10: the A2 objective ramp reads low = quiet, high = loud on a dark panel (light theme: pale to deep). */
+  --viz-ramp-1: #2c4a52;
+  --viz-ramp-2: #3f7380;
+  --viz-ramp-3: #5f9fae;
+  --viz-ramp-4: #8fc6d3;
+  --viz-ramp-5: #c9edf4;
+}
+
+/* Scroll-edge shade for horizontally scrollable tables (Research screens only). */
+.research-screen {
+  --scroll-shade: rgba(0, 0, 0, 0.16);
+}
+
+:root[data-theme="operations"] .research-screen {
+  --scroll-shade: rgba(0, 0, 0, 0.45);
 }

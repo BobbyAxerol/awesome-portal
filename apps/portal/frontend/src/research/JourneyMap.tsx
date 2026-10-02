@@ -260,21 +260,15 @@ function PhaseRow({ phase, runId }: { phase: JourneyPhase; runId: string | null 
         style={{ borderColor: "var(--line-soft)" }}
       >
         {phase.cards.map((card, index) => (
-          <span key={card.card_id} className="contents">
-            <JourneyCardLink card={card} runId={runId} />
-            {/* The last card of a phase carries no arrow: the flow ends here. */}
-            {index < phase.cards.length - 1 && !isOffSequence(card) && !isOffSequence(phase.cards[index + 1]) ? (
-              /* Hidden once the cards stack: an arrow pointing right while the
-                 flow runs downward describes a layout that is not there. */
-              <span
-                aria-hidden="true"
-                data-arrow
-                className="self-center text-[12px]"
-                style={{ color: "var(--line-strong)" }}
-              >
+          /* The arrow leads the card it points at, in the same non-wrapping group: when the
+             row wraps it starts the next line instead of dangling at the right edge. */
+          <span key={card.card_id} className="flex min-w-[200px] max-w-[320px] flex-1 items-stretch gap-2" data-card-group>
+            {index > 0 && !isOffSequence(card) && !isOffSequence(phase.cards[index - 1]) ? (
+              <span aria-hidden="true" data-arrow className="self-center text-[12px]" style={{ color: "var(--line-strong)" }}>
                 →
               </span>
             ) : null}
+            <JourneyCardLink card={card} runId={runId} />
           </span>
         ))}
       </div>

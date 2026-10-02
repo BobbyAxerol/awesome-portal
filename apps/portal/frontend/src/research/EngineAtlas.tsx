@@ -1282,18 +1282,23 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
         </dl>
         <div className="flex min-w-[min(260px,100%)] flex-1 flex-col gap-1">
           {release.optimizer_defaults.groups.map((group) => (
-            <span key={group.group_id} className="mono text-[10px] leading-[1.6]" data-default-group={group.group_id}>
-              <span style={{ color: "var(--ink-faint)" }}>{group.group_id}</span>{" "}
+            <span key={group.group_id} className="text-[10.5px] leading-[1.6]" data-default-group={group.group_id}>
+              <span className="mono font-bold" style={{ color: "var(--ink-faint)" }}>{group.group_id.replace(/_/g, " ")}</span>
               {group.fields.map((field) => (
-                <span key={field.field_id} title={field.detail}>
+                <span
+                  key={field.field_id}
+                  className="mono"
+                  style={{ marginLeft: 10 }}
+                  data-default-field-id={field.field_id}
+                  title={`${field.field_id} · ${field.override_state.toLowerCase()} · ${field.detail}`}
+                >
+                  <span style={{ color: "var(--ink-faint)" }}>{field.field_id.replace(/_/g, " ")}</span>{" "}
                   {/* The engine's `None` default is a fact ("unset"), never the bare token "null" (P23 matrix). */}
-                  {field.field_id}=
                   {Array.isArray(field.default_value)
-                    ? field.default_value.join(",")
+                    ? field.default_value.join(", ")
                     : field.default_value === null
                       ? "unset"
                       : String(field.default_value)}
-                  <span style={{ color: "var(--ink-faint)" }}> {field.override_state.toLowerCase()} </span>
                 </span>
               ))}
             </span>

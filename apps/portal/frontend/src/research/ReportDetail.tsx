@@ -694,6 +694,12 @@ function HeadlineRow({ core }: { core: FrozenCore }) {
                   {words(v2.headline[index]!.scope)}
                 </span>
               ) : null}
+              {/* QA S09 (UX-1): the tile names its source beside its scope, so two net returns on one sheet are told apart. */}
+              {v2 && v2.headline[index]!.scope !== "NOT_PUBLISHED" ? (
+                <span className="rr-reason" style={{ display: "block", fontWeight: 400 }} data-headline-source title="from the sealed run report core">
+                  sealed report
+                </span>
+              ) : null}
             </div>
           ) : (
             <div data-headline-withheld>
@@ -810,6 +816,24 @@ export function samplingWords(sampling: string | null | undefined): string {
   return sampling === "FULL" ? "all points" : "sampled (extrema)";
 }
 
+/**
+ * QA S09 (N-4): the caption says, per segment, how many points were drawn and whether they were sampled. One sampling word
+ * at the end when both segments agree; when they differ each segment carries its own, so "300 of 720 points" is never
+ * followed by "all points". A segment drawn from fewer points than its source is sampled whatever its token says.
+ */
+export function equityCaption(equity: ReportEquity, equityIs: ReportEquity | null, sourceFallback: number | null = null): string {
+  const wordsOf = (segment: ReportEquity, fallback: number | null): string => {
+    const source = segment.source_observation_count ?? fallback;
+    if (segment.state === "AVAILABLE" && segment.emitted_point_count !== null && source !== null && source > segment.emitted_point_count) return "sampled (extrema)";
+    return samplingWords(segment.sampling);
+  };
+  const oosWords = wordsOf(equity, sourceFallback);
+  if (equityIs === null) return `${countLine(equity, sourceFallback)} · ${oosWords} · UTC`;
+  const isWords = wordsOf(equityIs, null);
+  if (isWords === oosWords) return `before OOS ${countLine(equityIs)} · OOS ${countLine(equity, sourceFallback)} · ${oosWords} · UTC`;
+  return `before OOS ${countLine(equityIs)} · ${isWords} · OOS ${countLine(equity, sourceFallback)} · ${oosWords} · UTC`;
+}
+
 /** Nearest sealed point to a pointer at `fraction` (0-1) of the plot's time span; the series is time-ordered. */
 export function nearestPoint<T extends { at_utc_ms: number }>(points: readonly T[], fraction: number): T | null {
   if (points.length === 0) return null;
@@ -879,8 +903,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
           {equityTitle(folds, withIs)}
         </span>
         <span className="rr-eq-meta" data-equity-counts>
-          {withIs ? `before OOS ${countLine(equityIs!)} · OOS ` : ""}
-          {countLine(equity, sourceFallback)} · {samplingWords(equity.sampling)} · UTC
+          {equityCaption(equity, withIs ? equityIs : null, sourceFallback)}
         </span>
       </figcaption>
       {drawn ? (
@@ -1259,13 +1282,19 @@ function Artifacts({ core }: { core: FrozenCore }) {
                 ) : (
                   /* QA S09: "sealed - P18_MULTI_PART_TABLE_HAS_NO_SINGLE_PART_DIGEST" is "sealed, several parts"; the code is the tooltip. */
                   <span title={factReason(artifact)} data-reason-code={factReason(artifact)}>
-                    {factReason(artifact) === "P18_MULTI_PART_TABLE_HAS_NO_SINGLE_PART_DIGEST" ? `${ARTIFACT_STATE_WORDS.SEALED} — several parts` : `${ARTIFACT_STATE_WORDS.SEALED} — ${factReason(artifact)}`}
+                    {factReason(artifact) === "P18_MULTI_PART_TABLE_HAS_NO_SINGLE_PART_DIGEST" ? (
+                      `${ARTIFACT_STATE_WORDS.SEALED} — several parts`
+                    ) : (
+                      <>
+                        {ARTIFACT_STATE_WORDS.SEALED} — <BreakableCode code={factReason(artifact)} />
+                      </>
+                    )}
                   </span>
                 )
               ) : (
                 <>
                   {artifact.digest ? `${artifact.digest} · ` : ""}
-                  {ARTIFACT_STATE_WORDS[artifact.state]} — <span data-reason-code>{factReason(artifact)}</span>
+                  {ARTIFACT_STATE_WORDS[artifact.state]} — <span data-reason-code>{/* QA S09 (N-1): breaks at an underscore, not mid-word. */}<BreakableCode code={factReason(artifact)} /></span>
                 </>
               )}
             </span>

@@ -812,6 +812,8 @@ export interface PreflightEstimate {
   /** The profile the estimate was computed for, as served. */
   profileId?: string | null;
   earliestStartUtcMs?: number | null;
+  /** The served basis word of `earliestStartUtcMs` (tooltip only). */
+  earliestStartBasis?: string | null;
 }
 
 function estimateWindow(raw: unknown): EstimateWindow | null {
@@ -967,6 +969,7 @@ export function readDeclarationEstimate(raw: unknown): PreflightEstimate | null 
     readyForPreflight: typeof body.ready_for_preflight === "boolean" ? body.ready_for_preflight : null,
     profileId: text(body.profile_id),
     earliestStartUtcMs: num(metadata.earliest_start_utc_ms),
+    earliestStartBasis: text(metadata.earliest_start_basis),
   };
 }
 

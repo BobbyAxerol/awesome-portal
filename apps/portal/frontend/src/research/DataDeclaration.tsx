@@ -236,6 +236,8 @@ export function SymbolCombobox({
   /* null = untouched since opening: show every symbol, whatever the field holds. */
   const [query, setQuery] = useState<string | null>(null);
   const [active, setActive] = useState(0);
+  /* The symbol the field held when it was focused or last picked: Escape returns to it (R34). */
+  const committed = useRef(value);
   const [kind, setKind] = useState("");
   const [remote, setRemote] = useState<Remote>({ state: "idle" });
   /* A server without the route answers 404 once; from then on the served list is the list, silently. */
@@ -323,13 +325,22 @@ export function SymbolCombobox({
   }, [shownSymbols]);
 
   const pick = (symbol: string) => {
+    committed.current = symbol;
     onChange(symbol);
     setQuery(null);
     setOpen(false);
   };
 
   return (
-    <div className="relative flex w-full flex-col gap-1">
+    <div
+      className="relative flex w-full flex-col gap-1"
+      /* Focus moving on to something inside the popup (a kind chip, "more") keeps it open; leaving the whole
+         combobox closes it. Closing on the input's own blur unmounted the element Tab had just moved to, so
+         focus fell to BODY (U14). */
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
       <input
         className="mono rounded-[6px] border px-2 py-[5px] text-[11px]"
         style={{ borderColor: bad ? "var(--bad)" : "var(--line)", background: "var(--paper-raised)", color: "var(--ink)" }}
@@ -351,11 +362,19 @@ export function SymbolCombobox({
           onChange(next);
         }}
         onFocus={() => {
+          committed.current = value;
           setQuery(null);
           setOpen(true);
         }}
-        onBlur={() => setOpen(false)}
         onKeyDown={(event) => {
+          /* Escape drops what was typed and keeps the symbol that was chosen before it, listed or not (R34). */
+          if (event.key === "Escape" && (open || !listed) && value !== committed.current) {
+            event.preventDefault();
+            onChange(committed.current);
+            setQuery(null);
+            setOpen(false);
+            return;
+          }
           if (!listed) return;
           if (event.key === "ArrowDown") {
             event.preventDefault();
@@ -369,6 +388,7 @@ export function SymbolCombobox({
             pick(flat[Math.min(active, flat.length - 1)]!.symbol);
           } else if (event.key === "Escape" && open) {
             event.preventDefault();
+            setQuery(null);
             setOpen(false);
           }
         }}

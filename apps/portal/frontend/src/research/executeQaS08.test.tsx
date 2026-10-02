@@ -381,3 +381,60 @@ describe("I-13 · the window fee", () => {
     expect(line.querySelector("[data-window-fee='NOT_PUBLISHED']")?.getAttribute("title")).toContain("no fee");
   });
 });
+
+describe("S08 second wave · R-2 a window that did not load is not 'zero fees'", () => {
+  const inSample = () => {
+    const body = clone(FOLD0);
+    for (const row of body.replay.rows) if (row.bar) row.bar.fold_id = null;
+    return body;
+  };
+  it("cost timeline says 'not loaded' (never '0 charged bars · fee 0.00') and the anatomy child row resolves", async () => {
+    const { container } = mount({ replay: (url) => (url.searchParams.get("at") ? fail(500) : json(inSample())) });
+    await waitFor(() => expect(q(container, "[data-window-panel='oos-pending'][data-window-state='failed']")).toBeTruthy(), { timeout: 10_000 });
+    const line = q(container, "[data-cost-window]")!;
+    expect(line.querySelector("[data-window-charged='NOT_LOADED']")?.textContent).toBe("not loaded");
+    expect(line.querySelector("[data-window-fee='NOT_PUBLISHED']")?.textContent).toBe("not loaded");
+    expect(line.textContent).not.toMatch(/\d+ charged bars?|0\.00/);
+    await ledgerReady(container);
+    const anyRow = container.querySelector("[data-transition-row]") as HTMLElement | null;
+    if (anyRow) fireEvent.click(anyRow);
+    await waitFor(() => expect(q(container, "[data-link='child']")?.textContent).toMatch(/not read — no fold window loaded/));
+  });
+
+  it("value path: a loaded window keeps its count", async () => {
+    const { container } = mount();
+    await ready(container);
+    expect(q(container, "[data-cost-window]")!.textContent).toMatch(/\d+ charged bars?/);
+    expect(q(container, "[data-window-charged='NOT_LOADED']")).toBeNull();
+  });
+});
+
+describe("S08 second wave · R-1 / UX-01 the hash in the same page", () => {
+  it("a hash edited in the page (#stage=execute&fold=2) reads fold 2's window instead of being written back", async () => {
+    const { container, calls } = mount();
+    await ready(container);
+    const segment = FOLD0.execution.fold_capital.segments[1]!;
+    const before = calls.replay!.length;
+    await act(async () => {
+      window.location.hash = "#stage=execute&fold=2";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    await waitFor(() => expect(calls.replay!.length).toBe(before + 1));
+    expect(calls.replay!.at(-1)!.searchParams.get("at")).toBe(segment.start_cursor);
+  });
+
+  it("a fold the reader moves to is one history entry", async () => {
+    const second = clone(FOLD0);
+    const seg = FOLD0.execution.fold_capital.segments[1]!;
+    const shift = seg.first_ordinal - second.replay.rows[0]!.source_ordinal;
+    for (const r of second.replay.rows) { r.source_ordinal += shift; if (r.bar) r.bar.fold_id = "1"; }
+    const { container } = mount({ replay: (url) => json(url.searchParams.get("at") === seg.start_cursor ? second : FOLD0) });
+    await ready(container);
+    await ledgerReady(container);
+    const start = window.history.length;
+    const row = LEDGER.rows.find((candidate) => candidate.source_ordinal === 890)!;
+    fireEvent.click(q(container, `[data-transition-row='${row.source_ordinal}']`)!);
+    await waitFor(() => expect(window.location.hash).toContain("fold=2"));
+    expect(window.history.length).toBe(start + 1);
+  });
+});

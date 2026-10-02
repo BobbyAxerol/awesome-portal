@@ -87,8 +87,8 @@ describe("S00 - one instruction per card, shorter title, no dangling arrows", ()
     const phase = Array.from(document.querySelectorAll("[data-phase]")).find((p) => p.querySelector('[data-card="engine-atlas"]')) as HTMLElement;
     const cards = Array.from(phase.querySelectorAll("[data-card]"));
     for (const [index, card] of cards.entries()) {
-      const wrapper = card.parentElement as HTMLElement;
-      const arrowAfter = wrapper.querySelector("[data-arrow]") !== null;
+      /* QA2 UX-16: the arrow now leads the card it points at. */
+      const arrowAfter = (cards[index + 1]?.parentElement as HTMLElement | undefined)?.querySelector("[data-arrow]") != null;
       const next = cards[index + 1];
       const key = (el: Element | undefined) => (el ? V4.descriptor.phases.flatMap((p) => p.cards).find((c) => c.card_id === el.getAttribute("data-card"))?.target_key : undefined);
       if (isOffSequence({ target_key: key(card) ?? "" }) || (next && isOffSequence({ target_key: key(next) ?? "" }))) {

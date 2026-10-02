@@ -12,7 +12,7 @@
  * (`research-current-source.search-surface` and `.split`); a test changes only
  * the one field it is about.
  */
-import { act, cleanup, configure, render, waitFor } from "@testing-library/react";
+import { cleanup, configure, render, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -133,16 +133,13 @@ describe("F2 · S06 — the ledger asks with the cursor's fold", () => {
     expect(ledgerCalls()).toEqual([null, "1"]);
   });
 
-  it("a cursor fold the plan does not list asks nothing and the unfiltered ledger says 'no fold filter'", async () => {
+  it("QA D7: a cursor fold the plan does not list is clamped to the plan's last fold, said in the notice, and that fold is asked", async () => {
     stub();
     const { container } = mount("#stage=search&fold=9");
-    await waitFor(() => expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("One global selection"));
     await waitFor(() => expect(urls.some((url) => url.includes("/current-source/split"))).toBe(true));
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 30));
-    });
-    expect(ledgerCalls()).toEqual([null]);
-    expect(container.querySelector("[data-inspection-fold='']")).toBeTruthy();
+    await waitFor(() => expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 9"));
+    expect(window.location.hash).toContain("fold=2");
+    await waitFor(() => expect(ledgerCalls()).toEqual([null, SPLIT.fold_plan.folds[1]!.fold_id]));
   });
 
   it("a refused fold read keeps the unfiltered ledger and prints the server's code", async () => {

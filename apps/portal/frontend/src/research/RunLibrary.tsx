@@ -1546,6 +1546,8 @@ export const LEGACY_PICK_REPLACEMENT: Readonly<Record<string, string>> = {
   run_parameters_legacy: "freeze",
   run_execution_legacy: "execute_replay",
   run_audit_legacy: "release_candidate",
+  /* QA2 UX-3: the shipped alpha page does not list research alphas (404); Lineage is the research screen of an alpha. */
+  alpha_version_legacy: "attempt_lineage",
 };
 
 /** The screen a `?to=` key opens for a current-engine run (the replacement of a shipped tab, else the key). */
@@ -1602,10 +1604,7 @@ export function openTarget(
       return {
         to: picked,
         label: `open ${name} →`,
-        title:
-          pickTarget === "alpha_version_legacy"
-            ? "Opens the shipped alpha page, which may not list research alphas."
-            : `Opens this run in ${name}, the screen picked on the journey map.`,
+        title: `Opens ${name} for this run.`,
       };
     }
     if (needsAlphaToOpen(pickTarget)) {
@@ -2807,7 +2806,7 @@ export function RunLibrary(props: RunLibraryProps) {
               : filteredEmpty(response?.page.total_rows ?? 0)}
             {LABEL_SHAPED_QUERY.test(filters.q.trim()) ? (
               <span data-search-label-note style={{ display: "block", marginTop: 4, fontSize: 11.5, color: "var(--ink-faint)" }}>
-                Search reads the run id, alpha and symbol — not the R-… label. Click a label to copy its id.
+                Search reads id, alpha, symbol, not R-… labels.
               </span>
             ) : null}
           </span>

@@ -271,8 +271,7 @@ export const GUARD_MATCH_TITLE = "Both runs publish the same ComparisonContractK
 /** Hi-fi refusal card, verbatim. */
 export const REFUSED_TAG = "COMPARISON REFUSED";
 export const REFUSED_NO_CHART = "Different key — an overlay would look meaningful and mean nothing. No chart is rendered for a mismatched pair.";
-export const REFUSED_MARKETS_HINT =
-  'Cross-market reading of ONE alpha lives in the "one alpha × markets" mode — as small multiples, never an overlay.';
+export const REFUSED_MARKETS_HINT = "One alpha across markets: use the markets tab.";
 
 /** Hi-fi overlay caption with "alphas" → "runs" and the demo claim removed (VD-P20-01). */
 export const OVERLAY_TITLE = "Two runs, one key — overlay from retained points";
@@ -387,8 +386,9 @@ const COMPARE_CSS = `
 .cp-foldbar, .cp-foldline { transition: opacity .15s; }
 @media (prefers-reduced-motion: reduce) { .cp-foldbar, .cp-foldline { transition: none; } }
 .cp-foldlegend .sw { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
-.cp-foldline { fill: none; stroke-width: 1.25; }
+.cp-foldline { fill: none; stroke-width: 1.25; stroke-linecap: round; }
 .cp-foldline[data-active="true"] { stroke-width: 2.25; }
+.cp-foldline[data-vertices="1"] { stroke-width: 6; }
 .cp-diffcard > .cp-scroll { background:
   linear-gradient(to right, var(--paper-raised) 30%, transparent) left center / 24px 100% no-repeat local,
   linear-gradient(to left, var(--paper-raised) 30%, transparent) right center / 24px 100% no-repeat local,
@@ -440,7 +440,7 @@ const COMPARE_CSS = `
 .cp-frame[data-size="fold"] { height: 250px; }
 .cp-frame[data-size="overlay"] { height: 270px; }
 .cp-frame[data-size="mini"] { height: 120px; }
-.cp-grid { display: flex; gap: 14px; flex-wrap: wrap; align-items: stretch; min-width: 0; }
+.cp-grid { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; min-width: 0; }
 .cp-grid > * { min-width: 0; }
 .cp-card { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .cp-card > .t, .cp-tcard > .t { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin: 0; font-family: var(--font-body); font-size: 10px;
@@ -777,10 +777,6 @@ function KeyParts({ keyFact, other, side }: { keyFact: CompareKey; other?: Compa
       {keyFact.availability.state !== "AVAILABLE" ? <AvailabilityAbsent availability={keyFact.availability} what="key" /> : null}
     </span>
   );
-}
-
-function keyText(keyFact: CompareKey): string {
-  return KEY_PARTS.map((part) => keyFact[part] ?? "not published").join(" · ");
 }
 
 /* ------------------------------------------------------------------ plots */
@@ -1368,6 +1364,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
   const FOLD_DASHES = ["", "7 3", "2 3", "9 3 2 3"] as const;
   const dash = (runId: string): string | undefined => (linesMode ? FOLD_DASHES[Math.floor(Math.max(entryIndex(runId), 0) / (FOLD_TONES.length - 1)) % FOLD_DASHES.length] || undefined : undefined);
   const nameOf = (runId: string) => (byRunAll.get(runId) ? runName(byRunAll.get(runId)!) : sid(runId));
+  const verticesOf = (runId: string): number | null => (geometry ? (geometry.lines.find((line) => line.runId === runId)?.vertices ?? null) : null);
   const axis = (text: string) => formatMetric(text, "ratio") ?? text;
   return (
     <figure className="cp-fig" data-panel="fold-chart" aria-label="OOS Sharpe per fold" data-fold-series={published.length} data-fold-mode={geometry?.mode}>
@@ -1408,6 +1405,8 @@ function FoldChart({ result }: { result: AttemptResult }) {
                 />
                 {foldLegend(byRunAll.get(entry.runId), entry.runId)}
                 {entry.members.length > 1 ? <span data-fold-identical> +{entry.members.length - 1} identical</span> : null}
+                {/* QA S13 (N-3): a group with no per-fold value has no line to find; say so instead of a swatch that points at nothing. */}
+                {verticesOf(entry.runId) === 0 ? <span data-fold-no-line> · no value</span> : linesMode && verticesOf(entry.runId) === 1 ? <span data-fold-one-point> · one point</span> : null}
               </span>
             ))}
           </div>
@@ -1455,6 +1454,7 @@ function FoldChart({ result }: { result: AttemptResult }) {
                             d={line.path}
                             data-fold-line={line.runId}
                             data-fold-line-members={members.length}
+                            data-vertices={line.vertices}
                             data-active={members.some((id) => byRun.get(id)?.alpha_version_lifecycle.value === "ACTIVE") ? "true" : "false"}
                             style={{ stroke: tone(line.runId), opacity: dim(line.runId), strokeDasharray: dash(line.runId) }}
                           >
@@ -1855,18 +1855,15 @@ export function refusalSentence(left: CompareKey, right: CompareKey): string {
   return `These runs differ in ${parts.join(", ")}, so they cannot be overlaid.`;
 }
 
-function RefusalCard({ result, runs }: { result: PairRefused; runs: readonly string[] | null }) {
+function RefusalCard({ result }: { result: PairRefused }) {
   const { refusal } = result;
-  const [left, right] = runs ?? [];
   return (
     <div className="cp-refusal" data-panel="refusal" role="note" aria-label="comparison refused" title={refusal.message}>
       <span className="tag">{REFUSED_TAG}</span>
       <span className="msg" data-refusal-message data-server-message={refusal.message}>
         {refusalSentence(refusal.left_key, refusal.right_key)}
       </span>
-      <span className="msg cp-mono" data-refusal-keys title={[left, right].filter(Boolean).join(" · ")}>
-        {left ? sid(left) : "A"} is {keyText(refusal.left_key)}; {right ? sid(right) : "B"} is {keyText(refusal.right_key)}.
-      </span>
+      {/* QA S13 (UX-4, S13-8): one sentence; the run names are the chips beside the guard, never `rrun_` ids in prose. */}
       <span className="hint">{REFUSED_MARKETS_HINT}</span>
     </div>
   );
@@ -2302,7 +2299,7 @@ function PairBody({ result, runs }: { result: PairResult; runs: readonly string[
     return (
       <>
         <RefusedGuard result={result} runs={runs} />
-        <RefusalCard result={result} runs={runs} />
+        <RefusalCard result={result} />
       </>
     );
   }

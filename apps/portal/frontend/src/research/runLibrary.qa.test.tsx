@@ -110,7 +110,7 @@ describe("S01 UX-1 - the search says what it reads", () => {
     expect(LABEL_SHAPED_QUERY.test("WFO")).toBe(true);
     expect(LABEL_SHAPED_QUERY.test("zzzz-nothing")).toBe(false);
     mount([], { q: "WFO-023" });
-    expect(document.querySelector("[data-search-label-note]")?.textContent).toContain("not the R-… label");
+    expect(document.querySelector("[data-search-label-note]")?.textContent).toContain("not R-… labels");
   });
 
   it("typed-absence path: another empty query gets no note", () => {

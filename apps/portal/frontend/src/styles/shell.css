@@ -2751,3 +2751,8 @@
 :root[data-theme="execution-carbon"] .portal-price-chip [data-tone="bad"] { color: var(--bad); }
 .portal-price-chip { display: none; }
 :root[data-theme="execution-carbon"] .portal-price-chip { display: inline-flex; }
+
+/* Skip link: first focusable element of the shell, visible only on focus. */
+.portal-skip-link { position: absolute; left: var(--space-3); top: var(--space-2); z-index: 1000; padding: var(--space-2) var(--space-3); background: var(--paper-raised); color: var(--ink); border: 2px solid var(--accent); border-radius: 4px; transform: translateY(-200%); }
+.portal-skip-link:focus { transform: none; }
+.portal-content:focus { outline: none; }

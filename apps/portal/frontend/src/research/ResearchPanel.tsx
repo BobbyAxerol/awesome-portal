@@ -72,6 +72,9 @@ function showsContent(state: ResearchState): boolean {
   return state.state === "available" || state.retainsContent;
 }
 
+/** QA S03_S05 NEW-2: a state name that reads as a code gets a word; the state stays on the tooltip. */
+export const STATE_WORD: Record<string, string> = { "failed-retryable": "not accepted" };
+
 function StateNotice({ state }: { state: ResearchStateWithDiagnostics }) {
   const isWithheld = !showsContent(state);
   return (
@@ -96,8 +99,9 @@ function StateNotice({ state }: { state: ResearchStateWithDiagnostics }) {
         <span
           className="mono text-[10px] uppercase tracking-[.07em]"
           style={{ color: "var(--ink-faint)" }}
+          title={STATE_WORD[state.state] ? state.state : undefined}
         >
-          {state.state}
+          {STATE_WORD[state.state] ?? state.state}
         </span>
         {state.reason ? (
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>

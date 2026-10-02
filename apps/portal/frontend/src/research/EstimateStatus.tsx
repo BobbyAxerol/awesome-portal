@@ -4,8 +4,9 @@
  * Five states, worded apart: asking, refused by the server (a typed 400 that names a field),
  * a refused request (other 4xx), the server unavailable (5xx) and no answer. The last
  * three carry a Retry. None of them reads as "not published": that is a served answer.
- * The client sentence is chosen by status class; the server's message is never printed,
- * only its code, the field path and the request id.
+ * The client sentence is chosen by status class; the server's message is never printed
+ * as is: a typed refusal code has its fixed sentence from `ESTIMATE_REFUSAL_SENTENCE`,
+ * and the rest is its code, the field path and the request id.
  */
 
 import type { EstimateStatus } from "./useDeclarationEstimate";
@@ -21,10 +22,20 @@ export function fieldPathText(path: readonly string[] | null | undefined): strin
   return path && path.length > 0 ? path.join(".") : null;
 }
 
-/** Whether a typed refusal names this field (`windows.is`, `walk_forward.start`): the control then reads as invalid. */
-export function refusedAt(status: EstimateStatus, head: string, key?: string): boolean {
-  return status.kind === "refused" && status.fieldPath !== null && status.fieldPath[0] === head && (key === undefined || status.fieldPath[1] === key);
+/**
+ * Whether a typed refusal names this field (`windows.is.start`, `walk_forward.start`): the control then reads as invalid.
+ * `edge` narrows a window to one of its two bounds, so only the bound the server named reads as wrong (RG3).
+ */
+export function refusedAt(status: EstimateStatus, head: string, key?: string, edge?: string): boolean {
+  if (status.kind !== "refused" || status.fieldPath === null || status.fieldPath[0] !== head) return false;
+  if (key !== undefined && status.fieldPath[1] !== key) return false;
+  return edge === undefined || status.fieldPath[2] === undefined || status.fieldPath[2] === edge;
 }
+
+/** The short sentence the server published for a typed refusal code: a fixed client table, keyed by the code, never free text. */
+export const ESTIMATE_REFUSAL_SENTENCE: Readonly<Record<string, string>> = {
+  WINDOW_BOUND_NOT_ALIGNED: "Align window bounds to the selected UTC bar interval.",
+};
 
 /** The refusal's served facts for a tooltip: code, field path, request id. */
 function facts(parts: readonly (string | null | undefined)[]): string {
@@ -96,16 +107,24 @@ export function EstimateFieldRefusal({
   if (status.kind !== "refused" || status.fieldPath === null || status.fieldPath[0] !== owns) return null;
   if (key2 !== undefined && status.fieldPath[1] !== key2) return null;
   const path = fieldPathText(status.fieldPath);
+  const sentence = ESTIMATE_REFUSAL_SENTENCE[status.code] ?? null;
   return (
-    <p
-      className="mono w-full text-[10px]"
-      style={{ color: "var(--bad)" }}
-      role="alert"
-      title={facts([status.code, path, status.requestId ? `request ${status.requestId}` : null])}
-      data-estimate-field-refusal={path ?? undefined}
-      data-reason-code={status.code}
-    >
-      {status.code} · {path}
-    </p>
+    <>
+      <p
+        className="mono w-full text-[10px]"
+        style={{ color: "var(--bad)" }}
+        role="alert"
+        title={facts([status.code, path, status.requestId ? `request ${status.requestId}` : null])}
+        data-estimate-field-refusal={path ?? undefined}
+        data-reason-code={status.code}
+      >
+        {status.code} · {path}
+      </p>
+      {sentence !== null ? (
+        <p className="w-full pl-[82px] text-[10px]" style={{ color: "var(--bad)" }} data-estimate-refusal-sentence>
+          {sentence}
+        </p>
+      ) : null}
+    </>
   );
 }

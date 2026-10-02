@@ -128,11 +128,12 @@ describe("FG 02-8b — the stepper does not call an unvisited step valid", () =>
     expect(document.body.textContent).not.toContain("A symbol is required.");
     expect(document.querySelector("[data-review-rail]")?.textContent).not.toContain("A symbol is required.");
     go("route");
-    expect(pill("data").getAttribute("data-step-state")).toBe("error");
-    expect(pill("data").textContent).toContain("needs attention");
+    /* U18: walking through a step without typing in it is not an error. */
+    expect(pill("data").getAttribute("data-step-state")).toBe("incomplete");
+    expect(pill("data").textContent).toContain("in progress");
   });
 
-  it("typing in a required field shows its error at once; leaving also shows it; Review always lists it", () => {
+  it("typing in a required field shows its error at once; leaving does not; Review always lists it", () => {
     const patch = vi.fn();
     mount({ draft: draft({ symbol: "" }), patch });
     go("data");
@@ -147,9 +148,10 @@ describe("FG 02-8b — the stepper does not call an unvisited step valid", () =>
     mount({ draft: draft({ symbol: "" }) });
     go("data");
     go("route");
-    expect(pill("data").getAttribute("data-step-state")).toBe("error");
+    /* U18: leaving does not engage the step; only an edit does. */
+    expect(pill("data").getAttribute("data-step-state")).toBe("incomplete");
     go("data");
-    expect(document.querySelector("[data-step-error]")?.textContent).toBe("A symbol is required.");
+    expect(document.querySelector("[data-step-error]")).toBeNull();
     cleanup();
     mount({ draft: draft({ symbol: "" }) });
     go("data");

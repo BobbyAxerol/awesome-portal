@@ -68,7 +68,7 @@ import { foldLabel, formatMetric, formatUtc, shortDigest } from "./researchForma
 import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
-import { reasonCodeSentence, REFUSAL_COPY, refusalState } from "./researchRefusal";
+import { reasonCodeSentence, REFUSAL_COPY, refusalState, type ResearchStateWithDiagnostics } from "./researchRefusal";
 import { LineageLink, lineageHref } from "./LineageLink";
 import type { ProgressRead } from "./progressClient";
 import type { CurrentSourceSearch } from "./searchClient";
@@ -402,6 +402,8 @@ export function CopyEvidenceLink({ href }: { href?: string } = {}) {
       style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
       data-action="copy-evidence-link"
       data-copy-href={href}
+      title="Copies the link to this exact view"
+      aria-live="polite"
       onClick={() => {
         /* X2 (T16): a screen may hand the exact link it means; else this address. */
         const link = href ?? window.location.href;
@@ -1556,7 +1558,9 @@ export function splitScreenState(state: ResearchState, detail: SplitDetailDocume
   const base = refusalState(refusal, false);
   if (laneState) {
     /* Terminal without an artifact (or a legacy run): asking again cannot change it. */
-    return { ...base, state: "terminal", reason: LANE_STATE_COPY[laneState], mayRetry: false, retainsContent: false };
+    /* The sentence says why; the raw conflict code and request chip add nothing to it (QA NEW-2). */
+    const terminal: ResearchStateWithDiagnostics = { ...base, state: "terminal", reason: LANE_STATE_COPY[laneState], mayRetry: false, retainsContent: false, diagnostics: undefined, detail: undefined };
+    return terminal;
   }
   return { ...base, retainsContent: false };
 }

@@ -62,10 +62,6 @@ export function ExecuteContainer({
     );
     return at === -1 ? null : at + 1;
   }, [retained]);
-  useEffect(() => {
-    if (retainedFold !== null && retainedFold !== cursor.fold) update({ fold: retainedFold });
-  }, [cursor.fold, retainedFold, update]);
-
   /* Hub only. The hub's fold stepper reads that fold's window with the same
      one read the body's own fold chips send; a fold window the body reached
      by itself (a chip, play across folds) is handed back to the hub. */
@@ -75,6 +71,29 @@ export function ExecuteContainer({
       : null;
   const shown = useRef(retainedFold);
   const readFold = controller.retainedFold;
+  /* R-1: the hash names the window on screen. A window's arrival writes its fold to the hash; a hash edited by
+     hand in the same page (cursor.fold moved while the window did not) reads that fold's window instead of being
+     written back over. Embedded in the hub, the hub's own stepper owns the move. */
+  const seen = useRef({ fold: cursor.fold, retained: retainedFold });
+  useEffect(() => {
+    const before = seen.current;
+    seen.current = { fold: cursor.fold, retained: retainedFold };
+    if (retainedFold !== before.retained) {
+      if (retainedFold !== null && retainedFold !== cursor.fold) {
+        /* UX-01: a fold the reader moved to is a history entry (the shared cursor pushes it), so Back returns to
+           the fold before it. The arrival window (nothing on screen yet) writes in place. */
+        update({ fold: retainedFold }, { replace: before.retained === null });
+      }
+      return;
+    }
+    if (cursor.fold === before.fold || cursor.fold === null || retainedFold === null || cursor.fold === retainedFold) return;
+    if (hubFold !== undefined || !segments || !readFold) return;
+    const target = Math.min(Math.max(cursor.fold, 1), segments.length);
+    const segment = segments[target - 1];
+    if (target === retainedFold || !segment) update({ fold: retainedFold });
+    else readFold(segment);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reacts to a moved hash or window only
+  }, [cursor.fold, retainedFold]);
   useEffect(() => {
     if (hubFold == null || !segments || !readFold || retainedFold === null || hubFold === retainedFold) return;
     if (shown.current !== retainedFold) return; // the body just moved; the hub hears it below first

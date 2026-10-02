@@ -104,6 +104,11 @@ describe("QA S13 · labels, not ids", () => {
     await settled();
     const message = document.querySelector("[data-refusal-message]")!;
     expect(message.textContent).toBe("These runs differ in symbol (BTCUSDT vs ETHUSDT), so they cannot be overlaid.");
+    /* wave 2: one sentence plus one short pointer, and no `rrun_` id as prose in the card. */
+    const card = document.querySelector("[data-panel='refusal']")!;
+    expect(card.querySelector("[data-refusal-keys]")).toBeNull();
+    expect(card.textContent).not.toMatch(/rrun_/);
+    expect(card.querySelector(".hint")!.textContent).toBe("One alpha across markets: use the markets tab.");
     expect(message.getAttribute("data-server-message")).toBe(body.result.refusal.message);
     expect(document.querySelector("[data-panel='refusal']")!.getAttribute("title")).toBe(body.result.refusal.message);
     expect(document.querySelector("[data-panel='refusal']")!.textContent).not.toMatch(/button|lie/);
@@ -365,5 +370,49 @@ describe("QA S13 · the per-fold chart in lines mode", () => {
     const dimmed = [...figure.querySelectorAll("[data-fold-line]")].filter((line) => (line as SVGElement).style.opacity === "0.18");
     expect(dimmed).toHaveLength(1);
     expect(dimmed[0]!.getAttribute("data-fold-line")).not.toBe(entries[0]!.getAttribute("data-fold-legend-run"));
+  });
+});
+
+describe("QA S13 wave 2 · a legend entry always points at something", () => {
+  const fold = (index: number, value: string | null) => ({
+    fold_id: `fold_${String(index + 1).padStart(2, "0")}`,
+    source_ordinal: index,
+    oos_sharpe: value,
+    availability: { state: "AVAILABLE", reason_code: null },
+  });
+  const tenFolds = (value: (index: number) => string | null) => Array.from({ length: 10 }, (_, index) => fold(index, value(index)));
+
+  function serieses(make: (index: number) => ReturnType<typeof tenFolds>) {
+    return attempts((runs, result) => {
+      result.fold_series = runs.map((run, index) => ({
+        run_id: run.run_id,
+        state: "AVAILABLE",
+        source_fold_count: 10,
+        truncated: false,
+        folds: make(index),
+        availability: { state: "AVAILABLE", reason_code: null },
+      })) as typeof result.fold_series;
+    });
+  }
+
+  it("N-3: a series with one value draws a dot (a path that is not one vertex) and says 'one point'; one with none says 'no value'", async () => {
+    server(serieses((index) => (index === 0 ? tenFolds((i) => (i === 4 ? "1.5" : null)) : index === 1 ? tenFolds(() => null) : tenFolds((i) => String(i / 10)))));
+    renderAt(base);
+    await settled();
+    const figure = document.querySelector('[data-panel="fold-chart"]')!;
+    expect(figure.getAttribute("data-fold-mode")).toBe("lines");
+    const dot = figure.querySelector('[data-fold-line][data-vertices="1"]')!;
+    expect(dot.getAttribute("d")).toMatch(/^M(\S+ \S+) L\1$/);
+    expect(figure.querySelector("[data-fold-one-point]")).not.toBeNull();
+    expect(figure.querySelector("[data-fold-no-line]")!.textContent).toContain("no value");
+  });
+
+  it("N-3 absence path: every series with several values has neither marker", async () => {
+    server(serieses((index) => tenFolds((i) => String(index + i / 10))));
+    renderAt(base);
+    await settled();
+    const figure = document.querySelector('[data-panel="fold-chart"]')!;
+    expect(figure.querySelector("[data-fold-one-point]")).toBeNull();
+    expect(figure.querySelector("[data-fold-no-line]")).toBeNull();
   });
 });

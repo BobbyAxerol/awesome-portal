@@ -94,6 +94,21 @@ export function PortalShell() {
           them together or not at all (EL-V2-01 §4.1). */}
       <PortalPresentationProvider registry={registry.data}>
       <div className="portal-shell" data-sidebar-collapsed={preferences.sidebarCollapsed}>
+        <a
+          className="portal-skip-link"
+          href="#portal-content"
+          onClick={(event) => {
+            // Move focus to the content region without touching the router's URL.
+            const target = document.getElementById("portal-content");
+            if (target) {
+              event.preventDefault();
+              target.focus();
+              target.scrollIntoView?.({ block: "start" });
+            }
+          }}
+        >
+          Skip to content
+        </a>
         <TopBar
           breadcrumbs={breadcrumbs}
           environment={environment}
@@ -129,7 +144,7 @@ export function PortalShell() {
             </div>
           ) : null}
 
-          <main className="portal-content" id="portal-content">
+          <main className="portal-content" id="portal-content" tabIndex={-1}>
             <PortalRoutes registry={registry.data} />
           </main>
         </div>

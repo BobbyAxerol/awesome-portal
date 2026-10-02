@@ -1634,7 +1634,7 @@ function ChildAuditCard({
   );
 }
 
-function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay; selected: TransitionRow | null; childAudit?: ChildAuditSlot }) {
+function Anatomy({ replay, selected, childAudit, windowLoaded = true }: { replay: CurrentSourceReplay; selected: TransitionRow | null; childAudit?: ChildAuditSlot; windowLoaded?: boolean }) {
   const child = generationOf(childAudit, selected?.fold_id ?? null);
   const route = replay.execution.route;
   const links: Array<{ key: string; value: ReactNode; na?: boolean }> = selected
@@ -1666,7 +1666,9 @@ function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay
             : replay.execution.child_audit.state !== "AVAILABLE"
               ? `not published — ${replay.route_capabilities.child_audit.reason_code ?? "no child audit on this seal"}`
               /* UX-04 / T-04: every state resolves — never a spinner that waits for a record that is not coming. */
-              : childAudit?.state === "refused" && childAudit.fold === selected.fold_id
+              : !windowLoaded
+                ? "not read — no fold window loaded"
+                : childAudit?.state === "refused" && childAudit.fold === selected.fold_id
                 ? "not read — the child audit could not be read"
                 : childAudit?.state === "ready" && childAudit.fold === selected.fold_id
                   ? `not in the ${formatCount(childAudit.audit.records.length)} loaded records`
@@ -1712,7 +1714,8 @@ function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay
 }
 
 /** Per-bar fee in the loaded window, and the full run's totals (labelled retrospective). */
-function CostTimeline({ rows, replay, reveal, transport }: {
+function CostTimeline({ rows, replay, reveal, transport, windowLoaded = true }: {
+  windowLoaded?: boolean;
   rows: readonly CurrentSourceObservation[];
   replay: CurrentSourceReplay;
   reveal: boolean;
@@ -1723,17 +1726,18 @@ function CostTimeline({ rows, replay, reveal, transport }: {
   const inWindow = rows.slice(0, cut);
   const charged = inWindow.filter((row) => row.bar?.fee && Number(row.bar.fee) !== 0);
   /* The server publishes `fee` on every bar; the window's fee is those served strings added on the digits. */
-  const windowFee = inWindow.length === 0 ? null : sumDecimalStrings(inWindow.map((row) => row.bar?.fee));
+  const windowFee = !windowLoaded || inWindow.length === 0 ? null : sumDecimalStrings(inWindow.map((row) => row.bar?.fee));
   const totals = replay.execution.totals;
   const funding = replay.route_capabilities.funding;
   return (
     <Card title="cost timeline" data-panel="cost-timeline" aside={<FactLine label="fees" fact={replay.route_capabilities.fees} name="fees" />}>
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px]">
         <span className="mono" data-cost-window>
-          this window{reveal ? " to the cursor" : ""}: {charged.length} charged bars · fee{" "}
+          this window{reveal ? " to the cursor" : ""}:{" "}
+          {windowLoaded ? <>{charged.length} charged {charged.length === 1 ? "bar" : "bars"}</> : <em data-window-charged="NOT_LOADED">not loaded</em>} · fee{" "}
           {windowFee === null ? (
-            <em data-window-fee="NOT_PUBLISHED" title="At least one bar in this window carries no fee, so no window sum is stated.">
-              not published
+            <em data-window-fee="NOT_PUBLISHED" title={windowLoaded ? "At least one bar in this window carries no fee, so no window sum is stated." : "The fold window did not load, so no window sum is stated."}>
+              {windowLoaded ? "not published" : "not loaded"}
             </em>
           ) : (
             <span data-window-fee={windowFee} title={`${windowFee} — the served per-bar fees of this window, added exactly`}>
@@ -2196,7 +2200,7 @@ export function CandleReplayBody({
               />
             ) : null}
           </Card>
-          <Anatomy replay={replay} selected={selected} childAudit={controller.childAudit} />
+          <Anatomy replay={replay} selected={selected} childAudit={controller.childAudit} windowLoaded={!noFoldWindow} />
           <ChildAuditCard replay={replay} slot={controller.childAudit} fold={windowFold} waiting={across.holding} onRetry={controller.retryChildAudit} />
         </div>
         <div className="flex min-w-0 flex-col gap-3">
@@ -2210,7 +2214,7 @@ export function CandleReplayBody({
           <Card title="MAE × MFE" hint="Needs trade records (not published)." data-absent-panel="mae-mfe">
             <FactLine label="MAE × MFE" fact={replay.route_capabilities.mae_mfe} name="mae_mfe" />
           </Card>
-          <CostTimeline rows={rows} replay={replay} reveal={reveal} transport={transport} />
+          <CostTimeline rows={rows} replay={replay} reveal={reveal} transport={transport} windowLoaded={!noFoldWindow} />
         </div>
       </div>
     </>

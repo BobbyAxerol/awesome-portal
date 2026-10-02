@@ -230,8 +230,8 @@ describe("S02_PREFILL — Screen 02", () => {
     goTo("windows");
     expect(windowValues()).toEqual([H1.lower, "", "", "", "", H1.upper]);
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2026-07-01 00:00 → 2026-07-02 23:00 (1h)");
-    expect(text('[data-prefill-caption="is.start"]')).toBe("prefilled from BTCUSDT coverage · first 1h bar");
-    expect(text('[data-prefill-caption="holdout.endExclusive"]')).toBe("prefilled from BTCUSDT coverage · end of the last 1h bar");
+    expect(text('[data-prefill-caption="is.start"]')).toBe("prefilled · first 1h bar");
+    expect(text('[data-prefill-caption="holdout.endExclusive"]')).toBe("prefilled · end of the last 1h bar");
     expect(tip("[data-prefill-source]")).toContain("Exact bar edges, UTC, end exclusive");
     /* Warmup is the index's answer, not a date computed here. */
     expect(tip("[data-prefill-source]")).toContain("not computed here");

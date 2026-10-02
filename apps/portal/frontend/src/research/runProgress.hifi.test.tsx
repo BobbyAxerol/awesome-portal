@@ -438,19 +438,19 @@ describe("FE-S03-19 — folds are pressed buttons and arrow keys move the cursor
     expect(onPinFold).toHaveBeenCalledWith(2);
   });
 
-  it("switches to compact cells past eight folds, with detail rows around the pick", () => {
+  it("switches to compact cells past twelve folds, with detail rows around the pick", () => {
     const folds = Array.from({ length: 12 }, (_, i) => ({
       fold: i + 1,
       state: (i < 6 ? "DONE" : i === 6 ? "RUNNING" : "RUNNING") as "DONE" | "RUNNING",
       started_at_utc_ms: 1000 + i,
       completed_at_utc_ms: i < 6 ? 2000 + i : null,
     })).slice(0, 7);
-    const many = [...folds, ...Array.from({ length: 5 }, (_, i) => ({ fold: 8 + i, state: "DONE" as const, started_at_utc_ms: 1, completed_at_utc_ms: 2 }))];
+    const many = [...folds, ...Array.from({ length: 6 }, (_, i) => ({ fold: 8 + i, state: "DONE" as const, started_at_utc_ms: 1, completed_at_utc_ms: 2 }))];
     view({ read: read({}, { folds: many }), foldCursor: 3 });
     expect($("[data-gantt]").getAttribute("data-gantt-mode")).toBe("compact");
-    expect(document.querySelectorAll("[data-gantt-cells] [data-fold]")).toHaveLength(12);
+    expect(document.querySelectorAll("[data-gantt-cells] [data-fold]")).toHaveLength(13);
     const rows = Array.from(document.querySelectorAll("[data-fold-row]")).map((r) => Number(r.getAttribute("data-fold-row")));
-    expect(rows).toEqual([1, 2, 3, 4, 7, 12]);
+    expect(rows).toEqual([1, 2, 3, 4, 7, 13]);
     expect($('[data-gantt-cells] [data-fold="3"]').getAttribute("aria-pressed")).toBe("true");
   });
 

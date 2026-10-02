@@ -113,7 +113,7 @@ describe("FG 03-T — the transport words follow what is true of the transport",
 
   it.each([
     [503, "no stream · server unavailable (503)"],
-    [409, "stream closed · the run's state moved (409)"],
+    [409, "no stream · read again to refresh (409)"],
     [400, "no stream · request refused (400)"],
     [403, "no stream · access refused (403)"],
   ])("a first read refused with %i says so, with the status the server gave", (status, label) => {
@@ -173,7 +173,7 @@ describe("FG 03-T — the transport words follow what is true of the transport",
   it("a refusal that stops the floor is said (409 on a read that exists, transport not carrying)", () => {
     expect(face({ transport: "closed", refusal: refusal(409) })).toEqual({
       state: "refused",
-      label: "stream closed · the run's state moved (409)",
+      label: "no stream · read again to refresh (409)",
     });
     expect(face({ transport: "closed", refusal: refusal(400) }).label).toBe("no stream · request refused (400)");
   });

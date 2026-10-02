@@ -393,12 +393,13 @@ describe("D4 — Screen 02, real route and hook", () => {
     /* The Symbol field is right there; the hint lives on the Walk-forward step, where the dates are blank. */
     expect(document.querySelector("[data-window-prefill-status]")).toBeNull();
     fireEvent.change(field("Symbol"), { target: { value: BTC.symbol } });
-    expect(text("[data-window-prefill-status]")).toBe("Bounds prefilled from coverage");
+    /* T04: that bounds were prefilled is said once, on Walk-forward. */
+    expect(document.querySelector("[data-window-prefill-status]")).toBeNull();
 
     goTo("windows");
     expect(windowValues()).toEqual([BTC.lower, "", "", "", "", BTC.upper]);
-    expect(text('[data-prefill-caption="is.start"]')).toBe("prefilled from BTCUSDT coverage · first day of 2020-01");
-    expect(text('[data-prefill-caption="holdout.endExclusive"]')).toBe("prefilled from BTCUSDT coverage · end of 2026-09");
+    expect(text('[data-prefill-caption="is.start"]')).toBe("prefilled · first day of 2020-01");
+    expect(text('[data-prefill-caption="holdout.endExclusive"]')).toBe("prefilled · end of 2026-09");
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2020-01 → 2026-09 · 81 months");
     expect(tip("[data-prefill-source]")).toContain("UTC month partitions.");
     /* The version's own declared warmup (the registry fixture's 32 bars) is named, not converted into a date. */
@@ -581,7 +582,7 @@ describe("D4 — the advanced protocol fills its own outer bounds and leaves the
     expect(field("Analysis start").value).toBe(BTC.lower);
     expect(field("Analysis end exclusive").value).toBe(BTC.upper);
     expect(field("First OOS instant").value).toBe("");
-    expect(text('[data-prefill-caption="walkForward.start"]')).toBe("prefilled from BTCUSDT coverage · first day of 2020-01");
+    expect(text('[data-prefill-caption="walkForward.start"]')).toBe("prefilled · first day of 2020-01");
     expect(tip("[data-prefill-source]")).toContain("First OOS instant is left empty: the release publishes no default for it.");
     expect(tip("[data-prefill-source]")).toContain("must fit before the analysis start.");
 
@@ -658,7 +659,7 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     fireEvent.change(field("Holdout end exclusive"), { target: { value: "2025-01-01T00:00" } });
     goTo("data");
     choose(BTC.dataset, BTC.symbol);
-    expect(text("[data-window-prefill-status]")).toBe("Not prefilled — bounds already set");
+    expect(document.querySelector("[data-window-prefill-status]")).toBeNull();
     goTo("windows");
     expect(windowValues()).toEqual(["2021-01-01T00:00", "", "", "", "", "2025-01-01T00:00"]);
     expect(text("[data-prefill-reason]")).toBe("Your bounds kept · coverage 2020-01 → 2026-09 · 81 months");

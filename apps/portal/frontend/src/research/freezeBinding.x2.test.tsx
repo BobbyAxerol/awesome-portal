@@ -200,7 +200,7 @@ describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () 
     expect(link("PARAMS_DIGEST").textContent).toContain(`sha256:${sealed.slice(0, 12)}`);
     expect(link("PARAMS_DIGEST").querySelector("span[title]")!.getAttribute("title")).toBe(sealed);
     /* The strategy source is the protected kernel digest, named by its hash rule. */
-    expect(link("STRATEGY_SOURCE").textContent).toContain("PROTECTED_SHA256");
+    expect(link("STRATEGY_SOURCE").getAttribute("title")).toContain("PROTECTED_SHA256");
     expect(link("STRATEGY_SOURCE").querySelector("span[title]")!.getAttribute("title")).toBe(FREEZE.parameter_authority!.code_fixed.code_digest);
     /* The engine pin is the seal's own recorded version, not a build constant. */
     expect(link("ENGINE_PIN").textContent).toContain(FREEZE.provenance.engine_version);
@@ -209,7 +209,7 @@ describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () 
     /* The bundle digest is QuantBT's own strategy fingerprint on this lane, and the card says so. */
     const bundle = FREEZE.stage4_binding!.rows.find((row) => row.key === "SEALED_BUNDLE")!;
     expect(link("BUNDLE_DIGEST").querySelector("span[title]")!.getAttribute("title")).toBe(bundle.value);
-    expect(link("BUNDLE_DIGEST").textContent).toContain("QuantBT strategy fingerprint");
+    expect(link("BUNDLE_DIGEST").getAttribute("title")).toContain("QuantBT strategy fingerprint");
   });
 
   it("does not label the sealed sha256 with the candidate-id rule it is not", async () => {
@@ -217,7 +217,7 @@ describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () 
     const params = container.querySelector("[data-chain-link='PARAMS_DIGEST']") as HTMLElement;
     /* F4 compares QuantBT's candidate id on this lane; the digest printed here
        is the sha256 beside it, so it may not borrow that row's rule. */
-    expect(params.querySelector("[data-chain-rule='PARAMS_DIGEST']")!.textContent).toBe("sha256 of the sealed canonical parameter map");
+    expect(params.getAttribute("data-chain-rule")).toBe("sha256 of the sealed canonical parameter map");
     expect(params.textContent).not.toContain("QuantBT candidate id");
     const candidateId = FREEZE.stage4_binding!.rows.find((row) => row.key === "SEALED_PARAMS")!.value;
     expect(candidateId).not.toBe(FREEZE.stage4_binding!.sealed_params_sha256);
@@ -228,7 +228,7 @@ describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () 
     const { container } = await settled();
     const canonical = container.querySelector("[data-chain-link='CANONICAL_FORM']") as HTMLElement;
     for (const name of FREEZE.parameter_authority!.declared.names) expect(canonical.textContent).toContain(name);
-    expect(canonical.textContent).toContain("params digest");
+    expect(canonical.getAttribute("title")).toContain("params digest");
   });
 
   it("a link the seal did not publish says so with the server's reason, never a dash or a zero", async () => {
@@ -257,12 +257,14 @@ describe("E2c · 7.9 — S07 draws the digest chain from served facts only", () 
   it("verify stays one control: the chain states its scope and points at the card that owns the button", async () => {
     const { container } = await settled();
     const chain = container.querySelector("[data-panel='digest-chain']") as HTMLElement;
-    expect(chain.querySelector("[data-chain-verify]")!.textContent).toBe("verify digest — below");
-    expect(chain.querySelector("[data-chain-verify]")!.tagName).not.toBe("BUTTON");
+    /* H29: at rest there is no static "verify digest — below" pill; a label appears only while a verify is in flight or done. */
+    expect(chain.querySelector("[data-chain-verify]")).toBeNull();
     expect(chain.querySelector("button")).toBeNull();
     expect(container.querySelectorAll("[data-action='verify']")).toHaveLength(1);
-    expect(chain.querySelector("[data-chain-note]")!.textContent).toBe("checks artifact integrity, not selection");
-    /* VD-TEXT-01: the longer scope sentence rides in the title, not under the card. */
+    /* H25/VD-TEXT-01: the scope sentence rides in the heading's title; no sub-line sits under the card. */
     expect(chain.querySelector("[data-chain-note]")!.getAttribute("title")).toContain("never issues a digest of its own");
+    expect(chain.querySelector("[data-chain-note]")!.getAttribute("title")).toContain("not selection correctness");
+    expect(chain.querySelector("p")).toBeNull();
+    expect(chain.querySelector("[data-chain-link] .w-full")).toBeNull();
   });
 });

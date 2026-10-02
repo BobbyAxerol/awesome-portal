@@ -35,6 +35,15 @@ const BADGE: Record<Stage4BindingValue["state"], { words: string; tone: string }
   NOT_COMPARED: { words: "not compared", tone: "var(--ink-faint)" },
 };
 
+/**
+ * D3: on the retained lane the server's params rows carry QuantBT's candidate id, not a sha256, yet are labelled
+ * "params digest" beside the F3 sha256. The row is named by the identity rule the server published for its value.
+ */
+export function rowLabel(row: Row): string {
+  if (row.identity_rule !== "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1") return row.label;
+  return row.key === "REPLAY_PARAMS" ? "candidate id used by replay" : "sealed candidate id (engine)";
+}
+
 function mark(state: Row["state"]): { glyph: string; tone: string } {
   if (state === "MATCH") return { glyph: "✓", tone: "var(--good)" };
   if (state === "MISMATCH") return { glyph: "✕", tone: "var(--bad)" };
@@ -99,7 +108,7 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
               data-binding-published={row.value === null ? "false" : "true"}
               title={`${RULE_WORDS[row.identity_rule]} · ${row.source_key}${row.value ? ` · ${row.value}` : ""}`}
             >
-              <span style={{ color: "var(--ink-faint)" }}>{row.label}</span>
+              <span style={{ color: "var(--ink-faint)" }}>{rowLabel(row)}</span>
               {shown !== null ? (
                 <span className="text-right" style={{ color: tick.tone === "var(--ink-faint)" ? "var(--ink)" : tick.tone }}>
                   {shown}
@@ -138,7 +147,7 @@ export function ServedStage4Binding({ binding, authority }: { binding: Stage4Bin
       </ul>
       {binding.state === "NOT_COMPARED" && binding.reason_code ? (
         <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-binding-note>
-          <span data-binding-reason={binding.reason_code}>{reasonCodeSentence(binding.reason_code)} ({binding.reason_code})</span>
+          <span data-binding-reason={binding.reason_code} title={binding.reason_code}>{reasonCodeSentence(binding.reason_code)}</span>
         </span>
       ) : binding.state === "DRIFT" ? (
         <span
@@ -163,23 +172,15 @@ function ParameterAuthorityNote({ authority }: { authority: ParameterAuthorityVa
       <span>
         <span className="mono">{authority.declared.names.length}</span> declared · inside the params digest
       </span>
-      <span>
-        Code-fixed values{" "}
+      <span title={`code digest ${fixed.code_digest ?? "not published"} · adapter contract ${fixed.adapter_contract_digest ?? "not published"}`} data-code-fixed-digests>
+        Code-fixed values:{" "}
         {fixed.state === "AVAILABLE" ? (
           <span className="mono">{fixed.values.map((value) => `${value.name} = ${value.value}`).join(" · ") || "none"}</span>
         ) : (
           <span className="mono italic" style={{ color: "var(--ink-faint)" }} title={fixed.reason_code ?? undefined} data-code-fixed-reason={fixed.reason_code ?? ""}>
             not published
           </span>
-        )}{" "}
-        · code digest{" "}
-        <span className="mono" title={fixed.code_digest ?? undefined}>
-          {fixed.code_digest ? `${shortDigest(fixed.code_digest, 8)}…` : "not published"}
-        </span>{" "}
-        · adapter contract{" "}
-        <span className="mono" title={fixed.adapter_contract_digest ?? undefined}>
-          {fixed.adapter_contract_digest ? `${shortDigest(fixed.adapter_contract_digest, 8)}…` : "not published"}
-        </span>
+        )}
       </span>
     </div>
   );

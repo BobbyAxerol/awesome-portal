@@ -17,7 +17,7 @@
  */
 
 import { HubAtlasBody } from "./hubStageAtlas";
-import { Component, lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Component, createContext, lazy, Suspense, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { LineageLink, lineageHref } from "./LineageLink";
 import { Link } from "react-router-dom";
 
@@ -184,6 +184,20 @@ const ENDED_UNSEALED = new Set(["CANCELLED", "FAILED", "RECOVERY_REQUIRED"]);
 /** Statuses of a run still on its way to a seal. */
 const LIVE = new Set(["DRAFT", "QUEUED", "RUNNING", "SEALING"]);
 
+/**
+ * QA S04-U5: a card that scrolls sideways at a narrow width shows it — a soft shadow on the edge that still
+ * has content beyond it (the classic local/scroll background pair; no script, no layout).
+ */
+const SCROLL_SHADOW_STYLE = {
+  background: [
+    "linear-gradient(to right, var(--paper-raised) 30%, transparent) 0 0 / 40px 100% no-repeat local",
+    "linear-gradient(to left, var(--paper-raised) 30%, transparent) 100% 0 / 40px 100% no-repeat local",
+    "linear-gradient(to right, var(--scroll-shade), transparent) 0 0 / 14px 100% no-repeat scroll",
+    "linear-gradient(to left, var(--scroll-shade), transparent) 100% 0 / 14px 100% no-repeat scroll",
+    "var(--paper-raised)",
+  ].join(", "),
+} as const;
+
 const PANEL_STYLE = {
   borderColor: "var(--line)",
   background: "var(--paper-raised)",
@@ -200,6 +214,12 @@ const PANEL_STYLE = {
  * answer, `PENDING_SOURCE_CALLBACK` says the answer is still coming. The
  * server's reason code rides in the title.
  */
+/**
+ * QA S04-U4 (wave 2): while the sealed evidence could not be read (a transport or server failure, not a
+ * server answer), a fact that lives in it is unknown — `not read` — and never "not published".
+ */
+export const LaneReadFailedContext = createContext(false);
+
 export function Withheld({
   availability,
   what,
@@ -207,6 +227,8 @@ export function Withheld({
   availability: Availability | { state: keyof typeof WITHHELD_WORDS; reason_code: string | null };
   what?: string;
 }) {
+  const laneReadFailed = useContext(LaneReadFailedContext);
+  if (laneReadFailed && availability.state === "NOT_PUBLISHED") return <NotRead phase="not-read" what={what} />;
   /* F1: a token this screen coined itself is shown as a screen note, never as a server code. */
   const local = feLocalAbsenceId(availability.reason_code);
   if (local !== null) return <FeLocalAbsent id={local} what={what} />;
@@ -310,8 +332,10 @@ function AbsenceNote({
   what?: string;
   extra?: ReactNode;
 }) {
+  const laneReadFailed = useContext(LaneReadFailedContext);
+  const unread = laneReadFailed && availability.state === "NOT_PUBLISHED";
   const local = feLocalAbsenceId(availability.reason_code);
-  const sentence = local !== null ? null : reasonCodeSentence(availability.reason_code);
+  const sentence = local !== null || unread ? null : reasonCodeSentence(availability.reason_code);
   return (
     <p
       className="text-[11px] leading-[1.5]"
@@ -468,7 +492,9 @@ function PassportField({
   );
 }
 
-function AbsentClaimField({ name, bar, unread = null }: { name: string; bar?: boolean; unread?: "loading" | "not-read" | null }) {
+function AbsentClaimField({ name, bar, unread: unreadProp = null }: { name: string; bar?: boolean; unread?: "loading" | "not-read" | null }) {
+  const laneReadFailed = useContext(LaneReadFailedContext);
+  const unread = unreadProp ?? (laneReadFailed ? "not-read" : null);
   /* F1 (FG 04-F): with no hub in hand the field is unknown, not unpublished. */
   if (unread !== null) {
     return (
@@ -2415,7 +2441,11 @@ function RetainedVerdictTable({
     <section
       className="overflow-x-auto rounded-[6px] border"
       data-retained-verdicts={verdicts.state}
-      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+      data-scrolls-sideways
+      role="region"
+      aria-label="Per-fold verdict table; scrolls sideways when narrow"
+      tabIndex={0}
+      style={{ borderColor: "var(--line)", ...SCROLL_SHADOW_STYLE }}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
         <span className="inline-flex flex-wrap items-center gap-2.5">
@@ -2983,6 +3013,8 @@ const VERDICT_COLUMNS: [string, "left" | "right"][] = [
  * Sharpe and decay are the registry-v3 values or their typed absences. The spec's closing clause about the claim is not asserted.
  */
 function VerdictSummary({ hub }: { hub: EvidenceHub }) {
+  const laneReadFailed = useContext(LaneReadFailedContext);
+  const perFoldNotApplicable = hub.source_absences.per_fold_metrics?.state === "NOT_APPLICABLE";
   const folds = hub.core.fold_navigation;
   const observed = folds && isAvailable(folds.availability) ? (folds.published_fold_count ?? folds.observed_folds.length) : null;
   const metrics = hub.oos_performance?.metrics ?? [];
@@ -2997,6 +3029,16 @@ function VerdictSummary({ hub }: { hub: EvidenceHub }) {
         <span data-verdict-fact={metric.key} data-exact={metric.value} title={metric.value}>
           {name} {sign}
           {shown ?? metric.value}
+        </span>
+      );
+    }
+    /* QA S04-U8: the table under this header already says `per-fold metrics — not applicable`; the header
+       does not repeat the same absence as two more clauses. */
+    if (perFoldNotApplicable) return null;
+    if (laneReadFailed && metric.availability.state === "NOT_PUBLISHED") {
+      return (
+        <span data-verdict-fact={metric.key} data-withheld="NOT_READ">
+          {name} not read
         </span>
       );
     }
@@ -4010,7 +4052,13 @@ function laneGapOf(passport: PassportSlot): LaneGap {
 /** One served claim fact, verbatim, or its typed absence. */
 function FactCell({ fact, label, gap = null }: { fact: CurrentSourceClaimFact | null; label: string; gap?: LaneGap }) {
   if (fact === null && gap !== null) {
-    return "phase" in gap ? <NotRead phase={gap.phase} what={label} /> : <Withheld availability={gap.availability} what={label} />;
+    if ("phase" in gap) return <NotRead phase={gap.phase} what={label} />;
+    /* QA S04-U9: the lane being "not applicable" is a fact about the lane, not about this claim fact. The
+       header's claim strip says `not published` for the same fact; the table says the same word. */
+    if (gap.availability.state === "NOT_APPLICABLE") {
+      return <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={label} />;
+    }
+    return <Withheld availability={gap.availability} what={label} />;
   }
   if (fact === null) return <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={label} />;
   if (fact.value === null) {
@@ -4830,6 +4878,7 @@ export function EvidenceFlow({
 
   return (
     <NamedWindowContext.Provider value={evidenceWindow.named}>
+    <LaneReadFailedContext.Provider value={passport.state === "refused" && passport.refusal.mayRetry && passportSkip === null}>
     <div
       className="mx-auto flex w-full max-w-[1440px] flex-col gap-3.5 px-7 pb-16 pt-5"
       data-screen="evidence-flow"
@@ -4994,6 +5043,7 @@ export function EvidenceFlow({
         {hub ? <StageNav runId={runId} cursor={cursor} windowNamed={evidenceWindow.named} onStage={onStage} /> : null}
       </ResearchPanel>
     </div>
+    </LaneReadFailedContext.Provider>
     </NamedWindowContext.Provider>
   );
 }

@@ -67,7 +67,7 @@ import {
   timeframeChips,
   trialsPinned,
 } from "./dataDeclaration";
-import { ConditionsChecklist, PlannedFolds, WarmupChip, WindowBars, WindowBarsLine, hasEstimateStrip } from "./EstimateParts";
+import { ConditionsChecklist, EarliestStartOffer, PlannedFolds, WarmupChip, WindowBars, WindowBarsLine, hasEstimateStrip } from "./EstimateParts";
 import { EstimateFieldRefusal, EstimateStatusLine, refusedAt } from "./EstimateStatus";
 import type { EstimateStatus } from "./useDeclarationEstimate";
 import { OOS_STATE_LABEL, statusTone } from "./EngineAtlas";
@@ -86,6 +86,7 @@ import {
   SWEEP_CEILING,
   applyCoveragePrefill,
   blockingProblems,
+  isIncompleteProblem,
   carriedCoverage,
   earlyStoppingInvalid,
   effectiveStrategyId,
@@ -194,8 +195,8 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Wide enough for `05/01/2026, 12:00 AM` and the picker icon at the input's 11px mono. */
-const INSTANT_FIELD_WIDTH = 196;
+/** Wide enough for `05/01/2026, 12:00 AM`, the picker icon and the `UTC` suffix beside the input at 11px mono (RG1). */
+const INSTANT_FIELD_WIDTH = 236;
 
 function Field({
   label,
@@ -398,6 +399,8 @@ function WizardBar({
             role="tab"
             aria-selected={isCurrent}
             aria-current={isCurrent ? "step" : undefined}
+            /* Roving tabindex: the tab list is one stop, arrows move inside it (U14). */
+            tabIndex={isCurrent ? 0 : -1}
             aria-label={showText ? undefined : `${step.label} — ${caption}`}
             title={showText ? undefined : `${step.label} — ${caption}`}
             data-step-pill={step.id}
@@ -834,7 +837,8 @@ function RouteStep({
                       </span>
                     ) : null}
                     <span className="mono text-[8.5px]" style={{ color: "var(--ink-faint)" }}>
-                      {route.family} · {route.execution_contract}
+                      {/* Family and contract can be the same word (`legacy`): printed once (R21/T16). */}
+                      {route.family === route.execution_contract ? route.family : `${route.family} · ${route.execution_contract}`}
                     </span>
                   </button>
                 );
@@ -910,6 +914,7 @@ function RoutePanel({ route }: { route: AtlasDocument["routes"][number] | null }
   if (!route) return null;
   const facts = route.engine_facts ?? null;
   const resolved = facts?.resolved_backend ?? null;
+  const backendText = resolved?.state === "RESOLVED" ? resolved.value : resolved?.state === "SPEC_DEPENDENT" ? "backend per specification" : route.backend;
   return (
     <div
       className="flex flex-col gap-2 rounded-[6px] border px-3 py-2.5"
@@ -921,9 +926,12 @@ function RoutePanel({ route }: { route: AtlasDocument["routes"][number] | null }
         <span className="mono rounded-[3px] border px-1 text-[9px]" style={{ borderColor: "var(--accent)", color: "var(--accent)" }}>
           {route.execution_contract}
         </span>
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={resolved?.reason ?? undefined}>
-          {resolved?.state === "RESOLVED" ? resolved.value : resolved?.state === "SPEC_DEPENDENT" ? "backend per specification" : route.backend}
-        </span>
+        {/* The backend word can be the contract's own (`legacy` twice): the second is dropped (R21/T16). */}
+        {backendText !== route.execution_contract ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={resolved?.reason ?? undefined} data-route-backend>
+            {backendText}
+          </span>
+        ) : null}
         {facts ? (
           <span
             className="ml-auto text-[10px]"
@@ -1000,7 +1008,8 @@ function prefillCaption(field: PrefillField, source: CoverageSource): string {
     : start
       ? `first day of ${source.firstMonth}`
       : `end of ${source.lastMonth}`;
-  return `prefilled from ${source.symbol} coverage · ${edge}`;
+  /* The source (dataset, symbol, span) is the note above the windows; the caption names only the edge (T04). */
+  return `prefilled · ${edge}`;
 }
 
 /** The field's caption node, or nothing when the field holds a value that is not from coverage. */
@@ -1096,7 +1105,6 @@ function DataStep({
     && (listing?.partial !== true || serverMiss === typedSymbol)
     && !symbols.some((item) => item.symbol.includes(typedSymbol))
     && !serverItems.some((item) => item.symbol.includes(typedSymbol));
-  const prefilledNow = outerFields(draft.protocol).some((field) => carriedCoverage(draft, field) !== null);
   const publishedTimeframes = limits.declaredTimeframes ?? [];
   const timeframeDeclared = publishedTimeframes.includes(draft.timeframe);
   const versionLabel = bindingVersionLabel(draft, registry);
@@ -1209,25 +1217,10 @@ function DataStep({
       {/* D4: what the pick did to the walk-forward dates — filled, kept, or
           why nothing was. Silent until a dataset is chosen. */}
       {/* The Symbol field is right above and the Walk-forward step says "Pick a symbol to prefill windows" where the blank dates are: not a third time here. */}
-      {draft.datasetId !== "" && prefillPlan.state !== "no-symbol" && prefillPlan.state !== "symbol-unlisted" ? (
-        <p
-          className="text-[9.5px] leading-[1.5]"
-          style={{ color: "var(--ink-soft)" }}
-          data-window-prefill-status
-          data-prefill-state={prefillPlan.state}
-          title={
-            prefillPlan.state !== "ready"
-              ? undefined
-              : prefilledNow
-                ? "Outer walk-forward bounds prefilled from this coverage — edit them in the Walk-forward step."
-                : "Coverage is published; the outer walk-forward bounds already hold your own values, so nothing was prefilled."
-          }
-        >
-          {prefillPlan.state !== "ready"
-            ? prefillPlan.reason
-            : prefilledNow
-              ? "Bounds prefilled from coverage"
-              : "Not prefilled — bounds already set"}
+      {/* T04: that bounds were prefilled is said once, on the Walk-forward step where they are; here only a reason nothing could be. */}
+      {draft.datasetId !== "" && prefillPlan.state !== "no-symbol" && prefillPlan.state !== "symbol-unlisted" && prefillPlan.state !== "ready" ? (
+        <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-window-prefill-status data-prefill-state={prefillPlan.state}>
+          {prefillPlan.reason}
         </p>
       ) : null}
 
@@ -1551,6 +1544,8 @@ function WindowsStep({
     return { [kind]: value, ...(outside ? { declaredV2: true } : admitsSpecV2(profile) ? {} : { declaredV2: undefined }) };
   };
   const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe);
+  /* U01: only the declaration-estimate answer serves the earliest start; no other estimate does. */
+  const servedEstimate = estimateStatus.kind === "served" ? estimateStatus.estimate : null;
   const modes = atlas?.modes ?? [];
   const selectedMode = modes.find((mode) => mode.mode_id === draft.optimizationMode) ?? null;
   const scheduleOptions = atlas && selectedMode ? scheduleChoices(atlas, selectedMode) : [];
@@ -1596,7 +1591,7 @@ function WindowsStep({
               <span className="mono w-[72px] flex-none text-[10.5px] font-semibold">{label}</span>
               <Field minWidth={INSTANT_FIELD_WIDTH} label="start">
                 <DateTimeInput
-                  style={inputStyle(Boolean(error) || refusedAt(estimateStatus, "windows", key))}
+                  style={inputStyle(Boolean(error) || refusedAt(estimateStatus, "windows", key, "start"))}
                   value={draft.windows[key].start}
                   onChange={(value) => setWindow(key, "start", value)}
                   label={`${label} start`}
@@ -1604,7 +1599,7 @@ function WindowsStep({
               </Field>
               <Field minWidth={INSTANT_FIELD_WIDTH} label="end exclusive">
                 <DateTimeInput
-                  style={inputStyle(Boolean(error) || refusedAt(estimateStatus, "windows", key))}
+                  style={inputStyle(Boolean(error) || refusedAt(estimateStatus, "windows", key, "end_exclusive"))}
                   value={draft.windows[key].endExclusive}
                   onChange={(value) => setWindow(key, "endExclusive", value)}
                   label={`${label} end exclusive`}
@@ -1613,6 +1608,11 @@ function WindowsStep({
               <PrefillLine draft={draft} field={outerField(key, "start")} label={`${label} start`} />
               <PrefillLine draft={draft} field={outerField(key, "endExclusive")} label={`${label} end`} />
               <EstimateFieldRefusal status={estimateStatus} owns="windows" key2={key} />
+              {key === "is" ? (
+                <div className="w-full pl-[82px] empty:hidden">
+                  <EarliestStartOffer estimate={servedEstimate} start={draft.windows.is.start} onUse={(instant) => setWindow("is", "start", instant)} />
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -1672,6 +1672,13 @@ function WindowsStep({
             onChange={(windowMode) => patch({ walkForward: { ...draft.walkForward, ...walkForwardChoice("windowMode", windowMode) } })}
           />
           <EstimateFieldRefusal status={estimateStatus} owns="walk_forward" />
+          <div className="w-full empty:hidden">
+            <EarliestStartOffer
+              estimate={servedEstimate}
+              start={draft.walkForward.start}
+              onUse={(instant) => patch({ walkForward: { ...draft.walkForward, start: instant }, ...touchPatch(draft, "walkForward.start") })}
+            />
+          </div>
           {draft.walkForward.windowMode === "rolling" && rollingAdmitted ? (
             <Field label="Train width" title={options?.train_window?.rule ?? "Required for rolling, e.g. 180D or 72h."}>
               <input
@@ -2498,9 +2505,13 @@ export function timelineRows(
 }
 
 /** The fold count as a served fact: "≈ 14 outer folds · server plan", a served range, or a typed absence. */
+function hasNoOuterFolds(plan: FoldPlan, protocol: RunDraft["protocol"]): boolean {
+  return plan.kind === "absent" && protocol === "three_window_decay" && plan.reason === "profile publishes no fold bounds";
+}
+
 function FoldPlanLine({ plan, protocol }: { plan: FoldPlan; protocol: RunDraft["protocol"] }) {
   /* The admitted three-window profile serves `fold_bounds: null`: the protocol has no outer folds, so nothing is missing. */
-  const noFolds = plan.kind === "absent" && protocol === "three_window_decay" && plan.reason === "profile publishes no fold bounds";
+  const noFolds = hasNoOuterFolds(plan, protocol);
   const text =
     plan.kind === "server-plan"
       ? `≈ ${plan.count} outer folds`
@@ -2631,7 +2642,8 @@ function WindowTimeline({
         {hasEstimateStrip(estimate) || estimateStatus.kind !== "idle" ? (
           <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1" data-estimate-strip>
             <WarmupChip estimate={estimate} />
-            <PlannedFolds estimate={estimate} />
+            {/* One fold statement per protocol: the three-window protocol has no outer folds, so the planner's count would contradict it (RG2). */}
+            {hasNoOuterFolds(fold, draft.protocol) ? null : <PlannedFolds estimate={estimate} />}
             <EstimateStatusLine status={estimateStatus} onRetry={onRetryEstimate} />
           </p>
         ) : null}
@@ -2711,8 +2723,10 @@ function ClaimForecast({
             <span style={{ color: "var(--role-holdout)" }}>{claimToken(scheduleFact.chronological_validation_claim)}</span>
           </ForecastLine>
           {scheduleFact.oos_use_state ? (
-            <span className="mono text-right text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-forecast-oos={scheduleFact.oos_use_state}>
-              {OOS_STATE_LABEL[scheduleFact.oos_use_state] ?? scheduleFact.oos_use_state}
+            /* The Atlas words NOT_APPLICABLE "no held-out window — train = test"; beside three declared windows that
+               reads as a contradiction (R51), so here the served state is stated as it is. */
+            <span className="mono text-right text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-forecast-oos={scheduleFact.oos_use_state} title={scheduleFact.oos_use_state}>
+              {scheduleFact.oos_use_state === "NOT_APPLICABLE" ? "OOS: not applicable" : (OOS_STATE_LABEL[scheduleFact.oos_use_state] ?? scheduleFact.oos_use_state)}
             </span>
           ) : null}
           {/* CG-P04-05 / S02-01: the cap is an Atlas fact. The sentence below
@@ -2772,7 +2786,8 @@ function ReviewRows({
   withWindows?: boolean;
 }) {
   const overrides = Object.keys(draft.optimizationConfigOverrides);
-  const day = (value: string) => (value === "" ? NOT_DECLARED : value.slice(0, 10));
+  /* The instants as the form and the timeline print them (U12), not a second date-only format. */
+  const at = (value: string) => (value === "" ? NOT_DECLARED : instantText(value));
   /* Scratch is its own declaration; a bound run has nothing to show until a version is chosen. */
   const chosen = !draft.bound || draft.alphaVersionId !== "";
   const versionRead = chosen && versionDeclared;
@@ -2804,7 +2819,7 @@ function ReviewRows({
       {withWindows ? (
         <Row label="windows" labelWidth={labelWidth}>
           {draft.protocol === "three_window_decay"
-            ? `IS ${day(draft.windows.is.start)} → OOS ${day(draft.windows.oos.start)} → holdout ${day(draft.windows.holdout.start)}`
+            ? `IS ${at(draft.windows.is.start)} → OOS ${at(draft.windows.oos.start)} → holdout ${at(draft.windows.holdout.start)} → end ${at(draft.windows.holdout.endExclusive)}`
             : `walk-forward · ${draft.walkForward.frequency || "frequency not declared"} · ${draft.walkForward.windowMode || "window mode not declared"}`}
         </Row>
       ) : null}
@@ -3077,18 +3092,22 @@ export function NewRun(props: NewRunProps) {
   useEffect(() => {
     onStepChange?.(step);
   }, [step, onStepChange]);
-  /* Reaching a step is not enough to call its empty required fields wrong: a
-     fresh form opened on Market data read "A symbol is required." before a key
-     was pressed. A step's own problems show once the reader has edited it or
-     left it; Review always lists every one. (QA R99/U18 asks for "edited" only;
-     that would also hide a wrong value the reader walked past, so the recorded
-     rule stays until it is decided.) */
+  /* Reaching a step, or walking through it, is not enough to call what is still EMPTY wrong: a fresh form opened
+     on Market data read "A symbol is required." before a key was pressed, and passing through Market data on the
+     way to Review turned it red (U18). An unfinished step reads "in progress" until the reader edits it. A value
+     that is there and wrong (a copied 4h the version does not declare) is a different thing: leaving the step
+     with it shows it. Review always lists every problem, so nothing walked past is hidden. */
   const [engaged, setEngaged] = useState<ReadonlySet<StepId>>(() => new Set());
   const previousStep = useRef<StepId>(step);
+  const problemsRef = useRef<{ draft: RunDraft; blocking: ReturnType<typeof blockingProblems> } | null>(null);
   useEffect(() => {
     const left = previousStep.current;
     previousStep.current = step;
-    if (left !== step) setEngaged((previous) => (previous.has(left) ? previous : new Set([...previous, left])));
+    const latest = problemsRef.current;
+    if (left === step || latest === null) return;
+    if (latest.blocking.some((problem) => problem.step === left && !isIncompleteProblem(latest.draft, problem))) {
+      setEngaged((previous) => (previous.has(left) ? previous : new Set([...previous, left])));
+    }
   }, [step]);
   const stepPatch = useCallback(
     (change: Partial<RunDraft>) => {
@@ -3098,6 +3117,7 @@ export function NewRun(props: NewRunProps) {
     [patch, step],
   );
   const blocking = useMemo(() => blockingProblems(draft, limits), [draft, limits]);
+  problemsRef.current = { draft, blocking };
   const errorByStep = useMemo(
     () => new Map(blocking.map((problem) => [problem.step, problem.message])),
     [blocking],

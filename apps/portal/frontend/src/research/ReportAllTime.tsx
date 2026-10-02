@@ -92,7 +92,7 @@ function FactCell({ label, fact, unit, heading }: { label: string; fact: Enriche
   );
 }
 
-function SummaryCell({ label, value, block, unit }: { label: string; value: string | null; block: EnrichedAnalysis; unit: "fraction" }) {
+function SummaryCell({ label, value, block, unit, heading }: { label: string; value: string | null; block: EnrichedAnalysis; unit: "fraction"; heading?: string }) {
   const summary = block.library_summary;
   const shown = summary.state === "AVAILABLE" && value !== null ? formatMetric(value, unit) : null;
   const title = [`${label} · OOS all time · portal-derived`, value !== null ? `exact ${value}` : null, block.scope.locator, `input ${shortDigest(summary.input_digest)}`]
@@ -100,7 +100,7 @@ function SummaryCell({ label, value, block, unit }: { label: string; value: stri
     .join("\n");
   return (
     <div data-all-time-fact={label} data-fact-state={shown !== null ? "AVAILABLE" : "NOT_PUBLISHED"}>
-      <dt>{label}</dt>
+      <dt>{heading ?? label}</dt>
       <dd title={title} aria-label={`${label} ${shown ?? "not published"}, portal-derived`} data-exact={value ?? undefined}>
         {shown !== null ? shown : <AbsentLine state={summary.state} reason={summary.reason_code} what="" />}
       </dd>
@@ -426,7 +426,7 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
         {block !== null ? (
           <div className="rr-at">
             <dl className="rr-at-facts" data-all-time-facts>
-              <SummaryCell label="return" value={block.library_summary.return_fraction} block={block} unit="fraction" />
+              <SummaryCell label="return" heading="Return · all-time OOS · portal" value={block.library_summary.return_fraction} block={block} unit="fraction" />
               {/* QA S09 (UX-3): three Sharpe figures exist for one run; this one is the all-time OOS Sharpe, and says so. */}
               <FactCell label="Sharpe" heading="Sharpe · all-time OOS" fact={block.facts.metrics.sharpe} unit="ratio" />
               <FactCell label="CAGR" fact={block.facts.metrics.cagr_fraction} unit="fraction" />

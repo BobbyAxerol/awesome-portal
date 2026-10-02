@@ -300,7 +300,8 @@ export interface EvidenceCursorController {
   decline: (key: "mode" | "schedule", run: string | null) => void;
   setStage: (stage: EvidenceStage) => void;
   setFold: (fold: number) => void;
-  update: (patch: Partial<EvidenceCursor>) => void;
+  /** `replace`: the change is a write-back (a window arriving), not a move the reader made — no history entry. */
+  update: (patch: Partial<EvidenceCursor>, options?: { replace?: boolean }) => void;
   reset: () => void;
 }
 
@@ -332,13 +333,20 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
 
   const latest = useRef(cursor);
   latest.current = cursor;
+  /* QA S05 U15: a fold the reader picks is a history entry (Back returns to the fold before it);
+     typing, scrubbing, clamps and the mount write keep replacing. */
+  const pushNext = useRef(false);
 
   /* Mount writes the full key set even when the reader arrived without a hash,
      so the address bar always describes what is on screen. */
   useEffect(() => {
     const next = serializeCursor(cursor);
+    const push = pushNext.current;
+    pushNext.current = false;
     if (window.location.hash !== next) {
-      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${next}`);
+      const url = `${window.location.pathname}${window.location.search}${next}`;
+      if (push) window.history.pushState(null, "", url);
+      else window.history.replaceState(null, "", url);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on every cursor change by design
   }, [cursor]);
@@ -363,7 +371,8 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
     return () => window.removeEventListener("hashchange", onHashChange);
   }, [runId]);
 
-  const update = useCallback((patch: Partial<EvidenceCursor>) => {
+  const update = useCallback((patch: Partial<EvidenceCursor>, options?: { replace?: boolean }) => {
+    if (options?.replace !== true && patch.fold !== undefined && patch.fold !== latest.current.fold) pushNext.current = true;
     setCursor((previous) => {
       const next = { ...previous, ...patch };
       /* A key the reader just set is no longer the one the link carried. */

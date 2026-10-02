@@ -10,7 +10,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { healthy, noBenchmark, partialMonth } from "./enrichedAnalysis.fixtures";
-import { NOPRINT_NOTE, countLine, nearestPoint, revisionNotice, samplingWords } from "./ReportDetail";
+import { NOPRINT_NOTE, countLine, equityCaption, nearestPoint, revisionNotice, samplingWords } from "./ReportDetail";
 import { ReportRoute } from "./ReportRoute";
 import type { ReportDetail } from "./reportClient";
 import { BreakableCode, daysAndHours, humanToken, kilobytes, monthWords, roundAxis } from "./reportText";
@@ -364,5 +364,68 @@ describe("QA S09 · states and flow", () => {
     expect(line.textContent).not.toContain("rrun_3d5633d2adb712722fe4ba108102aa5d");
     expect(line.querySelector("[title]")!.getAttribute("title")).toBe("rrun_3d5633d2adb712722fe4ba108102aa5d");
     expect(panel("final-audit")!.querySelector("[data-optimizer-reinvoked]")!.textContent).toMatch(/optimizer not re-run/);
+  });
+});
+
+describe("QA S09 wave 2 · remaining partials", () => {
+  const seg = (state: string, emitted: number | null, source: number | null, sampling: string | null) =>
+    ({ state, emitted_point_count: emitted, source_observation_count: source, sampling, points: [] }) as any;
+
+  it("N-4: a sampled IS segment and a full OOS segment each carry their own sampling word (never '300 of 720' then 'all points')", () => {
+    expect(equityCaption(seg("AVAILABLE", 336, 336, "FULL"), seg("AVAILABLE", 300, 720, "FULL"))).toBe(
+      "before OOS 300 of 720 points · sampled (extrema) · OOS 336 points · all points · UTC",
+    );
+    expect(equityCaption(seg("AVAILABLE", 598, 1488, "EXTREMA"), seg("AVAILABLE", 261, 261, "EXTREMA"))).toBe(
+      "before OOS 261 points · OOS 598 of 1488 points · sampled (extrema) · UTC",
+    );
+  });
+
+  it("N-4 value path: agreeing segments say the sampling once; a single segment keeps its caption; no sampling token stays typed", () => {
+    expect(equityCaption(seg("AVAILABLE", 336, 336, "FULL"), seg("AVAILABLE", 300, 300, "FULL"))).toBe("before OOS 300 points · OOS 336 points · all points · UTC");
+    expect(equityCaption(seg("AVAILABLE", 25, 744, "EXTREMA"), null)).toBe("25 of 744 points · sampled (extrema) · UTC");
+    expect(equityCaption(seg("AVAILABLE", 25, 25, null), null)).toBe("25 points · sampling not published · UTC");
+  });
+
+  it("UX-22: the failed sheet shows an opaque attempt id as prefix + 8, the whole id in the tooltip", async () => {
+    const body = fixture("research-report.wfo-failed.valid.json");
+    const field = (body.frozen_core.identity as any[]).find((entry) => entry.key === "attempt_id");
+    field.value = "rwa_06GFEQ8XZ00VDADK2P63C144W3";
+    serve(body);
+    renderRoute(body.run_id);
+    await screen.findByText(/run failed at/);
+    await act(async () => {});
+    const cell = panel("identity")!.querySelector('[data-identity="attempt_id"] .v')!;
+    expect(cell.textContent).toBe("rwa_06GFEQ8X");
+    expect(cell.querySelector("span")!.getAttribute("title")).toBe("rwa_06GFEQ8XZ00VDADK2P63C144W3");
+  });
+
+  it("N-1: an artifact reason code breaks at underscores and keeps its exact text", async () => {
+    const body = retained();
+    await open(body);
+    const code = panel("artifacts")!.querySelector("[data-reason-code]")!;
+    expect(code.querySelector("wbr")).not.toBeNull();
+    expect(code.textContent).toMatch(/^[A-Z0-9_]+$/);
+  });
+
+  it("UX-1: the headline tile names its source beside its scope; a tile without a scope names none", async () => {
+    const body = retained();
+    await open(body);
+    const tile = panel("headline")!.querySelector('[data-headline="NET_RETURN"]')!;
+    expect(tile.querySelector("[data-headline-scope]")).not.toBeNull();
+    expect(tile.querySelector("[data-headline-source]")!.textContent).toBe("sealed report");
+    cleanup();
+    forgetHeldReports();
+    const none = retained();
+    none.frozen_core.headline = none.frozen_core.headline.map((cell: any) => ({ ...cell }));
+    none.frozen_core.headline[0].scope = "NOT_PUBLISHED";
+    await open(none);
+    expect(panel("headline")!.querySelector('[data-headline="' + none.frozen_core.headline[0].key + '"] [data-headline-source]')).toBeNull();
+  });
+
+  it("UX-1: the all-time return says its scope and source in its label, beside the headline return of another scope", async () => {
+    const body = retained();
+    body.enriched_analysis = clone(healthy());
+    await open(body);
+    expect(panel("all-time")!.querySelector("[data-all-time-fact='return'] dt")!.textContent).toBe("Return · all-time OOS · portal");
   });
 });

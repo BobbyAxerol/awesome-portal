@@ -237,7 +237,8 @@ describe("dataset identity", () => {
     expect(q("[data-dataset-chosen]")!.getAttribute("data-dataset-chosen")).toBe("false");
     fireEvent.click(q('[data-action="use-dataset"]')!);
     expect(q("[data-dataset-chosen]")!.getAttribute("data-dataset-chosen")).toBe("true");
-    expect(q("[data-window-prefill-status]")!.textContent).toBe("Bounds prefilled from coverage");
+    /* T04: that bounds were prefilled is said once, on Walk-forward; Market data prints only a reason nothing could be. */
+    expect(q("[data-window-prefill-status]")).toBeNull();
   });
 
   it("several datasets: a select, with an unavailable one disabled and carrying its reason", () => {

@@ -60,6 +60,8 @@ export function AlphaImportRoute() {
       registry={controller.registry}
       registryTotal={controller.registryTotal}
       registryAlpha={controller.registryAlpha}
+      registryShowAll={controller.registryShowAll}
+      onToggleRegistryShowAll={controller.onToggleRegistryShowAll}
       registryNext={controller.registryNext}
       registryMore={controller.registryMore}
       onLoadMoreRegistry={controller.onLoadMoreRegistry}

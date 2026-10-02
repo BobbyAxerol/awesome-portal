@@ -855,6 +855,8 @@ export interface AlphaImportProps {
   registryTotal?: number | null;
   /** The `alpha_id` the served list was requested with; the server already filtered by it. */
   registryAlpha?: string;
+  registryShowAll?: boolean;
+  onToggleRegistryShowAll?: () => void;
   /** The server's opaque `next_cursor`; a "load more" row shows only while it is non-null. */
   registryNext?: string | null;
   registryMore?: "idle" | "loading" | "failed";
@@ -942,6 +944,8 @@ export function AlphaImport(props: AlphaImportProps) {
     registry,
     registryTotal = null,
     registryAlpha = "",
+    registryShowAll = false,
+    onToggleRegistryShowAll,
     registryNext = null,
     registryMore = "idle",
     onLoadMoreRegistry,
@@ -1001,7 +1005,7 @@ export function AlphaImport(props: AlphaImportProps) {
   const typedAlpha = alphaId.trim();
   /* QA S14 U11: a half-typed or malformed id is a typo to correct, never a filter. */
   const alphaIdInvalid = typedAlpha.length > 0 && !new RegExp(RULE_PATTERNS.alphaId).test(typedAlpha);
-  const filterAlpha = alphaIdInvalid ? "" : typedAlpha;
+  const filterAlpha = alphaIdInvalid || registryShowAll ? "" : typedAlpha;
   const visibleRegistry = filterAlpha && filterAlpha !== registryAlpha ? registry.filter((entry) => entry.alpha_id === filterAlpha) : registry;
   const registryCapped = typeof registryTotal === "number" && registryTotal > registry.length;
   const registeredEntry = registration
@@ -1391,7 +1395,7 @@ export function AlphaImport(props: AlphaImportProps) {
                           : alphaId.trim().length === 0
                             ? "Name the alpha this version belongs to."
                             : alphaIdInvalid
-                              ? ALPHA_ID_RULE
+                              ? "Fix the alpha id."
                               : busy ?? (registration !== null ? "Registered." : null)
                   }
                 />
@@ -1515,6 +1519,11 @@ export function AlphaImport(props: AlphaImportProps) {
         <div className="ai-card" data-pad>
           <h2 className="ai-label">
             alpha registry{filterAlpha ? ` — ${filterAlpha}` : ""}
+            {onToggleRegistryShowAll && (registryShowAll || (typedAlpha && !alphaIdInvalid)) ? (
+              <button type="button" className="btn-ghost" data-action="registry-show-all" aria-pressed={registryShowAll} onClick={onToggleRegistryShowAll} style={{ marginLeft: 8 }}>
+                {registryShowAll ? "filter by this alpha" : "show all alphas"}
+              </button>
+            ) : null}
             {registryCapped ? (
               <span className="mono" data-registry-total title="The server lists the newest versions only; the total is the server's count.">
                 {" "}· top {registry.length} / {registryTotal}

@@ -1,7 +1,7 @@
 /**
  * Screen 07 §2.5 — the what-if sandbox (A10c).
  *
- * Two sliders around the frozen θ*, a ΔJ₁ preview read from the server's 9×9
+ * Two sliders around the frozen θ*, a ΔJ preview read from the server's 9×9
  * table, a coverage count, one explicit "evaluate grid" action and one
  * "create sibling attempt →" fork. The rules this card keeps:
  *
@@ -226,10 +226,10 @@ function LiveWhatIf({
 
   const preview = cell
     ? cell.state === "EVALUATED" && cell.delta_j !== null
-      ? `ΔJ₁ ${shownSignedDecimal(cell.delta_j)}`
+      ? `ΔJ ${shownSignedDecimal(cell.delta_j)}`
       : cell.state === "EVALUATED"
-        ? "ΔJ₁ — base objective not evaluated"
-        : `ΔJ₁ — ${CELL_WORDS[cell.state]}`
+        ? "ΔJ — base objective not evaluated"
+        : `ΔJ — ${CELL_WORDS[cell.state]}`
     : null;
 
   const slider = (index: 0 | 1, value: number, set: (next: number) => void) => {
@@ -289,8 +289,8 @@ function LiveWhatIf({
         />
         <span className="mono flex justify-between text-[9px]" style={{ color: "var(--ink-faint)" }}>
           <span>{spec.values[0]}</span>
-          <span>
-            θ* {spec.base} ± 4 × {spec.step} · declared {spec.minimum}–{spec.maximum}
+          <span title={`declared ${spec.minimum}–${spec.maximum} · step ${spec.step} · the track is the nodes the grid reaches`}>
+            θ* {spec.base} · step {spec.step}
           </span>
           <span>{spec.values[8]}</span>
         </span>
@@ -347,7 +347,7 @@ function LiveWhatIf({
               <span
                 className="mono text-[13px] font-semibold tabular-nums"
                 data-delta-j={cell?.delta_j ?? ""}
-                title={cell?.delta_j != null ? `ΔJ₁ ${signedDecimal(cell.delta_j)} (exact)` : undefined}
+                title={cell?.delta_j != null ? `ΔJ ${signedDecimal(cell.delta_j)} (exact)` : undefined}
               >
                 {preview}
               </span>
@@ -356,9 +356,9 @@ function LiveWhatIf({
                   className="mono text-[10px]"
                   style={{ color: "var(--ink-faint)" }}
                   data-objective={cell.objective}
-                  title={`J₁ ${cell.objective} · base ${whatIf.grid?.base_objective ?? "not evaluated"} (exact)`}
+                  title={`J ${cell.objective} · base ${whatIf.grid?.base_objective ?? "not evaluated"} (exact)`}
                 >
-                  J₁ {shownDecimal(cell.objective)} · base{" "}
+                  J {shownDecimal(cell.objective)} · base{" "}
                   {whatIf.grid?.base_objective ? shownDecimal(whatIf.grid.base_objective) : "not evaluated"}
                 </span>
               ) : null}
@@ -446,18 +446,16 @@ function LiveWhatIf({
 
 
       {whatIf.definition ? (
-        <p className="mono text-[9px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-what-if-definition>
-          ΔJ₁ = J at the node − J at θ* ·{" "}
+        <p
+          className="mono text-[9px] leading-[1.5]"
+          style={{ color: "var(--ink-faint)" }}
+          data-what-if-definition
+          title={`seed ${whatIf.definition.random_seed} · ${whatIf.definition.engine_release_id} · dataset ${shortDigest(whatIf.definition.dataset_binding_digest)} · ${enumWords(whatIf.definition.objective_scope)} · no interpolation`}
+        >
+          ΔJ = J at the node − J at θ* ·{" "}
           <span title={whatIf.definition.objective_kind} data-objective-kind={whatIf.definition.objective_kind}>
             {enumWords(whatIf.definition.objective_kind)}
-          </span>{" "}
-          ·{" "}
-          <span title={whatIf.definition.objective_scope} data-objective-scope={whatIf.definition.objective_scope}>
-            {enumWords(whatIf.definition.objective_scope)}
-          </span>{" "}
-          · seed {whatIf.definition.random_seed} ·{" "}
-          {whatIf.definition.engine_release_id} · dataset {shortDigest(whatIf.definition.dataset_binding_digest)} · no
-          interpolation
+          </span>
         </p>
       ) : null}
 

@@ -192,6 +192,36 @@ function ExactTable({
 /* ------------------------------------------------------------ builders */
 
 
+/** `fold_07` -> `F7`; any other label is kept as served. */
+export function shortFoldLabel(name: string): string {
+  const match = /^fold_0*(\d+)$/.exec(name);
+  return match ? `F${match[1]}` : name;
+}
+
+/**
+ * QA S04-U6: axis labels, legend and tick text are the soft ink, not the faint one: the faint ink is
+ * about 4:1 on the Operations Dark panel. Read at option-build time, so it follows the theme.
+ */
+function readable<T>(option: T): T {
+  const { inkSoft } = canvasTokens(activeTheme());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const o = option as unknown as Record<string, any>;
+  o.textStyle = { ...(o.textStyle ?? {}), color: inkSoft };
+  for (const key of ["xAxis", "yAxis"]) {
+    const axes = Array.isArray(o[key]) ? o[key] : o[key] ? [o[key]] : [];
+    for (const axis of axes) axis.axisLabel = { ...(axis.axisLabel ?? {}), color: inkSoft };
+  }
+  if (o.legend && typeof o.legend === "object" && !Array.isArray(o.legend)) {
+    o.legend.textStyle = { ...(o.legend.textStyle ?? {}), color: inkSoft };
+  }
+  return option;
+}
+
+/** The shared theme base, with the readable ink applied. */
+function evidenceBase(extra: Parameters<typeof baseOption>[0]) {
+  return readable(baseOption(extra));
+}
+
 function boundaryMarks(boundaries: readonly FoldBoundary[]) {
   if (boundaries.length === 0) return {};
   const tone = canvasTokens(activeTheme()).accent2;
@@ -200,8 +230,20 @@ function boundaryMarks(boundaries: readonly FoldBoundary[]) {
       symbol: "none",
       silent: true,
       lineStyle: { type: "dashed" as const, color: tone, width: 1 },
-      label: { show: true, formatter: "{b}", color: tone, fontSize: 9, fontFamily: "JetBrains Mono, monospace" },
-      data: boundaries.map((boundary) => ({ xAxis: boundary.at_utc_ms, name: boundary.label })),
+      /* QA S04-U5: `fold_01fold_02…` collided at 660. The label is the short form (F1) and every other one
+         sits one row higher; the full name stays in the item's `name`. */
+      label: {
+        show: true,
+        formatter: (param: { name?: string }) => shortFoldLabel(param.name ?? ""),
+        color: tone,
+        fontSize: 9,
+        fontFamily: "JetBrains Mono, monospace",
+      },
+      data: boundaries.map((boundary, index) =>
+        index % 2 === 1
+          ? { xAxis: boundary.at_utc_ms, name: boundary.label, label: { offset: [0, -11] } }
+          : { xAxis: boundary.at_utc_ms, name: boundary.label },
+      ),
     },
   };
 }
@@ -229,7 +271,7 @@ export function equityOption(points: EquityPoint[], boundaries: readonly FoldBou
   /* The two series share the boundary point, so the line stays continuous. */
   const before = split > 0 ? points.slice(0, split + 1) : [];
   const oos = split > 0 ? points.slice(split) : points;
-  return baseOption({
+  return evidenceBase({
     ...noChartApparatus(),
     ...(split > 0 || inSample.length > 0
       ? {
@@ -310,10 +352,10 @@ export function drawdownOption(points: EquityPoint[], boundaries: readonly FoldB
   const { ink, paperRaised } = paletteNow();
   /* A trough exists only if the series the server sent goes below zero. */
   const hasTrough = points.some((point) => Number(point.drawdown_fraction) < 0);
-  return baseOption({
+  return evidenceBase({
     ...noChartApparatus(),
     useUTC: true,
-    grid: { left: 56, right: 20, top: 16, bottom: 40, containLabel: true },
+    grid: { left: 56, right: 20, top: boundaries.length > 0 ? 34 : 16, bottom: 40, containLabel: true },
     xAxis: TIME_AXIS,
     yAxis: {
       type: "value",
@@ -368,7 +410,7 @@ export function drawdownOption(points: EquityPoint[], boundaries: readonly FoldB
 export function rollingOption(points: RollingReturnPoint[]) {
   const { accent } = paletteNow();
   const zero = canvasTokens(activeTheme()).line;
-  return baseOption({
+  return evidenceBase({
     ...noChartApparatus(),
     useUTC: true,
     grid: { left: 50, right: 46, top: 30, bottom: 40, containLabel: true },
@@ -449,7 +491,7 @@ const countShown = (count: unknown): string => formatMetric(safeCount(count), "c
 export function distributionOption(buckets: Bucket[], daily = false) {
   const { accent, accent2 } = canvasTokens(activeTheme());
   const zero = zeroBucketIndex(buckets);
-  return baseOption({
+  return evidenceBase({
     ...noChartApparatus(),
     grid: { left: 44, right: 16, top: 20, bottom: 40, containLabel: true },
     /* A tick names a bucket by its lower edge as a percentage; the exact edges
@@ -510,7 +552,7 @@ export function distributionOption(buckets: Bucket[], daily = false) {
 export function rollingSharpeOption(points: RollingSharpePoint[]) {
   const { accent } = paletteNow();
   const ratioPointer = { label: { formatter: (param: { value: unknown }) => ratio(Number(param.value)) } };
-  return baseOption({
+  return evidenceBase({
     ...noChartApparatus(),
     useUTC: true,
     grid: { left: 50, right: 20, top: 30, bottom: 40, containLabel: true },
@@ -597,8 +639,8 @@ export const SERIES_NAME_V2 = { strategy: "Strategy", benchmark: "Benchmark (buy
  */
 export function strategyBenchmarkOption(strategy: readonly RebasedPoint[], benchmark: readonly RebasedPoint[]) {
   const role = roleColorsNow();
-  const { inkFaint } = paletteNow();
-  return baseOption({
+  const { inkSoft: inkFaint } = canvasTokens(activeTheme());
+  return evidenceBase({
     ...noChartApparatus(),
     ...(benchmark.length > 0
       ? {
@@ -625,7 +667,7 @@ export function strategyBenchmarkOption(strategy: readonly RebasedPoint[], bench
       {
         type: "line", name: SERIES_NAME_V2.strategy, showSymbol: false,
         data: strategy.map((point) => [point.at_utc_ms, Number(point.value)]),
-        lineStyle: { width: 1.75, color: role.oos }, itemStyle: { color: role.oos },
+        lineStyle: { width: 2.5, color: role.oos }, itemStyle: { color: role.oos },
       },
       ...(benchmark.length > 0
         ? [{

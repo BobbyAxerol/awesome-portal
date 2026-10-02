@@ -191,6 +191,7 @@ function IntegrityPanel({
         </h2>
         <Chip
           data-integrity-state={integrity.state}
+          title={integrity.state === "BLOCKED" ? undefined : PARTIAL_SCOPE_NOTE}
           tone={blocked ? "var(--bad)" : "var(--role-holdout)"}
           border={blocked ? "var(--bad)" : "var(--role-holdout)"}
         >
@@ -754,6 +755,9 @@ function RetainedPanel({ slot, onNeeded }: { slot: RetainedSlot; onNeeded: () =>
     onNeeded();
   }, [onNeeded]);
 
+  /* D12: a P04 run is not held by the retained lane — nothing to check, nothing to say. */
+  if (slot.state === "not-applicable") return null;
+
   return (
     <section
       className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
@@ -766,18 +770,6 @@ function RetainedPanel({ slot, onNeeded }: { slot: RetainedSlot; onNeeded: () =>
 
       {slot.state === "ready" ? (
         <RetainedRows freeze={slot.freeze} />
-      ) : slot.state === "not-applicable" ? (
-        /* RF-05 CG-P13-09: a typed 200 — this run's profile is one the retained
-           lane never holds. Nothing is pending and nothing failed. */
-        <p
-          className="text-[11px] leading-[1.5]"
-          style={{ color: "var(--ink-soft)" }}
-          data-retained-not-applicable
-          title={`${slot.answer.lane.reason_code} · profile ${slot.answer.lane.run_profile} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
-        >
-          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>not applicable</span> — P04 run, not
-          retained · nothing pending
-        </p>
       ) : slot.state === "refused" ? (
         <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-retained-refusal>
           {slot.laneState ? (
@@ -878,10 +870,23 @@ function reasonText(code: string | null | undefined): string | null {
 
 export { WHAT_IF_RULE } from "./WhatIfCard";
 
+/* D15: the objective is "J" on every screen (S06 claim row, S07 strip, what-if); the unit label names which J it is. */
 const OBJECTIVE_WORDS: Record<string, string> = {
-  MODE_1_DECAY_J: "J",
+  MODE_1_DECAY_J: "mode 1 decay",
   IS_MEAN_SHARPE: "IS mean Sharpe",
 };
+
+/** The S06 claim row's precision: two places, the screen's minus. */
+function objectiveTwoPlaces(value: string): string {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return value;
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parsed).replace(/^-/, "−");
+}
+
+/** D24: a QuantBT claim token in words (underscores out); the token itself is the title where it is drawn. */
+function claimWords(value: string): string {
+  return claimToken(value).toLowerCase().replace(/_/g, " ");
+}
 
 /** A digest as 8 hex with the full value one hover away. */
 function Digest({ value, ...rest }: { value: string | null | undefined } & Record<string, unknown>) {
@@ -918,9 +923,10 @@ function TypedAbsence({
         <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
           {state.toLowerCase().replace(/_/g, " ")}
         </span>
+        {/* D24: the sentence is the text; the server's code is the hover. */}
         {code ? (
-          <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} title={sentence ?? undefined}>
-            {code}
+          <span className="text-[10px]" style={{ color: "var(--ink-faint)" }} title={code} data-absence-code={code}>
+            {sentence ?? ""}
           </span>
         ) : null}
       </span>
@@ -942,7 +948,7 @@ function foldSpan(folds: readonly number[]): string {
 function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity: RunIdentitySlot }) {
   const selection = freeze.frozen_selection;
   const objectiveKind = (selection as { objective_kind?: string }).objective_kind ?? null;
-  const objectiveWord = (objectiveKind && OBJECTIVE_WORDS[objectiveKind]) ?? "objective";
+  const objectiveWord = (objectiveKind && OBJECTIVE_WORDS[objectiveKind]) ?? null;
   const readiness = identity.state === "ready" ? retainedReadiness(identity.identity.progress) : undefined;
   return (
     <div
@@ -974,7 +980,8 @@ function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity:
         )}
         {selection.objective !== null ? (
           <span className="mono text-[10px]" data-selected-objective={selection.objective} title={selection.objective}>
-            · {objectiveWord} {formatMetric(selection.objective, "ratio") ?? selection.objective}
+            · J {objectiveTwoPlaces(selection.objective)}
+            {objectiveWord !== null ? ` · ${objectiveWord}` : ""}
           </span>
         ) : (
           <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -1360,13 +1367,13 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
           {badge}
         </span>
         {ordering.source_claims.chronological_claim ? (
-          <span className="mono text-[10px]" data-source-claim title="QuantBT walk_forward.chronological_validation_claim">
-            {claimToken(ordering.source_claims.chronological_claim)}
+          <span className="mono text-[10px]" data-source-claim title={`QuantBT walk_forward.chronological_validation_claim · ${claimToken(ordering.source_claims.chronological_claim)}`}>
+            {claimWords(ordering.source_claims.chronological_claim)}
           </span>
         ) : null}
         {ordering.source_claims.causality_claim ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title="QuantBT walk_forward.causality_claim">
-            {claimToken(ordering.source_claims.causality_claim)}
+            {claimWords(ordering.source_claims.causality_claim)}
           </span>
         ) : null}
         {ordering.source_claims.oos_used_for_selection === true ? (
@@ -1530,8 +1537,17 @@ function RetainedFreezeBody({
     <div className="flex flex-col gap-3" data-lane="retained">
       <RetainedOrdering identity={known} ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-        <RetainedFrozenTable freeze={freeze} identity={known} />
-        <div className="flex min-w-0 flex-col gap-3">
+        {/* D13: the what-if sits under the frozen θ* in the left column, so the two columns end together instead of leaving the left one empty. */}
+        <div className="flex min-w-0 flex-col gap-3" data-column="left">
+          <RetainedFrozenTable freeze={freeze} identity={known} />
+          <WhatIfCard
+            whatIf={isWhatIf(freeze.what_if) ? freeze.what_if : null}
+            inert={{ state: String((freeze.what_if as { state?: unknown } | undefined)?.state ?? "NOT_PUBLISHED"), reason_code: ((freeze.what_if as { reason_code?: string | null } | undefined)?.reason_code) ?? null }}
+            evaluate={evaluate}
+            onEvaluate={onEvaluate}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-3" data-column="right">
           {/* E2c (7.9): the chain the hi-fi draws, above the custody receipt it is verified by. */}
           <DigestChain chain={retainedDigestChain(freeze)} verifyLabel={verifyChainLabel(verify)} />
           <RetainedIntegrity freeze={freeze} verify={verify} onVerify={onVerify} />
@@ -1541,12 +1557,6 @@ function RetainedFreezeBody({
           <ExecuteLink href={executeHref} />
         </div>
       </div>
-      <WhatIfCard
-        whatIf={isWhatIf(freeze.what_if) ? freeze.what_if : null}
-        inert={{ state: String((freeze.what_if as { state?: unknown } | undefined)?.state ?? "NOT_PUBLISHED"), reason_code: ((freeze.what_if as { reason_code?: string | null } | undefined)?.reason_code) ?? null }}
-        evaluate={evaluate}
-        onEvaluate={onEvaluate}
-      />
     </div>
   );
 }
@@ -1799,6 +1809,7 @@ export function FreezeScreen({
 
             {/* Hi-fi F2 beside F3/F4 at laptop width; stacked below it. */}
             <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+              <div className="flex min-w-0 flex-col gap-3" data-column="left">
               <section
                 className="flex min-w-0 flex-col gap-2 rounded-[8px] border px-4 py-3"
                 data-panel="frozen-parameters"
@@ -1830,23 +1841,8 @@ export function FreezeScreen({
                   </span>
                 </div>
               </section>
-
-              <div className="flex min-w-0 flex-col gap-3">
-                {/* E2c (7.9): the chain the hi-fi draws, above the integrity card it is verified by. */}
-                <DigestChain chain={hubDigestChain(detail)} verifyLabel={verifyChainLabel(verify)} />
-                <IntegrityPanel integrity={freeze.integrity} bytes={detail.artifact_bytes} verify={verify} onVerify={onVerify} />
-                {detail.stage4_binding ? (
-                  <ServedStage4Binding binding={detail.stage4_binding} authority={detail.parameter_authority ?? null} />
-                ) : (
-                  <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
-                )}
-                {embedded ? null : <ExecuteLink href={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })} />}
-              </div>
-            </div>
-
-            {/* A10c/A11: the fixed hub keeps the what-if card, every control disabled with its reason. */}
-            <WhatIfCard whatIf={null} inert={{ state: freeze.what_if.state, reason_code: freeze.what_if.reason_code }} />
-
+              {/* D12/D13: the what-if card (here the fixed hub's single "not applicable" block) fills the left column's tail. */}
+              <WhatIfCard whatIf={null} inert={{ state: freeze.what_if.state, reason_code: freeze.what_if.reason_code }} />
             <section
               className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
               data-panel="inspection"
@@ -1863,19 +1859,36 @@ export function FreezeScreen({
               </p>
               <Withheld availability={freeze.inspection.availability} />
             </section>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-3" data-column="right">
+                {/* E2c (7.9): the chain the hi-fi draws, above the integrity card it is verified by. */}
+                <DigestChain chain={hubDigestChain(detail)} verifyLabel={verifyChainLabel(verify)} />
+                <IntegrityPanel integrity={freeze.integrity} bytes={detail.artifact_bytes} verify={verify} onVerify={onVerify} />
+                {detail.stage4_binding ? (
+                  <ServedStage4Binding binding={detail.stage4_binding} authority={detail.parameter_authority ?? null} />
+                ) : (
+                  <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
+                )}
+                {embedded ? null : <ExecuteLink href={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })} />}
+              </div>
+            </div>
+
 
             <RetainedPanel slot={retained} onNeeded={ensureRetained} />
 
             {Object.keys(detail.source_absences).length > 0 ? (
-              <section
-                className="flex flex-wrap gap-x-5 gap-y-1.5 rounded-[8px] border px-4 py-3"
-                data-source-absences
-                style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
-              >
-                {Object.entries(detail.source_absences).map(([name, gap]) => (
-                  <Gap key={name} gap={gap} what={name.replace(/_/g, " ")} />
-                ))}
-              </section>
+              /* D12: these gaps are already stated by the cards above; kept one click away, not repeated. */
+              <details className="rounded-[8px] border px-4 py-2" data-source-absences style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}>
+                <summary className="mono cursor-pointer text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+                  source gaps · {Object.keys(detail.source_absences).length}
+                </summary>
+                <div className="flex flex-wrap gap-x-5 gap-y-1.5 pt-2">
+                  {Object.entries(detail.source_absences).map(([name, gap]) => (
+                    <Gap key={name} gap={gap} what={name.replace(/_/g, " ")} />
+                  ))}
+                </div>
+              </details>
             ) : null}
           </div>
         ) : lane !== null ? (

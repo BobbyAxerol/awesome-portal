@@ -31,6 +31,8 @@ export interface FoldBar {
 export interface FoldLine {
   runId: string;
   path: string;
+  /** How many folds carry a value: 0 draws nothing, 1 is one point (a line of one vertex is invisible). */
+  vertices: number;
 }
 
 /**
@@ -114,7 +116,9 @@ export function foldBars(series: readonly FoldBarInput[]): FoldBarGeometry | nul
       .map((fold) => ({ fold, v: Number(fold.oos_sharpe) }))
       .sort((left, right) => left.fold.source_ordinal - right.fold.source_ordinal)
       .map(({ fold, v }) => `${round2((ordinals.indexOf(fold.source_ordinal) + 0.5) * groupWidth)} ${round2(y(v))}`);
-    return { runId: item.runId, path: vertices.length > 0 ? `M${vertices.join(" L")}` : "" };
+    /* One vertex: a zero-length segment, drawn as a dot by the round line cap; an empty path draws nothing. */
+    const path = vertices.length === 0 ? "" : vertices.length === 1 ? `M${vertices[0]} L${vertices[0]}` : `M${vertices.join(" L")}`;
+    return { runId: item.runId, path, vertices: vertices.length };
   });
   return {
     width: BOX,

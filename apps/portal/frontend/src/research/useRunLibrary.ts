@@ -2,7 +2,7 @@
  * Screen 01 container — filters, paging, the running poll (P12).
  *
  * Spec 01 §3.1: **the URL is the single source of truth for filters.** A
- * filter change replaces history, `sel` pushes it, and back, forward and a
+ * search typing replaces history, filter steps and `sel` push it, and back, forward and a
  * shared link all restore the same view because there is no second copy of the
  * state to drift from.
  *
@@ -290,9 +290,16 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
         filterKeyOf(next) !== filterKeyOf(current) ? { ...next, cursor: undefined, before: undefined } : next;
       const selChanged = target.sel.join(",") !== current.sel.join(",");
       const pageChanged = (target.cursor ?? "") !== (current.cursor ?? "") || (target.before ?? "") !== (current.before ?? "");
-      /* `sel` and the page are navigation and push; a filter is a view and
-         replaces, so back does not walk through every keystroke. */
-      navigate({ search: searchFromFilters(target) }, { replace: !selChanged && !pageChanged });
+      /* QA2 UX-11: `sel`, the page and every filter STEP (status, mode, alpha, group, clear)
+         push, so Back undoes one step instead of leaving the screen. Only typing in the
+         search box replaces, so Back does not walk through every keystroke. */
+      const typing =
+        target.q !== current.q &&
+        target.status.join(",") === current.status.join(",") &&
+        target.mode.join(",") === current.mode.join(",") &&
+        target.alpha.join(",") === current.alpha.join(",") &&
+        target.group === current.group;
+      navigate({ search: searchFromFilters(target) }, { replace: typing && !selChanged && !pageChanged });
     },
     [navigate],
   );

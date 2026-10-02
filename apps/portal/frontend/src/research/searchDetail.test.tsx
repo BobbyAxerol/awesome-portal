@@ -460,34 +460,18 @@ describe("P15-T02 — the one panel with content prints exactly what was declare
  * ---------------------------------------------------------------------- */
 
 describe("P15-T03 — each empty panel says which kind of empty it is", () => {
-  it("keeps all seven diagnostic panels with their own reason", () => {
+  /* QA 2026-10-02 D11: a fixed profile ran no search — one sentence replaces the shell per diagnostic; the served reasons ride in its title. */
+  it("a fixed profile draws no diagnostic shell, one sentence, and the served reason codes in its title", () => {
     const { container } = view();
-    for (const key of DIAGNOSTIC_KEYS) {
-      const panel = container.querySelector(`[data-panel='${key}']`);
-      expect(panel, key).toBeTruthy();
-      expect(panel?.querySelector(`[data-gap-reason='${key}']`)?.textContent).toMatch(/^P04_/);
-    }
-  });
-
-  it("distinguishes a question that does not arise from a fact nobody published", () => {
-    const { container } = view();
-    expect(container.querySelector("[data-panel='scatter']")?.getAttribute("data-panel-state")).toBe(
-      "NOT_APPLICABLE",
-    );
-    expect(container.querySelector("[data-panel='importance']")?.getAttribute("data-panel-state")).toBe(
-      "NOT_PUBLISHED",
-    );
-    expect(container.querySelector("[data-panel='scatter']")?.textContent).toContain("not applicable");
-    expect(container.querySelector("[data-panel='importance']")?.textContent).toContain("not published");
-  });
-
-  it("draws no chart and no zero in any of them", () => {
-    const { container } = view();
-    for (const key of DIAGNOSTIC_KEYS) {
-      const panel = container.querySelector(`[data-panel='${key}']`);
-      expect(panel?.querySelector("canvas, svg")).toBeNull();
-      expect(panel?.textContent).not.toMatch(/\b0 trials\b|\b0 candidates\b/);
-    }
+    for (const key of DIAGNOSTIC_KEYS) expect(container.querySelector(`[data-panel='${key}']`), key).toBeNull();
+    const note = container.querySelector("[data-panel='fixed-profile-note']") as HTMLElement;
+    expect(note.textContent).toBe("No search ran — the parameters were fixed.");
+    expect(note.getAttribute("title")).toContain("P04_RAN_NO_TRIALS");
+    expect(note.getAttribute("title")).toContain("P04_PUBLISHES_NO_IMPORTANCE");
+    /* the codes live in the title only: no raw P04_ token is visible text on the screen */
+    expect(container.textContent).not.toMatch(/P04_[A-Z_]+/);
+    expect(container.querySelector("canvas, svg[data-chart]")).toBeNull();
+    expect(container.textContent).not.toMatch(/\b0 trials\b|\b0 candidates\b/);
   });
 
   it("keeps the strict outer-OOS selector unasserted, with no verdict", () => {
@@ -509,25 +493,11 @@ describe("P15-T04 — no trial exists, so nothing points at one", () => {
     expect(container.querySelector("[data-selected-trial]")).toBeNull();
     expect(container.querySelector("[data-action='pick-trial']")).toBeNull();
     expect(container.querySelector("[data-action='freeze']")).toBeNull();
-    expect(container.querySelector("[data-selected-ref]")?.textContent).toContain("none published");
-  });
-
-  it("answers the requested fold instead of treating a split fold as a trial fold", () => {
-    const { container } = view();
-    const inspection = container.querySelector("[data-panel='inspection']");
-    expect(inspection?.getAttribute("data-inspection-state")).toBe("NOT_APPLICABLE");
-    expect(inspection?.textContent).toContain("Fold 3 requested");
-    expect(inspection?.querySelector("[data-withheld]")?.getAttribute("title")).toBe(
-      "P04_HAS_NO_OPTIMIZER_FOLD",
-    );
-  });
-
-  it("keeps the freeze line in the geometry and explains why it froze nothing", () => {
-    const { container } = view();
-    const freeze = container.querySelector("[data-freeze-line]");
-    expect(freeze).toBeTruthy();
-    expect(freeze?.textContent).toContain("POOL FREEZE");
-    expect(freeze?.querySelector("[title]")?.getAttribute("title")).toContain("ran no search");
+    /* D11: no selection / inspection / freeze-line shell at all on a fixed profile, so nothing can point at a trial or a fold. */
+    expect(container.querySelector("[data-panel='selection']")).toBeNull();
+    expect(container.querySelector("[data-panel='inspection']")).toBeNull();
+    expect(container.querySelector("[data-freeze-line]")).toBeNull();
+    expect(container.querySelector("[data-stage='B']")).toBeNull();
   });
 });
 
@@ -819,7 +789,7 @@ describe("RF-06 FE-S06-06 — a fold the read cannot accept is replaced before i
   it("fold=999 never reaches the server and the notice says what was shown", async () => {
     stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, foldEcho(url)]));
     const { container } = mountRoute("#stage=search&fold=999");
-    await waitFor(() => expect(container.querySelector("[data-panel='inspection']")).toBeTruthy());
+    await waitFor(() => expect(container.querySelector("[data-stage-grid]")).toBeTruthy());
     expect(requested.some((url) => url.includes("fold=999"))).toBe(false);
     expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 999");
     expect(window.location.hash).toBe("#stage=search&fold=1");
@@ -843,13 +813,12 @@ describe("RF-06 FE-S06-07/08 — HiFi layout", () => {
   it("lays Stage A, the freeze line and Stage B on a 1.08 : 52px : 1 grid, ledger full width below", () => {
     const { container } = view();
     const grid = container.querySelector("[data-stage-grid]") as HTMLElement;
-    expect(grid.className).toContain("grid-cols-[1.08fr_52px_1fr]");
+    /* D11: a fixed profile is one column (A1 and a sentence); the three-column geometry is the searched run's. */
+    expect(grid.getAttribute("data-fixed-profile")).toBe("");
+    expect(grid.className).not.toContain("grid-cols-[1.08fr_52px_1fr]");
     expect(grid.querySelector("[data-ledger]")).toBeNull();
     expect(container.querySelector("[data-ledger]")).toBeTruthy();
-    // Stage B keeps its frames.
-    for (const panel of ["pool-freeze", "formula", "selection", "parameter_frequency", "inspection"]) {
-      expect(container.querySelector(`[data-stage='B'] [data-panel='${panel}']`), panel).toBeTruthy();
-    }
+    expect(container.querySelector("[data-panel='search-space']")).toBeTruthy();
   });
 
   it("A1 carries the served kind; the claim row, copy link and formatted as-of are present", () => {
@@ -863,7 +832,7 @@ describe("RF-06 FE-S06-07/08 — HiFi layout", () => {
 
   it("prints every absence once — source_absences does not repeat a panel's", () => {
     const { container } = view();
-    expect(container.querySelectorAll("[data-gap-fact='objective components']")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-gap-fact='objective components']")).toHaveLength(0);
     expect(container.querySelector("[data-source-absences]")).toBeNull();
   });
 });
@@ -882,13 +851,11 @@ describe("RF-06 S06 fidelity — freeze arrow chip", () => {
     expect(freezeArrow("unpublished").glyph).toBe("—");
   });
 
-  it("a fixed profile shows the neutral 'no pool froze' chip, without motion", () => {
+  it("a fixed profile draws no freeze line at all (D11); the 'no pool froze' words stay in freezeArrow", () => {
     const { container } = view();
-    const chip = container.querySelector("[data-freeze-arrow]") as HTMLElement;
-    expect(chip.getAttribute("data-freeze-arrow")).toBe("no-freeze");
-    expect(chip.textContent).toBe("×");
-    expect(chip.getAttribute("title")).toContain("no pool froze");
-    expect(chip.getAttribute("data-motion")).toBeNull();
+    expect(container.querySelector("[data-freeze-arrow]")).toBeNull();
+    expect(freezeArrow("no-freeze").title).toContain("no pool froze");
+    expect(freezeArrow("no-freeze").flow).toBe(false);
   });
 });
 
@@ -1286,7 +1253,7 @@ describe("W3b — Search on the retained WFO lane", () => {
     const { container } = await settled();
     const panel = container.querySelector("[data-panel='importance']");
     expect(panel?.getAttribute("data-panel-state")).toBe("NOT_PUBLISHED");
-    expect(panel?.querySelector("[data-gap-reason='importance']")?.textContent).toBe(
+    expect(panel?.querySelector("[data-gap-reason='importance']")?.getAttribute("data-gap-code")).toBe(
       "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_IMPORTANCE",
     );
   });

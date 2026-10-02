@@ -12,7 +12,7 @@
  * rather than forwarded into every link (FE-S06-05).
  */
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { SearchScreen } from "./SearchDetail";
@@ -63,6 +63,33 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
     if (!inRange && !clamped) replaceFold(DEFAULT_CURSOR.fold, "OUT_OF_RANGE");
   }, [clamped, inRange, replaceFold]);
 
+  /* D7: this read publishes no fold set, but the fold plan the strip reads does —
+     a fold it never listed is clamped to it exactly as an observed fold is, with the same notice. */
+  const planFolds = modeReads.plan.state === "ready" ? modeReads.plan.folds.map((fold) => fold.source_ordinal + 1) : [];
+  const planKey = planFolds.join(",");
+  useEffect(() => {
+    if (planFolds.length > 0) clampToObserved(planFolds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `planKey` carries the set; a hand-edited fold re-clamps
+  }, [clampToObserved, planKey, cursor.fold]);
+
+  /* D7: a stage this route is not, and a pick the search does not hold, are said and taken out of the URL. */
+  const [linkNotes, setLinkNotes] = useState<string[]>([]);
+  const say = useCallback((text: string) => setLinkNotes((previous) => (previous.includes(text) ? previous : [...previous, text])), []);
+  useEffect(() => {
+    if (embedded || cursor.stage === "search") return;
+    say(`This link asked for stage “${cursor.stage}”. This is Search.`);
+    update({ stage: "search" });
+  }, [cursor.stage, embedded, say, update]);
+  const lane = retainedSearchOf(search.ledger);
+  const points = lane?.surface?.points ?? [];
+  const ledgerTrials = lane?.ledger.trials ?? [];
+  const pickKnown = pick === null || points.length === 0 || points.some((point) => point.trial_id === pick) || ledgerTrials.some((trial) => trial.trial_id === pick);
+  useEffect(() => {
+    if (pickKnown || pick === null) return;
+    say(`This link asked for trial ${pick}, which this search does not hold. No trial is selected.`);
+    onClear();
+  }, [onClear, pick, pickKnown, say]);
+
   /* The run's mode and schedule were fixed at submit. A link that names
      others is acknowledged, not obeyed and not carried on. */
   const requested = search.detail?.requested_optimizer;
@@ -82,6 +109,11 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
   return (
     <>
       {embedded ? null : <RouteCursorNotice problems={problems} notes={notes} frame={1560} />}
+      {linkNotes.length > 0 && !embedded ? (
+        <div role="status" className="mono mx-auto w-full max-w-[1560px] px-4 text-[11px]" style={{ color: "var(--ink-soft)" }} data-link-notice>
+          {linkNotes.join(" ")}
+        </div>
+      ) : null}
       <SearchScreen
         runId={runId}
         detail={search.detail}

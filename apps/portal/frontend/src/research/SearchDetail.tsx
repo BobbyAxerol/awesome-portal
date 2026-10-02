@@ -476,18 +476,16 @@ function EmptyPanel({ id, title, gap, sentence = false }: { id: string; title: s
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
           {title}
         </h3>
-        <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={gapReason(gap)}>
+        {/* D24: the server's code is the hover, never the visible text. */}
+        <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={gapReason(gap)} data-gap-reason={id} data-gap-code={gapReason(gap)}>
           {SEARCH_GAP_WORDS[gap.state]}
         </span>
       </div>
       {words ? (
-        <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+        <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} title={gapReason(gap)}>
           {words}
         </span>
       ) : null}
-      <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-gap-reason={id}>
-        {gapReason(gap)}
-      </span>
     </section>
   );
 }
@@ -1927,7 +1925,22 @@ export function SearchScreen({
       })
     : null;
   /* The hub's source_absences describe the hub on a retained run; each panel above states the lane's own. */
-  const absences = lane ? [] : hubAbsences;
+  /* D11: a fixed profile (P04) has nothing to draw past A1 — Stage B, the freeze line and every diagnostic shell are dropped. */
+  const fixedOnly = fixed && lane === null && !notFound;
+  const absences = lane || fixedOnly ? [] : hubAbsences;
+  const fixedReasons: string[] = [];
+  if (fixedOnly && detail) {
+    const served: unknown[] = [
+      ...Object.values(detail.source_absences),
+      ...Object.values(detail.diagnostics),
+      detail.inspection.availability,
+      detail.availability,
+    ];
+    for (const gap of served) {
+      const code = typeof gap === "object" && gap !== null ? (gap as { reason_code?: unknown }).reason_code : undefined;
+      if (typeof code === "string" && !fixedReasons.includes(code)) fixedReasons.push(code);
+    }
+  }
   /* F2: the fold-filtered answer replaces the unfiltered one for the trial ledger and the inspection panel only. */
   const folded = lane && foldLedger.state === "ready" ? foldLedger.search : null;
   /* D5: later pages of the retained ledger, appended to the first one in hand. */
@@ -2296,8 +2309,8 @@ export function SearchScreen({
             {/* D9: the picked trial, named where the reader is, with a way out. */}
             {pick !== null ? (
               <div
-                className="mono sticky top-2 z-10 flex flex-wrap items-center gap-x-3 gap-y-1 self-start rounded-[6px] border px-3 py-1.5 text-[10.5px]"
-                style={{ borderColor: "var(--accent)", background: "var(--paper-raised)", color: "var(--ink)", boxShadow: "var(--shadow-e1)" }}
+                className="mono sticky z-10 flex flex-wrap items-center gap-x-3 gap-y-1 self-start rounded-[6px] border px-3 py-1.5 text-[10.5px]"
+                style={{ top: "calc(var(--topbar-h, 56px) + 8px)", borderColor: "var(--accent)", background: "var(--paper-raised)", color: "var(--ink)", boxShadow: "var(--shadow-e1)" }}
                 data-pick-chip={pick}
               >
                 <span>trial {pick}</span>
@@ -2319,8 +2332,9 @@ export function SearchScreen({
 
             {/* ------------------------------------ Stage A · freeze · Stage B */}
             <div
-              className="grid grid-cols-1 gap-3 min-[1100px]:grid-cols-[1.08fr_52px_1fr] min-[1100px]:gap-0"
+              className={fixedOnly ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 gap-3 min-[1100px]:grid-cols-[1.08fr_52px_1fr] min-[1100px]:gap-0"}
               data-stage-grid
+              data-fixed-profile={fixedOnly ? "" : undefined}
             >
               <div className="flex min-w-0 flex-col gap-3" data-stage="A">
                 <div className="flex flex-wrap items-baseline gap-2.5">
@@ -2370,7 +2384,19 @@ export function SearchScreen({
                 </section>
                 )}
 
-                {STAGE_A_DIAGNOSTICS.map((key) => {
+                {fixedOnly ? (
+                  /* D11: a fixed profile ran no search — one sentence, with the served reasons on hover, instead of a shell per panel. */
+                  <p
+                    className="text-[11.5px] leading-[1.5]"
+                    style={{ color: "var(--ink-soft)" }}
+                    data-panel="fixed-profile-note"
+                    title={fixedReasons.length > 0 ? fixedReasons.join(" · ") : undefined}
+                  >
+                    No search ran — the parameters were fixed.
+                  </p>
+                ) : null}
+
+                {(fixedOnly ? [] : STAGE_A_DIAGNOSTICS).map((key) => {
                   if (lane) {
                     /* X2 · B3: the server's trial surface draws A2–A5; an older server keeps the W3b frames. */
                     const surface = lane.surface;
@@ -2425,8 +2451,9 @@ export function SearchScreen({
                 })}
               </div>
 
-              <FreezeLine detail={detail} retained={lane} />
+              {fixedOnly ? null : <FreezeLine detail={detail} retained={lane} />}
 
+              {fixedOnly ? null : (
               <div className="flex min-w-0 flex-col gap-3" data-stage="B">
                 <div className="flex flex-wrap items-baseline gap-2.5">
                   <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--accent-2)" }}>
@@ -2531,6 +2558,7 @@ export function SearchScreen({
                 </section>
                 )}
               </div>
+              )}
             </div>
 
             {/* ------------------------------------------ ledger, full width */}

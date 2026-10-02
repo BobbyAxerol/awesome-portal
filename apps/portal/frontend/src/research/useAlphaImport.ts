@@ -51,6 +51,8 @@ export interface AlphaImportController {
   registryTotal?: number | null;
   /** The `alpha_id` the served list was requested with ("" = unfiltered). */
   registryAlpha?: string;
+  registryShowAll?: boolean;
+  onToggleRegistryShowAll?: () => void;
   /** The server's opaque `next_cursor` (null = list complete). Sent back as served, never parsed. */
   registryNext?: string | null;
   /** State of the "load more" read; the rows already loaded stay whatever it answers. */
@@ -106,6 +108,8 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
   /* The server filters by alpha_id. The field is sent only once it is a whole,
      valid id and the typist has paused, so a half-typed id is never a request. */
   const [registryFilter, setRegistryFilter] = useState("");
+  /* QA2 U11: the typed id narrows the list; one control lifts it so a new id never hides the registry. */
+  const [registryShowAll, setRegistryShowAll] = useState(false);
 
   const [pending, setPending] = useState<Step | null>(null);
   const [refusal, setRefusal] = useState<ImportRefusal | null>(null);
@@ -170,11 +174,11 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
 
   useEffect(() => {
     const typed = alphaId.trim();
-    const next = ALPHA_ID_PATTERN.test(typed) ? typed : "";
+    const next = !registryShowAll && ALPHA_ID_PATTERN.test(typed) ? typed : "";
     if (next === registryFilter) return;
     const timer = setTimeout(() => setRegistryFilter(next), 250);
     return () => clearTimeout(timer);
-  }, [alphaId, registryFilter]);
+  }, [alphaId, registryFilter, registryShowAll]);
 
   /** Everything the current bytes produced. Dropped whenever the bytes change. */
   const dropReceipts = useCallback(() => {
@@ -339,6 +343,8 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
     registry,
     registryTotal,
     registryAlpha,
+    registryShowAll,
+    onToggleRegistryShowAll: () => setRegistryShowAll((current) => !current),
     registryNext,
     registryMore,
     onLoadMoreRegistry,

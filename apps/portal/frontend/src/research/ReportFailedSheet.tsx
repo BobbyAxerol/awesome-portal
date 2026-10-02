@@ -13,7 +13,13 @@
 import type { FinalAudit, FrozenCoreFailed } from "./reportClient";
 import { STAGE_CHECK_WORDS, STAGE_LABEL } from "./reportClient";
 import { foldLabel, shortDigest, shortId } from "./researchFormat";
-import { runLabelOrShortId } from "./runLabels";
+import { runLabelFor, runLabelOrShortId } from "./runLabels";
+
+/** QA S09 (UX-22): `rwa_06GFEQ8XZ00VDADK2P63C144W3` is an opaque base32 tail `shortId` leaves whole; any id of this sheet reads prefix + 8. */
+function clippedId(id: string): string {
+  const match = /^([a-z]{2,5}_)(.+)$/.exec(id);
+  return match && match[2]!.length > 8 ? `${match[1]}${match[2]!.slice(0, 8)}` : (shortId(id) ?? id);
+}
 import { reasonCodeSentence } from "./researchRefusal";
 import { iso } from "./utcMinute";
 
@@ -70,7 +76,7 @@ export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFaile
               <dd className="v rr-long">
                 {field.value !== null && field.availability.state === "AVAILABLE" ? (
                   /* QA S09 (UX-22): an attempt or run id is a short id with the full one in the tooltip, never a 30-character token. */
-                  /^(rrun|ratt|rwa)_/.test(field.value) ? <span title={field.value}>{runLabelOrShortId(field.value) ?? shortId(field.value)}</span> : field.value
+                  /^(rrun|ratt|rwa)_/.test(field.value) ? <span title={field.value}>{runLabelFor(field.value) ?? clippedId(field.value)}</span> : field.value
                 ) : (
                   <Absent code={field.availability.reason_code} />
                 )}

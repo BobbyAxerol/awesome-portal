@@ -110,13 +110,16 @@ describe("POLISH2 · 4 — no built-in timeframe", () => {
     expect(reviewRows()).not.toMatch(/·\s*$/m);
   });
 
-  it("the Market data step offers no 'selected' chip while the field is empty, and the error waits for an edit or a leave", () => {
+  it("the Market data step offers no 'selected' chip while the field is empty, and the error waits for an edit", () => {
     mount({ draft: bound({ timeframe: "" }), limits: constraintsFrom(ATLAS, registryWith(["4h", "1h"]).entries, ALPHA.alpha_version_id) });
     go("data");
     expect([...document.querySelectorAll('[data-timeframe-chip][aria-checked="true"]')]).toEqual([]);
     expect(document.querySelector("[data-step-error]")).toBeNull();
     go("route");
     go("data");
+    /* U18: leaving is not an edit. */
+    expect(document.querySelector("[data-step-error]")).toBeNull();
+    fireEvent.change(document.querySelector('input[aria-label="Symbol"]') as HTMLInputElement, { target: { value: "B" } });
     expect(document.querySelector("[data-step-error]")?.textContent).toBe("A timeframe is required.");
   });
 

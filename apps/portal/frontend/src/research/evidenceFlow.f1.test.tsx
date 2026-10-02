@@ -225,6 +225,12 @@ describe("F1 400-trial audit — the Claim tab does not contradict the Summary t
   it("Summary draws the per-fold table from the retained lane", () => {
     const { container } = view({ cursor: DEFAULT_CURSOR, passport: retained(), runIdentity: IDENTITY });
     expect(container.querySelector("[data-retained-verdicts='AVAILABLE']")).toBeTruthy();
+    /* QA S04-U5 (wave 2): the table that scrolls sideways at a narrow width is a focusable, named region with an edge shadow. */
+    const card = container.querySelector("[data-retained-verdicts]") as HTMLElement;
+    expect(card.getAttribute("role")).toBe("region");
+    expect(card.getAttribute("aria-label")).toMatch(/scrolls sideways/);
+    expect(card.getAttribute("tabindex")).toBe("0");
+    expect(card.style.background).toContain("no-repeat");
     expect(container.querySelectorAll("[data-verdict-row]").length).toBe(W3.evidence.fold_verdicts.rows.length);
   });
 

@@ -36,6 +36,7 @@
 import type { components as FreezeComponents } from "@portal/contracts-research-freeze";
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 
+import { InfoMark } from "../components/InfoMark";
 import { reasonCodeSentence } from "./researchRefusal";
 import { shortDigest } from "./researchFormat";
 import type { ParameterAuthorityValue, Stage4BindingValue } from "./Stage4Binding";
@@ -309,11 +310,12 @@ export const VERIFY_SCOPE_NOTE =
  * The hi-fi's verify label, from this screen's one verify slot. It names the
  * state of the custody card's POST; the control itself lives with the receipt.
  */
-export function verifyChainLabel(verify: { state: string }): string {
+export function verifyChainLabel(verify: { state: string }): string | null {
   if (verify.state === "verifying") return "recomputing…";
   if (verify.state === "done") return "verified — integrity only";
   if (verify.state === "refused") return "verify refused";
-  return "verify digest — below";
+  /* H29: at rest the label would be a static pill that reads as a control; the verify button lives with the receipt. */
+  return null;
 }
 
 function LinkValue({ link }: { link: ChainLink }) {
@@ -356,7 +358,7 @@ export function DigestChain({
   verifyLabel,
 }: {
   chain: DigestChainFacts;
-  verifyLabel: string;
+  verifyLabel: string | null;
 }) {
   const published = chain.links.filter((link) => link.value !== null).length;
   return (
@@ -371,17 +373,22 @@ export function DigestChain({
         <h3
           className="[font-family:var(--font-body)] text-[10px] font-medium uppercase tracking-[.07em]"
           style={{ color: "var(--ink-faint)" }}
-        >
-          F3 · digest chain
-        </h3>
-        <span
-          className="mono rounded-[6px] border px-2 text-[9.5px] uppercase tracking-[.05em]"
-          style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
-          data-chain-verify
           title={VERIFY_SCOPE_NOTE}
+          data-chain-note
         >
-          {verifyLabel}
-        </span>
+          F3 · digest chain <InfoMark />
+        </h3>
+        {verifyLabel !== null ? (
+          <span
+            className="mono rounded-[6px] border px-2 text-[9.5px] uppercase tracking-[.05em]"
+            style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+            data-chain-verify
+            role="status"
+            title={VERIFY_SCOPE_NOTE}
+          >
+            {verifyLabel}
+          </span>
+        ) : null}
       </div>
 
       <ul className="flex min-w-0 flex-col">
@@ -392,7 +399,8 @@ export function DigestChain({
             style={{ borderColor: "var(--line-soft)" }}
             data-chain-link={link.key}
             data-chain-link-state={link.value === null ? "NOT_PUBLISHED" : "PUBLISHED"}
-            title={`${link.sourceKey}${link.rule ? ` · ${link.rule}` : ""}`}
+            title={[link.sourceKey, link.value === null ? link.absenceNote : link.rule].filter((part) => part).join(" · ")}
+            data-chain-rule={link.value === null ? (link.absenceNote ?? "") : (link.rule ?? "")}
           >
             <span
               aria-hidden
@@ -407,22 +415,10 @@ export function DigestChain({
             <span className="ml-auto flex min-w-0 max-w-full flex-wrap items-baseline justify-end gap-x-2">
               <LinkValue link={link} />
             </span>
-            {link.rule !== null || link.absenceNote !== null ? (
-              <span
-                className="mono w-full text-[9px] leading-[1.5]"
-                style={{ color: "var(--ink-faint)" }}
-                data-chain-rule={link.key}
-              >
-                {link.value === null && link.absenceNote !== null ? link.absenceNote : link.rule}
-              </span>
-            ) : null}
           </li>
         ))}
       </ul>
 
-      <p className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-chain-note title={VERIFY_SCOPE_NOTE}>
-        checks artifact integrity, not selection
-      </p>
     </section>
   );
 }

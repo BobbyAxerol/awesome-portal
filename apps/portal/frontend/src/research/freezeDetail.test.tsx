@@ -699,10 +699,9 @@ describe("P16-T05 — retained custody is narrow, and says so", () => {
     };
     expect(isFreezeLaneNotApplicable(answer)).toBe(true);
     const { container } = view({ retained: { state: "not-applicable", answer } });
-    const note = container.querySelector("[data-retained-not-applicable]");
-    expect(note?.textContent).toContain("not applicable");
-    expect(note?.textContent).toContain("nothing pending");
-    expect(note?.textContent).not.toContain("which the retained lane never holds");
+    /* D12: a P04 run is not held by the retained lane — no "custody check not applicable" card is drawn. */
+    expect(container.querySelector("[data-retained-not-applicable]")).toBeNull();
+    expect(container.querySelector("[data-retained]")).toBeNull();
     expect(container.querySelector("[data-retained-state]")).toBeNull();
     expect(container.querySelector("[data-retained-refusal]")).toBeNull();
   });
@@ -1044,7 +1043,10 @@ describe("W3b — Freeze on the retained WFO lane", () => {
     const { container } = await settled();
     const bytes = container.querySelector("[data-absence='source artifact bytes']");
     expect(bytes?.getAttribute("data-reason")).toBe("P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES");
-    expect(bytes?.textContent).toContain("P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES");
+    /* D24: the sentence is the text, the server's code is the hover. */
+    expect(bytes?.textContent).toContain("bytes verified at import; a read never reopens them");
+    expect(bytes?.textContent).not.toContain("P05_SOURCE_BYTES");
+    expect(bytes?.querySelector("[data-absence-code]")?.getAttribute("title")).toBe("P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES");
   });
 
   it("what-if names RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET and prints no numeric ΔJ", async () => {
@@ -1139,7 +1141,8 @@ describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
     const { container } = delegatedView(foldOrderingFixture());
     const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
     expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("⚠ NOT CAUSAL · GLOBAL SELECTION");
-    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
+    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("not causal multi fold global calibration");
+    expect(panel.querySelector("[data-source-claim]")?.getAttribute("title")).toContain("NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION");
     expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("after every fold's OOS was read");
     expect(panel.querySelector("[data-two-clocks]")).toBeNull();
     expect(panel.textContent).not.toMatch(/\bPASS\b|causal ✓/);
@@ -1205,7 +1208,7 @@ describe("E2c · 7.9 — the P04 digest chain draws the hub's own provenance", (
     const engine = container.querySelector("[data-chain-link='ENGINE_PIN']") as HTMLElement;
     expect(engine.getAttribute("data-chain-link-state")).toBe("NOT_PUBLISHED");
     expect(engine.textContent).toContain("not published");
-    expect(engine.textContent).toContain("publishes no engine version");
+    expect(engine.getAttribute("title")).toContain("publishes no engine version");
     /* The hub freeze read has no engine field at all, so no version may appear here. */
     expect(engine.textContent).not.toContain("1.1.1");
     expect(engine.textContent).not.toContain("—");
@@ -1215,13 +1218,13 @@ describe("E2c · 7.9 — the P04 digest chain draws the hub's own provenance", (
     const { container } = view();
     const canonical = container.querySelector("[data-chain-link='CANONICAL_FORM']") as HTMLElement;
     expect(canonical.getAttribute("data-chain-link-state")).toBe("NOT_PUBLISHED");
-    expect(canonical.textContent).toContain("does not publish a parameter authority");
+    expect(canonical.getAttribute("title")).toContain("does not publish a parameter authority");
     expect(container.querySelector("[data-chain-link='STRATEGY_SOURCE']")!.getAttribute("data-chain-link-state")).toBe("NOT_PUBLISHED");
     expect(container.querySelector("[data-panel='digest-chain']")!.getAttribute("data-chain-published")).toBe("4");
   });
 
   it("the verify label follows this screen's one verify, and never becomes a second button", () => {
-    expect((view().container.querySelector("[data-chain-verify]") as HTMLElement).textContent).toBe("verify digest — below");
+    expect(view().container.querySelector("[data-chain-verify]")).toBeNull();
     cleanup();
     expect((view({ verify: { state: "verifying" } }).container.querySelector("[data-chain-verify]") as HTMLElement).textContent).toBe("recomputing…");
     cleanup();
@@ -1243,6 +1246,32 @@ describe("E2c · 7.9 — the P04 digest chain draws the hub's own provenance", (
     });
     expect((done.container.querySelector("[data-chain-verify]") as HTMLElement).textContent).toBe("verified — integrity only");
     expect(done.container.querySelector("[data-panel='digest-chain'] button")).toBeNull();
+  });
+});
+
+describe("QA 2026-10-02 D12 — the P04 hub body is balanced, not repeated", () => {
+  it("the what-if block sits in the left column under the frozen parameters, and no second what-if is drawn below", () => {
+    const { container } = view();
+    const left = container.querySelector("[data-column='left']") as HTMLElement;
+    expect(left.querySelector("[data-panel='frozen-parameters']")).toBeTruthy();
+    expect(left.querySelector("[data-panel='what-if']")).toBeTruthy();
+    expect(container.querySelectorAll("[data-panel='what-if']")).toHaveLength(1);
+    expect(container.querySelector("[data-column='right'] [data-panel='digest-chain']")).toBeTruthy();
+  });
+
+  it("the source-gap strip is one collapsed line with the count, the gaps one click away; no custody-check card for a lane that never holds the run", () => {
+    const { container } = view({ retained: { state: "not-applicable", answer: { lane: { reason_code: "X", run_profile: "P04", run_adapter_contract_digest: "a" } } as never } });
+    const strip = container.querySelector("[data-source-absences]") as HTMLElement;
+    expect(strip.tagName).toBe("DETAILS");
+    expect(strip.hasAttribute("open")).toBe(false);
+    expect(strip.querySelector("summary")?.textContent).toMatch(/^source gaps · \d+$/);
+    expect(container.querySelector("[data-retained]")).toBeNull();
+  });
+
+  it("the 'partial' integrity chip explains itself on hover", () => {
+    const { container } = view();
+    const chip = container.querySelector("[data-integrity-state]") as HTMLElement;
+    expect(chip.getAttribute("title")).toBe(PARTIAL_SCOPE_NOTE);
   });
 });
 

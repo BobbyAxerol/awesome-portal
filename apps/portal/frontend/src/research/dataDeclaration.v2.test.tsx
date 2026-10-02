@@ -810,7 +810,8 @@ describe("Review rail: the preflight estimate", () => {
     expect(q('[data-window-bars="is"]')!.title).toContain("first 2025-06-01 00:00");
     expect(q("[data-warmup-chip]")!.textContent).toBe("warmup 200");
     expect(q("[data-warmup-chip]")!.title).toBe("warmup 200 bars required · 12,000 available before IS");
-    expect(q("[data-planned-folds]")!.textContent).toBe("≈ 11 folds · weekly expanding");
+    /* RG2: the basis word is the tooltip, not the line. */
+    expect(q("[data-planned-folds]")!.textContent).toBe("≈ 11 folds");
     expect(q("[data-planned-folds]")!.title).toContain("the server decides");
     expect(document.querySelectorAll("[data-condition]")).toHaveLength(5);
     const absent = q('[data-condition="coverage_covers_windows"]')!;

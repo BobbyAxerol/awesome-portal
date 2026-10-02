@@ -311,7 +311,7 @@ export function toProgressRefusal(error: unknown): ProgressRefusal {
   const conflict = refusal.status === 409;
   return {
     ...refusal,
-    ...(conflict ? { state: "terminal" as const, mayRetry: false, message: REFUSAL_COPY.terminal } : {}),
+    ...(conflict ? { state: "terminal" as const, mayRetry: false, message: REFUSAL_COPY.conflict } : {}),
     closesStream: refusal.state === "denied" || conflict,
   };
 }

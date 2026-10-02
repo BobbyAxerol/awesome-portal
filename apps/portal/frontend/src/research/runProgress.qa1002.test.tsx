@@ -251,7 +251,7 @@ describe("S03 labels and counts", () => {
     const read = structuredClone(BASE);
     read.progress = {
       ...read.progress!,
-      folds: Array.from({ length: 9 }, (_, i) => ({ fold: i + 1, state: "DONE" as const, started_at_utc_ms: 1, completed_at_utc_ms: 2 })),
+      folds: Array.from({ length: 16 }, (_, i) => ({ fold: i + 1, state: "DONE" as const, started_at_utc_ms: 1, completed_at_utc_ms: 2 })),
     };
     view({ read, foldCursor: 1 });
     expect($("[data-gantt-cells] [data-fold='1']")?.getAttribute("aria-label")).toBe("fold 1, done");
@@ -382,5 +382,72 @@ describe("S03 hook — retry, console outage, history", () => {
     await waitFor(() => expect(result.current.read).not.toBeNull());
     act(() => result.current.pinFold(2));
     expect(window.location.hash).toBe("");
+  });
+});
+
+describe("S03_S05 second wave", () => {
+  const nineFolds = () => {
+    const read = structuredClone(BASE);
+    read.progress = {
+      ...read.progress!,
+      folds: Array.from({ length: 9 }, (_, i) => ({ fold: i + 1, state: "DONE" as const, started_at_utc_ms: 1, completed_at_utc_ms: 2 })),
+    };
+    return read;
+  };
+
+  it("U4: nine folds are nine rows (not three), and a bar with no published timeline says so", () => {
+    view({ read: nineFolds(), foldCursor: 1 });
+    expect($("[data-gantt]")?.getAttribute("data-gantt-mode")).toBe("rows");
+    expect(document.querySelectorAll("[data-fold-row]").length).toBe(9);
+    expect($("[data-fold-track='2']")?.getAttribute("title")).toContain("not published");
+    expect($("[data-fold-track='2']")?.getAttribute("title")).toContain("SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS");
+  });
+
+  it("NEW-1: a not-issued passport lists no claim chips (one state)", () => {
+    const read = { ...failedRead(), claims: FOUR } as ProgressRead;
+    view({ read });
+    expect($("[data-research-panel='claim']")?.getAttribute("data-claim")).toBe("NOT_ISSUED");
+    expect(document.querySelectorAll("[data-claim-kind]").length).toBe(0);
+  });
+
+  const refusal409 = { state: "terminal", status: 409, notFound: false, mayRetry: false, message: "x", code: null, detail: null, requestId: null, closesStream: true } as never;
+
+  it("409: the notice says to read again and offers a Retry; the transport label is not 'state moved'", () => {
+    const onRetry = vi.fn();
+    view({
+      read: null,
+      snapshot: null,
+      refusal: refusal409,
+      state: { state: "terminal", reason: "This changed while it was being read. Read it again.", mayRetry: false, retainsContent: false },
+      onRetry,
+    });
+    fireEvent.click($("[data-action='retry']")!);
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).not.toContain("state moved");
+  });
+
+  it("NEW-2: a failed-retryable state is worded 'not accepted' and keeps the code as a tooltip", () => {
+    view({
+      read: null,
+      snapshot: null,
+      refusal: { ...(refusal409 as object), state: "failed-retryable", status: 500, mayRetry: true } as never,
+      state: { state: "failed-retryable", reason: "The request was not accepted this time. It can be tried again.", mayRetry: true, retainsContent: false },
+      onRetry: vi.fn(),
+    });
+    const word = document.querySelector("[data-research-state='failed-retryable'] span[title='failed-retryable']");
+    expect(word?.textContent).toBe("not accepted");
+    expect(document.body.textContent).not.toContain("failed-retryable");
+  });
+
+  it("NEW-3: a refused first read does not keep 'reading run identity…'", () => {
+    const refusal = { state: "unavailable", status: 503, notFound: false, mayRetry: true, message: "m", code: null, detail: null, requestId: null, closesStream: false } as never;
+    view({ read: null, snapshot: null, refusal, state: { state: "unavailable", reason: "The Research service did not answer. Try again.", mayRetry: true, retainsContent: false }, onRetry: vi.fn() });
+    expect(document.body.textContent).not.toContain("reading run identity");
+    expect(document.querySelectorAll("[data-breadcrumb-run]").length).toBe(1);
+  });
+
+  it("NEW-3 control: while nothing has answered, the strip still says it is reading", () => {
+    view({ read: null, snapshot: null, state: researchState({ kind: "in-flight", hasAcceptedResponse: false }) });
+    expect(document.body.textContent).toContain("reading run identity");
   });
 });

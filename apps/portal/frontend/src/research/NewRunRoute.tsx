@@ -22,6 +22,7 @@ import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type Ru
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
 import { mergeEstimates, profileTrialDefault, readCatalogIndex, readPreflightEstimate, readProfiles, seedPinned, selectProfile, specVersionOf } from "./dataDeclaration";
 import { useWindowMetadata } from "./useWindowMetadata";
+import { clearRunDraft, restoreRunDraft, saveRunDraft } from "./runDraftStore";
 import { useDeclarationEstimate } from "./useDeclarationEstimate";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
@@ -200,7 +201,7 @@ export function NewRunRoute() {
   }, []);
 
   const document = atlas?.atlas ?? null;
-  const [draft, setDraft] = useState<RunDraft>(emptyDraft);
+  const [draft, setDraft] = useState<RunDraft>(() => restoreRunDraft(emptyDraft(), location.search) ?? emptyDraft());
   const limits = useMemo(
     () => constraintsFrom(document, registry, draft.alphaVersionId),
     [document, registry, draft.alphaVersionId],
@@ -516,6 +517,9 @@ export function NewRunRoute() {
 
   /* Keeps this component's copy of the draft in step with the controller's. */
   useEffect(() => setDraft(run.draft), [run.draft]);
+  /* U15: a reload brings the declaration back; leaving the form inside the app drops it. */
+  useEffect(() => saveRunDraft(run.draft), [run.draft]);
+  useEffect(() => clearRunDraft, []);
 
   /* The optional `preflight_estimate` of the answer on screen; absent means nothing new renders. */
   const preflightEstimate = useMemo(() => readPreflightEstimate(run.preflight.preflight), [run.preflight.preflight]);

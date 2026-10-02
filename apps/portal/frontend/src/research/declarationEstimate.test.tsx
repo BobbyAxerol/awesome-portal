@@ -360,7 +360,8 @@ describe("the estimate, on the screen", () => {
   it("value path: bars, folds with their basis, and the conditions checklist with observed / required in the tooltip", () => {
     mount({ estimate: readDeclarationEstimate(AVAILABLE)!, estimateStatus: { kind: "served", estimate: readDeclarationEstimate(AVAILABLE)! } });
     expect(text('[data-window-bars="analysis"]')).toBe("48 bars");
-    expect(text("[data-planned-folds]")).toBe("≈ 2 folds · p08 planner on indexed timestamps v1");
+    /* RG2: the planner's basis word is the tooltip, not the line. */
+    expect(text("[data-planned-folds]")).toBe("≈ 2 folds");
     expect(q("[data-planned-folds]")!.getAttribute("title")).toContain("basis P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1");
     expect(q("[data-planned-folds]")!.getAttribute("title")).toContain("min train 24 bars");
     expect(q("[data-planned-folds]")!.getAttribute("title")).toContain("min OOS 12 bars");

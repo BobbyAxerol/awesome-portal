@@ -11,6 +11,7 @@
  */
 
 import { type EstimateCondition, type EstimateWindow, type PreflightEstimate, group, utcMinute } from "./dataDeclaration";
+import { utcMs } from "./runDraft";
 
 export type EstimateWindowKey = "is" | "oos" | "holdout" | "analysis";
 
@@ -123,11 +124,6 @@ export function WarmupChip({ estimate }: { estimate: PreflightEstimate | null })
   );
 }
 
-/** The served basis word, readable: `P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1` as `p08 planner on indexed timestamps v1`. The exact word stays in the tooltip. */
-function basisText(basis: string): string {
-  return basis.includes("_") ? basis.toLowerCase().replace(/_/g, " ") : basis;
-}
-
 /** `≈ 11 folds · weekly expanding`: an estimate, and the tooltip says the server decides. */
 export function PlannedFolds({ estimate }: { estimate: PreflightEstimate | null }) {
   const folds = estimate?.plannedFolds;
@@ -158,7 +154,6 @@ export function PlannedFolds({ estimate }: { estimate: PreflightEstimate | null 
       data-planned-folds="served"
     >
       ≈ {group(folds.count)} fold{folds.count === 1 ? "" : "s"}
-      {folds.basis ? ` · ${basisText(folds.basis)}` : ""}
     </span>
   );
 }
@@ -233,5 +228,44 @@ export function ConditionsChecklist({ estimate }: { estimate: PreflightEstimate 
         })}
       </ul>
     </section>
+  );
+}
+
+/** The start the server says leaves the full warmup, as a draft instant (`2020-01-13T12:00`, UTC); null when it is not a usable whole minute. */
+export function servedEarliestStart(estimate: PreflightEstimate | null): string | null {
+  const ms = estimate?.earliestStartUtcMs ?? null;
+  return ms === null || !Number.isFinite(ms) || ms % 60000 !== 0 ? null : new Date(ms).toISOString().slice(0, 16);
+}
+
+/**
+ * U01: the declared start leaves no room for the warmup, and the estimate serves the earliest start that does.
+ * One click puts that served instant in the field; nothing is computed here, and nothing is offered once the
+ * start is at or after it (or when the estimate serves none).
+ */
+export function EarliestStartOffer({
+  estimate,
+  start,
+  onUse,
+}: {
+  estimate: PreflightEstimate | null;
+  /** The declared start (IS start, or the analysis start of an advanced run), as the draft holds it. */
+  start: string;
+  onUse: (instant: string) => void;
+}) {
+  const earliest = servedEarliestStart(estimate);
+  const declared = utcMs(start);
+  if (earliest === null || declared === null || declared >= (estimate?.earliestStartUtcMs ?? 0)) return null;
+  return (
+    <button
+      type="button"
+      className="mono w-fit rounded-[4px] border px-2 py-[3px] text-[10px]"
+      style={{ borderColor: "var(--accent)", color: "var(--accent)", background: "var(--accent-soft)" }}
+      title={`The earliest start with the full warmup, as the index served it (${estimate?.earliestStartBasis ?? "basis not published"}). Click to use it.`}
+      aria-label={`Start at ${earliest} UTC, the earliest with full warmup`}
+      onClick={() => onUse(earliest)}
+      data-earliest-start-offer={earliest}
+    >
+      Start at {earliest.replace("T", " ")} · full warmup
+    </button>
   );
 }

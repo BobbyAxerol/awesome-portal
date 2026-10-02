@@ -84,6 +84,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("skip link", () => {
+  it("is the first focusable element and moves focus to the content region", async () => {
+    const { container } = mount();
+    const link = await screen.findByRole("link", { name: "Skip to content" });
+    const focusable = container.querySelectorAll<HTMLElement>("a[href], button, input, [tabindex='0']");
+    expect(focusable[0]).toBe(link);
+    expect(link.getAttribute("href")).toBe("#portal-content");
+    fireEvent.click(link);
+    expect(document.activeElement).toBe(container.querySelector("main#portal-content"));
+  });
+});
+
 describe("bootstrap", () => {
   it("refuses to render navigation when the registry fails, and shows the request id", async () => {
     mount({ registryStatus: 500 });

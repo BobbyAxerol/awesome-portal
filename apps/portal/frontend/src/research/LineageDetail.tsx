@@ -690,7 +690,8 @@ function GatesChip({ diff }: { diff: SemanticDiff }) {
 
 function DiffChips({ diff }: { diff: SemanticDiff }) {
   const regular = diff.changes.filter((change) => change.kind !== "ALPHA_VERSION");
-  if (diff.state === "ROOT") return <span className="ln-diff" data-diff-state="ROOT">root — no parent</span>;
+  /* QA2: a root is said once, by the panel's parent row; the card stays quiet. */
+  if (diff.state === "ROOT") return null;
   if (diff.state !== "AVAILABLE") {
     return (
       <span data-diff-state={diff.state}>
@@ -1433,7 +1434,7 @@ function OutcomeLine({ attempt }: { attempt: LineageAttempt }) {
   if (attempt.outcome.source !== "SOURCE_CLAIM_SENTENCE" || attempt.outcome.text === null) return null;
   return (
     <span className="ln-note" data-outcome-line="SOURCE_CLAIM_SENTENCE" title={`claim ${attempt.run_facts.claim.state ?? "state not published"}`}>
-      {attempt.outcome.text}
+      {labelRunIds(attempt.outcome.text)}
     </span>
   );
 }
@@ -1818,7 +1819,7 @@ function Selected({
               <span data-claim-words>{CLAIM_STATE_WORDS[claim.state]}</span>
               {claim.text ? (
                 <span className="ln-claimwhy" data-claim-reason>
-                  {claim.text}
+                  {labelRunIds(claim.text)}
                 </span>
               ) : null}
             </span>
@@ -1891,7 +1892,7 @@ function Selected({
         {attempt.state === "ABANDONED" || attempt.state === "FAILED" ? (
           <ReasonLine attempt={attempt} className="ln-verdict" />
         ) : attempt.outcome.text !== null && attempt.outcome.text === claim.text && claim.state !== null ? null : attempt.outcome.text !== null ? (
-          attempt.outcome.text
+          labelRunIds(attempt.outcome.text)
         ) : (
           <AvailabilityAbsent what="verdict" availability={attempt.outcome.availability} />
         )}
@@ -1907,7 +1908,7 @@ function Selected({
               run report
             </Link>
           ) : (
-            <span className="ln-btnlink soft ln-unrouted" data-action-unrouted="run-report" title="No report — this run did not finish." aria-label="run report — no report, this run did not finish">
+            <span className="ln-btnlink soft ln-unrouted" data-action-unrouted="run-report" tabIndex={0} role="link" aria-disabled="true" title="No report — this run did not finish." aria-label="run report — no report, this run did not finish">
               run report
             </span>
           )}
@@ -1950,7 +1951,7 @@ function DiffPanel({ attempt }: { attempt: LineageAttempt | null }) {
       {diff === null ? (
         <p className="ln-dnote" title="Select an attempt to read its diff against its parent.">No attempt selected.</p>
       ) : diff.state === "ROOT" ? (
-        <p className="ln-dnote">Root attempt — nothing to diff against.</p>
+        <p className="ln-dnote">No parent to diff.</p>
       ) : diff.state !== "AVAILABLE" ? (
         <>
           {diff.gates_reset ? <GatesChip diff={diff} /> : null}
@@ -2179,9 +2180,12 @@ function PendingFrame({ state }: { state: ResearchState["state"] }) {
               </button>
             ))}
             <ProbesToggle known count={0} pressed={false} />
-            <span className="ln-count" data-counter-pending={state}>
-              counter — {state === "loading" ? "waiting for the lineage" : "withheld"}
-            </span>
+            {/* QA2: after a refusal the one notice above speaks; only loading says so here. */}
+            {state === "loading" ? (
+              <span className="ln-count" data-counter-pending={state}>
+                counter — loading
+              </span>
+            ) : null}
           </div>
           <section className="ln-tree" data-panel="tree" data-panel-state={state} aria-label="attempts, oldest first">
             <Pending what="attempts" state={state} />

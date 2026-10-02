@@ -202,7 +202,7 @@ describe("X2 · B3 — A3/A4/A5/A6 and B4 from the server", () => {
     expect(importance.querySelector("[title*='not fANOVA']")).toBeTruthy();
     expect(importance.textContent).toContain("3 trials, needs ≥ 8");
     const interactions = container.querySelector("[data-panel='interactions']") as HTMLElement;
-    expect(interactions.querySelector("[data-gap-reason='interactions']")?.textContent).toBe("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_INTERACTIONS");
+    expect(interactions.querySelector("[data-gap-reason='interactions']")?.getAttribute("data-gap-code")).toBe("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_INTERACTIONS");
   });
 
   it("B4 prints the top-decile share at θ* per parameter, one dot per parameter for a global study", async () => {

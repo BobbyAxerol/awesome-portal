@@ -461,6 +461,20 @@ export function blockingProblems(
     .map(([step, message]) => ({ step, message }));
 }
 
+/**
+ * Whether a blocking problem is only "not filled in yet": a required value that is empty, or a window with a
+ * bound still empty. Such a problem is not shown as an error on a step the reader merely passed through (U18);
+ * a value that is present and wrong is.
+ */
+export function isIncompleteProblem(draft: RunDraft, problem: { step: StepId; message: string }): boolean {
+  if (/\brequired\b/.test(problem.message)) return true;
+  if (problem.step !== "windows") return false;
+  if (draft.protocol === "three_window_decay") {
+    return [draft.windows.is, draft.windows.oos, draft.windows.holdout].some((window) => window.start === "" || window.endExclusive === "");
+  }
+  return draft.walkForward.start === "" || draft.walkForward.endExclusive === "" || draft.walkForward.splitMode === "";
+}
+
 /* ------------------------------------------------------------ serializer */
 
 function interval(window: WindowDraft) {

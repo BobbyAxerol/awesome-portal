@@ -107,14 +107,14 @@ function renderCard(props: Partial<Parameters<typeof WhatIfCard>[0]> = {}) {
 }
 
 describe("A10c WhatIfCard — the preview reads the server's node, never a formula", () => {
-  it("T07/P16-T06: the ΔJ₁ preview is the cell's own value, shown to 6 digits with the exact string in title; θ* starts at 0", () => {
+  it("T07/P16-T06: the ΔJ preview is the cell's own value, shown to 6 digits with the exact string in title; θ* starts at 0", () => {
     const { container } = renderCard();
-    expect(container.querySelector("[data-delta-j]")?.textContent).toBe("ΔJ₁ 0");
+    expect(container.querySelector("[data-delta-j]")?.textContent).toBe("ΔJ 0");
     const [rvol] = container.querySelectorAll<HTMLInputElement>("input[type='range']");
     fireEvent.change(rvol!, { target: { value: RVOL[6]! } });
     expect(container.querySelector("[data-preview]")?.getAttribute("data-cell")).toBe("x6y4");
-    expect(container.querySelector("[data-delta-j]")?.textContent).toBe("ΔJ₁ −0.656469");
-    expect(container.querySelector("[data-delta-j]")?.getAttribute("title")).toBe("ΔJ₁ −0.6564691879264798 (exact)");
+    expect(container.querySelector("[data-delta-j]")?.textContent).toBe("ΔJ −0.656469");
+    expect(container.querySelector("[data-delta-j]")?.getAttribute("title")).toBe("ΔJ −0.6564691879264798 (exact)");
     expect(container.querySelector("[data-delta-j]")?.getAttribute("data-delta-j")).toBe("-0.6564691879264798");
     expect(container.querySelector("[data-cell-source='PARENT_TRIAL']")).not.toBeNull();
   });
@@ -126,7 +126,7 @@ describe("A10c WhatIfCard — the preview reads the server's node, never a formu
     const preview = container.querySelector("[data-preview]");
     expect(preview?.getAttribute("data-preview")).toBe("MISSING");
     expect(preview?.textContent).toContain("not evaluated");
-    expect(preview?.textContent).not.toMatch(/ΔJ₁\s*[−+-]?\d/);
+    expect(preview?.textContent).not.toMatch(/ΔJ\s*[−+-]?\d/);
   });
 
   it("T08: a clamped node says ≈ and names the evaluation it shares", () => {
@@ -290,11 +290,11 @@ describe("A10c useFreeze.runEvaluate — one POST, from one click", () => {
  * ---------------------------------------------------------------------- */
 
 describe("F1 · D7 — what-if honesty", () => {
-  it("J₁ and base are shown to 6 digits, the exact decimals ride in the title, no 16-digit float on the face", () => {
+  it("J and base are shown to 6 digits, the exact decimals ride in the title, no 16-digit float on the face", () => {
     const { container } = renderCard();
     const line = container.querySelector("[data-objective]") as HTMLElement;
-    expect(line.textContent).toBe("J₁ −1.44353 · base −1.44353");
-    expect(line.getAttribute("title")).toBe("J₁ -1.4435308120735202 · base -1.4435308120735202 (exact)");
+    expect(line.textContent).toBe("J −1.44353 · base −1.44353");
+    expect(line.getAttribute("title")).toBe("J -1.4435308120735202 · base -1.4435308120735202 (exact)");
     expect(container.querySelector("[data-preview]")?.textContent).not.toMatch(/\d\.\d{7,}/);
     expect(container.querySelector("[data-heatmap]")?.textContent).not.toMatch(/\d\.\d{7,}/);
     const heat = container.querySelector("[data-heat-cell='x6y4']") as HTMLElement;
@@ -377,10 +377,20 @@ describe("F1 · D7 — what-if honesty", () => {
   it("the objective scope reads as words without turning 'IS' into a verb; the raw code is the title", () => {
     const { container } = renderCard();
     const definition = container.querySelector("[data-what-if-definition]") as HTMLElement;
-    expect(definition.textContent).toContain("mode 1 decay J · global study · IS folds");
-    expect(definition.textContent).not.toMatch(/over the|is folds/);
-    expect(definition.querySelector("[data-objective-scope]")?.getAttribute("title")).toBe("GLOBAL_STUDY_IS_FOLDS");
+    /* H27/D15: the face is one line, "J" with its unit label; scope, seed, engine and dataset ride in the title. */
+    expect(definition.textContent).toContain("mode 1 decay J");
+    expect(definition.textContent).not.toMatch(/over the|is folds|seed|dataset/);
+    expect(definition.getAttribute("title")).toContain("global study · IS folds");
+    expect(definition.getAttribute("title")).not.toMatch(/over the|is folds/);
     expect(definition.querySelector("[data-objective-kind]")?.getAttribute("title")).toBe("MODE_1_DECAY_J");
+  });
+
+  it("QA D14: the slider caption names θ* and the step only; the declared range is the hover, not a '± 4 ×' that the clamped track contradicts", () => {
+    const { container } = renderCard();
+    const caption = container.querySelector("input[type='range']")!.closest("label")!.querySelector("[title^='declared']") as HTMLElement;
+    expect(caption.textContent).toMatch(/^θ\* [\d.]+ · step [\d.]+$/);
+    expect(caption.textContent).not.toMatch(/±|declared/);
+    expect(caption.getAttribute("title")).toMatch(/^declared [\d.]+–[\d.]+ · step/);
   });
 
   it("shownDecimal / enumWords: no zero for a non-number, abbreviations stay capitals", () => {

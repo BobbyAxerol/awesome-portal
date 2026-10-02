@@ -52,6 +52,7 @@ import { ServedAttempts } from "./QueuePanel";
 import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import { useRunLabel } from "./runLabels";
 import { NotPublished, RunMetaStrip } from "./RunMetaStrip";
+import { STATE_WORD } from "./ResearchPanel";
 import { StageLedger, isFixedProfileScope, utcClock } from "./StageLedger";
 import type { LiveBestObjective, Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
@@ -91,7 +92,7 @@ export function sseRefused(refusal: Pick<ProgressRefusal, "status" | "state">): 
   const code = refusal.status > 0 ? ` (${refusal.status})` : "";
   if (refusal.status === 0) return "no stream · the server did not answer";
   if (refusal.state === "denied") return `no stream · access refused${code}`;
-  if (refusal.status === 409) return `stream closed · the run's state moved${code}`;
+  if (refusal.status === 409) return `no stream · read again to refresh${code}`;
   if (refusal.state === "unavailable" || refusal.state === "failed-retryable" || refusal.state === "stale") {
     return `no stream · server unavailable${code}`;
   }
@@ -759,7 +760,7 @@ const FOLD_STATUS_TONE: Record<string, { fg: string; border: string; bg: string 
 };
 
 /** Compact cells replace rows past this many folds (HiFi: `NF > 8`). */
-export const COMPACT_FOLDS = 8;
+export const COMPACT_FOLDS = 12;
 
 interface FoldGanttProps {
   folds: ProgressSnapshot["folds"];
@@ -987,6 +988,7 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: 
             </span>
             <span
               data-fold-track={fold.fold}
+              title={timeline.state === "NOT_PUBLISHED" && !isRunning ? `per-fold timeline — not published · ${timeline.reason_code}` : undefined}
               data-motion={motion?.["data-motion"]}
               style={{
                 ...motion?.style,
@@ -1719,7 +1721,7 @@ function ClaimPassport({
             </span>
           </Field>
         )}
-        {claims !== undefined && claims.length > 0 ? (
+        {!(notIssued && (status === "FAILED" || status === "CANCELLED")) && claims !== undefined && claims.length > 0 ? (
           <Field label="claims" name="claims">
             <MethodologyClaims claims={claims} />
           </Field>
@@ -1959,7 +1961,7 @@ const STATE_GLYPH: Record<string, string> = {
 };
 
 /** One screen-level notice instead of one per card (FE-S03-14). */
-function StateNotice({ state, onRetry, retrying = false }: { state: ResearchState; onRetry?: () => void; retrying?: boolean }) {
+function StateNotice({ state, onRetry, retrying = false, forceRetry = false }: { state: ResearchState; onRetry?: () => void; retrying?: boolean; forceRetry?: boolean }) {
   const withheld = !(state.state === "available" || state.retainsContent);
   return (
     <div
@@ -1979,12 +1981,12 @@ function StateNotice({ state, onRetry, retrying = false }: { state: ResearchStat
         {STATE_GLYPH[state.state] ?? "·"}
       </span>
       <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{ fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: ".07em", color: "var(--ink-faint)" }}>
-          {state.state}
+        <span style={{ fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: ".07em", color: "var(--ink-faint)" }} title={STATE_WORD[state.state] ? state.state : undefined}>
+          {STATE_WORD[state.state] ?? state.state}
         </span>
         {state.reason ? <span style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{state.reason}</span> : null}
       </span>
-      {state.mayRetry && onRetry ? (
+      {(state.mayRetry || forceRetry) && onRetry ? (
         <button
           type="button"
           data-action="retry"
@@ -2465,7 +2467,8 @@ export function RunProgress(props: RunProgressProps) {
         ) : null}
       </Header>
 
-      <RunMetaStrip runId={runId} identity={identity} status={statusSlot} panel />
+      {/* QA S03 NEW-3: a refused first read has no identity to wait for; the short id is in the breadcrumb once. */}
+      {firstReadFailed ? null : <RunMetaStrip runId={runId} identity={identity} status={statusSlot} panel />}
       {read && (read.queue || (read.attempts?.length ?? 0) > 0) ? (
         <ServedAttempts queue={read.queue} attempts={read.attempts} />
       ) : null}
@@ -2473,7 +2476,7 @@ export function RunProgress(props: RunProgressProps) {
       {/* Partial source and pending callback already speak in the header. */}
       {state.state !== "available" &&
       !(state.state === "partial" && (snapshot?.source.partial || read?.availability === "PENDING_SOURCE_CALLBACK")) ? (
-        <StateNotice state={state} onRetry={onRetry} retrying={retrying} />
+        <StateNotice state={state} onRetry={onRetry} retrying={retrying} forceRetry={refusal?.status === 409} />
       ) : null}
 
       {firstReadFailed ? null : (

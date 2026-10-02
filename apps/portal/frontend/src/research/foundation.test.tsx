@@ -258,7 +258,8 @@ describe("P09-T01 — the journey map renders the descriptor the server pinned",
       expect(phase.querySelectorAll("[data-arrow]").length).toBeLessThanOrEqual(cards - 1);
       expect(phase.querySelector("[data-phase-title]")).toBeTruthy();
       const flow = phase.querySelector("[data-card]")!.parentElement!.parentElement!;
-      expect(flow.lastElementChild!.querySelector("[data-arrow]")).toBeNull();
+      /* QA2 UX-16: the arrow leads the card it points at, so none dangles after a wrapped row's last card or leads the first. */
+      expect(flow.firstElementChild!.querySelector("[data-arrow]")).toBeNull();
     }
   });
 
