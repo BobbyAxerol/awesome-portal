@@ -206,6 +206,15 @@ test.describe("research-loop visual (Research Light)", () => {
         await freezeNondeterminism(page);
         await usePreferences(page, "research");
         await installLane(page);
+        /* B8: S08 asks for the fixed-run replay observations once the hub answers equity-only. This run is a
+           retained WFO, so the server's answer is the canonical typed NOT_APPLICABLE body, not a window. */
+        await page.route("**/api/v1/quantbt/runs/*/replay/observations*", (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(contractFixture("research-fixed-replay-companion.not-applicable")),
+          }),
+        );
         if (cell.arrange) await cell.arrange(page);
 
         // A route nobody stubbed is answered 501 by the catch-all: that is a fixture gap, never a baseline.
