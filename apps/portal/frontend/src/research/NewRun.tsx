@@ -21,7 +21,7 @@
  * summary written beside the payload — it *is* the payload, rendered.
  */
 
-import { useEntryRef } from "./chartLife";
+import { useEntryRef, useReadout } from "./chartLife";
 import { LineageLink, lineageHref } from "./LineageLink";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useInRouterContext } from "react-router-dom";
@@ -2572,6 +2572,7 @@ function WindowTimeline({
   const warnings = coverageWarnings(draft, coverage);
   const rows = timelineRows(draft, axis);
   const timelineRef = useEntryRef<HTMLElement>();
+  const readout = useReadout();
   const coverageSpan = axis && coverage ? { left: ((coverage.from - axis.from) / (axis.to - axis.from)) * 100, width: Math.max(((coverage.to - coverage.from) / (axis.to - axis.from)) * 100, 0.5) } : null;
   return (
     <section ref={timelineRef} className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-window-timeline>
@@ -2593,6 +2594,10 @@ function WindowTimeline({
                 className="absolute top-0 h-full rounded-full"
                 style={{ left: `${coverageSpan.left}%`, width: `${coverageSpan.width}%`, background: "var(--accent-2)", opacity: 0.55 }}
                 title={`${coverage.symbol} served coverage ${coverage.firstMonth} → ${coverage.lastMonth} (month partitions)`}
+                tabIndex={0}
+                role="img"
+                aria-label={`${coverage.symbol} served coverage ${coverage.firstMonth} to ${coverage.lastMonth}`}
+                {...readout.bind(`data · ${coverage.symbol} served coverage ${coverage.firstMonth} → ${coverage.lastMonth} (month partitions)`)}
                 data-timeline-segment="coverage"
                 data-entry="x"
                 data-entry-origin="left"
@@ -2620,6 +2625,10 @@ function WindowTimeline({
                   className="absolute top-0 h-full rounded-full"
                   style={{ left: `${segment.left}%`, width: `${segment.width}%`, background: segment.tone, opacity: 0.85 }}
                   title={segment.title}
+                  tabIndex={0}
+                  role="img"
+                  aria-label={`${row.label} ${segment.title}`}
+                  {...readout.bind(`${row.label} · ${segment.title}`)}
                   data-timeline-segment={row.key}
                   data-entry="x"
                   data-entry-origin="left"
@@ -2635,6 +2644,15 @@ function WindowTimeline({
             </span>
           </div>
         ))}
+        {/* Reserved readout line: the declared text of the focused or hovered segment, fixed height. */}
+        <span
+          className="mono block h-[13px] overflow-hidden text-ellipsis whitespace-nowrap text-[9.5px] leading-[13px]"
+          style={{ color: "var(--ink-soft)" }}
+          data-timeline-readout={readout.text ?? undefined}
+          aria-live="polite"
+        >
+          {readout.text}
+        </span>
         {draft.protocol === "advanced" ? (
           <>
             <p className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-advanced-timeline>

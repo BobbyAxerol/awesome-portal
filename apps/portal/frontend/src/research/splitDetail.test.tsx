@@ -2228,3 +2228,73 @@ describe("QA S05 — one-window (hub) run", () => {
     expect(container.querySelector("[data-protocol-note]")).toBeTruthy();
   });
 });
+
+/* -------------------------------------------------------------------------
+ * Chart life — hover / focus readout on the window timeline and the fold bars
+ * ---------------------------------------------------------------------- */
+
+describe("Split readout — served text only, on a reserved line", () => {
+  const iso = (at: number) => new Date(at).toISOString();
+
+  it("hover and focus on a window segment print its label, UTC span, bars and served role", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-window-readout]")).toBeNull();
+    const segment = container.querySelector("[data-window='is']") as HTMLElement;
+    expect(segment.getAttribute("tabindex")).toBe("0");
+    expect(segment.getAttribute("aria-label")).toBeTruthy();
+    fireEvent.mouseEnter(segment);
+    const shown = container.querySelector("[data-window-readout]") as HTMLElement;
+    expect(shown.textContent).toBe(segment.getAttribute("title")!.split("\n")[0]);
+    expect(shown.textContent).toContain("2,994 bars");
+    expect(shown.textContent).toContain("IS_CALIBRATION_HISTORY");
+    fireEvent.mouseLeave(segment);
+    expect(container.querySelector("[data-window-readout]")).toBeNull();
+    const warmup = container.querySelector("[data-window='warmup']") as HTMLElement;
+    fireEvent.focus(warmup);
+    expect((container.querySelector("[data-window-readout]") as HTMLElement).textContent).toContain("WARMUP_NOT_SCORED");
+    fireEvent.blur(warmup);
+    expect(container.querySelector("[data-window-readout]")).toBeNull();
+  });
+
+  it("the readout line is one fixed-height box, present empty and full (no layout shift)", () => {
+    const { container } = view();
+    const line = container.querySelector("span[aria-live='polite'].h-\\[14px\\]") as HTMLElement;
+    expect(line).toBeTruthy();
+    expect(line.textContent).toBe("");
+    fireEvent.mouseEnter(container.querySelector("[data-window='is']") as HTMLElement);
+    expect(container.querySelector("span[aria-live='polite'].h-\\[14px\\]")).toBe(line);
+    expect(line.className).toContain("whitespace-nowrap");
+  });
+
+  it("a fold row's hover/focus prints the fold id, train and test UTC windows, and says an unpublished count is not published", () => {
+    const { container } = view({ folds: { state: "ready", split: sourceSplit() } });
+    const row = container.querySelector("[data-fold-row='1']") as HTMLElement;
+    fireEvent.focus(row);
+    const text = (container.querySelector("[data-fold-readout]") as HTMLElement).textContent!;
+    expect(text).toContain("train " + iso(T0) + " → " + iso(T0 + 200 * DAY));
+    expect(text).toContain("test " + iso(T0 + 200 * DAY) + " → " + iso(T0 + 260 * DAY));
+    expect(text.match(/bars not published/g)).toHaveLength(2);
+    expect(text).not.toMatch(/\d bars(?! not)/);
+    fireEvent.blur(row);
+    expect(container.querySelector("[data-fold-readout]")).toBeNull();
+  });
+
+  it("a fold with a partial boundary reads 'train not published', and a served count is echoed as is", () => {
+    const split = sourceSplit();
+    const folds = split.fold_plan.folds as unknown as Array<Record<string, unknown>>;
+    const none = { state: "NOT_PUBLISHED", reason_code: "X", bars: null, start_utc_ms: null, end_utc_ms: null };
+    folds[0]!.anatomy = {
+      state: "AVAILABLE", reason_code: null, train_bars: 4800, test_bars: 1440,
+      warmup: none, label_horizon: none, purge: none, embargo: none, validation: none, cutoff_utc_ms: null, account_policy: null,
+    };
+    const { container } = view({ folds: { state: "ready", split } });
+    fireEvent.mouseEnter(container.querySelector("[data-fold-row='1']") as HTMLElement);
+    const first = (container.querySelector("[data-fold-readout]") as HTMLElement).textContent!;
+    expect(first).toContain("4,800 bars");
+    expect(first).toContain("1,440 bars");
+    fireEvent.mouseEnter(container.querySelector("[data-fold-row='3']") as HTMLElement);
+    const third = (container.querySelector("[data-fold-readout]") as HTMLElement).textContent!;
+    expect(third).toContain("train not published");
+    expect(third).toContain("test " + iso(T0 + 400 * DAY));
+  });
+});

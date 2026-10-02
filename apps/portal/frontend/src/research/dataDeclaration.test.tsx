@@ -402,6 +402,41 @@ describe("coverage on the window timeline", () => {
   });
 });
 
+describe("window timeline readout", () => {
+  const threeWindows = (is0: string, hold1: string): Partial<RunDraft> => ({
+    datasetId: "crypto-binance-1m",
+    symbol: "BTCUSDT_210326",
+    windows: {
+      is: { start: is0, endExclusive: "2021-02-15T00:00" },
+      oos: { start: "2021-02-15T00:00", endExclusive: "2021-03-01T00:00" },
+      holdout: { start: "2021-03-01T00:00", endExclusive: hold1 },
+    },
+  });
+  it("hover and focus on a segment print the declared text; blur clears it; segments are focusable with a name", () => {
+    mount(bound(threeWindows("2021-02-01T00:00", "2021-04-01T00:00")), { catalog: SOLE });
+    const line = () => q("[data-window-timeline] span[aria-live='polite']") as HTMLElement;
+    expect(line().textContent).toBe("");
+    const is = q('[data-timeline-segment="is"]') as HTMLElement;
+    expect(is.getAttribute("tabindex")).toBe("0");
+    expect(is.getAttribute("aria-label")).toContain("IS");
+    fireEvent.mouseEnter(is);
+    expect(line().textContent).toBe(`IS · ${is.getAttribute("title")}`);
+    fireEvent.mouseLeave(is);
+    expect(line().textContent).toBe("");
+    const coverage = q('[data-timeline-segment="coverage"]') as HTMLElement;
+    fireEvent.focus(coverage);
+    expect(line().textContent).toContain("served coverage 2021-02 → 2021-03");
+    fireEvent.blur(coverage);
+    expect(line().textContent).toBe("");
+  });
+
+  it("the readout invents nothing: a row with no drawn segment has nothing to hover", () => {
+    mount(bound(threeWindows("", "")), { catalog: null });
+    expect(qa('[data-timeline-segment="is"]')).toHaveLength(0);
+    expect((q("[data-window-timeline] span[aria-live='polite']") as HTMLElement).textContent).toBe("");
+  });
+});
+
 describe("fold plan on the rail", () => {
   const advanced = (): RunDraft => bound({
     protocol: "advanced",

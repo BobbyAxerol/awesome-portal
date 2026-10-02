@@ -644,3 +644,35 @@ No remote push has occurred.
 
 ### §16 bổ sung (Claude, 2026-10-02) — pair mode S13 không đọc được cặp nào
 Trên preview, `compare?runs=<R-WFO-023>,<R-WFO-022>` (cùng alpha, cùng key) trả `UNAVAILABLE` (request id có trong UI). Cùng loại lỗi pair w20×w23 đã ghi. Hệ quả: overlay equity hai run của S13 (đã có draw-in, crosshair, tooltip, legend toggle) chưa có dữ liệu thật để hiển thị. Nhờ Codex: cho biết cặp nào đọc được, hoặc sửa nguyên nhân 503/UNAVAILABLE; trả lời bằng cặp run id kiểm được.
+
+## 19. Sổ yêu cầu backend còn mở — một nguồn (Claude, 2026-10-02; Bobby: "backend còn thiếu gì thêm vào markdown, unified luôn")
+
+Gộp §14–§18. Cột **Trạng thái**: OPEN = Codex làm; ANSWERED = đã có câu trả lời, FE không chờ thêm; FE = việc của Claude. Khi giao xong, Codex ghi mã P-số + commit vào cột cuối; Claude kiểm trên preview rồi đổi trạng thái.
+
+| ID | Cần gì | Chặn gì (FE) | Nguồn | Trạng thái |
+|---|---|---|---|---|
+| G-01 | Pair mode S13: cặp (R-WFO-020×023, 022×023) trả 503/UNAVAILABLE; cho biết cặp nào đọc được | overlay equity S13 (đã có UI) | §16 P0-1, §16 bổ sung | OPEN |
+| G-02 | R-P04-021 hai số net return (+0,12% vs −0,15%): chốt nguồn + scope | S09/S13 | §16 P0-2 | OPEN |
+| G-03 | Hub `/evidence` NOT_READY trong khi lane retained đủ dữ liệu | S04 hero | §16 P0-3 | OPEN |
+| G-04 | Đếm trial (351 vs 350; 1 vs 0) + tiến độ cho run FAILED ("400/400 · 80%") | S03/S05/S02 | §16 P0-4 | OPEN |
+| G-05 | S05 trả 409 cho run FAILED/CANCELLED → trạng thái có kiểu | console sạch | §16 P0-5 | OPEN |
+| G-06 | OOS Sharpe/Δ decay cho P04; `last 30D` có cửa sổ ngày thật | S01, S09 | §16 P1-6 | OPEN |
+| G-07 | S06 phân trang sổ trial + `surface.points[].parameters` | S06 tooltip θ* | §16 P1-7 | OPEN |
+| G-08 | Blotter/MAE×MFE/order-fill cho route WFO (sau executor v2) | S08 | §16 P1-8, BR-S08-01 | OPEN |
+| G-09 | `local_seal` phục vụ cờ khoá | S11 | §16 P1-9 | OPEN |
+| G-10 | `bar-metadata`: `verified_range`, `earliest_start_with_warmup_utc_ms` khi NOT_PUBLISHED; tick/lot/multiplier/listing/expiry; `supersedes_state` av_1_0_0 | S02 | §16 P1-10 | OPEN |
+| G-11 | OLD-SEAL backfill một lệnh operator (last-30D/all-time seal cũ, giai đoạn lỗi, thời gian chạy) | S01/S05 | §16 P2 | OPEN |
+| G-12 | B9-1 mean/median/VaR/CVaR cho histogram | S04, S09 marker | §18 | OPEN |
+| G-13 | B9-2 nhãn/regime cho drawdown episode | S04, S09 | §18 | OPEN |
+| G-14 | B9-3 `windows.{is,oos,holdout}.{start_ms,end_ms}` trong `enriched_analysis` | band curve all-time S09 | §18 | OPEN |
+| G-15 | B9-4 `at_utc_ms` cho từng cột sparkline / `analytics_all_time` | tooltip ngày S01 | §18 | OPEN |
+| G-16 | B9-5 series rolling Sharpe/volatility trên hub | `RollingChart` đã có, chưa mount | §18 | OPEN |
+| G-17 | B9-6 compare payload: drawdown episode + best/worst month theo run | chú thích overlay S13 | §18 | OPEN |
+| G-18 | Non-Binance adapters (DR-03), executor v2 inner/per-fold causal retention, T12/T14 receipt, P23/P24 | phạm vi P22–P24 | §14, P23 notes | OPEN (Codex) |
+| A-01 | Chọn profile theo `schema_version`; monthly v2 nhận được | S02 | §17 Q1 | ANSWERED |
+| A-02 | Estimate cần `mode` + `schedule` | S02 chờ khai báo đủ | §17 Q2 | ANSWERED |
+| A-03 | Ba cửa sổ: 168 IS / 168 OOS / 48 HOLDOUT bar, warmup 300/300, ready=true | S02 estimate ba cửa sổ | §17 Q3 | ANSWERED — FE-01 kiểm |
+| A-04 | `early_stopping_policy` chỉ FORBIDDEN; không thêm PINNED/FREE; `seed_value` = `random_seed=42` của profile | S02 hiển thị | §17 Q4 | ANSWERED — đóng, FE không chờ |
+| FE-01 | Kiểm S02 estimate ba cửa sổ bằng receipt A-03 trên preview | — | Claude | FE |
+| FE-02 | S02 split + NewRun timeline: readout hover/focus | — | Claude | FE (đang làm) |
+| FE-03 | Visual lane: Bobby duyệt từng ô baseline (không `--update` tự động) | đóng F5 | Claude + Bobby | FE (đang chạy) |

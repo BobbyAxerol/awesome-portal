@@ -7086,3 +7086,9 @@ P23/P24 stay OPEN until their actual remaining gates pass.
   [P24 entry + local unsigned manifest](./research_loop/evidence/P24/ENTRY_ASSESSMENT_2026-10-02.md),
   [precise frontend handoff and remaining queue](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#current-source-delivery-and-actual-p23-closeout-checkpoint--2026-10-02).
 [Receipt](./research_loop/evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
+
+### Research FE ledger — Claude, 2026-10-02
+
+Frontend (lane `claude/fe-parity`) đã land và chạy trên preview: B6 `enrich_analysis`, BR-F6, B7 (catalog-v2, symbols, bar-metadata, declaration-estimates), hai đợt sửa QA, chart động (draw-in, crosshair/tooltip số thật, zoom chung, vùng drawdown, tháng tốt/xấu nhất). Gate hiện tại: tsc sạch; vitest đầy đủ pass; lane real-API 54/54; axe 90/90; hook qua. Bốn lệch HiFi (warn ink `#8f6118`, faint ink Research, hai chip xám, gạch chân link S13) đã được Bobby duyệt 2026-10-02.
+
+**F5 chưa đóng:** còn visual lane (Bobby duyệt từng ô baseline, không `--update` tự động) và receipt thật cho D7. Sổ yêu cầu backend còn mở và các câu đã được trả lời: [`CODEX_BACKEND_GAPS` §19](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#19-sổ-yêu-cầu-backend-còn-mở--một-nguồn-claude-2026-10-02-bobby-backend-còn-thiếu-gì-thêm-vào-markdown-unified-luôn). FE state theo màn: [`FRONTEND_GAPS_FOR_SONNET`](./research_loop/FRONTEND_GAPS_FOR_SONNET_2026-09-30.md) F7.

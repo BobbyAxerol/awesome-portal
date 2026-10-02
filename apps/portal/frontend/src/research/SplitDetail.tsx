@@ -36,7 +36,7 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 
-import { useEntryRef } from "./chartLife";
+import { useEntryRef, useReadout } from "./chartLife";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
@@ -519,6 +519,7 @@ function WindowAnatomy({
   cursor: EvidenceCursor;
 }) {
   const trackRef = useEntryRef<HTMLDivElement>();
+  const readout = useReadout();
   const placed = useMemo(() => {
     const out = windows.map((window) => {
       const geometry = placeInTimeline(timeline, window.span);
@@ -601,6 +602,9 @@ function WindowAnatomy({
               "data-window-row": window.row,
               "data-entry": "x",
               "data-entry-origin": "left",
+              tabIndex: 0,
+              /* Hover, focus and tap print the served text of this window on the reserved line below the track. */
+              ...readout.bind(text),
               className: "absolute rounded-[3px]",
               style: {
                 left: `${window.leftPercent}%`,
@@ -613,13 +617,12 @@ function WindowAnatomy({
             } as const;
             /* F2b: IS and outer OOS open Screen 08 on that window; the legend row below is the keyboard path. */
             return opens === null ? (
-              <span key={window.key} {...common} role="img" aria-label={spoken} title={text} />
+              <span key={window.key} {...common} role="img" aria-label={`${spoken}, ${window.role}`} title={text} />
             ) : (
               <Link
                 key={window.key}
                 {...common}
                 to={executeWindowHref(runPath, opens, cursor)}
-                tabIndex={-1}
                 aria-label={`${spoken}, open in Execute Replay`}
                 title={`${text}\nopen ${opens.toUpperCase()} in Execute Replay`}
                 data-window-link={opens}
@@ -639,6 +642,16 @@ function WindowAnatomy({
           {timelineClosed ? "]" : ")"}
         </span>
       </div>
+
+      {/* Reserved readout line: fixed height, so showing or clearing it never moves a mark or a label. */}
+      <span
+        className="mono block h-[14px] overflow-hidden text-ellipsis whitespace-nowrap pl-[72px] text-[9.5px] leading-[14px]"
+        style={{ color: "var(--ink-soft)" }}
+        data-window-readout={readout.text ?? undefined}
+        aria-live="polite"
+      >
+        {readout.text}
+      </span>
 
       <ul className="flex flex-wrap gap-x-5 gap-y-1 pl-[72px]">
         {placed.map((window) => (
@@ -799,6 +812,22 @@ function foldSpans(fold: SourceFoldRow): { train: Range | null; test: Range | nu
   };
 }
 
+/** A published span as exact UTC instants, or the typed absence. */
+function exactSpan(range: Range | null, what: string): string {
+  return range === null ? `${what} not published` : `${what} ${exact(range.start_utc_ms)} → ${exact(range.end_exclusive_utc_ms)}`;
+}
+
+/** Served per-fold counts only (`anatomy.train_bars` / `test_bars`); an unpublished count says so. */
+function foldCount(fold: SourceFoldRow, which: "train_bars" | "test_bars"): string {
+  const count = fold.anatomy?.state === "AVAILABLE" ? fold.anatomy[which] : null;
+  return count === null || count === undefined ? "bars not published" : (bars(count) as string);
+}
+
+/** The hover/focus text of a fold row: id, train and test windows, counts — nothing computed. */
+export function foldReadout(fold: SourceFoldRow, train: Range | null, test: Range | null): string {
+  return `${foldLabel(fold.fold_id)} · ${exactSpan(train, "train")} · ${foldCount(fold, "train_bars")} · ${exactSpan(test, "test")} · ${foldCount(fold, "test_bars")}`;
+}
+
 /**
  * The fold axis: the earliest published start to the latest published end. A
  * fold that published neither is listed rather than drawn.
@@ -864,6 +893,7 @@ function FoldRows({
   /* Roving tab stop: the cursor's fold, or the first while the cursor is off the plan. */
   const tabStop = cursor.fold >= 1 && cursor.fold <= folds.length ? cursor.fold : 1;
   const rowsRef = useEntryRef<HTMLDivElement>();
+  const readout = useReadout();
 
   return (
     <>
@@ -876,9 +906,11 @@ function FoldRows({
           const { train, test } = foldSpans(fold);
           const start = fold.train_start_utc_ms ?? fold.test_start_utc_ms;
           const end = fold.test_end_utc_ms ?? fold.train_end_utc_ms;
+          const readoutText = foldReadout(fold, train, test);
           return (
             <button
               key={fold.fold_id}
+              {...readout.bind(readoutText)}
               type="button"
               aria-pressed={current}
               data-fold-row={number}
@@ -950,6 +982,15 @@ function FoldRows({
           );
         })}
       </div>
+      {/* Reserved readout line: the focused or hovered fold's served windows and counts, same box height empty or full. */}
+      <span
+        className="mono block h-[14px] overflow-hidden text-ellipsis whitespace-nowrap pl-[72px] text-[9.5px] leading-[14px]"
+        style={{ color: "var(--ink-soft)" }}
+        data-fold-readout={readout.text ?? undefined}
+        aria-live="polite"
+      >
+        {readout.text}
+      </span>
     </>
   );
 }
