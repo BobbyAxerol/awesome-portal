@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchProgressService } from "../src/research/progress.service";
+import { DELTA_CAUSAL_INNER_PROFILE_ID } from "../src/research/delta-causal-inner.profile";
 
 const ingressScope = {
   workspaceId: "research-workspace",
@@ -130,6 +131,23 @@ describe("RS-01 terminal materialization and retry recovery", () => {
     const p04 = subject({ scope: { executionProfileId: "p04.fixed-qualification.v1" }, reportRefuses: true });
     await expect(p04.service.ingest(terminalIngress as never)).rejects.toMatchObject({ code: "RESEARCH_REPORT_NOT_READY" });
     expect(p04.progress.markTerminalMaterialized).not.toHaveBeenCalled();
+  });
+
+  it("routes causal-inner completion through retained WFO reports, never fixed sidecars or the long-preview CPU budget", async () => {
+    const causal = subject({ scope: { executionProfileId: DELTA_CAUSAL_INNER_PROFILE_ID }, reportRefuses: true });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await causal.service.ingest(terminalIngress as never);
+    stderr.mockRestore();
+    expect(causal.reports.materializeTerminal).toHaveBeenCalledWith(expect.anything(), expect.anything(), "RS02_RETAINED_CURRENT_SOURCE");
+    // The existing sidecar services see the terminal callback and are no-ops
+    // without fixed source receipts; attaching one is refused before persist.
+    await expect(causal.service.ingest({ ...terminalIngress, evidence: {} } as never)).rejects.toMatchObject({ code: "RESEARCH_PROGRESS_INVALID" });
+    expect(causal.progress.markTerminalMaterialized).toHaveBeenCalledTimes(1);
+    const capped = subject({ scope: { executionProfileId: DELTA_CAUSAL_INNER_PROFILE_ID } });
+    const input = structuredClone(terminalIngress);
+    input.event.payload.usage.cpu_seconds = 121;
+    await expect(capped.service.ingest(input as never)).rejects.toMatchObject({ code: "RESEARCH_PROGRESS_INVALID" });
+    expect(capped.progress.persistIngress).not.toHaveBeenCalled();
   });
 
   it("RF01-B3: projects retained tables without widening the vocabulary or leaking identity", async () => {

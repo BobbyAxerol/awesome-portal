@@ -22,8 +22,10 @@ import {
 import {
   ResearchCurrentSourceRepository,
   type CurrentSourceIngestAuthority,
+  type CurrentSourceLanePair,
 } from "./current-source.repository";
-import { DELTA_WFO_PROFILE, isDeltaWfoProfile } from "./delta-wfo.profile";
+import { DELTA_WFO_PROFILE, deltaWfoCurrentSourcePair, isDeltaWfoProfile } from "./delta-wfo.profile";
+import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
 import type { ProgressIngressScope } from "./progress.repository";
 
 export interface CurrentSourceBatchReceipt {
@@ -49,10 +51,14 @@ export class ResearchCurrentSourceIngestService {
 
   async appendBatch(lease: ProgressIngressScope, input: ResearchCurrentSourceBatchIngress): Promise<CurrentSourceBatchReceipt> {
     const scope = { workspaceId: lease.workspaceId, actorUserId: lease.actorUserId };
-    await this.requireAuthority(lease, input);
+    const authority = await this.requireAuthority(lease, input);
     for (const row of input.rows) {
       if (!currentSourceRowMatchesKind(input.table_kind, row)) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source row payload is incompatible with its table kind.", 400);
+      }
+      if (input.table_kind === "FOLD" && (authority.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID
+        ? row.payload.causal_selection === undefined : row.payload.causal_selection !== undefined)) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Per-fold causal selections must match the admitted immutable execution profile.", 400);
       }
     }
     const result = await this.repository.append(scope, {
@@ -83,13 +89,21 @@ export class ResearchCurrentSourceIngestService {
   async seal(lease: ProgressIngressScope, input: ResearchCurrentSourceSealIngress): Promise<CurrentSourceSealReceipt> {
     const scope = { workspaceId: lease.workspaceId, actorUserId: lease.actorUserId };
     const authority = await this.requireAuthority(lease, input);
-    if (input.source_adapter_id !== DELTA_WFO_PROFILE.current_source.source_adapter_id
-      || input.profile_id !== DELTA_WFO_PROFILE.current_source.profile_id) {
+    const pair = deltaWfoCurrentSourcePair(authority.executionProfileId, authority.executionProfileDigest);
+    if (!pair || input.source_adapter_id !== pair.source_adapter_id || input.profile_id !== pair.profile_id) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal names a lane pair outside the run execution profile.", 400);
     }
+    const lane: CurrentSourceLanePair = pair.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+      ? { sourceAdapterId: DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id, profileId: DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id }
+      : { sourceAdapterId: DELTA_WFO_PROFILE.current_source.source_adapter_id, profileId: DELTA_WFO_PROFILE.current_source.profile_id };
     const summary = CurrentSourceSummarySchema.safeParse(input.summary);
     if (!summary.success) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal summary is incompatible.", 400);
+    }
+    if (authority.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID
+      && (summary.data.selection.scope !== "LAST_FOLD_DEPLOYMENT" || summary.data.selection.fold_id === undefined
+        || summary.data.source_facts?.search.optimization_schedule !== "per_fold_causal")) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Causal retention requires the actual last-fold deployment singleton and per-fold source facts.", 400);
     }
     const counts = summary.data.counts;
     if (counts && (counts.folds !== input.table_rows.FOLD || counts.trials !== input.table_rows.TRIAL
@@ -99,8 +113,7 @@ export class ResearchCurrentSourceIngestService {
     const result = await this.repository.seal(scope, {
       runId: input.run_id,
       artifactRevision: input.artifact_revision,
-      sourceAdapterId: DELTA_WFO_PROFILE.current_source.source_adapter_id,
-      profileId: DELTA_WFO_PROFILE.current_source.profile_id,
+      ...lane,
       manifestDigest: input.manifest_digest,
       sourceTransformDigest: input.source_transform_digest,
       // Never from the body: the run's immutable P10 producer identity.

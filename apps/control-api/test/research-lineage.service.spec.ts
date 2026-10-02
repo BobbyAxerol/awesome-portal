@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ResearchLineageService } from "../src/research/lineage.service";
 import { libraryItem } from "./research-lineage.builders";
 import { p14SplitSourceFixture } from "./research-split.fixture";
+import { DELTA_CAUSAL_INNER_PROFILE } from "../src/research/delta-causal-inner.profile";
 
 const scope = { workspaceId: "ws-p19", actorUserId: "usr-p19" };
 const digest = (character: string) => character.repeat(64);
@@ -104,6 +105,45 @@ function subject(value = snapshot(), config = { FEATURE_RESEARCH_LINEAGE: "true"
 }
 
 describe("P19 Attempt Lineage persisted truth", () => {
+  it("causal lineage requires sealed outer-fold basis and publishes its distinct source/scope", async () => {
+    const retained = { run_id: "run-p19-root", artifact_revision: 1,
+      profile_id: DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id,
+      validation_claim: "strict_nested_fold_local_retraining", source_attested: true,
+      metrics: { mean_oos_sharpe: "1.25", mean_decay: "0.5", basis: "OUTER_FOLD_SELECTED_OOS_MEAN" } };
+    const response = await subject(snapshot({ retainedMetrics: [retained] })).service.read(scope, "alpha-p19", { limit: 128 });
+    expect(response.attempts[0]!.run_facts.oos_sharpe).toMatchObject({
+      value: "1.25", source: "RS02_RETAINED_OUTER_FOLD_SELECTIONS", scope: "OUTER_FOLD_SELECTED_OOS_MEAN",
+      definition_id: "research.current-source.v1.outer-fold-selected-oos-sharpe-mean", availability: { state: "AVAILABLE" },
+    });
+    expect(response.attempts[0]!.run_facts.decay).toMatchObject({
+      value: "0.5", definition_id: "research.current-source.v1.outer-fold-mean-inner-is-mean-minus-outer-oos",
+    });
+    expect(response.attempts[0]!.run_facts.claim.family).toBe("STRICT_OUTER_OOS");
+    for (const altered of [
+      { ...retained, source_attested: false },
+      { ...retained, metrics: { mean_oos_sharpe: "99", mean_decay: "98" } },
+      { ...retained, metrics: { ...retained.metrics, mean_oos_sharpe: null, mean_decay: null } },
+    ]) {
+      const refused = await subject(snapshot({ retainedMetrics: [altered] })).service.read(scope, "alpha-p19", { limit: 128 });
+      expect(refused.attempts[0]!.run_facts.oos_sharpe).toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED" } });
+      expect(refused.attempts[0]!.run_facts.decay.value).toBeNull();
+    }
+    const item = libraryItem("run-p19-root");
+    item.stats = item.stats.map(cell => cell.role === "OOS_SHARPE" || cell.role === "DECAY"
+      ? { ...cell, value: null, availability: { state: "NOT_PUBLISHED", reason_code: "CAUSAL_DEPLOYMENT_INNER_METRICS_NOT_OUTER_OOS" } }
+      : cell);
+    const repository = { read: vi.fn().mockResolvedValue(snapshot({
+      libraryRows: [{ run_id: "run-p19-root" }], retainedMetrics: [retained],
+    })) };
+    const runLibrary = { mapRow: vi.fn().mockReturnValue(item) };
+    const service = new ResearchLineageService(repository as never,
+      { FEATURE_RESEARCH_LINEAGE: "true", FEATURE_RESEARCH_RUN_LIBRARY: "true" } as never, runLibrary as never);
+    const withLibrary = await service.read(scope, "alpha-p19", { limit: 128 });
+    expect(runLibrary.mapRow).toHaveBeenCalledOnce();
+    expect(withLibrary.attempts[0]!.run_facts.oos_sharpe).toMatchObject({
+      value: "1.25", source: "RS02_RETAINED_OUTER_FOLD_SELECTIONS", scope: "OUTER_FOLD_SELECTED_OOS_MEAN",
+    });
+  });
   it("CG-FG-S10-03 derives family only from a sealed WFO claim or the persisted P04 protocol", async () => {
     const retained = { run_id: "run-p19-root", artifact_revision: 1, metrics: null,
       profile_id: "rs02.delta-signal-notional-wfo.v1", validation_claim: "walk_forward_oos", source_attested: true };

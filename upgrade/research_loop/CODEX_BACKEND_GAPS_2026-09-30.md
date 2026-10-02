@@ -2,6 +2,11 @@
 
 ## Codex continuation 2026-10-02 — B7/B8, not whole-phase closeout
 
+The causal/inner refusal in the earlier temporal journal below is historical:
+the later **§25** supplies an additional admitted bounded profile and real
+product proof. Its frontend consumer/compile follow-up remains explicitly
+open; no existing global profile digest or old seal is rewritten.
+
 Implemented declaration fold/conditions endpoint, UTC alignment refusal,
 spot/quarterly read-only qualification and safe bounded index append.
 Requested-spec v2 temporal **Delta/global** is connected through admission,
@@ -840,3 +845,59 @@ the owned-cell approval/receipt does not authorize a shared :8095 mutation.
 
 ### §24 bổ sung — vitest frontend vỡ bởi `8fc17a03` (Claude, 2026-10-02)
 `src/execution/r2Ledger.test.ts › INTENTIONALLY_UNEXPOSED phải nói vì sao` fail trên main sau `8fc17a03`: hai entry mới trong `hifi_execution_loop/r2_ledger/capability-inventory.v1.json` (`POST …/child-audit/seal`, `POST …/fixed-replay/seal`) thiếu từ khoá lý do (design/infrastructure/probe/forbidden/auth). Claude đã thêm một câu "Worker-principal internal ingress (infrastructure, auth required), never a browser route." cho cả hai (đúng với `assertWorkerPrincipal`). Hook verify-workspace không chạy vitest frontend nên không bắt được; lần sau khi thêm route nội bộ mới, thêm câu lý do cùng entry.
+
+## 25. Codex — causal/inner current-source integration (2026-10-02)
+
+Status **SCOPED_BACKEND_DELIVERED_WITH_REAL_RECEIPT**, within approved group 6;
+source-time base `8fc17a03`, preserve newer Claude frontend commits at landing.
+QuantBT 1.1.1 already executes Mode 1 per-fold causal selection with inner
+folds. Portal now wires one additional immutable bounded profile, leaving
+the fixed and global profiles, digests and historical seals unchanged.
+
+Root owns admission/create, exact profile bindings, constraint-only migration,
+contract generation and the owned :8096 product receipt. Python lane owns
+child execution and source retention; TypeScript lanes own current-source
+read models and ancillary immutable consumers. No frontend change, shared
+:8095 mutation, remote push or production action is included.
+
+Actual proof: P08 -> P10 -> isolated child -> P05 -> named API over real
+BTCUSDT/1h history, multiple outer studies with actual inner folds, per-fold
+selected parameters/digests, outer OOS excluded from selection, exact retained
+source identity and existing all-time analytics. Retain source-reported
+counts, not the declared minimum. The final singleton selection is explicitly
+LAST_FOLD_DEPLOYMENT, never a run-global theta. Engine wall-clock omissions
+remain typed. Focused negatives precede one combined build and mandatory hook.
+
+Real `rrun_becde1e160a2770d49246f7f665208ce` is COMPLETED/READY: **2 outer
+studies / 6 trials / 7 observed inner folds**, exact own-fold params/digests,
+2 own generation-child MATCHes, 9 authenticated named APIs 200 and **13/13
+GET-only negative cases PASS** with unchanged jobs/preflights. Source/P05
+identity is exact. Singleton selection is last-fold deployment; causal
+surfaces are bounded per study, not a global ranking. Legacy global surfaces
+and profiles remain unchanged. Shifted P08 bounds, mixed inner scores and
+contradictory source claims are rejected under the existing seal lock.
+
+[Exact image/hash/source/negative/test receipt and Claude screen handoff](./evidence/P10/B8_CAUSAL_INNER_CURRENT_SOURCE_2026-10-02.md).
+Regenerate generated contracts; consume optional `surfaces_by_study`, exact
+study/trial identities, observed versus minimum inner folds, last-deployment
+scope, own-fold Replay/Report params and explicit metric bases. Engine wall
+clocks remain NOT_PUBLISHED, never copied from P11 orchestration clocks.
+Do not call frontend/browser acceptance complete from this backend receipt.
+
+Claude `97308396` has already closed G-20 and bound §23; preserve those
+commits and the later S06 wrapping fix, do not repeat or overwrite them.
+G-21 remaining exact-pair/browser and G-22 fresh-source shared-preview proof,
+VN/source calendar/instrument/profile qualification and existing P23/P24
+gates stay open. Owned :8096 stopped; 0 active jobs/sessions, 21 users still
+disabled, owner anchor/volumes/backups/receipts retained. No remote push or
+shared :8095/production mutation. Full mandatory hook is attached to the
+single integrated commit, not rerun per agent or documentation hunk.
+
+**Claude compile handoff:** generated unions now require
+`FreezeDetail.tsx:1315` to map `CAUSAL_DATA_TIME_SELECTION`,
+`FreezeDetail.tsx:1414` to handle nullable `reason_code` in the HTML title,
+and `StageLedger.tsx:34` to map `PER_FOLD_STUDY: false`. These are actual
+Research typecheck diagnostics, separate from missing Planning dependencies
+in the isolated BE worktree. Codex does not edit frontend paths. Keep the
+data-time/engine-clock distinction; frontend compile/browser acceptance is
+not marked complete by the backend receipt or mandatory hook.

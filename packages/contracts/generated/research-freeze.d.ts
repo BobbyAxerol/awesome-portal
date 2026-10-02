@@ -277,6 +277,8 @@ export interface components {
                 /** @enum {unknown} */
                 bundle: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
             };
+            /** @enum {unknown} */
+            selection_scope?: "GLOBAL" | "PER_FOLD";
         };
         /** @description X2 · B4 · CG-P16-03 (guide §6.6): declared/swept/pinned values live in the params (θ) digest; values the code fixes are outside it and are covered by the protected code digest bound into the adapter contract digest. The Delta kernel publishes no machine-readable list of its fixed values, so `code_fixed.values` is a typed absence (P04_DELTA_KERNEL_PUBLISHES_NO_CODE_FIXED_VALUE_LIST) with the exact hash scope. */
         ParameterAuthority: {

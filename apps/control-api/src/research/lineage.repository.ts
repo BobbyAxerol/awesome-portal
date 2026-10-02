@@ -15,8 +15,10 @@ import { CONTROL_API_POOL } from "../tokens";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchLineageError } from "./lineage.error";
 import { ResearchRunLibraryRepository, type RunLibraryRow } from "./run-library.repository";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 
 type JsonColumn = Record<string, unknown> | string | null;
+const OUTER_DECIMAL_PATTERN = "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$";
 
 export interface LineageAlphaRow {
   alpha_id: string;
@@ -425,7 +427,11 @@ export class ResearchLineageRepository {
       const retainedMetrics = primaryIds.length === 0
         ? []
         : (await client.query<LineageRetainedMetricsRow>(
-          `SELECT seal.run_id, seal.artifact_revision, seal.profile_id, candidate.payload->'trial_facts'->'metrics' AS metrics,
+          `SELECT seal.run_id, seal.artifact_revision, seal.profile_id,
+                  CASE WHEN seal.profile_id = '${DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id}'
+                    THEN jsonb_build_object('mean_oos_sharpe', outer_facts.mean_oos_sharpe,
+                      'mean_decay', outer_facts.mean_decay, 'basis', 'OUTER_FOLD_SELECTED_OOS_MEAN')
+                    ELSE candidate.payload->'trial_facts'->'metrics' END AS metrics,
                   seal.summary->'source_facts'->'claims'->>'validation_claim' AS validation_claim,
                   EXISTS (SELECT 1 FROM research.artifacts artifact
                            WHERE artifact.workspace_id = seal.workspace_id AND artifact.run_id = seal.run_id
@@ -434,7 +440,7 @@ export class ResearchLineageRepository {
                              AND artifact.state = 'SEALED') AS source_attested
              FROM unnest($2::text[]) AS wanted(run_id)
              JOIN LATERAL (
-               SELECT source.workspace_id, source.run_id, source.artifact_revision, source.profile_id, source.manifest_digest, source.summary
+               SELECT source.workspace_id, source.run_id, source.artifact_revision, source.profile_id, source.manifest_digest, source.summary, source.table_rows
                  FROM research.current_source_seals_v1 source
                 WHERE source.workspace_id = $1 AND source.run_id = wanted.run_id
                 ORDER BY source.artifact_revision DESC
@@ -451,7 +457,29 @@ export class ResearchLineageRepository {
                   AND row.payload->>'objective' IS NOT DISTINCT FROM seal.summary->'selection'->>'objective'
                 ORDER BY row.source_ordinal ASC
                 LIMIT 1
-             ) candidate ON TRUE`,
+             ) candidate ON TRUE
+             LEFT JOIN LATERAL (
+               SELECT CASE WHEN count(*) = (seal.table_rows->>'FOLD')::integer
+                            AND count(*) BETWEEN 2 AND 16 AND bool_and(valid)
+                      THEN avg(CASE WHEN valid THEN oos::numeric END)::text END AS mean_oos_sharpe,
+                      CASE WHEN count(*) = (seal.table_rows->>'FOLD')::integer
+                            AND count(*) BETWEEN 2 AND 16 AND bool_and(valid)
+                      THEN avg(CASE WHEN valid THEN decay::numeric END)::text END AS mean_decay
+                 FROM (
+                   SELECT payload->'causal_selection'->>'candidate_oos_metric' AS oos,
+                          payload->'causal_selection'->>'candidate_decay' AS decay,
+                          COALESCE(payload->'causal_selection'->>'candidate_oos_metric' ~ '${OUTER_DECIMAL_PATTERN}'
+                            AND length(payload->'causal_selection'->>'candidate_oos_metric') <= 96
+                            AND payload->'causal_selection'->>'candidate_decay' ~ '${OUTER_DECIMAL_PATTERN}'
+                            AND length(payload->'causal_selection'->>'candidate_decay') <= 96
+                            AND payload->'causal_selection'->>'candidate_metrics_scope' = 'OUTER_FOLD_POST_SELECTION'
+                            AND payload->'causal_selection'->>'outer_oos_used_for_selection' = 'false', false) AS valid
+                     FROM research.current_source_rows_v1 rows
+                    WHERE rows.workspace_id = seal.workspace_id AND rows.run_id = seal.run_id
+                      AND rows.artifact_revision = seal.artifact_revision AND rows.table_kind = 'FOLD'
+                    ORDER BY rows.source_ordinal LIMIT 17
+                 ) bounded_outer
+             ) outer_facts ON seal.profile_id = '${DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id}'`,
           [scope.workspaceId, primaryIds],
         )).rows;
 

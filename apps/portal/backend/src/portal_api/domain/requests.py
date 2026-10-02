@@ -5,7 +5,7 @@ import json
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_serializer, model_validator
 
 from .enums import OptimizationMode, OptimizationSchedule, RunProtocol
 
@@ -182,6 +182,10 @@ class AdvancedWalkForwardConfig(PortalModel):
     split_frequency: Literal["single", "yearly", "semi_yearly", "quarterly", "monthly", "weekly"] = "quarterly"
     window_mode: Literal["expanding", "rolling"] = "expanding"
     train_window: str | None = None
+    inner_split_frequency: Literal["weekly", "monthly", "quarterly"] | None = None
+    inner_window_mode: Literal["expanding", "rolling"] | None = None
+    inner_train_window: Annotated[str, Field(pattern=r"^[1-9][0-9]{0,4}(D|h)$", max_length=8)] | None = None
+    inner_min_folds: Annotated[int, Field(ge=2, le=16, strict=True)] = 2
     label_horizon_bars: Annotated[int, Field(ge=0, le=10_000)] = 0
     purge_bars: Annotated[int, Field(ge=0, le=10_000)] = 0
     embargo_bars: Annotated[int, Field(ge=0, le=10_000)] = 0
@@ -195,6 +199,14 @@ class AdvancedWalkForwardConfig(PortalModel):
     optuna_early_stopping: Annotated[int | None, Field(gt=0)] = None
     random_seed: int | None = 42
     optimization: OptimizationConfig = OptimizationConfig()
+
+    @model_serializer(mode="wrap")
+    def serialize_without_absent_inner_fields(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if self.inner_split_frequency is None and self.inner_window_mode is None and self.inner_train_window is None:
+            for name in ("inner_split_frequency", "inner_window_mode", "inner_train_window", "inner_min_folds"):
+                data.pop(name, None)
+        return data
 
     @field_validator("data_start", "data_end_exclusive", mode="after")
     @classmethod
@@ -217,8 +229,14 @@ class AdvancedWalkForwardConfig(PortalModel):
             if self.optimization.candidate_selection_metric != "robust_decay":
                 raise ValueError("per_fold_decay requires robust_decay")
         if self.optimization_schedule == OptimizationSchedule.PER_FOLD_CAUSAL:
-            if self.optimization_mode != OptimizationMode.MODE_4_IS_ONLY_ROBUST:
-                raise ValueError("per_fold_causal requires mode_4_is_only_robust")
+            if self.optimization_mode not in {OptimizationMode.MODE_4_IS_ONLY_ROBUST, OptimizationMode.MODE_1_DECAY}:
+                raise ValueError("per_fold_causal requires mode_4_is_only_robust or nested mode_1_decay")
+        nested = self.optimization_schedule == OptimizationSchedule.PER_FOLD_CAUSAL and self.optimization_mode == OptimizationMode.MODE_1_DECAY
+        inner = (self.inner_split_frequency, self.inner_window_mode, self.inner_train_window)
+        if nested and (any(value is None for value in inner) or self.optimization.candidate_selection_metric != "robust_decay"):
+            raise ValueError("causal Mode 1 requires complete inner validation and robust_decay")
+        if not nested and (any(value is not None for value in inner) or "inner_min_folds" in self.model_fields_set):
+            raise ValueError("inner validation applies only to causal Mode 1")
         if self.optimization_schedule != OptimizationSchedule.GLOBAL and self.optuna_trials <= 0:
             raise ValueError("per-fold schedules require optuna_trials > 0")
         if self.optimization_mode == OptimizationMode.MODE_2_SBB and self.optimization.scoring_backend != "proxy":

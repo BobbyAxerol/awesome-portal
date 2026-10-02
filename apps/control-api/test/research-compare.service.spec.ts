@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchCompareResponseSchema } from "../src/research/compare.contract";
@@ -8,6 +9,7 @@ import type { CompareRunRow } from "../src/research/compare.repository";
 import { p14SplitSourceFixture } from "./research-split.fixture";
 import { SEALED_PERFORMANCE_DEFINITIONS } from "../src/research/source-aware-metric-resolver";
 import { sha256ResearchJson } from "../src/research/preflight.service";
+import { DELTA_CAUSAL_INNER_PROFILE } from "../src/research/delta-causal-inner.profile";
 
 const scope = { workspaceId: "ws-p20", actorUserId: "usr-p20" };
 const digest = (character: string) => character.repeat(64);
@@ -144,6 +146,40 @@ function subject(value = snapshot()) {
 }
 
 describe("P20 bounded Compare persisted truth", () => {
+  it("causal outer means use complete sealed fold aggregates, never the deployment singleton's inner metrics", async () => {
+    // Synthetic causal unit based on an unchanged historical retained fixture.
+    const fixture = JSON.parse(gunzipSync(readFileSync(resolve(__dirname, "research-w5b-real-replay.fixture.json.gz"))).toString("utf8"));
+    const summary = structuredClone(fixture.summary);
+    summary.source_facts.claims.validation_claim = "strict_nested_fold_local_retraining";
+    const folds = fixture.rows.FOLD.map((entry: { sourceOrdinal: number; payload: Record<string, any> }) => ({
+      source_ordinal: entry.sourceOrdinal, fold_id: entry.payload.fold_id,
+      test_start_utc_ms: entry.payload.test_start_utc_ms, test_end_utc_ms: entry.payload.test_end_utc_ms,
+      test_bars: entry.payload.fold_facts.test_bars,
+      oos_sharpe: entry.payload.fold_facts.oos_score.oos_sharpe,
+      oos_trade_count: entry.payload.fold_facts.oos_score.oos_trade_count,
+    }));
+    const retained = (overrides: Partial<CompareRunRow> = {}) => row("run-p20-left", {
+      current_profile_id: DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id,
+      current_source_summary: summary, current_source_folds: folds, current_source_table_rows: fixture.table_rows,
+      current_selected_mean_oos_sharpe: "99", current_selected_mean_decay: "98",
+      current_outer_mean_oos_sharpe: "1.25", current_outer_mean_decay: "0.5", ...overrides,
+    });
+    for (const [overrides, expected] of [
+      [{}, "1.25"], [{ current_outer_mean_oos_sharpe: null, current_outer_mean_decay: null }, null],
+      [{ current_artifact_sealed: false }, null], [{ current_source_folds: folds.slice(0, 1) }, null],
+    ] as Array<[Partial<CompareRunRow>, string | null]>) {
+      const response = await subject(snapshot([retained(overrides)])).service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+      if (response.result.mode !== "attempts") throw new Error("test guard");
+      expect(response.result.attempts[0]!.original_metrics.find(metric => metric.key === "OOS_SHARPE")).toMatchObject({
+        value: expected, scope: "RS02_OOS_MEAN_OF_FOLDS", availability: { state: expected === null ? "NOT_PUBLISHED" : "AVAILABLE" },
+      });
+      expect(response.result.attempts[0]!.original_metrics.find(metric => metric.key === "DECAY")).toMatchObject({
+        value: expected === null ? null : "0.5",
+        definition_id: "research.compare.metric.v1.outer-fold-mean-inner-is-mean-minus-outer-oos",
+      });
+      if (Object.keys(overrides).length === 0) expect(response.result.attempts[0]!.claim.family).toBe("STRICT_OUTER_OOS");
+    }
+  });
   it.each(["attempts", "pair", "markets"] as const)("historical companion-only scalars retain provenance in %s mode", async (mode) => {
     const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
     const block = JSON.parse(readFileSync(resolve(root, "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));

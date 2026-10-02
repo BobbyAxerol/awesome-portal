@@ -11,6 +11,7 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
     key, state: pass === null ? "NOT_PUBLISHED" : pass ? "PASS" : "FAIL", reason_code: pass ? null : reason,
     observed: observed === null || observed === undefined ? null : String(observed).slice(0, 200), required });
   const profile = profiles.find(row => row.protocol === spec.protocol && row.execution_route === spec.execution_route
+    && (spec.protocol !== "advanced" || row.optimization_schedule === spec.optimization_schedule)
     && (row.requested_spec_versions ?? ["research.requested-spec.v1"]).includes(spec.schema_version));
   add("profile", profile?.state === "ENABLED", "PORTAL_EXECUTION_PROFILE_NOT_ENABLED", profile?.profile_id, "Enabled execution profile");
   add("declared_timeframe", declaredTimeframes.includes(spec.data.timeframe), "ALPHA_TIMEFRAME_NOT_DECLARED", spec.data.timeframe, declaredTimeframes.join(", "));
@@ -36,7 +37,13 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
     if (profile.frequencies && spec.walk_forward) {
       add("fold_frequency", profile.frequencies.includes(spec.walk_forward.frequency), "PROFILE_FREQUENCY_NOT_ADMITTED", spec.walk_forward.frequency, profile.frequencies.join(", "));
       add("window_mode", profile.window_modes?.includes(spec.walk_forward.window_mode) ?? false, "PROFILE_WINDOW_MODE_NOT_ADMITTED", spec.walk_forward.window_mode, profile.window_modes?.join(", ") ?? "not published");
-      add("inner_validation", spec.walk_forward.inner === undefined, "PER_FOLD_SELECTION_RETENTION_PROFILE_NOT_INSTALLED", spec.walk_forward.inner === undefined ? "absent" : "requested", "Global retained profile only");
+      const inner = spec.walk_forward.inner, bounds = profile.inner_constraints;
+      const causal = profile.inner_validation === "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";
+      const allowed = causal ? !!inner && !!bounds && bounds.frequencies.includes(inner.split_frequency) &&
+        bounds.window_modes.includes(inner.window_mode) && new RegExp(bounds.train_window_pattern).test(inner.train_window) &&
+        (inner.min_folds ?? 2) >= bounds.fold_bounds.min && (inner.min_folds ?? 2) <= bounds.fold_bounds.max : inner === undefined;
+      add("inner_validation", allowed, causal ? "CAUSAL_INNER_CONFIGURATION_REQUIRED" : "PER_FOLD_SELECTION_RETENTION_PROFILE_NOT_INSTALLED",
+        inner === undefined ? "absent" : "requested", causal ? "Required engine nested validation inside outer IS" : "Global retained profile only");
     }
     if (profile.max_span_days && spec.walk_forward) {
       const span = metadata.windows.find(row => row.window === "SPAN");

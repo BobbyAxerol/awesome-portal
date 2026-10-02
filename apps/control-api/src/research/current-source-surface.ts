@@ -57,6 +57,7 @@ export const SURFACE_REASONS = {
   constantParameter: "PARAMETER_TOOK_ONE_VALUE_IN_EVERY_COMPLETE_TRIAL",
   constantObjective: "OBJECTIVE_TOOK_ONE_VALUE_IN_EVERY_COMPLETE_TRIAL",
   interactions: "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_INTERACTIONS",
+  noRunGlobalSurface: "PER_FOLD_STUDIES_HAVE_NO_RUN_GLOBAL_SURFACE",
 } as const;
 
 const Reason = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
@@ -95,6 +96,10 @@ export const DeclaredSpaceSchema = z.object({
   parameters: z.array(DeclaredSpaceParameterSchema).max(24),
   /** Points in the declared grid: the exact product of every parameter's levels (null when any is unknown). */
   grid_size: z.string().regex(/^[1-9][0-9]{0,39}$/).nullable(),
+  /** New causal runs retain this singleton only as the last-fold deployment. */
+  selection_scope: z.literal("LAST_FOLD_DEPLOYMENT").optional(),
+  fold_id: TrialId.optional(),
+  study_id: TrialId.optional(),
 }).strict();
 
 export type DeclaredSpace = z.infer<typeof DeclaredSpaceSchema>;
@@ -168,7 +173,7 @@ const SurfaceGridSchema = z.object({
 
 export const SearchSurfaceSchema = z.object({
   schema_version: z.literal(SEARCH_SURFACE_RULE),
-  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
   reason_code: Reason.nullable(),
   objective_kind: z.enum(["IS_MEAN_SHARPE", "NOT_PUBLISHED"]),
   source_trial_count: z.number().int().nonnegative().max(1_000_000),
@@ -214,6 +219,20 @@ export const SearchSurfaceSchema = z.object({
 }).strict();
 
 export type SearchSurface = z.infer<typeof SearchSurfaceSchema>;
+
+/** Exactly one retained outer study; never a run-global ranking or theta. */
+export const SearchStudySurfaceSchema = z.object({
+  scope: z.literal("INNER_VALIDATION_OUTER_STUDY"),
+  fold_id: TrialId,
+  study_id: TrialId,
+  surface: SearchSurfaceSchema.extend({
+    source_trial_count: z.literal(3),
+    complete_trial_count: z.number().int().nonnegative().max(3),
+    emitted_point_count: z.number().int().nonnegative().max(3),
+    points: z.array(SurfacePointSchema).max(3),
+  }),
+}).strict();
+export type SearchStudySurface = z.infer<typeof SearchStudySurfaceSchema>;
 
 /* ------------------------------------------------------------ decimals */
 
@@ -484,6 +503,70 @@ function emptySurface(reason: string, sourceTrials: number): SearchSurface {
     importance: { rule: "SPEARMAN_RANK_CORRELATION_PROXY_NOT_FANOVA_V1", state: "NOT_APPLICABLE", reason_code: reason, minimum_trials: IMPORTANCE_MINIMUM_TRIALS, parameters: [] },
     interactions: { state: "NOT_PUBLISHED", reason_code: SURFACE_REASONS.interactions },
   };
+}
+
+/** The causal profile has no comparable run-global objective or parameter set. */
+export function runGlobalCausalSurface(sourceTrials: number, completeTrials: number): SearchSurface {
+  if (!Number.isSafeInteger(sourceTrials) || sourceTrials < 6 || sourceTrials > 48 || sourceTrials % 3 !== 0
+    || !Number.isSafeInteger(completeTrials) || completeTrials < 0 || completeTrials > sourceTrials) {
+    throw new RangeError("Causal trial population is outside the immutable profile bound.");
+  }
+  const result = emptySurface(SURFACE_REASONS.noRunGlobalSurface, sourceTrials);
+  return { ...result, state: "NOT_APPLICABLE", complete_trial_count: completeTrials,
+    grid: emptyGrid("NOT_APPLICABLE", SURFACE_REASONS.noRunGlobalSurface) };
+}
+
+export interface SearchStudySurfaceInput {
+  foldId: string;
+  studyId: string;
+  selectedTrialId: string;
+  selectedParameters: Readonly<Record<string, string>>;
+  /** Caller joins these using original study_id AND exact outer fold_id. */
+  trials: readonly SurfaceTrial[];
+}
+
+/**
+ * The immutable causal profile owns 2..16 outer studies, three Stage-A trials
+ * each. Compute every statistic independently inside that population; a local
+ * best-IS is derived from its complete ledger, not from the final singleton.
+ */
+export function searchStudySurfaces(
+  retainedProfileId: string,
+  studies: readonly SearchStudySurfaceInput[],
+): SearchStudySurface[] {
+  if (studies.length < 2 || studies.length > 16) throw new RangeError("Causal study count is outside the immutable profile bound.");
+  const foldIds = new Set<string>(), studyIds = new Set<string>(), trialIds = new Set<string>();
+  return studies.map((study) => {
+    if (!TrialId.safeParse(study.foldId).success || !TrialId.safeParse(study.studyId).success
+      || foldIds.has(study.foldId) || studyIds.has(study.studyId) || study.trials.length !== 3) {
+      throw new RangeError("Causal surface must have one exact bounded population per outer study.");
+    }
+    foldIds.add(study.foldId); studyIds.add(study.studyId);
+    for (const trial of study.trials) {
+      if (!TrialId.safeParse(trial.trialId).success || trialIds.has(trial.trialId)) {
+        throw new RangeError("Causal surface trial identities must be unique retained identities.");
+      }
+      trialIds.add(trial.trialId);
+    }
+    const selected = study.trials.find(trial => trial.trialId === study.selectedTrialId);
+    const names = Object.keys(study.selectedParameters);
+    if (!selected || selected.state !== "COMPLETE" || selected.objective === null
+      || names.length !== Object.keys(selected.parameters).length
+      || names.some(name => selected.parameters[name] !== study.selectedParameters[name])) {
+      throw new RangeError("Causal surface selection is not its own complete retained trial.");
+    }
+    const complete = [...study.trials].sort((a, b) => a.sourceOrdinal - b.sourceOrdinal)
+      .filter(trial => trial.state === "COMPLETE" && trial.objective !== null && exact(trial.objective) !== null);
+    let bestIs: SurfaceTrial | null = null;
+    for (const trial of complete) {
+      if (bestIs === null || compareExact(exact(trial.objective!)!, exact(bestIs.objective!)!) > 0) bestIs = trial;
+    }
+    return SearchStudySurfaceSchema.parse({
+      scope: "INNER_VALIDATION_OUTER_STUDY", fold_id: study.foldId, study_id: study.studyId,
+      surface: searchSurface({ trials: study.trials, space: declaredSpace(retainedProfileId, study.selectedParameters),
+        selectedTrialId: study.selectedTrialId, bestIsTrialId: bestIs?.trialId ?? null, objectiveKind: "IS_MEAN_SHARPE" }),
+    });
+  });
 }
 
 /**

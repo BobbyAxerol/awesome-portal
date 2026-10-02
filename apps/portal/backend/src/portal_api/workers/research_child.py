@@ -1091,7 +1091,7 @@ class _ChildProgressWriter:
     its record/line budget: it is an observation, not a result.
     """
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, cumulative_trials: bool = False) -> None:
         from portal_api.services.research_supervisor import (
             CHILD_PROGRESS_MAX_LINE_BYTES,
             CHILD_PROGRESS_MAX_RECORDS,
@@ -1103,6 +1103,8 @@ class _ChildProgressWriter:
         self._max_line = CHILD_PROGRESS_MAX_LINE_BYTES
         self._descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_APPEND, 0o600)
         self._sequence = 0
+        self._cumulative_trials = cumulative_trials
+        self._study_id: str | None = None
 
     def trial(self, study: Any, frozen_trial: Any) -> None:
         if self._sequence >= self._max_records:
@@ -1129,12 +1131,16 @@ class _ChildProgressWriter:
             "schema_version": self._schema,
             "sequence": self._sequence + 1,
             "kind": "trial",
-            "trial": number + 1,
+            "trial": self._sequence + 1 if self._cumulative_trials else number + 1,
             "state": state,
             "objective": objective,
             "best_objective": best,
             "cpu_seconds": round(usage.ru_utime + usage.ru_stime, 3),
         }
+        if self._cumulative_trials:
+            if self._study_id is None:
+                return  # No source study identity: retained rows reconcile later.
+            record.update(study_id=self._study_id, source_trial_id=str(number))
         line = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
         if len(line) > self._max_line:
             return
@@ -1171,9 +1177,30 @@ def _observe_optuna_trials(writer: _ChildProgressWriter) -> Any:
             pass
 
     walkforward.logging_callback = observed
+    original_optimize = walkforward.WalkForwardEngine.optimize_params
+    if writer._cumulative_trials:
+        # Observe the engine's actual public study_id argument. Compact Optuna
+        # trial attrs omit it; callback order is not a source identity.
+        import inspect
+        signature = inspect.signature(original_optimize)
+
+        def observed_optimize(*args: Any, **kwargs: Any) -> Any:
+            arguments = signature.bind(*args, **kwargs)
+            arguments.apply_defaults()
+            source_study = arguments.arguments["study_id"]
+            previous = writer._study_id
+            writer._study_id = str(source_study) if type(source_study) is int and source_study >= 0 else None
+            try:
+                return original_optimize(*args, **kwargs)
+            finally:
+                writer._study_id = previous
+
+        walkforward.WalkForwardEngine.optimize_params = observed_optimize
 
     def restore() -> None:
         walkforward.logging_callback = original
+        if writer._cumulative_trials:
+            walkforward.WalkForwardEngine.optimize_params = original_optimize
 
     return restore
 
@@ -1202,9 +1229,23 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
     )
 
     from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
+    from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST, causal_inner_controls
     temporal = receipt.get("execution_profile_id") == DELTA_WFO_V2_PROFILE_ID
+    causal = receipt.get("execution_profile_id") == DELTA_CAUSAL_INNER_PROFILE_ID
     controls = None
-    if temporal:
+    if causal:
+        if receipt.get("execution_profile_digest") != DELTA_CAUSAL_INNER_PROFILE_DIGEST or "optuna_trials" in receipt or "temporal_controls" in receipt:
+            raise ValueError("causal inner child requires its exact bounded profile, without preview overrides")
+        raw = receipt.get("causal_inner_controls")
+        if not isinstance(raw, dict) or set(raw) != {"split_frequency", "window_mode", "train_window", "label_horizon_bars", "purge_bars", "embargo_bars", "inner_split_frequency", "inner_window_mode", "inner_train_window", "inner_min_folds"}:
+            raise ValueError("causal inner child requires exactly its bounded controls")
+        controls = causal_inner_controls({"schema_version": "research.requested-spec.v2", "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal", "walk_forward": {
+            "frequency": raw["split_frequency"], "window_mode": raw["window_mode"], "train_window": raw["train_window"],
+            **{key: raw[key] for key in ("label_horizon_bars", "purge_bars", "embargo_bars")},
+            "inner": {"split_frequency": raw["inner_split_frequency"], "window_mode": raw["inner_window_mode"], "train_window": raw["inner_train_window"], "min_folds": raw["inner_min_folds"]}}})
+    elif receipt.get("causal_inner_controls") is not None:
+        raise ValueError("causal controls cannot enter another child profile")
+    elif temporal:
         if receipt.get("execution_profile_digest") != DELTA_WFO_V2_PROFILE_DIGEST:
             raise ValueError("P10 temporal child profile digest does not match its installed profile")
         raw = receipt.get("temporal_controls")
@@ -1214,7 +1255,7 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
             "walk_forward": {"frequency": raw["split_frequency"], **{k: v for k, v in raw.items() if k != "split_frequency"}}})
     elif receipt.get("execution_profile_id") != DELTA_WFO_PROFILE_ID:
         raise ValueError("P10 WFO child receipt names an uninstalled execution profile")
-    if not temporal and (
+    if not temporal and not causal and (
         receipt.get("execution_profile_digest") != DELTA_WFO_PROFILE_DIGEST
         or delta_wfo_profile_digest(DELTA_WFO_PROFILE) != DELTA_WFO_PROFILE_DIGEST
     ):
@@ -1232,11 +1273,12 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
             raise ValueError("P10 WFO child preview trial count is outside its admitted bound")
         optuna_trials = requested
     return _run_delta_wfo_study(receipt, output_root, optuna_trials=optuna_trials,
-        temporal_controls=controls, profile_digest=DELTA_WFO_V2_PROFILE_DIGEST if temporal else DELTA_WFO_PROFILE_DIGEST)
+        temporal_controls=controls, profile_digest=DELTA_CAUSAL_INNER_PROFILE_DIGEST if causal else DELTA_WFO_V2_PROFILE_DIGEST if temporal else DELTA_WFO_PROFILE_DIGEST,
+        causal_inner=causal)
 
 
 def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_trials: int,
-        temporal_controls: dict[str, Any] | None = None, profile_digest: str | None = None) -> dict[str, Any]:
+        temporal_controls: dict[str, Any] | None = None, profile_digest: str | None = None, causal_inner: bool = False) -> dict[str, Any]:
     """The locked W1 Delta WFO study, with a caller-verified trial count.
 
     Both the WFO profile (3 sampled trials) and the P16 what-if profile
@@ -1278,7 +1320,11 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         pins[name] = float(Decimal(value))
         if not low <= pins[name] <= high:
             raise ValueError("P10 WFO pin leaves its declared range")
-    profile = DELTA_WFO_PROFILE
+    if causal_inner:
+        from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE
+    profile = DELTA_CAUSAL_INNER_PROFILE if causal_inner else DELTA_WFO_PROFILE
+    if causal_inner and optuna_trials != 3:
+        raise ValueError("causal inner execution runs exactly 3 trials per outer study")
     run_id = receipt.get("run_id")
     dataset_id = receipt.get("dataset_id")
     symbol = receipt.get("symbol")
@@ -1299,6 +1345,11 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     end = pd.Timestamp(end_ms, unit="ms", tz="UTC")
     split = pd.Timestamp(split_ms, unit="ms", tz="UTC")
     temporal = temporal_controls or {}
+    if causal_inner:
+        plan = QuantBTGateway().walk_forward_fold_plan(index=market.frame.index[(market.frame.index >= start) & (market.frame.index < end)], config_fields={
+            **temporal, "split_mode": split.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal", "optuna_trials": 3})
+        if not 2 <= len(plan) <= 16 or any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
+            raise ValueError("causal inner plan exceeds its 2..16 outer/inner fold bounds")
     request = PortalRunRequest(
         strategy_id="delta-rsi-polynomial-alpha",
         dataset_id=dataset_id,
@@ -1328,8 +1379,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
             data_start=start.to_pydatetime(),
             data_end_exclusive=end.to_pydatetime(),
             split_mode=split.isoformat(),
-            split_frequency=temporal.get("split_frequency", profile["frequency"]),
-            window_mode=temporal.get("window_mode", profile["window_mode"]),
+            split_frequency=temporal.get("split_frequency", "weekly"),
+            window_mode=temporal.get("window_mode", "expanding"),
             **({k: v for k, v in temporal.items() if k not in {"split_frequency", "window_mode"}}),
             optimization_mode=OptimizationMode(profile["optimization_mode"]),
             optimization_schedule=OptimizationSchedule(profile["optimization_schedule"]),
@@ -1342,7 +1393,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     )
     from portal_api.services.research_supervisor import CHILD_PROGRESS_FILENAME
 
-    writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME)
+    writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME, cumulative_trials=causal_inner)
     restore = _observe_optuna_trials(writer)
     try:
         summary = AdvancedWalkForwardRunner(
@@ -1358,8 +1409,12 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         raise ValueError(f"P10 WFO produced {n_folds} folds outside the admitted {bounds['min']}..{bounds['max']}")
     trials_path = output_root / run_id / "wfo" / "trials.parquet"
     trial_rows = len(pd.read_parquet(trials_path)) if trials_path.is_file() else 0
-    if trial_rows != optuna_trials:
+    if trial_rows != optuna_trials * (n_folds if causal_inner else 1):
         raise ValueError("P10 WFO did not publish exactly the admitted trial count")
+    if causal_inner:
+        trials = pd.read_parquet(trials_path)
+        if "study_id" not in trials or len(trials.groupby("study_id")) != n_folds or not trials.groupby("study_id").size().eq(3).all():
+            raise ValueError("causal inner source did not publish exactly 3 trials for every outer study")
     return {
         "task": "P10_DELTA_WFO",
         "engine_version": QuantBTGateway().version(),

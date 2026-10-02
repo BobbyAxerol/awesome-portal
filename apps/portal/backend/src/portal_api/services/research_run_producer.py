@@ -43,6 +43,7 @@ from portal_api.domain.research_delta_wfo_profile import (
 )
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest, sibling_pins
 from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
+from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST, causal_inner_controls
 from portal_api.domain.research_whatif_profile import WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
@@ -191,6 +192,7 @@ class LiveStudyProgress:
         trials_declared: int,
         cpu_cap_seconds: int,
         clock: Any = time.monotonic,
+        per_fold: bool = False,
     ) -> None:
         self._progress = progress
         self._declared = trials_declared
@@ -200,6 +202,7 @@ class LiveStudyProgress:
         self._last_trial = 0
         self._pruned = 0
         self._last_budget_pct = -1
+        self._per_fold = per_fold
 
     @property
     def trials_observed(self) -> int:
@@ -226,8 +229,17 @@ class LiveStudyProgress:
         if rate is not None and len(rate) > 24:
             rate = None
         tone = {"COMPLETE": "COMPLETE", "PRUNED": "INFO", "INFEASIBLE": "WARN", "FAILED": "ERROR"}[state]
+        study_label = "per-fold studies" if self._per_fold else "global study"
+        identities = {}
+        if self._per_fold:
+            for key in ("source_trial_id", "study_id"):
+                value = record.get(key)
+                if not isinstance(value, str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,159}", value) is None:
+                    raise ResearchRunProducerError("causal progress lacks actual source study/trial identity")
+                identities[key] = value
         self._progress("trial_completed", {
-            "study": "GLOBAL",
+            "study": "PER_FOLD_STUDY" if self._per_fold else "GLOBAL",
+            **identities,
             "trial": trial,
             "state": state,
             "objective": objective,
@@ -235,12 +247,12 @@ class LiveStudyProgress:
             "eta_s": eta,
             "rate_trials_per_s": rate,
             "tqdm_line": (
-                f"global study · trial {trial}/{self._declared} · best IS Sharpe {_short_objective(best)}"
+                f"{study_label} · trial {trial}/{self._declared} · best IS Sharpe {_short_objective(best)}"
                 f" · pruned {self._pruned}/{trial}"
             ),
             "console": {
                 "tone": tone,
-                "text": f"global trial {trial} IS Sharpe={_short_objective(objective)} state={state}",
+                "text": f"{'per-fold' if self._per_fold else 'global'} trial {trial} IS Sharpe={_short_objective(objective)} state={state}",
                 "trial": trial,
             },
         })
@@ -316,6 +328,28 @@ class ResearchRunProducerExecutor:
     wfo_child_limits: ResearchChildLimits = DELTA_WFO_CHILD_LIMITS
     imported_child_limits: ResearchChildLimits = IMPORTED_ALPHA_CHILD_LIMITS
     imported_source_client: ResearchImportedSourceClient | None = None
+
+    def causal_planned_trials(self, request: ResearchRunProducerRequest) -> int:
+        """Plan against the exact immutable snapshot before opening P11."""
+        from portal_api.adapters.quantbt import QuantBTGateway
+        research = request.research
+        if research.execution_profile_id != DELTA_CAUSAL_INNER_PROFILE_ID:
+            raise ResearchRunProducerError("causal trial planning requires its immutable profile")
+        identity, _ = self.snapshots.describe(research.snapshot_id)
+        frame_path = self.snapshots.snapshot_path(research.snapshot_id) / "frame.parquet"
+        if identity.content_hash != research.snapshot_content_hash or _sha256_file(frame_path) != identity.content_hash:
+            raise ResearchRunProducerError("causal trial planning snapshot binding changed")
+        parquet = pq.ParquetFile(frame_path)
+        index = pd.DatetimeIndex(parquet.read(columns=[_timestamp_index_column(parquet.schema_arrow)]).column(0).to_pandas())
+        wf = research.requested_spec["walk_forward"]
+        start = _utc_timestamp(wf["start"], label="walk-forward start")
+        end = _utc_timestamp(wf["end_exclusive"], label="walk-forward end")
+        plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= start) & (index < end)], config_fields={
+            **causal_inner_controls(research.requested_spec), "split_mode": wf["split_mode"],
+            "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal", "optuna_trials": 3})
+        if not 2 <= len(plan) <= 16 or any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
+            raise ResearchRunProducerError("causal inner immutable tape exceeds profile fold bounds")
+        return 3 * len(plan)
 
     async def __call__(
         self,
@@ -735,12 +769,12 @@ class ResearchRunProducerExecutor:
                 )
             if research.execution_profile_digest != WHATIF_PROFILE_DIGEST:
                 raise ResearchRunProducerError("P16 what-if profile digest no longer matches", code="CAPABILITY_MISMATCH")
-        elif research.execution_profile_digest != (DELTA_WFO_V2_PROFILE_DIGEST if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else DELTA_WFO_PROFILE_DIGEST):
+        elif research.execution_profile_digest != (DELTA_CAUSAL_INNER_PROFILE_DIGEST if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else DELTA_WFO_V2_PROFILE_DIGEST if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else DELTA_WFO_PROFILE_DIGEST):
             raise ResearchRunProducerError("P10 Delta WFO profile digest no longer matches", code="CAPABILITY_MISMATCH")
         # Research preview only: a long study runs the spec's own admitted
         # trial count under the preview child limits. Off, both stay locked.
         try:
-            preview_long = whatif is None and delta_wfo_preview_long_enabled()
+            preview_long = whatif is None and research.execution_profile_id != DELTA_CAUSAL_INNER_PROFILE_ID and delta_wfo_preview_long_enabled()
             study_trials = (
                 delta_wfo_admitted_trials(research.requested_spec) if preview_long else DELTA_WFO_OPTUNA_TRIALS
             )
@@ -819,6 +853,7 @@ class ResearchRunProducerExecutor:
                 ) if whatif is not None else (),
                 optuna_trials=study_trials if preview_long else None,
                 temporal_controls=temporal_controls(research.requested_spec) if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else None,
+                causal_inner_controls=causal_inner_controls(research.requested_spec) if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID else None,
             )
             progress("stage_completed", {"stage": "S2"})
             progress("stage_started", {"stage": "S3"})
@@ -827,7 +862,16 @@ class ResearchRunProducerExecutor:
             cpu_cap = child_limits.cpu_seconds if preview_long else min(child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
             progress("budget_tick", _cpu_budget_tick_payload(0, cpu_cap))
             declared_trials = len(whatif.evaluations) if whatif is not None else study_trials
-            live = LiveStudyProgress(progress, trials_declared=declared_trials, cpu_cap_seconds=cpu_cap)
+            causal = research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
+            if causal:
+                from portal_api.adapters.quantbt import QuantBTGateway
+                index = pd.read_parquet(tape_path).index
+                plan = QuantBTGateway().walk_forward_fold_plan(index=index[(index >= span_start) & (index < span_end)], config_fields={
+                    **causal_inner_controls(research.requested_spec), "split_mode": first_oos.isoformat(), "optimization_mode": "mode_1_decay", "optimization_schedule": "per_fold_causal", "optuna_trials": 3})
+                if not 2 <= len(plan) <= 16 or any(not 2 <= len(fold["inner"] or []) <= 16 for fold in plan):
+                    raise ResearchRunProducerError("causal inner immutable tape exceeds profile fold bounds")
+                declared_trials = 3 * len(plan)
+            live = LiveStudyProgress(progress, trials_declared=declared_trials, cpu_cap_seconds=cpu_cap, per_fold=causal)
             child = self.supervisor.run_delta_wfo(
                 receipt,
                 limits=child_limits,

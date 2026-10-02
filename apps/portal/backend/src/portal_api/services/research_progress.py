@@ -61,7 +61,7 @@ _SEGMENT_EVENTS = 128
 _MAX_SEGMENTS = 80  # 10,240 structured events; browser only ever receives 500.
 _SIGNED_DECIMAL_RE = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 _DIGEST_RE = re.compile(r"[0-9a-f]{64}")
-_FOLD_SELECTION_SCOPES = {"GLOBAL_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"}
+_FOLD_SELECTION_SCOPES = {"GLOBAL_STUDY", "PER_FOLD_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"}
 _USAGE_MAXIMA = {
     "peak_rss_bytes": 4 * 1024 * 1024 * 1024,
     # Largest admitted child CPU cap (W1 Delta WFO profile). Each journal
@@ -175,9 +175,12 @@ def _signed_decimal_or_none(value: object, label: str) -> None:
 def _validate_fold_selection(value: object) -> None:
     if not isinstance(value, dict):
         raise ResearchProgressError("P11 fold selection is invalid")
-    _exact_payload(value, event_type="fold selection", required={"scope", "trial", "objective", "params_digest"})
+    _exact_payload(value, event_type="fold selection", required={"scope", "trial", "objective", "params_digest"}, optional={"source_trial_id", "study_id"})
     if value.get("scope") not in _FOLD_SELECTION_SCOPES:
         raise ResearchProgressError("P11 fold selection scope is invalid")
+    _validate_source_trial_identity(value)
+    if value.get("scope") == "PER_FOLD_STUDY" and "study_id" not in value:
+        raise ResearchProgressError("P11 per-fold selection lacks its source study identity")
     _positive_integer(value.get("trial"), "fold selection trial")
     _signed_decimal_or_none(value.get("objective"), "fold selection objective")
     if value.get("scope") == "FIXED_PROFILE" and value.get("objective") is not None:
@@ -196,6 +199,14 @@ def _validate_handoff_cursor(value: object) -> None:
     digest = value.get("params_digest")
     if not isinstance(digest, str) or not _DIGEST_RE.fullmatch(digest):
         raise ResearchProgressError("P11 hand-off digest is invalid")
+
+
+def _validate_source_trial_identity(value: dict[str, Any]) -> None:
+    if ("source_trial_id" in value) != ("study_id" in value):
+        raise ResearchProgressError("P11 source study/trial identities must be paired")
+    for key in ("source_trial_id", "study_id"):
+        if key in value and (not isinstance(value[key], str) or not _ID_RE.fullmatch(value[key])):
+            raise ResearchProgressError("P11 source study/trial identity is invalid")
 
 
 def _derived_overall_pct(snapshot: dict[str, Any]) -> int:
@@ -347,14 +358,18 @@ def _validate_payload(event_type: str, payload: dict[str, Any]) -> None:
                 "fold", "study", "state", "objective", "best_objective", "eta_s",
                 "rate_trials_per_s",
                 "overall_pct", "tqdm_line", "console",
+                "source_trial_id", "study_id",
             },
         )
         # A fold-bound trial names its fold; a trial of one global study that
         # scores every fold at once names none. Exactly one of the two.
         if ("study" in payload) == ("fold" in payload):
             raise ResearchProgressError("P11 trial must name exactly one of fold or a global study")
-        if "study" in payload and payload.get("study") != "GLOBAL":
+        if "study" in payload and payload.get("study") not in {"GLOBAL", "PER_FOLD_STUDY"}:
             raise ResearchProgressError("P11 trial study scope is invalid")
+        _validate_source_trial_identity(payload)
+        if payload.get("study") == "PER_FOLD_STUDY" and "study_id" not in payload:
+            raise ResearchProgressError("P11 per-fold trial lacks its source study identity")
         if "fold" in payload:
             _positive_integer(payload.get("fold"), "trial fold")
         _positive_integer(payload.get("trial"), "trial number")
@@ -1214,13 +1229,14 @@ class ResearchProgressJournal:
                 raise ResearchProgressError("P11 snapshot fold shape is invalid")
             if "selection" in fold:
                 selection = fold["selection"]
-                if not isinstance(selection, dict) or set(selection) != {
+                required_selection = {
                     "state", "scope", "trial", "objective", "params_digest", "reason_code",
-                }:
+                }
+                if not isinstance(selection, dict) or not required_selection <= set(selection) or set(selection) - required_selection - {"source_trial_id", "study_id"}:
                     raise ResearchProgressError("P11 snapshot fold selection is invalid")
                 if selection["state"] == "AVAILABLE":
                     _validate_fold_selection({
-                        key: selection[key] for key in ("scope", "trial", "objective", "params_digest")
+                        key: selection[key] for key in ("scope", "trial", "objective", "params_digest", "source_trial_id", "study_id") if key in selection
                     })
                     if selection["reason_code"] is not None:
                         raise ResearchProgressError("P11 snapshot fold selection is invalid")

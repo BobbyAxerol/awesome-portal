@@ -13,8 +13,19 @@ from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_PROFILE_DIGEST,
     DELTA_WFO_PROFILE_ID,
 )
+from portal_api.serialization import canonicalize
 
 INGEST_PREFIX = "/internal/research/progress/artifacts/"
+
+
+def assert_summary_budgets(summary: dict[str, Any]) -> None:
+    """Exact existing PostgreSQL-space-aware core and enrichment ceilings."""
+    def size(value: object) -> int:
+        return len(json.dumps(canonicalize(value), ensure_ascii=True, sort_keys=True, allow_nan=False).encode("utf-8"))
+    assert size({key: value for key, value in summary.items() if key != "enriched_analysis"}) <= 65_536
+    if "enriched_analysis" in summary:
+        assert isinstance(summary["enriched_analysis"], dict)
+        assert size(summary["enriched_analysis"]) <= 73_728
 
 
 def wfo_request(

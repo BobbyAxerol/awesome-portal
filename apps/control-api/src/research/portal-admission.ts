@@ -1,6 +1,7 @@
 import type { ControlApiConfig } from "../config";
 import type { ResearchPortalAdmission } from "./foundation.contract";
 import { DELTA_WFO_V2_PROFILE } from "./delta-wfo-v2.profile";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import {
   DELTA_WFO_PREVIEW_LONG_LIMITS,
   DELTA_WFO_PROFILE,
@@ -80,6 +81,26 @@ export function researchPortalAdmission(
         frequency: null, window_mode: null, frequencies: [...DELTA_WFO_V2_PROFILE.frequencies],
         window_modes: [...DELTA_WFO_V2_PROFILE.window_modes], requested_spec_versions: ["research.requested-spec.v2"],
         seed_policy: "LOCKED", trial_default: 3, early_stopping_policy: "FORBIDDEN", inner_validation: DELTA_WFO_V2_PROFILE.inner_validation,
+      },
+      {
+        profile_id: DELTA_CAUSAL_INNER_PROFILE.profile_id,
+        state: wfoReason ? "DISABLED" : "ENABLED", reason: wfoReason,
+        engine_release_id: DELTA_CAUSAL_INNER_PROFILE.engine_release_id,
+        execution_route: DELTA_CAUSAL_INNER_PROFILE.execution_route, protocol: DELTA_CAUSAL_INNER_PROFILE.protocol,
+        optimization_mode: DELTA_CAUSAL_INNER_PROFILE.optimization_mode,
+        optimization_schedule: DELTA_CAUSAL_INNER_PROFILE.optimization_schedule,
+        timeframe: DELTA_CAUSAL_INNER_PROFILE.timeframe, random_seed: DELTA_CAUSAL_INNER_PROFILE.random_seed,
+        trial_count: DELTA_CAUSAL_INNER_PROFILE.trial_count, trial_scope: DELTA_CAUSAL_INNER_PROFILE.trial_scope,
+        max_total_trials: DELTA_CAUSAL_INNER_PROFILE.max_total_trials,
+        max_span_days: DELTA_CAUSAL_INNER_PROFILE.max_span_days, fold_bounds: DELTA_CAUSAL_INNER_PROFILE.fold_bounds,
+        frequency: null, window_mode: null, frequencies: [...DELTA_CAUSAL_INNER_PROFILE.frequencies],
+        window_modes: [...DELTA_CAUSAL_INNER_PROFILE.window_modes], requested_spec_versions: ["research.requested-spec.v2"],
+        seed_policy: "LOCKED", trial_default: 3, early_stopping_policy: "FORBIDDEN",
+        inner_validation: DELTA_CAUSAL_INNER_PROFILE.inner_validation,
+        inner_constraints: { fold_bounds: DELTA_CAUSAL_INNER_PROFILE.inner_constraints.fold_bounds,
+          frequencies: [...DELTA_CAUSAL_INNER_PROFILE.inner_constraints.frequencies],
+          window_modes: [...DELTA_CAUSAL_INNER_PROFILE.inner_constraints.window_modes],
+          train_window_pattern: DELTA_CAUSAL_INNER_PROFILE.inner_constraints.train_window_pattern },
       },
     ],
     note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE",

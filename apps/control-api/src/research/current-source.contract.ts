@@ -18,10 +18,10 @@ import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { WhatIfSchema } from "./whatif.contract";
 import { FoldOrderingSchema } from "./fold-ordering";
 import { P11StageEventsSchema } from "./p11-stage-events";
-import { DeclaredSpaceSchema, SearchSurfaceSchema } from "./current-source-surface";
+import { DeclaredSpaceSchema, SearchSurfaceSchema, SearchStudySurfaceSchema } from "./current-source-surface";
 import { CandidateDrawdownSchema, SearchPoolSchema } from "./current-source-pool";
 import { ParameterAuthoritySchema, Stage4BindingSchema } from "./stage4-binding";
-import { CurrentSourceSourceSeriesArtifactSchema } from "./current-source.payload";
+import { CurrentSourceSourceSeriesArtifactSchema, CurrentSourceCausalSelectionSchema } from "./current-source.payload";
 
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -109,8 +109,8 @@ export const ResearchCurrentSourceEvidenceSeriesQuerySchema = ResearchCurrentSou
  * with the signal-notional profile (or vice versa).
  */
 const ProvenanceBaseSchema = z.object({
-  source_adapter_id: z.enum(["rs02.quantbt-advanced-wfo.v1", "rs02.quantbt-signal-notional-wfo.v1"]),
-  profile_id: z.enum(["rs02.delta-wfo-global.v1", "rs02.delta-signal-notional-wfo.v1"]),
+  source_adapter_id: z.enum(["rs02.quantbt-advanced-wfo.v1", "rs02.quantbt-signal-notional-wfo.v1", "rs02.quantbt-signal-notional-causal-inner.v1"]),
+  profile_id: z.enum(["rs02.delta-wfo-global.v1", "rs02.delta-signal-notional-wfo.v1", "rs02.delta-signal-notional-causal-inner.v1"]),
   engine_version: z.literal("1.1.1"),
   source_manifest_digest: DigestSchema,
   source_transform_digest: DigestSchema,
@@ -123,7 +123,8 @@ const ProvenanceBaseSchema = z.object({
 
 const ProvenanceSchema = ProvenanceBaseSchema.superRefine((value, context) => {
   const paired = (value.source_adapter_id === "rs02.quantbt-advanced-wfo.v1" && value.profile_id === "rs02.delta-wfo-global.v1")
-    || (value.source_adapter_id === "rs02.quantbt-signal-notional-wfo.v1" && value.profile_id === "rs02.delta-signal-notional-wfo.v1");
+    || (value.source_adapter_id === "rs02.quantbt-signal-notional-wfo.v1" && value.profile_id === "rs02.delta-signal-notional-wfo.v1")
+    || (value.source_adapter_id === "rs02.quantbt-signal-notional-causal-inner.v1" && value.profile_id === "rs02.delta-signal-notional-causal-inner.v1");
   if (!paired) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["profile_id"], message: "current-source source adapter and profile must be one admitted pair" });
   }
@@ -190,6 +191,10 @@ const ObservationSchema = z.object({
 }).strict();
 
 const FoldSegmentSchema = z.object({
+  parameters: ParameterMapSchema.optional(),
+  selection_scope: z.literal("OUTER_FOLD_SELECTION").optional(),
+  selected_trial_id: SourceIdentifierSchema.optional(),
+  study_id: SourceIdentifierSchema.optional(),
   /** Sealed global-study θ* identity, not proof of the replay child's runtime parameters. */
   params_digest: DigestSchema.nullable(),
   params_digest_reason_code: z.literal("RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS").nullable(),
@@ -358,6 +363,8 @@ const ClaimStripSchema = z.object({
 }).strict();
 
 const FoldVerdictRowSchema = z.object({
+  score_basis: z.literal("INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS").optional(),
+  selected_parameters: ParameterMapSchema.optional(),
   source_ordinal: z.number().int().nonnegative().max(255),
   fold_id: SourceIdentifierSchema,
   test_start_utc_ms: UtcMsSchema.nullable(),
@@ -391,7 +398,7 @@ const FoldVerdictsSchema = z.object({
     version: z.literal("research.fold-verdict.v1"),
     pass: VerdictThresholdSchema,
     warn: VerdictThresholdSchema,
-    score_basis: z.literal("QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1"),
+    score_basis: z.enum(["QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1", "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS"]),
     path_basis: z.literal("RETAINED_STITCHED_OBSERVATIONS_V1"),
   }).strict(),
   order: z.literal("WORST_FIRST"),
@@ -580,6 +587,7 @@ const FoldAnatomySchema = z.object({
 }).strict();
 
 const FoldSchema = z.object({
+  causal_selection: CurrentSourceCausalSelectionSchema.optional(),
   source_ordinal: z.number().int().nonnegative().max(255),
   fold_id: SourceIdentifierSchema,
   train_start_utc_ms: UtcMsSchema.nullable(),
@@ -694,6 +702,7 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     warmup_policy: GuardFactSchema,
     warmup_bars: GuardFactSchema,
     inner_folds: GuardFactSchema,
+    inner_min_folds: GuardFactSchema.optional(),
     oos_used_for_selection: GuardFactSchema,
     train_test_disjoint: z.object({
       verdict: z.enum(["PASS", "FAIL", "NOT_CHECKABLE"]),
@@ -714,12 +723,14 @@ const TrialMetricSchema = z.object({
 
 /** W3 · CG-P15-03/04: what one ledger row is, measured and scoped. */
 const TrialFactsSchema = z.object({
+  evaluation_scope: z.literal("INNER_VALIDATION").optional(),
+  study_id: FactTokenValueSchema.nullable().optional(),
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
   reason_code: ReasonCodeSchema.nullable(),
   stage: FactTokenValueSchema.nullable(),
   objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
   fold_scope: z.object({
-    kind: z.enum(["FOLD", "ALL_OUTER_FOLDS", "NOT_PUBLISHED"]),
+    kind: z.enum(["FOLD", "PER_FOLD_STUDY", "ALL_OUTER_FOLDS", "NOT_PUBLISHED"]),
     fold_id: FactTokenValueSchema.nullable(),
     reason_code: ReasonCodeSchema.nullable(),
   }).strict(),
@@ -773,23 +784,27 @@ const CandidateSchema = z.object({
 }).strict();
 
 const SelectionRoleSchema = z.object({
+  scope: z.literal("LAST_FOLD_DEPLOYMENT").optional(),
+  fold_id: SourceIdentifierSchema.optional(),
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
   reason_code: ReasonCodeSchema.nullable(),
   trial_id: SourceIdentifierSchema.nullable(),
   objective: DecimalSchema.nullable(),
-  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
+  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "NOT_PUBLISHED"]),
 }).strict();
 
 export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
   schema_version: z.literal("research.current-source-search.v1"),
   selection: z.object({
+    scope: z.literal("LAST_FOLD_DEPLOYMENT").optional(),
+    fold_id: SourceIdentifierSchema.optional(),
     state: z.literal("AVAILABLE"),
     selected_trial_id: SourceIdentifierSchema.nullable(),
     objective: DecimalSchema.nullable(),
     parameters: ParameterMapSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,
     /** W3 · CG-P15-03: raw IS best vs the selected candidate vs a centroid. */
-    objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
+    objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J", "NOT_PUBLISHED"]),
     roles: z.object({
       raw_best_is: SelectionRoleSchema,
       selected: SelectionRoleSchema,
@@ -870,6 +885,7 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
    */
   declared_space: DeclaredSpaceSchema,
   surface: SearchSurfaceSchema,
+  surfaces_by_study: z.array(SearchStudySurfaceSchema).min(2).max(16).optional(),
   /**
    * E5 · 6.7/6.8/6.10: the frozen pool (trials, feasible, top-IS K and the
    * rule that sized it, re-evaluated, selected) and θ*'s per-fold decay.
@@ -895,6 +911,8 @@ export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
   /** A10a: the newest durable byte-verification receipt for this run's sealed P05 artifact. */
   byte_verification: ArtifactByteVerificationSchema,
   frozen_selection: z.object({
+    scope: z.literal("LAST_FOLD_DEPLOYMENT").optional(),
+    fold_id: SourceIdentifierSchema.optional(),
     selected_trial_id: SourceIdentifierSchema.nullable(),
     objective: DecimalSchema.nullable(),
     parameters: ParameterMapSchema,

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from wfo_test_support import assert_summary_budgets
 
 from golden_fixture import build_market_frame
 from portal_api.adapters.market_data import (
@@ -238,7 +239,7 @@ def test_current_source_adapter_retains_real_wfo_rows_once(exported) -> None:
     distribution = receipt.summary["derived"]["return_distribution"]
     if distribution["state"] == "AVAILABLE":
         assert sum(int(bucket["count"]) for bucket in distribution["values"]) == oos_count
-    assert len(json.dumps(receipt.summary, sort_keys=True).encode("utf-8")) <= 65_536
+    assert_summary_budgets(dict(receipt.summary))
 
     reader = retained.reader(cursor_secret=b"rs02-current-source-cursor-secret-at-least-32-bytes")
     page = reader.read_page(

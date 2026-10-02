@@ -20,6 +20,10 @@ export function researchClaimFamily(input: {
   validationClaim: string | null;
   split: ResearchSplitSource | null;
 }) {
+  if (input.validationClaim === "strict_nested_fold_local_retraining") {
+    return { family: "STRICT_OUTER_OOS" as const, rank: 4, origin: "SOURCE_ATTESTED" as const,
+      availability: { state: "AVAILABLE" as const, reason_code: null } };
+  }
   if (input.validationClaim === "walk_forward_oos") {
     return {
       family: "WALK_FORWARD_OOS_COMPATIBILITY" as const,

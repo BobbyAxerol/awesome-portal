@@ -34,6 +34,7 @@ from portal_api.domain.research_delta_wfo_profile import (
     delta_wfo_child_cpu_seconds,
 )
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
+from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
 from portal_api.domain.research_imported_alpha_profile import IMPORTED_ALPHA_CPU_SECONDS
 from portal_api.domain.research_whatif_profile import WHATIF_CPU_SECONDS
 from portal_api.services.artifact_store import ContentAddressedArtifactStore
@@ -326,8 +327,15 @@ class DurableQuantWorker:
             wfo_cpu_cap = DELTA_WFO_CPU_SECONDS
             if is_delta_wfo and not is_whatif:
                 try:
-                    wfo_trials = delta_wfo_admitted_trials(research_request.research.requested_spec)
-                    wfo_cpu_cap = delta_wfo_child_cpu_seconds()
+                    if research_request.research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID:
+                        planner = getattr(self._research_executor, "causal_planned_trials", None)
+                        if not callable(planner):
+                            raise _DeltaWfoProfileUnavailable("Causal executor cannot bind its trial count to the immutable snapshot")
+                        wfo_trials = await asyncio.to_thread(planner, research_request)
+                        wfo_cpu_cap = 120
+                    else:
+                        wfo_trials = delta_wfo_admitted_trials(research_request.research.requested_spec)
+                        wfo_cpu_cap = delta_wfo_child_cpu_seconds()
                 except (DeltaWfoPreviewLongMisconfigured, ValueError) as exc:
                     raise _DeltaWfoProfileUnavailable(str(exc)) from exc
             progress_enabled = (
@@ -1102,6 +1110,29 @@ class DurableQuantWorker:
         live = int(journal.snapshot()["overall"]["trials_done"])
         if live > total:
             raise DurableRunError("P11 observed more live WFO trials than the retained trial table holds")
+        if getattr(retention, "causal_fold_selections", ()):
+            trials = list(retention.causal_trials)
+            folds = list(retention.causal_fold_selections)
+            if len(trials) != total or len(folds) != retention.table_rows["FOLD"] or total != 3 * len(folds):
+                raise DurableRunError("P11 retained causal study counts do not match")
+            for index in range(live + 1, total + 1):
+                source = trials[index - 1]
+                journal.emit("trial_completed", {"study": "PER_FOLD_STUDY", "trial": index, "eta_s": None,
+                    "study_id": source["study_id"], "source_trial_id": source["source_trial_id"],
+                    "state": source["state"], "objective": source["objective"],
+                    "tqdm_line": f"per-fold studies · trial {index}/{total} · from retained trial table"})
+            for ordinal, source in enumerate(folds, 1):
+                selected = [(index + 1, trial) for index, trial in enumerate(trials)
+                            if trial["trial_id"] == source["selected_trial_id"] and trial["study_id"] == source["study_id"]]
+                if len(selected) != 1:
+                    raise DurableRunError("P11 causal fold does not name one exact retained study trial")
+                selected_trial, selected_row = selected[0]
+                digest = parameter_bundle_digest(dict(source["parameters"]))
+                journal.emit("fold_completed", {"fold": ordinal, "selection": {
+                    "scope": "PER_FOLD_STUDY", "trial": selected_trial, "study_id": source["study_id"],
+                    "source_trial_id": selected_row["source_trial_id"], "objective": source["objective"], "params_digest": digest}})
+            journal.emit("stage_completed", {"stage": "S4"})
+            return {"fold": len(folds), "trial": selected_trial, "params_digest": digest}
         for index in range(live + 1, total + 1):
             state = states[index - 1]
             payload: dict[str, Any] = {

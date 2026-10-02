@@ -33,6 +33,7 @@ import {
 } from "./compare.repository";
 import { CurrentSourceSummarySchema } from "./current-source.payload";
 import { RS02_DELTA_WFO_GLOBAL_PROFILE_ID, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import { RESEARCH_PERFORMANCE_METRIC_DEFINITIONS } from "./evidence-metric-registry";
 import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import type { ResearchSplitSource } from "./progress.contract";
@@ -83,6 +84,7 @@ interface Retained {
   sourceFoldCount: number | null;
   meanOosSharpe: string | null;
   meanDecay: string | null;
+  outerFoldMeans: boolean;
 }
 
 interface RetainedFold {
@@ -181,7 +183,8 @@ function asRequestedSpec(value: unknown): RequestedSpec | null {
 }
 
 function asRetained(row: CompareRunRow): Retained | null {
-  if (row.current_profile_id !== RS02_DELTA_WFO_GLOBAL_PROFILE_ID && row.current_profile_id !== RS02_SIGNAL_NOTIONAL_PROFILE_ID) return null;
+  const causal = row.current_profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
+  if (row.current_profile_id !== RS02_DELTA_WFO_GLOBAL_PROFILE_ID && row.current_profile_id !== RS02_SIGNAL_NOTIONAL_PROFILE_ID && !causal) return null;
   const summary = CurrentSourceSummarySchema.safeParse(record(row.current_source_summary));
   if (!summary.success) return null;
   const rawFolds = typeof row.current_source_folds === "string" ? (() => { try { return JSON.parse(row.current_source_folds as string); } catch { return null; } })() : row.current_source_folds;
@@ -189,12 +192,20 @@ function asRetained(row: CompareRunRow): Retained | null {
   if (!folds.success) return null;
   const tableRows = record(row.current_source_table_rows);
   const foldCount = typeof tableRows?.FOLD === "number" && Number.isSafeInteger(tableRows.FOLD) ? tableRows.FOLD : null;
+  const completeCausalFolds = row.current_artifact_sealed === true && foldCount !== null
+    && foldCount >= 2 && foldCount <= 16 && folds.data.length === foldCount
+    && new Set(folds.data.map(fold => fold.fold_id)).size === foldCount;
   return {
     summary: summary.data,
     folds: folds.data,
     sourceFoldCount: foldCount,
-    meanOosSharpe: exactDecimal(row.current_selected_mean_oos_sharpe),
-    meanDecay: exactDecimal(row.current_selected_mean_decay),
+    // A causal deployment singleton carries INNER validation means, not the
+    // run's realized outer-OOS means. Never reuse the historical trial query.
+    meanOosSharpe: causal ? completeCausalFolds ? exactDecimal(row.current_outer_mean_oos_sharpe) : null
+      : exactDecimal(row.current_selected_mean_oos_sharpe),
+    meanDecay: causal ? completeCausalFolds ? exactDecimal(row.current_outer_mean_decay) : null
+      : exactDecimal(row.current_selected_mean_decay),
+    outerFoldMeans: causal,
   };
 }
 
@@ -287,8 +298,13 @@ function claim(row: CompareRunRow, split: ResearchSplitSource | null, retained: 
   const sourceClaim = record(snapshot?.claim);
   const sourceText = sourceClaim?.state === "ISSUED" ? boundedText(sourceClaim.text) : null;
   const claims = retained?.summary.source_facts?.claims;
-  const family = researchClaimFamily({ validationClaim: claims?.validation_claim ?? null, split });
+  const strictAttested = row.current_profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+    && row.current_artifact_sealed === true;
+  const validationClaim = claims?.validation_claim === "strict_nested_fold_local_retraining" && !strictAttested
+    ? null : claims?.validation_claim ?? null;
+  const family = researchClaimFamily({ validationClaim, split });
   const sourceFallback = claims?.validation_claim === "walk_forward_oos"
+    || claims?.validation_claim === "strict_nested_fold_local_retraining"
     ? [
         `validation_claim=${claims.validation_claim}`,
         claims.chronological_validation_claim ? `chronological_claim=${claims.chronological_validation_claim}` : null,
@@ -307,8 +323,10 @@ function retainedMetrics(retained: Retained) {
     metric("TRADE_COUNT", "rs02-oos-trade-count", "RS02_OOS_SUM_OF_FOLDS",
       retained.sourceFoldCount === retained.folds.length ? sumIntegers(retained.folds.map((fold) => fold.oos_trade_count)) : null,
       "P20_RS02_FOLD_TRADE_COUNTS_NOT_RETAINED"),
-    metric("OOS_SHARPE", "oos-sharpe", "RS02_OOS_MEAN_OF_FOLDS", retained.meanOosSharpe, "P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE"),
-    metric("DECAY", "decay", "RS02_OOS_MEAN_OF_FOLDS", retained.meanDecay, "P20_SOURCE_DID_NOT_PUBLISH_DECAY"),
+    { ...metric("OOS_SHARPE", retained.outerFoldMeans ? "outer-fold-selected-oos-sharpe-mean" : "oos-sharpe", "RS02_OOS_MEAN_OF_FOLDS", retained.meanOosSharpe, "P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE"),
+      ...(retained.outerFoldMeans ? { origin: "PORTAL_DERIVED" as const } : {}) },
+    { ...metric("DECAY", retained.outerFoldMeans ? "outer-fold-mean-inner-is-mean-minus-outer-oos" : "decay", "RS02_OOS_MEAN_OF_FOLDS", retained.meanDecay, "P20_SOURCE_DID_NOT_PUBLISH_DECAY"),
+      ...(retained.outerFoldMeans ? { origin: "PORTAL_DERIVED" as const } : {}) },
   ];
 }
 

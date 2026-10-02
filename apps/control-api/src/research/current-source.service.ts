@@ -67,10 +67,12 @@ import {
   CurrentSourceSummarySchema as SummarySchema,
   CurrentSourceTrialPayloadSchema as TrialPayloadSchema,
   type CurrentSourceBar,
+  type CurrentSourceCausalSelection,
   type CurrentSourceFacts,
   type CurrentSourceReplaySummary,
 } from "./current-source.payload";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } from "./delta-wfo.profile";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
 import { sha256ResearchJson } from "./preflight.service";
@@ -78,7 +80,7 @@ import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
 import { inertWhatIf, ResearchWhatIfService, type WhatIfBasis } from "./whatif.service";
 import { foldOrdering } from "./fold-ordering";
-import { declaredSpace, searchSurface, type SurfaceTrial } from "./current-source-surface";
+import { declaredSpace, runGlobalCausalSurface, searchStudySurfaces, searchSurface, type SearchStudySurface, type SurfaceTrial } from "./current-source-surface";
 import { candidateDrawdown, searchPool } from "./current-source-pool";
 import { parameterAuthority, retainedStage4Binding } from "./stage4-binding";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
@@ -147,6 +149,11 @@ function revision(kind: string, seal: CurrentSourceSealRow): string {
       analytics_sidecar_digest: seal.analyticsSidecar.digest })}`;
   }
   return `rs02_${kind}_${currentSourceSealDigest(seal)}`;
+}
+
+function isCausalSeal(seal: CurrentSourceSealRow): boolean {
+  return seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+    && seal.sourceAdapterId === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id;
 }
 
 function parseSummary(seal: CurrentSourceSealRow) {
@@ -464,6 +471,8 @@ export class ResearchCurrentSourceService {
             testStartUtcMs: fold.test_start_utc_ms,
             testEndUtcMs: fold.test_end_utc_ms,
             facts: fold.fold_facts,
+            ...(seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id && fold.causal_selection
+              ? { selectedParameters: fold.causal_selection.parameters, causalSelection: fold.causal_selection } : {}),
           };
         }),
         facts,
@@ -519,7 +528,10 @@ export class ResearchCurrentSourceService {
       test_start_utc_ms: fold.test_start_utc_ms,
       test_end_utc_ms: fold.test_end_utc_ms,
     }));
-    const temporalGuards = splitGuards(summary.source_facts);
+    const retainedInnerCount = seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id &&
+      folds.every(fold => fold.causal_selection !== undefined) && folds.length > 0
+      ? folds.reduce((count, fold) => count + fold.causal_selection!.inner_folds.length, 0) : undefined;
+    const temporalGuards = splitGuards(summary.source_facts, retainedInnerCount);
     const value = {
       schema_version: "research.current-source-split.v1" as const,
       ...this.common("split", seal),
@@ -586,7 +598,7 @@ export class ResearchCurrentSourceService {
     }
     // X2 · B3: the surface is every retained trial (≤ 64), whatever page the ledger shows.
     const allTrials = inputs.trials;
-    const space = declaredSpace(seal.profileId, summary.selection.parameters);
+    let space = declaredSpace(seal.profileId, summary.selection.parameters);
     const roles = selectionRoles(facts, summary.selection);
     const surfaceTrials: SurfaceTrial[] = allTrials.map((row) => {
       const trial = asTrial(row);
@@ -598,11 +610,48 @@ export class ResearchCurrentSourceService {
         parameters: trial.parameters,
       };
     });
+    let studySurfaces: SearchStudySurface[] | undefined;
+    if (isCausalSeal(seal)) {
+      // The native local trial number repeats across studies. Join the actual
+      // source study_id AND outer fold_id, never parse a qualified display id.
+      const outer = [...inputs.folds].sort((left, right) => left.sourceOrdinal - right.sourceOrdinal).map(asFold);
+      const last = outer.at(-1);
+      if (outer.length < 2 || outer.length > 16 || allTrials.length !== outer.length * 3
+        || summary.selection.scope !== "LAST_FOLD_DEPLOYMENT" || !last?.causal_selection
+        || summary.selection.fold_id !== last.fold_id) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Causal study populations or last-fold deployment were not retained exactly.", 503);
+      }
+      try {
+        const studies = outer.map(outerFold => {
+          const selected = outerFold.causal_selection;
+          if (!selected) throw new RangeError("An outer study selection was not retained.");
+          const members = allTrials.flatMap((row, index) => {
+            const trial = asTrial(row), trialFacts = trial.trial_facts;
+            if (trialFacts?.study_id !== selected.study_id || trialFacts.fold_scope.fold_id !== outerFold.fold_id) return [];
+            if (!["FOLD", "PER_FOLD_STUDY"].includes(trialFacts.fold_scope.kind)
+              || trialFacts.stage !== "is_search" || trialFacts.objective_kind !== "IS_MEAN_SHARPE") {
+              throw new RangeError("Causal surface requires the study's actual Stage-A IS ledger.");
+            }
+            return [surfaceTrials[index]!];
+          });
+          return { foldId: outerFold.fold_id, studyId: selected.study_id, selectedTrialId: selected.selected_trial_id,
+            selectedParameters: selected.parameters, trials: members };
+        });
+        studySurfaces = searchStudySurfaces(seal.profileId, studies);
+        // Declared ranges are common; this singleton's values belong only to
+        // the final deployment, not a run-global theta used by earlier folds.
+        space = { ...space, selection_scope: "LAST_FOLD_DEPLOYMENT", fold_id: last.fold_id, study_id: last.causal_selection.study_id };
+      } catch {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Causal study surfaces do not match exact retained fold and trial identities.", 503);
+      }
+    }
     const firstFacts = allTrials.length > 0 ? asTrial(allTrials[0]!).trial_facts : undefined;
     // E5: the pool and θ*'s per-fold decay read every retained trial and fold row.
     const poolFolds = inputs.folds;
     const pool = searchPool({
       facts,
+      sourceAdapterId: seal.sourceAdapterId,
+      sourceProfileId: seal.profileId,
       trials: allTrials.map((row) => {
         const trial = asTrial(row);
         return { trialId: trial.trial_id, state: typedTrialState(trial.state), objective: trial.objective, facts: trial.trial_facts };
@@ -613,7 +662,7 @@ export class ResearchCurrentSourceService {
       }),
       folds: poolFolds.map((row) => {
         const fold = asFold(row);
-        return { foldId: fold.fold_id, sourceOrdinal: row.sourceOrdinal, facts: fold.fold_facts };
+        return { foldId: fold.fold_id, sourceOrdinal: row.sourceOrdinal, facts: fold.fold_facts, causalSelection: fold.causal_selection };
       }),
       selectedTrialId: summary.selection.trial_id,
     });
@@ -635,7 +684,8 @@ export class ResearchCurrentSourceService {
         objective: summary.selection.objective,
         parameters: summary.selection.parameters,
         availability: available(),
-        objective_kind: facts ? "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
+        objective_kind: facts ? summary.selection.scope === "LAST_FOLD_DEPLOYMENT" ? "INNER_VALIDATION_DECAY_J" as const : "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
+        ...(summary.selection.scope ? { scope: summary.selection.scope, fold_id: summary.selection.fold_id } : {}),
         roles,
       },
       // E5 · 6.7: K from the retained pool when QuantBT's own rule agrees; otherwise the configured value (null stays null).
@@ -656,7 +706,7 @@ export class ResearchCurrentSourceService {
             parameters: trial.parameters,
             params_digest: sha256ResearchJson(trial.parameters),
             params_digest_source: "PORTAL_CANONICAL_TRIAL_PARAMETERS_V1" as const,
-            facts: trialFacts(rowFacts, ledgerMode),
+            facts: trialFacts(rowFacts, ledgerMode, isCausalSeal(seal)),
             playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "TRIAL", row.sourceOrdinal),
           };
         }),
@@ -671,7 +721,7 @@ export class ResearchCurrentSourceService {
           return {
             source_ordinal: row.sourceOrdinal,
             ...candidate,
-            facts: trialFacts(rowFacts, ledgerMode),
+            facts: trialFacts(rowFacts, ledgerMode, isCausalSeal(seal)),
             max_drawdown: candidateDrawdown({
               candidate: { candidateId: candidate.candidate_id, objective: candidate.objective, facts: rowFacts },
               selection: summary.selection,
@@ -684,13 +734,15 @@ export class ResearchCurrentSourceService {
       },
       diagnostics: searchDiagnostics(facts),
       declared_space: space,
-      surface: searchSurface({
+      surface: isCausalSeal(seal) ? runGlobalCausalSurface(allTrials.length,
+        surfaceTrials.filter(trial => trial.state === "COMPLETE" && trial.objective !== null).length) : searchSurface({
         trials: surfaceTrials,
         space,
         selectedTrialId: summary.selection.trial_id,
         bestIsTrialId: roles.raw_best_is.trial_id,
         objectiveKind: firstFacts?.objective_kind ?? "NOT_PUBLISHED",
       }),
+      ...(studySurfaces ? { surfaces_by_study: studySurfaces } : {}),
       pool: {
         ...pool,
         frozen_at_utc_ms: null,
@@ -714,11 +766,18 @@ export class ResearchCurrentSourceService {
     // A10c: exact existing evaluations around θ*; nothing is evaluated here.
     const whatIf = await this.whatIfFor(scope, await this.basisFrom(scope, runId, seal, summary, byteVerification, signal));
     const common = this.common("freeze", seal);
-    const space = declaredSpace(seal.profileId, summary.selection.parameters);
+    let space = declaredSpace(seal.profileId, summary.selection.parameters);
     const binding = DEFAULT_PARAMETER_BINDING_REGISTRY.byRetainedLaneProfile(seal.profileId);
     // P16-T02/T11: per-fold ordering from the sealed FOLD rows (immutable
     // under the seal revision, so it cannot move the ETag on its own).
     const foldRows = (await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map((row) => ({ row, fold: asFold(row) }));
+    if (isCausalSeal(seal)) {
+      const deployment = foldRows.find(({ fold }) => fold.fold_id === summary.selection.fold_id)?.fold;
+      if (!deployment?.causal_selection || summary.selection.scope !== "LAST_FOLD_DEPLOYMENT") {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Last-fold deployment scope was not retained.", 503);
+      }
+      space = { ...space, selection_scope: "LAST_FOLD_DEPLOYMENT", fold_id: deployment.fold_id, study_id: deployment.causal_selection.study_id };
+    }
     const ordering = foldOrdering(
       foldRows.map(({ row }) => {
         const fold = asFold(row);
@@ -730,12 +789,14 @@ export class ResearchCurrentSourceService {
           testStartUtcMs: fold.test_start_utc_ms,
           testEndUtcMs: fold.test_end_utc_ms,
           childAudit: fold.child_audit?.records,
+          causalSelection: fold.causal_selection,
         };
       }),
       summary.source_facts,
       summary.selection.parameters,
       binding?.candidateParameterKinds,
       stageEvents,
+      seal.profileId,
     );
     // The ETag must move when a new receipt, a job state or a sealed grid
     // lands, or a 304 would hide it.
@@ -773,6 +834,7 @@ export class ResearchCurrentSourceService {
         objective: summary.selection.objective,
         parameters: summary.selection.parameters,
         availability: available(),
+        ...(summary.selection.scope ? { scope: summary.selection.scope, fold_id: summary.selection.fold_id } : {}),
       },
       what_if: whatIf,
       fold_ordering: ordering,
@@ -782,7 +844,9 @@ export class ResearchCurrentSourceService {
         Object.keys(summary.selection.parameters).length > 0 ? sha256ResearchJson(summary.selection.parameters) : null,
         [...foldRows]
           .sort((left, right) => left.row.sourceOrdinal - right.row.sourceOrdinal)
-          .map(({ fold }) => ({ foldId: fold.fold_id, records: fold.child_audit?.records })),
+          .map(({ fold }) => ({ foldId: fold.fold_id, records: fold.child_audit?.records,
+            ...(seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+              ? { selectedParameters: fold.causal_selection?.parameters ?? null } : {}) })),
         binding?.candidateParameterKinds,
       ),
       parameter_authority: parameterAuthority({
@@ -852,6 +916,12 @@ export class ResearchCurrentSourceService {
     const selectedObservation = selected ? asObservation(selected) : null;
     const summary = parseSummary(seal);
     const ledger = summary.replay ?? null;
+    const perFoldSelections = seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+      ? new Map((await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map(row => {
+        const fold = asFold(row);
+        if (!fold.causal_selection) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Causal replay selection was not retained for an outer fold.", 503);
+        return [fold.fold_id, fold.causal_selection] as const;
+      })) : undefined;
     const value = {
       schema_version: "research.current-source-replay.v1" as const,
       ...this.common("replay", seal, currentRevision),
@@ -898,6 +968,7 @@ export class ResearchCurrentSourceService {
         scope.workspaceId, runId, currentRevision, ledger, summary.source_facts ?? null,
         Object.keys(summary.selection.parameters).length > 0
           ? sha256ResearchJson(summary.selection.parameters) : null,
+        perFoldSelections,
       ),
     };
     return this.valid(ResearchCurrentSourceReplayResponseSchema, value);
@@ -1055,6 +1126,7 @@ export class ResearchCurrentSourceService {
     ledger: CurrentSourceReplaySummary | null,
     facts: CurrentSourceFacts | null,
     selectedParamsDigest: string | null,
+    perFoldSelections?: ReadonlyMap<string, CurrentSourceCausalSelection>,
   ) {
     const execution = facts?.execution ?? null;
     const contract = ledger?.account_contract ?? null;
@@ -1101,12 +1173,19 @@ export class ResearchCurrentSourceService {
         boundary_position_policy: capital?.boundary_position_policy ?? execution?.fold_boundary_position_policy ?? null,
         equity_continuity: equityContinuity(policy),
         reason_code: policy === null ? "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FOLD_ACCOUNT_POLICY" : null,
-        segments: (ledger?.fold_segments ?? []).map((segment) => ({
+        segments: (ledger?.fold_segments ?? []).map((segment) => {
+          const selected = perFoldSelections?.get(segment.fold_id);
+          if (perFoldSelections && !selected) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Replay segment has no exact retained outer-fold selection.", 503);
+          const digest = selected ? sha256ResearchJson(selected.parameters) : selectedParamsDigest;
+          return {
           ...segment,
-          params_digest: selectedParamsDigest,
-          params_digest_reason_code: selectedParamsDigest === null ? "RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS" : null,
+          ...(selected ? { parameters: selected.parameters, selection_scope: selected.scope,
+            selected_trial_id: selected.selected_trial_id, study_id: selected.study_id } : {}),
+          params_digest: digest,
+          params_digest_reason_code: digest === null ? "RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS" : null,
           start_cursor: this.playbackCursor(workspaceId, runId, currentRevision, "OBSERVATION", segment.first_ordinal),
-        })),
+        };
+        }),
         boundary_events: capital?.boundary_events ?? [],
       },
       candle_overview: ledger?.candle_overview ?? null,

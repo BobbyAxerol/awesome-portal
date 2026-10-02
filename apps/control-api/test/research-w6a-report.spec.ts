@@ -29,6 +29,8 @@ import {
 } from "../src/research/report.contract";
 import type { StoredResearchReport } from "../src/research/report.repository";
 import { ResearchReportService } from "../src/research/report.service";
+import { retainedCore, retainedFinalAudit, type RetainedReads } from "../src/research/report-core-v2";
+import { DELTA_CAUSAL_INNER_PROFILE } from "../src/research/delta-causal-inner.profile";
 import { openApiValidator } from "./research-rf05-openapi";
 
 type Kind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
@@ -185,6 +187,55 @@ function v2(report: ResearchReportDetailResponse): ResearchReportFrozenCoreV2 {
   return report.frozen_core;
 }
 
+it("synthetic causal report preserves each actual fold's parameters and labels the singleton deployment only", async () => {
+  const source = currentSource();
+  const page = { limit: 100 } as never;
+  const [evidence, split, search, freeze, replay, equity] = await Promise.all([
+    source.evidence(scope, real.run_id), source.split(scope, real.run_id), source.search(scope, real.run_id, page),
+    source.freeze(scope, real.run_id), source.replay(scope, real.run_id, page), source.evidenceSeries(scope, real.run_id, "EQUITY"),
+  ]);
+  const reads = structuredClone({ hub: wfoHub(), evidence, split, search, freeze, replay, equity, parts: parts() }) as unknown as RetainedReads;
+  reads.evidence.provenance.profile_id = DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
+  reads.evidence.provenance.source_adapter_id = DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id;
+  reads.freeze.provenance = reads.evidence.provenance;
+  reads.search.search_contract.optimization_schedule = "per_fold_causal";
+  reads.evidence.fold_verdicts.rows.forEach(row => {
+    row.score_basis = "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS";
+  });
+  // This intentionally synthetic read tests assembly only, not source admission.
+  reads.split.fold_plan.folds.forEach((fold, index) => {
+    fold.causal_selection = { parameters: { window: String(30 + index) } } as never;
+  });
+  const core = retainedCore(reads);
+  expect(core.folds.params_handoff.scope).toBe("PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS");
+  expect(core.folds.rows.map(row => row.params.text)).toEqual(["window=30", "window=31"]);
+  expect(core.folds.rows.every(row => row.score_basis === "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS")).toBe(true);
+  expect(core.identity.find(row => row.key === "selected_params")!.label).toBe("Last-fold deployment parameters");
+  delete reads.split.fold_plan.folds[0]!.causal_selection;
+  const missing = retainedCore(reads);
+  expect(missing.folds.params_handoff.scope).toBe("NOT_PUBLISHED");
+  expect(missing.folds.rows[0]!.params).toMatchObject({ text: null, availability: { state: "NOT_PUBLISHED" } });
+  expect(missing.folds.rows[1]!.params.text).toBe("window=31");
+  reads.search.search_contract.optimization_schedule = "global";
+  expect(retainedCore(reads).folds.rows.every(row => row.params.text === null)).toBe(true);
+
+  reads.search.search_contract.optimization_schedule = "per_fold_causal";
+  const globalAudit = retainedFinalAudit(real.run_id, { relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [] }, reads.freeze, reads.search, reads.replay);
+  expect(globalAudit.optimizer_reinvoked).toBeNull();
+  reads.freeze.fold_ordering!.selection_scope = "PER_FOLD";
+  reads.freeze.fold_ordering!.folds.forEach((fold, index) => {
+    fold.verdict = "CAUSAL_DATA_TIME_SELECTION";
+    fold.selected_candidate = { candidate_id: fold.oos_generation_child.candidate_id, params_digest: digest("a"),
+      study_id: `fold-study-${index}`, selected_trial_id: `fold-${index}-trial-0`, inner_fold_count: 2 };
+  });
+  const audit = retainedFinalAudit(real.run_id, { relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [] }, reads.freeze, reads.search, reads.replay);
+  expect(audit.audit_target_kind).toBe("PER_FOLD_PARAMETER_SELECTIONS");
+  expect(audit.optimizer_basis).toBe("EVERY_OOS_GENERATION_CHILD_RAN_ITS_FOLD_SELECTED_CANDIDATE");
+  expect(audit.source_refs.some(row => row.key === "frozen_candidate")).toBe(false);
+  const linked = retainedFinalAudit(real.run_id, { relationshipKind: "PRIMARY", parentRunId: null, auditChildren: [{ runId: "unproven-child", state: "READY" }] }, reads.freeze, reads.search, reads.replay);
+  expect(linked).toMatchObject({ kind: "NOT_PUBLISHED", reason_code: "CAUSAL_LINKED_CHILD_PER_FOLD_AUDIT_TARGET_NOT_PROVEN" });
+});
+
 it("B8 terminal split absence cannot be sealed as a completed retained Report", async () => {
   const { service, repository, source } = subject();
   vi.spyOn(source, "split").mockResolvedValueOnce({
@@ -216,7 +267,7 @@ it("B8 terminal split absence cannot be sealed as a completed retained Report", 
     });
     const repaired = await service.read(scope, real.run_id);
     expect(repository.claimMissingWfo).toHaveBeenCalledWith(scope, real.run_id,
-      ["p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2"]);
+      ["p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2", "p10.delta-signal-notional-causal-inner.v1"]);
     expect(repaired.schema_version).toBe("research.report-detail.v1");
     expect(repository.markRepairOutcome).toHaveBeenCalledWith(scope, real.run_id, "SEALED", null);
     expect(repository.seal).toHaveBeenCalledTimes(1);

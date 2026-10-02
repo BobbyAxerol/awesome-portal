@@ -19,6 +19,7 @@ import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from
 import type { ResearchRunLibraryQuery } from "./run-library.contract";
 import { ResearchRunLibraryError } from "./run-library.error";
 import { runDisplayOrdinalSql } from "./run-display-label";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 
 type JsonRecord = Record<string, unknown>;
 type JsonColumn = JsonRecord | string | null;
@@ -627,7 +628,8 @@ export class ResearchRunLibraryRepository {
                 COALESCE((seal.table_rows->>'OBSERVATION')::bigint, 0) AS observation_count
            FROM unnest($2::text[]) AS wanted(run_id)
            JOIN LATERAL (
-             SELECT source.workspace_id, source.run_id, source.artifact_revision, source.retained_import_digest, source.summary, source.table_rows
+             SELECT source.workspace_id, source.run_id, source.artifact_revision, source.retained_import_digest, source.summary, source.table_rows,
+                    source.source_adapter_id, source.profile_id
                FROM research.current_source_seals_v1 source
               WHERE source.workspace_id = $1 AND source.run_id = wanted.run_id
               ORDER BY source.artifact_revision DESC
@@ -644,6 +646,9 @@ export class ResearchRunLibraryRepository {
                 AND row.run_id = seal.run_id
                 AND row.artifact_revision = seal.artifact_revision
                 AND row.table_kind = 'CANDIDATE'
+                -- Causal candidates score INNER validation, not the run's outer OOS.
+                AND (seal.source_adapter_id IS DISTINCT FROM '${DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id}'
+                  OR seal.profile_id IS DISTINCT FROM '${DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id}')
                 AND row.payload->'trial_facts'->>'source_trial_id' = seal.summary->'selection'->>'trial_id'
                 AND row.payload->>'objective' IS NOT DISTINCT FROM seal.summary->'selection'->>'objective'
               ORDER BY row.source_ordinal ASC
@@ -815,7 +820,8 @@ export class ResearchRunLibraryRepository {
            ) evidence ON true
            LEFT JOIN LATERAL (
              SELECT seal.artifact_revision, seal.summary->'selection' AS selection, seal.table_rows,
-                    seal.retained_import_digest, seal.summary->'summary_analytics_v2' AS analytics_v2
+                    seal.retained_import_digest, seal.summary->'summary_analytics_v2' AS analytics_v2,
+                    seal.source_adapter_id, seal.profile_id
                FROM research.current_source_seals_v1 seal
               WHERE library.source_kind = 'RESEARCH_DURABLE'
                 AND seal.workspace_id = library.workspace_id
@@ -835,6 +841,9 @@ export class ResearchRunLibraryRepository {
                 AND row.run_id = library.run_id
                 AND row.artifact_revision = retained.artifact_revision
                 AND row.table_kind = 'CANDIDATE'
+                -- Exclude only the exact causal pair; historical/unknown lanes keep their projection.
+                AND (retained.source_adapter_id IS DISTINCT FROM '${DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id}'
+                  OR retained.profile_id IS DISTINCT FROM '${DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id}')
                 AND row.payload->'trial_facts'->>'source_trial_id' = retained.selection->>'trial_id'
                 AND row.payload->>'objective' IS NOT DISTINCT FROM retained.selection->>'objective'
               ORDER BY row.source_ordinal ASC

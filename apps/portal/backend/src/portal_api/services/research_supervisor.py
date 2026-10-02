@@ -278,10 +278,14 @@ class DeltaWfoChildReceipt:
     # the locked profile's count and the receipt bytes of every other run.
     optuna_trials: int | None = None
     temporal_controls: dict[str, Any] | None = None
+    causal_inner_controls: dict[str, Any] | None = None
 
     def as_payload(self, *, output_root: Path) -> dict[str, Any]:
         if self.task not in {"P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"}:
             raise ResearchSupervisorError("P06 WFO child task is not allowlisted")
+        from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
+        if self.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID and self.causal_inner_controls is None:
+            raise ResearchSupervisorError("causal inner child requires its explicit bounded controls")
         payload: dict[str, Any] = {
             "schema_version": "research.p06.child-receipt.v1",
             "task": self.task,
@@ -318,6 +322,11 @@ class DeltaWfoChildReceipt:
             if self.task != "P10_DELTA_WFO" or (self.execution_profile_id, self.execution_profile_digest) != (DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST):
                 raise ResearchSupervisorError("temporal controls require the exact v2 execution profile")
             payload["temporal_controls"] = dict(self.temporal_controls)
+        if self.causal_inner_controls is not None:
+            from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST
+            if self.task != "P10_DELTA_WFO" or (self.execution_profile_id, self.execution_profile_digest) != (DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST) or self.temporal_controls is not None or self.optuna_trials is not None:
+                raise ResearchSupervisorError("causal controls require the exact bounded causal inner profile")
+            payload["causal_inner_controls"] = dict(self.causal_inner_controls)
         if self.task == "P16_DELTA_WHATIF_GRID":
             if not self.whatif_grid_key or not 1 <= len(self.whatif_evaluations) <= 81:
                 raise ResearchSupervisorError("P06 what-if child receipt carries no bounded evaluation list")
@@ -372,8 +381,14 @@ def _valid_child_progress_record(value: object, expected_sequence: int) -> dict[
 
     if not isinstance(value, dict):
         return None
-    if set(value) != {"schema_version", "sequence", "kind", "trial", "state", "objective", "best_objective", "cpu_seconds"}:
+    required = {"schema_version", "sequence", "kind", "trial", "state", "objective", "best_objective", "cpu_seconds"}
+    if not required <= set(value) or set(value) - required - {"source_trial_id", "study_id"}:
         return None
+    if ("source_trial_id" in value) != ("study_id" in value):
+        return None
+    for key in ("source_trial_id", "study_id"):
+        if key in value and (not isinstance(value[key], str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,159}", value[key]) is None):
+            return None
     if value.get("schema_version") != CHILD_PROGRESS_SCHEMA or value.get("kind") != "trial":
         return None
     sequence = value.get("sequence")
@@ -718,6 +733,9 @@ class IsolatedResearchSupervisor:
         """
 
         limits.validate()
+        from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
+        if receipt.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID and (limits.cpu_seconds > 120 or limits.wall_seconds > 240):
+            raise ResearchSupervisorError("causal inner child cannot widen its 120 CPU/240 wall-second profile caps")
         self._validate_launch_identity(
             job_id=receipt.job_id,
             run_id=receipt.run_id,

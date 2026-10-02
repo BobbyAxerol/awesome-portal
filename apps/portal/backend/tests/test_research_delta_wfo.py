@@ -486,7 +486,11 @@ async def test_w1_worker_retains_before_run_completed_and_claims_three_trials(
     attempt = registry.attempt(run_id, attempt_id)
     assert attempt is not None and attempt.status == "SUCCEEDED", attempt
     operations = api.operations()
-    assert operations[0] == "reserve" and operations[1] == "seal" and operations[-1] == "current-source/seal"
+    assert operations[:2] == ["reserve", "seal"]
+    source_seal = operations.index("current-source/seal")
+    assert set(operations[2:source_seal]) == {"current-source/batches"}
+    assert operations[-1] == "child-audit/seal"
+    assert operations[source_seal + 1:-1] and set(operations[source_seal + 1:-1]) == {"child-audit/batches"}
     # Every retention request happened before the P11 terminal event and
     # before any fold was claimed. Trials were observed live (CG-P06-02), so
     # all three already existed when retention began.

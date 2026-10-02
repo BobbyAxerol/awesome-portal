@@ -20,6 +20,7 @@ import {
   type ResearchAttemptLineageResponse,
 } from "./lineage.contract";
 import { RS02_DELTA_WFO_GLOBAL_PROFILE_ID, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import { ResearchLineageError } from "./lineage.error";
 import {
   type LineageAttemptRow,
@@ -509,13 +510,20 @@ export class ResearchLineageService {
     const retained = new Map<string, Record<string, unknown>>();
     for (const row of snapshot.retainedMetrics ?? []) {
       const metrics = record(row.metrics);
-      if (metrics) retained.set(row.run_id, metrics);
+      // LAST_FOLD_DEPLOYMENT's mean_oos/decay describe its INNER candidate
+      // validation. The original selected-trial fallback is not an outer-OOS
+      // aggregate on a causal lane; Library's own all-time facts remain first.
+      if (metrics && (row.profile_id !== DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+        || row.source_attested === true && metrics.basis === "OUTER_FOLD_SELECTED_OOS_MEAN")) retained.set(row.run_id, metrics);
     }
     const attestedClaims = new Map<string, string>();
     for (const row of snapshot.retainedMetrics ?? []) {
-      if (row.source_attested === true && row.validation_claim === "walk_forward_oos"
-        && (row.profile_id === RS02_DELTA_WFO_GLOBAL_PROFILE_ID
-          || row.profile_id === RS02_SIGNAL_NOTIONAL_PROFILE_ID)) {
+      if (row.source_attested === true && (
+        row.validation_claim === "walk_forward_oos" && (row.profile_id === RS02_DELTA_WFO_GLOBAL_PROFILE_ID
+          || row.profile_id === RS02_SIGNAL_NOTIONAL_PROFILE_ID)
+        || row.validation_claim === "strict_nested_fold_local_retraining"
+          && row.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+      )) {
         attestedClaims.set(row.run_id, row.validation_claim);
       }
     }
@@ -855,12 +863,16 @@ export class ResearchLineageService {
       if (fromLibraryCell.value !== null) return fromLibraryCell as MetricFact;
       const value = retained?.[retainedKey];
       if (typeof value === "string" && CurrentSourceDecimalSchema.safeParse(value).success) {
+        const outer = retained?.basis === "OUTER_FOLD_SELECTED_OOS_MEAN";
         return {
           value,
-          source: "RS02_RETAINED_SELECTED_TRIAL",
-          scope: "SELECTED_TRIAL_MEAN_ACROSS_FOLDS",
-          definition_id: definition,
+          source: outer ? "RS02_RETAINED_OUTER_FOLD_SELECTIONS" : "RS02_RETAINED_SELECTED_TRIAL",
+          scope: outer ? "OUTER_FOLD_SELECTED_OOS_MEAN" : "SELECTED_TRIAL_MEAN_ACROSS_FOLDS",
+          definition_id: outer ? retainedKey === "mean_oos_sharpe"
+            ? "research.current-source.v1.outer-fold-selected-oos-sharpe-mean"
+            : "research.current-source.v1.outer-fold-mean-inner-is-mean-minus-outer-oos" : definition,
           availability: available(),
+          ...(outer ? { origin: "PORTAL_DERIVED" as const } : {}),
         };
       }
       const missing = fromLibraryCell as { reason: string } & Partial<MetricFact>;

@@ -274,11 +274,11 @@ export interface components {
             fold?: number | null;
             trial?: number | null;
         };
-        /** @description Exactly one of `fold` (a fold-bound trial) or `study: GLOBAL` (a trial of one study that scores every fold at once, which therefore names no fold). Ingress rejects both or neither. */
+        /** @description Exactly one of fold or study scope. PER_FOLD_STUDY events preserve both native study ID and local trial ID; the display ordinal is cumulative and is never a native trial number. */
         ProgressTrialPayload: {
             fold?: number;
-            /** @constant */
-            study?: "GLOBAL";
+            /** @enum {unknown} */
+            study?: "GLOBAL" | "PER_FOLD_STUDY";
             trial: number;
             /** @enum {unknown} */
             state?: "COMPLETE" | "PRUNED" | "INFEASIBLE" | "FAILED";
@@ -293,7 +293,9 @@ export interface components {
             overall_pct?: number;
             tqdm_line?: string;
             console?: components["schemas"]["ProgressConsoleObservation"];
-        };
+            study_id?: string;
+            source_trial_id?: string;
+        } & unknown;
         ProgressFoldPayload: {
             fold: number;
             selection?: components["schemas"]["ProgressFoldSelectionFact"];
@@ -343,34 +345,35 @@ export interface components {
         /** @description CG-P11-03. The parameter bundle a fold was evaluated with. GLOBAL_STUDY: one optimizer study selected it for every fold, so objective is study-wide, not a per-fold best. FIXED_PROFILE: no search ran; objective is null. */
         ProgressFoldSelectionFact: {
             /** @enum {unknown} */
-            scope: "GLOBAL_STUDY" | "FIXED_PROFILE" | "IMPORTED_FIXED_PROFILE";
+            scope: "GLOBAL_STUDY" | "FIXED_PROFILE" | "IMPORTED_FIXED_PROFILE" | "PER_FOLD_STUDY";
             trial: number;
             objective: components["schemas"]["SignedDecimal"] | null;
             params_digest: components["schemas"]["Digest"];
-        };
+            study_id?: string;
+            /** @description Exact original local Optuna trial ID; causal studies require study_id to distinguish repeated trial numbers. Never derived from a run-global ordinal. */
+            source_trial_id?: string;
+        } & unknown;
         /** @description Snapshot form of ProgressFoldSelectionFact. NOT_PUBLISHED until the source's fold_completed carries a selection. */
         ProgressFoldSelection: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "NOT_PUBLISHED";
-            scope: ("GLOBAL_STUDY" | "FIXED_PROFILE" | "IMPORTED_FIXED_PROFILE") | null;
+            scope: ("GLOBAL_STUDY" | "FIXED_PROFILE" | "IMPORTED_FIXED_PROFILE" | "PER_FOLD_STUDY") | null;
             trial: number | null;
             objective: components["schemas"]["SignedDecimal"] | null;
             params_digest: components["schemas"]["Digest"] | null;
             reason_code: "SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION" | null;
-            /** @description Original zero-based Optuna source ID for an admitted P10 Delta WFO v1/v2 GLOBAL selection; trial/display_trial_ordinal remain 1-based. Optional on fixed/older captures. */
+            /** @description Exact original local Optuna trial ID; causal studies require study_id to distinguish repeated trial numbers. Never derived from a run-global ordinal. */
             source_trial_id?: string;
-            /**
-             * @description Optional selected objective kind; distinct from the live trial callback best IS Sharpe.
-             * @constant
-             */
-            objective_kind?: "MODE_1_DECAY_J";
+            /** @enum {unknown} */
+            objective_kind?: "MODE_1_DECAY_J" | "INNER_VALIDATION_DECAY_J";
             display_trial_ordinal?: number | null;
             /**
              * @description trial and display_trial_ordinal are the same 1-based P11 display ordinal, not source trial identity. WFO source_trial_id preserves Optuna's zero-based ID; fixed profiles do not invent one.
              * @constant
              */
             trial_numbering?: "P11_ORDINAL_1_BASED";
-        };
+            study_id?: string;
+        } & unknown;
         ProgressIssuedClaim: {
             /** @constant */
             state: "ISSUED";

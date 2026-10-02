@@ -24,6 +24,7 @@ import type { ResearchReportFinalAudit, ResearchReportFrozenCoreFailed, Research
 import type { ResearchProgressSnapshot } from "./progress.contract";
 import type { SealedArtifactParts } from "./report.repository";
 import { extremaPreservingSample } from "./run-library.service";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 
 export type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_APPLICABLE";
@@ -267,38 +268,51 @@ export function retainedFinalAudit(
   search: ResearchCurrentSourceSearchResponse,
   replay: ResearchCurrentSourceReplayResponse,
 ): ResearchReportFinalAudit {
+  const causal = freeze.provenance.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
+    && freeze.provenance.source_adapter_id === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id
+    && search.search_contract.optimization_schedule === "per_fold_causal";
+  const target = causal ? "PER_FOLD_PARAMETER_SELECTIONS" as const : "SINGLE_PARAMETER_SET" as const;
   if (relation === null) {
     return {
-      schema_version: "research.report-final-audit.v1", kind: "NOT_PUBLISHED", reason_code: FINAL_AUDIT_NOT_READ, audit_target_kind: "SINGLE_PARAMETER_SET",
+      schema_version: "research.report-final-audit.v1", kind: "NOT_PUBLISHED", reason_code: FINAL_AUDIT_NOT_READ, audit_target_kind: target,
       final_audit_run_id: null, audited_run_id: null, relationship: null, optimizer_reinvoked: null, optimizer_basis: null, source_refs: [], folds: [],
     };
   }
   const linked = linkedChild(relation, runId, "SINGLE_PARAMETER_SET");
-  if (linked) return linked;
-  const ordering = (freeze as { fold_ordering?: { frozen_candidate: { candidate_id: string | null }; folds: Array<{ fold_id: string; oos_generation_child: { state: ResearchReportFinalAudit["folds"][number]["state"]; audit_ordinal: number | null; candidate_id: string | null } }> } }).fold_ordering;
+  if (linked) return causal ? {
+    schema_version: "research.report-final-audit.v1", kind: "NOT_PUBLISHED", reason_code: "CAUSAL_LINKED_CHILD_PER_FOLD_AUDIT_TARGET_NOT_PROVEN",
+    audit_target_kind: target, final_audit_run_id: null, audited_run_id: null, relationship: null,
+    optimizer_reinvoked: null, optimizer_basis: null, source_refs: [], folds: [],
+  } : linked;
+  const ordering = freeze.fold_ordering;
   const folds = (ordering?.folds ?? []).map((fold) => ({
     fold_id: fold.fold_id,
     audit_ordinal: fold.oos_generation_child.audit_ordinal,
     candidate_id: fold.oos_generation_child.candidate_id,
     state: fold.oos_generation_child.state,
   }));
-  const allMatch = folds.length > 0 && folds.every((fold) => fold.state === "MATCH");
+  const actualCausalTargets = !causal || ordering?.selection_scope === "PER_FOLD"
+    && ordering.folds.every(fold => fold.verdict === "CAUSAL_DATA_TIME_SELECTION"
+      && fold.selected_candidate?.candidate_id != null
+      && fold.selected_candidate.candidate_id === fold.oos_generation_child.candidate_id);
+  const allMatch = actualCausalTargets && folds.length > 0 && folds.every((fold) => fold.state === "MATCH");
   const anyMismatch = folds.some((fold) => fold.state === "MISMATCH");
   return {
     schema_version: "research.report-final-audit.v1",
     kind: "REUSED_ORIGINAL",
     reason_code: null,
-    audit_target_kind: "SINGLE_PARAMETER_SET",
+    audit_target_kind: target,
     final_audit_run_id: runId,
     audited_run_id: runId,
     relationship: "PRIMARY",
-    optimizer_reinvoked: allMatch ? false : anyMismatch ? true : null,
+    optimizer_reinvoked: allMatch ? false : anyMismatch && !causal ? true : null,
     optimizer_basis: allMatch
-      ? "EVERY_OOS_GENERATION_CHILD_RAN_THE_FROZEN_CANDIDATE"
+      ? causal ? "EVERY_OOS_GENERATION_CHILD_RAN_ITS_FOLD_SELECTED_CANDIDATE" : "EVERY_OOS_GENERATION_CHILD_RAN_THE_FROZEN_CANDIDATE"
       : anyMismatch ? "AN_OOS_GENERATION_CHILD_RAN_ANOTHER_CANDIDATE" : "QUANTBT_CHILD_AUDIT_NOT_RETAINED_FOR_EVERY_FOLD",
     source_refs: [
-      { key: "selection", ref: `${search.revision} · trial ${search.selection.selected_trial_id ?? "none"}` },
-      { key: "frozen_candidate", ref: `QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1 ${ordering?.frozen_candidate.candidate_id ?? "not computable"}` },
+      ...(causal ? [{ key: "per_fold_selections", ref: `${freeze.revision} · retained outer-fold parameter selections` }]
+        : [{ key: "selection", ref: `${search.revision} · trial ${search.selection.selected_trial_id ?? "none"}` },
+          { key: "frozen_candidate", ref: `QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1 ${ordering?.frozen_candidate.candidate_id ?? "not computable"}` }]),
       { key: "freeze", ref: freeze.revision },
       { key: "replay", ref: replay.revision },
     ],
@@ -497,7 +511,16 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
   const folds = [...verdicts.rows].sort((left, right) => left.source_ordinal - right.source_ordinal);
   const schedule = contract.optimization_schedule;
   const params = parameterText(search.selection.parameters);
-  const globalParams = schedule === "global" && params !== null;
+  const causalProfile = provenance.profile_id === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
+  const globalParams = !causalProfile && schedule === "global" && params !== null;
+  const causal = causalProfile && provenance.source_adapter_id === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id
+    && schedule === "per_fold_causal";
+  const causalParameters = new Map(split.fold_plan.folds.map((fold) => [fold.fold_id,
+    causal && fold.causal_selection ? parameterText(fold.causal_selection.parameters) : null]));
+  const perFoldParams = causal && folds.length > 0 && folds.length === split.fold_plan.folds.length
+    && new Set(folds.map(fold => fold.fold_id)).size === folds.length
+    && causalParameters.size === split.fold_plan.folds.length
+    && folds.every((fold) => causalParameters.get(fold.fold_id) != null);
   const claimText = (value: { value: unknown; availability: unknown }) =>
     ({ value: value.value === null || value.value === undefined ? null : String(value.value), availability: value.availability as Availability });
   const modeSchedule = contract.optimization_mode !== null && schedule !== null
@@ -586,7 +609,7 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       identity("route", "Route", ids.route.value, ids.route.availability, "P18_ROUTE_NOT_PUBLISHED"),
       identity("runtime_authority", "Runtime", runtimeText, runtime.availability as Availability, "QUANTBT_RUNTIME_AUTHORITY_NOT_PUBLISHED"),
       identity("optimization", "Optimization", modeSchedule.value, modeSchedule.availability, "QUANTBT_SEARCH_CONTRACT_NOT_PUBLISHED"),
-      identity("selected_params", "Selected parameters", params, search.selection.availability as Availability, "QUANTBT_SELECTION_NOT_PUBLISHED"),
+      identity("selected_params", causalProfile ? "Last-fold deployment parameters" : "Selected parameters", params, search.selection.availability as Availability, "QUANTBT_SELECTION_NOT_PUBLISHED"),
       identity("random_seed", "Seed", ids.seed.value, ids.seed.availability, "P18_SEED_NOT_PUBLISHED"),
       identity("config_digest", "Config digest", ids.configDigest.value, ids.configDigest.availability, "P18_CONFIG_DIGEST_NOT_PUBLISHED"),
       identity("evidence_revision", "Evidence revision", evidence.revision, AVAILABLE, "P18_REVISION_NOT_PUBLISHED"),
@@ -601,8 +624,8 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       scoped("NET_RETURN_FRACTION", "Net return", "FRACTION", "IS_PLUS_OOS", "SOURCE_DERIVED", passport.net_return_fraction, "RS02_NET_RETURN_NOT_PUBLISHED"),
       scoped("NET_OOS_RETURN_FRACTION", "Net OOS return", "FRACTION", "OOS", "ENGINE_DIRECT", netOosValue, netOosReason),
       scoped("MAX_DRAWDOWN_FRACTION", "Max drawdown", "FRACTION", "IS_PLUS_OOS", "SOURCE_DERIVED", passport.max_drawdown_fraction, "RS02_MAX_DRAWDOWN_NOT_PUBLISHED"),
-      scoped("MEAN_OOS_SHARPE", "Mean OOS Sharpe", "RATIO", "OOS_MEAN_OF_FOLDS", "ENGINE_DIRECT", verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED"),
-      scoped("MEAN_DECAY", "Mean decay", "RATIO", "OOS_MEAN_OF_FOLDS", "ENGINE_DIRECT", verdicts.mean_decay, "QUANTBT_SELECTED_CANDIDATE_DECAY_NOT_PUBLISHED"),
+      scoped("MEAN_OOS_SHARPE", "Mean OOS Sharpe", "RATIO", "OOS_MEAN_OF_FOLDS", causal ? "SOURCE_DERIVED" : "ENGINE_DIRECT", verdicts.mean_oos_sharpe, "QUANTBT_SELECTED_CANDIDATE_OOS_SHARPE_NOT_PUBLISHED"),
+      scoped("MEAN_DECAY", "Mean decay", "RATIO", "OOS_MEAN_OF_FOLDS", causal ? "SOURCE_DERIVED" : "ENGINE_DIRECT", verdicts.mean_decay, "QUANTBT_SELECTED_CANDIDATE_DECAY_NOT_PUBLISHED"),
       scoped("OOS_TRADE_COUNT", "OOS trades", "COUNT", "OOS_SUM_OF_FOLDS", "SOURCE_DERIVED", oosTrades, "QUANTBT_FOLD_OOS_TRADES_NOT_PUBLISHED"),
       ...descriptiveMetrics(analyticsV2),
     ],
@@ -634,6 +657,8 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
       // CG-P18-08: a global schedule freezes one selection for every fold boundary.
       params_handoff: globalParams
         ? { scope: "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD", text: params, availability: AVAILABLE }
+        : perFoldParams
+          ? { scope: "PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS", text: "Retained outer-fold selections; final singleton is deployment only.", availability: AVAILABLE }
         : { scope: "NOT_PUBLISHED", text: null, availability: NOT_PUBLISHED("QUANTBT_PER_FOLD_PARAMETERS_NOT_RETAINED") },
       rows: folds.map((row) => ({
         fold_id: row.fold_id,
@@ -643,8 +668,11 @@ export function retainedCore(reads: RetainedReads): CoreV2 {
         verdict: row.verdict,
         failed_criteria: row.failed_criteria,
         drag_target: row.drag_target,
+        ...(row.score_basis !== undefined ? { score_basis: row.score_basis } : {}),
         params: globalParams
           ? { text: params, availability: AVAILABLE }
+          : causalParameters.get(row.fold_id) != null
+            ? { text: causalParameters.get(row.fold_id)!, availability: AVAILABLE }
           : { text: null, availability: NOT_PUBLISHED("QUANTBT_PER_FOLD_PARAMETERS_NOT_RETAINED") },
         is_sharpe: decimalFact(row.is_sharpe, "QUANTBT_FOLD_IS_SHARPE_NOT_PUBLISHED"),
         oos_sharpe: decimalFact(row.oos_sharpe, "QUANTBT_FOLD_OOS_SHARPE_NOT_PUBLISHED"),

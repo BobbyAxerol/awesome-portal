@@ -133,6 +133,9 @@ def _config_fields(
     for name in ("label_horizon_bars", "purge_bars", "embargo_bars"):
         if name in config.model_fields_set or getattr(config, name):
             fields[name] = getattr(config, name)
+    if config.inner_split_frequency is not None:
+        for name in ("inner_split_frequency", "inner_window_mode", "inner_train_window", "inner_min_folds"):
+            fields[name] = getattr(config, name)
     return fields
 
 
@@ -327,6 +330,7 @@ class AdvancedWalkForwardRunner:
             ("folds", "fold_table"),
             ("fold_selection", "fold_selection_table"),
             ("fold_boundary", "fold_boundary_table"),
+            ("inner_folds", "inner_fold_table"),
         ):
             table = wf.get(key)
             if isinstance(table, pd.DataFrame) and not table.empty:
@@ -340,7 +344,7 @@ class AdvancedWalkForwardRunner:
                 run_id,
                 "wfo/params_by_fold.json",
                 with_portal_provenance(
-                    "params_by_fold.json", canonicalize(params_by_fold)
+                    "params_by_fold.json", canonicalize({str(fold_id): params for fold_id, params in params_by_fold.items()})
                 ),
             )
         for name, key in (("trials", "trial_table"), ("candidates", "candidate_table")):
@@ -602,7 +606,7 @@ def _freeze_deployment_selection(
         raise AdvancedWalkForwardError("walk-forward metadata has no selected trial params")
     params = {key: canonicalize(value) for key, value in best["params"].items()}
     semantics = wf.get("params_semantics") or "quantbt_declared"
-    return {
+    result = {
         "params": params,
         "trial_id": _sanitize(best.get("trial_id")),
         "objective": _sanitize(best.get("objective")),
@@ -624,6 +628,13 @@ def _freeze_deployment_selection(
             "capabilities": {"per_trial_selection_breakdown": False},
         },
     }
+    if config.optimization_schedule.value == "per_fold_causal" and config.optimization_mode.value == "mode_1_decay":
+        table = wf.get("fold_selection_table")
+        if not isinstance(table, pd.DataFrame) or table.empty:
+            raise AdvancedWalkForwardError("causal source did not publish per-fold selection")
+        result["scope"] = "LAST_FOLD_DEPLOYMENT"
+        result["fold_id"] = str(int(table.iloc[-1]["fold_id"]))
+    return result
 
 
 def _stitched_series(market_frame: pd.DataFrame, result) -> pd.DataFrame:

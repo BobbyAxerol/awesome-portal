@@ -439,8 +439,8 @@ export interface components {
                 trial_default?: number;
                 /** @constant */
                 early_stopping_policy?: "FORBIDDEN";
-                /** @constant */
-                inner_validation?: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY";
+                /** @enum {unknown} */
+                inner_validation?: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY" | "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";
                 max_span_days: number | null;
                 fold_bounds: {
                     min: number;
@@ -448,6 +448,18 @@ export interface components {
                 } | null;
                 frequency: string | null;
                 window_mode: string | null;
+                /** @constant */
+                trial_scope?: "PER_OUTER_FOLD_STUDY";
+                max_total_trials?: number;
+                inner_constraints?: {
+                    fold_bounds: {
+                        min: number;
+                        max: number;
+                    };
+                    frequencies: ("weekly" | "monthly" | "quarterly")[];
+                    window_modes: ("expanding" | "rolling")[];
+                    train_window_pattern: string;
+                };
             }[];
             /** @constant */
             note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";

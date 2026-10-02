@@ -12,6 +12,7 @@
  */
 
 import type {
+  CurrentSourceCausalSelection,
   CurrentSourceFacts,
   CurrentSourceFoldFacts,
   CurrentSourceTrialFacts,
@@ -100,6 +101,8 @@ export interface FoldVerdictInput {
   testStartUtcMs: number | null;
   testEndUtcMs: number | null;
   facts: CurrentSourceFoldFacts | undefined;
+  selectedParameters?: Readonly<Record<string, string>>;
+  causalSelection?: CurrentSourceCausalSelection;
 }
 
 /**
@@ -135,16 +138,21 @@ export function foldVerdicts(
 ) {
   const rows = folds.map((fold) => {
     const score = fold.facts?.oos_score ?? null;
+    // Native causal IS is the INNER study mean, not a separately evaluated
+    // full outer-IS account. Keep that basis beside the actual outer outcome.
+    const causal = fold.causalSelection;
     const path = fold.facts?.oos_path ?? null;
     const base = {
       source_ordinal: fold.sourceOrdinal,
+      ...(fold.selectedParameters ? { selected_parameters: fold.selectedParameters } : {}),
+      ...(causal ? { score_basis: "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS" as const } : {}),
       fold_id: fold.foldId,
       test_start_utc_ms: fold.testStartUtcMs,
       test_end_utc_ms: fold.testEndUtcMs,
-      oos_sharpe: score?.oos_sharpe ?? null,
-      is_sharpe: score?.is_sharpe ?? null,
-      decay: score?.decay ?? null,
-      oos_trades: score?.oos_trade_count ?? null,
+      oos_sharpe: causal ? causal.candidate_oos_metric : score?.oos_sharpe ?? null,
+      is_sharpe: causal ? causal.candidate_is_metric : score?.is_sharpe ?? null,
+      decay: causal ? causal.candidate_decay : score?.decay ?? null,
+      oos_trades: causal ? null : score?.oos_trade_count ?? null,
       max_drawdown_fraction: path?.max_drawdown_fraction ?? null,
       return_fraction: path?.return_fraction ?? null,
       worst_return_fraction: path?.worst_return_fraction ?? null,
@@ -177,7 +185,11 @@ export function foldVerdicts(
     state,
     reason_code: reason,
     availability: outer(state, reason),
-    rule: FOLD_VERDICT_RULE,
+    // The exact causal reader supplies a validated own-fold selection block.
+    // Its native IS value is an INNER mean, not the legacy full-fold score.
+    rule: folds.some(fold => fold.causalSelection !== undefined)
+      ? { ...FOLD_VERDICT_RULE, score_basis: "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS" as const }
+      : FOLD_VERDICT_RULE,
     order: "WORST_FIRST" as const,
     counts: {
       folds: rows.length,
@@ -270,15 +282,16 @@ function guardFact(value: number | string | boolean | null, facts: CurrentSource
 }
 
 /** Run-level temporal guards and the inner-fold (nested validation) fact. */
-export function splitGuards(facts: CurrentSourceFacts | undefined) {
+export function splitGuards(facts: CurrentSourceFacts | undefined, retainedInnerFoldCount?: number) {
   const guards = facts?.temporal_guards;
   let innerFolds: { value: number | string | boolean | null; state: State; reason_code: string | null };
   if (!facts || !guards) {
     innerFolds = { value: null, state: "NOT_PUBLISHED", reason_code: RS02_SEAL_PREDATES_SOURCE_FACTS };
   } else if (guards.inner_validation) {
-    innerFolds = guards.inner_validation.inner_min_folds === null
+    const count = retainedInnerFoldCount ?? guards.observed_inner_fold_count;
+    innerFolds = count === undefined
       ? { value: null, state: "NOT_PUBLISHED", reason_code: "QUANTBT_INNER_VALIDATION_DID_NOT_PUBLISH_FOLD_COUNT" }
-      : { value: guards.inner_validation.inner_min_folds, state: "AVAILABLE", reason_code: null };
+      : { value: count, state: "AVAILABLE", reason_code: null };
   } else if (guards.inner_validation_published) {
     // QuantBT published `inner_validation: null`: nested validation is only
     // used by Mode 1 per_fold_causal, so this schedule has no inner folds.
@@ -296,6 +309,8 @@ export function splitGuards(facts: CurrentSourceFacts | undefined) {
       ? { value: null, state: "NOT_APPLICABLE" as const, reason_code: "QUANTBT_WARMUP_POLICY_IS_NONE" }
       : guardFact(guards?.warmup_bars ?? null, facts, "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_WARMUP_BARS"),
     inner_folds: innerFolds,
+    ...(guards?.inner_validation ? { inner_min_folds: guardFact(guards.inner_validation.inner_min_folds, facts,
+      "QUANTBT_INNER_VALIDATION_DID_NOT_PUBLISH_MINIMUM_FOLD_COUNT") } : {}),
     oos_used_for_selection: guardFact(facts?.claims.oos_used_for_selection ?? null, facts,
       "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_OOS_USE"),
   };
@@ -328,7 +343,7 @@ function metric(value: string | null | undefined, reason: string | null) {
 }
 
 /** CG-P15-03/04: one ledger row's facts, typed absence for a pre-W3 row. */
-export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMode: string | null) {
+export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMode: string | null, causal = false) {
   // E5 correction (was: "the compact ledger drops per-fold constraint rows"):
   // QuantBT's walk-forward creates its Optuna study with no constraints
   // function (quantbt-engine 1.0.8/1.1.1 `walkforward.py`), so no trial on
@@ -354,6 +369,7 @@ export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMo
   }
   const metrics = facts.metrics;
   return {
+    ...(causal ? { evaluation_scope: "INNER_VALIDATION" as const, study_id: facts.study_id } : {}),
     state: "AVAILABLE" as const,
     reason_code: null,
     stage: facts.stage,
@@ -379,26 +395,29 @@ export function trialFacts(facts: CurrentSourceTrialFacts | undefined, _ledgerMo
 export function trialCoversFold(facts: CurrentSourceTrialFacts | undefined, foldId: string): boolean {
   if (!facts) return false;
   if (facts.fold_scope.kind === "ALL_OUTER_FOLDS") return true;
-  return facts.fold_scope.kind === "FOLD" && facts.fold_scope.fold_id === foldId;
+  return (facts.fold_scope.kind === "FOLD" || facts.fold_scope.kind === "PER_FOLD_STUDY") && facts.fold_scope.fold_id === foldId;
 }
 
 const CENTROID_SELECTORS = new Set(["is_plateau_robust", "full_plateau_robust", "plateau", "flat"]);
 
 /** Raw IS best vs the selected candidate vs a centroid (CG-P15-03). */
-export function selectionRoles(facts: CurrentSourceFacts | undefined, selection: { trial_id: string | null; objective: string | null }) {
+export function selectionRoles(facts: CurrentSourceFacts | undefined, selection: { trial_id: string | null; objective: string | null; scope?: "LAST_FOLD_DEPLOYMENT"; fold_id?: string }) {
   const search = facts?.search;
   const selected = {
     state: "AVAILABLE" as const,
     reason_code: null,
     trial_id: selection.trial_id,
     objective: selection.objective,
-    objective_kind: facts ? "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
+    objective_kind: facts ? selection.scope === "LAST_FOLD_DEPLOYMENT" ? "INNER_VALIDATION_DECAY_J" as const : "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
+    ...(selection.scope ? { scope: selection.scope, fold_id: selection.fold_id } : {}),
   };
   if (!facts || !search) {
     const absent = { state: "NOT_PUBLISHED" as const, reason_code: RS02_SEAL_PREDATES_SOURCE_FACTS, trial_id: null, objective: null, objective_kind: "NOT_PUBLISHED" as const };
     return { raw_best_is: absent, selected, centroid: absent, raw_best_is_equals_selected: null, candidate_source_trial_ids: [] };
   }
-  const rawBest = search.raw_best_is_trial_id === null
+  const rawBest = selection.scope === "LAST_FOLD_DEPLOYMENT"
+    ? { state: "NOT_APPLICABLE" as const, reason_code: "PER_FOLD_STUDIES_HAVE_NO_RUN_GLOBAL_RAW_BEST", trial_id: null, objective: null, objective_kind: "NOT_PUBLISHED" as const }
+    : search.raw_best_is_trial_id === null
     ? { state: "NOT_PUBLISHED" as const, reason_code: "QUANTBT_LEDGER_HAS_NO_SCORED_IS_SEARCH_TRIAL", trial_id: null, objective: null, objective_kind: "NOT_PUBLISHED" as const }
     : { state: "AVAILABLE" as const, reason_code: null, trial_id: search.raw_best_is_trial_id, objective: search.raw_best_is_objective, objective_kind: "IS_MEAN_SHARPE" as const };
   const metric = search.candidate_selection_metric;
@@ -409,7 +428,7 @@ export function selectionRoles(facts: CurrentSourceFacts | undefined, selection:
     raw_best_is: rawBest,
     selected,
     centroid,
-    raw_best_is_equals_selected: search.raw_best_is_trial_id === null || selection.trial_id === null
+    raw_best_is_equals_selected: selection.scope === "LAST_FOLD_DEPLOYMENT" || search.raw_best_is_trial_id === null || selection.trial_id === null
       ? null : search.raw_best_is_trial_id === selection.trial_id,
     candidate_source_trial_ids: search.candidate_source_trial_ids,
   };

@@ -21,6 +21,7 @@ import { ResearchCompareError } from "./compare.error";
 import { runDisplayOrdinalSql } from "./run-display-label";
 import { enrichedJoin, readEnriched } from "./enriched-analysis.read";
 import type { ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 
 /** PostgreSQL json/jsonb columns may be an object, an array or a serialized value. */
 type JsonColumn = Record<string, unknown> | unknown[] | string | null;
@@ -76,6 +77,9 @@ export interface CompareRunRow {
   current_source_folds: JsonColumn;
   current_selected_mean_oos_sharpe: string | null;
   current_selected_mean_decay: string | null;
+  /** Complete realized outer-fold facts, never inner candidate means. */
+  current_outer_mean_oos_sharpe?: string | null;
+  current_outer_mean_decay?: string | null;
 }
 
 export interface CompareRetainedEquityPoint {
@@ -489,7 +493,9 @@ export class ResearchCompareRepository {
                 current_source.table_rows AS current_source_table_rows,
                 current_folds.folds AS current_source_folds,
                 current_candidate.mean_oos_sharpe AS current_selected_mean_oos_sharpe,
-                current_candidate.mean_decay AS current_selected_mean_decay
+                current_candidate.mean_decay AS current_selected_mean_decay,
+                current_outer.mean_oos_sharpe AS current_outer_mean_oos_sharpe,
+                current_outer.mean_decay AS current_outer_mean_decay
            FROM research.attempts attempt
            JOIN research.alpha_versions version
              ON version.workspace_id = attempt.workspace_id AND version.alpha_version_id = attempt.alpha_version_id
@@ -581,6 +587,28 @@ export class ResearchCompareRepository {
               ORDER BY candidate.source_ordinal ASC
               LIMIT 1
            ) current_candidate ON current_source.artifact_revision IS NOT NULL
+           LEFT JOIN LATERAL (
+             SELECT CASE WHEN count(*) = (current_source.table_rows->>'FOLD')::integer
+                          AND count(*) BETWEEN 2 AND 16 AND bool_and(valid)
+                    THEN avg(CASE WHEN valid THEN oos::numeric END)::text END AS mean_oos_sharpe,
+                    CASE WHEN count(*) = (current_source.table_rows->>'FOLD')::integer
+                          AND count(*) BETWEEN 2 AND 16 AND bool_and(valid)
+                    THEN avg(CASE WHEN valid THEN decay::numeric END)::text END AS mean_decay
+               FROM (
+                 SELECT payload->'causal_selection'->>'candidate_oos_metric' AS oos,
+                        payload->'causal_selection'->>'candidate_decay' AS decay,
+                        COALESCE(payload->'causal_selection'->>'candidate_oos_metric' ~ '${DECIMAL_PATTERN}'
+                          AND length(payload->'causal_selection'->>'candidate_oos_metric') <= 96
+                          AND payload->'causal_selection'->>'candidate_decay' ~ '${DECIMAL_PATTERN}'
+                          AND length(payload->'causal_selection'->>'candidate_decay') <= 96
+                          AND payload->'causal_selection'->>'candidate_metrics_scope' = 'OUTER_FOLD_POST_SELECTION'
+                          AND payload->'causal_selection'->>'outer_oos_used_for_selection' = 'false', false) AS valid
+                   FROM research.current_source_rows_v1 rows
+                  WHERE rows.workspace_id = attempt.workspace_id AND rows.run_id = primary_run.run_id
+                    AND rows.artifact_revision = current_source.artifact_revision AND rows.table_kind = 'FOLD'
+                  ORDER BY rows.source_ordinal LIMIT 17
+               ) bounded_outer
+           ) current_outer ON current_source.profile_id = '${DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id}'
           WHERE attempt.workspace_id = $1 AND version.alpha_id = $2
           -- A pair deep link may reference a historical run outside the
           -- normal 128-attempt ladder. Prioritize its two exact opaque IDs

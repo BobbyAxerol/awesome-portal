@@ -1,6 +1,6 @@
 /** Private ingress service. Root controller supplies an authenticated live lease. */
 import { Inject, Injectable } from "@nestjs/common";
-import { isDeltaWfoProfile, DELTA_WFO_PROFILE } from "./delta-wfo.profile";
+import { isDeltaWfoProfile, deltaWfoCurrentSourcePair } from "./delta-wfo.profile";
 import { ResearchCurrentSourceRepository } from "./current-source.repository";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import type { ProgressIngressScope } from "./progress.repository";
@@ -32,13 +32,14 @@ export class ResearchChildAuditCompanionIngestService {
   private async authority(lease: ProgressIngressScope, input: ChildAuditCompanionBatchIngress | ChildAuditCompanionSealIngress) {
     const a = await this.source.ingestAuthority({workspaceId:lease.workspaceId,actorUserId:lease.actorUserId},input.run_id,input.artifact_id);
     const m=input.manifest, artifact=a?.artifact;
+    const pair=a ? deltaWfoCurrentSourcePair(a.executionProfileId,a.executionProfileDigest) : null;
     if (input.workspace_id !== lease.workspaceId || input.job_id !== lease.jobId
       || input.worker_attempt_id !== lease.workerAttemptId || input.lease_epoch !== lease.leaseEpoch
       || !a || !isDeltaWfoProfile(a.executionProfileId,a.executionProfileDigest)
       || m.execution_profile_id !== a.executionProfileId || m.execution_profile_digest !== a.executionProfileDigest
       || m.requested_spec_digest !== a.requestedSpecDigest || m.effective_spec_digest !== a.effectiveSpecDigest
       || m.dataset_binding_digest !== a.datasetBindingDigest
-      || m.source_adapter_id !== DELTA_WFO_PROFILE.current_source.source_adapter_id || m.profile_id !== DELTA_WFO_PROFILE.current_source.profile_id
+      || !pair || m.source_adapter_id !== pair.source_adapter_id || m.profile_id !== pair.profile_id
       || !artifact || artifact.runId !== input.run_id || artifact.state !== "SEALED"
       || artifact.manifestDigest !== input.manifest_digest || artifact.artifactRevision !== input.artifact_revision
       || artifact.workerAttemptId !== lease.workerAttemptId || artifact.leaseEpoch !== lease.leaseEpoch)

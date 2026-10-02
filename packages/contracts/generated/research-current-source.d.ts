@@ -160,6 +160,71 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        SearchStudySurface: {
+            /** @constant */
+            scope: "INNER_VALIDATION_OUTER_STUDY";
+            fold_id: string;
+            study_id: string;
+            surface: components["schemas"]["SearchSurface"] & {
+                /** @constant */
+                source_trial_count?: 3;
+                complete_trial_count?: number;
+                emitted_point_count?: number;
+                points?: unknown[];
+            };
+        };
+        /** @description Source-owned selection for this outer fold only. Objective uses nested inner validation, not outer OOS. Candidate metrics have a separate post-selection outer scope. Retained IDs are study-qualified; local source trial IDs remain in trial facts. Runtime validates exact inner count, unique IDs and train-before-test ranges inside outer IS; no engine wall clock is inferred. */
+        CausalSelection: {
+            /** @constant */
+            schema_version: "research.current-source-causal-selection.v1";
+            /** @constant */
+            scope: "OUTER_FOLD_SELECTION";
+            study_id: string;
+            fold_seed: number;
+            selected_trial_id: string;
+            parameters: {
+                [key: string]: string;
+            };
+            objective: string | null;
+            /** @constant */
+            objective_kind: "INNER_VALIDATION_DECAY_J";
+            candidate_is_metric: string | null;
+            candidate_oos_metric: string | null;
+            candidate_decay: string | null;
+            /** @constant */
+            candidate_metrics_scope: "OUTER_FOLD_POST_SELECTION";
+            /** @constant */
+            candidate_is_scope: "INNER_VALIDATION_IS_MEAN";
+            /** @constant */
+            candidate_oos_scope: "OUTER_FOLD_OOS";
+            /** @constant */
+            candidate_decay_scope: "INNER_IS_MEAN_MINUS_OUTER_OOS";
+            candidate_count: number;
+            /** @constant */
+            study_trial_rows: 3;
+            /** @constant */
+            outer_oos_used_for_selection: false;
+            /** @constant */
+            causality_claim: "strict_nested_fold_local_retraining";
+            inner_fold_count: number;
+            inner_validation: {
+                /** @enum {unknown} */
+                inner_split_frequency: "weekly" | "monthly" | "quarterly";
+                /** @enum {unknown} */
+                inner_window_mode: "expanding" | "rolling";
+                inner_train_window: string;
+                inner_min_folds: number;
+            };
+            inner_folds: {
+                inner_fold_id: string;
+                train_start_utc_ms: number;
+                train_end_utc_ms: number;
+                test_start_utc_ms: number;
+                test_end_utc_ms: number;
+                /** @constant */
+                outer_oos_used_for_selection: false;
+            }[];
+        };
         EnrichedAnalysis: {
             /** @constant */
             schema_version: "research.enriched-analysis.v1";
@@ -908,12 +973,12 @@ export interface components {
             reason_code: string | null;
             availability: components["schemas"]["Availability"];
         };
-        /** @description W1: exactly one admitted RS-02 lane pair; the source adapter and profile are never mixed. */
+        /** @description Exact historical/global/causal custody pair; mixing is refused. */
         Provenance: {
             /** @enum {unknown} */
-            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1";
+            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1" | "rs02.quantbt-signal-notional-causal-inner.v1";
             /** @enum {unknown} */
-            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1";
+            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1" | "rs02.delta-signal-notional-causal-inner.v1";
             /** @constant */
             engine_version: "1.1.1";
             source_manifest_digest: components["schemas"]["Digest"];
@@ -933,6 +998,11 @@ export interface components {
             source_adapter_id?: "rs02.quantbt-signal-notional-wfo.v1";
             /** @constant */
             profile_id?: "rs02.delta-signal-notional-wfo.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "rs02.quantbt-signal-notional-causal-inner.v1";
+            /** @constant */
+            profile_id?: "rs02.delta-signal-notional-causal-inner.v1";
         });
         Common: {
             /** @constant */
@@ -1022,6 +1092,7 @@ export interface components {
                 decay: components["schemas"]["Decimal"] | null;
                 oos_trades: components["schemas"]["Decimal"] | null;
             };
+            causal_selection?: components["schemas"]["CausalSelection"];
         };
         Trial: {
             source_ordinal: number;
@@ -1058,7 +1129,7 @@ export interface components {
             };
             availability: components["schemas"]["Availability"];
             /** @enum {string} */
-            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED";
+            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED" | "INNER_VALIDATION_DECAY_J";
             roles: {
                 raw_best_is: components["schemas"]["SelectionRole"];
                 selected: components["schemas"]["SelectionRole"];
@@ -1066,6 +1137,12 @@ export interface components {
                 raw_best_is_equals_selected: boolean | null;
                 candidate_source_trial_ids: string[];
             };
+            /**
+             * @description Final outer-fold deployment selection only, not a run-global parameter bundle.
+             * @constant
+             */
+            scope?: "LAST_FOLD_DEPLOYMENT";
+            fold_id?: string;
         };
         Evidence: components["schemas"]["Common"] & {
             enriched_analysis_availability?: components["schemas"]["EnrichedAnalysisAvailability"];
@@ -1155,6 +1232,7 @@ export interface components {
                     basis: "RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1";
                     reason_code: string | null;
                 };
+                inner_min_folds?: components["schemas"]["GuardFact"];
             };
             gap_scan: components["schemas"]["SplitGapScan"];
             stitch: components["schemas"]["SplitStitch"];
@@ -1232,6 +1310,8 @@ export interface components {
             surface?: components["schemas"]["SearchSurface"];
             pool?: components["schemas"]["SearchPool"];
             stage_events?: components["schemas"]["P11StageEvents"];
+            /** @description Only for the exact causal profile: independently ranked inner-validation study surfaces. Never a run-global ranking or theta. Total source trials remain bounded to 48. */
+            surfaces_by_study?: components["schemas"]["SearchStudySurface"][];
         };
         ArtifactByteMismatch: {
             /** @enum {unknown} */
@@ -1392,17 +1472,24 @@ export interface components {
                 reason_code: string | null;
             };
             /**
-             * @description Never PASS: a global study selected one θ* after reading every outer fold.
+             * @description Only the admitted causal/inner profile can earn a data-time causal verdict, from retained own-fold selection and inner ranges. Global selection never earns it; engine wall clocks remain separately absent.
              * @enum {unknown}
              */
-            verdict: "NOT_CAUSAL_GLOBAL_SELECTION" | "NOT_EVALUATED" | "NOT_PUBLISHED";
-            reason_code: string;
+            verdict: "NOT_CAUSAL_GLOBAL_SELECTION" | "NOT_EVALUATED" | "NOT_PUBLISHED" | "CAUSAL_DATA_TIME_SELECTION";
+            reason_code: string | null;
             oos_generation_child: {
                 /** @enum {unknown} */
                 state: "MATCH" | "MISMATCH" | "NOT_RETAINED" | "NOT_PUBLISHED" | "NOT_COMPUTABLE";
                 reason_code: string | null;
                 audit_ordinal: number | null;
                 candidate_id: string | null;
+            };
+            selected_candidate?: {
+                candidate_id: string | null;
+                params_digest: string;
+                study_id: string;
+                selected_trial_id: string;
+                inner_fold_count: number;
             };
         };
         /** @description W5a P16-T02/T11: per-fold ordering on two axes (data time, wall clock); the per-fold causal verdict from QuantBT's own claims; the out-of-sample generation child compared with the frozen selection by QuantBT's candidate identity. */
@@ -1439,6 +1526,7 @@ export interface components {
                 not_published: number;
                 oos_child_match: number;
                 oos_child_mismatch: number;
+                causal_data_time_selection?: number;
             };
             folds: components["schemas"]["FoldOrderingRow"][];
             stage_events?: components["schemas"]["P11StageEvents"];
@@ -1486,6 +1574,10 @@ export interface components {
             } | null;
             parameters: components["schemas"]["DeclaredSpaceParameter"][];
             grid_size: string | null;
+            /** @constant */
+            selection_scope?: "LAST_FOLD_DEPLOYMENT";
+            fold_id?: string;
+            study_id?: string;
         };
         /** @description One trial on the surface: every coordinate is the server's placement inside the declared range; objective_bucket is its quintile among complete trials; best_so_far is the running best in source order. */
         SurfacePoint: {
@@ -1570,7 +1662,7 @@ export interface components {
             rule: components["schemas"]["PoolRule"];
             reevaluated: components["schemas"]["PoolCount"];
             /** @enum {unknown} */
-            reevaluation_scope: "ALL_OUTER_FOLDS" | "FOLD" | "NOT_PUBLISHED";
+            reevaluation_scope: "ALL_OUTER_FOLDS" | "FOLD" | "NOT_PUBLISHED" | "PER_FOLD_STUDY";
             selected: components["schemas"]["PoolCount"];
             per_fold_decay: components["schemas"]["FoldDecay"];
         };
@@ -1628,7 +1720,7 @@ export interface components {
             /** @constant */
             schema_version: "research.current-source-search-surface.v1";
             /** @enum {unknown} */
-            state: "AVAILABLE" | "NOT_PUBLISHED";
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
             reason_code: string | null;
             /** @enum {unknown} */
             objective_kind: "IS_MEAN_SHARPE" | "NOT_PUBLISHED";
@@ -1750,6 +1842,8 @@ export interface components {
                 /** @enum {unknown} */
                 bundle: "MATCH" | "MISMATCH" | "NOT_PUBLISHED";
             };
+            /** @enum {unknown} */
+            selection_scope?: "GLOBAL" | "PER_FOLD";
         };
         /** @description X2 · B4 · CG-P16-03 (guide §6.6): declared/swept/pinned values live in the params (θ) digest; values the code fixes are outside it and are covered by the protected code digest bound into the adapter contract digest. The Delta kernel publishes no machine-readable list of its fixed values, so `code_fixed.values` is a typed absence (P04_DELTA_KERNEL_PUBLISHES_NO_CODE_FIXED_VALUE_LIST) with the exact hash scope. */
         ParameterAuthority: {
@@ -1786,6 +1880,12 @@ export interface components {
                 [key: string]: components["schemas"]["Decimal"];
             };
             availability: components["schemas"]["Availability"];
+            /**
+             * @description Final outer-fold deployment selection only, not a run-global parameter bundle.
+             * @constant
+             */
+            scope?: "LAST_FOLD_DEPLOYMENT";
+            fold_id?: string;
         };
         Freeze: components["schemas"]["Common"] & {
             /** @constant */
@@ -1974,6 +2074,11 @@ export interface components {
             failed_criteria: ("OOS_SHARPE" | "DECAY" | "MAX_DRAWDOWN")[];
             drag_target: ("search" | "execute") | null;
             reason_code: string | null;
+            selected_parameters?: {
+                [key: string]: string;
+            };
+            /** @constant */
+            score_basis?: "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS";
         };
         /** @description Per-fold verdicts under a versioned server rule; the frontend holds no threshold. */
         FoldVerdicts: {
@@ -1994,8 +2099,8 @@ export interface components {
                     decay_max: components["schemas"]["Decimal"];
                     max_drawdown_min: components["schemas"]["Decimal"];
                 };
-                /** @constant */
-                score_basis: "QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1";
+                /** @enum {unknown} */
+                score_basis: "QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1" | "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS";
                 /** @constant */
                 path_basis: "RETAINED_STITCHED_OBSERVATIONS_V1";
             };
@@ -2078,7 +2183,7 @@ export interface components {
             objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED";
             fold_scope: {
                 /** @enum {string} */
-                kind: "FOLD" | "ALL_OUTER_FOLDS" | "NOT_PUBLISHED";
+                kind: "FOLD" | "ALL_OUTER_FOLDS" | "NOT_PUBLISHED" | "PER_FOLD_STUDY";
                 fold_id: string | null;
                 reason_code: string | null;
             };
@@ -2106,6 +2211,9 @@ export interface components {
                     contribution: components["schemas"]["Decimal"];
                 }[];
             };
+            /** @constant */
+            evaluation_scope?: "INNER_VALIDATION";
+            study_id?: string | null;
         };
         SelectionRole: {
             /** @enum {string} */
@@ -2114,7 +2222,10 @@ export interface components {
             trial_id: string | null;
             objective: components["schemas"]["Decimal"] | null;
             /** @enum {string} */
-            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED";
+            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED" | "INNER_VALIDATION_DECAY_J";
+            /** @constant */
+            scope?: "LAST_FOLD_DEPLOYMENT";
+            fold_id?: string;
         };
         /**
          * @description CG-P17-02: every `error.code` a retained current-source read can return. 409 CONFLICT carries `details.lane_state`; SEQUENCE_GAP (503, W5b) is a retained relation read back with a hole — never retried into an invented row.
@@ -2164,6 +2275,13 @@ export interface components {
             /** @enum {unknown} */
             params_digest_reason_code: "RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS" | null;
             start_cursor: components["schemas"]["OpaqueCursor"];
+            parameters?: {
+                [key: string]: string;
+            };
+            /** @constant */
+            selection_scope?: "OUTER_FOLD_SELECTION";
+            selected_trial_id?: string;
+            study_id?: string;
         };
         /** @description W5b: what the signal-notional route really produced, retained at seal time. */
         ReplayExecution: {

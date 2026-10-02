@@ -45,7 +45,7 @@ describe("LW-07 Portal admission beside the immutable QuantBT Atlas", () => {
       FEATURE_RESEARCH_PREVIEW_LONG_WFO: "false" as const,
     };
     expect(researchPortalAdmission(flags, release).profiles.map((profile) => [profile.state, profile.reason]))
-      .toEqual([["ENABLED", null], ["DISABLED", "PROFILE_FLAG_OFF"], ["DISABLED", "PROFILE_FLAG_OFF"]]);
+      .toEqual([["ENABLED", null], ["DISABLED", "PROFILE_FLAG_OFF"], ["DISABLED", "PROFILE_FLAG_OFF"], ["DISABLED", "PROFILE_FLAG_OFF"]]);
     expect(researchPortalAdmission(flags, { ...release, verified: false }).profiles[1].reason)
       .toBe("SOURCE_RELEASE_UNVERIFIED");
     expect(researchPortalAdmission(flags, { release_id: "er_other", verified: true }).profiles[0].reason)

@@ -24,3 +24,12 @@ test('v2 rolling and guards are explicit and keep the pinned three real optimize
   assert.equal(v2.walk_forward.label_horizon_bars, 1);
   assert.equal(v2.walk_forward.embargo_bars, 3);
 });
+test('causal receipt uses own-study selection and real nested inner planning without changing the global profile', () => {
+  const causal=requestedSpec(binding,release,'wfo-causal-inner');
+  assert.equal(causal.schema_version,'research.requested-spec.v2');
+  assert.equal(causal.optimization_schedule,'per_fold_causal');
+  assert.equal(causal.walk_forward.window_mode,'expanding');
+  assert.deepEqual(causal.walk_forward.inner,{split_frequency:'weekly',window_mode:'rolling',train_window:'14D',min_folds:2});
+  assert.equal(causal.optuna_trials,3);assert.equal(causal.random_seed,42);
+  assert.equal(requestedSpec(binding,release,'wfo').optimization_schedule,'global');
+});

@@ -37,6 +37,7 @@ import {
 } from "./delta-wfo.profile";
 import { canonicalResearchJson } from "./preflight.service";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
+import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
 
 const DIGEST = /^[0-9a-f]{64}$/;
 
@@ -104,6 +105,7 @@ function sha(value: unknown): string {
 }
 
 export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedLaneFacts {
+  const causal = lane.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
   const seal = lane.seal;
   const summary = seal ? CurrentSourceSummarySchema.safeParse(seal.summary) : null;
   const parsed = summary?.success ? summary.data : null;
@@ -125,7 +127,8 @@ export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedL
   const folds = lane.folds.map((row) => ({ row, parsed: CurrentSourceFoldPayloadSchema.safeParse(row.payload) }));
   const foldsValid = seal === null || (
     folds.length === seal.tableRows.FOLD
-    && folds.every(({ row, parsed: fold }) => fold.success && fold.data.fold_id === row.sourceId)
+    && folds.every(({ row, parsed: fold }) => fold.success && fold.data.fold_id === row.sourceId
+      && (!causal || fold.data.causal_selection !== undefined))
   );
   const ordering = parsed && selection && foldsValid && folds.length > 0
     ? foldOrdering(folds.map(({ row, parsed: fold }) => {
@@ -138,13 +141,17 @@ export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedL
         testStartUtcMs: data?.test_start_utc_ms ?? null,
         testEndUtcMs: data?.test_end_utc_ms ?? null,
         childAudit: data?.child_audit?.records,
+        ...(causal ? {
+          causalSelection: data?.causal_selection,
+        } : {}),
       };
     }), parsed.source_facts, selection.parameters,
-    DEFAULT_PARAMETER_BINDING_REGISTRY.byProfileDigest(lane.executionProfileDigest)?.candidateParameterKinds)
+    DEFAULT_PARAMETER_BINDING_REGISTRY.byProfileDigest(lane.executionProfileDigest)?.candidateParameterKinds,
+    undefined, seal?.profileId)
     : null;
   const laneConsistent = isDeltaWfoProfile(lane.executionProfileId, lane.executionProfileDigest) && (seal === null || (
-    seal.sourceAdapterId === DELTA_WFO_PROFILE.current_source.source_adapter_id
-    && seal.profileId === DELTA_WFO_PROFILE.current_source.profile_id
+    seal.sourceAdapterId === (causal ? DELTA_CAUSAL_INNER_PROFILE : DELTA_WFO_PROFILE).current_source.source_adapter_id
+    && seal.profileId === (causal ? DELTA_CAUSAL_INNER_PROFILE : DELTA_WFO_PROFILE).current_source.profile_id
   ));
   return {
     sealed: seal !== null,

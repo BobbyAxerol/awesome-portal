@@ -7152,3 +7152,32 @@ amendments/exact-pair/browser acceptance, genuine source-profile qualification
 and previous P23/P24 gates stay open. Engine source omissions remain typed;
 rolling remains excluded by D-AN-01. Owned :8096 stopped without deleting
 volumes; zero active jobs/sessions, owner anchor and 21 disabled users preserved.
+
+#### B8 continuation — admitted causal/inner profile, 2026-10-02
+
+Scoped backend delivery in the same approved group 6, not a new phase or
+P23/P24 waiver. Adds immutable `p10.delta-signal-notional-causal-inner.v1`
+with digest `60a041b373808405f8896aee0a3421d41cc2199d516dadc9f40e1187e2fefdd1`;
+installed QuantBT 1.1.1 already supplies the source capability. Fixed/global
+v1/v2 digests, historical seals and existing five retained tables are unchanged.
+Constraint-only migration 089 binds the exact new custody pair. Admission,
+worker caps (120 CPU/240 wall), actual P08 inner topology, own-study identity,
+native selection/inner tables and locked cross-relation seal validation agree.
+
+Real producer `rrun_becde1e160a2770d49246f7f665208ce`: P08→P10→isolated
+child→P05→API, COMPLETED/READY, **2 outer folds / 6 real trials / 7 inner
+folds**, own selected parameters/digests and two generation-child MATCHes.
+Nine named APIs 200; 13 GET-negative cases PASS without new jobs/preflights.
+Causal Search surfaces are independent per study (max 48 points); no global
+theta/ranking/K. Selection means LAST_FOLD_DEPLOYMENT. Replay/Report use each
+fold's own params; causal verdict and decay bases explicitly separate inner
+IS from outer OOS. Source clocks stay typed absent; no orchestration inference.
+
+[Exact source/image/hash/tests, cleanup and generated-client frontend handoff](./research_loop/evidence/P10/B8_CAUSAL_INNER_CURRENT_SOURCE_2026-10-02.md);
+[backend queue §25](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#25-codex--causalinner-current-source-integration-2026-10-02).
+Keep Claude's newer frontend commits and G-20 evidence intact when landing.
+Frontend needs the new scoped bindings before causal browser acceptance.
+G-21/G-22, genuine VN calendar/instrument/daily profile, engine source omissions,
+old P23 failures/second-engine and P24 release remain separate. No FE edits,
+remote push, dev/main, shared :8095 or production action. Owned test cell down,
+0 active jobs/sessions, 21 accounts remain disabled; volumes/backups retained.

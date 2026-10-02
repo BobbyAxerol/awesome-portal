@@ -61,6 +61,18 @@ const snapshot = {
 };
 
 describe("P11 progress contracts", () => {
+  it("preserves repeated local trial IDs with native study identity and inner objective scope", () => {
+    const trial={...event,event_type:"trial_completed",payload:{study:"PER_FOLD_STUDY",study_id:"fold_1",source_trial_id:"0",trial:4,objective:"0.3"}};
+    expect(ResearchProgressEventSchema.safeParse(trial).success).toBe(true);
+    expect(ResearchProgressEventSchema.safeParse({...trial,payload:{...trial.payload,study_id:undefined}}).success).toBe(false);
+    const value=ResearchProgressSnapshotSchema.parse({...snapshot,folds:[{
+      fold:2,state:"DONE",started_at_utc_ms:snapshot.created_at_utc_ms,completed_at_utc_ms:snapshot.created_at_utc_ms+1,
+      selection:{state:"AVAILABLE",scope:"PER_FOLD_STUDY",trial:1,source_trial_id:"0",study_id:"fold_1",
+        objective:"0.25",params_digest:"a".repeat(64),reason_code:null},
+    }]});
+    const publicValue=toPublicResearchProgressSnapshot(value,"p10.delta-signal-notional-causal-inner.v1");
+    expect(publicValue.folds[0]!.selection).toMatchObject({scope:"PER_FOLD_STUDY",source_trial_id:"0",study_id:"fold_1",objective_kind:"INNER_VALIDATION_DECAY_J"});
+  });
   it("accepts imported fixed selection on the durable event and snapshot without inventing an objective", () => {
     const selection = { scope: "IMPORTED_FIXED_PROFILE", trial: 1, objective: null, params_digest: "a".repeat(64) };
     const completed = { ...event, event_type: "fold_completed", payload: { fold: 1, selection } };

@@ -30,6 +30,7 @@ from typing import Any, Callable, Mapping
 from urllib.parse import urlparse
 
 from portal_api.domain.research_delta_wfo_profile import delta_wfo_admitted_trials
+from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.repositories.artifacts import ArtifactRepository
 from portal_api.services.current_source_artifacts import (
@@ -37,6 +38,7 @@ from portal_api.services.current_source_artifacts import (
     CurrentSourceArtifactReceipt,
     iter_current_source_retention_batches,
     signal_notional_current_source_admission,
+    causal_inner_current_source_admission,
 )
 from portal_api.services.research_artifacts import (
     ArtifactFence,
@@ -98,6 +100,8 @@ class CurrentSourceRetentionResult:
     batch_count: int
     # Retained TRIAL row states in source order (drives P11 trial events).
     trial_states: tuple[str | None, ...] = ()
+    causal_trials: tuple[Mapping[str, Any], ...] = ()
+    causal_fold_selections: tuple[Mapping[str, Any], ...] = ()
 
 
 def retained_import_digest(batches: list[Mapping[str, Any]]) -> str:
@@ -245,7 +249,8 @@ class ResearchCurrentSourceRetentionClient:
             identity=identity,
             fence=fence,
             # The locked 3, or the preview long WFO's admitted count (flag on only).
-            admission=signal_notional_current_source_admission(delta_wfo_admitted_trials(research.requested_spec)),
+            admission=(causal_inner_current_source_admission() if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID
+                       else signal_notional_current_source_admission(delta_wfo_admitted_trials(research.requested_spec))),
             fence_validator=fence_validator,
             source_windows=_declared_wfo_oos_window(research.requested_spec),
         )
@@ -300,6 +305,8 @@ class ResearchCurrentSourceRetentionClient:
         }
         accepted: list[dict[str, Any]] = []
         trial_states: list[str | None] = []
+        causal_trials: list[Mapping[str, Any]] = []
+        causal_fold_selections: list[Mapping[str, Any]] = []
         for batch in iter_current_source_retention_batches(
             retained_artifacts=store,
             receipt=receipt,
@@ -317,6 +324,13 @@ class ResearchCurrentSourceRetentionClient:
                 for row in batch.rows:
                     state = row.get("payload", {}).get("state")
                     trial_states.append(state if isinstance(state, str) else None)
+                    if research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID:
+                        payload = row["payload"]
+                        facts = payload["trial_facts"]
+                        causal_trials.append({"trial_id": payload["trial_id"], "source_trial_id": facts["source_trial_id"],
+                                              "study_id": facts["study_id"], "state": state, "objective": payload["objective"]})
+            if batch.table_kind == "FOLD" and research.execution_profile_id == DELTA_CAUSAL_INNER_PROFILE_ID:
+                causal_fold_selections.extend({"fold_id": row["payload"]["fold_id"], **row["payload"]["causal_selection"]} for row in batch.rows)
             accepted.append({
                 "table_kind": batch.table_kind,
                 "batch_ordinal": batch.batch_ordinal,
@@ -357,6 +371,8 @@ class ResearchCurrentSourceRetentionClient:
             table_rows=table_rows,
             batch_count=len(accepted),
             trial_states=tuple(trial_states),
+            causal_trials=tuple(causal_trials),
+            causal_fold_selections=tuple(causal_fold_selections),
         )
 
     def _retain_child_audit(self, audit: ChildAuditCompanionCapture, *, binding: Mapping[str, Any], identity_fields: Mapping[str, Any]) -> None:

@@ -104,15 +104,20 @@ const TableRows = z.object({
 export const ResearchCurrentSourceSealIngressSchema = Identity.extend({
   schema_version: z.literal("research.current-source-seal.v1"),
   artifact_revision: z.number().int().positive().max(2_147_483_647),
-  source_adapter_id: z.literal("rs02.quantbt-signal-notional-wfo.v1"),
-  profile_id: z.literal("rs02.delta-signal-notional-wfo.v1"),
+  source_adapter_id: z.enum(["rs02.quantbt-signal-notional-wfo.v1", "rs02.quantbt-signal-notional-causal-inner.v1"]),
+  profile_id: z.enum(["rs02.delta-signal-notional-wfo.v1", "rs02.delta-signal-notional-causal-inner.v1"]),
   manifest_digest: Digest,
   source_transform_digest: Digest,
   retained_import_digest: Digest,
   table_rows: TableRows,
   total_rows: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   summary: z.record(z.string(), z.unknown()),
-}).strict();
+}).strict().superRefine((value, context) => {
+  const causal = value.source_adapter_id === "rs02.quantbt-signal-notional-causal-inner.v1";
+  if (causal !== (value.profile_id === "rs02.delta-signal-notional-causal-inner.v1")) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["profile_id"], message: "current-source custody pair is mismatched" });
+  }
+});
 
 /** Private worker bodies are capped below Fastify's 1 MiB default. */
 export const RESEARCH_CURRENT_SOURCE_INGEST_MAX_BODY_BYTES = 1_000_000;

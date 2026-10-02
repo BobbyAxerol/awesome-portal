@@ -23,6 +23,8 @@ import { sha256ResearchJson } from "./preflight.service";
 import { p11StageEvents, type P11StageEvents } from "./p11-stage-events";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 import { ResearchAllTimeDistributionsSchema, type ResearchAllTimeDistributions } from "./all-time-distributions.contract";
+import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
+import { assertCausalSealConsistency } from "./causal-seal-consistency";
 import {
   RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID,
   RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
@@ -54,14 +56,16 @@ export interface CurrentSourceAppendBatch {
   rows: readonly CurrentSourceRowInput[];
 }
 
-/** RS-02 admits exactly two (source adapter, profile) pairs; never a mix. */
+/** RS-02 admits exact historical/global/causal pairs; never a mix. */
 export type CurrentSourceLanePair =
   | { sourceAdapterId: "rs02.quantbt-advanced-wfo.v1"; profileId: "rs02.delta-wfo-global.v1" }
-  | { sourceAdapterId: "rs02.quantbt-signal-notional-wfo.v1"; profileId: "rs02.delta-signal-notional-wfo.v1" };
+  | { sourceAdapterId: "rs02.quantbt-signal-notional-wfo.v1"; profileId: "rs02.delta-signal-notional-wfo.v1" }
+  | { sourceAdapterId: "rs02.quantbt-signal-notional-causal-inner.v1"; profileId: "rs02.delta-signal-notional-causal-inner.v1" };
 
 export function isCurrentSourceLanePair(sourceAdapterId: unknown, profileId: unknown): boolean {
   return (sourceAdapterId === RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID && profileId === RS02_DELTA_WFO_GLOBAL_PROFILE_ID)
-    || (sourceAdapterId === RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID && profileId === RS02_SIGNAL_NOTIONAL_PROFILE_ID);
+    || (sourceAdapterId === RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID && profileId === RS02_SIGNAL_NOTIONAL_PROFILE_ID)
+    || (sourceAdapterId === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id && profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id);
 }
 
 export type CurrentSourceSealWrite = CurrentSourceLanePair & {
@@ -546,6 +550,32 @@ export class ResearchCurrentSourceRepository {
       const retainedImportDigest = currentSourceImportDigest(batches.rows);
       if (input.expectedRetainedImportDigest !== undefined && retainedImportDigest !== input.expectedRetainedImportDigest) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source retained import digest does not match the accepted batch receipts.", 400);
+      }
+      if (input.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id) {
+        const pin = await client.query<{ requested_spec: JsonColumn; topology: JsonColumn }>(
+          `SELECT preflight.requested_spec, preflight.topology
+             FROM research.run_producers producer JOIN research.preflight_manifests preflight
+               ON preflight.workspace_id=producer.workspace_id AND preflight.preflight_token=producer.preflight_token
+              AND preflight.actor_user_id=producer.actor_user_id
+            WHERE producer.workspace_id=$1 AND producer.run_id=$2
+              AND producer.execution_profile_id=$3 AND producer.execution_profile_digest=$4
+              AND producer.requested_spec_digest=$5 AND preflight.requested_spec_digest=$5
+              AND producer.effective_spec_digest=$6 AND preflight.effective_spec_digest=$6
+              AND producer.dataset_binding_digest=$7 AND preflight.dataset_binding_digest=$7 LIMIT 1`,
+          [scope.workspaceId,input.runId,DELTA_CAUSAL_INNER_PROFILE.profile_id,
+            DELTA_CAUSAL_INNER_PROFILE_DIGEST,input.requestedSpecDigest,input.effectiveSpecDigest,input.datasetBindingDigest]);
+        if (pin.rowCount !== 1) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Causal source pins do not match the immutable admission.",409);
+        const retained = await client.query<{ table_kind: string; source_ordinal: string | number; source_id: string; payload: JsonColumn }>(
+          `SELECT table_kind, source_ordinal, source_id, payload FROM research.current_source_rows_v1
+            WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3
+              AND table_kind IN ('FOLD','TRIAL','CANDIDATE','SELECTION')
+            ORDER BY table_kind, source_ordinal LIMIT 114`, [scope.workspaceId,input.runId,input.artifactRevision]);
+        assertCausalSealConsistency(input, retained.rows.map(row => ({ tableKind: row.table_kind,
+          sourceOrdinal: asSafeNonNegative(row.source_ordinal,"causal source ordinal"), sourceId: row.source_id,
+          payload: asJsonRecord(row.payload,"causal source payload") })), {
+          requestedSpec: asJsonRecord(pin.rows[0]!.requested_spec,"causal admitted request"),
+          topology: asJsonRecord(pin.rows[0]!.topology,"causal admitted topology"),
+        });
       }
       await client.query(
         `INSERT INTO research.current_source_seals_v1
@@ -1076,7 +1106,8 @@ export class ResearchCurrentSourceRepository {
     }
     let total = 0;
     // Research preview only: the long WFO seals up to 400 TRIAL rows.
-    const maximumTrials = deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;
+    const causal = input.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
+    const maximumTrials = causal ? DELTA_CAUSAL_INNER_PROFILE.max_total_trials : deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;
     for (const kind of TABLE_KINDS) {
       const count = input.tableRows[kind];
       if (!Number.isSafeInteger(count) || count < 0 || (kind !== "SELECTION" && count < 1) || (kind === "SELECTION" && count !== 1)

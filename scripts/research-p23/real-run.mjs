@@ -8,10 +8,11 @@ import { DEFAULT_HOME, operatorClient, privateJson, savePrivate } from './api-cl
 import { PROJECT, BASE_URL, validateHome } from './cell.mjs';
 
 export function requestedSpec(binding, release, profile) {
-  assert(['p04', 'wfo', 'wfo-v2'].includes(profile), 'P23_NAMED_EXECUTION_PROFILE_REQUIRED');
+  assert(['p04', 'wfo', 'wfo-v2', 'wfo-causal-inner'].includes(profile), 'P23_NAMED_EXECUTION_PROFILE_REQUIRED');
   const wfo = profile !== 'p04';
+  const causal = profile === 'wfo-causal-inner';
   return {
-    schema_version: profile === 'wfo-v2' ? 'research.requested-spec.v2' : 'research.requested-spec.v1',
+    schema_version: profile === 'wfo-v2' || causal ? 'research.requested-spec.v2' : 'research.requested-spec.v1',
     alpha_binding: { alpha_id: binding.alpha_id, alpha_version_id: binding.alpha_version_id },
     not_publishable: false, strategy_id: binding.alpha_id, execution_route: 'signal_notional', route_params: {},
     data: { dataset_id: 'crypto-binance-1m', symbol: 'BTCUSDT', timeframe: '1h' },
@@ -19,12 +20,13 @@ export function requestedSpec(binding, release, profile) {
       start: '2026-06-01T00:00:00Z', end_exclusive: '2026-07-15T00:00:00Z',
       split_mode: '2026-07-01T00:00:00Z', frequency: 'weekly', window_mode: profile === 'wfo-v2' ? 'rolling' : 'expanding',
       ...(profile === 'wfo-v2' ? { train_window: '14D', label_horizon_bars: 1, purge_bars: 2, embargo_bars: 3 } : {}),
+      ...(causal ? { inner: { split_frequency: 'weekly', window_mode: 'rolling', train_window: '14D', min_folds: 2 } } : {}),
     } } : { protocol: 'three_window_decay', windows: {
       is: { start: '2026-06-01T00:00', end_exclusive: '2026-06-08T00:00' },
       oos: { start: '2026-06-08T00:00', end_exclusive: '2026-06-15T00:00' },
       holdout: { start: '2026-06-15T00:00', end_exclusive: '2026-06-17T00:00' },
     } }),
-    optimization_mode: 'mode_1_decay', optimization_schedule: 'global',
+    optimization_mode: 'mode_1_decay', optimization_schedule: causal ? 'per_fold_causal' : 'global',
     parameter_space_overrides: [], optuna_trials: wfo ? 3 : 1,
     early_stopping: null, random_seed: wfo ? 42 : null, optimization_config: {},
     client: { engine_release_id: release.release_id, config_digest: release.config_digest },

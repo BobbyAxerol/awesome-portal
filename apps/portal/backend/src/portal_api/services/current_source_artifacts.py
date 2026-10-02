@@ -39,6 +39,7 @@ from portal_api.services.research_child_audit_companion import (
 )
 
 from portal_api.adapters.quantbt import QUANTBT_ENGINE_VERSION
+from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE
 from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_OPTUNA_TRIALS,
     DELTA_WFO_PREVIEW_LONG_MAX_TRIALS,
@@ -64,6 +65,8 @@ CURRENT_SOURCE_TARGET_MODE: Final = "pct_equity"
 CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-wfo-global.v1"
 SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID: Final = "rs02.quantbt-signal-notional-wfo.v1"
 SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-signal-notional-wfo.v1"
+CAUSAL_INNER_CURRENT_SOURCE_ADAPTER_ID: Final = "rs02.quantbt-signal-notional-causal-inner.v1"
+CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-signal-notional-causal-inner.v1"
 MAXIMUM_OPTUNA_TRIALS: Final = 64
 
 
@@ -89,6 +92,7 @@ _CURRENT_SOURCE_PROFILES: Final = {
         SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID,
         "signal_notional",
     ),
+    CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID: (CAUSAL_INNER_CURRENT_SOURCE_ADAPTER_ID, "signal_notional"),
 }
 
 
@@ -134,10 +138,12 @@ class CurrentSourceAdmission:
                 "RESEARCH_CURRENT_SOURCE_ROUTE_REJECTED",
                 f"The {expected_adapter} adapter accepts only QuantBT walk_forward with {expected_target_mode}.",
             )
-        if self.optimization_mode != "mode_1_decay" or self.optimization_schedule != "global":
+        causal = self.profile_id == CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID
+        expected_schedule = "per_fold_causal" if causal else "global"
+        if self.optimization_mode != "mode_1_decay" or self.optimization_schedule != expected_schedule:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_MODE_REJECTED",
-                "The current-source adapter accepts only mode_1_decay/global; it never downgrades to a fixed smoke run.",
+                f"The current-source adapter accepts only mode_1_decay/{expected_schedule}; it never downgrades to a fixed smoke run.",
             )
         if isinstance(self.random_seed, bool) or not isinstance(self.random_seed, int) or self.random_seed < 0:
             raise CurrentSourceArtifactError(
@@ -162,6 +168,8 @@ class CurrentSourceAdmission:
                     "RESEARCH_CURRENT_SOURCE_RESOURCE_REJECTED",
                     f"The current-source {label} is outside the admitted bounded range.",
                 )
+        if causal and (self.random_seed != 42 or self.optuna_trials != 3 or self.maximum_runtime_seconds != 240):
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED", "Causal inner custody requires seed 42, three trials per study and the 240-second cap.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -285,6 +293,18 @@ def signal_notional_current_source_admission(optuna_trials: int = DELTA_WFO_OPTU
     )
 
 
+def causal_inner_current_source_admission() -> CurrentSourceAdmission:
+    """Exact new profile; preview-long never widens the per-study budget."""
+    return CurrentSourceAdmission(
+        profile_id=CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID,
+        engine_operation=CURRENT_SOURCE_ENGINE_OPERATION, target_mode="signal_notional",
+        optimization_mode="mode_1_decay", optimization_schedule="per_fold_causal",
+        random_seed=42, optuna_trials=3, maximum_runtime_seconds=240,
+        maximum_rss_bytes=2 * 1024 * 1024 * 1024,
+        maximum_disk_bytes=4 * 1024 * 1024 * 1024, lease_seconds=90,
+    )
+
+
 def iter_current_source_retention_batches(
     *,
     retained_artifacts: ResearchArtifactStore,
@@ -386,6 +406,9 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
         child_audit = _retained_facts(row, "child_audit")
         if child_audit is not None:
             payload["child_audit"] = child_audit
+        causal_selection = _retained_facts(row, "causal_selection")
+        if causal_selection is not None:
+            payload["causal_selection"] = causal_selection
     elif table_kind == "trials":
         source_id = row.get("trial_id")
         at_utc_ms = None
@@ -418,6 +441,9 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
             "objective": row.get("objective"),
             "parameters": _decimal_object(row.get("parameters_json"), "selection parameters"),
         }
+        selection_record = _json_object(row.get("payload_json"), "selection payload")
+        if "scope" in selection_record:
+            payload.update({key: selection_record[key] for key in ("scope", "fold_id")})
     else:  # pragma: no cover - fixed table map above
         raise AssertionError(f"unsupported retained table {table_kind}")
     if not isinstance(source_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}", source_id):
@@ -607,6 +633,7 @@ class CurrentSourceArtifactAdapter:
         """
 
         admission.validate()
+        causal = admission.profile_id == CAUSAL_INNER_CURRENT_SOURCE_PROFILE_ID
         source_adapter_id = _CURRENT_SOURCE_PROFILES[admission.profile_id][0]
         if identity.run_id != run_id or fence.run_id != run_id:
             raise CurrentSourceArtifactError(
@@ -627,6 +654,14 @@ class CurrentSourceArtifactAdapter:
         # CG-P13-07/08. An older source tree simply lacks them; every fact
         # derived from them then stays a typed absence downstream.
         source_contract = self._optional_json(raw_dir / "wfo" / "source_contract.v1.json", "source contract")
+        if causal:
+            source_wfo = source_contract.get("walk_forward") if isinstance(source_contract, Mapping) else None
+            if (not isinstance(source_wfo, Mapping) or source_wfo.get("optimization_mode") != "mode_1_decay"
+                    or source_wfo.get("optimization_schedule") != "per_fold_causal"
+                    or source_wfo.get("causality_claim") != "strict_nested_fold_local_retraining"
+                    or source_wfo.get("oos_used_for_selection") is not False
+                    or source_wfo.get("full_sample_used_for_selection") is not False):
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CAUSAL_BINDING_REJECTED", "Causal source must publish its exact native nested-selection contract.")
         fold_metrics = self._optional_json(raw_dir / "wfo" / "selected_fold_metrics.v1.json", "selected fold metrics")
         summary_analytics = self._optional_json(raw_dir / "wfo" / "retained_analytics.v1.json", "retained analytics")
         summary_analytics_v2 = self._optional_json(raw_dir / "wfo" / "retained_analytics.v2.json", "Portal analytics v2")
@@ -644,16 +679,19 @@ class CurrentSourceArtifactAdapter:
         self._attach_fold_facts(
             folds,
             extension=fold_extension,
-            fold_metrics=fold_metrics,
+            fold_metrics=None if causal else fold_metrics,
             observations=observations,
         )
-        trials = self._frame_rows(raw_dir / "wfo" / "trials.parquet", kind="trials", source_contract=source_contract)
+        trials = self._frame_rows(raw_dir / "wfo" / "trials.parquet", kind="trials", source_contract=source_contract, causal=causal)
         candidates = self._frame_rows(
             raw_dir / "wfo" / "candidates.parquet",
             kind="candidates",
             source_contract=source_contract,
             objective_terms=self._objective_terms(config),
+            causal=causal,
         )
+        if causal:
+            selection = self._attach_causal_selections(raw_dir, folds=folds, trials=trials, candidates=candidates, config=config, selection=selection)
         selection_rows = [self._selection_row(selection)]
         execution_observation = self._execution_observation(manifest, folds, selection)
         # W5b (P17): the final account's per-bar ledger and its counted
@@ -721,11 +759,12 @@ class CurrentSourceArtifactAdapter:
             selection=selection_rows[0],
             source_facts=self._source_facts(
                 source_contract=source_contract,
-                fold_metrics=fold_metrics,
+                fold_metrics=None if causal else fold_metrics,
                 config=config,
                 trials=trials,
                 candidates=candidates,
                 selection=selection_rows[0],
+                folds=folds if causal else None,
             ),
         )
         # The retained table/manifest hashes authenticate the projection,
@@ -968,6 +1007,7 @@ class CurrentSourceArtifactAdapter:
         kind: str,
         source_contract: Mapping[str, Any] | None = None,
         objective_terms: Mapping[str, Decimal] | None = None,
+        causal: bool = False,
     ) -> list[dict[str, Any]]:
         frame = self._read_frame(path, kind)
         if frame.empty:
@@ -999,6 +1039,8 @@ class CurrentSourceArtifactAdapter:
                 params = record.get("params") if isinstance(record.get("params"), Mapping) else {}
                 normalized_params = _decimal_object(params, f"{kind} parameters")
                 record["trial_facts"] = self._trial_facts(record, source_contract=source_contract, objective_terms=None)
+                if causal:
+                    trial_id = self._causal_trial_id(record, trial_id)
                 rows.append({
                     "source_ordinal": ordinal,
                     "trial_id": trial_id,
@@ -1012,6 +1054,8 @@ class CurrentSourceArtifactAdapter:
                 params = record.get("params") if isinstance(record.get("params"), Mapping) else {}
                 normalized_params = _decimal_object(params, f"{kind} parameters")
                 record["trial_facts"] = self._trial_facts(record, source_contract=source_contract, objective_terms=objective_terms)
+                if causal:
+                    candidate_id = self._causal_trial_id(record, candidate_id)
                 rows.append({
                     "source_ordinal": ordinal,
                     "candidate_id": candidate_id,
@@ -1021,7 +1065,151 @@ class CurrentSourceArtifactAdapter:
                 })
             else:  # pragma: no cover - private call sites stay explicit
                 raise AssertionError(f"unsupported current-source table {kind}")
+        if causal:
+            field = "trial_id" if kind == "trials" else "candidate_id"
+            if len({row[field] for row in rows}) != len(rows):
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CAUSAL_BINDING_REJECTED", "Causal source rows repeat an identity within one study.")
         return rows
+
+    def _causal_trial_id(self, record: dict[str, Any], source_id: str) -> str:
+        facts = record["trial_facts"]
+        study = facts.get("study_id")
+        scope = facts.get("fold_scope", {})
+        metadata = record.get("selection_metadata") if isinstance(record.get("selection_metadata"), Mapping) else {}
+        local = self._nullable_identifier(metadata.get("source_trial_id", record.get("trial_id")))
+        original = record.get("trial_id")
+        if (study is None or local is None or scope.get("kind") != "FOLD" or scope.get("fold_id") != study
+                or type(original) is not int or original < 0 or source_id != str(original)):
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CAUSAL_BINDING_REJECTED", "Causal trial lacks its exact outer-fold study/source identity.")
+        facts["source_trial_id"] = local
+        # The evaluation row identity remains the actual engine trial ID;
+        # source_trial_id separately names the original local Optuna trial.
+        return self._identifier(f"study_{study}.trial_{source_id}", "causal trial id", 0)
+
+    def _attach_causal_selections(
+        self, raw_dir: Path, *, folds: list[dict[str, Any]], trials: list[dict[str, Any]],
+        candidates: list[dict[str, Any]], config: Mapping[str, Any], selection: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Join actual nested tables; never reinterpret last-study inner scores as outer scores."""
+        def refuse() -> None:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CAUSAL_BINDING_REJECTED", "Causal source selection/inner rows do not bind exactly to every outer fold.")
+
+        def records(frame: pd.DataFrame) -> list[dict[str, Any]]:
+            return [{str(k): self._json_value(v) for k, v in row.to_dict().items()} for _, row in frame.iterrows()]
+
+        selections = records(self._read_frame(raw_dir / "wfo" / "fold_selection.parquet", "causal fold selection"))
+        inner_rows = records(self._read_frame(raw_dir / "wfo" / "inner_folds.parquet", "causal inner folds"))
+        params_by_fold = self._read_json(raw_dir / "wfo" / "params_by_fold.json", "causal parameters by fold")
+        params_by_fold = {k: v for k, v in params_by_fold.items() if k not in {"producer", "artifact_schema_version"}}
+        expected_ids = {fold["fold_id"] for fold in folds}
+        if not 2 <= len(folds) <= 16 or len(expected_ids) != len(folds) or len(selections) != len(folds) or set(params_by_fold) != expected_ids:
+            refuse()
+        selection_map: dict[str, Mapping[str, Any]] = {}
+        grouped_inner: dict[str, list[Mapping[str, Any]]] = {}
+        for row in selections:
+            fold_id = self._nullable_identifier(row.get("fold_id"))
+            if fold_id not in expected_ids or fold_id in selection_map:
+                refuse()
+            selection_map[fold_id] = row
+        for row in inner_rows:
+            fold_id = self._nullable_identifier(row.get("outer_fold_id"))
+            if fold_id not in expected_ids:
+                refuse()
+            grouped_inner.setdefault(fold_id, []).append(row)
+        calibration = config["calibration"]
+        inner_config = {key: calibration.get(key) for key in ("inner_split_frequency", "inner_window_mode", "inner_train_window", "inner_min_folds")}
+        constraints = DELTA_CAUSAL_INNER_PROFILE["inner_constraints"]
+        if (inner_config["inner_split_frequency"] not in constraints["frequencies"]
+                or inner_config["inner_window_mode"] not in constraints["window_modes"]
+                or not isinstance(inner_config["inner_train_window"], str)
+                or re.fullmatch(constraints["train_window_pattern"], inner_config["inner_train_window"]) is None
+                or type(inner_config["inner_min_folds"]) is not int or not 2 <= inner_config["inner_min_folds"] <= 16):
+            refuse()
+
+        def facts(row: Mapping[str, Any]) -> Mapping[str, Any]:
+            return json.loads(row["payload_json"])["trial_facts"]
+
+        if len(trials) != 3 * len(folds) or len(trials) > 48:
+            refuse()
+        for fold in folds:
+            fold_id = fold["fold_id"]
+            native = selection_map[fold_id]
+            study = self._nullable_identifier(native.get("study_id"))
+            fold_seed = self._fact_int(native.get("fold_seed"))
+            if study != fold_id or fold_seed is None or fold_seed > 9_007_199_254_740_991 or native.get("outer_oos_used_for_selection") is not False:
+                refuse()
+            for name in ("train_start", "train_end", "test_start", "test_end"):
+                if self._nullable_utc_ms(native.get(name), name) != fold[name + "_utc_ms"]:
+                    refuse()
+            native_params = native.get("selected_params")
+            if native_params is None and isinstance(native.get("selected_params_json"), str):
+                native_params = _json_object(native["selected_params_json"], "causal selected parameters")
+            params = _decimal_object(native_params, "causal selected parameters")
+            if not params or params != _decimal_object(params_by_fold[fold_id], "causal fold parameter map"):
+                refuse()
+            study_trials = [row for row in trials if facts(row).get("study_id") == study]
+            study_candidates = [row for row in candidates if facts(row).get("study_id") == study]
+            if len(study_trials) != 3 or self._fact_int(native.get("study_trial_rows")) != 3 or not 1 <= len(study_candidates) <= 64 or self._fact_int(native.get("candidate_count")) != len(study_candidates):
+                refuse()
+            local = self._nullable_identifier(native.get("selected_trial_id"))
+            selected = [row for row in study_candidates if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
+            searched = [row for row in study_trials if facts(row).get("source_trial_id") == local and json.loads(row["parameters_json"]) == params]
+            if len(selected) != 1 or len(searched) != 1:
+                refuse()
+            if (searched[0]["state"] != "COMPLETE" or facts(searched[0]).get("stage") != "is_search"
+                    or facts(searched[0]).get("pruned") is not False
+                    or facts(selected[0]).get("stage") != "oos_candidate_selection"
+                    or facts(selected[0]).get("pruned") is not False):
+                refuse()
+            actual_inner = grouped_inner.get(fold_id, [])
+            if not max(2, inner_config["inner_min_folds"]) <= len(actual_inner) <= 16 or self._fact_int(native.get("inner_fold_count")) != len(actual_inner):
+                refuse()
+            validation = native.get("inner_validation")
+            if validation is None and isinstance(native.get("inner_validation_json"), str):
+                validation = _json_object(native["inner_validation_json"], "causal inner validation")
+            if (not isinstance(validation, Mapping) or any(validation.get(k) != v for k, v in inner_config.items())
+                    or validation.get("enabled") is not True or validation.get("selection_scope") != "outer_is_only"
+                    or validation.get("outer_oos_used_for_selection") is not False):
+                refuse()
+            retained_inner = []
+            seen_inner = set()
+            for row in actual_inner:
+                inner_id = self._nullable_identifier(row.get("inner_fold_id"))
+                bounds = {name + "_utc_ms": self._nullable_utc_ms(row.get("inner_" + name), "inner " + name)
+                          for name in ("train_start", "train_end", "test_start", "test_end")}
+                if inner_id is None or inner_id in seen_inner or row.get("outer_oos_used_for_selection") is not False or any(value is None for value in bounds.values()):
+                    refuse()
+                if (not fold["train_start_utc_ms"] <= bounds["train_start_utc_ms"] <= bounds["train_end_utc_ms"] < bounds["test_start_utc_ms"] <= bounds["test_end_utc_ms"] <= fold["train_end_utc_ms"] < fold["test_start_utc_ms"]
+                        or any(self._nullable_utc_ms(row.get("outer_" + name), "inner outer " + name) != fold[name + "_utc_ms"] for name in ("train_start", "train_end", "test_start"))):
+                    refuse()
+                seen_inner.add(inner_id)
+                retained_inner.append({"inner_fold_id": inner_id, **bounds, "outer_oos_used_for_selection": False})
+            claim = self._fact_token(native.get("causality_claim"))
+            if claim != "strict_nested_fold_local_retraining":
+                refuse()
+            block = {
+                "schema_version": "research.current-source-causal-selection.v1", "scope": "OUTER_FOLD_SELECTION",
+                "study_id": study, "fold_seed": fold_seed, "selected_trial_id": searched[0]["trial_id"],
+                "parameters": params, "objective": selected[0]["objective"], "objective_kind": "INNER_VALIDATION_DECAY_J",
+                **{name: self._nullable_decimal(native.get(name), name) for name in ("candidate_is_metric", "candidate_oos_metric", "candidate_decay")},
+                "candidate_is_scope": "INNER_VALIDATION_IS_MEAN", "candidate_oos_scope": "OUTER_FOLD_OOS",
+                "candidate_decay_scope": "INNER_IS_MEAN_MINUS_OUTER_OOS",
+                "candidate_metrics_scope": "OUTER_FOLD_POST_SELECTION", "candidate_count": len(study_candidates), "study_trial_rows": 3,
+                "outer_oos_used_for_selection": False, "causality_claim": claim,
+                "inner_fold_count": len(retained_inner), "inner_validation": inner_config, "inner_folds": retained_inner,
+            }
+            payload = json.loads(fold["payload_json"])
+            payload["causal_selection"] = block
+            fold["payload_json"] = self._canonical_json(payload)
+        last = json.loads(folds[-1]["payload_json"])["causal_selection"]
+        original_local = self._nullable_identifier(selection.get("trial_id"))
+        native_last = selection_map[folds[-1]["fold_id"]]
+        if (selection.get("scope") != "LAST_FOLD_DEPLOYMENT" or selection.get("fold_id") != folds[-1]["fold_id"]
+                or original_local != self._nullable_identifier(native_last.get("selected_trial_id"))
+                or _decimal_object(selection.get("params"), "last-fold parameters") != last["parameters"]
+                or self._nullable_decimal(selection.get("objective"), "last-fold objective") != last["objective"]):
+            refuse()
+        return {**selection, "trial_id": last["selected_trial_id"]}
 
     def _selection_row(self, selection: Mapping[str, Any]) -> dict[str, Any]:
         params = selection.get("params")
@@ -1777,6 +1965,7 @@ class CurrentSourceArtifactAdapter:
         trials: list[dict[str, Any]],
         candidates: list[dict[str, Any]],
         selection: Mapping[str, Any],
+        folds: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any] | None:
         """One bounded, versioned block of run-level QuantBT facts for the seal summary."""
 
@@ -1798,7 +1987,7 @@ class CurrentSourceArtifactAdapter:
         probes = [facts_of(row).get("objective_components", {}) for row in [*trials, *candidates]]
         verified = sum(1 for probe in probes if probe.get("state") == "AVAILABLE")
         pruned = [row for row in trials if facts_of(row).get("pruned") is True]
-        return {
+        result = {
             "schema_version": "research.current-source-facts.v1",
             "claims": {
                 "validation_claim": self._fact_token(walk_forward.get("validation_claim")),
@@ -1870,6 +2059,13 @@ class CurrentSourceArtifactAdapter:
                 "trial_id": None if fold_metrics is None else self._nullable_identifier(fold_metrics.get("trial_id")),
             },
         }
+        if folds is not None:
+            result["selected_fold_metrics"]["reason_code"] = "QUANTBT_CAUSAL_BEST_TRIAL_METRICS_ARE_INNER_VALIDATION_NOT_OUTER_OOS"
+            result["temporal_guards"]["observed_inner_fold_count"] = sum(json.loads(fold["payload_json"])["causal_selection"]["inner_fold_count"] for fold in folds)
+            result["search"]["raw_best_is_trial_id"] = None
+            result["search"]["raw_best_is_objective"] = None
+            result["search"]["candidate_source_trial_ids"] = sorted({self._identifier(f"study_{facts_of(row)['study_id']}.trial_{facts_of(row)['source_trial_id']}", "causal candidate source id", 0) for row in candidates})
+        return result
 
     @staticmethod
     def _summary(
@@ -1962,6 +2158,9 @@ class CurrentSourceArtifactAdapter:
         }
         if source_facts is not None:
             body["source_facts"] = dict(source_facts)
+        retained_selection = json.loads(str(selection["payload_json"]))
+        if "scope" in retained_selection:
+            body["selection"].update({key: retained_selection[key] for key in ("scope", "fold_id")})
         return body
 
     @staticmethod

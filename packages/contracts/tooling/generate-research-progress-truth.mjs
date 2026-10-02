@@ -17,7 +17,7 @@ export function progressTruthComponents(document) {
     display_trial_ordinal: nullable({ type: "integer", minimum: 1 }),
     trial_numbering: { const: "P11_ORDINAL_1_BASED", description: "trial and display_trial_ordinal are the same 1-based P11 display ordinal, not source trial identity. WFO source_trial_id preserves Optuna's zero-based ID; fixed profiles do not invent one." },
   });
-  selection.properties.source_trial_id.description = "Original zero-based Optuna source ID for an admitted P10 Delta WFO v1/v2 GLOBAL selection; trial/display_trial_ordinal remain 1-based. Optional on fixed/older captures.";
+  selection.properties.source_trial_id.description = "Exact original local Optuna trial ID; causal studies require study_id to distinguish repeated trial numbers. Never derived from a run-global ordinal.";
   const read = structuredClone(schemas.ProgressRead);
   read.properties.current.properties.fold_reporting = {
     ...obj({

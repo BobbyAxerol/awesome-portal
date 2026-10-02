@@ -778,6 +778,8 @@ export interface components {
             contribution_fraction: components["schemas"]["FoldFact"];
             max_drawdown_fraction: components["schemas"]["FoldFact"];
             oos_trades: components["schemas"]["FoldFact"];
+            /** @constant */
+            score_basis?: "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS";
         };
         FoldsV2: {
             /** @enum {unknown} */
@@ -801,7 +803,7 @@ export interface components {
             order: "SOURCE_ORDINAL_ASC";
             params_handoff: {
                 /** @enum {unknown} */
-                scope: "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" | "NOT_PUBLISHED";
+                scope: "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" | "NOT_PUBLISHED" | "PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS";
                 text: string | null;
                 availability: components["schemas"]["Availability"];
             };
@@ -908,7 +910,7 @@ export interface components {
             /** @enum {unknown} */
             kind: "REUSED_ORIGINAL" | "LINKED_CHILD" | "NOT_PUBLISHED";
             reason_code: components["schemas"]["ReasonCode"] | null;
-            audit_target_kind: ("SINGLE_PARAMETER_SET" | "FIXED_PARAMETER_PROFILE") | null;
+            audit_target_kind: ("SINGLE_PARAMETER_SET" | "FIXED_PARAMETER_PROFILE" | "PER_FOLD_PARAMETER_SELECTIONS") | null;
             final_audit_run_id: components["schemas"]["RunId"] | null;
             audited_run_id: components["schemas"]["RunId"] | null;
             relationship: ("PRIMARY" | "AUDIT_OF_SELECTION") | null;

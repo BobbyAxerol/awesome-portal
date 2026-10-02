@@ -12,8 +12,8 @@
  * entered and never a PASS a global study cannot earn: a global schedule
  * selects one θ* after reading every outer fold, so every fold is
  * `NOT_CAUSAL_GLOBAL_SELECTION` with the engine's chronological claim as the
- * reason. A `per_fold_causal` schedule is not admitted by the P10 Delta WFO
- * profile; if one ever appears it is `NOT_EVALUATED` with that typed reason.
+ * reason. Only the separately admitted causal-inner profile can earn a
+ * data-time causal verdict, from its own retained inner rows and selections.
  *
  * P16-T11: per fold, the out-of-sample generation child of QuantBT's child
  * audit (W5b, P17-T14) is compared with the frozen selection by QuantBT's own
@@ -25,8 +25,10 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { P11StageEventsSchema, type P11StageEvents } from "./p11-stage-events";
 
-import type { CurrentSourceFacts } from "./current-source.payload";
+import type { CurrentSourceCausalSelection, CurrentSourceFacts } from "./current-source.payload";
 import type { HistoricalProfileBinding } from "./parameter-binding.registry";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
+import { sha256ResearchJson } from "./preflight.service";
 
 export const FOLD_ORDERING_RULE = "research.freeze-fold-ordering.v1" as const;
 export const QUANTBT_CANDIDATE_IDENTITY_RULE = "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1" as const;
@@ -42,6 +44,10 @@ export const FOLD_ORDERING_REASONS = {
   childAuditNotRetained: "RS02_SEAL_PREDATES_P17_CHILD_AUDIT",
   noGenerationChild: "QUANTBT_CHILD_AUDIT_HAS_NO_OUT_OF_SAMPLE_GENERATION_RECORD",
   identityNotComputable: "FROZEN_PARAMETERS_NOT_EXACT_NUMERIC_JSON",
+  causalSourceMissing: "CAUSAL_FOLD_SELECTION_OR_INNER_ROWS_NOT_RETAINED",
+  causalWindowMismatch: "CAUSAL_INNER_WINDOWS_NOT_WITHIN_OUTER_IS",
+  causalClaimMismatch: "CAUSAL_SELECTION_SOURCE_CLAIMS_NOT_COMPATIBLE",
+  noGlobalCandidate: "LAST_FOLD_DEPLOYMENT_IS_NOT_RUN_GLOBAL_SELECTION",
 } as const;
 
 const Reason = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
@@ -64,8 +70,12 @@ export const FoldOrderingRowSchema = z.object({
     boundary: z.enum(["IS_ENDS_BEFORE_OOS", "IS_OVERLAPS_OOS", "NOT_PUBLISHED"]),
     reason_code: Reason.nullable(),
   }).strict(),
-  verdict: z.enum(["NOT_CAUSAL_GLOBAL_SELECTION", "NOT_EVALUATED", "NOT_PUBLISHED"]),
-  reason_code: Reason,
+  verdict: z.enum(["NOT_CAUSAL_GLOBAL_SELECTION", "CAUSAL_DATA_TIME_SELECTION", "NOT_EVALUATED", "NOT_PUBLISHED"]),
+  reason_code: Reason.nullable(),
+  selected_candidate: z.object({
+    candidate_id: CandidateId.nullable(), params_digest: z.string().regex(/^[0-9a-f]{64}$/),
+    study_id: Token, selected_trial_id: Token, inner_fold_count: z.number().int().min(2).max(16),
+  }).strict().optional(),
   oos_generation_child: z.object({
     state: z.enum(["MATCH", "MISMATCH", "NOT_RETAINED", "NOT_PUBLISHED", "NOT_COMPUTABLE"]),
     reason_code: Reason.nullable(),
@@ -100,6 +110,7 @@ export const FoldOrderingSchema = z.object({
     not_causal_global_selection: z.number().int().nonnegative(),
     not_evaluated: z.number().int().nonnegative(),
     not_published: z.number().int().nonnegative(),
+    causal_data_time_selection: z.number().int().nonnegative().optional(),
     oos_child_match: z.number().int().nonnegative(),
     oos_child_mismatch: z.number().int().nonnegative(),
   }).strict(),
@@ -117,6 +128,7 @@ export interface FoldOrderingInput {
   testEndUtcMs: number | null;
   /** Child-audit records (W5b); undefined when the seal predates P17-T14. */
   childAudit: ReadonlyArray<{ audit_ordinal: number; candidate_id: string | null; context: string | null }> | undefined;
+  causalSelection?: CurrentSourceCausalSelection;
 }
 
 const EXACT_JSON_NUMBER = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
@@ -206,19 +218,47 @@ export function foldOrdering(
   frozenParameters: Readonly<Record<string, string>>,
   candidateParameterKinds?: HistoricalProfileBinding["candidateParameterKinds"],
   stageEvents?: P11StageEvents,
+  sourceProfileId?: string,
 ): FoldOrdering {
   const { scope, verdict, reason } = scopeOf(facts);
   const frozen = quantbtCandidateId(frozenParameters, candidateParameterKinds);
+  const causal = sourceProfileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id && scope === "PER_FOLD";
   const rows = [...folds]
     .sort((a, b) => a.sourceOrdinal - b.sourceOrdinal)
-    .map((fold) => ({
+    .map((fold): FoldOrdering["folds"][number] => {
+      const selected = causal ? fold.causalSelection : undefined;
+      const candidate = causal ? selected ? quantbtCandidateId(selected.parameters, candidateParameterKinds) : null : frozen;
+      const dataTime = boundaryOf(fold);
+      let actualVerdict = verdict;
+      let actualReason: string | null = reason;
+      if (causal) {
+        actualVerdict = "NOT_EVALUATED";
+        actualReason = FOLD_ORDERING_REASONS.causalSourceMissing;
+        if (selected) {
+          const compatibleClaim = facts?.claims.oos_used_for_selection === false && selected.outer_oos_used_for_selection === false &&
+            selected.causality_claim === "strict_nested_fold_local_retraining" && facts.claims.causality_claim === selected.causality_claim;
+          const inner = selected.inner_folds;
+          const windowsValid = dataTime.boundary === "IS_ENDS_BEFORE_OOS" && fold.trainStartUtcMs !== null && fold.trainEndUtcMs !== null &&
+            inner.length === selected.inner_fold_count && inner.length >= selected.inner_validation.inner_min_folds &&
+            new Set(inner.map(row => row.inner_fold_id)).size === inner.length && inner.every(row =>
+              row.outer_oos_used_for_selection === false && row.train_start_utc_ms >= fold.trainStartUtcMs! &&
+              row.train_start_utc_ms <= row.train_end_utc_ms && row.train_end_utc_ms < row.test_start_utc_ms &&
+              row.test_start_utc_ms <= row.test_end_utc_ms && row.test_end_utc_ms <= fold.trainEndUtcMs!);
+          actualReason = !compatibleClaim ? FOLD_ORDERING_REASONS.causalClaimMismatch : !windowsValid ? FOLD_ORDERING_REASONS.causalWindowMismatch : null;
+          if (actualReason === null) actualVerdict = "CAUSAL_DATA_TIME_SELECTION";
+        }
+      }
+      return {
       fold_id: fold.foldId,
       source_ordinal: fold.sourceOrdinal,
-      data_time: boundaryOf(fold),
-      verdict,
-      reason_code: reason,
-      oos_generation_child: childOf(fold, frozen),
-    }));
+      data_time: dataTime,
+      verdict: actualVerdict,
+      reason_code: actualReason,
+      ...(selected ? { selected_candidate: { candidate_id: candidate, params_digest: sha256ResearchJson(selected.parameters),
+        study_id: selected.study_id, selected_trial_id: selected.selected_trial_id, inner_fold_count: selected.inner_fold_count } } : {}),
+      oos_generation_child: childOf(fold, candidate),
+    };
+    });
   const count = (predicate: (row: (typeof rows)[number]) => boolean) => rows.filter(predicate).length;
   return {
     schema_version: FOLD_ORDERING_RULE,
@@ -234,14 +274,15 @@ export function foldOrdering(
     ...(stageEvents ? { stage_events: stageEvents } : {}),
     frozen_candidate: {
       identity_rule: QUANTBT_CANDIDATE_IDENTITY_RULE,
-      candidate_id: frozen,
-      reason_code: frozen === null ? FOLD_ORDERING_REASONS.identityNotComputable : null,
+      candidate_id: causal ? null : frozen,
+      reason_code: causal ? FOLD_ORDERING_REASONS.noGlobalCandidate : frozen === null ? FOLD_ORDERING_REASONS.identityNotComputable : null,
     },
     counts: {
       folds: rows.length,
       not_causal_global_selection: count((row) => row.verdict === "NOT_CAUSAL_GLOBAL_SELECTION"),
       not_evaluated: count((row) => row.verdict === "NOT_EVALUATED"),
       not_published: count((row) => row.verdict === "NOT_PUBLISHED"),
+      ...(causal ? { causal_data_time_selection: count(row => row.verdict === "CAUSAL_DATA_TIME_SELECTION") } : {}),
       oos_child_match: count((row) => row.oos_generation_child.state === "MATCH"),
       oos_child_mismatch: count((row) => row.oos_generation_child.state === "MISMATCH"),
     },

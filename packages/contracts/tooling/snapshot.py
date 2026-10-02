@@ -20,6 +20,8 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "tooling/generate-research-causal-inner.mjs",
+    "fixtures/research-causal-inner.selection.synthetic.valid.json",
     "openapi/research-fixed-replay-companion.openapi.json",
     "generated/research-fixed-replay-companion.d.ts",
     "tooling/generate-research-fixed-replay-companion.mjs",

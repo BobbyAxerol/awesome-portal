@@ -7,6 +7,7 @@ import type { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { type ResearchScope, type ResearchWorkerUsage, ResearchMetadataError } from "./contracts";
 import { DELTA_WFO_V2_PROFILE_ID } from "./delta-wfo-v2.profile";
+import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import {
   type ResearchProgressEvent,
   type ResearchProgressIngress,
@@ -299,7 +300,8 @@ export class ResearchProgressService {
     // on). Its report is P18 work over current-source, not this sidecar.
     // A W5a what-if diagnostic has no report either: it seals one WHATIF_GRID
     // relation for its parent and nothing P04-shaped.
-    if (ingressScope.executionProfileId !== DELTA_WFO_PROFILE_ID && ingressScope.executionProfileId !== DELTA_WFO_V2_PROFILE_ID && ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
+    if (ingressScope.executionProfileId !== DELTA_WFO_PROFILE_ID && ingressScope.executionProfileId !== DELTA_WFO_V2_PROFILE_ID
+      && ingressScope.executionProfileId !== DELTA_CAUSAL_INNER_PROFILE_ID && ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       await this.reports.materializeTerminal(ingressScope, input);
     } else if (ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       // W6a (P18 over current-source): the WFO report is sealed from the
@@ -836,12 +838,14 @@ export class ResearchProgressService {
    */
   private assertProfileBoundIngress(scope: ProgressIngressScope, input: ResearchProgressIngress): void {
     const whatIf = scope.executionProfileId === WHATIF_PROFILE_ID;
-    const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID || scope.executionProfileId === DELTA_WFO_V2_PROFILE_ID || whatIf;
+    const causal = scope.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
+    const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID || scope.executionProfileId === DELTA_WFO_V2_PROFILE_ID || causal || whatIf;
     const usage = input.event.payload.usage;
     if (usage && typeof usage === "object" && !Array.isArray(usage)) {
       const cpu = (usage as Record<string, unknown>).cpu_seconds;
       const cap = whatIf
         ? WHATIF_PROFILE.child_limits.cpu_seconds
+        : causal ? DELTA_CAUSAL_INNER_PROFILE.child_limits.cpu_seconds
         : wfo
           // Research preview only: the long WFO child's own CPU cap.
           ? (deltaWfoPreviewLongEnabled(this.config)

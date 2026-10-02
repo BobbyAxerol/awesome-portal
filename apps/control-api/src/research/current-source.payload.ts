@@ -93,7 +93,7 @@ export const CurrentSourceTrialFactsSchema = z.object({
   stage: FactTokenSchema.nullable(),
   objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
   fold_scope: z.object({
-    kind: z.enum(["FOLD", "ALL_OUTER_FOLDS", "NOT_PUBLISHED"]),
+    kind: z.enum(["FOLD", "PER_FOLD_STUDY", "ALL_OUTER_FOLDS", "NOT_PUBLISHED"]),
     fold_id: FactTokenSchema.nullable(),
     reason_code: FactReasonSchema.nullable(),
   }).strict(),
@@ -145,6 +145,7 @@ export const CurrentSourceFactsSchema = z.object({
       inner_min_folds: FactCountSchema.nullable(),
     }).strict().nullable(),
     inner_validation_published: z.boolean(),
+    observed_inner_fold_count: FactCountSchema.optional(),
   }).strict(),
   search: z.object({
     optimization_mode: FactTokenSchema.nullable(),
@@ -382,6 +383,8 @@ export const CurrentSourceSummarySchema = z.object({
     max_drawdown_fraction: CurrentSourceDecimalSchema,
   }).strict(),
   selection: z.object({
+    scope: z.literal("LAST_FOLD_DEPLOYMENT").optional(),
+    fold_id: FactTokenSchema.optional(),
     trial_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/).nullable(),
     objective: CurrentSourceDecimalSchema.nullable(),
     parameters: CurrentSourceParameterMapSchema,
@@ -457,6 +460,43 @@ export const CurrentSourceObservationPayloadSchema = z.object({
   bar: CurrentSourceBarSchema.optional(),
 }).strict();
 
+export const CurrentSourceCausalSelectionSchema = z.object({
+  schema_version: z.literal("research.current-source-causal-selection.v1"),
+  scope: z.literal("OUTER_FOLD_SELECTION"), study_id: FactTokenSchema,
+  fold_seed: FactUtcMsSchema, selected_trial_id: FactTokenSchema,
+  parameters: CurrentSourceParameterMapSchema, objective: CurrentSourceDecimalSchema.nullable(),
+  objective_kind: z.literal("INNER_VALIDATION_DECAY_J"),
+  candidate_is_metric: CurrentSourceDecimalSchema.nullable(),
+  candidate_oos_metric: CurrentSourceDecimalSchema.nullable(), candidate_decay: CurrentSourceDecimalSchema.nullable(),
+  candidate_metrics_scope: z.literal("OUTER_FOLD_POST_SELECTION"),
+  candidate_is_scope: z.literal("INNER_VALIDATION_IS_MEAN"),
+  candidate_oos_scope: z.literal("OUTER_FOLD_OOS"),
+  candidate_decay_scope: z.literal("INNER_IS_MEAN_MINUS_OUTER_OOS"),
+  candidate_count: z.number().int().min(1).max(64), study_trial_rows: z.literal(3),
+  outer_oos_used_for_selection: z.literal(false), causality_claim: z.literal("strict_nested_fold_local_retraining"),
+  inner_fold_count: z.number().int().min(2).max(16),
+  inner_validation: z.object({
+    inner_split_frequency: z.enum(["weekly", "monthly", "quarterly"]),
+    inner_window_mode: z.enum(["expanding", "rolling"]),
+    inner_train_window: z.string().regex(/^[1-9][0-9]{0,4}(D|h)$/).max(8),
+    inner_min_folds: z.number().int().min(2).max(16),
+  }).strict(),
+  inner_folds: z.array(z.object({
+    inner_fold_id: FactTokenSchema,
+    train_start_utc_ms: FactUtcMsSchema, train_end_utc_ms: FactUtcMsSchema,
+    test_start_utc_ms: FactUtcMsSchema, test_end_utc_ms: FactUtcMsSchema,
+    outer_oos_used_for_selection: z.literal(false),
+  }).strict()).min(2).max(16),
+}).strict().superRefine((value, context) => {
+  if (value.inner_fold_count !== value.inner_folds.length || value.inner_fold_count < value.inner_validation.inner_min_folds ||
+      new Set(value.inner_folds.map(row => row.inner_fold_id)).size !== value.inner_folds.length ||
+      value.inner_folds.some(row => !(row.train_start_utc_ms <= row.train_end_utc_ms &&
+        row.train_end_utc_ms < row.test_start_utc_ms && row.test_start_utc_ms <= row.test_end_utc_ms))) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "causal inner counts, identities or chronology are incompatible" });
+  }
+});
+export type CurrentSourceCausalSelection = z.infer<typeof CurrentSourceCausalSelectionSchema>;
+
 export const CurrentSourceFoldPayloadSchema = z.object({
   fold_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
   train_start_utc_ms: z.number().int().nonnegative().nullable(),
@@ -466,7 +506,15 @@ export const CurrentSourceFoldPayloadSchema = z.object({
   fold_facts: CurrentSourceFoldFactsSchema.optional(),
   // P17-T14: QuantBT's strategy-isolation records for this fold.
   child_audit: CurrentSourceFoldChildAuditSchema.optional(),
-}).strict();
+  causal_selection: CurrentSourceCausalSelectionSchema.optional(),
+}).strict().superRefine((value, context) => {
+  if (!value.causal_selection) return;
+  const start = value.train_start_utc_ms, end = value.train_end_utc_ms, test = value.test_start_utc_ms;
+  if (start === null || end === null || test === null || end >= test ||
+      value.causal_selection.inner_folds.some(row => row.train_start_utc_ms < start || row.test_end_utc_ms > end)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["causal_selection"], message: "inner folds must stay inside this outer IS window" });
+  }
+});
 
 export const CurrentSourceTrialPayloadSchema = z.object({
   trial_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
@@ -484,6 +532,8 @@ export const CurrentSourceCandidatePayloadSchema = z.object({
 }).strict();
 
 export const CurrentSourceSelectionPayloadSchema = z.object({
+  scope: z.literal("LAST_FOLD_DEPLOYMENT").optional(),
+  fold_id: FactTokenSchema.optional(),
   selection_role: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
   trial_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/).nullable(),
   objective: CurrentSourceDecimalSchema.nullable(),

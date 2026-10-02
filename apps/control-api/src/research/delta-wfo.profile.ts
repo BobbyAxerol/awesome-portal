@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 
 import { IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
+import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
 
 export const P04_FIXED_QUALIFICATION_PROFILE_ID = "p04.fixed-qualification.v1" as const;
 export const DELTA_WFO_PROFILE_ID = "p10.delta-signal-notional-wfo.v1" as const;
@@ -21,6 +22,7 @@ export const RESEARCH_EXECUTION_PROFILE_IDS = [
   P04_FIXED_QUALIFICATION_PROFILE_ID,
   DELTA_WFO_PROFILE_ID,
   DELTA_WFO_V2_PROFILE_ID,
+  DELTA_CAUSAL_INNER_PROFILE_ID,
   IMPORTED_ALPHA_PROFILE_ID,
 ] as const;
 export type ResearchExecutionProfileId = typeof RESEARCH_EXECUTION_PROFILE_IDS[number];
@@ -122,5 +124,12 @@ export const DELTA_WFO_WORK_SCHEMA_VERSION = "research.p10.delta-wfo-work.v1" as
 
 export function isDeltaWfoProfile(profileId: string | null | undefined, profileDigest: string | null | undefined): boolean {
   return (profileId === DELTA_WFO_PROFILE_ID && profileDigest === DELTA_WFO_PROFILE_DIGEST)
-    || (profileId === DELTA_WFO_V2_PROFILE_ID && profileDigest === DELTA_WFO_V2_PROFILE_DIGEST);
+    || (profileId === DELTA_WFO_V2_PROFILE_ID && profileDigest === DELTA_WFO_V2_PROFILE_DIGEST)
+    || (profileId === DELTA_CAUSAL_INNER_PROFILE_ID && profileDigest === DELTA_CAUSAL_INNER_PROFILE_DIGEST);
+}
+
+/** Profile-bound custody pair; global and causal seals may never be mixed. */
+export function deltaWfoCurrentSourcePair(profileId: string | null | undefined, profileDigest: string | null | undefined) {
+  if (!isDeltaWfoProfile(profileId, profileDigest)) return null;
+  return profileId === DELTA_CAUSAL_INNER_PROFILE_ID ? DELTA_CAUSAL_INNER_PROFILE.current_source : DELTA_WFO_PROFILE.current_source;
 }

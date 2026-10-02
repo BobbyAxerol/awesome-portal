@@ -31,6 +31,7 @@
 
 import { z } from "zod";
 import { POOL_FREEZE_CLOCK_ABSENT } from "./p11-stage-events";
+import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 
 import type { CurrentSourceFacts, CurrentSourceFoldFacts, CurrentSourceTrialFacts } from "./current-source.payload";
 import { RS02_ROW_PREDATES_FACTS, RS02_SEAL_PREDATES_SOURCE_FACTS, WALK_FORWARD_HAS_NO_CONSTRAINTS } from "./current-source-facts";
@@ -48,6 +49,7 @@ export const POOL_REASONS = {
   noFoldScore: "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS",
   candidateDrawdown: "QUANTBT_CANDIDATE_LEDGER_DOES_NOT_PUBLISH_DRAWDOWN",
   pathNotThisCandidate: "STITCHED_OOS_PATH_IS_NOT_ONE_CANDIDATE_UNDER_THIS_SCHEDULE",
+  perFoldStudies: "PER_FOLD_STUDIES_HAVE_NO_SINGLE_RUN_GLOBAL_POOL",
 } as const;
 
 /** Mode 1 selectors that rank the pool and return it unchanged (`_select_is_candidate_records` → `top`). */
@@ -109,7 +111,7 @@ export const SearchPoolSchema = z.object({
   rule: PoolRuleSchema,
   reevaluated: PoolCountSchema,
   /** Where the re-evaluation read: every outer fold, one fold, or not published. */
-  reevaluation_scope: z.enum(["ALL_OUTER_FOLDS", "FOLD", "NOT_PUBLISHED"]),
+  reevaluation_scope: z.enum(["ALL_OUTER_FOLDS", "FOLD", "PER_FOLD_STUDY", "NOT_PUBLISHED"]),
   selected: PoolCountSchema,
   per_fold_decay: FoldDecaySchema,
 }).strict();
@@ -126,7 +128,10 @@ export type CandidateDrawdown = z.infer<typeof CandidateDrawdownSchema>;
 
 export interface PoolTrial { trialId: string; state: string; objective: string | null; facts: CurrentSourceTrialFacts | undefined }
 export interface PoolCandidate { candidateId: string; objective: string | null; facts: CurrentSourceTrialFacts | undefined }
-export interface PoolFold { foldId: string; sourceOrdinal: number; facts: CurrentSourceFoldFacts | undefined }
+export interface PoolFold {
+  foldId: string; sourceOrdinal: number; facts: CurrentSourceFoldFacts | undefined;
+  causalSelection?: { scope: "OUTER_FOLD_SELECTION"; study_id: string; selected_trial_id: string; parameters: Record<string, string> };
+}
 
 function count(value: number, source: NonNullable<z.infer<typeof PoolCountSchema>["source"]>) {
   return { state: "AVAILABLE" as const, value, reason_code: null, source };
@@ -155,6 +160,8 @@ function scoredUnpruned(trial: PoolTrial): boolean {
 }
 
 export function searchPool(input: {
+  sourceAdapterId?: string;
+  sourceProfileId?: string;
   facts: CurrentSourceFacts | undefined;
   trials: readonly PoolTrial[];
   candidates: readonly PoolCandidate[];
@@ -163,6 +170,7 @@ export function searchPool(input: {
 }): SearchPool {
   const { facts, trials, candidates, folds } = input;
   const search = facts?.search;
+  const perFoldStudies = search?.optimization_schedule === "per_fold_causal";
   const searched = trials.filter(isSearchTrial);
   const eligible = searched.filter(scoredUnpruned);
   const rowsHaveFacts = trials.every((trial) => trial.facts !== undefined);
@@ -179,7 +187,19 @@ export function searchPool(input: {
       ? absent("NOT_PUBLISHED", POOL_REASONS.rowPredatesFacts)
       : absent("NOT_PUBLISHED", POOL_REASONS.poolNotIsolated);
   const scopes = new Set(pooled.map((candidate) => candidate.facts?.fold_scope.kind ?? "NOT_PUBLISHED"));
-  const reevaluationScope = scopes.size === 1 ? ([...scopes][0] as SearchPool["reevaluation_scope"]) : "NOT_PUBLISHED";
+  const nativeScope = scopes.size === 1 ? ([...scopes][0] as SearchPool["reevaluation_scope"]) : "NOT_PUBLISHED";
+  // QuantBT's native FOLD token identifies an outer study, while its
+  // candidate objective was evaluated on INNER validation. Name that public
+  // scope only for the exact admitted pair and retained study/fold join.
+  const causalPair = input.sourceAdapterId === DELTA_CAUSAL_INNER_PROFILE.current_source.source_adapter_id
+    && input.sourceProfileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id;
+  const retainedInnerStudies = pooled.length > 0 && pooled.every(candidate => candidate.facts !== undefined
+    && candidate.facts.study_id !== null && candidate.facts.fold_scope.fold_id !== null
+    && folds.some(fold => fold.foldId === candidate.facts!.fold_scope.fold_id
+      && fold.causalSelection?.scope === "OUTER_FOLD_SELECTION"
+      && fold.causalSelection.study_id === candidate.facts!.study_id));
+  const reevaluationScope = causalPair && perFoldStudies && nativeScope === "FOLD" && retainedInnerStudies
+    ? "PER_FOLD_STUDY" as const : nativeScope;
 
   // K: the retained pool, published only when it is the whole pool and QuantBT's rule agrees.
   let topIsK: SearchPool["top_is_k"];
@@ -195,7 +215,13 @@ export function searchPool(input: {
     && reevaluated.state === "AVAILABLE"
     && sourceIds.size === pooled.length
     && [...sourceIds].every((id) => eligible.some((trial) => trial.trialId === id));
-  if (!facts) {
+  if (perFoldStudies) {
+    // Each outer study freezes its own inner-validation pool. ceil(total N
+    // * fraction) is not the engine's per-study rule, nor is summed K one K.
+    topIsK = absent("NOT_PUBLISHED", POOL_REASONS.perFoldStudies);
+    rule = { state: "NOT_PUBLISHED", reason_code: POOL_REASONS.perFoldStudies,
+      expression: null, n: null, top_is_fraction: fraction, configured_top_is_k: configured, k: null };
+  } else if (!facts) {
     topIsK = absent("NOT_PUBLISHED", POOL_REASONS.sealPredatesFacts);
     rule = { state: "NOT_PUBLISHED", reason_code: POOL_REASONS.sealPredatesFacts, ...ruleBase };
   } else if (!isolated) {
@@ -212,7 +238,14 @@ export function searchPool(input: {
     rule = { state: "AVAILABLE", reason_code: null, ...ruleBase };
   }
 
-  const selected = input.selectedTrialId !== null ? count(1, "RETAINED_SELECTION") : absent("NOT_PUBLISHED", POOL_REASONS.noSelection);
+  const selected = perFoldStudies ? folds.length > 0
+    && new Set(folds.map(fold => fold.foldId)).size === folds.length
+    && new Set(folds.map(fold => fold.causalSelection?.study_id)).size === folds.length
+    && folds.every((fold) => fold.causalSelection?.scope === "OUTER_FOLD_SELECTION"
+      && fold.causalSelection.study_id.length > 0 && fold.causalSelection.selected_trial_id.length > 0
+      && Object.keys(fold.causalSelection.parameters).length > 0)
+    ? count(folds.length, "RETAINED_SELECTION") : absent("NOT_PUBLISHED", POOL_REASONS.noSelection)
+    : input.selectedTrialId !== null ? count(1, "RETAINED_SELECTION") : absent("NOT_PUBLISHED", POOL_REASONS.noSelection);
 
   const scores = [...folds].sort((a, b) => a.sourceOrdinal - b.sourceOrdinal);
   const perFoldDecay: SearchPool["per_fold_decay"] = scores.length > 0 && scores.every((fold) => fold.facts?.oos_score)

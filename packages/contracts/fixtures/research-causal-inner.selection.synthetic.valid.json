@@ -1,0 +1,35 @@
+{
+  "fixture_authority": "SYNTHETIC_CONTRACT_FIXTURE_NOT_ENGINE_EVIDENCE",
+  "selection": {
+    "schema_version": "research.current-source-causal-selection.v1",
+    "scope": "OUTER_FOLD_SELECTION",
+    "study_id": "fold_0",
+    "fold_seed": 42,
+    "selected_trial_id": "fold_0.trial_1",
+    "parameters": { "window": "34", "rvol": "0.5" },
+    "objective": "0.25",
+    "objective_kind": "INNER_VALIDATION_DECAY_J",
+    "candidate_is_metric": "0.8",
+    "candidate_oos_metric": "0.6",
+    "candidate_decay": "0.2",
+    "candidate_metrics_scope": "OUTER_FOLD_POST_SELECTION",
+    "candidate_is_scope": "INNER_VALIDATION_IS_MEAN",
+    "candidate_oos_scope": "OUTER_FOLD_OOS",
+    "candidate_decay_scope": "INNER_IS_MEAN_MINUS_OUTER_OOS",
+    "candidate_count": 1,
+    "study_trial_rows": 3,
+    "outer_oos_used_for_selection": false,
+    "causality_claim": "strict_nested_fold_local_retraining",
+    "inner_fold_count": 2,
+    "inner_validation": {
+      "inner_split_frequency": "weekly",
+      "inner_window_mode": "rolling",
+      "inner_train_window": "14D",
+      "inner_min_folds": 2
+    },
+    "inner_folds": [
+      { "inner_fold_id": "inner_0", "train_start_utc_ms": 1777593600000, "train_end_utc_ms": 1778803199999, "test_start_utc_ms": 1778803200000, "test_end_utc_ms": 1779407999999, "outer_oos_used_for_selection": false },
+      { "inner_fold_id": "inner_1", "train_start_utc_ms": 1778198400000, "train_end_utc_ms": 1779407999999, "test_start_utc_ms": 1779408000000, "test_end_utc_ms": 1780012799999, "outer_oos_used_for_selection": false }
+    ]
+  }
+}

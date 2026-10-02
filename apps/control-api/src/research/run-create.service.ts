@@ -19,6 +19,7 @@ import {
 import { ResearchRunCreateError } from "./run-create.error";
 import { ResearchRunAdmissionService } from "./run-admission.service";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_WORK_SCHEMA_VERSION } from "./delta-wfo-v2.profile";
+import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_WORK_SCHEMA_VERSION } from "./delta-causal-inner.profile";
 import {
   DELTA_WFO_PROFILE_ID,
   DELTA_WFO_RESOURCE_CLASS,
@@ -120,7 +121,8 @@ export class ResearchRunCreateService {
     const jobId = stableId("rjob", commandDigest);
     const commandId = stableId("rcmd", commandDigest);
     const profile = accepted.profile!;
-    const wfo = profile.id === DELTA_WFO_PROFILE_ID || profile.id === DELTA_WFO_V2_PROFILE_ID;
+    const causal = profile.id === DELTA_CAUSAL_INNER_PROFILE_ID;
+    const wfo = profile.id === DELTA_WFO_PROFILE_ID || profile.id === DELTA_WFO_V2_PROFILE_ID || causal;
     const imported = profile.id === IMPORTED_ALPHA_PROFILE_ID;
     // Lineage is Portal-owned and already persisted above the compute port.
     // A clone is a fresh execution for the worker, not a new private engine
@@ -156,7 +158,7 @@ export class ResearchRunCreateService {
       })
       : wfo
       ? digest({
-        schema_version: profile.id === DELTA_WFO_V2_PROFILE_ID ? DELTA_WFO_V2_WORK_SCHEMA_VERSION : DELTA_WFO_WORK_SCHEMA_VERSION,
+        schema_version: causal ? DELTA_CAUSAL_INNER_WORK_SCHEMA_VERSION : profile.id === DELTA_WFO_V2_PROFILE_ID ? DELTA_WFO_V2_WORK_SCHEMA_VERSION : DELTA_WFO_WORK_SCHEMA_VERSION,
         requested_spec_digest: manifest.requestedSpecDigest,
         effective_spec_digest: manifest.effectiveSpecDigest,
         dataset_binding_digest: manifest.datasetBindingDigest,
@@ -295,7 +297,7 @@ export class ResearchRunCreateService {
           ? IMPORTED_ALPHA_RESOURCE_PROFILE
           : wfo
             // Research preview only: the long WFO declares its own child CPU cap.
-            ? (deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_RESOURCE_PROFILE : DELTA_WFO_RESOURCE_PROFILE)
+            ? (deltaWfoPreviewLongEnabled(this.config) && !causal ? DELTA_WFO_PREVIEW_LONG_RESOURCE_PROFILE : DELTA_WFO_RESOURCE_PROFILE)
             : P10_RESOURCE_PROFILE,
         // The wide confined profiles are compute, not viewer interactions.
         // P06's existing one-heavy-per-workspace admission must see them;

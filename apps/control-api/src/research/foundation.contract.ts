@@ -406,7 +406,10 @@ export interface ResearchPortalAdmission {
     seed_policy?: "LOCKED" | "FORBIDDEN";
     trial_default?: number;
     early_stopping_policy?: "FORBIDDEN";
-    inner_validation?: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY";
+    inner_validation?: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY" | "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";
+    trial_scope?: "PER_OUTER_FOLD_STUDY";
+    max_total_trials?: number;
+    inner_constraints?: { fold_bounds: { min: number; max: number }; frequencies: string[]; window_modes: string[]; train_window_pattern: string };
   }>;
   note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
 }

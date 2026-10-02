@@ -18,6 +18,7 @@ import {
 
 const WFO = "p10.delta-signal-notional-wfo.v1";
 const WFO_V2 = "p10.delta-signal-notional-wfo.v2";
+const WFO_CAUSAL = "p10.delta-signal-notional-causal-inner.v1";
 const P04 = "p04.fixed-qualification.v1";
 
 describe("D1 run display label", () => {
@@ -30,9 +31,10 @@ describe("D1 run display label", () => {
     expect(runDisplayLabel(WFO, 1204)).toBe("R-WFO-1204");
   });
 
-  it("labels the three shipped display profiles, never an unknown child", () => {
-    expect(Object.keys(RUN_DISPLAY_LABEL_KINDS).sort()).toEqual([P04, WFO, WFO_V2]);
+  it("labels the four admitted display profiles, never an unknown child", () => {
+    expect(Object.keys(RUN_DISPLAY_LABEL_KINDS).sort()).toEqual([P04, WFO_CAUSAL, WFO, WFO_V2]);
     expect(runDisplayLabel(WFO_V2, 7)).toBe("R-WFO-007");
+    expect(runDisplayLabel(WFO_CAUSAL, 8)).toBe("R-WFO-008");
     expect(runDisplayLabel("p16.delta-whatif-grid.v1", 3)).toBeNull();
     expect(runDisplayLabel(null, 3)).toBeNull();
     expect(runDisplayLabel(undefined, 3)).toBeNull();
@@ -70,8 +72,10 @@ describe("D1 run display label", () => {
     /* Same workspace and same stored profile — the partition. */
     expect(sql).toContain("peer_run.workspace_id = library.workspace_id");
     expect(sql).toContain("peer_producer.execution_profile_id = label_producer.execution_profile_id");
-    // v1/v2 share the WFO display kind and must not both print R-WFO-001.
-    expect(sql).toContain("peer_producer.execution_profile_id IN ('p10.delta-signal-notional-wfo.v1','p10.delta-signal-notional-wfo.v2')");
+    // v1/v2/causal share one WFO sequence; none resets at R-WFO-001.
+    const wfoProfiles = "('p10.delta-signal-notional-wfo.v1','p10.delta-signal-notional-wfo.v2','p10.delta-signal-notional-causal-inner.v1')";
+    expect(sql).toContain(`peer_producer.execution_profile_id IN ${wfoProfiles}`);
+    expect(sql).toContain(`label_producer.execution_profile_id IN ${wfoProfiles}`);
     /* Ordered by creation with the run id as the tiebreak, inclusive of this
        run, which is what makes the first run number 1 and keeps a run's
        number from moving when a later run is accepted. */

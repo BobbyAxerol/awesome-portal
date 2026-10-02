@@ -26,6 +26,7 @@ import {
 } from "./p04-delta.binding";
 import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_DIGEST, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
+import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
 import { boundWarning, positionPercent, type BoundWarning } from "./bound-warning";
 
 export interface DeclaredRange {
@@ -150,6 +151,11 @@ const WFO_V2: HistoricalProfileBinding = Object.freeze({
   profileDigest: DELTA_WFO_V2_PROFILE_DIGEST,
   installedInRelease: "research-loop-v1.1/B8",
 });
+const CAUSAL_INNER_V1: HistoricalProfileBinding = Object.freeze({
+  ...WFO_V1, profileId: DELTA_CAUSAL_INNER_PROFILE_ID, profileDigest: DELTA_CAUSAL_INNER_PROFILE_DIGEST,
+  installedInRelease: "research-loop-v1.1/B8-causal-inner",
+  retainedLaneProfileIds: Object.freeze([DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id]),
+});
 
 /**
  * The injectable lookup. Tests construct one with an older binding and a
@@ -162,7 +168,7 @@ export class ResearchParameterBindingRegistry {
 
   constructor(
     adapters: readonly HistoricalParameterBinding[] = [P04_V1],
-    profiles: readonly HistoricalProfileBinding[] = [WFO_V1, WFO_V2],
+    profiles: readonly HistoricalProfileBinding[] = [WFO_V1, WFO_V2, CAUSAL_INNER_V1],
   ) {
     this.adapters = new Map(adapters.map((entry) => [entry.adapterContractDigest, entry]));
     this.profiles = new Map(profiles.map((entry) => [entry.profileDigest, entry]));

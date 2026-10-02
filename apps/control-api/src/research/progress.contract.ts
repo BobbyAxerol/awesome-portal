@@ -12,6 +12,7 @@ import { z } from "zod";
 import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
 import { DELTA_WFO_V2_PROFILE_ID } from "./delta-wfo-v2.profile";
+import { DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
@@ -74,13 +75,18 @@ const UsageSchema = z.object({
  * there is no objective at all.
  */
 const FoldSelectionFactSchema = z.object({
-  scope: z.enum(["GLOBAL_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"]),
+  scope: z.enum(["GLOBAL_STUDY", "PER_FOLD_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"]),
   trial: PositiveIntegerSchema,
   objective: SignedDecimalSchema.nullable(),
   params_digest: DigestSchema,
+  source_trial_id: z.string().regex(/^(?:0|[1-9][0-9]*)$/).optional(),
+  study_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/).optional(),
 }).strict().superRefine((value, context) => {
-  if (value.scope !== "GLOBAL_STUDY" && value.objective !== null) {
+  if (value.scope !== "GLOBAL_STUDY" && value.scope !== "PER_FOLD_STUDY" && value.objective !== null) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "a fixed profile publishes no search objective" });
+  }
+  if (value.scope === "PER_FOLD_STUDY" && (value.source_trial_id === undefined || value.study_id === undefined)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "per-fold selection requires exact study and local source trial identity" });
   }
 });
 /** CG-P11-03: the structured cursor a finished run hands to Screen 04. */
@@ -99,17 +105,19 @@ const notPublishedFoldSelection = () => ({
 });
 const SnapshotFoldSelectionSchema = z.object({
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
-  scope: z.enum(["GLOBAL_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"]).nullable(),
+  scope: z.enum(["GLOBAL_STUDY", "PER_FOLD_STUDY", "FIXED_PROFILE", "IMPORTED_FIXED_PROFILE"]).nullable(),
   trial: PositiveIntegerSchema.nullable(),
   objective: SignedDecimalSchema.nullable(),
   params_digest: DigestSchema.nullable(),
   reason_code: z.literal("SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION").nullable(),
   source_trial_id: z.string().regex(/^(?:0|[1-9][0-9]*)$/).optional(),
-  objective_kind: z.literal("MODE_1_DECAY_J").optional(),
+  study_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/).optional(),
+  objective_kind: z.enum(["MODE_1_DECAY_J", "INNER_VALIDATION_DECAY_J"]).optional(),
 }).strict().superRefine((value, context) => {
   if (value.state === "AVAILABLE") {
     if (value.scope === null || value.trial === null || value.params_digest === null || value.reason_code !== null
-      || (value.scope !== "GLOBAL_STUDY" && value.objective !== null)) {
+      || (value.scope !== "GLOBAL_STUDY" && value.scope !== "PER_FOLD_STUDY" && value.objective !== null)
+      || (value.scope === "PER_FOLD_STUDY" && (value.source_trial_id === undefined || value.study_id === undefined))) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "available fold selection is inconsistent" });
     }
   } else if (value.scope !== null || value.trial !== null || value.objective !== null
@@ -117,9 +125,11 @@ const SnapshotFoldSelectionSchema = z.object({
     context.addIssue({ code: z.ZodIssueCode.custom, message: "not-published fold selection is inconsistent" });
   }
   if (value.source_trial_id !== undefined || value.objective_kind !== undefined) {
-    if (value.state !== "AVAILABLE" || value.scope !== "GLOBAL_STUDY"
-      || value.trial === null || value.source_trial_id !== String(value.trial - 1)
-      || value.objective_kind !== "MODE_1_DECAY_J") {
+    const global = value.scope === "GLOBAL_STUDY" && value.trial !== null
+      && value.source_trial_id === String(value.trial - 1) && value.objective_kind === "MODE_1_DECAY_J";
+    const causal = value.scope === "PER_FOLD_STUDY" && value.study_id !== undefined && value.source_trial_id !== undefined
+      && (value.objective_kind === undefined || value.objective_kind === "INNER_VALIDATION_DECAY_J");
+    if (value.state !== "AVAILABLE" || (!global && !causal)) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "WFO source trial id and selected objective kind are inconsistent" });
     }
   }
@@ -618,7 +628,9 @@ function validatePayload(
       // scores every fold at once names none (`study: "GLOBAL"`): pinning it
       // to fold 1 would draw a running fold the source never started.
       fold: PositiveIntegerSchema.optional(),
-      study: z.literal("GLOBAL").optional(),
+      study: z.enum(["GLOBAL", "PER_FOLD_STUDY"]).optional(),
+      source_trial_id: z.string().regex(/^(?:0|[1-9][0-9]*)$/).optional(),
+      study_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/).optional(),
       trial: PositiveIntegerSchema,
       state: z.enum(["COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"]).optional(),
       /** The trial's own objective; null for a pruned/failed trial. */
@@ -633,8 +645,12 @@ function validatePayload(
       tqdm_line: z.string().min(1).max(512).optional(),
       console: ConsoleObservationSchema.optional(),
     }).strict().superRefine((value, nestedContext) => {
-      if ((value.study === "GLOBAL") === (value.fold !== undefined)) {
+      if ((value.study !== undefined) === (value.fold !== undefined)) {
         nestedContext.addIssue({ code: z.ZodIssueCode.custom, message: "a trial names exactly one of fold or a global study" });
+      }
+      if ((value.source_trial_id !== undefined) !== (value.study_id !== undefined) ||
+          (value.study === "PER_FOLD_STUDY" && value.study_id === undefined)) {
+        nestedContext.addIssue({ code: z.ZodIssueCode.custom, message: "a causal trial requires its exact paired source study/trial identity" });
       }
     }),
     fold_completed: z.object({ fold: PositiveIntegerSchema, selection: FoldSelectionFactSchema.optional() }).strict(),
@@ -967,6 +983,9 @@ export function toPublicResearchProgressSnapshot(
         ...fold.selection,
         display_trial_ordinal: fold.selection.trial,
         trial_numbering: "P11_ORDINAL_1_BASED" as const,
+        ...(executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID && fold.selection.state === "AVAILABLE"
+          && fold.selection.scope === "PER_FOLD_STUDY" && fold.selection.study_id !== undefined
+          && fold.selection.source_trial_id !== undefined ? { objective_kind: "INNER_VALIDATION_DECAY_J" as const } : {}),
         ...((executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID)
           && fold.selection.state === "AVAILABLE"
           && fold.selection.scope === "GLOBAL_STUDY"

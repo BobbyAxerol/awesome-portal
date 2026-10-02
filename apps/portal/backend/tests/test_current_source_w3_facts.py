@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from wfo_test_support import assert_summary_budgets
 
 from golden_fixture import build_market_frame
 from portal_api.adapters.market_data import DatasetDescriptor, PreparedMarketData
@@ -239,7 +240,7 @@ def test_claims_and_guards_are_quantbts_own_metadata(wfo) -> None:
     assert facts["search"]["trial_ledger_mode"] == "compact"
     data_use = exported.receipt.summary["data_use"]
     assert {value["state"] for value in data_use.values()} == {"AVAILABLE"}
-    assert len(json.dumps(exported.receipt.summary).encode()) <= 65_536
+    assert_summary_budgets(exported.receipt.summary)
 
 
 def test_retained_rows_expose_only_declared_fact_blocks(wfo) -> None:

@@ -33,6 +33,7 @@ import {
 } from "./p04-delta.binding";
 import { ResearchMetadataRepository } from "./repository";
 import { DELTA_WFO_V2_PROFILE, DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
+import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
 import { parseDecimal } from "./whatif.grid";
 import { WHATIF_PROFILE } from "./whatif.profile";
 import { ResearchRunCreateError } from "./run-create.error";
@@ -248,7 +249,9 @@ export class ResearchRunAdmissionService {
         entrypoint: eligibility.entrypoint,
       },
       profile: wfo
-        ? requestedSpec.schema_version === "research.requested-spec.v2"
+        ? requestedSpec.optimization_schedule === "per_fold_causal"
+          ? { id: DELTA_CAUSAL_INNER_PROFILE_ID, digest: DELTA_CAUSAL_INNER_PROFILE_DIGEST }
+          : requestedSpec.schema_version === "research.requested-spec.v2"
           ? { id: DELTA_WFO_V2_PROFILE_ID, digest: DELTA_WFO_V2_PROFILE_DIGEST }
           : { id: DELTA_WFO_PROFILE_ID, digest: DELTA_WFO_PROFILE_DIGEST }
         : { id: P04_FIXED_QUALIFICATION_PROFILE_ID, digest: null },
@@ -362,6 +365,7 @@ export class ResearchRunAdmissionService {
   ): string | null {
     const profile = DELTA_WFO_PROFILE;
     const temporal = requested.schema_version === "research.requested-spec.v2";
+    const causal = temporal && requested.optimization_schedule === DELTA_CAUSAL_INNER_PROFILE.optimization_schedule;
     const engine = manifest.effectiveSpec.engine;
     if (!engine || typeof engine !== "object" || Array.isArray(engine) ||
         (engine as Record<string, unknown>).execution_route !== requested.execution_route ||
@@ -377,7 +381,8 @@ export class ResearchRunAdmissionService {
     if (requested.protocol !== profile.protocol || !requested.walk_forward || requested.windows) {
       return "The Delta walk-forward profile accepts only the advanced walk-forward protocol.";
     }
-    if (requested.optimization_mode !== profile.optimization_mode || requested.optimization_schedule !== profile.optimization_schedule) {
+    if (requested.optimization_mode !== profile.optimization_mode ||
+        (!causal && requested.optimization_schedule !== profile.optimization_schedule)) {
       return "The Delta walk-forward profile executes only mode_1_decay with the global schedule.";
     }
     if (requested.route_params && Object.keys(requested.route_params).length !== 0) {
@@ -391,7 +396,8 @@ export class ResearchRunAdmissionService {
         (requested.optimization_config && Object.keys(requested.optimization_config).length !== 0)) {
       return pinReason ?? "The Delta walk-forward profile searches only the installed Delta parameter space and accepts no overrides.";
     }
-    if (deltaWfoPreviewLongEnabled(this.config)) {
+    // Preview's 400-trial GLOBAL exception must not become 400 per fold.
+    if (deltaWfoPreviewLongEnabled(this.config) && !causal) {
       // Research preview only: a long study, bounded; the seed stays locked.
       const trials = requested.optuna_trials;
       if (!Number.isSafeInteger(trials) || trials < DELTA_WFO_PREVIEW_LONG_LIMITS.min_trials ||
@@ -411,8 +417,11 @@ export class ResearchRunAdmissionService {
       return "The Delta walk-forward profile accepts only the 1h timeframe.";
     }
     const walkForward = requested.walk_forward;
-    if (temporal && walkForward.inner !== undefined) {
+    if (temporal && !causal && walkForward.inner !== undefined) {
       return "Inner causal selection requires a retained per-fold selection profile; the installed v2 executor is global only.";
+    }
+    if (causal && !causalInnerTopologyMatches(walkForward, manifest.topology)) {
+      return "The causal inner profile requires a matching engine-built inner plan with 2 to 16 folds inside every outer IS window.";
     }
     if (temporal && (!(DELTA_WFO_V2_PROFILE.frequencies as readonly string[]).includes(walkForward.frequency)
         || !(DELTA_WFO_V2_PROFILE.window_modes as readonly string[]).includes(walkForward.window_mode))) {
@@ -532,6 +541,29 @@ function siblingPinReason(overrides: ResearchRequestedSpec["parameter_space_over
     }
   }
   return null;
+}
+
+/** Bind declared inner controls to the actual P08 engine-built plan. */
+function causalInnerTopologyMatches(walkForward: NonNullable<ResearchRequestedSpec["walk_forward"]>, topology: Record<string, unknown>): boolean {
+  const inner = walkForward.inner, bounds = DELTA_CAUSAL_INNER_PROFILE.inner_constraints;
+  if (!inner || !bounds.frequencies.some(value => value === inner.split_frequency) ||
+      !bounds.window_modes.some(value => value === inner.window_mode) ||
+      !new RegExp(bounds.train_window_pattern).test(inner.train_window)) return false;
+  const minimum = inner.min_folds ?? bounds.fold_bounds.min;
+  if (minimum < bounds.fold_bounds.min || minimum > bounds.fold_bounds.max ||
+      topology.plan_source !== "quantbt.walkforward.WalkForwardEngine.build_folds") return false;
+  const plan = topology.inner_validation;
+  if (!plan || typeof plan !== "object" || Array.isArray(plan)) return false;
+  const actual = plan as Record<string, unknown>;
+  if (actual.split_frequency !== inner.split_frequency || actual.window_mode !== inner.window_mode ||
+      actual.train_window !== inner.train_window || actual.min_folds !== minimum) return false;
+  const folds = topology.folds;
+  return Array.isArray(folds) && folds.length >= DELTA_CAUSAL_INNER_PROFILE.fold_bounds.min &&
+    folds.length <= DELTA_CAUSAL_INNER_PROFILE.fold_bounds.max && folds.every(fold => {
+      if (!fold || typeof fold !== "object" || Array.isArray(fold)) return false;
+      const count = (fold as Record<string, unknown>).inner_fold_count;
+      return typeof count === "number" && Number.isSafeInteger(count) && count >= minimum && count <= bounds.fold_bounds.max;
+    });
 }
 
 /** Fold count of the immutable P08 advanced topology; null for any other shape. */

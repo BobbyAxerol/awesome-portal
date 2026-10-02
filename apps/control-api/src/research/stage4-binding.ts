@@ -45,6 +45,7 @@ export const STAGE4_REASONS = {
   bindingNotRegistered: "P16_HISTORICAL_PARAMETER_BINDING_NOT_REGISTERED",
   p14ReceiptNotPublished: "P16_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED",
   sealedSideMissing: "STAGE4_SEALED_SIDE_NOT_PUBLISHED",
+  foldSelectionMissing: "CAUSAL_FOLD_SELECTED_PARAMETERS_NOT_RETAINED",
 } as const;
 
 const Reason = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
@@ -82,6 +83,8 @@ export const Stage4BindingSchema = z.object({
   reason_code: Reason.nullable(),
   /** sha256 of the sealed θ* canonical map — the P11 fold `params_digest` (the θ* digest S07 T10 copies). */
   sealed_params_sha256: Digest.nullable(),
+  /** Optional on causal receipts; the singleton SHA above is not every fold's theta. */
+  selection_scope: z.enum(["GLOBAL", "PER_FOLD"]).optional(),
   rows: z.array(Stage4RowSchema).length(4),
   pairs: z.object({
     params: z.enum(["MATCH", "MISMATCH", "NOT_PUBLISHED"]),
@@ -154,15 +157,17 @@ function foldRow(
   sourceKey: string,
   folds: FoldValue[],
   sealed: string | null,
+  sealedByFold?: ReadonlyMap<string, string | null>,
 ): Row {
   if (folds.length === 0) {
     return row(key, { value: null, identity_rule: rule, source_key: sourceKey, folds, state: "NOT_PUBLISHED", reason_code: STAGE4_REASONS.noFold });
   }
-  const compared = folds.map((fold): FoldValue => (fold.value === null
-    ? fold
-    : sealed === null
-      ? { ...fold, state: "NOT_PUBLISHED", reason_code: STAGE4_REASONS.sealedSideMissing }
-      : { ...fold, state: fold.value === sealed ? "MATCH" : "MISMATCH", reason_code: null }));
+  const compared = folds.map((fold): FoldValue => {
+    const expected = sealedByFold ? sealedByFold.get(fold.fold_id) ?? null : sealed;
+    return fold.value === null ? fold : expected === null
+      ? { ...fold, state: "NOT_PUBLISHED", reason_code: sealedByFold ? STAGE4_REASONS.foldSelectionMissing : STAGE4_REASONS.sealedSideMissing }
+      : { ...fold, state: fold.value === expected ? "MATCH" : "MISMATCH", reason_code: null };
+  });
   const values = new Set(compared.map((fold) => fold.value));
   const common = values.size === 1 ? [...values][0] ?? null : null;
   const mismatch = compared.some((fold) => fold.state === "MISMATCH");
@@ -179,6 +184,8 @@ function foldRow(
 
 export interface ChildAuditFold {
   foldId: string;
+  /** Null is a missing causal selection; omitted preserves historical global semantics. */
+  selectedParameters?: Readonly<Record<string, string>> | null;
   records: ReadonlyArray<{
     audit_ordinal: number;
     candidate_id: string | null;
@@ -197,14 +204,25 @@ export function retainedStage4Binding(
   folds: readonly ChildAuditFold[],
   candidateParameterKinds?: import("./parameter-binding.registry").HistoricalProfileBinding["candidateParameterKinds"],
 ): Stage4Binding {
+  const perFold = folds.some(fold => fold.selectedParameters !== undefined);
+  const frozenByFold = perFold ? new Map(folds.map(fold => [fold.foldId,
+    fold.selectedParameters ? quantbtCandidateId(fold.selectedParameters, candidateParameterKinds) : null])) : undefined;
   const frozen = quantbtCandidateId(theta, candidateParameterKinds);
+  const selectedCandidates = perFold ? folds.map(fold => ({
+    fold_id: fold.foldId, value: frozenByFold!.get(fold.foldId) ?? null, audit_ordinal: null,
+    state: frozenByFold!.get(fold.foldId) ? "MATCH" as const : "NOT_PUBLISHED" as const,
+    reason_code: frozenByFold!.get(fold.foldId) ? null : STAGE4_REASONS.foldSelectionMissing,
+  })) : [];
+  const expectedValues = new Set(selectedCandidates.map(fold => fold.value));
+  const expectedCommon = expectedValues.size === 1 ? [...expectedValues][0] ?? null : null;
+  const expectedMissing = selectedCandidates.find(fold => fold.state === "NOT_PUBLISHED");
   const sealedParams = row("SEALED_PARAMS", {
-    value: frozen,
+    value: perFold ? expectedCommon : frozen,
     identity_rule: QUANTBT_CANDIDATE_IDENTITY_RULE,
-    source_key: "rs02.seal.selection.parameters",
-    folds: [],
-    state: frozen === null ? "NOT_PUBLISHED" : "MATCH",
-    reason_code: frozen === null ? STAGE4_REASONS.identityNotComputable : null,
+    source_key: perFold ? "rs02.fold.causal_selection.parameters" : "rs02.seal.selection.parameters",
+    folds: selectedCandidates,
+    state: perFold ? expectedMissing ? "NOT_PUBLISHED" : "MATCH" : frozen === null ? "NOT_PUBLISHED" : "MATCH",
+    reason_code: perFold ? expectedMissing?.reason_code ?? null : frozen === null ? STAGE4_REASONS.identityNotComputable : null,
   });
 
   const generation = folds.map((fold) => {
@@ -229,12 +247,17 @@ export function retainedStage4Binding(
       };
     }),
     frozen,
+    frozenByFold,
   );
 
   // Sealed bundle: the fingerprint QuantBT recorded on the frozen candidate's
   // selection-stage children (search and scoring), across every fold.
-  const selectionStage = folds.flatMap((fold) => (fold.records ?? []).filter((record) =>
-    record.context !== GENERATION && frozen !== null && record.candidate_id === frozen));
+  const selectionByFold = folds.map((fold) => {
+    const expected = perFold ? frozenByFold!.get(fold.foldId) ?? null : frozen;
+    return { fold, records: (fold.records ?? []).filter(record => record.context !== GENERATION && expected !== null && record.candidate_id === expected) };
+  });
+  const selectionStage = selectionByFold.flatMap(value => value.records);
+  const missingSelectionFold = perFold && selectionByFold.some(value => value.records.length === 0);
   const selectionFingerprints = new Set(selectionStage.map((record) => record.strategy_fingerprint ?? null));
   const anyRetained = folds.some((fold) => fold.records !== undefined);
   const sealedFingerprint = selectionFingerprints.size === 1 ? [...selectionFingerprints][0] ?? null : null;
@@ -245,10 +268,12 @@ export function retainedStage4Binding(
     folds: [],
     state: selectionFingerprints.size > 1
       ? "MISMATCH"
+      : missingSelectionFold ? "NOT_PUBLISHED"
       : sealedFingerprint !== null && FINGERPRINT.test(sealedFingerprint) ? "MATCH" : "NOT_PUBLISHED",
     reason_code: selectionFingerprints.size > 1
       ? null
       : !anyRetained ? STAGE4_REASONS.childAuditNotRetained
+        : missingSelectionFold ? STAGE4_REASONS.noSelectionStageRecord
         : frozen === null ? STAGE4_REASONS.identityNotComputable
           : selectionStage.length === 0 ? STAGE4_REASONS.noSelectionStageRecord
             : sealedFingerprint === null || !FINGERPRINT.test(sealedFingerprint) ? STAGE4_REASONS.fingerprintNotPublished : null,
@@ -277,6 +302,7 @@ export function retainedStage4Binding(
     lane: "RS02_RETAINED_CHILD_AUDIT",
     ...verdict(params, bundle, [sealedParams.reason_code, replayParams.reason_code, sealedBundle.reason_code, runtimeBundle.reason_code]),
     sealed_params_sha256: sealedParamsSha256,
+    ...(perFold ? {selection_scope:"PER_FOLD" as const} : {}),
     rows: [settle(sealedParams, params), replayParams, settle(sealedBundle, bundle), runtimeBundle],
     pairs: { params, bundle },
   };
