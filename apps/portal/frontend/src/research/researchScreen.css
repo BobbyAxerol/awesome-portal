@@ -142,3 +142,57 @@
     transition: none;
   }
 }
+
+/*
+ * Phone width (QA 2026-10-02): no Research Loop screen may widen the page at 390 / 360 px.
+ * Everything below sits inside one max-width media query, so the 1440 px layout is untouched.
+ * Long codes wrap; fixed-width cards, stat rows, fold notes and the parameter table either
+ * shrink/wrap or scroll inside their own box. Measured by e2e (scrollWidth == viewport).
+ */
+@media (max-width: 720px) {
+  .research-screen {
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+  .research-screen [data-card-group],
+  .research-screen .jm-card {
+    min-width: 0;
+    max-width: none;
+  }
+  .research-screen [data-card-group] {
+    flex-basis: 100%;
+  }
+  .research-screen [data-phase] {
+    flex-direction: column;
+  }
+  .research-screen [data-phase] > :first-child {
+    width: auto;
+  }
+  .research-screen [data-stats] {
+    max-width: 100%;
+  }
+  .research-screen [data-fold-note] {
+    width: auto !important;
+    flex: 0 1 auto !important;
+    min-width: 0;
+    text-align: left !important;
+  }
+  .research-screen .ln-diff[data-gates="true"] {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .research-screen .flex-none.flex-wrap {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .research-screen .whitespace-nowrap {
+    white-space: normal;
+  }
+  .research-screen [data-parameters] {
+    position: relative;
+    overflow-x: auto;
+  }
+  .research-screen [data-parameters] > * {
+    min-width: max-content;
+  }
+}
