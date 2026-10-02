@@ -17,6 +17,7 @@ import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contr
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { WhatIfSchema } from "./whatif.contract";
 import { FoldOrderingSchema } from "./fold-ordering";
+import { P11StageEventsSchema } from "./p11-stage-events";
 import { DeclaredSpaceSchema, SearchSurfaceSchema } from "./current-source-surface";
 import { CandidateDrawdownSchema, SearchPoolSchema } from "./current-source-pool";
 import { ParameterAuthoritySchema, Stage4BindingSchema } from "./stage4-binding";
@@ -874,6 +875,8 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
    * rule that sized it, re-evaluated, selected) and θ*'s per-fold decay.
    */
   pool: SearchPoolSchema,
+  /** Source-bound P11 orchestration times; not engine pool-freeze/search/OOS-read times. */
+  stage_events: P11StageEventsSchema.optional(),
 }).strict();
 
 export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({

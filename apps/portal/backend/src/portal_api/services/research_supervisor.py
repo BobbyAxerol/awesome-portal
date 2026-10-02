@@ -168,6 +168,10 @@ class ResearchChildResult:
     evidence_source: dict[str, Any] | None = None
     # Independently rehashed by the E17 child and checked by the supervisor.
     imported_source_digest: str | None = None
+    # Tiny source metadata is outside the P13 core. The path is private,
+    # supervisor-derived, and never serialized into a public run receipt.
+    fixed_replay_source: dict[str, Any] | None = None
+    fixed_replay_path: Path | None = None
 
 
 # W1 §1.1 child_limits (cpu 120 s, wall 240 s) plus the design's scratch and
@@ -590,6 +594,7 @@ class IsolatedResearchSupervisor:
         evidence_source = payload.get("evidence_source")
         if evidence_source is not None:
             self._validate_evidence_source(evidence_source)
+        fixed_replay_source, fixed_replay_path = self._validated_fixed_replay(payload, receipt)
         return ResearchChildResult(
             launcher_pid=launch.launcher_pid,
             child_pid=launch.child_pid,
@@ -603,6 +608,8 @@ class IsolatedResearchSupervisor:
             cpu_seconds=launch.cpu_seconds,
             enforced_limits=launch.enforced_limits,
             evidence_source=evidence_source if isinstance(evidence_source, dict) else None,
+            fixed_replay_source=fixed_replay_source,
+            fixed_replay_path=fixed_replay_path,
         )
 
     def run_imported_alpha_qualification(
@@ -648,6 +655,7 @@ class IsolatedResearchSupervisor:
                 evidence_source,
                 expected_adapter_id=IMPORTED_ALPHA_ADAPTER_ID,
             )
+        fixed_replay_source, fixed_replay_path = self._validated_fixed_replay(payload, receipt)
         return ResearchChildResult(
             launcher_pid=launch.launcher_pid,
             child_pid=launch.child_pid,
@@ -662,7 +670,35 @@ class IsolatedResearchSupervisor:
             enforced_limits=launch.enforced_limits,
             evidence_source=evidence_source if isinstance(evidence_source, dict) else None,
             imported_source_digest=source_digest,
+            fixed_replay_source=fixed_replay_source,
+            fixed_replay_path=fixed_replay_path,
         )
+
+    def _validated_fixed_replay(
+        self, payload: dict[str, Any], receipt: ResearchChildReceipt | ImportedAlphaChildReceipt,
+    ) -> tuple[dict[str, Any] | None, Path | None]:
+        from portal_api.services.research_fixed_replay import FILE_NAME, validate_source_metadata, verify_fixed_replay_file
+
+        source = payload.get("fixed_replay_source")
+        if source is None:
+            if receipt.source_windows is not None:
+                raise ResearchSupervisorError("fresh fixed child omitted its replay source availability")
+            return None, None
+        try:
+            validate_source_metadata(source)
+            oos = (receipt.source_windows or {}).get("oos", {})
+            if source["oos_start_utc_ms"] != receipt.oos_start_utc_ms or source["oos_start_utc_ms"] != oos.get("start_ms") \
+                    or source["oos_end_exclusive_utc_ms"] != oos.get("end_ms"):
+                raise ValueError("fixed replay source bounds disagree with admitted OOS")
+            path = self._scratch_root / receipt.job_id / receipt.worker_attempt_id / FILE_NAME
+            if source["state"] == "NOT_PUBLISHED":
+                if path.exists() or path.is_symlink():
+                    raise ValueError("fixed replay absent source unexpectedly has a file")
+                return source, None
+            verify_fixed_replay_file(path, source)
+            return source, path
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise ResearchSupervisorError("fixed replay child source failed exact byte/row custody validation") from exc
 
     def run_delta_wfo(
         self,

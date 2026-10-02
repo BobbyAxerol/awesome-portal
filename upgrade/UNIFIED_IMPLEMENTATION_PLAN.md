@@ -7125,3 +7125,30 @@ fixed-child/RC/terminal receipts and actual VN/source/profile gates remain in
 the same approved groups. [Receipt and explicit Claude field handoff](./research_loop/evidence/P13/B8_B9_SIX_GROUP_REPAIR_2026-10-02.md).
 Owned test :8096 down, sessions 0 ACTIVE; volumes/backup retained. No FE edits,
 remote push, dev/main or production change.
+
+#### Six-group continuation — fresh source custody and named BFFs, 2026-10-02
+
+Continues the same six approved groups, after `8bd781ed`; no new phase or
+waiver. Fresh fixed/imported IS capture is optional and separately scoped.
+087 retains full available child lifecycle rows; 088 binds fixed OOS market/
+account Parquet and named observation replay to the exact fresh P05 byte seal.
+Native QuantBT DEFAULT positions are preserved with a separate authenticated
+market symbol. Orchestration clocks are not engine freeze/OOS-read clocks.
+AVAILABLE/null guards and actual CANCELLED Library mapping are repaired;
+retention cancellation now fences/joins custody threads before scratch cleanup.
+
+Final owned :8096 API proof: fixed 168 IS + 168 OOS / five replay pages; WFO
+336 OOS + two folds / 12 available audit rows / three pages. Full-OOS statistics
+match an independent replay-row oracle within 1e-12. RC actual local seal,
+identical retry, locked actions and post-seal PATCH 409; existing terminal
+Split/console; 13 metadata cases and 11 companion negatives PASS. These are
+diagnostic functional proofs, not signed/clean full P23 acceptance.
+
+[Exact images, run IDs, hashes, tests, cleanup and Claude generated-client
+handoff](./research_loop/evidence/P13/B8_FRESH_SOURCE_CUSTODY_2026-10-02.md).
+No FE edit, remote push, shared :8095 or production mutation. Preserve Claude's
+new commits when landing on `docs/research-loop-plan`. G-20/G-21 shared-preview
+amendments/exact-pair/browser acceptance, genuine source-profile qualification
+and previous P23/P24 gates stay open. Engine source omissions remain typed;
+rolling remains excluded by D-AN-01. Owned :8096 stopped without deleting
+volumes; zero active jobs/sessions, owner anchor and 21 disabled users preserved.

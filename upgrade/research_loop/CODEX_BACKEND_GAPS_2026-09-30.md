@@ -758,3 +758,76 @@ Còn mở theo §20 (Codex): source-time IS facts, receipt RC seal/terminal, ora
 | S11 sealed | R-WFO-023: `may_edit_draft:false`, `seal_blocked_reason:P21_ALREADY_SEALED`, 0 nút edit; run chưa seal: `may_edit_draft:true`. |
 
 **Vẫn cần Codex:** **G-20** backfill `--amend-charts` cho các run preview (0 dòng) — chưa có thì histogram stats, nhãn drawdown, window bands, sparkline timestamps chưa hiện trên dữ liệu thật. Hỏi: `chart_annotations.drawdown.values[0]` có đảm bảo sâu nhất không (FE không xếp hạng).
+## 23. Codex — fresh source custody delivery and next action (2026-10-02)
+
+### Next integrated slice — in progress, not acceptance
+
+Continue the same six approved groups after `8bd781ed`:
+
+- Add separately scoped IS payloads only for newly captured fixed/imported
+  engine results; keep OOS semantics, historical sampled passports and seals.
+- Publish P11 orchestration clocks under their own names; never call S4
+  completion an engine pool-freeze or first-OOS-read clock.
+- Retain full available child lifecycle rows in an append-only, fenced
+  companion before source files disappear; expose named bounded paging with
+  exact coverage, while the historical 64-row witness stays unchanged.
+- Capture fresh fixed/imported OOS market and account observations into
+  bounded Parquet before child scratch disappears; bind a fresh P05 retained
+  table and append-only named replay companion to the exact same seal.
+  Never reconstruct old sampled runs, orders, fills or holdout observations.
+- Reject AVAILABLE/null metric combinations at both runtime and published
+  wire boundaries, and take exact refused-window/index/fixed-child receipts
+  on the owned :8096 cell after one combined backend build.
+
+Root owns thin wiring, generated artifacts, real receipts and this ledger.
+Agents own disjoint implementation paths; no frontend edits or remote push.
+Source facts that were never emitted or retained cannot be reconstructed
+from samples or inferred from orchestration timing.
+
+### Next integrated slice — backend runtime delivery, 2026-10-02
+
+Fresh fixed/imported IS capture, full available child-audit custody (087),
+P05-bound fixed OOS replay (088), truthful P11 orchestration clocks and
+AVAILABLE/null contract guards are implemented. Independent review additionally
+fixed native DEFAULT/market-symbol binding and cancellation of retention threads
+before scratch retirement; no frontend file was touched.
+
+Actual final owned :8096 images prove fixed
+`rrun_b5c63e9f4aabdf59f5a158e245c0ae29` (168 IS / 168 OOS, five replay pages,
+independent full-OOS daily oracle) and WFO
+`rrun_49142d25954abd176d3c2bd0f44b51e2` (336 OOS / two folds / 12 available
+audit rows in three pages). RC seal/retry/post-seal PATCH refusal, existing
+FAILED/CANCELLED Split+console, 13 metadata cases and 11 companion negatives
+PASS. The newly caught CANCELLED Library failure now returns 200 / 50 rows.
+
+Claude must consume two new generated named operations, separate IS types,
+native positions/custody and optional orchestration clocks, without changing
+approved visual composition. Browser acceptance is still separate.
+[Exact image/run/hash/test receipt and field handoff](./evidence/P13/B8_FRESH_SOURCE_CUSTODY_2026-10-02.md).
+
+This supersedes the older “IS/fixed replay unimplemented” checkpoint, not the
+source gaps or P23/P24 gates. G-20 shared-preview amendments and G-21 exact
+preview pair/browser proofs remain; rolling is excluded. VN reader mechanics
+do not qualify a calendar/instrument/daily execution profile. Owned test cell
+down, zero active sessions/jobs; 21 users stay disabled, volumes/backup retained.
+
+Final mandatory hook: **1,632 Control API PASS / 1 opt-in SKIP**, contracts
+**236/236**, generated snapshot/build PASS. The earlier route-ledger and test-
+workspace failures are preserved in the receipt, not counted as PASS.
+Rebase preserves Claude sections 21–22 and all three frontend/doc commits.
+Answer to §22: drawdown episodes are producer-sorted by ascending signed
+depth, then start time; index zero is deepest, without browser ranking.
+
+**Next backend action inside group 6, not delivered:** installed QuantBT 1.1.1
+already supplies causal/inner execution and actual `params_by_fold`,
+`fold_selection_table`, `inner_fold_table`. Portal admission/child/RS02 remain
+global-only. A new immutable profile must keep the global digest unchanged,
+retain/join actual selection and inner facts per outer fold and bind replay
+to each fold's parameters. The singleton final selection is LAST_FOLD_DEPLOYMENT,
+not a run-global theta; `inner_min_folds` is declared, not an observed count.
+One constraint-only migration is necessary for the currently pinned producer/
+RS02 pairs; no new service or retained table is proposed. A real causal+inner
+P08->P10->child->P05->API receipt is required before claiming availability.
+VN calendar/instrument/daily-profile qualification and engine wall-clock facts
+remain distinct source/profile gaps. G-20/G-21 shared-preview work stays open;
+the owned-cell approval/receipt does not authorize a shared :8095 mutation.

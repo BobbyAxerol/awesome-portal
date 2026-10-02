@@ -11,6 +11,12 @@ export const TEST_TABLES = [
   // listing it keeps test cleanup bounded and makes a new relation visible to
   // the shared harness rather than relying on an incidental CASCADE path.
   "research.audit_log",
+  "research.child_audit_companion_seals_v1",
+  "research.fixed_replay_companion_seals_v1",
+  "research.fixed_replay_companion_rows_v1",
+  "research.fixed_replay_companion_batches_v1",
+  "research.child_audit_companion_rows_v1",
+  "research.child_audit_companion_batches_v1",
   "research.enriched_chart_amendments_v1",
   "research.enriched_analysis_v1",
   // AN-29/P05 retained rows have no FK to runs. A reused test cell must not

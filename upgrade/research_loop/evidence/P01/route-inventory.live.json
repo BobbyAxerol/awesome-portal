@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 249,
+  "route_count": 255,
   "routes": [
     {
       "method": "DELETE",
@@ -681,6 +681,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/current-source/child-audit-companion",
+      "owner": "apps/control-api/src/research/child-audit-companion.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/quantbt/runs/:runId/current-source/evidence",
       "owner": "apps/control-api/src/research/current-source.controller.ts"
     },
@@ -743,6 +748,11 @@
       "method": "GET",
       "path": "/api/v1/quantbt/runs/:runId/release-candidate",
       "owner": "apps/control-api/src/research/release-candidate.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/replay/observations",
+      "owner": "apps/control-api/src/research/fixed-replay-companion.controller.ts"
     },
     {
       "method": "GET",
@@ -1216,12 +1226,32 @@
     },
     {
       "method": "POST",
+      "path": "/internal/research/progress/artifacts/child-audit/batches",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/artifacts/child-audit/seal",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
+    },
+    {
+      "method": "POST",
       "path": "/internal/research/progress/artifacts/current-source/batches",
       "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
     },
     {
       "method": "POST",
       "path": "/internal/research/progress/artifacts/current-source/seal",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/artifacts/fixed-replay/batches",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/artifacts/fixed-replay/seal",
       "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
     },
     {

@@ -66,7 +66,9 @@ def test_w1_retention_order_and_exact_wire(wfo_source: Path, tmp_path: Path) -> 
         result = _retain(api, wfo_source, tmp_path)
     operations = api.operations()
     batch_count = operations.count("current-source/batches")
-    assert operations == ["reserve", "seal", *(["current-source/batches"] * batch_count), "current-source/seal"]
+    audit_batches = operations.count("child-audit/batches")
+    assert operations == ["reserve", "seal", *(["current-source/batches"] * batch_count), "current-source/seal",
+                          *(["child-audit/batches"] * audit_batches), "child-audit/seal"]
     assert batch_count == result.batch_count >= 5
     assert all(headers.get("x-portal-principal") for _, _, headers in api.requests)
 

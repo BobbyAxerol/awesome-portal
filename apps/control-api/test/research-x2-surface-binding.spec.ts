@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
 import { mockSearchRepository } from "./research-search-inputs.fixture";
+import { p11StageEvents } from "../src/research/p11-stage-events";
 
 import { positionPercent } from "../src/research/bound-warning";
 import {
@@ -88,7 +89,7 @@ function serviceFor(fixture: Fixture, rows: Partial<Record<Kind, CurrentSourceSt
   const repository = {
     sealForRead: vi.fn().mockResolvedValue(seal),
     runState: vi.fn(),
-    poolFrozenAt: vi.fn().mockResolvedValue(1_790_269_230_000),
+    stageEventClocks: vi.fn().mockResolvedValue(p11StageEvents("a".repeat(64), { s4_completed_utc_ms: 1_790_269_230_000 })),
     admittedRequestedSpec: vi.fn().mockResolvedValue(null),
     rows: vi.fn(async (_s: unknown, _r: string, _v: number, kind: Kind, selection: { limit: number }) => {
       const all = sorted(kind);

@@ -112,11 +112,11 @@ function degraded(
 }
 
 function input(
-  key: PackItem["key"], n: number, item: string, value: string | null, note: string,
+  key: PackItem["key"], n: number, item: string, value: string | null, note: string, href: string,
 ): PackItem {
   return {
     key, n, item, status: "INPUT", digest: value === null ? null : digestOf(value),
-    source: { label: "Researcher declaration", href: null }, note,
+    source: { label: "Researcher declaration", href }, note,
     availability: value === null ? absent("P21_RESEARCHER_DECLARATION_REQUIRED") : AVAILABLE,
   };
 }
@@ -471,13 +471,14 @@ export class ResearchReleaseCandidateService {
   }
 
   private packItems(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, values: ReturnType<ResearchReleaseCandidateService["values"]>): PackItem[] {
-    // Every href names a screen this build serves (W5c). The Alpha 360°
-    // passport is outside it, so that row carries no link rather than a dead one.
-    const alphaHref = null;
+    // Use the served version-bound lineage screen, not an uninstalled Alpha 360° route.
+    const alphaHref = source.alpha.alphaId && source.alpha.alphaVersionId
+      ? `/research/quantbt/alphas/${encodeURIComponent(source.alpha.alphaId)}/lineage?av=${encodeURIComponent(source.alpha.alphaVersionId)}`
+      : null;
     const runHref = `/research/quantbt/runs/${source.runId}`;
     const alphaPassport = values.alphaReady
-      ? complete("ALPHA_VERSION_PASSPORT", 1, "Alpha Version passport", { label: "Alpha 360°", href: alphaHref }, values.alphaCodeDigest, "Exact Alpha version identity is retained.")
-      : missing("ALPHA_VERSION_PASSPORT", 1, "Alpha Version passport", { label: "Alpha 360°", href: alphaHref }, "P21_ALPHA_PASSPORT_INCOMPLETE", "The run has no complete immutable Alpha version passport.");
+      ? complete("ALPHA_VERSION_PASSPORT", 1, "Alpha Version passport", { label: "Alpha version lineage", href: alphaHref }, values.alphaCodeDigest, "Exact Alpha version identity is retained.")
+      : missing("ALPHA_VERSION_PASSPORT", 1, "Alpha Version passport", { label: "Alpha version lineage", href: alphaHref }, "P21_ALPHA_PASSPORT_INCOMPLETE", "The run has no complete immutable Alpha version passport.");
     const engine = values.adapterContractDigest;
     const engineItem = engine && source.engineReleaseId
       ? complete("ENGINE_CAPABILITY_BACKEND", 2, "Engine/capability/backend", { label: "Engine Atlas", href: "/research/quantbt/atlas" }, engine, "Pinned adapter contract and engine release are retained.")
@@ -519,11 +520,11 @@ export class ResearchReleaseCandidateService {
     const robustness = source.evidence.revision
       ? degraded("ROBUSTNESS_PARAM_STABILITY_REGIME", 9, "Robustness/param stability/regime", { label: "Compare", href: source.alpha.alphaId ? `/research/quantbt/alphas/${encodeURIComponent(source.alpha.alphaId)}/compare` : null }, source.evidence.projectionDigest, "Current source publishes bounded evidence but not a complete stability/regime certificate; the degraded state travels unchanged.")
       : missing("ROBUSTNESS_PARAM_STABILITY_REGIME", 9, "Robustness/param stability/regime", { label: "Compare", href: source.alpha.alphaId ? `/research/quantbt/alphas/${encodeURIComponent(source.alpha.alphaId)}/compare` : null }, "P21_EVIDENCE_REVISION_NOT_PUBLISHED", "No retained evidence revision exists to support even a degraded declaration.");
-    const limitations = input("KNOWN_LIMITATIONS_WAIVERS", 10, "Known limitations & waivers", draft.knownLimitations, "Researcher-signed declaration; it cannot hide a missing mandatory item.");
+    const limitations = input("KNOWN_LIMITATIONS_WAIVERS", 10, "Known limitations & waivers", draft.knownLimitations, "Researcher-signed declaration; it cannot hide a missing mandatory item.", `${runHref}/release-candidate`);
     const reproducibility = values.manifest && values.sourceTransform && source.report.frozenCoreDigest
       ? complete("REPRODUCIBILITY_PARITY_CHECKSUMS", 11, "Reproducibility/parity checksums", { label: "Freeze & integrity", href: `${runHref}/freeze` }, source.report.frozenCoreDigest, "Retained manifest, transform and sealed Report checksum are all explicitly pinned.")
       : missing("REPRODUCIBILITY_PARITY_CHECKSUMS", 11, "Reproducibility/parity checksums", { label: "Freeze & integrity", href: `${runHref}/freeze` }, "P21_REPRODUCIBILITY_CHECKSUMS_INCOMPLETE", "A required retained checksum is absent or mismatched.");
-    const restrictions = input("PROPOSED_USE_RESTRICTIONS", 12, "Proposed use restrictions", draft.proposedUseRestrictions, "Researcher-signed declaration; downstream approval policy belongs to P22.");
+    const restrictions = input("PROPOSED_USE_RESTRICTIONS", 12, "Proposed use restrictions", draft.proposedUseRestrictions, "Researcher-signed declaration; downstream approval policy belongs to P22.", `${runHref}/release-candidate`);
     return [alphaPassport, engineItem, data, methodology, selection, audit, metrics, execution, robustness, limitations, reproducibility, restrictions];
   }
 

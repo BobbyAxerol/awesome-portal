@@ -37,6 +37,40 @@ const RegimeAbsence = z.object({
   source_locator: z.string().min(1).max(256), input_digest: Digest,
 }).strict();
 const Curve = z.array(z.object({ at_utc_ms: Ms, value: Decimal }).strict()).max(64);
+/** Source-time IS only. The legacy v2 Fact intentionally remains OOS-only. */
+const ISFact = z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
+  reason_code: Reason.nullable(), value: Decimal.nullable(), origin: z.enum(["ENGINE_DIRECT", "PORTAL_DERIVED"]),
+  scope: z.literal("IS"), source_locator: z.string().min(1).max(256), input_digest: Digest,
+}).strict().superRefine((fact, ctx) => {
+  if ((fact.state === "AVAILABLE") !== (fact.value !== null)
+    || (fact.state === "AVAILABLE") === (fact.reason_code !== null)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "IS fact availability contradicts value/reason" });
+  }
+});
+const ISPayload = z.object({ state: z.literal("AVAILABLE"), reason_code: z.null(), basis: z.literal("ALL_TIME"),
+  scope: z.object({ window: z.literal("IS"), coverage: z.literal("FULL_SOURCE_IS"),
+    start_ms: Ms, end_ms: Ms, source_locator: z.string().min(1).max(256),
+    bounds_semantics: z.literal("START_INCLUSIVE_END_EXCLUSIVE"), first_at_utc_ms: Ms, last_at_utc_ms: Ms,
+    observation_count: Count.min(2), source_table: z.literal("OBSERVATION_IS"), locator: z.string().min(1).max(256),
+  }).strict(),
+  facts: z.object({ metrics: z.object({ sharpe: ISFact, return_fraction: ISFact, max_drawdown_fraction: ISFact }).strict() }).strict(),
+  return_basis: z.object({ definition_id: z.literal("FIRST_LAST_DECLARED_IS_EQUITY_V1"),
+    start_equity: Decimal, end_equity: Decimal, first_at_utc_ms: Ms, last_at_utc_ms: Ms,
+    source_locator: z.string().min(1).max(256),
+  }).strict(),
+  benchmark: Head.extend({ definition_id: z.literal("DECLARED_IS_SOURCE_CLOSE_REBASED_100_V1"),
+    source_locator: z.string().min(1).max(256), input_digest: Digest,
+  }).strict(),
+  curves: z.object({ sampling: z.object({ source_observation_count: Count.min(2), emitted_point_count: Count.min(2).max(24),
+    method: z.literal("EXTREMA_BUCKET_V1") }).strict(), strategy_rebased_100: Curve,
+    benchmark_rebased_100: Curve, drawdown_fraction: Curve }).strict(),
+  return_distribution: Derived.extend({ sampling: z.literal("UTC_DAY"), observation_count: Count,
+    bucket_basis: z.literal("ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"), statistics_policy: DistributionPolicy,
+    mean: ISFact, median: ISFact, var_95: ISFact, cvar_95: ISFact,
+    buckets: z.array(z.object({ lower_inclusive: Decimal, upper: Decimal,
+      upper_inclusive: z.enum(["true", "false"]), count: Count }).strict()).max(12),
+  }).strict(),
+}).strict();
 const Coverage = z.enum(["FULL_RETAINED_OOS", "SAMPLED_RETAINED_EQUITY"]);
 const v2 = ResearchRetainedAnalyticsV2Schema._def.schema.shape;
 export const ResearchAnalyticsAllTimeSchema = Head.extend({
@@ -58,6 +92,7 @@ export const ResearchEnrichedAnalysisSchema = z.object({
     benchmark_locator: z.string().min(1).max(256), coverage: Coverage, source_observation_count: Count.min(2),
   }).strict(),
   windows: z.object({ is: WindowHead, oos: WindowHead, holdout: WindowHead }).strict(),
+  by_window: z.object({ is: ISPayload }).strict().optional(),
   facts: z.object({ metrics: v2.metrics, behaviour: v2.behaviour }).strict(),
   curves: z.object({ sampling: z.object({ source_observation_count: Count, emitted_point_count: Count.max(64), method: z.literal("EXTREMA_BUCKET_V1") }).strict(),
     strategy_rebased_100: Curve, benchmark_rebased_100: Curve, drawdown_fraction: Curve }).strict(),
@@ -109,8 +144,53 @@ export const ResearchEnrichedAnalysisSchema = z.object({
     block.monthly_returns, block.return_distribution, block.drawdown_episodes, block.library_summary]) {
     if ((head.state === "AVAILABLE") !== (head.reason_code === null)) bad("enriched state/reason mismatch");
   }
-  // This version carries only OOS payloads: window metadata cannot claim otherwise.
-  if (block.windows.is.state === "AVAILABLE" || block.windows.holdout.state === "AVAILABLE") bad("unsupported window payload");
+  // Metadata alone cannot enable IS; no version of this supplement evaluates holdout.
+  const is = block.by_window?.is;
+  if ((block.windows.is.state === "AVAILABLE") !== Boolean(is)
+    || block.windows.holdout.state === "AVAILABLE") bad("unsupported or missing window payload");
+  if (is) {
+    const s = is.scope, bound = block.windows.is, table = block.source_tables.find(row => row.name === s.source_table);
+    const rb = is.return_basis, c = is.curves, hist = is.return_distribution;
+    if (block.lane !== "FIXED" || scope.coverage !== "FULL_RETAINED_OOS"
+      || !table || table.row_count !== s.observation_count || s.start_ms >= s.end_ms
+      || s.first_at_utc_ms >= s.last_at_utc_ms || s.first_at_utc_ms < s.start_ms || s.last_at_utc_ms >= s.end_ms
+      || s.end_ms > scope.first_at_utc_ms || bound.start_ms !== s.start_ms || bound.end_ms !== s.end_ms
+      || bound.source_locator !== s.source_locator || bound.bounds_semantics !== s.bounds_semantics
+      || block.windows.oos.start_ms !== undefined && block.windows.oos.start_ms !== s.end_ms
+      || c.sampling.source_observation_count !== s.observation_count
+      || c.sampling.emitted_point_count !== c.strategy_rebased_100.length
+      || c.sampling.emitted_point_count > s.observation_count) bad("IS source/window/count binding mismatch");
+    if (rb.first_at_utc_ms !== s.first_at_utc_ms || rb.last_at_utc_ms !== s.last_at_utc_ms || rb.source_locator !== s.locator
+      || !Number.isFinite(Number(rb.start_equity)) || !Number.isFinite(Number(rb.end_equity))
+      || Number(rb.start_equity) <= 0 || Number(rb.end_equity) <= 0
+      || is.facts.metrics.return_fraction.state !== "AVAILABLE"
+      || is.facts.metrics.max_drawdown_fraction.state !== "AVAILABLE"
+      || Number(is.facts.metrics.max_drawdown_fraction.value) > 0) bad("IS return/drawdown basis mismatch");
+    const isStatistics = [hist.mean, hist.median, hist.var_95, hist.cvar_95];
+    for (const fact of [...Object.values(is.facts.metrics), ...isStatistics]) {
+      if (fact.input_digest !== block.input_digest) bad("IS fact digest mismatch");
+    }
+    if (is.facts.metrics.sharpe.origin !== "ENGINE_DIRECT" || is.facts.metrics.max_drawdown_fraction.origin !== "ENGINE_DIRECT"
+      || is.facts.metrics.return_fraction.origin !== "PORTAL_DERIVED" || isStatistics.some(f => f.origin !== "PORTAL_DERIVED"
+        || f.state === "AVAILABLE" && hist.observation_count < 2)) bad("IS fact origin/population mismatch");
+    for (const head of [is.benchmark, hist]) {
+      if ((head.state === "AVAILABLE") !== (head.reason_code === null)) bad("IS state/reason mismatch");
+    }
+    if (is.benchmark.input_digest !== block.input_digest
+      || (is.benchmark.state === "AVAILABLE") !== (c.benchmark_rebased_100.length >= 2)) bad("IS benchmark availability/binding mismatch");
+    for (const curve of [c.strategy_rebased_100, c.benchmark_rebased_100, c.drawdown_fraction]) {
+      if (curve.length > 24 || curve.length > s.observation_count
+        || curve.some((p, i) => p.at_utc_ms < s.first_at_utc_ms || p.at_utc_ms > s.last_at_utc_ms
+          || i > 0 && p.at_utc_ms <= curve[i - 1]!.at_utc_ms)
+        || curve.length && (curve[0]!.at_utc_ms !== s.first_at_utc_ms || curve.at(-1)!.at_utc_ms !== s.last_at_utc_ms)) bad("IS curve chronology/endpoints mismatch");
+    }
+    if (c.drawdown_fraction.length < 2 || Number(c.strategy_rebased_100[0]?.value) !== 100
+      || c.benchmark_rebased_100.length && Number(c.benchmark_rebased_100[0]!.value) !== 100
+      || c.drawdown_fraction.some(p => Number(p.value) > 0)) bad("IS curve normalization mismatch");
+    if (hist.state === "AVAILABLE" && (hist.buckets.length !== 12
+      || hist.buckets.reduce((sum, row) => sum + row.count, 0) !== hist.observation_count)
+      || hist.state !== "AVAILABLE" && hist.buckets.length) bad("IS histogram population mismatch");
+  } else if (block.source_tables.some(row => row.name === "OBSERVATION_IS")) bad("IS source table without source-time payload");
   for (const [kind, window] of Object.entries(block.windows)) {
     const bounds = [window.start_ms, window.end_ms, window.source_locator, window.bounds_semantics];
     if (bounds.some(value => value !== undefined)) {

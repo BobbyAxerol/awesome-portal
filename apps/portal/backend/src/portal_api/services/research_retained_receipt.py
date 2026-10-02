@@ -31,6 +31,12 @@ from portal_api.services.research_artifacts import (
     _sequence_transport_value,
 )
 from portal_api.services.research_progress_relay import _service_principal
+from portal_api.services.research_fixed_replay import (
+    REPLAY_SCHEMA, iter_parquet_rows, rows_to_batch, validate_source_metadata, verify_fixed_replay_file,
+)
+from portal_api.services.research_fixed_replay_retention import (
+    TABLE_SCHEMA_VERSION, fixed_replay_market_symbol, fixed_replay_profile, retain_fixed_replay_companion,
+)
 
 
 class ResearchRetainedReceiptError(RuntimeError):
@@ -73,8 +79,25 @@ class ResearchRetainedReceiptClient:
         receipt: dict[str, Any],
         artifact_root: Path,
         fence_validator: Callable[[ArtifactFence], bool],
+        fixed_replay_path: Path | None = None,
     ) -> str:
         research = request.research
+        replay_source = receipt.get("fixed_replay_source")
+        replay_available = False
+        if replay_source is not None:
+            try:
+                validate_source_metadata(replay_source)
+                fixed_replay_profile(research)
+                fixed_replay_market_symbol(research)
+                replay_available = replay_source["state"] == "AVAILABLE"
+                if fixed_replay_path is not None:
+                    if not replay_available:
+                        raise ValueError("fixed replay absent source unexpectedly supplied a file")
+                    verify_fixed_replay_file(fixed_replay_path, replay_source)
+            except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+                raise ResearchRetainedReceiptError("fixed replay source failed byte/row custody validation") from exc
+        elif fixed_replay_path is not None:
+            raise ResearchRetainedReceiptError("fixed replay source file has no bound metadata")
         identity_fields = {
             "workspace_id": request.workspace_id,
             "run_id": request.run_id,
@@ -114,23 +137,33 @@ class ResearchRetainedReceiptClient:
             dataset_binding_digest=research.dataset_binding_digest,
         )
         store = ResearchArtifactStore(artifact_root / "research-retained")
-        registry = ArtifactSchemaRegistry([
+        definitions = [
             ArtifactTableSchema(
                 table_kind="run_receipt",
                 schema_version="research.run-receipt.v1",
                 arrow_schema=_RECEIPT_SCHEMA,
                 id_column="run_id",
             )
-        ])
+        ]
+        if replay_available:
+            definitions.append(ArtifactTableSchema(
+                table_kind="fixed_replay", schema_version=TABLE_SCHEMA_VERSION,
+                arrow_schema=REPLAY_SCHEMA, sequence_column="source_ordinal", id_column="source_ordinal",
+            ))
+        registry = ArtifactSchemaRegistry(definitions)
         encoded = json.dumps(canonicalize(receipt), sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
         if len(encoded) > 256 * 1024:
             raise ResearchRetainedReceiptError("P05 run receipt exceeds small-document bound")
+        if replay_source is not None and len(encoded) > 196_608:
+            raise ResearchRetainedReceiptError("fixed replay exact receipt proof exceeds private wire bound")
         receipt_digest = hashlib.sha256(encoded).hexdigest()
         # A timeout after byte seal but before Control API ACK must reuse the
         # original immutable candidate. Rewriting it would change completed_at
         # and turn an at-least-once callback into a false digest conflict.
         final_dir = store.artifacts_dir / identity.artifact_id
         if not final_dir.exists():
+            if replay_available and fixed_replay_path is None:
+                raise ResearchRetainedReceiptError("fresh fixed replay retention requires verified source bytes")
             writer = store.begin_write(
                 identity=identity,
                 fence=fence,
@@ -144,11 +177,19 @@ class ResearchRetainedReceiptClient:
                     pa.array([receipt_digest], type=pa.string()),
                 ], schema=_RECEIPT_SCHEMA))
                 writer.write_small_document("run_receipt", canonicalize(receipt))
+                if replay_available:
+                    assert fixed_replay_path is not None
+                    for rows in iter_parquet_rows(fixed_replay_path):
+                        writer.append_batch("fixed_replay", rows_to_batch(rows))
+                    # Recheck the exact raw file after streaming; its byte SHA
+                    # is not the writer's rewritten Parquet part SHA.
+                    verify_fixed_replay_file(fixed_replay_path, replay_source)
                 writer.seal()
             except BaseException:
                 writer.abort()
                 raise
         manifest, digest = store._load_and_verify_manifest(identity.artifact_id, verify_parts=True)
+        tables = {table.get("table_kind"): table for table in manifest.get("tables", [])}
         if (
             manifest.get("artifact_revision") != revision
             or manifest.get("workspace_id") != request.workspace_id
@@ -158,9 +199,11 @@ class ResearchRetainedReceiptClient:
             or manifest.get("input", {}).get("request_spec_digest") != research.requested_spec_digest
             or manifest.get("input", {}).get("effective_spec_digest") != research.effective_spec_digest
             or manifest.get("input", {}).get("dataset_binding_digest") != research.dataset_binding_digest
-            or len(manifest.get("tables", [])) != 1
-            or manifest["tables"][0].get("table_kind") != "run_receipt"
-            or manifest["tables"][0].get("rows") != 1
+            or len(manifest.get("tables", [])) != (2 if replay_available else 1)
+            or set(tables) != ({"run_receipt", "fixed_replay"} if replay_available else {"run_receipt"})
+            or tables.get("run_receipt", {}).get("rows") != 1
+            or (replay_available and (tables["fixed_replay"].get("schema_version") != TABLE_SCHEMA_VERSION
+                or tables["fixed_replay"].get("rows") != replay_source["row_count"]))
             or next((doc.get("sha256") for doc in manifest.get("documents", []) if doc.get("name") == "run_receipt"), None) != receipt_digest
         ):
             raise ResearchRetainedReceiptError("P05 existing sealed candidate does not match this exact attempt receipt")
@@ -178,6 +221,8 @@ class ResearchRetainedReceiptClient:
             }
             for table in manifest["tables"] for part in table["parts"]
         ]
+        if not fence_validator(fence):
+            raise ResearchRetainedReceiptError("FENCE_REJECTED: P05 seal lease is stale")
         result = self._post("seal", {
             **identity_fields,
             "manifest_digest": digest,
@@ -199,6 +244,15 @@ class ResearchRetainedReceiptClient:
         })
         if result.get("schema_version") != "research.artifact-seal.v1" or result.get("sealed") is not True:
             raise ResearchRetainedReceiptError("P05 seal acknowledgement is incompatible")
+        if replay_source is not None:
+            try:
+                retain_fixed_replay_companion(
+                    request=request, source=replay_source, artifact_root=final_dir, artifact_manifest=manifest,
+                    artifact_manifest_digest=digest, identity_fields=identity_fields, artifact_revision=revision,
+                    fence=fence, fence_validator=fence_validator, post=self._post,
+                )
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                raise ResearchRetainedReceiptError("fixed replay private companion retention failed closed") from exc
         return digest
 
     def _post(self, operation: str, body: dict[str, Any]) -> dict[str, Any]:

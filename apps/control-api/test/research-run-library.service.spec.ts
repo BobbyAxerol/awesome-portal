@@ -169,6 +169,27 @@ const QUERY = {
 };
 
 describe("RF-05 P12 Run Library service mapping", () => {
+  it("B8: cancelled actual child progress stays readable without AVAILABLE/null placeholders", () => {
+    // Cancellation belongs to durable lifecycle; the retained child snapshot
+    // is the last genuine RUNNING observation, not an invented CANCELLED hook.
+    const progress = { ...snapshot("rrun_unit"), status: "RUNNING" };
+    const item = new ResearchRunLibraryService({} as never, config).mapRow(row({
+      effective_status: "CANCELLED", job_state: "CANCELLED", progress_snapshot: progress,
+    }));
+    expect(item.status).toBe("CANCELLED");
+    expect(item.stats.map((metric) => metric.value)).toEqual(["100%", "4 / 4", "8 s"]);
+    expect(item.stats.every((metric) => metric.availability.state === "AVAILABLE")).toBe(true);
+    expect(item.last_30d).toMatchObject({ data: null, availability: {
+      state: "NOT_PUBLISHED", reason_code: "RUN_NOT_COMPLETED",
+    } });
+  });
+
+  it.each(["QUEUED", "DRAFT", "RECOVERY_REQUIRED"])("B8: %s source custody is not availability of absent metrics", (status) => {
+    const item = new ResearchRunLibraryService({} as never, config).mapRow(row({ effective_status: status }));
+    expect(item.stats.every((metric) => metric.value === null && metric.availability.state === "NOT_PUBLISHED")).toBe(true);
+    expect(item.stats[0].availability.reason_code).toBe("P12_STATUS_METRICS_NOT_PUBLISHED");
+  });
+
   it("publishes distinct enrichment absence for unsealed and retained runs", () => {
     const service = new ResearchRunLibraryService({} as never, config);
     const absent = row({evidence_revision:null,evidence_projection:null});

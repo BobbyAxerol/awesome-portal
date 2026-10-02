@@ -160,6 +160,12 @@ class FakeControlApi:
             return {"schema_version": "research.current-source-batch-ack.v1", "accepted": True}
         if operation == "current-source/seal":
             return {"schema_version": "research.current-source-seal-ack.v1", "sealed": True}
+        if operation == "child-audit/batches":
+            return {"schema_version": "research.child-audit-companion-batch-receipt.v1", "accepted": True,
+                    "batch_ordinal": body["batch_ordinal"], "row_count": len(body["rows"]), "replayed": False}
+        if operation == "child-audit/seal":
+            return {"schema_version": "research.child-audit-companion-seal-receipt.v1", "sealed": True,
+                    "companion_digest": body["companion_digest"], "replayed": False}
         if operation == "what-if/seal":
             return {"schema_version": "research.whatif-grid-sealed.v1", "sealed": True, "replayed": False}
         return {"events": []}

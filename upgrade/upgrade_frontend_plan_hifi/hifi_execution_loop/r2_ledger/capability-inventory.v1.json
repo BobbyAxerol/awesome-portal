@@ -1646,6 +1646,36 @@
    "test_owner": "claude"
   },
   {
+   "route": "POST /internal/research/progress/artifacts/child-audit/batches",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "B8 full available source audit custody: exact worker principal/live lease, original P05 revision and digest, admitted profile, bounded 200-row/1,000,000-byte batches and append-only source-file identity; never browser authority.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/child-audit/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "B8 immutable audit finalization: same fenced artifact/profile source binding, exact full available file row count/hash/ordinals; original P05 seal and sampled witnesses remain unchanged.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/child-audit-companion",
+   "controller": "research/child-audit-companion.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "B8 named same-origin audit companion for S08, generated handoff: workspace/run/revision/filter-bound opaque cursor, <=200 rows, exact source-retained/dropped/filter counts. Legacy samples stay typed; frontend browser acceptance remains separate.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "POST /internal/research/progress/artifacts/what-if/seal",
    "controller": "research/progress-ingress.controller.ts",
    "interaction_class": "INTENTIONALLY_UNEXPOSED",
@@ -1982,6 +2012,36 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P22 strict same-origin CSRF-protected existing-R1 create request with immutable intent, exact source pin, idempotent retry and receipt reconciliation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/fixed-replay/batches",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER",
+   "unused_capability": false,
+   "evidence": "B8 fresh fixed OOS: bounded authenticated live-worker P05-manifest-bound immutable batches; never browser, shell or direct source access.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/fixed-replay/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER",
+   "unused_capability": false,
+   "evidence": "B8 fresh fixed OOS: exact P05/profile/OOS proof, complete contiguous source population, immutable seal and typed source absence.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/replay/observations",
+   "controller": "research/fixed-replay-companion.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "B8 named fixed-OOS market/account page: session/workspace, UTC/exact decimal, bounded cursor/exact ordinal, custody and legacy absence. Generated handoff; frontend/browser acceptance remains independent.",
    "owner": "codex",
    "test_owner": "codex"
   }

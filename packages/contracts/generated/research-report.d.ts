@@ -134,7 +134,7 @@ export interface components {
                 };
                 holdout: {
                     /** @enum {unknown} */
-                    state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                    state: "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
                     start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
                     end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
@@ -274,7 +274,10 @@ export interface components {
             };
             library_summary: components["schemas"]["EnrichedAnalysisLibrarySummary"];
             rolling: null;
-        };
+            by_window?: {
+                is: components["schemas"]["EnrichedAnalysisISPayload"];
+            };
+        } & unknown;
         EnrichedAnalysisMonthlyPoint: {
             month_start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
             return_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
@@ -385,6 +388,145 @@ export interface components {
                 start_equity: components["schemas"]["EnrichedAnalysisDecimal"];
                 end_equity: components["schemas"]["EnrichedAnalysisDecimal"];
                 source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            };
+        };
+        EnrichedAnalysisISFact: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+            value: components["schemas"]["EnrichedAnalysisDecimal"] | null;
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            /** @constant */
+            scope: "IS";
+            source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+        } & unknown;
+        EnrichedAnalysisISPayload: {
+            /** @constant */
+            state: "AVAILABLE";
+            reason_code: null;
+            /** @constant */
+            basis: "ALL_TIME";
+            scope: {
+                /** @constant */
+                window: "IS";
+                /** @constant */
+                coverage: "FULL_SOURCE_IS";
+                start_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                end_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+                /** @constant */
+                bounds_semantics: "START_INCLUSIVE_END_EXCLUSIVE";
+                first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                observation_count: number;
+                /** @constant */
+                source_table: "OBSERVATION_IS";
+                locator: components["schemas"]["EnrichedAnalysisLocator"];
+            };
+            facts: {
+                metrics: {
+                    sharpe: components["schemas"]["EnrichedAnalysisISFact"] & {
+                        /** @constant */
+                        origin?: "ENGINE_DIRECT";
+                    };
+                    return_fraction: components["schemas"]["EnrichedAnalysisISFact"] & {
+                        /** @constant */
+                        origin?: "PORTAL_DERIVED";
+                    };
+                    max_drawdown_fraction: components["schemas"]["EnrichedAnalysisISFact"] & {
+                        /** @constant */
+                        origin?: "ENGINE_DIRECT";
+                    };
+                };
+            };
+            return_basis: {
+                /** @constant */
+                definition_id: "FIRST_LAST_DECLARED_IS_EQUITY_V1";
+                start_equity: components["schemas"]["EnrichedAnalysisDecimal"];
+                end_equity: components["schemas"]["EnrichedAnalysisDecimal"];
+                first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            };
+            benchmark: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                /** @constant */
+                definition_id: "DECLARED_IS_SOURCE_CLOSE_REBASED_100_V1";
+                source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+                input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+            };
+            curves: {
+                sampling: {
+                    source_observation_count: number;
+                    emitted_point_count: number;
+                    /** @constant */
+                    method: "EXTREMA_BUCKET_V1";
+                };
+                strategy_rebased_100: {
+                    at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    value: components["schemas"]["EnrichedAnalysisDecimal"];
+                }[];
+                benchmark_rebased_100: {
+                    at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    value: components["schemas"]["EnrichedAnalysisDecimal"];
+                }[];
+                drawdown_fraction: {
+                    at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    value: components["schemas"]["EnrichedAnalysisDecimal"];
+                }[];
+            };
+            return_distribution: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                /** @constant */
+                origin: "PORTAL_DERIVED";
+                /** @constant */
+                sampling: "UTC_DAY";
+                observation_count: components["schemas"]["EnrichedAnalysisCount"];
+                /** @constant */
+                bucket_basis: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
+                statistics_policy: {
+                    /** @constant */
+                    quantile_method: "LINEAR_TYPE_7";
+                    /** @constant */
+                    probability: "0.95";
+                    /** @constant */
+                    risk_variable: "LOSS_FRACTION_NEGATIVE_RETURN";
+                    /** @constant */
+                    risk_sign: "SIGNED_LOSS_FRACTION";
+                    /** @constant */
+                    tail: "LOSS_GTE_VAR_INCLUSIVE";
+                    /** @constant */
+                    minimum_observations: 2;
+                };
+                mean: components["schemas"]["EnrichedAnalysisISFact"] & {
+                    /** @constant */
+                    origin?: "PORTAL_DERIVED";
+                };
+                median: components["schemas"]["EnrichedAnalysisISFact"] & {
+                    /** @constant */
+                    origin?: "PORTAL_DERIVED";
+                };
+                var_95: components["schemas"]["EnrichedAnalysisISFact"] & {
+                    /** @constant */
+                    origin?: "PORTAL_DERIVED";
+                };
+                cvar_95: components["schemas"]["EnrichedAnalysisISFact"] & {
+                    /** @constant */
+                    origin?: "PORTAL_DERIVED";
+                };
+                buckets: {
+                    lower_inclusive: components["schemas"]["EnrichedAnalysisDecimal"];
+                    upper: components["schemas"]["EnrichedAnalysisDecimal"];
+                    /** @enum {unknown} */
+                    upper_inclusive: "true" | "false";
+                    count: components["schemas"]["EnrichedAnalysisCount"];
+                }[];
             };
         };
         EnrichedAnalysisAvailability: {

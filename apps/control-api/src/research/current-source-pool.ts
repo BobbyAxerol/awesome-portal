@@ -30,6 +30,7 @@
  */
 
 import { z } from "zod";
+import { POOL_FREEZE_CLOCK_ABSENT } from "./p11-stage-events";
 
 import type { CurrentSourceFacts, CurrentSourceFoldFacts, CurrentSourceTrialFacts } from "./current-source.payload";
 import { RS02_ROW_PREDATES_FACTS, RS02_SEAL_PREDATES_SOURCE_FACTS, WALK_FORWARD_HAS_NO_CONSTRAINTS } from "./current-source-facts";
@@ -95,10 +96,10 @@ export const FoldDecaySchema = z.object({
 
 export const SearchPoolSchema = z.object({
   schema_version: z.literal(SEARCH_POOL_RULE),
-  /** Additive: source-clock S4 completion, never import or browser time. */
+  /** Legacy shape: P11 S4 completion is not an engine pool-freeze clock. */
   frozen_at_utc_ms: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable().optional(),
   frozen_at_source: z.literal("P11_STAGE_COMPLETED_S4_EVENT").nullable().optional(),
-  frozen_at_reason_code: z.literal("P11_S4_COMPLETION_EVENT_NOT_RETAINED").nullable().optional(),
+  frozen_at_reason_code: z.enum(["P11_S4_COMPLETION_EVENT_NOT_RETAINED", POOL_FREEZE_CLOCK_ABSENT]).nullable().optional(),
 
   trials_evaluated: PoolCountSchema,
   /** Completed, unpruned IS trials with an objective: what the pool is ranked from. */

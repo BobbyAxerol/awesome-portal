@@ -212,7 +212,7 @@ export interface components {
                 };
                 holdout: {
                     /** @enum {unknown} */
-                    state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                    state: "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
                     start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
                     end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
@@ -352,7 +352,10 @@ export interface components {
             };
             library_summary: components["schemas"]["EnrichedAnalysisLibrarySummary"];
             rolling: null;
-        };
+            by_window?: {
+                is: components["schemas"]["EnrichedAnalysisISPayload"];
+            };
+        } & unknown;
         EnrichedAnalysisMonthlyPoint: {
             month_start_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
             return_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
@@ -463,6 +466,145 @@ export interface components {
                 start_equity: components["schemas"]["EnrichedAnalysisDecimal"];
                 end_equity: components["schemas"]["EnrichedAnalysisDecimal"];
                 source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            };
+        };
+        EnrichedAnalysisISFact: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+            value: components["schemas"]["EnrichedAnalysisDecimal"] | null;
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            /** @constant */
+            scope: "IS";
+            source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+        } & unknown;
+        EnrichedAnalysisISPayload: {
+            /** @constant */
+            state: "AVAILABLE";
+            reason_code: null;
+            /** @constant */
+            basis: "ALL_TIME";
+            scope: {
+                /** @constant */
+                window: "IS";
+                /** @constant */
+                coverage: "FULL_SOURCE_IS";
+                start_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                end_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+                /** @constant */
+                bounds_semantics: "START_INCLUSIVE_END_EXCLUSIVE";
+                first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                observation_count: number;
+                /** @constant */
+                source_table: "OBSERVATION_IS";
+                locator: components["schemas"]["EnrichedAnalysisLocator"];
+            };
+            facts: {
+                metrics: {
+                    sharpe: components["schemas"]["EnrichedAnalysisISFact"] & {
+                        /** @constant */
+                        origin?: "ENGINE_DIRECT";
+                    };
+                    return_fraction: components["schemas"]["EnrichedAnalysisISFact"] & {
+                        /** @constant */
+                        origin?: "PORTAL_DERIVED";
+                    };
+                    max_drawdown_fraction: components["schemas"]["EnrichedAnalysisISFact"] & {
+                        /** @constant */
+                        origin?: "ENGINE_DIRECT";
+                    };
+                };
+            };
+            return_basis: {
+                /** @constant */
+                definition_id: "FIRST_LAST_DECLARED_IS_EQUITY_V1";
+                start_equity: components["schemas"]["EnrichedAnalysisDecimal"];
+                end_equity: components["schemas"]["EnrichedAnalysisDecimal"];
+                first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            };
+            benchmark: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                /** @constant */
+                definition_id: "DECLARED_IS_SOURCE_CLOSE_REBASED_100_V1";
+                source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+                input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+            };
+            curves: {
+                sampling: {
+                    source_observation_count: number;
+                    emitted_point_count: number;
+                    /** @constant */
+                    method: "EXTREMA_BUCKET_V1";
+                };
+                strategy_rebased_100: {
+                    at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    value: components["schemas"]["EnrichedAnalysisDecimal"];
+                }[];
+                benchmark_rebased_100: {
+                    at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    value: components["schemas"]["EnrichedAnalysisDecimal"];
+                }[];
+                drawdown_fraction: {
+                    at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    value: components["schemas"]["EnrichedAnalysisDecimal"];
+                }[];
+            };
+            return_distribution: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                /** @constant */
+                origin: "PORTAL_DERIVED";
+                /** @constant */
+                sampling: "UTC_DAY";
+                observation_count: components["schemas"]["EnrichedAnalysisCount"];
+                /** @constant */
+                bucket_basis: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1";
+                statistics_policy: {
+                    /** @constant */
+                    quantile_method: "LINEAR_TYPE_7";
+                    /** @constant */
+                    probability: "0.95";
+                    /** @constant */
+                    risk_variable: "LOSS_FRACTION_NEGATIVE_RETURN";
+                    /** @constant */
+                    risk_sign: "SIGNED_LOSS_FRACTION";
+                    /** @constant */
+                    tail: "LOSS_GTE_VAR_INCLUSIVE";
+                    /** @constant */
+                    minimum_observations: 2;
+                };
+                mean: components["schemas"]["EnrichedAnalysisISFact"] & {
+                    /** @constant */
+                    origin?: "PORTAL_DERIVED";
+                };
+                median: components["schemas"]["EnrichedAnalysisISFact"] & {
+                    /** @constant */
+                    origin?: "PORTAL_DERIVED";
+                };
+                var_95: components["schemas"]["EnrichedAnalysisISFact"] & {
+                    /** @constant */
+                    origin?: "PORTAL_DERIVED";
+                };
+                cvar_95: components["schemas"]["EnrichedAnalysisISFact"] & {
+                    /** @constant */
+                    origin?: "PORTAL_DERIVED";
+                };
+                buckets: {
+                    lower_inclusive: components["schemas"]["EnrichedAnalysisDecimal"];
+                    upper: components["schemas"]["EnrichedAnalysisDecimal"];
+                    /** @enum {unknown} */
+                    upper_inclusive: "true" | "false";
+                    count: components["schemas"]["EnrichedAnalysisCount"];
+                }[];
             };
         };
         EnrichedAnalysisAvailability: {
@@ -700,6 +842,25 @@ export interface components {
             at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
             value: components["schemas"]["RetainedAnalyticsV2Decimal"];
         }[];
+        /** @description P11 records Portal orchestration, not engine chronology: S3 completion can precede the actual study inside S4. No search-completed, pool-frozen, first-OOS-read or causal-order assertion is inferred. Missing fields carry individual reasons; legacy responses may omit this additive block. */
+        P11StageEvents: {
+            /** @constant */
+            schema_version: "research.p11-stage-event-clocks.v1";
+            /** @constant */
+            source: "P11_STAGE_EVENTS";
+            /** @constant */
+            semantics: "PORTAL_ORCHESTRATION_NOT_ENGINE_SEARCH_FREEZE_OR_OOS_READ";
+            /** @description Hash of exact retained artifact, producer attempt/lease, request/effective/data and historical execution profile bindings. Private attempt identifiers are not exposed. */
+            source_binding_digest: components["schemas"]["Digest"] | null;
+            s3_completed_utc_ms: components["schemas"]["UtcMs"] | null;
+            s4_started_utc_ms: components["schemas"]["UtcMs"] | null;
+            s4_completed_utc_ms: components["schemas"]["UtcMs"] | null;
+            reason_codes: {
+                s3_completed: string | null;
+                s4_started: string | null;
+                s4_completed: string | null;
+            };
+        } & (unknown & unknown & unknown);
         /** @description Durable run ended without retained execution split. Named terminal absence, not a pending source request or a planned/observed fold projection. Nothing here grants source access or a retry action. P04/imported fixed NOT_APPLICABLE stays unchanged. */
         SplitTerminalAbsence: {
             /** @constant */
@@ -1070,6 +1231,7 @@ export interface components {
             declared_space?: components["schemas"]["DeclaredSpace"];
             surface?: components["schemas"]["SearchSurface"];
             pool?: components["schemas"]["SearchPool"];
+            stage_events?: components["schemas"]["P11StageEvents"];
         };
         ArtifactByteMismatch: {
             /** @enum {unknown} */
@@ -1279,6 +1441,7 @@ export interface components {
                 oos_child_mismatch: number;
             };
             folds: components["schemas"]["FoldOrderingRow"][];
+            stage_events?: components["schemas"]["P11StageEvents"];
         };
         /** @description DR-02 research.bound-warning.v1: one relative definition shared by Search S06 and Freeze S07. Reference space is the declared range; AT_BOUND at <=6% or >=94%, NEAR_BOUND at <=18% or >=82% (inclusive, exact decimal); NOT_APPLICABLE with a typed reason for zero-width, categorical or out-of-declaration values. A display diagnostic, never a gate and never a claim that the value is not an optimum. */
         BoundWarning: {
@@ -1395,10 +1558,11 @@ export interface components {
         SearchPool: {
             /** @constant */
             schema_version: "research.current-source-search-pool.v1";
-            /** @description Source UTC milliseconds of the latest producer attempt P11 S4 completion, or null. */
+            /** @description Legacy field: new responses return null because P11 S4 completion is not engine pool freeze. Retained P11 times are published separately in Search.stage_events. */
             frozen_at_utc_ms?: number | null;
+            /** @description Legacy source tag accepted for historical captures only. New responses return null and never present S4 completion as pool freeze. */
             frozen_at_source?: "P11_STAGE_COMPLETED_S4_EVENT" | null;
-            frozen_at_reason_code?: "P11_S4_COMPLETION_EVENT_NOT_RETAINED" | null;
+            frozen_at_reason_code?: ("P11_S4_COMPLETION_EVENT_NOT_RETAINED" | "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_POOL_FREEZE_CLOCK") | null;
             trials_evaluated: components["schemas"]["PoolCount"];
             scored_unpruned: components["schemas"]["PoolCount"];
             feasible: components["schemas"]["PoolCount"];

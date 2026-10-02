@@ -264,7 +264,6 @@
           "properties": {
             "state": {
               "enum": [
-                "AVAILABLE",
                 "NOT_PUBLISHED",
                 "NOT_APPLICABLE"
               ]
@@ -848,6 +847,18 @@
     },
     "rolling": {
       "type": "null"
+    },
+    "by_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "is"
+      ],
+      "properties": {
+        "is": {
+          "$ref": "#/$defs/ISPayload"
+        }
+      }
     }
   },
   "$defs": {
@@ -1339,6 +1350,693 @@
           }
         }
       }
+    },
+    "ISFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_code",
+        "value",
+        "origin",
+        "scope",
+        "source_locator",
+        "input_digest"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "AVAILABLE",
+            "NOT_PUBLISHED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Reason"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origin": {
+          "enum": [
+            "ENGINE_DIRECT",
+            "PORTAL_DERIVED"
+          ]
+        },
+        "scope": {
+          "const": "IS"
+        },
+        "source_locator": {
+          "$ref": "#/$defs/Locator"
+        },
+        "input_digest": {
+          "$ref": "#/$defs/Digest"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "AVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "$ref": "#/$defs/Decimal"
+              },
+              "reason_code": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "reason_code": {
+                "$ref": "#/$defs/Reason"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ISPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_code",
+        "basis",
+        "scope",
+        "facts",
+        "return_basis",
+        "benchmark",
+        "curves",
+        "return_distribution"
+      ],
+      "properties": {
+        "state": {
+          "const": "AVAILABLE"
+        },
+        "reason_code": {
+          "type": "null"
+        },
+        "basis": {
+          "const": "ALL_TIME"
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "window",
+            "coverage",
+            "start_ms",
+            "end_ms",
+            "source_locator",
+            "bounds_semantics",
+            "first_at_utc_ms",
+            "last_at_utc_ms",
+            "observation_count",
+            "source_table",
+            "locator"
+          ],
+          "properties": {
+            "window": {
+              "const": "IS"
+            },
+            "coverage": {
+              "const": "FULL_SOURCE_IS"
+            },
+            "start_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "end_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "source_locator": {
+              "$ref": "#/$defs/Locator"
+            },
+            "bounds_semantics": {
+              "const": "START_INCLUSIVE_END_EXCLUSIVE"
+            },
+            "first_at_utc_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "last_at_utc_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "observation_count": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 2000000
+            },
+            "source_table": {
+              "const": "OBSERVATION_IS"
+            },
+            "locator": {
+              "$ref": "#/$defs/Locator"
+            }
+          }
+        },
+        "facts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "metrics"
+          ],
+          "properties": {
+            "metrics": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sharpe",
+                "return_fraction",
+                "max_drawdown_fraction"
+              ],
+              "properties": {
+                "sharpe": {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ISFact"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "origin": {
+                          "const": "ENGINE_DIRECT"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "return_fraction": {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ISFact"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "origin": {
+                          "const": "PORTAL_DERIVED"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "max_drawdown_fraction": {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ISFact"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "origin": {
+                          "const": "ENGINE_DIRECT"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "return_basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "definition_id",
+            "start_equity",
+            "end_equity",
+            "first_at_utc_ms",
+            "last_at_utc_ms",
+            "source_locator"
+          ],
+          "properties": {
+            "definition_id": {
+              "const": "FIRST_LAST_DECLARED_IS_EQUITY_V1"
+            },
+            "start_equity": {
+              "$ref": "#/$defs/Decimal"
+            },
+            "end_equity": {
+              "$ref": "#/$defs/Decimal"
+            },
+            "first_at_utc_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "last_at_utc_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "source_locator": {
+              "$ref": "#/$defs/Locator"
+            }
+          }
+        },
+        "benchmark": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "reason_code",
+            "definition_id",
+            "source_locator",
+            "input_digest"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "AVAILABLE",
+                "NOT_PUBLISHED",
+                "NOT_APPLICABLE"
+              ]
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Reason"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "definition_id": {
+              "const": "DECLARED_IS_SOURCE_CLOSE_REBASED_100_V1"
+            },
+            "source_locator": {
+              "$ref": "#/$defs/Locator"
+            },
+            "input_digest": {
+              "$ref": "#/$defs/Digest"
+            }
+          }
+        },
+        "curves": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sampling",
+            "strategy_rebased_100",
+            "benchmark_rebased_100",
+            "drawdown_fraction"
+          ],
+          "properties": {
+            "sampling": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source_observation_count",
+                "emitted_point_count",
+                "method"
+              ],
+              "properties": {
+                "source_observation_count": {
+                  "type": "integer",
+                  "minimum": 2,
+                  "maximum": 2000000
+                },
+                "emitted_point_count": {
+                  "type": "integer",
+                  "minimum": 2,
+                  "maximum": 24
+                },
+                "method": {
+                  "const": "EXTREMA_BUCKET_V1"
+                }
+              }
+            },
+            "strategy_rebased_100": {
+              "type": "array",
+              "maxItems": 24,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "at_utc_ms",
+                  "value"
+                ],
+                "properties": {
+                  "at_utc_ms": {
+                    "$ref": "#/$defs/UtcMs"
+                  },
+                  "value": {
+                    "$ref": "#/$defs/Decimal"
+                  }
+                }
+              },
+              "minItems": 2
+            },
+            "benchmark_rebased_100": {
+              "type": "array",
+              "maxItems": 24,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "at_utc_ms",
+                  "value"
+                ],
+                "properties": {
+                  "at_utc_ms": {
+                    "$ref": "#/$defs/UtcMs"
+                  },
+                  "value": {
+                    "$ref": "#/$defs/Decimal"
+                  }
+                }
+              }
+            },
+            "drawdown_fraction": {
+              "type": "array",
+              "maxItems": 24,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "at_utc_ms",
+                  "value"
+                ],
+                "properties": {
+                  "at_utc_ms": {
+                    "$ref": "#/$defs/UtcMs"
+                  },
+                  "value": {
+                    "$ref": "#/$defs/Decimal"
+                  }
+                }
+              },
+              "minItems": 2
+            }
+          }
+        },
+        "return_distribution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "reason_code",
+            "origin",
+            "sampling",
+            "observation_count",
+            "bucket_basis",
+            "statistics_policy",
+            "mean",
+            "median",
+            "var_95",
+            "cvar_95",
+            "buckets"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "AVAILABLE",
+                "NOT_PUBLISHED",
+                "NOT_APPLICABLE"
+              ]
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Reason"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "origin": {
+              "const": "PORTAL_DERIVED"
+            },
+            "sampling": {
+              "const": "UTC_DAY"
+            },
+            "observation_count": {
+              "$ref": "#/$defs/Count"
+            },
+            "bucket_basis": {
+              "const": "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"
+            },
+            "statistics_policy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "quantile_method",
+                "probability",
+                "risk_variable",
+                "risk_sign",
+                "tail",
+                "minimum_observations"
+              ],
+              "properties": {
+                "quantile_method": {
+                  "const": "LINEAR_TYPE_7"
+                },
+                "probability": {
+                  "const": "0.95"
+                },
+                "risk_variable": {
+                  "const": "LOSS_FRACTION_NEGATIVE_RETURN"
+                },
+                "risk_sign": {
+                  "const": "SIGNED_LOSS_FRACTION"
+                },
+                "tail": {
+                  "const": "LOSS_GTE_VAR_INCLUSIVE"
+                },
+                "minimum_observations": {
+                  "const": 2
+                }
+              }
+            },
+            "mean": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/ISFact"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "origin": {
+                      "const": "PORTAL_DERIVED"
+                    }
+                  }
+                }
+              ]
+            },
+            "median": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/ISFact"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "origin": {
+                      "const": "PORTAL_DERIVED"
+                    }
+                  }
+                }
+              ]
+            },
+            "var_95": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/ISFact"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "origin": {
+                      "const": "PORTAL_DERIVED"
+                    }
+                  }
+                }
+              ]
+            },
+            "cvar_95": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/ISFact"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "origin": {
+                      "const": "PORTAL_DERIVED"
+                    }
+                  }
+                }
+              ]
+            },
+            "buckets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "lower_inclusive",
+                  "upper",
+                  "upper_inclusive",
+                  "count"
+                ],
+                "properties": {
+                  "lower_inclusive": {
+                    "$ref": "#/$defs/Decimal"
+                  },
+                  "upper": {
+                    "$ref": "#/$defs/Decimal"
+                  },
+                  "upper_inclusive": {
+                    "enum": [
+                      "true",
+                      "false"
+                    ]
+                  },
+                  "count": {
+                    "$ref": "#/$defs/Count"
+                  }
+                }
+              },
+              "maxItems": 12
+            }
+          }
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "by_window": {}
+        },
+        "required": [
+          "by_window"
+        ]
+      },
+      "then": {
+        "properties": {
+          "lane": {
+            "const": "FIXED"
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "coverage": {
+                "const": "FULL_RETAINED_OOS"
+              }
+            }
+          },
+          "windows": {
+            "type": "object",
+            "properties": {
+              "is": {
+                "type": "object",
+                "required": [
+                  "start_ms",
+                  "end_ms",
+                  "source_locator",
+                  "bounds_semantics"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "AVAILABLE"
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  },
+                  "start_ms": {
+                    "$ref": "#/$defs/UtcMs"
+                  },
+                  "end_ms": {
+                    "$ref": "#/$defs/UtcMs"
+                  },
+                  "source_locator": {
+                    "$ref": "#/$defs/Locator"
+                  },
+                  "bounds_semantics": {
+                    "const": "START_INCLUSIVE_END_EXCLUSIVE"
+                  }
+                }
+              }
+            }
+          },
+          "source_tables": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "const": "OBSERVATION_IS"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "minContains": 1,
+            "maxContains": 1
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "windows": {
+            "type": "object",
+            "properties": {
+              "is": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "NOT_PUBLISHED",
+                      "NOT_APPLICABLE"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "source_tables": {
+            "type": "array",
+            "not": {
+              "contains": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "OBSERVATION_IS"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

@@ -285,6 +285,12 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     expect(built.frozenCore.fields.every((item: { value: string | null }) => item.value !== null)).toBe(true);
     expect(built.frozenCore).not.toHaveProperty("delivery_state");
     expect(built.frozenCore).not.toHaveProperty("approval_state");
+    expect(Object.fromEntries(built.frozenCore.pack.filter((item: { n: number }) => [1, 10, 12].includes(item.n))
+      .map((item: { n: number; source: { href: string | null } }) => [item.n, item.source.href]))).toEqual({
+      1: "/research/quantbt/alphas/alpha-p21/lineage?av=av-p21",
+      10: "/research/quantbt/runs/run-p21-audit/release-candidate",
+      12: "/research/quantbt/runs/run-p21-audit/release-candidate",
+    });
     expect(repository).not.toHaveProperty("publish");
     expect(repository).not.toHaveProperty("optimizer");
   });
@@ -364,7 +370,7 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     const result = await subject(sourceValue, persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(sourceValue) })).service.detail(scope, sourceValue.runId);
     const run = "/research/quantbt/runs/run-p21-audit";
     expect(Object.fromEntries(result.pack.map((item) => [item.key, item.source.href]))).toEqual({
-      ALPHA_VERSION_PASSPORT: null,
+      ALPHA_VERSION_PASSPORT: "/research/quantbt/alphas/alpha-p21/lineage?av=av-p21",
       ENGINE_CAPABILITY_BACKEND: "/research/quantbt/atlas",
       DATASET_UNIVERSE_SNAPSHOTS: `${run}/split`,
       METHODOLOGY_CLAIM: `${run}/evidence`,
@@ -373,10 +379,37 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
       METRICS_SEMANTICS: `${run}/report`,
       EXECUTION_ASSUMPTIONS: `${run}/split`,
       ROBUSTNESS_PARAM_STABILITY_REGIME: "/research/quantbt/alphas/alpha-p21/compare",
-      KNOWN_LIMITATIONS_WAIVERS: null,
+      KNOWN_LIMITATIONS_WAIVERS: `${run}/release-candidate`,
       REPRODUCIBILITY_PARITY_CHECKSUMS: `${run}/freeze`,
-      PROPOSED_USE_RESTRICTIONS: null,
+      PROPOSED_USE_RESTRICTIONS: `${run}/release-candidate`,
     });
+  });
+
+  it("adds RC source links without rewriting any previously stored frozen pack or digest", async () => {
+    const value = source();
+    const draft = persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(value) });
+    const { service, repository } = subject(value, draft);
+    const composition = await service.detail(scope, value.runId);
+    const historicalCore = { fields: composition.fields,
+      pack: composition.pack.map(item => [1, 10, 12].includes(item.n)
+        ? { ...item, source: { ...item.source, href: null, ...(item.n === 1 ? { label: "Alpha 360°" } : {}) } } : item),
+      source_fingerprint: releaseCandidateSourceFingerprint(value),
+      draft: { known_limitations: draft.knownLimitations, proposed_use_restrictions: draft.proposedUseRestrictions } };
+    const historical = storedPack({ frozenCore: historicalCore, packDigest: reportDigest(historicalCore),
+      sourceFingerprint: releaseCandidateSourceFingerprint(value) });
+    const bytes = JSON.stringify(historical.frozenCore);
+    repository.readPack.mockResolvedValue(historical);
+    repository.latestPack.mockResolvedValue(historical);
+    const freshComposition = await service.detail(scope, value.runId);
+    expect(freshComposition.pack[0]!.source.href).toBe("/research/quantbt/alphas/alpha-p21/lineage?av=av-p21");
+    const frozen = await service.pack(scope, releaseCandidateId);
+    expect(JSON.stringify(frozen.frozen_core)).toBe(bytes);
+    expect(frozen.pack_digest).toBe(historical.packDigest);
+    expect(JSON.stringify(historical.frozenCore)).toBe(bytes);
+    expect(repository.seal).not.toHaveBeenCalled();
+    expect(repository.patchDraft).not.toHaveBeenCalled();
+    const unbound = source({ alpha: { ...value.alpha, alphaVersionId: null } });
+    expect((await subject(unbound).service.detail(scope, unbound.runId)).pack[0]!.source.href).toBeNull();
   });
 
   it("B2 prints what P22 recorded: publish affordance, approval-mirror absence and intake flag", async () => {

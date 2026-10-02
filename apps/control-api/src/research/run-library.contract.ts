@@ -142,7 +142,15 @@ const MetricCellSchema = z.object({
   origin: z.enum(["ENGINE_DIRECT", "PORTAL_DERIVED"]).optional(),
   source_locator: z.string().min(1).max(256).optional(),
   input_digest: z.string().regex(/^[0-9a-f]{64}$/).optional(),
-}).strict();
+}).strict().superRefine((metric, context) => {
+  if (metric.availability.state === "AVAILABLE" && metric.value === null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["value"],
+      message: "An AVAILABLE metric requires a non-null source value.",
+    });
+  }
+});
 
 const AlphaBindingSchema = z.object({
   alpha_id: AlphaIdSchema,

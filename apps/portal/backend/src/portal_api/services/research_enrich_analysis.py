@@ -14,12 +14,17 @@ from decimal import Decimal, localcontext
 from typing import Any
 
 from portal_api.services.research_distributions import all_time_distributions
-from portal_api.services.research_evidence_metrics import decimal_text, extrema_indices, oos_scoped_result
+from portal_api.services.research_evidence_metrics import (
+    decimal_text, extrema_indices, oos_scoped_result, declared_is_scoped_result, engine_is_metrics,
+)
 from portal_api.services.research_portal_analytics import portal_analytics_v2, _fact
 
 MAX_BYTES = 65_536
 CHART_DEFINITION = "B9_ALL_TIME_DAILY_DISTRIBUTION_AND_DRAWDOWN_V1"
 RETURN_DEFINITION = "FIRST_LAST_RETAINED_OOS_EQUITY_V1"
+IS_DEFINITION = "B9_FULL_DECLARED_IS_ACCOUNT_AND_DAILY_DISTRIBUTION_V1"
+IS_RETURN_DEFINITION = "FIRST_LAST_DECLARED_IS_EQUITY_V1"
+IS_SCOPE_LOCATOR = "quantbt==1.1.1:scoped_result(scope='test',fold_table=[declared_IS.start,last_actual_IS_bar_before_end_exclusive])"
 DISTRIBUTION_POLICY = {
     "quantile_method": "LINEAR_TYPE_7", "probability": "0.95",
     "risk_variable": "LOSS_FRACTION_NEGATIVE_RETURN",
@@ -112,6 +117,93 @@ def digest_rows(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
 
+def _declared_is_input(*, result, mode, sampled, window_bounds, is_start_utc_ms,
+                       oos_start_utc_ms, market_close, benchmark_locator):
+    """Full source-time input only; never promote a retained display sample."""
+    import numpy as np
+    import pandas as pd
+
+    if mode != "FIXED" or sampled or "is" not in window_bounds:
+        return None
+    bounds = window_bounds["is"]
+    if bounds["start_ms"] != is_start_utc_ms or bounds["end_ms"] != oos_start_utc_ms \
+            or ("oos" in window_bounds and window_bounds["oos"]["start_ms"] != bounds["end_ms"]):
+        raise ValueError("declared IS bounds disagree with the immutable child boundaries")
+    start = pd.Timestamp(bounds["start_ms"], unit="ms", tz="UTC")
+    end = pd.Timestamp(bounds["end_ms"], unit="ms", tz="UTC")
+    count = int(((result.equity.index >= start) & (result.equity.index < end)).sum())
+    if count < 2:
+        return None
+    scoped = declared_is_scoped_result(result, start_utc_ms=bounds["start_ms"],
+        end_exclusive_utc_ms=bounds["end_ms"])
+    if not isinstance(market_close, pd.Series) or market_close.index.tz is None or not market_close.index.is_unique:
+        raise ValueError("declared IS benchmark requires the source close index, not display prices")
+    close = market_close.reindex(scoped.equity.index).to_numpy(dtype=float)
+    # Stream every actual reporting row into the identity without retaining a
+    # second potentially million-row list. Float repr also binds invalid close
+    # input truthfully, while its benchmark curve remains explicitly absent.
+    raw_hash = hashlib.sha256()
+    raw_hash.update(json.dumps({"definition": IS_DEFINITION, "bounds": bounds,
+        "symbols": list(scoped.symbols), "position_columns": list(scoped.positions.columns),
+        "benchmark_locator": benchmark_locator}, sort_keys=True, separators=(",", ":")).encode())
+    for at, equity, returns, positions, price in zip(scoped.equity.index, scoped.equity,
+            scoped.returns, scoped.positions.to_numpy(dtype=float), close, strict=True):
+        raw_hash.update(json.dumps([int(at.value // 1_000_000), repr(float(equity)), repr(float(returns)),
+            [repr(float(value)) for value in np.atleast_1d(positions)], repr(float(price))],
+            separators=(",", ":"), allow_nan=False).encode())
+    return scoped, close, {"name": "OBSERVATION_IS", "row_count": count, "digest": raw_hash.hexdigest()}
+
+
+def _is_payload(*, scoped, close, bounds, digest, benchmark_locator):
+    import numpy as np
+
+    index = scoped.equity.index.tz_convert("UTC").as_unit("ns")
+    equity = scoped.equity.to_numpy(dtype=float)
+    first, last = (int(index[at].value // 1_000_000) for at in (0, -1))
+    def fact(value, locator, *, state="NOT_PUBLISHED", reason="IS_SOURCE_VALUE_NOT_PUBLISHED", origin="PORTAL_DERIVED"):
+        return {**_fact(value, digest, locator, state=state, reason=reason, origin=origin), "scope": "IS"}
+    engine = engine_is_metrics(scoped)
+    metrics = {key: fact(row["value"], row["locator"] or f"quantbt.full_report.{key}:DECLARED_IS",
+        state=row["state"], reason=row["reason_code"] or "IS_SOURCE_VALUE_NOT_PUBLISHED", origin="ENGINE_DIRECT")
+        for key, row in engine.items()}
+    with localcontext() as context:
+        context.prec = 48
+        endpoint_return = Decimal(str(equity[-1])) / Decimal(str(equity[0])) - 1
+    metrics["return_fraction"] = fact(endpoint_return, "QuantBT.result.equity:DECLARED_IS:first_last_ratio_minus_one")
+    def points(values):
+        chosen = extrema_indices(list(values), maximum_points=24)
+        return [{"at_utc_ms": int(index[i].value // 1_000_000), "value": decimal_text(values[i])} for i in chosen]
+    strategy = points(equity / equity[0] * 100)
+    good_close = bool(np.isfinite(close).all() and np.all(close > 0))
+    daily = scoped.daily_returns
+    distribution = all_time_distributions(equity=scoped.equity, daily_returns=daily,
+        digest=digest, scope_locator=IS_SCOPE_LOCATOR)["return_distribution"]
+    statistics = {key: {**row, "scope": "IS", "source_locator": row["source_locator"] + ":DECLARED_IS"}
+        for key, row in distribution_statistics(daily_returns=daily, digest=digest, sampled=False).items()}
+    return {"state": "AVAILABLE", "reason_code": None, "basis": "ALL_TIME",
+        "scope": {"window": "IS", "coverage": "FULL_SOURCE_IS", **bounds,
+            "first_at_utc_ms": first, "last_at_utc_ms": last, "observation_count": len(index),
+            "source_table": "OBSERVATION_IS", "locator": IS_SCOPE_LOCATOR},
+        "facts": {"metrics": metrics},
+        "return_basis": {"definition_id": IS_RETURN_DEFINITION, "start_equity": decimal_text(equity[0]),
+            "end_equity": decimal_text(equity[-1]), "first_at_utc_ms": first, "last_at_utc_ms": last,
+            "source_locator": IS_SCOPE_LOCATOR},
+        "benchmark": {"state": "AVAILABLE" if good_close else "NOT_PUBLISHED",
+            "reason_code": None if good_close else "IS_SOURCE_ALIGNED_POSITIVE_CLOSE_NOT_PUBLISHED",
+            "definition_id": "DECLARED_IS_SOURCE_CLOSE_REBASED_100_V1",
+            "source_locator": benchmark_locator[:-4] + ":IS" if benchmark_locator.endswith(":OOS")
+                else "enriched_analysis.scope.benchmark_locator:loaded_close:DECLARED_IS",
+            "input_digest": digest},
+        "curves": {"sampling": {"source_observation_count": len(index), "emitted_point_count": len(strategy),
+            "method": "EXTREMA_BUCKET_V1"}, "strategy_rebased_100": strategy,
+            "benchmark_rebased_100": points(close / close[0] * 100) if good_close else [],
+            "drawdown_fraction": points(equity / np.maximum.accumulate(equity) - 1)},
+        "return_distribution": {"state": distribution["state"], "reason_code": distribution["reason_code"],
+            "origin": "PORTAL_DERIVED", "sampling": "UTC_DAY", "observation_count": distribution["source_observation_count"],
+            "bucket_basis": "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1", "statistics_policy": DISTRIBUTION_POLICY.copy(),
+            **statistics, "buckets": [{**row, "count": int(row["count"])} for row in distribution["values"]]}}
+
+
 def drawdown_episodes(index: Any, equity: Any) -> tuple[list[dict[str, Any]], bool, bool]:
     peak = 0
     trough = None
@@ -171,8 +263,11 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
     else:
         base = analytics or portal_analytics_v2(result=result, mode=mode, market_close=market_close,
             benchmark_locator=benchmark_locator, is_start_utc_ms=is_start_utc_ms, oos_start_utc_ms=oos_start_utc_ms)
-    tables = sorted(source_tables, key=lambda row: row["name"])
     window_bounds = _source_windows(source_windows)
+    is_input = _declared_is_input(result=result, mode=mode, sampled=sampled, window_bounds=window_bounds,
+        is_start_utc_ms=is_start_utc_ms, oos_start_utc_ms=oos_start_utc_ms,
+        market_close=market_close, benchmark_locator=benchmark_locator)
+    tables = sorted([*source_tables, *([is_input[2]] if is_input else [])], key=lambda row: row["name"])
     if "oos" in window_bounds and not (window_bounds["oos"]["start_ms"] <= int(index[0].value // 1_000_000)
             and int(index[-1].value // 1_000_000) < window_bounds["oos"]["end_ms"]):
         raise ValueError("source OOS bounds do not contain the retained OOS account")
@@ -182,7 +277,9 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
         "lane": mode, "sampled": sampled, "source_tables": tables, "analytics_input": base["input_digest"],
         "source_observation_count": source_observation_count, "nominal_bar_ms": step_ms,
         "chart_definition_id": CHART_DEFINITION, "return_definition_id": RETURN_DEFINITION,
-        "source_windows": window_bounds})
+        "source_windows": window_bounds,
+        **({"is_definition_id": IS_DEFINITION, "is_return_definition_id": IS_RETURN_DEFINITION,
+            "is_distribution_policy": DISTRIBUTION_POLICY} if is_input else {})})
     metrics, behaviour = copy.deepcopy(base["metrics"]), copy.deepcopy(base["behaviour"])
     for fact in (*metrics.values(), *behaviour.values()):
         fact["input_digest"] = digest
@@ -224,6 +321,8 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
     windows = {"oos": state, "is": {"state": "NOT_PUBLISHED", "reason_code": "RETAINED_NO_IN_SAMPLE_ACCOUNT_PAYLOAD"},
         "holdout": {"state": "NOT_PUBLISHED", "reason_code": "RETAINED_NO_HOLDOUT_ACCOUNT_PAYLOAD"}}
     windows = {kind: {**head, **window_bounds.get(kind, {})} for kind, head in windows.items()}
+    if is_input:
+        windows["is"].update(state="AVAILABLE", reason_code=None)
     fold_table = result.metadata.get("walk_forward", {}).get("fold_table") if mode == "WFO" else None
     fold_count = len(fold_table) if fold_table is not None else 1
     source_count = source_observation_count or len(index)
@@ -269,6 +368,20 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
             "max_drawdown_fraction": decimal_text(min(dd)), "input_digest": digest},
         "rolling": None,
     }
+    if is_input:
+        block["by_window"] = {"is": _is_payload(scoped=is_input[0], close=is_input[1], bounds=window_bounds["is"],
+            digest=digest, benchmark_locator=benchmark_locator)}
+        # Only new display samples may shrink; scalar facts, histogram counts,
+        # source row counts/digests and the existing OOS payload never change.
+        for maximum in (16, 8, 4):
+            if len(json.dumps(block, separators=(",", ":"), allow_nan=False).encode()) <= MAX_BYTES:
+                break
+            curves = block["by_window"]["is"]["curves"]
+            for curve in (curves["strategy_rebased_100"], curves["benchmark_rebased_100"], curves["drawdown_fraction"]):
+                if len(curve) > maximum:
+                    selected = extrema_indices([float(row["value"]) for row in curve], maximum_points=maximum)
+                    curve[:] = [curve[at] for at in selected]
+            curves["sampling"]["emitted_point_count"] = len(curves["strategy_rebased_100"])
     if len(json.dumps(block, separators=(",", ":"), allow_nan=False).encode()) > MAX_BYTES:
         raise ValueError("enrichment exceeds its independent immutable byte budget")
     return block

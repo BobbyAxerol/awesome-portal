@@ -1,0 +1,23 @@
+{
+  "schema_version": "research.child-audit-companion-page.v1",
+  "run_id": "synthetic-run",
+  "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "SOURCE_AUDIT_NOT_RETAINED"
+  },
+  "custody": "NOT_RETAINED",
+  "revision": null,
+  "manifest": null,
+  "scope": "SOURCE_LIFECYCLE_OBSERVATIONS_NOT_GENERATION_CLOCK",
+  "counts": {
+    "full_source_retained": null,
+    "records_dropped_by_source": null,
+    "source_total_if_known": null,
+    "matching_fold": null,
+    "matching_filter": null,
+    "legacy_sample_retained": null,
+    "returned": 0
+  },
+  "rows": [],
+  "next_cursor": null
+}

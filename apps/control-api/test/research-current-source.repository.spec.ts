@@ -8,9 +8,13 @@ import {
   currentSourceBatchDigest,
   currentSourceSummaryWithinBudget,
   ResearchCurrentSourceRepository,
+  CURRENT_SOURCE_STAGE_EVENTS_SQL,
   type CurrentSourceAppendBatch,
   type CurrentSourceSealWrite,
 } from "../src/research/current-source.repository";
+import { DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST } from "../src/research/delta-wfo.profile";
+import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "../src/research/delta-wfo-v2.profile";
+import { p11StageEvents, P11_STAGE_BINDING_ABSENT } from "../src/research/p11-stage-events";
 
 const scope = { workspaceId: "rs02-workspace", actorUserId: "rs02-user" };
 const digest = (character: string) => character.repeat(64);
@@ -34,6 +38,13 @@ function sealInput(): CurrentSourceSealWrite {
     tableRows: { OBSERVATION: 1, FOLD: 2, TRIAL: 2, CANDIDATE: 1, SELECTION: 1 }, totalRows: 7,
     summary: {},
   };
+}
+
+function stageRow() {
+  return { worker_attempt_id: "worker-attempt-exact", lease_epoch: 3, artifact_id: "artifact-exact",
+    execution_profile_id: DELTA_WFO_PROFILE_ID, execution_profile_digest: DELTA_WFO_PROFILE_DIGEST,
+    s3_completed_utc_ms: 10, s4_started_utc_ms: 11, s4_completed_utc_ms: 42,
+    requested_spec: { random_seed: 42 } };
 }
 
 function fakeRepository(respond: (sql: string, params: readonly unknown[]) => { rowCount?: number; rows?: unknown[] }) {
@@ -63,7 +74,7 @@ describe("RS-02 retained-current-source custody writes", () => {
     const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
       ? { rowCount: 1, rows: [{}] } : sql.includes("FROM research.current_source_seals_v1 seal")
         ? { rowCount: 1, rows: [row] } : sql.includes("WITH bounds") ? { rows: kindRows }
-          : sql.includes("AS frozen_at") ? { rows: [{ frozen_at: 42, requested_spec: { random_seed: 42 } }] } : {});
+          : sql === CURRENT_SOURCE_STAGE_EVENTS_SQL ? { rows: [stageRow()] } : {});
     expect(await repository.searchForRead(scope, input.runId)).toMatchObject({
       seal: { runId: input.runId, artifactRevision: 1 },
       inputs: { trials: [{}, {}], candidates: [{}], folds: [{}, {}], requestedSpec: { random_seed: 42 } },
@@ -87,14 +98,17 @@ describe("RS-02 retained-current-source custody writes", () => {
     }));
     const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
       ? { rowCount: 1, rows: [{}] } : sql.includes("WITH bounds") ? { rows: kindRows }
-        : sql.includes("AS frozen_at") ? { rows: [{ frozen_at: 42, requested_spec: { random_seed: 42 } }] } : {});
+        : sql === CURRENT_SOURCE_STAGE_EVENTS_SQL ? { rows: [stageRow()] } : {});
     const result = await repository.searchInputs(scope, seal);
     expect(result).toMatchObject({ trials: [{}, {}], candidates: [{}], folds: [{}, {}],
-      poolFrozenAt: 42, requestedSpec: { random_seed: 42 } });
+      stageEvents: { s3_completed_utc_ms: 10, s4_started_utc_ms: 11, s4_completed_utc_ms: 42 }, requestedSpec: { random_seed: 42 } });
     expect(calls.filter(({ sql }) => sql.startsWith("BEGIN"))).toHaveLength(1);
     expect(calls.filter(({ sql }) => sql.includes("FROM workspace_members"))).toHaveLength(1);
     expect(calls.find(({ sql }) => sql.includes("WITH bounds"))!.params).toEqual([scope.workspaceId, seal.runId, 1, 64]);
-    expect(calls.find(({ sql }) => sql.includes("AS frozen_at"))!.params).toEqual([scope.workspaceId, seal.runId, seal.requestedSpecDigest]);
+    expect(calls.find(({ sql }) => sql === CURRENT_SOURCE_STAGE_EVENTS_SQL)!.params).toEqual([
+      scope.workspaceId, seal.runId, seal.artifactRevision, seal.manifestDigest,
+      seal.requestedSpecDigest, seal.effectiveSpecDigest, seal.datasetBindingDigest,
+    ]);
     expect(calls.at(-1)!.sql).toBe("COMMIT");
     const short = fakeRepository(sql => sql.includes("FROM workspace_members") ? { rowCount: 1, rows: [{}] } : {});
     await expect(short.repository.searchInputs(scope, seal)).rejects.toMatchObject({ status: 503 });
@@ -102,6 +116,49 @@ describe("RS-02 retained-current-source custody writes", () => {
     const denied = fakeRepository(() => ({}));
     await expect(denied.repository.searchInputs(scope, seal)).rejects.toMatchObject({ status: 403 });
     expect(denied.calls.some(({ sql }) => sql.includes("WITH bounds"))).toBe(false);
+  });
+  it("binds P11 clocks to the exact SEALED artifact attempt, lease, request/effective/data and historical profile", async () => {
+    const seal = { ...sealInput(), retainedImportDigest: digest("f"), retainedAtUtcMs: 100 };
+    const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
+      ? { rowCount: 1, rows: [{}] } : sql === CURRENT_SOURCE_STAGE_EVENTS_SQL ? { rows: [stageRow()] } : {});
+    const clocks = await repository.stageEventClocks(scope, seal);
+    expect(clocks).toMatchObject({ s3_completed_utc_ms: 10, s4_started_utc_ms: 11, s4_completed_utc_ms: 42,
+      reason_codes: { s3_completed: null, s4_started: null, s4_completed: null } });
+    expect(clocks.source_binding_digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(clocks).not.toHaveProperty("worker_attempt_id");
+    expect(clocks).not.toHaveProperty("search_completed_utc_ms");
+    expect(CURRENT_SOURCE_STAGE_EVENTS_SQL).toContain("artifact.worker_attempt_id=producer.worker_attempt_id AND artifact.lease_epoch=producer.lease_epoch");
+    expect(CURRENT_SOURCE_STAGE_EVENTS_SQL).toContain("artifact.state='SEALED' AND artifact.artifact_revision=$3 AND artifact.manifest_digest=$4");
+    expect(CURRENT_SOURCE_STAGE_EVENTS_SQL).toContain("producer.requested_spec_digest=$5 AND producer.effective_spec_digest=$6");
+    expect(CURRENT_SOURCE_STAGE_EVENTS_SQL).toContain("producer.dataset_binding_digest=$7");
+    expect(CURRENT_SOURCE_STAGE_EVENTS_SQL).toContain("(SELECT count(*) FROM bound_producer)=1");
+    expect(CURRENT_SOURCE_STAGE_EVENTS_SQL).not.toContain("ORDER BY created_at");
+    expect(calls.find(({ sql }) => sql === CURRENT_SOURCE_STAGE_EVENTS_SQL)!.params).toEqual([
+      scope.workspaceId, seal.runId, 1, seal.manifestDigest, seal.requestedSpecDigest, seal.effectiveSpecDigest, seal.datasetBindingDigest,
+    ]);
+    expect(calls.findIndex(({ sql }) => sql.includes("FROM workspace_members"))).toBeLessThan(
+      calls.findIndex(({ sql }) => sql === CURRENT_SOURCE_STAGE_EVENTS_SQL));
+    const v2 = fakeRepository(sql => sql.includes("FROM workspace_members") ? { rowCount: 1, rows: [{}] }
+      : sql === CURRENT_SOURCE_STAGE_EVENTS_SQL ? { rows: [{ ...stageRow(), execution_profile_id: DELTA_WFO_V2_PROFILE_ID,
+        execution_profile_digest: DELTA_WFO_V2_PROFILE_DIGEST }] } : {});
+    const temporal = await v2.repository.stageEventClocks(scope, seal);
+    expect(temporal.s4_completed_utc_ms).toBe(42);
+    expect(temporal.source_binding_digest).not.toBe(clocks.source_binding_digest);
+  });
+  it("cannot lend clocks from absent, ambiguous or mismatched profiles; missing events have individual reasons", async () => {
+    const seal = { ...sealInput(), retainedImportDigest: digest("f"), retainedAtUtcMs: 100 };
+    for (const rows of [[], [stageRow(), stageRow()], [{ ...stageRow(), execution_profile_digest: digest("0") }],
+      [{ ...stageRow(), execution_profile_id: DELTA_WFO_PROFILE_ID, execution_profile_digest: DELTA_WFO_V2_PROFILE_DIGEST }]]) {
+      const { repository } = fakeRepository(sql => sql.includes("FROM workspace_members") ? { rowCount: 1, rows: [{}] }
+        : sql === CURRENT_SOURCE_STAGE_EVENTS_SQL ? { rows } : {});
+      expect(await repository.stageEventClocks(scope, seal)).toEqual(p11StageEvents());
+      expect((await repository.stageEventClocks(scope, seal)).reason_codes.s4_completed).toBe(P11_STAGE_BINDING_ABSENT);
+    }
+    const partial = fakeRepository(sql => sql.includes("FROM workspace_members") ? { rowCount: 1, rows: [{}] }
+      : sql === CURRENT_SOURCE_STAGE_EVENTS_SQL ? { rows: [{ ...stageRow(), s3_completed_utc_ms: null, s4_started_utc_ms: null }] } : {});
+    expect(await partial.repository.stageEventClocks(scope, seal)).toMatchObject({ s3_completed_utc_ms: null, s4_started_utc_ms: null,
+      s4_completed_utc_ms: 42, reason_codes: { s3_completed: "P11_S3_COMPLETED_EVENT_NOT_RETAINED",
+        s4_started: "P11_S4_STARTED_EVENT_NOT_RETAINED", s4_completed: null } });
   });
   it("counts sparse keyset edges with the total in one scoped query, including empty windows", async () => {
     const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")

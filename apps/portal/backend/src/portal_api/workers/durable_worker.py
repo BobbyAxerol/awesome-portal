@@ -18,6 +18,7 @@ import logging
 import math
 import os
 import shutil
+import threading
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -69,6 +70,37 @@ from portal_api.services.research_whatif_retention import (
 logger = logging.getLogger("portal_api.durable_worker")
 
 RunExecutor = Callable[[dict[str, Any], str, Path], Awaitable[dict[str, Any]]]
+
+
+async def _joined_retention_thread(
+    retain: Callable[..., Any], *, fence_validator: Callable[[Any], bool], **kwargs: Any
+) -> Any:
+    """Fence cancellation and join bounded custody work before scratch retirement.
+
+    A running to_thread cannot itself be cancelled. Its network clients and
+    source population are already bounded; keep heartbeat/lease ownership until
+    that thread settles, rather than deleting roots that it is still reading.
+    """
+    cancelled = threading.Event()
+
+    def current_fence(fence: Any) -> bool:
+        return not cancelled.is_set() and fence_validator(fence)
+
+    running = asyncio.create_task(asyncio.to_thread(retain, fence_validator=current_fence, **kwargs))
+    try:
+        return await asyncio.shield(running)
+    except asyncio.CancelledError:
+        cancelled.set()
+        while not running.done():
+            try:
+                await asyncio.shield(running)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        if running.done() and not running.cancelled():
+            running.exception()  # Consume the expected fenced source failure.
+        raise
 
 
 
@@ -451,7 +483,7 @@ class DurableQuantWorker:
                         )
                     )
 
-                retention = await asyncio.to_thread(
+                retention = await _joined_retention_thread(
                     current_source.retain,
                     request=research_request,
                     source_root=engine_root / WFO_SOURCE_DIRNAME,
@@ -483,7 +515,7 @@ class DurableQuantWorker:
                         )
                     )
 
-                await asyncio.to_thread(
+                await _joined_retention_thread(
                     whatif_client.retain,
                     request=research_request,
                     results=results,
@@ -516,12 +548,18 @@ class DurableQuantWorker:
                                 run_id, attempt.run_attempt_id, lease_epoch=research_request.lease_epoch
                             )
                         )
-                    await asyncio.to_thread(
+                    await _joined_retention_thread(
                         retained.retain,
                         request=research_request,
                         receipt=receipt,
                         artifact_root=Path(self._artifact_store.root),
                         fence_validator=current_fence,
+                        fixed_replay_path=(
+                            engine_root / research_request.run_id / "research" / "fixed-replay.parquet"
+                            if isinstance(receipt.get("fixed_replay_source"), dict)
+                            and receipt["fixed_replay_source"].get("state") == "AVAILABLE"
+                            else None
+                        ),
                     )
             split_digest: str | None = None
             sealed_names: list[str] = []

@@ -1,0 +1,863 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Fresh Fixed OOS Observations API",
+    "version": "1.0.0",
+    "description": "Complete source population is at most 20,000 retained rows; each response is at most 200 rows/1 MiB. Opaque renewable cursor binds workspace, actor, run, immutable revision and limit. Exact source_ordinal playhead is mutually exclusive with cursor. No rows or fake folds/orders/fills/trades/holdout are synthesized. NOT_RECORDED conservatively covers old or fresh unrecorded custody; it does not infer a historical run from absent parts."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
+  "paths": {
+    "/api/v1/quantbt/runs/{runId}/replay/observations": {
+      "get": {
+        "operationId": "researchFixedReplayObservationsGetV1",
+        "summary": "Read one bounded immutable fresh-fixed OOS observation page",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+            }
+          },
+          {
+            "name": "source_ordinal",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 19999
+            },
+            "description": "Exact immutable source ordinal; cannot combine with cursor."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded source observations or explicit custody/source/profile absence. Cache-Control private, no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixedReplayPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed refusal; no private source locators.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "FixedReplayObservation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_ordinal",
+          "at_utc_ms",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume",
+          "equity",
+          "return_fraction",
+          "drawdown_fraction",
+          "positions"
+        ],
+        "properties": {
+          "source_ordinal": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 19999
+          },
+          "at_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8640000000000000
+          },
+          "open": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "high": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "low": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "close": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "volume": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "equity": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "return_fraction": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "drawdown_fraction": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "maxLength": 96
+          },
+          "positions": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 16,
+            "propertyNames": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "maxLength": 96
+            }
+          }
+        },
+        "description": "Actual retained per-bar OOS candle/account observation. Exact decimal strings; OHLC coherence, positive equity and negative drawdown are source/runtime validated. Actual engine position labels (including DEFAULT) are preserved, not relabeled to requested market symbol. Never an order/fill/trade ledger."
+      },
+      "FixedReplayAvailableSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "state",
+          "reason_code",
+          "file_name",
+          "file_sha256",
+          "byte_count",
+          "normalized_rows_sha256",
+          "row_count",
+          "oos_start_utc_ms",
+          "oos_end_exclusive_utc_ms",
+          "first_observed_utc_ms",
+          "last_observed_utc_ms"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.fixed-replay-source.v1"
+          },
+          "state": {
+            "const": "AVAILABLE"
+          },
+          "reason_code": {
+            "type": "null"
+          },
+          "file_name": {
+            "const": "fixed-replay.parquet"
+          },
+          "file_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "byte_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2097152
+          },
+          "normalized_rows_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "row_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000
+          },
+          "oos_start_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8640000000000000
+          },
+          "oos_end_exclusive_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8640000000000000
+          },
+          "first_observed_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8640000000000000
+          },
+          "last_observed_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8640000000000000
+          }
+        },
+        "description": "file_sha256 binds original confined-child Parquet bytes. P05 rewrites retained parts, so their byte SHA may differ; normalized_rows_sha256 binds exact canonical row semantics. Bounds are half-open admitted OOS UTC bounds, never inferred from nominal intervals."
+      },
+      "FixedReplayAbsentSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "state",
+          "reason_code",
+          "oos_start_utc_ms",
+          "oos_end_exclusive_utc_ms"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.fixed-replay-source.v1"
+          },
+          "state": {
+            "const": "NOT_PUBLISHED"
+          },
+          "reason_code": {
+            "enum": [
+              "FIXED_REPLAY_ROW_LIMIT_EXCEEDED",
+              "FIXED_REPLAY_FILE_LIMIT_EXCEEDED",
+              "FIXED_REPLAY_MARKET_FIELDS_UNAVAILABLE",
+              "FIXED_REPLAY_SOURCE_UNAVAILABLE"
+            ]
+          },
+          "oos_start_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8640000000000000
+          },
+          "oos_end_exclusive_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8640000000000000
+          }
+        }
+      },
+      "FixedReplaySource": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/FixedReplayAvailableSource"
+          },
+          {
+            "$ref": "#/components/schemas/FixedReplayAbsentSource"
+          }
+        ]
+      },
+      "FixedReplayManifest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "run_id",
+          "artifact_id",
+          "artifact_revision",
+          "manifest_digest",
+          "requested_spec_digest",
+          "effective_spec_digest",
+          "dataset_binding_digest",
+          "execution_profile_id",
+          "execution_profile_digest",
+          "market_symbol",
+          "source",
+          "scope"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.fixed-replay-companion-manifest.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "manifest_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "requested_spec_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "effective_spec_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "dataset_binding_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "execution_profile_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "execution_profile_digest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "market_symbol": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$",
+            "description": "Exact immutable preflight requested market symbol, distinct from ENGINE_NATIVE_SYMBOL position labels such as DEFAULT."
+          },
+          "source": {
+            "$ref": "#/components/schemas/FixedReplaySource"
+          },
+          "scope": {
+            "const": "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXECUTION_LEDGER"
+          }
+        },
+        "description": "Immutable companion manifest bound to exact SEALED P05 artifact/revision/manifest, original admitted requested/effective/dataset digests and exact fixed/imported execution profile. Existing p04.fixed-qualification.v1 intentionally has a null profile digest. Private custody proofs and attempt/lease IDs are never public.",
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "properties": {
+                  "execution_profile_id": {
+                    "const": "p04.fixed-qualification.v1"
+                  },
+                  "execution_profile_digest": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "execution_profile_id": {
+                    "const": "p17.imported-signal-notional.v1"
+                  },
+                  "execution_profile_digest": {
+                    "const": "f1ed5dbccdd90ca7dd35be2755f3b3b5f7e9a29b1641beb08bd0136783c0f298"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "FixedReplayPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "run_id",
+          "availability",
+          "custody",
+          "execution_profile",
+          "scope",
+          "revision",
+          "manifest",
+          "counts",
+          "rows",
+          "next_cursor"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.fixed-replay-companion-page.v1"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "availability": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason_code"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "FIXED_REPLAY_ROW_LIMIT_EXCEEDED",
+                      "FIXED_REPLAY_FILE_LIMIT_EXCEEDED",
+                      "FIXED_REPLAY_MARKET_FIELDS_UNAVAILABLE",
+                      "FIXED_REPLAY_SOURCE_UNAVAILABLE",
+                      "FIXED_OOS_CUSTODY_NOT_RECORDED",
+                      "FIXED_OOS_RETENTION_NOT_FINALIZED",
+                      "EXECUTION_PROFILE_NOT_FIXED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "custody": {
+            "enum": [
+              "FRESH_FIXED_OOS_RETAINED",
+              "FRESH_SOURCE_NOT_PUBLISHED",
+              "NOT_RECORDED",
+              "NOT_FINALIZED",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "execution_profile": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "digest"
+            ],
+            "properties": {
+              "id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "digest": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "scope": {
+            "const": "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXECUTION_LEDGER"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manifest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FixedReplayManifest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "full_source_retained",
+              "matching_filter",
+              "returned"
+            ],
+            "properties": {
+              "full_source_retained": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "matching_filter": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "returned": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FixedReplayObservation"
+            },
+            "maxItems": 200
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "Complete source population is at most 20,000 retained rows; each response is at most 200 rows/1 MiB. Opaque renewable cursor binds workspace, actor, run, immutable revision and limit. Exact source_ordinal playhead is mutually exclusive with cursor. No rows or fake folds/orders/fills/trades/holdout are synthesized. NOT_RECORDED conservatively covers old or fresh unrecorded custody; it does not infer a historical run from absent parts.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "properties": {
+                    "state": {
+                      "const": "AVAILABLE"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "custody": {
+                  "const": "FRESH_FIXED_OOS_RETAINED"
+                },
+                "availability": {
+                  "properties": {
+                    "reason_code": {
+                      "type": "null"
+                    }
+                  }
+                },
+                "manifest": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/FixedReplayManifest"
+                    },
+                    {
+                      "properties": {
+                        "source": {
+                          "$ref": "#/components/schemas/FixedReplayAvailableSource"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "revision": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "counts": {
+                  "properties": {
+                    "full_source_retained": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 20000
+                    },
+                    "matching_filter": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 20000
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "rows": {
+                  "maxItems": 0
+                },
+                "next_cursor": {
+                  "type": "null"
+                },
+                "counts": {
+                  "properties": {
+                    "full_source_retained": {
+                      "type": "null"
+                    },
+                    "matching_filter": {
+                      "type": "null"
+                    },
+                    "returned": {
+                      "const": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "custody": {
+                  "const": "FRESH_SOURCE_NOT_PUBLISHED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "availability": {
+                  "properties": {
+                    "state": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "reason_code": {
+                      "enum": [
+                        "FIXED_REPLAY_ROW_LIMIT_EXCEEDED",
+                        "FIXED_REPLAY_FILE_LIMIT_EXCEEDED",
+                        "FIXED_REPLAY_MARKET_FIELDS_UNAVAILABLE",
+                        "FIXED_REPLAY_SOURCE_UNAVAILABLE"
+                      ]
+                    }
+                  }
+                },
+                "manifest": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/FixedReplayManifest"
+                    },
+                    {
+                      "properties": {
+                        "source": {
+                          "$ref": "#/components/schemas/FixedReplayAbsentSource"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "revision": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "custody": {
+                  "const": "NOT_RECORDED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "manifest": {
+                  "type": "null"
+                },
+                "revision": {
+                  "type": "null"
+                },
+                "availability": {
+                  "properties": {
+                    "state": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "reason_code": {
+                      "const": "FIXED_OOS_CUSTODY_NOT_RECORDED"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "custody": {
+                  "const": "NOT_FINALIZED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "manifest": {
+                  "type": "null"
+                },
+                "revision": {
+                  "type": "null"
+                },
+                "availability": {
+                  "properties": {
+                    "state": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "reason_code": {
+                      "const": "FIXED_OOS_RETENTION_NOT_FINALIZED"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "custody": {
+                  "const": "NOT_APPLICABLE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "manifest": {
+                  "type": "null"
+                },
+                "revision": {
+                  "type": "null"
+                },
+                "availability": {
+                  "properties": {
+                    "state": {
+                      "const": "NOT_APPLICABLE"
+                    },
+                    "reason_code": {
+                      "const": "EXECUTION_PROFILE_NOT_FIXED"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

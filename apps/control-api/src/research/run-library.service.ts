@@ -842,7 +842,9 @@ export class ResearchRunLibraryService {
         ? { availability: available(), input_digest: analyticsV2.input_digest, data: analyticsV2.last_30d }
         : { availability: status === "COMPLETED"
             ? unavailable("NOT_PUBLISHED", "PORTAL_ANALYTICS_V2_NOT_COMPUTED_FOR_SEAL")
-            : source, input_digest: null, data: null },
+            : source.state === "AVAILABLE"
+              ? unavailable("NOT_PUBLISHED", "RUN_NOT_COMPLETED")
+              : source, input_digest: null, data: null },
       superseded_note: currentOrdinal > 1 && row.source_kind === "RESEARCH_DURABLE"
         ? `Technical worker retry ${currentOrdinal} of the same durable job; it is not another logical research run.`
         : null,
@@ -1182,7 +1184,9 @@ export class ResearchRunLibraryService {
       definitionId: string | null = null,
     ) => ({ key, label, role, value, availability, tone, scope, definition_id: definitionId });
     const status = safeStatus(row.effective_status);
-    if (status === "RUNNING" && progress && source.state === "AVAILABLE") {
+    // A cancelled child can have genuine last-observed progress. Keep those
+    // values without presenting cancellation as RUNNING or inventing a seal.
+    if ((status === "RUNNING" || status === "CANCELLED") && progress && source.state === "AVAILABLE") {
       return [
         metric("progress", "progress", "PROGRESS", `${progress.overall.pct}%`, available(), "ACCENT"),
         metric("trials", "trials", "TRIALS", `${progress.overall.trials_done} / ${progress.overall.trials_declared}`, available()),
@@ -1294,10 +1298,13 @@ export class ResearchRunLibraryService {
           : metric(key, label, role, null, unavailable("NOT_PUBLISHED", `P13_PROJECTION_DOES_NOT_PUBLISH_${role}`));
       }) as ResearchRunLibraryItem["stats"]);
     }
+    const missingMetrics = source.state === "AVAILABLE"
+      ? unavailable("NOT_PUBLISHED", "P12_STATUS_METRICS_NOT_PUBLISHED")
+      : source;
     return [
-      metric("progress", "progress", "PROGRESS", null, source),
-      metric("trials", "trials", "TRIALS", null, source),
-      metric("elapsed", "elapsed", "ELAPSED", null, source),
+      metric("progress", "progress", "PROGRESS", null, missingMetrics),
+      metric("trials", "trials", "TRIALS", null, missingMetrics),
+      metric("elapsed", "elapsed", "ELAPSED", null, missingMetrics),
     ] as ResearchRunLibraryItem["stats"];
   }
 }

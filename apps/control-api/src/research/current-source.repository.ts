@@ -20,6 +20,7 @@ import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bound
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { sha256ResearchJson } from "./preflight.service";
+import { p11StageEvents, type P11StageEvents } from "./p11-stage-events";
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 import { ResearchAllTimeDistributionsSchema, type ResearchAllTimeDistributions } from "./all-time-distributions.contract";
 import {
@@ -29,6 +30,7 @@ import {
   RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID,
   DELTA_WFO_PREVIEW_LONG_LIMITS,
   deltaWfoPreviewLongEnabled,
+  isDeltaWfoProfile,
 } from "./delta-wfo.profile";
 
 export type CurrentSourceTableKind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
@@ -123,8 +125,56 @@ export interface CurrentSourceSearchInputs {
   trials: CurrentSourceStoredRow[];
   candidates: CurrentSourceStoredRow[];
   folds: CurrentSourceStoredRow[];
-  poolFrozenAt: number | null;
+  stageEvents: P11StageEvents;
   requestedSpec: Record<string, unknown> | null;
+}
+
+/** One exact retained P05 artifact/attempt, never the newest unrelated producer. */
+export const CURRENT_SOURCE_STAGE_EVENTS_SQL = `WITH bound_producer AS (
+  SELECT producer.worker_attempt_id, producer.lease_epoch,
+         producer.execution_profile_id, producer.execution_profile_digest,
+         producer.actor_user_id, producer.preflight_token, artifact.artifact_id
+    FROM research.run_producers producer
+    JOIN research.artifacts artifact
+      ON artifact.workspace_id=producer.workspace_id AND artifact.run_id=producer.run_id
+     AND artifact.worker_attempt_id=producer.worker_attempt_id AND artifact.lease_epoch=producer.lease_epoch
+   WHERE producer.workspace_id=$1 AND producer.run_id=$2
+     AND artifact.state='SEALED' AND artifact.artifact_revision=$3 AND artifact.manifest_digest=$4
+     AND producer.requested_spec_digest=$5 AND producer.effective_spec_digest=$6
+     AND producer.dataset_binding_digest=$7
+), exact_binding AS (
+  SELECT * FROM bound_producer WHERE (SELECT count(*) FROM bound_producer)=1
+)
+SELECT producer.worker_attempt_id, producer.lease_epoch, producer.artifact_id,
+       producer.execution_profile_id, producer.execution_profile_digest,
+       (SELECT event.occurred_at_utc_ms FROM research.run_progress_events event
+         WHERE event.workspace_id=$1 AND event.run_id=$2 AND event.worker_attempt_id=producer.worker_attempt_id
+           AND event.event_type='stage_completed' AND event.event_payload->>'stage'='S3'
+         ORDER BY event.source_sequence DESC LIMIT 1) AS s3_completed_utc_ms,
+       (SELECT event.occurred_at_utc_ms FROM research.run_progress_events event
+         WHERE event.workspace_id=$1 AND event.run_id=$2 AND event.worker_attempt_id=producer.worker_attempt_id
+           AND event.event_type='stage_started' AND event.event_payload->>'stage'='S4'
+         ORDER BY event.source_sequence DESC LIMIT 1) AS s4_started_utc_ms,
+       (SELECT event.occurred_at_utc_ms FROM research.run_progress_events event
+         WHERE event.workspace_id=$1 AND event.run_id=$2 AND event.worker_attempt_id=producer.worker_attempt_id
+           AND event.event_type='stage_completed' AND event.event_payload->>'stage'='S4'
+         ORDER BY event.source_sequence DESC LIMIT 1) AS s4_completed_utc_ms,
+       (SELECT preflight.requested_spec FROM research.preflight_manifests preflight
+         WHERE preflight.workspace_id=$1 AND preflight.preflight_token=producer.preflight_token
+           AND preflight.actor_user_id=producer.actor_user_id AND preflight.requested_spec_digest=$5
+         LIMIT 1) AS requested_spec
+  FROM exact_binding producer`;
+
+interface StageEventsQueryRow {
+  worker_attempt_id: string;
+  lease_epoch: string | number;
+  artifact_id: string;
+  execution_profile_id: string;
+  execution_profile_digest: string | null;
+  s3_completed_utc_ms: string | number | null;
+  s4_started_utc_ms: string | number | null;
+  s4_completed_utc_ms: string | number | null;
+  requested_spec: JsonColumn;
 }
 
 /** Run state for the no-seal lane; exported so the PostgreSQL lane runs the exact statement. */
@@ -642,33 +692,11 @@ export class ResearchCurrentSourceRepository {
   }
 
   /**
-   * CG-FG-S06-05: the pool's source-side S4 completion clock, never the
-   * retained import time or a browser clock. Bind to the latest producer's
-   * worker attempt so a failed earlier attempt cannot lend its timestamp.
+   * P11 orchestration observations from the exact retained artifact attempt.
+   * These never stand in for engine search, freeze or first-OOS-read clocks.
    */
-  async poolFrozenAt(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<number | null> {
-    return this.withScopedRead(scope, async (client) => {
-      const result = await client.query<{ occurred_at_utc_ms: string | number }>(
-        `SELECT event.occurred_at_utc_ms
-           FROM (
-             SELECT worker_attempt_id
-               FROM research.run_producers
-              WHERE workspace_id = $1 AND run_id = $2
-              ORDER BY created_at DESC
-              LIMIT 1
-           ) producer
-           JOIN research.run_progress_events event
-             ON event.workspace_id = $1 AND event.run_id = $2
-            AND event.worker_attempt_id = producer.worker_attempt_id
-          WHERE event.event_type = 'stage_completed'
-            AND event.event_payload->>'stage' = 'S4'
-          ORDER BY event.source_sequence DESC
-          LIMIT 1`,
-        [scope.workspaceId, runId],
-      );
-      return result.rowCount === 1
-        ? asSafeNonNegative(result.rows[0]!.occurred_at_utc_ms, "S4 completion timestamp") : null;
-    }, signal);
+  async stageEventClocks(scope: ResearchScope, seal: CurrentSourceSealRow, signal?: AbortSignal): Promise<P11StageEvents> {
+    return this.withScopedRead(scope, async (client) => (await this.readStageInputs(client, scope, seal)).stageEvents, signal);
   }
   /** CG-FG-S06-06: immutable P08 request, pinned to the P05 seal digest. */
   async admittedRequestedSpec(
@@ -797,28 +825,36 @@ export class ResearchCurrentSourceRepository {
           throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained search relation exceeds its sealed bound.", 503);
         }
       }
-      const facts = await client.query<{ frozen_at: string | number | null; requested_spec: JsonColumn }>(
-        `SELECT (
-           SELECT event.occurred_at_utc_ms FROM (
-             SELECT worker_attempt_id FROM research.run_producers WHERE workspace_id=$1 AND run_id=$2
-             ORDER BY created_at DESC LIMIT 1
-           ) producer JOIN research.run_progress_events event
-             ON event.workspace_id=$1 AND event.run_id=$2 AND event.worker_attempt_id=producer.worker_attempt_id
-           WHERE event.event_type='stage_completed' AND event.event_payload->>'stage'='S4'
-           ORDER BY event.source_sequence DESC LIMIT 1
-         ) AS frozen_at, (
-           SELECT preflight.requested_spec FROM research.run_producers producer
-           JOIN research.preflight_manifests preflight ON preflight.workspace_id=producer.workspace_id
-             AND preflight.preflight_token=producer.preflight_token AND preflight.actor_user_id=producer.actor_user_id
-             AND preflight.requested_spec_digest=$3
-           WHERE producer.workspace_id=$1 AND producer.run_id=$2 AND producer.requested_spec_digest=$3
-           ORDER BY producer.created_at DESC LIMIT 1
-         ) AS requested_spec`, [scope.workspaceId, seal.runId, seal.requestedSpecDigest],
-      );
-      const fact = facts.rows[0];
       return { trials: relations.TRIAL, candidates: relations.CANDIDATE, folds: relations.FOLD,
-        poolFrozenAt: fact?.frozen_at == null ? null : asSafeNonNegative(fact.frozen_at, "S4 completion timestamp"),
-        requestedSpec: fact?.requested_spec == null ? null : asJsonRecord(fact.requested_spec, "admitted requested spec") };
+        ...await this.readStageInputs(client, scope, seal) };
+  }
+
+  private async readStageInputs(client: PoolClient, scope: ResearchScope, seal: CurrentSourceSealRow): Promise<{
+    stageEvents: P11StageEvents; requestedSpec: Record<string, unknown> | null;
+  }> {
+    const result = await client.query<StageEventsQueryRow>(CURRENT_SOURCE_STAGE_EVENTS_SQL,
+      [scope.workspaceId, seal.runId, seal.artifactRevision, seal.manifestDigest,
+        seal.requestedSpecDigest, seal.effectiveSpecDigest, seal.datasetBindingDigest]);
+    const row = result.rows.length === 1 ? result.rows[0] : undefined;
+    // Unknown or mismatched historical profiles are not clock authority.
+    if (!row || !isDeltaWfoProfile(row.execution_profile_id, row.execution_profile_digest)) {
+      return { stageEvents: p11StageEvents(), requestedSpec: null };
+    }
+    const bindingDigest = sha256ResearchJson({ workspace_id: scope.workspaceId, run_id: seal.runId,
+      artifact_id: row.artifact_id, artifact_revision: seal.artifactRevision, manifest_digest: seal.manifestDigest,
+      worker_attempt_id: row.worker_attempt_id, lease_epoch: asSafeNonNegative(row.lease_epoch, "stage-event lease epoch"),
+      requested_spec_digest: seal.requestedSpecDigest, effective_spec_digest: seal.effectiveSpecDigest,
+      dataset_binding_digest: seal.datasetBindingDigest, execution_profile_id: row.execution_profile_id,
+      execution_profile_digest: row.execution_profile_digest });
+    const at = (value: string | number | null, label: string) => value == null ? null : asSafeNonNegative(value, label);
+    return {
+      stageEvents: p11StageEvents(bindingDigest, {
+        s3_completed_utc_ms: at(row.s3_completed_utc_ms, "S3 completed timestamp"),
+        s4_started_utc_ms: at(row.s4_started_utc_ms, "S4 started timestamp"),
+        s4_completed_utc_ms: at(row.s4_completed_utc_ms, "S4 completed timestamp"),
+      }),
+      requestedSpec: row.requested_spec == null ? null : asJsonRecord(row.requested_spec, "admitted requested spec"),
+    };
   }
 
   /**

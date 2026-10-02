@@ -25,6 +25,7 @@ import { ResearchCurrentSourceService } from "../src/research/current-source.ser
 import { FOLD_ORDERING_REASONS, foldOrdering, quantbtCandidateId } from "../src/research/fold-ordering";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "../src/research/parameter-binding.registry";
 import { openApiValidator } from "./research-rf05-openapi";
+import { p11StageEvents } from "../src/research/p11-stage-events";
 
 type Kind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
 interface Fixture {
@@ -72,7 +73,7 @@ function serviceFor(fixture: Fixture, rows: Partial<Record<Kind, CurrentSourceSt
   const repository = {
     sealForRead: vi.fn().mockResolvedValue(sealOf(fixture, summary)),
     runState: vi.fn(),
-    poolFrozenAt: vi.fn().mockResolvedValue(null),
+    stageEventClocks: vi.fn().mockResolvedValue(p11StageEvents()),
     admittedRequestedSpec: vi.fn().mockResolvedValue(null),
     rows: vi.fn(async (_s: unknown, _r: string, _v: number, kind: Kind, selection: { limit: number }) => {
       const all = sorted(kind);

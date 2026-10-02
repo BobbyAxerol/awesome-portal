@@ -51,6 +51,7 @@ import {
   trialFacts,
 } from "./current-source-facts";
 import { splitGapScan, splitStitch } from "./current-source-split-integrity";
+import { POOL_FREEZE_CLOCK_ABSENT } from "./p11-stage-events";
 import { trainTestDisjoint } from "./train-test-disjoint";
 import {
   ResearchCurrentSourceRepository,
@@ -561,7 +562,9 @@ export class ResearchCurrentSourceService {
     const summary = parseSummary(seal);
     const facts = summary.source_facts;
     const ledgerMode = facts?.search.trial_ledger_mode ?? null;
-    const currentRevision = revision("search", seal);
+    const currentRevision = `rs02_search_${sha256ResearchJson({
+      base: revision("search", seal), stage_events: inputs.stageEvents,
+    })}`;
     const fold = "fold" in query ? query.fold ?? null : null;
     // A fold filter binds its own cursors: a page minted for fold 1 is
     // refused for fold 2 (the operation string is part of the fingerprint).
@@ -615,7 +618,6 @@ export class ResearchCurrentSourceService {
       selectedTrialId: summary.selection.trial_id,
     });
     const contract = searchContract(facts);
-    const poolFrozenAt = inputs.poolFrozenAt;
     const rawRequest = inputs.requestedSpec;
     const admitted = rawRequest === null ? null : ResearchRequestedSpecSchema.safeParse(rawRequest);
     if (admitted !== null && !admitted.success) {
@@ -691,10 +693,11 @@ export class ResearchCurrentSourceService {
       }),
       pool: {
         ...pool,
-        frozen_at_utc_ms: poolFrozenAt,
-        frozen_at_source: poolFrozenAt === null ? null : "P11_STAGE_COMPLETED_S4_EVENT" as const,
-        frozen_at_reason_code: poolFrozenAt === null ? "P11_S4_COMPLETION_EVENT_NOT_RETAINED" as const : null,
+        frozen_at_utc_ms: null,
+        frozen_at_source: null,
+        frozen_at_reason_code: POOL_FREEZE_CLOCK_ABSENT,
       },
+      stage_events: inputs.stageEvents,
     };
     return this.valid(ResearchCurrentSourceSearchResponseSchema, value);
   }
@@ -703,6 +706,7 @@ export class ResearchCurrentSourceService {
     const seal = await this.requireSeal(scope, runId, "freeze", signal);
     if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
+    const stageEvents = await this.repository.stageEventClocks(scope, seal, signal);
     const observedImportDigest = await this.repository.verifyRetainedImport(scope, seal, signal);
     const integrityState = observedImportDigest === seal.retainedImportDigest ? "MATCH" as const : "MISMATCH" as const;
     // A10a: the newest durable byte receipt (a GET never re-reads bytes).
@@ -731,6 +735,7 @@ export class ResearchCurrentSourceService {
       summary.source_facts,
       summary.selection.parameters,
       binding?.candidateParameterKinds,
+      stageEvents,
     );
     // The ETag must move when a new receipt, a job state or a sealed grid
     // lands, or a 304 would hide it.

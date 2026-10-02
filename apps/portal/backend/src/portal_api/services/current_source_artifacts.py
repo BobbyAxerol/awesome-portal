@@ -34,6 +34,10 @@ from typing import Any, Callable, Final, Iterable, Mapping
 import pandas as pd
 import pyarrow as pa
 
+from portal_api.services.research_child_audit_companion import (
+    ChildAuditCompanionCapture, digest as child_audit_digest, source_file_digest,
+)
+
 from portal_api.adapters.quantbt import QUANTBT_ENGINE_VERSION
 from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_OPTUNA_TRIALS,
@@ -212,6 +216,8 @@ class CurrentSourceArtifactReceipt:
 class CurrentSourceArtifactExport:
     candidate: SealedArtifactCandidate
     receipt: CurrentSourceArtifactReceipt
+    # Independent private custody; never changes the five-table P05 manifest.
+    child_audit_companion: ChildAuditCompanionCapture | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -656,7 +662,12 @@ class CurrentSourceArtifactAdapter:
         account_ledger = self._optional_frame(raw_dir / "series" / "account_ledger.v1.parquet", "account ledger")
         account_contract = self._optional_json(raw_dir / "wfo" / "account_contract.v1.json", "account contract")
         replay_summary = None
-        lifecycle = self._optional_frame(raw_dir / "wfo" / "strategy_lifecycle.v1.parquet", "strategy lifecycle")
+        lifecycle_path = raw_dir / "wfo" / "strategy_lifecycle.v1.parquet"
+        try:
+            lifecycle_digest = source_file_digest(lifecycle_path) if lifecycle_path.exists() else None
+        except (OSError, ValueError) as exc:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CHILD_AUDIT_INVALID", "Lifecycle source exceeds companion custody bounds.") from exc
+        lifecycle = self._optional_frame(lifecycle_path, "strategy lifecycle")
         lifecycle_contract = self._optional_json(raw_dir / "wfo" / "strategy_lifecycle_contract.v1.json", "strategy lifecycle contract")
         child_audit_summary = None
         if lifecycle is not None and account_ledger is not None:
@@ -813,7 +824,37 @@ class CurrentSourceArtifactAdapter:
             summary=summary,
             source_adapter_id=source_adapter_id,
         )
-        return CurrentSourceArtifactExport(candidate=candidate, receipt=receipt)
+        companion = None
+        if lifecycle is not None:
+            # Exact raw-file binding is checked again after normalization. No
+            # full audit rows enter the terminal receipt or original P05 seal.
+            rows = []
+            for ordinal, (_, raw) in enumerate(lifecycle.iterrows()):
+                record = {str(column): self._json_value(value) for column, value in raw.to_dict().items()}
+                fold_id = None if record.get("fold_id") is None else str(record["fold_id"])
+                rows.append({**self._child_audit_record(ordinal, record, fold_id),
+                    "run_fingerprint": self._fact_token(record.get("run_id"))})
+            try:
+                if source_file_digest(lifecycle_path) != lifecycle_digest:
+                    raise ValueError("CHILD_AUDIT_SOURCE_CHANGED")
+                companion = ChildAuditCompanionCapture(tuple(rows), lifecycle_digest,
+                    child_audit_digest(lifecycle_contract), self._fact_int((lifecycle_contract or {}).get("records_dropped")),
+                    self._fact_token((lifecycle_contract or {}).get("policy")))
+            except (OSError, ValueError) as exc:
+                raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CHILD_AUDIT_INVALID", "Lifecycle source changed or exceeds custody bounds.") from exc
+        return CurrentSourceArtifactExport(candidate=candidate, receipt=receipt, child_audit_companion=companion)
+
+    def _child_audit_record(self, ordinal: int, record: Mapping[str, Any], fold_id: str | None) -> dict[str, Any]:
+        """Same normalization for full custody and the unchanged legacy witness."""
+        context = record.get("context")
+        return {"audit_ordinal": ordinal, "candidate_id": self._fact_token(record.get("candidate_id")),
+            "fold_id": fold_id, "seed": self._fact_int(record.get("seed")),
+            "context": context if isinstance(context, str) and 0 < len(context) <= 96 else None,
+            **{key: self._fact_token(record.get(key)) for key in ("lifecycle_kind", "policy", "state_before", "strategy_fingerprint", "market_fingerprint")},
+            **{key: self._fact_bool(record.get(key)) for key in ("certified_isolation", "spawned", "reset_called", "warmup_called", "closed")},
+            "warmup_bars": self._fact_int(record.get("warmup_bars")),
+            **{key + "_utc_ms": self._nullable_utc_ms(record.get(key), "lifecycle " + key.replace("_", " "))
+                for key in ("cutoff", "train_start", "train_end", "test_start", "test_end")}}
 
     def _require_current_advanced_wfo(self, manifest: Mapping[str, Any]) -> None:
         if manifest.get("quantbt_version") != QUANTBT_ENGINE_VERSION:
@@ -1232,30 +1273,7 @@ class CurrentSourceArtifactAdapter:
             run_fingerprint = self._fact_token(record.get("run_id"))
             if run_fingerprint:
                 fingerprints.add(run_fingerprint)
-            context = record.get("context")
-            by_fold[fold_id].append({
-                "audit_ordinal": ordinal,
-                "candidate_id": self._fact_token(record.get("candidate_id")),
-                "fold_id": fold_id,
-                "seed": self._fact_int(record.get("seed")),
-                "context": context if isinstance(context, str) and 0 < len(context) <= 96 else None,
-                "lifecycle_kind": self._fact_token(record.get("lifecycle_kind")),
-                "policy": self._fact_token(record.get("policy")),
-                "certified_isolation": self._fact_bool(record.get("certified_isolation")),
-                "spawned": self._fact_bool(record.get("spawned")),
-                "reset_called": self._fact_bool(record.get("reset_called")),
-                "warmup_called": self._fact_bool(record.get("warmup_called")),
-                "warmup_bars": self._fact_int(record.get("warmup_bars")),
-                "closed": self._fact_bool(record.get("closed")),
-                "state_before": self._fact_token(record.get("state_before")),
-                "cutoff_utc_ms": self._nullable_utc_ms(record.get("cutoff"), "lifecycle cutoff"),
-                "train_start_utc_ms": self._nullable_utc_ms(record.get("train_start"), "lifecycle train start"),
-                "train_end_utc_ms": self._nullable_utc_ms(record.get("train_end"), "lifecycle train end"),
-                "test_start_utc_ms": self._nullable_utc_ms(record.get("test_start"), "lifecycle test start"),
-                "test_end_utc_ms": self._nullable_utc_ms(record.get("test_end"), "lifecycle test end"),
-                "strategy_fingerprint": self._fact_token(record.get("strategy_fingerprint")),
-                "market_fingerprint": self._fact_token(record.get("market_fingerprint")),
-            })
+            by_fold[fold_id].append(self._child_audit_record(ordinal, record, fold_id))
         for fold in folds:
             records = by_fold[fold["fold_id"]]
             # QuantBT appends the OOS-generation child after trial search.

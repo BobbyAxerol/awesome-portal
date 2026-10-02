@@ -15,6 +15,14 @@ for (const [name, component] of [["research-run-library", "MetricCell"], ["resea
   const sources = ["SUMMARY_ANALYTICS_V2", "ENRICHED_ANALYSIS"];
   if (component !== "RunMetricFact") metric.properties.source = { enum: sources };
   else metric.properties.source.anyOf[0].enum = ["P13_EVIDENCE_PROJECTION", "RS02_RETAINED_SELECTED_TRIAL", ...sources];
+  // Match the runtime refinement: absence is typed, never AVAILABLE/null.
+  metric.allOf = [{
+    if: {
+      properties: { availability: { properties: { state: { const: "AVAILABLE" } }, required: ["state"] } },
+      required: ["availability"],
+    },
+    then: { properties: { value: { type: "string", minLength: 1 } }, required: ["value"] },
+  }];
   // Preserve all unrelated components, formatting and required-field lists.
   const line = new RegExp(`^      "${component}": [^\\n]+,$`, "m");
   const block = new RegExp(`^      "${component}": \\{\\n[\\s\\S]*?^      },$`, "m");

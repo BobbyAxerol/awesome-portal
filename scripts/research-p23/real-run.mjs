@@ -30,10 +30,11 @@ export function requestedSpec(binding, release, profile) {
     client: { engine_release_id: release.release_id, config_digest: release.config_digest },
   };
 }
-export async function admitRealRun(home, profile, label, operator = 'p23-owner') {
+export async function admitRealRun(home, profile, label, operator = 'p23-owner', authenticatedClient) {
   home = validateHome(home);
   assert(/^[a-z][a-z0-9-]{0,63}$/.test(label), 'P23_RECEIPT_LABEL_REQUIRED');
-  const client = await operatorClient(home, operator);
+  const client = authenticatedClient ?? await operatorClient(home, operator);
+  assert.equal(client.user.username, operator, 'EXACT_TEST_OPERATOR_REQUIRED');
   const path = join(home, `run-${label}.json`);
   let prior;
   try { prior = privateJson(path); } catch (error) { if (error.code !== 'ENOENT') throw error; }

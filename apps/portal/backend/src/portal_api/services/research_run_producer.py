@@ -538,6 +538,14 @@ class ResearchRunProducerExecutor:
                     limits=limits,
                     on_child_alive=(lambda: progress("heartbeat", {})) if progress_journal is not None else None,
                 )
+            if child.fixed_replay_source is not None and child.fixed_replay_source["state"] == "AVAILABLE":
+                from portal_api.services.research_fixed_replay import FILE_NAME, copy_fixed_replay_file
+
+                if child.fixed_replay_path is None:
+                    raise ResearchRunProducerError("fixed replay available source has no verified child file")
+                replay_directory = artifact_root / request.run_id / "research"
+                replay_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+                copy_fixed_replay_file(child.fixed_replay_path, replay_directory / FILE_NAME, child.fixed_replay_source)
             progress("budget_tick", _cpu_budget_tick_payload(
                 child.cpu_seconds,
                 child.enforced_limits.get("cpu_seconds", 0),
@@ -673,6 +681,8 @@ class ResearchRunProducerExecutor:
             # relayed through P11; it is not an artifact path or a database
             # source and does not expand P10's private input capability.
             receipt_document["evidence_source"] = child.evidence_source
+        if child.fixed_replay_source is not None:
+            receipt_document["fixed_replay_source"] = child.fixed_replay_source
         receipt_path = engine_directory / "research" / "p10-receipt.json"
         receipt_path.write_text(
             json.dumps(canonicalize(receipt_document), sort_keys=True, indent=2) + "\n",
@@ -684,6 +694,7 @@ class ResearchRunProducerExecutor:
             "research_receipt": receipt_document,
             "research_evidence": child.evidence_source,
             "research_split": split_source,
+            "fixed_replay_source": child.fixed_replay_source,
         }
 
     def _execute_delta_wfo_sync(

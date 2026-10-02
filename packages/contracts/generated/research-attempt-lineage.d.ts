@@ -69,7 +69,7 @@ export interface components {
             origin?: "ENGINE_DIRECT" | "PORTAL_DERIVED";
             source_locator?: string;
             input_digest?: string;
-        };
+        } & unknown;
         /** @description W6b CG-P19-05: the primary run's certificate, claim, OOS Sharpe and decay exactly as Screen 01 maps them; a Delta WFO run without a P13 projection falls back to its retained RS-02 selected trial. */
         RunFacts: {
             certificate: {

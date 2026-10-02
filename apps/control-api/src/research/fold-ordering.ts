@@ -23,6 +23,7 @@
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { P11StageEventsSchema, type P11StageEvents } from "./p11-stage-events";
 
 import type { CurrentSourceFacts } from "./current-source.payload";
 import type { HistoricalProfileBinding } from "./parameter-binding.registry";
@@ -87,6 +88,8 @@ export const FoldOrderingSchema = z.object({
     state: z.literal("NOT_PUBLISHED"),
     reason_code: Reason,
   }).strict(),
+  /** Optional P11 orchestration observations, separate from absent engine clocks above. */
+  stage_events: P11StageEventsSchema.optional(),
   frozen_candidate: z.object({
     identity_rule: z.literal(QUANTBT_CANDIDATE_IDENTITY_RULE),
     candidate_id: CandidateId.nullable(),
@@ -202,6 +205,7 @@ export function foldOrdering(
   facts: CurrentSourceFacts | undefined,
   frozenParameters: Readonly<Record<string, string>>,
   candidateParameterKinds?: HistoricalProfileBinding["candidateParameterKinds"],
+  stageEvents?: P11StageEvents,
 ): FoldOrdering {
   const { scope, verdict, reason } = scopeOf(facts);
   const frozen = quantbtCandidateId(frozenParameters, candidateParameterKinds);
@@ -227,6 +231,7 @@ export function foldOrdering(
       oos_used_for_selection: facts?.claims.oos_used_for_selection ?? null,
     },
     wall_clock: { state: "NOT_PUBLISHED", reason_code: FOLD_ORDERING_REASONS.wallClock },
+    ...(stageEvents ? { stage_events: stageEvents } : {}),
     frozen_candidate: {
       identity_rule: QUANTBT_CANDIDATE_IDENTITY_RULE,
       candidate_id: frozen,

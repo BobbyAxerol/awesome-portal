@@ -158,6 +158,14 @@ import { ResearchCurrentSourceController } from "./research/current-source.contr
 import { ResearchCurrentSourceRepository } from "./research/current-source.repository";
 import { ResearchCurrentSourceService } from "./research/current-source.service";
 import { ResearchCurrentSourceIngestService } from "./research/current-source-ingest.service";
+import { ResearchChildAuditCompanionController } from "./research/child-audit-companion.controller";
+import { ResearchChildAuditCompanionRepository } from "./research/child-audit-companion.repository";
+import { ResearchChildAuditCompanionService } from "./research/child-audit-companion.service";
+import { ResearchChildAuditCompanionIngestService } from "./research/child-audit-companion.ingest";
+import { ResearchFixedReplayCompanionController } from "./research/fixed-replay-companion.controller";
+import { ResearchFixedReplayCompanionRepository } from "./research/fixed-replay-companion.repository";
+import { ResearchFixedReplayCompanionService } from "./research/fixed-replay-companion.service";
+import { ResearchFixedReplayCompanionIngestService } from "./research/fixed-replay-companion.ingest";
 import { ResearchReportController } from "./research/report.controller";
 import { ResearchReportRepository } from "./research/report.repository";
 import { ResearchReportService } from "./research/report.service";
@@ -238,6 +246,8 @@ export class AppModule {
         ResearchWhatIfController,
         ResearchReplayController,
         ResearchCurrentSourceController,
+        ResearchChildAuditCompanionController,
+        ResearchFixedReplayCompanionController,
         ResearchReportController,
         ResearchLineageController,
         ResearchCompareController,
@@ -328,6 +338,12 @@ export class AppModule {
         ResearchCurrentSourceRepository,
         ResearchCurrentSourceService,
         ResearchCurrentSourceIngestService,
+        ResearchChildAuditCompanionRepository,
+        ResearchChildAuditCompanionService,
+        ResearchChildAuditCompanionIngestService,
+        ResearchFixedReplayCompanionRepository,
+        ResearchFixedReplayCompanionService,
+        ResearchFixedReplayCompanionIngestService,
         ResearchReportRepository,
         ResearchReportService,
         ResearchLineageRepository,

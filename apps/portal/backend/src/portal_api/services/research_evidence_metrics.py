@@ -134,6 +134,67 @@ def oos_scoped_result(result: Any, *, oos_start_utc_ms: int):
     return scoped_result(dataclasses.replace(result, metadata=metadata), scope="oos")
 
 
+def declared_is_scoped_result(result: Any, *, start_utc_ms: int, end_exclusive_utc_ms: int):
+    """Report on existing declared IS rows; never execute or reset an account.
+
+    QuantBT's public test slicer has an inclusive end. Use the last actual IS
+    observation, not the exclusive boundary (which belongs to OOS). Its ledger
+    tuples are not scoped, so callers must not publish IS trades/fills from it.
+    """
+    import numpy as np
+    import pandas as pd
+    from quantbt.core.scopes import scoped_result
+
+    if not isinstance(result, _engine_result_types()) or any(type(value) is not int
+            or not 0 <= value <= 9_007_199_254_740_991 for value in (start_utc_ms, end_exclusive_utc_ms)) \
+            or start_utc_ms >= end_exclusive_utc_ms:
+        raise ValueError("declared IS reporting requires an admitted result and half-open UTC bounds")
+    index = result.equity.index
+    if not 2 <= len(index) <= 2_000_000 or index.tz is None or not index.is_unique \
+            or not index.is_monotonic_increasing:
+        raise ValueError("declared IS reporting requires bounded chronological source observations")
+    start = pd.Timestamp(start_utc_ms, unit="ms", tz="UTC")
+    end = pd.Timestamp(end_exclusive_utc_ms, unit="ms", tz="UTC")
+    selected = index[(index >= start) & (index < end)]
+    if len(selected) < 2:
+        raise ValueError("declared IS reporting requires at least two source observations")
+    for array in (result.returns, result.positions, result.closes):
+        if not array.index.equals(index):
+            raise ValueError("declared IS source arrays must have exactly aligned indexes")
+    for array in (result.equity, result.returns, result.positions):
+        values = array.loc[selected].to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError("declared IS source account contains non-finite observations")
+    if np.any(result.equity.loc[selected].to_numpy(dtype=float) <= 0):
+        raise ValueError("declared IS source equity must be positive")
+    metadata = dict(result.metadata)
+    metadata["walk_forward"] = {"fold_table": pd.DataFrame([
+        {"test_start": start, "test_end": selected[-1]}])}
+    return scoped_result(dataclasses.replace(result, metadata=metadata), scope="test")
+
+
+def engine_is_metrics(scoped: Any) -> dict[str, dict[str, Any]]:
+    """Only IS Sharpe and drawdown; public reporting, not a strategy rerun."""
+    import numpy as np
+    from quantbt.metrics.performance import full_report
+
+    report = full_report(scoped, trading_days=TRADING_DAYS)
+    sample, _periods, _kind = _stats_sample(scoped)
+    finite = sample[np.isfinite(sample)]
+    if len(finite) < 2:
+        sharpe = _absent("NOT_APPLICABLE", "P13_IS_RETURN_SAMPLE_BELOW_TWO")
+    elif float(np.std(finite, ddof=1)) == 0:
+        sharpe = _absent("NOT_APPLICABLE", "P13_IS_RETURN_ZERO_VARIANCE")
+    else:
+        sharpe = {"state": "AVAILABLE", "reason_code": None, "value": decimal_text(report["sharpe"]),
+            "locator": "quantbt.metrics.performance.full_report(trading_days=365).sharpe:DECLARED_IS"}
+    with localcontext() as context:
+        context.prec = 48
+        drawdown = decimal_text(-Decimal(str(float(report["max_drawdown_pct"]))) / Decimal(100))
+    return {"sharpe": sharpe, "max_drawdown_fraction": {"state": "AVAILABLE", "reason_code": None,
+        "value": drawdown, "locator": "quantbt.metrics.performance.full_report.max_drawdown_pct:-/100:DECLARED_IS"}}
+
+
 def _stats_sample(scoped: Any) -> tuple[Any, float, str]:
     """The exact return sample and annualisation QuantBT uses for the report."""
 

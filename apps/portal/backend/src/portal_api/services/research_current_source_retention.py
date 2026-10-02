@@ -7,6 +7,7 @@ Order (all before the P11 ``run_completed`` event):
 3. ``POST artifacts/seal``               -- P05 manifest registration
 4. ``POST artifacts/current-source/batches`` x N (<= 200 rows, <= 1,000,000 B)
 5. ``POST artifacts/current-source/seal``
+6. optional full lifecycle companion batches/seal (same fenced P05 identity)
 
 The worker owns only local bytes; Control API owns every state transition.
 Each request body is serialized once and re-sent byte-identically on a
@@ -44,6 +45,7 @@ from portal_api.services.research_artifacts import (
     _sequence_transport_value,
 )
 from portal_api.services.research_progress_relay import _service_principal
+from portal_api.services.research_child_audit_companion import ChildAuditCompanionCapture, digest as child_audit_digest
 
 
 MAX_INGEST_BODY_BYTES = 1_000_000
@@ -338,6 +340,16 @@ class ResearchCurrentSourceRetentionClient:
             "total_rows": sum(table_rows.values()),
             "summary": dict(receipt.summary),
         })
+        # Additive full audit custody after the immutable five-table seal.
+        # It runs in the credential-owning durable parent, never in the child.
+        if export.child_audit_companion is not None:
+            self._retain_child_audit(export.child_audit_companion, binding={"workspace_id": request.workspace_id, "run_id": request.run_id,
+                "artifact_id": identity.artifact_id, "artifact_revision": revision,
+                "manifest_digest": manifest_digest, "source_transform_digest": receipt.source_transform_digest,
+                "requested_spec_digest": research.requested_spec_digest, "effective_spec_digest": research.effective_spec_digest,
+                "dataset_binding_digest": research.dataset_binding_digest,
+                "execution_profile_id": research.execution_profile_id, "execution_profile_digest": research.execution_profile_digest,
+                "source_adapter_id": receipt.source_adapter_id, "profile_id": receipt.profile_id}, identity_fields=identity_fields)
         return CurrentSourceRetentionResult(
             receipt=receipt,
             manifest_digest=manifest_digest,
@@ -346,6 +358,21 @@ class ResearchCurrentSourceRetentionClient:
             batch_count=len(accepted),
             trial_states=tuple(trial_states),
         )
+
+    def _retain_child_audit(self, audit: ChildAuditCompanionCapture, *, binding: Mapping[str, Any], identity_fields: Mapping[str, Any]) -> None:
+        audit_manifest = audit.bind(binding)
+        envelope = {**identity_fields, "artifact_revision": binding["artifact_revision"], "manifest_digest": binding["manifest_digest"],
+            "companion_digest": child_audit_digest(audit_manifest), "manifest": audit_manifest}
+        for batch in audit.batches():
+            ack = self._post("child-audit/batches", {"schema_version": "research.child-audit-companion-batch.v1", **envelope, **batch})
+            if (ack.get("schema_version") != "research.child-audit-companion-batch-receipt.v1"
+                or ack.get("accepted") is not True or ack.get("batch_ordinal") != batch["batch_ordinal"]
+                or ack.get("row_count") != len(batch["rows"])):
+                raise ResearchCurrentSourceRetentionError("Child-audit batch acknowledgement is incompatible")
+        ack = self._post("child-audit/seal", {"schema_version": "research.child-audit-companion-seal.v1", **envelope})
+        if (ack.get("schema_version") != "research.child-audit-companion-seal-receipt.v1"
+            or ack.get("sealed") is not True or ack.get("companion_digest") != envelope["companion_digest"]):
+            raise ResearchCurrentSourceRetentionError("Child-audit seal acknowledgement is incompatible")
 
     def _post(self, operation: str, body: Mapping[str, Any]) -> dict[str, Any]:
         encoded = encode_ingest_body(body)

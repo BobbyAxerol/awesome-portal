@@ -8,8 +8,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
-import { gunzipSync, gzipSync } from "node:zlib";
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
@@ -148,8 +148,37 @@ async function observe(): Promise<Record<string, unknown>> {
 }
 
 describe("W7 · P21 P04 lane golden (byte-for-byte)", () => {
-  it("composes, fingerprints and seals every P04 variant exactly as before the retained lane existed", async () => {
+  it("preserves P04 fingerprints, pins and all content except the explicitly approved source-link amendment", async () => {
     const observed = JSON.parse(JSON.stringify(await observe()));
+    // Group 4 adds exactly three links to new compositions/new packs. The
+    // stored baseline is never re-recorded. Compare unrelated content against
+    // it only after asserting this precise additive change and its new digest.
+    const normalizeLinks = (pack: Array<{ n: number; source: { href: string | null; label: string } }>, value: ReleaseCandidateSource) => {
+      for (const item of pack) {
+        if (item.n === 1) {
+          expect(item.source).toEqual({ label: "Alpha version lineage", href: value.alpha.alphaId && value.alpha.alphaVersionId
+            ? `/research/quantbt/alphas/${value.alpha.alphaId}/lineage?av=${value.alpha.alphaVersionId}` : null });
+          item.source = { label: "Alpha 360°", href: null };
+        } else if (item.n === 10 || item.n === 12) {
+          expect(item.source).toEqual({ label: "Researcher declaration", href: `/research/quantbt/runs/${value.runId}/release-candidate` });
+          item.source = { label: "Researcher declaration", href: null };
+        }
+      }
+    };
+    for (const [name, build] of Object.entries(VARIANTS)) {
+      const result = observed[name];
+      const value = build();
+      normalizeLinks(result.virtual.pack, value);
+      normalizeLinks(result.declared.pack, value);
+      if (result.seal.frozenCore) {
+        const actualDigest = coreDigest(result.seal.frozenCore);
+        expect(result.seal.packDigest).toBe(actualDigest);
+        normalizeLinks(result.seal.frozenCore.pack, value);
+        const legacyDigest = coreDigest(result.seal.frozenCore);
+        expect(legacyDigest).not.toBe(actualDigest);
+        result.seal.packDigest = legacyDigest; // Test-only unrelated-content comparison.
+      }
+    }
     // The deep-link label is an additive read-only response field, not part of
     // the pre-retained P04 fingerprint, frozen core or sealed pack golden.
     for (const result of Object.values(observed) as Array<{ virtual: { display_label?: string | null }; declared: { display_label?: string | null } }>) {
@@ -160,7 +189,7 @@ describe("W7 · P21 P04 lane golden (byte-for-byte)", () => {
       delete result.declared.display_label;
       delete (result.declared as { selected_params?: unknown }).selected_params;
     }
-    if (process.env.W7_WRITE_GOLDEN === "1") writeFileSync(GOLDEN, gzipSync(`${JSON.stringify(observed, null, 1)}\n`, { level: 9 }));
+    if (process.env.W7_WRITE_GOLDEN === "1") throw new Error("Group 4 must not rewrite the historical P04 golden");
     const golden = JSON.parse(gunzipSync(readFileSync(GOLDEN)).toString("utf8"));
     expect(Object.keys(observed)).toEqual(Object.keys(golden));
     for (const name of Object.keys(golden)) expect(observed[name], name).toEqual(golden[name]);

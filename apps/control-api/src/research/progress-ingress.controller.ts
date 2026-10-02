@@ -15,6 +15,10 @@ import {
   ResearchImportedSourceResolveIngressSchema,
 } from "./artifact-ingress.contract";
 import { ResearchCurrentSourceIngestService } from "./current-source-ingest.service";
+import { ResearchChildAuditCompanionIngestService } from "./child-audit-companion.ingest";
+import { ChildAuditCompanionBatchIngressSchema, ChildAuditCompanionSealIngressSchema } from "./child-audit-companion.contract";
+import { ResearchFixedReplayCompanionIngestService } from "./fixed-replay-companion.ingest";
+import { FixedReplayCompanionBatchIngressSchema, FixedReplayCompanionSealIngressSchema } from "./fixed-replay-companion.contract";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchProgressRepository } from "./progress.repository";
 import { ResearchProgressIngressSchema } from "./progress.contract";
@@ -33,6 +37,8 @@ export class ResearchProgressIngressController {
     @Inject(ResearchMetadataRepository) private readonly metadata: ResearchMetadataRepository,
     @Inject(ResearchCurrentSourceIngestService) private readonly currentSource: ResearchCurrentSourceIngestService,
     @Inject(ResearchWhatIfRepository) private readonly whatIf: ResearchWhatIfRepository,
+    @Inject(ResearchChildAuditCompanionIngestService) private readonly childAudit?: ResearchChildAuditCompanionIngestService,
+    @Inject(ResearchFixedReplayCompanionIngestService) private readonly fixedReplay?: ResearchFixedReplayCompanionIngestService,
   ) {}
 
   @Post("events")
@@ -210,6 +216,58 @@ export class ResearchProgressIngressController {
       parsed.data,
     );
     return { schema_version: "research.whatif-grid-sealed.v1", sealed: true, replayed: result.replayed };
+  }
+
+  @Post("artifacts/child-audit/batches")
+  @HttpCode(200)
+  async appendChildAudit(@Req() request: FastifyRequest, @Body() body: unknown) {
+    this.assertWorkerPrincipal(request);
+    this.assertCurrentSourceIngestEnabled();
+    this.assertBoundedBody(body);
+    const parsed = ChildAuditCompanionBatchIngressSchema.safeParse(body);
+    if (!parsed.success) throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research audit companion batch is invalid.", 400);
+    if (!this.childAudit) throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE", "Audit retention is not configured.", 503);
+    const lease = await this.progress.resolveIngress(parsed.data);
+    return this.childAudit.appendBatch(lease, parsed.data);
+  }
+
+  @Post("artifacts/child-audit/seal")
+  @HttpCode(200)
+  async sealChildAudit(@Req() request: FastifyRequest, @Body() body: unknown) {
+    this.assertWorkerPrincipal(request);
+    this.assertCurrentSourceIngestEnabled();
+    this.assertBoundedBody(body);
+    const parsed = ChildAuditCompanionSealIngressSchema.safeParse(body);
+    if (!parsed.success) throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research audit companion seal is invalid.", 400);
+    if (!this.childAudit) throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE", "Audit retention is not configured.", 503);
+    const lease = await this.progress.resolveIngress(parsed.data);
+    return this.childAudit.seal(lease, parsed.data);
+  }
+
+  @Post("artifacts/fixed-replay/batches")
+  @HttpCode(200)
+  async appendFixedReplay(@Req() request: FastifyRequest, @Body() body: unknown) {
+    this.assertWorkerPrincipal(request);
+    this.assertCurrentSourceIngestEnabled();
+    this.assertBoundedBody(body);
+    const parsed = FixedReplayCompanionBatchIngressSchema.safeParse(body);
+    if (!parsed.success) throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research fixed replay batch is invalid.", 400);
+    if (!this.fixedReplay) throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE", "Fixed replay retention is not configured.", 503);
+    const lease = await this.progress.resolveIngress(parsed.data);
+    return this.fixedReplay.appendBatch(lease, parsed.data);
+  }
+
+  @Post("artifacts/fixed-replay/seal")
+  @HttpCode(200)
+  async sealFixedReplay(@Req() request: FastifyRequest, @Body() body: unknown) {
+    this.assertWorkerPrincipal(request);
+    this.assertCurrentSourceIngestEnabled();
+    this.assertBoundedBody(body);
+    const parsed = FixedReplayCompanionSealIngressSchema.safeParse(body);
+    if (!parsed.success) throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research fixed replay seal is invalid.", 400);
+    if (!this.fixedReplay) throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE", "Fixed replay retention is not configured.", 503);
+    const lease = await this.progress.resolveIngress(parsed.data);
+    return this.fixedReplay.seal(lease, parsed.data);
   }
 
   private assertCurrentSourceIngestEnabled(): void {

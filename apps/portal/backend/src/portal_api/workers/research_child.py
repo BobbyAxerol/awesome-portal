@@ -806,7 +806,25 @@ def _enforced_limits() -> dict[str, int]:
     }
 
 
-def _run_p04_delta_smoke(receipt: dict[str, Any]) -> dict[str, Any]:
+def _capture_fixed_replay_source(*, receipt: dict[str, Any], receipt_dir: Path | None,
+                                 market: Any, result: Any, output: dict[str, Any]) -> None:
+    # Legacy scalar callers have no declared full OOS source or work directory.
+    # They must not acquire a complete-observation claim from old samples.
+    windows = receipt.get("source_windows")
+    if receipt_dir is None or not isinstance(windows, dict) or not isinstance(windows.get("oos"), dict):
+        return
+    from portal_api.services.research_fixed_replay import capture_fixed_replay
+
+    oos = windows["oos"]
+    if oos.get("start_ms") != receipt.get("oos_start_utc_ms"):
+        raise ValueError("fixed replay declared OOS boundary disagrees with child receipt")
+    output["fixed_replay_source"] = capture_fixed_replay(
+        result=result, market=market, output_directory=receipt_dir,
+        oos_start_utc_ms=oos["start_ms"], oos_end_exclusive_utc_ms=oos["end_ms"],
+    )
+
+
+def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = None) -> dict[str, Any]:
     """Run the pinned real P04 Delta calculation over an approved tape.
 
     The output is intentionally a tiny scalar receipt.  P05 owns artifact
@@ -858,6 +876,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any]) -> dict[str, Any]:
             run_id=receipt.get("run_id"),
             source_windows=receipt.get("source_windows"),
         )
+    _capture_fixed_replay_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
     return output
 
 
@@ -920,7 +939,7 @@ def _load_imported_entrypoint(source_text: str, *, expected_entrypoint: str) -> 
     return entrypoint, contract
 
 
-def _run_p17_imported_signal_notional(receipt: dict[str, Any]) -> dict[str, Any]:
+def _run_p17_imported_signal_notional(receipt: dict[str, Any], *, receipt_dir: Path | None = None) -> dict[str, Any]:
     """Execute one exact P07 source against past-only bounded bar contexts."""
 
     import pandas as pd
@@ -1030,6 +1049,7 @@ def _run_p17_imported_signal_notional(receipt: dict[str, Any]) -> dict[str, Any]
             run_id=receipt.get("run_id"),
             source_windows=receipt.get("source_windows"),
         )
+    _capture_fixed_replay_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
     return output
 
 
@@ -1498,9 +1518,9 @@ def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None)
     elif task == "P16_DELTA_WHATIF_GRID":
         result = _run_p16_delta_whatif(receipt, _wfo_output_root(receipt, receipt_dir))
     elif task == "P17_IMPORTED_SIGNAL_NOTIONAL":
-        result = _run_p17_imported_signal_notional(receipt)
+        result = _run_p17_imported_signal_notional(receipt, receipt_dir=receipt_dir)
     else:
-        result = _run_p04_delta_smoke(receipt)
+        result = _run_p04_delta_smoke(receipt, receipt_dir=receipt_dir)
     result.update(
         {
             "child_pid": os.getpid(),

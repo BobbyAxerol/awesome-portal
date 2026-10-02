@@ -1,5 +1,7 @@
 /** B6 canonical schema + additive references. Preserve unrelated OpenAPI bytes. */
 import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 const root = new URL("../", import.meta.url), check = process.argv.includes("--check");
 const v2 = JSON.parse(readFileSync(new URL("schemas/research-retained-analytics.v2.schema.json", root)));
 const ref = name => ({ $ref: `#/$defs/${name}` });
@@ -29,6 +31,28 @@ const defs = { ...v2.$defs, Curve: curve,
         start_equity: decimal, end_equity: decimal, source_locator: ref("Locator") }),
     }),
 };
+defs.ISFact = { ...v2.$defs.Fact, properties: { ...v2.$defs.Fact.properties, scope: { const: "IS" } } };
+const isFact = origin => ({ allOf: [ref("ISFact"), { type: "object", properties: { origin: { const: origin } } }] });
+defs.ISPayload = object({ state: { const: "AVAILABLE" }, reason_code: { type: "null" }, basis: { const: "ALL_TIME" },
+  scope: object({ window: { const: "IS" }, coverage: { const: "FULL_SOURCE_IS" }, start_ms: ms, end_ms: ms,
+    source_locator: ref("Locator"), bounds_semantics: { const: "START_INCLUSIVE_END_EXCLUSIVE" },
+    first_at_utc_ms: ms, last_at_utc_ms: ms, observation_count: { type: "integer", minimum: 2, maximum: 2_000_000 },
+    source_table: { const: "OBSERVATION_IS" }, locator: ref("Locator") }),
+  facts: object({ metrics: object({ sharpe: isFact("ENGINE_DIRECT"), return_fraction: isFact("PORTAL_DERIVED"),
+    max_drawdown_fraction: isFact("ENGINE_DIRECT") }) }),
+  return_basis: object({ definition_id: { const: "FIRST_LAST_DECLARED_IS_EQUITY_V1" }, start_equity: decimal,
+    end_equity: decimal, first_at_utc_ms: ms, last_at_utc_ms: ms, source_locator: ref("Locator") }),
+  benchmark: object({ ...head, definition_id: { const: "DECLARED_IS_SOURCE_CLOSE_REBASED_100_V1" },
+    source_locator: ref("Locator"), input_digest: digest }),
+  curves: object({ sampling: object({ source_observation_count: { type: "integer", minimum: 2, maximum: 2_000_000 },
+    emitted_point_count: { type: "integer", minimum: 2, maximum: 24 }, method: { const: "EXTREMA_BUCKET_V1" } }),
+    strategy_rebased_100: { ...curve, minItems: 2, maxItems: 24 }, benchmark_rebased_100: { ...curve, maxItems: 24 },
+    drawdown_fraction: { ...curve, minItems: 2, maxItems: 24 } }),
+  return_distribution: object({ ...derived, sampling: { const: "UTC_DAY" }, observation_count: count,
+    bucket_basis: { const: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1" }, statistics_policy: statistics.statistics_policy,
+    mean: isFact("PORTAL_DERIVED"), median: isFact("PORTAL_DERIVED"), var_95: isFact("PORTAL_DERIVED"), cvar_95: isFact("PORTAL_DERIVED"),
+    buckets: array(object({ lower_inclusive: decimal, upper: decimal, upper_inclusive: { enum: ["true", "false"] }, count }), 12) }),
+});
 const schema = { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "research.enriched-analysis.v1", ...object({
   schema_version: { const: "research.enriched-analysis.v1" }, service: { const: "enrich_analysis" }, basis: { const: "ALL_TIME" },
   lane: { enum: ["FIXED", "WFO"] }, run_id: { type: "string", pattern: "^rrun_[a-f0-9]{32}$" }, input_digest: digest,
@@ -54,6 +78,20 @@ const schema = { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "
         source_locator: ref("Locator"), input_digest: digest }) }), 10) }),
   library_summary: ref("LibrarySummary"), rolling: { type: "null" },
 }), $defs: defs };
+schema.properties.by_window = object({ is: ref("ISPayload") });
+const isSourceTable = { type: "object", properties: { name: { const: "OBSERVATION_IS" } }, required: ["name"] };
+schema.allOf = [{
+  if: { properties: { by_window: {} }, required: ["by_window"] },
+  then: { properties: { lane: { const: "FIXED" }, scope: { type: "object", properties: { coverage: { const: "FULL_RETAINED_OOS" } } },
+    windows: { type: "object", properties: { is: { type: "object", required: ["start_ms", "end_ms", "source_locator", "bounds_semantics"],
+      properties: { state: { const: "AVAILABLE" }, reason_code: { type: "null" }, start_ms: ms, end_ms: ms,
+        source_locator: ref("Locator"), bounds_semantics: { const: "START_INCLUSIVE_END_EXCLUSIVE" } } } } },
+    source_tables: { type: "array", contains: isSourceTable, minContains: 1, maxContains: 1 } } },
+  else: { properties: { windows: { type: "object", properties: { is: { type: "object", properties: { state: { enum: ["NOT_PUBLISHED", "NOT_APPLICABLE"] } } } } },
+    source_tables: { type: "array", not: { contains: isSourceTable } } } },
+}];
+schema.properties.windows.properties.holdout = { ...windowHead,
+  properties: { ...windowHead.properties, state: { enum: ["NOT_PUBLISHED", "NOT_APPLICABLE"] } } };
 schema.properties.return_distribution.dependentRequired = Object.fromEntries(Object.keys(statistics)
   .map(key => [key, Object.keys(statistics).filter(other => other !== key)]));
 function emit(path, text) {
@@ -62,6 +100,11 @@ function emit(path, text) {
   if (check) throw new Error(`Enrichment generated drift: ${path}`);
   writeFileSync(url, text);
 }
+// Importing the pure schema does not generate or overwrite any artifact.
+export const enrichedAnalysisSchema = schema;
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv.includes("--schema-only")) process.stdout.write(JSON.stringify(schema));
+else {
 emit("schemas/research-enriched-analysis.v1.schema.json", JSON.stringify(schema, null, 2) + "\n");
 const local = value => JSON.parse(JSON.stringify(value).replaceAll("#/$defs/", "#/components/schemas/EnrichedAnalysis"));
 const { $schema, $id, $defs, ...body } = schema;
@@ -102,3 +145,5 @@ for (const [file, dto, property, definition] of [
   emit(path, next);
 }
 process.stdout.write(`Enrichment components ${check ? "verified" : "generated"}.\n`);
+}
+}

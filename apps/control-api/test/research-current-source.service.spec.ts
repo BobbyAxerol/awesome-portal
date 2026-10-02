@@ -6,6 +6,7 @@ import { ResearchCurrentSourceService, currentSourceSealDigest } from "../src/re
 import { mockSearchRepository } from "./research-search-inputs.fixture";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import type { ResearchCurrentSourceNotApplicableResponse } from "../src/research/current-source.contract";
+import { p11StageEvents, POOL_FREEZE_CLOCK_ABSENT } from "../src/research/p11-stage-events";
 
 /** RF-05: these fixtures are sealed RS-02 runs; a not-applicable lane answer here is a test failure. */
 function sealed<T>(value: T | ResearchCurrentSourceNotApplicableResponse): T {
@@ -108,7 +109,7 @@ function page(rows: Array<{ sourceOrdinal: number; sourceId: string; occurredAtU
 }
 
 function service(repository: Record<string, unknown>) {
-  return new ResearchCurrentSourceService(mockSearchRepository({ poolFrozenAt: vi.fn().mockResolvedValue(null), admittedRequestedSpec: vi.fn().mockResolvedValue(null), ...repository }) as never, {
+  return new ResearchCurrentSourceService(mockSearchRepository({ admittedRequestedSpec: vi.fn().mockResolvedValue(null), ...repository }) as never, {
     FEATURE_RESEARCH_CURRENT_SOURCE: "true",
     QUERY_CURSOR_ACTIVE_KEY_ID: "query-k1",
     QUERY_CURSOR_KEYS_JSON: '{"query-k1":"current-source-test-key-is-at-least-32-bytes"}',
@@ -117,6 +118,43 @@ function service(repository: Record<string, unknown>) {
 }
 
 describe("RS-02 retained current-source named read models", () => {
+  it("publishes source-bound orchestration clocks separately and binds Search/Freeze cursors and ETags to them", async () => {
+    const stageEventClocks = vi.fn().mockResolvedValue(p11StageEvents("a".repeat(64), {
+      s3_completed_utc_ms: 10, s4_started_utc_ms: 11, s4_completed_utc_ms: 40,
+    }));
+    const repository = {
+      sealForRead: vi.fn().mockResolvedValue(seal), stageEventClocks,
+      rows: vi.fn().mockImplementation((_scope, _runId, _revision, kind: string) =>
+        page(kind === "FOLD" ? folds : kind === "TRIAL" ? trials : candidates)),
+      verifyRetainedImport: vi.fn().mockResolvedValue(seal.retainedImportDigest),
+    };
+    const current = service(repository);
+    const immutableSealDigest = currentSourceSealDigest(seal);
+    const search = sealed(await current.search(scope, seal.runId, { limit: 1 }));
+    const freeze = sealed(await current.freeze(scope, seal.runId));
+    expect(search.stage_events).toEqual(await stageEventClocks());
+    expect(search.pool).toMatchObject({ frozen_at_utc_ms: null, frozen_at_source: null, frozen_at_reason_code: POOL_FREEZE_CLOCK_ABSENT });
+    expect(freeze.fold_ordering.stage_events).toEqual(search.stage_events);
+    expect(freeze.fold_ordering.wall_clock.state).toBe("NOT_PUBLISHED");
+    expect(freeze.stage4_binding.sealed_params_sha256).toBe(sha256ResearchJson(seal.summary.selection.parameters));
+    expect(stageEventClocks).toHaveBeenCalledWith(scope, seal, undefined);
+
+    stageEventClocks.mockResolvedValue(p11StageEvents("a".repeat(64), {
+      s3_completed_utc_ms: 10, s4_started_utc_ms: 11, s4_completed_utc_ms: 41,
+    }));
+    const changedSearch = sealed(await current.search(scope, seal.runId, { limit: 1 }));
+    const changedFreeze = sealed(await current.freeze(scope, seal.runId));
+    expect(changedSearch.revision).not.toBe(search.revision);
+    expect(changedSearch.etag).not.toBe(search.etag);
+    expect(changedFreeze.revision).not.toBe(freeze.revision);
+    expect(changedFreeze.etag).not.toBe(freeze.etag);
+    expect(changedFreeze.stage4_binding).toEqual(freeze.stage4_binding);
+    expect(search.ledger.page.next_cursor).not.toBeNull();
+    await expect(current.search(scope, seal.runId, { limit: 1, cursor: search.ledger.page.next_cursor! }))
+      .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID", status: 400 });
+    expect(currentSourceSealDigest(seal)).toBe(immutableSealDigest);
+  });
+
   it("maps actual retained-source fields into five named screen models without a source call", async () => {
     const repository = {
       sealForRead: vi.fn().mockResolvedValue(seal),
@@ -137,7 +175,7 @@ describe("RS-02 retained current-source named read models", () => {
     const search = sealed(await current.search(scope, "run-rs02", { limit: 100 }));
     expect(search.pool.frozen_at_utc_ms).toBeNull();
     expect(search.pool.frozen_at_source).toBeNull();
-    expect(search.pool.frozen_at_reason_code).toBe("P11_S4_COMPLETION_EVENT_NOT_RETAINED");
+    expect(search.pool.frozen_at_reason_code).toBe(POOL_FREEZE_CLOCK_ABSENT);
     const freeze = sealed(await current.freeze(scope, "run-rs02"));
     const initialReplay = sealed(await current.replay(scope, "run-rs02", { limit: 100 }));
     const replay = sealed(await current.replay(scope, "run-rs02", {
