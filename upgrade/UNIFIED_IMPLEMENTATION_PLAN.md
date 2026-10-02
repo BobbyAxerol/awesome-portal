@@ -7048,3 +7048,14 @@ Claude gets the four §17 answers in backend queue, no consumer/layout change
 for this SQL patch. Full P23/P24, second-engine upgrade evidence, unsupported
 non-reuse audit-child and whole frontend/browser gates remain open. Preserve
 all original volumes/receipts/image pins; no remote/prod action.
+### P23 single-snapshot continuation — Codex, 2026-10-02
+
+Landed `e9c64d1c` (+433/-99, 18 files), preserving Claude `d30a201d`.
+Mandatory hook: backend 1468 PASS / 1 opt-in skip; contracts 219 PASS.
+Clean cell has the current frontend too. Actual 20-reader far-seek retake
+returns 140 GET 200 but Library 521/500 and Search 939/750 ms still FAIL;
+Replay deep/previous/far PASS. Next scoped S06 repair uses one authorized
+seal+ledger snapshot and no unconsumed B6 lookup, with build/95 focused tests
+PASS. No API/UI, limits, remotes, shared :8095, dev/main or production change.
+P23/P24 stay OPEN until their actual remaining gates pass.
+[Receipt](./research_loop/evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).

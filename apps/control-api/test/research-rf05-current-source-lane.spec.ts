@@ -16,6 +16,7 @@ import { ResearchCurrentSourceService } from "../src/research/current-source.ser
 import { ifNoneMatchWeakly } from "../src/research/etag";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "../src/research/p04-delta.binding";
 import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "../src/research/imported-alpha.profile";
+import { mockSearchRepository } from "./research-search-inputs.fixture";
 
 const scope = { workspaceId: "rf05-workspace", actorUserId: "rf05-user" };
 const config = {
@@ -32,7 +33,7 @@ function build(options: {
   /** W1: a P10-admitted run always carries its immutable execution profile. */
   executionProfileId?: string | null;
 }) {
-  const repository = {
+  const repository = mockSearchRepository({
     sealForRead: vi.fn().mockResolvedValue(null),
     runState: vi.fn().mockResolvedValue({
       sourceKind: options.sourceKind ?? "RESEARCH_DURABLE",
@@ -45,7 +46,7 @@ function build(options: {
     rows: vi.fn(),
     observationSeries: vi.fn(),
     verifyRetainedImport: vi.fn(),
-  };
+  });
   return {
     repository,
     service: new ResearchCurrentSourceService(repository as never, config as never),

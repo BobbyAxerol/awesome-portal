@@ -117,3 +117,35 @@ set. T07/T13 still need a real second qualified engine release; unsupported
 non-reusable audit-child and whole frontend/browser acceptance remain typed
 and open. Preserve rollback tags and original volumes. Revoke only owned
 test identities and stop only this cell at final closeout. No remote push.
+## Clean e9c64d1c retake and single-snapshot S06 repair
+
+Mandatory hook: **1468 Control API PASS / 1 opt-in SKIP**, contracts
+**219/219 PASS**; commit `e9c64d1c` landed by fast-forward after preserving
+Claude `d30a201d`. Control API and current Claude frontend both build. The
+owned cell uses the new frontend, not the earlier eae8 bundle.
+
+Private receipt byte SHA-256:
+`e34f5b7f471e62cbe46c779a14490477320e0953bef1bafcb9323ec76e9dfed4`.
+Actual clean `temporal-e9c-farseek.json`: 20 distinct authenticated readers,
+140/140 GET 200, Library depth 13, Replay depth 17 / playhead 1650,
+no implicit jobs, 24 capped samples, **601739264-byte peak**. Verdict **FAIL**:
+Library p95 **521 > 500 ms**, Search **939 > 750 ms**. Sparkline 317, Report
+481, Replay deep/previous/far 881/838/734 ms pass their unchanged targets.
+This result supersedes no earlier failure and is not a P23 GO.
+
+Next grouped repair binds S06's seal and finite TRIAL/CANDIDATE/FOLD inputs
+to one authorized repeatable-read transaction, not two independent admission
+turns. It omits the separate B6 enrichment lookup only for S06, which does
+not serve that block. Evidence/series still fetch and verify B6; retained
+summary/cursor digests, response schemas, actor/RLS checks, all timeout and
+2-active/18-queued limits stay unchanged. Focused build and six suites:
+**95/95 PASS**, including denied/no-seal/bounded single-snapshot checks.
+The first focused fixture attempt failed because object spread copied the
+old mock before its helper ran; the explicit mock repository adapter fixes
+that ordering. A clean-image official retake remains necessary.
+
+The mandatory hook found one additional RF-05 mock repository without the
+new single-snapshot method: **1466 PASS / 3 FAIL / 1 opt-in SKIP**. Those three
+failures are missing-method errors in the typed-absence test fixture, not
+runtime receipts. That fixture now uses the same explicit mock adapter;
+the hook is retaken without bypassing it.

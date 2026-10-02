@@ -4,8 +4,8 @@ import { ResearchCurrentSourceError } from "../src/research/current-source.error
 import type { CurrentSourceSealRow, CurrentSourcePage } from "../src/research/current-source.repository";
 import type { ResearchScope } from "../src/research/contracts";
 
-export function mockSearchInputs(repository: Record<string, unknown>) {
-  return vi.fn(async (scope: ResearchScope, seal: CurrentSourceSealRow) => {
+export function mockSearchRepository(repository: Record<string, unknown>) {
+  const searchInputs = vi.fn(async (scope: ResearchScope, seal: CurrentSourceSealRow) => {
     const read = repository.rows as (...args: unknown[]) => Promise<CurrentSourcePage>;
     const relations = {} as Record<"TRIAL" | "CANDIDATE" | "FOLD", CurrentSourcePage["rows"]>;
     for (const [kind, limit] of [["TRIAL", 400], ["CANDIDATE", 64], ["FOLD", 256]] as const) {
@@ -21,4 +21,9 @@ export function mockSearchInputs(repository: Record<string, unknown>) {
       poolFrozenAt: frozen ? await frozen(scope, seal.runId) : null,
       requestedSpec: request ? await request(scope, seal.runId, seal.requestedSpecDigest) : null };
   });
+  return { ...repository, searchInputs, searchForRead: vi.fn(async (scope: ResearchScope, runId: string) => {
+    const getSeal = repository.sealForRead as (...args: unknown[]) => Promise<CurrentSourceSealRow | null>;
+    const seal = await getSeal(scope, runId);
+    return seal ? { seal, inputs: await searchInputs(scope, seal) } : null;
+  }) };
 }

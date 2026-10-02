@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { ResearchCurrentSourceService, currentSourceSealDigest } from "../src/research/current-source.service";
-import { mockSearchInputs } from "./research-search-inputs.fixture";
+import { mockSearchRepository } from "./research-search-inputs.fixture";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import type { ResearchCurrentSourceNotApplicableResponse } from "../src/research/current-source.contract";
 
@@ -108,8 +108,7 @@ function page(rows: Array<{ sourceOrdinal: number; sourceId: string; occurredAtU
 }
 
 function service(repository: Record<string, unknown>) {
-  return new ResearchCurrentSourceService({ poolFrozenAt: vi.fn().mockResolvedValue(null), admittedRequestedSpec: vi.fn().mockResolvedValue(null), ...repository,
-    searchInputs: mockSearchInputs(repository) } as never, {
+  return new ResearchCurrentSourceService(mockSearchRepository({ poolFrozenAt: vi.fn().mockResolvedValue(null), admittedRequestedSpec: vi.fn().mockResolvedValue(null), ...repository }) as never, {
     FEATURE_RESEARCH_CURRENT_SOURCE: "true",
     QUERY_CURSOR_ACTIVE_KEY_ID: "query-k1",
     QUERY_CURSOR_KEYS_JSON: '{"query-k1":"current-source-test-key-is-at-least-32-bytes"}',

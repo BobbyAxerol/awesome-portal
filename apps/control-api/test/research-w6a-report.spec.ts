@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
-import { mockSearchInputs } from "./research-search-inputs.fixture";
+import { mockSearchRepository } from "./research-search-inputs.fixture";
 
 import type { CurrentSourceSealRow, CurrentSourceStoredRow } from "../src/research/current-source.repository";
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
@@ -94,7 +94,7 @@ function currentSource(importDigest = seal.retainedImportDigest, summaryAnalytic
     observationSeries: vi.fn(async () => ({ rows: sorted("OBSERVATION"), sampling: "FULL" as const, extremaEmitted: true })),
     verifyRetainedImport: vi.fn().mockResolvedValue(importDigest),
   };
-  return new ResearchCurrentSourceService({ ...repository, searchInputs: mockSearchInputs(repository) } as never, {
+  return new ResearchCurrentSourceService(mockSearchRepository(repository) as never, {
     FEATURE_RESEARCH_CURRENT_SOURCE: "true",
     QUERY_CURSOR_ACTIVE_KEY_ID: "query-k1",
     QUERY_CURSOR_KEYS_JSON: '{"query-k1":"current-source-test-key-is-at-least-32-bytes"}',

@@ -14,7 +14,7 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { mockSearchInputs } from "./research-search-inputs.fixture";
+import { mockSearchRepository } from "./research-search-inputs.fixture";
 
 import type {
   ResearchCurrentSourceEvidenceResponse,
@@ -83,7 +83,7 @@ describe.skipIf(!exportPath)("W3 real-HMD DR receipt (V11-P13/P14/P15-DR)", () =
       observationSeries: vi.fn(async () => ({ rows: all("OBSERVATION"), sampling: "FULL", extremaEmitted: true })),
       verifyRetainedImport: vi.fn(),
     };
-    const service = new ResearchCurrentSourceService({ ...repository, searchInputs: mockSearchInputs(repository) } as never, {
+    const service = new ResearchCurrentSourceService(mockSearchRepository(repository) as never, {
       FEATURE_RESEARCH_CURRENT_SOURCE: "true",
       QUERY_CURSOR_ACTIVE_KEY_ID: "query-k1",
       QUERY_CURSOR_KEYS_JSON: '{"query-k1":"current-source-test-key-is-at-least-32-bytes"}',

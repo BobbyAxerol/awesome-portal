@@ -571,7 +571,22 @@ export class ResearchCurrentSourceRepository {
   }
 
   async sealForRead(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<CurrentSourceSealRow | null> {
+    return this.withScopedRead(scope, (client) => this.readSeal(client, scope, runId, true), signal);
+  }
+
+  /** The S06 seal and its finite inputs belong to ONE authorized snapshot.
+   * S06 does not serve B6 analytics, so it must not fetch that separate block.
+   */
+  async searchForRead(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<{
+    seal: CurrentSourceSealRow; inputs: CurrentSourceSearchInputs;
+  } | null> {
     return this.withScopedRead(scope, async (client) => {
+      const seal = await this.readSeal(client, scope, runId, false);
+      return seal ? { seal, inputs: await this.readSearchInputs(client, scope, seal) } : null;
+    }, signal);
+  }
+
+  private async readSeal(client: PoolClient, scope: ResearchScope, runId: string, includeEnrichment: boolean): Promise<CurrentSourceSealRow | null> {
       const result = await client.query<SealQueryRow>(
         `SELECT seal.run_id, seal.artifact_revision, seal.source_adapter_id, seal.profile_id, seal.manifest_digest,
                 seal.source_transform_digest, seal.retained_import_digest, seal.requested_spec_digest,
@@ -597,10 +612,9 @@ export class ResearchCurrentSourceRepository {
         [scope.workspaceId, runId],
       );
       if (result.rowCount !== 1) return null;
-      const enrichedAnalysis = await readEnriched(client, scope.workspaceId, runId,
-        () => new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503));
+      const enrichedAnalysis = includeEnrichment ? await readEnriched(client, scope.workspaceId, runId,
+        () => new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503)) : null;
       return { ...this.toSeal(result.rows[0]!), ...(enrichedAnalysis ? { enrichedAnalysis } : {}) };
-    }, signal);
   }
 
   /**
@@ -753,7 +767,10 @@ export class ResearchCurrentSourceRepository {
    * No cached authorization, unbounded relation, source access or new API.
    */
   async searchInputs(scope: ResearchScope, seal: CurrentSourceSealRow, signal?: AbortSignal): Promise<CurrentSourceSearchInputs> {
-    return this.withScopedRead(scope, async (client) => {
+    return this.withScopedRead(scope, (client) => this.readSearchInputs(client, scope, seal), signal);
+  }
+
+  private async readSearchInputs(client: PoolClient, scope: ResearchScope, seal: CurrentSourceSealRow): Promise<CurrentSourceSearchInputs> {
       const trialLimit = deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;
       const limits = { TRIAL: trialLimit, CANDIDATE: 64, FOLD: 256 };
       const rows = await client.query<SourceRowQueryRow & { table_kind: keyof typeof limits }>(
@@ -802,7 +819,6 @@ export class ResearchCurrentSourceRepository {
       return { trials: relations.TRIAL, candidates: relations.CANDIDATE, folds: relations.FOLD,
         poolFrozenAt: fact?.frozen_at == null ? null : asSafeNonNegative(fact.frozen_at, "S4 completion timestamp"),
         requestedSpec: fact?.requested_spec == null ? null : asJsonRecord(fact.requested_spec, "admitted requested spec") };
-    }, signal);
   }
 
   /**

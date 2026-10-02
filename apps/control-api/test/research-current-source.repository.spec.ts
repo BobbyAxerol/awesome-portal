@@ -49,6 +49,37 @@ function fakeRepository(respond: (sql: string, params: readonly unknown[]) => { 
 }
 
 describe("RS-02 retained-current-source custody writes", () => {
+  it("reads S06 seal and bounded inputs in one authorized snapshot without unrelated B6 reads", async () => {
+    const input = sealInput();
+    const row = { run_id: input.runId, artifact_revision: 1,
+      source_adapter_id: input.sourceAdapterId, profile_id: input.profileId,
+      manifest_digest: input.manifestDigest, source_transform_digest: input.sourceTransformDigest,
+      retained_import_digest: digest("f"), requested_spec_digest: input.requestedSpecDigest,
+      effective_spec_digest: input.effectiveSpecDigest, dataset_binding_digest: input.datasetBindingDigest,
+      table_rows: input.tableRows, total_rows: input.totalRows, summary: {}, retained_at_utc_ms: 100 };
+    const kindRows = ["TRIAL", "TRIAL", "CANDIDATE", "FOLD", "FOLD"].map((kind, index) => ({
+      table_kind: kind, source_ordinal: index, source_id: `row-${index}`, occurred_at_utc_ms: null, payload: {},
+    }));
+    const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
+      ? { rowCount: 1, rows: [{}] } : sql.includes("FROM research.current_source_seals_v1 seal")
+        ? { rowCount: 1, rows: [row] } : sql.includes("WITH bounds") ? { rows: kindRows }
+          : sql.includes("AS frozen_at") ? { rows: [{ frozen_at: 42, requested_spec: { random_seed: 42 } }] } : {});
+    expect(await repository.searchForRead(scope, input.runId)).toMatchObject({
+      seal: { runId: input.runId, artifactRevision: 1 },
+      inputs: { trials: [{}, {}], candidates: [{}], folds: [{}, {}], requestedSpec: { random_seed: 42 } },
+    });
+    expect(calls.filter(({ sql }) => sql.startsWith("BEGIN"))).toHaveLength(1);
+    expect(calls.filter(({ sql }) => sql.includes("FROM workspace_members"))).toHaveLength(1);
+    expect(calls.some(({ sql }) => sql.includes("enriched_analysis_v1"))).toBe(false);
+    expect(calls.at(-1)!.sql).toBe("COMMIT");
+    const missing = fakeRepository(sql => sql.includes("FROM workspace_members") ? { rowCount: 1, rows: [{}] } : {});
+    expect(await missing.repository.searchForRead(scope, input.runId)).toBeNull();
+    expect(missing.calls.some(({ sql }) => sql.includes("WITH bounds"))).toBe(false);
+    const denied = fakeRepository(() => ({}));
+    await expect(denied.repository.searchForRead(scope, input.runId)).rejects.toMatchObject({ status: 403 });
+    expect(denied.calls.some(({ sql }) => sql.includes("FROM research.current_source_seals_v1 seal"))).toBe(false);
+    expect(denied.calls.at(-1)!.sql).toBe("ROLLBACK");
+  });
   it("reads finite S06 inputs in one scoped snapshot and binds seed to the sealed request", async () => {
     const seal = { ...sealInput(), retainedImportDigest: digest("f"), retainedAtUtcMs: 100 };
     const kindRows = ["TRIAL", "TRIAL", "CANDIDATE", "FOLD", "FOLD"].map((kind, index) => ({

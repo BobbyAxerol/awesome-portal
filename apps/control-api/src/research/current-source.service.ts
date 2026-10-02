@@ -552,14 +552,15 @@ export class ResearchCurrentSourceService {
     query: ResearchCurrentSourcePageQuery | ResearchCurrentSourceSearchQuery,
     signal?: AbortSignal,
   ): Promise<ResearchCurrentSourceSearchResponse | ResearchCurrentSourceNotApplicableResponse> {
-    const seal = await this.requireSeal(scope, runId, "search", signal);
-    if (!isSeal(seal)) return seal;
+    this.requireEnabled();
+    const retained = await this.repository.searchForRead(scope, runId, signal);
+    if (!retained) return this.noSealForRead(scope, runId, "search", signal);
+    const { seal, inputs } = retained;
     const summary = parseSummary(seal);
     const facts = summary.source_facts;
     const ledgerMode = facts?.search.trial_ledger_mode ?? null;
     const currentRevision = revision("search", seal);
     const fold = "fold" in query ? query.fold ?? null : null;
-    const inputs = await this.repository.searchInputs(scope, seal, signal);
     // A fold filter binds its own cursors: a page minted for fold 1 is
     // refused for fold 2 (the operation string is part of the fingerprint).
     const operation = fold === null ? "research.current-source.search.v1" : `research.current-source.search.v1:fold=${fold}`;
@@ -1135,6 +1136,12 @@ export class ResearchCurrentSourceService {
     this.requireEnabled();
     const seal = await this.repository.sealForRead(scope, runId, signal);
     if (seal) return seal;
+    return this.noSealForRead(scope, runId, operation, signal);
+  }
+
+  private async noSealForRead(
+    scope: ResearchScope, runId: string, operation: ResearchCurrentSourceOperation, signal?: AbortSignal,
+  ): Promise<ResearchCurrentSourceNotApplicableResponse> {
     const state = await this.repository.runState(scope, runId, signal);
     if (!state) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_NOT_FOUND", "Research run was not found.", 404);
     const refuse = (laneState: NonNullable<ResearchCurrentSourceError["details"]>["lane_state"], message: string): never => {

@@ -597,3 +597,16 @@ có lý do; UI không tự tính. Mọi số raw từ QuantBT/HMD, suy ra trong 
 | B9-4 | `at_utc_ms` cho từng cột của `/runs/{id}/sparkline` và `analytics_all_time` | tooltip ngày ở S01 | S01 |
 | B9-5 | Series `rolling_sharpe` / `rolling_volatility` (cửa sổ + mẫu) trên hub | `RollingChart`, `RollingSharpeChart` đã sẵn, chưa mount | S04 |
 | B9-6 | Compare payload: `drawdown_episodes` + best/worst month theo từng run | chú thích overlay S13 | S13 |
+
+### P23 single-snapshot continuation — 2026-10-02
+
+`e9c64d1c` is landed with Claude `d30a201d` intact. Full mandatory hook is
+green (1468 backend / 1 opt-in skip; 219 contracts). Current frontend is
+built in the owned cell. The official clean 20-reader retake still fails
+Library 521/500 and Search 939/750 ms; all 140 reads are 200 and Replay
+deep/previous/far now pass. No threshold is relaxed.
+
+S06 now receives its seal and finite inputs through one per-actor authorized
+snapshot, without an unrelated B6 lookup. Build + focused tests 95/95 PASS;
+unchanged API/UI/RLS/budgets. Clean-candidate runtime retake is next, not
+already qualified. [Exact evidence](./evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).

@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
-import { mockSearchInputs } from "./research-search-inputs.fixture";
+import { mockSearchRepository } from "./research-search-inputs.fixture";
 
 import {
   ResearchCurrentSourceSearchResponseSchema,
@@ -80,7 +80,7 @@ function serviceFor(fixture: Fixture, requestedSpec: Record<string, unknown> | n
     }),
     verifyRetainedImport: vi.fn().mockResolvedValue("f".repeat(64)),
   };
-  return new ResearchCurrentSourceService({ ...repository, searchInputs: mockSearchInputs(repository) } as never, config as never);
+  return new ResearchCurrentSourceService(mockSearchRepository(repository) as never, config as never);
 }
 
 async function search(fixture: Fixture): Promise<ResearchCurrentSourceSearchResponse> {
