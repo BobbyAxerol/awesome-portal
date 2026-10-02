@@ -559,29 +559,27 @@ export class ResearchCurrentSourceService {
     const ledgerMode = facts?.search.trial_ledger_mode ?? null;
     const currentRevision = revision("search", seal);
     const fold = "fold" in query ? query.fold ?? null : null;
+    const inputs = await this.repository.searchInputs(scope, seal, signal);
     // A fold filter binds its own cursors: a page minted for fold 1 is
     // refused for fold 2 (the operation string is part of the fingerprint).
     const operation = fold === null ? "research.current-source.search.v1" : `research.current-source.search.v1:fold=${fold}`;
     let page: CurrentSourcePage;
     let matchedRows: number;
     if (fold === null) {
-      page = await this.readPage(scope, runId, seal, "TRIAL", query, currentRevision, operation, signal);
+      page = this.pageInMemory(scope.workspaceId, runId, currentRevision, operation, inputs.trials, query);
       matchedRows = seal.tableRows.TRIAL;
     } else {
-      const folds = await this.boundedRows(scope, runId, seal, "FOLD", 256, signal);
+      const folds = inputs.folds;
       if (!folds.some((row) => row.sourceId === fold)) {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "The fold filter names no retained fold of this run.", 400);
       }
-      const all = await this.boundedRows(scope, runId, seal, "TRIAL", MAXIMUM_TRIAL_ROWS, signal);
+      const all = inputs.trials;
       const matched = all.filter((row) => trialCoversFold(asTrial(row).trial_facts, fold));
       matchedRows = matched.length;
       page = this.pageInMemory(scope.workspaceId, runId, currentRevision, operation, matched, query);
     }
-    const candidates = await this.repository.rows(scope, runId, seal.artifactRevision, "CANDIDATE", { limit: 64 }, signal);
     // X2 · B3: the surface is every retained trial (≤ 64), whatever page the ledger shows.
-    const allTrials = fold === null && !page.hasMore && !page.hasPrevious && page.rows.length === seal.tableRows.TRIAL
-      ? page.rows
-      : await this.boundedRows(scope, runId, seal, "TRIAL", MAXIMUM_TRIAL_ROWS, signal);
+    const allTrials = inputs.trials;
     const space = declaredSpace(seal.profileId, summary.selection.parameters);
     const roles = selectionRoles(facts, summary.selection);
     const surfaceTrials: SurfaceTrial[] = allTrials.map((row) => {
@@ -595,18 +593,15 @@ export class ResearchCurrentSourceService {
       };
     });
     const firstFacts = allTrials.length > 0 ? asTrial(allTrials[0]!).trial_facts : undefined;
-    if (candidates.totalRows !== seal.tableRows.CANDIDATE || candidates.hasMore || candidates.hasPrevious) {
-      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained candidate ledger exceeds its admitted bound.", 503);
-    }
     // E5: the pool and θ*'s per-fold decay read every retained trial and fold row.
-    const poolFolds = await this.boundedRows(scope, runId, seal, "FOLD", 256, signal);
+    const poolFolds = inputs.folds;
     const pool = searchPool({
       facts,
       trials: allTrials.map((row) => {
         const trial = asTrial(row);
         return { trialId: trial.trial_id, state: typedTrialState(trial.state), objective: trial.objective, facts: trial.trial_facts };
       }),
-      candidates: candidates.rows.map((row) => {
+      candidates: inputs.candidates.map((row) => {
         const candidate = asCandidate(row);
         return { candidateId: candidate.candidate_id, objective: candidate.objective, facts: candidate.trial_facts };
       }),
@@ -617,8 +612,8 @@ export class ResearchCurrentSourceService {
       selectedTrialId: summary.selection.trial_id,
     });
     const contract = searchContract(facts);
-    const poolFrozenAt = await this.repository.poolFrozenAt(scope, runId, signal);
-    const rawRequest = await this.repository.admittedRequestedSpec(scope, runId, seal.requestedSpecDigest, signal);
+    const poolFrozenAt = inputs.poolFrozenAt;
+    const rawRequest = inputs.requestedSpec;
     const admitted = rawRequest === null ? null : ResearchRequestedSpecSchema.safeParse(rawRequest);
     if (admitted !== null && !admitted.success) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained P08 request is incompatible.", 503);
@@ -628,7 +623,7 @@ export class ResearchCurrentSourceService {
       : requestSeed === null ? fact("NOT_APPLICABLE", "P08_RANDOM_SEED_NOT_SELECTED").availability : available();
     const value = {
       schema_version: "research.current-source-search.v1" as const,
-      ...this.common("search", seal),
+      ...this.common("search", seal, currentRevision),
       selection: {
         state: "AVAILABLE" as const,
         selected_trial_id: summary.selection.trial_id,
@@ -666,7 +661,7 @@ export class ResearchCurrentSourceService {
       },
       candidates: {
         source_candidate_count: seal.tableRows.CANDIDATE,
-        rows: candidates.rows.map((row) => {
+        rows: inputs.candidates.map((row) => {
           const { trial_facts: rowFacts, ...candidate } = asCandidate(row);
           return {
             source_ordinal: row.sourceOrdinal,
@@ -851,7 +846,7 @@ export class ResearchCurrentSourceService {
     const ledger = summary.replay ?? null;
     const value = {
       schema_version: "research.current-source-replay.v1" as const,
-      ...this.common("replay", seal),
+      ...this.common("replay", seal, currentRevision),
       replay: {
         source_observation_count: seal.tableRows.OBSERVATION,
         rows: page.rows.map((row) => {
@@ -918,7 +913,7 @@ export class ResearchCurrentSourceService {
     const currentRevision = revision("replay", seal);
     const resourceId = `${operation}:${runId}:${currentRevision}:OBSERVATION`;
     const fingerprint = queryFingerprint({ resourceId, limit: query.limit, filters: [], sort: [] });
-    const common = { ...this.common("replay", seal) };
+    const common = { ...this.common("replay", seal, currentRevision) };
     const emptyPage = {
       limit: query.limit, next_cursor: null, prev_cursor: null, has_more: false, has_previous: false,
       order: "SOURCE_TABLE_ORDINAL_ASC" as const,
@@ -1224,8 +1219,10 @@ export class ResearchCurrentSourceService {
     }
   }
 
-  private common(kind: string, seal: CurrentSourceSealRow) {
-    const value = revision(kind, seal);
+  private common(kind: string, seal: CurrentSourceSealRow, alreadyComputedRevision?: string) {
+    // One request already computed the exact same immutable seal revision
+    // for its signed cursor. Reuse that value, not a cross-request cache.
+    const value = alreadyComputedRevision ?? revision(kind, seal);
     return {
       read_authority: "PORTAL_RETAINED_CURRENT_SOURCE" as const,
       run_id: seal.runId,

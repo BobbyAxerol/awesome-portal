@@ -16,12 +16,12 @@ data, accounts or Cloudflare configuration.
 
 | Gate | Evidence / remaining work |
 | --- | --- |
-| P23 one candidate | Long WFO found the B6 summary-budget bug. Migration 085 and focused tests are in [P05](../P05/JSONB_SEAL_BUDGET_2026-10-02.md); corrected clean-image load/recovery retake is required. |
+| P23 one candidate | Long WFO now seals COMPLETED/READY after migration 085. Clean 660f4b18 still fails Search/Replay SLO; the next SQL repair passes a dirty diagnostic only. Corrected clean-image load/recovery/restore retake is required. [Actual results](../P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md). |
 | T07/T13 | Only QuantBT 1.1.1 is installed/accepted. No real second qualified engine image exists. Simulated pins, v2 profiles or another container of the same wheel are not upgrade/default/rollback proof. [Exact gap](../P23/T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md). |
 | T12 | Exact retained self-audit has real proof. Linked non-reusable AUDIT_OF_SELECTION stays unsupported, never a promoted diagnostic. Utility/primary quota evidence must match the candidate. |
 | T14 | New exposure is proved; whole restore must preserve audit/exposure/selection/publication references and verify every published part. |
 | Product/FE | QA inventory, full real-browser/visual/print/15-screen coverage and owner parity still need closure. Unit/source proof is not DOM proof. |
-| Security | Control API production build reports four high-severity dependency advisories; no clean security gate is claimed. Remediation/qualification is required for release. |
+| Security | Selected compatible-major HTTP/parser/dev-client pins are repaired; actual lock-only audit and production-image prune report 0 vulnerabilities on 2026-10-02. Regression and clean candidate acceptance are still required; this is not whole-product security clearance. |
 | Signed release | Local images are not signed release/SBOM/provenance. No remote push or release dispatch occurs in this task. |
 
 ## Continuation

@@ -23,6 +23,70 @@ No session, credential, cursor or business rows are copied into Git.
 The failed tests are not reclassified as cold, deleted, or replaced by unit
 tests. No SLO is weakened. Only a corrected clean candidate retake can pass.
 
+## Second measurement and scoped SQL repair
+
+Clean `660f4b18` kept the same seven-image cell topology. Private
+`temporal-memo-farseek.json`: Library deep now **381 ms PASS**, but Search
+**2,194 ms FAIL**, replay **1,332/1,502/1,558 ms FAIL** with bounded 503s.
+The entire lane is not accepted just because Library improved.
+
+The next repair keeps per-actor workspace membership, runtime-role RLS,
+repeatable-read, transaction-local timeouts, **2 active / 18 queued** retained
+read slots and the **750-ms** queue/acquisition limits:
+
+- Merge the same five `set_config(..., true)` functions into one query in
+  retained source and Report repositories; no setting or role is removed.
+- S06 already needs all bounded trial/candidate/fold rows for surface/pool.
+  A named internal `searchInputs` fetches those finite inputs and the exact
+  sealed-request seed/S4 completion facts in one actor-authorized snapshot.
+  Per-kind count must match the immutable seal and remain inside its existing
+  bounds. Cursor signatures, limits, fold binding and response schemas remain
+  unchanged; there is no persistent read/authorization cache.
+- Replay page total/previous/following counts use one filtered aggregate,
+  with the same sparse keyset edges, empty-page behavior and total count.
+- Reuse the already-computed revision only inside that same request; it is
+  not a cross-request trust cache.
+
+Focused repository/service/surface/pool/digest regressions: **70/70 PASS**.
+The Control API Docker build on pinned Node 22.23.2 succeeds. Diagnostic
+`temporal-bundle-diagnostic.json` (explicit **dirty/diagnostic-only**, not P23
+acceptance): 140/140 reads 200; p95 Library **205**, sparkline **363**, Report
+**345**, Search **749**, replay **715/718/666** ms, all below unchanged targets.
+Search is close to 750 ms; clean-candidate measurement is still required.
+
+The first mandatory hook stops with **1,450 pass / 18 fail / 1 opt-in skip**:
+all failures are the downstream Report fixture still missing the new internal
+`searchInputs` mock. No commit is created and that run is not PASS. The
+fixture adapter is now applied to Report and the opt-in DR fixture too;
+focused Report retake **25/25 PASS**, DR still explicitly opt-in/skipped in
+the host lane. The corrected mandatory hook and clean cell remain required.
+
+## Compatible-major dependency remediation
+
+The previous security blocker is repaired in the Control API manifest and
+actual lock: Nest Fastify adapter **11.2.4**, Fastify **5.12.5**, fast-uri
+**3.1.8/4.1.5**, brace-expansion **5.0.12**, test-only Undici **7.29.1**.
+No major upgrade or shared node_modules installation is performed. The exact
+nested lock copies have an offline regression guard. Full lock-only npm audit
+on 2026-10-02 reports **0 vulnerabilities** (197 dependencies), and the real
+production-image prune also reports 0. This is a dated audit result, not a
+claim that future vulnerabilities or whole-product security cannot exist.
+
+## Additional real functional receipts (not latency proof)
+
+- `temporal-monthly-product.json`: real v2 monthly Delta/global run
+  `rrun_b7ba4ed44f9c3b462a68b34d617941e0` is COMPLETED/READY. Split, Search,
+  Freeze, Report and RC return 200 with retained AVAILABLE facts. It ran on
+  the unchanged worker image during unrelated host gates; it is functional
+  evidence only, not one-candidate performance proof.
+- `temporal-frequency-estimates.json`: June–September v2 monthly gives
+  3 feasible folds; quarterly frequency over that same window gives 1 fold
+  and typed `PROFILE_FOLD_COUNT_NOT_ADMITTED` (minimum 2). An allowed
+  frequency is not a promise that every date window is admissible.
+- `temporal-three-window-estimate.json`: actual fixed IS/OOS/HOLDOUT metadata
+  gives **168/168/48 bars**, **300/300 warmup**, one fold, ready=true, named
+  P04 fixed profile. No run or source mutation is launched by this estimate.
+
 ## Bounded repair
 
 The coalesced Library repository shares the same DB-returned enrichment

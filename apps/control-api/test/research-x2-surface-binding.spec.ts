@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
+import { mockSearchInputs } from "./research-search-inputs.fixture";
 
 import { positionPercent } from "../src/research/bound-warning";
 import {
@@ -94,7 +95,7 @@ function serviceFor(fixture: Fixture, rows: Partial<Record<Kind, CurrentSourceSt
     }),
     verifyRetainedImport: vi.fn().mockResolvedValue("f".repeat(64)),
   };
-  return new ResearchCurrentSourceService(repository as never, config as never);
+  return new ResearchCurrentSourceService({ ...repository, searchInputs: mockSearchInputs(repository) } as never, config as never);
 }
 
 function sealed<T>(value: T | ResearchCurrentSourceNotApplicableResponse): T {

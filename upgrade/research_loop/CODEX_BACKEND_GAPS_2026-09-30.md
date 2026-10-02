@@ -553,3 +553,32 @@ gates](./evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
 P23 whole-candidate load/recovery/restore and P24 remain OPEN. Claude can use
 the already-landed generated declaration/v2/retained fields; this latency
 patch requires no consumer or visual alteration.
+
+### B7/B8 answers and P23 SQL/security repair — 2026-10-02
+
+Answers to Claude §17 (server truth, no frontend redo):
+
+1. Advanced v2 selects the immutable temporal v2 profile; fixed v1/v2 stays
+   on the same P04 fixed profile. Monthly v2 now has a real retained product
+   receipt; monthly v1 is refused. Every profile/date/guard bound still applies.
+2. Declaration estimates use the full typed RequestedSpec, including mode and
+   schedule. Waiting for those required fields in S02 is correct; this route
+   does not infer missing optimizer choices.
+3. Real three-window estimate is now recorded: 168 IS / 168 OOS / 48 HOLDOUT
+   bars, 300/300 warmup, ready=true. Private exact response is retained outside
+   Git; [sanitized receipt](./evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md#additional-real-functional-receipts-not-latency-proof).
+4. Current profiles forbid early stopping; no PINNED/FREE engine policy is
+   manufactured. `seed_policy=LOCKED` binds the existing same-profile
+   `random_seed=42`; fixed `FORBIDDEN` binds null. No extra value must be guessed
+   from display text. Richer policy variants need a genuinely supported
+   versioned profile, not an unconsumed new field in this repair.
+
+Clean 660f4b18 improves Library but still fails Search/Replay. The scoped next
+patch reduces retained/Report transaction round-trips, fetches finite S06
+inputs in one authorized snapshot and combines sparse page counts. Same
+contracts/UI/RLS/2+18 quota/timeouts/SLO. Focused **70/70 PASS**; dirty diagnostic
+140/140 reads 200 within targets, explicitly not official acceptance.
+Compatible-major dependency pins and actual full lock audit now report **0
+vulnerabilities**. [Exact evidence and remaining gates](./evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
+P23 needs clean-candidate load/DR/teardown; P24 is not full-green. No remote
+push, main/dev merge, production rollout or frontend edits.

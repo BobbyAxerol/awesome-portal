@@ -7033,3 +7033,18 @@ verified deeply frozen enrichment object, and repairs exact-spec preflight /
 fresh-parent reuse in the evidence harness. No RLS, UI, quota or SLO change.
 [Detailed measurement/repair packet](./research_loop/evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
 P23/P24 and real second-engine T07/T13 are not marked green.
+
+**2026-10-02 scoped read/security repair:** clean 660f4b18 brings deep Library
+to 381 ms but Search/Replay still fail; failures remain in the packet. The
+next finite S06 input snapshot and merged Replay count/settings queries keep
+membership/RLS, repeatable-read, 2 active/18 queued, queue/DB timeouts and SLO.
+Focused 70/70 and Control API image build pass. Dirty diagnostic has all 140
+reads 200 and all seven targets met, but it is not clean P23 acceptance.
+HTTP/parser/client compatible-major dependency pins give a dated full-lock
+audit result of 0 vulnerabilities. Monthly v2 has an actual COMPLETED/READY
+product receipt; fixed three-window estimate now has real 168/168/48 bars and
+300/300 warmup. [Packet](./research_loop/evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
+Claude gets the four §17 answers in backend queue, no consumer/layout change
+for this SQL patch. Full P23/P24, second-engine upgrade evidence, unsupported
+non-reuse audit-child and whole frontend/browser gates remain open. Preserve
+all original volumes/receipts/image pins; no remote/prod action.

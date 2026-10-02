@@ -118,6 +118,15 @@ export interface CurrentSourcePage {
   totalRows: number;
 }
 
+/** Finite S06 inputs, read under one actor-authorized repeatable-read snapshot. */
+export interface CurrentSourceSearchInputs {
+  trials: CurrentSourceStoredRow[];
+  candidates: CurrentSourceStoredRow[];
+  folds: CurrentSourceStoredRow[];
+  poolFrozenAt: number | null;
+  requestedSpec: Record<string, unknown> | null;
+}
+
 /** Run state for the no-seal lane; exported so the PostgreSQL lane runs the exact statement. */
 export const CURRENT_SOURCE_RUN_STATE_SQL = `SELECT library.source_kind, library.effective_status, producer.adapter_contract_digest,
        producer.execution_profile_id
@@ -712,24 +721,18 @@ export class ResearchCurrentSourceRepository {
       const hasExtra = result.rows.length > selection.limit;
       const pageRows = result.rows.slice(0, selection.limit);
       if (reverse) pageRows.reverse();
-      const total = await client.query<CountQueryRow>(
-        `SELECT count(*) AS count
-           FROM research.current_source_rows_v1
-          WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = $4`,
-        [scope.workspaceId, runId, artifactRevision, tableKind],
-      );
       const firstOrdinal = pageRows[0] ? asSafeNonNegative(pageRows[0].source_ordinal, "row ordinal") : null;
       const lastOrdinal = pageRows.at(-1) ? asSafeNonNegative(pageRows.at(-1)!.source_ordinal, "row ordinal") : null;
-      const previous = firstOrdinal === null ? 0 : asSafeNonNegative((await client.query<CountQueryRow>(
-        `SELECT count(*) AS count FROM research.current_source_rows_v1
-          WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = $4 AND source_ordinal < $5`,
-        [scope.workspaceId, runId, artifactRevision, tableKind, firstOrdinal],
-      )).rows[0]?.count, "previous row count");
-      const following = lastOrdinal === null ? 0 : asSafeNonNegative((await client.query<CountQueryRow>(
-        `SELECT count(*) AS count FROM research.current_source_rows_v1
-          WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = $4 AND source_ordinal > $5`,
-        [scope.workspaceId, runId, artifactRevision, tableKind, lastOrdinal],
-      )).rows[0]?.count, "following row count");
+      const total = await client.query<CountQueryRow & { previous_count: string | number; following_count: string | number }>(
+        `SELECT count(*) AS count,
+                count(*) FILTER (WHERE source_ordinal < $5) AS previous_count,
+                count(*) FILTER (WHERE source_ordinal > $6) AS following_count
+           FROM research.current_source_rows_v1
+          WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = $4`,
+        [scope.workspaceId, runId, artifactRevision, tableKind, firstOrdinal, lastOrdinal],
+      );
+      const previous = asSafeNonNegative(total.rows[0]?.previous_count, "previous row count");
+      const following = asSafeNonNegative(total.rows[0]?.following_count, "following row count");
       return {
         rows: pageRows.map((row) => ({
           sourceOrdinal: asSafeNonNegative(row.source_ordinal, "row ordinal"),
@@ -742,6 +745,63 @@ export class ResearchCurrentSourceRepository {
         hasPrevious: previous > 0 || (reverse && hasExtra),
         totalRows: asSafeNonNegative(total.rows[0]?.count, "table total"),
       };
+    }, signal);
+  }
+
+  /** S06 already needs every bounded trial/fold for its surface and pool.
+   * Fetch them once, not through seven separately queued transactions.
+   * No cached authorization, unbounded relation, source access or new API.
+   */
+  async searchInputs(scope: ResearchScope, seal: CurrentSourceSealRow, signal?: AbortSignal): Promise<CurrentSourceSearchInputs> {
+    return this.withScopedRead(scope, async (client) => {
+      const trialLimit = deltaWfoPreviewLongEnabled(this.config) ? DELTA_WFO_PREVIEW_LONG_LIMITS.max_trials : 64;
+      const limits = { TRIAL: trialLimit, CANDIDATE: 64, FOLD: 256 };
+      const rows = await client.query<SourceRowQueryRow & { table_kind: keyof typeof limits }>(
+        `WITH bounds(table_kind, row_limit) AS (VALUES ('TRIAL', $4::int), ('CANDIDATE', 64), ('FOLD', 256))
+         SELECT bounded.* FROM bounds CROSS JOIN LATERAL (
+           SELECT table_kind, source_ordinal, source_id, occurred_at_utc_ms, payload
+             FROM research.current_source_rows_v1
+            WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3 AND table_kind=bounds.table_kind
+            ORDER BY source_ordinal ASC LIMIT bounds.row_limit + 1
+         ) bounded ORDER BY table_kind, source_ordinal`,
+        [scope.workspaceId, seal.runId, seal.artifactRevision, trialLimit],
+      );
+      const relations: Record<keyof typeof limits, CurrentSourceStoredRow[]> = { TRIAL: [], CANDIDATE: [], FOLD: [] };
+      for (const row of rows.rows) {
+        if (!Object.hasOwn(relations, row.table_kind)) {
+          throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained search relation is incompatible.", 503);
+        }
+        relations[row.table_kind].push({ sourceOrdinal: asSafeNonNegative(row.source_ordinal, "row ordinal"),
+          sourceId: row.source_id, occurredAtUtcMs: row.occurred_at_utc_ms === null ? null
+            : asSafeNonNegative(row.occurred_at_utc_ms, "row timestamp"), payload: asJsonRecord(row.payload, "row payload") });
+      }
+      for (const kind of ["TRIAL", "CANDIDATE", "FOLD"] as const) {
+        if (relations[kind].length > limits[kind] || relations[kind].length !== seal.tableRows[kind]) {
+          throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained search relation exceeds its sealed bound.", 503);
+        }
+      }
+      const facts = await client.query<{ frozen_at: string | number | null; requested_spec: JsonColumn }>(
+        `SELECT (
+           SELECT event.occurred_at_utc_ms FROM (
+             SELECT worker_attempt_id FROM research.run_producers WHERE workspace_id=$1 AND run_id=$2
+             ORDER BY created_at DESC LIMIT 1
+           ) producer JOIN research.run_progress_events event
+             ON event.workspace_id=$1 AND event.run_id=$2 AND event.worker_attempt_id=producer.worker_attempt_id
+           WHERE event.event_type='stage_completed' AND event.event_payload->>'stage'='S4'
+           ORDER BY event.source_sequence DESC LIMIT 1
+         ) AS frozen_at, (
+           SELECT preflight.requested_spec FROM research.run_producers producer
+           JOIN research.preflight_manifests preflight ON preflight.workspace_id=producer.workspace_id
+             AND preflight.preflight_token=producer.preflight_token AND preflight.actor_user_id=producer.actor_user_id
+             AND preflight.requested_spec_digest=$3
+           WHERE producer.workspace_id=$1 AND producer.run_id=$2 AND producer.requested_spec_digest=$3
+           ORDER BY producer.created_at DESC LIMIT 1
+         ) AS requested_spec`, [scope.workspaceId, seal.runId, seal.requestedSpecDigest],
+      );
+      const fact = facts.rows[0];
+      return { trials: relations.TRIAL, candidates: relations.CANDIDATE, folds: relations.FOLD,
+        poolFrozenAt: fact?.frozen_at == null ? null : asSafeNonNegative(fact.frozen_at, "S4 completion timestamp"),
+        requestedSpec: fact?.requested_spec == null ? null : asJsonRecord(fact.requested_spec, "admitted requested spec") };
     }, signal);
   }
 
@@ -1064,11 +1124,18 @@ export class ResearchCurrentSourceRepository {
       } catch {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Current-source authority is not configured.", 503);
       }
-      await client.query("SELECT set_config('statement_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.statementTimeoutMs}ms`]);
-      await client.query("SELECT set_config('lock_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.lockTimeoutMs}ms`]);
-      await client.query("SELECT set_config('idle_in_transaction_session_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.idleTransactionTimeoutMs}ms`]);
-      await client.query("SELECT set_config('research.workspace_id', $1, true)", [scope.workspaceId]);
-      await client.query("SELECT set_config('research.actor_user_id', $1, true)", [scope.actorUserId]);
+      // Same transaction-local bounds and RLS identity as before, in one
+      // round-trip (the Library lane already uses this pattern). Never skip
+      // per-actor membership or keep settings outside this transaction.
+      await client.query(
+        `SELECT set_config('statement_timeout', $1, true),
+                set_config('lock_timeout', $2, true),
+                set_config('idle_in_transaction_session_timeout', $3, true),
+                set_config('research.workspace_id', $4, true),
+                set_config('research.actor_user_id', $5, true)`,
+        [`${RESEARCH_DB_BUDGET.statementTimeoutMs}ms`, `${RESEARCH_DB_BUDGET.lockTimeoutMs}ms`,
+          `${RESEARCH_DB_BUDGET.idleTransactionTimeoutMs}ms`, scope.workspaceId, scope.actorUserId],
+      );
       const result = await work(client);
       await client.query("COMMIT");
       began = false;

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sha256ResearchJson } from "../src/research/preflight.service";
+import { RESEARCH_DB_BUDGET } from "../src/research/contracts";
 
 import {
   currentSourceBatchDigest,
@@ -48,6 +49,65 @@ function fakeRepository(respond: (sql: string, params: readonly unknown[]) => { 
 }
 
 describe("RS-02 retained-current-source custody writes", () => {
+  it("reads finite S06 inputs in one scoped snapshot and binds seed to the sealed request", async () => {
+    const seal = { ...sealInput(), retainedImportDigest: digest("f"), retainedAtUtcMs: 100 };
+    const kindRows = ["TRIAL", "TRIAL", "CANDIDATE", "FOLD", "FOLD"].map((kind, index) => ({
+      table_kind: kind, source_ordinal: index, source_id: `row-${index}`, occurred_at_utc_ms: null, payload: {},
+    }));
+    const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
+      ? { rowCount: 1, rows: [{}] } : sql.includes("WITH bounds") ? { rows: kindRows }
+        : sql.includes("AS frozen_at") ? { rows: [{ frozen_at: 42, requested_spec: { random_seed: 42 } }] } : {});
+    const result = await repository.searchInputs(scope, seal);
+    expect(result).toMatchObject({ trials: [{}, {}], candidates: [{}], folds: [{}, {}],
+      poolFrozenAt: 42, requestedSpec: { random_seed: 42 } });
+    expect(calls.filter(({ sql }) => sql.startsWith("BEGIN"))).toHaveLength(1);
+    expect(calls.filter(({ sql }) => sql.includes("FROM workspace_members"))).toHaveLength(1);
+    expect(calls.find(({ sql }) => sql.includes("WITH bounds"))!.params).toEqual([scope.workspaceId, seal.runId, 1, 64]);
+    expect(calls.find(({ sql }) => sql.includes("AS frozen_at"))!.params).toEqual([scope.workspaceId, seal.runId, seal.requestedSpecDigest]);
+    expect(calls.at(-1)!.sql).toBe("COMMIT");
+    const short = fakeRepository(sql => sql.includes("FROM workspace_members") ? { rowCount: 1, rows: [{}] } : {});
+    await expect(short.repository.searchInputs(scope, seal)).rejects.toMatchObject({ status: 503 });
+    expect(short.calls.at(-1)!.sql).toBe("ROLLBACK");
+    const denied = fakeRepository(() => ({}));
+    await expect(denied.repository.searchInputs(scope, seal)).rejects.toMatchObject({ status: 403 });
+    expect(denied.calls.some(({ sql }) => sql.includes("WITH bounds"))).toBe(false);
+  });
+  it("counts sparse keyset edges with the total in one scoped query, including empty windows", async () => {
+    const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
+      ? { rowCount: 1, rows: [{}] } : sql.includes("SELECT source_ordinal")
+        ? { rows: [{ source_ordinal: 15, source_id: "row-15", occurred_at_utc_ms: null, payload: {} }] }
+        : sql.includes("FILTER (WHERE") ? { rows: [{ count: 3, previous_count: 1, following_count: 1 }] } : {});
+    expect(await repository.rows(scope, "run-rs02", 1, "OBSERVATION", { afterOrdinal: 10, limit: 1 }))
+      .toMatchObject({ hasMore: true, hasPrevious: true, totalRows: 3 });
+    const counts = calls.filter(({ sql }) => sql.includes("count(*)"));
+    expect(counts).toHaveLength(1);
+    expect(counts[0]!.params).toEqual([scope.workspaceId, "run-rs02", 1, "OBSERVATION", 15, 15]);
+    const empty = fakeRepository(sql => sql.includes("FROM workspace_members") ? { rowCount: 1, rows: [{}] }
+      : sql.includes("FILTER (WHERE") ? { rows: [{ count: 3, previous_count: 0, following_count: 0 }] } : {});
+    expect(await empty.repository.rows(scope, "run-rs02", 1, "OBSERVATION", { afterOrdinal: 99, limit: 1 }))
+      .toEqual({ rows: [], totalRows: 3, hasMore: false, hasPrevious: false });
+    expect(empty.calls.find(({ sql }) => sql.includes("FILTER (WHERE"))!.params.slice(-2)).toEqual([null, null]);
+  });
+  it("sets the same five transaction-local bounds in one query before individual membership and retained reads", async () => {
+    const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
+      ? { rowCount: 1, rows: [{}] } : {});
+    expect(await repository.sealForRead(scope, "run-rs02")).toBeNull();
+    const settings = calls.filter(({ sql }) => sql.includes("set_config("));
+    expect(settings).toHaveLength(1);
+    expect(settings[0]!.params).toEqual([
+      `${RESEARCH_DB_BUDGET.statementTimeoutMs}ms`, `${RESEARCH_DB_BUDGET.lockTimeoutMs}ms`,
+      `${RESEARCH_DB_BUDGET.idleTransactionTimeoutMs}ms`, scope.workspaceId, scope.actorUserId,
+    ]);
+    expect(settings[0]!.sql.match(/set_config\(/g)).toHaveLength(5);
+    expect(settings[0]!.sql.match(/, true\)/g)).toHaveLength(5);
+    expect(calls.findIndex(({ sql }) => sql.includes("set_config("))).toBeLessThan(
+      calls.findIndex(({ sql }) => sql.includes("FROM workspace_members")));
+    expect(calls.at(-1)!.sql).toBe("COMMIT");
+    const denied = fakeRepository(() => ({}));
+    await expect(denied.repository.sealForRead(scope, "run-rs02")).rejects.toMatchObject({ status: 403 });
+    expect(denied.calls.some(({ sql }) => sql.includes("FROM research.current_source_seals_v1"))).toBe(false);
+    expect(denied.calls.at(-1)!.sql).toBe("ROLLBACK");
+  });
   it("budgets immutable core/enrichment separately using JSONB spacing", () => {
     expect(currentSourceSummaryWithinBudget({ authority: "x".repeat(60_000),
       enriched_analysis: { authority: "y".repeat(70_000) } })).toBe(true);

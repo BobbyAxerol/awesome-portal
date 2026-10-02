@@ -11,6 +11,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { mockSearchInputs } from "./research-search-inputs.fixture";
 
 import {
   ResearchCurrentSourceEvidenceResponseSchema,
@@ -112,7 +113,7 @@ function memory(seal: CurrentSourceSealRow, tables: Partial<Record<Kind, Current
     observationSeries: vi.fn(),
     verifyRetainedImport: vi.fn().mockResolvedValue(seal.retainedImportDigest),
   };
-  return { repository, service: new ResearchCurrentSourceService(repository as never, config as never) };
+  return { repository, service: new ResearchCurrentSourceService({ ...repository, searchInputs: mockSearchInputs(repository) } as never, config as never) };
 }
 
 const realSeal = sealRow(real.summary, real.table_rows);
