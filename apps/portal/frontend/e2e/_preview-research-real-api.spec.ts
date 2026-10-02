@@ -425,7 +425,7 @@ for (const [name, width, height] of VIEWPORTS) {
       if (api.source_absences.approval_mirror?.reason_code) {
         await expect(root.locator(`[data-mirror-foot] [data-reason-code='${api.source_absences.approval_mirror.reason_code}']`)).toBeVisible();
       }
-      await expect(root.locator("[data-state-chip]")).toHaveText(api.run.binding === null ? "NOT_PUBLISHABLE" : api.local_seal.delivery_state === "DELIVERED" ? "PUBLISHED" : api.state);
+      await expect(root.locator("[data-state-chip]")).toHaveText(api.run.binding === null ? "NOT_PUBLISHABLE" : api.local_seal.delivery_state === "DELIVERED" ? "PUBLISHED" : api.local_seal.state === "SEALED_LOCAL" ? "SEALED" : api.state); /* QA S11 U1: a sealed candidate reads SEALED, not its draft state */
       const visible = await visibleText(page, "[data-screen='release-candidate']");
       expect(visible, "no fabricated governance state").not.toMatch(/\bPUBLISHED\b(?!_)|\bPENDING\b|\bAPPROVED\b(?!_)|Quant Reviewers|none recorded/);
       if (api.availability.state === "PARTIAL") {
@@ -437,9 +437,15 @@ for (const [name, width, height] of VIEWPORTS) {
       /* An unsealed candidate reads no publication, and nothing ever asks for /mirror. */
       if (api.local_seal.state !== "SEALED_LOCAL") expect(observed.requests.filter((line) => line.includes("/publication"))).toEqual([]);
       expect(observed.requests.filter((line) => line.includes("/mirror"))).toEqual([]);
-      /* 660px: the evidence table scrolls inside its own frame, never the page. */
-      const pack = await root.locator(".rc-pack").evaluate((node) => ({ scroll: node.scrollWidth, client: node.clientWidth }));
-      if (width < 960) expect(pack.scroll).toBeGreaterThan(pack.client);
+      /* QA S11 U2: at <=720px the evidence table is stacked as labelled cards (no inner scroll); neither the frame nor the page overflows sideways and every row still carries its SOURCE and NOTE cells. */
+      const pack = await root.locator(".rc-pack").evaluate((node) => ({ scroll: node.scrollWidth, client: node.clientWidth, body: getComputedStyle(node.querySelector("tbody")!).display }));
+      expect(pack.scroll, "evidence pack frame: no horizontal overflow").toBeLessThanOrEqual(pack.client);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "page: no horizontal overflow").toBe(true);
+      if (width <= 720) {
+        expect(pack.body, "stacked cards at phone width").toBe("block");
+        expect(await root.locator(".rc-pack tbody tr[data-pack-row] td.source[data-label]").count(), "SOURCE cells labelled").toBeGreaterThan(0);
+        expect(await root.locator(".rc-pack tbody tr[data-pack-row] td.note").count(), "NOTE cells present").toBeGreaterThan(0);
+      }
       /* W7 (after a preview rebuild): the retained lane's DEGRADED rows carry their sentence. */
       const certificate = api.pack.find((item: any) => item.availability.reason_code === "P21_METHODOLOGY_CERTIFICATE_NOT_ISSUED");
       if (certificate) await expect(root.locator(`[data-pack-row='${certificate.key}'] .note`)).toContainText("claim retained, no issued methodology certificate");
@@ -510,9 +516,11 @@ for (const [name, width, height] of VIEWPORTS) {
     await root.locator("[data-action='confirm-local-seal']").click();
     await expect(root.locator("[data-sealed]")).toHaveAttribute("data-sealed", rcId);
     /* F1/F3: the chip reads in words ("sealed locally"); the state stays on `data-s`. */
-    await expect(root.locator("[data-seal-chip]")).toHaveAttribute("data-s", "SEALED_LOCAL");
-    await expect(root.locator("[data-seal-chip]")).toHaveText("sealed locally");
-    await expect(root.locator("[data-state-chip]")).toHaveText("DRAFT");
+    /* QA S11 U1: the header carries no seal chip; the sealed panel (data-sealed above) says "sealed locally" and the header state chip reads SEALED, no longer DRAFT. */
+    await expect(root.locator("[data-seal-chip]")).toHaveCount(0);
+    await expect(root.locator("[data-panel='sealed']")).toHaveAttribute("aria-label", "sealed locally");
+    await expect(root.locator("[data-panel='sealed'] h3.k")).toContainText("sealed locally");
+    await expect(root.locator("[data-state-chip]")).toHaveText("SEALED");
     /* The publication read goes to the real preview. The seal above is a DOUBLE, so the server has no such
        candidate and answers 404 — which P22's screen reads as the one F-04 "denied" state (FG-05). */
     const publicationRead = await pageGet(page, `/api/v1/research/release-candidates/${rcId}/publication`);
@@ -670,6 +678,8 @@ for (const [name, width, height] of VIEWPORTS) {
     /* Screen 11 composes from a run; without a published pick naming one, "rc & publish →" says why. */
     const picked = api.alpha.versions.some((version: any) => version.lifecycle_state === "ACTIVE" && version.promotion_pick?.state === "PUBLISHED" && version.promotion_pick.run_id);
     if (picked) await expect(root.locator("[data-action='release-candidate']")).toHaveCount(1);
+    /* QA S10 U4: with no pick the header links the newest attempt's release candidate; the unrouted span and its reason remain only when no attempt has one. */
+    else if ((api.attempts ?? []).some((attempt: any) => attempt.release_candidate?.run_id)) await expect(root.locator("[data-action='release-candidate']")).toHaveAttribute("title", /newest release candidate of this alpha/);
     else await expect(root.locator("[data-action-unrouted='release-candidate']")).toHaveAttribute("title", /No published promotion pick names a run/);
     await finish(page, `W5c-S10-${name}`, observed, { total_attempts: api.counts.total_attempts, picked });
     expect(observed.failures, "S10 failed reads").toEqual([]);
@@ -699,6 +709,7 @@ for (const [name, width, height] of VIEWPORTS) {
       if (unclaimed.length > 0) await expect(root.locator("[data-unclaimed]")).toHaveAttribute("data-unclaimed", String(unclaimed.length));
       const claimedRuns = (result.attempts ?? []).filter((item: any) => item.claim?.family !== "NOT_PUBLISHED");
       const mixedLifecycle = new Set(claimedRuns.map((item: any) => item.alpha_version_lifecycle.value)).size > 1;
+      const sharedCertification = claimedRuns.length > 0 && claimedRuns.every((item: any) => item.certification.state === claimedRuns[0].certification.state && item.certification.reason_code === claimedRuns[0].certification.reason_code);
       for (const run of claimedRuns) {
         const card = root.locator(`[data-ladder-run='${run.run_id}']`);
         const sharpe = run.original_metrics.find((metric: any) => metric.key === "OOS_SHARPE");
@@ -707,7 +718,14 @@ for (const [name, width, height] of VIEWPORTS) {
         /* F1c (VD-F1-02): a card carries `data-lifecycle` only when the claimed ladder MIXES lifecycles; otherwise it is absent. */
         if (mixedLifecycle && run.alpha_version_lifecycle.value) await expect(card).toHaveAttribute("data-lifecycle", run.alpha_version_lifecycle.value);
         else await expect(card).not.toHaveAttribute("data-lifecycle", /.*/);
-        await expect(card.locator("[data-cert-absent]")).toContainText(run.certification.reason_code);
+        /* QA S13: identical certification absences are said once above the ladder (`sharedCert`), per card only when they differ; the code is rendered through BreakableCode (wbr), so the per-card assertion reads the data-reason-code attribute. */
+        if (!sharedCertification) await expect(card.locator("[data-cert-absent] [data-reason-code]")).toHaveAttribute("data-reason-code", run.certification.reason_code);
+        else await expect(card.locator("[data-cert-absent]")).toHaveCount(0);
+      }
+      if (sharedCertification && claimedRuns.length > 0) {
+        await expect(root.locator("[data-ladder-cert]")).toHaveAttribute("data-cert-state", claimedRuns[0].certification.state);
+        await expect(root.locator("[data-ladder-cert]")).toContainText("cert not published");
+        await expect(root.locator("[data-ladder-cert]")).toContainText(claimedRuns[0].certification.reason_code);
       }
       const bars = (result.fold_series ?? []).filter((item: any) => item.state === "AVAILABLE").flatMap((item: any) => item.folds.filter((fold: any) => fold.oos_sharpe !== null).map((fold: any) => [item.run_id, fold]));
       /* CG-P20-04 (compareFoldBars LINES_PAST_FOLDS = 8): bars up to eight fold positions, past that one line per attempt
@@ -717,7 +735,11 @@ for (const [name, width, height] of VIEWPORTS) {
       if (drawn.length > 0 && positions > 8) {
         await expect(root.locator("[data-panel='fold-chart']")).toHaveAttribute("data-fold-mode", "lines");
         await expect(root.locator("[data-fold-bar]")).toHaveCount(0);
-        await expect(root.locator("[data-fold-line]")).toHaveCount(drawn.length);
+        /* QA S13 UX-5: series with the same exact fold values are ONE line with a "+N identical" legend entry (`identicalSeriesGroups`); the lines count is the number of distinct series and the member counts add up to every drawn attempt. */
+        const distinct = new Set(drawn.map((item: any) => JSON.stringify(item.folds.filter((fold: any) => fold.oos_sharpe !== null).map((fold: any) => [fold.source_ordinal, fold.oos_sharpe]).sort((a: any, b: any) => Number(a[0]) - Number(b[0])))));
+        await expect(root.locator("[data-fold-line]")).toHaveCount(distinct.size);
+        const members = await root.locator("[data-fold-line]").evaluateAll((nodes) => nodes.reduce((sum, node) => sum + Number(node.getAttribute("data-fold-line-members") ?? 1), 0));
+        expect(members, "every drawn attempt is a member of exactly one line").toBe(drawn.length);
       } else {
         await expect(root.locator("[data-fold-bar]")).toHaveCount(bars.length);
         for (const [runId, fold] of bars) await expect(root.locator(`[data-fold-bar='${runId}:${fold.fold_id}']`)).toHaveAttribute("data-exact", fold.oos_sharpe);
@@ -1027,7 +1049,9 @@ for (const [name, width, height] of VIEWPORTS) {
     /* Header: the HiFi title over the shared crumb, with the real endpoint family. */
     await expect(root.locator("h1")).toHaveText("Alpha Import — standardize the code artifact");
     await expect(root.locator(".ai-crumb [aria-current='page']")).toHaveText("Alpha Import");
-    await expect(root.locator("[data-meta]")).toContainText("POST /api/v1/research/alphas/import/*");
+    /* QA S14: the header no longer prints the endpoint path (no [data-meta] strip); assert it is gone from the screen. */
+    await expect(root.locator("[data-meta]")).toHaveCount(0);
+    expect(await root.innerText(), "no endpoint path in the header").not.toContain("/api/v1/research/alphas/import");
     await expect(root.locator("[data-chip]")).toHaveCount(0);
 
     /* Registry strip: a real read of this workspace's versions, entry by entry. */
