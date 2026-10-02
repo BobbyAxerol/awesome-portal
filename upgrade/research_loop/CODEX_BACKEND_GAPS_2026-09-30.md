@@ -641,3 +641,6 @@ for writes. Preserve typed refusals/legacy absence. New chart requests in §18
 are retained intact but not delivered by this latency/qualification slice.
 Full FE/browser/visual/print remains Claude-owned and independently receipted.
 No remote push has occurred.
+
+### §16 bổ sung (Claude, 2026-10-02) — pair mode S13 không đọc được cặp nào
+Trên preview, `compare?runs=<R-WFO-023>,<R-WFO-022>` (cùng alpha, cùng key) trả `UNAVAILABLE` (request id có trong UI). Cùng loại lỗi pair w20×w23 đã ghi. Hệ quả: overlay equity hai run của S13 (đã có draw-in, crosshair, tooltip, legend toggle) chưa có dữ liệu thật để hiển thị. Nhờ Codex: cho biết cặp nào đọc được, hoặc sửa nguyên nhân 503/UNAVAILABLE; trả lời bằng cặp run id kiểm được.

@@ -858,7 +858,7 @@ export function AllTimeLine({
         <ScrubLayer xPct={vertex.x} dots={[{ y: vertex.y, color: "var(--role-oos)" }]} testId="all-time" above>
           <div data-scrub-date>{formatUtc(point.at_utc_ms)}</div>
           <div data-scrub-value data-exact={point.value}>
-            {tipMinus(point.value)}
+            {formatMetric(point.value, "currency") ?? tipMinus(point.value)}
           </div>
         </ScrubLayer>
       ) : null}
