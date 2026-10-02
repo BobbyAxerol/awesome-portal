@@ -482,3 +482,29 @@ Không làm: không thêm đường dẫn tính riêng cho từng endpoint; mọ
 FE nay prefill khoảng thời gian từ cận bar chính xác theo timeframe (`first_bar_utc_ms` … `indexed_end_exclusive_utc_ms`), nên mọi window nằm trong chỉ mục đã kiểm; trên BTCUSDT 1h OOS 14.808 bar và Holdout 14.807 bar đã hiện số thật. **Còn một chỗ chặn:** server từ chối cửa sổ đầu khi warmup của nó vươn ra trước bar đầu tiên của chỉ mục — thử trực tiếp: cửa sổ bắt đầu tại bar đầu, `warmup_bars=32` → `NOT_PUBLISHED / WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE`. Alpha khai 300 warmup bar, nên IS và warmup luôn "not published" nếu người dùng không tự dời ngày bắt đầu IS. FE không tự cộng "warmup × độ phân giải" (không tính ngày phía client).
 
 Cần: (a) phục vụ **`earliest_admissible_start_utc_ms`** cho `(symbol, timeframe, warmup_bars)` — ngày bắt đầu sớm nhất còn đủ warmup — trong `coverage_by_timeframe` hoặc trong `bar-metadata`; FE prefill IS từ đó. (b) Hoặc trả `AVAILABLE` kèm `warmup_bars_available_before_start` thật khi warmup thiếu (thay vì cả khối `NOT_PUBLISHED`), để UI hiện "thiếu 268 bar warmup" thay cho "not published". Đây chính là mục "earliest admissible start" Codex đã ghi còn mở ở B7.
+
+## 16. Đợt B8 — kho "NOT PUBLISHED" từ rà soát trình duyệt toàn bộ (Claude, 2026-10-02; Bobby giao: "bổ sung ngay cho backend")
+
+Tám auditor chạy trình duyệt thật trên preview, đi qua từng nút của S00–S14 trên mọi run thật. **Kho đầy đủ + 58 yêu cầu theo mẫu chuẩn:** [`QA_NOT_PUBLISHED_INVENTORY_2026-10-02.md`](./QA_NOT_PUBLISHED_INVENTORY_2026-10-02.md); báo cáo từng nhóm `evidence/P21/qa-2026-10-02/*.md` (ảnh từng trạng thái ngoài git: `/home/bobby/portal-research-qa-2026-10-02/`). Phân loại (số dòng xấp xỉ, có dòng lặp giữa các màn): LEGIT ≈ 147 (engine/route thật sự không có — không làm), **BACKEND-GAP ≈ 68**, **OLD-SEAL ≈ 29** (backfill được), FE-GAP ≈ 23 (API đã trả, FE đang sửa — không phải việc của Codex), HIFI-ONLY 1.
+
+**Ưu tiên (xếp theo ảnh hưởng đến niềm tin vào số liệu):**
+
+**P0 — số liệu mâu thuẫn hoặc lỗi server (làm trước):**
+1. **S13 cặp R-WFO-020 × R-WFO-023 trả 503** (`B-2` nhóm S09_S13): so sánh hai run mới nhất không dùng được.
+2. **R-P04-021 hai số "net return" khác nhau** (+0,12% ở một chỗ, −0,15% ở chỗ khác — `B-1` S09_S13): cùng một run, hai nguồn; chốt nguồn và scope, gắn nhãn.
+3. **Hub `/evidence` báo `NOT_READY` cho run WFO retained trong khi màn hiện đủ dữ liệu** (S04 U4/I10): làm hub phản ánh đúng readiness của lane retained.
+4. **Số lượt thử không khớp giữa màn:** S03 trial 351 vs S05 trial 350 (R-WFO-023), 1 vs 0 (R-WFO-017); run FAILED R-WFO-021 hiện "400/400 trials · 80% · 0 of 9 folds" — chốt cách đếm (1-based/0-based) và tiến độ cho run lỗi.
+5. **S05 trả 409 cho run FAILED/CANCELLED mỗi lần mở** (lỗi console mỗi lượt): trả trạng thái có kiểu (`NOT_APPLICABLE` + mã) thay vì 409 hoặc bỏ lời gọi cho run không có seal.
+
+**P1 — thiếu dữ liệu chặn quyết định:**
+6. **R-P04-021 thiếu OOS Sharpe và Δ decay** trên thẻ/Library (và `last 30D` vắng ở 34/44 run): publish từ `enriched_analysis`/`analytics_all_time` cho mọi seal đã backfill; kèm cửa sổ ngày thật của "last 30D" (đang là tháng cuối của mẫu, API có nhưng không có nhãn rõ).
+7. **S06:** chỉ 100/400 trial dùng được — phân trang sổ trial (cursor đã có) + `surface.points[].parameters` để tooltip θ*#350 / best #311 có giá trị.
+8. **S08 blotter/MAE×MFE/order-fill rỗng** trên mọi run WFO (R-A/R-B nhóm S08): lệnh/fill/trade và MAE-MFE cho route có chúng (đã nằm ở BR-S08-01; ưu tiên khi executor v2 xong).
+9. **S11:** trạng thái "đã seal cục bộ" cần phục vụ cờ khoá (`local_seal`) để UI ẩn nút seal và editor (R-6 nhóm S10_S14_S11).
+10. **S02 (B-01…B-04):** `bar-metadata` trả `verified_range` + `earliest_start_with_warmup_utc_ms` khi `NOT_PUBLISHED`; fold plan không cần ghi preflight; tick/lot/multiplier/listing/expiry (cần nguồn); backfill `supersedes_state` cho `av_1_0_0` (hiện `HISTORICAL_NOT_RECORDED`).
+
+**P2 — OLD-SEAL backfill (một lệnh operator như AN-29/082/083):** các dòng OLD-SEAL trong kho (last-30D/all-time cho seal cũ, giai đoạn lỗi/thời gian chạy cho run FAILED sớm nhất, thời gian đã trôi của run CANCELLED, sự kiện atlas 1.0.8).
+
+**P3 — phần còn lại** của kho theo từng nhóm; các dòng `LEGIT` giữ nguyên (đã ghi lý do từng dòng, không làm).
+
+Claude sửa toàn bộ phần FE (mục FE-GAP, chữ cứng, UX) song song và nối từng thứ Codex trả. Khi Codex xong từng mục, ghi mã P-số vào §9 để Claude kiểm trên preview.
