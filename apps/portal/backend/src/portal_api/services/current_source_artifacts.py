@@ -1407,7 +1407,18 @@ class CurrentSourceArtifactAdapter:
         A summary that cannot fit even with one candle still fails closed.
         """
         def size() -> int:
-            return len(self._canonical_json(summary).encode("utf-8"))
+            # PostgreSQL's CHECK measures jsonb::text, not the compact wire
+            # encoding. Its spaces after commas/colons can push an otherwise
+            # accepted summary over 64 KiB at the atomic seal. Count that
+            # representation before P05 writes; ASCII escaping is conservative
+            # for Unicode because jsonb stores UTF-8 text instead of escapes.
+            try:
+                return len(json.dumps(canonicalize(summary), ensure_ascii=True,
+                                      sort_keys=True, allow_nan=False).encode("utf-8"))
+            except (TypeError, ValueError) as exc:
+                raise CurrentSourceArtifactError(
+                    "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", "Source metadata is not canonical JSON."
+                ) from exc
 
         replay = summary.get("replay")
         overview = replay.get("candle_overview") if isinstance(replay, dict) else None

@@ -52,6 +52,36 @@ from portal_api.services.research_artifacts import ArtifactFence, ArtifactIdenti
 from strategy.specification import DELTA_RSI_SPECIFICATION
 
 
+def test_summary_budget_accounts_for_postgres_jsonb_spacing(monkeypatch: pytest.MonkeyPatch) -> None:
+    adapter = object.__new__(CurrentSourceArtifactAdapter)
+    summary = {"authority": "unchanged", "replay": {"candle_overview": {
+        "values": [{"a": "x", "b": "y"} for _ in range(3000)],
+    }}}
+    assert len(json.dumps(summary, separators=(",", ":")).encode()) < 65_536
+    assert len(json.dumps(summary).encode()) > 65_536
+    calls: list[int] = []
+
+    def coarsened(_observations: list[dict[str, object]], *, maximum_buckets: int) -> dict[str, object]:
+        calls.append(maximum_buckets)
+        return {"values": [], "sampling": "COARSENED_TEST"}
+
+    monkeypatch.setattr(adapter, "_candle_overview", coarsened)
+    adapter._fit_summary_budget(summary, [])
+    assert calls and summary["authority"] == "unchanged"
+    assert len(json.dumps(summary).encode()) <= 65_536
+
+
+def test_summary_budget_does_not_discard_oversized_authority() -> None:
+    adapter = object.__new__(CurrentSourceArtifactAdapter)
+    summary = {"authority": {str(i): "x" for i in range(5500)}}
+    assert len(json.dumps(summary, separators=(",", ":")).encode()) < 65_536
+    assert len(json.dumps(summary).encode()) > 65_536
+    with pytest.raises(CurrentSourceArtifactError) as failure:
+        adapter._fit_summary_budget(summary, [])
+    assert failure.value.code == "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE"
+    assert len(summary["authority"]) == 5500
+
+
 def _market() -> PreparedMarketData:
     return PreparedMarketData(
         frame=build_market_frame(),
