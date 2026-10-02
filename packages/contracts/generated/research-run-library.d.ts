@@ -603,6 +603,7 @@ export interface components {
             technical_retry_count: number;
         };
         RunLibraryItem: {
+            enriched_analysis_availability?: components["schemas"]["EnrichedAnalysisAvailability"];
             analytics_all_time?: components["schemas"]["EnrichedAnalysisLibrarySummary"];
             run_id: components["schemas"]["RunId"];
             /** @description D1: the short label the hi-fi prints (`R-WFO-118`) - the run's execution profile kind plus its position among the logical runs of that kind in this workspace, ordered by creation (run_id breaks a tie). Server-derived so two readers cannot disagree; presentation only - run_id remains the identity and is the only value a request may carry. null when the row is not a logical run of a known profile, and the reader prints the short id. */

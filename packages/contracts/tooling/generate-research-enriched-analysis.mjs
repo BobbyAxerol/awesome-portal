@@ -74,7 +74,7 @@ for (const [file, dto, property, definition] of [
   if (!properties[property]) next = next.slice(0, props + 15) + ` "${property}": { "$ref": "#/components/schemas/${definition}" },` + next.slice(props + 15);
   const updated = JSON.parse(next).components.schemas[dto];
   if (!(updated.properties ?? updated.allOf.find(x => x.properties).properties)[property]) throw new Error(`Missing additive field: ${dto}.${property}`);
-  if (file !== "research-run-library") {
+  {
     const field = "enriched_analysis_availability", definition = "EnrichedAnalysisAvailability";
     next = next.replace(new RegExp(` ?"${field}": \\{ "\\$ref": "#/components/schemas/${definition}" \\},`, "g"), "");
     const start = next.indexOf(`      "${dto}":`, next.indexOf('"schemas": {'));

@@ -111,6 +111,7 @@ export class ResearchCurrentSourceIngestService {
       totalRows: input.total_rows,
       summary: input.summary,
       expectedRetainedImportDigest: input.retained_import_digest,
+      lease: { workerAttemptId: lease.workerAttemptId, leaseEpoch: lease.leaseEpoch },
     });
     return {
       schema_version: "research.current-source-seal-receipt.v1",

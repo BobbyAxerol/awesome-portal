@@ -4,7 +4,9 @@ import { PrincipalService } from "../auth/principal";
 import { ControlApiConfig } from "../config";
 import type { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
-import { BarMetadataSchema, ResearchDatasetCatalogV2Schema } from "./dataset-index.contract";
+import { BarMetadataSchema, DeclarationMetadataSchema, ResearchDatasetCatalogV2Schema } from "./dataset-index.contract";
+import type { ResearchRequestedSpec } from "./preflight.contract";
+import { sha256ResearchJson } from "./preflight.service";
 import { ResearchPreflightError } from "./preflight.error";
 
 /** Existing signed deployment-bound adapter. URLs are never browser input. */
@@ -22,7 +24,13 @@ export class ResearchDatasetIndexClient {
     if (result.warmup_bars_required !== query.warmup_bars) throw this.error(502);
     return result;
   }
-  private async read<T>(user: PortalUser, path: string, query: Record<string, string | number>, schema: z.ZodType<T>): Promise<T> {
+  async estimate(user: PortalUser, requestedSpec: ResearchRequestedSpec, warmupBars: number) {
+    const result = await this.read(user, "/internal/research/dataset-declaration-estimate", {}, DeclarationMetadataSchema,
+      { requested_spec: requestedSpec, warmup_bars: warmupBars });
+    if (result.requested_spec_digest !== sha256ResearchJson(requestedSpec)) throw this.error(502);
+    return result;
+  }
+  private async read<T>(user: PortalUser, path: string, query: Record<string, string | number>, schema: z.ZodType<T>, body?: unknown): Promise<T> {
     if (!this.config.INTERNAL_PRINCIPAL_SECRET) throw this.error(503);
     const principal = new PrincipalService(this.config.INTERNAL_PRINCIPAL_SECRET).sign({ principalId: user.userId,
       username: user.username, accessSubject: null, accessEmail: null, role: user.role,
@@ -32,7 +40,8 @@ export class ResearchDatasetIndexClient {
     for (const [key, value] of Object.entries(query)) url.searchParams.set(key, String(value));
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), this.config.RESEARCH_PREFLIGHT_TIMEOUT_MS);
     try {
-      const response = await fetch(url, { method: "GET", headers: { accept: "application/json", "x-portal-principal": principal },
+      const response = await fetch(url, { method: body === undefined ? "GET" : "POST", headers: { accept: "application/json", "x-portal-principal": principal,
+          ...(body === undefined ? {} : {"content-type": "application/json"}) }, body: body === undefined ? undefined : JSON.stringify(body),
         signal: controller.signal, redirect: "manual" });
       if (!response.ok) {
         await response.body?.cancel();

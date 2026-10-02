@@ -29,7 +29,7 @@ from portal_api.services.research_preflight_snapshot import (
     refusal_detail,
 )
 from portal_api.services.enrich_dataset_catalog import (
-    DatasetIndexError, DatasetIndexStore, enrich_dataset_catalog, source_digest, window_metadata,
+    DatasetIndexError, DatasetIndexStore, enrich_dataset_catalog, source_digest, window_metadata, declaration_estimate,
 )
 
 router = APIRouter(prefix="/internal/research", include_in_schema=False)
@@ -151,6 +151,38 @@ async def read_indexed_dataset_catalog(request: Request) -> dict[str, object]:
         return enrich_dataset_catalog(request.app.state.market_data_provider, dataset_index_store(request))
     except (DatasetIndexError, ResearchDatasetCatalogError, OSError, ValueError) as exc:
         raise HTTPException(status_code=503, detail="historical metadata index is unavailable") from exc
+
+
+class DeclarationEstimateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    requested_spec: dict[str, Any]
+    warmup_bars: int = Field(ge=0, le=100_000)
+
+
+@router.post("/dataset-declaration-estimate")
+async def read_declaration_estimate(request: Request, payload: DeclarationEstimateRequest) -> dict:
+    try:
+        require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    provider = request.app.state.market_data_provider
+    store = dataset_index_store(request)
+    try:
+        revision, document, reason = store.read(source_digest(provider))
+    except (DatasetIndexError, OSError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="historical metadata index is unavailable") from exc
+    try:
+        result = store.estimate(revision if document else None, document, payload.requested_spec, warmup_bars=payload.warmup_bars,
+            engine_catalog=request.app.state.research_engine_catalog,
+            gateway=request.app.state.quantbt_gateway)
+        result["catalog_revision"] = revision
+        if document is None and reason:
+            result["planned_folds"]["reason_code"] = reason
+            for row in result["windows"]:
+                row["reason_code"] = reason
+        return result
+    except (DatasetIndexError, ResearchPreflightSnapshotError, KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Historical declaration estimate refused.") from exc
 
 
 @router.get("/dataset-bar-metadata")

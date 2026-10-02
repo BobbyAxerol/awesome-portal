@@ -11,6 +11,7 @@
 import { z } from "zod";
 import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 import { DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
+import { DELTA_WFO_V2_PROFILE_ID } from "./delta-wfo-v2.profile";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
@@ -948,7 +949,7 @@ export function toPublicResearchProgressSnapshot(
     },
     folds: publicSnapshot.folds.map((fold) => ({
       ...fold,
-      selection: executionProfileId === DELTA_WFO_PROFILE_ID
+      selection: (executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID)
         && fold.selection.state === "AVAILABLE"
         && fold.selection.scope === "GLOBAL_STUDY"
         && fold.selection.trial !== null

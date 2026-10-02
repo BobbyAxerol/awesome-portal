@@ -1,5 +1,6 @@
 import type { ControlApiConfig } from "../config";
 import type { ResearchPortalAdmission } from "./foundation.contract";
+import { DELTA_WFO_V2_PROFILE } from "./delta-wfo-v2.profile";
 import {
   DELTA_WFO_PREVIEW_LONG_LIMITS,
   DELTA_WFO_PROFILE,
@@ -43,6 +44,8 @@ export function researchPortalAdmission(
         fold_bounds: null,
         frequency: null,
         window_mode: null,
+        requested_spec_versions: ["research.requested-spec.v1", "research.requested-spec.v2"],
+        seed_policy: "FORBIDDEN", trial_default: 1, early_stopping_policy: "FORBIDDEN",
       },
       {
         profile_id: DELTA_WFO_PROFILE.profile_id,
@@ -62,6 +65,21 @@ export function researchPortalAdmission(
         fold_bounds: DELTA_WFO_PROFILE.fold_bounds,
         frequency: DELTA_WFO_PROFILE.frequency,
         window_mode: DELTA_WFO_PROFILE.window_mode,
+        requested_spec_versions: ["research.requested-spec.v1"],
+        seed_policy: "LOCKED", trial_default: 3, early_stopping_policy: "FORBIDDEN",
+      },
+      {
+        profile_id: DELTA_WFO_V2_PROFILE.profile_id,
+        state: wfoReason ? "DISABLED" : "ENABLED", reason: wfoReason,
+        engine_release_id: DELTA_WFO_V2_PROFILE.engine_release_id,
+        execution_route: DELTA_WFO_V2_PROFILE.execution_route, protocol: DELTA_WFO_V2_PROFILE.protocol,
+        optimization_mode: DELTA_WFO_V2_PROFILE.optimization_mode, optimization_schedule: DELTA_WFO_V2_PROFILE.optimization_schedule,
+        timeframe: DELTA_WFO_V2_PROFILE.timeframe, random_seed: DELTA_WFO_V2_PROFILE.random_seed,
+        trial_count: previewLong ? { min: 2, max: 400 } : DELTA_WFO_V2_PROFILE.trial_count,
+        max_span_days: DELTA_WFO_V2_PROFILE.max_span_days, fold_bounds: DELTA_WFO_V2_PROFILE.fold_bounds,
+        frequency: null, window_mode: null, frequencies: [...DELTA_WFO_V2_PROFILE.frequencies],
+        window_modes: [...DELTA_WFO_V2_PROFILE.window_modes], requested_spec_versions: ["research.requested-spec.v2"],
+        seed_policy: "LOCKED", trial_default: 3, early_stopping_policy: "FORBIDDEN", inner_validation: DELTA_WFO_V2_PROFILE.inner_validation,
       },
     ],
     note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE",

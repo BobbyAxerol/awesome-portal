@@ -8,6 +8,8 @@ are index metadata, not candles, session calendars or instrument authority.
 from __future__ import annotations
 
 import argparse
+import copy
+from collections import OrderedDict
 import hashlib
 import json
 import os
@@ -241,6 +243,25 @@ class DatasetIndexStore:
         self.root = root or index_root()
         self._cache: tuple[str, dict] | None = None
         self.catalog_cache: tuple[tuple[str | None, str | None, str | None], float, dict] | None = None
+        self._estimates: OrderedDict[str, tuple[float, dict]] = OrderedDict()
+
+    def estimate(self, revision: str | None, document: dict | None, requested: dict, *, warmup_bars: int,
+                 engine_catalog, gateway=None) -> dict:
+        # Metadata-only, <=64 entries/30s. Scope/identity checks remain outside
+        # this cache; no authorization, HMD prices or preflight tokens are kept.
+        key = hashlib.sha256(canonical([revision, requested, warmup_bars])).hexdigest()
+        now = monotonic()
+        cached = self._estimates.get(key)
+        if cached is not None and now - cached[0] < 30:
+            self._estimates.move_to_end(key)
+            return copy.deepcopy(cached[1])
+        result = declaration_estimate(document, requested, warmup_bars=warmup_bars,
+            engine_catalog=engine_catalog, gateway=gateway)
+        self._estimates[key] = (now, copy.deepcopy(result))
+        self._estimates.move_to_end(key)
+        while len(self._estimates) > 64:
+            self._estimates.popitem(last=False)
+        return result
 
     def publish(self, document: dict) -> str:
         validate_document(document)
@@ -369,18 +390,110 @@ def window_metadata(document: dict | None, *, dataset_id: str, symbol: str, time
         "warmup_bars_required": warmup_bars, "warmup_bars_available_before_start": warmup}
 
 
+def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars: int,
+                         engine_catalog, gateway=None) -> dict:
+    """DR-08: plan only from actual indexed timestamps, never OHLCV or a job.
+
+    Reuse the P08 planner so calendar edges and v2 guard semantics do not grow
+    a second definition. The frame has an index only, no synthetic prices.
+    Partial ranges cannot produce a complete fold count.
+    """
+    from portal_api.services.research_preflight_snapshot import (
+        ResearchPreflightSnapshotError, _advanced_topology, _engine_advanced_topology,
+        _three_window_topology, _v2_walk_forward_fields, parse_source_instant, sha256_json,
+    )
+    data = requested["data"]
+    dataset, symbol, timeframe = data["dataset_id"], data["symbol"], data["timeframe"]
+    step = timeframe_ms(timeframe)
+    windows: list[dict] = []
+    absence = {"availability": "NOT_PUBLISHED", "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED",
+        "count": None, "basis": "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1",
+        "min_train_bars": None, "min_oos_bars": None}
+    result = {"schema_version": "research.declaration-metadata.v1", "catalog_revision": None,
+        "requested_spec_digest": sha256_json(requested),
+        "as_of_utc_ms": document["as_of_utc_ms"] if document else None,
+        "scope": "INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION", "windows": windows,
+        "planned_folds": absence, "earliest_start_utc_ms": None,
+        "earliest_start_basis": "CONTIGUOUS_INDEXED_WARMUP_BARS_V1"}
+    spans = requested.get("windows") or {"span": requested["walk_forward"]}
+    def instant(text):
+        return int(parse_source_instant(text, source_timezone="UTC").value // 1_000_000)
+    bounds = [(key.upper(), instant(value["start"]), instant(value["end_exclusive"])) for key, value in spans.items()]
+    for key, left, right in bounds:
+        windows.append({"window": key, "start_utc_ms": left, "end_exclusive_utc_ms": right,
+            **window_metadata(document, dataset_id=dataset, symbol=symbol, timeframe=timeframe,
+                start_ms=left, end_ms=right, warmup_bars=warmup_bars if key in {"IS", "SPAN"} else 0)})
+    index = next((row["index"] for row in document["entries"] if
+        (row["dataset_id"], row["symbol"], row["index"]["timeframe"]) == (dataset, symbol, timeframe)), None) if document else None
+    if not index:
+        return result
+    result["earliest_start_utc_ms"] = next((first + warmup_bars * step for first, last in index["runs"]
+        if (last - first) // step >= warmup_bars), None)
+    incomplete = next((row for row in windows if row["availability"] != "AVAILABLE"), None)
+    if incomplete:
+        result["planned_folds"] = {**absence, "reason_code": incomplete["reason_code"]}
+        return result
+    left = min(x[1] for x in bounds); right = max(x[2] for x in bounds)
+    count = sum((min(last, right-step)-max(first,left))//step+1 for first,last in index["runs"]
+        if max(first,left) <= min(last,right-step))
+    if count > 100_000:
+        result["planned_folds"] = {**absence, "reason_code": "DECLARATION_TIMESTAMP_PLAN_BUDGET_EXCEEDED"}
+        return result
+    stamps = [stamp for first,last in index["runs"] for stamp in range(max(first,left), min(last,right-step)+1, step)]
+    frame = pd.DataFrame(index=pd.DatetimeIndex(pd.to_datetime(stamps, unit="ms", utc=True)))
+    if len(frame.index) == 0:
+        result["planned_folds"] = {**absence, "reason_code": "HMD_INDEXED_RANGE_HAS_NO_BARS"}
+        return result
+    try:
+        if requested["protocol"] == "three_window_decay":
+            _, _, topology = _three_window_topology(requested, frame, source_timezone="UTC")
+        elif requested["schema_version"] == "research.requested-spec.v2":
+            _, _, topology = _engine_advanced_topology(requested, frame, source_timezone="UTC",
+                options=engine_catalog.walk_forward_options(), gateway=gateway,
+                v2=_v2_walk_forward_fields(requested), trials=requested["optuna_trials"])
+        else:
+            _, _, topology = _advanced_topology(requested, frame, source_timezone="UTC",
+                options=engine_catalog.walk_forward_options())
+    except ResearchPreflightSnapshotError as exc:
+        result["planned_folds"] = {**absence, "reason_code": exc.code}
+        return result
+    folds = topology["folds"]
+    result["planned_folds"] = {**absence, "availability": "AVAILABLE", "reason_code": None,
+        "count": len(folds), "min_train_bars": min(f["train"]["bars"] for f in folds),
+        "min_oos_bars": min(f["outer_oos"]["bars"] for f in folds)}
+    return result
+
+
+def merge_index_documents(previous: dict, incoming: dict) -> dict:
+    """Append namespace coverage without losing any unrelated interval facts."""
+    validate_document(previous)
+    validate_document(incoming)
+    if any(previous[k] != incoming[k] for k in ("source_manifest_digest", "as_of_utc_ms")):
+        raise DatasetIndexError("DATASET_INDEX_APPEND_SOURCE_CLOCK_MISMATCH")
+    key = lambda row: (row["dataset_id"], row["symbol"], row["index"]["timeframe"])
+    combined = {key(row): row for row in previous["entries"]}
+    combined.update({key(row): row for row in incoming["entries"]})
+    result = {**incoming, "entries": [combined[k] for k in sorted(combined)]}
+    validate_document(result)
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Explicit read-only HMD timestamp-index builder; no backtest.")
+    parser.add_argument("--dataset-id", default="crypto-binance-1m")
     parser.add_argument("--symbol", action="append", required=True)
     parser.add_argument("--timeframe", action="append", required=True)
     parser.add_argument("--start", required=True)
     parser.add_argument("--end-exclusive", required=True)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--append", action="store_true", help="Preserve other indexed datasets at the same verified source clock")
     parser.add_argument("--partition-span", action="store_true", help="Clip queries to source-published month partitions; facts still come from actual bars")
     args = parser.parse_args()
     provider = HistoricalMarketDataProvider()
     catalog = build_research_dataset_catalog(provider)
-    dataset = next(row for row in catalog["datasets"] if row["dataset_id"] == "crypto-binance-1m")
+    dataset = next((row for row in catalog["datasets"] if row["dataset_id"] == args.dataset_id and row["availability"] == "available"), None)
+    if dataset is None:
+        raise DatasetIndexError("DATASET_INDEX_SELECTION_NOT_PUBLISHED")
     names = {row["symbol"] for row in dataset["symbols"]["items"]}
     symbols, timeframes = sorted(set(args.symbol)), sorted(set(x.lower() for x in args.timeframe))
     if len(symbols) > MAX_SYMBOLS or len(timeframes) > MAX_TIMEFRAMES or not set(symbols) <= names or not set(timeframes) <= set(dataset["timeframes"]):
@@ -392,6 +505,15 @@ def main() -> None:
         return int(value.tz_convert("UTC").value // 1_000_000)
     start, end = instant(args.start), instant(args.end_exclusive)
     clock = int(datetime.now(timezone.utc).timestamp() * 1000)
+    store = DatasetIndexStore()
+    previous = None
+    if args.append:
+        _, previous, reason = store.read(source_digest(provider))
+        if previous is None:
+            raise DatasetIndexError(reason or "DATASET_INDEX_APPEND_REQUIRES_VERIFIED_BASE")
+        # Never relabel old timestamps as a new scan. A later source clock
+        # requires an explicit all-source rebuild, not an append.
+        clock = previous["as_of_utc_ms"]
     entries = []
     for symbol in symbols:
         left, right = start, end
@@ -407,8 +529,10 @@ def main() -> None:
             entries.append({"dataset_id": dataset["dataset_id"], "symbol": symbol, "index": index})
     document = {"schema_version": "research.dataset-index.v1", "source_manifest_digest": source_digest(provider),
         "as_of_utc_ms": clock, "entries": entries}
+    if previous is not None:
+        document = merge_index_documents(previous, document)
     validate_document(document)
-    revision = DatasetIndexStore().publish(document) if args.apply else hashlib.sha256(canonical(document)).hexdigest()
+    revision = store.publish(document) if args.apply else hashlib.sha256(canonical(document)).hexdigest()
     print(json.dumps({"applied": args.apply, "catalog_revision": revision, "entries": len(entries),
         "bars": sum(bar_summary(row["index"])["bar_count"] for row in entries), "bytes": len(canonical(document))}))
 

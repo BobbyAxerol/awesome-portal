@@ -1178,9 +1178,20 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
         delta_wfo_profile_digest,
     )
 
-    if receipt.get("execution_profile_id") != DELTA_WFO_PROFILE_ID:
+    from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
+    temporal = receipt.get("execution_profile_id") == DELTA_WFO_V2_PROFILE_ID
+    controls = None
+    if temporal:
+        if receipt.get("execution_profile_digest") != DELTA_WFO_V2_PROFILE_DIGEST:
+            raise ValueError("P10 temporal child profile digest does not match its installed profile")
+        raw = receipt.get("temporal_controls")
+        if not isinstance(raw, dict) or set(raw) != {"split_frequency", "window_mode", "train_window", "label_horizon_bars", "purge_bars", "embargo_bars"}:
+            raise ValueError("P10 temporal child requires exactly its bounded controls")
+        controls = temporal_controls({"schema_version": "research.requested-spec.v2", "optimization_mode": "mode_1_decay", "optimization_schedule": "global",
+            "walk_forward": {"frequency": raw["split_frequency"], **{k: v for k, v in raw.items() if k != "split_frequency"}}})
+    elif receipt.get("execution_profile_id") != DELTA_WFO_PROFILE_ID:
         raise ValueError("P10 WFO child receipt names an uninstalled execution profile")
-    if (
+    if not temporal and (
         receipt.get("execution_profile_digest") != DELTA_WFO_PROFILE_DIGEST
         or delta_wfo_profile_digest(DELTA_WFO_PROFILE) != DELTA_WFO_PROFILE_DIGEST
     ):
@@ -1197,10 +1208,12 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
         ):
             raise ValueError("P10 WFO child preview trial count is outside its admitted bound")
         optuna_trials = requested
-    return _run_delta_wfo_study(receipt, output_root, optuna_trials=optuna_trials)
+    return _run_delta_wfo_study(receipt, output_root, optuna_trials=optuna_trials,
+        temporal_controls=controls, profile_digest=DELTA_WFO_V2_PROFILE_DIGEST if temporal else DELTA_WFO_PROFILE_DIGEST)
 
 
-def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_trials: int) -> dict[str, Any]:
+def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_trials: int,
+        temporal_controls: dict[str, Any] | None = None, profile_digest: str | None = None) -> dict[str, Any]:
     """The locked W1 Delta WFO study, with a caller-verified trial count.
 
     Both the WFO profile (3 sampled trials) and the P16 what-if profile
@@ -1262,6 +1275,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
     start = pd.Timestamp(start_ms, unit="ms", tz="UTC")
     end = pd.Timestamp(end_ms, unit="ms", tz="UTC")
     split = pd.Timestamp(split_ms, unit="ms", tz="UTC")
+    temporal = temporal_controls or {}
     request = PortalRunRequest(
         strategy_id="delta-rsi-polynomial-alpha",
         dataset_id=dataset_id,
@@ -1291,8 +1305,9 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
             data_start=start.to_pydatetime(),
             data_end_exclusive=end.to_pydatetime(),
             split_mode=split.isoformat(),
-            split_frequency=profile["frequency"],
-            window_mode=profile["window_mode"],
+            split_frequency=temporal.get("split_frequency", profile["frequency"]),
+            window_mode=temporal.get("window_mode", profile["window_mode"]),
+            **({k: v for k, v in temporal.items() if k not in {"split_frequency", "window_mode"}}),
             optimization_mode=OptimizationMode(profile["optimization_mode"]),
             optimization_schedule=OptimizationSchedule(profile["optimization_schedule"]),
             fold_boundary_position_policy="carry",
@@ -1328,7 +1343,7 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         "bars": int(len(market.frame)),
         "n_folds": n_folds,
         "trial_rows": trial_rows,
-        "execution_profile_digest": DELTA_WFO_PROFILE_DIGEST,
+        "execution_profile_digest": profile_digest or DELTA_WFO_PROFILE_DIGEST,
         # CG-P11-09: this process's own high-water RSS (Linux reports KiB).
         "peak_rss_bytes": int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024,
     }

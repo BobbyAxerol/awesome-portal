@@ -17,6 +17,7 @@ import {
 } from "../src/research/run-display-label";
 
 const WFO = "p10.delta-signal-notional-wfo.v1";
+const WFO_V2 = "p10.delta-signal-notional-wfo.v2";
 const P04 = "p04.fixed-qualification.v1";
 
 describe("D1 run display label", () => {
@@ -29,11 +30,9 @@ describe("D1 run display label", () => {
     expect(runDisplayLabel(WFO, 1204)).toBe("R-WFO-1204");
   });
 
-  it("knows only the two profiles the schema allows, and labels nothing else", () => {
-    /* Migration 062 CHECK-constrains the column to exactly these two. A third
-       value can only mean a profile shipped after this map, and inventing
-       `R-UNKNOWN-007` for it would be a worse answer than no label. */
-    expect(Object.keys(RUN_DISPLAY_LABEL_KINDS).sort()).toEqual([P04, WFO]);
+  it("labels the three shipped display profiles, never an unknown child", () => {
+    expect(Object.keys(RUN_DISPLAY_LABEL_KINDS).sort()).toEqual([P04, WFO, WFO_V2]);
+    expect(runDisplayLabel(WFO_V2, 7)).toBe("R-WFO-007");
     expect(runDisplayLabel("p16.delta-whatif-grid.v1", 3)).toBeNull();
     expect(runDisplayLabel(null, 3)).toBeNull();
     expect(runDisplayLabel(undefined, 3)).toBeNull();
@@ -71,6 +70,8 @@ describe("D1 run display label", () => {
     /* Same workspace and same stored profile — the partition. */
     expect(sql).toContain("peer_run.workspace_id = library.workspace_id");
     expect(sql).toContain("peer_producer.execution_profile_id = label_producer.execution_profile_id");
+    // v1/v2 share the WFO display kind and must not both print R-WFO-001.
+    expect(sql).toContain("peer_producer.execution_profile_id IN ('p10.delta-signal-notional-wfo.v1','p10.delta-signal-notional-wfo.v2')");
     /* Ordered by creation with the run id as the tiebreak, inclusive of this
        run, which is what makes the first run number 1 and keeps a run's
        number from moving when a later run is accepted. */

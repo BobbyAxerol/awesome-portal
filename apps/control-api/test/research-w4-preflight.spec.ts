@@ -95,13 +95,12 @@ describe("CG-P08-03 admission reason → field path", () => {
       .toEqual(["parameter_space_overrides"]);
   });
 
-  it("refuses a v2 request at P10 even with the WFO profile on, keeping the typed sentence", async () => {
+  it("admits consumed v2 temporal guards with their distinct pinned execution profile", async () => {
     const spec = v2({ purge_bars: 2 }) as unknown as ResearchRequestedSpec;
     const manifest = manifestFor(spec);
     const service = new ResearchRunAdmissionService(admissionRepository(manifest) as never, flagConfig(true) as never);
     const facts = await service.admissionFacts(w1Admin, w1Scope, manifest.preflightToken);
-    expect(facts).toMatchObject({ allowed: false, code: "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE" });
-    expect(admissionFieldPath(facts.message)).toEqual(["schema_version"]);
+    expect(facts).toMatchObject({ allowed: true, code: null, message: null });
     // The unchanged v1 profile is still admitted.
     const v1Manifest = manifestFor(v1Advanced());
     const v1Service = new ResearchRunAdmissionService(admissionRepository(v1Manifest) as never, flagConfig(true) as never);

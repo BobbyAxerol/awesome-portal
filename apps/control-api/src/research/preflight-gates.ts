@@ -177,6 +177,8 @@ export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly stri
   "The imported Alpha parameter declaration is unavailable.": ["alpha_binding"],
   "The imported Alpha fixed profile accepts parameter pins only; sweeps require a separately versioned adapter.": ["parameter_space_overrides"],
   "No installed executor runs requested-spec v2 temporal guards, rolling width or inner folds yet; preflight validates them only.": ["schema_version"],
+  "Inner causal selection requires a retained per-fold selection profile; the installed v2 executor is global only.": ["walk_forward", "inner"],
+  "The temporal executor admits weekly/monthly/quarterly expanding or rolling folds only.": ["walk_forward", "frequency"],
   "The effective preflight engine binding no longer matches the submitted request.": ["client", "engine_release_id"],
   "The installed Delta adapter is bound to engine release er_quantbt_111.": ["client", "engine_release_id"],
   "The Delta walk-forward profile is bound to engine release er_quantbt_111.": ["client", "engine_release_id"],

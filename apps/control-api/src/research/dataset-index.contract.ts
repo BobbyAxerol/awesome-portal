@@ -1,6 +1,7 @@
 /** B7: safe index metadata only, no candles or source handles. V1 is unchanged. */
 import { z } from "zod";
 import { ResearchDatasetCatalogSchema } from "./dataset-catalog.contract";
+import { ResearchPreflightCreateRequestSchema } from "./preflight.contract";
 
 const Ms = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const Count = z.number().int().min(0).max(10_000_000);
@@ -91,3 +92,34 @@ export const BarMetadataSchema = z.object({ schema_version: z.literal("research.
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Inconsistent indexed window metadata" });
   }
 });
+
+export const DeclarationEstimateRequestSchema = ResearchPreflightCreateRequestSchema;
+const WindowEstimate = z.object({ window: z.enum(["IS", "OOS", "HOLDOUT", "SPAN"]),
+  start_utc_ms: Ms, end_exclusive_utc_ms: Ms, availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: Reason.nullable(), bars: Count.nullable(), first_bar_utc_ms: Ms.nullable(), last_bar_utc_ms: Ms.nullable(),
+  warmup_bars_required: Count.max(100_000), warmup_bars_available_before_start: Count.max(100_000).nullable(),
+}).strict();
+export const DeclarationMetadataSchema = z.object({
+  schema_version: z.literal("research.declaration-metadata.v1"), catalog_revision: Digest.nullable(), as_of_utc_ms: Ms.nullable(),
+  requested_spec_digest: Digest,
+  scope: z.literal("INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION"), windows: z.array(WindowEstimate).min(1).max(3),
+  planned_folds: z.object({ availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]), reason_code: Reason.nullable(),
+    count: z.number().int().min(1).max(128).nullable(), basis: z.literal("P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1"),
+    min_train_bars: Count.nullable(), min_oos_bars: Count.nullable() }).strict(),
+  earliest_start_utc_ms: Ms.nullable(), earliest_start_basis: z.literal("CONTIGUOUS_INDEXED_WARMUP_BARS_V1"),
+}).strict().superRefine((v, ctx) => {
+  for (const row of [v.planned_folds, ...v.windows]) {
+    if ((row.availability === "AVAILABLE") !== (row.reason_code === null)
+      || ("bars" in row && (row.availability === "AVAILABLE") !== (row.bars !== null))
+      || ("count" in row && (row.availability === "AVAILABLE") !== (row.count !== null)))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Inconsistent declaration availability" });
+  }
+});
+export const DeclarationConditionSchema = z.object({ key: z.string().regex(/^[a-z][a-z0-9_.]{0,63}$/),
+  state: z.enum(["PASS", "FAIL", "NOT_PUBLISHED"]), reason_code: Reason.nullable(),
+  observed: z.string().max(200).nullable(), required: z.string().max(200),
+}).strict().refine(v => (v.state === "PASS") === (v.reason_code === null));
+export const DeclarationEstimateSchema = z.object({ schema_version: z.literal("research.declaration-estimate.v1"),
+  metadata: DeclarationMetadataSchema, profile_id: DatasetId.nullable(),
+  conditions: z.array(DeclarationConditionSchema).min(1).max(32), ready_for_preflight: z.boolean(),
+}).strict().refine(v => v.ready_for_preflight === v.conditions.every(row => row.state === "PASS"));

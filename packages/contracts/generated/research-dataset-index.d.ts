@@ -55,10 +55,388 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/datasets/declaration-estimates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Estimate indexed windows/folds and profile conditions without creating a preflight or run */
+        post: operations["researchDeclarationEstimatePostV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description P02 requested spec. v1 is the frozen P02 contract; v2 (CG-P02-02) adds rolling train width, temporal guards and causal Mode 1 inner folds on an advanced walk-forward. P08 validates every v2 field against the pinned engine; P10 runs neither v2 field yet. */
+        RequestedSpec: components["schemas"]["research-requested-spec.v1.schema"] | components["schemas"]["research-requested-spec.v2.schema"];
+        CreateRequest: {
+            workspace_id?: string;
+            requested_spec: components["schemas"]["RequestedSpec"];
+        };
+        Digest: string;
+        UtcMilliseconds: number;
+        UtcRange: {
+            start_utc: string;
+            end_exclusive_utc: string;
+            start_utc_ms: components["schemas"]["UtcMilliseconds"];
+            end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+            bars?: number;
+        };
+        Warmup: components["schemas"]["UtcRange"] & {
+            requested_bars: number;
+            /** @constant */
+            state: "BOUNDARY_ONLY_NOT_FIT";
+        };
+        Quality: {
+            rows: number;
+            gaps: number;
+            duplicates: number;
+            gap_ratio: number;
+            /** @constant */
+            passed: true;
+            reason_codes: string[];
+            missing_bar_count: number;
+            /** @constant */
+            state: "SNAPSHOT_INTEGRITY_ONLY";
+        };
+        Snapshot: {
+            snapshot_id: string;
+            snapshot_content_hash: components["schemas"]["Digest"];
+            market_content_hash: components["schemas"]["Digest"];
+            source_manifest_digest: components["schemas"]["Digest"];
+            row_count: number;
+            byte_count: number;
+            query: components["schemas"]["UtcRange"];
+            logical_range: components["schemas"]["UtcRange"];
+            warmup: components["schemas"]["Warmup"];
+            timezone: string;
+            calendar_policy: string;
+            /** @constant */
+            closed_bar_policy: "CLOSED_BARS_ONLY";
+            columns: string[];
+            quality: components["schemas"]["Quality"];
+            provenance: {
+                [key: string]: string | number | boolean;
+            };
+            gap_scan?: components["schemas"]["GapScan"];
+            holdout_seal?: components["schemas"]["HoldoutSeal"];
+        };
+        Capability: {
+            engine_release_id: string;
+            engine_catalog_digest: components["schemas"]["Digest"];
+            execution_route: string;
+            required_input_class: string;
+            route_axes: {
+                engine: string;
+                integration: string;
+                evidence: string;
+                admission: string;
+            };
+            /** @constant */
+            preflight_admission: "PREFLIGHT_ONLY";
+            optimization_mode: string;
+            optimization_schedule: string;
+        };
+        Fold: {
+            fold_id: string;
+            train: components["schemas"]["UtcRange"];
+            outer_oos: components["schemas"]["UtcRange"];
+            /** @constant */
+            state: "BOUNDARY_FIXED_NOT_EVALUATED";
+            /** @description CG-P02-02: engine-built label-horizon, purge and embargo spans (requested-spec v2 plans only). */
+            guards?: {
+                label_horizon: components["schemas"]["UtcRange"] | null;
+                purge: components["schemas"]["UtcRange"] | null;
+                embargo: components["schemas"]["UtcRange"] | null;
+            };
+            /** @description CG-P02-02: nested inner folds the engine built inside this outer IS. */
+            inner_fold_count?: number;
+        };
+        SealedHoldout: components["schemas"]["UtcRange"] & {
+            /** @constant */
+            snapshot_read_state: "OPAQUE_SNAPSHOT_ONLY";
+            /** @constant */
+            evaluation_state: "NOT_EVALUATED";
+            disclosure: string;
+        };
+        ThreeWindowTopology: {
+            /** @constant */
+            protocol: "three_window_decay";
+            folds: components["schemas"]["Fold"][];
+            sealed_holdout: components["schemas"]["SealedHoldout"];
+            topology_digest: components["schemas"]["Digest"];
+        };
+        AdvancedTopology: {
+            /** @constant */
+            protocol: "advanced_walk_forward";
+            /** @enum {unknown} */
+            frequency: "single" | "yearly" | "semi_yearly" | "quarterly" | "monthly" | "weekly";
+            /**
+             * @description Rolling appears only on an engine-built requested-spec v2 plan with a train width (CG-P08-02).
+             * @enum {unknown}
+             */
+            window_mode: "expanding" | "rolling";
+            folds: components["schemas"]["Fold"][];
+            sealed_holdout: null;
+            topology_digest: components["schemas"]["Digest"];
+            /**
+             * @description Present exactly when the engine's own fold planner built this plan (requested-spec v2).
+             * @constant
+             */
+            plan_source?: "quantbt.walkforward.WalkForwardEngine.build_folds";
+            train_window?: string | null;
+            temporal_guards?: {
+                label_horizon_bars: number;
+                purge_bars: number;
+                embargo_bars: number;
+            };
+            inner_validation?: {
+                /** @enum {unknown} */
+                split_frequency: "single" | "yearly" | "semi_yearly" | "quarterly" | "monthly" | "weekly";
+                /** @enum {unknown} */
+                window_mode: "expanding" | "rolling";
+                train_window: string;
+                min_folds: number;
+            } | null;
+        };
+        Topology: components["schemas"]["ThreeWindowTopology"] | components["schemas"]["AdvancedTopology"];
+        DatasetBinding: {
+            /** @constant */
+            schema_version: "research.dataset-binding.v1";
+            snapshot_id: string;
+            snapshot_content_hash: components["schemas"]["Digest"];
+            market_content_hash: components["schemas"]["Digest"];
+            source_manifest_digest: components["schemas"]["Digest"];
+            dataset_id: string;
+            symbol: string;
+            timeframe: string;
+            range_start_utc_ms: components["schemas"]["UtcMilliseconds"];
+            range_end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+            timezone: string;
+            calendar_policy: string;
+            /** @constant */
+            closed_bar_policy: "CLOSED_BARS_ONLY";
+        };
+        ResourceEstimate: {
+            /** @constant */
+            schema_version: "research.resource-estimate.v1";
+            /** @constant */
+            scope: "per_study_per_fold_per_seed; no product-wide trial claim is implied";
+            trial_count: number;
+            /** @constant */
+            seed_count: 1;
+            outer_fold_count: number;
+            evaluation_count: number;
+            raw_frame_bytes: number;
+            snapshot_bytes: number;
+            estimated_memory_bytes: number;
+            estimated_scratch_bytes: number;
+            estimated_cpu_seconds: number;
+            /** @constant */
+            admission_state: "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING";
+            disclosure: string;
+            /** @description CG-P08-05: the ceilings this preflight was checked against; sources are published on the Atlas release (preflight_limits). */
+            ceilings?: {
+                trial_ceiling: number;
+                sweep_dimension_ceiling: number;
+                swept_dimensions: number;
+                outer_fold_ceiling: number;
+                estimated_cpu_seconds_ceiling: number;
+            };
+        };
+        EffectiveDataBinding: {
+            snapshot_id: string;
+            snapshot_content_hash: components["schemas"]["Digest"];
+            market_content_hash: components["schemas"]["Digest"];
+            source_manifest_digest: components["schemas"]["Digest"];
+            timezone: string;
+            calendar_policy: string;
+            /** @constant */
+            closed_bar_policy: "CLOSED_BARS_ONLY";
+            columns: string[];
+            warmup_bars: number;
+            range_start_utc_ms: components["schemas"]["UtcMilliseconds"];
+            range_end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+        };
+        Optimization: {
+            mode: string;
+            schedule: string;
+            trial_count: number;
+            early_stopping: number | null;
+            random_seed: number | null;
+            /** @constant */
+            scope: "per_study_per_fold_per_seed";
+        };
+        Intent: {
+            /** @constant */
+            kind: "NEW";
+            reproduction_semantics: string;
+            upgrade_semantics: string;
+        };
+        EffectiveSpec: {
+            /** @constant */
+            schema_version: "research.effective-spec.v1";
+            requested_spec_digest: components["schemas"]["Digest"];
+            engine: components["schemas"]["Capability"];
+            data_binding: components["schemas"]["EffectiveDataBinding"];
+            topology: components["schemas"]["Topology"];
+            optimization: components["schemas"]["Optimization"];
+            intent: components["schemas"]["Intent"];
+        };
+        ResearchPreflightV1: {
+            /** @constant */
+            schema_version: "research.preflight.v1";
+            preflight_token: components["parameters"]["PreflightToken"]["schema"];
+            expires_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            /** @description Caller-specific server admission for creating a run from this preflight. P08 is preflight-only and currently returns false for every caller; P10 may return true only when its create route enforces the identical server-side predicate. It is never inferred by the browser from token, lifecycle or role. */
+            may_create_run: boolean;
+            requested_spec_digest: components["schemas"]["Digest"];
+            effective_spec_digest: components["schemas"]["Digest"];
+            dataset_binding_digest: components["schemas"]["Digest"];
+            manifest_digest: components["schemas"]["Digest"];
+            effective_spec: components["schemas"]["EffectiveSpec"];
+            dataset_binding: components["schemas"]["DatasetBinding"];
+            snapshot: components["schemas"]["Snapshot"];
+            topology: components["schemas"]["Topology"];
+            resource_estimate: components["schemas"]["ResourceEstimate"];
+            capability: components["schemas"]["Capability"];
+            issued_at_utc_ms?: components["schemas"]["UtcMilliseconds"];
+            gates?: components["schemas"]["PreflightGate"][];
+            run_admission?: components["schemas"]["RunAdmission"];
+        };
+        Problem: {
+            error: {
+                /** @enum {unknown} */
+                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_PREFLIGHT_INVALID" | "WINDOW_BOUND_NOT_ALIGNED" | "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE" | "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE" | "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE" | "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN" | "RESEARCH_PREFLIGHT_RELEASE_STALE" | "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID" | "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED" | "RESEARCH_PREFLIGHT_RESOURCE_REFUSED" | "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE" | "RESEARCH_PREFLIGHT_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REJECTED" | "RESEARCH_PREFLIGHT_NOT_FOUND" | "RESEARCH_PREFLIGHT_EXPIRED" | "RESEARCH_PREFLIGHT_STALE";
+                message: string;
+            };
+            request_id: string;
+            /** @description CG-P08-03: the failed gate and requested-spec field path of a 409 refusal, or every invalid field path of a 400. */
+            details?: {
+                gate?: string;
+                field_path?: components["schemas"]["FieldPath"];
+                field_paths?: components["schemas"]["FieldPath"][];
+            };
+        };
+        /** @description CG-P08-06: per-window missing-bar scan of the sealed snapshot's timestamps (never prices). The sealed holdout is not scanned per window. Severity per gap run is not published by the source; a window verdict is WATCH when it misses any bar and CRITICAL above the snapshot quality profile's max_gap_ratio. */
+        GapScan: {
+            /** @enum {unknown} */
+            state: "SCANNED" | "NOT_PUBLISHED";
+            reason: string | null;
+            max_gap_ratio?: number;
+            classification?: string;
+            windows: {
+                window: string;
+                start_utc_ms: components["schemas"]["UtcMilliseconds"];
+                end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+                /** @enum {unknown} */
+                state: "SCANNED" | "SEALED";
+                bars: number | null;
+                expected_bars: number | null;
+                missing_bars: number | null;
+                gap_runs: number | null;
+                verdict: ("PASS" | "WATCH" | "CRITICAL") | null;
+                items: {
+                    start_utc_ms: components["schemas"]["UtcMilliseconds"];
+                    missing_bars: number;
+                }[];
+                items_omitted: number;
+                note: string | null;
+            }[];
+        };
+        /** @description CG-P08-06 (DR-01): the read-only holdout seal record P08 can prove, or NOT_DECLARED for an advanced walk-forward. Nothing reads sealed values; unlock authority is DR-01 (OWNER_SCOPE_REQUIRED); no certificate cap is published (CG-P04-05). The sealing actor is the preflight's authenticated caller (manifests are actor-scoped) and the time is issued_at_utc_ms. */
+        HoldoutSeal: {
+            /** @constant */
+            schema_version: "research.holdout-seal.v1";
+            seal_digest: components["schemas"]["Digest"];
+            digest_basis: string;
+            read_log: {
+                /** @constant */
+                state: "NO_READER";
+                reads: unknown[];
+                reason: string;
+            };
+            unlock: {
+                /** @constant */
+                state: "OWNER_SCOPE_REQUIRED";
+                reason: string;
+            };
+            cap: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                reason: string;
+            };
+        } | {
+            /** @constant */
+            schema_version: "research.holdout-seal.v1";
+            /** @constant */
+            state: "NOT_DECLARED";
+            reason: string;
+        };
+        /** @description CG-P08-03: one server check this immutable manifest passed, projected from the stored documents. NOT_RECORDED marks a gate the manifest predates; it is never shown as PASS. */
+        PreflightGate: {
+            gate: string;
+            /** @enum {unknown} */
+            state: "PASS" | "NOT_APPLICABLE" | "NOT_RECORDED";
+            field_path: components["schemas"]["FieldPath"];
+            message: string;
+        };
+        /** @description Requested-spec key path (never a value), e.g. ["walk_forward", "train_window"]; Screen 02 maps it to the owning wizard step. */
+        FieldPath: string[];
+        /** @description CG-P08-03: the P10 predicate behind may_create_run, with its typed reason and field path when it is false. A manifest the predicate cannot load stays an opaque false with null code. */
+        RunAdmission: {
+            may_create_run: boolean;
+            code: string | null;
+            message: string | null;
+            field_path: components["schemas"]["FieldPath"];
+        };
+        /** @description CG-P08-04: read-only, bounded research dataset catalog for Screen 02. Public timeframes use lower-case day tokens (1d); the HMD reader's 1D is the same fixed interval. Older uppercase tokens remain accepted for compatibility. Datasets, timeframes, availability and, where the approved reader's storage layout is mounted, symbols with month-partition coverage. No path, row or price; exact bar availability is decided at preflight. */
+        DatasetCatalog: {
+            /** @constant */
+            schema_version: "research.dataset-catalog.v1";
+            coverage_rule: string;
+            datasets: {
+                dataset_id: string;
+                venue: string;
+                /** @enum {unknown} */
+                availability: "available" | "unavailable";
+                unavailable_reason: string | null;
+                source_class: string;
+                usage_scopes: string[];
+                excluded_scopes: string[];
+                source_timezone: string;
+                /** @enum {unknown} */
+                calendar_policy: "CRYPTO_24_7" | "SOURCE_DECLARED";
+                timeframes: string[];
+                symbols: {
+                    /** @enum {unknown} */
+                    state: "PUBLISHED" | "NOT_PUBLISHED";
+                    reason: string | null;
+                    total: number | null;
+                    truncated: boolean;
+                    items: {
+                        symbol: string;
+                        contract_kind: ("PERPETUAL" | "QUARTERLY") | null;
+                        coverage: {
+                            first_month: string;
+                            last_month: string;
+                            months: number;
+                            /** @constant */
+                            granularity: "MONTH_PARTITION";
+                        } | null;
+                    }[];
+                };
+            }[];
+        };
         DatasetCatalogV2: {
             /** @constant */
             schema_version: "research.dataset-catalog.v2";
@@ -210,25 +588,271 @@ export interface components {
             warmup_bars_required: number;
             warmup_bars_available_before_start: number | null;
         };
-        /** @description Requested-spec key path (never a value), e.g. ["walk_forward", "train_window"]; Screen 02 maps it to the owning wizard step. */
-        FieldPath: string[];
-        Problem: {
-            error: {
-                /** @enum {unknown} */
-                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_PREFLIGHT_INVALID" | "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE" | "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE" | "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE" | "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN" | "RESEARCH_PREFLIGHT_RELEASE_STALE" | "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID" | "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED" | "RESEARCH_PREFLIGHT_RESOURCE_REFUSED" | "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE" | "RESEARCH_PREFLIGHT_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REJECTED" | "RESEARCH_PREFLIGHT_NOT_FOUND" | "RESEARCH_PREFLIGHT_EXPIRED" | "RESEARCH_PREFLIGHT_STALE";
-                message: string;
-            };
-            request_id: string;
-            /** @description CG-P08-03: the failed gate and requested-spec field path of a 409 refusal, or every invalid field path of a 400. */
-            details?: {
-                gate?: string;
-                field_path?: components["schemas"]["FieldPath"];
-                field_paths?: components["schemas"]["FieldPath"][];
-            };
+        WindowEstimate: {
+            /** @enum {unknown} */
+            window: "IS" | "OOS" | "HOLDOUT" | "SPAN";
+            start_utc_ms: number;
+            end_exclusive_utc_ms: number;
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            bars: number | null;
+            first_bar_utc_ms: number | null;
+            last_bar_utc_ms: number | null;
+            warmup_bars_required: number;
+            warmup_bars_available_before_start: number | null;
         };
+        DeclarationMetadata: {
+            /** @constant */
+            schema_version: "research.declaration-metadata.v1";
+            requested_spec_digest: string;
+            catalog_revision: string | null;
+            as_of_utc_ms: number | null;
+            /** @constant */
+            scope: "INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION";
+            windows: components["schemas"]["WindowEstimate"][];
+            planned_folds: {
+                /** @enum {unknown} */
+                availability: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                count: number | null;
+                /** @constant */
+                basis: "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1";
+                min_train_bars: number | null;
+                min_oos_bars: number | null;
+            };
+            earliest_start_utc_ms: number | null;
+            /** @constant */
+            earliest_start_basis: "CONTIGUOUS_INDEXED_WARMUP_BARS_V1";
+        };
+        DeclarationCondition: {
+            key: string;
+            /** @enum {unknown} */
+            state: "PASS" | "FAIL" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            observed: string | null;
+            required: string;
+        };
+        DeclarationEstimate: {
+            /** @constant */
+            schema_version: "research.declaration-estimate.v1";
+            metadata: components["schemas"]["DeclarationMetadata"];
+            profile_id: string | null;
+            conditions: components["schemas"]["DeclarationCondition"][];
+            ready_for_preflight: boolean;
+        };
+        /**
+         * Research requested specification v1
+         * @description P02 producer-side structural contract for S02. It is not a live endpoint contract. P04 supplies installed-manifest values and P10 supplies authenticated producer wiring.
+         */
+        "research-requested-spec.v1.schema": {
+            /** @constant */
+            schema_version: "research.requested-spec.v1";
+            alpha_binding: null | {
+                alpha_id: string;
+                alpha_version_id: string;
+            };
+            not_publishable: boolean;
+            strategy_id: string;
+            /** @enum {unknown} */
+            execution_route: "signal_notional" | "pct_equity" | "intrabar_bracket" | "dca_ladder" | "reactive" | "event_driven" | "native_event_lifecycle" | "orders" | "fill_replay" | "basket" | "arbitrage" | "portfolio" | "nautilus_dca_grid" | "options";
+            route_params: {
+                intrabar?: {
+                    /** @enum {unknown} */
+                    level_mode: "hlc_conservative" | "ohlc_path" | "close_only";
+                    /** @enum {unknown} */
+                    same_bar_policy: "stop_first" | "target_first" | "ambiguity_flag";
+                    tick_size: string;
+                };
+                portfolio?: {
+                    /** @enum {unknown} */
+                    mode: "longshort" | "market_neutral" | "directional" | "equal_weight" | "risk_parity" | "beta_neutral";
+                    /** @enum {unknown} */
+                    sizing: "equal_weight" | "risk_parity" | "vol_target" | "kelly_fraction" | "fixed_notional" | "atr_risk" | "min_variance" | "score_weighted";
+                };
+                reactive?: {
+                    /** @enum {unknown} */
+                    runtime: "R0" | "R1" | "R2" | "R3" | "R3B";
+                    /** @enum {unknown} */
+                    audit_mode: "minimal" | "standard" | "audit";
+                };
+                dca?: {
+                    base_order_usd: string;
+                    safety_orders: number;
+                    step_scale: string;
+                };
+            };
+            data: {
+                dataset_id: string;
+                symbol: string;
+                timeframe: string;
+            };
+            /** @enum {unknown} */
+            protocol: "three_window_decay" | "advanced";
+            windows?: {
+                is: {
+                    start: string;
+                    end_exclusive: string;
+                };
+                oos: {
+                    start: string;
+                    end_exclusive: string;
+                };
+                holdout: {
+                    start: string;
+                    end_exclusive: string;
+                };
+            };
+            walk_forward?: {
+                start: string;
+                end_exclusive: string;
+                split_mode: string;
+                frequency: string;
+                window_mode: string;
+            };
+            optimization_mode: string;
+            optimization_schedule: string;
+            parameter_space_overrides: ({
+                name: string;
+                /** @constant */
+                kind: "sweep";
+                low: string | number | boolean;
+                high: string | number | boolean;
+            } | {
+                name: string;
+                /** @constant */
+                kind: "pin";
+                value: string | number | boolean;
+            })[];
+            optuna_trials: number;
+            early_stopping: null | number;
+            random_seed: null | number;
+            optimization_config: {
+                [key: string]: string | number | boolean;
+            };
+            client: {
+                engine_release_id: string;
+                config_digest: string;
+            };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        /**
+         * Research requested specification v2
+         * @description CG-P02-02: v1 plus requested-spec fields for rolling train width, temporal guards (label horizon, purge, embargo) and causal Mode 1 inner folds on an advanced walk-forward. Additive and versioned: every v1 document is unchanged. P08 validates each field against the pinned QuantBT engine and refuses what it cannot build with a typed reason and field path.
+         */
+        "research-requested-spec.v2.schema": {
+            /** @constant */
+            schema_version: "research.requested-spec.v2";
+            alpha_binding: null | {
+                alpha_id: string;
+                alpha_version_id: string;
+            };
+            not_publishable: boolean;
+            strategy_id: string;
+            /** @enum {unknown} */
+            execution_route: "signal_notional" | "pct_equity" | "intrabar_bracket" | "dca_ladder" | "reactive" | "event_driven" | "native_event_lifecycle" | "orders" | "fill_replay" | "basket" | "arbitrage" | "portfolio" | "nautilus_dca_grid" | "options";
+            route_params: {
+                intrabar?: {
+                    /** @enum {unknown} */
+                    level_mode: "hlc_conservative" | "ohlc_path" | "close_only";
+                    /** @enum {unknown} */
+                    same_bar_policy: "stop_first" | "target_first" | "ambiguity_flag";
+                    tick_size: string;
+                };
+                portfolio?: {
+                    /** @enum {unknown} */
+                    mode: "longshort" | "market_neutral" | "directional" | "equal_weight" | "risk_parity" | "beta_neutral";
+                    /** @enum {unknown} */
+                    sizing: "equal_weight" | "risk_parity" | "vol_target" | "kelly_fraction" | "fixed_notional" | "atr_risk" | "min_variance" | "score_weighted";
+                };
+                reactive?: {
+                    /** @enum {unknown} */
+                    runtime: "R0" | "R1" | "R2" | "R3" | "R3B";
+                    /** @enum {unknown} */
+                    audit_mode: "minimal" | "standard" | "audit";
+                };
+                dca?: {
+                    base_order_usd: string;
+                    safety_orders: number;
+                    step_scale: string;
+                };
+            };
+            data: {
+                dataset_id: string;
+                symbol: string;
+                timeframe: string;
+            };
+            /** @enum {unknown} */
+            protocol: "three_window_decay" | "advanced";
+            windows?: {
+                is: {
+                    start: string;
+                    end_exclusive: string;
+                };
+                oos: {
+                    start: string;
+                    end_exclusive: string;
+                };
+                holdout: {
+                    start: string;
+                    end_exclusive: string;
+                };
+            };
+            walk_forward?: {
+                start: string;
+                end_exclusive: string;
+                split_mode: string;
+                frequency: string;
+                window_mode: string;
+                /** @description Rolling train width (required for rolling, refused for expanding). */
+                train_window?: string;
+                /** @description Bars removed from each train tail for label horizon before OOS. */
+                label_horizon_bars?: number;
+                /** @description Bars purged from each train tail before the label horizon. */
+                purge_bars?: number;
+                /** @description Bars skipped after each OOS fold before the next OOS starts. */
+                embargo_bars?: number;
+                /** @description Nested inner folds; only mode_1_decay with per_fold_causal. */
+                inner?: {
+                    /** @enum {unknown} */
+                    split_frequency: "single" | "yearly" | "semi_yearly" | "quarterly" | "monthly" | "weekly";
+                    /** @enum {unknown} */
+                    window_mode: "expanding" | "rolling";
+                    train_window: string;
+                    min_folds?: number;
+                };
+            };
+            optimization_mode: string;
+            optimization_schedule: string;
+            parameter_space_overrides: ({
+                name: string;
+                /** @constant */
+                kind: "sweep";
+                low: string | number | boolean;
+                high: string | number | boolean;
+            } | {
+                name: string;
+                /** @constant */
+                kind: "pin";
+                value: string | number | boolean;
+            })[];
+            optuna_trials: number;
+            early_stopping: null | number;
+            random_seed: null | number;
+            optimization_config: {
+                [key: string]: string | number | boolean;
+            };
+            client: {
+                engine_release_id: string;
+                config_digest: string;
+            };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        Csrf: string;
+        WorkspaceId: string;
+        PreflightToken: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -419,6 +1043,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BarMetadata"];
+                };
+            };
+            /** @description Typed refusal; never a market-data fallback */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal; never a market-data fallback */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal; never a market-data fallback */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal; never a market-data fallback */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal; never a market-data fallback */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Typed refusal; never a market-data fallback */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    researchDeclarationEstimatePostV1: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-portal-csrf": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Named metadata response; absence remains typed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeclarationEstimate"];
                 };
             };
             /** @description Typed refusal; never a market-data fallback */

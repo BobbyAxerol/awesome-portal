@@ -34,6 +34,7 @@
 /** Stored execution profile -> the kind token the hi-fi prints. */
 export const RUN_DISPLAY_LABEL_KINDS: Readonly<Record<string, string>> = {
   "p10.delta-signal-notional-wfo.v1": "WFO",
+  "p10.delta-signal-notional-wfo.v2": "WFO",
   "p04.fixed-qualification.v1": "P04",
 };
 
@@ -81,7 +82,9 @@ export function runDisplayOrdinalSql(runAlias: string, producerAlias: string): s
                AND peer_producer.run_id = peer_run.run_id
              WHERE peer_run.workspace_id = ${runAlias}.workspace_id
                AND peer_run.relationship_kind = 'PRIMARY'
-               AND peer_producer.execution_profile_id = ${producerAlias}.execution_profile_id
+               AND (peer_producer.execution_profile_id = ${producerAlias}.execution_profile_id
+                 OR (peer_producer.execution_profile_id IN ('p10.delta-signal-notional-wfo.v1','p10.delta-signal-notional-wfo.v2')
+                   AND ${producerAlias}.execution_profile_id IN ('p10.delta-signal-notional-wfo.v1','p10.delta-signal-notional-wfo.v2')))
                AND (peer_run.created_at, peer_run.run_id)
                    <= (${runAlias}.created_at, ${runAlias}.run_id)
           ) END`;

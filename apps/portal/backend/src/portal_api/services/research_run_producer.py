@@ -42,6 +42,7 @@ from portal_api.domain.research_delta_wfo_profile import (
     delta_wfo_preview_long_enabled,
 )
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest, sibling_pins
+from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
 from portal_api.domain.research_whatif_profile import WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
@@ -714,7 +715,7 @@ class ResearchRunProducerExecutor:
                 )
             if research.execution_profile_digest != WHATIF_PROFILE_DIGEST:
                 raise ResearchRunProducerError("P16 what-if profile digest no longer matches", code="CAPABILITY_MISMATCH")
-        elif research.execution_profile_digest != DELTA_WFO_PROFILE_DIGEST:
+        elif research.execution_profile_digest != (DELTA_WFO_V2_PROFILE_DIGEST if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else DELTA_WFO_PROFILE_DIGEST):
             raise ResearchRunProducerError("P10 Delta WFO profile digest no longer matches", code="CAPABILITY_MISMATCH")
         # Research preview only: a long study runs the spec's own admitted
         # trial count under the preview child limits. Off, both stay locked.
@@ -777,8 +778,8 @@ class ResearchRunProducerExecutor:
                 lease_epoch=request.lease_epoch,
                 market_path=tape_path,
                 artifact_root=artifact_root,
-                execution_profile_id=WHATIF_PROFILE_ID if whatif is not None else DELTA_WFO_PROFILE_ID,
-                execution_profile_digest=WHATIF_PROFILE_DIGEST if whatif is not None else DELTA_WFO_PROFILE_DIGEST,
+                execution_profile_id=WHATIF_PROFILE_ID if whatif is not None else research.execution_profile_id,
+                execution_profile_digest=WHATIF_PROFILE_DIGEST if whatif is not None else str(research.execution_profile_digest),
                 dataset_id=str(data.get("dataset_id")),
                 symbol=str(data.get("symbol")),
                 data_start_utc_ms=int(span_start.value // 1_000_000),
@@ -797,6 +798,7 @@ class ResearchRunProducerExecutor:
                     for entry in whatif.evaluations
                 ) if whatif is not None else (),
                 optuna_trials=study_trials if preview_long else None,
+                temporal_controls=temporal_controls(research.requested_spec) if research.execution_profile_id == DELTA_WFO_V2_PROFILE_ID else None,
             )
             progress("stage_completed", {"stage": "S2"})
             progress("stage_started", {"stage": "S3"})

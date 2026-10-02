@@ -4,15 +4,53 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ResearchDatasetIndexClient } from "../src/research/dataset-index.client";
 import { ResearchDatasetIndexController } from "../src/research/dataset-index.controller";
 import { ResearchDatasetCatalogV2Schema } from "../src/research/dataset-index.contract";
+import {sha256} from "../src/auth/argon";
+import {sha256ResearchJson} from "../src/research/preflight.service";
+import {P04_DELTA_DECLARED_CONTRACT} from "../src/research/p04-delta.binding";
+import {wfoRequested} from "./research-w1-wfo.fixture";
 const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const fixture = (name = "healthy") => JSON.parse(readFileSync(resolve(root, `fixtures/research-dataset-catalog.v2.${name}.valid.json`), "utf8"));
 const config = { INTERNAL_PRINCIPAL_SECRET: "b7-test-principal-secret-0123456789", PORTAL_API_BASE_URL: "http://portal-api.test",
   RESEARCH_PREFLIGHT_TIMEOUT_MS: 1000, QUERY_CURSOR_ACTIVE_KEY_ID: "key", QUERY_CURSOR_KEYS_JSON: JSON.stringify({key:"x".repeat(32)}),
   QUERY_CURSOR_TTL_SECONDS: 900 } as never;
 const request = { portalUser: { userId: "u1", username: "u1", role: "ADMIN", mustChangePassword: false }, portalWorkspaceId: "w1" } as never;
-const make = (data = fixture(), member = true) => new ResearchDatasetIndexController({ catalog: async () => data } as never, { isMember: async () => member } as never, config);
+const make = (data = fixture(), member = true) => new ResearchDatasetIndexController({ catalog: async () => data } as never, { isMember: async () => member } as never, config, {} as never, {} as never);
 afterEach(() => vi.unstubAllGlobals());
 describe("B7 indexed dataset BFF", () => {
+  it("requires CSRF and workspace before source I/O; resolves warmup on the server",async()=>{
+    const spec=wfoRequested(), metadata=JSON.parse(readFileSync(resolve(root,"fixtures/research-declaration-estimate.v1.available.valid.json"),"utf8")).metadata;
+    const estimate=vi.fn(async()=>metadata), load=vi.fn(async()=>({declaredContract:P04_DELTA_DECLARED_CONTRACT,entrypoint:P04_DELTA_DECLARED_CONTRACT.entrypoint}));
+    const atlas=JSON.parse(readFileSync(resolve(root,"fixtures/research-foundation.atlas-current.valid.json"),"utf8"));
+    const csrf="estimate-test-csrf";
+    const req={...request as any,headers:{origin:"https://portal.test","x-portal-csrf":csrf},cookies:{"__Host-portal_csrf":csrf},portalSession:{csrfSecretHash:sha256(csrf)}};
+    const makeController=(member=true)=>new ResearchDatasetIndexController({estimate} as never,{isMember:async()=>member} as never,
+      {...config as any,PORTAL_PUBLIC_ORIGIN:"https://portal.test"},{loadAlphaVersionDataContract:load} as never,{atlas:async()=>atlas} as never);
+    await expect(makeController().estimate({...req,headers:{}} as never,{requested_spec:spec})).rejects.toMatchObject({status:403});
+    await expect(makeController(false).estimate(req as never,{requested_spec:spec})).rejects.toMatchObject({status:404});
+    expect(estimate).not.toHaveBeenCalled();
+    const result=await makeController().estimate(req as never,{requested_spec:spec});
+    expect(result.metadata.scope).toBe("INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION");
+    expect(estimate).toHaveBeenCalledWith(req.portalUser,spec,P04_DELTA_DECLARED_CONTRACT.warmup_bars);
+  });
+  it("binds private estimate responses to the exact requested spec digest",async()=>{
+    const spec=wfoRequested(),metadata=JSON.parse(readFileSync(resolve(root,"fixtures/research-declaration-estimate.v1.available.valid.json"),"utf8")).metadata;
+    metadata.requested_spec_digest=sha256ResearchJson(spec);
+    vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify(metadata))));
+    const client=new ResearchDatasetIndexClient(config);
+    expect(await client.estimate((request as any).portalUser,spec,300)).toEqual(metadata);
+    expect((fetch as any).mock.calls[0][1].method).toBe("POST");
+    metadata.requested_spec_digest="f".repeat(64);
+    await expect(client.estimate((request as any).portalUser,spec,300)).rejects.toMatchObject({status:502});
+  });
+  it("returns the public alignment code before any private metadata request", async () => {
+    const catalog = vi.fn(async () => fixture()), metadata = vi.fn();
+    const controller = new ResearchDatasetIndexController({ catalog, metadata } as never,
+      {isMember: async()=>true} as never, config, {} as never, {} as never);
+    await expect(controller.metadata(request, "crypto-binance-1m", {
+      symbol:"BTCUSDT",timeframe:"1h",start_utc_ms:1,end_exclusive_utc_ms:3600000,
+    })).rejects.toMatchObject({status:400,code:"WINDOW_BOUND_NOT_ALIGNED"});
+    expect(catalog).not.toHaveBeenCalled(); expect(metadata).not.toHaveBeenCalled();
+  });
   it.each(["healthy", "partial-quality", "multi-dataset", "symbol-absent"])("validates canonical %s consistently with OpenAPI", name => {
     const parsed = ResearchDatasetCatalogV2Schema.safeParse(fixture(name));
     expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);

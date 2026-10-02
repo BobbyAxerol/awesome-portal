@@ -14,6 +14,7 @@ import { ResearchProgressSnapshotSchema, type ResearchProgressSnapshot } from ".
 import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } from "./retained-analytics-v2.contract";
 import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
 import { sha256ResearchJson } from "./preflight.service";
+import { enrichedAvailability } from "./enriched-analysis.contract";
 import {
   ResearchRunIdSchema,
   ResearchRunLibraryItemSchema,
@@ -805,6 +806,7 @@ export class ResearchRunLibraryService {
     const analyticsV2 = retained?.analyticsV2 ?? (fixedAnalytics.success ? fixedAnalytics.data : null);
     const item = {
       ...(enriched ? { analytics_all_time: enriched.library_summary } : {}),
+      enriched_analysis_availability: enrichedAvailability(enriched, Boolean(retained || row.evidence_revision || row.evidence_projection)),
       run_id: row.run_id,
       // D1: server-derived, never minted here as an identity — see
       // run-display-label.ts. `null` stays distinct from a label.

@@ -71,7 +71,7 @@ def _config_fields(
     target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
 ) -> dict[str, Any]:
     opt = config.optimization
-    return {
+    fields = {
         "split_mode": config.split_mode,
         "split_frequency": config.split_frequency,
         "window_mode": config.window_mode,
@@ -128,6 +128,12 @@ def _config_fields(
         "trade_penalty_factor": opt.trade_penalty_factor,
         "use_numba": opt.use_numba,
     }
+    # Emit only explicit temporal v2 values. V1's config bytes/defaults remain
+    # unchanged; an admitted non-zero guard must reach QuantBT, never a caption.
+    for name in ("label_horizon_bars", "purge_bars", "embargo_bars"):
+        if name in config.model_fields_set or getattr(config, name):
+            fields[name] = getattr(config, name)
+    return fields
 
 
 class AdvancedWalkForwardRunner:

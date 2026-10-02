@@ -415,7 +415,7 @@ export interface components {
             schema_version: "research.portal-admission.v1";
             profiles: {
                 /** @enum {string} */
-                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2";
                 /** @enum {unknown} */
                 state: "ENABLED" | "DISABLED";
                 /** @enum {unknown} */
@@ -431,6 +431,16 @@ export interface components {
                     max: number;
                 };
                 random_seed: number | null;
+                requested_spec_versions?: ("research.requested-spec.v1" | "research.requested-spec.v2")[];
+                frequencies?: ("single" | "weekly" | "monthly" | "quarterly" | "semi_yearly" | "yearly")[];
+                window_modes?: ("expanding" | "rolling")[];
+                /** @enum {unknown} */
+                seed_policy?: "LOCKED" | "FORBIDDEN";
+                trial_default?: number;
+                /** @constant */
+                early_stopping_policy?: "FORBIDDEN";
+                /** @constant */
+                inner_validation?: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY";
                 max_span_days: number | null;
                 fold_bounds: {
                     min: number;

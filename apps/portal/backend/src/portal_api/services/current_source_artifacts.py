@@ -648,6 +648,7 @@ class CurrentSourceArtifactAdapter:
             objective_terms=self._objective_terms(config),
         )
         selection_rows = [self._selection_row(selection)]
+        execution_observation = self._execution_observation(manifest, folds, selection)
         # W5b (P17): the final account's per-bar ledger and its counted
         # order/fill/trade facts. Optional, so an older source tree keeps its
         # v1 observation schema, its digest and its summary exactly.
@@ -694,6 +695,7 @@ class CurrentSourceArtifactAdapter:
                     ("summary_analytics_v2", summary_analytics_v2),
                     ("account_contract", account_contract if account_ledger is not None else None),
                     ("strategy_lifecycle_contract", lifecycle_contract if child_audit_summary is not None else None),
+                    ("execution_observation", execution_observation),
                 )
                 if value is not None
             },
@@ -730,6 +732,8 @@ class CurrentSourceArtifactAdapter:
             "size_bytes": series_size,
             "scope": "FULL_STITCHED_SOURCE_SERIES",
         }
+        if execution_observation is not None:
+            summary["execution_observation"] = execution_observation
         if replay_summary is not None:
             summary["replay"] = replay_summary
             if child_audit_summary is not None:
@@ -1689,6 +1693,40 @@ class CurrentSourceArtifactAdapter:
                     }
             return {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_OBJECTIVE_DID_NOT_RECOMPOSE_FROM_PUBLISHED_TERMS", "formula": None, "terms": []}
         return {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_STAGE_HAS_NO_DOCUMENTED_OBJECTIVE_FORMULA", "formula": None, "terms": []}
+
+    @staticmethod
+    def _execution_observation(
+        manifest: Mapping[str, Any], folds: list[dict[str, Any]], selection: Mapping[str, Any]
+    ) -> dict[str, Any] | None:
+        """A real adapter completion clock, NOT an engine first-read timestamp.
+
+        Old output missing a clock/selection fact stays absent. The inclusive
+        source fold end is converted using the source's declared bar interval.
+        """
+        used = selection.get("oos_used_for_selection")
+        interval = {"1min": 60_000, "5min": 300_000, "15min": 900_000,
+                    "30min": 1_800_000, "1h": 3_600_000, "4h": 14_400_000,
+                    "1D": 86_400_000}.get(manifest.get("timeframe"))
+        if type(used) is not bool or interval is None or not folds:
+            return None
+        try:
+            start, completed = pd.Timestamp(manifest["started_at"]), pd.Timestamp(manifest["completed_at"])
+            if start.tzinfo is None or completed.tzinfo is None or pd.isna(start) or pd.isna(completed) or completed < start:
+                return None
+            bounds = [(row["test_start_utc_ms"], row["test_end_utc_ms"]) for row in folds]
+            if any(type(a) is not int or type(b) is not int or a < 0 or b < a for a, b in bounds):
+                return None
+        except (KeyError, TypeError, ValueError):
+            return None
+        return {
+            "schema_version": "research.execution-observation.v1",
+            "basis": "PORTAL_ADAPTER_ENGINE_CALL_COMPLETED",
+            "started_at_utc_ms": int(start.value // 1_000_000),
+            "completed_at_utc_ms": int(completed.value // 1_000_000),
+            "range_start_utc_ms": min(a for a, _ in bounds),
+            "range_end_exclusive_utc_ms": max(b for _, b in bounds) + interval,
+            "evaluation_role": "SELECTION_INPUT" if used else "OUTER_OOS",
+        }
 
     def _source_facts(
         self,

@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
+import { RetainedExecutionObservationSchema } from "./retained-exposure";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
@@ -370,6 +371,8 @@ export const CurrentSourceSourceSeriesArtifactSchema = z.object({
 
 export const CurrentSourceSummarySchema = z.object({
   schema_version: z.literal("research.current-source-summary.v1"),
+  // Adapter-observed engine-call completion; never a claimed engine first-read clock.
+  execution_observation: RetainedExecutionObservationSchema.optional(),
   // Older immutable seals predate source-byte custody; never infer their hash from sampled points.
   source_series_artifact: CurrentSourceSourceSeriesArtifactSchema.optional(),
   metrics: z.object({

@@ -292,6 +292,7 @@ function memoryRepository() {
   const client = {
     query: vi.fn(async (sql: string, params: unknown[] = []) => {
       if (/^(BEGIN|COMMIT|ROLLBACK|SET LOCAL|SELECT set_config|SELECT pg_advisory)/.test(sql.trim())) return { rows: [], rowCount: 0 };
+      if (sql.includes("SELECT producer.snapshot_content_hash")) return { rows: [{ snapshot_content_hash: "f".repeat(64) }], rowCount: 1 };
       if (sql.includes("SELECT manifest_digest, source_transform_digest")) {
         const first = batches[0];
         return first ? { rows: [first], rowCount: 1 } : { rows: [], rowCount: 0 };

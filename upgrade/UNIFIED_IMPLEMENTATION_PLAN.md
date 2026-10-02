@@ -6958,3 +6958,54 @@ Still open: DR-08/09 profile-aware fold/conditions, complete DR-10 S02-created
 WFO/P04/browser receipt, broader adapter qualification, requested-spec v2 executor,
 T12/T14 writers and whole-candidate P23/P24. Keep original pending notes above
 as history; this addendum supersedes only the proven slice, not the whole queue.
+
+#### B7–B9 / P23–P24 continuation — Bobby approval, 2026-10-02
+
+Owner has assigned all four remaining backend groups; no further generic
+approval is needed. Codex works in `portal-research-be` / `codex/be-gaps`,
+landing coherent reviewed packages on `docs/research-loop-plan` only. No
+frontend edit, remote push, dev/main promotion or production change is implied.
+
+1. **DR-08/09 and DR-03:** named metadata-only declaration estimate (actual
+   indexed timestamps, existing planner, profile/seed/trial/window conditions),
+   generated contract and bounded cached reads. Qualify source-specific HMD
+   adapters against the approved installed reader and actual mounted source;
+   never relabel a futures calendar as a different market or infer instruments.
+2. **Requested-spec v2:** versioned admission/profile/worker/isolated-child
+   mapping of temporal guards, rolling width and inner folds. Pin the effective
+   topology at worker dispatch and retain engine facts; retain v1 byte parity.
+   Preflight acceptance alone is not executable-adapter proof.
+3. **T12/T14:** complete governed audit-child and exposure writer through the
+   existing durable lease/fencing/budget/cancel/audit lane. No GET launches work,
+   no diagnostic selection overwrite and no invented source exposure.
+4. **P23/P24:** one clean candidate, real fixed/WFO write and retained/BFF
+   parity, scoped fault/restart/restore/identity cleanup and resource checks;
+   reuse unaffected evidence by dependency pin. P24 is a signed-release
+   rehearsal/review packet, not authority to roll out production. Browser and
+   visual ownership remain with Claude; missing receipts stay explicitly open.
+
+Each package records files/line counts, focused tests, source/API/image pins,
+typed absences, consumer handoff and cleanup in its packet plus queue §9.
+Group tests by risk before the mandatory hook; do not repeat engine runs for
+documentation or rebuild unchanged frontend. Overall completion requires the
+named real gates, not a count of green fixture tests.
+
+**2026-10-02 implementation checkpoint:** B7 fold/window/conditions now uses a
+named metadata-only operation with server-owned AlphaVersion warmup, bounded
+timestamp planner/cache and typed UTC alignment refusal. Additional spot/
+quarterly namespaces passed 14 direct-loader oracle cases. B8 adds immutable
+temporal v2 Delta/global profile with rolling width and guards end-to-end;
+real HMD child/retention passed (1,056 bars, 2 folds, 3 trials, 5.277s wall).
+Library enrichment absence and Atlas seed/default/version policies are now
+explicit. Inner/per-fold causal retainer, calendar-correct remaining HMD
+families, audit/exposure and one-candidate P23/P24 are not marked complete.
+[Detailed receipt and Claude handoff](./research_loop/evidence/P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md).
+No frontend/visual, production or remote mutation.
+
+**T14 writer checkpoint (same package):** new WFO seals now carry a real
+adapter-observed engine-call completion and actual half-open OOS range, with
+source-attested role. The private importer locks the live producer/job/attempt,
+uses the stored snapshot digest, and commits the immutable seal, exposure and
+audit together. Identical retry adds no duplicate. It does not claim an engine
+first-read timestamp or backfill an old absence. Focused tests pass; actual API
+receipt and whole P23/P24 acceptance still pending.

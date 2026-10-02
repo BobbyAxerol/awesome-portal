@@ -182,6 +182,9 @@ class AdvancedWalkForwardConfig(PortalModel):
     split_frequency: Literal["single", "yearly", "semi_yearly", "quarterly", "monthly", "weekly"] = "quarterly"
     window_mode: Literal["expanding", "rolling"] = "expanding"
     train_window: str | None = None
+    label_horizon_bars: Annotated[int, Field(ge=0, le=10_000)] = 0
+    purge_bars: Annotated[int, Field(ge=0, le=10_000)] = 0
+    embargo_bars: Annotated[int, Field(ge=0, le=10_000)] = 0
     min_train_bars: Annotated[int, Field(gt=0)] = 1
     min_test_bars: Annotated[int, Field(gt=0)] = 1
     fill_value: float = 0.0

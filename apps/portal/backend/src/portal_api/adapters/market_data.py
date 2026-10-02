@@ -90,6 +90,9 @@ class HistoricalDataRuntime:
     release_tag: str
     dataset_release_id: str
     loader_class: type
+    # Additional approved installed OHLCV readers in the same accepted release.
+    # No host source/plugin path and no market collector is imported.
+    additional_loaders: tuple[tuple[str, type], ...] = ()
 
     def provenance(self) -> dict[str, str]:
         return {
@@ -526,6 +529,8 @@ def load_historical_data_runtime(storage_root: str | Path) -> HistoricalDataRunt
         release_tag=str(git["tag"]),
         dataset_release_id=BINANCE_RELEASE_DATASET_ID,
         loader_class=loader_module.CryptoBinance1m,
+        additional_loaders=(("crypto-binance-spot-1m", loader_module.CryptoBinanceSpot1m),
+                            ("crypto-binance-quarterly-1m", loader_module.CryptoBinanceQuarterly1m)),
     )
 
 
@@ -584,7 +589,7 @@ class HistoricalMarketDataProvider:
             raise ValueError("resample engine must be duckdb or pandas")
 
     def list_datasets(self) -> tuple[DatasetDescriptor, ...]:
-        return (
+        primary = (
             DatasetDescriptor(
                 dataset_id=CRYPTO_BINANCE_DATASET_ID,
                 symbol=None,
@@ -600,6 +605,19 @@ class HistoricalMarketDataProvider:
                 source_timezone="UTC",
             ),
         )
+        additional = []
+        for key, loader in getattr(self._runtime, "additional_loaders", ()):
+            mounted = self._runtime.storage_root.joinpath(*loader.NEW_PATH_PARTS).is_dir()
+            additional.append(DatasetDescriptor(
+                dataset_id=key, symbol=None, venue="BINANCE", timeframe=None,
+                source_path=None, dynamic_query=True, supported_timeframes=self.SUPPORTED_TIMEFRAMES,
+                source_class="historical_market_data",
+                availability="available" if mounted else "unavailable",
+                unavailable_reason=None if mounted else "HMD_DATASET_COMPONENT_NOT_MOUNTED",
+                usage_scopes=HISTORICAL_USAGE_SCOPES,
+                excluded_scopes=HISTORICAL_EXCLUDED_SCOPES, source_timezone="UTC",
+            ))
+        return primary + tuple(additional)
 
     #: The approved reader's documented layout for the Binance USD-M 1m store
     #: (release manifest: canonical component crypto/binance_futures/1m,
@@ -614,15 +632,20 @@ class HistoricalMarketDataProvider:
         data file. Coverage is partition granularity, not the exact first or
         last bar. A quarterly contract keeps its expiry suffix.
         """
-        if dataset_id != CRYPTO_BINANCE_DATASET_ID or self._runtime is None:
+        if self._runtime is None:
             raise DatasetNotFoundError(f"no symbol catalog for dataset_id: {dataset_id}")
-        root = self._runtime.storage_root.joinpath(*self.FUTURES_1M_COMPONENT)
+        loader = self._loader_class(dataset_id)
+        parts = self.FUTURES_1M_COMPONENT if dataset_id == CRYPTO_BINANCE_DATASET_ID else loader.NEW_PATH_PARTS
+        root = self._runtime.storage_root.joinpath(*parts)
+        quarterly_symbols = set(loader()._discover_symbols()) if dataset_id == "crypto-binance-quarterly-1m" else None
         rows: list[dict[str, object]] = []
         for symbol_dir in sorted(root.glob("symbol=*")):
             if len(rows) >= self.MAXIMUM_LISTED_SYMBOLS or not symbol_dir.is_dir():
                 continue
             symbol = symbol_dir.name.split("=", 1)[1].upper()
             if not _SYMBOL_PATTERN.fullmatch(symbol):
+                continue
+            if quarterly_symbols is not None and symbol not in quarterly_symbols:
                 continue
             months = sorted(
                 (int(year_dir.name[5:]), int(month_dir.name[6:]))
@@ -634,7 +657,7 @@ class HistoricalMarketDataProvider:
             rows.append(
                 {
                     "symbol": symbol,
-                    "contract_kind": "QUARTERLY" if re.search(r"_[0-9]{6}$", symbol) else "PERPETUAL",
+                    "contract_kind": None if dataset_id == "crypto-binance-spot-1m" else "QUARTERLY" if re.search(r"_[0-9]{6}$", symbol) else "PERPETUAL",
                     "coverage": None
                     if not months
                     else {
@@ -647,15 +670,25 @@ class HistoricalMarketDataProvider:
             )
         return tuple(rows)
 
-    def _new_loader(self):
+    def _loader_class(self, dataset_id: str):
+        if self._runtime is None:
+            raise DatasetNotFoundError("historical reader runtime is unavailable")
+        if dataset_id == CRYPTO_BINANCE_DATASET_ID:
+            return self._runtime.loader_class
+        for key, loader in getattr(self._runtime, "additional_loaders", ()):
+            if key == dataset_id:
+                return loader
+        raise DatasetNotFoundError(f"unknown dataset_id: {dataset_id}")
+
+    def _new_loader(self, dataset_id: str = CRYPTO_BINANCE_DATASET_ID):
         if self._loader_factory is not None:
             return self._loader_factory()
         if self._runtime is None:  # pragma: no cover - constructor invariant
             raise DatasetNotFoundError("historical reader runtime is unavailable")
-        return self._runtime.loader_class()
+        return self._loader_class(dataset_id)()
 
     def load(self, query: MarketDataQuery) -> PreparedMarketData:
-        if query.dataset_id != CRYPTO_BINANCE_DATASET_ID:
+        if query.dataset_id not in {d.dataset_id for d in self.list_datasets() if d.availability == "available"}:
             raise DatasetNotFoundError(f"unknown dataset_id: {query.dataset_id}")
         normalized_symbol = str(query.symbol or "").strip().upper()
         if not _SYMBOL_PATTERN.fullmatch(normalized_symbol):
@@ -675,7 +708,8 @@ class HistoricalMarketDataProvider:
         reader_end = end - pd.Timedelta(1, unit="us")
 
         started = perf_counter()
-        raw = self._new_loader().load_resampled(
+        loader = self._new_loader(query.dataset_id)
+        raw = loader.load_resampled(
             normalized_symbol,
             timeframe=normalized_timeframe,
             start_date=start.isoformat(),
@@ -685,11 +719,12 @@ class HistoricalMarketDataProvider:
         )
         load_seconds = perf_counter() - started
         if not isinstance(raw, pd.DataFrame) or raw.empty:
+            prefix = "no Binance futures bars" if query.dataset_id == CRYPTO_BINANCE_DATASET_ID else "no historical bars"
             raise DatasetNotFoundError(
-                f"no Binance futures bars for {normalized_symbol} at {normalized_timeframe}"
+                f"{prefix} for {normalized_symbol} at {normalized_timeframe}"
             )
         if "time" not in raw.columns:
-            raise DataSchemaError("CryptoBinance1m output is missing time")
+            raise DataSchemaError("historical reader output is missing time")
 
         frame = (
             raw.sort_values("time", kind="stable")
@@ -697,7 +732,7 @@ class HistoricalMarketDataProvider:
             .set_index("datetime")
         )
         descriptor = DatasetDescriptor(
-            dataset_id=CRYPTO_BINANCE_DATASET_ID,
+            dataset_id=query.dataset_id,
             symbol=normalized_symbol,
             venue="BINANCE",
             timeframe=normalized_timeframe,
@@ -714,7 +749,7 @@ class HistoricalMarketDataProvider:
             descriptor,
             query,
             load_metadata={
-                "provider": "CryptoBinance1m",
+                "provider": "CryptoBinance1m" if query.dataset_id == CRYPTO_BINANCE_DATASET_ID else type(loader).__name__,
                 "source_resolution": "1min",
                 "source_timezone": "UTC",
                 "requested_timeframe": normalized_timeframe,

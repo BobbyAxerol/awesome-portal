@@ -13,12 +13,14 @@
 import { createHash } from "node:crypto";
 
 import { IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
+import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 
 export const P04_FIXED_QUALIFICATION_PROFILE_ID = "p04.fixed-qualification.v1" as const;
 export const DELTA_WFO_PROFILE_ID = "p10.delta-signal-notional-wfo.v1" as const;
 export const RESEARCH_EXECUTION_PROFILE_IDS = [
   P04_FIXED_QUALIFICATION_PROFILE_ID,
   DELTA_WFO_PROFILE_ID,
+  DELTA_WFO_V2_PROFILE_ID,
   IMPORTED_ALPHA_PROFILE_ID,
 ] as const;
 export type ResearchExecutionProfileId = typeof RESEARCH_EXECUTION_PROFILE_IDS[number];
@@ -119,5 +121,6 @@ export const DELTA_WFO_RESOURCE_CLASS = "p10-delta-wfo-v1" as const;
 export const DELTA_WFO_WORK_SCHEMA_VERSION = "research.p10.delta-wfo-work.v1" as const;
 
 export function isDeltaWfoProfile(profileId: string | null | undefined, profileDigest: string | null | undefined): boolean {
-  return profileId === DELTA_WFO_PROFILE_ID && profileDigest === DELTA_WFO_PROFILE_DIGEST;
+  return (profileId === DELTA_WFO_PROFILE_ID && profileDigest === DELTA_WFO_PROFILE_DIGEST)
+    || (profileId === DELTA_WFO_V2_PROFILE_ID && profileDigest === DELTA_WFO_V2_PROFILE_DIGEST);
 }

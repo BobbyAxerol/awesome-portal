@@ -168,6 +168,14 @@ const QUERY = {
 };
 
 describe("RF-05 P12 Run Library service mapping", () => {
+  it("publishes distinct enrichment absence for unsealed and retained runs", () => {
+    const service = new ResearchRunLibraryService({} as never, config);
+    const absent = row({evidence_revision:null,evidence_projection:null});
+    expect(service.mapRow(absent).enriched_analysis_availability?.reason_code).toBe("SOURCE_EVIDENCE_NOT_SEALED");
+    expect(service.mapRow(row()).enriched_analysis_availability?.reason_code).toBe("SEALED_ENRICHMENT_NOT_COMPUTED");
+    expect(service.mapRow(absent, {artifactRevision:1,meanOosSharpe:null,meanDecay:null,oosTrades:null,oosTradesReason:null,observationCount:2,analyticsV2:null})
+      .enriched_analysis_availability?.reason_code).toBe("SEALED_ENRICHMENT_NOT_COMPUTED");
+  });
   it("validates every card and envelope once without relaxing canonical response or array bounds", async () => {
     const repository = { list: vi.fn().mockResolvedValue(page([row()])) };
     const service = new ResearchRunLibraryService(repository as never, config);

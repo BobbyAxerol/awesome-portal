@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import { ResearchAnalyticsAllTimeSchema } from "./enriched-analysis.contract";
+import { ResearchAnalyticsAllTimeSchema, ResearchEnrichedAvailabilitySchema } from "./enriched-analysis.contract";
 import { ResearchRetainedAnalyticsV2Last30dSchema } from "./retained-analytics-v2.contract";
 
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -181,6 +181,7 @@ const ComparisonSchema = z.object({
 
 export const ResearchRunLibraryItemSchema = z.object({
   analytics_all_time: ResearchAnalyticsAllTimeSchema.optional(),
+  enriched_analysis_availability: ResearchEnrichedAvailabilitySchema.optional(),
   run_id: ResearchRunIdSchema,
   /**
    * D1: the short label the hi-fi prints (`R-WFO-118`) — the run's execution

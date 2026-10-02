@@ -40,6 +40,18 @@ const page = obj({ schema_version: { const: "research.dataset-symbols.v1" }, dat
   items: { type: "array", items: ref("IndexedSymbol"), maxItems: 200 }, total: nullable({ ...count, maximum: 256 }), next_cursor: nullable({ type: "string", maxLength: 4096 }) });
 const catalog = obj({ schema_version: { const: "research.dataset-catalog.v2" }, catalog_revision: nullable(digest), as_of_utc_ms: nullable(ms), index_availability: ref("Availability"),
   datasets: { type: "array", items: legacy, maxItems: 16 }, coverage_rule: { type: "string", minLength: 1, maxLength: 400 } });
+const windowEstimate = obj({ window: {enum:["IS","OOS","HOLDOUT","SPAN"]}, start_utc_ms:ms,end_exclusive_utc_ms:ms,
+  availability:{enum:["AVAILABLE","NOT_PUBLISHED"]},reason_code:nullable(reason),bars:nullable(count),first_bar_utc_ms:nullable(ms),last_bar_utc_ms:nullable(ms),
+  warmup_bars_required:{...count,maximum:100000},warmup_bars_available_before_start:nullable({...count,maximum:100000}) });
+const declarationMetadata = obj({schema_version:{const:"research.declaration-metadata.v1"},requested_spec_digest:digest,catalog_revision:nullable(digest),as_of_utc_ms:nullable(ms),
+  scope:{const:"INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION"},windows:{type:"array",items:ref("WindowEstimate"),minItems:1,maxItems:3},
+  planned_folds:obj({availability:{enum:["AVAILABLE","NOT_PUBLISHED"]},reason_code:nullable(reason),count:nullable({type:"integer",minimum:1,maximum:128}),
+    basis:{const:"P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1"},min_train_bars:nullable(count),min_oos_bars:nullable(count)}),
+  earliest_start_utc_ms:nullable(ms),earliest_start_basis:{const:"CONTIGUOUS_INDEXED_WARMUP_BARS_V1"} });
+const condition = obj({key:{type:"string",pattern:"^[a-z][a-z0-9_.]{0,63}$"},state:{enum:["PASS","FAIL","NOT_PUBLISHED"]},reason_code:nullable(reason),
+  observed:nullable({type:"string",maxLength:200}),required:{type:"string",maxLength:200}});
+const estimate = obj({schema_version:{const:"research.declaration-estimate.v1"},metadata:ref("DeclarationMetadata"),profile_id:nullable(id),
+  conditions:{type:"array",items:ref("DeclarationCondition"),minItems:1,maxItems:32},ready_for_preflight:{type:"boolean"}});
 const parameter = (name, schema, required = false, location = "query") => ({ name, in: location, required, schema });
 const workspace = parameter("workspace_id", { type: "string", pattern: "^[A-Za-z0-9._-]{1,128}$" });
 const dataset = parameter("dataset_id", id, true, "path");
@@ -57,8 +69,13 @@ const doc = { openapi: "3.1.0", info: { title: "Research indexed data declaratio
     "/api/v1/research/datasets/{dataset_id}/bar-metadata": operation("researchDatasetBarMetadataGetV1", "BarMetadata", [dataset, workspace,
       parameter("symbol", symbol, true), parameter("timeframe", tf, true), parameter("start_utc_ms", ms, true), parameter("end_exclusive_utc_ms", ms, true),
       parameter("warmup_bars", { type: "integer", minimum: 0, maximum: 100_000, default: 0 })]),
-  }, components: { securitySchemes: v1.components.securitySchemes, schemas: { DatasetCatalogV2: catalog, IndexedSymbol: indexedSymbol, Coverage: coverage,
+    "/api/v1/research/datasets/declaration-estimates": {post:{...operation("researchDeclarationEstimatePostV1","DeclarationEstimate",[]).get,
+      summary:"Estimate indexed windows/folds and profile conditions without creating a preflight or run",
+      parameters:[parameter("x-portal-csrf",{type:"string",minLength:1},true,"header")],
+      requestBody:{required:true,content:{"application/json":{schema:ref("CreateRequest")}}}}},
+  }, components: { securitySchemes: v1.components.securitySchemes, parameters:v1.components.parameters, schemas: { ...v1.components.schemas, DatasetCatalogV2: catalog, IndexedSymbol: indexedSymbol, Coverage: coverage,
     Availability: availability, Instrument: instrument, SymbolPage: page, BarMetadata: metadata,
+    WindowEstimate:windowEstimate,DeclarationMetadata:declarationMetadata,DeclarationCondition:condition,DeclarationEstimate:estimate,
     FieldPath: v1.components.schemas.FieldPath, Problem: v1.components.schemas.Problem } } };
 const path = new URL("openapi/research-dataset-index.openapi.json", root), text = JSON.stringify(doc, null, 2) + "\n";
 if (check) { if (readFileSync(path, "utf8") !== text) throw new Error("Dataset index OpenAPI drift"); }
@@ -101,4 +118,23 @@ for (const dataset of absent.datasets) {
   for (const row of dataset.symbols.items) { row.coverage_by_timeframe = []; row.coverage_availability = absent.index_availability; row.quality.as_of_utc_ms = null; }
 }
 emitFixture("symbol-absent", absent);
+const estimateFixture = {schema_version:"research.declaration-estimate.v1",profile_id:"p10.delta-signal-notional-wfo.v1",
+  metadata:{schema_version:"research.declaration-metadata.v1",requested_spec_digest:"b".repeat(64),catalog_revision:"a".repeat(64),as_of_utc_ms:end,
+    scope:"INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION",windows:[{window:"SPAN",start_utc_ms:start,end_exclusive_utc_ms:end,
+      availability:"AVAILABLE",reason_code:null,bars:48,first_bar_utc_ms:start,last_bar_utc_ms:end-3600000,
+      warmup_bars_required:0,warmup_bars_available_before_start:0}],
+    planned_folds:{availability:"AVAILABLE",reason_code:null,count:2,basis:"P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1",min_train_bars:24,min_oos_bars:12},
+    earliest_start_utc_ms:start,earliest_start_basis:"CONTIGUOUS_INDEXED_WARMUP_BARS_V1"},
+  conditions:[{key:"fold_plan",state:"PASS",reason_code:null,observed:"2",required:"P08-compatible indexed fold plan"}],ready_for_preflight:true};
+for (const name of ["available","partial"]) {
+  const value=structuredClone(estimateFixture);
+  if(name==="partial") {
+    Object.assign(value.metadata.planned_folds,{availability:"NOT_PUBLISHED",reason_code:"WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE",count:null,min_train_bars:null,min_oos_bars:null});
+    Object.assign(value.conditions[0],{state:"NOT_PUBLISHED",reason_code:"WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE",observed:null});
+    value.ready_for_preflight=false;
+  }
+  const path=new URL(`fixtures/research-declaration-estimate.v1.${name}.valid.json`,root), text=JSON.stringify(value,null,2)+"\n";
+  if(check) {if(readFileSync(path,"utf8")!==text) throw new Error("Declaration fixture drift");}
+  else writeFileSync(path,text);
+}
 process.stdout.write(`Dataset index contract ${check ? "verified" : "generated"}.\n`);

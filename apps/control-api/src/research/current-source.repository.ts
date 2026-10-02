@@ -10,6 +10,7 @@
 import { createHash } from "node:crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { readEnriched } from "./enriched-analysis.read";
+import { appendRetainedExposure, retainedExposureAuthority, type RetainedExposureFence } from "./retained-exposure";
 import { ResearchEnrichedAnalysisSchema, type ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
 import type { Pool, PoolClient } from "pg";
 
@@ -78,6 +79,8 @@ export type CurrentSourceSealWrite = CurrentSourceLanePair & {
    * receipts it sent. The stored digest is always recomputed locally.
    */
   expectedRetainedImportDigest?: string;
+  /** Private live-worker fence; not a browser-supplied field. */
+  lease?: RetainedExposureFence;
 };
 
 type JsonColumn = Record<string, unknown> | string | null;
@@ -376,6 +379,12 @@ export class ResearchCurrentSourceRepository {
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
         `${scope.workspaceId}:${input.runId}:${input.artifactRevision}:rs02-custody`,
       ]);
+      const exposure = input.summary.execution_observation;
+      if (exposure !== undefined && !input.lease) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Exposure retention requires a live execution lease.", 409);
+      }
+      const exposureAuthority = input.lease
+        ? await retainedExposureAuthority(client, scope, input.runId, input.lease) : null;
       const existing = await client.query<SealQueryRow>(
         `SELECT run_id, artifact_revision, source_adapter_id, profile_id, manifest_digest, source_transform_digest, retained_import_digest,
                 requested_spec_digest, effective_spec_digest, dataset_binding_digest, table_rows, total_rows,
@@ -475,6 +484,12 @@ export class ResearchCurrentSourceRepository {
         await client.query(`SELECT research.append_source_enrichment_v1($1,$2,'WFO_RETAINED',$3,$4,$5,$6,$7::jsonb)`,
           [scope.workspaceId,input.runId,String(input.artifactRevision),retainedImportDigest,
             sha256ResearchJson(enriched.source_tables),sha256ResearchJson(enriched),JSON.stringify(enriched)]);
+      }
+      if (exposure !== undefined && exposureAuthority) {
+        await appendRetainedExposure(client, scope, {
+          runId: input.runId, artifactRevision: input.artifactRevision, manifestDigest: input.manifestDigest,
+          snapshotDigest: exposureAuthority.snapshotDigest, observation: exposure,
+        });
       }
       return { replayed: false, retainedImportDigest };
     });

@@ -1,0 +1,45 @@
+{
+  "schema_version": "research.declaration-estimate.v1",
+  "profile_id": "p10.delta-signal-notional-wfo.v1",
+  "metadata": {
+    "schema_version": "research.declaration-metadata.v1",
+    "requested_spec_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "as_of_utc_ms": 1783036800000,
+    "scope": "INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION",
+    "windows": [
+      {
+        "window": "SPAN",
+        "start_utc_ms": 1782864000000,
+        "end_exclusive_utc_ms": 1783036800000,
+        "availability": "AVAILABLE",
+        "reason_code": null,
+        "bars": 48,
+        "first_bar_utc_ms": 1782864000000,
+        "last_bar_utc_ms": 1783033200000,
+        "warmup_bars_required": 0,
+        "warmup_bars_available_before_start": 0
+      }
+    ],
+    "planned_folds": {
+      "availability": "AVAILABLE",
+      "reason_code": null,
+      "count": 2,
+      "basis": "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1",
+      "min_train_bars": 24,
+      "min_oos_bars": 12
+    },
+    "earliest_start_utc_ms": 1782864000000,
+    "earliest_start_basis": "CONTIGUOUS_INDEXED_WARMUP_BARS_V1"
+  },
+  "conditions": [
+    {
+      "key": "fold_plan",
+      "state": "PASS",
+      "reason_code": null,
+      "observed": "2",
+      "required": "P08-compatible indexed fold plan"
+    }
+  ],
+  "ready_for_preflight": true
+}

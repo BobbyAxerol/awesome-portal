@@ -400,6 +400,13 @@ export interface ResearchPortalAdmission {
     fold_bounds: { min: number; max: number } | null;
     frequency: string | null;
     window_mode: string | null;
+    requested_spec_versions?: string[];
+    frequencies?: string[];
+    window_modes?: string[];
+    seed_policy?: "LOCKED" | "FORBIDDEN";
+    trial_default?: number;
+    early_stopping_policy?: "FORBIDDEN";
+    inner_validation?: "NOT_ADMITTED_GLOBAL_RETENTION_ONLY";
   }>;
   note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
 }

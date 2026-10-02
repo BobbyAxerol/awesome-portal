@@ -32,6 +32,7 @@ import {
   P04_DELTA_FIXED_PARAMETERS,
 } from "./p04-delta.binding";
 import { ResearchMetadataRepository } from "./repository";
+import { DELTA_WFO_V2_PROFILE, DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import { parseDecimal } from "./whatif.grid";
 import { WHATIF_PROFILE } from "./whatif.profile";
 import { ResearchRunCreateError } from "./run-create.error";
@@ -219,15 +220,6 @@ export class ResearchRunAdmissionService {
         eligibility.alphaVersionId !== P04_DELTA_ALPHA_VERSION_ID) {
       return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "No installed durable executor is bound to this active AlphaVersion.");
     }
-    // W4 CG-P02-02: v2 temporal guards, rolling width and inner folds are
-    // validated at preflight, but no installed executor consumes them. Refuse
-    // here instead of letting either profile silently run a v1 plan.
-    if (requestedSpec.schema_version !== "research.requested-spec.v1") {
-      return denied(
-        "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
-        "No installed executor runs requested-spec v2 temporal guards, rolling width or inner folds yet; preflight validates them only.",
-      );
-    }
     // W1 profile selection. An `advanced` request is the only shape the WFO
     // profile can own, and only while its flag is on; every other request
     // (including `advanced` with the flag off) takes the unchanged P04 branch,
@@ -256,7 +248,9 @@ export class ResearchRunAdmissionService {
         entrypoint: eligibility.entrypoint,
       },
       profile: wfo
-        ? { id: DELTA_WFO_PROFILE_ID, digest: DELTA_WFO_PROFILE_DIGEST }
+        ? requestedSpec.schema_version === "research.requested-spec.v2"
+          ? { id: DELTA_WFO_V2_PROFILE_ID, digest: DELTA_WFO_V2_PROFILE_DIGEST }
+          : { id: DELTA_WFO_PROFILE_ID, digest: DELTA_WFO_PROFILE_DIGEST }
         : { id: P04_FIXED_QUALIFICATION_PROFILE_ID, digest: null },
     };
   }
@@ -367,6 +361,7 @@ export class ResearchRunAdmissionService {
     manifest: ResearchPreflightManifestRecord,
   ): string | null {
     const profile = DELTA_WFO_PROFILE;
+    const temporal = requested.schema_version === "research.requested-spec.v2";
     const engine = manifest.effectiveSpec.engine;
     if (!engine || typeof engine !== "object" || Array.isArray(engine) ||
         (engine as Record<string, unknown>).execution_route !== requested.execution_route ||
@@ -416,7 +411,14 @@ export class ResearchRunAdmissionService {
       return "The Delta walk-forward profile accepts only the 1h timeframe.";
     }
     const walkForward = requested.walk_forward;
-    if (walkForward.frequency !== profile.frequency || walkForward.window_mode !== profile.window_mode) {
+    if (temporal && walkForward.inner !== undefined) {
+      return "Inner causal selection requires a retained per-fold selection profile; the installed v2 executor is global only.";
+    }
+    if (temporal && (!(DELTA_WFO_V2_PROFILE.frequencies as readonly string[]).includes(walkForward.frequency)
+        || !(DELTA_WFO_V2_PROFILE.window_modes as readonly string[]).includes(walkForward.window_mode))) {
+      return "The temporal executor admits weekly/monthly/quarterly expanding or rolling folds only.";
+    }
+    if (!temporal && (walkForward.frequency !== profile.frequency || walkForward.window_mode !== profile.window_mode)) {
       return "The Delta walk-forward profile accepts only weekly expanding folds.";
     }
     const start = utcInstantMs(walkForward.start);

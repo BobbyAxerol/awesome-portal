@@ -8,6 +8,14 @@ const openApiPath = join(ROOT, "openapi", "research-foundation.openapi.json");
 const generatedPath = join(ROOT, "generated", "research-foundation.d.ts");
 
 describe("P09 published Research foundation contract", () => {
+  it("publishes the additive temporal executor without changing the historical v1 example", () => {
+    const fixture = JSON.parse(readFileSync(join(ROOT,"fixtures/research-foundation.portal-admission-temporal.valid.json"),"utf8"));
+    expect(fixture.profiles).toHaveLength(3);
+    expect(fixture.profiles[2]).toMatchObject({profile_id:"p10.delta-signal-notional-wfo.v2",
+      requested_spec_versions:["research.requested-spec.v2"], window_modes:["expanding","rolling"],
+      seed_policy:"LOCKED", trial_default:3, inner_validation:"NOT_ADMITTED_GLOBAL_RETENTION_ONLY"});
+    expect(readFileSync(generatedPath,"utf8")).toContain("requested_spec_versions?:");
+  });
   it("publishes exactly two read-only same-origin operations", () => {
     const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as {
       paths: Record<string, Record<string, unknown>>;
@@ -180,7 +188,7 @@ describe("P09 published Research foundation contract", () => {
     const schemas = document.components.schemas;
     expect(schemas.AtlasResponse.oneOf[0].required).toContain("portal_admission");
     expect(schemas.AtlasResponse.oneOf[1].properties.portal_admission).toBeUndefined();
-    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(2);
+    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(3);
     const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
     expect(current.atlas.current_release.submission_constraints.profile_id).toBe("p10.fixed-qualification.v1");
     expect(current.portal_admission.profiles).toMatchObject([

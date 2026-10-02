@@ -35,6 +35,7 @@ from .research_imported_alpha_profile import (
     IMPORTED_ALPHA_PROFILE_DIGEST,
     IMPORTED_ALPHA_PROFILE_ID,
 )
+from .research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
 from .research_whatif_profile import WHATIF_MAX_EVALUATIONS, WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 
 
@@ -112,7 +113,7 @@ class ResearchRunProducerEnvelope(PortalModel):
     # never carries these two fields (see the serializer below), so the P04
     # durable request, its spec digest and the child receipt stay byte-equal.
     execution_profile_id: Literal[
-        "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1", "p16.delta-whatif-grid.v1",
+        "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2", "p16.delta-whatif-grid.v1",
         "p17.imported-signal-notional.v1"
     ] = P04_FIXED_QUALIFICATION_PROFILE_ID
     execution_profile_digest: str | None = Field(default=None, pattern=_DIGEST)
@@ -127,7 +128,7 @@ class ResearchRunProducerEnvelope(PortalModel):
 
     @property
     def is_delta_wfo(self) -> bool:
-        return self.execution_profile_id == DELTA_WFO_PROFILE_ID
+        return self.execution_profile_id in (DELTA_WFO_PROFILE_ID, DELTA_WFO_V2_PROFILE_ID)
 
     @property
     def is_whatif(self) -> bool:
@@ -185,6 +186,12 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("only the what-if profile is a DIAGNOSTIC intent with evaluations")
         if self.execution_profile_id == DELTA_WFO_PROFILE_ID:
             self._validate_delta_wfo_profile()
+            return self
+        if self.execution_profile_id == DELTA_WFO_V2_PROFILE_ID:
+            if self.execution_profile_digest != DELTA_WFO_V2_PROFILE_DIGEST:
+                raise ValueError("the temporal executor digest does not match its installed profile")
+            temporal_controls(self.requested_spec)
+            self._validate_delta_wfo_spec(temporal=True)
             return self
         if self.execution_profile_id == IMPORTED_ALPHA_PROFILE_ID:
             self._validate_imported_alpha_profile()
@@ -247,7 +254,7 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("the Delta WFO execution profile digest does not match the installed profile")
         self._validate_delta_wfo_spec()
 
-    def _validate_delta_wfo_spec(self) -> None:
+    def _validate_delta_wfo_spec(self, *, temporal: bool = False) -> None:
         """The locked W1 requested-spec shape (shared by the WFO and what-if profiles)."""
 
         profile = DELTA_WFO_PROFILE
@@ -287,7 +294,7 @@ class ResearchRunProducerEnvelope(PortalModel):
         walk_forward = spec.get("walk_forward")
         if not isinstance(walk_forward, dict):
             raise ValueError("requested_spec must retain its walk_forward boundaries")
-        if walk_forward.get("frequency") != profile["frequency"] or walk_forward.get("window_mode") != profile["window_mode"]:
+        if not temporal and (walk_forward.get("frequency") != profile["frequency"] or walk_forward.get("window_mode") != profile["window_mode"]):
             raise ValueError("the Delta WFO profile accepts only weekly expanding folds")
         start = _utc_instant(walk_forward.get("start"), "walk_forward start")
         end = _utc_instant(walk_forward.get("end_exclusive"), "walk_forward end")

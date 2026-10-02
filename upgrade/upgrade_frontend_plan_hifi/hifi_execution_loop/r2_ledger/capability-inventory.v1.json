@@ -1456,6 +1456,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "POST /api/v1/research/datasets/declaration-estimates",
+   "controller": "research/dataset-index.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "DR-08/09: workspace-bound, CSRF-protected estimate from immutable indexed timestamps and server AlphaVersion warmup. Reuses the P08 planner; no prices, token, run or admission grant. Claude owns S02 binding and browser acceptance.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "GET /api/v1/research/datasets/catalog-v2",
    "controller": "research/dataset-index.controller.ts",
    "interaction_class": "AUTO_READ",

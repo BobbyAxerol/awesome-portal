@@ -2110,7 +2110,7 @@
           "profiles": {
             "type": "array",
             "minItems": 2,
-            "maxItems": 2,
+            "maxItems": 3,
             "items": {
               "type": "object",
               "additionalProperties": false,
@@ -2136,7 +2136,8 @@
                   "type": "string",
                   "enum": [
                     "p04.fixed-qualification.v1",
-                    "p10.delta-signal-notional-wfo.v1"
+                    "p10.delta-signal-notional-wfo.v1",
+                    "p10.delta-signal-notional-wfo.v2"
                   ]
                 },
                 "state": {
@@ -2198,6 +2199,13 @@
                     "null"
                   ]
                 },
+                "requested_spec_versions": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "enum": ["research.requested-spec.v1", "research.requested-spec.v2"] } },
+                "frequencies": { "type": "array", "maxItems": 6, "items": { "enum": ["single", "weekly", "monthly", "quarterly", "semi_yearly", "yearly"] } },
+                "window_modes": { "type": "array", "maxItems": 2, "items": { "enum": ["expanding", "rolling"] } },
+                "seed_policy": { "enum": ["LOCKED", "FORBIDDEN"] },
+                "trial_default": { "type": "integer", "minimum": 1, "maximum": 400 },
+                "early_stopping_policy": { "const": "FORBIDDEN" },
+                "inner_validation": { "const": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY" },
                 "max_span_days": {
                   "type": [
                     "integer",

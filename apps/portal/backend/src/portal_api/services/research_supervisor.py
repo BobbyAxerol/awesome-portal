@@ -245,6 +245,7 @@ class DeltaWfoChildReceipt:
     # Research preview only: the admitted long-WFO trial count. None keeps
     # the locked profile's count and the receipt bytes of every other run.
     optuna_trials: int | None = None
+    temporal_controls: dict[str, Any] | None = None
 
     def as_payload(self, *, output_root: Path) -> dict[str, Any]:
         if self.task not in {"P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"}:
@@ -280,6 +281,11 @@ class DeltaWfoChildReceipt:
             ):
                 raise ResearchSupervisorError("P06 only a preview long WFO study may carry a bounded trial count")
             payload["optuna_trials"] = self.optuna_trials
+        if self.temporal_controls is not None:
+            from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST
+            if self.task != "P10_DELTA_WFO" or (self.execution_profile_id, self.execution_profile_digest) != (DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST):
+                raise ResearchSupervisorError("temporal controls require the exact v2 execution profile")
+            payload["temporal_controls"] = dict(self.temporal_controls)
         if self.task == "P16_DELTA_WHATIF_GRID":
             if not self.whatif_grid_key or not 1 <= len(self.whatif_evaluations) <= 81:
                 raise ResearchSupervisorError("P06 what-if child receipt carries no bounded evaluation list")

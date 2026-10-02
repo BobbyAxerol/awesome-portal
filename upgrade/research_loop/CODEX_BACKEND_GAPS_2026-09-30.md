@@ -1,5 +1,22 @@
 # Research Loop — hàng đợi backend cho Codex (Claude soạn, Bobby giao, 2026-09-30)
 
+## Codex continuation 2026-10-02 — B7/B8, not whole-phase closeout
+
+Implemented declaration fold/conditions endpoint, UTC alignment refusal,
+spot/quarterly read-only qualification and safe bounded index append.
+Requested-spec v2 temporal **Delta/global** is connected through admission,
+worker, progress and retention. Real child: 1,056 bars, rolling 14D, guards
+1/2/3, 2 folds, 3 trials, five retained tables, 5.277s wall. Product API receipt
+pending. Inner/per-fold causal retention remains explicitly not admitted;
+VN/session sources are not claimed qualified. The WFO exposure writer is now
+implemented with completion clock, server snapshot and live fencing; its product
+receipt, audit acceptance and one-candidate P23/P24 remain open. No remote push
+or production change.
+[Receipt and generated frontend handoff](./evidence/P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md):
+`DeclarationEstimate`, `researchDeclarationEstimatePostV1`, Atlas profile temporal/
+seed policies and `RunLibraryItem.enriched_analysis_availability`. Keep existing
+S02 consumer `b5f180e8`; no frontend redo, invented zero or typed-absence upgrade.
+
 **Đây là file Codex làm theo.** Mọi gap backend còn tồn đọng của Research Loop V1.1, đã **kiểm lại trong code** tại `f7c76bae` (mỗi mục có file:line hoặc commit trong phụ lục), gộp trùng, xếp **thứ tự làm tuần tự**. Frontend do Claude làm song song (§1). Bobby chỉ định: **Codex làm toàn bộ backend trong file này**, kể cả mục ≤P21 (thay cho phân vai 09-24 ở những mục này); Bobby có thể đổi từng mục.
 
 ## 0. Đọc gì, theo thứ tự nào

@@ -383,6 +383,23 @@ describe("W1 migration 062 on 061 · run execution profile + paired RS-02 lane",
     const client = await database.connect();
     try {
       await client.query("SET session_replication_role = replica");
+      // The producer identity fixtures above intentionally omit FK parents.
+      // Sealing now also checks the actual current execution fence, so supply
+      // its run/job/worker parents rather than weakening the writer's check.
+      await client.query(`INSERT INTO research.runs
+        (workspace_id,run_id,attempt_id,run_kind,relationship_kind,logical_run_key,
+         request_spec_digest,effective_spec_digest,engine_release_id,dataset_binding_digest,state,submitted_by_user_id)
+        VALUES ('ws_w1','rrun_w1_wfo','att_rrun_w1_wfo','PRIMARY','PRIMARY','w1-wfo',
+          $1,$1,'er_quantbt_111',$1,'RUNNING','usr_w1')`, [digestA]);
+      await client.query(`INSERT INTO research.jobs
+        (workspace_id,job_id,run_id,command_id,job_kind,queue_class,cost_estimate,
+         resource_class,state,requested_by_user_id,current_worker_attempt_id,current_lease_epoch,logical_work_key)
+        VALUES ('ws_w1','job_rrun_w1_wfo','rrun_w1_wfo','w1-wfo','PRIMARY','HEAVY','{}',
+          'QUANTBT_CHILD','RUNNING','usr_w1','rwa_rrun_w1_wfo',3,'w1-wfo')`);
+      await client.query(`INSERT INTO research.worker_attempts
+        (workspace_id,worker_attempt_id,job_id,ordinal,worker_id,lease_epoch,expires_at,state)
+        VALUES ('ws_w1','rwa_rrun_w1_wfo','job_rrun_w1_wfo',1,'w1-worker',3,
+          now()+interval '5 minutes','RUNNING')`);
       for (const runId of ["rrun_w1_wfo", "rrun_w1_p04_legacy"]) {
         await client.query(`INSERT INTO research.artifacts
           (workspace_id, artifact_id, run_id, table_kind, schema_version, manifest_digest, state, retention_class,
@@ -451,10 +468,22 @@ describe("W1 migration 062 on 061 · run execution profile + paired RS-02 lane",
         ...common, schema_version: "research.current-source-seal.v1",
         source_adapter_id: "rs02.quantbt-signal-notional-wfo.v1", profile_id: "rs02.delta-signal-notional-wfo.v1",
         retained_import_digest: expectedImport,
-        table_rows: { OBSERVATION: 2, FOLD: 2, TRIAL: 3, CANDIDATE: 1, SELECTION: 1 }, total_rows: 9, summary: w1Summary,
+        table_rows: { OBSERVATION: 2, FOLD: 2, TRIAL: 3, CANDIDATE: 1, SELECTION: 1 }, total_rows: 9,
+        summary: { ...w1Summary, execution_observation: {
+          schema_version: "research.execution-observation.v1", basis: "PORTAL_ADAPTER_ENGINE_CALL_COMPLETED",
+          started_at_utc_ms: 1_700_000_000_000, completed_at_utc_ms: 1_700_000_001_000,
+          range_start_utc_ms: 1_600_000_000_000, range_end_exclusive_utc_ms: 1_600_086_400_000,
+          evaluation_role: "SELECTION_INPUT",
+        } },
       };
       await expect(service.seal(lease, seal as never)).resolves.toMatchObject({ replayed: false, retained_import_digest: expectedImport });
       await expect(service.seal(lease, seal as never)).resolves.toMatchObject({ replayed: true });
+      expect((await database.query(`SELECT snapshot_digest,evaluation_role,source_fact_ref
+        FROM research.exposure_facts WHERE workspace_id='ws_w1' AND run_id='rrun_w1_wfo'`)).rows)
+        .toEqual([{ snapshot_digest: digestA, evaluation_role: "SELECTION_INPUT",
+          source_fact_ref: `p05:${digestA}:PORTAL_ADAPTER_ENGINE_CALL_COMPLETED` }]);
+      expect((await database.query(`SELECT count(*)::int AS count FROM research.audit_log
+        WHERE workspace_id='ws_w1' AND action='RESEARCH_EXPOSURE_FACT_RECORDED'`)).rows[0].count).toBe(1);
       const sealed = await repository.sealForRead({ workspaceId: "ws_w1", actorUserId: "usr_w1" }, "rrun_w1_wfo");
       expect(sealed).toMatchObject({
         sourceAdapterId: "rs02.quantbt-signal-notional-wfo.v1",
@@ -470,6 +499,14 @@ describe("W1 migration 062 on 061 · run execution profile + paired RS-02 lane",
         ...common, schema_version: "research.current-source-batch.v1", table_kind: "OBSERVATION", batch_ordinal: 1,
         batch_digest: currentSourceBatchDigest(tables.OBSERVATION!), rows: tables.OBSERVATION!,
       } as never)).rejects.toBeTruthy();
+      await database.query(`UPDATE research.worker_attempts SET expires_at=now()-interval '1 second'
+        WHERE workspace_id='ws_w1' AND worker_attempt_id='rwa_rrun_w1_wfo'`);
+      await expect(service.seal(lease, seal as never)).rejects.toMatchObject({ status: 409 });
+      // Release this test's heavy slot before the following P10 admission test.
+      await database.query(`UPDATE research.jobs SET state='SUCCEEDED'
+        WHERE workspace_id='ws_w1' AND job_id='job_rrun_w1_wfo'`);
+      await database.query(`UPDATE research.worker_attempts SET state='SUCCEEDED'
+        WHERE workspace_id='ws_w1' AND worker_attempt_id='rwa_rrun_w1_wfo'`);
     } finally {
       await database.end();
     }

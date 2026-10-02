@@ -10,6 +10,7 @@ import {
   IMPORTED_ALPHA_PROFILE_ID,
 } from "../src/research/imported-alpha.profile";
 import { migrateTestDatabase } from "./harness";
+import { DELTA_WFO_V2_PROFILE_DIGEST, DELTA_WFO_V2_PROFILE_ID } from "../src/research/delta-wfo-v2.profile";
 
 const baseUrl = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
 const databaseName = "portal_e17_" + randomUUID().replaceAll("-", "");
@@ -99,10 +100,14 @@ describe("E17 imported adapter migration on disposable PostgreSQL", () => {
         IMPORTED_ALPHA_PROFILE_ID,
         "0".repeat(64),
       )).rejects.toMatchObject({ code: "23514" });
+      await expect(insertProducer("rrun_temporal_ok", "p04.delta-rsi.v1",
+        DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST)).resolves.toMatchObject({rowCount:1});
+      await expect(insertProducer("rrun_temporal_wrong_digest", "p04.delta-rsi.v1",
+        DELTA_WFO_V2_PROFILE_ID, "0".repeat(64))).rejects.toMatchObject({code:"23514"});
       // PostgreSQL CHECK treats SQL UNKNOWN as success. Every non-P04
       // profile must explicitly reject NULL, not just compare its digest.
       for (const [index, profileId] of [
-        "p10.delta-signal-notional-wfo.v1", "p16.delta-whatif-grid.v1", IMPORTED_ALPHA_PROFILE_ID,
+        "p10.delta-signal-notional-wfo.v1", DELTA_WFO_V2_PROFILE_ID, "p16.delta-whatif-grid.v1", IMPORTED_ALPHA_PROFILE_ID,
       ].entries()) {
         await expect(insertProducer(
           `rrun_e17_null_digest_${index}`,

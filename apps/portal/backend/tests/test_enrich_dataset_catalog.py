@@ -13,6 +13,7 @@ from portal_api.domain.errors import DataSchemaError, DatasetNotFoundError
 from portal_api.services.enrich_dataset_catalog import (
     DatasetIndexError, DatasetIndexStore, bar_summary, build_bar_index, canonical,
     enrich_dataset_catalog, validate_document, window_metadata, build_symbol_indexes,
+    merge_index_documents,
 )
 
 DAY = 86_400_000
@@ -58,6 +59,19 @@ def test_exact_target_edges_gaps_and_independent_window_oracle():
     assert (result["bars"], result["warmup_bars_available_before_start"]) == (4, 1)
     assert result["first_bar_utc_ms"] == BASE + 4 * HOUR
     assert result["last_bar_utc_ms"] == BASE + 7 * HOUR
+
+def test_append_keeps_existing_sources_and_never_refreshes_their_clock():
+    previous = document()
+    incoming = copy.deepcopy(previous)
+    incoming["entries"][0]["dataset_id"] = "crypto-binance-spot-1m"
+    result = merge_index_documents(previous, incoming)
+    assert len(result["entries"]) == 2
+    assert result["as_of_utc_ms"] == previous["as_of_utc_ms"]
+    assert previous["entries"][0] in result["entries"]
+    incoming["as_of_utc_ms"] += HOUR
+    incoming["entries"][0]["index"]["as_of_utc_ms"] += HOUR
+    with pytest.raises(DatasetIndexError, match="APPEND_SOURCE_CLOCK_MISMATCH"):
+        merge_index_documents(previous, incoming)
 
 def test_observation_clock_excludes_open_bar():
     row = build_bar_index(Provider(missing=()), dataset_id="crypto-binance-1m", symbol="BTCUSDT", timeframe="1h",
@@ -131,6 +145,8 @@ async def test_private_metadata_routes_require_hmac_without_loading_hmd(tmp_path
     app.state.market_data_provider = provider
     app.state.research_dataset_index = DatasetIndexStore(tmp_path)
     app.state.research_dataset_index.publish(document())
+    app.state.research_engine_catalog = SimpleNamespace()
+    app.state.quantbt_gateway = None
     app.include_router(router)
     payload = {"principalId":"b7-test", "username":"b7-test", "role":"USER",
         "authnMethods":["portal_session"], "exp":int(time.time()) + 60, "policyVersion":"auth-policy-v1"}
@@ -140,6 +156,17 @@ async def test_private_metadata_routes_require_hmac_without_loading_hmd(tmp_path
     params = {"dataset_id":"crypto-binance-1m", "symbol":"BTCUSDT", "timeframe":"1h",
         "start_utc_ms":BASE + 4*HOUR, "end_exclusive_utc_ms":BASE + 8*HOUR, "warmup_bars":2}
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        estimate_body={"requested_spec":{"schema_version":"research.requested-spec.v1","protocol":"three_window_decay",
+            "data":{"dataset_id":"crypto-binance-1m","symbol":"BTCUSDT","timeframe":"1h"},
+            "windows":{key:{"start":pd.Timestamp(BASE+a*HOUR,unit="ms",tz="UTC").isoformat(),
+                "end_exclusive":pd.Timestamp(BASE+b*HOUR,unit="ms",tz="UTC").isoformat()}
+                for key,a,b in (("is",0,4),("oos",4,8),("holdout",8,10))}},"warmup_bars":0}
+        assert (await client.post("/internal/research/dataset-declaration-estimate",json=estimate_body)).status_code==401
+        assert (await client.post("/internal/research/dataset-declaration-estimate",json=estimate_body,headers={"x-portal-principal":"browser.fake"})).status_code==401
+        estimate=await client.post("/internal/research/dataset-declaration-estimate",json=estimate_body,headers=headers)
+        assert estimate.status_code==200,estimate.text
+        assert estimate.json()["planned_folds"]["count"]==1
+        assert not provider.calls
         for route in ("/internal/research/datasets-v2", "/internal/research/dataset-bar-metadata"):
             assert (await client.get(route, params=params if "bar-metadata" in route else {})).status_code == 401
             assert (await client.get(route, params=params if "bar-metadata" in route else {},
