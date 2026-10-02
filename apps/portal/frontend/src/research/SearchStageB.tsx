@@ -19,6 +19,7 @@
 
 import type { ReactNode } from "react";
 
+import { useEntryRef, useReadout } from "./chartLife";
 import { Formula } from "./Formula";
 import { foldLabel, formatUtc, groupDecimalString } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
@@ -285,8 +286,9 @@ export function TypesetFormula({ search, selected }: { search: CurrentSourceSear
 /** Per-fold decay of θ*: the engine's own d = S_IS − S_OOS per fold, bars scaled to the largest |d| (geometry only). */
 export function FoldDecayBars({ pool }: { pool: Pool | undefined }) {
   const decay = pool?.per_fold_decay;
+  const entryRef = useEntryRef<HTMLDivElement>();
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-[3px]" data-fold-decay={decay?.state ?? "NOT_PUBLISHED"}>
+    <div ref={entryRef} className="flex min-w-0 flex-1 flex-col gap-[3px]" data-fold-decay={decay?.state ?? "NOT_PUBLISHED"}>
       <span className="text-[9.5px]" style={FAINT}>
         per-fold decay of θ*
       </span>
@@ -308,7 +310,9 @@ export function FoldDecayBars({ pool }: { pool: Pool | undefined }) {
                   className="relative h-[10px] min-w-0 flex-1"
                   style={{ background: "var(--paper-sunken)" }}
                   role="img"
+                  tabIndex={0}
                   aria-label={`${foldLabel(row.fold_id)} decay ${row.decay ?? "not published"}: IS ${row.is_sharpe ?? "not published"}, OOS ${row.oos_sharpe ?? "not published"}`}
+                  title={`${foldLabel(row.fold_id)} · d ${row.decay ?? "not published"} · IS ${row.is_sharpe ?? "not published"} · OOS ${row.oos_sharpe ?? "not published"}`}
                 >
                   <span className="absolute bottom-0 left-1/2 top-0 w-px" style={{ background: "var(--line)" }} />
                   {known && share > 0 ? (
@@ -316,6 +320,8 @@ export function FoldDecayBars({ pool }: { pool: Pool | undefined }) {
                       className="absolute bottom-[1px] top-[1px]"
                       style={{ ...(value >= 0 ? { left: "50%" } : { right: "50%" }), width: `${share.toFixed(2)}%`, background: tone, opacity: 0.75 }}
                       data-decay-sign={value >= 0 ? "positive" : "negative"}
+                      data-entry="x"
+                      data-entry-origin={value >= 0 ? "left" : "right"}
                     />
                   ) : null}
                 </span>
@@ -363,8 +369,10 @@ export function PoolPlane({ search, selected }: { search: CurrentSourceSearch; s
   const pad = Math.max((high - low) * 0.18, Math.abs(high) * 0.08, 0.05);
   const [from, to] = [low - pad, high + pad];
   const at = (value: number) => ((value - from) / (to - from)) * 100;
+  const entryRef = useEntryRef<HTMLDivElement>();
+  const readout = useReadout();
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-[3px]" data-pool-plane={placed.length}>
+    <div ref={entryRef} className="flex min-w-0 flex-1 flex-col gap-[3px]" data-pool-plane={placed.length}>
       <span className="text-[9.5px]" style={FAINT} title="Pool on the S_IS × S̄_OOS plane — a point on the diagonal has zero decay">
         S_IS × S̄_OOS · diagonal = 0 decay
       </span>
@@ -380,6 +388,7 @@ export function PoolPlane({ search, selected }: { search: CurrentSourceSearch; s
         {placed.map(({ candidate, point }) => {
           const theta = candidate === selected;
           const size = theta ? 9 : 5;
+          const words = `candidate ${candidate.candidate_id} · IS ${candidate.facts.metrics.mean_is_sharpe.value} · OOS ${candidate.facts.metrics.mean_oos_sharpe.value}${theta ? " · θ*" : ""}`;
           return (
             <span
               key={candidate.candidate_id}
@@ -393,13 +402,20 @@ export function PoolPlane({ search, selected }: { search: CurrentSourceSearch; s
                 opacity: theta ? 1 : 0.45,
                 border: theta ? "2px solid var(--accent-2)" : 0,
               }}
-              title={`candidate ${candidate.candidate_id} · IS ${candidate.facts.metrics.mean_is_sharpe.value} · OOS ${candidate.facts.metrics.mean_oos_sharpe.value}${theta ? " · θ*" : ""}`}
+              title={words}
+              tabIndex={0}
+              aria-label={words}
+              data-entry="fade"
+              {...readout.bind(words)}
               data-plane-point={candidate.candidate_id}
               data-plane-theta={theta || undefined}
             />
           );
         })}
       </div>
+      <span className="mono text-[9px]" style={{ ...FAINT, minHeight: 12 }} data-plane-readout={readout.text ?? undefined} aria-live="polite">
+        {readout.text}
+      </span>
       <span className="text-[9px]" style={FAINT} title="Below the diagonal = positive decay (IS > OOS)">
         x S_IS · y S̄_OOS · below = decay
         {placed.length < search.candidates.rows.length ? ` · ${search.candidates.rows.length - placed.length} without both means, not placed` : ""}

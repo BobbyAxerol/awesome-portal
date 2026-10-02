@@ -20,6 +20,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { useEntryRef } from "./chartLife";
 import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import type { WhatIf, WhatIfCell, WhatIfEvaluateSlot } from "./freezeClient";
 import { RefusalNote } from "./ResearchPanel";
@@ -205,6 +206,7 @@ function LiveWhatIf({
   const navigate = useNavigate();
   const [x, setX] = useState(4);
   const [y, setY] = useState(4);
+  const heatRef = useEntryRef<HTMLDivElement>();
   const sliders = whatIf.sliders;
   const available = whatIf.state === "AVAILABLE" && whatIf.grid !== null && sliders.length === 2;
   const cell = available ? cellAt(whatIf, x, y) : null;
@@ -378,12 +380,13 @@ function LiveWhatIf({
             <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
               9 × 9 · {sliders[1]!.parameter} ↑ · {sliders[0]!.parameter} →
             </span>
-            <div className="grid grid-cols-9 gap-[2px]" role="img" aria-label={`what-if grid, ${coverage?.label ?? "0 / 81"} cells evaluated`}>
+            <div ref={heatRef} className="grid grid-cols-9 gap-[2px]" role="img" aria-label={`what-if grid, ${coverage?.label ?? "0 / 81"} cells evaluated`}>
               {heat.flat().map((entry) => (
                 <button
                   key={entry.cell_id}
                   type="button"
                   className="h-[14px] w-[14px] rounded-[2px] border"
+                  data-entry="fade"
                   data-heat-cell={entry.cell_id}
                   data-heat-state={entry.state}
                   aria-label={`${entry.cell_id} ${CELL_WORDS[entry.state]}`}

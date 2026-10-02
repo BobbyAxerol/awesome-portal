@@ -18,7 +18,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CandleOverviewStrip, REVEAL_HIDDEN, chartPrice, exactPercent, foldCapitalPolicyWords, foldCapitalTile, paddedRange, sumDecimalStrings, windowMarkers } from "./ExecuteCandleReplay";
+import { CandleOverviewStrip, REVEAL_HIDDEN, chartMotion, chartPrice, crosshairReadout, exactPercent, foldCapitalPolicyWords, foldCapitalTile, paddedRange, sumDecimalStrings, windowMarkers } from "./ExecuteCandleReplay";
+import { drawdownTooltip, equityTooltip, positionTooltip } from "./ExecuteDetail";
+import { formatMetric } from "./researchFormat";
+import { iso } from "./utcMinute";
 import { ExecuteRoute } from "./ExecuteRoute";
 import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
@@ -686,5 +689,53 @@ describe("F3 · S08 — fold_NN everywhere, 4× default, room at both ends of th
     const range = visibleRanges[0]!;
     expect(range.from).toBeLessThan(0);
     expect(range.to).toBeGreaterThan(167);
+  });
+});
+
+describe("chart life · S08 candle replay, equity and position panes", () => {
+  const rows = FOLD0.replay.rows;
+  const stubMedia = (matches: boolean) => {
+    window.matchMedia = ((query: string) => ({ matches, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+  };
+  it("crosshairReadout carries the served bar's own OHLC, position and equity, with a typographic minus", () => {
+    const row = rows.find((r) => r.bar?.candle) ?? rows[0]!;
+    const readout = crosshairReadout({ ...row, accepted_position: "-1" });
+    expect(readout.ordinal).toBe(row.source_ordinal);
+    expect(readout.at).toBe(iso(row.at_utc_ms));
+    expect(readout.position).toBe("−1");
+    expect(readout.close).toBe(chartPrice(Number(row.bar!.candle!.close)));
+    expect(readout.equity).toBe(formatMetric(row.equity, "currency"));
+  });
+  it("a bar with no candle reads as absent, never zero", () => {
+    const readout = crosshairReadout({ ...rows[0]!, bar: null });
+    expect(readout.open).toBeNull();
+    expect(readout.close).toBeNull();
+  });
+  it("chartMotion: entry animation is cubicOut, and reduced motion turns it off", () => {
+    const original = window.matchMedia;
+    try {
+      stubMedia(false);
+      const on = chartMotion();
+      expect(on.animation).toBe(true);
+      expect(on.animationDuration).toBeGreaterThanOrEqual(500);
+      expect(on.animationDuration).toBeLessThanOrEqual(700);
+      expect(on.animationEasing).toBe("cubicOut");
+      expect(on.animationDurationUpdate).toBe(0);
+      stubMedia(true);
+      expect(chartMotion().animation).toBe(false);
+      expect(chartMotion().animationDuration).toBe(0);
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+  it("tooltips show the real values at the same x, with the absence typed", () => {
+    const point = { playback_ordinal: 4, at_utc_ms: 0, equity: "10000.5", drawdown_fraction: "-0.02", playback_cursor: "" } as never;
+    expect(equityTooltip(point, "observation")).toContain("equity 10,000.50");
+    expect(equityTooltip(point, "observation")).toContain("drawdown −2.00%");
+    expect(drawdownTooltip(point)).toContain("equity 10,000.50");
+    expect(equityTooltip(point, "observation", { kind: "ENTRY", side: "LONG" } as never)).toContain("transition entry → long");
+    const row = { ...rows[0]!, accepted_position: "1", signal_target: null };
+    expect(positionTooltip(row)).toContain("accepted 1");
+    expect(positionTooltip(row)).toContain("target not published");
   });
 });

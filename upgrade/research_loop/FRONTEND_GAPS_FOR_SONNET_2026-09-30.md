@@ -338,3 +338,6 @@ partial-quality,symbol-absent}.valid.json` in `packages/contracts` (synthetic,
 not real-data evidence). The actual preview has all current 29 symbols indexed.
 FE/browser acceptance and complete DR-10 S02-created WFO/P04 runs remain open;
 Codex did not edit or mark completion of Claude's frontend paths.
+
+### F7 — chart động (2026-10-02)
+Bobby duyệt 4 lệch HiFi (Claude đo contrast, đều đạt AA): ink cảnh báo `#8f6118`; ink nhạt riêng Research (`#626d85` sáng, `#7d8aa0` tối); hai chip xám withheld/report-only; gạch chân link trong văn bản S13. Chart: draw-in một lần, crosshair/tooltip số thật, zoom chung (hub), vùng drawdown sâu nhất, tháng tốt/xấu nhất; tắt khi reduced-motion/smoke. Notes: `evidence/P21/qa-2026-10-02/charts/*.md`. Còn treo: `echarts.connect`/dataZoom cho S08 (EChart.tsx thiếu prop `group`), zoom S13, request backend §18.

@@ -234,7 +234,7 @@ describe("QA S09 · chart reading", () => {
     await open(body);
     const curve = panel("all-time")!.querySelector("[data-all-time-curve]")!;
     expect(curve.getAttribute("data-has-benchmark")).toBe("true");
-    expect(curve.querySelectorAll("polyline")).toHaveLength(2);
+    expect(curve.querySelectorAll("polyline")).toHaveLength(3);
     expect(curve.querySelector("[data-benchmark-curve]")).not.toBeNull();
     const strategy = curve.querySelector('[data-curve-range="strategy"]')!;
     const bench = curve.querySelector('[data-curve-range="benchmark"]')!;
@@ -253,7 +253,8 @@ describe("QA S09 · chart reading", () => {
     await open(body);
     const curve = panel("all-time")!.querySelector("[data-all-time-curve]")!;
     expect(curve.getAttribute("data-has-benchmark")).toBe("false");
-    expect(curve.querySelectorAll("polyline")).toHaveLength(1);
+    expect(curve.querySelectorAll("[data-curve-plot=strategy] polyline")).toHaveLength(1);
+    expect(curve.querySelector("[data-curve-plot=benchmark]")).toBeNull();
     expect(curve.querySelector("[data-curve-legend]")!.textContent).toBe("market benchmark not published");
   });
 

@@ -21,6 +21,7 @@
  * summary written beside the payload — it *is* the payload, rendered.
  */
 
+import { useEntryRef } from "./chartLife";
 import { LineageLink, lineageHref } from "./LineageLink";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useInRouterContext } from "react-router-dom";
@@ -2570,9 +2571,10 @@ function WindowTimeline({
   const axis = sharedAxis(draft, coverage);
   const warnings = coverageWarnings(draft, coverage);
   const rows = timelineRows(draft, axis);
+  const timelineRef = useEntryRef<HTMLElement>();
   const coverageSpan = axis && coverage ? { left: ((coverage.from - axis.from) / (axis.to - axis.from)) * 100, width: Math.max(((coverage.to - coverage.from) / (axis.to - axis.from)) * 100, 0.5) } : null;
   return (
-    <section className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-window-timeline>
+    <section ref={timelineRef} className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-window-timeline>
       <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]" style={{ fontFamily: "var(--font-body)" }} title="Half-open windows, end-exclusive. A declaration only: fold boundaries are decided by preflight.">
         Window timeline
       </h4>
@@ -2592,6 +2594,8 @@ function WindowTimeline({
                 style={{ left: `${coverageSpan.left}%`, width: `${coverageSpan.width}%`, background: "var(--accent-2)", opacity: 0.55 }}
                 title={`${coverage.symbol} served coverage ${coverage.firstMonth} → ${coverage.lastMonth} (month partitions)`}
                 data-timeline-segment="coverage"
+                data-entry="x"
+                data-entry-origin="left"
               />
             </span>
             <span />
@@ -2617,6 +2621,8 @@ function WindowTimeline({
                   style={{ left: `${segment.left}%`, width: `${segment.width}%`, background: segment.tone, opacity: 0.85 }}
                   title={segment.title}
                   data-timeline-segment={row.key}
+                  data-entry="x"
+                  data-entry-origin="left"
                 />
               ))}
             </span>

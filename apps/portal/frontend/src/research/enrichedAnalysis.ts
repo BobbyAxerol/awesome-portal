@@ -173,3 +173,33 @@ export function enrichedBlock(read: EnrichedRead): EnrichedAnalysis | null {
 
 /** The one chip every panel drawn from the block carries. */
 export const ENRICHED_CHIP = "enrich_analysis · all time";
+
+/** The deepest published drawdown episode (`drawdown_episodes`), as served: nothing is measured here. */
+export interface DrawdownSpan {
+  start_utc_ms: number;
+  trough_utc_ms: number;
+  /** null while the episode is still open at the end of the scope. */
+  end_utc_ms: number | null;
+  depth_fraction: string;
+}
+
+type SpanEpisode = { start_utc_ms: number; trough_utc_ms: number; recovery_utc_ms: number | null; depth_fraction: string };
+const spanCache = new WeakMap<readonly SpanEpisode[], DrawdownSpan | null>();
+
+/**
+ * Picks the served episode with the most negative `depth_fraction`; null when none was served. The
+ * result is cached per served array so a chart option keyed on it is not rebuilt every render.
+ */
+export function deepestSpan(episodes: readonly SpanEpisode[]): DrawdownSpan | null {
+  if (spanCache.has(episodes)) return spanCache.get(episodes) ?? null;
+  let best: SpanEpisode | undefined;
+  for (const episode of episodes) {
+    if (!Number.isFinite(Number(episode.depth_fraction))) continue;
+    if (best === undefined || Number(episode.depth_fraction) < Number(best.depth_fraction)) best = episode;
+  }
+  const span = best
+    ? { start_utc_ms: best.start_utc_ms, trough_utc_ms: best.trough_utc_ms, end_utc_ms: best.recovery_utc_ms, depth_fraction: best.depth_fraction }
+    : null;
+  spanCache.set(episodes, span);
+  return span;
+}

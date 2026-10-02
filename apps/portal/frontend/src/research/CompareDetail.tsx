@@ -57,7 +57,7 @@
  *    claim chip's title. Geometry, blocks and charts stay the hi-fi's.
  */
 
-import { Fragment, useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { releaseCandidateHref } from "./releaseCandidateClient";
@@ -102,6 +102,7 @@ import { BreakableCode } from "./reportText";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
 import { iso } from "./utcMinute";
+import { datasetKey, pathVertices, ScrubLayer, tipMinus, useDrawIn, useScrub } from "./compareChartLife";
 
 /** An id on screen (E1): prefix + 8 hex; callers keep the full value in a title. */
 function sid(id: string): string {
@@ -495,6 +496,14 @@ const COMPARE_CSS = `
 .cp-plot path, .cp-plot line { vector-effect: non-scaling-stroke; }
 .cp-grid-line { stroke: var(--line-soft); stroke-dasharray: 3 3; stroke-width: 1; }
 .cp-axis { stroke: var(--line); stroke-width: 1; }
+.cp-plot-area > svg[data-enter="true"] { animation: cp-draw-in 600ms cubic-bezier(0.215, 0.61, 0.355, 1) both; }
+@keyframes cp-draw-in { from { clip-path: inset(-10% 100% -10% 0); } to { clip-path: inset(-10% 0 -10% 0); } }
+@media (prefers-reduced-motion: reduce) { .cp-plot-area > svg[data-enter="true"] { animation: none; } }
+.cp-plot-area[data-scrubbable="true"] { cursor: crosshair; touch-action: pan-y; }
+.cp-plot-area[data-scrubbable="true"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cp-legend [data-legend][role="button"] { cursor: pointer; border-radius: 3px; }
+.cp-legend [data-legend][aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.cp-legend [data-legend][role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .cp-mini-line { stroke: var(--accent); stroke-width: 1.5; fill: none; }
 .cp-mini-fill { fill: var(--accent); fill-opacity: .08; stroke: none; }
 .cp-overlay .lineA { stroke: var(--accent); stroke-width: 1.75; fill: none; }
@@ -891,20 +900,53 @@ function MiniChart({ chart }: { chart: MarketChart }) {
       </div>
     );
   }
+  return <MiniPlot chart={chart} plot={plot} />;
+}
+
+function MiniPlot({ chart, plot }: { chart: MarketChart; plot: Plot & { line: string; fill: string } }) {
+  const animate = useDrawIn(datasetKey("mini", chart.points, chart.points[0]?.equity, chart.points[chart.points.length - 1]?.equity));
+  const vertices = useMemo(() => pathVertices(plot.line), [plot.line]);
+  /* Hover only when every served point has its own vertex (a single point is drawn as a rule, a dropped one has none). */
+  const scrubbable = vertices.length === chart.points.length && vertices.length > 1;
+  const xs = useMemo(() => vertices.map((v) => v.x), [vertices]);
+  const { index, handlers } = useScrub(scrubbable ? xs : []);
+  const point = index === null ? null : chart.points[index];
+  const vertex = index === null ? null : vertices[index];
+  const label = `equity, ${chart.emitted_point_count ?? chart.points.length} retained points`;
   return (
     <div className="cp-plot" data-size="mini" style={gutterOf(plot)} data-mini-chart={chart.state}>
-      <div className="cp-plot-area">
+      <div
+        className="cp-plot-area"
+        data-scrubbable={scrubbable ? "true" : undefined}
+        tabIndex={scrubbable ? 0 : undefined}
+        aria-label={scrubbable ? `${label}. Left and right arrows read each point.` : undefined}
+        {...(scrubbable ? handlers : {})}
+      >
         <svg
           viewBox={`0 0 ${plot.width} ${plot.height}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label={`equity, ${chart.emitted_point_count ?? chart.points.length} retained points`}
+          aria-label={label}
+          data-enter={animate ? "true" : undefined}
         >
           <line className="cp-axis" x1={0} x2={plot.width} y1={plot.height} y2={plot.height} />
           <path className="cp-mini-fill" d={plot.fill} />
           <path className="cp-mini-line" d={plot.line} />
         </svg>
         <AxisLabels plot={plot} />
+        {point && vertex ? (
+          <ScrubLayer xPct={vertex.x} dots={[{ y: vertex.y, color: "var(--accent)" }]} testId="mini">
+            <div data-scrub-date>{iso(point.at_utc_ms)}</div>
+            <div data-scrub-value data-exact={point.equity}>
+              {tipMinus(point.equity)}
+            </div>
+          </ScrubLayer>
+        ) : null}
+        {point ? (
+          <span className="sr-only" role="status" data-scrub-live>
+            {`${iso(point.at_utc_ms)} equity ${point.equity}`}
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -1913,40 +1955,113 @@ function OverlayFigure({ result }: { result: PairComparable }) {
         ) : null}
       </figcaption>
       {plot ? (
-        <div className="cp-plot" data-size="overlay" style={gutterOf(plot)}>
-          <div className="cp-legend" data-overlay-legend>
-            <span data-legend="left">
-              <span className="sw" aria-hidden="true" />
-              {legendText(runs[0])}
-            </span>
-            <span data-legend="right">
-              <span className="sw" aria-hidden="true" />
-              {legendText(runs[1])}
-            </span>
-          </div>
-          <div className="cp-plot-area">
-            <svg
-              viewBox={`0 0 ${plot.width} ${plot.height}`}
-              preserveAspectRatio="none"
-              role="img"
-              aria-label={`two equity lines on one scale: ${legendText(runs[0])}, solid; ${legendText(runs[1])}, dashed`}
-            >
-              {gridPcts(plot).map((pct) => (
-                <line key={pct} className="cp-grid-line" x1={0} x2={plot.width} y1={pct * 10} y2={pct * 10} data-grid-line />
-              ))}
-              <line className="cp-axis" x1={0} x2={plot.width} y1={plot.height} y2={plot.height} />
-              <path className="lineA" d={plot.left} data-line="left" />
-              <path className="lineB" d={plot.right} data-line="right" />
-            </svg>
-            <AxisLabels plot={plot} />
-          </div>
-        </div>
+        <OverlayPlot overlay={overlay} runs={runs} plot={plot} />
       ) : (
         <div className="cp-frame" data-size="overlay" data-overlay-absent>
           <AvailabilityAbsent availability={overlay.availability} what="overlay" />
         </div>
       )}
     </figure>
+  );
+}
+
+export function OverlayPlot({
+  overlay,
+  runs,
+  plot,
+}: {
+  overlay: PairComparable["pair"]["overlay"];
+  runs: PairComparable["pair"]["runs"];
+  plot: Plot & { left: string; right: string };
+}) {
+  const points = overlay.points;
+  const animate = useDrawIn(
+    datasetKey("overlay", points, points[0]?.left_equity, points[points.length - 1]?.right_equity),
+  );
+  const [shown, setShown] = useState({ left: true, right: true });
+  const left = useMemo(() => pathVertices(plot.left), [plot.left]);
+  const right = useMemo(() => pathVertices(plot.right), [plot.right]);
+  const scrubbable = left.length === points.length && right.length === points.length && points.length > 1;
+  const xs = useMemo(() => left.map((v) => v.x), [left]);
+  const { index, handlers } = useScrub(scrubbable ? xs : []);
+  const point = index === null ? null : points[index];
+  const toggle = (side: "left" | "right") => setShown((prev) => ({ ...prev, [side]: !prev[side] }));
+  const legendProps = (side: "left" | "right") => ({
+    role: "button" as const,
+    tabIndex: 0,
+    "aria-pressed": shown[side],
+    "aria-label": `${shown[side] ? "Hide" : "Show"} ${legendText(runs[side === "left" ? 0 : 1])}`,
+    onClick: () => toggle(side),
+    onKeyDown: (event: React.KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggle(side);
+      }
+    },
+  });
+  return (
+    <div className="cp-plot" data-size="overlay" style={gutterOf(plot)}>
+      <div className="cp-legend" data-overlay-legend>
+        <span data-legend="left" {...legendProps("left")}>
+          <span className="sw" aria-hidden="true" />
+          {legendText(runs[0])}
+        </span>
+        <span data-legend="right" {...legendProps("right")}>
+          <span className="sw" aria-hidden="true" />
+          {legendText(runs[1])}
+        </span>
+      </div>
+      <div
+        className="cp-plot-area"
+        data-scrubbable={scrubbable ? "true" : undefined}
+        tabIndex={scrubbable ? 0 : undefined}
+        aria-label={scrubbable ? "Two-run equity overlay. Left and right arrows read each point; Escape clears." : undefined}
+        {...(scrubbable ? handlers : {})}
+      >
+        <svg
+          viewBox={`0 0 ${plot.width} ${plot.height}`}
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={`two equity lines on one scale: ${legendText(runs[0])}, solid; ${legendText(runs[1])}, dashed`}
+          data-enter={animate ? "true" : undefined}
+        >
+          {gridPcts(plot).map((pct) => (
+            <line key={pct} className="cp-grid-line" x1={0} x2={plot.width} y1={pct * 10} y2={pct * 10} data-grid-line />
+          ))}
+          <line className="cp-axis" x1={0} x2={plot.width} y1={plot.height} y2={plot.height} />
+          {shown.left ? <path className="lineA" d={plot.left} data-line="left" /> : null}
+          {shown.right ? <path className="lineB" d={plot.right} data-line="right" /> : null}
+        </svg>
+        <AxisLabels plot={plot} />
+        {point && index !== null ? (
+          <ScrubLayer
+            xPct={left[index]!.x}
+            testId="overlay"
+            dots={[
+              { y: left[index]!.y, color: "var(--accent)", hidden: !shown.left },
+              { y: right[index]!.y, color: "var(--accent-2)", hidden: !shown.right },
+            ]}
+          >
+            <div data-scrub-date>{iso(point.at_utc_ms)}</div>
+            {shown.left ? (
+              <div data-scrub-left data-exact={point.left_equity} style={{ color: "var(--accent)" }}>
+                {tipMinus(point.left_equity)}
+              </div>
+            ) : null}
+            {shown.right ? (
+              <div data-scrub-right data-exact={point.right_equity} style={{ color: "var(--accent-2)" }}>
+                {tipMinus(point.right_equity)}
+              </div>
+            ) : null}
+          </ScrubLayer>
+        ) : null}
+        {point ? (
+          <span className="sr-only" role="status" data-scrub-live>
+            {`${iso(point.at_utc_ms)} left ${point.left_equity}, right ${point.right_equity}`}
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

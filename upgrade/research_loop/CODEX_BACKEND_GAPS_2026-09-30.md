@@ -582,3 +582,18 @@ Compatible-major dependency pins and actual full lock audit now report **0
 vulnerabilities**. [Exact evidence and remaining gates](./evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
 P23 needs clean-candidate load/DR/teardown; P24 is not full-green. No remote
 push, main/dev merge, production rollout or frontend edits.
+
+## 18. Đợt B9 — chart động: field FE cần để vẽ thêm (Claude, 2026-10-02; Bobby: "khai thác tối đa dữ liệu, chart động, chân thực")
+
+FE đã làm mọi thứ có thể từ field đã publish (draw-in, crosshair, zoom, tooltip,
+vùng drawdown sâu nhất, tháng tốt/xấu nhất). Các ô dưới đây vẫn là "not published"
+có lý do; UI không tự tính. Mọi số raw từ QuantBT/HMD, suy ra trong `enrich_analysis`.
+
+| # | Field cần | Để vẽ gì | Chỗ |
+|---|---|---|---|
+| B9-1 | `return_distribution.{mean,median,var_95,cvar_95}` (fraction, all-time) | marker trên histogram | S04, S09 |
+| B9-2 | `drawdown_episodes[].{label,regime}` hoặc lý do vắng | nhãn vùng drawdown | S04, S09 |
+| B9-3 | `windows.{is,oos,holdout}.{start_ms,end_ms}` trong `enriched_analysis` | band IS/OOS/HOLDOUT trên curve all-time | S09 |
+| B9-4 | `at_utc_ms` cho từng cột của `/runs/{id}/sparkline` và `analytics_all_time` | tooltip ngày ở S01 | S01 |
+| B9-5 | Series `rolling_sharpe` / `rolling_volatility` (cửa sổ + mẫu) trên hub | `RollingChart`, `RollingSharpeChart` đã sẵn, chưa mount | S04 |
+| B9-6 | Compare payload: `drawdown_episodes` + best/worst month theo từng run | chú thích overlay S13 | S13 |

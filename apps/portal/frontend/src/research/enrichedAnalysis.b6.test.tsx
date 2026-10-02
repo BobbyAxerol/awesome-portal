@@ -298,7 +298,9 @@ describe("B6 S09 - the supplemental all-time section", () => {
 
     const curve = section.querySelector("[data-all-time-curve]") as HTMLElement;
     expect(curve.getAttribute("data-has-benchmark")).toBe("true");
-    expect(curve.querySelectorAll("polyline")).toHaveLength(2);
+    /* strategy + benchmark + the served drawdown strip */
+    expect(curve.querySelectorAll("polyline")).toHaveLength(3);
+    expect(curve.querySelectorAll("[data-curve-plot] polyline")).toHaveLength(3);
     expect(curve.querySelector("[data-curve-sampling]")?.textContent).toBe("32 of 60 points");
 
     const months = [...section.querySelectorAll("[data-month]")] as HTMLElement[];

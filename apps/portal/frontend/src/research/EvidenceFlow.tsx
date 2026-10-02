@@ -66,13 +66,14 @@ import type { PassportSlot, RetainedSeriesSlot, SeriesSlot } from "./useEvidence
 import { isRetainedAnswer, retainedReadiness, type RunIdentitySlot } from "./retainedLane";
 import type { ResearchState } from "./state";
 import { InfoMark } from "../components/InfoMark";
+import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { ShortId } from "./ShortId";
 import { HubSplitBody } from "./hubStageSplit";
 import { HubSearchBody } from "./hubStageSearch";
 import { HubFreezeBody } from "./hubStageFreeze";
 import { HubExecuteBody } from "./hubStageExecute";
 import { AnalyticsAbsentLine, BehaviorV2, StrategyBenchmarkFigure, v2Absence, v2Of } from "./analyticsV2";
-import { enrichedBlock, type EnrichedAnalysis } from "./enrichedAnalysis";
+import { deepestSpan, enrichedBlock, type EnrichedAnalysis } from "./enrichedAnalysis";
 import { EnrichedAbsenceLine } from "./enrichedAvailability";
 import { companionRead, derivationTitle, derivedHeadline, derivationOf, monthCoverage, type MonthFacts } from "./allTimeSeries";
 import {
@@ -2049,11 +2050,42 @@ export function monthTint(returnFraction: string): number {
   return Math.min(0.85, 0.15 + magnitude * 9);
 }
 
+/**
+ * The served months with the best and the worst `return_fraction` — a pick among the served values,
+ * never a recomputation. Null when fewer than two months exist (one month is neither).
+ */
+export function monthExtremes(points: readonly { month_start_utc_ms: number; return_fraction: string }[]): { best: number; worst: number } | null {
+  let best: { at: number; value: number } | null = null;
+  let worst: { at: number; value: number } | null = null;
+  for (const point of points) {
+    const value = Number(point.return_fraction);
+    if (!Number.isFinite(value)) continue;
+    if (best === null || value > best.value) best = { at: point.month_start_utc_ms, value };
+    if (worst === null || value < worst.value) worst = { at: point.month_start_utc_ms, value };
+  }
+  return best === null || worst === null || best.at === worst.at ? null : { best: best.at, worst: worst.at };
+}
+
 function MonthlyHeat({ series }: { series: EvidenceSeries }) {
   const points = series.values as (MonthlyReturnPoint & Partial<EnrichedMonthPoint> & MonthFacts)[];
+  const extremes = monthExtremes(points);
+  const [active, setActive] = useState<number | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  /* Cells fade in once, on the first mount of a dataset; a poll that re-renders never replays it. */
+  const faded = useRef<string | null>(null);
+  const signature = `${points[0]?.month_start_utc_ms ?? "-"}:${points.length}`;
+  useEffect(() => {
+    if (faded.current === signature) return;
+    faded.current = signature;
+    if (!smokeMotionAllowed()) return;
+    root.current?.querySelectorAll<HTMLElement>("[data-month-cell]").forEach((cell, index) => {
+      const target = Number(cell.style.opacity || 1);
+      cell.animate?.([{ opacity: 0 }, { opacity: target }], { duration: 450, delay: Math.min(index * 18, 400), easing: "cubic-bezier(0.33, 1, 0.68, 1)", fill: "backwards" });
+    });
+  }, [signature]);
   return (
-    <div className="flex flex-wrap items-end gap-x-[3px] gap-y-2" data-chart="monthly">
-      {points.map((point) => {
+    <div ref={root} className="flex flex-wrap items-end gap-x-[3px] gap-y-2" data-chart="monthly" onMouseLeave={() => setActive(null)}>
+      {points.map((point, index) => {
         const negative = point.return_fraction.trim().startsWith("-");
         /* enrich_analysis: a first/last month the scope only part-covers is drawn hatched, with its observation count. */
         const partial = point.partial === true;
@@ -2062,27 +2094,40 @@ function MonthlyHeat({ series }: { series: EvidenceSeries }) {
         const shown = formatMetric(point.return_fraction, "fraction");
         /* HiFi tick: `7/26` — month without its zero, two-digit year. */
         const tick = `${month.slice(5).replace(/^0/, "")}/${month.slice(2, 4)}`;
+        const rank = extremes?.best === point.month_start_utc_ms ? "best" : extremes?.worst === point.month_start_utc_ms ? "worst" : null;
+        const detail = `${month} · ${shown ?? point.return_fraction} · exact ${point.return_fraction}${coverage}${rank ? ` · ${rank} month` : ""}`;
+        const open = active === point.month_start_utc_ms;
+        const side = index < points.length / 4 ? { left: 0 } : index > (points.length * 3) / 4 ? { right: 0 } : { left: "50%", transform: "translateX(-50%)" };
         return (
           <span
             key={point.month_start_utc_ms}
-            className="flex min-w-[38px] max-w-[56px] flex-1 flex-col gap-0.5"
+            className="relative flex min-w-[38px] max-w-[56px] flex-1 flex-col gap-0.5 outline-offset-1 focus-visible:outline focus-visible:outline-1"
+            style={{ outlineColor: "var(--accent)" }}
             data-month={month}
             data-exact={point.return_fraction}
             data-month-partial={partial ? "true" : undefined}
-            title={`${month} · ${shown ?? point.return_fraction} · exact ${point.return_fraction}${coverage}`}
+            data-month-rank={rank ?? undefined}
+            tabIndex={0}
+            title={open ? undefined : detail}
+            aria-label={detail}
+            onMouseEnter={() => setActive(point.month_start_utc_ms)}
+            onFocus={() => setActive(point.month_start_utc_ms)}
+            onBlur={() => setActive(null)}
+            onClick={() => setActive(point.month_start_utc_ms)}
           >
             <span
               className="block h-[26px] rounded-[3px]"
               data-month-cell
-              style={
-                partial
+              style={{
+                ...(partial
                   ? {
                       border: `1.5px dashed ${negative ? "var(--bad)" : "var(--good)"}`,
                       background: `repeating-linear-gradient(135deg, ${negative ? "var(--bad)" : "var(--good)"} 0 2px, transparent 2px 5px)`,
                       opacity: Math.max(0.6, monthTint(point.return_fraction)),
                     }
-                  : { background: negative ? "var(--bad)" : "var(--good)", opacity: monthTint(point.return_fraction) }
-              }
+                  : { background: negative ? "var(--bad)" : "var(--good)", opacity: monthTint(point.return_fraction) }),
+                ...(rank ? { boxShadow: "0 0 0 1.5px var(--paper-raised), 0 0 0 2.5px var(--ink)" } : {}),
+              }}
             />
             <span
               className="mono text-center text-[8.5px]"
@@ -2094,6 +2139,18 @@ function MonthlyHeat({ series }: { series: EvidenceSeries }) {
             <span className="mono text-center text-[8px]" style={{ color: "var(--ink-faint)" }}>
               {tick}
             </span>
+            {open ? (
+              <span
+                role="tooltip"
+                className="mono pointer-events-none absolute bottom-full z-20 mb-1 whitespace-nowrap rounded-[2px] border px-2 py-1 text-[10px] leading-[1.5]"
+                style={{ background: "var(--paper-raised)", borderColor: "var(--line)", color: "var(--ink)", ...side }}
+                data-month-tooltip
+              >
+                {month} <b>{shown ?? point.return_fraction}</b>
+                <br />
+                <span style={{ color: "var(--ink-soft)" }}>exact {point.return_fraction}{coverage}{rank ? ` · ${rank} month` : ""}</span>
+              </span>
+            ) : null}
           </span>
         );
       })}
@@ -3577,6 +3634,8 @@ function SummaryTab({
   const allTimeTitle = (kind: SeriesKind, derivedWords: string, legacyWords: string) => (loaded: EvidenceSeries | null) =>
     enrichedSeries.has(kind) || (loaded !== null && derivationOf(loaded) !== null) ? derivedWords : legacyWords;
   const underwater = enriched !== null ? underwaterPoints(enriched) : null;
+  /* The deepest drawdown episode the service published, shaded on the equity, underwater and curve charts. */
+  const deepest = enriched !== null && enriched.drawdown_episodes.state === "AVAILABLE" ? deepestSpan(enriched.drawdown_episodes.values) : null;
   const performance = hub.oos_performance ?? null;
   /* D-AN-01: all-time analytics. With a v2 block (or on a retained run, where the rest is one absence
      line) the headline is the HiFi's five hero tiles; the other numbers are in the Behavior block. */
@@ -3707,7 +3766,7 @@ function SummaryTab({
       >
         {(loaded) => (
           <ChartFrame height={380}>
-            <EquityChart series={loaded} inSample={summary?.in_sample_equity.state === "AVAILABLE" ? summary.in_sample_equity.points : undefined} />
+            <EquityChart series={loaded} span={deepest} inSample={summary?.in_sample_equity.state === "AVAILABLE" ? summary.in_sample_equity.points : undefined} />
           </ChartFrame>
         )}
       </SeriesPanel>
@@ -3723,7 +3782,7 @@ function SummaryTab({
       >
         {(loaded) => (
           <ChartFrame height={180}>
-            <DrawdownChart series={loaded} />
+            <DrawdownChart series={loaded} span={deepest} />
           </ChartFrame>
         )}
       </SeriesPanel>
@@ -3743,14 +3802,14 @@ function SummaryTab({
             chip={enriched !== null ? <EnrichedChip block={enriched} extra={`curves ${enriched.curves.sampling.method} · ${formatMetric(enriched.curves.sampling.emitted_point_count, "count")} of ${formatMetric(enriched.curves.sampling.source_observation_count, "count")} observations, extrema kept`} /> : undefined}
             chart={
               <ChartFrame height={230}>
-                <StrategyBenchmarkChart strategy={v2.strategy_curve} benchmark={v2.benchmark_curve} />
+                <StrategyBenchmarkChart strategy={v2.strategy_curve} benchmark={v2.benchmark_curve} span={deepest} />
               </ChartFrame>
             }
             underwater={
               underwater !== null && v2.strategy_curve.length > 0 ? (
                 <div className="mt-2" data-underwater-strip title="Drawdown from the running peak, all time. Same curve sample as the lines above.">
                   <ChartFrame height={132}>
-                    <UnderwaterStrip points={underwater} height={132} chart="underwater-strip" />
+                    <UnderwaterStrip points={underwater} height={132} chart="underwater-strip" span={deepest} group="evidence-curves" />
                   </ChartFrame>
                 </div>
               ) : undefined

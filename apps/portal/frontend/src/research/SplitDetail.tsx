@@ -36,6 +36,7 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 
+import { useEntryRef } from "./chartLife";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
@@ -517,6 +518,7 @@ function WindowAnatomy({
   runPath: string;
   cursor: EvidenceCursor;
 }) {
+  const trackRef = useEntryRef<HTMLDivElement>();
   const placed = useMemo(() => {
     const out = windows.map((window) => {
       const geometry = placeInTimeline(timeline, window.span);
@@ -580,6 +582,7 @@ function WindowAnatomy({
           windows
         </span>
         <div
+          ref={trackRef}
           className="relative flex-1 rounded-[3px]"
           data-track
           data-track-rows={rows}
@@ -596,6 +599,8 @@ function WindowAnatomy({
               "data-window": window.key,
               "data-hairline": window.hairline ? "true" : "false",
               "data-window-row": window.row,
+              "data-entry": "x",
+              "data-entry-origin": "left",
               className: "absolute rounded-[3px]",
               style: {
                 left: `${window.leftPercent}%`,
@@ -858,12 +863,13 @@ function FoldRows({
   const bounds = useFoldBounds(folds);
   /* Roving tab stop: the cursor's fold, or the first while the cursor is off the plan. */
   const tabStop = cursor.fold >= 1 && cursor.fold <= folds.length ? cursor.fold : 1;
+  const rowsRef = useEntryRef<HTMLDivElement>();
 
   return (
     <>
       {/* HiFi gantt: one button per fold, no list roles (a pressed button is not a list item).
           QA S05: the count is the protocol strip's ("outer folds N"); the source token is a tooltip. */}
-      <div className="flex flex-col gap-[6px]" data-fold-rows data-chronology={split.fold_plan.chronology} title={`fold plan chronology: ${split.fold_plan.chronology}`}>
+      <div ref={rowsRef} className="flex flex-col gap-[6px]" data-fold-rows data-chronology={split.fold_plan.chronology} title={`fold plan chronology: ${split.fold_plan.chronology}`}>
         {folds.map((fold, index) => {
           const number = index + 1;
           const current = cursor.fold === number;
@@ -893,6 +899,8 @@ function FoldRows({
                 {bounds && train ? (
                   <span
                     data-fold-segment="train"
+                    data-entry="x"
+                    data-entry-origin="left"
                     role="img"
                     aria-label={`${foldLabel(fold.fold_id)} · train ${exact(train.start_utc_ms)} → ${exact(train.end_exclusive_utc_ms)}`}
                     title={`${foldLabel(fold.fold_id)} · train ${exact(train.start_utc_ms)} → ${exact(train.end_exclusive_utc_ms)}`}
@@ -908,6 +916,8 @@ function FoldRows({
                 {bounds && test ? (
                   <span
                     data-fold-segment="test"
+                    data-entry="x"
+                    data-entry-origin="left"
                     role="img"
                     aria-label={`${foldLabel(fold.fold_id)} · test ${exact(test.start_utc_ms)} → ${exact(test.end_exclusive_utc_ms)}`}
                     title={`${foldLabel(fold.fold_id)} · test ${exact(test.start_utc_ms)} → ${exact(test.end_exclusive_utc_ms)}`}

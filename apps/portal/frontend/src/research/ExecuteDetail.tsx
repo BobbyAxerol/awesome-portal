@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 
 import { EChart } from "../charts/EChart";
 import { baseOption, roleColorsNow } from "../charts/theme";
-import { CandleOverviewStrip, CandleReplayBody, hasBarLedger, paddedRange } from "./ExecuteCandleReplay";
+import { CandleOverviewStrip, CandleReplayBody, chartMotion, hasBarLedger, paddedRange, windowMarkers, type CandleMarker } from "./ExecuteCandleReplay";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
@@ -296,6 +296,32 @@ function AbsentPanel({
 
 const GRID = { left: 64, right: 20 } as const;
 
+const NOT_PUBLISHED = "not published";
+
+/** Tooltip words for a transition marker at one ordinal; the kind and side are the bar's own. */
+function markerLine(marker: CandleMarker | undefined): string {
+  return marker ? `<br/>transition ${marker.kind.toLowerCase()} → ${marker.side.toLowerCase()}` : "";
+}
+
+/** Equity pane tooltip: the sample's own date, equity and the drawdown at the same x. */
+export function equityTooltip(point: ReplayPoint | undefined, noun: string, marker?: CandleMarker): string {
+  if (!point) return "";
+  return `${noun} ${point.playback_ordinal + 1}<br/>${iso(point.at_utc_ms)}<br/>equity ${formatMetric(point.equity, "currency") ?? NOT_PUBLISHED}<br/>drawdown ${formatMetric(point.drawdown_fraction, "fraction") ?? NOT_PUBLISHED}${markerLine(marker)}`;
+}
+
+/** Drawdown pane tooltip: drawdown, with the equity at the same x. */
+export function drawdownTooltip(point: ReplayPoint | undefined): string {
+  if (!point) return "";
+  return `${iso(point.at_utc_ms)}<br/>drawdown ${formatMetric(point.drawdown_fraction, "fraction") ?? NOT_PUBLISHED}<br/>equity ${formatMetric(point.equity, "currency") ?? NOT_PUBLISHED}`;
+}
+
+/** Position pane tooltip: accepted position and signal target; a null target is absent, never zero. */
+export function positionTooltip(row: CurrentSourceObservation | undefined): string {
+  if (!row) return "";
+  const num = (value: string | null) => (value === null ? NOT_PUBLISHED : formatMetric(value, "count") ?? value);
+  return `${iso(row.at_utc_ms)}<br/>accepted ${num(row.accepted_position)}<br/>target ${num(row.signal_target)}`;
+}
+
 /**
  * Equity and drawdown for the loaded window, drawn once per window. The
  * playhead is an overlay the transport moves, so a tick never re-sets the
@@ -307,7 +333,10 @@ function SampleChart({
   noun = "sample",
   seriesName = "retrospective equity sample",
   caption = "Retrospective equity samples in this window, exact values",
+  markerRows,
 }: {
+  /** Served target transitions of the window (retained lane); drawn at their real ordinals. */
+  markerRows?: readonly CurrentSourceObservation[];
   items: readonly ReplayPoint[];
   transport: ReplayTransport;
   noun?: string;
@@ -315,12 +344,15 @@ function SampleChart({
   caption?: string;
 }) {
   const labels = useMemo(() => items.map((point) => iso(point.at_utc_ms)), [items]);
+  const markers = useMemo(() => (markerRows ? windowMarkers(markerRows) : []), [markerRows]);
   const equityOption = useMemo(() => {
     const role = roleColorsNow();
+    const byOrdinal = new Map(markers.map((marker) => [marker.ordinal, marker]));
+    const marked = items.flatMap((point, at) => (byOrdinal.has(point.playback_ordinal) ? [{ at, point, marker: byOrdinal.get(point.playback_ordinal)! }] : []));
     return baseOption({
       legend: { show: false },
       dataZoom: [] as never[],
-      animation: false,
+      ...chartMotion(),
       grid: { left: GRID.left, right: GRID.right, top: 12, bottom: 26 },
       xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { fontSize: 9 } },
       /* A flat window (equity unchanged) is padded by a hair of its level,
@@ -339,9 +371,7 @@ function SampleChart({
         formatter: (params: unknown) => {
           const rows = params as { dataIndex: number }[];
           const point = items[rows[0]?.dataIndex ?? 0];
-          return point
-            ? `${noun} ${point.playback_ordinal + 1}<br/>${iso(point.at_utc_ms)}<br/>equity ${formatMetric(point.equity, "currency") ?? "not published"}`
-            : "";
+          return equityTooltip(point, noun, point ? byOrdinal.get(point.playback_ordinal) : undefined);
         },
       },
       series: [
@@ -355,18 +385,31 @@ function SampleChart({
           lineStyle: { width: 1.3, color: role.oos },
           itemStyle: { color: role.oos },
         },
+        ...(marked.length > 0
+          ? [{
+              type: "scatter" as const,
+              name: "target transitions",
+              symbol: "triangle",
+              symbolSize: 8,
+              z: 5,
+              silent: true,
+              data: marked.map(({ point, marker }) => [iso(point.at_utc_ms), Number(point.equity), marker.kind]),
+              itemStyle: { color: role.is },
+            }]
+          : []),
       ],
     });
-  }, [items, labels, noun, seriesName]);
+  }, [items, labels, noun, seriesName, markers]);
 
   const drawdownOption = useMemo(() => {
     const tone = roleColorsNow().oos;
     return baseOption({
       legend: { show: false },
       dataZoom: [] as never[],
-      animation: false,
+      ...chartMotion(),
       grid: { left: GRID.left, right: GRID.right, top: 8, bottom: 22 },
       xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { show: false } },
+      tooltip: { formatter: (params: unknown) => drawdownTooltip(items[(params as { dataIndex: number }[])[0]?.dataIndex ?? 0]) },
       /* E2b (audit 8.7): a 90 px pane holds two labels, not eight; drawdown reads as a percentage. */
       yAxis: { type: "value", splitNumber: 1, axisLabel: { fontSize: 9, formatter: (value: number) => formatFractionAxis(value, 1) } },
       series: [
@@ -785,10 +828,11 @@ function PositionChart({ rows, transport }: { rows: readonly CurrentSourceObserv
     return baseOption({
       legend: { show: false },
       dataZoom: [] as never[],
-      animation: false,
+      ...chartMotion(),
       grid: { left: GRID.left, right: GRID.right, top: 8, bottom: 22 },
       xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { show: false } },
       yAxis: { type: "value", axisLabel: { fontSize: 9 } },
+      tooltip: { formatter: (params: unknown) => positionTooltip(rows[(params as { dataIndex: number }[])[0]?.dataIndex ?? 0]) },
       series: [
         {
           type: "line",
@@ -1152,6 +1196,7 @@ function RetainedBody({
                 noun="observation"
                 seriesName="retained equity observation"
                 caption="Retained equity observations in this window, exact values"
+                markerRows={rows}
               />
               <PositionChart rows={rows} transport={transport} />
               <TransportBar transport={transport} items={items} total={count} noun="observation" />

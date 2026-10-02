@@ -28,7 +28,7 @@
  * block by block; behaviour and data follow spec 01 (DQ-02).
  */
 
-import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -61,6 +61,7 @@ import { lineageHref } from "./lineageClient";
 import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
 import { formatDuration, formatMetric, formatUtc, shortDigest, shortId, typographicMinus } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
+import { datasetKey, ScrubLayer, tipMinus, useDrawIn, useScrub } from "./compareChartLife";
 import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
@@ -720,24 +721,7 @@ function AllTime({ runId, summary }: { runId: string; summary: AllTimeSummary })
       <span style={LABEL_9}>{summary.label}</span>
       {path !== null ? (
         <>
-          <svg
-            width={ALL_TIME_WIDTH}
-            height={ALL_TIME_HEIGHT}
-            viewBox={`0 0 ${ALL_TIME_WIDTH} ${ALL_TIME_HEIGHT}`}
-            role="img"
-            aria-label={`${summary.label} equity, ${n} points`}
-            data-all-time-points={n}
-          >
-            <title>{`${summary.label} · ${n} of ${summary.source_observation_count} points as served${first && last ? ` · ${first} → ${last}` : ""}`}</title>
-            <polyline
-              points={path}
-              fill="none"
-              stroke="var(--role-oos)"
-              strokeWidth={1.5}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          </svg>
+          <AllTimeLine summary={summary} path={path} n={n} first={first} last={last} />
           <span
             style={{ fontFamily: MONO, fontSize: 8.5, lineHeight: "11px", height: 11, color: "var(--ink-faint)", whiteSpace: "nowrap" }}
             data-all-time-caption
@@ -790,6 +774,162 @@ function AllTime({ runId, summary }: { runId: string; summary: AllTimeSummary })
             face={formatMetric(summary.max_drawdown_fraction, "fraction")}
             absent={NO_REASON}
           />
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** Keyframes for the sparkline draw-in; only referenced when motion is allowed. */
+export const SPARK_MOTION_CSS = `
+@keyframes rl-draw-in { from { clip-path: inset(-10% 100% -10% 0); } to { clip-path: inset(-10% 0 -10% 0); } }
+@keyframes rl-bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { [data-spark-scrub] > span, [data-all-time-scrub] > svg { animation: none !important; } }
+[data-spark-scrub]:focus-visible, [data-all-time-scrub]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+`;
+
+/** Injected once, before first paint of a card, so a grid of cards carries one sheet and no extra child nodes. */
+function ensureSparkMotionCss(): void {
+  if (typeof document === "undefined" || document.getElementById("rl-spark-motion")) return;
+  const sheet = document.createElement("style");
+  sheet.id = "rl-spark-motion";
+  sheet.textContent = SPARK_MOTION_CSS;
+  document.head.appendChild(sheet);
+}
+
+/** The all-time polyline with its draw-in and a nearest-point read of the served points. */
+export function AllTimeLine({
+  summary,
+  path,
+  n,
+  first,
+  last,
+}: {
+  summary: AllTimeSummary;
+  path: string;
+  n: number;
+  first: string | null;
+  last: string | null;
+}) {
+  const points = summary.sparkline;
+  ensureSparkMotionCss();
+  const animate = useDrawIn(datasetKey("all-time", points, points[0]?.value, points[n - 1]?.value));
+  const vertices = useMemo(
+    () =>
+      path.split(" ").map((pair) => {
+        const [x, y] = pair.split(",").map(Number);
+        return { x: (x! / ALL_TIME_WIDTH) * 100, y: (y! / ALL_TIME_HEIGHT) * 100 };
+      }),
+    [path],
+  );
+  const xs = useMemo(() => vertices.map((v) => v.x), [vertices]);
+  const { index, handlers } = useScrub(vertices.length === n ? xs : []);
+  const point = index === null ? null : points[index];
+  const vertex = index === null ? null : vertices[index];
+  return (
+    <span
+      style={{ position: "relative", display: "inline-block", width: ALL_TIME_WIDTH, height: ALL_TIME_HEIGHT, touchAction: "pan-y" }}
+      tabIndex={0}
+      aria-label={`${summary.label} equity, ${n} points. Left and right arrows read each point.`}
+      data-all-time-scrub
+      {...handlers}
+    >
+      <svg
+        width={ALL_TIME_WIDTH}
+        height={ALL_TIME_HEIGHT}
+        viewBox={`0 0 ${ALL_TIME_WIDTH} ${ALL_TIME_HEIGHT}`}
+        role="img"
+        aria-label={`${summary.label} equity, ${n} points`}
+        data-all-time-points={n}
+        data-enter={animate ? "true" : undefined}
+        style={animate ? { animation: "rl-draw-in 600ms cubic-bezier(0.215, 0.61, 0.355, 1) both" } : undefined}
+      >
+        <title>{`${summary.label} · ${n} of ${summary.source_observation_count} points as served${first && last ? ` · ${first} → ${last}` : ""}`}</title>
+        <polyline
+          points={path}
+          fill="none"
+          stroke="var(--role-oos)"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </svg>
+      {point && vertex ? (
+        <ScrubLayer xPct={vertex.x} dots={[{ y: vertex.y, color: "var(--role-oos)" }]} testId="all-time" above>
+          <div data-scrub-date>{formatUtc(point.at_utc_ms)}</div>
+          <div data-scrub-value data-exact={point.value}>
+            {tipMinus(point.value)}
+          </div>
+        </ScrubLayer>
+      ) : null}
+      {point ? (
+        <span className="sr-only" role="status" data-scrub-live>
+          {`${formatUtc(point.at_utc_ms)} equity ${point.value}`}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** The 24-column sparkline: columns grow in on first sight; a read names the column's served value. */
+export function SparkBars({
+  shown,
+  heights,
+  ink,
+  label,
+  title,
+  extra,
+  revisionKey,
+}: {
+  shown: readonly string[];
+  heights: number[];
+  ink: string;
+  label: string;
+  title: string;
+  extra: Record<string, string | number | undefined>;
+  revisionKey: string;
+}) {
+  ensureSparkMotionCss();
+  const animate = useDrawIn(`bars|${revisionKey}|${shown.length}|${shown[0]}|${shown[shown.length - 1]}`);
+  const xs = useMemo(() => shown.map((_, i) => ((i + 0.5) / shown.length) * 100), [shown]);
+  const { index, handlers } = useScrub(xs);
+  return (
+    <span
+      className="flex items-end"
+      style={{ ...SPARK_BOX, position: "relative", touchAction: "pan-y" }}
+      {...extra}
+      role="img"
+      tabIndex={0}
+      aria-label={`${label}. Left and right arrows read each column.`}
+      title={title}
+      data-spark-scrub
+      {...handlers}
+    >
+      {heights.map((height, i) => (
+        <span
+          key={i}
+          aria-hidden="true"
+          className="flex-1 rounded-[1px]"
+          style={{
+            height: `${height.toFixed(0)}%`,
+            background: ink,
+            opacity: index === i ? 1 : 0.75,
+            transformOrigin: "bottom",
+            animation: animate ? `rl-bar-grow 600ms cubic-bezier(0.215, 0.61, 0.355, 1) ${Math.min(i * 8, 160)}ms both` : undefined,
+          }}
+        />
+      ))}
+      {index !== null ? (
+        <ScrubLayer xPct={xs[index]!} dots={[]} testId="spark" above>
+          <div data-scrub-date>{`${index + 1} of ${shown.length}`}</div>
+          <div data-scrub-value data-exact={shown[index]}>
+            {tipMinus(shown[index]!)}
+          </div>
+        </ScrubLayer>
+      ) : null}
+      {index !== null ? (
+        <span className="sr-only" role="status" data-scrub-live>
+          {`column ${index + 1} of ${shown.length}: ${shown[index]}`}
         </span>
       ) : null}
     </span>
@@ -935,26 +1075,20 @@ function Sparkline({
       ) : null}
       {(thirty || series) && heights ? (
         <>
-          <span
-            className="flex items-end"
-            style={SPARK_BOX}
-            data-sparkline-values={shown.length}
-            data-sparkline-window={thirty ? "last_30d" : "all_time"}
-            data-sparkline-partial={thirty?.partial ? "true" : undefined}
-            data-sparkline-revision={thirty ? undefined : (series?.revision ?? undefined)}
-            role="img"
-            aria-label={thirty ? `Last 30 days OOS equity, ${thirty.caption}` : `OOS equity, ${sparkCaption(shown.length, series?.source ?? null)}`}
+          <SparkBars
+            shown={shown}
+            heights={heights}
+            ink={ink}
+            label={thirty ? `Last 30 days OOS equity, ${thirty.caption}` : `OOS equity, ${sparkCaption(shown.length, series?.source ?? null)}`}
             title={thirty ? thirty.title : sparkProvenance(shown.length, series?.source ?? null, item.evidence_revision)}
-          >
-            {heights.map((height, index) => (
-              <span
-                key={index}
-                aria-hidden="true"
-                className="flex-1 rounded-[1px]"
-                style={{ height: `${height.toFixed(0)}%`, background: ink, opacity: 0.75 }}
-              />
-            ))}
-          </span>
+            revisionKey={thirty ? "30d" : (series?.revision ?? "")}
+            extra={{
+              "data-sparkline-values": shown.length,
+              "data-sparkline-window": thirty ? "last_30d" : "all_time",
+              "data-sparkline-partial": thirty?.partial ? "true" : undefined,
+              "data-sparkline-revision": thirty ? undefined : (series?.revision ?? undefined),
+            }}
+          />
           <span
             style={caption}
             data-sparkline-caption

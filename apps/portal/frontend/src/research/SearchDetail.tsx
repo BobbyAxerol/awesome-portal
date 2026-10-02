@@ -77,6 +77,7 @@ import {
 import { deepDiveHref, serializeCursor, type EvidenceCursor } from "./evidenceCursor";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME } from "./SplitDetail";
 import { LANE_STATE_COPY } from "./splitClient";
+import { useEntryRef } from "./chartLife";
 import type { LedgerSlot, RetainedRunFacts } from "./useSearch";
 import { BoundWarningNote } from "./BoundWarning";
 import type { BoundWarningValue } from "./BoundWarning";
@@ -537,13 +538,14 @@ function ParameterTable({
 }) {
   /* Compact (laptop Stage A column): kind and levels narrow, so θ*'s track keeps real width beside the note. */
   const compact = kindWidth !== undefined && kindWidth < 112;
+  const entryRef = useEntryRef<HTMLDivElement>();
   const levelsWidth = compact ? 44 : 56;
   const noteWidth = compact ? 104 : 118;
   const columns = A1_COLUMNS.map((column) =>
     column.head === "kind" && kindWidth ? { ...column, width: kindWidth } : column.head === "levels" ? { ...column, width: levelsWidth } : column,
   );
   return (
-    <div className="flex min-w-0 flex-col" data-parameters={parameters.length}>
+    <div ref={entryRef} className="flex min-w-0 flex-col" data-parameters={parameters.length}>
       <div
         className="flex border-b pb-[3px] text-[9.5px] uppercase tracking-[.06em]"
         style={{ color: "var(--ink-faint)", borderColor: "var(--line-soft)" }}
@@ -604,12 +606,14 @@ function ParameterTable({
               className="relative h-[11px] flex-1 border-b"
               style={{ borderColor: "var(--line)" }}
               role="img"
+              tabIndex={0}
               aria-label={`${parameter.name} ${parameter.effective_value} at ${parameter.position_percent}% of ${parameter.minimum} … ${parameter.maximum}`}
               title={`${parameter.effective_value} sits at ${parameter.position_percent}% of the declared range · ${parameter.bound_state}`}
             >
               <span
                 data-position={parameter.name}
                 data-position-percent={parameter.position_percent}
+                data-entry="fade"
                 data-tick-tone={parameter.bound_warning?.state ?? "NOT_PUBLISHED"}
                 className="absolute bottom-[-1px] h-[11px] w-[2px]"
                 style={{ left: `${parameter.position_percent}%`, background: tickTone(parameter.bound_warning) }}
@@ -1058,8 +1062,9 @@ function RetainedPoolFreeze({ search }: { search: CurrentSourceSearch }) {
   ];
   /* Bar length is geometry only: each count against the Stage A trial count. */
   const most = search.ledger.source_trial_count;
+  const entryRef = useEntryRef<HTMLDivElement>();
   return (
-    <div className="flex flex-col gap-[5px]" data-retained-pool="pre-e5">
+    <div ref={entryRef} className="flex flex-col gap-[5px]" data-retained-pool="pre-e5">
       <span className="mono text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} title={SERVER_PREDATES_POOL} data-gap-reason="pool">
         pool counts and K — not published · rows below are ledger totals
       </span>
@@ -1068,7 +1073,7 @@ function RetainedPoolFreeze({ search }: { search: CurrentSourceSearch }) {
           <span className="w-[158px] flex-none text-[10.5px] [font-family:var(--font-body)]" style={{ color: "var(--ink-soft)" }}>
             {label}
           </span>
-          {n !== null ? <span className="h-[8px] rounded-[2px]" style={{ width: `${n === 0 ? 2 : Math.round((n / most) * 120)}px`, background: "var(--accent-2)" }} /> : null}
+          {n !== null ? <span className="h-[8px] rounded-[2px]" data-entry="x" data-entry-origin="left" title={`${label}: ${n}`} style={{ width: `${n === 0 ? 2 : Math.round((n / most) * 120)}px`, background: "var(--accent-2)" }} /> : null}
           <span className="min-w-[40px] flex-none text-right">
             {n !== null ? n : <span className="italic" style={{ color: "var(--ink-faint)" }}>not published</span>}
           </span>

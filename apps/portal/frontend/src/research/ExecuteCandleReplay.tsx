@@ -27,6 +27,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "rea
 import { Link } from "react-router-dom";
 
 import { paletteNow } from "../charts/theme";
+import { smokeMotionAllowed } from "../execution/smokeMotion";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
 import { foldLabel, formatCount, formatMetric, formatUtc, typographicMinus } from "./researchFormat";
@@ -235,6 +236,58 @@ export function chartPrice(value: number): string {
   return typographicMinus(text);
 }
 
+
+/**
+ * Entry motion for every ECharts option on this screen: series draw in once for
+ * a dataset (an option is rebuilt only when its data changes, never on a poll or
+ * a transport tick). Reduced motion and the still-page contexts get none.
+ */
+export function chartMotion(): { animation: boolean; animationDuration: number; animationDurationUpdate: number; animationEasing: "cubicOut" } {
+  const on = smokeMotionAllowed();
+  return { animation: on, animationDuration: on ? 600 : 0, animationDurationUpdate: 0, animationEasing: "cubicOut" };
+}
+
+export interface CrosshairReadout {
+  ordinal: number;
+  at: string;
+  open: string | null;
+  high: string | null;
+  low: string | null;
+  close: string | null;
+  position: string | null;
+  equity: string | null;
+}
+
+const px = (value: string | null | undefined): string | null => {
+  if (value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? chartPrice(n) : null;
+};
+
+/** What the crosshair says about one served bar: its own OHLC, accepted position and equity — nothing derived. */
+export function crosshairReadout(row: CurrentSourceObservation): CrosshairReadout {
+  const candle = row.bar?.candle ?? null;
+  return {
+    ordinal: row.source_ordinal,
+    at: iso(row.at_utc_ms),
+    open: px(candle?.open),
+    high: px(candle?.high),
+    low: px(candle?.low),
+    close: px(candle?.close),
+    position: row.accepted_position === null || row.accepted_position === undefined ? null : typographicMinus(String(row.accepted_position)),
+    equity: formatMetric(row.equity, "currency"),
+  };
+}
+
+function ReadoutCell({ label, value }: { label: string; value: string | null }) {
+  return (
+    <span className="whitespace-nowrap">
+      <span style={{ color: "var(--ink-faint)" }}>{label} </span>
+      {value ?? <em style={{ color: "var(--ink-faint)" }}>not published</em>}
+    </span>
+  );
+}
+
 /* ------------------------------------------------------------------ parts */
 
 function Exact({ value, unit }: { value: string | null | undefined; unit: "currency" | "fraction" | "count" | null }) {
@@ -385,6 +438,12 @@ export function applyChartPalette(
   c.equity.applyOptions({ color: pal.ink });
 }
 
+const CHART_IN_CSS = `
+@keyframes s08chartin { from { opacity: 0 } to { opacity: 1 } }
+.s08-chart-in { animation: s08chartin .6s cubic-bezier(.2,.7,.2,1) 1; }
+@media (prefers-reduced-motion: reduce) { .s08-chart-in { animation: none } }
+`;
+
 function CandleChart({
   rows,
   transport,
@@ -419,6 +478,9 @@ function CandleChart({
   /* Bumped whenever the chart's own geometry moves (pan, zoom, resize, new data) so the overlay re-reads coordinates. */
   const [geometry, setGeometry] = useState(0);
   const [box, setBox] = useState({ width: 0, height: 0 });
+  /* The bar under the pointer (or the playhead's own bar, which the chart's crosshair also reports). */
+  const [probe, setProbe] = useState<number | null>(null);
+  const timeIndex = useRef<Map<number, number>>(new Map());
   const fitted = useRef<readonly CurrentSourceObservation[] | null>(null);
   const revealed = useRef(false);
   const resizeObserver = useRef<ResizeObserver | null>(null);
@@ -479,6 +541,14 @@ function CandleChart({
           });
         };
         try {
+          api.subscribeCrosshairMove?.((param: { time?: unknown }) => {
+            const at = typeof param?.time === "number" ? timeIndex.current.get(param.time) : undefined;
+            if (!disposed) setProbe(at ?? null);
+          });
+        } catch {
+          /* the readout falls back to the playhead's bar */
+        }
+        try {
           api.timeScale().subscribeVisibleLogicalRangeChange?.(bump);
         } catch {
           /* geometry events are a convenience */
@@ -526,6 +596,7 @@ function CandleChart({
     const c = chart.current;
     if (status !== "ready" || !c) return;
     const shown = rows.slice(0, cut).filter((row) => row.bar?.candle);
+    timeIndex.current = new Map(rows.slice(0, cut).map((row, at) => [sec(row.at_utc_ms), at]));
     c.candles.setData(shown.map((row) => ({
       time: sec(row.at_utc_ms),
       open: Number(row.bar!.candle!.open),
@@ -603,9 +674,30 @@ function CandleChart({
     }
   }, [index, rows, status]);
 
+  const probeRow = probe !== null && probe < cut ? rows[probe] : undefined;
+  const readoutRow = probeRow ?? (index < cut ? rows[index] : undefined);
+  const readout = useMemo(() => (readoutRow ? crosshairReadout(readoutRow) : null), [readoutRow]);
+
   return (
     <div className="relative" data-chart="replay-candles" data-chart-status={status}>
-      <div ref={host} style={{ height: 420 }} aria-hidden="true" />
+      <style>{CHART_IN_CSS}</style>
+      {readout ? (
+        <div
+          className="mono flex min-h-[18px] flex-wrap items-center gap-x-3 gap-y-0.5 px-3 pb-1 text-[10px]"
+          style={{ color: "var(--ink)" }}
+          data-crosshair-readout={readout.ordinal}
+          data-crosshair-source={probeRow ? "pointer" : "playhead"}
+        >
+          <span style={{ color: "var(--ink-soft)" }}>{readout.at}</span>
+          <ReadoutCell label="O" value={readout.open} />
+          <ReadoutCell label="H" value={readout.high} />
+          <ReadoutCell label="L" value={readout.low} />
+          <ReadoutCell label="C" value={readout.close} />
+          <ReadoutCell label="pos" value={readout.position} />
+          <ReadoutCell label="equity" value={readout.equity} />
+        </div>
+      ) : null}
+      <div ref={host} className={status === "ready" && smokeMotionAllowed() ? "s08-chart-in" : undefined} style={{ height: 420 }} aria-hidden="true" />
       {status !== "ready" ? (
         <span className="mono absolute left-3 top-3 text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
           {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; every bar is listed for screen readers"}

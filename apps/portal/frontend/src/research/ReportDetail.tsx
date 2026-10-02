@@ -63,7 +63,7 @@ import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
 import { FailedSheet, FinalAuditBlock } from "./ReportFailedSheet";
-import { ALL_TIME_CSS, AllTimeSupplement } from "./ReportAllTime";
+import { ALL_TIME_CSS, AllTimeSupplement, nextWindow, useEntryMotion } from "./ReportAllTime";
 import { ShortId } from "./ShortId";
 import { enrichedBlock } from "./enrichedAnalysis";
 import { BreakableCode, humanToken, kilobytes } from "./reportText";
@@ -267,6 +267,9 @@ const SHEET_CSS = `
 .rr-dd-fill { fill: var(--role-oos); fill-opacity: .16; stroke: none; }
 .rr-dd-line { stroke: var(--role-oos); stroke-opacity: .8; stroke-width: 1; fill: none; }
 .rr-eq-area:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rr-eq-tools { position: absolute; top: 0; left: var(--rr-gutter); z-index: 2; display: inline-flex; gap: 4px; }
+.rr-eq-draw { animation: rr-eq-reveal 600ms cubic-bezier(.215, .61, .355, 1) both; }
+@keyframes rr-eq-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .rr-eq-cross { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid var(--ink-soft); pointer-events: none; }
 .rr-eq-tip { position: absolute; top: 4px; display: flex; flex-direction: column; gap: 1px; padding: 3px 7px; font-family: var(--font-mono); font-size: 9.5px;
   color: var(--ink); background: var(--paper-raised); border: 1px solid var(--line); border-radius: 4px; pointer-events: none; white-space: nowrap; z-index: 2; }
@@ -877,8 +880,17 @@ function EquityDigest({ equity }: { equity: ReportEquity }) {
 function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equity: ReportEquity; folds: ReportFolds; equityIs: ReportEquity | null; sourceFallback?: number | null }) {
   /* QA S09 (UX-8): a pointer or the arrow keys read one sealed point: its day, equity and drawdown, exactly as sealed. */
   const [probe, setProbe] = useState<number | null>(null);
+  /* The shared time window of the equity plot and the underwater strip below it; null = the whole sealed series. */
+  const [win, setWin] = useState<[number, number] | null>(null);
+  const motion = useEntryMotion();
   const withIs = equityIs !== null && equityIs.state === "AVAILABLE" && equityIs.points.length > 0;
-  const points = withIs ? [...equityIs!.points, ...equity.points] : equity.points;
+  const allPoints = withIs ? [...equityIs!.points, ...equity.points] : equity.points;
+  const windowed = win === null ? allPoints : allPoints.filter((point) => point.at_utc_ms >= win[0] && point.at_utc_ms <= win[1]);
+  const zoomed = win !== null && windowed.length >= 2;
+  const points = zoomed ? windowed : allPoints;
+  const stamps = allPoints.map((point) => point.at_utc_ms);
+  const MIN_ZOOM_POINTS = 8;
+  const zoomBy = (dir: 1 | -1, centreMs: number | null) => setWin(nextWindow(stamps, win, dir, centreMs, 0, MIN_ZOOM_POINTS));
   const drawable = equity.state === "AVAILABLE" && equity.points.length > 0;
   const boundaries = foldBoundaries(folds);
   const geometry = drawable ? equitySvg(points, boundaries, { splitAtUtcMs: withIs ? equity.points[0]!.at_utc_ms : null }) : null;
@@ -909,6 +921,19 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
       {drawn ? (
         <>
           <div className="rr-eq-plot" style={gutter} data-equity-plot>
+            <div className="rr-eq-tools" data-equity-tools>
+              <button type="button" className="rr-at-btn" aria-label="Zoom equity in" title={points.length > MIN_ZOOM_POINTS ? "Zoom in (+)" : "Too few points in view to zoom in"} disabled={points.length <= MIN_ZOOM_POINTS} onClick={() => zoomBy(1, null)}>
+                +
+              </button>
+              <button type="button" className="rr-at-btn" aria-label="Zoom equity out" title={zoomed ? "Zoom out (−)" : "Already showing every sealed point"} disabled={!zoomed} onClick={() => zoomBy(-1, null)}>
+                −
+              </button>
+              {zoomed ? (
+                <button type="button" className="rr-at-btn" data-equity-reset aria-label="Reset zoom" title="Show every sealed point again" onClick={() => setWin(null)}>
+                  Reset zoom
+                </button>
+              ) : null}
+            </div>
             <div className="rr-eq-legend" aria-hidden="true" data-equity-legend>
               <span data-legend="is" data-legend-state={withIs ? "published" : "absent"}>
                 <span className="sw" />
@@ -924,7 +949,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
               data-equity-probe-area
               tabIndex={0}
               role="group"
-              aria-label="equity chart: move the pointer or use the arrow keys to read a point"
+              aria-label="equity chart: move the pointer or use the arrow keys to read a point; plus and minus zoom the time window"
               onPointerMove={(event) => {
                 const box = event.currentTarget.getBoundingClientRect();
                 if (box.width <= 0) return;
@@ -933,9 +958,14 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
               onPointerLeave={() => setProbe(null)}
               onBlur={() => setProbe(null)}
               onKeyDown={(event) => {
+                if (event.key === "+" || event.key === "=" || event.key === "-" || event.key === "_") {
+                  event.preventDefault();
+                  return zoomBy(event.key === "+" || event.key === "=" ? 1 : -1, probePoint ? probePoint.at_utc_ms : null);
+                }
                 if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Escape") return;
                 event.preventDefault();
                 if (event.key === "Escape") return setProbe(null);
+                if (event.shiftKey && zoomed) return setWin(nextWindow(stamps, win, 0, null, event.key === "ArrowRight" ? 0.25 : -0.25));
                 const index = probePoint ? points.indexOf(probePoint) : event.key === "ArrowRight" ? -1 : points.length;
                 const next = points[Math.min(points.length - 1, Math.max(0, index + (event.key === "ArrowRight" ? 1 : -1)))]!;
                 const first = points[0]!.at_utc_ms;
@@ -956,12 +986,14 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
                   <line key={rulePct} className="rr-eq-grid" x1={0} x2={drawn.width} y1={rulePct * 10} y2={rulePct * 10} data-y-rule />
                 ))}
                 <line className="rr-eq-axis" x1={0} x2={drawn.width} y1={drawn.height} y2={drawn.height} />
+                <g className={motion ? "rr-eq-draw" : undefined} data-equity-motion={motion ? "on" : "off"}>
                 <path className="rr-eq-fill" d={drawn.fill} />
                 {drawn.boundaries.map((mark) => (
                   <line key={mark.label} className="rr-eq-fold" data-boundary={mark.label} x1={mark.x} x2={mark.x} y1={0} y2={drawn.height} />
                 ))}
                 {drawn.lineBefore ? <path className="rr-eq-line rr-eq-is" d={drawn.lineBefore} data-equity-is-path /> : null}
                 <path className="rr-eq-line" d={drawn.line} data-equity-oos-path />
+                </g>
               </svg>
               {probePoint ? (
                 <>
@@ -1011,9 +1043,13 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
             <div className="rr-dd-area">
               <svg viewBox={`0 0 ${drawn.width} ${drawn.height}`} preserveAspectRatio="none" aria-hidden="true">
                 <line className="rr-eq-grid" x1={0} x2={drawn.width} y1={0} y2={0} />
-                <path className="rr-dd-fill" d={drawn.underwater} />
-                <path className="rr-dd-line" d={drawn.underwaterLine} />
+                <g className={motion ? "rr-eq-draw" : undefined}>
+                  <path className="rr-dd-fill" d={drawn.underwater} />
+                  <path className="rr-dd-line" d={drawn.underwaterLine} />
+                </g>
               </svg>
+              {/* The same crosshair as the equity plot above: one probe reads both panels. */}
+              {probePoint ? <span className="rr-eq-cross" style={{ left: `${probePct}%` }} aria-hidden="true" data-underwater-cross /> : null}
               <div aria-hidden="true">
                 {drawn.drawdownTop !== null ? (
                   <span className="rr-lbl y" style={{ top: "0%" }} data-dd-top title={drawn.drawdownTop}>
@@ -1058,6 +1094,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
             : "┆ = fold start"
           : `fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]} · ${folds.reason_code ?? factReason(folds)}`}
         {geometry && geometry.dropped > 0 ? ` · ${geometry.dropped} points did not parse and were not drawn` : ""}
+        {zoomed ? ` · zoomed ${iso(points[0]!.at_utc_ms).slice(0, 10)} to ${iso(points[points.length - 1]!.at_utc_ms).slice(0, 10)}` : ""}
       </p>
       <EquityDigest equity={equity} />
       {drawable ? (
@@ -1065,7 +1102,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
           <table>
             <caption>Sealed equity points, exact values</caption>
             <tbody>
-              {points.map((point) => (
+              {allPoints.map((point) => (
                 <tr key={point.at_utc_ms}>
                   <th scope="row">{iso(point.at_utc_ms)}</th>
                   <td>{point.equity}</td>

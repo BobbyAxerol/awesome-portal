@@ -31,6 +31,7 @@ import { Link } from "react-router-dom";
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 
 import { releaseCandidateHref } from "./releaseCandidateClient";
+import { useEntryRef } from "./chartLife";
 import { compareHref } from "./compareClient";
 import { ResearchPanel } from "./ResearchPanel";
 import {
@@ -2056,12 +2057,13 @@ const COUNT_LABELS: [keyof Lineage["counts"], string][] = [
  * publish draws nothing (never an empty segment standing for 0).
  */
 function StoryBar({ storied, probes }: { storied: unknown; probes: unknown }) {
+  const entryRef = useEntryRef<HTMLSpanElement>();
   if (typeof storied !== "number" || typeof probes !== "number" || storied + probes <= 0) return null;
   const label = `storied ${storied} · probes ${probes} of the returned attempts`;
   return (
-    <span className="ln-storybar" data-story-bar role="img" aria-label={label} title={label}>
-      <span data-seg="storied" style={{ flexGrow: storied }} />
-      <span data-seg="probes" style={{ flexGrow: probes }} />
+    <span ref={entryRef} className="ln-storybar" data-story-bar role="img" aria-label={label} title={label}>
+      <span data-seg="storied" data-entry="x" data-entry-origin="left" style={{ flexGrow: storied }} />
+      <span data-seg="probes" data-entry="x" data-entry-origin="right" style={{ flexGrow: probes }} />
     </span>
   );
 }

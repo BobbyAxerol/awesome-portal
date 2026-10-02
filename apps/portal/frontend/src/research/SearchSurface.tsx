@@ -16,6 +16,7 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
+import { useEntryAnimation, useEntryRef, useReadout } from "./chartLife";
 import type { CurrentSourceSearch } from "./searchClient";
 import { reasonCodeSentence } from "./researchRefusal";
 
@@ -156,6 +157,8 @@ export function SurfaceScatter({
   const [axes, setAxes] = useState(() => defaultAxes(surface.axes));
   const [roving, setRoving] = useState<string | null>(null);
   const plot = useRef<HTMLDivElement | null>(null);
+  useEntryAnimation(plot);
+  const readout = useReadout();
   /* A new pick (click, ledger row, link) becomes the stop again; arrows then move it. */
   useEffect(() => setRoving(null), [pick]);
   const pruned = surface.points.filter((point) => point.state === "PRUNED").length;
@@ -258,6 +261,8 @@ export function SurfaceScatter({
                 boxShadow: pick === point.trial_id ? "0 0 0 3px var(--viz-pick-ring)" : isBest && theta ? "0 0 0 2px var(--bad)" : "none",
                 zIndex: theta || isBest ? 3 : 1,
               }}
+              data-entry="fade"
+              {...readout.bind(title)}
               data-surface-point={point.trial_id}
               data-point-bucket={point.objective_bucket ?? ""}
               data-point-role={theta ? (isBest ? "theta best" : "theta") : isBest ? "best" : ""}
@@ -273,6 +278,9 @@ export function SurfaceScatter({
           {axes.x} →
         </span>
       </div>
+      <span className="mono min-h-[13px] text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-surface-readout={readout.text ?? undefined} aria-live="polite">
+        {readout.text}
+      </span>
       <div className="flex flex-wrap gap-3 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-surface-legend>
         <span className="flex items-center gap-1">
           <span className="inline-block h-[8px] w-[44px]" style={{ background: `linear-gradient(90deg, ${RAMP[0]}, ${RAMP[4]})` }} />
@@ -326,6 +334,7 @@ export function SurfaceProgression({
   };
   const thetaRow = declared.parameters.find((parameter) => parameter.name === conc);
   const pruned = points.filter((point) => point.state === "PRUNED");
+  const entryRef = useEntryRef<HTMLDivElement>();
   return (
     <SurfacePanel
       id="progression"
@@ -341,7 +350,7 @@ export function SurfaceProgression({
         </span>
       }
     >
-      <div className="flex flex-wrap items-stretch gap-[14px] min-[640px]:flex-nowrap">
+      <div ref={entryRef} className="flex flex-wrap items-stretch gap-[14px] min-[640px]:flex-nowrap">
         <div className="flex min-w-[220px] flex-[1.2] flex-col gap-1">
           <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
             objective in trial order · gold = best-so-far
@@ -358,6 +367,7 @@ export function SurfaceProgression({
                       className="absolute h-[5px] w-[5px] rounded-full"
                       style={{ left: `${x.toFixed(1)}%`, top: `${y.toFixed(1)}%`, background: "var(--accent)", opacity: 0.55 }}
                       title={`trial ${point.trial_id} · IS ${two(point.objective)}`}
+                      data-entry="fade"
                       data-progression-trial={point.trial_id}
                     />
                   ) : null}
@@ -366,6 +376,8 @@ export function SurfaceProgression({
                       className="absolute h-[2px] w-[9px]"
                       style={{ left: `calc(${x.toFixed(1)}% - 2px)`, top: `${best.toFixed(1)}%`, background: "var(--accent-2)" }}
                       title={`best-so-far ${two(point.best_so_far)}`}
+                      data-entry="x"
+                      data-entry-origin="left"
                       data-best-so-far={point.best_so_far ?? ""}
                     />
                   ) : null}
@@ -418,6 +430,7 @@ export function SurfaceProgression({
                     opacity: 0.55,
                   }}
                   title={`trial ${point.trial_id} · ${conc} at ${position}% of its declared range`}
+                  data-entry="fade"
                 />
               );
             })}
@@ -427,6 +440,8 @@ export function SurfaceProgression({
                 style={{ top: `${(94 - thetaRow.position_percent * 0.88).toFixed(1)}%`, background: "var(--good)", opacity: 0.7 }}
                 title={`θ* ${conc} = ${thetaRow.value}`}
                 data-conc-theta={thetaRow.value}
+                data-entry="x"
+                data-entry-origin="left"
               />
             ) : null}
           </div>
@@ -448,6 +463,8 @@ export function SurfaceProgression({
 
 export function SurfaceDistributions({ surface }: { surface: Surface }) {
   const distributions = surface.distributions.parameters;
+  const entryRef = useEntryRef<HTMLDivElement>();
+  const readout = useReadout();
   return (
     <SurfacePanel
       id="distributions"
@@ -460,7 +477,7 @@ export function SurfaceDistributions({ surface }: { surface: Surface }) {
         </span>
       }
     >
-      <div className="flex flex-wrap" data-distributions={distributions.length}>
+      <div ref={entryRef} className="flex flex-wrap" data-distributions={distributions.length}>
         {distributions.map((distribution) => {
           const tallest = Math.max(1, ...distribution.bins.map((bin) => bin.count));
           return (
@@ -486,6 +503,11 @@ export function SurfaceDistributions({ surface }: { surface: Surface }) {
                       background: bin.shade_bucket === null ? "var(--paper-sunken)" : RAMP[bin.shade_bucket],
                     }}
                     title={`${bin.lower} … ${bin.upper} · ${bin.count} trial${bin.count === 1 ? "" : "s"} · mean IS ${bin.mean_objective === null ? "—" : `${two(bin.mean_objective)} (${bin.mean_objective})`}`}
+                    tabIndex={0}
+                    aria-label={`${distribution.name} ${bin.lower} … ${bin.upper}: ${bin.count} trial${bin.count === 1 ? "" : "s"}`}
+                    data-entry="y"
+                    data-entry-origin="bottom"
+                    {...readout.bind(`${distribution.name} · ${bin.lower} … ${bin.upper} · ${bin.count} trial${bin.count === 1 ? "" : "s"} · mean IS ${bin.mean_objective === null ? "—" : `${two(bin.mean_objective)} (${bin.mean_objective})`}`)}
                     data-bin={bin.index}
                     data-bin-count={bin.count}
                   />
@@ -505,6 +527,9 @@ export function SurfaceDistributions({ surface }: { surface: Surface }) {
           );
         })}
       </div>
+      <span className="mono block min-h-[13px] pt-1 text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-distribution-readout={readout.text ?? undefined} aria-live="polite">
+        {readout.text}
+      </span>
       <SurfaceImportance surface={surface} />
     </SurfacePanel>
   );
@@ -514,8 +539,9 @@ export function SurfaceDistributions({ surface }: { surface: Surface }) {
 
 function SurfaceImportance({ surface }: { surface: Surface }) {
   const importance = surface.importance;
+  const entryRef = useEntryRef<HTMLDivElement>();
   return (
-    <div className="flex flex-col gap-[3px] border-t pt-2" style={{ borderColor: "var(--line-soft)" }} data-panel="importance" data-panel-state={importance.state} data-panel-lane="retained">
+    <div ref={entryRef} className="flex flex-col gap-[3px] border-t pt-2" style={{ borderColor: "var(--line-soft)" }} data-panel="importance" data-panel-state={importance.state} data-panel-lane="retained">
       <div className="flex items-baseline justify-between">
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
           A5 · which params drive the objective
@@ -541,6 +567,8 @@ function SurfaceImportance({ surface }: { surface: Surface }) {
                   <span
                     className="absolute bottom-0 left-0 top-0"
                     style={{ width: `${Math.min(100, Math.abs(rho) * 160).toFixed(0)}%`, background: strong ? "var(--viz-ramp-2)" : "var(--line)" }}
+                    data-entry="x"
+                    data-entry-origin="left"
                   />
                 ) : null}
               </span>
@@ -562,6 +590,7 @@ function SurfaceImportance({ surface }: { surface: Surface }) {
 /* ------------------------------------------------------ B4 · θ* journey */
 
 export function ThetaJourney({ surface, declared, schedule }: { surface: Surface; declared: DeclaredSpace; schedule: string | null }) {
+  const entryRef = useEntryRef<HTMLDivElement>();
   const frequency = useMemo(
     () => Object.fromEntries(surface.parameter_frequency.parameters.map((row) => [row.name, row])),
     [surface.parameter_frequency.parameters],
@@ -576,6 +605,7 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
         </span>
       }
     >
+      <div ref={entryRef} className="contents">
       {declared.parameters.map((parameter) => {
         const row = frequency[parameter.name];
         return (
@@ -587,6 +617,7 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
               <span
                 className="absolute top-[5px] h-[10px] w-[10px] rounded-full"
                 style={{ left: `calc(${parameter.position_percent}% - 5px)`, background: "var(--good)" }}
+                data-entry="fade"
                 title={`θ* ${parameter.name} = ${parameter.value} · ${schedule === "global" ? "one global selection — the same value in every fold" : "the selection"}`}
               />
             </span>
@@ -601,6 +632,7 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
           </span>
         );
       })}
+      </div>
       <span
         className="text-[9.5px] leading-[1.5]"
         style={{ color: "var(--ink-faint)" }}
