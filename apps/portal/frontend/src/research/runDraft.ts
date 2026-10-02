@@ -20,6 +20,7 @@
  */
 
 import type { DeclaredParameter } from "./alphaImportClient";
+import { coverageFor } from "./dataDeclarationV2";
 import type { DatasetCatalog } from "./datasetClient";
 import type { RequestedSpec } from "./preflightClient";
 
@@ -574,6 +575,11 @@ export interface CoverageSource {
   monthsSpanned: number;
   /** The dataset's own clock — the server reads a naive boundary in this zone. */
   timezone: string;
+  /**
+   * Set when the bounds are the exact bar edges the index served for the chosen
+   * timeframe (`coverage_by_timeframe`), not month edges. The instants are UTC ms as served.
+   */
+  exact?: { timeframe: string; firstBarUtcMs: number; lastBarUtcMs: number; endExclusiveUtcMs: number };
 }
 
 export interface CoveragePrefill {
@@ -645,8 +651,13 @@ export function coverageMonthEdges(
  * What the chosen dataset and symbol allow to be prefilled, and if nothing,
  * why. Every state is distinct — "no dataset", "catalog unread", "symbol not
  * listed" and "coverage not published" are four different facts and read as such.
+ *
+ * With a `timeframe` and a v2 catalog that serves `coverage_by_timeframe` for
+ * exactly it, the bounds are that timeframe's first bar and last closed bar's
+ * end (UTC, as served), so every prefilled window lies inside the verified
+ * index. Otherwise (v1, no such entry, a non-UTC dataset) they are month edges.
  */
-export function planCoverage(catalog: DatasetCatalog | null, datasetId: string, symbol: string): CoveragePlan {
+export function planCoverage(catalog: DatasetCatalog | null, datasetId: string, symbol: string, timeframe = ""): CoveragePlan {
   if (datasetId === "") {
     return { state: "no-dataset", reason: "No dataset is chosen, so nothing is prefilled." };
   }
@@ -682,11 +693,34 @@ export function planCoverage(catalog: DatasetCatalog | null, datasetId: string, 
         : `${wanted} is not among this dataset's ${dataset.symbols.total ?? dataset.symbols.items.length} listed symbols, so nothing is prefilled.`,
     };
   }
+  const exact = exactEdges(listed, timeframe, dataset.source_timezone);
   const coverage = listed.coverage;
+  const edges = coverage === null ? null : coverageMonthEdges(coverage.first_month, coverage.last_month);
+  if (exact !== null) {
+    const firstMonth = isoUtc(exact.firstBarUtcMs).slice(0, 7);
+    const lastMonth = isoUtc(exact.lastBarUtcMs).slice(0, 7);
+    const spanned = coverageMonthEdges(firstMonth, lastMonth)?.monthsSpanned ?? 1;
+    const monthly = coverage !== null && edges !== null && coverage.months <= edges.monthsSpanned ? { coverage, edges } : null;
+    return {
+      state: "ready",
+      reason: null,
+      lower: isoUtc(exact.firstBarUtcMs),
+      upperExclusive: isoUtc(exact.endExclusiveUtcMs),
+      source: {
+        datasetId,
+        symbol: wanted,
+        firstMonth: monthly ? monthly.coverage.first_month : firstMonth,
+        lastMonth: monthly ? monthly.coverage.last_month : lastMonth,
+        months: monthly ? monthly.coverage.months : spanned,
+        monthsSpanned: monthly ? monthly.edges.monthsSpanned : spanned,
+        timezone: dataset.source_timezone,
+        exact: { timeframe, ...exact },
+      },
+    };
+  }
   if (coverage === null) {
     return { state: "coverage-not-published", reason: `Coverage is not published for ${wanted} in ${datasetId}, so nothing is prefilled.` };
   }
-  const edges = coverageMonthEdges(coverage.first_month, coverage.last_month);
   if (edges === null || coverage.months > edges.monthsSpanned) {
     return {
       state: "coverage-unreadable",
@@ -708,6 +742,32 @@ export function planCoverage(catalog: DatasetCatalog | null, datasetId: string, 
       timezone: dataset.source_timezone,
     },
   };
+}
+
+/** `YYYY-MM-DDTHH:mm`, the draft's instant text, from UTC ms. */
+function isoUtc(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 16);
+}
+
+/**
+ * The exact bar edges the index served for this timeframe, or null. Null when
+ * the entry is absent or not published, the edges are not a forward range, an
+ * instant is not on a whole minute (the input cannot carry it), or the dataset
+ * clock is not UTC (the draft text would be read in that zone, not as served).
+ */
+function exactEdges(
+  listed: unknown,
+  timeframe: string,
+  timezone: string,
+): { firstBarUtcMs: number; lastBarUtcMs: number; endExclusiveUtcMs: number } | null {
+  if (timeframe === "" || timezone.toUpperCase() !== "UTC") return null;
+  const frame = coverageFor(listed, timeframe);
+  if (frame === null || frame.availability !== "AVAILABLE") return null;
+  const { firstBarUtcMs: first, lastBarUtcMs: last, indexedEndExclusiveUtcMs: end } = frame;
+  if (first === null || last === null || end === null) return null;
+  if (last < first || end <= last) return null;
+  if (first % 60000 !== 0 || end % 60000 !== 0) return null;
+  return { firstBarUtcMs: first, lastBarUtcMs: last, endExclusiveUtcMs: end };
 }
 
 type PrefillTarget = Pick<RunDraft, "windows" | "walkForward">;

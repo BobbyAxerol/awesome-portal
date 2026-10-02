@@ -325,8 +325,14 @@ export function NewRunRoute() {
   useEffect(() => {
     const first = limits.declaredTimeframes?.[0];
     if (run.draft.timeframe !== "" || run.draft.alphaVersionId === "" || first === undefined) return;
-    run.patch({ timeframe: first });
-  }, [limits.declaredTimeframes, run]);
+    /* A prefill already placed from month edges is re-placed on the adopted timeframe's exact bar edges
+       (only values still holding the prefill; nothing new is filled here). */
+    const placed = run.draft.coveragePrefill?.source ?? null;
+    run.patch({
+      timeframe: first,
+      ...(placed ? applyCoveragePrefill(run.draft, planCoverage(catalog, run.draft.datasetId, run.draft.symbol, first)) : {}),
+    });
+  }, [limits.declaredTimeframes, run, catalog]);
 
   /* S02_DATA: when the catalog serves exactly one available dataset it is the
      only choice, so a plain visit opens on it (with its coverage prefill). Done
@@ -343,7 +349,7 @@ export function NewRunRoute() {
     const only = available[0]!;
     run.patch({
       datasetId: only.dataset_id,
-      ...applyCoveragePrefill(run.draft, planCoverage(catalog, only.dataset_id, run.draft.symbol)),
+      ...applyCoveragePrefill(run.draft, planCoverage(catalog, only.dataset_id, run.draft.symbol, run.draft.timeframe)),
     });
   }, [catalog, location.search, run]);
 

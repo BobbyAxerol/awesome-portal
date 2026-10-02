@@ -931,7 +931,13 @@ function RoutePanel({ route }: { route: AtlasDocument["routes"][number] | null }
 /* ------------------------------------------------- coverage prefill (D4) */
 
 /** The coverage as the reader reads it: `2020-01 → 2026-09 · 81 months`. */
+function barInstant(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 16).replace("T", " ");
+}
+
 function coverageSpan(source: CoverageSource): string {
+  /* Exact bar edges: the first and last bar of the chosen timeframe, as the index served them (UTC). */
+  if (source.exact) return `${barInstant(source.exact.firstBarUtcMs)} → ${barInstant(source.exact.lastBarUtcMs)} (${source.exact.timeframe})`;
   const months =
     source.months === source.monthsSpanned
       ? `${source.months} month${source.months === 1 ? "" : "s"}`
@@ -941,9 +947,14 @@ function coverageSpan(source: CoverageSource): string {
 
 /** The caption under a prefilled field: its source, and which edge of the coverage it is. */
 function prefillCaption(field: PrefillField, source: CoverageSource): string {
-  const edge = field === "is.start" || field === "walkForward.start"
-    ? `first day of ${source.firstMonth}`
-    : `end of ${source.lastMonth}`;
+  const start = field === "is.start" || field === "walkForward.start";
+  const edge = source.exact
+    ? start
+      ? `first ${source.exact.timeframe} bar`
+      : `end of the last ${source.exact.timeframe} bar`
+    : start
+      ? `first day of ${source.firstMonth}`
+      : `end of ${source.lastMonth}`;
   return `prefilled from ${source.symbol} coverage · ${edge}`;
 }
 
@@ -1018,10 +1029,16 @@ function DataStep({
   const typedSymbol = draft.symbol.trim().toUpperCase();
   const selectedSymbol = symbols.find((item) => item.symbol === typedSymbol) ?? serverItems.find((item) => item.symbol === typedSymbol) ?? null;
   const pickDataset = (datasetId: string) =>
-    patch({ datasetId, ...applyCoveragePrefill(draft, planCoverage(catalog, datasetId, draft.symbol)) });
+    patch({ datasetId, ...applyCoveragePrefill(draft, planCoverage(catalog, datasetId, draft.symbol, draft.timeframe)) });
   const pickSymbol = (symbol: string) =>
-    patch({ symbol, ...applyCoveragePrefill(draft, planCoverage(catalog, draft.datasetId, symbol)) });
-  const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol);
+    patch({ symbol, ...applyCoveragePrefill(draft, planCoverage(catalog, draft.datasetId, symbol, draft.timeframe)) });
+  /* The exact bar edges differ per timeframe, so a timeframe pick re-places bounds the reader never touched. */
+  const pickTimeframe = (timeframe: string) =>
+    patch({
+      timeframe,
+      ...(draft.coveragePrefill?.source ? applyCoveragePrefill(draft, planCoverage(catalog, draft.datasetId, draft.symbol, timeframe)) : {}),
+    });
+  const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe);
   const prefilledNow = outerFields(draft.protocol).some((field) => carriedCoverage(draft, field) !== null);
   const publishedTimeframes = limits.declaredTimeframes ?? [];
   const timeframeDeclared = publishedTimeframes.includes(draft.timeframe);
@@ -1125,7 +1142,7 @@ function DataStep({
             chips={chips}
             version={versionLabel}
             bad={draft.bound && publishedTimeframes.length > 0 && !timeframeDeclared}
-            onPick={(timeframe) => patch({ timeframe })}
+            onPick={pickTimeframe}
           />
         </div>
       </div>
@@ -1376,8 +1393,9 @@ function WindowPrefillNote({ draft, plan, warmupBars }: { draft: RunDraft; plan:
         <p
           data-prefill-source
           title={[
-            `${source.timezone} month partitions.`,
-            edgesSentence(warmupBars, draft.protocol),
+            source.exact
+              ? `Exact bar edges, UTC, end exclusive: the index's first bar and the end of its last closed bar for ${source.exact.timeframe}. Bars before the start are answered by the index, not computed here. Every value stays editable.`
+              : `${source.timezone} month partitions. ${edgesSentence(warmupBars, draft.protocol)}`,
             draft.protocol === "advanced"
               ? "First OOS instant is left empty: the release publishes no default for it."
               : "IS end, OOS and holdout start are left empty: the server publishes no rule for splitting coverage into windows.",
@@ -1426,7 +1444,7 @@ function WindowsStep({
   createAdmitted?: boolean;
 }) {
   const options = atlas?.current_release.walk_forward_options ?? null;
-  const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol);
+  const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe);
   const modes = atlas?.modes ?? [];
   const selectedMode = modes.find((mode) => mode.mode_id === draft.optimizationMode) ?? null;
   const scheduleOptions = atlas && selectedMode ? scheduleChoices(atlas, selectedMode) : [];
@@ -2336,7 +2354,7 @@ function WindowTimeline({
   estimate?: PreflightEstimate | null;
 }) {
   /* S02_DATA: the chosen symbol's served coverage on the same clock as the windows. */
-  const coverage = coverageRange(planCoverage(catalog, draft.datasetId, draft.symbol));
+  const coverage = coverageRange(planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe));
   const axis = sharedAxis(draft, coverage);
   const warnings = coverageWarnings(draft, coverage);
   const rows = timelineRows(draft, axis);

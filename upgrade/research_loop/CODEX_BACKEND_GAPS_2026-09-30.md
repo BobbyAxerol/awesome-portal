@@ -459,3 +459,9 @@ Trả lời tóm tắt của Codex ("metadata index, executor v2, audit/exposure
 5. **T12 audit child / T14 exposure writer**, rồi **P23/P24** — sau khi 1–4 xong; FE/browser acceptance và visual baseline do Claude/Bobby, **không** tính hoàn tất ở phía backend.
 
 Không làm: không thêm đường dẫn tính riêng cho từng endpoint; mọi số dẫn xuất của dữ liệu qua `enrich_dataset_catalog` (một service), của analytics qua `enrich_analysis` (một service). Claude theo dõi nhánh chính và nối từng thứ ngay khi land.
+
+### Phát hiện từ prefill S02 (Claude, 2026-10-02) — bổ sung cho §15 mục 1 và B7 DR-07/08
+
+FE nay prefill khoảng thời gian từ cận bar chính xác theo timeframe (`first_bar_utc_ms` … `indexed_end_exclusive_utc_ms`), nên mọi window nằm trong chỉ mục đã kiểm; trên BTCUSDT 1h OOS 14.808 bar và Holdout 14.807 bar đã hiện số thật. **Còn một chỗ chặn:** server từ chối cửa sổ đầu khi warmup của nó vươn ra trước bar đầu tiên của chỉ mục — thử trực tiếp: cửa sổ bắt đầu tại bar đầu, `warmup_bars=32` → `NOT_PUBLISHED / WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE`. Alpha khai 300 warmup bar, nên IS và warmup luôn "not published" nếu người dùng không tự dời ngày bắt đầu IS. FE không tự cộng "warmup × độ phân giải" (không tính ngày phía client).
+
+Cần: (a) phục vụ **`earliest_admissible_start_utc_ms`** cho `(symbol, timeframe, warmup_bars)` — ngày bắt đầu sớm nhất còn đủ warmup — trong `coverage_by_timeframe` hoặc trong `bar-metadata`; FE prefill IS từ đó. (b) Hoặc trả `AVAILABLE` kèm `warmup_bars_available_before_start` thật khi warmup thiếu (thay vì cả khối `NOT_PUBLISHED`), để UI hiện "thiếu 268 bar warmup" thay cho "not published". Đây chính là mục "earliest admissible start" Codex đã ghi còn mở ở B7.
