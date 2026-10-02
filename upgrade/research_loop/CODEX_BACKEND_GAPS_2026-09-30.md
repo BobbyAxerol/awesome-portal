@@ -963,3 +963,17 @@ shared-preview proof (separate shared-window authority) and genuine VN daily
 calendar/trading-bar/profile qualification; unavailable source instrument/
 wall-clock facts remain typed. P23 mixed-load 538/568 ms, old test manifests,
 engine-two and P24 remain separate gates, not a six-group PASS claim.
+
+## 28. Claude — G-22 chạy trên :8095 và kiểm B10/B11 trên dữ liệu thật; một job causal không được nhận (2026-10-02)
+
+Bobby cho phép Claude tạo run thử trên preview :8095 (stack Claude quản, workspace claude-preview). Tạo qua S02 thật (preflight → create), preview chạy `3a1378bf` (migration 087–089):
+
+| Run | Loại | Kết quả |
+|---|---|---|
+| R-P04-022 `rrun_9ec42333b812f7e41e389a36e06328df` | fixed 3 cửa sổ, mode_1_decay global | COMPLETED |
+| R-WFO-024 `rrun_a71ae7ea4b4ff87a8bbfe19aa4b1b43c` | advanced walk-forward weekly expanding, global | COMPLETED |
+| R-WFO-025 `rrun_5e1185f847dddd418bdbd1f9f32b87c7` | advanced WFO weekly expanding, **per_fold_causal**, inner weekly/expanding/14D/min 2 folds, trials ghim 3, seed 42 | **QUEUED, không bao giờ được nhận** |
+
+**G-23 (Codex): R-WFO-025 kẹt QUEUED.** Preflight 201 + create thành công. `research.jobs`: `queue_class=HEAVY`, `state=QUEUED`, `resource_class=p10-delta-wfo-v1`, `current_worker_attempt_id` rỗng, `attempt_limit=2`; `run_progress`: "QUEUED — WAITING FOR A WORKER · 0 worker attempts". `research.job_outbox` của mọi job (kể cả job đã SUCCEEDED) đều `PENDING/0 attempts` nên không phải tín hiệu. Worker `quant-worker-py` (build `3a1378bf`) không log gì cho job này (chỉ 2 cảnh báo "terminal worker notification was not published" của hai run trước, `NoStreamResponseError` từ JetStream); đã `docker compose restart quant-worker-py`, vẫn QUEUED sau >5 phút. R-WFO-024 cùng queue HEAVY và cùng `resource_class` chạy xong trong ~10 giây, nên khác biệt là profile causal. Nghi: worker/producer không nhận job có `execution_adapter_id` hoặc spec causal trong preview (thiếu đăng ký profile `p10.delta-signal-notional-causal-inner.v1` ở phía Python, hoặc `resource_class` ghi sai cho causal). Cần Codex chẩn đoán trên cell của họ với đúng run này, hoặc cho biết cờ/env cần cho worker preview. Đã bind S02–S09 causal ở FE; chưa kiểm S03–S09 causal trên dữ liệu thật vì thiếu run này.
+
+**Đã kiểm trên dữ liệu thật (browser :8095, 0 lỗi console):** S02: profile causal nhận diện đúng (`pinned by p10.delta-signal-notional-causal-inner.v1`, thẻ `trials 3 per outer fold study · total ≤ 48 · inner folds 2–16 · seed 42 · span ≤ 92 days`, trials/seed ghim, inner controls hiện). B10: run fixed S08 có dải price overview 12 nến/744 bar OOS cạnh equity; S09 run fixed có 3 ô IS; run WFO S08 có panel child-audit companion. Visual lane đầy đủ: 360 passed / 0 failed trên `3a1378bf`.
