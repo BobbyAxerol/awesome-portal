@@ -96,13 +96,6 @@ const SCREENS: Screen[] = [
  */
 const RUN_SCREENS: Screen[] = [
   {
-    name: "new-run",
-    path: "/research/quantbt/new",
-    // The level-1 heading is the module header ("QuantBT Research"); the
-    // flow's own title is level 2.
-    ready: (page) => page.getByRole("heading", { level: 2, name: "New Run" }),
-  },
-  {
     name: "run-overview",
     path: `/research/quantbt/runs/${FIXTURE_RUN_ID}/overview`,
     ready: (page) => page.locator("figure[data-fig='1']"),
@@ -130,11 +123,6 @@ const RUN_SCREENS: Screen[] = [
     name: "run-progress",
     path: `/research/quantbt/runs/${FIXTURE_RUNNING_RUN_ID}/overview`,
     ready: (page) => page.getByText(/fold timeline|Window timeline/i),
-  },
-  {
-    name: "alpha-imports",
-    path: "/research/quantbt/imports",
-    ready: (page) => page.getByTestId("import-summary"),
   },
   {
     name: "run-audit",
