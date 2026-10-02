@@ -31,6 +31,7 @@ import { LocalRealtimeError } from "./execution/profile-realtime.service";
 import { ResearchMetadataError } from "./research/contracts";
 import { ResearchAlphaImportError } from "./research/alpha-import.error";
 import { ResearchPreflightError } from "./research/preflight.error";
+import { ResearchDatasetIndexError } from "./research/dataset-index.error";
 import { ResearchFoundationError } from "./research/foundation.error";
 import { ResearchRunCreateError } from "./research/run-create.error";
 import { ResearchProgressError } from "./research/progress.error";
@@ -84,6 +85,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof ResearchMetadataError ||
       exception instanceof ResearchAlphaImportError ||
       exception instanceof ResearchPreflightError
+      || exception instanceof ResearchDatasetIndexError
       || exception instanceof ResearchFoundationError
       || exception instanceof ResearchRunCreateError
       || exception instanceof ResearchProgressError
@@ -114,7 +116,7 @@ export class HttpErrorFilter implements ExceptionFilter {
           ? { details: exception.details }
           : {}),
         // W4 CG-P08-03: the failed gate and requested-spec field path(s).
-        ...(exception instanceof ResearchPreflightError && exception.details
+        ...((exception instanceof ResearchPreflightError || exception instanceof ResearchDatasetIndexError) && exception.details
           ? { details: exception.details }
           : {}),
         // OL-09 / P22-B: downstream refusal codes are public typed facts, not raw error text.

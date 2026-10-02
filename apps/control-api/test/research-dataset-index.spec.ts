@@ -8,6 +8,8 @@ import {sha256} from "../src/auth/argon";
 import {sha256ResearchJson} from "../src/research/preflight.service";
 import {P04_DELTA_DECLARED_CONTRACT} from "../src/research/p04-delta.binding";
 import {wfoRequested} from "./research-w1-wfo.fixture";
+import {ResearchDatasetIndexError} from "../src/research/dataset-index.error";
+import {HttpErrorFilter} from "../src/http-error.filter";
 const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const fixture = (name = "healthy") => JSON.parse(readFileSync(resolve(root, `fixtures/research-dataset-catalog.v2.${name}.valid.json`), "utf8"));
 const config = { INTERNAL_PRINCIPAL_SECRET: "b7-test-principal-secret-0123456789", PORTAL_API_BASE_URL: "http://portal-api.test",
@@ -17,6 +19,13 @@ const request = { portalUser: { userId: "u1", username: "u1", role: "ADMIN", mus
 const make = (data = fixture(), member = true) => new ResearchDatasetIndexController({ catalog: async () => data } as never, { isMember: async () => member } as never, config, {} as never, {} as never);
 afterEach(() => vi.unstubAllGlobals());
 describe("B7 indexed dataset BFF", () => {
+  it("publishes only fixed metadata error copy and typed field paths", () => {
+    const send=vi.fn(), status=vi.fn(()=>({send}));
+    const details={gate:"window_alignment",field_paths:[["start_utc_ms"]]};
+    new HttpErrorFilter().catch(new ResearchDatasetIndexError(details), {switchToHttp:()=>({getResponse:()=>({status}),getRequest:()=>({headers:{"x-request-id":"metadata-alignment"}})})} as never);
+    expect(status).toHaveBeenCalledWith(400);
+    expect(send).toHaveBeenCalledWith({error:{code:"WINDOW_BOUND_NOT_ALIGNED",message:"Align window bounds to the selected UTC bar interval."},request_id:"metadata-alignment",details});
+  });
   it("requires CSRF and workspace before source I/O; resolves warmup on the server",async()=>{
     const spec=wfoRequested(), metadata=JSON.parse(readFileSync(resolve(root,"fixtures/research-declaration-estimate.v1.available.valid.json"),"utf8")).metadata;
     const estimate=vi.fn(async()=>metadata), load=vi.fn(async()=>({declaredContract:P04_DELTA_DECLARED_CONTRACT,entrypoint:P04_DELTA_DECLARED_CONTRACT.entrypoint}));

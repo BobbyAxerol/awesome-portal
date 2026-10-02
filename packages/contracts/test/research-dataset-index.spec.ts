@@ -7,6 +7,12 @@ const root = join(__dirname, "..");
 const read = (path: string) => JSON.parse(readFileSync(join(root, path), "utf8"));
 const doc = read("openapi/research-dataset-index.openapi.json");
 describe("B7 named metadata contracts", () => {
+  it("keeps metadata alignment errors out of the unchanged preflight vocabulary", () => {
+    const preflight = read("openapi/research-preflight.openapi.json");
+    expect(preflight.components.schemas.Problem.properties.error.properties.code.enum).not.toContain("WINDOW_BOUND_NOT_ALIGNED");
+    const validate = new Ajv2020({strict:false}).compile(JSON.parse(JSON.stringify({...doc.components.schemas.Problem,$defs:doc.components.schemas}).replaceAll("#/components/schemas/","#/$defs/")));
+    expect(validate({error:{code:"WINDOW_BOUND_NOT_ALIGNED",message:"Align window bounds to the selected UTC bar interval."},request_id:"metadata-alignment",details:{gate:"window_alignment",field_paths:[["start_utc_ms"]]}}), JSON.stringify(validate.errors)).toBe(true);
+  });
   it.each(["available","partial"])("validates generated declaration %s without prices or authorization", name => {
     const validate=new Ajv2020({strict:false}).compile(JSON.parse(JSON.stringify({...doc.components.schemas.DeclarationEstimate,$defs:doc.components.schemas}).replaceAll("#/components/schemas/","#/$defs/")));
     const fixture:components["schemas"]["DeclarationEstimate"]=read(`fixtures/research-declaration-estimate.v1.${name}.valid.json`);

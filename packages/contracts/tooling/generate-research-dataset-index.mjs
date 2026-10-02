@@ -2,6 +2,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 const root = new URL("../", import.meta.url), check = process.argv.includes("--check");
 const v1 = JSON.parse(readFileSync(new URL("openapi/research-preflight.openapi.json", root)));
+const metadataProblem = structuredClone(v1.components.schemas.Problem);
+metadataProblem.properties.error.properties.code.enum.push("WINDOW_BOUND_NOT_ALIGNED");
 const obj = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const nullable = schema => ({ anyOf: [schema, { type: "null" }] });
@@ -76,7 +78,7 @@ const doc = { openapi: "3.1.0", info: { title: "Research indexed data declaratio
   }, components: { securitySchemes: v1.components.securitySchemes, parameters:v1.components.parameters, schemas: { ...v1.components.schemas, DatasetCatalogV2: catalog, IndexedSymbol: indexedSymbol, Coverage: coverage,
     Availability: availability, Instrument: instrument, SymbolPage: page, BarMetadata: metadata,
     WindowEstimate:windowEstimate,DeclarationMetadata:declarationMetadata,DeclarationCondition:condition,DeclarationEstimate:estimate,
-    FieldPath: v1.components.schemas.FieldPath, Problem: v1.components.schemas.Problem } } };
+    FieldPath: v1.components.schemas.FieldPath, Problem: metadataProblem } } };
 const path = new URL("openapi/research-dataset-index.openapi.json", root), text = JSON.stringify(doc, null, 2) + "\n";
 if (check) { if (readFileSync(path, "utf8") !== text) throw new Error("Dataset index OpenAPI drift"); }
 else writeFileSync(path, text);

@@ -85,3 +85,13 @@ reasons. No frontend/baseline, protected kernel, production or remote change.
 Next: mandatory hook/landing and real API v2/fixed receipts; remaining calendar-
 correct HMD qualification; pinned-selection audit/exposure; one final P23
 candidate then P24/release rehearsal. None are silently marked complete.
+
+### Candidate build correction
+
+Source landed at `00bf0762`; mandatory hook PASS (contracts 218/218,
+Control API 1,454 pass / 1 skip). The first clean-image build then caught a
+generated-contract regression: `WINDOW_BOUND_NOT_ALIGNED` had expanded the old
+P08 error union and broken Claude's exhaustive frontend refusal map. Correction
+isolates this fixed-copy error in the metadata operation family and its own
+Problem schema; P08's accepted vocabulary is unchanged. No frontend file is
+edited and the failed build is not an acceptance receipt.

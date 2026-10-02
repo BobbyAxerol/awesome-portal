@@ -17,6 +17,7 @@ import { assertDeclaredOptimization } from "./preflight.service";
 import { ResearchDatasetIndexClient } from "./dataset-index.client";
 import { BarMetadataQuery, DatasetId, DeclarationEstimateRequestSchema, DeclarationEstimateSchema, IndexedCatalogQuery, SymbolPageQuery, SymbolPageSchema } from "./dataset-index.contract";
 import { ResearchPreflightError } from "./preflight.error";
+import { ResearchDatasetIndexError } from "./dataset-index.error";
 interface Request extends FastifyRequest { portalUser: PortalUser; portalWorkspaceId: string; portalSession: {csrfSecretHash: string}; }
 
 @UseGuards(SessionGuard)
@@ -42,8 +43,7 @@ export class ResearchDatasetIndexController {
     if (!parsed) throw this.invalid();
     const step = Number(parsed[1]) * ({min:60_000,m:60_000,h:3_600_000,d:86_400_000}[parsed[2].toLowerCase()] ?? 0);
     const failed = bounds.filter(([, value]) => Number.isFinite(value) && value % step !== 0).map(([key]) => key.split("."));
-    if (failed.length) throw new ResearchPreflightError("WINDOW_BOUND_NOT_ALIGNED", "Align window bounds to the selected UTC bar interval.", 400,
-      {gate:"window_alignment",field_paths:failed});
+    if (failed.length) throw new ResearchDatasetIndexError({gate:"window_alignment",field_paths:failed});
   }
 
   @Post("declaration-estimates")

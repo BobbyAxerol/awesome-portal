@@ -1564,7 +1564,6 @@
                   "SESSION_REQUIRED",
                   "REQUEST_REJECTED",
                   "RESEARCH_PREFLIGHT_INVALID",
-                  "WINDOW_BOUND_NOT_ALIGNED",
                   "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE",
                   "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE",
                   "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE",
@@ -1581,7 +1580,8 @@
                   "RESEARCH_PREFLIGHT_REJECTED",
                   "RESEARCH_PREFLIGHT_NOT_FOUND",
                   "RESEARCH_PREFLIGHT_EXPIRED",
-                  "RESEARCH_PREFLIGHT_STALE"
+                  "RESEARCH_PREFLIGHT_STALE",
+                  "WINDOW_BOUND_NOT_ALIGNED"
                 ]
               },
               "message": {
