@@ -92,6 +92,7 @@ export const ALL_TIME_CSS = `
 .rr-at-table th { font-size: 8.5px; font-weight: 400; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); text-align: right; }
 .rr-at-table th:first-child, .rr-at-table td:first-child { text-align: left; }
 .rr-at-table td { text-align: right; padding: 1px 0; }
+.rr-at-table td:not(:first-child) { white-space: nowrap; padding-left: 8px; }
 .rr-at-sub { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin: 0; font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); }
 .rr-at-wrap { position: relative; outline: none; }
 .rr-at-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -772,7 +773,7 @@ function Episodes({ block, onActive }: { block: EnrichedAnalysis; onActive?: (in
               >
                 <td>
                   {DAY(episode.start_utc_ms)}
-                  {label !== null ? <span data-episode-label style={{ color: "var(--ink-faint)", marginLeft: 6 }}>{label}</span> : null}
+                  {label !== null ? <span data-episode-label style={{ color: "var(--ink-faint)", display: "block" }}>{label}</span> : null}
                 </td>
                 <td style={{ color: "var(--bad)" }} data-exact={episode.depth_fraction}>
                   {formatMetric(episode.depth_fraction, "fraction") ?? episode.depth_fraction}
