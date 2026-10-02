@@ -44,9 +44,13 @@ export interface EChartProps {
   height?: number;
   className?: string;
   id?: string;
+  /** Charts that share a `group` (and an x axis) share one crosshair and tooltip. */
+  group?: string;
 }
 
-export function EChart({ option, height = 320, className, id }: EChartProps) {
+export function EChart({ option, height = 320, className, id, group }: EChartProps) {
+  const groupRef = useRef(group);
+  groupRef.current = group;
   const container = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
@@ -67,6 +71,10 @@ export function EChart({ option, height = 320, className, id }: EChartProps) {
       if (disposed || !container.current) return;
       chart = echarts.init(container.current, undefined, { renderer: "canvas" });
       chartRef.current = chart;
+      if (groupRef.current) {
+        chart.group = groupRef.current;
+        echarts.connect(groupRef.current);
+      }
       // A synchronous first paint (lazyUpdate:false) is what keeps screenshots
       // deterministic; jsdom has no canvas context and throws inside it.
       try {

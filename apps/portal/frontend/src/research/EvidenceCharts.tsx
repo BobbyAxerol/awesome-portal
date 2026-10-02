@@ -382,7 +382,7 @@ function hifiTooltip() {
 
 /* The crosshair prints the axis value on the axis itself; it must read in the
    same units as the ticks, not as the raw float ECharts plotted. */
-const timePointer = { label: { formatter: (param: { value: unknown }) => utcZ(Number(param.value)) } };
+const timePointer = { label: { margin: 22, formatter: (param: { value: unknown }) => utcZ(Number(param.value)) } };
 const fractionPointer = { label: { formatter: (param: { value: unknown }) => percent(Number(param.value), 2) } };
 const currencyPointer = {
   label: { formatter: (param: { value: unknown }) => withMinus(formatMetric(Number(param.value), "currency")) },

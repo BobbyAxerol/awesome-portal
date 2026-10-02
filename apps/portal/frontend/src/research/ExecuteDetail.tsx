@@ -429,14 +429,14 @@ function SampleChart({
   return (
     <div className="flex flex-col gap-1" data-chart="replay-equity">
       <div className="relative">
-        <EChart option={equityOption} height={260} />
+        <EChart option={equityOption} height={260} group="execute-replay" />
         <Playhead transport={transport} length={items.length} />
       </div>
       <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         drawdown — restated from the same samples
       </span>
       <div className="relative">
-        <EChart option={drawdownOption} height={90} />
+        <EChart option={drawdownOption} height={90} group="execute-replay" />
         <Playhead transport={transport} length={items.length} />
       </div>
       {/* A table ignores width: 1px, so the clip sits on a wrapper (E2, S08 overflowed 91px at 660). */}
@@ -862,7 +862,7 @@ function PositionChart({ rows, transport }: { rows: readonly CurrentSourceObserv
         model position — accepted (solid) · signal target (dashed)
       </span>
       <div className="relative">
-        <EChart option={option} height={90} />
+        <EChart option={option} height={90} group="execute-replay" />
         <Playhead transport={transport} length={rows.length} />
       </div>
       {/* A table ignores width: 1px, so the clip sits on a wrapper (E2, S08 overflowed 91px at 660). */}
