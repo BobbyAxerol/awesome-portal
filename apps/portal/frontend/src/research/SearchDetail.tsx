@@ -23,6 +23,7 @@
  * the read published it (DQ-15).
  */
 
+import { OrchestrationClocks } from "./OrchestrationClocks";
 import { useEffect, useId, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
@@ -1762,7 +1763,9 @@ function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument;
           title={
             [
               served ? `${title} ${served.title}.` : title,
-              typeof retained?.pool?.frozen_at_utc_ms === "number" ? `frozen at ${formatUtc(retained.pool.frozen_at_utc_ms)}` : null,
+              typeof retained?.pool?.frozen_at_utc_ms === "number"
+                ? `${retained.pool.frozen_at_source === "P11_STAGE_COMPLETED_S4_EVENT" ? "orchestration · stage 4 completed" : "frozen at"} ${formatUtc(retained.pool.frozen_at_utc_ms)}`
+                : null,
             ]
               .filter(Boolean)
               .join(" ")
@@ -2477,6 +2480,8 @@ export function SearchScreen({
                     {!fixed && !notFound ? <StageLink to={deepDiveHref(`${runPath}/freeze`, { ...cursor, stage: "freeze" })} action="pool-to-freeze" title="Open S3 · Freeze — the sealed θ* and its digest chain">S3 Freeze →</StageLink> : null}
                   </h3>
                   {retained ? (retained.pool ? <PoolFunnel search={retained} /> : <RetainedPoolFreeze search={retained} />) : gapOf("candidate_pool") ? <Gap gap={gapOf("candidate_pool") as SearchSourceGap} what="candidate pool" showReason /> : null}
+                  {/* Orchestration clocks under their own name — never an engine pool-freeze or first-OOS-read clock. */}
+                  {retained ? <OrchestrationClocks events={retained.stage_events} /> : null}
                 </section>
 
                 <section className={CARD} style={CARD_STYLE} data-panel="formula">

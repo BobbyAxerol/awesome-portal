@@ -89,6 +89,8 @@ describe("no internal identifier or direct source access on the Research surface
     "releaseCandidateClient.ts",
     // W4: CG-P08-04 dataset catalog (Screen 02).
     "datasetClient.ts",
+    // B10: child-audit companion (full source lifecycle rows, paged).
+    "childAuditCompanionClient.ts",
   ];
 
   /*

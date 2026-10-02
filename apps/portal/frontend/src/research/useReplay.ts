@@ -20,6 +20,10 @@ import {
   replayState,
   toReplayRefusal,
   isRetainedReplay,
+  FIXED_REPLAY_LIMIT_MAX,
+  fixedPageServesRows,
+  isFixedReplayPage,
+  type FixedReplayPage,
   type CurrentSourceLaneNotApplicable,
   type CurrentSourceReplay,
   type FoldSegment,
@@ -29,6 +33,7 @@ import {
   type ReplayNavigation,
   type ReplayRefusal,
 } from "./replayClient";
+import { PortalApiError } from "../lib/api";
 import { evidenceApi, type CurrentSourceClaimStrip } from "./evidenceClient";
 import { useRunIdentity, type RunIdentitySlot } from "./retainedLane";
 import { researchState, type ResearchState } from "./state";
@@ -67,6 +72,29 @@ export interface RetainedContext {
   identity: RunIdentitySlot;
   claim: RetainedClaimSlot;
 }
+
+/**
+ * The fixed/imported lane's pages (`researchFixedReplayObservationsGetV1`).
+ * `ready` holds every page read so far, in order, and the one on show; the
+ * route's cursor only moves forward, so "earlier" steps back over pages
+ * already loaded and "later" reads the next one. `absent` is the server's
+ * typed answer with nothing to replay — the legacy lane stands unchanged.
+ */
+export type FixedReplaySlot =
+  | { state: "idle" }
+  | { state: "loading" }
+  | {
+      state: "ready";
+      pages: readonly FixedReplayPage[];
+      index: number;
+      inFlight: boolean;
+      /** A failed next-page read; the loaded pages stay on screen. */
+      pageRefusal: ReplayRefusal | null;
+      /** Set when an expired cursor was answered by one re-read of the first page. */
+      recovered: boolean;
+    }
+  | { state: "absent"; page: FixedReplayPage }
+  | { state: "refused"; refusal: ReplayRefusal };
 
 type RetainedNavigation = Exclude<ReplayNavigation, { kind: "at_ordinal" }>;
 
@@ -111,6 +139,11 @@ export interface ReplayController {
   retryRetained?: () => void;
   retryTransitions?: () => void;
   retryChildAudit?: () => void;
+  /** S08 fixed/imported runs: the observation pages, read only after the hub answered a P04 route. */
+  fixed?: FixedReplaySlot;
+  fixedNextPage?: () => void;
+  fixedPreviousPage?: () => void;
+  fixedRetry?: () => void;
 }
 
 export type ChildAuditSlot =
@@ -366,6 +399,8 @@ export function useReplay(
     if (hubUnpublished) ensureRetained();
   }, [ensureRetained, hubUnpublished]);
 
+  const fixed = useFixedReplay(runId, workspaceId, replay?.route.state === "RETROSPECTIVE_EQUITY_ONLY");
+
   const retainedAnswered = retained.state === "ready" && isRetainedReplay(retained.replay);
   const identity = useRunIdentity(runId, workspaceId, retainedAnswered);
   const claim = useRetainedClaim(runId, workspaceId, retainedAnswered);
@@ -410,7 +445,93 @@ export function useReplay(
     retryRetained,
     retryTransitions,
     retryChildAudit,
+    fixed: fixed.slot,
+    fixedNextPage: fixed.next,
+    fixedPreviousPage: fixed.previous,
+    fixedRetry: fixed.retry,
   };
+}
+
+/**
+ * The fixed observation pages. Asked once the hub answered a P04 route, the
+ * first page; later pages only when the reader asks (`next`). Nothing here is
+ * polled, and a failure of this route never touches the legacy lane.
+ */
+function useFixedReplay(runId: string, workspaceId: string | undefined, enabled: boolean) {
+  const [slot, setSlot] = useState<FixedReplaySlot>({ state: "idle" });
+  const [want, setWant] = useState<{ cursor: string | null; attempt: number } | null>(null);
+  const slotRef = useRef(slot);
+  slotRef.current = slot;
+
+  useEffect(() => {
+    if (enabled) setWant((prev) => prev ?? { cursor: null, attempt: 0 });
+  }, [enabled]);
+
+  useEffect(() => {
+    if (want === null) return;
+    const controller = new AbortController();
+    let recovering = false;
+    const send = (cursor: string | null) =>
+      replayApi.fixedObservations(runId, {
+        workspaceId,
+        limit: FIXED_REPLAY_LIMIT_MAX,
+        ...(cursor ? { cursor } : {}),
+        signal: controller.signal,
+      });
+    setSlot((prev) => (prev.state === "ready" ? { ...prev, inFlight: true, pageRefusal: null } : { state: "loading" }));
+    send(want.cursor)
+      .catch((error: unknown) => {
+        /* One bounded recovery: an expired cursor (409) is dropped and the first page is read again. */
+        if (want.cursor === null || controller.signal.aborted || !(error instanceof PortalApiError) || error.status !== 409) throw error;
+        recovering = true;
+        return send(null);
+      })
+      .then((page) => {
+        if (controller.signal.aborted) return;
+        if (!isFixedReplayPage(page)) {
+          setSlot({ state: "idle" });
+          return;
+        }
+        if (!fixedPageServesRows(page)) {
+          setSlot({ state: "absent", page });
+          return;
+        }
+        setSlot((prev) => {
+          const pages = prev.state === "ready" && want.cursor !== null && !recovering ? [...prev.pages, page] : [page];
+          return { state: "ready", pages, index: pages.length - 1, inFlight: false, pageRefusal: null, recovered: recovering };
+        });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        const refusal = toReplayRefusal(error);
+        setSlot((prev) =>
+          prev.state === "ready" ? { ...prev, inFlight: false, pageRefusal: refusal } : { state: "refused", refusal },
+        );
+      });
+    return () => controller.abort();
+  }, [want, runId, workspaceId]);
+
+  const next = useCallback(() => {
+    const current = slotRef.current;
+    if (current.state !== "ready" || current.inFlight) return;
+    if (current.index < current.pages.length - 1) {
+      setSlot({ ...current, index: current.index + 1 });
+      return;
+    }
+    const cursor = current.pages[current.index]?.next_cursor ?? null;
+    if (cursor) setWant((prev) => ({ cursor, attempt: (prev?.attempt ?? 0) + 1 }));
+  }, []);
+  const previous = useCallback(() => {
+    const current = slotRef.current;
+    if (current.state === "ready" && !current.inFlight && current.index > 0) setSlot({ ...current, index: current.index - 1 });
+  }, []);
+  const retry = useCallback(() => {
+    const current = slotRef.current;
+    const cursor = current.state === "ready" ? (current.pages[current.pages.length - 1]?.next_cursor ?? null) : null;
+    setWant((prev) => ({ cursor, attempt: (prev?.attempt ?? 0) + 1 }));
+  }, []);
+
+  return { slot: enabled ? slot : ({ state: "idle" } as FixedReplaySlot), next, previous, retry };
 }
 
 /**

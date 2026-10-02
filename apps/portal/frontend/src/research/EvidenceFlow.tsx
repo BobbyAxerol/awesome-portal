@@ -73,7 +73,7 @@ import { HubSearchBody } from "./hubStageSearch";
 import { HubFreezeBody } from "./hubStageFreeze";
 import { HubExecuteBody } from "./hubStageExecute";
 import { AnalyticsAbsentLine, BehaviorV2, StrategyBenchmarkFigure, v2Absence, v2Of } from "./analyticsV2";
-import { deepestSpan, enrichedBlock, windowBands, type EnrichedAnalysis } from "./enrichedAnalysis";
+import { deepestSpan, enrichedBlock, readIsFacts, windowBands, type EnrichedAnalysis } from "./enrichedAnalysis";
 import { EnrichedAbsenceLine } from "./enrichedAvailability";
 import { companionRead, derivationTitle, derivedHeadline, derivationOf, monthCoverage, type MonthFacts } from "./allTimeSeries";
 import {
@@ -84,6 +84,8 @@ import {
   enrichedDistribution,
   enrichedAbsence,
   enrichedMonthly,
+  IsWindowPanel,
+  isTiles,
   underwaterPoints,
   type EnrichedMonthPoint,
 } from "./enrichedPanels";
@@ -3637,6 +3639,7 @@ function SummaryTab({
   /* The deepest drawdown episode the service published, shaded on the equity, underwater and curve charts. */
   const deepest = enriched !== null && enriched.drawdown_episodes.state === "AVAILABLE" ? deepestSpan(enriched.drawdown_episodes.values) : null;
   const bands = windowBands(windowsShown);
+  const isRead = enriched !== null ? readIsFacts(enriched) : null;
   const performance = hub.oos_performance ?? null;
   /* D-AN-01: all-time analytics. With a v2 block (or on a retained run, where the rest is one absence
      line) the headline is the HiFi's five hero tiles; the other numbers are in the Behavior block. */
@@ -3690,7 +3693,9 @@ function SummaryTab({
   return (
     <section data-screen-label="Summary" className="flex flex-col gap-3.5">
       <WindowSwitcher window={evidenceWindow} onWindow={onWindow} windows={windowsShown} />
-      {evidenceWindow !== "oos" ? (
+      {evidenceWindow === "is" && isRead !== null && isRead.kind !== "absent" ? (
+        <IsWindowPanel read={isRead} />
+      ) : evidenceWindow !== "oos" ? (
         <WindowAbsent
           window={evidenceWindow}
           runId={runId}
@@ -3718,6 +3723,8 @@ function SummaryTab({
       >
         {tiles}
         {unordered}
+        {/* B8: served IS facts sit beside the OOS tiles under their own IS label; absent adds nothing. */}
+        {isRead !== null ? isTiles(isRead) : null}
       </div>
 
       {retained ? (

@@ -36,6 +36,7 @@ import {
   REPLAY_GAP_WORDS,
   type CurrentSourceObservation,
   type CurrentSourceReplay,
+  type FixedReplayObservation,
   type FoldSegment,
   type TransitionRow,
   type ChildAuditRecord,
@@ -49,6 +50,7 @@ import { retainedReadiness } from "./retainedLane";
 import { SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
 import { ACROSS_HELP, ACROSS_LABEL, pageRefusalWords, usePlayAcrossFolds, type PlayAcross } from "./usePlayAcrossFolds";
 import { RETAINED_WINDOW_MAX, type ChildAuditSlot, type ReplayController, type RetainedReplaySlot, type TransitionsSlot } from "./useReplay";
+import { ChildAuditCompanionPanel } from "./ChildAuditCompanionPanel";
 import { iso } from "./utcMinute";
 
 /* --------------------------------------------------------------- verbatim */
@@ -1667,7 +1669,7 @@ function ChildAuditCard({
       ) : (
         <div className="flex flex-col gap-1" data-child-audit={slot.fold}>
           <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} title="The shaded row is the strategy instance that generated this fold's out-of-sample bars.">
-            {foldLabel(slot.fold)} · shaded = OOS generation
+            {foldLabel(slot.fold)} · shaded = OOS generation · legacy witness, not the full lifecycle
           </p>
           {/* Keyboard users can scroll this table sideways at narrow widths (axe scrollable-region-focusable). */}
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of ${foldLabel(slot.fold)}`}>
@@ -1889,6 +1891,7 @@ export function CandleReplayBody({
   band,
   windowKey = "oos",
   onWindow,
+  runId,
 }: {
   replay: CurrentSourceReplay;
   slot: Extract<RetainedReplaySlot, { state: "ready" }>;
@@ -1899,6 +1902,8 @@ export function CandleReplayBody({
   /** Which span is on show (`?window=`); OOS is the replayable fold window. */
   windowKey?: ExecWindow;
   onWindow?: (next: ExecWindow) => void;
+  /** B8: the run whose full child-audit lifecycle the companion panel reads, on click. */
+  runId?: string;
 }) {
   const rows = replay.replay.rows;
   const execution = replay.execution;
@@ -2294,6 +2299,7 @@ export function CandleReplayBody({
           </Card>
           <Anatomy replay={replay} selected={selected} childAudit={controller.childAudit} windowLoaded={!noFoldWindow} />
           <ChildAuditCard replay={replay} slot={controller.childAudit} fold={windowFold} waiting={across.holding} onRetry={controller.retryChildAudit} />
+          {runId ? <ChildAuditCompanionPanel runId={runId} /> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-3">
           <Card
@@ -2310,5 +2316,267 @@ export function CandleReplayBody({
         </div>
       </div>
     </>
+  );
+}
+
+/* ------------------------------------------- fixed observation candle chart */
+
+/** What the crosshair says about one fixed-run observation: its own OHLC, equity and native position labels. */
+export interface FixedCrosshairReadout {
+  ordinal: number;
+  at: string;
+  open: string | null;
+  high: string | null;
+  low: string | null;
+  close: string | null;
+  equity: string | null;
+  /** Native engine position labels, verbatim keys (never relabelled to the market symbol). */
+  positions: ReadonlyArray<{ key: string; value: string; shown: string }>;
+}
+
+export function fixedCrosshairReadout(row: FixedReplayObservation): FixedCrosshairReadout {
+  return {
+    ordinal: row.source_ordinal,
+    at: iso(row.at_utc_ms),
+    open: px(row.open),
+    high: px(row.high),
+    low: px(row.low),
+    close: px(row.close),
+    equity: formatMetric(row.equity, "currency"),
+    positions: Object.entries(row.positions).map(([key, value]) => ({ key, value, shown: typographicMinus(value) })),
+  };
+}
+
+/** The native position labels in a window, in first-seen order; a label is a key, not a symbol. */
+export function fixedPositionKeys(rows: readonly FixedReplayObservation[]): string[] {
+  const seen = new Set<string>();
+  for (const row of rows) for (const key of Object.keys(row.positions)) seen.add(key);
+  return [...seen];
+}
+
+/**
+ * The candle chart of a fixed/imported run's retained OOS observations — the
+ * `CandleChart`'s own life (crosshair that follows the playhead, readout that
+ * follows the pointer, entry animation behind the motion gate) over bars the
+ * fixed route served. It draws what was served and no more: candles, the
+ * native position per label, and equity. No marker layer exists here because
+ * the route publishes no transition, order or fill to mark.
+ */
+export function FixedCandleChart({ rows, transport }: { rows: readonly FixedReplayObservation[]; transport: ReplayTransport }) {
+  const host = useRef<HTMLDivElement | null>(null);
+  const chart = useRef<{
+    lib: Lib;
+    api: import("lightweight-charts").IChartApi;
+    candles: import("lightweight-charts").ISeriesApi<"Candlestick">;
+    equity: import("lightweight-charts").ISeriesApi<"Line">;
+    positions: Map<string, import("lightweight-charts").ISeriesApi<"Line">>;
+  } | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [probe, setProbe] = useState<number | null>(null);
+  const timeIndex = useRef<Map<number, number>>(new Map());
+  const fitted = useRef<readonly FixedReplayObservation[] | null>(null);
+  const justFitted = useRef(false);
+  const { index } = useTransport(transport);
+  const keys = useMemo(() => fixedPositionKeys(rows), [rows]);
+
+  useEffect(() => {
+    let disposed = false;
+    loadLib()
+      .then((lib) => {
+        const element = host.current;
+        if (disposed || !element) return;
+        const pal = paletteNow();
+        const api = lib.createChart(element, {
+          autoSize: true,
+          layout: {
+            background: { type: lib.ColorType.Solid, color: pal.paperRaised },
+            textColor: pal.inkFaint,
+            fontSize: 10,
+            panes: { separatorColor: pal.lineSoft },
+            attributionLogo: false,
+          },
+          grid: { vertLines: { color: pal.lineSoft }, horzLines: { color: pal.lineSoft } },
+          timeScale: { timeVisible: true, borderColor: pal.lineSoft },
+          rightPriceScale: { borderColor: pal.lineSoft },
+          localization: { priceFormatter: chartPrice },
+        });
+        const candles = api.addSeries(lib.CandlestickSeries, {
+          upColor: pal.good, downColor: pal.bad, borderUpColor: pal.good, borderDownColor: pal.bad,
+          wickUpColor: pal.good, wickDownColor: pal.bad,
+        });
+        const equity = api.addSeries(lib.LineSeries, { color: pal.ink, lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 2);
+        equity.applyOptions({
+          autoscaleInfoProvider: () => {
+            const range = paddedRange(equity.data().map((point) => (point as { value: number }).value));
+            return range ? { priceRange: { minValue: range.min, maxValue: range.max } } : null;
+          },
+        });
+        try {
+          const panes = api.panes();
+          panes[0]?.setHeight(260);
+          panes[1]?.setHeight(56);
+          panes[2]?.setHeight(80);
+        } catch {
+          /* pane sizing is cosmetic */
+        }
+        chart.current = { lib, api, candles, equity, positions: new Map() };
+        try {
+          api.subscribeCrosshairMove?.((param: { time?: unknown }) => {
+            const at = typeof param?.time === "number" ? timeIndex.current.get(param.time) : undefined;
+            if (!disposed) setProbe(at ?? null);
+          });
+        } catch {
+          /* the readout falls back to the playhead's bar */
+        }
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (!disposed) setStatus("unavailable");
+      });
+    return () => {
+      disposed = true;
+      chart.current?.api.remove();
+      chart.current = null;
+    };
+  }, []);
+
+  /* Theme changes repaint the canvas from the tokens. */
+  useEffect(() => {
+    if (status !== "ready" || typeof MutationObserver === "undefined") return undefined;
+    const repaint = () => {
+      const c = chart.current;
+      if (!c) return;
+      applyChartPalette(
+        { ...c, position: { applyOptions: (options) => c.positions.forEach((line) => line.applyOptions({ ...options })) } },
+        paletteNow(),
+      );
+    };
+    const observer = new MutationObserver(repaint);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+    return () => observer.disconnect();
+  }, [status]);
+
+  useEffect(() => {
+    const c = chart.current;
+    if (status !== "ready" || !c) return;
+    const pal = paletteNow();
+    /* One step line per native position label; a label that left the window is removed. */
+    for (const [key, line] of c.positions) {
+      if (!keys.includes(key)) {
+        c.api.removeSeries(line);
+        c.positions.delete(key);
+      }
+    }
+    keys.forEach((key, at) => {
+      if (c.positions.has(key)) return;
+      c.positions.set(
+        key,
+        c.api.addSeries(
+          c.lib.LineSeries,
+          { color: at === 0 ? pal.accent : pal.ink, lineWidth: 1, lineType: c.lib.LineType.WithSteps, priceLineVisible: false, lastValueVisible: false, title: key },
+          1,
+        ),
+      );
+    });
+    timeIndex.current = new Map(rows.map((row, at) => [sec(row.at_utc_ms), at]));
+    c.candles.setData(rows.map((row) => ({
+      time: sec(row.at_utc_ms),
+      open: Number(row.open),
+      high: Number(row.high),
+      low: Number(row.low),
+      close: Number(row.close),
+    })));
+    for (const [key, line] of c.positions) {
+      line.setData(rows.filter((row) => key in row.positions).map((row) => ({ time: sec(row.at_utc_ms), value: Number(row.positions[key]) })));
+    }
+    c.equity.setData(rows.map((row) => ({ time: sec(row.at_utc_ms), value: Number(row.equity) })));
+    if (fitted.current !== rows) {
+      fitted.current = rows;
+      justFitted.current = true;
+      c.api.timeScale().fitContent();
+      c.api.timeScale().setVisibleLogicalRange?.({ from: -AXIS_END_ROOM_BARS, to: rows.length - 1 + AXIS_END_ROOM_BARS });
+    }
+  }, [rows, keys, status]);
+
+  /* The playhead: the crosshair sits on the bar, and the range slides to follow it. */
+  useEffect(() => {
+    const c = chart.current;
+    const row = rows[index];
+    if (status !== "ready" || !c || !row) return;
+    try {
+      c.api.setCrosshairPosition(Number(row.close), sec(row.at_utc_ms), c.candles);
+      const range = c.api.timeScale().getVisibleLogicalRange();
+      if (justFitted.current) {
+        justFitted.current = false;
+      } else if (range && (index < range.from || index > range.to)) {
+        const span = range.to - range.from;
+        const from = Math.max(-2, index - span * 0.7);
+        c.api.timeScale().setVisibleLogicalRange({ from, to: from + span });
+      }
+    } catch {
+      /* the crosshair is a convenience */
+    }
+  }, [index, rows, status]);
+
+  const probeRow = probe !== null ? rows[probe] : undefined;
+  const readoutRow = probeRow ?? rows[index];
+  const readout = useMemo(() => (readoutRow ? fixedCrosshairReadout(readoutRow) : null), [readoutRow]);
+
+  return (
+    <div className="relative" data-chart="fixed-replay-candles" data-chart-status={status}>
+      <style>{CHART_IN_CSS}</style>
+      {readout ? (
+        <div
+          className="mono flex min-h-[18px] flex-wrap items-center gap-x-3 gap-y-0.5 px-3 pb-1 text-[10px]"
+          style={{ color: "var(--ink)" }}
+          data-crosshair-readout={readout.ordinal}
+          data-crosshair-source={probeRow ? "pointer" : "playhead"}
+        >
+          <span style={{ color: "var(--ink-soft)" }}>{readout.at}</span>
+          <ReadoutCell label="O" value={readout.open} />
+          <ReadoutCell label="H" value={readout.high} />
+          <ReadoutCell label="L" value={readout.low} />
+          <ReadoutCell label="C" value={readout.close} />
+          {readout.positions.length === 0 ? (
+            <ReadoutCell label="pos" value={null} />
+          ) : (
+            readout.positions.map((position) => (
+              <span key={position.key} className="whitespace-nowrap" data-position-key={position.key} title={position.value}>
+                <span style={{ color: "var(--ink-faint)" }}>pos {position.key} </span>
+                {position.shown}
+              </span>
+            ))
+          )}
+          <ReadoutCell label="equity" value={readout.equity} />
+        </div>
+      ) : null}
+      <div ref={host} className={status === "ready" && smokeMotionAllowed() ? "s08-chart-in" : undefined} style={{ height: 420 }} aria-hidden="true" />
+      {status !== "ready" ? (
+        <span className="mono absolute left-3 top-3 text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+          {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; every observation is listed for screen readers"}
+        </span>
+      ) : null}
+      <span className="mono pointer-events-none absolute left-3 top-1 text-[9px]" style={{ color: "var(--ink-faint)" }} title="Panes: market candles, native position per label (units), equity.">
+        {rows.length} observations
+      </span>
+      <div className="sr-only">
+        <table data-chart-table="fixed-replay-candles">
+          <caption>Retained out-of-sample observations in this window, exact values</caption>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.source_ordinal} data-candle-row={row.source_ordinal}>
+                <th scope="row">{new Date(row.at_utc_ms).toISOString()}</th>
+                <td>{row.open}</td>
+                <td>{row.high}</td>
+                <td>{row.low}</td>
+                <td>{row.close}</td>
+                <td>{Object.entries(row.positions).map(([key, value]) => `${key} ${value}`).join(", ")}</td>
+                <td>{row.equity}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

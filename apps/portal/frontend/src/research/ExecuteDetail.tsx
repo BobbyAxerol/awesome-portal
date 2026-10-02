@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 
 import { EChart } from "../charts/EChart";
 import { baseOption, roleColorsNow } from "../charts/theme";
-import { CandleOverviewStrip, CandleReplayBody, chartMotion, hasBarLedger, paddedRange, windowMarkers, type CandleMarker } from "./ExecuteCandleReplay";
+import { CandleOverviewStrip, CandleReplayBody, FixedCandleChart, chartMotion, fixedPositionKeys, hasBarLedger, paddedRange, windowMarkers, type CandleMarker } from "./ExecuteCandleReplay";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
@@ -38,6 +38,8 @@ import {
   RETAINED_CAPABILITY_KEYS,
   RETAINED_CAPABILITY_LABEL,
   RETAINED_NO_FIELD,
+  FIXED_ROUTE_NOTE,
+  fixedFreshAbsence,
   gapReason,
   isRetainedReplay,
   type CurrentSourceObservation,
@@ -51,7 +53,7 @@ import { reasonCodeSentence } from "./researchRefusal";
 import { isHubLaneReason, retainedReadiness } from "./retainedLane";
 import { SplitBand, SplitBandNote, hubSplitBand, type SplitBandSlot } from "./SplitBand";
 import type { ResearchState } from "./state";
-import type { ReplayController, RetainedContext, RetainedReplaySlot } from "./useReplay";
+import type { FixedReplaySlot, ReplayController, RetainedContext, RetainedReplaySlot } from "./useReplay";
 import { iso } from "./utcMinute";
 import { formatAxisValue, formatCount, formatFractionAxis, formatMetric, shortId } from "./researchFormat";
 import { ShortId } from "./ShortId";
@@ -484,11 +486,14 @@ function TransportBar({
   items,
   total,
   noun = "sample",
+  ordinalLabel,
 }: {
   transport: ReplayTransport;
-  items: readonly ReplayPoint[];
+  items: ReadonlyArray<{ playback_ordinal: number; at_utc_ms: number }>;
   total: number | null;
   noun?: string;
+  /** The fixed lane's ordinals are the source's own; it says them verbatim instead of the sample's `+1`. */
+  ordinalLabel?: (at: { playback_ordinal: number; at_utc_ms: number }) => string;
 }) {
   const snapshot = useTransport(transport);
   const point = items[snapshot.index];
@@ -496,8 +501,10 @@ function TransportBar({
   const NO_TRANSPORT = `Fewer than two ${noun}s are loaded, so there is nothing to play or step through.`;
   const button = "mono rounded-[6px] border px-2 text-[11px] leading-[24px]";
   const style = { borderColor: "var(--line)", background: "var(--paper-raised)" };
-  const ordinalText = (at: ReplayPoint | undefined) =>
-    at ? `${noun} ${at.playback_ordinal + 1} of ${total ?? "not published"}` : `no ${noun}`;
+  const ordinalText = (at: { playback_ordinal: number } | undefined) =>
+    at
+      ? (ordinalLabel?.(at as { playback_ordinal: number; at_utc_ms: number }) ?? `${noun} ${at.playback_ordinal + 1} of ${total ?? "not published"}`)
+      : `no ${noun}`;
 
   return (
     <div
@@ -1318,6 +1325,143 @@ function RetainedBody({
  * Which lane answers this run — the one fact the route and the screen must
  * agree on, because the route reads the split of whichever lane this is.
  */
+/* ------------------------------------------- fixed/imported observation lane */
+
+/**
+ * S08 for a fixed/imported (P04-style) run whose source published retained OOS
+ * observations (`researchFixedReplayObservationsGetV1`). It is *added under*
+ * the legacy equity-sample panel, never in place of it: where the route is
+ * absent or typed-absent this panel does not exist and the legacy lane reads
+ * exactly as before.
+ *
+ * What it says is bounded by what the route says. The rows are market candles
+ * and account observations (equity, native position labels). They are not an
+ * orders/fills/trades ledger, so no order, fill or marker is drawn. The native
+ * position keys (e.g. `DEFAULT`) are shown as the engine labelled them, and
+ * the immutable market symbol is shown separately.
+ */
+function FixedObservationPanel({
+  controller,
+  slot,
+}: {
+  controller: ReplayController;
+  slot: Extract<FixedReplaySlot, { state: "ready" }>;
+}) {
+  const page = slot.pages[slot.index]!;
+  const manifest = page.manifest!;
+  const rows = page.rows;
+  const [transport] = useState(() => new ReplayTransport());
+  useEffect(() => {
+    transport.load(rows.length, 0);
+  }, [rows, transport]);
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") transport.hide();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      transport.dispose();
+    };
+  }, [transport]);
+
+  const items = useMemo(() => rows.map((row) => ({ playback_ordinal: row.source_ordinal, at_utc_ms: row.at_utc_ms })), [rows]);
+  const keys = useMemo(() => fixedPositionKeys(rows), [rows]);
+  const retained = page.counts.full_source_retained;
+  const source = manifest.source;
+  const hasNext = page.next_cursor !== null || slot.index < slot.pages.length - 1;
+  const busy = slot.inFlight;
+  const first = rows[0]!;
+  const last = rows[rows.length - 1]!;
+
+  return (
+    <Card
+      title="OOS observation replay — market and account"
+      data-panel="fixed-observation-replay"
+      data-fixed-window={slot.index}
+      data-fixed-in-flight={String(busy)}
+      aria-busy={busy}
+      aside={
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-fixed-revision>
+          revision {shortId(page.revision)}
+        </span>
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2" data-fixed-identity>
+        <Chip data-market-symbol={manifest.market_symbol} title="The immutable market symbol of this run's preflight. Position labels below are the engine's own.">
+          market {manifest.market_symbol}
+        </Chip>
+        {keys.map((key) => (
+          <Chip key={key} data-native-position-key={key} title="The engine's own position label, kept as served — not the market symbol.">
+            position label {key}
+          </Chip>
+        ))}
+        <Chip data-fixed-profile={manifest.execution_profile_id}>{manifest.execution_profile_id}</Chip>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-counts>
+          retained {formatCount(retained) ?? "not published"} · in this window {formatCount(page.counts.returned) ?? "not published"} · source ordinals{" "}
+          {first.source_ordinal}–{last.source_ordinal}
+        </span>
+        {source.state === "AVAILABLE" ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-fixed-bounds title={`normalized rows sha256 ${source.normalized_rows_sha256}`}>
+            OOS {iso(source.oos_start_utc_ms)} → {iso(source.oos_end_exclusive_utc_ms)} (end excluded)
+          </span>
+        ) : null}
+      </div>
+      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-fixed-scope>
+        {FIXED_ROUTE_NOTE}
+      </p>
+      {slot.recovered ? (
+        <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-recovered>
+          The page position expired. It was discarded and the first page was read again once.
+        </p>
+      ) : null}
+      <FixedCandleChart rows={rows} transport={transport} />
+      <TransportBar
+        transport={transport}
+        items={items}
+        total={retained}
+        noun="observation"
+        ordinalLabel={(at) => `observation ${at.playback_ordinal} of ${formatCount(retained) ?? "not published"} retained`}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className="btn-ghost mono text-[10px]"
+          data-action="fixed-previous-window"
+          disabled={slot.index === 0 || busy}
+          title={busy ? "A window is being read." : slot.index === 0 ? "This is the first window." : undefined}
+          onClick={controller.fixedPreviousPage}
+        >
+          ‹ earlier
+        </button>
+        <button
+          type="button"
+          className="btn-ghost mono text-[10px]"
+          data-action="fixed-next-window"
+          disabled={!hasNext || busy}
+          title={busy ? "A window is being read." : !hasNext ? "This window ends at the last retained observation." : undefined}
+          onClick={controller.fixedNextPage}
+        >
+          later ›
+        </button>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-fixed-pages>
+          window {slot.index + 1} · {slot.pages.length} read
+        </span>
+        {slot.pageRefusal ? (
+          <span className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-fixed-page-refusal={slot.pageRefusal.status}>
+            {slot.pageRefusal.message}
+            {slot.pageRefusal.mayRetry && controller.fixedRetry ? (
+              <button type="button" className="btn-ghost mono ml-2 text-[10px]" data-action="fixed-retry" onClick={controller.fixedRetry}>
+                try again
+              </button>
+            ) : null}
+          </span>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
 export function executeLane(controller: ReplayController): "hub" | "retained" | "pending" {
   if (controller.retained.state === "ready" && isRetainedReplay(controller.retained.replay)) return "retained";
   if (controller.replay?.route.state === "NOT_PUBLISHED" && controller.retained.state === "loading") return "pending";
@@ -1370,6 +1514,8 @@ export function ExecuteScreen({
       ? controller.retained.replay
       : null;
   const lane = executeLane(controller);
+  /* A fresh fixed run whose source declared no observations says so, with the server's code; every other absence leaves the legacy lane as it was. */
+  const freshAbsence = controller.fixed?.state === "absent" ? fixedFreshAbsence(controller.fixed.page) : null;
   /* The retained lane was asked because the hub declined, and its read failed — except a 409, which is its typed "no sealed source yet". */
   const retainedFailure =
     controller.replay?.route.state === "NOT_PUBLISHED" && controller.retained.state === "refused" && controller.retained.refusal.status !== 409
@@ -1394,6 +1540,7 @@ export function ExecuteScreen({
       data-screen="execute-replay"
       data-run={runId}
       data-lane={lane}
+      data-fixed-replay={controller.fixed?.state ?? undefined}
       data-embedded={embedded ? "hub" : undefined}
     >
       {embedded ? null : (
@@ -1471,6 +1618,7 @@ export function ExecuteScreen({
           band={band}
           windowKey={windowKey}
           onWindow={onWindow}
+          runId={runId}
         />
       ) : lane === "retained" && retainedReplay && controller.retained.state === "ready" ? (
         <RetainedBody
@@ -1534,6 +1682,11 @@ export function ExecuteScreen({
               </span>
             ) : null}
             <Chip data-readiness={replay.readiness}>readiness {replay.readiness.toLowerCase()}</Chip>
+            {freshAbsence ? (
+              <Chip data-fixed-absence={freshAbsence.code} title={freshAbsence.sentence ?? undefined}>
+                observations not published ({freshAbsence.code})
+              </Chip>
+            ) : null}
             <CapabilityGap replay={replay} capability="fold_capital" />
           </div>
           <p className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-route-note>
@@ -1688,6 +1841,8 @@ export function ExecuteScreen({
           </div>
         ) : null}
       </ResearchPanel>
+
+      {controller.fixed?.state === "ready" ? <FixedObservationPanel controller={controller} slot={controller.fixed} /> : null}
 
       {replay ? (
         <>

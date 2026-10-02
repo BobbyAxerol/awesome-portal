@@ -309,6 +309,36 @@ function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
+/**
+ * The hub read is followed by one read of the fixed observation route
+ * (`researchFixedReplayObservationsGetV1`) for a P04 run. These tests count the
+ * hub/retained reads only, so that route answers the canonical not-applicable
+ * fixture (typed absence: the legacy lane stands) and is recorded apart.
+ */
+function routedFetch(responses: Response[], fallback?: () => Response) {
+  const queue = [...responses];
+  const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
+  const fixedCalls: string[] = [];
+  const notApplicable = JSON.parse(
+    readFileSync(
+      join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures", "research-fixed-replay-companion.not-applicable.valid.json"),
+      "utf8",
+    ),
+  );
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+    if (String(url).includes("/replay/observations")) {
+      fixedCalls.push(String(url));
+      return jsonResponse(notApplicable);
+    }
+    calls.push([url, init]);
+    const next = queue.shift();
+    if (next) return next;
+    if (fallback) return fallback();
+    throw new Error("unexpected extra request");
+  });
+  return { mock: { calls }, fixedCalls };
+}
+
 /* ------------------------------------------------------------------- tests */
 
 describe("S08-U01 — the transport moves over loaded samples and never fetches", () => {
@@ -604,84 +634,73 @@ describe("S08-U06 — refusals speak fixed copy and keep the shell", () => {
 
 describe("S08-U07 — reads: one on arrival, one bounded recovery, and nothing else", () => {
   it("sends one plain GET on arrival, with no If-None-Match and no navigation input", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(replay()));
+    const { mock: fetchMock } = routedFetch([], () => jsonResponse(replay()));
     const { result } = renderHook(() => useReplay("run_p17", null));
     await waitFor(() => expect(result.current.replay).not.toBeNull());
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(fetchMock.calls).toHaveLength(1);
+    const [url, init] = fetchMock.calls[0]!;
     expect(String(url)).toBe("/api/v1/quantbt/runs/run_p17/execute/replay?limit=100");
     expect((init as RequestInit).method ?? "GET").toBe("GET");
     expect(JSON.stringify((init as RequestInit).headers ?? {})).not.toMatch(/If-None-Match/i);
   });
 
   it("restores an explicit deep link with one at_ordinal read", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(replay({ start: 40, selected: 45 })));
+    const { mock: fetchMock } = routedFetch([], () => jsonResponse(replay({ start: 40, selected: 45 })));
     const { result } = renderHook(() => useReplay("run_p17", 45));
     await waitFor(() => expect(result.current.replay).not.toBeNull());
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0]![0])).toContain("at_ordinal=45");
+    expect(fetchMock.calls).toHaveLength(1);
+    expect(String(fetchMock.calls[0]![0])).toContain("at_ordinal=45");
   });
 
   it("sends exactly one navigation token per window request", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(jsonResponse(replay()))
-      .mockResolvedValueOnce(jsonResponse(replay({ start: 24 })));
+    const { mock: fetchMock } = routedFetch([jsonResponse(replay()), jsonResponse(replay({ start: 24 }))]);
     const { result } = renderHook(() => useReplay("run_p17", null));
     await waitFor(() => expect(result.current.replay).not.toBeNull());
     act(() => result.current.nextWindow());
     await waitFor(() => expect(result.current.replay!.equity_replay.items[0]!.playback_ordinal).toBe(24));
-    const url = new URL(String(fetchMock.mock.calls[1]![0]), "http://x");
+    const url = new URL(String(fetchMock.calls[1]![0]), "http://x");
     expect(url.searchParams.get("cursor")).toBe(token(900));
     expect(["before", "at", "at_ordinal"].filter((k) => url.searchParams.has(k))).toEqual([]);
   });
 
   it("on 409 CURSOR_EXPIRED drops the token and recovers once by public ordinal", async () => {
     const expired = jsonResponse({ error: { code: "RESEARCH_REPLAY_CURSOR_EXPIRED", message: "x" } }, 409);
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(jsonResponse(replay()))
-      .mockResolvedValueOnce(expired)
-      .mockResolvedValueOnce(jsonResponse(replay({ start: 0, selected: 7 })));
+    const { mock: fetchMock } = routedFetch([jsonResponse(replay()), expired, jsonResponse(replay({ start: 0, selected: 7 }))]);
     const { result } = renderHook(() => useReplay("run_p17", null));
     await waitFor(() => expect(result.current.replay).not.toBeNull());
     act(() => result.current.pin(token(7), 7));
     await waitFor(() => expect(result.current.recovered).toBe(true));
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    const recovery = String(fetchMock.mock.calls[2]![0]);
+    expect(fetchMock.calls).toHaveLength(3);
+    const recovery = String(fetchMock.calls[2]![0]);
     expect(recovery).toContain("at_ordinal=7");
     expect(recovery).not.toContain(token(7));
   });
 
   it("does not loop: a second 409 is a refusal, not a third request", async () => {
     const expired = () => jsonResponse({ error: { code: "RESEARCH_REPLAY_CURSOR_EXPIRED", message: "x" } }, 409);
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(jsonResponse(replay()))
-      .mockResolvedValueOnce(expired())
-      .mockResolvedValueOnce(expired());
+    const { mock: fetchMock } = routedFetch([jsonResponse(replay()), expired(), expired()]);
     const { result } = renderHook(() => useReplay("run_p17", null));
     await waitFor(() => expect(result.current.replay).not.toBeNull());
     act(() => result.current.nextWindow());
     await waitFor(() => expect(result.current.refusal?.status).toBe(409));
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.calls).toHaveLength(3);
     /* The window already on screen stays; the refusal is stated over it. */
     expect(result.current.replay).not.toBeNull();
     expect(result.current.state.retainsContent).toBe(true);
   });
 
   it("reads the retained model replay only when asked", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(jsonResponse(replay()))
-      .mockResolvedValueOnce(jsonResponse({ error: { code: "RESEARCH_CURRENT_SOURCE_CONFLICT", message: "x" } }, 409));
+    const { mock: fetchMock } = routedFetch([
+      jsonResponse(replay()),
+      jsonResponse({ error: { code: "RESEARCH_CURRENT_SOURCE_CONFLICT", message: "x" } }, 409),
+    ]);
     const { result } = renderHook(() => useReplay("run_p17", null));
     await waitFor(() => expect(result.current.replay).not.toBeNull());
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.calls).toHaveLength(1);
     act(() => result.current.ensureRetained());
     act(() => result.current.ensureRetained());
     await waitFor(() => expect(result.current.retained.state).toBe("refused"));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.calls).toHaveLength(2);
     /* A retained 409 means "not retained yet", not an expired cursor or a changed revision. */
     const slot = result.current.retained as {
       state: "refused";
@@ -690,7 +709,7 @@ describe("S08-U07 — reads: one on arrival, one bounded recovery, and nothing e
     expect(slot.refusal.message).toBe(RETAINED_NOT_RETAINED);
     expect(slot.refusal.state).toBe("unavailable");
     expect(slot.refusal.cursorExpired).toBe(false);
-    expect(String(fetchMock.mock.calls[1]![0])).toBe("/api/v1/quantbt/runs/run_p17/current-source/replay");
+    expect(String(fetchMock.calls[1]![0])).toBe("/api/v1/quantbt/runs/run_p17/current-source/replay");
   });
 });
 

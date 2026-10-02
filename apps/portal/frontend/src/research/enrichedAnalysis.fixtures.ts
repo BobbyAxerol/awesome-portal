@@ -19,3 +19,5 @@ export const noBenchmark = (): EnrichedAnalysis => load("no-benchmark") as Enric
 export const partialMonth = (): EnrichedAnalysis => load("partial-month") as EnrichedAnalysis;
 /** Absence guard only: not a complete Evidence / Report response. */
 export const oldSealAbsent = () => load("old-seal-absent") as { schema_version: string; state: string; reason_code: string; enriched_analysis: null };
+/** FIXED fresh run: optional `by_window.is` (IS return / Sharpe / max DD) next to the OOS-only facts. */
+export const fixedIs = (): EnrichedAnalysis => load("fixed-is") as EnrichedAnalysis;

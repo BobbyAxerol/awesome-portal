@@ -1661,7 +1661,7 @@
    "interaction_class": "INTENTIONALLY_UNEXPOSED",
    "consumer": "INTERNAL_WORKER_ONLY",
    "unused_capability": false,
-   "evidence": "B8 immutable audit finalization: same fenced artifact/profile source binding, exact full available file row count/hash/ordinals; original P05 seal and sampled witnesses remain unchanged.",
+   "evidence": "B8 immutable audit finalization: same fenced artifact/profile source binding, exact full available file row count/hash/ordinals; original P05 seal and sampled witnesses remain unchanged. Worker-principal internal ingress (infrastructure, auth required), never a browser route.",
    "owner": "codex",
    "test_owner": "codex"
   },
@@ -2031,7 +2031,7 @@
    "interaction_class": "INTENTIONALLY_UNEXPOSED",
    "consumer": "INTERNAL_WORKER",
    "unused_capability": false,
-   "evidence": "B8 fresh fixed OOS: exact P05/profile/OOS proof, complete contiguous source population, immutable seal and typed source absence.",
+   "evidence": "B8 fresh fixed OOS: exact P05/profile/OOS proof, complete contiguous source population, immutable seal and typed source absence. Worker-principal internal ingress (infrastructure, auth required), never a browser route.",
    "owner": "codex",
    "test_owner": "codex"
   },

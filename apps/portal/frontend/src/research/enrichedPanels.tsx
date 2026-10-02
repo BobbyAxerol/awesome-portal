@@ -18,6 +18,8 @@ import {
   type EnrichedEpisode,
   type EnrichedRead,
   type EnrichedRefusal,
+  type IsFactRow,
+  type IsRead,
 } from "./enrichedAnalysis";
 import { formatMetric, shortDigest } from "./researchFormat";
 import { utcZ } from "./EvidenceCharts";
@@ -269,4 +271,82 @@ export function underwaterPoints(block: EnrichedAnalysis): { at_utc_ms: number; 
   const curve = block.curves.drawdown_fraction;
   if (curve.length === 0) return null;
   return curve.map((point) => ({ at_utc_ms: point.at_utc_ms, equity: point.value, drawdown_fraction: point.value }));
+}
+
+/* ------------------------------------------------------- IS facts (by_window.is) */
+
+/** One served IS fact as a headline tile, shaped like the OOS tiles but labelled and scoped IS. */
+export function IsTile({ row }: { row: IsFactRow }) {
+  const { fact } = row;
+  const shown = fact.state === "AVAILABLE" && fact.value !== null ? formatMetric(fact.value, row.unit) : null;
+  const negative = fact.value !== null && fact.value.trim().startsWith("-");
+  return (
+    <div
+      className="flex min-h-[90px] min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
+      data-metric={`IS_${row.key}`}
+      data-metric-lane="is"
+      data-fact-state={fact.state}
+      style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
+      title={row.title}
+    >
+      <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        {row.label}
+      </span>
+      {shown !== null ? (
+        <span
+          className="mono text-[22px] font-semibold leading-[28px]"
+          style={{ color: row.key === "max_drawdown_fraction" || negative ? "var(--bad)" : "var(--good)", fontVariantNumeric: "tabular-nums" }}
+          data-metric-value={`IS_${row.key}`}
+          data-exact={fact.value ?? undefined}
+          aria-label={`${row.label} ${shown}`}
+        >
+          {shown}
+        </span>
+      ) : (
+        <span className="leading-[28px]">
+          <Withheld availability={{ state: fact.state === "AVAILABLE" ? "NOT_PUBLISHED" : fact.state, reason_code: fact.reason_code }} />
+        </span>
+      )}
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-metric-scope="IS">
+        IS · {fact.origin === "ENGINE_DIRECT" ? "engine-direct" : "portal-derived"}
+      </span>
+    </div>
+  );
+}
+
+/** The IS tiles of an available read, or nothing (an absent / refused IS adds no tile and no layout). */
+export function isTiles(read: IsRead) {
+  return read.kind === "available" ? read.rows.map((row) => <IsTile key={row.key} row={row} />) : [];
+}
+
+/**
+ * The IS window view: the served IS facts under their own scope, or the typed absence with the served reason
+ * (never zero, never AVAILABLE). OOS numbers are never shown here.
+ */
+export function IsWindowPanel({ read }: { read: IsRead }) {
+  if (read.kind === "refused") {
+    return (
+      <p className="text-[11px]" data-is-window="refused">
+        <FeLocalAbsent id="UI_ENRICHED_ANALYSIS_SHAPE_INVALID" what="IS facts" text="refused — shape invalid" />
+        <span className="sr-only">{read.detail}</span>
+      </p>
+    );
+  }
+  if (read.kind === "absent") {
+    return (
+      <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-[11px]" data-is-window="absent" data-reason-code={read.reason_code ?? undefined}>
+        <Withheld availability={{ state: read.state, reason_code: read.reason_code }} what="IS window facts" />
+      </p>
+    );
+  }
+  return (
+    <section className="flex min-w-0 flex-col gap-2" data-is-window="ready" title={read.scopeTitle}>
+      <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+        {read.rows.map((row) => <IsTile key={row.key} row={row} />)}
+      </div>
+      <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-is-window-scope>
+        IS · {formatMetric(read.payload.scope.observation_count, "count")} observations · {utcZ(read.payload.scope.start_ms)} to {utcZ(read.payload.scope.end_ms)} (end exclusive) · separate from OOS
+      </p>
+    </section>
+  );
 }

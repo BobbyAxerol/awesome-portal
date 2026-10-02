@@ -255,6 +255,12 @@ describe("D8 — a failed lane read is a failure with a retry, not 'not publishe
 
 describe("D2 / D16 / D19 / H13 — honest labels", () => {
   it("D2: the S4 completion time is labelled as that, not as the pool's freeze", async () => {
+    /* B8: the regenerated fixture serves null; this is a LEGACY capture typed from the same schema. */
+    const legacy = JSON.parse(JSON.stringify(SURFACE)) as typeof SURFACE;
+    legacy.pool!.frozen_at_utc_ms = Date.UTC(2026, 8, 24, 17, 0);
+    legacy.pool!.frozen_at_source = "P11_STAGE_COMPLETED_S4_EVENT";
+    legacy.pool!.frozen_at_reason_code = null;
+    stub(() => [200, legacy]);
     const { container } = await settled();
     const row = container.querySelector("[data-pool-row='frozen-at']") as HTMLElement;
     expect(row.textContent).toContain("stage 4 completed");

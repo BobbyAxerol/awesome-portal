@@ -20,6 +20,15 @@
 
 import type { components as ReplayComponents } from "@portal/contracts-research-replay";
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
+/*
+ * `researchFixedReplayObservationsGetV1` — the generated companion types.
+ * No tsconfig alias exists for this file yet (NEEDS-SHARED); the import is
+ * type-only, so a relative path costs nothing at runtime.
+ */
+import type {
+  components as FixedReplayComponents,
+  operations as FixedReplayOperations,
+} from "../../../../../packages/contracts/generated/research-fixed-replay-companion";
 
 import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
@@ -52,7 +61,18 @@ export type ReplayTransitions = SourceSchemas["ReplayTransitions"];
 export type ReplayChildAudit = SourceSchemas["ReplayChildAudit"];
 export type ChildAuditRecord = SourceSchemas["ChildAuditRecord"];
 
+/** S08 fixed/imported (P04-style) runs: bounded OOS market + account observation pages. */
+type FixedSchemas = FixedReplayComponents["schemas"];
+export type FixedReplayPage = FixedSchemas["FixedReplayPage"];
+export type FixedReplayObservation = FixedSchemas["FixedReplayObservation"];
+export type FixedReplayManifest = FixedSchemas["FixedReplayManifest"];
+export type FixedReplayAvailability = FixedReplayPage["availability"];
+export type FixedReplayQuery = NonNullable<FixedReplayOperations["researchFixedReplayObservationsGetV1"]["parameters"]["query"]>;
+
 const RUNS = "/api/v1/quantbt/runs";
+
+/** The route's own ceiling: at most 200 rows per page. */
+export const FIXED_REPLAY_LIMIT_MAX = 200;
 
 /** The contract's own ceiling for one window. */
 export const REPLAY_LIMIT_MAX = 100;
@@ -125,6 +145,26 @@ export const replayApi = {
       `${RUNS}/${encodeURIComponent(runId)}/execute/replay${replayQuery(navigation, options)}`,
       options.signal,
     ),
+
+  /**
+   * `researchFixedReplayObservationsGetV1` — one bounded page of the fixed/
+   * imported run's retained OOS observations: the first page, or the opaque
+   * `cursor` the previous page minted. Observations, never an orders/fills ledger.
+   */
+  fixedObservations: (
+    runId: string,
+    options: { workspaceId?: string; limit?: number; cursor?: string; signal?: AbortSignal } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (options.workspaceId) params.set("workspace_id", options.workspaceId);
+    if (typeof options.limit === "number") params.set("limit", String(Math.min(options.limit, FIXED_REPLAY_LIMIT_MAX)));
+    if (options.cursor) params.set("cursor", options.cursor);
+    const query = params.toString();
+    return call<FixedReplayPage>(
+      `${RUNS}/${encodeURIComponent(runId)}/replay/observations${query ? `?${query}` : ""}`,
+      options.signal,
+    );
+  },
 
   /**
    * `researchCurrentSourceReplayGetV1` — the first window, or one opaque
@@ -432,4 +472,31 @@ export function replayState(replay: Replay): ResearchState {
     mayRetry: false,
     retainsContent: true,
   };
+}
+
+/* -------------------------------------------------------------------------
+ * The fixed observation lane
+ * ---------------------------------------------------------------------- */
+
+/** What the fixed lane replays, in one sentence — said beside its chart, never as an execution ledger. */
+export const FIXED_ROUTE_NOTE =
+  "Observation replay: the market candle and the account's equity and native position at each retained out-of-sample bar. It is not an orders, fills or trades ledger, and no order or fill is drawn.";
+
+export function isFixedReplayPage(body: unknown): body is FixedReplayPage {
+  return (body as { schema_version?: unknown } | null)?.schema_version === "research.fixed-replay-companion-page.v1";
+}
+
+/** A page that carries rows to replay: AVAILABLE, with a manifest and at least one observation. */
+export function fixedPageServesRows(page: FixedReplayPage | null | undefined): page is FixedReplayPage {
+  return page?.availability.state === "AVAILABLE" && page.manifest !== null && page.rows.length > 0;
+}
+
+/**
+ * The server's own typed absence for a fresh run whose source declared no
+ * observations (`FRESH_SOURCE_NOT_PUBLISHED`). Historical, not-applicable and
+ * not-recorded answers return `null`: the legacy lane's own absence stands.
+ */
+export function fixedFreshAbsence(page: FixedReplayPage | null | undefined): { code: string; sentence: string | null } | null {
+  if (!page || page.custody !== "FRESH_SOURCE_NOT_PUBLISHED" || page.availability.reason_code === null) return null;
+  return { code: page.availability.reason_code, sentence: reasonCodeSentence(page.availability.reason_code) };
 }

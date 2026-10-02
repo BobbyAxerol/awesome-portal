@@ -12,8 +12,8 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode
 
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 
-import type { EnrichedAnalysis, EnrichedEpisode, EnrichedFact, EnrichedRead } from "./enrichedAnalysis";
-import { ENRICHED_CHIP, bucketPosition, distributionStatistics, enrichedBlock, episodeLabel, regimeAbsence, windowBands } from "./enrichedAnalysis";
+import type { EnrichedAnalysis, EnrichedEpisode, EnrichedFact, EnrichedRead, IsFactRow } from "./enrichedAnalysis";
+import { ENRICHED_CHIP, bucketPosition, distributionStatistics, enrichedBlock, episodeLabel, readIsFacts, regimeAbsence, windowBands } from "./enrichedAnalysis";
 import { enrichedAbsenceTitle } from "./enrichedAvailability";
 import { formatMetric, shortDigest } from "./researchFormat";
 import { daysAndHours, monthWords, roundAxis } from "./reportText";
@@ -173,6 +173,20 @@ function FactCell({ label, fact, unit, heading }: { label: string; fact: Enriche
     <div data-all-time-fact={label} data-fact-state={fact.state}>
       <dt>{heading ?? label}</dt>
       <dd title={title} aria-label={`${label} ${shown ?? "not published"}, ${word(fact.origin)}`} data-exact={fact.value ?? undefined}>
+        {shown !== null ? shown : <AbsentLine state={fact.state} reason={fact.reason_code} what="" />}
+      </dd>
+    </div>
+  );
+}
+
+/** One served IS fact (`by_window.is`): its own scope and definition in the title, never merged with the OOS figure. */
+function IsFactCell({ row }: { row: IsFactRow }) {
+  const { fact } = row;
+  const shown = fact.state === "AVAILABLE" && fact.value !== null ? formatMetric(fact.value, row.unit) : null;
+  return (
+    <div data-all-time-fact={row.label} data-fact-state={fact.state} data-fact-scope="IS">
+      <dt>{row.label}</dt>
+      <dd title={row.title} aria-label={`${row.label} ${shown ?? "not published"}, ${word(fact.origin)}`} data-exact={fact.value ?? undefined}>
         {shown !== null ? shown : <AbsentLine state={fact.state} reason={fact.reason_code} what="" />}
       </dd>
     </div>
@@ -811,6 +825,7 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
           ...block.source_tables.map((table) => `${table.name} · ${formatMetric(table.row_count, "count")} rows · ${shortDigest(table.digest)}`),
         ].join("\n");
   const sampled = block !== null && block.scope.coverage === "SAMPLED_RETAINED_EQUITY";
+  const isRead = block !== null ? readIsFacts(block) : { kind: "absent" as const, state: "NOT_PUBLISHED" as const, reason_code: null };
   return (
     <section className="rr-block rr-keep" data-panel="all-time" data-all-time={block !== null ? "ready" : read.kind} aria-label={TITLE}>
       <h2 className="t flex flex-wrap items-baseline justify-between gap-2">
@@ -836,7 +851,7 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
       <div className="b">
         {block !== null ? (
           <div className="rr-at">
-            <dl className="rr-at-facts" data-all-time-facts>
+            <dl className="rr-at-facts" data-all-time-facts data-is-facts={isRead.kind} data-is-reason={isRead.kind === "absent" ? isRead.reason_code ?? undefined : undefined}>
               <SummaryCell label="return" heading="Return · all-time OOS · portal" value={block.library_summary.return_fraction} block={block} unit="fraction" />
               {/* QA S09 (UX-3): three Sharpe figures exist for one run; this one is the all-time OOS Sharpe, and says so. */}
               <FactCell label="Sharpe" heading="Sharpe · all-time OOS" fact={block.facts.metrics.sharpe} unit="ratio" />
@@ -844,6 +859,8 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
               <FactCell label="volatility" fact={block.facts.metrics.volatility_fraction} unit="fraction" />
               <SummaryCell label="max DD" value={block.library_summary.max_drawdown_fraction} block={block} unit="fraction" />
               <FactCell label="max DD length" fact={block.facts.metrics.max_drawdown_duration_days} unit="days" />
+              {/* B8: served IS facts, separately scoped next to the OOS ones; omitted IS adds no cell (typed on data-is-facts). */}
+              {isRead.kind === "available" ? isRead.rows.map((row) => <IsFactCell key={row.key} row={row} />) : null}
             </dl>
             <Curve block={block} activeEpisode={episode} />
             <div className="grid min-w-0 gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>

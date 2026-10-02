@@ -62,6 +62,8 @@ import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
 import { claimToken, foldLabel, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
+import { ChildAuditCompanionPanel } from "./ChildAuditCompanionPanel";
+import { OrchestrationClocks } from "./OrchestrationClocks";
 import {
   protocolLabel,
   retainedReadiness,
@@ -1491,7 +1493,11 @@ function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null
         ) : null}
       </div>
       {ordering ? (
-        <FoldOrderingAxes ordering={ordering} />
+        <>
+          <FoldOrderingAxes ordering={ordering} />
+          {/* Orchestration clocks under their own name: never an engine pool-freeze or first-OOS-read clock. */}
+          <OrchestrationClocks events={ordering.stage_events} />
+        </>
       ) : (
         <TypedAbsence what="wall clock ordering" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" />
       )}
@@ -1523,7 +1529,11 @@ function RetainedFreezeBody({
   evaluate,
   onEvaluate,
   executeHref,
+  runId,
+  workspaceId,
 }: {
+  runId: string;
+  workspaceId?: string;
   executeHref: string | null;
   freeze: RetainedFreeze;
   identity: RunIdentitySlot;
@@ -1536,6 +1546,8 @@ function RetainedFreezeBody({
   return (
     <div className="flex flex-col gap-3" data-lane="retained">
       <RetainedOrdering identity={known} ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
+      {/* The full source lifecycle audit (read on request) rides with the fold ordering that names each fold's child. */}
+      {(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ? <ChildAuditCompanionPanel runId={runId} workspaceId={workspaceId} /> : null}
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {/* D13: the what-if sits under the frozen θ* in the left column, so the two columns end together instead of leaving the left one empty. */}
         <div className="flex min-w-0 flex-col gap-3" data-column="left">
@@ -1583,6 +1595,8 @@ export interface FreezeScreenProps {
    * frame, breadcrumb, title and header actions — the hub draws those.
    */
   embedded?: boolean;
+  /** Optional workspace the child-audit companion read is scoped to (the personal workspace when absent). */
+  workspaceId?: string;
 }
 
 export function FreezeScreen({
@@ -1599,6 +1613,7 @@ export function FreezeScreen({
   whatIfEvaluate = { state: "idle" },
   onWhatIfEvaluate = () => undefined,
   embedded = false,
+  workspaceId,
 }: FreezeScreenProps) {
   /* W3b: the hub delegated this run and the retained lane answered — read it from there. */
   const lane = readsRetainedLane(detail, retained) ? retained.freeze : null;
@@ -1893,6 +1908,8 @@ export function FreezeScreen({
           </div>
         ) : lane !== null ? (
           <RetainedFreezeBody
+            runId={runId}
+            workspaceId={workspaceId}
             freeze={lane}
             identity={identity}
             verify={verify}

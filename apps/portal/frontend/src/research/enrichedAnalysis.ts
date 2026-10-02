@@ -341,3 +341,88 @@ export function regimeAbsence(block: EnrichedAnalysis): { reason_code: string; s
   for (const episode of block.drawdown_episodes.values) if (episode.regime !== undefined) return { reason_code: episode.regime.reason_code, source_locator: episode.regime.source_locator };
   return null;
 }
+
+/* ------------------------------------------------------------- IS facts (optional `by_window.is`) */
+
+/**
+ * B8: a fresh FIXED / imported run may publish its IS facts in `by_window.is`, a block of its own. It is NOT the
+ * OOS-only `facts` and is never summed with, substituted for, or ranked against them. Historical and WFO bodies omit
+ * it; the UI then says "not published" with the served `windows.is` reason (never zero, never AVAILABLE).
+ */
+export type EnrichedIsPayload = NonNullable<EnrichedAnalysis["by_window"]>["is"];
+export type EnrichedIsFact = EvidenceComponents["schemas"]["EnrichedAnalysisISFact"];
+
+export interface IsFactRow {
+  key: "return_fraction" | "sharpe" | "max_drawdown_fraction";
+  /** The words the UI prints (not a server code). */
+  label: string;
+  unit: "fraction" | "ratio";
+  fact: EnrichedIsFact;
+  /** The served scope/definition: window, bounds, coverage, table, return basis, origin, locators, digest. */
+  title: string;
+}
+
+export type IsRead =
+  | { kind: "available"; payload: EnrichedIsPayload; rows: IsFactRow[]; scopeTitle: string }
+  | { kind: "absent"; state: "NOT_PUBLISHED" | "NOT_APPLICABLE"; reason_code: string | null }
+  | { kind: "refused"; detail: string };
+
+const IS_KEYS = ["return_fraction", "sharpe", "max_drawdown_fraction"] as const;
+const isIsFact = (value: unknown): boolean => isFact(value) && (value as { scope: unknown }).scope === "IS";
+
+function isPayloadProblem(value: unknown): string | null {
+  if (!isObject(value) || value.state !== "AVAILABLE" || value.basis !== "ALL_TIME") return "by_window.is";
+  const scope = value.scope;
+  if (!isObject(scope) || scope.window !== "IS" || scope.coverage !== "FULL_SOURCE_IS" || scope.bounds_semantics !== HALF_OPEN || scope.source_table !== "OBSERVATION_IS") return "by_window.is.scope";
+  if (!isMs(scope.start_ms) || !isMs(scope.end_ms) || !isMs(scope.first_at_utc_ms) || !isMs(scope.last_at_utc_ms) || !isCount(scope.observation_count) || !isString(scope.locator) || !isString(scope.source_locator)) return "by_window.is.scope";
+  const metrics = isObject(value.facts) && isObject(value.facts.metrics) ? value.facts.metrics : null;
+  if (metrics === null) return "by_window.is.facts";
+  for (const key of IS_KEYS) if (!isIsFact(metrics[key])) return `by_window.is.facts.${key}`;
+  return null;
+}
+
+const isoZ = (ms: number) => new Date(ms).toISOString().replace(".000Z", "Z");
+
+/**
+ * Reads the IS facts of a guarded block. `available` carries the three served facts with their scope in the title;
+ * `absent` carries the served `windows.is` state and reason (state AVAILABLE without a payload is still absent: the
+ * window bounds do not prove IS facts exist); a malformed payload is `refused` locally and the OOS block is unaffected.
+ * IS Sharpe decay is not part of the IS payload, so none is shown and none is computed.
+ */
+export function readIsFacts(block: EnrichedAnalysis): IsRead {
+  const raw = (block as { by_window?: unknown }).by_window;
+  if (!isObject(raw) || raw.is === undefined) {
+    const w = block.windows.is;
+    return { kind: "absent", state: w.state === "NOT_APPLICABLE" ? "NOT_APPLICABLE" : "NOT_PUBLISHED", reason_code: w.state === "AVAILABLE" ? null : w.reason_code };
+  }
+  const problem = isPayloadProblem(raw.is);
+  if (problem !== null) return { kind: "refused", detail: problem };
+  const payload = raw.is as EnrichedIsPayload;
+  const s = payload.scope;
+  const scopeTitle = [
+    `IS · [${isoZ(s.start_ms)}, ${isoZ(s.end_ms)}) start inclusive, end exclusive`,
+    `${s.coverage} · ${formatMetric(s.observation_count, "count")} observations · ${isoZ(s.first_at_utc_ms)} to ${isoZ(s.last_at_utc_ms)} · ${s.source_table}`,
+    "separate from the OOS figures: never summed or substituted",
+    s.locator,
+  ].join("\n");
+  const m = payload.facts.metrics;
+  const basis = payload.return_basis;
+  const defs: [IsFactRow["key"], string, IsFactRow["unit"], string | null][] = [
+    ["return_fraction", "IS return", "fraction", basis ? `${basis.definition_id} · start equity ${basis.start_equity} to end equity ${basis.end_equity}` : null],
+    ["sharpe", "IS Sharpe", "ratio", null],
+    ["max_drawdown_fraction", "IS max DD", "fraction", null],
+  ];
+  const rows = defs.map(([key, label, unit, definition]): IsFactRow => {
+    const fact: EnrichedIsFact = m[key];
+    const title = [
+      `${label} · ${fact.scope} · ${fact.origin.toLowerCase().replace(/_/g, "-")}${fact.value !== null ? ` · exact ${fact.value}` : ""}`,
+      fact.state !== "AVAILABLE" ? `${fact.state}${fact.reason_code !== null ? ` · ${fact.reason_code}` : ""}` : null,
+      definition,
+      scopeTitle,
+      fact.source_locator,
+      `input ${fact.input_digest}`,
+    ].filter((part): part is string => part !== null).join("\n");
+    return { key, label, unit, fact, title };
+  });
+  return { kind: "available", payload, rows, scopeTitle };
+}

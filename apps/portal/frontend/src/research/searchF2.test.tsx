@@ -187,11 +187,16 @@ describe("F2 · S06 — Trial.params_digest in the ledger rows", () => {
 
 describe("F2 · S06 — pool.frozen_at_utc_ms in the pool funnel", () => {
   it("prints the served freeze time in UTC", async () => {
-    stub();
+    /* B8: the regenerated fixture serves frozen_at as null; a LEGACY capture (typed from the same schema) still serves the S4 event time. */
+    const legacy = copy(SURFACE);
+    legacy.pool!.frozen_at_utc_ms = Date.UTC(2026, 8, 24, 17, 0);
+    legacy.pool!.frozen_at_source = "P11_STAGE_COMPLETED_S4_EVENT";
+    legacy.pool!.frozen_at_reason_code = null;
+    stub({ search: () => [200, legacy] });
     const { container } = mount("#stage=search&fold=1");
     await waitFor(() => expect(container.querySelector("[data-frozen-at]")).toBeTruthy());
     const at = container.querySelector("[data-frozen-at]") as HTMLElement;
-    expect(at.getAttribute("data-frozen-at")).toBe(String(SURFACE.pool!.frozen_at_utc_ms));
+    expect(at.getAttribute("data-frozen-at")).toBe(String(legacy.pool!.frozen_at_utc_ms));
     expect(at.textContent).toBe("2026-09-24 17:00 UTC");
     expect(at.getAttribute("title")).toBe("P11_STAGE_COMPLETED_S4_EVENT");
   });
