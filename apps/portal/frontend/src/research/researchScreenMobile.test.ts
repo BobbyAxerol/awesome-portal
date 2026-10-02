@@ -48,6 +48,7 @@ describe("research screens at phone width", () => {
       "[data-fold-note]",
       ".ln-diff",
       "[data-parameters]",
+      "[data-pool-row]",
     ]) {
       expect(block, needle).toContain(needle);
     }

@@ -195,4 +195,17 @@
   .research-screen [data-parameters] > * {
     min-width: max-content;
   }
+  /* S03 pool funnel: a fixed 158px label + bar + count leaves the note no room at 390px; wrap the row and give the note its own line. */
+  .research-screen [data-pool-row] {
+    flex-wrap: wrap;
+  }
+  .research-screen [data-pool-row] > :first-child {
+    width: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .research-screen [data-pool-row] > :last-child {
+    flex: 1 1 100%;
+    padding-left: 0;
+  }
 }
