@@ -155,7 +155,7 @@ export function FrozenAt({ pool }: { pool: Pool }) {
   const at = typeof pool.frozen_at_utc_ms === "number" ? formatUtc(pool.frozen_at_utc_ms) : null;
   const stageFour = at !== null && pool.frozen_at_source === "P11_STAGE_COMPLETED_S4_EVENT";
   return (
-    <span className="mono flex min-w-0 items-center gap-2 text-[10.5px]" data-pool-row="frozen-at">
+    <span className="mono flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px]" data-pool-row="frozen-at">
       <span className="w-[158px] flex-none text-[10.5px] [font-family:var(--font-body)]" style={{ color: "var(--ink-soft)" }}>
         {/* D2: the served time is the stage-4 completion event — after OOS was read — so it is never called the pool's freeze. */}
         {stageFour ? "stage 4 completed" : "frozen at"}
@@ -168,7 +168,7 @@ export function FrozenAt({ pool }: { pool: Pool }) {
         <>
           <Absent code={pool.frozen_at_reason_code} data-frozen-at="absent" />
           {pool.frozen_at_reason_code ? (
-            <span className="text-[9px]" style={FAINT} data-frozen-at-reason>
+            <span className="min-w-0 text-[9px] [overflow-wrap:anywhere]" style={FAINT} data-frozen-at-reason>
               {pool.frozen_at_reason_code}
             </span>
           ) : null}
