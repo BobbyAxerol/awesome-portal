@@ -824,6 +824,23 @@ def _capture_fixed_replay_source(*, receipt: dict[str, Any], receipt_dir: Path |
     )
 
 
+def _capture_is_qualification_source(*, receipt: dict[str, Any], receipt_dir: Path | None,
+                                     market: Any, result: Any, output: dict[str, Any]) -> None:
+    """Private source-time proof only, never part of a public run artifact."""
+    if os.environ.get("RESEARCH_IS_QUALIFICATION_CAPTURE") != "true":
+        return
+    if receipt_dir is None or not isinstance(receipt.get("source_windows"), dict):
+        raise ValueError("IS qualification needs the admitted fixed windows and private work directory")
+    from portal_api.services.research_is_qualification import capture_is_qualification
+
+    output["is_qualification_source"] = capture_is_qualification(
+        result=result, market_close=market["close"], output_directory=receipt_dir,
+        source_windows=receipt["source_windows"],
+        binding={key: receipt[key] for key in ("run_id", "job_id", "worker_attempt_id", "lease_epoch")},
+        benchmark_locator=output["evidence_source"]["summary_analytics_v2"]["benchmark_locator"],
+    )
+
+
 def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = None) -> dict[str, Any]:
     """Run the pinned real P04 Delta calculation over an approved tape.
 
@@ -877,6 +894,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
             source_windows=receipt.get("source_windows"),
         )
     _capture_fixed_replay_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
+    _capture_is_qualification_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
     return output
 
 
@@ -1050,6 +1068,7 @@ def _run_p17_imported_signal_notional(receipt: dict[str, Any], *, receipt_dir: P
             source_windows=receipt.get("source_windows"),
         )
     _capture_fixed_replay_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
+    _capture_is_qualification_source(receipt=receipt, receipt_dir=receipt_dir, market=market, result=result, output=output)
     return output
 
 

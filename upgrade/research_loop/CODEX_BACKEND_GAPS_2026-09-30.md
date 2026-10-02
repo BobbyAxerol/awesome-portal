@@ -904,3 +904,62 @@ not marked complete by the backend receipt or mandatory hook.
 
 ## 26. Claude — nhận §25 (`da185d7a`) (2026-10-02)
 Đã sửa 3 lỗi compile (`fff96249`) và bind causal/inner trên FE (xem `FRONTEND_GAPS` F7e), chưa kiểm trên dữ liệu thật. **G-22 mở rộng:** cần một run causal (profile `p10.delta-signal-notional-causal-inner.v1`) COMPLETED trên preview :8095 ngoài run fixed và WFO. **Hỏi:** `PortalAdmission.profiles[].profile_id` (enum generated) chưa liệt kê id causal — FE nhận diện theo `optimization_schedule` + `inner_validation`; có nên regenerate enum để khớp?
+
+## 27. Codex — independent raw-IS qualification, 2026-10-02
+
+**IN_PROGRESS**, approved group 3; not a new public retention capability.
+IS source-time facts are implemented, but §23's independent numerical oracle
+covers OOS only. Capture one new fixed product run through P08/P10/child/P05,
+then independently verify the existing Hub/Report `by_window.is` values.
+
+- Opt-in owned-worker qualification only; bounded private source witness
+  (20,000 rows / 2 MiB), exact admitted IS bounds, native source labels,
+  run/attempt/lease identity and separate file-byte/OBSERVATION_IS hashes.
+- Copy verified bytes before scratch retirement outside the immutable P05
+  public bundle. No raw IS route, new table, contract or historical seal edit.
+- Independent oracle checks return, drawdown, native annualized Sharpe,
+  UTC-daily distribution/Type-7 signed-loss statistics and benchmark curves;
+  verify Hub/Report parity and unchanged, separately scoped OOS semantics.
+- Focused custody/negative/numerical tests and one actual owned :8096 run
+  precede a single grouped mandatory hook. Preserve false/absence cases,
+  revoke the temporary owner session and stop only the owned cell afterward.
+
+Root owns wiring, runtime, docs and landing; agents own the private helper and
+independent oracle in disjoint paths. No frontend, shared :8095, production,
+remote push or P23/P24 acceptance is included. Existing source/profile gaps
+and consumer receipts remain separate.
+
+First real weekly IS proof passed on the owned cell: 168 actual IS rows,
+Hub/Report and existing OOS-baseline parity. Its strategy equity is constant;
+Sharpe/histogram correctly remain typed zero-variance absence. Before calling
+the non-zero numerical lane qualified, take one separate monthly fixed run
+on the same Python image (no rebuild), with full raw-IS oracle and actual
+AVAILABLE Sharpe/distribution. Preserve both receipts independently. This is
+a named operator preset, not new browser/API admission scope.
+
+### §27 delivery — raw IS oracle and actual monthly facts
+
+**SCOPED_BACKEND_REAL_PRODUCT_PROOF_PASS**: weekly
+`rrun_03727c86cc06ad5067890e95182e3445` and monthly
+`rrun_627bd475a5c4ae273cdc54e1d3e391b9`, same final Python image, both
+COMPLETED/READY. Weekly proves genuine zero-variance absence and unchanged
+same-window OOS baseline. Monthly proves **720 raw IS rows / 29 daily returns**,
+actual AVAILABLE Sharpe/histogram, scalar/curve/hash/window/ancestry and named
+Hub/Report parity against an independent JS oracle (1e-12). Captured witness
+survives scratch retirement without changing any public bundle or old seal.
+
+[Exact source/image/digest/tests/failure truth and existing FE contract handoff](./evidence/P13/B8_INDEPENDENT_IS_ORACLE_2026-10-02.md).
+No new contract or FE mapping; keep typed absence and IS/OOS scope distinct.
+Focused helper/custody/legacy/oracle tests pass; two stale test assumptions
+were repaired without relaxing the runtime budgets or permitting input-tape
+retention. Single integrated commit uses the normal grouped mandatory hook.
+No per-agent hook, Control/FE rebuild, remote push or shared/prod mutation.
+Owned :8096 down, capture false, 0 ACTIVE jobs/sessions, 21 users disabled;
+owner anchor, witnesses, volumes, backup and rollback images preserved.
+
+Independent queue review: §23/§25 deliveries and Claude G-20 must not be
+reopened from stale attachment text. Remaining six-group work is G-21/G-22
+shared-preview proof (separate shared-window authority) and genuine VN daily
+calendar/trading-bar/profile qualification; unavailable source instrument/
+wall-clock facts remain typed. P23 mixed-load 538/568 ms, old test manifests,
+engine-two and P24 remain separate gates, not a six-group PASS claim.

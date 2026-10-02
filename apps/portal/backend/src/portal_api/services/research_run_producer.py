@@ -729,6 +729,10 @@ class ResearchRunProducerExecutor:
             "research_evidence": child.evidence_source,
             "research_split": split_source,
             "fixed_replay_source": child.fixed_replay_source,
+            # Ephemeral worker-only handles; do not add to receipt_document or
+            # engine_directory, whose files become user-reviewable artifacts.
+            "is_qualification_source": child.is_qualification_source,
+            "is_qualification_path": child.is_qualification_path,
         }
 
     def _execute_delta_wfo_sync(

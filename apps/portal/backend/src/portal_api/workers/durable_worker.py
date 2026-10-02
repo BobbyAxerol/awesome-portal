@@ -468,6 +468,26 @@ class DurableQuantWorker:
                 # still confined to the attempt scratch and the P06 terminal
                 # CAS will record CANCELLED rather than a misleading success.
                 raise DurableRunCancelled("P11 cancellation was requested before artifact seal")
+            if is_research_producer and result.get("is_qualification_source") is not None:
+                from portal_api.services.research_is_qualification_retention import retain_is_qualification
+
+                def qualification_fence(_binding: object) -> bool:
+                    current = self._registry.attempt(run_id, attempt.run_attempt_id)
+                    return (
+                        current is not None
+                        and current.status in {"CLAIMED", "RUNNING"}
+                        and self._registry.verify_lease(current, lease_token=lease_token)
+                        and not self._registry.cancellation_requested(
+                            run_id, attempt.run_attempt_id, lease_epoch=research_request.lease_epoch
+                        )
+                    )
+
+                await _joined_retention_thread(
+                    retain_is_qualification, request=research_request,
+                    source=result["is_qualification_source"], source_path=result.get("is_qualification_path"),
+                    private_root=Path(self._artifact_store.root), evidence=result["research_evidence"],
+                    fence_validator=qualification_fence,
+                )
             engine_dir = engine_root / run_id
             self._artifact_store.stage_directory(engine_dir, temp_dir)
             evidence_digest: str | None = None

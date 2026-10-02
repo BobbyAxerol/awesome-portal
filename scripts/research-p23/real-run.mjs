@@ -32,9 +32,10 @@ export function requestedSpec(binding, release, profile) {
     client: { engine_release_id: release.release_id, config_digest: release.config_digest },
   };
 }
-export async function admitRealRun(home, profile, label, operator = 'p23-owner', authenticatedClient) {
+export async function admitRealRun(home, profile, label, operator = 'p23-owner', authenticatedClient, specFactory = requestedSpec) {
   home = validateHome(home);
   assert(/^[a-z][a-z0-9-]{0,63}$/.test(label), 'P23_RECEIPT_LABEL_REQUIRED');
+  assert(typeof specFactory === 'function', 'NAMED_OPERATOR_SPEC_FACTORY_REQUIRED');
   const client = authenticatedClient ?? await operatorClient(home, operator);
   assert.equal(client.user.username, operator, 'EXACT_TEST_OPERATOR_REQUIRED');
   const path = join(home, `run-${label}.json`);
@@ -55,7 +56,9 @@ export async function admitRealRun(home, profile, label, operator = 'p23-owner',
   if (!receipt.requested_spec) {
     receipt.binding = await client.call('POST', '/api/v1/research/run-producer/p04-delta/install', {}, [200, 201]);
     receipt.atlas = await client.call('GET', '/api/v1/research/quantbt/atlas');
-    receipt.requested_spec = requestedSpec(receipt.binding.body, receipt.atlas.body.atlas.current_release, profile);
+    // Operator-only presets can qualify a second real source range without
+    // changing the public producer or treating a cached run as a fresh one.
+    receipt.requested_spec = specFactory(receipt.binding.body, receipt.atlas.body.atlas.current_release, profile);
     savePrivate(path, receipt);
   }
   if (!receipt.preflight) {

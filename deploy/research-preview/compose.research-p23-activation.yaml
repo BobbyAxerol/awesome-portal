@@ -41,6 +41,9 @@ services:
   quant-worker-py:
     cpus: 2
     environment:
+      # Operator-only private numerical witness, default off. This overlay is
+      # exclusive to the owned P23 cell; not a product/raw-IS read capability.
+      RESEARCH_IS_QUALIFICATION_CAPTURE: ${RESEARCH_IS_QUALIFICATION_CAPTURE:-false}
       PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION: "true"
       # Match Control API's explicit what-if lane. Without this worker fence
       # the durable diagnostic is admitted but cannot emit a source event.

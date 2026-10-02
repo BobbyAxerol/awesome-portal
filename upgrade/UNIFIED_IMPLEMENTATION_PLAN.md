@@ -7181,3 +7181,30 @@ G-21/G-22, genuine VN calendar/instrument/daily profile, engine source omissions
 old P23 failures/second-engine and P24 release remain separate. No FE edits,
 remote push, dev/main, shared :8095 or production action. Owned test cell down,
 0 active jobs/sessions, 21 accounts remain disabled; volumes/backups retained.
+
+#### B8 continuation — independent raw-IS qualification, 2026-10-02
+
+**IN_PROGRESS**, same approved group 3. Existing IS facts have source-time
+proof; the previous independent raw numerical oracle is OOS-only. Take one
+fresh fixed P08→P10→isolated child→P05→Hub/Report receipt with an opt-in,
+bounded private IS witness before scratch retirement. Verify source bytes,
+admitted windows/identity, return/drawdown/Sharpe, daily distribution and
+benchmark independently; do not change OOS semantics or historical seals.
+No new public raw-IS API, retained table, migration or frontend edit. Agents
+work on helper/oracle paths; root integrates and runs one grouped hook after
+focused tests and actual owned :8096 proof. Shared :8095 and P23/P24 gates
+remain separate. [Scope and live ledger](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#27-codex--independent-raw-is-qualification-2026-10-02).
+
+**Scoped backend proof delivered:** weekly `rrun_03727c86cc06ad5067890e95182e3445`
+and monthly `rrun_627bd475a5c4ae273cdc54e1d3e391b9`, same actual worker image,
+both COMPLETED/READY. Weekly 168 IS rows prove typed zero variance and old
+same-window OOS parity; monthly **720 IS rows / 29 daily returns**, AVAILABLE
+Sharpe/distribution, independent raw-input numerical/hash/bounds oracle and
+Hub/Report parity PASS. Private witnesses persist before scratch retirement;
+no public raw-IS route/table/migration, seal rewrite or new FE mapping.
+[Complete evidence, image identities, failed-attempt truth, existing FE handoff
+and C4](./research_loop/evidence/P13/B8_INDEPENDENT_IS_ORACLE_2026-10-02.md).
+One normal grouped hook gates the coherent commit. Preserve Claude's commits.
+Capture restored false, cell down without volumes, 0 active jobs/sessions;
+21 identities remain disabled. G-21/G-22, actual VN profile/source facts and
+P23/P24 remain distinct; no push, production or shared :8095 action.

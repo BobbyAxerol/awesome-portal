@@ -38,6 +38,7 @@ test('isolated activation uses private credentials, disables auto-login and adds
   assert.match(source, /FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY: "true"/);
   assert.match(source, /FEATURE_RESEARCH_WHATIF: "true"/);
   assert.match(source, /quant-worker-py:[\s\S]*PORTAL_FEATURE_RESEARCH_WHATIF: "true"/);
+  assert.match(source, /quant-worker-py:[\s\S]*RESEARCH_IS_QUALIFICATION_CAPTURE: \$\{RESEARCH_IS_QUALIFICATION_CAPTURE:-false\}/);
   assert(!source.includes('FEATURE_EXECUTION_'));
   assert(!source.includes('ports:'));
   assert(!source.includes('external:'));

@@ -39,6 +39,7 @@ from portal_api.services.research_run_producer import (
     _storage_exhausted,
 )
 from portal_api.services.research_imported_source import ImportedSource
+from portal_api.services.research_fixed_replay import verify_fixed_replay_file
 from portal_api.services.research_supervisor import IsolatedResearchSupervisor
 import portal_api.workers.durable_worker as durable_worker_module
 from portal_api.workers.durable_worker import DurableQuantWorker
@@ -277,7 +278,13 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
     assert evidence["source"]["oos_observation_count"] >= evidence["source"]["emitted_equity_points"] >= 1
     assert evidence["direct"]["initial_equity"] == evidence["equity_points"][0]["equity"]
     assert evidence["direct"]["final_equity"] == evidence["equity_points"][-1]["equity"]
-    assert len(json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode("utf-8")) <= 28 * 1024
+    # B6 adds a separately bounded enrichment block. Keep the original
+    # receipt ceiling on its core; do not apply it to the combined document
+    # or loosen either runtime guard to accommodate the new source facts.
+    evidence_core = {key: value for key, value in evidence.items() if key != "enriched_analysis"}
+    assert len(json.dumps(evidence_core, sort_keys=True, separators=(",", ":")).encode("utf-8")) <= 28 * 1024
+    assert len(json.dumps(evidence["enriched_analysis"], separators=(",", ":")).encode("utf-8")) <= 65_536
+    IsolatedResearchSupervisor._validate_evidence_source(evidence)
     # P14 consumes the exact tape construction facts and must preserve the
     # difference between semantic child-tape exclusion and an unproven
     # physical Parquet row-group I/O boundary.
@@ -355,7 +362,12 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
     )
 
     assert not list(market_root.rglob("*.parquet"))
-    assert not list((tmp_path / "engine-output").rglob("*.parquet"))
+    # The approved fixed replay is the sole retained OOS companion; raw
+    # input/scratch Parquet must still be absent. Validate its actual bytes
+    # and bounded metadata rather than rejecting all retained Parquet.
+    replay_path = tmp_path / "engine-output" / "rrun_p10_real" / "research" / "fixed-replay.parquet"
+    assert list((tmp_path / "engine-output").rglob("*.parquet")) == [replay_path]
+    verify_fixed_replay_file(replay_path, receipt["fixed_replay_source"])
     assert config_path.stat().st_mode & 0o777 == 0o600
     assert receipt_path.stat().st_mode & 0o777 == 0o600
 

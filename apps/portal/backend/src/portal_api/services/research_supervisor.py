@@ -172,6 +172,10 @@ class ResearchChildResult:
     # supervisor-derived, and never serialized into a public run receipt.
     fixed_replay_source: dict[str, Any] | None = None
     fixed_replay_path: Path | None = None
+    # Opt-in operator qualification only; these fields never enter the
+    # public evidence receipt, engine bundle or P05 manifest.
+    is_qualification_source: dict[str, Any] | None = None
+    is_qualification_path: Path | None = None
 
 
 # W1 §1.1 child_limits (cpu 120 s, wall 240 s) plus the design's scratch and
@@ -595,6 +599,7 @@ class IsolatedResearchSupervisor:
             worker_attempt_id=receipt.worker_attempt_id,
             payload_for=lambda _work: receipt.as_payload(),
             expected_task="P04_DELTA_SMOKE",
+            capture_is_qualification=receipt.source_windows is not None,
             limits=limits,
             on_child_alive=on_child_alive,
         )
@@ -610,6 +615,7 @@ class IsolatedResearchSupervisor:
         if evidence_source is not None:
             self._validate_evidence_source(evidence_source)
         fixed_replay_source, fixed_replay_path = self._validated_fixed_replay(payload, receipt)
+        is_qualification_source, is_qualification_path = self._validated_is_qualification(payload, receipt)
         return ResearchChildResult(
             launcher_pid=launch.launcher_pid,
             child_pid=launch.child_pid,
@@ -625,6 +631,8 @@ class IsolatedResearchSupervisor:
             evidence_source=evidence_source if isinstance(evidence_source, dict) else None,
             fixed_replay_source=fixed_replay_source,
             fixed_replay_path=fixed_replay_path,
+            is_qualification_source=is_qualification_source,
+            is_qualification_path=is_qualification_path,
         )
 
     def run_imported_alpha_qualification(
@@ -649,6 +657,7 @@ class IsolatedResearchSupervisor:
             worker_attempt_id=receipt.worker_attempt_id,
             payload_for=lambda _work: receipt.as_payload(),
             expected_task="P17_IMPORTED_SIGNAL_NOTIONAL",
+            capture_is_qualification=receipt.source_windows is not None,
             limits=limits,
             on_child_alive=on_child_alive,
         )
@@ -671,6 +680,7 @@ class IsolatedResearchSupervisor:
                 expected_adapter_id=IMPORTED_ALPHA_ADAPTER_ID,
             )
         fixed_replay_source, fixed_replay_path = self._validated_fixed_replay(payload, receipt)
+        is_qualification_source, is_qualification_path = self._validated_is_qualification(payload, receipt)
         return ResearchChildResult(
             launcher_pid=launch.launcher_pid,
             child_pid=launch.child_pid,
@@ -687,6 +697,8 @@ class IsolatedResearchSupervisor:
             imported_source_digest=source_digest,
             fixed_replay_source=fixed_replay_source,
             fixed_replay_path=fixed_replay_path,
+            is_qualification_source=is_qualification_source,
+            is_qualification_path=is_qualification_path,
         )
 
     def _validated_fixed_replay(
@@ -714,6 +726,47 @@ class IsolatedResearchSupervisor:
             return source, path
         except (OSError, ValueError, KeyError, TypeError) as exc:
             raise ResearchSupervisorError("fixed replay child source failed exact byte/row custody validation") from exc
+
+    def _validated_is_qualification(
+        self, payload: dict[str, Any], receipt: ResearchChildReceipt | ImportedAlphaChildReceipt,
+    ) -> tuple[dict[str, Any] | None, Path | None]:
+        source = payload.get("is_qualification_source")
+        enabled = os.environ.get("RESEARCH_IS_QUALIFICATION_CAPTURE") == "true" and receipt.source_windows is not None
+        if source is None and not enabled:
+            unexpected = self._scratch_root / receipt.job_id / receipt.worker_attempt_id / "is-qualification.ndjson"
+            if unexpected.exists() or unexpected.is_symlink():
+                raise ResearchSupervisorError("disabled IS qualification unexpectedly produced a private witness")
+            return None, None
+        try:
+            if not enabled or source is None or receipt.source_windows is None:
+                raise ValueError("IS qualification does not match its server opt-in")
+            from portal_api.services.research_is_qualification import (
+                FILE_NAME, validate_is_qualification_metadata, verify_is_qualification_file,
+            )
+            validate_is_qualification_metadata(source)
+            binding = {key: getattr(receipt, key) for key in ("run_id", "job_id", "worker_attempt_id", "lease_epoch")}
+            admitted_is = receipt.source_windows["is"]
+            if source["is_start_utc_ms"] != admitted_is["start_ms"] \
+                    or source["is_end_exclusive_utc_ms"] != admitted_is["end_ms"] \
+                    or source["binding_sha256"] != hashlib.sha256(json.dumps(binding,
+                        sort_keys=True, separators=(",", ":")).encode()).hexdigest():
+                raise ValueError("IS qualification metadata does not match admitted identity/windows")
+            path = self._scratch_root / receipt.job_id / receipt.worker_attempt_id / FILE_NAME
+            if source["state"] == "NOT_PUBLISHED":
+                if path.exists() or path.is_symlink():
+                    raise ValueError("absent IS qualification unexpectedly has a source file")
+                return source, None
+            verify_is_qualification_file(path, source,
+                binding=binding,
+                source_windows=receipt.source_windows)
+            enriched = payload["evidence_source"]["enriched_analysis"]
+            identities = [row for row in enriched["source_tables"] if row["name"] == "OBSERVATION_IS"]
+            if len(identities) != 1 or identities[0]["digest"] != source["observation_is_digest"] \
+                    or identities[0]["row_count"] != source["row_count"]:
+                raise ValueError("IS qualification source does not bind the public IS observation identity")
+            return source, path
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise ResearchSupervisorError("IS qualification failed private byte/identity/window validation") from exc
 
     def run_delta_wfo(
         self,
@@ -846,6 +899,7 @@ class IsolatedResearchSupervisor:
         limits: ResearchChildLimits,
         on_child_alive: Callable[[], None] | None,
         on_child_progress: Callable[[dict[str, Any]], None] | None = None,
+        capture_is_qualification: bool = False,
     ) -> _LaunchOutcome:
         work = self._scratch_root / job_id / worker_attempt_id
         if work.exists():
@@ -876,6 +930,12 @@ class IsolatedResearchSupervisor:
             "TMPDIR": str(work / "tmp"),
             "TZ": "UTC",
         }
+        # Exact non-secret boolean, not an inherited environment capability.
+        # WFO and legacy callers retain their original launch environment.
+        if expected_task in {"P04_DELTA_SMOKE", "P17_IMPORTED_SIGNAL_NOTIONAL"} \
+                and capture_is_qualification \
+                and os.environ.get("RESEARCH_IS_QUALIFICATION_CAPTURE") == "true":
+            environment["RESEARCH_IS_QUALIFICATION_CAPTURE"] = "true"
         # `-I` ignores PYTHONPATH and the user site. The controlled bootstrap
         # adds only this repository's immutable source roots, rather than
         # inheriting a parent interpreter's arbitrary module search path.

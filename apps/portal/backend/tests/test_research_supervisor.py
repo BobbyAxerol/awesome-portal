@@ -49,6 +49,9 @@ def test_p06_t05_t08_actual_quantbt_child_is_separate_network_pid_and_resource_b
     monkeypatch.setenv("DATABASE_URL", "postgres://must-not-reach-child")
     observed_child_alive: list[bool] = []
     monkeypatch.setenv("NATS_URL", "nats://must-not-reach-child")
+    # A legacy scalar P06 receipt has no admitted windows: even an operator's
+    # fixed qualification opt-in must not expand that child's environment.
+    monkeypatch.setenv("RESEARCH_IS_QUALIFICATION_CAPTURE", "true")
     supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=MARKET_PATH.parent)
     parent_network_namespace = os.readlink("/proc/self/ns/net")
     result = supervisor.run_p04_delta_qualification(
@@ -63,6 +66,7 @@ def test_p06_t05_t08_actual_quantbt_child_is_separate_network_pid_and_resource_b
     assert observed_child_alive, "the supervisor must report an actually running child"
     assert result.bars == 500
     assert result.num_trades == 8
+    assert result.is_qualification_source is None and result.is_qualification_path is None
     assert result.final_equity == pytest.approx(20_589.74597203475)
     assert result.elapsed_seconds > 0
     assert result.enforced_limits == {
