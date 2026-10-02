@@ -7023,3 +7023,13 @@ enrichment limits without rewriting old bytes; TS/PG 16/16, Python 10 pass /
 1 opt-in skip. [Bounded repair](./research_loop/evidence/P05/JSONB_SEAL_BUDGET_2026-10-02.md).
 P23 retake and P24 whole-product gate remain OPEN; no required test is waived.
 [P24 entry assessment](./research_loop/evidence/P24/ENTRY_ASSESSMENT_2026-10-02.md).
+
+**P23 measured continuation (2026-10-02):** clean `6726b4b5` completes the
+92-day retained WFO; all mixed/far-seek reads are 200, no implicit viewer
+compute, peak below 683 MB. Fresh-parent utility quota passes. Warm and
+far-seek latency **fail**; preserve actual failed receipts and thresholds.
+The next bounded fix removes repeated schema/hash work only for an already
+verified deeply frozen enrichment object, and repairs exact-spec preflight /
+fresh-parent reuse in the evidence harness. No RLS, UI, quota or SLO change.
+[Detailed measurement/repair packet](./research_loop/evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
+P23/P24 and real second-engine T07/T13 are not marked green.

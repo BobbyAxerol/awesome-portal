@@ -19,6 +19,13 @@ export function longWfoSpec(binding, release) {
   return spec; // Still the immutable <=92-day, <=16-fold, three-trial profile.
 }
 
+export function reuseExactPreflight(previous, requested) {
+  assert.deepEqual(previous.requested_spec, requested, 'PREFLIGHT_REUSE_REQUIRES_IDENTICAL_SPEC');
+  assert(previous.preflight?.status === 201 && previous.preflight.body?.may_create_run === true,
+    'ACCEPTED_SAME_ACTOR_PREFLIGHT_REQUIRED');
+  return previous.preflight;
+}
+
 export function assertQueue(rows, expected) {
   assert.equal(rows.length, expected);
   assert.equal(new Set(rows.map(row => row.job_id)).size, expected, 'DISTINCT_DURABLE_JOB_IDS_REQUIRED');
@@ -92,7 +99,12 @@ async function main() {
     for (let i = 0; i < 5; i++) {
       const job = { requested_spec: spec, client_intent_id: `p23-mixed-${i}-${randomUUID()}` };
       receipt.jobs.push(job); savePrivate(target, receipt);
-      job.preflight = await client.call('POST', '/api/v1/research/preflights', { requested_spec: spec }, [201]);
+      // Five distinct intents share one immutable same-actor snapshot/spec.
+      // Do not spend five of the actor's eight live-manifest slots on the
+      // same request; each create still rechecks token/spec/actor/authority.
+      job.preflight = i === 0
+        ? await client.call('POST', '/api/v1/research/preflights', { requested_spec: spec }, [201])
+        : reuseExactPreflight(receipt.jobs[0], spec);
       assert.equal(job.preflight.body.may_create_run, true);
       job.create_body = { schema_version: 'research.run-create.v1', client_intent_id: job.client_intent_id,
         preflight_token: job.preflight.body.preflight_token, requested_spec: spec };

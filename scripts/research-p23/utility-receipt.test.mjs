@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { assessUtility, utilityTarget, exportPath, EXPORT_FORMATS } from './utility-receipt.mjs';
+import { utilityParentRun } from './utility-quota-receipt.mjs';
 import { PROJECT, BASE_URL } from './cell.mjs';
 
 function good() {
@@ -59,6 +60,15 @@ test('a real primary lease and queued utility is the declared workload, not two 
 test('foreign targets and unsafe receipt labels are refused', () => {
   assert.deepEqual(utilityTarget('rrun_' + 'a'.repeat(32), 'utility-actual'), { runId: 'rrun_' + 'a'.repeat(32), label: 'utility-actual' });
   for (const [run, label] of [['legacy', 'ok'], ['rrun_' + 'a'.repeat(32), '../overwrite']]) assert.throws(() => utilityTarget(run, label));
+});
+test('quota retake can bind a fresh real parent without silently changing run identity', () => {
+  const old = 'rrun_' + 'a'.repeat(32), fresh = 'rrun_' + 'b'.repeat(32);
+  assert.equal(utilityParentRun(undefined, old), old);
+  assert.equal(utilityParentRun(fresh, old), fresh);
+  for (const run of ['legacy', '', '../other', 'rrun_' + 'a'.repeat(65)]) {
+    assert.throws(() => utilityParentRun(run, old), /EXACT_OWNED_PARENT_RUN_REQUIRED/);
+  }
+  assert.throws(() => utilityParentRun(undefined, undefined));
 });
 test('runtime export formats match the published producer contract, never guessed presentation names', () => {
   const source = readFileSync(new URL('../../apps/control-api/src/research/report.contract.ts', import.meta.url), 'utf8');

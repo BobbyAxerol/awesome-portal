@@ -27,14 +27,21 @@ function drain() {
   return { exit_code: result.status, output_tail: result.stdout?.slice(-400) };
 }
 
-export async function utilityQuotaReceipt(home = DEFAULT_HOME, label = 'utility-quota') {
+export function utilityParentRun(explicit, fallback) {
+  const runId = explicit ?? fallback;
+  assert(/^rrun_[a-z0-9]{16,64}$/.test(runId ?? ''), 'EXACT_OWNED_PARENT_RUN_REQUIRED');
+  return runId;
+}
+
+export async function utilityQuotaReceipt(home = DEFAULT_HOME, label = 'utility-quota', explicitRunId) {
   home = validateHome(home);
   assert(/^[a-z][a-z0-9-]{0,40}$/.test(label), 'BOUNDED_LABEL_REQUIRED');
   const path = join(home, `${label}.json`);
   assert(!existsSync(path), 'INSPECT_PRIOR_RECEIPT_DO_NOT_REPEAT');
   const identity = privateJson(join(home, 'identity.json'));
   assert.equal(identity.dirty, false, 'CLEAN_CELL_IMAGE_REQUIRED');
-  const runId = privateJson(join(home, 'run-plateau-warmup.json')).run_id;
+  const runId = utilityParentRun(explicitRunId,
+    explicitRunId ? undefined : privateJson(join(home, 'run-plateau-warmup.json')).run_id);
   const workspaceId = privateJson(join(home, 'reader-authorization.json')).workspace_id;
   const users = loadSessions(home).identities.filter(u => /^p23-reader-[0-9]{2}$/.test(u.username)).slice(0, 3);
   assert.equal(users.length, 3, 'THREE_REAL_AUTHENTICATED_READERS_REQUIRED');
@@ -95,6 +102,7 @@ export async function utilityQuotaReceipt(home = DEFAULT_HOME, label = 'utility-
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   utilityQuotaReceipt(process.argv.find(a => a.startsWith('--home='))?.slice(7) ?? DEFAULT_HOME,
-    process.argv.find(a => a.startsWith('--label='))?.slice(8) ?? 'utility-quota')
+    process.argv.find(a => a.startsWith('--label='))?.slice(8) ?? 'utility-quota',
+    process.argv.find(a => a.startsWith('--run='))?.slice(6))
     .catch(error => { console.error('P23 utility quota refused:', error.message); process.exitCode = 1; });
 }

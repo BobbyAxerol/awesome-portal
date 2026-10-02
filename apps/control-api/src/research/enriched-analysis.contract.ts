@@ -94,11 +94,38 @@ export const ResearchEnrichedAnalysisSchema = z.object({
 export type ResearchEnrichedAnalysis = z.infer<typeof ResearchEnrichedAnalysisSchema>;
 
 /** Canonical hash and run/source binding are checked before any public projection. */
+const verifiedObjects = new WeakMap<object, {
+  digest: string; runId: string; parsed: ResearchEnrichedAnalysis;
+}>();
+
+function freezeJson(value: unknown): void {
+  if (!value || typeof value !== "object") return;
+  for (const nested of Object.values(value)) freezeJson(nested);
+  Object.freeze(value);
+}
+
 export function verifiedEnriched(value: unknown, digest: string | null | undefined, runId: string): ResearchEnrichedAnalysis | undefined {
   if (value == null) return undefined;
+  // Coalesced Library pages share the same DB-returned supplement object.
+  // Verify it once, not once per viewer/card. This is NOT a data/authority
+  // cache: a fresh DB object is always verified, and only deeply frozen,
+  // previously verified objects can be reused. Weak keys retain no history.
+  const object = typeof value === "object" ? value : undefined;
+  const cached = object ? verifiedObjects.get(object) : undefined;
+  if (cached) {
+    if (cached.digest !== digest || cached.runId !== runId) {
+      throw new Error("Enriched analysis does not match its immutable source binding");
+    }
+    return cached.parsed;
+  }
   const parsed = ResearchEnrichedAnalysisSchema.safeParse(typeof value === "string" ? JSON.parse(value) : value);
   if (!parsed.success || parsed.data.run_id !== runId || sha256ResearchJson(parsed.data) !== digest) {
     throw new Error("Enriched analysis does not match its immutable source binding");
+  }
+  if (object) {
+    freezeJson(object);
+    freezeJson(parsed.data);
+    verifiedObjects.set(object, { digest: digest!, runId, parsed: parsed.data });
   }
   return parsed.data;
 }

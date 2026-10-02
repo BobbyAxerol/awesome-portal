@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { longWfoSpec, assertQueue, candidateDrift } from './mixed-workload.mjs';
+import { longWfoSpec, assertQueue, candidateDrift, reuseExactPreflight } from './mixed-workload.mjs';
 
 test('W02 expands only the approved window, never trials/modes/immutable profile caps',()=>{
   const spec=longWfoSpec({alpha_id:'a',alpha_version_id:'av_a'},{release_id:'r',config_digest:'a'.repeat(64)});
@@ -14,6 +14,17 @@ test('queue evidence requires five actual heavy rows, one active and four queued
   assert.throws(()=>assertQueue(rows.map(r=>({...r,queue_class:'INTERACTIVE'})),5),/BYPASSED_HEAVY/);
   assert.throws(()=>assertQueue(rows.map(r=>({...r,state:'RUNNING'})),5),/ONE_PRIMARY_HEAVY/);
   assert.throws(()=>assertQueue(rows.map(r=>({...r,job_id:'same-job'})),5),/DISTINCT_DURABLE_JOB_IDS/);
+});
+test('same-actor workload reuses only an accepted preflight for the identical immutable spec', () => {
+  const spec = longWfoSpec({ alpha_id: 'a', alpha_version_id: 'av_a' },
+    { release_id: 'r', config_digest: 'a'.repeat(64) });
+  const accepted = { requested_spec: spec, preflight: { status: 201, body: { may_create_run: true } } };
+  assert.equal(reuseExactPreflight(accepted, structuredClone(spec)), accepted.preflight);
+  assert.throws(() => reuseExactPreflight(accepted, { ...spec, random_seed: 123 }),
+    /PREFLIGHT_REUSE_REQUIRES_IDENTICAL_SPEC/);
+  assert.throws(() => reuseExactPreflight({ ...accepted, preflight: { status: 201, body: { may_create_run: false } } }, spec),
+    /ACCEPTED_SAME_ACTOR_PREFLIGHT_REQUIRED/);
+  assert.throws(() => reuseExactPreflight({ ...accepted, preflight: { status: 503 } }, spec));
 });
 test('workload evidence is diagnostic on source/image drift, never falsely official',()=>{
   const images = Object.fromEntries(Array.from({length:7},(_,i)=>[`service-${i}`,

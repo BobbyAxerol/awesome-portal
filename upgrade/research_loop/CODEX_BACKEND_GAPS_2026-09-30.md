@@ -535,3 +535,21 @@ Claude sửa toàn bộ phần FE (mục FE-GAP, chữ cứng, UX) song song và
 4. `early_stopping_policy` chỉ có giá trị `FORBIDDEN`: không có cách nói "ghim" hay "tự do". Đề nghị `{ state: PINNED|FREE|FORBIDDEN, value }` (như `seed_policy` cần cùng cách).
 
 **Lưu ý nhỏ:** `seed_policy` là một từ (`LOCKED`/`FORBIDDEN`), không phải object — FE đã theo; nhưng "LOCKED" không nói khoá ở giá trị nào: cần `seed_value` kèm theo.
+
+### P23 load continuation — 2026-10-02
+
+Clean candidate `6726b4b5`: the real 92-day WFO now seals COMPLETED/READY;
+120/120 mixed and 140/140 far-seek reads return 200, no viewer-created job,
+base memory below 683 MB. **Both latency verdicts remain FAIL**, not cold
+reclassification. Actual fresh-parent utility quota passes. A second workload
+also found the actor's eight-live-preflight quota, and the old quota fixture
+correctly replayed completed exports; both failed harness receipts are kept.
+
+Grouped repair: immutable object-bound enrichment verification reuse in
+coalesced Library cards, exact-spec same-actor preflight reuse for five distinct
+intents, and explicit fresh-parent selection for utility retake. No frontend,
+contract, RLS, quota or SLO change. [Measurements, focused tests and remaining
+gates](./evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
+P23 whole-candidate load/recovery/restore and P24 remain OPEN. Claude can use
+the already-landed generated declaration/v2/retained fields; this latency
+patch requires no consumer or visual alteration.

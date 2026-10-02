@@ -38,4 +38,20 @@ describe("B6 shared enriched analysis", () => {
     expect(sql).toContain("projection.source_evidence_digest=enrichment.source_digest");
     expect(sql).not.toMatch(/UPDATE|INSERT|DELETE/);
   });
+  it("reuses only deeply immutable verified objects, never a digest-only cache", () => {
+    const block = read("healthy"), digest = sha256ResearchJson(block);
+    const first = verifiedEnriched(block, digest, block.run_id)!;
+    expect(verifiedEnriched(block, digest, block.run_id)).toBe(first);
+    expect(Object.isFrozen(block)).toBe(true);
+    expect(Object.isFrozen(block.curves.strategy_rebased_100)).toBe(true);
+    expect(Object.isFrozen(first.facts.metrics)).toBe(true);
+    expect(() => { block.curves.strategy_rebased_100[0].value = "999"; }).toThrow();
+    expect(() => { first.run_id = "rrun_" + "b".repeat(32); }).toThrow();
+    expect(() => verifiedEnriched(block, "0".repeat(64), block.run_id)).toThrow();
+    expect(() => verifiedEnriched(block, digest, "rrun_" + "b".repeat(32))).toThrow();
+    const forged = read("healthy"); forged.facts.metrics.sharpe.input_digest = "0".repeat(64);
+    expect(() => verifiedEnriched(forged, digest, forged.run_id)).toThrow();
+    const fresh = read("healthy");
+    expect(verifiedEnriched(fresh, digest, fresh.run_id)).not.toBe(first);
+  });
 });
