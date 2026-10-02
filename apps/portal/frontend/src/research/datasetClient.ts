@@ -16,7 +16,16 @@ import type { components } from "@portal/contracts-research-preflight";
 
 import { PortalApiError } from "../lib/api";
 import { reportSessionExpired } from "../auth/sessionExpiry";
-import { type BarMetadata, type SymbolPage, normalizeCatalog, readBarMetadata as readBarMetadataBody, readSymbolPage } from "./dataDeclarationV2";
+import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
+import {
+  type BarMetadata,
+  type PreflightEstimate,
+  type SymbolPage,
+  normalizeCatalog,
+  readBarMetadata as readBarMetadataBody,
+  readDeclarationEstimate,
+  readSymbolPage,
+} from "./dataDeclarationV2";
 import type { ResearchState } from "./state";
 
 type Schemas = components["schemas"];
@@ -30,7 +39,7 @@ const V2_CATALOG = "/api/v1/research/datasets/catalog-v2";
 const ROUTE_ABSENT = new Set([404, 405, 501]);
 
 /** Routes a server has answered "not here" for, so a missing route is never asked twice. */
-const absentRoutes = new Set<"catalog-v2" | "symbols" | "bar-metadata">();
+const absentRoutes = new Set<"catalog-v2" | "symbols" | "bar-metadata" | "declaration-estimate">();
 
 /** For tests: forget which routes were absent. */
 export function resetDatasetRouteMemory(): void {
@@ -224,6 +233,80 @@ export function coverageLabel(symbol: CatalogSymbol): string | null {
   const coverage = symbol.coverage;
   if (!coverage) return null;
   return `${coverage.first_month} → ${coverage.last_month} · ${coverage.months} month${coverage.months === 1 ? "" : "s"}`;
+}
+
+/* ------------------------------------------------- declaration estimate */
+
+/**
+ * What the declaration-estimate route answered, as states the screen can tell apart:
+ *  - `estimate`  a 200 that is an estimate;
+ *  - `refused`   a 400 with the server's own code, and the requested-spec field it names;
+ *  - `absent`    the route is not there (404/405/501 without a RESEARCH_ code): the per-window bar metadata is the fallback;
+ *  - `client-error` any other 4xx (401 ends the session; 403/404 are a denial), `server-error` a 5xx, `network` no answer.
+ * The last three carry the served code and request id and may be retried; none of them reads as "not published".
+ */
+export type DeclarationEstimateResult =
+  | { state: "estimate"; estimate: PreflightEstimate }
+  | { state: "refused"; status: number; code: string; fieldPath: readonly string[] | null; message: string; requestId: string | null }
+  | { state: "absent" }
+  | { state: "client-error" | "server-error"; status: number; code: string | null; requestId: string | null }
+  | { state: "network" };
+
+const ESTIMATE_PATH = "/api/v1/research/datasets/declaration-estimates";
+
+/**
+ * `POST /api/v1/research/datasets/declaration-estimates` (`researchDeclarationEstimatePostV1`).
+ * Same-origin, session cookie, `x-portal-csrf` from the CSRF cookie like every other POST of this
+ * app. It creates nothing: no preflight token, no run authorization. The body is the requested spec
+ * the form already serializes; the server derives the digest.
+ */
+export async function postDeclarationEstimate(
+  requestedSpec: unknown,
+  workspaceId?: string,
+  signal?: AbortSignal,
+): Promise<DeclarationEstimateResult> {
+  if (absentRoutes.has("declaration-estimate")) return { state: "absent" };
+  const csrf = csrfTokenFromCookie();
+  try {
+    const response = await fetch(ESTIMATE_PATH, {
+      method: "POST",
+      credentials: "same-origin",
+      signal,
+      headers: { "content-type": "application/json", ...(csrf ? { [CSRF_HEADER]: csrf } : {}) },
+      body: JSON.stringify({ ...(workspaceId ? { workspace_id: workspaceId } : {}), requested_spec: requestedSpec }),
+    });
+    if (response.status === 401) reportSessionExpired();
+    if (!response.ok) {
+      let details: { field_path?: string[]; field_paths?: string[][] } | undefined;
+      let code: string | null = null;
+      let message = `${response.status} ${response.statusText}`;
+      let requestId: string | null = response.headers.get("x-request-id");
+      try {
+        const body = (await response.json()) as Partial<Schemas["Problem"]> & { details?: typeof details };
+        code = body?.error?.code ?? null;
+        message = body?.error?.message ?? message;
+        requestId = body?.request_id ?? requestId;
+        details = body?.details;
+      } catch {
+        /* keep the status line */
+      }
+      const problem = new PortalApiError(message, response.status, code, requestId);
+      if (isMissingRoute(problem)) {
+        absentRoutes.add("declaration-estimate");
+        return { state: "absent" };
+      }
+      if (response.status === 400 && code) {
+        return { state: "refused", status: 400, code, message, requestId, fieldPath: details?.field_path ?? details?.field_paths?.[0] ?? null };
+      }
+      return { state: response.status >= 500 ? "server-error" : "client-error", status: response.status, code, requestId };
+    }
+    const estimate = readDeclarationEstimate(await response.json());
+    /* A 200 that is not an estimate is a server we cannot read: the same as no route. */
+    return estimate === null ? { state: "absent" } : { state: "estimate", estimate };
+  } catch (error) {
+    if ((error as { name?: string } | null)?.name === "AbortError") throw error;
+    return { state: "network" };
+  }
 }
 
 /* ---------------------------------------------------------- bar metadata */

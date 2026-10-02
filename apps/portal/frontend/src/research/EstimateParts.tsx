@@ -123,6 +123,11 @@ export function WarmupChip({ estimate }: { estimate: PreflightEstimate | null })
   );
 }
 
+/** The served basis word, readable: `P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1` as `p08 planner on indexed timestamps v1`. The exact word stays in the tooltip. */
+function basisText(basis: string): string {
+  return basis.includes("_") ? basis.toLowerCase().replace(/_/g, " ") : basis;
+}
+
 /** `≈ 11 folds · weekly expanding`: an estimate, and the tooltip says the server decides. */
 export function PlannedFolds({ estimate }: { estimate: PreflightEstimate | null }) {
   const folds = estimate?.plannedFolds;
@@ -136,7 +141,10 @@ export function PlannedFolds({ estimate }: { estimate: PreflightEstimate | null 
   }
   const title = [
     "estimate · the server decides at preflight",
+    folds.basis ? `basis ${folds.basis}` : null,
     folds.minBarsPerFold !== null ? `min ${group(folds.minBarsPerFold)} bars per fold` : null,
+    folds.minTrainBars != null ? `min train ${group(folds.minTrainBars)} bars` : null,
+    folds.minOosBars != null ? `min OOS ${group(folds.minOosBars)} bars` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -150,7 +158,7 @@ export function PlannedFolds({ estimate }: { estimate: PreflightEstimate | null 
       data-planned-folds="served"
     >
       ≈ {group(folds.count)} fold{folds.count === 1 ? "" : "s"}
-      {folds.basis ? ` · ${folds.basis}` : ""}
+      {folds.basis ? ` · ${basisText(folds.basis)}` : ""}
     </span>
   );
 }
@@ -177,7 +185,18 @@ export function ConditionsChecklist({ estimate }: { estimate: PreflightEstimate 
   if (!conditions || conditions.length === 0) return null;
   return (
     <section className="flex flex-col gap-1 rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-conditions>
-      <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]" style={{ fontFamily: "var(--font-body)" }}>
+      <h4
+        className="text-[10px] font-semibold uppercase tracking-[.05em]"
+        style={{ fontFamily: "var(--font-body)" }}
+        title={[
+          "index estimate · preflight decides whether a run may be created",
+          estimate?.readyForPreflight === true ? "ready for preflight" : estimate?.readyForPreflight === false ? "not ready for preflight" : null,
+          estimate?.profileId ? `profile ${estimate.profileId}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        data-ready-for-preflight={estimate?.readyForPreflight == null ? undefined : String(estimate.readyForPreflight)}
+      >
         Conditions
       </h4>
       <ul className="flex flex-col gap-0.5">

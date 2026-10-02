@@ -89,6 +89,11 @@ export interface RunDraft {
     purgeBars?: string;
     embargoBars?: string;
     inner?: { splitFrequency: string; windowMode: string; trainWindow: string; minFolds: string };
+    /**
+     * The reader chose a value only a requested-spec v2 profile admits (a monthly or quarterly
+     * frequency), so the declaration goes out as v2 even with no other v2 field. Never set by a default.
+     */
+    declaredV2?: boolean;
   };
   optimizationMode: string;
   optimizationSchedule: string;
@@ -337,11 +342,40 @@ export function usesSpecV2(draft: RunDraft): boolean {
   if (draft.protocol !== "advanced") return false;
   const wf = draft.walkForward;
   return (
+    wf.declaredV2 === true ||
     wf.windowMode === "rolling" ||
     Boolean(wf.trainWindow) ||
     [wf.labelHorizonBars, wf.purgeBars, wf.embargoBars].some((value) => value !== undefined && value.trim() !== "") ||
     (draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal")
   );
+}
+
+/**
+ * Whether the declaration is complete enough to ask the declaration-estimate route about it: a
+ * dataset, symbol and timeframe, every window (or the analysis span and first OOS instant) filled
+ * and valid, and the release identity the request carries. Below that nothing is asked.
+ */
+export function estimateReady(draft: RunDraft): boolean {
+  if (draft.datasetId.trim() === "" || draft.symbol.trim() === "" || draft.timeframe.trim() === "") return false;
+  if (draft.engineReleaseId === "" || draft.configDigest === "") return false;
+  if (effectiveStrategyId(draft).trim() === "") return false;
+  if (draft.optimizationMode === "" || draft.optimizationSchedule === "") return false;
+  if (draft.protocol === "three_window_decay") return validateWindows(draft) === null;
+  const wf = draft.walkForward;
+  if (wf.start === "" || wf.endExclusive === "" || wf.splitMode === "" || wf.frequency === "" || wf.windowMode === "") return false;
+  return validateWalkForwardV2(draft) === null;
+}
+
+/**
+ * The parts of a serialized spec an estimate depends on. Trials, seed and parameters do not
+ * change the windows, so editing them does not ask again.
+ */
+export function estimateSignature(spec: RequestedSpec): string {
+  const s = spec as unknown as Record<string, unknown>;
+  return JSON.stringify([
+    s.schema_version, s.alpha_binding, s.strategy_id, s.execution_route, s.data, s.protocol,
+    s.windows, s.walk_forward, s.optimization_mode, s.optimization_schedule, s.client,
+  ]);
 }
 
 /** Advanced walk-forward v2 rules, verbatim with the server's field names. */
@@ -982,6 +1016,7 @@ export function draftFromRequestedSpec(spec: RequestedSpec, base: RunDraft): Run
           labelHorizonBars: text(wf.label_horizon_bars) || undefined,
           purgeBars: text(wf.purge_bars) || undefined,
           embargoBars: text(wf.embargo_bars) || undefined,
+          declaredV2: spec.schema_version === "research.requested-spec.v2" ? true : undefined,
           inner: inner
             ? { splitFrequency: inner.split_frequency, windowMode: inner.window_mode, trainWindow: inner.train_window, minFolds: text(inner.min_folds) }
             : undefined,

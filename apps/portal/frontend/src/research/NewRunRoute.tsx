@@ -18,10 +18,11 @@ import { NewRun } from "./NewRun";
 import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom, planCoverage } from "./runDraft";
+import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom, planCoverage, usesSpecV2 } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
-import { mergeEstimates, profileTrialDefault, readCatalogIndex, readPreflightEstimate, readProfiles, seedPinned, selectProfile } from "./dataDeclaration";
+import { mergeEstimates, profileTrialDefault, readCatalogIndex, readPreflightEstimate, readProfiles, seedPinned, selectProfile, specVersionOf } from "./dataDeclaration";
 import { useWindowMetadata } from "./useWindowMetadata";
+import { useDeclarationEstimate } from "./useDeclarationEstimate";
 import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { runLineageFor, useNewRun, type RunLineage } from "./useNewRun";
 import { useRunLabelRead } from "./useRunLabelRead";
@@ -417,6 +418,8 @@ export function NewRunRoute() {
     protocol: run.draft.protocol,
     executionRoute: run.draft.executionRoute,
     optimizationMode: run.draft.optimizationMode,
+    /* Two advanced profiles can be enabled (v1 and v2): the one whose requested-spec version the draft serializes as. */
+    specVersion: specVersionOf(usesSpecV2(run.draft)),
   });
   const staleAccepted = document?.current_release.submission_constraints?.accepted_trial_count;
   const accepted = profiles !== null ? (profileTrialDefault(profile) ?? undefined) : staleAccepted;
@@ -428,18 +431,32 @@ export function NewRunRoute() {
      draft with nothing to say so. Only a copy that failed gets the default. */
   const cloneOwnsTrials = fromRun !== null
     && !(clone !== null && clone.runId === fromRun && clone.spec === null && clone.state.state !== "loading");
+  /* The profile can change under a declaration (three-window → advanced, v1 → v2): a value this default
+     placed follows the new profile; a value the reader typed, or a copied run's, is never replaced. */
+  const placedTrials = useRef<string | null>(null);
+  const placedSeed = useRef<string | null>(null);
   useEffect(() => {
-    if (cloneOwnsTrials) return;
-    if (accepted !== undefined && run.draft.optunaTrials === "") {
-      run.patch({ optunaTrials: String(accepted) });
-    }
+    if (cloneOwnsTrials || accepted === undefined) return;
+    const current = run.draft.optunaTrials;
+    if (current !== "" && current !== placedTrials.current) return;
+    const next = String(accepted);
+    if (current !== next) run.patch({ optunaTrials: next });
+    placedTrials.current = next;
   }, [accepted, run, cloneOwnsTrials]);
   useEffect(() => {
     if (cloneOwnsTrials) return;
-    if (pinnedSeed !== null && run.draft.randomSeed === "") {
-      run.patch({ randomSeed: String(pinnedSeed) });
+    const current = run.draft.randomSeed;
+    if (pinnedSeed !== null) {
+      if (current !== "" && current !== placedSeed.current) return;
+      const next = String(pinnedSeed);
+      if (current !== next) run.patch({ randomSeed: next });
+      placedSeed.current = next;
+    } else if (placedSeed.current !== null && current === placedSeed.current && profile !== null) {
+      /* The new profile pins no seed: the value an earlier profile pinned goes with it. */
+      run.patch({ randomSeed: "" });
+      placedSeed.current = null;
     }
-  }, [pinnedSeed, run, cloneOwnsTrials]);
+  }, [pinnedSeed, profile, run, cloneOwnsTrials]);
 
   /*
    * Spec 02 T26 / §outbound: a created run leaves the form for its own
@@ -503,8 +520,16 @@ export function NewRunRoute() {
   /* The optional `preflight_estimate` of the answer on screen; absent means nothing new renders. */
   const preflightEstimate = useMemo(() => readPreflightEstimate(run.preflight.preflight), [run.preflight.preflight]);
   /* B7: bars per declared window and the warmup from the index, only against a v2 catalog; the preflight's own numbers win. */
-  const metadataEstimate = useWindowMetadata(run.draft, limits.warmupBars, readCatalogIndex(catalog) !== null);
-  const estimate = useMemo(() => mergeEstimates(preflightEstimate, metadataEstimate), [preflightEstimate, metadataEstimate]);
+  const indexServed = readCatalogIndex(catalog) !== null;
+  /* The declaration-estimate route answers the whole declaration (windows, warmup, folds, conditions) in one call. */
+  const declared = useDeclarationEstimate(run.draft, indexServed);
+  /* The per-window bar metadata is the fallback: the route is absent (older server), failed, or the declaration is not complete enough to ask. */
+  const barMetadataFallback = indexServed && (declared.status.kind === "idle" || declared.status.kind === "absent" || declared.status.kind === "error");
+  const metadataEstimate = useWindowMetadata(run.draft, limits.warmupBars, barMetadataFallback);
+  const estimate = useMemo(
+    () => mergeEstimates(preflightEstimate, declared.estimate ?? metadataEstimate),
+    [preflightEstimate, declared.estimate, metadataEstimate],
+  );
 
   return (
     <NewRun
@@ -528,6 +553,8 @@ export function NewRunRoute() {
       catalogReason={catalogReason}
       portalAdmission={atlas?.selected_release_kind === "CURRENT" ? (atlas.portal_admission?.profiles ?? null) : null}
       estimate={estimate}
+      estimateStatus={declared.status}
+      onRetryEstimate={declared.retry}
       cloneSource={clone ? { runId: clone.runId, state: clone.state } : null}
       forkSource={fork}
       mayCreateRun={run.mayCreateRun}

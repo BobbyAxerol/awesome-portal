@@ -24,6 +24,10 @@ export type IndexedSymbol = IndexSchemas["IndexedSymbol"];
 export type IndexCoverage = IndexSchemas["Coverage"];
 export type IndexSymbolPage = IndexSchemas["SymbolPage"];
 export type IndexBarMetadata = IndexSchemas["BarMetadata"];
+/** `POST /api/v1/research/datasets/declaration-estimates` (B7/B8 `researchDeclarationEstimatePostV1`). */
+export type DeclarationEstimate = IndexSchemas["DeclarationEstimate"];
+export type DeclarationCondition = IndexSchemas["DeclarationCondition"];
+export type DeclarationWindowEstimate = IndexSchemas["WindowEstimate"];
 
 type Bag = Readonly<Record<string, unknown>>;
 
@@ -585,6 +589,26 @@ export interface ProfilePins {
   maxSpanDays: number | null;
   /** The bar timeframe the profile is admitted for (`portal_admission.profiles[].timeframe`); null when not served. */
   timeframe: string | null;
+  /** `requested_spec_versions`: the spec versions this profile admits; null when the server did not say (any). */
+  requestedSpecVersions: readonly string[] | null;
+  /** `frequencies` / `window_modes`: the lists a profile admits; null when only the single pin (or nothing) was served. */
+  frequencies: readonly string[] | null;
+  windowModes: readonly string[] | null;
+  /** The served `trial_default`; null when the server sent none (never invented). */
+  trialDefault: number | null;
+  /** `early_stopping_policy`: `FORBIDDEN` is the only served word; null when not stated. */
+  earlyStopping: "forbidden" | null;
+  /** `inner_validation`: the served word while inner/per-fold selection is not admitted (`NOT_ADMITTED_GLOBAL_RETENTION_ONLY`); null when not stated. */
+  innerValidation: string | null;
+}
+
+export const SPEC_V1 = "research.requested-spec.v1";
+export const SPEC_V2 = "research.requested-spec.v2";
+
+function words(raw: unknown): readonly string[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out = raw.filter((entry): entry is string => typeof entry === "string" && entry.trim() !== "");
+  return out.length > 0 ? out : null;
 }
 
 function range(raw: unknown): { min: number; max: number } | null {
@@ -607,15 +631,17 @@ export function readProfile(raw: unknown): ProfilePins | null {
   if (row === null || profileId === null) return null;
   const trialRange = bag(row.trial_range);
   const trialBase = range(trialRange ?? row.trial_count);
+  /* The contract serves `seed_policy` as a word: `LOCKED` (the value is `random_seed`) or `FORBIDDEN`. The
+     object form (`{state, value}`) an earlier proposal used is still read. */
   const policy = bag(row.seed_policy);
-  const policyState = text(policy?.state)?.toLowerCase();
+  const policyState = (text(row.seed_policy) ?? text(policy?.state))?.toLowerCase();
   const seedValue = num(policy?.value) ?? num(row.random_seed);
   const seed: ProfilePins["seed"] =
-    policyState === "fixed" && seedValue !== null
+    (policyState === "fixed" || policyState === "locked") && seedValue !== null
       ? { state: "fixed", value: seedValue }
       : policyState === "forbidden" || policyState === "free"
         ? { state: policyState, value: null }
-        : seedValue !== null
+        : policyState === undefined && seedValue !== null
           ? { state: "fixed", value: seedValue }
           : { state: "unpinned", value: null };
   return {
@@ -632,6 +658,12 @@ export function readProfile(raw: unknown): ProfilePins | null {
     windowMode: text(row.window_mode),
     maxSpanDays: count(row.max_span_days),
     timeframe: text(row.timeframe),
+    requestedSpecVersions: words(row.requested_spec_versions),
+    frequencies: words(row.frequencies),
+    windowModes: words(row.window_modes),
+    trialDefault: count(row.trial_default),
+    earlyStopping: text(row.early_stopping_policy)?.toUpperCase() === "FORBIDDEN" ? "forbidden" : null,
+    innerValidation: text(row.inner_validation),
   };
 }
 
@@ -677,21 +709,51 @@ export function readProfiles(admission: unknown): readonly ProfilePins[] | null 
  */
 export function selectProfile(
   profiles: readonly ProfilePins[] | null,
-  draft: { protocol: string; executionRoute: string; optimizationMode: string },
+  draft: { protocol: string; executionRoute: string; optimizationMode: string; specVersion?: string },
 ): ProfilePins | null {
   if (profiles === null) return null;
-  const matches = profiles.filter(
+  const matches = profileFamily(profiles, draft).filter(
+    (profile) => draft.specVersion === undefined || profile.requestedSpecVersions === null || profile.requestedSpecVersions.includes(draft.specVersion),
+  );
+  return matches.length === 1 ? matches[0]! : null;
+}
+
+/** Every profile that fits protocol, route and mode, whatever requested-spec version it admits. */
+export function profileFamily(
+  profiles: readonly ProfilePins[] | null,
+  draft: { protocol: string; executionRoute: string; optimizationMode: string },
+): readonly ProfilePins[] {
+  return (profiles ?? []).filter(
     (profile) =>
       profile.protocol === draft.protocol
       && profile.executionRoute === draft.executionRoute
       && (draft.optimizationMode === "" || profile.optimizationMode === null || profile.optimizationMode === draft.optimizationMode),
   );
-  return matches.length === 1 ? matches[0]! : null;
+}
+
+/** The spec version a draft serializes as, in the contract's own words. */
+export function specVersionOf(usesV2: boolean): string {
+  return usesV2 ? SPEC_V2 : SPEC_V1;
+}
+
+/** What a profile admits for a walk-forward choice: its served list, else its single pin, else nothing stated. */
+export function admittedFrequencies(profile: ProfilePins | null): readonly string[] | null {
+  return profile?.frequencies ?? (profile?.granularity ? [profile.granularity] : null);
+}
+
+export function admittedWindowModes(profile: ProfilePins | null): readonly string[] | null {
+  return profile?.windowModes ?? (profile?.windowMode ? [profile.windowMode] : null);
+}
+
+/** Whether a profile serves requested-spec v2 (the temporal controls: label horizon, purge, embargo). */
+export function admitsSpecV2(profile: ProfilePins | null): boolean {
+  return profile !== null && profile.enabled && profile.requestedSpecVersions !== null && profile.requestedSpecVersions.includes(SPEC_V2);
 }
 
 /** The trial count a profile fixes (min = max), or its served default; else none. */
 export function profileTrialDefault(profile: ProfilePins | null): number | null {
   if (profile === null || !profile.enabled || profile.trials === null) return null;
+  if (profile.trialDefault !== null) return profile.trialDefault;
   if (profile.trials.min === profile.trials.max) return profile.trials.min;
   return profile.trials.default;
 }
@@ -733,8 +795,23 @@ export interface EstimateCondition {
 export interface PreflightEstimate {
   windows: Readonly<Partial<Record<"is" | "oos" | "holdout" | "analysis", EstimateWindow>>>;
   warmup: { barsRequired: number | null; barsAvailableBeforeIs: number | null; reasonCode?: string | null } | null;
-  plannedFolds: { count: number | null; basis: string | null; minBarsPerFold: number | null; reasonCode: string | null } | null;
+  plannedFolds: {
+    count: number | null;
+    basis: string | null;
+    minBarsPerFold: number | null;
+    reasonCode: string | null;
+    /** The served planner minimums (`min_train_bars`, `min_oos_bars`); null when not published. */
+    minTrainBars?: number | null;
+    minOosBars?: number | null;
+  } | null;
   conditions: readonly EstimateCondition[] | null;
+  /** Where this came from: the declaration-estimate route (`estimate`) or the per-window bar metadata (`metadata`). */
+  source?: "estimate" | "metadata";
+  /** Served `ready_for_preflight`: information only, never permission to create a run. */
+  readyForPreflight?: boolean | null;
+  /** The profile the estimate was computed for, as served. */
+  profileId?: string | null;
+  earliestStartUtcMs?: number | null;
 }
 
 function estimateWindow(raw: unknown): EstimateWindow | null {
@@ -814,6 +891,83 @@ export function estimateFromMetadata(windows: WindowMetadata, warmupWindow: "is"
         };
   if (Object.keys(out).length === 0 && warmup === null) return null;
   return { windows: out, warmup, plannedFolds: null, conditions: null };
+}
+
+/* ------------------------------------------ declaration estimate (POST route) */
+
+const ESTIMATE_WINDOW: Readonly<Record<string, "is" | "oos" | "holdout" | "analysis">> = {
+  IS: "is",
+  OOS: "oos",
+  HOLDOUT: "holdout",
+  SPAN: "analysis",
+};
+
+/**
+ * `research.declaration-estimate.v1`: windows (IS/OOS/HOLDOUT, or the one SPAN),
+ * the served fold plan and the conditions. A window or fold plan that is
+ * `NOT_PUBLISHED` keeps its code and no number. `ready_for_preflight` is carried
+ * as information; the preflight's `run_admission` stays the authority.
+ * Null when the body is not an estimate: the screen then falls back to the
+ * per-window bar metadata.
+ */
+export function readDeclarationEstimate(raw: unknown): PreflightEstimate | null {
+  const body = bag(raw);
+  const metadata = bag(body?.metadata);
+  if (body === null || metadata === null || body.schema_version !== "research.declaration-estimate.v1") return null;
+  const windows: { -readonly [K in "is" | "oos" | "holdout" | "analysis"]?: BarMetadata } = {};
+  let first: "is" | "analysis" | null = null;
+  const entries = Array.isArray(metadata.windows) ? metadata.windows : [];
+  entries.forEach((entry, index) => {
+    const row = bag(entry);
+    const key = typeof row?.window === "string" ? ESTIMATE_WINDOW[row.window] : undefined;
+    if (row === null || key === undefined) return;
+    const published = row.availability === "AVAILABLE";
+    windows[key] = {
+      availability: published ? "AVAILABLE" : "NOT_PUBLISHED",
+      reasonCode: text(row.reason_code),
+      startUtcMs: num(row.start_utc_ms),
+      endExclusiveUtcMs: num(row.end_exclusive_utc_ms),
+      bars: published ? count(row.bars) : null,
+      firstBarUtcMs: published ? num(row.first_bar_utc_ms) : null,
+      lastBarUtcMs: published ? num(row.last_bar_utc_ms) : null,
+      warmupBarsRequired: published ? count(row.warmup_bars_required) : null,
+      warmupBarsAvailableBeforeStart: published ? count(row.warmup_bars_available_before_start) : null,
+      asOfUtcMs: num(metadata.as_of_utc_ms),
+      catalogRevision: text(metadata.catalog_revision),
+    };
+    if (index === 0 && (key === "is" || key === "analysis")) first = key;
+  });
+  const base = estimateFromMetadata(windows, first) ?? { windows: {}, warmup: null, plannedFolds: null, conditions: null };
+  const folds = bag(metadata.planned_folds);
+  const foldsPublished = folds?.availability === "AVAILABLE";
+  const conditions = Array.isArray(body.conditions)
+    ? body.conditions.flatMap((entry): EstimateCondition[] => {
+        const row = bag(entry);
+        const key = text(row?.key);
+        if (row === null || key === null) return [];
+        const state = row.state === "PASS" || row.state === "FAIL" ? row.state : "NOT_PUBLISHED";
+        return [{ key, state, reasonCode: text(row.reason_code), observed: text(row.observed), required: text(row.required) }];
+      })
+    : null;
+  return {
+    ...base,
+    plannedFolds:
+      folds === null
+        ? null
+        : {
+            count: foldsPublished ? count(folds.count) : null,
+            basis: text(folds.basis),
+            minBarsPerFold: null,
+            reasonCode: text(folds.reason_code),
+            minTrainBars: foldsPublished ? count(folds.min_train_bars) : null,
+            minOosBars: foldsPublished ? count(folds.min_oos_bars) : null,
+          },
+    conditions,
+    source: "estimate",
+    readyForPreflight: typeof body.ready_for_preflight === "boolean" ? body.ready_for_preflight : null,
+    profileId: text(body.profile_id),
+    earliestStartUtcMs: num(metadata.earliest_start_utc_ms),
+  };
 }
 
 /**

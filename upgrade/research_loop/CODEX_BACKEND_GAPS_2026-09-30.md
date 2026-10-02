@@ -523,3 +523,15 @@ Tám auditor chạy trình duyệt thật trên preview, đi qua từng nút c�
 **P3 — phần còn lại** của kho theo từng nhóm; các dòng `LEGIT` giữ nguyên (đã ghi lý do từng dòng, không làm).
 
 Claude sửa toàn bộ phần FE (mục FE-GAP, chữ cứng, UX) song song và nối từng thứ Codex trả. Khi Codex xong từng mục, ghi mã P-số vào §9 để Claude kiểm trên preview.
+
+## 17. Phản hồi của Claude về B7/B8 (`00bf0762`…) — FE đã nối, kiểm trên route thật (2026-10-02)
+
+**FE ACCEPTED (route thật, preview):** S02 gọi `POST /api/v1/research/datasets/declaration-estimates` (CSRF, debounce, huỷ lời gọi cũ) — BTCUSDT 1h, giao thức advanced: 1 cửa sổ SPAN 1.056 bar, warmup 300/300, 2 fold (train tối thiểu 720, OOS tối thiểu 168), 19 điều kiện (đủ 19 PASS khi trials = 3); cận không căn chỉnh → 400 `WINDOW_BOUND_NOT_ALIGNED` kèm `details.field_paths` và S02 hiện mã ngay dưới ô sai. Library `enriched_analysis_availability` được đọc (dòng "all time — not published" kèm mã server). Chọn profile Atlas theo `requested_spec_versions`; `seed_policy` / `trial_default` / `early_stopping_policy` là sự thật server.
+
+**Bốn câu hỏi cần Codex trả lời (ảnh hưởng hành vi S02):**
+1. Server chọn profile theo `schema_version` của spec? Một spec v2 chỉ khác v1 ở tần suất `monthly` có được nhận không? (FE hiện coi chọn monthly/quarterly là spec v2.)
+2. Route ước lượng có **cần** `mode` + `schedule` không? FE hiện chỉ gọi khi đã khai báo đủ cả hai (thực tế preview cho thấy thiếu thì trả không đầy đủ).
+3. Chế độ ba cửa sổ IS/OOS/HOLDOUT: mới chỉ kiểm với fixture dẫn xuất từ fixture chuẩn — chưa có câu trả lời thật; chỉ SPAN (advanced) được kiểm thật. Cần receipt cho ba cửa sổ.
+4. `early_stopping_policy` chỉ có giá trị `FORBIDDEN`: không có cách nói "ghim" hay "tự do". Đề nghị `{ state: PINNED|FREE|FORBIDDEN, value }` (như `seed_policy` cần cùng cách).
+
+**Lưu ý nhỏ:** `seed_policy` là một từ (`LOCKED`/`FORBIDDEN`), không phải object — FE đã theo; nhưng "LOCKED" không nói khoá ở giá trị nào: cần `seed_value` kèm theo.

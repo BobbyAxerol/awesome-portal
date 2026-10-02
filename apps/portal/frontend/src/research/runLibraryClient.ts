@@ -198,6 +198,17 @@ function stringOrNull(value: unknown): string | null | undefined {
   return value === null ? null : typeof value === "string" ? value : undefined;
 }
 
+/**
+ * `enriched_analysis_availability` (generated `EnrichedAnalysisAvailability`): why a card has no
+ * all-time block. Only a served NOT_PUBLISHED state with a string code is a typed absence;
+ * anything else (not served, AVAILABLE, malformed) is `null` - today's behaviour, no invented reason.
+ */
+export function readEnrichmentAbsence(item: RunLibraryItem): { reason_code: string } | null {
+  const raw: unknown = item.enriched_analysis_availability;
+  if (!isRecord(raw) || raw.state !== "NOT_PUBLISHED") return null;
+  return typeof raw.reason_code === "string" && raw.reason_code !== "" ? { reason_code: raw.reason_code } : null;
+}
+
 export function readAllTime(item: RunLibraryItem): AllTimeRead {
   const raw: unknown = item.analytics_all_time;
   if (raw === undefined || raw === null) return { kind: "absent" };

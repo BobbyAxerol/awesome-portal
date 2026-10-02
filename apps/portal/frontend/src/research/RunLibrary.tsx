@@ -46,6 +46,7 @@ import {
   isAvailable,
   mayCompare,
   readAllTime,
+  readEnrichmentAbsence,
   unavailableReason as stateSentence,
   type AllTimeSummary,
 } from "./runLibraryClient";
@@ -871,6 +872,7 @@ function Sparkline({
     );
   }
 
+  const enrichmentAbsence = readEnrichmentAbsence(item);
   const label = last30dSeries(item)
     ? "last 30D equity"
     : item.sparkline.kind
@@ -921,6 +923,16 @@ function Sparkline({
   return (
     <span className="flex flex-none flex-col" style={{ gap: 3 }} data-sparkline={item.run_id} ref={box}>
       <span style={LABEL_9}>{label}</span>
+      {enrichmentAbsence ? (
+        <span
+          style={{ ...ALL_TIME_ABSENT, fontSize: 9 }}
+          data-all-time-absent={enrichmentAbsence.reason_code}
+          data-reason-code={enrichmentAbsence.reason_code}
+          title={`All-time analysis not published. ${enrichmentAbsence.reason_code}`}
+        >
+          all time — not published
+        </span>
+      ) : null}
       {(thirty || series) && heights ? (
         <>
           <span

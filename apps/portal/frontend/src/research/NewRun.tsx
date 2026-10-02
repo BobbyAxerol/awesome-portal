@@ -51,18 +51,25 @@ import {
   coverageRange,
   coverageWarnings,
   foldPlan,
+  admitsSpecV2,
+  admittedFrequencies,
+  admittedWindowModes,
   hasDeclarationFacts,
+  profileFamily,
   profileTimeframes,
   readCatalogIndex,
   readProfiles,
   seedPinned,
   selectProfile,
   sharedAxis,
+  specVersionOf,
   symbolListing,
   timeframeChips,
   trialsPinned,
 } from "./dataDeclaration";
 import { ConditionsChecklist, PlannedFolds, WarmupChip, WindowBars, WindowBarsLine, hasEstimateStrip } from "./EstimateParts";
+import { EstimateFieldRefusal, EstimateStatusLine, refusedAt } from "./EstimateStatus";
+import type { EstimateStatus } from "./useDeclarationEstimate";
 import { OOS_STATE_LABEL, statusTone } from "./EngineAtlas";
 import type { PreflightRefusal } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
@@ -1359,6 +1366,33 @@ function pinnedBy(profile: ProfilePins | null, pinned: string | null, current: s
  * the server's reason — preflight would refuse it, so offering it would only
  * teach the reader that the button fails.
  */
+type PublishedOption = { value: string; admission: string; reason?: string | null; note?: string; title?: string };
+
+/**
+ * The published options as the selected profile admits them (`frequencies`, `window_modes`).
+ * A value the release admits but the selected profile does not stays visible and disabled, with the
+ * profile as the reason; one that only another enabled profile of the family admits (the requested-spec
+ * v2 one) stays selectable and says which profile it declares. No profile, or a profile that served no
+ * list, leaves the release's options as they are.
+ */
+function profileOptions(
+  options: readonly PublishedOption[] | null,
+  profile: ProfilePins | null,
+  family: readonly ProfilePins[],
+  kind: "frequency" | "windowMode",
+): readonly PublishedOption[] | null {
+  if (options === null || profile === null || !profile.enabled) return options;
+  const listOf = (entry: ProfilePins) => (kind === "frequency" ? admittedFrequencies(entry) : admittedWindowModes(entry));
+  const admitted = listOf(profile);
+  if (admitted === null) return options;
+  return options.map((option): PublishedOption => {
+    if (option.admission !== "ADMITTED" || admitted.includes(option.value)) return option;
+    const other = family.find((entry) => entry.profileId !== profile.profileId && listOf(entry)?.includes(option.value));
+    if (other) return { ...option, note: "v2", title: `needs requested-spec v2 · ${other.profileId}` };
+    return { ...option, admission: "NOT_ADMITTED_BY_PROFILE", reason: `not admitted by ${profile.profileId}` };
+  });
+}
+
 function PublishedSelect({
   label,
   value,
@@ -1370,7 +1404,7 @@ function PublishedSelect({
 }: {
   label: string;
   value: string;
-  options: readonly { value: string; admission: string; reason?: string | null }[] | null;
+  options: readonly { value: string; admission: string; reason?: string | null; note?: string; title?: string }[] | null;
   fallback: string;
   onChange: (value: string) => void;
   minWidth?: number;
@@ -1401,9 +1435,9 @@ function PublishedSelect({
         data-pinned-by={pinnedBy}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.admission !== "ADMITTED"} title={option.admission !== "ADMITTED" ? (option.reason ?? undefined) : undefined} data-option-refused={option.admission !== "ADMITTED" ? option.value : undefined}>
+          <option key={option.value} value={option.value} disabled={option.admission !== "ADMITTED"} title={option.admission !== "ADMITTED" ? (option.reason ?? undefined) : option.title} data-option-refused={option.admission !== "ADMITTED" ? option.value : undefined} data-option-note={option.note}>
             {option.value}
-            {option.admission !== "ADMITTED" ? " — not admitted" : ""}
+            {option.admission !== "ADMITTED" ? " — not admitted" : option.note ? ` · ${option.note}` : ""}
           </option>
         ))}
       </select>
@@ -1479,9 +1513,15 @@ function WindowsStep({
   warmupBars = null,
   createAdmitted = false,
   profile = null,
+  family = [],
+  estimateStatus = IDLE_ESTIMATE,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
+  /** Every enabled profile of this protocol, route and mode (v1 and v2): what a v2 declaration would be admitted by. */
+  family?: readonly ProfilePins[];
+  /** The declaration-estimate call: its typed refusal prints under the field it names. */
+  estimateStatus?: EstimateStatus;
   /** Where the release defaults are adopted on arrival: not a reader edit, so it must not mark the step as touched. */
   adopt?: (change: Partial<RunDraft>) => void;
   /** LW-07: the profile this declaration falls under; it pins the fold granularity and window mode it serves. */
@@ -1496,6 +1536,20 @@ function WindowsStep({
   createAdmitted?: boolean;
 }) {
   const options = atlas?.current_release.walk_forward_options ?? null;
+  const frequencyOptions = profileOptions(options?.frequency ?? null, profile, family, "frequency");
+  const windowModeOptions = profileOptions(options?.window_mode ?? null, profile, family, "windowMode");
+  /* Controls that only a requested-spec v2 profile admits (rolling width, label horizon, purge, embargo) appear
+     only when a profile admits them: the selected one, or the v2 one a declaration of them would select. With no
+     profile identified the release's own options stand, as before. */
+  const specV2Served = profile === null || !profile.enabled || profile.requestedSpecVersions === null;
+  const temporalAdmitted = specV2Served || admitsSpecV2(profile) || family.some((entry) => admitsSpecV2(entry));
+  const rollingAdmitted = profile === null || !profile.enabled || admittedWindowModes(profile) === null || admittedWindowModes(profile)!.includes("rolling") || family.some((entry) => admittedWindowModes(entry)?.includes("rolling"));
+  /* A choice only the v2 profile admits is what makes the declaration a v2 one; going back to a value the v1 profile admits drops it. */
+  const walkForwardChoice = (kind: "frequency" | "windowMode", value: string): Partial<RunDraft["walkForward"]> => {
+    const list = profile?.enabled ? (kind === "frequency" ? admittedFrequencies(profile) : admittedWindowModes(profile)) : null;
+    const outside = list !== null && !list.includes(value);
+    return { [kind]: value, ...(outside ? { declaredV2: true } : admitsSpecV2(profile) ? {} : { declaredV2: undefined }) };
+  };
   const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe);
   const modes = atlas?.modes ?? [];
   const selectedMode = modes.find((mode) => mode.mode_id === draft.optimizationMode) ?? null;
@@ -1542,7 +1596,7 @@ function WindowsStep({
               <span className="mono w-[72px] flex-none text-[10.5px] font-semibold">{label}</span>
               <Field minWidth={INSTANT_FIELD_WIDTH} label="start">
                 <DateTimeInput
-                  style={inputStyle(Boolean(error))}
+                  style={inputStyle(Boolean(error) || refusedAt(estimateStatus, "windows", key))}
                   value={draft.windows[key].start}
                   onChange={(value) => setWindow(key, "start", value)}
                   label={`${label} start`}
@@ -1550,7 +1604,7 @@ function WindowsStep({
               </Field>
               <Field minWidth={INSTANT_FIELD_WIDTH} label="end exclusive">
                 <DateTimeInput
-                  style={inputStyle(Boolean(error))}
+                  style={inputStyle(Boolean(error) || refusedAt(estimateStatus, "windows", key))}
                   value={draft.windows[key].endExclusive}
                   onChange={(value) => setWindow(key, "endExclusive", value)}
                   label={`${label} end exclusive`}
@@ -1558,6 +1612,7 @@ function WindowsStep({
               </Field>
               <PrefillLine draft={draft} field={outerField(key, "start")} label={`${label} start`} />
               <PrefillLine draft={draft} field={outerField(key, "endExclusive")} label={`${label} end`} />
+              <EstimateFieldRefusal status={estimateStatus} owns="windows" key2={key} />
             </div>
           ))}
         </div>
@@ -1565,7 +1620,7 @@ function WindowsStep({
         <div className="flex flex-wrap gap-2.5" data-advanced-window>
           <Field minWidth={INSTANT_FIELD_WIDTH} label="Analysis start" hint={prefillHint(draft, "walkForward.start")}>
             <DateTimeInput
-              style={inputStyle()}
+              style={inputStyle(refusedAt(estimateStatus, "walk_forward", "start"))}
               value={draft.walkForward.start}
               onChange={(value) =>
                 patch({
@@ -1578,7 +1633,7 @@ function WindowsStep({
           </Field>
           <Field minWidth={INSTANT_FIELD_WIDTH} label="End exclusive" hint={prefillHint(draft, "walkForward.endExclusive")}>
             <DateTimeInput
-              style={inputStyle()}
+              style={inputStyle(refusedAt(estimateStatus, "walk_forward", "end_exclusive"))}
               value={draft.walkForward.endExclusive}
               onChange={(value) =>
                 patch({
@@ -1591,7 +1646,7 @@ function WindowsStep({
           </Field>
           <Field minWidth={INSTANT_FIELD_WIDTH} label="First OOS instant" title={options?.split_mode_rule}>
             <DateTimeInput
-              style={inputStyle()}
+              style={inputStyle(refusedAt(estimateStatus, "walk_forward", "split_mode"))}
               value={draft.walkForward.splitMode}
               onChange={(value) => patch({ walkForward: { ...draft.walkForward, splitMode: value } })}
               label="First OOS instant"
@@ -1601,22 +1656,23 @@ function WindowsStep({
           <PublishedSelect
             label="Frequency"
             value={draft.walkForward.frequency}
-            options={options?.frequency ?? null}
+            options={frequencyOptions}
             fallback={options?.frequency_default ?? ""}
             minWidth={120}
-            pinnedBy={pinnedBy(profile, profile?.granularity ?? null, draft.walkForward.frequency || options?.frequency_default || "")}
-            onChange={(frequency) => patch({ walkForward: { ...draft.walkForward, frequency } })}
+            pinnedBy={family.length > 1 ? undefined : pinnedBy(profile, profile?.granularity ?? null, draft.walkForward.frequency || options?.frequency_default || "")}
+            onChange={(frequency) => patch({ walkForward: { ...draft.walkForward, ...walkForwardChoice("frequency", frequency) } })}
           />
           <PublishedSelect
             label="Window mode"
             value={draft.walkForward.windowMode}
-            options={options?.window_mode ?? null}
+            options={windowModeOptions}
             fallback={options?.window_mode_default ?? ""}
             minWidth={120}
-            pinnedBy={pinnedBy(profile, profile?.windowMode ?? null, draft.walkForward.windowMode || options?.window_mode_default || "")}
-            onChange={(windowMode) => patch({ walkForward: { ...draft.walkForward, windowMode } })}
+            pinnedBy={family.length > 1 ? undefined : pinnedBy(profile, profile?.windowMode ?? null, draft.walkForward.windowMode || options?.window_mode_default || "")}
+            onChange={(windowMode) => patch({ walkForward: { ...draft.walkForward, ...walkForwardChoice("windowMode", windowMode) } })}
           />
-          {draft.walkForward.windowMode === "rolling" ? (
+          <EstimateFieldRefusal status={estimateStatus} owns="walk_forward" />
+          {draft.walkForward.windowMode === "rolling" && rollingAdmitted ? (
             <Field label="Train width" title={options?.train_window?.rule ?? "Required for rolling, e.g. 180D or 72h."}>
               <input
                 className={INPUT_CLASS}
@@ -1630,7 +1686,7 @@ function WindowsStep({
               <V2CreateNote where="train-window" admitted={createAdmitted} />
             </Field>
           ) : null}
-          {options?.temporal_guards ? (
+          {options?.temporal_guards && temporalAdmitted ? (
             <div className="flex w-full flex-wrap items-end gap-2.5" data-temporal-guards data-release-default={options.temporal_guards.release_default} title={options.temporal_guards.rule}>
               {([
                 ["labelHorizonBars", "Label horizon (bars)"],
@@ -1707,21 +1763,38 @@ function WindowsStep({
             disabled={selectedMode === null}
           >
             <option value="">{selectedMode === null ? "choose a mode first" : "choose a schedule"}</option>
-            {scheduleOptions.map(({ schedule, valid }) => (
-              <option
-                key={schedule}
-                value={schedule}
-                disabled={!valid}
-                title={valid ? undefined : (selectedMode?.invalid_schedules?.find((entry) => entry.schedule === schedule)?.reason ?? "Not admitted for this mode in the installed release manifest.")}
-                data-invalid-schedule={valid ? undefined : schedule}
-              >
-                {schedule}{valid ? "" : " · not admitted"}
-              </option>
-            ))}
+            {scheduleOptions.map(({ schedule, valid }) => {
+              /* The profile says inner (per-fold causal) selection is not admitted: its served word is the reason. */
+              const innerRefused = schedule === "per_fold_causal" && profile?.enabled === true && profile.innerValidation !== null;
+              const shown = valid && !innerRefused;
+              return (
+                <option
+                  key={schedule}
+                  value={schedule}
+                  disabled={!shown}
+                  title={shown ? undefined : innerRefused ? `${profile?.innerValidation} · ${profile?.profileId}` : (selectedMode?.invalid_schedules?.find((entry) => entry.schedule === schedule)?.reason ?? "Not admitted for this mode in the installed release manifest.")}
+                  data-invalid-schedule={shown ? undefined : schedule}
+                >
+                  {schedule}{shown ? "" : " · not admitted"}
+                </option>
+              );
+            })}
           </select>
         </Field>
       </div>
-      {draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" ? (
+      {draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" && profile?.enabled === true && profile.innerValidation !== null ? (
+        <p
+          className="mono rounded-[6px] border px-3 py-2 text-[10px]"
+          style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
+          title={`${profile.innerValidation} · ${profile.profileId}`}
+          aria-label={`Inner folds not admitted · ${profile.innerValidation} · ${profile.profileId}`}
+          tabIndex={0}
+          data-inner-folds="locked"
+          data-reason-code={profile.innerValidation ?? undefined}
+        >
+          inner folds — not admitted · {profile.innerValidation}
+        </p>
+      ) : draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" ? (
         <div className="flex flex-wrap items-end gap-2.5 rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line-soft)" }} data-inner-folds title={options?.inner_folds?.rule}>
           <span className="w-full mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
             inner folds — decay selection stays inside each outer IS
@@ -2123,8 +2196,9 @@ function ProfileCard({ profile }: { profile: ProfilePins }) {
     profile.trials ? (profile.trials.min === profile.trials.max ? `trials ${profile.trials.min}` : `trials ${profile.trials.min}–${profile.trials.max}`) : null,
     profile.seed.state === "fixed" ? `seed ${profile.seed.value}` : profile.seed.state === "forbidden" ? "no seed" : null,
     profile.folds ? `folds ${profile.folds.min}–${profile.folds.max}` : null,
-    profile.granularity,
-    profile.windowMode,
+    profile.frequencies?.join("/") ?? profile.granularity,
+    profile.windowModes?.join("/") ?? profile.windowMode,
+    profile.earlyStopping === "forbidden" ? "no early stopping" : null,
     profile.maxSpanDays !== null ? `span ≤ ${profile.maxSpanDays} days` : null,
   ].filter((part): part is string => part !== null);
   return (
@@ -2148,10 +2222,13 @@ function ProfileCard({ profile }: { profile: ProfilePins }) {
 
 /** Declared trials/seed outside the selected profile's pins, one sentence each; the value stays as entered. */
 export function outsideSelectedProfileNotes(
-  draft: Pick<RunDraft, "optunaTrials" | "randomSeed">,
+  draft: Pick<RunDraft, "optunaTrials" | "randomSeed"> & { earlyStopping?: string },
   profile: ProfilePins,
-): readonly { field: "trials" | "random_seed"; text: string }[] {
-  const notes: { field: "trials" | "random_seed"; text: string }[] = [];
+): readonly { field: "trials" | "random_seed" | "early_stopping"; text: string }[] {
+  const notes: { field: "trials" | "random_seed" | "early_stopping"; text: string }[] = [];
+  if ((draft.earlyStopping ?? "").trim() !== "" && profile.earlyStopping === "forbidden") {
+    notes.push({ field: "early_stopping", text: `Early stopping ${(draft.earlyStopping ?? "").trim()} — profile admits none. Kept as entered.` });
+  }
   const trials = draft.optunaTrials.trim();
   const trialRange = profile.trials;
   if (trials !== "" && trialRange !== null) {
@@ -2195,6 +2272,10 @@ function OptimizationStep({
   const trialsLocked = pinnedTrials !== null && draft.optunaTrials.trim() === String(pinnedTrials);
   const pinnedSeed = seedPinned(profile);
   const seedLocked = pinnedSeed !== null && draft.randomSeed.trim() === String(pinnedSeed);
+  /* `seed_policy: FORBIDDEN` / `early_stopping_policy: FORBIDDEN`: the profile admits no value, so an empty field is
+     read-only and says so. A value that is already there (a copied run) stays editable, and is noted below. */
+  const seedForbidden = profile?.enabled === true && profile.seed.state === "forbidden" && draft.randomSeed.trim() === "";
+  const earlyStopForbidden = profile?.enabled === true && profile.earlyStopping === "forbidden" && draft.earlyStopping.trim() === "";
   const lockStyle = { background: "var(--paper-sunken)", cursor: "not-allowed" } as const;
   return (
     <Card title="Optimization">
@@ -2222,28 +2303,32 @@ function OptimizationStep({
             data-pinned-by={trialsLocked ? profile?.profileId : undefined}
           />
         </Field>
-        <Field label="Early stopping" hint="Trials without gain before stopping">
+        <Field label="Early stopping" hint={earlyStopForbidden ? `not admitted · ${profile?.profileId}` : "Trials without gain before stopping"}>
           <input
             className={INPUT_CLASS}
-            style={inputStyle(earlyStoppingInvalid(draft.earlyStopping))}
+            style={earlyStopForbidden ? { ...inputStyle(), ...lockStyle } : inputStyle(earlyStoppingInvalid(draft.earlyStopping))}
             value={draft.earlyStopping}
             onChange={(e) => patch({ earlyStopping: e.target.value })}
             aria-label="Early stopping"
             inputMode="numeric"
             aria-invalid={earlyStoppingInvalid(draft.earlyStopping) || undefined}
+            readOnly={earlyStopForbidden}
+            title={earlyStopForbidden ? `early stopping not admitted by ${profile?.profileId}` : undefined}
+            data-forbidden-by={earlyStopForbidden ? profile?.profileId : undefined}
           />
         </Field>
-        <Field label={limits.seedRequired === true ? "Random seed *" : "Random seed"} hint={seedLocked ? `pinned · ${profile?.profileId}` : undefined}>
+        <Field label={limits.seedRequired === true ? "Random seed *" : "Random seed"} hint={seedLocked ? `pinned · ${profile?.profileId}` : seedForbidden ? `not admitted · ${profile?.profileId}` : undefined}>
           <input
             className={INPUT_CLASS}
-            style={seedLocked ? { ...inputStyle(), ...lockStyle } : inputStyle((limits.seedRequired === true && draft.randomSeed.trim() === "") || randomSeedInvalid(draft.randomSeed))}
+            style={seedLocked || seedForbidden ? { ...inputStyle(), ...lockStyle } : inputStyle((limits.seedRequired === true && draft.randomSeed.trim() === "") || randomSeedInvalid(draft.randomSeed))}
             value={draft.randomSeed}
             onChange={(e) => patch({ randomSeed: e.target.value })}
             aria-label="Random seed"
             aria-invalid={randomSeedInvalid(draft.randomSeed) || undefined}
-            readOnly={seedLocked}
-            title={seedLocked ? `pinned by ${profile?.profileId}` : undefined}
+            readOnly={seedLocked || seedForbidden}
+            title={seedLocked ? `pinned by ${profile?.profileId}` : seedForbidden ? `random seed not admitted by ${profile?.profileId}` : undefined}
             data-pinned-by={seedLocked ? profile?.profileId : undefined}
+            data-forbidden-by={seedForbidden ? profile?.profileId : undefined}
           />
         </Field>
       </div>
@@ -2450,15 +2535,22 @@ function FoldPlanLine({ plan, protocol }: { plan: FoldPlan; protocol: RunDraft["
   );
 }
 
+const IDLE_ESTIMATE: EstimateStatus = { kind: "idle" };
+
 function WindowTimeline({
   draft,
   catalog = null,
   fold,
   estimate = null,
+  estimateStatus = IDLE_ESTIMATE,
+  onRetryEstimate,
 }: {
   draft: RunDraft;
   catalog?: DatasetCatalog | null;
   fold: FoldPlan;
+  /** What the declaration-estimate call is doing; its refusal and failure states print under the bars. */
+  estimateStatus?: EstimateStatus;
+  onRetryEstimate?: () => void;
   /** The server's optional `preflight_estimate`: bars per window, warmup, planned folds. Null prints none of it. */
   estimate?: PreflightEstimate | null;
 }) {
@@ -2536,10 +2628,11 @@ function WindowTimeline({
             <WindowBarsLine estimate={estimate} />
           </>
         ) : null}
-        {hasEstimateStrip(estimate) ? (
+        {hasEstimateStrip(estimate) || estimateStatus.kind !== "idle" ? (
           <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1" data-estimate-strip>
             <WarmupChip estimate={estimate} />
             <PlannedFolds estimate={estimate} />
+            <EstimateStatusLine status={estimateStatus} onRetry={onRetryEstimate} />
           </p>
         ) : null}
       </div>
@@ -2803,9 +2896,13 @@ function ReviewRail({
   portalAdmission = null,
   versionDeclared = false,
   estimate = null,
+  estimateStatus = IDLE_ESTIMATE,
+  onRetryEstimate,
 }: {
   /** The server's optional `preflight_estimate` (bars, warmup, folds, conditions); null when none was served. */
   estimate?: PreflightEstimate | null;
+  estimateStatus?: EstimateStatus;
+  onRetryEstimate?: () => void;
   /** S02_DATA: the catalog the coverage bar reads, the Atlas's admitted profiles, and whether the version's declaration was read. */
   catalog?: DatasetCatalog | null;
   portalAdmission?: ProfileFoldBounds | null;
@@ -2837,6 +2934,8 @@ function ReviewRail({
         catalog={catalog}
         fold={foldPlan(draft, preflight?.resource_estimate?.outer_fold_count ?? null, portalAdmission)}
         estimate={estimate}
+        estimateStatus={estimateStatus}
+        onRetryEstimate={onRetryEstimate}
       />
       <ConditionsChecklist estimate={estimate} />
       <ClaimForecast draft={draft} atlas={atlas} preflight={preflight} />
@@ -2890,6 +2989,9 @@ export interface NewRunProps {
   portalAdmission?: ProfileFoldBounds | null;
   /** The server's optional `preflight_estimate` (bars per window, warmup, planned folds, conditions), or null. */
   estimate?: PreflightEstimate | null;
+  /** What the declaration-estimate call is doing: asking, refused (typed, with a field path), or failed (4xx / 5xx / no answer). */
+  estimateStatus?: EstimateStatus;
+  onRetryEstimate?: () => void;
   /** CG-P11-07 `?from=`: the run this draft was copied from, and the read's state. */
   cloneSource?: { runId: string; state: ResearchState; copiedAt?: number | null } | null;
   /** W5a: the Screen-07 what-if node this draft forks, read from the server's grid. */
@@ -2933,18 +3035,26 @@ export function NewRun(props: NewRunProps) {
     catalogReason = null,
     portalAdmission = null,
     estimate = null,
+    estimateStatus = IDLE_ESTIMATE,
+    onRetryEstimate,
     cloneSource = null,
     forkSource = null,
   } = props;
   /* LW-07: the profile this declaration falls under, when exactly one does. */
   const profiles = useMemo(() => readProfiles(portalAdmission), [portalAdmission]);
+  /* Two advanced profiles can be enabled (v1 and v2): the one whose requested-spec version the draft serializes as. */
+  const v2 = usesSpecV2(draft);
   const profile = useMemo(
-    () => selectProfile(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode }),
+    () => selectProfile(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode, specVersion: specVersionOf(v2) }),
+    [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode, v2],
+  );
+  const family = useMemo(
+    () => profileFamily(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode }).filter((entry) => entry.enabled),
     [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode],
   );
   const sweepCeiling = limits.sweepCeiling === undefined ? SWEEP_CEILING : limits.sweepCeiling;
-  const v2 = usesSpecV2(draft);
   const refusalStep = preflightRefusal?.fieldPath ? stepForFieldPath(preflightRefusal.fieldPath) : null;
+  const estimateRefusalStep = estimateStatus.kind === "refused" && estimateStatus.fieldPath ? stepForFieldPath(estimateStatus.fieldPath) : null;
   /* FG-08 (FE-A1-03): a refused preflight's panels state the client sentence,
      not the server's message that the hook carries as the panel reason. */
   const previewState: ResearchState = preflightRefusal
@@ -3004,8 +3114,10 @@ export function NewRun(props: NewRunProps) {
     const steps = new Set([...errorByStep.keys()].filter((key) => engaged.has(key)));
     /* CG-P08-03: a server refusal marks the step that owns its field path. */
     if (refusalStep && refusalStep !== "review") steps.add(refusalStep);
+    /* The declaration-estimate route names a field the same way. */
+    if (estimateRefusalStep && estimateRefusalStep !== "review") steps.add(estimateRefusalStep);
     return steps;
-  }, [errorByStep, engaged, refusalStep]);
+  }, [errorByStep, engaged, refusalStep, estimateRefusalStep]);
   const missing = useMemo(() => missingConstraints(limits), [limits]);
   /*
    * E4 (audit 02-8): a form that opens on a red box has told the reader they
@@ -3204,7 +3316,7 @@ export function NewRun(props: NewRunProps) {
             <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
+            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} estimateStatus={estimateStatus} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />
@@ -3404,7 +3516,7 @@ export function NewRun(props: NewRunProps) {
           ) : null}
         </div>
 
-        <ReviewRail draft={draft} blocking={step === "review" ? [] : visibleBlocking.filter((problem) => problem.step !== step)} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} estimate={estimate} />
+        <ReviewRail draft={draft} blocking={step === "review" ? [] : visibleBlocking.filter((problem) => problem.step !== step)} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} estimate={estimate} estimateStatus={estimateStatus} onRetryEstimate={onRetryEstimate} />
       </div>
     </div>
   );
