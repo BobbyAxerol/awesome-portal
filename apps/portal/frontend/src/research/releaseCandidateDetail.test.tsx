@@ -179,8 +179,17 @@ function sealed(publish: RcCompose["actions"]["publish"] = { enabled: true, bloc
     availability: { state: "AVAILABLE", reason_code: null },
   };
   body.rail = body.rail.map((node) => (node.key === "release_candidate" ? { ...node, value: RC_ID, detail: "sealed locally — not delivered", tone: "green" } : node));
-  body.actions = { ...body.actions, publish };
+  /* Typed builder (derived from the generated RcCompose type + the canonical P04 fixture): the server after 8bd781ed
+     serves ACTOR-LOCAL flags — this actor's own draft is sealed, so edit and seal are off with the typed reason. */
+  body.actions = { ...body.actions, may_edit_draft: false, may_seal: false, seal_blocked_reason: "P21_ALREADY_SEALED", publish };
   body.source_absences = { ...body.source_absences, approval_mirror: { state: "NOT_PUBLISHED", reason_code: "P22_NOT_PUBLISHED" } };
+  return body;
+}
+
+/** A PEER actor sealed this run: the run-level pack is served, but this actor's own flags stay open (typed builder, as above). */
+function peerSealed(): RcCompose {
+  const body = sealed();
+  body.actions = { ...body.actions, may_edit_draft: true, may_seal: true, seal_blocked_reason: null };
   return body;
 }
 
@@ -2039,6 +2048,45 @@ describe("S11 QA 2026-10-02 fixes", () => {
     expect(after.getAttribute("data-yaml-value")).toBe(RC_ID);
     expect(after.textContent).toContain(RC_ID);
     expect(after.textContent).not.toContain("P21_ASSIGNED_ON_LOCAL_SEAL");
+  });
+
+  it("B9-S11-A a peer's pack never locks this actor: the run-level seal is shown, this actor's seal and edit controls follow the served flags", async () => {
+    server({ COMPOSE: [ok(peerSealed())], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    expect(q("[data-panel='sealed']")).not.toBeNull();
+    expect(q("[data-action='local-seal']")!.getAttribute("data-seal-enabled")).toBe("true");
+    expect(qa("[data-action='edit-declaration']").length).toBeGreaterThan(0);
+  });
+
+  it("B9-S11-B own sealed draft: edit buttons are gone and no second seal is offered (flags: may_edit_draft=false, P21_ALREADY_SEALED)", async () => {
+    server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    expect(qa("[data-action='edit-declaration']")).toHaveLength(0);
+    expect(q("[data-panel='seal']")).toBeNull();
+  });
+
+  it("B9-S11-C a seal answered 409 keeps the ORIGINAL request: the re-read says sealed (typed refusal) and the retry replays the same body, not the new fence", async () => {
+    const moved = sealed();
+    moved.source_fingerprint = "9".repeat(64);
+    const api = server({
+      COMPOSE: [ok(sealable()), ok(moved)],
+      SEAL: [problem(409, "RESEARCH_RELEASE_CANDIDATE_CONFLICT"), ok(sealResponse(), 201)],
+      PUBLICATION: [ok(publication())],
+    });
+    renderCompose();
+    await ready();
+    fireEvent.click(sealButton());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
+    const notice = await until("[data-write-notice='seal'][data-post-seal-refusal]");
+    expect(notice.textContent).toContain("P21_ALREADY_SEALED");
+    expect(notice.textContent).not.toContain(RC_CONFLICT_COPY);
+    const retry = await until("[data-action='retry-seal-original']");
+    fireEvent.click(retry);
+    await waitFor(() => expect(api.of("SEAL")).toHaveLength(2));
+    expect(api.of("SEAL")[1]!.body).toEqual(api.of("SEAL")[0]!.body);
+    expect(api.of("SEAL")[1]!.body).toEqual({ draft_id: DRAFT_ID, expected_draft_revision: 1, expected_source_fingerprint: P04.source_fingerprint });
   });
 
   it("QA-S11-U2 below 720px a pack row is a labelled card: source and note stay", () => {

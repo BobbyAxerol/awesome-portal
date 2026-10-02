@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNod
 import { useEntryAnimation, useEntryRef, useReadout } from "./chartLife";
 import type { CurrentSourceSearch } from "./searchClient";
 import { reasonCodeSentence } from "./researchRefusal";
+import { cleanParameters } from "./searchParamText";
 
 export type Surface = NonNullable<CurrentSourceSearch["surface"]>;
 export type DeclaredSpace = NonNullable<CurrentSourceSearch["declared_space"]>;
@@ -64,6 +65,23 @@ function defaultAxes(axes: readonly string[]): { x: string; y: string } {
   const x = axes.includes("window") ? "window" : axes[0] ?? "";
   const y = axes.includes("rvol") && x !== "rvol" ? "rvol" : axes.find((axis) => axis !== x) ?? x;
   return { x, y };
+}
+
+/**
+ * The parameters a point's tooltip shows, and where they came from. A point
+ * that carries its own `parameters` (exact persisted values for its own
+ * `source_ordinal`, identical to the ledger's) is read from itself, whatever
+ * ledger page is loaded; only an older body without them falls back to the
+ * loaded ledger rows. Rounding here is display only and never reaches a digest.
+ */
+export function pointParameters(
+  point: Point,
+  ledgerParametersOf: (trialId: string) => Record<string, string> | undefined,
+): { parameters: Record<string, string> | undefined; source: "point" | "ledger" | "none" } {
+  const own = cleanParameters(point.parameters);
+  if (own !== undefined) return { parameters: own, source: "point" };
+  const ledger = ledgerParametersOf(point.trial_id);
+  return ledger !== undefined ? { parameters: ledger, source: "ledger" } : { parameters: undefined, source: "none" };
 }
 
 function pointTitle(point: Point, x: string, y: string, parameters: Record<string, string> | undefined): string {
@@ -146,7 +164,7 @@ export function SurfaceScatter({
   onClear,
 }: {
   surface: Surface;
-  /** The ledger's own parameter text per trial (titles only). */
+  /** The loaded ledger page's parameter text per trial: the fallback for a point that carries none of its own. */
   parametersOf: (trialId: string) => Record<string, string> | undefined;
   schedule: string | null;
   pick: string | null;
@@ -232,7 +250,8 @@ export function SurfaceScatter({
           const size = theta || isBest ? 9 : point.state === "PRUNED" ? 6 : 5;
           const left = (point.positions[axes.x] as number) * 0.96 + 2;
           const top = 98 - (point.positions[axes.y] as number) * 0.96;
-          const title = `${pointTitle(point, axes.x, axes.y, parametersOf(point.trial_id))}${theta ? " · θ* (selected)" : ""}${isBest ? " · best IS" : ""}`;
+          const params = pointParameters(point, parametersOf);
+          const title = `${pointTitle(point, axes.x, axes.y, params.parameters)}${theta ? " · θ* (selected)" : ""}${isBest ? " · best IS" : ""}`;
           return (
             <button
               key={point.trial_id}
@@ -264,6 +283,8 @@ export function SurfaceScatter({
               data-entry="fade"
               {...readout.bind(title)}
               data-surface-point={point.trial_id}
+              data-source-ordinal={point.source_ordinal}
+              data-params-source={params.source}
               data-point-bucket={point.objective_bucket ?? ""}
               data-point-role={theta ? (isBest ? "theta best" : "theta") : isBest ? "best" : ""}
               data-picked={pick === point.trial_id ? "true" : undefined}

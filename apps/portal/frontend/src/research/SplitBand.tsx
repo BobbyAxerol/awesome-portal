@@ -34,7 +34,7 @@ import type { components as SplitComponents } from "@portal/contracts-research-s
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 
 import { formatUtc } from "./researchFormat";
-import { hasRange, barsOf, splitApi, isLaneNotApplicable, type CurrentSourceSplit, type SplitDetail } from "./splitClient";
+import { hasRange, barsOf, splitApi, isLaneNotApplicable, isSplitTerminalAbsence, splitTerminalAbsenceSentence, type CurrentSourceSplit, type SplitDetail } from "./splitClient";
 import { reasonCodeSentence } from "./researchRefusal";
 
 type Range = SplitComponents["schemas"]["Range"];
@@ -245,6 +245,11 @@ export function useSplitBand(runId: string, lane: "hub" | "retained" | "pending"
           const body = answer as CurrentSourceSplit | { schema_version: string };
           if (isLaneNotApplicable(body)) {
             setSlot({ state: "absent", reason: "The retained walk-forward lane never holds this run's fold plan." });
+            return;
+          }
+          /* Terminal absence carries no windows or folds: say so with the served reason, draw nothing. */
+          if (isSplitTerminalAbsence(body)) {
+            setSlot({ state: "absent", reason: `${splitTerminalAbsenceSentence(body)} ${body.lane.reason_code}` });
             return;
           }
           setSlot({ state: "ready", hub: null, folds: body as CurrentSourceSplit });

@@ -44,6 +44,8 @@ export type HoldoutWindow = SplitSchemas["HoldoutWindow"];
 
 export type CurrentSourceSplit = SourceSchemas["Split"];
 export type SourceFold = SourceSchemas["Fold"];
+/** RS-02 terminal absence: the run ended FAILED/CANCELLED with no retained split. */
+export type SplitTerminalAbsence = SourceSchemas["SplitTerminalAbsence"];
 
 const RUNS = "/api/v1/quantbt/runs";
 
@@ -71,6 +73,32 @@ export type LaneNotApplicable = SourceSchemas["LaneNotApplicable"];
 export type LaneState = SourceSchemas["LaneState"];
 
 export const LANE_NOT_APPLICABLE_SCHEMA = "research.current-source-not-applicable.v1";
+export const SPLIT_TERMINAL_ABSENCE_SCHEMA = "research.current-source-split-terminal-absence.v1";
+
+/** Everything `researchCurrentSourceSplitGetV1` can answer with a 200. */
+export type CurrentSourceSplitAnswer = CurrentSourceSplit | LaneNotApplicable | SplitTerminalAbsence;
+
+/**
+ * Whether a 200 from the current-source split read is the named terminal
+ * absence. Discriminate this BEFORE touching `fold_plan`, `windows` or any
+ * other field of a retained split: the absence carries none of them.
+ */
+export function isSplitTerminalAbsence(body: unknown): body is SplitTerminalAbsence {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    (body as { schema_version?: unknown }).schema_version === SPLIT_TERMINAL_ABSENCE_SCHEMA
+  );
+}
+
+/**
+ * One sentence for the terminal absence, built from the status the server
+ * sent. No wall-clock segment, observed fold or certificate is implied.
+ */
+export function splitTerminalAbsenceSentence(answer: SplitTerminalAbsence): string {
+  const status = answer.lane.effective_status === "CANCELLED" ? "cancelled" : "failed";
+  return `The run ${status} before a split was retained. No observed fold, window span or certificate exists for it, and nothing is pending.`;
+}
 
 /** Whether a 200 from a current-source read is the typed not-applicable answer. */
 export function isLaneNotApplicable(body: unknown): body is LaneNotApplicable {
@@ -147,7 +175,7 @@ export const splitApi = {
 
   /** `researchCurrentSourceSplitGetV1` — the fold plan, or the typed not-applicable answer. */
   currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
-    call<CurrentSourceSplit | LaneNotApplicable>(
+    call<CurrentSourceSplitAnswer>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/split${query(options.workspaceId)}`,
       null,
       options.signal,

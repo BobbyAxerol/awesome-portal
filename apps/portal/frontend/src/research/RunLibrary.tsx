@@ -482,6 +482,8 @@ export interface Last30dSeries {
   caption: string;
   title: string;
   partial: boolean;
+  /** Served per-point UTC ms, one-for-one with `values`. */
+  at: readonly number[];
 }
 
 export function last30dSeries(item: Pick<RunLibraryItem, "status" | "last_30d">): Last30dSeries | null {
@@ -492,6 +494,7 @@ export function last30dSeries(item: Pick<RunLibraryItem, "status" | "last_30d">)
   const span = [formatUtc(block.data.window_start_utc_ms), formatUtc(block.data.window_end_utc_ms)].filter(Boolean).join(" → ");
   return {
     values: points.map((point) => point.value),
+    at: points.map((point) => point.at_utc_ms),
     caption: `last 30D${partial ? " partial" : ""} · ${points.length} of ${observed}`,
     title: [
       "Last 30D OOS equity (Portal-derived from the sealed series)",
@@ -671,7 +674,9 @@ function AllTimeCell({
   exact,
   face,
   absent,
+  note,
 }: {
+  note?: { text: string; title: string };
   name: string;
   label: string;
   exact: string | null;
@@ -680,7 +685,15 @@ function AllTimeCell({
 }) {
   return (
     <span className="flex flex-col" style={{ gap: 1 }} data-all-time-cell={name}>
-      <span style={LABEL_9}>{label}</span>
+      <span style={LABEL_9}>
+        {label}
+        {note ? (
+          <span data-return-basis title={note.title} style={{ textTransform: "none", letterSpacing: 0 }}>
+            {" · "}
+            {note.text}
+          </span>
+        ) : null}
+      </span>
       {face !== null ? (
         <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "var(--ink)" }} title={exact ?? undefined}>
           {face}
@@ -697,6 +710,23 @@ function AllTimeCell({
       )}
     </span>
   );
+}
+
+/** The served basis of the all-time return, short; it is not last-30D and not the RS02 final account. */
+function returnBasisNote(basis: AllTimeSummary["return_basis"]): { text: string; title: string } | undefined {
+  if (!basis) return undefined;
+  const span = [formatUtc(basis.first_at_utc_ms), formatUtc(basis.last_at_utc_ms)].filter(Boolean).join(" → ");
+  return {
+    text: "first→last",
+    title: [
+      `${basis.definition_id} · ${basis.scope}`,
+      `start equity ${tipMinus(basis.start_equity)} → end equity ${tipMinus(basis.end_equity)}`,
+      span,
+      "not the last-30D return and not the final account",
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  };
 }
 
 const NO_REASON: AllTimeAbsence = {
@@ -765,6 +795,7 @@ function AllTime({ runId, summary }: { runId: string; summary: AllTimeSummary })
             exact={summary.return_fraction}
             face={formatMetric(summary.return_fraction, "fraction")}
             absent={NO_REASON}
+            note={returnBasisNote(summary.return_basis)}
           />
           <AllTimeCell name="sharpe" label="sharpe" exact={sharpe?.value ?? null} face={sharpeFace} absent={sharpe ?? NO_REASON} />
           <AllTimeCell
@@ -880,8 +911,11 @@ export function SparkBars({
   title,
   extra,
   revisionKey,
+  at,
 }: {
   shown: readonly string[];
+  /** Served UTC ms per column; when absent the read names only the column's position. */
+  at?: readonly number[];
   heights: number[];
   ink: string;
   label: string;
@@ -921,7 +955,7 @@ export function SparkBars({
       ))}
       {index !== null ? (
         <ScrubLayer xPct={xs[index]!} dots={[]} testId="spark" above>
-          <div data-scrub-date>{`${index + 1} of ${shown.length}`}</div>
+          <div data-scrub-date>{(at && formatUtc(at[index])) ?? `${index + 1} of ${shown.length}`}</div>
           <div data-scrub-value data-exact={shown[index]}>
             {tipMinus(shown[index]!)}
           </div>
@@ -929,7 +963,7 @@ export function SparkBars({
       ) : null}
       {index !== null ? (
         <span className="sr-only" role="status" data-scrub-live>
-          {`column ${index + 1} of ${shown.length}: ${shown[index]}`}
+          {`${(at && formatUtc(at[index])) ?? `column ${index + 1} of ${shown.length}`}: ${shown[index]}`}
         </span>
       ) : null}
     </span>
@@ -1023,6 +1057,7 @@ function Sparkline({
   const series = listed && read?.kind === "series" ? read : null;
   const shown = thirty ? thirty.values.slice(-SPARK_COLUMNS) : series ? series.values.slice(-SPARK_COLUMNS) : [];
   const heights = thirty || series ? sparkHeights(shown) : null;
+  const shownAt = thirty ? thirty.at.slice(-SPARK_COLUMNS) : series?.at?.slice(-SPARK_COLUMNS);
   /* Hi-fi column ink by what the run is: a finished series in the OOS
      accent, a series still being searched in the train tint, a failed one
      in the quiet line colour. */
@@ -1082,6 +1117,7 @@ function Sparkline({
             label={thirty ? `Last 30 days OOS equity, ${thirty.caption}` : `OOS equity, ${sparkCaption(shown.length, series?.source ?? null)}`}
             title={thirty ? thirty.title : sparkProvenance(shown.length, series?.source ?? null, item.evidence_revision)}
             revisionKey={thirty ? "30d" : (series?.revision ?? "")}
+            at={shownAt}
             extra={{
               "data-sparkline-values": shown.length,
               "data-sparkline-window": thirty ? "last_30d" : "all_time",

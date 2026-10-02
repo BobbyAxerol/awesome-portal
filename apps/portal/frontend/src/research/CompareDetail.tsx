@@ -86,6 +86,7 @@ import {
   type MarketResult,
   type Overlay,
   type PairComparable,
+  type PairData,
   type PairRefused,
   type PairResult,
   COMPARE_METRIC_UNIT,
@@ -508,6 +509,17 @@ const COMPARE_CSS = `
 .cp-mini-fill { fill: var(--accent); fill-opacity: .08; stroke: none; }
 .cp-overlay .lineA { stroke: var(--accent); stroke-width: 1.75; fill: none; }
 .cp-overlay .lineB { stroke: var(--accent-2); stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; }
+.cp-annot-layer { position: absolute; inset: 0; pointer-events: none; }
+.cp-annot-span { position: absolute; top: 0; bottom: 0; border-left: 1px solid; border-right: 1px solid; opacity: .5; }
+.cp-annot-span[data-side="left"] { background: var(--accent-soft); border-color: var(--accent); }
+.cp-annot-span[data-side="right"] { background: var(--accent-2-soft); border-color: var(--accent-2); }
+.cp-annot-ring { position: absolute; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; border: 2px solid; background: transparent; }
+.cp-annot-ring[data-side="left"] { border-color: var(--accent); }
+.cp-annot-ring[data-side="right"] { border-color: var(--accent-2); }
+.cp-annot-ring[data-kind="worst"] { border-style: dashed; }
+.cp-annots { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 8px 16px; margin-top: 10px; min-width: 0; }
+.cp-annot { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); min-width: 0; overflow-wrap: anywhere; display: flex; flex-direction: column; gap: 2px; }
+.cp-annot-head { font-weight: 600; }
 .cp-lbl { position: absolute; white-space: nowrap; }
 .cp-lbl.y { right: calc(100% + 6px); transform: translateY(-50%); }
 .cp-lbl.x { top: calc(100% + 4px); transform: translateX(-50%); }
@@ -1955,13 +1967,182 @@ function OverlayFigure({ result }: { result: PairComparable }) {
         ) : null}
       </figcaption>
       {plot ? (
-        <OverlayPlot overlay={overlay} runs={runs} plot={plot} />
+        <OverlayPlot overlay={overlay} runs={runs} plot={plot} annotations={result.pair.chart_annotations} />
       ) : (
         <div className="cp-frame" data-size="overlay" data-overlay-absent>
           <AvailabilityAbsent availability={overlay.availability} what="overlay" />
         </div>
       )}
+      <RunAnnotations annotations={result.pair.chart_annotations} runs={runs} />
     </figure>
+  );
+}
+
+/* ------------------------------------------------- per-run chart annotations */
+
+type ChartAnnotation = NonNullable<PairData["chart_annotations"]>[number];
+type AnnotationSide = "left" | "right";
+
+const DAY = (ms: number) => iso(ms).slice(0, 10);
+
+function annotationSide(runs: PairComparable["pair"]["runs"], annotation: ChartAnnotation): AnnotationSide | null {
+  if (runs[0]?.run_id === annotation.run_id) return "left";
+  if (runs[1]?.run_id === annotation.run_id) return "right";
+  return null;
+}
+
+/** Provenance title: origin, locator and digest exactly as the server published them. */
+function annotationTitle(annotation: ChartAnnotation, what: string, origin: string): string {
+  return [
+    what,
+    `origin ${origin}`,
+    annotation.scope ? `locator ${annotation.scope.locator}` : null,
+    annotation.input_digest ? `digest ${annotation.input_digest}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * The server publishes drawdown episodes already ordered (episode 1 on the
+ * Report is the first); the first one is the span drawn. Nothing is ranked
+ * or compared here.
+ */
+function leadEpisode(annotation: ChartAnnotation) {
+  const block = annotation.drawdown_episodes;
+  return block && block.state === "AVAILABLE" ? (block.values[0] ?? null) : null;
+}
+
+/** The overlay point nearest a server timestamp, only when it lies inside the drawn window. */
+function pointIndexAt(points: Overlay["points"], ms: number): number | null {
+  if (points.length === 0) return null;
+  if (ms < points[0]!.at_utc_ms || ms > points[points.length - 1]!.at_utc_ms) return null;
+  let best = 0;
+  for (let i = 1; i < points.length; i += 1) if (Math.abs(points[i]!.at_utc_ms - ms) < Math.abs(points[best]!.at_utc_ms - ms)) best = i;
+  return best;
+}
+
+function RunAnnotations({ annotations, runs }: { annotations: PairData["chart_annotations"]; runs: PairComparable["pair"]["runs"] }) {
+  if (!annotations || annotations.length === 0) return null;
+  return (
+    <div className="cp-annots" data-run-annotations>
+      {annotations.map((annotation) => {
+        const side = annotationSide(runs, annotation);
+        const run = runs.find((candidate) => candidate.run_id === annotation.run_id);
+        const name = run ? runName(run) : annotation.run_id;
+        const scope = annotation.scope;
+        const episode = leadEpisode(annotation);
+        const extrema = annotation.month_extrema;
+        const drawdowns = annotation.drawdown_episodes;
+        return (
+          <div className="cp-annot" key={annotation.run_id} data-annotation-run={annotation.run_id} data-annotation-side={side ?? undefined}>
+            <span className="cp-annot-head" style={{ color: side === "right" ? "var(--accent-2)" : "var(--accent)" }}>
+              {name}
+            </span>
+            {annotation.availability.state !== "AVAILABLE" || !scope ? (
+              <AvailabilityAbsent availability={annotation.availability} what="annotations" />
+            ) : (
+              <>
+                <span data-annotation-scope title={`this run's own scope definition; not compared with the other run\nlocator ${scope.locator}`}>
+                  {`own scope · OOS ${DAY(scope.first_at_utc_ms)} → ${DAY(scope.last_at_utc_ms)} · ${scope.fold_count} folds · ${scope.coverage === "FULL_RETAINED_OOS" ? "full retained" : "sampled retained"}`}
+                </span>
+                {episode ? (
+                  <span data-annotation-drawdown title={annotationTitle(annotation, "drawdown episode", drawdowns?.origin ?? "PORTAL_DERIVED")}>
+                    {`drawdown ${DAY(episode.start_utc_ms)} → ${episode.recovery_utc_ms === null ? "open" : DAY(episode.recovery_utc_ms)} · depth `}
+                    <span data-exact={episode.depth_fraction}>{formatMetric(episode.depth_fraction, "fraction") ?? episode.depth_fraction}</span>
+                    {episode.label ? ` · ${episode.label}` : ""}
+                  </span>
+                ) : drawdowns ? (
+                  <AvailabilityAbsent
+                    availability={{ state: drawdowns.state === "AVAILABLE" ? "PARTIAL" : drawdowns.state, reason_code: drawdowns.reason_code }}
+                    what="drawdown span"
+                  />
+                ) : (
+                  <Absent what="drawdown span" state="not published" reason="drawdown_episodes not returned" />
+                )}
+                {extrema.availability.state === "AVAILABLE" && (extrema.best || extrema.worst) ? (
+                  (["best", "worst"] as const).map((kind) => {
+                    const month = extrema[kind];
+                    if (!month) return null;
+                    return (
+                      <span key={kind} data-annotation-month={kind} title={annotationTitle(annotation, `${kind} month · ${extrema.definition_id}`, "PORTAL_DERIVED")}>
+                        {`${kind} month ${DAY(month.month_start_utc_ms).slice(0, 7)} · `}
+                        <span data-exact={month.return_fraction}>{formatMetric(month.return_fraction, "fraction") ?? month.return_fraction}</span>
+                        {month.partial ? " · partial month" : ""}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span data-annotation-months-absent title={`${extrema.definition_id} · month population not complete`}>
+                    <AvailabilityAbsent availability={extrema.availability} what="best / worst month" />
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Shaded drawdown span and ringed months, placed on the overlay's own x/y vertices; geometry only. */
+function AnnotationLayer({
+  annotations,
+  runs,
+  points,
+  left,
+  right,
+  shown,
+}: {
+  annotations: PairData["chart_annotations"];
+  runs: PairComparable["pair"]["runs"];
+  points: Overlay["points"];
+  left: { x: number; y: number }[];
+  right: { x: number; y: number }[];
+  shown: { left: boolean; right: boolean };
+}) {
+  if (!annotations || annotations.length === 0 || left.length !== points.length || right.length !== points.length) return null;
+  return (
+    <div className="cp-annot-layer" aria-hidden="true" data-annotation-layer>
+      {annotations.map((annotation) => {
+        const side = annotationSide(runs, annotation);
+        if (!side || !shown[side] || annotation.availability.state !== "AVAILABLE") return null;
+        const vertices = side === "left" ? left : right;
+        const episode = leadEpisode(annotation);
+        const start = episode ? pointIndexAt(points, episode.start_utc_ms) : null;
+        const end = episode ? (episode.recovery_utc_ms === null ? points.length - 1 : pointIndexAt(points, episode.recovery_utc_ms)) : null;
+        const extrema = annotation.month_extrema;
+        const months = extrema.availability.state === "AVAILABLE" ? (["best", "worst"] as const) : [];
+        return (
+          <Fragment key={annotation.run_id}>
+            {start !== null && end !== null && end >= start ? (
+              <span
+                className="cp-annot-span"
+                data-side={side}
+                data-annotation-span={annotation.run_id}
+                style={{ left: `${vertices[start]!.x}%`, width: `${vertices[end]!.x - vertices[start]!.x}%` }}
+              />
+            ) : null}
+            {months.map((kind) => {
+              const month = extrema[kind];
+              const at = month ? pointIndexAt(points, month.close_at_utc_ms) : null;
+              if (!month || at === null) return null;
+              return (
+                <span
+                  key={kind}
+                  className="cp-annot-ring"
+                  data-side={side}
+                  data-kind={kind}
+                  data-annotation-ring={`${annotation.run_id}:${kind}`}
+                  style={{ left: `${vertices[at]!.x}%`, top: `${vertices[at]!.y}%` }}
+                />
+              );
+            })}
+          </Fragment>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1969,10 +2150,12 @@ export function OverlayPlot({
   overlay,
   runs,
   plot,
+  annotations,
 }: {
   overlay: PairComparable["pair"]["overlay"];
   runs: PairComparable["pair"]["runs"];
   plot: Plot & { left: string; right: string };
+  annotations?: PairData["chart_annotations"];
 }) {
   const points = overlay.points;
   const animate = useDrawIn(
@@ -2033,6 +2216,7 @@ export function OverlayPlot({
           {shown.right ? <path className="lineB" d={plot.right} data-line="right" /> : null}
         </svg>
         <AxisLabels plot={plot} />
+        <AnnotationLayer annotations={annotations} runs={runs} points={points} left={left} right={right} shown={shown} />
         {point && index !== null ? (
           <ScrubLayer
             xPct={left[index]!.x}

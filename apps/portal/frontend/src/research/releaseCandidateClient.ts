@@ -259,6 +259,7 @@ export const RC_REASON_SENTENCES: Readonly<Record<string, string>> = {
   P21_REQUIRED_EVIDENCE_MISSING: "resolve MISSING rows first",
   P21_RESEARCHER_DECLARATIONS_REQUIRED: "complete and save the two declarations first",
   P21_RESEARCHER_DECLARATION_REQUIRED: "not declared yet",
+  P21_ALREADY_SEALED: "your declaration draft is already sealed — its immutable pack cannot be changed",
   P21_LOCAL_SEAL_NOT_CREATED: "no local pack has been sealed from this run",
   P21_LOCAL_SEAL_REFERENCES_PRIOR_SOURCE_FINGERPRINT: "the sealed pack was frozen against earlier evidence — the source has changed since",
   P21_ASSIGNED_ON_LOCAL_SEAL: "assigned on local seal",

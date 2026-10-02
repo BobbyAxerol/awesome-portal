@@ -924,7 +924,10 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
     renderAt(`${wfoBase}?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b`);
     await settled();
     expect(document.querySelector("[data-delta-direction]")?.getAttribute("data-delta-direction")).toBe("RIGHT_MINUS_LEFT");
-    expect(document.querySelector('[data-delta-row="OOS_SHARPE"] td.d')?.textContent).toContain("P20_COMMON_WINDOW_SHARPE_NEEDS_SOURCE_ANNUALIZATION");
+    /* The Sharpe reason is the fixture's own (it moved with 8bd781ed): read, never hard-coded. */
+    const sharpe = body.result.mode === "pair" ? body.result.pair?.common_window.metrics.find((metric) => metric.key === "OOS_SHARPE") : undefined;
+    expect(sharpe?.availability.reason_code).toBeTruthy();
+    expect(document.querySelector('[data-delta-row="OOS_SHARPE"] td.d')?.textContent).toContain(sharpe!.availability.reason_code!);
     expect(document.querySelector('[data-delta-row="WIN_RATE"] td.d')?.textContent).toContain("P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE");
     if (body.result.mode !== "pair" || body.result.pair === null) throw new Error("fixture guard");
     const net = body.result.pair.common_window.metrics.find((metric) => metric.key === "NET_RETURN_FRACTION")!;
@@ -1291,5 +1294,111 @@ describe("S13 Compare — ladder arrows between cards, never after one", () => {
     /* The fixture's families are unsorted, so a ladder that sorted or grouped by claim would fail above. */
     const byRank = [...serverReversed].sort((a, b) => (a.claim.rank ?? 0) - (b.claim.rank ?? 0)).map((item) => item.claim.family);
     expect(shownClaims).not.toEqual(byRank);
+  });
+});
+
+/**
+ * B9 S13 chart annotations. The bodies are TYPED BUILDERS: the canonical pair-ok fixture with its
+ * `pair.chart_annotations` replaced by values shaped by the generated CompareChartAnnotation type
+ * (not server captures; preview has no amendment rows yet).
+ */
+describe("S13 Compare — per-run chart annotations (B9)", () => {
+  const url = "/research/quantbt/alphas/delta-rsi-polynomial-alpha/compare?mode=pair&runs=run-w6a-wfo-a,run-w6a-wfo-b";
+
+  function withAnnotations(truncated: boolean) {
+    const body = compareFixture("research-compare.pair-ok.valid.json");
+    if (body.result.mode !== "pair" || body.result.pair === null) throw new Error("fixture guard");
+    const points = body.result.pair.overlay.points;
+    const first = points[0]!.at_utc_ms;
+    const last = points[points.length - 1]!.at_utc_ms;
+    const one = (run_id: string, scopeWindow: [number, number], coverage: string) => ({
+      run_id,
+      availability: { state: "AVAILABLE", reason_code: null },
+      input_digest: "e".repeat(64),
+      scope: {
+        window: "OOS",
+        first_at_utc_ms: scopeWindow[0],
+        last_at_utc_ms: scopeWindow[1],
+        observation_count: 10,
+        fold_count: 3,
+        locator: `locator:${run_id}`,
+        benchmark_locator: "bench#1",
+        coverage,
+        source_observation_count: 10,
+      },
+      all_time_metrics: null,
+      drawdown_episodes: {
+        state: "AVAILABLE",
+        reason_code: null,
+        origin: "PORTAL_DERIVED",
+        total: 1,
+        open_episode_present: false,
+        longest_open: false,
+        values: [{ start_utc_ms: first, trough_utc_ms: first, recovery_utc_ms: last, depth_fraction: "-0.0123", duration_seconds: 100 }],
+      },
+      month_extrema: truncated
+        ? {
+            availability: { state: "NOT_PUBLISHED", reason_code: "B9_MONTH_TRANSPORT_DOES_NOT_COVER_FULL_POPULATION" },
+            definition_id: "ALL_RETAINED_OOS_MONTHS_MAX_MIN_RETURN_V1",
+            includes_partial_months: true,
+            source_period_count: 40,
+            best: null,
+            worst: null,
+          }
+        : {
+            availability: { state: "AVAILABLE", reason_code: null },
+            definition_id: "ALL_RETAINED_OOS_MONTHS_MAX_MIN_RETURN_V1",
+            includes_partial_months: true,
+            source_period_count: 2,
+            best: { month_start_utc_ms: first, return_fraction: "0.05", observation_count: 20, expected_observation_count: 30, partial: true, basis: "FIRST_OOS_CLOSE", base_at_utc_ms: first, close_at_utc_ms: last },
+            worst: null,
+          },
+    });
+    (body.result.pair as unknown as { chart_annotations: unknown[] }).chart_annotations = [
+      one("run-w6a-wfo-a", [first, last], "FULL_RETAINED_OOS"),
+      one("run-w6a-wfo-b", [first, last], "SAMPLED_RETAINED_EQUITY"),
+    ];
+    return body;
+  }
+
+  it("B9-S13-A the fixture's typed absence stays a typed absence per run (no span, no ring)", async () => {
+    server([{ status: 200, body: compareFixture("research-compare.pair-ok.valid.json") }]);
+    renderAt(url);
+    await settled();
+    const text = document.querySelector("[data-run-annotations]")!.textContent!;
+    expect(text).toContain("SEALED_ENRICHMENT_NOT_COMPUTED");
+    expect(document.querySelector("[data-annotation-span]")).toBeNull();
+    expect(document.querySelector("[data-annotation-ring]")).toBeNull();
+  });
+
+  it("B9-S13-B published annotations: a shaded span and a ringed month per run, each run's own scope labelled, provenance in the title", async () => {
+    server([{ status: 200, body: withAnnotations(false) }]);
+    renderAt(url);
+    await settled();
+    for (const run of ["run-w6a-wfo-a", "run-w6a-wfo-b"]) {
+      expect(document.querySelector(`[data-annotation-span="${run}"]`)).not.toBeNull();
+      expect(document.querySelector(`[data-annotation-ring="${run}:best"]`)).not.toBeNull();
+      const card = document.querySelector(`[data-annotation-run="${run}"]`)!;
+      expect(card.querySelector("[data-annotation-scope]")!.textContent).toContain("own scope");
+      const dd = card.querySelector("[data-annotation-drawdown]")!;
+      expect(dd.getAttribute("title")).toContain("origin PORTAL_DERIVED");
+      expect(dd.getAttribute("title")).toContain(`locator locator:${run}`);
+      expect(dd.getAttribute("title")).toContain("e".repeat(64));
+      expect(dd.querySelector("[data-exact]")!.getAttribute("data-exact")).toBe("-0.0123");
+      expect(dd.textContent).toContain("−1.23%");
+    }
+    const scopes = Array.from(document.querySelectorAll("[data-annotation-scope]")).map((node) => node.textContent);
+    expect(scopes[0]).toContain("full retained");
+    expect(scopes[1]).toContain("sampled retained");
+  });
+
+  it("B9-S13-C a truncated month population prints the typed absence and draws no ring, never a guessed extremum", async () => {
+    server([{ status: 200, body: withAnnotations(true) }]);
+    renderAt(url);
+    await settled();
+    expect(document.querySelector("[data-annotation-ring]")).toBeNull();
+    expect(document.querySelectorAll("[data-annotation-months-absent]")).toHaveLength(2);
+    expect(document.querySelector("[data-annotation-months-absent]")!.textContent).toContain("B9_MONTH_TRANSPORT_DOES_NOT_COVER_FULL_POPULATION");
+    expect(document.querySelector("[data-annotation-span]")).not.toBeNull();
   });
 });

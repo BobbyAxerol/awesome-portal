@@ -44,7 +44,7 @@ import type {
 } from "./evidenceClient";
 import { formatFractionAxis, formatMetric } from "./researchFormat";
 import { isDailyDistribution, safeCount } from "./allTimeSeries";
-import { deepestSpan, type DrawdownSpan } from "./enrichedAnalysis";
+import { bucketPosition, deepestSpan, distributionStatistics, type DistributionMarker, type DrawdownSpan, type EnrichedAnalysis, type WindowBand } from "./enrichedAnalysis";
 
 /** HiFi heights (measured on the `.dc.html`): equity 380, underwater 180, rolling/distribution 230. */
 export const CHART_HEIGHT = { equity: 380, underwater: 180, rolling: 230, distribution: 230 } as const;
@@ -125,6 +125,10 @@ export function entryAnimation(requested: boolean): Record<string, unknown> {
 export interface ChartOpts {
   animate?: boolean;
   span?: DrawdownSpan | null;
+  /** B9: the served shared histogram statistics, drawn as markers. */
+  markers?: readonly DistributionMarker[] | null;
+  /** B9: the served, located, half-open IS/OOS/HOLDOUT bounds, drawn as bands on the all-time curve. */
+  bands?: readonly WindowBand[] | null;
 }
 
 /** Wheel zoom needs shift (a bare wheel scrolls the page); drag pans; pinch zooms on touch. */
@@ -320,6 +324,34 @@ function spanMarkArea(span: DrawdownSpan | null | undefined, lastMs: number | un
       ],
     },
   };
+}
+
+/**
+ * B9: the served IS / OOS / HOLDOUT bounds as role-token bands, clipped to the drawn series. The bounds are the
+ * server's declared half-open windows; a band is a frame on the time axis, not a claim that a payload exists.
+ * Merged with the drawdown span's mark area when both are present (one `markArea` per series).
+ */
+function windowMarkArea(bands: readonly WindowBand[] | null | undefined, span: DrawdownSpan | null | undefined, firstMs: number | undefined, lastMs: number | undefined): Record<string, unknown> {
+  const base = spanMarkArea(span, lastMs) as unknown as { markArea?: { silent: boolean; itemStyle: object; data: unknown[] } };
+  if (!bands || bands.length === 0 || firstMs === undefined || lastMs === undefined) return base;
+  const role = roleColorsNow();
+  const tone = { is: role.is, oos: role.oos, holdout: role.holdout_live } as const;
+  const data = bands.flatMap((band) => {
+    const from = Math.max(band.start_ms, firstMs);
+    const to = Math.min(band.end_ms, lastMs);
+    if (to <= from) return [];
+    return [[
+      {
+        xAxis: from,
+        name: band.label,
+        itemStyle: { color: withAlpha(tone[band.key], 0.09) },
+        label: { show: true, position: "insideTopLeft" as const, color: tone[band.key], fontSize: 9, fontFamily: "JetBrains Mono, monospace", formatter: band.label },
+      },
+      { xAxis: to },
+    ]];
+  });
+  if (data.length === 0) return base;
+  return { markArea: { silent: true, itemStyle: base.markArea?.itemStyle ?? {}, data: [...data, ...(base.markArea?.data ?? [])] } };
 }
 
 /** A tooltip row naming the span while the crosshair is inside it. */
@@ -773,6 +805,20 @@ const countShown = (count: unknown): string => formatMetric(safeCount(count), "c
 export function distributionOption(buckets: Bucket[], daily = false, opts: ChartOpts = {}) {
   const { accent, accent2 } = canvasTokens(activeTheme());
   const zero = zeroBucketIndex(buckets);
+  const { ink, bad } = canvasTokens(activeTheme());
+  /* B9: served statistics, positioned by the served bucket edges (category axis: bar i is centred on i). */
+  const stats = (opts.markers ?? []).flatMap((marker) => {
+    if (marker.returnAt === null) return [];
+    const at = bucketPosition(buckets.map((bucket) => ({ lower_inclusive: bucketEdges(bucket).lower, upper: bucketEdges(bucket).upper, upper_inclusive: bucketEdges(bucket).closing === "]" ? "true" : "false" })), marker.returnAt);
+    if (at === null) return [];
+    const colour = marker.key === "mean" ? ink : marker.key === "median" ? accent : bad;
+    return [{
+      xAxis: at - 0.5,
+      name: marker.label,
+      lineStyle: { color: colour, type: marker.key === "cvar_95" ? ("dotted" as const) : ("solid" as const), width: 1.25 },
+      label: { color: colour, fontSize: 9, fontFamily: "JetBrains Mono, monospace", formatter: marker.key === "var_95" ? "VaR" : marker.key === "cvar_95" ? "CVaR" : marker.label },
+    }];
+  });
   return evidenceBase({
     ...noChartApparatus(),
     /* Bars grow from the axis on first mount. */
@@ -814,14 +860,14 @@ export function distributionOption(buckets: Bucket[], daily = false, opts: Chart
         barCategoryGap: "14%",
         itemStyle: { color: withAlpha(accent, 0.55) },
         emphasis: { itemStyle: { color: accent } },
-        ...(zero !== null
+        ...(zero !== null || stats.length > 0
           ? {
               markLine: {
                 symbol: "none",
                 silent: true,
                 lineStyle: { color: accent2, type: "dashed" },
                 label: { color: accent2, fontSize: 9, fontFamily: "JetBrains Mono, monospace", formatter: "0%" },
-                data: [{ xAxis: zero }],
+                data: [...(zero !== null ? [{ xAxis: zero }] : []), ...stats],
               },
             }
           : {}),
@@ -963,7 +1009,7 @@ export function strategyBenchmarkOption(strategy: readonly RebasedPoint[], bench
         type: "line", name: SERIES_NAME_V2.strategy, showSymbol: false,
         data: strategy.map((point) => [point.at_utc_ms, Number(point.value)]),
         lineStyle: { width: 2.5, color: role.oos }, itemStyle: { color: role.oos },
-        ...spanMarkArea(opts.span, strategy[strategy.length - 1]?.at_utc_ms),
+        ...windowMarkArea(opts.bands, opts.span, strategy[0]?.at_utc_ms, strategy[strategy.length - 1]?.at_utc_ms),
       },
       ...(benchmark.length > 0
         ? [{
@@ -1121,15 +1167,19 @@ export function StrategyBenchmarkChart({
   strategy,
   benchmark,
   span = null,
+  bands = null,
   group = CHART_GROUP.curves,
 }: {
   strategy: readonly RebasedPoint[];
   benchmark: readonly RebasedPoint[];
   span?: DrawdownSpan | null;
+  /** B9: served half-open window bounds (IS / OOS / HOLDOUT), drawn as role bands. */
+  bands?: readonly WindowBand[] | null;
   group?: string;
 }) {
   const animate = useEntryMotion(signatureOf(strategy));
-  const option = useMemo(() => strategyBenchmarkOption(strategy, benchmark, { animate, span }), [strategy, benchmark, span]); // eslint-disable-line react-hooks/exhaustive-deps -- animate is the first-render flag, not a trigger
+  const bandKey = (bands ?? []).map((band) => `${band.key}:${band.start_ms}:${band.end_ms}`).join("|");
+  const option = useMemo(() => strategyBenchmarkOption(strategy, benchmark, { animate, span, bands }), [strategy, benchmark, span, bandKey]); // eslint-disable-line react-hooks/exhaustive-deps -- animate is the first-render flag, not a trigger
   return (
     <ChartShell chart="strategy-benchmark" label="Strategy vs benchmark, rebased to 100" group={group} option={option}>
       <div role="img" aria-label="Strategy vs benchmark, rebased to 100; exact values in the table below">
@@ -1148,20 +1198,31 @@ export function StrategyBenchmarkChart({
   );
 }
 
-export function DistributionChart({ series }: { series: EvidenceSeries }) {
+export function DistributionChart({ series, block = null }: { series: EvidenceSeries; /** B9: the enrich_analysis block, when it publishes the shared statistics. */ block?: EnrichedAnalysis | null }) {
   const buckets = series.values as Bucket[];
   const daily = isDailyDistribution(series);
   const animate = useEntryMotion(`${buckets.length}:${buckets[0]?.lower_inclusive ?? "-"}`);
-  const option = useMemo(() => distributionOption(buckets, daily, { animate }), [buckets, daily]); // eslint-disable-line react-hooks/exhaustive-deps -- animate is the first-render flag, not a trigger
+  const stats = useMemo(() => (block !== null ? distributionStatistics(block) : null), [block]);
+  const option = useMemo(() => distributionOption(buckets, daily, { animate, markers: stats?.markers ?? null }), [buckets, daily, stats]); // eslint-disable-line react-hooks/exhaustive-deps -- animate is the first-render flag, not a trigger
   return (
     <div data-chart="distribution" data-distribution-grain={daily ? "UTC_DAY" : undefined}>
       <div role="img" aria-label="Return distribution; exact values in the table below">
         <EChart option={option} height={CHART_HEIGHT.distribution} />
       </div>
-      {/* NEEDS-BACKEND: mean, median and VaR are not published for the histogram; no marker is computed here. */}
-      <p className="mono mt-1 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-distribution-stats="NOT_PUBLISHED" title="The service publishes the buckets only. Mean, median and VaR markers are not drawn from them.">
-        mean · median · VaR — not published
-      </p>
+      {stats !== null ? (
+        <p className="mono mt-1 flex flex-wrap gap-x-3 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-distribution-stats="PUBLISHED" title={stats.policyTitle}>
+          {stats.markers.map((marker) => (
+            <span key={marker.key} data-stat={marker.key} data-exact={marker.fact.value ?? undefined} data-state={marker.fact.state} title={marker.title}>
+              {marker.label} {marker.shown ?? `not published${marker.fact.reason_code !== null ? ` · ${marker.fact.reason_code}` : ""}`}
+            </span>
+          ))}
+        </p>
+      ) : (
+        /* Legacy / pre-amendment body: the service published the buckets only; nothing is computed from them. */
+        <p className="mono mt-1 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-distribution-stats="NOT_PUBLISHED" title="The service publishes the buckets only. Mean, median and VaR markers are not drawn from them.">
+          mean · median · VaR — not published
+        </p>
+      )}
       <ExactTable
         id="distribution"
         caption={daily ? "Daily return distribution, exact bucket edges" : "Return distribution, exact bucket edges"}

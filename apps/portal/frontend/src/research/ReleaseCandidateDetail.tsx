@@ -148,6 +148,7 @@ export const SEAL_SENTENCE =
 export const SEAL_CONFIRM = "Seal now? Frozen as composed.";
 export const SEAL_CONFIRM_TITLE = "The pack below is frozen as it is composed; a later change to code, params or evidence composes a new candidate.";
 export const SEAL_CONFIRM_BUTTON = "Confirm local seal";
+export const SEAL_RETRY_LABEL = "retry original seal request";
 export const SEAL_DIRTY = "save your declarations first — the seal fences the saved draft revision";
 export const SEALED_SENTENCE =
   "This evidence pack is Portal-local and immutable. A further change to code, params or methodology composes a new candidate.";
@@ -1426,8 +1427,31 @@ function RefusalNotice({ refusal, op }: { refusal: RcWriteRefusal; op: string })
   );
 }
 
-function WriteNotice({ slot, op }: { slot: RcWriteSlot; op: RcWriteOp }) {
-  if (slot.state === "refused" && slot.op === op) return <RefusalNotice refusal={slot.refusal} op={op} />;
+/**
+ * After a 409 the composition is re-read; when the served flag now says this
+ * actor's own draft is sealed, the typed post-seal refusal is that served
+ * reason code and its sentence, not the generic "evidence changed" copy.
+ */
+export const ALREADY_SEALED_CODE = "P21_ALREADY_SEALED";
+
+function WriteNotice({ slot, op, compose }: { slot: RcWriteSlot; op: RcWriteOp; compose?: RcCompose | null }) {
+  if (slot.state === "refused" && slot.op === op) {
+    const sealedCode = compose?.actions.seal_blocked_reason;
+    if (slot.refusal.outcome === "conflict" && sealedCode === ALREADY_SEALED_CODE) {
+      return (
+        <div className="rc-notice" data-write-notice={op} data-outcome="conflict" data-post-seal-refusal role="alert">
+          <span>{rcReasonSentence(sealedCode)}</span>
+          <CodeDetail code={sealedCode} className="code" />
+          {slot.refusal.requestId ? (
+            <span className="code" data-request-id>
+              request {slot.refusal.requestId}
+            </span>
+          ) : null}
+        </div>
+      );
+    }
+    return <RefusalNotice refusal={slot.refusal} op={op} />;
+  }
   if (op === "patch" && slot.state === "saved") {
     return (
       <div className="rc-notice" data-write-notice="patch" data-outcome="saved" role="status">
@@ -1512,7 +1536,25 @@ function SealCard({ compose, controller, dirty, publishing }: {
           {blocked.code ? ` · ${blocked.code}` : ""}
         </span>
       ) : null}
-      <WriteNotice slot={controller.write} op="seal" />
+      <WriteNotice slot={controller.write} op="seal" compose={compose} />
+      {controller.originalSealRequest !== null &&
+      controller.write.state === "refused" &&
+      controller.write.op === "seal" &&
+      (controller.write.refusal.outcome === "unavailable" || controller.write.refusal.outcome === "conflict") &&
+      !controller.writesLocked ? (
+        <button
+          type="button"
+          className="rc-btn"
+          data-action="retry-seal-original"
+          title="Sends the original seal request again, unchanged: if the first answer was lost, the server returns the same pack."
+          aria-disabled={pending || undefined}
+          onClick={() => {
+            if (!pending) controller.retrySeal();
+          }}
+        >
+          {SEAL_RETRY_LABEL}
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -2124,7 +2166,7 @@ function normalized(text: string): string | null {
   return text.trim() === "" ? null : text;
 }
 
-function useDeclarationEditor(controller: ReleaseCandidateController, delivered: boolean): DeclarationEditor {
+function useDeclarationEditor(controller: ReleaseCandidateController): DeclarationEditor {
   const [edits, setEdits] = useState<Partial<Record<DeclarationRowKey, string>>>({});
   const [issues, setIssues] = useState<DeclarationIssue[]>([]);
   const { compose, write, writesLocked } = controller;
@@ -2135,7 +2177,7 @@ function useDeclarationEditor(controller: ReleaseCandidateController, delivered:
     : writesLocked
       ? "writes are off — access changed"
       : !compose.actions.may_edit_draft
-        ? "the server does not admit a draft edit"
+        ? (rcReasonSentence(compose.actions.seal_blocked_reason === ALREADY_SEALED_CODE ? ALREADY_SEALED_CODE : null) ?? "the server does not admit a draft edit")
         : null;
 
   const texts = (): Record<"known_limitations" | "proposed_use_restrictions", string> => ({
@@ -2161,7 +2203,8 @@ function useDeclarationEditor(controller: ReleaseCandidateController, delivered:
     edits,
     lockedReason,
     /* Spec T07: after a delivered publication the INPUT rows are read-only. */
-    editable: (compose?.actions.may_edit_draft ?? false) && !delivered,
+    /* The served, actor-local flag decides; another actor's seal or delivery never locks this draft. */
+    editable: compose?.actions.may_edit_draft ?? false,
     pending,
     dirty,
     issues,
@@ -2188,7 +2231,7 @@ function useDeclarationEditor(controller: ReleaseCandidateController, delivered:
       });
     },
     saveBlocked: lockedReason,
-    notice: <WriteNotice slot={write} op="patch" />,
+    notice: <WriteNotice slot={write} op="patch" compose={compose} />,
   };
 }
 
@@ -2244,8 +2287,11 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
   const current = publication.publication;
   const delivered = isDelivered(compose, current);
   const slot = publishSlot(compose, current);
-  const sealedLocal = compose?.local_seal.state === "SEALED_LOCAL";
-  const editor = useDeclarationEditor(controller, delivered || sealedLocal);
+  const editor = useDeclarationEditor(controller);
+  /* The served actor-local flag: this actor's own draft is sealed. A peer's pack never hides this actor's seal card. */
+  const ownDraftSealed = compose?.actions.seal_blocked_reason === ALREADY_SEALED_CODE;
+  /* A refused seal keeps its card (and the original-request retry) even once the re-read says the draft is sealed. */
+  const sealRetryOpen = controller.originalSealRequest !== null && controller.write.state === "refused" && controller.write.op === "seal";
   const sealed = compose?.local_seal.state === "SEALED_LOCAL" ? compose.local_seal : null;
   const replayed = controller.write.state === "sealed" && controller.write.replayed;
   const unbound = compose?.source_absences.alpha_binding;
@@ -2312,7 +2358,7 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
       <div className="rc-group3">
         <RecordBlock fields={compose ? withSealedId(compose.yaml, sealed?.release_candidate_id ?? null) : null} state={state} />
         <div className="rc-side">
-          {delivered || sealedLocal ? null : <SealCard compose={compose} controller={controller} dirty={editor.dirty} publishing={publication.write.state === "pending"} />}
+          {ownDraftSealed && !sealRetryOpen ? null : <SealCard compose={compose} controller={controller} dirty={editor.dirty} publishing={publication.write.state === "pending"} />}
           {sealed ? <SealedCard seal={sealed} replayed={replayed} /> : null}
           {slot === "published" ? (
             <PublishedCard releaseCandidateId={sealed?.release_candidate_id ?? current?.release_candidate_id ?? null} publication={publication} />

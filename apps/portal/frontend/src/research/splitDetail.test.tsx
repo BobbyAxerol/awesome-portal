@@ -43,6 +43,8 @@ import {
   type CurrentSourceSplit,
   type LaneNotApplicable,
   type SplitDetail,
+  type SplitTerminalAbsence,
+  isSplitTerminalAbsence,
 } from "./splitClient";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
 import { endedWithoutSource, forgetSplitReads, splitState, useSplit, type FoldsSlot } from "./useSplit";
@@ -118,6 +120,26 @@ function laneAnswer(operation: "split" | "search" = "split"): LaneNotApplicable 
       run_adapter_contract_digest: "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
       retainable_profile_id: "rs02.delta-wfo-global.v1",
       reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION",
+    },
+  };
+}
+
+/** Typed builder from the generated `SplitTerminalAbsence` schema (not a captured response). */
+function terminalAbsence(status: "FAILED" | "CANCELLED"): SplitTerminalAbsence {
+  return {
+    schema_version: "research.current-source-split-terminal-absence.v1",
+    read_authority: "PORTAL_RETAINED_CURRENT_SOURCE",
+    run_id: "R-WFO-118",
+    revision: "rs02_terminal_b31f",
+    etag: '"rs02_terminal_b31f"',
+    availability: { state: "NOT_PUBLISHED", reason_code: "RS02_TERMINAL_SPLIT_NOT_RETAINED" },
+    lane: {
+      state: "NOT_RETAINED_TERMINAL",
+      operation: "split",
+      effective_status: status,
+      execution_profile_id: null,
+      run_adapter_contract_digest: null,
+      reason_code: "RS02_TERMINAL_SPLIT_NOT_RETAINED",
     },
   };
 }
@@ -845,10 +867,9 @@ describe("RF-06 wave C — the fold lane is asked once and its answer is rendere
     stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
     const { container } = mountRoute("#stage=split&fold=1");
     await waitFor(() => expect(container.querySelector("[data-fold-anatomy='not-applicable']")).toBeTruthy());
-    // QA S05: between the two, one progress read asks whether the run ended without a seal (it would 409 the lane).
+    // B9: the lane answers a failed/cancelled run with a typed 200, so no progress pre-check stands between the two reads.
     expect(requested).toEqual([
       "/api/v1/quantbt/runs/R-WFO-118/split",
-      "/api/v1/research/runs/R-WFO-118/progress",
       "/api/v1/quantbt/runs/R-WFO-118/current-source/split",
     ]);
     expect(container.querySelector("[data-absent-reason='fold plan']")?.textContent).toBe("P04_PUBLISHES_NO_FOLD_PLAN");
@@ -1428,8 +1449,8 @@ describe("W3b — Split on the retained WFO lane", () => {
     expect(container.querySelector("[data-holdout='retained']")).toBeNull();
     expect(container.querySelector("[data-readiness='READY']")).toBeNull();
     expect(requested.some((url) => /\/research\/runs\/[^/]+\/requested-spec/.test(url))).toBe(false);
-    // QA S05: the one progress read is the "did this run end without a seal?" pre-check, not the retained lane's identity read.
-    expect(requested.filter((url) => /\/research\/runs\/[^/]+\/progress/.test(url))).toHaveLength(1);
+    // B9: no progress pre-check any more, and the retained lane's identity read is not issued for a P04 run.
+    expect(requested.filter((url) => /\/research\/runs\/[^/]+\/progress/.test(url))).toHaveLength(0);
   });
 });
 
@@ -2055,20 +2076,43 @@ describe("QA S05 — no 409 for a run the state machine already closed without a
     expect(endedWithoutSource({ nonsense: true } as never)).toBe(false);
   });
 
-  it("a FAILED run never calls current-source/split: the slot carries the terminal lane state", async () => {
+  it("a FAILED run asks the lane and keeps its typed terminal-absence 200 with the served reason (no invented fold/segment)", async () => {
     stub((url) => {
       const path = new URL(url, "http://x").pathname;
-      if (path.endsWith("/progress")) return [200, progressOf("FAILED", "FAILED")];
-      if (path.endsWith("/split") && !path.endsWith("/current-source/split")) return [200, W3B.hub_split];
+      if (path.endsWith("/current-source/split")) return [200, terminalAbsence("FAILED")];
+      if (path.endsWith("/split")) return [200, W3B.hub_split];
       return [404, { error: { code: "UNEXPECTED" } }];
     });
     const { result } = renderHook(() => useSplit(W3B_RUN));
     await waitFor(() => expect(result.current.detail).not.toBeNull());
     await act(async () => result.current.ensureFolds());
-    await waitFor(() => expect(result.current.folds.state).toBe("refused"));
-    expect(requested.some((url) => url.includes("current-source"))).toBe(false);
-    const slot = result.current.folds;
-    expect(slot.state === "refused" && slot.laneState).toBe("NOT_RETAINED_TERMINAL");
+    await waitFor(() => expect(result.current.folds.state).toBe("terminal-absence"));
+    expect(requested.some((url) => url.includes("current-source/split"))).toBe(true);
+    expect(requested.some((url) => url.includes("/progress"))).toBe(false);
+    expect(result.current.retained).toBeNull();
+    expect(result.current.state).toMatchObject({ state: "terminal", mayRetry: false, retainsContent: true, detail: "RS02_TERMINAL_SPLIT_NOT_RETAINED" });
+  });
+
+  it("the screen keeps its shell and names the terminal absence by its served reason, without a fold plan", async () => {
+    stub((url) => {
+      const path = new URL(url, "http://x").pathname;
+      if (path.endsWith("/current-source/split")) return [200, terminalAbsence("CANCELLED")];
+      return [200, detail()];
+    });
+    const { container } = mountRoute("#stage=split&fold=1");
+    await waitFor(() => expect(container.querySelector("[data-fold-lane='terminal-absence']")).toBeTruthy());
+    const lane = container.querySelector("[data-fold-lane='terminal-absence']") as HTMLElement;
+    expect(lane.textContent).toContain("cancelled before a split was retained");
+    expect(lane.textContent).toContain("RS02_TERMINAL_SPLIT_NOT_RETAINED");
+    expect(container.querySelector("[data-protocol-strip]")).toBeTruthy();
+    expect(container.querySelector("[data-fold-row], [data-stitch-segments]")).toBeNull();
+  });
+
+  it("isSplitTerminalAbsence discriminates before any fold field is read; a retained split and not-applicable are not it", () => {
+    expect(isSplitTerminalAbsence(terminalAbsence("FAILED"))).toBe(true);
+    expect(isSplitTerminalAbsence(laneAnswer())).toBe(false);
+    expect(isSplitTerminalAbsence(null)).toBe(false);
+    expect(isSplitTerminalAbsence({ schema_version: "research.current-source-split.v1" })).toBe(false);
   });
 
   it("a COMPLETED run still asks the lane (the other path)", async () => {

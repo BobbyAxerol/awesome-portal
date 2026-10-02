@@ -14,6 +14,8 @@
 
 import type { components as EvidenceComponents } from "@portal/contracts-research-evidence";
 
+import { formatMetric } from "./researchFormat";
+
 /** The generated contract is the shape: nothing below re-declares it (B6; the proposed fixture's shapes are retired). */
 export type EnrichedAnalysis = EvidenceComponents["schemas"]["EnrichedAnalysis"];
 export type EnrichedFact = EvidenceComponents["schemas"]["EnrichedAnalysisFact"];
@@ -83,6 +85,7 @@ function isHead(value: Record<string, unknown>): boolean {
   return STATES.includes(value.state as string) && isReason(value.reason_code) && value.origin === "PORTAL_DERIVED";
 }
 
+const STAT_KEYS = ["mean", "median", "var_95", "cvar_95"] as const;
 const COVERAGES: readonly string[] = ["FULL_RETAINED_OOS", "SAMPLED_RETAINED_EQUITY"];
 
 /** The Library card's block (`library_summary` inside the enrichment, `analytics_all_time` on a Library item). */
@@ -98,8 +101,14 @@ function summaryProblem(value: unknown): string | null {
 const curveOk = (value: unknown): value is EnrichedCurvePoint[] =>
   Array.isArray(value) && value.every((point) => isObject(point) && isMs(point.at_utc_ms) && isDecimal(point.value));
 
+const HALF_OPEN = "START_INCLUSIVE_END_EXCLUSIVE";
+
 function windowOk(value: unknown): value is EnrichedWindow {
-  return isObject(value) && STATES.includes(value.state as string) && isReason(value.reason_code);
+  if (!isObject(value) || !STATES.includes(value.state as string) || !isReason(value.reason_code)) return false;
+  /* B9: bounds are optional, all-or-none, half-open and located; a partial set is not a window. */
+  const given = ["start_ms", "end_ms", "source_locator", "bounds_semantics"].filter((key) => value[key] !== undefined);
+  if (given.length === 0) return true;
+  return given.length === 4 && isMs(value.start_ms) && isMs(value.end_ms) && isString(value.source_locator) && value.bounds_semantics === HALF_OPEN;
 }
 
 /** The first thing wrong with the shape, or `null` when it is the contract's. */
@@ -138,12 +147,17 @@ function shapeProblem(raw: Record<string, unknown>): string | null {
         isObject(row) && isDecimal(row.lower_inclusive) && isDecimal(row.upper) && (row.upper_inclusive === "true" || row.upper_inclusive === "false") && isCount(row.count));
     if (!ok) return "return_distribution.buckets";
   }
+  /* B9: the shared statistics are optional and all-or-none (policy + four Fact objects). */
+  const statsGiven = ["statistics_policy", ...STAT_KEYS].filter((key) => dist[key] !== undefined);
+  if (statsGiven.length > 0 && (statsGiven.length !== 5 || !isObject(dist.statistics_policy) || !STAT_KEYS.every((key) => isFact(dist[key])))) return "return_distribution.statistics";
   const episodes = raw.drawdown_episodes;
   if (!isObject(episodes) || !isHead(episodes) || !isCount(episodes.total) || typeof episodes.open_episode_present !== "boolean" || typeof episodes.longest_open !== "boolean") return "drawdown_episodes";
   if (episodes.state === "AVAILABLE") {
     const ok = Array.isArray(episodes.values) && episodes.values.every((row) =>
       isObject(row) && isMs(row.start_utc_ms) && isMs(row.trough_utc_ms) && (row.recovery_utc_ms === null || isMs(row.recovery_utc_ms)) &&
-      isDecimal(row.depth_fraction) && isCount(row.duration_seconds));
+      isDecimal(row.depth_fraction) && isCount(row.duration_seconds) &&
+      (row.label === undefined || typeof row.label === "string") &&
+      (row.regime === undefined || (isObject(row.regime) && row.regime.state === "NOT_PUBLISHED" && isString(row.regime.reason_code))));
     if (!ok) return "drawdown_episodes.values";
   }
   return summaryProblem(raw.library_summary);
@@ -202,4 +216,128 @@ export function deepestSpan(episodes: readonly SpanEpisode[]): DrawdownSpan | nu
     : null;
   spanCache.set(episodes, span);
   return span;
+}
+
+/* ------------------------------------------------------------- B9 chart fields */
+
+/** A served distribution statistic, ready to mark: its Fact as served, a label and its position on the return axis. */
+export interface DistributionMarker {
+  key: (typeof STAT_KEYS)[number];
+  /** The words the UI prints (not a server code). VaR and CVaR are loss fractions, and say so. */
+  label: string;
+  fact: EnrichedFact;
+  /** The Fact's value as a percentage (typographic minus, no plus sign), or null when the Fact is not AVAILABLE. */
+  shown: string | null;
+  /** Position on the RETURN axis (VaR/CVaR sit at return = -loss, the served definition); null when not drawable. */
+  returnAt: number | null;
+  title: string;
+}
+
+export interface DistributionStatistics {
+  markers: DistributionMarker[];
+  /** The served definition/policy, one line per part, for a tooltip. */
+  policyTitle: string;
+}
+
+const STAT_LABELS: Record<(typeof STAT_KEYS)[number], string> = { mean: "mean", median: "median", var_95: "VaR 95% loss", cvar_95: "CVaR 95% loss" };
+
+/** A served decimal as a percentage: the served sign stays (a loss fraction can be negative); no "+" is added. */
+export const signedPercent = (value: string): string | null => formatMetric(value, "fraction")?.replace(/^\+/, "") ?? null;
+
+/**
+ * The shared all-time histogram statistics as served (`return_distribution.mean|median|var_95|cvar_95`), or
+ * `null` when the block does not publish them (a legacy or pre-amendment body: the caller keeps its old line).
+ * VaR/CVaR are SIGNED LOSS FRACTIONS (`loss = -return`); an all-gain sample can have a negative value.
+ */
+export function distributionStatistics(block: EnrichedAnalysis): DistributionStatistics | null {
+  const dist = block.return_distribution;
+  if (dist.mean === undefined || dist.median === undefined || dist.var_95 === undefined || dist.cvar_95 === undefined || dist.statistics_policy === undefined) return null;
+  const policy = dist.statistics_policy;
+  const policyTitle = [
+    `${policy.quantile_method} · p=${policy.probability} · minimum ${policy.minimum_observations} observations`,
+    `${policy.risk_variable} · ${policy.risk_sign}: loss = −return, so an all-gain sample can be negative`,
+    `tail ${policy.tail}`,
+  ].join("\n");
+  const markers = STAT_KEYS.map((key): DistributionMarker => {
+    const fact = dist[key] as EnrichedFact;
+    const number = fact.state === "AVAILABLE" && fact.value !== null ? Number(fact.value) : null;
+    const loss = key === "var_95" || key === "cvar_95";
+    const returnAt = number !== null && Number.isFinite(number) ? (loss ? -number : number) : null;
+    const shown = fact.state === "AVAILABLE" && fact.value !== null ? signedPercent(fact.value) : null;
+    const title = [
+      `${STAT_LABELS[key]}${shown !== null ? ` ${shown}` : ""} · exact ${fact.value ?? "not published"}${fact.reason_code !== null ? ` · ${fact.reason_code}` : ""}`,
+      loss ? "signed loss fraction (loss = −return); drawn on the return axis at −loss" : null,
+      policyTitle,
+      `${fact.origin.toLowerCase().replace(/_/g, "-")} · ${fact.source_locator}`,
+      `input ${fact.input_digest}`,
+    ].filter((part): part is string => part !== null).join("\n");
+    return { key, label: STAT_LABELS[key], fact, shown, returnAt, title };
+  });
+  return { markers, policyTitle };
+}
+
+/**
+ * Where a served value falls along the histogram, in bucket units (bucket i spans i..i+1), or null when it lies
+ * outside every bucket. Layout only: the value is the server's, the bucket edges are the server's.
+ */
+export function bucketPosition(buckets: readonly { lower_inclusive: string; upper: string; upper_inclusive: string }[], value: number): number | null {
+  for (let index = 0; index < buckets.length; index += 1) {
+    const bucket = buckets[index]!;
+    const lo = Number(bucket.lower_inclusive);
+    const hi = Number(bucket.upper);
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) continue;
+    if (value >= lo && (value < hi || (bucket.upper_inclusive === "true" && value === hi))) return index + (value - lo) / (hi - lo);
+  }
+  return null;
+}
+
+/** One declared window, half-open `[start, end)`, with the source locator it was read from. */
+export interface WindowBand {
+  key: "is" | "oos" | "holdout";
+  label: string;
+  start_ms: number;
+  end_ms: number;
+  /** AVAILABLE: the window is published. Otherwise the bounds are declared only; no payload is claimed. */
+  state: EnrichedWindow["state"];
+  title: string;
+}
+
+const WINDOW_LABEL = { is: "IS", oos: "OOS", holdout: "HOLDOUT" } as const;
+
+/**
+ * The served, located, half-open window bounds. A window with no bounds, a NOT_APPLICABLE one, or an
+ * empty/reversed pair is not drawn. Bounds do not prove an account payload exists; the title says so when
+ * the window itself is not AVAILABLE.
+ */
+export function windowBands(windows: EnrichedAnalysis["windows"] | null): WindowBand[] {
+  if (windows === null) return [];
+  const iso = (ms: number) => new Date(ms).toISOString().replace(".000Z", "Z");
+  const bands: WindowBand[] = [];
+  for (const key of ["is", "oos", "holdout"] as const) {
+    const w = windows[key];
+    if (w.state === "NOT_APPLICABLE" || w.start_ms === undefined || w.end_ms === undefined || w.bounds_semantics !== HALF_OPEN || w.end_ms <= w.start_ms) continue;
+    bands.push({
+      key,
+      label: WINDOW_LABEL[key],
+      start_ms: w.start_ms,
+      end_ms: w.end_ms,
+      state: w.state,
+      title: [
+        `${WINDOW_LABEL[key]} window · [${iso(w.start_ms)}, ${iso(w.end_ms)}) start inclusive, end exclusive`,
+        w.state === "AVAILABLE" ? null : `declared bounds only · ${w.reason_code ?? w.state} · no ${WINDOW_LABEL[key]} account payload is claimed`,
+        w.source_locator ?? null,
+      ].filter((part): part is string => part !== null).join("\n"),
+    });
+  }
+  return bands;
+}
+
+/** The served descriptive drawdown label, if any. */
+export const episodeLabel = (episode: EnrichedEpisode): string | null => (typeof episode.label === "string" && episode.label.length > 0 ? episode.label : null);
+
+/** The served typed regime absence of the episodes (its reason code as served), or null when no episode carries one. */
+export function regimeAbsence(block: EnrichedAnalysis): { reason_code: string; source_locator: string } | null {
+  if (block.drawdown_episodes.state !== "AVAILABLE") return null;
+  for (const episode of block.drawdown_episodes.values) if (episode.regime !== undefined) return { reason_code: episode.regime.reason_code, source_locator: episode.regime.source_locator };
+  return null;
 }

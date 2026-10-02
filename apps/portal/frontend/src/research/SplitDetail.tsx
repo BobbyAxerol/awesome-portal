@@ -57,6 +57,7 @@ import {
   monthTicks,
   placeInTimeline,
   reasonOf,
+  splitTerminalAbsenceSentence,
   type AbsentFact,
   type AsOfBasis,
   type CurrentSourceSplit,
@@ -775,6 +776,19 @@ function FoldLane({ slot }: { slot: FoldsSlot }) {
       </span>
     );
   }
+  if (slot.state === "terminal-absence") {
+    return (
+      <span
+        className="text-[10.5px] leading-[1.5]"
+        style={{ color: "var(--ink-faint)" }}
+        data-fold-lane="terminal-absence"
+        title={`${splitTerminalAbsenceSentence(slot.answer)}\n${slot.answer.lane.reason_code}`}
+      >
+        retained fold lane — {slot.answer.lane.effective_status.toLowerCase()} before a split was retained{" "}
+        <span className="mono text-[9px] break-all">{slot.answer.lane.reason_code}</span>
+      </span>
+    );
+  }
   if (slot.state === "refused") {
     return (
       <span className="flex flex-col gap-[2px] text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-fold-refusal data-fold-lane={slot.laneState ?? "refused"}>
@@ -1396,6 +1410,7 @@ function disjointRowOf(
     return { mark: "none", state: "READING", body: <Reading what="the fold plan" /> };
   }
   if (slot.state === "not-applicable") return absent("NOT_PUBLISHED", slot.answer.lane.reason_code);
+  if (slot.state === "terminal-absence") return absent("NOT_PUBLISHED", slot.answer.lane.reason_code);
   if (slot.state === "refused") return absent("NOT_PUBLISHED", slot.refusal.code ?? slot.laneState ?? "REFUSED");
   if (!verdict) return absent("NO_FIELD", NO_RETAINED_FIELD_ON_SERVER, "no field in the retained lane");
   const basis = `${verdict.basis} — read from the retained fold windows and published purge/embargo`;

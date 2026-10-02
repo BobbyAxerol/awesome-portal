@@ -449,6 +449,52 @@ describe("the timeline from index metadata", () => {
   });
 });
 
+/* ------------------------------------- HMD remediation (optional published fields) */
+
+describe("verified range and earliest start: used only when the index published them", () => {
+  const draft = threeWindows({ alphaId: ALPHA.alpha_id, alphaVersionId: ALPHA.alpha_version_id, strategyId: ALPHA.strategy_id ?? ALPHA.alpha_id });
+  const VERIFIED_START = Date.UTC(2025, 5, 3);
+  const VERIFIED_END = Date.UTC(2026, 0, 1);
+  const EARLIEST = Date.UTC(2025, 5, 12, 8, 0);
+  /* Typed builder from the generated BarMetadata shape: a refused window that carries the HMD remediation. */
+  const refusedWith = (extra: Record<string, unknown>) =>
+    metadata({ availability: "NOT_PUBLISHED", reason_code: "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE", bars: null, first_bar_utc_ms: null, last_bar_utc_ms: null, warmup_bars_available_before_start: null, ...extra });
+
+  it("a legacy body without the fields maps exactly as before: no range, no earliest start", () => {
+    const parsed = parseBarMetadata(refusedWith({}))!;
+    expect("verifiedRange" in parsed).toBe(false);
+    expect("earliestStartWithWarmupUtcMs" in parsed).toBe(false);
+    const estimate = estimateFromMetadata({ is: parsed }, "is")!;
+    expect(estimate.earliestStartUtcMs).toBeUndefined();
+  });
+
+  it("published: the refusal copy carries the verified range and the estimate serves the earliest start with its basis", () => {
+    const parsed = parseBarMetadata(
+      refusedWith({
+        verified_range: { start_utc_ms: VERIFIED_START, end_exclusive_utc_ms: VERIFIED_END, basis: "INDEXED_TARGET_BAR_RANGE_V1" },
+        earliest_start_with_warmup_utc_ms: EARLIEST,
+      }),
+    )!;
+    const estimate = estimateFromMetadata({ is: parsed }, "is")!;
+    expect(estimate.earliestStartUtcMs).toBe(EARLIEST);
+    expect(estimate.earliestStartBasis).toBe("INDEXED_TARGET_BAR_RANGE_V1");
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    render(<Rail estimate={estimate} draft={draft} />);
+    const bars = q('[data-window-bars="is"]')!;
+    expect(bars.getAttribute("data-reason-code")).toBe("WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE");
+    expect(bars.title).toContain(`index verified [${utcMinute(VERIFIED_START)}, ${utcMinute(VERIFIED_END)}) UTC`);
+    expect(bars.textContent).toContain("verified 2025-06-03 → 2026-01-01");
+    expect(bars.textContent).not.toMatch(/\b0 bars\b/);
+  });
+
+  it("the earliest start is read from the warmup-carrying window only, never from a later one", () => {
+    const published = parseBarMetadata(metadata({ earliest_start_with_warmup_utc_ms: EARLIEST, verified_range: { start_utc_ms: VERIFIED_START, end_exclusive_utc_ms: VERIFIED_END, basis: "INDEXED_TARGET_BAR_RANGE_V1" } }))!;
+    const plain = parseBarMetadata(metadata({ start_utc_ms: MID, end_exclusive_utc_ms: MID2 }))!;
+    expect(estimateFromMetadata({ is: plain, oos: published }, "is")!.earliestStartUtcMs).toBeUndefined();
+    expect(estimateFromMetadata({ is: published, oos: plain }, "is")!.earliestStartUtcMs).toBe(EARLIEST);
+  });
+});
+
 /* ------------------------------------------------------------ the route */
 
 describe("the route", () => {

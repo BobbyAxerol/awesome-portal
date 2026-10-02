@@ -40,6 +40,7 @@ import {
   type RcCompose,
   type RcPack,
   type RcRefusal,
+  type RcSealRequest,
   type RcSealResponse,
   type RcWriteRefusal,
 } from "./releaseCandidateClient";
@@ -75,6 +76,14 @@ export interface ReleaseCandidateController {
   patchDraft: (declarations: RcDeclarations) => Promise<boolean>;
   /** Ask for the local seal of the persisted draft in hand. */
   seal: () => void;
+  /**
+   * Send the ORIGINAL seal request again, byte for byte (the draft id, revision
+   * and source fingerprint of the clicked attempt) — never refenced from a newer
+   * composition. A lost answer replays the same pack even if the source moved.
+   */
+  retrySeal: () => void;
+  /** The seal request of the last click, kept immutable for `retrySeal`; null before any attempt. */
+  originalSealRequest: RcSealRequest | null;
   /** Read the composition again. */
   retry: () => void;
   /** A write elsewhere on this screen was refused for access: lock every write. */
@@ -101,6 +110,9 @@ export function useReleaseCandidate(runId: string, options: { workspaceId?: stri
   const composeRef = useRef<RcCompose | null>(null);
   composeRef.current = compose;
   const lastSealRef = useRef<RcSealResponse | null>(null);
+  /** The seal request of the last click, kept unchanged so a retry replays it, never a re-fenced one. */
+  const originalSealRef = useRef<RcSealRequest | null>(null);
+  const [originalSealRequest, setOriginalSealRequest] = useState<RcSealRequest | null>(null);
   const lockedRef = useRef(false);
   const mounted = useRef(true);
 
@@ -190,41 +202,54 @@ export function useReleaseCandidate(runId: string, options: { workspaceId?: stri
     [refuse, runId, workspaceId, writing],
   );
 
+  const sendSeal = useCallback(
+    (request: RcSealRequest, held: RcCompose | null) => {
+      writing.current = true;
+      setWrite({ state: "pending", op: "seal" });
+      releaseCandidateApi
+        .seal(runId, request, { workspaceId })
+        .then((answer) => {
+          if (!mounted.current) return;
+          const replayed =
+            lastSealRef.current?.release_candidate_id === answer.release_candidate_id ||
+            held?.local_seal.release_candidate_id === answer.release_candidate_id;
+          lastSealRef.current = answer;
+          setLastSeal(answer);
+          setWrite({ state: "sealed", op: "seal", seal: answer, replayed });
+          /* The screen renders `local_seal` from the server, so read it. */
+          setGeneration((n) => n + 1);
+        })
+        .catch((error: unknown) => {
+          if (mounted.current) refuse("seal", error);
+        })
+        .finally(() => {
+          writing.current = false;
+        });
+    },
+    [refuse, runId, workspaceId, writing],
+  );
+
   const seal = useCallback(() => {
     const held = composeRef.current;
     if (!held || writing.current || lockedRef.current) return;
     const draftId = held.draft.draft_id;
     if (!held.actions.may_seal || draftId === null) return;
-    writing.current = true;
-    setWrite({ state: "pending", op: "seal" });
-    releaseCandidateApi
-      .seal(
-        runId,
-        {
-          draft_id: draftId,
-          expected_draft_revision: held.draft.revision,
-          expected_source_fingerprint: held.source_fingerprint,
-        },
-        { workspaceId },
-      )
-      .then((answer) => {
-        if (!mounted.current) return;
-        const replayed =
-          lastSealRef.current?.release_candidate_id === answer.release_candidate_id ||
-          held.local_seal.release_candidate_id === answer.release_candidate_id;
-        lastSealRef.current = answer;
-        setLastSeal(answer);
-        setWrite({ state: "sealed", op: "seal", seal: answer, replayed });
-        /* The screen renders `local_seal` from the server, so read it. */
-        setGeneration((n) => n + 1);
-      })
-      .catch((error: unknown) => {
-        if (mounted.current) refuse("seal", error);
-      })
-      .finally(() => {
-        writing.current = false;
-      });
-  }, [refuse, runId, workspaceId, writing]);
+    const request: RcSealRequest = {
+      draft_id: draftId,
+      expected_draft_revision: held.draft.revision,
+      expected_source_fingerprint: held.source_fingerprint,
+    };
+    /* A fresh click is a new request from the composition in hand; it is then kept unchanged for `retrySeal`. */
+    originalSealRef.current = request;
+    setOriginalSealRequest(request);
+    sendSeal(request, held);
+  }, [sendSeal, writing]);
+
+  const retrySeal = useCallback(() => {
+    const original = originalSealRef.current;
+    if (!original || writing.current || lockedRef.current) return;
+    sendSeal(original, composeRef.current);
+  }, [sendSeal, writing]);
 
   const keeps = refusal !== null && compose !== null && !refusal.terminal;
   const state: ResearchState = refusal
@@ -244,6 +269,8 @@ export function useReleaseCandidate(runId: string, options: { workspaceId?: stri
     lastSeal,
     patchDraft,
     seal,
+    retrySeal,
+    originalSealRequest,
     retry: reread,
     lock,
   };

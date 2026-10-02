@@ -73,7 +73,7 @@ import { HubSearchBody } from "./hubStageSearch";
 import { HubFreezeBody } from "./hubStageFreeze";
 import { HubExecuteBody } from "./hubStageExecute";
 import { AnalyticsAbsentLine, BehaviorV2, StrategyBenchmarkFigure, v2Absence, v2Of } from "./analyticsV2";
-import { deepestSpan, enrichedBlock, type EnrichedAnalysis } from "./enrichedAnalysis";
+import { deepestSpan, enrichedBlock, windowBands, type EnrichedAnalysis } from "./enrichedAnalysis";
 import { EnrichedAbsenceLine } from "./enrichedAvailability";
 import { companionRead, derivationTitle, derivedHeadline, derivationOf, monthCoverage, type MonthFacts } from "./allTimeSeries";
 import {
@@ -3636,6 +3636,7 @@ function SummaryTab({
   const underwater = enriched !== null ? underwaterPoints(enriched) : null;
   /* The deepest drawdown episode the service published, shaded on the equity, underwater and curve charts. */
   const deepest = enriched !== null && enriched.drawdown_episodes.state === "AVAILABLE" ? deepestSpan(enriched.drawdown_episodes.values) : null;
+  const bands = windowBands(windowsShown);
   const performance = hub.oos_performance ?? null;
   /* D-AN-01: all-time analytics. With a v2 block (or on a retained run, where the rest is one absence
      line) the headline is the HiFi's five hero tiles; the other numbers are in the Behavior block. */
@@ -3802,7 +3803,7 @@ function SummaryTab({
             chip={enriched !== null ? <EnrichedChip block={enriched} extra={`curves ${enriched.curves.sampling.method} · ${formatMetric(enriched.curves.sampling.emitted_point_count, "count")} of ${formatMetric(enriched.curves.sampling.source_observation_count, "count")} observations, extrema kept`} /> : undefined}
             chart={
               <ChartFrame height={230}>
-                <StrategyBenchmarkChart strategy={v2.strategy_curve} benchmark={v2.benchmark_curve} span={deepest} />
+                <StrategyBenchmarkChart strategy={v2.strategy_curve} benchmark={v2.benchmark_curve} span={deepest} bands={bands} />
               </ChartFrame>
             }
             underwater={
@@ -3828,7 +3829,7 @@ function SummaryTab({
         >
           {(loaded) => (
             <ChartFrame height={230}>
-              <DistributionChart series={loaded} />
+              <DistributionChart series={loaded} block={enriched !== null && enrichedSeries.has("RETURN_DISTRIBUTION") ? enriched : null} />
             </ChartFrame>
           )}
         </SeriesPanel>

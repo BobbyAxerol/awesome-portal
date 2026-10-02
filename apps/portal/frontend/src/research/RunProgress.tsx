@@ -259,6 +259,36 @@ export function foldsMeta(reported: number, declared: number | null): string {
   return `${reported} of ${declared} folds`;
 }
 
+type FoldReporting = NonNullable<ProgressRead["current"]["fold_reporting"]>;
+
+/** Tooltip on the overall percentage when the server published its basis. */
+export const PCT_BASIS_HINT =
+  "Source stage-weighted percentage — not trial completion, and a terminal failure does not force 100%.";
+/** Tooltip on the elapsed time when the server published its basis. */
+export const ELAPSED_BASIS_HINT =
+  "Source journal age at its last event — not CPU time, queue age or a browser timer.";
+
+/**
+ * The fold counts, kept apart: declared (admission), planned (admission plan)
+ * and reported (what the source journal observed). A planned or declared fold
+ * is never counted as an observed one, so a failed run that reported none does
+ * not read "x of 9 folds". Every number is the server's; nothing is derived.
+ */
+export function foldReportingWords(fr: FoldReporting): { text: string; title: string } {
+  const parts: string[] = [fr.reported_count === null ? "none reported" : `${fr.reported_count} reported`];
+  if (fr.declared_count !== null) parts.push(`${fr.declared_count} declared`);
+  if (fr.planned_count !== null && fr.planned_count !== fr.declared_count) parts.push(`${fr.planned_count} planned`);
+  const title = [
+    `declared ${fr.declared_count ?? "not published"} · planned ${fr.planned_count ?? "not published"} · reported ${fr.reported_count ?? "no source snapshot"}`,
+    fr.reported_count === null ? null : `done ${fr.done_count ?? "not published"} · failed ${fr.failed_count ?? "not published"}`,
+    fr.reason_code,
+    "Declared and planned folds are admission facts; only reported folds were observed by the source journal.",
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+  return { text: parts.join(" · "), title };
+}
+
 /** `1,603` — thousands separators on every count. */
 function count(value: number): string {
   return formatMetric(value, "count") ?? String(value);
@@ -631,8 +661,9 @@ function ProgressCard({
               transition: "width 400ms cubic-bezier(.2,0,.2,1)",
             }}
           />
-          {/* Fold boundaries, only when the fold count is published. */}
-          {foldCount !== null && foldCount > 1
+          {/* Fold boundaries, only when the fold count is published, and never over a
+              stage-weighted percentage: its bar is not a fold-by-fold scale. */}
+          {foldCount !== null && foldCount > 1 && snapshot.overall.pct_basis === undefined
             ? Array.from({ length: foldCount - 1 }, (_, i) => i + 1)
                 .filter((i) => foldCount <= 10 || i % Math.ceil(foldCount / 8) === 0)
                 .map((i) => (
@@ -651,7 +682,12 @@ function ProgressCard({
                 ))
             : null}
         </span>
-        <span data-progress-text style={{ fontFamily: MONO, fontSize: 11, color: "var(--ink)", whiteSpace: "nowrap" }}>
+        <span
+          data-progress-text
+          data-pct-basis={overall.pct_basis}
+          title={overall.pct_basis !== undefined ? PCT_BASIS_HINT : undefined}
+          style={{ fontFamily: MONO, fontSize: 11, color: "var(--ink)", whiteSpace: "nowrap" }}
+        >
           {count(overall.trials_done)} / {count(overall.trials_declared)} trials
           {failed ? (
             <span data-failed-at={failedAt?.stage ?? "unknown"} style={{ color: "var(--bad)" }}>
@@ -685,7 +721,7 @@ function ProgressCard({
             </span>
           </span>
         ) : null}
-        <span data-elapsed>
+        <span data-elapsed data-elapsed-basis={overall.elapsed_basis} title={overall.elapsed_basis !== undefined ? ELAPSED_BASIS_HINT : undefined}>
           elapsed <span style={{ color: "var(--ink)" }}>{formatDuration(overall.elapsed_s) ?? <Absent />}</span>
         </span>
         {failed ? null : (
@@ -848,7 +884,17 @@ function foldNote(
     const objective =
       selection.objective === null ? "no search" : `${selection.scope === "GLOBAL_STUDY" ? "global " : ""}best J₁ ${formatMetric(selection.objective, "ratio") ?? selection.objective}`;
     return (
-      <span title={[selection.objective, selection.params_digest].filter(Boolean).join(" · ")} data-fold-selection={selection.scope ?? undefined}>
+      <span
+        title={[
+          selection.objective,
+          selection.params_digest,
+          selection.source_trial_id !== undefined ? `source trial id ${selection.source_trial_id} (zero-based); trial ${count(selection.trial)} is the display ordinal` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        data-fold-selection={selection.scope ?? undefined}
+        data-source-trial-id={selection.source_trial_id}
+      >
         {objective} · trial {count(selection.trial)} · {paramsTag(selection.params_digest)}
       </span>
     );
@@ -2282,6 +2328,8 @@ export function RunProgress(props: RunProgressProps) {
   /* The server's own code for an undeclared count; nothing is worded here. */
   const foldCountReason = declared?.state === "NOT_PUBLISHED" ? declared.reason_code : null;
   const engineVersion = identity?.engine_release_id ?? null;
+  /* Published only by newer servers; absent keeps the older "x of N folds" header. */
+  const foldReporting = read?.current.fold_reporting ?? null;
 
   const noSource = read !== null && snapshot === null && (read.availability === "QUEUED_NO_SOURCE" || read.availability === "CANCELLED_BEFORE_SOURCE");
   const statusSlot =
@@ -2535,7 +2583,20 @@ export function RunProgress(props: RunProgressProps) {
           name="folds"
           title={live ? "fold gantt · live" : "fold gantt"}
           hint={GANTT_TITLE_HINT}
-          meta={snapshot ? foldsMeta(folds.length, foldCount) : undefined}
+          meta={
+            snapshot
+              ? foldReporting
+                ? (() => {
+                    const words = foldReportingWords(foldReporting);
+                    return (
+                      <span data-fold-reporting={foldReporting.basis} title={words.title}>
+                        {words.text}
+                      </span>
+                    );
+                  })()
+                : foldsMeta(folds.length, foldCount)
+              : undefined
+          }
           style={{ flex: "1.15 1 0", minWidth: "min(460px, 100%)" }}
         >
           {content && snapshot ? (

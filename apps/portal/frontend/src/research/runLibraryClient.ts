@@ -172,6 +172,16 @@ export interface AllTimeSummary {
   return_fraction: string | null;
   sharpe: AllTimeFact | null;
   max_drawdown_fraction: string | null;
+  /** Served basis of `return_fraction` (first/last retained OOS equity); absent when the server omitted it. */
+  return_basis?: AllTimeReturnBasis;
+}
+export interface AllTimeReturnBasis {
+  definition_id: string;
+  scope: string;
+  first_at_utc_ms: number;
+  last_at_utc_ms: number;
+  start_equity: string;
+  end_equity: string;
 }
 
 /**
@@ -260,9 +270,29 @@ export function readAllTime(item: RunLibraryItem): AllTimeRead {
   ) {
     return { kind: "refused", why: "the sparkline points are malformed" };
   }
+  const basisRaw = raw.return_basis;
+  const basis: AllTimeReturnBasis | undefined =
+    isRecord(basisRaw) &&
+    typeof basisRaw.definition_id === "string" &&
+    basisRaw.definition_id !== "" &&
+    typeof basisRaw.scope === "string" &&
+    Number.isFinite(basisRaw.first_at_utc_ms) &&
+    Number.isFinite(basisRaw.last_at_utc_ms) &&
+    typeof basisRaw.start_equity === "string" &&
+    typeof basisRaw.end_equity === "string"
+      ? {
+          definition_id: basisRaw.definition_id,
+          scope: basisRaw.scope,
+          first_at_utc_ms: basisRaw.first_at_utc_ms as number,
+          last_at_utc_ms: basisRaw.last_at_utc_ms as number,
+          start_equity: basisRaw.start_equity,
+          end_equity: basisRaw.end_equity,
+        }
+      : undefined;
   return {
     kind: "summary",
     summary: {
+      ...(basis ? { return_basis: basis } : {}),
       label: typeof raw.label !== "string" ? "all time" : raw.label,
       coverage: raw.coverage,
       source_observation_count: raw.source_observation_count,

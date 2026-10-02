@@ -1509,9 +1509,12 @@ function WindowsStep({
   profile = null,
   family = [],
   estimateStatus = IDLE_ESTIMATE,
+  estimate = null,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
+  /** The merged served estimate: its earliest start (bar-metadata) is offered only when the index published one. */
+  estimate?: PreflightEstimate | null;
   /** Every enabled profile of this protocol, route and mode (v1 and v2): what a v2 declaration would be admitted by. */
   family?: readonly ProfilePins[];
   /** The declaration-estimate call: its typed refusal prints under the field it names. */
@@ -1546,7 +1549,7 @@ function WindowsStep({
   };
   const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe);
   /* U01: only the declaration-estimate answer serves the earliest start; no other estimate does. */
-  const servedEstimate = estimateStatus.kind === "served" ? estimateStatus.estimate : null;
+  const servedEstimate = estimateStatus.kind === "served" ? estimateStatus.estimate : estimate?.earliestStartUtcMs != null ? estimate : null;
   const modes = atlas?.modes ?? [];
   const selectedMode = modes.find((mode) => mode.mode_id === draft.optimizationMode) ?? null;
   const scheduleOptions = atlas && selectedMode ? scheduleChoices(atlas, selectedMode) : [];
@@ -3360,7 +3363,7 @@ export function NewRun(props: NewRunProps) {
             <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} estimateStatus={estimateStatus} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
+            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />

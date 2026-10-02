@@ -13,7 +13,7 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 
 import type { EnrichedAnalysis, EnrichedEpisode, EnrichedFact, EnrichedRead } from "./enrichedAnalysis";
-import { ENRICHED_CHIP, enrichedBlock } from "./enrichedAnalysis";
+import { ENRICHED_CHIP, bucketPosition, distributionStatistics, enrichedBlock, episodeLabel, regimeAbsence, windowBands } from "./enrichedAnalysis";
 import { enrichedAbsenceTitle } from "./enrichedAvailability";
 import { formatMetric, shortDigest } from "./researchFormat";
 import { daysAndHours, monthWords, roundAxis } from "./reportText";
@@ -102,6 +102,15 @@ export const ALL_TIME_CSS = `
 .rr-at-tip .k { color: var(--ink-faint); }
 .rr-at-band { fill: var(--bad); fill-opacity: .08; stroke: none; }
 .rr-at-band[data-active="true"] { fill-opacity: .24; }
+.rr-at-win { fill-opacity: .09; stroke: none; }
+.rr-at-win[data-window="is"] { fill: var(--role-is); }
+.rr-at-win[data-window="oos"] { fill: var(--role-oos); }
+.rr-at-win[data-window="holdout"] { fill: var(--role-holdout); }
+.rr-at-stat { stroke-width: 1.25; fill: none; }
+.rr-at-stat[data-stat="mean"] { stroke: var(--ink); }
+.rr-at-stat[data-stat="median"] { stroke: var(--accent); }
+.rr-at-stat[data-stat="var_95"], .rr-at-stat[data-stat="cvar_95"] { stroke: var(--bad); }
+.rr-at-stat[data-stat="cvar_95"] { stroke-dasharray: 2 2; }
 .rr-at-tools { display: inline-flex; gap: 4px; align-items: center; }
 .rr-at-btn { font-family: var(--font-mono); font-size: 9px; line-height: 1; padding: 3px 6px; border: 1px solid var(--line); border-radius: 3px; background: var(--paper-raised); color: var(--ink-soft); cursor: pointer; }
 .rr-at-btn:hover:not(:disabled) { border-color: var(--ink-faint); color: var(--ink); }
@@ -280,6 +289,8 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
     const to = Math.min(episode.recovery_utc_ms ?? full1, x1);
     return to > from ? [{ index, from, to }] : [];
   });
+  /* B9: the served half-open IS / OOS / HOLDOUT bounds, as role bands under the curve (frames, not payloads). */
+  const windows = windowBands(block.windows);
   const at = probe !== null && probe >= x0 && probe <= x1 ? nearestAt(view, probe) : null;
   const atB = at !== null && lineB !== null ? nearestAt(visB, at.at_utc_ms) : null;
   const atD = at !== null && lineD !== null ? nearestAt(visD, at.at_utc_ms) : null;
@@ -346,6 +357,15 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
         <div className="rr-at-plot" ref={plotRef} data-curve-plot="strategy">
           <svg className="rr-at-curve" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label}>
             <title>{`${label}\n${block.scope.locator}`}</title>
+            {windows.map((win) => {
+              const from = Math.max(win.start_ms, x0);
+              const to = Math.min(win.end_ms, x1);
+              return to > from ? (
+                <rect key={win.key} className="rr-at-win" data-window={win.key} data-window-state={win.state} x={(pct(from) * W) / 100} width={Math.max(2, ((pct(to) - pct(from)) * W) / 100)} y={0} height={H}>
+                  <title>{win.title}</title>
+                </rect>
+              ) : null;
+            })}
             {bands.map((band) => (
               <rect
                 key={band.index}
@@ -448,6 +468,20 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
           {sampling.emitted_point_count} of {sampling.source_observation_count} points
         </span>
       </p>
+      {windows.length > 0 ? (
+        <p className="rr-at-sub" data-curve-windows title={windows.map((win) => win.title).join("\n\n")}>
+          <span>
+            {windows.map((win, index) => (
+              <span key={win.key} data-window-legend={win.key} style={{ color: `var(--role-${win.key})` }}>
+                {index > 0 ? " · " : ""}
+                {win.label} {DAY(win.start_ms)} → {DAY(win.end_ms)}
+              </span>
+            ))}
+            {" "}
+            <span>(end exclusive)</span>
+          </span>
+        </p>
+      ) : null}
       {bands.length > 0 ? (
         <p className="rr-at-sub" data-curve-bands title="Shaded spans are the served drawdown episodes, start to recovery.">
           <span>
@@ -468,8 +502,8 @@ function Curve({ block, activeEpisode = null }: { block: EnrichedAnalysis; activ
 /**
  * QA S09 (UX-11 / inventory 42): the daily-return histogram the API already serves. Bars are the served counts,
  * scaled to the tallest bar (layout only); each bar's exact edges and count ride its title, a hover / arrow-key
- * tooltip and the bars' own accessible names. The bars grow once on first mount. The server publishes no
- * mean / median / VaR for this histogram, so none is marked (NEEDS-BACKEND).
+ * tooltip and the bars' own accessible names. The bars grow once on first mount. Mean / median / VaR / CVaR are
+ * marked only when the block serves them (B9 Fact objects + policy); a legacy block draws no mark and no claim.
  */
 function Distribution({ block }: { block: EnrichedAnalysis }) {
   const motion = useEntryMotion();
@@ -499,6 +533,12 @@ function Distribution({ block }: { block: EnrichedAnalysis }) {
     setActive(Math.min(count - 1, Math.max(0, (active ?? (step === 1 ? -1 : count)) + step)));
   };
   const centre = active !== null ? (active + 0.5) * width : 0;
+  /* B9: the served statistics, positioned by the served bucket edges (VaR/CVaR are loss fractions: return = −loss). */
+  const stats = distributionStatistics(block);
+  const marks = (stats?.markers ?? []).flatMap((marker) => {
+    const at = marker.returnAt !== null ? bucketPosition(head.buckets, marker.returnAt) : null;
+    return at === null ? [] : [{ marker, x: at * width }];
+  });
   return (
     <div data-all-time-distribution data-bucket-count={count} data-distribution-motion={motion ? "on" : "off"}>
       <div
@@ -538,6 +578,11 @@ function Distribution({ block }: { block: EnrichedAnalysis }) {
               </rect>
             );
           })}
+          {marks.map(({ marker, x }) => (
+            <line key={marker.key} className="rr-at-stat" data-stat-mark={marker.key} x1={x} x2={x} y1={0} y2={58} vectorEffect="non-scaling-stroke">
+              <title>{marker.title}</title>
+            </line>
+          ))}
           <line x1={0} x2={100} y1={58.5} y2={58.5} stroke="var(--line)" strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
         </svg>
         {bucket !== undefined && active !== null ? (
@@ -565,6 +610,15 @@ function Distribution({ block }: { block: EnrichedAnalysis }) {
           {formatMetric(head.observation_count, "count")} days
         </span>
       </p>
+      {stats !== null ? (
+        <p className="rr-at-sub" style={{ marginTop: 2 }} data-distribution-stats="PUBLISHED" title={stats.policyTitle}>
+          {stats.markers.map((marker) => (
+            <span key={marker.key} data-stat={marker.key} data-exact={marker.fact.value ?? undefined} data-state={marker.fact.state} title={marker.title}>
+              {marker.label} {marker.shown ?? `not published${marker.fact.reason_code !== null ? ` · ${marker.fact.reason_code}` : ""}`}
+            </span>
+          ))}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -650,6 +704,7 @@ function Episodes({ block, onActive }: { block: EnrichedAnalysis; onActive?: (in
     return <AbsentLine state={head.state} reason={head.reason_code} what="drawdown episodes" />;
   }
   const shown = head.values.length;
+  const regime = regimeAbsence(block);
   return (
     <div data-all-time-episodes>
       <p className="rr-at-sub" style={{ marginBottom: 2 }}>
@@ -677,14 +732,17 @@ function Episodes({ block, onActive }: { block: EnrichedAnalysis; onActive?: (in
         <tbody>
           {head.values.map((episode: EnrichedEpisode, index) => {
             const open = episode.recovery_utc_ms === null;
+            const label = episodeLabel(episode);
             const title = [
               `episode ${index + 1} · ${word(head.origin)} · all time`,
+              label !== null ? `label ${label} (descriptive, from the served path)` : null,
+              episode.regime !== undefined ? `market regime not published · ${episode.regime.reason_code} · ${episode.regime.source_locator}` : null,
               `start ${UTC(episode.start_utc_ms)}`,
               `trough ${UTC(episode.trough_utc_ms)}`,
               open ? "recovery open at the end of the scope" : `recovery ${UTC(episode.recovery_utc_ms as number)}`,
               `depth exact ${episode.depth_fraction}`,
               block.scope.locator,
-            ].join("\n");
+            ].filter((part): part is string => part !== null).join("\n");
             return (
               <tr
                 key={`${episode.start_utc_ms}-${index}`}
@@ -698,7 +756,10 @@ function Episodes({ block, onActive }: { block: EnrichedAnalysis; onActive?: (in
                 onFocus={() => onActive?.(index)}
                 onBlur={() => onActive?.(null)}
               >
-                <td>{DAY(episode.start_utc_ms)}</td>
+                <td>
+                  {DAY(episode.start_utc_ms)}
+                  {label !== null ? <span data-episode-label style={{ color: "var(--ink-faint)", marginLeft: 6 }}>{label}</span> : null}
+                </td>
                 <td style={{ color: "var(--bad)" }} data-exact={episode.depth_fraction}>
                   {formatMetric(episode.depth_fraction, "fraction") ?? episode.depth_fraction}
                 </td>
@@ -711,6 +772,11 @@ function Episodes({ block, onActive }: { block: EnrichedAnalysis; onActive?: (in
           })}
         </tbody>
       </table>
+      {regime !== null ? (
+        <p className="rr-at-sub" style={{ marginTop: 2 }} data-episode-regime="NOT_PUBLISHED" data-reason-code={regime.reason_code} title={regime.source_locator}>
+          <span>market regime — not published · {regime.reason_code}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

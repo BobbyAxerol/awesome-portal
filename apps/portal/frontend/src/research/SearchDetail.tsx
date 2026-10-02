@@ -1961,6 +1961,8 @@ export function SearchScreen({
   const shownState: ResearchState = state.state === "partial" && laneFailed ? refusalState(ledger.refusal, false) : state;
   const pickedTrial = pick === null ? null : (pages.merged?.ledger.trials.find((trial) => trial.trial_id === pick) ?? null);
   const pickedPoint = pick === null ? null : (lane?.surface?.points.find((point) => point.trial_id === pick) ?? null);
+  /* The point's own exact parameters (its source ordinal) win; the loaded ledger page is only the fallback for an older body. */
+  const pickedParameters = pickedPoint?.parameters ?? pickedTrial?.parameters ?? null;
 
   return (
     <div
@@ -2322,9 +2324,9 @@ export function SearchScreen({
                 <span style={{ color: "var(--ink-soft)" }}>
                   IS {two(pickedPoint?.objective ?? pickedTrial?.objective ?? null) ?? "not published"}
                 </span>
-                {pickedTrial && Object.keys(pickedTrial.parameters).length > 0 ? (
-                  <span style={{ color: "var(--ink-faint)" }}>
-                    {Object.entries(pickedTrial.parameters)
+                {pickedParameters && Object.keys(pickedParameters).length > 0 ? (
+                  <span style={{ color: "var(--ink-faint)" }} data-pick-params-source={pickedPoint?.parameters !== undefined ? "point" : "ledger"}>
+                    {Object.entries(pickedParameters)
                       .map(([name, value]) => `${name} ${cleanParamText(value)}`)
                       .join(" · ")}
                   </span>

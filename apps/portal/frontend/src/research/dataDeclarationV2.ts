@@ -549,6 +549,21 @@ export interface BarMetadata {
   warmupBarsAvailableBeforeStart: number | null;
   asOfUtcMs: number | null;
   catalogRevision: string | null;
+  /**
+   * Remediation facts, present ONLY when the index published them (also on a
+   * refused window): the range the index verified, and the earliest start that
+   * still leaves the full warmup. Absent means absent: nothing is derived.
+   */
+  verifiedRange?: { startUtcMs: number; endExclusiveUtcMs: number; basis: string } | null;
+  earliestStartWithWarmupUtcMs?: number | null;
+}
+
+function readVerifiedRange(value: unknown): { startUtcMs: number; endExclusiveUtcMs: number; basis: string } | null {
+  const range = bag(value);
+  const start = num(range?.start_utc_ms);
+  const end = num(range?.end_exclusive_utc_ms);
+  const basis = text(range?.basis);
+  return start === null || end === null || basis === null ? null : { startUtcMs: start, endExclusiveUtcMs: end, basis };
 }
 
 export function readBarMetadata(raw: unknown): BarMetadata | null {
@@ -567,7 +582,18 @@ export function readBarMetadata(raw: unknown): BarMetadata | null {
     warmupBarsAvailableBeforeStart: published ? count(body.warmup_bars_available_before_start) : null,
     asOfUtcMs: num(body.as_of_utc_ms),
     catalogRevision: text(body.catalog_revision),
+    ...publishedRemediation(body),
   };
+}
+
+/** The two optional remediation fields, only when the body carries them; legacy bodies add no key. */
+function publishedRemediation(body: Bag): Pick<BarMetadata, "verifiedRange" | "earliestStartWithWarmupUtcMs"> {
+  const out: { verifiedRange?: BarMetadata["verifiedRange"]; earliestStartWithWarmupUtcMs?: number | null } = {};
+  const range = readVerifiedRange(body.verified_range);
+  if (range !== null) out.verifiedRange = range;
+  const earliest = num(body.earliest_start_with_warmup_utc_ms);
+  if (earliest !== null) out.earliestStartWithWarmupUtcMs = earliest;
+  return out;
 }
 
 /* ------------------------------------------------------- profiles (LW-07) */
@@ -781,6 +807,8 @@ export interface EstimateWindow {
   endExclusiveUtcMs?: number | null;
   reasonCode?: string | null;
   asOfUtcMs?: number | null;
+  /** Bar-metadata only, when the index published it: the range it verified (a refused window's remediation). */
+  verifiedRange?: { startUtcMs: number; endExclusiveUtcMs: number; basis: string } | null;
 }
 
 export interface EstimateCondition {
@@ -880,6 +908,7 @@ export function estimateFromMetadata(windows: WindowMetadata, warmupWindow: "is"
       endExclusiveUtcMs: meta.endExclusiveUtcMs,
       reasonCode: meta.availability === "AVAILABLE" ? null : meta.reasonCode,
       asOfUtcMs: meta.asOfUtcMs,
+      ...(meta.verifiedRange ? { verifiedRange: meta.verifiedRange } : {}),
     };
   }
   const first = warmupWindow === null ? undefined : windows[warmupWindow];
@@ -892,7 +921,15 @@ export function estimateFromMetadata(windows: WindowMetadata, warmupWindow: "is"
           reasonCode: first.availability === "AVAILABLE" ? null : first.reasonCode,
         };
   if (Object.keys(out).length === 0 && warmup === null) return null;
-  return { windows: out, warmup, plannedFolds: null, conditions: null };
+  /* The earliest start with warmup is served on the warmup-carrying (first) window only, and only when published. */
+  const earliest = first?.earliestStartWithWarmupUtcMs ?? null;
+  return {
+    windows: out,
+    warmup,
+    plannedFolds: null,
+    conditions: null,
+    ...(earliest !== null ? { earliestStartUtcMs: earliest, earliestStartBasis: first?.verifiedRange?.basis ?? null } : {}),
+  };
 }
 
 /* ------------------------------------------ declaration estimate (POST route) */
@@ -985,5 +1022,11 @@ export function mergeEstimates(preflight: PreflightEstimate | null, metadata: Pr
     warmup: preflight.warmup ?? metadata.warmup,
     plannedFolds: preflight.plannedFolds,
     conditions: preflight.conditions,
+    /* The preflight's own served earliest start wins; the index's fills only when it published one. */
+    ...(preflight.earliestStartUtcMs != null
+      ? { earliestStartUtcMs: preflight.earliestStartUtcMs, earliestStartBasis: preflight.earliestStartBasis ?? null }
+      : metadata.earliestStartUtcMs != null
+        ? { earliestStartUtcMs: metadata.earliestStartUtcMs, earliestStartBasis: metadata.earliestStartBasis ?? null }
+        : {}),
   };
 }

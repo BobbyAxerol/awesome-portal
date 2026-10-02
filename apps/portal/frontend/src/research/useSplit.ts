@@ -23,7 +23,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   NOT_MODIFIED,
   isLaneNotApplicable,
+  isSplitTerminalAbsence,
   laneStateOf,
+  splitTerminalAbsenceSentence,
   splitApi,
   toSplitRefusal,
   type CurrentSourceSplit,
@@ -31,10 +33,10 @@ import {
   type LaneState,
   type SplitDetail,
   type SplitRefusal,
+  type SplitTerminalAbsence,
 } from "./splitClient";
 import { researchState, type ResearchState } from "./state";
-import { PortalApiError } from "../lib/api";
-import { progressApi, type ProgressRead } from "./progressClient";
+import type { ProgressRead } from "./progressClient";
 import { refusalState } from "./researchRefusal";
 import { isRetainedAnswer, useRunIdentity, type RunIdentitySlot } from "./retainedLane";
 import { searchApi, NOT_MODIFIED as SEARCH_NOT_MODIFIED, type CurrentSourceSearch } from "./searchClient";
@@ -52,7 +54,9 @@ export type FoldsSlot =
   /** A refusal; `laneState` is the 409's `details.lane_state` when it named one. */
   | { state: "refused"; refusal: SplitRefusal; laneState: LaneState | null }
   /** RF-05: the lane answered a typed 200 — it never holds this run. */
-  | { state: "not-applicable"; answer: LaneNotApplicable };
+  | { state: "not-applicable"; answer: LaneNotApplicable }
+  /** The lane answered a typed 200: the run ended FAILED/CANCELLED with no retained split. */
+  | { state: "terminal-absence"; answer: SplitTerminalAbsence };
 
 /**
  * W3b · one retained fact this screen reads beside the fold plan: loading, in
@@ -105,25 +109,16 @@ export function forgetSplitReads(): void {
 const laneAnswers = new Map<string, LaneNotApplicable>();
 
 /**
- * QA S05: a run the state machine already closed without a seal has no retained
- * source, and asking the lane for it is a request that can only answer 409
- * (a console error on every visit). The run's own state says so first.
+ * Whether the run's own state says it closed without a seal. No longer a gate
+ * on the lane read: the lane now answers such a run with a typed 200
+ * (`research.current-source-split-terminal-absence.v1`), whose served reason is
+ * what the screen shows.
  */
 export function endedWithoutSource(read: ProgressRead): boolean {
   /* A body that is not a progress read says nothing about the run: ask the lane as before. */
   const status = (read as Partial<ProgressRead> | null)?.current?.effective_status;
   if (status !== "FAILED" && status !== "CANCELLED") return false;
   return read.progress == null || read.progress.readiness?.mandatory !== "SEALED";
-}
-
-/** The typed refusal a skipped lane read stands in for: exactly what the 409 would have said. */
-function terminalWithoutSource(): { refusal: SplitRefusal; laneState: LaneState } {
-  return {
-    refusal: toSplitRefusal(
-      new PortalApiError("This run ended without a retained current-source artifact.", 409, "RESEARCH_CURRENT_SOURCE_CONFLICT", null),
-    ),
-    laneState: "NOT_RETAINED_TERMINAL",
-  };
 }
 
 /** FE-S05-04: the source has not reported yet — pending, not empty. */
@@ -148,6 +143,16 @@ export function splitState(
 ): ResearchState {
   if (refusal) return refusalState(refusal, detail !== null);
   if (detail === null) return researchState({ kind: "in-flight", hasAcceptedResponse: false });
+  /* The lane named the run's end: final, not pending. The shell already in hand stays. */
+  if (folds.state === "terminal-absence") {
+    return {
+      state: "terminal",
+      reason: splitTerminalAbsenceSentence(folds.answer),
+      detail: folds.answer.availability.reason_code,
+      mayRetry: false,
+      retainsContent: true,
+    };
+  }
   /* W3b: the retained lane answered for this run — it is the source, not a pending one. */
   if (retainedSplitOf(detail, folds) !== null) return researchState({ kind: "ok", rowCount: 1 });
   if (isPendingSource(detail) && folds.state === "loading") {
@@ -220,6 +225,10 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
             setFolds({ runId, slot: { state: "not-applicable", answer } });
             return;
           }
+          if (isSplitTerminalAbsence(answer)) {
+            setFolds({ runId, slot: { state: "terminal-absence", answer } });
+            return;
+          }
           setFolds({ runId, slot: { state: "ready", split: answer } });
         })
         .catch((error: unknown) =>
@@ -228,18 +237,8 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
             slot: { state: "refused", refusal: toSplitRefusal(error), laneState: laneStateOf(error) },
           }),
         );
-    /* Any trouble with this pre-check falls through to the lane read, exactly as before. */
-    void progressApi
-      .read(runId, workspaceId)
-      .then((read) => (endedWithoutSource(read) ? "skip" : "ask"), () => "ask" as const)
-      .then((verdict) => {
-        if (verdict === "skip") {
-          const { refusal, laneState } = terminalWithoutSource();
-          setFolds({ runId, slot: { state: "refused", refusal, laneState } });
-          return;
-        }
-        return ask();
-      });
+    /* The lane answers a failed/cancelled run with a typed 200, so it is always asked and the served reason shown. */
+    void ask();
   }, [key, runId, workspaceId]);
 
   const ensureFolds = useCallback(() => {

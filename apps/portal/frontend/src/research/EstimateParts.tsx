@@ -31,7 +31,11 @@ export function WindowBars({ estimate, window }: { estimate: PreflightEstimate |
   const label = WINDOW_LABEL[window];
   const bounds = boundsText(served);
   if (served.bars === null) {
-    const title = [`${label} bars not published`, served.reasonCode, bounds].filter(Boolean).join(" · ");
+    /* Only when the index published its verified range: it rides in the refusal copy; otherwise nothing is added. */
+    const verified = served.verifiedRange
+      ? `index verified [${utcMinute(served.verifiedRange.startUtcMs)}, ${utcMinute(served.verifiedRange.endExclusiveUtcMs)}) UTC`
+      : null;
+    const title = [`${label} bars not published`, served.reasonCode, bounds, verified].filter(Boolean).join(" · ");
     return (
       <span
         className="text-[9px] italic"
@@ -42,8 +46,10 @@ export function WindowBars({ estimate, window }: { estimate: PreflightEstimate |
         data-window-bars={window}
         data-window-bars-state="absent"
         data-reason-code={served.reasonCode ?? undefined}
+        data-verified-range={verified !== null ? "published" : undefined}
       >
         bars — not published
+        {served.verifiedRange ? ` · verified ${utcMinute(served.verifiedRange.startUtcMs).slice(0, 10)} → ${utcMinute(served.verifiedRange.endExclusiveUtcMs).slice(0, 10)}` : ""}
       </span>
     );
   }

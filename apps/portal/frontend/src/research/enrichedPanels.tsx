@@ -12,6 +12,8 @@ import type { EvidenceSeries, MonthlyReturnPoint } from "./evidenceClient";
 import type { V2Core } from "./analyticsV2";
 import {
   ENRICHED_CHIP,
+  episodeLabel,
+  regimeAbsence,
   type EnrichedAnalysis,
   type EnrichedEpisode,
   type EnrichedRead,
@@ -164,8 +166,11 @@ function EpisodeRow({ block, episode, rank }: { block: EnrichedAnalysis; episode
   const open = episode.recovery_utc_ms === null;
   const depth = formatMetric(episode.depth_fraction, "fraction");
   const duration = formatMetric(episode.duration_seconds, "seconds");
+  const label = episodeLabel(episode);
   const title = [
     `episode ${rank} · ${block.drawdown_episodes.origin.toLowerCase().replace(/_/g, "-")} · all time`,
+    label !== null ? `label ${label} (descriptive, from the served path)` : null,
+    episode.regime !== undefined ? `market regime not published · ${episode.regime.reason_code} · ${episode.regime.source_locator}` : null,
     `start ${utcZ(episode.start_utc_ms)}`,
     `trough ${utcZ(episode.trough_utc_ms)}`,
     open ? "recovery open at the end of the scope" : `recovery ${utcZ(episode.recovery_utc_ms)}`,
@@ -173,10 +178,13 @@ function EpisodeRow({ block, episode, rank }: { block: EnrichedAnalysis; episode
     `duration ${formatMetric(episode.duration_seconds, "count")} s`,
     block.scope.locator,
     `input ${shortDigest(block.input_digest)}`,
-  ].join("\n");
+  ].filter((part): part is string => part !== null).join("\n");
   return (
     <tr data-episode={rank} data-episode-open={open ? "true" : "false"} title={title} aria-label={title.replace(/\n/g, ", ")}>
-      <td className="mono py-0.5 pr-2 text-[10.5px]">{DAY(episode.start_utc_ms)}</td>
+      <td className="mono py-0.5 pr-2 text-[10.5px]">
+        {DAY(episode.start_utc_ms)}
+        {label !== null ? <span className="ml-1.5 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-episode-label>{label}</span> : null}
+      </td>
       <td className="mono py-0.5 pr-2 text-right text-[10.5px] font-semibold" style={{ color: "var(--bad)", fontVariantNumeric: "tabular-nums" }} data-exact={episode.depth_fraction}>
         {depth ?? episode.depth_fraction}
       </td>
@@ -208,6 +216,7 @@ export function DrawdownEpisodes({ block }: { block: EnrichedAnalysis }) {
     );
   }
   const shown = head.values.length;
+  const regime = regimeAbsence(block);
   return (
     <section
       className="flex min-w-0 flex-col gap-1.5 rounded-[8px] border p-3.5"
@@ -246,6 +255,11 @@ export function DrawdownEpisodes({ block }: { block: EnrichedAnalysis }) {
           ))}
         </tbody>
       </table>
+      {regime !== null ? (
+        <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-episode-regime="NOT_PUBLISHED" data-reason-code={regime.reason_code} title={regime.source_locator}>
+          market regime — not published · {regime.reason_code}
+        </p>
+      ) : null}
     </section>
   );
 }

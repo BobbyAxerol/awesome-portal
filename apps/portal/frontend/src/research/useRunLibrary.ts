@@ -183,7 +183,14 @@ export interface SelectedRun {
  *    say "sparkline unavailable", and do not retry automatically.
  */
 export type SparklineRead =
-  | { kind: "series"; values: readonly string[]; source: RunSparklineSource | null; revision: string | null }
+  | {
+      kind: "series";
+      values: readonly string[];
+      /** Served per-point UTC ms, one-for-one with `values`; undefined when the body carries no (matching) `points`. */
+      at?: readonly number[];
+      source: RunSparklineSource | null;
+      revision: string | null;
+    }
   | { kind: "withheld"; availability: Availability }
   | { kind: "failed" };
 
@@ -192,6 +199,19 @@ export type SparklineRead =
  * QUEUED/RUNNING is what the retired engine once recorded; nothing monitors
  * it, so it is never polled and never shown as live work (RF-05 CG-P12-07).
  */
+/** The served per-point UTC ms, only when `points` is one-for-one with `values` (same order, same spelling). */
+function servedTimes(series: { values: readonly string[]; points?: readonly { at_utc_ms: number; equity: string }[] }): { at?: readonly number[] } {
+  const points = series.points;
+  if (
+    !Array.isArray(points) ||
+    points.length !== series.values.length ||
+    !points.every((p, i) => Number.isFinite(p?.at_utc_ms) && p.equity === series.values[i])
+  ) {
+    return {};
+  }
+  return { at: points.map((p) => p.at_utc_ms) };
+}
+
 export function isLiveStatus(item: RunLibraryItem): boolean {
   return item.status_basis.kind === "DURABLE_LIFECYCLE";
 }
@@ -523,7 +543,7 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
         .then((series) => {
           const read: SparklineRead =
             series.availability.state === "AVAILABLE" && series.values.length > 0
-              ? { kind: "series", values: series.values, source: series.source, revision: series.source?.projection_revision ?? series.source_revision }
+              ? { kind: "series", values: series.values, ...servedTimes(series), source: series.source, revision: series.source?.projection_revision ?? series.source_revision }
               : {
                   kind: "withheld",
                   /* An AVAILABLE answer with no values is still no series. */
