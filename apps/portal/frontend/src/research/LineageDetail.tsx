@@ -836,7 +836,13 @@ function MetricValue({ label, fact }: { label: string; fact: RunMetricFact }) {
       </span>
     );
   }
-  const basis = fact.scope === "SELECTED_TRIAL_MEAN_ACROSS_FOLDS" ? " (selected trial, mean of folds)" : "";
+  /* B11 S13: a causal profile publishes the mean of each outer fold's OWN selected OOS; never pooled inner candidates. */
+  const basis =
+    fact.scope === "SELECTED_TRIAL_MEAN_ACROSS_FOLDS"
+      ? " (selected trial, mean of folds)"
+      : fact.scope === "OUTER_FOLD_SELECTED_OOS_MEAN"
+        ? " (outer folds, each fold's own selection, mean OOS)"
+        : "";
   return (
     <span data-metric={label} data-metric-value={fact.value} title={`${fact.value} · ${fact.definition_id ?? "definition not published"} · ${fact.source ?? ""}`}>
       {label} <span className="v">{shown}</span>

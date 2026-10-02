@@ -91,11 +91,41 @@ type ProgressFold =NonNullable<NonNullable<ProgressRead["progress"]>["folds"]>[n
  * absence with the served reason code when there is one.
  */
 export type FoldParams =
-  | { state: "value"; digest: string }
+  | { state: "value"; digest: string; own?: OwnFoldSelection }
   | { state: "absent"; code: string | null }
   | { state: "unread"; answered: boolean };
 
-export function foldParams(progress: ProgressRead | null, foldId: string | null, answered: boolean): FoldParams {
+/**
+ * A causal/inner run publishes each outer fold's OWN selection on its capital
+ * segment (`selection_scope=OUTER_FOLD_SELECTION`). It applies to that fold's
+ * OOS window only; it is never a run-global theta. Legacy segments omit it.
+ */
+export type OwnFoldSelection = { studyId: string | null; trialId: string | null; parameters: Array<[string, string]> };
+
+export function ownFoldSelection(segment: FoldSegment | null | undefined): OwnFoldSelection | null {
+  if (!segment || segment.selection_scope !== "OUTER_FOLD_SELECTION") return null;
+  return {
+    studyId: segment.study_id ?? null,
+    trialId: segment.selected_trial_id ?? null,
+    parameters: Object.entries(segment.parameters ?? {}),
+  };
+}
+
+function ownSelectionTitle(own: OwnFoldSelection, digest: string): string {
+  return [
+    `own selection (applies to this fold's OOS only) ${digest}`,
+    own.studyId ? `study ${own.studyId}` : null,
+    own.trialId ? `trial ${own.trialId}` : null,
+    own.parameters.length > 0 ? own.parameters.map(([key, value]) => `${key}=${value}`).join(", ") : null,
+  ].filter(Boolean).join(" · ");
+}
+
+export function foldParams(progress: ProgressRead | null, foldId: string | null, answered: boolean, segment?: FoldSegment | null): FoldParams {
+  const own = ownFoldSelection(segment);
+  if (own && segment) {
+    if (segment.params_digest) return { state: "value", digest: segment.params_digest, own };
+    return { state: "absent", code: segment.params_digest_reason_code };
+  }
   if (progress === null || foldId === null || !/^\d+$/.test(foldId)) return { state: "unread", answered };
   const fold: ProgressFold | undefined = progress.progress?.folds?.find((candidate) => candidate.fold === Number(foldId) + 1);
   const selection = fold?.selection;
@@ -133,8 +163,9 @@ function claimToken(slotState: string | undefined, fact: ClaimFactLike | undefin
 function FoldParamsText({ params }: { params: FoldParams }) {
   if (params.state === "value") {
     return (
-      <span data-fold-params={params.digest} title={`params ${params.digest}`}>
-        params
+      <span data-fold-params={params.digest} data-fold-params-own={params.own ? "" : undefined} title={params.own ? ownSelectionTitle(params.own, params.digest) : `params ${params.digest}`}>
+        {params.own ? "own params" : "params"}
+        {params.own?.trialId ? ` · ${params.own.trialId}` : ""}
       </span>
     );
   }
@@ -877,8 +908,8 @@ function FoldStrip({
                 disabled={disabled}
                 onClick={() => onFold(segment)}
                 title={(() => {
-                  const params = foldParams(progress, segment.fold_id, progressAnswered);
-                  const paramsText = params.state === "value" ? `params ${params.digest}` : params.state === "absent" ? `params not published${params.code ? ` ${params.code}` : ""}` : "params not read";
+                  const params = foldParams(progress, segment.fold_id, progressAnswered, segment);
+                  const paramsText = params.state === "value" ? (params.own ? ownSelectionTitle(params.own, params.digest) : `params ${params.digest}`) : params.state === "absent" ? `params not published${params.code ? ` ${params.code}` : ""}` : "params not read";
                   const score = plan.get(segment.fold_id)?.score;
                   const scoreText = score && score.state === "AVAILABLE"
                     ? ` · IS Sharpe ${score.is_sharpe ?? "not published"} · OOS Sharpe ${score.oos_sharpe ?? "not published"} · decay ${score.decay ?? "not published"} · OOS trades ${score.oos_trades ?? "not published"}`
@@ -2149,7 +2180,7 @@ export function CandleReplayBody({
           </span>
           {segment ? (
             <span className="mono flex-none text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-              <FoldParamsText params={foldParams(progress, segment.fold_id, identity?.state === "ready")} />
+              <FoldParamsText params={foldParams(progress, segment.fold_id, identity?.state === "ready", segment)} />
             </span>
           ) : null}
           {band.state !== "ready" ? <SplitBandNote slot={band} /> : null}

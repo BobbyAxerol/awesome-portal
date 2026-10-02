@@ -130,15 +130,26 @@ function SurfacePanel({ id, title, aside, children }: { id: string; title: React
 }
 
 /** A typed absence of a surface block, in the server's words. */
-export function SurfaceAbsence({ id, title, reason }: { id: string; title: string; reason: string | null }) {
+export function SurfaceAbsence({
+  id,
+  title,
+  reason,
+  state = "NOT_PUBLISHED",
+}: {
+  id: string;
+  title: string;
+  reason: string | null;
+  /** NOT_APPLICABLE: the question does not arise (typed by the server), not a missing fact. */
+  state?: "NOT_PUBLISHED" | "NOT_APPLICABLE";
+}) {
   return (
-    <section className={CARD} style={CARD_STYLE} data-panel={id} data-panel-state="NOT_PUBLISHED" data-panel-lane="retained">
+    <section className={CARD} style={CARD_STYLE} data-panel={id} data-panel-state={state} data-panel-lane="retained">
       <div className="flex flex-wrap items-baseline gap-2">
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
           {title}
         </h3>
         <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={reason ?? undefined}>
-          not published
+          {state === "NOT_APPLICABLE" ? "not applicable" : "not published"}
         </span>
       </div>
       {reason ? (
@@ -162,8 +173,11 @@ export function SurfaceScatter({
   pick,
   onPick,
   onClear,
+  scopeLabel,
 }: {
   surface: Surface;
+  /** B11 S06: an honest scope for a per-study surface (replaces the schedule word). */
+  scopeLabel?: string;
   /** The loaded ledger page's parameter text per trial: the fallback for a point that carries none of its own. */
   parametersOf: (trialId: string) => Record<string, string> | undefined;
   schedule: string | null;
@@ -184,7 +198,7 @@ export function SurfaceScatter({
   const unplaced = surface.points.length - placed.length;
   const selected = surface.selected_trial_id;
   const best = surface.best_is_trial_id;
-  const scope = schedule === "global" ? "global study" : schedule ?? "study scope not published";
+  const scope = scopeLabel ?? (schedule === "global" ? "global study" : schedule ?? "study scope not published");
   /* One tab stop: the picked point, else the one the arrows reached, else θ*, else the first drawn. */
   const tabStop =
     [roving, pick, selected].find((id) => id != null && placed.some((point) => point.trial_id === id)) ?? placed[0]?.trial_id ?? null;
@@ -664,5 +678,104 @@ export function ThetaJourney({ surface, declared, schedule }: { surface: Surface
         top-decile share ({surface.parameter_frequency.pool_count} of {surface.complete_trial_count})
       </span>
     </SurfacePanel>
+  );
+}
+
+
+/* ------------------------------------------- S06 · one surface per outer study */
+
+export type StudySurface = NonNullable<CurrentSourceSearch["surfaces_by_study"]>[number];
+
+/**
+ * B11 S06: the causal profile ranks each outer fold's inner-validation study on
+ * its own, so there is one surface per study and no run-global surface. A study
+ * selector picks which one A2-A4 draw; every title names that study. Nothing
+ * here merges or re-ranks studies.
+ */
+export function StudySurfaces({
+  studies,
+  declared,
+  parentReason,
+  parametersOf,
+  schedule,
+  pick,
+  onPick,
+  onClear,
+  prunedCount,
+}: {
+  studies: readonly StudySurface[];
+  declared: DeclaredSpace | null | undefined;
+  /** The parent run-global surface's served reason (NOT_APPLICABLE). */
+  parentReason: string | null;
+  parametersOf: (trialId: string) => Record<string, string> | undefined;
+  schedule: string | null;
+  pick: string | null;
+  onPick: (trialId: string) => void;
+  onClear?: () => void;
+  prunedCount: number | null;
+}) {
+  const [chosen, setChosen] = useState<string | null>(null);
+  /* A pick inside another study moves the selector to it, so the point stays visible. */
+  const owner = pick === null ? null : (studies.find((study) => study.surface.points?.some((point) => point.trial_id === pick))?.study_id ?? null);
+  useEffect(() => {
+    if (owner !== null) setChosen(owner);
+  }, [owner]);
+  const active = studies.find((study) => study.study_id === chosen) ?? studies[0]!;
+  const surface = active.surface;
+  const served = surface.state === "AVAILABLE" && declared?.state === "AVAILABLE";
+  const label = `study ${active.study_id} · outer fold ${active.fold_id}`;
+  return (
+    <div className="flex min-w-0 flex-col gap-3" data-study-surfaces={studies.length}>
+      <SurfaceAbsence id="surface-run-global" title="A2 · run-global trial surface" reason={parentReason} state="NOT_APPLICABLE" />
+      <div className="flex flex-wrap items-center gap-[6px]" role="group" aria-label="outer study">
+        <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          inner-validation study per outer fold
+        </span>
+        {studies.map((study) => {
+          const on = study.study_id === active.study_id;
+          return (
+            <button
+              key={study.study_id}
+              type="button"
+              className="mono border px-[8px] py-[1px] text-[10px]"
+              style={
+                on
+                  ? { borderColor: "var(--accent)", background: "var(--accent-soft)", color: "var(--accent)" }
+                  : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-soft)" }
+              }
+              aria-pressed={on}
+              data-study-pick={study.study_id}
+              title={`${study.scope} · outer fold ${study.fold_id}`}
+              onClick={() => setChosen(study.study_id)}
+            >
+              {study.study_id}
+            </button>
+          );
+        })}
+      </div>
+      {served && declared ? (
+        <>
+          <SurfaceScatter
+            key={`scatter-${active.study_id}`}
+            surface={surface}
+            parametersOf={parametersOf}
+            schedule={schedule}
+            scopeLabel={`${label} · inner validation`}
+            pick={pick}
+            onPick={onPick}
+            onClear={onClear}
+          />
+          <SurfaceProgression key={`progression-${active.study_id}`} surface={surface} declared={declared} prunedCount={prunedCount} />
+          <SurfaceDistributions key={`distributions-${active.study_id}`} surface={surface} />
+        </>
+      ) : (
+        <SurfaceAbsence
+          id="surface-study"
+          title={`A2 · ${label}`}
+          reason={surface.reason_code ?? declared?.reason_code ?? null}
+          state={surface.state === "NOT_APPLICABLE" ? "NOT_APPLICABLE" : "NOT_PUBLISHED"}
+        />
+      )}
+    </div>
   );
 }

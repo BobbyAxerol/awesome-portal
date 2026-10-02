@@ -2489,8 +2489,15 @@ function RetainedVerdictTable({
   const dragging = verdicts.rows.filter((row) => row.verdict === "DRAG");
   /* The thresholds and the provenance of each column are the rule's own words, kept in the (i) tooltip. */
   const ruleShort = /\bv\d+$/.exec(rule.version)?.[0] ?? rule.version;
+  /* B11 S04/S05: the causal profile scores each fold on its OWN selection (inner-validation IS mean vs that fold's outer OOS). */
+  const causalBasis = rule.score_basis === "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS";
+  const selectedWord = causalBasis ? "each fold's own selected parameters" : "the selected parameters";
   const ruleText =
-    `${rule.version}: S_OOS, decay and trades are QuantBT's per-fold score of the selected parameters; max dd, contribution ` +
+    `${rule.version}: ${
+      causalBasis
+        ? "IS is the inner-validation mean, S_OOS is the fold's own outer OOS, decay is inner IS mean minus outer OOS (each fold's own selection), trades are that fold's outer OOS count"
+        : "S_OOS, decay and trades are QuantBT's per-fold score of the selected parameters"
+    }; max dd, contribution ` +
     `and the worst bar are read from the retained equity inside each test window. ` +
     `PASS needs S_OOS ≥ ${rule.pass.oos_sharpe_min}, decay ≤ ${rule.pass.decay_max} and max dd ≥ ${percentOf(rule.pass.max_drawdown_min)}; ` +
     `one criterion inside S_OOS ≥ ${rule.warn.oos_sharpe_min} / decay ≤ ${rule.warn.decay_max} / max dd ≥ ${percentOf(rule.warn.max_drawdown_min)} is WARN; ` +
@@ -2500,6 +2507,7 @@ function RetainedVerdictTable({
     <section
       className="overflow-x-auto rounded-[6px] border"
       data-retained-verdicts={verdicts.state}
+      data-score-basis={rule.score_basis}
       data-scrolls-sideways
       role="region"
       aria-label="Per-fold verdict table; scrolls sideways when narrow"
@@ -2513,13 +2521,13 @@ function RetainedVerdictTable({
             {counts.drag} DRAG · {counts.warn} WARN · {counts.pass} PASS
             {counts.not_evaluated > 0 ? ` · ${counts.not_evaluated} not evaluated` : ""}
             {meanOos !== null ? (
-              <span title={`${verdicts.mean_oos_sharpe} · mean S_OOS of the selected parameters`} data-verdict-fact="mean_oos_sharpe">
+              <span title={`${verdicts.mean_oos_sharpe} · mean S_OOS of ${selectedWord}`} data-verdict-fact="mean_oos_sharpe">
                 {" "}
                 — OOS {meanOos}
               </span>
             ) : null}
             {meanDecay !== null ? (
-              <span title={`${verdicts.mean_decay} · mean decay of the selected parameters`} data-verdict-fact="mean_decay">
+              <span title={`${verdicts.mean_decay} · mean decay of ${selectedWord}`} data-verdict-fact="mean_decay">
                 , decay {meanDecay}
               </span>
             ) : null}
@@ -2606,7 +2614,15 @@ function RetainedVerdictTable({
                   boxShadow: `inset 2px 0 0 ${current ? "var(--accent)" : "transparent"}`,
                 }}
               >
-                <td className="mono px-3 py-1.5" title={`retained source fold id ${row.fold_id}`}>
+                <td
+                  className="mono px-3 py-1.5"
+                  title={
+                    row.selected_parameters
+                      ? `retained source fold id ${row.fold_id}\nown selection · ${Object.entries(row.selected_parameters).map(([k, v]) => `${k} = ${v}`).join(", ")}`
+                      : `retained source fold id ${row.fold_id}`
+                  }
+                  data-fold-score-basis={row.score_basis}
+                >
                   {foldId(fold)}
                 </td>
                 <td className="px-3 py-1.5">

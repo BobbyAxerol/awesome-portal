@@ -1089,7 +1089,7 @@ function EquityFigure({ equity, folds, equityIs, sourceFallback = null }: { equi
           ? "params_handoff" in folds && folds.params_handoff.text !== null
             ? (
                 /* The sealed params handoff stays one hover away; the Identity block already lists the parameters. */
-                <span title={`params handoff at each boundary: ${folds.params_handoff.text}`}>┆ = fold OOS start</span>
+                <span title={`${folds.params_handoff.scope === "PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS" ? "each fold's own selection applies to its own OOS" : "params handoff at each boundary"}: ${folds.params_handoff.text}`}>┆ = fold OOS start</span>
               )
             : "┆ = fold start"
           : `fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]} · ${folds.reason_code ?? factReason(folds)}`}
@@ -1127,6 +1127,11 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
   const worst = published ? folds.rows.filter((row) => row.verdict === "DRAG").map((row) => foldLabel(row.fold_id)) : [];
   const globalParams = folds.params_handoff.scope === "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD";
   const columns = globalParams ? 7 : 8;
+  /* B11 S09: a causal profile selects per fold; the selection applies to its OWN OOS only. The wording and the
+     score basis are the server's published enums; legacy folds omit `score_basis` and read as before. */
+  const ownParams = folds.params_handoff.scope === "PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS";
+  const scoreBases = [...new Set(published ? folds.rows.map((row) => row.score_basis).filter((basis): basis is NonNullable<typeof basis> => basis !== undefined) : [])];
+  const scoreBasisWords = scoreBases.length === 1 ? "IS = inner-validation mean · OOS = outer fold" : scoreBases.length > 1 ? "mixed score bases" : null;
   /* QA S09 (inventory 16): a single-window run has no fold rows; the block says so in one line, with no empty table. */
   if (!published) {
     return (
@@ -1152,7 +1157,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
             <tr>
               <th scope="col">fold</th>
               <th scope="col">OOS window (UTC)</th>
-              {globalParams ? null : <th scope="col">params</th>}
+              {globalParams ? null : <th scope="col" title={ownParams ? "this fold's own selected parameters; they apply to its own OOS only" : undefined}>{ownParams ? "own params" : "params"}</th>}
               <th scope="col" title="in-sample Sharpe">IS Sharpe</th>
               <th scope="col" title="out-of-sample Sharpe">OOS Sharpe</th>
               <th scope="col" title="IS Sharpe minus OOS Sharpe">IS − OOS</th>
@@ -1162,7 +1167,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
           </thead>
           <tbody>
             {folds.rows.map((row) => (
-              <tr key={row.fold_id} data-fold={row.fold_id} data-v={row.verdict}>
+              <tr key={row.fold_id} data-fold={row.fold_id} data-v={row.verdict} data-score-basis={row.score_basis}>
                 <td title={`QuantBT fold_id ${row.fold_id}`}>{foldLabel(row.fold_id)}</td>
                 <td>
                   {row.test_start_utc_ms !== null ? iso(row.test_start_utc_ms) : "no start published"} →{" "}
@@ -1173,7 +1178,7 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
                     {row.params.text !== null ? <span title={row.params.text}>{row.params.text}</span> : <AvailabilityAbsent availability={row.params.availability} />}
                   </td>
                 )}
-                <td data-fold-is={row.is_sharpe.value ?? undefined}><FoldValue fact={row.is_sharpe} unit="ratio" /></td>
+                <td data-fold-is={row.is_sharpe.value ?? undefined} title={row.score_basis ? `score basis ${row.score_basis}` : undefined}><FoldValue fact={row.is_sharpe} unit="ratio" /></td>
                 <td data-fold-oos={row.oos_sharpe.value ?? undefined}><FoldValue fact={row.oos_sharpe} unit="ratio" /></td>
                 <td data-fold-decay={row.decay.value ?? undefined} data-fail={row.failed_criteria.includes("DECAY") ? "DECAY" : undefined}><FoldValue fact={row.decay} unit="ratio" /></td>
                 <td data-fold-contribution={row.contribution_fraction.value ?? undefined}><FoldValue fact={row.contribution_fraction} unit="fraction" /></td>
@@ -1187,13 +1192,15 @@ function FoldVerdictsV2({ folds }: { folds: FrozenCoreV2["folds"] }) {
           </tbody>
         </table>
       </div>
-      <p className="rr-caption" data-verdict-rule title={`rule ${folds.rule?.version ?? "not published"}${globalParams && folds.params_handoff.text !== null ? ` · params in every fold: ${folds.params_handoff.text}` : ""}`}>
+      <p className="rr-caption" data-verdict-rule title={`rule ${folds.rule?.version ?? "not published"}${globalParams && folds.params_handoff.text !== null ? ` · params in every fold: ${folds.params_handoff.text}` : ""}${ownParams && folds.params_handoff.text !== null ? ` · ${folds.params_handoff.text}` : ""}${scoreBases.length > 0 ? ` · score basis ${scoreBases.join(", ")}` : ""}`} data-params-handoff={folds.params_handoff.scope}>
         {worst.length > 0 ? `${worst.length} of ${folds.rows.length} folds drag (${worst.join(", ")}) · ` : ""}
         {folds.rule
           ? `pass needs Sharpe ≥ ${typographicMinus(folds.rule.pass.oos_sharpe_min)} · decay ≤ ${typographicMinus(folds.rule.pass.decay_max)} · drawdown ≥ ${typographicMinus(folds.rule.pass.max_drawdown_min)}`
           : "verdict rule not published"}
         {folds.rule ? ` · rule ${folds.rule.version}` : ""}
         {globalParams ? " · one global parameter set" : ""}
+        {ownParams ? " · each fold's own selection applies to its own OOS" : ""}
+        {scoreBasisWords ? ` · ${scoreBasisWords}` : ""}
       </p>
     </Block>
   );

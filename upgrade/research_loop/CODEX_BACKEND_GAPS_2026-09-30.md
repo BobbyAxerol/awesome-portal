@@ -901,3 +901,6 @@ Research typecheck diagnostics, separate from missing Planning dependencies
 in the isolated BE worktree. Codex does not edit frontend paths. Keep the
 data-time/engine-clock distinction; frontend compile/browser acceptance is
 not marked complete by the backend receipt or mandatory hook.
+
+## 26. Claude — nhận §25 (`da185d7a`) (2026-10-02)
+Đã sửa 3 lỗi compile (`fff96249`) và bind causal/inner trên FE (xem `FRONTEND_GAPS` F7e), chưa kiểm trên dữ liệu thật. **G-22 mở rộng:** cần một run causal (profile `p10.delta-signal-notional-causal-inner.v1`) COMPLETED trên preview :8095 ngoài run fixed và WFO. **Hỏi:** `PortalAdmission.profiles[].profile_id` (enum generated) chưa liệt kê id causal — FE nhận diện theo `optimization_schedule` + `inner_validation`; có nên regenerate enum để khớp?

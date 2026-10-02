@@ -90,6 +90,7 @@ import {
   ThetaJourney,
   two,
   type DeclaredSpace,
+  StudySurfaces,
 } from "./SearchSurface";
 import type { ResearchState } from "./state";
 
@@ -974,6 +975,7 @@ function ratio2(value: string | null): string | null {
 const OBJECTIVE_KIND_WORDS: Record<string, string> = {
   IS_MEAN_SHARPE: "IS mean Sharpe",
   MODE_1_DECAY_J: "Mode 1 J (OOS-adjusted)",
+  INNER_VALIDATION_DECAY_J: "inner-validation J (outer OOS not used)",
   NOT_PUBLISHED: "objective kind not published",
 };
 
@@ -990,6 +992,11 @@ function MetricCell({ metric }: { metric: TrialFacts["metrics"]["mean_is_sharpe"
 }
 
 function scopeWords(facts: TrialFacts): string {
+  if (facts.fold_scope.kind === "PER_FOLD_STUDY") {
+    /* B11 S06: a causal-profile trial belongs to ONE outer fold's own inner-validation study. */
+    const study = facts.study_id ? `study ${facts.study_id}` : "study not published";
+    return `${study}${facts.fold_scope.fold_id ? ` · fold ${facts.fold_scope.fold_id}` : ""}${facts.evaluation_scope === "INNER_VALIDATION" ? " · inner validation" : ""}`;
+  }
   if (facts.fold_scope.kind === "ALL_OUTER_FOLDS") return "all outer folds";
   if (facts.fold_scope.kind === "FOLD") return `fold ${facts.fold_scope.fold_id}`;
   return "fold scope not published";
@@ -1190,7 +1197,7 @@ function RetainedBestVsSelected({ search, freezeHref }: { search: CurrentSourceS
       ) : (
         <div className="flex flex-wrap gap-2.5">
           {card(roles.raw_best_is, "best_trial", "var(--bad)", "RANK 1 BY IS", "raw-best")}
-          {card(roles.selected, "selected", "var(--accent-2)", "SELECTED BY POLICY", "selected")}
+          {card(roles.selected, "selected", "var(--accent-2)", roles.selected.scope === "LAST_FOLD_DEPLOYMENT" ? "LAST-FOLD DEPLOYMENT" : "SELECTED BY POLICY", "selected")}
         </div>
       )}
       <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-roles-note>
@@ -1587,6 +1594,18 @@ function RetainedThetaJourney({ search }: { search: CurrentSourceSearch }) {
     (row) => row.facts?.source_trial_id === search.selection.selected_trial_id && row.objective === search.selection.objective,
   );
   const scope = selected?.facts?.fold_scope ?? null;
+  if (scope?.kind === "PER_FOLD_STUDY") {
+    return (
+      <RetainedPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} state="PER_FOLD_OWN_SELECTION">
+        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+          each outer fold selects inside its own study — there is no run-global θ* and no run-wide journey
+        </p>
+        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+          fold_scope {scope.kind} · schedule {search.search_contract.optimization_schedule ?? "not published"}
+        </span>
+      </RetainedPanel>
+    );
+  }
   if (scope === null || scope.kind !== "ALL_OUTER_FOLDS") {
     return <EmptyPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} gap={noField()} sentence />;
   }
@@ -2411,6 +2430,27 @@ export function SearchScreen({
                     /* X2 · B3: the server's trial surface draws A2–A5; an older server keeps the W3b frames. */
                     const surface = lane.surface;
                     const space = lane.declared_space;
+                    /* B11 S06: the causal profile has one surface per outer study and no run-global one. */
+                    const studies = lane.surfaces_by_study ?? [];
+                    if (surface && studies.length > 0) {
+                      if (key === "scatter") {
+                        return (
+                          <StudySurfaces
+                            key={key}
+                            studies={studies}
+                            declared={space}
+                            parentReason={surface.reason_code}
+                            parametersOf={(id) => cleanParameters((pages.merged ?? lane).ledger.trials.find((trial) => trial.trial_id === id)?.parameters)}
+                            schedule={lane.search_contract.optimization_schedule}
+                            pick={pick}
+                            onPick={onPick}
+                            onClear={onClear}
+                            prunedCount={lane.diagnostics.probe.pruned_trial_count}
+                          />
+                        );
+                      }
+                      if (key === "progression" || key === "distributions" || key === "importance") return null;
+                    }
                     if (surface && space) {
                       const served = surface.state === "AVAILABLE" && space.state === "AVAILABLE";
                       if (key === "scatter") {

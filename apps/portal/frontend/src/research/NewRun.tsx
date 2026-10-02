@@ -52,7 +52,11 @@ import {
   coverageRange,
   coverageWarnings,
   foldPlan,
+  SCHEDULE_PER_FOLD_CAUSAL,
   admitsSpecV2,
+  causalScheduleProfile,
+  isCausalProfile,
+  refusesInner,
   admittedFrequencies,
   admittedWindowModes,
   hasDeclarationFacts,
@@ -1508,6 +1512,7 @@ function WindowsStep({
   createAdmitted = false,
   profile = null,
   family = [],
+  profiles = null,
   estimateStatus = IDLE_ESTIMATE,
   estimate = null,
 }: {
@@ -1517,6 +1522,8 @@ function WindowsStep({
   estimate?: PreflightEstimate | null;
   /** Every enabled profile of this protocol, route and mode (v1 and v2): what a v2 declaration would be admitted by. */
   family?: readonly ProfilePins[];
+  /** Every served profile (enabled or not): the causal one answers for its own schedule option. */
+  profiles?: readonly ProfilePins[] | null;
   /** The declaration-estimate call: its typed refusal prints under the field it names. */
   estimateStatus?: EstimateStatus;
   /** Where the release defaults are adopted on arrival: not a reader edit, so it must not mark the step as touched. */
@@ -1553,6 +1560,19 @@ function WindowsStep({
   const modes = atlas?.modes ?? [];
   const selectedMode = modes.find((mode) => mode.mode_id === draft.optimizationMode) ?? null;
   const scheduleOptions = atlas && selectedMode ? scheduleChoices(atlas, selectedMode) : [];
+  /* The causal profile (when served and selected) admits inner folds and says exactly what they must declare. */
+  const selectedCausal = isCausalProfile(profile) && profile?.enabled === true ? profile : null;
+  const innerConstraints = selectedCausal?.innerConstraints ?? null;
+  /* The served word that refuses inner folds: a global profile's `inner_validation`, or the reason (else the state
+     word) of a disabled causal profile. Null when inner folds are admitted or no profile speaks. */
+  const innerLockWord: string | null =
+    profile === null || draft.optimizationSchedule !== SCHEDULE_PER_FOLD_CAUSAL
+      ? null
+      : profile.optimizationSchedule === SCHEDULE_PER_FOLD_CAUSAL && !profile.enabled
+        ? (profile.reason ?? "DISABLED")
+        : profile.enabled && refusesInner(profile)
+          ? profile.innerValidation
+          : null;
 
   /* A draft adopts the release defaults once, so the form never submits an
      empty value the reader did not see. The defaults are the published ones. */
@@ -1776,15 +1796,21 @@ function WindowsStep({
             <option value="">{selectedMode === null ? "choose a mode first" : "choose a schedule"}</option>
             {scheduleOptions.map(({ schedule, valid }) => {
               /* The profile says inner (per-fold causal) selection is not admitted: its served word is the reason. */
-              const innerRefused = schedule === "per_fold_causal" && profile?.enabled === true && profile.innerValidation !== null;
+              /* The causal profile, when served, is the profile that answers for this schedule: its own
+                 state and reason decide, whatever profile the draft currently falls under. */
+              const causal = schedule === SCHEDULE_PER_FOLD_CAUSAL ? causalScheduleProfile(profiles, draft) : null;
+              const refusingProfile = schedule !== SCHEDULE_PER_FOLD_CAUSAL ? null : causal ?? (profile?.enabled === true ? profile : null);
+              const innerRefused = refusingProfile !== null && (!refusingProfile.enabled || refusesInner(refusingProfile));
               const shown = valid && !innerRefused;
+              const refusalWord = refusingProfile === null ? null : !refusingProfile.enabled ? (refusingProfile.reason ?? "DISABLED") : refusingProfile.innerValidation;
               return (
                 <option
                   key={schedule}
                   value={schedule}
                   disabled={!shown}
-                  title={shown ? undefined : innerRefused ? `${profile?.innerValidation} · ${profile?.profileId}` : (selectedMode?.invalid_schedules?.find((entry) => entry.schedule === schedule)?.reason ?? "Not admitted for this mode in the installed release manifest.")}
+                  title={shown ? (isCausalProfile(causal) ? `profile ${causal?.profileId}` : undefined) : innerRefused ? `${refusalWord} · ${refusingProfile?.profileId}` : (selectedMode?.invalid_schedules?.find((entry) => entry.schedule === schedule)?.reason ?? "Not admitted for this mode in the installed release manifest.")}
                   data-invalid-schedule={shown ? undefined : schedule}
+                  data-causal-profile={shown && isCausalProfile(causal) ? causal?.profileId : undefined}
                 >
                   {schedule}{shown ? "" : " · not admitted"}
                 </option>
@@ -1793,23 +1819,28 @@ function WindowsStep({
           </select>
         </Field>
       </div>
-      {draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" && profile?.enabled === true && profile.innerValidation !== null ? (
+      {draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" && innerLockWord !== null && profile !== null ? (
         <p
           className="mono rounded-[6px] border px-3 py-2 text-[10px]"
           style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
-          title={`${profile.innerValidation} · ${profile.profileId}`}
-          aria-label={`Inner folds not admitted · ${profile.innerValidation} · ${profile.profileId}`}
+          title={`${innerLockWord} · ${profile.profileId}`}
+          aria-label={`Inner folds not admitted · ${innerLockWord} · ${profile.profileId}`}
           tabIndex={0}
           data-inner-folds="locked"
-          data-reason-code={profile.innerValidation ?? undefined}
+          data-reason-code={innerLockWord}
         >
-          inner folds — not admitted · {profile.innerValidation}
+          inner folds — not admitted · {innerLockWord}
         </p>
       ) : draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" ? (
-        <div className="flex flex-wrap items-end gap-2.5 rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line-soft)" }} data-inner-folds title={options?.inner_folds?.rule}>
+        <div className="flex flex-wrap items-end gap-2.5 rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line-soft)" }} data-inner-folds={selectedCausal ? "causal" : ""} title={options?.inner_folds?.rule}>
           <span className="w-full mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
             inner folds — decay selection stays inside each outer IS
           </span>
+          {selectedCausal ? (
+            <span className="w-full mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-causal-profile={selectedCausal.profileId} title={`${selectedCausal.innerValidation} · ${selectedCausal.profileId}`}>
+              {causalCapsText(selectedCausal)}
+            </span>
+          ) : null}
           {(() => {
             const inner = draft.walkForward.inner ?? { splitFrequency: "", windowMode: "expanding", trainWindow: "", minFolds: "" };
             const set = (change: Partial<typeof inner>) => patch({ walkForward: { ...draft.walkForward, inner: { ...inner, ...change } } });
@@ -1818,18 +1849,18 @@ function WindowsStep({
                 <Field label="Inner frequency">
                   <select className={INPUT_CLASS} style={inputStyle()} value={inner.splitFrequency} onChange={(e) => set({ splitFrequency: e.target.value })} aria-label="Inner frequency">
                     <option value="">choose</option>
-                    {(options?.inner_folds?.split_frequency ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
+                    {(innerConstraints && innerConstraints.frequencies.length > 0 ? innerConstraints.frequencies : (options?.inner_folds?.split_frequency ?? [])).map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </Field>
                 <Field label="Inner window mode">
                   <select className={INPUT_CLASS} style={inputStyle()} value={inner.windowMode} onChange={(e) => set({ windowMode: e.target.value })} aria-label="Inner window mode">
-                    {(options?.inner_folds?.window_mode ?? ["expanding", "rolling"]).map((value) => <option key={value} value={value}>{value}</option>)}
+                    {(innerConstraints && innerConstraints.windowModes.length > 0 ? innerConstraints.windowModes : (options?.inner_folds?.window_mode ?? ["expanding", "rolling"])).map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </Field>
-                <Field label="Inner train width">
+                <Field label="Inner train width" hint={innerConstraints?.trainWindowPattern ? `pattern ${innerConstraints.trainWindowPattern}` : undefined}>
                   <input className={INPUT_CLASS} style={inputStyle()} value={inner.trainWindow} onChange={(e) => set({ trainWindow: e.target.value.trim() })} aria-label="Inner train width" placeholder="90D" />
                 </Field>
-                <Field label="Minimum inner folds" hint={options?.inner_folds ? `release default ${options.inner_folds.min_folds_release_default}` : undefined}>
+                <Field label="Minimum inner folds" hint={innerConstraints ? `profile ${innerConstraints.folds.min}–${innerConstraints.folds.max} per outer fold` : options?.inner_folds ? `release default ${options.inner_folds.min_folds_release_default}` : undefined}>
                   <input className={INPUT_CLASS} style={inputStyle()} inputMode="numeric" value={inner.minFolds} onChange={(e) => set({ minFolds: e.target.value.trim() })} aria-label="Minimum inner folds" placeholder={options?.inner_folds ? String(options.inner_folds.min_folds_release_default) : undefined} />
                 </Field>
                 <V2CreateNote where="inner-folds" admitted={createAdmitted} />
@@ -2201,10 +2232,40 @@ function SelectedProfileNotes({ draft, profile }: { draft: RunDraft; profile: Pr
   );
 }
 
+/** The served `trial_scope` in words (`PER_OUTER_FOLD_STUDY` → "per outer fold study"); null when the profile serves none. */
+function trialScopeText(profile: ProfilePins): string | null {
+  return profile.trialScope === null ? null : profile.trialScope.toLowerCase().replace(/_/g, " ");
+}
+
+/** The served trial caps of a profile: the per-study range and the whole-run cap, each only when served. */
+function trialCapsText(profile: ProfilePins): string | null {
+  const scope = trialScopeText(profile);
+  const parts = [
+    profile.trials && scope !== null ? `trials ${profile.trials.min === profile.trials.max ? profile.trials.min : `${profile.trials.min}–${profile.trials.max}`} ${scope}` : null,
+    profile.maxTotalTrials !== null ? `total ≤ ${profile.maxTotalTrials}` : null,
+  ].filter((part): part is string => part !== null);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/** What the causal profile requires and caps, in its own served numbers. */
+function causalCapsText(profile: ProfilePins): string {
+  const inner = profile.innerConstraints;
+  return [
+    profile.profileId,
+    inner ? `inner folds ${inner.folds.min}–${inner.folds.max} per outer fold` : null,
+    trialCapsText(profile),
+  ]
+    .filter((part): part is string => part !== null)
+    .join(" · ");
+}
+
 /** What the selected profile fixes, in its own numbers (LW-07). Replaces the stale single-profile card when profiles are served. */
 function ProfileCard({ profile }: { profile: ProfilePins }) {
+  const caps = trialCapsText(profile);
+  const inner = profile.innerConstraints;
   const parts = [
-    profile.trials ? (profile.trials.min === profile.trials.max ? `trials ${profile.trials.min}` : `trials ${profile.trials.min}–${profile.trials.max}`) : null,
+    profile.trialScope !== null && caps !== null ? caps : profile.trials ? (profile.trials.min === profile.trials.max ? `trials ${profile.trials.min}` : `trials ${profile.trials.min}–${profile.trials.max}`) : null,
+    inner ? `inner folds ${inner.folds.min}–${inner.folds.max}${inner.frequencies.length > 0 ? ` ${inner.frequencies.join("/")}` : ""}${inner.windowModes.length > 0 ? ` ${inner.windowModes.join("/")}` : ""}` : null,
     profile.seed.state === "fixed" ? `seed ${profile.seed.value}` : profile.seed.state === "forbidden" ? "no seed" : null,
     profile.folds ? `folds ${profile.folds.min}–${profile.folds.max}` : null,
     profile.frequencies?.join("/") ?? profile.granularity,
@@ -2245,7 +2306,7 @@ export function outsideSelectedProfileNotes(
   if (trials !== "" && trialRange !== null) {
     const n = Number(trials);
     if (Number.isFinite(n) && (n < trialRange.min || n > trialRange.max)) {
-      notes.push({ field: "trials", text: `Trials ${trials} — profile ${trialRange.min}–${trialRange.max}. Kept as entered.` });
+      notes.push({ field: "trials", text: `Trials ${trials} — profile ${trialRange.min}–${trialRange.max}${trialScopeText(profile) ? ` ${trialScopeText(profile)}` : ""}. Kept as entered.` });
     }
   }
   const seed = draft.randomSeed.trim();
@@ -2295,9 +2356,9 @@ function OptimizationStep({
           label="Optuna trials"
           hint={
             trialsLocked
-              ? `pinned · ${profile?.profileId}`
+              ? `pinned · ${profile?.profileId}${profile && trialScopeText(profile) ? ` · ${trialCapsText(profile)}` : ""}`
               : profile?.enabled && profile.trials
-                ? `profile ${profile.trials.min}–${profile.trials.max}`
+                ? `profile ${profile.trials.min}–${profile.trials.max}${trialScopeText(profile) ? ` ${trialScopeText(profile)}` : ""}${profile.maxTotalTrials !== null ? ` · total ≤ ${profile.maxTotalTrials}` : ""}`
                 : limits.trialCeiling === null
                   ? "the release's ceiling could not be read"
                   : `ceiling ${limits.trialCeiling}`
@@ -3087,8 +3148,8 @@ export function NewRun(props: NewRunProps) {
   /* Two advanced profiles can be enabled (v1 and v2): the one whose requested-spec version the draft serializes as. */
   const v2 = usesSpecV2(draft);
   const profile = useMemo(
-    () => selectProfile(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode, specVersion: specVersionOf(v2) }),
-    [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode, v2],
+    () => selectProfile(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode, optimizationSchedule: draft.optimizationSchedule, specVersion: specVersionOf(v2) }),
+    [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode, draft.optimizationSchedule, v2],
   );
   const family = useMemo(
     () => profileFamily(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode }).filter((entry) => entry.enabled),
@@ -3363,7 +3424,7 @@ export function NewRun(props: NewRunProps) {
             <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
+            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />

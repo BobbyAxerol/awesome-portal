@@ -141,6 +141,10 @@ export function kExpression(rule: Pool["rule"]): string | null {
 export function freezeLineLabel(pool: Pool | undefined): { text: string; title: string } | null {
   if (!pool) return null;
   const expression = kExpression(pool.rule);
+  if (!expression && pool.rule.state === "NOT_APPLICABLE") {
+    /* Causal profile: there is no run-global pool, so K does not arise — typed, not broken data. */
+    return { text: "POOL · K NOT APPLICABLE", title: `${reasonWords(pool.rule.reason_code)} (${pool.rule.reason_code ?? "no reason"})` };
+  }
   if (expression) return { text: `POOL FROZEN · ${expression}`, title: `top-IS pool of ${pool.top_is_k.value} from the retained candidate ledger` };
   return { text: "POOL FROZEN · K NOT PUBLISHED", title: `${reasonWords(pool.top_is_k.reason_code)} (${pool.top_is_k.reason_code ?? "no reason"})` };
 }
@@ -186,7 +190,7 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
   const expression = kExpression(pool.rule);
   const optunaBlind = search.ledger.trials.every((trial) => trial.facts?.oos_seen_by_optuna === false);
   const scope =
-    pool.reevaluation_scope === "ALL_OUTER_FOLDS" ? "every outer fold" : pool.reevaluation_scope === "FOLD" ? "one fold" : "scope not published";
+    pool.reevaluation_scope === "ALL_OUTER_FOLDS" ? "every outer fold" : pool.reevaluation_scope === "FOLD" ? "one fold" : pool.reevaluation_scope === "PER_FOLD_STUDY" ? "each outer fold, its own study" : "scope not published";
   return (
     <div className="flex flex-col gap-[5px]" data-retained-pool data-pool-schema={pool.schema_version}>
       <FunnelRow
@@ -216,7 +220,14 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
         label="top-IS pool → FROZEN"
         count={pool.top_is_k}
         of={of}
-        note={expression ?? <span title={pool.top_is_k.reason_code ?? undefined}>K {reasonWords(pool.top_is_k.reason_code)}</span>}
+        note={
+          expression ?? (
+            <span title={pool.top_is_k.reason_code ?? undefined}>
+              {pool.rule.state === "NOT_APPLICABLE" ? "K not applicable " : "K "}
+              {reasonWords(pool.top_is_k.reason_code)}
+            </span>
+          )
+        }
       />
       <FunnelRow
         id="reevaluated"
@@ -244,8 +255,9 @@ export function PoolFunnel({ search }: { search: CurrentSourceSearch }) {
           {optunaBlind ? " · pool closes before OOS" : ""}
         </span>
       ) : (
-        <span className="mono mt-1 border border-dashed px-[10px] py-[5px] text-[10px] leading-[1.6]" style={{ ...FAINT, borderColor: "var(--line)" }} data-k-callout="absent" title={pool.rule.reason_code ?? undefined}>
-          K not shown — {reasonWords(pool.rule.reason_code)}
+        <span className="mono mt-1 border border-dashed px-[10px] py-[5px] text-[10px] leading-[1.6]" style={{ ...FAINT, borderColor: "var(--line)" }} data-k-callout={pool.rule.state === "NOT_APPLICABLE" ? "not-applicable" : "absent"} title={pool.rule.reason_code ?? undefined}>
+          {pool.rule.state === "NOT_APPLICABLE" ? "K not applicable" : "K not shown"} — {reasonWords(pool.rule.reason_code)}
+          {pool.rule.state === "NOT_APPLICABLE" && pool.rule.reason_code ? <span className="break-all text-[9px]"> {pool.rule.reason_code}</span> : null}
         </span>
       )}
     </div>
@@ -481,8 +493,13 @@ function RoleCard({ search, role, kind }: { search: CurrentSourceSearch; role: R
           {selected ? "selected" : "best_trial"} {role.trial_id ?? "—"}
         </span>
         {selected ? (
-          <span className="mono border px-[5px] text-[8.5px] font-bold tracking-[.08em]" style={{ color: tone, borderColor: tone }}>
-            SELECTED BY POLICY
+          <span
+            className="mono border px-[5px] text-[8.5px] font-bold tracking-[.08em]"
+            style={{ color: tone, borderColor: tone }}
+            data-role-scope={role.scope}
+            title={role.scope === "LAST_FOLD_DEPLOYMENT" ? `final outer-fold deployment selection only${role.fold_id ? ` (${role.fold_id})` : ""} — not a run-global parameter bundle` : undefined}
+          >
+            {role.scope === "LAST_FOLD_DEPLOYMENT" ? "LAST-FOLD DEPLOYMENT" : "SELECTED BY POLICY"}
           </span>
         ) : (
           <span className="text-[9px]" style={FAINT}>

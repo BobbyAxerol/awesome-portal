@@ -184,6 +184,21 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     expect(node("att_03")!.querySelector("[data-cert-absent]")?.textContent).toBe("cert not published");
   });
 
+  it("B11 S13 a causal run's OUTER_FOLD_SELECTED_OOS_MEAN scope is labelled as the outer-fold basis (typed mutation of the canonical fixture)", async () => {
+    const body = JSON.parse(JSON.stringify(HEALTHY)) as Lineage;
+    const fact = body.attempts.find((row) => row.attempt_id === "att_03")!.run_facts.oos_sharpe;
+    fact.source = "RS02_RETAINED_OUTER_FOLD_SELECTIONS";
+    fact.scope = "OUTER_FOLD_SELECTED_OOS_MEAN";
+    server([{ status: 200, body }]);
+    renderRoute();
+    await ready();
+    const oos = node("att_03")!.querySelector('[data-metric="OOS"]') as HTMLElement;
+    expect(oos.getAttribute("data-metric-value")).toBe(fact.value);
+    expect(oos.textContent).toBe("OOS 1.190 (outer folds, each fold's own selection, mean OOS)");
+    expect(oos.textContent).not.toContain("selected trial");
+    expect(oos.getAttribute("title")).toContain("RS02_RETAINED_OUTER_FOLD_SELECTIONS");
+  });
+
   it("W6b-U06 the selected attempt lists the hi-fi rows and links 04 · 09 · 07 · 11 · 02 · 13", async () => {
     server([{ status: 200, body: HEALTHY }]);
     renderRoute("?attempt=att_04");

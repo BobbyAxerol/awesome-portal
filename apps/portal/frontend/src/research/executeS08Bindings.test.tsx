@@ -256,3 +256,50 @@ describe("F2 S08 · claim strip tokens", () => {
     expect(claim.textContent).not.toContain("—");
   });
 });
+
+describe("B11 S08 · causal segment: each fold's OWN selection (typed builder from FoldSegment)", () => {
+  /* Typed builder: the canonical fold0 replay fixture with the optional OUTER_FOLD_SELECTION
+     fields of the generated FoldSegment type added; not a captured causal replay. */
+  const causal = () => {
+    const body = clone(FOLD0);
+    body.execution.fold_capital.segments.forEach((segment, index) => {
+      segment.selection_scope = "OUTER_FOLD_SELECTION";
+      segment.study_id = `study-${index}`;
+      segment.selected_trial_id = `study-${index}:trial-${index + 1}`;
+      segment.parameters = { fast: String(index + 3) };
+      segment.params_digest = `prm_own_${index}`;
+      segment.params_digest_reason_code = null;
+    });
+    return body;
+  };
+
+  it("foldParams prefers the segment's own selection over the progress join, with study/trial/params", () => {
+    const body = causal();
+    const segment = body.execution.fold_capital.segments[0]!;
+    const result = foldParams(W3B.progress, segment.fold_id, true, segment);
+    expect(result).toMatchObject({ state: "value", digest: "prm_own_0", own: { studyId: "study-0", trialId: "study-0:trial-1", parameters: [["fast", "3"]] } });
+  });
+
+  it("an own selection without a digest is an absence with the segment's served reason code", () => {
+    const segment = causal().execution.fold_capital.segments[0]!;
+    segment.params_digest = null;
+    segment.params_digest_reason_code = "RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS";
+    expect(foldParams(W3B.progress, segment.fold_id, true, segment)).toEqual({ state: "absent", code: "RS02_SEAL_DID_NOT_RETAIN_SELECTED_PARAMETERS" });
+  });
+
+  it("legacy segments (no selection_scope) keep the progress join untouched", () => {
+    const segment = clone(FOLD0).execution.fold_capital.segments[0]!;
+    expect(foldParams(W3B.progress, "0", true, segment)).toEqual(foldParams(W3B.progress, "0", true));
+  });
+
+  it("the screen labels the digest as the fold's own and carries study/trial/params in the chip title; no global overlay", async () => {
+    const { container } = await settled({ replay: causal() });
+    await waitFor(() => expect(container.querySelector("[data-fold-params-own]")).toBeTruthy());
+    const own = container.querySelector("[data-fold-params-own]")!;
+    expect(own.getAttribute("data-fold-params")).toBe("prm_own_0");
+    expect(own.getAttribute("title")).toContain("applies to this fold's OOS only");
+    expect(own.getAttribute("title")).toContain("study study-0");
+    expect(container.querySelector("[data-fold='0']")?.getAttribute("title")).toContain("trial study-0:trial-1");
+    expect(container.querySelector("[data-fold='0']")?.getAttribute("title")).toContain("fast=3");
+  });
+});

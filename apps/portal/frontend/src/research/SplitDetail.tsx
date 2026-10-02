@@ -76,6 +76,7 @@ import type { ProgressRead } from "./progressClient";
 import type { CurrentSourceSearch } from "./searchClient";
 import type { CurrentSourceClaimFact } from "./evidenceClient";
 import { ShortId } from "./ShortId";
+import { CausalSelectionPanel, causalSelectionOf, planIsCausal } from "./CausalSelectionPanel";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1522,6 +1523,20 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
   }
   const value = selection.value;
   const params = Object.entries(value.parameters ?? {});
+  if (value.scope === "LAST_FOLD_DEPLOYMENT") {
+    /* Causal profile: the final selection is the LAST fold's deployment choice, never a run-global θ*. */
+    return (
+      <span
+        className="mono"
+        style={{ color: "var(--accent)" }}
+        title={`last-fold deployment selection only (${value.fold_id ?? "last fold"}) · source trial ${value.selected_trial_id ?? "—"}`}
+        data-theta-star={value.selected_trial_id ?? ""}
+        data-theta-scope-kind="LAST_FOLD_DEPLOYMENT"
+      >
+        last fold only · trial {value.selected_trial_id ?? "—"}
+      </span>
+    );
+  }
   const title = [
     `source trial ${value.selected_trial_id ?? "—"} (the retained search's own id) · ${value.objective_kind} ${value.objective ?? "not published"}`,
     digest ? `params digest ${digest}` : null,
@@ -1874,6 +1889,11 @@ export function SplitScreen({
                     <Fact k="inner folds" data-fact="inner folds">
                       <GuardValue fact={retainedGuards.inner_folds} what="inner_folds" showReason />
                     </Fact>
+                    {retainedGuards.inner_min_folds ? (
+                      <Fact k="inner min (declared)" data-fact="inner min folds">
+                        <GuardValue fact={retainedGuards.inner_min_folds} what="inner_min_folds" showReason />
+                      </Fact>
+                    ) : null}
                     <Fact k="purge" tone="var(--bad)" data-fact="purge">
                       <GuardValue fact={retainedGuards.purge_bars} unit="bars" what="purge_bars" />
                     </Fact>
@@ -2085,6 +2105,15 @@ export function SplitScreen({
 
             {/* --------------------------------------------- fold table */}
             <FoldTable detail={detail} folds={folds} cursor={cursor} onFold={onFold} runPath={runPath} lane={lane} />
+
+            {/* S04/S05: the cursor fold's own causal selection — present only on the causal profile. */}
+            {folds.state === "ready" && causalSelectionOf(folds.split.fold_plan.folds[cursor.fold - 1]) ? (
+              <CausalSelectionPanel
+                fold={folds.split.fold_plan.folds[cursor.fold - 1]!}
+                foldNumber={cursor.fold}
+                guards={(folds.split as Partial<CurrentSourceSplit>).guards}
+              />
+            ) : null}
 
             {/* ------------------------------------------ three cards */}
             <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-[1.1fr_1fr_1fr]">
@@ -2566,7 +2595,11 @@ function ThetaFlow({
         </span>
         <span className="mono flex items-baseline gap-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-theta-meta>
           θ* per fold:{" "}
-          {lane ? (
+          {plan && planIsCausal(plan) ? (
+            <span style={{ color: "var(--accent)" }} data-theta-scope="PER_FOLD" title="fold_plan: each fold carries its own causal_selection (OUTER_FOLD_SELECTION)">
+              PER FOLD (own)
+            </span>
+          ) : lane ? (
             lane.schedule === "global" ? (
               <span style={{ color: "var(--accent)" }} data-theta-scope="GLOBAL" title="progress read: every fold's selection scope is GLOBAL_STUDY">
                 GLOBAL (shared)
@@ -2597,7 +2630,9 @@ function ThetaFlow({
                 isTitle={searchTitle}
                 active={cursor.fold === index + 1}
                 digest={
-                  lane ? (
+                  causalSelectionOf(fold) ? (
+                    <OwnSelection fold={fold} />
+                  ) : lane ? (
                     <ThetaStar lane={lane} compact />
                   ) : (
                     <span className="italic" style={{ color: "var(--ink-faint)" }} title={reasonOf(detail.protocol.theta_per_fold)}>
@@ -2653,6 +2688,22 @@ function ThetaFlow({
   );
 }
 
+/** S04/S05: a causal fold's own selected trial (applies to its own OOS fold); parameters ride in the title. */
+function OwnSelection({ fold }: { fold: SourceFoldRow }) {
+  const selection = causalSelectionOf(fold);
+  if (!selection) return null;
+  const title = [
+    `own-fold selection · ${selection.scope} · study ${selection.study_id}`,
+    `trial ${selection.selected_trial_id}`,
+    ...Object.entries(selection.parameters).map(([name, v]) => `${name} = ${v}`),
+  ].join("\n");
+  return (
+    <span className="mono" style={{ color: "var(--accent)" }} title={title} data-theta-own={selection.selected_trial_id}>
+      own · trial {selection.selected_trial_id}
+    </span>
+  );
+}
+
 /** W3b · the one selected θ*: trial, objective and every parameter, verbatim from the retained search. */
 function ThetaParams({ lane }: { lane: LaneView }) {
   const selection = lane.selection;
@@ -2670,7 +2721,10 @@ function ThetaParams({ lane }: { lane: LaneView }) {
   return (
     <div className="flex flex-col gap-[4px] pl-[72px]" data-theta-params>
       <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
-        θ* · source trial <span data-theta-trial title="the retained search's own trial id (S03 prints the progress read's selection.trial)">{value.selected_trial_id ?? "—"}</span>
+        {value.scope === "LAST_FOLD_DEPLOYMENT"
+          ? `θ* · last-fold deployment${value.fold_id ? ` (${foldLabel(value.fold_id)})` : ""} · source trial `
+          : "θ* · source trial "}
+        <span data-theta-trial title="the retained search's own trial id (S03 prints the progress read's selection.trial)">{value.selected_trial_id ?? "—"}</span>
         {objective !== null ? (
           <span title={`${value.objective_kind} ${value.objective}`}>
             {" "}· {value.objective_kind} {objective.replace(/^-/, "−")}
@@ -2900,7 +2954,11 @@ function FoldTable({
                   <SpanCell range={test} closed />
                   <CountCell value={anatomy?.test_bars ?? null} reason={anatomy?.reason_code ?? null} />
                   {anatomy ? <WindowCell window={anatomy.embargo} /> : embargo}
-                  {lane ? (
+                  {causalSelectionOf(fold) ? (
+                    <td className={`${TD} whitespace-nowrap`} data-params-cell>
+                      <OwnSelection fold={fold} />
+                    </td>
+                  ) : lane ? (
                     <td className={`${TD} whitespace-nowrap`} data-params-cell>
                       <ThetaStar lane={lane} compact />
                       {lane.schedule === "global" ? (

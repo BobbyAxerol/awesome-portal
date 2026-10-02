@@ -54,7 +54,7 @@ import { useRunLabel } from "./runLabels";
 import { NotPublished, RunMetaStrip } from "./RunMetaStrip";
 import { STATE_WORD } from "./ResearchPanel";
 import { StageLedger, isFixedProfileScope, utcClock } from "./StageLedger";
-import type { LiveBestObjective, Transport } from "./useRunProgress";
+import type { FoldTrialIdentity, LiveBestObjective, Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
 import { ShortId } from "./ShortId";
@@ -559,8 +559,25 @@ function StagePills({
 /* --------------------------------------------------------------- progress */
 
 /** How the study row names the study the source ran (CG-P10-04). */
-function studyLabel(snapshot: ProgressSnapshot, foldCount: number | null, foldCountReason: string | null): ReactNode {
+function studyLabel(
+  snapshot: ProgressSnapshot,
+  foldCount: number | null,
+  foldCountReason: string | null,
+  foldReporting: FoldReporting | null = null,
+  liveStudyScope = false,
+): ReactNode {
   const scope = snapshot.folds.find((f) => (f.selection ?? NOT_PUBLISHED_SELECTION).state === "AVAILABLE")?.selection?.scope;
+  /* A causal run: one study per outer fold. The counts are the server's reported/planned folds, never the declared
+     range and never a trial ordinal. */
+  if (scope === PER_FOLD_STUDY || liveStudyScope) {
+    const planned = foldReporting?.planned_count ?? foldCount;
+    const reported = foldReporting?.reported_count ?? snapshot.folds.length;
+    return (
+      <span data-study-scope={PER_FOLD_STUDY} title="One study per outer fold; counts are the source's reported and the admission plan's planned folds.">
+        per-fold studies — {count(reported)} reported / {planned === null ? <NotPublished reason={foldCountReason} /> : `${count(planned)} planned`}
+      </span>
+    );
+  }
   /* 03-M: an imported fixed profile ran no search either — never a per-fold "study N / M". */
   if (isFixedProfileScope(scope)) return "fixed profile — no search";
   const global = scope === "GLOBAL_STUDY" || (snapshot.folds.length === 0 && snapshot.overall.trials_done > 0);
@@ -590,7 +607,13 @@ function ProgressCard({
   liveRate,
   status = null,
   failedAt = null,
+  foldReporting = null,
+  liveStudyScope = false,
 }: {
+  /** The server's fold counts (declared / planned / reported), when published. */
+  foldReporting?: FoldReporting | null;
+  /** A `PER_FOLD_STUDY` trial event was seen before any fold published its selection. */
+  liveStudyScope?: boolean;
   snapshot: ProgressSnapshot;
   /** QA S03 U2: a FAILED run says where it stopped; it never reads as a run that got 80% of the way. */
   status?: EffectiveStatus | null;
@@ -623,7 +646,7 @@ function ProgressCard({
     ) : (
       <Absent />
     );
-  const study = studyLabel(snapshot, foldCount, foldCountReason);
+  const study = studyLabel(snapshot, foldCount, foldCountReason, foldReporting, liveStudyScope);
   /* S03: the source's cumulative GLOBAL-study throughput, exactly as served (a decimal string, never re-rounded). */
   const rate = liveRate !== undefined ? liveRate : (overall.rate_trials_per_s ?? null);
 
@@ -712,7 +735,11 @@ function ProgressCard({
         {bestObjective !== null ? (
           <span
             data-best-objective={bestObjective.value ?? "not-published"}
-            title={bestObjective.fold === null ? "best objective · global study" : `best objective · fold ${bestObjective.fold}`}
+            title={
+              bestObjective.fold === null
+                ? "best objective · global study"
+                : `best objective · fold ${bestObjective.fold}${bestObjective.studyId !== undefined ? ` · study ${bestObjective.studyId}` : ""}`
+            }
           >
             best{" "}
             <span style={{ color: "var(--ink)" }}>
@@ -803,6 +830,8 @@ interface FoldGanttProps {
   cursor: number | null;
   onPick: (fold: number) => void;
   foldTrials: Readonly<Record<number, number>>;
+  /** Native study/trial identity of per-fold-study trial events, by fold. */
+  foldTrialIds?: Readonly<Record<number, FoldTrialIdentity>>;
   /** The run's structured hand-off cursor, once published. */
   handoff: HandoffCursor | null;
   /** The claim's own legacy cursor text, when it names a fold. */
@@ -868,13 +897,66 @@ function paramsTag(digest: string): string {
   return `prm_${shortDigest(digest, 6)}`;
 }
 
+/** The scope word of a per-fold causal study: each outer fold ran its own study. */
+const PER_FOLD_STUDY = "PER_FOLD_STUDY";
+
+/**
+ * What a `PER_FOLD_STUDY` fold says about its trial: the native `study_id` and `source_trial_id` as served
+ * (each absent when not published) and the cumulative display ordinal, which is NOT a native trial id.
+ * Null for every other scope, so global and fixed runs keep their wording.
+ */
+export interface PerFoldTrial {
+  studyId: string | null;
+  sourceTrialId: string | null;
+  ordinal: number | null;
+}
+
+export function perFoldTrial(
+  fold: ProgressSnapshot["folds"][number],
+  foldTrialIds: Readonly<Record<number, FoldTrialIdentity>>,
+): PerFoldTrial | null {
+  const selection = fold.selection ?? NOT_PUBLISHED_SELECTION;
+  if (fold.state !== "RUNNING" && selection.state === "AVAILABLE" && selection.scope === PER_FOLD_STUDY) {
+    return { studyId: selection.study_id ?? null, sourceTrialId: selection.source_trial_id ?? null, ordinal: selection.trial };
+  }
+  const live = foldTrialIds[fold.fold];
+  if (fold.state === "RUNNING" && live !== undefined) {
+    return { studyId: live.studyId ?? null, sourceTrialId: live.sourceTrialId ?? null, ordinal: live.ordinal };
+  }
+  return null;
+}
+
+/** The tooltip of a per-fold trial: both native ids, and the ordinal said to be cumulative. */
+export function perFoldTrialTitle(trial: PerFoldTrial): string {
+  return [
+    `study ${trial.studyId ?? "not published"}`,
+    `source trial id ${trial.sourceTrialId ?? "not published"}`,
+    trial.ordinal === null ? null : `display ordinal ${count(trial.ordinal)} is cumulative across studies, not a native trial id`,
+  ]
+    .filter((line): line is string => line !== null)
+    .join(" · ");
+}
+
+/** `study s2 · trial 1` — both native ids visible, each `not published` when the source omitted it. */
+function PerFoldTrialChip({ trial, suffix = "" }: { trial: PerFoldTrial; suffix?: string }) {
+  return (
+    <span data-per-fold-trial title={perFoldTrialTitle(trial)} data-study-id={trial.studyId ?? undefined} data-source-trial-id={trial.sourceTrialId ?? undefined}>
+      study {trial.studyId ?? <Absent what="id not published" />} · trial {trial.sourceTrialId ?? <Absent what="id not published" />}
+      {suffix}
+    </span>
+  );
+}
+
 function foldNote(
   fold: ProgressSnapshot["folds"][number],
   foldTrials: Readonly<Record<number, number>>,
   handoff: HandoffCursor | null,
   claimCursor: InspectionCursor,
+  foldTrialIds: Readonly<Record<number, FoldTrialIdentity>> = {},
 ): ReactNode {
+  const perFold = perFoldTrial(fold, foldTrialIds);
   if (fold.state === "RUNNING") {
+    if (perFold !== null) return <PerFoldTrialChip trial={perFold} suffix=" · running" />;
     const trial = foldTrials[fold.fold];
     return trial === undefined ? "running" : `trial ${count(trial)} · running`;
   }
@@ -882,7 +964,19 @@ function foldNote(
   const selection = fold.selection ?? NOT_PUBLISHED_SELECTION;
   if (selection.state === "AVAILABLE" && selection.trial !== null && selection.params_digest !== null) {
     const objective =
-      selection.objective === null ? "no search" : `${selection.scope === "GLOBAL_STUDY" ? "global " : ""}best J₁ ${formatMetric(selection.objective, "ratio") ?? selection.objective}`;
+      selection.objective === null
+        ? "no search"
+        : `${selection.scope === "GLOBAL_STUDY" ? "global " : ""}${selection.objective_kind === "INNER_VALIDATION_DECAY_J" ? "inner J" : "best J₁"} ${formatMetric(selection.objective, "ratio") ?? selection.objective}`;
+    if (perFold !== null) {
+      return (
+        <span
+          title={[selection.objective, selection.objective_kind, selection.params_digest, perFoldTrialTitle(perFold)].filter(Boolean).join(" · ")}
+          data-fold-selection={selection.scope ?? undefined}
+        >
+          {objective} · <PerFoldTrialChip trial={perFold} /> · {paramsTag(selection.params_digest)}
+        </span>
+      );
+    }
     return (
       <span
         title={[
@@ -908,7 +1002,7 @@ function foldNote(
   return <NotPublished reason={FOLD_SELECTION_NOT_PUBLISHED} what="selection not published" />;
 }
 
-function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: FoldGanttProps) {
+function FoldGantt({ folds, cursor, onPick, foldTrials, foldTrialIds, handoff, claimCursor }: FoldGanttProps) {
   const container = useRef<HTMLDivElement>(null);
   if (folds.length === 0) {
     return (
@@ -1078,7 +1172,7 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: 
                 color: "var(--ink-faint)",
               }}
             >
-              {foldNote(fold, foldTrials, handoff, claimCursor)}
+              {foldNote(fold, foldTrials, handoff, claimCursor, foldTrialIds)}
             </span>
           </button>
         );
@@ -1097,6 +1191,7 @@ function CursorRow({
   foldState,
   cursor,
   liveTrial,
+  perFold = null,
   evidenceHref = null,
 }: {
   fold: number | null;
@@ -1104,6 +1199,8 @@ function CursorRow({
   /** The evidence cursor for this fold, from published facts only. */
   cursor: InspectionCursor;
   liveTrial: number | undefined;
+  /** A per-fold study names its trial by `study_id` + `source_trial_id`; the ordinal is then only a tooltip. */
+  perFold?: PerFoldTrial | null;
   /** F2b: Evidence Flow on this exact fold, offered once the fold is done. */
   evidenceHref?: string | null;
 }) {
@@ -1128,9 +1225,21 @@ function CursorRow({
       <span style={CHIP} data-cursor-fold>
         fold <span style={{ color: "var(--ink)" }}>{fold === null ? <Absent what="none yet" /> : fold}</span>
       </span>
-      <span style={CHIP} data-cursor-trial title="Trial number as the progress read serves it (selection.trial)">
-        trial{" "}
-        {trial === null ? (
+      <span
+        style={CHIP}
+        data-cursor-trial
+        title={perFold !== null ? perFoldTrialTitle(perFold) : "Trial number as the progress read serves it (selection.trial)"}
+        data-study-id={perFold?.studyId ?? undefined}
+        data-source-trial-id={perFold?.sourceTrialId ?? undefined}
+      >
+        {perFold !== null ? "study " : "trial "}
+        {perFold !== null ? (
+          <span style={{ color: "var(--ink)" }}>
+            {perFold.studyId ?? <Absent what="id not published" />}
+            {" · trial "}
+            {perFold.sourceTrialId ?? <Absent what="id not published" />}
+          </span>
+        ) : trial === null ? (
           <NotPublished reason="The progress read publishes no selected trial for this fold." />
         ) : (
           <span style={{ color: "var(--ink)" }}>
@@ -2261,6 +2370,8 @@ export interface RunProgressProps {
   cancelResult?: CancelResponse | null;
   refusal?: ProgressRefusal | null;
   foldTrials?: Readonly<Record<number, number>>;
+  /** Per-fold-study identity (`study_id`, `source_trial_id`) of the latest trial event of each fold. */
+  foldTrialIds?: Readonly<Record<number, FoldTrialIdentity>>;
   /** QA S03: read again after a failed read. Absent = no Retry is drawn. */
   onRetry?: () => void;
   retrying?: boolean;
@@ -2290,6 +2401,7 @@ export function RunProgress(props: RunProgressProps) {
     cancelResult = null,
     refusal = null,
     foldTrials = {},
+    foldTrialIds = {},
     onRetry,
     retrying = false,
     consoleRefusal = null,
@@ -2566,6 +2678,8 @@ export function RunProgress(props: RunProgressProps) {
               live={live}
               foldCount={foldCount}
               foldCountReason={foldCountReason}
+              foldReporting={foldReporting}
+              liveStudyScope={Object.keys(foldTrialIds).length > 0}
               bestObjective={bestObjective}
               liveRate={liveRate}
               status={status}
@@ -2607,6 +2721,7 @@ export function RunProgress(props: RunProgressProps) {
                 cursor={foldCursor}
                 onPick={onPinFold}
                 foldTrials={foldTrials}
+                foldTrialIds={foldTrialIds}
                 handoff={handoff}
                 claimCursor={claimCursor}
               />
@@ -2615,6 +2730,7 @@ export function RunProgress(props: RunProgressProps) {
                 foldState={cursorFold?.state ?? null}
                 cursor={cursor}
                 liveTrial={foldCursor !== null && cursorFold?.state === "RUNNING" ? foldTrials[foldCursor] : undefined}
+                perFold={cursorFold ? perFoldTrial(cursorFold, foldTrialIds) : null}
                 evidenceHref={handoffHref}
               />
             </>

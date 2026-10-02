@@ -1274,6 +1274,31 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     expect(audit.querySelector("[data-final-audit-refs]")?.textContent).toContain("frozen_candidate");
   });
 
+  it("B11 S09 a per-fold selection report: own-params column, score basis, own-OOS handoff and per-fold audit target (typed mutation of the canonical fixture)", async () => {
+    const body = fixture("research-report.wfo-retained.valid.json");
+    const core = body.frozen_core as any;
+    core.folds.params_handoff.scope = "PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS";
+    core.folds.rows.forEach((row: any) => { row.score_basis = "INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS"; });
+    core.final_audit.audit_target_kind = "PER_FOLD_PARAMETER_SELECTIONS";
+    server({ detail: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await screen.findAllByText(/per-fold verdict/i);
+    await act(async () => {});
+    const table = panel("folds").querySelector("table")!;
+    expect(table.getAttribute("data-fold-columns")).toBe("8");
+    expect([...table.querySelectorAll("th")].map((th) => th.textContent)).toContain("own params");
+    expect(table.querySelector("tr[data-fold]")?.getAttribute("data-score-basis")).toBe("INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS");
+    const rule = panel("folds").querySelector("[data-verdict-rule]")!;
+    expect(rule.getAttribute("data-params-handoff")).toBe("PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS");
+    expect(rule.textContent).toContain("each fold's own selection applies to its own OOS");
+    expect(rule.textContent).not.toContain("one global parameter set");
+    expect(rule.textContent).toContain("IS = inner-validation mean · OOS = outer fold");
+    const audit = panel("final-audit");
+    expect(audit.querySelector("[data-audit-target]")?.getAttribute("data-audit-target")).toBe("PER_FOLD_PARAMETER_SELECTIONS");
+    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toContain("= own selection");
+    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).not.toContain("θ*");
+  });
+
   it("X2-D09 PARQUET and ARCHIVE stay disabled with the server's real reasons", async () => {
     const body = fixture("research-report.wfo-retained.valid.json");
     server({ detail: [{ status: 200, body }] });

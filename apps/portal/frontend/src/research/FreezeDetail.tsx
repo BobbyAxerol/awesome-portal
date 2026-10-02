@@ -63,6 +63,7 @@ import { reasonCodeSentence } from "./researchRefusal";
 import { claimToken, foldLabel, formatMetric, formatUtc, shortDigest, shortId } from "./researchFormat";
 import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 import { ChildAuditCompanionPanel } from "./ChildAuditCompanionPanel";
+import { FoldSelectionPanel } from "./FoldSelectionPanel";
 import { OrchestrationClocks } from "./OrchestrationClocks";
 import {
   protocolLabel,
@@ -1548,6 +1549,7 @@ function RetainedFreezeBody({
   return (
     <div className="flex flex-col gap-3" data-lane="retained">
       <RetainedOrdering identity={known} ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
+      <FoldSelectionPanel ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
       {/* The full source lifecycle audit (read on request) rides with the fold ordering that names each fold's child. */}
       {(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ? <ChildAuditCompanionPanel runId={runId} workspaceId={workspaceId} /> : null}
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">

@@ -59,6 +59,19 @@ export interface LiveBestObjective {
   /** The fold the trial named, or null for a global-study trial. */
   fold: number | null;
   value: string | null;
+  /** `PER_FOLD_STUDY` events: the native study the trial belongs to, exactly as served. */
+  studyId?: string;
+}
+
+/**
+ * The native identity a `PER_FOLD_STUDY` trial event published. `ordinal` is the cumulative display ordinal
+ * (`payload.trial`), never a native trial id; `studyId` and `sourceTrialId` are the source's, each absent when
+ * the event did not carry it.
+ */
+export interface FoldTrialIdentity {
+  studyId?: string;
+  sourceTrialId?: string;
+  ordinal: number;
 }
 
 /** How the screen is currently being fed. */
@@ -207,6 +220,8 @@ export interface RunProgressController {
 
   /** The latest trial each fold published, from typed trial events and console lines. */
   foldTrials: Readonly<Record<number, number>>;
+  /** Per-fold-study identity (`study_id`, `source_trial_id`) from typed trial events; empty for global and fixed runs. */
+  foldTrialIds: Readonly<Record<number, FoldTrialIdentity>>;
 
   transport: Transport;
   /** The fold the reader pinned, or the latest one seen if they have not. */
@@ -239,6 +254,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   const [pinnedFold, setPinnedFold] = useState<number | null>(() =>
     typeof window === "undefined" ? null : foldFromHash(window.location.hash),
   );
+  const [eventTrialIds, setEventTrialIds] = useState<Readonly<Record<number, FoldTrialIdentity>>>({});
   const [eventTrials, setEventTrials] = useState<Readonly<Record<number, number>>>({});
   /* The earliest `after_seq` this view has asked the console for. */
   const [oldestAfter, setOldestAfter] = useState<number | null>(null);
@@ -364,15 +380,33 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
         const { fold, trial } = event.payload;
         /* An event that omits `best_objective` says nothing; a served null is kept as null. */
         if (event.payload.best_objective !== undefined) {
-          const best: LiveBestObjective = { fold: fold ?? null, value: event.payload.best_objective };
+          const best: LiveBestObjective = {
+            fold: fold ?? null,
+            value: event.payload.best_objective,
+            ...(event.payload.study_id !== undefined ? { studyId: event.payload.study_id } : {}),
+          };
           setBestObjective((previous) =>
-            previous !== null && previous.fold === best.fold && previous.value === best.value ? previous : best,
+            previous !== null && previous.fold === best.fold && previous.value === best.value && previous.studyId === best.studyId ? previous : best,
           );
         }
         /* Same rule for the rate: an omitted field says nothing; a served null is kept as null. */
         if (event.payload.rate_trials_per_s !== undefined) setLiveRate(event.payload.rate_trials_per_s);
         if (fold !== undefined) {
           setEventTrials((previous) => (previous[fold] === trial ? previous : { ...previous, [fold]: trial }));
+          /* A per-fold study event: keep the native identity beside the ordinal; the ordinal alone is never a trial id. */
+          if (event.payload.study === "PER_FOLD_STUDY") {
+            const identity: FoldTrialIdentity = {
+              ordinal: trial,
+              ...(event.payload.study_id !== undefined ? { studyId: event.payload.study_id } : {}),
+              ...(event.payload.source_trial_id !== undefined ? { sourceTrialId: event.payload.source_trial_id } : {}),
+            };
+            setEventTrialIds((previous) => {
+              const last = previous[fold];
+              return last !== undefined && last.ordinal === identity.ordinal && last.studyId === identity.studyId && last.sourceTrialId === identity.sourceTrialId
+                ? previous
+                : { ...previous, [fold]: identity };
+            });
+          }
         }
       }
 
@@ -729,6 +763,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     loadOlder,
     canLoadOlder,
     foldTrials,
+    foldTrialIds: eventTrialIds,
     transport,
     foldCursor,
     pinFold,

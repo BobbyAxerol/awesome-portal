@@ -185,7 +185,7 @@ export function FinalAuditBlock({ audit }: { audit: FinalAudit }) {
         {audit.kind === "NOT_PUBLISHED" && audit.reason_code ? <span className="rr-reason"> · {audit.reason_code}</span> : null}
       </p>
       {audit.kind !== "NOT_PUBLISHED" ? (
-        <p className="rr-note" data-optimizer-reinvoked={String(audit.optimizer_reinvoked)}>
+        <p className="rr-note" data-optimizer-reinvoked={String(audit.optimizer_reinvoked)} data-audit-target={audit.audit_target_kind ?? undefined}>
           <strong title={[audit.optimizer_basis, audit.audit_target_kind ? `target ${audit.audit_target_kind}` : null].filter(Boolean).join(" · ") || undefined}>
             {audit.optimizer_reinvoked === null ? "optimizer re-run not determined" : audit.optimizer_reinvoked ? "optimizer re-run" : "optimizer not re-run"}
           </strong>
@@ -196,10 +196,12 @@ export function FinalAuditBlock({ audit }: { audit: FinalAudit }) {
           {(() => {
             /* QA S09: nine identical "child #n abc = theta*" entries are one sentence. */
             const first = audit.folds[0]!;
-            const same = audit.folds.every((fold) => fold.state === "MATCH" && fold.candidate_id === first.candidate_id);
+            /* B11 S09: PER_FOLD_PARAMETER_SELECTIONS audits each fold against its own selection, not one theta*. */
+            const ownTargets = audit.audit_target_kind === "PER_FOLD_PARAMETER_SELECTIONS";
+            const same = !ownTargets && audit.folds.every((fold) => fold.state === "MATCH" && fold.candidate_id === first.candidate_id);
             if (same && first.candidate_id) return `all ${audit.folds.length} folds ran the frozen candidate ${first.candidate_id.slice(0, 8)}`;
             return audit.folds
-              .map((fold) => `${foldLabel(fold.fold_id)}: ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? "= θ*" : fold.state.toLowerCase().replace(/_/g, " ")}`)
+              .map((fold) => `${foldLabel(fold.fold_id)}: ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? (ownTargets ? "= own selection" : "= θ*") : fold.state.toLowerCase().replace(/_/g, " ")}`)
               .join(" · ");
           })()}
         </p>

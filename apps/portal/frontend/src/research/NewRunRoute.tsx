@@ -419,6 +419,7 @@ export function NewRunRoute() {
     protocol: run.draft.protocol,
     executionRoute: run.draft.executionRoute,
     optimizationMode: run.draft.optimizationMode,
+    optimizationSchedule: run.draft.optimizationSchedule,
     /* Two advanced profiles can be enabled (v1 and v2): the one whose requested-spec version the draft serializes as. */
     specVersion: specVersionOf(usesSpecV2(run.draft)),
   });

@@ -537,6 +537,82 @@ describe("the Atlas profile follows the requested-spec version", () => {
   });
 });
 
+/* ------------------------------------------------- causal profile (S02) */
+
+/**
+ * TYPED BUILDER, not a canonical fixture: no repo fixture serves the causal profile yet. The row is the
+ * canonical v2 profile with exactly the fields `PortalAdmission.profiles[]` in
+ * `packages/contracts/generated/research-foundation.d.ts` adds for it (`optimization_schedule`,
+ * `inner_validation`, `trial_scope`, `max_total_trials`, `inner_constraints`); values follow the B8 evidence
+ * (3 trials per study, 48 overall, 2-16 inner folds).
+ */
+type PortalProfile = import("../../../../../packages/contracts/generated/research-foundation").components["schemas"]["PortalAdmission"]["profiles"][number];
+function causalRow(change: Partial<PortalProfile> = {}): Record<string, unknown> {
+  const v2 = TEMPORAL.profiles.find((row) => row.profile_id === "p10.delta-signal-notional-wfo.v2")!;
+  return {
+    ...v2,
+    profile_id: "p10.delta-signal-notional-causal-inner.v1",
+    optimization_schedule: "per_fold_causal",
+    inner_validation: "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",
+    trial_scope: "PER_OUTER_FOLD_STUDY",
+    max_total_trials: 48,
+    inner_constraints: { fold_bounds: { min: 2, max: 16 }, frequencies: ["weekly", "monthly"], window_modes: ["expanding"], train_window_pattern: "^[1-9][0-9]{0,4}(D|h)$" },
+    ...change,
+  };
+}
+
+describe("the causal profile is its own served profile (S02)", () => {
+  const withCausal = (change: Partial<PortalProfile> = {}) => [...TEMPORAL.profiles, causalRow(change)] as never;
+  const causalDraft = () => advanced({ optimizationSchedule: "per_fold_causal" }, { windowMode: "expanding" });
+  const fit = { protocol: "advanced", executionRoute: "signal_notional", optimizationMode: "mode_1_decay", specVersion: SPEC_V2 };
+
+  it("value path: the profile is read with its schedule, caps and inner constraints; v2 alone does not select it", () => {
+    const profiles = readProfiles(withCausal())!;
+    const causal = profiles.find((profile) => profile.profileId.includes("causal"))!;
+    expect(causal).toMatchObject({ optimizationSchedule: "per_fold_causal", trialScope: "PER_OUTER_FOLD_STUDY", maxTotalTrials: 48, innerValidation: "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY" });
+    expect(causal.innerConstraints).toEqual({ folds: { min: 2, max: 16 }, frequencies: ["weekly", "monthly"], windowModes: ["expanding"], trainWindowPattern: "^[1-9][0-9]{0,4}(D|h)$" });
+    expect(selectProfile(profiles, { ...fit, optimizationSchedule: "per_fold_causal" })?.profileId).toBe("p10.delta-signal-notional-causal-inner.v1");
+    expect(selectProfile(profiles, { ...fit, optimizationSchedule: "global" })?.profileId).toBe("p10.delta-signal-notional-wfo.v2");
+    expect(selectProfile(profiles, fit)?.profileId).toBe("p10.delta-signal-notional-wfo.v2");
+  });
+
+  it("typed absence: not served means nothing changes (the global v2 profile still refuses inner folds)", () => {
+    const old = readProfiles(TEMPORAL.profiles)!;
+    expect(selectProfile(old, { ...fit, optimizationSchedule: "per_fold_causal" })?.profileId).toBe("p10.delta-signal-notional-wfo.v2");
+    expect(old.every((profile) => profile.trialScope === null && profile.maxTotalTrials === null && profile.innerConstraints === null)).toBe(true);
+  });
+
+  it("on the screen: the schedule is selectable, the inner controls show the served options, and the caps read as served", () => {
+    mount({ draft: causalDraft(), portalAdmission: withCausal() });
+    const schedule = q('[aria-label="Optimization schedule"]') as HTMLSelectElement;
+    const option = schedule.querySelector('option[value="per_fold_causal"]') as HTMLOptionElement;
+    expect(option.disabled).toBe(false);
+    expect(option.getAttribute("data-causal-profile")).toBe("p10.delta-signal-notional-causal-inner.v1");
+    expect(q('[data-inner-folds="locked"]')).toBeNull();
+    const inner = q('[data-inner-folds="causal"]')!;
+    expect(inner.textContent).toContain("p10.delta-signal-notional-causal-inner.v1 · inner folds 2–16 per outer fold · trials 3 per outer fold study · total ≤ 48");
+    const frequency = q('[aria-label="Inner frequency"]') as HTMLSelectElement;
+    expect([...frequency.options].map((entry) => entry.value)).toEqual(["", "weekly", "monthly"]);
+    expect([...(q('[aria-label="Inner window mode"]') as HTMLSelectElement).options].map((entry) => entry.value)).toEqual(["expanding"]);
+    expect(inner.textContent).toContain("pattern ^[1-9][0-9]{0,4}(D|h)$");
+    expect(inner.textContent).toContain("profile 2–16 per outer fold");
+  });
+
+  it("the optimization step states the per-study trials and the total cap", () => {
+    mount({ draft: causalDraft(), portalAdmission: withCausal(), initialStep: "optimization" });
+    expect(text('[data-profile-card="p10.delta-signal-notional-causal-inner.v1"]')).toContain("trials 3 per outer fold study · total ≤ 48");
+    expect((screen.getByLabelText("Optuna trials") as HTMLInputElement).closest("[data-field], div")?.textContent).toContain("total ≤ 48");
+  });
+
+  it("a disabled causal profile keeps the option refused with its served reason; global profiles are untouched", () => {
+    mount({ draft: causalDraft(), portalAdmission: withCausal({ state: "DISABLED", reason: "PROFILE_FLAG_OFF" }) });
+    const option = (q('[aria-label="Optimization schedule"]') as HTMLSelectElement).querySelector('option[value="per_fold_causal"]') as HTMLOptionElement;
+    expect(option.disabled).toBe(true);
+    expect(option.getAttribute("title")).toBe("PROFILE_FLAG_OFF · p10.delta-signal-notional-causal-inner.v1");
+    expect(q('[data-inner-folds="locked"]')!.getAttribute("data-reason-code")).toBe("PROFILE_FLAG_OFF");
+  });
+});
+
 /* ---------------------------------------------------------------- policies */
 
 describe("policies come from the server", () => {

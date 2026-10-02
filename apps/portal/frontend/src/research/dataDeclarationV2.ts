@@ -626,6 +626,54 @@ export interface ProfilePins {
   earlyStopping: "forbidden" | null;
   /** `inner_validation`: the served word while inner/per-fold selection is not admitted (`NOT_ADMITTED_GLOBAL_RETENTION_ONLY`); null when not stated. */
   innerValidation: string | null;
+  /** `optimization_schedule` as served (e.g. `per_fold_causal`); null when not stated. */
+  optimizationSchedule: string | null;
+  /** `trial_scope` as served (`PER_OUTER_FOLD_STUDY`): `trials` then count per study, not per run; null when not stated. */
+  trialScope: string | null;
+  /** `max_total_trials`: the served whole-run cap; null when not served (never derived from trials x folds). */
+  maxTotalTrials: number | null;
+  /** `inner_constraints`: what the inner folds of a causal profile must declare; null when not served. */
+  innerConstraints: {
+    folds: { min: number; max: number };
+    frequencies: readonly string[];
+    windowModes: readonly string[];
+    trainWindowPattern: string | null;
+  } | null;
+}
+
+/** The schedule whose profile is the distinct immutable causal one. */
+export const SCHEDULE_PER_FOLD_CAUSAL = "per_fold_causal";
+/** `inner_validation` of a profile that admits inner folds (the causal profile); the global ones serve `NOT_ADMITTED_GLOBAL_RETENTION_ONLY`. */
+export const INNER_VALIDATION_REQUIRED = "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY";
+
+/** Whether the served profile is the causal one: it names the schedule AND requires the nested inner validation. Never inferred from v2. */
+export function isCausalProfile(profile: ProfilePins | null): boolean {
+  return profile !== null && profile.optimizationSchedule === SCHEDULE_PER_FOLD_CAUSAL && profile.innerValidation === INNER_VALIDATION_REQUIRED;
+}
+
+/** Whether the profile refuses inner (per-fold causal) selection: it says so with a non-required `inner_validation`. */
+export function refusesInner(profile: ProfilePins | null): boolean {
+  return profile !== null && profile.innerValidation !== null && profile.innerValidation !== INNER_VALIDATION_REQUIRED;
+}
+
+/** The served profile that names the per-fold causal schedule for this declaration's protocol, route and mode; null when none was served. */
+export function causalScheduleProfile(
+  profiles: readonly ProfilePins[] | null,
+  draft: { protocol: string; executionRoute: string; optimizationMode: string },
+): ProfilePins | null {
+  return profileFamily(profiles, draft).find((profile) => profile.optimizationSchedule === SCHEDULE_PER_FOLD_CAUSAL) ?? null;
+}
+
+function readInnerConstraints(raw: unknown): ProfilePins["innerConstraints"] {
+  const row = bag(raw);
+  const folds = range(row?.fold_bounds);
+  if (row === null || folds === null) return null;
+  return {
+    folds,
+    frequencies: words(row.frequencies) ?? [],
+    windowModes: words(row.window_modes) ?? [],
+    trainWindowPattern: text(row.train_window_pattern),
+  };
 }
 
 export const SPEC_V1 = "research.requested-spec.v1";
@@ -690,6 +738,10 @@ export function readProfile(raw: unknown): ProfilePins | null {
     trialDefault: count(row.trial_default),
     earlyStopping: text(row.early_stopping_policy)?.toUpperCase() === "FORBIDDEN" ? "forbidden" : null,
     innerValidation: text(row.inner_validation),
+    optimizationSchedule: text(row.optimization_schedule),
+    trialScope: text(row.trial_scope),
+    maxTotalTrials: count(row.max_total_trials),
+    innerConstraints: readInnerConstraints(row.inner_constraints),
   };
 }
 
@@ -735,12 +787,17 @@ export function readProfiles(admission: unknown): readonly ProfilePins[] | null 
  */
 export function selectProfile(
   profiles: readonly ProfilePins[] | null,
-  draft: { protocol: string; executionRoute: string; optimizationMode: string; specVersion?: string },
+  draft: { protocol: string; executionRoute: string; optimizationMode: string; specVersion?: string; optimizationSchedule?: string },
 ): ProfilePins | null {
   if (profiles === null) return null;
-  const matches = profileFamily(profiles, draft).filter(
+  const family = profileFamily(profiles, draft).filter(
     (profile) => draft.specVersion === undefined || profile.requestedSpecVersions === null || profile.requestedSpecVersions.includes(draft.specVersion),
   );
+  /* A profile that names the draft's schedule is the one. The causal profile is never chosen for another
+     schedule (nor for none), and with no profile naming the schedule the family stands as before. */
+  const schedule = draft.optimizationSchedule ?? "";
+  const named = schedule === "" ? [] : family.filter((profile) => profile.optimizationSchedule === schedule);
+  const matches = named.length > 0 ? named : family.filter((profile) => profile.optimizationSchedule !== SCHEDULE_PER_FOLD_CAUSAL);
   return matches.length === 1 ? matches[0]! : null;
 }
 
