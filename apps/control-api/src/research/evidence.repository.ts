@@ -56,6 +56,22 @@ export interface EvidenceProjectionWrite {
 }
 
 export interface EvidenceHubRow {
+  /** Private same-snapshot proof; never infer readiness from enrichment alone. */
+  retainedSource?: {
+    runId: string;
+    sourceAdapterId: string;
+    profileId: string;
+    artifactRevision: number;
+    retainedImportDigest: string;
+    /** P05 artifact manifest, not the producer's preflight manifest. */
+    manifestDigest: string;
+    sealedArtifact: { manifestDigest: string; artifactRevision: number; state: string } | null;
+    requestedSpecDigest: string;
+    effectiveSpecDigest: string;
+    datasetBindingDigest: string;
+    lifecycleStatus: string;
+    terminalMaterialized: boolean;
+  };
   enrichedAnalysis?: ResearchEnrichedAnalysis;
   kind: "DURABLE" | "LEGACY";
   runId: string;
@@ -104,6 +120,20 @@ export interface EvidenceReadBundle {
 }
 
 interface HubQueryRow {
+  retained_run_id?: string | null;
+  retained_source_adapter_id?: string | null;
+  retained_profile_id?: string | null;
+  retained_artifact_revision?: string | number | null;
+  retained_import_digest?: string | null;
+  retained_manifest_digest?: string | null;
+  retained_artifact_manifest_digest?: string | null;
+  retained_artifact_sealed_revision?: string | number | null;
+  retained_artifact_state?: string | null;
+  retained_requested_spec_digest?: string | null;
+  retained_effective_spec_digest?: string | null;
+  retained_dataset_binding_digest?: string | null;
+  lifecycle_status?: string | null;
+  terminal_materialized?: boolean;
   as_of_utc_ms: string | number;
   run_id: string;
   run_state: string | null;
@@ -388,6 +418,22 @@ export class ResearchEvidenceRepository {
                 projection.source_evidence_digest,
                 projection.received_at,
                 producer.execution_profile_id AS display_profile_id,
+                retained.run_id AS retained_run_id,
+                retained.source_adapter_id AS retained_source_adapter_id,
+                retained.profile_id AS retained_profile_id,
+                retained.artifact_revision AS retained_artifact_revision,
+                retained.retained_import_digest,
+                retained.manifest_digest AS retained_manifest_digest,
+                sealed_artifact.manifest_digest AS retained_artifact_manifest_digest,
+                sealed_artifact.artifact_revision AS retained_artifact_sealed_revision,
+                sealed_artifact.state AS retained_artifact_state,
+                retained.requested_spec_digest AS retained_requested_spec_digest,
+                retained.effective_spec_digest AS retained_effective_spec_digest,
+                retained.dataset_binding_digest AS retained_dataset_binding_digest,
+                research.run_lifecycle_status_v1(job.state, durable_run.state, true,
+                  snapshot.snapshot->>'status', head.event_type IN ('run_completed','run_failed'),
+                  checkpoint.source_sequence IS NOT NULL) AS lifecycle_status,
+                (head.event_type = 'run_completed' AND checkpoint.source_sequence IS NOT NULL) AS terminal_materialized,
                 ${runDisplayOrdinalSql("durable_run", "producer")} AS display_ordinal
            FROM research.run_producers producer
            JOIN research.runs durable_run
@@ -404,6 +450,29 @@ export class ResearchEvidenceRepository {
              ON snapshot.workspace_id = producer.workspace_id
             AND snapshot.run_id = producer.run_id
             AND snapshot.worker_attempt_id = producer.worker_attempt_id
+           LEFT JOIN research.run_progress_events head
+             ON head.workspace_id = snapshot.workspace_id AND head.run_id = snapshot.run_id
+            AND head.worker_attempt_id = snapshot.worker_attempt_id
+            AND head.source_sequence = snapshot.source_latest_sequence
+           LEFT JOIN research.run_terminal_materializations_v1 checkpoint
+             ON checkpoint.workspace_id = head.workspace_id AND checkpoint.run_id = head.run_id
+            AND checkpoint.worker_attempt_id = head.worker_attempt_id
+            AND checkpoint.source_sequence = head.source_sequence
+           LEFT JOIN LATERAL (
+             SELECT run_id, source_adapter_id, profile_id, artifact_revision, retained_import_digest,
+                    manifest_digest, requested_spec_digest, effective_spec_digest, dataset_binding_digest
+               FROM research.current_source_seals_v1
+              WHERE workspace_id = producer.workspace_id AND run_id = producer.run_id
+              ORDER BY artifact_revision DESC LIMIT 1
+           ) retained ON true
+           LEFT JOIN LATERAL (
+             SELECT artifact_revision, manifest_digest, state
+               FROM research.artifacts
+              WHERE workspace_id = producer.workspace_id AND run_id = producer.run_id
+                AND artifact_revision = retained.artifact_revision
+                AND manifest_digest = retained.manifest_digest AND state = 'SEALED'
+              ORDER BY artifact_id ASC LIMIT 1
+           ) sealed_artifact ON true
            LEFT JOIN LATERAL (
              SELECT projection_revision, projection, readiness, source_evidence_digest, received_at
                FROM research.run_evidence_projections_v1
@@ -422,6 +491,26 @@ export class ResearchEvidenceRepository {
         const enrichedAnalysis = await readEnriched(client, scope.workspaceId, runId,
           () => new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Stored analytics supplement is incompatible.", 503));
         return {
+          ...(row.retained_run_id && row.retained_source_adapter_id && row.retained_profile_id
+            && row.retained_import_digest && row.retained_manifest_digest && row.retained_requested_spec_digest
+            && row.retained_effective_spec_digest && row.retained_dataset_binding_digest && row.lifecycle_status
+            && row.retained_artifact_revision !== null && row.retained_artifact_revision !== undefined ? {
+              retainedSource: {
+                runId: row.retained_run_id, sourceAdapterId: row.retained_source_adapter_id,
+                profileId: row.retained_profile_id,
+                artifactRevision: asSafeNonNegative(row.retained_artifact_revision, "retained revision"),
+                retainedImportDigest: row.retained_import_digest, manifestDigest: row.retained_manifest_digest,
+                sealedArtifact: row.retained_artifact_manifest_digest && row.retained_artifact_state
+                  && row.retained_artifact_sealed_revision !== null && row.retained_artifact_sealed_revision !== undefined ? {
+                    manifestDigest: row.retained_artifact_manifest_digest,
+                    artifactRevision: asSafeNonNegative(row.retained_artifact_sealed_revision, "retained artifact revision"),
+                    state: row.retained_artifact_state,
+                  } : null,
+                requestedSpecDigest: row.retained_requested_spec_digest, effectiveSpecDigest: row.retained_effective_spec_digest,
+                datasetBindingDigest: row.retained_dataset_binding_digest, lifecycleStatus: row.lifecycle_status,
+                terminalMaterialized: row.terminal_materialized === true,
+              },
+            } : {}),
           ...(enrichedAnalysis ? { enrichedAnalysis } : {}),
           kind: "DURABLE" as const,
           runId: row.run_id,

@@ -122,6 +122,7 @@ function subject(rows: CompareRunRow[], raw?: Record<string, unknown>) {
   const repository = {
     snapshot: vi.fn().mockResolvedValue({ alpha: { alpha_id: "delta-rsi-polynomial-alpha", name: "Delta-RSI Polynomial Alpha" }, runs: rows, totalAttempts: rows.length, hasMore: false, asOfUtcMs: 1_790_269_300_000 }),
     cached: vi.fn().mockResolvedValue(null),
+    pairEnriched: vi.fn().mockResolvedValue(new Map()),
     persistCache: vi.fn().mockResolvedValue(undefined),
     retainedEquity: vi.fn(async (_scope: unknown, runs: Array<{ runId: string }>) => runs.flatMap((run) => retainedPoints(run.runId))),
     pairRaw: vi.fn().mockResolvedValue({

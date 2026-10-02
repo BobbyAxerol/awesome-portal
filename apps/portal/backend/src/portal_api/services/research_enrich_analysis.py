@@ -10,6 +10,7 @@ import copy
 import hashlib
 import json
 import math
+from decimal import Decimal, localcontext
 from typing import Any
 
 from portal_api.services.research_distributions import all_time_distributions
@@ -17,6 +18,94 @@ from portal_api.services.research_evidence_metrics import decimal_text, extrema_
 from portal_api.services.research_portal_analytics import portal_analytics_v2, _fact
 
 MAX_BYTES = 65_536
+CHART_DEFINITION = "B9_ALL_TIME_DAILY_DISTRIBUTION_AND_DRAWDOWN_V1"
+RETURN_DEFINITION = "FIRST_LAST_RETAINED_OOS_EQUITY_V1"
+DISTRIBUTION_POLICY = {
+    "quantile_method": "LINEAR_TYPE_7", "probability": "0.95",
+    "risk_variable": "LOSS_FRACTION_NEGATIVE_RETURN",
+    "risk_sign": "SIGNED_LOSS_FRACTION", "tail": "LOSS_GTE_VAR_INCLUSIVE",
+    "minimum_observations": 2,
+}
+
+
+def distribution_statistics(*, daily_returns: Any, digest: str, sampled: bool) -> dict[str, Any]:
+    """Exact decimal presentation of the source daily sample, never histogram bins.
+
+    Mean/median describe returns. VaR/CVaR describe losses (-return): a
+    wholly profitable sample can therefore have negative risk values. Type-7
+    interpolation uses (n-1)*p; CVaR averages every observed loss >= VaR,
+    including threshold ties, rather than inventing fractional observations.
+    """
+    keys = ("mean", "median", "var_95", "cvar_95")
+    locator = "scoped.daily_returns:ALL_TIME_UTC_DAY"
+    if sampled:
+        return {key: _fact(None, digest, locator,
+            reason="P04_RETAINED_SAMPLED_EQUITY_HAS_NO_DAILY_RETURN_LEDGER") for key in keys}
+    values = sorted(Decimal(str(value)) for value in daily_returns.dropna().to_numpy(dtype=float))
+    if not all(value.is_finite() for value in values):
+        raise ValueError("daily return statistics require finite source returns")
+    if len(values) < 2:
+        return {key: _fact(None, digest, locator, state="NOT_APPLICABLE",
+            reason="PORTAL_DAILY_RETURN_STATISTICS_TOO_FEW_OBSERVATIONS") for key in keys}
+    with localcontext() as context:
+        context.prec = 48
+        def quantile(sample, probability):
+            position = Decimal(len(sample) - 1) * probability
+            lower = int(position)
+            return sample[lower] + (sample[min(lower + 1, len(sample) - 1)] - sample[lower]) * (position - lower)
+        losses = sorted(-value for value in values)
+        var = quantile(losses, Decimal("0.95"))
+        tail = [value for value in losses if value >= var]
+        computed = {"mean": sum(values) / Decimal(len(values)), "median": quantile(values, Decimal("0.5")),
+            "var_95": var, "cvar_95": sum(tail) / Decimal(len(tail))}
+    definitions = {"mean": "arithmetic_mean_return", "median": "return_type7_p0.5",
+        "var_95": "signed_loss_type7_p0.95", "cvar_95": "mean_signed_loss_gte_var_inclusive"}
+    return {key: _fact(value, digest, locator + ":" + definitions[key]) for key, value in computed.items()}
+
+
+def _source_windows(source_windows: dict[str, Any] | None) -> dict[str, Any]:
+    """Accept only caller-supplied, source-located half-open metadata bounds."""
+    if source_windows is not None and not isinstance(source_windows, dict):
+        raise ValueError("enrichment window metadata is incompatible")
+    result = {}
+    for kind, row in (source_windows or {}).items():
+        if kind not in {"is", "oos", "holdout"} or not isinstance(row, dict) \
+                or set(row) != {"start_ms", "end_ms", "source_locator"}:
+            raise ValueError("enrichment window metadata is incompatible")
+        start, end, locator = row["start_ms"], row["end_ms"], row["source_locator"]
+        if any(type(value) is not int or not 0 <= value <= 9_007_199_254_740_991 for value in (start, end)) \
+                or start >= end or not isinstance(locator, str) or not 1 <= len(locator) <= 256:
+            raise ValueError("enrichment window metadata requires source-located half-open UTC bounds")
+        result[kind] = {**row, "bounds_semantics": "START_INCLUSIVE_END_EXCLUSIVE"}
+    return result
+
+
+def declared_source_windows(windows: dict[str, Any] | None) -> dict[str, Any]:
+    """Convert immutable RequestedSpec bounds, not transport/display timestamps."""
+    import pandas as pd
+    if windows is None:
+        return {}
+    if not isinstance(windows, dict):
+        raise ValueError("declared windows must be an immutable object")
+    result = {}
+    for kind in ("is", "oos", "holdout"):
+        window = windows.get(kind)
+        if window is None:
+            continue
+        if not isinstance(window, dict) or not isinstance(window.get("start"), str) \
+                or not isinstance(window.get("end_exclusive"), str):
+            raise ValueError("declared window bounds are missing")
+        def utc_ms(value):
+            at = pd.Timestamp(value)
+            if at.tzinfo is None:
+                at = at.tz_localize("UTC")
+            else:
+                at = at.tz_convert("UTC")
+            return int(at.value // 1_000_000)
+        result[kind] = {"start_ms": utc_ms(window["start"]), "end_ms": utc_ms(window["end_exclusive"]),
+            "source_locator": f"P10.immutable_requested_spec.windows.{kind}"}
+    _source_windows(result)
+    return result
 
 
 def digest_rows(value: Any) -> str:
@@ -54,7 +143,8 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
                     benchmark_locator: str, source_tables: list[dict[str, Any]],
                     is_start_utc_ms: int | None = None, oos_start_utc_ms: int | None = None,
                     sampled: bool = False, source_observation_count: int | None = None,
-                    nominal_bar_ms: int | None = None, analytics: dict[str, Any] | None = None) -> dict[str, Any]:
+                    nominal_bar_ms: int | None = None, analytics: dict[str, Any] | None = None,
+                    source_windows: dict[str, Any] | None = None) -> dict[str, Any]:
     import numpy as np
     import pandas as pd
     from quantbt.core.scopes import scoped_result
@@ -82,11 +172,17 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
         base = analytics or portal_analytics_v2(result=result, mode=mode, market_close=market_close,
             benchmark_locator=benchmark_locator, is_start_utc_ms=is_start_utc_ms, oos_start_utc_ms=oos_start_utc_ms)
     tables = sorted(source_tables, key=lambda row: row["name"])
+    window_bounds = _source_windows(source_windows)
+    if "oos" in window_bounds and not (window_bounds["oos"]["start_ms"] <= int(index[0].value // 1_000_000)
+            and int(index[-1].value // 1_000_000) < window_bounds["oos"]["end_ms"]):
+        raise ValueError("source OOS bounds do not contain the retained OOS account")
     if not 1 <= len(tables) <= 8 or len({row["name"] for row in tables}) != len(tables):
         raise ValueError("enrichment source table identities are invalid")
     digest = digest_rows({"version": "research.enriched-analysis.v1", "run_id": run_id,
         "lane": mode, "sampled": sampled, "source_tables": tables, "analytics_input": base["input_digest"],
-        "source_observation_count": source_observation_count, "nominal_bar_ms": step_ms})
+        "source_observation_count": source_observation_count, "nominal_bar_ms": step_ms,
+        "chart_definition_id": CHART_DEFINITION, "return_definition_id": RETURN_DEFINITION,
+        "source_windows": window_bounds})
     metrics, behaviour = copy.deepcopy(base["metrics"]), copy.deepcopy(base["behaviour"])
     for fact in (*metrics.values(), *behaviour.values()):
         fact["input_digest"] = digest
@@ -104,6 +200,11 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
             metrics[key] = _fact(None, digest, benchmark_locator, reason="AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED")
     dd = capital / np.maximum.accumulate(capital) - 1
     episodes, open_present, longest_open = drawdown_episodes(index, capital)
+    for ordinal, episode in enumerate(episodes, 1):
+        episode["label"] = f"Drawdown {ordinal} ({'open' if episode['recovery_utc_ms'] is None else 'recovered'})"
+        episode["regime"] = {"state": "NOT_PUBLISHED", "value": None,
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_MARKET_REGIME",
+            "source_locator": "QuantBT.result.metadata:market_regime_not_published", "input_digest": digest}
     def points(values, maximum=32):
         chosen = extrema_indices(list(values), maximum_points=maximum)
         return [{"at_utc_ms": int(index[i].value // 1_000_000), "value": decimal_text(values[i])} for i in chosen]
@@ -120,6 +221,9 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
             "partial": row["partial"] or sampled or row["observation_count"] < expected})
     dist = distributions["return_distribution"]
     state = {"state": "AVAILABLE", "reason_code": None}
+    windows = {"oos": state, "is": {"state": "NOT_PUBLISHED", "reason_code": "RETAINED_NO_IN_SAMPLE_ACCOUNT_PAYLOAD"},
+        "holdout": {"state": "NOT_PUBLISHED", "reason_code": "RETAINED_NO_HOLDOUT_ACCOUNT_PAYLOAD"}}
+    windows = {kind: {**head, **window_bounds.get(kind, {})} for kind, head in windows.items()}
     fold_table = result.metadata.get("walk_forward", {}).get("fold_table") if mode == "WFO" else None
     fold_count = len(fold_table) if fold_table is not None else 1
     source_count = source_observation_count or len(index)
@@ -133,8 +237,7 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
             "fold_count": fold_count, "locator": base["scope_locator"], "benchmark_locator": benchmark_locator,
             "coverage": "SAMPLED_RETAINED_EQUITY" if sampled else "FULL_RETAINED_OOS",
             "source_observation_count": source_count},
-        "windows": {"oos": state, "is": {"state": "NOT_PUBLISHED", "reason_code": "RETAINED_NO_IN_SAMPLE_ACCOUNT_PAYLOAD"},
-            "holdout": {"state": "NOT_PUBLISHED", "reason_code": "RETAINED_NO_HOLDOUT_ACCOUNT_PAYLOAD"}},
+        "windows": windows,
         "facts": {"metrics": metrics, "behaviour": behaviour},
         "curves": {"sampling": {"source_observation_count": len(index), "emitted_point_count": len(strategy),
             "method": "EXTREMA_BUCKET_V1"}, "strategy_rebased_100": strategy,
@@ -149,6 +252,8 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
             "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_DAILY_RETURN_LEDGER" if sampled else dist["reason_code"],
             "origin": "PORTAL_DERIVED", "sampling": "UTC_DAY", "observation_count": 0 if sampled else dist["source_observation_count"],
             "bucket_basis": distributions["distribution_definition"],
+            "statistics_policy": DISTRIBUTION_POLICY.copy(),
+            **distribution_statistics(daily_returns=scoped.daily_returns, digest=digest, sampled=sampled),
             "buckets": [] if sampled else [{**row, "count": int(row["count"])} for row in dist["values"]]},
         "drawdown_episodes": {**state, "origin": "PORTAL_DERIVED", "total": len(episodes),
             "open_episode_present": open_present, "longest_open": longest_open,
@@ -157,6 +262,10 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
             "sampling": "EXTREMA_BUCKET_V1", "source_observation_count": source_count,
             "coverage": "SAMPLED_RETAINED_EQUITY" if sampled else "FULL_RETAINED_OOS",
             "return_fraction": decimal_text(capital[-1] / capital[0] - 1), "sharpe": metrics["sharpe"],
+            "return_basis": {"definition_id": RETURN_DEFINITION, "scope": "RETAINED_OOS_OBSERVATIONS",
+                "first_at_utc_ms": int(index[0].value // 1_000_000), "last_at_utc_ms": int(index[-1].value // 1_000_000),
+                "start_equity": decimal_text(capital[0]), "end_equity": decimal_text(capital[-1]),
+                "source_locator": base["scope_locator"]},
             "max_drawdown_fraction": decimal_text(min(dd)), "input_digest": digest},
         "rolling": None,
     }
@@ -166,17 +275,19 @@ def enrich_analysis(*, run_id: str, result: Any, mode: str, market_close: Any,
 
 
 def enrich_retained(*, run_id: str, observations: list[dict[str, Any]], folds: list[dict[str, Any]],
-                    nominal_bar_ms: int | None = None):
+                    nominal_bar_ms: int | None = None, source_windows: dict[str, Any] | None = None):
     from portal_api.services.research_analytics_sidecar import retained_result, derive_sidecar
     result, close = retained_result(observations, folds)
     return enrich_analysis(run_id=run_id, result=result, mode="WFO", market_close=close,
         benchmark_locator="P05.retained_OBSERVATION.bar.candle.close_or_NOT_PUBLISHED",
         nominal_bar_ms=nominal_bar_ms, analytics=derive_sidecar(observations, folds),
+        source_windows=source_windows,
         source_tables=[{"name": kind, "row_count": len(rows), "digest": digest_rows(rows)}
             for kind, rows in (("OBSERVATION", observations), ("FOLD", folds))])
 
 
-def enrich_fixed_passport(*, run_id: str, passport: dict[str, Any], nominal_bar_ms: int | None = None):
+def enrich_fixed_passport(*, run_id: str, passport: dict[str, Any], nominal_bar_ms: int | None = None,
+                          source_windows: dict[str, Any] | None = None):
     import pandas as pd
     from quantbt.core.results import BacktestResultV2
     rows = passport["equity_points"]
@@ -199,4 +310,4 @@ def enrich_fixed_passport(*, run_id: str, passport: dict[str, Any], nominal_bar_
         oos_start_utc_ms=int(index[0].value // 1_000_000), sampled=True,
         source_observation_count=passport["source"]["oos_observation_count"], nominal_bar_ms=nominal_bar_ms,
         benchmark_locator="P13.retained_sampled_equity:benchmark_NOT_PUBLISHED",
-        source_tables=tables, analytics=analytics)
+        source_tables=tables, analytics=analytics, source_windows=source_windows)

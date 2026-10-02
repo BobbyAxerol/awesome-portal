@@ -1077,8 +1077,8 @@ export const ResearchCurrentSourceTransitionsQuerySchema = ResearchCurrentSource
  * RF-05 CG-P13-09 · typed answer for a run whose admitted profile can never
  * enter the RS-02 retained lane (the P04 fixed qualification). It is a 200,
  * not a refusal: nothing is pending, so a screen can skip the lane without
- * logging an error. Pending/legacy/terminal remain 409 refusals whose
- * `details.lane_state` names the state (see `ResearchCurrentSourceLaneState`).
+ * logging an error. Pending/legacy remain 409 refusals. Terminal split reads
+ * have their own named absence below; other terminal operations still refuse.
  */
 export const ResearchCurrentSourceOperationSchema = z.enum([
   "evidence", "evidence_series", "split", "search", "freeze", "replay", "replay_transitions", "replay_child_audit",
@@ -1106,6 +1106,27 @@ export const ResearchCurrentSourceNotApplicableResponseSchema = z.object({
   }).strict(),
 }).strict();
 
+/** Terminal lifecycle is known, but no sealed execution split exists. No plan is presented as execution. */
+export const ResearchCurrentSourceSplitTerminalAbsenceResponseSchema = z.object({
+  schema_version: z.literal("research.current-source-split-terminal-absence.v1"),
+  read_authority: z.literal("PORTAL_RETAINED_CURRENT_SOURCE"),
+  run_id: ResearchCurrentSourceRunIdSchema,
+  revision: z.string().regex(/^rs02_terminal-split_[0-9a-f]{64}$/),
+  etag: z.string().regex(/^"rs02_terminal-split_[0-9a-f]{64}"$/),
+  availability: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    reason_code: z.literal("RS02_TERMINAL_SPLIT_NOT_RETAINED"),
+  }).strict(),
+  lane: z.object({
+    state: z.literal("NOT_RETAINED_TERMINAL"),
+    operation: z.literal("split"),
+    effective_status: z.enum(["FAILED", "CANCELLED"]),
+    execution_profile_id: z.string().min(1).max(191).nullable(),
+    run_adapter_contract_digest: DigestSchema.nullable(),
+    reason_code: z.literal("RS02_TERMINAL_SPLIT_NOT_RETAINED"),
+  }).strict(),
+}).strict();
+
 /** `details` of a 409 `RESEARCH_CURRENT_SOURCE_CONFLICT` refusal. */
 export const ResearchCurrentSourceLaneStateSchema = z.enum([
   "PENDING_SOURCE",
@@ -1115,6 +1136,7 @@ export const ResearchCurrentSourceLaneStateSchema = z.enum([
 ]);
 
 export type ResearchCurrentSourceNotApplicableResponse = z.infer<typeof ResearchCurrentSourceNotApplicableResponseSchema>;
+export type ResearchCurrentSourceSplitTerminalAbsenceResponse = z.infer<typeof ResearchCurrentSourceSplitTerminalAbsenceResponseSchema>;
 export type ResearchCurrentSourceOperation = z.infer<typeof ResearchCurrentSourceOperationSchema>;
 export type ResearchCurrentSourceLaneState = z.infer<typeof ResearchCurrentSourceLaneStateSchema>;
 

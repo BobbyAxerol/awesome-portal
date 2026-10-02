@@ -194,16 +194,31 @@ export interface components {
                     /** @enum {unknown} */
                     state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                    start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    source_locator?: components["schemas"]["EnrichedAnalysisLocator"];
+                    /** @constant */
+                    bounds_semantics?: "START_INCLUSIVE_END_EXCLUSIVE";
                 };
                 oos: {
                     /** @enum {unknown} */
                     state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                    start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    source_locator?: components["schemas"]["EnrichedAnalysisLocator"];
+                    /** @constant */
+                    bounds_semantics?: "START_INCLUSIVE_END_EXCLUSIVE";
                 };
                 holdout: {
                     /** @enum {unknown} */
                     state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                    start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    source_locator?: components["schemas"]["EnrichedAnalysisLocator"];
+                    /** @constant */
+                    bounds_semantics?: "START_INCLUSIVE_END_EXCLUSIVE";
                 };
             };
             facts: {
@@ -289,6 +304,24 @@ export interface components {
                     upper_inclusive: "true" | "false";
                     count: components["schemas"]["EnrichedAnalysisCount"];
                 }[];
+                statistics_policy?: {
+                    /** @constant */
+                    quantile_method: "LINEAR_TYPE_7";
+                    /** @constant */
+                    probability: "0.95";
+                    /** @constant */
+                    risk_variable: "LOSS_FRACTION_NEGATIVE_RETURN";
+                    /** @constant */
+                    risk_sign: "SIGNED_LOSS_FRACTION";
+                    /** @constant */
+                    tail: "LOSS_GTE_VAR_INCLUSIVE";
+                    /** @constant */
+                    minimum_observations: 2;
+                };
+                mean?: components["schemas"]["EnrichedAnalysisFact"];
+                median?: components["schemas"]["EnrichedAnalysisFact"];
+                var_95?: components["schemas"]["EnrichedAnalysisFact"];
+                cvar_95?: components["schemas"]["EnrichedAnalysisFact"];
             };
             drawdown_episodes: {
                 /** @enum {unknown} */
@@ -305,6 +338,16 @@ export interface components {
                     recovery_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"] | null;
                     depth_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
                     duration_seconds: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    label?: string;
+                    regime?: {
+                        /** @constant */
+                        state: "NOT_PUBLISHED";
+                        /** @constant */
+                        reason_code: "SOURCE_DID_NOT_PUBLISH_MARKET_REGIME";
+                        value: null;
+                        source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+                        input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+                    };
                 }[];
             };
             library_summary: components["schemas"]["EnrichedAnalysisLibrarySummary"];
@@ -410,6 +453,17 @@ export interface components {
             sharpe: components["schemas"]["EnrichedAnalysisFact"];
             max_drawdown_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+            return_basis?: {
+                /** @constant */
+                definition_id: "FIRST_LAST_RETAINED_OOS_EQUITY_V1";
+                /** @constant */
+                scope: "RETAINED_OOS_OBSERVATIONS";
+                first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                start_equity: components["schemas"]["EnrichedAnalysisDecimal"];
+                end_equity: components["schemas"]["EnrichedAnalysisDecimal"];
+                source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            };
         };
         EnrichedAnalysisAvailability: {
             /** @constant */
@@ -646,6 +700,34 @@ export interface components {
             at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
             value: components["schemas"]["RetainedAnalyticsV2Decimal"];
         }[];
+        /** @description Durable run ended without retained execution split. Named terminal absence, not a pending source request or a planned/observed fold projection. Nothing here grants source access or a retry action. P04/imported fixed NOT_APPLICABLE stays unchanged. */
+        SplitTerminalAbsence: {
+            /** @constant */
+            schema_version: "research.current-source-split-terminal-absence.v1";
+            /** @constant */
+            read_authority: "PORTAL_RETAINED_CURRENT_SOURCE";
+            run_id: components["schemas"]["RunId"];
+            revision: string;
+            etag: string;
+            availability: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "RS02_TERMINAL_SPLIT_NOT_RETAINED";
+            };
+            lane: {
+                /** @constant */
+                state: "NOT_RETAINED_TERMINAL";
+                /** @constant */
+                operation: "split";
+                /** @enum {unknown} */
+                effective_status: "FAILED" | "CANCELLED";
+                execution_profile_id: string | null;
+                run_adapter_contract_digest: components["schemas"]["Digest"] | null;
+                /** @constant */
+                reason_code: "RS02_TERMINAL_SPLIT_NOT_RETAINED";
+            };
+        };
         RunId: string;
         WorkspaceId: string;
         Digest: string;
@@ -1255,6 +1337,10 @@ export interface components {
             best_is: boolean;
             positions: {
                 [key: string]: number | null;
+            };
+            /** @description Exact persisted trial parameters for this source_ordinal, identical to ledger.parameters; never display-step rounded. */
+            parameters?: {
+                [key: string]: components["schemas"]["Decimal"];
             };
         };
         SurfaceBin: {
@@ -2115,14 +2201,14 @@ export interface components {
                 "application/json": components["schemas"]["EvidenceSeries"] | components["schemas"]["LaneNotApplicable"];
             };
         };
-        /** @description Observed Advanced WFO fold plan */
+        /** @description Observed sealed WFO split, fixed-profile not-applicable lane, or terminal-without-retained-split absence */
         Split: {
             headers: {
                 ETag: components["headers"]["Etag"];
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Split"] | components["schemas"]["LaneNotApplicable"];
+                "application/json": components["schemas"]["Split"] | components["schemas"]["LaneNotApplicable"] | components["schemas"]["SplitTerminalAbsence"];
             };
         };
         /** @description Bounded retained trial/candidate ledger */

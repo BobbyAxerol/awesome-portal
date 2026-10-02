@@ -244,6 +244,7 @@ describe("LW-01 preview long-WFO Search response", () => {
     source.surface.emitted_point_count = 400;
     source.surface.points = Array.from({ length: 400 }, (_, ordinal) => ({
       ...point, source_ordinal: ordinal, trial_id: String(ordinal),
+      parameters: { ...trial.parameters, rvol: "2.4000000000000004" },
     }));
     source.diagnostics.probe.objective_rows = CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS;
     source.diagnostics.probe.objective_rows_recomposed = CURRENT_SOURCE_MAXIMUM_OBJECTIVE_ROWS;

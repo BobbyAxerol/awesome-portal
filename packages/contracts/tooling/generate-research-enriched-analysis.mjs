@@ -6,15 +6,28 @@ const ref = name => ({ $ref: `#/$defs/${name}` });
 const nullable = value => ({ anyOf: [value, { type: "null" }] });
 const array = (items, maxItems) => ({ type: "array", items, maxItems });
 const object = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
+const withOptional = (required, optional) => ({ ...object(required), properties: { ...required, ...optional } });
 const count = ref("Count"), ms = ref("UtcMs"), decimal = ref("Decimal"), digest = ref("Digest");
 const head = { state: { enum: ["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"] }, reason_code: nullable(ref("Reason")) };
 const derived = { ...head, origin: { const: "PORTAL_DERIVED" } };
+const windowHead = withOptional(head, { start_ms: ms, end_ms: ms, source_locator: ref("Locator"),
+  bounds_semantics: { const: "START_INCLUSIVE_END_EXCLUSIVE" } });
+windowHead.dependentRequired = Object.fromEntries(["start_ms", "end_ms", "source_locator", "bounds_semantics"]
+  .map(key => [key, ["start_ms", "end_ms", "source_locator", "bounds_semantics"].filter(other => other !== key)]));
+const statistics = { statistics_policy: object({ quantile_method: { const: "LINEAR_TYPE_7" }, probability: { const: "0.95" },
+  risk_variable: { const: "LOSS_FRACTION_NEGATIVE_RETURN" }, risk_sign: { const: "SIGNED_LOSS_FRACTION" },
+  tail: { const: "LOSS_GTE_VAR_INCLUSIVE" }, minimum_observations: { const: 2 } }),
+  mean: ref("Fact"), median: ref("Fact"), var_95: ref("Fact"), cvar_95: ref("Fact") };
 const coverage = { enum: ["FULL_RETAINED_OOS", "SAMPLED_RETAINED_EQUITY"] };
 const curve = { ...v2.$defs.Curve, maxItems: 64 };
 const defs = { ...v2.$defs, Curve: curve,
-  LibrarySummary: object({ ...head, label: { const: "all time" }, basis: { const: "ALL_TIME" }, sparkline: ref("Curve"),
+  LibrarySummary: withOptional({ ...head, label: { const: "all time" }, basis: { const: "ALL_TIME" }, sparkline: ref("Curve"),
     sampling: { const: "EXTREMA_BUCKET_V1" }, source_observation_count: count, coverage, return_fraction: nullable(decimal),
-    sharpe: ref("Fact"), max_drawdown_fraction: nullable(decimal), input_digest: digest }),
+    sharpe: ref("Fact"), max_drawdown_fraction: nullable(decimal), input_digest: digest }, {
+      return_basis: object({ definition_id: { const: "FIRST_LAST_RETAINED_OOS_EQUITY_V1" },
+        scope: { const: "RETAINED_OOS_OBSERVATIONS" }, first_at_utc_ms: ms, last_at_utc_ms: ms,
+        start_equity: decimal, end_equity: decimal, source_locator: ref("Locator") }),
+    }),
 };
 const schema = { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "research.enriched-analysis.v1", ...object({
   schema_version: { const: "research.enriched-analysis.v1" }, service: { const: "enrich_analysis" }, basis: { const: "ALL_TIME" },
@@ -22,7 +35,7 @@ const schema = { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "
   source_tables: { ...array(object({ name: { type: "string", pattern: "^[A-Z0-9_]{1,64}$" }, row_count: count, digest }), 8), minItems: 1 },
   scope: object({ window: { const: "OOS" }, first_at_utc_ms: ms, last_at_utc_ms: ms, observation_count: { type: "integer", minimum: 2, maximum: 2_000_000 },
     fold_count: { type: "integer", minimum: 1, maximum: 32 }, locator: ref("Locator"), benchmark_locator: ref("Locator"), coverage, source_observation_count: { type: "integer", minimum: 2, maximum: 2_000_000 } }),
-  windows: object({ is: object(head), oos: object(head), holdout: object(head) }),
+  windows: object({ is: windowHead, oos: windowHead, holdout: windowHead }),
   facts: object({ metrics: v2.properties.metrics, behaviour: v2.properties.behaviour }),
   curves: object({ sampling: object({ source_observation_count: count, emitted_point_count: { type: "integer", minimum: 0, maximum: 64 }, method: { const: "EXTREMA_BUCKET_V1" } }),
     strategy_rebased_100: ref("Curve"), benchmark_rebased_100: ref("Curve"), drawdown_fraction: ref("Curve") }),
@@ -31,13 +44,18 @@ const schema = { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "
     definition_id: { const: "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1" },
     values: array(object({ month_start_utc_ms: ms, return_fraction: decimal, observation_count: count, expected_observation_count: count,
       partial: { type: "boolean" }, basis: { enum: ["FIRST_OOS_CLOSE", "PREVIOUS_OBSERVED_MONTH_CLOSE"] }, base_at_utc_ms: ms, close_at_utc_ms: ms }), 120) }),
-  return_distribution: object({ ...derived, sampling: { const: "UTC_DAY" }, observation_count: count,
+  return_distribution: withOptional({ ...derived, sampling: { const: "UTC_DAY" }, observation_count: count,
     bucket_basis: { const: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1" },
-    buckets: array(object({ lower_inclusive: decimal, upper: decimal, upper_inclusive: { enum: ["true", "false"] }, count }), 12) }),
+    buckets: array(object({ lower_inclusive: decimal, upper: decimal, upper_inclusive: { enum: ["true", "false"] }, count }), 12) }, statistics),
   drawdown_episodes: object({ ...derived, total: count, open_episode_present: { type: "boolean" }, longest_open: { type: "boolean" },
-    values: array(object({ start_utc_ms: ms, trough_utc_ms: ms, recovery_utc_ms: nullable(ms), depth_fraction: decimal, duration_seconds: ms }), 10) }),
+    values: array(withOptional({ start_utc_ms: ms, trough_utc_ms: ms, recovery_utc_ms: nullable(ms), depth_fraction: decimal, duration_seconds: ms },
+      { label: { type: "string", minLength: 1, maxLength: 96 }, regime: object({ state: { const: "NOT_PUBLISHED" },
+        reason_code: { const: "SOURCE_DID_NOT_PUBLISH_MARKET_REGIME" }, value: { type: "null" },
+        source_locator: ref("Locator"), input_digest: digest }) }), 10) }),
   library_summary: ref("LibrarySummary"), rolling: { type: "null" },
 }), $defs: defs };
+schema.properties.return_distribution.dependentRequired = Object.fromEntries(Object.keys(statistics)
+  .map(key => [key, Object.keys(statistics).filter(other => other !== key)]));
 function emit(path, text) {
   const url = new URL(path, root); let old = ""; try { old = readFileSync(url, "utf8"); } catch {}
   if (old === text) return;

@@ -156,7 +156,41 @@
                   "type": "null"
                 }
               ]
+            },
+            "start_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "end_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "source_locator": {
+              "$ref": "#/$defs/Locator"
+            },
+            "bounds_semantics": {
+              "const": "START_INCLUSIVE_END_EXCLUSIVE"
             }
+          },
+          "dependentRequired": {
+            "start_ms": [
+              "end_ms",
+              "source_locator",
+              "bounds_semantics"
+            ],
+            "end_ms": [
+              "start_ms",
+              "source_locator",
+              "bounds_semantics"
+            ],
+            "source_locator": [
+              "start_ms",
+              "end_ms",
+              "bounds_semantics"
+            ],
+            "bounds_semantics": [
+              "start_ms",
+              "end_ms",
+              "source_locator"
+            ]
           }
         },
         "oos": {
@@ -183,7 +217,41 @@
                   "type": "null"
                 }
               ]
+            },
+            "start_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "end_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "source_locator": {
+              "$ref": "#/$defs/Locator"
+            },
+            "bounds_semantics": {
+              "const": "START_INCLUSIVE_END_EXCLUSIVE"
             }
+          },
+          "dependentRequired": {
+            "start_ms": [
+              "end_ms",
+              "source_locator",
+              "bounds_semantics"
+            ],
+            "end_ms": [
+              "start_ms",
+              "source_locator",
+              "bounds_semantics"
+            ],
+            "source_locator": [
+              "start_ms",
+              "end_ms",
+              "bounds_semantics"
+            ],
+            "bounds_semantics": [
+              "start_ms",
+              "end_ms",
+              "source_locator"
+            ]
           }
         },
         "holdout": {
@@ -210,7 +278,41 @@
                   "type": "null"
                 }
               ]
+            },
+            "start_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "end_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "source_locator": {
+              "$ref": "#/$defs/Locator"
+            },
+            "bounds_semantics": {
+              "const": "START_INCLUSIVE_END_EXCLUSIVE"
             }
+          },
+          "dependentRequired": {
+            "start_ms": [
+              "end_ms",
+              "source_locator",
+              "bounds_semantics"
+            ],
+            "end_ms": [
+              "start_ms",
+              "source_locator",
+              "bounds_semantics"
+            ],
+            "source_locator": [
+              "start_ms",
+              "end_ms",
+              "bounds_semantics"
+            ],
+            "bounds_semantics": [
+              "start_ms",
+              "end_ms",
+              "source_locator"
+            ]
           }
         }
       }
@@ -546,7 +648,83 @@
             }
           },
           "maxItems": 12
+        },
+        "statistics_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "quantile_method",
+            "probability",
+            "risk_variable",
+            "risk_sign",
+            "tail",
+            "minimum_observations"
+          ],
+          "properties": {
+            "quantile_method": {
+              "const": "LINEAR_TYPE_7"
+            },
+            "probability": {
+              "const": "0.95"
+            },
+            "risk_variable": {
+              "const": "LOSS_FRACTION_NEGATIVE_RETURN"
+            },
+            "risk_sign": {
+              "const": "SIGNED_LOSS_FRACTION"
+            },
+            "tail": {
+              "const": "LOSS_GTE_VAR_INCLUSIVE"
+            },
+            "minimum_observations": {
+              "const": 2
+            }
+          }
+        },
+        "mean": {
+          "$ref": "#/$defs/Fact"
+        },
+        "median": {
+          "$ref": "#/$defs/Fact"
+        },
+        "var_95": {
+          "$ref": "#/$defs/Fact"
+        },
+        "cvar_95": {
+          "$ref": "#/$defs/Fact"
         }
+      },
+      "dependentRequired": {
+        "statistics_policy": [
+          "mean",
+          "median",
+          "var_95",
+          "cvar_95"
+        ],
+        "mean": [
+          "statistics_policy",
+          "median",
+          "var_95",
+          "cvar_95"
+        ],
+        "median": [
+          "statistics_policy",
+          "mean",
+          "var_95",
+          "cvar_95"
+        ],
+        "var_95": [
+          "statistics_policy",
+          "mean",
+          "median",
+          "cvar_95"
+        ],
+        "cvar_95": [
+          "statistics_policy",
+          "mean",
+          "median",
+          "var_95"
+        ]
       }
     },
     "drawdown_episodes": {
@@ -625,6 +803,39 @@
               },
               "duration_seconds": {
                 "$ref": "#/$defs/UtcMs"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 96
+              },
+              "regime": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason_code",
+                  "value",
+                  "source_locator",
+                  "input_digest"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_DID_NOT_PUBLISH_MARKET_REGIME"
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "source_locator": {
+                    "$ref": "#/$defs/Locator"
+                  },
+                  "input_digest": {
+                    "$ref": "#/$defs/Digest"
+                  }
+                }
               }
             }
           },
@@ -1090,6 +1301,42 @@
         },
         "input_digest": {
           "$ref": "#/$defs/Digest"
+        },
+        "return_basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "definition_id",
+            "scope",
+            "first_at_utc_ms",
+            "last_at_utc_ms",
+            "start_equity",
+            "end_equity",
+            "source_locator"
+          ],
+          "properties": {
+            "definition_id": {
+              "const": "FIRST_LAST_RETAINED_OOS_EQUITY_V1"
+            },
+            "scope": {
+              "const": "RETAINED_OOS_OBSERVATIONS"
+            },
+            "first_at_utc_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "last_at_utc_ms": {
+              "$ref": "#/$defs/UtcMs"
+            },
+            "start_equity": {
+              "$ref": "#/$defs/Decimal"
+            },
+            "end_equity": {
+              "$ref": "#/$defs/Decimal"
+            },
+            "source_locator": {
+              "$ref": "#/$defs/Locator"
+            }
+          }
         }
       }
     }

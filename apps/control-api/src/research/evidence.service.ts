@@ -23,6 +23,7 @@ import {
   type ResearchEvidenceSeriesResponse,
 } from "./evidence.contract";
 import { ResearchEvidenceError } from "./evidence.error";
+import { isCurrentSourceLanePair } from "./current-source.repository";
 import {
   RESEARCH_METRIC_REGISTRY_VERSION,
   RESEARCH_PERFORMANCE_METRIC_DEFINITIONS,
@@ -673,10 +674,14 @@ export class ResearchEvidenceService {
     if (row.projection && !projection) {
       throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Stored evidence projection is incompatible.", 503);
     }
-    const hubAvailability = projection ? availability("AVAILABLE", null) : fallback;
     const requested = asRecord(row.requestedSpec);
     const data = asRecord(requested?.data);
     const progress = this.progress(row.progressSnapshot);
+    const retainedReady = !projection && this.retainedSourceReady(row, progress);
+    const hubAvailability = projection || retainedReady ? availability("AVAILABLE", null) : fallback;
+    // A retained WFO seal proves readiness of that lane, not the presence of
+    // P13 fixed-profile vectors. Their missing values stay locally unavailable.
+    const projectionAvailability = projection ? hubAvailability : fallback;
     const runIdentity = this.runIdentity(row, fallback);
     const foldNavigation = this.foldNavigation(row, progress, fallback);
     const revision = row.revision;
@@ -713,7 +718,7 @@ export class ResearchEvidenceService {
         ? sourceAbsences.benchmark as Availability
         : definition.key === "FUNDING_TOTAL"
           ? sourceAbsences.funding as Availability
-          : hubAvailability;
+          : projectionAvailability;
       return {
         key: definition.key,
         label: definition.label,
@@ -723,7 +728,7 @@ export class ResearchEvidenceService {
         origin: definition.origin,
         definition_id: definition.definitionId,
         value: metricValues[definition.key] ?? null,
-        availability: definition.origin === "NOT_PUBLISHED" ? missing : hubAvailability,
+        availability: definition.origin === "NOT_PUBLISHED" ? missing : projectionAvailability,
       };
     });
     const series = SERIES_KINDS.map((kind) => {
@@ -746,7 +751,7 @@ export class ResearchEvidenceService {
     const response = {
       schema_version: "research.evidence-hub.v1",
       ...(row.enrichedAnalysis ? { enriched_analysis: row.enrichedAnalysis } : {}),
-      enriched_analysis_availability: enrichedAvailability(row.enrichedAnalysis, !!projection),
+      enriched_analysis_availability: enrichedAvailability(row.enrichedAnalysis, !!projection || retainedReady),
       ...(projection?.summary_analytics ? { summary_analytics: projection.summary_analytics } : {}),
       ...(projection?.summary_analytics_v2 ? { summary_analytics_v2: projection.summary_analytics_v2 } : {}),
       read_authority: "PORTAL_PERSISTED_RESEARCH",
@@ -758,7 +763,7 @@ export class ResearchEvidenceService {
       // revision alone covers those fields.
       etag: null,
       availability: hubAvailability,
-      readiness: projection ? row.readiness : "NOT_READY",
+      readiness: projection ? row.readiness : retainedReady ? "PARTIAL" : "NOT_READY",
       as_of_utc_ms: row.asOfUtcMs,
       metric_registry_version: metricRegistryVersion,
       core: {
@@ -1095,6 +1100,32 @@ export class ResearchEvidenceService {
       );
     }
     return notPublished("P13_SOURCE_EVIDENCE_NOT_PUBLISHED");
+  }
+
+  /** Private same-transaction seal + producer + terminal checkpoint proof; never analytics-as-readiness. */
+  private retainedSourceReady(row: EvidenceHubRow, progress: ResearchProgressSnapshot | null): boolean {
+    const retained = row.retainedSource;
+    const digest = /^[0-9a-f]{64}$/;
+    return row.kind === "DURABLE" && retained !== undefined
+      && retained.runId === row.runId
+      && isCurrentSourceLanePair(retained.sourceAdapterId, retained.profileId)
+      && Number.isSafeInteger(retained.artifactRevision) && retained.artifactRevision > 0
+      && digest.test(retained.retainedImportDigest)
+      // RS02 seals name the P05 artifact manifest; P10's manifest names the
+      // preflight dataset/spec. Verify each domain against its own authority.
+      && digest.test(retained.manifestDigest)
+      && retained.sealedArtifact?.state === "SEALED"
+      && retained.sealedArtifact.artifactRevision === retained.artifactRevision
+      && retained.sealedArtifact.manifestDigest === retained.manifestDigest
+      && retained.lifecycleStatus === "COMPLETED" && retained.terminalMaterialized === true
+      && row.runState === "READY" && row.jobState === "SUCCEEDED"
+      && progress?.run_id === row.runId && progress.status === "COMPLETED"
+      && progress.readiness.mandatory === "SEALED" && progress.source.coverage === "ACTUAL_HOOKS"
+      && [
+        [retained.requestedSpecDigest, row.requestedSpecDigest],
+        [retained.effectiveSpecDigest, row.effectiveSpecDigest],
+        [retained.datasetBindingDigest, row.datasetBindingDigest],
+      ].every(([source, producer]) => typeof source === "string" && digest.test(source) && source === producer);
   }
 
   private progress(value: unknown): ResearchProgressSnapshot | null {

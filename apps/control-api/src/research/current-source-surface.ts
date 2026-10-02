@@ -22,6 +22,7 @@
 import { z } from "zod";
 
 import { BoundWarningSchema, positionPercent } from "./bound-warning";
+import { CurrentSourceParameterMapSchema } from "./current-source.payload";
 import {
   DEFAULT_PARAMETER_BINDING_REGISTRY,
   declaredParameterRows,
@@ -109,6 +110,8 @@ const SurfacePointSchema = z.object({
   best_so_far: Decimal.nullable(),
   selected: z.boolean(),
   best_is: z.boolean(),
+  /** Exact persisted trial map for this source ordinal; optional for old responses. */
+  parameters: CurrentSourceParameterMapSchema.optional(),
   /** Placement of each declared parameter inside its declared range; null when not placeable. */
   positions: z.record(Name, Percent.nullable()),
 }).strict();
@@ -540,6 +543,9 @@ export function searchSurface(input: {
         best_so_far: bestText,
         selected: trial.trialId === input.selectedTrialId,
         best_is: trial.trialId === input.bestIsTrialId,
+        // Carry the same raw map as the retained ledger, including binary64
+        // decimal text. Display-step rounding would change its canonical hash.
+        parameters: { ...trial.parameters },
         positions,
       },
     };

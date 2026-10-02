@@ -676,3 +676,61 @@ Gộp §14–§18. Cột **Trạng thái**: OPEN = Codex làm; ANSWERED = đã c
 | FE-01 | Kiểm S02 estimate ba cửa sổ bằng receipt A-03 trên preview | — | Claude | FE |
 | FE-02 | S02 split + NewRun timeline: readout hover/focus | — | Claude | FE (đang làm) |
 | FE-03 | Visual lane: Bobby duyệt từng ô baseline (không `--update` tự động) | đóng F5 | Claude + Bobby | FE (đang chạy) |
+
+## 20. Bobby-approved six-group repair — 2026-10-02
+
+Approval source: Bobby's six-group attachment, read in full; base `267b8934`.
+Status: **IN_PROGRESS**, not six-group acceptance or P23/P24 closeout.
+Codex works in `codex/be-gaps`; Claude's staged frontend changes remain separate
+and untouched. Bobby requested parallel sub-agents; each owns disjoint backend
+paths. The root owns queue/Unified, integration and final generated artifacts.
+
+| Group | Required delivery | Evidence needed before closing |
+| --- | --- | --- |
+| 1 — cross-screen correctness | Diagnose exact failing S13 pairs; source-aware metrics across Library/Hub/Report/Lineage/Compare, explicit return bases and no AVAILABLE/null | Exact pair IDs, both orders, same-key refusal/overlap guards; numerical and scope parity, real GET receipt |
+| 2 — readiness/progress/split | Canonical retained readiness; declared versus observed topology; terminal split and journal failure visibility | READY/FAILED/CANCELLED real reads; no invented wall-clock segment, observed fold or certificate |
+| 3 — analytics/history | Maximum verified fixed/WFO facts and immutable historical supplements, complete versus sampled disclosure | Source-bound raw-input oracle and API parity; original seal/frozen Report hashes unchanged |
+| 4 — search/freeze/replay/RC | Bound surface params, truthful clocks/paging, fixed replay inputs and sealed-draft action/write consistency | Pagination/source identity parity; seal→PATCH refusal and exact retry; no digest rounding or synthetic fills |
+| 5 — B9 charts | Shared all-time histogram statistics, descriptive drawdown, window bounds, timestamped sparkline and Compare annotations | Quantile/tail/window oracles, strict generated contract parity, typed absence for incomplete inputs |
+| 6 — HMD/profile | Refused-window remediation, verified earliest start, source-specific calendar/profile qualification and actual source instrument facts | Contiguous-index boundaries, independent reader oracle, real compatible profile receipt; unsupported facts remain typed |
+
+Known semantics are preserved: source trial ID and display ordinal differ by
+one; stage progress is not trial completion. Global v2 and exposure/self-audit
+are already delivered and must not be reimplemented. Rolling detail charts
+remain excluded by the all-time decision. Existing 081/082/083 companions,
+source seals and frozen Report cores are immutable; additional analytics
+requires an append-only, explicitly source-bound revision, not an UPDATE.
+
+Tests are focused during implementation, with a combined required hook for
+each coherent integrated slice. Real receipts cover changed product paths;
+unaffected evidence is reused only with explicit dependency/hash scope.
+No frontend edits, remote push, shared-preview restart or production action.
+Implementation below will record exact changes and tests, not intent as PASS.
+
+### Six-group delivery checkpoint — actual API, not full closeout
+
+Integrated backend/generated types deliver Compare alignment/scalar parity,
+retained readiness, return bases, progress/fold truth, terminal split, surface
+params, RC action consistency, append-only B9 charts and HMD remediation.
+Independent sub-agent review fixed manifest-domain confusion and historical
+Compare/UTC/source-locator defects. No frontend paths were edited.
+
+Owned HMD pair R-WFO-198/R-WFO-197: both orders 200, 261/186 ms, same correlation;
+Hub AVAILABLE/PARTIAL. Two immutable chart rows: operator dry/apply/retry,
+Library/Hub/Report parity and independent daily oracle PASS. Original seal,
+B6 and frozen Report unchanged. Initial Control gate 1,549 PASS / 1 opt-in SKIP;
+final mandatory commit hook includes the late fixes: **1,570 PASS / 1 opt-in
+SKIP**, contracts **223/223**, generation/snapshot/build PASS. Private hook log:
+`/home/bobby/.local/state/portal-research-p23/20260927/runtime/b8-b9-commit-hook.log`.
+
+**Still open:** separately scoped source-time IS facts, exact shared-preview
+pairs/browser mapping, new fixed-child budget/benchmark receipt, RC/terminal
+runtime receipts, metadata/refusal oracle and genuine VN calendar/instrument/
+daily profile qualification. Rolling is intentionally excluded. Earlier source
+gaps and P23/P24 gates remain; partial is not relabeled AVAILABLE.
+
+Claude must consume the generated fields on rich panels and discriminate the
+terminal Split union before claiming browser receipt. [Exact handoff, remaining
+scope and evidence](./evidence/P13/B8_B9_SIX_GROUP_REPAIR_2026-10-02.md).
+Owned :8096 stopped, 0 ACTIVE test sessions, 21 test users remain disabled;
+volumes/backups retained. No push or shared/production action.

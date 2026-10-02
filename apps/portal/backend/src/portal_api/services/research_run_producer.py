@@ -426,6 +426,13 @@ class ResearchRunProducerExecutor:
         holdout_end = _utc_timestamp(holdout_window.get("end_exclusive"), label="holdout end")
         if is_start >= oos_start or oos_start >= oos_end or oos_end != holdout_start or holdout_start >= holdout_end:
             raise ResearchRunProducerError("P10 three-window chronology is invalid")
+        from portal_api.services.research_enrich_analysis import declared_source_windows
+        # Reuse the immutable declaration, normalized by the same UTC parser
+        # as the tape. Bounds disclose no holdout rows or evaluated account.
+        source_windows = declared_source_windows({kind: {
+            edge: _utc_timestamp(windows[kind].get(edge), label=f"{kind} {edge}").isoformat()
+            for edge in ("start", "end_exclusive")
+        } for kind in ("is", "oos", "holdout")})
 
         job_directory = self.market_root / request.job_id / request.worker_attempt_id
         tape_path = job_directory / "is_oos_only.parquet"
@@ -487,6 +494,7 @@ class ResearchRunProducerExecutor:
                     artifact_root=artifact_root,
                     oos_start_utc_ms=int(oos_start.value // 1_000_000),
                     is_start_utc_ms=int(is_start.value // 1_000_000),
+                    source_windows=source_windows,
                 )
             else:
                 assert research.p04_parameters is not None
@@ -500,6 +508,7 @@ class ResearchRunProducerExecutor:
                     p04_parameters=dict(research.p04_parameters),
                     oos_start_utc_ms=int(oos_start.value // 1_000_000),
                     is_start_utc_ms=int(is_start.value // 1_000_000),
+                    source_windows=source_windows,
                 )
             # P10 has one server-installed fixed qualification, not a generic
             # optimizer.  S2 therefore records preparation of that exact one

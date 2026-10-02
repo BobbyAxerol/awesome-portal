@@ -1,9 +1,13 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchCompareResponseSchema } from "../src/research/compare.contract";
 import { ResearchCompareService } from "../src/research/compare.service";
 import type { CompareRunRow } from "../src/research/compare.repository";
 import { p14SplitSourceFixture } from "./research-split.fixture";
+import { SEALED_PERFORMANCE_DEFINITIONS } from "../src/research/source-aware-metric-resolver";
+import { sha256ResearchJson } from "../src/research/preflight.service";
 
 const scope = { workspaceId: "ws-p20", actorUserId: "usr-p20" };
 const digest = (character: string) => character.repeat(64);
@@ -121,6 +125,7 @@ function subject(value = snapshot()) {
   const repository = {
     snapshot: vi.fn().mockResolvedValue(value),
     cached: vi.fn().mockResolvedValue(null),
+    pairEnriched: vi.fn().mockResolvedValue(new Map()),
     persistCache: vi.fn().mockResolvedValue(undefined),
     retainedEquity: vi.fn().mockResolvedValue([]),
     pairRaw: vi.fn().mockResolvedValue(raw()),
@@ -139,6 +144,115 @@ function subject(value = snapshot()) {
 }
 
 describe("P20 bounded Compare persisted truth", () => {
+  it.each(["attempts", "pair", "markets"] as const)("historical companion-only scalars retain provenance in %s mode", async (mode) => {
+    const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+    const block = JSON.parse(readFileSync(resolve(root, "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
+    // A typed fixed-lane unit companion; no runtime source or canonical fixture is rewritten.
+    block.lane = "FIXED";
+    const historical = row(block.run_id, { enriched_analysis: block, enriched_digest: sha256ResearchJson(block) });
+    const rightId = "rrun_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const right = row(rightId, mode === "markets" ? { requested_spec: requested(rightId, {
+      data: { dataset_id: "hmd", symbol: "ETHUSDT", timeframe: "1h" },
+    }) } : {});
+    const { service, repository } = subject(snapshot([historical, right]));
+    const response = await service.detail(scope, "alpha-p20", { mode, run_ids: mode === "pair" ? [historical.run_id!, right.run_id!] : [] });
+    const found = response.result.mode === "attempts" ? response.result.attempts.find((run) => run.run_id === block.run_id)
+      : response.result.mode === "markets" ? response.result.cards.find((card) => card.run.run_id === block.run_id)?.run
+      : response.result.pair?.runs.find((run) => run.run_id === block.run_id);
+    expect(found?.original_metrics.find((metric) => metric.key === "OOS_SHARPE")).toMatchObject({
+      value: block.facts.metrics.sharpe.value, origin: block.facts.metrics.sharpe.origin,
+      source: "ENRICHED_ANALYSIS", source_locator: block.facts.metrics.sharpe.source_locator,
+      input_digest: block.input_digest, scope: "OOS", definition_id: SEALED_PERFORMANCE_DEFINITIONS.portalSharpe,
+      availability: { state: "AVAILABLE", reason_code: null },
+    });
+    expect(found?.original_metrics.find((metric) => metric.key === "DECAY")).toMatchObject({
+      value: null, source: "ENRICHED_ANALYSIS", origin: "PORTAL_DERIVED", availability: {
+        state: "NOT_APPLICABLE", reason_code: block.facts.metrics.sharpe_decay.reason_code,
+      },
+    });
+    expect(repository.pairEnriched).toHaveBeenCalledTimes(mode === "pair" ? 1 : 0);
+    expect(repository.snapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it("historical companion verification rejects tampering/run mismatch before cache use", async () => {
+    const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+    for (const mismatch of ["digest", "run"] as const) {
+      const block = JSON.parse(readFileSync(resolve(root, "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
+      const { service, repository } = subject(snapshot([row(mismatch === "run" ? "rrun_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" : block.run_id, {
+        enriched_analysis: block, enriched_digest: mismatch === "digest" ? "0".repeat(64) : sha256ResearchJson(block),
+      })]));
+      await expect(service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] }))
+        .rejects.toMatchObject({ code: "RESEARCH_COMPARE_UNAVAILABLE", status: 503 });
+      expect(repository.cached).not.toHaveBeenCalled();
+    }
+  });
+
+  it("an amended companion moves scalar cache binding without changing the immutable engine receipt", async () => {
+    const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+    const original = JSON.parse(readFileSync(resolve(root, "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
+    const amendment = structuredClone(original);
+    amendment.facts.metrics.sharpe.value = "3.650968955554157";
+    amendment.library_summary.sharpe.value = amendment.facts.metrics.sharpe.value;
+    const { service, repository } = subject(snapshot([row(original.run_id, { enriched_analysis: original, enriched_digest: sha256ResearchJson(original) })]));
+    await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    repository.snapshot.mockResolvedValueOnce(snapshot([row(amendment.run_id, { enriched_analysis: amendment, enriched_digest: sha256ResearchJson(amendment) })]));
+    await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    const cachedCalls = repository.cached.mock.calls as unknown[][];
+    expect(cachedCalls[0]![4]).not.toBe(cachedCalls[1]![4]);
+  });
+
+  it("REQ-B: P04 sealed v2 supplies exact absent headline facts, preserving original engine priority", async () => {
+    const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+    const block = JSON.parse(readFileSync(resolve(root, "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const before = JSON.stringify(block);
+    const embedded = (runId: string, engine = false) => {
+      const source = row(runId);
+      return row(runId, { evidence_projection: {
+        ...source.evidence_projection as Record<string, unknown>, summary_analytics_v2: block,
+        oos_analytics: engine
+          ? { state: "AVAILABLE", metrics: { sharpe: { state: "AVAILABLE", reason_code: null, value: "0.744", locator: "full_report.sharpe" } } }
+          : { state: "NOT_PUBLISHED", reason_code: "P13_ENGINE_RESULT_NOT_AVAILABLE_TO_ANALYTICS", metrics: {} },
+      } });
+    };
+    const { service } = subject(snapshot([embedded("run-p20-left"), embedded("run-p20-right", true)]));
+    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    if (response.result.mode !== "attempts") throw new Error("test guard");
+    const left = response.result.attempts.find((run) => run.run_id === "run-p20-left")!;
+    const right = response.result.attempts.find((run) => run.run_id === "run-p20-right")!;
+    for (const [key, field, definition] of [
+      ["OOS_SHARPE", "sharpe", SEALED_PERFORMANCE_DEFINITIONS.engineSharpe],
+      ["DECAY", "sharpe_decay", SEALED_PERFORMANCE_DEFINITIONS.portalDecay],
+    ] as const) {
+      const fact = block.metrics[field];
+      expect(left.original_metrics.find((metric) => metric.key === key)).toMatchObject({
+        value: fact.value, scope: "OOS", definition_id: definition, source: "SUMMARY_ANALYTICS_V2",
+        origin: fact.origin, source_locator: fact.source_locator, input_digest: fact.input_digest,
+        availability: { state: "AVAILABLE", reason_code: null },
+      });
+    }
+    expect(right.original_metrics.find((metric) => metric.key === "OOS_SHARPE")).toMatchObject({
+      value: "0.744", definition_id: "research.compare.metric.v1.oos-sharpe",
+    });
+    expect(right.original_metrics.find((metric) => metric.key === "OOS_SHARPE")!.origin).toBeUndefined();
+    expect(JSON.stringify(block)).toBe(before);
+  });
+
+  it("REQ-B: invalid v2 digest consistency leaves source gaps unavailable; no sampled reconstruction", async () => {
+    const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+    const block = JSON.parse(readFileSync(resolve(root, "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    block.metrics.sharpe.input_digest = "0".repeat(64);
+    const source = row("run-p20-left");
+    const { service } = subject(snapshot([row("run-p20-left", { evidence_projection: {
+      ...source.evidence_projection as Record<string, unknown>, summary_analytics_v2: block,
+    } })]));
+    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    if (response.result.mode !== "attempts") throw new Error("test guard");
+    expect(response.result.attempts[0]!.original_metrics.find((metric) => metric.key === "OOS_SHARPE"))
+      .toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED" } });
+    expect(response.result.attempts[0]!.original_metrics.find((metric) => metric.key === "DECAY"))
+      .toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED" } });
+  });
+
   it("CG-FG-S13-02 publishes only the persisted ISSUED methodology grade", async () => {
     const certified = row("run-p20-left", { progress_snapshot: {
       claim: { state: "ISSUED", text: "Claim issued",

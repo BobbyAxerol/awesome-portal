@@ -38,6 +38,11 @@ const metadata = obj({ schema_version: { const: "research.dataset-bar-metadata.v
   symbol, timeframe: tf, start_utc_ms: ms, end_exclusive_utc_ms: ms, scope: { const: "INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION" },
   availability: { enum: ["AVAILABLE", "NOT_PUBLISHED"] }, reason_code: nullable(reason), bars: nullable(count), first_bar_utc_ms: nullable(ms), last_bar_utc_ms: nullable(ms),
   warmup_bars_required: { ...count, maximum: 100_000 }, warmup_bars_available_before_start: nullable({ ...count, maximum: 100_000 }) });
+// Optional additive disclosures preserve compatibility with older responses.
+Object.assign(metadata.properties, {
+  verified_range: nullable(obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,basis:{const:"INDEXED_TARGET_BAR_RANGE_V1"}})),
+  earliest_start_with_warmup_utc_ms: nullable(ms),
+});
 const page = obj({ schema_version: { const: "research.dataset-symbols.v1" }, dataset_id: id, catalog_revision: digest, as_of_utc_ms: nullable(ms), availability: ref("Availability"),
   items: { type: "array", items: ref("IndexedSymbol"), maxItems: 200 }, total: nullable({ ...count, maximum: 256 }), next_cursor: nullable({ type: "string", maxLength: 4096 }) });
 const catalog = obj({ schema_version: { const: "research.dataset-catalog.v2" }, catalog_revision: nullable(digest), as_of_utc_ms: nullable(ms), index_availability: ref("Availability"),

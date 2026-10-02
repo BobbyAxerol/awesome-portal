@@ -19,6 +19,7 @@ import {
   ResearchRunLibraryService,
 } from "../src/research/run-library.service";
 import { testConfig } from "./harness";
+import { SEALED_PERFORMANCE_DEFINITIONS } from "../src/research/source-aware-metric-resolver";
 
 /**
  * RF-05 / P12 service units over rows shaped from the isolated QuantBT 1.1.1
@@ -260,6 +261,61 @@ describe("RF-05 P12 Run Library service mapping", () => {
     });
   });
 
+  it("REQ-B: verified P04 v2 scalars survive a legacy oos_analytics block absence", () => {
+    const analytics = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const source = row({ display_profile_id: "p04.fixed-qualification.v1", evidence_projection: {
+      ...LIVE.projection, summary_analytics_v2: analytics,
+      oos_analytics: { state: "NOT_PUBLISHED", reason_code: "P13_ENGINE_RESULT_NOT_AVAILABLE_TO_ANALYTICS", metrics: {} },
+    } });
+    const before = JSON.stringify(source);
+    const item = new ResearchRunLibraryService({} as never, config).mapRow(source);
+    for (const [index, key, definition] of [
+      [0, "sharpe", SEALED_PERFORMANCE_DEFINITIONS.engineSharpe],
+      [1, "sharpe_decay", SEALED_PERFORMANCE_DEFINITIONS.portalDecay],
+    ] as const) {
+      const fact = analytics.metrics[key];
+      expect(item.stats[index]).toMatchObject({
+        value: fact.value, scope: "OOS", availability: { state: "AVAILABLE", reason_code: null },
+        definition_id: definition, source: "SUMMARY_ANALYTICS_V2", origin: fact.origin,
+        source_locator: fact.source_locator, input_digest: fact.input_digest,
+      });
+    }
+    expect(item.stats[2]).toMatchObject({ value: "45", scope: "CHILD_TAPE", definition_id: "research.metric.v1.trade_count" });
+    expect(JSON.stringify(source)).toBe(before);
+    const disabled = new ResearchRunLibraryService({} as never, { ...config, FEATURE_RESEARCH_EVIDENCE: "false" });
+    expect(disabled.mapRow(source).stats.every((cell) => cell.value === null)).toBe(true);
+  });
+
+  it("REQ-B: a valid original engine scalar outranks a different sealed fallback", () => {
+    const analytics = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
+    const item = new ResearchRunLibraryService({} as never, config).mapRow(row({ evidence_projection: {
+      ...LIVE.projection, summary_analytics_v2: analytics,
+      oos_analytics: { state: "AVAILABLE", reason_code: null, metrics: {
+        sharpe: { state: "AVAILABLE", reason_code: null, value: "0.7440081232022494", locator: "full_report.sharpe" },
+        sharpe_decay: { state: "NOT_PUBLISHED", reason_code: "P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT", value: null, locator: null },
+      } },
+    } }));
+    expect(item.stats[0]).toMatchObject({ value: "0.7440081232022494", definition_id: "research.metric.v3.oos_sharpe" });
+    expect(item.stats[0].origin).toBeUndefined();
+    expect(item.stats[1]).toMatchObject({ value: analytics.metrics.sharpe_decay.value, origin: "PORTAL_DERIVED" });
+  });
+
+  it("REQ-B: verified enrichment preserves Portal origin; absent decay never becomes a zero", () => {
+    const block = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-enriched-analysis.healthy.valid.json"), "utf8"));
+    const source = row({ run_id: block.run_id, enriched_analysis: block, enriched_digest: sha256ResearchJson(block) });
+    const item = new ResearchRunLibraryService({} as never, config).mapRow(source);
+    expect(item.stats[0]).toMatchObject({
+      value: block.facts.metrics.sharpe.value, origin: "PORTAL_DERIVED", source: "ENRICHED_ANALYSIS",
+      source_locator: block.facts.metrics.sharpe.source_locator, input_digest: block.input_digest,
+      definition_id: SEALED_PERFORMANCE_DEFINITIONS.portalSharpe, scope: "OOS",
+    });
+    expect(item.stats[1]).toMatchObject({ value: null, origin: "PORTAL_DERIVED", availability: {
+      state: "NOT_PUBLISHED", reason_code: block.facts.metrics.sharpe_decay.reason_code,
+    } });
+    expect(() => new ResearchRunLibraryService({} as never, config).mapRow({ ...source, enriched_digest: "0".repeat(64) }))
+      .toThrow(/Stored analytics supplement is incompatible/);
+  });
+
   it("CG-P12-06: an incompatible persisted rc shape is a typed absence, not a 503", async () => {
     const repository = {
       list: vi.fn().mockResolvedValue(page([row({
@@ -285,12 +341,69 @@ describe("RF-05 P12 Run Library service mapping", () => {
     const good = await service.sparkline(scope, "rrun_unit");
     expect(good.values.length).toBeLessThanOrEqual(24);
     expect(good.source?.display_sampling).toBe("EXTREMA_BUCKET_24_V1");
+    expect(good.points).toEqual(extremaPreservingSample(LIVE.equity_oos.payload, (point) => Number(point.equity))
+      .points.map((point) => ({ at_utc_ms: point.at_utc_ms, equity: point.equity })));
+    expect(good.points!.map((point) => point.equity)).toEqual(good.values);
     await expect(service.sparkline(scope, "rrun_unit")).rejects.toMatchObject({
       code: "RESEARCH_RUN_LIBRARY_UNAVAILABLE", status: 503,
     });
     expect(createHash("sha256").update(JSON.stringify(LIVE.equity_oos.payload.map((point) => ({
       at_utc_ms: point.at_utc_ms, drawdown_fraction: point.drawdown_fraction, equity: point.equity,
     })))).digest("hex")).toBe(LIVE.equity_oos.series_digest);
+  });
+
+  it("B9-4: P13 irregular timestamps and exact equity text follow the unchanged extrema selection", async () => {
+    const payload = Array.from({ length: 48 }, (_, index) => ({
+      at_utc_ms: 1725000000000 + index * index * 3600000,
+      equity: index === 11 ? "95.000000000000000001" : index === 37 ? "130.000000000000000002" : `${100 + index % 5}.000000000000000003`,
+      drawdown_fraction: "0",
+    }));
+    const before = JSON.stringify(payload);
+    const repository = {
+      findSparklineSource: vi.fn().mockResolvedValue(sparklineSource({
+        equity_series_payload: payload, equity_emitted_point_count: payload.length,
+        equity_series_digest: sha256ResearchJson(payload), equity_source_observation_count: payload.length,
+      })),
+    };
+    const response = await new ResearchRunLibraryService(repository as never, config).sparkline(scope, "rrun_unit");
+    const selected = extremaPreservingSample(payload, (point) => Number(point.equity)).points;
+    expect(response.values).toEqual(selected.map((point) => point.equity));
+    expect(response.points).toEqual(selected.map((point) => ({ at_utc_ms: point.at_utc_ms, equity: point.equity })));
+    expect(response.points!.length).toBeLessThanOrEqual(24);
+    expect(response.points).toContainEqual({ at_utc_ms: payload[11]!.at_utc_ms, equity: payload[11]!.equity });
+    expect(response.points).toContainEqual({ at_utc_ms: payload[37]!.at_utc_ms, equity: payload[37]!.equity });
+    expect(response.points![0]!.at_utc_ms).toBe(payload[0]!.at_utc_ms);
+    expect(response.points!.at(-1)!.at_utc_ms).toBe(payload.at(-1)!.at_utc_ms);
+    expect(JSON.stringify(payload)).toBe(before);
+  });
+
+  it("B9-4: legacy metadata and noncompleted sources publish empty timestamped points", async () => {
+    const repository = {
+      findSparklineSource: vi.fn()
+        .mockResolvedValueOnce(sparklineSource({ source_kind: "LEGACY_1_0_8_METADATA" }))
+        .mockResolvedValueOnce(sparklineSource({ effective_status: "RUNNING" })),
+    };
+    const service = new ResearchRunLibraryService(repository as never, config);
+    for (let index = 0; index < 2; index += 1) {
+      const response = await service.sparkline(scope, "rrun_unit");
+      expect(response).toMatchObject({ values: [], points: [], source: null });
+      expect(response.availability.state).not.toBe("AVAILABLE");
+    }
+  });
+
+  it("B9-4: a digest-valid source with duplicate timestamps is incompatible, not re-spaced", async () => {
+    const payload = [
+      { at_utc_ms: 1725000000000, equity: "100", drawdown_fraction: "0" },
+      { at_utc_ms: 1725000000000, equity: "99", drawdown_fraction: "-0.01" },
+    ];
+    const repository = {
+      findSparklineSource: vi.fn().mockResolvedValue(sparklineSource({
+        equity_series_payload: payload, equity_emitted_point_count: 2,
+        equity_series_digest: sha256ResearchJson(payload), equity_source_observation_count: 2,
+      })),
+    };
+    await expect(new ResearchRunLibraryService(repository as never, config).sparkline(scope, "rrun_unit"))
+      .rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_UNAVAILABLE", status: 503 });
   });
 
   it("CG-P12-08: cursors carry exact microsecond boundaries", async () => {
@@ -579,7 +692,25 @@ describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub 
       series_kind: "EQUITY_OOS", source_observation_count: 1440,
       first_at_utc_ms: 1725000000000, last_at_utc_ms: 1725003600000,
     });
+    expect(response.points).toEqual([
+      { at_utc_ms: 1725000000000, equity: "100" },
+      { at_utc_ms: 1725003600000, equity: "110" },
+    ]);
+    expect(response.points!.map((point) => point.equity)).toEqual(response.values);
     expect(repository.findRetainedSparklineValues).toHaveBeenCalledWith(scope, "rrun_unit", 1, 192);
+  });
+
+  it("B9-4: retained source without a usable series publishes empty timestamped points", async () => {
+    const repository = {
+      findSparklineSource: vi.fn().mockResolvedValue(hubless()),
+      retainedFacts: vi.fn().mockResolvedValue([retainedRow()]),
+      findRetainedSparklineValues: vi.fn().mockResolvedValue([]),
+    };
+    const response = await new ResearchRunLibraryService(repository as never, config).sparkline(scope, "rrun_unit");
+    expect(response).toMatchObject({
+      values: [], points: [], source: null,
+      availability: { state: "NOT_PUBLISHED", reason_code: "RS02_RETAINED_OBSERVATIONS_DO_NOT_FORM_A_SERIES" },
+    });
   });
 
   it("reads a retained row into the card's shape, and refuses one that is not a seal", () => {

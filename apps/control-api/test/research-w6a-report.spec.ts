@@ -168,21 +168,34 @@ function subject(options: {
   };
   const evidence = { bundle: vi.fn().mockResolvedValue({ hub: wfoHub(options.binding), series: new Map() }) };
   const unused = { detail: vi.fn().mockRejectedValue(new Error("a WFO report never reads a P04 hub")) };
+  const source = currentSource(options.importDigest, options.summaryAnalytics, options.summaryAnalyticsV2, options.sourceSeriesArtifact);
   const service = new ResearchReportService(
     repository as never, evidence as never, unused as never, unused as never, unused as never, unused as never,
-    currentSource(options.importDigest, options.summaryAnalytics, options.summaryAnalyticsV2, options.sourceSeriesArtifact),
+    source,
     {
       FEATURE_RESEARCH_REPORTS: "true", FEATURE_RESEARCH_CURRENT_SOURCE: "true",
       RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES: 512 * 1024, RESEARCH_REPORT_EXPORT_LEASE_SECONDS: 90,
     } as never,
   );
-  return { service, repository, evidence, unused };
+  return { service, repository, evidence, unused, source };
 }
 
 function v2(report: ResearchReportDetailResponse): ResearchReportFrozenCoreV2 {
   if (report.frozen_core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected a v2 core");
   return report.frozen_core;
 }
+
+it("B8 terminal split absence cannot be sealed as a completed retained Report", async () => {
+  const { service, repository, source } = subject();
+  vi.spyOn(source, "split").mockResolvedValueOnce({
+    schema_version: "research.current-source-split-terminal-absence.v1",
+    read_authority: "PORTAL_PERSISTED_CURRENT_SOURCE",
+    run_id: real.run_id,
+  } as never);
+  await expect(service.materialize(scope, real.run_id, "RS02_RETAINED_CURRENT_SOURCE"))
+    .rejects.toMatchObject({ code: "RESEARCH_REPORT_NOT_READY", status: 409 });
+  expect(repository.seal).not.toHaveBeenCalled();
+});
 
   it("LW-02 keeps failed WFO report materialization typed and retries an immutable seal", async () => {
     const { service, repository } = subject();

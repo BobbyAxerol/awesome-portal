@@ -221,6 +221,12 @@ export class ResearchReportService {
     };
     const hubBundle = await this.evidence.bundle(scope, runId, []);
     const evidenceRead = sealed(evidence);
+    // A failed/cancelled run can now answer S05 with a typed no-seal body.
+    // That is not a retained Report input; its independent failed-run Report
+    // continues to be assembled from the terminal journal above.
+    if (split.schema_version === "research.current-source-split-terminal-absence.v1") {
+      throw new ResearchReportError("RESEARCH_REPORT_NOT_READY", "Report source facts are not sealed yet.", 409);
+    }
     const parts = await this.repository.sealedArtifactParts(scope, runId, null);
     const reads = {
       hub: hubBundle.hub,

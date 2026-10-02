@@ -98,4 +98,49 @@ describe("P12 Run Library wire contract", () => {
       },
     }).success).toBe(true);
   });
+
+  it("B9-4: accepts optional source-timestamped points without changing legacy v1 documents", () => {
+    const response = {
+      schema_version: "research.run-sparkline.v1", run_id: "rrun_a", values: ["100.0000", "99.120000000000000004"],
+      availability: { state: "AVAILABLE", reason_code: null }, source_revision: "rs02r1",
+      source: {
+        lane: "PORTAL_RETAINED_CURRENT_SOURCE", series_kind: "EQUITY_OOS", value_field: "equity",
+        projection_revision: "rs02r1", series_digest: null, source_observation_count: 10,
+        source_sampling: "FULL", persisted_point_count: 10, display_sampling: "EXTREMA_BUCKET_24_V1",
+        first_at_utc_ms: 1725000000000, last_at_utc_ms: 1725086400001,
+      },
+    };
+    expect(ResearchRunLibrarySparklineResponseSchema.parse(response)).toEqual(response);
+    const timestamped = {
+      ...response, points: [
+        { at_utc_ms: 1725000000000, equity: "100.0000" },
+        { at_utc_ms: 1725086400001, equity: "99.120000000000000004" },
+      ],
+    };
+    expect(ResearchRunLibrarySparklineResponseSchema.parse(timestamped)).toEqual(timestamped);
+    for (const malformed of [
+      { ...timestamped, points: timestamped.points.slice(0, 1) },
+      { ...timestamped, points: [{ ...timestamped.points[0], equity: "100" }, timestamped.points[1]] },
+      { ...timestamped, points: [timestamped.points[0], { ...timestamped.points[1], at_utc_ms: 1725000000000 }] },
+      { ...timestamped, points: [timestamped.points[0], { ...timestamped.points[1], at_utc_ms: 1725086400000 }] },
+      { ...timestamped, source: null },
+      { ...timestamped, points: Array.from({ length: 25 }, (_, index) => ({ at_utc_ms: index, equity: "100" })) },
+      { ...timestamped, points: [{ ...timestamped.points[0], synthetic: true }, timestamped.points[1]] },
+    ]) {
+      expect(ResearchRunLibrarySparklineResponseSchema.safeParse(malformed).success).toBe(false);
+    }
+  });
+
+  it("B9-4: typed absent sparkline has empty points and values, with legacy omission still accepted", () => {
+    const response = {
+      schema_version: "research.run-sparkline.v1", run_id: "rrun_a", values: [],
+      availability: { state: "NOT_PUBLISHED", reason_code: "SOURCE_SERIES_NOT_PUBLISHED" },
+      source_revision: null, source: null,
+    };
+    expect(ResearchRunLibrarySparklineResponseSchema.parse(response)).toEqual(response);
+    expect(ResearchRunLibrarySparklineResponseSchema.parse({ ...response, points: [] })).toEqual({ ...response, points: [] });
+    expect(ResearchRunLibrarySparklineResponseSchema.safeParse({
+      ...response, points: [{ at_utc_ms: 1, equity: "100" }],
+    }).success).toBe(false);
+  });
 });

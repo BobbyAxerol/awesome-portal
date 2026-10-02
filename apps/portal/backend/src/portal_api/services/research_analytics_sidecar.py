@@ -126,10 +126,19 @@ def main() -> None:
         raise ValueError("AN-29 retained rows differ from the immutable seal")
     if enrichment:
         from portal_api.services.research_enrich_analysis import enrich_retained, enrich_fixed_passport
+        from portal_api.services.research_enrich_analysis import declared_source_windows
+        source_windows = declared_source_windows(enrichment.get("source_windows"))
+        basis = enrichment.get("source_window_basis", "FIXED_DECLARED_WINDOWS")
+        if basis == "WFO_DECLARED_OOS_SPAN":
+            if set(source_windows) != {"oos"} or passport is not None:
+                raise ValueError("WFO amendment accepts only its declared OOS span")
+            source_windows["oos"]["source_locator"] = "P10.immutable_requested_spec.walk_forward:split_mode..end_exclusive"
+        elif basis != "FIXED_DECLARED_WINDOWS":
+            raise ValueError("Enrichment source window basis is not published")
         block = enrich_fixed_passport(run_id=enrichment["run_id"], passport=passport,
-            nominal_bar_ms=enrichment.get("nominal_bar_ms")) if passport else enrich_retained(
+            nominal_bar_ms=enrichment.get("nominal_bar_ms"), source_windows=source_windows) if passport else enrich_retained(
             run_id=enrichment["run_id"], observations=observations, folds=folds,
-            nominal_bar_ms=enrichment.get("nominal_bar_ms"))
+            nominal_bar_ms=enrichment.get("nominal_bar_ms"), source_windows=source_windows)
     else:
         block = derive_sidecar(observations, folds)
     print(json.dumps(block, separators=(",", ":"), allow_nan=False))

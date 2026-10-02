@@ -61,10 +61,14 @@ export interface components {
         /** @description W6b CG-P19-05: one retained per-run value with its own source and scope. A null value is a typed absence, never a zero. */
         RunMetricFact: {
             value: components["schemas"]["ExactDecimal"] | null;
-            source: ("P13_EVIDENCE_PROJECTION" | "RS02_RETAINED_SELECTED_TRIAL") | null;
+            source: ("P13_EVIDENCE_PROJECTION" | "RS02_RETAINED_SELECTED_TRIAL" | "SUMMARY_ANALYTICS_V2" | "ENRICHED_ANALYSIS") | null;
             scope: ("OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "SELECTED_TRIAL_MEAN_ACROSS_FOLDS") | null;
             definition_id: string | null;
             availability: components["schemas"]["Availability"];
+            /** @enum {unknown} */
+            origin?: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            source_locator?: string;
+            input_digest?: string;
         };
         /** @description W6b CG-P19-05: the primary run's certificate, claim, OOS Sharpe and decay exactly as Screen 01 maps them; a Delta WFO run without a P13 projection falls back to its retained RS-02 selected trial. */
         RunFacts: {

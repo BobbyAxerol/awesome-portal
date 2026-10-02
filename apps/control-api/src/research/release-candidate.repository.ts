@@ -120,6 +120,8 @@ export interface ReleaseCandidateDraft {
   knownLimitations: string | null;
   proposedUseRestrictions: string | null;
   updatedAtUtcMs: number | null;
+  /** Actor-local lifecycle fact; never part of the source fence or frozen core. */
+  sealed?: boolean;
 }
 
 export interface ReleaseCandidateStoredPack {
@@ -231,6 +233,7 @@ interface DraftRow {
   known_limitations: string | null;
   proposed_use_restrictions: string | null;
   updated_at_utc_ms: string | number;
+  sealed?: boolean;
 }
 
 interface PackRow {
@@ -413,6 +416,8 @@ export class ResearchReleaseCandidateRepository {
     return this.transaction(scope, false, async (client) => {
       await this.requireMembership(client, scope);
       await this.lockRun(client, scope.workspaceId, runId);
+      const existingDraft = await this.draftFromClient(client, scope, runId);
+      if (existingDraft?.sealed) throw this.alreadySealed();
       const source = await this.requireSnapshot(client, scope.workspaceId, runId);
       this.assertFingerprint(source, input.expectedSourceFingerprint);
       if (input.expectedRevision === 0) {
@@ -458,23 +463,40 @@ export class ResearchReleaseCandidateRepository {
     return this.transaction(scope, false, async (client) => {
       await this.requireMembership(client, scope);
       await this.lockRun(client, scope.workspaceId, runId);
-      const source = await this.requireSnapshot(client, scope.workspaceId, runId);
-      this.assertFingerprint(source, input.expectedSourceFingerprint);
       const draft = await this.draftFromClient(client, scope, runId);
       if (!draft || draft.draftId !== input.draftId || draft.revision !== input.expectedDraftRevision) {
         throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Release Candidate draft changed; reload it.", 409);
       }
       if (draft.sourceFingerprint !== input.expectedSourceFingerprint) {
+        if (draft.sealed) throw this.alreadySealed();
         throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Evidence changed since composing; review the pack.", 409);
       }
-      // The draft/source fence is the idempotency scope.  A retry after a
-      // lost 201 must never manufacture another immutable candidate merely
-      // because its browser did not receive the first response.
+      // Replay the caller's exact sealed draft before consulting mutable
+      // source facts. A lost 201 stays retryable even if the source evolves;
+      // another actor's pack never freezes or satisfies this actor's draft.
       const existing = await client.query<PackRow>(`${this.packSelect()}
-        WHERE pack.workspace_id = $1 AND pack.draft_id = $2 AND pack.source_fingerprint = $3`, [
-        scope.workspaceId, draft.draftId, input.expectedSourceFingerprint,
+        JOIN research.release_candidate_drafts_v1 sealed_draft
+          ON sealed_draft.workspace_id = pack.workspace_id AND sealed_draft.draft_id = pack.draft_id
+        WHERE pack.workspace_id = $1 AND pack.run_id = $2 AND pack.draft_id = $3
+          AND sealed_draft.actor_user_id = $4 AND pack.source_fingerprint = $5
+        LIMIT 1`, [
+        scope.workspaceId, runId, draft.draftId, scope.actorUserId, input.expectedSourceFingerprint,
       ]);
-      if (existing.rowCount === 1) return this.pack(existing.rows[0]!);
+      if (existing.rowCount === 1) {
+        const pack = this.pack(existing.rows[0]!);
+        const declarations = pack.frozenCore.draft;
+        // Refuse a historical draft modified by an older writer after seal.
+        // Returning its old pack would silently ignore the new declarations.
+        if (!declarations || typeof declarations !== "object" || Array.isArray(declarations)
+          || (declarations as Record<string, unknown>).known_limitations !== draft.knownLimitations
+          || (declarations as Record<string, unknown>).proposed_use_restrictions !== draft.proposedUseRestrictions) {
+          throw this.alreadySealed();
+        }
+        return pack;
+      }
+      if (draft.sealed) throw this.alreadySealed();
+      const source = await this.requireSnapshot(client, scope.workspaceId, runId);
+      this.assertFingerprint(source, input.expectedSourceFingerprint);
 
       const releaseCandidateId = newUlid("rc");
       const built = build(source, draft, releaseCandidateId);
@@ -789,10 +811,12 @@ export class ResearchReleaseCandidateRepository {
 
   private async draftFromClient(client: PoolClient, scope: ResearchScope, runId: string): Promise<ReleaseCandidateDraft | null> {
     const result = await client.query<DraftRow>(
-      `SELECT draft_id, revision, source_fingerprint, known_limitations, proposed_use_restrictions,
-              (extract(epoch FROM updated_at) * 1000)::bigint AS updated_at_utc_ms
-         FROM research.release_candidate_drafts_v1
-        WHERE workspace_id = $1 AND run_id = $2 AND actor_user_id = $3`,
+      `SELECT draft.draft_id, draft.revision, draft.source_fingerprint, draft.known_limitations, draft.proposed_use_restrictions,
+              (extract(epoch FROM draft.updated_at) * 1000)::bigint AS updated_at_utc_ms,
+              EXISTS (SELECT 1 FROM research.release_candidate_packs_v1 pack
+                       WHERE pack.workspace_id = draft.workspace_id AND pack.draft_id = draft.draft_id) AS sealed
+         FROM research.release_candidate_drafts_v1 draft
+        WHERE draft.workspace_id = $1 AND draft.run_id = $2 AND draft.actor_user_id = $3`,
       [scope.workspaceId, runId, scope.actorUserId],
     );
     return result.rowCount === 1 ? this.draftRow(result.rows[0]!) : null;
@@ -804,6 +828,7 @@ export class ResearchReleaseCandidateRepository {
       sourceFingerprint: row.source_fingerprint, knownLimitations: row.known_limitations,
       proposedUseRestrictions: row.proposed_use_restrictions,
       updatedAtUtcMs: safeInteger(row.updated_at_utc_ms, "draft timestamp"),
+      sealed: row.sealed === true,
     };
   }
 
@@ -858,6 +883,12 @@ export class ResearchReleaseCandidateRepository {
     if (releaseCandidateSourceFingerprint(source) !== expected) {
       throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Evidence changed since composing; review the pack.", 409);
     }
+  }
+
+  private alreadySealed(): ResearchReleaseCandidateError {
+    return new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT",
+      "This declaration draft is already sealed; its immutable evidence pack cannot be changed.", 409,
+      { reason_code: "P21_ALREADY_SEALED" });
   }
 
   private async readDisplayLabel(client: PoolClient, workspaceId: string, runId: string): Promise<string | null> {

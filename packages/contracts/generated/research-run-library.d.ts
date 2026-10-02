@@ -82,16 +82,31 @@ export interface components {
                     /** @enum {unknown} */
                     state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                    start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    source_locator?: components["schemas"]["EnrichedAnalysisLocator"];
+                    /** @constant */
+                    bounds_semantics?: "START_INCLUSIVE_END_EXCLUSIVE";
                 };
                 oos: {
                     /** @enum {unknown} */
                     state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                    start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    source_locator?: components["schemas"]["EnrichedAnalysisLocator"];
+                    /** @constant */
+                    bounds_semantics?: "START_INCLUSIVE_END_EXCLUSIVE";
                 };
                 holdout: {
                     /** @enum {unknown} */
                     state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
                     reason_code: components["schemas"]["EnrichedAnalysisReason"] | null;
+                    start_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    end_ms?: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    source_locator?: components["schemas"]["EnrichedAnalysisLocator"];
+                    /** @constant */
+                    bounds_semantics?: "START_INCLUSIVE_END_EXCLUSIVE";
                 };
             };
             facts: {
@@ -177,6 +192,24 @@ export interface components {
                     upper_inclusive: "true" | "false";
                     count: components["schemas"]["EnrichedAnalysisCount"];
                 }[];
+                statistics_policy?: {
+                    /** @constant */
+                    quantile_method: "LINEAR_TYPE_7";
+                    /** @constant */
+                    probability: "0.95";
+                    /** @constant */
+                    risk_variable: "LOSS_FRACTION_NEGATIVE_RETURN";
+                    /** @constant */
+                    risk_sign: "SIGNED_LOSS_FRACTION";
+                    /** @constant */
+                    tail: "LOSS_GTE_VAR_INCLUSIVE";
+                    /** @constant */
+                    minimum_observations: 2;
+                };
+                mean?: components["schemas"]["EnrichedAnalysisFact"];
+                median?: components["schemas"]["EnrichedAnalysisFact"];
+                var_95?: components["schemas"]["EnrichedAnalysisFact"];
+                cvar_95?: components["schemas"]["EnrichedAnalysisFact"];
             };
             drawdown_episodes: {
                 /** @enum {unknown} */
@@ -193,6 +226,16 @@ export interface components {
                     recovery_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"] | null;
                     depth_fraction: components["schemas"]["EnrichedAnalysisDecimal"];
                     duration_seconds: components["schemas"]["EnrichedAnalysisUtcMs"];
+                    label?: string;
+                    regime?: {
+                        /** @constant */
+                        state: "NOT_PUBLISHED";
+                        /** @constant */
+                        reason_code: "SOURCE_DID_NOT_PUBLISH_MARKET_REGIME";
+                        value: null;
+                        source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+                        input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+                    };
                 }[];
             };
             library_summary: components["schemas"]["EnrichedAnalysisLibrarySummary"];
@@ -298,6 +341,17 @@ export interface components {
             sharpe: components["schemas"]["EnrichedAnalysisFact"];
             max_drawdown_fraction: components["schemas"]["EnrichedAnalysisDecimal"] | null;
             input_digest: components["schemas"]["EnrichedAnalysisDigest"];
+            return_basis?: {
+                /** @constant */
+                definition_id: "FIRST_LAST_RETAINED_OOS_EQUITY_V1";
+                /** @constant */
+                scope: "RETAINED_OOS_OBSERVATIONS";
+                first_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                last_at_utc_ms: components["schemas"]["EnrichedAnalysisUtcMs"];
+                start_equity: components["schemas"]["EnrichedAnalysisDecimal"];
+                end_equity: components["schemas"]["EnrichedAnalysisDecimal"];
+                source_locator: components["schemas"]["EnrichedAnalysisLocator"];
+            };
         };
         EnrichedAnalysisAvailability: {
             /** @constant */
@@ -577,6 +631,12 @@ export interface components {
             scope: ("OOS" | "IS_PLUS_OOS" | "CHILD_TAPE") | null;
             /** @description E11: also the retained lane's definition ids (research.current-source.v1.…), which Screen 10 already publishes for the same two values, so 01 and 10 name one definition. */
             definition_id: string | null;
+            /** @enum {unknown} */
+            origin?: "ENGINE_DIRECT" | "PORTAL_DERIVED";
+            source_locator?: string;
+            input_digest?: string;
+            /** @enum {unknown} */
+            source?: "SUMMARY_ANALYTICS_V2" | "ENRICHED_ANALYSIS";
         };
         /** @description A persisted P21 relation only: the newest Portal-local sealed pack for the run, otherwise the viewer's own draft. Never inferred from a run name, claim or certificate. */
         ReleaseCandidateRef: {
@@ -735,6 +795,11 @@ export interface components {
             availability: components["schemas"]["Availability"];
             source_revision: string | null;
             source: components["schemas"]["RunSparklineSource"] | null;
+            /** @description Optional additive source-timestamped points, one-for-one with values in the same order and exact decimal spelling. The existing extrema sample preserves the source first and last timestamps; no interpolation or synthetic spacing. */
+            points?: {
+                at_utc_ms: components["schemas"]["UtcMilliseconds"];
+                equity: components["schemas"]["ExactDecimal"];
+            }[];
         };
         /** @description Provenance of the display values: the lane that answered, its series, its source sampling and the Library's own <=24-point reduction. Null whenever values is empty. A retained walk-forward run has no P13 series, so its curve is the sealed RS-02 observation tape. */
         RunSparklineSource: {

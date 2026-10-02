@@ -137,6 +137,11 @@ const MetricCellSchema = z.object({
    * publishes for the same two values — so 01 and 10 name one definition.
    */
   definition_id: z.string().regex(/^research\.(?:metric|current-source)\.[a-z0-9_.-]{1,120}$/).nullable(),
+  /** Additive sealed-scalar provenance; omitted by unchanged legacy cells. */
+  source: z.enum(["SUMMARY_ANALYTICS_V2", "ENRICHED_ANALYSIS"]).optional(),
+  origin: z.enum(["ENGINE_DIRECT", "PORTAL_DERIVED"]).optional(),
+  source_locator: z.string().min(1).max(256).optional(),
+  input_digest: z.string().regex(/^[0-9a-f]{64}$/).optional(),
 }).strict();
 
 const AlphaBindingSchema = z.object({
@@ -315,6 +320,11 @@ export const ResearchRunLibrarySparklineResponseSchema = z.object({
   schema_version: z.literal("research.run-sparkline.v1"),
   run_id: ResearchRunIdSchema,
   values: z.array(z.string().regex(/^-?[0-9]+(?:\.[0-9]+)?$/)).max(24),
+  /** B9-4: the same selected source points as values, without synthetic spacing. */
+  points: z.array(z.object({
+    at_utc_ms: UtcMsSchema,
+    equity: z.string().regex(/^-?[0-9]+(?:\.[0-9]+)?$/),
+  }).strict()).max(24).optional(),
   availability: FieldAvailabilitySchema,
   source_revision: z.string().min(1).max(160).nullable(),
   /**
@@ -342,7 +352,33 @@ export const ResearchRunLibrarySparklineResponseSchema = z.object({
     first_at_utc_ms: UtcMsSchema,
     last_at_utc_ms: UtcMsSchema,
   }).strict().nullable(),
-}).strict();
+}).strict().superRefine((response, context) => {
+  // Optional, with no default: sealed legacy v1 responses remain unchanged.
+  if (response.points === undefined) return;
+  const issue = (message: string, path: (string | number)[]) => context.addIssue({
+    code: z.ZodIssueCode.custom, message, path,
+  });
+  if (response.points.length !== response.values.length) {
+    issue("Timestamped points must align one-for-one with values", ["points"]);
+  }
+  for (let index = 0; index < response.points.length; index += 1) {
+    const point = response.points[index]!;
+    if (point.equity !== response.values[index]) {
+      issue("Timestamped equity must preserve the exact selected value", ["points", index, "equity"]);
+    }
+    if (index > 0 && point.at_utc_ms <= response.points[index - 1]!.at_utc_ms) {
+      issue("Selected source timestamps must be strictly increasing", ["points", index, "at_utc_ms"]);
+    }
+  }
+  if (response.points.length > 0) {
+    if (!response.source) {
+      issue("Timestamped points require their existing source provenance", ["source"]);
+    } else if (response.points[0]!.at_utc_ms !== response.source.first_at_utc_ms
+      || response.points[response.points.length - 1]!.at_utc_ms !== response.source.last_at_utc_ms) {
+      issue("Timestamped points must preserve the source's first and last timestamps", ["points"]);
+    }
+  }
+});
 
 export type ResearchRunLibraryResponse = z.infer<typeof ResearchRunLibraryResponseSchema>;
 export type ResearchRunLibraryItem = z.infer<typeof ResearchRunLibraryItemSchema>;

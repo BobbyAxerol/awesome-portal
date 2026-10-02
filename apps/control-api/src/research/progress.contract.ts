@@ -910,7 +910,19 @@ export type ResearchProgressCancelRequest = z.infer<typeof ResearchProgressCance
  * serialize the internal shape.
  */
 export type ResearchProgressPublicEvent = Omit<ResearchProgressEvent, "attempt_id" | "lease_epoch">;
-export type ResearchProgressPublicSnapshot = Omit<ResearchProgressSnapshot, "attempt_id" | "lease_epoch">;
+export type ResearchProgressPublicSnapshot = Omit<ResearchProgressSnapshot, "attempt_id" | "lease_epoch" | "overall" | "folds"> & {
+  overall: ResearchProgressSnapshot["overall"] & {
+    pct_basis: "SOURCE_STAGE_WEIGHTED_V1";
+    /** Journal age at the last event, not CPU time, queue age or a browser timer. */
+    elapsed_basis: "SOURCE_JOURNAL_CREATED_TO_LAST_EVENT_V1";
+  };
+  folds: Array<Omit<ResearchProgressSnapshot["folds"][number], "selection"> & {
+    selection: ResearchProgressSnapshot["folds"][number]["selection"] & {
+      display_trial_ordinal: number | null;
+      trial_numbering: "P11_ORDINAL_1_BASED";
+    };
+  }>;
+};
 
 export function toPublicResearchProgressEvent(event: ResearchProgressEvent): ResearchProgressPublicEvent {
   const { attempt_id: _attemptId, lease_epoch: _leaseEpoch, ...publicEvent } = event;
@@ -943,24 +955,30 @@ export function toPublicResearchProgressSnapshot(
     ...publicSnapshot,
     overall: {
       ...publicSnapshot.overall,
+      pct_basis: "SOURCE_STAGE_WEIGHTED_V1",
+      elapsed_basis: "SOURCE_JOURNAL_CREATED_TO_LAST_EVENT_V1",
       tqdm_line: line.startsWith("global study · trial ")
         ? line.replace(" · best J₁ ", " · best IS Sharpe ")
         : line,
     },
     folds: publicSnapshot.folds.map((fold) => ({
       ...fold,
-      selection: (executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID)
-        && fold.selection.state === "AVAILABLE"
-        && fold.selection.scope === "GLOBAL_STUDY"
-        && fold.selection.trial !== null
-        ? {
-            ...fold.selection,
+      selection: {
+        ...fold.selection,
+        display_trial_ordinal: fold.selection.trial,
+        trial_numbering: "P11_ORDINAL_1_BASED" as const,
+        ...((executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID)
+          && fold.selection.state === "AVAILABLE"
+          && fold.selection.scope === "GLOBAL_STUDY"
+          && fold.selection.trial !== null
+          ? {
             // The P10 WFO journal uses a 1-based ordinal; Optuna and the
             // retained current-source/Freeze use a 0-based source trial id.
             source_trial_id: String(fold.selection.trial - 1),
             objective_kind: "MODE_1_DECAY_J" as const,
           }
-        : fold.selection,
+          : {}),
+      },
     })),
   };
 }

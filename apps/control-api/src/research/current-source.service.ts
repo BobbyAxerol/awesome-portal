@@ -20,7 +20,9 @@ import {
   ResearchCurrentSourceSearchResponseSchema,
   ResearchCurrentSourceSplitResponseSchema,
   ResearchCurrentSourceNotApplicableResponseSchema,
+  ResearchCurrentSourceSplitTerminalAbsenceResponseSchema,
   type ResearchCurrentSourceNotApplicableResponse,
+  type ResearchCurrentSourceSplitTerminalAbsenceResponse,
   type ResearchCurrentSourceOperation,
   type ResearchCurrentSourceEvidenceResponse,
   type ResearchCurrentSourceEvidenceSeriesResponse,
@@ -101,7 +103,7 @@ type Availability = {
   reason_code: string | null;
 };
 
-function isSeal(value: CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse): value is CurrentSourceSealRow {
+function isSeal(value: CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse | ResearchCurrentSourceSplitTerminalAbsenceResponse): value is CurrentSourceSealRow {
   return "artifactRevision" in value;
 }
 
@@ -494,7 +496,7 @@ export class ResearchCurrentSourceService {
     return this.valid(ResearchCurrentSourceEvidenceSeriesResponseSchema, value);
   }
 
-  async split(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchCurrentSourceSplitResponse | ResearchCurrentSourceNotApplicableResponse> {
+  async split(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchCurrentSourceSplitResponse | ResearchCurrentSourceNotApplicableResponse | ResearchCurrentSourceSplitTerminalAbsenceResponse> {
     const seal = await this.requireSeal(scope, runId, "split", signal);
     if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
@@ -1127,21 +1129,26 @@ export class ResearchCurrentSourceService {
     };
   }
 
+  private requireSeal(scope: ResearchScope, runId: string, operation: "split", signal?: AbortSignal): Promise<CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse | ResearchCurrentSourceSplitTerminalAbsenceResponse>;
+  private requireSeal(scope: ResearchScope, runId: string, operation: Exclude<ResearchCurrentSourceOperation, "split">, signal?: AbortSignal): Promise<CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse>;
   private async requireSeal(
     scope: ResearchScope,
     runId: string,
     operation: ResearchCurrentSourceOperation,
     signal?: AbortSignal,
-  ): Promise<CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse> {
+  ): Promise<CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse | ResearchCurrentSourceSplitTerminalAbsenceResponse> {
     this.requireEnabled();
     const seal = await this.repository.sealForRead(scope, runId, signal);
     if (seal) return seal;
     return this.noSealForRead(scope, runId, operation, signal);
   }
 
+  private noSealForRead(scope: ResearchScope, runId: string, operation: "split", signal?: AbortSignal): Promise<ResearchCurrentSourceNotApplicableResponse | ResearchCurrentSourceSplitTerminalAbsenceResponse>;
+  private noSealForRead(scope: ResearchScope, runId: string, operation: Exclude<ResearchCurrentSourceOperation, "split">, signal?: AbortSignal): Promise<ResearchCurrentSourceNotApplicableResponse>;
+  private noSealForRead(scope: ResearchScope, runId: string, operation: ResearchCurrentSourceOperation, signal?: AbortSignal): Promise<ResearchCurrentSourceNotApplicableResponse | ResearchCurrentSourceSplitTerminalAbsenceResponse>;
   private async noSealForRead(
     scope: ResearchScope, runId: string, operation: ResearchCurrentSourceOperation, signal?: AbortSignal,
-  ): Promise<ResearchCurrentSourceNotApplicableResponse> {
+  ): Promise<ResearchCurrentSourceNotApplicableResponse | ResearchCurrentSourceSplitTerminalAbsenceResponse> {
     const state = await this.repository.runState(scope, runId, signal);
     if (!state) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_NOT_FOUND", "Research run was not found.", 404);
     const refuse = (laneState: NonNullable<ResearchCurrentSourceError["details"]>["lane_state"], message: string): never => {
@@ -1161,6 +1168,27 @@ export class ResearchCurrentSourceService {
       return refuse("PENDING_RETENTION", "Current QuantBT output is PENDING_RETENTION; a sealed retained artifact is required.");
     }
     if (state.effectiveStatus === "CANCELLED" || state.effectiveStatus === "FAILED") {
+      if (operation === "split") {
+        const lane = {
+          state: "NOT_RETAINED_TERMINAL" as const,
+          operation,
+          effective_status: state.effectiveStatus,
+          execution_profile_id: state.executionProfileId ?? null,
+          run_adapter_contract_digest: state.adapterContractDigest ?? null,
+          reason_code: "RS02_TERMINAL_SPLIT_NOT_RETAINED" as const,
+        };
+        const schemaVersion = "research.current-source-split-terminal-absence.v1";
+        const revisionValue = `rs02_terminal-split_${sha256ResearchJson({ schema_version: schemaVersion, run_id: runId, lane })}`;
+        return this.valid(ResearchCurrentSourceSplitTerminalAbsenceResponseSchema, {
+          schema_version: schemaVersion,
+          read_authority: "PORTAL_RETAINED_CURRENT_SOURCE",
+          run_id: runId,
+          revision: revisionValue,
+          etag: `"${revisionValue}"`,
+          availability: { state: "NOT_PUBLISHED", reason_code: lane.reason_code },
+          lane,
+        });
+      }
       return refuse("NOT_RETAINED_TERMINAL", "This run ended without a retained current-source artifact.");
     }
     return refuse("PENDING_SOURCE", "Current QuantBT output is not yet retained.");

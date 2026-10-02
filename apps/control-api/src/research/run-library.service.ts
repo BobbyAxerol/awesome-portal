@@ -35,6 +35,7 @@ import {
   ResearchRunLibraryRepository,
 } from "./run-library.repository";
 import type { ResearchScope } from "./contracts";
+import { resolveSealedPerformanceMetric, type SealedMetricSources } from "./source-aware-metric-resolver";
 
 /**
  * E11 (HiFi audit 01-7) — what a COMPLETED card reads from the retained
@@ -525,6 +526,7 @@ export class ResearchRunLibraryService {
       schema_version: "research.run-sparkline.v1" as const,
       run_id: row.run_id,
       values: [] as string[],
+      points: [],
       availability,
       source_revision: revision,
       source: null,
@@ -604,6 +606,7 @@ export class ResearchRunLibraryService {
       schema_version: "research.run-sparkline.v1" as const,
       run_id: row.run_id,
       values: sample.points.map((point) => point.equity),
+      points: sample.points.map((point) => ({ at_utc_ms: point.at, equity: point.equity })),
       availability: available(),
       source_revision: revision,
       source: {
@@ -649,6 +652,7 @@ export class ResearchRunLibraryService {
         schema_version: "research.run-sparkline.v1" as const,
         run_id: runId,
         values: [] as string[],
+        points: [],
         availability: unavailable("NOT_PUBLISHED", "RS02_RETAINED_OBSERVATIONS_DO_NOT_FORM_A_SERIES"),
         source_revision: `rs02r${lane.artifactRevision}`,
         source: null,
@@ -659,6 +663,7 @@ export class ResearchRunLibraryService {
       schema_version: "research.run-sparkline.v1" as const,
       run_id: runId,
       values: sample.points.map((point) => point.equity),
+      points: sample.points.map((point) => ({ at_utc_ms: point.at, equity: point.equity })),
       availability: available(),
       source_revision: `rs02r${lane.artifactRevision}`,
       source: {
@@ -832,7 +837,7 @@ export class ResearchRunLibraryService {
       certificate: this.certificate(progress, source),
       claim: this.claim(progress, source),
       stages: this.stages(progress, source, status),
-      stats: this.stats(row, progress, source, retained),
+      stats: this.stats(row, progress, source, retained, { enriched, analyticsV2 }),
       last_30d: analyticsV2
         ? { availability: available(), input_digest: analyticsV2.input_digest, data: analyticsV2.last_30d }
         : { availability: status === "COMPLETED"
@@ -1164,6 +1169,7 @@ export class ResearchRunLibraryService {
     progress: ResearchProgressSnapshot | null,
     source: Availability,
     retained?: RetainedCardFacts,
+    sealed: SealedMetricSources = {},
   ): ResearchRunLibraryItem["stats"] {
     const metric = (
       key: string,
@@ -1211,6 +1217,18 @@ export class ResearchRunLibraryService {
         const missing = unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_EXACT_OOS_METRICS");
         return cells.map(([key, label, role]) => metric(key, label, role, null, missing)) as ResearchRunLibraryItem["stats"];
       }
+      const fallback = (original: ResearchRunLibraryItem["stats"]) => original.map((cell) => {
+        if (!this.evidenceEnabled() || cell.availability.state === "AVAILABLE"
+          || (cell.role !== "OOS_SHARPE" && cell.role !== "DECAY")) return cell;
+        const fact = resolveSealedPerformanceMetric(cell.role === "OOS_SHARPE" ? "sharpe" : "sharpe_decay", sealed);
+        if (!fact) return cell;
+        return {
+          ...cell, value: fact.value, scope: fact.state === "AVAILABLE" ? fact.scope : null,
+          definition_id: fact.state === "AVAILABLE" ? fact.definition_id : null,
+          availability: fact.state === "AVAILABLE" ? available() : unavailable("NOT_PUBLISHED", fact.reason_code!),
+          source: fact.source, origin: fact.origin, source_locator: fact.source_locator, input_digest: fact.input_digest,
+        };
+      }) as ResearchRunLibraryItem["stats"];
       const revision = this.evidenceRevision(row.evidence_revision);
       if (!this.evidenceEnabled() || !revision) {
         /*
@@ -1226,7 +1244,7 @@ export class ResearchRunLibraryService {
          * and are withheld unless every fold published one.
          */
         if (retained) {
-          return [
+          return fallback([
             retained.meanOosSharpe !== null
               ? metric("oos_sharpe", "OOS sharpe", "OOS_SHARPE", retained.meanOosSharpe, available(), "DEFAULT", "OOS", RETAINED_DEFINITION.oosSharpe)
               : metric("oos_sharpe", "OOS sharpe", "OOS_SHARPE", null, unavailable("NOT_PUBLISHED", "QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS")),
@@ -1237,13 +1255,13 @@ export class ResearchRunLibraryService {
               ? metric("trade_count", "OOS fold trades", "TRADE_COUNT", String(retained.oosTrades), available(), "DEFAULT", "OOS", RETAINED_DEFINITION.trades)
               : metric("trade_count", "OOS fold trades", "TRADE_COUNT", null,
                 unavailable("NOT_PUBLISHED", retained.oosTradesReason ?? "QUANTBT_DID_NOT_RETAIN_EVERY_FOLD_OOS_TRADE_COUNT")),
-          ] as ResearchRunLibraryItem["stats"];
+          ] as ResearchRunLibraryItem["stats"]);
         }
         const missing = unavailable(
           "NOT_PUBLISHED",
           this.evidenceEnabled() ? "P13_SOURCE_EVIDENCE_NOT_PUBLISHED" : "P13_EVIDENCE_READER_DISABLED",
         );
-        return cells.map(([key, label, role]) => metric(key, label, role, null, missing)) as ResearchRunLibraryItem["stats"];
+        return fallback(cells.map(([key, label, role]) => metric(key, label, role, null, missing)) as ResearchRunLibraryItem["stats"]);
       }
       const projection = asObject(row.evidence_projection);
       const values = projectionMetricValues(projection);
@@ -1252,7 +1270,7 @@ export class ResearchRunLibraryService {
         (typeof rawVersion === "string" ? rawVersion : "research.metric-registry.v1") as ResearchMetricRegistryVersion,
       );
       const performance = performanceMetricDefinitions();
-      return cells.map(([key, label, role]) => {
+      return fallback(cells.map(([key, label, role]) => {
         const registryKey = RUN_LIBRARY_STAT_ROLE_METRIC_KEYS[role];
         const performanceDefinition = performance.find((entry) => entry.key === registryKey);
         if (performanceDefinition) {
@@ -1274,7 +1292,7 @@ export class ResearchRunLibraryService {
         return value !== undefined
           ? metric(key, label, role, value, available(), "DEFAULT", scope, definition.definitionId)
           : metric(key, label, role, null, unavailable("NOT_PUBLISHED", `P13_PROJECTION_DOES_NOT_PUBLISH_${role}`));
-      }) as ResearchRunLibraryItem["stats"];
+      }) as ResearchRunLibraryItem["stats"]);
     }
     return [
       metric("progress", "progress", "PROGRESS", null, source),

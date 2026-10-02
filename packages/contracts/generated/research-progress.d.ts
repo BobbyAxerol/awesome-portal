@@ -180,6 +180,16 @@ export interface components {
                 trials_done: components["schemas"]["UtcMilliseconds"];
                 trials_declared: number;
                 tqdm_line: string;
+                /**
+                 * @description Source stage-weighted percentage, not trial completion percentage. A terminal failure does not force 100%. Optional for older public captures.
+                 * @constant
+                 */
+                pct_basis?: "SOURCE_STAGE_WEIGHTED_V1";
+                /**
+                 * @description elapsed_s is source journal age observed at its last event, with the source's monotonic floor. Not CPU/runtime accounting, control queue age, search throughput duration or a browser timer.
+                 * @constant
+                 */
+                elapsed_basis?: "SOURCE_JOURNAL_CREATED_TO_LAST_EVENT_V1";
             };
             budget: {
                 used: components["schemas"]["Decimal"];
@@ -347,13 +357,19 @@ export interface components {
             objective: components["schemas"]["SignedDecimal"] | null;
             params_digest: components["schemas"]["Digest"] | null;
             reason_code: "SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION" | null;
-            /** @description Optional public WFO source Optuna id, zero-based; trial remains the one-based progress ordinal. Added only when the run profile is p10.delta-signal-notional-wfo.v1. */
+            /** @description Original zero-based Optuna source ID for an admitted P10 Delta WFO v1/v2 GLOBAL selection; trial/display_trial_ordinal remain 1-based. Optional on fixed/older captures. */
             source_trial_id?: string;
             /**
              * @description Optional selected objective kind; distinct from the live trial callback best IS Sharpe.
              * @constant
              */
             objective_kind?: "MODE_1_DECAY_J";
+            display_trial_ordinal?: number | null;
+            /**
+             * @description trial and display_trial_ordinal are the same 1-based P11 display ordinal, not source trial identity. WFO source_trial_id preserves Optuna's zero-based ID; fixed profiles do not invent one.
+             * @constant
+             */
+            trial_numbering?: "P11_ORDINAL_1_BASED";
         };
         ProgressIssuedClaim: {
             /** @constant */
@@ -717,6 +733,17 @@ export interface components {
                 failed_at?: components["schemas"]["ProgressFailedAt"] | null;
                 /** @description E10. Why a FAILED run failed: the source failure when the source reported one, otherwise the typed control-side reason the scheduler recorded (for example P06_RETRY_NOT_DISPATCHED or P11_TERMINAL_SIDECAR_FAILED). Null unless effective_status is FAILED. Optional during additive client rollout; the server emits it on every read. */
                 terminal_reason?: components["schemas"]["ProgressTerminalReason"] | null;
+                /** @description Admission declaration/plan counts are separate from journal-reported execution. Null reported counts mean no source snapshot; zero means a snapshot reported no fold. No planned fold becomes DONE/FAILED/PENDING execution. Optional during additive rollout. */
+                fold_reporting?: {
+                    /** @constant */
+                    basis: "P08_ADMISSION_AND_P11_JOURNAL_V1";
+                    declared_count: number | null;
+                    planned_count: number | null;
+                    reported_count: number | null;
+                    done_count: number | null;
+                    failed_count: number | null;
+                    reason_code: ("SOURCE_PROGRESS_NOT_PUBLISHED" | "SOURCE_DID_NOT_REPORT_FOLDS") | null;
+                };
             };
             progress: components["schemas"]["ProgressSnapshot"] | null;
             /** @description RF01-B3. The run's retained P05 tables from the artifact authority, ordered by table_kind then artifact identity, bounded at 128. A different set from progress.artifacts (bundle readiness journaled by the source); only here can CORRUPT or MISSING appear. Optional during additive client rollout; the server emits it for every current read, as [] when no table is retained yet. */

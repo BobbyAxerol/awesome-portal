@@ -33,7 +33,7 @@ describe("P12 published Research Run Library contract", () => {
     // pin those bounds at their authoritative OpenAPI source instead of
     // asserting an implementation detail of openapi-typescript.
     expect(openApi).toContain('"maxItems": 50');
-    expect(openApi).toContain('"maxItems": 24');
+    expect(JSON.parse(openApi).components.schemas.RunSparklineResponse.properties.values.maxItems).toBe(24);
   });
 
   it("does not turn the reader into an artifact/source/worker control surface", () => {

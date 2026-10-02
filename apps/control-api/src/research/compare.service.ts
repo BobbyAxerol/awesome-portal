@@ -38,6 +38,10 @@ import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import type { ResearchSplitSource } from "./progress.contract";
 import { claimSplitFromProjection, researchClaimFamily } from "./claim-family";
 import { extremaPreservingSample } from "./run-library.service";
+import { compareChartAnnotation } from "./compare-annotations";
+import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
+import { resolveSealedPerformanceMetric } from "./source-aware-metric-resolver";
+import { verifiedEnriched, type ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
 
 type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL" | "NOT_APPLICABLE";
@@ -308,8 +312,9 @@ function retainedMetrics(retained: Retained) {
   ];
 }
 
-function originalMetrics(row: CompareRunRow) {
+function originalMetrics(row: CompareRunRow, enriched?: ResearchEnrichedAnalysis) {
   const evidence = asEvidence(row.evidence_projection);
+  const embedded = ResearchRetainedAnalyticsV2Schema.safeParse(evidence?.summary_analytics_v2);
   const analytics = record(evidence?.oos_analytics);
   const sourceMetric = record(record(analytics?.metrics)?.sharpe);
   const definition = RESEARCH_PERFORMANCE_METRIC_DEFINITIONS.find((item) => item.key === "OOS_SHARPE");
@@ -320,28 +325,29 @@ function originalMetrics(row: CompareRunRow) {
     && typeof sourceMetric.value === "string"
     ? exactDecimal(sourceMetric.value)
     : null;
-  const source = evidence ? available() : absent("P20_P13_EVIDENCE_PROJECTION_NOT_AVAILABLE");
+  const availability = (value: string | null | undefined) => exactDecimal(value) === null
+    ? absent("P20_P13_EVIDENCE_PROJECTION_NOT_AVAILABLE") : available();
   return [
     {
       key: "NET_RETURN_FRACTION" as const,
       definition_id: "research.compare.metric.v1.original-net-return",
       scope: "P13_OOS_EQUITY_SERIES",
-      value: evidence?.derived.net_return_fraction ?? null,
-      availability: source,
+      value: exactDecimal(evidence?.derived.net_return_fraction),
+      availability: availability(evidence?.derived.net_return_fraction),
     },
     {
       key: "MAX_DRAWDOWN_FRACTION" as const,
       definition_id: "research.compare.metric.v1.original-max-drawdown",
       scope: "P13_OOS_EQUITY_SERIES",
-      value: evidence?.derived.max_drawdown_fraction ?? null,
-      availability: source,
+      value: exactDecimal(evidence?.derived.max_drawdown_fraction),
+      availability: availability(evidence?.derived.max_drawdown_fraction),
     },
     {
       key: "TRADE_COUNT" as const,
       definition_id: "research.compare.metric.v1.original-trade-count",
       scope: "P13_FULL_CHILD_TAPE",
-      value: evidence?.direct.num_trades ?? null,
-      availability: source,
+      value: exactDecimal(evidence?.direct.num_trades),
+      availability: availability(evidence?.direct.num_trades),
     },
     {
       key: "OOS_SHARPE" as const,
@@ -357,7 +363,19 @@ function originalMetrics(row: CompareRunRow) {
       value: null,
       availability: absent("P20_SOURCE_DID_NOT_PUBLISH_DECAY"),
     },
-  ];
+  ].map((original) => {
+    if (original.availability.state === "AVAILABLE"
+      || (original.key !== "OOS_SHARPE" && original.key !== "DECAY")) return original;
+    const fact = resolveSealedPerformanceMetric(original.key === "OOS_SHARPE" ? "sharpe" : "sharpe_decay", {
+      enriched, analyticsV2: embedded.success ? embedded.data : undefined,
+    });
+    if (!fact) return original;
+    return {
+      ...original, value: fact.value, definition_id: fact.definition_id, scope: fact.scope,
+      availability: { state: fact.state, reason_code: fact.reason_code },
+      source: fact.source, origin: fact.origin, source_locator: fact.source_locator, input_digest: fact.input_digest,
+    };
+  });
 }
 
 function buildCandidate(row: CompareRunRow): Candidate | null {
@@ -365,6 +383,9 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
   if (!RUN_STATES.has(row.run_state)) {
     throw new ResearchCompareError("RESEARCH_COMPARE_UNAVAILABLE", "Compare run lifecycle is incompatible.", 503);
   }
+  let enriched;
+  try { enriched = verifiedEnriched(row.enriched_analysis, row.enriched_digest, row.run_id); }
+  catch { throw new ResearchCompareError("RESEARCH_COMPARE_UNAVAILABLE", "Stored Compare analytics supplement is incompatible.", 503); }
   const requested = asRequestedSpec(row.requested_spec);
   const split = asStoredSplit(row.split_projection);
   const retained = asRetained(row);
@@ -383,7 +404,7 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
     created_at_utc_ms: utcMs(row.run_created_at, "run timestamp"),
     comparison_contract_key: comparisonKey(requested),
     claim: claim(row, split, retained),
-    original_metrics: retained ? retainedMetrics(retained) : originalMetrics(row),
+    original_metrics: retained ? retainedMetrics(retained) : originalMetrics(row, enriched),
     lane,
     schedule: requested
       ? { mode: requested.optimization_mode ?? null, schedule: requested.optimization_schedule ?? null, availability: requested.optimization_mode && requested.optimization_schedule ? available() : absent("P20_REQUESTED_SPEC_HAS_NO_OPTIMIZATION_SCHEDULE") }
@@ -800,14 +821,19 @@ export class ResearchCompareService {
     if (!snapshot) throw new ResearchCompareError("RESEARCH_COMPARE_NOT_FOUND", "Research Alpha was not found.", 404);
     const candidates = snapshot.runs.map(buildCandidate).filter((item): item is Candidate => item !== null);
     const requested = query.mode === "pair" ? this.pairCandidates(candidates, query.run_ids) : [];
+    const enrichments = query.mode === "pair"
+      ? await this.repository.pairEnriched(scope, query.run_ids) : new Map();
     const requestDigest = compareDigest({ alpha_id: alphaId, mode: query.mode, run_ids: query.run_ids });
     const sourceBindingDigest = compareDigest({
+      projection_definition: "B8_EXACT_TIMESTAMP_GROUP_AND_B9_ANNOTATIONS_V1",
+      chart_inputs: query.run_ids.map(runId => [runId, enrichments.get(runId)?.input_digest ?? null]),
       alpha_id: alphaId,
       rows: snapshot.runs.map((row) => ({
         attempt_id: row.attempt_id, run_id: row.run_id, run_state: row.run_state,
         requested_spec_digest: row.requested_spec_digest, effective_spec_digest: row.effective_spec_digest,
         dataset_binding_digest: row.dataset_binding_digest, manifest_digest: row.manifest_digest,
         evidence_revision: row.evidence_revision, split_revision: row.split_revision,
+        enriched_digest: row.enriched_digest ?? null,
         current_artifact_revision: row.current_artifact_revision,
         current_manifest_digest: row.current_manifest_digest,
         current_requested_spec_digest: row.current_requested_spec_digest,
@@ -829,6 +855,10 @@ export class ResearchCompareService {
       : query.mode === "markets"
         ? await this.markets(scope, snapshot, candidates)
         : await this.pairForScope(scope, requested[0]!, requested[1]!);
+    if (response.mode === "pair" && response.pair !== null) {
+      Object.assign(response.pair, { chart_annotations: requested.map(candidate =>
+        compareChartAnnotation(candidate.run.run_id, enrichments.get(candidate.run.run_id))) });
+    }
     const body = this.finalize(snapshot, alphaId, response, candidates);
     await this.repository.persistCache(scope, {
       alphaId,

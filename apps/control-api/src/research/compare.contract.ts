@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { ResearchEnrichedAnalysisSchema } from "./enriched-analysis.contract";
 
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 export const ResearchCompareAlphaIdSchema = z.string().regex(/^[a-z][a-z0-9-]{2,63}$/);
@@ -88,6 +89,10 @@ const MetricSchema = z.object({
   scope: z.string().min(1).max(160),
   value: ExactDecimalSchema.nullable(),
   availability: ResearchCompareAvailabilitySchema,
+  source: z.enum(["SUMMARY_ANALYTICS_V2", "ENRICHED_ANALYSIS"]).optional(),
+  origin: z.enum(["ENGINE_DIRECT", "PORTAL_DERIVED"]).optional(),
+  source_locator: z.string().min(1).max(256).optional(),
+  input_digest: z.string().regex(/^[0-9a-f]{64}$/).optional(),
 }).strict();
 
 /** CG-P20-02 · the requested P08 optimization mode and schedule of a run. */
@@ -290,6 +295,26 @@ const PairRefusalSchema = z.object({
   right_key: ComparisonContractKeySchema,
 }).strict();
 
+const enrichment = ResearchEnrichedAnalysisSchema._def.schema.shape;
+const monthlyRow = enrichment.monthly_returns.shape.values.element;
+/** Original-run annotations; never silently recomputed on the common window. */
+export const ResearchCompareChartAnnotationSchema = z.object({
+  run_id: ResearchCompareRunIdSchema,
+  availability: ResearchCompareAvailabilitySchema,
+  input_digest: DigestSchema.nullable(),
+  scope: enrichment.scope.nullable(),
+  all_time_metrics: enrichment.facts.shape.metrics.nullable(),
+  drawdown_episodes: enrichment.drawdown_episodes.nullable(),
+  month_extrema: z.object({
+    availability: ResearchCompareAvailabilitySchema,
+    definition_id: z.literal("ALL_RETAINED_OOS_MONTHS_MAX_MIN_RETURN_V1"),
+    includes_partial_months: z.literal(true),
+    source_period_count: z.number().int().nonnegative().nullable(),
+    best: monthlyRow.nullable(), worst: monthlyRow.nullable(),
+  }).strict(),
+}).strict();
+export type ResearchCompareChartAnnotation = z.infer<typeof ResearchCompareChartAnnotationSchema>;
+
 const PairModeSchema = z.object({
   mode: z.literal("pair"),
   state: z.enum(["AVAILABLE", "PARTIAL", "REFUSED"]),
@@ -309,6 +334,7 @@ const PairModeSchema = z.object({
     common_window: CommonWindowSchema,
     correlation: CorrelationSchema,
     overlay: SampledOverlaySchema,
+    chart_annotations: z.tuple([ResearchCompareChartAnnotationSchema, ResearchCompareChartAnnotationSchema]).optional(),
   }).strict().nullable(),
 }).strict().superRefine((value, context) => {
   if (value.state === "REFUSED" && (value.refusal === null || value.pair !== null)) {

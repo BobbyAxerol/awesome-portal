@@ -592,6 +592,7 @@ class CurrentSourceArtifactAdapter:
         fence: ArtifactFence,
         admission: CurrentSourceAdmission,
         fence_validator: Callable[[ArtifactFence], bool],
+        source_windows: dict[str, Any] | None = None,
     ) -> CurrentSourceArtifactExport:
         """Seal actual, already-computed WFO output once under an active lease.
 
@@ -743,7 +744,8 @@ class CurrentSourceArtifactAdapter:
         if summary_analytics_v2 is not None:
             summary["summary_analytics_v2"] = summary_analytics_v2
         from portal_api.services.research_enrich_analysis import enrich_retained
-        summary["enriched_analysis"] = enrich_retained(run_id=identity.run_id, observations=observations, folds=folds)
+        summary["enriched_analysis"] = enrich_retained(run_id=identity.run_id, observations=observations, folds=folds,
+            source_windows=source_windows)
         self._fit_summary_budget(summary, observations)
         writer = self._retained_artifacts.begin_write(
             identity=identity,

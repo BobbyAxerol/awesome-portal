@@ -11,6 +11,39 @@ import {
 } from "./research-lineage.builders";
 
 describe("W6b CG-P19-02 · revision and ETag", () => {
+  it("REQ-B: Lineage keeps the Library's exact sealed scalar provenance and definition", async () => {
+    const item = libraryItem("run-att-1");
+    item.stats[0] = { ...item.stats[0]!, value: "3.650968955554156", definition_id: "research.metric.analytics-v2.sealed-oos-portal-sharpe",
+      source: "ENRICHED_ANALYSIS", origin: "PORTAL_DERIVED", source_locator: "quantbt.full_report.sharpe", input_digest: digest("7") } as never;
+    item.stats[1] = { ...item.stats[1]!, value: "-2.6418020398666044", scope: "OOS",
+      availability: { state: "AVAILABLE", reason_code: null }, definition_id: "research.metric.analytics-v2.sealed-is-minus-oos-sharpe",
+      source: "SUMMARY_ANALYTICS_V2", origin: "PORTAL_DERIVED", source_locator: "quantbt.full_report.sharpe:sealed_IS_minus_OOS", input_digest: digest("8") } as never;
+    const response = await subject(snapshot({ libraryRows: rows("run-att-1") }), { "run-att-1": item })
+      .service.read(scope, "alpha-p19", { limit: 128 }, user as never);
+    for (const [key, index] of [["oos_sharpe", 0], ["decay", 1]] as const) {
+      const cell = item.stats[index]! as typeof item.stats[number] & { source: string; origin: string; source_locator: string; input_digest: string };
+      expect(response.attempts[0]!.run_facts[key]).toEqual({
+        value: cell.value, source: cell.source, origin: cell.origin, scope: cell.scope,
+        definition_id: cell.definition_id, source_locator: cell.source_locator, input_digest: cell.input_digest,
+        availability: cell.availability,
+      });
+    }
+  });
+
+  it("REQ-B: typed missing facts retain the sealed provenance rather than losing its reason", async () => {
+    const item = libraryItem("run-att-1");
+    item.stats[1] = { ...item.stats[1]!, source: "ENRICHED_ANALYSIS", origin: "PORTAL_DERIVED",
+      source_locator: "P13.retained_sampled_equity:not_a_daily_or_position_ledger", input_digest: digest("7"),
+      availability: { state: "NOT_PUBLISHED", reason_code: "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT" } } as never;
+    const response = await subject(snapshot({ libraryRows: rows("run-att-1") }), { "run-att-1": item })
+      .service.read(scope, "alpha-p19", { limit: 128 }, user as never);
+    expect(response.attempts[0]!.run_facts.decay).toEqual({
+      value: null, scope: null, definition_id: null, source: "ENRICHED_ANALYSIS", origin: "PORTAL_DERIVED",
+      source_locator: "P13.retained_sampled_equity:not_a_daily_or_position_ledger", input_digest: digest("7"),
+      availability: item.stats[1]!.availability,
+    });
+  });
+
   it("is stable across snapshot time and changes with any persisted fact", async () => {
     const base = snapshot({ libraryRows: rows("run-att-1") });
     const first = await subject(base).service.read(scope, "alpha-p19", { limit: 128 }, user as never);

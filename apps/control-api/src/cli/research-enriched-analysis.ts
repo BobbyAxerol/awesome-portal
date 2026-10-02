@@ -12,11 +12,13 @@ import { ResearchEnrichedAnalysisSchema, verifiedEnriched } from "../research/en
 import { ENRICHED_RETAINED_SOURCE_SQL, ENRICHED_FIXED_SOURCE_SQL } from "../research/enriched-analysis.read";
 
 async function main() {
-  const [workspaceArg, workspaceId, runArg, runId, action] = process.argv.slice(2);
-  if (process.argv.length !== 7 || workspaceArg !== "--workspace-id" || runArg !== "--run-id"
+  const [workspaceArg, workspaceId, runArg, runId, action, amendmentArg] = process.argv.slice(2);
+  const amendment = amendmentArg === "--amend-charts";
+  if (![7, 8].includes(process.argv.length) || (amendmentArg !== undefined && !amendment)
+    || workspaceArg !== "--workspace-id" || runArg !== "--run-id"
     || !workspaceId || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(workspaceId)
     || !runId || !/^rrun_[a-f0-9]{32}$/.test(runId) || !["--dry-run", "--apply"].includes(action!)) {
-    throw new Error("usage: research-enriched-analysis --workspace-id <id> --run-id <rrun_hex32> (--dry-run|--apply)");
+    throw new Error("usage: research-enriched-analysis --workspace-id <id> --run-id <rrun_hex32> (--dry-run|--apply) [--amend-charts]");
   }
   const python = process.env.RESEARCH_ANALYTICS_PYTHON;
   if (!python || !isAbsolute(python)) throw new Error("RESEARCH_ANALYTICS_PYTHON must name an absolute pinned interpreter");
@@ -33,7 +35,9 @@ async function main() {
     const kind = source ? "WFO_RETAINED" : "P04_SOURCE";
     const revision = String(source?.artifact_revision ?? fixed.projection_revision);
     const sourceDigest = source?.retained_import_digest ?? fixed.source_evidence_digest;
-    const existing = (await client.query(`SELECT enriched_digest,enriched,source_digest FROM research.enriched_analysis_v1
+    // This identifier is a closed local choice, never a browser/table selector.
+    const companionTable = amendment ? "research.enriched_chart_amendments_v1" : "research.enriched_analysis_v1";
+    const existing = (await client.query(`SELECT enriched_digest,enriched,source_digest FROM ${companionTable}
       WHERE workspace_id=$1 AND run_id=$2 AND source_kind=$3 AND source_revision=$4`, [workspaceId, runId, kind, revision])).rows[0];
     if (existing) {
       if (existing.source_digest !== sourceDigest) throw new Error("Existing enrichment source conflict");
@@ -63,8 +67,16 @@ async function main() {
     const sourceRows = createHash("sha256");
     const timeframe = source?.timeframe ?? fixed.timeframe;
     const units: Record<string, number> = { "1m": 60_000, "5m": 300_000, "15m": 900_000, "30m": 1_800_000, "1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000, "1D": 86_400_000 };
+    const walkForward = source?.requested_walk_forward;
+    // The single OOS span is declared authority, not an invented union of
+    // rolling IS windows or permission to read holdout market rows.
+    const sourceWindows = source?.requested_windows ?? (walkForward ? {
+      oos: { start: walkForward.split_mode, end_exclusive: walkForward.end_exclusive },
+    } : fixed?.requested_windows ?? null);
     await write({ kind: "META", expected: { OBSERVATION: counts.OBSERVATION, FOLD: counts.FOLD },
-      enrichment: { run_id: runId, nominal_bar_ms: units[timeframe] ?? null } });
+      enrichment: { run_id: runId, nominal_bar_ms: units[timeframe] ?? null,
+        source_window_basis: walkForward && !source?.requested_windows ? "WFO_DECLARED_OOS_SPAN" : "FIXED_DECLARED_WINDOWS",
+        source_windows: sourceWindows } });
     if (fixed) { sourceRows.update(canonicalResearchJson(fixed.source_payload)); await write({ kind: "P04_SOURCE", payload: fixed.source_payload }); }
     else for (const tableKind of ["FOLD", "OBSERVATION"] as const) {
       let next = 0;
@@ -87,11 +99,18 @@ async function main() {
     const sourceRowsDigest = sourceRows.digest("hex");
     await client.query("COMMIT"); transaction = false;
     if (action === "--apply") {
-      const result = await client.query(`INSERT INTO research.enriched_analysis_v1
+      const result = await client.query(`INSERT INTO ${companionTable}
         (workspace_id,run_id,source_kind,source_revision,source_digest,source_rows_digest,enriched_digest,enriched)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT DO NOTHING RETURNING enriched_digest`,
         [workspaceId, runId, kind, revision, sourceDigest, sourceRowsDigest, enrichedDigest, JSON.stringify(enriched)]);
-      if (result.rowCount !== 1) throw new Error("Concurrent immutable enrichment conflicts; no overwrite");
+      if (result.rowCount !== 1) {
+        const raced = (await client.query(`SELECT source_digest,source_rows_digest,enriched_digest,enriched
+          FROM ${companionTable} WHERE workspace_id=$1 AND run_id=$2 AND source_kind=$3 AND source_revision=$4`,
+          [workspaceId, runId, kind, revision])).rows[0];
+        if (!raced || raced.source_digest !== sourceDigest || raced.source_rows_digest !== sourceRowsDigest
+          || raced.enriched_digest !== enrichedDigest) throw new Error("Concurrent immutable enrichment conflicts; no overwrite");
+        verifiedEnriched(raced.enriched, raced.enriched_digest, runId);
+      }
     }
     process.stdout.write(JSON.stringify({ state: action === "--apply" ? "BACKFILLED" : "DRY_RUN", run_id: runId,
       source_kind: kind, source_revision: revision, source_digest: sourceDigest, source_rows_digest: sourceRowsDigest,

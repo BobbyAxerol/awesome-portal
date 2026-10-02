@@ -160,6 +160,16 @@ export interface ResearchProgressReadResponse {
     failed_at: FailedAt | null;
     /** E10: why a FAILED run failed — the source's failure, else the typed control reason; null otherwise. */
     terminal_reason: { code: string; message: string; origin: "SOURCE" | "CONTROL" } | null;
+    /** Planned admission and reported execution are different authorities. Null counts mean no source snapshot. */
+    fold_reporting: {
+      basis: "P08_ADMISSION_AND_P11_JOURNAL_V1";
+      declared_count: number | null;
+      planned_count: number | null;
+      reported_count: number | null;
+      done_count: number | null;
+      failed_count: number | null;
+      reason_code: "SOURCE_PROGRESS_NOT_PUBLISHED" | "SOURCE_DID_NOT_REPORT_FOLDS" | null;
+    };
   };
   progress: ResearchProgressPublicSnapshot | null;
   /**
@@ -498,10 +508,26 @@ export class ResearchProgressService {
   ): Promise<ResearchProgressConsoleResponse> {
     this.requireEnabled();
     const page = await this.progress.events(scope, runId, afterSequence, limit);
-    const lines = page.events.flatMap((event) => {
+    const lines = page.events.flatMap<ResearchProgressConsoleResponse["lines"][number]>((event) => {
       const console = event.payload.console;
-      if (!console || typeof console !== "object" || Array.isArray(console)) return [];
-      const record = console as Record<string, unknown>;
+      const record = console && typeof console === "object" && !Array.isArray(console)
+        ? console as Record<string, unknown> : null;
+      // The structured terminal event is itself a real journal observation.
+      // Project it once at its original sequence/time; never append a new event,
+      // infer a stage, or duplicate an explicit source console observation.
+      if (!record && event.event_type === "run_failed") {
+        const { code, message } = event.payload;
+        if (typeof code !== "string" || typeof message !== "string") return [];
+        return [{
+          sequence: event.sequence,
+          occurred_at_utc_ms: event.occurred_at_utc_ms,
+          tone: code === "USER_CANCELLED" ? "WARN" as const : "ERROR" as const,
+          text: `${code}: ${message || code}`.slice(0, 1_024),
+          trial: null,
+          fold: null,
+        }];
+      }
+      if (!record) return [];
       const text = record.text;
       if (typeof text !== "string" || text.length === 0 || text.length > 1_024) return [];
       const tone = record.tone;
@@ -668,6 +694,16 @@ export class ResearchProgressService {
           : { state: "NOT_AVAILABLE", reason_code: "RUN_REQUESTED_SPEC_NOT_RETAINED" },
         failed_at: effectiveStatus === "FAILED" ? failedAt(current.progress) : null,
         terminal_reason: effectiveStatus === "FAILED" ? this.terminalReason(current) : null,
+        fold_reporting: {
+          basis: "P08_ADMISSION_AND_P11_JOURNAL_V1",
+          declared_count: identity?.declaredFoldCount ?? null,
+          planned_count: identity?.plannedFolds?.length ?? null,
+          reported_count: current.progress?.folds.length ?? null,
+          done_count: current.progress ? current.progress.folds.filter((fold) => fold.state === "DONE").length : null,
+          failed_count: current.progress ? current.progress.folds.filter((fold) => fold.state === "FAILED").length : null,
+          reason_code: !current.progress ? "SOURCE_PROGRESS_NOT_PUBLISHED"
+            : current.progress.folds.length === 0 ? "SOURCE_DID_NOT_REPORT_FOLDS" : null,
+        },
       },
       progress: current.progress ? toPublicResearchProgressSnapshot(current.progress, identity?.executionProfileId) : null,
       retained_artifacts: current.retainedArtifacts.map((artifact) => ({

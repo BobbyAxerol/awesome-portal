@@ -7092,3 +7092,36 @@ P23/P24 stay OPEN until their actual remaining gates pass.
 Frontend (lane `claude/fe-parity`) đã land và chạy trên preview: B6 `enrich_analysis`, BR-F6, B7 (catalog-v2, symbols, bar-metadata, declaration-estimates), hai đợt sửa QA, chart động (draw-in, crosshair/tooltip số thật, zoom chung, vùng drawdown, tháng tốt/xấu nhất). Gate hiện tại: tsc sạch; vitest đầy đủ pass; lane real-API 54/54; axe 90/90; hook qua. Bốn lệch HiFi (warn ink `#8f6118`, faint ink Research, hai chip xám, gạch chân link S13) đã được Bobby duyệt 2026-10-02.
 
 **F5 chưa đóng:** còn visual lane (Bobby duyệt từng ô baseline, không `--update` tự động) và receipt thật cho D7. Sổ yêu cầu backend còn mở và các câu đã được trả lời: [`CODEX_BACKEND_GAPS` §19](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#19-sổ-yêu-cầu-backend-còn-mở--một-nguồn-claude-2026-10-02-bobby-backend-còn-thiếu-gì-thêm-vào-markdown-unified-luôn). FE state theo màn: [`FRONTEND_GAPS_FOR_SONNET`](./research_loop/FRONTEND_GAPS_FOR_SONNET_2026-09-30.md) F7.
+
+#### Bobby-approved six-group backend repair — 2026-10-02
+
+Base `267b8934`; status **IN_PROGRESS**. This continues B8/B9 and source
+qualification within the existing phases, not a new phase or P23/P24 waiver.
+Approved scope and requirement/evidence matrix:
+[backend queue §20](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#20-bobby-approved-six-group-repair--2026-10-02).
+
+1. Cross-screen correctness and exact S13 pair failures.
+2. Retained readiness, observed/planned progress and typed terminal Split.
+3. Maximum source-backed analytics with immutable historical supplements.
+4. Search/Freeze/Replay facts and sealed RC draft/pack consistency.
+5. B9 all-time chart contracts; no browser analytics or rolling-detail change.
+6. HMD remediation and separately qualified source/profile capabilities.
+
+Bobby authorizes parallel agents. Codex root integrates disjoint backend
+slices; Claude's frontend lane and staged work are preserved. Shared generated
+artifacts are regenerated centrally. Focused tests precede grouped mandatory
+hooks; exact real product receipts are required for closing a group. No remote
+push, production rollout or shared preview mutation in this slice. Current
+P23 failures, missing old test artifacts, engine-2 and P24 gates remain recorded.
+
+Six-group scoped delivery now includes actual owned HMD Compare/Hubs and B9
+immutable amendments with independent source oracle; source-seal/B6/frozen
+Report unchanged. Compare both orders 200 (261/186 ms), Hub AVAILABLE/PARTIAL.
+Initial disposable gate 1,549 PASS / 1 opt-in SKIP; final mandatory hook
+includes late fixes: **1,570 PASS / 1 opt-in SKIP**, contracts **223/223**.
+Actual API proof is scoped to owned :8096. This is **not full six-group or
+P23/P24/FE acceptance**. Separate IS capture, exact shared-preview/browser,
+fixed-child/RC/terminal receipts and actual VN/source/profile gates remain in
+the same approved groups. [Receipt and explicit Claude field handoff](./research_loop/evidence/P13/B8_B9_SIX_GROUP_REPAIR_2026-10-02.md).
+Owned test :8096 down, sessions 0 ACTIVE; volumes/backup retained. No FE edits,
+remote push, dev/main or production change.

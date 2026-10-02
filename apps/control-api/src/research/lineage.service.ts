@@ -407,19 +407,29 @@ function rcFor(
 function metricFromLibrary(
   item: ResearchRunLibraryItem,
   role: "OOS_SHARPE" | "DECAY",
-): MetricFact | { value: null; reason: string } {
+): MetricFact | ({ value: null; reason: string } & Partial<Pick<MetricFact, "source" | "origin" | "source_locator" | "input_digest">>) {
   const cell = item.stats.find((stat) => stat.role === role);
   if (!cell) return { value: null, reason: "P19_RUN_LIBRARY_PUBLISHES_NO_PERFORMANCE_CELL_FOR_STATUS" };
   if (cell.availability.state === "AVAILABLE" && cell.value !== null && EXACT_DECIMAL.test(cell.value)) {
+    const retainedMean = cell.definition_id?.startsWith("research.current-source.v1.selected-trial-mean-");
     return {
       value: cell.value,
-      source: "P13_EVIDENCE_PROJECTION",
-      scope: cell.scope,
+      source: cell.source ?? (retainedMean ? "RS02_RETAINED_SELECTED_TRIAL" : "P13_EVIDENCE_PROJECTION"),
+      scope: retainedMean ? "SELECTED_TRIAL_MEAN_ACROSS_FOLDS" : cell.scope,
       definition_id: cell.definition_id,
       availability: available(),
+      ...(cell.origin !== undefined ? { origin: cell.origin } : {}),
+      ...(cell.source_locator !== undefined ? { source_locator: cell.source_locator } : {}),
+      ...(cell.input_digest !== undefined ? { input_digest: cell.input_digest } : {}),
     };
   }
-  return { value: null, reason: cell.availability.reason_code ?? "P13_SOURCE_EVIDENCE_NOT_PUBLISHED" };
+  return {
+    value: null, reason: cell.availability.reason_code ?? "P13_SOURCE_EVIDENCE_NOT_PUBLISHED",
+    ...(cell.source !== undefined ? { source: cell.source } : {}),
+    ...(cell.origin !== undefined ? { origin: cell.origin } : {}),
+    ...(cell.source_locator !== undefined ? { source_locator: cell.source_locator } : {}),
+    ...(cell.input_digest !== undefined ? { input_digest: cell.input_digest } : {}),
+  };
 }
 
 function notApplicable(reason: string): Availability {
@@ -853,7 +863,13 @@ export class ResearchLineageService {
           availability: available(),
         };
       }
-      return { value: null, source: null, scope: null, definition_id: null, availability: absent((fromLibraryCell as { reason: string }).reason) };
+      const missing = fromLibraryCell as { reason: string } & Partial<MetricFact>;
+      return {
+        value: null, source: missing.source ?? null, scope: null, definition_id: null, availability: absent(missing.reason),
+        ...(missing.origin !== undefined ? { origin: missing.origin } : {}),
+        ...(missing.source_locator !== undefined ? { source_locator: missing.source_locator } : {}),
+        ...(missing.input_digest !== undefined ? { input_digest: missing.input_digest } : {}),
+      };
     };
     return {
       certificate: item

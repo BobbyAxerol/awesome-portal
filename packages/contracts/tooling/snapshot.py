@@ -20,6 +20,18 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "schemas/research-enriched-analysis.v1.schema.json",
+    "tooling/generate-research-enriched-analysis.mjs",
+    "tooling/generate-research-compare-truth.mjs",
+    "tooling/generate-research-current-source-terminal-split.mjs",
+    "tooling/generate-research-library-lineage-metrics.mjs",
+    "tooling/generate-research-progress-truth.mjs",
+    "tooling/generate-research-search.mjs",
+    "tooling/generate-research-sparkline.mjs",
+    "fixtures/research-enriched-analysis.healthy.valid.json",
+    "fixtures/research-enriched-analysis.no-benchmark.valid.json",
+    "fixtures/research-enriched-analysis.partial-month.valid.json",
+    "fixtures/research-enriched-analysis.old-seal-absent.valid.json",
     "fixtures/research-declaration-estimate.v1.available.valid.json",
     "fixtures/research-declaration-estimate.v1.partial.valid.json",
     "openapi/research-dataset-index.openapi.json",

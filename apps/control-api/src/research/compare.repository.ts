@@ -19,6 +19,8 @@ import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bound
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchCompareError } from "./compare.error";
 import { runDisplayOrdinalSql } from "./run-display-label";
+import { enrichedJoin, readEnriched } from "./enriched-analysis.read";
+import type { ResearchEnrichedAnalysis } from "./enriched-analysis.contract";
 
 /** PostgreSQL json/jsonb columns may be an object, an array or a serialized value. */
 type JsonColumn = Record<string, unknown> | unknown[] | string | null;
@@ -48,6 +50,9 @@ export interface CompareRunRow {
   progress_snapshot: JsonColumn;
   evidence_revision: string | null;
   evidence_projection: JsonColumn;
+  /** Source-bound supplement selected inside this same bounded snapshot. */
+  enriched_analysis?: JsonColumn;
+  enriched_digest?: string | null;
   split_revision: string | null;
   split_projection: JsonColumn;
   current_artifact_revision: string | number | null;
@@ -238,17 +243,31 @@ const PAIR_STATS_SQL = `
       FROM right_rows
   ),
   aligned AS (
-    SELECT left_rows.occurred_at_utc_ms,
-           left_rows.return_fraction::numeric AS left_return_fraction,
-           right_rows.return_fraction::numeric AS right_return_fraction,
-           left_rows.equity::numeric AS left_equity,
-           right_rows.equity::numeric AS right_equity
-      FROM left_rows
-      JOIN right_rows USING (occurred_at_utc_ms)
-     WHERE left_rows.return_fraction ~ '${DECIMAL_PATTERN}'
-       AND right_rows.return_fraction ~ '${DECIMAL_PATTERN}'
-       AND CASE WHEN left_rows.equity ~ '${DECIMAL_PATTERN}' THEN left_rows.equity::numeric > 0 ELSE false END
-       AND CASE WHEN right_rows.equity ~ '${DECIMAL_PATTERN}' THEN right_rows.equity::numeric > 0 ELSE false END
+    -- A materialized CTE join can become an O(n²) nested loop when restored
+    -- statistics estimate one row. Group two bounded tapes by exact timestamp
+    -- instead: same inner-intersection semantics, without an all-pairs scan.
+    -- Duplicate timestamps are still rejected by the independent source counts.
+    SELECT occurred_at_utc_ms,
+           max(left_return_fraction) AS left_return_fraction,
+           max(right_return_fraction) AS right_return_fraction,
+           max(left_equity) AS left_equity,
+           max(right_equity) AS right_equity
+      FROM (
+        SELECT occurred_at_utc_ms, return_fraction::numeric AS left_return_fraction,
+               NULL::numeric AS right_return_fraction, equity::numeric AS left_equity,
+               NULL::numeric AS right_equity
+          FROM left_rows
+         WHERE return_fraction ~ '${DECIMAL_PATTERN}'
+           AND CASE WHEN equity ~ '${DECIMAL_PATTERN}' THEN equity::numeric > 0 ELSE false END
+        UNION ALL
+        SELECT occurred_at_utc_ms, NULL::numeric, return_fraction::numeric,
+               NULL::numeric, equity::numeric
+          FROM right_rows
+         WHERE return_fraction ~ '${DECIMAL_PATTERN}'
+           AND CASE WHEN equity ~ '${DECIMAL_PATTERN}' THEN equity::numeric > 0 ELSE false END
+      ) qualified
+     GROUP BY occurred_at_utc_ms
+    HAVING count(left_return_fraction) = 1 AND count(right_return_fraction) = 1
   ),
   ordered AS (
     SELECT *,
@@ -356,10 +375,18 @@ const PAIR_OVERLAY_SQL = `
        AND occurred_at_utc_ms >= $8 AND occurred_at_utc_ms < $9
   ),
   aligned AS (
-    SELECT left_rows.occurred_at_utc_ms, left_rows.equity::numeric AS left_equity, right_rows.equity::numeric AS right_equity
-      FROM left_rows JOIN right_rows USING (occurred_at_utc_ms)
-     WHERE CASE WHEN left_rows.equity ~ '${DECIMAL_PATTERN}' THEN left_rows.equity::numeric > 0 ELSE false END
-       AND CASE WHEN right_rows.equity ~ '${DECIMAL_PATTERN}' THEN right_rows.equity::numeric > 0 ELSE false END
+    SELECT occurred_at_utc_ms, max(left_equity) AS left_equity, max(right_equity) AS right_equity
+      FROM (
+        SELECT occurred_at_utc_ms, equity::numeric AS left_equity, NULL::numeric AS right_equity
+          FROM left_rows
+         WHERE CASE WHEN equity ~ '${DECIMAL_PATTERN}' THEN equity::numeric > 0 ELSE false END
+        UNION ALL
+        SELECT occurred_at_utc_ms, NULL::numeric, equity::numeric
+          FROM right_rows
+         WHERE CASE WHEN equity ~ '${DECIMAL_PATTERN}' THEN equity::numeric > 0 ELSE false END
+      ) qualified
+     GROUP BY occurred_at_utc_ms
+    HAVING count(left_equity) = 1 AND count(right_equity) = 1
   ),
   numbered AS (
     SELECT *, row_number() OVER (ORDER BY occurred_at_utc_ms ASC) AS row_number,
@@ -369,7 +396,7 @@ const PAIR_OVERLAY_SQL = `
   SELECT occurred_at_utc_ms AS at_utc_ms, left_equity::text AS left_equity, right_equity::text AS right_equity
     FROM numbered
    WHERE row_number = 1 OR row_number = total_count
-      OR mod(row_number - 1, greatest(ceil(total_count::numeric / 192)::integer, 1)) = 0
+      OR mod(row_number - 1, greatest(ceil((total_count - 1)::numeric / 191)::integer, 1)) = 0
    ORDER BY occurred_at_utc_ms ASC
    LIMIT 192
 `;
@@ -384,6 +411,22 @@ export class ResearchCompareRepository {
   });
 
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
+
+  /** A pair loads full chart companions only for its two exact opaque run IDs. */
+  async pairEnriched(scope: ResearchScope, runIds: readonly string[]): Promise<Map<string, ResearchEnrichedAnalysis>> {
+    if (runIds.length !== 2 || new Set(runIds).size !== 2) {
+      throw new ResearchCompareError("RESEARCH_COMPARE_INVALID", "A chart pair requires two run identities.", 400);
+    }
+    return this.withRead(scope, async (client) => {
+      const result = new Map<string, ResearchEnrichedAnalysis>();
+      for (const runId of runIds) {
+        const enriched = await readEnriched(client, scope.workspaceId, runId,
+          () => new ResearchCompareError("RESEARCH_COMPARE_UNAVAILABLE", "Compare enrichment binding is incompatible.", 503));
+        if (enriched) result.set(runId, enriched);
+      }
+      return result;
+    });
+  }
 
   async snapshot(
     scope: ResearchScope,
@@ -406,7 +449,10 @@ export class ResearchCompareRepository {
       const alpha = alphaResult.rows[0];
       if (!alpha) return null;
       const rows = await client.query<RunQueryRow>(
-        `SELECT attempt.attempt_id, attempt.alpha_version_id,
+        // Limit the authorized run page before joining any companion JSON.
+        `SELECT bounded_runs.*, enrichment.enriched AS enriched_analysis, enrichment.enriched_digest
+           FROM (
+         SELECT attempt.attempt_id, attempt.alpha_version_id,
                 COALESCE('av_' || replace(version.declared_contract->>'version', '.', '_'), version.alpha_version_id) AS alpha_version_label,
                 attempt.state AS attempt_state, attempt.intent_kind, attempt.created_at AS attempt_created_at,
                 primary_run.run_id, primary_run.state AS run_state, primary_run.created_at AS run_created_at,
@@ -542,7 +588,12 @@ export class ResearchCompareRepository {
           -- cursor. The rest of the page remains bounded and deterministic.
           ORDER BY (primary_run.run_id = ANY($3::text[])) DESC NULLS LAST,
                    attempt.created_at ASC, attempt.attempt_id ASC
-          LIMIT $4`,
+          LIMIT $4
+           ) bounded_runs
+           CROSS JOIN (SELECT $1::text AS workspace_id) companion_scope
+           ${enrichedJoin("companion_scope.workspace_id", "bounded_runs.run_id")}
+          ORDER BY (bounded_runs.run_id = ANY($3::text[])) DESC NULLS LAST,
+                   bounded_runs.attempt_created_at ASC, bounded_runs.attempt_id ASC`,
         [scope.workspaceId, alphaId, selectedRunIds, maximumRows + 1],
       );
       const countResult = await client.query<CountRow>(

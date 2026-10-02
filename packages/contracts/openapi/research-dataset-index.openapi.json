@@ -3062,6 +3062,49 @@
                 "type": "null"
               }
             ]
+          },
+          "verified_range": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "start_utc_ms",
+                  "end_exclusive_utc_ms",
+                  "basis"
+                ],
+                "properties": {
+                  "start_utc_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "end_exclusive_utc_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "basis": {
+                    "const": "INDEXED_TARGET_BAR_RANGE_V1"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "earliest_start_with_warmup_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },

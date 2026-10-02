@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import pytest
-from portal_api.services.research_enrich_analysis import enrich_retained, enrich_fixed_passport, drawdown_episodes
+from portal_api.services.research_enrich_analysis import enrich_retained, enrich_fixed_passport, drawdown_episodes, distribution_statistics, declared_source_windows
 
 RUN = "rrun_" + "a" * 32
 
@@ -51,6 +51,10 @@ def test_leading_month_daily_histogram_and_full_scope_sparkline():
     assert all(isinstance(row["count"], int) for row in histogram["buckets"])
     assert value["library_summary"]["sparkline"][0]["at_utc_ms"] == rows[0]["at_utc_ms"]
     assert value["library_summary"]["sparkline"][-1]["at_utc_ms"] == rows[-1]["at_utc_ms"]
+    basis = value["library_summary"]["return_basis"]
+    assert basis == {"definition_id": "FIRST_LAST_RETAINED_OOS_EQUITY_V1", "scope": "RETAINED_OOS_OBSERVATIONS",
+        "first_at_utc_ms": rows[0]["at_utc_ms"], "last_at_utc_ms": rows[-1]["at_utc_ms"],
+        "start_equity": rows[0]["equity"], "end_equity": rows[-1]["equity"], "source_locator": value["scope"]["locator"]}
 
 def test_no_benchmark_or_is_payload_never_claimed_available():
     value = block(False)
@@ -86,3 +90,83 @@ def test_changed_retained_diagnostic_changes_input_identity():
 def test_invalid_source_truth_fails_closed():
     rows, folds = raw_rows(); rows[1]["at_utc_ms"] = rows[0]["at_utc_ms"]
     with pytest.raises(ValueError): enrich_retained(run_id=RUN, observations=rows, folds=folds)
+
+
+@pytest.mark.parametrize("sample,expected", [
+    ([-0.2, -0.1, 0.1, 0.2], {"mean": "0", "median": "0", "var_95": "0.185", "cvar_95": "0.2"}),
+    ([0.1, 0.2, 0.3], {"mean": "0.2", "median": "0.2", "var_95": "-0.11", "cvar_95": "-0.1"}),
+    ([-0.1, -0.1, 0.2, 0.2], {"mean": "0.05", "median": "0.05", "var_95": "0.1", "cvar_95": "0.1"}),
+    ([0.0, 0.0], {"mean": "0", "median": "0", "var_95": "0", "cvar_95": "0"}),
+])
+def test_daily_statistics_independent_exact_oracle_and_signed_losses(sample, expected):
+    import pandas as pd
+    daily = pd.Series(sample, index=pd.date_range("2026-01-01", periods=len(sample), tz="UTC"))
+    facts = distribution_statistics(daily_returns=daily, digest="a" * 64, sampled=False)
+    assert {key: fact["value"] for key, fact in facts.items()} == expected
+    assert all(fact["state"] == "AVAILABLE" and fact["origin"] == "PORTAL_DERIVED"
+        and fact["input_digest"] == "a" * 64 and fact["scope"] == "OOS" for fact in facts.values())
+    assert daily.tolist() == sample
+
+
+def test_daily_statistics_insufficient_or_sampled_inputs_are_per_fact_absent():
+    import pandas as pd
+    for sample in ([], [0.01]):
+        facts = distribution_statistics(daily_returns=pd.Series(sample, dtype=float), digest="a" * 64, sampled=False)
+        assert all(fact["state"] == "NOT_APPLICABLE" and fact["value"] is None
+            and fact["reason_code"] == "PORTAL_DAILY_RETURN_STATISTICS_TOO_FEW_OBSERVATIONS" for fact in facts.values())
+    facts = distribution_statistics(daily_returns=None, digest="a" * 64, sampled=True)
+    assert all(fact["state"] == "NOT_PUBLISHED" and fact["value"] is None
+        and fact["reason_code"] == "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_DAILY_RETURN_LEDGER" for fact in facts.values())
+    with pytest.raises(ValueError):
+        distribution_statistics(daily_returns=pd.Series([0.01, float("inf")]), digest="a" * 64, sampled=False)
+
+
+def test_enrichment_statistics_population_policy_and_descriptive_not_inferred_regime():
+    value = block()
+    histogram = value["return_distribution"]
+    assert histogram["statistics_policy"] == {"quantile_method": "LINEAR_TYPE_7", "probability": "0.95",
+        "risk_variable": "LOSS_FRACTION_NEGATIVE_RETURN", "risk_sign": "SIGNED_LOSS_FRACTION",
+        "tail": "LOSS_GTE_VAR_INCLUSIVE", "minimum_observations": 2}
+    assert histogram["mean"]["input_digest"] == value["input_digest"]
+    assert histogram["mean"]["state"] == "AVAILABLE" and histogram["observation_count"] == 59
+    for episode in value["drawdown_episodes"]["values"]:
+        assert episode["label"].startswith("Drawdown ")
+        assert ("(open)" in episode["label"]) == (episode["recovery_utc_ms"] is None)
+        assert episode["regime"]["state"] == "NOT_PUBLISHED" and episode["regime"]["value"] is None
+        assert episode["regime"]["input_digest"] == value["input_digest"]
+
+
+def test_optional_source_window_bounds_are_digest_bound_and_never_create_accounts():
+    rows, folds = raw_rows()
+    bounds = {"oos": {"start_ms": rows[0]["at_utc_ms"], "end_ms": rows[-1]["at_utc_ms"] + 86_400_000,
+        "source_locator": "P08.sealed_windows.OOS"},
+        "holdout": {"start_ms": rows[-1]["at_utc_ms"] + 86_400_000,
+            "end_ms": rows[-1]["at_utc_ms"] + 172_800_000, "source_locator": "P08.sealed_windows.HOLDOUT"}}
+    before = copy.deepcopy(bounds)
+    plain = enrich_retained(run_id=RUN, observations=rows, folds=folds)
+    value = enrich_retained(run_id=RUN, observations=rows, folds=folds, source_windows=bounds)
+    assert value["input_digest"] != plain["input_digest"] and bounds == before
+    assert "start_ms" not in plain["windows"]["oos"] and "start_ms" not in value["windows"]["is"]
+    assert value["windows"]["oos"]["start_ms"] == rows[0]["at_utc_ms"]
+    assert value["windows"]["oos"]["bounds_semantics"] == "START_INCLUSIVE_END_EXCLUSIVE"
+    assert value["windows"]["holdout"]["state"] == "NOT_PUBLISHED"
+    assert set(value["curves"]) == set(plain["curves"]) and value["rolling"] is None
+    for invalid in ({"oos": {**bounds["oos"], "end_ms": rows[-1]["at_utc_ms"]}},
+        {"is": {"start_ms": 0, "end_ms": 1}}, {"oos": {**bounds["oos"], "start_ms": True}}):
+        with pytest.raises(ValueError):
+            enrich_retained(run_id=RUN, observations=rows, folds=folds, source_windows=invalid)
+
+
+def test_immutable_producer_window_dates_are_utc_bounds_not_new_account_facts():
+    assert declared_source_windows(None) == {}
+    assert declared_source_windows({"span": {"start": "2026-01-01", "end_exclusive": "2026-02-01"}}) == {}
+    result = declared_source_windows({"oos": {"start": "2026-07-01", "end_exclusive": "2026-08-01T00:00:00Z"}})
+    assert result == {"oos": {"start_ms": 1782864000000, "end_ms": 1785542400000,
+        "source_locator": "P10.immutable_requested_spec.windows.oos"}}
+    assert declared_source_windows({"oos": {"start": "2026-07-01T07:00:00+07:00",
+        "end_exclusive": "2026-08-01T07:00:00+07:00"}}) == result
+    for windows in (["invalid"], {"oos": {"start": "2026-07-01"}},
+        {"oos": {"start": "not-an-instant", "end_exclusive": "2026-08-01"}},
+        {"oos": {"start": "2026-08-01", "end_exclusive": "2026-07-01"}}):
+        with pytest.raises(ValueError):
+            declared_source_windows(windows)

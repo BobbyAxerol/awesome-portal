@@ -22,7 +22,7 @@ import time
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, TypedDict
 
 from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_PREVIEW_LONG_CPU_SECONDS,
@@ -52,6 +52,28 @@ def _child_resource_exhausted(stderr_tail: str) -> bool:
     """Recognize Python's bounded errno line after an engine wrapper fails."""
 
     return bool(re.search(r"(?:OSError|PermissionError): \[Errno (?:28|122)\]", stderr_tail))
+
+
+class SourceWindowMetadata(TypedDict):
+    start_ms: int
+    end_ms: int
+    source_locator: str
+
+
+def _source_windows_payload(windows: dict[str, SourceWindowMetadata]) -> dict[str, SourceWindowMetadata]:
+    """Bounded declared metadata only; never holdout rows or account authority."""
+    if not isinstance(windows, dict) or set(windows) - {"is", "oos", "holdout"}:
+        raise ResearchSupervisorError("P06 source window metadata is invalid")
+    copied = {}
+    for kind, row in windows.items():
+        if not isinstance(row, dict) or set(row) != {"start_ms", "end_ms", "source_locator"}:
+            raise ResearchSupervisorError("P06 source window metadata is invalid")
+        start, end, locator = row["start_ms"], row["end_ms"], row["source_locator"]
+        if any(type(value) is not int or not 0 <= value <= 9_007_199_254_740_991 for value in (start, end)) \
+                or start >= end or not isinstance(locator, str) or not 1 <= len(locator) <= 256:
+            raise ResearchSupervisorError("P06 source window metadata is invalid")
+        copied[kind] = dict(row)
+    return copied
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +123,8 @@ class ResearchChildReceipt:
     oos_start_utc_ms: int | None = None
     # Immutable P08 bound: optional warmup must not appear as IS equity.
     is_start_utc_ms: int | None = None
+    # Metadata bounds only; the tape still ends before the sealed holdout.
+    source_windows: dict[str, SourceWindowMetadata] | None = None
 
     def as_payload(self) -> dict[str, Any]:
         payload = {
@@ -121,6 +145,8 @@ class ResearchChildReceipt:
             payload["oos_start_utc_ms"] = self.oos_start_utc_ms
         if self.is_start_utc_ms is not None:
             payload["is_start_utc_ms"] = self.is_start_utc_ms
+        if self.source_windows is not None:
+            payload["source_windows"] = _source_windows_payload(self.source_windows)
         return payload
 
 
@@ -189,6 +215,7 @@ class ImportedAlphaChildReceipt:
     artifact_root: Path
     oos_start_utc_ms: int
     is_start_utc_ms: int | None = None
+    source_windows: dict[str, SourceWindowMetadata] | None = None
 
     def as_payload(self) -> dict[str, Any]:
         return {
@@ -207,6 +234,7 @@ class ImportedAlphaChildReceipt:
             "artifact_root": str(self.artifact_root),
             "oos_start_utc_ms": self.oos_start_utc_ms,
             **({"is_start_utc_ms": self.is_start_utc_ms} if self.is_start_utc_ms is not None else {}),
+            **({"source_windows": _source_windows_payload(self.source_windows)} if self.source_windows is not None else {}),
             "execution_adapter_id": IMPORTED_ALPHA_ADAPTER_ID,
             "adapter_contract_digest": IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
             "execution_profile_id": IMPORTED_ALPHA_PROFILE_ID,

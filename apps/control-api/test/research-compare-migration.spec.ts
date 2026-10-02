@@ -15,13 +15,13 @@ function databaseUrlFor(name: string): string {
   return url.toString();
 }
 
-async function seed(database: Pool) {
-  const userId = "usr_p20";
-  const workspaceId = "ws_p20";
-  const alphaId = "alpha-p20";
+async function seed(database: Pool, suffix = "") {
+  const userId = `usr_p20${suffix}`;
+  const workspaceId = `ws_p20${suffix}`;
+  const alphaId = `alpha-p20${suffix}`;
   await database.query(`INSERT INTO portal_users
     (user_id, username, display_name, role, status, must_change_password)
-    VALUES ($1, 'p20-owner', 'P20 owner', 'ADMIN', 'ACTIVE', false)`, [userId]);
+    VALUES ($1, $2, 'P20 owner', 'ADMIN', 'ACTIVE', false)`, [userId, `p20-owner${suffix}`]);
   await database.query(`INSERT INTO workspaces (workspace_id, name, owner_user_id)
     VALUES ($1, 'P20 disposable workspace', $2)`, [workspaceId, userId]);
   await database.query(`INSERT INTO workspace_members (workspace_id, user_id, role)
@@ -177,6 +177,47 @@ describe("P20 disposable PostgreSQL cache and exact-correlation proof", () => {
     } finally {
       await database.end();
     }
+  });
+
+  it("bounds long exact tapes without quadratic alignment and retains overlay endpoints", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    try {
+      const fixture = await seed(database, "-long");
+      const start = 1_704_672_000_000;
+      const count = 2_208;
+      for (const [runId, equityBase] of [["run-p20-long-left", 100], ["run-p20-long-right", 200]] as const) {
+        await database.query(`INSERT INTO research.current_source_rows_v1
+          (workspace_id,run_id,artifact_revision,table_kind,source_ordinal,source_id,occurred_at_utc_ms,payload)
+          SELECT $1,$2,1,'OBSERVATION',n,$2 || '-' || n, $3::bigint+n*3600000::bigint,
+            jsonb_build_object('return_fraction', '0.0001', 'equity', ($4::numeric+n)::text)
+          FROM generate_series(0,$5::integer-1) n`, [fixture.workspaceId, runId, start, equityBase, count]);
+      }
+      const repository = new ResearchCompareRepository(database);
+      const scope = { workspaceId: fixture.workspaceId, actorUserId: fixture.userId };
+      const tape = (runId: string) => ({ runId, artifactRevision: 1,
+        outerOosStartUtcMs: start, outerOosEndExclusiveUtcMs: start + count * 3_600_000,
+        expectedOuterOosBars: count });
+      const input = { left: tape("run-p20-long-left"), right: tape("run-p20-long-right") };
+      // The production repository's unchanged 1500-ms statement budget is
+      // part of this assertion: the former all-pairs nested loop timed out.
+      const stats = await repository.pairRaw(scope, input);
+      expect(stats.matchedCount).toBe(count);
+      expect(stats.leftCommonReturnFraction).toBe("22.0700000000000000");
+      const overlay = await repository.pairOverlay(scope, input);
+      expect(overlay.length).toBeLessThanOrEqual(192);
+      expect(overlay[0]?.atUtcMs).toBe(start);
+      expect(overlay.at(-1)?.atUtcMs).toBe(start + (count - 1) * 3_600_000);
+      // A duplicate timestamp stays a quality refusal fact, not a silently
+      // collapsed extra return or a Cartesian multiplication of the tape.
+      await database.query(`INSERT INTO research.current_source_rows_v1
+        (workspace_id,run_id,artifact_revision,table_kind,source_ordinal,source_id,occurred_at_utc_ms,payload)
+        VALUES ($1,$2,1,'OBSERVATION',$3,'duplicate-time',$4,'{"return_fraction":"0.0001","equity":"100"}')`,
+        [fixture.workspaceId, input.left.runId, count, start]);
+      const duplicate = await repository.pairRaw(scope, { ...input, left: { ...input.left, expectedOuterOosBars: count + 1 } });
+      expect(duplicate.leftSourceCount).toBe(count + 1);
+      expect(duplicate.leftDistinctTimestampCount).toBe(count);
+      expect(duplicate.matchedCount).toBe(count - 1);
+    } finally { await database.end(); }
   });
 
   /* W5c: the Alpha snapshot statement had never reached a database; on the

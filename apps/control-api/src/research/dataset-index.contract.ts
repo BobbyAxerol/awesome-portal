@@ -76,19 +76,38 @@ export const BarMetadataQuery = z.object({ workspace_id: Workspace, symbol: Symb
   end_exclusive_utc_ms: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   warmup_bars: z.coerce.number().int().min(0).max(100_000).default(0),
 }).strict().refine(value => value.start_utc_ms < value.end_exclusive_utc_ms);
+const VerifiedRange = z.object({ start_utc_ms: Ms, end_exclusive_utc_ms: Ms,
+  basis: z.literal("INDEXED_TARGET_BAR_RANGE_V1") }).strict().refine(value => value.start_utc_ms < value.end_exclusive_utc_ms);
 export const BarMetadataSchema = z.object({ schema_version: z.literal("research.dataset-bar-metadata.v1"),
   catalog_revision: Digest.nullable(), as_of_utc_ms: Ms.nullable(), dataset_id: DatasetId, symbol: Symbol, timeframe: Timeframe,
   start_utc_ms: Ms, end_exclusive_utc_ms: Ms, scope: z.literal("INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION"),
   availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]), reason_code: Reason.nullable(), bars: Count.nullable(),
   first_bar_utc_ms: Ms.nullable(), last_bar_utc_ms: Ms.nullable(), warmup_bars_required: Count.max(100_000),
   warmup_bars_available_before_start: Count.max(100_000).nullable(),
+  verified_range: VerifiedRange.nullable().optional(), earliest_start_with_warmup_utc_ms: Ms.nullable().optional(),
 }).strict().superRefine((value, ctx) => {
+  const range = value.verified_range;
+  const measuredRefusal = value.availability === "NOT_PUBLISHED"
+    && value.reason_code === "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE" && range != null
+    && value.start_utc_ms >= range.start_utc_ms && value.end_exclusive_utc_ms <= range.end_exclusive_utc_ms
+    && value.warmup_bars_required > 0 && value.bars !== null && value.warmup_bars_available_before_start !== null;
+  const measured = value.availability === "AVAILABLE" || measuredRefusal;
   if (value.start_utc_ms >= value.end_exclusive_utc_ms
     || (value.availability === "AVAILABLE") !== (value.reason_code === null)
-    || (value.availability === "AVAILABLE") !== (value.bars !== null)
-    || (value.availability === "AVAILABLE") !== (value.warmup_bars_available_before_start !== null)
-    || value.availability === "AVAILABLE" && (value.catalog_revision === null || value.as_of_utc_ms === null)
-    || value.warmup_bars_available_before_start !== null && value.warmup_bars_available_before_start > value.warmup_bars_required) {
+    || measured !== (value.bars !== null) || measured !== (value.warmup_bars_available_before_start !== null)
+    || (measured || range != null) && (value.catalog_revision === null || value.as_of_utc_ms === null)
+    || value.warmup_bars_available_before_start !== null && value.warmup_bars_available_before_start > value.warmup_bars_required
+    || measuredRefusal && value.warmup_bars_available_before_start! >= value.warmup_bars_required
+    || range != null && value.availability === "NOT_PUBLISHED" && value.reason_code !== "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE"
+    || range != null && (value.as_of_utc_ms === null || range.end_exclusive_utc_ms > value.as_of_utc_ms)
+    || value.earliest_start_with_warmup_utc_ms != null && (range == null
+      || value.earliest_start_with_warmup_utc_ms < range.start_utc_ms
+      || value.earliest_start_with_warmup_utc_ms >= range.end_exclusive_utc_ms)
+    || !measured && (value.first_bar_utc_ms !== null || value.last_bar_utc_ms !== null)
+    || measured && value.bars === 0 && (value.first_bar_utc_ms !== null || value.last_bar_utc_ms !== null)
+    || measured && value.bars! > 0 && (value.first_bar_utc_ms === null || value.last_bar_utc_ms === null
+      || value.first_bar_utc_ms < value.start_utc_ms || value.last_bar_utc_ms < value.first_bar_utc_ms
+      || value.last_bar_utc_ms >= value.end_exclusive_utc_ms)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Inconsistent indexed window metadata" });
   }
 });

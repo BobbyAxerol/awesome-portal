@@ -357,6 +357,12 @@ def enrich_dataset_catalog(provider, store: DatasetIndexStore) -> dict[str, obje
     return public
 
 
+def earliest_start_with_warmup(index: dict, warmup_bars: int, step: int) -> int | None:
+    """First indexed target bar preceded by the declared contiguous warmup."""
+    return next((first + warmup_bars * step for first, last in index["runs"]
+        if (last - first) // step >= warmup_bars), None)
+
+
 def window_metadata(document: dict | None, *, dataset_id: str, symbol: str, timeframe: str,
                     start_ms: int, end_ms: int, warmup_bars: int) -> dict[str, object]:
     if start_ms >= end_ms or start_ms < 0 or not _SYMBOL.fullmatch(symbol) or not 0 <= warmup_bars <= 100_000:
@@ -368,10 +374,17 @@ def window_metadata(document: dict | None, *, dataset_id: str, symbol: str, time
         if (row["dataset_id"], row["symbol"], row["index"]["timeframe"]) == (dataset_id, symbol, timeframe.lower())), None) if document else None
     unavailable = {"availability": "NOT_PUBLISHED", "reason_code": "HMD_SYMBOL_INTERVAL_NOT_INDEXED",
         "bars": None, "first_bar_utc_ms": None, "last_bar_utc_ms": None,
-        "warmup_bars_required": warmup_bars, "warmup_bars_available_before_start": None}
+        "warmup_bars_required": warmup_bars, "warmup_bars_available_before_start": None,
+        "verified_range": None, "earliest_start_with_warmup_utc_ms": None}
     if not index:
         return unavailable
-    if start_ms - warmup_bars * step < index["start_utc_ms"] or end_ms > index["end_exclusive_utc_ms"]:
+    unavailable.update(verified_range={"start_utc_ms": index["start_utc_ms"],
+        "end_exclusive_utc_ms": index["end_exclusive_utc_ms"], "basis": "INDEXED_TARGET_BAR_RANGE_V1"},
+        earliest_start_with_warmup_utc_ms=earliest_start_with_warmup(index, warmup_bars, step))
+    # Never present an overlap count as the complete requested window. A
+    # warmup-only refusal can still disclose all requested bars and the
+    # observed indexed warmup subset, scoped by the explicit verified range.
+    if start_ms < index["start_utc_ms"] or end_ms > index["end_exclusive_utc_ms"]:
         return {**unavailable, "reason_code": "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE"}
     bars = 0
     warmup = 0
@@ -385,7 +398,9 @@ def window_metadata(document: dict | None, *, dataset_id: str, symbol: str, time
         a, b = max(left, start_ms - warmup_bars * step), min(right, start_ms - step)
         if a <= b:
             warmup += (b - a) // step + 1
-    return {"availability": "AVAILABLE", "reason_code": None, "bars": bars,
+    warmup_refused = start_ms - warmup_bars * step < index["start_utc_ms"]
+    return {**unavailable, "availability": "NOT_PUBLISHED" if warmup_refused else "AVAILABLE",
+        "reason_code": "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE" if warmup_refused else None, "bars": bars,
         "first_bar_utc_ms": first, "last_bar_utc_ms": last,
         "warmup_bars_required": warmup_bars, "warmup_bars_available_before_start": warmup}
 
@@ -420,15 +435,22 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
         return int(parse_source_instant(text, source_timezone="UTC").value // 1_000_000)
     bounds = [(key.upper(), instant(value["start"]), instant(value["end_exclusive"])) for key, value in spans.items()]
     for key, left, right in bounds:
+        metadata = window_metadata(document, dataset_id=dataset, symbol=symbol, timeframe=timeframe,
+            start_ms=left, end_ms=right, warmup_bars=warmup_bars if key in {"IS", "SPAN"} else 0)
+        # BarMetadata's additive refusal disclosure is not a widening of the
+        # existing Declaration WindowEstimate shape or admission semantics.
+        metadata.pop("verified_range")
+        metadata.pop("earliest_start_with_warmup_utc_ms")
+        if metadata["availability"] != "AVAILABLE":
+            for field in ("bars", "first_bar_utc_ms", "last_bar_utc_ms", "warmup_bars_available_before_start"):
+                metadata[field] = None
         windows.append({"window": key, "start_utc_ms": left, "end_exclusive_utc_ms": right,
-            **window_metadata(document, dataset_id=dataset, symbol=symbol, timeframe=timeframe,
-                start_ms=left, end_ms=right, warmup_bars=warmup_bars if key in {"IS", "SPAN"} else 0)})
+            **metadata})
     index = next((row["index"] for row in document["entries"] if
         (row["dataset_id"], row["symbol"], row["index"]["timeframe"]) == (dataset, symbol, timeframe)), None) if document else None
     if not index:
         return result
-    result["earliest_start_utc_ms"] = next((first + warmup_bars * step for first, last in index["runs"]
-        if (last - first) // step >= warmup_bars), None)
+    result["earliest_start_utc_ms"] = earliest_start_with_warmup(index, warmup_bars, step)
     incomplete = next((row for row in windows if row["availability"] != "AVAILABLE"), None)
     if incomplete:
         result["planned_folds"] = {**absence, "reason_code": incomplete["reason_code"]}

@@ -571,6 +571,7 @@ def _p13_evidence_source(
     execution_adapter_id: str = "p04.delta-rsi.v1",
     is_start_utc_ms: int | None = None,
     run_id: str | None = None,
+    source_windows: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the bounded evidence passport from the actual QuantBT result.
 
@@ -757,7 +758,7 @@ def _p13_evidence_source(
             benchmark_locator=receipt["summary_analytics_v2"]["benchmark_locator"],
             is_start_utc_ms=is_start_utc_ms, oos_start_utc_ms=oos_start_utc_ms,
             source_tables=[{"name": "OBSERVATION", "row_count": len(raw_rows), "digest": digest_rows(raw_rows)}],
-            analytics=receipt["summary_analytics_v2"])
+            analytics=receipt["summary_analytics_v2"], source_windows=source_windows)
     return receipt
 
 
@@ -855,6 +856,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any]) -> dict[str, Any]:
             oos_start_utc_ms=oos_start_utc_ms,
             is_start_utc_ms=receipt.get("is_start_utc_ms"),
             run_id=receipt.get("run_id"),
+            source_windows=receipt.get("source_windows"),
         )
     return output
 
@@ -1026,6 +1028,7 @@ def _run_p17_imported_signal_notional(receipt: dict[str, Any]) -> dict[str, Any]
             execution_adapter_id=IMPORTED_ALPHA_ADAPTER_ID,
             is_start_utc_ms=receipt.get("is_start_utc_ms"),
             run_id=receipt.get("run_id"),
+            source_windows=receipt.get("source_windows"),
         )
     return output
 

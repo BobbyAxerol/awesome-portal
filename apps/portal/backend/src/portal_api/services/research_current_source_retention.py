@@ -119,6 +119,25 @@ def retained_import_digest(batches: list[Mapping[str, Any]]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _declared_wfo_oos_window(requested: Mapping[str, Any]) -> dict[str, Any]:
+    """Only the immutable OOS span; WFO train windows are an interval union.
+
+    A single initial IS interval cannot describe expanding/rolling per-fold
+    training, and advanced RequestedSpec declares no holdout.
+    """
+    import pandas as pd
+    from portal_api.services.research_enrich_analysis import declared_source_windows
+    walk_forward = requested["walk_forward"]
+    def utc(value: str) -> str:
+        at = pd.Timestamp(value)
+        return (at.tz_localize("UTC") if at.tzinfo is None else at.tz_convert("UTC")).isoformat()
+    windows = declared_source_windows({"oos": {
+        "start": utc(walk_forward["split_mode"]), "end_exclusive": utc(walk_forward["end_exclusive"]),
+    }})
+    windows["oos"]["source_locator"] = "P10.immutable_requested_spec.walk_forward:split_mode..end_exclusive"
+    return windows
+
+
 def encode_ingest_body(body: Mapping[str, Any]) -> bytes:
     """Serialize once; refuse a body above the 1,000,000-byte ingress cap."""
 
@@ -226,6 +245,7 @@ class ResearchCurrentSourceRetentionClient:
             # The locked 3, or the preview long WFO's admitted count (flag on only).
             admission=signal_notional_current_source_admission(delta_wfo_admitted_trials(research.requested_spec)),
             fence_validator=fence_validator,
+            source_windows=_declared_wfo_oos_window(research.requested_spec),
         )
         receipt = export.receipt
 

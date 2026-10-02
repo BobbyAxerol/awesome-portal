@@ -1,7 +1,7 @@
 /**
  * RF-05 CG-P13-09 — typed retained-lane states for the RS-02 current-source
  * reads: PENDING_SOURCE / PENDING_RETENTION / NOT_RETAINED_LEGACY /
- * NOT_RETAINED_TERMINAL stay 409 refusals with a machine-readable
+ * other-operation NOT_RETAINED_TERMINAL stay 409 refusals with a machine-readable
  * `details.lane_state`; a run whose admitted profile can never be retained
  * (the P04 fixed qualification) is a typed 200 NOT_APPLICABLE answer.
  */
@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { HttpErrorFilter } from "../src/http-error.filter";
 import { ResearchCurrentSourceController } from "../src/research/current-source.controller";
-import { ResearchCurrentSourceNotApplicableResponseSchema } from "../src/research/current-source.contract";
+import { ResearchCurrentSourceNotApplicableResponseSchema, ResearchCurrentSourceSplitTerminalAbsenceResponseSchema } from "../src/research/current-source.contract";
 import { ResearchCurrentSourceError } from "../src/research/current-source.error";
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
 import { ifNoneMatchWeakly } from "../src/research/etag";
@@ -183,8 +183,6 @@ describe("RF-05 CG-P13-09 · refusals carry a typed lane_state", () => {
     ["COMPLETED", "PENDING_RETENTION"],
     ["RUNNING", "PENDING_SOURCE"],
     ["QUEUED", "PENDING_SOURCE"],
-    ["CANCELLED", "NOT_RETAINED_TERMINAL"],
-    ["FAILED", "NOT_RETAINED_TERMINAL"],
   ])("a retainable-profile run with status %s refuses with lane_state %s", async (status, laneState) => {
     const { service } = build({ status, adapterContractDigest: "0".repeat(64) });
     await expect(service.split(scope, "run_wfo")).rejects.toMatchObject({
@@ -192,6 +190,61 @@ describe("RF-05 CG-P13-09 · refusals carry a typed lane_state", () => {
       status: 409,
       details: { lane_state: laneState, effective_status: status },
     });
+  });
+
+  it.each(["FAILED", "CANCELLED"])("terminal %s split is a named absence, not observed or planned execution", async (status) => {
+    const { service, repository } = build({ status, adapterContractDigest: P04_DELTA_ADAPTER_CONTRACT_DIGEST,
+      executionProfileId: "p10.delta-signal-notional-wfo.v1" });
+    const value = await service.split(scope, "terminal_wfo");
+    expect(ResearchCurrentSourceSplitTerminalAbsenceResponseSchema.safeParse(value).success).toBe(true);
+    const { openApiValidator } = await import("./research-rf05-openapi");
+    openApiValidator("research-current-source.openapi.json", "SplitTerminalAbsence").assert(value);
+    expect(value).toMatchObject({
+      schema_version: "research.current-source-split-terminal-absence.v1",
+      availability: { state: "NOT_PUBLISHED", reason_code: "RS02_TERMINAL_SPLIT_NOT_RETAINED" },
+      lane: { state: "NOT_RETAINED_TERMINAL", operation: "split", effective_status: status,
+        execution_profile_id: "p10.delta-signal-notional-wfo.v1", run_adapter_contract_digest: P04_DELTA_ADAPTER_CONTRACT_DIGEST },
+    });
+    expect(value).not.toHaveProperty("fold_plan");
+    expect(value).not.toHaveProperty("windows");
+    expect(ResearchCurrentSourceSplitTerminalAbsenceResponseSchema.safeParse({ ...value, fold_plan: { folds: [] } }).success).toBe(false);
+    expect((await service.split(scope, "terminal_wfo")).etag).toBe(value.etag);
+    expect(repository.rows).not.toHaveBeenCalled();
+    for (const [operation, read] of operations) {
+      if (operation === "split") continue;
+      await expect(read(service)).rejects.toMatchObject({ status: 409,
+        details: { lane_state: "NOT_RETAINED_TERMINAL", effective_status: status } });
+    }
+  });
+
+  it("terminal absence passes the same scoped controller revalidation and hides foreign workspaces", async () => {
+    const { service, repository } = build({ status: "FAILED", executionProfileId: "p10.delta-signal-notional-wfo.v1", adapterContractDigest: P04_DELTA_ADAPTER_CONTRACT_DIGEST });
+    const membership = { isMember: vi.fn().mockResolvedValue(true) };
+    const controller = new ResearchCurrentSourceController(service, membership as never);
+    const request = { portalUser: { userId: scope.actorUserId }, portalWorkspaceId: scope.workspaceId, headers: {}, raw: { once: vi.fn(), off: vi.fn() } };
+    const reply = () => ({ header: vi.fn(), code: vi.fn().mockReturnThis(), send: vi.fn() });
+    const first = reply();
+    await controller.split(request as never, first as never, "terminal_wfo", {});
+    const body = first.send.mock.calls[0]![0];
+    expect(ResearchCurrentSourceSplitTerminalAbsenceResponseSchema.safeParse(body).success).toBe(true);
+    expect(first.header).toHaveBeenCalledWith("cache-control", "private, no-cache");
+    const second = reply();
+    await controller.split({ ...request, headers: { "if-none-match": `W/${body.etag}` } } as never, second as never, "terminal_wfo", {});
+    expect(second.code).toHaveBeenCalledWith(304);
+    const before = repository.sealForRead.mock.calls.length;
+    membership.isMember.mockResolvedValue(false);
+    await expect(controller.split(request as never, reply() as never, "terminal_wfo", { workspace_id: "foreign" }))
+      .rejects.toMatchObject({ status: 404, code: "RESEARCH_CURRENT_SOURCE_NOT_FOUND" });
+    expect(repository.sealForRead).toHaveBeenCalledTimes(before);
+  });
+
+  it("missing/revoked runs preserve 404/403 and legacy terminal runs never become a durable absence", async () => {
+    const { service, repository } = build({ status: "FAILED", sourceKind: "LEGACY_1_0_8_METADATA" });
+    await expect(service.split(scope, "legacy")).rejects.toMatchObject({ status: 409, details: { lane_state: "NOT_RETAINED_LEGACY" } });
+    repository.runState.mockResolvedValue(null);
+    await expect(service.split(scope, "missing")).rejects.toMatchObject({ status: 404 });
+    repository.sealForRead.mockRejectedValue(new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_FORBIDDEN", "Access denied.", 403));
+    await expect(service.split(scope, "revoked")).rejects.toMatchObject({ status: 403 });
   });
 
   it("a legacy 1.0.8 row is NOT_RETAINED_LEGACY even if a binding were present", async () => {

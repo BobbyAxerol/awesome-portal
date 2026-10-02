@@ -27,6 +27,7 @@ import { ResearchCurrentSourceService } from "../src/research/current-source.ser
 import {
   SURFACE_POINT_LIMIT,
   SURFACE_REASONS,
+  SearchSurfaceSchema,
   declaredSpace,
   searchSurface,
   type SurfaceTrial,
@@ -182,6 +183,9 @@ describe("B3 · the S06 trial surface is derived on the server from every retain
       const payload = row.payload as { parameters: Record<string, string>; objective: string };
       const point = byId[row.sourceId]!;
       expect(point.objective).toBe(payload.objective);
+      expect(point.source_ordinal).toBe(row.sourceOrdinal);
+      expect(point.parameters).toEqual(payload.parameters);
+      expect(sha256ResearchJson(point.parameters)).toBe(sha256ResearchJson(payload.parameters));
       for (const parameter of response.declared_space.parameters) {
         expect(point.positions[parameter.name]).toBe(positionPercent(payload.parameters[parameter.name]!, parameter.minimum, parameter.maximum));
       }
@@ -264,6 +268,63 @@ describe("B3 · the S06 trial surface is derived on the server from every retain
     expect(surface.emitted_point_count).toBeLessThanOrEqual(SURFACE_POINT_LIMIT);
     expect(surface.points.map((point) => point.trial_id)).toEqual(expect.arrayContaining(["t999", "t501"]));
     expect(surface.source_trial_count).toBe(1_000);
+  });
+
+  it("carries every sampled point's exact source-ordinal map, without rounding or guessing selected/best", () => {
+    const space = declaredSpace(LANE_PROFILE, theta);
+    const trials: SurfaceTrial[] = Array.from({ length: 1_000 }, (_, index) => ({
+      sourceOrdinal: index, trialId: `t${index}`, state: index % 9 === 0 ? "PRUNED" : "COMPLETE",
+      objective: index % 9 === 0 ? null : String(index % 97),
+      parameters: { ...theta, rvol: "2.4000000000000004", window: String(20 + index % 21) },
+    }));
+    const before = structuredClone(trials);
+    const surface = searchSurface({ trials: [...trials].reverse(), space, selectedTrialId: "t999", bestIsTrialId: "t501", objectiveKind: "IS_MEAN_SHARPE" });
+    expect(SearchSurfaceSchema.safeParse(surface).success).toBe(true);
+    expect(surface.emitted_point_count).toBe(surface.points.length);
+    expect(surface.points.some(point => point.selected && point.trial_id === "t999")).toBe(true);
+    expect(surface.points.some(point => point.best_is && point.trial_id === "t501")).toBe(true);
+    for (const point of surface.points) {
+      const source = trials[point.source_ordinal]!;
+      expect(point.trial_id).toBe(source.trialId);
+      expect(point.parameters).toEqual(source.parameters);
+      expect(point.parameters?.rvol).toBe("2.4000000000000004");
+      expect(sha256ResearchJson(point.parameters)).toBe(sha256ResearchJson(source.parameters));
+    }
+    expect(trials).toEqual(before);
+    const legacy = structuredClone(surface);
+    for (const point of legacy.points) delete point.parameters;
+    expect(SearchSurfaceSchema.safeParse(legacy).success).toBe(true);
+    const invalid = structuredClone(surface);
+    invalid.points[0]!.parameters = { rvol: "2e0" };
+    expect(SearchSurfaceSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("a 400-point surface supplies selected/best parameters beyond the ledger's first 100 rows", async () => {
+    const fixture = structuredClone(w5b);
+    const template = fixture.rows.TRIAL[0]!;
+    fixture.rows.TRIAL = Array.from({ length: 400 }, (_, ordinal) => ({ ...structuredClone(template),
+      sourceOrdinal: ordinal, sourceId: String(ordinal), payload: { ...structuredClone(template.payload), trial_id: String(ordinal),
+        parameters: { ...theta, rvol: ordinal === 350 ? "2.4000000000000004" : "1.2" } } }));
+    fixture.table_rows.TRIAL = 400;
+    fixture.summary.selection.trial_id = "350";
+    fixture.summary.source_facts.search.raw_best_is_trial_id = "311";
+    const service = serviceFor(fixture);
+    const small = await search(service, fixture.run_id, 100);
+    const large = await search(service, fixture.run_id, 200);
+    expect(small.ledger.trials).toHaveLength(100);
+    expect(small.ledger.page.has_more).toBe(true);
+    expect(small.surface.points).toHaveLength(400);
+    expect(small.surface).toEqual(large.surface);
+    expect(small.surface.points.find(point => point.selected)).toMatchObject({ trial_id: "350", source_ordinal: 350,
+      parameters: fixture.rows.TRIAL[350]!.payload.parameters });
+    expect(small.surface.points.find(point => point.best_is)).toMatchObject({ trial_id: "311", source_ordinal: 311,
+      parameters: fixture.rows.TRIAL[311]!.payload.parameters });
+    for (const row of small.ledger.trials) {
+      const point = small.surface.points.find(point => point.source_ordinal === row.source_ordinal)!;
+      expect(point.parameters).toEqual(row.parameters);
+      expect(sha256ResearchJson(point.parameters)).toBe(row.params_digest);
+    }
+    expect(Buffer.byteLength(JSON.stringify(large))).toBeLessThan(1_048_576);
   });
 });
 

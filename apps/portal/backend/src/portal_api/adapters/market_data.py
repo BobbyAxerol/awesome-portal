@@ -6,7 +6,7 @@ import importlib.metadata
 import json
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
@@ -20,6 +20,9 @@ from portal_api.domain.requests import ThreeWindowConfig
 
 REQUIRED_MARKET_COLUMNS = ("open", "high", "low", "close", "volume")
 CRYPTO_BINANCE_DATASET_ID = "crypto-binance-1m"
+VN_STOCK_DAILY_DATASET_ID = "vn-stock-daily"
+VN_STOCK_DAILY_RELEASE_DATASET_ID = "vn_stock_daily"
+VN_SOURCE_TIMEZONE = "Asia/Ho_Chi_Minh"
 HISTORICAL_READER_DISTRIBUTION = "primus-historical-market-data"
 HISTORICAL_READER_VERSION = "0.1.0rc3"
 HISTORICAL_READER_WHEEL_SHA256 = (
@@ -115,7 +118,7 @@ class PreparedMarketData:
     frame: pd.DataFrame
     descriptor: DatasetDescriptor
     content_hash: str
-    missing_bar_count: int
+    missing_bar_count: int | None
     load_metadata: Mapping[str, object] = field(default_factory=dict)
 
     @property
@@ -532,6 +535,114 @@ def load_historical_data_runtime(storage_root: str | Path) -> HistoricalDataRunt
         additional_loaders=(("crypto-binance-spot-1m", loader_module.CryptoBinanceSpot1m),
                             ("crypto-binance-quarterly-1m", loader_module.CryptoBinanceQuarterly1m)),
     )
+
+
+def load_vn_stock_daily_qualification_runtime(storage_root: str | Path) -> HistoricalDataRuntime:
+    """Verify this installed release for a source-only VN qualification read.
+
+    This is deliberately outside the active provider factory/registry. An
+    accepted loader is not session-calendar, instrument or P10 qualification.
+    """
+    runtime = load_historical_data_runtime(storage_root)
+    loader_module = importlib.import_module("data_loader")
+    manifest_module = importlib.import_module("storage_manifest")
+    try:
+        manifest_module.assert_loader_compatible(runtime.storage_root,
+            dataset_id=VN_STOCK_DAILY_RELEASE_DATASET_ID, loader_contract_version=runtime.loader_contract)
+    except Exception as exc:
+        raise DataSchemaError("VN daily storage release is not reader-compatible") from exc
+    return replace(runtime, dataset_release_id=VN_STOCK_DAILY_RELEASE_DATASET_ID,
+        loader_class=loader_module.VnStockDaily, additional_loaders=())
+
+
+class VnStockDailyQualificationProvider:
+    """Opt-in source oracle only; never registered as an executable dataset.
+
+    The reader publishes local daily date labels, not session-close timestamps
+    or an authoritative exchange calendar. Preserve the observed labels/gaps,
+    localize before UTC conversion, and keep session completeness unknown.
+    """
+
+    def __init__(self, *, runtime: HistoricalDataRuntime | None = None,
+                 loader_factory: Callable[[], object] | None = None) -> None:
+        if runtime is None and loader_factory is None:
+            root = os.getenv("HISTORICAL_MARKET_DATA_ROOT")
+            if not root:
+                raise DatasetNotFoundError("HISTORICAL_MARKET_DATA_ROOT is not configured")
+            runtime = load_vn_stock_daily_qualification_runtime(root)
+        if runtime is not None and runtime.dataset_release_id != VN_STOCK_DAILY_RELEASE_DATASET_ID:
+            raise DataSchemaError("VN qualification requires its exact source release namespace")
+        self._runtime = runtime
+        self._loader_factory = loader_factory
+
+    def list_datasets(self) -> tuple[DatasetDescriptor, ...]:
+        return (DatasetDescriptor(dataset_id=VN_STOCK_DAILY_DATASET_ID, symbol=None, venue="VN",
+            timeframe="1d", dynamic_query=True, supported_timeframes=("1d",),
+            source_class="historical_market_data", availability="unavailable",
+            unavailable_reason="VN_DAILY_PORTAL_EXECUTION_NOT_QUALIFIED",
+            usage_scopes=HISTORICAL_USAGE_SCOPES, excluded_scopes=HISTORICAL_EXCLUDED_SCOPES,
+            source_timezone=VN_SOURCE_TIMEZONE),)
+
+    def load(self, query: MarketDataQuery) -> PreparedMarketData:
+        if query.dataset_id != VN_STOCK_DAILY_DATASET_ID:
+            raise DatasetNotFoundError("VN daily qualification admits only its exact source namespace")
+        symbol = str(query.symbol or "").strip().upper()
+        if not _SYMBOL_PATTERN.fullmatch(symbol):
+            raise DataSchemaError("VN daily qualification requires an explicit valid symbol")
+        if str(query.timeframe or "").strip().lower() != "1d":
+            raise DataSchemaError("VN daily qualification admits source daily bars only, without resampling")
+        if tuple(query.columns) != REQUIRED_MARKET_COLUMNS:
+            raise DataSchemaError("VN daily qualification requires the complete source OHLCV schema")
+        start, end = query.utc_bounds(required=True)
+        assert start is not None and end is not None
+        local_start, local_end = start.tz_convert(VN_SOURCE_TIMEZONE), end.tz_convert(VN_SOURCE_TIMEZONE)
+        if local_start != local_start.normalize() or local_end != local_end.normalize():
+            raise DateRangeError("VN daily qualification bounds must be source-local date midnights")
+        if local_end - local_start > pd.Timedelta(31, unit="D"):
+            raise DateRangeError("VN daily source qualification reads are bounded to 31 local dates")
+        # The installed reader compares naive local source labels with inclusive
+        # bounds. Never pass UTC strings and silently reinterpret the dates.
+        reader_start = local_start.tz_localize(None)
+        reader_end = local_end.tz_localize(None) - pd.Timedelta(1, unit="us")
+        loader = self._loader_factory() if self._loader_factory else self._runtime.loader_class()
+        started = perf_counter()
+        raw = loader.load(symbol, start_date=reader_start.isoformat(), end_date=reader_end.isoformat(), check_val=True)
+        elapsed = perf_counter() - started
+        if not isinstance(raw, pd.DataFrame) or raw.empty:
+            raise DatasetNotFoundError("No observed VN daily bars in the requested local-date window")
+        if "time" not in raw.columns or "symbol" not in raw.columns:
+            raise DataSchemaError("VN daily reader output lacks its source time/symbol identity")
+        if any(column not in raw.columns for column in REQUIRED_MARKET_COLUMNS):
+            raise DataSchemaError("VN daily reader output lacks the required OHLCV schema")
+        if not raw["symbol"].map(lambda value: isinstance(value, str) and value.strip().upper() == symbol).all():
+            raise DataSchemaError("VN daily reader returned a different source symbol")
+        try:
+            labels = pd.DatetimeIndex(pd.to_datetime(raw["time"], format="mixed", errors="raise"))
+            if labels.hasnans:
+                raise ValueError("missing source date")
+            local_labels = labels.tz_localize(VN_SOURCE_TIMEZONE) if labels.tz is None else labels.tz_convert(VN_SOURCE_TIMEZONE)
+        except (TypeError, ValueError) as exc:
+            raise DataSchemaError("VN daily reader returned invalid source date labels") from exc
+        if not (local_labels == local_labels.normalize()).all():
+            raise DataSchemaError("VN daily reader labels are not source-local dates")
+        frame = raw.loc[:, REQUIRED_MARKET_COLUMNS].copy()
+        frame.index = local_labels.tz_convert("UTC")
+        normalized = normalize_market_frame(frame)
+        bounded = _bounded_frame(normalized, query)
+        descriptor = replace(self.list_datasets()[0], symbol=symbol)
+        return PreparedMarketData(frame=bounded, descriptor=descriptor, content_hash=market_content_hash(bounded),
+            missing_bar_count=None, load_metadata={
+                **(self._runtime.provenance() if self._runtime else {"reader_version": "test-double",
+                    "loader_contract": HISTORICAL_LOADER_CONTRACT, "dataset_release_id": VN_STOCK_DAILY_RELEASE_DATASET_ID}),
+                "provider": "VnStockDaily", "source_resolution": "1d", "source_timezone": VN_SOURCE_TIMEZONE,
+                "requested_timeframe": "1d", "requested_start": start.isoformat(), "requested_end_exclusive": end.isoformat(),
+                "check_val": True, "load_seconds": round(elapsed, 6),
+                "qualification_scope": "SOURCE_READER_ONLY_NOT_P10_ADMISSION",
+                "daily_timestamp_basis": "SOURCE_LOCAL_DATE_LABEL_NOT_SESSION_CLOSE",
+                "session_quality_state": "NOT_PUBLISHED", "session_quality_reason_code": "VN_SESSION_CALENDAR_NOT_PUBLISHED",
+                "instrument_metadata_state": "NOT_PUBLISHED",
+                "instrument_metadata_reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+            })
 
 
 class UnavailableHistoricalMarketDataProvider:

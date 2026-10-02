@@ -587,6 +587,13 @@ export interface components {
             last_bar_utc_ms: number | null;
             warmup_bars_required: number;
             warmup_bars_available_before_start: number | null;
+            verified_range?: {
+                start_utc_ms: number;
+                end_exclusive_utc_ms: number;
+                /** @constant */
+                basis: "INDEXED_TARGET_BAR_RANGE_V1";
+            } | null;
+            earliest_start_with_warmup_utc_ms?: number | null;
         };
         WindowEstimate: {
             /** @enum {unknown} */

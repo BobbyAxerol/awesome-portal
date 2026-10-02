@@ -56,10 +56,13 @@ export const ResearchLineageReleaseCandidateRefSchema = z.object({
 /** W6b CG-P19-05: one retained per-run metric with its own source and scope. */
 const RunMetricFactSchema = z.object({
   value: ExactDecimalSchema.nullable(),
-  source: z.enum(["P13_EVIDENCE_PROJECTION", "RS02_RETAINED_SELECTED_TRIAL"]).nullable(),
+  source: z.enum(["P13_EVIDENCE_PROJECTION", "RS02_RETAINED_SELECTED_TRIAL", "SUMMARY_ANALYTICS_V2", "ENRICHED_ANALYSIS"]).nullable(),
   scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "SELECTED_TRIAL_MEAN_ACROSS_FOLDS"]).nullable(),
   definition_id: z.string().regex(/^research\.[a-z0-9_.-]{3,120}$/).nullable(),
   availability: ResearchLineageAvailabilitySchema,
+  origin: z.enum(["ENGINE_DIRECT", "PORTAL_DERIVED"]).optional(),
+  source_locator: z.string().min(1).max(256).optional(),
+  input_digest: z.string().regex(/^[0-9a-f]{64}$/).optional(),
 }).strict();
 
 const RunFactsSchema = z.object({

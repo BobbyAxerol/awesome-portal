@@ -23,6 +23,19 @@ export function enrichedAvailability(block: ResearchEnrichedAnalysis | undefined
       ? "SEALED_ENRICHMENT_NOT_COMPUTED" : "SOURCE_EVIDENCE_NOT_SEALED" });
 }
 const Derived = Head.extend({ origin: z.literal("PORTAL_DERIVED") });
+const WindowHead = Head.extend({
+  start_ms: Ms.optional(), end_ms: Ms.optional(), source_locator: z.string().min(1).max(256).optional(),
+  bounds_semantics: z.literal("START_INCLUSIVE_END_EXCLUSIVE").optional(),
+}).strict();
+const DistributionPolicy = z.object({
+  quantile_method: z.literal("LINEAR_TYPE_7"), probability: z.literal("0.95"),
+  risk_variable: z.literal("LOSS_FRACTION_NEGATIVE_RETURN"), risk_sign: z.literal("SIGNED_LOSS_FRACTION"),
+  tail: z.literal("LOSS_GTE_VAR_INCLUSIVE"), minimum_observations: z.literal(2),
+}).strict();
+const RegimeAbsence = z.object({
+  state: z.literal("NOT_PUBLISHED"), reason_code: z.literal("SOURCE_DID_NOT_PUBLISH_MARKET_REGIME"), value: z.null(),
+  source_locator: z.string().min(1).max(256), input_digest: Digest,
+}).strict();
 const Curve = z.array(z.object({ at_utc_ms: Ms, value: Decimal }).strict()).max(64);
 const Coverage = z.enum(["FULL_RETAINED_OOS", "SAMPLED_RETAINED_EQUITY"]);
 const v2 = ResearchRetainedAnalyticsV2Schema._def.schema.shape;
@@ -30,6 +43,10 @@ export const ResearchAnalyticsAllTimeSchema = Head.extend({
   label: z.literal("all time"), basis: z.literal("ALL_TIME"), sparkline: Curve,
   sampling: z.literal("EXTREMA_BUCKET_V1"), source_observation_count: Count,
   coverage: Coverage, return_fraction: Decimal.nullable(), sharpe: ResearchRetainedAnalyticsV2FactSchema,
+  return_basis: z.object({ definition_id: z.literal("FIRST_LAST_RETAINED_OOS_EQUITY_V1"),
+    scope: z.literal("RETAINED_OOS_OBSERVATIONS"), first_at_utc_ms: Ms, last_at_utc_ms: Ms,
+    start_equity: Decimal, end_equity: Decimal, source_locator: z.string().min(1).max(256),
+  }).strict().optional(),
   max_drawdown_fraction: Decimal.nullable(), input_digest: Digest,
 }).strict();
 export const ResearchEnrichedAnalysisSchema = z.object({
@@ -40,7 +57,7 @@ export const ResearchEnrichedAnalysisSchema = z.object({
     observation_count: Count.min(2), fold_count: Count.min(1).max(32), locator: z.string().min(1).max(256),
     benchmark_locator: z.string().min(1).max(256), coverage: Coverage, source_observation_count: Count.min(2),
   }).strict(),
-  windows: z.object({ is: Head.strict(), oos: Head.strict(), holdout: Head.strict() }).strict(),
+  windows: z.object({ is: WindowHead, oos: WindowHead, holdout: WindowHead }).strict(),
   facts: z.object({ metrics: v2.metrics, behaviour: v2.behaviour }).strict(),
   curves: z.object({ sampling: z.object({ source_observation_count: Count, emitted_point_count: Count.max(64), method: z.literal("EXTREMA_BUCKET_V1") }).strict(),
     strategy_rebased_100: Curve, benchmark_rebased_100: Curve, drawdown_fraction: Curve }).strict(),
@@ -53,11 +70,15 @@ export const ResearchEnrichedAnalysisSchema = z.object({
   }).strict(),
   return_distribution: Derived.extend({ sampling: z.literal("UTC_DAY"), observation_count: Count,
     bucket_basis: z.literal("ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"),
+    // Optional as a group: legacy immutable v1 bodies must retain identical bytes.
+    statistics_policy: DistributionPolicy.optional(),
+    mean: ResearchRetainedAnalyticsV2FactSchema.optional(), median: ResearchRetainedAnalyticsV2FactSchema.optional(),
+    var_95: ResearchRetainedAnalyticsV2FactSchema.optional(), cvar_95: ResearchRetainedAnalyticsV2FactSchema.optional(),
     buckets: z.array(z.object({ lower_inclusive: Decimal, upper: Decimal, upper_inclusive: z.enum(["true", "false"]), count: Count }).strict()).max(12),
   }).strict(),
   drawdown_episodes: Derived.extend({ total: Count, open_episode_present: z.boolean(), longest_open: z.boolean(),
     values: z.array(z.object({ start_utc_ms: Ms, trough_utc_ms: Ms, recovery_utc_ms: Ms.nullable(), depth_fraction: Decimal,
-      duration_seconds: Ms }).strict()).max(10),
+      duration_seconds: Ms, label: z.string().min(1).max(96).optional(), regime: RegimeAbsence.optional() }).strict()).max(10),
   }).strict(),
   library_summary: ResearchAnalyticsAllTimeSchema, rolling: z.null(),
 }).strict().superRefine((block, ctx) => {
@@ -67,8 +88,22 @@ export const ResearchEnrichedAnalysisSchema = z.object({
     || block.library_summary.input_digest !== block.input_digest || block.library_summary.coverage !== scope.coverage
     || new Set(block.source_tables.map(row => row.name)).size !== block.source_tables.length
     || Buffer.byteLength(JSON.stringify(block), "utf8") > 65_536) bad("enriched source binding/count/byte mismatch");
+  const returnBasis = block.library_summary.return_basis;
+  if (returnBasis && (returnBasis.first_at_utc_ms !== scope.first_at_utc_ms
+    || returnBasis.last_at_utc_ms !== scope.last_at_utc_ms || returnBasis.source_locator !== scope.locator
+    || Number(returnBasis.start_equity) <= 0 || Number(returnBasis.end_equity) <= 0
+    || !Number.isFinite(Number(returnBasis.start_equity)) || !Number.isFinite(Number(returnBasis.end_equity))
+    || block.library_summary.return_fraction === null)) bad("enriched return basis/scope mismatch");
   for (const fact of [...Object.values(block.facts.metrics), ...Object.values(block.facts.behaviour), block.library_summary.sharpe]) {
     if (fact.input_digest !== block.input_digest) bad("enriched fact input digest mismatch");
+  }
+  const statistics = [block.return_distribution.mean, block.return_distribution.median,
+    block.return_distribution.var_95, block.return_distribution.cvar_95];
+  if ([block.return_distribution.statistics_policy, ...statistics].some(value => value !== undefined)
+    && [block.return_distribution.statistics_policy, ...statistics].some(value => value === undefined)) bad("enriched distribution statistics/policy incomplete");
+  for (const fact of statistics) {
+    if (fact && (fact.input_digest !== block.input_digest || fact.origin !== "PORTAL_DERIVED")) bad("enriched distribution fact binding/origin mismatch");
+    if (fact?.state === "AVAILABLE" && (scope.coverage !== "FULL_RETAINED_OOS" || block.return_distribution.observation_count < 2)) bad("enriched distribution statistics require a complete daily population");
   }
   for (const head of [block.windows.is, block.windows.oos, block.windows.holdout,
     block.monthly_returns, block.return_distribution, block.drawdown_episodes, block.library_summary]) {
@@ -76,6 +111,13 @@ export const ResearchEnrichedAnalysisSchema = z.object({
   }
   // This version carries only OOS payloads: window metadata cannot claim otherwise.
   if (block.windows.is.state === "AVAILABLE" || block.windows.holdout.state === "AVAILABLE") bad("unsupported window payload");
+  for (const [kind, window] of Object.entries(block.windows)) {
+    const bounds = [window.start_ms, window.end_ms, window.source_locator, window.bounds_semantics];
+    if (bounds.some(value => value !== undefined)) {
+      if (bounds.some(value => value === undefined) || window.start_ms! >= window.end_ms!) bad("enriched window bounds incomplete/invalid");
+      if (kind === "oos" && (window.start_ms! > scope.first_at_utc_ms || window.end_ms! <= scope.last_at_utc_ms)) bad("enriched OOS bounds do not contain source scope");
+    }
+  }
   for (const curve of [...Object.values(block.curves).filter(Array.isArray), block.library_summary.sparkline] as Array<Array<{at_utc_ms: number}>>) {
     if (curve.some((p, i) => p.at_utc_ms < scope.first_at_utc_ms || p.at_utc_ms > scope.last_at_utc_ms
       || (i > 0 && p.at_utc_ms <= curve[i-1]!.at_utc_ms))) bad("enriched curve chronology/scope mismatch");
@@ -90,6 +132,7 @@ export const ResearchEnrichedAnalysisSchema = z.object({
     || block.drawdown_episodes.longest_open && !block.drawdown_episodes.open_episode_present
     || block.drawdown_episodes.values.some(row => row.trough_utc_ms < row.start_utc_ms || row.trough_utc_ms > scope.last_at_utc_ms
       || (row.recovery_utc_ms !== null && row.recovery_utc_ms < row.trough_utc_ms) || Number(row.depth_fraction) > 0)) bad("enriched episode mismatch");
+  if (block.drawdown_episodes.values.some(row => row.regime && row.regime.input_digest !== block.input_digest)) bad("enriched regime source binding mismatch");
 });
 export type ResearchEnrichedAnalysis = z.infer<typeof ResearchEnrichedAnalysisSchema>;
 

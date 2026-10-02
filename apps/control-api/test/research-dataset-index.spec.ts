@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ResearchDatasetIndexClient } from "../src/research/dataset-index.client";
 import { ResearchDatasetIndexController } from "../src/research/dataset-index.controller";
-import { ResearchDatasetCatalogV2Schema } from "../src/research/dataset-index.contract";
+import { BarMetadataSchema, ResearchDatasetCatalogV2Schema } from "../src/research/dataset-index.contract";
 import {sha256} from "../src/auth/argon";
 import {sha256ResearchJson} from "../src/research/preflight.service";
 import {P04_DELTA_DECLARED_CONTRACT} from "../src/research/p04-delta.binding";
@@ -112,6 +112,57 @@ describe("B7 indexed dataset BFF", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body))));
     await expect(new ResearchDatasetIndexClient(config).metadata((request as any).portalUser, {
       dataset_id:body.dataset_id,symbol:body.symbol,timeframe:"1h",start_utc_ms:3600000,end_exclusive_utc_ms:7200000,warmup_bars:0,
+    })).rejects.toMatchObject({status:502});
+  });
+  it("preserves legacy metadata responses and validates additive warmup-refusal disclosure", async () => {
+    const body = { schema_version:"research.dataset-bar-metadata.v1", catalog_revision:"a".repeat(64),as_of_utc_ms:36000000,
+      dataset_id:"crypto-binance-1m",symbol:"BTCUSDT",timeframe:"1h",start_utc_ms:0,end_exclusive_utc_ms:7200000,
+      scope:"INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION",availability:"NOT_PUBLISHED",reason_code:"WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE",bars:null,
+      first_bar_utc_ms:null,last_bar_utc_ms:null,warmup_bars_required:2,warmup_bars_available_before_start:null };
+    expect(BarMetadataSchema.safeParse(body).success).toBe(true);
+    const disclosed = { ...body, bars:2, first_bar_utc_ms:0,last_bar_utc_ms:3600000,warmup_bars_available_before_start:0,
+      verified_range:{start_utc_ms:0,end_exclusive_utc_ms:36000000,basis:"INDEXED_TARGET_BAR_RANGE_V1"},
+      earliest_start_with_warmup_utc_ms:7200000 };
+    expect(BarMetadataSchema.safeParse(disclosed).success).toBe(true);
+    vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify(disclosed))));
+    const result = await new ResearchDatasetIndexClient(config).metadata((request as any).portalUser, {
+      dataset_id:body.dataset_id,symbol:body.symbol,timeframe:body.timeframe,start_utc_ms:body.start_utc_ms,
+      end_exclusive_utc_ms:body.end_exclusive_utc_ms,warmup_bars:body.warmup_bars_required,
+    });
+    expect(result).toEqual(disclosed);
+    expect(result.availability).toBe("NOT_PUBLISHED");
+    expect(result).not.toHaveProperty("may_create_run");
+    for (const invalid of [
+      {...disclosed, verified_range:undefined},
+      {...disclosed, reason_code:"HMD_METADATA_INDEX_SOURCE_REVISION_CHANGED"},
+      {...disclosed, catalog_revision:null},
+      {...disclosed, earliest_start_with_warmup_utc_ms:36000000},
+      {...disclosed, warmup_bars_available_before_start:2},
+      {...disclosed, verified_range:{...disclosed.verified_range, end_exclusive_utc_ms:36000001}},
+      {...disclosed, verified_range:{...disclosed.verified_range, private_path:"/private"}},
+      {...body, bars:2},
+    ]) expect(BarMetadataSchema.safeParse(invalid).success).toBe(false);
+    for (const reason_code of ["HMD_SYMBOL_INTERVAL_NOT_INDEXED","HMD_METADATA_INDEX_NOT_BUILT","HMD_METADATA_INDEX_SOURCE_REVISION_CHANGED"]) {
+      expect(BarMetadataSchema.safeParse({...body,reason_code,catalog_revision:null,as_of_utc_ms:null,
+        verified_range:null,earliest_start_with_warmup_utc_ms:null}).success).toBe(true);
+    }
+  });
+  it.each(["unaligned","impossible-count","false-warmup-refusal"])("rejects %s indexed disclosure at the private client", async which => {
+    const body = { schema_version:"research.dataset-bar-metadata.v1",catalog_revision:"a".repeat(64),as_of_utc_ms:36000000,
+      dataset_id:"crypto-binance-1m",symbol:"BTCUSDT",timeframe:"1h",start_utc_ms:7200000,end_exclusive_utc_ms:14400000,
+      scope:"INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION",availability:"AVAILABLE",reason_code:null,bars:2,
+      first_bar_utc_ms:7200000,last_bar_utc_ms:10800000,warmup_bars_required:2,warmup_bars_available_before_start:2,
+      verified_range:{start_utc_ms:0,end_exclusive_utc_ms:36000000,basis:"INDEXED_TARGET_BAR_RANGE_V1"},
+      earliest_start_with_warmup_utc_ms:7200000 };
+    const malformed: any = structuredClone(body);
+    if (which === "unaligned") malformed.earliest_start_with_warmup_utc_ms++;
+    if (which === "impossible-count") malformed.bars=3;
+    if (which === "false-warmup-refusal") Object.assign(malformed,{availability:"NOT_PUBLISHED",
+      reason_code:"WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE",warmup_bars_available_before_start:1});
+    vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify(malformed))));
+    await expect(new ResearchDatasetIndexClient(config).metadata((request as any).portalUser, {
+      dataset_id:body.dataset_id,symbol:body.symbol,timeframe:body.timeframe,start_utc_ms:body.start_utc_ms,
+      end_exclusive_utc_ms:body.end_exclusive_utc_ms,warmup_bars:body.warmup_bars_required,
     })).rejects.toMatchObject({status:502});
   });
 });

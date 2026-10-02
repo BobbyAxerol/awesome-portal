@@ -141,6 +141,7 @@ describe("P21 canonical consumer fixture pack", () => {
         sourceFingerprint: releaseCandidateSourceFingerprint(value), displayLabel: value.displayLabel });
       repository.readPack.mockResolvedValue(stored);
       repository.latestPack.mockResolvedValue(stored);
+      repository.draft.mockResolvedValue({ ...draft, sealed: true });
       const unbound = source({ alpha: { ...value.alpha, alphaId: null, alphaVersionId: null,
         lifecycleState: null, codeDigest: null, entrypoint: null } });
       const missing = source({ runKind: "PRIMARY", relationshipKind: "ROOT" });
@@ -286,6 +287,37 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     expect(built.frozenCore).not.toHaveProperty("approval_state");
     expect(repository).not.toHaveProperty("publish");
     expect(repository).not.toHaveProperty("optimizer");
+  });
+
+  it("B8 R-6 freezes only the caller's sealed draft, including when its source fingerprint changes", async () => {
+    const original = source();
+    const fingerprint = releaseCandidateSourceFingerprint(original);
+    const frozenDraft = persistedDraft({ sourceFingerprint: fingerprint, sealed: true });
+    const immutablePack = storedPack({ sourceFingerprint: fingerprint });
+    const { service, repository } = subject(original, frozenDraft);
+    repository.latestPack.mockResolvedValue(immutablePack);
+
+    for (const current of [original, source({ effectiveSpecDigest: digest("changed source") })]) {
+      repository.snapshot.mockResolvedValue(current);
+      const result = await service.detail(scope, current.runId);
+      expect(result.actions).toMatchObject({
+        may_edit_draft: false, may_seal: false, seal_blocked_reason: "P21_ALREADY_SEALED",
+      });
+      expect(result.local_seal).toMatchObject({ state: "SEALED_LOCAL", release_candidate_id: releaseCandidateId });
+      expect(result.local_seal.availability.state).toBe(current === original ? "AVAILABLE" : "PARTIAL");
+      expect(result.draft).toMatchObject({ known_limitations: frozenDraft.knownLimitations,
+        proposed_use_restrictions: frozenDraft.proposedUseRestrictions });
+    }
+
+    // The newest pack is workspace-visible, not a lock on a peer's local draft.
+    repository.snapshot.mockResolvedValue(original);
+    repository.draft.mockResolvedValue(persistedDraft({ draftId: `rcd_${"2".repeat(26)}`,
+      sourceFingerprint: fingerprint, sealed: false }));
+    const peer = await service.detail({ ...scope, actorUserId: "usr-p21-peer" }, original.runId);
+    expect(peer.local_seal.release_candidate_id).toBe(releaseCandidateId);
+    expect(peer.actions).toMatchObject({ may_edit_draft: true, may_seal: true, seal_blocked_reason: null });
+    expect(repository.seal).not.toHaveBeenCalled();
+    expect(repository.patchDraft).not.toHaveBeenCalled();
   });
 
   it("P21-T10 blocks a primary/child-like run instead of relabelling it as a final audit", async () => {

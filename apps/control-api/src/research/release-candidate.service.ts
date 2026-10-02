@@ -246,7 +246,8 @@ export class ResearchReleaseCandidateService {
     const active = source.alpha.lifecycleState === "ACTIVE";
     const localSeal = this.localSeal(latestPack, sourceFingerprint);
     let sealBlockedReason: string | null = null;
-    if (isScratch) sealBlockedReason = "P21_SCRATCH_RUN_UNBOUND";
+    if (draft.sealed) sealBlockedReason = "P21_ALREADY_SEALED";
+    else if (isScratch) sealBlockedReason = "P21_SCRATCH_RUN_UNBOUND";
     else if (!active) sealBlockedReason = "P21_ALPHA_VERSION_NOT_ACTIVE";
     else if (!sourceIntegrity) sealBlockedReason = "P21_REFERENCED_SOURCE_INTEGRITY_FAILED";
     else if (missingCount > 0) sealBlockedReason = "P21_REQUIRED_EVIDENCE_MISSING";
@@ -327,7 +328,7 @@ export class ResearchReleaseCandidateService {
       pack_counts: counts,
       local_seal: localSeal,
       actions: {
-        may_edit_draft: true,
+        may_edit_draft: !draft.sealed,
         may_seal: sealBlockedReason === null,
         seal_blocked_reason: sealBlockedReason,
         publish: { enabled: publication.publishBlocked === null, blocked_reason: publication.publishBlocked },

@@ -13,7 +13,7 @@ from portal_api.domain.errors import DataSchemaError, DatasetNotFoundError
 from portal_api.services.enrich_dataset_catalog import (
     DatasetIndexError, DatasetIndexStore, bar_summary, build_bar_index, canonical,
     enrich_dataset_catalog, validate_document, window_metadata, build_symbol_indexes,
-    merge_index_documents,
+    merge_index_documents, declaration_estimate,
 )
 
 DAY = 86_400_000
@@ -173,9 +173,24 @@ async def test_private_metadata_routes_require_hmac_without_loading_hmd(tmp_path
                 headers={"x-portal-principal":"browser.fake"})).status_code == 401
         catalog = await client.get("/internal/research/datasets-v2", headers=headers)
         metadata = await client.get("/internal/research/dataset-bar-metadata", headers=headers, params=params)
+        refused = await client.get("/internal/research/dataset-bar-metadata", headers=headers,
+            params={**params, "start_utc_ms": BASE, "warmup_bars": 2})
+        provider._runtime.manifest_digest = "b" * 64
+        drifted = await client.get("/internal/research/dataset-bar-metadata", headers=headers, params=params)
+        app.state.research_dataset_index = DatasetIndexStore(tmp_path / "not-built")
+        unbuilt = await client.get("/internal/research/dataset-bar-metadata", headers=headers, params=params)
         invalid = await client.get("/internal/research/dataset-bar-metadata", headers=headers, params={**params,"warmup_bars":100001})
     assert catalog.status_code == 200
     assert metadata.status_code == 200 and metadata.json()["bars"] == 4
+    assert refused.status_code == 200 and refused.json()["availability"] == "NOT_PUBLISHED"
+    assert refused.json()["bars"] == 7 and refused.json()["warmup_bars_available_before_start"] == 0
+    assert refused.json()["verified_range"]["start_utc_ms"] == BASE
+    assert refused.json()["earliest_start_with_warmup_utc_ms"] == BASE + 2 * HOUR
+    assert drifted.status_code == 200 and drifted.json()["reason_code"] == "HMD_METADATA_INDEX_SOURCE_REVISION_CHANGED"
+    assert drifted.json()["verified_range"] is None and drifted.json()["earliest_start_with_warmup_utc_ms"] is None
+    assert drifted.json()["bars"] is None
+    assert unbuilt.status_code == 200 and unbuilt.json()["reason_code"] == "HMD_METADATA_INDEX_NOT_BUILT"
+    assert unbuilt.json()["verified_range"] is None and unbuilt.json()["warmup_bars_available_before_start"] is None
     assert invalid.status_code == 422
     assert provider.calls == []
 
@@ -205,12 +220,59 @@ def test_only_authoritative_empty_is_empty_no_schema_or_io_fallback():
     for failure in (OSError("source failure"), DataSchemaError("bad data")):
         with pytest.raises(type(failure)): indexed(Provider(failure=failure))
 
-def test_window_outside_index_and_invalid_query_are_not_zero():
+def test_warmup_only_refusal_discloses_measured_window_not_an_admission():
     result = window_metadata(document(), dataset_id="crypto-binance-1m", symbol="BTCUSDT", timeframe="1h",
         start_ms=BASE, end_ms=BASE + 8 * HOUR, warmup_bars=2)
-    assert result["bars"] is None and result["reason_code"] == "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE"
+    assert result["availability"] == "NOT_PUBLISHED" and result["reason_code"] == "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE"
+    assert (result["bars"], result["warmup_bars_available_before_start"]) == (7, 0)
+    assert result["verified_range"] == {"start_utc_ms": BASE, "end_exclusive_utc_ms": BASE + 10 * HOUR,
+        "basis": "INDEXED_TARGET_BAR_RANGE_V1"}
+    assert result["earliest_start_with_warmup_utc_ms"] == BASE + 2 * HOUR
+    assert "may_create_run" not in result
+    partial = window_metadata(document(), dataset_id="crypto-binance-1m", symbol="BTCUSDT", timeframe="1h",
+        start_ms=BASE + HOUR, end_ms=BASE + 8 * HOUR, warmup_bars=3)
+    assert partial["availability"] == "NOT_PUBLISHED"
+    assert (partial["bars"], partial["warmup_bars_available_before_start"]) == (6, 1)
+    assert partial["earliest_start_with_warmup_utc_ms"] == BASE + 7 * HOUR
+
+def test_window_outside_index_and_invalid_query_are_not_zero():
+    for start, end in ((BASE - HOUR, BASE + 8 * HOUR), (BASE, BASE + 11 * HOUR)):
+        result = window_metadata(document(), dataset_id="crypto-binance-1m", symbol="BTCUSDT", timeframe="1h",
+            start_ms=start, end_ms=end, warmup_bars=2)
+        assert result["bars"] is None and result["reason_code"] == "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE"
+        assert result["warmup_bars_available_before_start"] is None
+        assert result["verified_range"]["start_utc_ms"] == BASE
+        assert result["earliest_start_with_warmup_utc_ms"] == BASE + 2 * HOUR
     with pytest.raises(DatasetIndexError): window_metadata(document(), dataset_id="crypto-binance-1m", symbol="BTCUSDT", timeframe="1h",
         start_ms=BASE + 1, end_ms=BASE + 8 * HOUR, warmup_bars=0)
+
+def test_earliest_start_uses_contiguous_target_bars_and_truthful_nulls():
+    for warmup, earliest in ((0, BASE), (2, BASE + 2 * HOUR), (3, BASE + 7 * HOUR), (6, None)):
+        result = window_metadata(document(), dataset_id="crypto-binance-1m", symbol="BTCUSDT", timeframe="1h",
+            start_ms=BASE, end_ms=BASE + 8 * HOUR, warmup_bars=warmup)
+        assert result["earliest_start_with_warmup_utc_ms"] == earliest
+    gap = window_metadata(document(), dataset_id="crypto-binance-1m", symbol="BTCUSDT", timeframe="1h",
+        start_ms=BASE + 4 * HOUR, end_ms=BASE + 8 * HOUR, warmup_bars=2)
+    assert gap["availability"] == "AVAILABLE" and gap["warmup_bars_available_before_start"] == 1
+    for doc, symbol in ((None, "BTCUSDT"), (document(), "ETHUSDT"), (document(indexed(Provider(failure=DatasetNotFoundError("empty")))), "BTCUSDT")):
+        result = window_metadata(doc, dataset_id="crypto-binance-1m", symbol=symbol, timeframe="1h",
+            start_ms=BASE, end_ms=BASE + 8 * HOUR, warmup_bars=2)
+        assert result["earliest_start_with_warmup_utc_ms"] is None
+        if doc is None or symbol == "ETHUSDT":
+            assert result["verified_range"] is None and result["bars"] is None
+
+def test_declaration_keeps_exact_legacy_refusal_shape_and_shared_earliest():
+    requested = {"schema_version": "research.requested-spec.v1", "protocol": "three_window_decay",
+        "data": {"dataset_id": "crypto-binance-1m", "symbol": "BTCUSDT", "timeframe": "1h"},
+        "windows": {key: {"start": pd.Timestamp(BASE + left * HOUR, unit="ms", tz="UTC").isoformat(),
+            "end_exclusive": pd.Timestamp(BASE + right * HOUR, unit="ms", tz="UTC").isoformat()}
+            for key, left, right in (("is", 0, 4), ("oos", 4, 8), ("holdout", 8, 10))}}
+    result = declaration_estimate(document(), requested, warmup_bars=3, engine_catalog=SimpleNamespace())
+    assert result["earliest_start_utc_ms"] == BASE + 7 * HOUR
+    window = result["windows"][0]
+    assert window["availability"] == "NOT_PUBLISHED" and window["bars"] is None
+    assert window["warmup_bars_available_before_start"] is None
+    assert "verified_range" not in window and "earliest_start_with_warmup_utc_ms" not in window
 
 def test_range_budget_refuses_before_loading():
     provider = Provider()
