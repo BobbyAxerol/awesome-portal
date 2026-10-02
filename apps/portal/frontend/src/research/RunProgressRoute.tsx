@@ -45,6 +45,10 @@ export function RunProgressRoute() {
       cancelResult={progress.cancelResult}
       cancelling={progress.cancelling}
       onCancel={progress.cancel}
+      onRetry={progress.retry}
+      retrying={progress.retrying}
+      consoleRefusal={progress.consoleRefusal}
+      onRetryConsole={progress.retryConsole}
     />
   );
 }

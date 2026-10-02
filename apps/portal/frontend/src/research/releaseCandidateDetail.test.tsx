@@ -64,7 +64,6 @@ import {
   SEAL_DIRTY,
   SEAL_LABEL,
   SEAL_SENTENCE,
-  SEALED_REPLAY,
   SOD_NOTE,
   STATUS_TITLE,
   UNKNOWN_COPY,
@@ -466,7 +465,8 @@ describe("S11 composition as served (P21)", () => {
     server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
     renderCompose();
     await ready();
-    expect(panelOrder()).toEqual(without("banner", "publish-unknown", "published", "mirror"));
+    /* QA S11 U1: a sealed candidate has no seal card — only the sealed card. */
+    expect(panelOrder()).toEqual(without("banner", "seal", "publish-unknown", "published", "mirror"));
   });
 
   it("S11-U03 prints the hi-fi title, subtitle, breadcrumb and verbatim copy; DRAFT is the server's state", async () => {
@@ -948,9 +948,10 @@ describe("S11 local seal", () => {
     expect(q("[data-approval-state]")!.textContent).toBe("not approved");
     expect(q("[data-sealed-facts]")!.textContent).not.toContain(PACK_DIGEST);
     expect(q("[data-sealed-facts]")!.getAttribute("title")).toBe(`pack digest ${PACK_DIGEST}`);
-    /* SEALED_LOCAL sits beside DRAFT; nothing says PUBLISHED. */
-    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
-    expect(q("[data-seal-chip]")!.textContent).toBe("sealed locally");
+    /* QA S11 U1: the sealed header says SEALED, not DRAFT; nothing says PUBLISHED. */
+    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
+    expect(q("[data-seal-chip]")).toBeNull();
+    expect(q("[data-panel='seal']")).toBeNull();
     expect(q("[data-lifecycle]")!.textContent).toBe("not delivered · not approved");
     expect(within(q("[data-panel='sealed']")!).getByRole("link", { name: RC_ID }).getAttribute("href")).toBe(releaseCandidatePackHref(RC_ID));
     expect(q("[data-seal-replayed]")).toBeNull();
@@ -960,15 +961,14 @@ describe("S11 local seal", () => {
     expect(screenText()).not.toMatch(/\bPUBLISHED\b(?!_)/);
   });
 
-  it("S11-U28 a replayed seal says the server returned the same pack, not a second candidate", async () => {
+  it("S11-U28 a composition that is already sealed offers no second seal: no seal card, no seal request (QA S11 U1)", async () => {
     const api = server({ COMPOSE: [ok(sealed({ enabled: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" }))], SEAL: [ok(sealResponse(), 201)], PUBLICATION: [ok(publication({ may_publish: false, blocked_reason: "P22_PUBLICATION_INTAKE_DISABLED" }))] });
     renderCompose();
     await ready();
-    fireEvent.click(sealButton());
-    fireEvent.click(screen.getByRole("button", { name: "Confirm local seal" }));
-    await until("[data-seal-replayed]");
-    expect(q("[data-seal-replayed]")!.textContent).toBe(SEALED_REPLAY);
-    expect(api.of("SEAL")).toHaveLength(1);
+    expect(q("[data-action='local-seal']")).toBeNull();
+    expect(q("[data-panel='seal']")).toBeNull();
+    expect(q("[data-panel='sealed']")).not.toBeNull();
+    expect(api.of("SEAL")).toHaveLength(0);
   });
 
   it("S11-U29 a 422 is terminal for the seal; a 409 re-reads; neither is retried", async () => {
@@ -1076,7 +1076,7 @@ describe("S11 publish (P22, two routes)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Confirm publish" }));
     expect(publishButton()!.textContent).toBe(PUBLISHING_LABEL);
     expect(publishButton()!.getAttribute("aria-busy")).toBe("true");
-    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
     fireEvent.click(publishButton()!);
     gate.release();
     await until("[data-panel='published']");
@@ -1148,7 +1148,7 @@ describe("S11 publish (P22, two routes)", () => {
     const card = await until("[data-panel='publish-unknown']");
     expect(card.textContent).toContain(UNKNOWN_SHORT);
     expect(card.querySelector("[data-unknown-copy]")!.getAttribute("title")).toBe(UNKNOWN_COPY);
-    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
     expect(panel("publish")).toBeNull();
     expect(panel("mirror-ghost")).not.toBeNull();
     fireEvent.click(q("[data-action='publish-retry']")!);
@@ -1195,7 +1195,7 @@ describe("S11 publish (P22, two routes)", () => {
       const notice = await until("[data-write-notice='publish'][data-outcome='denied']");
       seen.push(notice.firstElementChild!.textContent!);
       expect(publishButton()!.getAttribute("aria-disabled")).toBe("true");
-      expect(sealButton().getAttribute("aria-disabled")).toBe("true");
+      expect(q("[data-action='local-seal']")).toBeNull();
       /* FG-05: the shell's Frame 01D answers a 401; the card builds no sign-in link of its own. */
       expect(within(notice).queryByRole("link", { name: "sign in again" })).toBeNull();
       await act(() => vi.advanceTimersByTimeAsync(PUBLICATION_POLL_MS * 3));
@@ -1221,7 +1221,7 @@ describe("S11 publish (P22, two routes)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm publish" }));
     const notice = await until("[data-write-notice='publish'][data-outcome='unavailable']");
     expect(notice.textContent).toContain(RC_PUBLISH_UNAVAILABLE_COPY);
-    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
     await flush();
     expect(api.of("PUBLISH")).toHaveLength(1);
     fireEvent.click(publishButton()!);
@@ -1929,8 +1929,7 @@ describe("S11 F2b flow links, tooltips and the pack strip", () => {
     server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
     renderCompose();
     await ready();
-    expect(panel("seal")!.querySelector("h3")!.getAttribute("title")).toBe(SEAL_SENTENCE);
-    expect(sealButton().getAttribute("title")).toBe(SEAL_SENTENCE);
+    expect(panel("seal")).toBeNull();
     expect(panel("sealed")!.querySelector("h3")!.getAttribute("title")).toBe(SEALED_SENTENCE);
     expect(panel("mirror-ghost")!.querySelector("h3")!.getAttribute("title")).toBe(MIRROR_NOTE);
     expect(screen.queryByText(MIRROR_NOTE)).toBeNull();
@@ -1938,6 +1937,12 @@ describe("S11 F2b flow links, tooltips and the pack strip", () => {
     expect(q("[data-pack-counts]")!.getAttribute("title")).toBe(PACK_FOOT_TITLE);
     /* the typed legend of outcomes stays on the page */
     expect(q("[data-mirror-outcomes='legend']")!.textContent).toBe(MIRROR_OUTCOMES);
+    cleanup();
+    server({ COMPOSE: [ok(sealable())] });
+    renderCompose();
+    await ready();
+    expect(panel("seal")!.querySelector("h3")!.getAttribute("title")).toBe(SEAL_SENTENCE);
+    expect(sealButton().getAttribute("title")).toBe(SEAL_SENTENCE);
   });
 
   it("F2b-S11-03 the pack strip has one cell per served row, in served order and status, and hover lights the row", async () => {
@@ -1984,6 +1989,63 @@ describe("S11 F3 digests, lifecycle words and layout", () => {
     expect(detail).toMatch(/\.rc-yaml \.v \{[^}]*overflow-wrap: anywhere/);
     expect(detail).not.toMatch(/\.rc-yaml \.line \{[^}]*white-space: nowrap/);
     expect(detail).not.toMatch(/\.rc-pack \.digest \{[^}]*text-overflow: ellipsis/);
+  });
+});
+
+describe("S11 QA 2026-10-02 fixes", () => {
+  it("QA-S11-U1 a sealed candidate is frozen: SEALED chip (no DRAFT), no seal card or confirm, no edit buttons; the open composition keeps them", async () => {
+    server({ COMPOSE: [ok(sealable())] });
+    renderCompose();
+    await ready();
+    expect(q("[data-state-chip]")!.textContent).toBe("DRAFT");
+    expect(q("[data-action='local-seal']")).not.toBeNull();
+    expect(qa("[data-action='edit-declaration']").length).toBeGreaterThan(0);
+    cleanup();
+    server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    expect(q("[data-state-chip]")!.textContent).toBe("SEALED");
+    expect(screenText()).not.toMatch(/\bDRAFT\b/);
+    expect(q("[data-action='local-seal']")).toBeNull();
+    expect(screen.queryByText(SEAL_CONFIRM)).toBeNull();
+    expect(qa("[data-action='edit-declaration']")).toHaveLength(0);
+    expect(q("[data-panel='sealed']")).not.toBeNull();
+  });
+
+  it("QA-S11-U3 Escape closes an open declaration editor without saving", async () => {
+    const api = server({ COMPOSE: [ok(sealable())] });
+    renderCompose();
+    await ready();
+    fireEvent.click(q("[data-action='edit-declaration']")!);
+    const input = await until("[data-declaration-input]");
+    expect(q("[data-editor]")).not.toBeNull();
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(q("[data-editor]")).toBeNull();
+    expect(api.of("COMPOSE")).toHaveLength(1);
+  });
+
+  it("QA-S11-U19 the record preview prints the sealed id from local_seal; unsealed it keeps the typed absence", async () => {
+    server({ COMPOSE: [ok(sealable())] });
+    renderCompose();
+    await ready();
+    const before = q("[data-yaml-key='release_candidate_id']")!;
+    expect(before.getAttribute("data-yaml-value")).toBe("");
+    expect(before.textContent).toContain("P21_ASSIGNED_ON_LOCAL_SEAL");
+    cleanup();
+    server({ COMPOSE: [ok(sealed())], PUBLICATION: [ok(publication())] });
+    renderCompose();
+    await ready();
+    const after = q("[data-yaml-key='release_candidate_id']")!;
+    expect(after.getAttribute("data-yaml-value")).toBe(RC_ID);
+    expect(after.textContent).toContain(RC_ID);
+    expect(after.textContent).not.toContain("P21_ASSIGNED_ON_LOCAL_SEAL");
+  });
+
+  it("QA-S11-U2 below 720px a pack row is a labelled card: source and note stay", () => {
+    const detail = readFileSync(join(process.cwd(), "src", "research", "ReleaseCandidateDetail.tsx"), "utf8");
+    expect(detail).toContain(".rc-pack tbody tr { display: grid;");
+    expect(detail).toContain('data-label="source"');
+    expect(detail).toContain('data-label="note"');
   });
 });
 

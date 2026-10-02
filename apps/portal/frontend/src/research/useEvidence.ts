@@ -124,7 +124,16 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
     return () => controller.abort();
   }, [generation, runId, workspaceId]);
 
-  const reread = useCallback(() => setGeneration((n) => n + 1), []);
+  /* QA S04-U4: a failed read of the sealed evidence is asked again with the Hub, not left refused for good. */
+  const passportRef = useRef(passport);
+  passportRef.current = passport;
+  const reread = useCallback(() => {
+    if (passportRef.current.state === "refused") {
+      passportAsked.current = false;
+      setPassport({ state: "idle" });
+    }
+    setGeneration((n) => n + 1);
+  }, []);
 
   /* ------------------------------------------------------- the lazy series */
 

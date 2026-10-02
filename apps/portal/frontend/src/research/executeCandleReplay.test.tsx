@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CandleOverviewStrip, CLOSE_TARGET_NOTICE, REVEAL_HIDDEN, chartPrice, exactPercent, foldCapitalPolicyWords, paddedRange, windowMarkers } from "./ExecuteCandleReplay";
+import { CandleOverviewStrip, REVEAL_HIDDEN, chartPrice, exactPercent, foldCapitalPolicyWords, foldCapitalTile, paddedRange, sumDecimalStrings, windowMarkers } from "./ExecuteCandleReplay";
 import { ExecuteRoute } from "./ExecuteRoute";
 import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
@@ -98,13 +98,15 @@ describe("E16 · overview reveal cannot leak a future bucket or its price scale"
     expect(lines).toHaveLength(1);
     expect(lines[0]?.getAttribute("y1")).toBe("2");
     expect(lines[0]?.getAttribute("y2")).toBe("22");
-    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("revealed range 8 – 12");
+    /* T-07: the range rides in the tooltip, grouped like the axis; the caption keeps the counts. */
+    expect(container.querySelector("[data-overview-caption]")?.getAttribute("title")).toContain("revealed range 8.00 – 12.00");
     expect(container.textContent).not.toContain("9999");
+    expect(container.textContent).not.toContain("9,999");
   });
   it("keeps the complete sealed overview unchanged when reveal is off", () => {
     const { container } = render(<CandleOverviewStrip overview={overview} scope="OOS" label="overview" />);
     expect(container.querySelectorAll("svg line")).toHaveLength(2);
-    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("range 1 – 9999");
+    expect(container.querySelector("[data-overview-caption]")?.getAttribute("title")).toContain("range 1.00 – 9,999.00");
   });
 });
 
@@ -179,7 +181,9 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     expect(container.querySelector("[data-chart='replay-equity']")).toBeNull();
     expect(container.querySelectorAll("[data-candle-row]")).toHaveLength(168);
     expect([...container.querySelectorAll("[data-marker]")].map((node) => node.getAttribute("data-marker"))).toEqual(["727", "736", "867", "880"]);
-    expect(container.querySelector("[data-route-note]")?.textContent).toContain(CLOSE_TARGET_NOTICE(0, 0, 0));
+    /* UX-07 / T-01: the "… · 0 orders · 0 fills · 0 trades" line is gone; the chips below carry the absences. */
+    expect(container.querySelector("[data-route-note]")).toBeNull();
+    expect(container.textContent).not.toContain("close-only accounting");
     expect(container.querySelector("[data-replay-contract]")?.textContent).toContain("close_target_v2");
     const reason = (name: string) => container.querySelector(`[data-capability='${name}'] [data-reason-code]`)?.getAttribute("data-reason-code");
     expect(reason("trades")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
@@ -193,9 +197,11 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
 
   it("VD-TEXT-01 · the route fact is one line, the explanatory prose is gone, the absences keep their reason codes", async () => {
     const { container } = await settled();
-    expect(CLOSE_TARGET_NOTICE(0, 0, 0)).toBe("close_target_v2 · close-only accounting · 0 orders · 0 fills · 0 trades");
-    // A count the source did not publish is said so, never printed as 0.
-    expect(CLOSE_TARGET_NOTICE(null, 0, null)).toBe("close_target_v2 · close-only accounting · orders not published · 0 fills · trades not published");
+    /* T-02: the tile says these are records the source published, so 0 cannot read as "no trade happened". */
+    const tile = container.querySelector("[data-tile='orders · fills · trades']") as HTMLElement;
+    expect(tile.textContent).toContain("published records");
+    expect(tile.textContent).toContain("0 · 0 · 0");
+    expect(container.textContent).not.toMatch(/0 orders · 0 fills · 0 trades/);
     expect(container.querySelector("[data-subtitle]")).toBeNull();
     expect(container.querySelector("[data-rules]")).toBeNull();
     expect(container.textContent).not.toMatch(
@@ -203,7 +209,7 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     );
     expect(container.querySelector("[data-panel='trade-anatomy'] h2")?.textContent).toBe("trade anatomy");
     // The long ledger rule rides in a tooltip on the (still accessible) title.
-    expect(container.querySelector("[data-panel='event-ledger'] h2")?.getAttribute("title")).toContain("bar where QuantBT changed the accepted position");
+    expect(container.querySelector("[data-panel='event-ledger'] h2")?.getAttribute("title")).toBe("One row per position change.");
     expect(container.querySelector("[data-transition-count]")?.getAttribute("title")).toBeTruthy();
     expect(container.querySelector("[data-absent-panel='trade-blotter'] [data-reason-code]")?.getAttribute("data-reason-code")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
     expect(container.querySelector("[data-absent-panel='mae-mfe'] [data-reason-code]")?.getAttribute("data-reason-code")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
@@ -222,8 +228,10 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     const { container } = await settled();
     fireEvent.click(within(container.querySelector("[data-transition-row='727']") as HTMLElement).getByRole("button"));
     const anatomy = container.querySelector("[data-anatomy='727']")!;
-    expect(anatomy.querySelector("[data-link='order'][data-na='true']")?.textContent).toContain("not_applicable — close_target_v2 · 0 order records");
-    expect(anatomy.querySelector("[data-link='fill'][data-na='true']")?.textContent).toContain("not_applicable — settles at the close · 0 fill records");
+    /* T-03: no raw enum with an underscore in prose. */
+    expect(anatomy.querySelector("[data-link='order'][data-na='true']")?.textContent).toContain("n/a for close_target_v2");
+    expect(anatomy.querySelector("[data-link='fill'][data-na='true']")?.textContent).toContain("fills at the close");
+    expect(anatomy.textContent).not.toContain("not_applicable");
     expect(anatomy.querySelector("[data-link='account']")?.textContent).toContain("2,000.00");
   });
 });
@@ -240,7 +248,9 @@ describe("P17-T14 · child audit on Screen 08", () => {
     expect(generation).toHaveLength(1);
     const record = AUDIT0.records.find((entry) => entry.context === "out-of-sample generation")!;
     expect(generation[0]!.textContent).toContain(String(record.seed));
-    expect(container.querySelector("[data-child-audit-caption]")?.textContent).toContain("policy isolated_v1");
+    /* T-06: the count is the line; policy, run total, drops and fingerprint are the tooltip. */
+    expect(container.querySelector("[data-child-audit-caption]")?.textContent).toContain("6 of 6 records for this fold");
+    expect(container.querySelector("[data-child-audit-caption]")?.getAttribute("title")).toContain("policy isolated_v1");
     /* The anatomy's child link names the generating child's original ids. */
     fireEvent.click(within(container.querySelector("[data-transition-row='727']") as HTMLElement).getByRole("button"));
     const child = container.querySelector("[data-anatomy='727'] [data-link='child']")!;
@@ -277,7 +287,7 @@ describe("P17-T12/T14 · fold arrival, fold switch and capital convention", () =
     fireEvent.click(container.querySelector("[data-fold='1']")!);
     await waitFor(() => expect(fetchMock.mock.calls.length).toBe(before + 1));
     expect(String(fetchMock.mock.calls.at(-1)![0])).toContain(`at=${encodeURIComponent(FOLD0.execution.fold_capital.segments[1]!.start_cursor)}`);
-    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("1,056 bars → 151 candles of 7");
+    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("1,056 bars · 151 candles (7 bars each)");
   });
 });
 
@@ -300,7 +310,10 @@ describe("P17-T07/T13 · transport and causal reveal are local and presentation-
     act(() => { fireEvent.click(container.querySelector("[data-action='causal-reveal']")!); });
     expect(container.querySelector("[data-action='causal-reveal']")?.getAttribute("aria-pressed")).toBe("true");
     const hidden = [...container.querySelectorAll("[data-transition-row][data-revealed='hidden']")].map((row) => row.getAttribute("data-transition-row"));
-    expect(hidden).toEqual(["736", "867", "880", "890", "946", "951", "1023"]);
+    /* UX-12: every row after the cursor is ONE line that counts them; none of them gives its time or outcome away. */
+    expect(hidden).toEqual(["736"]);
+    expect(container.querySelector("[data-reveal-collapsed]")?.getAttribute("data-reveal-collapsed")).toBe("7");
+    expect(container.querySelector("[data-reveal-collapsed]")?.textContent).toContain("7 later transitions");
     /* A future transition gives away neither its time nor its outcome. */
     expect(container.querySelector("[data-transition-row='736']")?.textContent).not.toContain("2026-07-01 16:00");
     expect(container.querySelectorAll("[data-fold] [data-reveal-hidden]")).toHaveLength(2);
@@ -503,7 +516,9 @@ describe("F1 · D11 — fold capital reads in words, the price axis groups thous
   it("the tile, the strip line and the hover say 'carried across folds'; the raw code is a title only", async () => {
     const { container } = await settled();
     const tile = container.querySelector("[data-tile='fold capital']") as HTMLElement;
-    expect(tile.textContent).toContain("carried across folds");
+    /* T-12 / UX-20: the tile value is one word with a sub-line; the strip line keeps the full words. */
+    expect(tile.querySelector("[data-tile-code]")?.textContent).toBe("carried");
+    expect(tile.textContent).toContain("fold to fold");
     expect(tile.textContent).not.toContain("carry_position");
     expect(tile.querySelector("[data-tile-code]")?.getAttribute("title")).toBe("carry_position");
     const line = container.querySelector("[data-fold-capital]") as HTMLElement;
@@ -525,6 +540,8 @@ describe("F1 · D11 — fold capital reads in words, the price axis groups thous
   it("a policy the server did not publish stays 'not published', never a word", () => {
     expect(foldCapitalPolicyWords(null)).toEqual({ text: "not published", code: null, mapped: false });
     expect(foldCapitalPolicyWords("close_at_boundary").text).toBe("closed at each fold boundary");
+    expect(foldCapitalTile("carry_position")).toEqual({ value: "carried", sub: "fold to fold" });
+    expect(foldCapitalTile(null)).toEqual({ value: "not published", sub: null });
   });
 
   it("the chart is built with a grouped price formatter, so the axis reads like the readout", async () => {
@@ -580,11 +597,23 @@ describe("F1 · FG 08-06 / 08-07 — the browser derives no return and sums no f
     expect(chips[0]!.querySelector("[data-exact]")?.getAttribute("title")).toBe(segments[0]!.end_equity);
   });
 
-  it("the cost timeline prints no window total; it says it is not published, keeps the served full-run fee", async () => {
+  it("sumDecimalStrings adds served decimal strings exactly on the digits, and refuses a partial sum", () => {
+    expect(sumDecimalStrings(["0.1", "0.2"])).toBe("0.3");
+    expect(sumDecimalStrings(["1.07", "0", "2"])).toBe("3.07");
+    expect(sumDecimalStrings(["-1.5", "0.5"])).toBe("-1");
+    expect(sumDecimalStrings(["0", "0"])).toBe("0");
+    expect(sumDecimalStrings(["1.5", null])).toBeNull();
+    expect(sumDecimalStrings(["1.5", "1e-5"])).toBeNull();
+    expect(sumDecimalStrings([])).toBe("0");
+  });
+
+  it("I-13 · the cost timeline states the window's fee as the exact sum of the served per-bar fees (QA S08: it was 'not published' while every bar served one)", async () => {
     const { container } = await settled();
     const windowLine = container.querySelector("[data-cost-window]") as HTMLElement;
-    expect(windowLine.querySelector("[data-window-fee='NOT_PUBLISHED']")?.textContent).toBe("not published");
-    expect(windowLine.textContent).not.toMatch(/fee\s*[\d−-]/);
+    const expected = sumDecimalStrings(FOLD0.replay.rows.map((row) => row.bar?.fee));
+    expect(expected).not.toBeNull();
+    expect(windowLine.querySelector("[data-window-fee]")?.getAttribute("data-window-fee")).toBe(expected);
+    expect(windowLine.querySelector("[data-window-fee='NOT_PUBLISHED']")).toBeNull();
     const total = container.querySelector("[data-cost-total='shown']") as HTMLElement;
     expect(total.querySelector("[data-exact]")?.getAttribute("title")).toBe(FOLD0.execution.totals.fee);
   });

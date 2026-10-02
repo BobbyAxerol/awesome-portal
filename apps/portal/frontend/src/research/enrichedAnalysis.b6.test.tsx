@@ -127,7 +127,7 @@ describe("B6 S04 - the P04 hub lane draws from the Hub's top-level block", () =>
 
     const monthly = container.querySelector("[data-series-panel='MONTHLY_RETURNS']") as HTMLElement;
     expect(monthly.getAttribute("data-series-state")).toBe("ready");
-    expect(monthly.querySelector("[data-enriched-chip]")?.textContent).toBe("enrich_analysis · all time");
+    expect(monthly.querySelector("[data-enriched-chip]")?.textContent).toBe("portal-derived · OOS");
     expect([...monthly.querySelectorAll("[data-month]")].map((m) => m.getAttribute("data-month-partial"))).toEqual(["true", null, "true"]);
 
     const dist = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']") as HTMLElement;
@@ -138,7 +138,7 @@ describe("B6 S04 - the P04 hub lane draws from the Hub's top-level block", () =>
     expect(counts[5]).toContain("36");
 
     await waitFor(() => expect(container.querySelector("[data-chart-table='strategy-benchmark']")).toBeTruthy(), { timeout: 15_000 });
-    expect(container.querySelector("[data-strategy-figure]")?.textContent).toContain("Strategy vs benchmark — all time");
+    expect(container.querySelector("[data-strategy-figure]")?.textContent).toContain("Strategy vs benchmark — OOS");
     expect(container.querySelector("[data-underwater-strip]")).toBeTruthy();
 
     const episodes = container.querySelector("[data-drawdown-episodes='ready']") as HTMLElement;

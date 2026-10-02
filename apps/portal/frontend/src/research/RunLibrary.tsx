@@ -63,7 +63,7 @@ import { ResearchPanel } from "./ResearchPanel";
 import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
-import { useRunLabel } from "./runLabels";
+import { runLabelOrShortId, useRunLabel } from "./runLabels";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -71,7 +71,7 @@ import { useRunLabel } from "./runLabels";
  * Hi-fi title. VD-TEXT-01: the hi-fi subtitle and its "rules of this screen"
  * footer are gone; the ComparisonContractKey rule lives on the Compare button.
  */
-export const TITLE = "Run Library — the entry point";
+export const TITLE = "Run Library";
 
 /** Tooltip on the Compare button while it is not open: the one rule that gates it. */
 export const COMPARE_RULE_TITLE =
@@ -90,6 +90,8 @@ export const LEGACY_NOTE =
   "legacy 1.0.8 metadata — retained for lineage, not current engine evidence.";
 
 export const EMPTY_NONE = "No runs yet.";
+/** QA UX-1: a query shaped like a run label (`R-WFO-023`, `WFO-023`, `P04-018`), which the server's search does not read. */
+export const LABEL_SHAPED_QUERY = /^(?:R-)?(?:[A-Z]{2,5}|P\d{2})(?:-\d{1,6})?$/i;
 export const filteredEmpty = (total: number) => `0 of ${total} runs match — loosen a filter.`;
 
 /** A legacy row's binding chip (RF-05 `binding_availability: LEGACY_METADATA_ONLY`). */
@@ -518,6 +520,18 @@ function last30dCells(item: Pick<RunLibraryItem, "status" | "last_30d">): Last30
     { key: "last30d_return", label: "last 30D return", fact: block.data.return_fraction, kind: "return" },
     { key: "last30d_sharpe", label: "last 30D sharpe", fact: block.data.sharpe, kind: "sharpe" },
   ];
+}
+
+/**
+ * QA S01: the window the last-30D figures cover, as the seal served it. It is the
+ * final 30 days of the sealed series, not the 30 days before the run date, so the
+ * dates ride in the tooltip. Null when the seal carries no window.
+ */
+export function last30dWindow(item: Pick<RunLibraryItem, "last_30d">): string | null {
+  const data = item.last_30d?.data;
+  if (!data) return null;
+  const span = [formatUtc(data.window_start_utc_ms), formatUtc(data.window_end_utc_ms)].filter(Boolean).join(" → ");
+  return span === "" ? null : span;
 }
 
 /** The hi-fi draws 24 columns in a 150 × 26 box. */
@@ -975,10 +989,22 @@ function Sparkline({
  */
 const TWO_DP = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+/**
+ * QA S01: a failure reason is a server token (`ENGINE_ERROR`); the card says it in
+ * words and keeps the token in the tooltip. The words are the token's own, lower-cased,
+ * without a phase prefix - the browser invents no cause the code does not name.
+ */
+export function failureReasonWords(code: string): string {
+  const words = code.replace(/^P\d+_/, "").split("_").join(" ").toLowerCase().trim();
+  return words === "" ? code : words;
+}
+
 export function statDisplay(metric: Pick<MetricCell, "role" | "value">): string | null {
   if (metric.value === null) return null;
   const parsed = Number(metric.value);
   switch (metric.role) {
+    case "FAILURE_REASON":
+      return /^[A-Z0-9]+(?:_[A-Z0-9]+)*$/.test(metric.value) ? failureReasonWords(metric.value) : metric.value;
     case "OOS_SHARPE":
     case "DECAY":
       return Number.isFinite(parsed) && metric.value.trim() !== "" ? typographicMinus(TWO_DP.format(parsed)) : metric.value;
@@ -1058,6 +1084,7 @@ function Stats({ stats, item }: { stats: readonly MetricCell[]; item: RunLibrary
         </span>
       ) : (
         cells?.map((cell) => {
+          const window30 = last30dWindow(item);
           const shown = isAvailable({ state: cell.fact.state === "AVAILABLE" ? "AVAILABLE" : "NOT_PUBLISHED", reason_code: cell.fact.reason_code })
             ? cell.kind === "return"
               ? formatMetric(cell.fact.value, "fraction")
@@ -1067,7 +1094,10 @@ function Stats({ stats, item }: { stats: readonly MetricCell[]; item: RunLibrary
             <span key={cell.key} className="flex flex-col" style={{ gap: 1 }} data-metric={`LAST_30D_${cell.kind.toUpperCase()}`} data-window="last_30d">
               <span style={LABEL_9}>{cell.label}</span>
               {shown !== null ? (
-                <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "var(--ink)" }} title={`${cell.fact.value} · Portal-derived, last 30D OOS window`}>
+                <span
+                  style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}
+                  title={`${cell.fact.value} · Portal-derived, last 30D of the sealed OOS series${window30 ? ` · ${window30}` : ""}`}
+                >
                   {shown}
                 </span>
               ) : (
@@ -1482,7 +1512,34 @@ export const PICK_TARGET_LABEL: Record<string, string> = {
   compare_runs: "Compare",
   /* The journey card's own words (HiFi S00 "Alpha version"); a raw key must never reach the banner. */
   alpha_version_legacy: "Alpha version",
+  /* QA S01 UX-4: the shipped tabs' own words; a raw key never reaches the banner. */
+  run_overview_legacy: "Evidence Flow · Summary",
+  run_optimization_legacy: "S2 · Search & Selection",
+  run_parameters_legacy: "S3 · Freeze",
+  run_execution_legacy: "S4 · Execute Replay",
+  run_audit_legacy: "Release Candidate & Publish",
 };
+
+/**
+ * QA S00/S01 UX-3: a shipped run tab reads the legacy run API, which does not
+ * know a current-engine run ("No run carries this id"). The journey's own
+ * mapping says which redesigned screen replaces each tab, so a pick of the
+ * shipped tab opens that screen for a current-engine row. Legacy 1.0.8 rows
+ * keep the legacy workspace.
+ */
+export const LEGACY_PICK_REPLACEMENT: Readonly<Record<string, string>> = {
+  run_progress_legacy: "run_progress",
+  run_overview_legacy: "evidence_hub",
+  run_optimization_legacy: "search_selection",
+  run_parameters_legacy: "freeze",
+  run_execution_legacy: "execute_replay",
+  run_audit_legacy: "release_candidate",
+};
+
+/** The screen a `?to=` key opens for a current-engine run (the replacement of a shipped tab, else the key). */
+export function effectivePickTarget(pickTarget: string): string {
+  return LEGACY_PICK_REPLACEMENT[pickTarget] ?? pickTarget;
+}
 
 /** Where a card's one link goes, by what the row is (spec 01 §15.4). `to: null` = nothing to open. */
 export function openTarget(
@@ -1521,6 +1578,7 @@ export function openTarget(
    * that cannot exist.
    */
   if (pickTarget) {
+    pickTarget = effectivePickTarget(pickTarget);
     const picked = resolveJourneyCardRoute(
       pickTarget,
       item.run_id,
@@ -1532,7 +1590,10 @@ export function openTarget(
       return {
         to: picked,
         label: `open ${name} →`,
-        title: `Opens this run in ${name}, the screen picked on the journey map.`,
+        title:
+          pickTarget === "alpha_version_legacy"
+            ? "Opens the shipped alpha page, which may not list research alphas."
+            : `Opens this run in ${name}, the screen picked on the journey map.`,
       };
     }
     if (needsAlphaToOpen(pickTarget)) {
@@ -1545,6 +1606,14 @@ export function openTarget(
   }
   if (item.status === "RUNNING" || item.status === "QUEUED") {
     return { to: `/research/quantbt/runs/${id}/progress`, label: "watch progress →" };
+  }
+  /* QA UX-13: a recovering run is not sealed, so there is no evidence to open; its record is on Progress. */
+  if (item.status === "RECOVERY_REQUIRED") {
+    return {
+      to: `/research/quantbt/runs/${id}/progress`,
+      label: "open progress →",
+      title: "A run awaiting recovery has no sealed evidence yet; its record is on Run Progress.",
+    };
   }
   if (item.status === "FAILED") {
     return {
@@ -1595,7 +1664,7 @@ function RunId({ runId }: { runId: string }) {
       data-copied={copied || undefined}
       onClick={copy}
       title={copied ? `${runId} — copied` : `${runId} — click to copy`}
-      aria-label={`run ${runId}, copy id`}
+      aria-label={`run ${label ?? shortId(runId)}, ${copied ? "id copied" : "copy id"}`}
       className="truncate text-left"
       style={{
         flex: "1 1 96px",
@@ -1612,18 +1681,24 @@ function RunId({ runId }: { runId: string }) {
       }}
     >
       {label ?? shortId(runId)}
+      {copied ? (
+        <span data-copied-mark aria-hidden="true" style={{ marginLeft: 6, fontSize: 10, fontWeight: 400, color: "var(--good)" }}>
+          copied
+        </span>
+      ) : null}
     </button>
   );
 }
 
 function CompareCheck({ runId, selected, onToggle }: { runId: string; selected: boolean; onToggle: () => void }) {
+  const label = useRunLabel(runId);
   /* 15 px box inside a 24 px target (spec 01 §8 hit-target rule). */
   return (
     <button
       type="button"
       role="checkbox"
       aria-checked={selected}
-      aria-label={`select ${runId} for compare`}
+      aria-label={`select ${label ?? shortId(runId)} for compare`}
       title="select for compare"
       data-compare-check={runId}
       onClick={onToggle}
@@ -1708,6 +1783,7 @@ function RunCard({
       data-row-kind={item.row_kind}
       data-evidence-revision={item.evidence_revision ?? undefined}
       data-selected={selected}
+      data-certificate-absent={cert === null ? (item.certificate.availability.reason_code ?? item.certificate.availability.state) : undefined}
       style={{
         ...CARD,
         ...(selected ? { outline: "2px solid var(--accent-2)", outlineOffset: 1 } : {}),
@@ -1795,22 +1871,25 @@ function RunCard({
           <Withheld availability={item.rc_availability} what="rc" />
         )}
 
-        <span
-          data-certificate={cert ?? "none"}
-          data-reason-code={cert ? undefined : (item.certificate.availability.reason_code ?? undefined)}
-          title={cert ? `methodology certificate ${cert}` : reasonSentence(item.certificate.availability)}
-          style={{
-            fontFamily: MONO,
-            fontSize: 10,
-            fontWeight: 700,
-            border: `1.5px solid ${cert ? CERT_TONE[cert] : "var(--line-strong)"}`,
-            color: cert ? CERT_TONE[cert] : "var(--ink-faint)",
-            borderRadius: 3,
-            padding: "0 7px",
-          }}
-        >
-          cert {cert ?? "—"}
-        </span>
+        {/* QA S01: `cert —` never held a value; an absent certificate is no pill.
+            The sentence stays on the card as data (reason code) for diagnostics. */}
+        {cert !== null ? (
+          <span
+            data-certificate={cert}
+            title={`methodology certificate ${cert}`}
+            style={{
+              fontFamily: MONO,
+              fontSize: 10,
+              fontWeight: 700,
+              border: `1.5px solid ${CERT_TONE[cert]}`,
+              color: CERT_TONE[cert],
+              borderRadius: 3,
+              padding: "0 7px",
+            }}
+          >
+            cert {cert}
+          </span>
+        ) : null}
 
         {/* Date and link travel together: when the head wraps, the link stays
             beside its date at the right edge instead of starting a lone row. */}
@@ -1938,7 +2017,16 @@ const REFUSED_SHORT = "different contract key — compare refused";
 
 type CompareMode = "pending" | "reading" | "ready" | "refused";
 
-function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[]; onClear: () => void }) {
+function CompareBar({
+  selection,
+  onClear,
+  replaced = null,
+}: {
+  selection: readonly SelectedRun[];
+  onClear: () => void;
+  /** QA UX-5: the run a third tick pushed out, so the eviction is said, not silent. */
+  replaced?: string | null;
+}) {
   if (selection.length === 0) return null;
   const both = selection.length === 2;
   const reading = both && selection.some((run) => run.item === null && run.pending);
@@ -1999,6 +2087,22 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
         >
           {note}
         </span>
+        {replaced !== null && both ? (
+          <span data-compare-replaced={replaced} style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
+            max 2 — replaced {runLabelOrShortId(replaced)}
+          </span>
+        ) : null}
+        {/* QA UX-5: a refusal names the two runs it is about. */}
+        {mode === "refused" ? (
+          <span data-compare-pair style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
+            {selection
+              .map((run) => {
+                const symbol = run.item?.instrument.display ?? null;
+                return `${runLabelOrShortId(run.runId)}${symbol ? ` · ${symbol}` : ""}`;
+              })
+              .join("  vs  ")}
+          </span>
+        ) : null}
         {/* The hi-fi bar is one line. The ids join it only when a selected
             run is off screen (spec 01 §12.5) — otherwise its card is right
             there, outlined. */}
@@ -2336,6 +2440,13 @@ export function RunLibrary(props: RunLibraryProps) {
   const [draft, setDraft] = useDebouncedQuery(filters, onFilters);
   const catalog = response?.filter_catalog;
 
+  /* QA UX-5: a third pick replaces the oldest (spec 01 §3.3); the bar says which. */
+  const [replaced, setReplaced] = useState<string | null>(null);
+  const toggleSel = (runId: string) => {
+    setReplaced(!filters.sel.includes(runId) && filters.sel.length >= 2 ? filters.sel[0] : null);
+    onToggleSel(runId);
+  };
+
   function toggleIn<T extends string>(list: readonly T[], value: T): T[] {
     return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
   }
@@ -2415,7 +2526,7 @@ export function RunLibrary(props: RunLibraryProps) {
               /
             </span>
             <span aria-current="page" style={{ color: "var(--ink)" }}>
-              Runs
+              Run Library
             </span>
           </nav>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 300, letterSpacing: "-.01em", lineHeight: 1 }}>
@@ -2496,7 +2607,7 @@ export function RunLibrary(props: RunLibraryProps) {
           }}
         >
           <span title="Each card's link opens it for that run.">
-            Pick a run to open <strong style={{ color: "var(--ink)" }}>{PICK_TARGET_LABEL[filters.to] ?? filters.to}</strong>
+            Pick a run to open <strong style={{ color: "var(--ink)" }}>{PICK_TARGET_LABEL[effectivePickTarget(filters.to)] ?? filters.to}</strong>
           </span>
           <Link
             to={JOURNEY_MAP}
@@ -2525,7 +2636,7 @@ export function RunLibrary(props: RunLibraryProps) {
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="filter by run id, alpha, symbol…"
+          placeholder="run id, alpha, symbol"
           aria-label="Filter runs"
           style={{
             border: "1px solid var(--line)",
@@ -2682,6 +2793,11 @@ export function RunLibrary(props: RunLibraryProps) {
             {response && response.page.total_rows === 0 && !anyFilter
               ? EMPTY_NONE
               : filteredEmpty(response?.page.total_rows ?? 0)}
+            {LABEL_SHAPED_QUERY.test(filters.q.trim()) ? (
+              <span data-search-label-note style={{ display: "block", marginTop: 4, fontSize: 11.5, color: "var(--ink-faint)" }}>
+                Search reads the run id, alpha and symbol — not the R-… label. Click a label to copy its id.
+              </span>
+            ) : null}
           </span>
           {response && response.page.total_rows === 0 && !anyFilter ? (
             <Link to={NEW_RUN} className="btn-ghost mono text-[10px] uppercase">
@@ -2726,7 +2842,7 @@ export function RunLibrary(props: RunLibraryProps) {
                     key={item.run_id}
                     item={item}
                     selected={filters.sel.includes(item.run_id)}
-                    onToggle={onToggleSel}
+                    onToggle={toggleSel}
                     sparkline={sparklines.get(item.run_id)}
                     onVisible={onVisible}
                     pickTarget={filters.to}
@@ -2779,7 +2895,14 @@ export function RunLibrary(props: RunLibraryProps) {
         </div>
       ) : null}
 
-      <CompareBar selection={selection} onClear={() => onFilters({ ...filters, sel: [] })} />
+      <CompareBar
+        selection={selection}
+        replaced={replaced}
+        onClear={() => {
+          setReplaced(null);
+          onFilters({ ...filters, sel: [] });
+        }}
+      />
 
     </div>
     </RcPublicationContext.Provider>

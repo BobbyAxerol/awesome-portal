@@ -31,6 +31,7 @@ import {
   useAlphaVersionPublications,
   type AlphaVersionPublicationView,
 } from "./alphaVersionPublication";
+import { RUN_ADMISSION_COPY } from "./AlphaImport";
 import { scheduleChoices } from "./atlas";
 import type { AtlasDocument } from "./atlas";
 import { type CatalogDataset, type CatalogSymbol, type DatasetCatalog, splitCatalogReason } from "./datasetClient";
@@ -51,6 +52,7 @@ import {
   coverageWarnings,
   foldPlan,
   hasDeclarationFacts,
+  profileTimeframes,
   readCatalogIndex,
   readProfiles,
   seedPinned,
@@ -78,11 +80,13 @@ import {
   applyCoveragePrefill,
   blockingProblems,
   carriedCoverage,
+  earlyStoppingInvalid,
   effectiveStrategyId,
   markPrefillTouched,
   missingConstraints,
   outerFields,
   planCoverage,
+  randomSeedInvalid,
   stepForFieldPath,
   utcMs,
   parameterStatus,
@@ -125,7 +129,7 @@ export function bindingChip(
   if (!draft.bound) {
     return {
       state: "NOT_PUBLISHABLE",
-      text: "NOT_PUBLISHABLE · scratch",
+      text: "Scratch — cannot be published",
       title: "A scratch run keeps full evidence, but no release candidate can be composed from one.",
     };
   }
@@ -191,15 +195,18 @@ function Field({
   children,
   hint,
   minWidth,
+  title,
 }: {
   label: string;
   children: React.ReactNode;
   hint?: React.ReactNode;
+  /** The long explanation, kept off the page: it rides on the label. */
+  title?: string;
   /** Pixels the field keeps before the row wraps (a date-time input must show its time, not "12:" cut by the picker icon). */
   minWidth?: number;
 }) {
   return (
-    <label className="flex min-w-0 flex-1 flex-col gap-1" style={minWidth ? { minWidth } : undefined}>
+    <label className="flex min-w-0 flex-1 flex-col gap-1" style={minWidth ? { minWidth } : undefined} title={title}>
       <Label>{label}</Label>
       {children}
       {hint ? (
@@ -224,7 +231,7 @@ function ErrorBlock({ message }: { message: string }) {
       role="alert"
       data-step-error
       className="rounded-[6px] border px-2.5 py-1.5 text-[11.5px]"
-      style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)", color: "var(--bad)" }}
+      style={{ borderColor: "var(--bad)", background: "var(--bad-bg)", color: "var(--bad)" }}
     >
       {message}
     </p>
@@ -289,6 +296,7 @@ export function stepCaption({
   unfinished = false,
   visited,
   contextChosen,
+  contextBlocked = false,
   reviewCaption,
 }: {
   step: StepId;
@@ -299,6 +307,8 @@ export function stepCaption({
   visited: boolean;
   /** Context has no validator of its own: it passes once a version is chosen, or for a scratch run. */
   contextChosen: boolean;
+  /** The bound version's served `run_admission.may_create_run` is false. */
+  contextBlocked?: boolean;
   reviewCaption: string;
 }): StepCaption {
   if (hasError) return { state: "error", caption: "needs attention" };
@@ -308,6 +318,9 @@ export function stepCaption({
   if (!visited) return { state: "not-visited", caption: "not visited" };
   if (unfinished) return { state: current ? "current" : "incomplete", caption: "in progress" };
   if (step === "context" && !contextChosen) return { state: current ? "current" : "incomplete", caption: "no version chosen" };
+  if (step === "context" && contextBlocked) return { state: current ? "current" : "incomplete", caption: "cannot create runs" };
+  /* The strategy of a bound run is the bound alpha: with no version chosen nothing is pinned yet. */
+  if (step === "strategy" && !contextChosen) return { state: current ? "current" : "incomplete", caption: "not set" };
   return { state: current ? "current" : "valid", caption: "valid" };
 }
 
@@ -318,6 +331,7 @@ function WizardBar({
   unfinished,
   visited,
   contextChosen,
+  contextBlocked,
   reviewCaption,
 }: {
   current: StepId;
@@ -328,6 +342,7 @@ function WizardBar({
   /** Steps the reader has reached. A step nobody opened has not been checked, so it is never "valid". */
   visited: ReadonlySet<StepId>;
   contextChosen: boolean;
+  contextBlocked: boolean;
   reviewCaption: string;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
@@ -363,6 +378,7 @@ function WizardBar({
           unfinished: unfinished.has(step.id),
           visited: visited.has(step.id),
           contextChosen,
+          contextBlocked,
           reviewCaption,
         });
         const checked = stepState === "valid" && step.id !== "review";
@@ -470,14 +486,26 @@ function ContextStep({
   const lookedUp = draft.bound && bound ? bound.alpha_version_id : null;
   const publications = useAlphaVersionPublications(lookedUp !== null ? [lookedUp] : []);
   const supersedes = supersedesFact(bound ?? null, registry);
+  /* `run_admission` as the registry serves it: a version that cannot create runs says why, here, before any step is filled. */
+  const admission = draft.bound ? (bound?.run_admission ?? null) : null;
+  const blockedWords = admission && !admission.may_create_run
+    ? ((admission.code ? (RUN_ADMISSION_COPY as Record<string, string | undefined>)[admission.code] : undefined) ?? "run admission refused")
+    : null;
+  /* An alpha none of whose versions can create a run is named so in the list. */
+  const cannotRun = (alphaId: string) => {
+    const versions = registry.filter((entry) => entry.alpha_id === alphaId);
+    return versions.length > 0 && versions.every((entry) => entry.run_admission?.may_create_run === false);
+  };
   return (
     <Card title="Context — alpha &amp; version binding">
       <div className="flex flex-wrap items-end gap-2.5">
+        {/* A scratch run binds no alpha: its two fields would only hold ids the serializer ignores. */}
+        {draft.bound ? (<>
         <Field label="Alpha">
           {draft.bound ? (
             <select className={INPUT_CLASS} style={inputStyle()} value={draft.alphaId} onChange={(event) => patch({ alphaId: event.target.value, alphaVersionId: "", strategyId: "" })} aria-label="Alpha" data-alpha-selector disabled={registry.length === 0} title={registry.length === 0 ? "No registry entry is available for the bound declaration." : undefined}>
               <option value="">Select an alpha</option>
-              {alphaIds.map((id) => <option key={id} value={id}>{registry.find((entry) => entry.alpha_id === id)?.display_name ?? id}</option>)}
+              {alphaIds.map((id) => <option key={id} value={id}>{registry.find((entry) => entry.alpha_id === id)?.display_name ?? id}{cannotRun(id) ? " · cannot create runs" : ""}</option>)}
             </select>
           ) : <input className={INPUT_CLASS} style={inputStyle()} value={draft.alphaId} onChange={(event) => patch({ alphaId: event.target.value })} aria-label="Alpha" />}
         </Field>
@@ -489,6 +517,7 @@ function ContextStep({
             </select>
           ) : <input className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" />}
         </Field>
+        </>) : null}
         <div className="flex flex-none gap-1" role="group" aria-label="Binding mode">
           {([true, false] as const).map((bound) => (
             <button
@@ -551,13 +580,18 @@ function ContextStep({
             <span className="flex items-baseline gap-1.5" data-supersedes={supersedes.kind}>
               <Label>supersedes</Label>
               {supersedes.kind === "absent" ? (
-                <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+                <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }} title={supersedes.code ?? undefined} data-supersedes-code={supersedes.code ?? undefined}>
                   {supersedes.text}
-                  {supersedes.code ? <span className="mono not-italic"> · {supersedes.code}</span> : null}
                 </span>
               ) : (
                 <span className="mono text-[10.5px]">{supersedes.text}</span>
               )}
+            </span>
+          ) : null}
+          {blockedWords !== null ? (
+            <span className="flex items-baseline gap-1.5" data-run-admission="refused" title={admission?.code ?? undefined}>
+              <Label>runs</Label>
+              <span className="text-[10.5px] font-semibold" style={{ color: "var(--bad)" }}>cannot create runs — {blockedWords}</span>
             </span>
           ) : null}
           {lookedUp !== null ? <LastPublishedRc view={publications.get(lookedUp) ?? { state: "loading" }} /> : null}
@@ -583,14 +617,8 @@ function ContextStep({
           style={{ borderColor: "var(--role-holdout)", background: "var(--paper)" }}
           data-scratch-banner
         >
-          <span
-            className="mono text-[9px] font-bold"
-            style={{ color: "var(--role-holdout)" }}
-          >
-            NOT_PUBLISHABLE
-          </span>
-          <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} title={SCRATCH_BANNER}>
-            no release candidate from a scratch run
+          <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} title={SCRATCH_BANNER} data-scratch-note>
+            Scratch — no release candidate can come from it.
           </span>
         </div>
       )}
@@ -627,8 +655,8 @@ function LastPublishedRc({ view }: { view: AlphaVersionPublicationView }) {
   } else if (view.read.publication === null) {
     state = view.read.availability;
     body = (
-      <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-last-rc-absent={view.read.reason_code ?? view.read.availability}>
-        not published · {view.read.reason_code ?? view.read.availability}
+      <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-last-rc-absent={view.read.reason_code ?? view.read.availability} title={view.read.reason_code ?? view.read.availability}>
+        No release candidate yet
       </span>
     );
   } else {
@@ -673,7 +701,7 @@ function StrategyStep({
     <Card title="Strategy &amp; protocol">
       <Field
         label="strategy_id"
-        hint={draft.bound ? "pinned to the bound alpha_id — the server admits no other" : "free while scratch"}
+        hint={draft.bound ? (draft.alphaVersionId === "" ? undefined : "pinned to the alpha id") : "free while scratch"}
       >
         <input
           className={INPUT_CLASS}
@@ -686,7 +714,7 @@ function StrategyStep({
       </Field>
       {error ? <ErrorBlock message={error} /> : null}
 
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Protocol">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Protocol" title="Only the protocols the installed engine release certifies are offered.">
         {(["three_window_decay", "advanced"] as const).map((protocol) => (
           <button
             key={protocol}
@@ -704,10 +732,6 @@ function StrategyStep({
             {protocol === "three_window_decay" ? "Three-Window Decay" : "Advanced Walk-Forward"}
           </button>
         ))}
-        <span className="self-center text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          Showing only the protocols the installed engine release certifies (2). An uncertified
-          protocol is not offered.
-        </span>
       </div>
       <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-seed-required>
         {/* Three states, not two: a rule that was not read is not a rule that
@@ -734,6 +758,8 @@ function RouteStep({
   limits: DraftConstraints;
   error: string | null;
 }) {
+  /* The reason of the not-admitted route the reader last pointed at or focused: a tooltip alone is invisible on touch. */
+  const [blockedHint, setBlockedHint] = useState<{ id: string; text: string } | null>(null);
   return (
     <Card
       title="Execution route — how orders come to exist"
@@ -822,20 +848,32 @@ function RouteStep({
                       <button
                         key={route.route_id}
                         type="button"
-                        disabled
+                        aria-disabled="true"
                         aria-label={`${route.route_id}, not admitted — ${blocked}`}
                         title={blocked}
                         data-route-card={route.route_id}
                         data-route-blocked="true"
+                        onFocus={() => setBlockedHint({ id: route.route_id, text: blocked })}
+                        onMouseEnter={() => setBlockedHint({ id: route.route_id, text: blocked })}
+                        onClick={() => setBlockedHint({ id: route.route_id, text: blocked })}
                         className="mono rounded-[6px] border border-dashed px-2 py-[3px] text-[10px]"
-                        style={{ borderColor: "var(--line-strong)", color: "var(--ink-faint)", background: "var(--paper)", cursor: "not-allowed" }}
+                        style={{
+                          borderColor: blockedHint?.id === route.route_id ? "var(--ink-faint)" : "var(--line-strong)",
+                          color: "var(--ink-faint)",
+                          background: "var(--paper)",
+                          cursor: "not-allowed",
+                        }}
                       >
                         {route.route_id}
-                        {route.status_word ? <span className="ml-1.5 text-[8.5px]">{route.status_word}</span> : null}
                       </button>
                     );
                   })}
               </div>
+              {blockedHint ? (
+                <p className="mono pt-1 text-[10px] leading-[1.45]" style={{ color: "var(--ink-soft)" }} data-route-blocked-reason={blockedHint.id}>
+                  {blockedHint.id} — {blockedHint.text}
+                </p>
+              ) : null}
             </details>
           ) : null}
         </>
@@ -849,9 +887,9 @@ function RouteStep({
 
 /** Spec 02 §5.2 method notes, keyed by the engine-derived method (CG-P04-06). */
 const ROUTE_METHOD_NOTE: Record<string, string> = {
-  wfo: "strategy-param route — walk-forward search applies",
-  tape: "tape-driven — single-pass replay; the walk-forward step collapses to the tape span",
-  single_pass: "single pass — the engine lists no walk-forward target for this route",
+  wfo: "Walk-forward searches strategy parameters.",
+  tape: "Tape replay — one pass over the tape span.",
+  single_pass: "Single pass — no walk-forward target.",
 };
 
 /**
@@ -1005,6 +1043,7 @@ function DataStep({
   catalog = null,
   catalogReason = null,
   registry = [],
+  profileFit = null,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
@@ -1014,6 +1053,8 @@ function DataStep({
   catalog?: DatasetCatalog | null;
   catalogReason?: string | null;
   registry?: readonly RegistryEntry[];
+  /** The timeframes the admitted profiles that fit this declaration cover; null restricts nothing. */
+  profileFit?: { timeframes: readonly string[]; profileIds: readonly string[] } | null;
 }) {
   const dataset: CatalogDataset | null = catalog?.datasets.find((item) => item.dataset_id === draft.datasetId) ?? null;
   /* FG-08 (FE-A1-01): client sentence, then the typed facts in mono. */
@@ -1039,11 +1080,20 @@ function DataStep({
       ...(draft.coveragePrefill?.source ? applyCoveragePrefill(draft, planCoverage(catalog, draft.datasetId, draft.symbol, timeframe)) : {}),
     });
   const prefillPlan = planCoverage(catalog, draft.datasetId, draft.symbol, draft.timeframe);
+  /* One line, and only while the popup has no match to offer: typing `BNB` shows BNBUSDT, which is no reason to say "not listed". */
+  const unlistedShown =
+    selectedSymbol === null
+    && dataset !== null
+    && dataset.symbols.state === "PUBLISHED"
+    && typedSymbol !== ""
+    && (listing?.partial !== true || serverMiss === typedSymbol)
+    && !symbols.some((item) => item.symbol.includes(typedSymbol))
+    && !serverItems.some((item) => item.symbol.includes(typedSymbol));
   const prefilledNow = outerFields(draft.protocol).some((field) => carriedCoverage(draft, field) !== null);
   const publishedTimeframes = limits.declaredTimeframes ?? [];
   const timeframeDeclared = publishedTimeframes.includes(draft.timeframe);
   const versionLabel = bindingVersionLabel(draft, registry);
-  const chips = timeframeChips(dataset, limits.declaredTimeframes, draft.timeframe, !draft.bound);
+  const chips = timeframeChips(dataset, limits.declaredTimeframes, draft.timeframe, !draft.bound, profileFit);
   const warnings = coverageWarnings(draft, coverageRange(prefillPlan));
   const available = catalog?.datasets.filter((item) => item.availability === "available") ?? [];
   const unavailable = catalog?.datasets.filter((item) => item.availability !== "available") ?? [];
@@ -1128,9 +1178,9 @@ function DataStep({
           />
           {selectedSymbol ? (
             <SymbolFacts symbol={selectedSymbol} timeframe={draft.timeframe} rich={richSymbols} />
-          ) : dataset && dataset.symbols.state === "PUBLISHED" && typedSymbol !== "" && (listing?.partial !== true || serverMiss === typedSymbol) ? (
-            <span className="text-[10px]" style={{ color: "var(--accent-2)" }} data-symbol-unlisted>
-              {draft.symbol.trim().toUpperCase()} is not in this dataset&rsquo;s {dataset.symbols.total ?? ""} listed symbols — preflight will refuse it.
+          ) : unlistedShown ? (
+            <span className="text-[10px]" style={{ color: "var(--accent-2)" }} data-symbol-unlisted title="Preflight refuses a symbol this dataset does not list.">
+              {typedSymbol} is not a listed symbol
             </span>
           ) : dataset?.symbols.state === "NOT_PUBLISHED" ? (
             <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>{dataset.symbols.reason}</span>
@@ -1151,7 +1201,8 @@ function DataStep({
 
       {/* D4: what the pick did to the walk-forward dates — filled, kept, or
           why nothing was. Silent until a dataset is chosen. */}
-      {draft.datasetId !== "" ? (
+      {/* The Symbol field is right above and the Walk-forward step says "Pick a symbol to prefill windows" where the blank dates are: not a third time here. */}
+      {draft.datasetId !== "" && prefillPlan.state !== "no-symbol" && prefillPlan.state !== "symbol-unlisted" ? (
         <p
           className="text-[9.5px] leading-[1.5]"
           style={{ color: "var(--ink-soft)" }}
@@ -1192,7 +1243,7 @@ function DataStep({
             <Label>{label}</Label>
             {value === null ? (
               <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
-                {draft.alphaVersionId ? "not declared" : "no version chosen"}
+                {!draft.bound || draft.alphaVersionId ? "not declared" : "no version chosen"}
               </span>
             ) : (
               <span className="mono text-[10.5px]">{value}</span>
@@ -1250,15 +1301,19 @@ function DateTimeInput({
   const shown = datetimeInputValue(value);
   return (
     <>
-      <input
-        type="datetime-local"
-        className={INPUT_CLASS}
-        style={style}
-        value={shown.input}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
-        data-split-mode={dataSplitMode ? "" : undefined}
-      />
+      <span className="flex items-center gap-1.5">
+        <input
+          type="datetime-local"
+          className={`${INPUT_CLASS} min-w-0 flex-1`}
+          style={style}
+          value={shown.input}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={label}
+          data-split-mode={dataSplitMode ? "" : undefined}
+        />
+        {/* The inputs render in the reader's locale; the form reads every instant as UTC. */}
+        <span className="mono flex-none text-[9px]" style={{ color: "var(--ink-faint)" }} data-utc-suffix>UTC</span>
+      </span>
       {shown.raw !== null ? (
         <span className="mono text-[9.5px]" style={{ color: "var(--accent-2)" }} data-instant-unshown>
           copied as {shown.raw} — this input cannot show it
@@ -1276,11 +1331,17 @@ function DateTimeInput({
  * no cause — a cause is the server's to state, at Review, once it has spoken —
  * and it steps aside when a served `run_admission` says creation is admitted.
  */
+const V2_NOTE_SUBJECT: Record<string, string> = {
+  "train-window": "Train width",
+  "temporal-guards": "Label/purge/embargo",
+  "inner-folds": "Inner folds",
+};
+
 function V2CreateNote({ where, admitted }: { where: string; admitted: boolean }) {
   if (admitted) return null;
   return (
     <span className="block w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--role-holdout)" }} data-v2-create-note={where}>
-      Preflight accepts this; create does not admit it yet.
+      {V2_NOTE_SUBJECT[where] ?? "This"}: preflight only for now.
     </span>
   );
 }
@@ -1340,22 +1401,13 @@ function PublishedSelect({
         data-pinned-by={pinnedBy}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.admission !== "ADMITTED"}>
+          <option key={option.value} value={option.value} disabled={option.admission !== "ADMITTED"} title={option.admission !== "ADMITTED" ? (option.reason ?? undefined) : undefined} data-option-refused={option.admission !== "ADMITTED" ? option.value : undefined}>
             {option.value}
             {option.admission !== "ADMITTED" ? " — not admitted" : ""}
           </option>
         ))}
       </select>
-      {refused.map((option) => (
-        <span
-          key={option.value}
-          className="text-[9.5px] leading-[1.45]"
-          style={{ color: "var(--ink-faint)" }}
-          data-option-refused={option.value}
-        >
-          {option.value}: {option.reason}
-        </span>
-      ))}
+      {refused.length > 0 ? <span className="sr-only">{refused.map((option) => `${option.value}: ${option.reason ?? "not admitted"}`).join(". ")}</span> : null}
     </Field>
   );
 }
@@ -1537,7 +1589,7 @@ function WindowsStep({
               label="Analysis end exclusive"
             />
           </Field>
-          <Field minWidth={INSTANT_FIELD_WIDTH} label="First OOS instant">
+          <Field minWidth={INSTANT_FIELD_WIDTH} label="First OOS instant" title={options?.split_mode_rule}>
             <DateTimeInput
               style={inputStyle()}
               value={draft.walkForward.splitMode}
@@ -1565,7 +1617,7 @@ function WindowsStep({
             onChange={(windowMode) => patch({ walkForward: { ...draft.walkForward, windowMode } })}
           />
           {draft.walkForward.windowMode === "rolling" ? (
-            <Field label="Train width" hint={options?.train_window?.rule ?? "Required for rolling, e.g. 180D or 72h."}>
+            <Field label="Train width" title={options?.train_window?.rule ?? "Required for rolling, e.g. 180D or 72h."}>
               <input
                 className={INPUT_CLASS}
                 style={inputStyle(!/^[1-9][0-9]{0,4}(D|h)$/.test(draft.walkForward.trainWindow ?? ""))}
@@ -1578,13 +1630,8 @@ function WindowsStep({
               <V2CreateNote where="train-window" admitted={createAdmitted} />
             </Field>
           ) : null}
-          {options ? (
-            <p className="w-full text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-split-rule>
-              {options.split_mode_rule}
-            </p>
-          ) : null}
           {options?.temporal_guards ? (
-            <div className="flex w-full flex-wrap items-end gap-2.5" data-temporal-guards data-release-default={options.temporal_guards.release_default}>
+            <div className="flex w-full flex-wrap items-end gap-2.5" data-temporal-guards data-release-default={options.temporal_guards.release_default} title={options.temporal_guards.rule}>
               {([
                 ["labelHorizonBars", "Label horizon (bars)"],
                 ["purgeBars", "Purge (bars)"],
@@ -1602,8 +1649,10 @@ function WindowsStep({
                   />
                 </Field>
               ))}
-              <p className="w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{options.temporal_guards.rule}</p>
-              <V2CreateNote where="temporal-guards" admitted={createAdmitted} />
+              {/* Only when a guard is actually declared: an untouched field is not serialized. */}
+              {(["labelHorizonBars", "purgeBars", "embargoBars"] as const).some((key) => (draft.walkForward[key] ?? "").trim() !== "") ? (
+                <V2CreateNote where="temporal-guards" admitted={createAdmitted} />
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -1637,12 +1686,13 @@ function WindowsStep({
               patch({ optimizationMode: e.target.value, optimizationSchedule: mode?.default_schedule ?? "" });
             }}
             aria-label="Optimization mode"
+            title={draft.optimizationMode || undefined}
             disabled={modes.length === 0}
           >
             <option value="">{modes.length === 0 ? "Atlas not available" : "choose a mode"}</option>
             {modes.map((mode) => (
-              <option key={mode.mode_id} value={mode.mode_id}>
-                {mode.mode_id} — {mode.display_name}
+              <option key={mode.mode_id} value={mode.mode_id} title={mode.mode_id}>
+                {mode.display_name || mode.mode_id}
               </option>
             ))}
           </select>
@@ -1658,7 +1708,13 @@ function WindowsStep({
           >
             <option value="">{selectedMode === null ? "choose a mode first" : "choose a schedule"}</option>
             {scheduleOptions.map(({ schedule, valid }) => (
-              <option key={schedule} value={schedule} disabled={!valid}>
+              <option
+                key={schedule}
+                value={schedule}
+                disabled={!valid}
+                title={valid ? undefined : (selectedMode?.invalid_schedules?.find((entry) => entry.schedule === schedule)?.reason ?? "Not admitted for this mode in the installed release manifest.")}
+                data-invalid-schedule={valid ? undefined : schedule}
+              >
                 {schedule}{valid ? "" : " · not admitted"}
               </option>
             ))}
@@ -1666,7 +1722,7 @@ function WindowsStep({
         </Field>
       </div>
       {draft.protocol === "advanced" && draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" ? (
-        <div className="flex flex-wrap items-end gap-2.5 rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line-soft)" }} data-inner-folds>
+        <div className="flex flex-wrap items-end gap-2.5 rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line-soft)" }} data-inner-folds title={options?.inner_folds?.rule}>
           <span className="w-full mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
             inner folds — decay selection stays inside each outer IS
           </span>
@@ -1692,25 +1748,32 @@ function WindowsStep({
                 <Field label="Minimum inner folds" hint={options?.inner_folds ? `release default ${options.inner_folds.min_folds_release_default}` : undefined}>
                   <input className={INPUT_CLASS} style={inputStyle()} inputMode="numeric" value={inner.minFolds} onChange={(e) => set({ minFolds: e.target.value.trim() })} aria-label="Minimum inner folds" placeholder={options?.inner_folds ? String(options.inner_folds.min_folds_release_default) : undefined} />
                 </Field>
-                {options?.inner_folds ? (
-                  <p className="w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{options.inner_folds.rule}</p>
-                ) : null}
                 <V2CreateNote where="inner-folds" admitted={createAdmitted} />
               </>
             );
           })()}
         </div>
       ) : null}
-      {scheduleOptions.filter((choice) => !choice.valid).map((choice) => {
-        const reason = selectedMode?.invalid_schedules?.find((entry) => entry.schedule === choice.schedule)?.reason;
-        return <p key={choice.schedule} data-invalid-schedule={choice.schedule} className="text-[10px]" style={{ color: "var(--ink-soft)" }}>
-          {choice.schedule} · {reason ?? "Not admitted for this mode in the installed release manifest."}
-        </p>;
-      })}
-
 
       {error ? <ErrorBlock message={error} /> : null}
     </Card>
+  );
+}
+
+/** Below this width the seven columns no longer sit in one row; each cell then names itself instead of the header. */
+const PARAM_TABLE_FULL_WIDTH = 760;
+
+/** One cell of a parameter row: a fixed column at full width, a labelled pair when narrow. */
+function PCell({ label, width, compact, children }: { label: string; width?: number; compact: boolean; children: React.ReactNode }) {
+  return (
+    <span className={compact ? "flex flex-none items-center gap-1.5" : "flex flex-none items-center"} style={compact || width === undefined ? undefined : { width }}>
+      {compact ? (
+        <span className="mono flex-none text-[8.5px] uppercase" style={{ width: label === "declared" ? 54 : 34, color: "var(--ink-faint)", letterSpacing: ".06em" }} aria-hidden="true">
+          {label}
+        </span>
+      ) : null}
+      {children}
+    </span>
   );
 }
 
@@ -1727,11 +1790,25 @@ function ParametersStep({
   ceiling?: number | null;
 }) {
   const swept = sweptCount(draft);
+  const hasRows = draft.parameters.length > 0;
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  useLayoutEffect(() => {
+    const element = tableRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => setCompact(element.clientWidth > 0 && element.clientWidth < PARAM_TABLE_FULL_WIDTH);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [hasRows]);
 
   function update(index: number, change: Partial<ParameterEntry>) {
     const next = draft.parameters.map((entry, i) => (i === index ? { ...entry, ...change } : entry));
     patch({ parameters: next });
   }
+  /* A refused row already says so in its own status cell; a second box under the table would be the same sentence again. */
+  const rowRefused = draft.parameters.some((entry) => parameterStatus(entry).tone === "refused");
 
   return (
     <Card
@@ -1748,27 +1825,29 @@ function ParametersStep({
     >
       {draft.parameters.length === 0 ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-no-parameters>
-          The bound version declares no parameter space. The browser never adds one.
+          {draft.bound && draft.alphaVersionId === "" ? "No version chosen." : "No parameter space declared."}
         </p>
       ) : (
-        <div className="flex flex-col" data-parameter-table>
+        <div className="flex flex-col" data-parameter-table data-parameter-compact={compact || undefined} ref={tableRef}>
           {/* E4 (audit 02-14): the HiFi's header row. Without it the two
               free-text boxes on each row are unlabelled, and the declared
               step — which the registry publishes and the form dropped — had
-              nowhere to go. */}
-          <div
-            className="mono flex flex-wrap items-center gap-2 border-b pb-1 text-[9px] uppercase"
-            style={{ borderColor: "var(--line)", color: "var(--ink-faint)", letterSpacing: ".06em" }}
-            data-parameter-header
-          >
-            <span className="w-[104px] flex-none">param</span>
-            <span className="w-[120px] flex-none">declared</span>
-            <span className="w-[84px] flex-none">dim</span>
-            <span className="w-[88px] flex-none">low</span>
-            <span className="w-[88px] flex-none">high</span>
-            <span className="w-[72px] flex-none">step</span>
-            <span className="flex-1">status</span>
-          </div>
+              nowhere to go. Narrow, every cell carries its own label instead. */}
+          {compact ? null : (
+            <div
+              className="mono flex flex-wrap items-center gap-2 border-b pb-1 text-[9px] uppercase"
+              style={{ borderColor: "var(--line)", color: "var(--ink-faint)", letterSpacing: ".06em" }}
+              data-parameter-header
+            >
+              <span className="w-[104px] flex-none">param</span>
+              <span className="w-[120px] flex-none">declared</span>
+              <span className="w-[84px] flex-none">dim</span>
+              <span className="w-[88px] flex-none">low</span>
+              <span className="w-[88px] flex-none">high</span>
+              <span className="w-[72px] flex-none">step</span>
+              <span className="flex-1">status</span>
+            </div>
+          )}
           {draft.parameters.map((entry, index) => {
             const status = parameterStatus(entry);
             const refused = status.tone === "refused";
@@ -1777,78 +1856,88 @@ function ParametersStep({
                 key={entry.name}
                 data-parameter={entry.name}
                 data-parameter-tone={status.tone}
-                className="flex flex-wrap items-center gap-2 border-b py-1.5"
+                className={compact ? "flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b py-2" : "flex flex-wrap items-center gap-2 border-b py-1.5"}
                 style={{ borderColor: "var(--line-soft)" }}
               >
-                <span className="mono w-[104px] flex-none text-[11px]">{entry.name}</span>
-                <span className="mono w-[120px] flex-none text-[10px]" style={{ color: "var(--ink-faint)" }}>
-                  {entry.levels
-                    ? `[${entry.levels.join(", ")}]`
-                    : `${entry.declaredLow} … ${entry.declaredHigh}`}
-                </span>
-                <span className="flex flex-none gap-[3px]">
-                  {(["sweep", "pin"] as const).map((dimension) => (
-                    <button
-                      key={dimension}
-                      type="button"
-                      data-dimension={`${entry.name}:${dimension}`}
-                      data-selected={entry.dimension === dimension}
-                      onClick={() => update(index, { dimension })}
-                      className="mono rounded-[4px] border px-2 py-px text-[9px]"
-                      style={{
-                        borderColor:
-                          entry.dimension === dimension
-                            ? dimension === "sweep"
-                              ? "var(--accent)"
-                              : "var(--role-holdout)"
-                            : "var(--line)",
-                        color:
-                          entry.dimension === dimension
-                            ? dimension === "sweep"
-                              ? "var(--accent)"
-                              : "var(--role-holdout)"
-                            : "var(--ink-faint)",
-                      }}
-                    >
-                      {dimension}
-                    </button>
-                  ))}
-                </span>
-                <input
-                  className={`${INPUT_CLASS} w-[88px] flex-none`}
-                  style={inputStyle(refused)}
-                  value={entry.low}
-                  onChange={(e) => update(index, { low: e.target.value })}
-                  aria-label={`${entry.name} ${entry.dimension === "pin" ? "value" : "low"}`}
-                />
-                {entry.dimension === "sweep" ? (
+                <span className={compact ? "mono w-full text-[11px] font-semibold" : "mono w-[104px] flex-none text-[11px]"}>{entry.name}</span>
+                <PCell label="declared" width={120} compact={compact}>
+                  <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
+                    {entry.levels
+                      ? `[${entry.levels.join(", ")}]`
+                      : `${entry.declaredLow} … ${entry.declaredHigh}`}
+                  </span>
+                </PCell>
+                <PCell label="dim" width={84} compact={compact}>
+                  <span className="flex flex-none gap-[3px]">
+                    {(["sweep", "pin"] as const).map((dimension) => (
+                      <button
+                        key={dimension}
+                        type="button"
+                        data-dimension={`${entry.name}:${dimension}`}
+                        data-selected={entry.dimension === dimension}
+                        onClick={() => update(index, { dimension })}
+                        className="mono rounded-[4px] border px-2 py-px text-[9px]"
+                        style={{
+                          borderColor:
+                            entry.dimension === dimension
+                              ? dimension === "sweep"
+                                ? "var(--accent)"
+                                : "var(--role-holdout)"
+                              : "var(--line)",
+                          color:
+                            entry.dimension === dimension
+                              ? dimension === "sweep"
+                                ? "var(--accent)"
+                                : "var(--role-holdout)"
+                              : "var(--ink-faint)",
+                        }}
+                      >
+                        {dimension}
+                      </button>
+                    ))}
+                  </span>
+                </PCell>
+                <PCell label={entry.dimension === "pin" ? "value" : "low"} width={88} compact={compact}>
                   <input
                     className={`${INPUT_CLASS} w-[88px] flex-none`}
                     style={inputStyle(refused)}
-                    value={entry.high}
-                    onChange={(e) => update(index, { high: e.target.value })}
-                    aria-label={`${entry.name} high`}
+                    value={entry.low}
+                    onChange={(e) => update(index, { low: e.target.value })}
+                    aria-label={`${entry.name} ${entry.dimension === "pin" ? "value" : "low"}`}
                   />
-                ) : (
+                </PCell>
+                {entry.dimension === "sweep" ? (
+                  <PCell label="high" width={88} compact={compact}>
+                    <input
+                      className={`${INPUT_CLASS} w-[88px] flex-none`}
+                      style={inputStyle(refused)}
+                      value={entry.high}
+                      onChange={(e) => update(index, { high: e.target.value })}
+                      aria-label={`${entry.name} high`}
+                    />
+                  </PCell>
+                ) : compact ? null : (
                   <span className="mono w-[88px] flex-none text-[11px]" style={{ color: "var(--ink-faint)" }}>
                     —
                   </span>
                 )}
                 {/* The declaration's grid, read from the registry. A fixed or
                     categorical parameter declares none, and says so. */}
+                <PCell label="step" width={72} compact={compact}>
+                  <span
+                    className="mono text-[10px]"
+                    style={{ color: "var(--ink-faint)" }}
+                    data-parameter-step={entry.name}
+                  >
+                    {entry.declaredStep === null || entry.declaredStep === undefined ? (
+                      <span className="italic">not declared</span>
+                    ) : (
+                      String(entry.declaredStep)
+                    )}
+                  </span>
+                </PCell>
                 <span
-                  className="mono w-[72px] flex-none text-[10px]"
-                  style={{ color: "var(--ink-faint)" }}
-                  data-parameter-step={entry.name}
-                >
-                  {entry.declaredStep === null || entry.declaredStep === undefined ? (
-                    <span className="italic">not declared</span>
-                  ) : (
-                    String(entry.declaredStep)
-                  )}
-                </span>
-                <span
-                  className="flex-1 text-[10px]"
+                  className={compact ? "w-full text-[10px]" : "flex-1 text-[10px]"}
                   data-parameter-status={entry.name}
                   style={{
                     color: refused
@@ -1865,7 +1954,7 @@ function ParametersStep({
           })}
         </div>
       )}
-      {error ? <ErrorBlock message={error} /> : null}
+      {error && !rowRefused ? <ErrorBlock message={error} /> : null}
     </Card>
   );
 }
@@ -1888,6 +1977,11 @@ const GROUP_LABEL: Record<string, string> = {
  * will refuse is a promise the screen cannot keep.
  */
 function OptimizerDefaults({ release }: { release: AtlasRelease }) {
+  /* A `detail` shared by three or more rows ("QuantBT OptimizationConfig default.") is a label, not information: it rides on the chip. */
+  const detailCount = new Map<string, number>();
+  for (const group of release.optimizer_defaults.groups) {
+    for (const field of group.fields) detailCount.set(field.detail, (detailCount.get(field.detail) ?? 0) + 1);
+  }
   return (
     <details className="rounded-[5px] border px-2.5 py-1.5" style={{ borderColor: "var(--line)" }} data-optimizer-defaults>
       <summary className="cursor-pointer text-[11px] font-semibold" style={{ color: "var(--ink-soft)" }}>
@@ -1923,16 +2017,16 @@ function OptimizerDefaults({ release }: { release: AtlasRelease }) {
               </span>
               <span
                 className="mono flex-none rounded-[3px] border px-1 text-[8.5px] font-bold leading-[14px]"
-                style={{
-                  color: field.override_state === "LOCKED" ? "var(--bad)" : "var(--ink-soft)",
-                  borderColor: field.override_state === "LOCKED" ? "var(--bad)" : "var(--line-strong)",
-                }}
+                style={{ color: "var(--ink-soft)", borderColor: "var(--line-strong)" }}
+                title={(detailCount.get(field.detail) ?? 0) >= 3 ? field.detail : undefined}
               >
                 {field.value_source} · {field.override_state}
               </span>
-              <span className="flex-1 text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
-                {field.detail}
-              </span>
+              {(detailCount.get(field.detail) ?? 0) >= 3 ? null : (
+                <span className="flex-1 text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
+                  {field.detail}
+                </span>
+              )}
             </div>
           ))}
         </section>
@@ -2128,22 +2222,25 @@ function OptimizationStep({
             data-pinned-by={trialsLocked ? profile?.profileId : undefined}
           />
         </Field>
-        <Field label="Early stopping" hint="stagnation patience — actual trials may land lower">
+        <Field label="Early stopping" hint="Trials without gain before stopping">
           <input
             className={INPUT_CLASS}
-            style={inputStyle()}
+            style={inputStyle(earlyStoppingInvalid(draft.earlyStopping))}
             value={draft.earlyStopping}
             onChange={(e) => patch({ earlyStopping: e.target.value })}
             aria-label="Early stopping"
+            inputMode="numeric"
+            aria-invalid={earlyStoppingInvalid(draft.earlyStopping) || undefined}
           />
         </Field>
         <Field label={limits.seedRequired === true ? "Random seed *" : "Random seed"} hint={seedLocked ? `pinned · ${profile?.profileId}` : undefined}>
           <input
             className={INPUT_CLASS}
-            style={seedLocked ? { ...inputStyle(), ...lockStyle } : inputStyle(limits.seedRequired === true && draft.randomSeed.trim() === "")}
+            style={seedLocked ? { ...inputStyle(), ...lockStyle } : inputStyle((limits.seedRequired === true && draft.randomSeed.trim() === "") || randomSeedInvalid(draft.randomSeed))}
             value={draft.randomSeed}
             onChange={(e) => patch({ randomSeed: e.target.value })}
             aria-label="Random seed"
+            aria-invalid={randomSeedInvalid(draft.randomSeed) || undefined}
             readOnly={seedLocked}
             title={seedLocked ? `pinned by ${profile?.profileId}` : undefined}
             data-pinned-by={seedLocked ? profile?.profileId : undefined}
@@ -2160,27 +2257,23 @@ function OptimizationStep({
         <OutsideProfileNotes draft={draft} constraints={release.submission_constraints} />
       ) : null}
 
-      <div
-        className="flex flex-col gap-1 rounded-[6px] border px-3 py-2"
-        style={{ borderColor: "var(--line-soft)", background: "var(--paper)" }}
-        data-config-surface
-      >
-        <span className="mono text-[9.5px]" data-override-summary style={{ color: "var(--ink-faint)" }}>
-          {overrides.length === 0
-            ? draft.engineReleaseId
-              ? `all defaults from ${draft.engineReleaseId} — nothing serialized`
-              : "all release defaults — nothing serialized"
-            : `${overrides.length} override(s) · rest = release defaults`}
-        </span>
-        {overrides.map((key) => (
-          <span key={key} className="mono text-[10px]" data-override={key}>
-            {key} = {String(draft.optimizationConfigOverrides[key])}
+      {overrides.length > 0 ? (
+        <div
+          className="flex flex-col gap-1 rounded-[6px] border px-3 py-2"
+          style={{ borderColor: "var(--line-soft)", background: "var(--paper)" }}
+          data-config-surface
+          title={DEFAULTS_FOOTER}
+        >
+          <span className="mono text-[9.5px]" data-override-summary style={{ color: "var(--ink-faint)" }}>
+            {overrides.length} override(s) · rest = release defaults
           </span>
-        ))}
-        <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-defaults-footer>
-          <span title={DEFAULTS_FOOTER}>release-manifest defaults · untouched fields not serialized</span>
-        </p>
-      </div>
+          {overrides.map((key) => (
+            <span key={key} className="mono text-[10px]" data-override={key}>
+              {key} = {String(draft.optimizationConfigOverrides[key])}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {release ? (
         <>
@@ -2243,6 +2336,16 @@ export interface TimelineRow {
 
 const NOT_DECLARED = "not declared";
 
+/**
+ * A draft instant as one text: a copied run carries `2026-06-01T00:00:00Z`, the
+ * form's own inputs `2026-06-01T00:00`. Both read the same minute, so both print
+ * the second (shorter) form; any other text (an offset, a stray format) is shown as it is.
+ */
+export function instantText(value: string): string {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::00(?:\.0+)?)?Z?$/.exec(value);
+  return match ? match[1]! : value;
+}
+
 function halfOpen(start: string, end: string): string {
   return `[${start || NOT_DECLARED}, ${end || NOT_DECLARED})`;
 }
@@ -2276,7 +2379,7 @@ export function timelineRows(
       key,
       label: key === "holdout" ? "Holdout" : key.toUpperCase(),
       tone: ROLE_TONE[key],
-      text: `${window.start || NOT_DECLARED} → ${window.endExclusive || NOT_DECLARED}`,
+      text: `${window.start ? instantText(window.start) : NOT_DECLARED} → ${window.endExclusive ? instantText(window.endExclusive) : NOT_DECLARED}`,
       segments: isDrawn
         ? [{
           left: (((from as number) - t0) / span) * 100,
@@ -2306,23 +2409,29 @@ export function timelineRows(
       segments.push({ left: at(from), width: ((to - from) / span) * 100, tone: "var(--line-strong)", title: `analysis span ${halfOpen(start, endExclusive)}` });
     }
   }
-  return [{ key: "span", label: "span", tone: ROLE_TONE.span, text: `${start || NOT_DECLARED} → ${endExclusive || NOT_DECLARED}`, segments }];
+  return [{ key: "span", label: "span", tone: ROLE_TONE.span, text: `${start ? instantText(start) : NOT_DECLARED} → ${endExclusive ? instantText(endExclusive) : NOT_DECLARED}`, segments }];
 }
 
 /** The fold count as a served fact: "≈ 14 outer folds · server plan", a served range, or a typed absence. */
-function FoldPlanLine({ plan }: { plan: FoldPlan }) {
+function FoldPlanLine({ plan, protocol }: { plan: FoldPlan; protocol: RunDraft["protocol"] }) {
+  /* The admitted three-window profile serves `fold_bounds: null`: the protocol has no outer folds, so nothing is missing. */
+  const noFolds = plan.kind === "absent" && protocol === "three_window_decay" && plan.reason === "profile publishes no fold bounds";
   const text =
     plan.kind === "server-plan"
       ? `≈ ${plan.count} outer folds`
       : plan.kind === "profile-bounds"
         ? `folds ${plan.min}–${plan.max}`
-        : "outer folds — not published";
+        : noFolds
+          ? "no outer folds"
+          : "outer folds — not published";
   const source =
     plan.kind === "server-plan"
       ? "server plan · preflight"
       : plan.kind === "profile-bounds"
         ? `server profile · ${plan.profileId}`
-        : plan.reason;
+        : noFolds
+          ? "three-window protocol"
+          : plan.reason;
   return (
     <p
       className="mono text-[9.5px]"
@@ -2359,9 +2468,6 @@ function WindowTimeline({
   const warnings = coverageWarnings(draft, coverage);
   const rows = timelineRows(draft, axis);
   const coverageSpan = axis && coverage ? { left: ((coverage.from - axis.from) / (axis.to - axis.from)) * 100, width: Math.max(((coverage.to - coverage.from) / (axis.to - axis.from)) * 100, 0.5) } : null;
-  /* D4: a date the reader is about to send that they did not type. */
-  const carried = outerFields(draft.protocol).flatMap((field) => carriedCoverage(draft, field) ?? []);
-  const source = carried[0] ?? null;
   return (
     <section className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-window-timeline>
       <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]" style={{ fontFamily: "var(--font-body)" }} title="Half-open windows, end-exclusive. A declaration only: fold boundaries are decided by preflight.">
@@ -2425,7 +2531,7 @@ function WindowTimeline({
             <p className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-advanced-timeline>
               {draft.walkForward.frequency || "frequency not declared"}
               {" · "}{draft.walkForward.windowMode || "window mode not declared"}
-              {" · first OOS "}{draft.walkForward.splitMode || NOT_DECLARED}
+              {" · first OOS "}{draft.walkForward.splitMode ? instantText(draft.walkForward.splitMode) : NOT_DECLARED}
             </p>
             <WindowBarsLine estimate={estimate} />
           </>
@@ -2439,13 +2545,8 @@ function WindowTimeline({
       </div>
       <div className="mt-1 flex flex-col gap-0.5">
         <CoverageWarnings warnings={warnings} coverage={coverage} />
-        <FoldPlanLine plan={fold} />
+        <FoldPlanLine plan={fold} protocol={draft.protocol} />
       </div>
-      {source ? (
-        <p className="mt-1 text-[9px]" style={{ color: "var(--ink-soft)" }} data-window-prefill-rail>
-          Outer bounds prefilled from {source.symbol} coverage ({source.firstMonth} → {source.lastMonth}) until edited.
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -2511,7 +2612,8 @@ function ClaimForecast({
       {scheduleFact && mode?.valid_schedules.includes(draft.optimizationSchedule) ? (
         <>
           <ForecastLine label="mode × schedule">{mode.mode_id} × {scheduleFact.schedule}</ForecastLine>
-          <ForecastLine label="source">chosen in Walk-forward step</ForecastLine>
+          {/* The schedule is set when a mode is picked (its default) and can be changed in the Walk-forward step. */}
+          <ForecastLine label="source">{draft.optimizationSchedule === mode.default_schedule ? "mode default" : "chosen"}</ForecastLine>
           <ForecastLine label="claim (forecast)">
             <span style={{ color: "var(--role-holdout)" }}>{claimToken(scheduleFact.chronological_validation_claim)}</span>
           </ForecastLine>
@@ -2524,10 +2626,18 @@ function ClaimForecast({
               is the server's own reason for it, not a line written here. */}
           <p className="flex flex-col gap-0.5 text-[9.5px] leading-[1.45]" style={{ color: "var(--ink-soft)" }} data-cert-cap={scheduleFact.cert_cap?.state ?? "NOT_SERVED"}>
             <span className="flex items-baseline justify-between gap-2.5">
-              <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>cert ceiling</span>
+              <span
+                className="text-[10.5px]"
+                style={{ color: "var(--ink-faint)" }}
+                title={scheduleFact.cert_cap?.reason ?? undefined}
+                aria-label={scheduleFact.cert_cap?.reason ? `cert ceiling — ${scheduleFact.cert_cap.reason}` : undefined}
+                tabIndex={scheduleFact.cert_cap?.reason ? 0 : undefined}
+                data-cert-cap-reason={scheduleFact.cert_cap?.reason ?? undefined}
+              >
+                cert ceiling
+              </span>
               <span className="mono text-[10px] font-bold uppercase tracking-[.06em]" data-cert-ceiling-absent>not published</span>
             </span>
-            {scheduleFact.cert_cap?.reason ? <span data-cert-cap-reason>{scheduleFact.cert_cap.reason}</span> : null}
           </p>
         </>
       ) : (
@@ -2669,7 +2779,7 @@ function BlockingList({ blocking }: { blocking: readonly { step: StepId; message
       role="alert"
       data-blocking
       className="flex flex-col gap-1 rounded-[6px] border px-2.5 py-2"
-      style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)" }}
+      style={{ borderColor: "var(--bad)", background: "var(--bad-bg)" }}
     >
       {blocking.map((problem) => (
         <span key={problem.step} className="text-[10.5px]" style={{ color: "var(--bad)" }}>
@@ -2771,6 +2881,8 @@ export interface NewRunProps {
   onRunPreflight: () => void;
   /** CG-P08-03: the typed refusal of the last preflight, with its field path. */
   preflightRefusal?: PreflightRefusal | null;
+  /** True while a preflight request is in flight: the button locks (no second POST) and says so. */
+  preflightPending?: boolean;
   /** CG-P08-04: research dataset catalog for the data step. */
   catalog?: DatasetCatalog | null;
   catalogReason?: string | null;
@@ -2816,6 +2928,7 @@ export function NewRun(props: NewRunProps) {
     initialStep = "context",
     onStepChange,
     preflightRefusal = null,
+    preflightPending = false,
     catalog = null,
     catalogReason = null,
     portalAdmission = null,
@@ -2857,7 +2970,9 @@ export function NewRun(props: NewRunProps) {
   /* Reaching a step is not enough to call its empty required fields wrong: a
      fresh form opened on Market data read "A symbol is required." before a key
      was pressed. A step's own problems show once the reader has edited it or
-     left it; Review always lists every one. */
+     left it; Review always lists every one. (QA R99/U18 asks for "edited" only;
+     that would also hide a wrong value the reader walked past, so the recorded
+     rule stays until it is decided.) */
   const [engaged, setEngaged] = useState<ReadonlySet<StepId>>(() => new Set());
   const previousStep = useRef<StepId>(step);
   useEffect(() => {
@@ -2905,6 +3020,13 @@ export function NewRun(props: NewRunProps) {
     [blocking, engaged, step],
   );
   const chip = bindingChip(draft, registry);
+  /* The bound version's served `run_admission`: shown on Context and in its step caption. Display only — the server decides at create. */
+  const boundEntry = registry.find((entry) => entry.alpha_id === draft.alphaId && entry.alpha_version_id === draft.alphaVersionId);
+  const contextBlocked = draft.bound && boundEntry?.run_admission?.may_create_run === false;
+  const profileFit = useMemo(
+    () => profileTimeframes(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode }),
+    [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode],
+  );
 
   return (
     <div
@@ -3035,6 +3157,7 @@ export function NewRun(props: NewRunProps) {
         unfinished={unfinishedSteps}
         visited={visited}
         contextChosen={!draft.bound || draft.alphaVersionId !== ""}
+        contextBlocked={contextBlocked}
         reviewCaption={preflightRefusal ? "preflight refused" : preflight ? "preflight issued" : "preflight pending"}
       />
 
@@ -3061,11 +3184,7 @@ export function NewRun(props: NewRunProps) {
                     </span>
                   </p>
                 </ResearchPanel>
-              ) : (
-                <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-declaration-bound={String(declarationBound ?? false)}>
-                  declaration read for {draft.alphaVersionId}
-                </p>
-              )}
+              ) : null}
             </>
           ) : null}
           {step === "strategy" ? (
@@ -3082,7 +3201,7 @@ export function NewRun(props: NewRunProps) {
             />
           ) : null}
           {step === "data" ? (
-            <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} />
+            <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} />
           ) : null}
           {step === "windows" ? (
             <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
@@ -3125,8 +3244,12 @@ export function NewRun(props: NewRunProps) {
                   type="button"
                   className="btn-ghost mono text-[10px]"
                   data-action="preflight"
-                  onClick={onRunPreflight}
-                  disabled={blocking.length > 0}
+                  onClick={() => {
+                    /* A second click while the first is in flight would persist a second preflight. */
+                    if (!preflightPending) onRunPreflight();
+                  }}
+                  disabled={blocking.length > 0 || preflightPending}
+                  aria-busy={preflightPending || undefined}
                   style={blocking.length > 0
                     ? { opacity: 0.4, cursor: "not-allowed" }
                     : {
@@ -3137,17 +3260,23 @@ export function NewRun(props: NewRunProps) {
                       letterSpacing: ".05em",
                       textTransform: "uppercase",
                       padding: "6px 16px",
+                      opacity: preflightPending ? 0.7 : 1,
+                      cursor: preflightPending ? "progress" : undefined,
                     }}
                   title={blocking.length > 0 ? blocking[0].message : undefined}
                 >
-                  Run preflight
+                  {preflightPending ? (
+                    <span className="inline-flex items-center gap-1.5" data-preflight-running>
+                      <span aria-hidden="true" className="inline-block h-[9px] w-[9px] rounded-full border-2 border-current border-t-transparent motion-safe:animate-spin" />
+                      Running preflight…
+                    </span>
+                  ) : (
+                    "Run preflight"
+                  )}
                 </button>
-                {blocking.length > 0 ? (
-                  <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-disabled-reason="preflight">
-                    {blocking[0].message}
-                  </span>
-                ) : null}
               </div>
+              {/* The one list of what blocks: the rail does not repeat it on this step. */}
+              <BlockingList blocking={blocking} />
 
               {/* FG-08 (FE-A1-03/-04): every refusal shows here, with or
                   without a field path. The sentence is client copy keyed by
@@ -3156,7 +3285,7 @@ export function NewRun(props: NewRunProps) {
                 <div
                   role="alert"
                   className="flex flex-wrap items-baseline gap-2 rounded-[6px] border px-2.5 py-1.5 text-[11px]"
-                  style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)", color: "var(--bad)" }}
+                  style={{ borderColor: "var(--bad)", background: "var(--bad-bg)", color: "var(--bad)" }}
                   data-refusal-field={preflightRefusal.fieldPath?.join(".") ?? ""}
                 >
                   {preflightRefusal.gate ?? preflightRefusal.code ? (
@@ -3191,7 +3320,7 @@ export function NewRun(props: NewRunProps) {
                   P08-T10 still finds every named panel — but they are folded,
                   so the primary action is not buried under them. */}
               {preflight === null ? (
-                <details data-preflight-preview open={preflightRefusal ? true : undefined}>
+                <details data-preflight-preview>
                   <summary
                     className="mono cursor-pointer text-[10.5px]"
                     style={{ color: "var(--ink-soft)" }}
@@ -3220,9 +3349,12 @@ export function NewRun(props: NewRunProps) {
                   Create run
                 </button>
                 {!canSubmit ? (
-                  <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-disabled-reason="create-run">
-                    Run preflight first.
-                  </span>
+                  /* While something blocks preflight, the list above is the one reason. */
+                  blocking.length > 0 ? null : (
+                    <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-disabled-reason="create-run">
+                      Run preflight first.
+                    </span>
+                  )
                 ) : !mayCreateRun ? (
                   <span className="text-[10.5px]" style={{ color: "var(--role-holdout)" }} data-admission-note>
                     {preflight?.run_admission?.message ? (
@@ -3272,7 +3404,7 @@ export function NewRun(props: NewRunProps) {
           ) : null}
         </div>
 
-        <ReviewRail draft={draft} blocking={visibleBlocking} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} estimate={estimate} />
+        <ReviewRail draft={draft} blocking={step === "review" ? [] : visibleBlocking.filter((problem) => problem.step !== step)} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} estimate={estimate} />
       </div>
     </div>
   );

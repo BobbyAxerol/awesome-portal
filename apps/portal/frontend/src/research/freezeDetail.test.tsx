@@ -604,13 +604,11 @@ describe("P16-T03 — one write, from one click", () => {
  * ---------------------------------------------------------------------- */
 
 describe("P16-T04 — an unavailable question keeps its card, with nothing that can act", () => {
-  it("A11: the what-if card keeps its place; every slider and action is disabled with the server's reason", () => {
+  it("A11 / QA D12: the what-if card keeps its place as one typed absence with the server's reason — no dead sliders", () => {
     const { container } = view();
     const card = container.querySelector("[data-panel='what-if']");
     expect(card?.getAttribute("data-what-if")).toBe(detail().freeze.what_if.state);
-    const ranges = [...container.querySelectorAll<HTMLInputElement>("input[type='range']")];
-    expect(ranges).toHaveLength(2);
-    expect(ranges.every((range) => range.disabled)).toBe(true);
+    expect(container.querySelectorAll("input[type='range']")).toHaveLength(0);
     expect(card?.querySelector("[data-what-if-reason]")).not.toBeNull();
     // The only ENABLED server action on the screen is the explicit verification;
     // X2 (spec 07 T10) adds "copy θ* digest", which writes the clipboard only.
@@ -756,9 +754,11 @@ describe("P16-T06 — the surface requests only the three named operations", () 
   it("carries the cursor to the hub and back to S2", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "freeze", fold: 3 } });
     expect(container.querySelector("[data-action='back-to-hub']")?.getAttribute("href")).toContain("fold=3");
-    expect(container.querySelector("[data-action='back-to-search']")?.getAttribute("href")).toContain(
-      "/runs/R-WFO-118/search#",
-    );
+    const back = container.querySelector("[data-action='back-to-search']")?.getAttribute("href") ?? "";
+    expect(back).toContain("/runs/R-WFO-118/search#");
+    /* QA D31: S2 opens on the search stage, not on the freeze stage the reader came from. */
+    expect(back).toContain("stage=search");
+    expect(back).not.toContain("stage=freeze");
   });
 
   it("sends the ETag on a reread and keeps the copy on 304", async () => {
@@ -1170,8 +1170,8 @@ describe("W5a · P16-T11 — the OOS generation child is the frozen θ*", () => 
       row.getAttribute("data-oos-child"), row.querySelector("[data-child-words]")?.textContent,
     ]);
     expect(children).toEqual([
-      ["MATCH", "OOS child = frozen θ* · 2671e27b827a"],
-      ["MISMATCH", "OOS child ≠ frozen θ* · baf7c707c243"],
+      ["MATCH", "OOS child = frozen θ* · candidate 2671e27b827a"],
+      ["MISMATCH", "OOS child ≠ frozen θ* · candidate baf7c707c243"],
     ]);
   });
 });
@@ -1307,6 +1307,6 @@ describe("F3 · S07 — one timestamp format, and a back link that names the sta
 
   it("the OOS child candidate id is 12 hex", () => {
     const { container } = delegatedView(foldOrderingFixture());
-    expect(container.querySelector("[data-child-words]")?.textContent).toMatch(/· 2671e27b827a$/);
+    expect(container.querySelector("[data-child-words]")?.textContent).toMatch(/· candidate 2671e27b827a$/);
   });
 });

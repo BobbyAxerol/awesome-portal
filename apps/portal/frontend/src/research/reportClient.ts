@@ -323,6 +323,8 @@ export const REPORT_REFUSAL_COPY = {
     /* CG-P18-10: the read never answers 409 — an unsealed run is a 404.
        X3 2026-09-26 (VD-P23-03, F-04): a 404 says exactly what a 403 says. */
     404: REPLAY_REFUSAL_COPY[404],
+    /* QA S09 (UX-23): an undeclared 409 is its own state, never the generic "could not be read"; it claims no cause. */
+    409: "The server answered with a conflict. Nothing was changed; read the report again.",
     503: "The report is unavailable right now. Nothing on this screen was changed.",
     other: "The report could not be read.",
   },
@@ -368,7 +370,7 @@ export function toReportRefusal(error: unknown, lane: ReportLane = "report"): Re
   /* F-04 (X3 2026-09-26): 403 and 404 are one state on every Research screen. */
   const denied = status === 401 || status === 403 || status === 404;
   /* A 409 is declared only on the export lane (CG-P18-10); on the read it is an undeclared answer. */
-  const conflict = status === 409 && lane === "export";
+  const conflict = status === 409;
   const known = status === 400 || status === 401 || status === 403 || status === 404 || conflict || status === 503;
   return {
     code: error.code,
@@ -376,7 +378,7 @@ export function toReportRefusal(error: unknown, lane: ReportLane = "report"): Re
     status,
     requestId: error.requestId,
     state: denied ? "denied" : conflict ? "stale" : status >= 500 ? "unavailable" : "terminal",
-    mayRetry: status >= 500,
+    mayRetry: status >= 500 || (conflict && lane === "report"),
     terminal: denied || status === 400,
   };
 }

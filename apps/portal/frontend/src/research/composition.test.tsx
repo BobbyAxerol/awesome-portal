@@ -434,8 +434,8 @@ describe("P04 — Engine Atlas composition", () => {
       }
       // Links only go to reading screens: a run list filtered by mode, or a run's Search & Selection.
       for (const link of screen.queryAllByRole("link")) {
-        // W4: "declare →" opens New Run on the route step — a form, not a run. F2b: the first crumb returns to the Journey Map.
-        expect(link.getAttribute("href")).toMatch(/^\/research\/quantbt\/(journey$|runs$|runs\/new(\?step=[a-z_]+(\&[^ ]*)?)?$|runs(\?mode=|\/new\?step=route\&route=|\/[^/]+\/(search|evidence)))/);
+        // W4: "declare →" opens New Run on the route step — a form, not a run. F2b: the first crumb returns to the Journey Map. QA S12: a retained release links to its own identity page.
+        expect(link.getAttribute("href")).toMatch(/^\/research\/quantbt\/(journey$|atlas\?release_id=[A-Za-z0-9._-]+$|runs$|runs\/new(\?step=[a-z_]+(\&[^ ]*)?)?$|runs(\?mode=|\/new\?step=route\&route=|\/[^/]+\/(search|evidence)))/);
       }
     }
   });

@@ -1254,7 +1254,9 @@ describe("RF-06 FE-S04-13 — the HiFi layout", () => {
     expect(container.querySelector("h1")).toBeNull();
     const summary = container.querySelector("[data-tab='summary']");
     expect(summary?.textContent).toContain("Summary");
-    expect(summary?.querySelector("[data-tab-sub]")?.textContent).toBe("4 of 5 metrics · 4 series");
+    /* QA S04: the sub-line names the window; the counts ride in the tab's tooltip. */
+    expect(summary?.querySelector("[data-tab-sub]")?.textContent).toBe("OOS");
+    expect(summary?.getAttribute("title")).toBe("4 of 5 metrics · 4 series");
   });
 
   it("keeps an absent claim field in the passport with its label and reason", () => {
@@ -1351,7 +1353,7 @@ describe("RF-06 fidelity — cursor bar", () => {
     expect(container.querySelector("[data-cursor-seq] [data-reason-code]")).toBeNull();
     expect(container.querySelector("[data-cursor-bar]")?.innerHTML).not.toMatch(/P13_PUBLISHES_NO/);
     expect(container.querySelector("[data-cursor-schedule]")?.textContent).toContain("per_fold_causal");
-    expect(container.querySelector("[data-cursor-window]")?.textContent).toContain("oos");
+    expect(container.querySelector("[data-cursor-window]")?.textContent).toBe("window OOS");
     cleanup();
     const withSeq = view({ cursor: { ...DEFAULT_CURSOR, seq: 92200 } });
     expect(withSeq.container.querySelector("[data-cursor-seq]")?.textContent).toContain("92200");
@@ -1397,11 +1399,12 @@ describe("RF-06 fidelity — window switcher and tiles", () => {
 });
 
 describe("RF-06 fidelity — summary panels", () => {
-  it("draws equity and underwater as two figures labelled EChart 1 and 2", () => {
+  it("draws equity and underwater as two figures, with no HiFi 'EChart n' tag (QA S04)", () => {
     const { container } = view();
     const figures = [...container.querySelectorAll("figure[data-series-panel='EQUITY_OOS']")];
     expect(figures).toHaveLength(2);
-    expect(figures.map((figure) => figure.querySelector("[data-chart-no]")?.textContent)).toEqual(["EChart 1", "EChart 2"]);
+    expect(figures.every((figure) => figure.querySelector("[data-chart-no]") === null)).toBe(true);
+    expect(figures.every((figure) => !/EChart/.test(figure.textContent ?? ""))).toBe(true);
     expect(figures[1].textContent).toContain("Underwater — drawdown derived from equity");
   });
 
@@ -1616,7 +1619,7 @@ describe("W3 — the retained equity is drawn at full resolution (CG-P13-05)", (
     expect(ensureRetainedSeries).toHaveBeenCalled();
     expect(ensureSeries).not.toHaveBeenCalledWith("EQUITY_OOS");
     const caption = container.querySelector("[data-retained-sampling='FULL']") as HTMLElement;
-    expect(caption.textContent).toContain("all 1,056 retained observations");
+    expect(caption.textContent).toContain("all 1,056 points");
     expect(caption.querySelector("[data-envelope]")?.textContent).toContain("deepest drawdown −0.67%");
     expect(container.querySelector("[data-fold-boundaries]")?.getAttribute("data-fold-boundaries")).toBe("2");
     expect(container.querySelector("[data-series-panel='EQUITY_OOS']")).toBeNull();
@@ -1799,7 +1802,8 @@ describe("E11 · sealed summary analytics are bound without recomputation or aut
     expect(container.querySelector('[data-summary-trade-count]')?.getAttribute("data-trade-scope")).toBe("CHILD_TAPE");
     expect(container.querySelector('[data-summary-trade-count] [data-exact]')?.getAttribute("data-exact")).toBe("4");
     /* F1b: the caveat moved into the tooltip; the line is the label, scope and number. */
-    expect(container.querySelector('[data-summary-trade-count]')?.textContent).toBe("Engine total trades (CHILD_TAPE): 4");
+    expect(container.querySelector('[data-summary-trade-count]')?.textContent).toBe("Engine trades: 4");
+    expect(container.querySelector("[data-summary-trade-count]")?.getAttribute("title")).toContain("CHILD_TAPE");
     expect(container.querySelector('[data-summary-trade-count]')?.getAttribute("title")).toContain("not an audited fill count");
   });
 

@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   COPY_DONE_LABEL,
   COPY_RESET_MS,
+  splitScreenState,
   foldKeyTarget,
   halfOpen,
   halfOpenShort,
@@ -44,7 +45,7 @@ import {
   type SplitDetail,
 } from "./splitClient";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
-import { forgetSplitReads, splitState, useSplit } from "./useSplit";
+import { endedWithoutSource, forgetSplitReads, splitState, useSplit, type FoldsSlot } from "./useSplit";
 import { SplitRoute } from "./SplitRoute";
 import {
   clampFold,
@@ -582,7 +583,10 @@ describe("P14-T05 — folds come from the one operation that publishes them", ()
     });
     expect(container.querySelectorAll("[data-fold-row]")).toHaveLength(3);
     expect(container.querySelector("[data-fold-row='2']")?.getAttribute("data-current")).toBe("true");
-    expect(container.querySelector("[data-fold-count]")?.textContent).toContain("3 folds observed");
+    // QA S05: the count is the protocol strip's; the rows do not restate it (the source token is a tooltip).
+    expect(container.querySelector("[data-fold-count]")).toBeNull();
+    expect(container.querySelector("[data-fold-rows]")?.getAttribute("data-chronology")).toBe(sourceSplit().fold_plan.chronology);
+    expect(container.textContent).not.toContain("folds observed in the retained source");
   });
 
   it("says which fold published no boundary instead of drawing one", () => {
@@ -841,8 +845,10 @@ describe("RF-06 wave C — the fold lane is asked once and its answer is rendere
     stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
     const { container } = mountRoute("#stage=split&fold=1");
     await waitFor(() => expect(container.querySelector("[data-fold-anatomy='not-applicable']")).toBeTruthy());
+    // QA S05: between the two, one progress read asks whether the run ended without a seal (it would 409 the lane).
     expect(requested).toEqual([
       "/api/v1/quantbt/runs/R-WFO-118/split",
+      "/api/v1/research/runs/R-WFO-118/progress",
       "/api/v1/quantbt/runs/R-WFO-118/current-source/split",
     ]);
     expect(container.querySelector("[data-absent-reason='fold plan']")?.textContent).toBe("P04_PUBLISHES_NO_FOLD_PLAN");
@@ -932,11 +938,11 @@ describe("RF-06 FE-S05-03 — copy asserts only what the run published", () => {
     expect(text).not.toMatch(/sealed holdout|fold_plan artifact|true scale|\bSEALED\b|cert cap: ≤/i);
   });
 
-  it("states the fold count once, in the table foot, with the long hint in its title", () => {
+  it("states the fold count once (the protocol strip), the table has no foot of its own, and the hint is a tooltip", () => {
     const { container } = view({ folds: { state: "ready", split: sourceSplit() } });
-    const foot = container.querySelector("[data-fold-table-foot]") as HTMLElement;
-    expect(foot.textContent).toMatch(/^\d+ folds · retained source$/);
-    expect(foot.getAttribute("title")).toContain("arrow keys");
+    expect(container.querySelector("[data-fold-table-foot]")).toBeNull();
+    expect(container.textContent).not.toMatch(/\d+ folds · retained source/);
+    expect(container.querySelector("[data-card='fold-table']")?.getAttribute("title")).toContain("arrow keys");
     expect(container.textContent).not.toContain("click a row or use the arrow keys");
   });
 });
@@ -1020,7 +1026,7 @@ describe("RF-06 S05 fidelity — spans read as the half-open intervals they are"
   it("right-aligns every numeric column, head and cell alike, and fits without a min-width overflow at desktop", () => {
     const { container } = view();
     const heads = [...container.querySelectorAll("[data-card='fold-table'] th")].map((th) => th.getAttribute("data-align"));
-    expect(heads).toEqual(["left", "left", "right", "right", "left", "right", "right", "left", "right", "right", "right"]);
+    expect(heads).toEqual(["left", "left", "right", "right", "left", "right", "right", "left", "right", "right", "right", "right"]);
     const cells = [...container.querySelectorAll("[data-fold-table-row='three-window'] td")];
     expect(cells[2].className).toContain("text-right");
     expect(cells[3].className).toContain("text-right");
@@ -1383,7 +1389,8 @@ describe("W3b — Split on the retained WFO lane", () => {
     for (const row of rows) {
       const theta = row.querySelector("[data-params-cell] [data-theta-star]");
       expect(theta?.getAttribute("data-theta-star")).toBe("0");
-      expect(theta?.textContent).toBe("GLOBAL · trial 0");
+      // QA S05 U1: the id is the retained search's own, and says so (S03 prints the progress read's selection.trial).
+      expect(theta?.textContent).toBe("GLOBAL · source trial 0");
     }
   });
 
@@ -1392,7 +1399,9 @@ describe("W3b — Split on the retained WFO lane", () => {
     const holdout = container.querySelector("[data-holdout='retained'] [data-holdout-lane]");
     expect(holdout?.getAttribute("data-holdout-lane")).toBe("NOT_APPLICABLE");
     expect(holdout?.getAttribute("data-holdout-reason")).toBe("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
-    expect(holdout?.textContent).toContain("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
+    // QA S05: the sentence is printed once; the server's code is the tooltip, not a second line of text.
+    expect(holdout?.getAttribute("title")).toContain("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
+    expect(holdout?.textContent).not.toContain("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
   });
 
   it("prints no P04-hub reason and no 'not built', though the hub split answered P14 NOT_PUBLISHED", async () => {
@@ -1418,7 +1427,9 @@ describe("W3b — Split on the retained WFO lane", () => {
     await waitFor(() => expect(container.textContent).toContain("P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED"));
     expect(container.querySelector("[data-holdout='retained']")).toBeNull();
     expect(container.querySelector("[data-readiness='READY']")).toBeNull();
-    expect(requested.some((url) => /\/research\/runs\/[^/]+\/(progress|requested-spec)/.test(url))).toBe(false);
+    expect(requested.some((url) => /\/research\/runs\/[^/]+\/requested-spec/.test(url))).toBe(false);
+    // QA S05: the one progress read is the "did this run end without a seal?" pre-check, not the retained lane's identity read.
+    expect(requested.filter((url) => /\/research\/runs\/[^/]+\/progress/.test(url))).toHaveLength(1);
   });
 });
 
@@ -1530,7 +1541,9 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
     expect(stitch.textContent).toContain(`stitch digest ${E14_SPLIT.stitch.digest!.slice(0, 12)}…`);
     expect(stitch.textContent).toContain("verified · 2 segments · 336 observations");
     expect((container.querySelector("[data-stitch-verdict]") as HTMLElement).getAttribute("title")).toContain("Verified against the fold boundaries");
-    expect(stitch.textContent).toContain("Portal digest · QuantBT: not published");
+    // QA S05: whose digest it is rides in the digest's tooltip, not as a second line.
+    expect(stitch.textContent).not.toContain("Portal digest · QuantBT: not published");
+    expect(container.querySelector("[data-stitch-basis]")?.getAttribute("title")).toContain("QuantBT publishes none");
     expect(stitch.textContent).not.toContain("the Portal's digest of the retained stitch plan");
     expect(container.textContent).not.toContain("stitch digest — not in the split read");
   });
@@ -1550,7 +1563,9 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
     // IS / OOS bands and the holdout label open the same screen on their own window.
     expect(container.querySelector("[data-window-link='is']")?.getAttribute("href")).toContain("execute?window=is#");
     expect(container.querySelector("[data-window-link='oos']")?.getAttribute("href")).toContain("execute?window=oos#");
-    expect(container.querySelector("[data-window-open='holdout']")?.getAttribute("href")).toContain("execute?window=holdout#");
+    // QA S05 U13: this profile declares no holdout, so the label is plain text, not a link to a dead end.
+    expect(container.querySelector("[data-window-open='holdout']")).toBeNull();
+    expect(container.querySelector("[data-holdout-label='not-applicable']")?.tagName).toBe("SPAN");
   });
 
   it("F2b · a key pressed on a row's replay link is the link's, not the row's", async () => {
@@ -1563,10 +1578,11 @@ describe("E14 — S05 boundary integrity and stitched OOS provenance", () => {
 
   it("VD-TEXT-01 · the retained lane's prose is one fact line, not paragraphs", async () => {
     const { container } = await laneRoute(e14Lane());
-    const note = (container.querySelector("[data-protocol-note]") as HTMLElement).textContent ?? "";
-    expect(note.split(/\s+/).length).toBeLessThanOrEqual(14);
-    expect(note).toContain("one global θ* · OOS used for selection");
-    expect(note.split(/\s+/).length).toBeLessThanOrEqual(8);
+    // QA S05: the selection statement is one chip (the strip's), not a note row that repeats it.
+    expect(container.querySelector("[data-protocol-note]")).toBeNull();
+    const strict = container.querySelector("[data-strict-outer-oos]") as HTMLElement;
+    expect(strict.textContent).toBe("no");
+    expect(strict.getAttribute("title")).toContain("oos_used_for_selection = true");
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/Shared params \(global schedule\): one study|Stage 2 ran one global study|never constructs a fold/);
     expect(container.querySelector("[data-theta-note]")).toBeNull();
@@ -1930,5 +1946,285 @@ describe("F3 · S05 — fold labels, ranges at 660, integrity and search rows", 
     stub(w3bResponder({ ...W3_ALL.split, guards }));
     const { container } = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
     await waitFor(() => expect(container.querySelector("[data-theta-is]")?.textContent).toBe("search · 3 trials · IS only"));
+  });
+});
+
+
+/* -------------------------------------------------------------------------
+ * QA 2026-10-02 · S05 fix wave
+ *
+ * The retained bodies are the committed real-WFO fixtures (`w3RealWfo`, `w3bRealWfo`) and the canonical
+ * `research-current-source.split.valid.json`; nothing here is a body written for the test except the typed
+ * refusals the server's problem document defines.
+ * ---------------------------------------------------------------------- */
+
+const E14_GAP = JSON.parse(
+  readFileSync(join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures", "research-current-source.split.valid.json"), "utf8"),
+).gap_scan;
+
+describe("QA S05 U3 — a refused lane read is its own state, and nothing is shown as read", () => {
+  const pending = () =>
+    detail({
+      readiness: "NOT_READY",
+      availability: { state: "NOT_PUBLISHED", reason_code: "P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED" },
+    } as Partial<SplitDetail>);
+  const refused = (status: number, code: string, lane?: string): FoldsSlot => ({
+    state: "refused",
+    refusal: toSplitRefusal(new PortalApiError("server words", status, code, "req_1")),
+    laneState: (lane ?? null) as never,
+  });
+  const partial = () => splitState(pending(), null, { state: "idle" });
+
+  it("403 is denied, 500/503 is unavailable with a retry, a 409 'ended without an artifact' is terminal with the lane's own sentence", () => {
+    const denied = splitScreenState(partial(), pending(), refused(403, "RESEARCH_FORBIDDEN"));
+    expect(denied.state).toBe("denied");
+    expect(denied.mayRetry).toBe(false);
+    expect(denied.retainsContent).toBe(false);
+    const down = splitScreenState(partial(), pending(), refused(503, "RESEARCH_CURRENT_SOURCE_UNAVAILABLE"));
+    expect(down.state).toBe("unavailable");
+    expect(down.mayRetry).toBe(true);
+    expect(down.reason).not.toContain("has not reported");
+    const ended = splitScreenState(partial(), pending(), refused(409, "RESEARCH_CURRENT_SOURCE_CONFLICT", "NOT_RETAINED_TERMINAL"));
+    expect(ended.state).toBe("terminal");
+    expect(ended.mayRetry).toBe(false);
+    expect(ended.reason).not.toContain("has not reported");
+  });
+
+  it("a lane that is genuinely pending keeps the pending notice; a good fold read and a ready detail are untouched", () => {
+    const wait = splitScreenState(partial(), pending(), refused(409, "RESEARCH_CURRENT_SOURCE_CONFLICT", "PENDING_SOURCE"));
+    expect(wait.state).toBe("partial");
+    expect(splitScreenState(OK, detail(), refused(503, "X"))).toBe(OK);
+    expect(splitScreenState(partial(), pending(), { state: "loading" }).state).toBe("partial");
+  });
+
+  it.each([
+    [503, "RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "unavailable"],
+    [403, "RESEARCH_FORBIDDEN", "denied"],
+  ])("a %i draws no as-of line, no sealed-holdout label and no wall of 'not published' — only the state", (status, code, word) => {
+    const slot = refused(status as number, code as string);
+    const { container } = view({ detail: pending(), folds: slot, state: partial() });
+    expect(container.querySelector("[data-research-state]")?.getAttribute("data-research-state")).toBe(word);
+    expect(container.querySelector("[data-as-of]")).toBeNull();
+    expect(container.querySelector("[data-holdout]")).toBeNull();
+    expect(container.textContent).not.toMatch(/never read/i);
+    expect(container.textContent).not.toContain("has not reported this run's split yet");
+  });
+
+  it("a 503 offers Retry, which reads again; a denied state offers none", () => {
+    const onReread = vi.fn();
+    view({ detail: pending(), folds: refused(503, "RESEARCH_CURRENT_SOURCE_UNAVAILABLE"), state: partial(), onReread });
+    fireEvent.click(document.querySelector("[data-action='reread']")!);
+    expect(onReread).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("[data-action='reread']")?.textContent).toBe("Retry");
+    cleanup();
+    view({ detail: pending(), folds: refused(403, "RESEARCH_FORBIDDEN"), state: partial() });
+    expect(document.querySelector("[data-action='reread']")).toBeNull();
+  });
+
+  it("the as-of line still shows when the lane did answer (the value path)", async () => {
+    forgetRunIdentities();
+    forgetObservedFolds();
+    forgetSplitReads();
+    stub(w3bResponder());
+    const { container } = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(container.querySelector("[data-as-of]")).toBeTruthy());
+  });
+});
+
+describe("QA S05 — no 409 for a run the state machine already closed without a seal", () => {
+  beforeEach(() => {
+    forgetSplitReads();
+    forgetRunIdentities();
+    requested = [];
+  });
+  const progressOf = (status: string, mandatory: string | null) => ({
+    ...(W3B.progress as object),
+    current: { ...(W3B.progress as { current: object }).current, effective_status: status },
+    progress:
+      mandatory === null
+        ? null
+        : { ...(W3B.progress as { progress: object }).progress, readiness: { mandatory, optional: "NOT_APPLICABLE" } },
+  });
+
+  it("endedWithoutSource: FAILED/CANCELLED without a SEALED bundle only", () => {
+    expect(endedWithoutSource(progressOf("FAILED", "FAILED") as never)).toBe(true);
+    expect(endedWithoutSource(progressOf("CANCELLED", null) as never)).toBe(true);
+    expect(endedWithoutSource(progressOf("FAILED", "SEALED") as never)).toBe(false);
+    expect(endedWithoutSource(progressOf("COMPLETED", "SEALED") as never)).toBe(false);
+    expect(endedWithoutSource(progressOf("RUNNING", "PENDING") as never)).toBe(false);
+    expect(endedWithoutSource({ nonsense: true } as never)).toBe(false);
+  });
+
+  it("a FAILED run never calls current-source/split: the slot carries the terminal lane state", async () => {
+    stub((url) => {
+      const path = new URL(url, "http://x").pathname;
+      if (path.endsWith("/progress")) return [200, progressOf("FAILED", "FAILED")];
+      if (path.endsWith("/split") && !path.endsWith("/current-source/split")) return [200, W3B.hub_split];
+      return [404, { error: { code: "UNEXPECTED" } }];
+    });
+    const { result } = renderHook(() => useSplit(W3B_RUN));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    await act(async () => result.current.ensureFolds());
+    await waitFor(() => expect(result.current.folds.state).toBe("refused"));
+    expect(requested.some((url) => url.includes("current-source"))).toBe(false);
+    const slot = result.current.folds;
+    expect(slot.state === "refused" && slot.laneState).toBe("NOT_RETAINED_TERMINAL");
+  });
+
+  it("a COMPLETED run still asks the lane (the other path)", async () => {
+    stub(w3bResponder());
+    const { result } = renderHook(() => useSplit(W3B_RUN));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    await act(async () => result.current.ensureFolds());
+    await waitFor(() => expect(result.current.folds.state).toBe("ready"));
+    expect(requested.some((url) => url.includes("current-source/split"))).toBe(true);
+  });
+
+  it("Retry after a 503 on the lane asks the lane again", async () => {
+    let lane = 0;
+    stub((url) => {
+      const path = new URL(url, "http://x").pathname;
+      if (path.endsWith("/current-source/split")) {
+        lane += 1;
+        return lane === 1 ? [503, { error: { code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE", message: "down" } }] : [200, W3_ALL.split];
+      }
+      return w3bResponder()(url);
+    });
+    const { result } = renderHook(() => useSplit(W3B_RUN));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    await act(async () => result.current.ensureFolds());
+    await waitFor(() => expect(result.current.folds.state).toBe("refused"));
+    await act(async () => result.current.reread());
+    await waitFor(() => expect(result.current.folds.state).toBe("ready"));
+    expect(lane).toBe(2);
+  });
+});
+
+describe("QA S05 — retained lane screen", () => {
+  beforeEach(() => {
+    forgetRunIdentities();
+    forgetObservedFolds();
+    forgetSplitReads();
+  });
+  async function laneRoute(splitLane: unknown = W3_ALL.split) {
+    stub(w3bResponder(splitLane));
+    const mounted = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(mounted.container.querySelector("[data-holdout-lane]")).toBeTruthy());
+    await waitFor(() => expect(mounted.container.querySelector("[data-lane-reading]")).toBeNull());
+    return mounted;
+  }
+
+  it("U10 value path: every OOS Sharpe has its trade count beside it, in the table and on the Θ* lane", async () => {
+    const { container } = await laneRoute();
+    const cells = [...container.querySelectorAll("[data-card='fold-table'] [data-trades-cell]")];
+    expect(cells.length).toBeGreaterThan(0);
+    expect(cells[0].getAttribute("data-trades-cell")).toBe(W3_ALL.split.fold_plan.folds[0].score.oos_trades);
+    expect(container.querySelectorAll("[data-card='fold-table'] th")[10].textContent).toBe("OOS trades");
+    const lane = container.querySelector("[data-theta-lane='1']")!;
+    expect(lane.querySelector("[data-theta-oos-trades]")?.textContent).toContain(`${W3_ALL.split.fold_plan.folds[0].score.oos_trades} trades`);
+  });
+
+  it("U10 typed-absence path: an unserved trade count says 'not published', never 0 or a blank", async () => {
+    const split = structuredClone(W3_ALL.split) as CurrentSourceSplit;
+    split.fold_plan.folds[0] = { ...split.fold_plan.folds[0], score: { ...split.fold_plan.folds[0].score, oos_trades: null } };
+    const { container } = await laneRoute(split);
+    const first = container.querySelector("[data-fold-table-row='1']")!;
+    expect(first.querySelector("[data-trades-cell]")).toBeNull();
+    expect(first.textContent).toContain("not published");
+    expect(container.querySelector("[data-theta-lane='1'] [data-theta-oos-trades]")?.getAttribute("data-theta-oos-trades")).toBe("not-published");
+  });
+
+  it("U9: IS and outer OOS overlap in time, so they take separate rows of the track and each stays hittable", async () => {
+    const { container } = await laneRoute();
+    const track = container.querySelector("[data-track]") as HTMLElement;
+    expect(track.getAttribute("data-track-rows")).toBe("2");
+    const is = container.querySelector("[data-window='is']") as HTMLElement;
+    const oos = container.querySelector("[data-window='outer_oos']") as HTMLElement;
+    expect(is.getAttribute("data-window-row")).toBe("0");
+    expect(oos.getAttribute("data-window-row")).toBe("1");
+    expect(is.style.top).toBe("0%");
+    expect(oos.style.top).toBe("50%");
+  });
+
+  it("U9: windows that do not overlap keep the single full-height row", () => {
+    const { container } = view({ detail: detail() });
+    expect(container.querySelector("[data-track]")?.getAttribute("data-track-rows")).toBe("1");
+  });
+
+  it("the window anchors' accessible names read days, not ISO instants", async () => {
+    const { container } = await laneRoute();
+    const label = container.querySelector("[data-window-link='is']")!.getAttribute("aria-label")!;
+    expect(label).toMatch(/\d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}, open in Execute Replay$/);
+    expect(label).not.toMatch(/T\d{2}:\d{2}/);
+    expect(container.querySelector("[data-window-link='is']")?.getAttribute("title")).toContain("T00:00");
+  });
+
+  it("U13: a profile with no holdout has no unlock control and no holdout link", async () => {
+    const { container } = await laneRoute();
+    expect(container.querySelector("[data-action-unlock]")).toBeNull();
+    expect(container.querySelector("[data-window-open='holdout']")).toBeNull();
+    expect(container.querySelector("[data-holdout-label='not-applicable']")).toBeTruthy();
+    // the way on for the alpha's attempts stays
+    expect(container.querySelector("[data-holdout-rule='unlock'] a")).toBeTruthy();
+  });
+
+  it("text: 'child tape' is gone and the certificate code is a tooltip, not a second line", async () => {
+    const { container } = await laneRoute();
+    const text = container.textContent ?? "";
+    expect(text).not.toContain("child tape");
+    expect(text).toContain("holdout never read");
+    const cert = container.querySelector("[data-cert-cap]") as HTMLElement | null;
+    if (cert) {
+      expect(cert.textContent).toBe("methodology certificate — not published");
+      expect(cert.getAttribute("title")).toContain(cert.getAttribute("data-cert-reason")!);
+    }
+  });
+
+  it("#22: the gap scan names the account policy and lists each boundary in its tooltip", async () => {
+    const { container } = await laneRoute({ ...W3_ALL.split, gap_scan: E14_GAP });
+    expect(container.querySelector("[data-gap-policy]")?.getAttribute("data-gap-policy")).toBe("carry_position");
+    expect(container.querySelector("[data-gap-scan]")?.getAttribute("title")).toContain("→");
+    expect(container.querySelector("[data-gap-scan]")?.getAttribute("title")).toContain("0 bars");
+  });
+
+  it("U11: the inline bar labels hide under 700 px so a narrow viewport never shows 'search · 400 tri'", async () => {
+    const { container } = await laneRoute();
+    expect(container.querySelector("[data-theta-is] span")?.className).toContain("max-[700px]:hidden");
+    expect(container.querySelector("[data-theta-oos] span")?.className).toContain("max-[700px]:hidden");
+  });
+
+  it("U1: S05 labels the id it prints as the source's trial id", async () => {
+    const { container } = await laneRoute();
+    expect(container.querySelector("[data-theta-star]")?.textContent).toMatch(/^GLOBAL · source trial /);
+    expect(container.querySelector("[data-theta-trial]")?.parentElement?.textContent).toContain("source trial");
+  });
+
+  it("the fold block states the count once: no 'folds observed' line, no table foot", async () => {
+    const { container } = await laneRoute();
+    expect(container.textContent).not.toMatch(/folds observed in the retained source/);
+    expect(container.textContent).not.toMatch(/\d+ folds · retained source/);
+  });
+});
+
+describe("QA S05 — one-window (hub) run", () => {
+  it("U17: no stitched bar is drawn while the card says there is no stitched series", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-card='stitched-oos']")?.textContent).toContain("no stitched series");
+    expect(container.querySelector("[data-stitch-segments]")).toBeNull();
+  });
+
+  it("the holdout row has no dangling separator or doubled space where a value is absent", () => {
+    const { container } = view();
+    const note = container.querySelector("[data-holdout-note]")!.textContent!;
+    expect(note).not.toMatch(/ · bars/);
+    expect(note).not.toMatch(/\s{2,}/);
+    expect(container.querySelector("[data-absence-key='holdout_bars']")?.textContent).toContain("bars");
+  });
+
+  it("the boundary row reads 'holdout never read' and the three-window protocol note keeps its fact line", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-card='boundary-integrity']")?.textContent).toContain("holdout never read");
+    expect(container.textContent).not.toContain("child tape");
+    expect(container.querySelector("[data-protocol-note]")).toBeTruthy();
   });
 });

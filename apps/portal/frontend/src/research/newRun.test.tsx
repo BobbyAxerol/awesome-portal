@@ -297,7 +297,7 @@ describe("P10-T02 — window rules are verbatim and half-open", () => {
     ).toBe("Every window must have a positive length.");
     expect(
       validateWindows(draft({ windows: { ...draft().windows, holdout: { start: "2025-01-01T00:00", endExclusive: "" } } })),
-    ).toBe("A holdout end-exclusive is required for the historical query.");
+    ).toBe("Holdout end is required.");
   });
 
   it("accepts windows that meet exactly", () => {
@@ -575,9 +575,10 @@ describe("P10-T13 — the four release-default groups stay locked", () => {
     expect(spec.optimization_config).toEqual({});
     view();
     goToStep("optimization");
-    expect(document.querySelector("[data-override-summary]")?.textContent).toContain(
-      "nothing serialized",
-    );
+    /* No override, nothing to say here: the Review row says "release defaults — nothing serialized" once. */
+    expect(document.querySelector("[data-config-surface]")).toBeNull();
+    expect(document.querySelector("[data-defaults-footer]")).toBeNull();
+    expect(document.querySelector('[data-step-card="Optimization"]')?.textContent).not.toContain("nothing serialized");
   });
 
   it("states the current submission profile in the server's own words", () => {
@@ -634,7 +635,7 @@ describe("RF-04 FE-S02-06 — timeframe choices come only from the bound declara
        not a sentence written in the form. */
     expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("cert ceiling");
     expect(document.querySelector("[data-cert-ceiling-absent]")?.textContent).toBe("not published");
-    expect(document.querySelector("[data-cert-cap-reason]")?.textContent).toBe(selected.cert_cap.reason);
+    expect(document.querySelector("[data-cert-cap-reason]")?.getAttribute("title")).toBe(selected.cert_cap.reason);
   });
 });
 
@@ -661,7 +662,7 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
     goToStep("route");
     const card = document.querySelector('[data-route-card="options"]') as HTMLButtonElement;
     expect(card).toBeTruthy();
-    expect(card.disabled).toBe(true);
+    expect(card.getAttribute("aria-disabled")).toBe("true");
     /* The served reason is the tooltip and the accessible name, not inline text. */
     expect(card.getAttribute("title")).toBe(
       "options route is deferred this round — no portal parameters are declared for it yet.",
@@ -1000,7 +1001,7 @@ describe("RF02-F2 — the P02 field map is covered 24/24", () => {
         at("route");
         const card = document.querySelector(`[data-route-card="${route}"]`) as HTMLButtonElement;
         expect(card, route).toBeTruthy();
-        expect(card.disabled).toBe(true);
+        expect(card.getAttribute("aria-disabled")).toBe("true");
         expect(card.getAttribute("title")).toContain(blockedRoutes[route]);
         outcome[control.source_control_id] = "refused";
         continue;
@@ -1032,7 +1033,9 @@ describe("RF02-F2 — the P02 field map is covered 24/24", () => {
         const rolling = [...windowMode.options].find((option) => option.value === "rolling")!;
         expect(rolling.disabled).toBe(false);
         expect(document.querySelector('[data-option-refused="rolling"]')).toBeNull();
-        expect(document.querySelector("[data-split-rule]")?.textContent).toBe(published.split_mode_rule);
+        /* The served rule is the field's tooltip (T13), not a 35-word paragraph under the row. */
+        expect(document.querySelector("[data-split-rule]")).toBeNull();
+        expect(screen.getByLabelText("First OOS instant").closest("label")?.getAttribute("title")).toBe(published.split_mode_rule);
         at("windows", { protocol: "advanced", walkForward: { start: "", endExclusive: "", splitMode: "", frequency: "weekly", windowMode: "rolling" } });
         expect(screen.getByLabelText("Train width")).toBeTruthy();
         expect(screen.getByLabelText("Purge (bars)")).toBeTruthy();
@@ -1151,7 +1154,11 @@ describe("FG-05 — last published rc reads the Alpha version's publication", ()
     view({ registry });
     goToStep("context");
     const row = await lastRc("NOT_PUBLISHED");
-    expect(row.querySelector("[data-last-rc-absent]")!.textContent).toBe("not published · P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED");
+    /* The typed absence stays typed: the server's reason code is the tooltip and the data attribute, the line is words. */
+    const absent = row.querySelector("[data-last-rc-absent]")!;
+    expect(absent.textContent).toBe("No release candidate yet");
+    expect(absent.getAttribute("data-last-rc-absent")).toBe("P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED");
+    expect(absent.getAttribute("title")).toBe("P22_ALPHA_VERSION_PUBLICATION_NOT_PUBLISHED");
     expect(row.textContent).not.toMatch(/—|N\/A|\b0\b/);
   });
 
@@ -1289,8 +1296,9 @@ describe("FG-08 — Screen 02 never renders the server's refusal prose", () => {
     expect(alert!.querySelector("[data-refusal-path]")).toBeNull();
     expect(alert!.querySelector('[data-action="go-to-refused-step"]')).toBeNull();
     const preview = document.querySelector("[data-preflight-preview]") as HTMLDetailsElement;
-    expect(preview.open).toBe(true);
-    expect(document.querySelector("[data-preflight-preview-summary]")!.textContent).not.toContain("none read yet");
+    /* One banner says it; the six panels stay folded rather than printing the same sentence six times (U19). */
+    expect(preview.open).toBe(false);
+    expect(document.querySelector("[data-preflight-preview-summary]")!.textContent).toBe("preflight checks · 6 panels · refused");
   });
 
   it("keeps the server prose out of the page for a 400 that lists field paths", async () => {

@@ -78,19 +78,19 @@ describe("S04 · D-AN-01 — value path (published v2 block)", () => {
     expect(sharpe.getAttribute("data-exact")).toBe(V2.metrics.sharpe.value);
     expect(sharpe.textContent).toBe("−1.96");
     const foot = container.querySelector("[data-metric='OOS_SHARPE'] [data-metric-scope]")?.textContent ?? "";
-    expect(foot).toContain("all time");
+    expect(foot).toContain("OOS");
     expect(foot).toContain("engine-direct");
     expect(foot).toContain("fold mean");
     expect(container.querySelector("[data-metric='OOS_SORTINO']")).toBeNull();
   });
 
-  it("replaces the rolling panel with 'Strategy vs benchmark — all time' and its four cells", async () => {
+  it("replaces the rolling panel with 'Strategy vs benchmark — OOS' and its four cells", async () => {
     const ensureSeries = vi.fn();
     const ensureRetainedKind = vi.fn();
     const { container } = view({ passport: withV2(V2), ensureSeries, ensureRetainedKind });
     await settle(container);
     const figure = container.querySelector("[data-strategy-figure]") as HTMLElement;
-    expect(figure.textContent).toContain("Strategy vs benchmark — all time");
+    expect(figure.textContent).toContain("Strategy vs benchmark — OOS");
     expect(container.querySelector("[data-rolling-figure]")).toBeNull();
     const exact = (id: string) => figure.querySelector(`[data-behavior-tile='${id}'] [data-exact]`)?.getAttribute("data-exact");
     expect(exact("beta")).toBe(V2.metrics.beta.value);
@@ -117,7 +117,8 @@ describe("S04 · D-AN-01 — value path (published v2 block)", () => {
     const { container } = view({ passport: withV2(V2) });
     await settle(container);
     const card = container.querySelector("[data-behavior-scope='all-time']") as HTMLElement;
-    expect(card.textContent).toContain("all time · OOS");
+    expect(card.textContent).toContain("OOS");
+    expect(card.textContent).not.toContain("all time");
     const cell = (label: string) => card.querySelector(`[data-behavior-tile='${label}'] [data-exact]`) as HTMLElement;
     expect(cell("sortino").getAttribute("data-exact")).toBe(V2.metrics.sortino.value);
     expect(cell("sortino").getAttribute("data-fact-origin")).toBe("ENGINE_DIRECT");
@@ -140,7 +141,7 @@ describe("S04 · D-AN-01 — value path (published v2 block)", () => {
       V2.behaviour.exposure_short_fraction.value,
       V2.behaviour.exposure_flat_fraction.value,
     ]);
-    expect(card.textContent).toContain("episodes — not audited trades");
+    expect(card.textContent).toContain("exposure episodes (not trades)");
     expect(cell("win rate").textContent).toBe("28.57%");
     expect(cell("payoff").getAttribute("data-exact")).toBe(V2.behaviour.payoff_ratio.value);
     expect(cell("avg hold").getAttribute("data-exact")).toBe(V2.behaviour.average_hold_seconds.value);
@@ -168,7 +169,7 @@ describe("S04 · D-AN-01 — value path (published v2 block)", () => {
     await settle(container);
     const tile = container.querySelector("[data-tile='OOS_SHARPE'], [data-metric='OOS_SHARPE']");
     const text = tile?.textContent ?? "";
-    expect(text).toContain("all time");
+    expect(text).toContain("OOS");
     expect(text).not.toMatch(/not published/i);
     expect(text).toContain(Number(V2.metrics.sharpe.value).toFixed(2).replace(/^-/, "−"));
   });

@@ -346,7 +346,7 @@ async function settled(search = "", hash = "") {
 vi.setConfig({ testTimeout: 30_000 });
 
 describe("F2b · the window switch, one control with the fold chain", () => {
-  it("sits in the fold chain's row, defaults to OOS and writes ?window= back with replace", async () => {
+  it("sits in the fold chain's row, defaults to OOS and writes ?window= back as one history entry per change", async () => {
     const { container } = await settled();
     const switchEl = container.querySelector("[data-window-switch]")!;
     expect(switchEl.getAttribute("role")).toBe("group");
@@ -357,7 +357,10 @@ describe("F2b · the window switch, one control with the fold chain", () => {
     const depth = window.history.length;
     fireEvent.click(switchEl.querySelector("[data-window='is']")!);
     expect(window.location.search).toBe("?window=is");
-    expect(window.history.length).toBe(depth);
+    /* QA S08 UX-01: a window change is one history entry, so Back steps to the previous window; clicking the same window adds none. */
+    expect(window.history.length).toBe(depth + 1);
+    fireEvent.click(switchEl.querySelector("[data-window='is']")!);
+    expect(window.history.length).toBe(depth + 1);
     fireEvent.click(switchEl.querySelector("[data-window='oos']")!);
     await waitFor(() => expect(container.querySelector("[data-chart-status='ready']")).toBeTruthy());
     expect(window.location.search).toBe("");
@@ -372,7 +375,10 @@ describe("F2b · the window switch, one control with the fold chain", () => {
     expect(panel.querySelector("svg")).toBeTruthy();
     expect(panel.getAttribute("data-is-buckets")).toBeTruthy();
     expect(Number(panel.getAttribute("data-is-buckets"))).toBeGreaterThan(0);
-    expect(panel.querySelector("[data-is-caption]")!.textContent).toMatch(/^overview · fold_01 IS · 2026-06-01/);
+    expect(panel.querySelector("[data-is-caption]")!.textContent).toMatch(/^overview · fold_01 IS · \d+ candles \(\d+ bars each\)$/);
+    /* UX-09: the IS overview has a price axis (served high / mid / low) and a time axis (served train span), like the replay chart. */
+    expect(panel.querySelector("[data-is-axis='price']")!.textContent).toMatch(/\d,\d{3}\.\d{2}/);
+    expect(panel.querySelector("[data-is-axis='time']")!.textContent).toContain("2026-06-01");
     expect(container.querySelector("[data-chart='replay-candles']")).toBeNull();
     expect(container.querySelector("[data-marker-glyph]")).toBeNull();
     expect(container.querySelector("[data-transport]")).toBeNull();
@@ -382,7 +388,9 @@ describe("F2b · the window switch, one control with the fold chain", () => {
     const { container } = await settled("?window=holdout");
     const panel = container.querySelector("[data-window-panel='holdout']")!;
     expect(panel.getAttribute("data-band-state")).toBe("NOT_APPLICABLE");
-    expect(panel.textContent).toContain("HOLDOUT — not applicable");
+    /* UX-08: a sentence for the reader; the served code stays as data and in the tooltip. */
+    expect(panel.textContent).toContain("This run has no holdout window.");
+    expect(panel.textContent).not.toContain("not applicable");
     expect(panel.querySelector("[data-reason-code]")!.getAttribute("data-reason-code")).toBe("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
     expect(panel.querySelector("[data-reason-code]")!.getAttribute("title")).toBe("This walk-forward profile declares no holdout segment.");
     const link = panel.querySelector("[data-action='to-split']") as HTMLAnchorElement;
@@ -493,6 +501,10 @@ describe("F2b · less text, more tooltip", () => {
     /* Honesty survives: counts, claim tokens and typed absences are still on screen. */
     expect(container.querySelector("[data-tile='orders · fills · trades']")!.textContent).toContain("0 · 0 · 0");
     expect(container.querySelector("[data-claim]")).toBeTruthy();
+    /* T-08: the claim token is words; the served snake_case token is the tooltip. */
+    const claimToken = container.querySelector("[data-claim] [data-claim-token]")!;
+    expect(claimToken.textContent).not.toContain("_");
+    expect(claimToken.getAttribute("title")).toContain("_");
     expect(container.querySelector("[data-capability='trades'] [data-reason-code]")!.getAttribute("data-reason-code")).toBe("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS");
   });
 

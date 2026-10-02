@@ -773,7 +773,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     fireEvent.click(node("att_03").querySelector("[data-row]") as HTMLElement);
     const selected = panel("selected");
     expect(selected.getAttribute("data-selected-attempt")).toBe("att_03");
-    expect(selected.querySelector('[data-row-key="parent"]')?.textContent).toBe("att_02");
+    expect(selected.querySelector('[data-row-key="parent"]')?.textContent).toBe("att_02 →");
     expect(selected.querySelector('[data-row-key="engine release"]')?.textContent).toBe("quantbt-1.1.1");
     expect(selected.querySelector('[data-row-key="technical retries"]')?.textContent).toBe("3 (not attempts)");
     expect(within(selected).getByText("open evidence →").getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/evidence");
@@ -819,7 +819,9 @@ describe("S10 Attempt Lineage — the screen", () => {
     server();
     renderRoute("?attempt=att_99");
     await ready();
-    expect(panel("selected").getAttribute("data-selected-attempt")).toBe("att_01");
+    /* QA S10 U6/U7: no deep link opens on the newest meaningful attempt, and says the asked-for one was not returned. */
+    expect(panel("selected").getAttribute("data-selected-attempt")).not.toBe("att_99");
+    expect(document.querySelector("[data-unknown-attempt]")?.getAttribute("data-unknown-attempt")).toBe("att_99");
   });
 
   it("S10-U26 renders the short promotion rule (rest in its tooltip), no rules footer, and the counts strip", async () => {
@@ -1267,7 +1269,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(root.querySelector(".ln-k")?.textContent).toBe("root · alpha");
     expect([...root.querySelectorAll(".ln-links > *")].map((l) => l.textContent)).toEqual(["runs →", "new run →", "rc & publish →"]);
     expect(within(root).getByText("declare at New Run →").getAttribute("href")).toMatch(/^\/research\/quantbt\/runs\/new\?alpha=/);
-    expect(panel("selected").querySelector("h3")?.textContent).toContain("selected attempt — att_01");
+    expect(panel("selected").querySelector("h3")?.textContent).toContain("selected attempt — att_");
     expect(panel("diff").querySelector("h3")?.textContent).toBe("diff vs parent — config keys only");
   });
 

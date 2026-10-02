@@ -1060,15 +1060,20 @@ function DatasetPanel({ hub, id, onClose }: { hub: EvidenceHub; id: string; onCl
 
 /* ------------------------------------------------ tabs + cursor, one card */
 
-function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub | null, summary: string | null = null): string {
+/** The summary tab's counts, for its tooltip only. */
+function summaryCounts(hub: EvidenceHub | null, summary: string | null): string | undefined {
+  if (hub === null) return undefined;
+  if (summary !== null) return summary;
+  const all = [...hub.metrics, ...(hub.oos_performance?.metrics ?? [])];
+  const shown = all.filter((metric) => isAvailable(metric.availability)).length;
+  return `${shown} of ${all.length} metrics · ${hub.series.length} series`;
+}
+
+function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub | null): string {
   /* No hub in hand (loading or refused): a word, never a bare dash (P23 matrix). */
   if (hub === null) return "not read";
-  if (stage === "summary" && summary !== null) return summary;
-  if (stage === "summary") {
-    const all = [...hub.metrics, ...(hub.oos_performance?.metrics ?? [])];
-    const shown = all.filter((metric) => isAvailable(metric.availability)).length;
-    return `${shown} of ${all.length} metrics · ${hub.series.length} series`;
-  }
+  /* QA S04: the counts ride in the tab's tooltip (`summaryCounts`); the line says which window the tab reads. */
+  if (stage === "summary") return "OOS";
   if (stage === "claim") {
     const certificate = hub.claim.methodology_certificate;
     return certificate.state === "ISSUED" && certificate.grade !== null ? `cert ${certificate.grade}` : `claim ${hub.claim.state}`;
@@ -1160,6 +1165,7 @@ function StageTabs({
               aria-controls={`ef-panel-${stage}`}
               tabIndex={selected ? 0 : -1}
               data-tab={stage}
+              title={stage === "summary" ? summaryCounts(hub, summary) : undefined}
               onClick={() => onStage(stage)}
               className="flex flex-none flex-col items-start gap-0.5 border-r px-3.5 py-2 text-left"
               style={{
@@ -1178,7 +1184,7 @@ function StageTabs({
               <span className="mono flex items-center gap-1 whitespace-nowrap text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-tab-sub>
                 {/* F2b: the stage's state as a dot, so the row reads at a glance; the word stays beside it. */}
                 <StageDot stage={stage} hub={hub} />
-                {tabSub(stage, cursor, hub, summary)}
+                {tabSub(stage, cursor, hub)}
               </span>
             </button>
           );
@@ -1446,7 +1452,7 @@ function CursorBar({
 
       {/* The window the URL names (`?window=`), else the Hub's own, OOS. */}
       <CursorPill data-cursor-window title="the evidence window — written to ?window= in the link">
-        window <span style={{ color: "var(--ink)" }}>{evidenceWindow}</span>
+        window <span style={{ color: "var(--ink)" }}>{evidenceWindow === "oos" ? "OOS" : evidenceWindow === "is" ? "IS" : "Holdout"}</span>
       </CursorPill>
 
       {/* F2b: the way OUT to every full stage screen. Each keeps the run, fold, trial and window. */}
@@ -1798,12 +1804,11 @@ function SamplingLine({ series }: { series: EvidenceSeries }) {
         headline
       ) : (
         <>
-          {formatMetric(series.source_sample.emitted_point_count, "count")}{" "}
-          {series.source_sample.emitted_point_count === 1 ? "point" : "points"} from{" "}
+          {formatMetric(series.source_sample.emitted_point_count, "count")} of{" "}
           {series.source_sample.source_observation_count === null
             ? "an unpublished number of"
             : formatMetric(series.source_sample.source_observation_count, "count")}{" "}
-          source observations · {series.source_sample.sampling ?? "sampling not published"}
+          points · {series.source_sample.sampling === null || series.source_sample.sampling === undefined ? "sampling not published" : series.source_sample.sampling === "FULL" ? "full" : "extrema kept"}
         </>
       )}
     </span>
@@ -1887,7 +1892,6 @@ function useSeriesBody({
 function SeriesPanel({
   kind,
   title: titleProp,
-  chartNo,
   variant = "figure",
   footnote,
   footer,
@@ -1906,8 +1910,6 @@ function SeriesPanel({
   title: string | ((series: EvidenceSeries | null) => string);
   /** enrich_analysis: a panel drawn from the block shows its provenance chip in place of the sampling line. */
   chip?: ReactNode;
-  /** The HiFi's `EChart n` label; figures only. */
-  chartNo?: number;
   variant?: "figure" | "card";
   footnote?: ReactNode;
   /** The provenance row under the chart (HiFi EChart 1). */
@@ -1956,11 +1958,6 @@ function SeriesPanel({
       style={{ ...PANEL_STYLE, ...style }}
     >
       <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
-        {chartNo !== undefined ? (
-          <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
-            EChart {chartNo}
-          </span>
-        ) : null}
         <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
           {title}
         </span>
@@ -2316,7 +2313,8 @@ function RetainedClaimFields({
       );
     }
     const text = String(fact.value);
-    const shown = claimToken(fact.value);
+    /* QA S04: words in the read-out, the engine's token verbatim in the tooltip and `data-claim-value`. */
+    const shown = typeof fact.value === "string" ? fact.value.toLowerCase().replace(/_/g, " ") : claimToken(fact.value);
     return (
       <PassportField key={name} name={name} bar={bar} data-claim-value={text} data-claim-source={fact.source_key}>
         <button
@@ -2324,7 +2322,7 @@ function RetainedClaimFields({
           className="mono text-left text-[12px]"
           style={{ color: "var(--ink)" }}
           aria-label={`${name} ${text} — jump to source`}
-          title={`QuantBT ${fact.source_key}${detail ? ` · ${detail}` : ""}`}
+          title={`QuantBT ${fact.source_key} · ${text}${detail ? ` · ${detail}` : ""}`}
           onClick={() => onJump(stage)}
         >
           {shown}
@@ -2648,10 +2646,10 @@ function RetainedSampleLine({ series }: { series: CurrentSourceEvidenceSeries })
   return (
     <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-retained-sampling={sample.sampling}>
       {full
-        ? `all ${formatMetric(sample.source_observation_count, "count")} retained observations`
-        : `${formatMetric(sample.emitted_point_count, "count")} of ${formatMetric(sample.source_observation_count, "count")} retained observations · extrema kept`}
+        ? `all ${formatMetric(sample.source_observation_count, "count")} points`
+        : `${formatMetric(sample.emitted_point_count, "count")} of ${formatMetric(sample.source_observation_count, "count")} points · extrema kept`}
       {envelope ? (
-        <span data-envelope title={`min equity ${envelope.min_equity} at ${utcZ(envelope.min_equity_at_utc_ms)} · max equity ${envelope.max_equity} at ${utcZ(envelope.max_equity_at_utc_ms)} · deepest drawdown ${envelope.min_drawdown_fraction} at ${utcZ(envelope.min_drawdown_at_utc_ms)}`}>
+        <span className="sr-only" data-envelope title={`min equity ${envelope.min_equity} at ${utcZ(envelope.min_equity_at_utc_ms)} · max equity ${envelope.max_equity} at ${utcZ(envelope.max_equity_at_utc_ms)} · deepest drawdown ${envelope.min_drawdown_fraction} at ${utcZ(envelope.min_drawdown_at_utc_ms)}`}>
           {" "}
           · range {formatMetric(envelope.min_equity, "currency")} – {formatMetric(envelope.max_equity, "currency")} · deepest
           drawdown {percentOf(envelope.min_drawdown_fraction)} at {utcZ(envelope.min_drawdown_at_utc_ms)}
@@ -2700,9 +2698,6 @@ function RetainedEquityPanels({
     <>
       <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-retained-series="EQUITY" data-series-state={slot.state}>
         <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
-          <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
-            EChart 1
-          </span>
           <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
             Equity — stitched OOS account
           </span>
@@ -2733,9 +2728,6 @@ function RetainedEquityPanels({
       </figure>
       <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-retained-series="UNDERWATER" data-series-state={slot.state}>
         <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
-          <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
-            EChart 2
-          </span>
           <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
             Underwater — drawdown derived from equity
           </span>
@@ -2868,7 +2860,7 @@ function WindowSwitcher({
 }) {
   /* F2b: IS / OOS / Holdout write `?window=` (the vocabulary S08 reads). The Hub still publishes OOS only,
      so the other two say so in place of the numbers instead of showing OOS under the wrong label. */
-  const notWindow = "the Evidence Hub publishes the OOS window only";
+  const notWindow = "no reason code was served for this window";
   const choice = (value: EvidenceWindow, label: string, why: string) => ({
     label,
     on: active === value,
@@ -2884,24 +2876,26 @@ function WindowSwitcher({
             choice("is", "IS", `?window=is — ${windowWhy(windows?.is, notWindow)}`),
             choice("oos", "OOS", `?window=oos — the window every metric and series on this tab describes${windows && windows.oos.state !== "AVAILABLE" ? ` · ${windowWhy(windows.oos, "")}` : ""}`),
             choice("holdout", "Holdout Live", `?window=holdout — ${windowWhy(windows?.holdout, notWindow)}`),
-            { label: "Compare", on: false, why: notWindow },
+            { label: "Compare", on: false, why: `Compare needs the IS window — ${windowWhy(windows?.is, "not published")}` },
           ]}
         />
-        <span
-          className="mono border-l-2 pl-1.5 text-[10px]"
-          style={{ color: "var(--accent-2)", borderColor: "var(--accent-2)" }}
-          data-window-disclosure
-          title={WINDOW_DISCLOSURE_RULE}
-        >
-          {WINDOW_DISCLOSURE}
-        </span>
+        {active === "oos" ? (
+          <span
+            className="mono border-l-2 pl-1.5 text-[10px]"
+            style={{ color: "var(--accent-2)", borderColor: "var(--accent-2)" }}
+            data-window-disclosure
+            title={WINDOW_DISCLOSURE_RULE}
+          >
+            {WINDOW_DISCLOSURE}
+          </span>
+        ) : null}
       </div>
       <Segmented
         label="equity scale"
         data-capital-toggle
         options={[
           { label: "Capital", on: true, why: "equity as the account holds it" },
-          { label: "Rebased 100", on: false, why: "a rebased series is not published; this screen does not rebase one" },
+          { label: "Rebased 100", on: false, why: "rebased to 100 — drawn in the strategy-vs-benchmark chart" },
         ]}
       />
     </div>
@@ -2934,6 +2928,11 @@ function WindowAbsent({
     >
       <PanelLabel>{label} window</PanelLabel>
       <Withheld availability={availability} what={`${label} window metrics`} />
+      {availability.reason_code !== null && feLocalAbsenceId(availability.reason_code) === null ? (
+        <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-window-reason title={reasonTitle(availability)}>
+          {availability.reason_code}
+        </span>
+      ) : null}
       <span className="ml-auto inline-flex flex-wrap gap-2">
         <Link
           to={withWindow(deepDiveHref(`${base}/split`, { ...cursor, stage: "split" }), active)}
@@ -3054,9 +3053,6 @@ function VerdictTable({ hub }: { hub: EvidenceHub }) {
               {label}
             </button>
           ))}
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-            per-fold metrics · not published
-          </span>
         </span>
       </div>
       <table className="w-full min-w-[980px] border-collapse text-[12px]">
@@ -3196,7 +3192,7 @@ export function retainedTiles(evidence: CurrentSourceEvidence): RetainedTileFact
             key,
             all.state === "AVAILABLE" ? all.value : null,
             "ratio",
-            `all time · ${origin}${foldMean !== null ? ` · fold mean ${foldMean}` : ""}`,
+            `OOS · ${origin}${foldMean !== null ? ` · fold mean ${foldMean}` : ""}`,
             { state: all.state === "AVAILABLE" ? "NOT_PUBLISHED" : (all.state as Availability["state"]), reason_code: all.reason_code },
             "OOS Sharpe",
           );
@@ -3387,7 +3383,7 @@ function BehaviorCard({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <PanelLabel>behavior</PanelLabel>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          {absent ? "all time · OOS" : summary ? "segment OOS" : retained ? "retained walk-forward lane" : "segment not published"}
+          {absent ? "OOS" : summary ? "segment OOS" : retained ? "retained walk-forward lane" : "segment not published"}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -3491,6 +3487,15 @@ function SummaryTab({
   const enriched = enrichedBlock(enrichedRead);
   /* B7: the served reason there is no block (null when the field is not served or a block is present). */
   const enrichedAbsentCode = enrichedAbsenceOf(retained ?? hub);
+  /* QA S04-I3: the sealed claim says the Delta WFO profile has no holdout (NOT_APPLICABLE, with its code); the
+     analytics block's blanket NOT_PUBLISHED is the weaker answer. The claim's own typed state wins for the holdout window. */
+  const claimHoldout = (retained as Partial<CurrentSourceEvidence> | null)?.claim?.holdout ?? null;
+  const windowsShown: EnrichedAnalysis["windows"] | null =
+    enriched === null
+      ? null
+      : claimHoldout !== null && claimHoldout.state === "NOT_APPLICABLE"
+        ? { ...enriched.windows, holdout: { ...enriched.windows.holdout, state: "NOT_APPLICABLE", reason_code: claimHoldout.reason_code } as EnrichedAnalysis["windows"]["holdout"] }
+        : enriched.windows;
   const enrichedSeries = new Map<SeriesKind, EvidenceSeries>();
   const enrichedAbsent = new Map<SeriesKind, Availability>();
   if (enriched !== null) {
@@ -3548,7 +3553,7 @@ function SummaryTab({
           const all = enriched?.facts.metrics.sharpe ?? v2?.metrics.sharpe ?? null;
           if (all !== null && all.state === "AVAILABLE" && all.value !== null) {
             const origin = all.origin === "ENGINE_DIRECT" ? "engine-direct" : "portal-derived";
-            return [<RetainedTile key={key} tile={{ key, label: "OOS Sharpe", value: String(all.value), unit: "ratio", foot: `all time · ${origin}`, absence: null }} />];
+            return [<RetainedTile key={key} tile={{ key, label: "OOS Sharpe", value: String(all.value), unit: "ratio", foot: `OOS · ${origin}`, absence: null }} />];
           }
         }
         const hubMetric = hub.metrics.find((metric) => metric.key === key);
@@ -3567,7 +3572,7 @@ function SummaryTab({
     <SeriesPanel
       kind="MONTHLY_RETURNS"
       variant="card"
-      title={allTimeTitle("MONTHLY_RETURNS", "monthly returns — all time", "monthly returns — stitched OOS")}
+      title={allTimeTitle("MONTHLY_RETURNS", "monthly returns — OOS", "monthly returns — stitched OOS")}
       className={enriched !== null ? "" : "flex-[1.3_1_460px]"}
       link={linkFor("MONTHLY_RETURNS")}
       slot={slotFor("MONTHLY_RETURNS")}
@@ -3582,16 +3587,18 @@ function SummaryTab({
 
   return (
     <section data-screen-label="Summary" className="flex flex-col gap-3.5">
-      <WindowSwitcher window={evidenceWindow} onWindow={onWindow} windows={enriched?.windows ?? null} />
+      <WindowSwitcher window={evidenceWindow} onWindow={onWindow} windows={windowsShown} />
       {evidenceWindow !== "oos" ? (
         <WindowAbsent
           window={evidenceWindow}
           runId={runId}
           cursor={cursor}
           availability={
-            enriched !== null && enriched.windows[evidenceWindow].state !== "AVAILABLE"
-              ? { state: enriched.windows[evidenceWindow].state as Availability["state"], reason_code: enriched.windows[evidenceWindow].reason_code }
-              : undefined
+            windowsShown !== null && windowsShown[evidenceWindow].state !== "AVAILABLE"
+              ? { state: windowsShown[evidenceWindow].state as Availability["state"], reason_code: windowsShown[evidenceWindow].reason_code }
+              : windowsShown === null && evidenceWindow === "holdout" && claimHoldout !== null && claimHoldout.state === "NOT_APPLICABLE"
+                ? { state: "NOT_APPLICABLE", reason_code: claimHoldout.reason_code }
+                : undefined
           }
         />
       ) : null}
@@ -3628,7 +3635,6 @@ function SummaryTab({
       <>
       <SeriesPanel
         kind="EQUITY_OOS"
-        chartNo={1}
         title="Equity — stitched OOS account"
         link={linkFor("EQUITY_OOS")}
         slot={series.get("EQUITY_OOS")}
@@ -3666,7 +3672,6 @@ function SummaryTab({
 
       <SeriesPanel
         kind="EQUITY_OOS"
-        chartNo={2}
         title="Underwater — drawdown derived from equity"
         link={linkFor("EQUITY_OOS")}
         slot={series.get("EQUITY_OOS")}
@@ -3712,8 +3717,7 @@ function SummaryTab({
         ) : null}
         <SeriesPanel
           kind="RETURN_DISTRIBUTION"
-          chartNo={4}
-          title={allTimeTitle("RETURN_DISTRIBUTION", "Return distribution — all time", "Return distribution — stitched OOS")}
+          title={allTimeTitle("RETURN_DISTRIBUTION", "Return distribution — OOS", "Return distribution — stitched OOS")}
           className="flex-[1_1_380px]"
           link={linkFor("RETURN_DISTRIBUTION")}
           slot={slotFor("RETURN_DISTRIBUTION")}
@@ -3732,7 +3736,7 @@ function SummaryTab({
       <div className="flex flex-wrap items-start gap-3.5" data-monthly-row>
         {/* enrich_analysis: the episodes card stacks under the monthly strip, filling the column the short strip leaves. */}
         {enriched !== null ? <div className="flex min-w-0 flex-[1.3_1_460px] flex-col gap-3.5" data-monthly-column>{monthlyPanel}<DrawdownEpisodes block={enriched} /></div> : monthlyPanel}
-        {v2 ? <BehaviorV2 v2={v2} chip={enriched !== null ? "enrich_analysis · all time" : undefined} /> : <BehaviorCard retained={retained} summary={summary} absent={retained ? v2Absence(retained) : null} />}
+        {v2 ? <BehaviorV2 v2={v2} chip={enriched !== null ? `portal-derived · ${enriched.scope.window}` : undefined} /> : <BehaviorCard retained={retained} summary={summary} absent={retained ? v2Absence(retained) : null} />}
       </div>
 
       {summary ? (
@@ -3740,9 +3744,9 @@ function SummaryTab({
           <span
             data-summary-trade-count
             data-trade-scope={summary.total_trade_count.scope}
-            title={`${summary.total_trade_count.source_locator} · not an audited fill count or the per-fold OOS trade total`}
+            title={`${summary.total_trade_count.scope} · ${summary.total_trade_count.source_locator} · not an audited fill count or the per-fold OOS trade total`}
           >
-            Engine total trades ({summary.total_trade_count.scope}):{" "}
+            Engine trades:{" "}
             {summary.total_trade_count.state === "AVAILABLE" && summary.total_trade_count.value !== null
               ? <span data-exact={summary.total_trade_count.value}>{formatMetric(summary.total_trade_count.value, "count")}</span>
               : <Withheld availability={{ state: summary.total_trade_count.state, reason_code: summary.total_trade_count.reason_code }} />}
@@ -4759,7 +4763,7 @@ export function EvidenceFlow({
   const passportSkip = hub ? passportSkipOf(hub) : { key: "NO_HUB", sentence: "" };
   useEffect(() => {
     if (passportSkip === null) ensurePassport();
-  }, [passportSkip === null, ensurePassport]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [passportSkip === null, passport.state === "idle", ensurePassport]); // eslint-disable-line react-hooks/exhaustive-deps
   const retainedClaim = passport.state === "ready" ? (passport.evidence as Partial<CurrentSourceEvidence>).claim ?? null : null;
   /* W3b: a retained answer is the authority for the run's lane facts. */
   const laneEvidence = passport.state === "ready" && isRetainedAnswer(passport.evidence) ? passport.evidence : null;
@@ -4849,7 +4853,28 @@ export function EvidenceFlow({
         laneReadiness={laneEvidence ? (laneSeal ?? "not read") : null}
       />
 
-      {view && !(laneEvidence && laneSeal === "READY") ? <SealNotice runId={runId} hub={view} /> : null}
+      {/* QA S04-U4: a failed read of the sealed evidence is an error with a retry, never "not published". */}
+      {passport.state === "refused" && passportSkip === null ? (
+        <section
+          className="flex flex-wrap items-center gap-3 rounded-[8px] border px-4 py-2.5"
+          data-passport-error={passport.refusal.state}
+          data-reason-code={passport.refusal.code ?? undefined}
+          role="alert"
+          style={{ borderColor: "var(--role-holdout)", background: "var(--paper-sunken)" }}
+        >
+          <span aria-hidden="true" className="inline-block h-[7px] w-[7px] flex-none rounded-full" style={{ background: "var(--role-holdout)" }} />
+          <p className="text-[11.5px]" style={{ color: "var(--ink-soft)" }} title={passport.refusal.detail ?? undefined}>
+            Sealed evidence could not be read. {passport.refusal.message}
+          </p>
+          {passport.refusal.mayRetry ? (
+            <button type="button" className="btn-ghost mono text-[10px]" data-action="reread-passport" onClick={onReread}>
+              read again
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+
+      {view && !(laneEvidence && laneSeal === "READY") && !(passport.state === "refused" && passportSkip === null) ? <SealNotice runId={runId} hub={view} /> : null}
 
       {/* Tabs and cursor: one card, sticky (HiFi). */}
       <div

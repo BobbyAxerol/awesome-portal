@@ -173,14 +173,14 @@ describe("E5 · 6.9/6.10 B2 formula and sub-panels", () => {
 });
 
 describe("E5 · 6.11 B3 best ≠ selected — four rows per card", () => {
-  it("each card lists S_IS, S̄_OOS, d̄ decay and max_dd from the pool member that re-scored it", async () => {
+  it("each card lists S_IS, S̄_OOS, mean decay and max_dd from the pool member that re-scored it", async () => {
     const root = await settled();
     for (const kind of ["raw-best", "selected"]) {
       const card = root.querySelector(`[data-role-card='${kind}']`) as HTMLElement;
       expect([...card.querySelectorAll("[data-role-row]")].map((row) => row.textContent)).toEqual([
         "S_IS−1.44",
         "S̄_OOS−5.35",
-        "d̄ decay+3.91",
+        "mean decay+3.91",
         "max_dd−0.67%",
       ]);
     }

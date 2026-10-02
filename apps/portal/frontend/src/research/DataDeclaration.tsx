@@ -646,14 +646,15 @@ export function SymbolFacts({ symbol, timeframe, rich }: { symbol: CatalogSymbol
 
 /* ------------------------------------------------------------ timeframes */
 
-const CHIP_REASON: Record<NonNullable<TimeframeChip["disabledReason"]>, (version: string, code: string | null) => string> = {
+const CHIP_REASON: Record<NonNullable<TimeframeChip["disabledReason"]>, (version: string, chip: TimeframeChip) => string> = {
   "not-declared": (version) => `not declared by ${version}`,
   "not-offered": () => "not offered by dataset",
   "declaration-not-published": () => "version timeframes not published — preflight decides",
-  unavailable: (_version, code) => `dataset cannot serve it${code ? ` · ${code}` : ""}`,
+  unavailable: (_version, chip) => `dataset cannot serve it${chip.reasonCode ? ` · ${chip.reasonCode}` : ""}`,
+  "no-profile": (_version, chip) => `no admitted profile covers it${chip.detail ? ` · ${chip.detail}` : ""}`,
 };
 
-/** One chip per dataset timeframe: enabled when the bound version declares it. */
+/** One chip per dataset timeframe: enabled when the bound version declares it and an admitted profile covers it. */
 export function TimeframeChips({
   chips,
   version,
@@ -673,10 +674,19 @@ export function TimeframeChips({
       </span>
     );
   }
+  /* Why a chip is off, said where it can be read: one line per distinct reason
+     (a tooltip alone is invisible on touch and in a screenshot). */
+  const refused = new Map<string, string[]>();
+  for (const chip of chips) {
+    if (!chip.disabledReason) continue;
+    const text = CHIP_REASON[chip.disabledReason](version, chip);
+    refused.set(text, [...(refused.get(text) ?? []), chip.timeframe]);
+  }
   return (
+    <div className="flex flex-col gap-1">
     <div role="radiogroup" aria-label="Timeframe" className="flex flex-wrap gap-1.5" data-timeframe-chips>
       {chips.map((chip) => {
-        const reason = chip.disabledReason ? CHIP_REASON[chip.disabledReason](version, chip.reasonCode) : `declared by ${version}`;
+        const reason = chip.disabledReason ? CHIP_REASON[chip.disabledReason](version, chip) : `declared by ${version}`;
         return (
           <button
             key={chip.timeframe}
@@ -706,6 +716,16 @@ export function TimeframeChips({
           </button>
         );
       })}
+    </div>
+    {refused.size > 0 ? (
+      <ul className="flex flex-col gap-0.5" data-timeframe-reasons>
+        {[...refused].map(([text, frames]) => (
+          <li key={text} className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-timeframe-reason={frames.join(",")}>
+            {frames.join(" · ")} — {text}
+          </li>
+        ))}
+      </ul>
+    ) : null}
     </div>
   );
 }

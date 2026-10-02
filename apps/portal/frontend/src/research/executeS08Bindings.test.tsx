@@ -156,7 +156,8 @@ describe("F2 S08 · child audit: window, caption counts", () => {
     const row = container.querySelector(`[data-audit-row='${audit.records[0]!.audit_ordinal}']`) as HTMLElement;
     expect(row.textContent).toContain("not published → not published");
     expect(row.textContent).not.toContain("—");
-    const caption = container.querySelector("[data-child-audit-caption]")!.textContent!;
+    /* T-06: the run-level facts ride in the caption's tooltip, still served and still exact. */
+    const caption = container.querySelector("[data-child-audit-caption]")!.getAttribute("title")!;
     expect(caption).toContain("run total 12,345");
     expect(caption).toContain("dropped by QuantBT 2,000");
   });
@@ -167,7 +168,7 @@ describe("F2 S08 · child audit: window, caption counts", () => {
     body.execution.child_audit.records_dropped_by_source = null;
     const { container } = await settled({ replay: body });
     await waitFor(() => expect(container.querySelector("[data-child-audit='0']")).toBeTruthy());
-    const caption = container.querySelector("[data-child-audit-caption]")!.textContent!;
+    const caption = container.querySelector("[data-child-audit-caption]")!.getAttribute("title")!;
     expect(caption).toContain("run total not published");
     expect(caption).toContain("dropped by QuantBT not published");
     expect(caption).not.toContain("—");
@@ -180,13 +181,13 @@ describe("F2 S08 · overview caption counts are grouped", () => {
     envelope: { max_high: "12", min_low: "8" },
     values: [{ first_ordinal: 0, last_ordinal: 7, open_utc_ms: 0, close_utc_ms: 7, open: "10", high: "12", low: "8", close: "11", volume: null, transitions: null }],
   };
-  it("prints 12,000 bars → 1,500 candles of 8", () => {
+  it("prints 12,000 bars · 1,500 candles (8 bars each)", () => {
     const { container } = render(<CandleOverviewStrip overview={overview} scope="OOS" label="overview" />);
-    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("12,000 bars → 1,500 candles of 8");
+    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("12,000 bars · 1,500 candles (8 bars each)");
   });
   it("the fixture's real 1056-bar overview prints grouped on the screen", async () => {
     const { container } = await settled();
-    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("1,056 bars → 151 candles of 7");
+    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("1,056 bars · 151 candles (7 bars each)");
   });
 });
 
@@ -217,7 +218,9 @@ describe("F2 S08 · each fold's params digest from the progress selection", () =
     const { container } = await settled();
     const digest = folds[0]!.selection.params_digest;
     await waitFor(() => expect(container.querySelector("[data-fold-params]")?.getAttribute("data-fold-params")).toBe(digest));
-    expect(container.querySelector("[data-fold-params]")?.textContent).toBe(`params ${digest.slice(0, 8)}`);
+    /* T-14: the digest is a tooltip, not a line of the screen. */
+    expect(container.querySelector("[data-fold-params]")?.textContent).toBe("params");
+    expect(container.querySelector("[data-fold-params]")?.getAttribute("title")).toBe(`params ${digest}`);
     expect(container.querySelector("[data-fold='0']")?.getAttribute("title")).toContain(`params ${digest}`);
   });
 

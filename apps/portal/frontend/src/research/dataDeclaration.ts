@@ -193,9 +193,11 @@ export interface TimeframeChip {
   selected: boolean;
   enabled: boolean;
   /** Why it cannot be chosen; null when it can. */
-  disabledReason: "not-declared" | "not-offered" | "declaration-not-published" | "unavailable" | null;
+  disabledReason: "not-declared" | "not-offered" | "declaration-not-published" | "unavailable" | "no-profile" | null;
   /** The server's code when the dataset names this timeframe as unavailable (v2), else null. */
   reasonCode: string | null;
+  /** `no-profile`: which admitted profile pins which timeframe (`p04… pins 1h`), as served; else null. */
+  detail: string | null;
 }
 
 /**
@@ -209,6 +211,8 @@ export function timeframeChips(
   current: string,
   /** A scratch run binds no version, so there is no declaration to wait for: the dataset's own timeframes are the choice. */
   scratch = false,
+  /** The timeframes the admitted profiles that fit the declaration cover (`profileTimeframes`); null restricts nothing. */
+  profileFit: { timeframes: readonly string[]; profileIds: readonly string[] } | null = null,
 ): readonly TimeframeChip[] {
   const offered = dataset?.timeframes ?? [];
   const declaredList = declared ?? [];
@@ -235,12 +239,16 @@ export function timeframeChips(
           : isDeclared
             ? null
             : "not-declared";
+    /* The profile fit only narrows a timeframe that was otherwise choosable. */
+    const outsideProfile = disabledReason === null && profileFit !== null && !profileFit.timeframes.includes(timeframe);
+    const finalReason: TimeframeChip["disabledReason"] = outsideProfile ? "no-profile" : disabledReason;
     return {
       timeframe,
       selected: timeframe === current,
-      enabled: disabledReason === null,
-      disabledReason,
+      enabled: finalReason === null,
+      disabledReason: finalReason,
       reasonCode: unavailable ? (fact.reasonCode ?? fact.availability) : null,
+      detail: outsideProfile && profileFit ? `${profileFit.profileIds.join(", ")} pins ${profileFit.timeframes.join(", ")}` : null,
     };
   });
 }

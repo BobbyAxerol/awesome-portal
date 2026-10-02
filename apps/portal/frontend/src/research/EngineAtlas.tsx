@@ -839,6 +839,16 @@ function ReadsGlyphs({ inputs }: { inputs: readonly string[] }) {
   );
 }
 
+/**
+ * QA UX-2: "declare" opens New Run at Optimization WITH the mode and the schedule this
+ * card shows, so the reader does not choose them again. New Run validates both against
+ * the same atlas before using them.
+ */
+export function declareModeHref(modeId: string, schedule: string): string {
+  const query = new URLSearchParams({ step: "optimization", mode: modeId, schedule });
+  return `/research/quantbt/runs/new?${query.toString()}`;
+}
+
 export interface ModeCardProps {
   mode: AtlasMode;
   /** The schedule whose claim is shown. Always one the mode lists. */
@@ -883,7 +893,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
           title={fact && fact.cert_cap.state === "NOT_PUBLISHED" ? fact.cert_cap.reason : "no certification cap is published for this mode"}
           data-cert-cap="not-published"
         >
-          cert cap not published
+          no cert cap
         </span>
         {thisRun ? (
           <span className="mono text-[9px]" style={{ color: "var(--accent)" }} data-this-run-marker title={`${runId} ran ${known?.mode ?? ""} × ${known?.schedule ?? "schedule not published"}`}>
@@ -892,11 +902,11 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
         ) : null}
         <span className="ml-auto flex flex-wrap items-baseline gap-x-3">
           <Link
-            to="/research/quantbt/runs/new?step=optimization"
+            to={declareModeHref(mode.mode_id, schedule)}
             className="mono text-[10px] font-semibold uppercase tracking-[.05em]"
             style={{ color: "var(--ink-soft)" }}
             data-declare-mode={mode.mode_id}
-            title={`Declare a run: New Run opens at Optimization, where ${mode.mode_id} is chosen`}
+            title={`Declare a run in ${mode.mode_id} × ${schedule}`}
             aria-label={`Declare a run in ${mode.mode_id}`}
           >
             declare →
@@ -1022,6 +1032,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
                   data-schedule-invalid={candidate}
                   tabIndex={0}
                   role="note"
+                  aria-disabled="true"
                   aria-label={`${candidate}: not admitted by this mode in the installed release manifest`}
                   title="Not in this mode's valid schedules in the installed release manifest."
                   className="mono rounded-[3px] border border-dashed px-[8px] text-[9.5px] leading-[18px] line-through"
@@ -1070,7 +1081,12 @@ function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
   return (
     <div className="overflow-x-auto rounded-[6px] border" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-mode-table>
       <div className="border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
-        <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-soft)" }}>
+        {/* QA S12: the shared "avoid when — not published" line is no visible promise; its typed absence rides here. */}
+        <span
+          className="text-[10px] font-medium uppercase tracking-[.07em]"
+          style={{ color: "var(--ink-soft)" }}
+          {...(shared ? { "data-avoid-when-shared": true, "data-avoid-when-reason": shared.reason, title: `avoid when — not published: ${shared.reason}` } : {})}
+        >
           when to reach for which mode
         </span>
       </div>
@@ -1101,18 +1117,6 @@ function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
           ))}
         </tbody>
       </table>
-      {shared ? (
-        /* VD-TEXT-01: the typed absence stays, its sentence is the tooltip. */
-        <p
-          className="m-0 border-t px-3 py-[7px] text-[10px] leading-[1.5]"
-          style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
-          data-avoid-when-shared
-          data-avoid-when-reason={shared.reason}
-          title={shared.reason}
-        >
-          <span className="mono text-[9px] font-bold uppercase tracking-[.06em]">avoid when — not published</span>
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -1172,7 +1176,7 @@ function ModesTab({
           </span>
           {/* 12-4: the HiFi's CandidateSelector list is not published by QuantBT 1.1.1's manifest; the sentence names no layer it cannot cite. */}
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-            <span className="mono">optimization_mode</span> is this page&rsquo;s · the execution route is separate
+            Execution route is chosen separately
           </span>
         </div>
       </div>
@@ -1212,10 +1216,15 @@ function ModesTab({
  * Release facts
  * ---------------------------------------------------------------------- */
 
-function Fact({ label, children }: { label: string; children: ReactNode }) {
+/** QA UX-20: a server constraint token (`MUST_BE_NULL`) read as words (`must be unset`); the token stays in the tooltip. */
+export function constraintWords(token: string): string {
+  return token.split("_").join(" ").toLowerCase().replace(/\bnull\b/, "unset");
+}
+
+function Fact({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="contents">
-      <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>{label}</dt>
+      <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }} title={hint}>{label}</dt>
       <dd className="mono min-w-0 text-[10.5px] [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
@@ -1231,7 +1240,17 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
   /* Closed it is a chip at the end of the tab row; open it takes the row's
      full width and the tabs move above it. */
   return (
-    <details className="max-w-full flex-none self-start rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-release-facts>
+    <details
+      className="max-w-full flex-none self-start rounded-[6px] border px-3 py-2"
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+      data-release-facts
+      onKeyDown={(event) => {
+        /* QA UX-18: Escape closes the drawer and returns focus to its summary. */
+        if (event.key !== "Escape" || !event.currentTarget.open) return;
+        event.currentTarget.open = false;
+        event.currentTarget.querySelector("summary")?.focus();
+      }}
+    >
       <summary className="mono cursor-pointer text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         release facts · {release.release_id}
       </summary>
@@ -1242,12 +1261,16 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
             {release.native_package ? `${release.native_package} · expected ${release.native_expected_version ?? "not declared"}` : "none declared"}
           </Fact>
           {/* E1: an exact integer is grouped as a string, never turned into a float. */}
-          <Fact label="trial ceiling">{groupDecimalString(String(release.trial_ceiling))}</Fact>
+          <Fact label="trial ceiling" hint="Most trials the engine accepts in one run">{groupDecimalString(String(release.trial_ceiling))}</Fact>
           <Fact label="profile">{release.submission_constraints.profile_id}</Fact>
           <Fact label="overrides">{release.submission_constraints.optimization_overrides}</Fact>
-          <Fact label="trials accepted">{groupDecimalString(String(release.submission_constraints.accepted_trial_count))}</Fact>
-          <Fact label="early stopping">{release.submission_constraints.early_stopping}</Fact>
-          <Fact label="random seed">{release.submission_constraints.random_seed}</Fact>
+          <Fact label="trials per run" hint="Trials the fixed qualification profile accepts in one run">{groupDecimalString(String(release.submission_constraints.accepted_trial_count))}</Fact>
+          <Fact label="early stopping">
+            <span title={release.submission_constraints.early_stopping}>{constraintWords(release.submission_constraints.early_stopping)}</span>
+          </Fact>
+          <Fact label="random seed">
+            <span title={release.submission_constraints.random_seed}>{constraintWords(release.submission_constraints.random_seed)}</span>
+          </Fact>
           {/* E1: a 64-character digest wraps every row it sits in; the full value stays in the title. */}
           {release.config_digest ? (
             <Fact label="config digest">
@@ -1367,17 +1390,19 @@ function AtlasFactsAbsent({
       data-atlas-facts-absent={identity?.facts_state ?? "NOT_PUBLISHED"}
     >
       {/* With a served state the code says it; without one, the words must. */}
-      <span>{identity ? `${what} —` : `${what} — not published`}</span>
       {identity ? (
+        /* QA S12: the server's one sentence; its state code is the tooltip, not a second line. */
         <>
-          <span className="mono text-[9px] font-bold uppercase tracking-[.06em]" data-facts-state>
+          <span className="sr-only" data-facts-state>
             {identity.facts_state}
           </span>
-          <span className="text-[10.5px] leading-[1.55]" data-facts-reason>
+          <span className="text-[11px] leading-[1.55]" data-facts-reason title={identity.facts_state}>
             {identity.facts_reason}
           </span>
         </>
-      ) : null}
+      ) : (
+        <span>{`${what} — not published`}</span>
+      )}
     </div>
   );
 }
@@ -1490,14 +1515,6 @@ export function EngineAtlas({
           >
             Engine Atlas
           </h1>
-          {doc ? (
-            <p
-              className="text-[13.5px] italic"
-              style={{ fontFamily: "Newsreader, Georgia, serif", color: "var(--ink-faint)" }}
-            >
-              Read from {doc.current_release.release_id}
-            </p>
-          ) : null}
           <span className="mt-0.5 flex flex-wrap items-center gap-x-3" data-atlas-exits>
               <Link to="/research/quantbt/runs" className="mono text-[10px]" style={{ color: "var(--accent)" }} data-exit-library title="Run Library">
                 Run Library →
@@ -1542,11 +1559,30 @@ export function EngineAtlas({
                 {release.text}
               </span>
             ) : null}
-            {history.map((label) => (
-              <span key={label} className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-                {label}
-              </span>
-            ))}
+            {history.map((label, index) => {
+              const releaseId = doc?.historical_releases[index]?.release_id ?? null;
+              /* QA UX-6: the retained release is one click away, not only by typing ?release_id=. */
+              return releaseId && !embedded ? (
+                <Link
+                  key={label}
+                  to={`/research/quantbt/atlas?release_id=${encodeURIComponent(releaseId)}`}
+                  className="mono text-[9.5px] underline"
+                  style={{ color: "var(--accent)" }}
+                  data-historical-link={releaseId}
+                >
+                  {label}
+                </Link>
+              ) : (
+                <span key={label} className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+                  {label}
+                </span>
+              );
+            })}
+            {selectedReleaseKind === "HISTORICAL" && !embedded ? (
+              <Link to="/research/quantbt/atlas" className="mono text-[10px]" style={{ color: "var(--accent)" }} data-back-to-current>
+                ← current release
+              </Link>
+            ) : null}
             </span>
             {/* CG-FG-S12-01: a historical selection states the identity the
                 server served for it, in the server's own vocabulary. The old
@@ -1578,6 +1614,8 @@ export function EngineAtlas({
       {/* RF-04: the tab bar is 369 px of a 1128 px row; the release facts sit
           in the space beside it instead of costing a band of their own. */}
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      {/* QA UX-6: a retained identity has no atlas document, so its three tabs would open nothing. */}
+      {doc === null && selectedReleaseKind === "HISTORICAL" && state.state === "available" ? null : (
       <div
         className="flex gap-1 self-start rounded-[6px] border p-[5px]"
         style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
@@ -1617,6 +1655,7 @@ export function EngineAtlas({
           );
         })}
       </div>
+      )}
 
       {/* A pre-P10 document carries no release facts; nothing is drawn for it. */}
       {doc?.current_release.submission_constraints && doc.current_release.optimizer_defaults ? (

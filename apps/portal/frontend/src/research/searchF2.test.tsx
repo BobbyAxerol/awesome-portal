@@ -119,10 +119,11 @@ describe("F2 · S06 — the ledger asks with the cursor's fold", () => {
     await waitFor(() => expect(container.querySelector("[data-inspection-fold='0']")).toBeTruthy());
     /* the first read is unfiltered (it learns the run); the second carries the plan's fold_id for fold 1 */
     expect(ledgerCalls()).toEqual([null, "0"]);
-    expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("fold 0");
-    expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("2 of 3");
-    expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("TRIAL_FOLD_SCOPE_COVERS_FOLD");
-    expect(container.querySelector("[data-ledger-scope]")?.textContent).toContain("fold filter 0");
+    /* D6: the reader's fold is the cursor's 1-based number; the plan's 0-based id stays in data-inspection-fold. */
+    expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("fold 1 · 2 of 3");
+    expect(container.querySelector("[data-panel='inspection']")?.textContent).not.toContain("fold 0");
+    expect(container.querySelector("[data-panel='inspection'] [title='TRIAL_FOLD_SCOPE_COVERS_FOLD']")).toBeTruthy();
+    expect(container.querySelector("[data-ledger-scope]")?.textContent).toBe("global study · fold 1");
   });
 
   it("a different cursor fold asks for that fold's id", async () => {
@@ -135,7 +136,7 @@ describe("F2 · S06 — the ledger asks with the cursor's fold", () => {
   it("a cursor fold the plan does not list asks nothing and the unfiltered ledger says 'no fold filter'", async () => {
     stub();
     const { container } = mount("#stage=search&fold=9");
-    await waitFor(() => expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("no fold filter"));
+    await waitFor(() => expect(container.querySelector("[data-panel='inspection']")?.textContent).toContain("One global selection"));
     await waitFor(() => expect(urls.some((url) => url.includes("/current-source/split"))).toBe(true));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
@@ -152,7 +153,7 @@ describe("F2 · S06 — the ledger asks with the cursor's fold", () => {
     const { container } = mount("#stage=search&fold=1");
     await waitFor(() => expect(container.querySelector("[data-fold-filter-refused]")).toBeTruthy());
     expect(container.querySelector("[data-fold-filter-refused]")?.getAttribute("data-fold-filter-refused")).toBe("RESEARCH_CURRENT_SOURCE_INVALID");
-    expect(container.querySelector("[data-ledger-scope]")?.textContent).toContain("fold filter none");
+    expect(container.querySelector("[data-ledger-scope]")?.textContent).not.toContain("fold filter");
   });
 
   it("foldIdForCursor is the plan's id for the 1-based cursor fold, never a guess", () => {

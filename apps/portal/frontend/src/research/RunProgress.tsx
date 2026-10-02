@@ -38,6 +38,7 @@ import {
   type EffectiveStatus,
   type FoldSegment,
   type HandoffCursor,
+  type MethodologyClaim,
   type ProgressRead,
   type ProgressRefusal,
   type ProgressSnapshot,
@@ -246,6 +247,16 @@ function pulse(duration: string): { "data-motion": "pulse"; style: CSSProperties
 }
 
 /* ------------------------------------------------------------- formatting */
+
+/**
+ * QA S03 U4: the header counts what the read carries, once. "9 of 9 reported"
+ * above three compact detail rows read as a contradiction; a count that is
+ * short of the declared total says so, one that matches is just the count.
+ */
+export function foldsMeta(reported: number, declared: number | null): string {
+  if (declared === null || reported === declared) return `${reported} ${reported === 1 ? "fold" : "folds"}`;
+  return `${reported} of ${declared} folds`;
+}
 
 /** `1,603` — thousands separators on every count. */
 function count(value: number): string {
@@ -532,6 +543,13 @@ function studyLabel(snapshot: ProgressSnapshot, foldCount: number | null, foldCo
   );
 }
 
+/** QA S03: two decimals on screen; the served string rides in the tooltip and `data-rate`. */
+function rateText(rate: string): string {
+  const decimals = rate.split(".")[1]?.length ?? 0;
+  const n = Number(rate);
+  return decimals > 2 && Number.isFinite(n) ? n.toFixed(2) : rate;
+}
+
 function ProgressCard({
   snapshot,
   live,
@@ -539,8 +557,13 @@ function ProgressCard({
   foldCountReason,
   bestObjective = null,
   liveRate,
+  status = null,
+  failedAt = null,
 }: {
   snapshot: ProgressSnapshot;
+  /** QA S03 U2: a FAILED run says where it stopped; it never reads as a run that got 80% of the way. */
+  status?: EffectiveStatus | null;
+  failedAt?: FailedAt | null;
   /** `trial_completed.rate_trials_per_s` from the stream: the server's decimal string, null, or undefined when no event carried it. */
   liveRate?: string | null;
   /** The study's live best objective, exact as the last trial event served it. */
@@ -553,13 +576,14 @@ function ProgressCard({
 }) {
   const { overall, budget } = snapshot;
   const pct = Math.max(0, Math.min(100, overall.pct));
+  const failed = status === "FAILED";
   const budgetHot = budget.pct > 90;
   const budgetTone = budgetHot ? "var(--bad)" : "var(--role-holdout)";
   const barMotion = live ? pulse("2.4s") : null;
   const searchDone = snapshot.stages.find((s) => s.key === "S4")?.state === "DONE" || overall.trials_done >= overall.trials_declared;
   /* The server owns the ETA. Null means "not computable", said in words. */
   const eta =
-    overall.eta_s !== null ? (
+    failed ? null : overall.eta_s !== null ? (
       formatDuration(overall.eta_s)
     ) : !live ? (
       <Absent what="none — run final" />
@@ -602,7 +626,7 @@ function ProgressCard({
               top: 0,
               bottom: 0,
               width: `${pct}%`,
-              background: "linear-gradient(90deg, var(--viz-train), var(--accent))",
+              background: failed ? "var(--bad)" : "linear-gradient(90deg, var(--viz-train), var(--accent))",
               transition: "width 400ms cubic-bezier(.2,0,.2,1)",
             }}
           />
@@ -627,7 +651,15 @@ function ProgressCard({
             : null}
         </span>
         <span data-progress-text style={{ fontFamily: MONO, fontSize: 11, color: "var(--ink)", whiteSpace: "nowrap" }}>
-          {count(overall.trials_done)} / {count(overall.trials_declared)} trials · {Math.round(pct)}%
+          {count(overall.trials_done)} / {count(overall.trials_declared)} trials
+          {failed ? (
+            <span data-failed-at={failedAt?.stage ?? "unknown"} style={{ color: "var(--bad)" }}>
+              {" · "}
+              {failedAt ? `failed at ${failedAt.stage} ${STAGE_LABEL[failedAt.stage]}` : "failed"}
+            </span>
+          ) : (
+            ` · ${Math.round(pct)}%`
+          )}
         </span>
       </div>
 
@@ -655,16 +687,18 @@ function ProgressCard({
         <span data-elapsed>
           elapsed <span style={{ color: "var(--ink)" }}>{formatDuration(overall.elapsed_s) ?? <Absent />}</span>
         </span>
-        <span data-eta>
-          {/* The server owns the ETA. A null one is absent, never computed. */}
-          eta <span style={{ color: "var(--ink)" }}>{eta}</span>
-        </span>
-        <span data-rate={rate ?? "not-published"} title="Source-observed global study trials per second, cumulative">
+        {failed ? null : (
+          <span data-eta>
+            {/* The server owns the ETA. A null one is absent, never computed. */}
+            eta <span style={{ color: "var(--ink)" }}>{eta}</span>
+          </span>
+        )}
+        <span data-rate={rate ?? "not-published"} title={`Source-observed global study trials per second, cumulative${rate === null ? "" : ` · ${rate}`}`}>
           rate{" "}
           {rate === null ? (
             <NotPublished what="not published" />
           ) : (
-            <span style={{ color: "var(--ink)" }}>{rate} trials/s</span>
+            <span style={{ color: "var(--ink)" }}>{rateText(rate)} trials/s</span>
           )}
         </span>
         {/* The server builds this string; the page does not reformat it. */}
@@ -869,7 +903,11 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: 
     >
       {compact ? (
         <>
-          <div style={{ display: "flex", gap: 2, alignItems: "stretch" }} data-gantt-cells>
+          <div
+            style={{ display: "flex", gap: 2, alignItems: "stretch", marginBottom: 4 }}
+            data-gantt-cells
+            title="One cell per fold — click one to inspect it; the rows below show the picked fold and its neighbours."
+          >
             {folds.map((fold) => {
               const selected = cursor === fold.fold;
               const tone = FOLD_STATUS_TONE[fold.state];
@@ -883,6 +921,7 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: 
                   data-selected={selected}
                   aria-pressed={selected}
                   title={`${foldId(fold.fold)} · ${fold.state.toLowerCase()}`}
+                  aria-label={`fold ${fold.fold}, ${fold.state.toLowerCase()}`}
                   onClick={() => onPick(fold.fold)}
                   onKeyDown={(event) => onKey(event, fold.fold)}
                   data-motion={motion?.["data-motion"]}
@@ -906,12 +945,6 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: 
               );
             })}
           </div>
-          <span
-            style={{ fontSize: 9.5, color: "var(--ink-faint)", margin: "2px 0 4px" }}
-            title="Compact plan: click a cell to inspect it below; the detail rows show the picked fold and its neighbours."
-          >
-            one cell per fold
-          </span>
         </>
       ) : null}
 
@@ -1045,9 +1078,9 @@ function CursorRow({
         evidence cursor
       </span>
       <span style={CHIP} data-cursor-fold>
-        fold <span style={{ color: "var(--ink)" }}>{fold === null ? <Absent what="none yet" /> : foldId(fold)}</span>
+        fold <span style={{ color: "var(--ink)" }}>{fold === null ? <Absent what="none yet" /> : fold}</span>
       </span>
-      <span style={CHIP} data-cursor-trial>
+      <span style={CHIP} data-cursor-trial title="Trial number as the progress read serves it (selection.trial)">
         trial{" "}
         {trial === null ? (
           <NotPublished reason="The progress read publishes no selected trial for this fold." />
@@ -1287,7 +1320,12 @@ function TrialConsole({
   connecting,
   follow,
   setFollow,
+  error = null,
+  onRetry,
 }: {
+  /** QA S03: a console read that failed is an outage, never "nothing was published". */
+  error?: ProgressRefusal | null;
+  onRetry?: () => void;
   lines: readonly ConsoleLine[];
   olderLines: readonly ConsoleLine[];
   dropped: boolean;
@@ -1316,13 +1354,19 @@ function TrialConsole({
 
   const empty =
     visible.length === 0 && history.length === 0
-      ? filter !== "all"
-        ? "No line matches this filter."
-        : connecting
-          ? "connecting…"
-          : live
-            ? "Waiting for the first console observation…"
-            : "No console observation has been published for this run."
+      ? filter === "errors"
+        ? "No errors or warnings in this log."
+        : filter === "fold"
+          ? `No line for fold ${foldFilter ?? ""}.`.replace(" .", ".")
+          : error !== null
+            ? error.state === "denied"
+              ? REFUSAL_COPY.denied
+              : "The console did not load."
+            : connecting
+              ? "connecting…"
+              : live
+                ? "Waiting for the first console observation…"
+                : "No console observation has been published for this run."
       : null;
 
 
@@ -1346,7 +1390,7 @@ function TrialConsole({
         position: "relative",
         height: 330,
         overflowY: "auto",
-        border: "1px solid var(--ink)",
+        border: "1px solid var(--console-faint)",
         borderRadius: 8,
         background: "var(--console-bg)",
         padding: "12px 16px",
@@ -1371,8 +1415,30 @@ function TrialConsole({
         </div>
       ) : null}
       {empty !== null ? (
-        <div style={{ color: "var(--console-faint)" }} data-console-empty>
+        <div style={{ color: "var(--console-faint)" }} data-console-empty data-console-error={error !== null ? error.state : undefined}>
           {empty}
+          {error !== null && error.mayRetry && onRetry ? (
+            <>
+              {" "}
+              <button
+                type="button"
+                data-action="retry-console"
+                onClick={onRetry}
+                style={{
+                  border: "1px solid var(--console-faint)",
+                  borderRadius: 999,
+                  background: "transparent",
+                  color: "var(--console-fg)",
+                  fontFamily: MONO,
+                  fontSize: 10,
+                  padding: "1px 10px",
+                  cursor: "pointer",
+                }}
+              >
+                Retry
+              </button>
+            </>
+          ) : null}
         </div>
       ) : (
         visible.map((line) => (
@@ -1408,10 +1474,10 @@ function TrialConsole({
             bottom: 6,
             display: "block",
             marginLeft: "auto",
-            border: "1px solid var(--viz-train)",
+            border: "1px solid var(--console-accent)",
             borderRadius: 999,
-            background: "var(--ink)",
-            color: "var(--viz-train)",
+            background: "var(--console-bg)",
+            color: "var(--console-accent)",
             fontFamily: MONO,
             fontSize: 9.5,
             padding: "2px 10px",
@@ -1471,20 +1537,78 @@ function valueStyle(kind: "forecast" | "issued" | "warn" | "neutral" | "bad"): C
   }
 }
 
+/** QA S03: the short word a methodology claim's kind prints as. */
+const CLAIM_KIND_LABEL: Record<MethodologyClaim["kind"], string> = {
+  VALIDATION: "validation",
+  CHRONOLOGY: "chronology",
+  CAUSALITY: "causality",
+  OOS_SELECTION: "OOS selection",
+  HOLDOUT_STATE: "holdout",
+  EXECUTION_CONTRACT: "execution",
+  RUNTIME_AUTHORITY: "runtime",
+};
+
+/**
+ * The run-scoped methodology facts the read serves (`progress.claims[]`).
+ * An ISSUED one is a sealed QuantBT fact and prints as its served text; a
+ * FORECAST one is dashed; an absent or inapplicable one says so with the
+ * server's reason code in the tooltip — never a blank, never a 0.
+ */
+export function MethodologyClaims({ claims }: { claims: readonly MethodologyClaim[] }) {
+  return (
+    <span data-claims style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+      {claims.map((claim) => {
+        const label = CLAIM_KIND_LABEL[claim.kind];
+        const text = claim.text;
+        const issued = claim.state === "ISSUED";
+        const forecast = claim.state === "FORECAST";
+        return (
+          <span
+            key={claim.kind}
+            data-claim-kind={claim.kind}
+            data-claim-state={claim.state}
+            title={
+              text !== null
+                ? `${label} · ${text} · ${issued ? "sealed by QuantBT" : "forecast from the mode schedule"}`
+                : `${label} · ${claim.state === "NOT_APPLICABLE" ? "not applicable" : "not published"} · ${claim.reason_code}`
+            }
+            style={{
+              ...CHIP,
+              borderStyle: forecast || text === null ? "dashed" : "solid",
+              borderColor: issued ? "var(--good)" : "var(--viz-legend-inactive)",
+              fontStyle: forecast || text === null ? "italic" : undefined,
+            }}
+          >
+            <span style={{ color: "var(--ink-faint)" }}>{label}</span>{" "}
+            <span style={{ color: issued ? "var(--ink)" : "var(--ink-faint)" }}>
+              {text ?? (claim.state === "NOT_APPLICABLE" ? "not applicable" : "not published")}
+            </span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 function ClaimPassport({
   claim,
+  claims,
   status,
   sealed,
   failure,
+  failedAt = null,
   readiness,
   handoffHref,
   handoffLabel,
   engineVersion,
 }: {
   claim: ProgressSnapshot["claim"];
+  /** `progress.claims[]`: the four methodology facts, when the read carries them. */
+  claims?: readonly MethodologyClaim[];
   status: EffectiveStatus | null;
   sealed: boolean;
   failure: ProgressSnapshot["failure"];
+  failedAt?: FailedAt | null;
   readiness: ProgressSnapshot["readiness"];
   handoffHref: string;
   /** `fold 2 · trial 1`, when the cursor names them (spec 03 §8). */
@@ -1495,20 +1619,36 @@ function ClaimPassport({
   const issued = claim.state === "ISSUED";
   const forecast = claim.state === "FORECAST";
   const certificate = claim.methodology_certificate ?? NOT_PUBLISHED_CERTIFICATE;
+  const sealedFacts = (claims ?? []).filter((c) => c.state === "ISSUED").length;
   const tone = passportTone(claim, status);
-  const stateWord = issued ? "issued" : forecast ? "forecast" : "not issued";
+  /* QA S03: a run whose release claim is not issued but whose methodology facts are sealed says so, not "not issued". */
+  const stateWord = issued
+    ? "issued"
+    : forecast
+      ? "forecast"
+      : sealedFacts > 0
+        ? `${sealedFacts} ${sealedFacts === 1 ? "fact" : "facts"} sealed`
+        : "not issued";
+  const head = !issued && !forecast && sealedFacts > 0 && status !== "FAILED" ? "var(--good)" : tone.head;
+  /* The not-issued fact is said once, in the header; the server's sentence rides in its tooltip. */
   const note = issued
     ? engineVersion
       ? `issued by engine ${engineVersion} at COMPLETED — now authoritative`
       : "issued by the engine at COMPLETED — now authoritative"
     : forecast
       ? "computed from mode × schedule in the config; issued only when the engine completes"
-      : status === "FAILED"
-        ? "the run failed before Stage 5"
-        : "the run ended without a claim";
-  const textKind = issued ? "issued" : forecast ? "forecast" : status === "FAILED" ? "bad" : "neutral";
+      : null;
+  const textKind = issued ? "issued" : "forecast";
   /* F2b: a note longer than a short phrase rides in the badge's tooltip. */
-  const noteIsLong = note.split(/\s+/).length > 8;
+  const noteIsLong = note !== null && note.split(/\s+/).length > 8;
+  const notIssued = claim.state === "NOT_ISSUED";
+  const badgeTitle = noteIsLong ? (note ?? undefined) : notIssued ? notIssuedText(claim.text, status) : undefined;
+  const failureSentence =
+    failure === null
+      ? null
+      : failure.message.trim() !== ""
+        ? failure.message
+        : (reasonCodeSentence(failure.code) ?? "The run failed before it could seal its evidence.");
 
   return (
     <section
@@ -1537,12 +1677,12 @@ function ClaimPassport({
       >
         <span
           data-claim-badge
-          title={noteIsLong ? note : undefined}
-          style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".07em", fontWeight: 600, color: tone.head }}
+          title={badgeTitle}
+          style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".07em", fontWeight: 600, color: head }}
         >
           claim passport — {stateWord}
         </span>
-        {noteIsLong ? null : <span style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>{note}</span>}
+        {note === null || noteIsLong ? null : <span style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>{note}</span>}
         {sealed ? (
           <a
             data-open-evidence
@@ -1570,13 +1710,20 @@ function ClaimPassport({
         ) : null}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px", padding: "10px 14px" }}>
-        <Field label="claim" name="claim">
-          {/* The server builds this sentence for every state; the page never
-              composes a claim string of its own. */}
-          <span style={valueStyle(textKind)} data-claim-text>
-            {claim.state === "NOT_ISSUED" ? notIssuedText(claim.text, status) : claim.text}
-          </span>
-        </Field>
+        {notIssued ? null : (
+          <Field label="claim" name="claim">
+            {/* The server builds this sentence for every state; the page never
+                composes a claim string of its own. */}
+            <span style={valueStyle(textKind)} data-claim-text>
+              {claim.text}
+            </span>
+          </Field>
+        )}
+        {claims !== undefined && claims.length > 0 ? (
+          <Field label="claims" name="claims">
+            <MethodologyClaims claims={claims} />
+          </Field>
+        ) : null}
         <Field label="certification" name="certification">
           {certificate.state === "ISSUED" && certificate.grade !== null ? (
             <span
@@ -1629,8 +1776,9 @@ function ClaimPassport({
         {failure !== null ? (
           <Field label="failure" name="failure">
             <span role="alert" style={valueStyle("bad")} data-failure={failure.code}>
-              {/* VD-P23-01 / E1: the screen's own sentence; the engine's code and message stay verbatim behind details. */}
-              {reasonCodeSentence(failure.code) ?? "The run failed before it could seal its evidence."}{" "}
+              {/* QA S03 U2: where it stopped, then the server's own sentence; the code stays behind details. */}
+              {failedAt ? `failed at ${failedAt.stage} ${STAGE_LABEL[failedAt.stage]} — ` : ""}
+              {failureSentence}{" "}
               <details style={{ display: "inline" }}>
                 <summary style={{ cursor: "pointer", fontSize: 10 }}>details</summary>
                 <span className="mono" style={{ fontSize: 10.5 }}>
@@ -1680,9 +1828,7 @@ function DoneBanner({
       <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "var(--good)" }}>
         {issued ? "✓ RUN COMPLETE — CLAIMS ISSUED" : "✓ RUN COMPLETE — ARTIFACTS SEALED"}
       </span>
-      <span style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--ink-soft)", flex: 1, minWidth: 120 }} data-done-claim={issued ? "issued" : "none"}>
-        {issued ? null : "no claim issued"}
-      </span>
+      <span style={{ flex: 1, minWidth: 0 }} data-done-claim={issued ? "issued" : "none"} />
       <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
         {links.map(([key, label]) => {
           const target = stageTarget(key);
@@ -1813,7 +1959,7 @@ const STATE_GLYPH: Record<string, string> = {
 };
 
 /** One screen-level notice instead of one per card (FE-S03-14). */
-function StateNotice({ state }: { state: ResearchState }) {
+function StateNotice({ state, onRetry, retrying = false }: { state: ResearchState; onRetry?: () => void; retrying?: boolean }) {
   const withheld = !(state.state === "available" || state.retainsContent);
   return (
     <div
@@ -1838,6 +1984,30 @@ function StateNotice({ state }: { state: ResearchState }) {
         </span>
         {state.reason ? <span style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{state.reason}</span> : null}
       </span>
+      {state.mayRetry && onRetry ? (
+        <button
+          type="button"
+          data-action="retry"
+          disabled={retrying}
+          onClick={onRetry}
+          style={{
+            marginLeft: "auto",
+            alignSelf: "center",
+            border: "1px solid var(--accent)",
+            borderRadius: 6,
+            background: "var(--paper-raised)",
+            color: "var(--accent)",
+            padding: "3px 12px",
+            fontFamily: MONO,
+            fontSize: 10,
+            letterSpacing: ".05em",
+            textTransform: "uppercase",
+            cursor: retrying ? "progress" : "pointer",
+          }}
+        >
+          {retrying ? "retrying…" : "Retry"}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -2043,6 +2213,12 @@ export interface RunProgressProps {
   cancelResult?: CancelResponse | null;
   refusal?: ProgressRefusal | null;
   foldTrials?: Readonly<Record<number, number>>;
+  /** QA S03: read again after a failed read. Absent = no Retry is drawn. */
+  onRetry?: () => void;
+  retrying?: boolean;
+  /** The console page's own refusal (an outage there is not a page-wide failure). */
+  consoleRefusal?: ProgressRefusal | null;
+  onRetryConsole?: () => void;
 }
 
 export function RunProgress(props: RunProgressProps) {
@@ -2066,6 +2242,10 @@ export function RunProgress(props: RunProgressProps) {
     cancelResult = null,
     refusal = null,
     foldTrials = {},
+    onRetry,
+    retrying = false,
+    consoleRefusal = null,
+    onRetryConsole,
   } = props;
   /* D1: the heading names the run as every other screen does — the server's label when a read published one. */
   const runLabel = useRunLabel(runId);
@@ -2101,11 +2281,13 @@ export function RunProgress(props: RunProgressProps) {
   const foldCountReason = declared?.state === "NOT_PUBLISHED" ? declared.reason_code : null;
   const engineVersion = identity?.engine_release_id ?? null;
 
+  const noSource = read !== null && snapshot === null && (read.availability === "QUEUED_NO_SOURCE" || read.availability === "CANCELLED_BEFORE_SOURCE");
   const statusSlot =
     status !== null ? (
       <>
         <StatusChip status={status} live={live} />
-        {read?.current.terminal_resolution === "CONTROL_CANCELLATION" ? (
+        {/* QA S03: on a run that never had a source the card says it once; the chip would say it twice. */}
+        {read?.current.terminal_resolution === "CONTROL_CANCELLATION" && !noSource ? (
           <span
             data-terminal-resolution
             style={{ fontFamily: MONO, fontSize: 10, color: "var(--accent-2)", border: "1px solid var(--accent-2)", borderRadius: 3, padding: "0 5px" }}
@@ -2131,7 +2313,7 @@ export function RunProgress(props: RunProgressProps) {
   if (refusal?.notFound || (read === null && state.state === "empty")) {
     return (
       <div data-screen="run-progress" data-run-not-found style={ROOT}>
-        <Header runId={runId} title={`Run ${shortId(runId)}`} />
+        <Header runId={runId} title="Run not available" />
         <section style={{ ...CARD, gap: 8 }}>
           <h2 style={{ ...CARD_TITLE, margin: 0 }}>run not available</h2>
           <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>{REFUSAL_COPY.denied}</p>
@@ -2150,8 +2332,8 @@ export function RunProgress(props: RunProgressProps) {
       <div data-screen="run-progress" data-no-source={read.availability} style={ROOT}>
         <Header
           runId={runId}
-          title={`${queued ? "Run queued" : "Run cancelled"} — ${shortId(runId)}`}
-          right={<TransportDot transport={transport} live={live} face={face} />}
+          title={`${queued ? "Run queued" : "Run cancelled"} — ${runLabel ?? shortId(runId)}`}
+          right={face.state === "never-opened" ? undefined : <TransportDot transport={transport} live={live} face={face} />}
         />
         <RunMetaStrip runId={runId} identity={identity} status={statusSlot} />
         <section style={{ ...CARD, gap: 8 }}>
@@ -2170,8 +2352,12 @@ export function RunProgress(props: RunProgressProps) {
               writing terminal record…
             </span>
           ) : null}
-          <ServedAttempts queue={read.queue} attempts={read.attempts} open />
-          {!queued ? <NewRunFrom runId={runId} read={read} /> : null}
+          {queued || (read.attempts?.length ?? 0) > 0 ? <ServedAttempts queue={read.queue} attempts={read.attempts} open /> : null}
+          {!queued ? (
+            <span style={{ alignSelf: "flex-start" }}>
+              <NewRunFrom runId={runId} read={read} />
+            </span>
+          ) : null}
         </section>
       </div>
     );
@@ -2179,7 +2365,9 @@ export function RunProgress(props: RunProgressProps) {
 
   /* ----------------------------------------------------- full screen */
   const content = state.state === "available" || state.retainsContent;
-  const connecting = read === null;
+  /* QA S03: "connecting" is only true while nothing has answered — a refused first read has stopped loading. */
+  const connecting = read === null && refusal === null;
+  const firstReadFailed = read === null && refusal !== null;
   const claimCursor = snapshot?.claim.cursor ? decodeInspectionCursor(snapshot.claim.cursor).cursor : {};
   const folds = snapshot?.folds ?? [];
   const handoff = snapshot?.claim.handoff_cursor ?? null;
@@ -2188,7 +2376,12 @@ export function RunProgress(props: RunProgressProps) {
   const handoffLabel = cursor.fold && cursor.trial ? `fold ${cursor.fold} · trial ${cursor.trial}` : null;
   const cursorFold = folds.find((f) => f.fold === foldCursor) ?? null;
   const terminalStatus = status === "FAILED" || status === "CANCELLED";
-  const title = `${status === "COMPLETED" ? "Run completed" : "Run progress"} — ${runLabel ?? shortId(runId)}`;
+  const stateWord = status === "COMPLETED" ? "Run completed" : status === "FAILED" ? "Run failed" : status === "CANCELLED" ? "Run cancelled" : "Run progress";
+  /* No read, no label: the heading never falls back to a raw id as prose. */
+  const title = read === null && !runLabel ? stateWord : `${stateWord} — ${runLabel ?? shortId(runId)}`;
+  const hasFoldLines = lines.length === 0 || lines.some((line) => line.fold !== null && line.fold !== undefined) || olderLines.some((line) => line.fold !== null && line.fold !== undefined);
+  /* The next stage is only offered where there is something sealed to open. */
+  const offerNext = read !== null && (!terminalStatus || sealed);
 
   const tabButton = (key: "live" | "stage", label: string) => (
     <button
@@ -2245,11 +2438,15 @@ export function RunProgress(props: RunProgressProps) {
         runId={runId}
         title={title}
         right={<TransportDot transport={transport} live={live} face={face} />}
-        next={{
-          href: handoffHref,
-          label: "next: Evidence Flow →",
-          title: handoffLabel ? `Opens Evidence Flow at ${handoffLabel}` : "Opens Evidence Flow on this run",
-        }}
+        next={
+          offerNext
+            ? {
+                href: handoffHref,
+                label: "next: Evidence Flow →",
+                title: handoffLabel ? `Opens Evidence Flow at ${handoffLabel}` : "Opens Evidence Flow on this run",
+              }
+            : undefined
+        }
       >
         {read?.availability === "PENDING_SOURCE_CALLBACK" ? (
           <p style={{ fontSize: 10.5, color: "var(--role-holdout)", margin: 0 }} data-pending-source title="The run exists. Waiting for its source to report progress.">
@@ -2276,15 +2473,19 @@ export function RunProgress(props: RunProgressProps) {
       {/* Partial source and pending callback already speak in the header. */}
       {state.state !== "available" &&
       !(state.state === "partial" && (snapshot?.source.partial || read?.availability === "PENDING_SOURCE_CALLBACK")) ? (
-        <StateNotice state={state} />
+        <StateNotice state={state} onRetry={onRetry} retrying={retrying} />
       ) : null}
 
+      {firstReadFailed ? null : (
+      <>
       {/* 1 · claim passport (HiFi: first card, FE-S03-16). */}
       {content && snapshot ? (
         <ClaimPassport
           claim={snapshot.claim}
+          claims={read?.claims}
           status={status}
           sealed={sealed}
+          failedAt={read?.current.failed_at ?? null}
           failure={snapshot.failure ?? controlFailure(read)}
           readiness={snapshot.readiness}
           handoffHref={handoffHref}
@@ -2293,7 +2494,7 @@ export function RunProgress(props: RunProgressProps) {
         />
       ) : (
         <section data-research-panel="claim" style={{ ...CARD, borderStyle: "dashed", borderColor: "var(--viz-legend-inactive)" }}>
-          <h2 style={{ ...CARD_TITLE, margin: 0, color: "var(--accent-2)" }}>claim passport — forecast</h2>
+          <h2 style={{ ...CARD_TITLE, margin: 0, color: "var(--accent-2)" }}>claim passport</h2>
           {connecting ? <Skeleton height={40} /> : null}
         </section>
       )}
@@ -2316,6 +2517,8 @@ export function RunProgress(props: RunProgressProps) {
               foldCountReason={foldCountReason}
               bestObjective={bestObjective}
               liveRate={liveRate}
+              status={status}
+              failedAt={read?.current.failed_at ?? null}
             />
           </>
         ) : (
@@ -2329,7 +2532,7 @@ export function RunProgress(props: RunProgressProps) {
           name="folds"
           title={live ? "fold gantt · live" : "fold gantt"}
           hint={GANTT_TITLE_HINT}
-          meta={snapshot ? (foldCount !== null ? `${folds.length} of ${foldCount} folds reported` : `${folds.length} reported`) : undefined}
+          meta={snapshot ? foldsMeta(folds.length, foldCount) : undefined}
           style={{ flex: "1.15 1 0", minWidth: "min(460px, 100%)" }}
         >
           {content && snapshot ? (
@@ -2359,15 +2562,14 @@ export function RunProgress(props: RunProgressProps) {
         <Card
           name="artifacts"
           title="artifacts"
+          hint={ARTIFACT_NO_READER}
           meta={
             snapshot?.mandatory_bundle ? (
               <span title={`${snapshot.mandatory_bundle.size} bytes · ${snapshot.mandatory_bundle.digest}`}>
                 bundle {formatBytes(Number(snapshot.mandatory_bundle.size)) ?? snapshot.mandatory_bundle.size} · sha256:
                 {shortDigest(snapshot.mandatory_bundle.digest)}…
               </span>
-            ) : (
-              "manifest preview"
-            )
+            ) : undefined
           }
           style={{ flex: "1 1 0", minWidth: "min(380px, 100%)" }}
           gap={5}
@@ -2375,10 +2577,6 @@ export function RunProgress(props: RunProgressProps) {
           {content && snapshot ? (
             <>
               <ArtifactsTable artifacts={snapshot.artifacts} denied={read?.denied_artifacts ?? []} />
-              {/* Said once, plainly, so a missing link reads as a boundary. */}
-              <span style={{ fontSize: 10, color: "var(--ink-faint)", lineHeight: 1.5, paddingTop: 4 }} data-artifact-no-reader>
-                {ARTIFACT_NO_READER}
-              </span>
               {read ? <RetainedTables retained={read.retained_artifacts} /> : null}
             </>
           ) : (
@@ -2396,7 +2594,8 @@ export function RunProgress(props: RunProgressProps) {
         {tab === "live" ? (
           <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
             {chip("all", "all")}
-            {chip("fold", foldCursor === null ? "fold" : `fold ${foldCursor}`, foldCursor === null)}
+            {/* QA S03 U5: a global study's lines carry no fold, so the chip would filter to nothing. */}
+            {hasFoldLines ? chip("fold", foldCursor === null ? "fold" : `fold ${foldCursor}`, foldCursor === null) : null}
             {chip("errors", "errors")}
             <button
               type="button"
@@ -2476,6 +2675,8 @@ export function RunProgress(props: RunProgressProps) {
           connecting={connecting}
           follow={follow}
           setFollow={setFollow}
+          error={consoleRefusal}
+          onRetry={onRetryConsole}
         />
       ) : (
         <StageLedger
@@ -2487,6 +2688,8 @@ export function RunProgress(props: RunProgressProps) {
       )}
 
       {sealed && snapshot ? <DoneBanner runId={runId} issued={snapshot.claim.state === "ISSUED"} cursor={cursor} /> : null}
+      </>
+      )}
 
       {confirming ? (
         <CancelDialog

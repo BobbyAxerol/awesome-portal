@@ -145,7 +145,7 @@ describe("S14 registry next_cursor — row", () => {
 
   it("(f) the meta line names an endpoint family only, never a permission claim", () => {
     mount(props());
-    expect(q("[data-meta]")?.textContent).toBe(IMPORT_META);
+    expect(q("[data-meta]")).toBeNull();
     expect(IMPORT_META).not.toMatch(/ADMIN|admin|permission|role/);
     expect(document.body.textContent).not.toMatch(/activation ADMIN-only/);
   });

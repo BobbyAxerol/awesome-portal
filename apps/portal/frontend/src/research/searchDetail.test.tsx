@@ -779,12 +779,12 @@ describe("RF-06 wave C — the retained ledger lane answers for itself (replaces
   it("the ledger shell names the search read's typed reason and the lane's own answer, no pending-retention sentence", () => {
     const { container } = view({ ledger: { state: "not-applicable", answer: laneAnswer() } });
     const shell = container.querySelector("[data-ledger-shell]");
-    expect(shell?.textContent).toContain("P04_RAN_NO_TRIALS");
+    /* H18: one sentence in words; the read's typed reason and the lane's own answer ride in its tooltip. */
+    expect(shell?.textContent).toBe("No trial ledger — fixed profile ran no search.");
     const lane = shell?.querySelector("[data-ledger-lane='not-applicable']");
-    expect(lane?.textContent).toContain("not applicable");
-    expect(lane?.textContent).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
-    expect(lane?.textContent).not.toContain("Nothing is pending");
+    expect(lane?.getAttribute("title")).toContain("P04_RAN_NO_TRIALS");
     expect(lane?.getAttribute("title")).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
+    expect(lane?.textContent).not.toContain("Nothing is pending");
     expect(container.textContent).not.toMatch(/pending retention/i);
   });
 });
@@ -921,7 +921,9 @@ describe("RF-06 S06 fidelity — mode card and claim row", () => {
     const layers = container.querySelector("[data-selector-layers]") as HTMLElement;
     expect(layers.getAttribute("title")).toBe(SELECTOR_LAYERS_HELP);
     expect(layers.textContent).toContain("optimization_mode");
-    expect(SELECTOR_LAYERS_HELP).toContain("CandidateSelector.mode");
+    /* H02: no internal class names in the tooltip. */
+    expect(SELECTOR_LAYERS_HELP).toBe("Mode is fixed per run.");
+    expect(SELECTOR_LAYERS_HELP).not.toContain("CandidateSelector");
     expect(container.querySelector("[data-claim-row]")?.parentElement?.textContent).not.toContain("This screen never mixes them");
   });
 });
@@ -1155,11 +1157,14 @@ describe("W3 — the retained ledger labels what each number measures", () => {
     expect(row.querySelector("[data-trial-is]")?.textContent).toBe("−1.44");
     expect(row.querySelector("[data-trial-oos]")?.textContent).toBe("not evaluated · IS stage");
     expect(row.querySelector("[data-trial-state]")?.textContent).toBe("COMPLETE");
-    const note = row.querySelector("[data-trial-note]")?.textContent ?? "";
-    expect(note).toContain("is_search · all outer folds · objective = IS mean Sharpe");
+    const noteCell = row.querySelector("[data-trial-note]") as HTMLElement;
+    const note = noteCell.textContent ?? "";
+    /* H17: the prefix every row repeats rides in the tooltip; the cell is the parameters. */
+    expect(noteCell.getAttribute("title")).toContain("is_search · all outer folds · objective = IS mean Sharpe");
+    expect(note).not.toContain("is_search");
     expect(note).toContain("window=34");
     expect(note).not.toContain("parameters not published");
-    expect(container.querySelector("[data-ledger-scope]")?.textContent).toContain("global study · compact ledger");
+    expect(container.querySelector("[data-ledger-scope]")?.textContent).toBe("global study");
   });
 
   it("keeps the candidate replay ledger separate, with S̄_OOS, decay and J", () => {
@@ -1299,7 +1304,8 @@ describe("F3 · S06 — search cinema placeholder", () => {
   it("a run that searched names the missing sampler trace in one line, and invents no code", () => {
     const { container } = view({ detail: admitted() });
     const line = container.querySelector("[data-panel='search-cinema']");
-    expect(line?.textContent).toContain("search cinema — sampler trace not published");
+    expect(line?.textContent).toBe("Sampler trace: not published");
+    expect(line?.textContent).not.toContain("cinema");
     expect(line?.getAttribute("data-gap-state")).toBe("NOT_PUBLISHED");
   });
 

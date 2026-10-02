@@ -226,7 +226,7 @@ describe("CG-P08-04 dataset step reads the catalog", () => {
   });
   it("names an unlisted symbol and a catalog it could not read", () => {
     view({ initialStep: "data", catalog, draft: advanced({}, { symbol: "DOGEUSDT" }) });
-    expect(document.querySelector("[data-symbol-unlisted]")?.textContent).toContain("DOGEUSDT is not in this dataset");
+    expect(document.querySelector("[data-symbol-unlisted]")?.textContent).toBe("DOGEUSDT is not a listed symbol");
     cleanup();
     view({ initialStep: "data", catalog: null, catalogReason: "The historical source cannot publish its dataset catalog right now." });
     expect(document.querySelector("[data-catalog-unread]")?.textContent).toContain("cannot publish");
@@ -238,7 +238,7 @@ describe("CG-P04-06 route step renders engine facts", () => {
     view({ initialStep: "route" });
     expect(document.querySelector('[data-route-card="arbitrage"] [data-route-status]')?.textContent).toBe("6/9");
     expect(document.querySelector('[data-route-desc="signal_notional"]')?.textContent).toBe("Create a signal-notional endpoint.");
-    expect(document.querySelector("[data-route-method-note]")?.textContent).toBe("strategy-param route — walk-forward search applies");
+    expect(document.querySelector("[data-route-method-note]")?.textContent).toBe("Walk-forward searches strategy parameters.");
   });
 });
 

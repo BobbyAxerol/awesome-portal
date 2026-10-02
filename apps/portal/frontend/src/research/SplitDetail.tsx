@@ -68,7 +68,7 @@ import { foldLabel, formatMetric, formatUtc, shortDigest } from "./researchForma
 import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
-import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
+import { reasonCodeSentence, REFUSAL_COPY, refusalState } from "./researchRefusal";
 import { LineageLink, lineageHref } from "./LineageLink";
 import type { ProgressRead } from "./progressClient";
 import type { CurrentSourceSearch } from "./searchClient";
@@ -515,18 +515,31 @@ function WindowAnatomy({
   runPath: string;
   cursor: EvidenceCursor;
 }) {
-  const placed = useMemo(
-    () =>
-      windows.map((window) => {
-        const geometry = placeInTimeline(timeline, window.span);
-        return {
-          ...window,
-          ...geometry,
-          hairline: geometry.widthPercent > 0 && geometry.widthPercent < HAIRLINE_PERCENT,
-        };
-      }),
-    [timeline, windows],
-  );
+  const placed = useMemo(() => {
+    const out = windows.map((window) => {
+      const geometry = placeInTimeline(timeline, window.span);
+      return {
+        ...window,
+        ...geometry,
+        hairline: geometry.widthPercent > 0 && geometry.widthPercent < HAIRLINE_PERCENT,
+        row: 0,
+      };
+    });
+    /* QA S05 U9: windows that overlap in time (IS and outer OOS of an expanding walk-forward) take their own
+       half of the track, so each stays hittable instead of the later one covering the earlier. */
+    out.forEach((item, index) => {
+      const taken = new Set<number>();
+      for (let before = 0; before < index; before += 1) {
+        const other = out[before];
+        if (item.span.start_utc_ms < other.span.end_exclusive_utc_ms && other.span.start_utc_ms < item.span.end_exclusive_utc_ms) taken.add(other.row);
+      }
+      let row = 0;
+      while (taken.has(row)) row += 1;
+      item.row = row;
+    });
+    return out;
+  }, [timeline, windows]);
+  const rows = placed.reduce((most, window) => Math.max(most, window.row + 1), 1);
 
   /* Label density follows the width, and nothing else does (P14 ruling). */
   const { box, width } = useWidth(1100);
@@ -565,35 +578,42 @@ function WindowAnatomy({
           windows
         </span>
         <div
-          className="relative h-[16px] flex-1 rounded-[3px]"
+          className="relative flex-1 rounded-[3px]"
           data-track
-          style={{ background: "var(--paper-sunken)" }}
+          data-track-rows={rows}
+          style={{ background: "var(--paper-sunken)", height: rows > 1 ? 24 : 16 }}
         >
           {placed.map((window) => {
             const text = `${window.label} · ${exact(window.span.start_utc_ms)} → ${exact(window.span.end_exclusive_utc_ms)}${
               window.bars === null ? "" : ` · ${bars(window.bars)}`
             } · ${window.role}`;
+            /* QA S05: the accessible name reads days, not 24-character ISO instants (those stay in the tooltip). */
+            const spoken = `${window.label}, ${day(window.span.start_utc_ms)} to ${day(window.span.end_exclusive_utc_ms)}`;
             const opens = executeWindowOf(window.key);
             const common = {
               "data-window": window.key,
               "data-hairline": window.hairline ? "true" : "false",
-              className: "absolute top-0 h-full rounded-[3px]",
+              "data-window-row": window.row,
+              className: "absolute rounded-[3px]",
               style: {
                 left: `${window.leftPercent}%`,
                 width: `${Math.max(window.widthPercent, HAIRLINE_PERCENT)}%`,
                 background: WINDOW_TONE[window.key] ?? "var(--line)",
+                ...(rows > 1
+                  ? { top: window.row * (100 / rows) + "%", height: `calc(${100 / rows}% - 1px)` }
+                  : { top: 0, height: "100%" }),
               },
             } as const;
             /* F2b: IS and outer OOS open Screen 08 on that window; the legend row below is the keyboard path. */
             return opens === null ? (
-              <span key={window.key} {...common} role="img" aria-label={text} title={text} />
+              <span key={window.key} {...common} role="img" aria-label={spoken} title={text} />
             ) : (
               <Link
                 key={window.key}
                 {...common}
                 to={executeWindowHref(runPath, opens, cursor)}
                 tabIndex={-1}
-                aria-label={`${text} — open in Execute Replay`}
+                aria-label={`${spoken}, open in Execute Replay`}
                 title={`${text}\nopen ${opens.toUpperCase()} in Execute Replay`}
                 data-window-link={opens}
               />
@@ -839,15 +859,9 @@ function FoldRows({
 
   return (
     <>
-      <div className="flex flex-wrap items-baseline gap-2 pl-[72px]">
-        <Chip data-chronology={split.fold_plan.chronology}>{split.fold_plan.chronology}</Chip>
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-fold-count>
-          {folds.length} folds observed in the retained source
-        </span>
-      </div>
-
-      {/* HiFi gantt: one button per fold, no list roles (a pressed button is not a list item). */}
-      <div className="flex flex-col gap-[6px]" data-fold-rows>
+      {/* HiFi gantt: one button per fold, no list roles (a pressed button is not a list item).
+          QA S05: the count is the protocol strip's ("outer folds N"); the source token is a tooltip. */}
+      <div className="flex flex-col gap-[6px]" data-fold-rows data-chronology={split.fold_plan.chronology} title={`fold plan chronology: ${split.fold_plan.chronology}`}>
         {folds.map((fold, index) => {
           const number = index + 1;
           const current = cursor.fold === number;
@@ -933,7 +947,15 @@ function FoldRows({
  * answers with the typed absence the server gives for a sealed or absent
  * holdout; the link reads no bar inside the span.
  */
-function HoldoutLabel({ runPath, cursor }: { runPath: string; cursor: EvidenceCursor }) {
+function HoldoutLabel({ runPath, cursor, applicable = true }: { runPath: string; cursor: EvidenceCursor; applicable?: boolean }) {
+  /* QA S05 U13: a profile with no holdout has no window to open — plain text, not a link to a dead end. */
+  if (!applicable) {
+    return (
+      <span className="mono w-[64px] flex-none text-left text-[11px]" style={{ color: "var(--ink-faint)" }} data-holdout-label="not-applicable">
+        holdout
+      </span>
+    );
+  }
   return (
     <Link
       to={executeWindowHref(runPath, "holdout", cursor)}
@@ -1041,18 +1063,12 @@ function HoldoutBlock({ detail, timeline, runPath, cursor }: { detail: SplitDeta
         <span data-holdout-rule="no-read" title={HOLDOUT_RULE_NO_READ}>
           <span className="mono text-[10px] uppercase tracking-[.07em]">{HOLDOUT_NEVER_READ}</span>
           {facts ? (
-            <>
-              {" "}
+            <span className="ml-2 inline-flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
               <span className="inline-flex items-baseline gap-1 text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
                 seal <Absent fact={facts.source_seal} what="source seal" indexKey="holdout_seal" />
               </span>
-              {facts.bars_absence ? (
-                <>
-                  {" "}
-                  <HoldoutBars fact={facts.bars_absence} />
-                </>
-              ) : null}
-            </>
+              {facts.bars_absence ? <HoldoutBars fact={facts.bars_absence} /> : null}
+            </span>
           ) : null}
         </span>
         <span className="flex flex-wrap items-center gap-2" data-holdout-rule="unlock">
@@ -1072,8 +1088,8 @@ function HoldoutBlock({ detail, timeline, runPath, cursor }: { detail: SplitDeta
             unlock holdout → sibling attempt
           </span>
           {bound ? (
-            <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
-              unlock record{" "}
+            <span className="inline-flex items-baseline gap-1 text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
+              unlock record
               <Absent fact={(holdout as { unlock: AbsentFact }).unlock} what="unlock record" indexKey="holdout_unlock" />
             </span>
           ) : null}
@@ -1093,13 +1109,13 @@ function HoldoutBars({ fact }: { fact: AbsentFact }) {
   const words = SPLIT_REASON_WORDS[reason];
   return (
     <span
-      className="ml-1 text-[10.5px]"
+      className="inline-flex items-baseline gap-1 text-[10.5px]"
       style={{ color: "var(--ink-faint)" }}
       data-absent="holdout bars"
       data-absent-state={fact.state}
       data-absence-key="holdout_bars"
     >
-      · bars{" "}
+      bars
       <span className="mono italic" title={words ? `${words}\n${reason}` : reason} data-holdout-bars-reason={reason}>
         {words ? words.split(" — ")[0] : `${ABSENT_WORDS[fact.state]} (${reason})`}
       </span>
@@ -1279,17 +1295,27 @@ function GapScanValue({ scan }: { scan: LaneGapScan }) {
     ) : (
       `widest ${widest} ${widest === 1 ? "bar" : "bars"} of ${measured}`
     );
+  /* QA S05 #22: the per-boundary rows and the account policy the read already serves, verbatim. */
+  const boundaryRows = (scan.boundaries ?? []).map(
+    (b) => `${b.previous_fold_id ?? "?"} → ${b.fold_id ?? "?"} · ${b.gap_bars === null ? "gap not published" : `${b.gap_bars} ${b.gap_bars === 1 ? "bar" : "bars"}`}${b.policy ? ` · ${b.policy}` : ""}`,
+  );
+  const policies = [...new Set((scan.boundaries ?? []).map((b) => b.policy).filter((v): v is string => v !== null))];
   return (
     <span
       className="inline-flex flex-wrap items-baseline gap-x-1.5"
       data-gap-scan="AVAILABLE"
       data-gap-scan-basis={scan.basis}
       data-gap-scan-max={widest === null ? undefined : String(widest)}
-      title={`QuantBT's account execution plan, verbatim (${scan.basis}).`}
+      title={[`QuantBT's account execution plan, verbatim (${scan.basis}).`, ...boundaryRows].join("\n")}
     >
       <span className="mono">{boundaryText}</span>
       <span>·</span>
       <span className="mono">{measuredText}</span>
+      {policies.length === 1 ? (
+        <span className="mono" style={{ color: "var(--ink-faint)" }} data-gap-policy={policies[0]} title="account policy across the fold boundaries">
+          · {policies[0]}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -1380,7 +1406,13 @@ function StitchDigest({ stitch }: { stitch: LaneStitch }) {
   const verified = stitch.boundary_check === "MATCH";
   return (
     <span className="flex flex-col gap-[2px]" data-stitch-digest="AVAILABLE" data-stitch-check={stitch.boundary_check}>
-      <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} title={stitch.digest} data-stitch-digest-value={stitch.digest}>
+      <span
+        className="mono text-[10px]"
+        style={{ color: "var(--ink-faint)" }}
+        title={`${stitch.digest}\n${stitch.basis === "PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1" ? "Portal's own digest over the retained fold segments; QuantBT publishes none" : stitch.basis}`}
+        data-stitch-digest-value={stitch.digest}
+        data-stitch-basis={stitch.basis}
+      >
         stitch digest {shortDigest(stitch.digest, 12)}…
       </span>
       <span
@@ -1396,11 +1428,6 @@ function StitchDigest({ stitch }: { stitch: LaneStitch }) {
         {verified
           ? `verified · ${stitch.segment_count} segments · ${stitch.observation_count} observations`
           : `does not line up with the fold boundaries · ${stitch.boundary_check_reason_code ?? stitch.boundary_check}`}
-      </span>
-      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-stitch-basis={stitch.basis}>
-        {stitch.basis === "PORTAL_DIGEST_OF_RETAINED_FOLD_SEGMENTS_V1"
-          ? "Portal digest · QuantBT: not published"
-          : stitch.basis}
       </span>
     </span>
   );
@@ -1428,7 +1455,7 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
   const value = selection.value;
   const params = Object.entries(value.parameters ?? {});
   const title = [
-    `selected trial ${value.selected_trial_id ?? "—"} · ${value.objective_kind} ${value.objective ?? "not published"}`,
+    `source trial ${value.selected_trial_id ?? "—"} (the retained search's own id) · ${value.objective_kind} ${value.objective ?? "not published"}`,
     digest ? `params digest ${digest}` : null,
     ...params.map(([name, v]) => `${name} = ${v}`),
   ]
@@ -1436,7 +1463,7 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
     .join("\n");
   return (
     <span className="mono" style={{ color: "var(--accent)" }} title={title} data-theta-star={value.selected_trial_id ?? ""}>
-      GLOBAL · trial {value.selected_trial_id ?? "—"}
+      GLOBAL · source trial {value.selected_trial_id ?? "—"}
       {compact ? null : (
         <span style={{ color: "var(--ink-faint)" }}> · {params.length} params</span>
       )}
@@ -1451,7 +1478,7 @@ function LaneHoldout({ lane, runPath, cursor }: { lane: LaneView; runPath: strin
   return (
     <div className="flex flex-col gap-[6px]" data-holdout="retained">
       <div className="flex items-baseline gap-2 pt-1">
-        <HoldoutLabel runPath={runPath} cursor={cursor} />
+        <HoldoutLabel runPath={runPath} cursor={cursor} applicable={applicable} />
         <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-[11px]" style={{ color: "var(--ink-soft)" }}>
           {fact.state === "loading" ? (
             <Reading what="the retained claim" />
@@ -1467,10 +1494,8 @@ function LaneHoldout({ lane, runPath, cursor }: { lane: LaneView; runPath: strin
               <span className="mono" style={{ color: "var(--ink-soft)" }}>
                 n/a
               </span>
+              {/* QA S05: the sentence once; the server's code is the tooltip above. */}
               <span>{reasonCodeSentence(fact.value.reason_code) ?? "Not applicable to this run's profile."}</span>
-              <span className="mono text-[9px] break-all" style={{ color: "var(--ink-faint)" }}>
-                {fact.value.reason_code}
-              </span>
             </span>
           ) : fact.value.state === "AVAILABLE" ? (
             <span className="mono" data-holdout-lane="AVAILABLE" title={fact.value.source_key}>
@@ -1492,15 +1517,18 @@ function LaneHoldout({ lane, runPath, cursor }: { lane: LaneView; runPath: strin
           </span>
         ) : null}
         <span className="flex flex-wrap items-center gap-2" data-holdout-rule="unlock">
-          <span
-            data-action-unlock={applicable ? "NOT_PUBLISHED" : "NOT_APPLICABLE"}
-            title={applicable ? "the retained lane publishes no unlock action" : "no holdout segment in this profile — there is nothing to unlock"}
-            className="mono rounded-[6px] border px-3 py-[2px] text-[10px] uppercase"
-            style={{ color: "var(--ink-faint)", borderColor: "var(--line)", opacity: 0.6, cursor: "not-allowed" }}
-            aria-disabled="true"
-          >
-            unlock holdout → sibling attempt
-          </span>
+          {/* QA S05 U13: nothing to unlock on a profile without a holdout, so no disabled control is drawn for it. */}
+          {applicable ? (
+            <span
+              data-action-unlock="NOT_PUBLISHED"
+              title="the retained lane publishes no unlock action"
+              className="mono rounded-[6px] border px-3 py-[2px] text-[10px] uppercase"
+              style={{ color: "var(--ink-faint)", borderColor: "var(--line)", opacity: 0.6, cursor: "not-allowed" }}
+              aria-disabled="true"
+            >
+              unlock holdout → sibling attempt
+            </span>
+          ) : null}
           {lane.alphaId ? (
             <LineageLink to={lineageHref(lane.alphaId)} className="mono text-[10.5px]" action="lineage">
               <span style={{ color: "var(--accent)" }}>this alpha's attempts · Attempt Lineage →</span>
@@ -1513,6 +1541,25 @@ function LaneHoldout({ lane, runPath, cursor }: { lane: LaneView; runPath: strin
 }
 
 /* ---------------------------------------------------------------- screen */
+
+/**
+ * QA S05 U3: what the screen says when the split read has not published and the
+ * retained lane REFUSED. A 403, a 500/503, and a 409 "ended without an artifact"
+ * are four different facts, and none of them is "the source has not reported
+ * yet" — so each gets its own state, and nothing is shown as if it had been read.
+ * A lane that is genuinely pending keeps the pending (partial) notice.
+ */
+export function splitScreenState(state: ResearchState, detail: SplitDetailDocument | null, folds: FoldsSlot): ResearchState {
+  if (folds.state !== "refused" || detail === null || state.state !== "partial") return state;
+  const { refusal, laneState } = folds;
+  if (laneState === "PENDING_SOURCE" || laneState === "PENDING_RETENTION") return state;
+  const base = refusalState(refusal, false);
+  if (laneState) {
+    /* Terminal without an artifact (or a legacy run): asking again cannot change it. */
+    return { ...base, state: "terminal", reason: LANE_STATE_COPY[laneState], mayRetry: false, retainsContent: false };
+  }
+  return { ...base, retainsContent: false };
+}
 
 export interface SplitScreenProps {
   runId: string;
@@ -1550,6 +1597,9 @@ export function SplitScreen({
 }: SplitScreenProps) {
   /* W3b: when the retained WFO lane is this run's source, it answers every frame it covers. */
   const lane = useMemo(() => laneViewOf(detail, folds, retained), [detail, folds, retained]);
+  /* QA S05 U3: a refused lane read is its own state; and when it is, nothing below was read. */
+  const screenState = useMemo(() => splitScreenState(state, detail, folds), [state, detail, folds]);
+  const nothingRead = screenState !== state;
   const timeline = lane ? (lane.span?.range ?? null) : (detail?.timeline ?? null);
   const runPath = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
 
@@ -1620,8 +1670,8 @@ export function SplitScreen({
             </span>
             <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span style={{ color: "var(--ink)" }}>Stage 1 · Split</span>
-            {notFound ? null : <span style={{ color: "var(--ink-faint)" }}>·</span>}
-            {notFound ? null : (
+            {notFound || nothingRead ? null : <span style={{ color: "var(--ink-faint)" }}>·</span>}
+            {notFound || nothingRead ? null : (
               /* The next stage, carrying this cursor on its own stage — spec 05 §1 outbound, FE-X-10. */
               <Link
                 to={deepDiveHref(`${runPath}/search`, { ...cursor, stage: "search" })}
@@ -1637,7 +1687,7 @@ export function SplitScreen({
             {SPLIT_TITLE}
           </h1>
         </div>
-        {detail ? (
+        {detail && !nothingRead ? (
           <div className="flex flex-none flex-col items-end gap-[5px]">
             {lane ? (
               <AsOf at={lane.split.as_of_utc_ms} source="retained split" />
@@ -1655,12 +1705,12 @@ export function SplitScreen({
       <ResearchPanel
         title="split"
         variant="plain"
-        state={state}
+        state={screenState}
         minBodyHeight={220}
         recovery={
-          state.mayRetry ? (
+          screenState.mayRetry ? (
             <button type="button" className="btn-ghost mono text-[10px]" data-action="reread" onClick={onReread}>
-              reread split
+              {nothingRead ? "Retry" : "reread split"}
             </button>
           ) : undefined
         }
@@ -1792,12 +1842,12 @@ export function SplitScreen({
                 <Fact k="strict outer OOS">
                   {retainedGuards && retainedGuards.oos_used_for_selection.value === true ? (
                     /* QuantBT's own flag: the selector read OOS, so this is not a strict outer-OOS run. */
-                    <span data-strict-outer-oos="OOS_USED_FOR_SELECTION" style={{ color: "var(--accent-2)" }} title="QuantBT oos_used_for_selection = true">
-                      no · OOS used for selection
+                    <span data-strict-outer-oos="OOS_USED_FOR_SELECTION" style={{ color: "var(--accent-2)" }} title="QuantBT oos_used_for_selection = true — the selector read OOS, so this is not a strict outer-OOS run">
+                      no
                     </span>
                   ) : retainedGuards && retainedGuards.oos_used_for_selection.value === false ? (
-                    <span data-strict-outer-oos="OOS_NOT_USED" title="QuantBT oos_used_for_selection = false">
-                      OOS not used for selection
+                    <span data-strict-outer-oos="OOS_NOT_USED" title="QuantBT oos_used_for_selection = false — OOS was not used for selection">
+                      yes
                     </span>
                   ) : lane ? (
                     <LaneAbsent reason={retainedGuards?.oos_used_for_selection.reason_code ?? NO_RETAINED_FIELD} what="strict outer OOS" />
@@ -1847,18 +1897,21 @@ export function SplitScreen({
                 ) : null}
               </div>
 
-              <div
-                className="flex items-start gap-3 rounded-b-[6px] border-t px-[14px] py-2"
-                style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
-                data-protocol-note
-              >
-                <span className="mono flex-none text-[10px] font-semibold uppercase tracking-[.1em]" style={{ color: "var(--ink-soft)" }}>
-                  protocol
-                </span>
-                <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                  {lane ? laneSentence(lane) : protocolSentence(detail, foldPlanReady)}
-                </span>
-              </div>
+              {/* QA S05: on a retained lane the note only restated the strip above (selection, OOS use, fold count). */}
+              {lane ? null : (
+                <div
+                  className="flex items-start gap-3 rounded-b-[6px] border-t px-[14px] py-2"
+                  style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
+                  data-protocol-note
+                >
+                  <span className="mono flex-none text-[10px] font-semibold uppercase tracking-[.1em]" style={{ color: "var(--ink-soft)" }}>
+                    protocol
+                  </span>
+                  <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
+                    {protocolSentence(detail, foldPlanReady)}
+                  </span>
+                </div>
+              )}
             </section>
 
             <ProvenanceStrip
@@ -1984,7 +2037,7 @@ export function SplitScreen({
                 </div>
                 {lane ? (
                   <>
-                    <IntegrityRow mark="none" label="holdout kept out of the child tape">
+                    <IntegrityRow mark="none" label="holdout never read">
                       {lane.holdout.state === "ready" && lane.holdout.value.state === "NOT_APPLICABLE" ? (
                         <span data-holdout-exposure="NOT_APPLICABLE" title={lane.holdout.value.reason_code ?? undefined}>
                           n/a · no holdout segment
@@ -2034,7 +2087,7 @@ export function SplitScreen({
                       ? "pass"
                       : "none"
                   }
-                  label="holdout kept out of the child tape"
+                  label="holdout never read"
                 >
                   {hasRange(detail.windows.holdout) ? (
                     <span
@@ -2101,11 +2154,7 @@ export function SplitScreen({
                       <span key={fold.fold_id} className="flex-1 rounded-[2px]" style={{ background: "var(--role-oos)" }} title={`${foldLabel(fold.fold_id)} · test window`} />
                     ))}
                   </span>
-                ) : !lane && hasRange(detail.windows.outer_oos) ? (
-                  <span className="flex h-[10px] gap-[2px]" data-stitch-segments={1}>
-                    <span className="flex-1 rounded-[2px]" style={{ background: "var(--role-oos)" }} />
-                  </span>
-                ) : null}
+                ) : null /* QA S05 U17: no stitched series on a one-window run, so no stitched bar is drawn. */}
                 {/* E14 · 5.12: the HiFi's "verified against fold boundaries". */}
                 {lane ? (
                   <StitchDigest stitch={lane.split.stitch} />
@@ -2132,9 +2181,14 @@ export function SplitScreen({
                 </Link>
                 {lane ? (
                   lane.certificateReason ? (
-                    <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-cert-cap data-cert-reason={lane.certificateReason}>
-                      methodology certificate — not published{" "}
-                      <span className="text-[9px]">{lane.certificateReason}</span>
+                    <span
+                      className="mono text-[10.5px]"
+                      style={{ color: "var(--ink-faint)" }}
+                      data-cert-cap
+                      data-cert-reason={lane.certificateReason}
+                      title={`${reasonCodeSentence(lane.certificateReason) ?? lane.certificateReason}\n${lane.certificateReason}`}
+                    >
+                      methodology certificate — not published
                     </span>
                   ) : lane.identityLoading ? (
                     <Reading what="the methodology certificate" />
@@ -2227,16 +2281,6 @@ function protocolSentence(detail: SplitDetailDocument, foldPlanReady: boolean): 
   return parts.join(" · ");
 }
 
-/** W3b · the protocol note on a retained WFO run: one fact line from what the lane published. */
-function laneSentence(lane: LaneView): string {
-  const parts: string[] = [];
-  if (lane.schedule === "global") parts.push("one global θ*");
-  const oos = lane.split.guards?.oos_used_for_selection;
-  if (oos?.state === "AVAILABLE" && oos.value === true) parts.push("OOS used for selection");
-  if (parts.length === 0) parts.push(`${lane.split.fold_plan.folds.length} outer folds · retained source`);
-  return parts.join(" · ");
-}
-
 /**
  * HiFi integrity row: a 16 px bold mono mark — ✓ a published pass, ✕ a
  * published failure, — nothing published either way — then the check and the
@@ -2295,8 +2339,8 @@ interface LaneProps {
   /** Present only when there are folds to move between (HiFi: lanes are controls in walk_forward only). */
   pick?: { number: number; count: number; tabStop: boolean; onFold: (fold: number) => void };
   rest?: Record<string, unknown>;
-  /** W3b: the fold's OOS Sharpe as the retained fold plan published it; undefined keeps the hub's "not in read". */
-  oosSharpe?: { value: string | null; reason: string | null };
+  /** W3b: the fold's OOS Sharpe as the retained fold plan published it; undefined keeps the hub's "not in read". `trades` is `score.oos_trades`. */
+  oosSharpe?: { value: string | null; reason: string | null; trades?: string | null };
 }
 
 /**
@@ -2307,6 +2351,7 @@ interface LaneProps {
  */
 function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick, rest, oosSharpe }: LaneProps) {
   const sharpe = oosSharpe?.value != null ? formatMetric(oosSharpe.value, "ratio") : null;
+  const trades = oosSharpe?.trades != null ? formatMetric(oosSharpe.trades, "count") : null;
   const lit = active && pick !== undefined;
   const body = (
     <>
@@ -2328,7 +2373,7 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
             title={`${isTitle ? `${isTitle}\n` : ""}IS ${exact(is.start_utc_ms)} → ${exact(is.end_exclusive_utc_ms)}`}
             data-theta-is
           >
-            <span className="mono overflow-hidden whitespace-nowrap text-[8.5px]" style={{ color: "var(--ink-soft)" }}>
+            <span className="mono overflow-hidden whitespace-nowrap text-[8.5px] max-[700px]:hidden" style={{ color: "var(--ink-soft)" }}>
               {isLabel}
             </span>
           </span>
@@ -2345,7 +2390,7 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
             title={`outer OOS ${exact(oos.start_utc_ms)} → ${exact(oos.end_exclusive_utc_ms)}`}
             data-theta-oos
           >
-            <span className="mono overflow-hidden whitespace-nowrap text-[8.5px]" style={{ color: "var(--accent-contrast)" }}>
+            <span className="mono overflow-hidden whitespace-nowrap text-[8.5px] max-[700px]:hidden" style={{ color: "var(--accent-contrast)" }}>
               OOS
             </span>
           </span>
@@ -2356,9 +2401,22 @@ function ThetaLane({ id, track, is, oos, isLabel, isTitle, digest, active, pick,
         <span style={{ color: "var(--accent)" }}>
           trade OOS → S{" "}
           {sharpe !== null ? (
-            <span title={`QuantBT per-fold OOS Sharpe ${oosSharpe?.value}`} data-theta-oos-sharpe={oosSharpe?.value ?? ""}>
-              {sharpe.replace(/^-/, "−")}
-            </span>
+            <>
+              <span title={`QuantBT per-fold OOS Sharpe ${oosSharpe?.value}`} data-theta-oos-sharpe={oosSharpe?.value ?? ""}>
+                {sharpe.replace(/^-/, "−")}
+              </span>
+              {/* QA S05 U10: a Sharpe is read beside the number of trades behind it. */}
+              {trades !== null ? (
+                <span style={{ color: "var(--ink-faint)" }} data-theta-oos-trades={oosSharpe?.trades ?? ""} title={`QuantBT per-fold OOS trades ${oosSharpe?.trades}`}>
+                  {" · "}
+                  {trades} {oosSharpe?.trades === "1" ? "trade" : "trades"}
+                </span>
+              ) : (
+                <span className="italic" style={{ color: "var(--ink-faint)" }} data-theta-oos-trades="not-published" title={oosSharpe?.reason ?? "the retained fold plan publishes no OOS trade count for this fold"}>
+                  {" · "}trades not published
+                </span>
+              )}
+            </>
           ) : oosSharpe ? (
             <span className="italic" style={{ color: "var(--ink-faint)" }} title={oosSharpe.reason ?? "the retained fold plan publishes no OOS Sharpe for this fold"}>
               not published
@@ -2482,6 +2540,7 @@ function ThetaFlow({
                     ? {
                         value: (fold as Partial<typeof fold>).score?.oos_sharpe ?? null,
                         reason: (fold as Partial<typeof fold>).score?.reason_code ?? null,
+                        trades: (fold as Partial<typeof fold>).score?.oos_trades ?? null,
                       }
                     : undefined
                 }
@@ -2541,7 +2600,7 @@ function ThetaParams({ lane }: { lane: LaneView }) {
   return (
     <div className="flex flex-col gap-[4px] pl-[72px]" data-theta-params>
       <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
-        θ* · selected trial <span data-theta-trial>{value.selected_trial_id ?? "—"}</span>
+        θ* · source trial <span data-theta-trial title="the retained search's own trial id (S03 prints the progress read's selection.trial)">{value.selected_trial_id ?? "—"}</span>
         {objective !== null ? (
           <span title={`${value.objective_kind} ${value.objective}`}>
             {" "}· {value.objective_kind} {objective.replace(/^-/, "−")}
@@ -2578,6 +2637,7 @@ const TABLE_COLUMNS: { head: string; right: boolean }[] = [
   { head: "params", right: false },
   { head: "IS sharpe", right: true },
   { head: "OOS · S_full", right: true },
+  { head: "OOS trades", right: true },
   { head: "Δ decay", right: true },
 ];
 
@@ -2628,6 +2688,17 @@ function WindowCell({ window }: { window: CurrentSourceSplit["fold_plan"]["folds
       title={window.start_utc_ms !== null && window.end_utc_ms !== null ? `${exact(window.start_utc_ms)} → ${exact(window.end_utc_ms)}` : "QuantBT published this window as empty for the fold"}
     >
       {window.bars}
+    </td>
+  );
+}
+
+/** QA S05 U10: the trades behind a fold's OOS Sharpe (`score.oos_trades`), a count — typed absence when unserved. */
+function TradesCell({ value, reason }: { value: string | null; reason: string }) {
+  const shown = formatMetric(value, "count");
+  if (value === null || shown === null) return <AbsentCell reason={reason} word="not published" />;
+  return (
+    <td className={`${TD} text-right`} style={{ color: "var(--ink-soft)" }} title={`${value} OOS trades`} data-trades-cell={value}>
+      {shown}
     </td>
   );
 }
@@ -2690,7 +2761,7 @@ function FoldTable({
   const embargo = <ProtocolCell fact={detail.protocol.embargo} />;
 
   return (
-    <section className="overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-card="fold-table" tabIndex={0} aria-label="fold table (scrolls sideways)">
+    <section className="overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-card="fold-table" tabIndex={0} aria-label="fold table (scrolls sideways)" title="Click a row or use the arrow keys to move the cursor — Search follows it">
       <table className="w-full min-w-[760px] border-collapse text-[12px]">
         <thead>
           <tr>
@@ -2773,6 +2844,7 @@ function FoldTable({
                   )}
                   <ScoreCell value={score?.is_sharpe ?? null} reason={score?.reason_code ?? metricReason} />
                   <ScoreCell value={score?.oos_sharpe ?? null} reason={score?.reason_code ?? metricReason} />
+                  <TradesCell value={score?.oos_trades ?? null} reason={score?.reason_code ?? metricReason} />
                   <ScoreCell value={score?.decay ?? null} reason={score?.reason_code ?? metricReason} signed />
                 </tr>
               );
@@ -2808,20 +2880,21 @@ function FoldTable({
               <AbsentCell reason={metricReason} />
               <AbsentCell reason={metricReason} />
               <AbsentCell reason={metricReason} />
+              <AbsentCell reason={metricReason} />
             </tr>
           ) : null}
         </tbody>
       </table>
-      <div
-        className="mono border-t px-3 py-1.5 text-[10px]"
-        style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
-        title="Click a row or use the arrow keys to move the cursor — Search follows it"
-        data-fold-table-foot
-      >
-        {plan && plan.length > 0
-          ? `${plan.length} folds · retained source`
-          : `protocol ${detail.protocol.kind ?? "not published"} · one IS/OOS pair · no fold rows published`}
-      </div>
+      {plan && plan.length > 0 ? null : (
+        <div
+          className="mono border-t px-3 py-1.5 text-[10px]"
+          style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
+          title="Click a row or use the arrow keys to move the cursor — Search follows it"
+          data-fold-table-foot
+        >
+          {`protocol ${detail.protocol.kind ?? "not published"} · one IS/OOS pair · no fold rows published`}
+        </div>
+      )}
     </section>
   );
 }

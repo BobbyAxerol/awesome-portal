@@ -162,7 +162,7 @@ export function AnalyticsAbsentLine({ availability }: { availability: Availabili
 }
 
 /**
- * EChart 3 — "Strategy vs benchmark — all time". The chart arrives as a node (the lazy chart lives
+ * EChart 3 — "Strategy vs benchmark — OOS". The chart arrives as a node (the lazy chart lives
  * with the screen); the cells under it are the all-time Beta / Corr / Sharpe / Sortino plus the
  * benchmark's own return.
  */
@@ -190,11 +190,8 @@ export function StrategyBenchmarkFigure({
   return (
     <figure className="m-0 min-w-0 flex-[1.4_1_520px] rounded-[8px] border p-4" data-strategy-figure style={PANEL}>
       <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
-        <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
-          EChart 3
-        </span>
         <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
-          Strategy vs benchmark — all time
+          Strategy vs benchmark — OOS
         </span>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={`${v2.scope_locator}\nbenchmark ${v2.benchmark_locator}`}>
           rebased 100
@@ -269,7 +266,7 @@ export function BehaviorV2({ v2, chip }: { v2: V2Core; chip?: string }) {
           behavior
         </h3>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={`${v2.scope_locator}\ninput ${shortDigest(v2.input_digest)}`}>
-          {chip ?? "all time · OOS"}
+          {chip ?? "OOS"}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3" data-behavior-grid>
@@ -289,7 +286,7 @@ export function BehaviorV2({ v2, chip }: { v2: V2Core; chip?: string }) {
             ))}
           </span>
         </Cell>
-        {group("episodes — not audited trades", "Position episodes (entry to exit) derived from positions; QuantBT publishes no audited trade ledger for this route.")}
+        {group("exposure episodes (not trades)", "Position episodes (entry to exit) derived from positions; QuantBT publishes no audited trade ledger for this route.")}
         {episodes.map(([id, label, fact, unit]) => (
           <Cell key={id} id={label.toLowerCase()} label={label}>
             <FactValue fact={fact} unit={unit} label={label} />

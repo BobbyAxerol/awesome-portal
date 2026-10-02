@@ -295,7 +295,10 @@ describe("symbol picker", () => {
     open();
     fireEvent.change(symbolInput(), { target: { value: "DOGEUSDT" } });
     expect(q("[data-symbol-no-match]")).not.toBeNull();
-    expect(q("[data-symbol-unlisted]")!.textContent).toContain("DOGEUSDT is not in this dataset");
+    /* One short line, shown only because the popup has no match to offer; the consequence rides in the tooltip. */
+    expect(q("[data-symbol-unlisted]")!.textContent).toBe("DOGEUSDT is not a listed symbol");
+    expect(q("[data-symbol-unlisted]")!.getAttribute("title")).toContain("Preflight refuses");
+    expect(q("[data-window-prefill-status]")).toBeNull();
     expect(q("[data-symbol-coverage]")).toBeNull();
   });
 
@@ -470,9 +473,15 @@ describe("route step", () => {
     const folded = q("[data-routes-not-admitted]")!;
     for (const id of blockedIds) {
       const card = folded.querySelector(`[data-route-card="${id}"]`) as HTMLButtonElement;
-      expect(card.disabled).toBe(true);
+      /* aria-disabled, not `disabled`: the chip stays focusable so its reason can be read (U08). */
+      expect(card.getAttribute("aria-disabled")).toBe("true");
       expect(card.getAttribute("title")).toBe(LIMITS.blockedRoutes[id]);
-      expect(card.textContent).not.toContain(LIMITS.blockedRoutes[id]!.slice(0, 20));
+      expect(card.textContent).toBe(id);
+      fireEvent.click(card);
+      expect(q("[data-route-card].selected, [data-route-card][data-selected=\"true\"][data-route-blocked]")).toBeNull();
+      /* The reason of the chip last pointed at is on screen, once, not as a tooltip alone. */
+      expect(q(`[data-route-blocked-reason="${id}"]`)!.textContent).toBe(`${id} — ${LIMITS.blockedRoutes[id]}`);
+      expect(qa("[data-route-blocked-reason]")).toHaveLength(1);
     }
     expect(q("[data-step-card] header")!.textContent).toContain(`${ATLAS.routes.length - blockedIds.length} of ${ATLAS.routes.length} routes admitted`);
   });

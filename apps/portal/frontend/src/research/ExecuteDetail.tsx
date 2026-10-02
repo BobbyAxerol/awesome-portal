@@ -233,7 +233,7 @@ function HubCandleOverview({ replay }: { replay: Replay }) {
           {REPLAY_GAP_WORDS[overview?.state ?? "NOT_PUBLISHED"]}
         </span>
         <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-overview-note>
-          {reasonCodeSentence(code) ?? "This run published no price overview."}
+          {code === "P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET" ? "No price overview stored for this run." : reasonCodeSentence(code) ?? "This run published no price overview."}
         </span>
         <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code>
           {code ?? words(overview!.availability.state)}
@@ -274,13 +274,15 @@ function AbsentPanel({
   title: string;
   replay: Replay;
   capabilities: readonly RouteCapabilityKey[];
-  note: string;
+  note?: string;
 }) {
   return (
     <Card title={title} data-absent-panel={id}>
-      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-        {note}
-      </p>
+      {note ? (
+        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+          {note}
+        </p>
+      ) : null}
       <div className="flex flex-col gap-1">
         {capabilities.map((capability) => (
           <CapabilityGap key={capability} replay={replay} capability={capability} />
@@ -743,13 +745,15 @@ function RetainedAbsentPanel({
   title: string;
   replay: CurrentSourceReplay;
   capabilities: readonly RouteCapabilityKey[];
-  note: string;
+  note?: string;
 }) {
   return (
     <Card title={title} data-absent-panel={id}>
-      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-        {note}
-      </p>
+      {note ? (
+        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+          {note}
+        </p>
+      ) : null}
       <div className="flex flex-col gap-1">
         {capabilities.map((capability) => (
           <RetainedGap key={capability} replay={replay} capability={capability} />
@@ -1087,7 +1091,7 @@ function RetainedBody({
       ? { state: "empty", reason: "No retained observations in this window.", mayRetry: false, retainsContent: true }
       : {
           state: "partial",
-          reason: "Model observations only. Every execution fact below is named with the reason the retained lane gave.",
+          reason: "Model observations only.",
           mayRetry: false,
           retainsContent: true,
         };
@@ -1210,9 +1214,6 @@ function RetainedBody({
             data-panel="event-ledger"
             aside={<RetainedGap replay={replay} capability="execution_events" />}
           >
-            <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-              observations around the playhead — not events
-            </p>
             {rows.length > 0 ? <RetainedLedger transport={transport} rows={rows} /> : null}
           </Card>
           <RetainedAbsentPanel
@@ -1236,14 +1237,14 @@ function RetainedBody({
             title="MAE × MFE"
             replay={replay}
             capabilities={["mae_mfe"]}
-            note="Needs trades and their price paths."
+            note="Needs trade records (not published)."
           />
           <RetainedAbsentPanel
             id="pnl-distribution"
             title="trade PnL distribution"
             replay={replay}
             capabilities={["trades"]}
-            note="Needs closed trades."
+            note="Needs trade records (not published)."
           />
           <RetainedAbsentPanel
             id="cost-timeline"
@@ -1257,8 +1258,7 @@ function RetainedBody({
             title="route-aware facts"
             replay={replay}
             capabilities={["sl_tp_ambiguity", "oco_tree", "multi_leg"]}
-            note="SL/TP, OCO and multi-leg: no field."
-          />
+                      />
         </div>
       </div>
 
@@ -1325,6 +1325,11 @@ export function ExecuteScreen({
       ? controller.retained.replay
       : null;
   const lane = executeLane(controller);
+  /* The retained lane was asked because the hub declined, and its read failed — except a 409, which is its typed "no sealed source yet". */
+  const retainedFailure =
+    controller.replay?.route.state === "NOT_PUBLISHED" && controller.retained.state === "refused" && controller.retained.refusal.status !== 409
+      ? controller.retained.refusal
+      : null;
 
   /* A new window places the playhead on the sample the server selected, or at
      its start. Nothing else moves the playhead but the reader. */
@@ -1434,6 +1439,28 @@ export function ExecuteScreen({
           title="stitched account — retained walk-forward lane"
           state={{ state: "loading", reason: "Reading the retained walk-forward lane for this run.", mayRetry: false, retainsContent: false }}
           minBodyHeight={280}
+        >
+          {null}
+        </ResearchPanel>
+      ) : retainedFailure !== null ? (
+        /* QA S08 UX-03: the hub declined and the retained lane's own read FAILED (denied, missing, server, network).
+           That is not "the source did not publish a replay": say what happened, keep one state per meaning. */
+        <ResearchPanel
+          title="stitched account — retained walk-forward lane"
+          state={{
+            state: retainedFailure.state,
+            reason: retainedFailure.message,
+            mayRetry: retainedFailure.mayRetry,
+            retainsContent: false,
+          }}
+          minBodyHeight={160}
+          recovery={
+            retainedFailure.mayRetry && controller.retryRetained ? (
+              <button type="button" className="btn-ghost mono text-[10px]" data-action="retry-retained" onClick={controller.retryRetained}>
+                Retry
+              </button>
+            ) : undefined
+          }
         >
           {null}
         </ResearchPanel>
@@ -1626,9 +1653,6 @@ export function ExecuteScreen({
                 data-panel="event-ledger"
                 aside={<CapabilityGap replay={replay} capability="execution_events" />}
               >
-                <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                  samples around the playhead — not events
-                </p>
                 {items.length > 0 ? <SampleLedger transport={transport} items={items} /> : null}
               </Card>
               <AbsentPanel
@@ -1652,14 +1676,14 @@ export function ExecuteScreen({
                 title="MAE × MFE"
                 replay={replay}
                 capabilities={["mae_mfe"]}
-                note="Needs trades and their price paths."
+                note="Needs trade records (not published)."
               />
               <AbsentPanel
                 id="pnl-distribution"
                 title="trade PnL distribution"
                 replay={replay}
                 capabilities={["trades"]}
-                note="Needs closed trades."
+                note="Needs trade records (not published)."
               />
               <AbsentPanel
                 id="cost-timeline"
@@ -1673,8 +1697,7 @@ export function ExecuteScreen({
                 title="route-aware facts"
                 replay={replay}
                 capabilities={["sl_tp_ambiguity", "oco_tree", "multi_leg"]}
-                note="SL/TP, OCO and multi-leg: not published."
-              />
+                              />
             </div>
           </div>
 

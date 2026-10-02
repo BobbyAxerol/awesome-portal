@@ -53,6 +53,8 @@ export type HandoffCursor = Schemas["ProgressHandoffCursor"];
 /** CG-P11-07: the immutable requested spec a new run may start from. */
 export type RunRequestedSpec = Schemas["RunRequestedSpec"];
 export type ClaimState = ProgressSnapshot["claim"]["state"];
+/** QA S03: one of the four run-scoped methodology facts the progress read serves (`claims[]`). */
+export type MethodologyClaim = Schemas["MethodologyClaim"];
 
 /**
  * The two source-owned display facts added by the P11 amendment.

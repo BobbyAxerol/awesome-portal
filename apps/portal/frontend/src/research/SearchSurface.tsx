@@ -14,7 +14,7 @@
  * `pick=` to the hash (T07/T08) and never changes θ*.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import type { CurrentSourceSearch } from "./searchClient";
 import { reasonCodeSentence } from "./researchRefusal";
@@ -71,6 +71,31 @@ function pointTitle(point: Point, x: string, y: string, parameters: Record<strin
   return `trial ${point.trial_id} · ${score} · ${at(x)} · ${at(y)}`;
 }
 
+/**
+ * D1: one tab stop for the whole plot. Arrow keys move focus to the nearest
+ * drawn point in that direction — screen geometry only, from the server's
+ * own placement percentages; nothing is ranked or scored here.
+ */
+export function neighbourInDirection(
+  from: { x: number; y: number },
+  others: readonly { id: string; x: number; y: number }[],
+  key: string,
+): string | null {
+  const axis = key === "ArrowRight" ? [1, 0] : key === "ArrowLeft" ? [-1, 0] : key === "ArrowDown" ? [0, 1] : key === "ArrowUp" ? [0, -1] : null;
+  if (axis === null) return null;
+  let best: { id: string; cost: number } | null = null;
+  for (const other of others) {
+    const dx = other.x - from.x;
+    const dy = other.y - from.y;
+    const along = dx * axis[0] + dy * axis[1];
+    if (along <= 0) continue;
+    const across = Math.abs(dx * axis[1]) + Math.abs(dy * axis[0]);
+    const cost = along + 2 * across;
+    if (best === null || cost < best.cost) best = { id: other.id, cost };
+  }
+  return best?.id ?? null;
+}
+
 function SurfacePanel({ id, title, aside, children }: { id: string; title: ReactNode; aside?: ReactNode; children: ReactNode }) {
   return (
     <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} data-panel={id} data-panel-state="AVAILABLE" data-panel-lane="retained">
@@ -117,6 +142,7 @@ export function SurfaceScatter({
   schedule,
   pick,
   onPick,
+  onClear,
 }: {
   surface: Surface;
   /** The ledger's own parameter text per trial (titles only). */
@@ -124,14 +150,45 @@ export function SurfaceScatter({
   schedule: string | null;
   pick: string | null;
   onPick: (trialId: string) => void;
+  /** Escape on the plot lets go of the pick. */
+  onClear?: () => void;
 }) {
   const [axes, setAxes] = useState(() => defaultAxes(surface.axes));
+  const [roving, setRoving] = useState<string | null>(null);
+  const plot = useRef<HTMLDivElement | null>(null);
+  /* A new pick (click, ledger row, link) becomes the stop again; arrows then move it. */
+  useEffect(() => setRoving(null), [pick]);
   const pruned = surface.points.filter((point) => point.state === "PRUNED").length;
   const placed = surface.points.filter((point) => point.positions[axes.x] != null && point.positions[axes.y] != null);
   const unplaced = surface.points.length - placed.length;
   const selected = surface.selected_trial_id;
   const best = surface.best_is_trial_id;
   const scope = schedule === "global" ? "global study" : schedule ?? "study scope not published";
+  /* One tab stop: the picked point, else the one the arrows reached, else θ*, else the first drawn. */
+  const tabStop =
+    [roving, pick, selected].find((id) => id != null && placed.some((point) => point.trial_id === id)) ?? placed[0]?.trial_id ?? null;
+  const onPlotKey = (event: KeyboardEvent<HTMLElement>, id: string) => {
+    if (event.key === "Escape") {
+      if (pick !== null && onClear) {
+        event.preventDefault();
+        onClear();
+      }
+      return;
+    }
+    const here = placed.find((point) => point.trial_id === id);
+    if (!here) return;
+    const at = (point: Point) => ({ x: point.positions[axes.x] as number, y: 100 - (point.positions[axes.y] as number) });
+    const next = neighbourInDirection(
+      at(here),
+      placed.filter((point) => point.trial_id !== id).map((point) => ({ id: point.trial_id, ...at(point) })),
+      event.key,
+    );
+    if (next === null) return;
+    event.preventDefault();
+    setRoving(next);
+    const target = [...(plot.current?.querySelectorAll("[data-surface-point]") ?? [])].find((element) => element.getAttribute("data-surface-point") === next);
+    (target as HTMLElement | undefined)?.focus();
+  };
   const sampled =
     surface.sampling === "ALL_RETAINED_TRIALS"
       ? `${surface.emitted_point_count} of ${surface.source_trial_count} trials drawn`
@@ -160,6 +217,9 @@ export function SurfaceScatter({
       <div
         className="relative h-[250px] border"
         style={{ borderColor: "var(--line)", background: "var(--paper)" }}
+        ref={plot}
+        role="group"
+        aria-label="trial surface — arrow keys move between points, Enter selects, Escape clears"
         data-surface={`${axes.x}×${axes.y}`}
         data-surface-points={placed.length}
       >
@@ -177,6 +237,9 @@ export function SurfaceScatter({
               aria-label={title}
               aria-pressed={pick === point.trial_id}
               title={title}
+              tabIndex={point.trial_id === tabStop ? 0 : -1}
+              onKeyDown={(event) => onPlotKey(event, point.trial_id)}
+              onFocus={() => setRoving(point.trial_id)}
               className="absolute rounded-full p-0"
               style={{
                 left: `${left.toFixed(2)}%`,
@@ -228,7 +291,7 @@ export function SurfaceScatter({
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-[9px] w-[9px] rounded-full" style={{ boxShadow: "0 0 0 3px var(--viz-pick-ring)" }} />
-          click a point → lineage lights up
+          Click a point to select that trial
         </span>
       </div>
       <span className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-surface-caption title={`${surface.schema_version} · ${surface.objective_ramp.rule} · positions are the server's placement inside each declared range; colour = how many of the ${surface.complete_trial_count} complete IS objectives' quintile thresholds a trial lies above`}>
@@ -390,8 +453,10 @@ export function SurfaceDistributions({ surface }: { surface: Surface }) {
       id="distributions"
       title="A4 · per param — sampled regions"
       aside={
-        <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          darker bar = higher objective · green tick = θ*
+        <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-regions-header>
+          {distributions.every((distribution) => distribution.regions_sampled === distribution.bins.length)
+            ? `regions sampled: ${distributions[0]?.bins.length ?? 0}/${distributions[0]?.bins.length ?? 0}`
+            : "regions sampled: see each parameter"}
         </span>
       }
     >
@@ -402,9 +467,14 @@ export function SurfaceDistributions({ surface }: { surface: Surface }) {
             <div key={distribution.name} className="flex w-full flex-col gap-[3px] pb-2 pr-[14px] pt-1.5 min-[520px]:w-1/2 min-[900px]:w-1/3" data-distribution={distribution.name}>
               <div className="flex items-baseline justify-between">
                 <span className="mono text-[10.5px]">{distribution.name}</span>
-                <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} data-regions-sampled={distribution.regions_sampled}>
-                  {distribution.regions_sampled}/{distribution.bins.length} regions sampled
-                </span>
+                {/* D17: full coverage is said once in the header; a parameter speaks only when it is short. */}
+                {distribution.regions_sampled < distribution.bins.length ? (
+                  <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} data-regions-sampled={distribution.regions_sampled}>
+                    {distribution.regions_sampled}/{distribution.bins.length} regions sampled
+                  </span>
+                ) : (
+                  <span hidden data-regions-sampled={distribution.regions_sampled} />
+                )}
               </div>
               <div className="relative flex h-[52px] items-end gap-px border-b" style={{ borderColor: "var(--line)" }} role="img" aria-label={`${distribution.name}: ${distribution.regions_sampled} of ${distribution.bins.length} regions sampled; θ* ${distribution.theta_value}`}>
                 {distribution.bins.map((bin) => (
@@ -450,8 +520,8 @@ function SurfaceImportance({ surface }: { surface: Surface }) {
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
           A5 · which params drive the objective
         </h3>
-        <span className="text-[9px]" style={{ color: "var(--accent-2)" }} title={importance.rule}>
-          Spearman proxy, not fANOVA
+        <span className="text-[9px]" style={{ color: "var(--accent-2)" }} title={`${importance.rule} · a Spearman proxy computed by the portal, not fANOVA`}>
+          Spearman ρ vs objective
         </span>
       </div>
       {importance.state === "AVAILABLE" ? (

@@ -13,7 +13,7 @@
  *    is no PnL here and an ambiguous sequence draws no connector.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type ExecWindow = "is" | "oos" | "holdout";
 
@@ -35,21 +35,41 @@ export function withWindow(path: string, window: ExecWindow): string {
   return `${base}${base.includes("?") ? "&" : "?"}window=${window}${tail}`;
 }
 
-/** The window in the URL: read on arrival, written with replace (never a history entry per click), re-read on Back/forward. */
+/**
+ * The window in the URL: read on arrival, re-read on Back/forward. A change of
+ * window is one history entry (QA S08 UX-01: Back steps to the previous window
+ * instead of leaving the screen). An unreadable `?window=` on arrival is
+ * dropped from the address (UX-19) with a replace, never an entry.
+ */
 export function useExecuteWindow(): [ExecWindow, (next: ExecWindow) => void] {
   const [current, setCurrent] = useState<ExecWindow>(() => (typeof window === "undefined" ? DEFAULT_WINDOW : parseWindow(window.location.search)));
   useEffect(() => {
+    try {
+      const raw = new URLSearchParams(window.location.search).get("window");
+      if (raw !== null && raw !== "is" && raw !== "oos" && raw !== "holdout") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("window");
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      }
+    } catch {
+      /* the address bar is a convenience */
+    }
     const onPop = () => setCurrent(parseWindow(window.location.search));
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+  const latest = useRef(current);
+  latest.current = current;
   const set = useCallback((next: ExecWindow) => {
+    /* One entry per real change; clicking the window already on show adds none. */
+    if (latest.current === next) return;
+    latest.current = next;
     setCurrent(next);
     try {
       const url = new URL(window.location.href);
       if (next === DEFAULT_WINDOW) url.searchParams.delete("window");
       else url.searchParams.set("window", next);
-      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      window.history.pushState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
     } catch {
       /* the address bar is a convenience; the state above still moved */
     }

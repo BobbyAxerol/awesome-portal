@@ -155,9 +155,10 @@ describe("A10c WhatIfCard — the preview reads the server's node, never a formu
     expect(container.querySelector("[data-preview-badge]")?.getAttribute("data-motion")).toBe("blink-once");
   });
 
-  it("coverage is 'k / 81', from the server", () => {
+  it("QA D14: coverage is the server's DISTINCT node count; the 'k / 81' grid-cell label rides in the tooltip", () => {
     const { container } = renderCard();
-    expect(container.querySelector("[data-coverage]")?.textContent).toBe("2 / 81 cells evaluated");
+    expect(container.querySelector("[data-coverage]")?.textContent).toBe("2 of 49 distinct nodes evaluated");
+    expect(container.querySelector("[data-coverage]")?.getAttribute("title")).toContain("2 / 81 grid cells evaluated");
     expect(container.querySelectorAll("[data-heat-cell]")).toHaveLength(81);
     expect(container.querySelectorAll("[data-heat-state='EVALUATED']")).toHaveLength(2);
   });
@@ -215,19 +216,21 @@ describe("A10c WhatIfCard — actions", () => {
     expect(container.querySelectorAll("[data-heat-state='QUEUED']")).toHaveLength(79);
   });
 
-  it("A11: a fixed run keeps the card, every control disabled, with the server's reason", () => {
+  it("A11 / QA D12: a fixed run keeps the card as ONE typed-absence block — the server's reason, no dead sliders, no disabled buttons", () => {
     const { container } = renderCard({ whatIf: null, inert: { state: "NOT_APPLICABLE", reason_code: "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF_GRID" } });
-    const ranges = [...container.querySelectorAll<HTMLInputElement>("input[type='range']")];
-    expect(ranges).toHaveLength(2);
-    expect(ranges.every((range) => range.disabled)).toBe(true);
+    expect(container.querySelector("[data-panel='what-if']")?.getAttribute("data-what-if")).toBe("NOT_APPLICABLE");
+    expect(container.querySelectorAll("input[type='range']")).toHaveLength(0);
+    expect(container.querySelectorAll("button")).toHaveLength(0);
     expect(container.querySelector("[data-what-if-reason]")?.textContent).toContain("no evaluated neighbourhood");
-    expect([...container.querySelectorAll<HTMLButtonElement>("button")].every((button) => button.disabled)).toBe(true);
+    expect(container.querySelector("[data-what-if-code]")?.getAttribute("title")).toBe("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF_GRID");
   });
 
   it("VD-TEXT-01: the fork rule is a short caption with the full sentence in its title", () => {
     const { container } = renderCard({ whatIf: null, inert: { state: "NOT_APPLICABLE", reason_code: "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF_GRID" } });
     const rule = container.querySelector("[data-what-if-rule]");
-    expect(rule?.textContent).toBe("commit → sibling attempt");
+    /* QA H28: no italic "commit → sibling attempt" line that reads like a control; the rule is the heading's tooltip. */
+    expect(rule?.textContent).toBe("what-if sandbox");
+    expect(container.textContent).not.toContain("commit → sibling attempt");
     expect(rule?.getAttribute("title")).toContain("never writes onto frozen params");
     expect(container.textContent).not.toContain("lineage-linked");
   });
@@ -313,7 +316,7 @@ describe("F1 · D7 — what-if honesty", () => {
   it("a card with no served slider names no parameter at all (inert and a served-but-unavailable body)", () => {
     const inert = renderCard({ whatIf: null, inert: { state: "NOT_APPLICABLE", reason_code: "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF_GRID" } });
     expect(inert.container.textContent).not.toMatch(/rvol|slpercent|entry_z|atr_mult/);
-    expect(inert.container.querySelectorAll("input[type='range']")).toHaveLength(2);
+    expect(inert.container.querySelectorAll("input[type='range']")).toHaveLength(0);
     inert.unmount();
     const dark = renderCard({ whatIf: whatIf({ state: "NOT_ENABLED", reason_code: "P16_WHATIF_NOT_ENABLED", sliders: [], grid: null, coverage: null }) });
     expect(dark.container.textContent).not.toMatch(/rvol|slpercent|entry_z|atr_mult/);

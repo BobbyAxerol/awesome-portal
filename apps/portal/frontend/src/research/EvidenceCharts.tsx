@@ -326,7 +326,7 @@ export function drawdownOption(points: EquityPoint[], boundaries: readonly FoldB
         const param = first(params);
         const point = points[param?.dataIndex ?? -1];
         return point
-          ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.drawdown, fraction(point.drawdown_fraction))}`
+          ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.drawdown, Number(point.drawdown_fraction) === 0 ? "0.00%" : fraction(point.drawdown_fraction))}`
           : "";
       },
     },
@@ -550,6 +550,45 @@ export interface RebasedPoint {
   value: string;
 }
 
+/** The served point nearest in time to `at` — a pick, never an interpolation. */
+function nearestPoint(points: readonly RebasedPoint[], at: number): RebasedPoint | undefined {
+  let best: RebasedPoint | undefined;
+  for (const point of points) {
+    if (best === undefined || Math.abs(point.at_utc_ms - at) < Math.abs(best.at_utc_ms - at)) best = point;
+  }
+  return best;
+}
+
+/**
+ * QA S04-U2: the strategy and the benchmark are sampled at different timestamps, so the hovered index
+ * of one is not the index of the other. Each series answers with its own served point nearest the
+ * hovered time; a point at another time says when.
+ */
+export function strategyBenchmarkTooltip(
+  strategy: readonly RebasedPoint[],
+  benchmark: readonly RebasedPoint[],
+  params: unknown,
+): string {
+  const list = (Array.isArray(params) ? params : [params]) as (AxisParam & { axisValue?: number | string })[];
+  const head = list[0];
+  const named = head?.seriesName === SERIES_NAME_V2.benchmark ? benchmark : strategy;
+  const axis = typeof head?.axisValue === "number" ? head.axisValue : undefined;
+  const at = axis ?? named[head?.dataIndex ?? -1]?.at_utc_ms;
+  if (at === undefined) return "";
+  const row = (name: string, points: readonly RebasedPoint[], marker: string) => {
+    const point = nearestPoint(points, at);
+    if (point === undefined) return "";
+    const when = point.at_utc_ms === at ? "" : ` <span style="opacity:.7">${utcZ(point.at_utc_ms)}</span>`;
+    return `${marker}${name} <b>${ratio(point.value)}</b>${when}`;
+  };
+  const marker = (name: string) => list.find((param) => param.seriesName === name)?.marker ?? "";
+  const rows = [
+    row(SERIES_NAME_V2.strategy, strategy, marker(SERIES_NAME_V2.strategy)),
+    benchmark.length > 0 ? row(SERIES_NAME_V2.benchmark, benchmark, marker(SERIES_NAME_V2.benchmark)) : "",
+  ];
+  return `${utcZ(at)}<br/>${rows.filter(Boolean).join("<br/>")}`;
+}
+
 export const SERIES_NAME_V2 = { strategy: "Strategy", benchmark: "Benchmark (buy and hold)" } as const;
 
 /**
@@ -559,7 +598,6 @@ export const SERIES_NAME_V2 = { strategy: "Strategy", benchmark: "Benchmark (buy
 export function strategyBenchmarkOption(strategy: readonly RebasedPoint[], benchmark: readonly RebasedPoint[]) {
   const role = roleColorsNow();
   const { inkFaint } = paletteNow();
-  const lookup = (points: readonly RebasedPoint[], param: AxisParam | undefined) => points[param?.dataIndex ?? -1];
   return baseOption({
     ...noChartApparatus(),
     ...(benchmark.length > 0
@@ -581,16 +619,7 @@ export function strategyBenchmarkOption(strategy: readonly RebasedPoint[], bench
     },
     tooltip: {
       ...hifiTooltip(),
-      formatter: (params: unknown) => {
-        const list = (Array.isArray(params) ? params : [params]) as AxisParam[];
-        const rows = list.map((param) => {
-          const point = lookup(param.seriesName === SERIES_NAME_V2.benchmark ? benchmark : strategy, param);
-          return point ? tooltipRow(param, param.seriesName ?? "", ratio(point.value)) : "";
-        });
-        const first = list[0];
-        const at = lookup(first?.seriesName === SERIES_NAME_V2.benchmark ? benchmark : strategy, first)?.at_utc_ms;
-        return `${utcZ(at)}<br/>${rows.filter(Boolean).join("<br/>")}`;
-      },
+      formatter: (params: unknown) => strategyBenchmarkTooltip(strategy, benchmark, params),
     },
     series: [
       {
@@ -634,7 +663,9 @@ export function EquityChart({
   const equity = useMemo(() => equityOption(points, boundaries, inSample), [points, boundaries, inSample]);
   return (
     <div data-chart="equity">
-      <EChart option={equity} height={CHART_HEIGHT.equity} />
+      <div role="img" aria-label="OOS equity curve; exact values in the table below">
+        <EChart option={equity} height={CHART_HEIGHT.equity} />
+      </div>
       <ExactTable
         id="equity"
         caption="OOS equity and drawdown, exact values"
@@ -683,7 +714,9 @@ export function DrawdownChart({
   }, [points, boundaries, height]);
   return (
     <div data-chart={chart}>
-      <EChart option={drawdown} height={height} />
+      <div role="img" aria-label="OOS drawdown, from the running peak">
+        <EChart option={drawdown} height={height} />
+      </div>
     </div>
   );
 }
@@ -693,7 +726,9 @@ export function RollingChart({ series }: { series: EvidenceSeries }) {
   const option = useMemo(() => rollingOption(points), [points]);
   return (
     <div data-chart="rolling">
-      <EChart option={option} height={CHART_HEIGHT.rolling} />
+      <div role="img" aria-label="Rolling 20-observation return; exact values in the table below">
+        <EChart option={option} height={CHART_HEIGHT.rolling} />
+      </div>
       <ExactTable
         id="rolling"
         caption="Rolling 20-observation return, exact values"
@@ -712,7 +747,9 @@ export function RollingSharpeChart({ series, points: supplied }: { series?: Evid
   const option = useMemo(() => rollingSharpeOption(points), [points]);
   return (
     <div data-chart="rolling-sharpe">
-      <EChart option={option} height={CHART_HEIGHT.rolling} />
+      <div role="img" aria-label="Rolling 63-day Sharpe; exact values in the table below">
+        <EChart option={option} height={CHART_HEIGHT.rolling} />
+      </div>
       <ExactTable
         id="rolling-sharpe"
         caption="Rolling 63-day Sharpe, exact values"
@@ -736,7 +773,9 @@ export function StrategyBenchmarkChart({
   const option = useMemo(() => strategyBenchmarkOption(strategy, benchmark), [strategy, benchmark]);
   return (
     <div data-chart="strategy-benchmark">
-      <EChart option={option} height={CHART_HEIGHT.rolling} />
+      <div role="img" aria-label="Strategy vs benchmark, rebased to 100; exact values in the table below">
+        <EChart option={option} height={CHART_HEIGHT.rolling} />
+      </div>
       <ExactTable
         id="strategy-benchmark"
         caption="Strategy and benchmark rebased to 100, exact values"
@@ -756,7 +795,9 @@ export function DistributionChart({ series }: { series: EvidenceSeries }) {
   const option = useMemo(() => distributionOption(buckets, daily), [buckets, daily]);
   return (
     <div data-chart="distribution" data-distribution-grain={daily ? "UTC_DAY" : undefined}>
-      <EChart option={option} height={CHART_HEIGHT.distribution} />
+      <div role="img" aria-label="Return distribution; exact values in the table below">
+        <EChart option={option} height={CHART_HEIGHT.distribution} />
+      </div>
       <ExactTable
         id="distribution"
         caption={daily ? "Daily return distribution, exact bucket edges" : "Return distribution, exact bucket edges"}

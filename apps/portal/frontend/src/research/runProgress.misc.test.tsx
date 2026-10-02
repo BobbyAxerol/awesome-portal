@@ -98,8 +98,10 @@ describe("S03 rate_trials_per_s", () => {
   it("prints the served decimal string exactly, with its unit", () => {
     view(IDENTITY, { rate_trials_per_s: "0.35084033613445376" });
     const node = $("[data-rate]")!;
+    // QA S03: two decimals on screen; the served string stays on the node and in the tooltip.
     expect(node.getAttribute("data-rate")).toBe("0.35084033613445376");
-    expect(node.textContent).toBe("rate 0.35084033613445376 trials/s");
+    expect(node.textContent).toBe("rate 0.35 trials/s");
+    expect(node.getAttribute("title")).toContain("0.35084033613445376");
   });
 
   it("a served null, or no field at all, is 'not published' — never 0 or a dash", () => {

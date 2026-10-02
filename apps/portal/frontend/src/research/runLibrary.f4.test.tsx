@@ -9,7 +9,7 @@ import { cleanup, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { RunLibrary, last30dSeries, statDisplay } from "./RunLibrary";
+import { RunLibrary, last30dSeries, last30dWindow, statDisplay } from "./RunLibrary";
 import type { RunLibraryItem, RunLibraryResponse } from "./runLibraryClient";
 import { researchState } from "./state";
 import type { LibraryFilters } from "./useRunLibrary";
@@ -74,6 +74,9 @@ describe("F4 S01 - last 30D", () => {
     expect(ret.textContent).toContain("last 30D return");
     expect(ret.textContent).toContain("−0.27%");
     expect(ret.querySelector("[title]")!.getAttribute("title")).toContain(v2.last_30d.return_fraction.value);
+    /* QA S01: the served window dates ride the value's tooltip - it is the sample's last 30 days, not the 30 before the run date. */
+    expect(last30dWindow(item)).not.toBeNull();
+    expect(ret.querySelector("[title]")!.getAttribute("title")).toContain(last30dWindow(item)!);
     expect(document.querySelector('[data-metric="LAST_30D_SHARPE"]')!.textContent).toContain("−2.21");
   });
 

@@ -166,7 +166,12 @@ export function patchSnapshot(prev: ProgressSnapshot, event: ProgressEvent): Pro
  * The progress snapshot is kept when the stream has already applied a newer
  * sequence, and the overall percentage is clamped so it never moves back.
  */
-export function mergeRead(prev: ProgressRead | null, next: ProgressRead): ProgressRead {
+export function mergeRead(prev: ProgressRead | null, incoming: ProgressRead): ProgressRead {
+  /* `claims` is optional on SSE read frames: a frame that omits it says nothing, so the last served four stay. */
+  const next: ProgressRead =
+    prev !== null && prev.run_id === incoming.run_id && incoming.claims === undefined && prev.claims !== undefined
+      ? { ...incoming, claims: prev.claims }
+      : incoming;
   if (prev === null || prev.run_id !== next.run_id || prev.progress === null || next.progress === null) return next;
   if (next.progress.latest_sequence < prev.progress.latest_sequence) return { ...next, progress: prev.progress };
   if (next.progress.overall.pct >= prev.progress.overall.pct) return next;
@@ -218,6 +223,12 @@ export interface RunProgressController {
   cancelling: boolean;
   cancelResult: CancelResponse | null;
   cancel: (reason: string) => void;
+  /** QA S03: read the snapshot again after a refused read (clears the refusal on success). */
+  retry: () => void;
+  retrying: boolean;
+  /** The console page's own refusal: an outage there is not "nothing was published". */
+  consoleRefusal: ProgressRefusal | null;
+  retryConsole: () => void;
 }
 
 export function useRunProgress(runId: string, workspaceId?: string): RunProgressController {
@@ -237,6 +248,9 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   const [cancelResult, setCancelResult] = useState<CancelResponse | null>(null);
   const [linesDropped, setLinesDropped] = useState(false);
   const [olderLines, setOlderLines] = useState<readonly ConsoleLine[]>([]);
+  const [retrying, setRetrying] = useState(false);
+  const [consoleRefusal, setConsoleRefusal] = useState<ProgressRefusal | null>(null);
+  const [consoleTry, setConsoleTry] = useState(0);
 
   /* The console ring. Never React state: a line per trial through state
      re-renders the whole screen (spec 03 pitfall 3). */
@@ -562,14 +576,27 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     const { latest_sequence, retention_floor_sequence } = read.progress;
     const after = Math.max(0, retention_floor_sequence - 1, latest_sequence - CONSOLE_WINDOW);
     setOldestAfter(after);
+    setConsoleRefusal(null);
     void progressApi
       .console(runId, after, workspaceId, controller.signal)
       .then((page) => appendLines(page.lines))
       .catch((error: unknown) => {
-        if (!controller.signal.aborted) fail(error);
+        if (controller.signal.aborted) return;
+        /* The console's refusal is its own state: the snapshot above it is still good. */
+        setConsoleRefusal(toProgressRefusal(error));
       });
     return () => controller.abort();
-  }, [appendLines, consoleAvailable, fail, runId, workspaceId]);
+  }, [appendLines, consoleAvailable, consoleTry, runId, workspaceId]);
+
+  const retryConsole = useCallback(() => {
+    bootstrappedConsoleRun.current = null;
+    setConsoleTry((n) => n + 1);
+  }, []);
+
+  const retry = useCallback(() => {
+    setRetrying(true);
+    void refresh().finally(() => setRetrying(false));
+  }, [refresh]);
 
   const loadOlder = useCallback(() => {
     const floor = read?.progress?.retention_floor_sequence ?? 0;
@@ -627,6 +654,26 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   /* Spec 03 §3.2: the cursor is written to the URL once the run is final, so
      the page can be shared — never while running, which would spam history. */
   const terminal = status !== null && !isLive(status);
+
+  /* QA S03 U15: a fold the reader picks is a history entry, so Back returns to the fold before it
+     instead of leaving the page. Live runs keep the address bar quiet (spec 03 §3.2). */
+  const pinFold = useCallback(
+    (fold: number) => {
+      setPinnedFold(fold);
+      if (!terminal || typeof window === "undefined") return;
+      const next = `#fold=${fold}`;
+      if (window.location.hash === next) return;
+      window.history.pushState(window.history.state, "", `${window.location.pathname}${window.location.search}${next}`);
+    },
+    [terminal],
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onPop = () => setPinnedFold(foldFromHash(window.location.hash));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   useEffect(() => {
     if (!terminal || foldCursor === null || typeof window === "undefined") return;
     const next = `#fold=${foldCursor}`;
@@ -684,11 +731,15 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     foldTrials,
     transport,
     foldCursor,
-    pinFold: setPinnedFold,
+    pinFold,
     bestObjective,
     liveRate,
     cancelling,
     cancelResult,
     cancel,
+    retry,
+    retrying,
+    consoleRefusal,
+    retryConsole,
   };
 }

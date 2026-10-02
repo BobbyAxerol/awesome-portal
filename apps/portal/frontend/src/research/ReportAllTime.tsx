@@ -14,6 +14,7 @@ import type { EnrichedAnalysis, EnrichedEpisode, EnrichedFact, EnrichedRead } fr
 import { ENRICHED_CHIP, enrichedBlock } from "./enrichedAnalysis";
 import { enrichedAbsenceTitle } from "./enrichedAvailability";
 import { formatMetric, shortDigest } from "./researchFormat";
+import { daysAndHours, monthWords, roundAxis } from "./reportText";
 
 const DAY = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const UTC = (ms: number) => `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")} UTC`;
@@ -66,11 +67,11 @@ const REFUSAL_WORDS: Record<string, string> = {
 
 /* ------------------------------------------------------------------------- facts */
 
-function FactCell({ label, fact, unit }: { label: string; fact: EnrichedFact; unit: "ratio" | "fraction" | "days" }) {
+function FactCell({ label, fact, unit, heading }: { label: string; fact: EnrichedFact; unit: "ratio" | "fraction" | "days"; heading?: string }) {
   const shown =
     fact.state === "AVAILABLE" && fact.value !== null
       ? unit === "days"
-        ? `${formatMetric(fact.value, "count")} d`
+        ? (daysAndHours(Number(fact.value) * 86400) ?? `${formatMetric(fact.value, "count")} d`)
         : formatMetric(fact.value, unit)
       : null;
   const title = [
@@ -83,7 +84,7 @@ function FactCell({ label, fact, unit }: { label: string; fact: EnrichedFact; un
     .join("\n");
   return (
     <div data-all-time-fact={label} data-fact-state={fact.state}>
-      <dt>{label}</dt>
+      <dt>{heading ?? label}</dt>
       <dd title={title} aria-label={`${label} ${shown ?? "not published"}, ${word(fact.origin)}`} data-exact={fact.value ?? undefined}>
         {shown !== null ? shown : <AbsentLine state={fact.state} reason={fact.reason_code} what="" />}
       </dd>
@@ -124,47 +125,127 @@ function path(points: readonly { at_utc_ms: number; value: string }[], x0: numbe
     .join(" ");
 }
 
+/** The drawn range of a curve, rounded for the axis; the exact strings ride the title. */
+function rangeOf(points: readonly { value: string }[]): { low: string; high: string; lowText: string; highText: string } | null {
+  const ys = points.map((point) => Number(point.value));
+  if (ys.length === 0 || ys.some((y) => !Number.isFinite(y))) return null;
+  const lo = Math.min(...ys);
+  const hi = Math.max(...ys);
+  const lowText = points.find((point) => Number(point.value) === lo)?.value ?? "";
+  const highText = points.find((point) => Number(point.value) === hi)?.value ?? "";
+  return { low: roundAxis(lowText), high: roundAxis(highText), lowText, highText };
+}
+
+/**
+ * QA S09 (UX-10): the strategy and the market benchmark do not share one y-scale. At +1.7% against +34% a shared
+ * scale drew the strategy flat. Each curve has its own panel and its own labelled range, on one time axis; the
+ * benchmark panel says "own scale", so no reader compares the two slopes by eye.
+ */
 function Curve({ block }: { block: EnrichedAnalysis }) {
   const strategy = block.curves.strategy_rebased_100;
   const benchmark = block.curves.benchmark_rebased_100;
-  const all = [...strategy, ...benchmark];
   if (strategy.length < 2) {
     return <AbsentLine state="NOT_PUBLISHED" reason={null} what="strategy curve" />;
   }
-  const xs = all.map((point) => point.at_utc_ms);
-  const ys = all.map((point) => Number(point.value));
+  const xs = [...strategy, ...benchmark].map((point) => point.at_utc_ms);
   const x0 = Math.min(...xs);
   const x1 = Math.max(...xs);
-  const y0 = Math.min(...ys);
-  const y1 = Math.max(...ys);
-  const lineS = path(strategy, x0, x1, y0, y1);
-  const lineB = benchmark.length > 1 ? path(benchmark, x0, x1, y0, y1) : null;
-  if (lineS === null) return <AbsentLine state="NOT_PUBLISHED" reason={null} what="strategy curve" />;
+  const rangeS = rangeOf(strategy);
+  const rangeB = benchmark.length > 1 ? rangeOf(benchmark) : null;
+  const lineS = rangeS ? path(strategy, x0, x1, Number(rangeS.lowText), Number(rangeS.highText)) : null;
+  const lineB = rangeB ? path(benchmark, x0, x1, Number(rangeB.lowText), Number(rangeB.highText)) : null;
+  if (lineS === null || rangeS === null) return <AbsentLine state="NOT_PUBLISHED" reason={null} what="strategy curve" />;
   const sampling = block.curves.sampling;
-  const label = `strategy${lineB !== null ? " and benchmark" : ""}, rebased to 100, all time, ${sampling.emitted_point_count} of ${sampling.source_observation_count} points`;
-  const lowText = all.find((point) => Number(point.value) === y0)?.value ?? "";
-  const highText = all.find((point) => Number(point.value) === y1)?.value ?? "";
+  const label = `strategy${lineB !== null ? " and market benchmark on their own scales" : ""}, rebased to 100, all time, ${sampling.emitted_point_count} of ${sampling.source_observation_count} points`;
   return (
     <div data-all-time-curve data-has-benchmark={lineB !== null ? "true" : "false"}>
+      <p className="rr-at-sub" data-curve-range="strategy" title={`range of the drawn points: ${rangeS.lowText} to ${rangeS.highText}`}>
+        <span style={{ color: "var(--role-oos)" }}>strategy · rebased 100</span>
+        <span>
+          {rangeS.low} – {rangeS.high}
+        </span>
+      </p>
       <svg className="rr-at-curve" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label}>
         <title>{`${label}\n${block.scope.locator}`}</title>
-        {lineB !== null ? <polyline points={lineB} fill="none" stroke="var(--ink-faint)" strokeWidth={1.2} strokeDasharray="5 4" vectorEffect="non-scaling-stroke" /> : null}
         <polyline points={lineS} fill="none" stroke="var(--role-oos)" strokeWidth={1.8} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
+      {lineB !== null && rangeB !== null ? (
+        <>
+          <p className="rr-at-sub" data-curve-range="benchmark" title={`range of the drawn points: ${rangeB.lowText} to ${rangeB.highText}`}>
+            <span>market benchmark (portal) · own scale</span>
+            <span>
+              {rangeB.low} – {rangeB.high}
+            </span>
+          </p>
+          <svg className="rr-at-curve" style={{ height: 56 }} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true" data-benchmark-curve>
+            <polyline points={lineB} fill="none" stroke="var(--ink-faint)" strokeWidth={1.2} strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />
+          </svg>
+        </>
+      ) : null}
       <div className="rr-at-axis">
         <span>{DAY(x0)}</span>
-        <span title={`range of the drawn points: ${lowText} to ${highText}`}>
-          {lowText} – {highText}
-        </span>
         <span>{DAY(x1)}</span>
       </div>
       <p className="rr-at-sub" style={{ marginTop: 2 }}>
         <span data-curve-legend>
-          <span style={{ color: "var(--role-oos)" }}>strategy</span>
-          {lineB !== null ? " · benchmark dashed" : benchmark.length === 0 ? " · benchmark not published" : ""}
+          {benchmark.length === 0 ? "market benchmark not published" : lineB !== null ? "market benchmark dashed, own scale" : ""}
         </span>
         <span data-curve-sampling title={`${sampling.method} · extrema kept`}>
           {sampling.emitted_point_count} of {sampling.source_observation_count} points
+        </span>
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ distribution */
+
+/**
+ * QA S09 (UX-11 / inventory 42): the daily-return histogram the API already serves. Bars are the served counts,
+ * scaled to the tallest bar (layout only); each bar's exact edges and count ride its title and the table below.
+ */
+function Distribution({ block }: { block: EnrichedAnalysis }) {
+  const head = block.return_distribution;
+  if (head.state !== "AVAILABLE" || head.buckets.length === 0) {
+    return <AbsentLine state={head.state} reason={head.reason_code} what="return distribution" />;
+  }
+  const tallest = Math.max(...head.buckets.map((bucket) => bucket.count), 1);
+  const first = head.buckets[0]!;
+  const last = head.buckets[head.buckets.length - 1]!;
+  const edge = (value: string) => formatMetric(value, "fraction") ?? value;
+  const width = 100 / head.buckets.length;
+  return (
+    <div data-all-time-distribution data-bucket-count={head.buckets.length}>
+      <svg className="rr-at-curve" style={{ height: 80 }} viewBox="0 0 100 60" preserveAspectRatio="none" role="img" aria-label={`daily return distribution, ${head.buckets.length} buckets, ${head.observation_count} days`}>
+        {head.buckets.map((bucket, index) => {
+          const height = (bucket.count / tallest) * 56;
+          const zeroBucket = Number(bucket.lower_inclusive) < 0 && Number(bucket.upper) >= 0;
+          return (
+            <rect
+              key={index}
+              data-bucket={index}
+              data-count={bucket.count}
+              data-lower={bucket.lower_inclusive}
+              data-upper={bucket.upper}
+              x={index * width + 0.4}
+              y={58 - height}
+              width={width - 0.8}
+              height={height}
+              fill={zeroBucket ? "var(--ink-soft)" : "var(--role-oos)"}
+              opacity={0.75}
+            >
+              <title>{`${edge(bucket.lower_inclusive)} to ${edge(bucket.upper)} · ${bucket.count} ${bucket.count === 1 ? "day" : "days"}`}</title>
+            </rect>
+          );
+        })}
+        <line x1={0} x2={100} y1={58.5} y2={58.5} stroke="var(--line)" strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <p className="rr-at-sub" style={{ marginTop: 2 }}>
+        <span title={`${first.lower_inclusive} to ${last.upper}`}>
+          {edge(first.lower_inclusive)} to {edge(last.upper)}
+        </span>
+        <span data-distribution-count title={`tallest bar ${tallest} days`}>
+          {formatMetric(head.observation_count, "count")} days
         </span>
       </p>
     </div>
@@ -212,9 +293,7 @@ function Months({ block }: { block: EnrichedAnalysis }) {
                 }
               />
               <span style={{ color: colour }}>{shown}</span>
-              <span style={{ color: "var(--ink-faint)" }}>
-                {month.slice(5).replace(/^0/, "")}/{month.slice(2, 4)}
-              </span>
+              <span style={{ color: "var(--ink-faint)" }}>{monthWords(row.month_start_utc_ms)}</span>
             </span>
           );
         })}
@@ -280,7 +359,9 @@ function Episodes({ block }: { block: EnrichedAnalysis }) {
                 <td style={{ color: "var(--bad)" }} data-exact={episode.depth_fraction}>
                   {formatMetric(episode.depth_fraction, "fraction") ?? episode.depth_fraction}
                 </td>
-                <td>{formatMetric(episode.duration_seconds, "seconds") ?? `${episode.duration_seconds} s`}</td>
+                <td title={`${episode.duration_seconds} s`} data-exact={episode.duration_seconds}>
+                  {daysAndHours(episode.duration_seconds) ?? `${episode.duration_seconds} s`}
+                </td>
                 <td style={{ color: open ? "var(--accent-2)" : undefined }}>{open ? "open" : DAY(episode.recovery_utc_ms as number)}</td>
               </tr>
             );
@@ -346,7 +427,8 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
           <div className="rr-at">
             <dl className="rr-at-facts" data-all-time-facts>
               <SummaryCell label="return" value={block.library_summary.return_fraction} block={block} unit="fraction" />
-              <FactCell label="Sharpe" fact={block.facts.metrics.sharpe} unit="ratio" />
+              {/* QA S09 (UX-3): three Sharpe figures exist for one run; this one is the all-time OOS Sharpe, and says so. */}
+              <FactCell label="Sharpe" heading="Sharpe · all-time OOS" fact={block.facts.metrics.sharpe} unit="ratio" />
               <FactCell label="CAGR" fact={block.facts.metrics.cagr_fraction} unit="fraction" />
               <FactCell label="volatility" fact={block.facts.metrics.volatility_fraction} unit="fraction" />
               <SummaryCell label="max DD" value={block.library_summary.max_drawdown_fraction} block={block} unit="fraction" />
@@ -359,6 +441,9 @@ export function AllTimeSupplement({ read, absentCode = null }: { read: EnrichedR
               </Sub>
               <Sub title="drawdown episodes">
                 <Episodes block={block} />
+              </Sub>
+              <Sub title="daily return distribution">
+                <Distribution block={block} />
               </Sub>
             </div>
           </div>

@@ -802,7 +802,9 @@ describe("D7 · a refusal or an unusable window stops playback and says why", ()
     /* A different read, the reader's, is refused too: it must not be swallowed by the earlier note. */
     fireEvent.click(m.container.querySelector("[data-action='next-window']")!);
     await waitFor(() => expect(m.container.querySelectorAll("[data-page-refusal]")).toHaveLength(1));
-    expect(m.container.querySelector("[data-page-refusal]")?.textContent).toBe(REPLAY_REFUSAL_COPY[503]);
+    expect(m.container.querySelector("[data-page-refusal]")?.textContent).toContain(REPLAY_REFUSAL_COPY[503]);
+    /* QA S08: a refused read that may be repeated offers one explicit Retry. */
+    expect(m.container.querySelector("[data-page-refusal] [data-action='retry-window']")).toBeTruthy();
   });
 
   it("a sequence gap is said as the gap it is, not as a generic refusal", async () => {

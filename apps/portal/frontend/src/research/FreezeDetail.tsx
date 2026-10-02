@@ -1415,7 +1415,8 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
                   ?? (fold.oos_generation_child.candidate_id ? `QuantBT candidate ${fold.oos_generation_child.candidate_id} · child #${fold.oos_generation_child.audit_ordinal}` : undefined)}
               >
                 {CHILD_WORDS[fold.oos_generation_child.state]}
-                {fold.oos_generation_child.candidate_id ? ` · ${shortDigest(fold.oos_generation_child.candidate_id, 12)}` : ""}
+                {/* D3: this is the engine's candidate id, not a params digest — it is labelled as what it is. */}
+                {fold.oos_generation_child.candidate_id ? ` · candidate ${shortDigest(fold.oos_generation_child.candidate_id, 12)}` : ""}
               </span>
             </li>
           ))}
@@ -1630,7 +1631,7 @@ export function FreezeScreen({
         </span>
         <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
-          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/search`, cursor)}
+          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/search`, { ...cursor, stage: "search" })}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-action="back-to-search"

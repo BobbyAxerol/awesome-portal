@@ -33,6 +33,8 @@ import {
   type SplitRefusal,
 } from "./splitClient";
 import { researchState, type ResearchState } from "./state";
+import { PortalApiError } from "../lib/api";
+import { progressApi, type ProgressRead } from "./progressClient";
 import { refusalState } from "./researchRefusal";
 import { isRetainedAnswer, useRunIdentity, type RunIdentitySlot } from "./retainedLane";
 import { searchApi, NOT_MODIFIED as SEARCH_NOT_MODIFIED, type CurrentSourceSearch } from "./searchClient";
@@ -101,6 +103,28 @@ export function forgetSplitReads(): void {
 
 /** Typed not-applicable answers, per run: final, so a revisit does not ask again. */
 const laneAnswers = new Map<string, LaneNotApplicable>();
+
+/**
+ * QA S05: a run the state machine already closed without a seal has no retained
+ * source, and asking the lane for it is a request that can only answer 409
+ * (a console error on every visit). The run's own state says so first.
+ */
+export function endedWithoutSource(read: ProgressRead): boolean {
+  /* A body that is not a progress read says nothing about the run: ask the lane as before. */
+  const status = (read as Partial<ProgressRead> | null)?.current?.effective_status;
+  if (status !== "FAILED" && status !== "CANCELLED") return false;
+  return read.progress == null || read.progress.readiness?.mandatory !== "SEALED";
+}
+
+/** The typed refusal a skipped lane read stands in for: exactly what the 409 would have said. */
+function terminalWithoutSource(): { refusal: SplitRefusal; laneState: LaneState } {
+  return {
+    refusal: toSplitRefusal(
+      new PortalApiError("This run ended without a retained current-source artifact.", 409, "RESEARCH_CURRENT_SOURCE_CONFLICT", null),
+    ),
+    laneState: "NOT_RETAINED_TERMINAL",
+  };
+}
 
 /** FE-S05-04: the source has not reported yet — pending, not empty. */
 export function isPendingSource(detail: SplitDetail): boolean {
@@ -183,6 +207,41 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
     return () => controller.abort();
   }, [generation, key, runId, workspaceId]);
 
+  /** One lane read. Skipped, with the answer it would have given, for a run that ended without a seal. */
+  const loadFolds = useCallback(() => {
+    setFolds({ runId, slot: { state: "loading" } });
+    const ask = () =>
+      splitApi
+        .currentSource(runId, { workspaceId })
+        .then((answer) => {
+          if (answer === NOT_MODIFIED) return;
+          if (isLaneNotApplicable(answer)) {
+            laneAnswers.set(key, answer);
+            setFolds({ runId, slot: { state: "not-applicable", answer } });
+            return;
+          }
+          setFolds({ runId, slot: { state: "ready", split: answer } });
+        })
+        .catch((error: unknown) =>
+          setFolds({
+            runId,
+            slot: { state: "refused", refusal: toSplitRefusal(error), laneState: laneStateOf(error) },
+          }),
+        );
+    /* Any trouble with this pre-check falls through to the lane read, exactly as before. */
+    void progressApi
+      .read(runId, workspaceId)
+      .then((read) => (endedWithoutSource(read) ? "skip" : "ask"), () => "ask" as const)
+      .then((verdict) => {
+        if (verdict === "skip") {
+          const { refusal, laneState } = terminalWithoutSource();
+          setFolds({ runId, slot: { state: "refused", refusal, laneState } });
+          return;
+        }
+        return ask();
+      });
+  }, [key, runId, workspaceId]);
+
   const ensureFolds = useCallback(() => {
     if (detail === null) return;
     if (foldsAskedFor.current === key) return;
@@ -192,27 +251,21 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
       setFolds({ runId, slot: { state: "not-applicable", answer: known } });
       return;
     }
-    setFolds({ runId, slot: { state: "loading" } });
-    splitApi
-      .currentSource(runId, { workspaceId })
-      .then((answer) => {
-        if (answer === NOT_MODIFIED) return;
-        if (isLaneNotApplicable(answer)) {
-          laneAnswers.set(key, answer);
-          setFolds({ runId, slot: { state: "not-applicable", answer } });
-          return;
-        }
-        setFolds({ runId, slot: { state: "ready", split: answer } });
-      })
-      .catch((error: unknown) =>
-        setFolds({
-          runId,
-          slot: { state: "refused", refusal: toSplitRefusal(error), laneState: laneStateOf(error) },
-        }),
-      );
-  }, [detail, key, runId, workspaceId]);
+    loadFolds();
+  }, [detail, key, loadFolds, runId]);
 
   const slot: FoldsSlot = folds.runId !== runId ? { state: "idle" } : folds.slot;
+  /* QA S05: Retry after a refused lane read asks the lane again; a typed final answer is never re-asked. */
+  const slotRef = useRef<FoldsSlot>(slot);
+  slotRef.current = slot;
+  const reread = useCallback(() => {
+    setGeneration((n) => n + 1);
+    const current = slotRef.current;
+    if (current.state === "refused" && current.laneState !== "NOT_RETAINED_TERMINAL" && current.laneState !== "NOT_RETAINED_LEGACY") {
+      foldsAskedFor.current = key;
+      loadFolds();
+    }
+  }, [key, loadFolds]);
   const retainedSplit = retainedSplitOf(detail, slot);
   const retained = useRetainedFacts(runId, workspaceId, retainedSplit !== null);
 
@@ -223,7 +276,7 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
     folds: slot,
     retained: retainedSplit !== null ? retained : null,
     ensureFolds,
-    reread: useCallback(() => setGeneration((n) => n + 1), []),
+    reread,
   };
 }
 

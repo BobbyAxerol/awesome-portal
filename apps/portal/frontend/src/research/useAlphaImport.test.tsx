@@ -108,7 +108,7 @@ const GATES_OK: [number, unknown] = [
 async function registerDraft(result: { current: ReturnType<typeof useAlphaImport> }) {
   await waitFor(() => expect(result.current.registry).toHaveLength(1));
   await act(async () => result.current.onSourceChange("def run(): ...", "a.py"));
-  await act(async () => result.current.onAlphaIdChange("delta_rsi_polynomial"));
+  await act(async () => result.current.onAlphaIdChange("delta-rsi-polynomial"));
   await act(async () => result.current.onParse());
   await waitFor(() => expect(result.current.parse).not.toBeNull());
   await act(async () => result.current.onRunGates());

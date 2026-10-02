@@ -10,12 +10,10 @@
  * computes: every word and state is the sealed core's.
  */
 
-import { Link } from "react-router-dom";
-
 import type { FinalAudit, FrozenCoreFailed } from "./reportClient";
 import { STAGE_CHECK_WORDS, STAGE_LABEL } from "./reportClient";
-import { releaseCandidateHref } from "./releaseCandidateClient";
-import { foldLabel, shortDigest } from "./researchFormat";
+import { foldLabel, shortDigest, shortId } from "./researchFormat";
+import { runLabelOrShortId } from "./runLabels";
 import { reasonCodeSentence } from "./researchRefusal";
 import { iso } from "./utcMinute";
 
@@ -34,7 +32,7 @@ function Absent({ code }: { code: string | null }) {
   );
 }
 
-export function FailedSheet({ core, runId, seriesUnavailable }: { core: FrozenCoreFailed; runId: string; seriesUnavailable: string }) {
+export function FailedSheet({ core, seriesUnavailable }: { core: FrozenCoreFailed; runId?: string; seriesUnavailable: string }) {
   const outcome = core.outcome;
   return (
     <>
@@ -58,9 +56,7 @@ export function FailedSheet({ core, runId, seriesUnavailable }: { core: FrozenCo
           {outcome.failure_message ? <span data-failure-message> — {outcome.failure_message}</span> : null}
         </p>
         <p className="rr-caption" style={{ color: "var(--ink-soft)" }}>
-          {outcome.state === "CANCELLED" ? "cancelled" : "failed"} {iso(outcome.failed_at_utc_ms)} · terminal progress sequence{" "}
-          {outcome.terminal_sequence} · mandatory bundle {core.mandatory_bundle.toLowerCase()}. A run that ended without a
-          sealed claim reports no metric, no equity path and no fold verdict.
+          {outcome.state === "CANCELLED" ? "cancelled" : "failed"} {iso(outcome.failed_at_utc_ms)} · no metric, equity path or fold verdict is reported
         </p>
         </div>
       </section>
@@ -72,7 +68,12 @@ export function FailedSheet({ core, runId, seriesUnavailable }: { core: FrozenCo
             <div key={field.key} className="contents" data-identity={field.key}>
               <dt className="k">{field.label}</dt>
               <dd className="v rr-long">
-                {field.value !== null && field.availability.state === "AVAILABLE" ? field.value : <Absent code={field.availability.reason_code} />}
+                {field.value !== null && field.availability.state === "AVAILABLE" ? (
+                  /* QA S09 (UX-22): an attempt or run id is a short id with the full one in the tooltip, never a 30-character token. */
+                  /^(rrun|ratt|rwa)_/.test(field.value) ? <span title={field.value}>{runLabelOrShortId(field.value) ?? shortId(field.value)}</span> : field.value
+                ) : (
+                  <Absent code={field.availability.reason_code} />
+                )}
               </dd>
             </div>
           ))}
@@ -143,11 +144,6 @@ export function FailedSheet({ core, runId, seriesUnavailable }: { core: FrozenCo
           <p className="rr-note" data-promotion-line>
             {core.promotion.line}
           </p>
-          <p className="rr-note no-print">
-            <Link to={releaseCandidateHref(runId)} data-action="promotion-release-candidate">
-              release candidate screen →
-            </Link>
-          </p>
         </section>
         <section data-panel="provenance" aria-label="provenance of this report">
           <h2 className="rr-t2">Provenance of this report</h2>
@@ -161,8 +157,8 @@ export function FailedSheet({ core, runId, seriesUnavailable }: { core: FrozenCo
 }
 
 const AUDIT_WORDS: Record<FinalAudit["kind"], string> = {
-  REUSED_ORIGINAL: "reused original — this run is its own final audit",
-  LINKED_CHILD: "linked child — a separate audit-of-selection run",
+  REUSED_ORIGINAL: "this run is its own final audit",
+  LINKED_CHILD: "a separate audit run",
   NOT_PUBLISHED: "not published",
 };
 
@@ -174,22 +170,32 @@ export function FinalAuditBlock({ audit }: { audit: FinalAudit }) {
       <div className="b">
       <p className="rr-note" data-final-audit-kind>
         {AUDIT_WORDS[audit.kind]}
-        {audit.final_audit_run_id ? <span className="rr-long"> · {audit.final_audit_run_id}</span> : null}
+        {audit.final_audit_run_id ? (
+          <span className="rr-long" title={audit.final_audit_run_id}>
+            {" · "}
+            {runLabelOrShortId(audit.final_audit_run_id)}
+          </span>
+        ) : null}
         {audit.kind === "NOT_PUBLISHED" && audit.reason_code ? <span className="rr-reason"> · {audit.reason_code}</span> : null}
       </p>
       {audit.kind !== "NOT_PUBLISHED" ? (
         <p className="rr-note" data-optimizer-reinvoked={String(audit.optimizer_reinvoked)}>
-          optimizer re-invoked:{" "}
-          <strong>{audit.optimizer_reinvoked === null ? "not determined" : audit.optimizer_reinvoked ? "yes" : "no"}</strong>
-          {audit.optimizer_basis ? <span className="rr-reason"> · {audit.optimizer_basis}</span> : null}
-          {audit.audit_target_kind ? <span className="rr-reason"> · target {audit.audit_target_kind}</span> : null}
+          <strong title={[audit.optimizer_basis, audit.audit_target_kind ? `target ${audit.audit_target_kind}` : null].filter(Boolean).join(" · ") || undefined}>
+            {audit.optimizer_reinvoked === null ? "optimizer re-run not determined" : audit.optimizer_reinvoked ? "optimizer re-run" : "optimizer not re-run"}
+          </strong>
         </p>
       ) : null}
       {audit.folds.length > 0 ? (
         <p className="rr-caption" data-final-audit-folds>
-          {audit.folds
-            .map((fold) => `${foldLabel(fold.fold_id)}: child #${fold.audit_ordinal ?? "—"} ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? "= θ*" : fold.state.toLowerCase().replace(/_/g, " ")}`)
-            .join(" · ")}
+          {(() => {
+            /* QA S09: nine identical "child #n abc = theta*" entries are one sentence. */
+            const first = audit.folds[0]!;
+            const same = audit.folds.every((fold) => fold.state === "MATCH" && fold.candidate_id === first.candidate_id);
+            if (same && first.candidate_id) return `all ${audit.folds.length} folds ran the frozen candidate ${first.candidate_id.slice(0, 8)}`;
+            return audit.folds
+              .map((fold) => `${foldLabel(fold.fold_id)}: ${fold.candidate_id ? fold.candidate_id.slice(0, 8) : "—"} ${fold.state === "MATCH" ? "= θ*" : fold.state.toLowerCase().replace(/_/g, " ")}`)
+              .join(" · ");
+          })()}
         </p>
       ) : null}
       {audit.source_refs.length > 0 ? (

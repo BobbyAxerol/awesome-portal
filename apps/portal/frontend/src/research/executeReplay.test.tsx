@@ -425,12 +425,12 @@ describe("S08-E16R1 — the retained OHLC overview on the P04 hub lane", () => {
     expect(strip.querySelectorAll("svg line").length).toBe(4);
     const caption = block.querySelector("[data-overview-caption]")!.textContent!;
     expect(caption).toContain("out-of-sample window · 240 bars");
-    expect(caption).toContain("→ 4 candles of 60");
+    expect(caption).toContain("4 candles (60 bars each)");
     // The long sentence is a tooltip now (VD-TEXT-01); the downsample itself stays on the caption.
     expect(caption).not.toContain("true extreme");
     expect(block.querySelector("[data-overview-caption]")!.getAttribute("title")).toContain("true extremes of its bars");
-    // The caption prints the envelope, so a reader can check the range drawn.
-    expect(caption).toContain("59400.00 – 62700.00");
+    // T-07: the envelope is the tooltip (grouped like the axis); the caption keeps the counts.
+    expect(block.querySelector("[data-overview-caption]")!.getAttribute("title")).toContain("range 59,400.00 – 62,700.00");
   });
 
   it("keeps the per-bar candle ledger absent: a summary is not a bar ledger", () => {
@@ -511,7 +511,8 @@ describe("S08-U04 — every hi-fi panel keeps its place with a published reason"
   it("draws samples in the ledger and calls them samples, not events", () => {
     renderScreen(controllerOf(replay()));
     const ledger = document.querySelector('[data-panel="event-ledger"]')!;
-    expect(ledger.textContent).toContain("samples around the playhead — not events");
+    /* T-16: the filler sentence is gone; the panel title already says what the rows are. */
+    expect(ledger.textContent).not.toContain("not events");
     expect(ledger.querySelectorAll("[data-sample-row]").length).toBe(14);
     expect(document.body.textContent).not.toMatch(/\bFILL\b|\bORDER_NEW\b|\bSIGNAL\b/);
   });
@@ -1005,5 +1006,76 @@ describe("F2b · S08 draws ONE overview: candle_overview, with market_overview o
     renderScreen(controllerOf(replay()));
     expect(document.querySelector("[data-action='previous-window']")!.textContent).toBe("‹ earlier");
     expect(document.querySelector("[data-action='next-window']")!.textContent).toBe("later ›");
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * QA 2026-10-02 · S08 — the hub-lane fixes
+ * ------------------------------------------------------------------------ */
+
+describe("QA S08 UX-03 · a failed retained read is not 'the source did not publish a replay'", () => {
+  const unpublished = () => replay({ route: "NOT_PUBLISHED" });
+  const refused = (status: number | null) => ({
+    state: "refused" as const,
+    refusal: toReplayRefusal(status === null ? new Error("offline") : new PortalApiError(`${status}`, status, null, null), "retained"),
+  });
+  const panel = () => document.querySelector("[data-research-panel='stitched account — retained walk-forward lane']");
+
+  it.each([403, 404])("a %i is a denied state in the screen's own words; the hub's 'did not publish' sentence is not drawn", (status) => {
+    renderScreen(controllerOf(unpublished(), { retained: refused(status) }));
+    expect(panel()?.getAttribute("data-state")).toBe("denied");
+    expect(panel()?.textContent).toContain(REPLAY_REFUSAL_COPY[403]);
+    expect(document.body.textContent).not.toMatch(/did not publish a replay|not published|readiness/i);
+    expect(document.querySelector("[data-action='retry-retained']")).toBeNull();
+  });
+
+  it.each([500, 503, null])("a %s is unavailable with one Retry that re-sends the same read", (status) => {
+    const retryRetained = vi.fn();
+    renderScreen(controllerOf(unpublished(), { retained: refused(status), retryRetained }));
+    expect(panel()?.getAttribute("data-state")).toBe(status === null ? "failed-retryable" : "unavailable");
+    expect(document.body.textContent).not.toMatch(/did not publish a replay/i);
+    fireEvent.click(document.querySelector("[data-action='retry-retained']")!);
+    expect(retryRetained).toHaveBeenCalledTimes(1);
+  });
+
+  it("a 409 is the lane's typed 'no sealed source yet': the existing hub answer stays, not an error panel", () => {
+    renderScreen(controllerOf(unpublished(), { retained: refused(409) }));
+    expect(panel()).toBeNull();
+    expect(document.querySelector("[data-route-state='NOT_PUBLISHED']")).toBeTruthy();
+  });
+
+  it("a retained lane that answered is untouched (value path)", () => {
+    renderScreen(controllerOf(replay()));
+    expect(panel()).toBeNull();
+    expect(document.querySelector("[data-route-state='RETROSPECTIVE_EQUITY_ONLY']")).toBeTruthy();
+  });
+});
+
+describe("QA S08 · filler sentences are gone from the hub lane", () => {
+  it("T-15: the partial-state banner is two words, not a restatement of the chips below it", () => {
+    expect(replayState(replay()).reason).toBe("Equity samples only.");
+  });
+
+  it("T-16 / T-23: no 'around the playhead' filler, no route-aware note, and the missing-input panels say what is missing", () => {
+    renderScreen(controllerOf(replay()));
+    const text = document.body.textContent ?? "";
+    expect(text).not.toContain("around the playhead");
+    expect(text).not.toContain("SL/TP, OCO and multi-leg: not published.");
+    expect(text).not.toContain("Needs trades and their price paths");
+    expect(document.querySelector("[data-absent-panel='mae-mfe']")?.textContent).toContain("Needs trade records (not published).");
+    expect(document.querySelector("[data-absent-panel='pnl-distribution']")?.textContent).toContain("Needs trade records (not published).");
+    /* The typed absence itself stays: the route-aware panel still names each capability with its code. */
+    expect(document.querySelector("[data-absent-panel='route-panel'] [data-reason-code]")).toBeTruthy();
+  });
+
+  it("T-18: the receipt-budget overview absence reads as one short sentence; the served code stays", () => {
+    renderScreen(controllerOf(replay({ overviewReason: "P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET" })));
+    const block = document.querySelector("[data-candle-overview]")!;
+    expect(block.querySelector("[data-overview-note]")!.textContent).toBe("No price overview stored for this run.");
+    expect(block.querySelector("[data-reason-code]")!.textContent).toBe("P13_CANDLE_OVERVIEW_EXCEEDS_RECEIPT_BYTE_BUDGET");
+  });
+
+  it("T-19: the retained-lane 409 is one short sentence", () => {
+    expect(toReplayRefusal(new PortalApiError("409", 409, null, null), "retained").message).toBe("No retained source for this run yet.");
   });
 });

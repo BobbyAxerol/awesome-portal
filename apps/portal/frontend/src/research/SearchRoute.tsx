@@ -33,6 +33,11 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
     (trialId: string) => update({ carried: { ...(carried ?? {}), pick: trialId } }),
     [carried, update],
   );
+  /* D9: letting go of the pick drops only `pick=`; every other carried key stays. */
+  const onClear = useCallback(() => {
+    const { pick: _dropped, ...rest } = carried ?? {};
+    update({ carried: rest });
+  }, [carried, update]);
   /* RF-06: the search read publishes no fold set. Where this run already
      published one (the hub's `fold_navigation`, S05's fold plan), a fold it
      never observed is clamped here exactly as there — before it is sent. */
@@ -89,6 +94,7 @@ export function SearchRoute({ embedded = false }: { embedded?: boolean } = {}) {
         modeReads={modeReads}
         pick={pick}
         onPick={onPick}
+        onClear={onClear}
         ensureLedger={search.ensureLedger}
         onReread={search.reread}
         embedded={embedded}

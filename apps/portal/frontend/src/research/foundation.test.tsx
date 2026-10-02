@@ -241,7 +241,7 @@ describe("P09-T01 — the journey map renders the descriptor the server pinned",
 
     await waitFor(() => expect(document.querySelectorAll("[data-phase]")).toHaveLength(2));
     expect(document.querySelectorAll("[data-card]")).toHaveLength(5);
-    expect(screen.getByText("Journey Map — shipped portal × redesigned evidence flow")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Journey Map");
     expect(document.querySelector("[data-descriptor-digest]")?.textContent).toContain(
       "sha256:journey01",
     );
@@ -254,7 +254,11 @@ describe("P09-T01 — the journey map renders the descriptor the server pinned",
 
     for (const phase of Array.from(document.querySelectorAll("[data-phase]"))) {
       const cards = phase.querySelectorAll("[data-card]").length;
-      expect(phase.querySelectorAll("[data-arrow]")).toHaveLength(cards - 1);
+      /* QA UX-16: an arrow joins two sequential cards only, and none follows the last. */
+      expect(phase.querySelectorAll("[data-arrow]").length).toBeLessThanOrEqual(cards - 1);
+      expect(phase.querySelector("[data-phase-title]")).toBeTruthy();
+      const flow = phase.querySelector("[data-card]")!.parentElement!.parentElement!;
+      expect(flow.lastElementChild!.querySelector("[data-arrow]")).toBeNull();
     }
   });
 
@@ -431,6 +435,8 @@ describe("E12 — the map opens every screen this build serves (audit 00-3, D2)"
     /* The dead end is gone: no card says SELECT RUN with nowhere to select. */
     expect(card.getAttribute("data-card-unreachable")).toBeNull();
     expect(card.textContent).toContain("pick a run");
+    /* QA: the badge no longer says it a second time. */
+    expect(card.textContent).not.toContain("PICK A RUN");
   });
 
   it("an unserved key still greys out rather than becoming a run picker", async () => {
@@ -455,7 +461,7 @@ describe("E12 — the map opens every screen this build serves (audit 00-3, D2)"
     expect(card.getAttribute("data-card-unreachable")).toBeNull();
     expect(card.textContent).toContain("pick an alpha");
     expect(card.textContent).not.toContain("pick a run");
-    expect(card.textContent).toContain(PICK_ALPHA_BADGE);
+    expect(card.textContent).not.toContain(PICK_ALPHA_BADGE);
     expect(card.getAttribute("data-card-picks-alpha")).toBe("alpha_version_legacy");
     expect(card.getAttribute("data-card-picks-run")).toBeNull();
     /* Resolved against a row: the Alpha and the version both come from its binding. */
@@ -541,8 +547,8 @@ describe("P09-T03 — a journey deep link inspects and never dispatches", () => 
     expect(document.querySelector('[data-card-route^="/research/quantbt/atlas"]')?.getAttribute("data-card-route")).toBe(
       "/research/quantbt/atlas#tab=modes&run=rrun_abc123",
     );
-    // The sentence under the title is a tooltip now.
-    expect(document.querySelector("h1")?.getAttribute("title")).toContain("reading map");
+    // QA: the title says what the page is; no tooltip repeats it.
+    expect(document.querySelector("h1")?.getAttribute("title")).toBeNull();
     expect(document.body.textContent).not.toContain("A reading map of the domain");
   });
 
@@ -602,7 +608,9 @@ describe("P09-T04 — the Atlas renders from the manifest response", () => {
     expect(absent.getAttribute("data-atlas-facts-absent")).toBe(identity.facts_state);
     expect(absent.querySelector("[data-facts-state]")?.textContent).toBe("NOT_PUBLISHED");
     expect(absent.querySelector("[data-facts-reason]")?.textContent).toBe(identity.facts_reason);
-    expect(absent.textContent).toContain("route, mode and claim facts —");
+    /* QA S12: the server's one sentence, with its code as the tooltip - not a second line saying the same. */
+    expect(absent.querySelector("[data-facts-reason]")?.getAttribute("title")).toBe("NOT_PUBLISHED");
+    expect(absent.textContent).not.toContain("route, mode and claim facts —");
     /* The retired hard-coded claim is gone. */
     expect(document.body.textContent).not.toContain("not installed and cannot run");
     expect(document.querySelector("[role='tabpanel']")).toBeNull();
@@ -829,7 +837,7 @@ describe("P09-T09 — the composition survives a document-less render", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText("Journey Map — shipped portal × redesigned evidence flow")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Journey Map");
     expect(document.querySelectorAll("[data-legend-tag]")).toHaveLength(2);
     for (const name of ["journey", "deep link inspection"]) {
       const panel = document.querySelector(`[data-research-panel="${name}"]`) as HTMLElement;

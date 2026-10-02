@@ -352,8 +352,9 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
     expect(document.querySelector("[data-certificate]")?.getAttribute("data-certificate")).toBe("B");
     cleanup();
     view({ response: page([item({ certificate: { grade: null, availability: NOT_PUBLISHED } })]) });
-    expect(document.querySelector("[data-certificate]")?.getAttribute("data-certificate")).toBe("none");
-    expect(document.querySelector("[data-certificate]")?.textContent).toBe("cert —");
+    /* QA S01: `cert —` never held a value in 44 runs; an absent grade draws no pill, and the reason stays on the card. */
+    expect(document.querySelector("[data-certificate]")).toBeNull();
+    expect(document.querySelector("[data-run]")?.getAttribute("data-certificate-absent")).toBe(NOT_PUBLISHED.reason_code ?? "NOT_PUBLISHED");
   });
 
   it("renders a pending claim for a running run and never a completed one", () => {
@@ -410,7 +411,10 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
     expect(cell.getAttribute("data-motion")).toBeNull();
     const text = document.body.textContent ?? "";
     expect(text).toContain("S4");
-    expect(text).toContain("P06_RETRY_NOT_DISPATCHED");
+    /* QA S01: the token reads as words; the token itself is the tooltip. */
+    expect(text).toContain("retry not dispatched");
+    expect(text).not.toContain("P06_RETRY_NOT_DISPATCHED");
+    expect(document.querySelector('[data-metric="FAILURE_REASON"] [title]')?.getAttribute("title")).toBe("P06_RETRY_NOT_DISPATCHED");
   });
 
   it("keeps the lazy placeholder when no series is published", () => {

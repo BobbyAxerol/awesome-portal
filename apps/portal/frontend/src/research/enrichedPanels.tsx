@@ -131,7 +131,7 @@ export function EnrichedChip({ block, extra }: { block: EnrichedAnalysis; extra?
         .filter((part): part is string => part !== null)
         .join("\n")}
     >
-      {ENRICHED_CHIP}
+      portal-derived · {block.scope.window}
     </span>
     </span>
   );

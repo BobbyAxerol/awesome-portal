@@ -29,7 +29,7 @@ import { Link } from "react-router-dom";
 import { paletteNow } from "../charts/theme";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { reasonCodeSentence } from "./researchRefusal";
-import { foldLabel, formatCount, formatMetric, formatUtc, shortDigest, typographicMinus } from "./researchFormat";
+import { foldLabel, formatCount, formatMetric, formatUtc, typographicMinus } from "./researchFormat";
 import type { CurrentSourceSplit } from "./splitClient";
 import {
   REPLAY_GAP_WORDS,
@@ -47,27 +47,24 @@ import type { ProgressRead } from "./progressClient";
 import { retainedReadiness } from "./retainedLane";
 import { SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
 import { ACROSS_HELP, ACROSS_LABEL, pageRefusalWords, usePlayAcrossFolds, type PlayAcross } from "./usePlayAcrossFolds";
-import type { ChildAuditSlot, ReplayController, RetainedReplaySlot, TransitionsSlot } from "./useReplay";
+import { RETAINED_WINDOW_MAX, type ChildAuditSlot, type ReplayController, type RetainedReplaySlot, type TransitionsSlot } from "./useReplay";
 import { iso } from "./utcMinute";
 
 /* --------------------------------------------------------------- verbatim */
 
-/**
- * VD-TEXT-01: the route's one-line fact. The longer sentence ("markers are
- * target transitions, not audited fills...") is gone: the legend says what a
- * marker is and each absent panel carries the server's own reason. A count the
- * source did not publish says so; it is never printed as 0.
+/*
+ * QA S08 T-01: the route's one-line "close_target_v2 · … · 0 orders · 0 fills ·
+ * 0 trades" is gone. The tile carries the counts (labelled as records the
+ * source published) and the capability chips carry the typed absences; the line
+ * duplicated the one and contradicted the other.
  */
-export const CLOSE_TARGET_NOTICE = (orders: number | null, fills: number | null, trades: number | null) =>
-  `close_target_v2 · close-only accounting · ${counted(orders, "orders")} · ${counted(fills, "fills")} · ${counted(trades, "trades")}`;
 
 export const REVEAL_NOTE = "Hides everything after the cursor — no re-run.";
 
 export const REVEAL_HIDDEN = "hidden by causal reveal";
 
-function counted(value: number | null, noun: string): string {
-  return value === null ? `${noun} not published` : `${formatCount(value)} ${noun}`;
-}
+/** QA S08 UX-12: the short form for the repeated places (fold chips, later ledger rows). */
+export const REVEAL_HIDDEN_SHORT = "hidden";
 
 /** A served count, grouped; an unpublished one says so (never `0`, never a dash). */
 function countCell(value: number | null): string {
@@ -114,7 +111,8 @@ type ClaimFactLike = {
 function claimToken(slotState: string | undefined, fact: ClaimFactLike | undefined): ReactNode {
   if (slotState !== "ready") return "reading…";
   if (fact === undefined) return "not published";
-  if (fact.value !== null) return String(fact.value);
+  /* QA S08 T-08: snake_case is the server's token; the words read, the token is the tooltip. */
+  if (fact.value !== null) return typeof fact.value === "string" ? <span title={fact.value} data-claim-token={fact.value}>{words(fact.value)}</span> : String(fact.value);
   const code = fact.reason_code ?? fact.availability.reason_code;
   return (
     <>
@@ -132,8 +130,8 @@ function claimToken(slotState: string | undefined, fact: ClaimFactLike | undefin
 function FoldParamsText({ params }: { params: FoldParams }) {
   if (params.state === "value") {
     return (
-      <span data-fold-params={params.digest} title={params.digest}>
-        params {shortDigest(params.digest, 8)}
+      <span data-fold-params={params.digest} title={`params ${params.digest}`}>
+        params
       </span>
     );
   }
@@ -168,6 +166,13 @@ const FOLD_CAPITAL_POLICY_WORDS: Record<string, string> = {
   close_at_boundary: "closed at each fold boundary",
 };
 
+/** QA S08 T-12 / UX-20: the KPI tile's value is one word and the rest is its sub-line. */
+export function foldCapitalTile(policy: string | null): { value: string; sub: string | null } {
+  if (policy === "carry_position") return { value: "carried", sub: "fold to fold" };
+  if (policy === "close_at_boundary") return { value: "closed", sub: "at each fold boundary" };
+  return { value: foldCapitalPolicyWords(policy).text, sub: null };
+}
+
 export function foldCapitalPolicyWords(policy: string | null): { text: string; code: string | null; mapped: boolean } {
   if (policy === null) return { text: "not published", code: null, mapped: false };
   const known = FOLD_CAPITAL_POLICY_WORDS[policy];
@@ -187,6 +192,35 @@ export function exactPercent(value: string): string | null {
   const whole = `${match[1]}${fraction.slice(0, 2)}`.replace(/^0+(?=\d)/, "");
   const rest = fraction.slice(2).replace(/0+$/, "");
   return `${whole}${rest ? `.${rest}` : ""}%`;
+}
+
+/**
+ * QA S08 I-13 / T-09: the sum of served per-bar decimal strings, done on the
+ * digits (BigInt at the widest scale) so it is exact, never a float. `null`
+ * when any value is absent or not a plain decimal: a partial sum is a smaller
+ * number wearing the window's name.
+ */
+export function sumDecimalStrings(values: ReadonlyArray<string | null | undefined>): string | null {
+  const parsed: Array<{ negative: boolean; whole: string; fraction: string }> = [];
+  let scale = 0;
+  for (const value of values) {
+    if (value === null || value === undefined) return null;
+    const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value);
+    if (!match) return null;
+    const fraction = match[3] ?? "";
+    scale = Math.max(scale, fraction.length);
+    parsed.push({ negative: match[1] === "-", whole: match[2]!, fraction });
+  }
+  let total = 0n;
+  for (const part of parsed) {
+    const magnitude = BigInt(`${part.whole}${part.fraction.padEnd(scale, "0")}`);
+    total += part.negative ? -magnitude : magnitude;
+  }
+  const negative = total < 0n;
+  const digits = (negative ? -total : total).toString().padStart(scale + 1, "0");
+  const whole = scale === 0 ? digits : digits.slice(0, -scale);
+  const fraction = scale === 0 ? "" : digits.slice(-scale).replace(/0+$/, "");
+  return `${negative ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
 }
 
 /** Bars of empty room each side of the bars, so the first and last time labels stays inside the plot. */
@@ -574,7 +608,7 @@ function CandleChart({
       <div ref={host} style={{ height: 420 }} aria-hidden="true" />
       {status !== "ready" ? (
         <span className="mono absolute left-3 top-3 text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
-          {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; the table below carries every bar"}
+          {status === "loading" ? "drawing candles…" : "the chart could not be drawn here; every bar is listed for screen readers"}
         </span>
       ) : null}
       <span className="mono pointer-events-none absolute left-3 top-1 text-[9px]" style={{ color: "var(--ink-faint)" }} title="Panes: candles with transition markers, model position (units), equity.">
@@ -661,6 +695,9 @@ function FoldStrip({
   const activeAt = replay.execution.fold_capital.segments.findIndex((segment) => segment.fold_id === activeFold);
   const capital = replay.execution.fold_capital;
   const policyWords = foldCapitalPolicyWords(capital.policy);
+  const plan = new Map((split?.fold_plan.folds ?? []).map((fold) => [fold.fold_id, fold]));
+  /* UX-08: a run whose profile has no holdout says so on the button, instead of answering a click with a code. */
+  const holdoutNone = split ? retainedSplitBand(split, activeFold, holdout ?? null).segments.find((segment) => segment.key === "holdout")?.state === "NOT_APPLICABLE" : false;
   const overview = replay.execution.candle_overview;
   /* S08 T17: past a dozen folds the strip is one scrolling, snapping row
      (spec 08 §2.2) that keeps the active fold in view; fewer folds wrap. */
@@ -691,8 +728,11 @@ function FoldStrip({
               }}
               aria-pressed={windowKey === key}
               data-window={key}
+              disabled={key === "holdout" && holdoutNone && windowKey !== "holdout"}
               title={
-                key === "is"
+                key === "holdout" && holdoutNone
+                  ? "This run has no holdout window."
+                  : key === "is"
                   ? "IS — the in-sample (train) span of this fold, as overview candles"
                   : key === "oos"
                     ? "OOS — the replayable out-of-sample fold window"
@@ -745,15 +785,19 @@ function FoldStrip({
                 title={(() => {
                   const params = foldParams(progress, segment.fold_id, progressAnswered);
                   const paramsText = params.state === "value" ? `params ${params.digest}` : params.state === "absent" ? `params not published${params.code ? ` ${params.code}` : ""}` : "params not read";
+                  const score = plan.get(segment.fold_id)?.score;
+                  const scoreText = score && score.state === "AVAILABLE"
+                    ? ` · IS Sharpe ${score.is_sharpe ?? "not published"} · OOS Sharpe ${score.oos_sharpe ?? "not published"} · decay ${score.decay ?? "not published"} · OOS trades ${score.oos_trades ?? "not published"}`
+                    : "";
                   return reveal && position >= activeAt
                     ? `${foldLabel(segment.fold_id)}: ${segment.bars} bars`
-                    : `${foldLabel(segment.fold_id)}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · ${paramsText} · fold return not published`;
+                    : `${foldLabel(segment.fold_id)}: ${segment.bars} bars, ${segment.transitions} transitions, equity ${segment.start_equity} → ${segment.end_equity} · ${paramsText}${scoreText} · fold return not published`;
                 })()}
               >
                 {/* F1 FG 08-06: the server publishes each fold's start and end equity, not a return — the chip shows the served end equity and never divides. */}
                 {foldLabel(segment.fold_id)} · {segment.bars} bars ·{" "}
                 {reveal && position >= activeAt ? (
-                  <em data-reveal-hidden>{REVEAL_HIDDEN}</em>
+                  <em data-reveal-hidden title={REVEAL_HIDDEN}>{REVEAL_HIDDEN_SHORT}</em>
                 ) : (
                   <span data-fold-end-equity={segment.end_equity}>
                     end <Exact value={segment.end_equity} unit="currency" />
@@ -919,12 +963,20 @@ function IsWindowPanel({ replay, band, activeFold, onJumpOos }: { replay: Curren
   }
   const high = Math.max(...inSpan.map((bucket) => Number(bucket.high)));
   const low = Math.min(...inSpan.map((bucket) => Number(bucket.low)));
+  const mid = (high + low) / 2;
   const height = 200;
   const y = (value: number) => (high === low ? height / 2 : 8 + (1 - (value - low) / (high - low)) * (height - 16));
   const width = Math.max(1, inSpan.length);
   return (
     <div className="flex flex-col gap-1" data-window-panel="is" data-is-buckets={inSpan.length}>
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-[220px] w-full rounded-[6px] border" style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }} role="img" aria-label={`${foldLabel(fold.fold_id)} in-sample overview candles`}>
+      <div className="flex gap-2">
+      {/* UX-09: the same price axis (grouped, served high/mid/low of the span) and time axis the replay chart has. */}
+      <div className="mono relative h-[220px] w-[64px] flex-none text-[9px]" style={{ color: "var(--ink-faint)" }} data-is-axis="price" aria-hidden="true">
+        <span className="absolute right-0 top-0">{chartPrice(high)}</span>
+        <span className="absolute right-0 top-1/2 -translate-y-1/2">{chartPrice(mid)}</span>
+        <span className="absolute bottom-0 right-0">{chartPrice(low)}</span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-[220px] min-w-0 flex-1 rounded-[6px] border" style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }} role="img" aria-label={`${foldLabel(fold.fold_id)} in-sample overview candles`}>
         {inSpan.map((bucket, position) => {
           const up = Number(bucket.close) >= Number(bucket.open);
           const ink = up ? "var(--good)" : "var(--bad)";
@@ -939,8 +991,13 @@ function IsWindowPanel({ replay, band, activeFold, onJumpOos }: { replay: Curren
           );
         })}
       </svg>
-      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-is-caption title="Each candle's high and low are the true extremes of its bars; there is no per-bar replay in the IS window.">
-        overview · {foldLabel(fold.fold_id)} IS · {formatUtc(start)} → {formatUtc(end)} · {formatCount(inSpan.length)} candles of {formatCount(overview!.bucket_bars)} · range {low} – {high}
+      </div>
+      <div className="mono ml-[72px] flex justify-between text-[9px]" style={{ color: "var(--ink-faint)" }} data-is-axis="time" aria-hidden="true">
+        <span>{formatUtc(start)}</span>
+        <span>{formatUtc(end)}</span>
+      </div>
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-is-caption title={`Each candle's high and low are the true extremes of its bars; there is no per-bar replay in the IS window. Range ${chartPrice(low)} – ${chartPrice(high)}.`}>
+        overview · {foldLabel(fold.fold_id)} IS · {formatCount(inSpan.length)} candles ({formatCount(overview!.bucket_bars)} bars each)
       </span>
     </div>
   );
@@ -952,11 +1009,12 @@ function HoldoutWindowPanel({ band, activeFold, holdout, splitHref }: { band: Sp
   const code = facts?.reasonCode ?? null;
   return (
     <div className="flex min-h-[120px] flex-col items-start justify-center gap-1.5 rounded-[6px] border border-dashed px-4 py-3" style={{ borderColor: "var(--role-holdout)" }} data-window-panel="holdout" data-window-absent data-band-state={facts?.state ?? "NOT_PUBLISHED"}>
-      <span className="mono text-[10px] uppercase tracking-[.08em]" style={{ color: "var(--role-holdout)" }}>
-        HOLDOUT — {facts?.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}
+      <span className="mono text-[10px] uppercase tracking-[.08em]" style={{ color: "var(--role-holdout)" }} title={code ? `${reasonCodeSentence(code) ?? ""} (${code})`.trim() : undefined}>
+        {facts?.state === "NOT_APPLICABLE" ? "This run has no holdout window." : "HOLDOUT — not published"}
       </span>
       {band.state !== "ready" ? <SplitBandNote slot={band} /> : null}
-      {code ? <span className="mono text-[9.5px]" data-reason-code={code} title={reasonCodeSentence(code) ?? undefined} style={{ color: "var(--ink-faint)" }}>{code}</span> : null}
+      {/* The served code stays on the page for the machine and the tooltip for the reader. */}
+      {code ? <span className="sr-only" data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>{code}</span> : null}
       <Link to={splitHref} className="mono text-[10px]" style={{ color: "var(--accent)" }} data-action="to-split">Split · windows →</Link>
     </div>
   );
@@ -1106,15 +1164,16 @@ export function CandleOverviewStrip({
         className="mono text-[9px]"
         style={{ color: "var(--ink-faint)" }}
         data-overview-caption
-        title={overview.sampling === "FULL" ? undefined : "Each candle's high and low are the true extremes of its bars."}
+        title={[
+          overview.sampling === "FULL" ? null : "Each candle's high and low are the true extremes of its bars.",
+          high !== null && low !== null ? `${cutOrdinal === null ? "range" : "revealed range"} ${chartPrice(Number(low))} – ${chartPrice(Number(high))}` : null,
+        ].filter(Boolean).join(" · ") || undefined}
       >
         {scope} · {formatCount(n)} bars
         {overview.sampling === "FULL"
           ? " · every bar"
-          : ` → ${formatCount(overview.emitted_bucket_count)} candles of ${formatCount(overview.bucket_bars)}`}
-        {high !== null && low !== null
-          ? ` · ${cutOrdinal === null ? "range" : "revealed range"} ${low} – ${high}`
-          : " · range withheld — no complete bucket at cursor"}
+          : ` · ${formatCount(overview.emitted_bucket_count)} candles (${formatCount(overview.bucket_bars)} bars each)`}
+        {high === null || low === null ? " · range withheld — no complete bucket at cursor" : ""}
         {shading ? ` · ${shading}` : ""}
       </span>
     </div>
@@ -1129,6 +1188,7 @@ function Transport({
   onFoldStep,
   onTransitionStep,
   canFold,
+  canTransition = { previous: true, next: true },
   acrossControl,
 }: {
   transport: ReplayTransport;
@@ -1136,6 +1196,8 @@ function Transport({
   onFoldStep: (direction: -1 | 1) => void;
   onTransitionStep: (direction: -1 | 1) => void;
   canFold: { previous: boolean; next: boolean };
+  /** UX-14: false only when the loaded bars and the read ledger both say there is none in that direction. */
+  canTransition?: { previous: boolean; next: boolean };
   /** D7 (8.10): the HiFi puts "play across folds" in the transport row, between the speeds and the seek bar. */
   acrossControl?: ReactNode;
 }) {
@@ -1150,7 +1212,7 @@ function Transport({
     <div className="flex flex-wrap items-center gap-2 border-t pt-2" style={{ borderColor: "var(--line-soft)" }} data-transport data-playing={String(snap.playing)}>
       <span className="flex gap-1">
         <button type="button" className={button} style={style} aria-label="previous fold" disabled={!canFold.previous} title={canFold.previous ? "Previous fold" : "Already on the first fold of this run."} onClick={() => onFoldStep(-1)}>|◀</button>
-        <button type="button" className={button} style={style} aria-label="previous transition" disabled={disabled} title={stepReason ?? "Previous transition (marker)"} onClick={() => onTransitionStep(-1)}>◀◀</button>
+        <button type="button" className={button} style={style} aria-label="previous transition" disabled={disabled || !canTransition.previous} title={stepReason ?? (canTransition.previous ? "Previous transition (marker)" : "This is the first transition.")} onClick={() => onTransitionStep(-1)}>◀◀</button>
         <button type="button" className={button} style={style} aria-label="step back" disabled={disabled} title={stepReason ?? "Step back one bar"} onClick={() => transport.step(-1)}>◀</button>
         <button
           type="button"
@@ -1166,7 +1228,7 @@ function Transport({
           {snap.playing ? "❚❚" : "▶"}
         </button>
         <button type="button" className={button} style={style} aria-label="step forward" disabled={disabled} title={stepReason ?? "Step forward one bar"} onClick={() => transport.step(1)}>▶</button>
-        <button type="button" className={button} style={style} aria-label="next transition" disabled={disabled} title={stepReason ?? "Next transition (marker)"} onClick={() => onTransitionStep(1)}>▶▶</button>
+        <button type="button" className={button} style={style} aria-label="next transition" disabled={disabled || !canTransition.next} title={stepReason ?? (canTransition.next ? "Next transition (marker)" : "This is the last transition.")} onClick={() => onTransitionStep(1)}>▶▶</button>
         <button type="button" className={button} style={style} aria-label="next fold" disabled={!canFold.next} title={canFold.next ? "Next fold" : "Already on the last fold of this run."} onClick={() => onFoldStep(1)}>▶|</button>
       </span>
       <span className="flex gap-1" role="group" aria-label="speed">
@@ -1176,6 +1238,8 @@ function Transport({
             type="button"
             className={button}
             aria-pressed={snap.speed === speed}
+            aria-label={`playback speed ${speed}×`}
+            title={`Playback speed ${speed}× (the 1× base rate is the screen's own)`}
             data-speed={speed}
             style={snap.speed === speed ? { ...style, borderColor: "var(--accent)", color: "var(--accent)", background: "var(--paper-sunken)" } : style}
             onClick={() => transport.setSpeed(speed)}
@@ -1290,19 +1354,18 @@ function PlayheadState({ transport, rows, reveal, totals }: {
       className="mono flex flex-wrap items-baseline gap-y-1 rounded-[6px] border px-3 py-1.5 text-[10px]"
       style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)", color: "var(--ink-soft)" }}
       data-playhead-readout={row.source_ordinal}
+      data-playhead-note
+      title="Model state replayed from the retained bars, not a broker account."
     >
       <span className={cell}>t <b>{iso(row.at_utc_ms)}</b></span>
       <span className={cell} data-readout-fold><b>{bar?.fold_id != null ? foldLabel(bar.fold_id) : "in-sample (no fold)"}</b></span>
       <span className={cell} data-readout-position>position <b><Exact value={row.accepted_position} unit={null} /></b></span>
       <span className={cell}>equity <b><Exact value={row.equity} unit="currency" /></b></span>
-      <span className={cell}>fees to here <b><Exact value={bar?.checkpoint.cumulative_fee} unit="currency" /></b></span>
-      <span className={cell} data-readout-transitions>transitions to here <b>{bar ? bar.checkpoint.transition_count : "not published"}</b></span>
+      <span className={cell} title="Cumulative over the whole run up to this bar, not only this fold.">run fees so far <b><Exact value={bar?.checkpoint.cumulative_fee} unit="currency" /></b></span>
+      <span className={cell} data-readout-transitions title="Cumulative over the whole run up to this bar, not only this fold.">run transitions so far <b>{bar ? bar.checkpoint.transition_count : "not published"}</b></span>
       <span className={cell} data-readout-full-run={reveal ? "hidden" : "shown"}>
         full-run fees{" "}
         {reveal ? <em data-reveal-hidden>{REVEAL_HIDDEN}</em> : <b><Exact value={totals.fee} unit="currency" /></b>}
-      </span>
-      <span className="italic" style={{ color: "var(--ink-faint)" }} data-playhead-note title="Model state replayed from the retained bars — not a broker account.">
-        model state
       </span>
     </div>
   );
@@ -1317,11 +1380,13 @@ function TransitionLedger({
   reveal,
   onSeek,
   onPage,
+  onRetry,
   hover,
   selected,
   onHover,
 }: {
   slot: TransitionsSlot;
+  onRetry?: () => void;
   rows: readonly CurrentSourceObservation[];
   transport: ReplayTransport;
   reveal: boolean;
@@ -1336,8 +1401,13 @@ function TransitionLedger({
   const cursorAt = rows[index]?.at_utc_ms ?? null;
   if (slot.state !== "ready") {
     return (
-      <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-transitions={slot.state}>
-        {slot.state === "refused" ? slot.message : "reading transitions…"}
+      <p className="mono flex flex-wrap items-center gap-2 text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-transitions={slot.state}>
+        {slot.state === "refused" ? `Transitions unavailable. ${slot.message}` : "reading transitions…"}
+        {slot.state === "refused" && slot.mayRetry && onRetry ? (
+          <button type="button" className="btn-ghost mono text-[10px] not-italic" data-action="retry-transitions" onClick={onRetry}>
+            Retry
+          </button>
+        ) : null}
       </p>
     );
   }
@@ -1358,8 +1428,12 @@ function TransitionLedger({
             </tr>
           </thead>
           <tbody>
-            {ledger.rows.map((row) => {
+            {ledger.rows.map((row, position) => {
               const future = reveal && cursorAt !== null && row.at_utc_ms > cursorAt;
+              /* UX-12: the rows after the cursor are one line, not thirty identical ones. */
+              const earlier = ledger.rows[position - 1];
+              if (future && earlier && cursorAt !== null && earlier.at_utc_ms > cursorAt) return null;
+              const hiddenCount = future ? ledger.rows.filter((candidate) => candidate.at_utc_ms > cursorAt!).length : 0;
               const current = cursorAt === row.at_utc_ms;
               return (
                 <tr
@@ -1393,8 +1467,8 @@ function TransitionLedger({
                     </td>
                   )}
                   {future ? (
-                    <td colSpan={6} className="py-[3px] italic" style={{ color: "var(--ink-faint)" }}>
-                      {REVEAL_HIDDEN}
+                    <td colSpan={6} className="py-[3px] italic" style={{ color: "var(--ink-faint)" }} data-reveal-collapsed={hiddenCount}>
+                      {hiddenCount} later {hiddenCount === 1 ? "transition" : "transitions"} {REVEAL_HIDDEN}
                     </td>
                   ) : (
                     <>
@@ -1452,10 +1526,12 @@ function ChildAuditCard({
   slot,
   fold,
   waiting = false,
+  onRetry,
 }: {
   replay: CurrentSourceReplay;
   slot: ChildAuditSlot | undefined;
   fold: string | null;
+  onRetry?: () => void;
   /** D7: play across folds is running, so this fold's audit is not asked for until playback rests. */
   waiting?: boolean;
 }) {
@@ -1463,7 +1539,20 @@ function ChildAuditCard({
   const fact = replay.route_capabilities.child_audit;
   const loaded = slot && slot.state !== "idle" && slot.state !== "loading" && slot.fold === fold;
   return (
-    <Card title="child audit — strategy isolation, per fold" data-panel="child-audit" aside={<FactLine label="child audit" fact={fact} name="child_audit" />}>
+    <Card
+      title="child audit — strategy isolation, per fold"
+      data-panel="child-audit"
+      aside={
+        /* UX-04: the chip follows the response. A failed read is not "available". */
+        slot?.state === "refused" && slot.fold === fold ? (
+          <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--warn)" }} data-capability="child_audit" data-capability-state="READ_FAILED">
+            child audit · could not be read
+          </span>
+        ) : (
+          <FactLine label="child audit" fact={fact} name="child_audit" />
+        )
+      }
+    >
       {summary.state !== "AVAILABLE" ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>This seal carries no child-audit records.</p>
       ) : fold === null ? (
@@ -1475,7 +1564,14 @@ function ChildAuditCard({
       ) : !slot || slot.state === "idle" || slot.state === "loading" || slot.fold !== fold ? (
         <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="loading">reading {foldLabel(fold)}'s child audit…</p>
       ) : slot.state === "refused" ? (
-        <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-child-audit="refused">{slot.message}</p>
+        <p className="flex flex-wrap items-center gap-2 text-[11px]" style={{ color: "var(--ink-soft)" }} data-child-audit="refused">
+          {slot.message}
+          {slot.mayRetry && onRetry ? (
+            <button type="button" className="btn-ghost mono text-[10px]" data-action="retry-child-audit" onClick={onRetry}>
+              Retry
+            </button>
+          ) : null}
+        </p>
       ) : (
         <div className="flex flex-col gap-1" data-child-audit={slot.fold}>
           <p className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} title="The shaded row is the strategy instance that generated this fold's out-of-sample bars.">
@@ -1522,10 +1618,15 @@ function ChildAuditCard({
               </tbody>
             </table>
           </div>
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-child-audit-caption>
+          {/* T-06: the reader's fact is the count; policy, run total, drops and fingerprint ride in the tooltip. */}
+          <span
+            className="mono text-[9.5px]"
+            style={{ color: "var(--ink-faint)" }}
+            data-child-audit-caption
+            title={`run total ${formatCount(summary.source_record_count) ?? "not published"} · policy ${summary.policy ?? "not published"} · dropped by QuantBT ${formatCount(summary.records_dropped_by_source) ?? "not published"} · run fingerprint ${short(summary.source_run_fingerprint, 12)}`}
+          >
             {formatCount(slot.audit.records.length)} of {formatCount(slot.audit.source_record_count) ?? "an unpublished number of"} records for this fold
-            {slot.audit.truncated ? " (capped at 64)" : ""} · run total {formatCount(summary.source_record_count) ?? "not published"} · policy {summary.policy ?? "not published"} ·
-            dropped by QuantBT {formatCount(summary.records_dropped_by_source) ?? "not published"} · run fingerprint {short(summary.source_run_fingerprint, 12)}
+            {slot.audit.truncated ? ` (capped at ${formatCount(slot.audit.records.length)})` : ""}
           </span>
         </div>
       )}
@@ -1536,14 +1637,13 @@ function ChildAuditCard({
 function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay; selected: TransitionRow | null; childAudit?: ChildAuditSlot }) {
   const child = generationOf(childAudit, selected?.fold_id ?? null);
   const route = replay.execution.route;
-  const counts = replay.execution.counts;
   const links: Array<{ key: string; value: ReactNode; na?: boolean }> = selected
     ? [
         { key: "signal", value: `bar ${iso(selected.at_utc_ms)} · evaluated at the ${words(route.signal_phase ?? "bar close")}` },
         {
           key: "order",
           na: true,
-          value: `not_applicable — ${route.engine_id ?? "this route"} · ${counted(counts.orders_published, "order records")}`,
+          value: `n/a for ${route.engine_id ?? "this route"}`,
         },
         {
           key: "target",
@@ -1556,16 +1656,23 @@ function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay
         {
           key: "fill",
           na: true,
-          value: `not_applicable — settles at the ${route.fill_price_policy ?? "close"} · ${counted(counts.fills_published, "fill records")}`,
+          value: `fills at the ${route.fill_price_policy ?? "close"}`,
         },
         {
           key: "child",
           na: child === null,
           value: child
             ? `audit #${child.audit_ordinal} · ${child.context} · candidate ${short(child.candidate_id, 8)} · seed ${child.seed ?? "?"} · ${child.policy ?? "isolation not published"}${child.certified_isolation ? " certified" : ""}`
-            : replay.execution.child_audit.state === "AVAILABLE"
-              ? "reading this fold's child audit…"
-              : `not published — ${replay.route_capabilities.child_audit.reason_code ?? "no child audit on this seal"}`,
+            : replay.execution.child_audit.state !== "AVAILABLE"
+              ? `not published — ${replay.route_capabilities.child_audit.reason_code ?? "no child audit on this seal"}`
+              /* UX-04 / T-04: every state resolves — never a spinner that waits for a record that is not coming. */
+              : childAudit?.state === "refused" && childAudit.fold === selected.fold_id
+                ? "not read — the child audit could not be read"
+                : childAudit?.state === "ready" && childAudit.fold === selected.fold_id
+                  ? `not in the ${formatCount(childAudit.audit.records.length)} loaded records`
+                  : childAudit?.state === "ready" || childAudit?.state === "refused"
+                    ? "not read for this fold"
+                    : "reading…",
         },
         {
           key: "account",
@@ -1597,7 +1704,7 @@ function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay
         </div>
       ) : (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
-          Pick a transition to read its links.
+          Select a transition.
         </p>
       )}
     </Card>
@@ -1613,7 +1720,10 @@ function CostTimeline({ rows, replay, reveal, transport }: {
 }) {
   const { index } = useTransport(transport);
   const cut = reveal ? index + 1 : rows.length;
-  const charged = rows.slice(0, cut).filter((row) => row.bar?.fee && Number(row.bar.fee) !== 0);
+  const inWindow = rows.slice(0, cut);
+  const charged = inWindow.filter((row) => row.bar?.fee && Number(row.bar.fee) !== 0);
+  /* The server publishes `fee` on every bar; the window's fee is those served strings added on the digits. */
+  const windowFee = inWindow.length === 0 ? null : sumDecimalStrings(inWindow.map((row) => row.bar?.fee));
   const totals = replay.execution.totals;
   const funding = replay.route_capabilities.funding;
   return (
@@ -1621,9 +1731,15 @@ function CostTimeline({ rows, replay, reveal, transport }: {
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px]">
         <span className="mono" data-cost-window>
           this window{reveal ? " to the cursor" : ""}: {charged.length} charged bars · fee{" "}
-          <em data-window-fee="NOT_PUBLISHED" title="The server publishes a fee per bar and per fold, not per loaded window; the browser does not add them up.">
-            not published
-          </em>
+          {windowFee === null ? (
+            <em data-window-fee="NOT_PUBLISHED" title="At least one bar in this window carries no fee, so no window sum is stated.">
+              not published
+            </em>
+          ) : (
+            <span data-window-fee={windowFee} title={`${windowFee} — the served per-bar fees of this window, added exactly`}>
+              <Exact value={windowFee} unit="currency" />
+            </span>
+          )}
         </span>
         <span className="mono" data-cost-total={reveal ? "hidden" : "shown"}>
           full run (retrospective): {reveal ? <em>{REVEAL_HIDDEN}</em> : (
@@ -1698,9 +1814,18 @@ export function CandleReplayBody({
   const [hover, setHover] = useState<number | null>(null);
   const inFlight = slot.inFlight === true;
   const snap = useTransport(transport);
+  /* UX-13: a ledger row of another fold loads that fold's own window, then the playhead moves to the row. */
+  const pendingSeek = useRef<number | null>(null);
 
   useEffect(() => {
-    const at = selectedOrdinal === null ? 0 : rows.findIndex((row) => row.source_ordinal === selectedOrdinal);
+    let at = selectedOrdinal === null ? 0 : rows.findIndex((row) => row.source_ordinal === selectedOrdinal);
+    if (pendingSeek.current !== null) {
+      const wanted = rows.findIndex((row) => row.source_ordinal === pendingSeek.current);
+      if (wanted >= 0) {
+        at = wanted;
+        pendingSeek.current = null;
+      }
+    }
     transport.load(rows.length, Math.max(0, at));
   }, [rows, selectedOrdinal, transport]);
 
@@ -1723,11 +1848,23 @@ export function CandleReplayBody({
     readChildAudit?.(windowFold);
   }, [childAuditAvailable, windowFold, readChildAudit, acrossRunning, across.holding]);
   const foldIndex = segments.findIndex((segment) => segment.fold_id === activeFold);
+  const noFoldWindow = windowKey === "oos" && segments.length > 0 && activeFold === null;
 
   const goFold = (segment: FoldSegment) => controller.retainedFold?.(segment);
   const foldStep = (direction: -1 | 1) => {
     const target = segments[(foldIndex === -1 ? 0 : foldIndex) + direction];
     if (target) goFold(target);
+  };
+  const ledgerSlot = controller.transitions;
+  const canTransition = (direction: -1 | 1): boolean => {
+    for (let at = snap.index + direction; at >= 0 && at < rows.length; at += direction) {
+      if (rows[at]!.bar?.transition) return true;
+    }
+    /* Unknown (ledger unread) stays enabled; only a ledger that has been read can say there is none. */
+    if (ledgerSlot?.state !== "ready") return true;
+    const here = playRow?.source_ordinal ?? 0;
+    const found = direction > 0 ? ledgerSlot.ledger.rows.some((row) => row.source_ordinal > here) : ledgerSlot.ledger.rows.some((row) => row.source_ordinal < here);
+    return found || (direction > 0 ? ledgerSlot.ledger.page.has_more : ledgerSlot.ledger.page.has_previous);
   };
   const transitionStep = (direction: -1 | 1) => {
     for (let at = snap.index + direction; at >= 0 && at < rows.length; at += direction) {
@@ -1753,8 +1890,17 @@ export function CandleReplayBody({
   const seekTransition = (row: TransitionRow) => {
     setSelected(row);
     const at = rows.findIndex((candidate) => candidate.source_ordinal === row.source_ordinal);
-    if (at >= 0) transport.seek(at);
-    else controller.retainedSeek?.(row.playback_cursor);
+    if (at >= 0) {
+      transport.seek(at);
+      return;
+    }
+    const owner = segments.find((candidate) => row.source_ordinal >= candidate.first_ordinal && row.source_ordinal <= candidate.last_ordinal);
+    if (owner && owner.bars <= RETAINED_WINDOW_MAX && controller.retainedFold) {
+      pendingSeek.current = row.source_ordinal;
+      controller.retainedFold(owner);
+    } else {
+      controller.retainedSeek?.(row.playback_cursor);
+    }
   };
 
   /* The chart's markers: the window's own transition bars, upgraded by the served ledger row where one was read. */
@@ -1841,16 +1987,13 @@ export function CandleReplayBody({
             </span>
           ) : null}
           <span className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]" style={{ borderColor: "var(--line)" }} data-readiness={readiness ?? ""}>
-            {readiness ? `readiness ${words(readiness)}` : "readiness — reading…"}
+            {readiness ? `readiness ${words(readiness)}` : identity?.state === "ready" ? "readiness — the progress read did not answer" : "readiness — reading…"}
           </span>
           <span className="mono ml-auto flex flex-wrap gap-3 text-[10px]" style={{ color: "var(--ink-soft)" }}>
             <span data-claim>claim <b style={{ color: "var(--warn)" }}>{claimToken(claim?.state, claimStrip?.validation_claim)}</b></span>
             <span>causality <b>{claimToken(claim?.state, claimStrip?.causality_claim)}</b></span>
           </span>
         </div>
-        <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-route-note>
-          {CLOSE_TARGET_NOTICE(counts.orders_published, counts.fills_published, counts.trades_published)}
-        </p>
       </Card>
 
       <section
@@ -1879,8 +2022,13 @@ export function CandleReplayBody({
         {/* When play across folds asked for the read that was refused, its own notice under the
             transport carries this same sentence; it is said once, not twice. */}
         {slot.pageRefusal && across.status.refusal !== slot.pageRefusal ? (
-          <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-page-refusal={slot.pageRefusal.code ?? slot.pageRefusal.status}>
+          <p className="mono flex flex-wrap items-center gap-2 text-[10px]" role="status" style={{ color: "var(--warn)" }} data-page-refusal={slot.pageRefusal.code ?? slot.pageRefusal.status}>
             {pageRefusalWords(slot.pageRefusal)}
+            {slot.pageRefusal.mayRetry && controller.retryRetained ? (
+              <button type="button" className="btn-ghost mono text-[10px]" data-action="retry-window" onClick={controller.retryRetained}>
+                Retry
+              </button>
+            ) : null}
           </p>
         ) : null}
         {slot.recovered ? (
@@ -1896,7 +2044,7 @@ export function CandleReplayBody({
           */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-y py-1.5" style={{ borderColor: "var(--line-soft)" }}>
           <span className="mono flex-none text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }} data-band-fold>
-            {segment ? foldLabel(segment.fold_id) : "in-sample bars (no fold)"}
+            {segment ? foldLabel(segment.fold_id) : noFoldWindow ? "fold window" : "in-sample bars (no fold)"}
           </span>
           {segment ? (
             <span className="mono flex-none text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
@@ -1904,7 +2052,8 @@ export function CandleReplayBody({
             </span>
           ) : null}
           {band.state !== "ready" ? <SplitBandNote slot={band} /> : null}
-          <span
+{noFoldWindow ? null : (
+                    <span
             className="mono text-[9.5px]"
             style={{ color: "var(--ink-faint)" }}
             data-counts
@@ -1912,8 +2061,9 @@ export function CandleReplayBody({
           >
             bars {window} of {formatCount(replay.replay.source_observation_count) ?? "not published"}
           </span>
+          )}
           {windowKey === "oos" ? <MarkerLegend /> : null}
-          <CapabilityStrip items={capabilityItems} />
+          {windowKey === "oos" ? <CapabilityStrip items={capabilityItems} /> : null}
           {windowKey === "oos" ? (
             <button
               type="button"
@@ -1939,6 +2089,14 @@ export function CandleReplayBody({
         ) : windowKey === "holdout" ? (
           <HoldoutWindowPanel band={band} activeFold={activeFold} holdout={claimStrip?.holdout ?? null} splitHref={splitHref} />
         ) : (
+          noFoldWindow ? (
+            /* UX-02: no fold window is loaded. In-sample bars are never drawn under an OOS selection. */
+            <div className="flex min-h-[120px] flex-col items-start justify-center gap-1.5 rounded-[6px] border border-dashed px-4 py-3" style={{ borderColor: "var(--line)" }} data-window-panel="oos-pending" data-window-state={slot.pageRefusal ? "failed" : "reading"}>
+              <span className="mono text-[10px] uppercase tracking-[.08em]" style={{ color: "var(--ink-soft)" }}>
+                {slot.pageRefusal ? "Fold window not loaded" : "Reading the fold window…"}
+              </span>
+            </div>
+          ) : (
           <>
             {rows.length > 0 ? (
               <CandleChart rows={rows} transport={transport} reveal={reveal} markers={markers} hover={hover} selected={selected?.source_ordinal ?? null} onHover={setHover} onPick={pickMarker} />
@@ -1949,6 +2107,7 @@ export function CandleReplayBody({
               onFoldStep={foldStep}
               onTransitionStep={transitionStep}
               canFold={{ previous: !inFlight && foldIndex > 0, next: !inFlight && foldIndex < segments.length - 1 && segments.length > 0 }}
+              canTransition={{ previous: canTransition(-1), next: canTransition(1) }}
               acrossControl={<AcrossSwitch across={across} />}
             />
             <AcrossNotice across={across} />
@@ -1966,6 +2125,7 @@ export function CandleReplayBody({
               </button>
             </div>
           </>
+          )
         )}
       </section>
 
@@ -1973,6 +2133,7 @@ export function CandleReplayBody({
         {[
           {
             k: "orders · fills · trades",
+            label: "published records",
             v: `${countCell(counts.orders_published)} · ${countCell(counts.fills_published)} · ${countCell(counts.trades_published)}`,
             tip: "Records QuantBT emitted on this route.",
             absent: counts.orders_published === null || counts.fills_published === null || counts.trades_published === null,
@@ -1993,8 +2154,8 @@ export function CandleReplayBody({
           },
           { k: "fees paid", v: reveal ? REVEAL_HIDDEN : (formatMetric(execution.totals.fee, "currency") ?? "not published"), sub: "full run", tip: "Full run, retrospective: the whole run's fee, not up to the cursor.", hidden: reveal },
           { k: "rejected orders", v: countCell(counts.rejected_orders), tip: "Engine diagnostics.", absent: counts.rejected_orders === null },
-          { k: "fold capital", v: foldCapitalPolicyWords(execution.fold_capital.policy).text, vTitle: foldCapitalPolicyWords(execution.fold_capital.policy).code, tip: words(execution.fold_capital.equity_continuity) },
-        ].map((tile: { k: string; v: string; sub?: string; tip?: string; hidden?: boolean; absent?: boolean; codes?: Array<string | null>; vTitle?: string | null }) => (
+          { k: "fold capital", v: foldCapitalTile(execution.fold_capital.policy).value, sub: foldCapitalTile(execution.fold_capital.policy).sub ?? undefined, vTitle: foldCapitalPolicyWords(execution.fold_capital.policy).code, tip: words(execution.fold_capital.equity_continuity) },
+        ].map((tile: { k: string; label?: string; v: string; sub?: string; tip?: string; hidden?: boolean; absent?: boolean; codes?: Array<string | null>; vTitle?: string | null }) => (
           <div
             key={tile.k}
             className="flex min-w-[150px] flex-1 flex-col gap-0.5 rounded-[6px] border px-3 py-2"
@@ -2002,7 +2163,7 @@ export function CandleReplayBody({
             data-tile={tile.k}
             title={tile.tip}
           >
-            <span className="text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{tile.k}</span>
+            <span className="text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>{tile.label ?? tile.k}</span>
             <span className="mono text-[17px] font-semibold" style={{ fontStyle: tile.hidden || tile.absent ? "italic" : undefined, fontSize: tile.hidden || tile.absent ? 12 : undefined }} title={tile.vTitle ?? undefined} data-tile-code={tile.vTitle ?? undefined} data-tile-absent={tile.absent ? "" : undefined}>{tile.v}</span>
             {(tile.codes ?? []).filter((code): code is string => code !== null).map((code) => (
               <span key={code} className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code={code} title={reasonCodeSentence(code) ?? undefined}>{code}</span>
@@ -2016,7 +2177,7 @@ export function CandleReplayBody({
         <div className="flex min-w-0 flex-col gap-3">
           <Card
             title="target transition ledger"
-            hint="Each row is a bar where QuantBT changed the accepted position. Numbers are original bar ordinals; a gap is bars without a transition."
+            hint="One row per position change."
             data-panel="event-ledger"
             aside={<FactLine label="events" fact={replay.route_capabilities.execution_events} name="execution_events" />}
           >
@@ -2028,6 +2189,7 @@ export function CandleReplayBody({
                 reveal={reveal}
                 onSeek={seekTransition}
                 onPage={(direction) => controller.transitionsPage?.(direction)}
+                onRetry={controller.retryTransitions}
                 hover={hover}
                 selected={selected?.source_ordinal ?? null}
                 onHover={setHover}
@@ -2035,7 +2197,7 @@ export function CandleReplayBody({
             ) : null}
           </Card>
           <Anatomy replay={replay} selected={selected} childAudit={controller.childAudit} />
-          <ChildAuditCard replay={replay} slot={controller.childAudit} fold={windowFold} waiting={across.holding} />
+          <ChildAuditCard replay={replay} slot={controller.childAudit} fold={windowFold} waiting={across.holding} onRetry={controller.retryChildAudit} />
         </div>
         <div className="flex min-w-0 flex-col gap-3">
           <Card
@@ -2045,7 +2207,7 @@ export function CandleReplayBody({
           >
             <FactLine label={counts.trades_published === null ? "trades · count" : `trades · ${counts.trades_published}`} fact={replay.route_capabilities.trades} name="trades" />
           </Card>
-          <Card title="MAE × MFE" hint="Needs trade records; this route has none." data-absent-panel="mae-mfe">
+          <Card title="MAE × MFE" hint="Needs trade records (not published)." data-absent-panel="mae-mfe">
             <FactLine label="MAE × MFE" fact={replay.route_capabilities.mae_mfe} name="mae_mfe" />
           </Card>
           <CostTimeline rows={rows} replay={replay} reveal={reveal} transport={transport} />

@@ -146,7 +146,7 @@ describe("D4 — every reason nothing is prefilled is its own state, worded on i
   });
 
   it("tells a missing symbol, an unlisted symbol and unpublished coverage apart", () => {
-    expect(planCoverage(CATALOG, BTC.dataset, "")).toMatchObject({ state: "no-symbol", reason: "No symbol is chosen, so nothing is prefilled." });
+    expect(planCoverage(CATALOG, BTC.dataset, "")).toMatchObject({ state: "no-symbol", reason: "Pick a symbol to prefill windows." });
     expect(planCoverage(CATALOG, BTC.dataset, "DOGEUSDT")).toMatchObject({
       state: "symbol-unlisted", reason: "DOGEUSDT is not among this dataset's 5 listed symbols, so nothing is prefilled.",
     });
@@ -390,7 +390,8 @@ describe("D4 — Screen 02, real route and hook", () => {
   it("choose a dataset and symbol → the outer bounds are filled and captioned with their source", async () => {
     await mountRoute("data");
     fireEvent.change(field("Dataset"), { target: { value: BTC.dataset } });
-    expect(text("[data-window-prefill-status]")).toBe("No symbol is chosen, so nothing is prefilled.");
+    /* The Symbol field is right there; the hint lives on the Walk-forward step, where the dates are blank. */
+    expect(document.querySelector("[data-window-prefill-status]")).toBeNull();
     fireEvent.change(field("Symbol"), { target: { value: BTC.symbol } });
     expect(text("[data-window-prefill-status]")).toBe("Bounds prefilled from coverage");
 
@@ -404,7 +405,8 @@ describe("D4 — Screen 02, real route and hook", () => {
     expect(tip("[data-prefill-source]")).toContain("Month edges, not bar times — preflight checks the exact range, and the 32 warmup bars the version declares must fit before IS start. Every value stays editable.");
     expect(tip("[data-prefill-source]")).toContain("IS end, OOS and holdout start are left empty: the server publishes no rule for splitting coverage into windows.");
     expect(document.querySelector("[data-prefill-edges], [data-prefill-interior]")).toBeNull();
-    expect(text("[data-window-prefill-rail]")).toBe("Outer bounds prefilled from BTCUSDT coverage (2020-01 → 2026-09) until edited.");
+    /* The step says it once (the note and the field captions); the rail no longer repeats it (T04). */
+    expect(document.querySelector("[data-window-prefill-rail]")).toBeNull();
     /* Nothing is locked: every input stays enabled and editable. */
     for (const label of WINDOW_LABELS) expect(field(label).disabled).toBe(false);
   });

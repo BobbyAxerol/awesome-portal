@@ -299,6 +299,7 @@ const RC_CSS = `
 .rc-state { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .05em; border-radius: 999px; padding: 2px 10px; white-space: nowrap;
   border: 1px solid var(--accent-2); color: var(--accent-2); background: var(--paper-raised); }
 .rc-state[data-s="SEALED_LOCAL"], .rc-state[data-s="PUBLISHED"] { border-color: var(--good); color: var(--good); background: var(--paper-raised); }
+.rc-state[data-s="SEALED"] { border-color: var(--good); color: var(--good); background: var(--paper-raised); }
 .rc-state[data-s="NOT_PUBLISHABLE"] { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
 .rc-lifecycle { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-soft); overflow-wrap: anywhere; }
 .rc-linkbtn { border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); padding: 5px 14px; font-family: var(--font-mono); font-size: 10px;
@@ -495,6 +496,17 @@ a.rc-node:hover { border-color: var(--accent); text-decoration: none; }
   .rc-verdict { border-left: 0; padding-left: 0; border-top: 1px solid var(--line-soft); padding-top: 10px; }
 }
 @media (max-width: 720px) {
+  /* QA S11 U2: below 720px a pack row is a card — every cell keeps its label, none is cut off. */
+  .rc-pack table { min-width: 0; display: block; }
+  .rc-pack colgroup, .rc-pack thead { display: none; }
+  .rc-pack tbody { display: block; }
+  .rc-pack tbody tr { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 2px 8px; padding: 8px 16px; border-bottom: 1px solid var(--line-soft); }
+  .rc-pack tbody tr.rc-editor { display: block; }
+  .rc-pack td, .rc-pack tbody th { border-bottom: 0; padding: 0 !important; min-width: 0; }
+  .rc-pack td.digest, .rc-pack td.source, .rc-pack td.note { grid-column: 1 / -1; max-width: none; }
+  .rc-pack td[data-label]::before { content: attr(data-label); display: inline-block; min-width: 54px; margin-right: 6px; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+  .rc-pack td.note:empty, .rc-pack td.source:empty { display: none; }
+  .rc-pack tbody tr[data-s="DEGRADED"] > td:first-child { box-shadow: none; }
   .rc-tax .what { width: 140px; }
   .rc-tax .state { width: 84px; }
   .rc-yaml .k { width: 230px; }
@@ -659,9 +671,11 @@ function Header({ runId, here, chips, alpha = null, composeRun = null }: {
 }
 
 /** Spec 11 §2.1: DRAFT gold / PUBLISHED green / NOT_PUBLISHABLE red; PUBLISHED only from a server fact. */
-export function stateChipOf(compose: RcCompose, publication: RcPublication | null): "NOT_PUBLISHABLE" | "PUBLISHED" | RcCompose["state"] {
+export function stateChipOf(compose: RcCompose, publication: RcPublication | null): "NOT_PUBLISHABLE" | "PUBLISHED" | "SEALED" | RcCompose["state"] {
   if (compose.run.binding === null) return "NOT_PUBLISHABLE";
   if (isDelivered(compose, publication)) return "PUBLISHED";
+  /* QA S11 U1: a sealed candidate is no longer a DRAFT — the served seal state decides. */
+  if (compose.local_seal.state === "SEALED_LOCAL") return "SEALED";
   return compose.state;
 }
 
@@ -677,17 +691,17 @@ export function digestText(value: string): string {
 
 function StateChip({ value }: { value: string }) {
   return (
-    <span className="rc-state" data-s={value} data-state-chip={value}>
+    <span className="rc-state" data-s={value} data-state-chip={value} title={value === "SEALED" ? "an immutable Portal-local pack exists" : undefined}>
       {value}
     </span>
   );
 }
 
-function SealChips({ seal, delivered }: { seal: RcLocalSeal; delivered: boolean }) {
+function SealChips({ seal, delivered, showChip = true }: { seal: RcLocalSeal; delivered: boolean; showChip?: boolean }) {
   if (seal.state !== "SEALED_LOCAL") return null;
   return (
     <>
-      {delivered ? null : (
+      {delivered || !showChip ? null : (
         <span className="rc-state" data-s="SEALED_LOCAL" data-seal-chip title="an immutable Portal-local pack exists">
           sealed locally
         </span>
@@ -1095,6 +1109,12 @@ function DeclarationRow({ item, editor }: { item: RcPackItem; editor: Declaratio
             aria-invalid={issues.length > 0 || undefined}
             aria-describedby={issues.length > 0 ? `${labelId}-issues` : undefined}
             onChange={(event) => editor.change(key, event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.stopPropagation();
+                editor.cancel(key);
+              }
+            }}
             readOnly={editor.lockedReason !== null}
           />
           {issues.length > 0 ? (
@@ -1166,13 +1186,13 @@ function PackRow({ item, route, declared, editor, highlighted = false, onHover }
             {item.status}
           </span>
         </td>
-        <td className="digest" data-digest={item.digest ?? ""} title={item.digest ?? undefined}>
+        <td className="digest" data-label="digest" data-digest={item.digest ?? ""} title={item.digest ?? undefined}>
           {item.digest !== null ? digestText(item.digest) : decl !== null ? <span className="rc-absent">— not declared</span> : <Absent availability={item.availability} />}
         </td>
-        <td className="source">
+        <td className="source" data-label="source">
           <SourceCell item={item} route={route} />
         </td>
-        <td className="note">
+        <td className="note" data-label="note">
           {item.note}
           {item.status === "MISSING" || item.status === "DEGRADED" ? (
             <>
@@ -1318,6 +1338,16 @@ function PackBlock({ items, runId, alphaId, counts, axes, declarations, editor, 
 /* ---------------------------------------------------------------- record */
 
 type CopyState = "idle" | "copied" | "failed";
+
+/** QA S11 U19: after the seal the id is served in `local_seal`; the preview line reads it instead of `null # P21_ASSIGNED_ON_LOCAL_SEAL`. */
+export function withSealedId(fields: readonly RcField[], sealedId: string | null): readonly RcField[] {
+  if (sealedId === null) return fields;
+  return fields.map((field) =>
+    field.key === "release_candidate_id" && field.value === null
+      ? { ...field, value: sealedId, tone: "ink" as RcField["tone"], availability: { state: "AVAILABLE", reason_code: null } as RcField["availability"] }
+      : field,
+  );
+}
 
 function RecordBlock({ fields, state }: { fields: readonly RcField[] | null; state: ResearchState }) {
   const [copy, setCopy] = useState<CopyState>("idle");
@@ -2214,7 +2244,8 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
   const current = publication.publication;
   const delivered = isDelivered(compose, current);
   const slot = publishSlot(compose, current);
-  const editor = useDeclarationEditor(controller, delivered);
+  const sealedLocal = compose?.local_seal.state === "SEALED_LOCAL";
+  const editor = useDeclarationEditor(controller, delivered || sealedLocal);
   const sealed = compose?.local_seal.state === "SEALED_LOCAL" ? compose.local_seal : null;
   const replayed = controller.write.state === "sealed" && controller.write.replayed;
   const unbound = compose?.source_absences.alpha_binding;
@@ -2243,7 +2274,7 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
             <>
               <Steps composed sealed={sealed !== null} published={delivered} />
               <StateChip value={chip} />
-              <SealChips seal={compose.local_seal} delivered={delivered} />
+              <SealChips seal={compose.local_seal} delivered={delivered} showChip={false} />
             </>
           ) : null
         }
@@ -2279,9 +2310,9 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
         state={state}
       />
       <div className="rc-group3">
-        <RecordBlock fields={compose?.yaml ?? null} state={state} />
+        <RecordBlock fields={compose ? withSealedId(compose.yaml, sealed?.release_candidate_id ?? null) : null} state={state} />
         <div className="rc-side">
-          {delivered ? null : <SealCard compose={compose} controller={controller} dirty={editor.dirty} publishing={publication.write.state === "pending"} />}
+          {delivered || sealedLocal ? null : <SealCard compose={compose} controller={controller} dirty={editor.dirty} publishing={publication.write.state === "pending"} />}
           {sealed ? <SealedCard seal={sealed} replayed={replayed} /> : null}
           {slot === "published" ? (
             <PublishedCard releaseCandidateId={sealed?.release_candidate_id ?? current?.release_candidate_id ?? null} publication={publication} />

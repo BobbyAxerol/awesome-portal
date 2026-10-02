@@ -606,7 +606,8 @@ describe("FE-S03-06 — Live console / Stage log", () => {
   it("says a filter matched nothing instead of saying nothing was published", () => {
     view({ lines: [line(1)] });
     fireEvent.click($('[data-console-filter="errors"]'));
-    expect($("[data-console-empty]").textContent).toBe("No line matches this filter.");
+    // QA S03: an empty errors filter says there are no errors, not that the lines failed to load.
+    expect($("[data-console-empty]").textContent).toBe("No errors or warnings in this log.");
   });
 
   it("offers load older only while older retained lines remain", () => {
@@ -694,9 +695,11 @@ describe("FE-S03-09 / FE-S03-10 — states and attempts", () => {
       }),
       transport: "closed",
     });
-    expect($("h1").textContent).toBe("Run cancelled — run_01");
+    // QA S03 U7: the heading uses the run label, never the raw id.
+    expect($("h1").textContent).toBe("Run cancelled — R-WFO-118");
     expect($('[data-job-state="LOST_LEASE"]')).toBeTruthy();
-    expect($("[data-terminal-resolution]")).toBeTruthy();
+    // QA S03: "resolved by cancellation" is the card's own headline on a run with no source; not said a third time.
+    expect($("[data-terminal-resolution]")).toBeNull();
     expect($("[data-terminal-materialization]")).toBeTruthy();
     expect($("[data-run-meta]")).toBeTruthy();
   });

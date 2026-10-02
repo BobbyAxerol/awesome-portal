@@ -272,7 +272,9 @@ describe("P11-T01 — every HIFI block is present and reads from the snapshot", 
     const failure = document.querySelector("[data-failure]") as HTMLElement;
     expect(failure.getAttribute("data-failure")).toBe("RuntimeBudgetError.CAP_EXCEEDED");
     expect(failure.textContent).toContain("runtime budget exhausted");
-    expect(screen.getByText(NOT_ISSUED_NOTE)).toBeTruthy();
+    // QA S03: the not-issued fact is said once, in the header; the sentence rides in its tooltip.
+    expect(document.querySelector("[data-claim-badge]")?.getAttribute("title")).toBe(NOT_ISSUED_NOTE);
+    expect(screen.queryByText(NOT_ISSUED_NOTE)).toBeNull();
   });
 });
 
@@ -285,7 +287,8 @@ describe("RF-04 FE-S03-04 — a finished run without a claim is not called faile
         { status: "COMPLETED", claim: { state: "NOT_ISSUED", text, cursor: null } },
       ),
     });
-    expect(screen.getByText(text)).toBeTruthy();
+    // The server's sentence is the header's tooltip (QA S03: not repeated in the body).
+    expect(document.querySelector("[data-claim-badge]")?.getAttribute("title")).toBe(text);
     expect(screen.queryByText(NOT_ISSUED_NOTE)).toBeNull();
   });
 
@@ -459,7 +462,8 @@ describe("P11-T02 — a sealed artifact is readiness, not authorization", () => 
     expect(sealed.textContent).toContain("sha256:aa91b3");
     // `reader_href` is null by contract; no route may be invented for it.
     expect(sealed.querySelectorAll("a")).toHaveLength(0);
-    expect(screen.getByText(ARTIFACT_NO_READER)).toBeTruthy();
+    // QA S03: said once, as the card title's tooltip.
+    expect(screen.getByTitle(ARTIFACT_NO_READER)).toBeTruthy();
   });
 
   it("offers no link on any artifact state", () => {

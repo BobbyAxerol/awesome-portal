@@ -136,11 +136,12 @@ export function JourneyMapRoute() {
 
   /* A version-pinned, contract-tested snapshot keeps the reading map visible
      during a transient read failure. It never replaces a 401/403 refusal. */
-  const snapshotAllowed = !read.data && (read.state.state === "unavailable" || read.state.state === "failed-retryable");
+  const snapshotAllowed =
+    !read.data && (read.state.state === "unavailable" || read.state.state === "failed-retryable" || read.state.state === "stale");
   const accepted = read.data ?? (snapshotAllowed ? journeySnapshot as JourneyResponse : null);
   const viewState: ResearchState = snapshotAllowed ? {
     state: "stale",
-    reason: "Showing the bundled map while the live descriptor is unavailable. Availability may have changed.",
+    reason: "Showing the saved map. Live status unavailable.",
     mayRetry: true,
     retainsContent: true,
   } : read.state;

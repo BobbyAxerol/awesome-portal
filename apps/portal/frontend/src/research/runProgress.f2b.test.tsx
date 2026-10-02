@@ -110,7 +110,8 @@ describe("S03 less text — a sentence a tooltip can carry is a tooltip", () => 
     view({ snapshot: snap });
     const banner = $("[data-done-banner]")!;
     expect(banner.textContent).not.toContain("open the evidence at");
-    expect(banner.textContent).toContain("no claim issued");
+    // QA S03: the not-issued fact is the passport header's; the banner does not repeat it.
+    expect(banner.textContent).not.toContain("no claim issued");
   });
 
   it("the seal reads as a status dot as well as words", () => {

@@ -12,7 +12,7 @@
  */
 
 import { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { ReportScreen } from "./ReportDetail";
 import { parseCursor } from "./evidenceCursor";
@@ -22,6 +22,8 @@ import { useReportExport } from "./useReportExport";
 export const PRINT_SHEET_ATTRIBUTE = "data-research-print-sheet";
 
 function ReportContainer({ runId }: { runId: string }) {
+  const [search] = useSearchParams();
+  const requestedRevision = search.get("report_revision");
   const controller = useReport(runId);
   const exporter = useReportExport(runId);
   const cursor = { ...parseCursor(typeof window === "undefined" ? "" : window.location.hash), stage: "claim" as const };
@@ -32,7 +34,7 @@ function ReportContainer({ runId }: { runId: string }) {
     return () => root.removeAttribute(PRINT_SHEET_ATTRIBUTE);
   }, []);
 
-  return <ReportScreen runId={runId} cursor={cursor} controller={controller} exporter={exporter} />;
+  return <ReportScreen runId={runId} cursor={cursor} controller={controller} exporter={exporter} requestedRevision={requestedRevision} />;
 }
 
 export function ReportRoute() {

@@ -23,7 +23,7 @@
  * the read published it (DQ-15).
  */
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip, type ProvenanceFacts } from "./ProvenanceStrip";
@@ -44,6 +44,9 @@ import { InfoMark } from "../components/InfoMark";
 import { ShortId } from "./ShortId";
 import { ImportedAlphaLine } from "./ImportedAlphaLine";
 import type { FoldLedgerSlot } from "./useFoldLedger";
+import { useLedgerPages } from "./useLedgerPages";
+import { cleanParamText, cleanParameters } from "./searchParamText";
+import { refusalState } from "./researchRefusal";
 import {
   BestVsSelectedCards,
   FoldDecayBars,
@@ -83,6 +86,7 @@ import {
   SurfaceProgression,
   SurfaceScatter,
   ThetaJourney,
+  two,
   type DeclaredSpace,
 } from "./SearchSurface";
 import type { ResearchState } from "./state";
@@ -103,7 +107,7 @@ const DIAGNOSTIC_LABEL: Record<DiagnosticKey, string> = {
   distributions: "A4 · per-parameter sampled regions",
   parameter_frequency: "B4 · θ* journey — parameter frequency",
   progression: "A3 · progression",
-  prune_reasons: "A3 · prune reasons",
+  prune_reasons: "A3b · prune reasons",
   importance: "A5 · importance",
   interactions: "A6 · parameter interactions",
 };
@@ -200,8 +204,7 @@ export function atlasModeHref(reference: NonNullable<ClaimRow["mode_reference"]>
  * The HiFi claim-row aside, now the tooltip of the optimization_mode label
  * (VD-TEXT-01): two selector layers, two enums, never mixed on this screen.
  */
-export const SELECTOR_LAYERS_HELP =
-  "Two selector layers, two enums: optimization_mode belongs to the walk-forward endpoint; CandidateSelector.mode belongs to the optimization package.";
+export const SELECTOR_LAYERS_HELP = "Mode is fixed per run.";
 
 function Withheld({ availability, what }: { availability: SearchAvailability; what?: string }) {
   return (
@@ -627,18 +630,32 @@ function ParameterTable({
 
 /* ------------------------------------------------------------ the ledger */
 
+/** The rest of the ledger, one cursor page at a time (D5). */
+interface LedgerMore {
+  hasMore: boolean;
+  loading: boolean;
+  error: boolean;
+  onMore: () => void;
+}
+
 function LedgerPanel({
   slot,
   detail,
   onNeeded,
   pick,
   onPick,
+  onClear,
+  foldNote,
+  more,
 }: {
   slot: LedgerSlot;
   detail: SearchDetailDocument;
   onNeeded: () => void;
   pick: string | null;
   onPick: (trialId: string) => void;
+  onClear?: () => void;
+  foldNote: string | null;
+  more?: LedgerMore;
 }) {
   useEffect(() => {
     onNeeded();
@@ -654,13 +671,13 @@ function LedgerPanel({
         </h3>
         {slot.state === "ready" ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-ledger-total>
-            {slot.search.ledger.returned_rows} of {slot.search.ledger.source_trial_count} retained trials
+            {slot.search.ledger.trials.length} of {slot.search.ledger.source_trial_count} retained trials
           </span>
         ) : null}
       </div>
 
       {slot.state === "ready" ? (
-        <LedgerRows search={slot.search} pick={pick} onPick={onPick} />
+        <LedgerRows search={slot.search} pick={pick} onPick={onPick} onClear={onClear} foldNote={foldNote} more={more} />
       ) : (
         <>
           <LedgerHead />
@@ -669,20 +686,14 @@ function LedgerPanel({
               /* RF-05: the retained lane answered a typed not-applicable. */
               <div className="flex flex-col gap-1" data-ledger-shell>
                 <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                  {/* "exists" only where the read says the question does not arise. */}
-                  {ledgerGap.state === "NOT_APPLICABLE" ? "No trial ledger for this run" : "Trial ledger"} —{" "}
-                  <span className="mono" data-ledger-gap-state={ledgerGap.state}>
-                    {SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}
-                  </span>{" "}
-                  — <span className="mono text-[10px]">{ledgerGap.reason_code}</span>
-                </p>
-                <p
-                  className="text-[10.5px] leading-[1.5]"
-                  style={{ color: "var(--ink-faint)" }}
-                  data-ledger-lane="not-applicable"
-                  title={`${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
-                >
-                  retained ledger lane — not applicable · <span className="mono">{slot.answer.lane.reason_code}</span>
+                  {/* H18: one sentence; the server's codes ride in the tooltip. */}
+                  <span
+                    title={`${ledgerGap.reason_code ?? ""} · ${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
+                    data-ledger-lane="not-applicable"
+                  >
+                    {ledgerGap.state === "NOT_APPLICABLE" ? "No trial ledger — fixed profile ran no search." : `Trial ledger — ${SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}.`}
+                  </span>
+                  <span hidden data-ledger-gap-state={ledgerGap.state} />
                 </p>
               </div>
             ) : slot.state === "refused" ? (
@@ -782,16 +793,43 @@ function NotPublished({ title }: { title: string }) {
  * source's selection is the gold row, the row the reader clicked is the accent
  * row, and clicking never selects anything.
  */
-function LedgerRows({ search, pick, onPick }: { search: CurrentSourceSearch; pick: string | null; onPick: (trialId: string) => void }) {
+function LedgerRows({
+  search,
+  pick,
+  onPick,
+  onClear,
+  foldNote,
+  more,
+}: {
+  search: CurrentSourceSearch;
+  pick: string | null;
+  onPick: (trialId: string) => void;
+  onClear?: () => void;
+  foldNote: string | null;
+  more?: LedgerMore;
+}) {
   const trials = search.ledger.trials;
   const selectedId = search.selection.selected_trial_id;
   const picked = pick;
-  /* T07: a pick from the surface (or a restored `pick=`) brings its row into view. */
-  useEffect(() => {
-    if (picked === null || typeof document === "undefined") return;
-    const row = [...document.querySelectorAll("[data-trial]")].find((element) => element.getAttribute("data-trial") === picked);
-    if (row && typeof (row as HTMLElement).scrollIntoView === "function") (row as HTMLElement).scrollIntoView({ block: "nearest" });
-  }, [picked]);
+  /* D1: the ledger is one tab stop (the picked row, else the first); arrows walk the rows, Escape lets go of the pick.
+     D9: a pick no longer scrolls the page to its row — the pick chip names it where the reader is. */
+  const tabStop = trials.some((trial) => trial.trial_id === picked) ? picked : (trials[0]?.trial_id ?? null);
+  const onRowKey = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape" && picked !== null && onClear) {
+      event.preventDefault();
+      onClear();
+      return;
+    }
+    const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : event.key === "Home" ? "first" : event.key === "End" ? "last" : null;
+    if (step === null) return;
+    const rows = [...(event.currentTarget.querySelectorAll("[data-trial]") as NodeListOf<HTMLElement>)];
+    const here = rows.indexOf(event.target as HTMLElement);
+    if (here < 0) return;
+    event.preventDefault();
+    const target = here + (typeof step === "number" ? step : 0);
+    const next = step === "first" || target < 0 ? 0 : step === "last" || target > rows.length - 1 ? rows.length - 1 : target;
+    rows[next]?.focus();
+  };
 
   return (
     <div>
@@ -801,8 +839,8 @@ function LedgerRows({ search, pick, onPick }: { search: CurrentSourceSearch; pic
         </span>
         {search.search_contract ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-ledger-scope>
-            {search.search_contract.optuna_trials_scope ?? "scope not published"} study · {search.search_contract.trial_ledger_mode ?? "ledger mode not published"} ledger ·
-            fold filter {search.ledger.fold_filter?.fold_id ?? "none"}
+            {search.search_contract.optuna_trials_scope ?? "scope not published"} study
+            {foldNote ? ` · ${foldNote}` : ""}
           </span>
         ) : null}
         {selectedId !== null ? (
@@ -821,6 +859,7 @@ function LedgerRows({ search, pick, onPick }: { search: CurrentSourceSearch; pic
         )}
       </div>
       <LedgerHead />
+      <div onKeyDown={onRowKey} data-ledger-rows>
       {trials.map((trial) => {
         const selected = trial.trial_id === selectedId;
         /* Optional: a pre-W3 responder sends the row without its facts. */
@@ -836,6 +875,7 @@ function LedgerRows({ search, pick, onPick }: { search: CurrentSourceSearch; pic
               background: selected ? "var(--accent-2-soft)" : picked === trial.trial_id ? "var(--accent-soft)" : "transparent",
             }}
             aria-pressed={picked === trial.trial_id}
+            tabIndex={trial.trial_id === tabStop ? 0 : -1}
             onClick={() => onPick(trial.trial_id)}
             data-trial={trial.trial_id}
             data-trial-selected={selected}
@@ -874,19 +914,40 @@ function LedgerRows({ search, pick, onPick }: { search: CurrentSourceSearch; pic
                 <NotPublished title="this trial row carries no params_digest" />
               )}
             </span>
-            <span className={`${columnClass(LEDGER_COLUMNS[6])} text-[9.5px]`} style={{ color: "var(--ink-faint)" }} data-trial-note>
-              {facts && facts.state === "AVAILABLE"
-                ? `${facts.stage ?? "stage not published"} · ${scopeWords(facts)} · objective = ${OBJECTIVE_KIND_WORDS[facts.objective_kind]} · `
-                : ""}
+            <span
+              className={`${columnClass(LEDGER_COLUMNS[6])} text-[9.5px]`}
+              style={{ color: "var(--ink-faint)" }}
+              data-trial-note
+              title={
+                facts && facts.state === "AVAILABLE"
+                  ? `${facts.stage ?? "stage not published"} · ${scopeWords(facts)} · objective = ${OBJECTIVE_KIND_WORDS[facts.objective_kind]}`
+                  : undefined
+              }
+            >
               {Object.keys(trial.parameters).length > 0
                 ? Object.entries(trial.parameters)
-                    .map(([name, value]) => `${name}=${value}`)
+                    .map(([name, value]) => `${name}=${cleanParamText(value)}`)
                     .join(" · ")
                 : "parameters not published"}
             </span>
           </button>
         );
       })}
+      </div>
+      {more && (more.hasMore || more.error) ? (
+        <div className="flex flex-wrap items-center gap-3 px-3 py-2" data-ledger-more>
+          {more.hasMore ? (
+            <button type="button" className="btn-ghost mono text-[10px]" disabled={more.loading} title={more.loading ? "Reading the next page of trials" : undefined} onClick={more.onMore} data-action="ledger-more">
+              {more.loading ? "loading more trials…" : `show more trials (${trials.length} of ${search.ledger.source_trial_count})`}
+            </button>
+          ) : null}
+          {more.error ? (
+            <span className="mono text-[10px]" style={{ color: "var(--bad)" }} data-ledger-more-error role="alert">
+              Could not read the next page. Try again.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {search.candidates.rows.length > 0 && (search.candidates.rows[0] as Partial<RetainedCandidate>).facts ? <CandidateLedger search={search} /> : null}
     </div>
   );
@@ -1054,7 +1115,7 @@ function RetainedFormula({ search }: { search: CurrentSourceSearch }) {
             {term.term}
           </span>
           <span className="flex-1" style={{ color: "var(--ink-faint)" }}>
-            {TERM_WORDS[term.term] ?? term.term} · {ratio2(term.value) ?? "not published"} × {term.weight}
+            {TERM_WORDS[term.term] ?? term.term} · {ratio2(term.value) ?? "not published"} × {term.weight.replace(/^-/, "−")}
           </span>
           <span className="mono text-[11px] font-semibold" title={term.contribution}>
             {ratio2(term.contribution) ?? "not published"}
@@ -1133,10 +1194,16 @@ function RetainedBestVsSelected({ search, freezeHref }: { search: CurrentSourceS
           ? "Same trial."
           : same === false
             ? "Selector did not take the IS best."
-            : "No selection published."}{" "}
-        <span data-centroid={roles.centroid.state} title={roles.centroid.reason_code ?? undefined}>
-          Centroid — {roles.centroid.state === "NOT_APPLICABLE" ? "not applicable" : "not published"}
-        </span>
+            : "No selection published."}
+        {/* H13: the centroid is only worth a sentence when it is a gap that is not by design. */}
+        {roles.centroid.state === "NOT_APPLICABLE" ? (
+          <span hidden data-centroid={roles.centroid.state} title={roles.centroid.reason_code ?? undefined} />
+        ) : (
+          <span data-centroid={roles.centroid.state} title={roles.centroid.reason_code ?? undefined}>
+            {" "}
+            Centroid — not published
+          </span>
+        )}
       </span>
       {freezeHref !== null && roles.selected.state === "AVAILABLE" ? (
         <StageLink to={freezeHref} action="selected-to-freeze" title="Open S3 · Freeze — this selected θ* as sealed, with its digest">
@@ -1317,11 +1384,7 @@ function ServedSearchSpace({ search, space, run }: { search: CurrentSourceSearch
         <Gap gap={factGap(probe.warm_start)} what="warm start" />
         <Gap gap={factGap(probe.dedupe)} what="dedupe" />
       </div>
-      {space.state === "AVAILABLE" && space.grid_size ? (
-        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--accent-2)" }} data-coverage-note>
-          {search.ledger.source_trial_count} of {groupDecimalString(String(space.grid_size))} grid points sampled
-        </span>
-      ) : null}
+      {/* H05: "trials retained" above and the declared grid size already say this. */}
     </section>
   );
 }
@@ -1746,6 +1809,8 @@ export interface SearchScreenProps {
   /** X2 · F4 (T07/T08): the trial the reader is inspecting — the hash's `pick=`, never θ*. */
   pick?: string | null;
   onPick?: (trialId: string) => void;
+  /** D9: lets go of the pick (the hash's `pick=`). */
+  onClear?: () => void;
   /**
    * Drawn inside the Evidence Hub's Search tab (HiFi 04): the hub owns the
    * page frame, the breadcrumb and the title, so this screen leaves out its
@@ -1806,6 +1871,8 @@ const SHOWN_GAPS = new Set<string>([
   "trial_detail",
   "study",
   "sampler_seed_warm_start",
+  /* D11: the server's absence key for the trial jump — a control name, not something a reader asked about. */
+  "trial_jump",
 ]);
 
 export function SearchScreen({
@@ -1822,13 +1889,17 @@ export function SearchScreen({
   modeReads,
   pick: controlledPick,
   onPick: controlledOnPick,
+  onClear: controlledOnClear,
   embedded = false,
 }: SearchScreenProps) {
   const modeReadsLabel = useId();
   /* Controlled by the route (the hash's `pick=`); a bare screen keeps its own. */
   const [localPick, setLocalPick] = useState<string | null>(null);
   const pick = controlledPick !== undefined ? controlledPick : localPick;
-  const onPick = controlledOnPick ?? setLocalPick;
+  const pickTrial = controlledOnPick ?? setLocalPick;
+  const onClear = controlledOnClear ?? (() => setLocalPick(null));
+  /* D9: choosing the picked trial again lets it go, so a pick is never a one-way door. */
+  const onPick = (trialId: string) => (trialId === pick ? onClear() : pickTrial(trialId));
   const profile = detail?.fixed_profile;
   const parameters = profile?.parameters ?? [];
   const fixed = detail?.source_profile.state === "FIXED_PROFILE_NO_SEARCH";
@@ -1859,8 +1930,19 @@ export function SearchScreen({
   const absences = lane ? [] : hubAbsences;
   /* F2: the fold-filtered answer replaces the unfiltered one for the trial ledger and the inspection panel only. */
   const folded = lane && foldLedger.state === "ready" ? foldLedger.search : null;
-  const ledgerSlot: LedgerSlot = folded ? { state: "ready", search: folded } : ledger;
+  /* D5: later pages of the retained ledger, appended to the first one in hand. */
+  const pages = useLedgerPages(runId, folded ?? lane, folded && foldLedger.state === "ready" ? foldLedger.foldId : null);
+  const ledgerSlot: LedgerSlot = pages.merged && (folded || lane) ? { state: "ready", search: pages.merged } : ledger;
   const inspected = folded ?? lane;
+  const ledgerMore: LedgerMore = { hasMore: pages.hasMore, loading: pages.loading, error: pages.error !== null, onMore: pages.loadMore };
+  /* D6: the ledger's fold id is the plan's own (0-based); the reader's fold is the cursor's. A filter that keeps every trial says nothing. */
+  const filter = inspected?.ledger.fold_filter ?? null;
+  const foldNote = filter && filter.matched_rows < inspected!.ledger.source_trial_count ? `fold ${cursor.fold}` : null;
+  /* D8: a failed read of the retained lane is a failure with a retry, not a source that "has not reported". */
+  const laneFailed = ledger.state === "refused" && ledger.laneState === null;
+  const shownState: ResearchState = state.state === "partial" && laneFailed ? refusalState(ledger.refusal, false) : state;
+  const pickedTrial = pick === null ? null : (pages.merged?.ledger.trials.find((trial) => trial.trial_id === pick) ?? null);
+  const pickedPoint = pick === null ? null : (lane?.surface?.points.find((point) => point.trial_id === pick) ?? null);
 
   return (
     <div
@@ -1931,10 +2013,10 @@ export function SearchScreen({
       <ResearchPanel
         title="search & selection"
         variant="plain"
-        state={state}
+        state={shownState}
         minBodyHeight={240}
         recovery={
-          state.mayRetry ? (
+          shownState.mayRetry ? (
             <button type="button" className="btn-ghost mono text-[10px]" data-action="reread" onClick={onReread}>
               reread search
             </button>
@@ -2204,11 +2286,36 @@ export function SearchScreen({
                   data-panel="search-cinema"
                   data-gap-state="NOT_PUBLISHED"
                 >
-                  <span className="italic">search cinema — sampler trace not published</span>
-                  {samplerCode ? <span className="text-[9px]">{samplerCode}</span> : null}
+                  <span className="italic" title={samplerCode ?? undefined}>
+                    Sampler trace: not published
+                  </span>
                 </div>
               );
             })()}
+
+            {/* D9: the picked trial, named where the reader is, with a way out. */}
+            {pick !== null ? (
+              <div
+                className="mono sticky top-2 z-10 flex flex-wrap items-center gap-x-3 gap-y-1 self-start rounded-[6px] border px-3 py-1.5 text-[10.5px]"
+                style={{ borderColor: "var(--accent)", background: "var(--paper-raised)", color: "var(--ink)", boxShadow: "var(--shadow-e1)" }}
+                data-pick-chip={pick}
+              >
+                <span>trial {pick}</span>
+                <span style={{ color: "var(--ink-soft)" }}>
+                  IS {two(pickedPoint?.objective ?? pickedTrial?.objective ?? null) ?? "not published"}
+                </span>
+                {pickedTrial && Object.keys(pickedTrial.parameters).length > 0 ? (
+                  <span style={{ color: "var(--ink-faint)" }}>
+                    {Object.entries(pickedTrial.parameters)
+                      .map(([name, value]) => `${name} ${cleanParamText(value)}`)
+                      .join(" · ")}
+                  </span>
+                ) : null}
+                <button type="button" className="btn-ghost mono text-[10px]" onClick={onClear} aria-label={`clear the picked trial ${pick}`} title="Clear the pick" data-action="clear-pick">
+                  ×
+                </button>
+              </div>
+            ) : null}
 
             {/* ------------------------------------ Stage A · freeze · Stage B */}
             <div
@@ -2275,10 +2382,11 @@ export function SearchScreen({
                           <SurfaceScatter
                             key={key}
                             surface={surface}
-                            parametersOf={(id) => lane.ledger.trials.find((trial) => trial.trial_id === id)?.parameters}
+                            parametersOf={(id) => cleanParameters((pages.merged ?? lane).ledger.trials.find((trial) => trial.trial_id === id)?.parameters)}
                             schedule={lane.search_contract.optimization_schedule}
                             pick={pick}
                             onPick={onPick}
+                            onClear={onClear}
                           />
                         ) : (
                           <SurfaceAbsence key={key} id={key} title={DIAGNOSTIC_LABEL.scatter} reason={surface.reason_code ?? space.reason_code} />
@@ -2387,17 +2495,16 @@ export function SearchScreen({
                       fold inspection
                     </h3>
                     <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-inspection-fold={inspected!.ledger.fold_filter?.fold_id ?? ""}>
-                      {inspected!.ledger.fold_filter?.fold_id ? `fold ${inspected!.ledger.fold_filter.fold_id}` : "no fold filter"} ·{" "}
-                      <span className="mono">
-                        {inspected!.ledger.fold_filter?.matched_rows ?? inspected!.ledger.returned_rows} of {inspected!.ledger.source_trial_count}
+                      {/* D6/H15: a global study has one selection for every fold; the fold the reader holds is the cursor's (1-based), not the ledger's id. */}
+                      {foldNote === null && runSchedule === "global"
+                        ? "One global selection — applies to every fold"
+                        : foldNote ?? "no fold filter"}{" "}
+                      ·{" "}
+                      <span className="mono" title={inspected!.ledger.fold_filter?.rule ?? undefined}>
+                        {inspected!.ledger.fold_filter?.matched_rows ?? inspected!.ledger.source_trial_count} of {inspected!.ledger.source_trial_count}
                       </span>{" "}
                       trials
                     </p>
-                    {inspected!.ledger.fold_filter ? (
-                      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
-                        {inspected!.ledger.fold_filter.rule}
-                      </span>
-                    ) : null}
                     {foldLedger.state === "refused" ? (
                       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-fold-filter-refused={foldLedger.refusal.code ?? ""}>
                         fold filter — not applied · {foldLedger.refusal.code ?? `HTTP ${foldLedger.refusal.status}`}
@@ -2427,7 +2534,7 @@ export function SearchScreen({
             </div>
 
             {/* ------------------------------------------ ledger, full width */}
-            <LedgerPanel slot={ledgerSlot} detail={detail} onNeeded={ensureLedger} pick={pick} onPick={onPick} />
+            <LedgerPanel slot={ledgerSlot} detail={detail} onNeeded={ensureLedger} pick={pick} onPick={onPick} onClear={onClear} foldNote={foldNote} more={ledgerMore} />
 
             {absences.length > 0 ? (
               <section className="flex flex-wrap gap-x-5 gap-y-1.5 px-1" data-source-absences>

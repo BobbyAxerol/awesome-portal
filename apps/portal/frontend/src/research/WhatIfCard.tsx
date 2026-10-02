@@ -169,7 +169,7 @@ function InertWhatIf({ state, reason }: { state: string; reason: string | null }
       style={{ borderColor: "var(--warn)", background: "var(--paper-raised)" }}
     >
       <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }} data-what-if-rule title={WHAT_IF_RULE}>
           what-if sandbox
         </h3>
         <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -178,26 +178,10 @@ function InertWhatIf({ state, reason }: { state: string; reason: string | null }
         {/* E2: the code rides in the title; the sentence below says it once. */}
         {reason ? <span className="sr-only" data-what-if-code title={reason}>{reason}</span> : null}
       </div>
-      <div className="flex flex-col gap-2" data-what-if-inert>
-        {/* A11: the card keeps its place; controls exist but cannot move, with the server's reason. */}
-        {INERT_SLIDERS.map((slot) => (
-          <input key={slot} type="range" disabled aria-disabled="true" aria-label={`parameter ${slot + 1} — ${whatIfReason(reason)}`} style={{ width: "100%" }} />
-        ))}
-        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-what-if-reason>
-          {whatIfReason(reason) || "No evaluated neighbourhood is published for this run."}
-        </p>
-      </div>
-      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule title={WHAT_IF_RULE}>
-        commit → sibling attempt
+      {/* D12: nothing here can act, so nothing that looks like a control is drawn — the server's reason, once. */}
+      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-what-if-inert data-what-if-reason>
+        {whatIfReason(reason) || "No evaluated neighbourhood is published for this run."}
       </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn-ghost mono text-[10px]" data-action="evaluate-grid" disabled title={whatIfReason(reason)}>
-          evaluate grid
-        </button>
-        <button type="button" className="btn-ghost mono text-[10px]" data-action="create-sibling" disabled title={whatIfReason(reason)}>
-          create sibling attempt →
-        </button>
-      </div>
     </section>
   );
 }
@@ -323,7 +307,7 @@ function LiveWhatIf({
       style={{ borderColor: "var(--warn)", background: "var(--paper-raised)" }}
     >
       <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }} data-what-if-rule title={WHAT_IF_RULE}>
           what-if sandbox
         </h3>
         <span
@@ -336,8 +320,13 @@ function LiveWhatIf({
           preview only
         </span>
         {coverage ? (
-          <span className="mono ml-auto text-[10px]" data-coverage={coverage.label} title={`${coverage.evaluated_unique} of ${coverage.unique_evaluations} unique evaluations exist`}>
-            {coverage.label} cells evaluated
+          /* D14: clamped bounds repeat θ* in the 81 grid cells; the server's distinct count is the honest one, the grid count rides in the tooltip. */
+          <span
+            className="mono ml-auto text-[10px]"
+            data-coverage={coverage.label}
+            title={`${coverage.label} grid cells evaluated · clamped bounds repeat the same node, so the distinct count is ${coverage.evaluated_unique} of ${coverage.unique_evaluations}`}
+          >
+            {coverage.evaluated_unique} of {coverage.unique_evaluations} distinct nodes evaluated
           </span>
         ) : null}
       </div>
@@ -455,9 +444,6 @@ function LiveWhatIf({
         </div>
       )}
 
-      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule title={WHAT_IF_RULE}>
-        commit → sibling attempt
-      </p>
 
       {whatIf.definition ? (
         <p className="mono text-[9px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-what-if-definition>

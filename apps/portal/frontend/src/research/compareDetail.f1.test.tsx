@@ -249,11 +249,12 @@ describe("S13 config diff — a baseline this screen picked says so", () => {
     await settled();
     const legend = document.querySelector("[data-config-diff-legend]") as HTMLElement;
     const active = body.result.attempts.find((item) => item.alpha_version_lifecycle.value === "ACTIVE")!;
-    expect(legend.textContent).toBe(`gold = differs from ${active.attempt_id} · baseline picked by this screen`);
+    /* QA S13 (UX-4): the legend names the baseline by the run's label, not its attempt id. */
+    expect(legend.textContent).toBe(`differs from ${active.display_label ?? active.run_id} · baseline picked by this screen`);
     expect(legend.getAttribute("data-baseline-chosen")).toBe("screen");
     expect(legend.getAttribute("title")).toContain("The server publishes no baseline attempt");
     const head = document.querySelector(`.cp-difftable thead th[data-active="true"]`) as HTMLElement;
-    expect(head.getAttribute("title")).toBe(`${active.attempt_id} — baseline picked by this screen (the server names none)`);
+    expect(head.querySelector("button")!.getAttribute("title")).toContain(`${active.attempt_id} — the baseline (the server names none)`);
   });
 
   it("F1-S13-03b with no ACTIVE version on the ladder nothing is compared, and the legend says no baseline exists", async () => {
@@ -292,8 +293,9 @@ describe("S13 text trim (VD-TEXT-01) — prose out of the body, honesty kept", (
     expect(links.textContent).toMatch(/^Attempt Lineage → · release candidate →$/);
     expect(links.getAttribute("title")).toContain("only ever reads the ACTIVE node");
     /* typed absences stay: cert and claim chip are printed, never dropped with the gloss */
-    expect(page().querySelector("[data-cert-absent]")!.textContent).toContain("cert not published");
-    expect(page().querySelector(".cp-claimchip")!.textContent).toContain("WALK");
+    /* QA S13: the same absence on every card is said once above the ladder; the claim of a one-claim ladder is in its header. */
+    expect((page().querySelector("[data-cert-absent]") ?? page().querySelector("[data-ladder-cert]"))!.textContent).toContain("cert not published");
+    expect((page().querySelector(".cp-claimchip") ?? page().querySelector("[data-ladder-one-claim]"))!.textContent).toMatch(/WALK/);
   });
 
   it("F1b-S13-05 without an ACTIVE attempt the release-candidate link says so instead of vanishing", async () => {

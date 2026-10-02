@@ -227,7 +227,12 @@ describe("S02-01 — the cert ceiling line carries the Atlas fact, not a sentenc
     expect(line.getAttribute("data-cert-cap")).toBe(fact.cert_cap.state);
     expect(line.textContent).toContain("cert ceiling");
     expect(line.querySelector("[data-cert-ceiling-absent]")?.textContent).toBe("not published");
-    expect(document.querySelector("[data-cert-cap-reason]")?.textContent).toBe(fact.cert_cap.reason);
+    /* The server's sentence is the label's tooltip and accessible name, no longer a 28-word line under every forecast. */
+    const reason = document.querySelector("[data-cert-cap-reason]") as HTMLElement;
+    expect(reason.getAttribute("title")).toBe(fact.cert_cap.reason);
+    expect(reason.getAttribute("aria-label")).toBe(`cert ceiling — ${fact.cert_cap.reason}`);
+    expect(reason.textContent).toBe("cert ceiling");
+    expect(document.querySelector("[data-claim-forecast]")?.textContent).not.toContain(fact.cert_cap.reason);
     expect(fact.cert_cap.reason.length).toBeGreaterThan(20);
     /* The old hard-coded tail is gone. */
     expect(document.querySelector("[data-claim-forecast]")?.textContent).not.toContain("global · cert ceiling not published");
@@ -239,23 +244,28 @@ describe("S02-01 — the cert ceiling line carries the Atlas fact, not a sentenc
     const schedule = mode.facts!.schedules.find((entry) => entry.schedule === "global")!;
     schedule.cert_cap = { state: "NOT_PUBLISHED", reason: "A reason the form never wrote.", source: null };
     mount({ atlas: changed, draft: draft({ optimizationMode: "mode_1_decay", optimizationSchedule: "global" }) });
-    expect(document.querySelector("[data-cert-cap-reason]")?.textContent).toBe("A reason the form never wrote.");
+    expect(document.querySelector("[data-cert-cap-reason]")?.getAttribute("title")).toBe("A reason the form never wrote.");
   });
 });
 
 /* ------------------------------------------------- CG-P02-02 / CG-P08-02 */
 
 describe("CG-P02-02 / P08-02 — v2 controls say create does not admit them yet", () => {
-  const NOTE = "Preflight accepts this; create does not admit it yet.";
+  const NOTES: Record<string, string> = {
+    "train-window": "Train width: preflight only for now.",
+    "temporal-guards": "Label/purge/embargo: preflight only for now.",
+    "inner-folds": "Inner folds: preflight only for now.",
+  };
   const notes = () => [...document.querySelectorAll("[data-v2-create-note]")].map((node) => node.getAttribute("data-v2-create-note"));
 
   it("rolling width, the temporal guards and the inner folds each carry the note, with no cause claimed", () => {
     mount({
-      draft: advanced({ windowMode: "rolling", trainWindow: "30D" }, { optimizationMode: "mode_1_decay", optimizationSchedule: "per_fold_causal" }),
+      draft: advanced({ windowMode: "rolling", trainWindow: "30D", purgeBars: "2" }, { optimizationMode: "mode_1_decay", optimizationSchedule: "per_fold_causal" }),
     });
     go("windows");
     expect(notes()).toEqual(["train-window", "temporal-guards", "inner-folds"]);
-    for (const node of document.querySelectorAll("[data-v2-create-note]")) expect(node.textContent).toBe(NOTE);
+    /* Each note names its own control (T14), not "this". */
+    for (const node of document.querySelectorAll("[data-v2-create-note]")) expect(node.textContent).toBe(NOTES[node.getAttribute("data-v2-create-note")!]);
     /* Neutral: it names no executor, no adapter and no reason. */
     expect(document.body.textContent).not.toMatch(/no installed executor|adapter/i);
   });
@@ -267,18 +277,22 @@ describe("CG-P02-02 / P08-02 — v2 controls say create does not admit them yet"
     cleanup();
     mount({ draft: advanced() });
     go("windows");
-    /* Expanding + global: only the always-offered temporal guards remain. */
+    /* Expanding + global and no guard declared: an untouched field is not serialized, so there is nothing to warn about. */
+    expect(notes()).toEqual([]);
+    cleanup();
+    mount({ draft: advanced({ embargoBars: "3" }) });
+    go("windows");
     expect(notes()).toEqual(["temporal-guards"]);
   });
 
   it("steps aside when the preflight serves run_admission.may_create_run = true", () => {
     const admitted = { ...PREFLIGHT, run_admission: { may_create_run: true, code: null, message: null, field_path: [] } } as PreflightResponse;
-    mount({ draft: advanced(), preflight: admitted });
+    mount({ draft: advanced({ purgeBars: "1" }), preflight: admitted });
     go("windows");
     expect(notes()).toEqual([]);
     cleanup();
     const refused = { ...PREFLIGHT, run_admission: { may_create_run: false, code: "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", message: "x", field_path: [] } } as PreflightResponse;
-    mount({ draft: advanced(), preflight: refused });
+    mount({ draft: advanced({ purgeBars: "1" }), preflight: refused });
     go("windows");
     expect(notes()).toEqual(["temporal-guards"]);
   });
@@ -318,7 +332,9 @@ describe("400-trial audit — a copied run's instants are shown, not blanked", (
 
   it("the Review rail names the first OOS instant it used to leave out", () => {
     mount({ draft: advanced() });
-    expect(document.querySelector("[data-advanced-timeline]")?.textContent).toContain("first OOS 2026-06-01T00:00:00Z");
+    expect(document.querySelector("[data-advanced-timeline]")?.textContent).toContain("first OOS 2026-06-01T00:00");
+    /* One instant format (U12): the seconds and the Z a copied run carries are not printed. */
+    expect(document.querySelector("[data-advanced-timeline]")?.textContent).not.toContain(":00Z");
     cleanup();
     mount({ draft: advanced({ splitMode: "" }) });
     expect(document.querySelector("[data-advanced-timeline]")?.textContent).toContain("first OOS not declared");

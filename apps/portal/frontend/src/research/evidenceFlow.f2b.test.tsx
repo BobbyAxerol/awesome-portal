@@ -115,11 +115,11 @@ describe("F2b — the window switcher", () => {
   it("writes ?window= (hash kept) and the pill follows", () => {
     window.history.replaceState(null, "", "/research/quantbt/runs/R-WFO-118/evidence#stage=summary&fold=1");
     const { container } = view();
-    expect(container.querySelector("[data-cursor-window]")?.textContent).toContain("oos");
+    expect(container.querySelector("[data-cursor-window]")?.textContent).toBe("window OOS");
     fireEvent.click(container.querySelector("[data-window-switcher] [data-segment='IS']") as Element);
     expect(window.location.search).toBe("?window=is");
     expect(window.location.hash).toBe("#stage=summary&fold=1");
-    expect(container.querySelector("[data-cursor-window]")?.textContent).toContain("is");
+    expect(container.querySelector("[data-cursor-window]")?.textContent).toBe("window IS");
     expect(container.querySelector("[data-window-switcher] [data-segment='IS']")?.getAttribute("aria-pressed")).toBe("true");
     expect(container.querySelector("[data-window-switcher] [data-segment='OOS']")?.getAttribute("aria-pressed")).toBe("false");
     window.history.replaceState(null, "", "/");
@@ -127,7 +127,7 @@ describe("F2b — the window switcher", () => {
 
   it("an arriving ?window=holdout opens on it", () => {
     const { container } = view({ entry: `/research/quantbt/runs/${RUN}/evidence?window=holdout` });
-    expect(container.querySelector("[data-cursor-window]")?.textContent).toContain("holdout");
+    expect(container.querySelector("[data-cursor-window]")?.textContent).toBe("window Holdout");
     expect(container.querySelector("[data-window-switcher] [data-segment='Holdout Live']")?.getAttribute("aria-pressed")).toBe("true");
   });
 

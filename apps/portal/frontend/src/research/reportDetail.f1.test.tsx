@@ -115,7 +115,7 @@ describe("F1 D8 walk — the equity legend and the source absences tell one stor
     expect(equity.querySelector('[data-legend="is"]')?.getAttribute("data-legend-state")).toBe("published");
     const emitted = body.frozen_core.equity_is;
     expect(equity.querySelector("[data-equity-counts]")?.textContent).toContain(
-      `before OOS emitted ${emitted.emitted_point_count} of ${emitted.source_observation_count} source observations`,
+      `before OOS ${emitted.emitted_point_count} of ${emitted.source_observation_count} points`,
     );
     expect(equity.querySelector("[data-equity-title]")?.textContent).toContain("before OOS vs stitched OOS");
     expect(equity.textContent).not.toMatch(/\bIS account\b|\bIS emitted\b|\bIS \d/);

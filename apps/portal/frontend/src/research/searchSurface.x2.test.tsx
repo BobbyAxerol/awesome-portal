@@ -198,7 +198,8 @@ describe("X2 · B3 — A3/A4/A5/A6 and B4 from the server", () => {
     const { container } = await settled();
     const importance = container.querySelector("[data-panel='importance']") as HTMLElement;
     expect(importance.getAttribute("data-panel-state")).toBe("NOT_APPLICABLE");
-    expect(importance.textContent).toContain("Spearman proxy, not fANOVA");
+    expect(importance.textContent).toContain("Spearman ρ vs objective");
+    expect(importance.querySelector("[title*='not fANOVA']")).toBeTruthy();
     expect(importance.textContent).toContain("3 trials, needs ≥ 8");
     const interactions = container.querySelector("[data-panel='interactions']") as HTMLElement;
     expect(interactions.querySelector("[data-gap-reason='interactions']")?.textContent).toBe("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_INTERACTIONS");

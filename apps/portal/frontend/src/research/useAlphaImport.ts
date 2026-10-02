@@ -244,7 +244,7 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
   }, [fail, parse, pending, workspaceId]);
 
   const onRegister = useCallback(() => {
-    if (pending !== null || !parse || !gates?.all_pass || alphaId.trim().length === 0) return;
+    if (pending !== null || !parse || !gates?.all_pass || alphaId.trim().length === 0 || !ALPHA_ID_PATTERN.test(alphaId.trim())) return;
     setPending("register");
     setRefusal(null);
     alphaImportApi

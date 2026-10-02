@@ -17,7 +17,7 @@
  *    to a plausible-looking digest.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -330,6 +330,9 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
     );
   }, []);
 
+  const latest = useRef(cursor);
+  latest.current = cursor;
+
   /* Mount writes the full key set even when the reader arrived without a hash,
      so the address bar always describes what is on screen. */
   useEffect(() => {
@@ -345,14 +348,20 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
   useEffect(() => {
     const onHashChange = () => {
       /* An edited hash that names no stage keeps the stage in hand (FE-X-10). */
-      setCursor((previous) => seedCursor(window.location.hash, previous).cursor);
+      const observed = observedFoldsFor(runId ?? "");
       const read = seedCursor(window.location.hash, DEFAULT_CURSOR);
+      /* QA S04-U3: a fold the run never observed is clamped here too, with the same notice a fresh load gets. */
+      const clamped = observed !== null ? clampFold(seedCursor(window.location.hash, latest.current).cursor.fold, observed) : null;
+      setCursor((previous) => {
+        const next = seedCursor(window.location.hash, previous).cursor;
+        return clamped !== null && clamped.note !== null ? { ...next, fold: clamped.fold } : next;
+      });
       setProblems(read.problems);
-      setNotes(read.notes);
+      setNotes(clamped !== null && clamped.note !== null ? [...read.notes, clamped.note] : read.notes);
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  }, [runId]);
 
   const update = useCallback((patch: Partial<EvidenceCursor>) => {
     setCursor((previous) => {
@@ -421,7 +430,21 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
     decline,
     /* Stage is one key of the cursor. Everything else survives the change —
        the invariant spec 04 §2.4 and test T03 are about. */
-    setStage: useCallback((stage: EvidenceStage) => update({ stage }), [update]),
+    setStage: useCallback(
+      (stage: EvidenceStage) => {
+        /* QA S04-U1: an embedded stage body mounts in the same commit as the tab change and
+           seeds its own cursor from the hash — which still named the old tab. Its first write
+           (`seq=1`) then put the old stage back. The hash names the new tab before it mounts. */
+        if (typeof window !== "undefined") {
+          const next = serializeCursor({ ...latest.current, stage });
+          if (window.location.hash !== next) {
+            window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${next}`);
+          }
+        }
+        update({ stage });
+      },
+      [update],
+    ),
     setFold: useCallback((fold: number) => update({ fold: Math.max(1, Math.trunc(fold)) }), [update]),
     update,
     reset: useCallback(() => setCursor(seed), [seed]),

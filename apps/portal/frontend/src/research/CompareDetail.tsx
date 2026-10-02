@@ -94,10 +94,11 @@ import {
   type FoldSeries,
 } from "./compareClient";
 import { LineageLink, lineageHref } from "./LineageLink";
-import { foldBars, LINES_PAST_FOLDS, SINGLE_OOS_ORDINAL, SINGLE_OOS_WINDOW } from "./compareFoldBars";
+import { foldBars, identicalSeriesGroups, LINES_PAST_FOLDS, SINGLE_OOS_ORDINAL, SINGLE_OOS_WINDOW } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
 import { foldLabel, formatAxisValue, formatCorrelation, formatMetric, shortId } from "./researchFormat";
 import { runLabelFor } from "./runLabels";
+import { BreakableCode } from "./reportText";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
 import { iso } from "./utcMinute";
@@ -105,6 +106,15 @@ import { iso } from "./utcMinute";
 /** An id on screen (E1): prefix + 8 hex; callers keep the full value in a title. */
 function sid(id: string): string {
   return runLabelFor(id) ?? shortId(id) ?? id;
+}
+
+/**
+ * QA S13 (UX-4): an attempt is named by the run's `display_label` (`R-P04-006`), never by `ratt_8d756a95`. The label comes
+ * from the row itself, else from the registry a read filled; with neither, the short RUN id (the id every other
+ * screen shows). The attempt id rides the tooltip only.
+ */
+export function runName(run: CompareRun): string {
+  return run.display_label ?? runLabelFor(run.run_id) ?? shortId(run.run_id) ?? run.run_id;
 }
 
 /**
@@ -176,7 +186,7 @@ const ATTEMPTS_RULE_SOME_UP =
 export const ATTEMPTS_RULE = `${ATTEMPTS_RULE_BASE} ${ATTEMPTS_RULE_ALL_UP}`;
 
 /** VD-TEXT-01: the ladder's visible heading (compareClient's longer LADDER_HEADER is not printed; the rule sentence is this heading's title). */
-export const LADDER_TITLE = "claims rank before numbers";
+export const LADDER_TITLE = "attempts, weakest to strongest claim";
 /** VD-F1-03: the one short line a ladder that strengthens somewhere prints. */
 export const LADDER_STRENGTHENS = "claim strengthens →";
 
@@ -396,6 +406,8 @@ const COMPARE_CSS = `
 .cp-difftable td[data-differs="true"] { color: var(--accent-2); font-weight: 600; }
 .cp-difftable td[data-active="true"] { background: var(--paper-sunken); }
 .cp-att { font-family: var(--font-mono); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+.cp-colpick { font: inherit; text-transform: none; letter-spacing: 0; color: inherit; background: transparent; border: 0; padding: 0; cursor: pointer; white-space: nowrap; }
+.cp-colpick:hover { color: var(--accent); text-decoration: underline; }
 .cp-arrow { position: absolute; top: 0; bottom: 0; right: 100%; width: var(--cp-link); display: flex; align-items: center; justify-content: center;
   white-space: nowrap; font-family: var(--font-mono); font-size: 11px; color: var(--warn); }
 /* VD-F1-03: equal claim = no words, a hairline in the card gap (the flex ladder's spacing is unchanged). */
@@ -509,7 +521,7 @@ const COMPARE_CSS = `
 .cp-delta td.d { font-weight: 600; }
 .cp-delta td[data-sign="pos"] { color: var(--good); }
 .cp-delta td[data-sign="neg"] { color: var(--bad); }
-.cp-delta .scope { display: block; font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-faint); white-space: normal; word-break: break-all; max-width: 16ch; }
+.cp-delta .scope { display: block; font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-faint); white-space: normal; overflow-wrap: anywhere; max-width: 16ch; }
 .cp-corr { flex: 1 1 320px; border: 1.5px solid var(--accent); border-radius: 8px; background: var(--accent-soft);
   padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .cp-corr .t { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px; margin: 0; font-family: var(--font-body); }
@@ -529,7 +541,7 @@ const COMPARE_CSS = `
 .cp-foot .t { font-family: var(--font-body); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0; font-weight: 400; }
 .cp-foot p { font-size: 11px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
 .cp-absent { font-family: var(--font-mono); font-style: italic; color: var(--ink-faint); font-size: 9.5px; }
-.cp-reason { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); word-break: break-all; }
+.cp-reason { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); overflow-wrap: anywhere; word-break: normal; }
 /* D10: attempts without a claim, folded like S10's probes. */
 .cp-unclaimed { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin-top: 10px; min-width: 0; }
 .cp-toggle { border: 1px dashed var(--line-strong); background: var(--paper-raised); color: var(--ink-soft); padding: 1px 9px; font-family: var(--font-mono);
@@ -585,7 +597,7 @@ function Absent({ what, state, reason }: { what?: string; state: string; reason:
         {state}
       </span>
       <span className="cp-reason" data-reason-code>
-        {reason}
+        <BreakableCode code={reason} />
       </span>
     </span>
   );
@@ -666,28 +678,33 @@ function RunState({ state }: { state: CompareRun["run_state"] }) {
   );
 }
 
-function RunLine({ run, withState = false }: { run: CompareRun; withState?: boolean }) {
+function RunLine({ run, withState = false, skipLabel = false }: { run: CompareRun; withState?: boolean; skipLabel?: boolean }) {
+  const label = runName(run);
   return (
     <span className="cp-faint" data-run-line>
-      <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={`${run.run_id} — open in Evidence Flow`}>
-        {sid(run.run_id)}
-      </Link>
+      {skipLabel ? null : (
+        <>
+          <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={`${run.run_id} — open in Evidence Flow`}>
+            {label}
+          </Link>
+          {" · "}
+        </>
+      )}
       {withState ? (
         <>
-          {" · "}
           {/* On a ladder card the hi-fi's pill is the lifecycle; the run's own state reads here. */}
           <span className="cp-runstate" data-run-state={run.run_state} data-state={run.run_state}>
             {run.run_state}
           </span>
+          {" · "}
         </>
       ) : null}
-      {" · "}
-      <Link to={reportHref(run.run_id)} data-report-link={run.run_id} title="Run report of this run (Screen 9)" aria-label={`Run report of ${sid(run.run_id)}`}>
+      <Link to={reportHref(run.run_id)} data-report-link={run.run_id} title="Run report of this run (Screen 9)" aria-label={`Run report of ${label}`}>
         report
       </Link>
       {" · "}
       {/* Spec 13 §1 outbound 11: this run's release candidate (P21). */}
-      <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)" aria-label={`Release candidate of ${sid(run.run_id)}`}>
+      <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)" aria-label={`Release candidate of ${label}`}>
         RC
       </Link>
       {" · "}
@@ -710,8 +727,8 @@ function CertAbsent({ run }: { run: CompareRun }) {
   return (
     <span className="cp-cert" data-cert-absent data-cert-state={run.certification.state} data-absent="cert" data-absent-state="not published">
       <span className="chip">cert not published</span>
-      <span className="cp-reason" data-reason-code>
-        {run.certification.reason_code}
+      <span className="cp-reason" data-reason-code={run.certification.reason_code}>
+        {run.certification.reason_code !== null ? <BreakableCode code={run.certification.reason_code} /> : null}
       </span>
     </span>
   );
@@ -927,14 +944,33 @@ function Header({
         </nav>
         <h2 className="cp-title">{COMPARE_TITLE}</h2>
       </div>
-      <span className="cp-seg" role="group" aria-label="compare mode">
+      {/* QA S13-2: the three modes are a tablist (roving tabindex, arrow keys, Home/End); aria-pressed stays for the existing selectors. */}
+      <span
+        className="cp-seg"
+        role="tablist"
+        aria-label="compare mode"
+        onKeyDown={(event) => {
+          const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+          if (!keys.includes(event.key)) return;
+          event.preventDefault();
+          const current = Math.max(0, COMPARE_MODES.findIndex((mode) => mode === active));
+          const next =
+            event.key === "Home" ? 0 : event.key === "End" ? COMPARE_MODES.length - 1 : (current + (event.key === "ArrowRight" ? 1 : COMPARE_MODES.length - 1)) % COMPARE_MODES.length;
+          onMode(COMPARE_MODES[next]!);
+          const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>("[role='tab']");
+          buttons[next]?.focus();
+        }}
+      >
         {COMPARE_MODES.map((mode) => (
           <button
             key={mode}
             type="button"
+            role="tab"
             className="cp-segbtn"
             data-mode-option={mode}
+            aria-selected={active === mode}
             aria-pressed={active === mode}
+            tabIndex={active === mode || (active === null && mode === COMPARE_MODES[0]) ? 0 : -1}
             onClick={() => onMode(mode)}
           >
             {MODE_LABELS[mode]}
@@ -953,7 +989,10 @@ function coverageOf(compare: Compare): string {
 
 /** VD-P20-08: one mono disclosure line — authority, revision, as-of, coverage and source absences. */
 function Meta({ alphaId, compare, state }: { alphaId: string | null; compare: Compare | null; state: ResearchState["state"] }) {
+  /* QA S13: the two source absences below are about a pair; on attempts and markets they are two reason codes that mean nothing. */
+  const pairMode = compare?.result.mode === "pair";
   if (!compare) {
+    if (state !== "loading") return null;
     return (
       <div className="cp-meta" data-panel="meta" data-panel-state={state}>
         <Pending what="read authority, revision and coverage" state={state} />
@@ -968,14 +1007,18 @@ function Meta({ alphaId, compare, state }: { alphaId: string | null; compare: Co
       <span data-revision={compare.revision} title={compare.revision}>revision {shortId(compare.revision)}</span>
       <span data-as-of>as of {iso(compare.as_of_utc_ms)}</span>
       <span data-coverage>{coverageOf(compare)}</span>
-      <span data-source-absence="structured_claim_family">
-        claim family {COMPARE_WITHHELD_WORDS[absences.structured_claim_family.state]}
-        {absences.structured_claim_family.reason_code ? ` · ${absences.structured_claim_family.reason_code}` : ""}
-      </span>
-      <span data-source-absence="full_resolution_outer_oos_returns">
-        full-resolution outer-OOS returns {COMPARE_WITHHELD_WORDS[absences.full_resolution_outer_oos_returns.state]}
-        {absences.full_resolution_outer_oos_returns.reason_code ? ` · ${absences.full_resolution_outer_oos_returns.reason_code}` : ""}
-      </span>
+      {pairMode ? (
+        <>
+          <span data-source-absence="structured_claim_family">
+            claim family {COMPARE_WITHHELD_WORDS[absences.structured_claim_family.state]}
+            {absences.structured_claim_family.reason_code ? ` · ${absences.structured_claim_family.reason_code}` : ""}
+          </span>
+          <span data-source-absence="full_resolution_outer_oos_returns">
+            full-resolution outer-OOS returns {COMPARE_WITHHELD_WORDS[absences.full_resolution_outer_oos_returns.state]}
+            {absences.full_resolution_outer_oos_returns.reason_code ? ` · ${absences.full_resolution_outer_oos_returns.reason_code}` : ""}
+          </span>
+        </>
+      ) : null}
       {alphaId ? (
         <LineageLink to={lineageHref(alphaId)} action="open-lineage">
           attempt lineage →
@@ -1039,17 +1082,20 @@ function Rule({ tone, title, children }: { tone: "gold" | "bad"; title?: string;
  * every card. Cards say it only when the ladder MIXES lifecycles (then the accent border + pill tell
  * the ACTIVE version's attempt from the others); a ladder of one lifecycle names it once in the heading.
  */
-function LadderCard({ run, showLifecycle }: { run: CompareRun; showLifecycle: boolean }) {
+function LadderCard({ run, showLifecycle, showClaim = true, showCert = true }: { run: CompareRun; showLifecycle: boolean; showClaim?: boolean; showCert?: boolean }) {
   return (
     <article className="cp-lcard" data-ladder-run={run.run_id} data-attempt={run.attempt_id} data-lifecycle={showLifecycle ? (run.alpha_version_lifecycle.value ?? undefined) : undefined} data-lane={run.lane}>
       <div className="top">
-        <span className="cp-att" title={run.attempt_id}>
-          {sid(run.attempt_id)}
+        {/* QA S13 (UX-4): the card is titled by the run's label; it opens the run. The attempt id is the tooltip. */}
+        <span className="cp-att" data-attempt-label title={`${run.attempt_id} · ${run.run_id}${!showClaim && run.claim.text ? ` · server claim: ${run.claim.text}` : ""}`}>
+          <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={`${run.run_id} — open in Evidence Flow`}>
+            {runName(run)}
+          </Link>
         </span>
         {showLifecycle ? <Lifecycle run={run} /> : null}
       </div>
-      <RunLine run={run} withState />
-      <ClaimChip claim={run.claim} />
+      <RunLine run={run} withState skipLabel />
+      {showClaim ? <ClaimChip claim={run.claim} /> : null}
       <div className="cp-big">
         {(() => {
           const sharpe = metricOf(run, "OOS_SHARPE");
@@ -1063,10 +1109,26 @@ function LadderCard({ run, showLifecycle }: { run: CompareRun; showLifecycle: bo
             </span>
           );
         })()}
-        <CertAbsent run={run} />
+        {/* QA S13 (UX-3): three Sharpe figures exist for one run; the card says which one this is. */}
+        {(() => {
+          const sharpe = metricOf(run, "OOS_SHARPE");
+          return sharpe && sharpe.value !== null && sharpe.availability.state === "AVAILABLE" ? (
+            <span className="cp-faint" data-sharpe-scope>
+              {scopeWords(sharpe.scope) === "OOS" ? "OOS Sharpe" : `OOS Sharpe · ${scopeWords(sharpe.scope)}`}
+            </span>
+          ) : null;
+        })()}
+        {showCert ? <CertAbsent run={run} /> : null}
       </div>
     </article>
   );
+}
+
+/** QA S13: when every card carries the same certification absence it is said once above the ladder, not nineteen times. */
+function sharedCert(runs: readonly CompareRun[]): CompareRun["certification"] | null {
+  const first = runs[0];
+  if (!first || runs.length < 2) return null;
+  return runs.every((run) => run.certification.state === first.certification.state && run.certification.reason_code === first.certification.reason_code) ? first.certification : null;
 }
 
 function Ladder({ result }: { result: AttemptResult }) {
@@ -1077,6 +1139,7 @@ function Ladder({ result }: { result: AttemptResult }) {
   const oneFamily = ladderOneClaim(steps) ? new Set(claimed.map((run) => run.claim.family)) : null;
   const oneClaim = oneFamily !== null && oneFamily.size === 1 ? [...oneFamily][0]! : null;
   const mixedLifecycle = new Set(claimed.map((run) => run.alpha_version_lifecycle.value)).size > 1;
+  const cert = sharedCert(claimed);
   return (
     <section data-panel="ladder" aria-label="claim ladder">
       {/* VD-F1-03: the rule sentences ride the heading's title, in the hi-fi's order, as far as the ladder really strengthens. */}
@@ -1084,7 +1147,11 @@ function Ladder({ result }: { result: AttemptResult }) {
         <span data-ladder-header>{LADDER_TITLE}</span>
         <span className="cp-faint" data-ladder-order-key={result.order} title={`server order: ${result.order}, laid out reversed`}>
           {oneClaim !== null ? (
-            <span data-ladder-one-claim={oneClaim}>
+            <span
+              data-ladder-one-claim={oneClaim}
+              data-claim={oneClaim}
+              title={`${CLAIM_SENTENCE[oneClaim]} (${CLAIM_RANK_MAP[oneClaim].tier})`}
+            >
               {claimed.length} attempts · one claim: {oneClaim}
             </span>
           ) : (
@@ -1095,6 +1162,12 @@ function Ladder({ result }: { result: AttemptResult }) {
           )}
         </span>
       </h3>
+      {cert !== null ? (
+        /* QA S13: one certification line for the whole ladder instead of one per card. */
+        <span className="cp-faint" data-ladder-cert data-cert-state={cert.state} title="No source publishes a certification grade for these attempts">
+          cert not published{cert.reason_code !== null ? <> · <BreakableCode code={cert.reason_code} /></> : null}
+        </span>
+      ) : null}
       {result.attempts.length === 0 ? (
         <span className="cp-faint" data-no-attempts>
           no comparable attempt was returned for this alpha
@@ -1107,7 +1180,7 @@ function Ladder({ result }: { result: AttemptResult }) {
         <div className="cp-ladder" data-ladder-order="server-reversed" data-ladder-layout={oneClaim !== null ? "one-claim" : "ladder"}>
           {/* Reversed for the hi-fi's reading direction (VD-P20-14); the server's order is the inverse. */}
           {claimed.map((run, index) => (
-            <LadderStep key={run.run_id} run={run} showLifecycle={mixedLifecycle} step={index === 0 || oneClaim !== null ? null : ladderStepKind(claimed[index - 1]!, run)} />
+            <LadderStep key={run.run_id} run={run} showLifecycle={mixedLifecycle} showClaim={oneClaim === null} showCert={cert === null} step={index === 0 || oneClaim !== null ? null : ladderStepKind(claimed[index - 1]!, run)} />
           ))}
         </div>
       )}
@@ -1148,9 +1221,8 @@ function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
           {runs.map((run) => (
             <li key={run.run_id} className="cp-crow" data-unclaimed-run={run.run_id} data-attempt={run.attempt_id}>
               <span className="cp-mono cp-crowid" title={`${run.attempt_id} · ${run.run_id}`}>
-                {sid(run.attempt_id)} ·{" "}
                 <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id}>
-                  {sid(run.run_id)}
+                  {runName(run)}
                 </Link>
               </span>
               <span className="cp-runstate" data-state={run.run_state}>
@@ -1176,7 +1248,7 @@ function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
  * inside one wrapping box (FG-04a): a line that wraps never ends on an arrow
  * pointing at nothing. DOM and reading order stay card, arrow, card, …
  */
-function LadderStep({ run, step, showLifecycle }: { run: CompareRun; step: LadderStepKind | null; showLifecycle: boolean }) {
+function LadderStep({ run, step, showLifecycle, showClaim, showCert }: { run: CompareRun; step: LadderStepKind | null; showLifecycle: boolean; showClaim: boolean; showCert: boolean }) {
   return (
     <div className="cp-lstep" data-ladder-step={run.run_id}>
       {step === null ? null : (
@@ -1184,7 +1256,7 @@ function LadderStep({ run, step, showLifecycle }: { run: CompareRun; step: Ladde
           {STEP_CONNECTOR[step].text}
         </span>
       )}
-      <LadderCard run={run} showLifecycle={showLifecycle} />
+      <LadderCard run={run} showLifecycle={showLifecycle} showClaim={showClaim} showCert={showCert} />
     </div>
   );
 }
@@ -1226,7 +1298,7 @@ const CLAIM_SHORT: Record<CompareClaim["family"], string> = {
 };
 
 function foldLegend(run: CompareRun | undefined, runId: string): string {
-  return run ? `${sid(run.attempt_id)} · ${CLAIM_SHORT[run.claim.family]}` : sid(runId);
+  return run ? `${runName(run)} · ${CLAIM_SHORT[run.claim.family]}` : sid(runId);
 }
 
 /**
@@ -1284,7 +1356,18 @@ function FoldChart({ result }: { result: AttemptResult }) {
   const geometry = foldBars(published.map((item) => ({ runId: item.run_id, folds: item.folds })));
   const absent = result.fold_series.filter((item: FoldSeries) => item.state !== "AVAILABLE" && !singleWindow.some((one) => one.run_id === item.run_id));
   const truncated = published.filter((item) => item.truncated);
-  const tone = (runId: string) => foldTone(byRun.get(runId), published.findIndex((item) => item.run_id === runId), published.length);
+  /* QA S13 (UX-5): in lines mode identical series are one line; each legend entry is one distinct line, and past seven
+     colours the line style changes too, so no two entries look alike. Bars mode keeps one bar per attempt. */
+  const linesMode = geometry?.mode === "lines";
+  const lineGroups = linesMode ? identicalSeriesGroups(published.map((item) => ({ runId: item.run_id, folds: item.folds }))) : [];
+  const repOf = new Map<string, string>();
+  for (const members of lineGroups) for (const id of members) repOf.set(id, members[0]!);
+  const legendEntries = linesMode ? lineGroups.map((members) => ({ runId: members[0]!, members })) : published.map((item) => ({ runId: item.run_id, members: [item.run_id] }));
+  const entryIndex = (runId: string) => legendEntries.findIndex((entry) => entry.runId === (repOf.get(runId) ?? runId));
+  const tone = (runId: string) => foldTone(byRun.get(runId), entryIndex(runId) < 0 ? 0 : entryIndex(runId), legendEntries.length);
+  const FOLD_DASHES = ["", "7 3", "2 3", "9 3 2 3"] as const;
+  const dash = (runId: string): string | undefined => (linesMode ? FOLD_DASHES[Math.floor(Math.max(entryIndex(runId), 0) / (FOLD_TONES.length - 1)) % FOLD_DASHES.length] || undefined : undefined);
+  const nameOf = (runId: string) => (byRunAll.get(runId) ? runName(byRunAll.get(runId)!) : sid(runId));
   const axis = (text: string) => formatMetric(text, "ratio") ?? text;
   return (
     <figure className="cp-fig" data-panel="fold-chart" aria-label="OOS Sharpe per fold" data-fold-series={published.length} data-fold-mode={geometry?.mode}>
@@ -1301,20 +1384,30 @@ function FoldChart({ result }: { result: AttemptResult }) {
       {geometry ? (
         <>
           <div className="cp-foldlegend" data-fold-legend>
-            {published.map((item) => (
+            {legendEntries.map((entry) => (
               <span
-                key={item.run_id}
+                key={entry.runId}
                 className="cp-legendrun"
-                data-fold-legend-run={item.run_id}
-                title={`${item.run_id} — hover to isolate`}
+                data-fold-legend-run={entry.runId}
+                data-fold-group-size={entry.members.length}
+                title={
+                  entry.members.length > 1
+                    ? `${entry.members.map(nameOf).join(", ")} have identical per-fold values, drawn as one line — hover to isolate`
+                    : `${entry.runId} — hover to isolate`
+                }
                 tabIndex={0}
-                onMouseEnter={() => setHovered(item.run_id)}
+                onMouseEnter={() => setHovered(entry.runId)}
                 onMouseLeave={() => setHovered(null)}
-                onFocus={() => setHovered(item.run_id)}
+                onFocus={() => setHovered(entry.runId)}
                 onBlur={() => setHovered(null)}
               >
-                <span className="sw" style={{ background: tone(item.run_id) }} aria-hidden="true" />
-                {foldLegend(byRunAll.get(item.run_id), item.run_id)}
+                <span
+                  className="sw"
+                  style={dash(entry.runId) ? { background: "none", borderTop: `2px dashed ${tone(entry.runId)}`, height: 0, width: 14 } : { background: tone(entry.runId) }}
+                  aria-hidden="true"
+                />
+                {foldLegend(byRunAll.get(entry.runId), entry.runId)}
+                {entry.members.length > 1 ? <span data-fold-identical> +{entry.members.length - 1} identical</span> : null}
               </span>
             ))}
           </div>
@@ -1348,19 +1441,27 @@ function FoldChart({ result }: { result: AttemptResult }) {
                         data-exact={bar.value}
                         style={{ fill: tone(bar.runId), opacity: dim(bar.runId) }}
                       >
-                        <title>{`${byRun.get(bar.runId)?.attempt_id ?? bar.runId} · fold_id ${bar.foldId} · OOS Sharpe ${bar.value}`}</title>
+                        <title>{`${(byRun.get(bar.runId) ?? byRunAll.get(bar.runId)) ? runName((byRun.get(bar.runId) ?? byRunAll.get(bar.runId))!) : sid(bar.runId)} · fold_id ${bar.foldId} · OOS Sharpe ${bar.value}`}</title>
                       </rect>
                     ))
-                  : geometry.lines.map((line) => (
-                      <path
-                        key={line.runId}
-                        className="cp-foldline"
-                        d={line.path}
-                        data-fold-line={line.runId}
-                        data-active={byRun.get(line.runId)?.alpha_version_lifecycle.value === "ACTIVE" ? "true" : "false"}
-                        style={{ stroke: tone(line.runId), opacity: dim(line.runId) }}
-                      />
-                    ))}
+                  : geometry.lines
+                      .filter((line) => (repOf.get(line.runId) ?? line.runId) === line.runId)
+                      .map((line) => {
+                        const members = lineGroups.find((group) => group[0] === line.runId) ?? [line.runId];
+                        return (
+                          <path
+                            key={line.runId}
+                            className="cp-foldline"
+                            d={line.path}
+                            data-fold-line={line.runId}
+                            data-fold-line-members={members.length}
+                            data-active={members.some((id) => byRun.get(id)?.alpha_version_lifecycle.value === "ACTIVE") ? "true" : "false"}
+                            style={{ stroke: tone(line.runId), opacity: dim(line.runId), strokeDasharray: dash(line.runId) }}
+                          >
+                            <title>{members.map(nameOf).join(", ")}</title>
+                          </path>
+                        );
+                      })}
                 <line className="cp-foldzero" x1={0} x2={geometry.width} y1={geometry.zeroPct * 10} y2={geometry.zeroPct * 10} />
               </svg>
               <div aria-hidden="true">
@@ -1370,7 +1471,8 @@ function FoldChart({ result }: { result: AttemptResult }) {
                   </span>
                 ))}
                 {geometry.groups.map((group, index) =>
-                  geometry.mode === "bars" || index === 0 || index === geometry.groups.length - 1 || index % 4 === 0 ? (
+                  /* QA S13-5: every fold is labelled up to twelve; past that every fourth, as before. */
+                  geometry.mode === "bars" || geometry.groups.length <= 12 || index === 0 || index === geometry.groups.length - 1 || index % 4 === 0 ? (
                     /* 13-06: the hi-fi's fold_01 style from the served fold_id; the raw id stays in the data attribute. */
                     <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label} data-fold-position={index + 1}>
                       {foldLabel(group.label)}
@@ -1398,8 +1500,8 @@ function FoldChart({ result }: { result: AttemptResult }) {
           </summary>
           <ul className="cp-absentlist">
             {absent.map((item) => (
-              <li key={item.run_id} title={item.run_id}>
-                {sid(byRunAll.get(item.run_id)?.attempt_id ?? item.run_id)} · {reasonOf(item.availability)}
+              <li key={item.run_id} title={`${byRunAll.get(item.run_id)?.attempt_id ?? ""} · ${item.run_id}`}>
+                {byRunAll.get(item.run_id) ? runName(byRunAll.get(item.run_id)!) : sid(item.run_id)} · {reasonOf(item.availability)}
               </li>
             ))}
           </ul>
@@ -1418,7 +1520,11 @@ function FoldChart({ result }: { result: AttemptResult }) {
  */
 function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: ConfigDiff; result: AttemptResult }) {
   const runs = ladderOrder(result);
-  const active = runs.find((run) => run.alpha_version_lifecycle.value === "ACTIVE") ?? null;
+  /* QA S13 (UX-7): a column header is a real baseline picker. The reader's pick wins over the screen's default (the first
+     ACTIVE attempt); picking the baseline again returns to the default. Display-only: it changes which column the gold cells compare with. */
+  const [picked, setPicked] = useState<string | null>(null);
+  const defaultBaseline = runs.find((run) => run.alpha_version_lifecycle.value === "ACTIVE") ?? null;
+  const active = (picked !== null ? runs.find((run) => run.run_id === picked) : undefined) ?? defaultBaseline;
   const valueOf = (path: ConfigDiff["paths"][number], runId: string) => path.values.find((entry) => entry.run_id === runId)?.value ?? null;
   return (
     <section className="cp-tcard cp-diffcard" data-panel="diff" aria-label="config diff" data-config-diff={diff.availability.state}>
@@ -1430,14 +1536,14 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
           data-baseline-chosen={active ? "screen" : "none"}
           title={
             active
-              ? `The server publishes no baseline attempt. This screen compares every column with the first attempt of an ACTIVE alpha version on the ladder (${active.attempt_id}); it is a reading aid, not a server fact.`
+              ? `The server publishes no baseline attempt. This screen compares every column with the first attempt of an ACTIVE alpha version on the ladder (${active.attempt_id}); click a column heading to compare with another. It is a reading aid, not a server fact.`
               : "The server publishes no baseline attempt and no returned attempt belongs to an ACTIVE alpha version, so nothing is compared."
           }
         >
           {diff.availability.state !== "AVAILABLE"
             ? COMPARE_WITHHELD_WORDS[diff.availability.state]
             : active
-              ? `gold = differs from ${sid(active.attempt_id)} · baseline picked by this screen`
+              ? `differs from ${runName(active)} · ${picked !== null ? "baseline picked by you" : "baseline picked by this screen"}`
               : `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"} · no baseline — the server names none`}
           {diff.availability.state === "AVAILABLE" && diff.paths.length > 0 && runs.length > 4 ? (
             <span data-config-diff-columns={runs.length} title="The columns are every ladder attempt; the table scrolls sideways">
@@ -1459,13 +1565,22 @@ function DiffCard({ alphaId, diff, result }: { alphaId: string | null; diff: Con
               <tr>
                 <th scope="col">key</th>
                 {runs.map((run) => (
-                  <th
-                    key={run.run_id}
-                    scope="col"
-                    data-active={run === active ? "true" : undefined}
-                    title={run === active ? `${run.attempt_id} — baseline picked by this screen (the server names none)` : run.attempt_id}
-                  >
-                    {sid(run.attempt_id)}
+                  <th key={run.run_id} scope="col" data-active={run === active ? "true" : undefined} data-picked={run.run_id === picked ? "true" : undefined}>
+                    <button
+                      type="button"
+                      className="cp-colpick"
+                      data-action="pick-baseline"
+                      data-baseline-run={run.run_id}
+                      aria-pressed={run === active}
+                      title={
+                        run === active
+                          ? `${run.attempt_id} — the baseline (the server names none); click to ${run.run_id === picked ? "return to the default" : "keep it"}`
+                          : `${run.attempt_id} — click to compare the other columns with this attempt`
+                      }
+                      onClick={() => setPicked((now) => (run.run_id === now ? null : run.run_id))}
+                    >
+                      {runName(run)}
+                    </button>
                   </th>
                 ))}
               </tr>
@@ -1522,12 +1637,15 @@ function TrajectoryCard({ result, alphaId }: { result: AttemptResult; alphaId: s
   const active = ladderOrder(result).filter((run) => run.alpha_version_lifecycle.value === "ACTIVE").at(-1) ?? null;
   return (
     <section className="cp-card cp-trajcard" data-panel="trajectory" aria-label={TRAJECTORY_TITLE}>
-      <h3 className="t">
+      {/* QA S13: the server's sentence is a slogan ("claims rank before numbers - inspection never selects...") and the template id a caption;
+          both ride the heading's tooltip, and the sentence stays one read away for assistive tech. */}
+      <h3 className="t" title={[trajectory.template_id, trajectory.availability.state === "AVAILABLE" ? trajectory.text : null].filter(Boolean).join(" · ")}>
         <span>{TRAJECTORY_TITLE}</span>
-        <span className="cp-faint">{trajectory.template_id}</span>
       </h3>
       {trajectory.availability.state === "AVAILABLE" ? (
-        <p data-trajectory-text>{trajectory.text}</p>
+        <p data-trajectory-text className="sr-only">
+          {trajectory.text}
+        </p>
       ) : (
         <AvailabilityAbsent availability={trajectory.availability} what="trajectory" />
       )}
@@ -1576,6 +1694,9 @@ export const MARKET_SELECTION_WORDS: Record<MarketCard["selection"], string> = {
   LATEST_RUN: "latest run — no ACTIVE version ran this market",
   MARKET_NOT_PUBLISHED: "this run's key publishes no market — shown on its own",
 };
+
+/** QA S13: what the markets rule says on screen. */
+export const MARKETS_SHORT = "Different markets: shown side by side, never overlaid.";
 
 /** A server older than D10 sends one card per run, with no market grouping: said so, never grouped here. */
 export const MARKETS_UNGROUPED = "this server lists one card per run — market grouping is not published (P20 composer before D10)";
@@ -1648,8 +1769,9 @@ function MarketsBody({ result }: { result: MarketResult }) {
           {MARKETS_UNGROUPED}
         </span>
       )}
-      <Rule tone="bad" title={MARKETS_RULE_TAIL}>
-        <span data-caption>{result.caption}</span>
+      {/* QA S13: the server's caption is developer phrasing ("a comparison lie"); the screen says it in six words and keeps the server's for the title. */}
+      <Rule tone="bad" title={`${result.caption} ${MARKETS_RULE_TAIL}`}>
+        <span data-caption data-server-caption={result.caption}>{MARKETS_SHORT}</span>
       </Rule>
       <section data-panel="markets" aria-label="small multiples">
         <div className="cp-smallmult">
@@ -1722,19 +1844,29 @@ function RefusedGuard({ result, runs }: { result: PairRefused; runs: readonly st
   );
 }
 
+/**
+ * QA S13 (refusal, S13-8): one short box. The sentence names the key parts that differ, from the two keys the
+ * server sent (display-only equality, as the guard's tint); the server's own message rides the title.
+ */
+export function refusalSentence(left: CompareKey, right: CompareKey): string {
+  const differing = KEY_PARTS.filter((part) => left[part] !== right[part]);
+  if (differing.length === 0) return "These runs cannot be overlaid.";
+  const parts = differing.map((part) => `${part} (${left[part] ?? "not published"} vs ${right[part] ?? "not published"})`);
+  return `These runs differ in ${parts.join(", ")}, so they cannot be overlaid.`;
+}
+
 function RefusalCard({ result, runs }: { result: PairRefused; runs: readonly string[] | null }) {
   const { refusal } = result;
   const [left, right] = runs ?? [];
   return (
-    <div className="cp-refusal" data-panel="refusal" role="note" aria-label="comparison refused">
+    <div className="cp-refusal" data-panel="refusal" role="note" aria-label="comparison refused" title={refusal.message}>
       <span className="tag">{REFUSED_TAG}</span>
-      <span className="msg" data-refusal-message>
-        {refusal.message}
+      <span className="msg" data-refusal-message data-server-message={refusal.message}>
+        {refusalSentence(refusal.left_key, refusal.right_key)}
       </span>
-      <span className="msg cp-mono" data-refusal-keys>
+      <span className="msg cp-mono" data-refusal-keys title={[left, right].filter(Boolean).join(" · ")}>
         {left ? sid(left) : "A"} is {keyText(refusal.left_key)}; {right ? sid(right) : "B"} is {keyText(refusal.right_key)}.
       </span>
-      <span className="msg">{REFUSED_NO_CHART}</span>
       <span className="hint">{REFUSED_MARKETS_HINT}</span>
     </div>
   );
@@ -1767,7 +1899,7 @@ function ComparableGuard({ result, runs }: { result: PairComparable; runs: reado
 }
 
 function legendText(run: CompareRun | undefined): string {
-  return run ? `${sid(run.run_id)} · ${run.alpha_version_label} (${run.claim.family})` : "run not returned";
+  return run ? `${runName(run)} · ${run.alpha_version_label} (${run.claim.family})` : "run not returned";
 }
 
 function OverlayFigure({ result }: { result: PairComparable }) {
@@ -1918,7 +2050,7 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
       right: <MetricValue metric={sharpeRight} what="B" />,
       /* CG-P20-06: the common window types its Sharpe NOT_APPLICABLE with the server's reason. */
       delta: sharpeCommonServed ? (
-        <Absent what="Δ" state="not published" reason="none for this scope — see common window" />
+        <Absent what="Δ" state="not published" reason="none for this scope — see the common-window row" />
       ) : sharpeCommon ? (
         <AvailabilityAbsent availability={sharpeCommon.availability} what="Δ" />
       ) : (
@@ -2001,10 +2133,10 @@ function DeltaTable({ result }: { result: PairComparable }) {
             <tr>
               <th scope="col">metric</th>
               <th scope="col" data-side="left" title={left?.run_id}>
-                A{left ? ` · ${sid(left.run_id)}` : ""}
+                A{left ? ` · ${runName(left)}` : ""}
               </th>
               <th scope="col" data-side="right" title={right?.run_id}>
-                B{right ? ` · ${sid(right.run_id)}` : ""}
+                B{right ? ` · ${runName(right)}` : ""}
               </th>
               <th scope="col">
                 Δ<span className="scope" data-delta-direction={window.delta_definition}>
@@ -2224,6 +2356,24 @@ function PendingBody({
   runs: readonly string[] | null;
   guardNote?: ReactNode;
 }) {
+  /* QA S13-9: after a refusal, an error or nothing requested, the notice above is the whole answer; five frames of
+     "withheld - the notice above says why" repeated it. Only a pair that was never addressed keeps its one guard card. */
+  if (state !== "loading") {
+    if (mode === "pair" && guardNote) {
+      return (
+        <div className="cp-guardrow" data-panel="guard" data-panel-state={state}>
+          <div className="cp-guardcard" data-verdict="pending">
+            <div className="head">
+              <span className="tag">contract key</span>
+              <span className="txt">{guardNote}</span>
+            </div>
+          </div>
+          <RunChips runs={runs} />
+        </div>
+      );
+    }
+    return null;
+  }
   if (mode === "markets") {
     return (
       <>

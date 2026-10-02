@@ -350,8 +350,7 @@ export const REPLAY_REFUSAL_COPY = {
  * retention, or a run that predates it (RF-02 found this on the real API). The
  * sentence is the shared mapper's, word for word, so S08 says what S04–S07 say.
  */
-export const RETAINED_NOT_RETAINED =
-  "No sealed retained source exists for this run yet — it is pending retention, or the run predates it. Nothing here is taken from the live output instead.";
+export const RETAINED_NOT_RETAINED = "No retained source for this run yet.";
 
 
 export interface ReplayRefusal {
@@ -429,7 +428,7 @@ export function replayState(replay: Replay): ResearchState {
   }
   return {
     state: "partial",
-    reason: "Equity samples only. Every execution fact below is named with the reason the source gave.",
+    reason: "Equity samples only.",
     mayRetry: false,
     retainsContent: true,
   };

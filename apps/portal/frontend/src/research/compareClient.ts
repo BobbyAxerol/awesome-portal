@@ -68,7 +68,7 @@ export const COMPARE_METRIC_UNIT: Record<CompareMetric["key"], "fraction" | "cou
 
 /** The Δ direction the contract fixes (CG-P20-09), as the column header reads it. */
 export const DELTA_DIRECTION_LABEL: Record<CommonWindow["delta_definition"], string> = {
-  RIGHT_MINUS_LEFT: "B − A · contract invariant",
+  RIGHT_MINUS_LEFT: "B − A",
 };
 
 export { NOT_MODIFIED };

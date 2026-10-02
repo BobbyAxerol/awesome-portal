@@ -96,7 +96,9 @@ describe("spec 12 §2 — the claim comes from mode × schedule", () => {
     const table = document.querySelector("[data-mode-table]") as HTMLElement;
     expect(within(table).queryAllByText(/publishes no avoid-when guidance/)).toHaveLength(0);
     const shared = table.querySelector("[data-avoid-when-shared]") as HTMLElement;
-    expect(shared.textContent).toBe("avoid when — not published");
+    /* QA S12: the footer line is gone (an empty promise); the typed absence rides the table heading's tooltip. */
+    expect(table.querySelectorAll("p")).toHaveLength(0);
+    expect(shared.textContent).toBe("when to reach for which mode");
     expect(shared.getAttribute("title")).toMatch(/publishes no avoid-when guidance/);
     expect(table.querySelectorAll('[data-mode-row="mode_1_decay"] td')).toHaveLength(2);
     // No cap is invented from the HiFi's sample letters.
@@ -171,7 +173,7 @@ describe("Q4 / D-4 and the release facts panel", () => {
     expect(rule.getAttribute("title")).toContain("Click the schedule chips below and watch the claim change.");
     // Rule Two keeps its box (HiFi geometry) but says it in one line; the sentence is the tooltip.
     const two = document.querySelector("[data-rule-two]") as HTMLElement;
-    expect(two.textContent).toContain("optimization_mode");
+    expect(two.textContent).toContain("Execution route is chosen separately");
     expect(two.getAttribute("title")).toMatch(/Two selector layers, never mixed/);
   });
 
@@ -229,7 +231,7 @@ describe("Q4 / D-4 and the release facts panel", () => {
   it("F2b: every mode card links to New Run at the Optimization step", () => {
     view("modes");
     const link = document.querySelector('[data-mode="mode_1_decay"] [data-declare-mode]') as HTMLElement;
-    expect(link.getAttribute("href")).toBe("/research/quantbt/runs/new?step=optimization");
+    expect(link.getAttribute("href")).toBe("/research/quantbt/runs/new?step=optimization&mode=mode_1_decay&schedule=global");
     expect(link.getAttribute("title")).toContain("mode_1_decay");
     expect(document.querySelectorAll("[data-declare-mode]").length).toBe(document.querySelectorAll("[data-mode]").length);
   });

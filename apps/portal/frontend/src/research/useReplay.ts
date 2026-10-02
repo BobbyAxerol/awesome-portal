@@ -107,19 +107,23 @@ export interface ReplayController {
   /** P17-T14: the child audit of one fold, read once per fold on request. */
   childAudit?: ChildAuditSlot;
   readChildAudit?: (fold: string) => void;
+  /** QA S08: one explicit re-read per failed panel. Each re-sends the same request; none is automatic. */
+  retryRetained?: () => void;
+  retryTransitions?: () => void;
+  retryChildAudit?: () => void;
 }
 
 export type ChildAuditSlot =
   | { state: "idle" }
   | { state: "loading"; fold: string }
   | { state: "ready"; fold: string; audit: ReplayChildAudit }
-  | { state: "refused"; fold: string; message: string };
+  | { state: "refused"; fold: string; message: string; mayRetry?: boolean };
 
 export type TransitionsSlot =
   | { state: "idle" }
   | { state: "loading" }
   | { state: "ready"; ledger: ReplayTransitions; inFlight?: boolean }
-  | { state: "refused"; message: string };
+  | { state: "refused"; message: string; mayRetry?: boolean };
 
 /** The largest window the retained lane serves; a fold longer than this pages. */
 export const RETAINED_WINDOW_MAX = 200;
@@ -262,6 +266,10 @@ export function useReplay(
     return () => controller.abort();
   }, [retainedIntent, runId, workspaceId, arrivalFold]);
 
+  const retryRetained = useCallback(() => {
+    setRetainedIntent((prev) => (prev === null ? { navigation: { kind: "first" }, arrival: true } : { ...prev }));
+  }, []);
+
   const retainedPage = retained.state === "ready" && isRetainedReplay(retained.replay) ? retained.replay.replay.page : null;
   const windowLimit = retainedIntent?.limit;
   const retainedNextWindow = useCallback(() => {
@@ -307,10 +315,18 @@ export function useReplay(
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        setTransitions({ state: "refused", message: toReplayRefusal(error, "retained").message });
+        {
+          const refusal = toReplayRefusal(error, "retained");
+          setTransitions({ state: "refused", message: refusal.message, mayRetry: refusal.mayRetry });
+        }
       });
     return () => controller.abort();
   }, [transitionsNavigation, runId, workspaceId]);
+  const retryTransitions = useCallback(() => {
+    setTransitionsNavigation((prev) => (prev === null ? { kind: "first" } : { ...prev }));
+  }, []);
+  const [childAuditTry, setChildAuditTry] = useState(0);
+  const retryChildAudit = useCallback(() => setChildAuditTry((n) => n + 1), []);
   const [childAudit, setChildAudit] = useState<ChildAuditSlot>({ state: "idle" });
   const [childAuditFold, setChildAuditFold] = useState<string | null>(null);
   const readChildAudit = useCallback((fold: string) => setChildAuditFold(fold), []);
@@ -329,10 +345,12 @@ export function useReplay(
         setChildAudit({ state: "ready", fold: childAuditFold, audit: body as ReplayChildAudit });
       })
       .catch((error: unknown) => {
-        if (!controller.signal.aborted) setChildAudit({ state: "refused", fold: childAuditFold, message: toReplayRefusal(error, "retained").message });
+        if (controller.signal.aborted) return;
+        const refusal = toReplayRefusal(error, "retained");
+        setChildAudit({ state: "refused", fold: childAuditFold, message: refusal.message, mayRetry: refusal.mayRetry });
       });
     return () => controller.abort();
-  }, [childAuditFold, runId, workspaceId]);
+  }, [childAuditFold, childAuditTry, runId, workspaceId]);
 
   const transitionsPage = useCallback((direction: "next" | "previous") => {
     if (transitions.state !== "ready") return;
@@ -389,6 +407,9 @@ export function useReplay(
     transitionsPage,
     childAudit,
     readChildAudit,
+    retryRetained,
+    retryTransitions,
+    retryChildAudit,
   };
 }
 

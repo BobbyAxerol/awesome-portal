@@ -152,7 +152,7 @@ describe("CG-P11-03 — fold selection, hand-off cursor, declared folds", () => 
     /* CG-P10-04: no rate field is published, so the cell is a short absence — no invented sentence. */
     expect($("[data-rate]").textContent).toBe("rate not published");
     expect($("[data-rate] [data-not-published]").getAttribute("title")).toBeNull();
-    expect($('[data-research-panel="folds"]').textContent).toContain("0 of 2 folds reported");
+    expect($('[data-research-panel="folds"]').textContent).toContain("0 of 2 folds");
     // A global study opens no fold row: nothing is drawn running.
     expect(document.querySelectorAll("[data-fold-row]")).toHaveLength(0);
   });

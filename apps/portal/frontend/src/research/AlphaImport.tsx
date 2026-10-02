@@ -70,7 +70,7 @@ import type { ResearchState } from "./state";
 export const FAIL_CLOSED_NOTE = "fail-closed: a red gate stops the import.";
 
 /** Spec 14 §2.3 — shown on a DRAFT registration (VD-TEXT-01: shortened, same meaning). */
-export const DRAFT_NOTE = "a DRAFT can run as evidence, not compose rc_";
+export const DRAFT_NOTE = "a DRAFT can run, not seal a candidate";
 
 /** Spec 14 §4 pitfall 8 — shown when more than one file is offered. */
 export const SINGLE_FILE_ERROR = "One .py only — single-file contract.";
@@ -87,13 +87,16 @@ export const IMPORT_TITLE = "Alpha Import — standardize the code artifact";
  * hard-coded permission claim ("activation ADMIN-only") is gone too — whether
  * this account may activate is the server's `may_activate` / `may_activate_reason`.
  */
-export const IMPORT_META = "POST /api/v1/research/alphas/import/*";
+export const IMPORT_META = "";
 
 /**
  * Field rules under the mirror. Every pattern is the contract's own
  * (`research-alpha-import.v1.schema.json`); a test reads the schema and
  * compares, so the sentence cannot drift from the validator.
  */
+/** The alpha id rule in words (`RULE_PATTERNS.alphaId`), shown beside the field when the typed id breaks it. */
+export const ALPHA_ID_RULE = "Alpha id: lowercase letters, digits and hyphens; 3–64 characters; starts with a letter.";
+
 export const RULE_PATTERNS = {
   alphaId: "^[a-z][a-z0-9-]{2,63}$",
   versionLabel: "^av_[0-9]+(?:_[0-9]+){2}$",
@@ -119,7 +122,7 @@ export const RUN_ADMISSION_COPY: Record<RunAdmissionCode, string> = {
   RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE: "no executor is installed for this version",
 };
 
-export const RUN_LINK_LABEL = "new run with this av_";
+export const RUN_LINK_LABEL = "new run with this version";
 
 /** The New Run route's own prefill contract (`NewRunRoute`: `?alpha=` + `?av=`). */
 export function newRunHref(alphaId: string, alphaVersionId: string): string {
@@ -503,6 +506,9 @@ const MIRROR_CHECK_COLOR: Record<string, string> = {
   NOT_APPLICABLE: "var(--ink-mute)",
 };
 
+/** QA S14: the two raw enum tokens read as words; PASS / FAIL / VERIFY stay the contract's own verdicts. */
+export const MIRROR_CHECK_WORD: Record<string, string> = { GATED: "gated", NOT_APPLICABLE: "not applicable" };
+
 function MirrorValue({ field }: { field: MirrorField }) {
   const hasValue = field.state === "parsed" || field.state === "server_computed";
   if (hasValue && field.field === "artifact.digest" && typeof field.value === "string") {
@@ -539,7 +545,7 @@ function MirrorTable({ mirror }: { mirror: readonly MirrorField[] }) {
               <MirrorValue field={field} />
             </dd>
             <dd className="c" style={{ color: MIRROR_CHECK_COLOR[field.check] ?? "var(--ink-soft)" }} data-mirror-verdict={field.check}>
-              {field.check}
+              {MIRROR_CHECK_WORD[field.check] ?? field.check}
               {/* The note is the row's title on a pointer; this is the same
                   sentence for a screen reader, which never sees a title. */}
               <span className="ai-sr" data-mirror-note>
@@ -890,7 +896,7 @@ export type ImportStep = 1 | 2 | 3;
 export const IMPORT_STEPS: readonly { n: ImportStep; key: string; label: string; sub: string }[] = [
   { n: 1, key: "source", label: "Source & mirror", sub: "one .py — contract + code" },
   { n: 2, key: "gates", label: "Quarantine gates", sub: "7 gates · fail-closed" },
-  { n: 3, key: "register", label: "Register av_", sub: "DRAFT → ACTIVE" },
+  { n: 3, key: "register", label: "Register version", sub: "DRAFT → ACTIVE" },
 ];
 
 type StepProgress = "done" | "failed" | "open";
@@ -993,7 +999,10 @@ export function AlphaImport(props: AlphaImportProps) {
      served list (not yet requested) is the exact match applied locally, so a
      half-typed id never shows another alpha's versions. */
   const typedAlpha = alphaId.trim();
-  const visibleRegistry = typedAlpha && typedAlpha !== registryAlpha ? registry.filter((entry) => entry.alpha_id === typedAlpha) : registry;
+  /* QA S14 U11: a half-typed or malformed id is a typo to correct, never a filter. */
+  const alphaIdInvalid = typedAlpha.length > 0 && !new RegExp(RULE_PATTERNS.alphaId).test(typedAlpha);
+  const filterAlpha = alphaIdInvalid ? "" : typedAlpha;
+  const visibleRegistry = filterAlpha && filterAlpha !== registryAlpha ? registry.filter((entry) => entry.alpha_id === filterAlpha) : registry;
   const registryCapped = typeof registryTotal === "number" && registryTotal > registry.length;
   const registeredEntry = registration
     ? registry.find((entry) => entry.alpha_version_id === registration.alpha_version_id) ?? null
@@ -1065,9 +1074,6 @@ export function AlphaImport(props: AlphaImportProps) {
             ) : null}
           </div>
         </div>
-        <span className="ai-meta" data-meta>
-          {IMPORT_META}
-        </span>
       </header>
 
       {refusal ? (
@@ -1307,9 +1313,12 @@ export function AlphaImport(props: AlphaImportProps) {
           {busyStep === "gates" ? (
             <RunningGates />
           ) : (
-            <ResearchPanel title="import gates" state={gatesState} variant="plain" minBodyHeight={0}>
-              {gates ? <GateList gates={gates.gates} reducedMotion={reducedMotion} /> : null}
-            </ResearchPanel>
+            /* QA S14 U9: "Gates run once a source parses." is false after a parse; the Run gates button says the rest. */
+            gates === null && gatesState.state === "empty" && parse !== null ? null : (
+              <ResearchPanel title="import gates" state={gatesState} variant="plain" minBodyHeight={0}>
+                {gates ? <GateList gates={gates.gates} reducedMotion={reducedMotion} /> : null}
+              </ResearchPanel>
+            )
           )}
 
           {anyGateFailed ? (
@@ -1358,8 +1367,16 @@ export function AlphaImport(props: AlphaImportProps) {
                     className="mono rounded-[6px] border px-2 py-1 text-[11px]"
                     style={{ borderColor: "var(--line)", background: "var(--paper)" }}
                     aria-label="Alpha id"
+                    aria-invalid={alphaIdInvalid || undefined}
+                    aria-describedby={alphaIdInvalid ? "ai-alpha-id-rule" : undefined}
+                    data-alpha-id-input
                   />
                 </label>
+                {alphaIdInvalid ? (
+                  <span id="ai-alpha-id-rule" className="m-0 text-[10.5px]" role="alert" style={{ color: "var(--bad)" }} data-alpha-id-invalid>
+                    {ALPHA_ID_RULE}
+                  </span>
+                ) : null}
                 <StepButton
                   label="Register draft"
                   action="register"
@@ -1373,21 +1390,26 @@ export function AlphaImport(props: AlphaImportProps) {
                           ? "All seven gates must pass."
                           : alphaId.trim().length === 0
                             ? "Name the alpha this version belongs to."
-                            : busy ?? (registration !== null ? "Registered." : null)
+                            : alphaIdInvalid
+                              ? ALPHA_ID_RULE
+                              : busy ?? (registration !== null ? "Registered." : null)
                   }
                 />
               </div>
 
-            <ResearchPanel title="registration" state={registerState} variant="plain" minBodyHeight={0}>
-              {registration ? (
-                <RegistrationRows
-                  registration={registration}
-                  activation={activation}
-                  lifecycle={lifecycle}
-                  entry={registeredEntry}
-                />
-              ) : null}
-            </ResearchPanel>
+            {/* QA S14 U9: "Registration opens once all seven gates pass." is false once they have. */}
+            {registration === null && registerState.state === "empty" && gatesAllPass ? null : (
+              <ResearchPanel title="registration" state={registerState} variant="plain" minBodyHeight={0}>
+                {registration ? (
+                  <RegistrationRows
+                    registration={registration}
+                    activation={activation}
+                    lifecycle={lifecycle}
+                    entry={registeredEntry}
+                  />
+                ) : null}
+              </ResearchPanel>
+            )}
 
             {/* Activation is a separate, permissioned act — never implied by a
                 successful registration, and never offered unless the server said so. */}
@@ -1492,7 +1514,7 @@ export function AlphaImport(props: AlphaImportProps) {
         {/* -------------------------------------------------------- registry */}
         <div className="ai-card" data-pad>
           <h2 className="ai-label">
-            alpha registry{alphaId.trim() ? ` — ${alphaId.trim()}` : ""}
+            alpha registry{filterAlpha ? ` — ${filterAlpha}` : ""}
             {registryCapped ? (
               <span className="mono" data-registry-total title="The server lists the newest versions only; the total is the server's count.">
                 {" "}· top {registry.length} / {registryTotal}
@@ -1511,7 +1533,7 @@ export function AlphaImport(props: AlphaImportProps) {
             <div className="ai-registry" data-registry-strip>
               {visibleRegistry.length === 0 ? (
                 <span className="text-[10.5px]" style={{ color: "var(--ink-mute)" }} data-registry-empty>
-                  {alphaId.trim() ? "No versions for this alpha id." : "No imported versions in this workspace yet."}
+                  {filterAlpha ? "No versions for this alpha id." : "No imported versions in this workspace yet."}
                 </span>
               ) : (
                 visibleRegistry.map((entry) => (

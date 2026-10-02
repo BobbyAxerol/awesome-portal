@@ -463,6 +463,24 @@ export function NewRunRoute() {
     }
   }, [routeFromQuery, document, limits, run]);
 
+  /* QA S12 UX-2 (additive): the Atlas "declare →" link carries `?mode=&schedule=`. Both are checked
+     against the same atlas the step offers; an unknown mode is ignored and an unlisted schedule falls
+     back to the mode's default, exactly as choosing the mode by hand does (NewRun.tsx optimization select). */
+  const modeFromQuery = new URLSearchParams(location.search).get("mode");
+  const scheduleFromQuery = new URLSearchParams(location.search).get("schedule");
+  const modeDeclaredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!modeFromQuery || !document) return;
+    const key = `${modeFromQuery}|${scheduleFromQuery ?? ""}`;
+    if (modeDeclaredFor.current === key) return;
+    modeDeclaredFor.current = key;
+    const entry = document.modes.find((candidate) => candidate.mode_id === modeFromQuery);
+    if (!entry) return;
+    const schedule =
+      scheduleFromQuery && entry.valid_schedules.includes(scheduleFromQuery as never) ? scheduleFromQuery : entry.default_schedule;
+    run.patch({ optimizationMode: entry.mode_id, optimizationSchedule: schedule });
+  }, [modeFromQuery, scheduleFromQuery, document, run]);
+
   /* HiFi 02-18: the wizard step is written to the address (replace, never push:
      moving through the steps must not fill the Back button). `context` is the
      default and leaves the address clean; every other parameter is kept. */
@@ -505,6 +523,7 @@ export function NewRunRoute() {
       clearedBecause={run.preflight.clearedBecause}
       onRunPreflight={run.preflight.runPreflight}
       preflightRefusal={run.preflight.refusal}
+      preflightPending={run.preflight.pending}
       catalog={catalog}
       catalogReason={catalogReason}
       portalAdmission={atlas?.selected_release_kind === "CURRENT" ? (atlas.portal_admission?.profiles ?? null) : null}

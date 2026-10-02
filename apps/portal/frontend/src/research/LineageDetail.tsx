@@ -75,6 +75,45 @@ export const LINEAGE_TITLE = "Attempt lineage";
  * hard-coded tail ("lineage is persisted, not reconstructed") is gone, and so are
  * the subtitle under the title and the "rules of this screen" footer.
  */
+/**
+ * QA S10 U6: with no deep link the screen opens on the attempt that matters, not on the oldest root
+ * (often a FAILED first try): the newest attempt that has a release candidate (sealed before draft),
+ * else the newest READY storied one, else the newest non-probe, else the newest READY, else the first listed.
+ */
+export function defaultAttemptId(nodes: readonly { attempt: LineageAttempt }[]): string | null {
+  if (nodes.length === 0) return null;
+  const newest = (list: readonly LineageAttempt[]) =>
+    list.reduce<LineageAttempt | null>((best, a) => (best === null || a.created_at_utc_ms > best.created_at_utc_ms ? a : best), null);
+  const all = nodes.map((node) => node.attempt);
+  const withRc = all.filter((a) => a.release_candidate !== null);
+  const sealedRc = withRc.filter((a) => a.release_candidate?.kind !== "ACTOR_DRAFT");
+  const storied = all.filter((a) => !isHideableProbe(a));
+  const pick =
+    newest(sealedRc) ??
+    newest(withRc) ??
+    newest(storied.filter((a) => a.state === "READY")) ??
+    newest(storied) ??
+    newest(all.filter((a) => a.state === "READY"));
+  return (pick ?? all[0]).attempt_id;
+}
+
+/** QA S10 U4: the newest attempt's release candidate (sealed before draft), for the header link when no promotion pick names a run. */
+export function newestRcRun(attempts: readonly LineageAttempt[]): string | null {
+  const withRc = attempts.filter((a) => a.release_candidate !== null && a.release_candidate.run_id);
+  const rank = (a: LineageAttempt) => (a.release_candidate?.kind === "ACTOR_DRAFT" ? 0 : 1);
+  const best = withRc.reduce<LineageAttempt | null>(
+    (acc, a) => (acc === null || rank(a) > rank(acc) || (rank(a) === rank(acc) && a.created_at_utc_ms > acc.created_at_utc_ms) ? a : acc),
+    null,
+  );
+  return best?.release_candidate?.run_id ?? null;
+}
+
+/** QA S10 U5: a run that failed or was cancelled has no report to open. */
+export function runHasReport(attempt: LineageAttempt): boolean {
+  const state = attempt.primary_run.state;
+  return attempt.state !== "FAILED" && state !== "FAILED" && state !== "CANCELLED";
+}
+
 export function lineageSourceChip(readAuthority: string | null): string {
   return readAuthority ?? "read authority pending";
 }
@@ -680,18 +719,23 @@ function DiffChips({ diff }: { diff: SemanticDiff }) {
   );
 }
 
+/** QA S10: a server reason may name a run by its raw id ("clone of rrun_..."); print the run's label instead. */
+export function labelRunIds(text: string, label: (id: string) => string = sid): string {
+  return text.replace(/\brrun_[0-9a-f]{8,}\b/g, (id) => label(id));
+}
+
 function ReasonLine({ attempt, className = "ln-note" }: { attempt: LineageAttempt; className?: string }) {
   if (attempt.state === "ABANDONED") {
     return (
       <span className={`${className} ln-abandon`} data-abandon-reason={attempt.reason === null ? "absent" : "published"}>
-        {attempt.reason === null ? "abandoned — reason not published" : `abandoned — ${attempt.reason}`}
+        {attempt.reason === null ? "abandoned — reason not published" : `abandoned — ${labelRunIds(attempt.reason)}`}
       </span>
     );
   }
   if (attempt.reason === null) return null;
   return (
     <span className={className} data-reason>
-      {attempt.state === "FAILED" ? `failed — ${attempt.reason}` : `reason — ${attempt.reason}`}
+      {attempt.state === "FAILED" ? `failed — ${labelRunIds(attempt.reason)}` : `reason — ${labelRunIds(attempt.reason)}`}
     </span>
   );
 }
@@ -836,14 +880,16 @@ function Header({ alphaId, lineage }: { alphaId: string; lineage: Lineage | null
         </nav>
         <h2 className="ln-title">{LINEAGE_TITLE}</h2>
       </div>
-      <span
-        className="ln-src"
-        data-source-chip
-        data-read-authority-chip={lineage?.read_authority ?? undefined}
-        title={lineage ? `read authority: ${lineage.read_authority} · ${lineage.schema_version}` : undefined}
-      >
-        {lineageSourceChip(lineage?.read_authority ?? null)}
-      </span>
+      {lineage ? (
+        <span
+          className="ln-src"
+          data-source-chip
+          data-read-authority-chip={lineage.read_authority ?? undefined}
+          title={`read authority: ${lineage.read_authority} · ${lineage.schema_version}`}
+        >
+          {lineageSourceChip(lineage.read_authority ?? null)}
+        </span>
+      ) : null}
     </header>
   );
 }
@@ -1008,7 +1054,7 @@ function VersionBand({
               className="ln-chip probe"
               data-probe-chip={probes}
               aria-pressed={showProbes}
-              title="config sweeps — toggle below the ledger"
+              title="show probe attempts"
               onClick={onToggleProbes}
             >
               +{String(probes)} probes
@@ -1199,6 +1245,7 @@ function RootCard({
     active
       .map((version) => version.promotion_pick)
       .find((pick) => pick !== null && pick.state === "PUBLISHED" && pick.run_id !== null)?.run_id ?? null;
+  const rcRun = pickRun ?? newestRcRun(lineage.attempts);
   return (
     <section className="ln-card0" data-panel="root" aria-label="alpha root and version ledger">
       <div className="h">
@@ -1217,8 +1264,12 @@ function RootCard({
           <Link to={newRunPrefillHref(alpha.alpha_id, active[0]?.alpha_version_id ?? null)} data-action="new-run" title="Screen 02 with this alpha and its active version preselected">
             new run →
           </Link>
-          {pickRun ? (
-            <Link to={releaseCandidateHref(pickRun)} data-action="release-candidate" title="Screen 11 for the active version's promotion pick run">
+          {rcRun ? (
+            <Link
+              to={releaseCandidateHref(rcRun)}
+              data-action="release-candidate"
+              title={pickRun ? "Screen 11 for the active version's promotion pick run" : "Screen 11 for the newest release candidate of this alpha"}
+            >
               rc &amp; publish →
             </Link>
           ) : (
@@ -1352,7 +1403,7 @@ function NodeDetail({ attempt }: { attempt: LineageAttempt }) {
     <div className="ln-detail" data-detail={attempt.attempt_id}>
       <span className="ln-spec" data-parent-line data-relation={attempt.relation_to_parent ?? ""} title={attempt.parent_attempt_id ?? undefined}>
         {attempt.parent_state === "ROOT"
-          ? "root — no parent"
+          ? ""
           : `${attempt.relation_to_parent === "SIBLING_OF" ? "sibling of" : "parent"} ${attempt.parent_attempt_id ? sid(attempt.parent_attempt_id) : ""}${
             attempt.relation_to_parent === "SIBLING_OF" ? " — a what-if fork with its own config_hash" : ""
           }${attempt.parent_state === "RETURNED" ? "" : " — outside the returned graph"}`}
@@ -1569,6 +1620,7 @@ function Tree({
   scrollTop,
   onScroll,
   older,
+  onClearFilters,
 }: {
   lineage: Lineage;
   visible: readonly TreeNode[];
@@ -1580,6 +1632,7 @@ function Tree({
   scrollTop: number;
   onScroll: (top: number) => void;
   older?: { load: (() => void) | null; inFlight: boolean; refusal: string | null };
+  onClearFilters?: () => void;
 }) {
   const virtual = visible.length > VIRTUAL_THRESHOLD;
   const heights = virtual
@@ -1635,7 +1688,15 @@ function Tree({
         <p className="ln-dnote" data-tree-empty>
           {counts.returned_attempts === 0
             ? "No attempt is recorded for this alpha yet."
-            : "No returned attempt matches these filters. The filters above are unchanged so the selection can be widened."}
+            : "No attempt matches."}
+          {counts.returned_attempts > 0 && onClearFilters ? (
+            <>
+              {" "}
+              <button type="button" className="ln-btn" data-action="clear-filters" onClick={onClearFilters}>
+                clear filters
+              </button>
+            </>
+          ) : null}
         </p>
       ) : (
         <div
@@ -1691,11 +1752,14 @@ function Selected({
   version,
   alphaId,
   parentRunId,
+  onSelectParent,
 }: {
   attempt: LineageAttempt | null;
   version: LineageVersion | null;
   alphaId: string;
   parentRunId: string | null;
+  /** Selects the parent attempt (revealing it when it is a hidden probe); null when the parent was not returned. */
+  onSelectParent?: ((attemptId: string) => void) | null;
 }) {
   if (attempt === null) {
     return (
@@ -1731,10 +1795,16 @@ function Selected({
           {attempt.parent_state === "ROOT" ? (
             "— root"
           ) : attempt.parent_attempt_id ? (
-            <span title={attempt.parent_attempt_id}>
-              {sid(attempt.parent_attempt_id)}
-              {attempt.parent_state === "RETURNED" ? "" : " (outside returned graph)"}
-            </span>
+            attempt.parent_state === "RETURNED" && onSelectParent ? (
+              <button type="button" className="ln-btn" data-action="select-parent" title={`select the parent attempt ${attempt.parent_attempt_id}`} onClick={() => onSelectParent(attempt.parent_attempt_id!)}>
+                {sid(attempt.parent_attempt_id)} →
+              </button>
+            ) : (
+              <span title={attempt.parent_attempt_id}>
+                {sid(attempt.parent_attempt_id)}
+                {attempt.parent_state === "RETURNED" ? "" : " (outside returned graph)"}
+              </span>
+            )
           ) : (
             <span className="ln-absent">parent not published</span>
           )}
@@ -1832,9 +1902,15 @@ function Selected({
           <Link className="ln-btnlink" to={evidenceHref(run.run_id)} data-action="open-evidence" title={`Evidence Flow of ${run.run_id}`}>
             open evidence →
           </Link>
-          <Link className="ln-btnlink soft" to={reportHref(run.run_id)} data-action="run-report" title={`Run report of ${run.run_id}`}>
-            run report
-          </Link>
+          {runHasReport(attempt) ? (
+            <Link className="ln-btnlink soft" to={reportHref(run.run_id)} data-action="run-report" title={`Run report of ${run.run_id}`}>
+              run report
+            </Link>
+          ) : (
+            <span className="ln-btnlink soft ln-unrouted" data-action-unrouted="run-report" title="No report — this run did not finish." aria-label="run report — no report, this run did not finish">
+              run report
+            </span>
+          )}
           {parentRunId ? (
             <Link
               className="ln-btnlink soft"
@@ -2060,7 +2136,6 @@ function Notice({ controller }: { controller: LineageController }) {
 /** What a withheld block says while loading, or after a refusal. Never a digit. */
 export const PENDING_REASON = {
   loading: "the lineage has not answered yet",
-  refused: "withheld — the notice above says why",
 } as const;
 
 /**
@@ -2069,11 +2144,9 @@ export const PENDING_REASON = {
  */
 function Pending({ what, state }: { what: string; state: ResearchState["state"] }) {
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-pending={what} data-pending-state={state}>
-      <span className="ln-absent">
-        {what} — {state}
-      </span>
-      <span className="ln-reason">{state === "loading" ? PENDING_REASON.loading : PENDING_REASON.refused}</span>
+    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-pending={what} data-pending-state={state} title={state === "loading" ? PENDING_REASON.loading : undefined}>
+      {/* QA S10: while loading each block says so (the sentence is a tooltip); after a refusal the one notice above speaks, the blocks stay quiet. */}
+      {state === "loading" ? <span className="ln-absent">{what} — loading</span> : null}
     </span>
   );
 }
@@ -2290,7 +2363,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
     [filters, matches, showProbes, tree],
   );
 
-  const selectedId = chosen ?? fromLink.attempt ?? visible[0]?.attempt.attempt_id ?? tree[0]?.attempt.attempt_id ?? null;
+  const selectedId = chosen ?? fromLink.attempt ?? defaultAttemptId(visible) ?? tree[0]?.attempt.attempt_id ?? null;
   const selectedBand = band ?? fromLink.band;
   const selected = selectedId ? (byId.get(selectedId) ?? null) : null;
 
@@ -2406,6 +2479,11 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       {lineage ? (
         <>
           {state.state !== "available" && !(state.state === "partial" && onlyPickGap(lineage)) ? <Notice controller={controller} /> : null}
+          {initialAttempt && chosen === null && !returnedIds.has(initialAttempt) ? (
+            <p className="ln-bound" role="status" data-unknown-attempt={initialAttempt}>
+              Attempt {initialAttempt} was not returned for this alpha — showing {selected ? sid(selected.primary_run.run_id ?? selected.attempt_id) : "the first attempt"} instead.
+            </p>
+          ) : null}
           <div
             className="ln-grid"
             onMouseOver={setHot}
@@ -2454,6 +2532,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
                   inFlight: controller.older?.inFlight ?? false,
                   refusal: controller.older?.refusal?.message ?? null,
                 }}
+                onClearFilters={() => setFilters(new Set())}
               />
             </div>
             <aside className="ln-right" aria-label="selected attempt detail">
@@ -2466,6 +2545,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
                     ? (byId.get(selected.parent_attempt_id)?.primary_run.run_id ?? null)
                     : null
                 }
+                onSelectParent={onChip}
               />
               <DiffPanel attempt={selected} />
               <PromotionRule lineage={lineage} />

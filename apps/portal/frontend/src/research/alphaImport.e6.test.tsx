@@ -23,6 +23,7 @@ import {
   AlphaImport,
   DRAFT_NOTE,
   IMPORT_META,
+  MIRROR_CHECK_WORD,
   IMPORT_STEPS,
   IMPORT_TITLE,
   REGISTRATION_ABSENT,
@@ -127,11 +128,10 @@ describe("14-1/14-2 — header: crumb, title, state chip, meta line", () => {
     expect(within(crumb).getByText("Alpha Import").getAttribute("aria-current")).toBe("page");
     expect(within(crumb).getByText("Journey").getAttribute("href")).toBe("/research/quantbt/journey");
 
-    expect(document.querySelector("[data-meta]")?.textContent).toBe(IMPORT_META);
-    // The meta names the endpoints this client really calls.
-    expect(IMPORT_META).toContain("/api/v1/research/alphas/import");
-    // VD-TEXT-01: no hard-coded permission claim; the subtitle is gone with it.
-    expect(IMPORT_META).not.toMatch(/ADMIN|workspace members|never executes/);
+    // QA S14: the endpoint path is not for users — no meta line at all, and no permission claim.
+    expect(document.querySelector("[data-meta]")).toBeNull();
+    expect(document.body.textContent).not.toContain("/api/v1/research/alphas/import");
+    expect(IMPORT_META).toBe("");
     expect(document.querySelector("[data-subtitle]")).toBeNull();
   });
 
@@ -166,7 +166,7 @@ describe("14-3 — a three-step stepper (DQ-06) over mounted views", () => {
     render(<AlphaImport {...props()} />);
     const tabs = screen.getAllByRole("tab");
     expect(tabs).toHaveLength(3);
-    expect(IMPORT_STEPS.map((step) => step.label)).toEqual(["Source & mirror", "Quarantine gates", "Register av_"]);
+    expect(IMPORT_STEPS.map((step) => step.label)).toEqual(["Source & mirror", "Quarantine gates", "Register version"]);
     tabs.forEach((node, index) => {
       expect(node.textContent).toContain(IMPORT_STEPS[index].label);
       expect(node.textContent).toContain(IMPORT_STEPS[index].sub);
@@ -247,7 +247,7 @@ describe("14-4/14-5 — step 1: mirror table left, drop zone + entrypoint right"
       const row = document.querySelector(`[data-mirror-field="${field.field}"]`) as HTMLElement;
       const [value, check] = Array.from(row.querySelectorAll(":scope > dd")) as HTMLElement[];
       expect(check.getAttribute("data-mirror-verdict")).toBe(field.check);
-      expect(check.textContent?.startsWith(field.check)).toBe(true);
+      expect(check.textContent?.startsWith(MIRROR_CHECK_WORD[field.check] ?? field.check)).toBe(true);
       expect(row.getAttribute("title")).toBe(field.gate ? `${field.gate} · ${field.note}` : field.note);
       if (field.state === "parsed" || field.state === "server_computed") {
         expect(value.querySelector("[data-absent]")).toBeNull();

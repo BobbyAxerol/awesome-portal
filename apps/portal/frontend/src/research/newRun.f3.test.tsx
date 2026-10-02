@@ -42,6 +42,8 @@ const REGISTRY = fixture<RegistryListResponse>("research-alpha-import.registry.v
 const CATALOG = fixture<unknown>("research-preflight.dataset-catalog.valid.json");
 const PREFLIGHT = fixture<PreflightResponse>("research-preflight.response.valid.json");
 const ALPHA = REGISTRY.entries[0]!;
+/** The canonical entry serves `run_admission.may_create_run = false`; a step-caption test about "valid" needs one that can run. */
+const ADMITTED = REGISTRY.entries.map((entry, index) => (index === 0 ? { ...entry, run_admission: { may_create_run: true, code: null } } : entry));
 const LIMITS = constraintsFrom(ATLAS, REGISTRY.entries, ALPHA.alpha_version_id);
 const OK = researchState({ kind: "ok", rowCount: 1 });
 const RUN_ID = "rrun_3258a4c450816129d2d285f25b801061";
@@ -313,7 +315,9 @@ describe("02-5 — supersedes, as a typed fact", () => {
     const fact = document.querySelector("[data-supersedes]") as HTMLElement;
     expect(fact.getAttribute("data-supersedes")).toBe("absent");
     expect(fact.textContent).toContain("not recorded");
-    expect(fact.textContent).toContain("HISTORICAL_NOT_RECORDED");
+    /* The code is the tooltip, not part of the line. */
+    expect(fact.textContent).not.toContain("HISTORICAL_NOT_RECORDED");
+    expect(fact.querySelector("[data-supersedes-code]")?.getAttribute("title")).toBe("HISTORICAL_NOT_RECORDED");
     expect(fact.textContent).not.toMatch(/\b0\b|—/);
   });
 });
@@ -371,7 +375,7 @@ describe("02-7 — live captions", () => {
   });
 
   it("the bar prints them: a visited passing step says valid, a visited failing one needs attention, an unvisited one is not visited", () => {
-    mount({ draft: draft({ symbol: "" }) });
+    mount({ draft: draft({ symbol: "" }), registry: ADMITTED });
     expect(caption("context")).toBe("valid");
     expect(caption("data")).toBe("not visited");
     go("data");
@@ -409,7 +413,7 @@ describe("02-7 — live captions", () => {
 
   it("below the full width the other seven pills collapse to their mark and keep a name; the current one keeps its text", () => {
     narrow(WIZARD_FULL_WIDTH - 1);
-    mount();
+    mount({ registry: ADMITTED });
     expect(document.querySelector("[role=tablist]")?.getAttribute("data-wizard-compact")).toBe("true");
     expect(document.querySelectorAll("[role=tab]")).toHaveLength(8);
     expect(document.querySelectorAll("[data-step-caption]")).toHaveLength(1);
@@ -542,10 +546,12 @@ describe("02-9 — the gold claim-forecast card", () => {
     expect(text).toContain("mode × schedule");
     expect(text).toContain("mode_1_decay × global");
     expect(text).toContain("source");
-    expect(text).toContain("chosen in Walk-forward step");
+    /* Picking a mode sets its default schedule; the card says so instead of claiming the reader chose it. */
+    expect(text).toContain("mode default");
+    expect(text).not.toContain("chosen in Walk-forward step");
     expect(text).toContain("claim (forecast)");
     expect(document.querySelector("[data-cert-ceiling-absent]")?.textContent).toBe("not published");
-    expect(document.querySelector("[data-cert-cap-reason]")?.textContent?.length).toBeGreaterThan(20);
+    expect(document.querySelector("[data-cert-cap-reason]")?.getAttribute("title")?.length).toBeGreaterThan(20);
   });
 
   it("the augmentation paragraph is the card's tooltip, not printed text", () => {

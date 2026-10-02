@@ -2,7 +2,7 @@
  * E5 · Screen 06 Stage B on a retained WFO run (HiFi audit 6.7, 6.8, 6.9,
  * 6.10, 6.11): the pool funnel with its K callout, the typeset formula, the
  * per-fold decay of θ* and the pool on the S_IS × S̄_OOS plane, and the
- * best ≠ selected cards with S_IS, S̄_OOS, d̄ decay and max_dd.
+ * best ≠ selected cards with S_IS, S̄_OOS, mean decay and max_dd.
  *
  * Every number is the server's (`search.pool`, `candidates[]`,
  * `selection.roles`). The browser adds nothing up: K and the rule's inputs are
@@ -152,10 +152,12 @@ export function freezeLineLabel(pool: Pool | undefined): { text: string; title: 
  */
 export function FrozenAt({ pool }: { pool: Pool }) {
   const at = typeof pool.frozen_at_utc_ms === "number" ? formatUtc(pool.frozen_at_utc_ms) : null;
+  const stageFour = at !== null && pool.frozen_at_source === "P11_STAGE_COMPLETED_S4_EVENT";
   return (
     <span className="mono flex min-w-0 items-center gap-2 text-[10.5px]" data-pool-row="frozen-at">
       <span className="w-[158px] flex-none text-[10.5px] [font-family:var(--font-body)]" style={{ color: "var(--ink-soft)" }}>
-        frozen at
+        {/* D2: the served time is the stage-4 completion event — after OOS was read — so it is never called the pool's freeze. */}
+        {stageFour ? "stage 4 completed" : "frozen at"}
       </span>
       {at !== null ? (
         <span data-frozen-at={pool.frozen_at_utc_ms} title={pool.frozen_at_source ?? undefined}>
@@ -448,7 +450,7 @@ function RoleCard({ search, role, kind }: { search: CurrentSourceSearch; role: R
   const rows: [string, ReactNode][] = [
     ["S_IS", <MetricValue key="is" metric={isMetric} />],
     ["S̄_OOS", <MetricValue key="oos" metric={candidate?.facts.metrics.mean_oos_sharpe ?? trial?.facts.metrics.mean_oos_sharpe} />],
-    ["d̄ decay", <MetricValue key="decay" metric={candidate?.facts.metrics.mean_decay ?? trial?.facts.metrics.mean_decay} signed />],
+    ["mean decay", <MetricValue key="decay" metric={candidate?.facts.metrics.mean_decay ?? trial?.facts.metrics.mean_decay} signed />],
     ["max_dd", <DrawdownValue key="dd" candidate={candidate} />],
   ];
   return (

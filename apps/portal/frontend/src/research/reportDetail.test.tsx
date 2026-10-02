@@ -395,7 +395,9 @@ describe("S09 Run Report — the sheet", () => {
     expect(panel("headline").querySelector('[data-headline="TRADES"] [data-exact]')?.textContent).toBe("3");
     expect(panel("metrics").querySelector('[data-metric="NET_RETURN_FRACTION"] [data-metric-value]')?.getAttribute("data-metric-value")).toBe("0.1");
     expect(panel("metrics").querySelector('[data-metric="NET_RETURN_FRACTION"]')?.textContent).toContain("+10.00%");
-    expect(panel("provenance").querySelector("[data-data-signature]")?.textContent).toBe("e".repeat(64));
+    /* QA S09: the signature equals the dataset binding digest here, so it is listed once (under the digest). */
+    expect(panel("provenance").querySelector("[data-data-signature]")).toBeNull();
+    expect(panel("provenance").querySelector('[data-source-digest="dataset_binding_digest"]')?.textContent).toContain("e".repeat(64));
     expect(panel("provenance").querySelector('[data-source-digest="manifest_digest"]')?.textContent).toContain("f".repeat(64));
     expect(panel("header").textContent).toContain(REV);
     expect(panel("header").textContent).toContain("2024-09-22 10:13Z");
@@ -450,7 +452,7 @@ describe("S09 Run Report — the sheet", () => {
     await screen.findByText("claim passport");
     const svg = panel("equity").querySelector("[data-equity-svg]")!;
     expect(svg.getAttribute("aria-label")).toContain("3 sealed points");
-    expect(panel("equity").textContent).toContain("emitted 3 of 3 source observations · sampling full");
+    expect(panel("equity").textContent).toContain("3 points · all points");
     expect(panel("equity").textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
     expect(document.querySelector("canvas")).toBeNull();
   });
@@ -540,7 +542,7 @@ describe("S09 Run Report — the sheet", () => {
     expect(document.querySelector('[data-export-unavailable="ARCHIVE"]')?.getAttribute("title")).toBe(
       "P18_SOURCE_ARTIFACT_ARCHIVE_NOT_EXPOSED_TO_REPORT",
     );
-    expect(panel("exports").textContent).toContain("at most 524288 bytes per file");
+    expect(panel("exports").textContent).toContain("max 512 KB per file");
   });
 });
 
@@ -569,11 +571,9 @@ describe("S09 Run Report — layout rules", () => {
     /* The one clipped box is the off-screen screen-reader copy (.rr-sr, S09-U32). */
     expect(css.replace(/\.rr-sr \{[^}]*\}/, "")).not.toMatch(/overflow\s*:\s*hidden/);
     const long = [
-      "[data-provenance-line]",
       "[data-meta]",
       "[data-run-chip]",
-      "[data-data-signature]",
-      ...Object.keys(REVS).map((key) => `[data-source-revision="${key}"] dd`),
+      /* QA S09: the five revisions live in Identity (long-wrapping below); Provenance no longer repeats them. */
       '[data-source-digest="manifest_digest"] dd',
       '[data-artifact="RUN_SPEC"] [data-artifact-digest]',
       '[data-identity="evidence_revision"] dd',
@@ -585,7 +585,7 @@ describe("S09 Run Report — layout rules", () => {
       expect(el!.classList.contains("rr-long"), selector).toBe(true);
     }
     /* Not shortened: the full 70-character revisions are in the text. */
-    for (const revision of Object.values(REVS)) expect(panel("provenance").querySelector("[data-provenance-line]")!.textContent).toContain(revision);
+    for (const revision of Object.values(REVS)) expect(panel("provenance").querySelector("[data-provenance-line]")!.getAttribute("title")).toContain(revision);
   });
 
   it("S09-U29 the route owns the print page box: @page margin 0.55in inside the print rules", async () => {
@@ -759,7 +759,7 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     const css = await loaded();
     const figure = panel("equity");
     expect(figure.querySelector("[data-equity-title]")?.textContent).toBe("Equity — stitched OOS");
-    expect(figure.querySelector("[data-equity-counts]")?.textContent).toBe("emitted 3 of 3 source observations · sampling full · UTC");
+    expect(figure.querySelector("[data-equity-counts]")?.textContent).toBe("3 points · all points · UTC");
     expect([...figure.querySelectorAll("[data-y-label]")].map((el) => el.textContent)).toEqual(["110.00", "100.00"]);
     expect([...figure.querySelectorAll("[data-y-label]")].map((el) => el.getAttribute("title"))).toEqual(["110", "100"]);
     expect([...figure.querySelectorAll("[data-x-label]")].map((el) => el.textContent)).toEqual(["2024-09-22"]);
@@ -880,8 +880,9 @@ describe("S09 Run Report — reading", () => {
     expect(conflict).toMatchObject({ state: "stale", mayRetry: false, terminal: false, message: REPORT_REFUSAL_COPY.export[409] });
     expect(toReportRefusal(new TypeError("offline"), "report")).toMatchObject({ state: "failed-retryable", mayRetry: true });
     /* CG-P18-10: the read never declares 409; an unexpected one is not mistaken for "not sealed yet". */
-    expect("409" in REPORT_REFUSAL_COPY.report).toBe(false);
-    expect(toReportRefusal(new PortalApiError("409", 409, "X", "req"), "report")).toMatchObject({ state: "terminal", message: REPORT_REFUSAL_COPY.report.other });
+    /* QA S09 (UX-23): an undeclared 409 on the read is its own state with a retry; it is neither "not sealed yet" nor the generic failure. */
+    expect(toReportRefusal(new PortalApiError("409", 409, "X", "req"), "report")).toMatchObject({ state: "stale", mayRetry: true, terminal: false, message: REPORT_REFUSAL_COPY.report[409] });
+    expect(REPORT_REFUSAL_COPY.report[409]).not.toBe(REPORT_REFUSAL_COPY.report.other);
   });
 
   it("S09-U16 a 503 retry reads again with the held ETag only when asked", async () => {
@@ -1113,8 +1114,9 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(document.querySelector("[data-noprint-note]")).toBeNull();
     /* Kept, shortened: the scope of the boundary marks, the cert-cap absence, the download absence, the verdict rule. */
     expect(panel("equity").querySelector("[data-equity-caption]")?.textContent).toContain("┆ = fold OOS start");
-    expect(panel("stages").textContent).toContain("certification cap — not published");
-    expect(panel("artifacts").textContent).toContain("download — not available");
+    /* QA S09: the chain's own "certification cap - not published" line is gone (the header box says it once). */
+    expect(panel("stages").textContent).not.toContain("certification cap");
+    expect(panel("artifacts").textContent).toContain("download — not offered");
     expect(panel("folds").querySelector("[data-verdict-rule]")?.textContent).toMatch(/rule \S+/);
     expect(panel("annotation").getAttribute("aria-label")).toBe("approval annotation · not printed");
     expect(panel("annotation").textContent).toContain("annotation");
@@ -1125,8 +1127,10 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(panel("passport").querySelector("h2")?.textContent).toBe("Claim passport");
     const facts = [...panel("passport").querySelectorAll("[data-passport-key]")];
     expect(facts.map((fact) => fact.getAttribute("data-passport-key"))).toEqual(body.frozen_core.passport.map((fact: { key: string }) => fact.key));
-    expect(facts[0]!.querySelector(".k")?.textContent).toBe("validation_claim");
-    expect(facts[0]!.querySelector(".v")?.textContent).toBe("walk_forward_oos");
+    /* QA S09: enum tokens read as words; the exact token stays in the tooltip. */
+    expect(facts[0]!.querySelector(".k")?.textContent).toBe("validation claim");
+    expect(facts[0]!.querySelector(".v")?.textContent).toBe("walk forward oos");
+    expect(facts[0]!.querySelector(".v [title]")?.getAttribute("title")).toBe("walk_forward_oos");
     expect(facts[3]!.getAttribute("data-fact-state")).toBe("NOT_APPLICABLE");
     expect(panel("passport").textContent).not.toContain("numbered rather than named");
   });
@@ -1134,8 +1138,13 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
   it("S09-U43 CG-P18-04/08 the fold table has the hi-fi's eight columns and each cell keeps its exact value", async () => {
     const body = await open("research-report.wfo-retained.valid.json");
     const table = panel("folds").querySelector("table")!;
-    expect(table.getAttribute("data-fold-columns")).toBe("8");
-    expect([...table.querySelectorAll("th")].map((th) => th.textContent)).toEqual(["fold", "OOS window (UTC)", "params", "IS", "OOS", "Δ decay", "contribution", "verdict"]);
+    /* QA S09: one global parameter set is said once (caption), not on every row; the columns say what they hold. */
+    expect(body.frozen_core.folds.params_handoff.scope).toBe("GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD");
+    expect(table.getAttribute("data-fold-columns")).toBe("7");
+    expect([...table.querySelectorAll("th")].map((th) => th.textContent)).toEqual(["fold", "OOS window (UTC)", "IS Sharpe", "OOS Sharpe", "IS − OOS", "contribution", "verdict"]);
+    expect(table.querySelector("[data-fold-params]")).toBeNull();
+    expect(panel("folds").querySelector("[data-verdict-rule]")?.getAttribute("title")).toContain(body.frozen_core.folds.params_handoff.text);
+    expect(panel("folds").querySelector("[data-verdict-rule]")?.textContent).toContain("one global parameter set");
     const rows = body.frozen_core.folds.rows as Array<{ fold_id: string; oos_sharpe: { value: string }; decay: { value: string }; contribution_fraction: { value: string }; verdict: string }>;
     expect(table.querySelectorAll("[data-fold]")).toHaveLength(rows.length);
     for (const row of rows) {
@@ -1144,7 +1153,6 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
       expect(tr.querySelector("[data-fold-decay]")?.getAttribute("data-fold-decay")).toBe(row.decay.value);
       expect(tr.querySelector("[data-fold-contribution]")?.getAttribute("data-fold-contribution")).toBe(row.contribution_fraction.value);
       expect(tr.querySelector("[data-v]")?.textContent).toBe(row.verdict);
-      expect(tr.querySelector("[data-fold-params] [title]")?.getAttribute("title")).toBe(body.frozen_core.folds.params_handoff.text);
     }
     const caption = panel("equity").querySelector("[data-equity-caption]")!;
     expect(caption.textContent).toContain("┆ = fold OOS start");
@@ -1173,7 +1181,9 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(panel("equity").querySelector("[data-equity-is-path]")).not.toBeNull();
     expect(panel("equity").querySelector("[data-equity-oos-path]")).not.toBeNull();
     expect(panel("equity").querySelector('[data-legend="is"]')?.getAttribute("data-legend-state")).toBe("published");
-    expect(panel("equity").querySelector("[data-equity-counts]")?.textContent).toContain(`OOS emitted ${body.frozen_core.equity.emitted_point_count} of ${body.frozen_core.equity.source_observation_count} source observations`);
+    expect(panel("equity").querySelector("[data-equity-counts]")?.textContent).toContain(`OOS ${body.frozen_core.equity.emitted_point_count} points`);
+    /* QA S09: when the whole series is drawn, "336 of 336" is just "336 points". */
+    expect(body.frozen_core.equity.emitted_point_count).toBe(body.frozen_core.equity.source_observation_count);
   });
 
   it("S09-U46 CG-P18-07 sealed artifacts show their in-artifact filename and digest; nothing is a download", async () => {
@@ -1183,7 +1193,9 @@ describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
     expect(cell.querySelector("[data-artifact-filename]")?.getAttribute("data-artifact-filename")).toBe(fold.filename);
     expect(cell.querySelector("[data-exact]")?.getAttribute("data-exact")).toBe(fold.digest);
     expect(panel("artifacts").querySelectorAll("a")).toHaveLength(0);
-    expect(panel("artifacts").textContent).toContain(fold.download.reason_code);
+    /* QA S09: the private-bytes code is the note's tooltip; the line says it in words. */
+    expect(panel("artifacts").querySelector("[data-download-note]")?.getAttribute("title")).toContain(fold.download.reason_code);
+    expect(panel("artifacts").querySelector("[data-download-note]")?.textContent).toBe("download — not offered for private artifacts");
   });
 
   it("S09-U47 CG-P18-11 a scratch run says NOT_PUBLISHABLE in its identity and keeps the generic title", async () => {
@@ -1249,7 +1261,16 @@ describe("S09 X2 — failed run, 32 folds, final audit", () => {
     const audit = panel("final-audit");
     expect(audit.getAttribute("data-final-audit")).toBe("REUSED_ORIGINAL");
     expect(audit.querySelector("[data-optimizer-reinvoked]")?.getAttribute("data-optimizer-reinvoked")).toBe("false");
-    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toBe("fold_01: child #10 2671e27b = θ* · fold_02: child #11 2671e27b = θ*");
+    /* QA S09: identical entries are one sentence. */
+    expect(audit.querySelector("[data-final-audit-folds]")?.textContent).toBe("all 2 folds ran the frozen candidate 2671e27b");
+    (body.frozen_core as any).final_audit.folds[1].state = "MISMATCH";
+    cleanup();
+    forgetHeldReports();
+    server({ detail: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await screen.findAllByText(/per-fold verdict/i);
+    await act(async () => {});
+    expect(panel("final-audit")!.querySelector("[data-final-audit-folds]")?.textContent).toBe("fold_01: 2671e27b = θ* · fold_02: 2671e27b mismatch");
     expect(audit.querySelector("[data-final-audit-refs]")?.textContent).toContain("frozen_candidate");
   });
 

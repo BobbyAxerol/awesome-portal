@@ -132,7 +132,7 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     const sharpe = container.querySelector("[data-metric-value='OOS_SHARPE']") as HTMLElement;
     expect(sharpe.getAttribute("data-exact")).toBe(PROPOSED.facts.metrics.sharpe.value);
     expect(sharpe.textContent).toBe("3.65");
-    expect(container.querySelector("[data-metric='OOS_SHARPE'] [data-metric-scope]")?.textContent).toContain("all time");
+    expect(container.querySelector("[data-metric='OOS_SHARPE'] [data-metric-scope]")?.textContent).toContain("OOS");
     const tile = retainedTiles({ ...W3.evidence, enriched_analysis: clone(PROPOSED) } as CurrentSourceEvidence).find((t) => t.key === "OOS_SHARPE");
     expect(tile?.value).toBe(PROPOSED.facts.metrics.sharpe.value);
   });
@@ -142,11 +142,13 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     await settle(container);
     await waitFor(() => expect(container.querySelector("[data-chart-table='strategy-benchmark']")).toBeTruthy(), { timeout: 15_000 });
     const figure = container.querySelector("[data-strategy-figure]") as HTMLElement;
-    expect(figure.textContent).toContain("Strategy vs benchmark — all time");
+    expect(figure.textContent).toContain("Strategy vs benchmark — OOS");
+    /* QA S04-U12: the canvas has an accessible name. */
+    expect(figure.querySelector("[role='img'][aria-label*='Strategy vs benchmark']")).toBeTruthy();
     const rows = container.querySelectorAll("[data-chart-table='strategy-benchmark'] tbody tr");
     expect(rows).toHaveLength(PROPOSED.curves.strategy_rebased_100.length + PROPOSED.curves.benchmark_rebased_100.length);
     const chip = figure.querySelector("[data-enriched-chip]") as HTMLElement;
-    expect(chip.textContent).toBe("enrich_analysis · all time");
+    expect(chip.textContent).toBe("portal-derived · OOS");
     expect(chip.getAttribute("title")).toContain("EXTREMA_BUCKET_V1");
     const exact = (id: string) => figure.querySelector(`[data-behavior-tile='${id}'] [data-exact]`)?.getAttribute("data-exact");
     expect(exact("beta")).toBe(PROPOSED.facts.metrics.beta.value);
@@ -175,8 +177,8 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     await settle(container);
     const monthly = container.querySelector("[data-series-panel='MONTHLY_RETURNS']") as HTMLElement;
     expect(monthly.getAttribute("data-series-state")).toBe("ready");
-    expect(monthly.querySelector("[data-enriched-chip]")?.textContent).toBe("enrich_analysis · all time");
-    expect(monthly.textContent).toContain("monthly returns — all time");
+    expect(monthly.querySelector("[data-enriched-chip]")?.textContent).toBe("portal-derived · OOS");
+    expect(monthly.textContent).toContain("monthly returns — OOS");
     const months = monthly.querySelectorAll("[data-month]");
     expect(months).toHaveLength(3);
     expect([...months].map((m) => m.getAttribute("data-month"))).toEqual(["2026-07", "2026-08", "2026-09"]);
@@ -189,7 +191,7 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     expect(dist.getAttribute("data-series-state")).toBe("ready");
     expect(dist.querySelector("[data-enriched-chip]")?.getAttribute("title")).toContain("ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1");
     expect(dist.querySelectorAll("[data-chart-table='distribution'] tbody tr")).toHaveLength(PROPOSED.return_distribution.buckets.length);
-    expect(dist.textContent).toContain("Return distribution — all time");
+    expect(dist.textContent).toContain("Return distribution — OOS");
     expect(ensureRetainedKind).not.toHaveBeenCalled();
     expect(ensureSeries).not.toHaveBeenCalled();
   }, 20_000);
@@ -211,7 +213,7 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     const { container } = view(clone(PROPOSED));
     await settle(container);
     const card = container.querySelector("[data-behavior-scope='all-time']") as HTMLElement;
-    expect(card.textContent).toContain("enrich_analysis · all time");
+    expect(card.textContent).toContain("portal-derived · OOS");
     const cell = (label: string) => card.querySelector(`[data-behavior-tile='${label}'] [data-exact]`) as HTMLElement;
     expect(cell("sortino").getAttribute("data-exact")).toBe(PROPOSED.facts.metrics.sortino.value);
     expect(cell("turnover").getAttribute("data-exact")).toBe(PROPOSED.facts.behaviour.turnover_notional.value);
@@ -290,8 +292,9 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     const title = (segment: string) => container.querySelector(`[data-window-switcher] [data-segment='${segment}']`)?.getAttribute("title") ?? "";
     expect(title("IS")).toContain("RETAINED_NO_IN_SAMPLE_ACCOUNT_PAYLOAD");
     expect(title("IS")).toContain("not published");
-    expect(title("Holdout Live")).toContain("RETAINED_NO_HOLDOUT_ACCOUNT_PAYLOAD");
-    expect(title("Holdout Live")).toContain("not published");
+    /* QA S04-I3: the sealed claim's typed NOT_APPLICABLE wins over the block's blanket NOT_PUBLISHED for holdout. */
+    expect(title("Holdout Live")).toContain("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
+    expect(title("Holdout Live")).toContain("not applicable");
     expect(title("OOS")).not.toContain("not published");
   }, 20_000);
 
@@ -300,8 +303,10 @@ describe("S04 · enrich_analysis — value path (canonical healthy fixture)", ()
     const { container } = view(clone(PROPOSED), {}, "/?window=holdout");
     await waitFor(() => expect(container.querySelector("[data-window-absent='holdout']")).toBeTruthy());
     const absent = container.querySelector("[data-window-absent='holdout'] [data-withheld]") as HTMLElement;
-    expect(absent.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
-    expect(absent.getAttribute("data-reason-code")).toBe("RETAINED_NO_HOLDOUT_ACCOUNT_PAYLOAD");
+    expect(absent.getAttribute("data-withheld")).toBe("NOT_APPLICABLE");
+    expect(absent.getAttribute("data-reason-code")).toBe("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
+    /* the reason code is on screen, not only in a tooltip */
+    expect(container.querySelector("[data-window-absent='holdout'] [data-window-reason]")?.textContent).toBe("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
     await settle(container);
   }, 20_000);
 
@@ -333,7 +338,7 @@ describe("S04 · enrich_analysis — absence and refusal", () => {
     const monthly = container.querySelector("[data-series-panel='MONTHLY_RETURNS']") as HTMLElement;
     expect(monthly.textContent).toContain("monthly returns — stitched OOS");
     expect(monthly.getAttribute("data-series-state")).not.toBe("ready");
-    expect(container.querySelector("[data-window-switcher] [data-segment='IS']")?.getAttribute("title")).toContain("the Evidence Hub publishes the OOS window only");
+    expect(container.querySelector("[data-window-switcher] [data-segment='IS']")?.getAttribute("title")).toContain("no reason code was served for this window");
     expect(container.querySelector("[data-analytics-v2-absent]")).toBeTruthy();
   }, 20_000);
 

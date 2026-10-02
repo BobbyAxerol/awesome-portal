@@ -194,7 +194,7 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
         to={pickRunHref(card.target_key, scope)}
         data-card-route={pickRunHref(card.target_key, scope)}
       >
-        <CardBody card={card} blocked={picksAlpha ? PICK_ALPHA_BADGE : PICK_RUN_BADGE} />
+        <CardBody card={card} blocked={null} />
         <span className="mono text-[8.5px] font-bold" style={{ color: "var(--accent)" }}>
           {picksAlpha ? "pick an alpha →" : "pick a run →"}
         </span>
@@ -221,9 +221,6 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
     return (
       <span {...shared} tabIndex={0} role="link" aria-label={`${card.title}: ${blocked ?? "NOT ROUTED"}`} data-card-unreachable={blocked ?? "NOT ROUTED"} aria-disabled="true">
         <CardBody card={card} blocked={blocked ?? "NOT ROUTED"} />
-        <span className="mono text-[8.5px] font-bold" style={{ color: "var(--ink-faint)" }}>
-          {blocked ?? "NOT ROUTED"}
-        </span>
       </span>
     );
   }
@@ -233,6 +230,15 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
       <CardBody card={card} blocked={null} />
     </Link>
   );
+}
+
+/**
+ * QA UX-16: Attempt Lineage, Engine Atlas and Compare are references reached from the
+ * flow, not steps of it, so no arrow runs into or out of them.
+ */
+const OFF_SEQUENCE_KEYS: readonly string[] = ["attempt_lineage", "engine_atlas", "compare_runs"];
+export function isOffSequence(card: Pick<JourneyCard, "target_key">): boolean {
+  return OFF_SEQUENCE_KEYS.includes(card.target_key);
 }
 
 function PhaseRow({ phase, runId }: { phase: JourneyPhase; runId: string | null }) {
@@ -257,7 +263,7 @@ function PhaseRow({ phase, runId }: { phase: JourneyPhase; runId: string | null 
           <span key={card.card_id} className="contents">
             <JourneyCardLink card={card} runId={runId} />
             {/* The last card of a phase carries no arrow: the flow ends here. */}
-            {index < phase.cards.length - 1 ? (
+            {index < phase.cards.length - 1 && !isOffSequence(card) && !isOffSequence(phase.cards[index + 1]) ? (
               /* Hidden once the cards stack: an arrow pointing right while the
                  flow runs downward describes a layout that is not there. */
               <span
@@ -347,21 +353,33 @@ export function mappingHref(targetKey: string, runId: string | null): { href: st
   return null;
 }
 
+/** QA UX-7: a mapping row whose shipped side the descriptor words as "no shipped tab" links nothing there. */
+export const NO_SHIPPED_TAB = /^\s*[—–-]\s*no shipped tab\b/i;
+
 function MappingLink({
   targetKey,
   runId,
   label,
   column,
   color,
+  noShippedTab = false,
 }: {
+  noShippedTab?: boolean;
   targetKey: string;
   runId: string | null;
   label: string;
   column: "shipped" | "mine";
   color: string;
 }) {
-  const target = mappingHref(targetKey, runId);
+  const target = noShippedTab ? null : mappingHref(targetKey, runId);
   const common = "mono min-w-0 text-[10.5px]";
+  if (!target && noShippedTab) {
+    return (
+      <span className={common} style={{ color: "var(--ink-faint)" }} data-mapping-cell={column} data-mapping-key={targetKey} data-mapping-no-shipped-tab>
+        {label}
+      </span>
+    );
+  }
   if (!target) {
     return (
       <span className={common} style={{ color: "var(--ink-faint)" }} data-mapping-cell={column} data-mapping-key={targetKey} data-mapping-unrouted title={`${targetKey} — not routed in this build`}>
@@ -449,9 +467,8 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
             <h1
               className="text-[27px] font-normal leading-[1.2] tracking-[-.01em]"
               style={{ fontFamily: "Newsreader, Georgia, serif" }}
-              title="A reading map of the domain: where each screen sits, and what it adds."
             >
-              Journey Map — shipped portal × redesigned evidence flow
+              Journey Map
             </h1>
           </div>
           <TagLegend />
@@ -479,7 +496,7 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
             {descriptor.phases.map((phase) => (
               <PhaseRow key={phase.phase_id} phase={phase} runId={runId} />
             ))}
-            <p className="sr-only" data-descriptor-digest>
+            <p className="sr-only" aria-hidden="true" data-descriptor-digest>
               {descriptor.descriptor_id} · {descriptor.content_sha256}
             </p>
           </div>
@@ -492,7 +509,7 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
             className="text-[10px] font-medium uppercase tracking-[.07em]"
             style={{ color: "var(--ink-faint)", fontFamily: "var(--font-body)" }}
           >
-            where the redesign plugs into the shipped run view — tab by tab
+            Shipped tab → new screen
           </h2>
           <div className="grid">
             {descriptor.mapping.map((row, index) => (
@@ -502,7 +519,14 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
                 className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-baseline gap-x-2.5 border-b py-[3px] text-[11.5px] min-[900px]:grid-cols-[minmax(0,200px)_auto_minmax(0,290px)_minmax(0,1fr)]"
                 style={{ borderColor: "var(--line-soft)" }}
               >
-                <MappingLink targetKey={row.shipped_target_key} runId={runId} label={row.shipped} column="shipped" color="var(--accent)" />
+                <MappingLink
+                  targetKey={row.shipped_target_key}
+                  runId={runId}
+                  label={row.shipped}
+                  column="shipped"
+                  color="var(--accent)"
+                  noShippedTab={NO_SHIPPED_TAB.test(row.shipped)}
+                />
                 <span aria-hidden="true" style={{ color: "var(--line-strong)" }}>→</span>
                 <MappingLink targetKey={row.mine_target_key} runId={runId} label={row.mine} column="mine" color="var(--warn)" />
                 <span className="col-span-3 min-[900px]:col-span-1" style={{ color: "var(--ink-soft)" }}>{row.adds}</span>

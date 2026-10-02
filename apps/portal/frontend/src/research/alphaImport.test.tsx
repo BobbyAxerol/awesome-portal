@@ -399,7 +399,7 @@ describe("T04 — seven green gates stagger in and open step 3", () => {
           parseState: OK,
           gates: gatesResponse(),
           gatesState: OK,
-          alphaId: "delta_rsi_polynomial",
+          alphaId: "delta-rsi-polynomial",
         })}
       />,
     );
@@ -427,7 +427,7 @@ describe("T05 — registration lands as DRAFT with its supersedes note", () => {
     expect(within(card).getAllByText("av_0_3_0").length).toBeGreaterThan(0);
     expect(card.querySelector("[data-lifecycle]")?.getAttribute("data-lifecycle")).toBe("DRAFT");
     expect(card.textContent).toContain("supersedes av_0_2_0");
-    expect(screen.getByText(DRAFT_NOTE).textContent).toBe("a DRAFT can run as evidence, not compose rc_");
+    expect(screen.getByText(DRAFT_NOTE).textContent).toBe("a DRAFT can run, not seal a candidate");
   });
 
   it("updates the registry strip from the server list alone", () => {
@@ -661,7 +661,7 @@ describe("T11 — contractual copy is byte-exact", () => {
   it("keeps all three sentences and the contract's own disclosure", () => {
     // VD-TEXT-01: the short forms, same meanings.
     expect(FAIL_CLOSED_NOTE).toBe("fail-closed: a red gate stops the import.");
-    expect(DRAFT_NOTE).toBe("a DRAFT can run as evidence, not compose rc_");
+    expect(DRAFT_NOTE).toBe("a DRAFT can run, not seal a candidate");
     expect(SINGLE_FILE_ERROR).toBe("One .py only — single-file contract.");
     // S14-C1 / VD-TEXT-01: Bobby's DRAFT copy stays factual and within 12 words.
     expect(DRAFT_NOTE.split(/\s+/).length).toBeLessThanOrEqual(12);

@@ -32,7 +32,7 @@ describe("S00 header (00-1a…d)", () => {
   it("carries the HiFi kicker and title", () => {
     draw();
     expect(document.querySelector("[data-journey-kicker]")?.textContent).toBe("Quant Ecosystem Portal · Research");
-    expect(document.querySelector("h1")?.textContent).toBe("Journey Map — shipped portal × redesigned evidence flow");
+    expect(document.querySelector("h1")?.textContent).toBe("Journey Map");
     expect(document.querySelector("h1")?.className).toContain("text-[27px]");
     expect(document.querySelector("h1")?.className).toContain("font-normal");
   });
@@ -62,7 +62,7 @@ describe("S00 mapping block (00-8…10)", () => {
   it("prints the HiFi caps header and no footnote", () => {
     draw();
     const block = document.querySelector("[data-mapping]") as HTMLElement;
-    expect(block.querySelector("h2")?.textContent).toBe("where the redesign plugs into the shipped run view — tab by tab");
+    expect(block.querySelector("h2")?.textContent).toBe("Shipped tab → new screen");
     expect(block.querySelector("h2")?.className).toContain("uppercase");
     expect(block.textContent).not.toContain("skeleton");
     expect(block.querySelectorAll("[data-mapping-row]")).toHaveLength(V4.descriptor.mapping.length);
@@ -101,11 +101,11 @@ describe("S00 mapping block (00-8…10)", () => {
     expect(shipped).toHaveLength(V4.descriptor.mapping.length);
     for (const cell of shipped) {
       const key = cell.getAttribute("data-mapping-key") as string;
-      const routed = mappingHref(key, RUN);
+      const routed = cell.hasAttribute("data-mapping-no-shipped-tab") ? null : mappingHref(key, RUN);
       if (routed) expect(cell.getAttribute("href")).toBe(routed.href);
       else {
         expect(cell.tagName).toBe("SPAN");
-        expect(cell.hasAttribute("data-mapping-unrouted")).toBe(true);
+        expect(cell.hasAttribute("data-mapping-unrouted") || cell.hasAttribute("data-mapping-no-shipped-tab")).toBe(true);
       }
     }
   });

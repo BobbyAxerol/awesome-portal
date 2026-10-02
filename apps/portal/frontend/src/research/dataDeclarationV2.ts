@@ -583,6 +583,8 @@ export interface ProfilePins {
   granularity: string | null;
   windowMode: string | null;
   maxSpanDays: number | null;
+  /** The bar timeframe the profile is admitted for (`portal_admission.profiles[].timeframe`); null when not served. */
+  timeframe: string | null;
 }
 
 function range(raw: unknown): { min: number; max: number } | null {
@@ -629,6 +631,35 @@ export function readProfile(raw: unknown): ProfilePins | null {
     granularity: text(row.fold_granularity) ?? text(row.frequency),
     windowMode: text(row.window_mode),
     maxSpanDays: count(row.max_span_days),
+    timeframe: text(row.timeframe),
+  };
+}
+
+/**
+ * The timeframes the admitted profiles that fit this declaration cover.
+ *
+ * Read from the served `timeframe` of every ENABLED profile matching the
+ * protocol and route (and the mode, once one is chosen). Null — nothing to
+ * restrict by — when profiles were not served, none matches, or any match does
+ * not name a timeframe: a fact the server left out is not a restriction the
+ * browser may invent.
+ */
+export function profileTimeframes(
+  profiles: readonly ProfilePins[] | null,
+  draft: { protocol: string; executionRoute: string; optimizationMode: string },
+): { timeframes: readonly string[]; profileIds: readonly string[] } | null {
+  if (profiles === null) return null;
+  const matches = profiles.filter(
+    (profile) =>
+      profile.enabled
+      && profile.protocol === draft.protocol
+      && profile.executionRoute === draft.executionRoute
+      && (draft.optimizationMode === "" || profile.optimizationMode === null || profile.optimizationMode === draft.optimizationMode),
+  );
+  if (matches.length === 0 || matches.some((profile) => profile.timeframe === null)) return null;
+  return {
+    timeframes: [...new Set(matches.map((profile) => profile.timeframe as string))],
+    profileIds: matches.map((profile) => profile.profileId),
   };
 }
 

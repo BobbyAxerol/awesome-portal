@@ -217,7 +217,7 @@ describe("S04 · F6 — panels (Codex's fixture through the screen)", () => {
     await settle(container);
     const monthly = container.querySelector("[data-series-panel='MONTHLY_RETURNS']") as HTMLElement;
     expect(monthly.getAttribute("data-series-state")).toBe("ready");
-    expect(monthly.textContent).toContain("monthly returns — all time");
+    expect(monthly.textContent).toContain("monthly returns — OOS");
     const months = monthly.querySelectorAll("[data-month]");
     expect([...months].map((m) => m.getAttribute("data-exact"))).toEqual(["0.1", "-0.01"]);
     expect(months[0]!.getAttribute("data-month-partial")).toBe("true");
@@ -232,7 +232,7 @@ describe("S04 · F6 — panels (Codex's fixture through the screen)", () => {
 
     const dist = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']") as HTMLElement;
     expect(dist.getAttribute("data-series-state")).toBe("ready");
-    expect(dist.textContent).toContain("Return distribution — all time");
+    expect(dist.textContent).toContain("Return distribution — OOS");
     expect(dist.querySelector("[data-sampling]")?.textContent).toBe("12 bins · 4 days");
     expect(dist.querySelector("[data-sampling]")?.getAttribute("title")).toContain(DIST.distribution_definition);
     expect(dist.querySelector("[data-chart='distribution']")?.getAttribute("data-distribution-grain")).toBe("UTC_DAY");
@@ -285,12 +285,12 @@ describe("S04 · F6 — panels (Codex's fixture through the screen)", () => {
     expect(monthly.textContent).toContain("monthly returns — stitched OOS");
     expect(monthly.querySelector("[data-month-partial]")).toBeNull();
     expect(monthly.querySelector("[data-month]")?.getAttribute("title")).not.toContain("observation");
-    expect(monthly.querySelector("[data-sampling]")?.textContent).toContain("source observations");
+    expect(monthly.querySelector("[data-sampling]")?.textContent).toContain("points");
     expect(monthly.querySelector("[data-sampling]")?.getAttribute("title")).toBeNull();
     const dist = container.querySelector("[data-series-panel='RETURN_DISTRIBUTION']") as HTMLElement;
     expect(dist.textContent).toContain("Return distribution — stitched OOS");
     expect(dist.querySelector("[data-distribution-grain]")).toBeNull();
-    expect(dist.querySelector("[data-sampling]")?.textContent).toContain("source observations");
+    expect(dist.querySelector("[data-sampling]")?.textContent).toContain("points");
     expect(dist.textContent).not.toMatch(/\bbars?\b|\bdays\b/i);
   }, 20_000);
 
@@ -312,7 +312,7 @@ describe("S04 · F6 — panels (Codex's fixture through the screen)", () => {
     const panel = container.querySelector("[data-series-panel='MONTHLY_RETURNS']") as HTMLElement;
     expect(panel.querySelector("[data-sampling]")?.textContent).toBe("last 32 of 40 months");
     expect(panel.querySelector("[data-sampling]")?.getAttribute("title")).toContain("8 earlier months not sent");
-    expect(panel.textContent).toContain("monthly returns — all time");
+    expect(panel.textContent).toContain("monthly returns — OOS");
     expect(panel.querySelectorAll("[data-month]")).toHaveLength(32);
     /* 32 cells wrap into rows instead of colliding their value labels at phone width. */
     expect(panel.querySelector("[data-chart='monthly']")?.className).toContain("flex-wrap");

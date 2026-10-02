@@ -235,7 +235,7 @@ export function validateWindows(draft: RunDraft): string | null {
   if (draft.protocol !== "three_window_decay") return null;
   const { is, oos, holdout } = draft.windows;
 
-  if (!holdout.endExclusive) return "A holdout end-exclusive is required for the historical query.";
+  if (!holdout.endExclusive) return "Holdout end is required.";
 
   const bounds = [is, oos, holdout].map((w) => [utcMs(w.start), utcMs(w.endExclusive)] as const);
   if (bounds.some(([a, b]) => a === null || b === null)) {
@@ -285,14 +285,24 @@ export function parameterStatus(entry: ParameterEntry): ParameterStatus {
   const declaredHigh = Number(entry.declaredHigh);
 
   if (entry.dimension === "pin") {
-    if (low === null || low < declaredLow || low > declaredHigh) {
+    if (low === null) {
+      return { name: entry.name, text: "pin value is not a number — refused", tone: "refused" };
+    }
+    if (low < declaredLow || low > declaredHigh) {
       return { name: entry.name, text: "pin value outside declared space — refused", tone: "refused" };
     }
     return { name: entry.name, text: `pinned at ${entry.low} — fixed, out of sweep dims`, tone: "narrowed" };
   }
 
   const high = asNumber(entry.high);
-  if (low === null || high === null || low < declaredLow || high > declaredHigh || high <= low) {
+  /* One sentence per cause: a number that is not a number is not "outside the space". */
+  if (low === null || high === null) {
+    return { name: entry.name, text: "not a number — refused", tone: "refused" };
+  }
+  if (high <= low) {
+    return { name: entry.name, text: "high must be above low — refused", tone: "refused" };
+  }
+  if (low < declaredLow || high > declaredHigh) {
     return { name: entry.name, text: "outside the declared space — refused", tone: "refused" };
   }
   if (low > declaredLow || high < declaredHigh) {
@@ -374,7 +384,24 @@ export function validateOptimization(draft: RunDraft, limits: DraftConstraints):
   if (limits.seedRequired === true && draft.randomSeed.trim() === "") {
     return "The strategy declares determinism.seed_required — a fixed random seed is required.";
   }
+  /* A typed value the serializer cannot read as a number was sent as null — a silent drop. */
+  if (earlyStoppingInvalid(draft.earlyStopping)) return "Early stopping must be a whole number of at least 1.";
+  if (randomSeedInvalid(draft.randomSeed)) return "Random seed must be a whole number.";
   return null;
+}
+
+/** True for a non-empty early-stopping value that is not a whole number of at least 1. */
+export function earlyStoppingInvalid(value: string): boolean {
+  if (value.trim() === "") return false;
+  const parsed = asNumber(value);
+  return parsed === null || !Number.isInteger(parsed) || parsed < 1;
+}
+
+/** True for a non-empty seed that is not a whole number. */
+export function randomSeedInvalid(value: string): boolean {
+  if (value.trim() === "") return false;
+  const parsed = asNumber(value);
+  return parsed === null || !Number.isInteger(parsed);
 }
 
 /**
@@ -682,7 +709,7 @@ export function planCoverage(catalog: DatasetCatalog | null, datasetId: string, 
   }
   const wanted = symbol.trim().toUpperCase();
   if (wanted === "") {
-    return { state: "no-symbol", reason: "No symbol is chosen, so nothing is prefilled." };
+    return { state: "no-symbol", reason: "Pick a symbol to prefill windows." };
   }
   const listed = dataset.symbols.items.find((item) => item.symbol === wanted);
   if (!listed) {

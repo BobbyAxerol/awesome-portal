@@ -128,3 +128,24 @@ export function foldBars(series: readonly FoldBarInput[]): FoldBarGeometry | nul
     missing: parsed.length - drawable.length,
   };
 }
+
+/**
+ * QA S13 (UX-5): attempts whose per-fold values are identical draw exactly the same line, so twelve attempts looked like
+ * three. This groups the ids of identical series (same folds, same exact strings), keeping the order of first appearance
+ * in `series`; the screen draws one line per group and names the others in the legend. A display grouping of equal strings.
+ */
+export function identicalSeriesGroups(series: readonly FoldBarInput[]): string[][] {
+  const byKey = new Map<string, string[]>();
+  for (const item of series) {
+    const key = JSON.stringify(
+      item.folds
+        .filter((fold) => fold.oos_sharpe !== null)
+        .map((fold) => [fold.source_ordinal, fold.oos_sharpe])
+        .sort((left, right) => Number(left[0]) - Number(right[0])),
+    );
+    const members = byKey.get(key);
+    if (members) members.push(item.runId);
+    else byKey.set(key, [item.runId]);
+  }
+  return [...byKey.values()];
+}

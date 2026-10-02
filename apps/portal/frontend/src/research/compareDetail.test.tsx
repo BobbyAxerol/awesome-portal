@@ -20,6 +20,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  MARKETS_SHORT,
   ATTEMPTS_RULE,
   ATTEMPTS_RULE_BASE,
   CLAIM_SENTENCE,
@@ -476,7 +477,9 @@ describe("S13 Compare — markets", () => {
     await settled();
     expect(calls[0]!.url).toContain("mode=markets");
     expect(calls[0]!.url).not.toContain("runs=");
-    expect(document.querySelector("[data-caption]")?.textContent).toBe(MARKETS_CAPTION);
+    /* QA S13: the screen says it in one short sentence; the server's caption rides along as an attribute and the rule's title. */
+    expect(document.querySelector("[data-caption]")?.textContent).toBe(MARKETS_SHORT);
+    expect(document.querySelector("[data-caption]")?.getAttribute("data-server-caption")).toBe(MARKETS_CAPTION);
     expect(document.querySelector("[data-pair-overlay]")).toBeNull();
     expect(document.querySelector("[data-delta-table]")).toBeNull();
     expect(document.querySelector('[data-mini-chart="AVAILABLE"] svg path.cp-mini-line')).not.toBeNull();
@@ -553,7 +556,10 @@ describe("S13 Compare — pair", () => {
     renderAt(`${base}?mode=pair&runs=run_a,run_b`);
     await settled();
     expect(page().getAttribute("data-pair-state")).toBe("REFUSED");
-    expect(document.querySelector("[data-refusal-message]")?.textContent).toBe(COMPARE_REFUSAL_MESSAGE);
+    /* QA S13: one short sentence built from the two keys; the server's message stays in the attribute and the box's title. */
+    expect(document.querySelector("[data-refusal-message]")?.getAttribute("data-server-message")).toBe(COMPARE_REFUSAL_MESSAGE);
+    expect(document.querySelector("[data-refusal-message]")?.textContent).toMatch(/^These runs differ in symbol \(.* vs .*\), timeframe/);
+    expect(document.querySelector("[data-refusal-message]")?.textContent).not.toMatch(/lie|button/);
     for (const selector of ["[data-pair-overlay]", "[data-delta-table]", "[data-correlation]", "[data-weaker-claim]", "svg", "[data-rho]", "[data-difference]"]) {
       expect(document.querySelectorAll(selector), selector).toHaveLength(0);
     }
@@ -567,7 +573,9 @@ describe("S13 Compare — pair", () => {
     renderAt(`${base}?mode=pair&runs=run_a`);
     expect(spy).not.toHaveBeenCalled();
     expect(document.querySelector("[data-idle-reason]")?.textContent).toBe(PAIR_NEEDS_TWO);
-    for (const name of ["guard", "overlay", "delta", "correlation"]) expect(panel(name), name).not.toBeNull();
+    /* QA S13-9: nothing was requested, so one guard card says so; the four placeholder frames are gone. */
+    expect(panel("guard")).not.toBeNull();
+    for (const name of ["overlay", "delta", "correlation"]) expect(panel(name), name).toBeNull();
     expect(document.querySelector("[data-pair-overlay]")).toBeNull();
     expect(pairRuns(["a"])).toBeNull();
     expect(pairRuns(["a", ""])).toBeNull();
@@ -636,7 +644,10 @@ describe("S13 Compare — refusals and validators", () => {
     expect(document.body.textContent).not.toContain("alice@example");
     expect(document.querySelector("[data-request-id]")?.textContent).toBe("request req_p20");
     expect(document.querySelector("[data-pair-overlay]")).toBeNull();
-    for (const name of ["guard", "overlay", "delta", "correlation"]) expect(panel(name), name).not.toBeNull();
+    /* QA S13-9: after a refusal the notice is the whole answer; no placeholder frame repeats "withheld". */
+    for (const name of ["guard", "overlay", "delta", "correlation"]) expect(panel(name), name).toBeNull();
+    expect(document.querySelector("[data-pending]")).toBeNull();
+    expect(document.querySelector('[data-panel="meta"]')).toBeNull();
   });
 
   it("S13-U16 400 and 401 are their own sentences; neither is retryable", async () => {
@@ -739,7 +750,7 @@ describe("S13 Compare — audit fixes", () => {
     expect(cell.getAttribute("data-sign")).toBeNull();
     /* CG-P20-09: the direction is the contract's field, not a reading of the service code. */
     expect(document.querySelector("[data-delta-direction]")?.getAttribute("data-delta-direction")).toBe("RIGHT_MINUS_LEFT");
-    expect(document.querySelector("[data-delta-direction]")?.textContent).toBe("B − A · contract invariant");
+    expect(document.querySelector("[data-delta-direction]")?.textContent).toBe("B − A");
     expect(document.querySelector('[data-delta-row="OOS_SHARPE"] td')?.textContent).not.toContain("stitched");
   });
 
@@ -861,7 +872,8 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
       /* The pill is the lifecycle (hi-fi); the run state reads in the run line. */
       expect(card.querySelector("[data-run-state]")?.textContent).toBe(run.run_state);
       expect(card.querySelectorAll(".cp-st")).toHaveLength(0);
-      expect(card.querySelector("[data-cert-absent]")?.textContent).toContain(run.certification.reason_code);
+      /* QA S13: one absence shared by every card is said once above the ladder. */
+      expect((card.querySelector("[data-cert-absent]") ?? document.querySelector("[data-ladder-cert]"))?.textContent).toContain(run.certification.reason_code);
       expect(card.querySelector(`[data-life="${run.alpha_version_lifecycle.value}"]`)).not.toBeNull();
     }
   });
@@ -1027,7 +1039,7 @@ describe("S13 Compare — X3 decisions and debt", () => {
     expect(figure.querySelector('[data-fold-line="run_active"]')?.getAttribute("data-active")).toBe("true");
     expect(figure.querySelector('[data-fold-line="run_old"]')?.getAttribute("data-active")).toBe("false");
     /* Legend in ladder order (weak → strong): the server's array reversed. */
-    expect(Array.from(figure.querySelectorAll("[data-fold-legend-run]")).map((el) => el.textContent)).toEqual(["att_01 · WALK-FORWARD", "att_03 · WALK-FORWARD"]);
+    expect(Array.from(figure.querySelectorAll("[data-fold-legend-run]")).map((el) => el.textContent)).toEqual(["run_old · WALK-FORWARD", "run_active · WALK-FORWARD"]);
   });
 
   it("S13-U36 the config diff reads in ladder order, marks the ACTIVE column and tints only cells that differ from it", async () => {
@@ -1037,9 +1049,9 @@ describe("S13 Compare — X3 decisions and debt", () => {
     await settled();
     if (body.result.mode !== "attempts") throw new Error("fixture guard");
     const heads = Array.from(document.querySelectorAll(".cp-difftable thead th")).map((el) => el.textContent);
-    expect(heads).toEqual(["key", ...[...body.result.attempts].reverse().map((item) => item.attempt_id)]);
+    expect(heads).toEqual(["key", ...[...body.result.attempts].reverse().map((item) => item.display_label ?? item.run_id)]);
     const active = body.result.attempts.find((item) => item.alpha_version_lifecycle.value === "ACTIVE")!;
-    expect(document.querySelector("[data-config-diff-legend]")?.textContent).toBe(`gold = differs from ${active.attempt_id} · baseline picked by this screen`);
+    expect(document.querySelector("[data-config-diff-legend]")?.textContent).toBe(`differs from ${active.display_label ?? active.run_id} · baseline picked by this screen`);
     for (const path of body.result.config_diff.paths) {
       const reference = path.values.find((entry) => entry.run_id === active.run_id)?.value ?? null;
       for (const entry of path.values) {
@@ -1094,13 +1106,14 @@ describe("E7 / D10 — Screen 13 on the HiFi (Unified 13.4.1)", () => {
     await settled();
     const card = document.querySelector('[data-ladder-run="run-w6a-wfo-a"]') as HTMLElement;
     /* VD-TEXT-01: the sentence is the claim chip's title (once, not printed on every card); the key=value text rides there too. */
-    const chip = card.querySelector(".cp-claimchip") as HTMLElement;
+    /* QA S13: every card shares one claim, so the chip is not repeated per card; the ladder header says it once and carries the sentence. */
+    const chip = (card.querySelector(".cp-claimchip") ?? page().querySelector("[data-ladder-one-claim]")) as HTMLElement;
     expect(card.querySelector("[data-claim-text]")).toBeNull();
     expect(card.textContent).not.toContain(CLAIM_SENTENCE.WALK_FORWARD_OOS_COMPATIBILITY);
     expect(chip.getAttribute("title")).toContain(CLAIM_SENTENCE.WALK_FORWARD_OOS_COMPATIBILITY);
-    expect(chip.getAttribute("title")).toContain("validation_claim=walk_forward_oos");
+    expect((card.querySelector(".cp-claimchip") ?? card.querySelector(".cp-att"))!.getAttribute("title")).toContain("validation_claim=walk_forward_oos");
     expect(page().textContent).not.toContain("validation_claim=");
-    expect(card.querySelector("[data-claim]")?.getAttribute("data-claim")).toBe("WALK_FORWARD_OOS_COMPATIBILITY");
+    expect((card.querySelector("[data-claim]") ?? chip).getAttribute("data-claim")).toBe("WALK_FORWARD_OOS_COMPATIBILITY");
   });
 
   it("13-10 metric scopes read as words, never RS02_… codes", async () => {
@@ -1126,8 +1139,10 @@ describe("E7 / D10 — Screen 13 on the HiFi (Unified 13.4.1)", () => {
     renderAt(base);
     await settled();
     const card = document.querySelector(`[data-ladder-run="${LONG}"]`) as HTMLElement;
-    expect(card.querySelector(".cp-att")?.textContent).toBe("ratt_8c9c9991");
-    expect(card.querySelector(".cp-att")?.getAttribute("title")).toBe(LONG_ATT);
+    /* QA S13 (UX-4): the card is titled by the run (label, else the short RUN id), never by the attempt id; the attempt id is the tooltip. */
+    expect(card.querySelector(".cp-att")?.textContent).toBe("rrun_8c9c9991");
+    expect(card.querySelector(".cp-att")?.textContent).not.toMatch(/ratt_/);
+    expect(card.querySelector(".cp-att")?.getAttribute("title")).toContain(LONG_ATT);
     expect(card.querySelector(`[data-run-link="${LONG}"]`)?.textContent).toBe("rrun_8c9c9991");
     expect(page().textContent).not.toContain("8c9c9991bdd0cfe72100da64ebee1150");
     cleanup();

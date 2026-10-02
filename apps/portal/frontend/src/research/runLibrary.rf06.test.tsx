@@ -486,7 +486,9 @@ describe("FE-S01-12 — compare bar and checkbox", () => {
 describe("FE-S01-13 — header, frame, certificate, footer", () => {
   it("links the journey map and bound Alpha group to built Attempt Lineage", () => {
     view({ filters: { ...EMPTY, group: true } });
-    expect(screen.getByText(TITLE)).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(TITLE);
+    /* QA UX-9: one name for the screen - title and crumb agree. */
+    expect(document.querySelector("[aria-current='page']")?.textContent).toBe(TITLE);
     expect(screen.getByText("journey map ↗").getAttribute("href")).toBe("/research/quantbt/journey");
     /* F2b: one bound alpha on the list → the hint is a real link to its lineage. */
     const hint = document.querySelector("[data-lineage-hint]") as HTMLAnchorElement;
@@ -502,9 +504,10 @@ describe("FE-S01-13 — header, frame, certificate, footer", () => {
     expect(document.querySelector('[data-research-panel="runs"] h3')).toBeNull();
   });
 
-  it("prints cert — when no grade is published", () => {
+  it("draws no cert pill when no grade is published (QA S01), and keeps the absence on the card", () => {
     view();
-    expect(document.querySelector("[data-certificate]")?.textContent).toBe("cert —");
+    expect(document.querySelector("[data-certificate]")).toBeNull();
+    expect(document.querySelector("[data-run]")?.hasAttribute("data-certificate-absent")).toBe(true);
   });
 
   it("has no rules footer; the ComparisonContractKey rule is on the Compare button (VD-TEXT-01)", () => {

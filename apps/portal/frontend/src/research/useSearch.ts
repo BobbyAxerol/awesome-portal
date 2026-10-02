@@ -191,7 +191,14 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
     state: searchState(detail, currentRefusal, slot),
     ledger: slot,
     ensureLedger,
-    reread: useCallback(() => setGeneration((n) => n + 1), []),
+    /* D8: a reread also asks the retained lane again when its read failed — the retry the failure card offers. */
+    reread: useCallback(() => {
+      setGeneration((n) => n + 1);
+      if (ledger.runId === runId && ledger.slot.state === "refused") {
+        ledgerAskedFor.current = null;
+        ensureLedger();
+      }
+    }, [ensureLedger, ledger, runId]),
   };
 }
 
