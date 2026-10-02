@@ -898,6 +898,11 @@ export interface components {
             gaps: number | null;
             missing_bar_count: number | null;
             columns: string[];
+            /**
+             * @description Only qualified observed-source P08 snapshots publish this scope. Range, observed rows and columns are available; calendar gap and missing-bar counts remain null because no expected-session calendar is asserted.
+             * @constant
+             */
+            quality_scope?: "OBSERVED_TAPE_INTEGRITY_ONLY";
         };
         /** @description P08 immutable per-fold IS/OOS bar counts. Totals sum fold windows and may overlap; sealed holdout count is denied. No results or raw market rows. */
         WindowDisclosure: {

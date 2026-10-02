@@ -111,10 +111,13 @@ def build_research_dataset_catalog(provider: MarketDataProvider) -> dict[str, ob
                 "symbols": symbols,
             }
         )
+    coverage_rule = "Coverage is the month partitions present in the approved reader's storage layout (hive-symbol-year-month-v1). It is not the exact first or last bar; preflight queries the bounded range and refuses what is absent."
+    if any(row["dataset_id"] == "vn-stock-daily" for row in datasets):
+        coverage_rule += " VN daily symbols come only from the verified observed-date index, not Hive partition inference; their exact observed ranges and last-N warmup are published by indexed metadata. Session-calendar completeness remains NOT_PUBLISHED."
     return {
         "schema_version": DATASET_CATALOG_SCHEMA_VERSION,
         "datasets": datasets,
-        "coverage_rule": "Coverage is the month partitions present in the approved reader's storage layout (hive-symbol-year-month-v1). It is not the exact first or last bar; preflight queries the bounded range and refuses what is absent.",
+        "coverage_rule": coverage_rule,
     }
 
 

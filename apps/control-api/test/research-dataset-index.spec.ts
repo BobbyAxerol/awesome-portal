@@ -19,6 +19,58 @@ const request = { portalUser: { userId: "u1", username: "u1", role: "ADMIN", mus
 const make = (data = fixture(), member = true) => new ResearchDatasetIndexController({ catalog: async () => data } as never, { isMember: async () => member } as never, config, {} as never, {} as never);
 afterEach(() => vi.unstubAllGlobals());
 describe("B7 indexed dataset BFF", () => {
+  it("preserves typed observed-date absence instead of inventing a UTC session grid", () => {
+    const sample=JSON.parse(readFileSync(resolve(root,"fixtures/research-dataset-bar-metadata.observed-local-date.valid.json"),"utf8"));
+    expect(BarMetadataSchema.safeParse(sample).success).toBe(true);
+    for (const patch of [{source_timezone:"UTC"},{dataset_id:"crypto-binance-1m"},
+      {clock_basis:undefined},{warmup_start_utc_ms:undefined},{warmup_start_utc_ms:null},
+      {start_utc_ms:sample.start_utc_ms+7*3600000},{last_bar_utc_ms:sample.last_bar_utc_ms+1},
+      {verified_range:{...sample.verified_range,basis:"INDEXED_TARGET_BAR_RANGE_V1"}}])
+      expect(BarMetadataSchema.safeParse({...sample,...patch}).success,JSON.stringify(patch)).toBe(false);
+    const catalog=fixture();
+    catalog.datasets[0].symbols.items=catalog.datasets[0].symbols.items.slice(0,1);
+    catalog.datasets[0].dataset_id="vn-stock-daily";
+    catalog.datasets[0].source_timezone="Asia/Ho_Chi_Minh";
+    catalog.datasets[0].symbols.items[0].coverage_by_timeframe=[JSON.parse(readFileSync(resolve(root,
+      "fixtures/research-dataset-coverage.observed-local-date.valid.json"),"utf8"))];
+    expect(ResearchDatasetCatalogV2Schema.safeParse(catalog).success).toBe(true);
+    catalog.datasets[0].symbols.items[0].coverage_by_timeframe[0].expected_bar_count=6;
+    expect(ResearchDatasetCatalogV2Schema.safeParse(catalog).success).toBe(false);
+  });
+  it("carries valid observed warmup and honest ordinal refusal through the signed client",async()=>{
+    const sample=JSON.parse(readFileSync(resolve(root,"fixtures/research-dataset-bar-metadata.observed-local-date.valid.json"),"utf8"));
+    const query={dataset_id:sample.dataset_id,symbol:sample.symbol,timeframe:sample.timeframe,
+      start_utc_ms:sample.start_utc_ms,end_exclusive_utc_ms:sample.end_exclusive_utc_ms,warmup_bars:sample.warmup_bars_required};
+    vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify(sample))));
+    const client=new ResearchDatasetIndexClient(config);
+    expect(await client.metadata((request as any).portalUser,query)).toEqual(sample);
+    // Three calendar dates can be indexed before start without three observed
+    // rows. An ordinal refusal is not a substituted-range protocol violation.
+    const refused={...sample,availability:"NOT_PUBLISHED",reason_code:"WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE",
+      warmup_bars_required:3,warmup_bars_available_before_start:2,warmup_start_utc_ms:null,
+      earliest_start_with_warmup_utc_ms:sample.last_bar_utc_ms};
+    vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify(refused))));
+    expect(await client.metadata((request as any).portalUser,{...query,warmup_bars:3})).toEqual(refused);
+    vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify({...refused,warmup_start_utc_ms:sample.warmup_start_utc_ms}))));
+    await expect(client.metadata((request as any).portalUser,{...query,warmup_bars:3})).rejects.toMatchObject({status:502});
+  });
+  it("checks source-local daily edges before metadata I/O, preserving the existing UTC branch",async()=>{
+    const sample=JSON.parse(readFileSync(resolve(root,"fixtures/research-dataset-bar-metadata.observed-local-date.valid.json"),"utf8"));
+    const metadata=vi.fn(async()=>sample),catalog=vi.fn(async()=>({datasets:[{dataset_id:"vn-stock-daily"}]}));
+    const controller=new ResearchDatasetIndexController({catalog,metadata} as never,{isMember:async()=>true} as never,config,{} as never,{} as never);
+    const query={symbol:sample.symbol,timeframe:sample.timeframe,start_utc_ms:sample.start_utc_ms,
+      end_exclusive_utc_ms:sample.end_exclusive_utc_ms,warmup_bars:2};
+    expect(await controller.metadata(request,"vn-stock-daily",query)).toEqual(sample);
+    expect(metadata).toHaveBeenCalledOnce();
+    await expect(controller.metadata(request,"vn-stock-daily",{...query,start_utc_ms:query.start_utc_ms+7*3600000})).rejects.toMatchObject({code:"WINDOW_BOUND_NOT_ALIGNED"});
+    await expect(controller.metadata(request,"vn-stock-daily",{...query,timeframe:"1h"})).rejects.toMatchObject({status:400});
+    expect(metadata).toHaveBeenCalledOnce();
+    for (const date of ["2026-08-03","2026-08-03T00:00","2026-08-03T00:00:00.000",
+      "2026-08-03T00:00:00.0000","2026-08-03T00:00:00.000000000","2026-08-03 00:00:00"])
+      expect((controller as any).sourceInstant(date,"vn-stock-daily")).toBe(query.start_utc_ms);
+    expect((controller as any).sourceInstant("2026-08-03T00:00:00+07:00","vn-stock-daily")).toBe(query.start_utc_ms);
+    expect((controller as any).sourceInstant("2026-08-03T00:00:00.000000001+07:00","vn-stock-daily")).toBeNaN();
+  });
   it("publishes only fixed metadata error copy and typed field paths", () => {
     const send=vi.fn(), status=vi.fn(()=>({send}));
     const details={gate:"window_alignment",field_paths:[["start_utc_ms"]]};

@@ -854,6 +854,16 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
     from portal_api.adapters.quantbt import QuantBTGateway
     from strategy.delta_rsi import generate_signals
 
+    vn_observed = receipt.get("execution_profile_id") is not None
+    if vn_observed:
+        from portal_api.domain.research_vn_observed_fixed_profile import VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST
+        from portal_api.domain.research_run_producer import VnSourceObservation
+        if (receipt.get("execution_profile_id"), receipt.get("execution_profile_digest")) != (VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST):
+            raise ValueError("fixed child execution profile does not match its installed source tuple")
+        observation = VnSourceObservation.model_validate(receipt.get("source_observation"))
+    elif receipt.get("execution_profile_digest") is not None or receipt.get("source_observation") is not None:
+        raise ValueError("legacy fixed child cannot carry another source profile's fields")
+
     parameters = receipt.get("p04_parameters", _P04_DELTA_PARAMS)
     if not isinstance(parameters, dict) or set(parameters) != set(_P04_DELTA_PARAMS):
         raise ValueError("P04 child receipt has an invalid parameter map")
@@ -863,6 +873,15 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
             raise ValueError("P04 child receipt parameter map does not match installed profile")
     market_path = _safe_path(str(receipt["market_path"]), label="market_path")
     market = pd.read_parquet(market_path)
+    if vn_observed:
+        index = pd.DatetimeIndex(market.index)
+        local = index.tz_convert("Asia/Ho_Chi_Minh") if index.tz is not None else None
+        is_start = receipt.get("is_start_utc_ms")
+        if (local is None or not index.is_monotonic_increasing or not index.is_unique
+                or bool((local != local.normalize()).any()) or type(is_start) is not int
+                or len(index[index < pd.Timestamp(is_start, unit="ms", tz="UTC")]) != 300
+                or int(index[0].value // 1_000_000) != observation.warmup_start_utc_ms):
+            raise ValueError("VN fixed child requires its exact observed predecessor tape and source-local clock")
     signal = generate_signals(market, dict(parameters))["pos_weight"]
     endpoint = QuantBTGateway().signal_notional_endpoint(
         initial_capital=20_000,
@@ -871,7 +890,7 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
         fee_rate=0.0005,
         use_funding=False,
     )
-    result = endpoint.backtest(data=market, signal=signal)
+    result = endpoint.backtest(data=market, signal=signal, **({"symbols": ["FPT"]} if vn_observed else {}))
     report = result.full_report()
     output = {
         "task": "P04_DELTA_SMOKE",
@@ -880,6 +899,9 @@ def _run_p04_delta_smoke(receipt: dict[str, Any], *, receipt_dir: Path | None = 
         "final_equity": float(report["final_equity"]),
         "num_trades": int(report["num_trades"]),
     }
+    if vn_observed:
+        output.update(execution_profile_id=receipt["execution_profile_id"],
+            execution_profile_digest=receipt["execution_profile_digest"], source_observation=observation.model_dump(mode="json"))
     oos_start_utc_ms = receipt.get("oos_start_utc_ms")
     # Older P06 test receipts are intentionally still executable; P13 only
     # receives an evidence document when P10 supplied the immutable boundary.

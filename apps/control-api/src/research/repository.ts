@@ -6,6 +6,7 @@ import { newUlid } from "../id";
 import { CONTROL_API_POOL } from "../tokens";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
+import { isVnObservedFixedProfile, VN_OBSERVED_FIXED_PROFILE } from "./vn-observed-fixed.profile";
 import {
   RESEARCH_DB_BUDGET,
   RESEARCH_DB_RUNTIME_ROLE,
@@ -221,7 +222,7 @@ interface RunProducerRow {
   worker_attempt_id: string | null;
   lease_epoch: string | number | null;
   portal_receipt: Record<string, unknown> | string | null;
-  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1";
+  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1" | "p10.vn-stock-daily-observed-fixed.v1";
   execution_profile_digest: string | null;
 }
 
@@ -2167,19 +2168,18 @@ export class ResearchMetadataRepository {
     requireBoundedObject(input.receipt, "Research Portal dispatch receipt", RESEARCH_DB_BUDGET.maxSmallMetadataJsonBytes);
     return this.withScopedWrite(scope, async (client) => {
       const updated = await client.query<RunProducerRow>(
-        `UPDATE research.run_producers
+        `UPDATE research.run_producers producer
             SET dispatch_state = 'DISPATCHED', portal_receipt = $6::jsonb,
                 updated_at = now()
-          WHERE workspace_id = $1 AND run_id = $2 AND job_id = $3
-            AND worker_attempt_id = $4 AND lease_epoch = $5
-            AND dispatch_state = 'PENDING'
-          RETURNING run_id, attempt_id, job_id, client_intent_id, alpha_id,
-                    alpha_version_id, execution_adapter_id, adapter_contract_digest,
-                    requested_spec_digest, effective_spec_digest,
-                    dataset_binding_digest, manifest_digest, snapshot_id,
-                    snapshot_content_hash, work_digest, legacy_request,
-                    dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
-                   execution_profile_id, execution_profile_digest`,
+           FROM research.jobs job, research.worker_attempts worker
+          WHERE producer.workspace_id = $1 AND producer.run_id = $2 AND producer.job_id = $3
+            AND producer.worker_attempt_id = $4 AND producer.lease_epoch = $5
+            AND producer.dispatch_state = 'PENDING'
+            AND job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
+            AND job.current_worker_attempt_id = $4 AND job.current_lease_epoch = $5
+            AND worker.workspace_id = job.workspace_id AND worker.job_id = job.job_id
+            AND worker.worker_attempt_id = $4 AND worker.lease_epoch = $5
+          RETURNING producer.*`,
         [scope.workspaceId, input.runId, input.jobId, input.workerAttemptId, input.leaseEpoch, JSON.stringify(input.receipt)],
       );
       const row = updated.rows[0];
@@ -2829,6 +2829,10 @@ export class ResearchMetadataRepository {
     const leaseSeconds = input.leaseSeconds ?? 60;
     requirePositiveSafeInteger(leaseSeconds, "leaseSeconds", RESEARCH_SCHEDULER_BUDGET.maximumLeaseSeconds);
     return this.withScopedWrite(scope, async (client) => {
+      // Per-job SKIP LOCKED cannot serialize the workspace-wide HEAVY
+      // predicate. Every claim shares this bounded transaction lock; another
+      // workspace remains independent. No execution or retry is introduced.
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [`research.scheduler:${scope.workspaceId}`]);
       await this.recoverExpiredDurableJobsInTransaction(client, scope);
       const candidate = await client.query<DurableJobRow>(
         `SELECT j.job_id, j.run_id, j.command_id, j.logical_work_key, j.work_digest, j.job_kind, j.readiness_class,
@@ -4847,7 +4851,10 @@ export class ResearchMetadataRepository {
     const imported = input.executionAdapterId === IMPORTED_ALPHA_ADAPTER_ID &&
       input.adapterContractDigest === IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST &&
       profileId === IMPORTED_ALPHA_PROFILE_ID && profileDigest === IMPORTED_ALPHA_PROFILE_DIGEST;
-    if (!p04 && !imported) {
+    const vnObserved = input.executionAdapterId === VN_OBSERVED_FIXED_PROFILE.adapter_id &&
+      input.adapterContractDigest === VN_OBSERVED_FIXED_PROFILE.adapter_contract_digest &&
+      isVnObservedFixedProfile(profileId, profileDigest);
+    if (!p04 && !imported && !vnObserved) {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research execution profile is unsupported.", 400);
     }
     for (const [label, value] of Object.entries({

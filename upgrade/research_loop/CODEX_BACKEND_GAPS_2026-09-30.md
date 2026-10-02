@@ -982,3 +982,167 @@ Bobby cho phép Claude tạo run thử trên preview :8095 (stack Claude quản,
 **Không có lỗi backend.** R-WFO-025 kẹt vì `research.run_producers.dispatch_state = PENDING`: Claude tạo nó ~10 giây sau R-WFO-024 (cùng queue HEAVY), nên admission P06 "một HEAVY mỗi workspace" trả 503 "waiting for queue capacity… retry with the same intent" (hành vi đúng, an toàn thử lại); script của Claude không thử lại cùng intent nên run để QUEUED chưa dispatch. Tạo lại khi hàng đợi rảnh → **R-WFO-027 `rrun_686af4b1d64472591b6a64a1db1233a3` (per_fold_causal) COMPLETED** trong vài giây. Xin lỗi vì báo nhầm; không cần Codex làm gì cho G-23. (R-WFO-025 còn là run QUEUED chưa dispatch trên preview, vô hại.)
 
 **G-22 ĐÓNG — kiểm B10/B11 trên dữ liệu thật (preview :8095, browser, 0 lỗi console), run causal R-WFO-027:** S03 `per-fold studies — 3 reported / 3 planned`, `study … trial 9/9`, không tính lại pct; S05 `OUTER FOLDS 3 observed · INNER FOLDS 12 · INNER MIN (DECLARED) 2`, θ* `PER FOLD (own)`, `last-fold deployment (fold_03) · source trial study_2.trial_1`; S06 `K not shown — PER_FOLD_STUDIES_HAVE_NO_SINGLE_RUN_GLOBAL_POOL`, `candidates re-evaluated: each outer fold, its own study`, đồng hồ "Portal orchestration times — not an engine pool freeze or first out-of-sample read"; S07/S08/S09 hiện selection/own params/`per_fold` score basis. Trước đó: S02 profile causal, S08/S09 fixed, child-audit companion WFO. Còn mở phía Codex: chỉ các mục §19 cũ chưa giao (G-02…G-11), VN/source profile, P23/P24.
+
+## 29. Codex — published profile parity and observed VN daily index, 2026-10-02
+
+**IN_PROGRESS**, next bounded substage of approved group 6. Three disjoint
+agents handle contract parity, the observed-date index helper and independent
+source/custody review. Root owns integration, source receipt and one grouped
+commit/hook; no frontend edits, remote push or shared/prod runtime changes.
+
+- Answer Claude §26: make the published foundation admission enum and array
+  bound match all four actual immutable runtime profiles, including causal/
+  inner. Regenerate only the affected contract and prove unknown-profile
+  rejection; do not weaken runtime admission or ask the browser to cast.
+- Add a bounded, reusable VN daily index lane over the already installed HMD
+  reader. Preserve source-local date labels (`Asia/Ho_Chi_Minh`, previous-day
+  17:00 UTC), <=31-local-date queries, actual gaps and ordinal warmup bars.
+- Expose measured index coverage with explicit observed-date basis. Expected
+  exchange-session count, session-close clock, calendar completeness and
+  instrument terms remain typed absent; never count weekends as missing
+  sessions or invent a 24/7 source calendar.
+- Take a real installed-reader/index oracle for the helper, alongside focused
+  timezone/chunk/warmup/custody and unchanged-Binance regressions. This is
+  **index infrastructure qualification**, not a VN executable-profile or
+  product receipt. P08/P10/child/profile binding remains the next vertical
+  step until an actual product run passes.
+
+No new service, vendor install, direct DB access, old-index/seal rewrite or
+profile activation is included. Generated fields require an explicit Claude
+handoff; metadata availability must not imply execution authorization.
+
+### §29 delivery — source index proof, not product activation
+
+Foundation transport now matches the four runtime profiles; causal enum,
+bound and duplicate rejection are generated and tested. VN observed-date
+helper, V2 immutable mixed index, safe signed metadata client/controller and
+ordinal warmup are implemented. Independent installed-reader oracle proves
+**661 FPT timestamps / 32 queries / 139 runs**, exact 300-bar predecessor,
+holiday and refused-range semantics. UTC indexes/profiles/seals are unchanged.
+
+The explicit observed provider is also implemented: exact 300-predecessor
+hydration, source/index timestamp parity and no default app activation. A
+second independent direct-reader receipt matches every OHLCV value for
+**661 rows (300+361)** and holiday **303 rows (300+3)**. Raw source order and
+sub-ms boundaries refuse instead of being silently repaired. Focused final
+source/index/adapter regressions: **156 PASS / 1 opt-in SKIP**.
+
+[Exact hashes/tests/failure truth, C4 and Claude handoff](./evidence/P08/B8_VN_OBSERVED_INDEX_AND_PROFILE_PARITY_2026-10-02.md).
+No VN executable profile/catalog or frontend activation is claimed. Complete
+that next vertical gate with actual owned P08→child→P05/API proof, preserving
+old immutable AV/pins and typed calendar/instrument authority. Claude's §28
+correction at `1bcee81a` withdraws G-23: capacity 503 requires same-intent
+retry; a later causal run completed. Preserve that correction when landing.
+No automatic recovery or shared runtime mutation is introduced. No push,
+production or full P23/P24 claim.
+
+The next immutable VN profile must join every profile consumer, including the
+P10 producer/worker/read/replay allowlists; an adapter alone is not permission
+to admit or execute work. No unresolved source absence is labeled AVAILABLE.
+
+## 30. Codex — observed VN fixed product vertical, 2026-10-02
+
+**IN_PROGRESS**, same approved group 6, not a new campaign. Reuse §29's
+verified source adapter and ordinal warmup instead of repeating qualification.
+Python agent owns source composition, P08 snapshot and fixed child/retention;
+Control agent owns the exact immutable admission/work/read/replay profile and
+generated contract; root owns migration, owned :8096 receipt, docs and landing.
+
+- Add only `p10.vn-stock-daily-observed-fixed.v1`: installed QuantBT 1.1.1,
+  signal_notional, fixed three windows, FPT/1d source-local observations,
+  declared 300 observed predecessors. Keep every old profile and AV byte
+  unchanged; inspect the existing P04 immutable declaration before reuse.
+- Require source/index custody and explicit opt-in before exposing an
+  executable VN profile. Preserve exact source-local midnight (17:00 UTC),
+  half-open bounds and source gaps. No exchange calendar, session close,
+  instrument precision, currency or account permission is inferred.
+- Wire P08 ordinal warmup and observed-only quality through P10, isolated
+  child, immutable P05 retention, named Hub/Report and route-aware Replay.
+  Do not label missing session authority as a 24/7 missing-bar failure or
+  silently change all-time UTC/365 analytics.
+- Focused contract/source/negative tests and one real owned :8096 product run
+  must name exact image/source/profile/AV/snapshot/seal hashes and independently
+  check source-to-snapshot/replay parity. A helper/fixture alone does not close
+  this vertical. Frontend binding is handed to Claude; no FE edit here.
+
+G-23 is withdrawn, not repaired by auto-dispatch: capacity refusal still
+requires caller retry. Only independently demonstrated existing claim/receipt
+fence races may receive narrow safety regression fixes; no timer, service,
+automatic future execution or shared preview mutation. One grouped mandatory
+hook after the integrated code is ready. No remote push, dev/main, production,
+kernel/package change or P23/P24 completion claim.
+
+### §30 delivery — actual observed VN fixed product proof
+
+**SCOPED_VN_FIXED_PRODUCT_QUALIFICATION_PASS** on
+`rrun_df77613b0f4ceb2dd069935f61ae75e2`, COMPLETED/READY. Actual public
+P08→P10→isolated QuantBT 1.1.1 child→immutable P05→named API path is complete.
+Hub/Report/Split/Search/Freeze/Replay 6/6 HTTP 200; fixed WFO retained lane is
+typed NOT_APPLICABLE. Seven bounded opaque replay pages retain 107 OOS rows.
+Independent installed HMD reader matches every timestamp/OHLCV for 568 rows
+(300 observed predecessors + 268 analysis), 28 bounded queries, and replay.
+Wrong source symbol/clock both refuse with actual typed 409 responses.
+
+Real qualification exposed and repaired **five** integration defects:
+Control P08 closed-bar guard, repository profile/adapter allowlist, private
+terminal split enum/profile isolation, calendar-return versus observed-bar
+population validation, and Hub's calendar-gap coverage requirement. Failed
+runs stay FAILED and evidence is retained. Observed coverage is AVAILABLE
+only with explicit `OBSERVED_TAPE_INTEGRITY_ONLY`; unknown calendar counts
+stay null. No weekend/session count, UTC/365 analytics or old seal is changed.
+
+[Exact images, source/work/snapshot/Parquet hashes, real proof, failure record,
+tests, cleanup and Claude generated-client handoff](./evidence/P10/B8_VN_FIXED_PRODUCT_VERTICAL_2026-10-02.md).
+A receipt-only range assertion was corrected after the successful run; its
+original failed receipt is preserved and a guarded read-only continuation
+has a distinct proof label. No second QuantBT run was needed.
+
+## 31. Six-group backend reconciliation — 2026-10-02
+
+This addendum supersedes the **backend** OPEN rows and earlier IN_PROGRESS
+checkpoints in §19/§20/§29/§30 without deleting their historical evidence.
+It does not grant frontend/browser, P23/P24 or production acceptance.
+
+| Approved group | Current backend verdict | Evidence and consumer distinction |
+| --- | --- | --- |
+| 1 — cross-screen correctness | SCOPED_BACKEND_ACCEPTED | Exact R-WFO-020↔023 and 022↔023: all four named GETs 200; keys, overlap, numerical correlation and annotations agree both orders. Explicit engine-return versus first/last-equity bases remain distinct; G-02 remaining same-label presentation is frontend. |
+| 2 — readiness/progress/split | SCOPED_BACKEND_ACCEPTED | §20/§23 actual terminal/failed reads; no fabricated fold, wall-clock, cert or progress. Final VN run also COMPLETED/READY with persisted Hub/Report/Split. |
+| 3 — analytics/history | SCOPED_BACKEND_ACCEPTED | §23 OOS oracle; §27 weekly zero-variance and monthly 720-row IS oracle; immutable sidecars and raw source custody. G-20's six eligible amendments are closed, not every historical seal; old seals lacking raw source remain typed absent. |
+| 4 — search/freeze/replay/RC | SCOPED_BACKEND_ACCEPTED | §23 RC seal/retry and fixed replay receipt; §25 causal own-fold selection/inner studies and generation child MATCHes; bounded VN replay + Report reads. |
+| 5 — B9 chart contracts | SCOPED_BACKEND_ACCEPTED | §20 chart scalar/curve/tail/window/timestamp/Compare annotations, independent daily oracle and unchanged original seals; generated contracts handed to Claude. |
+| 6 — HMD/profile | SCOPED_BACKEND_ACCEPTED | §23 refusal/index oracle; §25 actual causal profile; §29 observed VN index/provider oracle; §30 actual FPT fixed product vertical. Foundation includes all five admitted runtime profiles by exact identity and request versions. |
+
+[G-01/G-21 exact-pair proof and completed session-specific cleanup](./evidence/P20/B8_EXACT_COMPARE_PAIRS_2026-10-02.md).
+The initial logout Origin refusal remains in the immutable proof; the parent
+revoked only the one uniquely identified QA session through the existing
+repository method. All other sessions are unchanged; no second login,
+business/run/preflight write or runtime restart on shared :8095.
+
+Claude's latest common-branch corrections must survive landing: G-20 CLOSED,
+G-22 CLOSED (actual fixed/global/causal browser runs), G-23 WITHDRAWN (capacity
+503 requires caller retry). No automatic dispatch/recovery was implemented.
+G-03/04/05/07/09/12/13/14/15/17 are backend-delivered by linked receipts; do not
+reopen them merely because their earlier §19 rows say OPEN.
+
+**Still not supplied by the source:** authoritative VN calendar/session close,
+instrument precision/currency/venue terms; WFO native order/fill/MAE/MFE or
+source wall clocks; missing raw history of older seals. Keep typed absence and
+explicit locators, not zero or synthetic rows. G-16 rolling detail remains
+WONT_DO under D-AN-01, not an unimplemented all-time feature.
+
+**Separate genuine remaining gates:** P23 mixed Library/Progress 538/568 ms
+against recorded 500 ms; three lost disposable test manifests and full
+restore integrity; real second-engine T07/T13; one candidate-consistent
+utility/recovery/audit and frontend/a11y/owner acceptance. P24 signed-release
+rehearsal is not delivered by this six-group backend slice. Linked
+AUDIT_OF_SELECTION child scope remains separate if its full gate is required.
+Do not mark the whole Research product or release green from this addendum.
+
+C4: owned :8096 cell fully removed **without volumes**; 0 nonterminal jobs,
+0 ACTIVE test sessions, 21 test identities still disabled and one owner anchor
+retained. Both owned VN flags restored false. Protect seven exact current
+image tags, original rollback images, source/index/DB/artifact/backup and
+private receipts. Root free space 207,521,882,112 bytes (69% used);
+**NO_ACTION_NEEDED** beyond completed exact cell/session teardown. One normal
+grouped mandatory hook gates this coherent source/generated/docs commit;
+no per-agent hook, frontend build, remote push, dev/main or production change.

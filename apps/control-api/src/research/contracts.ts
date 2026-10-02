@@ -372,7 +372,7 @@ export interface ResearchRunProducerInput {
    * W1 run execution profile. Omitted means the P04 fixed qualification
    * (with a NULL digest), so existing callers keep their exact identity.
    */
-  executionProfileId?: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p17.imported-signal-notional.v1";
+  executionProfileId?: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p17.imported-signal-notional.v1" | "p10.vn-stock-daily-observed-fixed.v1";
   executionProfileDigest?: string | null;
   preflightToken: string;
   requestedSpecDigest: string;
@@ -446,7 +446,7 @@ export interface ResearchRunProducerRecord {
   alphaVersionId: string;
   executionAdapterId: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
   adapterContractDigest: string;
-  executionProfileId: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1";
+  executionProfileId: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1" | "p10.vn-stock-daily-observed-fixed.v1";
   executionProfileDigest: string | null;
   requestedSpecDigest: string;
   effectiveSpecDigest: string;

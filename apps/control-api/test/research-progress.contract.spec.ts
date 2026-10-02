@@ -9,6 +9,8 @@ import {
   toPublicResearchProgressSnapshot,
 } from "../src/research/progress.contract";
 import { ResearchProgressFanout } from "../src/research/progress.fanout";
+import { ResearchProgressService } from "../src/research/progress.service";
+import { VN_OBSERVED_FIXED_PROFILE_ID } from "../src/research/vn-observed-fixed.profile";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import { p13EvidenceSourceFixture } from "./research-evidence.fixture";
 import { p14SplitSourceFixture } from "./research-split.fixture";
@@ -61,6 +63,31 @@ const snapshot = {
 };
 
 describe("P11 progress contracts", () => {
+  it("accepts VN fixed terminal split on its exact profile and never rebrands a legacy fixed source", () => {
+    const split = { ...p14SplitSourceFixture(), windows: { ...p14SplitSourceFixture().windows,
+      outer_oos: { ...p14SplitSourceFixture().windows.outer_oos, evaluation_state: "VN_OBSERVED_AFTER_FIXED_PROFILE" as const } } };
+    const evidence = p13EvidenceSourceFixture();
+    const terminal = ResearchProgressIngressSchema.parse({
+      schema_version: "research.progress-ingress.v1", workspace_id: "workspace_p11",
+      run_id: event.run_id, job_id: "job_p11", worker_attempt_id: event.attempt_id, lease_epoch: event.lease_epoch,
+      event: { ...event, event_type: "run_completed", payload: {
+        usage: { peak_rss_bytes: 1, cpu_seconds: 1, scratch_bytes: 0, fd_peak: 1 },
+        evidence_digest: sha256ResearchJson(evidence), split_digest: sha256ResearchJson(split) } },
+      snapshot: { ...snapshot, status: "COMPLETED", readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" } },
+      evidence, split,
+    });
+    const service = new ResearchProgressService({} as never, {} as never, {} as never, {} as never,
+      {} as never, {} as never, {} as never, {} as never) as unknown as {
+      assertProfileBoundIngress: (scope: { executionProfileId: string }, input: typeof terminal) => void;
+    };
+    expect(() => service.assertProfileBoundIngress({ executionProfileId: VN_OBSERVED_FIXED_PROFILE_ID }, terminal)).not.toThrow();
+    expect(() => service.assertProfileBoundIngress({ executionProfileId: "p04.fixed-qualification.v1" }, terminal))
+      .toThrow("Research split evaluation does not match");
+    const legacy = { ...terminal, split: p14SplitSourceFixture() };
+    expect(() => service.assertProfileBoundIngress({ executionProfileId: VN_OBSERVED_FIXED_PROFILE_ID }, legacy))
+      .toThrow("Research split evaluation does not match");
+    expect(() => service.assertProfileBoundIngress({ executionProfileId: "p04.fixed-qualification.v1" }, legacy)).not.toThrow();
+  });
   it("preserves repeated local trial IDs with native study identity and inner objective scope", () => {
     const trial={...event,event_type:"trial_completed",payload:{study:"PER_FOLD_STUDY",study_id:"fold_1",source_trial_id:"0",trial:4,objective:"0.3"}};
     expect(ResearchProgressEventSchema.safeParse(trial).success).toBe(true);

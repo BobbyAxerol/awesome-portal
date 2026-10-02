@@ -631,6 +631,20 @@ class ReleaseRuntimePublic(CatalogModel):
     # the browser renders — not the private catalog digest — so the form can
     # name the configuration it was built from without computing anything.
     config_digest: str | None = None
+    vn_observed_daily_qualification: "VnObservedDailyQualification | None" = None
+
+
+class VnObservedDailyQualification(CatalogModel):
+    state: Literal["AVAILABLE", "NOT_PUBLISHED"]
+    reason_code: str | None
+    profile_id: Literal["p10.vn-stock-daily-observed-fixed.v1"]
+    profile_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    dataset_id: Literal["vn-stock-daily"]
+    symbol: Literal["FPT"]
+    timeframe: Literal["1d"]
+    source_timezone: Literal["Asia/Ho_Chi_Minh"]
+    clock_basis: Literal["OBSERVED_SOURCE_LOCAL_DATE_V1"]
+    index_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
 class HistoricalReleasePublic(CatalogModel):
@@ -777,8 +791,9 @@ def release_config_digest(release: EngineRelease) -> str:
 class ResearchEngineCatalogService:
     """Fail-closed loader and safe public projection for the P04 Atlas."""
 
-    def __init__(self, registry_root: Path) -> None:
+    def __init__(self, registry_root: Path, *, market_data_provider=None) -> None:
         self._registry_root = registry_root
+        self._market_data_provider = market_data_provider
         self._catalog, self._catalog_digest = self._load()
         # Provenance verification hashes installed wheel metadata.  It belongs
         # to controlled service construction (or a deliberate validation
@@ -1082,9 +1097,27 @@ class ResearchEngineCatalogService:
         return current.walk_forward_options
 
     def public_document(self) -> ResearchEngineAtlasDocument:
+        from portal_api.domain.research_vn_observed_fixed_profile import (
+            VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST, vn_observed_fixed_enabled,
+        )
+        qualification = {"state": "NOT_PUBLISHED", "reason_code": "VN_OBSERVED_PROFILE_NOT_QUALIFIED",
+            "profile_id": VN_OBSERVED_FIXED_PROFILE_ID, "profile_digest": VN_OBSERVED_FIXED_PROFILE_DIGEST,
+            "dataset_id": "vn-stock-daily", "symbol": "FPT", "timeframe": "1d", "source_timezone": "Asia/Ho_Chi_Minh",
+            "clock_basis": "OBSERVED_SOURCE_LOCAL_DATE_V1", "index_revision": None}
+        if vn_observed_fixed_enabled() and self._current_release_runtime.verified:
+            source = self._market_data_provider
+            getter = getattr(source, "qualification", None)
+            if callable(getter):
+                try:
+                    qualification = getter()
+                except (OSError, ValueError):
+                    qualification["reason_code"] = "VN_OBSERVED_SOURCE_INDEX_NOT_QUALIFIED"
+            else:
+                qualification["reason_code"] = getattr(source, "vn_qualification_reason", "HMD_METADATA_INDEX_NOT_BUILT")
         return ResearchEngineAtlasDocument(
             manifest_revision=self._catalog.manifest_revision,
-            current_release=self._current_release_runtime,
+            current_release=self._current_release_runtime.model_copy(update={
+                "vn_observed_daily_qualification": VnObservedDailyQualification.model_validate(qualification)}),
             historical_releases=tuple(
                 HistoricalReleasePublic(
                     release_id=release.release_id,

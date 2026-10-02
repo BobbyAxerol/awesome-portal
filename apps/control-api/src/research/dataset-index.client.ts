@@ -27,12 +27,17 @@ export class ResearchDatasetIndexClient {
     const step = interval ? Number(interval[1]) * (units[interval[2]] ?? 0) : 0;
     if (!Number.isSafeInteger(step) || step <= 0 || step > 31 * 86_400_000) throw this.error(502);
     const range = result.verified_range;
+    const observed = result.dataset_id === "vn-stock-daily";
+    const offset = observed ? 7 * 3600000 : 0;
     const edges = [result.start_utc_ms, result.end_exclusive_utc_ms, result.first_bar_utc_ms,
-      result.last_bar_utc_ms, result.earliest_start_with_warmup_utc_ms, range?.start_utc_ms, range?.end_exclusive_utc_ms];
-    if (edges.some(value => value != null && value % step !== 0)
+      result.last_bar_utc_ms, result.earliest_start_with_warmup_utc_ms, range?.start_utc_ms, range?.end_exclusive_utc_ms,
+      result.warmup_start_utc_ms];
+    if (edges.some(value => value != null && (value + offset) % step !== 0)
       || result.bars !== null && result.bars > (result.end_exclusive_utc_ms - result.start_utc_ms) / step
       || result.availability === "NOT_PUBLISHED" && result.bars !== null && (range == null
-        || result.start_utc_ms - result.warmup_bars_required * step >= range.start_utc_ms)) throw this.error(502);
+        || (observed ? result.warmup_start_utc_ms !== null
+          || result.warmup_bars_available_before_start! >= result.warmup_bars_required
+          : result.start_utc_ms - result.warmup_bars_required * step >= range.start_utc_ms))) throw this.error(502);
     return result;
   }
   async estimate(user: PortalUser, requestedSpec: ResearchRequestedSpec, warmupBars: number) {

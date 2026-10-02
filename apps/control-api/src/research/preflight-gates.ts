@@ -67,7 +67,9 @@ export function preflightGates(
     `${group(snapshot.warmup.bars ?? 0)} of ${group(snapshot.warmup.requested_bars)} declared warmup bars precede the first window.`,
   );
   if (topology.protocol === "three_window_decay") {
-    add("topology", "PASS", ["windows"], "IS → OOS → holdout are contiguous half-open windows, each with closed bars.");
+    add("topology", "PASS", ["windows"], snapshot.quality.state === "OBSERVED_TAPE_INTEGRITY_ONLY"
+      ? "IS → OOS → holdout are contiguous half-open windows, each with observed source daily bars."
+      : "IS → OOS → holdout are contiguous half-open windows, each with closed bars.");
   } else {
     const engineBuilt = topology.plan_source !== undefined;
     add(
@@ -135,7 +137,9 @@ export function preflightGates(
     "snapshot_quality",
     "PASS",
     ["data"],
-    `Snapshot integrity passed: ${group(snapshot.quality.gaps)} gaps, ${group(snapshot.quality.duplicates)} duplicates, ratio ${snapshot.quality.gap_ratio}.`,
+    snapshot.quality.state === "OBSERVED_TAPE_INTEGRITY_ONLY"
+      ? "Observed tape integrity passed; expected sessions and calendar gaps are not published."
+      : `Snapshot integrity passed: ${group(snapshot.quality.gaps)} gaps, ${group(snapshot.quality.duplicates)} duplicates, ratio ${snapshot.quality.gap_ratio}.`,
   );
   if (!scan) {
     add("gap_scan", "NOT_RECORDED", ["data"], "This manifest was issued before the per-window gap scan was recorded.");
@@ -156,6 +160,12 @@ export function preflightGates(
  * sentence is added without a path, so the two cannot drift silently.
  */
 export const ADMISSION_REASON_FIELD_PATHS: Readonly<Record<string, readonly string[]>> = {
+  "The VN observed daily fixed profile is not enabled.": [],
+  "The VN observed daily fixed profile admits requested-spec v1 only.": ["schema_version"],
+  "The VN observed daily fixed profile admits only source-qualified FPT 1d three-window research.": ["data"],
+  "The preflight does not carry a verified VN observed-date index and predecessor warmup binding.": ["data"],
+  "The VN source-local windows and observed predecessor warmup must match the immutable bounded preflight.": ["windows"],
+  "The VN observed fixed profile requires exactly 300 indexed predecessor bars bound by the preflight.": ["windows", "is", "start"],
   "Research run creation is not enabled in this environment.": [],
   "The current account is not eligible to create a Research run.": [],
   "The immutable preflight specification is no longer valid.": [],

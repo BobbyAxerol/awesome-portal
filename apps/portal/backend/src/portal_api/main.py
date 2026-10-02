@@ -13,7 +13,10 @@ from portal_api.adapters.market_data import (
     HistoricalMarketDataProvider,
     ManifestMarketDataProvider,
     MarketDataProvider,
+    ObservedVnCompositeProvider,
     UnavailableHistoricalMarketDataProvider,
+    VnStockDailyObservedProvider,
+    load_vn_stock_daily_qualification_runtime,
 )
 from portal_api.adapters.planning_summary import (
     PlanningSummaryAdapter,
@@ -72,9 +75,27 @@ def _default_provider() -> MarketDataProvider:
             "historical backtest/research data is disabled in this environment"
         )
     try:
-        return HistoricalMarketDataProvider(
+        primary = HistoricalMarketDataProvider(
             engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb"),
         )
+        from portal_api.domain.research_vn_observed_fixed_profile import vn_observed_fixed_enabled
+        if not vn_observed_fixed_enabled():
+            return primary
+        # A flag alone never grants VN availability. Read one already sealed
+        # revision through the bounded index store and exact installed source.
+        from portal_api.services.enrich_dataset_catalog import DatasetIndexStore
+        try:
+            revision, document, reason = DatasetIndexStore().read(primary._runtime.manifest_digest)
+            if document is None or revision is None:
+                primary.vn_qualification_reason = reason or "HMD_METADATA_INDEX_NOT_BUILT"
+                return primary
+            observed = VnStockDailyObservedProvider(index_document=document, index_revision=revision,
+                runtime=load_vn_stock_daily_qualification_runtime(primary._runtime.storage_root))
+            return ObservedVnCompositeProvider(primary, observed)
+        except (OSError, ValueError):
+            # VN refusal must not take away the already qualified crypto lane.
+            primary.vn_qualification_reason = "VN_OBSERVED_SOURCE_INDEX_NOT_QUALIFIED"
+            return primary
     except Exception as exc:
         if mode == "required":
             raise RuntimeError(
@@ -161,7 +182,7 @@ def create_app(
         registry_repository.registry_root
     )
     app.state.research_engine_catalog = ResearchEngineCatalogService(
-        registry_repository.registry_root
+        registry_repository.registry_root, market_data_provider=app.state.market_data_provider
     )
     app.state.data_catalog = DataCatalogService(registry_repository.registry_root)
     app.state.alpha_registry = AlphaRegistry(registry_repository.registry_root)

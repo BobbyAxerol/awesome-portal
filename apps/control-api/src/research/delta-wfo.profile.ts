@@ -15,6 +15,7 @@ import { createHash } from "node:crypto";
 import { IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
+import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
 
 export const P04_FIXED_QUALIFICATION_PROFILE_ID = "p04.fixed-qualification.v1" as const;
 export const DELTA_WFO_PROFILE_ID = "p10.delta-signal-notional-wfo.v1" as const;
@@ -24,6 +25,7 @@ export const RESEARCH_EXECUTION_PROFILE_IDS = [
   DELTA_WFO_V2_PROFILE_ID,
   DELTA_CAUSAL_INNER_PROFILE_ID,
   IMPORTED_ALPHA_PROFILE_ID,
+  VN_OBSERVED_FIXED_PROFILE_ID,
 ] as const;
 export type ResearchExecutionProfileId = typeof RESEARCH_EXECUTION_PROFILE_IDS[number];
 

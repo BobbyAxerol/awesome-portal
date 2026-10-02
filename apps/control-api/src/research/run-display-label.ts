@@ -37,6 +37,7 @@ export const RUN_DISPLAY_LABEL_KINDS: Readonly<Record<string, string>> = {
   "p10.delta-signal-notional-wfo.v2": "WFO",
   "p10.delta-signal-notional-causal-inner.v1": "WFO",
   "p04.fixed-qualification.v1": "P04",
+  "p10.vn-stock-daily-observed-fixed.v1": "VN",
 };
 
 /** The hi-fi pads to three digits (`R-TT-002`, `R-WFO-118`). */

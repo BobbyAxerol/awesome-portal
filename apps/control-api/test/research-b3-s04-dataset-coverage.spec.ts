@@ -33,4 +33,29 @@ describe("B3 CG-FG-S04-02 P08 immutable snapshot coverage", () => {
     expect(() => evidenceDatasetCoverage({ ...b3RetainedSnapshot, row_count: 335 })).toThrow(/inconsistent/);
     expect(() => evidenceDatasetCoverage({ snapshot_id: "bad", query: b3RetainedSnapshot.query })).toThrow(/incompatible/);
   });
+
+  it("keeps observed VN query coverage available without inventing expected-session gap counts", () => {
+    const snapshot = { ...b3RetainedSnapshot,
+      timezone: "Asia/Ho_Chi_Minh", calendar_policy: "SOURCE_DECLARED",
+      closed_bar_policy: "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1",
+      provenance: {
+        clock_basis: "OBSERVED_SOURCE_LOCAL_DATE_V1", source_timezone: "Asia/Ho_Chi_Minh",
+        metadata_index_revision: "a".repeat(64), metadata_index_source_manifest_digest: "b".repeat(64),
+        metadata_index_as_of_utc_ms: 1769000000000,
+        warmup_semantics: "LAST_N_OBSERVED_PREDECESSORS_V1", warmup_start_utc_ms: 1767000000000,
+      },
+      quality: { rows: b3RetainedSnapshot.row_count, gaps: null, duplicates: 0, gap_ratio: null,
+        passed: true, reason_codes: [], missing_bar_count: null, state: "OBSERVED_TAPE_INTEGRITY_ONLY" },
+    };
+    const coverage = ResearchEvidenceDatasetCoverageSchema.parse(evidenceDatasetCoverage(snapshot));
+    expect(coverage).toMatchObject({ availability: { state: "AVAILABLE", reason_code: null },
+      quality_scope: "OBSERVED_TAPE_INTEGRITY_ONLY", rows: 336, gaps: null, missing_bar_count: null,
+      range_scope: "FULL_SNAPSHOT_QUERY" });
+    const { quality_scope: _scope, ...unlabelled } = coverage;
+    expect(ResearchEvidenceDatasetCoverageSchema.safeParse(unlabelled).success).toBe(false);
+    expect(ResearchEvidenceDatasetCoverageSchema.safeParse({ ...coverage, gaps: 0, missing_bar_count: 0 }).success).toBe(false);
+    expect(ResearchEvidenceDatasetCoverageSchema.safeParse({ ...coverage,
+      availability: { state: "NOT_PUBLISHED", reason_code: "SOURCE_NOT_PUBLISHED" } }).success).toBe(false);
+    expect(evidenceDatasetCoverage(b3RetainedSnapshot)).not.toHaveProperty("quality_scope");
+  });
 });

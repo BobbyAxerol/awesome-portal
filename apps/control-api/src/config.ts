@@ -133,6 +133,8 @@ const EnvSchema = z.object({
   // Requires the producer, progress, retained-artifact and current-source
   // lanes, because a WFO run is complete only once its artifact is sealed.
   FEATURE_RESEARCH_WFO_PROFILE: z.enum(["true", "false"]).default("false"),
+  // Source-qualified FPT observed daily research only; not a generic VN venue.
+  FEATURE_RESEARCH_VN_OBSERVED_PROFILE: z.enum(["true", "false"]).default("false"),
   // E17: execute only a digest-bound DRAFT/ACTIVE P07 AlphaVersion through
   // the installed restricted signal-notional adapter. Publication still
   // requires ACTIVE; execution needs the producer/progress/evidence foundation
@@ -510,6 +512,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     if (missing.length > 0) {
       throw new Error(`FEATURE_RESEARCH_WFO_PROFILE=true requires: ${missing.join(", ")}`);
     }
+  }
+  if (config.FEATURE_RESEARCH_VN_OBSERVED_PROFILE === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_RUN_PRODUCER", config.FEATURE_RESEARCH_RUN_PRODUCER],
+      ["FEATURE_RESEARCH_PROGRESS", config.FEATURE_RESEARCH_PROGRESS],
+      ["FEATURE_RESEARCH_RETAINED_ARTIFACTS", config.FEATURE_RESEARCH_RETAINED_ARTIFACTS],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) throw new Error(`FEATURE_RESEARCH_VN_OBSERVED_PROFILE=true requires: ${missing.join(", ")}`);
   }
   if (config.FEATURE_RESEARCH_IMPORTED_EXECUTION === "true") {
     const missing = [

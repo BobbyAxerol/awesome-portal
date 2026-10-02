@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { IMPORTED_ALPHA_PROFILE_ID, IMPORTED_ALPHA_PROFILE_DIGEST } from "./imported-alpha.profile";
+import { isVnObservedFixedProfile } from "./vn-observed-fixed.profile";
 import { sha256ResearchJson } from "./preflight.service";
 
 const Id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/);
@@ -22,7 +23,8 @@ export const FIXED_REPLAY_MAX_WIRE_BYTES = 1_048_576;
 export const FIXED_REPLAY_SCOPE = "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXECUTION_LEDGER" as const;
 export function isFixedReplayProfile(id: string, digest: string | null) {
   return id === P04_FIXED_QUALIFICATION_PROFILE_ID && digest === null
-    || id === IMPORTED_ALPHA_PROFILE_ID && digest === IMPORTED_ALPHA_PROFILE_DIGEST;
+    || id === IMPORTED_ALPHA_PROFILE_ID && digest === IMPORTED_ALPHA_PROFILE_DIGEST
+    || isVnObservedFixedProfile(id, digest);
 }
 export const FixedReplayCompanionRowSchema = z.object({
   source_ordinal:z.number().int().min(0).max(FIXED_REPLAY_MAX_ROWS-1), at_utc_ms:Utc,
@@ -128,7 +130,7 @@ export function fixedReplayCustodyProof(input:FixedReplayCompanionSealIngress | 
     || receipt.run_id!==input.run_id || receipt.requested_spec_digest!==input.manifest.requested_spec_digest
     || receipt.effective_spec_digest!==input.manifest.effective_spec_digest || receipt.dataset_binding_digest!==input.manifest.dataset_binding_digest
     || receipt.input_scope!=="P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" || receipt.holdout_rows_exposed_to_child!==0
-    || input.manifest.execution_profile_id===IMPORTED_ALPHA_PROFILE_ID
+    || input.manifest.execution_profile_id!==P04_FIXED_QUALIFICATION_PROFILE_ID
       && (receipt.execution_profile_id!==input.manifest.execution_profile_id || receipt.execution_profile_digest!==input.manifest.execution_profile_digest)
     || sha256ResearchJson(receipt.fixed_replay_source)!==sha256ResearchJson(input.manifest.source)
     || artifact.schema_version!=="research.artifact-manifest.v1"

@@ -7208,3 +7208,86 @@ One normal grouped hook gates the coherent commit. Preserve Claude's commits.
 Capture restored false, cell down without volumes, 0 active jobs/sessions;
 21 identities remain disabled. G-21/G-22, actual VN profile/source facts and
 P23/P24 remain distinct; no push, production or shared :8095 action.
+
+#### Group 6 continuation — profile contract parity and VN observed-date index
+
+**IN_PROGRESS**, 2026-10-02. First repair the genuine Claude §26 contract
+drift: the published admission catalogue must include the fourth causal/
+inner profile already present at runtime. In parallel, qualify bounded VN
+daily index infrastructure using the installed HMD reader, source-local
+midnight labels and ordinal observed warmup. Calendar/session/instrument
+authority stays typed absent; no 24/7 expected-bar inference.
+
+Three agents own disjoint helper/contract/review paths; root integrates,
+records an independent real source oracle and runs one coherent commit hook.
+This does not activate a VN execution profile or close its P08→P10→child→P05
+product gate. Existing Binance index revisions and profiles stay unchanged;
+no FE, remote, production or shared :8095 action.
+[Scope, required negatives and next vertical step](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#29-codex--published-profile-parity-and-observed-vn-daily-index-2026-10-02).
+
+**Scoped source infrastructure delivered:** exact four-profile generated
+admission parity and observed VN V2 index/source-time/ordinal-warmup contracts.
+Independent installed HMD oracle **661 FPT observations / 32 queries / 139
+runs**, 300-predecessor/holiday/outside-range checks PASS; original UTC V1
+bytes remain. [Receipt, tests, failures, C4 and FE handoff](./research_loop/evidence/P08/B8_VN_OBSERVED_INDEX_AND_PROFILE_PARITY_2026-10-02.md).
+
+Bounded observed provider is implemented without default activation: actual
+direct-reader OHLCV proof matches **661 warmup+analysis rows** and a holiday
+tape of **303 rows**, with exactly 300 observed predecessors. Final focused
+source/index/adapter regressions **156 PASS / 1 opt-in SKIP**. P08/P10/profile
+and product proof remain the next vertical gate; do not duplicate the source
+adapter or infer a session calendar from its available observations.
+VN provider/profile/product activation remains the next exact vertical step;
+do not infer calendar/instrument/execution authority from index availability.
+Claude corrected/withdrew G-23 at `1bcee81a`: capacity 503 requires same-intent
+retry and the later causal run completed. No automatic dispatch is added.
+Goal/six groups/P23/P24 are not marked complete by source helper receipts.
+
+#### Group 6 continuation — observed VN fixed product vertical
+
+**IN_PROGRESS**, same approved scope. Reuse the verified observed VN provider;
+add one exact immutable fixed profile, qualified source-aware composition,
+P08 ordinal warmup/observed quality, then P10→child→P05→named reads/Replay.
+Old profile/AV/seal bytes and UTC/365 analytics remain unchanged. Calendar,
+session and instrument authority remain typed absent, never inferred from
+available bars. Python and Control agents own disjoint paths; root owns the
+additive migration, owned :8096 product proof, C4, one grouped hook and landing.
+No frontend, shared :8095, production or remote push. Helper receipts alone
+do not close this vertical or the six-group goal.
+[Exact scope and exit evidence](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#30-codex--observed-vn-fixed-product-vertical-2026-10-02).
+
+#### Approved six-group backend closeout — actual VN product and exact Compare
+
+2026-10-02: **SCOPED_BACKEND_ACCEPTED for groups 1–6**, superseding earlier
+IN_PROGRESS checkpoints above, not a full Research/FE/P23/P24/release verdict.
+Observed FPT fixed run `rrun_df77613b0f4ceb2dd069935f61ae75e2` is
+COMPLETED/READY through real P08→P10→isolated QuantBT 1.1.1→P05→API.
+Six named screen reads 200; 107 OOS rows over seven bounded replay pages;
+independent installed HMD reader matches all 568 snapshot rows (300 observed
+warmup + 268 analysis) and every retained OOS OHLCV/timestamp. Two actual
+wrong-source/clock negative requests refuse. Runtime profile, generated
+Foundation admission catalogue, P08 source metadata and downstream custody
+now agree; no package/kernel or historical AV/seal bytes changed.
+
+Real product tests found five Control/source integration defects, fixed with
+strict profile guards and regressions. Original failed runs/evidence remain.
+Hub's new optional observed-only quality scope preserves unknown gap counts
+as null. A receipt-only assertion was corrected and resumed under a distinct
+read-only proof label, reusing the successful run rather than executing it
+again. [Exact hashes, receipts, tests, failures and Claude handoff](./research_loop/evidence/P10/B8_VN_FIXED_PRODUCT_VERTICAL_2026-10-02.md).
+
+Requested R-WFO-020↔023 and 022↔023 Compare pairs now have **4/4 actual GET
+proof**, both orders; same key/common-window correlation and per-run
+annotations. [Read-only proof and exact QA-session cleanup](./research_loop/evidence/P20/B8_EXACT_COMPARE_PAIRS_2026-10-02.md).
+G-20/G-22 closed and G-23 withdrawn by Claude's common-branch correction;
+preserve those commits, no auto-dispatch. Generated VN coverage/source types
+need frontend binding, not invented calendar completeness. Remaining FE
+return-basis labels, genuine source omissions, P23 candidate/load/restore/
+engine-two and P24 signed rehearsal stay distinct.
+
+[Full six-group reconciliation, source exclusions and next gates](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#31-six-group-backend-reconciliation--2026-10-02).
+C4 complete: only owned :8096 stopped/removed without volumes; VN flags false,
+0 active test jobs/sessions, 21 disabled test users, owner anchor and all
+source/DB/artifacts/receipts/backups/rollback images retained. Root 207.5 GB
+free, NO_ACTION_NEEDED beyond exact teardown. One grouped mandatory commit
+hook; no frontend edit/build, shared runtime restart, push or production.

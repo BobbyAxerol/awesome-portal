@@ -39,6 +39,7 @@ import {
   deltaWfoPreviewLongEnabled,
 } from "./delta-wfo.profile";
 import { WHATIF_PROFILE, WHATIF_PROFILE_ID } from "./whatif.profile";
+import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
 import {
   RETRY_WAIT_DISPATCH_GRACE_SECONDS,
   STRANDED_TERMINAL_MIN_AGE_SECONDS,
@@ -837,6 +838,18 @@ export class ResearchProgressService {
    * the retained RS-02 lane, not a fixed-qualification receipt).
    */
   private assertProfileBoundIngress(scope: ProgressIngressScope, input: ResearchProgressIngress): void {
+    // The VN observed tape remains a distinct source lane even though it
+    // reuses the immutable Delta fixed kernel and P13/P14 sidecars.
+    if (input.split !== undefined) {
+      // Keep service-level refusal typed even when a caller/test bypasses the
+      // controller's full wire validation. Never dereference a malformed
+      // sidecar before the existing pre-persistence profile fence.
+      const evaluation = input.split?.windows?.outer_oos?.evaluation_state;
+      if (typeof evaluation !== "string" || (scope.executionProfileId === VN_OBSERVED_FIXED_PROFILE_ID) !==
+          (evaluation === "VN_OBSERVED_AFTER_FIXED_PROFILE")) {
+        throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research split evaluation does not match the run's source profile.", 400);
+      }
+    }
     const whatIf = scope.executionProfileId === WHATIF_PROFILE_ID;
     const causal = scope.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
     const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID || scope.executionProfileId === DELTA_WFO_V2_PROFILE_ID || causal || whatIf;

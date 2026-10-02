@@ -8,6 +8,7 @@ import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchReplayError } from "./replay.error";
 import { retainedExposureAuthority } from "./retained-exposure";
 import { sha256ResearchJson } from "./preflight.service";
+import { isVnObservedFixedProfile, vnObservedSourceDateMs } from "./vn-observed-fixed.profile";
 import { FixedReplayCompanionBatchIngressSchema, FixedReplayCompanionSealIngressSchema,
   FixedReplayCompanionManifestSchema, FixedReplayCompanionRowSchema, fixedReplayCustodyProof, isFixedReplayProfile,
   type FixedReplayCompanionBatchIngress, type FixedReplayCompanionSealIngress,
@@ -193,10 +194,13 @@ export class ResearchFixedReplayCompanionRepository {
     if(result.rowCount!==1 || !binding || !isFixedReplayProfile(binding.execution_profile_id,binding.execution_profile_digest)
       || keys.some(k=>binding[k]!==manifest[k])) throw conflict();
     const spec=object(binding.requested_spec) as any;
+    const vnObserved=isVnObservedFixedProfile(binding.execution_profile_id,binding.execution_profile_digest);
+    const sourceDate=(value:unknown)=>vnObserved ? vnObservedSourceDateMs(value) : Date.parse(value as string);
     if(spec?.protocol!=="three_window_decay" || spec.execution_route!=="signal_notional" || typeof spec.data?.symbol!=="string"
       || spec.data.symbol!==manifest.market_symbol
-      || Date.parse(spec.windows?.oos?.start)!==manifest.source.oos_start_utc_ms
-      || Date.parse(spec.windows?.oos?.end_exclusive)!==manifest.source.oos_end_exclusive_utc_ms) throw conflict();
+      || vnObserved && (spec.data.dataset_id!=="vn-stock-daily" || spec.data.symbol!=="FPT" || spec.data.timeframe!=="1d")
+      || sourceDate(spec.windows?.oos?.start)!==manifest.source.oos_start_utc_ms
+      || sourceDate(spec.windows?.oos?.end_exclusive)!==manifest.source.oos_end_exclusive_utc_ms) throw conflict();
     const retained=await client.query(`SELECT part_ordinal,schema_version,relative_path,part_digest,row_count,byte_count,sequence_min,sequence_max
       FROM research.artifact_parts WHERE workspace_id=$1 AND artifact_id=$2 AND table_kind='fixed_replay'
       ORDER BY part_ordinal LIMIT 101`,[scope.workspaceId,input.artifact_id]);

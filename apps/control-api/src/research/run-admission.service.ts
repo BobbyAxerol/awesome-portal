@@ -38,6 +38,7 @@ import { parseDecimal } from "./whatif.grid";
 import { WHATIF_PROFILE } from "./whatif.profile";
 import { ResearchRunCreateError } from "./run-create.error";
 import { researchRunVersionPrecheck } from "./version-admission";
+import { VN_OBSERVED_FIXED_PROFILE, VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST, vnObservedSourceDateMs } from "./vn-observed-fixed.profile";
 import {
   IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST,
   IMPORTED_ALPHA_ADAPTER_ID,
@@ -226,7 +227,10 @@ export class ResearchRunAdmissionService {
     // (including `advanced` with the flag off) takes the unchanged P04 branch,
     // so P04 admission, wording and bytes are identical to the pre-W1 release.
     const wfo = requestedSpec.protocol === "advanced" && this.config.FEATURE_RESEARCH_WFO_PROFILE === "true";
-    const unsupported = wfo
+    const vnObserved = requestedSpec.data.dataset_id === VN_OBSERVED_FIXED_PROFILE.dataset_id;
+    const unsupported = vnObserved
+      ? this.vnObservedUnsupportedReason(requestedSpec, manifest)
+      : wfo
       ? this.deltaWfoUnsupportedReason(requestedSpec, manifest)
       : this.p04UnsupportedReason(requestedSpec, manifest);
     if (unsupported) {
@@ -243,12 +247,14 @@ export class ResearchRunAdmissionService {
         alphaVersionId: eligibility.alphaVersionId,
         adapterId: eligibility.binding.adapterId,
         adapterContractDigest: eligibility.binding.contractDigest,
-        fixedParameters: wfo ? null : P04_DELTA_FIXED_PARAMETERS,
+        fixedParameters: wfo && !vnObserved ? null : P04_DELTA_FIXED_PARAMETERS,
         importedParameters: null,
         sourceDigest: null,
         entrypoint: eligibility.entrypoint,
       },
-      profile: wfo
+      profile: vnObserved
+        ? { id: VN_OBSERVED_FIXED_PROFILE_ID, digest: VN_OBSERVED_FIXED_PROFILE_DIGEST }
+        : wfo
         ? requestedSpec.optimization_schedule === "per_fold_causal"
           ? { id: DELTA_CAUSAL_INNER_PROFILE_ID, digest: DELTA_CAUSAL_INNER_PROFILE_DIGEST }
           : requestedSpec.schema_version === "research.requested-spec.v2"
@@ -256,6 +262,50 @@ export class ResearchRunAdmissionService {
           : { id: DELTA_WFO_PROFILE_ID, digest: DELTA_WFO_PROFILE_DIGEST }
         : { id: P04_FIXED_QUALIFICATION_PROFILE_ID, digest: null },
     };
+  }
+
+  /** Only P08's source-qualified observed FPT tape grants this source pair. */
+  private vnObservedUnsupportedReason(requested: ResearchRequestedSpec, manifest: ResearchPreflightManifestRecord): string | null {
+    const p = VN_OBSERVED_FIXED_PROFILE;
+    if (this.config.FEATURE_RESEARCH_VN_OBSERVED_PROFILE !== "true") return "The VN observed daily fixed profile is not enabled.";
+    if (requested.schema_version !== "research.requested-spec.v1") return "The VN observed daily fixed profile admits requested-spec v1 only.";
+    const fixedReason = this.p04UnsupportedReason(requested, manifest);
+    if (fixedReason) return fixedReason;
+    if (requested.data.symbol !== p.symbol || requested.data.timeframe !== p.timeframe || !requested.windows || requested.walk_forward) {
+      return "The VN observed daily fixed profile admits only source-qualified FPT 1d three-window research.";
+    }
+    const binding = manifest.datasetBinding;
+    const raw = binding.provenance;
+    const provenance = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    const hash = (value: unknown) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+    if (binding.dataset_id !== p.dataset_id || binding.symbol !== p.symbol || binding.timeframe !== p.timeframe
+      || binding.timezone !== p.source_timezone || binding.closed_bar_policy !== "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+      || provenance.clock_basis !== p.clock_basis
+      || provenance.source_timezone !== p.source_timezone || provenance.warmup_semantics !== p.warmup_semantics
+      || !hash(provenance.metadata_index_revision) || !hash(provenance.metadata_index_source_manifest_digest)
+      || !Number.isSafeInteger(provenance.metadata_index_as_of_utc_ms) || (provenance.metadata_index_as_of_utc_ms as number) < 0
+      || !Number.isSafeInteger(provenance.warmup_start_utc_ms) || (provenance.warmup_start_utc_ms as number) < 0) {
+      return "The preflight does not carry a verified VN observed-date index and predecessor warmup binding.";
+    }
+    const ranges = [requested.windows.is, requested.windows.oos, requested.windows.holdout].map(window => ({
+      start: vnObservedSourceDateMs(window.start), end: vnObservedSourceDateMs(window.end_exclusive),
+    }));
+    if (ranges.some(window => window.start === null || window.end === null || window.start >= window.end)
+      || ranges[0]!.end! !== ranges[1]!.start! || ranges[1]!.end! !== ranges[2]!.start!
+      || ranges[2]!.end! - ranges[0]!.start! > p.max_span_days * 86_400_000
+      || (provenance.warmup_start_utc_ms as number) >= ranges[0]!.start!
+      || binding.range_start_utc_ms !== provenance.warmup_start_utc_ms || binding.range_end_exclusive_utc_ms !== ranges[2]!.end) {
+      return "The VN source-local windows and observed predecessor warmup must match the immutable bounded preflight.";
+    }
+    const effectiveBinding = manifest.effectiveSpec.data_binding as Record<string, unknown> | undefined;
+    const warmup = manifest.snapshot.warmup as Record<string, unknown> | undefined;
+    if (effectiveBinding?.warmup_bars !== p.warmup_bars || warmup?.requested_bars !== p.warmup_bars
+      || warmup?.bars !== p.warmup_bars || warmup?.start_utc_ms !== provenance.warmup_start_utc_ms
+      || effectiveBinding?.closed_bar_policy !== binding.closed_bar_policy
+      || sha256ResearchJson(effectiveBinding?.provenance) !== sha256ResearchJson(provenance)) {
+      return "The VN observed fixed profile requires exactly 300 indexed predecessor bars bound by the preflight.";
+    }
+    return null;
   }
 
   /**

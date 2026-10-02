@@ -80,7 +80,7 @@ export interface components {
             /** @constant */
             child_input_state: "EXPOSED_TO_CHILD_TAPE";
             /** @enum {unknown} */
-            evaluation_state: "P04_OBSERVED_AFTER_FIXED_PROFILE" | "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE";
+            evaluation_state: "P04_OBSERVED_AFTER_FIXED_PROFILE" | "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE" | "VN_OBSERVED_AFTER_FIXED_PROFILE";
             availability: components["schemas"]["Availability"];
         }) | components["schemas"]["AbsentFact"];
         HoldoutWindow: (components["schemas"]["Range"] & {

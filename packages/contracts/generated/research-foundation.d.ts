@@ -42,6 +42,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Private provider/index qualification projected as metadata only. An enabled flag alone never qualifies a dataset. No VN exchange/session authority is inferred. */
+        VnObservedDailyQualification: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            /** @enum {unknown} */
+            reason_code: "VN_OBSERVED_PROFILE_NOT_QUALIFIED" | null;
+            /** @constant */
+            profile_id: "p10.vn-stock-daily-observed-fixed.v1";
+            /** @constant */
+            profile_digest: "acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e";
+            /** @constant */
+            dataset_id: "vn-stock-daily";
+            /** @constant */
+            symbol: "FPT";
+            /** @constant */
+            timeframe: "1d";
+            /** @constant */
+            source_timezone: "Asia/Ho_Chi_Minh";
+            /** @constant */
+            clock_basis: "OBSERVED_SOURCE_LOCAL_DATE_V1";
+            index_revision: string | null;
+        } & unknown;
         WorkspaceId: string;
         Identifier: string;
         /** @enum {unknown} */
@@ -391,6 +413,7 @@ export interface components {
             /** @description RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed. */
             walk_forward_options?: components["schemas"]["AtlasWalkForwardOptions"] | null;
             preflight_limits?: components["schemas"]["AtlasPreflightLimits"] | null;
+            vn_observed_daily_qualification?: components["schemas"]["VnObservedDailyQualification"];
         };
         HistoricalRelease: {
             release_id: components["schemas"]["Identifier"];
@@ -415,11 +438,11 @@ export interface components {
             schema_version: "research.portal-admission.v1";
             profiles: {
                 /** @enum {string} */
-                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2";
+                profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p10.delta-signal-notional-wfo.v2" | "p10.delta-signal-notional-causal-inner.v1" | "p10.vn-stock-daily-observed-fixed.v1";
                 /** @enum {unknown} */
                 state: "ENABLED" | "DISABLED";
                 /** @enum {unknown} */
-                reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | null;
+                reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | null | "SOURCE_PROFILE_UNQUALIFIED";
                 engine_release_id: components["schemas"]["Identifier"];
                 execution_route: string;
                 protocol: string;
@@ -460,7 +483,21 @@ export interface components {
                     window_modes: ("expanding" | "rolling")[];
                     train_window_pattern: string;
                 };
-            }[];
+                /** @constant */
+                dataset_id?: "vn-stock-daily";
+                /** @constant */
+                symbol?: "FPT";
+                /** @constant */
+                source_timezone?: "Asia/Ho_Chi_Minh";
+                /** @constant */
+                clock_basis?: "OBSERVED_SOURCE_LOCAL_DATE_V1";
+                /** @constant */
+                calendar_authority?: "NOT_PUBLISHED";
+                /** @constant */
+                warmup_semantics?: "LAST_N_OBSERVED_PREDECESSORS_V1";
+                /** @constant */
+                account_model?: "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE";
+            }[] & (unknown & unknown & unknown & unknown & unknown);
             /** @constant */
             note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
         };

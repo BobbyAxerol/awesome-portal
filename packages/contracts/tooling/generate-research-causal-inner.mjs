@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { replaceComponent } from "./generate-research-progress-truth.mjs";
+import { amendVnObservedFixedOpenApi } from "./generate-research-vn-observed-fixed.mjs";
 
 const ref = name => ({ $ref: `#/components/schemas/${name}` });
 const obj = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
@@ -12,6 +13,8 @@ const ms = { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 const innerBounds = { type: "integer", minimum: 2, maximum: 16 };
 const frequency = { enum: ["weekly", "monthly", "quarterly"] };
 const windowMode = { enum: ["expanding", "rolling"] };
+const admissionProfileIds = ["p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1",
+  "p10.delta-signal-notional-wfo.v2", "p10.delta-signal-notional-causal-inner.v1", "p10.vn-stock-daily-observed-fixed.v1"];
 const params = { type: "object", maxProperties: 24, propertyNames: { pattern: "^[A-Za-z][A-Za-z0-9_]{0,63}$" }, additionalProperties: decimal };
 export const causalSelectionSchema = {
   ...obj({ schema_version: { const: "research.current-source-causal-selection.v1" }, scope: { const: "OUTER_FOLD_SELECTION" },
@@ -37,7 +40,15 @@ function amend(original, file) {
   const edit = name => updates[name] ??= structuredClone(s[name]);
   const addEnum = (schema, value) => { if (!schema.enum.includes(value)) schema.enum.push(value); };
   if (file === "research-foundation") {
-    const p = edit("PortalAdmission").properties.profiles.items.properties;
+    const profiles = edit("PortalAdmission").properties.profiles;
+    profiles.maxItems = admissionProfileIds.length;
+    // Keep historical two/three-profile examples valid, but never publish two
+    // rows for one identity (uniqueItems alone misses differing states).
+    profiles.allOf = admissionProfileIds.map(profileId => ({ contains: {
+      type: "object", required: ["profile_id"], properties: { profile_id: { const: profileId } },
+    }, minContains: 0, maxContains: 1 }));
+    const p = profiles.items.properties;
+    p.profile_id.enum = [...admissionProfileIds];
     p.inner_validation = { enum: ["NOT_ADMITTED_GLOBAL_RETENTION_ONLY", "REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY"] };
     p.trial_scope = { const: "PER_OUTER_FOLD_STUDY" };
     p.max_total_trials = { type: "integer", minimum: 1, maximum: 48 };
@@ -140,12 +151,15 @@ function amend(original, file) {
     if (s[name]) next = replaceComponent(next, name, value, next.indexOf('"schemas": {'));
     else next = next.replace('"schemas": {\n', `"schemas": {\n      "${name}": ${JSON.stringify(value)},\n`);
   }
-  return next;
+  return amendVnObservedFixedOpenApi(next, file);
 }
 export function amendCausalInnerOpenApi(original, file) { return amend(original, file); }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  for (const file of ["research-foundation", "research-progress", "research-current-source", "research-freeze", "research-report", "research-attempt-lineage"]) {
+  const targets = ["research-foundation", "research-progress", "research-current-source", "research-freeze", "research-report", "research-attempt-lineage"];
+  const only = process.argv.find(arg => arg.startsWith("--only="))?.slice(7);
+  if (only !== undefined && !targets.includes(only)) throw new Error("Named causal transport target required");
+  for (const file of only === undefined ? targets : [only]) {
     const path = new URL(`../openapi/${file}.openapi.json`, import.meta.url), old = readFileSync(path,"utf8"), next = amend(old,file);
     if (process.argv.includes("--check")) { if (next !== old) throw new Error(`Causal inner transport drift: ${file}`); }
     else if (next !== old) writeFileSync(path,next);

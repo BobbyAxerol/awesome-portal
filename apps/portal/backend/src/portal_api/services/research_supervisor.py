@@ -125,6 +125,9 @@ class ResearchChildReceipt:
     is_start_utc_ms: int | None = None
     # Metadata bounds only; the tape still ends before the sealed holdout.
     source_windows: dict[str, SourceWindowMetadata] | None = None
+    execution_profile_id: str | None = None
+    execution_profile_digest: str | None = None
+    source_observation: dict[str, Any] | None = None
 
     def as_payload(self) -> dict[str, Any]:
         payload = {
@@ -147,6 +150,15 @@ class ResearchChildReceipt:
             payload["is_start_utc_ms"] = self.is_start_utc_ms
         if self.source_windows is not None:
             payload["source_windows"] = _source_windows_payload(self.source_windows)
+        if self.execution_profile_id is not None:
+            from portal_api.domain.research_vn_observed_fixed_profile import VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST
+            from portal_api.domain.research_run_producer import VnSourceObservation
+            if (self.execution_profile_id, self.execution_profile_digest) != (VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST) or self.source_observation is None:
+                raise ResearchSupervisorError("fixed child requires its exact observed-date profile and provenance")
+            payload.update(execution_profile_id=self.execution_profile_id, execution_profile_digest=self.execution_profile_digest,
+                source_observation=VnSourceObservation.model_validate(self.source_observation).model_dump(mode="json"))
+        elif self.execution_profile_digest is not None or self.source_observation is not None:
+            raise ResearchSupervisorError("legacy fixed child cannot carry another profile's provenance")
         return payload
 
 
@@ -586,6 +598,8 @@ class IsolatedResearchSupervisor:
         on_child_alive: Callable[[], None] | None = None,
     ) -> ResearchChildResult:
         limits.validate()
+        if receipt.execution_profile_id is not None and (limits.cpu_seconds > 45 or limits.wall_seconds > 90):
+            raise ResearchSupervisorError("observed fixed child cannot widen its 45 CPU/90 wall-second profile caps")
         self._validate_launch_identity(
             job_id=receipt.job_id,
             run_id=receipt.run_id,
@@ -604,6 +618,11 @@ class IsolatedResearchSupervisor:
             on_child_alive=on_child_alive,
         )
         payload = launch.payload
+        if receipt.execution_profile_id is not None:
+            if (payload.get("execution_profile_id") != receipt.execution_profile_id
+                    or payload.get("execution_profile_digest") != receipt.execution_profile_digest
+                    or payload.get("source_observation") != receipt.source_observation):
+                raise ResearchSupervisorError("fixed child did not retain the admitted observed source/profile identity")
         try:
             engine_version = str(payload["engine_version"])
             final_equity = float(payload["final_equity"])

@@ -33,7 +33,12 @@ def retain_is_qualification(*, request: Any, source: dict[str, Any], source_path
         return
     if source_path is None or not fence_validator(binding):
         raise ValueError("IS qualification source or live lease is unavailable")
-    windows = declared_source_windows(request.research.requested_spec["windows"])
+    declaration = request.research.requested_spec["windows"]
+    if getattr(request.research, "is_vn_observed_fixed", False):
+        from portal_api.domain.research_vn_observed_fixed_profile import vn_source_instant
+        declaration = {kind: {edge: vn_source_instant(window[edge]).isoformat()
+            for edge in ("start", "end_exclusive")} for kind, window in declaration.items()}
+    windows = declared_source_windows(declaration)
     enriched = evidence["enriched_analysis"]
     observation = [row for row in enriched["source_tables"] if row["name"] == "OBSERVATION_IS"]
     if len(observation) != 1 or observation[0]["digest"] != source["observation_is_digest"] \

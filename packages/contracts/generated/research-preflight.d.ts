@@ -62,6 +62,43 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        RegularSnapshotQuality: {
+            rows: number;
+            gaps: number;
+            duplicates: number;
+            gap_ratio: number;
+            /** @constant */
+            passed: true;
+            reason_codes: string[];
+            missing_bar_count: number;
+            /** @constant */
+            state: "SNAPSHOT_INTEGRITY_ONLY";
+        };
+        ObservedTapeQuality: {
+            rows: number;
+            gaps: null;
+            /** @constant */
+            duplicates: 0;
+            gap_ratio: null;
+            /** @constant */
+            passed: true;
+            reason_codes: unknown[];
+            missing_bar_count: null;
+            /** @constant */
+            state: "OBSERVED_TAPE_INTEGRITY_ONLY";
+        };
+        VnObservedProvenance: {
+            /** @constant */
+            clock_basis: "OBSERVED_SOURCE_LOCAL_DATE_V1";
+            /** @constant */
+            source_timezone: "Asia/Ho_Chi_Minh";
+            metadata_index_revision: string;
+            metadata_index_source_manifest_digest: string;
+            metadata_index_as_of_utc_ms: number;
+            /** @constant */
+            warmup_semantics: "LAST_N_OBSERVED_PREDECESSORS_V1";
+            warmup_start_utc_ms: number;
+        };
         /** @description P02 requested spec. v1 is the frozen P02 contract; v2 (CG-P02-02) adds rolling train width, temporal guards and causal Mode 1 inner folds on an advanced walk-forward. P08 validates every v2 field against the pinned engine; P10 runs neither v2 field yet. */
         RequestedSpec: components["schemas"]["research-requested-spec.v1.schema"] | components["schemas"]["research-requested-spec.v2.schema"];
         CreateRequest: {
@@ -82,18 +119,8 @@ export interface components {
             /** @constant */
             state: "BOUNDARY_ONLY_NOT_FIT";
         };
-        Quality: {
-            rows: number;
-            gaps: number;
-            duplicates: number;
-            gap_ratio: number;
-            /** @constant */
-            passed: true;
-            reason_codes: string[];
-            missing_bar_count: number;
-            /** @constant */
-            state: "SNAPSHOT_INTEGRITY_ONLY";
-        };
+        /** @description Observed-tape integrity does not certify a trading calendar: expected session gaps remain unknown/null, not zero. */
+        Quality: components["schemas"]["RegularSnapshotQuality"] | components["schemas"]["ObservedTapeQuality"];
         Snapshot: {
             snapshot_id: string;
             snapshot_content_hash: components["schemas"]["Digest"];
@@ -106,8 +133,8 @@ export interface components {
             warmup: components["schemas"]["Warmup"];
             timezone: string;
             calendar_policy: string;
-            /** @constant */
-            closed_bar_policy: "CLOSED_BARS_ONLY";
+            /** @enum {unknown} */
+            closed_bar_policy: "CLOSED_BARS_ONLY" | "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1";
             columns: string[];
             quality: components["schemas"]["Quality"];
             provenance: {
@@ -115,7 +142,7 @@ export interface components {
             };
             gap_scan?: components["schemas"]["GapScan"];
             holdout_seal?: components["schemas"]["HoldoutSeal"];
-        };
+        } & unknown;
         Capability: {
             engine_release_id: string;
             engine_catalog_digest: components["schemas"]["Digest"];
@@ -209,9 +236,10 @@ export interface components {
             range_end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
             timezone: string;
             calendar_policy: string;
-            /** @constant */
-            closed_bar_policy: "CLOSED_BARS_ONLY";
-        };
+            /** @enum {unknown} */
+            closed_bar_policy: "CLOSED_BARS_ONLY" | "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1";
+            provenance?: components["schemas"]["VnObservedProvenance"];
+        } & unknown;
         ResourceEstimate: {
             /** @constant */
             schema_version: "research.resource-estimate.v1";
@@ -246,13 +274,14 @@ export interface components {
             source_manifest_digest: components["schemas"]["Digest"];
             timezone: string;
             calendar_policy: string;
-            /** @constant */
-            closed_bar_policy: "CLOSED_BARS_ONLY";
+            /** @enum {unknown} */
+            closed_bar_policy: "CLOSED_BARS_ONLY" | "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1";
             columns: string[];
             warmup_bars: number;
             range_start_utc_ms: components["schemas"]["UtcMilliseconds"];
             range_end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
-        };
+            provenance?: components["schemas"]["VnObservedProvenance"];
+        } & unknown;
         Optimization: {
             mode: string;
             schedule: string;

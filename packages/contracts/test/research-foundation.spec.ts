@@ -1,11 +1,20 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import Ajv2020 from "ajv/dist/2020";
 
 import { describe, expect, it } from "vitest";
+import { amendCausalInnerOpenApi } from "../tooling/generate-research-causal-inner.mjs";
 
 const ROOT = join(__dirname, "..");
 const openApiPath = join(ROOT, "openapi", "research-foundation.openapi.json");
 const generatedPath = join(ROOT, "generated", "research-foundation.d.ts");
+const admissionFixturePath = join(ROOT,"fixtures/research-foundation.portal-admission-causal-inner.valid.json");
+function admissionValidator() {
+  const document = JSON.parse(readFileSync(openApiPath,"utf8"));
+  return new Ajv2020({allErrors:true,strict:false}).compile(JSON.parse(JSON.stringify({
+    ...document.components.schemas.PortalAdmission,$defs:document.components.schemas,
+  }).replaceAll("#/components/schemas/","#/$defs/")));
+}
 
 describe("P09 published Research foundation contract", () => {
   it("publishes the additive temporal executor without changing the historical v1 example", () => {
@@ -188,7 +197,7 @@ describe("P09 published Research foundation contract", () => {
     const schemas = document.components.schemas;
     expect(schemas.AtlasResponse.oneOf[0].required).toContain("portal_admission");
     expect(schemas.AtlasResponse.oneOf[1].properties.portal_admission).toBeUndefined();
-    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(3);
+    expect(schemas.PortalAdmission.properties.profiles.maxItems).toBe(5);
     const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
     expect(current.atlas.current_release.submission_constraints.profile_id).toBe("p10.fixed-qualification.v1");
     expect(current.portal_admission.profiles).toMatchObject([
@@ -196,5 +205,56 @@ describe("P09 published Research foundation contract", () => {
       { profile_id: "p10.delta-signal-notional-wfo.v1", trial_count: { min: 2, max: 400 }, random_seed: 42 },
     ]);
     expect(readFileSync(generatedPath, "utf8")).toContain("PortalAdmission");
+  });
+  it("publishes all five canonical admission identities and preserves exact causal profile bounds", () => {
+    const fixture = JSON.parse(readFileSync(admissionFixturePath,"utf8"));
+    expect(fixture.profiles).toHaveLength(5);
+    const document = JSON.parse(readFileSync(openApiPath,"utf8"));
+    expect(document.components.schemas.PortalAdmission.properties.profiles.items.properties.profile_id.enum)
+      .toEqual(fixture.profiles.map((profile: { profile_id: string }) => profile.profile_id));
+    expect(admissionValidator()(fixture)).toBe(true);
+    expect(fixture.profiles[3]).toMatchObject({profile_id:"p10.delta-signal-notional-causal-inner.v1",
+      optimization_schedule:"per_fold_causal",requested_spec_versions:["research.requested-spec.v2"],
+      trial_count:{min:3,max:3},trial_scope:"PER_OUTER_FOLD_STUDY",max_total_trials:48,
+      inner_validation:"REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY",max_span_days:92,fold_bounds:{min:2,max:16},
+      inner_constraints:{fold_bounds:{min:2,max:16},frequencies:["weekly","monthly","quarterly"],
+        window_modes:["expanding","rolling"],train_window_pattern:"^[1-9][0-9]{0,4}(D|h)$"}});
+    expect(fixture.profiles[4]).toMatchObject({ profile_id:"p10.vn-stock-daily-observed-fixed.v1",
+      state:"DISABLED", reason:"PROFILE_FLAG_OFF", requested_spec_versions:["research.requested-spec.v1"],
+      dataset_id:"vn-stock-daily",symbol:"FPT",timeframe:"1d",calendar_authority:"NOT_PUBLISHED" });
+    expect(readFileSync(generatedPath,"utf8")).toContain('"p10.delta-signal-notional-causal-inner.v1"');
+    expect(readFileSync(generatedPath,"utf8")).toContain('"p10.vn-stock-daily-observed-fixed.v1"');
+  });
+  it("validates both historical admission examples without widening the causal study", () => {
+    const validate = admissionValidator();
+    for(const name of ["research-foundation.portal-admission-temporal.valid.json","research-foundation.atlas-current.valid.json"]) {
+      const fixture = JSON.parse(readFileSync(join(ROOT,"fixtures",name),"utf8"));
+      expect(validate(fixture.portal_admission ?? fixture),JSON.stringify(validate.errors)).toBe(true);
+    }
+  });
+  it("refuses unknown IDs, duplicate identities despite different states, excess rows and out-of-bound inner facts", () => {
+    const fixture = JSON.parse(readFileSync(admissionFixturePath,"utf8")),validate=admissionValidator();
+    const unknown=structuredClone(fixture);unknown.profiles[3].profile_id="p10.unknown.v1";
+    expect(validate(unknown)).toBe(false);
+    const duplicate=structuredClone(fixture);
+    duplicate.profiles[3]={...duplicate.profiles[0],state:"DISABLED",reason:"RUN_PRODUCER_OFF"};
+    expect(validate(duplicate)).toBe(false);
+    const excess=structuredClone(fixture);excess.profiles.push(structuredClone(excess.profiles[3]));
+    expect(validate(excess)).toBe(false);
+    const tooFew=structuredClone(fixture);tooFew.profiles=tooFew.profiles.slice(0,1);
+    expect(validate(tooFew)).toBe(false);
+    for(const mutate of [(row: any)=>{row.inner_constraints.fold_bounds.min=1;},
+      (row: any)=>{row.inner_constraints.fold_bounds.max=17;},(row: any)=>{row.max_total_trials=49;},
+      (row: any)=>{row.inner_constraints.frequencies=["yearly"];}]) {
+      const invalid=structuredClone(fixture);mutate(invalid.profiles[3]);expect(validate(invalid)).toBe(false);
+    }
+  });
+  it("foundation-only regeneration is stable and repairs the omitted fourth-profile enum/count", () => {
+    const original=readFileSync(openApiPath,"utf8");
+    expect(amendCausalInnerOpenApi(original,"research-foundation")).toBe(original);
+    const stale=JSON.parse(original),profiles=stale.components.schemas.PortalAdmission.properties.profiles;
+    profiles.maxItems=3;profiles.items.properties.profile_id.enum.pop();delete profiles.allOf;
+    const restored=JSON.parse(amendCausalInnerOpenApi(JSON.stringify(stale,null,2),"research-foundation"));
+    expect(restored.components.schemas.PortalAdmission).toEqual(JSON.parse(original).components.schemas.PortalAdmission);
   });
 });

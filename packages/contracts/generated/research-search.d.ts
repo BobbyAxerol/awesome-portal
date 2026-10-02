@@ -219,7 +219,7 @@ export interface components {
         OosColumn: {
             /** @enum {unknown} */
             state: "SELECTION_INPUT" | "RETROSPECTIVE" | "REPORT_ONLY" | "WITHHELD" | "NOT_APPLICABLE" | "NOT_PUBLISHED";
-            source_evaluation_state: ("P04_OBSERVED_AFTER_FIXED_PROFILE" | "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE") | null;
+            source_evaluation_state: ("P04_OBSERVED_AFTER_FIXED_PROFILE" | "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE" | "VN_OBSERVED_AFTER_FIXED_PROFILE") | null;
             /** @enum {unknown} */
             provenance: "P14_SOURCE_RECEIPT" | "NONE";
             reason_code: components["schemas"]["ReasonCode"] | null;

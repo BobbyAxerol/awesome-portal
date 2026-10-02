@@ -325,6 +325,17 @@ describe("W1 P11 ingress binds usage and sidecars to the run execution profile",
     await expect(wfo.service.ingest(ingress(10, { split: {} }))).rejects.toMatchObject({ code: "RESEARCH_PROGRESS_INVALID" });
     expect(wfo.progress.persistIngress).not.toHaveBeenCalled();
   });
+
+  it("refuses malformed split sidecars with a typed error on either fixed source before persistence", async () => {
+    for (const profile of [undefined, "p10.vn-stock-daily-observed-fixed.v1"]) {
+      const fixed = progressService(profile);
+      for (const split of [null, {}, { windows: {} }, { windows: { outer_oos: {} } }]) {
+        await expect(fixed.service.ingest(ingress(10, { split })))
+          .rejects.toMatchObject({ code: "RESEARCH_PROGRESS_INVALID", status: 400 });
+      }
+      expect(fixed.progress.persistIngress).not.toHaveBeenCalled();
+    }
+  });
 });
 
 describe("W1 P15/P16 never read a WFO run as the P04 fixed qualification", () => {

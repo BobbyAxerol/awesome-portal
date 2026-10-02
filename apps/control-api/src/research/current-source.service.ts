@@ -75,6 +75,7 @@ import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } 
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST, IMPORTED_ALPHA_PROFILE_ID } from "./imported-alpha.profile";
+import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
 import { sha256ResearchJson } from "./preflight.service";
 import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
@@ -1296,9 +1297,12 @@ export class ResearchCurrentSourceService {
       adapterContractDigest === IMPORTED_ALPHA_ADAPTER_CONTRACT_DIGEST;
     const p04 = executionProfileId === P04_FIXED_QUALIFICATION_PROFILE_ID &&
       adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST;
-    if (!p04 && !imported) return null;
+    const vnObserved = executionProfileId === VN_OBSERVED_FIXED_PROFILE_ID &&
+      adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST;
+    if (!p04 && !imported && !vnObserved) return null;
     const reason = imported
       ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_IMPORTED_FIXED_QUALIFICATION"
+      : vnObserved ? "RS02_RETAINED_WFO_LANE_NOT_APPLICABLE_TO_VN_OBSERVED_FIXED_QUALIFICATION"
       : P04_FIXED_PROFILE_NOT_RETAINABLE_REASON;
     const revisionValue = `rs02_not-applicable_${sha256ResearchJson({
       schema_version: "research.current-source-not-applicable.v1",
@@ -1317,7 +1321,7 @@ export class ResearchCurrentSourceService {
       lane: {
         state: "NOT_APPLICABLE",
         operation,
-        run_profile: imported ? "IMPORTED_FIXED_QUALIFICATION" : "P04_FIXED_QUALIFICATION",
+        run_profile: imported ? "IMPORTED_FIXED_QUALIFICATION" : vnObserved ? "VN_OBSERVED_FIXED_QUALIFICATION" : "P04_FIXED_QUALIFICATION",
         run_adapter_contract_digest: adapterContractDigest,
         // Byte-stable: P04 N/A keeps naming the original Advanced-WFO lane.
         retainable_profile_id: RS02_DELTA_WFO_GLOBAL_PROFILE_ID,

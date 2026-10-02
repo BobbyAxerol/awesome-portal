@@ -80,6 +80,7 @@ const OuterOosWindowSchema = RangeShape.extend({
   evaluation_state: z.enum([
     "P04_OBSERVED_AFTER_FIXED_PROFILE",
     "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE",
+    "VN_OBSERVED_AFTER_FIXED_PROFILE",
   ]),
   availability: ResearchSplitAvailabilitySchema,
 }).strict();

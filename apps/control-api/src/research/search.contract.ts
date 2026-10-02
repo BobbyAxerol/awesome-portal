@@ -167,7 +167,7 @@ const OosColumnSchema = z.object({
   // window was observed after the parameters were fixed and fed no selection
   // inside this run; strict outer-OOS selection stays NOT_ASSERTED above.
   state: z.enum(["SELECTION_INPUT", "RETROSPECTIVE", "REPORT_ONLY", "WITHHELD", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
-  source_evaluation_state: z.enum(["P04_OBSERVED_AFTER_FIXED_PROFILE", "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE"]).nullable(),
+  source_evaluation_state: z.enum(["P04_OBSERVED_AFTER_FIXED_PROFILE", "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE", "VN_OBSERVED_AFTER_FIXED_PROFILE"]).nullable(),
   provenance: z.enum(["P14_SOURCE_RECEIPT", "NONE"]),
   reason_code: ReasonCodeSchema.nullable(),
   availability: ResearchSearchAvailabilitySchema,

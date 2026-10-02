@@ -16,6 +16,7 @@ import {
 import { levelsOf } from "./current-source-surface";
 import { sha256ResearchJson } from "./preflight.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
+import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import { ResearchSearchResponseSchema, type ResearchSearchResponse } from "./search.contract";
 import { ResearchSearchError } from "./search.error";
@@ -314,7 +315,8 @@ export class ResearchSearchService {
     const binding = imported?.numeric ?? this.bindings.byAdapterDigest(row.adapterContractDigest);
     // W1: gate on the immutable execution profile too; the Delta WFO profile
     // shares the P04 executor digest but is not the fixed qualification.
-    const compatible = (imported !== null || (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID)
+    const vnObserved = row.executionProfileId === VN_OBSERVED_FIXED_PROFILE_ID;
+    const compatible = (imported !== null || vnObserved || (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID)
       && binding !== null
       && (imported === null || source.source.execution_adapter_id === "p17.imported-signal-notional.v1")
       && source.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH"
@@ -336,11 +338,12 @@ export class ResearchSearchService {
     const declaredOptimizer = Boolean(declared);
     const metric = candidateSelectionMetric(available, declaredOptimizer);
     const strictOos = gap("NOT_ASSERTED", source.protocol.selection.strict_outer_oos.reason_code || STRICT_OOS_REASON);
-    const fixedReason = imported ? "E17_IMPORTED_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY" : FIXED_PROFILE_REASON;
-    const diagnosticReason = imported ? "E17_IMPORTED_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS" : FIXED_DIAGNOSTIC_REASON;
+    const profileReason = (reason: string) => vnObserved ? reason.replace(/^P04_/, "VN_OBSERVED_") : reason;
+    const fixedReason = imported ? "E17_IMPORTED_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY" : profileReason(FIXED_PROFILE_REASON);
+    const diagnosticReason = imported ? "E17_IMPORTED_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS" : profileReason(FIXED_DIAGNOSTIC_REASON);
     const fixedGap = gap("NOT_APPLICABLE", fixedReason);
     const diagnosticGap = gap("NOT_APPLICABLE", diagnosticReason);
-    const selectionTrace = gap("NOT_APPLICABLE", imported ? "E17_IMPORTED_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE" : "P04_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE");
+    const selectionTrace = gap("NOT_APPLICABLE", imported ? "E17_IMPORTED_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE" : profileReason("P04_FIXED_PROFILE_HAS_NO_ENGINE_SELECTION_TRACE"));
     const sourceAbsences = {
       study: fixedGap,
       trial_ledger: fixedGap,
@@ -394,7 +397,7 @@ export class ResearchSearchService {
       },
       source_profile: {
         state: "FIXED_PROFILE_NO_SEARCH",
-        reason_code: FIXED_PROFILE_REASON,
+        reason_code: vnObserved ? fixedReason : FIXED_PROFILE_REASON,
         availability: available,
       },
       requested_optimizer: {

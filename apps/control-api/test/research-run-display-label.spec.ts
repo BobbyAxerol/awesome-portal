@@ -20,6 +20,7 @@ const WFO = "p10.delta-signal-notional-wfo.v1";
 const WFO_V2 = "p10.delta-signal-notional-wfo.v2";
 const WFO_CAUSAL = "p10.delta-signal-notional-causal-inner.v1";
 const P04 = "p04.fixed-qualification.v1";
+const VN_OBSERVED = "p10.vn-stock-daily-observed-fixed.v1";
 
 describe("D1 run display label", () => {
   it("writes the kind and the ordinal exactly as the hi-fi does", () => {
@@ -31,10 +32,12 @@ describe("D1 run display label", () => {
     expect(runDisplayLabel(WFO, 1204)).toBe("R-WFO-1204");
   });
 
-  it("labels the four admitted display profiles, never an unknown child", () => {
-    expect(Object.keys(RUN_DISPLAY_LABEL_KINDS).sort()).toEqual([P04, WFO_CAUSAL, WFO, WFO_V2]);
+  it("labels the five admitted display profiles, never an unknown child", () => {
+    expect(Object.keys(RUN_DISPLAY_LABEL_KINDS).sort()).toEqual([P04, WFO_CAUSAL, WFO, WFO_V2, VN_OBSERVED]);
     expect(runDisplayLabel(WFO_V2, 7)).toBe("R-WFO-007");
     expect(runDisplayLabel(WFO_CAUSAL, 8)).toBe("R-WFO-008");
+    expect(runDisplayLabel(VN_OBSERVED, 9)).toBe("R-VN-009");
+    expect(runDisplayLabel("p10.vn-stock-daily-observed-fixed.v2", 9)).toBeNull();
     expect(runDisplayLabel("p16.delta-whatif-grid.v1", 3)).toBeNull();
     expect(runDisplayLabel(null, 3)).toBeNull();
     expect(runDisplayLabel(undefined, 3)).toBeNull();

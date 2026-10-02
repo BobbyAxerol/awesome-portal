@@ -48,6 +48,10 @@ export function evidenceDatasetCoverage(snapshot: unknown) {
     gaps: source.quality.gaps,
     missing_bar_count: source.quality.missing_bar_count,
     columns: source.columns,
+    // P08's strict observed-source branch proves tape integrity, not an
+    // exchange calendar. Keep those unknown gap counts null and labelled.
+    ...(source.quality.state === "OBSERVED_TAPE_INTEGRITY_ONLY"
+      ? { quality_scope: "OBSERVED_TAPE_INTEGRITY_ONLY" as const } : {}),
   };
 }
 

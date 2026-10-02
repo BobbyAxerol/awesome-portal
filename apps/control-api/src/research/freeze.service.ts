@@ -19,6 +19,7 @@ import { bytesBlockChain, notYet, type ArtifactByteVerification } from "./artifa
 import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
 import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
+import { VN_OBSERVED_FIXED_PROFILE_ID } from "./vn-observed-fixed.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import {
   ResearchFreezeResponseSchema,
@@ -229,7 +230,7 @@ export class ResearchFreezeService {
   }
 
   private mapDetail(row: SplitHubRow, requestedFold: number | null, bytes: ArtifactByteVerification): unknown {
-    if (row.kind === "DURABLE" && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID && row.executionProfileId !== IMPORTED_ALPHA_PROFILE_ID) {
+    if (row.kind === "DURABLE" && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID && row.executionProfileId !== IMPORTED_ALPHA_PROFILE_ID && row.executionProfileId !== VN_OBSERVED_FIXED_PROFILE_ID) {
       // W1: a Delta WFO run shares the P04 executor digest but has no P04
       // fixed-parameter bundle to verify; its freeze truth is the retained
       // RS-02 current-source lane. Answer the existing typed absence.
@@ -275,7 +276,8 @@ export class ResearchFreezeService {
       : sourceAvailable;
     const bindingMatches = integrity.state === "PARTIAL";
     const strictOuterOos = gap("NOT_ASSERTED", source.protocol.selection.strict_outer_oos.reason_code);
-    const profileReason = (reason: string) => imported ? reason.replace(/^P04_/, "E17_IMPORTED_") : reason;
+    const profileReason = (reason: string) => imported ? reason.replace(/^P04_/, "E17_IMPORTED_")
+      : row.executionProfileId === VN_OBSERVED_FIXED_PROFILE_ID ? reason.replace(/^P04_/, "VN_OBSERVED_") : reason;
     const noSelection = gap("NOT_APPLICABLE", profileReason(NO_SELECTION_ARTIFACT));
     const noOrdering = gap("NOT_ASSERTED", profileReason(NO_STRICT_ORDERING));
     const noGrid = gap("NOT_APPLICABLE", profileReason(NO_DIAGNOSTIC_GRID));

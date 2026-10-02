@@ -8,6 +8,7 @@ services:
       PORTAL_FEATURE_RESEARCH_PROGRESS: "true"
       PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS: "true"
       PORTAL_FEATURE_RESEARCH_WFO_PROFILE: "true"
+      PORTAL_FEATURE_RESEARCH_VN_OBSERVED_PROFILE: ${PORTAL_FEATURE_RESEARCH_VN_OBSERVED_PROFILE:-false}
       NATS_URL: nats://portal-nats:4222
     depends_on:
       portal-nats: { condition: service_healthy }
@@ -30,6 +31,7 @@ services:
       FEATURE_RESEARCH_COMPARE: "true"
       FEATURE_RESEARCH_RELEASE_CANDIDATES: "true"
       FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true"
+      FEATURE_RESEARCH_VN_OBSERVED_PROFILE: ${CONTROL_API_FEATURE_RESEARCH_VN_OBSERVED_PROFILE:-false}
   control-api-migrate:
     environment:
       DATABASE_URL: ${P23_DATABASE_URL:?P23 requires its own database credential}
@@ -45,6 +47,7 @@ services:
       # exclusive to the owned P23 cell; not a product/raw-IS read capability.
       RESEARCH_IS_QUALIFICATION_CAPTURE: ${RESEARCH_IS_QUALIFICATION_CAPTURE:-false}
       PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION: "true"
+      PORTAL_FEATURE_RESEARCH_VN_OBSERVED_PROFILE: ${PORTAL_FEATURE_RESEARCH_VN_OBSERVED_PROFILE:-false}
       # Match Control API's explicit what-if lane. Without this worker fence
       # the durable diagnostic is admitted but cannot emit a source event.
       PORTAL_FEATURE_RESEARCH_WHATIF: "true"

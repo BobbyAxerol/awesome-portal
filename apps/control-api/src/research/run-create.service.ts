@@ -18,6 +18,9 @@ import {
 } from "./run-create.contract";
 import { ResearchRunCreateError } from "./run-create.error";
 import { ResearchRunAdmissionService } from "./run-admission.service";
+import { VnObservedSourceObservationSchema } from "./preflight.contract";
+import { VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_RESOURCE_CLASS, VN_OBSERVED_FIXED_RESOURCE_PROFILE,
+  VN_OBSERVED_FIXED_WORK_SCHEMA_VERSION } from "./vn-observed-fixed.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_WORK_SCHEMA_VERSION } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_WORK_SCHEMA_VERSION } from "./delta-causal-inner.profile";
 import {
@@ -124,6 +127,15 @@ export class ResearchRunCreateService {
     const causal = profile.id === DELTA_CAUSAL_INNER_PROFILE_ID;
     const wfo = profile.id === DELTA_WFO_PROFILE_ID || profile.id === DELTA_WFO_V2_PROFILE_ID || causal;
     const imported = profile.id === IMPORTED_ALPHA_PROFILE_ID;
+    const vnObserved = profile.id === VN_OBSERVED_FIXED_PROFILE_ID;
+    const observation = vnObserved ? VnObservedSourceObservationSchema.safeParse({
+      ...(manifest.datasetBinding.provenance as Record<string, unknown>),
+      dataset_id: requested.data.dataset_id, symbol: requested.data.symbol, timeframe: requested.data.timeframe,
+    }) : null;
+    if (observation && !observation.success) {
+      throw new ResearchRunCreateError("RESEARCH_RUN_PREFLIGHT_NOT_READY", "The VN observed source binding is incompatible.", 409);
+    }
+    const sourceObservation = observation?.success ? observation.data : null;
     // Lineage is Portal-owned and already persisted above the compute port.
     // A clone is a fresh execution for the worker, not a new private engine
     // operation. Keep the immutable public intent/parent in PostgreSQL and
@@ -132,7 +144,19 @@ export class ResearchRunCreateService {
     // The P04 branch below is byte-for-byte the pre-W1 construction (golden
     // tests pin both digests). The WFO branch is a separate versioned shape:
     // it carries the pinned profile identity and never a P04 parameter map.
-    const workDigest = imported
+    const workDigest = vnObserved
+      ? digest({
+        schema_version: VN_OBSERVED_FIXED_WORK_SCHEMA_VERSION,
+        requested_spec_digest: manifest.requestedSpecDigest, effective_spec_digest: manifest.effectiveSpecDigest,
+        dataset_binding_digest: manifest.datasetBindingDigest, manifest_digest: manifest.manifestDigest,
+        snapshot: { snapshot_id: this.stringFact(manifest.snapshot, "snapshot_id"),
+          snapshot_content_hash: this.stringFact(manifest.snapshot, "snapshot_content_hash") },
+        alpha: { alpha_id: alpha.alphaId, alpha_version_id: alpha.alphaVersionId,
+          adapter_id: alpha.adapterId, adapter_contract_digest: alpha.adapterContractDigest, fixed_parameters: alpha.fixedParameters },
+        execution_profile: { profile_id: profile.id, profile_digest: profile.digest },
+        source_observation: sourceObservation, engine_release_id: requested.client.engine_release_id, requested_spec: requested,
+      })
+      : imported
       ? digest({
         schema_version: IMPORTED_ALPHA_WORK_SCHEMA_VERSION,
         requested_spec_digest: manifest.requestedSpecDigest,
@@ -264,6 +288,8 @@ export class ResearchRunCreateService {
         // the child never receives an implied UI default or discovers params
         // from arbitrary Alpha source.
         p04_parameters: alpha.fixedParameters,
+        ...(vnObserved ? { execution_profile_id: profile.id, execution_profile_digest: profile.digest,
+          source_observation: sourceObservation } : {}),
         work_digest: workDigest,
       },
     };
@@ -293,7 +319,9 @@ export class ResearchRunCreateService {
         workDigest,
         engineReleaseId: requested.client.engine_release_id,
         legacyRequest,
-        cost: imported
+        cost: vnObserved
+          ? VN_OBSERVED_FIXED_RESOURCE_PROFILE
+          : imported
           ? IMPORTED_ALPHA_RESOURCE_PROFILE
           : wfo
             // Research preview only: the long WFO declares its own child CPU cap.
@@ -304,7 +332,7 @@ export class ResearchRunCreateService {
         // otherwise several creates reserve leases before a single worker
         // can consume them. Keep the historical fixed P04 policy unchanged.
         queueClass: wfo || imported ? "HEAVY" : "INTERACTIVE",
-        resourceClass: imported ? IMPORTED_ALPHA_RESOURCE_CLASS : wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
+        resourceClass: vnObserved ? VN_OBSERVED_FIXED_RESOURCE_CLASS : imported ? IMPORTED_ALPHA_RESOURCE_CLASS : wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
         attemptLimit: 2,
         // The edge the browser declared, if any. Both relations reach the
         // same column; only SIBLING_OF carries a cell and the same-version

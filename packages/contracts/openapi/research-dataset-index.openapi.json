@@ -3,7 +3,7 @@
   "info": {
     "title": "Research indexed data declaration",
     "version": "1.0.0",
-    "description": "Explicit operator-built immutable index. Fixed UTC timestamps/exact counts over declared indexed ranges only; not instrument authority, constituent-minute completeness, a preflight token, engine admission or sealed-holdout values. GET does not build/scan HMD. V1 remains unchanged."
+    "description": "Explicit operator-built immutable index. Fixed UTC bars or explicitly typed observed source-local date labels over declared indexed ranges only; no exchange-session completeness or daily session-close inference. Not instrument authority, constituent-minute completeness, a preflight token, engine admission or sealed-holdout values. GET does not build/scan HMD. Dataset catalog V1 remains unchanged."
   },
   "paths": {
     "/api/v1/research/datasets/catalog-v2": {
@@ -534,6 +534,140 @@
       }
     },
     "schemas": {
+      "RegularSnapshotQuality": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rows",
+          "gaps",
+          "duplicates",
+          "gap_ratio",
+          "passed",
+          "reason_codes",
+          "missing_bar_count",
+          "state"
+        ],
+        "properties": {
+          "rows": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "gaps": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "duplicates": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gap_ratio": {
+            "type": "number",
+            "minimum": 0
+          },
+          "passed": {
+            "const": true
+          },
+          "reason_codes": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "maxLength": 96
+            }
+          },
+          "missing_bar_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "state": {
+            "const": "SNAPSHOT_INTEGRITY_ONLY"
+          }
+        }
+      },
+      "ObservedTapeQuality": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rows",
+          "gaps",
+          "duplicates",
+          "gap_ratio",
+          "passed",
+          "reason_codes",
+          "missing_bar_count",
+          "state"
+        ],
+        "properties": {
+          "rows": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "gaps": {
+            "type": "null"
+          },
+          "duplicates": {
+            "const": 0
+          },
+          "gap_ratio": {
+            "type": "null"
+          },
+          "passed": {
+            "const": true
+          },
+          "reason_codes": {
+            "type": "array",
+            "maxItems": 0
+          },
+          "missing_bar_count": {
+            "type": "null"
+          },
+          "state": {
+            "const": "OBSERVED_TAPE_INTEGRITY_ONLY"
+          }
+        }
+      },
+      "VnObservedProvenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "clock_basis",
+          "source_timezone",
+          "metadata_index_revision",
+          "metadata_index_source_manifest_digest",
+          "metadata_index_as_of_utc_ms",
+          "warmup_semantics",
+          "warmup_start_utc_ms"
+        ],
+        "properties": {
+          "clock_basis": {
+            "const": "OBSERVED_SOURCE_LOCAL_DATE_V1"
+          },
+          "source_timezone": {
+            "const": "Asia/Ho_Chi_Minh"
+          },
+          "metadata_index_revision": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "metadata_index_source_manifest_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "metadata_index_as_of_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "warmup_semantics": {
+            "const": "LAST_N_OBSERVED_PREDECESSORS_V1"
+          },
+          "warmup_start_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      },
       "RequestedSpec": {
         "description": "P02 requested spec. v1 is the frozen P02 contract; v2 (CG-P02-02) adds rolling train width, temporal guards and causal Mode 1 inner folds on an advanced walk-forward. P08 validates every v2 field against the pinned engine; P10 runs neither v2 field yet.",
         "oneOf": [
@@ -628,54 +762,15 @@
         ]
       },
       "Quality": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "rows",
-          "gaps",
-          "duplicates",
-          "gap_ratio",
-          "passed",
-          "reason_codes",
-          "missing_bar_count",
-          "state"
-        ],
-        "properties": {
-          "rows": {
-            "type": "integer",
-            "minimum": 1
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RegularSnapshotQuality"
           },
-          "gaps": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "duplicates": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "gap_ratio": {
-            "type": "number",
-            "minimum": 0
-          },
-          "passed": {
-            "const": true
-          },
-          "reason_codes": {
-            "type": "array",
-            "maxItems": 16,
-            "items": {
-              "type": "string",
-              "maxLength": 96
-            }
-          },
-          "missing_bar_count": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "state": {
-            "const": "SNAPSHOT_INTEGRITY_ONLY"
+          {
+            "$ref": "#/components/schemas/ObservedTapeQuality"
           }
-        }
+        ],
+        "description": "Observed-tape integrity does not certify a trading calendar: expected session gaps remain unknown/null, not zero."
       },
       "Snapshot": {
         "type": "object",
@@ -739,7 +834,10 @@
             "maxLength": 128
           },
           "closed_bar_policy": {
-            "const": "CLOSED_BARS_ONLY"
+            "enum": [
+              "CLOSED_BARS_ONLY",
+              "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+            ]
           },
           "columns": {
             "type": "array",
@@ -769,7 +867,19 @@
                 "release_commit",
                 "release_tag",
                 "dataset_release_id",
-                "adapter_version"
+                "adapter_version",
+                "clock_basis",
+                "source_timezone",
+                "metadata_index_revision",
+                "metadata_index_source_manifest_digest",
+                "metadata_index_as_of_utc_ms",
+                "warmup_start_utc_ms",
+                "warmup_semantics",
+                "daily_timestamp_basis",
+                "session_quality_state",
+                "session_quality_reason_code",
+                "instrument_metadata_state",
+                "instrument_metadata_reason_code"
               ]
             },
             "additionalProperties": {
@@ -786,7 +896,75 @@
           "holdout_seal": {
             "$ref": "#/components/schemas/HoldoutSeal"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "closed_bar_policy": {
+                  "const": "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "timezone": {
+                  "const": "Asia/Ho_Chi_Minh"
+                },
+                "quality": {
+                  "$ref": "#/components/schemas/ObservedTapeQuality"
+                },
+                "provenance": {
+                  "required": [
+                    "clock_basis",
+                    "source_timezone",
+                    "metadata_index_revision",
+                    "metadata_index_source_manifest_digest",
+                    "metadata_index_as_of_utc_ms",
+                    "warmup_semantics",
+                    "warmup_start_utc_ms"
+                  ],
+                  "properties": {
+                    "clock_basis": {
+                      "const": "OBSERVED_SOURCE_LOCAL_DATE_V1"
+                    },
+                    "source_timezone": {
+                      "const": "Asia/Ho_Chi_Minh"
+                    },
+                    "metadata_index_revision": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "metadata_index_source_manifest_digest": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "metadata_index_as_of_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "warmup_semantics": {
+                      "const": "LAST_N_OBSERVED_PREDECESSORS_V1"
+                    },
+                    "warmup_start_utc_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "quality": {
+                  "$ref": "#/components/schemas/RegularSnapshotQuality"
+                }
+              }
+            }
+          }
+        ]
       },
       "Capability": {
         "type": "object",
@@ -1188,9 +1366,52 @@
             "maxLength": 128
           },
           "closed_bar_policy": {
-            "const": "CLOSED_BARS_ONLY"
+            "enum": [
+              "CLOSED_BARS_ONLY",
+              "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/VnObservedProvenance"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "closed_bar_policy": {
+                  "const": "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "provenance"
+              ],
+              "properties": {
+                "timezone": {
+                  "const": "Asia/Ho_Chi_Minh"
+                },
+                "dataset_id": {
+                  "const": "vn-stock-daily"
+                },
+                "symbol": {
+                  "const": "FPT"
+                },
+                "timeframe": {
+                  "const": "1d"
+                }
+              }
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "provenance"
+                ]
+              }
+            }
+          }
+        ]
       },
       "ResourceEstimate": {
         "type": "object",
@@ -1338,7 +1559,10 @@
             "maxLength": 128
           },
           "closed_bar_policy": {
-            "const": "CLOSED_BARS_ONLY"
+            "enum": [
+              "CLOSED_BARS_ONLY",
+              "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+            ]
           },
           "columns": {
             "type": "array",
@@ -1359,8 +1583,39 @@
           },
           "range_end_exclusive_utc_ms": {
             "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/VnObservedProvenance"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "closed_bar_policy": {
+                  "const": "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "provenance"
+              ],
+              "properties": {
+                "timezone": {
+                  "const": "Asia/Ho_Chi_Minh"
+                }
+              }
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "provenance"
+                ]
+              }
+            }
+          }
+        ]
       },
       "Optimization": {
         "type": "object",
@@ -2457,7 +2712,363 @@
                 "asset_class_availability": {
                   "$ref": "#/components/schemas/Availability"
                 }
-              }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "dataset_id": {
+                        "const": "vn-stock-daily"
+                      }
+                    },
+                    "required": [
+                      "dataset_id"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "symbols": {
+                        "type": "object",
+                        "properties": {
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "coverage_by_timeframe": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "timeframe",
+                                      "resolution_seconds",
+                                      "availability",
+                                      "reason_code",
+                                      "origin",
+                                      "as_of_utc_ms",
+                                      "first_bar_utc_ms",
+                                      "last_bar_utc_ms",
+                                      "last_closed_bar_end_utc_ms",
+                                      "bar_count",
+                                      "expected_bar_count",
+                                      "missing_ratio",
+                                      "gap_count",
+                                      "largest_gap_seconds",
+                                      "duplicate_bar_count",
+                                      "coverage_scope",
+                                      "indexed_start_utc_ms",
+                                      "indexed_end_exclusive_utc_ms",
+                                      "closed_bar_policy",
+                                      "clock_basis",
+                                      "source_timezone",
+                                      "calendar_availability"
+                                    ],
+                                    "properties": {
+                                      "timeframe": {
+                                        "const": "1d"
+                                      },
+                                      "resolution_seconds": {
+                                        "const": 86400
+                                      },
+                                      "availability": {
+                                        "enum": [
+                                          "AVAILABLE",
+                                          "NOT_PUBLISHED"
+                                        ]
+                                      },
+                                      "reason_code": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "origin": {
+                                        "const": "PORTAL_DERIVED"
+                                      },
+                                      "as_of_utc_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "first_bar_utc_ms": {
+                                        "anyOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "last_bar_utc_ms": {
+                                        "anyOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "last_closed_bar_end_utc_ms": {
+                                        "type": "null"
+                                      },
+                                      "bar_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 10000000
+                                      },
+                                      "expected_bar_count": {
+                                        "type": "null"
+                                      },
+                                      "missing_ratio": {
+                                        "type": "null"
+                                      },
+                                      "gap_count": {
+                                        "type": "null"
+                                      },
+                                      "largest_gap_seconds": {
+                                        "type": "null"
+                                      },
+                                      "duplicate_bar_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 10000000
+                                      },
+                                      "coverage_scope": {
+                                        "const": "INDEXED_RANGE"
+                                      },
+                                      "indexed_start_utc_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "indexed_end_exclusive_utc_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "closed_bar_policy": {
+                                        "const": "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+                                      },
+                                      "clock_basis": {
+                                        "const": "OBSERVED_SOURCE_LOCAL_DATE_V1"
+                                      },
+                                      "source_timezone": {
+                                        "const": "Asia/Ho_Chi_Minh"
+                                      },
+                                      "calendar_availability": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "required": [
+                                          "state",
+                                          "reason_code"
+                                        ],
+                                        "properties": {
+                                          "state": {
+                                            "const": "NOT_PUBLISHED"
+                                          },
+                                          "reason_code": {
+                                            "const": "VN_SESSION_CALENDAR_NOT_PUBLISHED"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "source_timezone": {
+                        "const": "Asia/Ho_Chi_Minh"
+                      }
+                    }
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "symbols": {
+                        "type": "object",
+                        "properties": {
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "coverage_by_timeframe": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "timeframe",
+                                      "resolution_seconds",
+                                      "availability",
+                                      "reason_code",
+                                      "origin",
+                                      "as_of_utc_ms",
+                                      "first_bar_utc_ms",
+                                      "last_bar_utc_ms",
+                                      "last_closed_bar_end_utc_ms",
+                                      "bar_count",
+                                      "expected_bar_count",
+                                      "missing_ratio",
+                                      "gap_count",
+                                      "largest_gap_seconds",
+                                      "duplicate_bar_count",
+                                      "coverage_scope",
+                                      "indexed_start_utc_ms",
+                                      "indexed_end_exclusive_utc_ms",
+                                      "closed_bar_policy"
+                                    ],
+                                    "properties": {
+                                      "timeframe": {
+                                        "type": "string",
+                                        "pattern": "^[1-9][0-9]*(?:min|m|h|d)$"
+                                      },
+                                      "resolution_seconds": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 10000000
+                                      },
+                                      "availability": {
+                                        "enum": [
+                                          "AVAILABLE",
+                                          "NOT_PUBLISHED"
+                                        ]
+                                      },
+                                      "reason_code": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "origin": {
+                                        "const": "PORTAL_DERIVED"
+                                      },
+                                      "as_of_utc_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "first_bar_utc_ms": {
+                                        "anyOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "last_bar_utc_ms": {
+                                        "anyOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "last_closed_bar_end_utc_ms": {
+                                        "anyOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "bar_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 10000000
+                                      },
+                                      "expected_bar_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 10000000
+                                      },
+                                      "missing_ratio": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "pattern": "^0\\.\\d{12}$"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "gap_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 10000000
+                                      },
+                                      "largest_gap_seconds": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "duplicate_bar_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 10000000
+                                      },
+                                      "coverage_scope": {
+                                        "const": "INDEXED_RANGE"
+                                      },
+                                      "indexed_start_utc_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "indexed_end_exclusive_utc_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "closed_bar_policy": {
+                                        "const": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
             },
             "maxItems": 16
           },
@@ -2594,153 +3205,305 @@
         }
       },
       "Coverage": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "timeframe",
-          "resolution_seconds",
-          "availability",
-          "reason_code",
-          "origin",
-          "as_of_utc_ms",
-          "first_bar_utc_ms",
-          "last_bar_utc_ms",
-          "last_closed_bar_end_utc_ms",
-          "bar_count",
-          "expected_bar_count",
-          "missing_ratio",
-          "gap_count",
-          "largest_gap_seconds",
-          "duplicate_bar_count",
-          "coverage_scope",
-          "indexed_start_utc_ms",
-          "indexed_end_exclusive_utc_ms",
-          "closed_bar_policy"
-        ],
-        "properties": {
-          "timeframe": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]*(?:min|m|h|d)$"
-          },
-          "resolution_seconds": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10000000
-          },
-          "availability": {
-            "enum": [
-              "AVAILABLE",
-              "NOT_PUBLISHED"
-            ]
-          },
-          "reason_code": {
-            "anyOf": [
-              {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "timeframe",
+              "resolution_seconds",
+              "availability",
+              "reason_code",
+              "origin",
+              "as_of_utc_ms",
+              "first_bar_utc_ms",
+              "last_bar_utc_ms",
+              "last_closed_bar_end_utc_ms",
+              "bar_count",
+              "expected_bar_count",
+              "missing_ratio",
+              "gap_count",
+              "largest_gap_seconds",
+              "duplicate_bar_count",
+              "coverage_scope",
+              "indexed_start_utc_ms",
+              "indexed_end_exclusive_utc_ms",
+              "closed_bar_policy"
+            ],
+            "properties": {
+              "timeframe": {
                 "type": "string",
-                "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                "pattern": "^[1-9][0-9]*(?:min|m|h|d)$"
               },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "origin": {
-            "const": "PORTAL_DERIVED"
-          },
-          "as_of_utc_ms": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "first_bar_utc_ms": {
-            "anyOf": [
-              {
+              "resolution_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000000
+              },
+              "availability": {
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "origin": {
+                "const": "PORTAL_DERIVED"
+              },
+              "as_of_utc_ms": {
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
               },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "last_bar_utc_ms": {
-            "anyOf": [
-              {
+              "first_bar_utc_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "last_bar_utc_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "last_closed_bar_end_utc_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "bar_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              "expected_bar_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              "missing_ratio": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^0\\.\\d{12}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "gap_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              "largest_gap_seconds": {
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
               },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "last_closed_bar_end_utc_ms": {
-            "anyOf": [
-              {
+              "duplicate_bar_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              "coverage_scope": {
+                "const": "INDEXED_RANGE"
+              },
+              "indexed_start_utc_ms": {
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
               },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "bar_count": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000000
-          },
-          "expected_bar_count": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000000
-          },
-          "missing_ratio": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^0\\.\\d{12}$"
+              "indexed_end_exclusive_utc_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
-              {
-                "type": "null"
+              "closed_bar_policy": {
+                "const": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
               }
-            ]
+            }
           },
-          "gap_count": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000000
-          },
-          "largest_gap_seconds": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "duplicate_bar_count": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000000
-          },
-          "coverage_scope": {
-            "const": "INDEXED_RANGE"
-          },
-          "indexed_start_utc_ms": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "indexed_end_exclusive_utc_ms": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "closed_bar_policy": {
-            "const": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "timeframe",
+              "resolution_seconds",
+              "availability",
+              "reason_code",
+              "origin",
+              "as_of_utc_ms",
+              "first_bar_utc_ms",
+              "last_bar_utc_ms",
+              "last_closed_bar_end_utc_ms",
+              "bar_count",
+              "expected_bar_count",
+              "missing_ratio",
+              "gap_count",
+              "largest_gap_seconds",
+              "duplicate_bar_count",
+              "coverage_scope",
+              "indexed_start_utc_ms",
+              "indexed_end_exclusive_utc_ms",
+              "closed_bar_policy",
+              "clock_basis",
+              "source_timezone",
+              "calendar_availability"
+            ],
+            "properties": {
+              "timeframe": {
+                "const": "1d"
+              },
+              "resolution_seconds": {
+                "const": 86400
+              },
+              "availability": {
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_PUBLISHED"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "origin": {
+                "const": "PORTAL_DERIVED"
+              },
+              "as_of_utc_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "first_bar_utc_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "last_bar_utc_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "last_closed_bar_end_utc_ms": {
+                "type": "null"
+              },
+              "bar_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              "expected_bar_count": {
+                "type": "null"
+              },
+              "missing_ratio": {
+                "type": "null"
+              },
+              "gap_count": {
+                "type": "null"
+              },
+              "largest_gap_seconds": {
+                "type": "null"
+              },
+              "duplicate_bar_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              "coverage_scope": {
+                "const": "INDEXED_RANGE"
+              },
+              "indexed_start_utc_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "indexed_end_exclusive_utc_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "closed_bar_policy": {
+                "const": "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+              },
+              "clock_basis": {
+                "const": "OBSERVED_SOURCE_LOCAL_DATE_V1"
+              },
+              "source_timezone": {
+                "const": "Asia/Ho_Chi_Minh"
+              },
+              "calendar_availability": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason_code"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "const": "VN_SESSION_CALENDAR_NOT_PUBLISHED"
+                  }
+                }
+              }
+            }
           }
-        }
+        ]
       },
       "Availability": {
         "oneOf": [
@@ -3085,7 +3848,10 @@
                     "maximum": 9007199254740991
                   },
                   "basis": {
-                    "const": "INDEXED_TARGET_BAR_RANGE_V1"
+                    "enum": [
+                      "INDEXED_TARGET_BAR_RANGE_V1",
+                      "INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1"
+                    ]
                   }
                 }
               },
@@ -3105,8 +3871,137 @@
                 "type": "null"
               }
             ]
+          },
+          "clock_basis": {
+            "const": "OBSERVED_SOURCE_LOCAL_DATE_V1"
+          },
+          "source_timezone": {
+            "const": "Asia/Ho_Chi_Minh"
+          },
+          "warmup_start_utc_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "dataset_id": {
+                  "const": "vn-stock-daily"
+                }
+              },
+              "required": [
+                "dataset_id"
+              ]
+            },
+            "then": {
+              "required": [
+                "clock_basis",
+                "source_timezone",
+                "warmup_start_utc_ms"
+              ],
+              "properties": {
+                "timeframe": {
+                  "const": "1d"
+                },
+                "verified_range": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "start_utc_ms",
+                        "end_exclusive_utc_ms",
+                        "basis"
+                      ],
+                      "properties": {
+                        "start_utc_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "end_exclusive_utc_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "basis": {
+                          "const": "INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1"
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            },
+            "else": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "clock_basis"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "source_timezone"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "warmup_start_utc_ms"
+                    ]
+                  }
+                ]
+              },
+              "properties": {
+                "verified_range": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "start_utc_ms",
+                        "end_exclusive_utc_ms",
+                        "basis"
+                      ],
+                      "properties": {
+                        "start_utc_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "end_exclusive_utc_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "basis": {
+                          "const": "INDEXED_TARGET_BAR_RANGE_V1"
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
       },
       "WindowEstimate": {
         "type": "object",
@@ -3353,7 +4248,10 @@
             ]
           },
           "earliest_start_basis": {
-            "const": "CONTIGUOUS_INDEXED_WARMUP_BARS_V1"
+            "enum": [
+              "CONTIGUOUS_INDEXED_WARMUP_BARS_V1",
+              "OBSERVED_INDEXED_WARMUP_BARS_V1"
+            ]
           }
         }
       },

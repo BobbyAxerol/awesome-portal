@@ -1,0 +1,10 @@
+{
+  "availability": { "state": "AVAILABLE", "reason_code": null },
+  "range_scope": "FULL_SNAPSHOT_QUERY",
+  "range": { "start_utc_ms": 1767484800000, "end_exclusive_utc_ms": 1768003200000 },
+  "rows": 336,
+  "gaps": null,
+  "missing_bar_count": null,
+  "columns": ["open", "high", "low", "close", "volume"],
+  "quality_scope": "OBSERVED_TAPE_INTEGRITY_ONLY"
+}

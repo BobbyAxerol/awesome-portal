@@ -10,7 +10,10 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
   const add = (key: string, pass: boolean | null, reason: string, observed: unknown, required: string) => rows.push({
     key, state: pass === null ? "NOT_PUBLISHED" : pass ? "PASS" : "FAIL", reason_code: pass ? null : reason,
     observed: observed === null || observed === undefined ? null : String(observed).slice(0, 200), required });
+  const sourceQualified = profiles.some(row => row.dataset_id === spec.data.dataset_id);
   const profile = profiles.find(row => row.protocol === spec.protocol && row.execution_route === spec.execution_route
+    && (sourceQualified ? row.dataset_id === spec.data.dataset_id && row.symbol === spec.data.symbol && row.timeframe === spec.data.timeframe
+      : row.dataset_id === undefined)
     && (spec.protocol !== "advanced" || row.optimization_schedule === spec.optimization_schedule)
     && (row.requested_spec_versions ?? ["research.requested-spec.v1"]).includes(spec.schema_version));
   add("profile", profile?.state === "ENABLED", "PORTAL_EXECUTION_PROFILE_NOT_ENABLED", profile?.profile_id, "Enabled execution profile");
@@ -58,7 +61,7 @@ export function declarationConditions(spec: ResearchRequestedSpec, metadata: z.i
     metadata.planned_folds.reason_code ?? "DECLARATION_FOLD_PLAN_NOT_PUBLISHED", metadata.planned_folds.count, "P08-compatible indexed fold plan");
   for (const window of metadata.windows) {
     add(`bars.${window.window.toLowerCase()}`, window.bars === null ? null : window.bars > 0,
-      window.reason_code ?? "WINDOW_HAS_NO_BARS", window.bars, "> 0 closed bars in indexed range");
+      window.reason_code ?? "WINDOW_HAS_NO_BARS", window.bars, sourceQualified ? "> 0 observed bars in indexed range" : "> 0 closed bars in indexed range");
     if (window.warmup_bars_required) add("warmup", window.warmup_bars_available_before_start === null ? null
       : window.warmup_bars_available_before_start >= window.warmup_bars_required,
       window.reason_code ?? "INSUFFICIENT_INDEXED_WARMUP", window.warmup_bars_available_before_start, String(window.warmup_bars_required));

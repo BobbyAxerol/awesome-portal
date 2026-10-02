@@ -1985,7 +1985,7 @@ export interface components {
                 /** @enum {unknown} */
                 operation: "evidence" | "evidence_series" | "split" | "search" | "freeze" | "replay" | "replay_transitions" | "replay_child_audit";
                 /** @enum {unknown} */
-                run_profile: "P04_FIXED_QUALIFICATION" | "IMPORTED_FIXED_QUALIFICATION";
+                run_profile: "P04_FIXED_QUALIFICATION" | "IMPORTED_FIXED_QUALIFICATION" | "VN_OBSERVED_FIXED_QUALIFICATION";
                 run_adapter_contract_digest: components["schemas"]["Digest"];
                 /**
                  * @description The P04 fixed qualification always emits rs02.delta-wfo-global.v1 (byte-stable).

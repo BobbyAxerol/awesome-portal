@@ -17,7 +17,7 @@ const MissingInstrument = z.object({ state: z.literal("NOT_PUBLISHED"), reason_c
   display_name: z.null(), underlying: z.null(), base: z.null(), quote: z.null(), settle_currency: z.null(),
   tick_size: z.null(), lot_size: z.null(), contract_multiplier: z.null(), listing_utc_ms: z.null(), expiry_utc_ms: z.null(),
 }).strict();
-const Coverage = z.object({ timeframe: Timeframe, resolution_seconds: Count.positive(),
+const ClockGridCoverage = z.object({ timeframe: Timeframe, resolution_seconds: Count.positive(),
   availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]), reason_code: Reason.nullable(),
   origin: z.literal("PORTAL_DERIVED"), as_of_utc_ms: Ms,
   first_bar_utc_ms: Ms.nullable(), last_bar_utc_ms: Ms.nullable(), last_closed_bar_end_utc_ms: Ms.nullable(),
@@ -42,6 +42,31 @@ const Coverage = z.object({ timeframe: Timeframe, resolution_seconds: Count.posi
   if (value.missing_ratio !== null && value.expected_bar_count && Math.abs(Number(value.missing_ratio)
     - (value.expected_bar_count - value.bar_count) / value.expected_bar_count) > 5.1e-13) bad();
 });
+const ObservedDailyCoverage = z.object({ timeframe: z.literal("1d"), resolution_seconds: z.literal(86400),
+  availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]), reason_code: Reason.nullable(),
+  origin: z.literal("PORTAL_DERIVED"), as_of_utc_ms: Ms,
+  first_bar_utc_ms: Ms.nullable(), last_bar_utc_ms: Ms.nullable(), last_closed_bar_end_utc_ms: z.null(),
+  bar_count: Count, expected_bar_count: z.null(), missing_ratio: z.null(),
+  gap_count: z.null(), largest_gap_seconds: z.null(), duplicate_bar_count: Count,
+  coverage_scope: z.literal("INDEXED_RANGE"), indexed_start_utc_ms: Ms, indexed_end_exclusive_utc_ms: Ms,
+  clock_basis: z.literal("OBSERVED_SOURCE_LOCAL_DATE_V1"), source_timezone: z.literal("Asia/Ho_Chi_Minh"),
+  closed_bar_policy: z.literal("SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"),
+  calendar_availability: z.object({ state: z.literal("NOT_PUBLISHED"), reason_code: z.literal("VN_SESSION_CALENDAR_NOT_PUBLISHED") }).strict(),
+}).strict().superRefine((v, ctx) => {
+  const aligned = (n: number) => (n + 7 * 3600000) % 86400000 === 0;
+  if (v.indexed_start_utc_ms >= v.indexed_end_exclusive_utc_ms || v.indexed_end_exclusive_utc_ms > v.as_of_utc_ms
+    || !aligned(v.indexed_start_utc_ms) || !aligned(v.indexed_end_exclusive_utc_ms)
+    || (v.availability === "AVAILABLE") !== (v.reason_code === null)
+    || (v.availability === "AVAILABLE") !== (v.bar_count > 0)
+    || v.bar_count === 0 && (v.first_bar_utc_ms !== null || v.last_bar_utc_ms !== null)
+    || v.bar_count > 0 && (v.first_bar_utc_ms === null || v.last_bar_utc_ms === null
+      || !aligned(v.first_bar_utc_ms) || !aligned(v.last_bar_utc_ms)
+      || v.first_bar_utc_ms < v.indexed_start_utc_ms || v.last_bar_utc_ms < v.first_bar_utc_ms
+      || v.last_bar_utc_ms >= v.indexed_end_exclusive_utc_ms
+      || v.bar_count > (v.last_bar_utc_ms - v.first_bar_utc_ms) / 86400000 + 1))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Inconsistent observed-date coverage" });
+});
+const Coverage = z.union([ClockGridCoverage, ObservedDailyCoverage]);
 const LegacyDataset = ResearchDatasetCatalogSchema.shape.datasets.element;
 export const IndexedSymbolSchema = LegacyDataset.shape.symbols.shape.items.element.extend({
   coverage_by_timeframe: z.array(Coverage).max(16), coverage_availability: Availability,
@@ -58,7 +83,14 @@ export const ResearchDatasetCatalogV2Schema = z.object({
       availability: z.enum(["available", "unavailable"]), reason_code: Reason.nullable() }).strict()).max(16),
     symbols: LegacyDataset.shape.symbols.extend({ items: z.array(IndexedSymbolSchema).max(256) }),
   })).max(16), coverage_rule: z.string().min(1).max(400),
-}).strict();
+}).strict().superRefine((v, ctx) => {
+  for (const dataset of v.datasets) for (const symbol of dataset.symbols.items) for (const row of symbol.coverage_by_timeframe) {
+    const observed = "clock_basis" in row;
+    if (observed !== (dataset.dataset_id === "vn-stock-daily")
+      || observed && dataset.source_timezone !== "Asia/Ho_Chi_Minh")
+      ctx.addIssue({code:z.ZodIssueCode.custom,message:"Coverage belongs to another source date basis"});
+  }
+});
 export type ResearchDatasetCatalogV2 = z.infer<typeof ResearchDatasetCatalogV2Schema>;
 
 const Workspace = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional();
@@ -77,7 +109,7 @@ export const BarMetadataQuery = z.object({ workspace_id: Workspace, symbol: Symb
   warmup_bars: z.coerce.number().int().min(0).max(100_000).default(0),
 }).strict().refine(value => value.start_utc_ms < value.end_exclusive_utc_ms);
 const VerifiedRange = z.object({ start_utc_ms: Ms, end_exclusive_utc_ms: Ms,
-  basis: z.literal("INDEXED_TARGET_BAR_RANGE_V1") }).strict().refine(value => value.start_utc_ms < value.end_exclusive_utc_ms);
+  basis: z.enum(["INDEXED_TARGET_BAR_RANGE_V1", "INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1"]) }).strict().refine(value => value.start_utc_ms < value.end_exclusive_utc_ms);
 export const BarMetadataSchema = z.object({ schema_version: z.literal("research.dataset-bar-metadata.v1"),
   catalog_revision: Digest.nullable(), as_of_utc_ms: Ms.nullable(), dataset_id: DatasetId, symbol: Symbol, timeframe: Timeframe,
   start_utc_ms: Ms, end_exclusive_utc_ms: Ms, scope: z.literal("INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION"),
@@ -85,8 +117,27 @@ export const BarMetadataSchema = z.object({ schema_version: z.literal("research.
   first_bar_utc_ms: Ms.nullable(), last_bar_utc_ms: Ms.nullable(), warmup_bars_required: Count.max(100_000),
   warmup_bars_available_before_start: Count.max(100_000).nullable(),
   verified_range: VerifiedRange.nullable().optional(), earliest_start_with_warmup_utc_ms: Ms.nullable().optional(),
+  clock_basis: z.literal("OBSERVED_SOURCE_LOCAL_DATE_V1").optional(),
+  source_timezone: z.literal("Asia/Ho_Chi_Minh").optional(), warmup_start_utc_ms: Ms.nullable().optional(),
 }).strict().superRefine((value, ctx) => {
   const range = value.verified_range;
+  const observed = value.dataset_id === "vn-stock-daily";
+  const observedClock = (n: number) => (n + 7 * 3600000) % 86400000 === 0;
+  if (observed && (value.timeframe !== "1d" || value.clock_basis !== "OBSERVED_SOURCE_LOCAL_DATE_V1"
+      || value.source_timezone !== "Asia/Ho_Chi_Minh" || value.warmup_start_utc_ms === undefined
+      || !observedClock(value.start_utc_ms) || !observedClock(value.end_exclusive_utc_ms)
+      || range != null && (range.basis !== "INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1"
+        || !observedClock(range.start_utc_ms) || !observedClock(range.end_exclusive_utc_ms))
+      || value.first_bar_utc_ms !== null && !observedClock(value.first_bar_utc_ms)
+      || value.last_bar_utc_ms !== null && !observedClock(value.last_bar_utc_ms)
+      || value.earliest_start_with_warmup_utc_ms != null && !observedClock(value.earliest_start_with_warmup_utc_ms)
+      || value.warmup_start_utc_ms != null && (range == null || !observedClock(value.warmup_start_utc_ms)
+        || value.warmup_start_utc_ms < range.start_utc_ms || value.warmup_start_utc_ms > value.start_utc_ms)
+      || value.availability === "AVAILABLE" && value.warmup_bars_required > 0 && value.warmup_start_utc_ms == null)
+    || !observed && (value.clock_basis !== undefined || value.source_timezone !== undefined
+      || value.warmup_start_utc_ms !== undefined || range?.basis === "INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Incorrect dataset date basis" });
+  }
   const measuredRefusal = value.availability === "NOT_PUBLISHED"
     && value.reason_code === "WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE" && range != null
     && value.start_utc_ms >= range.start_utc_ms && value.end_exclusive_utc_ms <= range.end_exclusive_utc_ms
@@ -125,7 +176,7 @@ export const DeclarationMetadataSchema = z.object({
   planned_folds: z.object({ availability: z.enum(["AVAILABLE", "NOT_PUBLISHED"]), reason_code: Reason.nullable(),
     count: z.number().int().min(1).max(128).nullable(), basis: z.literal("P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1"),
     min_train_bars: Count.nullable(), min_oos_bars: Count.nullable() }).strict(),
-  earliest_start_utc_ms: Ms.nullable(), earliest_start_basis: z.literal("CONTIGUOUS_INDEXED_WARMUP_BARS_V1"),
+  earliest_start_utc_ms: Ms.nullable(), earliest_start_basis: z.enum(["CONTIGUOUS_INDEXED_WARMUP_BARS_V1", "OBSERVED_INDEXED_WARMUP_BARS_V1"]),
 }).strict().superRefine((v, ctx) => {
   for (const row of [v.planned_folds, ...v.windows]) {
     if ((row.availability === "AVAILABLE") !== (row.reason_code === null)

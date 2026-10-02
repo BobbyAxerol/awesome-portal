@@ -198,6 +198,17 @@ const PrivateTopologySchema = z.discriminatedUnion("protocol", [
   }
 });
 
+export const VnObservedProvenanceSchema = z.object({
+  clock_basis: z.literal("OBSERVED_SOURCE_LOCAL_DATE_V1"), source_timezone: z.literal("Asia/Ho_Chi_Minh"),
+  metadata_index_revision: Digest, metadata_index_source_manifest_digest: Digest,
+  metadata_index_as_of_utc_ms: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  warmup_semantics: z.literal("LAST_N_OBSERVED_PREDECESSORS_V1"),
+  warmup_start_utc_ms: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+}).strict();
+export const VnObservedSourceObservationSchema = VnObservedProvenanceSchema.extend({
+  dataset_id: z.literal("vn-stock-daily"), symbol: z.literal("FPT"), timeframe: z.literal("1d"),
+}).strict();
+
 const PrivateDatasetBindingSchema = z.object({
   schema_version: z.literal("research.dataset-binding.v1"),
   snapshot_id: z.string().regex(/^dss_[0-9a-f]{32}$/),
@@ -211,8 +222,12 @@ const PrivateDatasetBindingSchema = z.object({
   range_end_exclusive_utc_ms: z.number().int().nonnegative(),
   timezone: z.string().min(1).max(128),
   calendar_policy: z.string().min(1).max(128),
-  closed_bar_policy: z.literal("CLOSED_BARS_ONLY"),
-}).strict();
+  closed_bar_policy: z.enum(["CLOSED_BARS_ONLY", "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"]),
+  provenance: VnObservedProvenanceSchema.optional(),
+}).strict().refine(value => value.closed_bar_policy === "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+  ? value.dataset_id === "vn-stock-daily" && value.symbol === "FPT" && value.timeframe === "1d"
+    && value.timezone === "Asia/Ho_Chi_Minh" && value.provenance !== undefined
+  : value.provenance === undefined, "Observed-date binding is exact source qualified, never crypto closed-bar authority.");
 
 const PrivateResourceEstimateSchema = z.object({
   schema_version: z.literal("research.resource-estimate.v1"),
@@ -299,9 +314,9 @@ const PrivateSnapshotSchema = z.object({
   }).strict(),
   timezone: z.string().min(1).max(128),
   calendar_policy: z.string().min(1).max(128),
-  closed_bar_policy: z.literal("CLOSED_BARS_ONLY"),
+  closed_bar_policy: z.enum(["CLOSED_BARS_ONLY", "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"]),
   columns: z.array(z.string().min(1)).min(1).max(16),
-  quality: z.object({
+  quality: z.union([z.object({
     rows: z.number().int().positive(),
     gaps: z.number().int().nonnegative(),
     duplicates: z.number().int().nonnegative(),
@@ -310,12 +325,21 @@ const PrivateSnapshotSchema = z.object({
     reason_codes: z.array(z.string()).max(16),
     missing_bar_count: z.number().int().nonnegative(),
     state: z.literal("SNAPSHOT_INTEGRITY_ONLY"),
-  }).strict(),
+  }).strict(), z.object({
+    rows: z.number().int().positive(), gaps: z.null(), duplicates: z.literal(0), gap_ratio: z.null(),
+    passed: z.literal(true), reason_codes: z.array(z.never()).max(0), missing_bar_count: z.null(),
+    state: z.literal("OBSERVED_TAPE_INTEGRITY_ONLY"),
+  }).strict()]),
   provenance: z.record(z.union([z.string(), z.number(), z.boolean()])),
   /** CG-P08-06, additive: absent on a manifest sealed before W4. */
   gap_scan: GapScanSchema.optional(),
   holdout_seal: HoldoutSealSchema.optional(),
-}).strict();
+}).strict().refine(value => value.quality.state === "OBSERVED_TAPE_INTEGRITY_ONLY"
+  ? value.closed_bar_policy === "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1" && value.timezone === "Asia/Ho_Chi_Minh"
+    && value.quality.rows === value.row_count
+    && VnObservedProvenanceSchema.safeParse(Object.fromEntries(Object.keys(VnObservedProvenanceSchema.shape)
+      .map(key => [key, value.provenance[key]]))).success
+  : value.closed_bar_policy === "CLOSED_BARS_ONLY", "Unknown session counts require qualified observed-date integrity.");
 
 const PrivateEffectiveSpecSchema = z.object({
   schema_version: z.literal("research.effective-spec.v1"),
@@ -328,12 +352,15 @@ const PrivateEffectiveSpecSchema = z.object({
     source_manifest_digest: Digest,
     timezone: z.string().min(1).max(128),
     calendar_policy: z.string().min(1).max(128),
-    closed_bar_policy: z.literal("CLOSED_BARS_ONLY"),
+    closed_bar_policy: z.enum(["CLOSED_BARS_ONLY", "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"]),
+    provenance: VnObservedProvenanceSchema.optional(),
     columns: z.array(z.string().min(1).max(64)).min(1).max(16),
     warmup_bars: z.number().int().nonnegative(),
     range_start_utc_ms: z.number().int().nonnegative(),
     range_end_exclusive_utc_ms: z.number().int().nonnegative(),
-  }).strict(),
+  }).strict().refine(value => value.closed_bar_policy === "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+    ? value.timezone === "Asia/Ho_Chi_Minh" && value.provenance !== undefined
+    : value.provenance === undefined, "Observed effective binding must retain source qualification."),
   topology: PrivateTopologySchema,
   optimization: z.object({
     mode: Identifier,

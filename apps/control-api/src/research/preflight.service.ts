@@ -16,6 +16,7 @@ import { projectResearchAlphaVersionDeclaration, ResearchAlphaVersionDeclaration
 import {
   ResearchPreflightPrivateResponseSchema,
   ResearchRequestedSpecSchema,
+  VnObservedProvenanceSchema,
   type ResearchPreflightPrivateResponse,
   type ResearchPreflightResponse,
   type ResearchRequestedSpec,
@@ -24,6 +25,7 @@ import { ResearchPreflightSnapshotClient } from "./preflight.client";
 import { preflightGates } from "./preflight-gates";
 import { ResearchPreflightError } from "./preflight.error";
 import { ResearchMetadataRepository } from "./repository";
+import { VN_OBSERVED_FIXED_PROFILE } from "./vn-observed-fixed.profile";
 
 const DEFAULT_COLUMNS = ["open", "high", "low", "close", "volume"] as const;
 const MAX_ALPHA_WARMUP_BARS = 100_000;
@@ -301,6 +303,12 @@ export class ResearchPreflightService {
         effectiveBinding.timezone !== binding.timezone ||
         effectiveBinding.calendar_policy !== binding.calendar_policy ||
         effectiveBinding.closed_bar_policy !== binding.closed_bar_policy ||
+        // New observed-date custody is one binding, not independently valid
+        // index documents for different snapshots. Legacy crypto has no such field.
+        binding.closed_bar_policy === "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1" && (
+          snapshot.closed_bar_policy !== binding.closed_bar_policy || snapshot.timezone !== binding.timezone
+          || canonicalResearchJson(effectiveBinding.provenance) !== canonicalResearchJson(binding.provenance)
+          || Object.entries(binding.provenance!).some(([key, value]) => snapshot.provenance[key] !== value)) ||
         effectiveBinding.range_start_utc_ms !== binding.range_start_utc_ms ||
         effectiveBinding.range_end_exclusive_utc_ms !== binding.range_end_exclusive_utc_ms ||
         canonicalResearchJson(effectiveBinding.columns) !== canonicalResearchJson(snapshot.columns) ||
@@ -317,7 +325,24 @@ export class ResearchPreflightService {
         502,
       );
     }
-    if (result.snapshot.closed_bar_policy !== "CLOSED_BARS_ONLY" ||
+    const vn = VN_OBSERVED_FIXED_PROFILE;
+    const qualifiedObservedSource = this.config.FEATURE_RESEARCH_VN_OBSERVED_PROFILE === "true"
+      && requestedSpec.schema_version === "research.requested-spec.v1"
+      && requestedSpec.data.dataset_id === vn.dataset_id && requestedSpec.data.symbol === vn.symbol && requestedSpec.data.timeframe === vn.timeframe
+      && requestedSpec.execution_route === vn.execution_route && requestedSpec.protocol === vn.protocol
+      && requestedSpec.client.engine_release_id === vn.engine_release_id && result.capability.engine_release_id === vn.engine_release_id
+      && binding.dataset_id === vn.dataset_id && binding.symbol === vn.symbol && binding.timeframe === vn.timeframe
+      && binding.timezone === vn.source_timezone && snapshot.timezone === vn.source_timezone
+      && snapshot.calendar_policy === "SOURCE_DECLARED" && binding.calendar_policy === snapshot.calendar_policy
+      && snapshot.closed_bar_policy === "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"
+      && snapshot.quality.state === "OBSERVED_TAPE_INTEGRITY_ONLY"
+      && snapshot.quality.gaps === null && snapshot.quality.gap_ratio === null && snapshot.quality.missing_bar_count === null
+      && VnObservedProvenanceSchema.safeParse(binding.provenance).success
+      && snapshot.warmup.requested_bars === vn.warmup_bars && snapshot.warmup.bars === vn.warmup_bars
+      && snapshot.warmup.start_utc_ms === binding.provenance?.warmup_start_utc_ms;
+    const safeSourcePolicy = requestedSpec.data.dataset_id === vn.dataset_id
+      ? qualifiedObservedSource : snapshot.closed_bar_policy === "CLOSED_BARS_ONLY";
+    if (!safeSourcePolicy ||
         result.capability.preflight_admission !== "PREFLIGHT_ONLY" ||
         result.snapshot.quality.passed !== true) {
       throw new ResearchPreflightError(

@@ -124,6 +124,8 @@ def test_fixed_producer_passes_immutable_bounds_but_not_holdout_rows(tmp_path: P
             return SimpleNamespace(engine_version="1.1.1", final_equity=20000, num_trades=0, bars=len(frame),
                 elapsed_seconds=0.1, peak_rss_bytes=1024, cpu_seconds=0.01,
                 enforced_limits={"cpu_seconds": 45}, evidence_source={"source": {"source_transform_digest": "a" * 64}},
+                fixed_replay_source=None, fixed_replay_path=None,
+                is_qualification_source=None, is_qualification_path=None,
                 imported_source_digest=source_digest if imported else None)
 
         run_imported_alpha_qualification = run_p04_delta_qualification
@@ -150,9 +152,12 @@ def test_fixed_source_time_full_result_bounds_do_not_make_sampled_passport_compl
     for kind in ("is", "oos", "holdout"):
         assert full["windows"][kind]["start_ms"] == expected[kind]["start_ms"]
         assert full["windows"][kind]["end_ms"] == expected[kind]["end_ms"]
-    assert full["windows"]["holdout"]["state"] == full["windows"]["is"]["state"] == "NOT_PUBLISHED"
+    assert full["windows"]["is"]["state"] == "AVAILABLE"
+    assert full["windows"]["is"]["reason_code"] is None
+    assert full["windows"]["holdout"]["state"] == "NOT_PUBLISHED"
     sampled = enrich_fixed_passport(run_id=RUN, passport=source, nominal_bar_ms=3_600_000, source_windows=expected)
     assert sampled["scope"]["coverage"] == "SAMPLED_RETAINED_EQUITY"
+    assert sampled["windows"]["is"]["state"] == "NOT_PUBLISHED"
     assert sampled["return_distribution"]["state"] == "NOT_PUBLISHED"
     assert sampled["return_distribution"]["mean"]["value"] is None
     assert sampled["windows"]["oos"]["end_ms"] == expected["oos"]["end_ms"]

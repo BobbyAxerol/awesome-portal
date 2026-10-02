@@ -15,6 +15,13 @@
       "native_installed_version": "0.4.2",
       "verified": true,
       "detail": null,
+      "vn_observed_daily_qualification": {
+        "state": "NOT_PUBLISHED", "reason_code": "VN_OBSERVED_PROFILE_NOT_QUALIFIED",
+        "profile_id": "p10.vn-stock-daily-observed-fixed.v1",
+        "profile_digest": "acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e",
+        "dataset_id": "vn-stock-daily", "symbol": "FPT", "timeframe": "1d",
+        "source_timezone": "Asia/Ho_Chi_Minh", "clock_basis": "OBSERVED_SOURCE_LOCAL_DATE_V1", "index_revision": null
+      },
       "trial_ceiling": 4000,
       "optimizer_defaults": {
         "schema_version": "research.optimizer-defaults.v1",

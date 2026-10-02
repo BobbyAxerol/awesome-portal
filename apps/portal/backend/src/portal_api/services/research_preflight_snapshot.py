@@ -32,6 +32,7 @@ from portal_api.adapters.market_data import (
     MarketDataProvider,
     MarketDataQuery,
     PreparedMarketData,
+    VN_STOCK_DAILY_DATASET_ID,
     inferred_end_exclusive,
 )
 from portal_api.services.data_catalog import (
@@ -76,6 +77,9 @@ PREFLIGHT_SAFE_PROVENANCE_KEYS = frozenset(
         "release_tag",
         "dataset_release_id",
         "adapter_version",
+        "clock_basis", "source_timezone", "metadata_index_revision", "metadata_index_source_manifest_digest",
+        "metadata_index_as_of_utc_ms", "warmup_start_utc_ms", "warmup_semantics", "daily_timestamp_basis",
+        "session_quality_state", "session_quality_reason_code", "instrument_metadata_state", "instrument_metadata_reason_code",
     }
 )
 
@@ -421,6 +425,7 @@ def _three_window_topology(
     frame: pd.DataFrame,
     *,
     source_timezone: str,
+    verified_end_exclusive: pd.Timestamp | None = None,
 ) -> tuple[pd.Timestamp, pd.Timestamp, dict[str, object]]:
     windows = _require_object(requested.get("windows"), "windows")
     is_start, is_end = _interval(windows.get("is"), source_timezone=source_timezone, label="windows.is")
@@ -433,7 +438,11 @@ def _three_window_topology(
             "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID",
             "Three-window boundaries must be contiguous: IS→OOS→holdout.",
         )
-    if holdout_end > inferred_end_exclusive(frame.index):
+    # An observed-date tape has no published session cadence. The VN reader
+    # proves its half-open indexed query coverage; an empty weekend tail must
+    # not be reclassified as a missing bar by inferring a calendar from prices.
+    available_end = verified_end_exclusive if verified_end_exclusive is not None else inferred_end_exclusive(frame.index)
+    if holdout_end > available_end:
         raise ResearchPreflightSnapshotError(
             "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE",
             "The requested holdout end exceeds the available closed-bar source range.",
@@ -1059,6 +1068,16 @@ class ResearchPreflightSnapshotService:
                 "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE", "The selected historical dataset is unavailable."
             )
         source_timezone = descriptor.source_timezone or "UTC"
+        observed_vn = dataset_id == VN_STOCK_DAILY_DATASET_ID
+        if observed_vn:
+            from portal_api.domain.research_vn_observed_fixed_profile import validate_vn_observed_fixed_spec, vn_observed_fixed_enabled
+            try:
+                if not vn_observed_fixed_enabled() or warmup_bars != 300:
+                    raise ValueError("VN observed profile/warmup is not admitted")
+                validate_vn_observed_fixed_spec(dict(requested))
+            except ValueError as exc:
+                raise ResearchPreflightSnapshotError("RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+                    "The selected VN source requires its qualified fixed FPT profile.", gate="vn_observed_fixed_profile") from exc
         protocol = _require_text(requested.get("protocol"), "protocol", maximum=64)
         # First resolve logical boundaries. The source query gets exactly the
         # warmup lookback plus logical end -- no unbounded discovery scan.
@@ -1076,16 +1095,19 @@ class ResearchPreflightSnapshotService:
             )
         query_start = logical_start - (_timeframe_delta(timeframe) * warmup_bars)
         try:
-            market = self.provider.load(
-                MarketDataQuery(
+            query = MarketDataQuery(
                     dataset_id=dataset_id,
                     symbol=symbol,
                     timeframe=timeframe,
-                    start=query_start,
+                    start=logical_start if observed_vn else query_start,
                     end_exclusive=logical_end,
                     columns=PREFLIGHT_REQUIRED_COLUMNS,
                 )
-            )
+            if observed_vn:
+                market = self.provider.load_with_warmup(query, warmup_bars=warmup_bars)
+                query_start = pd.Timestamp(market.load_metadata["hydrated_start_utc_ms"], unit="ms", tz="UTC")
+            else:
+                market = self.provider.load(query)
         except (PortalDomainError, OSError, ValueError) as exc:
             raise ResearchPreflightSnapshotError(
                 "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE",
@@ -1129,7 +1151,8 @@ class ResearchPreflightSnapshotService:
             )
         if protocol == "three_window_decay":
             _, _, topology = _three_window_topology(
-                requested, market.frame, source_timezone=source_timezone
+                requested, market.frame, source_timezone=source_timezone,
+                verified_end_exclusive=pd.Timestamp(market.load_metadata["verified_end_exclusive_utc_ms"], unit="ms", tz="UTC") if observed_vn else None,
             )
         elif is_v2:
             _, _, topology = _engine_advanced_topology(
@@ -1217,7 +1240,7 @@ class ResearchPreflightSnapshotService:
                 frame=snapshot_frame,
                 family=_snapshot_family(market),
                 lineage=lineage,
-                expected_frequency=timeframe,
+                expected_frequency=None if observed_vn else timeframe,
             )
             snapshot_path = self.snapshots.snapshot_path(identity.snapshot_id) / "frame.parquet"
             snapshot_bytes = snapshot_path.stat().st_size
@@ -1279,6 +1302,7 @@ class ResearchPreflightSnapshotService:
             windows=scan_windows,
             max_gap_ratio=float(_snapshot_family(market).quality.max_gap_ratio),
         )
+        closed_bar_policy = "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1" if observed_vn else "CLOSED_BARS_ONLY"
         snapshot = {
             "snapshot_id": identity.snapshot_id,
             "snapshot_content_hash": identity.content_hash,
@@ -1295,17 +1319,17 @@ class ResearchPreflightSnapshotService:
             },
             "timezone": source_timezone,
             "calendar_policy": calendar_policy,
-            "closed_bar_policy": "CLOSED_BARS_ONLY",
+            "closed_bar_policy": closed_bar_policy,
             "columns": list(required_columns),
             "quality": {
                 "rows": quality.rows,
-                "gaps": quality.gaps,
+                "gaps": None if observed_vn else quality.gaps,
                 "duplicates": quality.duplicates,
-                "gap_ratio": quality.gap_ratio,
+                "gap_ratio": None if observed_vn else quality.gap_ratio,
                 "passed": quality.passed,
                 "reason_codes": list(quality.reason_codes),
                 "missing_bar_count": market.missing_bar_count,
-                "state": "SNAPSHOT_INTEGRITY_ONLY",
+                "state": "OBSERVED_TAPE_INTEGRITY_ONLY" if observed_vn else "SNAPSHOT_INTEGRITY_ONLY",
             },
             "provenance": _safe_provenance(market.load_metadata),
             # CG-P08-06. Both live in the snapshot document: the topology and
@@ -1332,7 +1356,7 @@ class ResearchPreflightSnapshotService:
                 "source_manifest_digest": _source_manifest_digest(market),
                 "timezone": source_timezone,
                 "calendar_policy": snapshot["calendar_policy"],
-                "closed_bar_policy": "CLOSED_BARS_ONLY",
+                "closed_bar_policy": closed_bar_policy,
                 "columns": list(required_columns),
                 "warmup_bars": warmup_bars,
                 "range_start_utc_ms": utc_milliseconds(query_start),
@@ -1367,8 +1391,17 @@ class ResearchPreflightSnapshotService:
             "range_end_exclusive_utc_ms": utc_milliseconds(logical_end),
             "timezone": source_timezone,
             "calendar_policy": snapshot["calendar_policy"],
-            "closed_bar_policy": "CLOSED_BARS_ONLY",
+            "closed_bar_policy": closed_bar_policy,
         }
+        if observed_vn:
+            provenance = {key: market.load_metadata[key] for key in (
+                "clock_basis", "source_timezone", "metadata_index_revision", "metadata_index_source_manifest_digest",
+                "metadata_index_as_of_utc_ms", "warmup_start_utc_ms")}
+            provenance["warmup_semantics"] = "LAST_N_OBSERVED_PREDECESSORS_V1"
+            dataset_binding["provenance"] = provenance
+            snapshot["provenance"].update(provenance)
+            effective_spec["data_binding"]["provenance"] = provenance
+            effective_digest = sha256_json(effective_spec)
         for label, value in (
             ("effective-spec", effective_spec),
             ("dataset-binding", dataset_binding),

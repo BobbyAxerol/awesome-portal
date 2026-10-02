@@ -206,6 +206,9 @@
       }
     },
     "schemas": {
+      "RegularSnapshotQuality": {"type":"object","additionalProperties":false,"required":["rows","gaps","duplicates","gap_ratio","passed","reason_codes","missing_bar_count","state"],"properties":{"rows":{"type":"integer","minimum":1},"gaps":{"type":"integer","minimum":0},"duplicates":{"type":"integer","minimum":0},"gap_ratio":{"type":"number","minimum":0},"passed":{"const":true},"reason_codes":{"type":"array","maxItems":16,"items":{"type":"string","maxLength":96}},"missing_bar_count":{"type":"integer","minimum":0},"state":{"const":"SNAPSHOT_INTEGRITY_ONLY"}}},
+      "ObservedTapeQuality": {"type":"object","additionalProperties":false,"required":["rows","gaps","duplicates","gap_ratio","passed","reason_codes","missing_bar_count","state"],"properties":{"rows":{"type":"integer","minimum":1},"gaps":{"type":"null"},"duplicates":{"const":0},"gap_ratio":{"type":"null"},"passed":{"const":true},"reason_codes":{"type":"array","maxItems":0},"missing_bar_count":{"type":"null"},"state":{"const":"OBSERVED_TAPE_INTEGRITY_ONLY"}}},
+      "VnObservedProvenance": {"type":"object","additionalProperties":false,"required":["clock_basis","source_timezone","metadata_index_revision","metadata_index_source_manifest_digest","metadata_index_as_of_utc_ms","warmup_semantics","warmup_start_utc_ms"],"properties":{"clock_basis":{"const":"OBSERVED_SOURCE_LOCAL_DATE_V1"},"source_timezone":{"const":"Asia/Ho_Chi_Minh"},"metadata_index_revision":{"type":"string","pattern":"^[0-9a-f]{64}$"},"metadata_index_source_manifest_digest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"metadata_index_as_of_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"warmup_semantics":{"const":"LAST_N_OBSERVED_PREDECESSORS_V1"},"warmup_start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991}}},
       "RequestedSpec": {
         "description": "P02 requested spec. v1 is the frozen P02 contract; v2 (CG-P02-02) adds rolling train width, temporal guards and causal Mode 1 inner folds on an advanced walk-forward. P08 validates every v2 field against the pinned engine; P10 runs neither v2 field yet.",
         "oneOf": [
@@ -299,167 +302,8 @@
           }
         ]
       },
-      "Quality": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "rows",
-          "gaps",
-          "duplicates",
-          "gap_ratio",
-          "passed",
-          "reason_codes",
-          "missing_bar_count",
-          "state"
-        ],
-        "properties": {
-          "rows": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "gaps": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "duplicates": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "gap_ratio": {
-            "type": "number",
-            "minimum": 0
-          },
-          "passed": {
-            "const": true
-          },
-          "reason_codes": {
-            "type": "array",
-            "maxItems": 16,
-            "items": {
-              "type": "string",
-              "maxLength": 96
-            }
-          },
-          "missing_bar_count": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "state": {
-            "const": "SNAPSHOT_INTEGRITY_ONLY"
-          }
-        }
-      },
-      "Snapshot": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "snapshot_id",
-          "snapshot_content_hash",
-          "market_content_hash",
-          "source_manifest_digest",
-          "row_count",
-          "byte_count",
-          "query",
-          "logical_range",
-          "warmup",
-          "timezone",
-          "calendar_policy",
-          "closed_bar_policy",
-          "columns",
-          "quality",
-          "provenance"
-        ],
-        "properties": {
-          "snapshot_id": {
-            "type": "string",
-            "pattern": "^dss_[0-9a-f]{32}$"
-          },
-          "snapshot_content_hash": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "market_content_hash": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "source_manifest_digest": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "row_count": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "byte_count": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "query": {
-            "$ref": "#/components/schemas/UtcRange"
-          },
-          "logical_range": {
-            "$ref": "#/components/schemas/UtcRange"
-          },
-          "warmup": {
-            "$ref": "#/components/schemas/Warmup"
-          },
-          "timezone": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "calendar_policy": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "closed_bar_policy": {
-            "const": "CLOSED_BARS_ONLY"
-          },
-          "columns": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 16,
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
-          },
-          "quality": {
-            "$ref": "#/components/schemas/Quality"
-          },
-          "provenance": {
-            "type": "object",
-            "propertyNames": {
-              "enum": [
-                "source_class",
-                "usage_scope",
-                "reader_distribution",
-                "reader_version",
-                "reader_wheel_sha256",
-                "loader_contract",
-                "manifest_digest",
-                "environment_id",
-                "release_commit",
-                "release_tag",
-                "dataset_release_id",
-                "adapter_version"
-              ]
-            },
-            "additionalProperties": {
-              "type": [
-                "string",
-                "number",
-                "boolean"
-              ]
-            }
-          },
-          "gap_scan": {
-            "$ref": "#/components/schemas/GapScan"
-          },
-          "holdout_seal": {
-            "$ref": "#/components/schemas/HoldoutSeal"
-          }
-        }
-      },
+      "Quality": {"oneOf":[{"$ref":"#/components/schemas/RegularSnapshotQuality"},{"$ref":"#/components/schemas/ObservedTapeQuality"}],"description":"Observed-tape integrity does not certify a trading calendar: expected session gaps remain unknown/null, not zero."},
+      "Snapshot": {"type":"object","additionalProperties":false,"required":["snapshot_id","snapshot_content_hash","market_content_hash","source_manifest_digest","row_count","byte_count","query","logical_range","warmup","timezone","calendar_policy","closed_bar_policy","columns","quality","provenance"],"properties":{"snapshot_id":{"type":"string","pattern":"^dss_[0-9a-f]{32}$"},"snapshot_content_hash":{"$ref":"#/components/schemas/Digest"},"market_content_hash":{"$ref":"#/components/schemas/Digest"},"source_manifest_digest":{"$ref":"#/components/schemas/Digest"},"row_count":{"type":"integer","minimum":1},"byte_count":{"type":"integer","minimum":1},"query":{"$ref":"#/components/schemas/UtcRange"},"logical_range":{"$ref":"#/components/schemas/UtcRange"},"warmup":{"$ref":"#/components/schemas/Warmup"},"timezone":{"type":"string","minLength":1,"maxLength":128},"calendar_policy":{"type":"string","minLength":1,"maxLength":128},"closed_bar_policy":{"enum":["CLOSED_BARS_ONLY","SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"]},"columns":{"type":"array","minItems":1,"maxItems":16,"items":{"type":"string","minLength":1,"maxLength":64}},"quality":{"$ref":"#/components/schemas/Quality"},"provenance":{"type":"object","propertyNames":{"enum":["source_class","usage_scope","reader_distribution","reader_version","reader_wheel_sha256","loader_contract","manifest_digest","environment_id","release_commit","release_tag","dataset_release_id","adapter_version","clock_basis","source_timezone","metadata_index_revision","metadata_index_source_manifest_digest","metadata_index_as_of_utc_ms","warmup_start_utc_ms","warmup_semantics","daily_timestamp_basis","session_quality_state","session_quality_reason_code","instrument_metadata_state","instrument_metadata_reason_code"]},"additionalProperties":{"type":["string","number","boolean"]}},"gap_scan":{"$ref":"#/components/schemas/GapScan"},"holdout_seal":{"$ref":"#/components/schemas/HoldoutSeal"}},"allOf":[{"if":{"properties":{"closed_bar_policy":{"const":"SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"}}},"then":{"properties":{"timezone":{"const":"Asia/Ho_Chi_Minh"},"quality":{"$ref":"#/components/schemas/ObservedTapeQuality"},"provenance":{"required":["clock_basis","source_timezone","metadata_index_revision","metadata_index_source_manifest_digest","metadata_index_as_of_utc_ms","warmup_semantics","warmup_start_utc_ms"],"properties":{"clock_basis":{"const":"OBSERVED_SOURCE_LOCAL_DATE_V1"},"source_timezone":{"const":"Asia/Ho_Chi_Minh"},"metadata_index_revision":{"type":"string","pattern":"^[0-9a-f]{64}$"},"metadata_index_source_manifest_digest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"metadata_index_as_of_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"warmup_semantics":{"const":"LAST_N_OBSERVED_PREDECESSORS_V1"},"warmup_start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991}}}}},"else":{"properties":{"quality":{"$ref":"#/components/schemas/RegularSnapshotQuality"}}}}]},
       "Capability": {
         "type": "object",
         "additionalProperties": false,
@@ -795,75 +639,7 @@
           }
         ]
       },
-      "DatasetBinding": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "schema_version",
-          "snapshot_id",
-          "snapshot_content_hash",
-          "market_content_hash",
-          "source_manifest_digest",
-          "dataset_id",
-          "symbol",
-          "timeframe",
-          "range_start_utc_ms",
-          "range_end_exclusive_utc_ms",
-          "timezone",
-          "calendar_policy",
-          "closed_bar_policy"
-        ],
-        "properties": {
-          "schema_version": {
-            "const": "research.dataset-binding.v1"
-          },
-          "snapshot_id": {
-            "type": "string",
-            "pattern": "^dss_[0-9a-f]{32}$"
-          },
-          "snapshot_content_hash": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "market_content_hash": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "source_manifest_digest": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "dataset_id": {
-            "type": "string",
-            "maxLength": 191
-          },
-          "symbol": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "timeframe": {
-            "type": "string",
-            "maxLength": 191
-          },
-          "range_start_utc_ms": {
-            "$ref": "#/components/schemas/UtcMilliseconds"
-          },
-          "range_end_exclusive_utc_ms": {
-            "$ref": "#/components/schemas/UtcMilliseconds"
-          },
-          "timezone": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "calendar_policy": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "closed_bar_policy": {
-            "const": "CLOSED_BARS_ONLY"
-          }
-        }
-      },
+      "DatasetBinding": {"type":"object","additionalProperties":false,"required":["schema_version","snapshot_id","snapshot_content_hash","market_content_hash","source_manifest_digest","dataset_id","symbol","timeframe","range_start_utc_ms","range_end_exclusive_utc_ms","timezone","calendar_policy","closed_bar_policy"],"properties":{"schema_version":{"const":"research.dataset-binding.v1"},"snapshot_id":{"type":"string","pattern":"^dss_[0-9a-f]{32}$"},"snapshot_content_hash":{"$ref":"#/components/schemas/Digest"},"market_content_hash":{"$ref":"#/components/schemas/Digest"},"source_manifest_digest":{"$ref":"#/components/schemas/Digest"},"dataset_id":{"type":"string","maxLength":191},"symbol":{"type":"string","minLength":1,"maxLength":64},"timeframe":{"type":"string","maxLength":191},"range_start_utc_ms":{"$ref":"#/components/schemas/UtcMilliseconds"},"range_end_exclusive_utc_ms":{"$ref":"#/components/schemas/UtcMilliseconds"},"timezone":{"type":"string","minLength":1,"maxLength":128},"calendar_policy":{"type":"string","minLength":1,"maxLength":128},"closed_bar_policy":{"enum":["CLOSED_BARS_ONLY","SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"]},"provenance":{"$ref":"#/components/schemas/VnObservedProvenance"}},"allOf":[{"if":{"properties":{"closed_bar_policy":{"const":"SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"}}},"then":{"required":["provenance"],"properties":{"timezone":{"const":"Asia/Ho_Chi_Minh"},"dataset_id":{"const":"vn-stock-daily"},"symbol":{"const":"FPT"},"timeframe":{"const":"1d"}}},"else":{"not":{"required":["provenance"]}}}]},
       "ResourceEstimate": {
         "type": "object",
         "additionalProperties": false,
@@ -969,71 +745,7 @@
           }
         }
       },
-      "EffectiveDataBinding": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "snapshot_id",
-          "snapshot_content_hash",
-          "market_content_hash",
-          "source_manifest_digest",
-          "timezone",
-          "calendar_policy",
-          "closed_bar_policy",
-          "columns",
-          "warmup_bars",
-          "range_start_utc_ms",
-          "range_end_exclusive_utc_ms"
-        ],
-        "properties": {
-          "snapshot_id": {
-            "type": "string",
-            "pattern": "^dss_[0-9a-f]{32}$"
-          },
-          "snapshot_content_hash": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "market_content_hash": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "source_manifest_digest": {
-            "$ref": "#/components/schemas/Digest"
-          },
-          "timezone": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "calendar_policy": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "closed_bar_policy": {
-            "const": "CLOSED_BARS_ONLY"
-          },
-          "columns": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 16,
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
-          },
-          "warmup_bars": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "range_start_utc_ms": {
-            "$ref": "#/components/schemas/UtcMilliseconds"
-          },
-          "range_end_exclusive_utc_ms": {
-            "$ref": "#/components/schemas/UtcMilliseconds"
-          }
-        }
-      },
+      "EffectiveDataBinding": {"type":"object","additionalProperties":false,"required":["snapshot_id","snapshot_content_hash","market_content_hash","source_manifest_digest","timezone","calendar_policy","closed_bar_policy","columns","warmup_bars","range_start_utc_ms","range_end_exclusive_utc_ms"],"properties":{"snapshot_id":{"type":"string","pattern":"^dss_[0-9a-f]{32}$"},"snapshot_content_hash":{"$ref":"#/components/schemas/Digest"},"market_content_hash":{"$ref":"#/components/schemas/Digest"},"source_manifest_digest":{"$ref":"#/components/schemas/Digest"},"timezone":{"type":"string","minLength":1,"maxLength":128},"calendar_policy":{"type":"string","minLength":1,"maxLength":128},"closed_bar_policy":{"enum":["CLOSED_BARS_ONLY","SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"]},"columns":{"type":"array","minItems":1,"maxItems":16,"items":{"type":"string","minLength":1,"maxLength":64}},"warmup_bars":{"type":"integer","minimum":0},"range_start_utc_ms":{"$ref":"#/components/schemas/UtcMilliseconds"},"range_end_exclusive_utc_ms":{"$ref":"#/components/schemas/UtcMilliseconds"},"provenance":{"$ref":"#/components/schemas/VnObservedProvenance"}},"allOf":[{"if":{"properties":{"closed_bar_policy":{"const":"SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"}}},"then":{"required":["provenance"],"properties":{"timezone":{"const":"Asia/Ho_Chi_Minh"}}},"else":{"not":{"required":["provenance"]}}}]},
       "Optimization": {
         "type": "object",
         "additionalProperties": false,

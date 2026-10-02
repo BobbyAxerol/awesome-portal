@@ -487,15 +487,22 @@ export const ResearchEvidenceDatasetCoverageSchema = z.object({
   gaps: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
   missing_bar_count: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
   columns: z.array(z.string().min(1).max(64)).max(16),
+  /** An observed tape has no authoritative expected-session/calendar census. */
+  quality_scope: z.literal("OBSERVED_TAPE_INTEGRITY_ONLY").optional(),
 }).strict().superRefine((value, context) => {
   const present = value.availability.state === "AVAILABLE";
   const values = [value.range, value.range_scope, value.rows, value.gaps, value.missing_bar_count];
-  if (present && (values.some((item) => item === null) || value.columns.length === 0 ||
-      value.range!.start_utc_ms >= value.range!.end_exclusive_utc_ms || value.availability.reason_code !== null)) {
+  const observed = value.quality_scope === "OBSERVED_TAPE_INTEGRITY_ONLY";
+  const bounded = value.range !== null && value.range_scope !== null && value.rows !== null;
+  const calendarCountsMatchScope = observed
+    ? value.gaps === null && value.missing_bar_count === null
+    : value.gaps !== null && value.missing_bar_count !== null;
+  if (present && (!bounded || !calendarCountsMatchScope || value.columns.length === 0 ||
+      (value.range !== null && value.range.start_utc_ms >= value.range.end_exclusive_utc_ms) || value.availability.reason_code !== null)) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "available coverage requires complete bounded metadata" });
   }
   if (!present && (values.some((item) => item !== null) || value.columns.length !== 0 ||
-      value.availability.reason_code === null)) {
+      value.availability.reason_code === null || value.quality_scope !== undefined)) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "unpublished coverage cannot carry values" });
   }
 });

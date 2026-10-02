@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from portal_api.domain.research_imported_alpha_profile import IMPORTED_ALPHA_PROFILE_DIGEST, IMPORTED_ALPHA_PROFILE_ID
+from portal_api.domain.research_vn_observed_fixed_profile import VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST
 from portal_api.services.research_artifacts import ArtifactFence
 from portal_api.services.research_fixed_replay import (
     BATCH_ROWS, MAX_BYTES, canonical_rows_json, iter_parquet_rows, validate_source_metadata, verify_normalized_rows,
@@ -19,7 +20,8 @@ _P04_PROFILE = "p04.fixed-qualification.v1"
 
 def fixed_replay_profile(research: Any) -> tuple[str, str | None]:
     profile_id, profile_digest = research.execution_profile_id, research.execution_profile_digest
-    if (profile_id, profile_digest) not in {(_P04_PROFILE, None), (IMPORTED_ALPHA_PROFILE_ID, IMPORTED_ALPHA_PROFILE_DIGEST)}:
+    if (profile_id, profile_digest) not in {(_P04_PROFILE, None), (IMPORTED_ALPHA_PROFILE_ID, IMPORTED_ALPHA_PROFILE_DIGEST),
+            (VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST)}:
         raise ValueError("fixed replay requires an admitted digest-pinned fixed profile")
     return profile_id, profile_digest
 

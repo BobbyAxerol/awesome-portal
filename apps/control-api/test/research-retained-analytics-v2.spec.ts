@@ -36,4 +36,28 @@ describe("D-AN-01 sealed analytics v2", () => {
       expect(ResearchAllTimeDistributionsSchema.safeParse(malformed).success).toBe(false);
     }
   });
+
+  it("keeps observed VN bars and source UTC-daily returns as independently bounded populations", () => {
+    // Population-only fixture from the real VN terminal: economic values,
+    // source digests and timestamps remain the existing synthetic fixture.
+    const distributions = JSON.parse(readFileSync(resolve(path, "../research-all-time-distributions.valid.json"), "utf8"));
+    distributions.oos_observation_count = 107;
+    distributions.monthly_returns.source_observation_count = 107;
+    distributions.monthly_returns.values[0].observation_count = 50;
+    distributions.monthly_returns.values[1].observation_count = 57;
+    distributions.return_distribution.source_observation_count = 152;
+    distributions.return_distribution.values.forEach((bucket: { count: string }, index: number) => {
+      bucket.count = index === 0 ? "1" : index === 11 ? "151" : "0";
+    });
+    expect(ResearchAllTimeDistributionsSchema.safeParse(distributions).success).toBe(true);
+    for (const mutate of [
+      (block: typeof distributions) => { block.return_distribution.values[11].count = "152"; },
+      (block: typeof distributions) => { block.monthly_returns.source_observation_count = 152; },
+      (block: typeof distributions) => { block.return_distribution.source_observation_count = 2_000_001; },
+      (block: typeof distributions) => { block.distribution_definition = "OBSERVED_VN_SESSION_RETURNS"; },
+    ]) {
+      const malformed = structuredClone(distributions); mutate(malformed);
+      expect(ResearchAllTimeDistributionsSchema.safeParse(malformed).success).toBe(false);
+    }
+  });
 });

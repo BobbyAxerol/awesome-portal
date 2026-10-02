@@ -82,7 +82,7 @@ def test_nonqualified_namespace_schema_or_bounds_refuse_before_any_source_read(o
     assert loader.calls == []
 
 
-@pytest.mark.parametrize("fault", ["invalid-date", "intraday", "wrong-symbol", "duplicate", "bad-ohlc", "missing-column", "empty"])
+@pytest.mark.parametrize("fault", ["invalid-date", "intraday", "wrong-symbol", "duplicate", "unordered", "bad-ohlc", "missing-column", "empty"])
 def test_source_identity_and_ohlcv_are_strict_not_repaired_or_filled(fault):
     frame = source_frame()
     if fault == "invalid-date":
@@ -94,6 +94,8 @@ def test_source_identity_and_ohlcv_are_strict_not_repaired_or_filled(fault):
         frame.loc[0, "symbol"] = "VN30F1M"
     if fault == "duplicate":
         frame.loc[1, "time"] = frame.loc[0, "time"]
+    if fault == "unordered":
+        frame = frame.iloc[[1, 0, 2, 3]]
     if fault == "bad-ohlc":
         frame.loc[0, "high"] = 50.
     if fault == "missing-column":
@@ -102,6 +104,19 @@ def test_source_identity_and_ohlcv_are_strict_not_repaired_or_filled(fault):
         frame = frame.iloc[:0]
     provider = VnStockDailyQualificationProvider(loader_factory=lambda: Loader(frame))
     with pytest.raises((DataSchemaError, DatasetNotFoundError)):
+        provider.load(query())
+
+
+@pytest.mark.parametrize("indices", [[1, 0, 2, 3], [0, 1, 1, 3]])
+def test_source_chronology_refuses_before_normalization_can_sort_or_coalesce(indices, monkeypatch):
+    from portal_api.adapters import market_data
+
+    def forbidden_normalization(_frame):
+        raise AssertionError("invalid source chronology must fail before generic normalization")
+
+    monkeypatch.setattr(market_data, "normalize_market_frame", forbidden_normalization)
+    provider = VnStockDailyQualificationProvider(loader_factory=lambda: Loader(source_frame().iloc[indices]))
+    with pytest.raises(DataSchemaError, match="source dates are unordered or duplicated"):
         provider.load(query())
 
 

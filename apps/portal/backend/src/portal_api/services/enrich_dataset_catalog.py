@@ -22,7 +22,10 @@ from typing import Mapping
 
 import pandas as pd
 
-from portal_api.adapters.market_data import HistoricalMarketDataProvider, MarketDataQuery
+from portal_api.adapters.market_data import (
+    HistoricalMarketDataProvider, MarketDataQuery, VN_STOCK_DAILY_DATASET_ID,
+    VnStockDailyQualificationProvider,
+)
 from portal_api.domain.errors import DatasetNotFoundError
 from portal_api.services.research_dataset_catalog import build_research_dataset_catalog
 
@@ -68,6 +71,10 @@ def build_bar_index(provider, *, dataset_id: str, symbol: str, timeframe: str,
     Use exactly aligned edges. Do not ceil an arbitrary start to imply data was
     available earlier. Actual clock is captured by the operator once per revision.
     """
+    if dataset_id == VN_STOCK_DAILY_DATASET_ID:
+        from portal_api.services.research_observed_daily_index import build_observed_daily_index
+        return build_observed_daily_index(provider, dataset_id=dataset_id, symbol=symbol,
+            timeframe=timeframe, start_ms=start_ms, end_ms=end_ms, as_of_ms=as_of_ms)
     step = timeframe_ms(timeframe)
     if not _SYMBOL.fullmatch(symbol) or start_ms < 0 or start_ms >= end_ms or as_of_ms < 0:
         raise DatasetIndexError("DATASET_INDEX_BOUNDS_INVALID")
@@ -114,6 +121,9 @@ def build_bar_index(provider, *, dataset_id: str, symbol: str, timeframe: str,
 
 
 def bar_summary(index: Mapping[str, object]) -> dict[str, object]:
+    if index.get("clock_basis") == "OBSERVED_SOURCE_LOCAL_DATE_V1":
+        from portal_api.services.research_observed_daily_index import observed_bar_summary
+        return observed_bar_summary(index)
     step = int(index["resolution_ms"])
     runs = index["runs"]
     assert isinstance(runs, list)
@@ -198,7 +208,7 @@ DAY_MS = 86_400_000
 def validate_document(value: object) -> dict:
     if not isinstance(value, dict) or set(value) != {"schema_version", "source_manifest_digest", "as_of_utc_ms", "entries"}:
         raise DatasetIndexError("DATASET_INDEX_DOCUMENT_REJECTED")
-    if value["schema_version"] != "research.dataset-index.v1" or not _DIGEST.fullmatch(str(value["source_manifest_digest"])):
+    if value["schema_version"] not in {"research.dataset-index.v1", "research.dataset-index.v2"} or not _DIGEST.fullmatch(str(value["source_manifest_digest"])):
         raise DatasetIndexError("DATASET_INDEX_DOCUMENT_REJECTED")
     clock = value["as_of_utc_ms"]
     if type(clock) is not int or clock < 0 or not isinstance(value["entries"], list) or len(value["entries"]) > MAX_SYMBOLS * MAX_TIMEFRAMES:
@@ -210,6 +220,18 @@ def validate_document(value: object) -> dict:
         if not _SYMBOL.fullmatch(str(row["symbol"])) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,190}", str(row["dataset_id"])):
             raise DatasetIndexError("DATASET_INDEX_DOCUMENT_REJECTED")
         index = row["index"]
+        if row["dataset_id"] == VN_STOCK_DAILY_DATASET_ID:
+            if value["schema_version"] != "research.dataset-index.v2":
+                raise DatasetIndexError("DATASET_INDEX_OBSERVED_DATE_REQUIRES_V2")
+            from portal_api.services.research_observed_daily_index import validate_observed_daily_index
+            validate_observed_daily_index(index)
+            if index["as_of_utc_ms"] != clock:
+                raise DatasetIndexError("DATASET_INDEX_DOCUMENT_REJECTED")
+            key = (row["dataset_id"], row["symbol"], index["timeframe"])
+            if key in keys:
+                raise DatasetIndexError("DATASET_INDEX_DOCUMENT_REJECTED")
+            keys.add(key)
+            continue
         if not isinstance(index, dict) or set(index) != {"timeframe", "resolution_ms", "start_utc_ms", "end_exclusive_utc_ms", "as_of_utc_ms", "duplicate_bar_count", "runs"}:
             raise DatasetIndexError("DATASET_INDEX_DOCUMENT_REJECTED")
         step = timeframe_ms(str(index["timeframe"]))
@@ -249,7 +271,13 @@ class DatasetIndexStore:
                  engine_catalog, gateway=None) -> dict:
         # Metadata-only, <=64 entries/30s. Scope/identity checks remain outside
         # this cache; no authorization, HMD prices or preflight tokens are kept.
-        key = hashlib.sha256(canonical([revision, requested, warmup_bars])).hexdigest()
+        cache_inputs = [revision, requested, warmup_bars]
+        if requested.get("data", {}).get("dataset_id") == VN_STOCK_DAILY_DATASET_ID:
+            # The index is immutable but the release/profile qualification can
+            # be withdrawn independently. Neither flag changes nor source-pin
+            # refusal may keep a previously ready estimate in this cache.
+            cache_inputs.append(_vn_observed_qualification(engine_catalog))
+        key = hashlib.sha256(canonical(cache_inputs)).hexdigest()
         now = monotonic()
         cached = self._estimates.get(key)
         if cached is not None and now - cached[0] < 30:
@@ -359,6 +387,9 @@ def enrich_dataset_catalog(provider, store: DatasetIndexStore) -> dict[str, obje
 
 def earliest_start_with_warmup(index: dict, warmup_bars: int, step: int) -> int | None:
     """First indexed target bar preceded by the declared contiguous warmup."""
+    if index.get("clock_basis") == "OBSERVED_SOURCE_LOCAL_DATE_V1":
+        from portal_api.services.research_observed_daily_index import observed_earliest_start_with_warmup
+        return observed_earliest_start_with_warmup(index, warmup_bars)
     return next((first + warmup_bars * step for first, last in index["runs"]
         if (last - first) // step >= warmup_bars), None)
 
@@ -368,6 +399,14 @@ def window_metadata(document: dict | None, *, dataset_id: str, symbol: str, time
     if start_ms >= end_ms or start_ms < 0 or not _SYMBOL.fullmatch(symbol) or not 0 <= warmup_bars <= 100_000:
         raise DatasetIndexError("DATASET_WINDOW_QUERY_INVALID")
     step = timeframe_ms(timeframe)
+    if dataset_id == VN_STOCK_DAILY_DATASET_ID:
+        from portal_api.services.research_observed_daily_index import observed_window_metadata
+        index = next((row["index"] for row in document["entries"]
+            if (row["dataset_id"], row["symbol"], row["index"]["timeframe"])
+            == (dataset_id, symbol, timeframe.lower())), None) if document else None
+        if timeframe.lower() != "1d":
+            raise DatasetIndexError("DATASET_INTERVAL_INVALID")
+        return observed_window_metadata(index, start_ms=start_ms, end_ms=end_ms, warmup_bars=warmup_bars)
     if start_ms % step or end_ms % step:
         raise DatasetIndexError("DATASET_WINDOW_NOT_BAR_ALIGNED")
     index = next((row["index"] for row in document["entries"]
@@ -405,6 +444,14 @@ def window_metadata(document: dict | None, *, dataset_id: str, symbol: str, time
         "warmup_bars_required": warmup_bars, "warmup_bars_available_before_start": warmup}
 
 
+def _vn_observed_qualification(engine_catalog) -> dict | None:
+    try:
+        fact = engine_catalog.public_document().current_release.vn_observed_daily_qualification
+        return fact.model_dump(mode="json") if fact is not None else None
+    except (AttributeError, OSError, ValueError, RuntimeError):
+        return None
+
+
 def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars: int,
                          engine_catalog, gateway=None) -> dict:
     """DR-08: plan only from actual indexed timestamps, never OHLCV or a job.
@@ -430,6 +477,75 @@ def declaration_estimate(document: dict | None, requested: dict, *, warmup_bars:
         "scope": "INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION", "windows": windows,
         "planned_folds": absence, "earliest_start_utc_ms": None,
         "earliest_start_basis": "CONTIGUOUS_INDEXED_WARMUP_BARS_V1"}
+    # The index can qualify observed dates before the execution profile is
+    # admitted. Never publish a ready fold plan from a UTC/24-7 planner for VN.
+    if dataset == VN_STOCK_DAILY_DATASET_ID:
+        from portal_api.domain.research_vn_observed_fixed_profile import (
+            VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST,
+            validate_vn_observed_fixed_spec,
+        )
+        result["earliest_start_basis"] = "OBSERVED_INDEXED_WARMUP_BARS_V1"
+        # Measured window counts remain useful, while a UTC planner may not
+        # authorize the unqualified profile. Keep the existing strict window
+        # DTO free of BarMetadata's additive basis/warmup disclosures.
+        spans = requested.get("windows") or {"span": requested["walk_forward"]}
+        for key, span in spans.items():
+            left = int(parse_source_instant(span["start"], source_timezone="Asia/Ho_Chi_Minh").value // 1_000_000)
+            right = int(parse_source_instant(span["end_exclusive"], source_timezone="Asia/Ho_Chi_Minh").value // 1_000_000)
+            metadata = window_metadata(document, dataset_id=dataset, symbol=symbol, timeframe=timeframe,
+                start_ms=left, end_ms=right, warmup_bars=warmup_bars if key.upper() in {"IS", "SPAN"} else 0)
+            window = {field: metadata[field] for field in ("availability", "reason_code", "bars", "first_bar_utc_ms",
+                "last_bar_utc_ms", "warmup_bars_required", "warmup_bars_available_before_start")}
+            if window["availability"] != "AVAILABLE":
+                for field in ("bars", "first_bar_utc_ms", "last_bar_utc_ms", "warmup_bars_available_before_start"):
+                    window[field] = None
+            windows.append({"window": key.upper(), "start_utc_ms": left, "end_exclusive_utc_ms": right, **window})
+        result["planned_folds"] = {**absence, "reason_code": "VN_DAILY_PORTAL_EXECUTION_NOT_QUALIFIED"}
+        index = next((row["index"] for row in document["entries"] if
+            (row["dataset_id"], row["symbol"], row["index"]["timeframe"]) == (dataset, symbol, timeframe)), None) if document else None
+        if index is None:
+            return result
+        result["earliest_start_utc_ms"] = earliest_start_with_warmup(index, warmup_bars, step)
+        fact = _vn_observed_qualification(engine_catalog)
+        expected = {"state": "AVAILABLE", "reason_code": None,
+            "profile_id": VN_OBSERVED_FIXED_PROFILE_ID, "profile_digest": VN_OBSERVED_FIXED_PROFILE_DIGEST,
+            "dataset_id": VN_STOCK_DAILY_DATASET_ID, "symbol": "FPT", "timeframe": "1d",
+            "source_timezone": "Asia/Ho_Chi_Minh", "clock_basis": "OBSERVED_SOURCE_LOCAL_DATE_V1",
+            "index_revision": hashlib.sha256(canonical(document)).hexdigest()}
+        if fact != expected or warmup_bars != 300:
+            return result
+        try:
+            validate_vn_observed_fixed_spec(requested)
+        except ValueError:
+            return result
+        incomplete = next((row for row in windows if row["availability"] != "AVAILABLE"), None)
+        if incomplete:
+            result["planned_folds"] = {**absence, "reason_code": incomplete["reason_code"]}
+            return result
+        left = min(row["start_utc_ms"] for row in windows)
+        right = max(row["end_exclusive_utc_ms"] for row in windows)
+        count = sum((min(last, right-step)-max(first, left))//step+1 for first, last in index["runs"]
+            if max(first, left) <= min(last, right-step))
+        if count > 100_000:
+            result["planned_folds"] = {**absence, "reason_code": "DECLARATION_TIMESTAMP_PLAN_BUDGET_EXCEEDED"}
+            return result
+        stamps = [stamp for first, last in index["runs"]
+            for stamp in range(max(first, left), min(last, right-step)+1, step)]
+        frame = pd.DataFrame(index=pd.DatetimeIndex(pd.to_datetime(stamps, unit="ms", utc=True)))
+        if len(frame.index) == 0:
+            result["planned_folds"] = {**absence, "reason_code": "HMD_INDEXED_RANGE_HAS_NO_BARS"}
+            return result
+        try:
+            _, _, topology = _three_window_topology(requested, frame, source_timezone="Asia/Ho_Chi_Minh",
+                verified_end_exclusive=pd.Timestamp(index["end_exclusive_utc_ms"], unit="ms", tz="UTC"))
+        except ResearchPreflightSnapshotError as exc:
+            result["planned_folds"] = {**absence, "reason_code": exc.code}
+            return result
+        folds = topology["folds"]
+        result["planned_folds"] = {**absence, "availability": "AVAILABLE", "reason_code": None,
+            "count": len(folds), "min_train_bars": min(f["train"]["bars"] for f in folds),
+            "min_oos_bars": min(f["outer_oos"]["bars"] for f in folds)}
+        return result
     spans = requested.get("windows") or {"span": requested["walk_forward"]}
     def instant(text):
         return int(parse_source_instant(text, source_timezone="UTC").value // 1_000_000)
@@ -496,6 +612,8 @@ def merge_index_documents(previous: dict, incoming: dict) -> dict:
     combined = {key(row): row for row in previous["entries"]}
     combined.update({key(row): row for row in incoming["entries"]})
     result = {**incoming, "entries": [combined[k] for k in sorted(combined)]}
+    if previous["schema_version"] == "research.dataset-index.v2":
+        result["schema_version"] = "research.dataset-index.v2"
     validate_document(result)
     return result
 
@@ -510,7 +628,61 @@ def main() -> None:
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--append", action="store_true", help="Preserve other indexed datasets at the same verified source clock")
     parser.add_argument("--partition-span", action="store_true", help="Clip queries to source-published month partitions; facts still come from actual bars")
+    parser.add_argument("--source-only-qualification", action="store_true",
+        help="Explicit VN observed-date index only; never grants P08/P10 execution admission")
+    parser.add_argument("--qualification-root", type=Path,
+        help="Explicit private index destination for VN source qualification; never an input data root")
     args = parser.parse_args()
+    if args.dataset_id == VN_STOCK_DAILY_DATASET_ID:
+        if not args.source_only_qualification or args.partition_span:
+            raise DatasetIndexError("VN_OBSERVED_INDEX_REQUIRES_SOURCE_ONLY_QUALIFICATION")
+        provider = VnStockDailyQualificationProvider()
+        symbols = sorted(set(args.symbol))
+        timeframes = sorted(set(x.lower() for x in args.timeframe))
+        if not symbols or len(symbols) > MAX_SYMBOLS or timeframes != ["1d"] or any(not _SYMBOL.fullmatch(x) for x in symbols):
+            raise DatasetIndexError("DATASET_INDEX_SELECTION_NOT_PUBLISHED")
+        def observed_instant(text: str) -> int:
+            value = pd.Timestamp(text)
+            if value.tzinfo is None:
+                raise DatasetIndexError("DATASET_INDEX_UTC_BOUND_REQUIRED")
+            nanoseconds = value.tz_convert("UTC").value
+            if nanoseconds % 1_000_000:
+                raise DatasetIndexError("DATASET_WINDOW_NOT_BAR_ALIGNED")
+            return int(nanoseconds // 1_000_000)
+        start, end = observed_instant(args.start), observed_instant(args.end_exclusive)
+        clock = int(datetime.now(timezone.utc).timestamp() * 1000)
+        if args.apply and args.qualification_root is None:
+            raise DatasetIndexError("VN_OBSERVED_INDEX_REQUIRES_PRIVATE_QUALIFICATION_ROOT")
+        if args.qualification_root is not None:
+            if not args.qualification_root.is_absolute() or args.qualification_root == Path("/"):
+                raise DatasetIndexError("VN_OBSERVED_INDEX_REQUIRES_PRIVATE_QUALIFICATION_ROOT")
+            for ancestor in (args.qualification_root, *args.qualification_root.parents):
+                if ancestor.is_symlink():
+                    raise DatasetIndexError("DATASET_INDEX_QUALIFICATION_ROOT_REJECTED")
+        store = DatasetIndexStore(args.qualification_root) if args.qualification_root is not None else DatasetIndexStore()
+        if args.apply and not args.append and (store.root / "current").exists():
+            raise DatasetIndexError("VN_OBSERVED_INDEX_EXISTING_REVISION_REQUIRES_APPEND")
+        previous = None
+        if args.append:
+            _, previous, reason = store.read(source_digest(provider))
+            if previous is None:
+                raise DatasetIndexError(reason or "DATASET_INDEX_APPEND_REQUIRES_VERIFIED_BASE")
+            clock = previous["as_of_utc_ms"]
+        entries = [{"dataset_id": args.dataset_id, "symbol": symbol,
+            "index": build_bar_index(provider, dataset_id=args.dataset_id, symbol=symbol,
+                timeframe="1d", start_ms=start, end_ms=end, as_of_ms=clock)} for symbol in symbols]
+        document = {"schema_version": "research.dataset-index.v2", "source_manifest_digest": source_digest(provider),
+            "as_of_utc_ms": clock, "entries": entries}
+        if previous is not None:
+            document = merge_index_documents(previous, document)
+        validate_document(document)
+        revision = store.publish(document) if args.apply else hashlib.sha256(canonical(document)).hexdigest()
+        print(json.dumps({"applied": args.apply, "catalog_revision": revision, "entries": len(entries),
+            "bars": sum(bar_summary(row["index"])["bar_count"] for row in entries), "bytes": len(canonical(document)),
+            "qualification_scope": "OBSERVED_INDEX_ONLY_NOT_EXECUTION_ADMISSION"}))
+        return
+    if args.source_only_qualification or args.qualification_root is not None:
+        raise DatasetIndexError("VN_OBSERVED_INDEX_REQUIRES_EXACT_SOURCE_NAMESPACE")
     provider = HistoricalMarketDataProvider()
     catalog = build_research_dataset_catalog(provider)
     dataset = next((row for row in catalog["datasets"] if row["dataset_id"] == args.dataset_id and row["availability"] == "available"), None)

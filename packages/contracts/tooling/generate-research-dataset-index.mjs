@@ -22,6 +22,15 @@ const coverage = obj({ timeframe: tf, resolution_seconds: { ...count, minimum: 1
   bar_count: count, expected_bar_count: count, missing_ratio: nullable({ type: "string", pattern: "^0\\.\\d{12}$" }),
   gap_count: count, largest_gap_seconds: ms, duplicate_bar_count: count, coverage_scope: { const: "INDEXED_RANGE" },
   indexed_start_utc_ms: ms, indexed_end_exclusive_utc_ms: ms, closed_bar_policy: { const: "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1" } });
+// Observed local-date coverage is not an exchange calendar or session close.
+// Keep the existing UTC-grid variant strict rather than nullable-widening it.
+const observedCoverage = obj({ ...structuredClone(coverage.properties), timeframe: {const:"1d"},
+  resolution_seconds:{const:86400}, last_closed_bar_end_utc_ms:{type:"null"},
+  expected_bar_count:{type:"null"}, missing_ratio:{type:"null"}, gap_count:{type:"null"}, largest_gap_seconds:{type:"null"},
+  clock_basis:{const:"OBSERVED_SOURCE_LOCAL_DATE_V1"}, source_timezone:{const:"Asia/Ho_Chi_Minh"},
+  closed_bar_policy:{const:"SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1"},
+  calendar_availability:obj({state:{const:"NOT_PUBLISHED"},reason_code:{const:"VN_SESSION_CALENDAR_NOT_PUBLISHED"}}),
+});
 const legacy = structuredClone(v1.components.schemas.DatasetCatalog.properties.datasets.items);
 const indexedSymbol = structuredClone(legacy.properties.symbols.properties.items.items);
 Object.assign(indexedSymbol.properties, { coverage_by_timeframe: { type: "array", items: ref("Coverage"), maxItems: 16 },
@@ -33,6 +42,11 @@ Object.assign(legacy.properties, { catalog_revision: nullable(digest), as_of_utc
   timeframes: { type: "array", maxItems: 16, items: obj({ timeframe: tf, resolution_seconds: { ...count, minimum: 1 },
     availability: { enum: ["available", "unavailable"] }, reason_code: nullable(reason) }) } });
 legacy.required.push("catalog_revision", "as_of_utc_ms", "asset_class", "asset_class_availability");
+const sourceCoverage = items => ({type:"object",properties:{symbols:{type:"object",properties:{items:{type:"array",items:{
+  type:"object",properties:{coverage_by_timeframe:{type:"array",items}}}}}}}});
+legacy.allOf = [{if:{properties:{dataset_id:{const:"vn-stock-daily"}},required:["dataset_id"]},
+  then:{...sourceCoverage(observedCoverage),properties:{...sourceCoverage(observedCoverage).properties,
+    source_timezone:{const:"Asia/Ho_Chi_Minh"}}},else:sourceCoverage(coverage)}];
 legacy.properties.symbols.properties.items.items = ref("IndexedSymbol");
 const metadata = obj({ schema_version: { const: "research.dataset-bar-metadata.v1" }, catalog_revision: nullable(digest), as_of_utc_ms: nullable(ms), dataset_id: id,
   symbol, timeframe: tf, start_utc_ms: ms, end_exclusive_utc_ms: ms, scope: { const: "INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION" },
@@ -40,9 +54,15 @@ const metadata = obj({ schema_version: { const: "research.dataset-bar-metadata.v
   warmup_bars_required: { ...count, maximum: 100_000 }, warmup_bars_available_before_start: nullable({ ...count, maximum: 100_000 }) });
 // Optional additive disclosures preserve compatibility with older responses.
 Object.assign(metadata.properties, {
-  verified_range: nullable(obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,basis:{const:"INDEXED_TARGET_BAR_RANGE_V1"}})),
+  verified_range: nullable(obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,basis:{enum:["INDEXED_TARGET_BAR_RANGE_V1","INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1"]}})),
   earliest_start_with_warmup_utc_ms: nullable(ms),
+  clock_basis:{const:"OBSERVED_SOURCE_LOCAL_DATE_V1"}, source_timezone:{const:"Asia/Ho_Chi_Minh"}, warmup_start_utc_ms:nullable(ms),
 });
+metadata.allOf = [{if:{properties:{dataset_id:{const:"vn-stock-daily"}},required:["dataset_id"]},
+  then:{required:["clock_basis","source_timezone","warmup_start_utc_ms"],properties:{timeframe:{const:"1d"},
+    verified_range:nullable(obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,basis:{const:"INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1"}}))}},
+  else:{not:{anyOf:[{required:["clock_basis"]},{required:["source_timezone"]},{required:["warmup_start_utc_ms"]}]},
+    properties:{verified_range:nullable(obj({start_utc_ms:ms,end_exclusive_utc_ms:ms,basis:{const:"INDEXED_TARGET_BAR_RANGE_V1"}}))}}}];
 const page = obj({ schema_version: { const: "research.dataset-symbols.v1" }, dataset_id: id, catalog_revision: digest, as_of_utc_ms: nullable(ms), availability: ref("Availability"),
   items: { type: "array", items: ref("IndexedSymbol"), maxItems: 200 }, total: nullable({ ...count, maximum: 256 }), next_cursor: nullable({ type: "string", maxLength: 4096 }) });
 const catalog = obj({ schema_version: { const: "research.dataset-catalog.v2" }, catalog_revision: nullable(digest), as_of_utc_ms: nullable(ms), index_availability: ref("Availability"),
@@ -54,7 +74,7 @@ const declarationMetadata = obj({schema_version:{const:"research.declaration-met
   scope:{const:"INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION"},windows:{type:"array",items:ref("WindowEstimate"),minItems:1,maxItems:3},
   planned_folds:obj({availability:{enum:["AVAILABLE","NOT_PUBLISHED"]},reason_code:nullable(reason),count:nullable({type:"integer",minimum:1,maximum:128}),
     basis:{const:"P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1"},min_train_bars:nullable(count),min_oos_bars:nullable(count)}),
-  earliest_start_utc_ms:nullable(ms),earliest_start_basis:{const:"CONTIGUOUS_INDEXED_WARMUP_BARS_V1"} });
+  earliest_start_utc_ms:nullable(ms),earliest_start_basis:{enum:["CONTIGUOUS_INDEXED_WARMUP_BARS_V1","OBSERVED_INDEXED_WARMUP_BARS_V1"]} });
 const condition = obj({key:{type:"string",pattern:"^[a-z][a-z0-9_.]{0,63}$"},state:{enum:["PASS","FAIL","NOT_PUBLISHED"]},reason_code:nullable(reason),
   observed:nullable({type:"string",maxLength:200}),required:{type:"string",maxLength:200}});
 const estimate = obj({schema_version:{const:"research.declaration-estimate.v1"},metadata:ref("DeclarationMetadata"),profile_id:nullable(id),
@@ -67,7 +87,7 @@ const operation = (operationId, response, parameters) => ({ get: { operationId, 
   responses: { "200": { description: "Named metadata response; absence remains typed", content: { "application/json": { schema: ref(response) } } },
     ...Object.fromEntries([400,401,403,404,502,503].map(status => [status, { description: "Typed refusal; never a market-data fallback", content: { "application/json": { schema: ref("Problem") } } }])) } } });
 const doc = { openapi: "3.1.0", info: { title: "Research indexed data declaration", version: "1.0.0",
-  description: "Explicit operator-built immutable index. Fixed UTC timestamps/exact counts over declared indexed ranges only; not instrument authority, constituent-minute completeness, a preflight token, engine admission or sealed-holdout values. GET does not build/scan HMD. V1 remains unchanged." },
+  description: "Explicit operator-built immutable index. Fixed UTC bars or explicitly typed observed source-local date labels over declared indexed ranges only; no exchange-session completeness or daily session-close inference. Not instrument authority, constituent-minute completeness, a preflight token, engine admission or sealed-holdout values. GET does not build/scan HMD. Dataset catalog V1 remains unchanged." },
   paths: {
     "/api/v1/research/datasets/catalog-v2": operation("researchDatasetCatalogGetV2", "DatasetCatalogV2", [workspace]),
     "/api/v1/research/datasets/{dataset_id}/symbols": operation("researchDatasetSymbolsGetV1", "SymbolPage", [dataset, workspace,
@@ -80,7 +100,7 @@ const doc = { openapi: "3.1.0", info: { title: "Research indexed data declaratio
       summary:"Estimate indexed windows/folds and profile conditions without creating a preflight or run",
       parameters:[parameter("x-portal-csrf",{type:"string",minLength:1},true,"header")],
       requestBody:{required:true,content:{"application/json":{schema:ref("CreateRequest")}}}}},
-  }, components: { securitySchemes: v1.components.securitySchemes, parameters:v1.components.parameters, schemas: { ...v1.components.schemas, DatasetCatalogV2: catalog, IndexedSymbol: indexedSymbol, Coverage: coverage,
+  }, components: { securitySchemes: v1.components.securitySchemes, parameters:v1.components.parameters, schemas: { ...v1.components.schemas, DatasetCatalogV2: catalog, IndexedSymbol: indexedSymbol, Coverage: {oneOf:[coverage,observedCoverage]},
     Availability: availability, Instrument: instrument, SymbolPage: page, BarMetadata: metadata,
     WindowEstimate:windowEstimate,DeclarationMetadata:declarationMetadata,DeclarationCondition:condition,DeclarationEstimate:estimate,
     FieldPath: v1.components.schemas.FieldPath, Problem: metadataProblem } } };
@@ -143,5 +163,29 @@ for (const name of ["available","partial"]) {
   const path=new URL(`fixtures/research-declaration-estimate.v1.${name}.valid.json`,root), text=JSON.stringify(value,null,2)+"\n";
   if(check) {if(readFileSync(path,"utf8")!==text) throw new Error("Declaration fixture drift");}
   else writeFileSync(path,text);
+}
+const localMs = text => Date.parse(`${text}T00:00:00+07:00`);
+const observedExample = {timeframe:"1d",resolution_seconds:86400,availability:"AVAILABLE",reason_code:null,
+  origin:"PORTAL_DERIVED",as_of_utc_ms:localMs("2026-08-05"),first_bar_utc_ms:localMs("2026-07-30"),
+  last_bar_utc_ms:localMs("2026-08-04"),last_closed_bar_end_utc_ms:null,bar_count:4,expected_bar_count:null,
+  missing_ratio:null,gap_count:null,largest_gap_seconds:null,duplicate_bar_count:0,coverage_scope:"INDEXED_RANGE",
+  indexed_start_utc_ms:localMs("2026-07-30"),indexed_end_exclusive_utc_ms:localMs("2026-08-05"),
+  clock_basis:"OBSERVED_SOURCE_LOCAL_DATE_V1",source_timezone:"Asia/Ho_Chi_Minh",
+  closed_bar_policy:"SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1",
+  calendar_availability:{state:"NOT_PUBLISHED",reason_code:"VN_SESSION_CALENDAR_NOT_PUBLISHED"}};
+const observedMetadata = {schema_version:"research.dataset-bar-metadata.v1",catalog_revision:"c".repeat(64),
+  as_of_utc_ms:localMs("2026-08-05"),dataset_id:"vn-stock-daily",symbol:"FPT",timeframe:"1d",
+  start_utc_ms:localMs("2026-08-03"),end_exclusive_utc_ms:localMs("2026-08-05"),
+  scope:"INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION",availability:"AVAILABLE",reason_code:null,bars:2,
+  first_bar_utc_ms:localMs("2026-08-03"),last_bar_utc_ms:localMs("2026-08-04"),warmup_bars_required:2,
+  warmup_bars_available_before_start:2,verified_range:{start_utc_ms:localMs("2026-07-30"),
+    end_exclusive_utc_ms:localMs("2026-08-05"),basis:"INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1"},
+  earliest_start_with_warmup_utc_ms:localMs("2026-08-03"),clock_basis:"OBSERVED_SOURCE_LOCAL_DATE_V1",
+  source_timezone:"Asia/Ho_Chi_Minh",warmup_start_utc_ms:localMs("2026-07-30")};
+for (const [name,value] of [["research-dataset-coverage.observed-local-date.valid.json",observedExample],
+  ["research-dataset-bar-metadata.observed-local-date.valid.json",observedMetadata]]) {
+  const path=new URL(`fixtures/${name}`,root), next=JSON.stringify(value,null,2)+"\n";
+  if(check) {if(readFileSync(path,"utf8")!==next) throw new Error(`Observed-date fixture drift: ${name}`);}
+  else writeFileSync(path,next);
 }
 process.stdout.write(`Dataset index contract ${check ? "verified" : "generated"}.\n`);

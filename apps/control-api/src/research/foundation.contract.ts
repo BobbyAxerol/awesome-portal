@@ -366,6 +366,17 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
       estimated_cpu_seconds_ceiling: PreflightLimitSchema,
     }).strict().nullable().optional(),
     config_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable().optional(),
+    /** Reader/index fact only; this never replaces P08/P10 admission. */
+    vn_observed_daily_qualification: z.object({
+      state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]), reason_code: z.string().min(1).max(160).nullable(),
+      profile_id: z.literal("p10.vn-stock-daily-observed-fixed.v1"),
+      profile_digest: z.literal("acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e"),
+      dataset_id: z.literal("vn-stock-daily"), symbol: z.literal("FPT"), timeframe: z.literal("1d"),
+      source_timezone: z.literal("Asia/Ho_Chi_Minh"), clock_basis: z.literal("OBSERVED_SOURCE_LOCAL_DATE_V1"),
+      index_revision: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+    }).strict().refine(value => value.state === "AVAILABLE"
+      ? value.reason_code === null && value.index_revision !== null
+      : value.reason_code !== null && value.index_revision === null, "Source qualification must carry exact index truth.").optional(),
   }).strict(),
   historical_releases: z.array(z.object({
     release_id: Identifier, package: z.string().min(1).max(191), version: z.string().min(1).max(191),
@@ -387,7 +398,7 @@ export interface ResearchPortalAdmission {
   profiles: Array<{
     profile_id: string;
     state: "ENABLED" | "DISABLED";
-    reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | null;
+    reason: "PROFILE_FLAG_OFF" | "RUN_PRODUCER_OFF" | "ENGINE_RELEASE_MISMATCH" | "SOURCE_RELEASE_UNVERIFIED" | "SOURCE_PROFILE_UNQUALIFIED" | null;
     engine_release_id: string;
     execution_route: string;
     protocol: string;
@@ -410,6 +421,13 @@ export interface ResearchPortalAdmission {
     trial_scope?: "PER_OUTER_FOLD_STUDY";
     max_total_trials?: number;
     inner_constraints?: { fold_bounds: { min: number; max: number }; frequencies: string[]; window_modes: string[]; train_window_pattern: string };
+    dataset_id?: "vn-stock-daily";
+    symbol?: "FPT";
+    source_timezone?: "Asia/Ho_Chi_Minh";
+    clock_basis?: "OBSERVED_SOURCE_LOCAL_DATE_V1";
+    calendar_authority?: "NOT_PUBLISHED";
+    warmup_semantics?: "LAST_N_OBSERVED_PREDECESSORS_V1";
+    account_model?: "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE";
   }>;
   note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE";
 }

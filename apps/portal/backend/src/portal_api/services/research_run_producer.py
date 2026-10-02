@@ -45,6 +45,7 @@ from portal_api.domain.research_run_producer import ResearchRunProducerRequest, 
 from portal_api.domain.research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
 from portal_api.domain.research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST, causal_inner_controls
 from portal_api.domain.research_whatif_profile import WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
+from portal_api.domain.research_vn_observed_fixed_profile import vn_source_instant, vn_observed_fixed_enabled
 from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
 from portal_api.services.research_supervisor import (
@@ -432,6 +433,9 @@ class ResearchRunProducerExecutor:
 
         research = request.research
         imported = research.is_imported_alpha
+        vn_observed = research.is_vn_observed_fixed
+        if vn_observed and not vn_observed_fixed_enabled():
+            raise ResearchRunProducerError("VN observed fixed profile is not enabled", code="CAPABILITY_MISMATCH")
         progress("stage_started", {"stage": "S1"})
         try:
             identity, _ = self.snapshots.describe(research.snapshot_id)
@@ -453,18 +457,20 @@ class ResearchRunProducerExecutor:
         oos_window = windows["oos"]
         holdout_window = windows["holdout"]
         assert isinstance(is_window, dict) and isinstance(oos_window, dict) and isinstance(holdout_window, dict)
-        is_start = _utc_timestamp(is_window.get("start"), label="IS start")
-        oos_start = _utc_timestamp(oos_window.get("start"), label="OOS start")
-        oos_end = _utc_timestamp(oos_window.get("end_exclusive"), label="OOS end")
-        holdout_start = _utc_timestamp(holdout_window.get("start"), label="holdout start")
-        holdout_end = _utc_timestamp(holdout_window.get("end_exclusive"), label="holdout end")
+        def source_instant(value: object, label: str) -> pd.Timestamp:
+            return pd.Timestamp(vn_source_instant(value)) if vn_observed else _utc_timestamp(value, label=label)
+        is_start = source_instant(is_window.get("start"), "IS start")
+        oos_start = source_instant(oos_window.get("start"), "OOS start")
+        oos_end = source_instant(oos_window.get("end_exclusive"), "OOS end")
+        holdout_start = source_instant(holdout_window.get("start"), "holdout start")
+        holdout_end = source_instant(holdout_window.get("end_exclusive"), "holdout end")
         if is_start >= oos_start or oos_start >= oos_end or oos_end != holdout_start or holdout_start >= holdout_end:
             raise ResearchRunProducerError("P10 three-window chronology is invalid")
         from portal_api.services.research_enrich_analysis import declared_source_windows
         # Reuse the immutable declaration, normalized by the same UTC parser
         # as the tape. Bounds disclose no holdout rows or evaluated account.
         source_windows = declared_source_windows({kind: {
-            edge: _utc_timestamp(windows[kind].get(edge), label=f"{kind} {edge}").isoformat()
+            edge: source_instant(windows[kind].get(edge), f"{kind} {edge}").isoformat()
             for edge in ("start", "end_exclusive")
         } for kind in ("is", "oos", "holdout")})
 
@@ -493,6 +499,12 @@ class ResearchRunProducerExecutor:
             # end (the sealed holdout boundary).
             if tape_counts.total_bars < 2 or tape_counts.is_bars < 1 or tape_counts.outer_oos_bars < 1:
                 raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded IS/OOS tape")
+            if vn_observed:
+                observation = research.source_observation
+                assert observation is not None
+                if tape_counts.warmup_bars != 300 or tape_counts.warmup_start is None \
+                        or int(tape_counts.warmup_start.value // 1_000_000) != observation.warmup_start_utc_ms:
+                    raise ResearchRunProducerError("VN observed snapshot does not retain the exact 300 predecessor warmup")
             os.chmod(tape_path, 0o600)
             if imported:
                 if self.imported_source_client is None:
@@ -543,6 +555,9 @@ class ResearchRunProducerExecutor:
                     oos_start_utc_ms=int(oos_start.value // 1_000_000),
                     is_start_utc_ms=int(is_start.value // 1_000_000),
                     source_windows=source_windows,
+                    **({"execution_profile_id": research.execution_profile_id,
+                        "execution_profile_digest": research.execution_profile_digest,
+                        "source_observation": research.source_observation.model_dump(mode="json")} if vn_observed else {}),
                 )
             # P10 has one server-installed fixed qualification, not a generic
             # optimizer.  S2 therefore records preparation of that exact one
@@ -639,6 +654,11 @@ class ResearchRunProducerExecutor:
         # values and immutable public digests, but never persist the opaque
         # preflight capability, worker/job/lease fence, snapshot locator/hash
         # or work digest where a future artifact reader could expose them.
+        provenance = ({"execution_profile_id": research.execution_profile_id,
+            "execution_profile_digest": research.execution_profile_digest,
+            "source_observation": research.source_observation.model_dump(mode="json"),
+            "account_model": "GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE", "calendar_authority": "NOT_PUBLISHED"}
+            if vn_observed else {})
         public_config = {
             "schema_version": "research.p17.imported-run-config.v1" if imported else "research.p10.run-config.v1",
             "run_id": request.run_id,
@@ -659,6 +679,7 @@ class ResearchRunProducerExecutor:
             } if imported else {"p04_parameters": research.p04_parameters}),
             "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
         }
+        public_config.update(provenance)
         request_path = engine_directory / "config" / "request.json"
         request_path.write_text(
             json.dumps(canonicalize(public_config), sort_keys=True, indent=2) + "\n",
@@ -695,6 +716,7 @@ class ResearchRunProducerExecutor:
                 "enforced_limits": child.enforced_limits,
             },
         }
+        receipt_document.update(provenance)
         split_source = self._p14_split_source(
             request=request,
             imported_source_digest=child.imported_source_digest,
@@ -1079,7 +1101,7 @@ class ResearchRunProducerExecutor:
                     "child_input_state": "EXPOSED_TO_CHILD_TAPE",
                     "evaluation_state": (
                         "IMPORTED_ALPHA_OBSERVED_AFTER_FIXED_PROFILE"
-                        if imported else "P04_OBSERVED_AFTER_FIXED_PROFILE"
+                        if imported else "VN_OBSERVED_AFTER_FIXED_PROFILE" if research.is_vn_observed_fixed else "P04_OBSERVED_AFTER_FIXED_PROFILE"
                     ),
                 },
                 "holdout": {

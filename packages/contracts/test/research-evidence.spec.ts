@@ -73,5 +73,10 @@ describe("P13 published Research Evidence Flow contract", () => {
       columns: ["open", "high", "low", "close", "volume"],
     });
     expect(readFileSync(generatedPath, "utf8")).toContain("DatasetCoverage");
+    expect(coverage.properties.quality_scope).toMatchObject({ const: "OBSERVED_TAPE_INTEGRITY_ONLY" });
+    expect(coverage.required).not.toContain("quality_scope");
+    const observed = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-evidence.dataset-coverage-observed.valid.json"), "utf8"));
+    expect(observed).toMatchObject({ availability: { state: "AVAILABLE" },
+      quality_scope: "OBSERVED_TAPE_INTEGRITY_ONLY", gaps: null, missing_bar_count: null });
   });
 });

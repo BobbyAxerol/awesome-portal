@@ -42,8 +42,12 @@ export const ResearchAllTimeDistributionsSchema = z.object({
     && monthly.total_period_count === monthly.values.length + monthly.omitted_transport_period_count
     && (monthly.sampling === "FULL") === (monthly.omitted_transport_period_count === 0)
     && histogram.emitted_point_count === histogram.values.length
-    && histogram.source_observation_count <= block.oos_observation_count
     && Buffer.byteLength(JSON.stringify(block), "utf8") <= 16_384;
+  // Independent grains: observed equity/tape bars versus QuantBT's declared
+  // UTC-daily return population. An irregular VN tape can have 107 observed
+  // bars and 152 calendar-day returns. The source verifies one finite return
+  // per OOS UTC day; never infer venue sessions or discard its weekend zeros.
+  // Both populations retain their own Count bound and exact histogram sum.
   for (const series of [monthly, histogram]) {
     valid &&= (series.state === "AVAILABLE") === (series.values.length > 0)
       && (series.state === "AVAILABLE") === (series.reason_code === null);

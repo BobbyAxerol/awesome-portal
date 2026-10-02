@@ -10,6 +10,7 @@ raw candle row, credential or generic Python entrypoint.
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import re
 from datetime import UTC, datetime
@@ -38,6 +39,10 @@ from .research_imported_alpha_profile import (
 from .research_delta_wfo_v2_profile import DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST, temporal_controls
 from .research_delta_causal_inner_profile import DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST, DELTA_CAUSAL_INNER_PROFILE, causal_inner_controls
 from .research_whatif_profile import WHATIF_MAX_EVALUATIONS, WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
+from .research_vn_observed_fixed_profile import (
+    VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST,
+    validate_vn_observed_fixed_spec, vn_source_instant, vn_observed_fixed_profile,
+)
 
 
 _IDENTIFIER = r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
@@ -90,6 +95,20 @@ class WhatIfJob(PortalModel):
         return self
 
 
+class VnSourceObservation(PortalModel):
+    """Private, immutable observed-date metadata; not calendar/venue authority."""
+    dataset_id: Literal["vn-stock-daily"]
+    symbol: Literal["FPT"]
+    timeframe: Literal["1d"]
+    clock_basis: Literal["OBSERVED_SOURCE_LOCAL_DATE_V1"]
+    source_timezone: Literal["Asia/Ho_Chi_Minh"]
+    metadata_index_revision: str = Field(pattern=_DIGEST)
+    metadata_index_source_manifest_digest: str = Field(pattern=_DIGEST)
+    metadata_index_as_of_utc_ms: int = Field(strict=True, ge=0, le=8_640_000_000_000_000)
+    warmup_semantics: Literal["LAST_N_OBSERVED_PREDECESSORS_V1"]
+    warmup_start_utc_ms: int = Field(strict=True, ge=0, le=8_640_000_000_000_000)
+
+
 class ResearchRunProducerEnvelope(PortalModel):
     """The server-owned P08/P10 immutable facts needed by the worker."""
 
@@ -115,7 +134,7 @@ class ResearchRunProducerEnvelope(PortalModel):
     # durable request, its spec digest and the child receipt stay byte-equal.
     execution_profile_id: Literal[
         "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1", "p10.delta-signal-notional-wfo.v2", "p16.delta-whatif-grid.v1",
-        "p17.imported-signal-notional.v1", "p10.delta-signal-notional-causal-inner.v1"
+        "p17.imported-signal-notional.v1", "p10.delta-signal-notional-causal-inner.v1", "p10.vn-stock-daily-observed-fixed.v1"
     ] = P04_FIXED_QUALIFICATION_PROFILE_ID
     execution_profile_digest: str | None = Field(default=None, pattern=_DIGEST)
     p04_parameters: Annotated[dict[str, int | float], Field(min_length=8, max_length=8)] | None = None
@@ -126,6 +145,11 @@ class ResearchRunProducerEnvelope(PortalModel):
     ] | None = None
     work_digest: str = Field(pattern=_DIGEST)
     whatif: WhatIfJob | None = None
+    source_observation: VnSourceObservation | None = None
+
+    @property
+    def is_vn_observed_fixed(self) -> bool:
+        return self.execution_profile_id == VN_OBSERVED_FIXED_PROFILE_ID
 
     @property
     def is_delta_wfo(self) -> bool:
@@ -149,6 +173,8 @@ class ResearchRunProducerEnvelope(PortalModel):
             data.pop("p04_parameters", None)
         if self.whatif is None:
             data.pop("whatif", None)
+        if self.source_observation is None:
+            data.pop("source_observation", None)
         if self.imported_source_digest is None:
             data.pop("imported_source_digest", None)
         if self.imported_entrypoint is None:
@@ -174,6 +200,36 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("requested_spec AlphaVersion does not match the immutable producer binding")
         if self.requested_spec.get("strategy_id") != self.alpha_id:
             raise ValueError("requested_spec strategy_id does not match the immutable Alpha identity")
+        if self.is_vn_observed_fixed:
+            profile = vn_observed_fixed_profile()
+            validate_vn_observed_fixed_spec(self.requested_spec)
+            if (self.execution_profile_digest != VN_OBSERVED_FIXED_PROFILE_DIGEST
+                    or self.execution_adapter_id != profile["adapter_id"]
+                    or self.adapter_contract_digest != profile["adapter_contract_digest"]
+                    or self.intent_kind != "NEW" or self.whatif is not None or self.source_observation is None
+                    or self.imported_source_digest is not None or self.imported_entrypoint is not None
+                    or self.imported_parameters is not None or self.p04_parameters != _P04_DELTA_FIXED_PARAMETERS
+                    or any(isinstance(value, bool) for value in (self.p04_parameters or {}).values())):
+                raise ValueError("VN observed fixed producer does not match its immutable installed pins")
+            if self.source_observation.warmup_start_utc_ms >= int(vn_source_instant(self.requested_spec["windows"]["is"]["start"]).timestamp() * 1000):
+                raise ValueError("VN observed warmup must precede declared IS")
+            if hashlib.sha256(encoded).hexdigest() != self.requested_spec_digest:
+                raise ValueError("VN observed requested spec digest does not match its retained bytes")
+            work = {"schema_version": "research.p10.vn-observed-fixed-work.v1",
+                "requested_spec_digest": self.requested_spec_digest, "effective_spec_digest": self.effective_spec_digest,
+                "dataset_binding_digest": self.dataset_binding_digest, "manifest_digest": self.manifest_digest,
+                "snapshot": {"snapshot_id": self.snapshot_id, "snapshot_content_hash": self.snapshot_content_hash},
+                "alpha": {"alpha_id": self.alpha_id, "alpha_version_id": self.alpha_version_id,
+                    "adapter_id": self.execution_adapter_id, "adapter_contract_digest": self.adapter_contract_digest,
+                    "fixed_parameters": self.p04_parameters},
+                "execution_profile": {"profile_id": self.execution_profile_id, "profile_digest": self.execution_profile_digest},
+                "source_observation": self.source_observation.model_dump(mode="json"),
+                "engine_release_id": self.requested_spec["client"]["engine_release_id"], "requested_spec": self.requested_spec}
+            if hashlib.sha256(json.dumps(work, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest() != self.work_digest:
+                raise ValueError("VN observed work digest does not match its immutable source/profile binding")
+            return self
+        if self.source_observation is not None:
+            raise ValueError("source observation metadata cannot enter another execution profile")
         if self.execution_profile_id == WHATIF_PROFILE_ID:
             # The what-if diagnostic re-runs its parent's exact WFO request:
             # same spec, same data, same seed; only its evaluations differ.

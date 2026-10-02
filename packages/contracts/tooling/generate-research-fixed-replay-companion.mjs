@@ -30,7 +30,8 @@ export function buildFixedReplayCompanionOpenApi() {
       description:"Exact immutable preflight requested market symbol, distinct from ENGINE_NATIVE_SYMBOL position labels such as DEFAULT."},source:ref("FixedReplaySource"),scope:{const:scope}});
   manifest.description="Immutable companion manifest bound to exact SEALED P05 artifact/revision/manifest, original admitted requested/effective/dataset digests and exact fixed/imported execution profile. Existing p04.fixed-qualification.v1 intentionally has a null profile digest. Private custody proofs and attempt/lease IDs are never public.";
   manifest.allOf=[{anyOf:[{properties:{execution_profile_id:{const:"p04.fixed-qualification.v1"},execution_profile_digest:{type:"null"}}},
-    {properties:{execution_profile_id:{const:"p17.imported-signal-notional.v1"},execution_profile_digest:{const:"f1ed5dbccdd90ca7dd35be2755f3b3b5f7e9a29b1641beb08bd0136783c0f298"}}}]}];
+    {properties:{execution_profile_id:{const:"p17.imported-signal-notional.v1"},execution_profile_digest:{const:"f1ed5dbccdd90ca7dd35be2755f3b3b5f7e9a29b1641beb08bd0136783c0f298"}}},
+    {properties:{execution_profile_id:{const:"p10.vn-stock-daily-observed-fixed.v1"},execution_profile_digest:{const:"acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e"}}}]}];
   const page=object({schema_version:{const:"research.fixed-replay-companion-page.v1"},run_id:id,
     availability:object({state:{enum:["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},reason_code:nullable({enum:[...absence,
       "FIXED_OOS_CUSTODY_NOT_RECORDED","FIXED_OOS_RETENTION_NOT_FINALIZED","EXECUTION_PROFILE_NOT_FIXED"]})}),

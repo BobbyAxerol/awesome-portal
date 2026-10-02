@@ -331,6 +331,7 @@
       }
     },
     "schemas": {
+      "VnObservedDailyQualification": {"type":"object","additionalProperties":false,"required":["state","reason_code","profile_id","profile_digest","dataset_id","symbol","timeframe","source_timezone","clock_basis","index_revision"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED"]},"reason_code":{"enum":["VN_OBSERVED_PROFILE_NOT_QUALIFIED",null]},"profile_id":{"const":"p10.vn-stock-daily-observed-fixed.v1"},"profile_digest":{"const":"acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e"},"dataset_id":{"const":"vn-stock-daily"},"symbol":{"const":"FPT"},"timeframe":{"const":"1d"},"source_timezone":{"const":"Asia/Ho_Chi_Minh"},"clock_basis":{"const":"OBSERVED_SOURCE_LOCAL_DATE_V1"},"index_revision":{"anyOf":[{"type":"string","pattern":"^[0-9a-f]{64}$"},{"type":"null"}]}},"description":"Private provider/index qualification projected as metadata only. An enabled flag alone never qualifies a dataset. No VN exchange/session authority is inferred.","allOf":[{"if":{"properties":{"state":{"const":"AVAILABLE"}}},"then":{"properties":{"reason_code":{"type":"null"},"index_revision":{"type":"string","pattern":"^[0-9a-f]{64}$"}}},"else":{"properties":{"reason_code":{"const":"VN_OBSERVED_PROFILE_NOT_QUALIFIED"},"index_revision":{"type":"null"}}}}]},
       "WorkspaceId": {
         "type": "string",
         "minLength": 1,
@@ -1901,114 +1902,7 @@
           }
         }
       },
-      "AtlasRelease": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "release_id",
-          "package",
-          "expected_version",
-          "verified",
-          "trial_ceiling",
-          "optimizer_defaults",
-          "submission_constraints"
-        ],
-        "properties": {
-          "release_id": {
-            "$ref": "#/components/schemas/Identifier"
-          },
-          "package": {
-            "type": "string",
-            "maxLength": 191
-          },
-          "expected_version": {
-            "type": "string",
-            "maxLength": 191
-          },
-          "installed_version": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 191
-          },
-          "native_package": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 191
-          },
-          "native_expected_version": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 191
-          },
-          "native_installed_version": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 191
-          },
-          "verified": {
-            "type": "boolean"
-          },
-          "detail": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 1024
-          },
-          "trial_ceiling": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100000
-          },
-          "optimizer_defaults": {
-            "$ref": "#/components/schemas/AtlasOptimizerDefaults"
-          },
-          "submission_constraints": {
-            "$ref": "#/components/schemas/AtlasSubmissionConstraints"
-          },
-          "config_digest": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "CG-P10-01. sha256 of the canonical browser-visible release configuration (release_id, trial_ceiling, optimizer_defaults, submission_constraints, walk_forward_options). A New Run form sends it unchanged as requested_spec.client.config_digest; the browser never computes it."
-          },
-          "walk_forward_options": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AtlasWalkForwardOptions"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed."
-          },
-          "preflight_limits": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AtlasPreflightLimits"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        }
-      },
+      "AtlasRelease": {"type":"object","additionalProperties":false,"required":["release_id","package","expected_version","verified","trial_ceiling","optimizer_defaults","submission_constraints"],"properties":{"release_id":{"$ref":"#/components/schemas/Identifier"},"package":{"type":"string","maxLength":191},"expected_version":{"type":"string","maxLength":191},"installed_version":{"type":["string","null"],"maxLength":191},"native_package":{"type":["string","null"],"maxLength":191},"native_expected_version":{"type":["string","null"],"maxLength":191},"native_installed_version":{"type":["string","null"],"maxLength":191},"verified":{"type":"boolean"},"detail":{"type":["string","null"],"maxLength":1024},"trial_ceiling":{"type":"integer","minimum":1,"maximum":100000},"optimizer_defaults":{"$ref":"#/components/schemas/AtlasOptimizerDefaults"},"submission_constraints":{"$ref":"#/components/schemas/AtlasSubmissionConstraints"},"config_digest":{"anyOf":[{"type":"string","pattern":"^[0-9a-f]{64}$"},{"type":"null"}],"description":"CG-P10-01. sha256 of the canonical browser-visible release configuration (release_id, trial_ceiling, optimizer_defaults, submission_constraints, walk_forward_options). A New Run form sends it unchanged as requested_spec.client.config_digest; the browser never computes it."},"walk_forward_options":{"anyOf":[{"$ref":"#/components/schemas/AtlasWalkForwardOptions"},{"type":"null"}],"description":"RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed."},"preflight_limits":{"anyOf":[{"$ref":"#/components/schemas/AtlasPreflightLimits"},{"type":"null"}]},"vn_observed_daily_qualification":{"$ref":"#/components/schemas/VnObservedDailyQualification"}}},
       "HistoricalRelease": {
         "type": "object",
         "additionalProperties": false,
@@ -2095,7 +1989,7 @@
           }
         }
       },
-      "PortalAdmission": {"type":"object","additionalProperties":false,"required":["schema_version","profiles","note"],"properties":{"schema_version":{"const":"research.portal-admission.v1"},"profiles":{"type":"array","minItems":2,"maxItems":3,"items":{"type":"object","additionalProperties":false,"required":["profile_id","state","reason","engine_release_id","execution_route","protocol","optimization_mode","optimization_schedule","timeframe","trial_count","random_seed","max_span_days","fold_bounds","frequency","window_mode"],"properties":{"profile_id":{"type":"string","enum":["p04.fixed-qualification.v1","p10.delta-signal-notional-wfo.v1","p10.delta-signal-notional-wfo.v2"]},"state":{"enum":["ENABLED","DISABLED"]},"reason":{"enum":["PROFILE_FLAG_OFF","RUN_PRODUCER_OFF","ENGINE_RELEASE_MISMATCH","SOURCE_RELEASE_UNVERIFIED",null]},"engine_release_id":{"$ref":"#/components/schemas/Identifier"},"execution_route":{"type":"string"},"protocol":{"type":"string"},"optimization_mode":{"type":"string"},"optimization_schedule":{"type":"string"},"timeframe":{"type":"string"},"trial_count":{"type":"object","additionalProperties":false,"required":["min","max"],"properties":{"min":{"type":"integer","minimum":1,"maximum":400},"max":{"type":"integer","minimum":1,"maximum":400}}},"random_seed":{"type":["integer","null"]},"requested_spec_versions":{"type":"array","minItems":1,"maxItems":2,"items":{"enum":["research.requested-spec.v1","research.requested-spec.v2"]}},"frequencies":{"type":"array","maxItems":6,"items":{"enum":["single","weekly","monthly","quarterly","semi_yearly","yearly"]}},"window_modes":{"type":"array","maxItems":2,"items":{"enum":["expanding","rolling"]}},"seed_policy":{"enum":["LOCKED","FORBIDDEN"]},"trial_default":{"type":"integer","minimum":1,"maximum":400},"early_stopping_policy":{"const":"FORBIDDEN"},"inner_validation":{"enum":["NOT_ADMITTED_GLOBAL_RETENTION_ONLY","REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY"]},"max_span_days":{"type":["integer","null"],"minimum":1},"fold_bounds":{"oneOf":[{"type":"object","additionalProperties":false,"required":["min","max"],"properties":{"min":{"type":"integer","minimum":1},"max":{"type":"integer","minimum":1}}},{"type":"null"}]},"frequency":{"type":["string","null"]},"window_mode":{"type":["string","null"]},"trial_scope":{"const":"PER_OUTER_FOLD_STUDY"},"max_total_trials":{"type":"integer","minimum":1,"maximum":48},"inner_constraints":{"type":"object","additionalProperties":false,"required":["fold_bounds","frequencies","window_modes","train_window_pattern"],"properties":{"fold_bounds":{"type":"object","additionalProperties":false,"required":["min","max"],"properties":{"min":{"type":"integer","minimum":2,"maximum":16},"max":{"type":"integer","minimum":2,"maximum":16}}},"frequencies":{"type":"array","minItems":1,"maxItems":3,"items":{"enum":["weekly","monthly","quarterly"]}},"window_modes":{"type":"array","minItems":1,"maxItems":2,"items":{"enum":["expanding","rolling"]}},"train_window_pattern":{"type":"string","maxLength":64}}}}}},"note":{"const":"PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE"}}},
+      "PortalAdmission": {"type":"object","additionalProperties":false,"required":["schema_version","profiles","note"],"properties":{"schema_version":{"const":"research.portal-admission.v1"},"profiles":{"type":"array","minItems":2,"maxItems":5,"items":{"type":"object","additionalProperties":false,"required":["profile_id","state","reason","engine_release_id","execution_route","protocol","optimization_mode","optimization_schedule","timeframe","trial_count","random_seed","max_span_days","fold_bounds","frequency","window_mode"],"properties":{"profile_id":{"type":"string","enum":["p04.fixed-qualification.v1","p10.delta-signal-notional-wfo.v1","p10.delta-signal-notional-wfo.v2","p10.delta-signal-notional-causal-inner.v1","p10.vn-stock-daily-observed-fixed.v1"]},"state":{"enum":["ENABLED","DISABLED"]},"reason":{"enum":["PROFILE_FLAG_OFF","RUN_PRODUCER_OFF","ENGINE_RELEASE_MISMATCH","SOURCE_RELEASE_UNVERIFIED",null,"SOURCE_PROFILE_UNQUALIFIED"]},"engine_release_id":{"$ref":"#/components/schemas/Identifier"},"execution_route":{"type":"string"},"protocol":{"type":"string"},"optimization_mode":{"type":"string"},"optimization_schedule":{"type":"string"},"timeframe":{"type":"string"},"trial_count":{"type":"object","additionalProperties":false,"required":["min","max"],"properties":{"min":{"type":"integer","minimum":1,"maximum":400},"max":{"type":"integer","minimum":1,"maximum":400}}},"random_seed":{"type":["integer","null"]},"requested_spec_versions":{"type":"array","minItems":1,"maxItems":2,"items":{"enum":["research.requested-spec.v1","research.requested-spec.v2"]}},"frequencies":{"type":"array","maxItems":6,"items":{"enum":["single","weekly","monthly","quarterly","semi_yearly","yearly"]}},"window_modes":{"type":"array","maxItems":2,"items":{"enum":["expanding","rolling"]}},"seed_policy":{"enum":["LOCKED","FORBIDDEN"]},"trial_default":{"type":"integer","minimum":1,"maximum":400},"early_stopping_policy":{"const":"FORBIDDEN"},"inner_validation":{"enum":["NOT_ADMITTED_GLOBAL_RETENTION_ONLY","REQUIRED_ENGINE_NESTED_OUTER_IS_ONLY"]},"max_span_days":{"type":["integer","null"],"minimum":1},"fold_bounds":{"oneOf":[{"type":"object","additionalProperties":false,"required":["min","max"],"properties":{"min":{"type":"integer","minimum":1},"max":{"type":"integer","minimum":1}}},{"type":"null"}]},"frequency":{"type":["string","null"]},"window_mode":{"type":["string","null"]},"trial_scope":{"const":"PER_OUTER_FOLD_STUDY"},"max_total_trials":{"type":"integer","minimum":1,"maximum":48},"inner_constraints":{"type":"object","additionalProperties":false,"required":["fold_bounds","frequencies","window_modes","train_window_pattern"],"properties":{"fold_bounds":{"type":"object","additionalProperties":false,"required":["min","max"],"properties":{"min":{"type":"integer","minimum":2,"maximum":16},"max":{"type":"integer","minimum":2,"maximum":16}}},"frequencies":{"type":"array","minItems":1,"maxItems":3,"items":{"enum":["weekly","monthly","quarterly"]}},"window_modes":{"type":"array","minItems":1,"maxItems":2,"items":{"enum":["expanding","rolling"]}},"train_window_pattern":{"type":"string","maxLength":64}}},"dataset_id":{"const":"vn-stock-daily"},"symbol":{"const":"FPT"},"source_timezone":{"const":"Asia/Ho_Chi_Minh"},"clock_basis":{"const":"OBSERVED_SOURCE_LOCAL_DATE_V1"},"calendar_authority":{"const":"NOT_PUBLISHED"},"warmup_semantics":{"const":"LAST_N_OBSERVED_PREDECESSORS_V1"},"account_model":{"const":"GENERIC_SIGNAL_NOTIONAL_RESEARCH_NOT_VN_VENUE"}}},"allOf":[{"contains":{"type":"object","required":["profile_id"],"properties":{"profile_id":{"const":"p04.fixed-qualification.v1"}}},"minContains":0,"maxContains":1},{"contains":{"type":"object","required":["profile_id"],"properties":{"profile_id":{"const":"p10.delta-signal-notional-wfo.v1"}}},"minContains":0,"maxContains":1},{"contains":{"type":"object","required":["profile_id"],"properties":{"profile_id":{"const":"p10.delta-signal-notional-wfo.v2"}}},"minContains":0,"maxContains":1},{"contains":{"type":"object","required":["profile_id"],"properties":{"profile_id":{"const":"p10.delta-signal-notional-causal-inner.v1"}}},"minContains":0,"maxContains":1},{"contains":{"type":"object","required":["profile_id"],"properties":{"profile_id":{"const":"p10.vn-stock-daily-observed-fixed.v1"}}},"minContains":0,"maxContains":1}]},"note":{"const":"PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE"}}},
       "AtlasResponse": {
         "oneOf": [
           {

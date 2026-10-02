@@ -1,5 +1,6 @@
 import type { ControlApiConfig } from "../config";
-import type { ResearchPortalAdmission } from "./foundation.contract";
+import type { ResearchPortalAdmission, ResearchEngineAtlasPrivate } from "./foundation.contract";
+import { VN_OBSERVED_FIXED_PROFILE, VN_OBSERVED_FIXED_PROFILE_DIGEST } from "./vn-observed-fixed.profile";
 import { DELTA_WFO_V2_PROFILE } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import {
@@ -10,12 +11,13 @@ import {
 } from "./delta-wfo.profile";
 
 type AdmissionFlags = Pick<ControlApiConfig,
-  "FEATURE_RESEARCH_RUN_PRODUCER" | "FEATURE_RESEARCH_WFO_PROFILE" | "FEATURE_RESEARCH_PREVIEW_LONG_WFO">;
+  "FEATURE_RESEARCH_RUN_PRODUCER" | "FEATURE_RESEARCH_WFO_PROFILE" | "FEATURE_RESEARCH_PREVIEW_LONG_WFO">
+  & Partial<Pick<ControlApiConfig, "FEATURE_RESEARCH_VN_OBSERVED_PROFILE">>;
 
 /** Descriptive Portal facts, never an authorization grant or a replacement for preflight. */
 export function researchPortalAdmission(
   config: AdmissionFlags,
-  release: { release_id: string; verified: boolean },
+  release: Pick<ResearchEngineAtlasPrivate["current_release"], "release_id" | "verified" | "vn_observed_daily_qualification">,
 ): ResearchPortalAdmission {
   const sourceReason = release.release_id !== DELTA_WFO_PROFILE.engine_release_id
     ? "ENGINE_RELEASE_MISMATCH"
@@ -26,6 +28,14 @@ export function researchPortalAdmission(
   const fixedReason = sourceReason ?? producerReason;
   const wfoReason = fixedReason ?? (config.FEATURE_RESEARCH_WFO_PROFILE !== "true" ? "PROFILE_FLAG_OFF" : null);
   const previewLong = deltaWfoPreviewLongEnabled(config);
+  const vn = VN_OBSERVED_FIXED_PROFILE, qualification = release.vn_observed_daily_qualification;
+  const vnQualified = qualification?.state === "AVAILABLE" && qualification.reason_code === null
+    && qualification.profile_id === vn.profile_id && qualification.profile_digest === VN_OBSERVED_FIXED_PROFILE_DIGEST
+    && qualification.dataset_id === vn.dataset_id && qualification.symbol === vn.symbol && qualification.timeframe === vn.timeframe
+    && qualification.source_timezone === vn.source_timezone && qualification.clock_basis === vn.clock_basis
+    && typeof qualification.index_revision === "string" && /^[a-f0-9]{64}$/.test(qualification.index_revision);
+  const vnReason = fixedReason ?? (config.FEATURE_RESEARCH_VN_OBSERVED_PROFILE !== "true" ? "PROFILE_FLAG_OFF"
+    : !vnQualified ? "SOURCE_PROFILE_UNQUALIFIED" : null);
   return {
     schema_version: "research.portal-admission.v1",
     profiles: [
@@ -101,6 +111,18 @@ export function researchPortalAdmission(
           frequencies: [...DELTA_CAUSAL_INNER_PROFILE.inner_constraints.frequencies],
           window_modes: [...DELTA_CAUSAL_INNER_PROFILE.inner_constraints.window_modes],
           train_window_pattern: DELTA_CAUSAL_INNER_PROFILE.inner_constraints.train_window_pattern },
+      },
+      {
+        profile_id: vn.profile_id, state: vnReason ? "DISABLED" : "ENABLED", reason: vnReason,
+        engine_release_id: vn.engine_release_id, execution_route: vn.execution_route, protocol: vn.protocol,
+        optimization_mode: "mode_1_decay", optimization_schedule: "global", timeframe: vn.timeframe,
+        trial_count: { min: 1, max: 1 }, random_seed: null, max_span_days: vn.max_span_days,
+        fold_bounds: null, frequency: null, window_mode: null,
+        requested_spec_versions: ["research.requested-spec.v1"],
+        seed_policy: "FORBIDDEN", trial_default: 1, early_stopping_policy: "FORBIDDEN",
+        dataset_id: vn.dataset_id, symbol: vn.symbol, source_timezone: vn.source_timezone,
+        clock_basis: vn.clock_basis, calendar_authority: vn.calendar_authority,
+        warmup_semantics: vn.warmup_semantics, account_model: vn.account_model,
       },
     ],
     note: "PROFILE_FACTS_ONLY_PREFLIGHT_AND_RUN_ADMISSION_ARE_AUTHORITATIVE",

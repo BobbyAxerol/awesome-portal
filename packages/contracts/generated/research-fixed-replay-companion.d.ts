@@ -98,6 +98,11 @@ export interface components {
             execution_profile_id?: "p17.imported-signal-notional.v1";
             /** @constant */
             execution_profile_digest?: "f1ed5dbccdd90ca7dd35be2755f3b3b5f7e9a29b1641beb08bd0136783c0f298";
+        } | {
+            /** @constant */
+            execution_profile_id?: "p10.vn-stock-daily-observed-fixed.v1";
+            /** @constant */
+            execution_profile_digest?: "acb6566ebae23bcf77c77974136c9d083a95f0967260b1332530f600f5abe00e";
         });
         /** @description Complete source population is at most 20,000 retained rows; each response is at most 200 rows/1 MiB. Opaque renewable cursor binds workspace, actor, run, immutable revision and limit. Exact source_ordinal playhead is mutually exclusive with cursor. No rows or fake folds/orders/fills/trades/holdout are synthesized. NOT_RECORDED conservatively covers old or fresh unrecorded custody; it does not infer a historical run from absent parts. */
         FixedReplayPage: {

@@ -625,6 +625,8 @@ class VnStockDailyQualificationProvider:
             raise DataSchemaError("VN daily reader returned invalid source date labels") from exc
         if not (local_labels == local_labels.normalize()).all():
             raise DataSchemaError("VN daily reader labels are not source-local dates")
+        if not local_labels.is_monotonic_increasing or local_labels.has_duplicates:
+            raise DataSchemaError("VN daily reader source dates are unordered or duplicated")
         frame = raw.loc[:, REQUIRED_MARKET_COLUMNS].copy()
         frame.index = local_labels.tz_convert("UTC")
         normalized = normalize_market_frame(frame)
@@ -643,6 +645,251 @@ class VnStockDailyQualificationProvider:
                 "instrument_metadata_state": "NOT_PUBLISHED",
                 "instrument_metadata_reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
             })
+
+
+class VnStockDailyObservedProvider(VnStockDailyQualificationProvider):
+    """Explicit read adapter over a verified, immutable observed-date index.
+
+    This is not installed in the default provider factory and grants no P10
+    profile, exchange calendar, session-close or instrument authority. The
+    service supplies the already verified document/revision and installed
+    runtime; construction does not inspect a current pointer or source file.
+    The adapter defensively rechecks its own VN branch without importing a
+    service (services depend on adapters, never the reverse).
+    """
+
+    MAX_CHUNK_DAYS = 31
+    MAX_CHUNKS = 100
+    MAX_WARMUP_BARS = 100_000
+    DAY_MS = 86_400_000
+    OFFSET_MS = 7 * 3_600_000
+    CLOCK_BASIS = "OBSERVED_SOURCE_LOCAL_DATE_V1"
+
+    def __init__(self, *, index_document: Mapping[str, object], index_revision: str,
+                 runtime: HistoricalDataRuntime | None = None,
+                 loader_factory: Callable[[], object] | None = None) -> None:
+        if runtime is None and loader_factory is None:
+            raise DataSchemaError("VN observed adapter requires an explicit installed runtime")
+        super().__init__(runtime=runtime, loader_factory=loader_factory)
+        try:
+            raw = json.dumps(index_document, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+            document = json.loads(raw)
+        except (TypeError, ValueError) as exc:
+            raise DataSchemaError("VN_OBSERVED_INDEX_DOCUMENT_REJECTED") from exc
+        if len(raw) > 8 * 1024 * 1024 or not isinstance(index_revision, str) \
+                or not re.fullmatch(r"[0-9a-f]{64}", index_revision) \
+                or hashlib.sha256(raw).hexdigest() != index_revision:
+            raise DataSchemaError("VN_OBSERVED_INDEX_REVISION_REJECTED")
+        if not isinstance(document, dict) or set(document) != {
+                "schema_version", "source_manifest_digest", "as_of_utc_ms", "entries"} \
+                or document["schema_version"] != "research.dataset-index.v2" \
+                or not isinstance(document["source_manifest_digest"], str) \
+                or not re.fullmatch(r"[0-9a-f]{64}", document["source_manifest_digest"]):
+            raise DataSchemaError("VN_OBSERVED_INDEX_DOCUMENT_REJECTED")
+        clock = document["as_of_utc_ms"]
+        if not self._is_ms(clock) or not isinstance(document["entries"], list) \
+                or len(document["entries"]) > 256 * 16:
+            raise DataSchemaError("VN_OBSERVED_INDEX_DOCUMENT_REJECTED")
+        self._manifest_digest = document["source_manifest_digest"]
+        self._index_revision = index_revision
+        self._index_clock = clock
+        self._indexes: dict[str, dict] = {}
+        for entry in document["entries"]:
+            if not isinstance(entry, dict) or set(entry) != {"dataset_id", "symbol", "index"}:
+                raise DataSchemaError("VN_OBSERVED_INDEX_DOCUMENT_REJECTED")
+            if entry["dataset_id"] != VN_STOCK_DAILY_DATASET_ID:
+                continue  # Verified mixed-document namespaces do not grant a VN query.
+            symbol, index = entry["symbol"], entry["index"]
+            if not isinstance(symbol, str) or not _SYMBOL_PATTERN.fullmatch(symbol) \
+                    or symbol in self._indexes:
+                raise DataSchemaError("VN_OBSERVED_INDEX_DOCUMENT_REJECTED")
+            self._validate_index(index, clock)
+            self._indexes[symbol] = index
+        if not self._indexes:
+            raise DataSchemaError("VN_OBSERVED_INDEX_HAS_NO_VN_ENTRIES")
+        self._verify_runtime_pin()
+
+    @staticmethod
+    def _is_ms(value: object) -> bool:
+        return type(value) is int and 0 <= value <= 9_007_199_254_740_991
+
+    @classmethod
+    def _validate_index(cls, index: object, clock: int) -> None:
+        rejected = "VN_OBSERVED_INDEX_DOCUMENT_REJECTED"
+        fields = {"timeframe", "resolution_ms", "start_utc_ms", "end_exclusive_utc_ms", "as_of_utc_ms",
+                  "duplicate_bar_count", "runs", "clock_basis", "source_timezone"}
+        if not isinstance(index, dict) or set(index) != fields \
+                or index["timeframe"] != "1d" or index["clock_basis"] != cls.CLOCK_BASIS \
+                or index["source_timezone"] != VN_SOURCE_TIMEZONE \
+                or any(not cls._is_ms(index[key]) for key in
+                       ("resolution_ms", "start_utc_ms", "end_exclusive_utc_ms", "as_of_utc_ms")):
+            raise DataSchemaError(rejected)
+        start, end = index["start_utc_ms"], index["end_exclusive_utc_ms"]
+        if index["resolution_ms"] != cls.DAY_MS or index["as_of_utc_ms"] != clock \
+                or start >= end or end > clock or (start + cls.OFFSET_MS) % cls.DAY_MS \
+                or (end + cls.OFFSET_MS) % cls.DAY_MS \
+                or (end - start + cls.MAX_CHUNK_DAYS * cls.DAY_MS - 1) // (cls.MAX_CHUNK_DAYS * cls.DAY_MS) > cls.MAX_CHUNKS \
+                or type(index["duplicate_bar_count"]) is not int or index["duplicate_bar_count"] != 0 \
+                or not isinstance(index["runs"], list) or len(index["runs"]) > 50_000:
+            raise DataSchemaError(rejected)
+        previous, rows = start - 2 * cls.DAY_MS, 0
+        for pair in index["runs"]:
+            if not isinstance(pair, list) or len(pair) != 2 or any(not cls._is_ms(value) for value in pair):
+                raise DataSchemaError(rejected)
+            first, last = pair
+            if first < start or last + cls.DAY_MS > end or first > last \
+                    or (first + cls.OFFSET_MS) % cls.DAY_MS or (last + cls.OFFSET_MS) % cls.DAY_MS \
+                    or first <= previous + cls.DAY_MS:
+                raise DataSchemaError(rejected)
+            rows += (last - first) // cls.DAY_MS + 1
+            if rows > 10_000_000:
+                raise DataSchemaError(rejected)
+            previous = last
+
+    def _verify_runtime_pin(self) -> None:
+        if self._runtime is not None and self._runtime.manifest_digest != self._manifest_digest:
+            raise DataSchemaError("VN_OBSERVED_INDEX_SOURCE_REVISION_CHANGED")
+
+    def list_datasets(self) -> tuple[DatasetDescriptor, ...]:
+        self._verify_runtime_pin()
+        present = any(index["runs"] for index in self._indexes.values())
+        descriptor = super().list_datasets()[0]
+        return (replace(descriptor, availability="available" if present else "unavailable",
+                        unavailable_reason=None if present else "HMD_INDEXED_RANGE_HAS_NO_BARS"),)
+
+    def research_symbol_catalog(self, dataset_id: str) -> tuple[dict[str, object], ...]:
+        if dataset_id != VN_STOCK_DAILY_DATASET_ID:
+            raise DatasetNotFoundError("VN observed adapter admits only its exact source namespace")
+        self._verify_runtime_pin()
+        return tuple({"symbol": symbol, "contract_kind": None, "coverage": None}
+                     for symbol, index in sorted(self._indexes.items()) if index["runs"])
+
+    def qualification(self) -> dict[str, object]:
+        from portal_api.domain.research_vn_observed_fixed_profile import VN_OBSERVED_FIXED_PROFILE_ID, VN_OBSERVED_FIXED_PROFILE_DIGEST
+        self._verify_runtime_pin()
+        ready = bool(self._indexes.get("FPT", {}).get("runs"))
+        return {"state": "AVAILABLE" if ready else "NOT_PUBLISHED",
+            "reason_code": None if ready else "HMD_SYMBOL_INTERVAL_NOT_INDEXED",
+            "profile_id": VN_OBSERVED_FIXED_PROFILE_ID, "profile_digest": VN_OBSERVED_FIXED_PROFILE_DIGEST,
+            "dataset_id": VN_STOCK_DAILY_DATASET_ID, "symbol": "FPT", "timeframe": "1d",
+            "source_timezone": VN_SOURCE_TIMEZONE, "clock_basis": self.CLOCK_BASIS,
+            "index_revision": self._index_revision if ready else None}
+
+    @classmethod
+    def _timestamps(cls, index: dict, start: int, end: int) -> list[int]:
+        result: list[int] = []
+        for first, last in index["runs"]:
+            left, right = max(first, start), min(last, end - cls.DAY_MS)
+            if left <= right:
+                result.extend(range(left, right + cls.DAY_MS, cls.DAY_MS))
+        return result
+
+    def load(self, query: MarketDataQuery) -> PreparedMarketData:
+        return self.load_with_warmup(query, warmup_bars=0)
+
+    def load_with_warmup(self, query: MarketDataQuery, *, warmup_bars: int) -> PreparedMarketData:
+        """Hydrate exactly N observed predecessors and the requested half-open tape."""
+        self._verify_runtime_pin()
+        if type(warmup_bars) is not int or not 0 <= warmup_bars <= self.MAX_WARMUP_BARS:
+            raise DataSchemaError("VN_OBSERVED_WARMUP_INVALID")
+        if query.dataset_id != VN_STOCK_DAILY_DATASET_ID:
+            raise DatasetNotFoundError("VN observed adapter admits only its exact source namespace")
+        symbol = str(query.symbol or "").strip().upper()
+        if not _SYMBOL_PATTERN.fullmatch(symbol) or str(query.timeframe or "").strip().lower() != "1d" \
+                or tuple(query.columns) != REQUIRED_MARKET_COLUMNS:
+            raise DataSchemaError("VN_OBSERVED_QUERY_INVALID")
+        start, end = query.utc_bounds(required=True)
+        assert start is not None and end is not None
+        if start != start.tz_convert(VN_SOURCE_TIMEZONE).normalize().tz_convert("UTC") \
+                or end != end.tz_convert(VN_SOURCE_TIMEZONE).normalize().tz_convert("UTC"):
+            raise DateRangeError("VN observed query bounds must be source-local date midnights")
+        start_ms, end_ms = int(start.value // 1_000_000), int(end.value // 1_000_000)
+        index = self._indexes.get(symbol)
+        if index is None:
+            raise DatasetNotFoundError("HMD_SYMBOL_INTERVAL_NOT_INDEXED")
+        if start_ms < index["start_utc_ms"] or end_ms > index["end_exclusive_utc_ms"]:
+            raise DateRangeError("WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE")
+        predecessors = self._timestamps(index, index["start_utc_ms"], start_ms)
+        if len(predecessors) < warmup_bars:
+            raise DateRangeError("WINDOW_EXCEEDS_VERIFIED_METADATA_RANGE")
+        requested = self._timestamps(index, start_ms, end_ms)
+        if not requested:
+            raise DatasetNotFoundError("No observed VN daily bars in the requested local-date window")
+        warmup_start = predecessors[-warmup_bars] if warmup_bars else None
+        hydrated_start = warmup_start if warmup_start is not None else start_ms
+        expected = (predecessors[-warmup_bars:] if warmup_bars else []) + requested
+        frames: list[pd.DataFrame] = []
+        cursor, source_seconds, queries = hydrated_start, 0.0, 0
+        while cursor < end_ms:
+            boundary = min(end_ms, cursor + self.MAX_CHUNK_DAYS * self.DAY_MS)
+            queries += 1
+            if queries > self.MAX_CHUNKS:
+                raise DateRangeError("VN_OBSERVED_HYDRATION_CHUNK_BUDGET")
+            self._verify_runtime_pin()
+            expected_chunk = self._timestamps(index, cursor, boundary)
+            chunk_query = replace(query, symbol=symbol, timeframe="1d",
+                start=pd.Timestamp(cursor, unit="ms", tz="UTC"),
+                end_exclusive=pd.Timestamp(boundary, unit="ms", tz="UTC"))
+            try:
+                loaded = super().load(chunk_query)
+            except DatasetNotFoundError as exc:
+                if str(exc) != "No observed VN daily bars in the requested local-date window" or expected_chunk:
+                    raise DataSchemaError("VN_OBSERVED_SOURCE_INDEX_DISAGREEMENT") from exc
+            else:
+                actual = [int(value) for value in loaded.frame.index.as_unit("ms").asi8]
+                if actual != expected_chunk or len(actual) > self.MAX_CHUNK_DAYS:
+                    raise DataSchemaError("VN_OBSERVED_SOURCE_INDEX_DISAGREEMENT")
+                frames.append(loaded.frame)
+                source_seconds += float(loaded.load_metadata["load_seconds"])
+            self._verify_runtime_pin()
+            cursor = boundary
+        frame = pd.concat(frames)
+        actual = [int(value) for value in frame.index.as_unit("ms").asi8]
+        if actual != expected or not frame.index.is_monotonic_increasing or frame.index.has_duplicates:
+            raise DataSchemaError("VN_OBSERVED_SOURCE_INDEX_DISAGREEMENT")
+        return PreparedMarketData(frame=frame, descriptor=replace(self.list_datasets()[0], symbol=symbol),
+            content_hash=market_content_hash(frame), missing_bar_count=None, load_metadata={
+                **(self._runtime.provenance() if self._runtime else {"reader_version": "test-double",
+                    "loader_contract": HISTORICAL_LOADER_CONTRACT, "dataset_release_id": VN_STOCK_DAILY_RELEASE_DATASET_ID}),
+                "provider": "VnStockDaily", "source_resolution": "1d", "source_timezone": VN_SOURCE_TIMEZONE,
+                "requested_timeframe": "1d", "requested_start": start.isoformat(), "requested_end_exclusive": end.isoformat(),
+                "check_val": True, "load_seconds": round(source_seconds, 6), "source_queries": queries,
+                "qualification_scope": "OBSERVED_DAILY_ADAPTER_ONLY_NOT_P10_ADMISSION",
+                "daily_timestamp_basis": "SOURCE_LOCAL_DATE_LABEL_NOT_SESSION_CLOSE", "clock_basis": self.CLOCK_BASIS,
+                "metadata_index_revision": self._index_revision, "metadata_index_source_manifest_digest": self._manifest_digest,
+                "metadata_index_as_of_utc_ms": self._index_clock, "warmup_start_utc_ms": warmup_start,
+                "warmup_bars": warmup_bars, "analysis_bars": len(requested), "hydrated_start_utc_ms": hydrated_start,
+                "verified_end_exclusive_utc_ms": index["end_exclusive_utc_ms"],
+                "session_quality_state": "NOT_PUBLISHED", "session_quality_reason_code": "VN_SESSION_CALENDAR_NOT_PUBLISHED",
+                "instrument_metadata_state": "NOT_PUBLISHED", "instrument_metadata_reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+            })
+
+
+class ObservedVnCompositeProvider:
+    """Opt-in composition; unchanged crypto reads plus the pinned VN adapter."""
+    def __init__(self, primary: MarketDataProvider, observed: VnStockDailyObservedProvider):
+        self.primary, self.observed = primary, observed
+        self._runtime = getattr(primary, "_runtime", None)
+        if self._runtime is None or self._runtime.manifest_digest != observed._manifest_digest:
+            raise DataSchemaError("VN composite source revisions disagree")
+
+    def list_datasets(self) -> tuple[DatasetDescriptor, ...]:
+        return self.primary.list_datasets() + self.observed.list_datasets()
+
+    def load(self, query: MarketDataQuery) -> PreparedMarketData:
+        return (self.observed if query.dataset_id == VN_STOCK_DAILY_DATASET_ID else self.primary).load(query)
+
+    def load_with_warmup(self, query: MarketDataQuery, *, warmup_bars: int) -> PreparedMarketData:
+        if query.dataset_id != VN_STOCK_DAILY_DATASET_ID:
+            raise DataSchemaError("observed warmup is reserved for its exact VN source namespace")
+        return self.observed.load_with_warmup(query, warmup_bars=warmup_bars)
+
+    def research_symbol_catalog(self, dataset_id: str):
+        selected = self.observed if dataset_id == VN_STOCK_DAILY_DATASET_ID else self.primary
+        return selected.research_symbol_catalog(dataset_id)
+
+    def qualification(self) -> dict[str, object]:
+        return self.observed.qualification()
 
 
 class UnavailableHistoricalMarketDataProvider:

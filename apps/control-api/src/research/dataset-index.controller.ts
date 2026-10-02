@@ -38,11 +38,29 @@ export class ResearchDatasetIndexController {
   }
   private missing() { return new ResearchPreflightError("RESEARCH_PREFLIGHT_NOT_FOUND", "Dataset or workspace not found.", 404); }
   private invalid() { return new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "Invalid historical metadata query.", 400); }
-  private aligned(timeframe: string, bounds: Array<[string, number]>) {
+  private sourceInstant(text: string, datasetId: string): number {
+    if (datasetId === "vn-stock-daily") {
+      // A fractional daily-date boundary must be exactly zero, including
+      // digits below JS milliseconds; do not silently truncate source time.
+      const fraction = /\d{2}:\d{2}:\d{2}\.(\d+)/.exec(text)?.[1];
+      if (fraction !== undefined && /[1-9]/.test(fraction)) return Number.NaN;
+    }
+    if (datasetId === "vn-stock-daily" && /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?)?$/.test(text)) {
+      // Match P08's declared source-local interpretation, not the Node host
+      // timezone. Keep the requested JSON/digest itself unchanged.
+      const local = text.includes("T") || text.includes(" ") ? text.replace(" ", "T") : `${text}T00:00:00`;
+      return Date.parse(`${local}+07:00`);
+    }
+    return Date.parse(text);
+  }
+  private aligned(timeframe: string, bounds: Array<[string, number]>, datasetId?: string) {
     const parsed = /^([1-9][0-9]*)(min|m|h|d)$/i.exec(timeframe);
     if (!parsed) throw this.invalid();
     const step = Number(parsed[1]) * ({min:60_000,m:60_000,h:3_600_000,d:86_400_000}[parsed[2].toLowerCase()] ?? 0);
-    const failed = bounds.filter(([, value]) => Number.isFinite(value) && value % step !== 0).map(([key]) => key.split("."));
+    const observed = datasetId === "vn-stock-daily";
+    if (observed && timeframe !== "1d") throw this.invalid();
+    const offset = observed ? 7 * 3600000 : 0;
+    const failed = bounds.filter(([, value]) => !Number.isSafeInteger(value) || (value + offset) % step !== 0).map(([key]) => key.split("."));
     if (failed.length) throw new ResearchDatasetIndexError({gate:"window_alignment",field_paths:failed});
   }
 
@@ -58,7 +76,10 @@ export class ResearchDatasetIndexController {
     if (!parsed.success) throw this.invalid();
     const workspaceId = await this.scope(request, parsed.data.workspace_id), spec = parsed.data.requested_spec;
     const windows = spec.walk_forward ? {walk_forward:spec.walk_forward} : spec.windows ? Object.fromEntries(Object.entries(spec.windows).map(([key, value]) => [`windows.${key}`,value])) : {};
-    this.aligned(spec.data.timeframe, Object.entries(windows).flatMap(([key,value]) => [[`${key}.start`,Date.parse(value.start)], [`${key}.end_exclusive`,Date.parse(value.end_exclusive)]] as Array<[string,number]>));
+    this.aligned(spec.data.timeframe, Object.entries(windows).flatMap(([key,value]) => [
+      [`${key}.start`,this.sourceInstant(value.start,spec.data.dataset_id)],
+      [`${key}.end_exclusive`,this.sourceInstant(value.end_exclusive,spec.data.dataset_id)],
+    ] as Array<[string,number]>),spec.data.dataset_id);
     if (!spec.alpha_binding) throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "Bind an AlphaVersion to estimate its declaration.", 409);
     const binding = await this.metadataRepository.loadAlphaVersionDataContract({workspaceId, actorUserId: request.portalUser.userId},
       spec.alpha_binding.alpha_id, spec.alpha_binding.alpha_version_id);
@@ -130,7 +151,7 @@ export class ResearchDatasetIndexController {
     const query = BarMetadataQuery.safeParse(raw);
     if (!query.success || !DatasetId.safeParse(datasetId).success) throw this.invalid();
     await this.scope(request, query.data.workspace_id);
-    this.aligned(query.data.timeframe, [["start_utc_ms",query.data.start_utc_ms],["end_exclusive_utc_ms",query.data.end_exclusive_utc_ms]]);
+    this.aligned(query.data.timeframe, [["start_utc_ms",query.data.start_utc_ms],["end_exclusive_utc_ms",query.data.end_exclusive_utc_ms]],datasetId);
     const catalog = await this.client.catalog(request.portalUser);
     if (!catalog.datasets.some(row => row.dataset_id === datasetId)) throw this.missing();
     const { workspace_id, ...params } = query.data;
