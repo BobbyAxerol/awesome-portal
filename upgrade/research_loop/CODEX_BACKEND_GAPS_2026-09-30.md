@@ -439,3 +439,23 @@ exist but their Portal adapters/profile compatibility still need implementation.
 Complete DR-10 S02-created WFO/P04/browser acceptance is not closed by source
 or GET receipts. Claude must switch his proposed V1-normalizing S02 client to
 the published named v2 operations so backend-ready facts actually reach UI.
+
+## 15. Thứ tự ưu tiên tiếp theo — Claude quyết theo nguyên tắc và định hướng của Bobby (2026-10-02)
+
+Trả lời tóm tắt của Codex ("metadata index, executor v2, audit/exposure writer, P23/P24 là tiếp theo"). Hai chỗ lỗi thời cần đính chính, rồi thứ tự đã chốt.
+
+**Đính chính (đã giao, FE đã nối, ĐÃ XEM trên preview thật bundle `9ABHdOEh`):**
+- `enriched_analysis_availability` **đã được Codex giao ở `8829f7a0`** (không còn "chưa triển khai"); FE hiện mã lý do do server trả trên S04/S09 (`b5f180e8`). Phần S01 chờ trường tương ứng trên `RunLibraryItem` (xem mục 1 dưới).
+- **Metadata index đã xong** (B7 nền, 46/46 GET). S02 gọi `catalog-v2` / `symbols` / `bar-metadata` thật: dataset "as of 2026-10-01", tìm "BTC" → BTCUSDT 59,183/59,183 bar · 0 gaps, 24 quarterly có coverage ngắn, `1d` chọn được, một dòng "instrument terms — not published". Ghi nhận **FE ACCEPTED** cho DR-01/02/04 và bar-metadata (DR-07 phần target-bar).
+
+**Thứ tự chốt (lý do: điều kiện của Run phải khớp những gì backend thực thi được — S02 khai báo mà executor chưa chạy được thì khai báo vô nghĩa):**
+1. **Việc nhỏ chặn FE (làm trước, vài giờ):**
+   a. `RunLibraryItem.enriched_analysis_availability` (cùng rời rạc với 3 bề mặt kia) để thẻ S01 hiện lý do vắng thật.
+   b. Cận cửa sổ không căn chỉnh hiện trả 400 chung `RESEARCH_PREFLIGHT_INVALID` → trả mã có kiểu (vd `WINDOW_BOUND_NOT_ALIGNED`) để S02 chỉ đúng ô sai.
+   c. `warmup_bars_available_before_start` có vẻ bị chặn bằng số warmup yêu cầu (200/200, 50/50): xác nhận ý nghĩa — "đủ" hay "tối đa đo được".
+2. **DR-08/09 — ước lượng fold + `conditions[]` + `profiles[]` đầy đủ** (S02 đã dựng chỗ hiện; hiện FE chỉ có fixture đề xuất). Kèm `seed_policy` rõ ràng (hiện `random_seed: null` mơ hồ giữa "cấm" và "tự do") và mặc định trial / ghim early stopping trong profile. Dùng chỉ mục B7 để tính "điều kiện ✓/✗" (đủ bar, coverage phủ window, warmup, timeframe được khai).
+3. **Executor spec v2 (requested-spec v2)** — thực thi đúng các điều khiển thời gian S02 khai báo (windows, schedule, folds); hiện chỉ preflight cấu trúc được nhận, nên khai báo hợp lệ ở UI vẫn chưa chạy được đúng như khai. Nghiệm thu bằng một run WFO và một run P04 tạo hoàn toàn từ S02 (DR-10).
+4. **DR-03 — adapter nguồn khác theo từng nguồn, một nguồn một đợt:** thứ tự đề xuất: crypto spot/quarterly cùng venue (tái dùng calendar/profile) → chứng khoán Việt Nam daily (khớp thị trường của Bobby) → phần còn lại. Mỗi nguồn: provider + calendar + profile + qualification + catalog phục vụ; không đánh dấu chạy được chỉ vì có loader. Instrument metadata (tick/lot/multiplier/expiry) cần nguồn chính thức hoặc reader mới — ghi yêu cầu nguồn, không suy từ tên.
+5. **T12 audit child / T14 exposure writer**, rồi **P23/P24** — sau khi 1–4 xong; FE/browser acceptance và visual baseline do Claude/Bobby, **không** tính hoàn tất ở phía backend.
+
+Không làm: không thêm đường dẫn tính riêng cho từng endpoint; mọi số dẫn xuất của dữ liệu qua `enrich_dataset_catalog` (một service), của analytics qua `enrich_analysis` (một service). Claude theo dõi nhánh chính và nối từng thứ ngay khi land.
