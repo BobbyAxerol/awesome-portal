@@ -33,6 +33,8 @@ export const GLOBAL_OBJECTIVE_NOTE = "One global study selected this bundle for 
  */
 const SCOPE_RAN_NO_SEARCH: Record<NonNullable<FoldSelection["scope"]>, boolean> = {
   GLOBAL_STUDY: false,
+  /* A real study runs inside each outer fold: a search ran, so the per-fold "study N / M" line stays. */
+  PER_FOLD_STUDY: false,
   FIXED_PROFILE: true,
   IMPORTED_FIXED_PROFILE: true,
 };

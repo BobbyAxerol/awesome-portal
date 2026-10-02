@@ -1314,6 +1314,8 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
 
 const FOLD_VERDICT_WORDS: Record<FoldOrderingRow["verdict"], string> = {
   NOT_CAUSAL_GLOBAL_SELECTION: "not causal · global selection",
+  /* Per-fold study: the selection used only data before this fold's OOS. A data-time statement — never a claim about an engine freeze or first-OOS-read clock. */
+  CAUSAL_DATA_TIME_SELECTION: "causal · data-time selection",
   NOT_EVALUATED: "not evaluated",
   NOT_PUBLISHED: "not published",
 };
@@ -1411,7 +1413,7 @@ function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
               >
                 {BOUNDARY_WORDS[fold.data_time.boundary]}
               </span>
-              <span className="mono text-[9.5px]" style={{ color: "var(--warn)" }} title={fold.reason_code} data-verdict-words>
+              <span className="mono text-[9.5px]" style={{ color: "var(--warn)" }} title={fold.reason_code ?? undefined} data-verdict-words>
                 {FOLD_VERDICT_WORDS[fold.verdict]}
               </span>
               <span
