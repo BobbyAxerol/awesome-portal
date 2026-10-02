@@ -557,7 +557,7 @@ describe("legacy row — recorded status, legacy binding, protocol not mode (CG-
     view([LEGACY]);
     const pill = card(LEGACY.run_id).querySelector("[data-status]") as HTMLElement;
     // Pre-wave-C: a live "QUEUED" pill.
-    expect(pill.textContent).toBe("recorded QUEUED · not monitored");
+    expect(pill.textContent).toBe("recorded queued · not monitored");
     expect(pill.getAttribute("data-status-basis")).toBe("LEGACY_RECORDED_STATUS");
     expect(pill.getAttribute("role")).toBeNull();
     expect(pill.hasAttribute("data-motion")).toBe(false);

@@ -747,11 +747,20 @@ describe("P09-T07 — typed refusals keep their generated meaning", () => {
     renderAt("/research/quantbt/atlas", <EngineAtlasRoute />);
 
     await waitFor(() =>
-      expect(document.querySelector(`[data-research-state='${expected}']`)).toBeTruthy(),
+      expect(
+        document.querySelector(code === "RESEARCH_FOUNDATION_RELEASE_NOT_FOUND" ? "[data-atlas-not-found]" : `[data-research-state='${expected}']`),
+      ).toBeTruthy(),
     );
-    // The screen keeps its composition: heading, tabs and the panel frame.
     expect(screen.getByRole("heading", { name: "Engine Atlas" })).toBeTruthy();
-    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    if (code === "RESEARCH_FOUNDATION_RELEASE_NOT_FOUND") {
+      /* W1: an unknown release is one line and a way out; no tabs, no panel. */
+      expect(screen.getByText("Release not found.")).toBeTruthy();
+      expect(screen.queryAllByRole("tab")).toHaveLength(0);
+      expect(document.querySelector("[data-back-to-current]")?.getAttribute("href")).toBe("/research/quantbt/atlas");
+    } else {
+      // The screen keeps its composition: heading, tabs and the panel frame.
+      expect(screen.getAllByRole("tab")).toHaveLength(3);
+    }
     /* VD-P23-01: the server's sentence never reaches the screen. */
     expect(screen.queryAllByText("The server said so.")).toHaveLength(0);
   });

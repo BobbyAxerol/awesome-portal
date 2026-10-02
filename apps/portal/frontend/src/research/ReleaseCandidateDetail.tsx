@@ -39,11 +39,10 @@
  * tones, titles, reason codes and the seal and publish gates are the server's.
  */
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ResearchPanel } from "./ResearchPanel";
-import { DEFAULT_CURSOR, deepDiveHref } from "./evidenceCursor";
 import {
   DECLARATION_KEYS,
   RC_DENIED_COPY,
@@ -75,13 +74,17 @@ import {
   type RcTaxonomyRow,
   type RcWriteRefusal,
 } from "./releaseCandidateClient";
-import type { ResearchState } from "./state";
+import { researchState, type ResearchState } from "./state";
 import type { RcDeclarations, RcPackController, RcWriteOp, RcWriteSlot, ReleaseCandidateController } from "./useReleaseCandidate";
 import type { RcPublicationController, RcPublicationView, RcReadFailure } from "./useReleaseCandidatePublication";
 import { iso } from "./utcMinute";
 import { shortDigest, shortId } from "./researchFormat";
 import { runLabelFor } from "./runLabels";
-import { lineageHref } from "./lineageClient";
+import { RunExitBar } from "./RunExitBar";
+import { hubHref, lineageRunHref, reportHref, type LinkCursor } from "./runLinks";
+import { runTerminalState, type RunTerminalState } from "./runTerminalState";
+import { trialLabel, trialTitle } from "./trialLabel";
+import type { RunStatusRead } from "./useRunStatus";
 import { encodeInspectionCursor } from "./inspectionCursor";
 
 export { releaseCandidateHref, releaseCandidatePackHref };
@@ -90,9 +93,6 @@ export { releaseCandidateHref, releaseCandidatePackHref };
 
 /** Hi-fi title, verbatim. */
 export const RC_TITLE = "Release Candidate — compose, pin, publish";
-/** Hi-fi subtitle, verbatim. */
-export const RC_SUBTITLE =
-  "A run is evidence; what travels is the release candidate. Publish writes one immutable record — the Approval Inbox reads it. Nothing here recomputes or approves.";
 /** Hi-fi breadcrumb tail, verbatim. */
 export const RC_CRUMB = "Release Candidate & Publish";
 
@@ -109,7 +109,8 @@ export const IDENTITY_TITLE = "the unit that travels";
 export const IDENTITY_SPEC = "spec v0.7 §3.1";
 export const IDENTITY_SPEC_TITLE = "binding goes through rc_, never alpha↔run directly";
 export const TAXONOMY_CAPTION = "change taxonomy vs last published rc — ";
-export const VERDICT_LABEL = "gate verdict for this candidate";
+export const VERDICT_LABEL = "gate verdict";
+export const VERDICT_TITLE = "verdict at compose time";
 
 /** Rail node labels by contract key (VD-P21-06: `run` reads "run / attempt"). */
 export const RAIL_LABEL: Record<RcRailNode["key"], string> = {
@@ -149,7 +150,7 @@ export const SEAL_CONFIRM = "Seal now? Frozen as composed.";
 export const SEAL_CONFIRM_TITLE = "The pack below is frozen as it is composed; a later change to code, params or evidence composes a new candidate.";
 export const SEAL_CONFIRM_BUTTON = "Confirm local seal";
 export const SEAL_RETRY_LABEL = "retry original seal request";
-export const SEAL_DIRTY = "save your declarations first — the seal fences the saved draft revision";
+export const SEAL_DIRTY = "Save the declarations first.";
 export const SEALED_SENTENCE =
   "This evidence pack is Portal-local and immutable. A further change to code, params or methodology composes a new candidate.";
 export const SEALED_REPLAY = "replay — same pack returned";
@@ -158,7 +159,7 @@ export const SEALED_REPLAY_TITLE = "The server returned this same pack for the s
 const READ_AUTHORITY_WORDS: Record<string, string> = {
   PORTAL_PERSISTED_RESEARCH: "portal-persisted research record",
 };
-export const DRAFT_NOT_PERSISTED = "save the two declarations first — the draft is not persisted yet";
+export const DRAFT_NOT_PERSISTED = "Save the declarations first.";
 
 /* ------------------------------------------------------------- P22 publish */
 
@@ -233,10 +234,6 @@ export const MIRROR_NOT_READABLE = "not readable with your access";
 export const MIRROR_NOT_FOUND = "the governance store has no approval by this id";
 export const MIRROR_UNAVAILABLE = "the governance store did not answer this read — the mirror is read again in 60 s";
 export const MIRROR_INBOX_LINK = "open in Approval Inbox";
-
-/** Hi-fi rules footer, verbatim. */
-export const RC_RULES =
-  "The promotable unit is rc_, never a bare run_id. Digests pinned at publish are verified downstream. This screen never computes, approves, or mutates — its one verb is publish.";
 
 export const PACK_ROUTE_SHORT = "sealed identity";
 export const PACK_ROUTE_IDENTITY =
@@ -522,9 +519,11 @@ function runHref(runId: string, tail: string): string {
   return `${RUNS_ROOT}/${encodeURIComponent(runId)}/${tail}`;
 }
 
-function hubHref(runId: string): string {
-  return deepDiveHref(runHref(runId, "evidence"), { ...DEFAULT_CURSOR, stage: "claim" });
-}
+/**
+ * The way back carries the cursor of the page that sent the reader here (hash +
+ * `?window=`); a page opened with none carries none (W1 B3, never `fold=1`).
+ */
+const LinkContext = createContext<LinkCursor>({});
 
 /** A reason code, with its sentence when the screen knows one. The code is always printed. */
 function Reason({ code, what }: { code: string | null | undefined; what?: string }) {
@@ -609,7 +608,7 @@ function Confirm({ label, sentence, sentenceTitle, detail, confirm, onConfirm, o
 
 /* ---------------------------------------------------------------- header */
 
-function Header({ runId, here, chips, alpha = null, composeRun = null }: {
+function Header({ runId, here, chips, alpha = null, composeRun = null, attemptId = null }: {
   runId: string | null;
   here: ReactNode;
   chips: ReactNode;
@@ -617,14 +616,17 @@ function Header({ runId, here, chips, alpha = null, composeRun = null }: {
   alpha?: { alphaId: string; alphaVersionId: string | null } | null;
   /** Pack route only: the run whose live composition this sealed pack came from. */
   composeRun?: string | null;
+  /** `compose.run.attempt` when it is an identifier: Lineage opens on this run's attempt. */
+  attemptId?: string | null;
 }) {
+  const link = useContext(LinkContext);
   return (
     <header className="rc-head" data-panel="header">
       <div className="l">
         <nav className="rc-crumb" aria-label="Breadcrumb">
           {runId ? (
             <>
-              <Link to={hubHref(runId)} data-action="back-to-hub">
+              <Link to={hubHref(runId, { ...link, stage: "claim" })} data-action="back-to-hub">
                 Evidence Flow
               </Link>
               <span className="sep">/</span>
@@ -644,21 +646,20 @@ function Header({ runId, here, chips, alpha = null, composeRun = null }: {
           ) : null}
           <span className="here rc-long">{here}</span>
         </nav>
-        {/* F2b: the hi-fi subtitle and rules footer are this heading's tooltip, not two lines of prose. */}
-        <h2 className="rc-title" data-subtitle title={`${RC_SUBTITLE} ${RC_RULES}`}>
+        <h2 className="rc-title" data-subtitle>
           {RC_TITLE}
         </h2>
       </div>
       <div className="r">
         {chips}
         {runId ? (
-          <Link to={runHref(runId, "report")} className="rc-linkbtn" data-action="run-report" title="Screen 09 — the run report this candidate is built from">
+          <Link to={reportHref(runId, link)} className="rc-linkbtn" data-action="run-report" title="Screen 09 — the run report this candidate is built from">
             run report
           </Link>
         ) : null}
         {alpha !== null ? (
           <Link
-            to={lineageHref(alpha.alphaId, { av: alpha.alphaVersionId })}
+            to={lineageRunHref(alpha.alphaId, { av: alpha.alphaVersionId, run: runId, attempt: attemptId })}
             className="rc-linkbtn"
             data-action="open-lineage"
             title="Screen 10 — this alpha's attempt lineage, on this version"
@@ -837,11 +838,11 @@ function PromotionPickNode({ publication }: { publication: RcPublication | null 
         {pick.selected_trial_id === null ? (
           <span className="rc-absent">trial — not published</span>
         ) : trialHref !== null ? (
-          <Link to={trialHref} data-action="open-pick-trial" title="Screen 06 — the picked trial, selected in the trial ledger">
-            trial {pick.selected_trial_id}
+          <Link to={trialHref} data-action="open-pick-trial" title={`Screen 06 — the picked trial, selected in the trial ledger. ${trialTitle}`}>
+            {trialLabel({ sourceId: pick.selected_trial_id })}
           </Link>
         ) : (
-          `trial ${pick.selected_trial_id}`
+          trialLabel({ sourceId: pick.selected_trial_id })
         )}
       </span>
       {pick.artifact_id === null ? (
@@ -873,13 +874,14 @@ function Steps({ composed, sealed, published }: { composed: boolean; sealed: boo
 
 function Rail({ compose, sealedId, pick }: { compose: RcCompose; sealedId: string | null; pick?: ReactNode }) {
   const nodes = compose.rail;
+  const link = useContext(LinkContext);
   return (
     <ol className="rc-rail" data-rail aria-label="lineage rail">
       {nodes.map((node, index) => {
         const label = RAIL_LABEL[node.key] ?? node.key;
         const title = node.detail ? `${label} — ${node.value} · ${node.detail}` : `${label} — ${node.value}`;
         const linkedPack = node.key === "release_candidate" && sealedId !== null && node.value === sealedId;
-        const route = railRoute(node, compose);
+        const route = railRoute(node, compose, link);
         const body = (
           <>
             <span className="k">{label}</span>
@@ -980,15 +982,15 @@ function IdentityBlock({ compose, state, publication }: { compose: RcCompose | n
           />
           <div className="rc-taxrow">
             <Taxonomy rows={compose.taxonomy} comparison={compose.published_comparison} />
-            <div className="rc-verdict" data-panel-part="verdict">
-              <h4 className="rc-k">{VERDICT_LABEL}</h4>
-              <span className="t" data-verdict-title>
-                {compose.gate_verdict.title}
-              </span>
-              <p className="b" data-verdict-body>
-                {compose.gate_verdict.body}
-              </p>
-            </div>
+            {/* B2: `gate_verdict` is composed before the seal and knows nothing of it; once the seal exists the chip and the seal card say it. */}
+            {compose.local_seal.state === "SEALED_LOCAL" ? null : (
+              <div className="rc-verdict" data-panel-part="verdict" title={VERDICT_TITLE}>
+                <h4 className="rc-k">{VERDICT_LABEL}</h4>
+                <span className="t" data-verdict-title title={compose.gate_verdict.body}>
+                  {compose.gate_verdict.title}
+                </span>
+              </div>
+            )}
           </div>
         </>
       ) : (
@@ -2238,8 +2240,68 @@ function useDeclarationEditor(controller: ReleaseCandidateController): Declarati
 /* ---------------------------------------------------------------- screen */
 
 export type ReleaseCandidateScreenProps =
-  | { mode: "compose"; runId: string; controller: ReleaseCandidateController; publication: RcPublicationController }
+  | {
+      mode: "compose";
+      runId: string;
+      controller: ReleaseCandidateController;
+      publication: RcPublicationController;
+      /** What the run's workspace listing says about the run (W1): decides the failed / cancelled / queued / not-found face. */
+      status?: RunStatusRead;
+      /** The hash cursor and `?window=` of the page that sent the reader here; none when it carried none. */
+      link?: LinkCursor;
+    }
   | { mode: "pack"; releaseCandidateId: string; controller: RcPackController; publication: RcPublicationController };
+
+const NO_STATUS: RunStatusRead = { state: "idle" };
+const NO_LINK: LinkCursor = {};
+
+export type RcFace =
+  | { kind: "composer" }
+  /** The composition is readable but the run's status is not known yet: nothing is drawn that a failed run must not show. */
+  | { kind: "hold" }
+  | { kind: "exit"; terminal: RunTerminalState };
+
+/**
+ * W1 S11: the composer is for a run that can be composed. A run that is queued,
+ * running, failed, cancelled, needs recovery or is not available gets the one
+ * line and its exits, never the composer (no ghost seal / publish / mirror
+ * cards). Direct field lookups only: the status is the Run Library row's, the
+ * seal is the compose read's. A sealed candidate never waits for the status.
+ */
+export function rcFaceOf(compose: RcCompose | null, state: ResearchState, status: RunStatusRead): RcFace {
+  const sealed = compose?.local_seal.state === "SEALED_LOCAL";
+  if (status.state === "listed" && !sealed) {
+    const terminal = runTerminalState({ status: status.status, read: "ok", sealed: status.sealed });
+    if (terminal.phase !== "completed" && terminal.phase !== "unread") return { kind: "exit", terminal };
+  }
+  if (state.state === "denied") return { kind: "exit", terminal: runTerminalState({ status: null, read: "not-found" }) };
+  if (compose !== null && !sealed && (status.state === "idle" || status.state === "reading")) return { kind: "hold" };
+  return { kind: "composer" };
+}
+
+const HELD: ResearchState = researchState({ kind: "in-flight", hasAcceptedResponse: false });
+
+function RunFace({ runId, terminal, label, link, onRetry }: { runId: string; terminal: RunTerminalState; label: string | null; link: LinkCursor; onRetry: () => void }) {
+  const unavailable = terminal.phase === "unavailable";
+  return (
+    <div className="rc-page" data-screen="release-candidate" data-rc-mode="compose" data-run={runId} data-rc-state={unavailable ? "denied" : "empty"} data-run-phase={terminal.phase}>
+      <style>{RC_CSS}</style>
+      <header className="rc-head" data-panel="header">
+        <div className="l">
+          <h2 className="rc-title" data-subtitle>
+            {RC_TITLE}
+          </h2>
+          {unavailable ? null : (
+            <span className="rc-mono" data-crumb-run title={runId}>
+              {label ?? shortId(runId)}
+            </span>
+          )}
+        </div>
+      </header>
+      <RunExitBar runId={runId} state={terminal} cursor={link.cursor ?? null} onRetry={onRetry} />
+    </div>
+  );
+}
 
 /** Which card sits in the publish slot: the server's facts decide. */
 function publishSlot(compose: RcCompose | null, publication: RcPublication | null): "publish" | "publish-unknown" | "published" {
@@ -2282,8 +2344,11 @@ function ghostFoot(compose: RcCompose | null, publication: RcPublication | null)
   return absence ? <Reason code={reasonOf(absence)} what="approval_mirror" /> : "mirror not published";
 }
 
-function ComposeScreen({ runId, controller, publication }: { runId: string; controller: ReleaseCandidateController; publication: RcPublicationController }) {
-  const { compose, state } = controller;
+function ComposeScreen({ runId, controller, publication, status = NO_STATUS, link = NO_LINK }: { runId: string; controller: ReleaseCandidateController; publication: RcPublicationController; status?: RunStatusRead; link?: LinkCursor }) {
+  const face = rcFaceOf(controller.compose, controller.state, status);
+  const held = face.kind === "hold";
+  const compose = held ? null : controller.compose;
+  const state = held ? HELD : controller.state;
   const current = publication.publication;
   const delivered = isDelivered(compose, current);
   const slot = publishSlot(compose, current);
@@ -2296,12 +2361,19 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
   const replayed = controller.write.state === "sealed" && controller.write.replayed;
   const unbound = compose?.source_absences.alpha_binding;
   const chip = compose ? stateChipOf(compose, current) : null;
+  const attemptId = compose && IDENTIFIER_OK.test(compose.run.attempt) ? compose.run.attempt : null;
+
+  if (face.kind === "exit") {
+    return <RunFace runId={runId} terminal={face.terminal} label={runLabelFor(runId) ?? (status.state === "listed" ? status.label : null)} link={link} onRetry={controller.retry} />;
+  }
 
   return (
+    <LinkContext.Provider value={link}>
     <div
       className="rc-page"
       data-screen="release-candidate"
       data-rc-mode="compose"
+      data-run-phase={compose ? "completed" : undefined}
       data-run={runId}
       data-rc-state={state.state}
       data-rc-chip={chip ?? ""}
@@ -2314,6 +2386,7 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
       <Header
         runId={runId}
         here={RC_CRUMB}
+        attemptId={attemptId}
         alpha={compose?.run.binding ? { alphaId: compose.run.binding.alpha_id, alphaVersionId: compose.run.binding.alpha_version_id ?? null } : null}
         chips={
           compose && chip ? (
@@ -2371,6 +2444,7 @@ function ComposeScreen({ runId, controller, publication }: { runId: string; cont
         </div>
       </div>
     </div>
+    </LinkContext.Provider>
   );
 }
 
@@ -2521,7 +2595,7 @@ function PackIdentity({ pack, state, publication }: { pack: RcPack | null; state
 
 export function ReleaseCandidateScreen(props: ReleaseCandidateScreenProps) {
   return props.mode === "compose" ? (
-    <ComposeScreen runId={props.runId} controller={props.controller} publication={props.publication} />
+    <ComposeScreen runId={props.runId} controller={props.controller} publication={props.publication} status={props.status} link={props.link} />
   ) : (
     <PackScreen releaseCandidateId={props.releaseCandidateId} controller={props.controller} publication={props.publication} />
   );

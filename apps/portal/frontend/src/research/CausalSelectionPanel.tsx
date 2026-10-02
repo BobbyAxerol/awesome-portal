@@ -105,7 +105,7 @@ export function CausalSelectionPanel({
 
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[11px]">
         <span className="mono" data-causal-trial={selection.selected_trial_id} title="study-qualified retained trial id">
-          trial {selection.selected_trial_id}
+          source {selection.selected_trial_id}
         </span>
         <span className="mono" style={MUTED} data-causal-study={selection.study_id}>
           study {selection.study_id} · seed {selection.fold_seed}

@@ -1,0 +1,2273 @@
+801	S01,S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/AlphaImport.tsx:150	not published
+25	S04-atlas	DATA?	QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned sou
+109	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:309	not served for this lane
+105	S04-search	research/SearchDetail.tsx:987	not evaluated · IS stage
+29	S01,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	The Delta walk-forward study sealed its artifacts but did not issue a release claim.
+153	S02	research/NewRun.tsx:295	not visited
+20	S01,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/LineageDetail.tsx:631 «The fixed P»	The fixed P10 qualification sealed its artifacts but did not issue a release claim.
+88	S01,S02,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	Delta-RSI Polynomial Alpha
+20	S04-atlas	DATA?	Mean train (IS) Sharpe across folds; the Optuna search objective for this stage.
+15	S04-atlas	DATA?	Only a positive mean decay (IS beat OOS on average) is penalised; OOS outperformance is not rewarded.
+63	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	DONE · fold 1
+26	S01,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/RunLibrary.tsx:2371 «The run failed before Stage»	The run failed before Stage 5 issued a claim.
+10	S04-atlas	DATA?	Robustness of a trial across the IS subperiod shards: median shard Sharpe, rewarded by its lower quartile, penalised by its median absolute deviation.
+72	S04-execute	research/childAuditCompanionClient.ts:29	anti-leakage in-sample search
+15	S04-atlas	DATA?	Sample standard deviation (ddof=1) of the per-fold decay; exactly 0 with a single fold.
+10	S04-atlas	DATA?	The cluster with the highest weighted sum is selected; the bootstrap and complexity penalties are 0 in this release.
+60	S01,S02,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:1074	attempt lineage →
+10	S04-atlas	DATA?	Per-fold decay after the trade-frequency penalty; d < 0 means the fold's OOS Sharpe beat its IS Sharpe.
+25	S04-atlas	research/EngineAtlas.tsx:983	objective — Stage 2 opens every term
+15	S04-atlas	DATA?	Mean outer-fold OOS Sharpe; the base that the decay penalties discount.
+54	S02,S04-atlas	research/CompareDetail.tsx:734	mode × schedule
+10	S04-atlas	DATA?	Robustness of a dense parameter cluster: its plateau_quantile objective, its median, its dispersion and its size.
+10	S04-atlas	DATA?	Temporal/plateau selection terms are retained verbatim in selection_metadata; they do not inspect an external OOS tape.
+80	S04-execute	research/ExecuteCandleReplay.tsx:1735	· certified
+31	S01	research/RunLibrary.tsx:1108	all time — not published
+25	S04-atlas	research/EngineAtlas.tsx:561	causality, OOS use, params, cert cap
+10	S04-atlas	~research/EngineAtlas.tsx:602 «weight * median»	plateau_score = q + plateau_median_weight * median - plateau_std_penalty * std + plateau_size_bonus * log1p(n)
+75	S04-execute	DATA?	2026-06-01 00:00Z
+49	S01	~research/ResearchFixtures.tsx:423 «BTCUSDT»	BTCUSDT · 1h
+48	S02	~research/NewRun.tsx:130 «PUBLISHABLE»	PUBLISHABLE · av_1_0_0
+18	S02	research/ResearchFixtures.tsx:713	No preflight has been run for this declaration.
+47	S01	DATA?	mode_1_decay · global
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1241	Approval Gate · Paper
+10	S04-atlas	DATA?	candidate_decay_lambda: Unset: falls back to decay_lambda. · candidate_decay_gamma: Unset: falls back to decay_gamma.
+63	S04-execute	DATA?	2026-06-30 23:00Z
+25	S02	research/NewRun.tsx:2801	payload sha256 · after preflight
+25	S02	research/NewRun.tsx:2898	dataset · symbol · tf
+25	S02	research/NewRun.tsx:2948	trials · stop · seed
+25	S02	research/NewRun.tsx:2964	release defaults — nothing serialized
+5	S04-atlas	DATA?	The current P10 adapter is a fixed-parameter qualification path. Release defaults describe the pinned engine and Portal protocol; they do not grant browser over
+60	S01,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/RunLibrary.tsx:307	pending source
+24	S02	research/NewRun.tsx:3315	new intent · fresh preflight
+40	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:556	stage 5 claim
+118	S02,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CausalSelectionPanel.tsx:102	OOS
+39	S04-search	research/SearchDetail.tsx:1000	all outer folds
+6	S04-execute	~research/researchRefusal.ts:463 «so the playhead reads a retros»	This run's adapter published no execution state, so the playhead reads a retrospective equity sample and says so. (P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SN
+10	S04-atlas	DATA?	temporal_score = median + q25_weight * q25 - dispersion_penalty * MAD
+110	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:417	COMPLETE
+9	S04-atlas,S04-search	DATA?	With the release-default candidate_selection_metric robust_decay. The engine records NOT_USED for plateau/IS-only/full-sample metrics.
+105	S02,S04-atlas,S04-summary	research/AlphaImport.tsx:15	source
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1110	modes × routes
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1532	reset to θ*
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:120	copy evidence link
+5	S04-atlas	DATA?	Mean of the bootstrap Sharpe replicates of the fold's own train returns, minus the trade penalty; no held-out bar is evaluated.
+5	S04-atlas	DATA?	The largest DBSCAN cluster (radius flat_eps in normalized parameter space) wins; its medoid is selected instead of the sharp peak.
+10	S04-atlas	DATA?	Number of IS shards the temporal score is measured on.
+10	S04-atlas	DATA?	Weight of the shard lower quartile in the temporal score.
+10	S04-atlas	DATA?	Weight of the temporal score in the final selection score.
+10	S04-atlas	DATA?	Weight of the plateau score in the final selection score.
+10	S04-atlas	DATA?	Quantile of the cluster objectives used as the plateau base.
+49	S01	research/RunLibrary.tsx:392	evidence trail
+24	S02	research/EstimateStatus.tsx:15	estimate — request refused
+5	S04-atlas	DATA?	Mean across folds of the replicate standard deviation; a wide spread under a high mean marks a lucky tail.
+47	S01	research/ReleaseCandidateDetail.tsx:111	rc —
+91	S01,S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EngineAtlas.tsx:1126	mode_1_decay
+15	S04-atlas	DATA?	DBSCAN radius in normalized parameter space.
+10	S04-atlas	DATA?	final = temporal_weight * temporal_score + plateau_weight * plateau_score
+5	S04-atlas	DATA?	The whole supplied history is one calibration fold; no window is withheld, so no term reads out-of-sample data.
+89	S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/ResearchFixtures.tsx:457	BTCUSDT
+3	S04-execute	~research/researchRefusal.ts:429 «window price overview is shown»	This run's adapter published no per-bar candle ledger, so nothing here is drawn bar by bar. A whole-window price overview is shown above when the run retained o
+43	S01	research/RunLibrary.tsx:1377	NOT ISSUED
+17	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	strict nested fold local retraining
+28	S02	research/runDraft.ts:193	Review & run
+84	S02	research/NewRun.tsx:2087	RELEASE_DEFAULT
+84	S02	research/FreezeDetail.tsx:12	LOCKED
+21	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/AlphaImport.tsx:872 «PENDING»	PENDING · fold 1
+40	S03,S04-claim	research/EvidenceFlow.tsx:4326	· sha256:
+20	S04-atlas	research/EngineAtlas.tsx:932	runs in mode →
+5	S04-atlas	DATA?	Decay from the original IS Sharpe to the synthetic Sharpe; only a positive mean is penalised.
+80	S04-execute	~research/LineageLink.tsx:10 «isolated»	isolated_v1
+78	S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:331	global
+39	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1356	evidence cursor
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	This run is QUEUED and has not sealed its evidence yet.
+38	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1494	S1 split
+38	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1495	S2 search
+38	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1496	S3 freeze
+38	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1497	S4 replay
+25	S01	research/EvidenceFlowRoute.tsx:7	open evidence →
+25	S02	research/EvidenceFlow.tsx:4692	← Run Library
+25	S02	research/NewRun.tsx:3261	Import a version
+25	S02	~research/AlphaImport.tsx:21 «quantbt»	quantbt-engine==1.1.1 · er_quantbt_111
+25	S04-atlas	research/EngineAtlas.tsx:896	no cert cap
+25	S04-atlas	research/EngineAtlas.tsx:797	what it reads
+75	S04-atlas	~research/DigestChain.tsx:83 «walkforward»	quantbt/walkforward.py
+25	S04-atlas	research/EngineAtlas.tsx:940	schedule → claim
+5	S04-atlas	~research/EngineAtlas.tsx:694 «selection metric»	4 of 6 terms · 1 more stage · weights · selection metric · sources
+5	S04-atlas	~research/EngineAtlas.tsx:694 «selection metric»	4 of 7 terms · 2 more stages · weights · selection metric · sources
+5	S04-atlas	DATA?	May replace the deployed candidate with a recorded plateau/medoid selection; its geometry is in selection_metadata.
+74	S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/NewRunRoute.tsx:43	signal_notional
+72	S02,S04-claim,S04-execute,S04-freeze,S04-split	research/ChildAuditCompanionPanel.tsx:72	bars
+24	S02	research/NewRun.tsx:2892	(pinned by alpha_id)
+24	S02	~research/NewRun.tsx:1904 «sweep ceiling»	(sweep ceiling 8)
+72	S04-atlas,S04-search	research/EngineAtlas.tsx:593	oos_candidate_selection
+18	S04-split	research/SplitDetail.tsx:1549	GLOBAL · source trial
+35	S01,S04-split,S04-summary	research/EvidenceFlow.tsx:3069	Δ decay
+70	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/AlphaImportRoute.tsx:28	params
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:853	· created
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:636	runtime authority
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:681	issued by
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:4720	This run failed before sealing evidence, so none will arrive.
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1520	journey ↗
+5	S04-atlas	DATA?	A centroid can be unevaluated and must not be silently promoted as a trial.
+10	S04-atlas	DATA?	Penalty on the shard median absolute deviation.
+23	S01	research/RunLibrary.tsx:1795	open progress →
+34	S02	research/CompareDetail.tsx:1659	not set
+17	S04-atlas	research/EngineAtlas.tsx:568	does not feed selection
+5	S04-atlas	~research/EngineAtlas.tsx:694 «selection metric»	4 of 5 terms · 2 more stages · selection metric · sources
+5	S04-atlas	~research/DigestChain.tsx:83 «walkforward»	quantbt/walkforward.py:2096-2103 · quantbt/walkforward.py:2128-2128 · quantbt/walkforward.py:2127-2127 · quantbt/walkforward.py:2130-2130 · quantbt/walkforward.
+5	S04-atlas	~research/ReportDetail.tsx:1306 «not a pass»	Good central tendency with high temporal dispersion is a warning, not a pass.
+32	S04-atlas,S04-freeze,S04-split	research/CausalSelectionPanel.tsx:102	outer OOS
+21	S01	research/RunLibrary.tsx:470	equity — none
+21	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/EvidenceFlow.tsx:3455 «notional»	DONE · signal_notional
+62	S02,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	crypto-binance-1m
+62	S02,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/AlphaImport.tsx:456	window
+31	S04-claim,S04-execute,S04-freeze,S04-search,S04-summary	research/AlphaImport.tsx:510	not applicable
+30	S01,S04-summary	research/CompareDetail.tsx:1158	OOS sharpe
+10	S04-atlas	DATA?	Weight of the cluster median objective.
+10	S04-atlas	DATA?	Penalty on the cluster objective dispersion.
+12	S04-freeze	research/FreezeDetail.tsx:1331	OOS child = frozen θ*
+58	S02,S04-atlas	DATA?	maximize
+57	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CausalSelectionPanel.tsx:2	fold
+28	S02	research/DataDeclaration.tsx:2	Market data
+28	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1438	· global
+28	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/CompareDetail.tsx:1282 «claim NOT»	claim NOT_ISSUED
+5	S04-atlas	DATA?	A high average OOS score with broad decay dispersion requires review.
+5	S04-atlas	DATA?	Penalty on a positive mean decay from IS to synthetic Sharpe.
+5	S04-atlas	~research/DigestChain.tsx:83 «walkforward»	quantbt/walkforward.py:2225-2231 · quantbt/walkforward.py:2232-2232 · quantbt/walkforward.py:2276-2276 · quantbt/walkforward.py:2127-2127 · quantbt/walkforward.
+5	S04-atlas	~research/EngineAtlas.tsx:694 «selection metric»	all 4 terms shown · weights · selection metric · sources
+5	S04-atlas	~research/EngineAtlas.tsx:694 «selection metric»	4 of 5 terms · weights · selection metric · sources
+5	S04-atlas	DATA?	Use when a frozen candidate pool needs an explicit decay diagnostic.
+5	S04-atlas	DATA?	Use when parameter stability is more meaningful than one peak score.
+27	S02	research/LineageDetail.tsx:864	swept ·
+3	S04-execute,S04-summary	research/researchRefusal.ts:465	This run is bound to the P04 fixed qualification, which the retained lane never holds. Nothing is pending.
+52	S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EngineAtlas.tsx:1126	per_fold_causal
+4	S03,S04-claim	research/RunProgress.tsx:171	sealed — unlock is a one-time audited workflow this release does not install
+26	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/AlphaImport.tsx:21 «quantbt»	quantbt-engine 1.1.1
+26	S04-freeze	research/FreezeDetail.tsx:650	· step
+13	S04-split	research/SplitDetail.tsx:2501	trade OOS → S
+4	S04-freeze,S04-search	research/OrchestrationClocks.tsx:53	Portal orchestration times — not an engine pool freeze or first out-of-sample read.
+3	S04-execute	~research/researchRefusal.ts:461 «This run's adapter published n»	This run's adapter published no execution event stream, so the ledger holds samples rather than events. (P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM)
+25	S02	research/AlphaImport.tsx:127	New Run
+25	S02	research/NewRun.tsx:295	preflight pending
+25	S02	research/NewRun.tsx:2644	Window timeline
+25	S02	research/NewRun.tsx:2793	Claim forecast
+25	S02	research/NewRun.tsx:2884	alpha binding
+25	S02	research/EngineAtlas.tsx:4	execution route
+10	S02,S04-atlas	research/EngineAtlas.tsx:520	OOS: withheld until Stage 4
+25	S04-atlas	research/EngineAtlas.tsx:379	declare →
+10	S04-atlas	DATA?	d_k = is_sharpe_k - oos_sharpe_k
+25	S04-atlas	research/EngineAtlas.tsx:745	formula id
+25	S04-atlas	research/EngineAtlas.tsx:694	selection metric
+25	S04-atlas	research/EngineAtlas.tsx:1025	· default
+25	S04-atlas	research/EngineAtlas.tsx:561	cert cap
+5	S04-atlas	DATA?	Selects a stable plateau rather than a single sharp optimum.
+5	S04-atlas	DATA?	Use for robustness calibration, not to make an OOS claim.
+5	S04-atlas	DATA?	Use only for calibration where the full-sample label is explicit.
+49	S01,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:417	COMPLETED
+12	S00	research/JourneyMap.tsx:199	pick a run →
+24	S02	research/DigestChain.tsx:24	copied from
+24	S02	~research/AlphaImport.tsx:109 «PREFLIGHT»	· RESEARCH_PREFLIGHT_INVALID
+24	S02	research/NewRun.tsx:2810	claim (forecast)
+24	S02,S04-atlas	research/EngineAtlas.tsx:521	OOS: retrospective
+24	S02	research/NewRun.tsx:2762	cert ceiling
+24	S02	research/NewRun.tsx:2921	entries ·
+16	S02	DATA?	mode_1_decay × global
+16	S02	research/NewRun.tsx:2725	· first OOS
+3	S04-execute	~research/researchRefusal.ts:459 «This run's adapter published n»	This run's adapter published no position snapshots, so no position is shown at the playhead. (P04_SOURCE_DID_NOT_PUBLISH_POSITION_STATE_SNAPSHOTS)
+8	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	not causal multi fold global calibration
+12	S04-freeze	research/FreezeDetail.tsx:1325	IS ends before OOS
+8	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	strict outer oos after frozen selection
+46	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CausalSelectionPanel.tsx:6	trial
+15	S01	DATA?	OOS fold trades
+45	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:119	SOON
+5	S04-atlas	DATA?	Do not relabel global output as strict outer OOS.
+5	S04-atlas	~research/DigestChain.tsx:83 «walkforward»	quantbt/walkforward.py:2096-2103 · quantbt/walkforward.py:2128-2128 · quantbt/walkforward.py:2127-2127 · quantbt/walkforward.py:2130-2130 · quantbt/walkforward.
+5	S04-atlas	DATA?	The current Portal proxy is not an engine certificate.
+5	S04-atlas	~research/DigestChain.tsx:83 «walkforward»	quantbt/walkforward.py:2324-2339 · quantbt/walkforward.py:2128-2128 · quantbt/walkforward.py:4399-4402 · quantbt/walkforward.py:4136-4142 · quantbt/walkforward.
+5	S04-atlas	DATA?	Full-sample selection must never be described as OOS evidence.
+5	S04-atlas	DATA?	Use for train-only selection diagnostics or causal per-fold experiments.
+9	S04-freeze	research/FoldSelectionPanel.tsx:16	not causal · global selection
+44	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:749	certification
+21	S01	research/ReportFailedSheet.tsx:6	failed at
+14	S01	DATA?	artifact commit failed
+3	S02	DATA?	Portal ThreeWindowConfig default; the current P10 submission profile still accepts exactly one qualification trial.
+42	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EngineAtlas.tsx:535	validation_claim
+42	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CausalSelectionPanel.tsx:100	oos_used_for_selection
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/EvidenceFlow.tsx:1384 «observed folds»	observed folds —
+42	S04-atlas,S04-search	research/EvidenceFlow.tsx:2487	mean_oos_sharpe
+42	S04-atlas,S04-search	research/SearchDetail.tsx:1099	std_decay
+3	S04-execute	~research/researchRefusal.ts:453 «This run's adapter published n»	This run's adapter published no order ledger, so no order can be replayed. (P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER)
+3	S04-execute	~research/researchRefusal.ts:455 «This run's adapter published n»	This run's adapter published no audited fills, so no fill can be replayed. (P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS)
+3	S04-execute	~research/researchRefusal.ts:457 «This run's adapter published n»	This run's adapter published no trade ledger, so no trade can be replayed. (P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER)
+2	S04-search	research/useSearch.ts:101	The source has not reported this run's search facts yet. What the server published is shown; the rest is marked pending.
+6	S04-summary	~research/EvidenceFlow.tsx:1696 «locator not published»	oos · ratio · locator not published
+21	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:846	engine quantbt-engine
+14	S04-split	research/SplitDetail.tsx:2441	not in read
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	close target v2
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	bar_close → same_close
+41	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:26	schedule
+40	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/AlphaImport.tsx:4	run
+40	S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/AlphaImport.tsx:127	route
+40	S03,S04-claim	research/DigestChain.tsx:92	SEALED
+40	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:465	chronological_claim
+5	S04-atlas	research/EvidenceFlow.tsx:4512	Atlas — how to read modes and routes
+40	S04-atlas	research/EngineAtlas.tsx:718	unset
+40	S04-atlas	research/SearchDetail.tsx:902	mean_is_sharpe
+20	S04-atlas	research/EngineAtlas.tsx:714	release default
+5	S04-atlas	DATA?	Only the best-ranked trials enter the flat-minima clustering.
+5	S04-atlas	DATA?	Combines robust IS subperiod statistics with explicit penalties.
+10	S04-atlas	DATA?	Bonus per log1p(cluster size).
+10	S04-claim,S04-summary	research/EvidenceFlow.tsx:115	headline = OOS only
+5	S04-search	research/EvidenceFlow.tsx:172	Stage 2 · Search — why these params
+2	S04-split	research/useSplit.ts:171	The source has not reported this run's split yet. What the server published is shown; the rest is marked pending.
+4	S04-execute,S04-freeze	research/ChildAuditCompanionPanel.tsx:161	Observations of the source lifecycle — not a generation clock.
+13	S03,S04-freeze,S04-search	DATA?	2026-10-02 17:02 UTC
+13	S04-execute	research/ExecuteCandleReplay.tsx:2343	MAE × MFE
+19	S03,S04-freeze	research/FoldSelectionPanel.tsx:46	· trial
+38	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/ArtifactPanel.tsx:2	readiness
+18	S01	research/EvidenceCharts.tsx:972	all time
+18	S01	research/EvidenceFlow.tsx:2467	max DD
+3	S02	DATA?	QuantBT OptimizationConfig default; P10 fixed qualification does not accept a caller override.
+9	S03	DATA?	global best J₁ −0.537
+36	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:467	holdout_state
+4	S04-summary	~research/EvidenceFlow.tsx:1696 «locator not published»	oos · percent of bars · locator not published
+9	S04-split	DATA?	search · 400 trials
+9	S04-split	research/SplitDetail.tsx:2966	shared params (global schedule)
+35	S01,S04-execute,S04-split,S04-summary	research/CompareDetail.tsx:2331	trades
+35	S02,S04-atlas,S04-search	research/SearchDetail.tsx:1652	decay_lambda
+35	S02,S04-atlas,S04-search	research/SearchDetail.tsx:1653	decay_gamma
+1	S02	~research/NewRun.tsx:2235 «per outer fold study»	trials 3 per outer fold study · total ≤ 48 · inner folds 2–16 weekly/monthly/quarterly expanding/rolling · seed 42 · folds 2–16 · weekly/monthly/quarterly · exp
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CausalSelectionPanel.tsx:100	causality_claim
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EngineAtlas.tsx:357	execution_contract
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:127	Summary
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CausalSelectionPanel.tsx:12	Split
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/AlphaImportRoute.tsx:12	Search
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/BoundWarning.tsx:4	Freeze
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:74	Execute
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:78	Claim
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EngineAtlas.tsx:2	Atlas
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1234	Promotion
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:832	seq
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/AlphaImport.tsx:1000	report
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1227	promotion
+35	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/AlphaImport.tsx:120	runs
+35	S04-atlas	research/EngineAtlas.tsx:593	is_search
+5	S04-atlas	DATA?	Scores an IS-only stationary bootstrap robustness estimate.
+5	S04-atlas	DATA?	Penalty on the mean replicate standard deviation.
+5	S04-atlas	DATA?	Fraction of ranked trials that enters clustering.
+5	S04-atlas	DATA?	Minimum cluster size and minimum clustered trials.
+5	S04-atlas	DATA?	Per-fold causal requires its own evidence lane.
+5	S04-atlas	~research/DigestChain.tsx:83 «walkforward»	quantbt/walkforward.py:2128-2128 · quantbt/walkforward.py:4399-4402 · quantbt/walkforward.py:4136-4142 · quantbt/walkforward.py:4151-4156
+5	S04-atlas	DATA?	Calibrates robustness on the full supplied sample.
+5	S04-atlas	DATA?	Publication labels must retain the full-sample disclosure.
+5	S04-atlas	~research/EngineAtlas.tsx:1312 «temporal»	full_robust · full_plateau_robust · full_temporal_robust · full_best
+5	S04-atlas	research/EngineAtlas.tsx:523	no held-out window — train = test
+5	S04-claim	research/EvidenceFlow.tsx:4255	window disclosure — who may read what
+5	S04-execute	research/EvidenceFlow.tsx:180	Stage 4 · Execute — candle replay
+5	S04-split	research/EvidenceFlow.tsx:168	Stage 1 · Split — fold construction
+5	S04-split	research/SplitDetail.tsx:1394	train ∩ test = ∅, every fold
+5	S04-summary	research/EvidenceFlow.tsx:3703	monthly return, % · tint = magnitude
+17	S01	research/RunLibrary.tsx:477	last 30D
+17	S04-execute,S04-freeze,S04-search,S04-split	research/EvidenceFlow.tsx:1029	source transform
+33	S02,S04-split	research/ChildAuditCompanionPanel.tsx:71	warmup
+33	S02,S04-split	research/CompareDetail.tsx:771	protocol
+3	S02	DATA?	2020-01-01 → 2026-10-01 · 59,183 of 59,183 bars · 0 gaps
+11	S04-freeze,S04-search,S04-split	research/EngineAtlas.tsx:1127	strict outer OOS
+1	S04-execute	research/replayClient.ts:483	Observation replay: the market candle and the account's equity and native position at each retained out-of-sample bar. It is not an orders, fills or trades ledg
+16	S02	research/NewRun.tsx:2809	mode default
+16	S02	DATA?	folds 2–16
+8	S02	~research/NewRun.tsx:2592 «server profile»	server profile · p10.delta-signal-notional-wfo.v1
+8	S02	~research/NewRun.tsx:2592 «server profile»	server profile · p10.delta-signal-notional-causal-inner.v1
+32	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:1530	fold_01
+32	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:522	NOT_ISSUED
+16	S04-execute,S04-freeze,S04-search,S04-split	research/EvidenceFlow.tsx:1027	requested spec
+16	S04-execute,S04-freeze,S04-search,S04-split	research/DigestChain.tsx:208	effective spec
+16	S04-execute,S04-freeze,S04-search,S04-split	research/DigestChain.tsx:198	dataset binding
+31	S01,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:381	FAILED
+30	S02,S03	research/AlphaImport.tsx:666	engine
+3	S02	DATA?	Portal adapter locks single-process optimizer execution until dedupe is certified.
+30	S03,S04-atlas,S04-execute	research/CausalSelectionPanel.tsx:100	causality
+10	S04-atlas	research/EngineAtlas.tsx:1219	must be unset
+5	S04-atlas	DATA?	Ranks OOS stability against IS-to-OOS decay.
+30	S04-atlas	research/EvidenceFlow.tsx:2488	mean_decay
+15	S04-atlas	DATA?	max(0, mean_decay)
+5	S04-atlas	DATA?	Bootstrap confidence is not out-of-sample proof.
+10	S04-atlas	research/EngineAtlas.tsx:522	OOS: report only
+5	S04-atlas	~research/CompareDetail.tsx:822 «fraction»	top_n = max(ceil(n * flat_top_fraction), flat_min_samples)
+10	S04-atlas	DATA?	Minimum cluster size.
+5	S04-atlas	~research/SearchFoldStrip.tsx:31 «full sample»	train = test = full sample
+5	S04-atlas	research/EngineAtlas.tsx:969	when to reach for which mode
+5	S04-claim	research/EvidenceFlow.tsx:4460	next — report and later gates
+5	S04-claim	research/EvidenceFlow.tsx:4483	requires a methodology certificate · currently
+2	S04-execute	research/researchRefusal.ts:441	This run's evidence is not readable yet, so its price overview cannot be read either.
+6	S04-execute	research/ExecuteCandleReplay.tsx:2343	Needs trade records (not published).
+5	S04-search	research/SearchDetail.tsx:173	the source receipt is not published
+5	S04-search	research/SearchDetail.tsx:1356	A1 · search space as declared
+5	S04-summary	research/EvidenceFlow.tsx:2837	Underwater — drawdown derived from equity
+30	S04-freeze,S04-search	research/BoundWarning.tsx:29	interior
+10	S04-execute,S04-freeze,S04-search,S04-split	DATA?	· engine 1.1.1
+2	S04-freeze	DATA?	rvol · rsi_l · window · len_vol · len_atr1 · len_atr2 · slpercent · signalLength
+2	S04-search	DATA?	rvol=1.2 · rsi_l=30 · window=34 · len_vol=8 · len_atr1=14 · len_atr2=30 · slpercent=2.3 · signalLength=16
+2	S04-search	DATA?	rvol=1.3 · rsi_l=25 · window=44 · len_vol=14 · len_atr1=20 · len_atr2=54 · slpercent=1 · signalLength=3
+2	S04-search	DATA?	rvol=1.2 · rsi_l=21 · window=32 · len_vol=16 · len_atr1=9 · len_atr2=47 · slpercent=1.3 · signalLength=10
+2	S04-execute	research/replayClient.ts:284	The source has not called back yet. There is nothing to replay until it does.
+29	S02,S03	~research/ResearchFixtures.tsx:239 «polynomial»	delta-rsi-polynomial-alpha
+1	S00	DATA?	same console + Gantt, plus the claim passport in forecast state — it flips to issued and hands its cursor to Evidence Flow the moment the run completes
+28	S02	research/CompareDetail.tsx:130	Walk-forward
+28	S02	research/EvidenceCharts.tsx:516	Parameters
+28	S02	research/EngineAtlas.tsx:843	Optimization
+28	S02	research/NewRun.tsx:718	strategy_id
+28	S03,S04-atlas	research/CausalSelectionPanel.tsx:94	validation
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	engine —
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/DigestChain.tsx:6	the engine
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:4687	open progress record →
+4	S04-search	research/SearchDetail.tsx:2540	B3 · best trial ≠ selected params
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	2026-10-02 16:31Z
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	DONE · 1 fold
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	native vectorized
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:538	retained seal
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	DONE · 9 folds
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	· per_fold_causal
+1	S04-freeze	research/researchRefusal.ts:141	No sealed retained source exists for this run yet — it is pending retention, or the run predates it. Nothing here is taken from the live output instead.
+2	S04-search,S04-split	research/researchRefusal.ts:369	The run has not completed, so the retained source has nothing for it yet.
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	DONE · 3 folds
+3	S02	DATA?	open · high · low · close · volume
+27	S02	research/AlphaImport.tsx:590	declared
+9	S03,S04-freeze,S04-search	DATA?	2026-10-01 13:44 UTC
+3	S04-execute	research/ExecuteDetail.tsx:1276	No orders or fills published — no chain drawn.
+9	S04-execute	research/replayClient.ts:273	child audit provenance
+9	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	retrospective global calibration
+9	S04-freeze	~research/AlphaImport.tsx:73 «candidate»	· candidate 00b18de5ca92
+26	S02,S04-freeze,S04-search,S04-split	research/SearchSurface.tsx:64	rvol
+25	S02	research/EvidenceFlow.tsx:20	Context
+25	S02	research/EngineAtlas.tsx:144	Strategy
+25	S02	research/AlphaImport.tsx:127	Route
+25	S02	research/BoundWarning.tsx:24	review
+25	S02	research/LineageDetail.tsx:2279	parameter_space
+25	S02	research/NewRun.tsx:2962	optimization_config
+25	S02,S04-atlas,S04-search	research/ResearchFixtures.tsx:70	robust_decay
+25	S03,S04-atlas	research/researchFormat.ts:136	not_causal_multi_fold_global_calibration
+25	S03,S04-atlas	~research/CompareDetail.tsx:173 «retrospective»	retrospective_global_calibration
+5	S04-atlas	~research/atlas.ts:163 «retained history»	quantbt-engine 1.0.8 — retained history
+5	S04-atlas	~research/EngineAtlas.tsx:857 «Open search & selection»	Open search & selection →
+5	S04-atlas	~research/AlphaImport.tsx:22 «horizon»	· guards label_horizon_bars/purge_bars/embargo_bars ≤ 10000
+5	S04-atlas	research/EngineAtlas.tsx:1165	, never the mode alone
+5	S04-atlas	research/EngineAtlas.tsx:1179	Execution route is chosen separately
+25	S04-atlas	research/AlphaImport.tsx:219	retains
+5	S04-atlas	DATA?	Keep selected separate from best.
+25	S04-atlas	DATA?	mean_oos_minus_decay_penalties_v1
+25	S04-atlas	~research/AlphaImport.tsx:32 «research»	quantbt/core/research_audit_artifact.py
+25	S04-atlas	research/EngineAtlas.tsx:993	suspect
+25	S04-atlas	research/EngineAtlas.tsx:1127	per_fold_decay
+25	S04-atlas	~research/DigestChain.tsx:36 «contracts»	quantbt/core/wfo_contracts.py
+5	S04-atlas	DATA?	d = is_sharpe - synthetic_sharpe
+5	S04-atlas	DATA?	Stationary-bootstrap block length in bars.
+5	S04-claim	~research/EvidenceFlow.tsx:4202 «read permission»	read permission, card count —
+5	S04-claim	research/EvidenceFlow.tsx:4321	artifact manifest — whole run
+5	S04-search	research/SearchDetail.tsx:674	trial ledger — Optuna trials
+5	S04-split	research/SplitDetail.tsx:2269	what this stage feeds forward
+5	S04-summary	research/EvidenceFlow.tsx:2807	Equity — stitched OOS account
+8	S01	research/RunLibrary.tsx:525	last 30D return
+8	S01	research/RunLibrary.tsx:526	last 30D sharpe
+8	S01,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:4682	watch progress →
+4	S02	~research/AlphaImport.tsx:892 «Context»	Context — alpha & version binding
+24	S02	research/AlphaImport.tsx:201	data
+24	S02	research/AlphaImport.tsx:219	Retry
+8	S02	research/NewRun.tsx:2578	no outer folds
+24	S02	research/EvidenceFlow.tsx:119	pinned
+24	S02	research/EngineAtlas.tsx:1318	sweep
+24	S02	research/CompareDetail.tsx:364	pin
+24	S02,S04-freeze,S04-search,S04-split	DATA?	slpercent
+3	S02	research/NewRun.tsx:3549	preflight checks · 6 panels · not read
+3	S02	research/NewRun.tsx:780	Execution route — how orders come to exist
+8	S02	DATA?	mode_1_decay × per_fold_causal
+24	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceCharts.tsx:528	fold_02
+24	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1260	fold_03
+4	S04-search	research/SearchDetail.tsx:2374	what the sampler searched, on IS
+2	S04-split	~research/CompareDetail.tsx:1782 «protocol not published»	protocol not published · one IS/OOS pair · no fold rows published
+3	S04-split	research/SplitDetail.tsx:1461	stitch digest — not in the split read
+4	S04-summary	research/RunLibrary.tsx:143	This run published no sealed evidence.
+24	S04-search	research/FreezeDetail.tsx:862	NUMERIC
+24	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:2366	n/a
+8	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	walk forward oos
+12	S04-execute	research/ExecuteCandleReplay.tsx:923	bars ·
+2	S04-execute	research/ExecuteCandleReplay.tsx:1703	· shaded = OOS generation · legacy witness, not the full lifecycle
+4	S04-execute,S04-freeze	research/ChildAuditCompanionPanel.tsx:158	child audit · source lifecycle observations
+4	S04-freeze,S04-split	research/retainedLane.ts:141	advanced walk-forward · weekly · expanding
+12	S04-execute	DATA?	2026-06-14 23:00Z
+6	S04-freeze	research/FoldSelectionPanel.tsx:15	causal · data-time selection
+23	S02,S04-atlas	~research/AlphaImport.tsx:73 «candidate»	candidate_decay_lambda
+23	S02,S04-atlas	~research/AlphaImport.tsx:73 «candidate»	candidate_decay_gamma
+23	S04-atlas	~research/CompareDetail.tsx:173 «retrospective»	retrospective_global_v2
+23	S04-atlas	~research/AlphaImport.tsx:11 «parameter»	single_global_parameter_set
+23	S04-execute	research/EngineAtlas.tsx:1523	exit
+1	S00	DATA?	binds alpha · av_ (or scratch = NOT_PUBLISHABLE), 14-route grid with per-route params, sweep/pin per param, fold-plan preview, claim forecast before compute
+11	S01,S04-summary	research/CompareDetail.tsx:141	child tape
+22	S02,S04-freeze,S04-search,S04-split	research/LineageDetail.tsx:2279	len_atr1
+22	S02,S04-freeze,S04-search,S04-split	DATA?	len_atr2
+22	S02,S04-freeze,S04-search,S04-split	DATA?	len_vol
+22	S02,S04-freeze,S04-search,S04-split	research/ResearchFixtures.tsx:190	rsi_l
+22	S02,S04-freeze,S04-search,S04-split	DATA?	signalLength
+2	S02	~research/DataDeclaration.tsx:674 «no admitted profile covers it»	no admitted profile covers it · p10.delta-signal-notional-wfo.v1, p10.delta-signal-notional-wfo.v2, p10.delta-signal-notional-causal-inner.v1 pins 1h
+11	S03,S04-atlas,S04-execute	research/EvidenceFlowRoute.tsx:35	S5 Claim
+11	S04-execute	research/ExecuteCandleReplay.tsx:6	fold capital
+2	S04-search	research/SearchDetail.tsx:2310	no declared mode in the search read — no Atlas entry
+2	S04-split	~research/SplitDetail.tsx:2377 «protocol kind»	protocol kind — not published · fold plan — not published
+1	S04-split	~research/SplitDetail.tsx:2374 «OOS observed after the profile»	three_window_current · IS + outer OOS + holdout · OOS observed after the profile was fixed · fold plan — not published
+1	S00	DATA?	claim bar + evidence cursor over 7 stages: Summary · Split · Search · Freeze · Execute · Claim · Atlas
+21	S01	research/AlphaImport.tsx:88	reason
+21	S01	research/EvidenceFlow.tsx:636	runtime
+7	S01	research/EvidenceCharts.tsx:1034	stitched OOS equity
+21	S02	research/AlphaImport.tsx:15	valid
+3	S02	DATA?	1min · 5min · 15min · 30min
+21	S02,S04-split	research/AlphaImport.tsx:201	span
+1	S02	~research/NewRun.tsx:2273 «no early stopping»	trials 2–400 · seed 42 · folds 2–16 · weekly · expanding · no early stopping · span ≤ 92 days
+21	S03,S04-atlas,S04-claim	research/reportText.tsx:28	walk_forward_oos
+7	S03,S04-freeze,S04-search	DATA?	2026-10-01 13:43 UTC
+21	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/AlphaImport.tsx:32 «research»	research.metric-registry.v3
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/EvidenceFlow.tsx:3455 «notional»	RUNNING · signal_notional
+3	S04-execute	research/ExecuteDetail.tsx:984	state at cursor — from the server
+3	S04-search	research/SearchDetail.tsx:111	B4 · θ* journey — parameter frequency
+3	S04-split	research/SplitDetail.tsx:2297	this stage's cert cap — not published
+3	S04-execute,S04-search,S04-split	DATA?	p08 optional warmup plus is oos only
+3	S04-freeze	research/Stage4Binding.tsx:85	F4 · binding down to Stage 4
+21	S04-execute	research/AlphaImport.tsx:144	entry
+21	S04-execute	research/CompareDetail.tsx:1378	flat
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/EvidenceFlow.tsx:3455 «notional»	PENDING · signal_notional
+1	S04-summary	~research/researchRefusal.ts:369 «so the retained source has not»	The run has not completed, so the retained source has nothing for it yet. It is read once the run seals.
+1	S04-freeze	research/FoldSelectionPanel.tsx:104	The verdict reads retained data-time ranges and each fold's own selection — it is not an engine freeze or read-clock guarantee.
+3	S04-split	~research/EvidenceFlow.tsx:5 «IS only»	search · 3 trials · IS only
+4	S03	research/RunProgress.tsx:75	stream closed at terminal frame
+20	S03,S04-freeze	research/AlphaImport.tsx:398	sha256:
+5	S04-atlas	research/EvidenceFlow.tsx:4520	full atlas → 12
+5	S04-atlas	~research/AlphaImport.tsx:357 «expected»	quantbt-native · expected 0.4.2
+10	S04-atlas	research/EngineAtlas.tsx:1271	random seed
+5	S04-atlas	DATA?	early stopping min trials
+5	S04-atlas	DATA?	early stopping min delta
+5	S04-atlas	DATA?	min trades per year
+5	S04-atlas	~research/CompareDetail.tsx:130 «forward»	· rolling needs walk_forward.train_window
+5	S04-atlas	~research/EngineAtlas.tsx:857 «search & selection»	search & selection →
+20	S04-atlas	DATA?	mean_is_sharpe_v1
+20	S04-atlas	research/AlphaImport.tsx:247	weight
+20	S04-atlas	research/AlphaImport.tsx:602	role
+5	S04-atlas	DATA?	Bootstrap replicates per fold.
+5	S04-atlas	DATA?	Centroid references are explicit.
+5	S04-claim	research/EvidenceFlow.tsx:143	Stage 5 · Claim
+5	S04-claim	research/EvidenceFlow.tsx:4092	binding — not published
+5	S04-claim	~research/EvidenceFlow.tsx:4251 «compare scope»	compare scope, state —
+4	S04-claim	research/EvidenceFlow.tsx:4314	reader route — not published
+5	S04-claim	research/EvidenceFlow.tsx:4482	Send to Approval Gate
+5	S04-claim	research/EvidenceFlow.tsx:4489	Register for Paper Trading
+10	S04-claim,S04-freeze	research/ExecuteDetail.tsx:2	S4 Execute
+2	S04-execute	research/replayClient.ts:287	The source did not publish a replay for this run.
+10	S04-execute,S04-freeze,S04-search,S04-split	research/EvidenceFlow.tsx:3088	not asserted
+10	S04-execute,S04-search	research/ExecuteDetail.tsx:1569	S3 Freeze
+5	S04-freeze	research/EvidenceFlow.tsx:141	Stage 3 · Freeze
+10	S04-freeze,S04-split	research/FreezeDetail.tsx:1668	S2 Search
+5	S04-search	research/SearchDetail.tsx:1832	what this mode reads
+5	S04-search	research/SearchDetail.tsx:2371	Stage A · search
+4	S04-search	research/SearchDetail.tsx:2513	selects on the frozen pool
+4	S04-search	research/SearchDetail.tsx:2529	B2 · the formula of
+10	S04-search,S04-summary	research/SearchDetail.tsx:2026	S1 Split
+5	S04-split	research/SplitDetail.tsx:2024	S1 · fold construction
+5	S04-split	research/SplitDetail.tsx:2103	S2 · θ* flow
+5	S04-split	research/FreezeDetail.tsx:1678	next: S4 Execute →
+4	S04-freeze,S04-search	research/OrchestrationClocks.tsx:19	orchestration · stage 3 completed
+4	S04-freeze,S04-search	research/OrchestrationClocks.tsx:20	orchestration · stage 4 started
+4	S04-freeze,S04-search	research/OrchestrationClocks.tsx:21	orchestration · stage 4 completed
+10	S04-split	research/PreflightPanel.tsx:364	0 bars
+1	S04-search	~research/CausalSelectionPanel.tsx:94 «inner validation»	A2 · trial surface — 3 trials · 0 pruned · study 0 · outer fold 0 · inner validation
+19	S02,S04-freeze	research/AlphaImport.tsx:214	empty
+19	S02,S03	research/EstimateParts.tsx:78	advanced
+1	S02	~research/NewRun.tsx:2235 «per outer fold study»	p10.delta-signal-notional-causal-inner.v1 · inner folds 2–16 per outer fold · trials 3 per outer fold study · total ≤ 48
+19	S04-execute,S04-freeze,S04-search,S04-split	research/DigestChain.tsx:8	provenance
+1	S01	~research/EvidenceFlow.tsx:578 «not issued»	49 runs · 0 issued · 25 not issued · 1 pending · 21 failed · 2 cancelled
+18	S01,S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	R-WFO-027
+18	S01	research/AlphaImport.tsx:911	pts
+18	S01	research/AlphaImport.tsx:33	return
+18	S01	research/CompareDetail.tsx:1151	sharpe
+18	S01,S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	R-P04-022
+18	S01,S02,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/RunLibrary.tsx:95	R-WFO-023
+9	S01,S03	research/NewRun.tsx:460	not reported
+18	S02,S04-summary	research/ArtifactPanel.tsx:35	UTC
+6	S02	DATA?	as of 2026-10-01
+18	S02,S04-atlas,S04-execute,S04-search	research/CausalSelectionPanel.tsx:111	seed
+6	S02	DATA?	QuantBT SamplerConfig default.
+3	S02	DATA?	2020-01-01 00:00 → 2026-10-01 22:00 (1h)
+6	S03,S04-freeze	DATA?	2026-07-01 00:00 UTC
+6	S03	DATA?	2026-10-02 16:31 UTC
+3	S03	research/RunProgress.tsx:1986	✓ RUN COMPLETE — ARTIFACTS SEALED
+9	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	2026-10-01 13:44Z
+9	S04-execute,S04-search,S04-split	research/EvidenceFlow.tsx:724	input scope
+9	S04-execute,S04-freeze	research/CompareDetail.tsx:1058	as of
+3	S04-execute	research/ExecuteDetail.tsx:1273	trade anatomy — entry → exit
+3	S04-execute	research/ExecuteDetail.tsx:1306	No funding or cost series published.
+3	S04-execute	research/ExecuteDetail.tsx:1960	every capability the route declared ·
+6	S04-summary	research/EvidenceFlow.tsx:1565	is + oos
+3	S04-freeze	research/Stage4Binding.tsx:173	declared · inside the params digest
+3	S04-search	research/SearchDetail.tsx:169	the declared optimizer did not run
+9	S04-summary	research/EvidenceFlow.tsx:3864	portal-derived ·
+3	S04-summary	research/ReportAllTime.tsx:792	market regime — not published ·
+18	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/CompareDetail.tsx:424	READY
+2	S04-execute	~research/ExecuteCandleReplay.tsx:1335 «source bar»	bar 1/168 · source bar 721 · 2026-07-01 00:00Z
+6	S04-freeze,S04-search	DATA?	at lower bound
+6	S04-freeze,S04-search	DATA?	at upper bound
+9	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	2026-10-02 17:02Z
+2	S04-freeze	research/WhatIfCard.tsx:42	no registered walk-forward declaration to build a grid from
+6	S04-split	research/SplitDetail.tsx:2702	own · trial
+17	S02,S04-search	research/researchFormat.ts:136	NOT_CAUSAL_MULTI_FOLD_GLOBAL_CALIBRATION
+17	S02,S04-atlas,S04-claim	research/AlphaImport.tsx:254	true
+17	S02,S04-split	research/EstimateParts.tsx:133	weekly
+17	S02,S04-split	research/EstimateParts.tsx:133	expanding
+17	S03,S04-atlas,S04-search	~research/AlphaImport.tsx:21 «quantbt»	er_quantbt_111
+1	S04-search	research/researchRefusal.ts:474	The retained walk-forward lane has no field for this figure, and this screen does not compute one.
+1	S00	DATA?	printable evidence artifact: claim passport, cert chain, per-fold verdict, digests — attach it to the approval
+4	S02	research/NewRun.tsx:527	Version (immutable after submit)
+8	S02	research/NewRun.tsx:2594	three-window protocol
+16	S02	research/EstimateParts.tsx:16	analysis
+8	S02	research/NewRun.tsx:2927	walk-forward v2
+8	S02	DATA?	inner weekly/14D
+16	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:2237	NOT_READY
+8	S04-atlas	research/EngineAtlas.tsx:568	feeds selection
+8	S04-freeze,S04-search,S04-summary	research/DigestChain.tsx:86	adapter contract
+16	S04-execute,S04-freeze,S04-search,S04-split	research/ArtifactPanel.tsx:37	manifest
+4	S04-search	research/SearchDetail.tsx:2332	Sampler trace: not published
+4	S04-search	research/SearchDetail.tsx:113	A3b · prune reasons
+4	S04-search	research/SearchDetail.tsx:115	A6 · parameter interactions
+2	S04-search	~research/SearchDetail.tsx:1794 «NO SEARCH RAN»	POOL FREEZE · NONE — NO SEARCH RAN
+4	S04-search	research/SearchDetail.tsx:2510	Stage B · selection
+4	S04-search	research/SearchDetail.tsx:2519	B1 · pool freeze
+8	S04-summary	research/CompareDetail.tsx:256	OOS Sharpe
+8	S04-execute	DATA?	2026-07-01 00:00Z
+2	S04-freeze	DATA?	portal retained manifest row counts and batch receipt
+2	S04-freeze	research/FreezeDetail.tsx:834	match = manifest, row counts, batch receipt only
+2	S04-search	research/SearchSurface.tsx:391	objective in trial order · gold = best-so-far
+2	S04-search	research/SearchDetail.tsx:174	the retained lane has no field for it
+8	S04-search	research/SearchSurface.tsx:510	regions sampled
+15	S00	research/JourneyMap.tsx:73	redesign
+1	S00	DATA?	adds ordering verdict (wall clock vs data time), digest drift check, what-if as sibling attempt
+3	S02	DATA?	1h · 4h · 1d
+3	S02	research/NewRun.tsx:621	runs of this alpha →
+15	S02,S04-claim	research/EvidenceFlow.tsx:1484	Holdout
+3	S02	research/NewRun.tsx:2103	fields · pinned by protocol
+3	S02	DATA?	QuantBT OptimizationConfig default direction tuple.
+3	S02	~research/NewRun.tsx:784 «routes admitted»	2 of 14 routes admitted
+3	S02	DATA?	Create a legacy `%_equity` endpoint.
+3	S02	research/NewRun.tsx:719	pinned to the alpha id
+3	S02	research/NewRun.tsx:1495	Your bounds kept · coverage
+3	S02	~research/DataDeclaration.tsx:670 «not declared»	not declared → not declared
+15	S03,S04-atlas,S04-search,S04-split	research/CausalSelectionPanel.tsx:107	study
+5	S04-atlas	research/EngineAtlas.tsx:1423	Claims by contract
+5	S04-atlas	research/EngineAtlas.tsx:1255	release facts ·
+5	S04-atlas	research/EngineAtlas.tsx:1267	trials per run
+5	S04-atlas	DATA?	early stopping rounds
+5	S04-atlas	DATA?	show progress bar
+5	S04-atlas	DATA?	optuna early stopping
+5	S04-atlas	DATA?	trade penalty factor
+5	S04-atlas	research/SearchDetail.tsx:2178	candidate selection metric
+5	S04-atlas	DATA?	top is fraction
+5	S04-atlas	DATA?	top is k
+5	S04-atlas	DATA?	candidate decay lambda
+5	S04-atlas	DATA?	candidate decay gamma
+5	S04-atlas	research/EngineAtlas.tsx:1309	) · window
+5	S04-atlas	research/EngineAtlas.tsx:900	← this run
+15	S04-atlas	~research/CausalSelectionPanel.tsx:153 «metrics»	is_metrics
+5	S04-atlas	~research/AlphaImport.tsx:11 «parameter»	fold_decay · top_parameter_frequency
+5	S04-atlas	research/EngineAtlas.tsx:1026	· this run
+5	S04-atlas	DATA?	Stationary bootstrap robustness
+15	S04-atlas	DATA?	sbb_decay_lambda
+15	S04-atlas	DATA?	sbb_std_penalty
+5	S04-atlas	~research/EngineAtlas.tsx:805 «bootstrap»	bootstrap_samples · bootstrap_decay
+5	S04-atlas	~research/ExecuteCandleReplay.tsx:1152 «No fold»	No fold-last fallback.
+5	S04-atlas	DATA?	largest cluster, medoid
+15	S04-atlas	DATA?	flat_eps
+15	S04-atlas	~research/EvidenceCharts.tsx:12 «samples»	flat_min_samples
+5	S04-atlas	~research/CausalSelectionPanel.tsx:113 «candidates»	robust_candidates · selection_target
+5	S04-atlas	~research/SearchDetail.tsx:1099 «dispersion»	subperiod_scores · dispersion
+5	S04-atlas	~research/CausalSelectionPanel.tsx:113 «candidates»	full_sample_used_for_selection · robust_candidates
+5	S04-claim	~research/EvidenceFlow.tsx:12 «stage caps»	per-stage caps —
+5	S04-claim	research/EvidenceFlow.tsx:4440	declared source absences
+5	S04-claim	research/EvidenceFlow.tsx:4469	open report →
+5	S04-claim	research/CompareDetail.tsx:1718	release candidate →
+3	S04-execute	research/ExecuteDetail.tsx:1702	stitched account — retrospective equity
+5	S04-search	research/SearchDetail.tsx:2159	OOS column state
+3	S04-split	research/SplitDetail.tsx:1156	unlock holdout → sibling attempt
+5	S04-split	research/SplitDetail.tsx:2597	θ* per fold:
+5	S04-split	research/SplitDetail.tsx:2763	OOS · S_full
+5	S04-split	research/SplitDetail.tsx:2139	holdout never read
+5	S04-split	research/EvidenceFlow.tsx:169	stitched OOS provenance
+3	S04-summary	research/EvidenceFlow.tsx:2847	fold starts — not published
+5	S04-summary	research/EvidenceFlow.tsx:2272	retained source passport
+1	S04-freeze	DATA?	window · rsi_l · signalLength · len_atr1 · len_atr2 · rvol · len_vol · slpercent
+3	S04-search	research/SearchDetail.tsx:1668	in the Engine Atlas →
+3	S04-summary	research/analyticsV2.tsx:165	Strategy vs benchmark — OOS
+3	S04-summary	research/analyticsV2.tsx:279	long / short / flat
+1	S04-search	DATA?	rvol=1 · rsi_l=26 · window=38 · len_vol=28 · len_atr1=13 · len_atr2=46 · slpercent=1 · signalLength=6
+1	S04-search	DATA?	rvol=1.1 · rsi_l=30 · window=22 · len_vol=30 · len_atr1=17 · len_atr2=35 · slpercent=1.5 · signalLength=20
+1	S04-search	DATA?	rvol=2 · rsi_l=21 · window=24 · len_vol=18 · len_atr1=19 · len_atr2=34 · slpercent=1.6 · signalLength=3
+1	S04-search	DATA?	rvol=2.4 · rsi_l=15 · window=42 · len_vol=28 · len_atr1=17 · len_atr2=58 · slpercent=2.4 · signalLength=20
+1	S04-search	DATA?	rvol=1.4 · rsi_l=15 · window=22 · len_vol=36 · len_atr1=10 · len_atr2=38 · slpercent=1.3 · signalLength=3
+1	S04-search	DATA?	rvol=2.5 · rsi_l=22 · window=30 · len_vol=34 · len_atr1=17 · len_atr2=27 · slpercent=1 · signalLength=5
+1	S04-search	DATA?	rvol=1.1 · rsi_l=27 · window=20 · len_vol=20 · len_atr1=16 · len_atr2=52 · slpercent=0.9 · signalLength=15
+1	S04-search	DATA?	rvol=1.7 · rsi_l=12 · window=56 · len_vol=22 · len_atr1=5 · len_atr2=52 · slpercent=0.7 · signalLength=14
+1	S04-search	DATA?	rvol=2.1 · rsi_l=21 · window=20 · len_vol=20 · len_atr1=20 · len_atr2=40 · slpercent=1.9 · signalLength=10
+1	S04-search	DATA?	rvol=2.1 · rsi_l=25 · window=20 · len_vol=22 · len_atr1=15 · len_atr2=42 · slpercent=2 · signalLength=10
+1	S04-search	DATA?	rvol=2.2 · rsi_l=18 · window=52 · len_vol=10 · len_atr1=10 · len_atr2=41 · slpercent=2 · signalLength=10
+1	S04-search	DATA?	rvol=1.9 · rsi_l=23 · window=28 · len_vol=26 · len_atr1=20 · len_atr2=44 · slpercent=2 · signalLength=8
+1	S04-search	DATA?	rvol=2.2 · rsi_l=18 · window=26 · len_vol=40 · len_atr1=15 · len_atr2=39 · slpercent=1.9 · signalLength=12
+1	S04-search	DATA?	rvol=1.7 · rsi_l=18 · window=26 · len_vol=38 · len_atr1=15 · len_atr2=33 · slpercent=2.2 · signalLength=13
+1	S04-search	DATA?	rvol=1.6 · rsi_l=18 · window=36 · len_vol=40 · len_atr1=12 · len_atr2=25 · slpercent=2.5 · signalLength=13
+1	S04-search	DATA?	rvol=1.5 · rsi_l=18 · window=28 · len_vol=40 · len_atr1=12 · len_atr2=33 · slpercent=2.2 · signalLength=17
+1	S04-search	DATA?	rvol=1.8 · rsi_l=16 · window=48 · len_vol=34 · len_atr1=5 · len_atr2=30 · slpercent=1.7 · signalLength=12
+1	S04-search	DATA?	rvol=2.3 · rsi_l=12 · window=26 · len_vol=36 · len_atr1=8 · len_atr2=38 · slpercent=2.2 · signalLength=17
+1	S04-search	DATA?	rvol=2 · rsi_l=19 · window=26 · len_vol=40 · len_atr1=15 · len_atr2=37 · slpercent=1.9 · signalLength=12
+1	S04-search	DATA?	rvol=1.9 · rsi_l=19 · window=32 · len_vol=40 · len_atr1=15 · len_atr2=36 · slpercent=1.8 · signalLength=12
+1	S04-search	DATA?	rvol=1.7 · rsi_l=16 · window=28 · len_vol=36 · len_atr1=14 · len_atr2=31 · slpercent=2.1 · signalLength=8
+1	S04-search	DATA?	rvol=2.2 · rsi_l=19 · window=60 · len_vol=32 · len_atr1=18 · len_atr2=38 · slpercent=1.8 · signalLength=14
+1	S04-search	DATA?	rvol=1.9 · rsi_l=19 · window=24 · len_vol=38 · len_atr1=13 · len_atr2=28 · slpercent=1.5 · signalLength=13
+1	S04-search	DATA?	rvol=2 · rsi_l=14 · window=34 · len_vol=38 · len_atr1=15 · len_atr2=44 · slpercent=2.3 · signalLength=8
+1	S04-search	DATA?	rvol=1.6 · rsi_l=17 · window=40 · len_vol=32 · len_atr1=11 · len_atr2=32 · slpercent=1.8 · signalLength=11
+1	S04-search	DATA?	rvol=2.5 · rsi_l=23 · window=26 · len_vol=38 · len_atr1=16 · len_atr2=36 · slpercent=2.5 · signalLength=18
+1	S04-search	DATA?	rvol=2.3 · rsi_l=20 · window=34 · len_vol=34 · len_atr1=14 · len_atr2=49 · slpercent=2.2 · signalLength=15
+1	S04-search	DATA?	rvol=1.8 · rsi_l=14 · window=30 · len_vol=40 · len_atr1=18 · len_atr2=39 · slpercent=2.3 · signalLength=16
+1	S04-search	DATA?	rvol=2.2 · rsi_l=19 · window=56 · len_vol=32 · len_atr1=18 · len_atr2=37 · slpercent=1.8 · signalLength=13
+1	S04-search	DATA?	rvol=2.1 · rsi_l=20 · window=46 · len_vol=38 · len_atr1=16 · len_atr2=34 · slpercent=1.9 · signalLength=14
+1	S04-search	DATA?	rvol=2.3 · rsi_l=16 · window=58 · len_vol=32 · len_atr1=18 · len_atr2=40 · slpercent=2.1 · signalLength=11
+1	S04-search	DATA?	rvol=2.3 · rsi_l=16 · window=48 · len_vol=36 · len_atr1=14 · len_atr2=44 · slpercent=2.1 · signalLength=11
+1	S04-search	DATA?	rvol=2.4 · rsi_l=17 · window=38 · len_vol=30 · len_atr1=19 · len_atr2=47 · slpercent=2.1 · signalLength=9
+1	S04-search	DATA?	rvol=2 · rsi_l=14 · window=32 · len_vol=40 · len_atr1=16 · len_atr2=41 · slpercent=1.6 · signalLength=12
+1	S04-search	DATA?	rvol=1.9 · rsi_l=13 · window=32 · len_vol=26 · len_atr1=17 · len_atr2=42 · slpercent=1.6 · signalLength=6
+1	S04-search	DATA?	rvol=2 · rsi_l=14 · window=42 · len_vol=30 · len_atr1=19 · len_atr2=35 · slpercent=1.2 · signalLength=11
+1	S04-search	DATA?	rvol=1.4 · rsi_l=15 · window=24 · len_vol=34 · len_atr1=16 · len_atr2=60 · slpercent=1.4 · signalLength=9
+1	S04-search	DATA?	rvol=1.6 · rsi_l=17 · window=36 · len_vol=14 · len_atr1=13 · len_atr2=29 · slpercent=1.7 · signalLength=15
+1	S04-search	DATA?	rvol=2.1 · rsi_l=17 · window=30 · len_vol=40 · len_atr1=15 · len_atr2=40 · slpercent=1.9 · signalLength=12
+1	S04-search	DATA?	rvol=2.4 · rsi_l=15 · window=26 · len_vol=38 · len_atr1=17 · len_atr2=45 · slpercent=2.3 · signalLength=13
+1	S04-search	DATA?	rvol=2 · rsi_l=20 · window=22 · len_vol=36 · len_atr1=16 · len_atr2=41 · slpercent=1.7 · signalLength=12
+1	S04-search	DATA?	rvol=2.2 · rsi_l=13 · window=24 · len_vol=40 · len_atr1=15 · len_atr2=47 · slpercent=2.4 · signalLength=11
+1	S04-search	DATA?	rvol=1.8 · rsi_l=16 · window=32 · len_vol=38 · len_atr1=13 · len_atr2=33 · slpercent=1.5 · signalLength=9
+1	S04-search	DATA?	rvol=2 · rsi_l=18 · window=22 · len_vol=36 · len_atr1=17 · len_atr2=39 · slpercent=2 · signalLength=14
+1	S04-search	DATA?	rvol=2.3 · rsi_l=21 · window=28 · len_vol=34 · len_atr1=14 · len_atr2=37 · slpercent=1.9 · signalLength=10
+1	S04-search	DATA?	rvol=2.1 · rsi_l=28 · window=26 · len_vol=28 · len_atr1=18 · len_atr2=43 · slpercent=1.2 · signalLength=13
+1	S04-search	DATA?	rvol=1.7 · rsi_l=22 · window=54 · len_vol=40 · len_atr1=16 · len_atr2=35 · slpercent=2.1 · signalLength=12
+1	S04-search	DATA?	rvol=2.4 · rsi_l=13 · window=30 · len_vol=8 · len_atr1=12 · len_atr2=41 · slpercent=1.5 · signalLength=7
+1	S04-search	DATA?	rvol=2.2 · rsi_l=19 · window=60 · len_vol=32 · len_atr1=18 · len_atr2=38 · slpercent=1.6 · signalLength=14
+1	S04-search	DATA?	rvol=2.2 · rsi_l=18 · window=60 · len_vol=24 · len_atr1=20 · len_atr2=40 · slpercent=1.8 · signalLength=16
+1	S04-search	DATA?	rvol=2.1 · rsi_l=20 · window=56 · len_vol=38 · len_atr1=19 · len_atr2=37 · slpercent=2 · signalLength=14
+1	S04-search	DATA?	rvol=2.3 · rsi_l=15 · window=58 · len_vol=36 · len_atr1=17 · len_atr2=39 · slpercent=1.7 · signalLength=11
+1	S04-search	DATA?	rvol=2.5 · rsi_l=16 · window=58 · len_vol=36 · len_atr1=17 · len_atr2=42 · slpercent=1.7 · signalLength=10
+1	S04-search	DATA?	rvol=2.3 · rsi_l=15 · window=52 · len_vol=40 · len_atr1=15 · len_atr2=33 · slpercent=1.9 · signalLength=11
+1	S04-search	DATA?	rvol=2.4 · rsi_l=14 · window=50 · len_vol=34 · len_atr1=14 · len_atr2=31 · slpercent=2.2 · signalLength=13
+1	S04-search	DATA?	rvol=1.9 · rsi_l=17 · window=58 · len_vol=38 · len_atr1=16 · len_atr2=39 · slpercent=1.4 · signalLength=10
+1	S04-search	DATA?	rvol=2 · rsi_l=16 · window=22 · len_vol=36 · len_atr1=15 · len_atr2=36 · slpercent=2 · signalLength=12
+1	S04-search	DATA?	rvol=1.5 · rsi_l=12 · window=20 · len_vol=40 · len_atr1=17 · len_atr2=43 · slpercent=2.4 · signalLength=11
+1	S04-search	DATA?	rvol=2.5 · rsi_l=15 · window=58 · len_vol=36 · len_atr1=17 · len_atr2=42 · slpercent=1.7 · signalLength=10
+1	S04-search	DATA?	rvol=2.5 · rsi_l=15 · window=54 · len_vol=38 · len_atr1=18 · len_atr2=40 · slpercent=1.6 · signalLength=9
+1	S04-search	DATA?	rvol=2.4 · rsi_l=18 · window=58 · len_vol=36 · len_atr1=6 · len_atr2=46 · slpercent=1.7 · signalLength=12
+1	S04-search	DATA?	rvol=1 · rsi_l=15 · window=54 · len_vol=38 · len_atr1=17 · len_atr2=41 · slpercent=1.9 · signalLength=11
+1	S04-search	DATA?	rvol=1 · rsi_l=14 · window=54 · len_vol=38 · len_atr1=17 · len_atr2=49 · slpercent=1.8 · signalLength=10
+1	S04-search	DATA?	rvol=1 · rsi_l=13 · window=54 · len_vol=34 · len_atr1=19 · len_atr2=54 · slpercent=1.8 · signalLength=4
+1	S04-search	DATA?	rvol=1.2 · rsi_l=14 · window=52 · len_vol=38 · len_atr1=16 · len_atr2=48 · slpercent=2.1 · signalLength=8
+1	S04-search	DATA?	rvol=1.2 · rsi_l=12 · window=52 · len_vol=18 · len_atr1=16 · len_atr2=50 · slpercent=2.1 · signalLength=7
+1	S04-search	DATA?	rvol=1.1 · rsi_l=14 · window=56 · len_vol=38 · len_atr1=16 · len_atr2=45 · slpercent=2.2 · signalLength=7
+1	S04-search	DATA?	rvol=1.2 · rsi_l=16 · window=44 · len_vol=30 · len_atr1=18 · len_atr2=56 · slpercent=2 · signalLength=8
+1	S04-search	DATA?	rvol=1 · rsi_l=14 · window=50 · len_vol=38 · len_atr1=17 · len_atr2=51 · slpercent=1.8 · signalLength=11
+1	S04-search	DATA?	rvol=1.1 · rsi_l=13 · window=54 · len_vol=40 · len_atr1=18 · len_atr2=48 · slpercent=2 · signalLength=9
+1	S04-search	DATA?	rvol=1.3 · rsi_l=13 · window=52 · len_vol=40 · len_atr1=18 · len_atr2=53 · slpercent=2.1 · signalLength=9
+1	S04-search	DATA?	rvol=1.3 · rsi_l=15 · window=56 · len_vol=40 · len_atr1=19 · len_atr2=48 · slpercent=2.2 · signalLength=8
+1	S04-search	DATA?	rvol=1.1 · rsi_l=12 · window=50 · len_vol=40 · len_atr1=20 · len_atr2=26 · slpercent=0.7 · signalLength=13
+1	S04-search	DATA?	rvol=1.2 · rsi_l=13 · window=58 · len_vol=36 · len_atr1=15 · len_atr2=44 · slpercent=1.9 · signalLength=10
+1	S04-search	DATA?	rvol=1 · rsi_l=15 · window=34 · len_vol=38 · len_atr1=16 · len_atr2=46 · slpercent=2.3 · signalLength=6
+1	S04-search	DATA?	rvol=1.5 · rsi_l=17 · window=60 · len_vol=32 · len_atr1=18 · len_atr2=34 · slpercent=2 · signalLength=11
+1	S04-search	DATA?	rvol=1.1 · rsi_l=16 · window=48 · len_vol=40 · len_atr1=19 · len_atr2=41 · slpercent=2.1 · signalLength=9
+1	S04-search	DATA?	rvol=1.1 · rsi_l=14 · window=28 · len_vol=36 · len_atr1=14 · len_atr2=36 · slpercent=2 · signalLength=13
+1	S04-search	DATA?	rvol=1 · rsi_l=14 · window=54 · len_vol=38 · len_atr1=17 · len_atr2=49 · slpercent=1.9 · signalLength=10
+1	S04-search	DATA?	rvol=1.1 · rsi_l=13 · window=56 · len_vol=38 · len_atr1=17 · len_atr2=48 · slpercent=1.8 · signalLength=11
+1	S04-search	DATA?	rvol=1 · rsi_l=15 · window=54 · len_vol=40 · len_atr1=16 · len_atr2=50 · slpercent=1.9 · signalLength=12
+1	S04-search	DATA?	rvol=1.2 · rsi_l=17 · window=56 · len_vol=40 · len_atr1=15 · len_atr2=51 · slpercent=2.1 · signalLength=12
+1	S04-search	DATA?	rvol=1.4 · rsi_l=15 · window=40 · len_vol=40 · len_atr1=16 · len_atr2=39 · slpercent=2.2 · signalLength=12
+1	S04-search	DATA?	rvol=1.8 · rsi_l=16 · window=52 · len_vol=36 · len_atr1=16 · len_atr2=38 · slpercent=1.9 · signalLength=13
+1	S04-search	DATA?	rvol=1 · rsi_l=14 · window=54 · len_vol=38 · len_atr1=18 · len_atr2=43 · slpercent=2 · signalLength=14
+1	S04-search	DATA?	rvol=1 · rsi_l=15 · window=54 · len_vol=34 · len_atr1=18 · len_atr2=52 · slpercent=2 · signalLength=15
+1	S04-search	DATA?	rvol=1 · rsi_l=12 · window=50 · len_vol=34 · len_atr1=18 · len_atr2=53 · slpercent=2 · signalLength=16
+1	S04-search	DATA?	rvol=1.1 · rsi_l=24 · window=54 · len_vol=38 · len_atr1=19 · len_atr2=51 · slpercent=1.9 · signalLength=15
+1	S04-search	DATA?	rvol=1 · rsi_l=15 · window=58 · len_vol=34 · len_atr1=18 · len_atr2=50 · slpercent=2.1 · signalLength=15
+1	S04-search	DATA?	rvol=1.1 · rsi_l=15 · window=54 · len_vol=36 · len_atr1=17 · len_atr2=55 · slpercent=2 · signalLength=14
+1	S04-search	DATA?	rvol=1.1 · rsi_l=13 · window=52 · len_vol=36 · len_atr1=17 · len_atr2=56 · slpercent=2 · signalLength=14
+1	S04-search	DATA?	rvol=1.1 · rsi_l=13 · window=54 · len_vol=36 · len_atr1=17 · len_atr2=55 · slpercent=2 · signalLength=15
+1	S04-search	DATA?	rvol=1.1 · rsi_l=13 · window=54 · len_vol=36 · len_atr1=17 · len_atr2=58 · slpercent=2 · signalLength=16
+1	S04-search	DATA?	rvol=1 · rsi_l=13 · window=54 · len_vol=34 · len_atr1=17 · len_atr2=57 · slpercent=2 · signalLength=17
+1	S04-search	DATA?	rvol=1 · rsi_l=12 · window=54 · len_vol=32 · len_atr1=19 · len_atr2=59 · slpercent=1.9 · signalLength=19
+1	S04-search	DATA?	rvol=1 · rsi_l=12 · window=56 · len_vol=32 · len_atr1=20 · len_atr2=59 · slpercent=1.9 · signalLength=19
+1	S04-search	DATA?	rvol=1 · rsi_l=12 · window=50 · len_vol=34 · len_atr1=19 · len_atr2=57 · slpercent=1.9 · signalLength=17
+1	S00	~research/EvidenceFlow.tsx:4255 «window disclosure»	cert = min of caps, manifest states, window disclosure — lives inside the hub
+1	S00	DATA?	fold anatomy, nested inner folds, holdout seal — and the modes × routes reference
+1	S01	~research/EvidenceFlow.tsx:417 «completed»	49 runs · 25 completed · 21 failed · 1 queued · 2 cancelled
+2	S01	research/RunLibrary.tsx:87	no claim — cancelled before Stage 5
+2	S01	research/RunLibrary.tsx:85	no claim — failed before Stage 5
+2	S02	DATA?	folds 2–16 · span ≤ 92 days
+1	S02	~research/NewRun.tsx:2235 «per outer fold study»	pinned · p10.delta-signal-notional-causal-inner.v1 · trials 3 per outer fold study · total ≤ 48
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/AlphaImport.tsx:32 «research»	research.metric-registry.v1
+7	S04-claim,S04-split	research/EvidenceFlow.tsx:2983	holdout —
+14	S04-claim,S04-execute	research/ExecuteCandleReplay.tsx:1856	funding
+14	S04-freeze,S04-search,S04-split	research/CausalSelectionPanel.tsx:2	selection
+2	S04-summary	~research/EvidenceFlow.tsx:1696 «locator not published»	oos · percent · locator not published
+2	S04-summary	~research/EvidenceFlow.tsx:1577 «origin not published»	oos · ratio · origin not published
+2	S04-execute	research/ExecuteDetail.tsx:664	retained model samples · read on request
+1	S04-summary	DATA?	The chart is an extrema-preserving sample. Official metrics use the full confined QuantBT result.
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	2026-10-01 13:43Z
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	numba_units_v2
+14	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:686	research.current-source-evidence.v1
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:1464	none selected
+1	S04-execute	~research/ExecuteCandleReplay.tsx:1639 «sample generation»	audit #4185 · out-of-sample generation · candidate 00b18de5… · seed 402125700 · isolated_v1 certified
+2	S04-execute	research/ExecuteCandleReplay.tsx:1668	child audit — strategy isolation, per fold
+2	S04-search	research/SearchSurface.tsx:337	Click a point to select that trial
+2	S04-search	research/SearchSurface.tsx:506	A4 · per param — sampled regions
+2	S04-search	research/SearchSurface.tsx:582	A5 · which params drive the objective
+2	S04-search	DATA?	K = ⌈387 × 0.1⌉ = 39
+2	S04-split	~research/NewRun.tsx:747 «advanced walk»	— advanced walk-forward · weekly · expanding
+2	S04-split	research/researchRefusal.ts:477	This walk-forward profile declares no holdout segment.
+2	S04-split	research/SplitDetail.tsx:1617	this alpha's attempts · Attempt Lineage →
+2	S04-summary	~research/EvidenceFlow.tsx:3262 «retained stitched account»	retained stitched account · currency · source-derived
+2	S04-summary	~research/EvidenceFlow.tsx:3262 «retained stitched account»	retained stitched account · percent · source-derived
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/CompareDetail.tsx:1282 «claim NOT»	claim NOT_PUBLISHED
+1	S04-execute	~research/ExecuteCandleReplay.tsx:1639 «sample generation»	audit #15 · out-of-sample generation · candidate 9f93eca7… · seed 3926297980 · isolated_v1 certified
+1	S00	DATA?	single .py contract, 7 fail-closed gates, DRAFT→ACTIVE registry — feeds New Run Context
+1	S00	DATA?	S1–S5 trail chips, cert + claim on the face, compare guarded by ComparisonContractKey
+1	S00	DATA?	adds search cinema, freeze line, per-mode formulas J₁…J₅, θ* journey, 4-state OOS column
+1	S00	DATA?	adds cert chain (min of caps), 7-state artifact manifest, report gate, promotion hooks
+13	S01,S03,S04-search,S04-summary	research/EngineAtlas.tsx:1264	trials
+13	S02,S04-atlas	research/NewRun.tsx:2079	sampler
+13	S03	research/EvidenceFlow.tsx:121	DONE
+1	S03	~research/RunProgress.tsx:740 «global study»	global study · trial 400/400 · best IS Sharpe 6.101 · pruned 13/400
+1	S03	~research/RunProgress.tsx:577 «fold studies»	per-fold studies · trial 9/9 · best IS Sharpe -1.746 · pruned 0/9
+13	S04-freeze,S04-split	research/EngineAtlas.tsx:1547	holdout
+13	S04-claim,S04-execute,S04-freeze,S04-search,S04-summary	research/AlphaImport.tsx:36	available
+13	S04-execute	research/AlphaImport.tsx:16	long
+1	S04-search	~research/SearchDetail.tsx:4 «trial surface»	A2 · trial surface — 400 trials · 13 pruned · global study
+1	S04-split	research/CausalSelectionPanel.tsx:102	applies to its own OOS fold · outer OOS not used to select
+1	S00	DATA?	modes × routes × claims — the support matrix as a reference
+1	S00	~research/ReleaseCandidateDetail.tsx:123 «evidence pack»	lineage rail alpha→av_→run→params→rc_, the 12-item R1 evidence pack, publish → approval-inbox mirror
+1	S00	DATA?	adds window disclosure (IS/OOS/holdout), rolling Sharpe & beta, monthly heat, behavior tiles
+6	S01	research/RunLibrary.tsx:1239	not measured
+3	S02	research/NewRun.tsx:674	No release candidate yet
+3	S02	research/AlphaImportRoute.tsx:22	import new version →
+3	S02	research/DataDeclaration.tsx:635	instrument — not published
+3	S02	DATA?	not declared by av_1_0_0
+3	S02	DATA?	QuantBT OptimizationConfig deterministic default.
+12	S02	research/AlphaImport.tsx:136	null
+3	S02	DATA?	Three-window validation requires robust_decay.
+3	S02	DATA?	data binding & snapshot
+3	S02	research/NewRun.tsx:788	full route atlas →
+3	S02	DATA?	Create a signal-notional endpoint.
+3	S02	research/NewRun.tsx:906	Walk-forward searches strategy parameters.
+6	S02	research/DataDeclaration.tsx:670	not declared
+4	S03	research/RunProgress.tsx:1814	claim passport —
+4	S03	DATA?	✓ S1 Split
+4	S03	DATA?	✓ S2 Search
+4	S03	DATA?	✓ S3 Freeze
+4	S03	research/PlannedWindows.tsx:38	planned OOS windows
+4	S03,S04-freeze	DATA?	2026-08-01 00:00 UTC
+3	S03	research/RunProgress.tsx:2607	next: Evidence Flow →
+3	S03	research/RunProgress.tsx:1865	open evidence flow →
+3	S03	research/RunProgress.tsx:643	none — run final
+6	S03,S04-claim	DATA?	417 B
+3	S03	research/artifacts.ts:86	export — not published
+12	S04-atlas,S04-freeze,S04-split,S04-summary	research/CausalSelectionPanel.tsx:4	folds
+6	S04-execute	research/replayClient.ts:266	candle windows
+2	S04-execute	DATA?	source did not publish execution state
+6	S04-execute	research/replayClient.ts:265	execution events
+3	S04-execute	research/ExecuteDetail.tsx:1285	No trade ledger published.
+6	S04-execute	research/replayClient.ts:267	SL/TP ambiguity
+6	S04-execute	research/replayClient.ts:268	OCO tree
+3	S04-search	research/SearchDetail.tsx:2411	trials · grid size
+4	S04-search	research/SearchDetail.tsx:112	A3 · progression
+4	S04-search	research/SearchDetail.tsx:2035	S3 Freeze →
+4	S04-search	research/SearchDetail.tsx:2529	— every term
+2	S04-search	research/SearchDetail.tsx:2557	selected trial ref — none published
+2	S04-split	research/SplitDetail.tsx:775	retained fold lane — not applicable
+6	S04-freeze,S04-split	research/CausalSelectionPanel.tsx:7	inner folds
+2	S04-split	research/SplitDetail.tsx:2684	θ* per fold — not published
+4	S04-summary	research/EvidenceFlow.tsx:1567	scope not published
+4	S04-summary	research/EvidenceFlow.tsx:1577	origin not published
+3	S04-claim	research/EvidenceFlow.tsx:4326	progress read · bundle
+3	S04-freeze	research/DigestChain.tsx:379	F3 · digest chain
+6	S04-freeze	research/DigestChain.tsx:5	params digest
+3	S04-search	research/SearchDetail.tsx:566	θ* and range position
+1	S04-summary	DATA?	No funding series was published by this adapter; zero is not implied.
+3	S04-summary	research/EvidenceFlow.tsx:3845	Return distribution — OOS
+3	S04-summary	research/EvidenceFlow.tsx:3696	monthly returns — OOS
+3	S04-summary	research/analyticsV2.tsx:289	exposure episodes (not trades)
+12	S04-execute	research/AlphaImport.tsx:10	end
+12	S04-execute	research/AlphaImport.tsx:72	short
+4	S04-execute,S04-freeze	research/ChildAuditCompanionPanel.tsx:220	read lifecycle rows
+2	S04-freeze	research/FreezeDetail.tsx:1470	data time · requested walk-forward window
+2	S04-freeze	research/FreezeDetail.tsx:859	no freeze or OOS-read timestamps published
+4	S04-freeze,S04-search	research/BoundWarning.tsx:42	near upper bound
+2	S04-search	research/SearchSurface.tsx:342	· colour = IS quintile (
+12	S04-summary	research/AlphaImport.tsx:32	search
+12	S04-summary	research/AlphaImport.tsx:1703	replay
+1	S00	DATA?	the redesigned run view — one hub, one cursor, five stages
+1	S00	~research/SearchStageB.tsx:5 «best ≠ selected»	search cinema, freeze line, J₁…J₅ in real math, best ≠ selected
+11	S00,S04-claim,S04-summary	research/CompareDetail.tsx:2	Compare
+1	S00	~research/EvidenceFlow.tsx:4490 «or declare a refit»	deployment params must equal the frozen digest, or declare a refit
+1	S00	DATA?	reads the published record — nothing here is a research screen
+11	S02,S03	research/NewRun.tsx:733	three_window_decay
+11	S02,S04-search	research/EngineAtlas.tsx:1133	optimization_mode
+1	S02	~research/EngineAtlas.tsx:1547 «holdout»	IS 2026-05-01T00:00 → OOS 2026-07-01T00:00 → holdout 2026-08-01T00:00 → end 2026-08-15T00:00
+11	S02,S04-execute	research/EvidenceFlow.tsx:2469	orders
+1	S03	~research/RunProgress.tsx:581 «fixed profile»	fixed profile · fold 1/1 · trial 1/1 · no search
+11	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	fold_04
+11	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	fold_05
+11	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	fold_06
+11	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceCharts.tsx:490	fold_07
+11	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	fold_08
+11	S03,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	fold_09
+11	S04-execute,S04-freeze,S04-search,S04-split	research/ArtifactPanel.tsx:69	partial
+11	S04-summary	research/AlphaImport.tsx:891	open
+1	S04-split	~research/SplitDetail.tsx:3023 «no fold rows published»	protocol THREE_WINDOW_CURRENT · one IS/OOS pair · no fold rows published
+1	S04-freeze	research/WhatIfCard.tsx:458	ΔJ = J at the node − J at θ* ·
+1	S00	DATA?	redesign adds the forecast claim bar + handoff into evidence
+2	S00	research/RunLibrary.tsx:1688	S2 · Search & Selection
+1	S00	DATA?	version ledger per av_, 52-attempt scale (probes collapsed), promotion pick
+1	S00	DATA?	adds event-level replay transport, causal chain per fill, route-honest not_applicable
+10	S01	research/RunLibrary.tsx:720	first→last
+10	S01,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	R-WFO-025
+10	S01,S04-execute	research/CompareDetail.tsx:99	equity
+10	S01,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	R-P04-020
+5	S01,S02	research/AlphaImport.tsx:160	not recorded
+2	S02	research/retainedLane.ts:141	walk-forward · weekly · expanding
+1	S02	research/NewRun.tsx:1837	inner folds — decay selection stays inside each outer IS
+5	S03	research/RunMetaStrip.tsx:113	· config
+5	S03	research/QueuePanel.tsx:227	· queued
+5	S03	research/QueuePanel.tsx:4	worker attempt
+2	S03	DATA?	P10 isolated Delta qualification failed
+5	S04-atlas	research/EngineAtlas.tsx:1421	WFO modes
+5	S04-atlas	research/EngineAtlas.tsx:1422	Execution routes
+5	S04-atlas	research/EngineAtlas.tsx:1259	· expected
+5	S04-atlas	research/EngineAtlas.tsx:1235	trial ceiling
+5	S04-atlas	research/EngineAtlas.tsx:1268	early stopping
+5	S04-atlas	research/DigestChain.tsx:22	config digest
+5	S04-atlas	research/NewRun.tsx:3091	n trials
+5	S04-atlas	DATA?	n jobs
+5	S04-atlas	DATA?	duplicate policy
+5	S04-atlas	DATA?	exception policy
+5	S04-atlas	DATA?	constraint mode
+5	S04-atlas	research/RunLibrary.tsx:166	optimization mode
+5	S04-atlas	research/SplitDetail.tsx:1829	optimization schedule
+5	S04-atlas	research/NewRun.tsx:2356	optuna trials
+5	S04-atlas	research/SearchDetail.tsx:435	scoring backend
+5	S04-atlas	DATA?	use numba
+5	S04-atlas	research/SearchDetail.tsx:2178	candidate selection
+5	S04-atlas	DATA?	decay lambda
+5	S04-atlas	DATA?	decay gamma
+5	S04-atlas	research/EngineAtlas.tsx:1317	preflight limits
+5	S04-atlas	research/EngineAtlas.tsx:1319	sweep dims
+5	S04-atlas	research/EngineAtlas.tsx:1162	rule one
+5	S04-atlas	research/CompareDetail.tsx:415	claim =
+5	S04-atlas	research/EngineAtlas.tsx:1175	rule two
+5	S04-atlas	DATA?	Decay robustness
+10	S04-atlas	~research/FreezeDetail.tsx:488 «evaluation»	fixed_or_post_selection_evaluation
+10	S04-atlas	DATA?	mode_2_sbb
+10	S04-atlas	DATA?	mean_synthetic_oos_std
+10	S04-atlas	DATA?	mode_3_flat_minima
+5	S04-atlas	DATA?	Flat minima
+10	S04-atlas	~research/EngineAtlas.tsx:602 «plateau»	plateau_neighborhood
+10	S04-atlas	DATA?	mode_4_is_only_robust
+5	S04-atlas	DATA?	IS-only robust
+10	S04-atlas	DATA?	is_subperiods
+10	S04-atlas	DATA?	q25_weight
+10	S04-atlas	~research/SearchDetail.tsx:1099 «dispersion»	dispersion_penalty
+10	S04-atlas	~research/EngineAtlas.tsx:1312 «temporal»	temporal_weight
+10	S04-atlas	~research/EngineAtlas.tsx:602 «plateau»	plateau_weight
+10	S04-atlas	~research/SearchSurface.tsx:8 «quantile»	plateau_quantile
+10	S04-atlas	research/EngineAtlas.tsx:602	plateau_median_weight
+10	S04-atlas	~research/EngineAtlas.tsx:602 «plateau»	plateau_std_penalty
+10	S04-atlas	~research/EngineAtlas.tsx:602 «plateau»	plateau_size_bonus
+10	S04-atlas	DATA?	mode_5_full_robust
+5	S04-atlas	DATA?	Full-sample robust
+5	S04-claim	research/EvidenceFlow.tsx:4406	methodology certificate
+5	S04-claim	research/EvidenceFlow.tsx:4101	condition observed
+5	S04-claim	research/EvidenceFlow.tsx:4053	resulting level
+5	S04-claim	DATA?	◫ Atlas
+5	S04-claim	research/EvidenceFlow.tsx:4469	report →
+5	S04-execute	research/EngineAtlas.tsx:431	execution contract
+5	S04-execute	research/ExecuteCandleReplay.tsx:2337	trade blotter
+5	S04-execute	research/ExecuteCandleReplay.tsx:1858	cost timeline
+5	S04-search	research/ReportDetail.tsx:588	source profile
+2	S04-search	research/SearchDetail.tsx:110	A4 · per-parameter sampled regions
+5	S04-freeze,S04-search	research/FreezeDetail.tsx:1872	fold inspection
+10	S04-search	research/SearchDetail.tsx:733	S_IS
+10	S04-split	research/NewRun.tsx:1333	purge
+10	S04-split	research/NewRun.tsx:1333	embargo
+5	S04-split	research/EvidenceFlow.tsx:2501	test window
+5	S04-split	research/SplitDetail.tsx:2762	IS sharpe
+5	S04-split	research/ExecuteCandleReplay.tsx:915	OOS trades
+5	S04-split	research/SplitDetail.tsx:20	boundary integrity
+5	S04-split	research/EvidenceFlow.tsx:1067	gap scan
+2	S04-split	research/SplitDetail.tsx:2237	no outer OOS window published
+5	S04-split	DATA?	◈ Summary
+5	S04-summary	research/EvidenceFlow.tsx:2983	Holdout Live
+5	S04-summary	research/EvidenceFlow.tsx:3003	Rebased 100
+10	S04-summary	research/EvidenceFlow.tsx:1575	engine-direct
+2	S04-summary	~research/EvidenceFlow.tsx:3326 «Sharpe decay»	Sharpe decay (IS → OOS)
+5	S04-summary	research/EvidenceFlow.tsx:3242	Benchmark return
+5	S04-summary	research/EvidenceFlow.tsx:2465	per-fold verdict
+5	S04-summary	research/EvidenceFlow.tsx:2469	by fold
+5	S04-summary	research/EvidenceFlow.tsx:2469	worst first
+5	S04-summary	research/EvidenceFlow.tsx:2500	max dd
+5	S04-summary	research/EvidenceFlow.tsx:3073	worst moment
+2	S04-summary	research/EvidenceFlow.tsx:3845	Return distribution — stitched OOS
+2	S04-summary	research/EvidenceFlow.tsx:3696	monthly returns — stitched OOS
+1	S04-execute	research/ExecuteDetail.tsx:81	equity samples only — no orders, fills, positions or candles
+1	S04-split	research/SplitDetail.tsx:2684	no search · fixed profile traded on the OOS window
+2	S04-execute	DATA?	fill same close @ close
+2	S04-freeze	research/FreezeDetail.tsx:1052	digest chain · retained custody
+2	S04-freeze	research/Stage4Binding.tsx:44	candidate id used by replay
+2	S04-search	research/SearchDetail.tsx:2120	executed · retained search contract
+10	S04-search	research/DigestChain.tsx:83	QUANTBT
+2	S04-search	~research/DigestChain.tsx:36 «components»	is_metrics · oos_metrics · decay_components
+1	S04-search	~research/SearchDetail.tsx:2513 «POOL FROZEN»	POOL FROZEN · K = ⌈387 × 0.1⌉ = 39
+2	S04-search	~research/SearchStageB.tsx:39 «no constraints declared»	n/a — no constraints declared
+1	S04-search	research/SearchStageB.tsx:354	QuantBT's d = S_IS − S_OOS per fold, for θ*
+2	S04-search	research/SearchDetail.tsx:1221	θ* sealed in S3 →
+2	S04-search	research/SearchDetail.tsx:1015	candidate replays — Stage B
+2	S04-split	research/SplitDetail.tsx:1697	outer OOS — test windows
+2	S04-split	research/SplitDetail.tsx:2142	n/a · no holdout segment
+2	S04-split	research/SplitDetail.tsx:2171	purge between train and test
+2	S04-split	research/SplitDetail.tsx:1424	disjoint at every retained fold
+2	S04-split	research/SplitDetail.tsx:2246	series on Evidence Flow →
+2	S04-split	research/SplitDetail.tsx:2290	methodology certificate — not published
+2	S04-summary	~research/BoundWarning.tsx:50 «percent»	oos · percent · engine-direct
+2	S04-summary	research/EvidenceFlow.tsx:3340	OOS · sum of folds
+2	S04-summary	research/EvidenceFlow.tsx:2847	dashed = fold test start
+1	S04-search	~research/SearchSurface.tsx:489 «too few trials»	too few trials (3) to read · green = θ*
+1	S00	DATA?	same frozen payload; the redesign adds the claim forecast
+1	S00	~research/EngineAtlas.tsx:843 «optimization»	shipped 6-step form: strategy, data, windows, params, optimization, review
+1	S00	~research/ReleaseCandidateDetail.tsx:28 «assignee pool»	reads the rc_ read-model · SLA · assignee pool
+1	S00	~research/AlphaImport.tsx:88 «account»	venue, account, capital — belongs to dc_, not rc_
+9	S01,S03,S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/EvidenceFlow.tsx:188	QUEUED
+3	S01	DATA?	retry not dispatched
+1	S01	DATA?	The fixed qualification has not sealed a publishable claim.
+3	S02	research/NewRun.tsx:645	last published rc
+3	S02	DATA?	4h · 1d
+1	S02	~research/DataDeclaration.tsx:674 «no admitted profile covers it»	no admitted profile covers it · p04.fixed-qualification.v1 pins 1h
+1	S02	~research/NewRun.tsx:2273 «no early stopping»	trials 1 · no seed · no early stopping
+3	S02	research/NewRun.tsx:2103	Optimizer defaults ·
+3	S02	research/NewRun.tsx:2080	Objective & constraints
+3	S02	~research/NewRun.tsx:1904 «sweep ceiling»	sweep ceiling 8
+3	S02	DATA?	5 … 20
+3	S02	DATA?	25 … 60
+3	S02	DATA?	8 … 40
+3	S02	DATA?	12 … 30
+3	S02	DATA?	1 … 2.5
+3	S02	DATA?	3 … 20
+3	S02	DATA?	0.7 … 2.5
+3	S02	DATA?	20 … 60
+3	S02	research/NewRun.tsx:3567	Run preflight first.
+3	S02	DATA?	signal · close_target_v2
+3	S02	DATA?	signal · legacy
+3	S02	research/NewRun.tsx:856	routes not admitted
+3	S02	DATA?	Strategy & protocol
+9	S02,S04-search	~research/CausalSelectionPanel.tsx:2 «SELECTION»	STRICT_OUTER_OOS_AFTER_FROZEN_SELECTION
+9	S03,S04-claim	research/ArtifactPanel.tsx:52	denied
+1	S03	research/RunProgress.tsx:1432	No table has been retained for this run yet.
+3	S03	~research/AlphaImport.tsx:1227 «Execute»	✓ S4 Execute
+3	S03	DATA?	✓ S5 Claim
+3	S03	research/RunProgress.tsx:1438	retained tables ·
+9	S04-execute	~research/AlphaImport.tsx:137 «PUBLISH»	P04_SOURCE_DID_NOT_PUBLISH_FOLD_CAPITAL_CONVENTION
+3	S04-execute	research/ExecuteDetail.tsx:1733	· emitted samples
+3	S04-execute	research/ExecuteDetail.tsx:1004	execution state —
+9	S04-execute	~research/CompareDetail.tsx:1994 «PROVENANCE»	P04_SOURCE_DID_NOT_PUBLISH_CHILD_AUDIT_REPLAY_PROVENANCE
+9	S04-execute	research/researchRefusal.ts:456	P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_TRADE_LEDGER
+9	S04-execute	~research/AlphaImport.tsx:137 «PUBLISH»	P04_SOURCE_DID_NOT_PUBLISH_MAE_MFE_INPUTS
+3	S04-execute	research/ExecuteDetail.tsx:1296	trade PnL distribution
+9	S04-execute	~research/AlphaImport.tsx:137 «PUBLISH»	P04_SOURCE_DID_NOT_PUBLISH_FUNDING
+9	S04-execute	~research/ExecuteDetail.tsx:1312 «AMBIGUITY»	P04_SOURCE_DID_NOT_PUBLISH_INTRABAR_SL_TP_AMBIGUITY
+9	S04-execute	~research/AlphaImport.tsx:137 «PUBLISH»	P04_SOURCE_DID_NOT_PUBLISH_OCO_PARENT_CHILD_RELATIONSHIPS
+9	S04-execute	~research/AlphaImport.tsx:54 «EXECUTION»	P04_SOURCE_DID_NOT_PUBLISH_MULTI_LEG_EXECUTION_FACTS
+3	S04-execute	research/ExecuteDetail.tsx:1960	route facts ·
+3	S04-execute	DATA?	sl tp ambiguity
+3	S04-execute	DATA?	cross stream order
+3	S04-execute	research/ExecuteDetail.tsx:660	retained model replay
+3	S04-search	research/SearchDetail.tsx:2409	sampler · seeds
+3	S04-search	research/SearchDetail.tsx:1208	No selection published.
+3	S04-summary	DATA?	OOS net return
+9	S04-summary	research/AlphaImport.tsx:1205	oos
+3	S04-summary	DATA?	OOS max drawdown
+3	S04-summary	DATA?	evidence series EQUITY_OOS
+3	S04-summary	research/EvidenceFlow.tsx:3110	per-fold metrics —
+3	S04-freeze	research/FreezeDetail.tsx:1445	wall clock ordering
+3	S04-freeze	research/Stage4Binding.tsx:216	copy θ* digest
+1	S04-freeze	research/FreezeDetail.tsx:1859	selection artifact · trial · sequence — none published
+3	S04-freeze	research/DigestChain.tsx:128	ParameterSetV1 canonical form
+9	S04-freeze	research/AlphaImport.tsx:228	match
+3	S04-freeze	research/freezeClient.ts:53	not verified yet
+3	S04-freeze	research/FreezeDetail.tsx:699	sealed bundle digest
+3	S04-freeze	research/FreezeDetail.tsx:708	runtime bundle digest
+1	S04-search	research/SearchFoldStrip.tsx:277	no fold strip — fixed profile, no optimizer study
+3	S04-search	research/SearchDetail.tsx:502	low … high
+1	S04-search	research/SearchDetail.tsx:698	No trial ledger — fixed profile ran no search.
+3	S04-split	research/SplitDetail.tsx:197	n/a · three-window
+1	S04-summary	~research/ChildAuditCompanionPanel.tsx:10 «IS observations»	8 of 1464 IS observations · DECLARED_IS · EXTREMA_BUCKET_V1
+3	S04-summary	research/enrichedAnalysis.ts:242	VaR 95% loss
+3	S04-summary	research/enrichedAnalysis.ts:242	CVaR 95% loss
+3	S04-summary	research/ReportAllTime.tsx:735	open · longest
+3	S04-summary	~research/ArtifactPanel.tsx:45 «derived»	portal-derived · OOS
+3	S04-summary	research/analyticsV2.tsx:250	Max consec. loss
+9	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/EvidenceFlow.tsx:3455 «notional»	rs02.quantbt-signal-notional-wfo.v1
+1	S04-execute	DATA?	bar 2026-07-01 02:00Z · evaluated at the bar close
+1	S04-search	research/SearchStageB.tsx:432	x S_IS · y S̄_OOS · below = decay
+9	S04-search	~research/OrchestrationClocks.tsx:5 «COMPLETION»	P15_SOURCE_COMPLETION_PENDING
+9	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/EvidenceFlow.tsx:3455 «notional»	rs02.quantbt-signal-notional-causal-inner.v1
+1	S04-execute	DATA?	bar 2026-07-01 07:00Z · evaluated at the bar close
+9	S04-freeze,S04-search,S04-split	DATA?	study_2.trial_1
+3	S04-freeze	DATA?	per fold study
+3	S04-split	DATA?	2026-06-01 00:00 UTC
+8	S00	research/JourneyMap.tsx:72	shipped
+1	S00	DATA?	Cloudflare Zero Trust → portal credential → session
+1	S00	~features/quantbt/QuantBTModule.tsx:393 «quarantine inbox»	quarantine inbox · digest verification · contract states
+1	S00	DATA?	redesign adds the evidence trail to every card
+1	S00	research/NewRun.tsx:2	New Run — context · route · preflight
+1	S00	~research/DigestChain.tsx:2 «digest chain»	two-axis timeline, digest chain, what-if → new attempt
+2	S00	research/ExecuteDetail.tsx:73	S4 · Execute Replay
+1	S00	DATA?	within one alpha: methodology trajectory, guarded by ComparisonContractKey
+1	S00	DATA?	compose rc_ → publish → Execution side approves
+1	S00	~research/ExecuteCandleReplay.tsx:15 «outcomes»	6 outcomes · conditions & waivers · expiry
+2	S02	~research/DigestChain.tsx:20 «qualification»	not admitted · p04.fixed-qualification.v1
+8	S02,S04-atlas	DATA?	directions
+8	S02,S04-atlas	research/SearchDetail.tsx:113	prune
+8	S02,S04-atlas	research/AlphaImport.tsx:226	raise
+8	S02,S04-atlas	research/AlphaImport.tsx:305	name
+8	S02,S04-atlas	research/ResearchFixtures.tsx:68	tpe
+8	S02,S04-search	research/SearchDetail.tsx:2169	scoring_backend
+8	S02,S04-atlas	research/AlphaImport.tsx:22	endpoint
+8	S02,S04-search	research/ResearchFixtures.tsx:70	candidate_selection_metric
+8	S02,S04-search	research/AlphaImport.tsx:11	param
+8	S02	research/CompareDetail.tsx:1590	chosen
+4	S03	research/ResearchFixtures.tsx:657	· optional
+4	S03	research/RunProgress.tsx:778	runtime budget
+4	S03	research/RunProgress.tsx:2698	fold gantt
+4	S03,S04-claim	research/ExecuteDetail.tsx:1749	sealed holdout
+4	S03	research/RunProgress.tsx:6	Live console
+4	S03	research/RunProgress.tsx:6	Stage log
+4	S03,S04-claim	DATA?	1.5 KB
+4	S03,S04-claim	DATA?	402 B
+8	S04-claim,S04-split	research/AlphaImport.tsx:137	NOT_PUBLISHED
+8	S04-execute	research/AlphaImportRoute.tsx:22	fills
+8	S04-execute	research/ExecuteCandleReplay.tsx:19	multi-leg
+2	S04-search	research/SearchDetail.tsx:109	A2 · trial surface
+8	S04-search,S04-summary	research/AlphaImport.tsx:398	digest
+4	S04-summary	research/EvidenceFlow.tsx:3231	Final equity
+8	S04-summary	research/CompareDetail.tsx:2282	percent
+8	S04-summary	research/EvidenceFlow.tsx:1576	source-derived
+4	S04-summary	research/EvidenceFlow.tsx:3234	Trade count
+2	S04-summary	research/EvidenceFlow.tsx:3238	OOS long-bar hit rate
+2	S04-summary	research/EvidenceFlow.tsx:3239	OOS short-bar hit rate
+2	S04-summary	research/EvidenceFlow.tsx:3130	observed folds not published
+4	S04-execute,S04-freeze,S04-search,S04-split	DATA?	· p04.delta-rsi.v1
+4	S04-execute	research/ExecuteCandleReplay.tsx:1622	‹ earlier
+4	S04-execute	research/ExecuteCandleReplay.tsx:1625	later ›
+2	S04-freeze	DATA?	exposed to child tape
+1	S04-search	research/SearchDetail.tsx:2424	No search ran — the parameters were fixed.
+1	S04-split	research/SplitDetail.tsx:2236	one outer OOS window · no stitched series
+8	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	research/SearchDetail.tsx:2154	YES
+4	S04-execute,S04-freeze,S04-search,S04-split	~research/EvidenceFlow.tsx:3455 «notional»	· rs02.quantbt-signal-notional-wfo.v1
+2	S04-execute	research/ExecuteCandleReplay.tsx:2107	accounting certified by QuantBT
+2	S04-execute	research/ExecuteCandleReplay.tsx:1489	run fees so far
+2	S04-execute	research/ExecuteCandleReplay.tsx:1490	run transitions so far
+4	S04-execute	research/ExecuteCandleReplay.tsx:1841	full run
+2	S04-execute	research/ExecuteCandleReplay.tsx:1777	committed at the close
+2	S04-execute	DATA?	fills at the close
+4	S04-execute	research/ExecuteCandleReplay.tsx:1808	· fee
+2	S04-execute	research/ExecuteCandleReplay.tsx:1753	records for this fold
+4	S04-execute,S04-freeze	research/ChildAuditCompanionPanel.tsx:193	exact #
+4	S04-execute,S04-freeze	research/ChildAuditCompanionPanel.tsx:204	page size
+4	S04-freeze,S04-search	research/FreezeDetail.tsx:986	· J
+2	S04-freeze	research/FreezeDetail.tsx:1389	F1 · two axes
+1	S04-freeze	research/FreezeDetail.tsx:855	θ* chosen after every fold's OOS was read
+2	S04-freeze	research/NewRunRoute.tsx:211	create sibling attempt →
+4	S04-freeze	research/FreezeDetail.tsx:376	· observed
+2	S04-freeze	research/Stage4Binding.tsx:44	sealed candidate id (engine)
+2	S04-search	~research/EvidenceFlow.tsx:1027 «requested spec»	42 · requested spec
+1	S04-search	~research/AlphaImport.tsx:30 «requested»	400 requested · 400 retained · 1 study
+2	S04-search	research/SearchSurface.tsx:322	objective low → high
+1	S04-search	research/SearchSurface.tsx:489	dot = one trial · green = θ*
+2	S04-search	research/SearchSurface.tsx:585	Spearman ρ vs objective
+2	S04-search	research/SearchStageB.tsx:213	feasible (constraint ≤ 0)
+2	S04-search	research/SearchStageB.tsx:220	top-IS pool → FROZEN
+1	S04-search	research/SearchStageB.tsx:389	S_IS × S̄_OOS · diagonal = 0 decay
+2	S04-search	research/SearchStageB.tsx:506	rank 1 by IS
+1	S04-search	research/SearchSurface.tsx:636	B4 · θ* journey — stability across folds
+1	S04-search	research/SearchDetail.tsx:2579	One global selection — applies to every fold
+2	S04-split	research/SplitDetail.tsx:1696	IS — train windows
+2	S04-split	research/SplitDetail.tsx:2174	embargo after each test
+2	S04-summary	research/EvidenceFlow.tsx:2828	source retained current-source ·
+2	S04-summary	research/EvidenceFlow.tsx:2829	units currency · UTC
+4	S04-execute,S04-freeze,S04-search,S04-split	~research/EvidenceFlow.tsx:3455 «notional»	· rs02.quantbt-signal-notional-causal-inner.v1
+8	S04-freeze,S04-search,S04-split	DATA?	study_0.trial_2
+1	S04-freeze	research/FreezeDetail.tsx:1222	— the retained lane publishes one frozen selection
+1	S04-search	research/SearchFoldStrip.tsx:137	OOS withheld — read once, at Stage 4
+1	S04-search	~research/AlphaImport.tsx:30 «requested»	3 requested · 9 retained · 3 studies
+1	S04-split	~research/SearchDetail.tsx:1200 «fold deployment»	θ* · last-fold deployment (fold_03) · source trial
+1	S00	DATA?	lifecycle DRAFT→LIVE · artifact identity · read-only
+1	S00	~research/RunProgress.tsx:1535 «trial console»	stage pipeline, fold 1/20 timeline, per-trial console
+1	S00	~research/EvidenceFlow.tsx:180 «candle replay»	candle replay, trade tape, event ledger, MAE×MFE
+1	S00	~research/WhatIfCard.tsx:2 «Sandbox»	Paper / Sandbox / Canary / Live
+1	S00	DATA?	deployment params must equal the frozen digest
+7	S01,S03	research/RunProgress.tsx:267	elapsed
+1	S01	research/RunLibrary.tsx:84	claim pending — issued at Stage 5
+1	S03	research/RunProgress.tsx:70	SSE streaming · poll floor 5s underneath
+7	S03,S04-atlas,S04-claim	DATA?	strict_nested_fold_local_retraining
+7	S04-atlas,S04-search	DATA?	fold_metric_rows
+7	S04-execute	research/EvidenceCharts.tsx:130	HOLDOUT
+7	S04-search	research/AlphaImport.tsx:32	note
+7	S04-summary	research/EvidenceCharts.tsx:82	currency
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	DATA?	p04.delta-rsi.v1
+7	S04-atlas,S04-claim,S04-execute,S04-freeze,S04-search,S04-split,S04-summary	~research/AlphaImport.tsx:32 «research»	research.metric-registry.v2
+1	S04-execute	research/ExecuteDetail.tsx:438	drawdown — restated from the same samples
+1	S04-execute	research/ExecuteDetail.tsx:75	retrospective sample — not an execution state
+1	S04-execute	research/ExecuteDetail.tsx:1379	OOS observation replay — market and account
+7	S04-freeze	research/AlphaImport.tsx:357	expected
+1	S04-search	research/SearchDetail.tsx:172	a fixed profile asserts no OOS selection
+1	S04-search	research/SearchDetail.tsx:1207	Selector did not take the IS best.
+7	S04-search,S04-split,S04-summary	research/CausalSelectionPanel.tsx:113	candidates
+1	S04-split	~research/ChildAuditCompanionPanel.tsx:10 «observations»	verified · 9 segments · 1488 observations
+1	S04-summary	~research/EvidenceFlow.tsx:3254 «fold mean»	OOS · portal-derived · fold mean 4.14
+1	S04-summary	~research/EvidenceFlow.tsx:1840 «extrema kept»	967 of 2,208 points · extrema kept
+7	S04-summary	research/AlphaImport.tsx:304	PASS
+7	S04-summary	research/EvidenceFlow.tsx:2445	DRAG
+1	S04-summary	DATA?	fold_08, fold_07, fold_05, fold_09, fold_02 drag ·
+1	S04-split	research/CausalSelectionPanel.tsx:94	· selected on its own inner validation
+1	S04-split	~research/ChildAuditCompanionPanel.tsx:10 «observations»	verified · 3 segments · 360 observations
+3	S00,S01	research/AlphaImport.tsx:1495	Run Library
+1	S00	DATA?	registry truth, priority items, module KPIs
+1	S00	~research/AlphaImport.tsx:28 «lifecycle»	lifecycle 01→09, persona × status filters
+1	S00	~research/CompareDetail.tsx:771 «protocol»	shipped table: id, status, protocol, strategy
+1	S00	~research/NewRun.tsx:3567 «preflight first»	Configure — New Run, preflight first
+2	S00	research/FreezeDetail.tsx:1704	S3 · Freeze
+1	S00	~research/EngineAtlas.tsx:2 «Engine Atlas»	S1 · Split + Engine Atlas
+1	S01	research/RunLibrary.tsx:2768	+ new run · preflight first
+2	S01	DATA?	mode_1_decay · per_fold_causal
+3	S02	research/NewRun.tsx:571	declared timeframes
+3	S02	research/AlphaImport.tsx:724	lineage →
+3	S02	research/NewRun.tsx:1185	Symbol *
+3	S02	research/dataDeclarationV2.ts:260	0 gaps
+3	S02	DATA?	1h ·
+3	S02	research/NewRun.tsx:1210	Timeframe *
+3	S02	research/NewRun.tsx:1237	required columns
+3	S02	research/ChildAuditCompanionPanel.tsx:72	warmup bars
+3	S02	research/NewRun.tsx:1239	not required
+3	S02	research/NewRun.tsx:2356	Optuna trials
+3	S02	research/NewRun.tsx:2195	Early stopping
+3	S02	research/NewRun.tsx:2201	Random seed
+3	S02	research/NewRun.tsx:2164	profile ·
+6	S02	research/NewRun.tsx:1787	optimization_schedule
+3	S02	research/NewRun.tsx:2081	Candidate selection
+3	S02	research/NewRun.tsx:1937	pinned ·
+6	S02,S04-search	research/AlphaImport.tsx:4	step
+6	S02,S04-split	research/EstimateParts.tsx:2	windows
+3	S02	research/NewRun.tsx:3494	Run preflight
+3	S02	research/PreflightPanel.tsx:662	snapshot quality
+3	S02	research/PreflightPanel.tsx:678	engine capability
+3	S02	research/PreflightPanel.tsx:50	resource estimate
+3	S02	research/NewRun.tsx:3461	Create run
+3	S02	research/NewRun.tsx:747	Three-Window Decay
+3	S02	research/NewRun.tsx:747	Advanced Walk-Forward
+3	S02	research/NewRun.tsx:754	seed required:
+6	S02,S04-summary	research/AlphaImport.tsx:98	start
+3	S02	research/NewRun.tsx:1481	end exclusive
+2	S02	research/NewRun.tsx:1484	First OOS instant
+2	S02	research/NewRun.tsx:1723	Label horizon (bars)
+2	S02	research/NewRun.tsx:152	NO VERSION CHOSEN
+2	S02	research/NewRun.tsx:333	no version chosen
+2	S03,S04-claim	DATA?	744 bars ·
+1	S03	research/RunProgress.tsx:174	new run with same draft →
+3	S03	research/ExecuteCandleReplay.tsx:2225	OOS selection
+3	S03	research/RunProgress.tsx:419	hand-off cursor
+3	S03	research/EvidenceFlowRoute.tsx:7	evidence →
+6	S03,S04-claim	~research/AlphaImport.tsx:30 «requested»	research/requested-spec.json
+6	S03,S04-claim	~research/DigestChain.tsx:206 «effective»	research/effective-spec-receipt.json
+6	S03,S04-claim	~research/AlphaImport.tsx:32 «research»	research/dataset-binding-receipt.json
+6	S03,S04-claim	~research/AlphaImport.tsx:32 «research»	research/progress-journal.ndjson
+6	S03,S04-claim	~research/AlphaImport.tsx:32 «research»	research/progress-receipt.json
+2	S03,S04-claim	DATA?	336 bars ·
+3	S03	research/ArtifactPanel.tsx:128	sealed at
+3	S03,S04-search	research/evidenceCursor.ts:190	fold 1
+3	S03	research/EvidenceFlow.tsx:4016	S5 claim
+2	S03	~research/RunProgress.tsx:1986 «facts sealed»	4 facts sealed
+1	S03	~research/RunProgress.tsx:584 «scores all»	global — scores all 9 folds
+1	S03	research/RunProgress.tsx:2510	queued — waiting for a worker
+3	S04-claim	~research/CausalSelectionPanel.tsx:94 «validation»	validation_claim —
+3	S04-claim	~research/CausalSelectionPanel.tsx:2 «selection»	oos_used_for_selection —
+2	S04-claim	research/EvidenceFlow.tsx:4241	bars — denied
+3	S04-execute,S04-summary	DATA?	2026-10-02 19:09Z
+3	S04-execute	research/EvidenceFlow.tsx:724	route contract
+3	S04-execute	research/CompareDetail.tsx:969	source observations
+6	S04-execute	research/researchRefusal.ts:428	P04_SOURCE_DID_NOT_PUBLISH_REPLAY_CANDLE_WINDOWS
+3	S04-execute	research/ExecuteDetail.tsx:1755	run windows
+3	S04-execute	research/SplitBand.tsx:68	OOS (plotted)
+3	S04-execute	research/ExecuteDetail.tsx:165	price overview
+3	S04-execute	research/EvidenceFlow.tsx:181	event ledger
+6	S04-execute	research/researchRefusal.ts:460	P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_EVENT_STREAM
+6	S04-execute	research/researchRefusal.ts:452	P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER
+6	S04-execute	research/researchRefusal.ts:454	P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS
+6	S04-execute	research/EvidenceFlow.tsx:2317	positions
+6	S04-execute	research/researchRefusal.ts:458	P04_SOURCE_DID_NOT_PUBLISH_POSITION_STATE_SNAPSHOTS
+3	S04-execute	research/ExecuteDetail.tsx:1310	route-aware facts
+3	S04-execute	research/CompareDetail.tsx:1040	source absences
+3	S04-execute	research/ExecuteDetail.tsx:75	execution state
+3	S04-execute	research/researchRefusal.ts:453	order ledger
+3	S04-execute	DATA?	fill ledger
+3	S04-execute	research/ExecuteDetail.tsx:1285	trade ledger
+3	S04-execute	research/researchRefusal.ts:459	position snapshots
+3	S04-execute	research/researchRefusal.ts:461	event stream
+3	S04-execute	research/replayClient.ts:268	oco tree
+3	S04-execute	DATA?	multi leg
+3	S04-execute	DATA?	mae mfe
+2	S04-search	research/SearchDetail.tsx:2087	mode not published
+2	S04-search	research/EngineAtlas.tsx:899	schedule not published
+2	S04-search	~research/SearchDetail.tsx:9 «parameter profile»	parameter profile —
+2	S04-search	research/SearchDetail.tsx:114	A5 · importance
+3	S04-freeze,S04-search	research/SearchDetail.tsx:1065	candidate pool
+2	S04-search	~research/AlphaImport.tsx:30 «requested»	Fold 1 requested.
+2	S04-split	research/SplitDetail.tsx:2091	outer OOS window
+3	S04-split	research/EstimateParts.tsx:167	fold plan
+3	S04-split	research/ExecuteDetail.tsx:1478	never read
+6	S04-split	research/CausalSelectionPanel.tsx:169	train
+2	S04-summary	research/AlphaImport.tsx:150	— not published
+2	S04-summary	research/EvidenceFlow.tsx:3237	OOS profit factor
+2	S04-summary	DATA?	OOS initial equity
+3	S04-execute,S04-summary	DATA?	2026-10-02 19:08Z
+2	S04-summary	research/EvidenceFlow.tsx:3503	segment not published
+2	S04-summary	research/EvidenceFlow.tsx:3443	beta vs benchmark
+2	S04-summary	research/EvidenceFlow.tsx:3444	corr vs benchmark
+2	S04-summary	DATA?	The lane retains
+1	S04-execute	~research/ExecuteCandleReplay.tsx:1125 «bars each»	· 12 candles (62 bars each)
+2	S04-execute	DATA?	· 2026-07-01 00:00Z
+2	S04-execute	research/ExecuteDetail.tsx:667	read retained replay
+2	S04-freeze,S04-search	research/researchRefusal.ts:499	fixed parameter profile
+2	S04-freeze	DATA?	2026-05-01 00:00 UTC
+2	S04-freeze	DATA?	2026-08-15 00:00 UTC
+3	S04-freeze	research/BoundWarning.tsx:34	declared range
+3	S04-freeze	research/FreezeDetail.tsx:603	range position
+3	S04-freeze	research/FreezeDetail.tsx:604	frozen θ*
+3	S04-freeze	research/WhatIfCard.tsx:2	what-if sandbox
+1	S04-freeze	research/WhatIfCard.tsx:48	fixed profile — no evaluated neighbourhood
+3	S04-freeze	research/DigestChain.tsx:6	strategy source
+3	S04-freeze	research/DigestChain.tsx:6	engine pin
+3	S04-freeze	research/DigestChain.tsx:195	dataset hash
+3	S04-freeze	research/DigestChain.tsx:205	config hash
+3	S04-freeze	research/DigestChain.tsx:7	bundle digest
+3	S04-freeze	research/FreezeDetail.tsx:219	verify now
+2	S04-freeze	research/FreezeDetail.tsx:257	source artifact bytes
+3	S04-freeze,S04-split	research/SplitDetail.tsx:2208	not attested
+3	S04-freeze	research/FreezeDetail.tsx:91	artifact bytes
+3	S04-freeze	research/Stage4Binding.tsx:33	✓ BOUND
+3	S04-freeze	research/Stage4Binding.tsx:176	Code-fixed values:
+1	S04-search	research/SearchDetail.tsx:2294	release metadata · not run evidence
+1	S04-search	research/SearchDetail.tsx:2298	declared, not executed by the source
+1	S04-search	research/SearchDetail.tsx:2374	no sampler ran — fixed profile
+3	S04-split	research/splitClient.ts:362	1h bars
+1	S04-split	research/SplitDetail.tsx:1712	warmup — copied in, never scored
+1	S04-split	research/SplitDetail.tsx:2663	IS · fixed profile, no search
+3	S04-split	research/ProvenanceStrip.tsx:83	split rev
+3	S04-summary	research/CausalSelectionPanel.tsx:152	IS ·
+3	S04-summary	research/ReportAllTime.tsx:367	rebased 100
+6	S04-summary	research/EvidenceFlow.tsx:3235	Sortino
+3	S04-summary	research/CompareDetail.tsx:2007	drawdown episodes
+2	S04-summary	~research/CompareDetail.tsx:815 «Drawdown»	Drawdown 2 (open)
+2	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 1 (recovered)
+3	S04-summary	research/analyticsV2.tsx:235	Profit factor
+3	S04-summary	research/analyticsV2.tsx:237	Long-bar hit
+3	S04-summary	research/analyticsV2.tsx:238	Short-bar hit
+3	S04-summary	research/analyticsV2.tsx:239	Drawdown duration
+3	S04-summary	research/analyticsV2.tsx:242	Excess kurtosis
+3	S04-summary	research/EvidenceFlow.tsx:3326	Sharpe decay
+3	S04-summary	research/analyticsV2.tsx:247	Win rate
+3	S04-summary	research/analyticsV2.tsx:249	Avg hold
+3	S04-summary	research/EvidenceFlow.tsx:3874	Engine trades:
+3	S04-claim	research/EstimateParts.tsx:51	bars —
+2	S04-execute	DATA?	signal bar close
+2	S04-execute	research/ExecuteCandleReplay.tsx:199	carried across folds
+1	S04-execute	~research/ExecuteCandleReplay.tsx:1125 «bars each»	· 79 candles (28 bars each)
+3	S04-execute	DATA?	2026-07-01 02:00Z
+2	S04-execute	research/ExecuteCandleReplay.tsx:20	play across folds
+6	S04-execute	research/AlphaImport.tsx:2	position
+2	S04-execute	research/ExecuteCandleReplay.tsx:2253	‹ earlier bars
+2	S04-execute	research/ExecuteCandleReplay.tsx:2256	later bars ›
+2	S04-execute	research/ExecuteCandleReplay.tsx:205	fold to fold
+2	S04-execute	research/ExecuteCandleReplay.tsx:2311	target transition ledger
+2	S04-execute	DATA?	n/a for close_target_v2
+6	S04-execute,S04-freeze	research/AlphaImport.tsx:892	context
+2	S04-execute	DATA?	trades · 0
+2	S04-execute	research/ExecuteCandleReplay.tsx:1874	full run (retrospective):
+2	S04-execute	research/ExecuteCandleReplay.tsx:1904	one-way · slippage
+2	S04-freeze	research/FreezeDetail.tsx:964	retained current source
+1	S04-freeze	research/FreezeDetail.tsx:1367	⚠ NOT CAUSAL · GLOBAL SELECTION
+2	S04-freeze	research/FreezeDetail.tsx:1393	data time ·
+2	S04-freeze	research/FreezeDetail.tsx:1185	frozen θ* —
+2	S04-freeze,S04-search	DATA?	near lower bound
+2	S04-freeze	research/FreezeDetail.tsx:1034	retained import digest
+1	S04-search	research/SearchDetail.tsx:2234	no · OOS used for selection
+1	S04-search	research/SearchFoldStrip.tsx:136	retrospective — not a deployment claim
+2	S04-search	~research/SearchDetail.tsx:1387 «points declared»	21,379,147,776 points declared
+2	S04-search	research/SearchSurface.tsx:329	best IS #
+2	S04-search	research/SearchSurface.tsx:333	pruned = duplicate
+2	S04-search	research/SearchSurface.tsx:451	by trial order
+2	S04-search	research/SearchStageB.tsx:204	scored, not pruned
+2	S04-search	research/SearchDetail.tsx:1050	selected by policy
+3	S04-search	research/EvidenceFlow.tsx:2530	mean decay
+1	S04-search	research/SearchSurface.tsx:639	server · top-decile share at θ*
+1	S04-search	~research/SearchDetail.tsx:945 «show more trials»	show more trials (100 of 400)
+2	S04-split	research/SplitDetail.tsx:1859	· end exclusive
+1	S04-split	~research/SplitDetail.tsx:1362 «no gap at any of»	no gap at any of 8
+2	S04-summary	research/EvidenceFlow.tsx:3290	Net OOS return
+2	S04-summary	~research/EvidenceCharts.tsx:62 «IS equity»	IS equity —
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.10% single bar · 2026-08-25 02:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.06% single bar · 2026-08-14 15:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.10% single bar · 2026-08-03 13:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.05% single bar · 2026-08-31 05:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.09% single bar · 2026-07-13 03:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.08% single bar · 2026-07-28 15:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.10% single bar · 2026-07-17 05:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.04% single bar · 2026-08-07 13:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.08% single bar · 2026-07-07 02:00Z
+2	S04-summary	~research/EvidenceFlow.tsx:2347 «route ledger»	route ledger —
+2	S04-summary	~research/EvidenceFlow.tsx:2348 «audited fills»	audited fills —
+3	S04-claim	research/AlphaImport.tsx:147	not read
+2	S04-execute,S04-search	DATA?	pending source callback
+1	S04-execute	~research/ExecuteCandleReplay.tsx:1125 «bars each»	· 78 candles (14 bars each)
+3	S04-execute	research/childAuditCompanionClient.ts:30	in-sample scoring
+3	S04-execute	research/childAuditCompanionClient.ts:31	out-of-sample scoring
+3	S04-execute	DATA?	2026-06-15 00:00Z
+3	S04-execute	DATA?	2026-06-21 23:00Z
+1	S04-freeze	research/FoldSelectionPanel.tsx:39	per fold · no global θ*
+1	S04-search	research/SearchDetail.tsx:978	inner-validation J (outer OOS not used)
+1	S04-search	research/SearchStageB.tsx:149	POOL FROZEN · K NOT PUBLISHED
+1	S04-search	research/SearchStageB.tsx:193	each outer fold, its own study
+2	S04-split	DATA?	2026-06-21 23:00 UTC
+2	S04-split	DATA?	2026-06-28 23:00 UTC
+1	S04-split	~research/SplitDetail.tsx:1362 «no gap at any of»	no gap at any of 2
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.24% single bar · 2026-07-06 15:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.04% single bar · 2026-07-15 00:00Z
+1	S04-summary	~research/EvidenceFlow.tsx:2664 «single bar»	−0.09% single bar · 2026-07-08 01:00Z
+1	S00	research/JourneyMap.tsx:459	Quant Ecosystem Portal · Research
+1	S00	~research/JourneyMap.tsx:44 «shipped»	shipped — quarantine is fail-closed
+1	S00	~research/AlphaImport.tsx:2 «Alpha Import»	Alpha Import — standardize av_
+1	S00	~research/AlphaImport.tsx:1495 «Run Library»	Run Library — evidence cards
+1	S00	~research/ArtifactPanel.tsx:4 «Run Progress»	Run Progress — claims pending
+1	S00	~research/SplitBoundary.tsx:174 «fold anatomy»	fold anatomy, purge/embargo, holdout seal
+1	S00	DATA?	S5 · Claim (in hub)
+1	S00	~research/CompareDetail.tsx:723 «Run Report»	Run Report — one sheet
+5	S00	research/FreezeDetail.tsx:12	BLOCKED
+1	S00	~research/ReleaseCandidateDetail.tsx:216 «research evidence»	Gate R1 · research evidence
+1	S00	DATA?	Gate R2 · deployment fit
+1	S00	research/JourneyMap.tsx:506	Shipped tab → new screen
+1	S00	~research/CompareDetail.tsx:727 «Release Candidate»	hub S5 + Release Candidate
+5	S02,S04-search	research/SearchDetail.tsx:1067	top_is_fraction
+5	S02,S04-execute	research/EngineAtlas.tsx:136	DEFAULT
+5	S02,S04-execute	research/ExecuteCandleReplay.tsx:5	close_target_v2
+1	S02	~research/NewRun.tsx:1863 «per outer fold»	profile 2–16 per outer fold
+1	S02	research/NewRun.tsx:1349	: preflight only for now.
+1	S02	research/NewRun.tsx:2587	outer folds — not published
+1	S02	research/dataDeclaration.ts:287	pick a mode and schedule
+1	S02	research/NewRun.tsx:2842	Pick a mode and schedule.
+5	S03	research/CompareDetail.tsx:989	Runs
+5	S03	research/AlphaImport.tsx:904	Progress
+5	S03	DATA?	69c943
+5	S03	research/Formula.tsx:48	queue
+5	S03,S04-split	research/AlphaImport.tsx:73	seal
+1	S03	~research/AlphaImport.tsx:1227 «Execute»	failed at S4 Execute —
+5	S03,S04-search,S04-split	research/AlphaImport.tsx:762	details
+1	S03	~research/DigestChain.tsx:20 «qualification»	worker claimed durable P10 qualification
+1	S03	~research/CausalSelectionPanel.tsx:7 «reported»	0 reported · 1 declared
+1	S03	research/RunProgress.tsx:1010	No fold has reported yet.
+1	S03	research/RunProgress.tsx:582	fixed profile — no search
+1	S03	~research/CausalSelectionPanel.tsx:7 «reported»	1 reported · 1 declared
+1	S03	~research/CausalSelectionPanel.tsx:7 «reported»	9 reported · 9 declared
+1	S03	~research/CausalSelectionPanel.tsx:7 «reported»	3 reported · 3 declared
+5	S04-atlas	research/EngineAtlas.tsx:1386	CURRENT
+5	S04-atlas	research/EngineAtlas.tsx:1236	package
+5	S04-atlas	research/EvidenceFlow.tsx:681	quantbt-engine
+5	S04-atlas	research/EngineAtlas.tsx:1235	native
+5	S04-atlas	research/CausalSelectionPanel.tsx:4	profile
+5	S04-atlas	research/ResearchFixtures.tsx:74	p10.fixed-qualification.v1
+5	S04-atlas	research/EngineAtlas.tsx:1266	overrides
+5	S04-atlas	research/AlphaImport.tsx:120	FORBIDDEN
+5	S04-atlas	research/CausalSelectionPanel.tsx:7	objective
+5	S04-atlas	research/EngineAtlas.tsx:144	walk-forward
+5	S04-atlas	research/CausalSelectionPanel.tsx:169	frequency
+5	S04-atlas	~research/DataDeclaration.tsx:172 «quarterly»	single/yearly/semi_yearly/quarterly/monthly/weekly
+5	S04-atlas	research/EngineAtlas.tsx:1309	(default
+5	S04-atlas	research/ResearchFixtures.tsx:386	quarterly
+5	S04-atlas	~research/EstimateParts.tsx:133 «expanding»	expanding/rolling
+5	S04-atlas	DATA?	portal_policy
+5	S04-atlas	research/EngineAtlas.tsx:1325	cpu
+5	S04-atlas	research/RunLibrary.tsx:171	oos_metrics
+5	S04-atlas	~research/DigestChain.tsx:36 «components»	decay_components
+5	S04-atlas	DATA?	is_return_path
+5	S04-atlas	~research/EngineAtlas.tsx:805 «bootstrap»	bootstrap_indices
+5	S04-atlas	~research/EvidenceCharts.tsx:47 «statistics»	replicate_statistics
+5	S04-atlas	~research/AlphaImport.tsx:73 «candidate»	one_candidate_fold_return_path_plus_replicate_vector
+5	S04-atlas	DATA?	synthetic_oos_sharpe
+5	S04-atlas	DATA?	mean_synthetic_oos_minus_sbb_penalties_v1
+5	S04-atlas	DATA?	mean_synthetic_oos_sharpe
+5	S04-atlas	~research/EvidenceCharts.tsx:12 «samples»	sbb_samples
+5	S04-atlas	DATA?	sbb_block_length
+5	S04-atlas	~research/ExecuteCandleReplay.tsx:511 «coordinates»	parameter_coordinates
+5	S04-atlas	~research/ExecuteCandleReplay.tsx:511 «coordinates»	candidate_metric_rows_and_plateau_coordinates
+5	S04-atlas	~research/CompareDetail.tsx:822 «fraction»	flat_top_fraction
+5	S04-atlas	~research/CausalSelectionPanel.tsx:153 «metrics»	is_subperiod_metrics
+5	S04-atlas	~research/ExecuteCandleReplay.tsx:511 «coordinates»	is_subperiod_metric_rows_and_plateau_coordinates
+5	S04-atlas	DATA?	is_only_robust
+5	S04-atlas	~research/CausalSelectionPanel.tsx:153 «metrics»	full_is_metrics
+5	S04-atlas	~research/EngineAtlas.tsx:602 «plateau»	full_sample_plateau
+5	S04-atlas	~research/DigestChain.tsx:36 «components»	temporal_components
+5	S04-atlas	~research/AlphaImport.tsx:11 «parameter»	full_is_metric_rows_and_parameter_plateau
+5	S04-atlas	research/CompareDetail.tsx:131	none_full_sample_calibration
+5	S04-claim	research/AlphaImport.tsx:24	stage
+5	S04-claim	research/AlphaImport.tsx:158	cap
+5	S04-claim	research/EvidenceCharts.tsx:940	benchmark
+5	S04-claim	research/EvidenceFlow.tsx:2348	audited_fills
+1	S04-freeze	research/state.ts:146	No rows in this scope.
+5	S04-search	research/AlphaImport.tsx:21	state
+5	S04-search	research/EvidenceFlow.tsx:1565	S_OOS
+1	S04-search	~research/AlphaImport.tsx:150 «not published»	Trial ledger — not published.
+5	S04-summary	research/EvidenceFlow.tsx:2953	Capital
+5	S04-summary	research/AlphaImport.tsx:88	count
+5	S04-execute,S04-summary	research/EvidenceCharts.tsx:380	units
+5	S04-search,S04-split,S04-summary	research/CausalSelectionPanel.tsx:154	decay
+5	S04-summary	research/EvidenceFlow.tsx:2500	contribution
+5	S04-summary	research/AlphaImport.tsx:500	verdict
+5	S04-summary	research/EngineAtlas.tsx:273	behavior
+1	S04-execute	research/ExecuteDetail.tsx:85	bucket extrema, not every observation
+5	S04-execute,S04-freeze,S04-summary	research/ArtifactPanel.tsx:4	retained
+1	S04-execute	~research/CausalSelectionPanel.tsx:54 «observation»	observation 0 of 744 retained
+1	S04-freeze	DATA?	fixed profile no selection artifact
+1	S04-freeze	DATA?	p04 observed after fixed profile
+1	S04-freeze	DATA?	not exposed to child tape
+1	S04-freeze	DATA?	portal retained digest binding only
+1	S04-freeze	research/FreezeDetail.tsx:706	params digest used by replay
+5	S04-execute,S04-search	research/AlphaImport.tsx:134	kind
+5	S04-execute	DATA?	9f93eca7…
+1	S04-freeze	~research/FreezeDetail.tsx:17 «evaluate grid»	evaluate grid · 44 missing
+1	S04-search	~research/SearchSurface.tsx:229 «trials drawn»	400 of 400 trials drawn
+1	S04-search	research/SearchStageB.tsx:255	· pool closes before OOS
+5	S04-search	research/EngineAtlas.tsx:600	S̄_OOS
+1	S04-split	~research/EvidenceCharts.tsx:22 «fold boundaries»	8 of 8 fold boundaries
+1	S04-freeze	research/FoldSelectionPanel.tsx:98	engine wall clock: not published
+1	S04-search	research/SearchSurface.tsx:729	A2 · run-global trial surface
+1	S04-search	research/SearchSurface.tsx:732	inner-validation study per outer fold
+1	S04-search	~research/SearchSurface.tsx:229 «trials drawn»	3 of 3 trials drawn
+1	S04-search	research/SearchSurface.tsx:511	regions sampled: see each parameter
+1	S04-search	research/SearchDetail.tsx:1116	objective components — not published
+1	S04-search	research/SearchStageB.tsx:461	not in the pool ledger
+1	S04-split	~research/EvidenceCharts.tsx:22 «fold boundaries»	2 of 2 fold boundaries
+2	S00	research/AlphaImport.tsx:1056	Journey Map
+1	S00	~research/CompareDetail.tsx:415 «unchanged»	shipped shell — unchanged
+1	S00	~app/PortalRoutes.tsx:32 «Command Center»	02 · Command Center
+1	S00	~app/PortalRoutes.tsx:38 «Portal Map»	03 · Portal Map
+1	S00	~features/quantbt/QuantBTModule.tsx:347 «Alpha imports»	12 · Alpha imports
+1	S00	~research/AlphaImport.tsx:1653 «Alpha version»	13 · Alpha version
+1	S00	research/JourneyMap.tsx:199	pick an alpha →
+1	S00	~research/AlphaImport.tsx:1495 «Run Library»	04 · Run Library
+1	S00	~research/AlphaImport.tsx:125 «New Run»	05 · New Run
+1	S00	~research/ArtifactPanel.tsx:4 «Run Progress»	06 · Run Progress
+1	S00	research/ReleaseCandidateDetail.tsx:2	Release Candidate & Publish
+1	S00	~research/EvidenceFlow.tsx:4489 «Paper Trading»	Paper Trading — SOON
+1	S00	research/RunLibrary.tsx:1698	Evidence Flow · Summary
+1	S00	~research/JourneyMap.tsx:350 «no shipped tab»	— no shipped tab
+4	S01,S02	research/AlphaImport.tsx:1090	status
+4	S01,S02	research/AlphaImport.tsx:51	alpha
+1	S01	DATA?	49 of 49 runs
+2	S01	DATA?	engine error
+1	S01	research/RunLibrary.tsx:1495	rc_ (draft) · DRAFT
+2	S01	DATA?	capability mismatch
+4	S02	research/AlphaImport.tsx:2	Alpha
+4	S02	research/AlphaImport.tsx:1061	bound
+4	S02	research/NewRun.tsx:146	scratch
+1	S02	~research/AlphaImport.tsx:1502 «not admitted»	not admitted · p10.delta-signal-notional-wfo.v1
+2	S02	research/NewRun.tsx:1645	Analysis start
+2	S02	research/NewRun.tsx:1658	End exclusive
+2	S02	research/NewRun.tsx:1690	Window mode
+2	S02	research/NewRun.tsx:1724	Purge (bars)
+2	S02	research/NewRun.tsx:1725	Embargo (bars)
+1	S02	~research/AlphaImport.tsx:1502 «not admitted»	not admitted · p10.delta-signal-notional-causal-inner.v1
+1	S03	~research/EvidenceFlow.tsx:4720 «Run failed»	Run failed — R-P04-020
+4	S03	research/CompareDetail.tsx:5	attempt
+4	S03	research/CompareDetail.tsx:211	claimed
+4	S03	research/EvidenceFlow.tsx:3949	started
+4	S03	research/ChildAuditCompanionPanel.tsx:5	ended
+2	S03	research/EvidenceFlow.tsx:578	not issued
+4	S03	research/EvidenceFlow.tsx:4282	mandatory
+4	S03	research/AlphaImport.tsx:506	NOT_APPLICABLE
+1	S03	~research/AlphaImport.tsx:1227 «Execute»	failed at S4 Execute
+4	S03	research/AlphaImport.tsx:19	rate
+4	S03	DATA?	core-min
+4	S03	research/ArtifactPanel.tsx:25	artifacts
+4	S03	research/AlphaImport.tsx:75	all
+4	S03	research/NewRun.tsx:343	errors
+4	S03	research/RunProgress.tsx:1465	auto-scroll
+1	S03	~research/EvidenceFlow.tsx:4727 «Run completed»	Run completed — R-P04-022
+4	S03,S04-freeze	research/DigestChain.tsx:7	bundle
+2	S03,S04-claim	DATA?	194.4 KB
+2	S03,S04-claim	DATA?	587 B
+2	S03,S04-claim	DATA?	54.1 KB
+2	S03,S04-claim	DATA?	2.4 KB
+2	S03,S04-claim	DATA?	9.5 KB
+1	S03	~research/EvidenceFlow.tsx:4727 «Run completed»	Run completed — R-WFO-023
+2	S03,S04-claim	DATA?	268.5 KB
+2	S03,S04-claim	DATA?	1.3 KB
+2	S03,S04-claim	DATA?	655 B
+2	S03,S04-claim	DATA?	262.6 KB
+2	S03,S04-claim	DATA?	403 B
+1	S03	~research/RunProgress.tsx:2497 «Run queued»	Run queued — R-WFO-025
+1	S03	~research/EvidenceFlow.tsx:4727 «Run completed»	Run completed — R-WFO-027
+2	S03,S04-claim	DATA?	22.7 KB
+2	S03,S04-claim	DATA?	664 B
+2	S03,S04-claim	DATA?	16.4 KB
+2	S04-claim	research/EvidenceFlow.tsx:538	progress read
+1	S04-execute	research/EvidenceFlow.tsx:4314	route — not published
+2	S04-execute	research/ExecuteDetail.tsx:1182	sampling —
+2	S04-freeze	research/ProvenanceStrip.tsx:31	source split
+2	S04-freeze	research/ProvenanceStrip.tsx:83	split revision
+2	S04-search	research/EstimateParts.tsx:194	not ready
+2	S04-search	research/CompareDetail.tsx:1120	this mode
+2	S04-search	research/SearchDetail.tsx:1116	objective components
+2	S04-search	research/SearchDetail.tsx:2555	selection trace
+2	S04-search	research/SearchDetail.tsx:2607	Not published.
+4	S04-split	research/retainedLane.ts:10	P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED
+2	S04-split	~research/CompareDetail.tsx:771 «protocol»	protocol —
+2	S04-split	research/RunProgress.tsx:1131	timeline —
+2	S04-split	research/EvidenceFlow.tsx:2984	IS window
+4	S04-split	research/researchRefusal.ts:464	RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION
+2	S04-split	research/SplitDetail.tsx:754	└ inner
+2	S04-summary	research/EvidenceFlow.tsx:3660	all-time analytics
+2	S04-summary	research/EvidenceFlow.tsx:3235	OOS Sortino
+2	S04-summary	research/EvidenceFlow.tsx:3236	OOS CAGR
+2	S04-summary	research/EvidenceFlow.tsx:3240	Bars processed
+2	S04-summary	research/EvidenceFlow.tsx:3243	Funding total
+2	S04-summary	research/EvidenceFlow.tsx:3446	excess kurtosis
+2	S04-summary	research/CompareDetail.tsx:2376	win rate
+2	S04-summary	research/EvidenceFlow.tsx:3448	avg holding
+2	S04-summary	research/EvidenceFlow.tsx:3449	exposure L/S/F
+2	S04-summary	research/EvidenceFlow.tsx:2204	runs only.
+1	S04-execute	DATA?	sample 1 of 8
+1	S04-execute	research/ExecuteDetail.tsx:1252	read state at playhead
+1	S04-execute	research/ExecuteDetail.tsx:1401	· in this window
+2	S04-execute	DATA?	2026-07-01 16:00Z
+1	S04-freeze	DATA?	· three window current
+1	S04-search	research/SearchDetail.tsx:1244	fixed profile no search
+2	S04-search,S04-split	research/ExecuteCandleReplay.tsx:87	parameter bundle
+4	S04-search	research/EngineAtlas.tsx:118	levels
+1	S04-split	research/SplitDetail.tsx:1713	IS — calibration history
+1	S04-split	research/SplitDetail.tsx:1714	outer OOS — observed
+1	S04-summary	~research/EvidenceFlow.tsx:3204 «Trade count»	Trade count (child tape)
+2	S04-summary	research/EvidenceFlow.tsx:1840	points ·
+2	S04-summary	research/EvidenceFlow.tsx:1840	extrema kept
+2	S04-summary	DATA?	4h 00m
+2	S04-execute	research/ExecuteCandleReplay.tsx:2109	→ contract
+2	S04-execute	DATA?	readiness ready
+2	S04-execute	research/EvidenceFlow.tsx:3262	stitched account
+2	S04-execute	research/EvidenceFlow.tsx:4321	whole run
+2	S04-execute	research/ExecuteCandleReplay.tsx:14	causal reveal
+2	S04-execute	research/ExecuteCandleReplay.tsx:1492	full-run fees
+2	S04-execute	research/ExecuteCandleReplay.tsx:2268	published records
+2	S04-execute	research/ExecuteCandleReplay.tsx:2279	target transitions
+2	S04-execute	research/ExecuteCandleReplay.tsx:2287	fees paid
+2	S04-execute	research/ExecuteCandleReplay.tsx:2288	rejected orders
+2	S04-execute	research/ExecuteCandleReplay.tsx:1547	bar (UTC)
+4	S04-execute	research/EvidenceFlow.tsx:3455	notional
+4	S04-execute	research/EngineAtlas.tsx:568	fee
+2	S04-execute	DATA?	2026-07-06 04:00Z
+2	S04-execute	DATA?	2026-07-08 02:00Z
+2	S04-execute	research/ExecuteCandleReplay.tsx:1816	trade anatomy
+2	S04-execute	research/ExecuteCandleReplay.tsx:1808	at close
+2	S04-execute	research/ExecuteCandleReplay.tsx:1809	· equity
+2	S04-execute	research/ChildAuditCompanionPanel.tsx:158	child audit
+2	S04-execute	research/ExecuteCandleReplay.tsx:1710	audit #
+4	S04-execute,S04-search	research/AlphaImport.tsx:73	candidate
+2	S04-execute	research/ExecuteCandleReplay.tsx:1715	window (UTC)
+2	S04-execute	research/ExecuteCandleReplay.tsx:1639	out-of-sample generation
+2	S04-execute	DATA?	2026-07-07 23:00Z
+4	S04-execute	~research/AlphaImport.tsx:21 «QUANTBT»	QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS
+2	S04-execute	research/EvidenceFlow.tsx:2968	this window
+2	S04-execute	research/ExecuteCandleReplay.tsx:1875	· notional
+2	S04-execute	research/ExecuteCandleReplay.tsx:1896	fee rate
+2	S04-freeze	research/FreezeDetail.tsx:1484	declared folds
+1	S04-freeze	research/FreezeDetail.tsx:1438	— report evidence only
+2	S04-freeze	research/FoldSelectionPanel.tsx:7	wall clock
+2	S04-freeze	research/WhatIfCard.tsx:322	preview only
+2	S04-freeze	research/SearchDetail.tsx:111	· θ*
+1	S04-freeze	research/WhatIfCard.tsx:381	9 × 9 ·
+1	S04-freeze	DATA?	mode 1 decay J
+2	S04-freeze	research/EvidenceFlow.tsx:1026	manifest digest
+2	S04-freeze	research/FreezeDetail.tsx:810	retained rows
+4	S04-freeze	DATA?	92cb64129171…
+1	S04-search	research/SearchDetail.tsx:977	Mode 1 J (OOS-adjusted)
+1	S04-search	~research/EvidenceFlow.tsx:3455 «notional»	p10.delta-signal-notional-wfo.v1 · binding research-loop-v1.1/W1
+2	S04-search	research/SearchDetail.tsx:1389	sampler seed
+2	S04-search	research/SearchDetail.tsx:1394	sampler trace
+2	S04-search	research/SearchDetail.tsx:1395	warm start
+2	S04-search	research/SearchSurface.tsx:325	θ* #
+1	S04-search	~research/SearchSurface.tsx:443 «duplicate pruner»	13 pruned (duplicate pruner)
+2	S04-search	research/SearchStageB.tsx:103	trials evaluated
+2	S04-search	research/SearchStageB.tsx:234	candidates re-evaluated
+2	S04-search	research/SearchDetail.tsx:1786	frozen at
+1	S04-search	research/SearchStageB.tsx:4	per-fold decay of θ*
+4	S04-search	research/AlphaImport.tsx:254	selected
+2	S04-search	research/SearchDetail.tsx:678	retained trials
+2	S04-search	research/SearchDetail.tsx:1023	from trial
+1	S04-search	research/SearchDetail.tsx:1050	· selected by policy
+2	S04-split	research/LineageDetail.tsx:844	outer folds
+2	S04-split	research/NewRun.tsx:1545	label horizon
+2	S04-split	research/SplitDetail.tsx:2058	warmup window
+1	S04-split	research/SplitDetail.tsx:2726	θ* · source trial
+2	S04-split	DATA?	[2026-06-01, 06-30]
+2	S04-split	DATA?	[2026-07-01, 07-07]
+2	S04-split	DATA?	[2026-06-01, 07-07]
+2	S04-split	DATA?	[2026-07-08, 07-14]
+2	S04-split	DATA?	[2026-06-01, 07-14]
+2	S04-split	research/SplitDetail.tsx:1461	stitch digest
+2	S04-summary	research/EvidenceFlow.tsx:3233	Max drawdown
+2	S04-summary	research/EvidenceFlow.tsx:2830	retained import
+2	S04-summary	research/EvidenceFlow.tsx:2521	DRAG ·
+2	S04-summary	research/EvidenceFlow.tsx:2521	WARN ·
+1	S04-summary	DATA?	top 10 / 44
+2	S04-summary	DATA?	6h 00m
+2	S04-summary	research/EvidenceFlow.tsx:2313	initial equity
+2	S04-summary	research/EvidenceFlow.tsx:2314	final equity
+2	S04-summary	research/EvidenceFlow.tsx:2315	account return
+2	S04-summary	research/CompareDetail.tsx:1807	max drawdown
+2	S04-summary	research/EvidenceFlow.tsx:2317	retained positions
+2	S04-summary	research/EvidenceCharts.tsx:972	benchmark —
+1	S04-execute	~research/RunLibrary.tsx:307 «pending source»	route — pending source
+1	S04-search	research/SearchDetail.tsx:707	retained ledger lane —
+4	S04-split	~research/OrchestrationClocks.tsx:5 «COMPLETION»	P14_SOURCE_COMPLETION_PENDING
+1	S04-split	research/SplitDetail.tsx:775	retained fold lane —
+1	S04-split	research/SplitDetail.tsx:803	no fold row drawn
+1	S04-freeze	research/FreezeDetail.tsx:1367	PER-FOLD · NOT EVALUATED
+1	S04-freeze	research/EvidenceFlow.tsx:2498	each fold's own selection
+4	S04-freeze,S04-search,S04-split	DATA?	study_1.trial_2
+1	S04-search	~research/EvidenceFlow.tsx:3455 «notional»	p10.delta-signal-notional-causal-inner.v1 · binding research-loop-v1.1/B8-causal-inner
+1	S04-search	DATA?	pruned 0 of 3
+1	S04-split	research/CausalSelectionPanel.tsx:140	objective · inner validation
+1	S04-split	research/CausalSelectionPanel.tsx:152	IS · inner mean
+1	S04-split	research/CausalSelectionPanel.tsx:153	OOS · this fold
+1	S04-summary	DATA?	fold_01, fold_03 drag ·
+1	S00	DATA?	Access & command
+1	S00	DATA?	01 · Login
+1	S00	research/JourneyMap.tsx:392	Pick a run
+1	S00	DATA?	Read the evidence
+1	S00	research/EvidenceFlow.tsx:2	Evidence Flow hub
+1	S00	research/RunLibrary.tsx:1687	S1 · Split
+1	S00	~research/ExecuteCandleReplay.tsx:46 «OVERVIEW»	07 · OVERVIEW
+1	S00	~research/EngineAtlas.tsx:843 «OPTIMIZATION»	08 · OPTIMIZATION
+1	S00	~research/CausalSelectionPanel.tsx:6 «PARAMETERS»	09 · PARAMETERS
+1	S00	~research/AlphaImport.tsx:54 «EXECUTION»	10 · EXECUTION
+1	S00	DATA?	11 · AUDIT
+1	S01	research/RunLibrary.tsx:2749	journey map ↗
+1	S01	research/RunLibrary.tsx:2918	group by alpha
+3	S01	research/AlphaImport.tsx:256	progress
+1	S01	~research/CompareDetail.tsx:53 «APPROVED»	rc_06GFFDG3SA1… · NOT_APPROVED
+3	S02	research/AlphaImport.tsx:102	version
+3	S02	research/AlphaImport.tsx:28	lifecycle
+3	S02	research/AlphaImport.tsx:18	ACTIVE
+3	S02	research/AlphaImport.tsx:587	entrypoint
+3	S02	~research/ChildAuditCompanionPanel.tsx:80 «strategy»	strategy.delta_rsi:generate_signals
+3	S02	research/AlphaImport.tsx:1681	supersedes
+3	S02	research/DataDeclaration.tsx:13	Dataset
+3	S02	DATA?	BINANCE
+3	S02	DATA?	CRYPTO_24_7
+3	S02	~research/DigestChain.tsx:187 «historical»	historical_market_data
+3	S02	research/dataDeclaration.ts:30	perpetual
+3	S02	DATA?	1min
+3	S02	DATA?	5min
+3	S02	DATA?	15min
+3	S02	DATA?	30min
+1	S02	~research/DigestChain.tsx:20 «qualification»	pinned · p04.fixed-qualification.v1
+3	S02	research/NewRun.tsx:2078	Study
+3	S02	research/ResearchFixtures.tsx:67	n_trials
+3	S02	DATA?	n_jobs
+3	S02	~research/EngineAtlas.tsx:1268 «stopping»	early_stopping_rounds
+3	S02	~research/EngineAtlas.tsx:1268 «stopping»	early_stopping_min_trials
+3	S02	~research/EngineAtlas.tsx:1268 «stopping»	early_stopping_min_delta
+3	S02	~research/AlphaImport.tsx:256 «progress»	show_progress_bar
+3	S02	research/SearchSurface.tsx:431	duplicate_policy
+3	S02	~research/scheduler.ts:69 «exception»	exception_policy
+3	S02	research/NewRun.tsx:2079	Sampler
+3	S02	~research/EngineAtlas.tsx:1219 «constraint»	constraint_mode
+3	S02	research/ResearchFixtures.tsx:69	optuna_trials
+3	S02	~research/EngineAtlas.tsx:1268 «stopping»	optuna_early_stopping
+3	S02	research/EngineAtlas.tsx:1272	random_seed
+3	S02	DATA?	min_trades_per_year
+3	S02	DATA?	trade_penalty_factor
+3	S02	DATA?	use_numba
+3	S02	research/SearchDetail.tsx:1067	top_is_k
+3	S02	research/CompareDetail.tsx:1369	dim
+3	S02	research/AlphaImport.tsx:54	low
+3	S02	research/AlphaImport.tsx:461	high
+3	S02	research/AlphaImport.tsx:109	preflight
+3	S02	research/PlannedWindows.tsx:4	topology
+3	S02	DATA?	pct_equity
+3	S02	research/ChildAuditCompanionPanel.tsx:7	LEGACY
+3	S02	research/ResearchFixtures.tsx:112	intrabar_bracket
+3	S02	DATA?	dca_ladder
+3	S02	DATA?	reactive
+3	S02	DATA?	event_driven
+3	S02	~research/AlphaImport.tsx:28 «lifecycle»	native_event_lifecycle
+3	S02	DATA?	fill_replay
+3	S02	DATA?	basket
+3	S02	research/EngineAtlas.tsx:225	arbitrage
+3	S02	app/icons.ts:61	portfolio
+3	S02	DATA?	nautilus_dca_grid
+3	S02	research/EngineAtlas.tsx:1239	options
+3	S02	DATA?	native_vectorized
+1	S02	~research/EvidenceFlow.tsx:3455 «notional»	pinned · p10.delta-signal-notional-wfo.v1
+1	S02	~research/EvidenceFlow.tsx:3455 «notional»	pinned · p10.delta-signal-notional-causal-inner.v1
+1	S02	research/NewRun.tsx:1855	Inner window mode
+1	S02	research/NewRun.tsx:1860	Inner train width
+1	S02	research/NewRun.tsx:1863	Minimum inner folds
+1	S03	DATA?	2026-10-01 13:45 UTC
+1	S03	~research/AlphaImport.tsx:1227 «Execute»	✕ S4 Execute
+3	S03	research/QueuePanel.tsx:32	SUCCEEDED
+3	S03	research/AlphaImport.tsx:598	claims
+3	S03	research/FreezeDetail.tsx:1812	chronology
+3	S03,S04-search	research/CompareDetail.tsx:14	USED
+3	S03	research/AlphaImport.tsx:22	eta
+3	S03	~research/AlphaImport.tsx:32 «research»	research_bundle
+3	S03	research/AlphaImport.tsx:9	rows
+3	S03	research/AlphaImport.tsx:16	bytes
+3	S03	research/ArtifactPanel.tsx:34	coverage
+3	S03	app/PortalRoutes.tsx:30	HEAVY
+1	S03	DATA?	2026-09-01 00:00 UTC
+3	S03,S04-atlas	~research/CausalSelectionPanel.tsx:2 «selection»	strict_outer_oos_after_frozen_selection
+1	S03	research/RunProgress.tsx:577	per-fold studies —
+1	S03	DATA?	2026-07-16 00:00 UTC
+1	S03	~research/RunProgress.tsx:969 «inner J»	inner J −15.246
+1	S03	~research/RunProgress.tsx:969 «inner J»	inner J −5.253
+1	S03	~research/RunProgress.tsx:969 «inner J»	inner J −3.381
+3	S04-claim	research/EvidenceFlow.tsx:3092	per_fold_metrics
+3	S04-execute,S04-freeze	research/EvidenceFlow.tsx:2237	not_ready
+3	S04-execute,S04-freeze	research/AlphaImport.tsx:36	unavailable
+3	S04-execute	research/ExecuteCandleReplay.tsx:9	candles
+3	S04-execute	~research/AlphaImport.tsx:54 «EXECUTION»	P04_SOURCE_DID_NOT_PUBLISH_CROSS_STREAM_EXECUTION_ORDER
+1	S04-freeze	DATA?	2026-10-02 19:09 UTC
+3	S04-search	research/SearchDetail.tsx:173	P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED
+3	S04-summary	research/CompareDetail.tsx:22	segment
+3	S04-summary	research/DataDeclaration.tsx:64	timezone
+3	S04-summary	research/CompareDetail.tsx:1040	as-of
+1	S04-execute	DATA?	retrospective equity only
+1	S04-execute	research/replayClient.ts:471	Equity samples only.
+1	S04-execute	DATA?	extrema bucket v1
+1	S04-execute	DATA?	· window 1–8
+1	S04-execute	DATA?	no selected playhead
+1	S04-execute	research/ExecuteDetail.tsx:1401	· source ordinals
+3	S04-execute	research/AlphaImport.tsx:2	pos
+3	S04-execute,S04-summary	research/ChildAuditCompanionPanel.tsx:10	observations
+1	S04-freeze	DATA?	2026-10-02 19:08 UTC
+3	S04-freeze	research/CompareDetail.tsx:833	ordering
+1	S04-freeze	DATA?	is calibration history
+1	S04-freeze	DATA?	outer oos observation
+3	S04-freeze	research/AlphaImport.tsx:11	parameter
+3	S04-freeze	research/ChildAuditCompanionPanel.tsx:219	reading
+1	S04-freeze	~research/AlphaImport.tsx:30 «requested»	fold 1 requested
+1	S04-freeze	research/FreezeDetail.tsx:193	retained binding check
+1	S04-freeze	research/FreezeDetail.tsx:230	digest comparison only
+3	S04-freeze	research/CausalSelectionPanel.tsx:159	observed
+1	S04-freeze	research/FreezeDetail.tsx:96	fixed parameter bundle
+1	S04-freeze	research/FreezeDetail.tsx:705	sealed params digest
+1	S04-freeze	research/FreezeDetail.tsx:1903	source gaps ·
+1	S04-freeze	DATA?	what if grid
+1	S04-search	DATA?	declared not executed
+1	S04-split	DATA?	· 300 bars
+1	S04-split	DATA?	· 1,464 bars
+1	S04-split	DATA?	· 744 bars
+1	S04-split	research/SplitDetail.tsx:2659	IS → OOS
+1	S04-split	research/SplitDetail.tsx:2202	physical row-group I/O
+1	S04-summary	DATA?	OOS ending equity
+1	S04-summary	DATA?	OOS · engine-direct
+1	S04-summary	research/enrichedAnalysis.ts:413	IS max DD
+1	S04-summary	~research/EvidenceCharts.tsx:22 «observed fold»	1 observed fold
+3	S04-summary	research/analyticsV2.tsx:166	Beta
+3	S04-summary	research/CompareDetail.tsx:83	Corr
+3	S04-summary	research/CompareDetail.tsx:28	Sharpe
+3	S04-summary	research/AlphaImport.tsx:11	mean
+3	S04-summary	research/EngineAtlas.tsx:602	median
+3	S04-summary	research/CompareDetail.tsx:2051	depth
+3	S04-summary	research/EvidenceFlow.tsx:2085	duration
+3	S04-summary	research/ExecuteCandleReplay.tsx:2166	recovered
+3	S04-summary	~research/AlphaImport.tsx:137 «PUBLISH»	SOURCE_DID_NOT_PUBLISH_MARKET_REGIME
+3	S04-summary	research/EvidenceFlow.tsx:1653	CAGR
+3	S04-summary	research/analyticsV2.tsx:236	Volatility
+3	S04-summary	research/analyticsV2.tsx:241	Skew
+3	S04-summary	research/analyticsV2.tsx:244	Turnover
+3	S04-summary	research/EvidenceFlow.tsx:3449	exposure
+3	S04-summary	research/analyticsV2.tsx:248	Payoff
+1	S04-execute	~research/EvidenceFlow.tsx:2045 «capped at»	(capped at 64)
+1	S04-freeze	research/FreezeDetail.tsx:1385	oos_used_for_selection = true
+1	S04-freeze	research/FreezeDetail.tsx:1185	one shared set
+1	S04-freeze	research/FreezeDetail.tsx:1212	shared θ* ·
+1	S04-freeze	research/WhatIfCard.tsx:331	distinct nodes evaluated
+3	S04-search,S04-summary	~research/EvidenceFlow.tsx:3455 «notional»	rs02.delta-signal-notional-wfo.v1
+1	S04-search	~research/SearchSurface.tsx:510 «regions sampled»	regions sampled: 12/12
+1	S04-search	research/SearchStageB.tsx:193	every outer fold
+1	S04-search	research/SearchStageB.tsx:240	· OOS ranks
+1	S04-search	research/SearchDetail.tsx:1098	mean OOS Sharpe
+1	S04-search	research/SearchDetail.tsx:1100	positive mean decay
+3	S04-search	research/SearchDetail.tsx:1191	max_dd
+1	S04-search	research/SearchDetail.tsx:1200	SELECTED BY POLICY
+1	S04-search	research/SearchSurface.tsx:677	global θ* ·
+1	S04-search	research/SearchSurface.tsx:678	top-decile share (
+1	S04-split	DATA?	[2026-06-01 ⋯ 2026-08-25]
+1	S04-split	DATA?	[2026-07-01 ⋯ 2026-08-31]
+1	S04-split	~research/SearchFoldStrip.tsx:10 «test windows»	9 test windows
+1	S04-summary	~research/CompareDetail.tsx:815 «Drawdown»	Drawdown 44 (open)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 25 (recovered)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 35 (recovered)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 33 (recovered)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 20 (recovered)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 18 (recovered)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 5 (recovered)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 6 (recovered)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 2 (recovered)
+1	S04-summary	~research/ExecuteCandleReplay.tsx:2166 «recovered»	Drawdown 39 (recovered)
+1	S04-claim	research/EvidenceFlow.tsx:4297	artifact manifest —
+1	S04-search	research/SearchDetail.tsx:713	Search contract: ledger
+3	S04-execute	DATA?	b7d1ced8…
+3	S04-execute	DATA?	b7425b8e…
+1	S04-freeze	~research/AlphaImport.tsx:73 «candidate»	· candidate 9f93eca761aa
+1	S04-freeze	~research/RunLibrary.tsx:1580 «candidate b»	· candidate b7d1ced833a8
+1	S04-freeze	~research/RunLibrary.tsx:1580 «candidate b»	· candidate b7425b8eb7c6
+1	S04-freeze	research/FreezeDetail.tsx:1437	no retained fold
+1	S04-freeze	research/FoldSelectionPanel.tsx:46	verdict (data time)
+1	S04-freeze	research/FoldSelectionPanel.tsx:46	study · trial
+3	S04-search,S04-summary	~research/EvidenceFlow.tsx:3455 «notional»	rs02.delta-signal-notional-causal-inner.v1
+1	S04-search	research/SearchSurface.tsx:618	trials, needs ≥
+1	S04-search	research/SearchStageB.tsx:259	K not shown
+1	S04-search	DATA?	· fold 1
+1	S04-split	research/SplitDetail.tsx:1893	inner min (declared)
+1	S04-split	DATA?	[2026-06-01 ⋯ 2026-07-14]
+1	S04-split	DATA?	[2026-07-01 ⋯ 2026-07-15]
+1	S04-split	research/SplitDetail.tsx:2600	PER FOLD (own)
+1	S04-split	research/CausalSelectionPanel.tsx:160	inner folds observed
+1	S04-split	DATA?	2026-06-14 23:00 UTC
+1	S04-split	DATA?	2026-06-15 00:00 UTC
+1	S04-split	DATA?	2026-06-22 00:00 UTC
+1	S04-split	DATA?	2026-06-29 00:00 UTC
+1	S04-split	DATA?	2026-06-30 23:00 UTC
+1	S04-split	~research/SearchFoldStrip.tsx:10 «test windows»	3 test windows
+1	S04-summary	~research/ArtifactPanel.tsx:45 «derived»	OOS · portal-derived
+1	S04-summary	DATA?	all 1,080 points
+1	S04-summary	~research/analyticsV2.tsx:212 «benchmark curve»	benchmark curve —
+1	S00	research/JourneyMap.tsx:94	shipped hi-fi
+1	S00	research/JourneyMap.tsx:471	descriptor revision
+1	S00	DATA?	Alpha intake
+1	S00	research/EngineAtlas.tsx:790	Run it
+1	S00	research/AlphaImport.tsx:722	Attempt Lineage
+1	S00	research/EngineAtlas.tsx:2	Engine Atlas
+1	S00	research/ReleaseCandidateDetail.tsx:215	Execution side
+1	S00	research/ReleaseCandidateDetail.tsx:5	Approval Inbox
+1	S01	research/RunLibrary.tsx:2705	QuantBT Research
+1	S01	research/RunLibrary.tsx:2931	claim ledger
+2	S01	research/CompareDetail.tsx:2047	sampled
+2	S01	research/EvidenceFlow.tsx:186	CANCELLED
+2	S02,S04-execute	~research/DigestChain.tsx:20 «qualification»	p04.fixed-qualification.v1
+1	S02	~research/CausalSelectionPanel.tsx:4 «profile»	profile 2–400
+2	S02	research/NewRun.tsx:1586	Frequency
+1	S02	research/NewRun.tsx:1849	Inner frequency
+1	S02	DATA?	pattern ^[1-9][0-9]{0,4}(D|h)$
+1	S02	research/NewRun.tsx:1342	Inner folds
+2	S03	research/ReleaseCandidateDetail.tsx:1979	INTERACTIVE
+1	S03	research/RunProgress.tsx:1226	none yet
+1	S03	research/OrchestrationClocks.tsx:5	no search
+2	S03,S04-claim	~research/AlphaImport.tsx:32 «research»	research/evidence-source.json
+2	S03,S04-claim	~research/AlphaImport.tsx:32 «research»	research/split-source.json
+1	S03	DATA?	103.4 KB
+2	S03	research/NewRun.tsx:2295	trials/s
+1	S03	DATA?	346.4 KB
+2	S03,S04-search	research/SplitDetail.tsx:1939	NOT_USED
+1	S03	research/RunProgress.tsx:577	reported /
+1	S03	~research/EstimateParts.tsx:4 «planned»	3 planned
+1	S03	DATA?	210.6 KB
+2	S04-execute	research/researchRefusal.ts:440	P13_EVIDENCE_NOT_READABLE_FOR_RETAINED_CANDLE_OVERVIEW
+2	S04-summary	research/enrichedAvailability.tsx:4	SOURCE_EVIDENCE_NOT_SEALED
+2	S04-summary	research/EvidenceFlow.tsx:3445	skew
+2	S04-summary	research/EvidenceFlow.tsx:3450	turnover
+2	S04-summary	DATA?	rs02.delta-wfo-global.v1
+2	S04-summary	research/DigestChain.tsx:164	P04_FIXED_QUALIFICATION
+1	S04-claim	DATA?	1/1 folds
+1	S04-execute	DATA?	revision p17r1_f9b402f4
+1	S04-execute	research/ExecuteDetail.tsx:207	out-of-sample window
+2	S04-execute	research/CompareDetail.tsx:815	drawdown
+1	S04-execute	DATA?	not selected
+2	S04-execute,S04-freeze	research/AlphaImport.tsx:19	revision
+1	S04-execute	research/ExecuteCandleReplay.tsx:2355	position label
+1	S04-execute	DATA?	2026-08-01 00:00Z
+1	S04-execute	research/ExecuteDetail.tsx:1406	(end excluded)
+1	S04-execute	research/ExecuteDetail.tsx:621	at (UTC)
+1	S04-execute	DATA?	2026-07-01 12:00Z
+1	S04-execute	DATA?	2026-07-15 15:00Z
+1	S04-execute	research/EvidenceCharts.tsx:94	2026-07-20 13:00Z
+1	S04-execute	DATA?	2026-07-20 15:00Z
+1	S04-execute	DATA?	2026-07-25 08:00Z
+1	S04-execute	DATA?	2026-07-31 23:00Z
+1	S04-freeze	research/FoldSelectionPanel.tsx:46	data time
+1	S04-freeze	research/EvidenceFlow.tsx:2522	not evaluated
+1	S04-freeze	research/FreezeDetail.tsx:863	frozen parameters
+1	S04-freeze	research/FreezeDetail.tsx:95	manifest binding
+2	S04-freeze	DATA?	2486e573470e…
+2	S04-freeze	DATA?	9ade757b5c1c…
+1	S04-freeze	research/FreezeDetail.tsx:1852	selection artifact
+1	S04-freeze	DATA?	strict ordering
+1	S04-freeze	DATA?	diagnostic admission
+1	S04-freeze	DATA?	sibling draft
+1	S04-search	research/EngineAtlas.tsx:522	report only
+1	S04-split	DATA?	[2026-04-18, 2026-08-15)
+2	S04-split	~research/ArtifactPanel.tsx:30 «METADATA»	P08_METADATA_BOUND
+1	S04-split	~research/AlphaImport.tsx:281 «CURRENT»	— THREE_WINDOW_CURRENT
+1	S04-split	DATA?	[2026-04-18, 2026-05-01)
+1	S04-split	research/SplitDetail.tsx:331	[2026-05-01, 2026-07-01)
+1	S04-split	DATA?	[2026-07-01, 2026-08-01)
+1	S04-split	DATA?	[2026-08-01, 2026-08-15)
+1	S04-split	research/splitClient.ts:15	not counted
+1	S04-split	research/SplitDetail.tsx:1160	unlock record
+1	S04-split	research/RunProgress.tsx:581	fixed profile
+1	S04-split	DATA?	[2026-05-01, 07-01)
+1	S04-split	DATA?	[2026-07-01, 08-01)
+1	S04-summary	research/enrichedAnalysis.ts:411	IS return
+1	S04-summary	research/ExecuteCandleReplay.tsx:915	IS Sharpe
+1	S04-summary	DATA?	731h 00m
+1	S04-summary	DATA?	30.5 d
+1	S04-summary	DATA?	25h 06m
+1	S04-claim	DATA?	9/9 folds
+2	S04-claim	research/EvidenceFlow.tsx:2347	route_ledger
+2	S04-claim	research/EvidenceFlow.tsx:3752	in_sample_account
+2	S04-claim	research/researchRefusal.ts:411	rolling_sharpe
+2	S04-execute	research/AlphaImport.tsx:87	claim
+2	S04-execute	research/EvidenceFlow.tsx:2952	capital
+2	S04-execute	DATA?	721–888
+2	S04-execute	research/ExecuteMarkers.tsx:112	flip
+2	S04-execute	research/AlphaImport.tsx:291	resize
+2	S04-execute	research/AlphaImport.tsx:214	pair
+2	S04-execute	research/ExecuteCandleReplay.tsx:18	SL/TP
+2	S04-execute	research/ExecuteCandleReplay.tsx:18	OCO
+1	S04-execute	DATA?	L 59063.3
+2	S04-execute	research/AlphaImport.tsx:75	off
+2	S04-execute	research/DigestChain.tsx:69	carried
+2	S04-execute	research/CompareDetail.tsx:512	events
+2	S04-execute	~research/ExecuteCandleReplay.tsx:52 «TRANSITIONS»	QUANTBT_CLOSE_TARGET_ROUTE_PUBLISHES_TRANSITIONS_NOT_AN_EVENT_TAPE
+2	S04-execute	research/AlphaImport.tsx:4	close
+1	S04-execute	DATA?	2026-07-06 17:00Z
+1	S04-execute	DATA?	2026-07-07 15:00Z
+1	S04-execute	DATA?	2026-07-08 16:00Z
+1	S04-execute	DATA?	2026-07-13 01:00Z
+1	S04-execute	DATA?	2026-07-13 04:00Z
+1	S04-execute	DATA?	2026-07-13 16:00Z
+1	S04-execute	DATA?	2026-07-21 09:00Z
+1	S04-execute	DATA?	2026-07-27 01:00Z
+1	S04-execute	DATA?	2026-08-03 14:00Z
+1	S04-execute	DATA?	2026-08-03 17:00Z
+1	S04-execute	DATA?	2026-08-04 16:00Z
+1	S04-execute	DATA?	2026-08-04 19:00Z
+1	S04-execute	DATA?	2026-08-09 23:00Z
+1	S04-execute	DATA?	2026-08-10 03:00Z
+1	S04-execute	DATA?	2026-08-14 16:00Z
+1	S04-execute	DATA?	2026-08-17 03:00Z
+1	S04-execute	DATA?	2026-08-17 09:00Z
+1	S04-execute	DATA?	2026-08-17 13:00Z
+1	S04-execute	DATA?	2026-08-17 19:00Z
+1	S04-execute	DATA?	2026-08-20 10:00Z
+1	S04-execute	DATA?	2026-08-20 18:00Z
+1	S04-execute	DATA?	2026-08-24 13:00Z
+1	S04-execute	DATA?	2026-08-24 14:00Z
+1	S04-execute	DATA?	2026-08-24 18:00Z
+1	S04-execute	DATA?	2026-08-25 03:00Z
+1	S04-execute	DATA?	2026-08-27 19:00Z
+1	S04-execute	DATA?	2026-08-28 02:00Z
+1	S04-execute	DATA?	2026-08-30 18:00Z
+1	S04-execute	DATA?	2026-08-31 09:00Z
+2	S04-execute	research/ExecuteCandleReplay.tsx:493	transitions
+2	S04-execute	research/AlphaImport.tsx:1266	signal
+2	S04-execute	research/AlphaImport.tsx:240	order
+2	S04-execute	research/AlphaImport.tsx:1212	target
+2	S04-execute	research/AlphaImport.tsx:53	fill
+2	S04-execute	research/AlphaImport.tsx:1589	child
+2	S04-execute	research/AlphaImport.tsx:88	account
+2	S04-execute	research/ChildAuditCompanionPanel.tsx:68	isolation
+2	S04-execute	DATA?	2671e27b…
+2	S04-execute	DATA?	baf7c707…
+2	S04-execute	DATA?	00b18de5…
+2	S04-execute	research/ExecuteCandleReplay.tsx:1489	fees
+2	S04-execute	research/ExecuteCandleReplay.tsx:1852	charged
+2	S04-execute	~research/AlphaImport.tsx:21 «QUANTBT»	QUANTBT_RUN_CONFIG_USE_FUNDING_FALSE
+2	S04-execute	research/ExecuteCandleReplay.tsx:1904	bps
+2	S04-freeze	research/AlphaImport.tsx:383	ready
+1	S04-freeze	DATA?	folds 1–9
+2	S04-freeze	research/AlphaImport.tsx:10	read-only
+1	S04-freeze	research/WhatIfCard.tsx:381	↑ ·
+2	S04-search	research/AlphaImport.tsx:22	ENDPOINT
+2	S04-search	research/ResearchFixtures.tsx:70	ROBUST_DECAY
+2	S04-search	research/EngineAtlas.tsx:797	selection_inputs
+2	S04-search	research/EngineAtlas.tsx:955	retention
+2	S04-search	research/SearchDetail.tsx:1646	atlas_release
+2	S04-search	research/CausalSelectionPanel.tsx:100	oos_use
+2	S04-search	research/SearchDetail.tsx:1386	grid_size
+2	S04-search	research/SearchDetail.tsx:1396	dedupe
+1	S04-search	research/SearchDetail.tsx:151	◀ OOS
+2	S04-search	~research/AlphaImport.tsx:21 «QUANTBT»	QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_POOL_FREEZE_CLOCK
+1	S04-search	research/SearchStageB.tsx:289	J =
+2	S04-search	research/SearchDetail.tsx:1100	positive_mean_decay
+1	S04-search	research/SearchStageB.tsx:292	· γ
+1	S04-search	research/SearchDetail.tsx:1099	decay dispersion
+1	S04-search	research/SearchDetail.tsx:1138	J (selected)
+2	S04-search	research/SearchDetail.tsx:1199	best_trial
+1	S04-search	DATA?	97% top-decile
+1	S04-search	DATA?	74% top-decile
+1	S04-search	DATA?	82% top-decile
+1	S04-search	DATA?	5% top-decile
+1	S04-search	DATA?	44% top-decile
+1	S04-search	DATA?	13% top-decile
+1	S04-search	DATA?	62% top-decile
+1	S04-search	DATA?	23% top-decile
+1	S04-split	DATA?	[2026-06-01, 2026-09-01)
+1	S04-split	~research/CausalSelectionPanel.tsx:9 «observed»	9 observed
+2	S04-split	research/AlphaImport.tsx:134	none
+1	S04-split	research/SplitDetail.tsx:1979	θ* params
+2	S04-split	~research/AlphaImport.tsx:21 «QUANTBT»	QUANTBT_WARMUP_POLICY_IS_NONE
+1	S04-split	research/SplitDetail.tsx:2605	GLOBAL (shared)
+1	S04-split	research/ReportDetail.tsx:1195	· params
+1	S04-split	DATA?	[2026-07-15, 07-21]
+1	S04-split	DATA?	[2026-06-01, 07-21]
+1	S04-split	DATA?	[2026-07-22, 07-28]
+1	S04-split	DATA?	[2026-06-01, 07-28]
+1	S04-split	DATA?	[2026-07-29, 08-04]
+1	S04-split	DATA?	[2026-06-01, 08-04]
+1	S04-split	DATA?	[2026-08-05, 08-11]
+1	S04-split	DATA?	[2026-06-01, 08-11]
+1	S04-split	DATA?	[2026-08-12, 08-18]
+1	S04-split	DATA?	[2026-06-01, 08-18]
+1	S04-split	DATA?	[2026-08-19, 08-25]
+1	S04-split	DATA?	[2026-06-01, 08-25]
+1	S04-split	DATA?	[2026-08-26, 08-31]
+2	S04-split	research/ExecuteCandleReplay.tsx:199	carry_position
+1	S04-summary	research/EvidenceFlow.tsx:2526	— OOS
+1	S04-summary	research/EvidenceFlow.tsx:2466	, decay
+2	S04-summary	~research/AlphaImport.tsx:32 «research»	research.fold-verdict.v1
+2	S04-summary	research/AlphaImport.tsx:7	rule
+1	S04-summary	DATA?	417h 00m
+1	S04-summary	DATA?	120h 00m
+1	S04-summary	DATA?	213h 00m
+1	S04-summary	DATA?	73h 00m
+1	S04-summary	DATA?	141h 00m
+1	S04-summary	DATA?	35h 00m
+1	S04-summary	DATA?	9h 00m
+1	S04-summary	DATA?	20h 00m
+1	S04-summary	DATA?	17.4 d
+1	S04-summary	DATA?	52h 11m
+2	S04-atlas	research/AlphaImport.tsx:178	needs
+2	S04-atlas	~research/CompareDetail.tsx:130 «forward»	walk_forward.inner
+2	S04-atlas	~research/foundationRoutes.tsx:5 «enforced»	engine_enforced_nested_v2
+2	S04-atlas	~research/EvidenceFlow.tsx:417 «completed»	last_completed_fold_selected_params
+1	S04-claim	research/CompareDetail.tsx:1188	claim —
+2	S04-freeze,S04-split	research/EvidenceFlow.tsx:2176	RESEARCH_CURRENT_SOURCE_CONFLICT
+1	S04-freeze	research/FreezeDetail.tsx:1783	reread freeze
+1	S04-claim	DATA?	3/3 folds
+1	S04-execute	research/ExecuteCandleReplay.tsx:167	own params
+1	S04-execute	DATA?	· study_0.trial_2
+1	S04-execute	DATA?	S 58744.4
+1	S04-execute	DATA?	2026-07-01 07:00Z
+1	S04-execute	DATA?	2026-07-01 15:00Z
+1	S04-execute	DATA?	2026-07-01 23:00Z
+1	S04-execute	DATA?	2026-07-06 16:00Z
+1	S04-execute	DATA?	2026-07-08 00:00Z
+1	S04-execute	DATA?	2026-07-14 13:00Z
+1	S04-execute	DATA?	2026-07-15 00:00Z
+1	S04-freeze	research/FoldSelectionPanel.tsx:5	selected candidate
+1	S04-freeze	research/FreezeDetail.tsx:1185	retained selection
+1	S04-freeze	research/FreezeDetail.tsx:17	evaluate grid
+2	S04-search	~research/RunProgress.tsx:577 «STUDIES»	PER_FOLD_STUDIES_HAVE_NO_SINGLE_RUN_GLOBAL_POOL
+1	S04-search	research/SearchDetail.tsx:1200	LAST-FOLD DEPLOYMENT
+1	S04-search	research/SplitBand.tsx:6	fold 0
+1	S04-search	research/RunProgress.tsx:1771	fold 2
+1	S04-split	DATA?	[2026-06-01, 2026-07-16)
+1	S04-split	~research/CausalSelectionPanel.tsx:9 «observed»	3 observed
+1	S04-split	DATA?	[2026-07-15, 07-15]
+1	S04-split	research/CausalSelectionPanel.tsx:111	· seed
+1	S04-split	research/CausalSelectionPanel.tsx:165	declared minimum
+1	S04-split	research/CausalSelectionPanel.tsx:169	· train
+1	S04-split	research/CausalSelectionPanel.tsx:7	inner fold
+1	S04-summary	DATA?	347h 00m
+1	S04-summary	DATA?	14.5 d
+1	S04-summary	DATA?	8h 00m
+1	S00	research/JourneyMap.tsx:92	redesigned
+1	S00	components/form.tsx:4	Promote
+1	S01	research/EvidenceFlow.tsx:3952	completed
+1	S01	research/AlphaImport.tsx:602	running
+1	S01	research/Formula.tsx:48	queued
+1	S01	research/AlphaImport.tsx:35	failed
+1	S01	research/EvidenceFlow.tsx:435	cancelled
+1	S01	research/CausalSelectionPanel.tsx:169	mode
+1	S01	DATA?	R-WFO-026
+1	S01	DATA?	R-WFO-024
+1	S01	DATA?	R-P04-021
+1	S01	DATA?	R-WFO-022
+1	S01	DATA?	R-WFO-021
+1	S01	DATA?	50s
+1	S01	research/NewRun.tsx:272	R-WFO-020
+1	S01	DATA?	R-WFO-019
+1	S01	DATA?	R-WFO-018
+1	S01	DATA?	R-P04-019
+1	S01	DATA?	R-WFO-017
+1	S01	app/researchRunCrumb.ts:55	R-P04-018
+1	S01	DATA?	R-P04-017
+1	S01	DATA?	R-WFO-016
+1	S01	DATA?	R-P04-016
+1	S01	DATA?	R-WFO-015
+1	S01	DATA?	R-P04-015
+1	S01	DATA?	R-WFO-014
+1	S01	DATA?	R-P04-014
+1	S01	DATA?	R-WFO-013
+1	S01	DATA?	R-P04-013
+1	S01	DATA?	R-P04-012
+1	S01	DATA?	R-P04-011
+1	S01	DATA?	R-WFO-012
+1	S01	DATA?	R-WFO-011
+1	S01	DATA?	R-WFO-010
+1	S01	DATA?	R-WFO-009
+1	S01	DATA?	R-WFO-008
+1	S01	DATA?	R-WFO-007
+1	S01	DATA?	R-WFO-006
+1	S01	DATA?	R-WFO-005
+1	S01	DATA?	R-WFO-004
+1	S01	DATA?	R-P04-010
+1	S01	DATA?	R-P04-009
+1	S01	DATA?	R-P04-008
+1	S01	DATA?	R-P04-007
+1	S01	DATA?	R-WFO-003
+1	S01	DATA?	R-WFO-002
+1	S01	DATA?	R-WFO-001
+1	S01	research/CompareDetail.tsx:114	R-P04-006
+1	S01	DATA?	R-P04-005
+1	S01	research/EvidenceFlow.tsx:590	FORECAST
+1	S01	DATA?	R-P04-004
+1	S01	DATA?	R-P04-003
+1	S01	DATA?	R-P04-002
+1	S01	DATA?	R-P04-001
+1	S02	~research/EvidenceFlow.tsx:3455 «notional»	p10.delta-signal-notional-wfo.v1
+1	S02	~research/EvidenceFlow.tsx:3455 «notional»	p10.delta-signal-notional-causal-inner.v1
+1	S03	research/EngineAtlas.tsx:991	failure
+1	S03	research/RunLibrary.tsx:1175	ENGINE_ERROR
+1	S03	DATA?	10s
+1	S03	DATA?	52s
+1	S03	research/OrchestrationClocks.tsx:16	11s
+1	S04-execute	research/AlphaImport.tsx:10	contract
+1	S04-execute	~research/AlphaImport.tsx:281 «CURRENT»	P17_CURRENT_P04_EQUITY_SAMPLE_V1
+1	S04-execute	research/CompareDetail.tsx:967	sampling
+1	S04-execute	research/ChildAuditCompanionPanel.tsx:81	market
+1	S04-execute	research/AlphaImport.tsx:10	read
+1	S04-execute	research/ChildAuditCompanionPanel.tsx:23	sample
+1	S04-freeze	DATA?	p16r1_09124de6
+1	S04-freeze	DATA?	p14r1_40d27e153360c1a476e4ac3fb6b2de943d81fd6af675a557f6cac717831f5cbe
+1	S04-search	research/ChildAuditCompanionPanel.tsx:121	adapter
+1	S04-split	research/SplitDetail.tsx:2367	THREE_WINDOW_CURRENT
+1	S04-split	research/SearchDetail.tsx:1244	FIXED_PROFILE_NO_SEARCH
+1	S04-split	research/splitClient.ts:427	P14_THREE_WINDOW_PROTOCOL_HAS_NO_INNER_FOLDS
+1	S04-split	research/CompareDetail.tsx:1238	PARTIAL
+1	S04-split	~research/CausalSelectionPanel.tsx:4 «PROFILE»	P04_FIXED_PROFILE_DOES_NOT_PUBLISH_FOLD_PLAN
+1	S04-split	research/EvidenceFlow.tsx:2450	NOT_EVALUATED
+1	S04-split	research/AlphaImport.tsx:10	result
+1	S04-split	research/SplitDetail.tsx:2185	NOT_EXPOSED
+1	S04-split	~research/CausalSelectionPanel.tsx:4 «PROFILE»	P04_FIXED_PROFILE_DOES_NOT_PUBLISH_THETA_PER_FOLD
+1	S04-split	DATA?	p14r1_40d27e
+1	S04-split	research/SplitDetail.tsx:2185	NOT_EXPOSED_TO_CHILD_TAPE
+1	S04-summary	research/EvidenceFlow.tsx:3307	portal-derived
+1	S04-execute	DATA?	7456c93d…
+1	S04-execute	DATA?	dab50a04…
+1	S04-execute	DATA?	473e37c7…
+1	S04-execute	DATA?	a38be46b…
+1	S04-execute	DATA?	979053aa…
+1	S04-execute	DATA?	edc5c3c5…
+1	S04-execute	DATA?	20878950…
+1	S04-execute	DATA?	5f1f68f9…
+1	S04-execute	DATA?	9a53066b…
+1	S04-execute	DATA?	b8dcc2f8…
+1	S04-execute	DATA?	6b6fccb4…
+1	S04-execute	DATA?	ddb3f9e4…
+1	S04-execute	DATA?	d516c391…
+1	S04-execute	DATA?	d3a978f0…
+1	S04-execute	DATA?	25865130…
+1	S04-execute	DATA?	773ece4f…
+1	S04-execute	DATA?	ada5984e…
+1	S04-execute	DATA?	6ce0f5bd…
+1	S04-execute	DATA?	32e5f5cb…
+1	S04-execute	DATA?	b1bf395b…
+1	S04-execute	DATA?	75358aa3…
+1	S04-execute	DATA?	c703a9ac…
+1	S04-execute	DATA?	fb0ffed3…
+1	S04-execute	DATA?	61a9e802…
+1	S04-execute	DATA?	19f160c4…
+1	S04-execute	DATA?	4cc2438b…
+1	S04-execute	DATA?	768bb3e3…
+1	S04-execute	DATA?	6a0a882b…
+1	S04-execute	DATA?	de889f17…
+1	S04-execute	DATA?	1184d10e…
+1	S04-execute	DATA?	c129271a…
+1	S04-execute	DATA?	f0907e6d…
+1	S04-execute	DATA?	22e16883…
+1	S04-execute	DATA?	dee64a23…
+1	S04-execute	DATA?	74396ac8…
+1	S04-execute	DATA?	a40e1a80…
+1	S04-execute	DATA?	452bf92a…
+1	S04-execute	DATA?	22aa5d4e…
+1	S04-execute	DATA?	cf61eb99…
+1	S04-execute	DATA?	f8e776b0…
+1	S04-execute	DATA?	00274d79…
+1	S04-execute	DATA?	41701095…
+1	S04-execute	DATA?	b4944e91…
+1	S04-execute	DATA?	cbd5fba6…
+1	S04-execute	DATA?	549309a0…
+1	S04-execute	DATA?	574be6e9…
+1	S04-execute	DATA?	d9447833…
+1	S04-execute	DATA?	501c2bb6…
+1	S04-execute	DATA?	392d08b3…
+1	S04-execute	DATA?	15a702bb…
+1	S04-execute	DATA?	e82fafc0…
+1	S04-execute	DATA?	47c5d4b7…
+1	S04-execute	DATA?	235cd21b…
+1	S04-execute	DATA?	49989fb7…
+1	S04-execute	DATA?	162ec1bb…
+1	S04-execute	DATA?	70d5ecca…
+1	S04-execute	DATA?	ad0e26ff…
+1	S04-execute	DATA?	3e8803c3…
+1	S04-execute	DATA?	b6923afb…
+1	S04-freeze	research/NewRun.tsx:2497	2026-06-01T00:00:00Z
+1	S04-freeze	DATA?	2026-09-01T00:00:00Z
+1	S04-freeze	research/AlphaImport.tsx:414	shared
+1	S04-search	research/CompareDetail.tsx:130	WALK_FORWARD_OOS
+1	S04-search	research/CompareDetail.tsx:173	retrospective
+1	S04-search	research/SearchDetail.tsx:1106	recompose
+1	S04-split	research/EvidenceFlow.tsx:1302	GLOBAL
+1	S04-split	~research/CausalSelectionPanel.tsx:94 «VALIDATION»	QUANTBT_SCHEDULE_HAS_NO_NESTED_INNER_VALIDATION
+1	S04-split	research/FreezeDetail.tsx:878	MODE_1_DECAY_J
+1	S04-split	DATA?	rs02_split_7
+1	S04-freeze	research/ResearchPanel.tsx:259	request_id
+1	S04-claim	research/AlphaImport.tsx:219	false
+1	S04-execute	DATA?	574c55f4…
+1	S04-execute	DATA?	ddf84b8d…
+1	S04-execute	DATA?	1ac7f92f…
+1	S04-execute	DATA?	35b302db…
+1	S04-freeze	research/FreezeDetail.tsx:858	QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS
+1	S04-search	DATA?	STRICT_NESTED_FOLD_LOCAL_RETRAINING
+1	S04-search	~research/RunProgress.tsx:577 «STUDIES»	PER_FOLD_STUDIES_HAVE_NO_RUN_GLOBAL_SURFACE
+1	S04-search	research/EngineAtlas.tsx:1126	per_fold
+1	S04-search	DATA?	study_0.trial_0
+1	S04-search	DATA?	study_0.trial_1
+1	S04-split	research/FreezeDetail.tsx:856	PER_FOLD_CAUSAL
+1	S04-split	research/ChildAuditCompanionPanel.tsx:47	yes
+1	S04-split	research/RunProgress.tsx:969	INNER_VALIDATION_DECAY_J
+1	S04-split	research/CausalSelectionPanel.tsx:162	(source-reported)
+1	S04-split	DATA?	14D
+1	S04-split	research/AlphaImport.tsx:45	test
+1	S04-split	DATA?	rs02_split_e

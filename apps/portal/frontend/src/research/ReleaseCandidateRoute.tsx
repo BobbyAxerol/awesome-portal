@@ -14,17 +14,23 @@
  * carries from one identity to the next.
  */
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 
 import { ReleaseCandidateScreen } from "./ReleaseCandidateDetail";
 import { packFromHash, releaseCandidatePackHref } from "./releaseCandidateClient";
+import { linkFromLocation } from "./reportClient";
+import { useRunStatus } from "./useRunStatus";
 import { useReleaseCandidate, useReleaseCandidatePack } from "./useReleaseCandidate";
 import { useReleaseCandidatePublication } from "./useReleaseCandidatePublication";
 
 function ComposeContainer({ runId }: { runId: string }) {
   /* One writer for the screen: a save, a seal and a publish never overlap. */
   const writer = useRef(false);
+  const { hash, search } = useLocation();
+  const link = useMemo(() => linkFromLocation(hash, search), [hash, search]);
+  /* The compose read has no run status; the Run Library row is the one served fact (W1 S11). */
+  const status = useRunStatus(runId, true);
   const controller = useReleaseCandidate(runId, { writer });
   const sealed = controller.compose?.local_seal.state === "SEALED_LOCAL" ? controller.compose.local_seal.release_candidate_id : null;
   const publication = useReleaseCandidatePublication(sealed, {
@@ -33,7 +39,7 @@ function ComposeContainer({ runId }: { runId: string }) {
     onDenied: controller.lock,
     onSettled: controller.retry,
   });
-  return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} publication={publication} />;
+  return <ReleaseCandidateScreen mode="compose" runId={runId} controller={controller} publication={publication} status={status} link={link} />;
 }
 
 function PackContainer({ releaseCandidateId }: { releaseCandidateId: string }) {

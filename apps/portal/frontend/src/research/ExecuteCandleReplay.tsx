@@ -44,7 +44,8 @@ import {
 import { ReplayTransport, SPEEDS, useTransport } from "./replayTransport";
 import { CapabilityStrip, GlyphShape, MarkerLayer, MarkerLegend, type CandleMarker, type ChartHandles } from "./ExecuteMarkers";
 import { EXEC_WINDOWS, bucketsInSpan, ordinalAt, withWindow, type ExecWindow, type OverviewBand } from "./executeWindows";
-import { DEFAULT_CURSOR, deepDiveHref } from "./evidenceCursor";
+import { DEFAULT_CURSOR, deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
+import { splitHref as runSplitHref } from "./runLinks";
 import type { ProgressRead } from "./progressClient";
 import { retainedReadiness } from "./retainedLane";
 import { SplitBandNote, retainedSplitBand, type SplitBandSlot } from "./SplitBand";
@@ -1923,7 +1924,10 @@ export function CandleReplayBody({
   windowKey = "oos",
   onWindow,
   runId,
+  cursor = null,
 }: {
+  /** W1 B3: the screen's live cursor; the Split link carries it (stage forced to split) instead of a fresh one. */
+  cursor?: EvidenceCursor | null;
   replay: CurrentSourceReplay;
   slot: Extract<RetainedReplaySlot, { state: "ready" }>;
   controller: ReplayController;
@@ -2058,7 +2062,10 @@ export function CandleReplayBody({
   const window = rows.length > 0 ? `${rows[0]!.source_ordinal + 1}–${rows.at(-1)!.source_ordinal + 1}` : "none read";
   const segment = foldIndex >= 0 ? segments[foldIndex]! : null;
   const runPath = `/research/quantbt/runs/${encodeURIComponent(replay.run_id)}`;
-  const splitHref = withWindow(deepDiveHref(`${runPath}/split`, { ...DEFAULT_CURSOR, stage: "split", fold: foldIndex >= 0 ? foldIndex + 1 : 1 }), windowKey);
+  const splitHref =
+    cursor !== null
+      ? runSplitHref(replay.run_id, { cursor, window: windowKey === "oos" ? null : windowKey })
+      : withWindow(deepDiveHref(`${runPath}/split`, { ...DEFAULT_CURSOR, stage: "split", fold: foldIndex >= 0 ? foldIndex + 1 : 1 }), windowKey);
   const caps = replay.route_capabilities;
   const capabilityItems = [
     { name: "orders", label: "orders", fact: caps.orders },

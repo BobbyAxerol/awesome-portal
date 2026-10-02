@@ -75,7 +75,8 @@ import {
 import type { ProgressRead } from "./progressClient";
 import { ShortId } from "./ShortId";
 import { ImportedAlphaLine } from "./ImportedAlphaLine";
-import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
+import { CopyEvidenceLink, SCREEN_FRAME, StageRunBar } from "./SplitDetail";
+import { trialLabel, trialTitle } from "./trialLabel";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -972,9 +973,9 @@ function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity:
           <span
             className="mono text-[10px]"
             data-selected-trial={selection.selected_trial_id}
-            title="the source's trial id; the progress read numbers trials from 1 (P11 ordinal = source trial + 1)"
+            title={trialTitle}
           >
-            · trial {selection.selected_trial_id}
+            · {trialLabel({ sourceId: selection.selected_trial_id })}
           </span>
         ) : (
           <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
@@ -1694,6 +1695,8 @@ export function FreezeScreen({
         ) : null}
       </nav>
       )}
+
+      <StageRunBar runId={runId} active={retained.state === "refused" && retained.laneState != null} />
 
       {bytes && bytesBlock(bytes) ? <BlockedBanner bytes={bytes} /> : null}
 

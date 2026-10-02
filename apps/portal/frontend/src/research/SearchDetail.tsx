@@ -76,7 +76,7 @@ import {
   type SearchSourceGap,
 } from "./searchClient";
 import { deepDiveHref, serializeCursor, type EvidenceCursor } from "./evidenceCursor";
-import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME } from "./SplitDetail";
+import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME, StageRunBar } from "./SplitDetail";
 import { LANE_STATE_COPY } from "./splitClient";
 import { useEntryRef } from "./chartLife";
 import type { LedgerSlot, RetainedRunFacts } from "./useSearch";
@@ -93,6 +93,7 @@ import {
   StudySurfaces,
 } from "./SearchSurface";
 import type { ResearchState } from "./state";
+import { trialLabel, trialTitle } from "./trialLabel";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1437,7 +1438,7 @@ function RetainedSearchSpace({ search, run }: { search: CurrentSourceSearch; run
               {column.head}
             </span>
           ))}
-          <span className="flex-1 pl-[14px]">θ* · selected trial {search.selection.selected_trial_id ?? "—"}</span>
+          <span className="flex-1 pl-[14px]">θ* · {trialLabel({ sourceId: search.selection.selected_trial_id }) ?? "source not published"}</span>
         </div>
         {names.map((name) => {
           const cells = space ? declaredCells(space[name]) : null;
@@ -1541,7 +1542,7 @@ function RetainedProgression({ search }: { search: CurrentSourceSearch }) {
       <div className="flex flex-wrap gap-x-4 gap-y-1" data-progression>
         {trials.map((trial) => (
           <span key={trial.trial_id} className="mono text-[10.5px]" data-progression-trial={trial.trial_id}>
-            <span style={{ color: "var(--ink-faint)" }}>trial {trial.trial_id}</span>{" "}
+            <span style={{ color: "var(--ink-faint)" }}>{trialLabel({ sourceId: trial.trial_id })}</span>{" "}
             <span title={trial.objective ?? undefined}>{ratio2(trial.objective) ?? <NotPublished title="the retained trial publishes no objective" />}</span>
           </span>
         ))}
@@ -1566,7 +1567,7 @@ function RetainedSampledValues({ search }: { search: CurrentSourceSearch }) {
       <div className="flex min-w-0 flex-col overflow-x-auto" data-sampled-values>
         <div className="flex border-b pb-[3px] text-[9.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)", borderColor: "var(--line-soft)" }}>
           <span className="w-[86px] flex-none">param</span>
-          <span className="flex-1">sampled, trial {trials.map((trial) => trial.trial_id).join(" · ")}</span>
+          <span className="flex-1">sampled, source {trials.map((trial) => trial.trial_id).join(" · ")}</span>
           <span className="w-[56px] flex-none text-right">θ*</span>
         </div>
         {retainedParameterNames(search).map((name) => (
@@ -1612,7 +1613,7 @@ function RetainedThetaJourney({ search }: { search: CurrentSourceSearch }) {
   return (
     <RetainedPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} state="ONE_SELECTION_ALL_FOLDS">
       <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-        global θ* (trial <span className="mono">{search.selection.selected_trial_id}</span>) — no per-fold journey
+        global θ* (source <span className="mono">{search.selection.selected_trial_id}</span>) — no per-fold journey
       </p>
       <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
         fold_scope {scope.kind} · schedule {search.search_contract.optimization_schedule ?? "not published"}
@@ -2050,7 +2051,7 @@ export function SearchScreen({
       </header>
       )}
 
-      {notFound ? <RunNotFound runId={runId} /> : null}
+      {notFound ? <RunNotFound runId={runId} /> : <StageRunBar runId={runId} active={ledger.state === "refused" && ledger.laneState != null} />}
 
       <ResearchPanel
         title="search & selection"
@@ -2218,7 +2219,7 @@ export function SearchScreen({
                         <span title={lane.selection.availability.state}>{stateWords(lane.selection.availability.state)}</span>
                         {lane.selection.selected_trial_id !== null ? (
                           <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} title={lane.selection.objective ?? undefined} data-selection-summary>
-                            trial {lane.selection.selected_trial_id} · J {ratio2(lane.selection.objective) ?? "not published"} ·{" "}
+                            {trialLabel({ sourceId: lane.selection.selected_trial_id })} · J {ratio2(lane.selection.objective) ?? "not published"} ·{" "}
                             {OBJECTIVE_KIND_WORDS[lane.selection.objective_kind] ?? lane.selection.objective_kind}
                           </span>
                         ) : null}
@@ -2342,7 +2343,7 @@ export function SearchScreen({
                 style={{ top: "calc(var(--topbar-h, 56px) + 8px)", borderColor: "var(--accent)", background: "var(--paper-raised)", color: "var(--ink)", boxShadow: "var(--shadow-e1)" }}
                 data-pick-chip={pick}
               >
-                <span>trial {pick}</span>
+                <span title={trialTitle}>{trialLabel({ sourceId: pick })}</span>
                 <span style={{ color: "var(--ink-soft)" }}>
                   IS {two(pickedPoint?.objective ?? pickedTrial?.objective ?? null) ?? "not published"}
                 </span>

@@ -97,30 +97,21 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     server([{ status: 200, body: HEALTHY }]);
     renderRoute();
     await ready();
-    /* F4/MISC (S10 decision): a clone or reproduction is a step of the trace and is never folded away, so the
-       toggle hides only the probes that are neither (here att_07, a plain NEW probe). */
-    const shown = HEALTHY.attempts.filter((row) => row.presentation_kind === "STORIED" || row.intent_kind !== "NEW").map((row) => row.attempt_id);
-    const hideable = HEALTHY.attempts.filter((row) => row.presentation_kind === "PROBE" && row.intent_kind === "NEW").map((row) => row.attempt_id);
+    /* W1 B4: the newest 8 attempts always list, probe or not; this fixture has 7, so nothing is folded and the toggle is inert.
+       Scaled fixtures (lineageDetail.w1) cover the folded case. */
+    const all = HEALTHY.attempts.map((row) => row.attempt_id);
     const storied = HEALTHY.attempts.filter((row) => row.presentation_kind === "STORIED").map((row) => row.attempt_id);
     expect(storied).toEqual(["att_01", "att_03", "att_04"]);
-    expect(hideable).toEqual(["att_07"]);
-    expect([...document.querySelectorAll("[data-attempt]")].map((el) => el.getAttribute("data-attempt"))).toEqual(shown);
-    expect(counter()).toBe(`showing ${shown.length} of ${HEALTHY.counts.returned_attempts} attempts`);
+    expect([...document.querySelectorAll("[data-attempt]")].map((el) => el.getAttribute("data-attempt"))).toEqual(all);
+    expect(counter()).toBe(`showing ${all.length} of ${HEALTHY.counts.returned_attempts} attempts`);
     const toggle = panel("filters").querySelector('[data-action="toggle-probes"]') as HTMLButtonElement;
-    expect(toggle.disabled).toBe(false);
-    expect(toggle.textContent).toBe(`show ${hideable.length} probe attempts`);
-    fireEvent.click(toggle);
-    expect(toggle.getAttribute("aria-pressed")).toBe("true");
-    expect(counter()).toBe(`showing 7 of 7 attempts`);
+    expect(toggle.disabled).toBe(true);
+    expect(toggle.textContent).toBe("older probes (0)");
     for (const id of ["att_02", "att_05", "att_06", "att_07"]) expect(node(id)?.querySelector(".ln-row"), id).toBeTruthy(); // compact row
     for (const id of storied) expect(node(id)?.querySelector(".ln-card"), id).toBeTruthy(); // full card
-    /* Band: storied and traced chips plus one "+N probes" chip that toggles the same set. */
     const band = document.querySelector('[data-band-label="av_0_9_3"]') as HTMLElement;
     expect([...band.querySelectorAll("[data-chip]")].map((chip) => chip.textContent)).toEqual(["att_03", "att_04 ●", "att_05", "att_06"]);
-    const probeChip = band.querySelector("[data-probe-chip]") as HTMLButtonElement;
-    expect(probeChip.textContent).toBe("+1 probes");
-    fireEvent.click(probeChip);
-    expect(counter()).toBe("showing 6 of 7 attempts");
+    expect(band.querySelector("[data-probe-chip]")).toBeNull();
   });
 
   it("W6b-U03 CG-P19-07/06 prints each version's outcome, successor, exercised and untried as the server sent them", async () => {
@@ -247,7 +238,8 @@ describe("W6b S10 on contract 1.1.0 — canonical fixtures", () => {
     await ready();
     expect(panel("selected").getAttribute("data-selected-attempt")).toBe("att_07");
     expect(node("att_07")).toBeTruthy();
-    expect(panel("filters").querySelector('[data-action="toggle-probes"]')?.getAttribute("aria-pressed")).toBe("true");
+    /* W1 B4: the linked attempt is pinned in the list by itself; the toggle stays the reader's. */
+    expect(panel("filters").querySelector('[data-action="toggle-probes"]')?.getAttribute("aria-pressed")).toBe("false");
     expect(panel("selected").querySelector('[data-row-key="presentation"]')?.textContent).toBe("probe");
   });
 

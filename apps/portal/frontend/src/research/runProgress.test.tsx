@@ -13,6 +13,7 @@
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -125,6 +126,7 @@ const OK = researchState({ kind: "ok", rowCount: 1 });
 function view(overrides: Partial<React.ComponentProps<typeof RunProgress>> = {}) {
   const r = overrides.read === undefined ? read() : overrides.read;
   return render(
+    <MemoryRouter>
     <RunProgress
       runId="run_01"
       read={r}
@@ -139,7 +141,8 @@ function view(overrides: Partial<React.ComponentProps<typeof RunProgress>> = {})
       cancelling={false}
       onCancel={vi.fn()}
       {...overrides}
-    />,
+    />
+    </MemoryRouter>,
   );
 }
 

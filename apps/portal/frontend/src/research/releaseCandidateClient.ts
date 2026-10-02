@@ -38,7 +38,8 @@ import type { components as PublicationComponents } from "@portal/contracts-rese
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { reportSessionExpired } from "../auth/sessionExpiry";
 import { PortalApiError } from "../lib/api";
-import { lineageHref, toLineageRefusal, type LineageRefusal } from "./lineageClient";
+import { toLineageRefusal, type LineageRefusal } from "./lineageClient";
+import { freezeHref, hubHref, lineageRunHref, rcHref, type LinkCursor } from "./runLinks";
 import { rememberRunLabel } from "./runLabels";
 import type { ResearchState } from "./state";
 import { REFUSAL_COPY } from "./researchRefusal";
@@ -132,8 +133,8 @@ export function publishPath(releaseCandidateId: string, workspaceId?: string): s
 }
 
 /** Screen 11's composition route (PLAN P21 §2.1). */
-export function releaseCandidateHref(runId: string): string {
-  return `/research/quantbt/runs/${encodeURIComponent(runId)}/release-candidate`;
+export function releaseCandidateHref(runId: string, c?: LinkCursor): string {
+  return rcHref(runId, c);
 }
 
 /** A sealed pack's own read-only route (VD-P21-09); the 01 rc chip of a LOCAL_SEAL opens it. */
@@ -379,14 +380,19 @@ export function packSourceRoute(item: RcPackItem, runId: string, alphaId: string
 }
 
 /** Rail links (W5c D-10): `alpha` → Screen 10 lineage, `run` → Screen 04 hub; a dim node never links. */
-export function railRoute(node: RcRailNode, compose: Pick<RcCompose, "run" | "run_id">): string | null {
+export function railRoute(node: RcRailNode, compose: Pick<RcCompose, "run" | "run_id">, link?: LinkCursor): string | null {
   if (node.tone === "dim") return null;
   /* F2b: the alpha and its version both open Screen 10 on the bound version; the selected params open Screen 07 on this run. */
   if ((node.key === "alpha" || node.key === "alpha_version") && compose.run.binding) {
-    return lineageHref(compose.run.binding.alpha_id, { av: compose.run.binding.alpha_version_id });
+    const attempt = compose.run.attempt;
+    return lineageRunHref(compose.run.binding.alpha_id, {
+      av: compose.run.binding.alpha_version_id,
+      run: compose.run_id,
+      attempt: /^[A-Za-z0-9_-]{1,128}$/.test(attempt) ? attempt : null,
+    });
   }
-  if (node.key === "run") return `/research/quantbt/runs/${encodeURIComponent(compose.run_id)}/evidence`;
-  if (node.key === "selected_params") return `/research/quantbt/runs/${encodeURIComponent(compose.run_id)}/freeze`;
+  if (node.key === "run") return hubHref(compose.run_id, link);
+  if (node.key === "selected_params") return freezeHref(compose.run_id, link);
   return null;
 }
 

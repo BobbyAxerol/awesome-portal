@@ -20,8 +20,11 @@ import { HubAtlasBody } from "./hubStageAtlas";
 import { Component, createContext, lazy, Suspense, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { LineageLink, lineageHref } from "./LineageLink";
 import { Link } from "react-router-dom";
+import { RunExitBar } from "./RunExitBar";
+import { isEndedWithoutEvidence, phaseOfStatus, runStatusWord, runTerminalState, stageChip, type RunPhase } from "./runTerminalState";
+import { libraryHref, newRunHref, progressHref, rcHref, reportHref } from "./runLinks";
+import { trialLabel, trialTitle } from "./trialLabel";
 
-import { releaseCandidateHref } from "./releaseCandidateClient";
 import { usePresentation } from "../app/presentation";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
@@ -59,7 +62,7 @@ import {
   type EvidenceStage,
 } from "./evidenceCursor";
 import { NamedWindowContext, useEvidenceWindow, useNamedWindow, withWindow, type EvidenceWindow } from "./evidenceWindow";
-import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, REFUSAL_COPY, refusalDetail } from "./researchRefusal";
+import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, refusalDetail } from "./researchRefusal";
 import { claimToken, formatBytes, formatMetric, shortDigest } from "./researchFormat";
 import { ARTIFACT_NO_READER, ArtifactsTable } from "./RunProgress";
 import type { PassportSlot, RetainedSeriesSlot, SeriesSlot } from "./useEvidence";
@@ -453,6 +456,27 @@ export function statusWord(hub: EvidenceHub | null): { word: string; durable: st
   return durable !== null ? { word: durable, durable, vocabulary: null } : null;
 }
 
+/**
+ * B1: the run's phase from the lifecycle's terminal outcome (the same fact Progress reads as
+ * `failed_at`), else its attention phase, else its status word. Null = unknown (in progress).
+ */
+export function hubPhase(hub: EvidenceHub | null): RunPhase | null {
+  const lifecycle = lifecycleOf(hub);
+  if (lifecycle !== null) {
+    if (lifecycle.phase === "ATTENTION_REQUIRED") return "attention";
+    if (lifecycle.phase === "TERMINAL" && lifecycle.terminal_outcome !== null) return phaseOfStatus(lifecycle.terminal_outcome);
+    const fromLifecycle = phaseOfStatus(lifecycle.display_status ?? lifecycle.durable_status);
+    if (fromLifecycle !== null) return fromLifecycle;
+  }
+  return phaseOfStatus(runStatus(hub));
+}
+
+/** A terminal run that never sealed evidence: the hub holds no metric, series or claim for it. */
+function endedWithoutEvidence(hub: EvidenceHub): boolean {
+  const phase = hubPhase(hub);
+  return phase !== null && isEndedWithoutEvidence(phase) && hub.readiness === "NOT_READY";
+}
+
 /* --------------------------------------------------------- claims passport */
 
 /**
@@ -773,7 +797,7 @@ function RunHeader({
               : `durable ${status.durable ?? "not published"}`
           }
         >
-          {status.word}
+          {runStatusWord(status.word)}
         </span>
       ) : identity ? (
         <Withheld availability={identity.status.availability} what="status" />
@@ -1109,7 +1133,9 @@ function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub |
   }
   if (stage === "atlas") return "modes × routes";
   const row = hub.stages.find((entry) => entry.key === STAGE_KEY[stage]);
-  const state = row ? row.state : "not published";
+  const state = row ? stageChip(row.state, hubPhase(hub)).word : "not published";
+  /* B1: a failed / cancelled / not-run stage is one word; no fold or route suffix. */
+  if (state === "failed" || state === "cancelled" || state === "not run" || state === "stopped") return state;
   if (stage === "execute") {
     const route = hub.core.run_identity?.route.id;
     return route && isAvailable(route.availability) && route.value !== null ? `${state} · ${route.value}` : state;
@@ -1123,16 +1149,25 @@ function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub |
   return `${state} · fold ${cursor.fold}`;
 }
 
+const DOT_TONE = {
+  good: { color: "var(--good)" },
+  accent: { color: "var(--accent)" },
+  quiet: { color: "var(--ink-faint)" },
+  bad: { color: "var(--bad)" },
+  warn: { color: "var(--warn)" },
+} as const;
+
 /** The state a stage row publishes, as a colour. Read from the row; no state is derived here. */
 function StageDot({ stage, hub }: { stage: EvidenceStage; hub: EvidenceHub | null }) {
   if (hub === null || !(stage in STAGE_KEY)) return null;
   const row = hub.stages.find((entry) => entry.key === STAGE_KEY[stage as PreviewStage]);
   if (!row) return null;
-  const tone = statusTone(row.state === "DONE" ? "READY" : row.state);
+  const chip = stageChip(row.state, hubPhase(hub));
+  const tone = DOT_TONE[chip.tone];
   return (
     <span
       aria-hidden="true"
-      data-stage-dot={row.state}
+      data-stage-dot={chip.word}
       className="inline-block h-[6px] w-[6px] flex-none rounded-full"
       style={{ background: tone.color }}
     />
@@ -1303,7 +1338,7 @@ function CursorBar({
    * selection (P11 progress fold selection). An empty cursor shows it, marked
    * as the global selection rather than a cursor the reader chose.
    */
-  laneSelection?: { trial: number | null; paramsDigest: string | null } | null;
+  laneSelection?: { trial: number | null; sourceId?: number | string | null; paramsDigest: string | null } | null;
 }) {
   const [copied, setCopied] = useState(false);
   /*
@@ -1430,12 +1465,14 @@ function CursorBar({
       </span>
 
       <CursorPill data-cursor-trial>
-        trial{" "}
+        {cursor.trial === null && laneSelection?.trial == null ? <>trial </> : null}
         {cursor.trial !== null ? (
-          <span style={{ color: "var(--ink)" }}>#{cursor.trial}</span>
+          <span style={{ color: "var(--ink)" }} title={trialTitle}>
+            {trialLabel({ ordinal: cursor.trial })}
+          </span>
         ) : laneSelection?.trial != null ? (
-          <span style={{ color: "var(--ink)" }} data-cursor-lane="global" title="the global selection every fold froze (progress read, ordinal)">
-            #{laneSelection.trial} · global
+          <span style={{ color: "var(--ink)" }} data-cursor-lane="global" title={`Global selection every fold froze. ${trialTitle}`}>
+            {trialLabel({ ordinal: laneSelection.trial, sourceId: laneSelection.sourceId })} · global
           </span>
         ) : (
           <CursorGap id="hub-lane-has-no-trial-cursor" unread={unread} lanePending={lanePending} />
@@ -1507,10 +1544,10 @@ function CursorBar({
             {label}
           </Link>
         ))}
-        <Link to={`${base}/report`} data-nav-stage="report" title="Run report" style={{ color: "var(--accent)" }}>
+        <Link to={reportHref(runId, { cursor, window: windowNamed })} data-nav-stage="report" title="Run report" style={{ color: "var(--accent)" }}>
           report
         </Link>
-        <Link to={`${base}/release-candidate`} title="Release candidate — promotion" style={{ color: "var(--accent)" }}>
+        <Link to={rcHref(runId, { cursor, window: windowNamed })} title="Release candidate — promotion" style={{ color: "var(--accent)" }}>
           promotion
         </Link>
         <Link to="/research/quantbt/runs" title="Run Library" data-nav-stage="library" style={{ color: "var(--accent)" }}>
@@ -2223,9 +2260,14 @@ function PassportNotApplicable({ answer }: { answer: CurrentSourceNotApplicable 
 function passportSkipOf(hub: EvidenceHub): { key: string; sentence: string } | null {
   const lifecycle = lifecycleOf(hub);
   if (lifecycle !== null) {
-    return lifecycle.phase === "IN_PROGRESS"
-      ? { key: "PENDING_SOURCE", sentence: `${CURRENT_SOURCE_LANE_COPY.PENDING_SOURCE} It is read once the run seals.` }
-      : null;
+    if (lifecycle.phase === "IN_PROGRESS") {
+      return { key: "PENDING_SOURCE", sentence: `${CURRENT_SOURCE_LANE_COPY.PENDING_SOURCE} It is read once the run seals.` };
+    }
+    /* W1: a failed / cancelled run that never sealed has no retained lane; asking it is a 409 on every visit. */
+    if (endedWithoutEvidence(hub)) {
+      return { key: "NOT_RETAINABLE", sentence: "Nothing sealed to read." };
+    }
+    return null;
   }
   const status = runStatus(hub);
   if (status !== null && ENDED_UNSEALED.has(status)) {
@@ -3942,8 +3984,8 @@ function StagePreviewTab({
         <span className="mono text-[11px] font-bold">{key}</span>
         {row ? (
           <>
-            <span className="mono text-[10.5px] font-semibold" data-stage-state={row.state}>
-              {row.state}
+            <span className="mono text-[10.5px] font-semibold" data-stage-state={stageChip(row.state, hubPhase(hub)).word}>
+              {stageChip(row.state, hubPhase(hub)).word}
             </span>
             <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
               started {row.started_at_utc_ms === null ? "not published" : utcZ(row.started_at_utc_ms)}
@@ -4340,8 +4382,13 @@ function ClaimTab({
   retainedClaim,
   runIdentity,
   passport = IDLE_PASSPORT,
+  cursor = null,
+  windowNamed = null,
 }: {
   hub: EvidenceHub;
+  /** W1 B3: the cursor and window this tab sits under, carried into the report and candidate links. */
+  cursor?: EvidenceCursor | null;
+  windowNamed?: EvidenceWindow | null;
   retainedClaim: RetainedClaimStrip | null;
   runIdentity: RunIdentitySlot;
   /** F1: the retained lane's read — what the Summary tab's per-fold table is drawn from. */
@@ -4460,7 +4507,7 @@ function ClaimTab({
           <PanelLabel>next — report and later gates</PanelLabel>
           <span className="inline-flex flex-wrap gap-2">
             <Link
-              to={`/research/quantbt/runs/${encodeURIComponent(hub.run_id)}/report`}
+              to={reportHref(hub.run_id, { cursor, window: windowNamed })}
               data-action="generate-report"
               title="Run report"
               className="mono rounded-[6px] border px-3 py-1 text-[10px] font-semibold uppercase tracking-[.05em]"
@@ -4470,7 +4517,7 @@ function ClaimTab({
             </Link>
             {/* P21 · Screen 11 composes and locally seals the candidate for this run. */}
             <Link
-              to={releaseCandidateHref(hub.run_id)}
+              to={rcHref(hub.run_id, { cursor, window: windowNamed })}
               data-action="release-candidate"
               className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
               style={{ color: "var(--accent)", borderColor: "var(--accent)", background: "transparent" }}
@@ -4576,7 +4623,7 @@ function StageNav({
       ) : null}
       {cursor.stage === "claim" ? (
         <Link
-          to={`/research/quantbt/runs/${encodeURIComponent(runId)}/report`}
+          to={reportHref(runId, { cursor, window: windowNamed })}
           data-stage-next="report"
           title="Next · the run report"
           className={cls}
@@ -4591,9 +4638,9 @@ function StageNav({
 
 function RunNotFound({ runId }: { runId: string }) {
   return (
-    <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-2 px-7 pb-16 pt-5" data-screen="evidence-flow" data-run={runId} data-run-not-found>
+    <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-2 px-7 pb-16 pt-5" data-screen="evidence-flow" data-run={runId} data-run-not-found data-run-phase="unavailable">
       <nav className="mono text-[10.5px]" aria-label="Research breadcrumbs">
-        <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }}>
+        <Link to={libraryHref()} style={{ color: "var(--accent)" }}>
           Runs
         </Link>{" "}
         <span aria-hidden="true" style={{ color: "var(--line-strong)" }}>
@@ -4601,30 +4648,18 @@ function RunNotFound({ runId }: { runId: string }) {
         </span>{" "}
         <ShortId id={runId} label="run" />
       </nav>
-      <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
-        Run not available
-      </h1>
-      <p className="text-[12px]" style={{ color: "var(--ink-soft)" }}>
-        {REFUSAL_COPY.denied}
-      </p>
-      <Link
-        to="/research/quantbt/runs"
-        data-action="open-runs"
-        className="mono self-start rounded-[6px] border px-3 py-1 text-[10px] uppercase"
-        style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
-      >
-        Open Run Library →
-      </Link>
+      <RunExitBar runId={runId} state={runTerminalState({ status: null, read: "not-found" })} />
     </main>
   );
 }
 
 /** The notice's one action, in the HiFi outline-button grammar. */
-function NoticeLink({ to, action, children }: { to: string; action: string; children: ReactNode }) {
+function NoticeLink({ to, action, title, children }: { to: string; action: string; title?: string; children: ReactNode }) {
   return (
     <Link
       to={to}
       data-action={action}
+      title={title}
       className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase"
       style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
     >
@@ -4674,123 +4709,124 @@ export function retainedHubView(
 export function sealNoticeOf(
   runId: string,
   hub: EvidenceHub,
-): { key: string; sentence: string; action: ReactNode } | null {
-  const progress = `/research/quantbt/runs/${encodeURIComponent(runId)}/progress`;
-  const runs = "/research/quantbt/runs";
+): { key: string; sentence: string; tip: string | null; action: ReactNode } | null {
+  const progress = progressHref(runId);
   const watch = (
     <NoticeLink to={progress} action="watch-progress">
-      watch progress →
+      Progress
     </NoticeLink>
   );
   const record = (
-    <NoticeLink to={progress} action="open-progress-record">
-      open progress record →
-    </NoticeLink>
+    <>
+      <NoticeLink to={progress} action="open-progress-record">
+        Progress
+      </NoticeLink>
+      <NoticeLink to={newRunHref(runId)} action="new-run" title="Same draft, fresh preflight">
+        New run
+      </NoticeLink>
+      <NoticeLink to={libraryHref()} action="open-runs">
+        Library
+      </NoticeLink>
+    </>
   );
   const library = (
-    <NoticeLink to={runs} action="open-runs">
-      ← Run Library
+    <>
+      <NoticeLink to={libraryHref()} action="open-runs">
+        Library
+      </NoticeLink>
+      <NoticeLink to={newRunHref(runId)} action="new-run" title="Same draft, fresh preflight">
+        New run
+      </NoticeLink>
+    </>
+  );
+  const libraryOnly = (
+    <NoticeLink to={libraryHref()} action="open-runs">
+      Library
     </NoticeLink>
   );
-  const notReady =
-    "The evidence projection for this run is not ready (readiness NOT_READY). Nothing below is inferred from the run's status.";
+  const notReady = "The evidence projection for this run is not ready. Nothing below is inferred from the run's status.";
+  const liveOf = (status: string | null | undefined) => {
+    const t = runTerminalState({ status: status ?? "RUNNING", read: "ok" });
+    return t.phase === "queued" || t.phase === "running" ? t : runTerminalState({ status: "RUNNING", read: "ok" });
+  };
+  const failed = runTerminalState({ status: "FAILED", read: "ok" });
+  const cancelled = runTerminalState({ status: "CANCELLED", read: "ok" });
+  const attention = runTerminalState({ status: "RECOVERY_REQUIRED", read: "ok" });
 
   const lifecycle = lifecycleOf(hub);
   if (lifecycle !== null) {
-    const word = lifecycle.display_status ?? lifecycle.durable_status ?? "in progress";
+    const word = runStatusWord(lifecycle.display_status ?? lifecycle.durable_status);
     if (lifecycle.phase === "IN_PROGRESS") {
-      return {
-        key: "IN_PROGRESS",
-        sentence: `This run is ${word} and has not sealed its evidence yet. The hub shows what the projection holds; the run's live state lives on its progress screen.`,
-        action: watch,
-      };
+      const live = liveOf(lifecycle.display_status ?? lifecycle.durable_status);
+      return { key: "IN_PROGRESS", sentence: live.banner ?? "Running.", tip: live.tip, action: watch };
     }
     if (hub.readiness !== "NOT_READY") return null;
     if (lifecycle.phase === "TERMINAL" && lifecycle.terminal_outcome === "CANCELLED") {
-      return {
-        key: "CANCELLED",
-        sentence:
-          "This run was cancelled. It stopped before sealing evidence, so no metric, series or claim was produced for it, and none will arrive.",
-        action: library,
-      };
+      return { key: "CANCELLED", sentence: cancelled.banner ?? "Cancelled.", tip: cancelled.tip, action: library };
     }
     if (lifecycle.phase === "TERMINAL" && lifecycle.terminal_outcome === "FAILED") {
-      return {
-        key: "FAILED",
-        sentence: "This run failed before sealing evidence, so none will arrive. Its progress record shows where it stopped.",
-        action: record,
-      };
+      return { key: "FAILED", sentence: failed.banner ?? "Failed.", tip: failed.tip, action: record };
     }
     if (lifecycle.phase === "TERMINAL" && lifecycle.terminal_outcome === "COMPLETED") {
       return {
         key: "COMPLETED",
-        sentence: `This run completed, but its evidence projection is not published (${reasonTitle(hub.availability)}).`,
+        sentence: `Completed, evidence not published (${reasonTitle(hub.availability)}).`,
+        tip: null,
         action: null,
       };
     }
     if (lifecycle.phase === "ATTENTION_REQUIRED") {
-      return {
-        key: "ATTENTION_REQUIRED",
-        sentence: `This run needs attention (${word}). It stopped before sealing evidence; its progress record shows where.`,
-        action: record,
-      };
+      return { key: "ATTENTION_REQUIRED", sentence: attention.banner ?? "Needs recovery.", tip: `${word}. ${attention.tip ?? ""}`.trim(), action: record };
     }
     if (lifecycle.phase === "LEGACY") {
       return {
         key: "LEGACY",
-        sentence: "This is a legacy run recorded as metadata only. It has no sealed evidence to show, and none will arrive.",
-        action: library,
+        sentence: "Legacy run.",
+        tip: "Recorded as metadata only. It has no sealed evidence to show, and none will arrive.",
+        action: libraryOnly,
       };
     }
-    return { key: "NOT_PUBLISHED", sentence: notReady, action: null };
+    return { key: "NOT_PUBLISHED", sentence: "Evidence not ready.", tip: notReady, action: null };
   }
 
   if (hub.readiness !== "NOT_READY") return null;
   const status = runStatus(hub);
   if (status !== null && LIVE.has(status)) {
-    return {
-      key: status,
-      sentence: `This run is ${status} and has not sealed its evidence yet. The hub shows what the projection holds; the run's live state lives on its progress screen.`,
-      action: watch,
-    };
+    const live = liveOf(status);
+    return { key: status, sentence: live.banner ?? "Running.", tip: live.tip, action: watch };
   }
   if (status === "CANCELLED") {
-    return {
-      key: status,
-      sentence:
-        "This run is CANCELLED. It stopped before sealing evidence, so no metric, series or claim was produced for it, and none will arrive.",
-      action: library,
-    };
+    return { key: status, sentence: cancelled.banner ?? "Cancelled.", tip: cancelled.tip, action: library };
   }
   if (status === "FAILED" || status === "RECOVERY_REQUIRED") {
-    return {
-      key: status,
-      sentence: `This run is ${status}. It ended before sealing evidence; its progress record shows where it stopped.`,
-      action: record,
-    };
+    const t = status === "FAILED" ? failed : attention;
+    return { key: status, sentence: t.banner ?? "", tip: t.tip, action: record };
   }
-  return { key: "UNKNOWN", sentence: notReady, action: null };
+  return { key: "UNKNOWN", sentence: "Evidence not ready.", tip: notReady, action: null };
 }
 
 function SealNotice({ runId, hub }: { runId: string; hub: EvidenceHub }) {
   const notice = sealNoticeOf(runId, hub);
   if (notice === null) return null;
   const lifecycle = lifecycleOf(hub);
-  /* F2b: the first sentence is the state; the rest explains it and rides in the tooltip. A sentence that
-     carries a typed reason in brackets is kept whole — a reason is never moved out of sight. */
-  const cut = notice.sentence.includes("(") ? -1 : notice.sentence.indexOf(". ");
-  const lead = cut === -1 ? notice.sentence : notice.sentence.slice(0, cut + 1);
+  /* One line states the run; the explanation rides in the tooltip and the accessible name. */
   return (
     <section
       className="flex flex-wrap items-center gap-3 rounded-[8px] border px-4 py-2.5"
       data-not-ready={notice.key}
       data-phase={lifecycle?.phase ?? undefined}
-      title={cut === -1 ? undefined : notice.sentence}
+      data-run-phase={hubPhase(hub) ?? undefined}
+      title={notice.tip ?? undefined}
       style={{ borderColor: "var(--role-holdout)", background: "var(--paper-sunken)" }}
     >
       <span aria-hidden="true" className="inline-block h-[7px] w-[7px] flex-none rounded-full" style={{ background: "var(--role-holdout)" }} />
-      <p className="text-[11.5px]" style={{ color: "var(--ink-soft)" }} data-seal-sentence>
-        {lead}
+      <p
+        className="text-[11.5px]"
+        style={{ color: "var(--ink-soft)" }}
+        data-seal-sentence
+        aria-label={notice.tip !== null ? `${notice.sentence} ${notice.tip}` : undefined}
+      >
+        {notice.sentence}
       </p>
       {notice.action}
     </section>
@@ -4908,7 +4944,7 @@ export function EvidenceFlow({
     const picks = folds.flatMap((fold) => (fold.selection && fold.selection.state === "AVAILABLE" ? [fold.selection] : []));
     const head = picks[0];
     if (head === undefined || !picks.every((pick) => pick.scope === "GLOBAL_STUDY" && pick.params_digest === head.params_digest)) return null;
-    return { trial: head.trial ?? null, paramsDigest: head.params_digest ?? null };
+    return { trial: head.trial ?? null, sourceId: head.source_trial_id ?? null, paramsDigest: head.params_digest ?? null };
   })();
   const laneSummary = laneEvidence
     ? `${retainedTiles(laneEvidence).filter((tile) => tile.value !== null).length} of ${TILE_ORDER.length} metrics · ${laneEvidence.series.length} series`
@@ -5060,7 +5096,7 @@ export function EvidenceFlow({
             data-panel={cursor.stage}
           >
             {cursor.stage === "claim" ? (
-              <ClaimTab hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} passport={passport} />
+              <ClaimTab hub={hub} retainedClaim={retainedClaim} runIdentity={runIdentity} passport={passport} cursor={cursor} windowNamed={evidenceWindow.named} />
             ) : cursor.stage === "atlas" ? (
               <AtlasTab runId={runId} hub={hub} />
             ) : cursor.stage === "split" ? (
@@ -5105,7 +5141,7 @@ export function EvidenceFlow({
             data-panel-kept="summary"
             hidden={cursor.stage !== "summary"}
           >
-            <SummaryTab
+            {endedWithoutEvidence(hub) ? null : <SummaryTab
               hub={hub}
               runId={runId}
               cursor={cursor}
@@ -5120,7 +5156,7 @@ export function EvidenceFlow({
               ensureRetainedSeries={ensureRetainedSeries}
               retainedKinds={retainedKinds}
               ensureRetainedKind={ensureRetainedKind}
-            />
+            />}
           </div>
         ) : null}
         {hub ? <StageNav runId={runId} cursor={cursor} windowNamed={evidenceWindow.named} onStage={onStage} /> : null}

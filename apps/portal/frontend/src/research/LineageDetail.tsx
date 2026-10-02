@@ -30,7 +30,8 @@ import { Link } from "react-router-dom";
 
 import { smokeMotionAllowed } from "../execution/smokeMotion";
 
-import { releaseCandidateHref } from "./releaseCandidateClient";
+import { freezeHref, hubHref, newRunHref, progressHref, rcHref as releaseCandidateHref, reportHref } from "./runLinks";
+import { phaseOfStatus, type RunPhase } from "./runTerminalState";
 import { useEntryRef } from "./chartLife";
 import { compareHref } from "./compareClient";
 import { ResearchPanel } from "./ResearchPanel";
@@ -182,6 +183,23 @@ export function isTracedChild(attempt: Pick<LineageAttempt, "intent_kind">): boo
 /** A probe the "show probe attempts" toggle may hide: the server's PROBE class, minus the traced children. */
 export function isHideableProbe(attempt: Pick<LineageAttempt, "presentation_kind" | "intent_kind">): boolean {
   return attempt.presentation_kind === "PROBE" && !isTracedChild(attempt);
+}
+
+/** B4: the newest attempts that are always listed, probe or not. A display size, not a classification. */
+export const LINEAGE_RECENT = 8;
+
+/** B4: ids of the newest `LINEAGE_RECENT` attempts by the server's `created_at_utc_ms`. */
+export function recentAttemptIds(attempts: readonly Pick<LineageAttempt, "attempt_id" | "created_at_utc_ms">[]): Set<string> {
+  /* A selection by the server's own timestamp, repeated LINEAGE_RECENT times: no sort, nothing re-ordered. */
+  const left = [...attempts];
+  const picked = new Set<string>();
+  while (picked.size < LINEAGE_RECENT && left.length > 0) {
+    let best = 0;
+    for (let i = 1; i < left.length; i += 1) if (left[i].created_at_utc_ms > left[best].created_at_utc_ms) best = i;
+    picked.add(left[best].attempt_id);
+    left.splice(best, 1);
+  }
+  return picked;
 }
 
 /** The GATES RESET chip's suffix, spec 10 §2.3. */
@@ -646,12 +664,14 @@ function sid(id: string): string {
   return runLabelOrShortId(id) ?? id;
 }
 
+/** Evidence Flow of a run; S10 holds no evidence cursor, so none is carried (W1 link row 16). */
 function evidenceHref(runId: string): string {
-  return `${RUNS_ROOT}/${encodeURIComponent(runId)}/evidence`;
+  return hubHref(runId);
 }
 
-function reportHref(runId: string): string {
-  return `${RUNS_ROOT}/${encodeURIComponent(runId)}/report`;
+/** The run's own phase: the primary run's state, else the attempt's. A direct lookup, nothing derived. */
+function attemptPhase(attempt: LineageAttempt): RunPhase | null {
+  return phaseOfStatus(attempt.primary_run.state) ?? phaseOfStatus(attempt.state);
 }
 
 function gatesChange(diff: SemanticDiff): SemanticChange | null {
@@ -977,6 +997,7 @@ function VersionBand({
   presentationKnown,
   showProbes,
   onToggleProbes,
+  olderProbeIds,
 }: {
   alphaId: string;
   version: LineageVersion;
@@ -988,11 +1009,13 @@ function VersionBand({
   presentationKnown: boolean;
   showProbes: boolean;
   onToggleProbes: () => void;
+  /** B4: the probes the toggle can still reveal; the chip counts the same set the toggle counts. */
+  olderProbeIds: ReadonlySet<string>;
 }) {
   const pick = version.promotion_pick;
   /* Hi-fi: the band names its storied attempts; its probes are one "+N probes" chip. */
   const storied = presentationKnown ? attempts.filter((attempt) => !isHideableProbe(attempt)) : attempts;
-  const probes = presentationKnown ? attempts.length - storied.length : null;
+  const probes = presentationKnown ? attempts.filter((attempt) => olderProbeIds.has(attempt.attempt_id)).length : null;
   return (
     <div
       className="ln-band"
@@ -1062,10 +1085,10 @@ function VersionBand({
               className="ln-chip probe"
               data-probe-chip={probes}
               aria-pressed={showProbes}
-              title="show probe attempts"
+              title="older probes"
               onClick={onToggleProbes}
             >
-              +{String(probes)} probes
+              +{String(probes)} older
             </button>
           ) : null}
         </div>
@@ -1232,6 +1255,7 @@ function RootCard({
   presentationKnown,
   showProbes,
   onToggleProbes,
+  olderProbeIds,
 }: {
   lineage: Lineage;
   bands: readonly LineageVersion[];
@@ -1245,6 +1269,7 @@ function RootCard({
   presentationKnown: boolean;
   showProbes: boolean;
   onToggleProbes: () => void;
+  olderProbeIds: ReadonlySet<string>;
 }) {
   const { alpha } = lineage;
   const active = bands.filter((version) => version.lifecycle_state === "ACTIVE");
@@ -1314,6 +1339,7 @@ function RootCard({
               presentationKnown={presentationKnown}
               showProbes={showProbes}
               onToggleProbes={onToggleProbes}
+              olderProbeIds={olderProbeIds}
             />
           ))
         )}
@@ -1328,7 +1354,21 @@ function RootCard({
   );
 }
 
-function ProbesToggle({ known, count, pressed, onToggle }: { known: boolean; count: number; pressed: boolean; onToggle?: () => void }) {
+function ProbesToggle({
+  known,
+  count,
+  total,
+  pressed,
+  onToggle,
+}: {
+  known: boolean;
+  /** K: probes the toggle can still reveal (not in the newest few, not the viewed attempt). */
+  count: number;
+  /** The server's own probe count, for the tooltip only. */
+  total?: number | null;
+  pressed: boolean;
+  onToggle?: () => void;
+}) {
   if (!known || !onToggle) {
     return (
       <button
@@ -1339,9 +1379,9 @@ function ProbesToggle({ known, count, pressed, onToggle }: { known: boolean; cou
         aria-pressed={false}
         disabled
         title={known ? undefined : PROBES_REASON}
-        aria-label={known ? "show probe attempts" : `show probe attempts — ${PROBES_REASON}`}
+        aria-label={known ? "older probes" : `older probes — ${PROBES_REASON}`}
       >
-        show probe attempts
+        older probes
       </button>
     );
   }
@@ -1353,10 +1393,14 @@ function ProbesToggle({ known, count, pressed, onToggle }: { known: boolean; cou
       data-probes={count}
       aria-pressed={pressed}
       disabled={count === 0}
-      title={count === 0 ? "every returned attempt is storied" : "probes are counted in every total whether shown or not"}
+      title={
+        count === 0
+          ? "no older probes"
+          : `${pressed ? "Hide" : "Show"} the ${String(count)} older probes. The newest attempts and the one you opened always show${typeof total === "number" ? `; the server counts ${String(total)} probes in all` : ""}.`
+      }
       onClick={onToggle}
     >
-      {pressed ? "hide" : "show"} {String(count)} probe attempts
+      older probes ({String(count)})
     </button>
   );
 }
@@ -1396,7 +1440,13 @@ function Filters({
           {FILTER_WORDS[status].text}
         </button>
       ))}
-      <ProbesToggle known={presentationKnown} count={probeCount} pressed={showProbes} onToggle={onToggleProbes} />
+      <ProbesToggle
+        known={presentationKnown}
+        count={probeCount}
+        total={lineage.counts.probe_returned}
+        pressed={showProbes}
+        onToggle={onToggleProbes}
+      />
       <span className="ln-count" data-counter aria-live="polite">
         {counterText(shown, lineage.counts.returned_attempts, lineage.counts.total_attempts)}
       </span>
@@ -1780,6 +1830,7 @@ function Selected({
   const run = attempt.primary_run;
   const facts = attempt.run_facts;
   const claim = facts.claim;
+  const phase = attemptPhase(attempt);
   return (
     <section
       key={attempt.attempt_id}
@@ -1910,15 +1961,11 @@ function Selected({
           <Link className="ln-btnlink" to={evidenceHref(run.run_id)} data-action="open-evidence" title={`Evidence Flow of ${run.run_id}`}>
             open evidence →
           </Link>
-          {runHasReport(attempt) ? (
+          {phase === "completed" && runHasReport(attempt) ? (
             <Link className="ln-btnlink soft" to={reportHref(run.run_id)} data-action="run-report" title={`Run report of ${run.run_id}`}>
               run report
             </Link>
-          ) : (
-            <span className="ln-btnlink soft ln-unrouted" data-action-unrouted="run-report" tabIndex={0} role="link" aria-disabled="true" title="No report — this run did not finish." aria-label="run report — no report, this run did not finish">
-              run report
-            </span>
-          )}
+          ) : null}
           {parentRunId ? (
             <Link
               className="ln-btnlink soft"
@@ -1933,13 +1980,21 @@ function Selected({
               compare →
             </Link>
           )}
-          <Link className="ln-btnlink soft" to={`${RUNS_ROOT}/${encodeURIComponent(run.run_id)}/freeze`} data-action="open-freeze" title="Freeze (Screen 04) of this run">
-            freeze
-          </Link>
-          <Link className="ln-btnlink soft" to={releaseCandidateHref(run.run_id)} data-action="open-release-candidate" title="Screen 11 for this run">
-            release candidate
-          </Link>
-          <Link className="ln-btnlink soft" to={`${RUNS_ROOT}/new?from=${encodeURIComponent(run.run_id)}`} data-action="clone-at-new-run" title="copy this run's declaration into a new draft on Screen 02 (a new attempt, never an edit)">
+          {phase === "completed" ? (
+            <>
+              <Link className="ln-btnlink soft" to={freezeHref(run.run_id)} data-action="open-freeze" title="Freeze (Screen 04) of this run">
+                freeze
+              </Link>
+              <Link className="ln-btnlink soft" to={releaseCandidateHref(run.run_id)} data-action="open-release-candidate" title="Screen 11 for this run">
+                release candidate
+              </Link>
+            </>
+          ) : (
+            <Link className="ln-btnlink soft" to={progressHref(run.run_id)} data-action="open-progress" title="Where this run is, or where it stopped">
+              progress
+            </Link>
+          )}
+          <Link className="ln-btnlink soft" to={newRunHref(run.run_id)} data-action="clone-at-new-run" title="copy this run's declaration into a new draft on Screen 02 (a new attempt, never an edit)">
             clone →
           </Link>
         </span>
@@ -2270,8 +2325,14 @@ export interface LineageScreenProps {
   initialAv?: string | null;
   /** `?attempt=` at mount: the attempt to select. Read once. */
   initialAttempt?: string | null;
+  /** `?run=` at mount: select the attempt that holds this run (a lookup on the returned graph). Read once. */
+  initialRun?: string | null;
+  /** `?probes=1` at mount: older probes listed. Read once. */
+  initialProbes?: boolean;
   /** Told when the reader selects an attempt; the route mirrors it with `replace`. */
   onSelectAttempt?: (attemptId: string) => void;
+  /** Told when the older-probes toggle changes; the route writes `?probes=1`. */
+  onProbesChange?: (shown: boolean) => void;
 }
 
 /**
@@ -2289,7 +2350,16 @@ function breakablePath(path: string) {
   ));
 }
 
-export function LineageScreen({ alphaId, controller, initialAv = null, initialAttempt = null, onSelectAttempt }: LineageScreenProps) {
+export function LineageScreen({
+  alphaId,
+  controller,
+  initialAv = null,
+  initialAttempt = null,
+  initialRun = null,
+  initialProbes = false,
+  onSelectAttempt,
+  onProbesChange,
+}: LineageScreenProps) {
   const { lineage, state } = controller;
 
   const tree = useMemo(() => (lineage ? treeOrder(lineage.attempts) : []), [lineage]);
@@ -2345,8 +2415,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
   );
   /* CG-P19-03: probes are the server's classification; hidden until asked for (hi-fi), and always counted. */
   const presentationKnown = lineage ? lineageHasPresentation(lineage) : false;
-  const isHideable = (attempt: LineageAttempt | undefined) => attempt !== undefined && isHideableProbe(attempt);
-  const [probesChoice, setProbesChoice] = useState<boolean | null>(null);
+  const [probesChoice, setProbesChoice] = useState<boolean>(initialProbes);
 
   /* Cards stay compact as in the hi-fi (spec line + reason); run detail opens
      on demand, and the selected attempt's fields live in the right column. */
@@ -2356,23 +2425,46 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
   const fromLink = useMemo(() => {
     if (!lineage) return { attempt: null as string | null, band: null as string | null };
     const version = findVersion(lineage, initialAv);
+    const byRun = initialRun
+      ? (tree.find(
+          (node) =>
+            node.attempt.primary_run.run_id === initialRun || node.attempt.child_runs.some((child) => child.run_id === initialRun),
+        )?.attempt.attempt_id ?? null)
+      : null;
     const attempt =
       initialAttempt && returnedIds.has(initialAttempt)
         ? initialAttempt
-        : version
+        : byRun !== null
+          ? byRun
+          : version
           ? (tree.find((node) => node.attempt.alpha_version_id === version.alpha_version_id && node.attempt.presentation_kind !== "PROBE")?.attempt.attempt_id ?? null)
           : null;
     return { attempt, band: version?.alpha_version_id ?? null };
-  }, [initialAttempt, initialAv, lineage, returnedIds, tree]);
+  }, [initialAttempt, initialAv, initialRun, lineage, returnedIds, tree]);
 
-  /* A deep link to a probe opens the probes (spec T04); otherwise the reader's choice, hidden by default. */
-  const linkedProbe = fromLink.attempt !== null && isHideable(byId.get(fromLink.attempt));
-  const probeCount = useMemo(() => tree.filter((node) => isHideableProbe(node.attempt)).length, [tree]);
-  const showProbes = !presentationKnown || (probesChoice ?? linkedProbe);
-  const onToggleProbes = useCallback(() => setProbesChoice((current) => !(current ?? linkedProbe)), [linkedProbe]);
+  /* B4: the screen opens on the viewed attempt plus the newest few; older probes sit behind one toggle.
+     The attempt the reader came for (link) or picked is never hidden, probe or not. */
+  const alwaysIds = useMemo(() => {
+    const ids = lineage ? recentAttemptIds(lineage.attempts) : new Set<string>();
+    if (chosen) ids.add(chosen);
+    if (fromLink.attempt) ids.add(fromLink.attempt);
+    return ids;
+  }, [chosen, fromLink.attempt, lineage]);
+  /* K: the probes the toggle can still reveal. The band chip and the toggle both read this set, so they cannot disagree. */
+  const olderProbeIds = useMemo(
+    () => new Set(tree.filter((node) => isHideableProbe(node.attempt) && !alwaysIds.has(node.attempt.attempt_id)).map((node) => node.attempt.attempt_id)),
+    [alwaysIds, tree],
+  );
+  const probeCount = olderProbeIds.size;
+  const showProbes = !presentationKnown || probesChoice;
+  const onToggleProbes = useCallback(() => {
+    const next = !probesChoice;
+    setProbesChoice(next);
+    onProbesChange?.(next);
+  }, [onProbesChange, probesChoice]);
   const visible = useMemo(
-    () => tree.filter((node) => matches(node.attempt, filters) && (showProbes || !isHideableProbe(node.attempt))),
-    [filters, matches, showProbes, tree],
+    () => tree.filter((node) => matches(node.attempt, filters) && (showProbes || !olderProbeIds.has(node.attempt.attempt_id))),
+    [filters, matches, olderProbeIds, showProbes, tree],
   );
 
   const selectedId = chosen ?? fromLink.attempt ?? defaultAttemptId(visible) ?? tree[0]?.attempt.attempt_id ?? null;
@@ -2445,7 +2537,6 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       select(attemptId);
       const attempt = byId.get(attemptId);
       if (attempt && !matches(attempt, filters)) setFilters(new Set());
-      if (isHideable(attempt)) setProbesChoice(true);
       setExpanded((current) => {
         const base = new Set(current ?? openSet);
         base.add(attemptId);
@@ -2491,9 +2582,14 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       {lineage ? (
         <>
           {state.state !== "available" && !(state.state === "partial" && onlyPickGap(lineage)) ? <Notice controller={controller} /> : null}
+          {!initialAttempt && initialRun && chosen === null && fromLink.attempt === null ? (
+            <p className="ln-bound" role="status" data-unknown-run={initialRun}>
+              That run is not in this graph.
+            </p>
+          ) : null}
           {initialAttempt && chosen === null && !returnedIds.has(initialAttempt) ? (
             <p className="ln-bound" role="status" data-unknown-attempt={initialAttempt}>
-              Attempt {initialAttempt} was not returned for this alpha — showing {selected ? sid(selected.primary_run.run_id ?? selected.attempt_id) : "the first attempt"} instead.
+              Attempt {initialAttempt} not returned — showing {selected ? sid(selected.primary_run.run_id ?? selected.attempt_id) : "the first attempt"}.
             </p>
           ) : null}
           <div
@@ -2518,6 +2614,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
                 presentationKnown={presentationKnown}
                 showProbes={showProbes}
                 onToggleProbes={onToggleProbes}
+                olderProbeIds={olderProbeIds}
               />
               <Filters
                 active={filters}
@@ -2565,10 +2662,20 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
           </div>
           <Counts lineage={lineage} />
         </>
-      ) : (
+      ) : state.state !== "denied" && state.state !== "terminal" ? (
         <>
           <Notice controller={controller} />
           <PendingFrame state={state.state} />
+        </>
+      ) : (
+        /* A refusal: the notice and the way out, nothing else (no skeleton, no ghost tabs). */
+        <>
+          <Notice controller={controller} />
+          <p className="ln-bound" data-action-row="exit">
+            <Link to={RUNS_ROOT} data-action="open-run-library">
+              Open Run Library
+            </Link>
+          </p>
         </>
       )}
     </div>

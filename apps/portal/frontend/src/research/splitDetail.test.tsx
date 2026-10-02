@@ -921,7 +921,7 @@ describe("RF-06 FE-S05-04 — pending ≠ empty, 404 ≠ empty, first-read 409 �
     const { container } = mountRoute("");
     await waitFor(() => expect(container.querySelector("[data-run-not-found]")).toBeTruthy());
     expect(container.querySelector("[data-state]")?.getAttribute("data-state")).toBe("denied");
-    expect(container.querySelector("[data-action='run-library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(container.querySelector("[data-exit='library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
     expect(container.querySelector("[data-action='next-stage']")).toBeNull();
     expect(container.querySelector("[data-action='back-to-hub']")).toBeNull();
   });
@@ -1411,7 +1411,7 @@ describe("W3b — Split on the retained WFO lane", () => {
       const theta = row.querySelector("[data-params-cell] [data-theta-star]");
       expect(theta?.getAttribute("data-theta-star")).toBe("0");
       // QA S05 U1: the id is the retained search's own, and says so (S03 prints the progress read's selection.trial).
-      expect(theta?.textContent).toBe("GLOBAL · source trial 0");
+      expect(theta?.textContent).toBe("GLOBAL · source 0");
     }
   });
 
@@ -2239,8 +2239,8 @@ describe("QA S05 — retained lane screen", () => {
 
   it("U1: S05 labels the id it prints as the source's trial id", async () => {
     const { container } = await laneRoute();
-    expect(container.querySelector("[data-theta-star]")?.textContent).toMatch(/^GLOBAL · source trial /);
-    expect(container.querySelector("[data-theta-trial]")?.parentElement?.textContent).toContain("source trial");
+    expect(container.querySelector("[data-theta-star]")?.textContent).toMatch(/^GLOBAL · source \d/);
+    expect(container.querySelector("[data-theta-trial]")?.parentElement?.textContent).toContain("source ");
   });
 
   it("the fold block states the count once: no 'folds observed' line, no table foot", async () => {

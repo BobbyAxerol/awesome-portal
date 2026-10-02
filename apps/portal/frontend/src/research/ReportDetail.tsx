@@ -19,13 +19,14 @@
  *    export panel are `no-print`, and printing sends no request.
  */
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ResearchPanel } from "./ResearchPanel";
 import { researchState, type ResearchState } from "./state";
 import { useRunVisibility, type RunVisibility } from "./useRunVisibility";
-import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
+import type { EvidenceCursor } from "./evidenceCursor";
+import type { EvidenceWindow } from "./evidenceWindow";
 import {
   ARTIFACT_LABEL,
   ARTIFACT_STATE_WORDS,
@@ -57,8 +58,9 @@ import {
 import { foldLabel, formatMetric, shortDigest, typographicMinus } from "./researchFormat";
 import { reasonCodeSentence } from "./researchRefusal";
 import { equitySvg } from "./reportEquity";
-import { releaseCandidateHref } from "./releaseCandidateClient";
-import { lineageHref } from "./lineageClient";
+import { RunExitBar } from "./RunExitBar";
+import { executeHref, hubHref, lineageRunHref, newRunHref, progressHref, libraryHref, rcHref, type LinkCursor } from "./runLinks";
+import { runStatusWord, runTerminalState, type RunTerminalState } from "./runTerminalState";
 import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
@@ -127,17 +129,17 @@ export const REPORT_PANELS = [
   "noprint-bar",
   "header",
   "passport",
-  "identity",
   "headline",
   "metrics",
   "equity",
   "folds",
   "stages",
-  "artifacts",
   "warnings",
   "all-time",
   "promotion",
   "provenance",
+  "identity",
+  "artifacts",
   "footer",
   "exports",
   "annotation",
@@ -309,10 +311,14 @@ const SHEET_CSS = `
 .rr-artgrid [data-tone="NOT_APPLICABLE"] { color: var(--ink-mute); }
 .rr-artgrid [data-tone="NOT_PUBLISHED"] { color: var(--accent-2); }
 .rr-artgrid [data-tone="ABORTED"] { color: var(--bad); }
-/* Promotion + provenance (hi-fi): one card, two columns. */
-.rr-pp { border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; display: flex; gap: 16px; align-items: flex-start; }
-.rr-pp > section { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-.rr-pp > [data-panel="provenance"] { border-left: 1px solid var(--line-soft); padding-left: 16px; }
+/* Promotion + provenance: one card. Provenance is one block: identity | key artifacts, then the report's own rows. */
+.rr-pp { border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.rr-pp > section { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.rr-pp > [data-panel="provenance"] { border-top: 1px solid var(--line-soft); padding-top: 9px; }
+.rr-provgrid { display: flex; gap: 16px; align-items: flex-start; }
+.rr-provgrid > .rr-sub { flex: 1 1 0; min-width: 0; }
+.rr-sub .rr-artgrid { padding: 0; }
+.rr-dig { min-width: 0; }
 .rr-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line);
   font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-faint); }
 .rr-screen { margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
@@ -322,10 +328,14 @@ const SHEET_CSS = `
   .rr-noprint .rr-note { margin-left: 0; }
   .rr-head { flex-wrap: wrap; }
   .rr-head-text { flex: 1 1 100%; }
-  .rr-idrow, .rr-chainrow, .rr-pp { flex-direction: column; }
+  .rr-idrow, .rr-chainrow, .rr-pp, .rr-provgrid { flex-direction: column; }
   .rr-idrow > *, .rr-chainrow > * { flex: 1 1 auto; }
-  .rr-pp > section { flex: 1 1 auto; width: 100%; }
-  .rr-pp > [data-panel="provenance"] { border-left: 0; padding-left: 0; border-top: 1px solid var(--line-soft); padding-top: 9px; }
+  .rr-pp > section { width: 100%; }
+  .rr-provgrid > .rr-sub { width: 100%; flex: 1 1 auto; }
+  /* The key column took the width and left the digest one character wide: one column, and a digest that does not fit ends in an ellipsis (its full value is the tooltip). */
+  .rr-artgrid { grid-template-columns: minmax(0, 1fr); }
+  .rr-artgrid .k { white-space: normal; overflow-wrap: anywhere; }
+  .rr-dig { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
 }
 @media print {
   /* Hi-fi <doc-page margin="0.55in">; doc-page is not used, so this route owns the page box. */
@@ -343,9 +353,11 @@ const SHEET_CSS = `
   .rr-id { grid-template-columns: auto minmax(0, 1fr); }
   .rr-head { flex-wrap: nowrap; }
   .rr-head-text { flex: 1 1 0; }
-  .rr-idrow, .rr-pp { flex-direction: row; }
-  .rr-idcard { flex: 1.15 1 0; }
-  .rr-headline, .rr-pp > section { flex: 1 1 0; }
+  .rr-idrow { flex-direction: row; }
+  .rr-provgrid { flex-direction: row; }
+  .rr-headline { flex: 1 1 0; }
+  /* On paper a digest is the whole digest. */
+  .rr-dig { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
   /* X2 · F6 (Letter/A4 re-run): a scroll box cannot fragment across pages, so
      a long fold table jumped whole to the next page and left its header alone
      over a blank page. On paper the table flows, and its thead repeats. */
@@ -372,7 +384,6 @@ const SHEET_CSS = `
      the shorter column left an empty frame across the page break. */
   .rr-chainrow { flex-direction: column; }
   .rr-chainrow > * { flex: 1 1 auto; }
-  .rr-pp > [data-panel="provenance"] { border-left: 1px solid var(--line-soft); padding-left: 16px; border-top: 0; padding-top: 0; }
 }
 `;
 
@@ -473,43 +484,53 @@ export function reportAlphaScope(report: ReportDetail | null): { alphaId: string
 
 function NoPrintBar({
   runId,
-  cursor,
+  link,
   report,
   exporter,
 }: {
   runId: string;
-  cursor: EvidenceCursor;
+  /** The cursor and window of the page that sent the reader here; none when it carried none (W1 B3). */
+  link: LinkCursor;
   report: ReportDetail | null;
   exporter: ReportExportController;
 }) {
-  const run = encodeURIComponent(runId);
   const offered = report ? EXPORT_FORMATS.filter((format) => report.exports.formats.includes(format)) : [];
   const scope = reportAlphaScope(report);
   /* QA S09 (UX-21/22): a run with no sealed claim has nothing to publish and nothing to export. */
   const hasClaim = report !== null && coreFailed(report.frozen_core) === null;
+  const failed = report !== null && coreFailed(report.frozen_core) !== null;
   return (
     <nav className="rr-noprint no-print" data-panel="noprint-bar" aria-label="Report actions">
-      <Link
-        to={deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "claim" })}
-        data-action="back-to-hub"
-        title="Evidence Flow · Stage 5 Claim"
-      >
-        ← Hub · Stage 5 Claim
+      <Link to={hubHref(runId, { ...link, stage: "claim" })} data-action="back-to-hub" title="Evidence Flow · Stage 5 Claim">
+        ← Hub
       </Link>
       <span style={{ color: "var(--ink-faint)" }}>·</span>
-      <Link
-        to={deepDiveHref(`/research/quantbt/runs/${run}/execute`, { ...cursor, stage: "execute" })}
-        data-action="back-to-execute"
-        title="Stage 4 · Execute replay of this run"
-      >
-        ← Execute replay
+      <Link to={executeHref(runId, link)} data-action="back-to-execute" title="Stage 4 · Execute replay of this run">
+        ← Execute
       </Link>
+      {failed ? (
+        <>
+          {/* W1: the failed sheet is honest about the run; the way on is Progress, a fresh draft or the Library. */}
+          <span style={{ color: "var(--ink-faint)" }}>·</span>
+          <Link to={progressHref(runId)} data-exit="progress">
+            Progress
+          </Link>
+          <span style={{ color: "var(--ink-faint)" }}>·</span>
+          <Link to={newRunHref(runId)} data-exit="new-run" title="Same draft, fresh preflight">
+            New run
+          </Link>
+          <span style={{ color: "var(--ink-faint)" }}>·</span>
+          <Link to={libraryHref()} data-exit="library">
+            Library
+          </Link>
+        </>
+      ) : null}
       {hasClaim ? (
         <>
           <span style={{ color: "var(--ink-faint)" }}>·</span>
           {/* P21: Screen 11 composes and locally seals the candidate for this run. */}
-          <Link to={releaseCandidateHref(runId)} data-action="release-candidate" title="Next: release candidate for this run">
-            Release Candidate &amp; Publish →
+          <Link to={rcHref(runId, link)} data-action="release-candidate" title="Next: release candidate for this run">
+            Release candidate →
           </Link>
         </>
       ) : null}
@@ -517,7 +538,7 @@ function NoPrintBar({
         <>
           <span style={{ color: "var(--ink-faint)" }}>·</span>
           <Link
-            to={lineageHref(scope.alphaId, { av: scope.version })}
+            to={lineageRunHref(scope.alphaId, { av: scope.version, run: runId })}
             data-action="attempt-lineage"
             title={`Attempt lineage of ${scope.alphaId}`}
           >
@@ -528,9 +549,11 @@ function NoPrintBar({
       <span style={{ color: "var(--ink-faint)" }}>/</span>
       <span aria-current="page">Run Report</span>
       <span className="flex flex-wrap items-center gap-1.5">
-        <button type="button" className="rr-btn" data-action="print" title={NOPRINT_NOTE} onClick={() => window.print()}>
-          Print
-        </button>
+        {report !== null ? (
+          <button type="button" className="rr-btn" data-action="print" title={NOPRINT_NOTE} onClick={() => window.print()}>
+            Print
+          </button>
+        ) : null}
         {(hasClaim ? offered : []).map((format) => {
           const slot = exporter.slots[format];
           const busy = slot.creating || exportPending(slot.job);
@@ -647,8 +670,8 @@ function Passport({ core }: { core: FrozenCore }) {
 
 function Identity({ core }: { core: FrozenCore }) {
   return (
-    <section className="rr-idcard" data-panel="identity" aria-label="identity">
-      <h2 className="rr-t2">Identity</h2>
+    <section className="rr-sub" data-panel="identity" aria-label="identity">
+      <h3 className="rr-t2">Identity</h3>
       <dl className="rr-id">
         {core.identity.map((field) => (
           <div key={field.key} className="contents" data-identity={field.key}>
@@ -1310,14 +1333,20 @@ function StageChain({ core }: { core: FrozenCore }) {
 
 function Artifacts({ core }: { core: FrozenCore }) {
   return (
-    <Block panel="artifacts" title="Key artifacts & digests" className="rr-flush">
+    <section className="rr-sub" data-panel="artifacts" aria-label="Key artifacts & digests">
+      <h3 className="rr-t2">Key artifacts</h3>
       <div className="rr-artgrid">
         {core.artifacts.map((artifact) => (
           <div key={artifact.key} className="contents" data-artifact={artifact.key} data-artifact-state={artifact.state}>
             <span className="k" data-artifact-filename={"filename" in artifact ? artifact.filename ?? undefined : undefined}>
               {"filename" in artifact && artifact.filename ? artifact.filename : ARTIFACT_LABEL[artifact.key]}
             </span>
-            <span className="rr-long" data-artifact-digest data-tone={artifact.state === "SEALED" ? undefined : artifact.state}>
+            <span
+              className="rr-long rr-dig"
+              data-artifact-digest
+              data-tone={artifact.state === "SEALED" ? undefined : artifact.state}
+              title={artifact.digest ?? factReason(artifact)}
+            >
               {artifact.state === "SEALED" ? (
                 artifact.digest ? (
                   <span title={artifact.digest} data-exact={artifact.digest}>
@@ -1357,11 +1386,11 @@ function Artifacts({ core }: { core: FrozenCore }) {
             })()
           : "download — not available"}
       </p>
-    </Block>
+    </section>
   );
 }
 
-function Promotion({ core, runId }: { core: FrozenCore; runId: string }) {
+function Promotion({ core, runId, link }: { core: FrozenCore; runId: string; link: LinkCursor }) {
   return (
     <section data-panel="promotion" aria-label="promotion state">
       <h2 className="rr-t2">Promotion state</h2>
@@ -1371,7 +1400,7 @@ function Promotion({ core, runId }: { core: FrozenCore; runId: string }) {
       <AvailabilityAbsent what="promotion" availability={core.promotion.availability} />
       {/* Spec 11 §1 inbound "09 promotion line"; the printed sheet keeps only the line. */}
       <p className="rr-note no-print">
-        <Link to={releaseCandidateHref(runId)} data-action="promotion-release-candidate" title="Compose the release candidate for this run">
+        <Link to={rcHref(runId, link)} data-action="promotion-release-candidate" title="Compose the release candidate for this run">
           Release candidate →
         </Link>
       </p>
@@ -1426,16 +1455,25 @@ export function reportEvidenceLinkLabel(runId: string, report: ReportDetail): st
   );
 }
 
+/**
+ * W1 fewer words (TEXT_B §4 #5): Identity, Key artifacts and Provenance were three
+ * blocks restating the same revisions and digests. They are one block now: who
+ * the run is, what it sealed, where the report came from.
+ */
 function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; report: ReportDetail | null }) {
   const { provenance } = core;
   const absences = Object.entries(core.source_absences);
   const evidenceLink = reportEvidenceLink(runId, report);
   return (
-    <section data-panel="provenance" aria-label="provenance of this report">
+    <section className="rr-prov" data-panel="provenance" aria-label="provenance of this report">
       {/* QA S09: the server's sentence re-lists the five revisions the table below already carries; it rides the heading's tooltip. */}
       <h2 className="rr-t2" title={provenance.line} data-provenance-line={provenance.line}>
         Provenance of this report
       </h2>
+      <div className="rr-provgrid">
+        <Identity core={core} />
+        <Artifacts core={core} />
+      </div>
       <dl className="rr-id">
         {/* E14 · 9.15: the evidence link the hi-fi puts first in this block. */}
         <dt className="k">evidence link</dt>
@@ -1475,7 +1513,7 @@ function Provenance({ core, runId, report }: { core: FrozenCore; runId: string; 
         {DIGEST_ROWS.map(([key, label]) => (
           <div key={key} className="contents" data-source-digest={key}>
             <dt className="k">{label} digest</dt>
-            <dd className="v rr-long">{core.source_digests[key] ?? <span className="rr-absent">not published</span>}</dd>
+            <dd className="v rr-long rr-dig" title={core.source_digests[key] ?? undefined}>{core.source_digests[key] ?? <span className="rr-absent">not published</span>}</dd>
           </div>
         ))}
       </dl>
@@ -1666,9 +1704,9 @@ export function reportNoticeState(controller: ReportController, visibility: RunV
   const live = visibility.status !== null && ["DRAFT", "QUEUED", "RUNNING", "SEALING"].includes(visibility.status);
   return {
     state: "empty",
-    reason: "No sealed report is available for this run.",
+    reason: reportFaceOf(controller, visibility).kind === "exit" ? (reportExit(visibility.status).banner ?? NO_SEALED_REPORT) : NO_SEALED_REPORT,
     detail: [
-      visibility.status !== null ? `run status ${visibility.status}` : null,
+      visibility.status !== null ? `run status ${runStatusWord(visibility.status)}` : null,
       `report read answered 404 ${refusal.code}`,
       refusal.requestId !== null ? `request ${refusal.requestId}` : null,
     ]
@@ -1679,11 +1717,50 @@ export function reportNoticeState(controller: ReportController, visibility: RunV
   };
 }
 
+/** A completed (or status-less) run whose report read answered 404: the one sentence, long form in the tooltip. */
+export const NO_SEALED_REPORT = "No sealed report yet.";
+
+/** The face of a listed run with no sealed report: a direct lookup of the library row's status. */
+function reportExit(status: string | null): RunTerminalState {
+  const terminal = runTerminalState({ status, read: "ok" });
+  if (terminal.phase !== "completed" && terminal.phase !== "unread") return terminal;
+  return {
+    ...terminal,
+    phase: "completed",
+    banner: NO_SEALED_REPORT,
+    tip: "No sealed report is available for this run.",
+    tone: "quiet",
+    exits: ["progress", "hub", "library"],
+  };
+}
+
+export type ReportFace = { kind: "sheet" } | { kind: "exit"; terminal: RunTerminalState };
+
+/**
+ * W1 S09: which face the screen draws. A report in hand, or a read still going,
+ * or a refusal that is a retry (503, 409, 400), keeps the sheet frame. A 404 on
+ * the report is refined by the run's library row: listed -> its own status face;
+ * not listed and 403 -> the one "not available" face (F-04: the server does
+ * not tell unknown from not-yours, so neither does this).
+ */
+export function reportFaceOf(controller: ReportController, visibility: RunVisibility): ReportFace {
+  const { refusal, report } = controller;
+  /* A 401 is "your session ended", which the notice says with its own sign-in sentence. */
+  if (report !== null || refusal === null || (refusal.status !== 403 && refusal.status !== 404)) return { kind: "sheet" };
+  const missing = refusal.status === 404 && refusal.code === "RESEARCH_REPORT_NOT_FOUND";
+  if (missing && (visibility.state === "idle" || visibility.state === "reading")) return { kind: "sheet" };
+  if (missing && visibility.state === "listed") return { kind: "exit", terminal: reportExit(visibility.status) };
+  return { kind: "exit", terminal: runTerminalState({ status: null, read: "not-found" }) };
+}
+
 /* ---------------------------------------------------------------- screen */
 
 export interface ReportScreenProps {
   runId: string;
-  cursor: EvidenceCursor;
+  /** The cursor of the page that sent the reader here; `null` when it carried none. */
+  cursor?: EvidenceCursor | null;
+  /** `?window=` of that page. */
+  window?: EvidenceWindow | null;
   controller: ReportController;
   exporter: ReportExportController;
   /** `?report_revision=` from the link, when it carried one (QA S09 UX-24). */
@@ -1696,23 +1773,51 @@ export function revisionNotice(requested: string | null | undefined, report: Rep
   return `This link names report revision ${requested}. The page shows the current sealed revision, ${report.report_revision}.`;
 }
 
-export function ReportScreen({ runId, cursor, controller, exporter, requestedRevision = null }: ReportScreenProps) {
+export function ReportScreen({ runId, cursor = null, window: evidenceWindow = null, controller, exporter, requestedRevision = null }: ReportScreenProps) {
   const { report } = controller;
+  const link = useMemo<LinkCursor>(() => ({ cursor, window: evidenceWindow }), [cursor, evidenceWindow]);
   const revisionLine = revisionNotice(requestedRevision, report);
   const sourceFallback = report ? (enrichedBlock(enrichedOfReport(report))?.curves.sampling.source_observation_count ?? null) : null;
   /* F1: ask the Run Library which 404 this is — only when the report read answered one. */
   const reportMissing = controller.refusal !== null && controller.refusal.status === 404 && controller.refusal.code === "RESEARCH_REPORT_NOT_FOUND";
   const visibility = useRunVisibility(runId, reportMissing);
   const state = reportNoticeState(controller, visibility);
+  const face = reportFaceOf(controller, visibility);
   /* X2 · spec 09 T06: a failed run's sheet has no claim blocks; it is drawn by its own component. */
   const failed = report ? coreFailed(report.frozen_core) : null;
   const core = report && !failed ? (report.frozen_core as FrozenCore) : null;
+
+  if (face.kind === "exit") {
+    const unavailable = face.terminal.phase === "unavailable";
+    return (
+      <div className="rr-page" data-screen="run-report" data-run={runId} data-report-state={state.state} data-run-phase={face.terminal.phase} data-report-revision="">
+        <style>{SHEET_CSS}</style>
+        <article className="rr-sheet" aria-label="Run report sheet">
+          <header className="rr-head" data-panel="header">
+            <div className="rr-head-text">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 className="rr-title" data-report-title>
+                  Run report
+                </h2>
+                {unavailable ? null : (
+                  <span className="rr-runchip rr-long" data-run-chip>
+                    <ShortId id={runId} label="run" />
+                  </span>
+                )}
+              </div>
+            </div>
+          </header>
+          <RunExitBar runId={runId} state={face.terminal} cursor={cursor} />
+        </article>
+      </div>
+    );
+  }
 
   return (
     <div className="rr-page" data-screen="run-report" data-run={runId} data-report-state={state.state} data-report-revision={report?.report_revision ?? ""}>
       <style>{SHEET_CSS}</style>
       <style>{ALL_TIME_CSS}</style>
-      <NoPrintBar runId={runId} cursor={cursor} report={report} exporter={exporter} />
+      <NoPrintBar runId={runId} link={link} report={report} exporter={exporter} />
       {revisionLine !== null ? (
         <p className="rr-note no-print" role="status" data-revision-notice style={{ padding: "6px 18px", background: "var(--paper-sunken)", borderBottom: "1px solid var(--line)" }}>
           {revisionLine}
@@ -1726,22 +1831,16 @@ export function ReportScreen({ runId, cursor, controller, exporter, requestedRev
           <>
             {state.state !== "available" ? <ReportNotice controller={controller} state={state} minBodyHeight={0} /> : null}
             <Passport core={core} />
-            <div className="rr-idrow rr-keep">
-              <Identity core={core} />
-              <HeadlineRow core={core} />
-            </div>
+            <HeadlineRow core={core} />
             <Metrics core={core} />
             <EquityFigure equity={core.equity} folds={core.folds} equityIs={coreV2(core)?.equity_is ?? null} sourceFallback={sourceFallback} />
             <FoldVerdicts folds={core.folds} verdictRule={core.provenance.verdict_rule_revision} />
-            <div className="rr-chainrow">
-              <StageChain core={core} />
-              <Artifacts core={core} />
-            </div>
+            <StageChain core={core} />
             {coreV2(core)?.final_audit ? <FinalAuditBlock audit={coreV2(core)!.final_audit!} /> : null}
             <Warnings core={core} />
             <AllTimeSupplement read={enrichedOfReport(report)} absentCode={enrichedAbsenceOfReport(report)} />
             <div className="rr-pp rr-keep" data-promotion-provenance>
-              <Promotion core={core} runId={runId} />
+              <Promotion core={core} runId={runId} link={link} />
               <Provenance core={core} runId={runId} report={report} />
             </div>
           </>

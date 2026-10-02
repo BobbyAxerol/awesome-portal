@@ -57,9 +57,10 @@ import type { FixedReplaySlot, ReplayController, RetainedContext, RetainedReplay
 import { iso } from "./utcMinute";
 import { formatAxisValue, formatCount, formatFractionAxis, formatMetric, shortId } from "./researchFormat";
 import { ShortId } from "./ShortId";
-import { CopyEvidenceLink, SCREEN_FRAME } from "./SplitDetail";
-import { withWindow, type ExecWindow } from "./executeWindows";
+import { CopyEvidenceLink, SCREEN_FRAME, StageRunBar } from "./SplitDetail";
+import { DEFAULT_WINDOW, withWindow, type ExecWindow } from "./executeWindows";
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
+import { reportHref } from "./runLinks";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -1570,7 +1571,7 @@ export function ExecuteScreen({
         </Link>
         <span style={{ color: "var(--ink-faint)" }}>·</span>
         <Link
-          to={withWindow(deepDiveHref(`/research/quantbt/runs/${run}/report`, { ...cursor, stage: "execute" }), windowKey)}
+          to={reportHref(runId, { cursor, window: windowKey === DEFAULT_WINDOW ? null : windowKey })}
           className="mono text-[10px]"
           style={{ color: "var(--accent)" }}
           data-next="run-report"
@@ -1578,6 +1579,8 @@ export function ExecuteScreen({
           next: Run Report →
         </Link>
       </nav>
+
+      <StageRunBar runId={runId} active={controller.retained.state === "refused" && controller.retained.refusal.status === 409} />
 
       <div className="flex flex-col gap-[3px]">
         <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
@@ -1619,6 +1622,7 @@ export function ExecuteScreen({
           windowKey={windowKey}
           onWindow={onWindow}
           runId={runId}
+          cursor={cursor}
         />
       ) : lane === "retained" && retainedReplay && controller.retained.state === "ready" ? (
         <RetainedBody

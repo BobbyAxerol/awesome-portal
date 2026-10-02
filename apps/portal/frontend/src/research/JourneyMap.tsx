@@ -34,6 +34,7 @@ import { shortId } from "./researchFormat";
 import { journeyCardScope, needsAlphaToOpen, needsRunToOpen, opensWithRunId, pickRunHref, resolveJourneyCardRoute } from "./screenRoutes";
 import type { ResearchState } from "./state";
 import { CursorNotice } from "./CursorNotice";
+import { hubHref, libraryHref } from "./runLinks";
 import { decodeInspectionCursor, encodeInspectionCursor, type CursorProblem } from "./inspectionCursor";
 
 /** Spec 00 §3.2 — the three card kinds, distinguished visually. */
@@ -414,7 +415,7 @@ export interface JourneyMapProps {
  */
 export function evidenceHrefFor(runId: string, inspection: InspectionCursor): string {
   const hash = encodeInspectionCursor(inspection.cursor as Record<string, string>);
-  return `/research/quantbt/runs/${encodeURIComponent(runId)}/evidence${hash ? `#${hash}` : ""}`;
+  return `${hubHref(runId)}${hash ? `#${hash}` : ""}`;
 }
 
 export function JourneyMap({ descriptor, inspection, state, linkProblems = [], runId = null, onRetry }: JourneyMapProps) {
@@ -425,14 +426,14 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
     >
       <header className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" role="group" data-breadcrumb>
-          <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }} data-crumb-library>
+          <Link to={libraryHref()} style={{ color: "var(--accent)" }} data-crumb-library>
             Run Library
           </Link>
           <span style={{ color: "var(--ink-faint)" }}>/</span>
           {runId ? (
             <>
               <Link
-                to={`/research/quantbt/runs/${encodeURIComponent(runId)}/evidence`}
+                to={hubHref(runId)}
                 className="mono"
                 style={{ color: "var(--accent)" }}
                 data-crumb-evidence

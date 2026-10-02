@@ -371,7 +371,7 @@ describe("S09 Run Report — the sheet", () => {
     expect(panel("warnings").querySelectorAll("[data-warning]")).toHaveLength(2);
     expect(panel("warnings").textContent).toContain("P04_FIXED_PROFILE");
     const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
-    expect(order.indexOf("warnings")).toBe(order.indexOf("artifacts") + 1);
+    expect(order.indexOf("warnings")).toBe(order.indexOf("stages") + 1);
     expect(order.indexOf("warnings")).toBeLessThan(order.indexOf("promotion"));
     expect(sheet.contains(panel("annotation"))).toBe(false);
     expect(panel("annotation").getAttribute("aria-label")).toBe(ANNOTATION_TITLE);
@@ -519,8 +519,9 @@ describe("S09 Run Report — the sheet", () => {
     server();
     renderRoute();
     await screen.findByText("claim passport");
-    const back = screen.getByRole("link", { name: "← Hub · Stage 5 Claim" });
-    expect(back.getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`));
+    const back = screen.getByRole("link", { name: "← Hub" });
+    expect(back.getAttribute("title")).toContain("Stage 5 Claim");
+    expect(back.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence`);
     const release = document.querySelector('[data-action="release-candidate"]')!;
     expect(release.tagName).toBe("A");
     expect(release.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/release-candidate`);
@@ -569,7 +570,8 @@ describe("S09 Run Report — layout rules", () => {
     expect(css).toMatch(/\.rr-block \{[^}]*\}/);
     expect(/\.rr-block \{([^}]*)\}/.exec(css)![1]).not.toMatch(/overflow\s*:\s*(hidden|clip)/);
     /* The one clipped box is the off-screen screen-reader copy (.rr-sr, S09-U32). */
-    expect(css.replace(/\.rr-sr \{[^}]*\}/, "")).not.toMatch(/overflow\s*:\s*hidden/);
+    /* W1: and, on a phone only, a digest that cannot fit ends in an ellipsis with its full value as the tooltip (never one character per line). */
+    expect(css.replace(/\.rr-sr \{[^}]*\}/, "").replace(/ {2}\.rr-dig \{ overflow: hidden;[^}]*\}/, "")).not.toMatch(/overflow\s*:\s*hidden/);
     const long = [
       "[data-meta]",
       "[data-run-chip]",
@@ -728,24 +730,20 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     expect(passport.classList.contains("rr-block")).toBe(true);
   });
 
-  it("S09-U37 identity and the six headline tiles share one row; the footnote closes the tiles", async () => {
+  it("S09-U37 the six headline tiles; identity moved into the one provenance block; the footnote closes the tiles", async () => {
     const css = await loaded();
-    const row = panel("identity").parentElement!;
-    expect(row.classList.contains("rr-idrow")).toBe(true);
-    expect(row.lastElementChild).toBe(panel("headline"));
+    expect(panel("provenance").contains(panel("identity"))).toBe(true);
     expect(panel("identity").querySelector(".rr-id")).toBeTruthy();
     const cells = panel("headline").querySelectorAll(":scope > .cell");
     expect(cells).toHaveLength(6);
     expect(panel("headline").lastElementChild?.hasAttribute("data-headline-footnote")).toBe(true);
-    expect(rule(css, ".rr-idrow")).toContain("display: flex; gap: 10px");
-    expect(rule(css, ".rr-idcard")).toContain("flex: 1.15 1 0");
     expect(rule(css, ".rr-id")).toContain("grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; font-family: var(--font-mono); font-size: 10px");
     expect(rule(css, ".rr-headline .cell")).toContain("flex: 1 1 44%");
     expect(rule(css, ".rr-headline .v")).toContain("font-size: 15px; font-weight: 600");
     expect(rule(css, ".rr-headline .foot")).toContain("flex: 1 1 100%; font-size: 9px");
-    expect(narrow(css)).toContain(".rr-idrow, .rr-chainrow, .rr-pp { flex-direction: column; }");
+    expect(narrow(css)).toContain(".rr-idrow, .rr-chainrow, .rr-pp, .rr-provgrid { flex-direction: column; }");
     const print = css.slice(css.indexOf("@media print {"));
-    expect(print).toContain(".rr-idrow, .rr-pp { flex-direction: row; }");
+    expect(print).toContain(".rr-provgrid { flex-direction: row; }");
     /* X2 · F6: on paper the stage chain and the artifacts stack, and the sheet's tables flow (Letter/A4 re-run). */
     expect(print).toContain(".rr-chainrow { flex-direction: column; }");
     expect(print).toContain(".rr-page table.rr-table { break-inside: auto; }");
@@ -784,11 +782,9 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     expect(withFolds.querySelectorAll("line[data-boundary]")).toHaveLength(2);
   });
 
-  it("S09-U39 the certification chain and the key artifacts are two cards in one row", async () => {
+  it("S09-U39 the certification chain is its own card; the key artifacts sit in the one provenance block", async () => {
     const css = await loaded();
-    const row = panel("stages").parentElement!;
-    expect(row.classList.contains("rr-chainrow")).toBe(true);
-    expect(row.lastElementChild).toBe(panel("artifacts"));
+    expect(panel("provenance").contains(panel("artifacts"))).toBe(true);
     expect(panel("stages").querySelector("h2")?.textContent).toBe(CHAIN_TITLE);
     const s1 = panel("stages").querySelector('[data-stage="S1"]')!;
     const cells = [...s1.querySelectorAll("td")];
@@ -802,8 +798,6 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     const trace = grid.querySelector('[data-artifact="SELECTION_TRACE"]')!;
     expect(trace.querySelector(".k")?.textContent).toBe("selection_trace");
     expect(trace.querySelector("[data-artifact-digest]")?.getAttribute("data-tone")).toBe("NOT_PUBLISHED");
-    expect(rule(css, ".rr-chainrow > [data-panel=\"stages\"]")).toContain("flex: 1.1 1 0");
-    expect(rule(css, ".rr-chainrow > [data-panel=\"artifacts\"]")).toContain("flex: 1 1 0");
     expect(rule(css, ".rr-artgrid")).toContain("grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; padding: 7px 12px; font-family: var(--font-mono); font-size: 9.5px");
   });
 
@@ -814,7 +808,7 @@ describe("S09 Run Report — hi-fi sheet geometry", () => {
     expect(card.lastElementChild).toBe(panel("provenance"));
     expect(panel("promotion").querySelector("h2")?.textContent).toBe("Promotion state");
     expect(panel("provenance").querySelector("h2")?.textContent).toBe("Provenance of this report");
-    expect(rule(css, '.rr-pp > [data-panel="provenance"]')).toContain("border-left: 1px solid var(--line-soft); padding-left: 16px");
+    expect(rule(css, '.rr-pp > [data-panel="provenance"]')).toContain("border-top: 1px solid var(--line-soft); padding-top: 9px");
     const spans = [...panel("footer").children].map((el) => el.textContent);
     expect(spans[0]).toBe("Quant Ecosystem Portal · Research · confidential");
     expect(spans[1]).toBe(`${RUN} · report 2024-09-22 10:13Z`);
@@ -861,7 +855,19 @@ describe("S09 Run Report — reading", () => {
     server({ detail: [problem(status, code)] });
     renderRoute();
     const copy = REPORT_REFUSAL_COPY.report[status];
-    await screen.findByText(copy);
+    if (state === "denied" && status !== 401) {
+      /* W1: one line and the Library exit; the F-04 sentence is the tooltip, and there is nothing to print. */
+      const line = await screen.findByText("Run not available.");
+      expect(line.getAttribute("title")).toBe(copy);
+      expect(document.querySelector("[data-run-exit-bar]")!.querySelectorAll("[data-exit]")).toHaveLength(1);
+      expect(document.querySelector('[data-exit="library"]')!.getAttribute("href")).toBe("/research/quantbt/runs");
+      expect(document.querySelector('[data-screen="run-report"]')?.getAttribute("data-run-phase")).toBe("unavailable");
+      expect(document.querySelector('[data-action="print"]')).toBeNull();
+      expect(document.querySelector('[data-panel="noprint-bar"]')).toBeNull();
+      expect(document.querySelector(`a[href*="${RUN}"]`)).toBeNull();
+    } else {
+      await screen.findByText(copy);
+    }
     expect(document.querySelector('[data-screen="run-report"]')?.getAttribute("data-report-state")).toBe(state);
     expect(document.body.textContent).not.toContain("alice");
     expect(document.body.textContent).not.toContain("server prose");
@@ -1058,7 +1064,7 @@ describe("S09 Run Report — pure parts and source rules", () => {
     const module = readFileSync(join(process.cwd(), "src", "features", "quantbt", "QuantBTModule.tsx"), "utf8");
     expect(module).toContain('<Route path="runs/:runId/report" element={<ReportRoute />} />');
     const execute = readFileSync(join(process.cwd(), "src", "research", "ExecuteDetail.tsx"), "utf8");
-    expect(execute).toMatch(/to=\{withWindow\(deepDiveHref\(`\/research\/quantbt\/runs\/\$\{run\}\/report`, \{ \.\.\.cursor, stage: "execute" \}\), windowKey\)\}\s+className="mono text-\[10px\]"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
+    expect(execute).toMatch(/to=\{reportHref\(runId, \{ cursor, window: [^}]+\}\)\}\s+className="mono text-\[10px\]"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
     const hub = readFileSync(join(process.cwd(), "src", "research", "EvidenceFlow.tsx"), "utf8");
     expect(hub).toContain('data-action="generate-report"');
     expect(hub).toContain('data-action="release-candidate"');

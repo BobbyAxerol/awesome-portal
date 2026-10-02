@@ -7,6 +7,7 @@
  * never through a snapshot image.
  */
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CANCEL_BODY, FOLLOW_SLACK_PX, RunProgress, SSE_LIVE, SSE_POLL, SSE_RESTING, consoleStamp } from "./RunProgress";
@@ -135,6 +136,7 @@ const OK = researchState({ kind: "ok", rowCount: 1 });
 function view(overrides: Partial<React.ComponentProps<typeof RunProgress>> = {}) {
   const r = overrides.read === undefined ? read() : overrides.read;
   return render(
+    <MemoryRouter>
     <RunProgress
       runId="run_01"
       read={r}
@@ -149,7 +151,8 @@ function view(overrides: Partial<React.ComponentProps<typeof RunProgress>> = {})
       cancelling={false}
       onCancel={vi.fn()}
       {...overrides}
-    />,
+    />
+    </MemoryRouter>,
   );
 }
 
@@ -311,7 +314,7 @@ describe("FE-S03-03 / CG-P11-03 — the run meta strip reads the progress read's
     expect($('[data-meta="route"]').textContent).toBe("route signal_notional");
     expect($('[data-meta="engine"]').textContent).toContain("engine er_quantbt_111");
     expect($('[data-meta="engine"]').textContent).toContain("sha256:909514…");
-    expect(within(strip).getByText("RUNNING").getAttribute("data-status-pill")).toBe("RUNNING");
+    expect(within(strip).getByText("running").getAttribute("data-status-pill")).toBe("RUNNING");
   });
 
   it("renders a null fact as not published, never as a guess", () => {
@@ -399,7 +402,7 @@ describe("FE-S03-05 — hand-off with the cursor", () => {
       "/research/quantbt/runs/run_01/split#fold=1",
       "/research/quantbt/runs/run_01/search#fold=1",
       "/research/quantbt/runs/run_01/freeze#fold=1",
-      "/research/quantbt/runs/run_01/evidence#stage=execute&fold=1",
+      "/research/quantbt/runs/run_01/execute#stage=execute&fold=1",
       "/research/quantbt/runs/run_01/evidence#stage=claim&fold=1",
     ]);
     // A run without an issued claim does not say claims were issued (DQ-15).
@@ -508,6 +511,7 @@ describe("FE-S03-11 — numbers, bar and motion", () => {
     const { rerender } = view({ transport: "stream" });
     expect(screen.getByText(SSE_LIVE)).toBeTruthy();
     rerender(
+      <MemoryRouter>
       <RunProgress
         runId="run_01"
         read={read()}
@@ -521,7 +525,8 @@ describe("FE-S03-11 — numbers, bar and motion", () => {
         onPinFold={vi.fn()}
         cancelling={false}
         onCancel={vi.fn()}
-      />,
+      />
+      </MemoryRouter>,
     );
     expect(screen.getByText(SSE_POLL)).toBeTruthy();
     expect($("[data-transport] span").style.background).toBe("var(--ink-faint)");
@@ -721,7 +726,7 @@ describe("FE-S03-09 / FE-S03-10 — states and attempts", () => {
       state: { state: "terminal", reason: "Not found.", mayRetry: false, retainsContent: false },
     });
     expect($("[data-run-not-found]")).toBeTruthy();
-    expect(screen.getByText("Open Run Library →").getAttribute("href")).toBe("/research/quantbt/runs");
+    expect($("[data-exit='library']").getAttribute("href")).toBe("/research/quantbt/runs");
   });
 
   it("draws one screen-level notice instead of one per card", () => {

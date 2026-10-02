@@ -41,6 +41,14 @@ import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
 import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 
+/* W1: the stage pages read the Library status only when a lane refuses; these tests do not cover that read. */
+vi.mock("./useRunStatus", () => ({
+  useRunStatus: () => ({ state: "idle" }),
+  setRunStatusSeed: () => undefined,
+  clearRunStatusCache: () => undefined,
+}));
+
+
 afterEach(cleanup);
 
 function codeOf(name: string): string {
@@ -803,7 +811,7 @@ describe("RF-06 FE-X-11 — states", () => {
     stub(() => [404, { error: { code: "RESEARCH_SEARCH_NOT_FOUND", message: "Research run was not found." } }]);
     const { container } = mountRoute("");
     await waitFor(() => expect(container.querySelector("[data-run-not-found]")).toBeTruthy());
-    expect(container.querySelector("[data-action='run-library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(container.querySelector("[data-exit='library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
     expect(container.querySelector("[data-action='next-stage']")).toBeNull();
     expect(container.querySelector("[data-rules-footer]")).toBeNull();
   });

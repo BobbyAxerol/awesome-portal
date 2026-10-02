@@ -52,11 +52,12 @@ describe("S10 traced children", () => {
     expect(isHideableProbe({ presentation_kind: "STORIED", intent_kind: "NEW" })).toBe(false);
   });
 
-  it("a probe-class clone is on screen by default; only the plain probe waits for the toggle", async () => {
+  it("a probe-class clone is on screen by default, and so is a recent plain probe", async () => {
     await mount(HEALTHY);
     expect(ids()).toContain("att_02"); // PROBE + CLONE_FOR_EXPERIMENT
-    expect(ids()).not.toContain("att_07"); // PROBE + NEW
-    expect(toggle().textContent).toBe("show 1 probe attempts");
+    /* W1 B4: the fixture has 7 attempts, all among the newest 8, so even the plain probe is listed. */
+    expect(ids()).toContain("att_07"); // PROBE + NEW, recent
+    expect(toggle().textContent).toBe("older probes (0)");
   });
 
   it("a probe-class reproduction is on screen too, and with no hideable probe the toggle is inert", async () => {
@@ -65,6 +66,6 @@ describe("S10 traced children", () => {
     await mount(body);
     expect(ids()).toContain("att_07");
     expect(toggle().disabled).toBe(true);
-    expect(toggle().textContent).toBe("show 0 probe attempts");
+    expect(toggle().textContent).toBe("older probes (0)");
   });
 });

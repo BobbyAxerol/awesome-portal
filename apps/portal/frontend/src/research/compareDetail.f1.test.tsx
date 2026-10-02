@@ -12,6 +12,7 @@
  *    (OOS)" and mixed scopes under one header; the config diff compared every column
  *    with a baseline this screen picked, without saying so.
  */
+import { runStatusWord } from "./runTerminalState";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -183,7 +184,7 @@ describe("S13 ladder pill — the version's lifecycle is not the run's state", (
     for (const item of body.result.attempts) {
       const pill = document.querySelector(`[data-ladder-run="${item.run_id}"] [data-life]`) as HTMLElement;
       expect(pill.textContent).toBe(`version ${item.alpha_version_lifecycle.value}`);
-      expect(pill.getAttribute("title")).toContain(`not the run's state (${item.run_state})`);
+      expect(pill.getAttribute("title")).toContain(`not the run's state (${runStatusWord(item.run_state)})`);
     }
     expect([...document.querySelectorAll("[data-ladder-run] [data-life]")].map((el) => el.textContent)).not.toContain("ACTIVE");
   });

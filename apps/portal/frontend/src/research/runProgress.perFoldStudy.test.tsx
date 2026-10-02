@@ -73,7 +73,7 @@ describe("PER_FOLD_STUDY keeps both native ids, and the ordinal is never a trial
     view({ 1: perFold() });
     const note = $('[data-fold-note="1"]')!;
     expect(note.textContent).toContain("inner J 0.420");
-    expect(note.textContent).toContain("study study-s1 · trial 2");
+    expect(note.textContent).toContain("study study-s1 · source 2");
     expect(note.textContent).not.toContain("trial 5");
     const chip = note.querySelector("[data-per-fold-trial]")!;
     expect(chip.getAttribute("data-study-id")).toBe("study-s1");
@@ -84,7 +84,7 @@ describe("PER_FOLD_STUDY keeps both native ids, and the ordinal is never a trial
   it("typed absence: an id the source did not publish says so, and never falls back to the ordinal", () => {
     view({ 1: perFold({ study_id: undefined, source_trial_id: undefined }) });
     const note = $('[data-fold-note="1"]')!;
-    expect(note.textContent).toContain("study id not published · trial id not published");
+    expect(note.textContent).toContain("study id not published · source id not published");
     expect(note.textContent).not.toMatch(/trial 5\b/);
     expect(note.querySelector("[data-per-fold-trial]")!.getAttribute("title")).toContain("source trial id not published");
   });
@@ -92,14 +92,14 @@ describe("PER_FOLD_STUDY keeps both native ids, and the ordinal is never a trial
   it("a running per-fold fold shows the live study and source trial, not the ordinal", () => {
     view({}, { foldTrials: { 3: 7 }, foldTrialIds: { 3: { studyId: "study-s3", sourceTrialId: "1", ordinal: 7 } } });
     const note = $('[data-fold-note="3"]')!;
-    expect(note.textContent).toBe("study study-s3 · trial 1 · running");
+    expect(note.textContent).toBe("study study-s3 · source 1 · running");
     expect(note.querySelector("[data-per-fold-trial]")!.getAttribute("title")).toContain("display ordinal 7 is cumulative");
   });
 
   it("the evidence cursor chip carries both ids too", () => {
     view({ 1: perFold() }, { foldCursor: 1 });
     const chip = $("[data-cursor-trial]")!;
-    expect(chip.textContent).toContain("study study-s1 · trial 2");
+    expect(chip.textContent).toContain("study study-s1 · source 2");
     expect(chip.getAttribute("data-source-trial-id")).toBe("2");
   });
 

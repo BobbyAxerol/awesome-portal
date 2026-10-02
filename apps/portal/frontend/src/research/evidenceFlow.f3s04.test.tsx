@@ -57,14 +57,14 @@ describe("F3 · S04", () => {
 
   it("04-H: the Split tab subtitle carries the served fold count", () => {
     const { container } = view(W3B.hub_evidence);
-    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("DONE · 2 folds");
+    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("done · 2 folds");
   });
 
   it("04-H: with no fold count served the subtitle keeps the cursor fold, and invents no seal", () => {
     const hub = { ...W3B.hub_evidence, core: { ...W3B.hub_evidence.core, fold_navigation: undefined } } as unknown as EvidenceHub;
     const { container } = view(hub);
     const sub = container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent ?? "";
-    expect(sub).toBe("DONE · fold 1");
+    expect(sub).toBe("done · fold 1");
     expect(sub).not.toMatch(/holdout|sealed/i);
   });
 

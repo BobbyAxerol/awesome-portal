@@ -55,10 +55,15 @@ const ALPHAS = "/api/v1/research/alphas";
 /** The contract's own ceiling for one graph, and the hook's default. */
 export const LINEAGE_LIMIT_MAX = 128;
 
-export function lineageHref(alphaId: string, options: { attempt?: string | null; av?: string | null } = {}): string {
+export function lineageHref(
+  alphaId: string,
+  options: { attempt?: string | null; av?: string | null; run?: string | null; probes?: boolean } = {},
+): string {
   const params = new URLSearchParams();
   if (options.av) params.set("av", options.av);
   if (options.attempt) params.set("attempt", options.attempt);
+  if (options.run) params.set("run", options.run);
+  if (options.probes) params.set("probes", "1");
   const query = params.toString();
   return "/research/quantbt/alphas/" + encodeURIComponent(alphaId) + "/lineage" + (query ? `?${query}` : "");
 }

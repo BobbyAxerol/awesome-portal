@@ -20,6 +20,7 @@ import { useEntryAnimation, useEntryRef, useReadout } from "./chartLife";
 import type { CurrentSourceSearch } from "./searchClient";
 import { reasonCodeSentence } from "./researchRefusal";
 import { cleanParameters } from "./searchParamText";
+import { trialLabel } from "./trialLabel";
 
 export type Surface = NonNullable<CurrentSourceSearch["surface"]>;
 export type DeclaredSpace = NonNullable<CurrentSourceSearch["declared_space"]>;
@@ -322,11 +323,11 @@ export function SurfaceScatter({
           objective low → high
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-[9px] w-[9px] rounded-full" style={{ border: "2px solid var(--good)" }} />θ* #{selected ?? "—"}
+          <span className="inline-block h-[9px] w-[9px] rounded-full" style={{ border: "2px solid var(--good)" }} />θ* · {trialLabel({ sourceId: selected }) ?? "source not published"}
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-[9px] w-[9px] rounded-full" style={{ border: "2px solid var(--bad)" }} />
-          best IS #{best ?? "—"}
+          best IS · {trialLabel({ sourceId: best }) ?? "source not published"}
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-[8px] w-[8px] rounded-full" style={{ border: "1px dashed var(--ink-faint)" }} />

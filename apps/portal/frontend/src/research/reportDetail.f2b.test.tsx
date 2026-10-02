@@ -54,12 +54,13 @@ describe("F2b S09 — the bar is the way out and back in", () => {
     renderRoute(body.run_id);
     await screen.findByText("Claim passport");
     const run = body.run_id;
-    expect(bar().querySelector('[data-action="back-to-hub"]')?.getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${run}/evidence#stage=claim`));
-    expect(bar().querySelector('[data-action="back-to-execute"]')?.getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${run}/execute`));
+    /* W1 B3: arrived with no cursor, every way back carries none (it used to invent fold=1). */
+    expect(bar().querySelector('[data-action="back-to-hub"]')?.getAttribute("href")).toBe(`/research/quantbt/runs/${run}/evidence`);
+    expect(bar().querySelector('[data-action="back-to-execute"]')?.getAttribute("href")).toBe(`/research/quantbt/runs/${run}/execute`);
     expect(bar().querySelector('[data-action="release-candidate"]')?.getAttribute("href")).toBe(`/research/quantbt/runs/${run}/release-candidate`);
     const lineage = bar().querySelector('[data-action="attempt-lineage"]')!;
     expect(lineage.getAttribute("href")).toBe(
-      "/research/quantbt/alphas/delta-rsi-polynomial-alpha/lineage?av=av_delta_rsi_polynomial_alpha_1_0_0",
+      `/research/quantbt/alphas/delta-rsi-polynomial-alpha/lineage?av=av_delta_rsi_polynomial_alpha_1_0_0&run=${run}`,
     );
     expect(lineage.getAttribute("title")).toContain("delta-rsi-polynomial-alpha");
     expect(bar().querySelector('[aria-current="page"]')?.textContent).toBe("Run Report");
@@ -68,11 +69,18 @@ describe("F2b S09 — the bar is the way out and back in", () => {
   it("carries the evidence cursor (fold) from the arriving hash into the hub and Execute links", async () => {
     const body = fixture();
     serve(body);
-    window.location.hash = "#stage=claim&fold=2";
-    renderRoute(body.run_id);
+    renderRoute(body.run_id, "#stage=execute&fold=2&trial=351&params=abc");
     await screen.findByText("Claim passport");
-    expect(bar().querySelector('[data-action="back-to-hub"]')?.getAttribute("href")).toContain("fold=2");
+    const hub = bar().querySelector('[data-action="back-to-hub"]')!.getAttribute("href")!;
+    expect(hub).toContain("fold=2");
+    expect(hub).toContain("trial=351");
+    /* The hub is Stage 5 whatever stage the cursor was on; Execute is Stage 4. */
+    expect(hub).toContain("stage=claim");
     expect(bar().querySelector('[data-action="back-to-execute"]')?.getAttribute("href")).toContain("fold=2");
+    expect(bar().querySelector('[data-action="back-to-execute"]')?.getAttribute("href")).toContain("stage=execute");
+    /* Screen 11 is reached with the same cursor, so its way back is the hub the reader left. */
+    expect(bar().querySelector('[data-action="release-candidate"]')?.getAttribute("href")).toContain("fold=2");
+    expect(document.querySelector('[data-action="promotion-release-candidate"]')?.getAttribute("href")).toContain("trial=351");
   });
 
   it("draws no lineage link when the report's alpha fact is absent or not an identifier", () => {

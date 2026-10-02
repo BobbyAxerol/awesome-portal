@@ -22,7 +22,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSPrope
 import { Link } from "react-router-dom";
 
 import { Formula } from "./Formula";
-import type { AtlasResponse } from "./foundationClient";
+import { FOUNDATION_REFUSAL_SENTENCE, type AtlasResponse } from "./foundationClient";
 import { encodeInspectionCursor } from "./inspectionCursor";
 import {
   ENGINE_SCHEDULES,
@@ -531,7 +531,7 @@ function oosStateColor(state: string): string {
 }
 
 /** HiFi column 3 · SCHEDULE → CLAIM: the claim pair, the OOS state, then the rest of the facts under one disclosure. */
-function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
+function ScheduleClaim({ fact, certCapShared = false }: { fact: AtlasScheduleFact; certCapShared?: boolean }) {
   const tone = claimTone(fact.chronological_validation_claim);
   return (
     <div className="flex flex-col gap-1.5" data-schedule-claim={fact.schedule}>
@@ -558,7 +558,7 @@ function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
       ) : null}
       <details className="text-[10.5px]" data-claim-facts={fact.schedule}>
         <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }}>
-          causality, OOS use, params, cert cap
+          causality, OOS use, params
         </summary>
         <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5">
           <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>causality</dt>
@@ -570,10 +570,14 @@ function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
           </dd>
           <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>params</dt>
           <dd className="mono min-w-0 text-[10px] [overflow-wrap:anywhere]">{fact.params_semantics}</dd>
-          <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>cert cap</dt>
-          <dd className="min-w-0 [overflow-wrap:anywhere]">
-            <NotPublished fact={fact.cert_cap} label="cert_cap" />
-          </dd>
+          {certCapShared ? null : (
+            <>
+              <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-soft)" }}>cert cap</dt>
+              <dd className="min-w-0 [overflow-wrap:anywhere]">
+                <NotPublished fact={fact.cert_cap} label="cert_cap" />
+              </dd>
+            </>
+          )}
         </dl>
         <Locators sources={fact.source} />
       </details>
@@ -856,11 +860,13 @@ export interface ModeCardProps {
   onSchedule: (schedule: string) => void;
   /** A run to open Search & Selection for, when the Atlas was reached from one. */
   runId: string | null;
+  /** W1: every mode publishes the same absent cert cap; the tab says it once and the card keeps neither the chip nor the row. */
+  certCapShared?: boolean;
   /** 12-3: the run's own mode × schedule when it is known; `undefined` when the caller did not read it. */
   runCell?: AtlasRunCell;
 }
 
-export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCardProps) {
+export function ModeCard({ mode, schedule, onSchedule, runId, runCell, certCapShared = false }: ModeCardProps) {
   const facts = mode.facts ?? null;
   const fact = facts?.schedules.find((item) => item.schedule === schedule) ?? null;
   const known = runCell?.state === "known" ? runCell : null;
@@ -887,14 +893,16 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
           {mode.display_name}
         </span>
         {/* CG-P04-05: no per-mode cap is published; the chip keeps the HiFi's place and says so. */}
-        <span
-          className="mono rounded-[3px] border border-dashed px-1.5 text-[9.5px] font-bold"
-          style={{ borderColor: "var(--line-strong)", color: "var(--ink-soft)" }}
-          title={fact && fact.cert_cap.state === "NOT_PUBLISHED" ? fact.cert_cap.reason : "no certification cap is published for this mode"}
-          data-cert-cap="not-published"
-        >
-          no cert cap
-        </span>
+        {certCapShared ? null : (
+          <span
+            className="mono rounded-[3px] border border-dashed px-1.5 text-[9.5px] font-bold"
+            style={{ borderColor: "var(--line-strong)", color: "var(--ink-soft)" }}
+            title={fact && fact.cert_cap.state === "NOT_PUBLISHED" ? fact.cert_cap.reason : "no certification cap is published for this mode"}
+            data-cert-cap="not-published"
+          >
+            no cert cap
+          </span>
+        )}
         {thisRun ? (
           <span className="mono text-[9px]" style={{ color: "var(--accent)" }} data-this-run-marker title={`${runId} ran ${known?.mode ?? ""} × ${known?.schedule ?? "schedule not published"}`}>
             ← this run
@@ -1044,7 +1052,7 @@ export function ModeCard({ mode, schedule, onSchedule, runId, runCell }: ModeCar
             })}
           </span>
           {fact ? (
-            <ScheduleClaim fact={fact} />
+            <ScheduleClaim fact={fact} certCapShared={certCapShared} />
           ) : (
             <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-facts-unpublished title="This manifest publishes no engine facts for this mode × schedule.">
               engine facts — not published
@@ -1074,6 +1082,18 @@ export function sharedAvoidWhen(modes: readonly AtlasMode[]): AtlasNotPublishedF
   return facts.every((fact) => (fact as AtlasNotPublishedFact).state === "NOT_PUBLISHED" && (fact as AtlasNotPublishedFact).reason === first.reason)
     ? first
     : null;
+}
+
+/**
+ * W1: the cert cap every mode shares. One chip for the tab instead of one per card, only when every
+ * schedule of every mode publishes the same NOT_PUBLISHED reason; a manifest that publishes real caps keeps its own.
+ */
+export function sharedCertCap(modes: readonly AtlasMode[]): AtlasNotPublishedFact | null {
+  const caps = modes.flatMap((mode) => (mode.facts?.schedules ?? []).map((fact) => fact.cert_cap));
+  if (caps.length === 0 || modes.some((mode) => !mode.facts)) return null;
+  const first = caps[0];
+  if (first.state !== "NOT_PUBLISHED") return null;
+  return caps.every((cap) => cap.state === "NOT_PUBLISHED" && cap.reason === first.reason) ? first : null;
 }
 
 function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
@@ -1146,8 +1166,20 @@ function ModesTab({
   runCell?: AtlasRunCell;
 }) {
   const known = runCell?.state === "known" ? runCell : null;
+  const certCap = sharedCertCap(doc.modes);
   return (
     <div className="flex flex-col gap-3.5">
+      {certCap ? (
+        <span
+          className="mono self-start rounded-[3px] border border-dashed px-1.5 text-[9.5px] font-bold"
+          style={{ borderColor: "var(--line-strong)", color: "var(--ink-soft)" }}
+          title={`${certCap.reason} — the same for every mode`}
+          data-cert-cap="not-published"
+          data-cert-cap-shared
+        >
+          no cert cap
+        </span>
+      ) : null}
       <div className="flex flex-wrap gap-3.5">
         {/* Q4 / D-4: gold, as the HiFi has it — a claim warning, not an accent. */}
         <div
@@ -1203,6 +1235,7 @@ function ModesTab({
             onSchedule={(schedule) => onSchedule(mode.mode_id, schedule)}
             runId={runId}
             runCell={runCell}
+            certCapShared={certCap !== null}
           />
         );
       })}
@@ -1486,6 +1519,29 @@ export function EngineAtlas({
     },
     [onLocationChange],
   );
+
+  /* W1: an unknown release (or selection) is one line and a way out: not the default atlas, not "EMPTY", no dead tabs. */
+  if (!doc && !embedded && state.state === "empty") {
+    const releaseMissing = state.reason === FOUNDATION_REFUSAL_SENTENCE.RESEARCH_FOUNDATION_RELEASE_NOT_FOUND;
+    return (
+      <div data-screen="engine-atlas" data-atlas-not-found className="flex min-w-0 flex-col gap-2.5" style={{ background: "var(--paper)", color: "var(--ink)" }}>
+        <h1 className="text-[22px] font-light tracking-[-.01em]" style={{ fontFamily: "Newsreader, Georgia, serif" }}>
+          Engine Atlas
+        </h1>
+        <p role="status" className="text-[12px]" data-atlas-not-found-message title={state.reason}>
+          {releaseMissing ? "Release not found." : "Not found."}
+        </p>
+        <span className="flex flex-wrap items-center gap-x-3 text-[11px]" data-atlas-exits>
+          <Link to="/research/quantbt/atlas" style={{ color: "var(--accent)" }} data-back-to-current>
+            Current release
+          </Link>
+          <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }} data-exit-library>
+            Run Library
+          </Link>
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div

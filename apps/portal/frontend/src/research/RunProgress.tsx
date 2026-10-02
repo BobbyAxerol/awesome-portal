@@ -57,6 +57,10 @@ import { StageLedger, isFixedProfileScope, utcClock } from "./StageLedger";
 import type { FoldTrialIdentity, LiveBestObjective, Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
+import { RunExitBar } from "./RunExitBar";
+import { libraryHref } from "./runLinks";
+import { runStatusWord, runTerminalState } from "./runTerminalState";
+import { trialLabel, trialTitle } from "./trialLabel";
 import { ShortId } from "./ShortId";
 import { reasonCodeSentence, REFUSAL_COPY } from "./researchRefusal";
 
@@ -340,7 +344,7 @@ function StatusChip({ status, live }: { status: EffectiveStatus; live: boolean }
         color: tone.fg,
       }}
     >
-      {status}
+      {runStatusWord(status)}
     </span>
   );
 }
@@ -402,7 +406,7 @@ function stageTarget(key: Stage["key"]): StageCursorTarget {
     case "S3":
       return { path: "freeze" };
     case "S4":
-      return { path: "evidence", stage: "execute" };
+      return { path: "execute", stage: "execute" };
     default:
       return { path: "evidence", stage: "claim" };
   }
@@ -941,7 +945,7 @@ export function perFoldTrialTitle(trial: PerFoldTrial): string {
 function PerFoldTrialChip({ trial, suffix = "" }: { trial: PerFoldTrial; suffix?: string }) {
   return (
     <span data-per-fold-trial title={perFoldTrialTitle(trial)} data-study-id={trial.studyId ?? undefined} data-source-trial-id={trial.sourceTrialId ?? undefined}>
-      study {trial.studyId ?? <Absent what="id not published" />} · trial {trial.sourceTrialId ?? <Absent what="id not published" />}
+      study {trial.studyId ?? <Absent what="id not published" />} · source {trial.sourceTrialId ?? <Absent what="id not published" />}
       {suffix}
     </span>
   );
@@ -958,7 +962,7 @@ function foldNote(
   if (fold.state === "RUNNING") {
     if (perFold !== null) return <PerFoldTrialChip trial={perFold} suffix=" · running" />;
     const trial = foldTrials[fold.fold];
-    return trial === undefined ? "running" : `trial ${count(trial)} · running`;
+    return trial === undefined ? "running" : `${trialLabel({ ordinal: count(trial) })} · running`;
   }
   if (fold.state === "FAILED") return "failed";
   const selection = fold.selection ?? NOT_PUBLISHED_SELECTION;
@@ -982,14 +986,14 @@ function foldNote(
         title={[
           selection.objective,
           selection.params_digest,
-          selection.source_trial_id !== undefined ? `source trial id ${selection.source_trial_id} (zero-based); trial ${count(selection.trial)} is the display ordinal` : null,
+          selection.source_trial_id !== undefined ? trialTitle : null,
         ]
           .filter(Boolean)
           .join(" · ")}
         data-fold-selection={selection.scope ?? undefined}
         data-source-trial-id={selection.source_trial_id}
       >
-        {objective} · trial {count(selection.trial)} · {paramsTag(selection.params_digest)}
+        {objective} · {trialLabel({ ordinal: count(selection.trial), sourceId: selection.source_trial_id })} · {paramsTag(selection.params_digest)}
       </span>
     );
   }
@@ -1236,16 +1240,13 @@ function CursorRow({
         {perFold !== null ? (
           <span style={{ color: "var(--ink)" }}>
             {perFold.studyId ?? <Absent what="id not published" />}
-            {" · trial "}
+            {" · source "}
             {perFold.sourceTrialId ?? <Absent what="id not published" />}
           </span>
         ) : trial === null ? (
           <NotPublished reason="The progress read publishes no selected trial for this fold." />
         ) : (
-          <span style={{ color: "var(--ink)" }}>
-            {"#"}
-            {trial}
-          </span>
+          <span style={{ color: "var(--ink)" }}>{trial}</span>
         )}
       </span>
       <span style={CHIP} data-cursor-params>
@@ -1919,7 +1920,7 @@ function ClaimPassport({
         {handoff !== null ? (
           <Field label="hand-off cursor" name="handoff">
             <span style={valueStyle(issued ? "issued" : "neutral")} data-handoff-cursor title={handoff.params_digest}>
-              fold {count(handoff.fold)} · trial {count(handoff.trial)} · {paramsTag(handoff.params_digest)}
+              fold {count(handoff.fold)} · {trialLabel({ ordinal: count(handoff.trial) })} · {paramsTag(handoff.params_digest)}
             </span>
           </Field>
         ) : null}
@@ -2477,11 +2478,7 @@ export function RunProgress(props: RunProgressProps) {
       <div data-screen="run-progress" data-run-not-found style={ROOT}>
         <Header runId={runId} title="Run not available" />
         <section style={{ ...CARD, gap: 8 }}>
-          <h2 style={{ ...CARD_TITLE, margin: 0 }}>run not available</h2>
-          <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>{REFUSAL_COPY.denied}</p>
-          <a href={`${QUANTBT_ROOT}/runs`} style={{ fontFamily: MONO, fontSize: 10.5 }}>
-            Open Run Library →
-          </a>
+          <RunExitBar runId={runId} state={runTerminalState({ status: null, read: "not-found" })} />
         </section>
       </div>
     );
@@ -2490,6 +2487,7 @@ export function RunProgress(props: RunProgressProps) {
   /* --------------------------------------------- run without a source */
   if (read && snapshot === null && (read.availability === "QUEUED_NO_SOURCE" || read.availability === "CANCELLED_BEFORE_SOURCE")) {
     const queued = read.availability === "QUEUED_NO_SOURCE";
+    const noSourceState = runTerminalState({ status: queued ? "QUEUED" : "CANCELLED", read: "ok" });
     return (
       <div data-screen="run-progress" data-no-source={read.availability} style={ROOT}>
         <Header
@@ -2498,7 +2496,7 @@ export function RunProgress(props: RunProgressProps) {
           right={face.state === "never-opened" ? undefined : <TransportDot transport={transport} live={live} face={face} />}
         />
         <RunMetaStrip runId={runId} identity={identity} status={statusSlot} />
-        <section style={{ ...CARD, gap: 8 }}>
+        <section style={{ ...CARD, gap: 8 }} data-run-phase={noSourceState.phase}>
           <h2
             style={{ ...CARD_TITLE, margin: 0 }}
             title={
@@ -2506,8 +2504,9 @@ export function RunProgress(props: RunProgressProps) {
                 ? "The run is queued; no source progress has been published yet. This page updates on its own when a worker claims it."
                 : "The run was cancelled before source progress began. No progress, artifact or claim exists for it."
             }
+            aria-label={noSourceState.tip ?? undefined}
           >
-            {queued ? "queued — waiting for a worker" : "cancelled before the source reported"}
+            {noSourceState.banner}
           </h2>
           {read.current.terminal_materialization === "PENDING" && !queued ? (
             <span data-terminal-materialization style={{ fontSize: 10.5, color: "var(--ink-faint)" }} title="The cancellation is recorded; its terminal record is still being written.">
@@ -2520,6 +2519,7 @@ export function RunProgress(props: RunProgressProps) {
               <NewRunFrom runId={runId} read={read} />
             </span>
           ) : null}
+          <RunExitBar runId={runId} state={{ ...noSourceState, banner: null }} hide={["progress", "new-run"]} />
         </section>
       </div>
     );
@@ -2538,7 +2538,7 @@ export function RunProgress(props: RunProgressProps) {
   const handoffLabel = cursor.fold && cursor.trial ? `fold ${cursor.fold} · trial ${cursor.trial}` : null;
   const cursorFold = folds.find((f) => f.fold === foldCursor) ?? null;
   const terminalStatus = status === "FAILED" || status === "CANCELLED";
-  const stateWord = status === "COMPLETED" ? "Run completed" : status === "FAILED" ? "Run failed" : status === "CANCELLED" ? "Run cancelled" : "Run progress";
+  const stateWord = status === "COMPLETED" || status === "FAILED" || status === "CANCELLED" ? `Run ${runStatusWord(status)}` : "Run progress";
   /* No read, no label: the heading never falls back to a raw id as prose. */
   const title = read === null && !runLabel ? stateWord : `${stateWord} — ${runLabel ?? shortId(runId)}`;
   const hasFoldLines = lines.length === 0 || lines.some((line) => line.fold !== null && line.fold !== undefined) || olderLines.some((line) => line.fold !== null && line.fold !== undefined);
@@ -2818,6 +2818,11 @@ export function RunProgress(props: RunProgressProps) {
         ) : null}
         <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8 }}>
           {read !== null && terminalStatus ? <NewRunFrom runId={runId} read={read} /> : null}
+          {read !== null && terminalStatus ? (
+            <a href={libraryHref()} data-exit="library" style={{ fontFamily: MONO, fontSize: 10 }}>
+              Library
+            </a>
+          ) : null}
           {read?.current.may_cancel && live ? (
             <button
               type="button"

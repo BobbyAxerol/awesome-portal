@@ -164,48 +164,56 @@ describe("F1 400-trial audit — 'no report sealed' is not 'you don't have acces
   it("the reader's own run with no sealed report says so, keeps the code in details, and the chip carries the label", async () => {
     const api = server({ report: NOT_FOUND, library: libraryPage([ROW]) });
     renderRoute(OWN);
-    await screen.findByText("No sealed report is available for this run.");
+    /* W1: the listed run's own status is the face — one line, three exits, no sheet, no Print. */
+    const line = await screen.findByText("Cancelled.");
     const root = document.querySelector('[data-screen="run-report"]') as HTMLElement;
     expect(root.getAttribute("data-report-state")).toBe("empty");
+    expect(root.getAttribute("data-run-phase")).toBe("cancelled");
+    expect(line.getAttribute("title")).toContain("nothing will arrive");
+    expect([...document.querySelectorAll("[data-run-exit-bar] [data-exit]")].map((el) => el.getAttribute("data-exit"))).toEqual(["progress", "new-run", "library"]);
     expect(document.body.textContent).not.toContain(REPORT_REFUSAL_COPY.report[404]);
     expect(document.body.textContent).not.toMatch(/don't have access/i);
-    expect(document.querySelector("[data-research-detail]")?.textContent).toContain("run status CANCELLED");
-    expect(document.querySelector("[data-research-detail]")?.textContent).toContain("RESEARCH_REPORT_NOT_FOUND");
+    expect(document.querySelector('[data-action="print"]')).toBeNull();
+    expect(document.querySelector('[data-panel="noprint-bar"]')).toBeNull();
     /* A cancelled run never seals: no retry is offered. */
     expect(screen.queryByRole("button", { name: "read again" })).toBeNull();
     /* The poll-by-ids is one request for this one run, and only after the 404. */
     expect(api.libraryCalls()).toHaveLength(1);
     expect(api.libraryCalls()[0]).toContain(`ids=${OWN}`);
-    /* With no report in hand the certification box describes nothing: it is unread, not "not a field of the report contract". */
-    expect(panel("header").querySelector("[data-cert-box]")?.getAttribute("data-cert-state")).toBe("NOT_READ");
-    expect(panel("header").querySelector("[data-cert-unread]")?.textContent).toBe("not read");
-    expect(panel("header").textContent).not.toContain("not a field of the report contract");
+    /* No certification box for a sheet that was never read (nothing to describe). */
+    expect(panel("header").querySelector("[data-cert-box]")).toBeNull();
     /* The title chip prints the R-… label the library row published, not the 37-character id. */
     await waitFor(() => expect(panel("header").querySelector("[data-run-chip] button")?.textContent).toBe("R-WFO-019"));
     expect(panel("header").querySelector("[data-run-chip] button")?.getAttribute("data-full-id")).toBe(OWN);
     expect(panel("header").textContent).not.toContain(OWN);
   });
 
-  it("a run still in progress with no report offers to read again; the 'read again' request is the report read, not the library", async () => {
+  it("a run still in progress with no report says Running. and offers Progress; no sheet and no Print", async () => {
     const api = server({ report: NOT_FOUND, library: libraryPage([{ ...ROW, status: "RUNNING" }]) });
     renderRoute(OWN);
-    await screen.findByText("No sealed report is available for this run.");
-    expect(screen.getByRole("button", { name: "read again" })).toBeTruthy();
+    await screen.findByText("Running.");
+    expect([...document.querySelectorAll("[data-run-exit-bar] [data-exit]")].map((el) => el.getAttribute("data-exit"))).toEqual(["progress", "library"]);
     expect(api.reportCalls()).toHaveLength(1);
   });
 
   it("a run the workspace does not list keeps the F-04 sentence exactly: a denial confirms nothing", async () => {
     server({ report: NOT_FOUND, library: libraryPage([]) });
     renderRoute("rrun_00000000000000000000000000000000");
-    await screen.findByText(REPORT_REFUSAL_COPY.report[404]);
+    const line = await screen.findByText("Run not available.");
+    expect(line.getAttribute("title")).toBe(REPORT_REFUSAL_COPY.report[404]);
     expect(document.querySelector('[data-screen="run-report"]')?.getAttribute("data-report-state")).toBe("denied");
     expect(document.body.textContent).not.toContain("No sealed report");
+    expect([...document.querySelectorAll("[data-run-exit-bar] [data-exit]")].map((el) => el.getAttribute("data-exit"))).toEqual(["library"]);
+    expect(document.querySelector('[data-action="print"]')).toBeNull();
+    /* No link names the missing run. */
+    expect(document.querySelector('a[href*="rrun_0000"]')).toBeNull();
   });
 
   it("when the library cannot be read nothing is concluded: the F-04 sentence stands", async () => {
     server({ report: NOT_FOUND, library: { status: 503, body: { error: { code: "X", message: "m" }, request_id: "r" } } });
     renderRoute(OWN);
-    await screen.findByText(REPORT_REFUSAL_COPY.report[404]);
+    const line = await screen.findByText("Run not available.");
+    expect(line.getAttribute("title")).toBe(REPORT_REFUSAL_COPY.report[404]);
     expect(document.querySelector('[data-screen="run-report"]')?.getAttribute("data-report-state")).toBe("denied");
   });
 
@@ -215,7 +223,8 @@ describe("F1 400-trial audit — 'no report sealed' is not 'you don't have acces
       library: libraryPage([ROW]),
     });
     renderRoute(OWN);
-    await screen.findByText(REPORT_REFUSAL_COPY.report[403]);
+    const line = await screen.findByText("Run not available.");
+    expect(line.getAttribute("title")).toBe(REPORT_REFUSAL_COPY.report[403]);
     await act(async () => {});
     expect(api.libraryCalls()).toHaveLength(0);
     expect(document.body.textContent).not.toContain("No sealed report");
@@ -244,8 +253,10 @@ describe("F1 400-trial audit — 'no report sealed' is not 'you don't have acces
 
     const empty = reportNoticeState(missing, { state: "listed", status: "COMPLETED" });
     expect(empty.state).toBe("empty");
-    expect(empty.reason).toBe("No sealed report is available for this run.");
-    expect(empty.detail).toBe("run status COMPLETED · report read answered 404 RESEARCH_REPORT_NOT_FOUND · request req_f1");
+    expect(empty.reason).toBe("No sealed report yet.");
+    expect(empty.detail).toBe("run status completed · report read answered 404 RESEARCH_REPORT_NOT_FOUND · request req_f1");
+    expect(reportNoticeState(missing, { state: "listed", status: "QUEUED" }).reason).toBe("Queued.");
+    expect(reportNoticeState(missing, { state: "listed", status: "CANCELLED" }).reason).toBe("Cancelled.");
     expect(empty.mayRetry).toBe(false);
 
     expect(reportNoticeState(missing, { state: "listed", status: null }).detail).toBe("report read answered 404 RESEARCH_REPORT_NOT_FOUND · request req_f1");

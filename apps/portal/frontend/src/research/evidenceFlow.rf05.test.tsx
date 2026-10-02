@@ -1401,7 +1401,7 @@ describe("RF-06 wave C — status and the progress banner follow the lifecycle",
   it("prints display_status in the pill, with the durable status behind it", () => {
     const { container } = view();
     const pill = container.querySelector("[data-run-status]");
-    expect(pill?.textContent).toBe("COMPLETED");
+    expect(pill?.textContent).toBe("completed");
     expect(pill?.getAttribute("data-durable-status")).toBe("READY");
     expect(pill?.getAttribute("title")).toContain("research.run-status-vocabulary.v1");
   });
@@ -1423,10 +1423,10 @@ describe("RF-06 wave C — status and the progress banner follow the lifecycle",
     const notice = container.querySelector("[data-not-ready]");
     expect(notice?.getAttribute("data-not-ready")).toBe("CANCELLED");
     expect(notice?.getAttribute("data-phase")).toBe("TERMINAL");
-    expect(notice?.textContent).toContain("This run was cancelled");
+    expect(notice?.textContent).toContain("Cancelled.");
     expect(container.querySelector("[data-action='watch-progress']")).toBeNull();
     expect(container.querySelector("[data-action='open-runs']")).toBeTruthy();
-    expect(container.querySelector("[data-run-status]")?.textContent).toBe("CANCELLED");
+    expect(container.querySelector("[data-run-status]")?.textContent).toBe("cancelled");
   });
 
   it("words a failed run by its outcome and points at its progress record", () => {
@@ -1494,10 +1494,10 @@ describe("RF-06 wave C — the passport renders the lane's typed answer", () => 
     expect(result.current.refusal).toBeNull();
   });
 
-  it("asks the lane about a cancelled run and renders its answer, rather than inferring a skip", () => {
+  it("W1: does not ask the lane about a cancelled or failed run that never sealed (a 409 on every visit)", () => {
     const ensurePassport = vi.fn();
     view({ hub: hubCancelled(), ensurePassport });
-    expect(ensurePassport).toHaveBeenCalled();
+    expect(ensurePassport).not.toHaveBeenCalled();
   });
 
   it("skips the read only while the run is in progress", () => {

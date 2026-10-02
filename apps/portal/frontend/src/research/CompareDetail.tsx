@@ -60,7 +60,6 @@
 import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import { releaseCandidateHref } from "./releaseCandidateClient";
 import { ResearchPanel } from "./ResearchPanel";
 import {
   CLAIM_RANK_MAP,
@@ -97,7 +96,9 @@ import {
 import { LineageLink, lineageHref } from "./LineageLink";
 import { foldBars, identicalSeriesGroups, LINES_PAST_FOLDS, SINGLE_OOS_ORDINAL, SINGLE_OOS_WINDOW } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
-import { foldLabel, formatAxisValue, formatCorrelation, formatMetric, shortId } from "./researchFormat";
+import { foldLabel, formatAxisValue, formatCorrelation, formatMetric as sharedFormatMetric, shortId } from "./researchFormat";
+import { hubHref, rcHref as releaseCandidateHref, reportHref } from "./runLinks";
+import { phaseOfStatus, runStatusWord } from "./runTerminalState";
 import { runLabelFor } from "./runLabels";
 import { BreakableCode } from "./reportText";
 import type { ResearchState } from "./state";
@@ -601,13 +602,24 @@ function runsHref(alphaId: string | null): string {
   return alphaId ? `${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(alphaId)}` : RUNS_ROOT;
 }
 
-function reportHref(runId: string): string {
-  return `${RUNS_ROOT}/${encodeURIComponent(runId)}/report`;
+/** S13 holds no evidence cursor, so no link here carries one (W1 link row 17). */
+const evidenceHref = (runId: string): string => hubHref(runId);
+
+/**
+ * A tiny negative served value rounds to "−0.000": the shared minus formatter prints the sign of the
+ * served number, and a rounded zero has none. Strip it here (NEEDS-SHARED: belongs in `formatMetric`).
+ */
+export function noNegativeZero(text: string | null): string | null {
+  return text === null ? null : text.replace(/^[−-](?=0(?:\.0+)?(?:%| pp)?$)/, "");
 }
 
-function evidenceHref(runId: string): string {
-  return `${RUNS_ROOT}/${encodeURIComponent(runId)}/evidence`;
-}
+const formatAxisValueGuarded = (value: string): string => noNegativeZero(formatAxisValue(value)) ?? value;
+
+const formatMetric = (value: string | number | null | undefined, unit: string | null | undefined): string | null =>
+  noNegativeZero(sharedFormatMetric(value, unit));
+
+/** Only a completed run has a report and a release candidate to open (W1 `has` rule). */
+const runHasOutputs = (run: Pick<CompareRun, "run_state">): boolean => phaseOfStatus(run.run_state) === "completed";
 
 /** A value the comparison did not publish: the state word and the reason, never a digit. */
 function Absent({ what, state, reason }: { what?: string; state: string; reason: string }) {
@@ -677,15 +689,13 @@ function ClaimChip({ claim }: { claim: CompareClaim }) {
       <span
         className="cp-claimchip"
         data-rank={entry.rank ?? "none"}
+        data-claim-origin={claim.origin}
         data-claim-rank={claim.rank ?? undefined}
         data-claim-source-text={claim.text ?? undefined}
         style={style}
         title={title}
       >
         {claim.family.split("_").map((part, index) => (index === 0 ? part : <Fragment key={index}>_<wbr />{part}</Fragment>))}
-        <span className="sr-only" data-claim-origin={claim.origin}>
-          {` (${detail})`}
-        </span>
       </span>
     </span>
   );
@@ -694,15 +704,20 @@ function ClaimChip({ claim }: { claim: CompareClaim }) {
 function RunState({ state }: { state: CompareRun["run_state"] }) {
   return (
     <span className="cp-st" data-state={state}>
-      {state}
+      {runStatusWord(state)}
     </span>
   );
 }
 
 function RunLine({ run, withState = false, skipLabel = false }: { run: CompareRun; withState?: boolean; skipLabel?: boolean }) {
   const label = runName(run);
+  const outputs = runHasOutputs(run);
+  const scheduled = run.schedule.availability.state === "AVAILABLE" && run.schedule.mode !== null && run.schedule.schedule !== null;
+  const scheduleText = scheduled ? `${run.schedule.mode} × ${run.schedule.schedule}` : null;
+  /* Ladder card: state, version and mode × schedule ride one tooltip; only a non-completed state and a typed absence stay visible. */
+  const detail = withState ? [runStatusWord(run.run_state), run.alpha_version_label, scheduleText].filter(Boolean).join(" · ") : undefined;
   return (
-    <span className="cp-faint" data-run-line>
+    <span className="cp-faint" data-run-line title={detail}>
       {skipLabel ? null : (
         <>
           <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id} title={`${run.run_id} — open in Evidence Flow`}>
@@ -711,33 +726,41 @@ function RunLine({ run, withState = false, skipLabel = false }: { run: CompareRu
           {" · "}
         </>
       )}
-      {withState ? (
+      {withState && !outputs ? (
         <>
-          {/* On a ladder card the hi-fi's pill is the lifecycle; the run's own state reads here. */}
+          {/* On a ladder card the hi-fi's pill is the lifecycle; the run's own state reads here only when it is not completed. */}
           <span className="cp-runstate" data-run-state={run.run_state} data-state={run.run_state}>
-            {run.run_state}
+            {runStatusWord(run.run_state)}
           </span>
-          {" · "}
         </>
       ) : null}
-      <Link to={reportHref(run.run_id)} data-report-link={run.run_id} title="Run report of this run (Screen 9)" aria-label={`Run report of ${label}`}>
-        report
-      </Link>
-      {" · "}
-      {/* Spec 13 §1 outbound 11: this run's release candidate (P21). */}
-      <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)" aria-label={`Release candidate of ${label}`}>
-        RC
-      </Link>
-      {" · "}
-      {run.alpha_version_label}
-      {" · "}
-      {/* CG-P20-02: the requested P08 mode × schedule. */}
-      {run.schedule.availability.state === "AVAILABLE" && run.schedule.mode !== null && run.schedule.schedule !== null ? (
-        <span data-schedule>
-          {run.schedule.mode} × {run.schedule.schedule}
-        </span>
+      {outputs ? (
+        <>
+          <Link to={reportHref(run.run_id)} data-report-link={run.run_id} title="Run report of this run (Screen 9)" aria-label={`Run report of ${label}`}>
+            report
+          </Link>
+          {" · "}
+          {/* Spec 13 §1 outbound 11: this run's release candidate (P21). */}
+          <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)" aria-label={`Release candidate of ${label}`}>
+            RC
+          </Link>
+        </>
+      ) : null}
+      {withState ? (
+        scheduled ? null : (
+          <>
+            {" · "}
+            <AvailabilityAbsent availability={run.schedule.availability} what="sched" />
+          </>
+        )
       ) : (
-        <AvailabilityAbsent availability={run.schedule.availability} what="sched" />
+        <>
+          {" · "}
+          {run.alpha_version_label}
+          {" · "}
+          {/* CG-P20-02: the requested P08 mode × schedule. */}
+          {scheduled ? <span data-schedule>{scheduleText}</span> : <AvailabilityAbsent availability={run.schedule.availability} what="sched" />}
+        </>
       )}
     </span>
   );
@@ -760,7 +783,7 @@ function Lifecycle({ run }: { run: CompareRun }) {
   const life = run.alpha_version_lifecycle;
   return life.value !== null && life.availability.state === "AVAILABLE" ? (
     /* F1 / CG-FG-S10-02 (same defect on S13): the pill is the ALPHA VERSION's lifecycle, never the run's state. */
-    <span className="cp-life" data-life={life.value} title={`alpha version lifecycle ${life.value} — not the run's state (${run.run_state})`}>
+    <span className="cp-life" data-life={life.value} title={`alpha version lifecycle ${life.value} — not the run's state (${runStatusWord(run.run_state)})`}>
       version {life.value}
     </span>
   ) : (
@@ -879,7 +902,7 @@ function gutterOf(plot: Plot): CSSProperties {
  * rounded to what fits a ~300px small multiple; the exact string stays in the
  * title and `data-exact`.
  */
-const equityAxis = formatAxisValue;
+const equityAxis = formatAxisValueGuarded;
 
 function AxisLabels({ plot }: { plot: Plot }) {
   return (
@@ -1257,7 +1280,7 @@ function Ladder({ result }: { result: AttemptResult }) {
 function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
   const [open, setOpen] = useState(false);
   if (runs.length === 0) return null;
-  const states = [...new Set(runs.map((run) => run.run_state))].map((state) => `${runs.filter((run) => run.run_state === state).length} ${state}`);
+  const states = [...new Set(runs.map((run) => run.run_state))].map((state) => `${runs.filter((run) => run.run_state === state).length} ${runStatusWord(state)}`);
   return (
     <div className="cp-unclaimed" data-unclaimed={runs.length}>
       <button type="button" className="cp-toggle" aria-pressed={open} aria-expanded={open} data-action="toggle-unclaimed" onClick={() => setOpen((value) => !value)}>
@@ -1276,7 +1299,7 @@ function Unclaimed({ runs }: { runs: readonly CompareRun[] }) {
                 </Link>
               </span>
               <span className="cp-runstate" data-state={run.run_state}>
-                {run.run_state}
+                {runStatusWord(run.run_state)}
               </span>
               <span className="cp-faint">{run.alpha_version_label}</span>
               <span className="cp-faint cp-crowwhy">claim not published · {reasonOf(run.claim.availability)}</span>
@@ -1919,6 +1942,9 @@ function RefusalCard({ result }: { result: PairRefused }) {
       </span>
       {/* QA S13 (UX-4, S13-8): one sentence; the run names are the chips beside the guard, never `rrun_` ids in prose. */}
       <span className="hint">{REFUSED_MARKETS_HINT}</span>
+      <Link to={RUNS_ROOT} data-action="open-run-library">
+        Run Library
+      </Link>
     </div>
   );
 }
@@ -2282,7 +2308,7 @@ const COMMON_WINDOW_SCOPE = "common window";
 /** 13-11: the difference of two percentages is percentage points, not a percentage. */
 export function ppDelta(delta: string): string {
   const shown = formatMetric(delta, "fraction");
-  return shown === null ? delta : `${shown.replace(/%$/, "")} pp`;
+  return shown === null ? delta : (noNegativeZero(`${shown.replace(/%$/, "")} pp`) ?? delta);
 }
 
 function commonRow(result: PairComparable, id: CommonMetric["key"], label: string): DeltaRowView {
@@ -2776,6 +2802,7 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
   const { compare, state } = controller;
   const result = compare?.result ?? null;
   const shownMode: CompareMode | null = result ? result.mode : mode;
+  const withheld = compare === null && state.state === "denied";
   const idleLink = idleReason ? (
     <Link to={runsHref(alphaId)} data-action="runs">
       open the run library →
@@ -2794,12 +2821,19 @@ export function CompareScreen({ alphaId, mode, runs, controller, onMode, idleRea
       aria-busy={controller.inFlight}
     >
       <style>{COMPARE_CSS}</style>
-      <Header alphaId={alphaId} compare={compare} active={mode} onMode={onMode} />
-      <Meta alphaId={alphaId} compare={compare} state={state.state} />
+      {withheld ? <h2 className="cp-title" data-panel="header">Compare</h2> : <Header alphaId={alphaId} compare={compare} active={mode} onMode={onMode} />}
+      {withheld ? null : <Meta alphaId={alphaId} compare={compare} state={state.state} />}
       {state.state !== "available" ? (
         <Notice controller={controller} idleLink={idleLink} idleReason={mode === "pair" ? null : idleReason} />
       ) : null}
-      {result ? (
+      {withheld ? (
+        /* A refusal (denied or unknown alpha): the notice and the way out, no mode tabs, no skeleton. */
+        <p data-action-row="exit">
+          <Link to={RUNS_ROOT} data-action="open-run-library">
+            Open Run Library
+          </Link>
+        </p>
+      ) : result ? (
         result.mode === "attempts" ? (
           <AttemptsBody result={result} alphaId={alphaId} />
         ) : result.mode === "markets" ? (

@@ -595,7 +595,7 @@ describe("D3 / audit 01-11 — the summary bar leads with the HiFi's status coun
     expect(statusCaption(
       { COMPLETED: 0, RUNNING: 0, FAILED: 0, QUEUED: 0, DRAFT: 0, CANCELLED: 0, RECOVERY_REQUIRED: 1 },
       1,
-    )).toBe("1 run · 1 recovery required");
+    )).toBe("1 run · 1 needs recovery");
   });
 });
 

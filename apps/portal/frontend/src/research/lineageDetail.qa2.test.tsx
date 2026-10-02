@@ -94,11 +94,10 @@ describe("QA2 S10 counter", () => {
 });
 
 describe("QA2 S10 run report dead end", () => {
-  it("is focusable and keeps its reason", async () => {
+  it("W1: a run that did not finish shows no dead-end report control at all", async () => {
     serve(copy());
     await open("?attempt=att_07");
-    const span = q('[data-panel="selected"] [data-action-unrouted="run-report"]') as HTMLElement;
-    expect(span.tabIndex).toBe(0);
-    expect(span.getAttribute("aria-disabled")).toBe("true");
+    expect(q('[data-panel="selected"] [data-action-unrouted="run-report"]')).toBeNull();
+    expect(q('[data-panel="selected"] [data-action="run-report"]')).toBeNull();
   });
 });

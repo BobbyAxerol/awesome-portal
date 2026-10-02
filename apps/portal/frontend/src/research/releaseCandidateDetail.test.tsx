@@ -57,8 +57,6 @@ import {
   PUBLISHED_SENTENCE,
   PUBLISHING_LABEL,
   RC_PANELS,
-  RC_RULES,
-  RC_SUBTITLE,
   RC_TITLE,
   SEAL_CONFIRM,
   SEAL_DIRTY,
@@ -459,9 +457,9 @@ describe("S11 composition as served (P21)", () => {
     expect(screen.getAllByRole("status", { name: "Loading" }).length).toBeGreaterThan(0);
     expect(panelOrder()).toEqual(["header", "meta", "notice", "identity", "pack", "record", "seal", "publish", "mirror-ghost"]);
     expect(sealButton().getAttribute("aria-disabled")).toBe("true");
-    /* F2b: the rules footer is gone from the page; its words are the heading's tooltip. */
+    /* W1 (fewer words): the rules footer and the subtitle are gone; the title is only the title. */
     expect(q("[data-panel='rules']")).toBeNull();
-    expect(screen.getByRole("heading", { level: 2, name: RC_TITLE }).getAttribute("title")).toContain(RC_RULES);
+    expect(screen.getByRole("heading", { level: 2, name: RC_TITLE }).getAttribute("title")).toBeNull();
   });
 
   it("S11-U02 renders the blocks in the hi-fi order RC_PANELS names", async () => {
@@ -482,13 +480,13 @@ describe("S11 composition as served (P21)", () => {
     server({ COMPOSE: [ok(P04)] });
     renderCompose();
     await ready();
-    /* F2b: the subtitle is a tooltip on the title, not a line of prose. */
-    expect(q("[data-subtitle]")!.getAttribute("title")).toContain(RC_SUBTITLE);
-    expect(screen.queryByText(RC_SUBTITLE)).toBeNull();
+    /* W1: no subtitle prose and no tooltip copy of it. */
+    expect(q("[data-subtitle]")!.getAttribute("title")).toBeNull();
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(crumb.textContent).toBe(`Evidence Flow/${RUN.slice(0, 13)}/Release Candidate & Publish`);
     expect(q("[data-crumb-run]")!.getAttribute("title")).toBe(RUN);
-    expect(within(crumb).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`));
+    /* W1 B3: opened with no cursor, the way back carries none (it used to say fold=1). */
+    expect(within(crumb).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence`);
     expect(panel("seal")!.querySelector("h3")!.getAttribute("title")).toBe(SEAL_SENTENCE);
     expect(within(panel("publish")!).getByTitle(SOD_NOTE)).toBeTruthy();
     expect(panel("seal")!.textContent).not.toContain(SOD_NOTE);
@@ -532,12 +530,14 @@ describe("S11 composition as served (P21)", () => {
     expect(nodes.map((node) => node.getAttribute("data-rail-node"))).toEqual(P04.rail.map((node) => node.key));
     expect(nodes.map((node) => node.getAttribute("data-tone"))).toEqual(P04.rail.map((node) => node.tone));
     const avId = P04.run.binding!.alpha_version_id;
-    expect(q("[data-rail-node='alpha']")!.getAttribute("href")).toBe(`/research/quantbt/alphas/${ALPHA}/lineage?av=${encodeURIComponent(avId)}`);
+    /* W1 B3: Lineage opens on this run's attempt (`?run=`, and `?attempt=` when the compose read serves a valid id). */
+    const lineage = `/research/quantbt/alphas/${ALPHA}/lineage?av=${encodeURIComponent(avId)}&attempt=${encodeURIComponent(P04.run.attempt)}&run=${encodeURIComponent(RUN)}`;
+    expect(q("[data-rail-node='alpha']")!.getAttribute("href")).toBe(lineage);
     /* F2b: version → Screen 10 on that version; selected params → Screen 07 on this run. */
-    expect(q("[data-rail-node='alpha_version']")!.getAttribute("href")).toBe(`/research/quantbt/alphas/${ALPHA}/lineage?av=${encodeURIComponent(avId)}`);
+    expect(q("[data-rail-node='alpha_version']")!.getAttribute("href")).toBe(lineage);
     expect(q("[data-rail-node='selected_params']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/freeze`);
     /* F2b: the header's way out to lineage and the report, with the run and version kept. */
-    expect(q("[data-action='open-lineage']")!.getAttribute("href")).toBe(`/research/quantbt/alphas/${ALPHA}/lineage?av=${encodeURIComponent(avId)}`);
+    expect(q("[data-action='open-lineage']")!.getAttribute("href")).toBe(lineage);
     expect(q("[data-action='open-lineage']")!.getAttribute("title")).toContain("Screen 10");
     expect(q("[data-action='run-report']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
     expect(q("[data-rail-node='run']")!.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/evidence`);
@@ -1012,6 +1012,21 @@ describe("S11 composition read refused", () => {
   ])("S11-U30 %s %s renders its own state inside the screen frame, with no server prose", async (status, code, state) => {
     const api = server({ COMPOSE: [problem(status, code)] });
     renderCompose();
+    if (state === "denied") {
+      /* W1 (F-04): a 401/403/404 is one face: the line, the Library exit, nothing from the composer. */
+      const bar = await until("[data-run-exit-bar]");
+      expect(bar.querySelector("[data-run-phase]")!.textContent).toBe("Run not available.");
+      expect([...bar.querySelectorAll("[data-exit]")].map((el) => el.getAttribute("data-exit"))).toEqual(["library"]);
+      expect(q("[data-screen='release-candidate']")!.getAttribute("data-run-phase")).toBe("unavailable");
+      for (const name of ["identity", "pack", "record", "seal", "publish", "mirror-ghost", "meta"]) expect(panel(name)).toBeNull();
+      expect(q("[data-action='run-report']")).toBeNull();
+      expect(q("[data-rc-notice]")).toBeNull();
+      expect(screenText()).not.toContain("denied — nothing from this block");
+      expect(screenText()).not.toContain("SECRET-SERVER-PROSE");
+      await flush();
+      expect(api.of("COMPOSE")).toHaveLength(1);
+      return;
+    }
     const notice = await until("[data-rc-notice]");
     expect(notice.getAttribute("data-rc-notice")).toBe(state);
     expect(qa("[data-pack-row]")).toHaveLength(0);
@@ -1612,7 +1627,7 @@ describe("S11 source guards", () => {
     expect(source("research", "RunLibrary.tsx")).toContain(
       'rc.kind === "LOCAL_SEAL" && rc.release_candidate_id ? releaseCandidatePackHref(rc.release_candidate_id) : releaseCandidateHref(runId)',
     );
-    expect(source("research", "EvidenceFlow.tsx")).toContain("to={releaseCandidateHref(hub.run_id)}");
+    expect(source("research", "EvidenceFlow.tsx")).toContain("to={rcHref(hub.run_id,");
     expect(source("research", "ReportDetail.tsx")).toContain('data-action="release-candidate"');
     expect(source("research", "LineageDetail.tsx")).toContain("releaseCandidateHref(pick.run_id)");
     expect(source("research", "CompareDetail.tsx")).toContain("releaseCandidateHref(run.run_id)");
@@ -1857,7 +1872,7 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     expect(node.getAttribute("data-pick-status")).toBe("APPROVED_WITH_CONDITION");
     expect(node.querySelector("[data-state-chip]")!.textContent).toBe("APPROVED_WITH_CONDITION");
     expect(node.querySelector("[data-pick-state-word]")!.textContent!.trim()).toBe("WRITTEN");
-    expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("trial trial_0007");
+    expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("source trial_0007");
     /* F2b: the artifact and the fact digest are the node's tooltip and data, not two more lines. */
     expect(node.getAttribute("data-pick-artifact")).toBe("art_selected_params_01");
     expect(node.getAttribute("data-pick-fact")).toBe(FACT);
@@ -1909,7 +1924,7 @@ describe("S11 F2 promotion_pick in the lineage rail", () => {
     await ready();
     const node = await until("[data-rail] [data-rail-node='promotion_pick'][data-pick-state]");
     expect(node.getAttribute("data-pick-status")).toBe("APPROVED_WITH_CONDITION");
-    expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("trial trial_0007");
+    expect(node.querySelector("[data-pick-trial]")!.textContent).toBe("source trial_0007");
     cleanup();
 
     server({ COMPOSE: [ok(deliveredCompose())], PUBLICATION: [ok(deliveredRead())] });

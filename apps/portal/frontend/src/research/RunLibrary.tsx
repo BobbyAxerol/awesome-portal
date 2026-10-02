@@ -58,7 +58,9 @@ import {
 } from "./alphaVersionPublication";
 import { compareEntryHref } from "./compareClient";
 import { lineageHref } from "./lineageClient";
-import { releaseCandidateHref, releaseCandidatePackHref } from "./releaseCandidateClient";
+import { releaseCandidatePackHref } from "./releaseCandidateClient";
+import { hubHref, progressHref, rcHref as releaseCandidateHref } from "./runLinks";
+import { runStatusWord } from "./runTerminalState";
 import { formatDuration, formatMetric, formatUtc, shortDigest, shortId, typographicMinus } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
 import { datasetKey, ScrubLayer, tipMinus, useDrawIn, useScrub } from "./compareChartLife";
@@ -107,6 +109,11 @@ const JOURNEY_MAP = "/research/quantbt/journey";
 const NEW_RUN = "/research/quantbt/runs/new";
 
 const STAGE_KEYS: readonly StageCell["key"][] = ["S1", "S2", "S3", "S4", "S5"];
+
+/** The one status word. A library DRAFT is a draft (the shared humaniser files DRAFT under queued, which a draft is not). */
+export function libraryStatusWord(status: string): string {
+  return status === "DRAFT" ? "draft" : runStatusWord(status);
+}
 
 /** Status chips in the filter bar: the hi-fi three, then the two the data has. */
 const STATUS_CHIPS: readonly RunStatus[] = ["COMPLETED", "RUNNING", "QUEUED", "FAILED", "CANCELLED"];
@@ -331,7 +338,7 @@ function Withheld({ availability, what }: { availability: Availability; what?: s
 export function recordedStatusLabel(item: RunLibraryItem): string {
   const notMonitored =
     item.status_basis.availability.reason_code === "LEGACY_1_0_8_NON_TERMINAL_STATUS_NOT_MONITORED";
-  return `recorded ${item.status}${notMonitored ? " · not monitored" : ""}`;
+  return `recorded ${libraryStatusWord(item.status)}${notMonitored ? " · not monitored" : ""}`;
 }
 
 function StatusPill({ item }: { item: RunLibraryItem }) {
@@ -383,7 +390,7 @@ function StatusPill({ item }: { item: RunLibraryItem }) {
         ...(running ? ({ "--rs-motion-duration": "2s" } as CSSProperties) : {}),
       }}
     >
-      {status}
+      {libraryStatusWord(status)}
     </span>
   );
 }
@@ -1786,31 +1793,31 @@ export function openTarget(
     }
   }
   if (item.status === "RUNNING" || item.status === "QUEUED") {
-    return { to: `/research/quantbt/runs/${id}/progress`, label: "watch progress →" };
+    return { to: progressHref(item.run_id), label: "watch progress →" };
   }
   /* QA UX-13: a recovering run is not sealed, so there is no evidence to open; its record is on Progress. */
   if (item.status === "RECOVERY_REQUIRED") {
     return {
-      to: `/research/quantbt/runs/${id}/progress`,
+      to: progressHref(item.run_id),
       label: "open progress →",
       title: "A run awaiting recovery has no sealed evidence yet; its record is on Run Progress.",
     };
   }
   if (item.status === "FAILED") {
     return {
-      to: `/research/quantbt/runs/${id}/progress`,
+      to: progressHref(item.run_id),
       label: "open progress →",
       title: "A failed run's stage and reason are on Run Progress; the stage chips open the stages that ran.",
     };
   }
   if (item.status === "CANCELLED") {
     return {
-      to: `/research/quantbt/runs/${id}/progress`,
+      to: progressHref(item.run_id),
       label: "open progress →",
       title: "A cancelled run sealed no evidence; its record and attempts are on Run Progress.",
     };
   }
-  return { to: `/research/quantbt/runs/${id}/evidence`, label: "open evidence →" };
+  return { to: hubHref(item.run_id), label: "open evidence →" };
 }
 
 /**
@@ -2404,13 +2411,13 @@ type StatusCounts = RunLibraryResponse["status_counts"];
 
 /** The statuses the HiFi's first line names, in its order. */
 const STATUS_WORDS: readonly { key: keyof StatusCounts; word: string }[] = [
-  { key: "COMPLETED", word: "completed" },
-  { key: "RUNNING", word: "running" },
-  { key: "FAILED", word: "failed" },
-  { key: "QUEUED", word: "queued" },
-  { key: "DRAFT", word: "draft" },
-  { key: "CANCELLED", word: "cancelled" },
-  { key: "RECOVERY_REQUIRED", word: "recovery required" },
+  { key: "COMPLETED", word: runStatusWord("COMPLETED") },
+  { key: "RUNNING", word: runStatusWord("RUNNING") },
+  { key: "FAILED", word: runStatusWord("FAILED") },
+  { key: "QUEUED", word: runStatusWord("QUEUED") },
+  { key: "DRAFT", word: libraryStatusWord("DRAFT") },
+  { key: "CANCELLED", word: runStatusWord("CANCELLED") },
+  { key: "RECOVERY_REQUIRED", word: runStatusWord("RECOVERY_REQUIRED") },
 ];
 
 /**
@@ -2846,7 +2853,7 @@ export function RunLibrary(props: RunLibraryProps) {
               onClick={() => onFilters({ ...filters, status: toggleIn(filters.status, status) })}
               style={chipStyle(on)}
             >
-              {status.toLowerCase()}
+              {libraryStatusWord(status)}
             </button>
           );
         })}

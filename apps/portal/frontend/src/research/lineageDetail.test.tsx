@@ -397,6 +397,14 @@ function expectPendingFrame(state: string) {
   for (const button of panel("filters").querySelectorAll("button")) expect((button as HTMLButtonElement).disabled).toBe(true);
 }
 
+/** W1: a refusal is the notice and the way out; no skeleton, no ghost panels. */
+function expectRefusalOnly() {
+  const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
+  expect(order).toEqual(["header", "notice"]);
+  expect(document.querySelector("[data-lineage-pending]")).toBeNull();
+  expect(document.querySelector('a[data-action="open-run-library"]')?.getAttribute("href")).toBe("/research/quantbt/runs");
+}
+
 async function ready() {
   await waitFor(() => expect(document.querySelector('[data-panel="counts"]')).toBeTruthy());
   await waitFor(() => expect(document.querySelector('[data-panel="root"]')).toBeTruthy());
@@ -899,7 +907,7 @@ describe("S10 Attempt Lineage — refusals", () => {
     renderRoute();
     await screen.findByText(LINEAGE_REFUSAL_COPY[400]);
     expect(screenState()).toBe("terminal");
-    expectPendingFrame("terminal");
+    expectRefusalOnly();
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
   });
 
@@ -908,7 +916,7 @@ describe("S10 Attempt Lineage — refusals", () => {
     renderRoute();
     await screen.findByText(LINEAGE_REFUSAL_COPY[401]);
     expect(screenState()).toBe("denied");
-    expectPendingFrame("denied");
+    expectRefusalOnly();
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
     expect(calls).toHaveLength(1);
   });
@@ -932,7 +940,7 @@ describe("S10 Attempt Lineage — refusals", () => {
         String(badge.getAttribute("data-research-state")),
         String(badge.textContent),
       ]);
-      expectPendingFrame("denied");
+      expectRefusalOnly();
       cleanup();
       vi.restoreAllMocks();
     }
@@ -1282,7 +1290,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(kids).toEqual(["ACTIVE", "DRAFT", "SUPERSEDED", "ABANDONED", "toggle-probes", "counter"]);
     const toggle = filters.querySelector('[data-action="toggle-probes"]') as HTMLButtonElement;
     expect(toggle.disabled).toBe(true);
-    expect(toggle.textContent).toBe("show probe attempts");
+    expect(toggle.textContent).toBe("older probes");
     expect(toggle.textContent).not.toMatch(/\d/);
     expect(toggle.getAttribute("title")).toBe("probe classification not published by this server (P19_SERVER_PREDATES_LINEAGE_CONTRACT_1_1)");
     expect(toggle.getAttribute("aria-label")).toContain(PROBES_REASON);

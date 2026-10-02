@@ -35,6 +35,14 @@ import { researchState } from "./state";
 import { FreezeRoute } from "./FreezeRoute";
 import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 
+/* W1: the stage pages read the Library status only when a lane refuses; these tests do not cover that read. */
+vi.mock("./useRunStatus", () => ({
+  useRunStatus: () => ({ state: "idle" }),
+  setRunStatusSeed: () => undefined,
+  clearRunStatusCache: () => undefined,
+}));
+
+
 /*
  * The CSRF token lives in a `__Host-` cookie, which jsdom will not accept over
  * http. The reader is stubbed rather than the cookie faked, so the assertion

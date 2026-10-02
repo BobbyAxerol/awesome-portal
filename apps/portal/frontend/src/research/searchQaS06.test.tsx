@@ -142,7 +142,7 @@ describe("D9 — a pick is visible, never teleports the page, and can be let go"
     const { container } = await settled();
     fireEvent.click(container.querySelector("[data-surface-point='2']") as Element);
     await waitFor(() => expect(window.location.hash).toContain("pick=2"));
-    expect(container.querySelector("[data-pick-chip='2']")?.textContent).toContain("trial 2");
+    expect(container.querySelector("[data-pick-chip='2']")?.textContent).toContain("source 2");
     expect(scroll).not.toHaveBeenCalled();
     fireEvent.click(container.querySelector("[data-surface-point='2']") as Element);
     await waitFor(() => expect(window.location.hash).not.toContain("pick="));

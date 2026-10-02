@@ -89,7 +89,11 @@ describe("spec 12 §2 — the claim comes from mode × schedule", () => {
     const card = document.querySelector('[data-mode="mode_4_is_only_robust"]') as HTMLElement;
     fireEvent.click(within(card).getByRole("button", { name: /per_fold_causal/ }));
     expect(card.querySelector("[data-claim]")?.textContent).toBe("strict_outer_oos_after_frozen_selection");
-    expect(card.querySelector('[data-not-published="cert_cap"]')?.textContent).toMatch(/certifies an execution route/);
+    /* W1: every mode publishes the same absent cert cap, so it is one chip for the tab, with the reason in its tooltip; no card repeats it. */
+    expect(card.querySelector('[data-not-published="cert_cap"]')).toBeNull();
+    expect(card.querySelector("[data-cert-cap]")).toBeNull();
+    expect(document.querySelectorAll("[data-cert-cap]")).toHaveLength(1);
+    expect(document.querySelector("[data-cert-cap-shared]")?.getAttribute("title")).toMatch(/certifies an execution route/);
     /* RF-04 + VD-TEXT-01: the five modes share one avoid-when reason, so the
        typed absence is said once under the table — "avoid when — not
        published" — with the server's sentence in its tooltip, not in the flow. */

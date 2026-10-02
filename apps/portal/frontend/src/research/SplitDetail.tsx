@@ -35,6 +35,10 @@ import {
   type ReactNode,
 } from "react";
 import { Link } from "react-router-dom";
+import { RunExitBar } from "./RunExitBar";
+import { runTerminalState } from "./runTerminalState";
+import { trialLabel, trialTitle } from "./trialLabel";
+import { useRunStatus } from "./useRunStatus";
 
 import { useEntryRef, useReadout } from "./chartLife";
 import { ProvenanceStrip } from "./ProvenanceStrip";
@@ -70,7 +74,7 @@ import { foldLabel, formatMetric, formatUtc, shortDigest } from "./researchForma
 import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
 import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
-import { reasonCodeSentence, REFUSAL_COPY, refusalState, type ResearchStateWithDiagnostics } from "./researchRefusal";
+import { reasonCodeSentence, refusalState, type ResearchStateWithDiagnostics } from "./researchRefusal";
 import { LineageLink, lineageHref } from "./LineageLink";
 import type { ProgressRead } from "./progressClient";
 import type { CurrentSourceSearch } from "./searchClient";
@@ -426,30 +430,35 @@ export function CopyEvidenceLink({ href }: { href?: string } = {}) {
   );
 }
 
-/** FE-X-11: a run id that does not exist gets a way back, not an empty frame. */
+/** FE-X-11: a run id that does not exist gets a way back, not an empty frame. One line; the F-04 sentence is its tooltip. */
 export function RunNotFound({ runId }: { runId: string }) {
   return (
-    <section
-      className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
-      style={CARD_STYLE}
-      data-run-not-found={runId}
-    >
-      <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-        run not available
-      </span>
-      {/* F-04: one sentence for a 403 and a 404 — it neither confirms the run exists nor says whose it is. */}
-      <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-        {REFUSAL_COPY.denied}
-      </p>
-      <Link
-        to="/research/quantbt/runs"
-        className="mono self-start text-[11px]"
-        style={{ color: "var(--accent)" }}
-        data-action="run-library"
-      >
-        Open the Run Library →
-      </Link>
+    <section data-run-not-found={runId} data-run-phase="unavailable">
+      <RunExitBar runId={runId} state={runTerminalState({ status: null, read: "not-found" })} />
     </section>
+  );
+}
+
+/**
+ * W1 S05-S08: when the retained lane refused with a typed "no evidence" state
+ * (pending / terminal / legacy), say what the run is and offer the exits. The
+ * Library read is made only then (`active`), so a screen that has data asks
+ * for nothing. The lane's own typed absence stays where it is.
+ */
+export function StageRunBar({ runId, active }: { runId: string; active: boolean }) {
+  const listed = useRunStatus(runId, active);
+  if (!active || listed.state === "idle" || listed.state === "reading") return null;
+  const state = runTerminalState(
+    listed.state === "listed"
+      ? { status: listed.status, read: "ok" }
+      : listed.state === "not-listed"
+        ? { status: null, read: "not-found" }
+        : { status: null, read: "unread" },
+  );
+  return (
+    <div data-stage-run-bar={state.phase}>
+      <RunExitBar runId={runId} state={state} />
+    </div>
   );
 }
 
@@ -1529,16 +1538,16 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
       <span
         className="mono"
         style={{ color: "var(--accent)" }}
-        title={`last-fold deployment selection only (${value.fold_id ?? "last fold"}) · source trial ${value.selected_trial_id ?? "—"}`}
+        title={`last-fold deployment selection only (${value.fold_id ?? "last fold"}) · ${trialLabel({ sourceId: value.selected_trial_id }) ?? "source not published"}`}
         data-theta-star={value.selected_trial_id ?? ""}
         data-theta-scope-kind="LAST_FOLD_DEPLOYMENT"
       >
-        last fold only · trial {value.selected_trial_id ?? "—"}
+        last fold only · {trialLabel({ sourceId: value.selected_trial_id }) ?? "source not published"}
       </span>
     );
   }
   const title = [
-    `source trial ${value.selected_trial_id ?? "—"} (the retained search's own id) · ${value.objective_kind} ${value.objective ?? "not published"}`,
+    `${trialLabel({ sourceId: value.selected_trial_id }) ?? "source not published"} · ${trialTitle} · ${value.objective_kind} ${value.objective ?? "not published"}`,
     digest ? `params digest ${digest}` : null,
     ...params.map(([name, v]) => `${name} = ${v}`),
   ]
@@ -1546,7 +1555,7 @@ function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolea
     .join("\n");
   return (
     <span className="mono" style={{ color: "var(--accent)" }} title={title} data-theta-star={value.selected_trial_id ?? ""}>
-      GLOBAL · source trial {value.selected_trial_id ?? "—"}
+      GLOBAL · {trialLabel({ sourceId: value.selected_trial_id }) ?? "source not published"}
       {compact ? null : (
         <span style={{ color: "var(--ink-faint)" }}> · {params.length} params</span>
       )}
@@ -1785,7 +1794,7 @@ export function SplitScreen({
       </header>
       )}
 
-      {notFound ? <RunNotFound runId={runId} /> : null}
+      {notFound ? <RunNotFound runId={runId} /> : <StageRunBar runId={runId} active={folds.state === "refused" && folds.laneState != null} />}
 
       <ResearchPanel
         title="split"
@@ -2694,12 +2703,12 @@ function OwnSelection({ fold }: { fold: SourceFoldRow }) {
   if (!selection) return null;
   const title = [
     `own-fold selection · ${selection.scope} · study ${selection.study_id}`,
-    `trial ${selection.selected_trial_id}`,
+    trialLabel({ sourceId: selection.selected_trial_id }) ?? "source not published",
     ...Object.entries(selection.parameters).map(([name, v]) => `${name} = ${v}`),
   ].join("\n");
   return (
     <span className="mono" style={{ color: "var(--accent)" }} title={title} data-theta-own={selection.selected_trial_id}>
-      own · trial {selection.selected_trial_id}
+      own · {trialLabel({ sourceId: selection.selected_trial_id })}
     </span>
   );
 }
@@ -2722,9 +2731,9 @@ function ThetaParams({ lane }: { lane: LaneView }) {
     <div className="flex flex-col gap-[4px] pl-[72px]" data-theta-params>
       <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
         {value.scope === "LAST_FOLD_DEPLOYMENT"
-          ? `θ* · last-fold deployment${value.fold_id ? ` (${foldLabel(value.fold_id)})` : ""} · source trial `
-          : "θ* · source trial "}
-        <span data-theta-trial title="the retained search's own trial id (S03 prints the progress read's selection.trial)">{value.selected_trial_id ?? "—"}</span>
+          ? `θ* · last-fold deployment${value.fold_id ? ` (${foldLabel(value.fold_id)})` : ""} · source `
+          : "θ* · source "}
+        <span data-theta-trial title={trialTitle}>{value.selected_trial_id ?? "not published"}</span>
         {objective !== null ? (
           <span title={`${value.objective_kind} ${value.objective}`}>
             {" "}· {value.objective_kind} {objective.replace(/^-/, "−")}

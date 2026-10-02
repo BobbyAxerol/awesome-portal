@@ -36,6 +36,14 @@ import { ExecuteRoute } from "./ExecuteRoute";
 import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 import type { SplitBandSlot } from "./SplitBand";
 
+/* W1: the stage pages read the Library status only when a lane refuses; these tests do not cover that read. */
+vi.mock("./useRunStatus", () => ({
+  useRunStatus: () => ({ state: "idle" }),
+  setRunStatusSeed: () => undefined,
+  clearRunStatusCache: () => undefined,
+}));
+
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();

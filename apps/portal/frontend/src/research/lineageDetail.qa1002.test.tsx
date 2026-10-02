@@ -134,7 +134,11 @@ describe("QA S10 U5 run report", () => {
     serve(copy());
     await open("?attempt=att_07");
     expect(q('[data-panel="selected"] a[data-action="run-report"]')).toBeNull();
-    expect(q('[data-panel="selected"] [data-action-unrouted="run-report"]')?.getAttribute("title")).toContain("did not finish");
+    /* W1: a failed run has no report, freeze or RC to open; the links are absent, Progress is the way on. */
+    expect(q('[data-panel="selected"] [data-action-unrouted="run-report"]')).toBeNull();
+    expect(q('[data-panel="selected"] a[data-action="open-freeze"]')).toBeNull();
+    expect(q('[data-panel="selected"] a[data-action="open-release-candidate"]')).toBeNull();
+    expect(q('[data-panel="selected"] a[data-action="open-progress"]')).toBeTruthy();
   });
 
   it("runHasReport follows the run and attempt state", () => {
@@ -172,7 +176,9 @@ describe("QA S10 text", () => {
   it("the probe chip says what it toggles", async () => {
     serve(copy());
     await open();
-    expect(q("[data-probe-chip]")?.getAttribute("title")).toBe("show probe attempts");
+    /* W1 B4: the 7-attempt fixture folds nothing, so no probe chip; the toggle is the one place older probes live. */
+    expect(q("[data-probe-chip]")).toBeNull();
+    expect(q('[data-action="toggle-probes"]')?.textContent).toBe("older probes (0)");
   });
 
   it("an empty filter says so in four words and offers one button that clears it", async () => {

@@ -13,6 +13,7 @@
  *    same state; the server's prose is never rendered.
  *  - **No comparison, same frame.** Loading and refusals keep the mode's blocks.
  */
+import { runStatusWord } from "./runTerminalState";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { readFileSync } from "node:fs";
@@ -445,7 +446,7 @@ describe("S13 Compare — reads and order", () => {
     expect(card.querySelector("[data-oos-sharpe]")).toBeNull();
     expect(card.querySelector("[data-oos-sharpe-absent]")?.textContent).toContain("P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE");
     expect(card.querySelector("[data-cert-absent]")?.textContent).toContain("P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE");
-    expect(card.querySelector("[data-claim-origin]")?.textContent).toContain("PORTAL_DERIVED_FROM_SOURCE_PROTOCOL");
+    expect(card.querySelector("[data-claim-origin]")?.getAttribute("data-claim-origin")).toBe("PORTAL_DERIVED_FROM_SOURCE_PROTOCOL");
     expect(panel("fold-chart")?.querySelector("[data-fold-chart-absent]")?.textContent).toContain("P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE");
     expect(document.querySelector("[data-ladder-header]")?.textContent).toBe(LADDER_TITLE);
     expect(document.querySelector("[data-trajectory-text]")?.textContent).toBe(TRAJECTORY.text);
@@ -868,9 +869,10 @@ describe("S13 Compare — W6a fields on the canonical fixtures", () => {
       const card = document.querySelector(`[data-ladder-run="${run.run_id}"]`) as HTMLElement;
       expect(card.getAttribute("data-lifecycle")).toBe(run.alpha_version_lifecycle.value);
       /* Hi-fi: "{run} · {mode} × {schedule}" — no "sched" word. */
-      expect(card.querySelector("[data-schedule]")?.textContent).toBe(`${run.schedule.mode} × ${run.schedule.schedule}`);
+      /* W1: the ladder line is one tooltip (state · version · mode × schedule); only a typed absence stays visible. */
+      expect(card.querySelector("[data-run-line]")?.getAttribute("title")).toContain(`${run.schedule.mode} × ${run.schedule.schedule}`);
       /* The pill is the lifecycle (hi-fi); the run state reads in the run line. */
-      expect(card.querySelector("[data-run-state]")?.textContent).toBe(run.run_state);
+      expect(card.querySelector("[data-run-line]")?.getAttribute("title")).toContain(runStatusWord(run.run_state));
       expect(card.querySelectorAll(".cp-st")).toHaveLength(0);
       /* QA S13: one absence shared by every card is said once above the ladder. */
       expect((card.querySelector("[data-cert-absent]") ?? document.querySelector("[data-ladder-cert]"))?.textContent).toContain(run.certification.reason_code);
@@ -1076,7 +1078,7 @@ describe("S13 Compare — X3 decisions and debt", () => {
     /* Bobby 2026-10-01: a ladder whose attempts all share one lifecycle does not repeat it on every card. */
     expect(card.querySelectorAll("[data-life]")).toHaveLength(0);
     expect(card.hasAttribute("data-lifecycle")).toBe(false);
-    expect(card.querySelector("[data-run-state]")?.textContent).toBe("READY");
+    expect(card.querySelector("[data-run-line]")?.getAttribute("title")).toContain("completed");
     const css = document.querySelector('[data-screen="compare"] style')?.textContent ?? "";
     expect(css).toMatch(/\.cp-head > \.l \{[^}]*flex: 0 1 auto/);
     expect(css).toMatch(/\.cp-card > \.t, \.cp-tcard > \.t \{[^}]*font-family: var\(--font-body\)/);

@@ -1028,7 +1028,7 @@ describe("RF-06 FE-S04-05 — state vocabulary", () => {
       state: { state: "terminal", reason: "Nothing with this id exists in your current workspace.", mayRetry: false, retainsContent: false },
     });
     expect(container.querySelector("[data-run-not-found]")).toBeTruthy();
-    expect(container.querySelector("[data-action='open-runs']")?.getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(container.querySelector("[data-exit='library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
     // No cursor for a run that does not exist.
     expect(container.querySelector("[data-cursor-bar]")).toBeNull();
     expect(container.querySelector("[role='tab']")).toBeNull();
@@ -1038,7 +1038,7 @@ describe("RF-06 FE-S04-05 — state vocabulary", () => {
     const { container } = view({ hub: withStatus("CANCELLED", { readiness: "NOT_READY" }) });
     const notice = container.querySelector("[data-not-ready]");
     expect(notice?.getAttribute("data-not-ready")).toBe("CANCELLED");
-    expect(notice?.textContent).toContain("CANCELLED");
+    expect(notice?.textContent).toContain("Cancelled.");
     expect(container.querySelector("[data-action='watch-progress']")).toBeNull();
     expect(notice?.textContent).not.toMatch(/has not sealed its evidence yet/);
   });
@@ -1046,8 +1046,8 @@ describe("RF-06 FE-S04-05 — state vocabulary", () => {
   it("F2b: a live run's notice says the state in one sentence; the explanation rides in the tooltip", () => {
     const { container } = view({ hub: withStatus("RUNNING", { readiness: "NOT_READY" }) });
     const notice = container.querySelector("[data-not-ready]") as HTMLElement;
-    expect(notice.querySelector("[data-seal-sentence]")?.textContent).toBe("This run is RUNNING and has not sealed its evidence yet.");
-    expect(notice.getAttribute("title")).toContain("the run's live state lives on its progress screen");
+    expect(notice.querySelector("[data-seal-sentence]")?.textContent).toBe("Running.");
+    expect(notice.getAttribute("title")).toContain("Evidence seals when the run ends");
     expect(notice.querySelector("[data-action='watch-progress']")?.getAttribute("href")).toContain("/progress");
   });
 
@@ -1159,7 +1159,8 @@ describe("RF-06 FE-S04-09 — the passport refusal names the real cause", () => 
     const ensurePassport = vi.fn();
     const { container } = view({ hub: withStatus("CANCELLED", { readiness: "NOT_READY" }), ensurePassport });
     expect(ensurePassport).not.toHaveBeenCalled();
-    expect(container.querySelector("[data-passport-cause='NOT_RETAINABLE']")?.textContent).toContain("CANCELLED");
+    expect(container.querySelector("[data-not-ready]")?.getAttribute("data-not-ready")).toBe("CANCELLED");
+    expect(container.querySelector("[data-passport-cause]")).toBeNull();
   });
 });
 
@@ -1181,7 +1182,7 @@ describe("RF-06 FE-S04-10 — an empty series says it is empty", () => {
 describe("RF-06 FE-S04-11 — durable strings are rendered exactly", () => {
   it("prints status, readiness, input scope, metric scope and stage state as sent", () => {
     const { container } = view();
-    expect(container.querySelector("[data-run-status]")?.textContent).toBe("READY");
+    expect(container.querySelector("[data-run-status]")?.textContent).toBe("completed");
     expect(container.querySelector("[data-readiness]")?.textContent).toContain("COMPLETE");
     fireEvent.click(container.querySelector("[data-action='dataset-panel']") as Element);
     expect(container.querySelector("[data-header-value='input scope']")?.textContent).toBe(
@@ -1192,7 +1193,7 @@ describe("RF-06 FE-S04-11 — durable strings are rendered exactly", () => {
     expect(foot?.textContent).toBe("oos · currency · engine-direct");
     expect(foot?.getAttribute("title")).toContain("OOS · CURRENCY · ENGINE_DIRECT");
     // The split tab now draws Screen 05's body (hubStageSplit); the stage's state rides on its tab.
-    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("DONE · 4 folds");
+    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toBe("done · 4 folds");
   });
 });
 
@@ -1288,7 +1289,7 @@ describe("RF-06 FE-S04-13 — the HiFi layout", () => {
     expect(report?.getAttribute("href")).toContain("/report");
     const rc = container.querySelector('[data-action="release-candidate"]');
     expect(rc?.tagName).toBe("A");
-    expect(rc?.getAttribute("href")).toMatch(/\/release-candidate$/);
+    expect(rc?.getAttribute("href")).toContain("/release-candidate");
   });
 });
 
@@ -1674,7 +1675,7 @@ describe("W3b — S04 on the retained lane (real hub + retained bodies)", () => 
     // The engine is the retained provenance's, not "engine — not published".
     expect(container.querySelector("[data-engine]")?.getAttribute("data-engine")).toBe("1.1.1");
     // Global schedule: the cursor shows the one selection every fold froze.
-    expect(container.querySelector("[data-cursor-trial] [data-cursor-lane='global']")?.textContent).toContain("#1");
+    expect(container.querySelector("[data-cursor-trial] [data-cursor-lane='global']")?.textContent).toContain("trial 1");
   });
 
   it("never claims READY before the progress read answered", () => {

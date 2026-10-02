@@ -173,7 +173,7 @@ describe("CG-P11-03 — fold selection, hand-off cursor, declared folds", () => 
     const note = $('[data-fold-note="2"]');
     expect(note.textContent).toBe("global best J₁ −9.806 · trial 1 · prm_3a91c2");
     expect(note.querySelector("[data-fold-selection]")?.getAttribute("title")).toContain(DIGEST);
-    expect($("[data-cursor-trial]").textContent).toBe("trial #1");
+    expect($("[data-cursor-trial]").textContent).toBe("trial 1");
     expect($("[data-cursor-params]").textContent).toBe("params prm_3a91c2");
     const open = $("[data-open-evidence]");
     expect(open.getAttribute("href")).toBe(

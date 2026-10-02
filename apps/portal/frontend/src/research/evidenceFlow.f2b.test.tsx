@@ -191,7 +191,7 @@ describe("F2b — previous / next along the stages", () => {
   it("Claim hands on to the run report; Atlas has no next", async () => {
     const claim = await settled({ cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
     const report = claim.container.querySelector("[data-stage-next='report']") as HTMLAnchorElement;
-    expect(report.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
+    expect(report.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report#stage=claim&fold=1`);
     expect(claim.container.querySelector("[data-stage-prev='execute']")).toBeTruthy();
     claim.unmount();
     const atlas = await settled({ cursor: { ...DEFAULT_CURSOR, stage: "atlas" } });
@@ -204,7 +204,7 @@ describe("F2b — previous / next along the stages", () => {
     const link = container.querySelector("[data-action='generate-report']") as HTMLAnchorElement;
     expect(link.textContent).toBe("open report →");
     expect(link.getAttribute("title")).toBe("Run report");
-    expect(link.getAttribute("href")).toBe(`/research/quantbt/runs/${HUB_RUN}/report`);
+    expect(link.getAttribute("href")).toBe(`/research/quantbt/runs/${HUB_RUN}/report#stage=claim&fold=1`);
   });
 });
 
@@ -222,7 +222,7 @@ describe("F2b — the way out of the cursor bar", () => {
       expect(link.getAttribute("href"), stage).toContain(`/runs/${RUN}/${stage}?window=is#stage=${stage}&fold=2`);
       expect(link.getAttribute("title"), stage).toContain("fold 2, is window");
     }
-    expect(nav.querySelector("[data-nav-stage='report']")?.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report`);
+    expect(nav.querySelector("[data-nav-stage='report']")?.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/report?window=is#stage=claim&fold=2`);
     expect(nav.querySelector("[data-nav-stage='library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
     expect(nav.textContent).not.toMatch(/deep dives:/);
   });
@@ -246,9 +246,9 @@ describe("F2b — the stage state as a dot", () => {
     expect(dots.length).toBeGreaterThan(0);
     for (const dot of dots) {
       expect(dot.getAttribute("aria-hidden")).toBe("true");
-      expect(dot.getAttribute("data-stage-dot")).toMatch(/^(PENDING|RUNNING|DONE)$/);
+      expect(dot.getAttribute("data-stage-dot")).toMatch(/^(pending|running|done)$/);
     }
     /* the word is still there beside it */
-    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toMatch(/DONE|PENDING|RUNNING|not published/);
+    expect(container.querySelector("[data-tab='split'] [data-tab-sub]")?.textContent).toMatch(/done|pending|running|not published/);
   });
 });
