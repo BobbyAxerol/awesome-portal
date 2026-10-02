@@ -258,6 +258,29 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(normalize(value));
 }
 
+/** JSONB text adds one space per structural comma/colon, never inside strings.
+ * Source number fields are bounded integer counts; exact decimals are strings.
+ */
+export function currentSourceSummaryWithinBudget(summary: Record<string, unknown>): boolean {
+  const spacedBytes = (value: unknown) => {
+    const encoded = canonicalJson(value);
+    let extra = 0, quoted = false, escaped = false;
+    for (const character of encoded) {
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === '"') quoted = false;
+      } else if (character === '"') quoted = true;
+      else if (character === "," || character === ":") extra += 1;
+    }
+    return Buffer.byteLength(encoded, "utf8") + extra;
+  };
+  const { enriched_analysis: enriched, ...core } = summary;
+  return spacedBytes(core) <= 65_536
+    && (enriched === undefined || (enriched !== null && typeof enriched === "object"
+      && !Array.isArray(enriched) && spacedBytes(enriched) <= 73_728));
+}
+
 export function currentSourceBatchDigest(rows: readonly CurrentSourceRowInput[]): string {
   return createHash("sha256").update(canonicalJson(rows), "utf8").digest("hex");
 }
@@ -950,7 +973,7 @@ export class ResearchCurrentSourceRepository {
       }
       total += count;
     }
-    if (total !== input.totalRows || Buffer.byteLength(canonicalJson(input.summary), "utf8") > 65_536) {
+    if (total !== input.totalRows || !currentSourceSummaryWithinBudget(input.summary)) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal summary is invalid.", 400);
     }
   }

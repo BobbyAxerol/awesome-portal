@@ -6,11 +6,13 @@ Implemented declaration fold/conditions endpoint, UTC alignment refusal,
 spot/quarterly read-only qualification and safe bounded index append.
 Requested-spec v2 temporal **Delta/global** is connected through admission,
 worker, progress and retention. Real child: 1,056 bars, rolling 14D, guards
-1/2/3, 2 folds, 3 trials, five retained tables, 5.277s wall. Product API receipt
-pending. Inner/per-fold causal retention remains explicitly not admitted;
+1/2/3, 2 folds, 3 trials, five retained tables, 5.277s wall. Public API now
+passes on clean c8b1641b: rolling v2, fixed Delta and Quarterly all
+COMPLETED/READY; RC v2 AVAILABLE. Inner/per-fold causal retention remains explicitly not admitted;
 VN/session sources are not claimed qualified. The WFO exposure writer is now
-implemented with completion clock, server snapshot and live fencing; its product
-receipt, audit acceptance and one-candidate P23/P24 remain open. No remote push
+implemented with completion clock, server snapshot and live fencing; product
+proof records one exposure and exact self-audit reuse without new GET jobs.
+Linked non-reusable audit and one-candidate P23/P24 remain open. No remote push
 or production change.
 [Receipt and generated frontend handoff](./evidence/P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md):
 `DeclarationEstimate`, `researchDeclarationEstimatePostV1`, Atlas profile temporal/
@@ -160,6 +162,19 @@ Theo `A4_p22_p24.md` §3 (thứ tự đã đề xuất): ledger hygiene → gom 
 Unified: U:3636 (board P23), U:3637 (P24 → Codex), U:3691 (OL-12), U:3692/3695 (T02-01/T12-02 đã xong — mig 077), U:3693/3696 (T05-01/T03-01 cần note supersede), U:3701 (CG-FG-S04-03/04/05: 03 xong qua E11, 04 N/A, 05 → BR-AN-01), U:3712 (CG-FG-R2-01 xong `0b868c6f`), U:3756 (OL-24: lý do thật là host), U:3782 (E11 rolling Sharpe63 → supersede D-AN-01), U:3957-3959 (§G "(c) chờ Codex" đã đóng), dòng P10 U:3623 (CG-P10-01 xong `996eef6c`), U:3625 (CG-P12-01 `status_counts` đã phục vụ từ `c81e8dc2`), board RF-03 U:3615 (CG-RF02-01 xong `ad7491cf`). Evidence: `P21/thanhvuong-backend-requests.md` (CG-P21-02 xong `f1deb763`), `P22/…:156-168`, `P23/…:165-175` + debt-register JSON, `P23/frontend-handoff-claude.md` §3–4, `CODEX_REQUESTS_FROM_CLAUDE_P11_P15.md:76` (CG-P13-04 → supersede), S14-RW-BR-03 (xong `4e343fe9`), debt-register P02/P04/P05. Chi tiết: §4 của A3/A4, §4 của A2, "STALE" của A1/A5.
 
 ## 9. Trạng thái (Codex điền khi làm)
+
+**2026-10-02 current-source continuation:** public rolling v2/fixed/Quarterly
+run ids and exact images are in [P10 acceptance](./evidence/P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md).
+Eligible v2 self-audit and T14 exposure writer have actual API/DB proof;
+the failed longer WFO remains recorded. Migration 085 repairs independently
+bounded B6 enrichment (16 focused TS/PG tests; Python 10/1-skip), with a final
+workload retake pending. [P05 budget evidence](./evidence/P05/JSONB_SEAL_BUDGET_2026-10-02.md).
+Frontend: consume `researchDeclarationEstimatePostV1` / generated
+`DeclarationEstimate` for folds, conditions and earliest start; Atlas profile
+schema-version/seed/default policy for v2. Keep preflight `may_create_run` as
+write authority. Existing `bar-metadata` verified-range/earliest fields, new
+QA §16 defects, inner/per-fold execution and linked non-reusable audit remain
+open. New metadata availability is not browser acceptance.
 
 | Id | Commit | Test | Contract đổi (Claude cần nối FE) | Ghi chú |
 |---|---|---|---|---|

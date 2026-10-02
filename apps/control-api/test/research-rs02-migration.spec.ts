@@ -214,6 +214,29 @@ describe("RS-02 disposable PostgreSQL retained-current-source proof", () => {
       await database.end();
     }
   });
+  it("keeps old seal bytes while enforcing separate core and enrichment limits", async () => {
+    const database = new Pool({ connectionString: databaseUrl });
+    try {
+      const before = (await database.query(`SELECT summary::text AS bytes FROM research.current_source_seals_v1
+        WHERE workspace_id='ws_rs02' AND run_id='run_rs02' AND artifact_revision=1`)).rows;
+      expect(before).toHaveLength(1);
+      const insert = (revision: number, summary: unknown) => database.query(`INSERT INTO research.current_source_seals_v1
+        (workspace_id,run_id,artifact_revision,source_adapter_id,profile_id,manifest_digest,
+         source_transform_digest,requested_spec_digest,effective_spec_digest,dataset_binding_digest,
+         retained_import_digest,table_rows,total_rows,summary)
+        SELECT workspace_id,run_id,$1,source_adapter_id,profile_id,manifest_digest,source_transform_digest,
+         requested_spec_digest,effective_spec_digest,dataset_binding_digest,retained_import_digest,table_rows,total_rows,$2::jsonb
+        FROM research.current_source_seals_v1 WHERE workspace_id='ws_rs02' AND run_id='run_rs02' AND artifact_revision=1`,
+        [revision,JSON.stringify(summary)]);
+      expect((await insert(91,{authority:"x".repeat(60_000),enriched_analysis:{authority:"y".repeat(70_000)}})).rowCount).toBe(1);
+      await expect(insert(92,{authority:"x".repeat(65_536)})).rejects.toMatchObject({code:"23514"});
+      await expect(insert(93,{enriched_analysis:{authority:"y".repeat(73_728)}})).rejects.toMatchObject({code:"23514"});
+      await expect(database.query(`UPDATE research.current_source_seals_v1 SET summary='{}'
+        WHERE workspace_id='ws_rs02' AND run_id='run_rs02' AND artifact_revision=91`)).rejects.toThrow();
+      expect((await database.query(`SELECT summary::text AS bytes FROM research.current_source_seals_v1
+        WHERE workspace_id='ws_rs02' AND run_id='run_rs02' AND artifact_revision=1`)).rows).toEqual(before);
+    } finally { await database.end(); }
+  });
 });
 
 const w1DatabaseName = `portal_w1_${randomUUID().replaceAll("-", "")}`;

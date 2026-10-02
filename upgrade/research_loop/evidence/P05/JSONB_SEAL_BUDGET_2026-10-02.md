@@ -31,3 +31,27 @@ preserves the existing typed invalid-JSON error as well as the 64-KiB limit.
 
 Frontend: no contract/layout change. Consume the published sampling caption
 and coverage as before; do not claim one bucket equals one original bar.
+
+## Real product correction and long-load finding
+
+Clean `c8b1641b` retake `rrun_99e22fdbb265b86e4a9c5f45c54ba19d`
+completes **COMPLETED/READY**, with RC **AVAILABLE**. The original failed
+Quarterly receipt is retained. Rolling v2 and fixed Delta also complete on
+that same candidate (see the P10 packet).
+
+The subsequent real 92-day mixed workload exposes a separate pre-existing B6
+integration error: `rrun_26c7490c49549f89e1b665a9b83b7037` reaches its engine
+output but fails with `RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE`. The new
+enrichment was charged against the old whole-summary 64-KiB limit, despite
+having its own immutable 72-KiB companion budget. All four queued test
+intents were cleaned up; no active owned job remained after the failed test.
+This failure is not a workload PASS.
+
+Migration **085** follows the existing P04 migration-083 model: retain the
+original **64-KiB core** bound and separately enforce the existing **72-KiB
+enrichment** bound. Python, private TS ingest and SQL agree on spaced JSONB
+representation. P05's 256-KiB document and transport limits remain unchanged.
+No role/fence/lease/immutable guard, source/core bytes or digest is rewritten.
+Focused actual disposable-PG + TS tests: **16/16 PASS**; affected Python
+adapter: **10 PASS / 1 opt-in SKIP**. The disposable fixture DB was removed;
+no Portal volume was deleted. A clean-image long-workload retake is pending.

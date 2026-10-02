@@ -5,6 +5,7 @@ import { sha256ResearchJson } from "../src/research/preflight.service";
 
 import {
   currentSourceBatchDigest,
+  currentSourceSummaryWithinBudget,
   ResearchCurrentSourceRepository,
   type CurrentSourceAppendBatch,
   type CurrentSourceSealWrite,
@@ -47,6 +48,20 @@ function fakeRepository(respond: (sql: string, params: readonly unknown[]) => { 
 }
 
 describe("RS-02 retained-current-source custody writes", () => {
+  it("budgets immutable core/enrichment separately using JSONB spacing", () => {
+    expect(currentSourceSummaryWithinBudget({ authority: "x".repeat(60_000),
+      enriched_analysis: { authority: "y".repeat(70_000) } })).toBe(true);
+    expect(currentSourceSummaryWithinBudget({ authority: "x".repeat(65_536) })).toBe(false);
+    expect(currentSourceSummaryWithinBudget({ enriched_analysis: { authority: "y".repeat(73_728) } })).toBe(false);
+    const crowded = { values: Array.from({ length: 3000 }, () => ({ a: "x", b: "y" })) };
+    expect(Buffer.byteLength(JSON.stringify(crowded))).toBeLessThan(65_536);
+    expect(currentSourceSummaryWithinBudget(crowded)).toBe(false);
+    // These commas/colons/escaped quotes belong to string values, not JSONB
+    // structural spacing; a near-boundary core must not be falsely refused.
+    expect(currentSourceSummaryWithinBudget({ text: ':,"'.repeat(10_000) })).toBe(true);
+    expect(currentSourceSummaryWithinBudget({ enriched_analysis: null })).toBe(false);
+  });
+
   it("BR-F6: companion digest and import binding are verified in the scoped read", async () => {
     const distributions = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-all-time-distributions.valid.json"), "utf8"));
     const input = sealInput();

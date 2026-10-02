@@ -7009,3 +7009,17 @@ uses the stored snapshot digest, and commits the immutable seal, exposure and
 audit together. Identical retry adds no duplicate. It does not claim an engine
 first-read timestamp or backfill an old absence. Focused tests pass; actual API
 receipt and whole P23/P24 acceptance still pending.
+
+**2026-10-02 real API continuation (supersedes pending API):**
+clean c8b1641b + Claude eae8a7b5 frontend passes rolling v2
+`rrun_c1ff5f12d22a86b6f1c97c6fb37f2222`, fixed Delta
+`rrun_13440d54340605a7764f2b7c116084b8` and Quarterly
+`rrun_99e22fdbb265b86e4a9c5f45c54ba19d`, all COMPLETED/READY.
+RC v2 returns AVAILABLE with exact self-audit COMPLETE, fold stitch MATCH,
+stored snapshot-bound exposure and no GET-created job. [Acceptance](./research_loop/evidence/P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md).
+The one-candidate 92-day workload fails B6's shared summary budget, not HMD or
+engine capability. Migration 085 restores separate 64-KiB core / 72-KiB
+enrichment limits without rewriting old bytes; TS/PG 16/16, Python 10 pass /
+1 opt-in skip. [Bounded repair](./research_loop/evidence/P05/JSONB_SEAL_BUDGET_2026-10-02.md).
+P23 retake and P24 whole-product gate remain OPEN; no required test is waived.
+[P24 entry assessment](./research_loop/evidence/P24/ENTRY_ASSESSMENT_2026-10-02.md).

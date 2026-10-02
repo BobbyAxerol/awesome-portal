@@ -128,3 +128,31 @@ repair use those same exact pairs. It never promotes a diagnostic into audit.
 The P13 Hub is still a separate reader from WFO current-source Evidence;
 its absence is not relabeled AVAILABLE. Bounded SQLSTATE-only diagnostics
 for private 503s log no SQL, rows, credentials or raw exception text.
+
+### Actual public API acceptance — clean c8b1641b
+
+- Rolling v2 `rrun_c1ff5f12d22a86b6f1c97c6fb37f2222`: June 1..July 15,
+  BTCUSDT 1h, 14D rolling, guards 1/2/3, two folds, three trials;
+  **COMPLETED/READY**, five retained relations and one SELECTION_INPUT exposure.
+- Fixed regression `rrun_13440d54340605a7764f2b7c116084b8`:
+  **COMPLETED/READY**. No WFO exposure is fabricated for this lane.
+- Quarterly `rrun_99e22fdbb265b86e4a9c5f45c54ba19d`: Aug 1..Sep 1,
+  BTCUSDT_260925 1h, expanding/weekly, three folds/trials;
+  **COMPLETED/READY**, RC **AVAILABLE** after the JSONB budget correction.
+- V2 RC exact retained audit: AVAILABLE, FINAL_AUDIT_REPLAY COMPLETE,
+  same run/attempt, fold stitch MATCH, one exposure with stored snapshot hash,
+  and GET job count unchanged. This is eligible self-audit reuse, **not** a new
+  linked AUDIT_OF_SELECTION child profile or optimizer rerun.
+
+Private 0600 product proofs: `temporal-20261002-a.json`,
+`temporal-quarterly-retake.json`, `temporal-final-audit-exposure.json`, beside
+the owned cell's `identity.json`. Candidate source: c8b1641b3f392930ff0cbc16ad6649464a9fd402.
+Control API image b81b95b37590d4ba8c3ca7b74e94eef39c69f58ee8b84b2fc4626b93666f8e0b;
+Python/worker 55c85dfb6e98459bc9176d5e9951c7e9a3c1d60daaab1ccda5c2c99e692fc503;
+Claude frontend ac6e376700b07ce237d52d3f29b6b75121a2b5ad24130cb4577a8418f19010f0.
+All seven exact images were retained under owned rollback tags. Shared :8095,
+dev, Production and remote refs were untouched.
+
+One-candidate P23 is **not** PASS: its longer workload found the separate B6
+budget integration bug documented in the [P05 correction](../P05/JSONB_SEAL_BUDGET_2026-10-02.md).
+Other HMD family calendars and inner/per-fold retention remain unqualified.

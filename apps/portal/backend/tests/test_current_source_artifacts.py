@@ -82,6 +82,17 @@ def test_summary_budget_does_not_discard_oversized_authority() -> None:
     assert len(summary["authority"]) == 5500
 
 
+def test_summary_budget_keeps_independently_bounded_enrichment() -> None:
+    adapter = object.__new__(CurrentSourceArtifactAdapter)
+    summary = {"authority": "x" * 60_000, "enriched_analysis": {"authority": "y" * 70_000}}
+    adapter._fit_summary_budget(summary, [])
+    assert len(summary["authority"]) == 60_000
+    assert len(summary["enriched_analysis"]["authority"]) == 70_000
+    with pytest.raises(CurrentSourceArtifactError) as failure:
+        adapter._fit_summary_budget({"enriched_analysis": {"authority": "y" * 73_728}}, [])
+    assert failure.value.code == "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE"
+
+
 def _market() -> PreparedMarketData:
     return PreparedMarketData(
         frame=build_market_frame(),

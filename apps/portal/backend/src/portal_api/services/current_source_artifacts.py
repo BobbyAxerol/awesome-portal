@@ -1399,35 +1399,44 @@ class CurrentSourceArtifactAdapter:
         }
 
     def _fit_summary_budget(self, summary: dict[str, Any], observations: list[dict[str, Any]]) -> None:
-        """Keep the 64-KiB seal bound without removing any source authority.
+        """Keep separate core/enrichment bounds without removing authority.
 
         Only the declared OHLC display sampling is coarsened, with all bars
         represented and price extrema preserved. Retained observation rows,
         analytics, selection, child audit and fold facts are never discarded.
         A summary that cannot fit even with one candle still fails closed.
         """
-        def size() -> int:
+        def size(value: Mapping[str, Any]) -> int:
             # PostgreSQL's CHECK measures jsonb::text, not the compact wire
             # encoding. Its spaces after commas/colons can push an otherwise
             # accepted summary over 64 KiB at the atomic seal. Count that
             # representation before P05 writes; ASCII escaping is conservative
             # for Unicode because jsonb stores UTF-8 text instead of escapes.
             try:
-                return len(json.dumps(canonicalize(summary), ensure_ascii=True,
+                return len(json.dumps(canonicalize(value), ensure_ascii=True,
                                       sort_keys=True, allow_nan=False).encode("utf-8"))
             except (TypeError, ValueError) as exc:
                 raise CurrentSourceArtifactError(
                     "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", "Source metadata is not canonical JSON."
                 ) from exc
 
+        enriched = summary.get("enriched_analysis")
+        if enriched is not None and (not isinstance(enriched, dict) or size(enriched) > 73_728):
+            raise CurrentSourceArtifactError(
+                "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE", "The retained enrichment exceeds its bounded supplement budget."
+            )
+
+        def core_size() -> int:
+            return size({key: value for key, value in summary.items() if key != "enriched_analysis"})
+
         replay = summary.get("replay")
         overview = replay.get("candle_overview") if isinstance(replay, dict) else None
         ceiling = MAXIMUM_CANDLE_OVERVIEW_BUCKETS
-        while size() > 65_536 and isinstance(overview, dict) and ceiling > 1:
+        while core_size() > 65_536 and isinstance(overview, dict) and ceiling > 1:
             ceiling = max(1, ceiling // 2)
             overview = self._candle_overview(observations, maximum_buckets=ceiling)
             replay["candle_overview"] = overview
-        if size() > 65_536:
+        if core_size() > 65_536:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE",
                 "The current-source summary exceeds the sealed local read-model budget.",
