@@ -746,3 +746,15 @@ volumes/backups retained. No push or shared/production action.
 | G-21 | Pair thật cho S13 trên preview (id cặp đọc được cả hai chiều, ví dụ R-WFO-023 × R-WFO-022) — §20 chỉ nêu cặp ở cell :8096 R-WFO-198/197 | kiểm overlay S13 + `chart_annotations` |
 
 Còn mở theo §20 (Codex): source-time IS facts, receipt RC seal/terminal, oracle metadata/refusal, profile VN. Sổ tổng: §19 (G-12…G-17 coi như GIAO — chờ Claude kiểm trên preview sau G-20).
+
+## 22. Claude kiểm §20 trên preview `8a6365dd` (backend `8bd781ed`) — 2026-10-02
+
+**Đã kiểm trên run thật (preview :8095, browser, 0 lỗi console):**
+| Mục | Kết quả |
+|---|---|
+| G-01 pair S13 | **ĐÃ HẾT 503**: R-WFO-023 × R-WFO-022 → `pair AVAILABLE`, overlay + correlation + `chart_annotations` per run (drawdown span, best/worst month, scope riêng từng run). Chỉ kiểm một chiều (A=023, B=022); chiều ngược chưa. |
+| G-04 run FAILED | R-P04-020 (FAILED): `0 reported · 1 declared`, `0 / 1 trials`, console lỗi thật; không còn "400/400 · 80%". |
+| G-05 S05 failed | split cho run FAILED trả 200 typed (`PARTIAL`, không còn 409 mỗi lần mở). |
+| S11 sealed | R-WFO-023: `may_edit_draft:false`, `seal_blocked_reason:P21_ALREADY_SEALED`, 0 nút edit; run chưa seal: `may_edit_draft:true`. |
+
+**Vẫn cần Codex:** **G-20** backfill `--amend-charts` cho các run preview (0 dòng) — chưa có thì histogram stats, nhãn drawdown, window bands, sparkline timestamps chưa hiện trên dữ liệu thật. Hỏi: `chart_annotations.drawdown.values[0]` có đảm bảo sâu nhất không (FE không xếp hạng).

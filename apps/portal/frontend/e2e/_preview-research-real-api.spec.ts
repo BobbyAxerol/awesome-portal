@@ -554,7 +554,7 @@ for (const [name, width, height] of VIEWPORTS) {
       pack_counts: { complete: 9, degraded: 1, input: 2, missing: 0 },
       draft: { draft_id: "rcd_01K5W5CDRAFT0000000000000", revision: 1, source_fingerprint: real.source_fingerprint, known_limitations: "Single venue depth.", proposed_use_restrictions: "Paper first.", state: "PERSISTED", updated_at_utc_ms: real.as_of_utc_ms },
       local_seal: { state: "SEALED_LOCAL", release_candidate_id: rcId, pack_digest: "5".repeat(64), sealed_at_utc_ms: real.as_of_utc_ms, delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED", availability: { state: "AVAILABLE", reason_code: null } },
-      actions: { may_edit_draft: true, may_seal: true, seal_blocked_reason: null, publish: { enabled: true, blocked_reason: null } },
+      actions: { may_edit_draft: false, may_seal: false, seal_blocked_reason: "P21_ALREADY_SEALED", publish: { enabled: true, blocked_reason: null } },
     });
     sealedBody.rail = sealedBody.rail.map((node: any) => (node.key === "release_candidate" ? { ...node, value: rcId, detail: "sealed locally — not delivered", tone: "green" } : node));
     sealedBody.source_absences = { ...sealedBody.source_absences, approval_mirror: { state: "NOT_PUBLISHED", reason_code: "P22_NOT_PUBLISHED" } };
