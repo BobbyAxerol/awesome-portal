@@ -7058,4 +7058,31 @@ Replay deep/previous/far PASS. Next scoped S06 repair uses one authorized
 seal+ledger snapshot and no unconsumed B6 lookup, with build/95 focused tests
 PASS. No API/UI, limits, remotes, shared :8095, dev/main or production change.
 P23/P24 stay OPEN until their actual remaining gates pass.
+
+#### Current-source / P23 actual closeout checkpoint — 2026-10-02
+
+- `65bdc8e2` landed after preserving Claude `a599bd3f` (latest chart UI).
+  Docs append conflict resolved by retaining both sections; no frontend edit.
+  Mandatory hook **1469 Control API PASS / 1 opt-in SKIP**, contracts **219/219**.
+- Clean seven-image :8096 candidate: **far-seek PASS** (140/140 GET, Library
+  192 ms / Search 494 ms p95, Replay 731–802 ms, 599 MB peak). Real 92-day
+  WFO finishes READY with 4 queued intents; 120 GET all 200, but mixed
+  Library **538 > 500** / Progress **568 > 500** ms => **W06 FAIL**. No SLO waived.
+- Utility quota, DB/NATS/worker recovery and ten-route tenant/cache scope
+  PASS. Coherent restore actually verifies **144 tables / 805 part records /
+  3132 files** and 5 worker-off reads; original volumes recovered unchanged.
+  Full integrity stays FAIL for **3 old T03 disposable-store manifests** lost
+  when those test ext4 images were deleted. Keep exact missing IDs and failed
+  strict/partial receipts, not fabricated artifacts or deleted DB history.
+- Supported step-up account APIs: exactly **22 test identities' sessions
+  revoked / 0 ACTIVE**, 21 test accounts disabled, test owner anchor retained.
+  Owned cell down without `-v`; volumes/backups/receipts/rollback pins kept.
+  Shared preview, real accounts, Execution/TS, dev/main/prod and remotes untouched.
+- **P23 / P24 OPEN**: mixed SLO, old test artifact loss, real engine-2,
+  whole frontend/browser/owner and signed-release proof. Current-source
+  declaration/v2/self-audit/exposure scopes are delivered, not universal
+  source/calendar/inner-execution/linked-audit capability.
+- [P23 actual evidence](./research_loop/evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md#final-actual-candidate--65bdc8e2),
+  [P24 entry + local unsigned manifest](./research_loop/evidence/P24/ENTRY_ASSESSMENT_2026-10-02.md),
+  [precise frontend handoff and remaining queue](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#current-source-delivery-and-actual-p23-closeout-checkpoint--2026-10-02).
 [Receipt](./research_loop/evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).

@@ -149,3 +149,102 @@ new single-snapshot method: **1466 PASS / 3 FAIL / 1 opt-in SKIP**. Those three
 failures are missing-method errors in the typed-absence test fixture, not
 runtime receipts. That fixture now uses the same explicit mock adapter;
 the hook is retaken without bypassing it.
+
+## Final actual candidate — 65bdc8e2
+
+Mandatory hook retake **PASS: 1469 Control API tests / 1 opt-in skip**,
+contracts **219/219**. `6a2bfdc9` rebased to `65bdc8e2` after preserving
+Claude `a599bd3f` (32 files, +2465/-233). Only the append conflict in the
+backend queue needed resolution; both agents' sections are retained. Own
+commit: 14 files, +140/-25. Backend and current Claude chart frontend build;
+production dependency prune reports 0 vulnerabilities. No frontend edit by
+Codex. This is not a browser/visual acceptance result.
+
+Clean application source `65bdc8e254c6393c8884de4433f64b61acbdde30`,
+seven exact images, `dirty=false`, isolated `portal-research-p23-ol12` /
+`:8096`. Pins and sanitized receipt hashes are collected in the
+[P24 local candidate manifest](../P24/current-source-candidate-manifest.v1.json).
+No signed release or production activation is implied.
+
+| Actual measurement | Result |
+| --- | --- |
+| Far-seek, 20 distinct authenticated readers / 140 GET | **PASS**: all 200; Library depth 13, Replay depth 17 / playhead 1650, no implicit/active compute. Library 192, sparkline 449, Report 380, Search 494, Replay deep/previous/far 802/737/731 ms p95. Peak 598724608 bytes. |
+| One real 92-day WFO + four durable queued intents / 120 GET | **FAIL on latency**: all GET 200 and WFO COMPLETED/READY, but Library 538 > 500 and Progress 568 > 500 ms. Evidence 337, Search 461, Report 148, Replay 304 ms pass. Peak 955523072 bytes, queued intents cancelled through API after measurement. |
+| Execution isolation around that same workload | **Scoped PASS**: before/after queue 0/0, during 1/4; same-host Execution GET/denial, outside container identities and health unchanged. Does not override the W06 latency failure. |
+| Shared utility, fresh actual parent | **PASS**: four active exports, fifth 503, same-key replay uses no extra slot, verify 503 then 200 after drain, fifth export then 202. |
+| Tenant/cache/ETag, ten named GET routes | **Scoped PASS**: membership, anonymous denial, cache policy and weak revalidation. Legacy export and full T05 remain separate. |
+| DB/NATS/worker outage | **PASS**: DB structured refusal 5013 ms; Control API same process/restart count; one intent resumes after NATS/worker restart and reaches COMPLETED/READY. Archived source/auth unchanged. |
+
+Real fresh WFO: `rrun_cc8554d6d2b768a028909cfb0cad50f9`; 2026-06-01
+through 2026-09-01, BTCUSDT 1h, first OOS 2026-06-08, weekly expanding,
+three optimizer trials, pinned QuantBT 1.1.1. Fault-recovery fixed regression:
+`rrun_a77aff5c3846aa64886d949fa0b75755`. Earlier monthly/rolling/Spot/Quarterly
+proofs retain their original run/image scope; they are not silently rewritten
+as runs on this candidate. The Python worker pin is unchanged.
+
+## Coherent restore and an old test-store loss
+
+The default strict restore **FAILS** before backup because three database
+records remain SEALED while their manifest bytes are absent. Read-only
+inventory verifies **70/73** sealed artifacts, not zero: the first diagnostic
+incorrectly compared PostgreSQL bigint strings to Python integers; correcting
+only that diagnostic type comparison yields the exact three missing IDs.
+
+| Artifact | Run / source of the absence |
+| --- | --- |
+| `rart_64469653604a37d46833ed048ba75c1d7e864b60` | `rrun_e2c3a4d31decb9f5d77b77fe49616fdb`; old disposable disk-pressure run |
+| `rart_0a356b7ee5c8e6f85ebeeb9ca416c1a347229b0f` | `rrun_1690a9830787332de93d93d457c8aa0e`; [T03 full-run recovery](./T03_FULL_DURABLE_RUN_2026-09-29.md) |
+| `rart_830fa0d721d3817db2c4881b54c1cd84fa3306a0` | `rrun_c93896666b0f3f1647aaa4967ce8c792`; [T03 clean recovery](./T03_CLEAN_COMMIT_ACCEPTANCE_2026-09-29.md) |
+
+The T03 packets explicitly record deletion of the separate disposable ext4
+images after recovery, without promoting their new artifact bytes into the
+original named volume. Each missing artifact has zero retention references
+and ten recorded parts. No hash-matching copy was found in the retained
+owned backups. Do not reconstruct a new manifest/Parquet payload and call
+it the old byte receipt; do not delete database history or relabel SEALED.
+The old T03 scoped runtime result is not whole-store restore proof.
+
+`restore-receipt.mjs` now has an explicit
+`--record-partial-missing-manifests` evidence mode. Default mode stays strict.
+The extra mode records every missing manifest and expected digest, verifies
+all existing manifests/parts/documents and the complete tree, and compares
+the missing set exactly across the restore. Corrupt or missing parts of a
+present manifest still abort. Any missing manifest leaves **passed=false /
+exit 1**, even if coherent copying itself succeeds. The focused harness file
+passes, including refusal of changed missing sets/tree hashes and empty
+verified populations. Application images/contracts are unchanged by this
+instrumentation refinement; its byte hash is embedded in the private receipt.
+
+Actual fresh-volume restore: **144 tables**, complete rows/auth/RLS/roles/
+memberships/schema/constraints/sequences/functions parity, **805 part
+records**, **3132 files**, **70 verified sealed artifacts + the same three
+MISSING manifests**. Five named reads work with the restored worker OFF.
+Original volumes and image pins are restored in `finally`, without `-v`.
+`coherent_restore_passed=true`, **full integrity passed=false**. All original
+failures are retained. This is not full T06/T14 or P23 GO.
+
+Actual byte-observer API checks on the three old runs return
+`artifact_bytes=MISSING`, source-derived `integrity=NOT_PUBLISHED` (not an
+invented BLOCKED state). An initial proof assertion incorrectly expected
+BLOCKED; that failed receipt is kept. The complete three-response observation
+receipt preserves the actual source states. No sealed metadata is rewritten.
+
+## Cleanup, handoff and exact remaining gates
+
+Supported owner account APIs with step-up disabled exactly 21 non-owner
+temporary P23 accounts and revoked sessions for all 22 test identities,
+owner last. SQL readback proves **0 ACTIVE sessions** for these exact IDs;
+test owner anchor remains. No Bobby/Stan/Thanhvuong production account changed.
+Owned containers/network were stopped/removed; original and fresh restore
+volumes, backups, private 0600 receipts and immutable rollback tags retained.
+Shared :8095, dev/stable/production, Trading System and remotes untouched.
+
+**P23/P24 remain OPEN**, with exact blockers rather than a blanket NO_GO:
+W06 Library/Progress p95, historical negative-test-store artifact loss,
+real second-engine T07/T13/P24-T05, full frontend/browser/visual/print and
+owner acceptance, full linked audit-child source case, signed-release proof.
+The available self-audit and exposure writer are delivered; the queue's typed
+NOT_PUBLISHED alternative for the non-reusable audit child does not prove
+that child's restoration. No additional whole-suite run outside the required
+commit hook is needed; the restore-harness change has its focused test and
+actual restore receipt above.

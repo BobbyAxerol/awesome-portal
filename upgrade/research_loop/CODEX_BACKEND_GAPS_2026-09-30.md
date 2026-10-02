@@ -610,3 +610,34 @@ S06 now receives its seal and finite inputs through one per-actor authorized
 snapshot, without an unrelated B6 lookup. Build + focused tests 95/95 PASS;
 unchanged API/UI/RLS/budgets. Clean-candidate runtime retake is next, not
 already qualified. [Exact evidence](./evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md).
+
+### Current-source delivery and actual P23 closeout checkpoint — 2026-10-02
+
+**Supersedes earlier pending runtime claims, not the original failure records.**
+`65bdc8e2` preserves Claude `a599bd3f` and lands the single authorized S06
+snapshot; mandatory hook 1469 backend PASS / 1 opt-in SKIP, 219 contracts.
+Own change 14 files +140/-25, no frontend. Application images are built from
+that clean candidate; the restored original cell is subsequently torn down.
+
+| Requested lane | Exact delivered scope / remaining work |
+| --- | --- |
+| Fold estimates / conditions / HMD | Generated named declaration read, UTC window/warmup checks and measured folds delivered. Real Spot/Quarterly metadata 14/14 and product runs; VN/session/options/features remain unqualified, not activated by loader existence. |
+| Requested-spec v2 | Real rolling/monthly/Quarterly/fixed API/child/retention proof; temporal Delta/global profile with published bounds. Inner/per-fold causal profiles are typed refused, not universal v2 execution. |
+| Audit / exposure | Exact eligible retained self-audit and atomic source-attested exposure writer delivered. Eight actual exposure rows now present. Zero linked AUDIT_OF_SELECTION child cases; preserve the typed NOT_PUBLISHED scope alternative and full-child test gap. |
+| One-candidate P23 | Far-seek 140/140 PASS; utility/outage/ten-route tenant cache scoped PASS. Real WFO + 4 queued / 120 GET all 200 but Library 538 and Progress 568 exceed 500 ms. Coherent 144-table/805-part/3132-file restore succeeds; strict integrity FAILs for 3 old deleted T03 disposable manifests. |
+| P24 | Local unsigned manifest/entry packet prepared, **NOT_READY_FOR_FULL_P24**. Engine-2, whole FE/browser/owner and signed release proof remain required. |
+
+Exact measurements, byte hashes, missing artifact/run IDs and cleanup:
+[P23 final receipt](./evidence/P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md#final-actual-candidate--65bdc8e2).
+Retired only the 22 P23 test sessions (0 ACTIVE), disabled 21 test accounts,
+kept owner anchor, stopped owned :8096 without deleting any volume/source.
+Shared :8095, real accounts, dev/main/stable/production and remotes untouched.
+
+**Claude handoff:** existing named generated declaration/Atlas v2/retained
+fields are available; do not wait for a new publication or redo F4/F5 mapping.
+S02 uses complete RequestedSpec for the estimate, Atlas's exact versioned
+profile for supported temporal controls, and actual preflight `may_create_run`
+for writes. Preserve typed refusals/legacy absence. New chart requests in §18
+are retained intact but not delivered by this latency/qualification slice.
+Full FE/browser/visual/print remains Claude-owned and independently receipted.
+No remote push has occurred.

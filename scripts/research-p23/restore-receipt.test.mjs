@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { assertFreshRestoreTarget, assertRestoreParity, globalsForFreshPortalDatabase, restoreVolumes, CONSTRAINT_INVENTORY_SQL } from './restore-receipt.mjs';
+import { assertFreshRestoreTarget, assertRestoreParity, assessRestoredArtifacts, globalsForFreshPortalDatabase, restoreVolumes, CONSTRAINT_INVENTORY_SQL } from './restore-receipt.mjs';
 
 test('restore refuses shared, original, nonempty or non-mounted database targets',()=>{
   const label='test-copy',v=restoreVolumes(label);
@@ -47,4 +47,22 @@ test('CHECK restore equivalence is source parser roundtrip, not term stripping o
   assert(CONSTRAINT_INVENTORY_SQL.includes('convalidated'));
   assert(!CONSTRAINT_INVENTORY_SQL.includes('CREATE TABLE research.'));
   assert(!CONSTRAINT_INVENTORY_SQL.includes('UPDATE '));
+});
+test('preserved pre-existing missing manifests never turn full restore integrity green',()=>{
+  const healthy={tree_sha256:'a',verified:[{artifact_id:'a'}],missing_manifests:[]};
+  assert.equal(assessRestoredArtifacts(healthy,structuredClone(healthy)).passed,true);
+  const partial={...healthy,missing_manifests:[{artifact_id:'b',state:'MISSING',expected_manifest_digest:'b'}]};
+  const result=assessRestoredArtifacts(partial,structuredClone(partial));
+  assert.equal(result.passed,false);
+  assert.equal(result.all_sealed_artifacts_verified,false);
+  assert.equal(result.verified_artifacts,1);
+  assert.deepEqual(result.missing_manifests,partial.missing_manifests);
+  assert.throws(()=>assessRestoredArtifacts(partial,healthy));
+  assert.throws(()=>assessRestoredArtifacts(partial,{...partial,tree_sha256:'changed'}));
+  assert.throws(()=>assessRestoredArtifacts({verified:[]},{verified:[]}));
+  const code=readFileSync(new URL('./restore-receipt.mjs',import.meta.url),'utf8');
+  assert(code.includes('recordMissingManifests=false'));
+  assert(code.includes('--record-partial-missing-manifests'));
+  assert(code.includes('receipt.passed=receipt.artifact_assessment.passed'));
+  assert(code.includes('if(!receipt?.passed)process.exitCode=1'));
 });

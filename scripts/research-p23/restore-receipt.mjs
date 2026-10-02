@@ -37,6 +37,15 @@ export function globalsForFreshPortalDatabase(text) {
 export function assertRestoreParity(before, after) {
   assert.deepEqual(after, before, 'COHERENT_DATABASE_ARTIFACT_RESTORE_MISMATCH');
 }
+export function assessRestoredArtifacts(before, after) {
+  assertRestoreParity(before, after);
+  assert(Array.isArray(before.verified) && before.verified.length > 0,
+    'NONEMPTY_VERIFIED_ARTIFACTS_REQUIRED');
+  const missing = before.missing_manifests ?? [];
+  return { all_sealed_artifacts_verified: missing.length === 0,
+    verified_artifacts: before.verified.length, missing_manifests: missing,
+    passed: missing.length === 0 };
+}
 // pg_dump reparses CHECK expressions. PostgreSQL flattens associative AND
 // nodes during that parse: byte-identical pg_get_constraintdef output is not
 // promised across a restore. Canonicalize with PostgreSQL's OWN parser on
@@ -151,8 +160,13 @@ for directory,dirs,names in os.walk(root):
         rel=path.relative_to(root).as_posix()
         tree.update((rel+'\0'+h.hexdigest()+'\n').encode());files+=1;size+=path.stat().st_size
 store=ResearchArtifactStore(root/'runs/durable-store/research-retained')
-verified=[]
+verified=[];missing=[]
 for artifact in facts['artifacts']:
+    manifest_path=store._artifact_dir(artifact['artifact_id'])/'manifest.json'
+    if facts.get('record_missing_manifests') is True and not manifest_path.is_file():
+        missing.append({'artifact_id':artifact['artifact_id'],
+            'expected_manifest_digest':artifact['manifest_digest'],'state':'MISSING'})
+        continue
     manifest,digest=store._load_and_verify_manifest(artifact['artifact_id'],verify_parts=True)
     if digest!=artifact['manifest_digest'] or manifest['artifact_revision']!=artifact['artifact_revision']:
         raise RuntimeError('RESTORED_MANIFEST_DATABASE_PIN_MISMATCH')
@@ -163,7 +177,8 @@ for artifact in facts['artifacts']:
             if (part['relative_path'],part['part_digest']) not in actual or path.stat().st_size!=int(part['byte_count']):
                 raise RuntimeError('RESTORED_PART_DATABASE_PIN_MISMATCH')
     verified.append({'artifact_id':artifact['artifact_id'],'manifest_digest':digest})
-print(json.dumps({'tree_sha256':tree.hexdigest(),'file_count':files,'bytes':size,'verified':verified}))
+print(json.dumps({'tree_sha256':tree.hexdigest(),'file_count':files,'bytes':size,
+    'verified':verified,'missing_manifests':missing}))
 `;
 function utility(image, volume, args, input) {
   assert(/^sha256:[a-f0-9]{64}$/.test(image), 'IMMUTABLE_UTILITY_IMAGE_REQUIRED');
@@ -173,8 +188,9 @@ function utility(image, volume, args, input) {
     '--memory', '350000000', '--memory-swap', '350000000', '--pids-limit', '64',
     '--user', '0:0', '-i', '-v', `${volume}:/owned-artifacts:ro`, image, ...args], input);
 }
-function artifactSnapshot(image, volume, snapshot) {
-  return JSON.parse(utility(image, volume, ['python', '-c', VERIFY_ARTIFACTS], JSON.stringify(snapshot)));
+function artifactSnapshot(image, volume, snapshot, recordMissingManifests = false) {
+  return JSON.parse(utility(image, volume, ['python', '-c', VERIFY_ARTIFACTS],
+    JSON.stringify({...snapshot, record_missing_manifests: recordMissingManifests})));
 }
 function pipeFile(args, path, direction) {
   const fd = openSync(path, direction === 'output' ? 'wx' : 'r', 0o600);
@@ -196,7 +212,8 @@ function fileDigest(path) {
   return {sha256:hash.digest('hex'),bytes};
 }
 
-export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868') {
+export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868',recordMissingManifests=false) {
+  assert.equal(typeof recordMissingManifests,'boolean','EXPLICIT_MISSING_MANIFEST_MODE_REQUIRED');
   home=validateHome(home);const fresh=restoreVolumes(label);
   const target=join(home,`restore-${label}.json`);
   assert(!existsSync(target),'INSPECT_PRIOR_RESTORE_DO_NOT_OVERWRITE');
@@ -235,13 +252,15 @@ export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868'
   };
   const receipt={schema_version:'research.p23-coherent-restore.v1',project:PROJECT,base_url:BASE_URL+'/',
     candidate_source_sha:identity.candidate_source_sha,identity,started_at_utc:new Date().toISOString(),
-    original_volumes:{db:ORIGINAL_DB,artifacts:ORIGINAL_ARTIFACTS},restore_volumes:fresh,passed:false};
+    instrumentation_sha256:createHash('sha256').update(readFileSync(fileURLToPath(import.meta.url))).digest('hex'),
+    original_volumes:{db:ORIGINAL_DB,artifacts:ORIGINAL_ARTIFACTS},restore_volumes:fresh,
+    record_missing_manifests:recordMissingManifests,passed:false};
   savePrivate(target,receipt);let originalStopped=false;
   try {
     // Stop all writers first; keep only the owned database up for a coherent dump.
     originalStopped=true;compose(originalPath,['stop','--timeout','20',...SERVICES.filter(s=>s!=='portal-postgres')]);
     receipt.before=await databaseSnapshot();
-    receipt.artifacts_before=artifactSnapshot(identity.images['portal-api'].image_id,ORIGINAL_ARTIFACTS,receipt.before);
+    receipt.artifacts_before=artifactSnapshot(identity.images['portal-api'].image_id,ORIGINAL_ARTIFACTS,receipt.before,recordMissingManifests);
     assert(receipt.before.artifacts.length>0 && receipt.before.parts.length>0,'NONEMPTY_RETAINED_RESTORE_REQUIRED');
     receipt.backups={
       database:pipeFile(['exec',PG,'pg_dump','-U','portal','-d','portal_control','-Fc'],join(home,`restore-${label}.dump`),'output'),
@@ -272,8 +291,8 @@ export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868'
       '--user','0:0','-v',`${fresh.artifacts}:/owned-artifacts`,identity.images['portal-api'].image_id,
       'tar','-C','/owned-artifacts','-xpf','-'],receipt.backups.artifacts.locator,'input');
     receipt.after=await databaseSnapshot();assertRestoreParity(receipt.before,receipt.after);
-    receipt.artifacts_after=artifactSnapshot(identity.images['portal-api'].image_id,fresh.artifacts,receipt.after);
-    assertRestoreParity(receipt.artifacts_before,receipt.artifacts_after);
+    receipt.artifacts_after=artifactSnapshot(identity.images['portal-api'].image_id,fresh.artifacts,receipt.after,recordMissingManifests);
+    receipt.artifact_assessment=assessRestoredArtifacts(receipt.artifacts_before,receipt.artifacts_after);
     savePrivate(target,receipt);
     // No migration/bootstrap/reseal. No worker. Reads must work from restored state.
     for(const service of ['portal-nats','portal-api','control-api','roadmap-task-board-api','portal-web']) {
@@ -300,13 +319,19 @@ export async function restoreReceipt(home=DEFAULT_HOME,label='coherent-b2e8b868'
       receipt.original_stack_restored=true;savePrivate(target,receipt);
     }
   }
-  receipt.passed=true;receipt.completed_at_utc=new Date().toISOString();savePrivate(target,receipt);
-  console.log(JSON.stringify({passed:true,tables:receipt.before.data.length,sealed_artifacts:receipt.before.artifacts.length,
+  receipt.coherent_restore_passed=true;
+  receipt.passed=receipt.artifact_assessment.passed;
+  receipt.completed_at_utc=new Date().toISOString();savePrivate(target,receipt);
+  console.log(JSON.stringify({passed:receipt.passed,coherent_restore_passed:true,
+    artifact_assessment:receipt.artifact_assessment,tables:receipt.before.data.length,sealed_artifacts:receipt.before.artifacts.length,
     artifact_parts:receipt.before.parts.length,files:receipt.artifacts_after.file_count,
     restored_worker_off:true,original_stack_restored:true,publication_pin_scope:'Only actual nonempty source relations, not inferred from empty tables.'}));
+  return receipt;
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   restoreReceipt(process.argv.find(a=>a.startsWith('--home='))?.slice(7)??DEFAULT_HOME,
-    process.argv.find(a=>a.startsWith('--label='))?.slice(8)??'coherent-b2e8b868')
+    process.argv.find(a=>a.startsWith('--label='))?.slice(8)??'coherent-b2e8b868',
+    process.argv.includes('--record-partial-missing-manifests'))
+    .then(receipt=>{if(!receipt?.passed)process.exitCode=1;})
     .catch(error=>{console.error('P23 coherent restore refused:',error.message);process.exitCode=1;});
 }

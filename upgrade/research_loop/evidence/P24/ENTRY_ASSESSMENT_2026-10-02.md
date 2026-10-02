@@ -16,7 +16,7 @@ data, accounts or Cloudflare configuration.
 
 | Gate | Evidence / remaining work |
 | --- | --- |
-| P23 one candidate | Long WFO now seals COMPLETED/READY after migration 085. Clean 660f4b18 still fails Search/Replay SLO; the next SQL repair passes a dirty diagnostic only. Corrected clean-image load/recovery/restore retake is required. [Actual results](../P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md). |
+| P23 one candidate | Clean `65bdc8e2` far-seek, utility and outage PASS; real 92-day WFO seals COMPLETED/READY. Mixed Library 538/500 and Progress 568/500 ms still FAIL. Coherent restore copies all state correctly but retains three missing old disposable test-store manifests; full integrity FAIL. [Actual results](../P23/TEMPORAL_CANDIDATE_LOAD_2026-10-02.md#final-actual-candidate--65bdc8e2). |
 | T07/T13 | Only QuantBT 1.1.1 is installed/accepted. No real second qualified engine image exists. Simulated pins, v2 profiles or another container of the same wheel are not upgrade/default/rollback proof. [Exact gap](../P23/T07_T13_P04_RELEASE_PIN_GAP_2026-09-30.md). |
 | T12 | Exact retained self-audit has real proof. Linked non-reusable AUDIT_OF_SELECTION stays unsupported, never a promoted diagnostic. Utility/primary quota evidence must match the candidate. |
 | T14 | New exposure is proved; whole restore must preserve audit/exposure/selection/publication references and verify every published part. |
@@ -26,12 +26,27 @@ data, accounts or Cloudflare configuration.
 
 ## Continuation
 
-Retake corrected isolated P23 once; reuse unaffected evidence only by explicit
-code/config/image pins and preserve failures. Finish actual recovery/restore,
-utility admission and identity teardown, then stop owned :8096. Keep volumes,
-rollback images and private 0600 receipts; no broad prune. Shared :8095, dev
-and production remain untouched. Claude owns consumer/browser/visual closure
-and receives generated fields in backend queue §9.
+The recovery, utility and identity teardown below have already run; the
+owned cell is down. Next, repair mixed-load latency and resolve the exact
+old-test-store integrity gap without inventing bytes or deleting history.
+Retake only affected gates on a named clean candidate; reuse unaffected
+evidence only with explicit code/config/image pins and preserve failures.
+Keep volumes, rollback images and private 0600 receipts; no broad prune.
+Shared :8095, dev and production remain untouched. Claude owns consumer/
+browser/visual closure and receives generated fields in backend queue §9.
 
 All mandatory PASS is required for READY_FOR_BOBBY_REVIEW. Owner acceptance
 and eventual production rollout are separate actual events.
+
+## Actual closeout checkpoint — 2026-10-02
+
+[Local candidate manifest](./current-source-candidate-manifest.v1.json) pins
+seven images and receipt hashes. It is **unsigned / NOT_READY_FOR_FULL_P24**,
+not a release manifest. It includes Claude's latest chart commit `a599bd3f`
+without Codex frontend edits. Application builds and mandatory backend hook
+pass (1469 / 1 opt-in skip, 219 contracts); no browser/visual verdict inferred.
+144-table coherent restore and original-volume recovery actually ran; default
+strict and explicit partial-mode integrity FAILs are retained. No data/record
+was removed to make either gate green. Cleanup proves zero owned active
+sessions, 21 temporary accounts disabled, owner anchor kept, cell :8096 down;
+all original data/backups/rollback pins retained. No remote push or release.
