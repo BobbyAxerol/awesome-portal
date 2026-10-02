@@ -430,7 +430,7 @@ export class ResearchRunAdmissionService {
     if (end - start > profile.max_span_days * 86_400_000) {
       return "The Delta walk-forward span exceeds the admitted 92 days.";
     }
-    const folds = advancedFoldCount(manifest.topology);
+    const folds = advancedFoldCount(manifest.topology, walkForward.frequency, walkForward.window_mode);
     if (folds === null || folds < profile.fold_bounds.min || folds > profile.fold_bounds.max) {
       return "The Delta walk-forward profile admits 2 to 16 weekly expanding folds in the preflight topology.";
     }
@@ -535,10 +535,12 @@ function siblingPinReason(overrides: ResearchRequestedSpec["parameter_space_over
 }
 
 /** Fold count of the immutable P08 advanced topology; null for any other shape. */
-function advancedFoldCount(topology: Record<string, unknown>): number | null {
+function advancedFoldCount(topology: Record<string, unknown>, frequency: string, windowMode: string): number | null {
   if (!topology || typeof topology !== "object" || Array.isArray(topology)) return null;
-  if (topology.protocol !== "advanced_walk_forward" || topology.frequency !== DELTA_WFO_PROFILE.frequency ||
-      topology.window_mode !== DELTA_WFO_PROFILE.window_mode || topology.sealed_holdout !== null) {
+  // Bind the source topology to the admitted request, not W1's constants.
+  // W1 still rejects other schedules above; v2 owns its separately pinned set.
+  if (topology.protocol !== "advanced_walk_forward" || topology.frequency !== frequency ||
+      topology.window_mode !== windowMode || topology.sealed_holdout !== null) {
     return null;
   }
   return Array.isArray(topology.folds) ? topology.folds.length : null;

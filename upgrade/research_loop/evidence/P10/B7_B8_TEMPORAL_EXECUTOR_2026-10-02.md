@@ -95,3 +95,15 @@ P08 error union and broken Claude's exhaustive frontend refusal map. Correction
 isolates this fixed-copy error in the metadata operation family and its own
 Problem schema; P08's accepted vocabulary is unchanged. No frontend file is
 edited and the failed build is not an acceptance receipt.
+
+### Actual preflight correction
+
+Clean candidate `36420654` built and started with all seven services healthy.
+The first v2 product preflight passed its 17 source/declaration gates and built
+two rolling folds, but run admission returned false: the fold-count helper
+still compared every source topology to W1's weekly/expanding constants. Its
+unit fixture had also defaulted to that old topology, hiding the error.
+The correction binds source frequency/window mode to the admitted request;
+W1's earlier exact-set check stays unchanged. Regression fixtures now carry
+actual rolling/monthly/quarterly topology and refuse mismatched source shapes.
+No failed admission is counted as a completed run or product receipt.
