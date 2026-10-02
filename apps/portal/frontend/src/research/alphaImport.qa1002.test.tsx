@@ -114,7 +114,7 @@ describe("QA S14 U11 alpha id", () => {
 
   it("the rule sentence is the contract's own pattern", () => {
     expect(RULE_PATTERNS.alphaId).toBe("^[a-z][a-z0-9-]{2,63}$");
-    expect(ALPHA_ID_RULE).toMatch(/3.64 characters/);
+    expect(ALPHA_ID_RULE).toMatch(/3.64/);
   });
 });
 

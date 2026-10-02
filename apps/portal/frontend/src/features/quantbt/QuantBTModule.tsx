@@ -50,14 +50,11 @@ function lazyNamed<M extends Record<K, ComponentType<any>>, K extends keyof M>(l
 }
 
 const AuditView = lazyNamed(() => import("../audit/AuditView"), "AuditView");
-const ConfigWorkspace = lazyNamed(() => import("../config/ConfigWorkspace"), "ConfigWorkspace");
 const AlphaVersionDetail = lazyNamed(() => import("../imports/AlphaVersionDetail"), "AlphaVersionDetail");
-const ImportInbox = lazyNamed(() => import("../imports/ImportInbox"), "ImportInbox");
 const ExecutionView = lazyNamed(() => import("../execution/ExecutionView"), "ExecutionView");
 const OptimizationView = lazyNamed(() => import("../optimization/OptimizationView"), "OptimizationView");
 const OverviewView = lazyNamed(() => import("../overview/OverviewView"), "OverviewView");
 const ParametersView = lazyNamed(() => import("../parameters/ParametersView"), "ParametersView");
-const RunLibrary = lazyNamed(() => import("../runs/RunLibrary"), "RunLibrary");
 const RunProgress = lazyNamed(() => import("../runs/RunProgress"), "RunProgress");
 const EngineAtlasRoute = lazyNamed(() => import("../../research/foundationRoutes"), "EngineAtlasRoute");
 const JourneyMapRoute = lazyNamed(() => import("../../research/foundationRoutes"), "JourneyMapRoute");
@@ -221,9 +218,18 @@ function ResolveDefaultRun({ tab }: { tab?: string }) {
   const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns });
   if (runs.isLoading) return <StateView kind="loading" message="Resolving the default run…" />;
   const target = defaultRun(runs.data);
-  if (!target) return <Navigate to={`${QUANTBT_ROOT}/new`} replace />;
+  if (!target) return <Navigate to={`${QUANTBT_ROOT}/runs/new`} replace />;
   const safeTab = tab && isQuantBTTab(tab) ? tab : "overview";
   return <Navigate to={runTabPath(target.run_id, safeTab)} replace />;
+}
+
+/**
+ * A retired screen's URL still works: it lands on the redesigned screen with
+ * its query string and hash intact. The retired screens are no longer mounted.
+ */
+export function LegacyScreenRedirect({ to }: { to: string }) {
+  const location = useLocation();
+  return <Navigate to={{ pathname: to, search: location.search, hash: location.hash }} replace />;
 }
 
 /** `/research/quantbt/<tab>?run=…` — the in-module legacy form. */
@@ -242,7 +248,7 @@ function LegacyTabRedirect() {
 
 /** The Research Loop screens mounted through P20. */
 const RESEARCH_SCREEN =
-  /\/research\/quantbt\/(journey|atlas|alpha-import|alphas\/[^/]+\/(lineage|compare)|compare|release-candidates\/[^/]+|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report|release-candidate)|runs)\/?$/;
+  /\/research\/quantbt(?:\/?$|\/(journey|atlas|alpha-import|alphas\/[^/]+\/(lineage|compare)|compare|release-candidates\/[^/]+|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report|release-candidate)|runs)\/?$)/;
 
 /** Research screens that draw their own HiFi frame (padding, max width): 01, 03, 04, 05, 06, 07, 08 (E2), 14 (E6). */
 const OWN_FRAME_SCREEN =
@@ -262,12 +268,6 @@ export function QuantBTModule() {
      FE-X-03). */
   const onResearchScreen = RESEARCH_SCREEN.test(location.pathname);
   useResearchDocumentTitle(location.pathname);
-  const runs = useQuery({
-    queryKey: ["runs"],
-    queryFn: api.listRuns,
-    refetchInterval: 4000,
-    enabled: !onResearchScreen,
-  });
   const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies, enabled: !onResearchScreen });
 
   // The active run is whatever the canonical path names. Reading it from the
@@ -315,7 +315,6 @@ export function QuantBTModule() {
       <Link to={`${QUANTBT_ROOT}/runs`} className="btn-ghost no-print" aria-label="Run library">
         <FolderOpen size={12} />
         Runs
-        {runs.data?.length ? <span className="text-ink-faint">({runs.data.length})</span> : null}
       </Link>
       {activeRunId ? (
         <>
@@ -389,7 +388,7 @@ export function QuantBTModule() {
         data-own-frame={OWN_FRAME_SCREEN.test(location.pathname) || undefined}
       >
       <Routes>
-        <Route path="new" element={<ConfigWorkspace />} />
+        <Route path="new" element={<LegacyScreenRedirect to={`${QUANTBT_ROOT}/runs/new`} />} />
         {/* The quarantine inbox lives under QuantBT because it is about the
           * strategies this module's picker can (and cannot) run. ALPHA_POOL is
           * still COMMISSIONED in the registry, and rendering a working screen
@@ -426,7 +425,7 @@ export function QuantBTModule() {
           * rather than under the still-COMMISSIONED ALPHA_POOL feature.
           * Legacy `imports` below is untouched. */}
         <Route path="alpha-import" element={<AlphaImportRoute />} />
-        <Route path="imports" element={<ImportInbox />} />
+        <Route path="imports" element={<LegacyScreenRedirect to={`${QUANTBT_ROOT}/alpha-import`} />} />
         {/* P19 · Screen 10. Declared before `alphas/:alphaId/:version` so a
           * reader never has to know that the static segment also outranks it. */}
         <Route path="alphas/:alphaId/lineage" element={<LineageRoute />} />
@@ -440,7 +439,7 @@ export function QuantBTModule() {
           * replaces is not deleted — it stays reachable at `runs/legacy`, so
           * the swap is one line to reverse. */}
         <Route path="runs" element={<RunLibraryRoute />} />
-        <Route path="runs/legacy" element={<RunLibrary />} />
+        <Route path="runs/legacy" element={<LegacyScreenRedirect to={`${QUANTBT_ROOT}/runs`} />} />
         <Route path="runs/:runId/*" element={<RunWorkspace />} />
         <Route path=":tab" element={<LegacyTabRedirect />} />
         {/* The module opens on S01; the latest legacy run is one click away in it. */}

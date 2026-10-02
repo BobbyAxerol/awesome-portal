@@ -79,7 +79,7 @@ export function AlphaVersionDetail() {
           </>
         }
         actions={
-          <Link className="btn-ghost" to={`${QUANTBT_ROOT}/imports`}>
+          <Link className="btn-ghost" to={`${QUANTBT_ROOT}/alpha-import`}>
             <ArrowLeft size={12} />
             Quarantine inbox
           </Link>

@@ -139,7 +139,7 @@ describe("S14 registry next_cursor — row", () => {
     const { rerender } = mount(props({ registryNext: CURSOR, registryMore: "loading", onLoadMoreRegistry: vi.fn() }));
     expect((q('[data-action="load-more-registry"]') as HTMLButtonElement).disabled).toBe(true);
     rerender(<MemoryRouter><AlphaImport {...props({ registryNext: CURSOR, registryMore: "failed", onLoadMoreRegistry: vi.fn() })} /></MemoryRouter>);
-    expect(q("[data-registry-more-failed]")?.textContent).toContain("the 1 loaded stay");
+    expect(q("[data-registry-more-failed]")?.textContent).toBe("Next page failed.");
     expect((q('[data-action="load-more-registry"]') as HTMLButtonElement).disabled).toBe(false);
   });
 

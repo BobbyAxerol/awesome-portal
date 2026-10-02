@@ -151,6 +151,15 @@ export interface DraftConstraints {
    * here and the server's preflight still applies it.
    */
   sweepCeiling?: number | null;
+  /**
+   * The symbols the chosen dataset lists, when the catalog served the whole list. A symbol outside it is not valid.
+   * Null/absent when the list is not served in full (a partial list cannot say "unlisted"; the server's search does).
+   */
+  listedSymbols?: readonly string[] | null;
+  /** A symbol the server's own search said the dataset does not list (a partial listing). */
+  unlistedSymbol?: string | null;
+  /** The label horizon, purge and embargo are offered for this declaration, so Advanced walk-forward requires them. */
+  temporalGuardsRequired?: boolean;
 }
 
 /** Facts the browser could not read, named so a panel can say which. */
@@ -223,6 +232,10 @@ export function effectiveStrategyId(draft: RunDraft): string {
 
 export function validateData(draft: RunDraft, limits: DraftConstraints): string | null {
   if (draft.symbol.trim().length === 0) return "A symbol is required.";
+  const typed = draft.symbol.trim().toUpperCase();
+  if ((limits.listedSymbols && !limits.listedSymbols.includes(typed)) || limits.unlistedSymbol === typed) {
+    return `${typed} is not a listed symbol.`;
+  }
   /* No version's timeframe is assumed: the reader (or the chosen version's first declared one) supplies it. */
   if (draft.timeframe.trim().length === 0) return "A timeframe is required.";
   /* No declaration read means no rule to enforce — not a rule that passes. */
@@ -236,28 +249,48 @@ export function validateData(draft: RunDraft, limits: DraftConstraints): string 
   return null;
 }
 
+const WINDOW_LABEL = { is: "IS", oos: "OOS", holdout: "Holdout" } as const;
+
+/** Every problem of the three windows, each naming its window; empty when the windows are sound. */
+export function windowProblems(draft: RunDraft): readonly string[] {
+  if (draft.protocol !== "three_window_decay") return [];
+  const out: string[] = [];
+  const keys = ["is", "oos", "holdout"] as const;
+  /* The holdout end is the outer bound the reader is most likely to miss, so it is named first. */
+  if (!draft.windows.holdout.endExclusive) out.push("Holdout end is required.");
+  for (const key of keys) {
+    const window = draft.windows[key];
+    if (!window.start) out.push(`${WINDOW_LABEL[key]} start is required.`);
+    if (!window.endExclusive && !(key === "holdout")) out.push(`${WINDOW_LABEL[key]} end is required.`);
+  }
+  const at = (key: (typeof keys)[number], edge: "start" | "endExclusive") => utcMs(draft.windows[key][edge]);
+  for (const key of keys) {
+    const from = at(key, "start");
+    const to = at(key, "endExclusive");
+    if (from !== null && to !== null && to <= from) out.push(`${WINDOW_LABEL[key]} must end after it starts.`);
+    else if ((draft.windows[key].start && from === null) || (draft.windows[key].endExclusive && to === null)) out.push(`${WINDOW_LABEL[key]} has an unreadable date.`);
+  }
+  /* Half-open windows meet exactly; a gap or an overlap is a different methodology, not a tolerance. */
+  for (const [before, after] of [["is", "oos"], ["oos", "holdout"]] as const) {
+    const end = at(before, "endExclusive");
+    const start = at(after, "start");
+    if (end === null || start === null) continue;
+    if (start < end) out.push(`${WINDOW_LABEL[after]} overlaps ${WINDOW_LABEL[before]}: it starts before ${WINDOW_LABEL[before]} ends.`);
+    else if (start > end) out.push(`${WINDOW_LABEL[after]} must begin exactly where ${WINDOW_LABEL[before]} ends.`);
+  }
+  return out;
+}
+
 export function validateWindows(draft: RunDraft): string | null {
-  if (draft.protocol !== "three_window_decay") return null;
-  const { is, oos, holdout } = draft.windows;
+  return windowProblems(draft)[0] ?? null;
+}
 
-  if (!holdout.endExclusive) return "Holdout end is required.";
-
-  const bounds = [is, oos, holdout].map((w) => [utcMs(w.start), utcMs(w.endExclusive)] as const);
-  if (bounds.some(([a, b]) => a === null || b === null)) {
-    return "Every window must have a positive length.";
-  }
-  if (bounds.some(([a, b]) => (b as number) <= (a as number))) {
-    return "Every window must have a positive length.";
-  }
-  /* Half-open windows meet exactly; a gap or an overlap is a different
-     methodology, not a tolerance. */
-  if (utcMs(oos.start) !== utcMs(is.endExclusive)) {
-    return "OOS must begin exactly where IS ends.";
-  }
-  if (utcMs(holdout.start) !== utcMs(oos.endExclusive)) {
-    return "Holdout must begin exactly where OOS ends.";
-  }
-  return null;
+/** What the Walk-forward step still needs besides its dates: the mode and schedule both protocols declare there. */
+export function modeProblems(draft: RunDraft): readonly string[] {
+  const out: string[] = [];
+  if (draft.optimizationMode === "") out.push("Choose an optimization mode.");
+  else if (draft.optimizationSchedule === "") out.push("Choose a schedule.");
+  return out;
 }
 
 export interface ParameterStatus {
@@ -378,6 +411,38 @@ export function estimateSignature(spec: RequestedSpec): string {
   ]);
 }
 
+/**
+ * Every problem of the Advanced walk-forward declaration, like the three windows': the analysis span, the first OOS
+ * instant and the frequency and window mode are required; the label horizon, purge and embargo are required whenever the
+ * screen offers them (`limits.temporalGuardsRequired`). Then the v2 rules, verbatim with the server's field names.
+ */
+export function advancedProblems(draft: RunDraft, limits?: Pick<DraftConstraints, "temporalGuardsRequired">): readonly string[] {
+  if (draft.protocol !== "advanced") return [];
+  const wf = draft.walkForward;
+  const out: string[] = [];
+  if (!wf.start) out.push("Analysis start is required.");
+  if (!wf.endExclusive) out.push("Analysis end is required.");
+  const from = utcMs(wf.start);
+  const to = utcMs(wf.endExclusive);
+  if (from !== null && to !== null && to <= from) out.push("The analysis must end after it starts.");
+  if (!wf.splitMode) out.push("First OOS instant is required.");
+  else {
+    const split = utcMs(wf.splitMode);
+    if (split === null) out.push("First OOS instant is not a readable date.");
+    else if (from !== null && to !== null && to > from && (split <= from || split >= to)) out.push("First OOS instant must fall inside the analysis.");
+  }
+  if (!wf.frequency) out.push("Frequency is required.");
+  if (!wf.windowMode) out.push("Window mode is required.");
+  if (limits?.temporalGuardsRequired === true) {
+    for (const [label, value] of [["Label horizon", wf.labelHorizonBars], ["Purge", wf.purgeBars], ["Embargo", wf.embargoBars]] as const) {
+      if (value === undefined || value.trim() === "") out.push(`${label} is required.`);
+    }
+  }
+  const v2 = validateWalkForwardV2(draft);
+  if (v2 !== null) out.push(v2);
+  return out;
+}
+
 /** Advanced walk-forward v2 rules, verbatim with the server's field names. */
 export function validateWalkForwardV2(draft: RunDraft): string | null {
   if (draft.protocol !== "advanced") return null;
@@ -397,7 +462,7 @@ export function validateWalkForwardV2(draft: RunDraft): string | null {
   if (causal) {
     const inner = wf.inner;
     if (!inner || !inner.splitFrequency || !inner.windowMode || !TRAIN_WINDOW.test(inner.trainWindow)) {
-      return "mode_1_decay with per_fold_causal needs inner folds: a frequency, a window mode and a train width.";
+      return "Per-fold causal selection needs inner folds: a frequency, a window mode and a train width.";
     }
     const minFolds = Number(inner.minFolds || "2");
     if (!Number.isInteger(minFolds) || minFolds < 1 || minFolds > 64) return "Inner minimum folds must be a whole number from 1 to 64.";
@@ -448,17 +513,17 @@ export function blockingProblems(
   draft: RunDraft,
   limits: DraftConstraints,
 ): readonly { step: StepId; message: string }[] {
-  const checks: [StepId, string | null][] = [
-    ["route", validateRoute(draft, limits)],
-    ["strategy", validateStrategy(draft, limits)],
-    ["data", validateData(draft, limits)],
-    ["windows", validateWindows(draft) ?? validateWalkForwardV2(draft)],
-    ["parameters", validateParameters(draft, limits)],
-    ["optimization", validateOptimization(draft, limits)],
+  const checks: [StepId, readonly (string | null)[]][] = [
+    ["route", [validateRoute(draft, limits)]],
+    ["strategy", [validateStrategy(draft, limits)]],
+    ["data", [validateData(draft, limits)]],
+    ["windows", [...windowProblems(draft), ...advancedProblems(draft, limits), ...modeProblems(draft)]],
+    ["parameters", [validateParameters(draft, limits)]],
+    ["optimization", [validateOptimization(draft, limits)]],
   ];
-  return checks
-    .filter((entry): entry is [StepId, string] => entry[1] !== null)
-    .map(([step, message]) => ({ step, message }));
+  return checks.flatMap(([step, messages]) =>
+    messages.filter((message): message is string => message !== null).map((message) => ({ step, message })),
+  );
 }
 
 /**
@@ -467,12 +532,63 @@ export function blockingProblems(
  * a value that is present and wrong is.
  */
 export function isIncompleteProblem(draft: RunDraft, problem: { step: StepId; message: string }): boolean {
-  if (/\brequired\b/.test(problem.message)) return true;
+  if (/\brequired\b/.test(problem.message) || /^Choose\b/.test(problem.message)) return true;
   if (problem.step !== "windows") return false;
   if (draft.protocol === "three_window_decay") {
     return [draft.windows.is, draft.windows.oos, draft.windows.holdout].some((window) => window.start === "" || window.endExclusive === "");
   }
   return draft.walkForward.start === "" || draft.walkForward.endExclusive === "" || draft.walkForward.splitMode === "";
+}
+
+/** The test alphas the platform's own checks register: they cannot create runs, so no select offers them. */
+export const RECEIPT_ALPHA = /^s14-(ui|api)-receipt$/;
+
+/* ---------------------------------------------------------- draft progress */
+
+/** Constraints that read nothing: only what the draft itself says can be judged (the stored-draft summary has no atlas). */
+export const NO_LIMITS: DraftConstraints = {
+  declaredTimeframes: null,
+  seedRequired: null,
+  trialCeiling: null,
+  entrypoint: null,
+  requiredColumns: null,
+  warmupBars: null,
+  blockedRoutes: {},
+};
+
+/** True when nothing of the declaration has been chosen or typed yet. */
+export function draftIsEmpty(draft: RunDraft): boolean {
+  const windows = [draft.windows.is, draft.windows.oos, draft.windows.holdout];
+  return (
+    draft.alphaVersionId === "" &&
+    draft.datasetId === "" &&
+    draft.symbol.trim() === "" &&
+    windows.every((window) => window.start === "" && window.endExclusive === "") &&
+    draft.walkForward.start === "" &&
+    draft.walkForward.endExclusive === "" &&
+    draft.walkForward.splitMode === ""
+  );
+}
+
+/** The wizard steps a declaration has filled in soundly, from what the draft itself says. Review is never one. */
+export function stepsDone(draft: RunDraft, limits: DraftConstraints = NO_LIMITS): ReadonlySet<StepId> {
+  const problems = new Set(blockingProblems(draft, limits).map((problem) => problem.step));
+  const done = new Set<StepId>();
+  if (draft.bound && draft.alphaVersionId === "") return done;
+  done.add("context");
+  if (!problems.has("strategy")) done.add("strategy");
+  if (!problems.has("route")) done.add("route");
+  if (draft.datasetId !== "" && draft.symbol.trim() !== "" && draft.timeframe.trim() !== "" && !problems.has("data")) done.add("data");
+  if (!problems.has("windows")) done.add("windows");
+  if (!problems.has("parameters")) done.add("parameters");
+  if (!problems.has("optimization")) done.add("optimization");
+  return done;
+}
+
+/** The first step still to fill in: where a draft with nothing to review resumes. `review` once every step before it is done. */
+export function firstIncompleteStep(draft: RunDraft, limits: DraftConstraints = NO_LIMITS): StepId {
+  const done = stepsDone(draft, limits);
+  return STEPS.find((step) => step.id !== "review" && !done.has(step.id))?.id ?? "review";
 }
 
 /* ------------------------------------------------------------ serializer */

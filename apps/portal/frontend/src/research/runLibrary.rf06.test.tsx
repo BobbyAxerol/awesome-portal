@@ -389,7 +389,8 @@ describe("FE-S01-08 — the claim face uses the server's reason", () => {
     view({ response: page([item({ claim: { state: "NOT_ISSUED", text: sentence, availability: AVAILABLE } })]) });
     const claim = document.querySelector("[data-claim]") as HTMLElement;
     // Pre-RF-05 code: the sentence was printed as if it were an issued claim.
-    expect(claim.textContent).toBe(`NOT ISSUED — ${sentence}`);
+    expect(claim.textContent).toBe("NOT ISSUED");
+    expect(claim.querySelector("[data-claim-state]")?.getAttribute("title")).toBe(sentence);
     expect(claim.getAttribute("data-claim-kind")).toBe("not-issued");
   });
 

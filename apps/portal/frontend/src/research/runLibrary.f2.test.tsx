@@ -142,7 +142,7 @@ describe("F2 S01 - every journey pick target has a screen word", () => {
   it.each(targets)("%s: banner and card link carry no raw snake_case token", (key) => {
     expect(PICK_TARGET_LABEL[key]).toBeDefined();
     mount([PARENT], key);
-    const banner = [...document.querySelectorAll("span")].find((node) => node.textContent?.startsWith("Pick a run to open"));
+    const banner = [...document.querySelectorAll("span")].find((node) => node.textContent?.startsWith(key === "alpha_version_legacy" ? "Pick an alpha to open" : "Pick a run to open"));
     expect(banner).toBeDefined();
     expect(banner?.textContent).not.toMatch(/[a-z]+_[a-z_]+/);
     expect(openTarget(PARENT, key).label).not.toMatch(/[a-z]+_[a-z_]+/);

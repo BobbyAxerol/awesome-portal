@@ -35,6 +35,7 @@ import {
   type AlphaImportProps,
 } from "./AlphaImport";
 import {
+  IMPORT_FORBIDDEN,
   toRefusal,
   type ActivationResponse,
   type GatesResponse,
@@ -43,7 +44,6 @@ import {
   type SourceResponse,
 } from "./alphaImportClient";
 import { PortalApiError } from "../lib/api";
-import { REFUSAL_COPY } from "./researchRefusal";
 import { formatUtc } from "./researchFormat";
 import { researchState } from "./state";
 
@@ -121,11 +121,10 @@ describe("14-1/14-2 — header: crumb, title, state chip, meta line", () => {
   it("prints the HiFi title, the shared crumb and the real endpoint meta", () => {
     render(<AlphaImport {...props()} />);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(IMPORT_TITLE);
-    expect(IMPORT_TITLE).toBe("Alpha Import — standardize the code artifact");
+    expect(IMPORT_TITLE).toBe("Import alpha");
 
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
-    expect(crumb.textContent).toBe("Journey/Alpha Import·next: New Run →");
-    expect(within(crumb).getByText("Alpha Import").getAttribute("aria-current")).toBe("page");
+    expect(crumb.textContent).toBe("JourneyNew Run →");
     expect(within(crumb).getByText("Journey").getAttribute("href")).toBe("/research/quantbt/journey");
 
     // QA S14: the endpoint path is not for users — no meta line at all, and no permission claim.
@@ -166,10 +165,11 @@ describe("14-3 — a three-step stepper (DQ-06) over mounted views", () => {
     render(<AlphaImport {...props()} />);
     const tabs = screen.getAllByRole("tab");
     expect(tabs).toHaveLength(3);
-    expect(IMPORT_STEPS.map((step) => step.label)).toEqual(["Source & mirror", "Quarantine gates", "Register version"]);
+    expect(IMPORT_STEPS.map((step) => step.label)).toEqual(["Source", "Gates", "Register"]);
     tabs.forEach((node, index) => {
       expect(node.textContent).toContain(IMPORT_STEPS[index].label);
-      expect(node.textContent).toContain(IMPORT_STEPS[index].sub);
+      // The longer name rides in the tooltip, not in the visible label (TEXT_C I2).
+      expect(node.getAttribute("title")).toBe(IMPORT_STEPS[index].sub);
     });
   });
 
@@ -276,7 +276,9 @@ describe("14-4/14-5 — step 1: mirror table left, drop zone + entrypoint right"
     expect(RULE_PATTERNS.versionLabel).toBe(defs.RegistrationResponse.properties?.version_label.pattern);
     expect(RULE_PATTERNS.timeframe).toBe(defs.AlphaVersionDeclaration.properties?.timeframes.items?.pattern);
     const rules = document.querySelector("[data-mirror-rules]") as HTMLElement;
-    for (const pattern of Object.values(RULE_PATTERNS)) expect(rules.textContent).toContain(pattern);
+    // The regexes are a tooltip, not helper text on the page.
+    for (const pattern of Object.values(RULE_PATTERNS)) expect(rules.getAttribute("title")).toContain(pattern);
+    expect(rules.textContent).not.toContain(RULE_PATTERNS.alphaId);
   });
 
   it("puts the drop zone and the entrypoint card beside the mirror, and Code anatomy below", () => {
@@ -452,7 +454,7 @@ describe("E1 — display rules on Screen 14", () => {
       [403, null],
       [404, null],
     ] as const) {
-      expect(toRefusal(new PortalApiError("server text", status, code, null)).message).toBe(REFUSAL_COPY.denied);
+      expect(toRefusal(new PortalApiError("server text", status, code, null)).message).toBe(IMPORT_FORBIDDEN);
     }
   });
 });

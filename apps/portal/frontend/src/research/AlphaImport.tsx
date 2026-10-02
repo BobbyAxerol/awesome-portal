@@ -73,13 +73,16 @@ export const FAIL_CLOSED_NOTE = "fail-closed: a red gate stops the import.";
 export const DRAFT_NOTE = "a DRAFT can run, not seal a candidate";
 
 /** Spec 14 §4 pitfall 8 — shown when more than one file is offered. */
-export const SINGLE_FILE_ERROR = "One .py only — single-file contract.";
+export const SINGLE_FILE_ERROR = "One file only.";
+
+/** A file that is not `.py` is refused with this one line and never read (W2C). */
+export const NON_PY_ERROR = ".py files only.";
 
 /** Stagger between gate rows. Suppressed under `prefers-reduced-motion`. */
 export const GATE_STAGGER_MS = 120;
 
 /** HiFi title, verbatim. */
-export const IMPORT_TITLE = "Alpha Import — standardize the code artifact";
+export const IMPORT_TITLE = "Import alpha";
 
 /**
  * VD-TEXT-01 (2026-10-01): the subtitle under the title and the "rules of this
@@ -95,7 +98,7 @@ export const IMPORT_META = "";
  * compares, so the sentence cannot drift from the validator.
  */
 /** The alpha id rule in words (`RULE_PATTERNS.alphaId`), shown beside the field when the typed id breaks it. */
-export const ALPHA_ID_RULE = "Alpha id: lowercase letters, digits and hyphens; 3–64 characters; starts with a letter.";
+export const ALPHA_ID_RULE = "a–z, 0–9, hyphen; 3–64; start with a letter.";
 
 export const RULE_PATTERNS = {
   alphaId: "^[a-z][a-z0-9-]{2,63}$",
@@ -184,7 +187,8 @@ export const ACTIVATION_NOT_PERMITTED = "Activation not permitted";
 export const ACTIVATION_NO_REASON = "reason not published";
 
 export function activationNotPermitted(reason: string | null | undefined): { sentence: string; code: string | null } {
-  if (!reason) return { sentence: `${ACTIVATION_NOT_PERMITTED} — ${ACTIVATION_NO_REASON}`, code: null };
+  /* No served reason: the line says only "not permitted"; the tooltip says no reason was published. */
+  if (!reason) return { sentence: ACTIVATION_NOT_PERMITTED, code: null };
   const known = (ACTIVATION_REASON_COPY as Record<string, string | undefined>)[reason];
   return { sentence: known ? `${ACTIVATION_NOT_PERMITTED} — ${known}` : ACTIVATION_NOT_PERMITTED, code: reason };
 }
@@ -193,7 +197,7 @@ export function activationNotPermitted(reason: string | null | undefined): { sen
 function ActivationNotPermitted({ reason }: { reason: string | null | undefined }) {
   const { sentence, code } = activationNotPermitted(reason);
   return (
-    <>
+    <span title={code ? undefined : ACTIVATION_NO_REASON}>
       {sentence}
       {code ? (
         <>
@@ -203,7 +207,7 @@ function ActivationNotPermitted({ reason }: { reason: string | null | undefined 
           </span>
         </>
       ) : null}
-    </>
+    </span>
   );
 }
 
@@ -250,7 +254,7 @@ const AI_CSS = `
 .ai-chip[data-chip="ACTIVE"] { border-color: var(--good); color: var(--good); }
 .ai-meta { flex: 0 1 auto; font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); overflow-wrap: anywhere; }
 .ai-stepper { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); box-shadow: var(--shadow-e1); padding: 5px; overflow-x: auto; }
-.ai-step { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 5px; padding: 5px 12px; background: transparent; color: var(--ink); flex: none; cursor: pointer; text-align: left; }
+.ai-step { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 5px; padding: 5px 12px; min-height: 40px; background: transparent; color: var(--ink); flex: none; cursor: pointer; text-align: left; }
 .ai-step[aria-selected="true"] { background: var(--accent-soft); }
 .ai-step .num { width: 20px; height: 20px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; border: 1.5px solid var(--ink-faint); color: var(--ink-mute); }
 .ai-step[data-progress="done"] .num { border-color: var(--good); color: var(--good); }
@@ -258,7 +262,6 @@ const AI_CSS = `
 .ai-step[aria-selected="true"] .num { border-color: var(--accent); color: var(--accent); }
 .ai-step .txt { display: flex; flex-direction: column; align-items: flex-start; }
 .ai-step .lbl { font-size: 11.5px; font-weight: 500; }
-.ai-step .sub { font-size: 9px; color: var(--ink-faint); }
 .ai-cols { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
 .ai-cols[data-stretch] { align-items: stretch; }
 .ai-card { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised); min-width: 0; }
@@ -335,11 +338,13 @@ const AI_CSS = `
 .ai-registry { display: flex; flex-wrap: wrap; gap: 6px; }
 .ai-more { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; font-size: 10.5px; }
 .ai-regentry { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); padding: 6px 10px; font-size: 10px; }
-.ai-alert { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--bad); border-radius: 6px; background: var(--bad-bg-soft); padding: 8px 12px; }
+.ai-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; border: 1px solid var(--bad); border-radius: 6px; background: var(--bad-bg-soft); padding: 8px 12px; }
 .ai-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .ai-anatomy summary { cursor: pointer; padding: 8px 14px; font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 500; color: var(--ink-soft); }
 @media (max-width: 720px) {
   .ai-page { padding: 12px 16px 40px; }
+  .ai-stepper { gap: 2px; padding: 3px; }
+  .ai-step { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 5px 8px; justify-content: center; }
   .ai-mirror-card, .ai-side, .ai-reg, .ai-next { min-width: 0; flex-basis: 100%; }
   .ai-mirror-cols .k, .ai-row .k { width: 156px; }
   .ai-mirror-cols .c, .ai-row .c { width: 84px; }
@@ -364,15 +369,19 @@ function StepButton({
   disabled,
   reason,
   action,
+  hint,
 }: {
   label: string;
   onClick: () => void;
+  /** Tooltip while the control is pressable (the honest "what this does"). */
+  hint?: string;
   /** Why the control is inert, or null when it is pressable. */
   reason: string | null;
   action: string;
   disabled?: boolean;
 }) {
   const inert = disabled === true || reason !== null;
+  const reasonId = `ai-reason-${action}`;
   return (
     <span className="ai-controls">
       <button
@@ -380,17 +389,50 @@ function StepButton({
         className="ai-btn"
         onClick={onClick}
         disabled={inert}
-        title={inert ? (reason ?? "This request is already in flight.") : undefined}
+        title={inert ? (reason ?? "A request is in flight.") : hint}
+        aria-describedby={reason ? reasonId : undefined}
         data-action={action}
       >
         {label}
       </button>
+      {/* The reason is the tooltip and the accessible description; the stepper already shows
+          which step is owed, so it is not printed a second time (TEXT_C I7/I8). */}
       {reason ? (
-        <span className="ai-reason" data-disabled-reason={action}>
+        <span id={reasonId} className="ai-sr" data-disabled-reason={action}>
           {reason}
         </span>
       ) : null}
     </span>
+  );
+}
+
+/**
+ * The one place a refused step prints its refusal (W2C): a short line, an action only
+ * where one helps, and the code, the server's text and the request id in the tooltip.
+ */
+function StepRefusal({ refusal, panel }: { refusal: ImportRefusal; panel?: string }) {
+  const tip = refusalDetail({ code: refusal.code, detail: refusal.detail ?? null, requestId: refusal.requestId });
+  return (
+    <div
+      role="alert"
+      className="ai-alert"
+      title={tip ?? undefined}
+      /* The refused step keeps its named panel frame (a screen reader still lands on it by name). */
+      data-research-panel={panel}
+      data-state={panel ? refusal.state : undefined}
+      aria-label={panel}
+      data-refusal={refusal.neutral ? "DENIED" : (refusal.code ?? "UNKNOWN")}
+      data-research-state={refusal.state}
+    >
+      <span className="text-[11.5px]" style={{ color: "var(--ink-soft)" }}>
+        {refusal.message}
+      </span>
+      {refusal.origin ? (
+        <button type="button" className="ai-btn" data-action="reload" onClick={() => window.location.reload()}>
+          Reload
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -765,7 +807,7 @@ function RegistryChip({
 function CodeAnatomy() {
   return (
     <details className="ai-card ai-anatomy" data-shadow data-code-anatomy>
-      <summary>Code anatomy — current single-file contract</summary>
+      <summary>Code anatomy</summary>
 
       <div className="flex flex-col gap-2.5 px-3.5 pb-3">
         <p className="ai-note" data-anatomy-note>
@@ -815,7 +857,7 @@ function CodeAnatomy() {
             data-unlock-map
           >
             <h3 className="ai-label" style={{ color: "var(--accent)", fontWeight: 700 }}>
-              what this release proves
+              Unlocks
             </h3>
             {UNLOCK_MAP.map((row) => (
               <span key={row.output} className="flex flex-col gap-px border-b py-[3px]" style={{ borderColor: "var(--line-soft)" }} data-unlock-output={row.output}>
@@ -842,6 +884,8 @@ export interface AlphaImportProps {
   sourceText: string;
   fileName: string | null;
   onSourceChange: (text: string, fileName: string | null) => void;
+  /** The one step the outstanding refusal belongs to (its panel prints the refusal). */
+  refusalStep?: "parse" | "gates" | "register" | "activate" | null;
   /** Set once the user offered more than one file. */
   multiFileRejected?: boolean;
   onMultiFileRejected?: () => void;
@@ -896,9 +940,9 @@ export type ImportStep = 1 | 2 | 3;
 
 /** The three authority states (DQ-06), with the HiFi's label + sub-line shape. */
 export const IMPORT_STEPS: readonly { n: ImportStep; key: string; label: string; sub: string }[] = [
-  { n: 1, key: "source", label: "Source & mirror", sub: "one .py — contract + code" },
-  { n: 2, key: "gates", label: "Quarantine gates", sub: "7 gates · fail-closed" },
-  { n: 3, key: "register", label: "Register version", sub: "DRAFT → ACTIVE" },
+  { n: 1, key: "source", label: "Source", sub: "Source & mirror — one .py, contract and code" },
+  { n: 2, key: "gates", label: "Gates", sub: "Quarantine gates — 7 gates, fail-closed" },
+  { n: 3, key: "register", label: "Register", sub: "Register version — DRAFT, then ACTIVE" },
 ];
 
 type StepProgress = "done" | "failed" | "open";
@@ -956,6 +1000,7 @@ export function AlphaImport(props: AlphaImportProps) {
     onRetryRegistry,
     activationPending,
     refusal,
+    refusalStep = null,
     alphaId,
     onAlphaIdChange,
     onParse,
@@ -994,6 +1039,30 @@ export function AlphaImport(props: AlphaImportProps) {
     }
   }, [receiptStep]);
 
+  /* A refusal opens the step it belongs to, so it is never printed behind another tab. */
+  useEffect(() => {
+    if (refusalStep === "parse") setView(1);
+    else if (refusalStep === "gates") setView(2);
+    else if (refusalStep === "register" || refusalStep === "activate") setView(3);
+  }, [refusalStep]);
+
+  const [fileNote, setFileNote] = useState<string | null>(null);
+  /* The pasted text a chosen file replaced, kept so the replacement can be undone. */
+  const [replacedPaste, setReplacedPaste] = useState<string | null>(null);
+
+  function onStepKey(event: React.KeyboardEvent<HTMLButtonElement>, n: ImportStep) {
+    const next: ImportStep | null =
+      event.key === "ArrowRight" ? ((n % 3) + 1) as ImportStep
+      : event.key === "ArrowLeft" ? (n === 1 ? 3 : ((n - 1) as ImportStep))
+      : event.key === "Home" ? 1
+      : event.key === "End" ? 3
+      : null;
+    if (next === null) return;
+    event.preventDefault();
+    setView(next);
+    document.getElementById(`ai-tab-${next}`)?.focus();
+  }
+
   const parsedOk = parse?.parse_ok === true;
   const anyGateFailed = Boolean(gates?.gates.some((gate) => gate.state === "FAIL"));
   const gatesAllPass = gates?.all_pass === true;
@@ -1015,9 +1084,7 @@ export function AlphaImport(props: AlphaImportProps) {
   const run = runSlot(registration, registeredEntry);
   /* The alpha the reader named: the registered one, else a whole typed id, else the one the screen was opened for. */
   const nextAlpha = registration?.alpha_id ?? (/^[a-z][a-z0-9-]{2,63}$/.test(typedAlpha) ? typedAlpha : contextAlpha);
-  const quietDetail = refusal?.codeInDetails
-    ? refusalDetail({ code: refusal.code, detail: refusal.detail ?? null, requestId: refusal.requestId })
-    : null;
+  const stepRefusal = refusal && refusalStep !== null && refusalStep !== "activate" ? refusal : null;
 
   const progress: Record<ImportStep, StepProgress> = {
     1: parse ? (parsedOk ? "done" : "failed") : "open",
@@ -1028,11 +1095,23 @@ export function AlphaImport(props: AlphaImportProps) {
   function acceptFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     if (files.length > 1) {
+      setFileNote(null);
       onMultiFileRejected?.();
       return;
     }
     const file = files[0];
-    void file.text().then((text) => onSourceChange(text, file.name));
+    /* Never silently accepted: a non-.py file is refused before it is read. */
+    if (!/\.py$/i.test(file.name)) {
+      setFileNote(NON_PY_ERROR);
+      return;
+    }
+    setFileNote(null);
+    /* Last input wins: a file replaces the pasted text, with an undo. */
+    const pasted = fileName === null && sourceText.trim().length > 0 ? sourceText : null;
+    void file.text().then((text) => {
+      setReplacedPaste(pasted);
+      onSourceChange(text, file.name);
+    });
   }
 
   const byteLength = sourceText ? new TextEncoder().encode(sourceText).byteLength : null;
@@ -1054,9 +1133,6 @@ export function AlphaImport(props: AlphaImportProps) {
               </>
             ) : null}
             <LineageLink to="/research/quantbt/journey" title="Journey Map">Journey</LineageLink>
-            <span className="sep" aria-hidden="true">/</span>
-            <span className="here" aria-current="page">Alpha Import</span>
-            <span className="sep" aria-hidden="true">·</span>
             {/* Screen 02. Once the server admits a run for the registered version the link is
                 version-bound (its `run_admission`); otherwise it carries only the alpha in
                 hand, never a guessed version. */}
@@ -1066,7 +1142,7 @@ export function AlphaImport(props: AlphaImportProps) {
               to={run.kind === "admitted" ? run.href : nextAlpha ? newRunPrefillHref(nextAlpha) : "/research/quantbt/runs/new"}
               title={run.kind === "admitted" ? "Screen 02 with this version preselected" : nextAlpha ? `Screen 02 for ${nextAlpha}` : "Screen 02"}
             >
-              next: New Run →
+              New Run →
             </LineageLink>
           </nav>
           <div className="ai-titlerow">
@@ -1080,38 +1156,8 @@ export function AlphaImport(props: AlphaImportProps) {
         </div>
       </header>
 
-      {refusal ? (
-        <div role="alert" className="ai-alert" data-refusal={refusal.neutral ? "DENIED" : (refusal.code ?? "UNKNOWN")}>
-          {/* 14-21/22 + S14-C1: a 403 and a 404 are one neutral sentence on the surface (F-04), and the
-              origin refusal's `…_INVALID` code would contradict its own sentence; the code, the server's
-              text and the request id are details only. */}
-          {refusal.codeInDetails ? null : (
-            <span className="mono text-[10px] uppercase tracking-[.06em]" style={{ color: "var(--bad)" }}>
-              {refusal.code ?? `http ${refusal.status}`}
-            </span>
-          )}
-          {/* The screen's sentence for the code (VD-P23-01); the server's text is detail. */}
-          <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-            {refusal.message}
-          </span>
-          {refusal.codeInDetails ? (
-            quietDetail ? (
-              <details data-refusal-details>
-                <summary className="text-[9.5px]" style={{ color: "var(--ink-mute)", cursor: "pointer" }}>
-                  details
-                </summary>
-                <span className="mono text-[9.5px]" style={{ color: "var(--ink-mute)" }}>
-                  {quietDetail}
-                </span>
-              </details>
-            ) : null
-          ) : refusal.requestId ? (
-            <span className="mono text-[9.5px]" style={{ color: "var(--ink-mute)" }}>
-              request {refusal.requestId}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      {/* A refusal no step claims (none attributed) still prints exactly once, here. */}
+      {refusal && refusalStep === null ? <StepRefusal refusal={refusal} /> : null}
 
       {/* ----------------------------------------------------------- stepper */}
       <div className="ai-stepper" role="tablist" aria-label="Import steps" data-stepper>
@@ -1126,14 +1172,16 @@ export function AlphaImport(props: AlphaImportProps) {
             className="ai-step"
             data-step-marker={step.n}
             data-progress={progress[step.n]}
+            tabIndex={view === step.n ? 0 : -1}
+            title={step.sub}
             onClick={() => setView(step.n)}
+            onKeyDown={(event) => onStepKey(event, step.n)}
           >
             <span className="num" aria-hidden="true">
               {step.n}
             </span>
             <span className="txt">
               <span className="lbl">{step.label}</span>
-              <span className="sub">{step.sub}</span>
             </span>
             <span className="ai-sr">
               {progress[step.n] === "done" ? ", complete" : progress[step.n] === "failed" ? ", did not pass" : ", not done"}
@@ -1155,9 +1203,9 @@ export function AlphaImport(props: AlphaImportProps) {
         <div className="ai-cols">
           <div className="ai-card ai-mirror-card" data-shadow>
             <div className="ai-mirror-head">
-              <h2 className="ai-label">1 · contract mirror</h2>
+              <h2 className="ai-label">Contract</h2>
               <span className="m">
-                single file · {parse ? parse.schema_version : "research.alpha-source.v1"}
+                {parse ? parse.schema_version : "research.alpha-source.v1"}
                 {parse ? (
                   <>
                     {" · receipt expires "}
@@ -1171,21 +1219,20 @@ export function AlphaImport(props: AlphaImportProps) {
               <span className="v">declared value</span>
               <span className="c">check</span>
             </div>
-            <div className="ai-mirror-body">
+            <div className="ai-mirror-body" data-mirror-rules title={`Field rules: alpha_id ${RULE_PATTERNS.alphaId} · version ${RULE_PATTERNS.versionLabel} · timeframe ${RULE_PATTERNS.timeframe}`}>
+              {stepRefusal && refusalStep === "parse" ? (
+                <StepRefusal refusal={stepRefusal} panel="parsed contract mirror" />
+              ) : (
               <ResearchPanel title="parsed contract mirror" state={parseState} variant="plain" minBodyHeight={0}>
                 {parse ? <MirrorTable mirror={parse.mirror} /> : null}
               </ResearchPanel>
+              )}
             </div>
-            <p className="ai-rules" data-mirror-rules>
-              field rules · <span className="mono">alpha_id {RULE_PATTERNS.alphaId}</span> · version{" "}
-              <span className="mono">{RULE_PATTERNS.versionLabel}</span> · timeframes{" "}
-              <span className="mono">{RULE_PATTERNS.timeframe}</span>
-            </p>
           </div>
 
           <div className="ai-side">
             <div className="ai-card" data-pad>
-              <h2 className="ai-label">drop one .py file</h2>
+              <h2 className="ai-label">Source (.py)</h2>
               <div
                 className="ai-drop"
                 data-dropzone
@@ -1202,14 +1249,17 @@ export function AlphaImport(props: AlphaImportProps) {
                 }}
               >
                 <label className="file cursor-pointer" style={{ color: fileName ? "var(--ink)" : "var(--accent)" }}>
-                  {fileName ?? "choose or drop a .py file"}
+                  {fileName ?? "Choose or drop file"}
                   <input
                     ref={fileRef}
                     type="file"
                     accept=".py"
                     className="sr-only"
                     aria-label="Alpha source file"
-                    onChange={(event) => acceptFiles(event.target.files)}
+                    onChange={(event) => {
+                      acceptFiles(event.target.files);
+                      event.target.value = "";
+                    }}
                   />
                 </label>
                 <span className="custody" data-source-custody>
@@ -1221,10 +1271,8 @@ export function AlphaImport(props: AlphaImportProps) {
                   ) : sourceText ? (
                     "digest computed at parse · "
                   ) : null}
-                  {byteLength !== null ? `${formatBytes(byteLength)} · ` : null}
-                  one .py · contract + code
+                  {byteLength !== null ? formatBytes(byteLength) : null}
                 </span>
-                <span className="quarantine">held in quarantine · not executed</span>
               </div>
 
               {multiFileRejected ? (
@@ -1233,11 +1281,40 @@ export function AlphaImport(props: AlphaImportProps) {
                 </p>
               ) : null}
 
+              {fileNote ? (
+                <p role="alert" className="m-0 text-[11px]" style={{ color: "var(--bad)" }} data-file-error>
+                  {fileNote}
+                </p>
+              ) : null}
+
+              {replacedPaste !== null && fileName !== null ? (
+                <p className="ai-note m-0" data-paste-undo>
+                  Replaced pasted text.{" "}
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    data-action="undo-file"
+                    onClick={() => {
+                      onSourceChange(replacedPaste, null);
+                      setReplacedPaste(null);
+                    }}
+                  >
+                    Undo
+                  </button>
+                </p>
+              ) : null}
+
               <label className="ai-paste">
-                <span className="ai-label">or paste the module</span>
+                <span className="ai-label" title="Last input wins: a file replaces pasted text; typing clears the file.">
+                  or paste
+                </span>
                 <textarea
                   value={sourceText}
-                  onChange={(event) => onSourceChange(event.target.value, fileName)}
+                  onChange={(event) => {
+                    setReplacedPaste(null);
+                    setFileNote(null);
+                    onSourceChange(event.target.value, null);
+                  }}
                   rows={6}
                   spellCheck={false}
                   aria-label="Alpha source text"
@@ -1248,10 +1325,11 @@ export function AlphaImport(props: AlphaImportProps) {
                 label="Parse"
                 action="parse"
                 onClick={onParse}
+                hint="Held in quarantine, not executed."
                 reason={
                   sourceText.trim().length === 0
-                    ? "Add a .py file or module first."
-                    : busy ?? (parse !== null ? "Parsed. Change the module to parse it again." : null)
+                    ? "Add a file or paste code."
+                    : busy ?? (parse !== null ? "Parsed." : null)
                 }
               />
               {parsedOk ? (
@@ -1262,7 +1340,7 @@ export function AlphaImport(props: AlphaImportProps) {
             </div>
 
             <div className="ai-card" data-pad data-entrypoint-card>
-              <h2 className="ai-label" title="One literal, one plain function. No classes, decorators or imports.">entrypoint shape (v1 single-file contract)</h2>
+              <h2 className="ai-label" title="v1 single-file contract: one literal, one plain function. No classes, decorators or imports.">Entrypoint</h2>
               <pre className="ai-entry" title="One literal, one plain function. No classes, decorators or imports.">{"ALPHA_CONTRACT = { … }     # one literal\ndef generate_signals(context): …"}</pre>
             </div>
           </div>
@@ -1284,7 +1362,7 @@ export function AlphaImport(props: AlphaImportProps) {
       >
         <div className="ai-card ai-pipe" data-shadow>
           <div className="ai-pipe-head">
-            <h2 className="ai-label">2 · quarantine gates</h2>
+            <h2 className="ai-label">Gates</h2>
             <span className="m">
               {gates ? (
                 <>
@@ -1293,9 +1371,7 @@ export function AlphaImport(props: AlphaImportProps) {
                   {" · expires "}
                   {formatUtc(gates.expires_at_utc_ms) ?? "time not published"}
                 </>
-              ) : (
-                "seven gates, one server request"
-              )}
+              ) : null}
             </span>
           </div>
 
@@ -1305,10 +1381,10 @@ export function AlphaImport(props: AlphaImportProps) {
             onClick={onRunGates}
             reason={
               parse === null
-                ? "Parse a source first."
+                ? "Parse first."
                 : !parsedOk
-                  ? "Parse incomplete — see the mirror in step 1."
-                  : busy ?? (gates !== null ? "The gates ran for these bytes." : null)
+                  ? "Parse failed."
+                  : busy ?? (gates !== null ? "Gates ran." : null)
             }
           />
 
@@ -1316,6 +1392,8 @@ export function AlphaImport(props: AlphaImportProps) {
 
           {busyStep === "gates" ? (
             <RunningGates />
+          ) : stepRefusal && refusalStep === "gates" ? (
+            <StepRefusal refusal={stepRefusal} panel="import gates" />
           ) : (
             /* QA S14 U9: "Gates run once a source parses." is false after a parse; the Run gates button says the rest. */
             gates === null && gatesState.state === "empty" && parse !== null ? null : (
@@ -1360,11 +1438,11 @@ export function AlphaImport(props: AlphaImportProps) {
       >
         <div className="ai-cols" data-stretch>
           <div className="ai-card ai-reg" data-pad>
-            <h2 className="ai-label">3 · registration</h2>
+            <h2 className="ai-label">Registration</h2>
 
             <div className="ai-controls py-1">
                 <label className="flex items-center gap-2">
-                  <span className="ai-label">alpha id</span>
+                  <span className="ai-label">Alpha id</span>
                   <input
                     value={alphaId}
                     onChange={(event) => onAlphaIdChange(event.target.value)}
@@ -1387,22 +1465,24 @@ export function AlphaImport(props: AlphaImportProps) {
                   onClick={onRegister}
                   reason={
                     gates === null
-                      ? "Run the gates first."
+                      ? "Run gates first."
                       : anyGateFailed
-                        ? "A gate failed — fix the module and resubmit."
+                        ? "A gate failed."
                         : !gatesAllPass
-                          ? "All seven gates must pass."
+                          ? "Gates must pass."
                           : alphaId.trim().length === 0
-                            ? "Name the alpha this version belongs to."
+                            ? "Name the alpha."
                             : alphaIdInvalid
-                              ? "Fix the alpha id."
+                              ? "Alpha id invalid."
                               : busy ?? (registration !== null ? "Registered." : null)
                   }
                 />
               </div>
 
             {/* QA S14 U9: "Registration opens once all seven gates pass." is false once they have. */}
-            {registration === null && registerState.state === "empty" && gatesAllPass ? null : (
+            {stepRefusal && refusalStep === "register" ? (
+              <StepRefusal refusal={stepRefusal} panel="registration" />
+            ) : registration === null && registerState.state === "empty" && gatesAllPass ? null : (
               <ResearchPanel title="registration" state={registerState} variant="plain" minBodyHeight={0}>
                 {registration ? (
                   <RegistrationRows
@@ -1425,9 +1505,9 @@ export function AlphaImport(props: AlphaImportProps) {
                   onClick={onActivate}
                   reason={
                     activationPending
-                      ? "Activation is in flight."
+                      ? "Activating."
                       : activationRefusal && !activationRefusal.mayRetry
-                        ? "The server refused this activation."
+                        ? "Refused."
                         : busy
                   }
                 />
@@ -1451,7 +1531,7 @@ export function AlphaImport(props: AlphaImportProps) {
             data-where-next
             data-motion={registration && smokeMotionAllowed() ? "true" : "false"}
           >
-            <h2 className="ai-label">where it goes next</h2>
+            <h2 className="ai-label">Next</h2>
             {registration ? (
               <p>
                 <span className="mono">{registration.version_label}</span> of{" "}
@@ -1459,7 +1539,7 @@ export function AlphaImport(props: AlphaImportProps) {
                 <Digest value={registration.source_digest} label="source digest" />
               </p>
             ) : (
-              <p>Nothing registered yet.</p>
+              <p>Not registered.</p>
             )}
             <div className="links">
               {/* F1 CG-FG-S14-03: the slot follows the server's `run_admission` for this
@@ -1499,7 +1579,7 @@ export function AlphaImport(props: AlphaImportProps) {
             </div>
             {run.kind === "refused" ? (
               <p className="ai-reason" data-run-not-admitted data-run-admission-code={run.code ?? undefined}>
-                {run.sentence ?? "run not admitted — reason not published"}
+                <span title={run.code ? undefined : "reason not published"}>{run.sentence ?? "Not admitted"}</span>
                 {run.code ? (
                   <>
                     {" · "}
@@ -1525,7 +1605,7 @@ export function AlphaImport(props: AlphaImportProps) {
               </button>
             ) : null}
             {registryCapped ? (
-              <span className="mono" data-registry-total title="The server lists the newest versions only; the total is the server's count.">
+              <span className="mono" data-registry-total title="Newest versions only; the total is the server's count.">
                 {" "}· top {registry.length} / {registryTotal}
               </span>
             ) : null}
@@ -1542,7 +1622,7 @@ export function AlphaImport(props: AlphaImportProps) {
             <div className="ai-registry" data-registry-strip>
               {visibleRegistry.length === 0 ? (
                 <span className="text-[10.5px]" style={{ color: "var(--ink-mute)" }} data-registry-empty>
-                  {filterAlpha ? "No versions for this alpha id." : "No imported versions in this workspace yet."}
+                  {filterAlpha ? "No versions for this alpha." : "No versions yet."}
                 </span>
               ) : (
                 visibleRegistry.map((entry) => (
@@ -1564,14 +1644,14 @@ export function AlphaImport(props: AlphaImportProps) {
                   data-action="load-more-registry"
                   disabled={registryMore === "loading"}
                   aria-busy={registryMore === "loading"}
-                  title="Read the next page of the registry from the server"
+                  title={`Read the next page. The ${registry.length} loaded stay.`}
                   onClick={onLoadMoreRegistry}
                 >
                   {registryMore === "loading" ? "loading…" : "load more"}
                 </button>
                 {registryMore === "failed" ? (
                   <span role="alert" data-registry-more-failed style={{ color: "var(--bad)" }}>
-                    the next page could not be read — the {registry.length} loaded stay
+                    Next page failed.
                   </span>
                 ) : null}
               </div>

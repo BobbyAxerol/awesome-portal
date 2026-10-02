@@ -55,7 +55,7 @@ describe("QA2 S14 U11 registry scope", () => {
     );
     const button = view.container.querySelector('[data-action="registry-show-all"]') as HTMLElement;
     expect(button.textContent).toBe("show all alphas");
-    expect(view.container.querySelector("[data-registry-empty]")?.textContent).toBe("No versions for this alpha id.");
+    expect(view.container.querySelector("[data-registry-empty]")?.textContent).toBe("No versions for this alpha.");
     button.click();
     expect(onToggle).toHaveBeenCalledTimes(1);
     cleanup();

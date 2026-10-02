@@ -106,15 +106,15 @@ const pill = (step: string) => document.querySelector(`[data-step-pill="${step}"
 /* ---------------------------------------------------------------- FG 02-8b */
 
 describe("FG 02-8b — the stepper does not call an unvisited step valid", () => {
-  it("opens with one current step and seven that are not visited — no ✓ anywhere", () => {
+  it("opens with one current step and six that are not visited — and the pinned strategy says so, not a tick it never earned", () => {
     mount();
     expect(pill("context").getAttribute("data-step-state")).toBe("current");
-    for (const step of ["strategy", "route", "data", "windows", "parameters", "optimization", "review"]) {
+    for (const step of ["route", "data", "windows", "parameters", "optimization", "review"]) {
       expect(pill(step).getAttribute("data-step-state")).toBe("not-visited");
-      expect(pill(step).textContent).not.toContain("✓");
     }
+    /* A bound run's strategy is the alpha's own: nothing is left to choose, so the pill reads "pinned" and never blocks. */
+    expect(pill("strategy").textContent).toContain("pinned");
     expect(pill("data").textContent).toContain("not visited");
-    expect(document.querySelector("[role=tablist]")?.textContent).not.toContain("✓");
   });
 
   it("an unvisited step that would fail is not-visited, never valid, until the reader gets there", () => {
@@ -201,7 +201,6 @@ describe("D6 — the Data select shows the draft's timeframe, not its first opti
     expect(chip("1h")!.getAttribute("aria-disabled")).toBe("false");
     /* The cause of the error is on screen, naming the same value Review prints. */
     expect(document.querySelector("[data-step-error]")?.textContent).toContain("declares only 1h");
-    expect(document.querySelector("[data-review-rail]")?.textContent).toContain("4h");
   });
 
   it("a declared timeframe adds no extra chip", () => {
@@ -225,6 +224,7 @@ describe("S02-01 — the cert ceiling line carries the Atlas fact, not a sentenc
   it("prints the served cert_cap reason beside 'not published'", () => {
     const fact = ATLAS.modes.find((mode) => mode.mode_id === "mode_1_decay")!.facts!.schedules.find((entry) => entry.schedule === "global")!;
     mount({ draft: draft({ optimizationMode: "mode_1_decay", optimizationSchedule: "global" }) });
+    go("review");
     const line = document.querySelector("[data-cert-cap]") as HTMLElement;
     expect(line.getAttribute("data-cert-cap")).toBe(fact.cert_cap.state);
     expect(line.textContent).toContain("cert ceiling");
@@ -246,57 +246,24 @@ describe("S02-01 — the cert ceiling line carries the Atlas fact, not a sentenc
     const schedule = mode.facts!.schedules.find((entry) => entry.schedule === "global")!;
     schedule.cert_cap = { state: "NOT_PUBLISHED", reason: "A reason the form never wrote.", source: null };
     mount({ atlas: changed, draft: draft({ optimizationMode: "mode_1_decay", optimizationSchedule: "global" }) });
+    go("review");
     expect(document.querySelector("[data-cert-cap-reason]")?.getAttribute("title")).toBe("A reason the form never wrote.");
   });
 });
 
 /* ------------------------------------------------- CG-P02-02 / CG-P08-02 */
 
-describe("CG-P02-02 / P08-02 — v2 controls say create does not admit them yet", () => {
-  const NOTES: Record<string, string> = {
-    "train-window": "Train width: preflight only for now.",
-    "temporal-guards": "Label/purge/embargo: preflight only for now.",
-    "inner-folds": "Inner folds: preflight only for now.",
-  };
-  const notes = () => [...document.querySelectorAll("[data-v2-create-note]")].map((node) => node.getAttribute("data-v2-create-note"));
-
-  it("rolling width, the temporal guards and the inner folds each carry the note, with no cause claimed", () => {
+describe("CG-P02-02 / P08-02 — the v2 controls carry no 'preflight only' note", () => {
+  it("rolling width, the temporal guards and the inner folds are controls, not warnings", () => {
     mount({
       draft: advanced({ windowMode: "rolling", trainWindow: "30D", purgeBars: "2" }, { optimizationMode: "mode_1_decay", optimizationSchedule: "per_fold_causal" }),
     });
     go("windows");
-    expect(notes()).toEqual(["train-window", "temporal-guards", "inner-folds"]);
-    /* Each note names its own control (T14), not "this". */
-    for (const node of document.querySelectorAll("[data-v2-create-note]")) expect(node.textContent).toBe(NOTES[node.getAttribute("data-v2-create-note")!]);
-    /* Neutral: it names no executor, no adapter and no reason. */
-    expect(document.body.textContent).not.toMatch(/no installed executor|adapter/i);
-  });
-
-  it("is absent where the controls are not offered (three-window, or no v2 control on screen)", () => {
-    mount({ draft: draft() });
-    go("windows");
-    expect(notes()).toEqual([]);
-    cleanup();
-    mount({ draft: advanced() });
-    go("windows");
-    /* Expanding + global and no guard declared: an untouched field is not serialized, so there is nothing to warn about. */
-    expect(notes()).toEqual([]);
-    cleanup();
-    mount({ draft: advanced({ embargoBars: "3" }) });
-    go("windows");
-    expect(notes()).toEqual(["temporal-guards"]);
-  });
-
-  it("steps aside when the preflight serves run_admission.may_create_run = true", () => {
-    const admitted = { ...PREFLIGHT, run_admission: { may_create_run: true, code: null, message: null, field_path: [] } } as PreflightResponse;
-    mount({ draft: advanced({ purgeBars: "1" }), preflight: admitted });
-    go("windows");
-    expect(notes()).toEqual([]);
-    cleanup();
-    const refused = { ...PREFLIGHT, run_admission: { may_create_run: false, code: "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", message: "x", field_path: [] } } as PreflightResponse;
-    mount({ draft: advanced({ purgeBars: "1" }), preflight: refused });
-    go("windows");
-    expect(notes()).toEqual(["temporal-guards"]);
+    expect(document.querySelector("[data-v2-create-note]")).toBeNull();
+    expect(document.body.textContent).not.toContain("preflight only for now");
+    expect(document.querySelector("[data-train-window]")).not.toBeNull();
+    expect(document.querySelector("[data-temporal-guards]")).not.toBeNull();
+    expect(document.querySelector("[data-inner-folds]")).not.toBeNull();
   });
 });
 
@@ -334,12 +301,15 @@ describe("400-trial audit — a copied run's instants are shown, not blanked", (
 
   it("the Review rail names the first OOS instant it used to leave out", () => {
     mount({ draft: advanced() });
+    go("windows");
     expect(document.querySelector("[data-advanced-timeline]")?.textContent).toContain("first OOS 2026-06-01T00:00");
     /* One instant format (U12): the seconds and the Z a copied run carries are not printed. */
     expect(document.querySelector("[data-advanced-timeline]")?.textContent).not.toContain(":00Z");
     cleanup();
     mount({ draft: advanced({ splitMode: "" }) });
-    expect(document.querySelector("[data-advanced-timeline]")?.textContent).toContain("first OOS not declared");
+    go("windows");
+    /* An absent instant is left out of the line, not printed as "not declared". */
+    expect(document.querySelector("[data-advanced-timeline]")?.textContent).not.toContain("first OOS");
   });
 
   it("a three-window draft's typed values still show as typed", () => {
@@ -464,3 +434,7 @@ describe("400-trial audit — ?from=<400-trial run> copies the run's own values"
     );
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

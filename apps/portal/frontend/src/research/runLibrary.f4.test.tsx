@@ -71,7 +71,7 @@ describe("F4 S01 - last 30D", () => {
     );
     expect(bars.getAttribute("title")).toContain("Portal-derived");
     const ret = document.querySelector('[data-metric="LAST_30D_RETURN"]')!;
-    expect(ret.textContent).toContain("last 30D return");
+    expect(ret.textContent).toContain("final 30D return");
     expect(ret.textContent).toContain("−0.27%");
     expect(ret.querySelector("[title]")!.getAttribute("title")).toContain(v2.last_30d.return_fraction.value);
     /* QA S01: the served window dates ride the value's tooltip - it is the sample's last 30 days, not the 30 before the run date. */

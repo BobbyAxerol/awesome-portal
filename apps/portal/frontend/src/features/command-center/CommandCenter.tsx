@@ -377,15 +377,16 @@ export function CommandCenter() {
         maturity={feature?.maturity ?? "PROTOTYPE"}
         dataMode={feature?.data_mode ?? "REAL"}
         actions={
-          <>
+          /* min-w-0 + wrap: four buttons in the header's non-wrapping action row pushed the page past 390px. */
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {/* v0.4 §21.3: the Command Center opens the two actions a manager
               * arrives wanting, instead of making them walk the nav to find
               * them. Both are real routes from the QuantBT module. */}
-            <Link className="btn-ghost" to={`${QUANTBT_ROOT}/new`}>
+            <Link className="btn-ghost" to={`${QUANTBT_ROOT}/runs/new`}>
               <Plus size={12} />
               New run
             </Link>
-            <Link className="btn-ghost" to={`${QUANTBT_ROOT}/imports`}>
+            <Link className="btn-ghost" to={`${QUANTBT_ROOT}/alpha-import`}>
               <ShieldAlert size={12} />
               Import alpha
             </Link>
@@ -407,7 +408,7 @@ export function CommandCenter() {
               <RefreshCw size={13} className={summary.isFetching ? "animate-spin" : undefined} />
               Refresh
             </button>
-          </>
+          </div>
         }
       >
         <div className="mt-2 flex flex-wrap items-center gap-3">

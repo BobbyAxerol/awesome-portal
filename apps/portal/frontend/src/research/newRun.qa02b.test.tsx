@@ -423,7 +423,7 @@ describe("U15 — on the route: a reload restores the declaration, leaving the f
       </MemoryRouter>,
     );
 
-  it("a stored draft is on screen after a reload, an edit is stored, and unmounting (leaving inside the app) clears it", async () => {
+  it("a stored draft is on screen after a reload, an edit is stored, and leaving inside the app keeps it", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => notFound()));
     saveRunDraft(draft({ symbol: "ETHUSDT", alphaId: "", alphaVersionId: "" }));
     const view = route();
@@ -431,6 +431,9 @@ describe("U15 — on the route: a reload restores the declaration, leaving the f
     fireEvent.change(q('input[aria-label="Symbol"]') as HTMLInputElement, { target: { value: "SOLUSDT" } });
     await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem(RUN_DRAFT_STORAGE_KEY)!).symbol).toBe("SOLUSDT"));
     view.unmount();
+    /* Autosave: a link out of the wizard and back, or the browser Back button, finds the declaration where it was left. */
+    expect(JSON.parse(window.sessionStorage.getItem(RUN_DRAFT_STORAGE_KEY)!).symbol).toBe("SOLUSDT");
+    clearRunDraft();
     expect(window.sessionStorage.getItem(RUN_DRAFT_STORAGE_KEY)).toBeNull();
   });
 
@@ -494,7 +497,7 @@ describe("U18 — passing through a step does not turn it red", () => {
 describe("R51 — the forecast does not say 'no held-out window' beside three declared windows", () => {
   it("mode_5 says the served state, 'OOS: not applicable'; the served enum is the tooltip", () => {
     mount({ draft: draft({ windows: THREE, optimizationMode: "mode_5_full_robust", optimizationSchedule: "global" }) });
-    go("optimization");
+    go("review");
     const line = q("[data-forecast-oos='NOT_APPLICABLE']") as HTMLElement;
     expect(line.textContent).toBe("OOS: not applicable");
     expect(line.getAttribute("title")).toBe("NOT_APPLICABLE");
@@ -503,7 +506,7 @@ describe("R51 — the forecast does not say 'no held-out window' beside three de
 
   it("the other served states keep their Atlas words", () => {
     mount({ draft: draft({ windows: THREE, optimizationMode: "mode_1_decay", optimizationSchedule: "global" }) });
-    go("optimization");
+    go("review");
     expect(text("[data-forecast-oos]")).toBe("OOS: retrospective");
   });
 });
@@ -518,11 +521,13 @@ describe("U12 — the Review windows row prints the instants the form prints", (
     expect(rows.find((row) => row.toLowerCase().startsWith("windows"))).toContain("IS 2020-03-01T00:00 → OOS 2024-01-01T00:00 → holdout 2025-01-01T00:00 → end 2026-06-01T00:00");
   });
 
-  it("typed absence: an empty window reads 'not declared', never a slice of nothing", () => {
+  it("typed absence: an empty window is left out of the row, never a slice of nothing", () => {
     mount({ draft: draft({ windows: { ...THREE, holdout: { start: "", endExclusive: "" } } }) });
     go("review");
     const row = qa("[data-review-rows] > *").map((entry) => entry.textContent ?? "").find((entry) => entry.toLowerCase().startsWith("windows"))!;
-    expect(row).toContain("holdout not declared → end not declared");
+    expect(row).not.toContain("holdout");
+    expect(row).not.toContain("end ");
+    expect(row).not.toContain("not declared");
   });
 });
 
@@ -583,3 +588,7 @@ describe("the profile table used above is the served one", () => {
     expect(profiles.some((profile) => profile.protocol === "three_window_decay")).toBe(true);
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

@@ -103,10 +103,10 @@ describe("POLISH2 · 4 — no built-in timeframe", () => {
     expect(validateData(bound({ timeframe: "1h" }), constraintsFrom(ATLAS, REGISTRY.entries, ALPHA.alpha_version_id))).toBeNull();
   });
 
-  it("Review says 'not declared' for an empty timeframe — no trailing separator", () => {
+  it("Review lists only what is declared for an empty timeframe — no trailing separator", () => {
     mount({ draft: bound({ timeframe: "" }) });
     go("review");
-    expect(row("dataset · symbol · tf")).toBe("dataset · symbol · tfcrypto-binance-1m · BTCUSDT · not declared");
+    expect(row("dataset · symbol · tf")).toBe("dataset · symbol · tfcrypto-binance-1m · BTCUSDT");
     expect(reviewRows()).not.toMatch(/·\s*$/m);
   });
 
@@ -183,13 +183,14 @@ describe("POLISH2 · 4 — the real route", () => {
     await route(registry, `alpha=${ALPHA.alpha_id}&av=${ALPHA.alpha_version_id}&step=data`);
     expect(document.querySelector('[data-timeframe-chip][aria-checked="true"]')).toBeNull();
     go("review");
-    expect(row("dataset · symbol · tf")).toMatch(/not declared$/);
+    expect(row("dataset · symbol · tf")).not.toMatch(/·\s*$/);
+    expect(row("dataset · symbol · tf")).not.toContain("4h");
   });
 
-  it("with no version chosen the field is empty and Review says 'not declared'", async () => {
+  it("with nothing declared an address that names Review opens the first step to fill in, never an empty Review", async () => {
     await route({ ...REGISTRY, entries: [] }, "step=review");
-    expect(row("dataset · symbol · tf")).toMatch(/not declared$/);
-    expect(reviewRows()).not.toContain("4h");
+    expect(document.querySelector("[data-review-step]")).toBeNull();
+    expect(document.querySelector('[data-step-pill="context"]')?.getAttribute("aria-current")).toBe("step");
   });
 });
 
@@ -200,16 +201,18 @@ describe("POLISH2 · 3 — Review prints what nobody chose as 'not declared' / '
     mount({ draft: bound({ timeframe: "", parameters: [], optunaTrials: "", earlyStopping: "", randomSeed: "" }) });
     go("review");
     const rows = reviewRows();
-    expect(row("parameter_space")).toBe("parameter_spacenot declared");
+    /* Nothing declared is not a row: no "not declared" repeated down the table, and never a made-up 0. */
+    expect(row("parameter_space")).toBe("");
     expect(rows).not.toContain("0 entries");
-    expect(row("trials · stop · seed")).toBe("trials · stop · seednot declared · not set · not set");
+    expect(row("trials · stop · seed")).toBe("");
+    expect(rows).not.toContain("not declared");
     expect(rows).not.toContain("none");
   });
 
   it("a read declaration with entries still counts them; a stop and seed that were set print as set", () => {
     mount({ draft: bound({ timeframe: "1h", earlyStopping: "20", randomSeed: "42", optunaTrials: "400", parameters: [{ name: "x", declaredLow: 1, declaredHigh: 3, dimension: "sweep", low: "1", high: "3" }] }), versionDeclared: true } as never);
     go("review");
-    expect(row("trials · stop · seed")).toBe("trials · stop · seed400 · 20 · 42");
+    expect(row("trials · stop · seed")).toBe("trials · stop · seed400 trials · stop 20 · seed 42");
     expect(row("parameter_space")).toContain("1 entries");
   });
 });
@@ -241,3 +244,7 @@ describe("POLISH2 · 3 — walk-forward placeholders come from the served releas
     expect(placeholder("Purge (bars)")).toBe(String(ATLAS.current_release.walk_forward_options!.temporal_guards!.release_default));
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

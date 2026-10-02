@@ -325,7 +325,7 @@ describe("U06 — an error box takes the theme's own error fill", () => {
     go("route");
     go("windows");
     const error = q("[data-step-error]") as HTMLElement;
-    expect(error.textContent).toBe("OOS must begin exactly where IS ends.");
+    expect(error.textContent).toBe("OOS overlaps IS: it starts before IS ends.");
     expect(error.style.background).toBe("var(--bad-bg)");
     expect(error.outerHTML).not.toContain("bad-bg-soft");
     const tokens = readFileSync(join(__dirname, "..", "styles", "tokens.css"), "utf8");
@@ -344,9 +344,11 @@ describe("U07 — the forecast says whether the schedule is the mode's default",
 
   it("the default reads 'mode default'; a schedule the reader moved to reads 'chosen'", () => {
     mount({ draft: draft({ optimizationSchedule: mode.default_schedule }) });
+    go("review");
     expect(source()).toBe("mode default");
     cleanup();
     mount({ draft: draft({ optimizationSchedule: other }) });
+    go("review");
     expect(source()).toBe("chosen");
   });
 });
@@ -397,15 +399,19 @@ describe("U09 — scratch keeps no ignored ids and names itself in words", () =>
     expect(screen.getByLabelText("Alpha version")).toBeTruthy();
   });
 
-  it("the data-step facts say 'not declared' in scratch, 'no version chosen' only for a bound run with no version (R39)", () => {
+  it("the data-step facts print only what the version declares: nothing unknown is a chip of 'not declared' or 'no version chosen' (R39)", () => {
     mount({ draft: scratch(), limits: { ...LIMITS, requiredColumns: null, warmupBars: null, seedRequired: null } });
     go("data");
-    expect(q('[data-declaration-fact="warmup bars"]')!.textContent).toContain("not declared");
-    expect(q('[data-declaration-fact="warmup bars"]')!.textContent).not.toContain("no version chosen");
+    expect(q('[data-declaration-fact="warmup bars"]')).toBeNull();
     cleanup();
     mount({ draft: draft({ alphaVersionId: "" }), limits: { ...LIMITS, requiredColumns: null, warmupBars: null, seedRequired: null } });
     go("data");
-    expect(q('[data-declaration-fact="warmup bars"]')!.textContent).toContain("no version chosen");
+    expect(q('[data-declaration-fact="warmup bars"]')).toBeNull();
+    expect(q('[data-step-card="Market data"]')!.textContent).not.toContain("no version chosen");
+    cleanup();
+    mount();
+    go("data");
+    expect(q('[data-declaration-fact="warmup bars"]')!.textContent).toContain("32");
   });
 });
 
@@ -446,23 +452,26 @@ describe("U11 — a problem is printed once", () => {
     go("windows");
     go("route");
     go("windows");
-    expect(count("OOS must begin exactly where IS ends.")).toBe(1);
+    expect(count("OOS overlaps IS: it starts before IS ends.")).toBe(1);
     expect(q("[data-review-rail] [data-blocking]")).toBeNull();
   });
 
-  it("on another step: the rail names it, once", () => {
+  it("on another step: nothing echoes it — Review is the one list", () => {
     mount({ draft: overlap() });
     go("windows");
     go("route");
-    expect(count("OOS must begin exactly where IS ends.")).toBe(1);
-    expect(q("[data-review-rail] [data-blocking]")!.textContent).toBe("OOS must begin exactly where IS ends.");
+    expect(count("OOS overlaps IS: it starts before IS ends.")).toBe(0);
+    expect(q("[data-review-rail]")).toBeNull();
+    expect(q("[data-blocking]")).toBeNull();
   });
 
   it("on Review: one list in the main panel, one disabled reason, none in the rail", () => {
     mount({ draft: overlap() });
     go("review");
-    expect(count("OOS must begin exactly where IS ends.")).toBe(1);
+    expect(count("OOS overlaps IS: it starts before IS ends.")).toBe(1);
     expect(qa("[data-blocking]")).toHaveLength(1);
+    /* Each error is a link to the step that owns it. */
+    expect(q('[data-blocking-link="windows"]')).not.toBeNull();
     expect(q("[data-review-rail] [data-blocking]")).toBeNull();
     expect((q('[data-action="preflight"]') as HTMLButtonElement).disabled).toBe(true);
     expect(q('[data-disabled-reason="create-run"]')).toBeNull();
@@ -614,7 +623,10 @@ describe("U19 / U20 — one refusal banner, neutral locked chips, a repeated sen
     const details = q("[data-optimizer-defaults]") as HTMLDetailsElement;
     details.open = true;
     expect(details.textContent).not.toContain(repeated);
-    expect(qa(`[data-optimizer-defaults] [title="${repeated}"]`).length).toBeGreaterThanOrEqual(3);
+    /* One line, one tooltip: the shared sentence rides on the summary, and the uniform lock state is said once, not per row. */
+    expect(qa(`[data-optimizer-defaults] [title="${repeated}"]`).length).toBeGreaterThanOrEqual(1);
+    expect(details.querySelector("summary")!.textContent!.toLowerCase()).toContain("release defaults");
+    expect(details.textContent).not.toMatch(/release default · locked.*release default · locked/);
     expect(qa("[data-optimizer-defaults] [data-override-state=LOCKED] span").every((node) => !(node as HTMLElement).style.color.includes("--bad"))).toBe(true);
     for (const field of all.filter((item) => counts.get(item.detail) === 1)) expect(details.textContent).toContain(field.detail);
   });
@@ -636,25 +648,27 @@ describe("U21 and the text pass — less words, no debug lines", () => {
   it("T01/T02: the pin hint is ≤ 8 words, absent with no version; the protocol sentence is a tooltip", () => {
     mount({ draft: draft({ alphaVersionId: "" }) });
     go("strategy");
-    expect(q('[data-step-card="Strategy & protocol"]')!.textContent).not.toContain("pinned to");
+    expect(q('[data-step-card="Strategy"]')!.textContent).not.toContain("pinned to");
     cleanup();
     mount();
     go("strategy");
-    const card = q('[data-step-card="Strategy & protocol"]') as HTMLElement;
+    const card = q('[data-step-card="Strategy"]') as HTMLElement;
     expect(card.textContent).toContain("pinned to the alpha id");
     expect(card.textContent).not.toContain("the server admits no other");
     expect(card.textContent).not.toContain("Showing only the protocols");
+    /* The protocol sits with the windows it decides. */
+    go("windows");
     expect(q('[role="group"][aria-label="Protocol"]')!.getAttribute("title")).toBe("Only the protocols the installed engine release certifies are offered.");
   });
 
   it("T08: the empty parameter table says one short thing, by cause", () => {
     mount({ draft: draft({ parameters: [] }) });
     go("parameters");
-    expect(q("[data-no-parameters]")!.textContent).toBe("No parameter space declared.");
+    expect(q("[data-no-parameters]")!.textContent).toBe("This version declares no parameters.");
     cleanup();
     mount({ draft: draft({ alphaVersionId: "", parameters: [] }) });
     go("parameters");
-    expect(q("[data-no-parameters]")!.textContent).toBe("No version chosen.");
+    expect(q("[data-no-parameters]")!.textContent).toBe("Choose a version first.");
   });
 
   it("T09: the Context page has no 'declaration read for av_…' debug line", () => {
@@ -687,11 +701,13 @@ describe("U21 and the text pass — less words, no debug lines", () => {
 
   it("N02: a three-window run has no outer folds; that is said as a fact, an advanced run's absence stays 'not published'", () => {
     mount({ portalAdmission: PROFILES_RAW as never });
+    go("review");
     const three = q("[data-fold-plan]") as HTMLElement;
     expect(three.getAttribute("data-fold-plan")).toBe("absent");
     expect(three.textContent).toBe("no outer folds · three-window protocol");
     cleanup();
     mount({ draft: draft({ protocol: "advanced", optimizationMode: "mode_2_sbb", optimizationSchedule: "global" }), portalAdmission: PROFILES_RAW as never });
+    go("review");
     expect((q("[data-fold-plan]") as HTMLElement).textContent).toContain("outer folds — not published");
   });
 
@@ -706,3 +722,7 @@ describe("T16 — the route method note", () => {
     expect(q("[data-route-method-note]")!.textContent).toBe("Walk-forward searches strategy parameters.");
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

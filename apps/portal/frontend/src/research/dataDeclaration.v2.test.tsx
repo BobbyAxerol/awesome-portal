@@ -911,3 +911,7 @@ describe("the route", () => {
     expect(q("[data-profile-card]")).toBeNull();
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

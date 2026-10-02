@@ -22,7 +22,7 @@ import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
 import { reportSessionExpired } from "../auth/sessionExpiry";
-import { REFUSAL_COPY, refusalCopy, stateOfStatus } from "./researchRefusal";
+import { refusalCopy, stateOfStatus } from "./researchRefusal";
 
 type Schemas = components["schemas"];
 
@@ -257,6 +257,8 @@ export interface ImportRefusal extends RefusalPresentation {
    * (`…_INVALID`) would contradict its own sentence.
    */
   codeInDetails?: boolean;
+  /** True for the origin/CSRF refusal: the one refusal a page reload can fix (action `Reload`). */
+  origin?: boolean;
 }
 
 /**
@@ -266,7 +268,11 @@ export interface ImportRefusal extends RefusalPresentation {
  * exactly this sentence — it names no cause; the `RESEARCH_…` code, the server's
  * text and the request id sit in the details line only.
  */
-export const IMPORT_ORIGIN_REFUSED = "Request refused — reload the page and try again.";
+export const IMPORT_ORIGIN_REFUSED = "Request refused.";
+
+/** One short line per write-refusal class (W2C): 403/404 and 400 each say one thing. */
+export const IMPORT_FORBIDDEN = "Not permitted.";
+export const IMPORT_INVALID = "Request not valid.";
 
 /**
  * The screen's sentence per contract code (VD-P23-01): specific enough to act
@@ -274,20 +280,20 @@ export const IMPORT_ORIGIN_REFUSED = "Request refused — reload the page and tr
  * back to the state's sentence.
  */
 export const IMPORT_REFUSAL_SENTENCE: Partial<Record<ProblemCode, string>> = {
-  RESEARCH_ALPHA_IMPORT_INVALID: "The import request is not valid. Check the source and try again.",
-  RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE: "The analyser is not responding. Try again.",
-  RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED: "The analyser rejected this module. Nothing was registered.",
-  RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH: "The module changed since it was parsed — its digest no longer matches. Parse it again.",
-  /* 403 = 404 (F-04): one sentence, E1 `REFUSAL_COPY.denied`. */
-  RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND: REFUSAL_COPY.denied,
-  RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED: "That parse receipt expired. Parse the module again.",
-  RESEARCH_ALPHA_IMPORT_GATES_REQUIRED: "The gates have not run for this source yet. Run them before registering.",
-  RESEARCH_ALPHA_IMPORT_GATES_FAILED: "At least one gate failed for this source. Nothing was registered.",
-  RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED: "This exact source is already registered as an alpha version.",
-  RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT: "This alpha changed since it was read. Read it again.",
-  RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED: "The import queue is full. This request was not accepted and can be tried again.",
-  RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN: REFUSAL_COPY.denied,
-  RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT: "This version's lifecycle changed since it was read. Read it again.",
+  RESEARCH_ALPHA_IMPORT_INVALID: IMPORT_INVALID,
+  RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE: "Analyser not responding. Try again.",
+  RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED: "Module rejected.",
+  RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH: "Source changed. Parse again.",
+  /* 403 = 404 (F-04): one short line. */
+  RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND: IMPORT_FORBIDDEN,
+  RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED: "Parse expired. Parse again.",
+  RESEARCH_ALPHA_IMPORT_GATES_REQUIRED: "Run gates first.",
+  RESEARCH_ALPHA_IMPORT_GATES_FAILED: "A gate failed.",
+  RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED: "Already registered.",
+  RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT: "Changed. Read again.",
+  RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED: "Queue full. Try again.",
+  RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN: IMPORT_FORBIDDEN,
+  RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT: "Changed. Read again.",
 };
 
 /**
@@ -324,13 +330,14 @@ export function toRefusal(error: unknown): ImportRefusal {
     message: originRefused
       ? IMPORT_ORIGIN_REFUSED
       : neutral
-        ? REFUSAL_COPY.denied
-        : (known && error.code ? IMPORT_REFUSAL_SENTENCE[error.code as ProblemCode] : undefined) ?? refusalCopy(state, error.status),
+        ? IMPORT_FORBIDDEN
+        : (known && error.code ? IMPORT_REFUSAL_SENTENCE[error.code as ProblemCode] : undefined) ?? (error.status === 400 ? IMPORT_INVALID : refusalCopy(state, error.status)),
     detail: error.message || null,
     status: error.status,
     requestId: error.requestId,
     neutral,
     codeInDetails: neutral || originRefused,
+    origin: originRefused,
     state,
     mayRetry: known?.mayRetry ?? state === "unavailable",
     requiresRefresh: known?.requiresRefresh ?? false,

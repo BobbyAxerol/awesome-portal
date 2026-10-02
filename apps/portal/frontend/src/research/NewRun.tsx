@@ -88,8 +88,10 @@ import {
   type RunDraft,
   type StepId,
   STEPS,
+  RECEIPT_ALPHA,
   SWEEP_CEILING,
   applyCoveragePrefill,
+  draftIsEmpty,
   blockingProblems,
   isIncompleteProblem,
   carriedCoverage,
@@ -311,10 +313,13 @@ export function stepCaption({
   contextChosen,
   contextBlocked = false,
   reviewCaption,
+  passive = false,
 }: {
   step: StepId;
   current: boolean;
   hasError: boolean;
+  /** The step has nothing left to choose (everything on it is pinned): it never blocks and reads "pinned", visited or not. */
+  passive?: boolean;
   /** The step has a required field still empty that is not flagged yet (reached, not edited, not left). It never reads "valid". */
   unfinished?: boolean;
   visited: boolean;
@@ -328,6 +333,7 @@ export function stepCaption({
   /* Review's verdict is the server's preflight, which the bar cannot see, so
      Review never gets a tick; its caption is the preflight's own state. */
   if (step === "review") return { state: current ? "current" : visited ? "visited" : "not-visited", caption: reviewCaption };
+  if (passive) return { state: current ? "current" : "valid", caption: "pinned" };
   if (!visited) return { state: "not-visited", caption: "not visited" };
   if (unfinished) return { state: current ? "current" : "incomplete", caption: "in progress" };
   if (step === "context" && !contextChosen) return { state: current ? "current" : "incomplete", caption: "no version chosen" };
@@ -346,9 +352,12 @@ function WizardBar({
   contextChosen,
   contextBlocked,
   reviewCaption,
+  passive,
 }: {
   current: StepId;
   onPick: (step: StepId) => void;
+  /** Steps with nothing left to choose: kept for orientation, never blocking, skipped by Back and Next. */
+  passive: ReadonlySet<StepId>;
   errors: ReadonlySet<StepId>;
   /** Steps whose problems are not shown yet (reached, not edited or left). */
   unfinished: ReadonlySet<StepId>;
@@ -393,6 +402,7 @@ function WizardBar({
           contextChosen,
           contextBlocked,
           reviewCaption,
+          passive: passive.has(step.id),
         });
         const checked = stepState === "valid" && step.id !== "review";
         const tone = hasError ? "var(--bad)" : isCurrent ? "var(--accent)" : checked ? "var(--good)" : "var(--ink-faint)";
@@ -496,7 +506,13 @@ function ContextStep({
   registry: readonly RegistryEntry[];
 }) {
   const bound = registry.find((entry) => entry.alpha_id === draft.alphaId && entry.alpha_version_id === draft.alphaVersionId);
-  const alphaIds = [...new Set(registry.map((entry) => entry.alpha_id))];
+  /* The receipt alphas the platform's own checks register cannot create runs: they are not offered (one the draft already holds stays visible). */
+  const alphaIds = [...new Set(registry.map((entry) => entry.alpha_id))].filter((id) => !RECEIPT_ALPHA.test(id) || id === draft.alphaId);
+  /* An alpha with one version has nothing to choose: picking it picks the version. */
+  const pickAlpha = (alphaId: string) => {
+    const versions = registry.filter((entry) => entry.alpha_id === alphaId);
+    patch({ alphaId, alphaVersionId: versions.length === 1 ? versions[0]!.alpha_version_id : "", strategyId: "" });
+  };
   /* FG-05: the P22 lookup runs only for a bound version the registry listed. */
   const lookedUp = draft.bound && bound ? bound.alpha_version_id : null;
   const publications = useAlphaVersionPublications(lookedUp !== null ? [lookedUp] : []);
@@ -518,7 +534,7 @@ function ContextStep({
         {draft.bound ? (<>
         <Field label="Alpha">
           {draft.bound ? (
-            <select className={INPUT_CLASS} style={inputStyle()} value={draft.alphaId} onChange={(event) => patch({ alphaId: event.target.value, alphaVersionId: "", strategyId: "" })} aria-label="Alpha" data-alpha-selector disabled={registry.length === 0} title={registry.length === 0 ? "No registry entry is available for the bound declaration." : undefined}>
+            <select className={INPUT_CLASS} style={inputStyle()} value={draft.alphaId} onChange={(event) => pickAlpha(event.target.value)} aria-label="Alpha" data-alpha-selector disabled={registry.length === 0} title={registry.length === 0 ? "No registry entry is available for the bound declaration." : undefined}>
               <option value="">Select an alpha</option>
               {alphaIds.map((id) => <option key={id} value={id}>{registry.find((entry) => entry.alpha_id === id)?.display_name ?? id}{cannotRun(id) ? " · cannot create runs" : ""}</option>)}
             </select>
@@ -701,19 +717,18 @@ function LastPublishedRc({ view }: { view: AlphaVersionPublicationView }) {
   );
 }
 
+/** The strategy of the run: the alpha's own when bound (nothing to choose), a free id when scratch. */
 function StrategyStep({
   draft,
   patch,
-  limits,
   error,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
-  limits: DraftConstraints;
   error: string | null;
 }) {
   return (
-    <Card title="Strategy &amp; protocol">
+    <Card title="Strategy">
       <Field
         label="strategy_id"
         hint={draft.bound ? (draft.alphaVersionId === "" ? undefined : "pinned to the alpha id") : "free while scratch"}
@@ -728,32 +743,32 @@ function StrategyStep({
         />
       </Field>
       {error ? <ErrorBlock message={error} /> : null}
-
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Protocol" title="Only the protocols the installed engine release certifies are offered.">
-        {(["three_window_decay", "advanced"] as const).map((protocol) => (
-          <button
-            key={protocol}
-            type="button"
-            data-protocol={protocol}
-            data-selected={draft.protocol === protocol}
-            onClick={() => patch({ protocol })}
-            className="mono rounded-[5px] border px-2.5 py-1 text-[10px]"
-            style={{
-              borderColor: draft.protocol === protocol ? "var(--accent)" : "var(--line)",
-              background: draft.protocol === protocol ? "var(--accent-soft)" : "var(--paper-raised)",
-              color: draft.protocol === protocol ? "var(--accent)" : "var(--ink-soft)",
-            }}
-          >
-            {protocol === "three_window_decay" ? "Three-Window Decay" : "Advanced Walk-Forward"}
-          </button>
-        ))}
-      </div>
-      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-seed-required>
-        {/* Three states, not two: a rule that was not read is not a rule that
-            says no. */}
-        seed required: {limits.seedRequired === null ? "not declared" : limits.seedRequired ? "yes" : "no"}
-      </span>
     </Card>
+  );
+}
+
+/** The protocol the run is validated under; it decides which windows the next block asks for. */
+function ProtocolToggle({ draft, patch }: { draft: RunDraft; patch: (change: Partial<RunDraft>) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Protocol" title="Only the protocols the installed engine release certifies are offered.">
+      {(["three_window_decay", "advanced"] as const).map((protocol) => (
+        <button
+          key={protocol}
+          type="button"
+          data-protocol={protocol}
+          data-selected={draft.protocol === protocol}
+          onClick={() => patch({ protocol })}
+          className="mono rounded-[5px] border px-2.5 py-1 text-[10px]"
+          style={{
+            borderColor: draft.protocol === protocol ? "var(--accent)" : "var(--line)",
+            background: draft.protocol === protocol ? "var(--accent-soft)" : "var(--paper-raised)",
+            color: draft.protocol === protocol ? "var(--accent)" : "var(--ink-soft)",
+          }}
+        >
+          {protocol === "three_window_decay" ? "Three-Window Decay" : "Advanced Walk-Forward"}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -1065,11 +1080,14 @@ function DataStep({
   catalogReason = null,
   registry = [],
   profileFit = null,
+  onSymbolMiss,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   limits: DraftConstraints;
   error: string | null;
+  /** Reports the typed symbol when the server's own search says the dataset does not list it (a partial list). */
+  onSymbolMiss?: (symbol: string | null) => void;
   /** CG-P08-04: the research dataset catalog, or null when it was not read. */
   catalog?: DatasetCatalog | null;
   catalogReason?: string | null;
@@ -1090,6 +1108,11 @@ function DataStep({
   const catalogIndex = readCatalogIndex(catalog);
   const typedSymbol = draft.symbol.trim().toUpperCase();
   const selectedSymbol = symbols.find((item) => item.symbol === typedSymbol) ?? serverItems.find((item) => item.symbol === typedSymbol) ?? null;
+  const missRef = useRef(onSymbolMiss);
+  missRef.current = onSymbolMiss;
+  useEffect(() => {
+    missRef.current?.(serverMiss !== null && serverMiss === typedSymbol ? serverMiss : null);
+  }, [serverMiss, typedSymbol]);
   const pickDataset = (datasetId: string) =>
     patch({ datasetId, ...applyCoveragePrefill(draft, planCoverage(catalog, datasetId, draft.symbol, draft.timeframe)) });
   const pickSymbol = (symbol: string) =>
@@ -1188,7 +1211,7 @@ function DataStep({
             symbols={symbols}
             total={dataset?.symbols.total ?? null}
             truncated={dataset?.symbols.truncated === true}
-            bad={error !== null && draft.symbol.trim().length === 0}
+            bad={error !== null && (draft.symbol.trim().length === 0 || error.endsWith("is not a listed symbol."))}
             onChange={pickSymbol}
             datasetId={dataset?.dataset_id ?? ""}
             timeframe={draft.timeframe}
@@ -1237,7 +1260,7 @@ function DataStep({
           ["required columns", limits.requiredColumns === null ? null : limits.requiredColumns.join(" · "), "Columns the version declares; the server checks them at preflight."],
           ["warmup bars", limits.warmupBars === null ? null : String(limits.warmupBars), "Bars the version declares it needs before the analysis start; the server checks the exact range at preflight."],
           ["seed", limits.seedRequired === null ? null : limits.seedRequired ? "required" : "not required", "determinism.seed_required, as the version declares it."],
-        ] as const).map(([label, value, hint]) => (
+        ] as const).filter(([, value]) => value !== null).map(([label, value, hint]) => (
           <span
             key={label}
             className="flex items-baseline gap-1.5 rounded-[3px] border px-1.5 py-[1px]"
@@ -1246,17 +1269,12 @@ function DataStep({
             data-declaration-fact={label}
           >
             <Label>{label}</Label>
-            {value === null ? (
-              <span className="text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
-                {!draft.bound || draft.alphaVersionId ? "not declared" : "no version chosen"}
-              </span>
-            ) : (
-              <span className="mono text-[10.5px]">{value}</span>
-            )}
+            <span className="mono text-[10.5px]">{value}</span>
           </span>
         ))}
       </div>
-      {error ? <ErrorBlock message={error} /> : null}
+      {/* An unlisted symbol is said once, under the symbol field. */}
+      {error && !(unlistedShown && error.endsWith("is not a listed symbol.")) ? <ErrorBlock message={error} /> : null}
     </Card>
   );
 }
@@ -1328,43 +1346,12 @@ function DateTimeInput({
   );
 }
 
-/**
- * CG-P02-02 / CG-P08-02: preflight accepts the requested-spec v2 controls
- * (rolling width, label/purge/embargo, inner folds) but run creation has
- * refused every v2 spec so far. Offering the control without saying so
- * teaches the reader that Create fails. The note states the observed fact and
- * no cause — a cause is the server's to state, at Review, once it has spoken —
- * and it steps aside when a served `run_admission` says creation is admitted.
- */
-const V2_NOTE_SUBJECT: Record<string, string> = {
-  "train-window": "Train width",
-  "temporal-guards": "Label/purge/embargo",
-  "inner-folds": "Inner folds",
-};
-
-function V2CreateNote({ where, admitted }: { where: string; admitted: boolean }) {
-  if (admitted) return null;
-  return (
-    <span className="block w-full text-[9.5px] leading-[1.5]" style={{ color: "var(--role-holdout)" }} data-v2-create-note={where}>
-      {V2_NOTE_SUBJECT[where] ?? "This"}: preflight only for now.
-    </span>
-  );
-}
-
 /** The profile id that fixes a value, when the draft holds exactly that value; else undefined (the field stays editable). */
 function pinnedBy(profile: ProfilePins | null, pinned: string | null, current: string): string | undefined {
   return profile?.enabled && pinned !== null && pinned === current ? profile.profileId : undefined;
 }
 
-/**
- * One published walk-forward choice (RF02-F2).
- *
- * The values come from the Atlas (`walk_forward_options`), never from a list in
- * this file. A value the Portal does not admit stays visible, disabled, with
- * the server's reason — preflight would refuse it, so offering it would only
- * teach the reader that the button fails.
- */
-type PublishedOption = { value: string; admission: string; reason?: string | null; note?: string; title?: string };
+type PublishedOption ={ value: string; admission: string; reason?: string | null; note?: string; title?: string };
 
 /**
  * The published options as the selected profile admits them (`frequencies`, `window_modes`).
@@ -1509,7 +1496,6 @@ function WindowsStep({
   error,
   catalog = null,
   warmupBars = null,
-  createAdmitted = false,
   profile = null,
   family = [],
   profiles = null,
@@ -1536,8 +1522,6 @@ function WindowsStep({
   catalog?: DatasetCatalog | null;
   /** D4: the warmup the bound version declares, or null when it was not read. */
   warmupBars?: number | null;
-  /** The preflight's served `run_admission.may_create_run === true`; hides the v2 create note. */
-  createAdmitted?: boolean;
 }) {
   const options = atlas?.current_release.walk_forward_options ?? null;
   const frequencyOptions = profileOptions(options?.frequency ?? null, profile, family, "frequency");
@@ -1607,6 +1591,7 @@ function WindowsStep({
 
   return (
     <Card title="Walk-forward">
+      <ProtocolToggle draft={draft} patch={patch} />
       <WindowPrefillNote draft={draft} plan={prefillPlan} warmupBars={warmupBars} />
       {draft.protocol === "three_window_decay" ? (
         <div className="flex flex-col gap-2" data-three-window>
@@ -1714,7 +1699,6 @@ function WindowsStep({
                 placeholder="180D"
                 data-train-window
               />
-              <V2CreateNote where="train-window" admitted={createAdmitted} />
             </Field>
           ) : null}
           {options?.temporal_guards && temporalAdmitted ? (
@@ -1736,10 +1720,6 @@ function WindowsStep({
                   />
                 </Field>
               ))}
-              {/* Only when a guard is actually declared: an untouched field is not serialized. */}
-              {(["labelHorizonBars", "purgeBars", "embargoBars"] as const).some((key) => (draft.walkForward[key] ?? "").trim() !== "") ? (
-                <V2CreateNote where="temporal-guards" admitted={createAdmitted} />
-              ) : null}
             </div>
           ) : null}
         </div>
@@ -1857,13 +1837,12 @@ function WindowsStep({
                     {(innerConstraints && innerConstraints.windowModes.length > 0 ? innerConstraints.windowModes : (options?.inner_folds?.window_mode ?? ["expanding", "rolling"])).map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </Field>
-                <Field label="Inner train width" hint={innerConstraints?.trainWindowPattern ? `pattern ${innerConstraints.trainWindowPattern}` : undefined}>
+                <Field label="Inner train width">
                   <input className={INPUT_CLASS} style={inputStyle()} value={inner.trainWindow} onChange={(e) => set({ trainWindow: e.target.value.trim() })} aria-label="Inner train width" placeholder="90D" />
                 </Field>
                 <Field label="Minimum inner folds" hint={innerConstraints ? `profile ${innerConstraints.folds.min}–${innerConstraints.folds.max} per outer fold` : options?.inner_folds ? `release default ${options.inner_folds.min_folds_release_default}` : undefined}>
                   <input className={INPUT_CLASS} style={inputStyle()} inputMode="numeric" value={inner.minFolds} onChange={(e) => set({ minFolds: e.target.value.trim() })} aria-label="Minimum inner folds" placeholder={options?.inner_folds ? String(options.inner_folds.min_folds_release_default) : undefined} />
                 </Field>
-                <V2CreateNote where="inner-folds" admitted={createAdmitted} />
               </>
             );
           })()}
@@ -1940,7 +1919,7 @@ function ParametersStep({
     >
       {draft.parameters.length === 0 ? (
         <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-no-parameters>
-          {draft.bound && draft.alphaVersionId === "" ? "No version chosen." : "No parameter space declared."}
+          {draft.bound && draft.alphaVersionId === "" ? "Choose a version first." : "This version declares no parameters."}
         </p>
       ) : (
         <div className="flex flex-col" data-parameter-table data-parameter-compact={compact || undefined} ref={tableRef}>
@@ -2045,7 +2024,7 @@ function ParametersStep({
                     data-parameter-step={entry.name}
                   >
                     {entry.declaredStep === null || entry.declaredStep === undefined ? (
-                      <span className="italic">not declared</span>
+                      <span className="italic" title="The declaration names no grid for this parameter.">no grid</span>
                     ) : (
                       String(entry.declaredStep)
                     )}
@@ -2092,15 +2071,19 @@ const GROUP_LABEL: Record<string, string> = {
  * will refuse is a promise the screen cannot keep.
  */
 function OptimizerDefaults({ release }: { release: AtlasRelease }) {
-  /* A `detail` shared by three or more rows ("QuantBT OptimizationConfig default.") is a label, not information: it rides on the chip. */
+  const fields = release.optimizer_defaults.groups.flatMap((group) => group.fields);
+  /* A `detail` shared by three or more rows ("QuantBT OptimizationConfig default.") is a label, not information: it goes to the tooltip. */
   const detailCount = new Map<string, number>();
-  for (const group of release.optimizer_defaults.groups) {
-    for (const field of group.fields) detailCount.set(field.detail, (detailCount.get(field.detail) ?? 0) + 1);
-  }
+  for (const field of fields) detailCount.set(field.detail, (detailCount.get(field.detail) ?? 0) + 1);
+  /* When every row carries the same source and lock state, that is said once, not once per row. */
+  const kinds = new Set(fields.map((field) => `${field.value_source} · ${field.override_state}`));
+  const uniform = kinds.size === 1 ? [...kinds][0]! : null;
+  const words = (value: string) => value.toLowerCase().replace(/_/g, " ");
+  const sharedDetail = fields.find((field) => (detailCount.get(field.detail) ?? 0) >= 3)?.detail;
   return (
     <details className="rounded-[5px] border px-2.5 py-1.5" style={{ borderColor: "var(--line)" }} data-optimizer-defaults>
-      <summary className="cursor-pointer text-[11px] font-semibold" style={{ color: "var(--ink-soft)" }}>
-        Optimizer defaults · {release.optimizer_defaults.groups.reduce((count, group) => count + group.fields.length, 0)} fields · pinned by protocol
+      <summary className="cursor-pointer text-[11px] font-semibold" style={{ color: "var(--ink-soft)" }} title={sharedDetail}>
+        Release defaults · {fields.length} fields{uniform !== null ? ` · ${words(uniform)}` : ""}
       </summary>
       <div className="mt-2 flex flex-col gap-2">
       {release.optimizer_defaults.groups.map((group) => (
@@ -2130,13 +2113,15 @@ function OptimizerDefaults({ release }: { release: AtlasRelease }) {
                   String(field.default_value)
                 )}
               </span>
-              <span
-                className="mono flex-none rounded-[3px] border px-1 text-[8.5px] font-bold leading-[14px]"
-                style={{ color: "var(--ink-soft)", borderColor: "var(--line-strong)" }}
-                title={(detailCount.get(field.detail) ?? 0) >= 3 ? field.detail : undefined}
-              >
-                {field.value_source} · {field.override_state}
-              </span>
+              {uniform === null ? (
+                <span
+                  className="mono flex-none rounded-[3px] border px-1 text-[8.5px] font-bold leading-[14px]"
+                  style={{ color: "var(--ink-soft)", borderColor: "var(--line-strong)" }}
+                  title={(detailCount.get(field.detail) ?? 0) >= 3 ? field.detail : undefined}
+                >
+                  {words(`${field.value_source} · ${field.override_state}`)}
+                </span>
+              ) : null}
               {(detailCount.get(field.detail) ?? 0) >= 3 ? null : (
                 <span className="flex-1 text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
                   {field.detail}
@@ -2356,7 +2341,7 @@ function OptimizationStep({
           label="Optuna trials"
           hint={
             trialsLocked
-              ? `pinned · ${profile?.profileId}${profile && trialScopeText(profile) ? ` · ${trialCapsText(profile)}` : ""}`
+              ? "pinned"
               : profile?.enabled && profile.trials
                 ? `profile ${profile.trials.min}–${profile.trials.max}${trialScopeText(profile) ? ` ${trialScopeText(profile)}` : ""}${profile.maxTotalTrials !== null ? ` · total ≤ ${profile.maxTotalTrials}` : ""}`
                 : limits.trialCeiling === null
@@ -2389,7 +2374,7 @@ function OptimizationStep({
             data-forbidden-by={earlyStopForbidden ? profile?.profileId : undefined}
           />
         </Field>
-        <Field label={limits.seedRequired === true ? "Random seed *" : "Random seed"} hint={seedLocked ? `pinned · ${profile?.profileId}` : seedForbidden ? `not admitted · ${profile?.profileId}` : undefined}>
+        <Field label={limits.seedRequired === true ? "Random seed *" : "Random seed"} hint={seedLocked ? "pinned" : seedForbidden ? `not admitted · ${profile?.profileId}` : undefined}>
           <input
             className={INPUT_CLASS}
             style={seedLocked || seedForbidden ? { ...inputStyle(), ...lockStyle } : inputStyle((limits.seedRequired === true && draft.randomSeed.trim() === "") || randomSeedInvalid(draft.randomSeed))}
@@ -2719,11 +2704,15 @@ function WindowTimeline({
         </span>
         {draft.protocol === "advanced" ? (
           <>
-            <p className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-advanced-timeline>
-              {draft.walkForward.frequency || "frequency not declared"}
-              {" · "}{draft.walkForward.windowMode || "window mode not declared"}
-              {" · first OOS "}{draft.walkForward.splitMode ? instantText(draft.walkForward.splitMode) : NOT_DECLARED}
-            </p>
+            {draft.walkForward.frequency || draft.walkForward.windowMode || draft.walkForward.splitMode ? (
+              <p className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-advanced-timeline>
+                {[
+                  draft.walkForward.frequency || null,
+                  draft.walkForward.windowMode || null,
+                  draft.walkForward.splitMode ? `first OOS ${instantText(draft.walkForward.splitMode)}` : null,
+                ].filter(Boolean).join(" · ")}
+              </p>
+            ) : null}
             <WindowBarsLine estimate={estimate} />
           </>
         ) : null}
@@ -2848,11 +2837,6 @@ function ClaimForecast({
 
 /* ------------------------------------------------------------- review rows */
 
-/** Typed absence in a review row: italic, never a digit. */
-function NotDeclared({ children }: { children: React.ReactNode }) {
-  return <span className="italic" style={{ color: "var(--ink-faint)" }} data-not-declared>{children}</span>;
-}
-
 /** The draft as one line per declaration — the same serializer facts the submit sends (HiFi `reviewRows`). */
 function ReviewRows({
   draft,
@@ -2875,54 +2859,57 @@ function ReviewRows({
 }) {
   const overrides = Object.keys(draft.optimizationConfigOverrides);
   /* The instants as the form and the timeline print them (U12), not a second date-only format. */
-  const at = (value: string) => (value === "" ? NOT_DECLARED : instantText(value));
+  const at = (value: string) => instantText(value);
   /* Scratch is its own declaration; a bound run has nothing to show until a version is chosen. */
   const chosen = !draft.bound || draft.alphaVersionId !== "";
   const versionRead = chosen && versionDeclared;
+  /* Only what is declared is listed: an absent value is not a row of "not declared" (the errors above name what is missing). */
+  const dataParts = [draft.datasetId, draft.symbol, draft.timeframe].filter((part) => part !== "");
+  const anyWindow = draft.protocol === "three_window_decay"
+    ? [draft.windows.is, draft.windows.oos, draft.windows.holdout].some((window) => window.start !== "" || window.endExclusive !== "")
+    : draft.walkForward.start !== "" || draft.walkForward.endExclusive !== "" || draft.walkForward.splitMode !== "";
+  const trialParts = [draft.optunaTrials, draft.earlyStopping, draft.randomSeed];
   return (
     <div className="flex flex-col" data-review-rows>
-      <Row label="alpha binding" labelWidth={labelWidth}>
-        <span title={bindingChip(draft, registry).title}>{bindingChip(draft, registry).text}</span>
-      </Row>
-      <Row label="execution route" labelWidth={labelWidth}>{draft.executionRoute}</Row>
-      <Row label="strategy_id" labelWidth={labelWidth}>
-        {effectiveStrategyId(draft) ? (
-          <>
-            {effectiveStrategyId(draft)}
-            {draft.bound ? " (pinned by alpha_id)" : ""}
-          </>
-        ) : (
-          <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>
-        )}
-      </Row>
-      <Row label="dataset · symbol · tf" labelWidth={labelWidth}>
-        {/* §3.3: an absent value is never a dash. */}
-        {draft.datasetId || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
-        {" · "}
-        {draft.symbol || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
-        {" · "}
-        {draft.timeframe || <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>}
-      </Row>
-      <Row label="protocol" labelWidth={labelWidth}>{draft.protocol}</Row>
-      {withWindows ? (
-        <Row label="windows" labelWidth={labelWidth}>
-          {draft.protocol === "three_window_decay"
-            ? `IS ${at(draft.windows.is.start)} → OOS ${at(draft.windows.oos.start)} → holdout ${at(draft.windows.holdout.start)} → end ${at(draft.windows.holdout.endExclusive)}`
-            : `walk-forward · ${draft.walkForward.frequency || "frequency not declared"} · ${draft.walkForward.windowMode || "window mode not declared"}`}
+      {chosen ? (
+        <Row label="alpha binding" labelWidth={labelWidth}>
+          <span title={bindingChip(draft, registry).title}>{bindingChip(draft, registry).text}</span>
         </Row>
       ) : null}
-      <Row label="parameter_space" labelWidth={labelWidth}>
-        {/* A real 0 is a version that published an empty space; before a version
-            is chosen there is nothing to count. */}
-        {draft.parameters.length === 0 && !versionRead ? (
-          <NotDeclared>{chosen ? "not declared" : "no version chosen"}</NotDeclared>
-        ) : (
-          <>
-            {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
-            {sweepCeiling === null ? " (sweep ceiling not published)" : ` (sweep ceiling ${sweepCeiling})`}
-          </>
-        )}
-      </Row>
+      <Row label="execution route" labelWidth={labelWidth}>{draft.executionRoute}</Row>
+      {effectiveStrategyId(draft) ? (
+        <Row label="strategy_id" labelWidth={labelWidth}>
+          {effectiveStrategyId(draft)}
+          {draft.bound ? " (pinned by alpha_id)" : ""}
+        </Row>
+      ) : null}
+      {dataParts.length > 0 ? (
+        <Row label="dataset · symbol · tf" labelWidth={labelWidth}>{dataParts.join(" · ")}</Row>
+      ) : null}
+      <Row label="protocol" labelWidth={labelWidth}>{draft.protocol}</Row>
+      {withWindows && anyWindow ? (
+        <Row label="windows" labelWidth={labelWidth}>
+          {draft.protocol === "three_window_decay"
+            ? [
+              draft.windows.is.start ? `IS ${at(draft.windows.is.start)}` : null,
+              draft.windows.oos.start ? `OOS ${at(draft.windows.oos.start)}` : null,
+              draft.windows.holdout.start ? `holdout ${at(draft.windows.holdout.start)}` : null,
+              draft.windows.holdout.endExclusive ? `end ${at(draft.windows.holdout.endExclusive)}` : null,
+            ].filter(Boolean).join(" → ")
+            : [
+              draft.walkForward.start || draft.walkForward.endExclusive ? `walk-forward ${draft.walkForward.start ? at(draft.walkForward.start) : ""} → ${draft.walkForward.endExclusive ? at(draft.walkForward.endExclusive) : ""}`.trim() : null,
+              draft.walkForward.splitMode ? `first OOS ${instantText(draft.walkForward.splitMode)}` : null,
+              draft.walkForward.frequency || null,
+              draft.walkForward.windowMode || null,
+            ].filter(Boolean).join(" · ")}
+        </Row>
+      ) : null}
+      {draft.parameters.length > 0 || versionRead ? (
+        <Row label="parameter_space" labelWidth={labelWidth}>
+          {draft.parameters.length} entries · {sweptCount(draft)} swept · {pinnedCount(draft)} pinned
+          {sweepCeiling === null ? "" : ` (sweep ceiling ${sweepCeiling})`}
+        </Row>
+      ) : null}
       {draft.protocol === "advanced" && usesV2 ? (
         <Row label="walk-forward v2" labelWidth={labelWidth}>
           {[
@@ -2934,54 +2921,59 @@ function ReviewRows({
           ].filter(Boolean).join(" · ") || "requested-spec v2"}
         </Row>
       ) : null}
-      <Row label="mode × schedule" labelWidth={labelWidth}>
-        {/* Two empty fields rendered as a bare `×` printed a separator where
-            a value belongs; an undeclared field says so. */}
-        {draft.optimizationMode || draft.optimizationSchedule ? (
-          `${draft.optimizationMode || "not declared"} × ${draft.optimizationSchedule || "not declared"}`
-        ) : (
-          <span className="italic" style={{ color: "var(--ink-faint)" }}>
-            not declared
-          </span>
-        )}
-      </Row>
-      <Row label="trials · stop · seed" labelWidth={labelWidth}>
-        {/* Each part is its own value: one the step has not supplied says so,
-            and nothing is shown before a version is chosen. */}
-        {[
-          chosen ? draft.optunaTrials : "",
-          chosen ? draft.earlyStopping : "",
-          chosen ? draft.randomSeed : "",
-        ].map((value, index) => (
-          <span key={index}>
-            {index > 0 ? " · " : ""}
-            {value !== "" ? value : <NotDeclared>{index === 0 ? "not declared" : "not set"}</NotDeclared>}
-          </span>
-        ))}
-      </Row>
+      {draft.optimizationMode || draft.optimizationSchedule ? (
+        <Row label="mode × schedule" labelWidth={labelWidth}>
+          {[draft.optimizationMode, draft.optimizationSchedule].filter((part) => part !== "").join(" × ")}
+        </Row>
+      ) : null}
+      {chosen && trialParts.some((value) => value !== "") ? (
+        <Row label="trials · stop · seed" labelWidth={labelWidth}>
+          {[trialParts[0] ? `${trialParts[0]} trials` : null, trialParts[1] ? `stop ${trialParts[1]}` : null, trialParts[2] ? `seed ${trialParts[2]}` : null].filter(Boolean).join(" · ")}
+        </Row>
+      ) : null}
       <Row label="optimization_config" labelWidth={labelWidth}>
         {overrides.length === 0
-          ? "release defaults — nothing serialized"
+          ? "release defaults"
           : `${overrides.length} overrides (${overrides.join(", ")}) — rest engine defaults`}
       </Row>
     </div>
   );
 }
 
-function BlockingList({ blocking }: { blocking: readonly { step: StepId; message: string }[] }) {
+/**
+ * Every problem that blocks the run, each a link to the step that owns it: one list, on Review. A message names its
+ * own field, so the reader is sent to the thing to fix rather than told that something is wrong.
+ */
+function BlockingList({ blocking, onGo }: { blocking: readonly { step: StepId; message: string }[]; onGo?: (step: StepId) => void }) {
   if (blocking.length === 0) return null;
   return (
     <div
       role="alert"
       data-blocking
-      className="flex flex-col gap-1 rounded-[6px] border px-2.5 py-2"
+      className="flex flex-col gap-0.5 rounded-[6px] border px-2.5 py-2"
       style={{ borderColor: "var(--bad)", background: "var(--bad-bg)" }}
     >
-      {blocking.map((problem) => (
-        <span key={problem.step} className="text-[10.5px]" style={{ color: "var(--bad)" }}>
-          {problem.message}
-        </span>
-      ))}
+      {blocking.map((problem, index) => {
+        const label = STEPS.find((candidate) => candidate.id === problem.step)?.label ?? problem.step;
+        return onGo ? (
+          <button
+            key={`${problem.step}-${index}`}
+            type="button"
+            className="flex flex-wrap items-baseline gap-x-2 text-left text-[10.5px]"
+            style={{ color: "var(--bad)" }}
+            data-blocking-link={problem.step}
+            title={`Fix it in ${label}`}
+            onClick={() => onGo(problem.step)}
+          >
+            <span>{problem.message}</span>
+            <span className="underline">{label} →</span>
+          </button>
+        ) : (
+          <span key={`${problem.step}-${index}`} className="text-[10.5px]" style={{ color: "var(--bad)" }}>
+            {problem.message}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -2995,6 +2987,7 @@ function ReviewRail({
   registry,
   preflight,
   showRows,
+  scope = "review",
   catalog = null,
   portalAdmission = null,
   versionDeclared = false,
@@ -3002,6 +2995,8 @@ function ReviewRail({
   estimateStatus = IDLE_ESTIMATE,
   onRetryEstimate,
 }: {
+  /** `review`: the one compact summary on the Review step. `timeline`: only the drawing of the windows, beside the steps that edit them. */
+  scope?: "review" | "timeline";
   /** The server's optional `preflight_estimate` (bars, warmup, folds, conditions); null when none was served. */
   estimate?: PreflightEstimate | null;
   estimateStatus?: EstimateStatus;
@@ -3027,11 +3022,13 @@ function ReviewRail({
       className="flex w-full flex-col gap-2 rounded-[8px] border px-3 py-2.5 lg:sticky lg:top-3 lg:w-[320px] lg:flex-none"
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
       data-review-rail
-      aria-label="Review"
+      aria-label={scope === "review" ? "Review" : "Window timeline"}
     >
-      <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        review
-      </h3>
+      {scope === "review" ? (
+        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          review
+        </h3>
+      ) : null}
       <WindowTimeline
         draft={draft}
         catalog={catalog}
@@ -3041,7 +3038,7 @@ function ReviewRail({
         onRetryEstimate={onRetryEstimate}
       />
       <ConditionsChecklist estimate={estimate} />
-      <ClaimForecast draft={draft} atlas={atlas} preflight={preflight} />
+      {scope === "review" ? <ClaimForecast draft={draft} atlas={atlas} preflight={preflight} /> : null}
       {showRows ? <ReviewRows draft={draft} sweepCeiling={sweepCeiling} usesV2={usesV2} registry={registry} versionDeclared={versionDeclared} /> : null}
       <BlockingList blocking={blocking} />
     </aside>
@@ -3076,6 +3073,12 @@ export interface NewRunProps {
   initialStep?: StepId;
   /** HiFi 02-18: called with the step the reader is on, so the route can write `?step=`. */
   onStepChange?: (step: StepId) => void;
+  /** The Market data step found the typed symbol is not one the dataset lists (answered by the server's search for a partial list). */
+  onSymbolMiss?: (symbol: string | null) => void;
+  /** Drops the saved draft and opens the form blank; the link shows only while there is something to drop. */
+  onStartOver?: () => void;
+  /** Bumped by the route when it turned the address's step down, so the screen follows the step it was given. */
+  stepSyncKey?: number;
 
   preflight: PreflightResponse | null;
   preflightState: ResearchState;
@@ -3132,6 +3135,9 @@ export function NewRun(props: NewRunProps) {
     onRecheck,
     initialStep = "context",
     onStepChange,
+    onSymbolMiss,
+    onStartOver,
+    stepSyncKey = 0,
     preflightRefusal = null,
     preflightPending = false,
     catalog = null,
@@ -3166,9 +3172,11 @@ export function NewRun(props: NewRunProps) {
 
   const [step, setStep] = useState<StepId>(initialStep);
   const [visited, setVisited] = useState<ReadonlySet<StepId>>(() => new Set(initialStep === "context" ? [] : [initialStep]));
+  /* The address names the step: a Back, a Forward or a link moves the screen to it; a bumped key re-applies it when the
+     route turned a step down (Review with nothing declared) and the address did not otherwise change. */
   useEffect(() => {
     setStep(initialStep);
-  }, [initialStep]);
+  }, [initialStep, stepSyncKey]);
   /* E4 (audit 02-8): reaching a step counts as visiting it, however the
      reader got there — a pill, a refusal jump, or `?step=`. Before this, only
      a pill click counted, so the wizard's own error marks lagged behind the
@@ -3176,10 +3184,16 @@ export function NewRun(props: NewRunProps) {
   useEffect(() => {
     setVisited((previous) => (previous.has(step) ? previous : new Set([...previous, step])));
   }, [step]);
-  /* HiFi 02-18: the step is part of the address, so a reload or a shared link lands where the reader was. */
+  /* HiFi 02-18: the step is part of the address, so a reload or a shared link lands where the reader was. Only a step
+     the reader moved to is written (one history entry each): a step the address already names (a Back, a Forward,
+     the opening one) is the address talking, and writing it back would undo the Back. */
+  const onStepChangeRef = useRef(onStepChange);
+  onStepChangeRef.current = onStepChange;
+  const addressStepRef = useRef(initialStep);
+  addressStepRef.current = initialStep;
   useEffect(() => {
-    onStepChange?.(step);
-  }, [step, onStepChange]);
+    if (step !== addressStepRef.current) onStepChangeRef.current?.(step);
+  }, [step]);
   /* Reaching a step, or walking through it, is not enough to call what is still EMPTY wrong: a fresh form opened
      on Market data read "A symbol is required." before a key was pressed, and passing through Market data on the
      way to Review turned it red (U18). An unfinished step reads "in progress" until the reader edits it. A value
@@ -3199,7 +3213,9 @@ export function NewRun(props: NewRunProps) {
   }, [step]);
   const stepPatch = useCallback(
     (change: Partial<RunDraft>) => {
-      setEngaged((previous) => (previous.has(step) ? previous : new Set([...previous, step])));
+      /* Choosing the dataset opens the step's work; it is not yet an answer to the symbol, so it must not flag the symbol empty. */
+      const picksDatasetOnly = ("datasetId" in change && !("symbol" in change)) || (Object.keys(change).length === 1 && "protocol" in change);
+      if (!picksDatasetOnly) setEngaged((previous) => (previous.has(step) ? previous : new Set([...previous, step])));
       patch(change);
     },
     [patch, step],
@@ -3227,18 +3243,6 @@ export function NewRun(props: NewRunProps) {
     return steps;
   }, [errorByStep, engaged, refusalStep, estimateRefusalStep]);
   const missing = useMemo(() => missingConstraints(limits), [limits]);
-  /*
-   * E4 (audit 02-8): a form that opens on a red box has told the reader they
-   * are wrong before they have typed anything. The HiFi shows no error until
-   * the reader reaches a step. The rail therefore lists the problems of steps
-   * they have been to; Review lists all of them, because Review is where the
-   * decision to run is made and every problem blocks it. `blocking` itself is
-   * unchanged, so the preflight button's own guard still sees everything.
-   */
-  const visibleBlocking = useMemo(
-    () => (step === "review" ? blocking : blocking.filter((problem) => engaged.has(problem.step))),
-    [blocking, engaged, step],
-  );
   const chip = bindingChip(draft, registry);
   /* The bound version's served `run_admission`: shown on Context and in its step caption. Display only — the server decides at create. */
   const boundEntry = registry.find((entry) => entry.alpha_id === draft.alphaId && entry.alpha_version_id === draft.alphaVersionId);
@@ -3247,6 +3251,54 @@ export function NewRun(props: NewRunProps) {
     () => profileTimeframes(profiles, { protocol: draft.protocol, executionRoute: draft.executionRoute, optimizationMode: draft.optimizationMode }),
     [profiles, draft.protocol, draft.executionRoute, draft.optimizationMode],
   );
+
+  /* Steps with nothing left to choose. A bound run's strategy is the alpha's own; the optimization step is read-only
+     once the profile pins the trial count and the seed (when one is needed). They stay as pills for orientation, never
+     block, and Back and Next walk past them. */
+  const pinnedTrials = trialsPinned(profile);
+  const pinnedSeedValue = seedPinned(profile);
+  const optimizationPinned =
+    profile?.enabled === true
+    && pinnedTrials !== null
+    && draft.optunaTrials.trim() === String(pinnedTrials)
+    && (limits.seedRequired !== true || (pinnedSeedValue !== null && draft.randomSeed.trim() === String(pinnedSeedValue)))
+    && !errorByStep.has("optimization");
+  const passive = useMemo<ReadonlySet<StepId>>(() => {
+    const out = new Set<StepId>();
+    if (draft.bound && draft.alphaVersionId !== "" && !errorByStep.has("strategy")) out.add("strategy");
+    if (optimizationPinned) out.add("optimization");
+    return out;
+  }, [draft.bound, draft.alphaVersionId, errorByStep, optimizationPinned]);
+  const goTo = useCallback(
+    (next: StepId) => {
+      setVisited((previous) => new Set([...previous, step, next]));
+      setStep(next);
+    },
+    [step],
+  );
+  /* The step Back or Next leads to: the next one that still has something to choose. */
+  const neighbour = (direction: 1 | -1): StepId | null => {
+    for (let index = STEPS.findIndex((candidate) => candidate.id === step) + direction; index >= 0 && index < STEPS.length; index += direction) {
+      const candidate = STEPS[index]!.id;
+      if (!passive.has(candidate) || candidate === "review") return candidate;
+    }
+    return null;
+  };
+  const previousStepId = neighbour(-1);
+  const nextStepId = neighbour(1);
+
+  /* One state for a session that may read but not write: the estimate, the preflight and the create all answer 403,
+     and three sentences for one cause is noise. The codes are in the tooltip. */
+  const estimateReadOnly = estimateStatus.kind === "error" && estimateStatus.status === 403;
+  const preflightReadOnly = preflightRefusal !== null && preflightRefusal.status === 403;
+  const createReadOnly = createState.state === "denied";
+  const readOnly = estimateReadOnly || preflightReadOnly || createReadOnly;
+  const readOnlyFacts = [
+    "403",
+    preflightReadOnly ? preflightRefusal?.code : null,
+    estimateStatus.kind === "error" && estimateReadOnly ? estimateStatus.code : null,
+    preflightReadOnly ? (preflightRefusal?.requestId ? `request ${preflightRefusal.requestId}` : null) : null,
+  ].filter((part): part is string => Boolean(part));
 
   return (
     <div
@@ -3259,6 +3311,11 @@ export function NewRun(props: NewRunProps) {
           <div className="flex flex-wrap gap-3 text-[10px] font-semibold" style={{ color: "var(--accent)" }}>
             <Link to="/research/quantbt/runs" data-link="run-library" title="Back to the Run Library">← Run Library</Link>
             <Link to="/research/quantbt/alpha-import" data-link="alpha-import" title="Import a new alpha version, then come back here">Import a version</Link>
+            {onStartOver && !draftIsEmpty(draft) ? (
+              <button type="button" className="text-[10px] font-semibold" style={{ color: "var(--accent)" }} data-action="start-over" title="Drop the saved draft and open a blank form" onClick={onStartOver}>
+                Start over
+              </button>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
             <h1
@@ -3369,10 +3426,8 @@ export function NewRun(props: NewRunProps) {
 
       <WizardBar
         current={step}
-        onPick={(next) => {
-          setVisited((previous) => new Set([...previous, step, next]));
-          setStep(next);
-        }}
+        onPick={goTo}
+        passive={passive}
         errors={errorSteps}
         unfinished={unfinishedSteps}
         visited={visited}
@@ -3408,7 +3463,7 @@ export function NewRun(props: NewRunProps) {
             </>
           ) : null}
           {step === "strategy" ? (
-            <StrategyStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("strategy") ?? null} />
+            <StrategyStep draft={draft} patch={stepPatch} error={shownError.get("strategy") ?? null} />
           ) : null}
           {step === "route" ? (
             <RouteStep
@@ -3421,10 +3476,10 @@ export function NewRun(props: NewRunProps) {
             />
           ) : null}
           {step === "data" ? (
-            <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} />
+            <DataStep draft={draft} patch={stepPatch} limits={limits} error={shownError.get("data") ?? null} catalog={catalog} catalogReason={catalogReason} registry={registry} profileFit={profileFit} onSymbolMiss={onSymbolMiss} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} createAdmitted={preflight?.run_admission?.may_create_run === true} />
+            <WindowsStep draft={draft} patch={stepPatch} adopt={patch} atlas={atlas} profile={profile} family={family} profiles={profiles} estimateStatus={estimateStatus} estimate={estimate} error={shownError.get("windows") ?? null} catalog={catalog} warmupBars={limits.warmupBars} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={stepPatch} error={shownError.get("parameters") ?? null} ceiling={sweepCeiling} />
@@ -3496,12 +3551,25 @@ export function NewRun(props: NewRunProps) {
                 </button>
               </div>
               {/* The one list of what blocks: the rail does not repeat it on this step. */}
-              <BlockingList blocking={blocking} />
+              <BlockingList blocking={blocking} onGo={goTo} />
+              {readOnly ? (
+                <p
+                  role="status"
+                  className="text-[11px] font-semibold"
+                  style={{ color: "var(--bad)" }}
+                  data-read-only-session
+                  title={readOnlyFacts.join(" · ")}
+                  aria-label={`Read-only session · ${readOnlyFacts.join(" · ")}`}
+                  tabIndex={0}
+                >
+                  Read-only session.
+                </p>
+              ) : null}
 
               {/* FG-08 (FE-A1-03/-04): every refusal shows here, with or
                   without a field path. The sentence is client copy keyed by
                   the typed code; the server's own message is never printed. */}
-              {preflightRefusal ? (
+              {preflightRefusal && !readOnly ? (
                 <div
                   role="alert"
                   className="flex flex-wrap items-baseline gap-2 rounded-[6px] border px-2.5 py-1.5 text-[11px]"
@@ -3539,7 +3607,7 @@ export function NewRun(props: NewRunProps) {
                   the DOM — the reader can see what preflight will check, and
                   P08-T10 still finds every named panel — but they are folded,
                   so the primary action is not buried under them. */}
-              {preflight === null ? (
+              {preflight === null && readOnly ? null : preflight === null ? (
                 <details data-preflight-preview>
                   <summary
                     className="mono cursor-pointer text-[10.5px]"
@@ -3596,7 +3664,7 @@ export function NewRun(props: NewRunProps) {
               {/* E4 (audit 02-16): the seventh empty frame. A run that has not
                   been created has no record to show and no state to report, so
                   the panel appears with the request rather than before it. */}
-              {created || createState.state !== "empty" ? (
+              {created || (createState.state !== "empty" && !readOnly) ? (
               <ResearchPanel title="run" state={createState} minBodyHeight={72}>
                 {created ? (
                   <div className="flex flex-col" data-created={created.run_id}>
@@ -3622,9 +3690,25 @@ export function NewRun(props: NewRunProps) {
               ) : null}
             </div>
           ) : null}
+
+          {/* Back and Next walk the steps that still have something to choose; the pills reach the rest. */}
+          <nav className="flex flex-wrap items-center justify-between gap-2" aria-label="Step navigation" data-step-nav>
+            {previousStepId ? (
+              <button type="button" className="btn-ghost mono text-[10px]" data-action="step-back" onClick={() => goTo(previousStepId)}>
+                ← Back · {STEPS.find((candidate) => candidate.id === previousStepId)?.label}
+              </button>
+            ) : <span />}
+            {nextStepId && step !== "review" ? (
+              <button type="button" className="btn-primary mono text-[10px]" data-action="step-next" onClick={() => goTo(nextStepId)}>
+                Next · {STEPS.find((candidate) => candidate.id === nextStepId)?.label} →
+              </button>
+            ) : null}
+          </nav>
         </div>
 
-        <ReviewRail draft={draft} blocking={step === "review" ? [] : visibleBlocking.filter((problem) => problem.step !== step)} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={step !== "review"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} estimate={estimate} estimateStatus={estimateStatus} onRetryEstimate={onRetryEstimate} />
+        {step === "review" || step === "windows" || step === "data" ? (
+          <ReviewRail draft={draft} blocking={[]} atlas={atlas} sweepCeiling={sweepCeiling} usesV2={v2} registry={registry} preflight={preflight} showRows={false} scope={step === "review" ? "review" : "timeline"} catalog={catalog} portalAdmission={portalAdmission} versionDeclared={declarationBound ?? false} estimate={estimate} estimateStatus={step === "review" && readOnly ? IDLE_ESTIMATE : estimateStatus} onRetryEstimate={onRetryEstimate} />
+        ) : null}
       </div>
     </div>
   );

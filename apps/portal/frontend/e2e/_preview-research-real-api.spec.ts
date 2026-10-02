@@ -1045,8 +1045,7 @@ for (const [name, width, height] of VIEWPORTS) {
     await page.waitForLoadState("networkidle");
 
     /* Header: the HiFi title over the shared crumb, with the real endpoint family. */
-    await expect(root.locator("h1")).toHaveText("Alpha Import — standardize the code artifact");
-    await expect(root.locator(".ai-crumb [aria-current='page']")).toHaveText("Alpha Import");
+    await expect(root.locator("h1")).toHaveText("Import alpha");
     /* QA S14: the header no longer prints the endpoint path (no [data-meta] strip); assert it is gone from the screen. */
     await expect(root.locator("[data-meta]")).toHaveCount(0);
     expect(await root.innerText(), "no endpoint path in the header").not.toContain("/api/v1/research/alphas/import");

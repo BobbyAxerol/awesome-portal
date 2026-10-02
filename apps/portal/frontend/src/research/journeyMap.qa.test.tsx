@@ -10,7 +10,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { JourneyMapRoute } from "./foundationRoutes";
-import { JourneyMap, NO_SHIPPED_TAB, isOffSequence } from "./JourneyMap";
+import { JourneyMap, isOffSequence } from "./JourneyMap";
 import type { JourneyDescriptor } from "./foundationClient";
 import { researchState } from "./state";
 
@@ -32,32 +32,14 @@ function draw(runId: string | null = null) {
   );
 }
 
-describe("S00 UX-7 - 'no shipped tab' links nothing on the shipped side", () => {
-  it("value path: the row that says it has no shipped tab draws plain text there", () => {
-    draw();
-    const rows = Array.from(document.querySelectorAll("[data-mapping-row]"));
-    const none = rows.find((r) => NO_SHIPPED_TAB.test(r.querySelector("[data-mapping-cell='shipped']")?.textContent ?? ""));
-    expect(none).toBeTruthy();
-    const cell = none!.querySelector("[data-mapping-cell='shipped']") as HTMLElement;
-    expect(cell.tagName).toBe("SPAN");
-    expect(cell.hasAttribute("data-mapping-no-shipped-tab")).toBe(true);
-    expect(cell.getAttribute("href")).toBeNull();
-  });
-
-  it("typed-absence path: a real shipped tab keeps its link", () => {
-    draw();
-    const overview = Array.from(document.querySelectorAll("[data-mapping-cell='shipped']")).find((n) => n.getAttribute("data-mapping-key") === "run_overview_legacy");
-    expect(overview?.tagName).toBe("A");
-  });
-});
-
 describe("S00 - one instruction per card, shorter title, no dangling arrows", () => {
-  it("a picker card says 'pick a run' once, and still carries its kind tag", () => {
+  it("a picker card says 'pick a run' once; its kind is a tooltip, not a printed tag", () => {
     draw();
     const card = document.querySelector('[data-card-picks-run="split"]') as HTMLElement;
     expect(card.textContent?.match(/pick a run/gi)).toHaveLength(1);
     expect(card.textContent).not.toContain("PICK A RUN");
-    expect(card.textContent).toContain("redesign");
+    expect(card.textContent).not.toMatch(/redesign/i);
+    expect(card.getAttribute("title")).toContain("Redesigned Research screen");
   });
 
   it("a blocked card says BLOCKED once", () => {
@@ -66,11 +48,10 @@ describe("S00 - one instruction per card, shorter title, no dangling arrows", ()
     expect(blocked.textContent?.match(/BLOCKED/g)).toHaveLength(1);
   });
 
-  it("title and mapping heading are short; the h1 has no tooltip repeating itself", () => {
+  it("the h1 is short and has no tooltip repeating itself", () => {
     draw();
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Journey Map");
     expect(document.querySelector("h1")?.hasAttribute("title")).toBe(false);
-    expect(document.querySelector("[data-mapping] h2")?.textContent).toBe("Shipped tab → new screen");
   });
 
   it("the hash of the descriptor is hidden from assistive technology", () => {

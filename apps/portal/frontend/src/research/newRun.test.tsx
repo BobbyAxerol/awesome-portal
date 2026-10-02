@@ -294,7 +294,7 @@ describe("P10-T02 — window rules are verbatim and half-open", () => {
     ).toBe("Holdout must begin exactly where OOS ends.");
     expect(
       validateWindows(draft({ windows: { ...draft().windows, is: { start: "2024-01-01T00:00", endExclusive: "2022-01-01T00:00" } } })),
-    ).toBe("Every window must have a positive length.");
+    ).toBe("IS must end after it starts.");
     expect(
       validateWindows(draft({ windows: { ...draft().windows, holdout: { start: "2025-01-01T00:00", endExclusive: "" } } })),
     ).toBe("Holdout end is required.");
@@ -629,6 +629,7 @@ describe("RF-04 FE-S02-06 — timeframe choices come only from the bound declara
     const manifest = JSON.parse(readFileSync(join(__dirname, "../../e2e/research-foundation/atlas.json"), "utf8")) as { atlas: AtlasDocument };
     const selected = manifest.atlas.modes[0]!.facts!.schedules[0]!;
     view({ atlas: manifest.atlas, draft: draft({ optimizationMode: manifest.atlas.modes[0]!.mode_id, optimizationSchedule: selected.schedule }) });
+    goToStep("review");
     expect(document.querySelector("[data-window-timeline]")?.textContent).toContain("2022-01-01T00:00");
     expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain(selected.chronological_validation_claim.toUpperCase());
     /* S02-01: the ceiling line carries the server's own reason for the absence,
@@ -702,13 +703,14 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
     // §3.3 in its smallest form: `PUBLISHABLE ·` with nothing after it, and
     // `x × y` with both sides empty, both read as a value that is there.
     view({ draft: { ...emptyDraft(), bound: true } });
-    const rail = document.querySelector("[data-review-rail]") as HTMLElement;
+    goToStep("review");
+    const rail = document.querySelector("[data-review-step]") as HTMLElement;
     expect(rail.textContent).not.toMatch(/PUBLISHABLE ·\s*$/m);
     /* E4 (audit 02-x): before a version is chosen the chip states that, instead of
        claiming PUBLISHABLE for a binding the reader has not made. */
-    expect(rail.textContent).toContain("NO VERSION CHOSEN");
+    /* The header chip says it once; the Review rows do not repeat it. */
+    expect(rail.textContent).not.toContain("NO VERSION CHOSEN");
     expect(rail.textContent).not.toContain("PUBLISHABLE · no version bound");
-    expect(within(rail).getAllByText("not declared").length).toBeGreaterThan(0);
 
     const chip = document.querySelector("[data-binding-chip]") as HTMLElement;
     expect(chip.textContent).toBe("NO VERSION CHOSEN");
@@ -720,9 +722,12 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
 
   it("shows the review rail on every step, with the payload's own facts", () => {
     view();
-    const rail = document.querySelector("[data-review-rail]") as HTMLElement;
-    expect(within(rail).getByText(/PUBLISHABLE · av_0_3_0/)).toBeTruthy();
-    expect(rail.textContent).toContain("release defaults — nothing serialized");
+    /* The rail is one compact summary on Review alone; on every other step the steps speak for themselves. */
+    expect(document.querySelector("[data-review-rail]")).toBeNull();
+    goToStep("review");
+    const rows = document.querySelector("[data-review-rows]") as HTMLElement;
+    expect(within(rows).getByText(/PUBLISHABLE · av_0_3_0/)).toBeTruthy();
+    expect(rows.textContent).toContain("release defaults");
   });
 });
 
@@ -1364,7 +1369,8 @@ describe("FG-08 (A2b) — Screen 02 run create and preflight hook never carry se
       preflight: preflightResponse(true),
       preflightState: OK,
     });
-    const panel = document.querySelector('[data-research-panel="run"]') as HTMLElement | null;
+    /* A 403 or 404 is the read-only session: one short state in place of the run panel's long sentence. */
+    const panel = (document.querySelector('[data-research-panel="run"]') ?? document.querySelector("[data-read-only-session]")) as HTMLElement | null;
     expect(panel, `run panel for ${status}`).not.toBeNull();
     const pageText = document.body.textContent ?? "";
     const detailNode = panel!.querySelector("[data-research-detail]");
@@ -1388,7 +1394,8 @@ describe("FG-08 (A2b) — Screen 02 run create and preflight hook never carry se
       expect(pageText, `${status}`).not.toContain(SENTINEL);
       expect(createState.reason, `${status}`).toBe(refusal.copy);
       expect(createState.detail, `${status}`).toBe(`${code} · request req_a2b`);
-      expect(panelWithoutDetail, `${status}`).toContain(refusal.copy);
+      if (status === 403 || status === 404) expect(panelWithoutDetail, `${status}`).toBe("Read-only session.");
+      else expect(panelWithoutDetail, `${status}`).toContain(refusal.copy);
       // The server's sentence is still on the refusal, for diagnostics only.
       expect(refusal.message, `${status}`).toBe(SENTINEL);
     }
@@ -1467,3 +1474,7 @@ describe("F2b S02 — the way out and the way back", () => {
     expect(document.querySelector("[data-preflight-preview-summary]")!.textContent!.split(/\s+/).length).toBeLessThanOrEqual(8);
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

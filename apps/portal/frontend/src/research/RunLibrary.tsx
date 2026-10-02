@@ -65,6 +65,7 @@ import { formatDuration, formatMetric, formatUtc, shortDigest, shortId, typograp
 import { ResearchPanel } from "./ResearchPanel";
 import { datasetKey, ScrubLayer, tipMinus, useDrawIn, useScrub } from "./compareChartLife";
 import { needsAlphaToOpen, resolveJourneyCardRoute } from "./screenRoutes";
+import { readLibraryDraftSummary } from "./libraryDraftChip";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
 import { runLabelOrShortId, useRunLabel } from "./runLabels";
@@ -529,8 +530,8 @@ function last30dCells(item: Pick<RunLibraryItem, "status" | "last_30d">): Last30
   const block = item.last_30d;
   if (!block || !isAvailable(block.availability) || !block.data) return "absent";
   return [
-    { key: "last30d_return", label: "last 30D return", fact: block.data.return_fraction, kind: "return" },
-    { key: "last30d_sharpe", label: "last 30D sharpe", fact: block.data.sharpe, kind: "sharpe" },
+    { key: "last30d_return", label: "final 30D return", fact: block.data.return_fraction, kind: "return" },
+    { key: "last30d_sharpe", label: "final 30D sharpe", fact: block.data.sharpe, kind: "sharpe" },
   ];
 }
 
@@ -1263,7 +1264,7 @@ function Stats({ stats, item }: { stats: readonly MetricCell[]; item: RunLibrary
     <span className="flex flex-wrap" style={{ gap: 18, flex: "1 0 auto" }} data-stats>
       {cells === "absent" ? (
         <span className="flex flex-col" style={{ gap: 1 }} data-metric="LAST_30D" data-last30d="absent" data-reason-code={item.last_30d?.availability.reason_code ?? undefined}>
-          <span style={LABEL_9}>last 30D</span>
+          <span style={LABEL_9}>final 30D</span>
           <span
             style={{ fontFamily: MONO, fontSize: 10, fontStyle: "italic", lineHeight: "17px", color: "var(--ink-faint)", whiteSpace: "nowrap" }}
             title={reasonSentence(item.last_30d?.availability ?? { state: "NOT_PUBLISHED", reason_code: null })}
@@ -1285,7 +1286,7 @@ function Stats({ stats, item }: { stats: readonly MetricCell[]; item: RunLibrary
               {shown !== null ? (
                 <span
                   style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}
-                  title={`${cell.fact.value} · Portal-derived, last 30D of the sealed OOS series${window30 ? ` · ${window30}` : ""}`}
+                  title={`${cell.fact.value} · Portal-derived over the final 30D of the sealed OOS series${window30 ? ` · ${window30}` : ""} · not the span of the all-time chart`}
                 >
                   {shown}
                 </span>
@@ -1385,6 +1386,9 @@ export const CLAIM_STATE_WORDS: Record<NonNullable<RunLibraryItem["claim"]["stat
   FORECAST: "FORECAST",
 };
 
+/** The served reason for the ordinary "no release candidate yet" row: every such card would print the same words, so none does (its code stays as data-rc-absent). Any other reason is abnormal and is still drawn. */
+const NO_RC_REASON = "P21_NO_PERSISTED_RELEASE_CANDIDATE";
+
 /** The claim line: the server's state and sentence, or the one fact the row published about its absence. */
 function ClaimQuote({ item }: { item: RunLibraryItem }) {
   const legacy = item.source_kind === "LEGACY_1_0_8_METADATA";
@@ -1395,8 +1399,17 @@ function ClaimQuote({ item }: { item: RunLibraryItem }) {
   if (isAvailable(availability) && item.claim.text !== null) {
     body = (
       <>
-        {state ? <span data-claim-state={state}>{CLAIM_STATE_WORDS[state]} — </span> : null}
-        {item.claim.text}
+        {state === "NOT_ISSUED" ? (
+          /* The server's sentence is kept whole, in the tooltip; the card says the state. */
+          <span data-claim-state={state} data-claim-text={item.claim.text} title={item.claim.text}>
+            {CLAIM_STATE_WORDS[state]}
+          </span>
+        ) : (
+          <>
+            {state ? <span data-claim-state={state}>{CLAIM_STATE_WORDS[state]} — </span> : null}
+            {item.claim.text}
+          </>
+        )}
       </>
     );
     kind = state === "NOT_ISSUED" ? "not-issued" : state === "FORECAST" ? "forecast" : "issued";
@@ -1952,7 +1965,10 @@ function RunCard({
   sparkline,
   onVisible,
   pickTarget,
+  hide = {},
 }: {
+  /** Facts the list already states once (filter, group header, a value every row shares); the card does not repeat them. */
+  hide?: { alpha?: boolean; mode?: boolean; instrument?: boolean };
   item: RunLibraryItem;
   selected: boolean;
   onToggle: (runId: string) => void;
@@ -1971,6 +1987,7 @@ function RunCard({
       data-row-kind={item.row_kind}
       data-evidence-revision={item.evidence_revision ?? undefined}
       data-selected={selected}
+      data-rc-absent={item.rc === null ? (item.rc_availability.reason_code ?? item.rc_availability.state) : undefined}
       data-certificate-absent={cert === null ? (item.certificate.availability.reason_code ?? item.certificate.availability.state) : undefined}
       style={{
         ...CARD,
@@ -1986,7 +2003,7 @@ function RunCard({
         <RelationshipMark relationship={item.relationship} />
         <StatusPill item={item} />
 
-        {item.mode.display !== null && (isAvailable(item.mode.availability) || item.mode.availability.state === "LEGACY_METADATA_ONLY") ? (
+        {hide.mode && isAvailable(item.mode.availability) ? null : item.mode.display !== null && (isAvailable(item.mode.availability) || item.mode.availability.state === "LEGACY_METADATA_ONLY") ? (
           /* FE-S01-14: a legacy row's mode is still the server's value; it is
              shown, marked as legacy metadata, rather than replaced by a word. */
           <span
@@ -2007,7 +2024,7 @@ function RunCard({
           <Withheld availability={item.mode.availability} what="mode" />
         )}
 
-        {item.binding ? (
+        {hide.alpha && item.binding ? null : item.binding ? (
           <span
             data-binding={item.binding.alpha_version_id}
             title={boundTitle(item.binding.alpha_name, item.binding.av)}
@@ -2043,7 +2060,7 @@ function RunCard({
           <Withheld availability={item.binding_availability} what="binding" />
         )}
 
-        {isAvailable(item.instrument.availability) && item.instrument.display !== null ? (
+        {hide.instrument && isAvailable(item.instrument.availability) ? null : isAvailable(item.instrument.availability) && item.instrument.display !== null ? (
           <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }} data-instrument>
             {item.instrument.display}
           </span>
@@ -2055,7 +2072,7 @@ function RunCard({
             `rc_availability` reason (never a silent gap, never a chip). */}
         {item.rc !== null ? (
           <RcChip rc={item.rc} runId={item.run_id} alphaVersionId={item.binding?.alpha_version_id ?? null} />
-        ) : (
+        ) : item.rc_availability.reason_code === NO_RC_REASON ? null : (
           <Withheld availability={item.rc_availability} what="rc" />
         )}
 
@@ -2276,7 +2293,7 @@ function CompareBar({
           {note}
         </span>
         {replaced !== null && both ? (
-          <span data-compare-replaced={replaced} style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
+          <span data-compare-replaced={replaced} role="status" style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
             max 2 — replaced {runLabelOrShortId(replaced)}
           </span>
         ) : null}
@@ -2626,6 +2643,9 @@ export function RunLibrary(props: RunLibraryProps) {
     });
 
   const [draft, setDraft] = useDebouncedQuery(filters, onFilters);
+  /* The alpha-version card is alpha-scoped; the Library is grouped by alpha for it. */
+  const alphaPick = filters.to === "alpha_version_legacy";
+  const draftSummary = useMemo(() => readLibraryDraftSummary(), []);
   const catalog = response?.filter_catalog;
 
   /* QA UX-5: a third pick replaces the oldest (spec 01 §3.3); the bar says which. */
@@ -2659,6 +2679,10 @@ export function RunLibrary(props: RunLibraryProps) {
   const showScratch = Boolean(catalog?.scratch_available) || filters.alpha.includes("scratch");
   const anyFilter = filters.q !== "" || filters.status.length > 0 || filters.mode.length > 0 || filters.alpha.length > 0;
   const clearAll = () => onFilters(clearedFilters(filters));
+
+  /* One instrument on the whole page: said once beside the counter, not on every card. */
+  const instruments = new Set(items.map((item) => (isAvailable(item.instrument.availability) ? item.instrument.display : null)));
+  const commonInstrument = items.length > 1 && instruments.size === 1 ? ([...instruments][0] ?? null) : null;
 
   const ledger = response?.claim_ledger;
   /* One bound alpha on the list: the lineage link needs no grouping first. */
@@ -2755,6 +2779,17 @@ export function RunLibrary(props: RunLibraryProps) {
           >
             journey map ↗
           </Link>
+          {draftSummary ? (
+            <Link
+              to={NEW_RUN}
+              data-action="continue-draft"
+              title="Your unsent New Run draft is saved in this browser"
+              className="text-[color:var(--accent)]"
+              style={{ fontFamily: MONO, fontSize: 10 }}
+            >
+              Continue draft · step {draftSummary.step}
+            </Link>
+          ) : null}
           <Link
             to={NEW_RUN}
             data-new-run
@@ -2794,8 +2829,8 @@ export function RunLibrary(props: RunLibraryProps) {
             color: "var(--ink-soft)",
           }}
         >
-          <span title="Each card's link opens it for that run.">
-            Pick a run to open <strong style={{ color: "var(--ink)" }}>{PICK_TARGET_LABEL[effectivePickTarget(filters.to)] ?? filters.to}</strong>
+          <span title={alphaPick ? "Each run's link opens its alpha's lineage." : "Each card's link opens it for that run."}>
+            Pick {alphaPick ? "an alpha" : "a run"} to open <strong style={{ color: "var(--ink)" }}>{PICK_TARGET_LABEL[effectivePickTarget(filters.to)] ?? filters.to}</strong>
           </span>
           <Link
             to={JOURNEY_MAP}
@@ -2925,6 +2960,11 @@ export function RunLibrary(props: RunLibraryProps) {
           group by alpha
         </button>
 
+        {commonInstrument ? (
+          <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }} data-common-instrument title="Every run on this page">
+            {commonInstrument}
+          </span>
+        ) : null}
         {counter ? (
           <span
             style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }}
@@ -3034,6 +3074,11 @@ export function RunLibrary(props: RunLibraryProps) {
                     sparkline={sparklines.get(item.run_id)}
                     onVisible={onVisible}
                     pickTarget={filters.to}
+                    hide={{
+                      alpha: filters.group || (filters.alpha.length === 1 && filters.alpha[0] === item.binding?.alpha_id),
+                      mode: filters.mode.length === 1 && filters.mode[0] === item.mode.key,
+                      instrument: commonInstrument !== null,
+                    }}
                   />
                 ))}
               </div>

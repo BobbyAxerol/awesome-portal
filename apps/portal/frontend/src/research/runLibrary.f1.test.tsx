@@ -123,16 +123,13 @@ describe("FG 01-13 — a legacy row never links to a screen it lacks", () => {
 });
 
 describe("2_wiring S01 — a null rc shows the served rc_availability, not a silent gap", () => {
-  it("prints a short absence carrying the server's reason code and its sentence", () => {
+  it("the ordinary no-candidate row prints nothing and keeps the served reason as data", () => {
     mount([CURRENT]);
-    const absent = card("R-WFO-118").querySelector("[data-withheld]") as HTMLElement | null;
     const rcAbsent = [...card("R-WFO-118").querySelectorAll("[data-withheld]")].find(
       (node) => node.getAttribute("data-reason-code") === CURRENT.rc_availability.reason_code,
-    ) as HTMLElement;
-    expect(absent).toBeTruthy();
-    expect(rcAbsent.textContent).toBe("rc — not published");
-    expect(rcAbsent.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
-    expect(rcAbsent.getAttribute("title")).toBe("No release candidate has been composed from this run.");
+    );
+    expect(rcAbsent).toBeUndefined();
+    expect(card("R-WFO-118").getAttribute("data-rc-absent")).toBe(CURRENT.rc_availability.reason_code);
     expect(card("R-WFO-118").querySelector("[data-rc]")).toBeNull();
   });
 

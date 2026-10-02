@@ -18,9 +18,9 @@ import { NewRun } from "./NewRun";
 import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom, planCoverage, usesSpecV2 } from "./runDraft";
+import { STEPS, type StepId, type DraftConstraints, type ParameterEntry, type RunDraft, RECEIPT_ALPHA, applyCoveragePrefill, applyOverrides, draftFromRequestedSpec, draftIsEmpty, firstIncompleteStep, parameterEntriesFrom, planCoverage, usesSpecV2 } from "./runDraft";
 import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
-import { mergeEstimates, profileTrialDefault, readCatalogIndex, readPreflightEstimate, readProfiles, seedPinned, selectProfile, specVersionOf } from "./dataDeclaration";
+import { admitsSpecV2, mergeEstimates, profileTrialDefault, readCatalogIndex, readPreflightEstimate, readProfiles, seedPinned, selectProfile, specVersionOf, symbolListing } from "./dataDeclaration";
 import { useWindowMetadata } from "./useWindowMetadata";
 import { clearRunDraft, restoreRunDraft, saveRunDraft } from "./runDraftStore";
 import { useDeclarationEstimate } from "./useDeclarationEstimate";
@@ -81,6 +81,14 @@ export function constraintsFrom(
   atlas: AtlasDocument | null,
   registry: readonly RegistryEntry[],
   alphaVersionId: string,
+  data?: {
+    catalog: DatasetCatalog | null;
+    datasetId: string;
+    /** A symbol the server's own search said the dataset does not list. */
+    unlistedSymbol?: string | null;
+    /** The Atlas's served profiles; with one that admits requested-spec v2, Advanced walk-forward requires the temporal guards. */
+    profiles?: ReturnType<typeof readProfiles>;
+  },
 ): DraftConstraints {
   const blocked: Record<string, string> = {};
   for (const route of atlas?.routes ?? []) {
@@ -101,7 +109,22 @@ export function constraintsFrom(
     blockedRoutes: blocked,
     /* CG-P08-05: the release's own sweep ceiling; null when unpublished. */
     sweepCeiling: atlas ? (atlas.current_release.preflight_limits?.sweep_dimension_ceiling.value ?? null) : null,
+    listedSymbols: data ? listedSymbolsFor(data.catalog, data.datasetId) : null,
+    unlistedSymbol: data?.unlistedSymbol ?? null,
+    temporalGuardsRequired: atlas?.current_release.walk_forward_options?.temporal_guards != null
+      && (data?.profiles == null || data.profiles.some((profile) => profile.protocol === "advanced" && admitsSpecV2(profile))),
   };
+}
+
+/**
+ * The symbols the chosen dataset lists, when the catalog served the whole list; null when it did not (no dataset, no
+ * catalog, no published list, or a partial one that only the server's search can answer for).
+ */
+export function listedSymbolsFor(catalog: DatasetCatalog | null, datasetId: string): readonly string[] | null {
+  const dataset = catalog?.datasets.find((item) => item.dataset_id === datasetId) ?? null;
+  if (dataset === null || dataset.symbols.state !== "PUBLISHED") return null;
+  if (symbolListing(dataset)?.partial !== false) return null;
+  return dataset.symbols.items.map((item) => item.symbol.toUpperCase());
 }
 
 /** The declared parameter space of the bound version, or none. */
@@ -120,11 +143,27 @@ export function parametersFor(
  * reader chooses; a near-match is never a match.
  */
 export function soleActiveEntry(registry: readonly RegistryEntry[]): RegistryEntry | null {
-  const active = registry.filter((entry) => entry.lifecycle_state === "ACTIVE");
+  /* The receipt alphas the platform's own checks leave behind cannot create runs and are not offered. */
+  const active = registry.filter((entry) => entry.lifecycle_state === "ACTIVE" && !RECEIPT_ALPHA.test(entry.alpha_id));
   return active.length === 1 ? active[0]! : null;
 }
 
+/**
+ * The route. "Start over" drops the saved draft and rebuilds the whole form from blank by changing the key, so no
+ * adoption ref or loaded copy of the old declaration survives it.
+ */
 export function NewRunRoute() {
+  const [epoch, setEpoch] = useState(0);
+  const navigate = useNavigate();
+  const startOver = useCallback(() => {
+    clearRunDraft();
+    navigate({ pathname: "/research/quantbt/runs/new", search: "" }, { replace: true });
+    setEpoch((value) => value + 1);
+  }, [navigate]);
+  return <NewRunRouteBody key={epoch} onStartOver={startOver} />;
+}
+
+function NewRunRouteBody({ onStartOver }: { onStartOver: () => void }) {
   const location = useLocation();
   const [atlas, setAtlas] = useState<AtlasResponse | null>(null);
   const [atlasState, setAtlasState] = useState<ResearchState>(() =>
@@ -202,9 +241,16 @@ export function NewRunRoute() {
 
   const document = atlas?.atlas ?? null;
   const [draft, setDraft] = useState<RunDraft>(() => restoreRunDraft(emptyDraft(), location.search) ?? emptyDraft());
+  /* LW-07: the served profiles, read once: they decide the trial default and whether the temporal guards are required. */
+  const profiles = useMemo(
+    () => (atlas?.selected_release_kind === "CURRENT" ? readProfiles(atlas.portal_admission?.profiles ?? null) : null),
+    [atlas],
+  );
+  /* A symbol the server's own search answered "not listed" for (a partial symbol list), reported by the Market data step. */
+  const [symbolMiss, setSymbolMiss] = useState<string | null>(null);
   const limits = useMemo(
-    () => constraintsFrom(document, registry, draft.alphaVersionId),
-    [document, registry, draft.alphaVersionId],
+    () => constraintsFrom(document, registry, draft.alphaVersionId, { catalog, datasetId: draft.datasetId, unlistedSymbol: symbolMiss, profiles }),
+    [document, registry, draft.alphaVersionId, catalog, draft.datasetId, symbolMiss, profiles],
   );
   /*
    * W5a · `?from=<run>&fork=<cell>` (spec 07 §2.5 / §15.5): Screen 07's
@@ -411,10 +457,6 @@ export function NewRunRoute() {
   /* LW-07: when the Atlas serves `portal_admission`, the profile the draft falls under fixes the trial
      count (or serves a default) and the seed; the single-profile `submission_constraints` (1 trial, no
      seed) is then not the source. Without profiles the old behaviour stands. */
-  const profiles = useMemo(
-    () => (atlas?.selected_release_kind === "CURRENT" ? readProfiles(atlas.portal_admission?.profiles ?? null) : null),
-    [atlas],
-  );
   const profile = selectProfile(profiles, {
     protocol: run.draft.protocol,
     executionRoute: run.draft.executionRoute,
@@ -468,7 +510,10 @@ export function NewRunRoute() {
   const navigate = useNavigate();
   const createdId = run.created?.run_id ?? null;
   useEffect(() => {
-    if (createdId) navigate(`/research/quantbt/runs/${encodeURIComponent(createdId)}/progress`);
+    if (!createdId) return;
+    /* The declaration became a run: it is no longer a draft to continue. */
+    clearRunDraft();
+    navigate(`/research/quantbt/runs/${encodeURIComponent(createdId)}/progress`);
   }, [createdId, navigate]);
 
   /* `?route=` from the Atlas "declare →" link preselects an offered route. */
@@ -500,12 +545,12 @@ export function NewRunRoute() {
     run.patch({ optimizationMode: entry.mode_id, optimizationSchedule: schedule });
   }, [modeFromQuery, scheduleFromQuery, document, run]);
 
-  /* HiFi 02-18: the wizard step is written to the address (replace, never push:
-     moving through the steps must not fill the Back button). `context` is the
-     default and leaves the address clean; every other parameter is kept. */
+  /* HiFi 02-18, extended: the wizard step is written to the address and every step is one history entry, so the
+     browser Back and Forward buttons walk the steps (and only the first step's Back leaves the wizard). `context` is
+     the default and leaves the address clean; every other parameter is kept. */
   const locationRef = useRef(location);
   locationRef.current = location;
-  const writeStep = useCallback((step: StepId) => {
+  const writeStep = useCallback((step: StepId, replace = false) => {
     const here = locationRef.current;
     const query = new URLSearchParams(here.search);
     const current = query.get("step");
@@ -513,14 +558,27 @@ export function NewRunRoute() {
     if (step === "context") query.delete("step");
     else query.set("step", step);
     const text = query.toString();
-    navigate({ pathname: here.pathname, search: text ? `?${text}` : "", hash: here.hash }, { replace: true });
+    navigate({ pathname: here.pathname, search: text ? `?${text}` : "", hash: here.hash }, { replace });
   }, [navigate]);
 
   /* Keeps this component's copy of the draft in step with the controller's. */
   useEffect(() => setDraft(run.draft), [run.draft]);
-  /* U15: a reload brings the declaration back; leaving the form inside the app drops it. */
+  /* Autosave: every edit is kept for the session, so a reload, Back or any link out and back brings the declaration back. */
   useEffect(() => saveRunDraft(run.draft), [run.draft]);
-  useEffect(() => clearRunDraft, []);
+
+  /* An address never opens Review on a declaration with nothing in it (a stale link, a Back past the draft): it opens
+     the first step still to fill in. A copied or forked run fills its draft a moment after the first render, so those wait. */
+  const stepFromAddress = STEPS.find((step) => step.id === new URLSearchParams(location.search).get("step"))?.id ?? "context";
+  const addressQuery = new URLSearchParams(location.search);
+  const ownedByLink = fromRun !== null || forkRun !== null || ["av", "mode", "route"].some((key) => addressQuery.get(key));
+  const shownStep: StepId = stepFromAddress === "review" && !ownedByLink && draftIsEmpty(run.draft) ? firstIncompleteStep(run.draft, limits) : stepFromAddress;
+  const [stepSyncKey, setStepSyncKey] = useState(0);
+  useEffect(() => {
+    if (shownStep === stepFromAddress) return;
+    writeStep(shownStep, true);
+    setStepSyncKey((value) => value + 1);
+  }, [shownStep, stepFromAddress, writeStep]);
+
 
   /* The optional `preflight_estimate` of the answer on screen; absent means nothing new renders. */
   const preflightEstimate = useMemo(() => readPreflightEstimate(run.preflight.preflight), [run.preflight.preflight]);
@@ -538,8 +596,11 @@ export function NewRunRoute() {
 
   return (
     <NewRun
-      initialStep={STEPS.find((step) => step.id === new URLSearchParams(location.search).get("step"))?.id ?? "context"}
+      initialStep={shownStep}
+      stepSyncKey={stepSyncKey}
       onStepChange={writeStep}
+      onSymbolMiss={setSymbolMiss}
+      onStartOver={onStartOver}
       draft={run.draft}
       patch={run.patch}
       limits={limits}

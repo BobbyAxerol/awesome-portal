@@ -72,6 +72,7 @@ export function AlphaImportRoute() {
       onRetryRegistry={controller.onRetryRegistry}
       activationPending={controller.activationPending}
       refusal={controller.refusal}
+      refusalStep={controller.refusalStep}
       alphaId={controller.alphaId}
       onAlphaIdChange={mirrorAlpha}
       onParse={controller.onParse}

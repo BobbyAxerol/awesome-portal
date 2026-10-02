@@ -64,14 +64,15 @@ const TAG_STYLE: Record<
 
 /** F2b: what each card kind means, as the tooltip of its tag (spec 00 §3.2). */
 const TAG_TITLE: Record<JourneyCard["target_kind"], string> = {
-  SHIPPED: "Shipped hi-fi capture, unchanged",
+  SHIPPED: "Existing portal screen, unchanged",
   RESEARCH_SCREEN: "Redesigned Research screen",
   EXECUTION_HANDOFF: "Hands off to the Execution loop",
 };
 
-const TAG_LABEL: Record<JourneyCard["target_kind"], string> = {
-  SHIPPED: "shipped",
-  RESEARCH_SCREEN: "redesign",
+/* Fewer words: the border and the legend carry the kind; only the hand-off to Execution (and a blocked reason) is a printed tag. The kind's sentence rides in the tooltip. */
+const TAG_LABEL: Record<JourneyCard["target_kind"], string | null> = {
+  SHIPPED: null,
+  RESEARCH_SCREEN: null,
   EXECUTION_HANDOFF: "execution",
 };
 
@@ -90,11 +91,8 @@ export function unreachableReason(card: JourneyCard, route: string | null): stri
   return null;
 }
 
-/** F3 00-1d: HiFi legend — two swatches (shipped / redesigned); the execution tag explains itself on its cards. */
-const LEGEND: readonly { kind: "SHIPPED" | "RESEARCH_SCREEN"; label: string }[] = [
-  { kind: "SHIPPED", label: "shipped hi-fi" },
-  { kind: "RESEARCH_SCREEN", label: "redesigned" },
-];
+/* The legacy screens are redirected to the redesigned ones, so "shipped hi-fi" no longer names a screen the reader can open: one swatch remains. */
+const LEGEND: readonly { kind: "RESEARCH_SCREEN"; label: string }[] = [{ kind: "RESEARCH_SCREEN", label: "redesigned" }];
 
 function TagLegend() {
   return (
@@ -120,7 +118,7 @@ function TagLegend() {
 }
 
 const CARD_CLASS =
-  "jm-card flex min-w-[180px] max-w-[300px] flex-1 flex-col gap-1 rounded-[8px] px-3 py-2.5 shadow-[0_1px_2px_rgba(28,37,50,.05)] transition-[filter,border-color] duration-[120ms] hover:brightness-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
+  "jm-card flex min-w-0 min-[721px]:min-w-[180px] max-w-[300px] flex-1 flex-col gap-1 rounded-[8px] px-3 py-2.5 shadow-[0_1px_2px_rgba(28,37,50,.05)] transition-[filter,border-color] duration-[120ms] hover:brightness-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
 
 /** D2: the badge on a card that opens the Run Library to choose its run. */
 export const PICK_RUN_BADGE = "PICK A RUN";
@@ -135,18 +133,24 @@ function CardBody({ card, blocked }: { card: JourneyCard; blocked: string | null
         <span className="flex-1 text-[12px] font-semibold" style={{ color: "var(--ink)" }}>
           {card.title}
         </span>
-        <span
-          className="mono flex-none rounded-[3px] border px-[5px] text-[8.5px] uppercase leading-[15px]"
-          style={{ color: tone.ink, borderColor: tone.border, fontWeight: tone.weight }}
-        >
-          {blocked ?? TAG_LABEL[card.target_kind]}
-        </span>
-      </span>
-      <span className="text-[10.5px] leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
-        {card.description}
+        {(blocked ?? TAG_LABEL[card.target_kind]) ? (
+          <span
+            className="mono flex-none rounded-[3px] border px-[5px] text-[8.5px] uppercase leading-[15px]"
+            style={{ color: tone.ink, borderColor: tone.border, fontWeight: tone.weight }}
+          >
+            {blocked ?? TAG_LABEL[card.target_kind]}
+          </span>
+        ) : null}
       </span>
     </>
   );
+}
+
+/** The card's served description and kind, as its tooltip (the card face carries the title only). */
+function cardTitle(card: JourneyCard): string {
+  /* Served copy that still calls a redirected screen "shipped" is not repeated. */
+  const description = /\bshipped\b/i.test(card.description) ? null : card.description;
+  return [description, TAG_TITLE[card.target_kind]].filter(Boolean).join(" · ");
 }
 
 function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | null }) {
@@ -186,6 +190,7 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
         data-card-availability={card.availability}
         data-card-picks-run={picksRun ? card.target_key : undefined}
         data-card-picks-alpha={picksAlpha ? card.target_key : undefined}
+        title={cardTitle(card)}
         className={CARD_CLASS}
         style={{
           border: `${card.target_kind === "RESEARCH_SCREEN" ? 1.5 : 1}px solid ${tone.border}`,
@@ -207,6 +212,7 @@ function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | n
     "data-card": card.card_id,
     "data-card-kind": card.target_kind,
     "data-card-availability": card.availability,
+    title: cardTitle(card),
     className: CARD_CLASS,
     style: {
       border: `${card.target_kind === "RESEARCH_SCREEN" ? 1.5 : 1}px solid ${tone.border}`,
@@ -249,12 +255,9 @@ function PhaseRow({ phase, runId }: { phase: JourneyPhase; runId: string | null 
         <div className="mono text-[11px] font-bold" style={{ color: "var(--accent)" }}>
           P{phase.ordinal}
         </div>
-        <h2 className="text-[13px] font-semibold" style={{ color: "var(--ink)", fontFamily: "var(--font-body)" }} data-phase-title>
+        <h2 className="text-[13px] font-semibold" style={{ color: "var(--ink)", fontFamily: "var(--font-body)" }} data-phase-title title={phase.description}>
           {phase.title}
         </h2>
-        <div className="text-[10.5px] leading-[1.45]" style={{ color: "var(--ink-faint)" }}>
-          {phase.description}
-        </div>
       </div>
       <div
         className="flex min-w-0 flex-1 flex-wrap items-stretch gap-2 border-l-2 py-1.5 pl-3.5"
@@ -263,7 +266,7 @@ function PhaseRow({ phase, runId }: { phase: JourneyPhase; runId: string | null 
         {phase.cards.map((card, index) => (
           /* The arrow leads the card it points at, in the same non-wrapping group: when the
              row wraps it starts the next line instead of dangling at the right edge. */
-          <span key={card.card_id} className="flex min-w-[200px] max-w-[320px] flex-1 items-stretch gap-2" data-card-group>
+          <span key={card.card_id} className="flex min-w-0 max-w-[320px] flex-1 items-stretch gap-2 max-[720px]:basis-full min-[721px]:min-w-[200px]" data-card-group>
             {index > 0 && !isOffSequence(card) && !isOffSequence(phase.cards[index - 1]) ? (
               <span aria-hidden="true" data-arrow className="self-center text-[12px]" style={{ color: "var(--line-strong)" }}>
                 →
@@ -351,52 +354,6 @@ export function mappingHref(targetKey: string, runId: string | null): { href: st
 /** QA UX-7: a mapping row whose shipped side the descriptor words as "no shipped tab" links nothing there. */
 export const NO_SHIPPED_TAB = /^\s*[—–-]\s*no shipped tab\b/i;
 
-function MappingLink({
-  targetKey,
-  runId,
-  label,
-  column,
-  color,
-  noShippedTab = false,
-}: {
-  noShippedTab?: boolean;
-  targetKey: string;
-  runId: string | null;
-  label: string;
-  column: "shipped" | "mine";
-  color: string;
-}) {
-  const target = noShippedTab ? null : mappingHref(targetKey, runId);
-  const common = "mono min-w-0 text-[10.5px]";
-  if (!target && noShippedTab) {
-    return (
-      <span className={common} style={{ color: "var(--ink-faint)" }} data-mapping-cell={column} data-mapping-key={targetKey} data-mapping-no-shipped-tab>
-        {label}
-      </span>
-    );
-  }
-  if (!target) {
-    return (
-      <span className={common} style={{ color: "var(--ink-faint)" }} data-mapping-cell={column} data-mapping-key={targetKey} data-mapping-unrouted title={`${targetKey} — not routed in this build`}>
-        {label}
-      </span>
-    );
-  }
-  return (
-    <Link
-      to={target.href}
-      className={common}
-      style={{ color }}
-      data-mapping-cell={column}
-      data-mapping-key={targetKey}
-      data-mapping-route={target.href}
-      title={target.picks ? "Pick a run to open" : undefined}
-    >
-      {label}
-    </Link>
-  );
-}
-
 export interface JourneyMapProps {
   descriptor: JourneyDescriptor | null;
   inspection: InspectionCursor | null;
@@ -452,16 +409,10 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
           data-journey-head
         >
           <div className="flex min-w-0 flex-col gap-[3px]">
-            <div
-              className="mono text-[10px] uppercase tracking-[.1em]"
-              style={{ color: "var(--ink-faint)" }}
-              data-journey-kicker
-            >
-              Quant Ecosystem Portal · Research
-            </div>
             <h1
               className="text-[27px] font-normal leading-[1.2] tracking-[-.01em]"
               style={{ fontFamily: "Newsreader, Georgia, serif" }}
+              data-descriptor-revision={descriptor?.revision}
             >
               Journey Map
             </h1>
@@ -471,18 +422,12 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
         {/* `ResearchPanel` prints `meta` only in its framed variant, and this screen is
             plain, so the descriptor revision never reached the reader: the map said which
             screens exist without saying which published answer it was reading. */}
-        {descriptor ? (
-          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-descriptor-revision={descriptor.revision}>
-            descriptor revision {descriptor.revision}
-          </span>
-        ) : null}
       </header>
 
       <ResearchPanel
         title="journey"
         variant="plain"
         recovery={onRetry ? <button type="button" onClick={onRetry} className="btn-ghost self-start">Retry map read</button> : undefined}
-        meta={descriptor ? `revision ${descriptor.revision}` : undefined}
         state={state}
         minBodyHeight={160}
       >
@@ -497,39 +442,6 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
           </div>
         ) : null}
       </ResearchPanel>
-
-      {descriptor?.mapping ? (
-        <section data-mapping className="mt-1 flex flex-col gap-2 rounded-[8px] border bg-[var(--paper-raised)] px-4 py-3.5 shadow-[0_1px_2px_rgba(28,37,50,.05)]" style={{ borderColor: "var(--line)" }}>
-          <h2
-            className="text-[10px] font-medium uppercase tracking-[.07em]"
-            style={{ color: "var(--ink-faint)", fontFamily: "var(--font-body)" }}
-          >
-            Shipped tab → new screen
-          </h2>
-          <div className="grid">
-            {descriptor.mapping.map((row, index) => (
-              <div
-                key={`${row.shipped_target_key}:${row.mine_target_key}:${index}`}
-                data-mapping-row
-                className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-baseline gap-x-2.5 border-b py-[3px] text-[11.5px] min-[900px]:grid-cols-[minmax(0,200px)_auto_minmax(0,290px)_minmax(0,1fr)]"
-                style={{ borderColor: "var(--line-soft)" }}
-              >
-                <MappingLink
-                  targetKey={row.shipped_target_key}
-                  runId={runId}
-                  label={row.shipped}
-                  column="shipped"
-                  color="var(--accent)"
-                  noShippedTab={NO_SHIPPED_TAB.test(row.shipped)}
-                />
-                <span aria-hidden="true" style={{ color: "var(--line-strong)" }}>→</span>
-                <MappingLink targetKey={row.mine_target_key} runId={runId} label={row.mine} column="mine" color="var(--warn)" />
-                <span className="col-span-3 min-[900px]:col-span-1" style={{ color: "var(--ink-soft)" }}>{row.adds}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <CursorNotice problems={linkProblems} />
       {inspection && runId ? (

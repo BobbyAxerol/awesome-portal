@@ -14,6 +14,8 @@ afterEach(() => {
 describe("F3 — one browser tab title per Research Loop screen (HiFi <title>)", () => {
   it.each([
     [`${ROOT}/journey`, "QuantBT — Journey Map"],
+    [ROOT, "QuantBT — Journey Map"],
+    [`${ROOT}/`, "QuantBT — Journey Map"],
     [`${ROOT}/runs`, "QuantBT — Run Library"],
     [`${ROOT}/runs/new`, "QuantBT — New Run"],
     [`${ROOT}/atlas`, "QuantBT — Engine Atlas"],

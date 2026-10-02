@@ -361,7 +361,7 @@ async function mountRoute(step: "data" | "windows", options?: Parameters<typeof 
   );
   /* The registry read binds the version through `?alpha=&av=`; the review
      rail shows it on every step, so it says the route has finished reading. */
-  await waitFor(() => expect(document.querySelector('[data-review-row="alpha binding"]')?.textContent).toContain(ALPHA.version_label));
+  await waitFor(() => expect(document.querySelector('[data-binding-chip]')?.textContent).toContain(ALPHA.version_label));
   await settle();
   return { served, view };
 }
@@ -502,6 +502,8 @@ describe("D4 — Screen 02, real route and hook", () => {
     fireEvent.change(field("OOS start"), { target: { value: "2024-01-01T00:00" } });
     fireEvent.change(field("OOS end exclusive"), { target: { value: "2025-01-01T00:00" } });
     fireEvent.change(field("Holdout start"), { target: { value: "2025-01-01T00:00" } });
+    /* The mode is the reader's to choose: the Walk-forward step asks for it, and Review would list it as missing. */
+    fireEvent.change(field("Optimization mode"), { target: { value: "mode_1_decay" } });
     goTo("optimization");
     fireEvent.change(field("Random seed"), { target: { value: "42" } });
 
@@ -668,3 +670,7 @@ describe("D4 — the caption tells the truth about the coverage it came from", (
     expect(document.querySelector("[data-window-prefill-rail]")).toBeNull();
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

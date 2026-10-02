@@ -145,7 +145,7 @@ export const RESEARCH_FIXTURES_ROUTE = "/research/_fixtures";
 function RootRoute() {
   const location = useLocation();
   if (new URLSearchParams(location.search).get("new") === "1") {
-    return <Navigate to={`${QUANTBT_ROOT}/new`} replace />;
+    return <Navigate to={`${QUANTBT_ROOT}/runs/new`} replace />;
   }
   return <CommandCenter />;
 }

@@ -179,6 +179,7 @@ function Probe() {
       <span data-probe-search>{location.search}</span>
       <span data-probe-path>{location.pathname}</span>
       <button type="button" data-probe-back onClick={() => navigate(-1)}>back</button>
+      <button type="button" data-probe-forward onClick={() => navigate(1)}>forward</button>
     </div>
   );
 }
@@ -385,7 +386,8 @@ describe("02-7 — live captions", () => {
     /* U18: passing through is not an edit, so the step is still "in progress". */
     expect(caption("data")).toBe("in progress");
     expect(caption("route")).toBe("valid");
-    expect(caption("strategy")).toBe("not visited");
+    /* A bound run's strategy is the alpha's own: nothing to choose, so it reads pinned and never blocks. */
+    expect(caption("strategy")).toBe("pinned");
   });
 
   it("Review reads pending, then issued once the server's preflight exists, refused when it refused", () => {
@@ -501,6 +503,7 @@ describe("02-10a — the window timeline is proportional bars", () => {
 
   it("the rail draws the tracks, keeps the exact dates as text and gives each track an accessible name", () => {
     mount({ draft: draft({ windows: three().windows }) });
+    go("windows");
     const rail = document.querySelector("[data-window-timeline]") as HTMLElement;
     expect(rail.querySelectorAll("[data-timeline-segment]")).toHaveLength(3);
     const segment = rail.querySelector('[data-timeline-segment="oos"]') as HTMLElement;
@@ -512,6 +515,7 @@ describe("02-10a — the window timeline is proportional bars", () => {
 
   it("no per-window bar count is printed: the server publishes none (CG-FG-S02-02)", () => {
     mount({ draft: draft({ windows: three().windows }) });
+    go("windows");
     expect(document.querySelector("[data-window-timeline]")?.textContent).not.toMatch(/\bbars\b/);
   });
 });
@@ -521,6 +525,7 @@ describe("02-10a — the window timeline is proportional bars", () => {
 describe("02-9 — the gold claim-forecast card", () => {
   it("is drawn in the holdout gold with the card's own shadow", () => {
     mount();
+    go("review");
     const card = document.querySelector("[data-claim-forecast]") as HTMLElement;
     expect(card.style.borderColor).toBe("var(--role-holdout)");
     expect(card.style.boxShadow).toBe("var(--shadow-e2)");
@@ -529,12 +534,14 @@ describe("02-9 — the gold claim-forecast card", () => {
 
   it("before a preflight the payload digest is pending, not a made-up hash", () => {
     mount();
+    go("review");
     expect(document.querySelector("[data-payload-digest]")?.getAttribute("data-payload-digest")).toBe("pending");
     expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("payload sha256 · after preflight");
   });
 
   it("with a preflight it prints the server's requested_spec_digest, shortened, the whole value in the title", () => {
     mount({ preflight: PREFLIGHT });
+    go("review");
     const digest = document.querySelector("[data-payload-digest]") as HTMLElement;
     expect(digest.getAttribute("data-payload-digest")).toBe(PREFLIGHT.requested_spec_digest);
     expect(digest.getAttribute("title")).toBe(PREFLIGHT.requested_spec_digest);
@@ -543,6 +550,7 @@ describe("02-9 — the gold claim-forecast card", () => {
 
   it("lists mode × schedule, source, the forecast claim, and the cert ceiling as 'not published' with the server's reason", () => {
     mount();
+    go("review");
     const text = document.querySelector("[data-claim-forecast]")?.textContent ?? "";
     expect(text).toContain("mode × schedule");
     expect(text).toContain("mode_1_decay × global");
@@ -557,6 +565,7 @@ describe("02-9 — the gold claim-forecast card", () => {
 
   it("the augmentation paragraph is the card's tooltip, not printed text", () => {
     mount();
+    go("review");
     const card = document.querySelector("[data-claim-forecast]") as HTMLElement;
     expect(card.getAttribute("title")).toContain("never changes it");
     expect(card.textContent).not.toContain("never changes it");
@@ -606,13 +615,13 @@ describe("02-11 — one heading on the route card", () => {
 
 describe("02-16 — the summary table is the Review step's main panel", () => {
   it("on Review the rows sit in the main column and the rail does not repeat them", () => {
-    mount();
+    mount({ draft: draft({ windows: { is: { start: "2026-01-01T00:00", endExclusive: "2026-03-01T00:00" }, oos: { start: "2026-03-01T00:00", endExclusive: "2026-04-01T00:00" }, holdout: { start: "2026-04-01T00:00", endExclusive: "2026-05-01T00:00" } } }) });
     go("review");
     const main = document.querySelector("[data-review-step]") as HTMLElement;
     const table = main.querySelector("[data-review-rows]") as HTMLElement;
     expect(table).not.toBeNull();
     expect(main.querySelector("[data-step-card]")?.getAttribute("data-step-card")).toBe("Review & run");
-    for (const label of ["alpha binding", "execution route", "strategy_id", "dataset · symbol · tf", "protocol", "windows", "parameter_space", "mode × schedule", "trials · stop · seed", "optimization_config"]) {
+    for (const label of ["alpha binding", "execution route", "strategy_id", "dataset · symbol · tf", "protocol", "windows", "mode × schedule", "trials · stop · seed", "optimization_config"]) {
       expect(table.querySelector(`[data-review-row="${label}"]`), label).not.toBeNull();
     }
     expect(document.querySelector("[data-review-rail] [data-review-rows]")).toBeNull();
@@ -621,18 +630,23 @@ describe("02-16 — the summary table is the Review step's main panel", () => {
     expect(document.querySelector("[data-review-rail] [data-claim-forecast]")).not.toBeNull();
   });
 
-  it("on every other step the rail keeps its compact rows", () => {
+  it("on every other step there is no rail restating the step: only the timeline beside the steps that draw it", () => {
     mount();
-    expect(document.querySelector("[data-review-rail] [data-review-rows]")).not.toBeNull();
+    expect(document.querySelector("[data-review-rail]")).toBeNull();
+    go("route");
+    expect(document.querySelector("[data-review-rail]")).toBeNull();
     go("data");
-    expect(document.querySelector("[data-review-rail] [data-review-rows]")).not.toBeNull();
-    expect(document.querySelector("[data-review-rail] [data-review-row=\"windows\"]")).toBeNull();
+    expect(document.querySelector("[data-review-rail] [data-review-rows]")).toBeNull();
+    expect(document.querySelector("[data-review-rail] [data-claim-forecast]")).toBeNull();
+    go("windows");
+    expect(document.querySelector("[data-review-rail] [data-window-timeline]")).not.toBeNull();
   });
 
-  it("the windows row names the three starts and the end as instants, or says not declared", () => {
+  it("the windows row names the three starts and the end as instants, and leaves out what is not declared", () => {
     mount({ draft: draft({ windows: { is: { start: "2026-01-01T00:00", endExclusive: "2026-03-01T00:00" }, oos: { start: "2026-03-01T00:00", endExclusive: "2026-04-01T00:00" }, holdout: { start: "", endExclusive: "" } } }) });
     go("review");
-    expect(document.querySelector('[data-review-row="windows"]')?.textContent).toContain("IS 2026-01-01T00:00 → OOS 2026-03-01T00:00 → holdout not declared → end not declared");
+    expect(document.querySelector('[data-review-row="windows"]')?.textContent).toContain("IS 2026-01-01T00:00 → OOS 2026-03-01T00:00");
+    expect(document.querySelector('[data-review-row="windows"]')?.textContent).not.toContain("holdout");
   });
 
   it("the primary action is still below the table, not buried under panels", () => {
@@ -650,25 +664,48 @@ describe("02-18 — the step is written to the address", () => {
   it("the screen reports the step the reader is on", () => {
     const onStepChange = vi.fn();
     mount({ onStepChange });
-    expect(onStepChange).toHaveBeenLastCalledWith("context");
+    /* The opening step is the address's own: it is not written back. */
+    expect(onStepChange).not.toHaveBeenCalled();
     go("windows");
     expect(onStepChange).toHaveBeenLastCalledWith("windows");
   });
 
-  it("picking a step writes ?step= (replace), keeps other parameters, and context leaves the address clean", async () => {
+  it("every step is one history entry: Back and Forward walk the steps, and only the first step's Back leaves the wizard", async () => {
     serve();
     await mountRoute(["/elsewhere", "/research/quantbt/runs/new?route=signal_notional"], 1);
     const search = () => document.querySelector("[data-probe-search]")?.textContent;
+    const back = () => fireEvent.click(document.querySelector("[data-probe-back]") as HTMLElement);
     expect(search()).toBe("?route=signal_notional");
     go("data");
     await waitFor(() => expect(search()).toBe("?route=signal_notional&step=data"));
-    go("review");
-    await waitFor(() => expect(search()).toBe("?route=signal_notional&step=review"));
+    go("windows");
+    await waitFor(() => expect(search()).toBe("?route=signal_notional&step=windows"));
     go("context");
     await waitFor(() => expect(search()).toBe("?route=signal_notional"));
-    /* Replace, not push: Back leaves the form, it does not walk the steps. */
-    fireEvent.click(document.querySelector("[data-probe-back]") as HTMLElement);
+    /* Back walks back through the steps, and the screen follows the address. */
+    back();
+    await waitFor(() => expect(search()).toBe("?route=signal_notional&step=windows"));
+    await waitFor(() => expect(pill("windows").getAttribute("aria-selected")).toBe("true"));
+    back();
+    await waitFor(() => expect(search()).toBe("?route=signal_notional&step=data"));
+    await waitFor(() => expect(pill("data").getAttribute("aria-selected")).toBe("true"));
+    /* Forward goes the other way. */
+    fireEvent.click(document.querySelector("[data-probe-forward]") as HTMLElement);
+    await waitFor(() => expect(search()).toBe("?route=signal_notional&step=windows"));
+    await waitFor(() => expect(pill("windows").getAttribute("aria-selected")).toBe("true"));
+    back();
+    back();
+    await waitFor(() => expect(search()).toBe("?route=signal_notional"));
+    back();
     await waitFor(() => expect(document.querySelector("[data-probe-path]")?.textContent).toBe("/elsewhere"));
+  });
+
+  it("an address that names Review while nothing is declared opens the first step to fill in", async () => {
+    serve();
+    await mountRoute(["/research/quantbt/runs/new?step=review"]);
+    await waitFor(() => expect(document.querySelector("[data-probe-search]")?.textContent).toBe(""));
+    expect(document.querySelector("[data-review-step]")).toBeNull();
+    expect(pill("context").getAttribute("aria-selected")).toBe("true");
   });
 
   it("opening on ?step= does not rewrite the address", async () => {
@@ -678,3 +715,7 @@ describe("02-18 — the step is written to the address", () => {
     expect(pill("optimization").getAttribute("aria-selected")).toBe("true");
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

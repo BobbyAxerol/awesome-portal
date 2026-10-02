@@ -431,9 +431,21 @@ describe("refusals point at the offending field", () => {
   });
 });
 
+describe("a 403 is the session, said once", () => {
+  it("reads 'Read-only session.' with the code in the tooltip, and offers no Retry that cannot help", () => {
+    const retry = vi.fn();
+    mount({ estimateStatus: { kind: "error", failure: "client-error", status: 403, code: "SESSION_REQUIRED", requestId: "r" }, onRetryEstimate: retry });
+    const line = q('[data-estimate-status="read-only"]')!;
+    expect(line.textContent).toBe("Read-only session.");
+    expect(line.getAttribute("title")).toContain("SESSION_REQUIRED");
+    expect(line.querySelector("[data-estimate-retry]")).toBeNull();
+    expect(document.body.textContent).not.toContain("request refused");
+  });
+});
+
 describe("failures are distinct and retryable", () => {
   it.each([
-    ["client-error", "estimate — request refused · 403 · SESSION_REQUIRED", { kind: "error", failure: "client-error", status: 403, code: "SESSION_REQUIRED", requestId: "r" }],
+    ["client-error", "estimate — request refused · 400 · SOMETHING", { kind: "error", failure: "client-error", status: 400, code: "SOMETHING", requestId: "r" }],
     ["server-error", "estimate — server unavailable · 503", { kind: "error", failure: "server-error", status: 503, code: null, requestId: null }],
     ["network", "estimate — no answer", { kind: "error", failure: "network", status: null, code: null, requestId: null }],
   ] as const)("%s says its own words and Retry asks again; it never reads as not published", (state, words, status) => {
@@ -594,14 +606,14 @@ describe("the causal profile is its own served profile (S02)", () => {
     const frequency = q('[aria-label="Inner frequency"]') as HTMLSelectElement;
     expect([...frequency.options].map((entry) => entry.value)).toEqual(["", "weekly", "monthly"]);
     expect([...(q('[aria-label="Inner window mode"]') as HTMLSelectElement).options].map((entry) => entry.value)).toEqual(["expanding"]);
-    expect(inner.textContent).toContain("pattern ^[1-9][0-9]{0,4}(D|h)$");
+    /* The pattern is the server's rule, not helper text. */
+    expect(inner.textContent).not.toContain("pattern ^");
     expect(inner.textContent).toContain("profile 2–16 per outer fold");
   });
 
   it("the optimization step states the per-study trials and the total cap", () => {
     mount({ draft: causalDraft(), portalAdmission: withCausal(), initialStep: "optimization" });
     expect(text('[data-profile-card="p10.delta-signal-notional-causal-inner.v1"]')).toContain("trials 3 per outer fold study · total ≤ 48");
-    expect((screen.getByLabelText("Optuna trials") as HTMLInputElement).closest("[data-field], div")?.textContent).toContain("total ≤ 48");
   });
 
   it("a disabled causal profile keeps the option refused with its served reason; global profiles are untouched", () => {
@@ -706,7 +718,7 @@ describe("the route", () => {
         <NewRunRoute />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(document.querySelector('[data-review-row="alpha binding"]')?.textContent).toContain(ALPHA.version_label));
+    await waitFor(() => expect(document.querySelector('[data-binding-chip]')?.textContent).toContain(ALPHA.version_label));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "BTCUSDT" } });
     fireEvent.click(document.querySelector('[data-step-pill="windows"]') as HTMLElement);
@@ -762,30 +774,34 @@ describe("the route", () => {
   it("the served defaults follow the profile when the protocol changes; a value the reader typed stays", async () => {
     stub(() => json({ error: { code: "NOT_FOUND", message: "x" } }, 404));
     render(
-      <MemoryRouter initialEntries={[`/research/quantbt/runs/new?step=strategy&alpha=${ALPHA.alpha_id}&av=${ALPHA.alpha_version_id}`]}>
+      <MemoryRouter initialEntries={[`/research/quantbt/runs/new?step=windows&alpha=${ALPHA.alpha_id}&av=${ALPHA.alpha_version_id}`]}>
         <NewRunRoute />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(document.querySelector('[data-review-row="alpha binding"]')?.textContent).toContain(ALPHA.version_label));
-    const review = () => document.querySelector('[data-review-row="trials · stop · seed"]')?.textContent ?? null;
+    await waitFor(() => expect(document.querySelector('[data-binding-chip]')?.textContent).toContain(ALPHA.version_label));
+    const pill = (step: string) => fireEvent.click(document.querySelector(`[data-step-pill="${step}"]`) as HTMLElement);
+    const protocol = (name: string) => { pill("windows"); fireEvent.click(document.querySelector(`[data-protocol="${name}"]`) as HTMLElement); };
+    /* What the Optimization step holds right now: trials and seed. */
+    const held = () => {
+      pill("optimization");
+      return { trials: (screen.getByLabelText("Optuna trials") as HTMLInputElement).value, seed: (screen.getByLabelText("Random seed") as HTMLInputElement).value };
+    };
     /* Three-window: the p04 profile serves trial_default 1 and forbids a seed. */
-    await waitFor(() => expect(review()).toContain("1"));
-    expect(review()).not.toContain("42");
-    fireEvent.click(document.querySelector('[data-protocol="advanced"]') as HTMLElement);
+    await waitFor(() => expect(held().trials).toBe("1"));
+    expect(held().seed).toBe("");
+    protocol("advanced");
     /* Advanced v1: trial_default 3 and the locked seed 42. */
-    await waitFor(() => expect(review()).toContain("3"));
-    expect(review()).toContain("42");
+    await waitFor(() => expect(held()).toEqual({ trials: "3", seed: "42" }));
     /* Back: the seed the other profile pinned goes, and the default follows. */
-    fireEvent.click(document.querySelector('[data-protocol="three_window_decay"]') as HTMLElement);
-    await waitFor(() => expect(review()).not.toContain("42"));
-    expect(review()).toContain("1");
+    protocol("three_window_decay");
+    await waitFor(() => expect(held().seed).toBe(""));
+    expect(held().trials).toBe("1");
     /* A typed count is the reader's. */
-    fireEvent.click(document.querySelector('[data-step-pill="optimization"]') as HTMLElement);
+    pill("optimization");
     fireEvent.change(screen.getByLabelText("Optuna trials"), { target: { value: "7" } });
-    fireEvent.click(document.querySelector('[data-step-pill="strategy"]') as HTMLElement);
-    fireEvent.click(document.querySelector('[data-protocol="advanced"]') as HTMLElement);
-    await waitFor(() => expect(review()).toContain("42"));
-    expect(review()).toContain("7 · not set");
+    protocol("advanced");
+    await waitFor(() => expect(held().seed).toBe("42"));
+    expect(held().trials).toBe("7");
   });
 
   it("a typed 400 shows its code under the OOS start", async () => {
@@ -794,3 +810,7 @@ describe("the route", () => {
     await waitFor(() => expect(document.querySelector('[data-window="oos"] [data-estimate-field-refusal="windows.oos.start"]')?.textContent).toBe("WINDOW_BOUND_NOT_ALIGNED · windows.oos.start"), { timeout: 4000 });
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

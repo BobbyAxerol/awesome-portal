@@ -10,7 +10,7 @@
  * case needs changed (never a hand-built body); the enums are read from the
  * contract schema so a code added there fails here.
  */
-import { cleanup, render, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -29,6 +29,8 @@ import {
   type AlphaImportProps,
 } from "./AlphaImport";
 import {
+  IMPORT_FORBIDDEN,
+  IMPORT_INVALID,
   IMPORT_ORIGIN_REFUSED,
   toRefusal,
   type GatesResponse,
@@ -38,7 +40,6 @@ import {
   type SourceResponse,
 } from "./alphaImportClient";
 import { PortalApiError } from "../lib/api";
-import { REFUSAL_COPY } from "./researchRefusal";
 import { researchState } from "./state";
 
 afterEach(cleanup);
@@ -119,7 +120,7 @@ describe("CG-FG-S14-02 — the activation reason is the server's", () => {
   });
 
   it("names no cause when the server served none", () => {
-    expect(activationNotPermitted(null)).toEqual({ sentence: `${ACTIVATION_NOT_PERMITTED} — reason not published`, code: null });
+    expect(activationNotPermitted(null)).toEqual({ sentence: ACTIVATION_NOT_PERMITTED, code: null });
     expect(activationNotPermitted(undefined).code).toBeNull();
   });
 
@@ -141,7 +142,11 @@ describe("CG-FG-S14-02 — the activation reason is the server's", () => {
     render(<AlphaImport {...registered({ registry: [draft], registration: { ...REGISTRATION, may_activate: false, may_activate_reason: null }, activationAdmitted: false })} />);
     const lines = Array.from(document.querySelectorAll("[data-activation-not-permitted], [data-activation-not-admitted]"));
     expect(lines).toHaveLength(2);
-    for (const line of lines) expect(line.textContent).toBe(`${ACTIVATION_NOT_PERMITTED} — reason not published`);
+    // The absence is stated in the tooltip, not as a second clause on the page.
+    for (const line of lines) {
+      expect(line.textContent).toBe(ACTIVATION_NOT_PERMITTED);
+      expect(line.querySelector("[title]")?.getAttribute("title")).toBe("reason not published");
+    }
     expect(text()).not.toMatch(/workspace ADMIN|can register a draft but not activate/);
   });
 
@@ -175,7 +180,7 @@ describe("CG-FG-S14-03 / 14-12 — the run slot follows the served run_admission
     expect(text()).not.toContain(RUN_LINK_LABEL);
     expect(runSlot(null, ENTRY)).toEqual({ kind: "none" });
     // The rest of "where it goes next" is unchanged.
-    expect(q("[data-where-next]")!.textContent).toContain("Nothing registered yet.");
+    expect(q("[data-where-next]")!.textContent).toContain("Not registered.");
   });
 
   it("links to New Run bound to this version when the server admits a run", () => {
@@ -201,7 +206,7 @@ describe("CG-FG-S14-03 / 14-12 — the run slot follows the served run_admission
 
   it("a refusal that carries no code says so and prints no code", () => {
     render(<AlphaImport {...registered({ registry: [entry({ run_admission: { may_create_run: false, code: null } })] })} />);
-    expect(q("[data-run-not-admitted]")!.textContent).toBe("run not admitted — reason not published");
+    expect(q("[data-run-not-admitted]")!.textContent).toBe("Not admitted");
   });
 
   it("a registry row with no run_admission is 'not published', not a refusal and not a link", () => {
@@ -283,18 +288,14 @@ describe("14-21/22 — a 403 and a 404 read the same", () => {
   it.each(ERRORS)("%s resolves to the one F-04 sentence, marked neutral", (_label, error) => {
     const refusal = toRefusal(error);
     expect(refusal.neutral).toBe(true);
-    expect(refusal.message).toBe(REFUSAL_COPY.denied);
+    expect(refusal.message).toBe(IMPORT_FORBIDDEN);
   });
 
-  it("renders the same banner surface for 403 and 404, with the code only in details", () => {
+  it("renders the same surface for 403 and 404, with the code only in the tooltip", () => {
     const surface = (refusal: ReturnType<typeof toRefusal>) => {
       const { unmount } = render(<AlphaImport {...props({ refusal })} />);
       const alert = q("[role='alert'][data-refusal]")!;
-      const clone = alert.cloneNode(true) as HTMLElement;
-      const details = clone.querySelector("[data-refusal-details]");
-      const detailText = details?.textContent ?? "";
-      details?.remove();
-      const result = { visible: clone.textContent ?? "", attr: alert.getAttribute("data-refusal"), detailText };
+      const result = { visible: alert.textContent ?? "", attr: alert.getAttribute("data-refusal"), tip: alert.getAttribute("title") ?? "" };
       unmount();
       return result;
     };
@@ -302,22 +303,24 @@ describe("14-21/22 — a 403 and a 404 read the same", () => {
     const forbidden = surface(toRefusal(ERRORS[1][1]));
     expect(notFound.visible).toBe(forbidden.visible);
     expect(notFound.attr).toBe(forbidden.attr);
-    expect(notFound.visible).toBe(REFUSAL_COPY.denied);
+    expect(notFound.visible).toBe(IMPORT_FORBIDDEN);
     expect(notFound.visible).not.toMatch(/RESEARCH_|request req_|http 40/);
     // Diagnostics stay reachable.
-    expect(notFound.detailText).toContain("RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND");
-    expect(notFound.detailText).toContain("req_404");
-    expect(forbidden.detailText).toContain("RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN");
+    expect(notFound.tip).toContain("RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND");
+    expect(notFound.tip).toContain("req_404");
+    expect(forbidden.tip).toContain("RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN");
   });
 
-  it("still prints the code of a refusal the reader can act on", () => {
+  it("keeps the code of a refusal the reader can act on in the tooltip, once", () => {
     const refusal = toRefusal(new PortalApiError("busy", 503, "RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED", "req_9"));
     expect(refusal.neutral).toBe(false);
     render(<AlphaImport {...props({ refusal })} />);
-    const alert = q("[role='alert'][data-refusal]")!;
+    const alerts = document.querySelectorAll("[role='alert'][data-refusal]");
+    expect(alerts).toHaveLength(1);
+    const alert = alerts[0] as HTMLElement;
     expect(alert.getAttribute("data-refusal")).toBe("RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED");
-    expect(alert.textContent).toContain("RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED");
-    expect(alert.querySelector("[data-refusal-details]")).toBeNull();
+    expect(alert.textContent).toBe("Queue full. Try again.");
+    expect(alert.getAttribute("title")).toContain("RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED");
   });
 });
 
@@ -329,7 +332,8 @@ describe("S14-C1 — the origin refusal does not misdescribe its cause", () => {
     const refusal = toRefusal(error);
     expect(refusal.message).toBe(IMPORT_ORIGIN_REFUSED);
     // VD-F1-01 (Bobby, 2026-10-01): exactly this sentence; it names no cause, so neither "origin" nor "CSRF" appears.
-    expect(refusal.message).toBe("Request refused — reload the page and try again.");
+    expect(refusal.message).toBe("Request refused.");
+    expect(refusal.origin).toBe(true);
     expect(refusal.message).not.toMatch(/origin|csrf|RESEARCH_/i);
     expect(refusal.codeInDetails).toBe(true);
     expect(refusal.message).not.toMatch(/not valid|invalid|source/i);
@@ -337,19 +341,25 @@ describe("S14-C1 — the origin refusal does not misdescribe its cause", () => {
     expect(refusal.detail).toBe(error.message);
   });
 
-  it("the banner keeps the contradicting …_INVALID code and the request id under details", () => {
+  it("prints the refusal once, with one Reload action; the …_INVALID code and request id ride in the tooltip", () => {
     render(<AlphaImport {...props({ refusal: toRefusal(origin) })} />);
-    const alert = q("[role='alert'][data-refusal]")!;
-    const clone = alert.cloneNode(true) as HTMLElement;
-    clone.querySelector("[data-refusal-details]")?.remove();
-    expect(clone.textContent).toBe(IMPORT_ORIGIN_REFUSED);
-    const details = alert.querySelector("[data-refusal-details]")!;
-    expect(details.textContent).toContain("RESEARCH_ALPHA_IMPORT_INVALID");
-    expect(details.textContent).toContain("req_o");
+    const alerts = document.querySelectorAll("[role='alert'][data-refusal]");
+    expect(alerts).toHaveLength(1);
+    const alert = alerts[0] as HTMLElement;
+    expect(alert.textContent).toBe(`${IMPORT_ORIGIN_REFUSED}Reload`);
+    expect(document.body.textContent?.split(IMPORT_ORIGIN_REFUSED).length).toBe(2);
+    expect(alert.getAttribute("title")).toContain("RESEARCH_ALPHA_IMPORT_INVALID");
+    expect(alert.getAttribute("title")).toContain("req_o");
+    expect(within(alert).getByRole("button", { name: "Reload" })).toBeTruthy();
+  });
+
+  it("a non-origin refusal offers no Reload", () => {
+    render(<AlphaImport {...props({ refusal: toRefusal(new PortalApiError("x", 400, "RESEARCH_ALPHA_IMPORT_INVALID", null)) })} />);
+    expect(screen.queryByRole("button", { name: "Reload" })).toBeNull();
   });
 
   it("a 400 INVALID is still an invalid import", () => {
     const refusal = toRefusal(new PortalApiError("Invalid Alpha import request.", 400, "RESEARCH_ALPHA_IMPORT_INVALID", "req_i"));
-    expect(refusal.message).toBe("The import request is not valid. Check the source and try again.");
+    expect(refusal.message).toBe(IMPORT_INVALID);
   });
 });

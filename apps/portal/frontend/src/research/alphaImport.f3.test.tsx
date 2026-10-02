@@ -104,12 +104,12 @@ describe("F3 — S14 registry", () => {
 
   it("an empty answered registry prints the screen's sentence", () => {
     mount(props({ registry: [], registryState: researchState({ kind: "ok", rowCount: 0 }) }));
-    expect(q("[data-registry-empty]")?.textContent).toBe("No imported versions in this workspace yet.");
+    expect(q("[data-registry-empty]")?.textContent).toBe("No versions yet.");
   });
 
   it("an empty answer for a typed alpha says so for that alpha", () => {
     mount(props({ registry: [], alphaId: "momentum-btc", registryState: researchState({ kind: "ok", rowCount: 0 }) }));
-    expect(q("[data-registry-empty]")?.textContent).toBe("No versions for this alpha id.");
+    expect(q("[data-registry-empty]")?.textContent).toBe("No versions for this alpha.");
   });
 
   it("every registry chip links to its lineage", () => {

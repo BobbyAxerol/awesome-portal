@@ -465,34 +465,35 @@ describe("fold plan on the rail", () => {
   });
 });
 
-describe("the review rail declares nothing it was not given", () => {
-  /* The row's value cell (its last child), without the label. */
-  const row = (label: string) => q(`[data-review-row="${label}"]`)!.lastElementChild as HTMLElement;
+describe("the review rows declare nothing they were not given", () => {
+  /* The row's value cell (its last child), without the label; null when the row is not listed. */
+  const row = (label: string) => (q(`[data-review-row="${label}"]`)?.lastElementChild ?? null) as HTMLElement | null;
+  const review = (draft: RunDraft, extra: Partial<React.ComponentProps<typeof NewRun>>) => mount(draft, extra, "review");
 
-  it("a fresh form: parameter_space and trials · stop · seed show no digit, only 'not declared'", () => {
-    mount({ ...emptyDraft(), optunaTrials: "1" }, { declarationBound: false });
-    expect(row("parameter_space").textContent).not.toMatch(/\d/);
-    expect(row("parameter_space").textContent).toContain("no version chosen");
+  it("a fresh form: parameter_space and trials · stop · seed are not listed, and no row says 'not declared'", () => {
+    review({ ...emptyDraft(), optunaTrials: "1" }, { declarationBound: false });
+    expect(row("parameter_space")).toBeNull();
     /* Even the release's autofilled trial count stays out until a version is chosen. */
-    expect(row("trials · stop · seed").textContent).not.toMatch(/\d/);
-    expect(qa('[data-review-row="trials · stop · seed"] [data-not-declared]')).toHaveLength(3);
+    expect(row("trials · stop · seed")).toBeNull();
+    expect(q("[data-review-rows]")!.textContent).not.toContain("not declared");
+    expect(qa("[data-review-rows] [data-not-declared]")).toHaveLength(0);
   });
 
   it("with a version and its values, the real numbers appear, including a real 0 the version published", () => {
-    mount(bound({ optunaTrials: "400", earlyStopping: "20", randomSeed: "42" }), { declarationBound: true });
-    expect(row("trials · stop · seed").textContent).toBe("400 · 20 · 42");
-    expect(row("parameter_space").textContent).toContain("0 entries · 0 swept · 0 pinned");
+    review(bound({ optunaTrials: "400", earlyStopping: "20", randomSeed: "42" }), { declarationBound: true });
+    expect(row("trials · stop · seed")!.textContent).toBe("400 trials · stop 20 · seed 42");
+    expect(row("parameter_space")!.textContent).toContain("0 entries · 0 swept · 0 pinned");
   });
 
-  it("a value the step has not supplied says so on its own, not as a default", () => {
-    mount(bound({ optunaTrials: "400", earlyStopping: "", randomSeed: "" }), { declarationBound: true });
-    expect(row("trials · stop · seed").textContent).toBe("400 · not set · not set");
-    expect(row("trials · stop · seed").textContent).not.toMatch(/none/);
+  it("a value the step has not supplied is left out on its own, not printed as a default", () => {
+    review(bound({ optunaTrials: "400", earlyStopping: "", randomSeed: "" }), { declarationBound: true });
+    expect(row("trials · stop · seed")!.textContent).toBe("400 trials");
+    expect(row("trials · stop · seed")!.textContent).not.toMatch(/none|not set/);
   });
 
   it("a scratch run is its own declaration", () => {
-    mount({ ...emptyDraft(), bound: false, strategyId: "s", optunaTrials: "400", randomSeed: "42" }, { declarationBound: false });
-    expect(row("trials · stop · seed").textContent).toBe("400 · not set · 42");
+    review({ ...emptyDraft(), bound: false, strategyId: "s", optunaTrials: "400", randomSeed: "42" }, { declarationBound: false });
+    expect(row("trials · stop · seed")!.textContent).toBe("400 trials · seed 42");
   });
 });
 
@@ -569,7 +570,7 @@ describe("the route preselects the only available dataset", () => {
         <NewRunRoute />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(q('[data-review-row="alpha binding"]')!.textContent).toContain(ALPHA.version_label));
+    await waitFor(() => expect(q('[data-binding-chip]')!.textContent).toContain(ALPHA.version_label));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
   }
 
@@ -577,6 +578,7 @@ describe("the route preselects the only available dataset", () => {
     await route(SOLE);
     expect(q("[data-dataset-identity]")!.getAttribute("data-dataset-chosen")).toBe("true");
     cleanup();
+    window.sessionStorage.clear();
     await route(CATALOG);
     expect((screen.getByLabelText("Dataset") as HTMLSelectElement).value).toBe("");
   });
@@ -587,3 +589,7 @@ describe("the route preselects the only available dataset", () => {
     expect(optionIds()).toHaveLength(5);
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

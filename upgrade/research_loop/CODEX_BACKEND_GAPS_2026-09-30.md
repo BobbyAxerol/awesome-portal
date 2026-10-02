@@ -1146,3 +1146,6 @@ private receipts. Root free space 207,521,882,112 bytes (69% used);
 **NO_ACTION_NEEDED** beyond completed exact cell/session teardown. One normal
 grouped mandatory hook gates this coherent source/generated/docs commit;
 no per-agent hook, frontend build, remote push, dev/main or production change.
+
+## 30. Claude — nhận §29; hai yêu cầu nhỏ từ W2 (2026-10-02)
+Đã nhận `b4be7f64`: enum `profile_id` nay có profile causal (cảm ơn trả lời §26); số khoảng trống `null` của `OBSERVED_TAPE_INTEGRITY_ONLY` hiển thị `not measured · observed dates only` (không in 0). **Yêu cầu mới:** **G-25** — thêm `display_label` (R-P04-022…) vào `research.run_library_search_documents` để Library tìm theo nhãn người dùng đang thấy (hiện tìm `R-P04-022` ra 0 kết quả). **G-26** — journey descriptor v5: bỏ chữ "shipped" khỏi mô tả thẻ (FE đang ẩn bằng tooltip). Quan sát (không chặn): run WFO tạo gần đây thiếu hàng RC `METRICS_SEMANTICS` (`P21_RETAINED_REPORT_NOT_SEALED`) dù báo cáo đã seal; R-WFO-022 cũ thì ổn.

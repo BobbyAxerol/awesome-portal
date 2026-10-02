@@ -28,9 +28,9 @@ import { awaitingStep } from "./AlphaImport";
 import { researchState, type ResearchState } from "./state";
 
 const IDLE = {
-  parse: awaitingStep("No source has been parsed yet."),
-  gates: awaitingStep("Gates run once a source parses."),
-  register: awaitingStep("Registration opens once all seven gates pass."),
+  parse: awaitingStep("Nothing parsed yet."),
+  gates: awaitingStep("Parse a source first."),
+  register: awaitingStep("Run gates first."),
 } as const;
 
 export type Step = "parse" | "gates" | "register" | "activate";
@@ -68,6 +68,8 @@ export interface AlphaImportController {
   activationPending: boolean;
 
   refusal: ImportRefusal | null;
+  /** The one step the outstanding refusal belongs to; that step's panel prints it, nothing else does. */
+  refusalStep?: Step | null;
 
   alphaId: string;
   onAlphaIdChange: (value: string) => void;
@@ -360,6 +362,7 @@ export function useAlphaImport(workspaceId?: string, initialAlphaId = ""): Alpha
     activationPending: pending === "activate",
 
     refusal,
+    refusalStep: pending === null ? lastAttempted : null,
 
     alphaId,
     onAlphaIdChange: setAlphaId,

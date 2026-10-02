@@ -86,3 +86,7 @@ describe("NewRunRoute — a missing portal_admission block", () => {
     expect(document.querySelector("[data-screen=new-run]")).not.toBeNull();
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

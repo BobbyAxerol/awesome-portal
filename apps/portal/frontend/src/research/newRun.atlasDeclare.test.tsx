@@ -72,3 +72,7 @@ describe("S12 UX-2 - declare carries the mode", () => {
     expect(text()).not.toContain("mode_99_made_up");
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

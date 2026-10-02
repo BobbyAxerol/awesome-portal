@@ -22,7 +22,7 @@ const RUN_SCREENS: Readonly<Record<string, string>> = {
 
 /** Screens whose HiFi title is only the screen name (no run in it). */
 const PLAIN: ReadonlyArray<readonly [RegExp, string]> = [
-  [/\/research\/quantbt\/journey\/?$/, "QuantBT — Journey Map"],
+  [/\/research\/quantbt(?:\/(?:journey\/?)?)?$/, "QuantBT — Journey Map"],
   [/\/research\/quantbt\/runs\/?$/, "QuantBT — Run Library"],
   [/\/research\/quantbt\/runs\/new\/?$/, "QuantBT — New Run"],
   [/\/research\/quantbt\/atlas\/?$/, "QuantBT — Engine Atlas"],

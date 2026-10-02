@@ -417,10 +417,11 @@ describe("sparkline — bars from the lazy read, caption from its source (CG-P12
 /* ------------------------------------------------------------------ claim */
 
 describe("claim — state and sentence (CG-P12-09)", () => {
-  it("prints the NOT_ISSUED sentence behind its state", () => {
+  it("prints the NOT_ISSUED state; the server's sentence is its tooltip", () => {
     view([item()]);
     const claim = card(item().run_id).querySelector("[data-claim]") as HTMLElement;
-    expect(claim.textContent).toBe(`NOT ISSUED — ${NOT_ISSUED_SENTENCE}`);
+    expect(claim.textContent).toBe("NOT ISSUED");
+    expect(claim.querySelector("[data-claim-state]")?.getAttribute("title")).toBe(NOT_ISSUED_SENTENCE);
     expect(claim.querySelector("[data-claim-state]")?.getAttribute("data-claim-state")).toBe("NOT_ISSUED");
   });
 
@@ -538,12 +539,11 @@ describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P
     expect(face.title).toMatch(/^rc_0123456789abcdef0123 —/);
   });
 
-  it("reserves no chip when no candidate exists; the typed absence says why in words (2_wiring S01)", () => {
+  it("reserves no chip and prints no words when no candidate exists; the served reason stays as data (2_wiring S01)", () => {
     view([item()]);
     expect(document.querySelector("[data-rc]")).toBeNull();
-    const absent = card(item().run_id).querySelector("[data-withheld][data-reason-code='P21_NO_PERSISTED_RELEASE_CANDIDATE']") as HTMLElement;
-    expect(absent.textContent).toBe("rc — not published");
-    expect(absent.getAttribute("title")).toBe("No release candidate has been composed from this run.");
+    expect(card(item().run_id).querySelector("[data-withheld][data-reason-code='P21_NO_PERSISTED_RELEASE_CANDIDATE']")).toBeNull();
+    expect(card(item().run_id).getAttribute("data-rc-absent")).toBe("P21_NO_PERSISTED_RELEASE_CANDIDATE");
     expect(reasonSentence({ state: "NOT_PUBLISHED", reason_code: "P21_NO_PERSISTED_RELEASE_CANDIDATE" })).toBe(
       "No release candidate has been composed from this run.",
     );

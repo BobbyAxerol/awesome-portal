@@ -176,7 +176,8 @@ describe("G10 — a refusal that names no field is still shown (real-server rece
   it.each(cases)("shows the %s refusal on the Review step, with no field to fix", (_label, error) => {
     const refusal = toPreflightRefusal(error);
     view({ initialStep: "review", preflightRefusal: refusal });
-    const alert = document.querySelector("[data-refusal-field]") as HTMLElement;
+    /* A 403 is the read-only session: one short state, whatever the server's code says. */
+    const alert = (document.querySelector("[data-refusal-field]") ?? document.querySelector("[data-read-only-session]")) as HTMLElement;
     expect(alert, "the refusal must be on screen").not.toBeNull();
     expect(alert.textContent).not.toBe("");
     /* No field, so nothing to navigate to. */
@@ -188,9 +189,13 @@ describe("G10 — a refusal that names no field is still shown (real-server rece
   it("reads a 403 as the one neutral sentence and never echoes the server's prose", () => {
     const refusal = toPreflightRefusal(new PreflightApiError("SECRET-SERVER-PROSE", 403, "RESEARCH_PREFLIGHT_INVALID", "r", {}));
     view({ initialStep: "review", preflightRefusal: refusal });
-    const text = (document.querySelector("[data-refusal-field]") as HTMLElement).textContent ?? "";
-    expect(text).toContain(REFUSAL_COPY.denied);
-    expect(text).not.toContain("SECRET-SERVER-PROSE");
+    const banner = document.querySelector("[data-read-only-session]") as HTMLElement;
+    expect(banner.textContent).toBe("Read-only session.");
+    /* The code is in the tooltip; the server's prose is nowhere. */
+    expect(banner.getAttribute("title")).toContain("RESEARCH_PREFLIGHT_INVALID");
+    expect(document.body.textContent).not.toContain("SECRET-SERVER-PROSE");
+    expect(document.querySelector("[data-refusal-field]")).toBeNull();
+    expect(REFUSAL_COPY.denied).toBeTruthy();
   });
 });
 
@@ -349,3 +354,7 @@ describe("CG-P07-03/04 Screen 14 mirror and gates", () => {
     expect(gateTiming({ ...base, state: "SKIPPED" })).toBeNull();
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

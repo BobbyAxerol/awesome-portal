@@ -69,6 +69,15 @@ export function EstimateStatusLine({ status, onRetry }: { status: EstimateStatus
       </span>
     );
   }
+  if (status.kind === "error" && status.status === 403) {
+    /* A 403 is the session, not the estimate: one short state, the code in the tooltip, and no Retry that cannot help. */
+    const title = facts([`status ${status.status}`, status.code, status.requestId ? `request ${status.requestId}` : null]);
+    return (
+      <span className="text-[9.5px]" style={{ color: "var(--bad)" }} title={title} aria-label={`Read-only session · ${title}`} tabIndex={0} data-estimate-status="read-only">
+        Read-only session.
+      </span>
+    );
+  }
   if (status.kind === "error") {
     const title = facts([status.status !== null ? `status ${status.status}` : null, status.code, status.requestId ? `request ${status.requestId}` : null]);
     return (

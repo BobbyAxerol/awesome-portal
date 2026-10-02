@@ -520,7 +520,7 @@ describe("the route", () => {
         <NewRunRoute />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(q('[data-review-row="alpha binding"]')!.textContent).toContain(ALPHA.version_label));
+    await waitFor(() => expect(q('[data-binding-chip]')!.textContent).toContain(ALPHA.version_label));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
   }
 
@@ -562,3 +562,7 @@ describe("the route", () => {
     expect(normalizeCatalog(V1)).toBeDefined();
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });

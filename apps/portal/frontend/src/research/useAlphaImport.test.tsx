@@ -233,7 +233,7 @@ describe("a dead receipt is not retried", () => {
         {
           error: {
             code: "RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED",
-            message: "That parse receipt expired. Parse the module again.",
+            message: "Parse expired. Parse again.",
           },
           request_id: "req_7",
         },
@@ -251,7 +251,7 @@ describe("a dead receipt is not retried", () => {
     expect(result.current.refusal?.code).toBe("RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED");
     // The server's sentence survives; the dead reference does not.
     expect(result.current.refusal?.message).toBe(
-      "That parse receipt expired. Parse the module again.",
+      "Parse expired. Parse again.",
     );
     expect(result.current.parse).toBeNull();
   });

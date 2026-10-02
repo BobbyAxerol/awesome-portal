@@ -56,6 +56,13 @@ function mount({ route = "/", registryDocument = registry, registryStatus }: Mou
     if (url.includes("/portal/links")) {
       return new Response(JSON.stringify(linksDocument), { status: 200 });
     }
+    // New Run reads the alpha registry as `{ entries }`; an empty one keeps the redirect test about routing.
+    if (url.includes("/api/v1/research/alphas")) {
+      return new Response(JSON.stringify({ entries: [] }), { status: 200 });
+    }
+    if (url.includes("/api/v1/research/")) {
+      return new Response(JSON.stringify({ error: { code: "NOT_UNDER_TEST", message: "not under test" } }), { status: 404 });
+    }
     // QuantBT run endpoints are not under test here.
     return new Response(JSON.stringify([]), { status: 200 });
   }) as unknown as typeof fetch;
@@ -208,7 +215,7 @@ describe("embedding (U04/U05)", () => {
   it("mounts QuantBT under its canonical route with no nested topbar", async () => {
     // A legacy QuantBT screen: it keeps the module header. The Research Loop
     // screens (`/runs`, `/journey`, …) carry their own heading instead (DQ-01).
-    mount({ route: "/research/quantbt/runs/legacy" });
+    mount({ route: "/research/quantbt/overview" });
     // QuantBT is a split chunk now (it owns ECharts), so the module arrives a
     // dynamic import later than the shell around it.
     // 15s, matching the sibling tests. The test budget below was raised to 20s
@@ -261,9 +268,8 @@ describe("embedding (U04/U05)", () => {
 
   it("sends the legacy /?new=1 bookmark to the canonical new-run route", async () => {
     mount({ route: "/?new=1" });
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1, name: "QuantBT Backtest" })).toBeTruthy(),
-    );
+    // New Run is a Research screen with its own heading, not the module header.
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "New Run" })).toBeTruthy(), { timeout: 15_000 });
     // The Command Center must not also be mounted at the root.
     expect(screen.queryByRole("heading", { level: 1, name: "Command Center" })).toBeNull();
   });

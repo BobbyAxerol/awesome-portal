@@ -29,20 +29,21 @@ function draw(runId: string | null = null) {
 }
 
 describe("S00 header (00-1a…d)", () => {
-  it("carries the HiFi kicker and title", () => {
+  it("carries the title and no kicker (fewer words); the descriptor revision is a data attribute", () => {
     draw();
-    expect(document.querySelector("[data-journey-kicker]")?.textContent).toBe("Quant Ecosystem Portal · Research");
+    expect(document.querySelector("[data-journey-kicker]")).toBeNull();
+    expect(document.querySelector("h1")?.getAttribute("data-descriptor-revision")).toBe(String(V4.descriptor.revision));
     expect(document.querySelector("h1")?.textContent).toBe("Journey Map");
     expect(document.querySelector("h1")?.className).toContain("text-[27px]");
     expect(document.querySelector("h1")?.className).toContain("font-normal");
   });
 
-  it("puts a two-swatch legend on the right of the title", () => {
+  it("puts a one-swatch legend on the right of the title (no 'shipped hi-fi': those screens redirect)", () => {
     draw();
     const head = document.querySelector("[data-journey-head]") as HTMLElement;
     const legend = head.querySelector("[data-legend]") as HTMLElement;
     expect(legend).toBeTruthy();
-    expect(Array.from(legend.querySelectorAll("[data-legend-tag]")).map((n) => n.textContent)).toEqual(["shipped hi-fi", "redesigned"]);
+    expect(Array.from(legend.querySelectorAll("[data-legend-tag]")).map((n) => n.textContent)).toEqual(["redesigned"]);
     // legend follows the title block inside the same header row
     expect(head.firstElementChild?.querySelector("h1")).toBeTruthy();
     expect(head.lastElementChild).toBe(legend);
@@ -58,56 +59,22 @@ describe("S00 phase labels (00-2)", () => {
   });
 });
 
-describe("S00 mapping block (00-8…10)", () => {
-  it("prints the HiFi caps header and no footnote", () => {
+describe("S00 mapping (removed from the page; the helper stays)", () => {
+  it("draws no mapping block and no word 'shipped'", () => {
     draw();
-    const block = document.querySelector("[data-mapping]") as HTMLElement;
-    expect(block.querySelector("h2")?.textContent).toBe("Shipped tab → new screen");
-    expect(block.querySelector("h2")?.className).toContain("uppercase");
-    expect(block.textContent).not.toContain("skeleton");
-    expect(block.querySelectorAll("[data-mapping-row]")).toHaveLength(V4.descriptor.mapping.length);
-  });
-
-  it("without a run, the redesign column opens the Run Library as the picker", () => {
-    draw();
-    const mine = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-mapping-cell='mine']"));
-    expect(mine.map((a) => a.getAttribute("href"))).toEqual([
-      "/research/quantbt/runs?to=evidence_hub",
-      "/research/quantbt/runs?to=search_selection",
-      "/research/quantbt/runs?to=freeze",
-      "/research/quantbt/runs?to=execute_replay",
-      "/research/quantbt/runs?to=release_candidate",
-      "/research/quantbt/runs?to=split",
-    ]);
-    expect(mine[0].title).toBe("Pick a run to open");
-  });
-
-  it("with a run in hand, the redesign column opens that run's screen", () => {
-    draw(RUN);
-    const mine = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-mapping-cell='mine']"));
-    expect(mine.map((a) => a.getAttribute("href"))).toEqual([
-      `/research/quantbt/runs/${RUN}/evidence`,
-      `/research/quantbt/runs/${RUN}/search`,
-      `/research/quantbt/runs/${RUN}/freeze`,
-      `/research/quantbt/runs/${RUN}/execute`,
-      `/research/quantbt/runs/${RUN}/release-candidate`,
-      `/research/quantbt/runs/${RUN}/split`,
-    ]);
-  });
-
-  it("draws a shipped-tab key this build does not route as plain text, never a guessed link", () => {
-    draw(RUN);
-    const shipped = Array.from(document.querySelectorAll<HTMLElement>("[data-mapping-cell='shipped']"));
-    expect(shipped).toHaveLength(V4.descriptor.mapping.length);
-    for (const cell of shipped) {
-      const key = cell.getAttribute("data-mapping-key") as string;
-      const routed = cell.hasAttribute("data-mapping-no-shipped-tab") ? null : mappingHref(key, RUN);
-      if (routed) expect(cell.getAttribute("href")).toBe(routed.href);
-      else {
-        expect(cell.tagName).toBe("SPAN");
-        expect(cell.hasAttribute("data-mapping-unrouted") || cell.hasAttribute("data-mapping-no-shipped-tab")).toBe(true);
-      }
+    expect(document.querySelector("[data-mapping]")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/shipped/i);
+    for (const card of Array.from(document.querySelectorAll<HTMLElement>("[data-card]"))) {
+      expect(card.getAttribute("title") ?? "").not.toMatch(/shipped/i);
     }
+  });
+
+  it("the three retired-screen nodes (04, 05, 12) open the redesigned screens", () => {
+    draw();
+    const route = (id: string) => document.querySelector(`[data-card="${id}"]`)?.getAttribute("data-card-route");
+    expect(route("run-library-shipped")).toBe("/research/quantbt/runs");
+    expect(route("new-run-shipped")).toBe("/research/quantbt/runs/new");
+    expect(route("alpha-imports-shipped")).toBe("/research/quantbt/alpha-import");
   });
 
   it("mappingHref refuses a key that is already a URL", () => {

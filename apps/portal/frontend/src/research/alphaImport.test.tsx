@@ -240,9 +240,9 @@ describe("T01 — a clean module mirrors every field and opens step 2", () => {
       ]),
     );
     expect(reasons).toEqual({
-      parse: "Add a .py file or module first.",
-      "run-gates": "Parse a source first.",
-      register: "Run the gates first.",
+      parse: "Add a file or paste code.",
+      "run-gates": "Parse first.",
+      register: "Run gates first.",
     });
   });
 
@@ -340,7 +340,7 @@ describe("T03 — a failed gate keeps its message and closes step 3", () => {
     );
     flushStagger();
     const reason = document.querySelector('[data-disabled-reason="register"]') as HTMLElement;
-    expect(reason.textContent).toBe("A gate failed — fix the module and resubmit.");
+    expect(reason.textContent).toBe("A gate failed.");
     expect(action("register").getAttribute("title")).toBe(reason.textContent);
   });
 
@@ -500,7 +500,7 @@ describe("S14-VIS-01 — Code anatomy is a presentation substage, not a stage", 
   it("lives under step 1 and adds no step marker", () => {
     render(<AlphaImport {...props()} />);
     const step1 = screen.getByLabelText("Step 1 — source");
-    expect(within(step1).getByText("Code anatomy — current single-file contract")).toBeTruthy();
+    expect(within(step1).getByText("Code anatomy")).toBeTruthy();
     // Still three steps: parse, gates, register/activate.
     expect(document.querySelectorAll("[data-step-marker]")).toHaveLength(3);
     expect(document.querySelectorAll("[data-step]")).toHaveLength(3);
@@ -571,7 +571,7 @@ describe("T08 — a multi-file drop is refused verbatim", () => {
     expect(onSourceChange).not.toHaveBeenCalled();
 
     rerender(<AlphaImport {...props({ multiFileRejected: true })} />);
-    expect(screen.getByText(SINGLE_FILE_ERROR).textContent).toBe("One .py only — single-file contract.");
+    expect(screen.getByText(SINGLE_FILE_ERROR).textContent).toBe("One file only.");
   });
 
   it("accepts a single dropped file", async () => {
@@ -651,9 +651,11 @@ describe("T10 — accessible names and roles", () => {
     expect(alert.getAttribute("role")).toBe("alert");
     expect(alert.getAttribute("data-refusal")).toBe("RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED");
     /* VD-P23-01 (X3 2026-09-26): the screen's own sentence for the code, never the server's prose. */
-    expect(alert.textContent).toContain("The import queue is full.");
+    expect(alert.textContent).toBe("Queue full. Try again.");
     expect(refusal.detail).toBe("The run queue is full.");
-    expect(alert.textContent).toContain("req_9");
+    // The server's text, the code and the request id are the tooltip, not the surface.
+    expect(alert.getAttribute("title")).toContain("req_9");
+    expect(alert.getAttribute("title")).toContain("The run queue is full.");
   });
 });
 
@@ -662,7 +664,7 @@ describe("T11 — contractual copy is byte-exact", () => {
     // VD-TEXT-01: the short forms, same meanings.
     expect(FAIL_CLOSED_NOTE).toBe("fail-closed: a red gate stops the import.");
     expect(DRAFT_NOTE).toBe("a DRAFT can run, not seal a candidate");
-    expect(SINGLE_FILE_ERROR).toBe("One .py only — single-file contract.");
+    expect(SINGLE_FILE_ERROR).toBe("One file only.");
     // S14-C1 / VD-TEXT-01: Bobby's DRAFT copy stays factual and within 12 words.
     expect(DRAFT_NOTE.split(/\s+/).length).toBeLessThanOrEqual(12);
     // The disclosure is a contract constant; the component must not hold a copy.
@@ -725,6 +727,7 @@ describe("panel frames survive every state", () => {
       <AlphaImport
         {...props({
           refusal,
+          refusalStep: "parse",
           parseState: {
             state: refusal.state,
             reason: refusal.message,
@@ -737,7 +740,8 @@ describe("panel frames survive every state", () => {
     const panel = document.querySelector('[data-research-panel="parsed contract mirror"]') as HTMLElement;
     expect(panel).toBeTruthy();
     expect(panel.getAttribute("data-state")).toBe("failed-retryable");
-    expect(panel.textContent).toContain("The analyser is not responding.");
+    expect(panel.textContent).toBe("Analyser not responding. Try again.");
+    expect(document.body.textContent?.split("Analyser not responding.").length).toBe(2);
   });
 
   it("keeps the source form usable while a parse is in flight", () => {
@@ -797,7 +801,7 @@ describe("RF-04 FE-S14-07 — no write is posted twice, and a refusal sits by it
   it("says Activate is not permitted, without naming a cause the server did not serve", () => {
     render(<AlphaImport {...props({ registration: registration({ may_activate: false }), registerState: OK })} />);
     const line = document.querySelector("[data-activation-not-admitted]") as HTMLElement;
-    expect(line.textContent).toBe(`${ACTIVATION_NOT_PERMITTED} — reason not published`);
+    expect(line.textContent).toBe(ACTIVATION_NOT_PERMITTED);
     expect(line.textContent).not.toMatch(/ADMIN/);
   });
 

@@ -848,7 +848,7 @@ describe("P09-T09 — the composition survives a document-less render", () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Journey Map");
-    expect(document.querySelectorAll("[data-legend-tag]")).toHaveLength(2);
+    expect(document.querySelectorAll("[data-legend-tag]")).toHaveLength(1);
     for (const name of ["journey", "deep link inspection"]) {
       const panel = document.querySelector(`[data-research-panel="${name}"]`) as HTMLElement;
       expect(panel, name).toBeTruthy();
@@ -857,7 +857,7 @@ describe("P09-T09 — the composition survives a document-less render", () => {
     expect(document.querySelectorAll("[data-phase]")).toHaveLength(0);
   });
 
-  it("shows the two HiFi swatches in the legend even with no data", () => {
+  it("shows the legend swatch even with no data", () => {
     render(
       <MemoryRouter>
         <JourneyMap descriptor={null} inspection={null} state={researchState({ kind: "ok", rowCount: 0 })} />
@@ -866,6 +866,6 @@ describe("P09-T09 — the composition survives a document-less render", () => {
     const kinds = Array.from(document.querySelectorAll("[data-legend-tag]")).map((n) =>
       n.getAttribute("data-legend-tag"),
     );
-    expect(kinds).toEqual(["SHIPPED", "RESEARCH_SCREEN"]);
+    expect(kinds).toEqual(["RESEARCH_SCREEN"]);
   });
 });

@@ -36,9 +36,9 @@ const SCREEN_ROUTES: Readonly<Record<string, string>> = {
   new_run: `${QUANTBT_ROOT}/runs/new`,
   command_center: "/",
   run_library: `${QUANTBT_ROOT}/runs`,
-  run_library_legacy: `${QUANTBT_ROOT}/runs/legacy`,
-  alpha_imports_legacy: `${QUANTBT_ROOT}/imports`,
-  new_run_legacy: `${QUANTBT_ROOT}/new`,
+  run_library_legacy: `${QUANTBT_ROOT}/runs`,
+  alpha_imports_legacy: `${QUANTBT_ROOT}/alpha-import`,
+  new_run_legacy: `${QUANTBT_ROOT}/runs/new`,
   /* E12: Screen 13 opens without a run — `CompareResolverRoute` asks for the
      Alpha when the URL names none. With a run in hand the per-alpha form below
      wins, because that is the route spec 13 calls canonical. */

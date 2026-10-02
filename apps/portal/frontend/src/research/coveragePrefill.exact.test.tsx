@@ -291,7 +291,7 @@ describe("S02_PREFILL — the route", () => {
         <NewRunRoute />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(document.querySelector('[data-review-row="alpha binding"]')?.textContent).toContain(ALPHA.version_label));
+    await waitFor(() => expect(document.querySelector('[data-binding-chip]')?.textContent).toContain(ALPHA.version_label));
     await settle();
     choose(DS, "BTCUSDT");
     goTo("windows");
@@ -300,3 +300,7 @@ describe("S02_PREFILL — the route", () => {
     expect(text("[data-prefill-source]")).toBe("Prefilled from crypto-binance-1m · BTCUSDT · 2026-07-01 00:00 → 2026-07-02 23:00 (1h)");
   });
 });
+
+/* The draft is autosaved for the session: each test starts from a blank one. */
+import { beforeEach as clearDraftBeforeEach } from "vitest";
+clearDraftBeforeEach(() => { window.sessionStorage.clear(); });
