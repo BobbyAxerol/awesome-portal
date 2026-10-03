@@ -25,3 +25,12 @@ Nguồn: `CODEX_BACKEND_GAPS_2026-09-30.md` §31 + addendum, `FRONTEND_GAPS_FOR_
 | §31-5 | approval mirror, R-WFO-027 | `approval read DENIED` cho chính người publish | widen read hoặc nêu copy dự kiến | Codex quyết | hiện đúng như typed | `OPEN` (câu hỏi, chưa đánh số trong §31) |
 
 Ghi chú: mục 4–5 là phần quan sát/addendum, không phải request chặn. Không mục nào chặn frontend.
+
+## Cập nhật 2026-10-03 (W7) — Codex `d5d09875` đã tiêu thụ
+
+| Id | Kết quả trên preview (image chứa `d5d09875`, GET only) | Frontend | Trạng thái |
+|---|---|---|---|
+| §31-1 | R-WFO-022/023: compose `actions.publish` và publication read cùng `P22_CURRENT_SOURCE_CHANGED` | S11 "Sealed from an older source." + một lối thoát | `CLOSED` |
+| §31-2 | `blocked_action` = `CREATE_NEW_RUN_AND_SEAL` (022/023), `NONE` (027 đã delivered) | một exit theo action; không bao giờ reseal/reopen | `CLOSED` |
+| §31-3 | rail `selected_params`: 351 `RUN_GLOBAL` (022/023), 2 `STUDY_LOCAL` (027) | `trialLabel` | `CLOSED` |
+| §31-5 | `approval_read: DENIED` giữ quyền đọc R1 độc lập | "Published. You can't view the Gate R1 review with this account." (câu đầy đủ ở tooltip) | `CLOSED` |

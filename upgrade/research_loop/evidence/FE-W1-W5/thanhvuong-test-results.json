@@ -2,19 +2,20 @@
   "packet": "FE-W1-W5",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-10-03",
-  "status": "W1-W5 FE landed \u00b7 gates measured \u00b7 NOT_VERIFIED at product level",
+  "status": "W1-W7 FE landed on claude/fe-parity · gates measured 2026-10-03 · NOT_VERIFIED at product level (Bobby by-eye review + signed release pending)",
   "branch": "claude/fe-parity",
-  "head": "c5795c71e14e225f27c323c4118eab43add89a5e",
-  "tree": "f1d1d5ec8cc7b5da3ca444536be886ce67faf619",
+  "head": "d2028d133e5d1dd715b9d104df4131bc3a479284",
+  "tree": "d49144200ff3cbd0cec07604c6d5b364e48cef32",
   "base": "b2098a81",
   "diff_base_head": "450 files +19352/-5529",
   "measured_on": "2026-10-03",
-  "bundle": "index-C6w4OUAn.js",
+  "bundle": "index-DKkYLzA8.js",
   "gates": {
     "vitest_full": {
-      "passed": 5873,
+      "passed": 5891,
       "skipped": 1,
-      "files": 336
+      "files": 338,
+      "note": "one load flake (searchF2 QA D7) fails under full-suite load and passes alone 13/13"
     },
     "tsc": "clean",
     "preview_real_api_lane": {
@@ -58,6 +59,12 @@
       "S07": "20/17",
       "S08": "85/59",
       "S09": "57/51"
+    },
+    "lane_plus_gate_combined": {
+      "passed": 228,
+      "total": 228,
+      "bundle": "index-DKkYLzA8.js",
+      "after": "Codex d5d09875 consumed, W6 QA fixes, W7 contract/enum/gating changes"
     }
   },
   "p22_publish": {
@@ -73,5 +80,12 @@
     "signed release",
     "gates re-run on HEAD after a226d1d9/f0346ef8"
   ],
-  "note": "counts are as reported from the session on 2026-10-03; logs and image hashes are not stored in this packet"
+  "note": "counts are as reported from the session on 2026-10-03; logs and image hashes are not stored in this packet",
+  "w6_w7": {
+    "browser_acceptance": "/home/bobby/portal-research-qa-2026-10-03/REPORT.md (224 screenshots, 55 flow shots, 7+28 print PDFs; 12 + 13 defects; D12 verdict MIS-TEST)",
+    "console_noise_queued_cancelled": "0 errors after useEvidenceReadsAllowed (was 1 per stage route)",
+    "raw_enum_tokens_S04_S11": "398 occurrences/79 distinct -> 141/23 (rest: names, ids, acronyms kept by decision)",
+    "visual": "Research spec 28 cells recorded; legacy spec 101 cells; print cells now light palette",
+    "codex_payloads_on_preview": "d5d09875 verified: R-WFO-022/023 P22_CURRENT_SOURCE_CHANGED + CREATE_NEW_RUN_AND_SEAL on both readers; R-WFO-027 DELIVERED/NONE/approval_read DENIED; rail selected_params ordinal 351 RUN_GLOBAL / 2 STUDY_LOCAL"
+  }
 }

@@ -69,3 +69,11 @@ Receipt chỉ ghi thay đổi frontend và evidence. Không đổi rule, contrac
 - Gate đo trên lane copy ở HEAD `c5795c71`; bundle `index-C6w4OUAn.js` là bundle lúc đo, chưa đối chiếu lại với HEAD sau `a226d1d9`/`f0346ef8` (xem debt `DEBT-BUNDLE-VS-HEAD`).
 - Print acceptance, browser acceptance đầy đủ của Bobby, release ký: `NOT_VERIFIED`.
 - S07 causal fold rows và chip claim S03 ở 360: chưa có fixture causal.
+
+
+## 7. Đợt W6–W7 (2026-10-03, sau W5)
+
+- W6: browser/print acceptance (`/home/bobby/portal-research-qa-2026-10-03/REPORT.md`), sửa D1–D8, D11 (Esc đóng drawer, `researchPrint.css`, ResearchNotFound, RunExitBar, skip link, nút menu trùng), nhãn fold `F1`, ProvenanceStrip một dòng, S12/S13/S09 chữ.
+- W7: tiêu thụ Codex `d5d09875` trên S11; `useEvidenceReadsAllowed` (queued/cancelled không gọi reads bằng chứng); `humaniseTokens` + humanise tại render S04–S08/S10/S11; QA T (in theme tối → `printTheme.ts`, Pair picker, fold chart region, bảng config-diff khi in).
+- Gate cuối: lane + gate 228/228 trên `index-DKkYLzA8.js`; vitest 5891 qua/1 flake khi tải nặng (qua riêng 13/13); baseline Research 28 + legacy 101 ô ghi lại.
+- Vẫn `NOT_VERIFIED` ở mức sản phẩm: Bobby rà bằng mắt, release có ký, in thiết bị thật.
