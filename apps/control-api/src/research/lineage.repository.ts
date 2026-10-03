@@ -47,6 +47,8 @@ export interface LineageVersionRow {
   promotion_receipt_count?: number | null;
   promotion_selected_trial_id?: string | null;
   promotion_selected_params_digest?: string | null;
+  /** Null unless the receipt's RC/run and actual same-workspace R1 pin all match. */
+  promotion_approval_id?: string | null;
 }
 
 export interface LineageAttemptRow {
@@ -122,6 +124,8 @@ export interface LineageChildRunRow {
 
 export interface LineageCountsRow {
   total_attempts: string | number;
+  /** Full logical prefix before the signed keyset boundary, not this page's size. */
+  attempts_before_boundary?: string | number;
   draft_attempts: string | number;
   submitted_attempts: string | number;
   failed_attempts: string | number;
@@ -221,7 +225,8 @@ export class ResearchLineageRepository {
                 pick.source_as_of AS promotion_source_as_of,
                 receipt.receipt_count AS promotion_receipt_count,
                 receipt.selected_trial_id AS promotion_selected_trial_id,
-                receipt.selected_params_digest AS promotion_selected_params_digest
+                receipt.selected_params_digest AS promotion_selected_params_digest,
+                receipt.approval_id AS promotion_approval_id
            FROM research.alpha_versions version
            LEFT JOIN research.attempt_promotion_pick_facts_v1 pick
              ON pick.workspace_id = version.workspace_id
@@ -229,8 +234,25 @@ export class ResearchLineageRepository {
            LEFT JOIN LATERAL (
              SELECT count(*)::integer AS receipt_count,
                     max(source_receipt.selected_trial_id) AS selected_trial_id,
-                    max(selection.parameter_bundle_digest) AS selected_params_digest
+                    max(selection.parameter_bundle_digest) AS selected_params_digest,
+                    -- Only the existing P22 SECURITY DEFINER writer can
+                    -- attest R1/workspace/Alpha identity. The Research runtime
+                    -- cannot read Governance directly and gets no new grant.
+                    max(CASE WHEN pack.release_candidate_id IS NOT NULL
+                                   AND receipt_run.run_id IS NOT NULL
+                                   AND (receipt_run.run_id = pack.run_id OR
+                                        (receipt_run.relationship_kind = 'AUDIT_OF_SELECTION'
+                                         AND receipt_run.parent_run_id = pack.run_id))
+                             THEN source_receipt.approval_id END) AS approval_id
                FROM research.p22_promotion_pick_receipts_v1 source_receipt
+               LEFT JOIN research.release_candidate_packs_v1 pack
+                 ON pack.workspace_id = source_receipt.workspace_id
+                AND pack.release_candidate_id = source_receipt.release_candidate_id
+                AND pack.pack_digest = source_receipt.pack_digest
+               LEFT JOIN research.runs receipt_run
+                 ON receipt_run.workspace_id = source_receipt.workspace_id
+                AND receipt_run.run_id = source_receipt.run_id
+                AND receipt_run.attempt_id = pick.attempt_id
                LEFT JOIN research.selection_records selection
                  ON selection.workspace_id = source_receipt.workspace_id
                 AND selection.selection_id = source_receipt.selection_id
@@ -361,7 +383,7 @@ export class ResearchLineageRepository {
 
       const countResult = await client.query<LineageCountsRow>(
         `WITH selected_attempts AS (
-           SELECT attempt.attempt_id, attempt.state
+           SELECT attempt.attempt_id, attempt.state, attempt.created_at
              FROM research.attempts attempt
              JOIN research.alpha_versions version
                ON version.workspace_id = attempt.workspace_id
@@ -390,13 +412,17 @@ export class ResearchLineageRepository {
          )
          SELECT
            (SELECT count(*) FROM selected_attempts)::bigint AS total_attempts,
+           (SELECT count(*) FROM selected_attempts
+             ${boundary ? "WHERE (created_at, attempt_id) < ($3::timestamptz, $4::text)" : ""}
+           )::bigint AS attempts_before_boundary,
            (SELECT count(*) FROM selected_attempts WHERE state = 'DRAFT')::bigint AS draft_attempts,
            (SELECT count(*) FROM selected_attempts WHERE state <> 'DRAFT')::bigint AS submitted_attempts,
            (SELECT count(*) FROM selected_attempts WHERE state = 'FAILED')::bigint AS failed_attempts,
            (SELECT count(*) FROM selected_attempts WHERE state = 'ABANDONED')::bigint AS abandoned_attempts,
            (SELECT count(*) FROM selected_runs WHERE relationship_kind <> 'PRIMARY')::bigint AS child_runs,
            COALESCE((SELECT sum(GREATEST(max_ordinal - 1, 0)) FROM job_retries), 0)::bigint AS technical_retries`,
-        [scope.workspaceId, alphaId],
+        boundary ? [scope.workspaceId, alphaId, boundary.createdAt, boundary.attemptId]
+          : [scope.workspaceId, alphaId],
       );
       const counts = countResult.rows[0];
       if (!counts) {

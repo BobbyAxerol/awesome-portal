@@ -392,3 +392,44 @@ Four groups merged on `bfbf5ca4`: A (primitives `Absence`/`humanise`/`formatValu
 - Rule held: explanation in tooltips, one humanised status word, a fact once per screen, uniform absence columns collapse to one caption.
 - Open (not done): ProvenanceStrip collapse, `fold_01→F1`, tile caption shortening, S12 Routes/Claims tab copy, Claim-tab cleanup; S05–S08 render `RunNotFound` plus a scoped `:has()` stopgap instead of only `RunNotFound`.
 - Baselines: all of S00–S14 change; recorded after deploy via the bounded recorder.
+
+## Backend → Claude: broad request reconciliation — 2026-10-03
+
+Scoped code delivery, not a browser or deployed-preview receipt. Preserve
+accepted W4 UI. [Exact generated types, synthetic examples and test/source
+limits](./evidence/P21/BROAD_REQUEST_RECONCILIATION_2026-10-03.md#5-focused-acceptance-and-consumer-handoff).
+
+- **S12:** use generated Atlas `reason_code` / historical
+  `facts_reason_code` / schedule `oos_use_condition_code` for short public
+  copy; retain original reason/condition in the tooltip. Never infer new
+  certification, selection authority or engine cause from a slot label.
+- **S08:** both named Replay DTOs now publish exact alpha identity and
+  IS/OOS/holdout metadata with typed availability, source-bound segments and
+  explicit count/boundary basis. Retained fold endpoints are inclusive source
+  bars, fixed declared windows are half-open. Fold sums can overlap; holdout
+  bars remain withheld. Use opaque IDs/cursors, not display text or a new
+  client-side time/count conversion. Presentation digest is not a source pin.
+  Public `basis` is a strict fact-class enum, not an internal `source_locator`.
+  Use that generated enum only; do not expect source paths in browser DTOs.
+- **S09:** frozen Report already carries exact IDs at
+  `identity[key="alpha"].value` and `identity[key="alpha_version"].value`;
+  no invented aliases or new Report read is needed.
+- **S10/P19 pick consumers:** `AttemptNode.display_label` is presentation-only
+  full logical-Alpha order; keep opaque attempt ID for links. Show label and
+  `PromotionPick.approval_href` only when their generated availability is
+  AVAILABLE. `fold=null` has its own NOT_PUBLISHED reason; never decode trial
+  ID as a fold or add a duplicate RC/Lineage authority read.
+- **S05:** corrected retained disjointness uses inclusive-bar V2, with old V1
+  capture support. It is not a purge-applied/embargo-respected verdict. The
+  backend HTTP ETag changes while immutable source/Report/RC pins stay intact.
+- **Legacy export:** `features/quantbt/QuantBTModule.tsx` and
+  `features/audit/AuditView.tsx` still link straight to GET. Backend delivered
+  workspace-scoped ADMIN POST prepare→read-only GET; bind that flow with
+  CSRF/request-ID/refusal handling, or hide the affordance. Do not request a
+  weaker guard to make the old link work.
+
+Stale F3 subtitle/artifact requests must not undo W4: tabs show stage state,
+summary cards show their own facts, Claim uses actual P11 artifact inventory
+(not ten fake rows). Fixed IS is already consumed; unavailable WFO IS or
+protected holdout remains typed. Remaining P23/P24/browser/visual acceptance
+is separate, and no frontend file or baseline was edited by this slice.

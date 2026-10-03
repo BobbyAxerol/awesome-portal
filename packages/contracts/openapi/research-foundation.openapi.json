@@ -907,6 +907,7 @@
         }
       },
       "AtlasNotPublishedFact": {
+        "description": "The original reason and source remain unchanged. Optional reason_code is a Portal-owned presentation label for the absent fact slot, not a source cause, certification level or admission grant. Older captured responses omit it.",
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -921,6 +922,14 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 400
+          },
+          "reason_code": {
+            "enum": [
+              "ATLAS_CERT_CAP_NOT_PUBLISHED",
+              "ATLAS_OBJECTIVE_NOT_PUBLISHED",
+              "ATLAS_READS_NOT_PUBLISHED",
+              "ATLAS_AVOID_WHEN_NOT_PUBLISHED"
+            ]
           },
           "source": {
             "anyOf": [
@@ -937,6 +946,14 @@
       "AtlasScheduleFact": {
         "type": "object",
         "additionalProperties": false,
+        "dependentSchemas": {
+          "oos_use_condition_code": {
+            "required": ["oos_use_condition"],
+            "properties": {
+              "oos_use_condition": { "type": "string", "minLength": 1, "maxLength": 300 }
+            }
+          }
+        },
         "required": [
           "schedule",
           "validation_claim",
@@ -993,6 +1010,10 @@
                 "type": "null"
               }
             ]
+          },
+          "oos_use_condition_code": {
+            "const": "ATLAS_SOURCE_OOS_USE_CONDITION",
+            "description": "Optional Portal presentation template code, only when the source condition string is present. It does not assert selection, certification or admission. Preserve the original condition for the tooltip; older responses omit this code."
           },
           "params_semantics": {
             "type": "string",
@@ -2144,6 +2165,10 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 400
+          },
+          "facts_reason_code": {
+            "const": "ATLAS_HISTORICAL_FACTS_NOT_PUBLISHED",
+            "description": "Optional Portal presentation label: only the retained historical identity is available. No historical route, mode or claim facts are inferred. Older captured responses omit it."
           }
         }
       },

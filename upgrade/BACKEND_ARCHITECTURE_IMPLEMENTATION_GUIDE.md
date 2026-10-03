@@ -2264,3 +2264,20 @@ Generated consumer mapping and exact evidence live in the
 This supplements older snapshots; it does not claim P23/P24, FE/browser,
 remote publication or production activation. One normal grouped hook gates
 landing on `docs/research-loop-plan`; no frontend or shared :8095 changes.
+
+### 14.1.13 Research broad read-request reconciliation (2026-10-03)
+
+Scoped backend delivery: separate public Atlas absence/condition codes,
+Replay exact window/alpha navigation with its own presentation digest, P19
+receipt-bound approval href and logical-attempt labels. A wide audit also
+found/fixed S05's retained endpoint convention: QuantBT stores inclusive
+observed bars, not P08 half-open declarations. New HTTP Split representation
+ETag is independent of immutable source/Report/RC pins. No source artifact,
+manifest, seal, frontend, shared preview or production mutation. Actual
+disposable PG 4/4 preserves runtime role restrictions; official generated
+contracts/snapshot and one normal grouped hook gate landing. Details and
+Claude mappings: [canonical reconciliation packet](./research_loop/evidence/P21/BROAD_REQUEST_RECONCILIATION_2026-10-03.md).
+Applied purge/embargo proof remains distinct; P23 candidate/load/restore/
+engine-two/independent-recompute/browser gates and P24 are not called complete.
+Legacy export backend guard is delivered; its old frontend direct GET links
+still need the documented prepare→download consumer. No remote push.

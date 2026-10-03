@@ -119,6 +119,10 @@
           "selected_trial_availability": { "$ref": "#/components/schemas/Availability" },
           "selected_params_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] },
           "selected_params_availability": { "$ref": "#/components/schemas/Availability" },
+          "fold": { "description": "BR-S11-01: nullable source-attested selected fold. The current P22 receipt does not publish it; global trial identifiers must never be decoded into a fold.", "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+          "fold_availability": { "$ref": "#/components/schemas/Availability" },
+          "approval_href": { "description": "Only the exact persisted P22 receipt, sealed RC/run binding and same-workspace R1 approval may supply this stable Portal route.", "anyOf": [{ "type": "string", "pattern": "^/governance/approvals/[A-Za-z0-9][A-Za-z0-9._:-]{0,190}/r1$" }, { "type": "null" }] },
+          "approval_availability": { "$ref": "#/components/schemas/Availability" },
           "availability": { "$ref": "#/components/schemas/Availability" },
           "source_authority": {
             "type": "object", "additionalProperties": false, "required": ["owner", "state"],
@@ -232,6 +236,9 @@
         "required": ["attempt_id", "parent_attempt_id", "parent_state", "alpha_version_id", "alpha_version_label", "state", "intent_kind", "relation_to_parent", "reason", "space_signature", "created_at_utc_ms", "updated_at_utc_ms", "primary_run", "child_runs", "child_runs_coverage", "semantic_diff", "exposure", "presentation_kind", "presentation_reasons", "promotion_state", "promotion_reason_code", "spec_label", "release_candidate", "release_candidate_availability", "run_facts", "outcome"],
         "properties": {
           "attempt_id": { "$ref": "#/components/schemas/OpaqueId" },
+          "display_label": { "description": "BR-F3-03: att_NN is PRESENTATION ONLY: chronological full-history logical-attempt rank across all Alpha versions in this workspace, excluding DIAGNOSTIC attempts, ordered by exact created_at then attempt_id. Worker retries, child runs and page-local indices never define it. The keyset prefix is counted in the same existing repeatable-read census; attempt_id remains the identity. null with a typed reason if the full prefix is unavailable.", "anyOf": [{ "type": "string", "pattern": "^att_[0-9]{2,16}$" }, { "type": "null" }] },
+          "display_label_basis": { "const": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1" },
+          "display_label_availability": { "$ref": "#/components/schemas/Availability" },
           "parent_attempt_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
           "parent_state": { "enum": ["ROOT", "RETURNED", "OUTSIDE_RETURNED_GRAPH"] },
           "relation_to_parent": { "anyOf": [{ "enum": ["SIBLING_OF"] }, { "type": "null" }], "description": "W5a: SIBLING_OF when this attempt was forked from a Screen-07 what-if node of its parent attempt's run; its own intent and config_hash." },

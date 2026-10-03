@@ -20,6 +20,11 @@ describe("P17 published Research Replay contract", () => {
       "researchReplayDetailGetV1", "playback_cursor", "RETROSPECTIVE_EQUITY_NOT_EXECUTION_STATE",
       "SOURCE_CHRONOLOGICAL_SAMPLE_ORDINAL_ASC", "child_audit_provenance", "P17_CURRENT_P04_EQUITY_SAMPLE_V1",
       "trades_reported", "orders_published", "OOS_EQUITY_WINDOW",
+      "ReplayNavigationIdentity", "ReplayNavigationWindow", "alpha_version_id", "is_window", "oos_window", "holdout_window",
+      "research.replay-navigation.v1", "presentation_digest", "SUM_OF_FOLD_WINDOWS_MAY_OVERLAP",
+      "IMMUTABLE_REQUEST_ALPHA_BINDING", "HUB_BOUND_ALPHA_IDENTITY", "BOUND_WINDOW_METADATA",
+      "DECLARED_IS_WINDOW", "DECLARED_OOS_WINDOW", "DECLARED_HOLDOUT_WINDOW",
+      "RETAINED_FOLD_TRAIN_WINDOWS", "RETAINED_FOLD_TEST_WINDOWS",
     ]) expect(generated).toContain(needle);
   });
 

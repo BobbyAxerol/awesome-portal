@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
+import { ReplayNavigationShape } from "./replay-navigation.contract";
 
 export const ResearchReplayRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -239,6 +240,7 @@ const ReplayCandleOverviewSchema = z.object({
 });
 
 export const ResearchReplayResponseSchema = z.object({
+  ...ReplayNavigationShape,
   schema_version: z.literal("research.replay.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchReplayRunIdSchema,

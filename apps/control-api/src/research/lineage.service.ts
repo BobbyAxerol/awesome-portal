@@ -542,7 +542,19 @@ export class ResearchLineageService {
       ? absent("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK")
       : available();
 
-    const attempts: Node[] = snapshot.attempts.map((row) => {
+    const totalAttempts = count(snapshot.counts.total_attempts, "total attempt count");
+    // This is the full same-workspace/Alpha prefix in the repository's exact
+    // repeatable-read census, not the position in a response page. Existing
+    // microsecond created_at + opaque-id keyset order is the presentation
+    // basis; the immutable attempt_id remains the only identity.
+    const ordinalUpperBound = snapshot.counts.attempts_before_boundary !== undefined
+      ? count(snapshot.counts.attempts_before_boundary, "logical attempt prefix")
+      : snapshot.window === "OLDER_PAGE" ? null : totalAttempts;
+    if (totalAttempts < snapshot.attempts.length || ordinalUpperBound !== null
+      && (ordinalUpperBound > totalAttempts || ordinalUpperBound < snapshot.attempts.length)) {
+      throw new ResearchLineageError("RESEARCH_LINEAGE_UNAVAILABLE", "Attempt Lineage count boundary is incompatible.", 503);
+    }
+    const attempts: Node[] = snapshot.attempts.map((row, index) => {
       const parent = row.parent_attempt_id ? byId.get(row.parent_attempt_id) : undefined;
       const parentState = row.parent_attempt_id === null
         ? "ROOT" as const
@@ -598,6 +610,11 @@ export class ResearchLineageService {
       const reason = boundedText(row.reason, "reason");
       return {
         attempt_id: row.attempt_id,
+        display_label: ordinalUpperBound === null ? null
+          : `att_${String(ordinalUpperBound - snapshot.attempts.length + index + 1).padStart(2, "0")}`,
+        display_label_basis: "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+        display_label_availability: ordinalUpperBound === null
+          ? absent("P19_LOGICAL_ATTEMPT_HISTORY_PREFIX_NOT_PUBLISHED") : available(),
         parent_attempt_id: row.parent_attempt_id,
         parent_state: parentState,
         alpha_version_id: row.alpha_version_id,
@@ -686,6 +703,9 @@ export class ResearchLineageService {
         : absent(receiptCount > 1 ? "P19_P22_PICK_RECEIPT_AMBIGUOUS" : "P19_P22_PICK_RECEIPT_NOT_AVAILABLE");
       const selectedTrialId = exactReceipt ? row.promotion_selected_trial_id ?? null : null;
       const selectedParamsDigest = exactReceipt ? row.promotion_selected_params_digest ?? null : null;
+      const approvalId = exactReceipt && typeof row.promotion_approval_id === "string"
+        && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/.test(row.promotion_approval_id)
+        ? row.promotion_approval_id : null;
       return {
         alpha_version_id: row.alpha_version_id,
         label: labels.get(row.alpha_version_id)!,
@@ -708,6 +728,13 @@ export class ResearchLineageService {
             selected_params_digest: selectedParamsDigest,
             selected_params_availability: selectedParamsDigest ? available()
               : exactReceipt ? absent("P19_P21_SELECTED_PARAMS_DIGEST_NOT_PUBLISHED") : selectionAbsent,
+            // The receipt does not carry a fold fact. In particular, the
+            // numeric part of a global selected_trial_id is not a fold.
+            fold: null,
+            fold_availability: absent("P19_P22_SELECTED_FOLD_NOT_PUBLISHED"),
+            approval_href: approvalId ? `/governance/approvals/${approvalId}/r1` : null,
+            approval_availability: approvalId ? available()
+              : exactReceipt ? absent("P19_P22_APPROVAL_BINDING_NOT_AVAILABLE") : selectionAbsent,
             source_authority: sourceAuthority,
             release_candidate: pickRc.ref,
             release_candidate_availability: pickRc.availability,
@@ -724,6 +751,10 @@ export class ResearchLineageService {
             selected_trial_availability: selectionAbsent,
             selected_params_digest: null,
             selected_params_availability: selectionAbsent,
+            fold: null,
+            fold_availability: notApplicable("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"),
+            approval_href: null,
+            approval_availability: notApplicable("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"),
             source_authority: sourceAuthority,
             release_candidate: null,
             release_candidate_availability: pickRc.availability,
@@ -774,7 +805,6 @@ export class ResearchLineageService {
       version.untried = this.untried(version, atlasRoutes);
     }
 
-    const totalAttempts = count(snapshot.counts.total_attempts, "total attempt count");
     if (totalAttempts < attempts.length) {
       throw new ResearchLineageError("RESEARCH_LINEAGE_UNAVAILABLE", "Attempt Lineage count boundary is incompatible.", 503);
     }

@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ResearchCurrentSourceService, currentSourceSealDigest } from "../src/research/current-source.service";
+import { ResearchCurrentSourceService, currentSourceReadRevision, currentSourceSealDigest } from "../src/research/current-source.service";
 import { mockSearchRepository } from "./research-search-inputs.fixture";
+import { wfoRequested } from "./research-w1-wfo.fixture";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import type { ResearchCurrentSourceNotApplicableResponse } from "../src/research/current-source.contract";
 import { p11StageEvents, POOL_FREEZE_CLOCK_ABSENT } from "../src/research/p11-stage-events";
@@ -118,6 +119,30 @@ function service(repository: Record<string, unknown>) {
 }
 
 describe("RS-02 retained current-source named read models", () => {
+  it("publishes digest-bound Replay IDs and fold metadata without changing source pins or issuing duplicate fold reads", async () => {
+    const request = wfoRequested();
+    const source = { ...seal, requestedSpecDigest: sha256ResearchJson(request) };
+    const original = currentSourceSealDigest(source);
+    const admittedRequestedSpec = vi.fn().mockResolvedValue(request);
+    const rows = vi.fn().mockImplementation((_scope, _runId, _revision, kind: string) =>
+      kind === "FOLD" ? page(folds, 2) : page(observations, 3));
+    const current = service({ sealForRead: vi.fn().mockResolvedValue(source), admittedRequestedSpec, rows });
+    const first = sealed(await current.replay(scope, source.runId, { limit: 100 }));
+    expect(first.identity).toMatchObject({ ...request.alpha_binding, availability: { state: "AVAILABLE" } });
+    expect(first.is_window).toMatchObject({ bounds_semantics: "SOURCE_RETAINED_FOLD_BOUNDS", bars: null,
+      availability: { reason_code: "REPLAY_RETAINED_FOLD_BAR_COUNTS_NOT_PUBLISHED" } });
+    expect(first.is_window!.segments).toHaveLength(2);
+    expect(first.revision).toBe(`rs02_replay_${original}`);
+    expect(first.presentation_revision).toBe("research.replay-navigation.v1");
+    expect(rows.mock.calls.filter(call => call[3] === "FOLD")).toHaveLength(1);
+    expect(admittedRequestedSpec).toHaveBeenCalledWith(scope, source.runId, source.requestedSpecDigest, undefined);
+    expect(currentSourceSealDigest(source)).toBe(original);
+    admittedRequestedSpec.mockResolvedValue({ ...request, alpha_binding: { alpha_id: "foreign", alpha_version_id: "foreign" } });
+    const next = sealed(await current.replay(scope, source.runId, { limit: 100 }));
+    expect(next.identity!.alpha_id).toBeNull();
+    expect(next.presentation_digest).not.toBe(first.presentation_digest);
+    expect(next.revision).toBe(first.revision);
+  });
   it("publishes source-bound orchestration clocks separately and binds Search/Freeze cursors and ETags to them", async () => {
     const stageEventClocks = vi.fn().mockResolvedValue(p11StageEvents("a".repeat(64), {
       s3_completed_utc_ms: 10, s4_started_utc_ms: 11, s4_completed_utc_ms: 40,
@@ -185,6 +210,9 @@ describe("RS-02 retained current-source named read models", () => {
 
     expect(evidence.passport.artifact_table_rows).toMatchObject({ observations: 3, trials: 2 });
     expect(split.fold_plan.folds).toHaveLength(2);
+    expect(split.revision).toBe(currentSourceReadRevision("split", seal));
+    expect(split.etag).not.toBe(`"${split.revision}"`);
+    expect(sealed(await current.split(scope, "run-rs02")).etag).toBe(split.etag);
     expect(split.guards.train_test_disjoint).toMatchObject({
       verdict: "NOT_CHECKABLE", reason_code: "S05_TEMPORAL_GUARDS_NOT_PUBLISHED",
     });
@@ -365,9 +393,10 @@ describe("RS-02 retained current-source named read models", () => {
 
   it("binds replay paging cursors to the retained revision and workspace", async () => {
     const repository = {
-      sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn(), rows: vi.fn().mockResolvedValue({
-        rows: observations.slice(0, 1), hasMore: true, hasPrevious: false, totalRows: 3,
-      }), observationSeries: vi.fn(), verifyRetainedImport: vi.fn(),
+      sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn(), rows: vi.fn().mockImplementation(
+        (_scope, _runId, _revision, kind: string) => kind === "FOLD" ? page(folds, 2) : {
+          rows: observations.slice(0, 1), hasMore: true, hasPrevious: false, totalRows: 3,
+        }), observationSeries: vi.fn(), verifyRetainedImport: vi.fn(),
     };
     const current = service(repository);
     const first = sealed(await current.replay(scope, "run-rs02", { limit: 1 }));

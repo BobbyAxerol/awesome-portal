@@ -1,4 +1,5 @@
-/** S05: verify only the retained fold windows; never infer a test verdict from fold existence. */
+/** S05: retained QuantBT WFO endpoints name observed bars (both inclusive), not P08 half-open declarations. */
+export const RETAINED_TRAIN_TEST_BASIS = "RETAINED_FOLD_INCLUSIVE_BAR_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V2" as const;
 export interface RetainedTrainTestWindow {
   fold_id: string;
   train_start_utc_ms: number | null;
@@ -17,7 +18,7 @@ export function trainTestDisjoint(
   purge: PublishedTemporalGuard,
   embargo: PublishedTemporalGuard,
 ) {
-  const basis = "RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1" as const;
+  const basis = RETAINED_TRAIN_TEST_BASIS;
   if (folds.length < 2) {
     return { verdict: "NOT_CHECKABLE" as const, basis, reason_code: "S05_FOLD_PLAN_NOT_COMPLETE" };
   }
@@ -27,12 +28,13 @@ export function trainTestDisjoint(
     if ([trainStart, trainEnd, testStart, testEnd].some((value) => value === null || !Number.isSafeInteger(value))) {
       return { verdict: "NOT_CHECKABLE" as const, basis, reason_code: "S05_FOLD_WINDOW_NOT_PUBLISHED" };
     }
-    if (trainStart! >= trainEnd! || testStart! >= testEnd!) {
+    // Equal endpoints describe one observed bar and are not an empty window.
+    if (trainStart! > trainEnd! || testStart! > testEnd!) {
       return { verdict: "FAIL" as const, basis, reason_code: "S05_FOLD_WINDOW_INVALID" };
     }
-    // Half-open UTC ranges: touching endpoints are disjoint; any positive
-    // intersection is a definitive failure, even if guard metadata is absent.
-    if (trainStart! < testEnd! && testStart! < trainEnd!) {
+    // The pinned wheel uses train_index[-1]/test_index[-1]. Touching
+    // endpoints share that observed bar: fail even with no guard metadata.
+    if (trainStart! <= testEnd! && testStart! <= trainEnd!) {
       return { verdict: "FAIL" as const, basis, reason_code: "S05_TRAIN_TEST_WINDOWS_OVERLAP" };
     }
   }

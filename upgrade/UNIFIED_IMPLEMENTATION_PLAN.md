@@ -7327,3 +7327,64 @@ shared-preview/production change. C4 done without deleting volumes/data;
 0 jobs/QA sessions, test identities disabled, owned cell removed. Claude
 consumes the generated fields and takes browser receipt; P23/P24 retain their
 separate genuine gates. No remote push is authorized by this delivery.
+
+#### Broad backend request reconciliation before P23 — 2026-10-03
+
+**IN_PROGRESS**, Codex `codex/be-gaps`, baseline `d1e0b839`; Bobby requests a
+wide queue/audit/Unified cross-check, then closure of overlooked requests.
+Three independent audits confirm §31/§32 accepted scopes are not reopened by
+old OPEN rows. The actionable F2b/F3/B4 leftovers are Atlas typed reason codes,
+Replay exact window/alpha binding metadata, P19 promotion fold/approval links
+and logical-attempt presentation labels. Each joins existing facts; absence,
+old seals, source authority and validators remain explicit.
+
+[Queue §33 — exact ownership, bounds, required tests and remaining gates](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#33-broad-request-reconciliation-before-p23--2026-10-03).
+Root owns shared snapshot/docs and the grouped mandatory hook; domain agents
+own disjoint backend/contracts/tests. No frontend edit, new engine run,
+shared preview mutation, remote push or dev/main/production change. Claude
+receives generated-field mapping and the still-unfixed legacy export
+prepare→download consumer gap; do not weaken workspace/admin/CSRF guards.
+
+The distinct remaining P23 gates are latest-candidate load/SLO, exact
+historical test-store custody, engine-two T07/T13, independent WFO recompute,
+negative/browser and aggregated acceptance. P24 remains downstream. Missing
+source facts are typed, not an automatic request to upgrade QuantBT; a
+historical audit alone is not a new implementation gap.
+
+**Delivery addendum — SCOPED_CODE_ACCEPTED, not P23/P24/product GO.** The
+broad read reconciliation adds Atlas typed absence/condition codes, Replay
+window/alpha navigation in both lanes, exact P19 approval disclosure and
+logical-attempt labels. It also fixes a newly confirmed S05 correctness bug:
+QuantBT retained fold ends are inclusive observed bars, so a shared endpoint
+is overlap; a one-bar window is valid. Split's HTTP ETag changes independently
+of existing source/Report/RC pins. Source manifests/seals and all frontend
+bytes remain untouched. Lineage uses immutable P22 receipt authority, no new
+Governance grant; actual disposable PG 4/4 covers role and binding negatives.
+
+[Full reconciliation, test limits, generated types and Claude mapping](./research_loop/evidence/P21/BROAD_REQUEST_RECONCILIATION_2026-10-03.md)
+and [backend queue §33](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#33-broad-request-reconciliation-before-p23--2026-10-03)
+supersede stale statuses without deleting the original audit. The normal
+grouped hook gates landing on `docs/research-loop-plan`; no remote push,
+frontend rebuild, engine rerun, shared preview or production change.
+
+Still genuinely open: BR-F3-02 applied purge/embargo proof (not an alias of
+disjointness); P23 coherent candidate/load, original lost historical test
+bytes, actual engine-two T07/T13, independent WFO recomputation and remaining
+browser refusal/DR acceptance; then P24. Legacy export consumer remains a
+Claude frontend handoff. BR-F3-04 old subtitles are superseded by W4B;
+BR-F3-05 uses actual P11 artifacts, never ten fabricated rows. Fixed IS is
+already served/consumed, while unavailable WFO IS/holdout stays typed.
+
+Full official regeneration also reproduced/repaired an order-dependent
+schema drift: the later metrics amender dropped Lineage's existing causal
+source enum while runtime/type retained it. Canonical generator + published
+regression now preserve that supported source. No engine data or authority
+was widened, and no accepted causal implementation was removed.
+
+**Pre-landing public-boundary correction:** the first normal hook refused
+new Replay `source_locator` via the existing RS-03 anti-leak assertion.
+Replay instead exposes strict public fact-class `basis` enums; no private
+path/host/relation or weakened assertion. The failed attempt remains in the
+receipt, and focused RS-03/Replay/contract tests plus the normal hook retry
+must pass before landing. All immutable source/cursor/Report/RC pins remain
+unchanged.

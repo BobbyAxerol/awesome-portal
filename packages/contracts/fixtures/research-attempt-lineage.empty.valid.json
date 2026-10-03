@@ -35,6 +35,16 @@
             "state": "NOT_APPLICABLE",
             "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
           },
+          "fold": null,
+          "fold_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
+          "approval_href": null,
+          "approval_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
           "availability": {
             "state": "NOT_PUBLISHED",
             "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
@@ -186,6 +196,6 @@
     }
   },
   "as_of_utc_ms": 1790035200000,
-  "lineage_revision": "p19r2_6c6409ae3549e9fee173f1d074bcea4f3a30d7c1e3698f107b45ff5aa95edbec",
-  "etag": "\"p19r2_6c6409ae3549e9fee173f1d074bcea4f3a30d7c1e3698f107b45ff5aa95edbec\""
+  "lineage_revision": "p19r2_d417200c98f8ab1ff03dd47e465f47743e15837f1a98c8b4e965838b5955465a",
+  "etag": "\"p19r2_d417200c98f8ab1ff03dd47e465f47743e15837f1a98c8b4e965838b5955465a\""
 }

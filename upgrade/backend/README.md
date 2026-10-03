@@ -1995,3 +1995,13 @@ P12 17/17 covers historical/concurrent bounded index consistency. No
 frontend/shared preview/production/remote change; C4 complete without volumes.
 See [the canonical Research packet](../research_loop/evidence/P21/W1_W2_BACKEND_REQUEST_CLOSEOUT_2026-10-03.md)
 for exact hashes/tests and Claude binding. P23/P24 are separate gates.
+
+**2026-10-03 Research broad reconciliation:** Atlas public reason/condition
+codes, both Replay navigation contracts, exact P19 approval/attempt display
+mapping and an inclusive-retained-fold S05 correctness fix are delivered.
+Presentation validators do not rewrite private manifests or frozen source/
+Report/RC pins. Actual lineage PostgreSQL 4/4 keeps Governance inaccessible
+to the Research runtime role. No frontend/runtime/production/push change;
+one grouped normal hook gates landing. [Receipt and consumer mapping](../research_loop/evidence/P21/BROAD_REQUEST_RECONCILIATION_2026-10-03.md).
+Purge/embargo applied proof and genuine P23/P24 gates remain explicit; stale
+subtitle/ten-artifact requests do not reopen accepted W4/source semantics.

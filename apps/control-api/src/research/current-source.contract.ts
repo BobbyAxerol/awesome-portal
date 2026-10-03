@@ -16,6 +16,7 @@ import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
 
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
+import { ReplayNavigationShape } from "./replay-navigation.contract";
 import { WhatIfSchema } from "./whatif.contract";
 import { FoldOrderingSchema } from "./fold-ordering";
 import { P11StageEventsSchema } from "./p11-stage-events";
@@ -715,7 +716,9 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     oos_used_for_selection: GuardFactSchema,
     train_test_disjoint: z.object({
       verdict: z.enum(["PASS", "FAIL", "NOT_CHECKABLE"]),
-      basis: z.literal("RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1"),
+      // V1 remains readable for old captured responses; new reads publish inclusive-bar V2.
+      basis: z.enum(["RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1",
+        "RETAINED_FOLD_INCLUSIVE_BAR_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V2"]),
       reason_code: ReasonCodeSchema.nullable(),
     }).strict().optional(),
   }).strict(),
@@ -949,6 +952,7 @@ export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
 }).strict();
 
 export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
+  ...ReplayNavigationShape,
   schema_version: z.literal("research.current-source-replay.v1"),
   replay: z.object({
     source_observation_count: z.number().int().positive().max(2_000_000),

@@ -35,6 +35,16 @@
             "state": "NOT_APPLICABLE",
             "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
           },
+          "fold": null,
+          "fold_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
+          "approval_href": null,
+          "approval_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
           "availability": {
             "state": "NOT_PUBLISHED",
             "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
@@ -92,6 +102,12 @@
   "attempts": [
     {
       "attempt_id": "att_p041",
+      "display_label": null,
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P19_LOGICAL_ATTEMPT_HISTORY_PREFIX_NOT_PUBLISHED"
+      },
       "parent_attempt_id": "att_p012",
       "parent_state": "OUTSIDE_RETURNED_GRAPH",
       "alpha_version_id": "av-p19-1",
@@ -208,6 +224,12 @@
     },
     {
       "attempt_id": "att_p042",
+      "display_label": null,
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P19_LOGICAL_ATTEMPT_HISTORY_PREFIX_NOT_PUBLISHED"
+      },
       "parent_attempt_id": "att_p041",
       "parent_state": "RETURNED",
       "alpha_version_id": "av-p19-1",
@@ -581,6 +603,12 @@
     },
     {
       "attempt_id": "att_p043",
+      "display_label": null,
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P19_LOGICAL_ATTEMPT_HISTORY_PREFIX_NOT_PUBLISHED"
+      },
       "parent_attempt_id": null,
       "parent_state": "ROOT",
       "alpha_version_id": "av-p19-1",
@@ -792,6 +820,6 @@
     }
   },
   "as_of_utc_ms": 1790035200000,
-  "lineage_revision": "p19r2_5f20a0d1f311cf9c7d5c6b3666a755cf7d466a1775655218b88f0d4a822f1842",
-  "etag": "\"p19r2_5f20a0d1f311cf9c7d5c6b3666a755cf7d466a1775655218b88f0d4a822f1842\""
+  "lineage_revision": "p19r2_28bcd8cd9135dad504edfbd98056e73b79fd93dcb9e2521c057c092a7f321cfa",
+  "etag": "\"p19r2_28bcd8cd9135dad504edfbd98056e73b79fd93dcb9e2521c057c092a7f321cfa\""
 }

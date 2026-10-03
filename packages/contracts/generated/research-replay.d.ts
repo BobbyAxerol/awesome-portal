@@ -25,6 +25,40 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Existing immutable metadata only. Retained fold start/end are exact source bounds, not converted half-open dates; the top range is an envelope, not contiguous coverage. Sum counts may overlap and are not unique bars. A partial NOT_PUBLISHED object may retain known bounds. Holdout never publishes bars or source values. */
+        ReplayNavigationWindow: {
+            /** @enum {unknown} */
+            window: "IS" | "OOS" | "HOLDOUT";
+            start_utc_ms: number | null;
+            end_utc_ms: number | null;
+            bars: number | null;
+            bounds_semantics: ("START_INCLUSIVE_END_EXCLUSIVE" | "SOURCE_RETAINED_FOLD_BOUNDS") | null;
+            count_basis: ("FULL_SOURCE_WINDOW_OBSERVATIONS" | "SUM_OF_FOLD_WINDOWS_MAY_OVERLAP") | null;
+            segments: {
+                fold_id: string;
+                start_utc_ms: number;
+                end_utc_ms: number;
+                bars: number | null;
+            }[];
+            /** @enum {unknown} */
+            basis: "BOUND_WINDOW_METADATA" | "DECLARED_IS_WINDOW" | "DECLARED_OOS_WINDOW" | "DECLARED_HOLDOUT_WINDOW" | "RETAINED_FOLD_TRAIN_WINDOWS" | "RETAINED_FOLD_TEST_WINDOWS";
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: string | null;
+            };
+        } & (unknown & unknown);
+        ReplayNavigationIdentity: {
+            alpha_id: string | null;
+            alpha_version_id: string | null;
+            /** @enum {unknown} */
+            basis: "IMMUTABLE_REQUEST_ALPHA_BINDING" | "HUB_BOUND_ALPHA_IDENTITY";
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: string | null;
+            };
+        } & unknown;
         WorkspaceId: string;
         RunId: string;
         UtcMilliseconds: number;
@@ -221,6 +255,17 @@ export interface components {
             source_absences: {
                 [key: string]: components["schemas"]["SourceGap"];
             };
+            identity?: components["schemas"]["ReplayNavigationIdentity"];
+            is_window?: components["schemas"]["ReplayNavigationWindow"];
+            oos_window?: components["schemas"]["ReplayNavigationWindow"];
+            holdout_window?: components["schemas"]["ReplayNavigationWindow"];
+            /**
+             * @description Separate additive presentation; immutable replay source revision, source digest and frozen Report/RC pins are unchanged.
+             * @constant
+             */
+            presentation_revision?: "research.replay-navigation.v1";
+            /** @description Canonical SHA256 of presentation_revision plus identity/is_window/oos_window/holdout_window. Neither a source digest nor an HTTP cache validator (Replay is private no-store). */
+            presentation_digest?: string;
         };
         Problem: {
             error: {

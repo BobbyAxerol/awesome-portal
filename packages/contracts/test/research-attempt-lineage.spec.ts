@@ -63,4 +63,15 @@ describe("P19 published Research Attempt Lineage contract", () => {
     expect(document).toContain("same-origin");
     expect(document).toContain("never be replaced by best/newest/ACTIVE logic");
   });
+
+  it("preserves the supported causal metric source across the full generation order", () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, "utf8"));
+    const source = openApi.components.schemas.RunMetricFact.properties.source.anyOf[0].enum;
+    expect(source).toContain("RS02_RETAINED_OUTER_FOLD_SELECTIONS");
+    expect(readFileSync(generatedPath, "utf8")).toContain("RS02_RETAINED_OUTER_FOLD_SELECTIONS");
+    // The metrics amender is also called by the later Compare target.
+    // It must retain this source rather than relying on another causal pass.
+    expect(readFileSync(join(ROOT, "tooling", "generate-research-library-lineage-metrics.mjs"), "utf8"))
+      .toContain('"RS02_RETAINED_OUTER_FOLD_SELECTIONS"');
+  });
 });

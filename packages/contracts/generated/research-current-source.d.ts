@@ -160,126 +160,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Source-owned selection for this outer fold only. Objective uses nested inner validation, not outer OOS. Candidate metrics have a separate post-selection outer scope. Retained IDs are study-qualified; local source trial IDs remain in trial facts. Runtime validates exact inner count, unique IDs and train-before-test ranges inside outer IS; no engine wall clock is inferred. W1 ordinal: display only, source number + 1. Qualified studies require a retained native study/trial mapping and STUDY_LOCAL scope; never a run-global trial. Null carries an explicit reason. Not a digest or selection identity. */
-        DisplayCausalSelection: {
-            /** @constant */
-            schema_version: "research.current-source-causal-selection.v1";
-            /** @constant */
-            scope: "OUTER_FOLD_SELECTION";
-            study_id: string;
-            fold_seed: number;
-            selected_trial_id: string;
-            parameters: {
-                [key: string]: string;
-            };
-            objective: string | null;
-            /** @constant */
-            objective_kind: "INNER_VALIDATION_DECAY_J";
-            candidate_is_metric: string | null;
-            candidate_oos_metric: string | null;
-            candidate_decay: string | null;
-            /** @constant */
-            candidate_metrics_scope: "OUTER_FOLD_POST_SELECTION";
-            /** @constant */
-            candidate_is_scope: "INNER_VALIDATION_IS_MEAN";
-            /** @constant */
-            candidate_oos_scope: "OUTER_FOLD_OOS";
-            /** @constant */
-            candidate_decay_scope: "INNER_IS_MEAN_MINUS_OUTER_OOS";
-            candidate_count: number;
-            /** @constant */
-            study_trial_rows: 3;
-            /** @constant */
-            outer_oos_used_for_selection: false;
-            /** @constant */
-            causality_claim: "strict_nested_fold_local_retraining";
-            inner_fold_count: number;
-            inner_validation: {
-                /** @enum {unknown} */
-                inner_split_frequency: "weekly" | "monthly" | "quarterly";
-                /** @enum {unknown} */
-                inner_window_mode: "expanding" | "rolling";
-                inner_train_window: string;
-                inner_min_folds: number;
-            };
-            inner_folds: {
-                inner_fold_id: string;
-                train_start_utc_ms: number;
-                train_end_utc_ms: number;
-                test_start_utc_ms: number;
-                test_end_utc_ms: number;
-                /** @constant */
-                outer_oos_used_for_selection: false;
-            }[];
-            selected_trial_ordinal?: number | null;
-            selected_trial_ordinal_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
-            selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
-        };
-        SearchStudySurface: {
-            /** @constant */
-            scope: "INNER_VALIDATION_OUTER_STUDY";
-            fold_id: string;
-            study_id: string;
-            surface: components["schemas"]["SearchSurface"] & {
-                /** @constant */
-                source_trial_count?: 3;
-                complete_trial_count?: number;
-                emitted_point_count?: number;
-                points?: unknown[];
-            };
-        };
-        /** @description Source-owned selection for this outer fold only. Objective uses nested inner validation, not outer OOS. Candidate metrics have a separate post-selection outer scope. Retained IDs are study-qualified; local source trial IDs remain in trial facts. Runtime validates exact inner count, unique IDs and train-before-test ranges inside outer IS; no engine wall clock is inferred. */
-        CausalSelection: {
-            /** @constant */
-            schema_version: "research.current-source-causal-selection.v1";
-            /** @constant */
-            scope: "OUTER_FOLD_SELECTION";
-            study_id: string;
-            fold_seed: number;
-            selected_trial_id: string;
-            parameters: {
-                [key: string]: string;
-            };
-            objective: string | null;
-            /** @constant */
-            objective_kind: "INNER_VALIDATION_DECAY_J";
-            candidate_is_metric: string | null;
-            candidate_oos_metric: string | null;
-            candidate_decay: string | null;
-            /** @constant */
-            candidate_metrics_scope: "OUTER_FOLD_POST_SELECTION";
-            /** @constant */
-            candidate_is_scope: "INNER_VALIDATION_IS_MEAN";
-            /** @constant */
-            candidate_oos_scope: "OUTER_FOLD_OOS";
-            /** @constant */
-            candidate_decay_scope: "INNER_IS_MEAN_MINUS_OUTER_OOS";
-            candidate_count: number;
-            /** @constant */
-            study_trial_rows: 3;
-            /** @constant */
-            outer_oos_used_for_selection: false;
-            /** @constant */
-            causality_claim: "strict_nested_fold_local_retraining";
-            inner_fold_count: number;
-            inner_validation: {
-                /** @enum {unknown} */
-                inner_split_frequency: "weekly" | "monthly" | "quarterly";
-                /** @enum {unknown} */
-                inner_window_mode: "expanding" | "rolling";
-                inner_train_window: string;
-                inner_min_folds: number;
-            };
-            inner_folds: {
-                inner_fold_id: string;
-                train_start_utc_ms: number;
-                train_end_utc_ms: number;
-                test_start_utc_ms: number;
-                test_end_utc_ms: number;
-                /** @constant */
-                outer_oos_used_for_selection: false;
-            }[];
-        };
         EnrichedAnalysis: {
             /** @constant */
             schema_version: "research.enriched-analysis.v1";
@@ -962,6 +842,160 @@ export interface components {
             at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
             value: components["schemas"]["RetainedAnalyticsV2Decimal"];
         }[];
+        /** @description Existing immutable metadata only. Retained fold start/end are exact source bounds, not converted half-open dates; the top range is an envelope, not contiguous coverage. Sum counts may overlap and are not unique bars. A partial NOT_PUBLISHED object may retain known bounds. Holdout never publishes bars or source values. */
+        ReplayNavigationWindow: {
+            /** @enum {unknown} */
+            window: "IS" | "OOS" | "HOLDOUT";
+            start_utc_ms: number | null;
+            end_utc_ms: number | null;
+            bars: number | null;
+            bounds_semantics: ("START_INCLUSIVE_END_EXCLUSIVE" | "SOURCE_RETAINED_FOLD_BOUNDS") | null;
+            count_basis: ("FULL_SOURCE_WINDOW_OBSERVATIONS" | "SUM_OF_FOLD_WINDOWS_MAY_OVERLAP") | null;
+            segments: {
+                fold_id: string;
+                start_utc_ms: number;
+                end_utc_ms: number;
+                bars: number | null;
+            }[];
+            /** @enum {unknown} */
+            basis: "BOUND_WINDOW_METADATA" | "DECLARED_IS_WINDOW" | "DECLARED_OOS_WINDOW" | "DECLARED_HOLDOUT_WINDOW" | "RETAINED_FOLD_TRAIN_WINDOWS" | "RETAINED_FOLD_TEST_WINDOWS";
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: string | null;
+            };
+        } & (unknown & unknown);
+        ReplayNavigationIdentity: {
+            alpha_id: string | null;
+            alpha_version_id: string | null;
+            /** @enum {unknown} */
+            basis: "IMMUTABLE_REQUEST_ALPHA_BINDING" | "HUB_BOUND_ALPHA_IDENTITY";
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: string | null;
+            };
+        } & unknown;
+        /** @description Source-owned selection for this outer fold only. Objective uses nested inner validation, not outer OOS. Candidate metrics have a separate post-selection outer scope. Retained IDs are study-qualified; local source trial IDs remain in trial facts. Runtime validates exact inner count, unique IDs and train-before-test ranges inside outer IS; no engine wall clock is inferred. W1 ordinal: display only, source number + 1. Qualified studies require a retained native study/trial mapping and STUDY_LOCAL scope; never a run-global trial. Null carries an explicit reason. Not a digest or selection identity. */
+        DisplayCausalSelection: {
+            /** @constant */
+            schema_version: "research.current-source-causal-selection.v1";
+            /** @constant */
+            scope: "OUTER_FOLD_SELECTION";
+            study_id: string;
+            fold_seed: number;
+            selected_trial_id: string;
+            parameters: {
+                [key: string]: string;
+            };
+            objective: string | null;
+            /** @constant */
+            objective_kind: "INNER_VALIDATION_DECAY_J";
+            candidate_is_metric: string | null;
+            candidate_oos_metric: string | null;
+            candidate_decay: string | null;
+            /** @constant */
+            candidate_metrics_scope: "OUTER_FOLD_POST_SELECTION";
+            /** @constant */
+            candidate_is_scope: "INNER_VALIDATION_IS_MEAN";
+            /** @constant */
+            candidate_oos_scope: "OUTER_FOLD_OOS";
+            /** @constant */
+            candidate_decay_scope: "INNER_IS_MEAN_MINUS_OUTER_OOS";
+            candidate_count: number;
+            /** @constant */
+            study_trial_rows: 3;
+            /** @constant */
+            outer_oos_used_for_selection: false;
+            /** @constant */
+            causality_claim: "strict_nested_fold_local_retraining";
+            inner_fold_count: number;
+            inner_validation: {
+                /** @enum {unknown} */
+                inner_split_frequency: "weekly" | "monthly" | "quarterly";
+                /** @enum {unknown} */
+                inner_window_mode: "expanding" | "rolling";
+                inner_train_window: string;
+                inner_min_folds: number;
+            };
+            inner_folds: {
+                inner_fold_id: string;
+                train_start_utc_ms: number;
+                train_end_utc_ms: number;
+                test_start_utc_ms: number;
+                test_end_utc_ms: number;
+                /** @constant */
+                outer_oos_used_for_selection: false;
+            }[];
+            selected_trial_ordinal?: number | null;
+            selected_trial_ordinal_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
+            selected_trial_ordinal_reason_code?: ("SELECTION_HAS_NO_TRIAL" | "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED" | "STUDY_LOCAL_TRIAL_MAPPING_NOT_PUBLISHED") | null;
+        };
+        SearchStudySurface: {
+            /** @constant */
+            scope: "INNER_VALIDATION_OUTER_STUDY";
+            fold_id: string;
+            study_id: string;
+            surface: components["schemas"]["SearchSurface"] & {
+                /** @constant */
+                source_trial_count?: 3;
+                complete_trial_count?: number;
+                emitted_point_count?: number;
+                points?: unknown[];
+            };
+        };
+        /** @description Source-owned selection for this outer fold only. Objective uses nested inner validation, not outer OOS. Candidate metrics have a separate post-selection outer scope. Retained IDs are study-qualified; local source trial IDs remain in trial facts. Runtime validates exact inner count, unique IDs and train-before-test ranges inside outer IS; no engine wall clock is inferred. */
+        CausalSelection: {
+            /** @constant */
+            schema_version: "research.current-source-causal-selection.v1";
+            /** @constant */
+            scope: "OUTER_FOLD_SELECTION";
+            study_id: string;
+            fold_seed: number;
+            selected_trial_id: string;
+            parameters: {
+                [key: string]: string;
+            };
+            objective: string | null;
+            /** @constant */
+            objective_kind: "INNER_VALIDATION_DECAY_J";
+            candidate_is_metric: string | null;
+            candidate_oos_metric: string | null;
+            candidate_decay: string | null;
+            /** @constant */
+            candidate_metrics_scope: "OUTER_FOLD_POST_SELECTION";
+            /** @constant */
+            candidate_is_scope: "INNER_VALIDATION_IS_MEAN";
+            /** @constant */
+            candidate_oos_scope: "OUTER_FOLD_OOS";
+            /** @constant */
+            candidate_decay_scope: "INNER_IS_MEAN_MINUS_OUTER_OOS";
+            candidate_count: number;
+            /** @constant */
+            study_trial_rows: 3;
+            /** @constant */
+            outer_oos_used_for_selection: false;
+            /** @constant */
+            causality_claim: "strict_nested_fold_local_retraining";
+            inner_fold_count: number;
+            inner_validation: {
+                /** @enum {unknown} */
+                inner_split_frequency: "weekly" | "monthly" | "quarterly";
+                /** @enum {unknown} */
+                inner_window_mode: "expanding" | "rolling";
+                inner_train_window: string;
+                inner_min_folds: number;
+            };
+            inner_folds: {
+                inner_fold_id: string;
+                train_start_utc_ms: number;
+                train_end_utc_ms: number;
+                test_start_utc_ms: number;
+                test_end_utc_ms: number;
+                /** @constant */
+                outer_oos_used_for_selection: false;
+            }[];
+        };
         /** @description P11 records Portal orchestration, not engine chronology: S3 completion can precede the actual study inside S4. No search-completed, pool-frozen, first-OOS-read or causal-order assertion is inferred. Missing fields carry individual reasons; legacy responses may omit this additive block. */
         P11StageEvents: {
             /** @constant */
@@ -1287,8 +1321,11 @@ export interface components {
                 train_test_disjoint?: {
                     /** @enum {unknown} */
                     verdict: "PASS" | "FAIL" | "NOT_CHECKABLE";
-                    /** @constant */
-                    basis: "RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1";
+                    /**
+                     * @description V1 remains readable for old captures. New retained WFO reads use V2: both endpoints name inclusive observed bars. This does not attest applied purge or embargo.
+                     * @enum {unknown}
+                     */
+                    basis: "RETAINED_FOLD_UTC_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V1" | "RETAINED_FOLD_INCLUSIVE_BAR_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V2";
                     reason_code: string | null;
                 };
                 inner_min_folds?: components["schemas"]["GuardFact"];
@@ -2026,6 +2063,17 @@ export interface components {
                 child_audit: components["schemas"]["Fact"];
             };
             execution: components["schemas"]["ReplayExecution"];
+            identity?: components["schemas"]["ReplayNavigationIdentity"];
+            is_window?: components["schemas"]["ReplayNavigationWindow"];
+            oos_window?: components["schemas"]["ReplayNavigationWindow"];
+            holdout_window?: components["schemas"]["ReplayNavigationWindow"];
+            /**
+             * @description Separate additive presentation; immutable replay source revision, source digest and frozen Report/RC pins are unchanged.
+             * @constant
+             */
+            presentation_revision?: "research.replay-navigation.v1";
+            /** @description Canonical SHA256 of presentation_revision plus identity/is_window/oos_window/holdout_window. Neither a source digest nor an HTTP cache validator (Replay is private no-store). */
+            presentation_digest?: string;
         };
         /** @description RF-05 CG-P13-09: the run's immutable P10 adapter binding is the P04 fixed qualification, which can never be sealed into the RS-02 Advanced-WFO lane. Nothing is pending; do not retry. */
         LaneNotApplicable: {

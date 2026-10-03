@@ -35,6 +35,16 @@
             "state": "NOT_APPLICABLE",
             "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
           },
+          "fold": null,
+          "fold_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
+          "approval_href": null,
+          "approval_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
           "availability": {
             "state": "NOT_PUBLISHED",
             "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
@@ -147,6 +157,16 @@
             "state": "NOT_PUBLISHED",
             "reason_code": "P19_P22_PICK_RECEIPT_NOT_AVAILABLE"
           },
+          "fold": null,
+          "fold_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_P22_SELECTED_FOLD_NOT_PUBLISHED"
+          },
+          "approval_href": null,
+          "approval_availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_P22_PICK_RECEIPT_NOT_AVAILABLE"
+          },
           "availability": {
             "state": "AVAILABLE",
             "reason_code": null
@@ -248,6 +268,12 @@
   "attempts": [
     {
       "attempt_id": "att_01",
+      "display_label": "att_01",
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
       "parent_attempt_id": null,
       "parent_state": "ROOT",
       "alpha_version_id": "av-p19-momentum-0-9-2",
@@ -370,6 +396,12 @@
     },
     {
       "attempt_id": "att_02",
+      "display_label": "att_02",
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
       "parent_attempt_id": "att_01",
       "parent_state": "RETURNED",
       "alpha_version_id": "av-p19-momentum-0-9-2",
@@ -503,6 +535,12 @@
     },
     {
       "attempt_id": "att_03",
+      "display_label": "att_03",
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
       "parent_attempt_id": "att_02",
       "parent_state": "RETURNED",
       "alpha_version_id": "av-p19-momentum-0-9-3",
@@ -645,6 +683,12 @@
     },
     {
       "attempt_id": "att_04",
+      "display_label": "att_04",
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
       "parent_attempt_id": "att_03",
       "parent_state": "RETURNED",
       "alpha_version_id": "av-p19-momentum-0-9-3",
@@ -808,6 +852,12 @@
     },
     {
       "attempt_id": "att_05",
+      "display_label": "att_05",
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
       "parent_attempt_id": "att_03",
       "parent_state": "RETURNED",
       "alpha_version_id": "av-p19-momentum-0-9-3",
@@ -935,6 +985,12 @@
     },
     {
       "attempt_id": "att_06",
+      "display_label": "att_06",
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
       "parent_attempt_id": "att_03",
       "parent_state": "RETURNED",
       "alpha_version_id": "av-p19-momentum-0-9-3",
@@ -1051,6 +1107,12 @@
     },
     {
       "attempt_id": "att_07",
+      "display_label": "att_07",
+      "display_label_basis": "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1",
+      "display_label_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
       "parent_attempt_id": null,
       "parent_state": "ROOT",
       "alpha_version_id": "av-p19-momentum-0-9-3",
@@ -1266,6 +1328,6 @@
     }
   },
   "as_of_utc_ms": 1790035200000,
-  "lineage_revision": "p19r2_549d7bec64b574664b1cd18257204baa99e986347bfb939ec2558488e29e8776",
-  "etag": "\"p19r2_549d7bec64b574664b1cd18257204baa99e986347bfb939ec2558488e29e8776\""
+  "lineage_revision": "p19r2_0681c074ccacc5476167b6fade82bc612f079f4d69ee5f7bc53acfb1b54cde48",
+  "etag": "\"p19r2_0681c074ccacc5476167b6fade82bc612f079f4d69ee5f7bc53acfb1b54cde48\""
 }

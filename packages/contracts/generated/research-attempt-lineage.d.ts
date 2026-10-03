@@ -111,6 +111,12 @@ export interface components {
             selected_trial_availability?: components["schemas"]["Availability"];
             selected_params_digest?: components["schemas"]["Digest"] | null;
             selected_params_availability?: components["schemas"]["Availability"];
+            /** @description BR-S11-01: nullable source-attested selected fold. The current P22 receipt does not publish it; global trial identifiers must never be decoded into a fold. */
+            fold?: number | null;
+            fold_availability?: components["schemas"]["Availability"];
+            /** @description Only the exact persisted P22 receipt, sealed RC/run binding and same-workspace R1 approval may supply this stable Portal route. */
+            approval_href?: string | null;
+            approval_availability?: components["schemas"]["Availability"];
             availability: components["schemas"]["Availability"];
             /** @description W6b DR-03: the only authority that may publish a pick is a governed approval of a sealed release candidate (P22). NOT_CONNECTED keeps the pick NOT_PUBLISHED. */
             source_authority: {
@@ -211,6 +217,11 @@ export interface components {
         };
         AttemptNode: {
             attempt_id: components["schemas"]["OpaqueId"];
+            /** @description BR-F3-03: att_NN is PRESENTATION ONLY: chronological full-history logical-attempt rank across all Alpha versions in this workspace, excluding DIAGNOSTIC attempts, ordered by exact created_at then attempt_id. Worker retries, child runs and page-local indices never define it. The keyset prefix is counted in the same existing repeatable-read census; attempt_id remains the identity. null with a typed reason if the full prefix is unavailable. */
+            display_label?: string | null;
+            /** @constant */
+            display_label_basis?: "PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1";
+            display_label_availability?: components["schemas"]["Availability"];
             parent_attempt_id: components["schemas"]["OpaqueId"] | null;
             /** @enum {unknown} */
             parent_state: "ROOT" | "RETURNED" | "OUTSIDE_RETURNED_GRAPH";

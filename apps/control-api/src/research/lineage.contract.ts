@@ -131,6 +131,12 @@ const PromotionPickSchema = z.object({
   selected_trial_availability: ResearchLineageAvailabilitySchema.optional(),
   selected_params_digest: DigestSchema.nullable().optional(),
   selected_params_availability: ResearchLineageAvailabilitySchema.optional(),
+  /** BR-S11-01: P22 does not attest a selected fold; never decode a global trial id. */
+  fold: z.number().int().positive().nullable().optional(),
+  fold_availability: ResearchLineageAvailabilitySchema.optional(),
+  /** Exact persisted P22 receipt/RC/run and same-workspace R1 approval only. */
+  approval_href: z.string().regex(/^\/governance\/approvals\/[A-Za-z0-9][A-Za-z0-9._:-]{0,190}\/r1$/).nullable().optional(),
+  approval_availability: ResearchLineageAvailabilitySchema.optional(),
   availability: ResearchLineageAvailabilitySchema,
   /**
    * W6b DR-03: the only authority that may publish a pick is a governed
@@ -254,6 +260,10 @@ const ExposureSchema = z.object({
 
 export const ResearchAttemptLineageNodeSchema = z.object({
   attempt_id: OpaqueIdSchema,
+  /** BR-F3-03: canonical full-Alpha logical order, not a worker retry or page index. */
+  display_label: z.string().regex(/^att_[0-9]{2,16}$/).nullable().optional(),
+  display_label_basis: z.literal("PRESENTATION_ONLY_WORKSPACE_ALPHA_CREATED_AT_ID_V1").optional(),
+  display_label_availability: ResearchLineageAvailabilitySchema.optional(),
   parent_attempt_id: OpaqueIdSchema.nullable(),
   parent_state: z.enum(["ROOT", "RETURNED", "OUTSIDE_RETURNED_GRAPH"]),
   alpha_version_id: OpaqueIdSchema,

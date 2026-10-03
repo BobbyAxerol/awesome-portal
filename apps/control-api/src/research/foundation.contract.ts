@@ -178,6 +178,15 @@ const NotPublishedFactSchema = z.object({
   reason: z.string().min(1).max(400),
   source: SourceLocatorSchema.nullable().optional(),
 }).strict();
+/** Portal presentation labels classify the absent slot, not an engine cause. */
+export const ResearchAtlasAbsenceReasonCodeSchema = z.enum([
+  "ATLAS_CERT_CAP_NOT_PUBLISHED", "ATLAS_OBJECTIVE_NOT_PUBLISHED",
+  "ATLAS_READS_NOT_PUBLISHED", "ATLAS_AVOID_WHEN_NOT_PUBLISHED",
+]);
+const PresentedNotPublishedFactSchema = NotPublishedFactSchema.extend({
+  /** Additive: older captured Atlas responses do not carry a Portal label. */
+  reason_code: ResearchAtlasAbsenceReasonCodeSchema.optional(),
+});
 const ScheduleFactSchema = z.object({
   schedule: z.enum(["global", "per_fold_decay", "per_fold_causal"]),
   validation_claim: FactToken,
@@ -392,6 +401,25 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
 
 export type ResearchEngineAtlasPrivate = z.infer<typeof ResearchEngineAtlasPrivateSchema>;
 
+/** Separate public boundary: no Portal label is accepted from the private source. */
+export const ResearchEngineAtlasPublicSchema = ResearchEngineAtlasPrivateSchema.extend({
+  modes: z.array(AtlasModeSchema.extend({
+    facts: ModeFactsSchema.extend({
+      schedules: z.array(ScheduleFactSchema.extend({
+        cert_cap: PresentedNotPublishedFactSchema,
+        /** Portal template label only; the source condition remains the authority. */
+        oos_use_condition_code: z.literal("ATLAS_SOURCE_OOS_USE_CONDITION").optional(),
+      }).refine(schedule => schedule.oos_use_condition_code === undefined || typeof schedule.oos_use_condition === "string", {
+        path: ["oos_use_condition_code"], message: "A condition label requires an actual source condition.",
+      })).min(1).max(3),
+      objective: z.union([ObjectiveFactSchema, PresentedNotPublishedFactSchema]),
+      reads: z.union([ReadsFactSchema, PresentedNotPublishedFactSchema]),
+      avoid_when: PresentedNotPublishedFactSchema,
+    }).optional(),
+  })).min(1).max(8),
+});
+export type ResearchEngineAtlasPublic = z.infer<typeof ResearchEngineAtlasPublicSchema>;
+
 /** Portal admission is separate from the pinned QuantBT source catalogue. */
 export interface ResearchPortalAdmission {
   schema_version: "research.portal-admission.v1";
@@ -436,7 +464,7 @@ export type ResearchAtlasResponse = {
   schema_version: "research.engine-atlas-response.v1";
   selected_release_id: string;
   selected_release_kind: "CURRENT";
-  atlas: ResearchEngineAtlasPrivate;
+  atlas: ResearchEngineAtlasPublic;
   portal_admission: ResearchPortalAdmission;
   historical_identity: null;
   etag: string;
@@ -448,6 +476,8 @@ export type ResearchAtlasResponse = {
   historical_identity: ResearchEngineAtlasPrivate["historical_releases"][number] & {
     facts_state: "NOT_PUBLISHED";
     facts_reason: string;
+    /** Portal presentation only; absent on older captured responses. */
+    facts_reason_code?: "ATLAS_HISTORICAL_FACTS_NOT_PUBLISHED";
   };
   etag: string;
 };

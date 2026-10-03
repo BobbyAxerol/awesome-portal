@@ -195,10 +195,13 @@ export interface components {
             sha256: string;
             anchor: string;
         };
+        /** @description The original reason and source remain unchanged. Optional reason_code is a Portal-owned presentation label for the absent fact slot, not a source cause, certification level or admission grant. Older captured responses omit it. */
         AtlasNotPublishedFact: {
             /** @constant */
             state: "NOT_PUBLISHED";
             reason: string;
+            /** @enum {unknown} */
+            reason_code?: "ATLAS_CERT_CAP_NOT_PUBLISHED" | "ATLAS_OBJECTIVE_NOT_PUBLISHED" | "ATLAS_READS_NOT_PUBLISHED" | "ATLAS_AVOID_WHEN_NOT_PUBLISHED";
             source?: components["schemas"]["AtlasSourceLocator"] | null;
         };
         AtlasScheduleFact: {
@@ -212,6 +215,11 @@ export interface components {
             /** @enum {unknown} */
             oos_use: "USED" | "NOT_USED";
             oos_use_condition?: string | null;
+            /**
+             * @description Optional Portal presentation template code, only when the source condition string is present. It does not assert selection, certification or admission. Preserve the original condition for the tooltip; older responses omit this code.
+             * @constant
+             */
+            oos_use_condition_code?: "ATLAS_SOURCE_OOS_USE_CONDITION";
             params_semantics: string;
             cert_cap: components["schemas"]["AtlasNotPublishedFact"];
             source: components["schemas"]["AtlasSourceLocator"][];
@@ -539,6 +547,11 @@ export interface components {
             /** @constant */
             facts_state: "NOT_PUBLISHED";
             facts_reason: string;
+            /**
+             * @description Optional Portal presentation label: only the retained historical identity is available. No historical route, mode or claim facts are inferred. Older captured responses omit it.
+             * @constant
+             */
+            facts_reason_code?: "ATLAS_HISTORICAL_FACTS_NOT_PUBLISHED";
         };
         /** @description CG-P04-06: the backend the pinned constructor resolves with no caller override. SPEC_DEPENDENT means the constructor needs a typed specification first; its support matrix lists backends per specification. */
         AtlasResolvedBackend: {

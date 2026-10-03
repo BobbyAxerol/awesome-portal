@@ -26,6 +26,7 @@ import {
 } from "./journey.descriptor.v5";
 import { ResearchMetadataRepository } from "./repository";
 import { researchPortalAdmission } from "./portal-admission";
+import { presentResearchAtlas, RESEARCH_ATLAS_PRESENTATION_REVISION } from "./atlas-presentation";
 
 @Injectable()
 export class ResearchFoundationService {
@@ -82,8 +83,9 @@ export class ResearchFoundationService {
           ...historical,
           facts_state: "NOT_PUBLISHED",
           facts_reason: "Only the historical release identity is retained; route, mode and claim facts for that release are not published.",
+          facts_reason_code: "ATLAS_HISTORICAL_FACTS_NOT_PUBLISHED",
         },
-        etag: this.etag("atlas", `${atlas.manifest_revision}:${selected.releaseId}:historical-identity`),
+        etag: this.etag("atlas", `${RESEARCH_ATLAS_PRESENTATION_REVISION}:${atlas.manifest_revision}:${selected.releaseId}:historical-identity`),
       };
     }
     if (query.route && !atlas.routes.some((route) => route.route_id === query.route)) {
@@ -105,12 +107,12 @@ export class ResearchFoundationService {
       schema_version: "research.engine-atlas-response.v1",
       selected_release_id: selected.releaseId,
       selected_release_kind: selected.kind,
-      atlas,
+      atlas: presentResearchAtlas(atlas),
       portal_admission: portalAdmission,
       historical_identity: null,
       etag: this.etag(
         "atlas",
-        `${atlas.manifest_revision}:${selected.releaseId}:${query.route ?? ""}:${query.mode ?? ""}:${JSON.stringify(portalAdmission)}`,
+        `${RESEARCH_ATLAS_PRESENTATION_REVISION}:${atlas.manifest_revision}:${selected.releaseId}:${query.route ?? ""}:${query.mode ?? ""}:${JSON.stringify(portalAdmission)}`,
       ),
     };
   }

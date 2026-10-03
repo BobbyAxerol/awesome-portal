@@ -1217,3 +1217,98 @@ Claude can consume these generated fields now; browser receipt remains its
 own acceptance. Next: existing P23 candidate/load/restore/engine-two gates,
 then P24. This request slice does not reopen accepted numerical engine proof
 or label an unresolved source fact AVAILABLE.
+
+## 33. Broad request reconciliation before P23 — 2026-10-03
+
+**IN_PROGRESS**, Bobby's continuation, baseline `d1e0b839`. Read the Unified
+board/addenda, three Claude request ledgers, P01–P10/P11–P15/P15–P23 and
+2026-09-30/2026-10-02 audits, current W1–W5 plan, P21–P24 packets and the
+actual contracts/code. Later accepted receipts supersede historical OPEN
+rows; §31/§32 remain accepted. No new campaign, frontend redesign, engine
+run, production, shared :8095 mutation, push or release is implied.
+
+Confirmed overlooked implementation/response work in B4 and the earlier
+F2b/F3 tables, not a reason to repeat the six-group qualification:
+
+| Request | Bounded work and authority | Owner |
+| --- | --- | --- |
+| BR-TXT-01 / Atlas | Add stable public `reason_code` to known NOT_PUBLISHED slots without parsing prose, changing availability or modifying the private pinned manifest. Keep original reason/source; public presentation revision invalidates Atlas ETag. | Foundation agent |
+| BR-S08-02 | Publish Replay window metadata from existing exact preflight/retained facts in both fixed/retained lanes. Preserve withheld holdout and historical absence; no HMD scan or synthetic counts. | Replay agent |
+| BR-S08-03 | Publish exact Replay alpha bindings if the run/source supplies them. Report already exposes exact IDs as frozen `identity.alpha`/`alpha_version`; document that mapping, never rewrite the core just to add aliases. | Replay agent + root handoff |
+| BR-S11-01 | This is P19 `PromotionPick`: join the source-attested fold/approval identity under current workspace/run/RC guards. Missing fold remains typed absent; do not parse a global trial identifier. | Lineage agent |
+| BR-F3-03 | Use a defensible bounded logical-attempt presentation label, never worker retry ordinal or page position. If existing source cannot establish it, return an explicit typed disposition. | Lineage agent |
+
+Root owns shared generation/snapshot, integration review, append-only
+ledger/Unified updates and one grouped normal commit hook. Each agent owns
+disjoint domain paths; focused tests cover old fixtures, identity/absence,
+source custody, stable paging and conditional validators. No frontend file
+is changed; delivered generated fields receive one precise Claude handoff.
+
+Read-only Markdown target checks found **0 missing file links** in Unified,
+the backend/frontend queues and all three request ledgers. That does not
+prove anchor/browser or external/private artifact availability. Preserve
+original audits and receipts; do not silently mark all historical seals or
+endpoint parameter/profile combinations accepted.
+
+**Separate consumer gap:** legacy `QuantBTModule` and `AuditView` export
+links still perform GET directly. Backend now requires workspace-scoped ADMIN
+POST prepare + read-only GET. Claude must bind that flow or hide the old
+affordance; do not remove the guard to make a link work.
+
+**Genuine next gates remain P23:** mixed-load SLO, the exact three lost test
+artifact manifests, actual engine-two T07/T13, independent WFO recomputation
+and the missing negative/browser cases on one coherent candidate. Current
+self-audit/typed linked-child scope stays distinct from a full linked
+AUDIT_OF_SELECTION child. P24/signed rehearsal follows its declared gates,
+not this request/schema repair.
+
+### §33 delivery — missed read contracts and one S05 correctness defect
+
+**SCOPED_CODE_ACCEPTED**, subject to the one normal grouped hook before
+landing; no preview/browser/P23 GO is claimed. Exact delivery SHA is the
+commit containing [this receipt and generated consumer map](./evidence/P21/BROAD_REQUEST_RECONCILIATION_2026-10-03.md).
+This addendum supersedes the IN_PROGRESS checkpoint without deleting it.
+
+| ID | Current disposition |
+| --- | --- |
+| BR-TXT-01 / Atlas | DELIVERED: four typed absence codes, historical identity code and source OOS-condition template code. Separate public projection/fixtures, private manifest unchanged, Atlas ETag v2. Other short copy uses existing typed refusal/mode/template fields; this is not a blanket server-prose rewrite. |
+| BR-S08-02 | DELIVERED: exact fixed and retained Replay windows, fold segments, count basis/typed historical absence and withheld holdout. Fixed half-open bounds and inclusive source fold endpoints stay distinct; sums are not unique bars. |
+| BR-S08-03 | DELIVERED Replay IDs bound to the immutable run request/Hub. Report already delivered exact IDs under frozen `identity.alpha` / `identity.alpha_version`; no alias or core rewrite. |
+| BR-S11-01 | DELIVERED contract/disclosure: exact P19/P22 approval href; fold remains null with source-attested absence, not decoded from trial ID. No Governance SELECT grant. |
+| BR-F3-03 | DELIVERED: server-owned logical `att_NN` label and PRESENTATION_ONLY basis, full Alpha/workspace census prefix; opaque ID and technical retries remain separate. |
+| S05 retained boundary defect | FIXED: pinned QuantBT ends name inclusive observed bars. Shared endpoint FAIL, distinct single-bar windows valid. Basis V2; old capture V1 remains readable. Corrected HTTP ETag is separate from unchanged source/Report/RC pins. |
+| BR-F3-02 | STILL_OPEN_APPLIED_GUARD_PROOF: the disjointness correction does not attest applied purge/embargo. Use exact retained guard windows and allow legitimate tail clipping; absent historical facts remain NOT_CHECKABLE. Do not relabel this as an engine-wide source gap. |
+| BR-F3-04 | SUPERSEDED_BY_ACCEPTED_W4B: tab subtitle is stage state only; existing summary cards retain their exact generated facts. Do not restore stale duplicated subtitles. |
+| BR-F3-05 | EXISTING_MANIFEST_MAPPING: P11 publishes actual artifact digests/sizes and Claim consumes them; HiFi's ten-row sample is not a source invariant. |
+| BR-S04-WIN | PARTIALLY_DELIVERED: fixed IS analytics/curves already consumed. WFO selected-candidate IS account and protected holdout cannot be invented from declaration bounds. |
+
+Focused proof: Atlas 9/9 final add-on and 17/17 contracts, Replay 60/60
+plus single-bar 6/6, lineage 36/36 plus canonical fixture and actual PG 4/4,
+S05/current-source focus 53/53. Groups overlap. Official generation/snapshot
+and one normal hook gate commit/landing. Exact tests, generated type names,
+synthetic examples, custody invariants and Claude handoff are in the receipt.
+No frontend, source artifact/manifest/seal, shared :8095, runtime image,
+production or remote push change. Exact owned PG test container removed;
+no volumes or business data deleted.
+
+Next ordered backend work: BR-F3-02 applied-guard contract/proof, then the
+already-listed coherent P23 load/restore/engine-two/independent-recompute and
+browser gates, then P24. Missing original historical bytes and an actual
+second engine are not repaired by invented data or another same-wheel image.
+Claude must also replace legacy direct export GET links with the delivered
+workspace/admin prepare→download flow (or hide them).
+
+**Generation correctness addendum:** official generation reproduced a real
+ordering bug: the later Compare/metrics amender removed Lineage's already
+supported `RS02_RETAINED_OUTER_FOLD_SELECTIONS` enum after its generated
+type was emitted. The canonical amender now retains it, with published
+schema/type regression and generator drift check; no causal source is lost
+or manually invented. [Exact defect and repair](./evidence/P21/BROAD_REQUEST_RECONCILIATION_2026-10-03.md#7-official-generation-regression-found-and-repaired).
+
+**Public-boundary correction before landing:** the first mandatory hook
+refused the commit: 1,808 Control tests passed, one failed, one skipped.
+RS-03's existing public anti-leak assertion caught new Replay
+`source_locator`. The new metadata is changed to strict public `basis`
+enums, not a private locator renamed into another free-form field. Existing
+anti-leak assertions remain intact; focused RS-03/Replay/contracts and the
+normal hook retry gate landing. No source/cursor/Report/RC pin changes.

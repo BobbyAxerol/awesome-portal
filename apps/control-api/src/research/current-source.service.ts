@@ -2,6 +2,7 @@
 
 import { Buffer } from "node:buffer";
 import { selectedTrialPresentation } from "./selected-trial-presentation";
+import { replayNavigation, replayRequestedIdentity } from "./replay-navigation";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { enrichedAvailability } from "./enriched-analysis.contract";
 import { z } from "zod";
@@ -577,7 +578,14 @@ export class ResearchCurrentSourceService {
       gap_scan: splitGapScan(summary.replay, windows),
       stitch: splitStitch(summary.replay, windows),
     };
-    return this.valid(ResearchCurrentSourceSplitResponseSchema, value);
+    // Split's immutable revision is pinned by existing Report/RC seals.
+    // Version only the HTTP representation when its guard interpretation changes.
+    const { etag: _sourceEtag, ...representation } = value;
+    return this.valid(ResearchCurrentSourceSplitResponseSchema, { ...value,
+      etag: `"rs02_split-presentation_${sha256ResearchJson({
+        presentation_revision: "S05_INCLUSIVE_BAR_GUARD_V2", representation,
+      })}"`,
+    });
   }
 
   async search(
@@ -943,15 +951,18 @@ export class ResearchCurrentSourceService {
     const selectedObservation = selected ? asObservation(selected) : null;
     const summary = parseSummary(seal);
     const ledger = summary.replay ?? null;
+    const requested = typeof this.repository.admittedRequestedSpec === "function"
+      ? await this.repository.admittedRequestedSpec(scope, runId, seal.requestedSpecDigest, signal) : null;
+    const replayFolds = (await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map(asFold);
     const perFoldSelections = seal.profileId === DELTA_CAUSAL_INNER_PROFILE.current_source.profile_id
-      ? new Map((await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map(row => {
-        const fold = asFold(row);
+      ? new Map(replayFolds.map(fold => {
         if (!fold.causal_selection) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Causal replay selection was not retained for an outer fold.", 503);
         return [fold.fold_id, fold.causal_selection] as const;
       })) : undefined;
     const value = {
       schema_version: "research.current-source-replay.v1" as const,
       ...this.common("replay", seal, currentRevision),
+      ...replayNavigation(replayRequestedIdentity(requested, seal.requestedSpecDigest), seal.enrichedAnalysis, replayFolds),
       replay: {
         source_observation_count: seal.tableRows.OBSERVATION,
         rows: page.rows.map((row) => {

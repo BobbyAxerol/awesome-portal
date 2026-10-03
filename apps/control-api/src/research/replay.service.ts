@@ -26,6 +26,7 @@ import {
 } from "./replay.contract";
 import { ResearchReplayError } from "./replay.error";
 import { sha256ResearchJson } from "./preflight.service";
+import { replayBoundIdentity, replayNavigation } from "./replay-navigation";
 
 const PAGE_RESOURCE = "research.replay.equity-window.v1";
 const PLAYHEAD_RESOURCE = "research.replay.state-at-cursor.v1";
@@ -282,7 +283,9 @@ export class ResearchReplayService {
       && (tradeMetric.scope === "CHILD_TAPE" || tradeMetric.scope === "IS_PLUS_OOS")
       && tradeMetric.value !== null && /^[0-9]+$/.test(tradeMetric.value);
     const noLedger = (reason: string) => this.routeGap(sourceReason(reason), absenceAvailability);
+    const identity = replayBoundIdentity(hub.core.run_identity?.binding);
     return {
+      ...replayNavigation(identity, hub.enriched_analysis),
       schema_version: "research.replay.v1",
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: runId,

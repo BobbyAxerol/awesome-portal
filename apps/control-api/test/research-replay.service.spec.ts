@@ -158,6 +158,22 @@ function enabledConfig() {
 }
 
 describe("P17 route-aware, current-source replay authority", () => {
+  it("publishes only the Hub's verified binding and separate additive Replay presentation", async () => {
+    const fixture = evidenceFixture(3);
+    const bound = { ...fixture, hub: { ...fixture.hub, core: { ...fixture.hub.core, run_identity: {
+      binding: { alpha_id: "alpha_p17", alpha_version_id: "av_p17", availability: { state: "AVAILABLE", reason_code: null } },
+    } } } };
+    const evidence = evidenceReader(bound);
+    const service = new ResearchReplayService(evidence as never, enabledConfig() as never);
+    const first = await service.detail(scope, "run_p17", { limit: 2 });
+    expect(first.identity).toMatchObject({ alpha_id: "alpha_p17", alpha_version_id: "av_p17", availability: { state: "AVAILABLE" } });
+    expect(first.is_window).toMatchObject({ bars: null, availability: { reason_code: "REPLAY_SEAL_PREDATES_WINDOW_METADATA" } });
+    bound.hub.core.run_identity.binding.alpha_version_id = "av_other";
+    const next = await service.detail(scope, "run_p17", { limit: 2 });
+    expect(next.presentation_digest).not.toBe(first.presentation_digest);
+    expect(next.revision).toBe(first.revision);
+    expect(evidence.bundle).toHaveBeenCalledTimes(2);
+  });
   it("reads imported retained equity with its own route identity, never as P04", async () => {
     const fixture = evidenceFixture(3);
     fixture.hub.core.source_adapter_id = "p17.imported-signal-notional.v1";

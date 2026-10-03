@@ -200,6 +200,57 @@ describe("P09 published Research foundation contract", () => {
       .toEqual(oldCards.filter((card: any) => card.availability === "DEPENDENCY_REQUIRED"));
   });
 
+  it("BR-TXT-01: validates legacy/current/historical Atlas capture and additive Portal presentation codes", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8"));
+    const validate = new Ajv2020({ allErrors: true, strict: false }).compile(JSON.parse(JSON.stringify({
+      ...document.components.schemas.AtlasResponse, $defs: document.components.schemas,
+    }).replaceAll("#/components/schemas/", "#/$defs/")));
+    const read = (name: string) => JSON.parse(readFileSync(join(ROOT, "fixtures", `research-foundation.${name}.valid.json`), "utf8"));
+    for (const name of ["atlas-current", "historical-identity", "atlas-presented-current", "atlas-presented-historical"]) {
+      expect(validate(read(name)), JSON.stringify(validate.errors)).toBe(true);
+    }
+    const current = read("atlas-presented-current"), original = read("atlas-current");
+    current.atlas.modes.forEach((mode: any, index: number) => {
+      mode.facts.schedules.forEach((schedule: any, j: number) => {
+        const originalSchedule = original.atlas.modes[index].facts.schedules[j];
+        expect(schedule.oos_use_condition).toEqual(originalSchedule.oos_use_condition);
+        if (typeof originalSchedule.oos_use_condition === "string") {
+          expect(schedule.oos_use_condition_code).toBe("ATLAS_SOURCE_OOS_USE_CONDITION");
+        } else {
+          expect(schedule).not.toHaveProperty("oos_use_condition_code");
+        }
+        const { reason_code, ...fact } = schedule.cert_cap;
+        expect(reason_code).toBe("ATLAS_CERT_CAP_NOT_PUBLISHED");
+        expect(fact).toEqual(original.atlas.modes[index].facts.schedules[j].cert_cap);
+      });
+      const { reason_code, ...fact } = mode.facts.avoid_when;
+      expect(reason_code).toBe("ATLAS_AVOID_WHEN_NOT_PUBLISHED");
+      expect(fact).toEqual(original.atlas.modes[index].facts.avoid_when);
+      expect(mode.facts.objective).toEqual(original.atlas.modes[index].facts.objective);
+      expect(mode.facts.reads).toEqual(original.atlas.modes[index].facts.reads);
+    });
+    expect(read("atlas-presented-historical").historical_identity.facts_reason_code).toBe("ATLAS_HISTORICAL_FACTS_NOT_PUBLISHED");
+    expect(current.atlas.manifest_revision).toBe(original.atlas.manifest_revision);
+    const invalid = structuredClone(current);
+    invalid.atlas.modes[0].facts.avoid_when.reason_code = "ENGINE_CERTIFIED";
+    expect(validate(invalid)).toBe(false);
+    for (const condition of [null, undefined]) {
+      const invalidCondition = structuredClone(current);
+      const schedule = invalidCondition.atlas.modes[0].facts.schedules[0];
+      schedule.oos_use_condition_code = "ATLAS_SOURCE_OOS_USE_CONDITION";
+      if (condition === undefined) delete schedule.oos_use_condition;
+      else schedule.oos_use_condition = condition;
+      expect(validate(invalidCondition)).toBe(false);
+    }
+    const unknownCode = structuredClone(current);
+    unknownCode.atlas.modes[0].facts.schedules[0].oos_use_condition_code = "OOS_NOT_USED";
+    expect(validate(unknownCode)).toBe(false);
+    const generated = readFileSync(generatedPath, "utf8");
+    expect(generated).toContain('reason_code?: "ATLAS_CERT_CAP_NOT_PUBLISHED"');
+    expect(generated).toContain('facts_reason_code?: "ATLAS_HISTORICAL_FACTS_NOT_PUBLISHED"');
+    expect(generated).toContain('oos_use_condition_code?: "ATLAS_SOURCE_OOS_USE_CONDITION"');
+  });
+
   it("W4 CG-P04-04/06/07: publishes OOS states, route engine facts, claim qualifiers, terms and weights", () => {
     const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
     const atlas = current.atlas;

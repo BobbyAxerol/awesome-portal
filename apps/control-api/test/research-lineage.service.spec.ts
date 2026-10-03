@@ -234,6 +234,8 @@ describe("P19 Attempt Lineage persisted truth", () => {
       availability: { state: "AVAILABLE", reason_code: null },
       selected_trial_id: "trial-p19", selected_trial_availability: { state: "AVAILABLE", reason_code: null },
       selected_params_digest: digest("8"), selected_params_availability: { state: "AVAILABLE", reason_code: null },
+      fold: null, fold_availability: { state: "NOT_PUBLISHED", reason_code: "P19_P22_SELECTED_FOLD_NOT_PUBLISHED" },
+      approval_href: null, approval_availability: { state: "NOT_PUBLISHED", reason_code: "P19_P22_APPROVAL_BINDING_NOT_AVAILABLE" },
       // W6b DR-03 / CG-P19-04 additive facts.
       source_authority: { owner: "P22_RELEASE_CANDIDATE_APPROVAL", state: "CONNECTED" },
       release_candidate: null,

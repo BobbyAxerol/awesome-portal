@@ -14,7 +14,11 @@ for (const [name, component] of [["research-run-library", "MetricCell"], ["resea
   Object.assign(metric.properties, provenance);
   const sources = ["SUMMARY_ANALYTICS_V2", "ENRICHED_ANALYSIS"];
   if (component !== "RunMetricFact") metric.properties.source = { enum: sources };
-  else metric.properties.source.anyOf[0].enum = ["P13_EVIDENCE_PROJECTION", "RS02_RETAINED_SELECTED_TRIAL", ...sources];
+  // A later Compare target runs this amender again after causal generation.
+  // Keep the already-supported source token; otherwise OpenAPI loses it while
+  // the earlier generated Lineage type/runtime still publish it.
+  else metric.properties.source.anyOf[0].enum = ["P13_EVIDENCE_PROJECTION", "RS02_RETAINED_SELECTED_TRIAL", ...sources,
+    "RS02_RETAINED_OUTER_FOLD_SELECTIONS"];
   // Match the runtime refinement: absence is typed, never AVAILABLE/null.
   metric.allOf = [{
     if: {
