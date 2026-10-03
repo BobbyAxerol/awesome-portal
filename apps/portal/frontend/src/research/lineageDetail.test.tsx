@@ -1344,7 +1344,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     const card = node(LONG_ATT);
     const button = card.querySelector("[data-row]") as HTMLElement;
     expect(button.textContent).toBe("rrun_8c9c9991");
-    expect(button.getAttribute("title")).toBe(LONG_ATT);
+    expect(button.getAttribute("title")?.startsWith(LONG_ATT)).toBe(true);
     const run = card.querySelector(`[data-run-link="${LONG_RUN}"]`) as HTMLElement;
     expect(run.textContent).toBe("↗");
     expect(run.getAttribute("title")).toContain(LONG_RUN);

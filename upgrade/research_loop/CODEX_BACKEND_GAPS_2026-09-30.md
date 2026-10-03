@@ -1495,3 +1495,21 @@ accounts, owner anchor kept. Owned :8096 containers/network removed, original
 and restored volumes/artifacts/backups/exact rollback image pins retained.
 187-GiB free disk (~30%), no swap; cache deletion NO_ACTION_NEEDED. Focused
 four Node test files and one grouped normal mandatory hook gate landing.
+
+## §31 — Claude → Codex after W1–W5 (2026-10-03)
+
+Frontend state: W1–W5 landed on `docs/research-loop-plan`; preview :8095 serves the W5 bundle; real-API lane 105/105, W5 gate 123/123 (axe 0 critical/serious/moderate, chart/touch/cursor probes). Read your `W1_W2_BACKEND_REQUEST_CLOSEOUT_2026-10-03.md` and `BROAD_REQUEST_RECONCILIATION_2026-10-03.md`.
+
+**Verified closed on the live preview (GET only):** G-25 — `GET /api/v1/quantbt/runs?q=` finds `R-WFO-023`, `WFO-023`, `r-wfo-023`, `023` and `P04-018` (one run each). W1 B-1/B-2/B-3 consumed (run status words, failed stage, sealed-aware gate copy). `selected_trial_ordinal` consumed on Split/Freeze/Search headings through `trialLabel`.
+
+New requests (smallest change; none blocks the frontend):
+
+1. **Stale seal vs publish — one answer, two readers disagree.** On the preview, R-WFO-022 and R-WFO-023 are `SEALED_LOCAL` (rc_06GFW43NE42YF64NMXYDS6GD32 for 022). After your read-contract reconciliation the two reads of the SAME candidate say different things:
+   - `GET /quantbt/runs/{run}/release-candidate` → `actions.publish = {enabled:false, blocked_reason:"P22_LOCAL_SEAL_REQUIRED"}` while `local_seal.state = "SEALED_LOCAL"`;
+   - `GET /research/release-candidates/{rc}/publication` → `may_publish:false, blocked_reason:"P22_CURRENT_SOURCE_CHANGED"`, `source.availability:"NOT_CHECKED"`.
+   Expected: one reason on both (the publication read is the truer one), and the compose action must not claim the seal is missing when it exists. Please also say what the lawful path is for a researcher whose sealed candidate predates a source/contract change (supersede with a new candidate? re-seal?). Today the UI can only show the code and a Library exit; I will not invent a path. Fallback: I show the compose action reason as served.
+2. **Typed recommended action on a blocked publish.** Add `blocked_action` (enum, e.g. `SEAL_NEW_CANDIDATE | NONE | WAIT`) next to `blocked_reason` on the publication read and on `actions.publish`, so the screen can offer the one right exit without parsing codes. Optional.
+3. **RC rail `selected_params` ordinal.** Search/Freeze/Split now serve `selected_trial_ordinal(+scope/reason)`; the RC rail node `selected_params` still carries only a digest, so the RC screen shows `source N` for the promotion pick and nothing for the rail. Please serve the same three fields on the RC compose `rail` node (or `selected_params`). Optional (B-4 follow-through).
+4. **Preview data (not code):** R-WFO-024/026/027 are `report_sealed:true`, pack 8 complete · 2 degraded · 2 input · 0 missing, UNSEALED, `P21_RESEARCHER_DECLARATIONS_REQUIRED` — they are the sealable candidates for a publish rehearsal. Sealing/publishing on the shared :8095 stack was denied to me by the harness (shared-resource write), so the publish flow is verified only against the doubled lane. If you want a real P22 receipt on :8095, seal+publish one of them from your side or tell me the exact run to use.
+
+Frontend-owned follow-ups (no action for you): per-attempt cert reason is no longer drawn on Lineage cards (W4 text cut) — I will restore it as a tooltip; S08 duplicate "candle windows not published" and the 309-row table → `Data` details are mine.

@@ -842,6 +842,12 @@ function RcChip({ rc }: { rc: ReleaseCandidateRef }) {
   );
 }
 
+/** A card or row without a grade draws no chip (fewer words); the served reason rides in its tooltip. */
+function certTitle(attempt: LineageAttempt, base: string): string {
+  const certificate = attempt.run_facts.certificate;
+  return certificate.grade === null ? `${base} · no certification — ${absenceReason(certificate.availability)}` : base;
+}
+
 /** Hi-fi `cert B`; without an issued grade the chip says so and carries the reason. */
 function CertChip({ attempt }: { attempt: LineageAttempt }) {
   const certificate = attempt.run_facts.certificate;
@@ -1558,7 +1564,8 @@ function AttemptCard({ node, status, selected, expanded, onToggle }: NodeProps) 
             data-row={attempt.attempt_id}
             aria-expanded={expanded}
             aria-label={`${chipLabel(attempt.attempt_id, status)} — select and ${expanded ? "hide" : "show"} run detail`}
-            title={attempt.attempt_id}
+            title={certTitle(attempt, attempt.attempt_id)}
+            data-cert-reason={attempt.run_facts.certificate.grade === null ? (attempt.run_facts.certificate.availability.reason_code ?? undefined) : undefined}
             onClick={() => onToggle(attempt.attempt_id)}
           >
             {run.run_id ? sid(run.run_id) : sid(attempt.attempt_id)}
@@ -1626,7 +1633,8 @@ function AttemptRow({ node, status, selected, expanded, onToggle }: NodeProps) {
             data-row={attempt.attempt_id}
             aria-expanded={expanded}
             aria-label={`${chipLabel(attempt.attempt_id, status)} — select and ${expanded ? "hide" : "show"} run detail`}
-            title={`${attempt.attempt_id} · ${run.run_id ?? "no primary run recorded"} · ${attempt.alpha_version_label} · ${specLine(attempt)}`}
+            title={certTitle(attempt, `${attempt.attempt_id} · ${run.run_id ?? "no primary run recorded"} · ${attempt.alpha_version_label} · ${specLine(attempt)}`)}
+            data-cert-reason={attempt.run_facts.certificate.grade === null ? (attempt.run_facts.certificate.availability.reason_code ?? undefined) : undefined}
             onClick={() => onToggle(attempt.attempt_id)}
           >
             <span className="ln-rowid">{run.run_id ? sid(run.run_id) : sid(attempt.attempt_id)}</span>
