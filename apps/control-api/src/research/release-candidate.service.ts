@@ -156,12 +156,10 @@ export class ResearchReleaseCandidateService {
 
   async detail(scope: ResearchScope, runId: string): Promise<ResearchReleaseCandidateComposeResponse> {
     this.requireEnabled();
-    const [source, persistedDraft, latestPack] = await Promise.all([
-      this.repository.snapshot(scope, runId), this.repository.draft(scope, runId), this.repository.latestPack(scope, runId),
-    ]);
-    if (!source) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Research run was not found.", 404);
-    const context = await this.publicationContext(scope, source, latestPack);
-    return this.compose(source, persistedDraft ?? this.virtualDraft(source), latestPack, context);
+    const snapshot = await this.repository.readComposition(scope, runId);
+    if (!snapshot) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Research run was not found.", 404);
+    const { source, draft, latestPack, publicationContext } = snapshot;
+    return this.compose(source, draft ?? this.virtualDraft(source), latestPack, publicationContext);
   }
 
   /** B2: the P22 facts the composer prints — this candidate's intent and the last published candidate of the Alpha. */

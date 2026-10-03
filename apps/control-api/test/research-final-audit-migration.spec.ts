@@ -138,6 +138,49 @@ describe("pinned audit real migration/admission/immutable proof",()=>{
     expect(await sealedPack("3",null)).toBe(false);
     expect((await db.query("SELECT research.p22_final_audit_source_eligible('ws_audit',$1,$2) AS ok",[`rc_${"1".repeat(26)}`,child.runId])).rows[0].ok).toBe(false);
   });
+  it("reads the same bounded proof for parent/child and rechecks every authority pin under RLS",async()=>{
+    const client=await db.connect();
+    async function read(mutation?:string,workspace="ws_audit",actor="usr_audit"){
+      await client.query("BEGIN");
+      try{
+        // Only this disposable fixture can emulate a corrupt restored row.
+        // Product tests never change the immutable proof to produce a PASS.
+        if(mutation){await client.query("SET LOCAL session_replication_role=replica");await client.query(mutation);
+          await client.query("SET LOCAL session_replication_role=origin");}
+        await client.query("SET LOCAL ROLE portal_research_runtime");
+        await client.query("SELECT set_config('research.workspace_id',$1,true),set_config('research.actor_user_id',$2,true)",[workspace,actor]);
+        return await readPinnedAuditProofs(client,workspace,["rrun_parent",child.runId,child.runId,"rrun_unrelated"]);
+      }finally{await client.query("ROLLBACK");}
+    }
+    try{
+      const proofs=await read();
+      expect([...proofs.keys()].sort()).toEqual(["rrun_parent",child.runId].sort());
+      expect(proofs.get("rrun_parent")).toEqual(proofs.get(child.runId));
+      expect((await read(undefined,"other")).size).toBe(0);
+      expect((await read(undefined,"ws_audit","unknown")).size).toBe(0);
+      const mutations=[
+        "UPDATE research.runs SET state='RUNNING' WHERE run_kind='AUDIT'",
+        // A wrong digest and diagnostic/global pair are already rejected by
+        // CHECKs. Exercise a different *valid diagnostic* profile, not a row
+        // which cannot exist in the actual schema.
+        `UPDATE research.run_producers SET execution_profile_id='p16.delta-whatif-grid.v1',
+          execution_profile_digest='3c29160abf214a0ef1c20c630048442ef131aadc1d00849f69ae428d0ff513bc'
+          WHERE run_id<>'rrun_parent'`,
+        "UPDATE research.artifacts SET manifest_digest=repeat('0',64) WHERE artifact_id='rart_audit_2'",
+        "UPDATE research.artifacts SET manifest_digest=repeat('0',64) WHERE artifact_id='rart_parent'",
+        "UPDATE research.artifacts SET state='CORRUPT' WHERE artifact_id='rart_parent'",
+        "UPDATE research.pinned_audit_receipts_v1 SET target_digest=repeat('0',64)",
+        "UPDATE research.pinned_audit_targets_v1 SET target_pins=jsonb_set(target_pins,'{parameters_digest}',to_jsonb(repeat('0',64)))",
+        `INSERT INTO research.artifacts(workspace_id,artifact_id,run_id,table_kind,schema_version,manifest_digest,state,
+          retention_class,storage_locator,artifact_revision,worker_attempt_id,lease_epoch)
+          SELECT workspace_id,'rart_newer_parent',run_id,table_kind,schema_version,repeat('c',64),state,
+            retention_class,'artifacts/rart_newer_parent',2,worker_attempt_id,lease_epoch
+          FROM research.artifacts WHERE artifact_id='rart_parent'`,
+      ];
+      for(const mutation of mutations)expect((await read(mutation)).size,mutation).toBe(0);
+      expect(await read()).toEqual(proofs);
+    }finally{client.release();}
+  });
   it("shares real actor/workspace utility capacity with diagnostic work before allocating anything",async()=>{
     async function diagnostic(id:string,actor:string){
       await db.query(`INSERT INTO research.jobs(workspace_id,job_id,run_id,command_id,logical_work_key,work_digest,

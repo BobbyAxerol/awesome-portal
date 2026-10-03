@@ -164,6 +164,14 @@ export interface ReleaseCandidatePublicationContext {
   } | null;
 }
 
+/** One actor/workspace-authorized repeatable-read view of the whole composer. */
+export interface ReleaseCandidateCompositionSource {
+  source: ReleaseCandidateSource;
+  draft: ReleaseCandidateDraft | null;
+  latestPack: ReleaseCandidateStoredPack | null;
+  publicationContext: ReleaseCandidatePublicationContext;
+}
+
 export interface ReleaseCandidatePin {
   pinKind: "ALPHA_VERSION" | "RUN" | "REPORT" | "EVIDENCE" | "SPLIT" | "SELECTION" | "CURRENT_SOURCE" | "ARTIFACT";
   sourceRef: string;
@@ -329,6 +337,20 @@ export function releaseCandidateSourceFingerprint(source: ReleaseCandidateSource
 export class ResearchReleaseCandidateRepository {
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
+  async readComposition(scope: ResearchScope, runId: string): Promise<ReleaseCandidateCompositionSource | null> {
+    return this.transaction(scope, true, async (client) => {
+      await this.requireMembership(client, scope);
+      const source = await this.snapshotFromClient(client, scope.workspaceId, runId);
+      if (!source) return null;
+      const draft = await this.draftFromClient(client, scope, runId);
+      const latestPack = await this.latestPackFromClient(client, scope.workspaceId, runId);
+      const publicationContext = await this.publicationContextFromClient(client, scope.workspaceId, {
+        alphaId: source.alpha.alphaId, releaseCandidateId: latestPack?.releaseCandidateId ?? null,
+      });
+      return { source, draft, latestPack, publicationContext };
+    });
+  }
+
   async snapshot(scope: ResearchScope, runId: string): Promise<ReleaseCandidateSource | null> {
     return this.transaction(scope, true, async (client) => {
       await this.requireMembership(client, scope);
@@ -346,11 +368,15 @@ export class ResearchReleaseCandidateRepository {
   async latestPack(scope: ResearchScope, runId: string): Promise<ReleaseCandidateStoredPack | null> {
     return this.transaction(scope, true, async (client) => {
       await this.requireMembership(client, scope);
-      const result = await client.query<PackRow>(`${this.packSelect()}
-        WHERE pack.workspace_id = $1 AND pack.run_id = $2
-        ORDER BY pack.sealed_at DESC, pack.release_candidate_id DESC LIMIT 1`, [scope.workspaceId, runId]);
-      return result.rowCount === 1 ? this.pack(result.rows[0]!) : null;
+      return this.latestPackFromClient(client, scope.workspaceId, runId);
     });
+  }
+
+  private async latestPackFromClient(client: PoolClient, workspaceId: string, runId: string): Promise<ReleaseCandidateStoredPack | null> {
+    const result = await client.query<PackRow>(`${this.packSelect()}
+      WHERE pack.workspace_id = $1 AND pack.run_id = $2
+      ORDER BY pack.sealed_at DESC, pack.release_candidate_id DESC LIMIT 1`, [workspaceId, runId]);
+    return result.rowCount === 1 ? this.pack(result.rows[0]!) : null;
   }
 
   /** P22 publication facts for the composer; one read-only snapshot, bounded to two rows. */
@@ -360,12 +386,20 @@ export class ResearchReleaseCandidateRepository {
   ): Promise<ReleaseCandidatePublicationContext> {
     return this.transaction(scope, true, async (client) => {
       await this.requireMembership(client, scope);
+      return this.publicationContextFromClient(client, scope.workspaceId, input);
+    });
+  }
+
+  private async publicationContextFromClient(
+    client: PoolClient, workspaceId: string,
+    input: { alphaId: string | null; releaseCandidateId: string | null },
+  ): Promise<ReleaseCandidatePublicationContext> {
       let current: ReleaseCandidatePublicationContext["current"] = null;
       if (input.releaseCandidateId !== null) {
         const found = await client.query<{ release_candidate_id: string; state: string }>(
           `SELECT release_candidate_id, state FROM research.release_candidate_publications_v1
             WHERE workspace_id = $1 AND release_candidate_id = $2`,
-          [scope.workspaceId, input.releaseCandidateId],
+          [workspaceId, input.releaseCandidateId],
         );
         const row = found.rows[0];
         if (row && ["PENDING", "UNKNOWN", "DELIVERED", "REFUSED"].includes(row.state)) {
@@ -384,7 +418,7 @@ export class ResearchReleaseCandidateRepository {
               AND ($3::text IS NULL OR pub.release_candidate_id <> $3)
             ORDER BY pub.published_at DESC, pub.release_candidate_id DESC
             LIMIT 1`,
-          [scope.workspaceId, input.alphaId, input.releaseCandidateId],
+          [workspaceId, input.alphaId, input.releaseCandidateId],
         );
         const row = found.rows[0];
         if (row) {
@@ -403,7 +437,6 @@ export class ResearchReleaseCandidateRepository {
         }
       }
       return { current, predecessor };
-    });
   }
 
   async readPack(scope: ResearchScope, releaseCandidateId: string): Promise<ReleaseCandidateStoredPack | null> {
@@ -1029,11 +1062,11 @@ export class ResearchReleaseCandidateRepository {
       await client.query(readOnly ? "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY" : "BEGIN");
       began = true;
       await client.query(`SET LOCAL ROLE ${RESEARCH_DB_RUNTIME_ROLE}`);
-      await client.query("SELECT set_config('statement_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.statementTimeoutMs}ms`]);
-      await client.query("SELECT set_config('lock_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.lockTimeoutMs}ms`]);
-      await client.query("SELECT set_config('idle_in_transaction_session_timeout', $1, true)", [`${RESEARCH_DB_BUDGET.idleTransactionTimeoutMs}ms`]);
-      await client.query("SELECT set_config('research.workspace_id', $1, true)", [scope.workspaceId]);
-      await client.query("SELECT set_config('research.actor_user_id', $1, true)", [scope.actorUserId]);
+      await client.query(`SELECT set_config('statement_timeout', $1, true), set_config('lock_timeout', $2, true),
+        set_config('idle_in_transaction_session_timeout', $3, true),
+        set_config('research.workspace_id', $4, true), set_config('research.actor_user_id', $5, true)`,
+      [`${RESEARCH_DB_BUDGET.statementTimeoutMs}ms`, `${RESEARCH_DB_BUDGET.lockTimeoutMs}ms`,
+        `${RESEARCH_DB_BUDGET.idleTransactionTimeoutMs}ms`, scope.workspaceId, scope.actorUserId]);
       const result = await work(client);
       await client.query("COMMIT");
       began = false;

@@ -1688,3 +1688,20 @@ Owned :8096 down without -v; zero active QA sessions/nonterminal jobs,
 no swap, cache prune NO_ACTION_NEEDED. Full goal OPEN: non-reusable original
 proof, three original lost bytes or explicit disposition, second qualified
 engine, whole-product P24 and signed-release aggregation.
+
+### §39 original non-reuse delivery / affected-reader repair — 2026-10-03
+
+Supersedes R-WFO-020 execution pending. Actual original non-reusable child
+in fresh owned clone: 9 folds/2,484 bars, optimizer 0, idempotent one-child
+allocation, P05 verified ACK and Report/RC/Lineage proof. Frozen parent custody
+unchanged. New proof survives actual restart/fresh DB-artifact restore,
+worker OFF, no rerun. [Exact pins, hashes, failures and frontend handoff](./evidence/P23/NONREUSABLE_ORIGINAL_AUDIT_AND_READ_COST_2026-10-03.md).
+
+Affected-only 20-user load **FAIL**: 120/120 GET 200, Report p95 547 ms /
+RC 1,710 ms, each target 500 ms. Repair: one coherent RC RLS snapshot and
+reduced proof-planner search, with all authority checks retained. Focused
+92/92/build PASS; normal hook, clean Control-only build and actual read retake
+gate acceptance. No DTO/UI/migration/budget change. Fresh QA/cell remain
+owned pending retake and exact revocation/teardown; older C4 stays historical.
+Remaining: read acceptance/aggregation, original lost bytes/disposition,
+qualified engine two and P24/release. No remote push or unrelated retest.

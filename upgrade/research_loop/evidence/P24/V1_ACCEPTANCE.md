@@ -7,6 +7,17 @@ not the outstanding product/source/owner gates. No new phase is introduced.
 
 ## Latest scoped amendment — clean 4bc9cefe, 2026-10-03
 
+**Later non-reuse/proof-recovery amendment:** original R-WFO-020 now has a
+real admitted confined child, P05 verified ACK, Report/RC/Lineage proof and
+actual restart/fresh restore of its original and new child bytes. The earlier
+execution-pending and new-proof-restore-pending scopes below are superseded
+by [this receipt](../P23/NONREUSABLE_ORIGINAL_AUDIT_AND_READ_COST_2026-10-03.md),
+not every per-fold profile or the three missing historical manifests.
+New affected Report/RC 20-user cost FAIL (547/1,710 ms versus 500 ms) is
+being repaired without changing authority/DTO/budgets. Clean read retake,
+exact-candidate aggregation, strict historical integrity, engine two and full
+P24/owner/release remain OPEN; no Product GO.
+
 The [current-candidate receipt](../P23/CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md)
 supersedes only older pending scopes below, never their full denominators.
 P22 six-GET runtime is accepted separately. Linked admission/P05 ACK/

@@ -79,20 +79,68 @@ function subject() {
     }),
     release: vi.fn(),
   };
-  const repository = new ResearchReleaseCandidateRepository({ connect: vi.fn().mockResolvedValue(client) } as never);
+  const pool = { connect: vi.fn().mockResolvedValue(client) };
+  const repository = new ResearchReleaseCandidateRepository(pool as never);
   // Only the unrelated large source projection is a stand-in. Repository
   // transactions, membership, actor-local reads, CAS and seal fences run here.
   const snapshot = vi.spyOn(repository as unknown as {
     snapshotFromClient: () => Promise<ReleaseCandidateSource>;
   }, "snapshotFromClient").mockResolvedValue(currentSource);
   const sealInput = { draftId, expectedDraftRevision: 1, expectedSourceFingerprint: fingerprint };
-  return { repository, snapshot, queries, drafts, packs, members, fingerprint, sealInput, currentSource };
+  return { repository, snapshot, queries, drafts, packs, members, fingerprint, sealInput, currentSource, pool, client };
 }
 
 const sealedConflict = { code: "RESEARCH_RELEASE_CANDIDATE_CONFLICT", status: 409,
   details: { reason_code: "P21_ALREADY_SEALED" } };
 
 describe("P21 actor-local immutable declaration and seal fences", () => {
+  it("reads composer source, own draft, latest pack and publication in one RLS snapshot", async () => {
+    const { repository, pool, client, queries } = subject();
+    const observed = await repository.readComposition(peer, runId);
+    expect(observed).toMatchObject({ source: { runId }, draft: { draftId: peerDraftId, sealed: false },
+      latestPack: { releaseCandidateId: rcId }, publicationContext: { current: null, predecessor: null } });
+    expect(pool.connect).toHaveBeenCalledTimes(1);
+    expect(client.release).toHaveBeenCalledTimes(1);
+    expect(queries.filter(q => q.sql.startsWith("BEGIN"))).toEqual([
+      { sql: "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY", values: [] },
+    ]);
+    expect(queries.filter(q => q.sql.includes("SELECT 1 FROM workspace_members"))).toHaveLength(1);
+    const settings = queries.filter(q => q.sql.includes("set_config"));
+    expect(settings).toHaveLength(1);
+    expect(settings[0]!.values.slice(3)).toEqual([scope.workspaceId, peer.actorUserId]);
+    expect(queries.filter(q => q.sql === "COMMIT")).toHaveLength(1);
+    expect(queries.some(q => /INSERT INTO|UPDATE research/.test(q.sql))).toBe(false);
+  });
+
+  it("checks membership afresh on every composer read and does not reuse a peer's authorization", async () => {
+    const { repository, members, snapshot } = subject();
+    await repository.readComposition(scope, runId);
+    members.delete(scope.actorUserId);
+    await expect(repository.readComposition(scope, runId)).rejects.toMatchObject({ status: 403 });
+    await expect(repository.readComposition({ ...scope, workspaceId: "ws-other" }, runId))
+      .rejects.toMatchObject({ status: 403 });
+    expect(snapshot).toHaveBeenCalledTimes(1);
+    expect((await repository.readComposition(peer, runId))!.draft!.draftId).toBe(peerDraftId);
+  });
+
+  it("stops a missing run before draft, pack or publication reads", async () => {
+    const { repository, snapshot, queries } = subject();
+    snapshot.mockResolvedValue(null as never);
+    expect(await repository.readComposition(scope, runId)).toBeNull();
+    expect(queries.some(q => /FROM research.release_candidate_(drafts|packs|publications)_v1/.test(q.sql))).toBe(false);
+  });
+
+  it("rolls back and releases the one composer connection on any component failure", async () => {
+    const { repository, client, queries } = subject();
+    vi.spyOn(repository as unknown as { latestPackFromClient: () => Promise<never> }, "latestPackFromClient")
+      .mockRejectedValue(new Error("private test diagnostic"));
+    await expect(repository.readComposition(scope, runId))
+      .rejects.toMatchObject({ code: "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", status: 503 });
+    expect(queries.filter(q => q.sql === "ROLLBACK")).toHaveLength(1);
+    expect(queries.some(q => q.sql === "COMMIT")).toBe(false);
+    expect(client.release).toHaveBeenCalledTimes(1);
+  });
+
   it("derives the seal lock from the caller's draft, not a peer's workspace-visible latest pack", async () => {
     const { repository, queries } = subject();
     expect(await repository.draft(scope, runId)).toMatchObject({ draftId, sealed: true });

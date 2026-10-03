@@ -109,6 +109,7 @@ function draftFor(value: ReleaseCandidateSource, declared: boolean): ReleaseCand
 
 function service(value: ReleaseCandidateSource, draft: ReleaseCandidateDraft | null) {
   const repository = {
+    readComposition: vi.fn(),
     snapshot: vi.fn().mockResolvedValue(value),
     draft: vi.fn().mockResolvedValue(draft),
     latestPack: vi.fn().mockResolvedValue(null),
@@ -117,6 +118,15 @@ function service(value: ReleaseCandidateSource, draft: ReleaseCandidateDraft | n
     patchDraft: vi.fn(),
     seal: vi.fn(),
   };
+  repository.readComposition.mockImplementation(async (actor, id) => {
+    const source = await repository.snapshot(actor, id);
+    const storedDraft = await repository.draft(actor, id);
+    const latestPack = await repository.latestPack(actor, id);
+    const publicationContext = await repository.publicationContext(actor, {
+      alphaId: source.alpha.alphaId, releaseCandidateId: latestPack?.releaseCandidateId ?? null,
+    });
+    return { source, draft: storedDraft, latestPack, publicationContext };
+  });
   return {
     repository,
     subject: new ResearchReleaseCandidateService(repository as never, { FEATURE_RESEARCH_RELEASE_CANDIDATES: "true" } as never),

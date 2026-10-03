@@ -171,6 +171,14 @@ describe("P21 disposable PostgreSQL immutable Release Candidate proof", () => {
         deliveryState: "NOT_DELIVERED",
         approvalState: "NOT_APPROVED",
       });
+      const composition = await repository.readComposition(scope, scope.runId);
+      expect(releaseCandidateSourceFingerprint(composition!.source))
+        .toBe(releaseCandidateSourceFingerprint(changedSource!));
+      expect(composition!.draft).toEqual(await repository.draft(scope, scope.runId));
+      expect(composition!.latestPack).toEqual(await repository.latestPack(scope, scope.runId));
+      expect(composition!.publicationContext).toEqual(await repository.publicationContext(scope, {
+        alphaId: changedSource!.alpha.alphaId, releaseCandidateId: first.releaseCandidateId,
+      }));
 
       await expect(database.query(`UPDATE research.release_candidate_packs_v1
         SET pack_digest = $1 WHERE workspace_id = $2 AND release_candidate_id = $3`,

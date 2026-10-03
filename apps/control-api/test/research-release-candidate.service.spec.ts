@@ -108,6 +108,7 @@ function storedPack(overrides: Partial<ReleaseCandidateStoredPack> = {}): Releas
 
 function subject(sourceValue = source(), draftValue: ReleaseCandidateDraft | null = persistedDraft()) {
   const repository = {
+    readComposition: vi.fn(),
     snapshot: vi.fn().mockResolvedValue(sourceValue),
     draft: vi.fn().mockResolvedValue(draftValue),
     latestPack: vi.fn().mockResolvedValue(null),
@@ -119,12 +120,37 @@ function subject(sourceValue = source(), draftValue: ReleaseCandidateDraft | nul
       return storedPack({ packDigest: built.packDigest, frozenCore: built.frozenCore, sourceFingerprint: releaseCandidateSourceFingerprint(sourceValue) });
     }),
   };
+  repository.readComposition.mockImplementation(async (actor, id) => {
+    const current = await repository.snapshot(actor, id);
+    if (!current) return null;
+    const draft = await repository.draft(actor, id);
+    const pack = await repository.latestPack(actor, id);
+    const context = await repository.publicationContext(actor, {
+      alphaId: current.alpha.alphaId, releaseCandidateId: pack?.releaseCandidateId ?? null,
+    });
+    return { source: current, draft, latestPack: pack, publicationContext: context };
+  });
   const config = { FEATURE_RESEARCH_RELEASE_CANDIDATES: "true" };
   return { service: new ResearchReleaseCandidateService(repository as never, config as never), repository };
 }
 
 /** CG-P21-01: canonical service/filter outputs, consumed without FE-authored bodies. */
 describe("P21 canonical consumer fixture pack", () => {
+  it("uses only the coherent repository composition for a detail GET", async () => {
+    const current = source();
+    const { service, repository } = subject(current);
+    repository.readComposition.mockResolvedValue({ source: current, draft: null, latestPack: null,
+      publicationContext: { current: null, predecessor: null } });
+    repository.snapshot.mockRejectedValue(new Error("separate snapshot is forbidden"));
+    repository.draft.mockRejectedValue(new Error("separate draft is forbidden"));
+    repository.latestPack.mockRejectedValue(new Error("separate pack is forbidden"));
+    repository.publicationContext.mockRejectedValue(new Error("separate context is forbidden"));
+    const result = await service.detail(scope, current.runId);
+    expect(result.run_id).toBe(current.runId);
+    expect(repository.readComposition).toHaveBeenCalledExactlyOnceWith(scope, current.runId);
+    for (const read of [repository.snapshot, repository.draft, repository.latestPack, repository.publicationContext])
+      expect(read).not.toHaveBeenCalled();
+  });
   const path = resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"),
     "fixtures/research-release-candidate.consumer.fixtures.json");
 

@@ -7618,3 +7618,24 @@ or explicit disposition, genuine second engine, P24 whole-product/release.
 No FE/push/dev-main/production action. C4: zero active QA sessions/nonterminal
 jobs, 21 disabled non-owner accounts; cell down without -v, data/backups/
 rollback images kept, 181 GiB free, cache prune NO_ACTION_NEEDED.
+
+#### Original non-reuse audit / affected-reader cost — 2026-10-03
+
+**NON_REUSE_PRODUCT_ACCEPTED; READ_COST_REPAIR_PENDING; full P23/P24 OPEN.**
+R-WFO-020 has an actual pinned child in a fresh owned clone: 9 folds/2,484
+bars, optimizer 0, one idempotent child/outbox, P05 verified ACK and Report/
+RC/Lineage proof. Parent frozen custody unchanged. New proof survives restart
+and fresh restore with worker OFF/no engine rerun. Shared :8095 data/worker/
+identities unchanged. This supersedes execution pending, not per-fold profile
+limits or historical 83/86 strict-integrity failure.
+
+New affected-only load: twenty distinct readers, 120/120 GET 200, Report p95
+**547 ms**, RC **1,710 ms** versus unchanged **500 ms** targets. Repair: one
+coherent RC RLS snapshot and reduced shared-proof planning complexity;
+fresh membership/all source pins/immutable hashes/public DTOs retained.
+Six focused files 92/92/build PASS; normal hook and clean-image retake pending.
+No frontend/migration/budget/source seal/remote change.
+[Exact evidence, private hashes, frontend handoff and C4 plan](./research_loop/evidence/P23/NONREUSABLE_ORIGINAL_AUDIT_AND_READ_COST_2026-10-03.md).
+Fresh isolated QA/cell remain owned pending retake/cleanup. Goal retains
+original lost bytes/disposition, engine two, P24/product/signed-release gates.
+Reuse unaffected PASS; rebuild only changed Control, not the whole stack.
