@@ -55,6 +55,7 @@ import {
 import { splitGapScan, splitStitch } from "./current-source-split-integrity";
 import { POOL_FREEZE_CLOCK_ABSENT } from "./p11-stage-events";
 import { trainTestDisjoint } from "./train-test-disjoint";
+import { appliedTemporalGuards, guardEndpointTimes } from "./applied-temporal-guards";
 import {
   ResearchCurrentSourceRepository,
   type CurrentSourcePage,
@@ -552,6 +553,11 @@ export class ResearchCurrentSourceService {
       folds.every(fold => fold.causal_selection !== undefined) && folds.length > 0
       ? folds.reduce((count, fold) => count + fold.causal_selection!.inner_folds.length, 0) : undefined;
     const temporalGuards = splitGuards(summary.source_facts, retainedInnerCount);
+    const nativeFolds = page.rows.map(asFold);
+    const guardTimes = guardEndpointTimes(nativeFolds);
+    const canWitness = nativeFolds.some(fold => fold.fold_facts?.guards !== null && fold.fold_facts?.guards !== undefined)
+      && typeof this.repository.temporalGuardWitness === "function";
+    const witness = canWitness ? await this.repository.temporalGuardWitness(scope, seal, guardTimes, signal) : null;
     const value = {
       schema_version: "research.current-source-split.v1" as const,
       ...this.common("split", seal),
@@ -569,6 +575,7 @@ export class ResearchCurrentSourceService {
       },
       guards: {
         ...temporalGuards,
+        ...appliedTemporalGuards(nativeFolds, summary.source_facts, witness, seal.tableRows.OBSERVATION),
         train_test_disjoint: trainTestDisjoint(
           folds,
           temporalGuards.purge_bars,
@@ -583,7 +590,7 @@ export class ResearchCurrentSourceService {
     const { etag: _sourceEtag, ...representation } = value;
     return this.valid(ResearchCurrentSourceSplitResponseSchema, { ...value,
       etag: `"rs02_split-presentation_${sha256ResearchJson({
-        presentation_revision: "S05_INCLUSIVE_BAR_GUARD_V2", representation,
+        presentation_revision: "S05_APPLIED_TEMPORAL_GUARD_V3", representation,
       })}"`,
     });
   }

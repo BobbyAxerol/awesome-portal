@@ -60,6 +60,34 @@ function fakeRepository(respond: (sql: string, params: readonly unknown[]) => { 
 }
 
 describe("RS-02 retained-current-source custody writes", () => {
+  it("BR-F3-02 scopes one finite guard witness to the actor, run and artifact revision", async () => {
+    const { repository, calls } = fakeRepository(sql => sql.includes("FROM workspace_members")
+      ? { rowCount: 1, rows: [{}] } : sql.includes("count(*) AS row_count")
+        ? { rows: [{ row_count: "12", first_ordinal: "0", last_ordinal: "11" }] }
+        : sql.includes("occurred_at_utc_ms=ANY")
+          ? { rows: [{ source_ordinal: "3", occurred_at_utc_ms: "1000" }, { source_ordinal: "8", occurred_at_utc_ms: "2000" }] } : {});
+    const seal = sealInput() as never;
+    expect(await repository.temporalGuardWitness(scope, seal, [1000, 2000])).toEqual({ rowCount: 12,
+      firstOrdinal: 0, lastOrdinal: 11, points: [{ ordinal: 3, atUtcMs: 1000 }, { ordinal: 8, atUtcMs: 2000 }] });
+    const query = calls.find(row => row.sql.includes("occurred_at_utc_ms=ANY"))!;
+    expect(query.params).toEqual([scope.workspaceId, "run-rs02", 1, [1000, 2000], 3]);
+    expect(calls.filter(row => row.sql.startsWith("BEGIN"))).toEqual([{ sql: "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY", params: [] }]);
+    expect(calls.some(row => row.sql === "SET LOCAL ROLE portal_research_runtime")).toBe(true);
+    expect(calls.some(row => /INSERT|UPDATE|DELETE/.test(row.sql))).toBe(false);
+  });
+
+  it("BR-F3-02 refuses unbounded/duplicate endpoints and foreign actor membership before source read", async () => {
+    const { repository, calls } = fakeRepository(() => ({}));
+    const seal = sealInput() as never;
+    await expect(repository.temporalGuardWitness(scope, seal, Array.from({ length: 2561 }, (_, n) => n)))
+      .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID" });
+    await expect(repository.temporalGuardWitness(scope, seal, [1, 1]))
+      .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_INVALID" });
+    expect(calls).toHaveLength(0);
+    await expect(repository.temporalGuardWitness(scope, seal, [1000])).rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_FORBIDDEN" });
+    expect(calls.some(row => row.sql.includes("FROM research.current_source_rows_v1"))).toBe(false);
+  });
+
   it("reads S06 seal and bounded inputs in one authorized snapshot without unrelated B6 reads", async () => {
     const input = sealInput();
     const row = { run_id: input.runId, artifact_revision: 1,

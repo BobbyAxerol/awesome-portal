@@ -622,6 +622,33 @@ const GuardFactSchema = z.object({
   reason_code: ReasonCodeSchema.nullable(),
 }).strict();
 
+/** BR-F3-02: native windows checked against the same sealed bar index, not a disjointness alias. */
+export const AppliedTemporalGuardProofSchema = z.object({
+  verdict: z.enum(["PASS", "FAIL", "NOT_CHECKABLE"]),
+  basis: z.literal("RETAINED_OBSERVATION_INDEX_AND_SOURCE_FOLD_GUARDS_V1"),
+  reason_code: ReasonCodeSchema.nullable(),
+  folds: z.array(z.object({
+    fold_id: SourceIdentifierSchema,
+    verdict: z.enum(["PASS", "FAIL", "NOT_CHECKABLE"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    configured_bars: CountSchema.nullable(),
+    observed_bars: CountSchema.nullable(),
+    clipping: z.enum(["NONE", "DATASET_TAIL"]).nullable(),
+  }).strict()).max(256),
+}).strict().superRefine((value, ctx) => {
+  const bad = (path: (string | number)[]) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Applied guard verdict contradicts its source proof" });
+  if ((value.verdict === "PASS") !== (value.reason_code === null)) bad(["reason_code"]);
+  for (const [index, fold] of value.folds.entries()) {
+    if ((fold.verdict === "PASS") !== (fold.reason_code === null)) bad(["folds", index, "reason_code"]);
+    if (fold.verdict === "PASS" && (fold.configured_bars === null || fold.observed_bars === null || fold.clipping === null)) bad(["folds", index]);
+    if (fold.verdict !== "PASS" && fold.clipping !== null) bad(["folds", index, "clipping"]);
+  }
+  const failed = value.folds.some(fold => fold.verdict === "FAIL");
+  const allPass = value.folds.length >= 2 && value.folds.every(fold => fold.verdict === "PASS");
+  if ((value.verdict === "FAIL") !== failed || (value.verdict === "PASS") !== allPass) bad(["verdict"]);
+  if (new Set(value.folds.map(fold => fold.fold_id)).size !== value.folds.length) bad(["folds"]);
+});
+
 /** E14 · 5.11: one crossing from a fold's test window into the next one's. */
 const BoundaryGapSchema = z.object({
   previous_fold_id: FactTokenValueSchema.nullable(),
@@ -714,6 +741,8 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     inner_folds: GuardFactSchema,
     inner_min_folds: GuardFactSchema.optional(),
     oos_used_for_selection: GuardFactSchema,
+    purge_applied: AppliedTemporalGuardProofSchema.optional(),
+    embargo_respected: AppliedTemporalGuardProofSchema.optional(),
     train_test_disjoint: z.object({
       verdict: z.enum(["PASS", "FAIL", "NOT_CHECKABLE"]),
       // V1 remains readable for old captured responses; new reads publish inclusive-bar V2.

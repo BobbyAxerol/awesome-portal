@@ -2281,3 +2281,19 @@ Applied purge/embargo proof remains distinct; P23 candidate/load/restore/
 engine-two/independent-recompute/browser gates and P24 are not called complete.
 Legacy export backend guard is delivered; its old frontend direct GET links
 still need the documented prepare→download consumer. No remote push.
+
+### 14.1.14 Research applied temporal guards and causal navigation (2026-10-03)
+
+BR-F3-02 is delivered from retained native fold windows and same-seal observed
+bar positions, with independent purge/embargo verdicts, exact counts, honest
+historical absence and verified dataset-tail clipping. Two bounded scoped SQL
+reads, no source/HMD scan or per-fold query loop; only Split's public validator
+changes. Real causal read mismatch also corrected: public handoff uses local
+trial/study/scope and preserves the private Progress counter/journal. RC reuses
+its existing selected number with the same source-backed mapping; no duplicate
+ordinal or prose parsing. Four actual retained runs, verified Parquet/native
+QuantBT 1.1.1 oracle and 22 controls pass; immutable custody unchanged.
+Generated types and [Claude's exact W5 handoff](./research_loop/evidence/P14/BR_F3_02_APPLIED_GUARDS_AND_W5_NAVIGATION_2026-10-03.md)
+are available. One normal grouped hook gates landing; C4 removes only the owned
+cell/network, no volumes/data. No frontend/shared preview/production/push;
+W5 browser and P23/P24 acceptance remain separate.

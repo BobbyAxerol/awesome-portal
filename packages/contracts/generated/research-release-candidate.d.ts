@@ -134,8 +134,12 @@ export interface components {
         SelectedParams: {
             param_set_id: string | null;
             param_set_id_availability: components["schemas"]["Availability"];
+            /** @description Server-owned source-backed display ordinal; causal numbers are local to selected_trial_study_id. Same native mapping as Search/Freeze, not a parsed rail label or cumulative progress count. */
             selected_trial_number: number | null;
             selected_trial_number_availability: components["schemas"]["Availability"];
+            selected_trial_number_scope?: ("RUN_GLOBAL" | "STUDY_LOCAL") | null;
+            selected_trial_source_id?: string | null;
+            selected_trial_study_id?: string | null;
         };
         ComposeTaxonomyRow: {
             what: string;

@@ -842,6 +842,23 @@ export interface components {
             at_utc_ms: components["schemas"]["RetainedAnalyticsV2UtcMs"];
             value: components["schemas"]["RetainedAnalyticsV2Decimal"];
         }[];
+        /** @description Read-only checks against the same immutable retained observation index. Purge excludes exactly its configured bars before the label-horizon and test. Embargo follows the test and may be clipped only at the verified dataset tail. Zero is valid only when source windows explicitly publish zero; missing historical facts are NOT_CHECKABLE. This is not a strict-OOS selection/holdout/certification assertion. */
+        AppliedTemporalGuardProof: {
+            /** @enum {unknown} */
+            verdict: "PASS" | "FAIL" | "NOT_CHECKABLE";
+            /** @constant */
+            basis: "RETAINED_OBSERVATION_INDEX_AND_SOURCE_FOLD_GUARDS_V1";
+            reason_code: string | null;
+            folds: ({
+                fold_id: string;
+                /** @enum {unknown} */
+                verdict: "PASS" | "FAIL" | "NOT_CHECKABLE";
+                reason_code: string | null;
+                configured_bars: number | null;
+                observed_bars: number | null;
+                clipping: ("NONE" | "DATASET_TAIL") | null;
+            } & unknown)[];
+        } & (unknown & unknown & unknown);
         /** @description Existing immutable metadata only. Retained fold start/end are exact source bounds, not converted half-open dates; the top range is an envelope, not contiguous coverage. Sum counts may overlap and are not unique bars. A partial NOT_PUBLISHED object may retain known bounds. Holdout never publishes bars or source values. */
         ReplayNavigationWindow: {
             /** @enum {unknown} */
@@ -1329,6 +1346,8 @@ export interface components {
                     reason_code: string | null;
                 };
                 inner_min_folds?: components["schemas"]["GuardFact"];
+                purge_applied?: components["schemas"]["AppliedTemporalGuardProof"];
+                embargo_respected?: components["schemas"]["AppliedTemporalGuardProof"];
             };
             gap_scan: components["schemas"]["SplitGapScan"];
             stitch: components["schemas"]["SplitStitch"];

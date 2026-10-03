@@ -15,6 +15,7 @@ import { DELTA_WFO_V2_PROFILE_ID } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
 import { ResearchRetainedAnalyticsSchema } from "./retained-analytics.contract";
 import { ResearchRetainedAnalyticsV2Schema } from "./retained-analytics-v2.contract";
+import { sourceTrialOrdinal } from "./selected-trial-presentation";
 
 import { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
 export { ResearchEvidenceCandleOverviewSchema } from "./evidence-candle-overview.contract";
@@ -95,6 +96,15 @@ const HandoffCursorSchema = z.object({
   trial: PositiveIntegerSchema,
   params_digest: DigestSchema,
 }).strict();
+/** Public navigation only. The private journal cursor keeps its original P11 ordinal. */
+export const PublicResearchHandoffCursorSchema = HandoffCursorSchema.extend({
+  trial_scope: z.enum(["RUN_GLOBAL", "STUDY_LOCAL"]).optional(),
+  source_trial_id: z.string().regex(/^(?:0|[1-9][0-9]*)$/).nullable().optional(),
+  study_id: z.string().min(1).max(191).nullable().optional(),
+  progress_trial_ordinal: PositiveIntegerSchema.optional(),
+}).strict();
+type HandoffProjectionReason = "CAUSAL_HANDOFF_SELECTION_NOT_RETAINED" | "CAUSAL_HANDOFF_SOURCE_MAPPING_NOT_PUBLISHED"
+  | "CAUSAL_HANDOFF_JOURNAL_SELECTION_MISMATCH";
 const notPublishedFoldSelection = () => ({
   state: "NOT_PUBLISHED" as const,
   scope: null,
@@ -927,7 +937,11 @@ export type ResearchProgressCancelRequest = z.infer<typeof ResearchProgressCance
  * serialize the internal shape.
  */
 export type ResearchProgressPublicEvent = Omit<ResearchProgressEvent, "attempt_id" | "lease_epoch">;
-export type ResearchProgressPublicSnapshot = Omit<ResearchProgressSnapshot, "attempt_id" | "lease_epoch" | "overall" | "folds"> & {
+export type ResearchProgressPublicSnapshot = Omit<ResearchProgressSnapshot, "attempt_id" | "lease_epoch" | "overall" | "folds" | "claim"> & {
+  claim: Omit<ResearchProgressSnapshot["claim"], "handoff_cursor"> & {
+    handoff_cursor: z.infer<typeof PublicResearchHandoffCursorSchema> | null;
+    handoff_cursor_reason_code?: HandoffProjectionReason | null;
+  };
   overall: ResearchProgressSnapshot["overall"] & {
     pct_basis: "SOURCE_STAGE_WEIGHTED_V1";
     /** Journal age at the last event, not CPU time, queue age or a browser timer. */
@@ -968,8 +982,30 @@ export function toPublicResearchProgressSnapshot(
   // Legacy source journals are immutable. Only their public display copy is
   // corrected: the live Optuna callback reported raw IS Sharpe, not selected J.
   const line = publicSnapshot.overall.tqdm_line;
+  let handoff = publicSnapshot.claim.handoff_cursor;
+  let handoffReason: HandoffProjectionReason | null = null;
+  if (handoff !== null && executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID) {
+    const matches = snapshot.folds.filter(fold => fold.fold === handoff!.fold);
+    const selection = matches.length === 1 ? matches[0]!.selection : null;
+    if (!selection || selection.state !== "AVAILABLE" || selection.scope !== "PER_FOLD_STUDY") {
+      handoff = null; handoffReason = "CAUSAL_HANDOFF_SELECTION_NOT_RETAINED";
+    } else if (selection.params_digest !== handoff.params_digest || selection.trial !== handoff.trial) {
+      handoff = null; handoffReason = "CAUSAL_HANDOFF_JOURNAL_SELECTION_MISMATCH";
+    } else {
+      const ordinal = sourceTrialOrdinal(selection.source_trial_id);
+      if (ordinal === null || !PositiveIntegerSchema.safeParse(ordinal).success || !selection.study_id) {
+        handoff = null; handoffReason = "CAUSAL_HANDOFF_SOURCE_MAPPING_NOT_PUBLISHED";
+      } else handoff = { ...handoff, trial: ordinal, trial_scope: "STUDY_LOCAL",
+        source_trial_id: selection.source_trial_id!, study_id: selection.study_id,
+        progress_trial_ordinal: handoff.trial } as z.infer<typeof PublicResearchHandoffCursorSchema>;
+    }
+  } else if (handoff !== null && (executionProfileId === DELTA_WFO_PROFILE_ID || executionProfileId === DELTA_WFO_V2_PROFILE_ID)) {
+    handoff = { ...handoff, trial_scope: "RUN_GLOBAL", source_trial_id: String(handoff.trial - 1),
+      study_id: null, progress_trial_ordinal: handoff.trial } as z.infer<typeof PublicResearchHandoffCursorSchema>;
+  }
   return {
     ...publicSnapshot,
+    claim: { ...publicSnapshot.claim, handoff_cursor: handoff, handoff_cursor_reason_code: handoffReason },
     overall: {
       ...publicSnapshot.overall,
       pct_basis: "SOURCE_STAGE_WEIGHTED_V1",

@@ -222,6 +222,7 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     expect(result.selected_params).toEqual({
       param_set_id: null, param_set_id_availability: { state: "NOT_PUBLISHED", reason_code: "P21_PARAM_SET_ID_NOT_PUBLISHED" },
       selected_trial_number: null, selected_trial_number_availability: { state: "NOT_APPLICABLE", reason_code: "P21_TRIAL_ORDINAL_NOT_APPLICABLE" },
+      selected_trial_number_scope: null, selected_trial_source_id: null, selected_trial_study_id: null,
     });
     expect(result.certification_axes).toEqual({
       methodology_claim: { value: "A", availability: { state: "AVAILABLE", reason_code: null } },

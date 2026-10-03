@@ -232,6 +232,8 @@ TRACKED = (
     "generated/research-attempt-lineage.d.ts",
     "generated/research-compare.d.ts",
     "fixtures/research-release-candidate.consumer.fixtures.json",
+    "fixtures/research-current-source.applied-guard-proof.valid.json",
+    "fixtures/research-w5-navigation.valid.json",
     "generated/research-release-candidate.d.ts",
     "generated/research-release-candidate-publication.d.ts",
     "generated/execution-manager-lists.d.ts",

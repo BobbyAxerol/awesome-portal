@@ -7388,3 +7388,51 @@ path/host/relation or weakened assertion. The failed attempt remains in the
 receipt, and focused RS-03/Replay/contract tests plus the normal hook retry
 must pass before landing. All immutable source/cursor/Report/RC pins remain
 unchanged.
+
+#### BR-F3-02 applied temporal guards — Bobby-approved, 2026-10-03
+
+**IN_PROGRESS**, Codex backend lane. Compare retained purge/embargo windows
+and configured counts to the exact sealed observation-index positions;
+publish independent PASS/FAIL/NOT_CHECKABLE guards, including per-fold
+counts and verified dataset-tail clipping. Disjoint train/test windows are
+not an applied-guard proof. Historical missing facts stay NOT_CHECKABLE.
+[Scope, tests and handoff](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#34-br-f3-02--applied-purgeembargo-proof-2026-10-03).
+No UI/immutable-source rewrite, HMD scan/compute, shared :8095, production,
+push or P23/P24 acceptance is implied.
+
+#### W5 causal cursor / RC structured numbering — Bobby-approved, 2026-10-03
+
+**IN_PROGRESS**, exact real-read defect, not an engine upgrade. Retained causal
+run handoff exposes progress ordinal 6 but Search/Freeze select local trial 3;
+RC structured numbering is absent. Correct the public navigation projection
+with typed source/study/scope, preserve the private journal and progress
+counter, and reuse RC's existing number field. Missing bindings stay typed
+absent. [Scope and actual before receipt](./research_loop/CODEX_BACKEND_GAPS_2026-09-30.md#35-w5-causal-navigation-and-rc-numbering--bobby-approved-2026-10-03).
+Claude receives generated types/consumer instructions; no UI redesign, source
+seal rewrite, optimizer, shared preview, remote push or P23/P24 verdict.
+
+**Delivery addendum — BR-F3-02 and the two W5 backend issues accepted.**
+Same-seal retained/native applied purge/embargo proof now exposes independent
+verdicts/counts and verified tail clipping; absent historical facts remain
+NOT_CHECKABLE. The actual causal handoff mismatch is corrected only in its
+public projection: local trial 3 · STUDY_LOCAL, counter 6 retained separately.
+RC reuses its existing selected number and adds typed scope/source/study,
+without duplicate ordinal or parsing a rail. Private journal, source seals,
+Report and RC pins remain unchanged. Only the Split representation ETag changes.
+
+[Canonical packet — exact images/receipt/hash, tests, limits and Claude handoff](./research_loop/evidence/P14/BR_F3_02_APPLIED_GUARDS_AND_W5_NAVIGATION_2026-10-03.md).
+Four actual retained runs, installed QuantBT 1.1.1 native oracle and 22
+controls pass, including causal/global read parity and 401/404/304. Focused
+Control 88/88, contract 7/7, official generation/snapshot; one normal grouped
+hook gates landing. C4 complete without volume/data deletion: zero jobs/QA
+sessions, 21 disabled test identities, owned :8096 containers/network removed.
+No frontend/shared :8095/production/remote changes. Claude owns the browser
+round trip; coherent P23 load/DR/engine-two/independent-recompute and P24
+remain separate. Do not reopen this applied-proof item from a stale OPEN row.
+
+**Pre-landing hook correction:** contracts 260/260; Control's first grouped
+hook found one old W7 exact RC expectation missing the three new scope/native
+fields (1,830 pass, one fail, one existing DR skip). The test asserts them
+exactly, not via a weakened partial match. Public causal ordinal range is
+also checked against its existing schema; W5/W7 focused 29/29 and build pass.
+Corrected-image read receipt and normal hook retry gate the same landing.

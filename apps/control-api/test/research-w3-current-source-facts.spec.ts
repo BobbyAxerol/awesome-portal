@@ -300,7 +300,8 @@ describe("W3 · S05 split: fold anatomy and guards (CG-P14-02)", () => {
       expect(fold.anatomy.account_policy).toBe("carry_position");
       expect(fold.anatomy.cutoff_utc_ms).toBe(fold.test_end_utc_ms);
     }
-    expect(split.guards).toEqual({
+    const { purge_applied, embargo_respected, ...declaredGuards } = split.guards;
+    expect(declaredGuards).toEqual({
       label_horizon_bars: { value: 0, state: "AVAILABLE", reason_code: null },
       purge_bars: { value: 0, state: "AVAILABLE", reason_code: null },
       embargo_bars: { value: 0, state: "AVAILABLE", reason_code: null },
@@ -312,6 +313,15 @@ describe("W3 · S05 split: fold anatomy and guards (CG-P14-02)", () => {
         verdict: "PASS", basis: "RETAINED_FOLD_INCLUSIVE_BAR_WINDOWS_AND_PUBLISHED_TEMPORAL_GUARDS_V2", reason_code: null,
       },
     });
+    // This historical capture deliberately omits OBSERVATION rows. Published
+    // zero-sized native guards are facts, but cannot attest applied boundaries
+    // without the exact retained index. Disjointness alone is not this proof.
+    for (const proof of [purge_applied, embargo_respected]) {
+      expect(proof).toMatchObject({ verdict: "NOT_CHECKABLE", reason_code: "S05_RETAINED_GUARD_INDEX_NOT_COMPLETE" });
+      expect(proof!.folds).toHaveLength(2);
+      expect(proof!.folds.every((fold) => fold.verdict === "NOT_CHECKABLE"
+        && fold.configured_bars === 0 && fold.observed_bars === 0 && fold.clipping === null)).toBe(true);
+    }
     expect(split.fold_plan.folds.map((fold) => fold.score)).toEqual(real.expected.folds.map((fold) => expect.objectContaining({
       state: "AVAILABLE", oos_sharpe: fold.oos_sharpe, decay: fold.decay,
     })));

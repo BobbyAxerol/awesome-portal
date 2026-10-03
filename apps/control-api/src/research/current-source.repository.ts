@@ -25,6 +25,7 @@ import { ResearchRetainedAnalyticsV2Schema, type ResearchRetainedAnalyticsV2 } f
 import { ResearchAllTimeDistributionsSchema, type ResearchAllTimeDistributions } from "./all-time-distributions.contract";
 import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
 import { assertCausalSealConsistency } from "./causal-seal-consistency";
+import { MAXIMUM_GUARD_ENDPOINTS, type GuardIndexWitness } from "./applied-temporal-guards";
 import {
   RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID,
   RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
@@ -913,6 +914,38 @@ export class ResearchCurrentSourceRepository {
         sourceId: row.source_id,
         occurredAtUtcMs: row.occurred_at_utc_ms === null ? null : asSafeNonNegative(row.occurred_at_utc_ms, "row timestamp"),
         payload: asJsonRecord(row.payload, "row payload"),
+      };
+    }, signal);
+  }
+
+  /** BR-F3-02: one finite endpoint witness; no HMD, payload export or per-fold SQL loop. */
+  async temporalGuardWitness(scope: ResearchScope, seal: CurrentSourceSealRow, times: readonly number[],
+    signal?: AbortSignal): Promise<GuardIndexWitness> {
+    if (times.length > MAXIMUM_GUARD_ENDPOINTS || times.some(at => !Number.isSafeInteger(at) || at < 0)
+      || new Set(times).size !== times.length) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Temporal guard witness exceeds its finite bound.", 400);
+    }
+    return this.withScopedRead(scope, async client => {
+      const params = [scope.workspaceId, seal.runId, seal.artifactRevision];
+      const census = await client.query<{ row_count: string; first_ordinal: string | null; last_ordinal: string | null }>(
+        `SELECT count(*) AS row_count, min(source_ordinal) AS first_ordinal, max(source_ordinal) AS last_ordinal
+           FROM research.current_source_rows_v1
+          WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3 AND table_kind='OBSERVATION'`, params);
+      const endpoints = await client.query<{ source_ordinal: string; occurred_at_utc_ms: string }>(
+        `SELECT source_ordinal, occurred_at_utc_ms FROM research.current_source_rows_v1
+          WHERE workspace_id=$1 AND run_id=$2 AND artifact_revision=$3 AND table_kind='OBSERVATION'
+            AND occurred_at_utc_ms=ANY($4::bigint[])
+          ORDER BY source_ordinal LIMIT $5`, [...params, times, times.length + 1]);
+      const population = census.rows[0];
+      return {
+        rowCount: asSafeNonNegative(population?.row_count, "guard index census"),
+        firstOrdinal: population?.first_ordinal == null ? null : asSafeNonNegative(population.first_ordinal, "guard first ordinal"),
+        lastOrdinal: population?.last_ordinal == null ? null : asSafeNonNegative(population.last_ordinal, "guard last ordinal"),
+        // More matches than endpoints means ambiguous timestamps; withhold the whole witness.
+        points: endpoints.rows.length > times.length ? [] : endpoints.rows.map(row => ({
+          atUtcMs: asSafeNonNegative(row.occurred_at_utc_ms, "guard boundary"),
+          ordinal: asSafeNonNegative(row.source_ordinal, "guard ordinal"),
+        })),
       };
     }, signal);
   }

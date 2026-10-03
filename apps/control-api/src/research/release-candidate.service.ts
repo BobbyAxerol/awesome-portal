@@ -265,8 +265,12 @@ export class ResearchReleaseCandidateService {
     // No source publishes a param_set_id; a digest or selection id is not one.
     const trialNumber = selectedTrialId !== null && /^(0|[1-9][0-9]*)$/.test(selectedTrialId)
       ? Number(selectedTrialId) + 1 : null;
-    const selectedTrialNumber = trialNumber !== null && Number.isSafeInteger(trialNumber) && trialNumber <= 1_000_000
-      ? trialNumber : null;
+    const presentation = selectedTrialPresentation(selectedTrialId, source.wfo?.seal?.profileId ?? "", source.selectedTrialNativeFacts);
+    // Legacy numeric selection keeps its existing number; retained lanes must
+    // use the native profile-bound mapping also used by Search/Freeze.
+    const candidateNumber = source.wfo ? presentation.selected_trial_ordinal : trialNumber;
+    const selectedTrialNumber = candidateNumber !== null && Number.isSafeInteger(candidateNumber) && candidateNumber <= 1_000_000
+      ? candidateNumber : null;
     const response = {
       schema_version: "research.release-candidate-compose.v1" as const,
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
@@ -300,6 +304,10 @@ export class ResearchReleaseCandidateService {
         selected_trial_number_availability: selectedTrialNumber !== null ? AVAILABLE
           : source.selection.targetKind === "CENTROID" || source.selection.targetKind === "COMPOSITE_POLICY"
             ? notApplicable("P21_TRIAL_ORDINAL_NOT_APPLICABLE") : absent("P21_SELECTED_TRIAL_ORDINAL_NOT_PUBLISHED"),
+        selected_trial_number_scope: selectedTrialNumber === null ? null : presentation.selected_trial_ordinal_scope,
+        selected_trial_source_id: selectedTrialNumber === null ? null : selectedTrialId,
+        selected_trial_study_id: presentation.selected_trial_ordinal_scope === "STUDY_LOCAL"
+          ? source.selectedTrialNativeFacts?.study_id ?? null : null,
       },
       taxonomy: publication.taxonomy ?? [
         { what: "code / entrypoint (av_)", state: "UNSET", consequence: "No P22-published predecessor is available, so no code-change or gate conclusion is inferred." },

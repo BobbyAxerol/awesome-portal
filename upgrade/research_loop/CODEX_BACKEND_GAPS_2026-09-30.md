@@ -1312,3 +1312,82 @@ RS-03's existing public anti-leak assertion caught new Replay
 enums, not a private locator renamed into another free-form field. Existing
 anti-leak assertions remain intact; focused RS-03/Replay/contracts and the
 normal hook retry gate landing. No source/cursor/Report/RC pin changes.
+
+## 34. BR-F3-02 — applied purge/embargo proof, 2026-10-03
+
+**IN_PROGRESS**, Bobby-approved scope. Verify the source's retained per-fold
+guard windows/counts against the same sealed OBSERVATION index, not against
+calendar arithmetic or train/test disjointness alone. Publish separate
+`guards.purge_applied` / `guards.embargo_respected` verdicts, per-fold reasons
+and exact configured/observed counts. Dataset-tail clipping is valid only
+when the same retained index proves the available tail; missing historical
+windows/index facts remain NOT_CHECKABLE, never zero or PASS.
+
+Bounded read-only implementation, generated schema/types/fixtures, positive
+and negative/source/tenant regressions, exact retained-source receipt and
+Claude handoff are required. Keep existing source/seal/Report/RC pins and UI
+unchanged; only the Split representation validator changes. No new engine
+run, source backfill, production/shared :8095 mutation or remote push.
+P23/P24 and W5 remain separate.
+
+## 35. W5 causal navigation and RC numbering — Bobby-approved, 2026-10-03
+
+**IN_PROGRESS**, additive backend correction alongside §34. Actual owned-cell
+reads of `rrun_becde1e160a2770d49246f7f665208ce` prove the mismatch: P11 handoff
+trial 6 is a run-wide progress ordinal, while Search/Freeze select
+`study_1.trial_2`, study-local ordinal 3; RC's structured selected number is
+null. Private receipt `br-f3-02-w5-before-20261003.json` records the four reads.
+
+Correct only the public navigation projection: handoff `trial` follows the
+exact matching fold's original study-local trial, with explicit scope/study/
+source ID and the old progress counter retained separately. Missing or
+conflicting source mapping withholds the public cursor with a typed reason.
+Private journal/ingress, claim text, selected parameters and hashes stay
+unchanged. RC reuses its existing `selected_trial_number`, adds scope and
+exact native identity, and uses the shared source-backed presentation rule;
+do not add a parallel `selected_trial_ordinal` or parse rail prose.
+
+Regenerate public OpenAPI/types; old captures stay readable. Focused tests
+must cover cumulative/local mismatch, global regression, missing/mismatched
+causal facts, immutable inputs, and actual named Progress→Search/Freeze→RC
+read parity. Claude owns browser wiring/round-trip acceptance; no frontend
+file, runtime worker, optimizer, shared :8095 or production change.
+
+### §34/§35 delivery — applied guards and causal navigation
+
+**SCOPED_BACKEND_ACCEPTED**; exact delivery SHA is the commit containing
+[the canonical receipt and Claude W5 handoff](./evidence/P14/BR_F3_02_APPLIED_GUARDS_AND_W5_NAVIGATION_2026-10-03.md).
+This supersedes the two IN_PROGRESS checkpoints without erasing them.
+
+- BR-F3-02 **DELIVERED**: same-seal observation-index/native-window proof for
+  purge/embargo, independent PASS/FAIL/NOT_CHECKABLE verdicts and verified
+  tail clipping. Missing historical facts stay NOT_CHECKABLE; HTTP Split
+  validator changes, immutable source/Report/RC identities do not.
+- W5 causal handoff **FIXED** after real-read mismatch: public trial follows
+  the native study-local selection; source/study/scope are typed and the run
+  progress counter is separate. Private journal unchanged; ambiguous or
+  mismatched selection withholds the cursor with a typed reason.
+- W5 RC **DELIVERED**: reuses `selected_trial_number`, now source-bound for
+  causal profiles with explicit scope/source/study. No duplicate ordinal or
+  rail-string parsing. Old public captures/private cursors remain readable.
+
+Real owned :8096 proof: four retained runs, native installed QuantBT 1.1.1
+oracle with verified Parquet bytes, 22 controls PASS; global/causal named
+Progress→Search/Freeze→RC parity, 401/404/304 and unchanged custody.
+Final focused Control 88/88 and contract 7/7; official generation/snapshot
+pass. One normal grouped commit hook gates landing, not per request/edit.
+No frontend/shared :8095/production change, optimizer or remote push.
+C4 complete: zero jobs/QA sessions, 21 disabled test identities; exact cell
+containers/network removed, no volumes/data/image prune.
+
+Claude must consume the generated guard/cursor/RC fields and take its W5
+browser receipt; backend round trip is not browser acceptance. P23/P24 and
+legacy export prepare→download consumer remain their declared next scopes.
+
+**Hook correction:** first grouped hook: contracts 260/260, Control
+1,830 pass / one old exact RC expectation fail / one existing DR skip.
+The W7 expectation now checks all three added native-number metadata fields
+exactly; it is not relaxed to a partial match. A public cursor outside the
+existing integer bound is withheld, with a focused negative. Final W5/W7
+29/29 and Control build pass; corrected-image receipt and normal hook retry
+gate landing. Source journals/immutable custody and frontend remain untouched.

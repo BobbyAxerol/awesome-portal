@@ -2005,3 +2005,14 @@ to the Research runtime role. No frontend/runtime/production/push change;
 one grouped normal hook gates landing. [Receipt and consumer mapping](../research_loop/evidence/P21/BROAD_REQUEST_RECONCILIATION_2026-10-03.md).
 Purge/embargo applied proof and genuine P23/P24 gates remain explicit; stale
 subtitle/ten-artifact requests do not reopen accepted W4/source semantics.
+
+**2026-10-03 BR-F3-02 + W5 backend closeout:** applied purge/embargo proof now
+uses exact same-seal observed positions/native guard windows with typed absence
+and verified tail clipping. Public causal handoff fixes the real cumulative/local
+ordinal mismatch without rewriting the source journal; RC reuses its existing
+selected number with source/study/scope. Four real retained runs, installed native
+QuantBT 1.1.1 oracle, 22 read controls and unchanged immutable custody. Generated
+contracts/focused tests and one normal grouped hook gate landing; C4 exact cell
+teardown, no volumes/data/images pruned. [Receipt and Claude W5 mapping](../research_loop/evidence/P14/BR_F3_02_APPLIED_GUARDS_AND_W5_NAVIGATION_2026-10-03.md).
+No frontend/shared preview/production/remote changes; W5 browser and P23/P24
+retain their own gates, not reopened source upgrades.

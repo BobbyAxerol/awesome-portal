@@ -11,6 +11,13 @@ export const SelectedTrialPresentationSchema = z.object({
   ]).nullable(),
 }).strict();
 
+/** Original zero-based source number, never the P11 cumulative progress ordinal. */
+export function sourceTrialOrdinal(source: string | null | undefined): number | null {
+  if (typeof source !== "string" || !/^(?:0|[1-9][0-9]*)$/.test(source)) return null;
+  const number = Number(source);
+  return Number.isSafeInteger(number) && Number.isSafeInteger(number + 1) ? number + 1 : null;
+}
+
 export function selectedTrialPresentation(
   id: string | null,
   profileId: string,
@@ -30,8 +37,8 @@ export function selectedTrialPresentation(
   }
   const source = causal ? native!.source_trial_id! : id;
   if ((!global && !causal) || !/^(?:0|[1-9][0-9]*)$/.test(source)) return absent("SOURCE_TRIAL_NUMBER_NOT_PUBLISHED");
-  const number = Number(source);
-  if (!Number.isSafeInteger(number) || !Number.isSafeInteger(number + 1)) return absent("SOURCE_TRIAL_NUMBER_NOT_PUBLISHED");
-  return { selected_trial_ordinal: number + 1, selected_trial_ordinal_scope: causal ? "STUDY_LOCAL" : "RUN_GLOBAL",
+  const ordinal = sourceTrialOrdinal(source);
+  if (ordinal === null) return absent("SOURCE_TRIAL_NUMBER_NOT_PUBLISHED");
+  return { selected_trial_ordinal: ordinal, selected_trial_ordinal_scope: causal ? "STUDY_LOCAL" : "RUN_GLOBAL",
     selected_trial_ordinal_reason_code: null };
 }

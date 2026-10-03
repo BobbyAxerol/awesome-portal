@@ -186,6 +186,9 @@ export const ResearchReleaseCandidateComposeResponseSchema = z.object({
     param_set_id_availability: AvailabilitySchema,
     selected_trial_number: z.number().int().positive().max(1_000_000).nullable(),
     selected_trial_number_availability: AvailabilitySchema,
+    selected_trial_number_scope: z.enum(["RUN_GLOBAL", "STUDY_LOCAL"]).nullable().optional(),
+    selected_trial_source_id: z.string().min(1).max(191).nullable().optional(),
+    selected_trial_study_id: z.string().min(1).max(191).nullable().optional(),
   }).strict(),
   taxonomy: z.array(z.object({
     what: z.string().min(1).max(120),

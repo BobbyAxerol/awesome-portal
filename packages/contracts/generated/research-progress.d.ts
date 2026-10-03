@@ -217,8 +217,18 @@ export interface components {
                 cursor: string | null;
                 /** @description Optional only for a pre-amendment historical snapshot; it must not be inferred from the claim text, engine capability or a methodology ceiling. */
                 methodology_certificate?: components["schemas"]["ProgressMethodologyCertificate"];
-                /** @description CG-P11-03. The structured cursor from run_completed, set whether or not a claim was issued; `cursor` stays the legacy free text of an issued claim. Optional only for a pre-W2 snapshot; absence means null. */
-                handoff_cursor?: components["schemas"]["ProgressHandoffCursor"] | null;
+                handoff_cursor?: {
+                    fold: number;
+                    /** @description Navigation ordinal: local to the published study for causal runs, run-global otherwise. The immutable P11 cumulative counter is progress_trial_ordinal. Never infer scope from magnitude. */
+                    trial: number;
+                    params_digest: components["schemas"]["Digest"];
+                    /** @enum {unknown} */
+                    trial_scope?: "RUN_GLOBAL" | "STUDY_LOCAL";
+                    source_trial_id?: string | null;
+                    study_id?: string | null;
+                    progress_trial_ordinal?: number;
+                } | null;
+                handoff_cursor_reason_code?: ("CAUSAL_HANDOFF_SELECTION_NOT_RETAINED" | "CAUSAL_HANDOFF_SOURCE_MAPPING_NOT_PUBLISHED" | "CAUSAL_HANDOFF_JOURNAL_SELECTION_MISMATCH") | null;
             };
             readiness: {
                 /** @enum {unknown} */

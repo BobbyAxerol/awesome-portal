@@ -12,6 +12,19 @@ export function progressTruthComponents(document) {
     pct_basis: { const: "SOURCE_STAGE_WEIGHTED_V1", description: "Source stage-weighted percentage, not trial completion percentage. A terminal failure does not force 100%. Optional for older public captures." },
     elapsed_basis: { const: "SOURCE_JOURNAL_CREATED_TO_LAST_EVENT_V1", description: "elapsed_s is source journal age observed at its last event, with the source's monotonic floor. Not CPU/runtime accounting, control queue age, search throughput duration or a browser timer." },
   });
+  const publicCursor = structuredClone(schemas.ProgressHandoffCursor);
+  Object.assign(publicCursor.properties, {
+    trial_scope: { enum: ["RUN_GLOBAL", "STUDY_LOCAL"] },
+    source_trial_id: nullable({ type: "string", pattern: "^(?:0|[1-9][0-9]*)$" }),
+    study_id: nullable({ type: "string", minLength: 1, maxLength: 191 }),
+    progress_trial_ordinal: { type: "integer", minimum: 1 },
+  });
+  publicCursor.properties.trial.description = "Navigation ordinal: local to the published study for causal runs, run-global otherwise. The immutable P11 cumulative counter is progress_trial_ordinal. Never infer scope from magnitude.";
+  snapshot.properties.claim.properties.handoff_cursor = { anyOf: [publicCursor, { type: "null" }] };
+  snapshot.properties.claim.properties.handoff_cursor_reason_code = nullable({ enum: [
+    "CAUSAL_HANDOFF_SELECTION_NOT_RETAINED", "CAUSAL_HANDOFF_SOURCE_MAPPING_NOT_PUBLISHED",
+    "CAUSAL_HANDOFF_JOURNAL_SELECTION_MISMATCH",
+  ] });
   const selection = structuredClone(schemas.ProgressFoldSelection);
   Object.assign(selection.properties, {
     display_trial_ordinal: nullable({ type: "integer", minimum: 1 }),
