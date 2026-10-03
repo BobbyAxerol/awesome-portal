@@ -24,7 +24,7 @@
  *    read as a boundary.
  */
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { Children, isValidElement, useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import * as echarts from "echarts/core";
 import type { ECharts } from "echarts/core";
 
@@ -364,7 +364,14 @@ function ChartShell({
       if (pinnedAt.current !== null) show(pinnedAt.current);
     }, 60);
   };
+  /* The exact-values table (and its visible "Data" disclosure) is a sibling of the region, never inside it: nothing
+     tabbable may sit inside a chart region (one tab stop per chart). */
+  const parts = Children.toArray(children);
+  const isTable = (node: ReactNode) => isValidElement(node) && node.type === ExactTable;
+  const inside = parts.filter((node) => !isTable(node));
+  const tables = parts.filter(isTable);
   return (
+    <>
     <div
       ref={wrapper}
       onPointerUp={onPointerUp}
@@ -386,9 +393,11 @@ function ChartShell({
           Reset zoom
         </button>
       ) : null}
-      {children}
+      {inside}
       {c.nodes}
     </div>
+    {tables}
+    </>
   );
 }
 
