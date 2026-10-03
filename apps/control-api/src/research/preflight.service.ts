@@ -35,14 +35,14 @@ export function canonicalResearchJson(value: unknown): string {
   const normalize = (input: unknown): unknown => {
     if (Array.isArray(input)) return input.map(normalize);
     if (input && typeof input === "object") {
-      return Object.fromEntries(
-        Object.entries(input as Record<string, unknown>)
-          // Python's `sort_keys=True` uses Unicode code-point ordering. Do
-          // not use localeCompare here: locale collation can produce a
-          // different requested-spec SHA for valid mixed-case option keys.
-          .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-          .map(([key, nested]) => [key, normalize(nested)]),
-      );
+      // Preserve the existing key ordering/JSON bytes without allocating two
+      // arrays of entry tuples for every accounting/analytics observation.
+      // A null prototype retains literal __proto__ as an ordinary JSON key.
+      const output: Record<string, unknown> = Object.create(null);
+      for (const key of Object.keys(input).sort()) {
+        output[key] = normalize((input as Record<string, unknown>)[key]);
+      }
+      return output;
     }
     return input;
   };

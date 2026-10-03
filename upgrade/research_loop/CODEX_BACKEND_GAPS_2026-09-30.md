@@ -1705,3 +1705,25 @@ gate acceptance. No DTO/UI/migration/budget change. Fresh QA/cell remain
 owned pending retake and exact revocation/teardown; older C4 stays historical.
 Remaining: read acceptance/aggregation, original lost bytes/disposition,
 qualified engine two and P24/release. No remote push or unrelated retest.
+
+### §39 clean read retake / exact-JSON CPU continuation — 2026-10-03
+
+`4b845a3a` normal hook passed (1,889 Control / one named skip), shared FF,
+Control-only image built and reconciled. Actual 120/120 GET 200 still FAIL:
+Report **541 ms**, RC **1,752 ms** against unchanged 500-ms targets.
+Do not call the first planner/RLS correction the final SLO fix.
+
+Fresh DB/current-role attribution locates synchronous repeated 500-KiB
+schema/hash work. Next coherent repair batches request-local revisions and
+uses bounded exact-current-JSON pure calculation memoization, not a SQL,
+source, actor/grant or lease cache. Membership/source/proof reads stay fresh;
+public DTO/financial/hash/authority semantics and all current data unchanged.
+Nine memo owners, each 32 entries / 4 MiB / 30 s; final regression, normal
+hook, clean Control-only build and affected HTTP retake gate acceptance.
+[Failure hash, exact changes/tests, Claude handoff and C4](./evidence/P23/EXACT_JSON_READ_COST_REPAIR_2026-10-03.md).
+
+Linked original child/restart/fresh restore, P22 reader, actual JSON502 and
+restored browser are already accepted in their scopes. Product FE still
+needs the published named linked-audit operation/proof mapping. Historical
+83/86, second qualified engine and P24 whole-product/release remain OPEN.
+No new phase, remote push, FE edit or shared/production runtime mutation.

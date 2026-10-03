@@ -30,7 +30,7 @@ import {
   type CurrentSourceFacts,
 } from "./current-source.payload";
 import type { CurrentSourceSealRow, CurrentSourceTableKind } from "./current-source.repository";
-import { currentSourceReadRevision, currentSourceSealDigest } from "./current-source.service";
+import { currentSourceReadRevisions } from "./current-source.service";
 import {
   DELTA_WFO_PROFILE,
   isDeltaWfoProfile,
@@ -38,6 +38,7 @@ import {
 import { canonicalResearchJson } from "./preflight.service";
 import { DEFAULT_PARAMETER_BINDING_REGISTRY } from "./parameter-binding.registry";
 import { DELTA_CAUSAL_INNER_PROFILE, DELTA_CAUSAL_INNER_PROFILE_ID } from "./delta-causal-inner.profile";
+import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 
 const DIGEST = /^[0-9a-f]{64}$/;
 
@@ -108,21 +109,19 @@ function sha(value: unknown): string {
   return createHash("sha256").update(canonicalResearchJson(value), "utf8").digest("hex");
 }
 
+const retainedCalculations = new ExactJsonCalculationMemo<RetainedLaneFacts>();
 export function retainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedLaneFacts {
+  return retainedCalculations.calculate(lane, () => calculateRetainedLaneFacts(lane));
+}
+function calculateRetainedLaneFacts(lane: ReleaseCandidateRetainedLane): RetainedLaneFacts {
   const causal = lane.executionProfileId === DELTA_CAUSAL_INNER_PROFILE_ID;
   const seal = lane.seal;
   const summary = seal ? CurrentSourceSummarySchema.safeParse(seal.summary) : null;
   const parsed = summary?.success ? summary.data : null;
-  const sealDigest = seal && parsed ? currentSourceSealDigest({
-    artifactRevision: seal.artifactRevision,
-    manifestDigest: seal.manifestDigest,
-    sourceTransformDigest: seal.sourceTransformDigest,
-    retainedImportDigest: seal.retainedImportDigest,
-    tableRows: seal.tableRows,
-    summary: seal.summary as Record<string, unknown>,
-  }) : null;
-  const revision = (kind: string) => seal && sealDigest
-    ? currentSourceReadRevision(kind, { ...seal, summary: seal.summary as Record<string, unknown> }) : null;
+  const revisionSet = seal && parsed ? currentSourceReadRevisions(["evidence", "split", "search", "replay"],
+    { ...seal, summary: seal.summary as Record<string, unknown> }) : null;
+  const sealDigest = revisionSet?.sealDigest ?? null;
+  const revision = (kind: string) => revisionSet?.revisions[kind] ?? null;
   const selection = parsed && parsed.selection.trial_id !== null && Object.keys(parsed.selection.parameters).length > 0
     ? { trialId: parsed.selection.trial_id, parameters: parsed.selection.parameters }
     : null;

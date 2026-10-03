@@ -7639,3 +7639,21 @@ No frontend/migration/budget/source seal/remote change.
 Fresh isolated QA/cell remain owned pending retake/cleanup. Goal retains
 original lost bytes/disposition, engine two, P24/product/signed-release gates.
 Reuse unaffected PASS; rebuild only changed Control, not the whole stack.
+
+#### Exact-current JSON read-cost continuation — 2026-10-03
+
+Backend/shared clean `4b845a3a`; normal hook 1,889 Control PASS / one named
+skip. Control-only clean image passes identity/compiled/mount isolation, but
+the **actual** affected 20-reader retake remains FAIL: Report 541 ms, RC
+1,752 ms, targets 500 ms; 120/120 GET 200, no implicit compute/proof change.
+This supersedes the pending first retake, not the SLO gate itself.
+
+Codex repairs duplicated canonical/schema CPU, with exact-current-JSON,
+bounded pure-calculation reuse and fresh per-request RLS/source/proof reads.
+Canonical/DTO/hash/financial/authority semantics, source seals and Claude UI
+stay unchanged. Normal coherent hook plus new clean Control-only retake and
+exact QA teardown remain required. [Receipt, failures and generated Claude
+handoff](./research_loop/evidence/P23/EXACT_JSON_READ_COST_REPAIR_2026-10-03.md).
+No FE/push/dev-main/shared :8095/production action. Three lost original
+manifests, engine-two qualification and full P24/owner/release stay OPEN;
+do not recreate already accepted linked-child/P22/JSON502/restore work.

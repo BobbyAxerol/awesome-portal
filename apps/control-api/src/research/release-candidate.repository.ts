@@ -7,8 +7,6 @@
  * declaration draft and one immutable local pack/retention-pin insertion.
  */
 
-import { createHash } from "node:crypto";
-
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
 
@@ -32,6 +30,8 @@ import { CurrentSourceSummarySchema, CurrentSourceTrialPayloadSchema } from "./c
 import { DELTA_CAUSAL_INNER_PROFILE } from "./delta-causal-inner.profile";
 import { readPinnedAuditProofs } from "./final-audit.read";
 import type { VerifiedPinnedAudit } from "./final-audit.contract";
+import { memoizedResearchJsonDigest } from "./memoized-json-digest";
+import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 
 export type { ReleaseCandidateRetainedLane } from "./release-candidate.retained-lane";
 
@@ -281,12 +281,17 @@ function safeInteger(value: string | number | null | undefined, label: string): 
   return numeric;
 }
 
+const decodedJsonCalculations = new ExactJsonCalculationMemo<Record<string, unknown>>();
+const retainedSourceCalculations = new ExactJsonCalculationMemo<ReleaseCandidateRetainedLane>();
 function jsonRecord(value: JsonColumn, label: string): Record<string, unknown> | null {
   if (value === null) return null;
   try {
-    const parsed = typeof value === "string" ? JSON.parse(value) : value;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
-    return parsed as Record<string, unknown>;
+    const decode = () => {
+      const parsed = typeof value === "string" ? JSON.parse(value) : value;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
+      return parsed as Record<string, unknown>;
+    };
+    return typeof value === "string" ? decodedJsonCalculations.calculate(value, decode) : decode();
   } catch {
     throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", `Release Candidate ${label} is incompatible.`, 503);
   }
@@ -294,7 +299,7 @@ function jsonRecord(value: JsonColumn, label: string): Record<string, unknown> |
 
 /** Deterministic source fence shared by service tests and write CAS. */
 export function releaseCandidateSourceFingerprint(source: ReleaseCandidateSource): string {
-  return createHash("sha256").update(canonicalResearchJson({
+  return memoizedResearchJsonDigest({
     run: {
       id: source.runId, attempt_id: source.attemptId, state: source.runState,
       kind: source.runKind, relationship_kind: source.relationshipKind,
@@ -330,11 +335,13 @@ export function releaseCandidateSourceFingerprint(source: ReleaseCandidateSource
     // W7: present only on the retained lane, so a P04 fingerprint is unchanged.
     ...(!source.wfo ? {} : { retained_lane: source.wfo }),
     ...(source.verifiedAudit ? { linked_final_audit: source.verifiedAudit } : {}),
-  }), "utf8").digest("hex");
+  });
 }
 
 @Injectable()
 export class ResearchReleaseCandidateRepository {
+  private readonly companionCalculations = new ExactJsonCalculationMemo<Pick<NonNullable<ReleaseCandidateRetainedLane["seal"]>,
+    "enrichedAnalysis" | "analyticsSidecar" | "distributionsSidecar">>();
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
   async readComposition(scope: ResearchScope, runId: string): Promise<ReleaseCandidateCompositionSource | null> {
@@ -629,7 +636,7 @@ export class ResearchReleaseCandidateRepository {
              NULL::text AS producer_source_transform_digest,
              selection.selection_id, selection.selected_trial_id, selection.parameter_bundle_digest,
              selection.source_digest AS selection_source_digest, selection.target_kind AS selection_target_kind,
-             report.report_revision, report.frozen_core_digest, report.frozen_core,
+             report.report_revision, report.frozen_core_digest, report.frozen_core::text AS frozen_core,
              (extract(epoch FROM report.sealed_at) * 1000)::bigint AS report_sealed_at_utc_ms,
              evidence.projection_revision AS evidence_revision, evidence.source_evidence_digest,
              evidence.projection_digest AS evidence_projection_digest, evidence.readiness AS evidence_readiness,
@@ -654,7 +661,7 @@ export class ResearchReleaseCandidateRepository {
              current_source.dataset_binding_digest AS current_dataset_binding_digest,
              current_source.table_rows AS current_table_rows,
              current_source.total_rows AS current_total_rows,
-             current_source.summary AS current_summary,
+             current_source.summary::text AS current_summary,
              current_source.sealed_artifact_id AS current_sealed_artifact_id,
              floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms
         FROM research.runs run
@@ -812,7 +819,7 @@ export class ResearchReleaseCandidateRepository {
     }
     const revision = safeInteger(row.current_artifact_revision, "current-source artifact revision");
     const folds = await client.query<{ source_ordinal: string | number; source_id: string; payload: JsonColumn }>(
-      `SELECT source_ordinal, source_id, payload
+      `SELECT source_ordinal, source_id, payload::text AS payload
          FROM research.current_source_rows_v1
         WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'FOLD'
         ORDER BY source_ordinal ASC
@@ -845,7 +852,7 @@ export class ResearchReleaseCandidateRepository {
       totalRows: safeInteger(row.current_total_rows, "current-source row count"),
       summary: jsonRecord(row.current_summary, "current-source summary"),
     };
-    return {
+    const lane: ReleaseCandidateRetainedLane = {
       ...base,
       seal: {
         ...seal,
@@ -860,6 +867,10 @@ export class ResearchReleaseCandidateRepository {
         payload: jsonRecord(fold.payload, "retained fold row"),
       })),
     };
+    // Intern only this fully read current JSON, after all RLS snapshot queries.
+    // Pure schema/hash consumers can reuse its private frozen encoding; no
+    // source, membership, artifact or proof query is skipped on the next read.
+    return retainedSourceCalculations.calculate(lane, () => lane);
   }
 
   /** Read and verify the same immutable companions canonical Evidence revision uses. */
@@ -888,27 +899,32 @@ export class ResearchReleaseCandidateRepository {
       [workspaceId, runId, seal.artifactRevision, seal.retainedImportDigest],
     );
     const row = result.rows[0];
-    const companions: Awaited<ReturnType<ResearchReleaseCandidateRepository["retainedCompanions"]>> = {
-      ...(enrichedAnalysis ? { enrichedAnalysis } : {}),
-    };
-    const isDigest = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
-    if (row?.analytics != null) {
-      const analytics = ResearchRetainedAnalyticsV2Schema.safeParse(row.analytics);
-      if (!analytics.success || sha256ResearchJson(analytics.data) !== row.analytics_digest
-        || !isDigest(row.analytics_source_rows_digest) || row.analytics_import_digest !== seal.retainedImportDigest
-        || (seal.summary as Record<string, unknown> | null)?.summary_analytics_v2 !== undefined) throw unavailable();
-      companions.analyticsSidecar = { digest: row.analytics_digest as string,
-        sourceRowsDigest: row.analytics_source_rows_digest, analytics: analytics.data };
-    }
-    if (row?.distributions != null) {
-      const distributions = ResearchAllTimeDistributionsSchema.safeParse(row.distributions);
-      if (!distributions.success || sha256ResearchJson(distributions.data) !== row.distributions_digest
-        || !isDigest(row.distributions_source_rows_digest) || row.distributions_import_digest !== seal.retainedImportDigest
-        || (companions.analyticsSidecar && row.distributions_source_rows_digest !== companions.analyticsSidecar.sourceRowsDigest)
-        || distributions.data.oos_observation_count > seal.tableRows.OBSERVATION) throw unavailable();
-      companions.distributionsSidecar = { digest: row.distributions_digest as string, distributions: distributions.data };
-    }
-    return companions;
+    return this.companionCalculations.calculate({ runId, artifactRevision: seal.artifactRevision,
+      retainedImportDigest: seal.retainedImportDigest, observations: seal.tableRows.OBSERVATION,
+      inlineAnalyticsPresent: (seal.summary as Record<string, unknown> | null)?.summary_analytics_v2 !== undefined,
+      row: row ?? null, enrichedAnalysis: enrichedAnalysis ?? null }, () => {
+      const companions: Awaited<ReturnType<ResearchReleaseCandidateRepository["retainedCompanions"]>> = {
+        ...(enrichedAnalysis ? { enrichedAnalysis } : {}),
+      };
+      const isDigest = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+      if (row?.analytics != null) {
+        const analytics = ResearchRetainedAnalyticsV2Schema.safeParse(row.analytics);
+        if (!analytics.success || sha256ResearchJson(analytics.data) !== row.analytics_digest
+          || !isDigest(row.analytics_source_rows_digest) || row.analytics_import_digest !== seal.retainedImportDigest
+          || (seal.summary as Record<string, unknown> | null)?.summary_analytics_v2 !== undefined) throw unavailable();
+        companions.analyticsSidecar = { digest: row.analytics_digest as string,
+          sourceRowsDigest: row.analytics_source_rows_digest, analytics: analytics.data };
+      }
+      if (row?.distributions != null) {
+        const distributions = ResearchAllTimeDistributionsSchema.safeParse(row.distributions);
+        if (!distributions.success || sha256ResearchJson(distributions.data) !== row.distributions_digest
+          || !isDigest(row.distributions_source_rows_digest) || row.distributions_import_digest !== seal.retainedImportDigest
+          || (companions.analyticsSidecar && row.distributions_source_rows_digest !== companions.analyticsSidecar.sourceRowsDigest)
+          || distributions.data.oos_observation_count > seal.tableRows.OBSERVATION) throw unavailable();
+        companions.distributionsSidecar = { digest: row.distributions_digest as string, distributions: distributions.data };
+      }
+      return companions;
+    });
   }
 
   private async selectedTrialNativeFacts(

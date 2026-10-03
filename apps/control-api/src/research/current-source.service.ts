@@ -142,24 +142,40 @@ export function currentSourceSealDigest(seal: Pick<CurrentSourceSealRow,
 export function currentSourceReadRevision(kind: string, seal: Pick<CurrentSourceSealRow,
   "artifactRevision" | "manifestDigest" | "sourceTransformDigest" | "retainedImportDigest" | "tableRows" | "summary"
   | "enrichedAnalysis" | "analyticsSidecar" | "distributionsSidecar">): string {
-  if (seal.enrichedAnalysis && ["evidence", "evidence-monthly_returns", "evidence-return_distribution"].includes(kind)) {
-    return `rs02_${kind}_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
-      enrichment: sha256ResearchJson(seal.enrichedAnalysis) })}`;
+  return currentSourceReadRevisions([kind], seal).revisions[kind]!;
+}
+
+/** Request-local batch: hash this exact authorized seal once, not per view. */
+export function currentSourceReadRevisions(kinds: readonly string[], seal: Parameters<typeof currentSourceReadRevision>[1]): {
+  sealDigest: string; revisions: Record<string, string>;
+} {
+  const sealDigest = currentSourceSealDigest(seal);
+  let enrichmentDigest: string | undefined;
+  const revisions: Record<string, string> = Object.create(null);
+  for (const kind of kinds) revisions[kind] = revisionFor(kind);
+  return { sealDigest, revisions };
+
+  function revisionFor(kind: string): string {
+    if (seal.enrichedAnalysis && ["evidence", "evidence-monthly_returns", "evidence-return_distribution"].includes(kind)) {
+      enrichmentDigest ??= sha256ResearchJson(seal.enrichedAnalysis);
+      return `rs02_${kind}_${sha256ResearchJson({ seal_digest: sealDigest,
+        enrichment: enrichmentDigest })}`;
+    }
+    if (seal.distributionsSidecar && ["evidence", "evidence-monthly_returns", "evidence-return_distribution"].includes(kind)) {
+      return `rs02_${kind}_${sha256ResearchJson({ seal_digest: sealDigest,
+        ...(kind === "evidence" && seal.analyticsSidecar ? { analytics_sidecar_digest: seal.analyticsSidecar.digest } : {}),
+        distributions_digest: seal.distributionsSidecar.digest })}`;
+    }
+    if (kind === "evidence" && seal.analyticsSidecar) {
+      return `rs02_evidence_${sha256ResearchJson({ seal_digest: sealDigest,
+        analytics_sidecar_digest: seal.analyticsSidecar.digest })}`;
+    }
+    if (["split", "search", "freeze"].includes(kind)) {
+      return `rs02_${kind}_${sha256ResearchJson({ seal_digest: sealDigest,
+        presentation_revision: "W1_SELECTED_TRIAL_ORDINAL_V1" })}`;
+    }
+    return `rs02_${kind}_${sealDigest}`;
   }
-  if (seal.distributionsSidecar && ["evidence", "evidence-monthly_returns", "evidence-return_distribution"].includes(kind)) {
-    return `rs02_${kind}_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
-      ...(kind === "evidence" && seal.analyticsSidecar ? { analytics_sidecar_digest: seal.analyticsSidecar.digest } : {}),
-      distributions_digest: seal.distributionsSidecar.digest })}`;
-  }
-  if (kind === "evidence" && seal.analyticsSidecar) {
-    return `rs02_evidence_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
-      analytics_sidecar_digest: seal.analyticsSidecar.digest })}`;
-  }
-  if (["split", "search", "freeze"].includes(kind)) {
-    return `rs02_${kind}_${sha256ResearchJson({ seal_digest: currentSourceSealDigest(seal),
-      presentation_revision: "W1_SELECTED_TRIAL_ORDINAL_V1" })}`;
-  }
-  return `rs02_${kind}_${currentSourceSealDigest(seal)}`;
 }
 
 const revision = currentSourceReadRevision;

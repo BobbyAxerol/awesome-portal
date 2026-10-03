@@ -1,13 +1,10 @@
 /** P21 Release Candidate composer/local-seal authority. */
 
-import { createHash } from "node:crypto";
-
 import { Inject, Injectable } from "@nestjs/common";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
-import { canonicalResearchJson } from "./preflight.service";
 import {
   ResearchReleaseCandidateComposeResponseSchema,
   ResearchReleaseCandidatePackResponseSchema,
@@ -33,11 +30,14 @@ import { retainedLaneFacts } from "./release-candidate.retained-lane";
 import { selectedTrialPresentation } from "./selected-trial-presentation";
 import { publishBlockedAction } from "./release-candidate-publish-action";
 import { ResearchReportFrozenCoreSchema } from "./report.contract";
+import { memoizedResearchJsonDigest } from "./memoized-json-digest";
+import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 
 type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL" | "NOT_APPLICABLE";
   reason_code: string | null;
 };
+type ReportVerification = { core: Record<string, unknown> | null; exactSource: boolean; sealed: boolean };
 type Field = {
   key: "release_candidate_id" | "alpha_id" | "alpha_version_id" | "alpha_code_digest" | "alpha_entrypoint"
     | "final_audit_run_id" | "final_audit_attempt_id" | "requested_spec_digest" | "effective_spec_digest"
@@ -96,7 +96,7 @@ function digest(value: unknown): string | null {
 }
 
 function digestOf(value: unknown): string {
-  return createHash("sha256").update(canonicalResearchJson(value), "utf8").digest("hex");
+  return memoizedResearchJsonDigest(value);
 }
 
 function field(key: Field["key"], label: string, value: string | null, availability: Availability, tone?: Field["tone"]): Field {
@@ -149,6 +149,7 @@ function missing(
  */
 @Injectable()
 export class ResearchReleaseCandidateService {
+  private readonly reportVerification = new ExactJsonCalculationMemo<ReportVerification>();
   constructor(
     private readonly repository: ResearchReleaseCandidateRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
@@ -159,7 +160,8 @@ export class ResearchReleaseCandidateService {
     const snapshot = await this.repository.readComposition(scope, runId);
     if (!snapshot) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Research run was not found.", 404);
     const { source, draft, latestPack, publicationContext } = snapshot;
-    return this.compose(source, draft ?? this.virtualDraft(source), latestPack, publicationContext);
+    const fingerprint = releaseCandidateSourceFingerprint(source);
+    return this.compose(source, draft ?? this.virtualDraft(source, fingerprint), latestPack, publicationContext, fingerprint);
   }
 
   /** B2: the P22 facts the composer prints — this candidate's intent and the last published candidate of the Alpha. */
@@ -239,9 +241,10 @@ export class ResearchReleaseCandidateService {
     draft: ReleaseCandidateDraft,
     latestPack: ReleaseCandidateStoredPack | null,
     context: ReleaseCandidatePublicationContext,
+    sourceFingerprint = releaseCandidateSourceFingerprint(source),
   ): ResearchReleaseCandidateComposeResponse {
-    const sourceFingerprint = releaseCandidateSourceFingerprint(source);
-    const { values, pack, sourceIntegrity, selectedDetail, selectedTrialId } = this.lane(source, draft, null);
+    const report = this.verifyReport(source);
+    const { values, pack, sourceIntegrity, selectedDetail, selectedTrialId } = this.lane(source, draft, null, report);
     const missingCount = pack.filter((item) => item.status === "MISSING").length;
     const hasInput = draft.knownLimitations === null || draft.proposedUseRestrictions === null;
     const isScratch = source.alpha.alphaVersionId === null;
@@ -281,7 +284,7 @@ export class ResearchReleaseCandidateService {
       state: "DRAFT" as const,
       run_status: ResearchReleaseCandidateRunStatusSchema.safeParse(source.lifecycleStatus).success
         ? source.lifecycleStatus : null,
-      report_sealed: this.reportSealed(source),
+      report_sealed: report.sealed,
       availability: sourceIntegrity ? AVAILABLE : partial("P21_REFERENCED_SOURCE_INTEGRITY_FAILED"),
       as_of_utc_ms: source.asOfUtcMs,
       source_fingerprint: sourceFingerprint,
@@ -439,8 +442,8 @@ export class ResearchReleaseCandidateService {
     };
   }
 
-  private values(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null) {
-    const reportCore = record(source.report.frozenCore);
+  private values(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null, report: ReportVerification) {
+    const reportCore = report.core;
     const alphaCodeDigest = digest(source.alpha.codeDigest);
     const adapterContractDigest = digest(source.producer.adapterContractDigest);
     const sourceTransform = this.sameDigest(
@@ -469,7 +472,7 @@ export class ResearchReleaseCandidateService {
       && source.runState === "READY" && targetSelectionExact;
     const alphaReady = source.alpha.alphaId !== null && source.alpha.alphaVersionId !== null
       && alphaCodeDigest !== null && source.alpha.entrypoint !== null;
-    const exactSource = sourceIntegritySource(source);
+    const exactSource = report.exactSource;
     const fields: Field[] = [
       field("release_candidate_id", "Release candidate ID", releaseCandidateId, releaseCandidateId ? AVAILABLE : notApplicable("P21_ASSIGNED_ON_LOCAL_SEAL"), releaseCandidateId ? "ink" : "gold"),
       field("alpha_id", "Alpha ID", source.alpha.alphaId, alphaReady ? AVAILABLE : absent("P21_ALPHA_BINDING_NOT_PUBLISHED")),
@@ -582,11 +585,11 @@ export class ResearchReleaseCandidateService {
     };
   }
 
-  private virtualDraft(source: ReleaseCandidateSource): ReleaseCandidateDraft {
+  private virtualDraft(source: ReleaseCandidateSource, fingerprint = releaseCandidateSourceFingerprint(source)): ReleaseCandidateDraft {
     return {
       draftId: null,
       revision: 0,
-      sourceFingerprint: releaseCandidateSourceFingerprint(source),
+      sourceFingerprint: fingerprint,
       knownLimitations: null,
       proposedUseRestrictions: null,
       updatedAtUtcMs: null,
@@ -637,9 +640,9 @@ export class ResearchReleaseCandidateService {
    * runs exactly the composition it always ran; a Delta WFO run binds every
    * row and field the P04 hubs used to answer to its retained fact.
    */
-  private lane(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null) {
+  private lane(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null, report = this.verifyReport(source)) {
     if (!source.wfo) {
-      const values = this.values(source, draft, releaseCandidateId);
+      const values = this.values(source, draft, releaseCandidateId, report);
       return {
         values,
         pack: this.packItems(source, draft, values),
@@ -648,7 +651,7 @@ export class ResearchReleaseCandidateService {
         selectedTrialId: source.selection.selectedTrialId,
       };
     }
-    const values = this.retainedValues(source, draft, releaseCandidateId);
+    const values = this.retainedValues(source, draft, releaseCandidateId, report);
     return {
       values,
       pack: this.retainedPackItems(source, draft, values),
@@ -666,8 +669,8 @@ export class ResearchReleaseCandidateService {
    * declarations) and replaces every row and field the P04 hubs used to
    * answer with its retained fact. Nothing of the P04 path is changed.
    */
-  private retainedValues(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null) {
-    const base = this.values(source, draft, releaseCandidateId);
+  private retainedValues(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, releaseCandidateId: string | null, report: ReportVerification) {
+    const base = this.values(source, draft, releaseCandidateId, report);
     const lane = source.wfo!;
     const facts = retainedLaneFacts(lane);
     const reportCore = base.reportCore;
@@ -692,7 +695,7 @@ export class ResearchReleaseCandidateService {
       && source.verifiedAudit.result.parameters_digest === facts.parameterDigest ? source.verifiedAudit : undefined;
     const finalAudit = source.runState === "READY" && facts.replayRetained && facts.parameterDigest !== null
       && (childAuditMatches || linkedAudit !== undefined);
-    const reportFromLane = retainedReport && this.reportSealed(source)
+    const reportFromLane = retainedReport && report.sealed
       && stringAt(reportCore, ["source_revisions", "evidence_revision"]) === facts.evidenceRevision;
     const fields = base.fields.map((item): Field => {
       switch (item.key) {
@@ -824,15 +827,19 @@ export class ResearchReleaseCandidateService {
   }
 
   /** A verified seal is a source fact, separate from "matches the current Evidence revision". */
-  private reportSealed(source: ReleaseCandidateSource): boolean {
-    const { reportRevision, frozenCoreDigest, frozenCore, sealedAtUtcMs } = source.report;
-    const core = record(frozenCore);
-    const parsed = ResearchReportFrozenCoreSchema.safeParse(core);
-    return reportRevision !== null && frozenCoreDigest !== null && digest(frozenCoreDigest) !== null
-      && reportRevision === `p18r1_${frozenCoreDigest}`
-      && sealedAtUtcMs !== null && Number.isSafeInteger(sealedAtUtcMs) && sealedAtUtcMs >= 0
-      && core !== null && digestOf(core) === frozenCoreDigest && parsed.success
-      && parsed.data.identity.find((item) => item.key === "run_id")?.value === source.runId;
+  private verifyReport(source: ReleaseCandidateSource): ReportVerification {
+    return this.reportVerification.calculate({ runId: source.runId, report: source.report }, () => {
+      const { reportRevision, frozenCoreDigest, frozenCore, sealedAtUtcMs } = source.report;
+      const core = record(frozenCore);
+      const parsed = ResearchReportFrozenCoreSchema.safeParse(core);
+      const digestMatches = core !== null && frozenCoreDigest !== null && digestOf(core) === frozenCoreDigest;
+      const sealed = reportRevision !== null && frozenCoreDigest !== null && digest(frozenCoreDigest) !== null
+        && reportRevision === `p18r1_${frozenCoreDigest}`
+        && sealedAtUtcMs !== null && Number.isSafeInteger(sealedAtUtcMs) && sealedAtUtcMs >= 0
+        && digestMatches && parsed.success
+        && parsed.data.identity.find((item) => item.key === "run_id")?.value === source.runId;
+      return { core, exactSource: reportRevision === null || digestMatches, sealed };
+    });
   }
 
   private retainedSelectedDetail(source: ReleaseCandidateSource, trialId: string | null): string | null {
@@ -862,15 +869,4 @@ function issuedMethodologyAxis(source: ReleaseCandidateSource): { value: string 
     value: null,
     availability: absent("P21_METHODOLOGY_CERTIFICATION_NOT_PUBLISHED"),
   };
-}
-
-function sourceIntegritySource(source: ReleaseCandidateSource): boolean {
-  // The Report core itself is an immutable object. A row that advertises a
-  // report revision but cannot be parsed is an integrity failure, never a
-  // reason to fall back to an older digest or reconstruct a report from UI.
-  if (source.report.reportRevision === null) return true;
-  const reportCore = record(source.report.frozenCore);
-  return reportCore !== null
-    && source.report.frozenCoreDigest !== null
-    && digestOf(reportCore) === source.report.frozenCoreDigest;
 }

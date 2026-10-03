@@ -15,6 +15,7 @@ import { ResearchUtilitySaturated, assertUtilityCapacity } from "./utility-admis
 import { runDisplayLabel, runDisplayOrdinal, runDisplayOrdinalSql } from "./run-display-label";
 import type { ReportAuditRelation } from "./report-core-v2";
 import { readPinnedAuditProofs } from "./final-audit.read";
+import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 import { DELTA_WFO_PROFILE_ID, DELTA_WFO_PROFILE_DIGEST } from "./delta-wfo.profile";
 import { DELTA_WFO_V2_PROFILE_ID, DELTA_WFO_V2_PROFILE_DIGEST } from "./delta-wfo-v2.profile";
 import { DELTA_CAUSAL_INNER_PROFILE_ID, DELTA_CAUSAL_INNER_PROFILE_DIGEST } from "./delta-causal-inner.profile";
@@ -127,20 +128,23 @@ function asByteCount(value: string | number | null): number | null {
   return numeric;
 }
 
+const coreCalculations = new ExactJsonCalculationMemo<ResearchReportFrozenCore>();
 function parseCore(value: JsonValue): ResearchReportFrozenCore {
-  let parsed: unknown;
-  try {
-    parsed = typeof value === "string" ? JSON.parse(value) : value;
-  } catch {
-    throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored report core is incompatible.", 503);
-  }
-  const validated = ResearchReportFrozenCoreSchema.safeParse(parsed);
-  if (validated.success) return validated.data;
-  const error = new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored report core is incompatible.", 503);
-  // Keep schema diagnostics internal for logs/tests; the public error filter
-  // still returns the stable typed 503 without leaking stored report content.
-  (error as Error & { cause?: unknown }).cause = validated.error;
-  throw error;
+  return coreCalculations.calculate(value, () => {
+    let parsed: unknown;
+    try {
+      parsed = typeof value === "string" ? JSON.parse(value) : value;
+    } catch {
+      throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored report core is incompatible.", 503);
+    }
+    const validated = ResearchReportFrozenCoreSchema.safeParse(parsed);
+    if (validated.success) return validated.data;
+    const error = new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored report core is incompatible.", 503);
+    // Schema diagnostics stay internal; cached successful math cannot conceal
+    // current-byte drift because the exact input is part of the lookup key.
+    (error as Error & { cause?: unknown }).cause = validated.error;
+    throw error;
+  });
 }
 
 function annotation(row: Pick<ManifestRow | ClaimedJobRow, "annotation_state" | "annotation_text" | "annotation_updated_at_utc_ms">): StoredResearchReport["annotation"] {

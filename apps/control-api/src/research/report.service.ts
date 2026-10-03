@@ -50,6 +50,8 @@ import {
 } from "./report.repository";
 import { ResearchSearchService } from "./search.service";
 import { ResearchSplitService } from "./split.service";
+import { memoizedResearchJsonDigest } from "./memoized-json-digest";
+import { ExactJsonCalculationMemo } from "./exact-json-calculation-memo";
 
 /** Which sealed read model a report is assembled from; the run's P10 profile decides. */
 export type ResearchReportLane = "P04_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE";
@@ -70,6 +72,7 @@ function csvCell(value: string | null): string {
  */
 @Injectable()
 export class ResearchReportService {
+  private readonly detailCalculations = new ExactJsonCalculationMemo<ResearchReportDetailResponse>();
   constructor(
     private readonly repository: ResearchReportRepository,
     private readonly evidence: ResearchEvidenceService,
@@ -419,10 +422,12 @@ export class ResearchReportService {
     // The core revision is immutable; the delivered representation also has a
     // mutable annotation and a presentation-only label. A core-only ETag could
     // return 304 after either changed, hiding the new truth from the browser.
-    const etag = `"p18r1_${createHash("sha256").update(canonicalResearchJson(response), "utf8").digest("hex")}"`;
-    const parsed = ResearchReportDetailResponseSchema.safeParse({ ...response, etag });
-    if (!parsed.success) throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored report is incompatible.", 503);
-    return parsed.data;
+    return this.detailCalculations.calculate(response, () => {
+      const etag = `"p18r1_${memoizedResearchJsonDigest(response)}"`;
+      const parsed = ResearchReportDetailResponseSchema.safeParse({ ...response, etag });
+      if (!parsed.success) throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Stored report is incompatible.", 503);
+      return parsed.data;
+    });
   }
 
   private exportStatus(job: ResearchReportExportJob, workspaceId: string): ResearchReportExportStatus {
